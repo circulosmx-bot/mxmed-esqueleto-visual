@@ -694,16 +694,16 @@ if (isLocalDevRequest()) {
               </div>
             </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="sent" hidden>
-              <p class="mxpp-booking-modal__eyebrow">Pendiente de confirmación</p>
-              <h2>Código de confirmación enviado</h2>
-              <p>Te enviamos un código para confirmar tu cita. En el siguiente paso podrás ingresarlo para completar la reserva.</p>
+              <p class="mxpp-booking-modal__eyebrow">Vista previa</p>
+              <h2>Solicitud en preparación</h2>
+              <p>Este paso quedará conectado a la confirmación por código en la siguiente fase. No se ha creado ninguna cita todavía.</p>
               <div class="mxpp-booking-modal__summary">
                 <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
                 <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
-                <p><strong>Enviado a:</strong> <span data-mxpp-booking-contact>Por confirmar</span></p>
+                <p><strong>Teléfono:</strong> <span data-mxpp-booking-contact>Por confirmar</span></p>
               </div>
-              <p class="mxpp-booking-modal__message mxpp-booking-modal__message--success">Tu cita quedó reservada temporalmente mientras confirmas el código.</p>
+              <p class="mxpp-booking-modal__message mxpp-booking-modal__message--success">No se ha creado ninguna cita todavía.</p>
               <div class="mxpp-booking-modal__actions">
                 <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cerrar</button>
                 <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-close>Entendido</button>
@@ -1320,7 +1320,7 @@ if (isLocalDevRequest()) {
           return !Number.isNaN(date.getTime());
         }
 
-        function validateInlineReserveData(modal, state) {
+        function validateInlineBookingData(modal, state) {
           var data = getBookingFormData(modal);
           if (!state.selectedSlot) {
             return { ok: false, message: 'Antes de continuar, selecciona una cita disponible.' };
@@ -1352,69 +1352,6 @@ if (isLocalDevRequest()) {
           return { ok: true, data: data };
         }
 
-        function buildInlineReservePayload(state, patientData) {
-          var payload = {
-            doctor_id: state.doctorId,
-            start_at: state.selectedSlot ? state.selectedSlot.start_at : '',
-            end_at: state.selectedSlot ? state.selectedSlot.end_at : '',
-            visit_kind: 'presencial',
-            patient_type: 'first_time',
-            booker_is_patient: true,
-            payment_mode: 'none',
-            booker: {
-              name: patientData.full_name,
-              phone: patientData.mobile_phone,
-              email: patientData.email
-            },
-            patient: {
-              first_name: patientData.first_name,
-              last_name: patientData.last_name,
-              second_last_name: patientData.second_last_name,
-              name: patientData.full_name,
-              phone: patientData.mobile_phone,
-              email: patientData.email,
-              dob: patientData.birth_date,
-              gender: patientData.gender,
-              reason: patientData.reason
-            }
-          };
-          var consultorioId = state.selectedSlot ? String(state.selectedSlot.consultorio_id || '').trim() : '';
-          if (consultorioId !== '') {
-            payload.consultorio_id = consultorioId;
-          }
-          return payload;
-        }
-
-        function readInlineErrorMessage(payload, statusCode) {
-          if (payload && typeof payload.message === 'string' && payload.message.trim() !== '') {
-            return payload.message;
-          }
-          if (payload && typeof payload.error === 'string' && payload.error.trim() !== '') {
-            return payload.error;
-          }
-          return statusCode ? 'Error API (' + statusCode + ')' : 'Error de red';
-        }
-
-        function postInlineJson(path, payload) {
-          return fetch(path, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json'
-            },
-            body: JSON.stringify(payload)
-          }).then(function (response) {
-            return response.json().catch(function () {
-              return null;
-            }).then(function (json) {
-              if (!response.ok || !json || json.ok !== true) {
-                throw new Error(readInlineErrorMessage(json, response.status));
-              }
-              return json;
-            });
-          });
-        }
-
         function setBookingSubmitState(modal, busy, label) {
           var button = modal ? modal.querySelector('[data-mxpp-booking-submit]') : null;
           if (!button) {
@@ -1431,48 +1368,18 @@ if (isLocalDevRequest()) {
           });
         }
 
-        function submitInlineReserveAndOtp(modal, state) {
+        function submitInlineBookingPreview(modal, state) {
           clearBookingModalMessage(modal);
-          var valid = validateInlineReserveData(modal, state);
+          var valid = validateInlineBookingData(modal, state);
           if (!valid.ok) {
             showBookingModalMessage(modal, 'error', valid.message);
             return;
           }
 
           var patientData = valid.data;
-          setBookingSubmitState(modal, true, 'Solicitando cita...');
-          var reserveRequest = state.appointmentId
-            ? Promise.resolve({ data: { appointment_id: state.appointmentId, cancel_token: state.cancelToken || '' } })
-            : postInlineJson('/api/agenda/index.php/public/appointments/reserve', buildInlineReservePayload(state, patientData));
-
-          reserveRequest
-            .then(function (reserve) {
-              state.appointmentId = reserve.data && reserve.data.appointment_id ? String(reserve.data.appointment_id) : '';
-              state.cancelToken = reserve.data && reserve.data.cancel_token ? String(reserve.data.cancel_token) : '';
-              if (state.appointmentId === '') {
-                throw new Error('No se pudo reservar el horario.');
-              }
-              setBookingSubmitState(modal, true, 'Enviando código...');
-              return postInlineJson('/api/agenda/index.php/public/otp/request', {
-                doctor_id: state.doctorId,
-                contact_type: 'sms',
-                contact_value: patientData.mobile_phone
-              });
-            })
-            .then(function (otpRequest) {
-              state.otpId = otpRequest.data && otpRequest.data.otp_id ? String(otpRequest.data.otp_id) : '';
-              if (state.otpId === '') {
-                throw new Error('No se recibió otp_id.');
-              }
-              fillBookingSentStep(modal, state, patientData);
-              setBookingModalStep(modal, 'sent');
-            })
-            .catch(function (error) {
-              showBookingModalMessage(modal, 'error', error && error.message ? error.message : 'No pudimos solicitar tu cita.');
-            })
-            .finally(function () {
-              setBookingSubmitState(modal, false, 'Solicitar código');
-            });
+          fillBookingSentStep(modal, state, patientData);
+          setBookingModalStep(modal, 'sent');
+          setBookingSubmitState(modal, false, 'Solicitar código');
         }
 
         function bindBookingModalControls(block, state) {
@@ -1515,13 +1422,13 @@ if (isLocalDevRequest()) {
           if (form) {
             form.addEventListener('submit', function (event) {
               event.preventDefault();
-              submitInlineReserveAndOtp(modal, state);
+              submitInlineBookingPreview(modal, state);
             });
           }
           var submitButton = modal.querySelector('[data-mxpp-booking-submit]');
           if (submitButton) {
             submitButton.addEventListener('click', function () {
-              submitInlineReserveAndOtp(modal, state);
+              submitInlineBookingPreview(modal, state);
             });
           }
           document.addEventListener('keydown', function (event) {
@@ -1542,9 +1449,6 @@ if (isLocalDevRequest()) {
             currentBlockIndex: -1,
             blocks: [],
             selectedSlot: null,
-            appointmentId: null,
-            cancelToken: null,
-            otpId: null,
             isLoading: false,
             hasMore: true,
             isMock: mockMode === 'mixed',
