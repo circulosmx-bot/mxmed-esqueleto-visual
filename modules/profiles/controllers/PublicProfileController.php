@@ -4,9 +4,11 @@ declare(strict_types=1);
 namespace Profiles\Controllers;
 
 use Profiles\Repositories\PublicProfileRepository;
+use Profiles\Services\PublicProfilePlanCapabilities;
 use function Agenda\Helpers\ConsultorioMap\buildConsultorioPublicMapPayload;
 
 require_once __DIR__ . '/../repositories/PublicProfileRepository.php';
+require_once __DIR__ . '/../services/PublicProfilePlanCapabilities.php';
 require_once __DIR__ . '/../../agenda/helpers/consultorio_map.php';
 
 final class PublicProfileController
@@ -34,38 +36,19 @@ final class PublicProfileController
         $professional = (array)($snapshot['professional'] ?? []);
         $specialties = (array)($snapshot['specialties'] ?? []);
         $profileSource = (array)($snapshot['profile_source'] ?? []);
+        $planSource = (array)($snapshot['plan_source'] ?? []);
         $scheduleRows = is_array($snapshot['schedule_rows'] ?? null) ? $snapshot['schedule_rows'] : [];
 
-        $plan = [
-            'plan_code' => 'free',
-            'plan_label' => 'Gratuito',
-            'is_paid' => false,
-            'is_active' => true,
-            'expires_at' => null,
-            'grace_status' => null,
-            'features' => [
-                'contact' => false,
-                'public_agenda' => false,
-                'reviews' => false,
-                'promotions' => false,
-            ],
+        $planContext = [
+            'plan_source' => $planSource['source'] ?? 'default_free',
+            'has_public_profile' => false,
+            'is_claimed' => false,
+            'public_contact_source_ready' => false,
+            'claim_source_ready' => false,
+            'commercial_source_ready' => false,
         ];
-
-        $publicVisibility = [
-            'show_contact_buttons' => false,
-            'show_phone' => false,
-            'show_whatsapp' => false,
-            'show_internal_message' => false,
-            'show_public_agenda' => false,
-            'show_map_gps' => false,
-            'show_reviews' => false,
-            'show_promotions' => false,
-            'show_claim_button' => false,
-            'show_video_consultation' => false,
-            'show_ai_claims' => false,
-            'show_consultation_fee' => false,
-            'show_accepted_insurances' => false,
-        ];
+        $planContract = PublicProfilePlanCapabilities::build($planSource['plan_code'] ?? null, $planContext);
+        $publicVisibility = (array)$planContract['public_visibility'];
 
         $consultorios = $this->mapConsultorios(
             is_array($snapshot['consultorios'] ?? null) ? $snapshot['consultorios'] : [],
@@ -79,6 +62,10 @@ final class PublicProfileController
         $isPublicCandidate = (bool)($profileSource['is_public_candidate'] ?? false);
         $isPublic = $hasMinimumPublicData && $isPublicCandidate && $sourceStatus === 'active';
         $profileStatus = $isPublic ? 'active' : 'hidden';
+        $planContext['has_public_profile'] = $isPublic;
+        $planContract = PublicProfilePlanCapabilities::build($planSource['plan_code'] ?? null, $planContext);
+        $plan = (array)$planContract['plan'];
+        $publicVisibility = (array)$planContract['public_visibility'];
 
         $city = $this->firstNonEmpty($consultorios[0]['city'] ?? null);
         $displayName = $this->firstNonEmpty($identity['display_name'] ?? null);
@@ -136,44 +123,11 @@ final class PublicProfileController
             'specialties' => $this->sanitizeSpecialties($specialties),
             'consultorios' => $consultorios,
             'schedule' => $schedule,
-            'contact' => [
-                'phone' => null,
-                'whatsapp' => null,
-                'internal_message_enabled' => false,
-                'contact_cta_label' => null,
-                'contact_restriction_reason' => 'source_not_ready',
-            ],
-            'agenda_public' => [
-                'enabled' => false,
-                'availability_endpoint' => '/api/agenda/index.php/public/availability',
-                'booking_flow' => 'public_agenda_existing',
-                'requires_otp' => true,
-                'allowed_consultorios' => [],
-                'allowed_modalities' => [],
-                'blocked_by_plan_reason' => 'source_not_ready',
-            ],
-            'commercial_visibility' => [
-                'consultation_fee' => null,
-                'payment_methods' => [],
-                'accepted_insurances' => [],
-                'commercial_restriction_reason' => 'source_not_ready',
-            ],
-            'reviews' => [
-                'enabled' => false,
-                'visible' => false,
-                'rating_avg' => null,
-                'review_count' => 0,
-                'reviews_preview' => [],
-                'doctor_can_reply' => false,
-                'doctor_can_archive' => false,
-            ],
-            'claim' => [
-                'show_claim_button' => false,
-                'claim_url' => null,
-                'claim_status' => null,
-                'claim_allowed' => false,
-                'claim_blocked_reason' => 'source_not_ready',
-            ],
+            'contact' => (array)$planContract['contact'],
+            'agenda_public' => (array)$planContract['agenda_public'],
+            'commercial_visibility' => (array)$planContract['commercial_visibility'],
+            'reviews' => (array)$planContract['reviews'],
+            'claim' => (array)$planContract['claim'],
             'seo' => [
                 'title' => $title,
                 'description' => $description,
@@ -193,20 +147,7 @@ final class PublicProfileController
                 'imaging_centers' => [],
                 'pharma_partners' => [],
             ],
-            'feature_flags' => [
-                'has_public_profile' => $isPublic,
-                'has_public_contact' => false,
-                'has_public_agenda' => false,
-                'has_reviews' => false,
-                'has_promotions' => false,
-                'has_video_consultation' => false,
-                'has_ai_agent' => false,
-                'has_ai_profile_writer' => false,
-                'has_ai_prescription_safety' => false,
-                'has_commercial_profile_data' => false,
-                'has_insurance_affiliations' => false,
-                'has_ecosystem_links' => false,
-            ],
+            'feature_flags' => (array)$planContract['feature_flags'],
         ];
 
         return [

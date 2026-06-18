@@ -40,6 +40,7 @@ final class PublicProfileRepository
             'schedule_rows' => $scheduleRows,
             'has_appointments' => $hasAppointments,
             'profile_source' => $this->resolveProfileSource($canonicalProfile),
+            'plan_source' => $this->resolvePlanSource($canonicalProfile),
             'identity' => $this->resolveIdentity($canonicalProfile),
             'professional' => $this->resolveProfessional($canonicalProfile),
             'specialties' => $this->resolveSpecialties($canonicalProfile),
@@ -247,6 +248,11 @@ final class PublicProfileRepository
             'photo_url',
             'avatar_url',
             'logo_url',
+            'plan_code',
+            'profile_plan',
+            'plan_name',
+            'subscription_plan',
+            'commercial_plan',
             'profile_status',
             'is_public_candidate',
             'updated_at',
@@ -294,6 +300,31 @@ final class PublicProfileRepository
         $source['profile_status'] = in_array($status, $allowed, true) ? $status : 'hidden';
         $source['is_public_candidate'] = ((int)($profileRow['is_public_candidate'] ?? 0) === 1);
         $source['last_public_update_at'] = $this->toNullableText($profileRow['updated_at'] ?? null);
+        return $source;
+    }
+
+    private function resolvePlanSource(?array $profileRow): array
+    {
+        $source = [
+            'plan_code' => null,
+            'source' => 'default_free',
+            'source_field' => null,
+        ];
+        if (!is_array($profileRow)) {
+            return $source;
+        }
+
+        foreach (['plan_code', 'profile_plan', 'plan_name', 'subscription_plan', 'commercial_plan'] as $field) {
+            $candidate = $this->toNullableText($profileRow[$field] ?? null);
+            if ($candidate !== null) {
+                return [
+                    'plan_code' => $candidate,
+                    'source' => 'profiles_doctors',
+                    'source_field' => $field,
+                ];
+            }
+        }
+
         return $source;
     }
 
