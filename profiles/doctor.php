@@ -58,6 +58,102 @@ function scheduleSummaryText($value): ?string
     return $parts !== [] ? implode(' · ', $parts) : null;
 }
 
+function platformNavigationSectionsFromTaxonomy(array $taxonomy): array
+{
+    $sections = safeArray($taxonomy['sections'] ?? []);
+    if ($sections === []) {
+        return [];
+    }
+
+    $sections = array_values(array_filter($sections, static fn($section): bool => is_array($section)));
+    usort($sections, static function (array $a, array $b): int {
+        return ((int)($a['sort_order'] ?? 0)) <=> ((int)($b['sort_order'] ?? 0));
+    });
+
+    $out = [];
+    foreach ($sections as $section) {
+        if (!toBool($section['enabled'] ?? false)) {
+            continue;
+        }
+
+        $sectionKey = toText($section['key'] ?? null);
+        $sectionLabel = toText($section['label'] ?? null);
+        if ($sectionKey === null || $sectionLabel === null) {
+            continue;
+        }
+
+        $items = safeArray($section['items'] ?? []);
+        $items = array_values(array_filter($items, static fn($item): bool => is_array($item)));
+        usort($items, static function (array $a, array $b): int {
+            return ((int)($a['sort_order'] ?? 0)) <=> ((int)($b['sort_order'] ?? 0));
+        });
+
+        $navItems = [];
+        foreach ($items as $item) {
+            if (!toBool($item['enabled'] ?? false)) {
+                continue;
+            }
+
+            $label = toText($item['label'] ?? null);
+            if ($label === null) {
+                continue;
+            }
+
+            $navItems[] = [
+                'label' => $label,
+                'slug' => toText($item['slug'] ?? null),
+                'profile_type' => toText($item['profile_type'] ?? null),
+                'route_enabled' => toBool($item['route_enabled'] ?? false),
+                'url' => toText($item['url'] ?? null),
+            ];
+        }
+
+        $out[] = [
+            'id' => $sectionKey,
+            'label' => $sectionLabel,
+            'items' => $navItems,
+        ];
+    }
+
+    return $out;
+}
+
+function fallbackPlatformNavigationSections(): array
+{
+    return [
+        [
+            'id' => 'medical_specialists',
+            'label' => 'Especialistas Médicos',
+            'items' => [['label' => 'Cardiología']],
+        ],
+        [
+            'id' => 'dental_specialists',
+            'label' => 'Especialistas Dentales',
+            'items' => [['label' => 'Odontología general']],
+        ],
+        [
+            'id' => 'other_services',
+            'label' => 'Otros servicios',
+            'items' => [['label' => 'Psicología']],
+        ],
+        [
+            'id' => 'hospitals',
+            'label' => 'Hospitales',
+            'items' => [['label' => 'Hospitales generales']],
+        ],
+        [
+            'id' => 'clinics',
+            'label' => 'Clínicas',
+            'items' => [['label' => 'Clínicas generales']],
+        ],
+        [
+            'id' => 'laboratories',
+            'label' => 'Laboratorios',
+            'items' => [['label' => 'Laboratorios clínicos']],
+        ],
+    ];
+}
+
 function telHref(?string $value): ?string
 {
     if ($value === null) {
@@ -330,6 +426,7 @@ $jsonLd = $data['json_ld'] ?? null;
 $featureFlags = safeArray($data['feature_flags'] ?? []);
 $plan = safeArray($data['plan'] ?? []);
 $geoContext = safeArray($data['geo_context'] ?? []);
+$publicNavigationTaxonomy = safeArray($data['public_navigation_taxonomy'] ?? []);
 
 $displayName = toText($identity['display_name'] ?? null);
 $profileStatus = toText($profile['status'] ?? null) ?? 'hidden';
@@ -348,82 +445,10 @@ $geoCitySlug = toText($geoContext['city_slug'] ?? null);
 $geoSource = toText($geoContext['source'] ?? null);
 $geoIsNational = toBool($geoContext['is_national'] ?? false);
 $platformRegionLabel = $geoStateName;
-$platformNavItems = [
-    [
-        'id' => 'medicos',
-        'label' => 'Especialistas Médicos',
-        'items' => [
-            'Cardiología',
-            'Ginecología',
-            'Pediatría',
-            'Dermatología',
-            'Otorrinolaringología',
-            'Endocrinología',
-            'Traumatología y Ortopedia',
-            'Neurología',
-            'Oftalmología',
-            'Urología',
-        ],
-    ],
-    [
-        'id' => 'dentales',
-        'label' => 'Especialistas Dentales',
-        'items' => [
-            'Odontología general',
-            'Ortodoncia',
-            'Endodoncia',
-            'Periodoncia',
-            'Odontopediatría',
-            'Cirugía maxilofacial',
-            'Implantología',
-        ],
-    ],
-    [
-        'id' => 'servicios',
-        'label' => 'Otros servicios',
-        'items' => [
-            'Psicología',
-            'Nutrición',
-            'Fisioterapia',
-            'Enfermería',
-            'Terapias y rehabilitación',
-        ],
-    ],
-    [
-        'id' => 'hospitales',
-        'label' => 'Hospitales',
-        'items' => [
-            'Hospitales generales',
-            'Hospitales privados',
-            'Urgencias',
-            'Maternidad',
-            'Cirugía',
-        ],
-    ],
-    [
-        'id' => 'clinicas',
-        'label' => 'Clínicas',
-        'items' => [
-            'Clínicas generales',
-            'Clínicas dentales',
-            'Clínicas de especialidad',
-            'Centros de diagnóstico',
-            'Rehabilitación',
-        ],
-    ],
-    [
-        'id' => 'laboratorios',
-        'label' => 'Laboratorios',
-        'items' => [
-            'Laboratorios clínicos',
-            'Imagenología',
-            'Rayos X',
-            'Ultrasonido',
-            'Resonancia magnética',
-            'Tomografía',
-        ],
-    ],
-];
+$platformNavItems = platformNavigationSectionsFromTaxonomy($publicNavigationTaxonomy);
+if ($platformNavItems === []) {
+    $platformNavItems = fallbackPlatformNavigationSections();
+}
 
 $consultorioPanels = [];
 foreach ($consultorios as $index => $consultorio) {
@@ -614,6 +639,7 @@ if (isLocalDevRequest()) {
               aria-expanded="false"
               aria-controls="<?= h($navPanelId) ?>"
               data-mxpp-platform-menu-button
+              data-nav-section-key="<?= h($navId) ?>"
               <?php if ($geoStateSlug !== null): ?>data-nav-context-state="<?= h($geoStateSlug) ?>"<?php endif; ?>
               <?php if ($geoCitySlug !== null): ?>data-nav-context-city="<?= h($geoCitySlug) ?>"<?php endif; ?>
             >
@@ -628,9 +654,24 @@ if (isLocalDevRequest()) {
               data-mxpp-platform-dropdown
             >
               <?php foreach ($navOptions as $navOption): ?>
-                <?php $navOptionLabel = toText($navOption); ?>
+                <?php
+                  $navOptionData = safeArray($navOption);
+                  $navOptionLabel = toText($navOptionData['label'] ?? null);
+                  $navOptionSlug = toText($navOptionData['slug'] ?? null);
+                  $navOptionProfileType = toText($navOptionData['profile_type'] ?? null);
+                  $navOptionRouteEnabled = toBool($navOptionData['route_enabled'] ?? false);
+                  $navOptionUrl = toText($navOptionData['url'] ?? null);
+                ?>
                 <?php if ($navOptionLabel !== null): ?>
-                  <button type="button" class="mxpp-platform-dropdown__item" role="menuitem"><?= h($navOptionLabel) ?></button>
+                  <button
+                    type="button"
+                    class="mxpp-platform-dropdown__item"
+                    role="menuitem"
+                    <?php if ($navOptionSlug !== null): ?>data-nav-item-slug="<?= h($navOptionSlug) ?>"<?php endif; ?>
+                    <?php if ($navOptionProfileType !== null): ?>data-nav-profile-type="<?= h($navOptionProfileType) ?>"<?php endif; ?>
+                    data-route-enabled="<?= $navOptionRouteEnabled ? 'true' : 'false' ?>"
+                    <?php if ($navOptionUrl !== null): ?>data-nav-url="<?= h($navOptionUrl) ?>"<?php endif; ?>
+                  ><?= h($navOptionLabel) ?></button>
                 <?php endif; ?>
               <?php endforeach; ?>
             </div>

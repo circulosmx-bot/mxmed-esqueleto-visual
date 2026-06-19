@@ -146,6 +146,7 @@ final class PublicProfileController
             'specialties' => $this->sanitizeSpecialties($specialties),
             'consultorios' => $consultorios,
             'geo_context' => $geoContext,
+            'public_navigation_taxonomy' => $this->buildPublicNavigationTaxonomy(),
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -233,6 +234,135 @@ final class PublicProfileController
             ];
         }
         return $mapped;
+    }
+
+    private function buildPublicNavigationTaxonomy(): array
+    {
+        $sections = [
+            [
+                'key' => 'medical_specialists',
+                'label' => 'Especialistas Médicos',
+                'profile_type' => 'doctor',
+                'sort_order' => 10,
+                'items' => [
+                    ['Cardiología', 'cardiologos'],
+                    ['Ginecología', 'ginecologos'],
+                    ['Pediatría', 'pediatras'],
+                    ['Dermatología', 'dermatologos'],
+                    ['Otorrinolaringología', 'otorrinolaringologos'],
+                    ['Endocrinología', 'endocrinologos'],
+                    ['Traumatología y Ortopedia', 'traumatologos-ortopedistas'],
+                    ['Neurología', 'neurologos'],
+                    ['Oftalmología', 'oftalmologos'],
+                    ['Urología', 'urologos'],
+                ],
+            ],
+            [
+                'key' => 'dental_specialists',
+                'label' => 'Especialistas Dentales',
+                'profile_type' => 'dentist',
+                'sort_order' => 20,
+                'items' => [
+                    ['Odontología general', 'odontologia-general'],
+                    ['Ortodoncia', 'ortodoncia'],
+                    ['Endodoncia', 'endodoncia'],
+                    ['Periodoncia', 'periodoncia'],
+                    ['Odontopediatría', 'odontopediatria'],
+                    ['Cirugía maxilofacial', 'cirugia-maxilofacial'],
+                    ['Implantología', 'implantologia'],
+                ],
+            ],
+            [
+                'key' => 'other_services',
+                'label' => 'Otros servicios',
+                'profile_type' => 'service',
+                'sort_order' => 30,
+                'items' => [
+                    ['Psicología', 'psicologia'],
+                    ['Nutrición', 'nutricion'],
+                    ['Fisioterapia', 'fisioterapia'],
+                    ['Enfermería', 'enfermeria'],
+                    ['Terapias y rehabilitación', 'terapias-rehabilitacion'],
+                ],
+            ],
+            [
+                'key' => 'hospitals',
+                'label' => 'Hospitales',
+                'profile_type' => 'hospital',
+                'sort_order' => 40,
+                'items' => [
+                    ['Hospitales generales', 'hospitales-generales'],
+                    ['Hospitales privados', 'hospitales-privados'],
+                    ['Urgencias', 'urgencias'],
+                    ['Maternidad', 'maternidad'],
+                    ['Cirugía', 'cirugia'],
+                ],
+            ],
+            [
+                'key' => 'clinics',
+                'label' => 'Clínicas',
+                'profile_type' => 'clinic',
+                'sort_order' => 50,
+                'items' => [
+                    ['Clínicas generales', 'clinicas-generales'],
+                    ['Clínicas dentales', 'clinicas-dentales'],
+                    ['Clínicas de especialidad', 'clinicas-especialidad'],
+                    ['Centros de diagnóstico', 'centros-diagnostico'],
+                    ['Rehabilitación', 'rehabilitacion'],
+                ],
+            ],
+            [
+                'key' => 'laboratories',
+                'label' => 'Laboratorios',
+                'profile_type' => 'laboratory',
+                'sort_order' => 60,
+                'items' => [
+                    ['Laboratorios clínicos', 'laboratorios-clinicos'],
+                    ['Imagenología', 'imagenologia'],
+                    ['Rayos X', 'rayos-x'],
+                    ['Ultrasonido', 'ultrasonido'],
+                    ['Resonancia magnética', 'resonancia-magnetica'],
+                    ['Tomografía', 'tomografia'],
+                ],
+            ],
+        ];
+
+        $contractSections = [];
+        foreach ($sections as $section) {
+            $sectionKey = (string)$section['key'];
+            $sectionSource = 'controlled_navigation_taxonomy';
+            $profileType = (string)$section['profile_type'];
+            $items = [];
+
+            foreach ($section['items'] as $index => $item) {
+                $items[] = [
+                    'label' => $item[0],
+                    'slug' => $item[1],
+                    'profile_type' => $profileType,
+                    'source' => $sectionSource,
+                    'enabled' => true,
+                    'sort_order' => (($index + 1) * 10),
+                    'route_enabled' => false,
+                    'url' => null,
+                ];
+            }
+
+            $contractSections[$sectionKey] = [
+                'key' => $sectionKey,
+                'label' => $section['label'],
+                'enabled' => true,
+                'sort_order' => $section['sort_order'],
+                'source' => $sectionSource,
+                'items' => $items,
+            ];
+        }
+
+        return [
+            'source' => 'controlled_navigation_taxonomy',
+            'version' => 'nav-taxonomy-v1',
+            'route_generation' => 'disabled',
+            'sections' => $contractSections,
+        ];
     }
 
     private function buildGeoContext(array $consultorios): array

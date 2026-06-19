@@ -756,6 +756,52 @@ Incluir en v1:
 - Detalle UX/contrato tecnico de PP-7G:
   - `docs/PERFIL_PUBLICO_MEDICO_PANEL_IDENTIDAD_PUBLICA_MXMED.md`
 
+## Adenda PP-Decisiones 06 — Taxonomia controlada de navegacion publica
+
+### A) Campo DTO publico
+- El perfil publico expone `public_navigation_taxonomy` como read-model controlado para alimentar el header publico.
+- Fuente actual: `controlled_navigation_taxonomy`.
+- Version actual: `nav-taxonomy-v1`.
+- `route_generation`: `disabled`.
+
+### B) Secciones
+- `medical_specialists`
+- `dental_specialists`
+- `other_services`
+- `hospitals`
+- `clinics`
+- `laboratories`
+
+Cada seccion incluye:
+- `key`
+- `label`
+- `enabled`
+- `sort_order`
+- `source`
+- `items`
+
+### C) Items
+Cada item incluye:
+- `label`
+- `slug`
+- `profile_type`
+- `source`
+- `enabled`
+- `sort_order`
+- `route_enabled`
+- `url`
+
+Regla vigente:
+- `source`: `controlled_navigation_taxonomy`
+- `route_enabled`: `false`
+- `url`: `null`
+
+### D) Limites vigentes
+- Los slugs son controlados por esta taxonomia visual inicial, pero aun no son rutas reales ni canonicals definitivos.
+- No se alimenta desde `profiles_doctors.specialty_primary` porque ese campo es texto libre y no representa catalogo publico estable.
+- No hay selector de estado, rutas SEO, listados publicos ni navegacion funcional en esta fase.
+- La generacion futura de URL debe combinar esta taxonomia con `geo_context`, por ejemplo `/{state_slug}/{city_slug}/{item_slug}`, en una microfase posterior.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
