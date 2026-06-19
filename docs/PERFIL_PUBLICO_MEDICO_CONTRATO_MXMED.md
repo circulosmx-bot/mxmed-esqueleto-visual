@@ -804,6 +804,75 @@ Regla vigente:
 
 ---
 
+## Adenda PP-Decisiones 07 — Contexto candidato de URL publica
+
+### A) Campo DTO publico
+- El perfil publico expone `public_url_context` como read-model derivado para preparar URLs publicas futuras.
+- Fuente actual: `derived_public_url_builder`.
+- Version actual: `public-url-v1`.
+- `route_generation`: `candidate_only`.
+- `route_enabled`: `false`.
+- `canonical_enabled`: `false`.
+
+### B) Proposito
+- Concentrar candidatos de URL para listados, perfil individual y breadcrumbs potenciales sin activar rutas reales.
+- Preparar el futuro `PublicUrlBuilder` con datos provenientes de:
+  - `geo_context`;
+  - `public_navigation_taxonomy`;
+  - especialidad principal;
+  - nombre publico del perfil.
+
+### C) Patrones candidatos
+- Listados geo-first:
+  - `/{estado}/{ciudad}/{item_slug}`
+  - Ejemplo: `/aguascalientes/aguascalientes/endocrinologos`
+- Perfil individual:
+  - candidato preferente singular si se puede derivar de forma transitoria:
+    - `/{estado}/{ciudad}/{especialidad-singular}/{slug-medico}`
+  - fallback mas estable:
+    - `/{estado}/{ciudad}/medicos/{slug-medico}`
+- Patrones legacy solo como referencia:
+  - `/{seo_category}/{ciudad}/{slug-medico}`
+  - `/{seo_category}/{estado}/{ciudad}/{slug-medico}`
+
+### D) Slugs y warnings
+- El slug de perfil se genera de forma transitoria desde `identity.display_name`.
+- Los slugs geograficos siguen siendo transitorios desde `geo_context`.
+- Los slugs de especialidad/listado vienen de `public_navigation_taxonomy`.
+- La especialidad singular no es canonica todavia; si se deriva, debe reportarse con warnings.
+- Warnings esperados:
+  - `seo_routes_not_implemented`
+  - `canonical_url_missing`
+  - `profile_slug_transient`
+  - `geo_slug_transient`
+  - `specialty_slug_transient`
+  - `slug_history_missing`
+  - `singular_specialty_not_canonical`
+  - `legacy_url_pattern_detected`
+  - `canonical_pending`
+
+### E) Breadcrumbs candidatos
+- `public_url_context.breadcrumbs` puede incluir una ruta potencial:
+  - Mexico Medico;
+  - estado;
+  - ciudad;
+  - listado/especialidad;
+  - perfil actual.
+- Estos breadcrumbs no se renderizan todavia.
+- `seo.breadcrumb` permanece vacio hasta una microfase especifica de breadcrumb read-model/canonical.
+
+### F) Limites vigentes
+- No modifica `.htaccess`.
+- No crea rutas SEO reales.
+- No activa navegacion real desde el header.
+- No modifica `public_navigation_taxonomy.items[].url`, que permanece `null`.
+- No modifica `profile.canonical_url`.
+- No modifica `seo.canonical_url`.
+- No modifica `seo.robots`.
+- No agrega JSON-LD.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf

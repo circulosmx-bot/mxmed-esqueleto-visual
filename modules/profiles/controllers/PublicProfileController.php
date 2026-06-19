@@ -104,6 +104,16 @@ final class PublicProfileController
             $description = sprintf('Perfil profesional de %s.', $displayName);
             $h1 = $displayName;
         }
+        $sanitizedSpecialties = $this->sanitizeSpecialties($specialties);
+        $publicNavigationTaxonomy = $this->buildPublicNavigationTaxonomy();
+        $publicUrlContext = $this->buildPublicUrlContext(
+            $doctorId,
+            $displayName,
+            $geoContext,
+            $publicNavigationTaxonomy,
+            $sanitizedSpecialties,
+            $identity
+        );
 
         $data = [
             'profile' => [
@@ -143,10 +153,11 @@ final class PublicProfileController
                 'services' => [],
                 'conditions_treated' => [],
             ],
-            'specialties' => $this->sanitizeSpecialties($specialties),
+            'specialties' => $sanitizedSpecialties,
             'consultorios' => $consultorios,
             'geo_context' => $geoContext,
-            'public_navigation_taxonomy' => $this->buildPublicNavigationTaxonomy(),
+            'public_navigation_taxonomy' => $publicNavigationTaxonomy,
+            'public_url_context' => $publicUrlContext,
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -363,6 +374,386 @@ final class PublicProfileController
             'route_generation' => 'disabled',
             'sections' => $contractSections,
         ];
+    }
+
+    private function buildPublicUrlContext(
+        string $doctorId,
+        ?string $displayName,
+        array $geoContext,
+        array $publicNavigationTaxonomy,
+        array $specialties,
+        array $identity
+    ): array {
+        $warnings = [
+            'seo_routes_not_implemented',
+            'canonical_url_missing',
+            'canonical_slug_missing',
+            'slug_history_missing',
+            'canonical_pending',
+        ];
+
+        $stateName = $this->firstNonEmpty($geoContext['state_name'] ?? null);
+        $stateSlug = $this->firstNonEmpty($geoContext['state_slug'] ?? null);
+        $cityName = $this->firstNonEmpty($geoContext['city_name'] ?? null);
+        $citySlug = $this->firstNonEmpty($geoContext['city_slug'] ?? null);
+        $hasGeoPath = ($stateSlug !== null && $citySlug !== null);
+        if ($hasGeoPath) {
+            $this->appendWarning($warnings, 'geo_slug_transient');
+        } else {
+            $this->appendWarning($warnings, 'geo_context_incomplete');
+        }
+
+        $profileSlug = $displayName !== null ? $this->slugifyPublicUrlText($displayName) : null;
+        if ($profileSlug !== null) {
+            $this->appendWarning($warnings, 'profile_slug_transient');
+        }
+
+        $primarySpecialty = $this->resolvePrimarySpecialtyForUrl($specialties);
+        $specialtyName = $primarySpecialty['name'] ?? null;
+        $specialtySlug = $primarySpecialty['slug'] ?? null;
+        $matchedNavigationItem = $this->findNavigationItemForSpecialty(
+            $publicNavigationTaxonomy,
+            $specialtyName,
+            $specialtySlug
+        );
+        $listingSlug = $this->firstNonEmpty($matchedNavigationItem['slug'] ?? null) ?? $specialtySlug;
+        $listingLabel = $this->resolveListingLabel(
+            $this->firstNonEmpty($matchedNavigationItem['label'] ?? null) ?? $specialtyName,
+            $listingSlug
+        );
+        if ($listingSlug !== null) {
+            $this->appendWarning($warnings, 'specialty_slug_transient');
+        }
+
+        $gender = $this->resolveProfileGenderForUrl($identity, $displayName);
+        $singularSpecialty = $this->deriveSingularSpecialtySlug($specialtyName, $specialtySlug, $gender);
+        $singularSlug = $this->firstNonEmpty($singularSpecialty['slug'] ?? null);
+        if ($singularSlug !== null) {
+            $this->appendWarning($warnings, 'specialty_singular_transient');
+            $this->appendWarning($warnings, 'singular_specialty_not_canonical');
+            if ((bool)($singularSpecialty['is_gendered'] ?? false)) {
+                $this->appendWarning($warnings, 'gendered_specialty_slug_not_canonical');
+            }
+        }
+
+        $preferredCandidateUrl = ($hasGeoPath && $singularSlug !== null && $profileSlug !== null)
+            ? $this->buildCandidatePath($stateSlug, $citySlug, $singularSlug, $profileSlug)
+            : null;
+        $fallbackCandidateUrl = ($hasGeoPath && $profileSlug !== null)
+            ? $this->buildCandidatePath($stateSlug, $citySlug, 'medicos', $profileSlug)
+            : null;
+        $profileListingCandidateUrl = ($hasGeoPath && $listingSlug !== null)
+            ? $this->buildCandidatePath($stateSlug, $citySlug, $listingSlug)
+            : null;
+
+        $legacyCandidates = [];
+        if ($listingSlug !== null && $citySlug !== null && $profileSlug !== null) {
+            $legacyCandidates[] = $this->buildCandidatePath($listingSlug, $citySlug, $profileSlug);
+            if ($stateSlug !== null) {
+                $legacyCandidates[] = $this->buildCandidatePath($listingSlug, $stateSlug, $citySlug, $profileSlug);
+            }
+            $this->appendWarning($warnings, 'legacy_url_pattern_detected');
+        }
+        $legacyCandidates = array_values(array_filter($legacyCandidates, static fn($url): bool => is_string($url) && $url !== ''));
+
+        return [
+            'source' => 'derived_public_url_builder',
+            'version' => 'public-url-v1',
+            'route_generation' => 'candidate_only',
+            'route_enabled' => false,
+            'canonical_enabled' => false,
+            'profile' => [
+                'current_url' => '/profiles/doctor.php?doctor_id=' . rawurlencode($doctorId),
+                'transient_profile_slug' => $profileSlug,
+                'preferred_candidate_url' => $preferredCandidateUrl,
+                'fallback_candidate_url' => $fallbackCandidateUrl,
+                'legacy_candidates' => $legacyCandidates,
+                'route_enabled' => false,
+                'canonical_enabled' => false,
+                'reason_disabled' => 'seo_routes_not_implemented',
+            ],
+            'listings' => $this->buildListingUrlCandidates($publicNavigationTaxonomy, $stateSlug, $citySlug),
+            'breadcrumbs' => $this->buildPublicUrlBreadcrumbCandidates(
+                $stateName,
+                $stateSlug,
+                $cityName,
+                $citySlug,
+                $listingLabel,
+                $profileListingCandidateUrl,
+                $displayName,
+                $preferredCandidateUrl ?? $fallbackCandidateUrl
+            ),
+            'warnings' => array_values(array_unique($warnings)),
+        ];
+    }
+
+    private function buildListingUrlCandidates(array $publicNavigationTaxonomy, ?string $stateSlug, ?string $citySlug): array
+    {
+        $sections = (array)($publicNavigationTaxonomy['sections'] ?? []);
+        $hasGeoPath = ($stateSlug !== null && $citySlug !== null);
+        $listingCandidates = [];
+
+        foreach ($sections as $section) {
+            if (!is_array($section) || !(bool)($section['enabled'] ?? false)) {
+                continue;
+            }
+
+            $sectionKey = $this->firstNonEmpty($section['key'] ?? null);
+            $sectionLabel = $this->firstNonEmpty($section['label'] ?? null);
+            $items = is_array($section['items'] ?? null) ? $section['items'] : [];
+            foreach ($items as $item) {
+                if (!is_array($item) || !(bool)($item['enabled'] ?? false)) {
+                    continue;
+                }
+
+                $itemSlug = $this->firstNonEmpty($item['slug'] ?? null);
+                $listingCandidates[] = [
+                    'section_key' => $sectionKey,
+                    'section_label' => $sectionLabel,
+                    'label' => $this->firstNonEmpty($item['label'] ?? null),
+                    'slug' => $itemSlug,
+                    'profile_type' => $this->firstNonEmpty($item['profile_type'] ?? null),
+                    'candidate_url' => ($hasGeoPath && $itemSlug !== null)
+                        ? $this->buildCandidatePath($stateSlug, $citySlug, $itemSlug)
+                        : null,
+                    'route_enabled' => false,
+                    'source' => 'derived_public_url_builder',
+                ];
+            }
+        }
+
+        return $listingCandidates;
+    }
+
+    private function buildPublicUrlBreadcrumbCandidates(
+        ?string $stateName,
+        ?string $stateSlug,
+        ?string $cityName,
+        ?string $citySlug,
+        ?string $listingLabel,
+        ?string $listingCandidateUrl,
+        ?string $displayName,
+        ?string $profileCandidateUrl
+    ): array {
+        $breadcrumbs = [
+            [
+                'label' => 'México Médico',
+                'candidate_url' => '/',
+                'route_enabled' => false,
+            ],
+        ];
+
+        if ($stateName !== null) {
+            $breadcrumbs[] = [
+                'label' => $stateName,
+                'candidate_url' => $stateSlug !== null ? $this->buildCandidatePath($stateSlug) : null,
+                'route_enabled' => false,
+            ];
+        }
+
+        if ($cityName !== null) {
+            $breadcrumbs[] = [
+                'label' => $cityName,
+                'candidate_url' => ($stateSlug !== null && $citySlug !== null)
+                    ? $this->buildCandidatePath($stateSlug, $citySlug)
+                    : null,
+                'route_enabled' => false,
+            ];
+        }
+
+        if ($listingLabel !== null) {
+            $breadcrumbs[] = [
+                'label' => $listingLabel,
+                'candidate_url' => $listingCandidateUrl,
+                'route_enabled' => false,
+            ];
+        }
+
+        if ($displayName !== null) {
+            $breadcrumbs[] = [
+                'label' => $displayName,
+                'candidate_url' => $profileCandidateUrl,
+                'route_enabled' => false,
+                'is_current' => true,
+            ];
+        }
+
+        return $breadcrumbs;
+    }
+
+    private function resolvePrimarySpecialtyForUrl(array $specialties): array
+    {
+        $fallback = [];
+        foreach ($specialties as $specialty) {
+            if (!is_array($specialty)) {
+                continue;
+            }
+            $name = $this->firstNonEmpty($specialty['name_es'] ?? null);
+            if ($name === null) {
+                continue;
+            }
+            $candidate = [
+                'name' => $name,
+                'slug' => $this->firstNonEmpty($specialty['slug'] ?? null) ?? $this->slugifyPublicUrlText($name),
+                'name_plural_es' => $this->firstNonEmpty($specialty['name_plural_es'] ?? null),
+            ];
+            if ((bool)($specialty['is_primary'] ?? false)) {
+                return $candidate;
+            }
+            if ($fallback === []) {
+                $fallback = $candidate;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function findNavigationItemForSpecialty(array $publicNavigationTaxonomy, ?string $specialtyName, ?string $specialtySlug): array
+    {
+        $specialtyNameSlug = $specialtyName !== null ? $this->slugifyPublicUrlText($specialtyName) : null;
+        $sections = (array)($publicNavigationTaxonomy['sections'] ?? []);
+        foreach ($sections as $section) {
+            if (!is_array($section) || (string)($section['key'] ?? '') !== 'medical_specialists') {
+                continue;
+            }
+            $items = is_array($section['items'] ?? null) ? $section['items'] : [];
+            foreach ($items as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $itemLabel = $this->firstNonEmpty($item['label'] ?? null);
+                $itemSlug = $this->firstNonEmpty($item['slug'] ?? null);
+                $itemLabelSlug = $itemLabel !== null ? $this->slugifyPublicUrlText($itemLabel) : null;
+                if (
+                    ($specialtyNameSlug !== null && $itemLabelSlug === $specialtyNameSlug)
+                    || ($specialtySlug !== null && $itemLabelSlug === $specialtySlug)
+                    || ($specialtySlug !== null && $itemSlug === $specialtySlug)
+                ) {
+                    return [
+                        'label' => $itemLabel,
+                        'slug' => $itemSlug,
+                    ];
+                }
+            }
+        }
+
+        return [];
+    }
+
+    private function resolveListingLabel(?string $label, ?string $slug): ?string
+    {
+        $slugMap = [
+            'cardiologos' => 'Cardiólogos',
+            'ginecologos' => 'Ginecólogos',
+            'pediatras' => 'Pediatras',
+            'dermatologos' => 'Dermatólogos',
+            'otorrinolaringologos' => 'Otorrinolaringólogos',
+            'endocrinologos' => 'Endocrinólogos',
+            'traumatologos-ortopedistas' => 'Traumatólogos y ortopedistas',
+            'neurologos' => 'Neurólogos',
+            'oftalmologos' => 'Oftalmólogos',
+            'urologos' => 'Urólogos',
+        ];
+
+        if ($slug !== null && isset($slugMap[$slug])) {
+            return $slugMap[$slug];
+        }
+
+        return $label;
+    }
+
+    private function deriveSingularSpecialtySlug(?string $specialtyName, ?string $specialtySlug, ?string $gender): array
+    {
+        $key = $specialtyName !== null ? $this->slugifyPublicUrlText($specialtyName) : null;
+        if ($key === null) {
+            $key = $specialtySlug;
+        }
+
+        $map = [
+            'cardiologia' => ['masculine' => 'cardiologo', 'feminine' => 'cardiologa'],
+            'ginecologia' => ['masculine' => 'ginecologo', 'feminine' => 'ginecologa'],
+            'pediatria' => ['neutral' => 'pediatra'],
+            'dermatologia' => ['masculine' => 'dermatologo', 'feminine' => 'dermatologa'],
+            'otorrinolaringologia' => ['masculine' => 'otorrinolaringologo', 'feminine' => 'otorrinolaringologa'],
+            'endocrinologia' => ['masculine' => 'endocrinologo', 'feminine' => 'endocrinologa'],
+            'neurologia' => ['masculine' => 'neurologo', 'feminine' => 'neurologa'],
+            'oftalmologia' => ['masculine' => 'oftalmologo', 'feminine' => 'oftalmologa'],
+            'urologia' => ['masculine' => 'urologo', 'feminine' => 'urologa'],
+        ];
+
+        if ($key === null || !isset($map[$key])) {
+            return ['slug' => null, 'is_gendered' => false];
+        }
+
+        $entry = $map[$key];
+        if (isset($entry['neutral'])) {
+            return ['slug' => $entry['neutral'], 'is_gendered' => false];
+        }
+
+        if ($gender === 'feminine' && isset($entry['feminine'])) {
+            return ['slug' => $entry['feminine'], 'is_gendered' => true];
+        }
+
+        return ['slug' => $entry['masculine'] ?? null, 'is_gendered' => true];
+    }
+
+    private function resolveProfileGenderForUrl(array $identity, ?string $displayName): ?string
+    {
+        $genderLabel = $this->firstNonEmpty($identity['gender_label'] ?? null);
+        if ($genderLabel !== null) {
+            $genderKey = $this->slugifyPublicUrlText($genderLabel);
+            if (in_array($genderKey, ['femenino', 'mujer', 'female'], true)) {
+                return 'feminine';
+            }
+            if (in_array($genderKey, ['masculino', 'hombre', 'male'], true)) {
+                return 'masculine';
+            }
+        }
+
+        $prefix = $this->firstNonEmpty($identity['prefix'] ?? null);
+        $prefixKey = $prefix !== null ? $this->slugifyPublicUrlText($prefix) : '';
+        if (in_array($prefixKey, ['dra', 'doctora'], true)) {
+            return 'feminine';
+        }
+        if (in_array($prefixKey, ['dr', 'doctor'], true)) {
+            return 'masculine';
+        }
+
+        $nameKey = $displayName !== null ? $this->slugifyPublicUrlText($displayName) : '';
+        if (strpos($nameKey, 'dra-') === 0 || strpos($nameKey, 'doctora-') === 0) {
+            return 'feminine';
+        }
+        if (strpos($nameKey, 'dr-') === 0 || strpos($nameKey, 'doctor-') === 0) {
+            return 'masculine';
+        }
+
+        return null;
+    }
+
+    private function slugifyPublicUrlText(?string $value): ?string
+    {
+        return $this->slugifyGeoText($value);
+    }
+
+    private function buildCandidatePath(?string ...$segments): ?string
+    {
+        $clean = [];
+        foreach ($segments as $segment) {
+            $part = $this->firstNonEmpty($segment);
+            if ($part === null) {
+                return null;
+            }
+            $clean[] = trim($part, '/');
+        }
+
+        return '/' . implode('/', $clean);
+    }
+
+    private function appendWarning(array &$warnings, string $warning): void
+    {
+        if (!in_array($warning, $warnings, true)) {
+            $warnings[] = $warning;
+        }
     }
 
     private function buildGeoContext(array $consultorios): array
