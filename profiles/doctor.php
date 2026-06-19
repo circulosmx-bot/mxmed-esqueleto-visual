@@ -553,7 +553,13 @@ if (isLocalDevRequest()) {
             <?php endif; ?>
 
             <?php if ($reviewsVisible): ?>
-              <p class="mxpp-opinions">★★★★★ <?= h((string)$reviewCount) ?> opiniones<?= $ratingAvg !== null ? ' · ' . h((string)$ratingAvg) : '' ?></p>
+              <div class="mxpp-rating-row" aria-label="Calificación y opiniones">
+                <p class="mxpp-rating-pill">
+                  <span class="mxpp-rating-stars" aria-hidden="true">★★★★★</span>
+                  <span class="mxpp-rating-count"><?= h((string)$reviewCount) ?> opiniones<?= $ratingAvg !== null ? ' · ' . h((string)$ratingAvg) : '' ?></span>
+                </p>
+                <span class="mxpp-rating-write-link">escribir una opinión</span>
+              </div>
             <?php else: ?>
               <p class="mxpp-opinions mxpp-opinions--muted">Opiniones públicas no disponibles por ahora.</p>
             <?php endif; ?>
