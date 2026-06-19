@@ -401,7 +401,7 @@ body {
   background: linear-gradient(90deg, #12aeb7 0%, #0a9ea8 100%);
   border: 1px solid #0a98a2;
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
   box-shadow: 0 10px 22px rgba(10, 158, 168, 0.18);
 }
@@ -441,10 +441,11 @@ body {
 
 .mxpp-profile-title {
   margin: 0;
-  font-size: clamp(1.66rem, 2.45vw, 2.12rem);
-  line-height: 1.08;
-  letter-spacing: -0.012em;
-  font-weight: 800;
+  font-family: "Asap", sans-serif;
+  font-size: clamp(1.7rem, 2.28vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: 0;
+  font-weight: 700;
 }
 
 .mxpp-profile-title--pending {
@@ -489,10 +490,11 @@ body {
 
 .mxpp-specialty {
   margin: 0.18rem 0;
-  font-size: 1.36rem;
+  font-family: "Asap", sans-serif;
+  font-size: clamp(1.45rem, 2.1vw, 1.75rem);
   line-height: 1.1;
   text-transform: uppercase;
-  font-weight: 800;
+  font-weight: 900;
 }
 
 .mxpp-license-block p {
@@ -512,8 +514,14 @@ body {
   flex-wrap: wrap;
   gap: 0.34rem;
   align-items: center;
-  font-size: 0.86rem;
-  line-height: 1.35;
+  font-family: "Asap", sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.mxpp-licenses-inline strong {
+  font-weight: 400;
 }
 
 .mxpp-license-divider {
@@ -522,9 +530,11 @@ body {
 
 .mxpp-bio {
   margin: 0.38rem 0 0;
-  font-size: 0.88rem;
-  color: #36505c;
-  line-height: 1.34;
+  font-family: "Baloo 2", cursive;
+  font-size: clamp(1.08rem, 1.75vw, 1.5rem);
+  font-weight: 500;
+  color: #173f56;
+  line-height: 1.1;
 }
 
 .mxpp-bio--pending {

@@ -441,6 +441,9 @@ if (isLocalDevRequest()) {
   <?php if ($canonicalUrl !== null): ?>
     <link rel="canonical" href="<?= h($canonicalUrl) ?>" />
   <?php endif; ?>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600;700;900&family=Baloo+2:wght@500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
   <?php if ($renderJsonLd): ?>
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
