@@ -30,7 +30,7 @@ body {
 }
 
 .mxpp-platform-header__brand {
-  padding: 0.78rem 0 0.66rem;
+  padding: 0.56rem 0 0.46rem;
   background: #fff;
 }
 
@@ -42,20 +42,20 @@ body {
 .mxpp-platform-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.78rem;
+  gap: 0.68rem;
   color: #123d59;
 }
 
 .mxpp-platform-brand__grid {
   display: grid;
-  grid-template-columns: repeat(3, 13px);
-  gap: 5px;
+  grid-template-columns: repeat(3, 12px);
+  gap: 4px;
   flex: 0 0 auto;
 }
 
 .mxpp-platform-brand__grid span {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   border-radius: 4px;
   background: #d0d8dd;
 }
@@ -80,40 +80,42 @@ body {
 
 .mxpp-platform-brand__mark {
   color: #123d59;
-  font-size: clamp(1.86rem, 3.8vw, 2.55rem);
+  font-size: clamp(1.68rem, 3.2vw, 2.22rem);
   font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 0.96;
+  letter-spacing: -0.015em;
+  line-height: 0.98;
 }
 
 .mxpp-platform-brand__region {
-  margin-top: 0.15rem !important;
+  margin-top: 0.12rem !important;
   color: #0a95a4;
-  font-size: 1.05rem;
-  font-weight: 800;
+  font-size: 0.92rem;
+  font-weight: 700;
   line-height: 1;
 }
 
 .mxpp-platform-brand__tagline {
-  margin-top: 0.16rem !important;
+  margin-top: 0.12rem !important;
   color: #174b63;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.1;
 }
 
 .mxpp-platform-nav {
-  background: linear-gradient(90deg, #45b1b8 0%, #43aeb6 48%, #3da7b0 100%);
+  background: linear-gradient(90deg, #48b1b8 0%, #43aeb6 52%, #3fa7af 100%);
 }
 
 .mxpp-platform-nav__inner {
-  min-height: 45px;
+  min-height: 39px;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.36rem;
+  gap: 0.22rem;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mxpp-platform-nav__item {
@@ -124,10 +126,10 @@ body {
   color: #fff;
   cursor: default;
   font: inherit;
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: 0.94rem;
+  font-weight: 700;
   line-height: 1.1;
-  padding: 0.48rem 0.74rem;
+  padding: 0.5rem 0.7rem;
   text-align: center;
   white-space: nowrap;
 }
