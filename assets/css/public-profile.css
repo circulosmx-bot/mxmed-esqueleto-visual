@@ -75,27 +75,36 @@ body {
 
 .mxpp-platform-nav {
   background: linear-gradient(90deg, #48b1b8 0%, #43aeb6 52%, #3fa7af 100%);
+  position: relative;
+  z-index: 30;
 }
 
 .mxpp-platform-nav__inner {
   min-height: 39px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 0.22rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
+  gap: 0.18rem;
+  overflow: visible;
+}
+
+.mxpp-platform-nav__menu {
+  position: relative;
+  flex: 1 0 max-content;
+  display: flex;
 }
 
 .mxpp-platform-nav__item {
-  flex: 1 0 max-content;
+  width: 100%;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: #fff;
-  cursor: default;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
   font: inherit;
   font-size: 0.94rem;
   font-weight: 700;
@@ -105,9 +114,80 @@ body {
   white-space: nowrap;
 }
 
+.mxpp-platform-nav__menu:hover .mxpp-platform-nav__item,
+.mxpp-platform-nav__menu:focus-within .mxpp-platform-nav__item,
+.mxpp-platform-nav__menu--open .mxpp-platform-nav__item {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .mxpp-platform-nav__item:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.82);
   outline-offset: -4px;
+}
+
+.mxpp-platform-nav__chevron {
+  font-size: 0.84em;
+  line-height: 1;
+  transform: translateY(-1px);
+  transition: transform 0.16s ease;
+}
+
+.mxpp-platform-nav__menu:hover .mxpp-platform-nav__chevron,
+.mxpp-platform-nav__menu:focus-within .mxpp-platform-nav__chevron,
+.mxpp-platform-nav__menu--open .mxpp-platform-nav__chevron {
+  transform: translateY(-1px) rotate(180deg);
+}
+
+.mxpp-platform-dropdown {
+  position: absolute;
+  top: calc(100% + 0.28rem);
+  left: 50%;
+  z-index: 60;
+  width: max-content;
+  min-width: 218px;
+  max-width: min(310px, calc(100vw - 2rem));
+  padding: 0.42rem;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 57, 82, 0.16);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -0.22rem);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+  visibility: hidden;
+}
+
+.mxpp-platform-nav__menu:hover .mxpp-platform-dropdown,
+.mxpp-platform-nav__menu:focus-within .mxpp-platform-dropdown,
+.mxpp-platform-nav__menu--open .mxpp-platform-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+
+.mxpp-platform-dropdown__item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #123d59;
+  cursor: default;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.22;
+  padding: 0.48rem 0.58rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.mxpp-platform-dropdown__item:hover,
+.mxpp-platform-dropdown__item:focus-visible {
+  background: #eaf8fa;
+  color: #0a7184;
+  outline: 0;
 }
 
 .mxpp-header {
@@ -1338,11 +1418,32 @@ body {
 
 @media (max-width: 920px) {
   .mxpp-platform-nav__inner {
-    justify-content: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.16rem;
+    padding: 0.18rem 0;
   }
 
-  .mxpp-platform-nav__item {
-    flex: 0 0 auto;
+  .mxpp-platform-nav__menu {
+    flex: 1 1 calc(33.333% - 0.24rem);
+    min-width: 172px;
+  }
+
+  .mxpp-platform-dropdown {
+    left: 0;
+    min-width: min(260px, calc(100vw - 1rem));
+    transform: translateY(-0.22rem);
+  }
+
+  .mxpp-platform-nav__menu:hover .mxpp-platform-dropdown,
+  .mxpp-platform-nav__menu:focus-within .mxpp-platform-dropdown,
+  .mxpp-platform-nav__menu--open .mxpp-platform-dropdown {
+    transform: translateY(0);
+  }
+
+  .mxpp-platform-nav__menu:nth-child(3n) .mxpp-platform-dropdown {
+    right: 0;
+    left: auto;
   }
 
   .mxpp-header__bar-wrap {
@@ -1428,6 +1529,30 @@ body {
   .mxpp-platform-nav__item {
     font-size: 0.86rem;
     padding: 0.42rem 0.58rem;
+  }
+
+  .mxpp-platform-nav__menu {
+    flex: 1 1 calc(50% - 0.18rem);
+    min-width: 148px;
+  }
+
+  .mxpp-platform-dropdown {
+    min-width: min(245px, calc(100vw - 1rem));
+  }
+
+  .mxpp-platform-nav__menu:nth-child(odd) .mxpp-platform-dropdown {
+    left: 0;
+    right: auto;
+  }
+
+  .mxpp-platform-nav__menu:nth-child(even) .mxpp-platform-dropdown {
+    left: auto;
+    right: 0;
+  }
+
+  .mxpp-platform-dropdown__item {
+    font-size: 0.88rem;
+    padding: 0.43rem 0.52rem;
   }
 
   .mxpp-dev-plan-switcher {

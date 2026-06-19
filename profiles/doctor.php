@@ -348,6 +348,82 @@ $geoCitySlug = toText($geoContext['city_slug'] ?? null);
 $geoSource = toText($geoContext['source'] ?? null);
 $geoIsNational = toBool($geoContext['is_national'] ?? false);
 $platformRegionLabel = $geoStateName;
+$platformNavItems = [
+    [
+        'id' => 'medicos',
+        'label' => 'Especialistas Médicos',
+        'items' => [
+            'Cardiología',
+            'Ginecología',
+            'Pediatría',
+            'Dermatología',
+            'Otorrinolaringología',
+            'Endocrinología',
+            'Traumatología y Ortopedia',
+            'Neurología',
+            'Oftalmología',
+            'Urología',
+        ],
+    ],
+    [
+        'id' => 'dentales',
+        'label' => 'Especialistas Dentales',
+        'items' => [
+            'Odontología general',
+            'Ortodoncia',
+            'Endodoncia',
+            'Periodoncia',
+            'Odontopediatría',
+            'Cirugía maxilofacial',
+            'Implantología',
+        ],
+    ],
+    [
+        'id' => 'servicios',
+        'label' => 'Otros servicios',
+        'items' => [
+            'Psicología',
+            'Nutrición',
+            'Fisioterapia',
+            'Enfermería',
+            'Terapias y rehabilitación',
+        ],
+    ],
+    [
+        'id' => 'hospitales',
+        'label' => 'Hospitales',
+        'items' => [
+            'Hospitales generales',
+            'Hospitales privados',
+            'Urgencias',
+            'Maternidad',
+            'Cirugía',
+        ],
+    ],
+    [
+        'id' => 'clinicas',
+        'label' => 'Clínicas',
+        'items' => [
+            'Clínicas generales',
+            'Clínicas dentales',
+            'Clínicas de especialidad',
+            'Centros de diagnóstico',
+            'Rehabilitación',
+        ],
+    ],
+    [
+        'id' => 'laboratorios',
+        'label' => 'Laboratorios',
+        'items' => [
+            'Laboratorios clínicos',
+            'Imagenología',
+            'Rayos X',
+            'Ultrasonido',
+            'Resonancia magnética',
+            'Tomografía',
+        ],
+    ],
+];
 
 $consultorioPanels = [];
 foreach ($consultorios as $index => $consultorio) {
@@ -521,12 +597,45 @@ if (isLocalDevRequest()) {
     </div>
     <div class="mxpp-platform-nav" aria-label="Secciones de México Médico">
       <div class="mxpp-wrap mxpp-platform-nav__inner">
-        <button type="button" class="mxpp-platform-nav__item">Especialistas Médicos</button>
-        <button type="button" class="mxpp-platform-nav__item">Especialistas Dentales</button>
-        <button type="button" class="mxpp-platform-nav__item">Otros servicios</button>
-        <button type="button" class="mxpp-platform-nav__item">Hospitales</button>
-        <button type="button" class="mxpp-platform-nav__item">Clínicas</button>
-        <button type="button" class="mxpp-platform-nav__item">Laboratorios</button>
+        <?php foreach ($platformNavItems as $navItem): ?>
+          <?php
+            $navId = toText($navItem['id'] ?? null) ?? 'item';
+            $navLabel = toText($navItem['label'] ?? null) ?? 'Sección';
+            $navOptions = safeArray($navItem['items'] ?? []);
+            $navButtonId = 'mxpp-platform-nav-button-' . $navId;
+            $navPanelId = 'mxpp-platform-dropdown-' . $navId;
+          ?>
+          <div class="mxpp-platform-nav__menu" data-mxpp-platform-menu>
+            <button
+              type="button"
+              class="mxpp-platform-nav__item"
+              id="<?= h($navButtonId) ?>"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="<?= h($navPanelId) ?>"
+              data-mxpp-platform-menu-button
+              <?php if ($geoStateSlug !== null): ?>data-nav-context-state="<?= h($geoStateSlug) ?>"<?php endif; ?>
+              <?php if ($geoCitySlug !== null): ?>data-nav-context-city="<?= h($geoCitySlug) ?>"<?php endif; ?>
+            >
+              <span><?= h($navLabel) ?></span>
+              <span class="mxpp-platform-nav__chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div
+              class="mxpp-platform-dropdown"
+              id="<?= h($navPanelId) ?>"
+              role="menu"
+              aria-labelledby="<?= h($navButtonId) ?>"
+              data-mxpp-platform-dropdown
+            >
+              <?php foreach ($navOptions as $navOption): ?>
+                <?php $navOptionLabel = toText($navOption); ?>
+                <?php if ($navOptionLabel !== null): ?>
+                  <button type="button" class="mxpp-platform-dropdown__item" role="menuitem"><?= h($navOptionLabel) ?></button>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endforeach; ?>
       </div>
     </div>
   </header>
@@ -932,6 +1041,91 @@ if (isLocalDevRequest()) {
   <?php endif; ?>
   <script>
     (function () {
+      function initPlatformMenus() {
+        var menus = Array.prototype.slice.call(document.querySelectorAll('[data-mxpp-platform-menu]'));
+
+        function closeMenu(menu) {
+          var button = menu.querySelector('[data-mxpp-platform-menu-button]');
+          menu.classList.remove('mxpp-platform-nav__menu--open');
+          if (button) {
+            button.setAttribute('aria-expanded', 'false');
+          }
+        }
+
+        function openMenu(menu) {
+          var button = menu.querySelector('[data-mxpp-platform-menu-button]');
+          menus.forEach(function (item) {
+            if (item !== menu) {
+              closeMenu(item);
+            }
+          });
+          menu.classList.add('mxpp-platform-nav__menu--open');
+          if (button) {
+            button.setAttribute('aria-expanded', 'true');
+          }
+        }
+
+        if (!menus.length) {
+          return;
+        }
+
+        menus.forEach(function (menu) {
+          var button = menu.querySelector('[data-mxpp-platform-menu-button]');
+          var options = Array.prototype.slice.call(menu.querySelectorAll('.mxpp-platform-dropdown__item'));
+
+          if (!button) {
+            return;
+          }
+
+          button.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (menu.classList.contains('mxpp-platform-nav__menu--open')) {
+              closeMenu(menu);
+            } else {
+              openMenu(menu);
+            }
+          });
+
+          menu.addEventListener('mouseenter', function () {
+            openMenu(menu);
+          });
+
+          menu.addEventListener('mouseleave', function () {
+            closeMenu(menu);
+          });
+
+          menu.addEventListener('focusin', function () {
+            openMenu(menu);
+          });
+
+          menu.addEventListener('focusout', function (event) {
+            if (!menu.contains(event.relatedTarget)) {
+              closeMenu(menu);
+            }
+          });
+
+          options.forEach(function (option) {
+            option.addEventListener('click', function (event) {
+              event.preventDefault();
+              closeMenu(menu);
+              button.focus();
+            });
+          });
+        });
+
+        document.addEventListener('click', function (event) {
+          if (!event.target.closest('[data-mxpp-platform-menu]')) {
+            menus.forEach(closeMenu);
+          }
+        });
+
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') {
+            menus.forEach(closeMenu);
+          }
+        });
+      }
+
       function initConsultorioSwitcher(switcher) {
         var tabs = Array.prototype.slice.call(switcher.querySelectorAll('[data-mxpp-consultorio-tab]'));
         var panels = Array.prototype.slice.call(switcher.querySelectorAll('[data-mxpp-consultorio-panel]'));
@@ -973,6 +1167,7 @@ if (isLocalDevRequest()) {
         });
       }
 
+      initPlatformMenus();
       document.querySelectorAll('[data-mxpp-consultorio-switcher]').forEach(initConsultorioSwitcher);
     })();
   </script>
