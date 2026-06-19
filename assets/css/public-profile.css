@@ -6,7 +6,7 @@
   --mxpp-teal: #0ca7b1;
   --mxpp-teal-dark: #0b7689;
   --mxpp-border: #e0edf2;
-  --mxpp-shadow: 0 3px 10px rgba(15, 58, 78, 0.04);
+  --mxpp-shadow: none;
 }
 
 * {
@@ -220,7 +220,7 @@ body {
   gap: 1.25rem;
   align-items: center;
   background: #fff;
-  border: 1px solid rgba(12, 84, 98, 0.14);
+  border: 1px solid transparent;
   border-radius: 9px;
   box-shadow: var(--mxpp-shadow);
   padding: 0.78rem 1rem;
@@ -228,7 +228,7 @@ body {
 
 .mxpp-card {
   background: var(--mxpp-surface);
-  border: 1px solid rgba(12, 84, 98, 0.14);
+  border: 1px solid transparent;
   border-radius: 9px;
   box-shadow: var(--mxpp-shadow);
 }
@@ -360,6 +360,7 @@ body {
 
 .mxpp-action-link {
   background: #fff;
+  border-color: transparent;
   color: #0d4f64;
   font-weight: 600;
 }
@@ -442,11 +443,11 @@ body {
 .mxpp-profile-title {
   margin: 0;
   font-family: "Asap", sans-serif;
-  font-size: clamp(1.82rem, 2.52vw, 2.18rem);
-  line-height: 1.08;
+  font-size: clamp(1.78rem, 2.42vw, 2.08rem);
+  line-height: 1.06;
   letter-spacing: 0;
-  font-weight: 700;
-  color: #103a57;
+  font-weight: 500;
+  color: #123d59;
 }
 
 .mxpp-profile-title--pending {
@@ -490,13 +491,14 @@ body {
 }
 
 .mxpp-specialty {
-  margin: 0.1rem 0 0.12rem;
+  margin: 0.08rem 0 0.14rem;
   font-family: "Asap", sans-serif;
-  font-size: clamp(1.58rem, 2.25vw, 1.9rem);
-  line-height: 1.06;
+  font-size: clamp(1.45rem, 2.08vw, 1.78rem);
+  line-height: 1.08;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
-  font-weight: 900;
-  color: #103a57;
+  font-weight: 600;
+  color: #123d59;
 }
 
 .mxpp-license-block p {
@@ -534,7 +536,7 @@ body {
   margin: 0.38rem 0 0;
   font-family: "Baloo 2", cursive;
   font-size: clamp(1.08rem, 1.75vw, 1.5rem);
-  font-weight: 500;
+  font-weight: 400;
   color: #173f56;
   line-height: 1.1;
 }
@@ -552,7 +554,9 @@ body {
 
 .mxpp-consultas-note {
   margin: 0.34rem 0 0;
-  font-size: 0.86rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.35;
   color: #0f7a9b;
 }
 
@@ -578,7 +582,7 @@ body {
 .mxpp-institutional__placeholder {
   height: clamp(180px, 30vw, 280px);
   border-radius: 10px;
-  border: 1px solid var(--mxpp-border);
+  border: 1px solid transparent;
   background:
     linear-gradient(125deg, rgba(255, 255, 255, 0.68) 0%, rgba(255, 255, 255, 0.32) 100%),
     linear-gradient(112deg, #d2dee5 0%, #ebf0f3 44%, #cedbe2 100%);
@@ -1049,7 +1053,7 @@ body {
 }
 
 .mxpp-review-strip {
-  border: 1px solid rgba(12, 84, 98, 0.14);
+  border: 1px solid transparent;
   border-radius: 9px;
   background: #fff;
   padding: 0.62rem 0.75rem;
