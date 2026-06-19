@@ -1221,6 +1221,54 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 16 — Canonical Render Guard
+
+### A) Campo del DTO
+- El DTO publico expone `canonical_render_guard` como llave de primer nivel.
+- La fuente del guard es `public_canonical_route`.
+- Version actual: `canonical-render-guard-v1`.
+- El objetivo es centralizar las condiciones futuras para renderizar `<link rel="canonical">`.
+
+### B) Condiciones futuras requeridas
+- Ruta persistida en `public_profile_seo_routes`.
+- `status=active`.
+- `route_enabled=1`.
+- `canonical_enabled=1`.
+- `robots` debe permitir indexacion.
+- Router SEO publico implementado.
+- Renderer canonical habilitado por fase explicita.
+
+### C) Estado actual de doctor_id=1
+- `enabled=false`.
+- `can_render=false`.
+- `candidate_path=/aguascalientes/aguascalientes/medicos/dra-leticia-munoz-romo`.
+- `canonical_url=null`.
+- `requires.route_persisted=true`.
+- `requires.status_active=false`.
+- `requires.route_enabled=false`.
+- `requires.canonical_enabled=false`.
+- `requires.robots_index_allowed=false`.
+- `requires.seo_router_enabled=false`.
+- `requires.canonical_renderer_enabled=false`.
+- `blocking_reasons` incluye `status_candidate`, `route_disabled`, `canonical_disabled`, `robots_noindex_active`, `seo_router_not_implemented` y `canonical_renderer_not_enabled`.
+
+### D) Limites vigentes
+- Ruta persistida no significa canonical activo.
+- `status=candidate` bloquea canonical.
+- `route_enabled=0` bloquea router.
+- `canonical_enabled=0` bloquea canonical.
+- `robots=noindex,nofollow` bloquea indexacion.
+- `seo_router_enabled=false` bloquea rutas/canonical reales.
+- `canonical_renderer_enabled=false` bloquea `<link rel="canonical">`.
+- No se modifica SSR.
+- No se modifica DB.
+- No se activa canonical.
+- No se activa JSON-LD real.
+- No se cambia `seo.robots`.
+- No se modifica `.htaccess`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf

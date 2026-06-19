@@ -120,6 +120,18 @@ final class PublicProfileController
             $this->repository->findPublicCanonicalRoute('doctor', $doctorId),
             $publicUrlContext
         );
+        $seo = [
+            'title' => $title,
+            'description' => $description,
+            'h1' => $h1,
+            'canonical_url' => null,
+            'robots' => 'noindex,nofollow',
+            'og_title' => $title,
+            'og_description' => $description,
+            'og_image' => $this->firstNonEmpty($identity['photo_url'] ?? null),
+            'breadcrumb' => [],
+        ];
+        $canonicalRenderGuard = $this->buildCanonicalRenderGuard($publicCanonicalRoute, $seo);
 
         $data = [
             'profile' => [
@@ -165,6 +177,7 @@ final class PublicProfileController
             'public_navigation_taxonomy' => $publicNavigationTaxonomy,
             'public_url_context' => $publicUrlContext,
             'public_canonical_route' => $publicCanonicalRoute,
+            'canonical_render_guard' => $canonicalRenderGuard,
             'public_breadcrumbs' => $this->buildPublicBreadcrumbs($publicUrlContext, $geoContext),
             'schedule' => $schedule,
             'contact' => $contact,
@@ -172,17 +185,7 @@ final class PublicProfileController
             'commercial_visibility' => (array)$planContract['commercial_visibility'],
             'reviews' => (array)$planContract['reviews'],
             'claim' => (array)$planContract['claim'],
-            'seo' => [
-                'title' => $title,
-                'description' => $description,
-                'h1' => $h1,
-                'canonical_url' => null,
-                'robots' => 'noindex,nofollow',
-                'og_title' => $title,
-                'og_description' => $description,
-                'og_image' => $this->firstNonEmpty($identity['photo_url'] ?? null),
-                'breadcrumb' => [],
-            ],
+            'seo' => $seo,
             'json_ld' => null,
             'ecosystem_links' => [
                 'medical_groups' => [],
@@ -612,6 +615,63 @@ final class PublicProfileController
             'can_route' => false,
             'candidate_path_from_builder' => $candidatePath,
             'warnings' => array_values(array_unique($warnings)),
+            'blocking_reasons' => array_values(array_unique($blockingReasons)),
+        ];
+    }
+
+    private function buildCanonicalRenderGuard(array $publicCanonicalRoute, array $seo): array
+    {
+        $status = $this->firstNonEmpty($publicCanonicalRoute['status'] ?? null);
+        $candidatePath = $this->firstNonEmpty($publicCanonicalRoute['canonical_path'] ?? null)
+            ?? $this->firstNonEmpty($publicCanonicalRoute['candidate_path_from_builder'] ?? null);
+        $routePersisted = (bool)($publicCanonicalRoute['found'] ?? false);
+        $statusActive = ($status === 'active');
+        $routeEnabled = ((bool)($publicCanonicalRoute['route_enabled'] ?? false) === true);
+        $canonicalEnabled = ((bool)($publicCanonicalRoute['canonical_enabled'] ?? false) === true);
+        $robots = strtolower((string)($seo['robots'] ?? ''));
+        $robotsIndexAllowed = ($robots !== '' && !str_contains($robots, 'noindex'));
+        $seoRouterEnabled = false;
+        $canonicalRendererEnabled = false;
+
+        $blockingReasons = [];
+        if (!$routePersisted) {
+            $blockingReasons[] = 'canonical_route_not_persisted';
+        }
+        if (!$statusActive) {
+            $blockingReasons[] = $status ? ('status_' . $status) : 'status_unknown';
+        }
+        if (!$routeEnabled) {
+            $blockingReasons[] = 'route_disabled';
+        }
+        if (!$canonicalEnabled) {
+            $blockingReasons[] = 'canonical_disabled';
+        }
+        if (!$robotsIndexAllowed) {
+            $blockingReasons[] = 'robots_noindex_active';
+        }
+        if (!$seoRouterEnabled) {
+            $blockingReasons[] = 'seo_router_not_implemented';
+        }
+        if (!$canonicalRendererEnabled) {
+            $blockingReasons[] = 'canonical_renderer_not_enabled';
+        }
+
+        return [
+            'source' => 'public_canonical_route',
+            'version' => 'canonical-render-guard-v1',
+            'enabled' => false,
+            'can_render' => false,
+            'candidate_path' => $candidatePath,
+            'canonical_url' => null,
+            'requires' => [
+                'route_persisted' => $routePersisted,
+                'status_active' => $statusActive,
+                'route_enabled' => $routeEnabled,
+                'canonical_enabled' => $canonicalEnabled,
+                'robots_index_allowed' => $robotsIndexAllowed,
+                'seo_router_enabled' => $seoRouterEnabled,
+                'canonical_renderer_enabled' => $canonicalRendererEnabled,
+            ],
             'blocking_reasons' => array_values(array_unique($blockingReasons)),
         ];
     }
