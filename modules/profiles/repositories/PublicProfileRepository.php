@@ -49,6 +49,76 @@ final class PublicProfileRepository
         ];
     }
 
+    public function findPublicCanonicalRoute(string $entityType, string $entityId): ?array
+    {
+        $entityType = trim($entityType);
+        $entityId = trim($entityId);
+        if ($entityType === '' || $entityId === '') {
+            return null;
+        }
+
+        try {
+            if (!$this->tableExists('public_profile_seo_routes')) {
+                return null;
+            }
+
+            $columns = $this->tableColumns('public_profile_seo_routes');
+            $required = [
+                'entity_type',
+                'entity_id',
+                'profile_type',
+                'profile_slug',
+                'canonical_path',
+                'canonical_state_slug',
+                'canonical_city_slug',
+                'canonical_specialty_slug',
+                'status',
+                'route_enabled',
+                'canonical_enabled',
+                'source',
+                'version',
+                'created_at',
+                'updated_at',
+            ];
+            foreach ($required as $column) {
+                if (!in_array($column, $columns, true)) {
+                    return null;
+                }
+            }
+
+            $sql = 'SELECT
+                        `entity_type`,
+                        `entity_id`,
+                        `profile_type`,
+                        `profile_slug`,
+                        `canonical_path`,
+                        `canonical_state_slug`,
+                        `canonical_city_slug`,
+                        `canonical_specialty_slug`,
+                        `status`,
+                        `route_enabled`,
+                        `canonical_enabled`,
+                        `source`,
+                        `version`,
+                        `created_at`,
+                        `updated_at`
+                    FROM `public_profile_seo_routes`
+                    WHERE `entity_type` = :entity_type
+                      AND `entity_id` = :entity_id
+                    LIMIT 1';
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+            ]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return null;
+        }
+
+        return is_array($row) ? $row : null;
+    }
+
     private function doctorHasAppointments(string $doctorId): bool
     {
         $configPath = __DIR__ . '/../../agenda/config/agenda.php';

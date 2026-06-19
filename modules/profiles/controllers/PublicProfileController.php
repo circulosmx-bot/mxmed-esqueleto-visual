@@ -114,6 +114,12 @@ final class PublicProfileController
             $sanitizedSpecialties,
             $identity
         );
+        $publicCanonicalRoute = $this->buildPublicCanonicalRoute(
+            'doctor',
+            $doctorId,
+            $this->repository->findPublicCanonicalRoute('doctor', $doctorId),
+            $publicUrlContext
+        );
 
         $data = [
             'profile' => [
@@ -158,6 +164,7 @@ final class PublicProfileController
             'geo_context' => $geoContext,
             'public_navigation_taxonomy' => $publicNavigationTaxonomy,
             'public_url_context' => $publicUrlContext,
+            'public_canonical_route' => $publicCanonicalRoute,
             'public_breadcrumbs' => $this->buildPublicBreadcrumbs($publicUrlContext, $geoContext),
             'schedule' => $schedule,
             'contact' => $contact,
@@ -485,6 +492,78 @@ final class PublicProfileController
                 $preferredCandidateUrl ?? $fallbackCandidateUrl
             ),
             'warnings' => array_values(array_unique($warnings)),
+        ];
+    }
+
+    private function buildPublicCanonicalRoute(
+        string $entityType,
+        string $entityId,
+        ?array $routeRow,
+        array $publicUrlContext
+    ): array {
+        $candidatePath = $this->firstNonEmpty($publicUrlContext['profile']['fallback_candidate_url'] ?? null);
+
+        if (!is_array($routeRow)) {
+            return [
+                'source' => 'public_profile_seo_routes',
+                'version' => 'canonical-route-readmodel-v1',
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'found' => false,
+                'status' => null,
+                'profile_slug' => null,
+                'canonical_path' => null,
+                'canonical_url' => null,
+                'canonical_state_slug' => null,
+                'canonical_city_slug' => null,
+                'canonical_specialty_slug' => null,
+                'route_enabled' => false,
+                'canonical_enabled' => false,
+                'can_render_canonical' => false,
+                'can_route' => false,
+                'candidate_path_from_builder' => $candidatePath,
+                'warnings' => [
+                    'canonical_route_not_persisted',
+                    'canonical_not_enabled',
+                    'route_not_enabled',
+                    'robots_noindex_active',
+                ],
+            ];
+        }
+
+        $routeEnabled = ((int)($routeRow['route_enabled'] ?? 0) === 1);
+        $canonicalEnabled = ((int)($routeRow['canonical_enabled'] ?? 0) === 1);
+        $warnings = ['canonical_route_candidate_only', 'robots_noindex_active'];
+        if (!$canonicalEnabled) {
+            $warnings[] = 'canonical_not_enabled';
+        } else {
+            $warnings[] = 'canonical_rendering_not_enabled';
+        }
+        if (!$routeEnabled) {
+            $warnings[] = 'route_not_enabled';
+        } else {
+            $warnings[] = 'seo_router_not_implemented';
+        }
+
+        return [
+            'source' => 'public_profile_seo_routes',
+            'version' => 'canonical-route-readmodel-v1',
+            'entity_type' => $this->firstNonEmpty($routeRow['entity_type'] ?? null) ?? $entityType,
+            'entity_id' => $this->firstNonEmpty($routeRow['entity_id'] ?? null) ?? $entityId,
+            'found' => true,
+            'status' => $this->firstNonEmpty($routeRow['status'] ?? null),
+            'profile_slug' => $this->firstNonEmpty($routeRow['profile_slug'] ?? null),
+            'canonical_path' => $this->firstNonEmpty($routeRow['canonical_path'] ?? null),
+            'canonical_url' => null,
+            'canonical_state_slug' => $this->firstNonEmpty($routeRow['canonical_state_slug'] ?? null),
+            'canonical_city_slug' => $this->firstNonEmpty($routeRow['canonical_city_slug'] ?? null),
+            'canonical_specialty_slug' => $this->firstNonEmpty($routeRow['canonical_specialty_slug'] ?? null),
+            'route_enabled' => $routeEnabled,
+            'canonical_enabled' => $canonicalEnabled,
+            'can_render_canonical' => false,
+            'can_route' => false,
+            'candidate_path_from_builder' => $candidatePath,
+            'warnings' => $warnings,
         ];
     }
 

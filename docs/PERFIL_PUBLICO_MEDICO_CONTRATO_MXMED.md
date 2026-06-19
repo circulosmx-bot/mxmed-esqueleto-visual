@@ -1084,6 +1084,49 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 13 — Read-model de ruta canonica publica
+
+### A) Campo del DTO
+- El DTO publico expone `public_canonical_route`.
+- La fuente es `public_profile_seo_routes`.
+- Version actual del read-model: `canonical-route-readmodel-v1`.
+- El objetivo es informar si existe una ruta canonica persistida para la entidad publica.
+
+### B) Cuando no existe fila persistida
+- `found=false`.
+- `canonical_path=null`.
+- `canonical_url=null`.
+- `route_enabled=false`.
+- `canonical_enabled=false`.
+- `can_route=false`.
+- `can_render_canonical=false`.
+- `candidate_path_from_builder` puede mostrar la ruta candidata derivada desde `public_url_context.profile.fallback_candidate_url`.
+- El warning `canonical_route_not_persisted` indica que la tabla aun no tiene ruta para esa entidad.
+
+### C) Cuando existe fila persistida
+- `found=true`.
+- El read-model expone `status`, `profile_slug`, `canonical_path`, `canonical_state_slug`, `canonical_city_slug` y `canonical_specialty_slug` desde la tabla.
+- `route_enabled` y `canonical_enabled` salen como booleanos.
+- Aunque exista fila, `canonical_url` permanece `null` hasta una fase explicita de activacion.
+- Aunque `route_enabled` llegue a estar activo en datos, `can_route` permanece `false` mientras no exista router SEO.
+- Aunque `canonical_enabled` llegue a estar activo en datos, `can_render_canonical` permanece `false` mientras no exista fase de canonical real.
+
+### D) Limites vigentes
+- No hay insert automatico en `public_profile_seo_routes`.
+- No se puebla `doctor_id=1` en esta fase.
+- No se cambia `profile.canonical_url`.
+- No se cambia `seo.canonical_url`.
+- `seo.robots` permanece `noindex,nofollow`.
+- `seo.breadcrumb` permanece `[]`.
+- `json_ld` real permanece `null`.
+- No se renderiza `<link rel="canonical">`.
+- No se renderiza JSON-LD real.
+- No se activa router.
+- No se crean aliases ni redirects 301.
+- No se modifica `.htaccess`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
