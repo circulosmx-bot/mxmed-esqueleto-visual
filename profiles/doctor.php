@@ -502,13 +502,15 @@ if (isLocalDevRequest()) {
           <?php if ($geoCitySlug !== null): ?>data-city-slug="<?= h($geoCitySlug) ?>"<?php endif; ?>
           <?php if ($geoSource !== null): ?>data-geo-source="<?= h($geoSource) ?>"<?php endif; ?>
         >
-          <div class="mxpp-platform-brand__grid" aria-hidden="true">
-            <span></span><span></span><span></span>
-            <span></span><span></span><span></span>
-            <span></span><span></span><span></span>
-          </div>
+          <img
+            class="mxpp-platform-brand__logo"
+            src="/assets/mexico-medico.svg"
+            alt="México Médico"
+            width="250"
+            height="48"
+            decoding="async"
+          />
           <div class="mxpp-platform-brand__copy">
-            <p class="mxpp-platform-brand__mark">MÉXICO MÉDICO</p>
             <?php if ($platformRegionLabel !== null): ?>
               <p class="mxpp-platform-brand__region"><?= h($platformRegionLabel) ?></p>
             <?php endif; ?>

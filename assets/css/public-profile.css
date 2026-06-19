@@ -44,50 +44,21 @@ body {
   align-items: center;
   gap: 0.68rem;
   color: #123d59;
+  max-width: 100%;
 }
 
-.mxpp-platform-brand__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 12px);
-  gap: 4px;
-  flex: 0 0 auto;
-}
-
-.mxpp-platform-brand__grid span {
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
-  background: #d0d8dd;
-}
-
-.mxpp-platform-brand__grid span:nth-child(1),
-.mxpp-platform-brand__grid span:nth-child(5) {
-  background: #ea3f92;
-}
-
-.mxpp-platform-brand__grid span:nth-child(2),
-.mxpp-platform-brand__grid span:nth-child(4) {
-  background: #0ea8ba;
-}
-
-.mxpp-platform-brand__grid span:nth-child(3) {
-  background: #ef8f2c;
+.mxpp-platform-brand__logo {
+  display: block;
+  width: min(250px, 58vw);
+  height: auto;
+  flex: 0 1 auto;
 }
 
 .mxpp-platform-brand__copy p {
   margin: 0;
 }
 
-.mxpp-platform-brand__mark {
-  color: #123d59;
-  font-size: clamp(1.68rem, 3.2vw, 2.22rem);
-  font-weight: 800;
-  letter-spacing: -0.015em;
-  line-height: 0.98;
-}
-
 .mxpp-platform-brand__region {
-  margin-top: 0.12rem !important;
   color: #0a95a4;
   font-size: 0.92rem;
   font-weight: 700;
@@ -1442,19 +1413,8 @@ body {
     gap: 0.58rem;
   }
 
-  .mxpp-platform-brand__grid {
-    grid-template-columns: repeat(3, 11px);
-    gap: 4px;
-  }
-
-  .mxpp-platform-brand__grid span {
-    width: 11px;
-    height: 11px;
-    border-radius: 3px;
-  }
-
-  .mxpp-platform-brand__mark {
-    font-size: 1.78rem;
+  .mxpp-platform-brand__logo {
+    width: min(205px, 62vw);
   }
 
   .mxpp-platform-brand__region {
