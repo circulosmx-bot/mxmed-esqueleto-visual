@@ -879,7 +879,7 @@ Regla vigente:
 - El perfil publico expone `public_breadcrumbs` como read-model formal derivado de `public_url_context.breadcrumbs`.
 - Fuente actual: `public_url_context`.
 - Version actual: `breadcrumb-v1`.
-- `render_enabled`: `false`.
+- `render_enabled`: `true` desde la Adenda PP-Decisiones 09 para render visual controlado.
 - `json_ld_enabled`: `false`.
 - `route_enabled`: `false`.
 
@@ -902,7 +902,6 @@ Warnings minimos esperados:
 - `seo_routes_not_implemented`
 - `canonical_pending`
 - `route_disabled`
-- `breadcrumb_visual_not_enabled`
 - `json_ld_not_enabled`
 
 Puede conservar warnings relevantes derivados de `public_url_context.warnings`, por ejemplo:
@@ -913,7 +912,7 @@ Puede conservar warnings relevantes derivados de `public_url_context.warnings`, 
 - `singular_specialty_not_canonical`
 
 ### E) Limites vigentes
-- `public_breadcrumbs` no renderiza breadcrumb visual todavia.
+- `public_breadcrumbs` solo habilita render visual SSR cuando `render_enabled=true`.
 - `public_breadcrumbs` no genera JSON-LD todavia.
 - `public_breadcrumbs` no llena `seo.breadcrumb` todavia.
 - `public_breadcrumbs` no activa rutas reales.
@@ -921,6 +920,36 @@ Puede conservar warnings relevantes derivados de `public_url_context.warnings`, 
 - `public_breadcrumbs` no cambia robots.
 - `public_breadcrumbs.items[].url` permanece `null`.
 - `public_breadcrumbs.items[].route_enabled` permanece `false`.
+
+---
+
+## Adenda PP-Decisiones 09 — Breadcrumb visual publico
+
+### A) Activacion visual controlada
+- El perfil publico puede renderizar un breadcrumb visual alimentado por `public_breadcrumbs.items`.
+- `public_breadcrumbs.render_enabled` queda en `true` para habilitar solo la presentacion SSR.
+- `public_breadcrumbs.json_ld_enabled` permanece `false`.
+- `public_breadcrumbs.route_enabled` permanece `false`.
+
+### B) Render SSR
+- El SSR consume `public_breadcrumbs.items` de forma defensiva.
+- El breadcrumb se muestra como texto no enlazado.
+- El item actual se marca visualmente y con `aria-current="page"`.
+- Los separadores son visuales y no representan rutas activas.
+
+### C) URLs candidatas
+- `items[].candidate_url` sigue siendo una URL candidata.
+- `items[].candidate_url` no se usa como `href`.
+- `items[].url` permanece `null`.
+- `items[].route_enabled` permanece `false`.
+
+### D) Limites SEO vigentes
+- No se genera JSON-LD `BreadcrumbList`.
+- No se llena `seo.breadcrumb`; permanece `[]`.
+- No se cambia `seo.canonical_url`; permanece `null`.
+- No se cambia `seo.robots`; permanece `noindex,nofollow`.
+- No se activa ninguna ruta real ni rewrite SEO.
+- No se modifica `.htaccess`.
 
 ---
 

@@ -516,7 +516,6 @@ final class PublicProfileController
             'seo_routes_not_implemented',
             'canonical_pending',
             'route_disabled',
-            'breadcrumb_visual_not_enabled',
             'json_ld_not_enabled',
         ];
         $contextWarnings = is_array($publicUrlContext['warnings'] ?? null) ? $publicUrlContext['warnings'] : [];
@@ -530,7 +529,7 @@ final class PublicProfileController
         return [
             'source' => 'public_url_context',
             'version' => 'breadcrumb-v1',
-            'render_enabled' => false,
+            'render_enabled' => true,
             'json_ld_enabled' => false,
             'route_enabled' => false,
             'items' => $items,

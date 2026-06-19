@@ -427,6 +427,7 @@ $featureFlags = safeArray($data['feature_flags'] ?? []);
 $plan = safeArray($data['plan'] ?? []);
 $geoContext = safeArray($data['geo_context'] ?? []);
 $publicNavigationTaxonomy = safeArray($data['public_navigation_taxonomy'] ?? []);
+$publicBreadcrumbs = safeArray($data['public_breadcrumbs'] ?? []);
 
 $displayName = toText($identity['display_name'] ?? null);
 $profileStatus = toText($profile['status'] ?? null) ?? 'hidden';
@@ -449,6 +450,38 @@ $platformNavItems = platformNavigationSectionsFromTaxonomy($publicNavigationTaxo
 if ($platformNavItems === []) {
     $platformNavItems = fallbackPlatformNavigationSections();
 }
+
+$breadcrumbItems = [];
+foreach (safeArray($publicBreadcrumbs['items'] ?? []) as $breadcrumbItem) {
+    if (!is_array($breadcrumbItem)) {
+        continue;
+    }
+
+    $breadcrumbLabel = toText($breadcrumbItem['label'] ?? null);
+    if ($breadcrumbLabel === null) {
+        continue;
+    }
+
+    $breadcrumbItems[] = [
+        'label' => $breadcrumbLabel,
+        'is_current' => toBool($breadcrumbItem['is_current'] ?? false),
+    ];
+}
+
+$hasCurrentBreadcrumb = false;
+foreach ($breadcrumbItems as $breadcrumbItem) {
+    if (toBool($breadcrumbItem['is_current'] ?? false)) {
+        $hasCurrentBreadcrumb = true;
+        break;
+    }
+}
+
+if (!$hasCurrentBreadcrumb && $breadcrumbItems !== []) {
+    $lastBreadcrumbIndex = count($breadcrumbItems) - 1;
+    $breadcrumbItems[$lastBreadcrumbIndex]['is_current'] = true;
+}
+
+$showPublicBreadcrumb = (toBool($publicBreadcrumbs['render_enabled'] ?? false) && count($breadcrumbItems) >= 2);
 
 $consultorioPanels = [];
 foreach ($consultorios as $index => $consultorio) {
@@ -688,6 +721,19 @@ if (isLocalDevRequest()) {
         <p><?= h($inputError ?? $endpointError ?? 'No fue posible cargar el perfil en este momento.') ?></p>
       </section>
     <?php else: ?>
+      <?php if ($showPublicBreadcrumb): ?>
+        <nav class="mxpp-breadcrumb" aria-label="Ruta de navegación">
+          <ol class="mxpp-breadcrumb__list">
+            <?php foreach ($breadcrumbItems as $breadcrumbItem): ?>
+              <?php $isCurrentBreadcrumb = toBool($breadcrumbItem['is_current'] ?? false); ?>
+              <li class="mxpp-breadcrumb__item <?= $isCurrentBreadcrumb ? 'mxpp-breadcrumb__item--current' : '' ?>" <?= $isCurrentBreadcrumb ? 'aria-current="page"' : '' ?>>
+                <span class="mxpp-breadcrumb__text"><?= h($breadcrumbItem['label']) ?></span>
+              </li>
+            <?php endforeach; ?>
+          </ol>
+        </nav>
+      <?php endif; ?>
+
       <section class="mxpp-profile-hero">
         <aside class="mxpp-left-panel">
           <article class="mxpp-card mxpp-card--left-main">
