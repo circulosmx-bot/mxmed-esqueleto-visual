@@ -996,6 +996,44 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 11 — JSON-LD candidato de breadcrumbs deduplicados
+
+### A) Campo candidato
+- `public_breadcrumbs` puede incluir `json_ld_candidate`.
+- La fuente es `public_breadcrumbs.items`, no `public_url_context.breadcrumbs`.
+- Por lo tanto, usa el breadcrumb ya normalizado y deduplicado cuando `display_policy=deduplicate_same_geo`.
+- Version actual: `breadcrumb-jsonld-candidate-v1`.
+
+### B) Estado de activacion
+- `json_ld_candidate.enabled` permanece `false`.
+- `json_ld_candidate.script_render_enabled` permanece `false`.
+- `public_breadcrumbs.json_ld_enabled` permanece `false`.
+- `json_ld` real permanece `null`.
+- No se renderiza `<script type="application/ld+json">` en SSR.
+
+### C) Estructura
+- `schema_type`: `BreadcrumbList`.
+- `context`: `https://schema.org`.
+- Cada item incluye:
+  - `position`: posicion derivada de `public_breadcrumbs.items[].position`.
+  - `name`: texto derivado de `public_breadcrumbs.items[].label`.
+  - `candidate_item`: URL candidata derivada de `public_breadcrumbs.items[].candidate_url`.
+  - `item`: siempre `null` en esta fase.
+  - `route_enabled`: siempre `false`.
+
+### D) Limites vigentes
+- `candidate_item` conserva la URL candidata y no se usa como URL real.
+- `item` permanece `null`.
+- `route_enabled` permanece `false`.
+- `seo.breadcrumb` permanece `[]`.
+- `seo.canonical_url` permanece `null`.
+- `seo.robots` permanece `noindex,nofollow`.
+- No hay canonical.
+- No hay rutas reales.
+- No se modifica `.htaccess`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf

@@ -560,7 +560,53 @@ final class PublicProfileController
             'json_ld_enabled' => false,
             'route_enabled' => false,
             'items' => $items,
+            'json_ld_candidate' => $this->buildBreadcrumbJsonLdCandidate($items),
             'warnings' => $warnings,
+        ];
+    }
+
+    private function buildBreadcrumbJsonLdCandidate(array $breadcrumbItems): array
+    {
+        $items = [];
+        foreach ($breadcrumbItems as $index => $breadcrumbItem) {
+            if (!is_array($breadcrumbItem)) {
+                continue;
+            }
+
+            $name = $this->firstNonEmpty($breadcrumbItem['label'] ?? null);
+            if ($name === null) {
+                continue;
+            }
+
+            $position = (int)($breadcrumbItem['position'] ?? 0);
+            if ($position < 1) {
+                $position = count($items) + 1;
+            }
+
+            $items[] = [
+                'position' => $position,
+                'name' => $name,
+                'candidate_item' => $this->firstNonEmpty($breadcrumbItem['candidate_url'] ?? null),
+                'item' => null,
+                'route_enabled' => false,
+            ];
+        }
+
+        return [
+            'source' => 'public_breadcrumbs',
+            'version' => 'breadcrumb-jsonld-candidate-v1',
+            'enabled' => false,
+            'script_render_enabled' => false,
+            'schema_type' => 'BreadcrumbList',
+            'context' => 'https://schema.org',
+            'items' => $items,
+            'warnings' => [
+                'json_ld_not_enabled',
+                'json_ld_script_not_rendered',
+                'route_disabled',
+                'canonical_pending',
+                'seo_routes_not_implemented',
+            ],
         ];
     }
 
