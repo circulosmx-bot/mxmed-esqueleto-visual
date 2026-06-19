@@ -1170,6 +1170,57 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 15 — Estados de activacion de ruta canonica publica
+
+### A) Estado del read-model
+- `public_canonical_route` diferencia explicitamente el estado de activacion de una ruta canonica publica.
+- Campos agregados al contrato:
+  - `activation_state`.
+  - `is_persisted`.
+  - `is_candidate`.
+  - `is_active`.
+  - `is_blocked`.
+  - `blocking_reasons`.
+- Estos campos son diagnosticos y no activan router, canonical, JSON-LD real ni robots index.
+
+### B) Estados soportados
+- `not_persisted`: no existe fila en `public_profile_seo_routes`.
+- `persisted_candidate`: existe fila con `status=candidate`.
+- `persisted_reserved`: existe fila reservada, pero no activa.
+- `persisted_active_pending_router`: existe fila `active`, pero aun falta fase explicita de router/canonical real.
+- `persisted_blocked`: existe fila bloqueada.
+- `persisted_retired`: existe fila retirada.
+- `unknown_status`: existe fila con estado no reconocido.
+
+### C) Estado actual de doctor_id=1
+- `found=true`.
+- `is_persisted=true`.
+- `activation_state=persisted_candidate`.
+- `status=candidate`.
+- `is_candidate=true`.
+- `is_active=false`.
+- `is_blocked=false`.
+- `route_enabled=false`.
+- `canonical_enabled=false`.
+- `can_route=false`.
+- `can_render_canonical=false`.
+- `blocking_reasons` incluye `status_candidate`, `route_disabled`, `canonical_disabled`, `robots_noindex_active` y `seo_router_not_implemented`.
+
+### D) Limites vigentes
+- `found=true` no implica canonical activo.
+- `status=candidate` no habilita router ni canonical.
+- `route_enabled=0` mantiene `can_route=false`.
+- `canonical_enabled=0` mantiene `can_render_canonical=false`.
+- `seo.robots` permanece `noindex,nofollow` y sigue bloqueando indexacion.
+- Aunque una fila futura llegue como `status=active`, esta fase mantiene `can_route=false` y `can_render_canonical=false` hasta una activacion explicita.
+- No se cambia `profile.canonical_url`.
+- No se cambia `seo.canonical_url`.
+- No se renderiza `<link rel="canonical">`.
+- No se activa JSON-LD real.
+- No se modifica `.htaccess`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf

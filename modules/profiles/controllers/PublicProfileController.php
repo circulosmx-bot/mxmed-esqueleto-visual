@@ -510,7 +510,12 @@ final class PublicProfileController
                 'entity_type' => $entityType,
                 'entity_id' => $entityId,
                 'found' => false,
+                'is_persisted' => false,
+                'activation_state' => 'not_persisted',
                 'status' => null,
+                'is_candidate' => false,
+                'is_active' => false,
+                'is_blocked' => false,
                 'profile_slug' => null,
                 'canonical_path' => null,
                 'canonical_url' => null,
@@ -528,12 +533,32 @@ final class PublicProfileController
                     'route_not_enabled',
                     'robots_noindex_active',
                 ],
+                'blocking_reasons' => [
+                    'canonical_route_not_persisted',
+                    'route_disabled',
+                    'canonical_disabled',
+                    'robots_noindex_active',
+                    'seo_router_not_implemented',
+                ],
             ];
         }
 
         $routeEnabled = ((int)($routeRow['route_enabled'] ?? 0) === 1);
         $canonicalEnabled = ((int)($routeRow['canonical_enabled'] ?? 0) === 1);
-        $warnings = ['canonical_route_candidate_only', 'robots_noindex_active'];
+        $status = $this->firstNonEmpty($routeRow['status'] ?? null);
+        $isCandidate = ($status === 'candidate');
+        $isActive = ($status === 'active');
+        $isBlocked = ($status === 'blocked');
+        $activationState = match ($status) {
+            'candidate' => 'persisted_candidate',
+            'reserved' => 'persisted_reserved',
+            'active' => 'persisted_active_pending_router',
+            'blocked' => 'persisted_blocked',
+            'retired' => 'persisted_retired',
+            default => 'unknown_status',
+        };
+
+        $warnings = [$isCandidate ? 'canonical_route_candidate_only' : 'canonical_route_not_active', 'robots_noindex_active'];
         if (!$canonicalEnabled) {
             $warnings[] = 'canonical_not_enabled';
         } else {
@@ -545,13 +570,36 @@ final class PublicProfileController
             $warnings[] = 'seo_router_not_implemented';
         }
 
+        $blockingReasons = [];
+        if ($isCandidate) {
+            $blockingReasons[] = 'status_candidate';
+        } elseif (!$isActive) {
+            $blockingReasons[] = $status ? ('status_' . $status) : 'status_unknown';
+        }
+        if (!$routeEnabled) {
+            $blockingReasons[] = 'route_disabled';
+        }
+        if (!$canonicalEnabled) {
+            $blockingReasons[] = 'canonical_disabled';
+        }
+        $blockingReasons[] = 'robots_noindex_active';
+        $blockingReasons[] = 'seo_router_not_implemented';
+        if ($canonicalEnabled) {
+            $blockingReasons[] = 'canonical_render_not_enabled';
+        }
+
         return [
             'source' => 'public_profile_seo_routes',
             'version' => 'canonical-route-readmodel-v1',
             'entity_type' => $this->firstNonEmpty($routeRow['entity_type'] ?? null) ?? $entityType,
             'entity_id' => $this->firstNonEmpty($routeRow['entity_id'] ?? null) ?? $entityId,
             'found' => true,
-            'status' => $this->firstNonEmpty($routeRow['status'] ?? null),
+            'is_persisted' => true,
+            'activation_state' => $activationState,
+            'status' => $status,
+            'is_candidate' => $isCandidate,
+            'is_active' => $isActive,
+            'is_blocked' => $isBlocked,
             'profile_slug' => $this->firstNonEmpty($routeRow['profile_slug'] ?? null),
             'canonical_path' => $this->firstNonEmpty($routeRow['canonical_path'] ?? null),
             'canonical_url' => null,
@@ -563,7 +611,8 @@ final class PublicProfileController
             'can_render_canonical' => false,
             'can_route' => false,
             'candidate_path_from_builder' => $candidatePath,
-            'warnings' => $warnings,
+            'warnings' => array_values(array_unique($warnings)),
+            'blocking_reasons' => array_values(array_unique($blockingReasons)),
         ];
     }
 
