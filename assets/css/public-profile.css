@@ -312,7 +312,54 @@ body {
 .mxpp-consultorio-bar {
   width: 100%;
   background: linear-gradient(90deg, #10adba 0%, #0a99a6 100%);
-  padding: 0.4rem 0.72rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.62rem;
+  padding: 0.38rem 0.72rem;
+}
+
+.mxpp-consultorio-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 260px;
+  justify-content: flex-end;
+  gap: 0.38rem;
+  min-width: 0;
+}
+
+.mxpp-consultorio-tab {
+  min-height: 28px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.12;
+  padding: 0.24rem 0.62rem;
+  white-space: nowrap;
+}
+
+.mxpp-consultorio-tab--active {
+  background: #fff;
+  color: #0d6275;
+}
+
+.mxpp-consultorio-tab:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.68);
+  outline-offset: 2px;
+}
+
+.mxpp-consultorio-panel-title {
+  margin: 0;
+  color: #103d57;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .mxpp-consultorio-body {

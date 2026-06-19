@@ -37,6 +37,27 @@ function safeArray($value): array
     return is_array($value) ? $value : [];
 }
 
+function scheduleSummaryText($value): ?string
+{
+    if (is_string($value) || is_numeric($value)) {
+        return toText($value);
+    }
+
+    if (!is_array($value)) {
+        return null;
+    }
+
+    $parts = [];
+    foreach ($value as $item) {
+        $text = toText($item);
+        if ($text !== null) {
+            $parts[] = $text;
+        }
+    }
+
+    return $parts !== [] ? implode(' · ', $parts) : null;
+}
+
 function telHref(?string $value): ?string
 {
     if ($value === null) {
@@ -320,26 +341,39 @@ $pageDescription = toText($seo['description'] ?? null) ?? 'Ficha pública inform
 $pageRobots = toText($seo['robots'] ?? null) ?? 'noindex,nofollow';
 $canonicalUrl = toText($seo['canonical_url'] ?? null);
 
-$primaryConsultorio = isset($consultorios[0]) && is_array($consultorios[0]) ? $consultorios[0] : [];
-$primaryName = toText($primaryConsultorio['public_name'] ?? null) ?? 'Consultorio principal';
-$primaryAddress = toText($primaryConsultorio['address'] ?? null);
-$primaryMapUrl = toText($primaryConsultorio['map_embed_url'] ?? null);
-$scheduleSummaryRaw = $primaryConsultorio['schedule_summary'] ?? null;
-$scheduleSummary = null;
-if (is_string($scheduleSummaryRaw)) {
-    $scheduleSummary = toText($scheduleSummaryRaw);
-} elseif (is_array($scheduleSummaryRaw)) {
-    $parts = [];
-    foreach ($scheduleSummaryRaw as $item) {
-        $text = toText($item);
-        if ($text !== null) {
-            $parts[] = $text;
-        }
+$consultorioPanels = [];
+foreach ($consultorios as $index => $consultorio) {
+    if (!is_array($consultorio)) {
+        continue;
     }
-    if (!empty($parts)) {
-        $scheduleSummary = implode(' · ', $parts);
-    }
+
+    $consultorioPanels[] = [
+        'id' => toText($consultorio['consultorio_id'] ?? null) ?? (string)($index + 1),
+        'name' => toText($consultorio['public_name'] ?? null) ?? 'Consultorio principal',
+        'address' => toText($consultorio['address'] ?? null),
+        'map_url' => toText($consultorio['map_embed_url'] ?? null),
+        'map_can_open_gps' => toBool($consultorio['map_can_open_gps'] ?? false),
+        'schedule_summary' => scheduleSummaryText($consultorio['schedule_summary'] ?? null),
+    ];
 }
+
+if ($consultorioPanels === []) {
+    $consultorioPanels[] = [
+        'id' => 'principal',
+        'name' => 'Consultorio principal',
+        'address' => null,
+        'map_url' => null,
+        'map_can_open_gps' => false,
+        'schedule_summary' => null,
+    ];
+}
+
+$primaryConsultorio = $consultorioPanels[0];
+$primaryName = $primaryConsultorio['name'];
+$primaryAddress = $primaryConsultorio['address'];
+$primaryMapUrl = $primaryConsultorio['map_url'];
+$scheduleSummary = $primaryConsultorio['schedule_summary'];
+$showConsultorioSwitcher = count($consultorioPanels) > 1;
 
 $photoUrl = toText($identity['photo_url'] ?? null);
 $primarySpecialty = null;
@@ -571,36 +605,80 @@ if (isLocalDevRequest()) {
         </div>
       </section>
 
-      <section class="mxpp-card mxpp-consultorio-block" aria-label="Consultorio principal">
+      <section class="mxpp-card mxpp-consultorio-block" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
         <div class="mxpp-consultorio-bar">
-          <h2 class="mxpp-consultorio-name"><?= h($primaryName) ?></h2>
+          <h2 class="mxpp-consultorio-name"><?= h($showConsultorioSwitcher ? 'Consultorios' : $primaryName) ?></h2>
+          <?php if ($showConsultorioSwitcher): ?>
+            <div class="mxpp-consultorio-tabs" role="tablist" aria-label="Consultorios disponibles">
+              <?php foreach ($consultorioPanels as $index => $consultorio): ?>
+                <?php
+                  $tabId = 'mxpp-consultorio-tab-' . ($index + 1);
+                  $panelId = 'mxpp-consultorio-panel-' . ($index + 1);
+                  $isActiveConsultorio = $index === 0;
+                ?>
+                <button
+                  class="mxpp-consultorio-tab <?= $isActiveConsultorio ? 'mxpp-consultorio-tab--active' : '' ?>"
+                  type="button"
+                  id="<?= h($tabId) ?>"
+                  role="tab"
+                  aria-selected="<?= $isActiveConsultorio ? 'true' : 'false' ?>"
+                  aria-controls="<?= h($panelId) ?>"
+                  tabindex="<?= $isActiveConsultorio ? '0' : '-1' ?>"
+                  data-mxpp-consultorio-tab
+                ><?= h($consultorio['name']) ?></button>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
         </div>
-        <div class="mxpp-consultorio-body">
-          <div class="mxpp-consultorio-address-col">
-            <?php if ($primaryAddress !== null): ?>
-              <p class="mxpp-consultorio-address"><?= h($primaryAddress) ?></p>
-            <?php else: ?>
-              <p class="mxpp-consultorio-address mxpp-muted">Dirección pública no disponible por ahora.</p>
-            <?php endif; ?>
-            <?php if ($scheduleSummary !== null): ?>
-              <p class="mxpp-consultorio-schedule"><?= h($scheduleSummary) ?></p>
-            <?php endif; ?>
-            <?php if ($primaryMapUrl !== null && $showClickableMap): ?>
-              <p class="mxpp-map-link">Ver en Google Maps</p>
-            <?php endif; ?>
-          </div>
-          <div class="mxpp-consultorio-map-col">
-            <?php if ($primaryMapUrl !== null): ?>
-              <div class="mxpp-map">
-                <iframe src="<?= h($primaryMapUrl) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación del consultorio"></iframe>
+        <?php foreach ($consultorioPanels as $index => $consultorio): ?>
+          <?php
+            $tabId = 'mxpp-consultorio-tab-' . ($index + 1);
+            $panelId = 'mxpp-consultorio-panel-' . ($index + 1);
+            $isActiveConsultorio = $index === 0;
+            $consultorioName = toText($consultorio['name'] ?? null) ?? 'Consultorio principal';
+            $consultorioAddress = toText($consultorio['address'] ?? null);
+            $consultorioMapUrl = toText($consultorio['map_url'] ?? null);
+            $consultorioSchedule = toText($consultorio['schedule_summary'] ?? null);
+          ?>
+          <div
+            class="mxpp-consultorio-panel"
+            id="<?= h($panelId) ?>"
+            role="tabpanel"
+            <?= $showConsultorioSwitcher ? 'aria-labelledby="' . h($tabId) . '"' : '' ?>
+            data-mxpp-consultorio-panel
+            <?= $isActiveConsultorio ? '' : 'hidden' ?>
+          >
+            <div class="mxpp-consultorio-body">
+              <div class="mxpp-consultorio-address-col">
+                <?php if ($showConsultorioSwitcher): ?>
+                  <h3 class="mxpp-consultorio-panel-title"><?= h($consultorioName) ?></h3>
+                <?php endif; ?>
+                <?php if ($consultorioAddress !== null): ?>
+                  <p class="mxpp-consultorio-address"><?= h($consultorioAddress) ?></p>
+                <?php else: ?>
+                  <p class="mxpp-consultorio-address mxpp-muted">Dirección pública no disponible por ahora.</p>
+                <?php endif; ?>
+                <?php if ($consultorioSchedule !== null): ?>
+                  <p class="mxpp-consultorio-schedule"><?= h($consultorioSchedule) ?></p>
+                <?php endif; ?>
+                <?php if ($consultorioMapUrl !== null && $showClickableMap): ?>
+                  <p class="mxpp-map-link">Ver en Google Maps</p>
+                <?php endif; ?>
               </div>
-            <?php else: ?>
-              <div class="mxpp-map mxpp-map--placeholder">
-                <span>Mapa no disponible por ahora.</span>
+              <div class="mxpp-consultorio-map-col">
+                <?php if ($consultorioMapUrl !== null): ?>
+                  <div class="mxpp-map">
+                    <iframe src="<?= h($consultorioMapUrl) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación de <?= h($consultorioName) ?>"></iframe>
+                  </div>
+                <?php else: ?>
+                  <div class="mxpp-map mxpp-map--placeholder">
+                    <span>Mapa no disponible por ahora.</span>
+                  </div>
+                <?php endif; ?>
               </div>
-            <?php endif; ?>
+            </div>
           </div>
-        </div>
+        <?php endforeach; ?>
       </section>
 
       <div class="mxpp-actions-row">
@@ -834,6 +912,52 @@ if (isLocalDevRequest()) {
       <span class="mxpp-dev-plan-switcher__hint">Sólo DEV</span>
     </form>
   <?php endif; ?>
+  <script>
+    (function () {
+      function initConsultorioSwitcher(switcher) {
+        var tabs = Array.prototype.slice.call(switcher.querySelectorAll('[data-mxpp-consultorio-tab]'));
+        var panels = Array.prototype.slice.call(switcher.querySelectorAll('[data-mxpp-consultorio-panel]'));
+        if (tabs.length < 2 || panels.length < 2) {
+          return;
+        }
+
+        function activateTab(tab) {
+          var panelId = tab.getAttribute('aria-controls') || '';
+          tabs.forEach(function (item) {
+            var isActive = item === tab;
+            item.classList.toggle('mxpp-consultorio-tab--active', isActive);
+            item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            item.setAttribute('tabindex', isActive ? '0' : '-1');
+          });
+          panels.forEach(function (panel) {
+            panel.hidden = panel.id !== panelId;
+          });
+        }
+
+        tabs.forEach(function (tab, index) {
+          tab.addEventListener('click', function () {
+            activateTab(tab);
+          });
+          tab.addEventListener('keydown', function (event) {
+            var nextIndex = null;
+            if (event.key === 'ArrowRight') {
+              nextIndex = (index + 1) % tabs.length;
+            } else if (event.key === 'ArrowLeft') {
+              nextIndex = (index - 1 + tabs.length) % tabs.length;
+            }
+            if (nextIndex === null) {
+              return;
+            }
+            event.preventDefault();
+            tabs[nextIndex].focus();
+            activateTab(tabs[nextIndex]);
+          });
+        });
+      }
+
+      document.querySelectorAll('[data-mxpp-consultorio-switcher]').forEach(initConsultorioSwitcher);
+    })();
+  </script>
   <?php if ($showAgendaSlot): ?>
     <script>
       (function () {
