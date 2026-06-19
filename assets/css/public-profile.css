@@ -442,10 +442,11 @@ body {
 .mxpp-profile-title {
   margin: 0;
   font-family: "Asap", sans-serif;
-  font-size: clamp(1.7rem, 2.28vw, 2rem);
-  line-height: 1.1;
+  font-size: clamp(1.82rem, 2.52vw, 2.18rem);
+  line-height: 1.08;
   letter-spacing: 0;
   font-weight: 700;
+  color: #103a57;
 }
 
 .mxpp-profile-title--pending {
@@ -489,12 +490,13 @@ body {
 }
 
 .mxpp-specialty {
-  margin: 0.18rem 0;
+  margin: 0.1rem 0 0.12rem;
   font-family: "Asap", sans-serif;
-  font-size: clamp(1.45rem, 2.1vw, 1.75rem);
-  line-height: 1.1;
+  font-size: clamp(1.58rem, 2.25vw, 1.9rem);
+  line-height: 1.06;
   text-transform: uppercase;
   font-weight: 900;
+  color: #103a57;
 }
 
 .mxpp-license-block p {
