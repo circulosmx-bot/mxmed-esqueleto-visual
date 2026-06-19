@@ -1034,6 +1034,56 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 12 — Tabla canonical de rutas SEO publicas
+
+### A) Tabla definida
+- Se agrega el SQL idempotente `modules/profiles/db/2026_06_19_create_public_profile_seo_routes.sql`.
+- La tabla definida es `public_profile_seo_routes`.
+- Proposito: guardar la ruta canonica actual por entidad publicable.
+- Esta tabla no guarda aliases, historial ni redirects 301.
+
+### B) Compatibilidad multi-tipo
+- `entity_type` permite distinguir entidades futuras como `doctor`, `dentist`, `hospital`, `clinic`, `laboratory`, `diagnostic_center`, `insurer`, `pharma` y `service_provider`.
+- `profile_type` permite distinguir la presentacion publica: `doctor`, `dental`, `hospital`, `clinic`, `laboratory`, `diagnostic`, `insurer`, `pharma` y `service`.
+- `entity_id` es `VARCHAR(64)` porque `profiles_doctors.doctor_id` ya usa identificadores tipo texto.
+- La tabla no agrega columnas a `profiles_doctors` para evitar acoplar SEO solo al dominio medico.
+
+### C) Estado inicial
+- `status` inicia como `candidate`.
+- `route_enabled` inicia en `0`.
+- `canonical_enabled` inicia en `0`.
+- `source` inicia como `derived_public_url_builder`.
+- `version` inicia como `seo-route-v1`.
+- No se activa router.
+- No se activa canonical real.
+- No se activa JSON-LD real.
+- No se cambia `seo.robots`.
+
+### D) Ruta conceptual para doctor_id=1
+- `entity_type=doctor`.
+- `entity_id=1`.
+- `profile_type=doctor`.
+- `profile_slug=dra-leticia-munoz-romo`.
+- `canonical_path=/aguascalientes/aguascalientes/medicos/dra-leticia-munoz-romo`.
+- `canonical_state_slug=aguascalientes`.
+- `canonical_city_slug=aguascalientes`.
+- `canonical_specialty_slug=NULL` en la primera fase.
+- `status=candidate`.
+- `route_enabled=0`.
+- `canonical_enabled=0`.
+
+### E) Limites vigentes
+- No se puebla la tabla en esta fase.
+- No se conecta el DTO publico a la tabla todavia.
+- `public_url_context` sigue usando candidatos derivados.
+- `profile.slug` sigue sin activarse como slug productivo.
+- `profile.canonical_url` y `seo.canonical_url` permanecen `null`.
+- `json_ld` real permanece `null`.
+- `seo.breadcrumb` permanece `[]`.
+- La tabla de aliases, historial y redirects 301 queda para una fase posterior.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
