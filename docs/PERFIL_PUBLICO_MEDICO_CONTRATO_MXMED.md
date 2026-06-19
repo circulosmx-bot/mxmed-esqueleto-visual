@@ -953,6 +953,49 @@ Puede conservar warnings relevantes derivados de `public_url_context.warnings`, 
 
 ---
 
+## Adenda PP-Decisiones 10 — Politica de breadcrumbs geograficos deduplicados
+
+### A) Objetivo de la politica
+- `public_breadcrumbs` puede deduplicar niveles geograficos repetidos para mejorar UX y preparar una jerarquia futura mas limpia.
+- La deduplicacion aplica al read-model formal `public_breadcrumbs.items`.
+- `public_url_context.breadcrumbs` puede conservar los candidatos crudos derivados del builder.
+
+### B) Regla aplicada
+- Si `geo_context.state_slug` y `geo_context.city_slug` existen y son iguales, se muestra un solo nivel geografico.
+- Si `geo_context.state_slug` y `geo_context.city_slug` son distintos, se conservan Estado y Ciudad.
+- Si no hay slugs comparables, el read-model puede usar labels consecutivos normalizados como respaldo defensivo.
+
+Ejemplo con estado y ciudad iguales:
+- Crudo: `Mexico Medico / Aguascalientes / Aguascalientes / Endocrinologos / Dra. Leticia Munoz Romo`.
+- Read-model: `Mexico Medico / Aguascalientes / Endocrinologos / Dra. Leticia Munoz Romo`.
+
+Ejemplo con estado y ciudad distintos:
+- `Mexico Medico / Jalisco / Guadalajara / Cardiologos / Dr. Nombre Apellido`.
+- En este caso no se deduplica.
+
+### C) Senales del contrato
+- `public_breadcrumbs.display_policy` indica la politica aplicada.
+- Cuando se deduplica, puede reportar `display_policy=deduplicate_same_geo`.
+- Cuando no se deduplica, puede reportar `display_policy=standard_geo_hierarchy`.
+- El warning `same_geo_breadcrumb_deduplicated` aparece solo cuando la deduplicacion aplica.
+- Las posiciones se recalculan en orden 1-based despues de deduplicar.
+
+### D) Limites vigentes
+- `items[].candidate_url` sigue siendo candidata.
+- `items[].url` permanece `null`.
+- `items[].route_enabled` permanece `false`.
+- `public_breadcrumbs.route_enabled` permanece `false`.
+- `public_breadcrumbs.json_ld_enabled` permanece `false`.
+- `json_ld` permanece `null`.
+- `seo.breadcrumb` permanece `[]`.
+- `seo.canonical_url` permanece `null`.
+- `seo.robots` permanece `noindex,nofollow`.
+- No se activan rutas reales.
+- No se renderiza JSON-LD.
+- No se modifica `.htaccess`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf

@@ -158,7 +158,7 @@ final class PublicProfileController
             'geo_context' => $geoContext,
             'public_navigation_taxonomy' => $publicNavigationTaxonomy,
             'public_url_context' => $publicUrlContext,
-            'public_breadcrumbs' => $this->buildPublicBreadcrumbs($publicUrlContext),
+            'public_breadcrumbs' => $this->buildPublicBreadcrumbs($publicUrlContext, $geoContext),
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -488,17 +488,40 @@ final class PublicProfileController
         ];
     }
 
-    private function buildPublicBreadcrumbs(array $publicUrlContext): array
+    private function buildPublicBreadcrumbs(array $publicUrlContext, array $geoContext = []): array
     {
         $sourceItems = is_array($publicUrlContext['breadcrumbs'] ?? null)
             ? array_values(array_filter($publicUrlContext['breadcrumbs'], static fn($item): bool => is_array($item)))
             : [];
         $lastIndex = count($sourceItems) - 1;
         $items = [];
+        $stateSlug = $this->firstNonEmpty($geoContext['state_slug'] ?? null);
+        $citySlug = $this->firstNonEmpty($geoContext['city_slug'] ?? null);
+        $canCompareGeoSlugs = ($stateSlug !== null && $citySlug !== null);
+        $sameGeoBySlug = ($canCompareGeoSlugs && $stateSlug === $citySlug);
+        $deduplicatedSameGeo = false;
 
         foreach ($sourceItems as $index => $item) {
             $label = $this->firstNonEmpty($item['label'] ?? null);
             if ($label === null) {
+                continue;
+            }
+
+            $previousLabel = $items !== [] ? $items[count($items) - 1]['label'] : null;
+            $sameLabelAsPrevious = (
+                $previousLabel !== null
+                && $this->slugifyPublicUrlText($previousLabel) === $this->slugifyPublicUrlText($label)
+            );
+            $shouldSkipDuplicateCity = (
+                $index === 2
+                && (
+                    ($canCompareGeoSlugs && $sameGeoBySlug)
+                    || (!$canCompareGeoSlugs && $sameLabelAsPrevious)
+                )
+            );
+
+            if ($shouldSkipDuplicateCity) {
+                $deduplicatedSameGeo = true;
                 continue;
             }
 
@@ -525,10 +548,14 @@ final class PublicProfileController
                 $this->appendWarning($warnings, $warningText);
             }
         }
+        if ($deduplicatedSameGeo) {
+            $this->appendWarning($warnings, 'same_geo_breadcrumb_deduplicated');
+        }
 
         return [
             'source' => 'public_url_context',
             'version' => 'breadcrumb-v1',
+            'display_policy' => $deduplicatedSameGeo ? 'deduplicate_same_geo' : 'standard_geo_hierarchy',
             'render_enabled' => true,
             'json_ld_enabled' => false,
             'route_enabled' => false,
