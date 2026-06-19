@@ -71,6 +71,7 @@ final class PublicProfileController
             $scheduleRows,
             $publicVisibility
         );
+        $geoContext = $this->buildGeoContext($consultorios);
 
         $schedule = $this->buildSchedule($scheduleRows);
         $hasMinimumPublicData = $this->hasMinimumPublicData($identity, $professional, $specialties, $consultorios);
@@ -144,6 +145,7 @@ final class PublicProfileController
             ],
             'specialties' => $this->sanitizeSpecialties($specialties),
             'consultorios' => $consultorios,
+            'geo_context' => $geoContext,
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -231,6 +233,127 @@ final class PublicProfileController
             ];
         }
         return $mapped;
+    }
+
+    private function buildGeoContext(array $consultorios): array
+    {
+        $sourceConsultorio = $this->firstGeoConsultorio($consultorios);
+        if ($sourceConsultorio === null) {
+            return [
+                'country_label' => 'México',
+                'state_name' => null,
+                'state_slug' => null,
+                'city_name' => null,
+                'city_slug' => null,
+                'source' => 'national_default',
+                'source_consultorio_id' => null,
+                'is_national' => true,
+                'available_locations' => [],
+            ];
+        }
+
+        $stateName = $this->firstNonEmpty($sourceConsultorio['state'] ?? null);
+        $cityName = $this->resolveConsultorioCity($sourceConsultorio);
+
+        return [
+            'country_label' => 'México',
+            'state_name' => $stateName,
+            'state_slug' => $this->slugifyGeoText($stateName),
+            'city_name' => $cityName,
+            'city_slug' => $this->slugifyGeoText($cityName),
+            'source' => 'profile_consultorio_primary',
+            'source_consultorio_id' => $this->firstNonEmpty($sourceConsultorio['consultorio_id'] ?? null),
+            'is_national' => false,
+            'available_locations' => $this->buildAvailableGeoLocations($consultorios),
+        ];
+    }
+
+    private function firstGeoConsultorio(array $consultorios): ?array
+    {
+        foreach ($consultorios as $consultorio) {
+            if (!is_array($consultorio)) {
+                continue;
+            }
+            if (!(bool)($consultorio['is_public'] ?? false) || !(bool)($consultorio['is_active'] ?? false)) {
+                continue;
+            }
+            if ($this->firstNonEmpty($consultorio['state'] ?? null) !== null || $this->resolveConsultorioCity($consultorio) !== null) {
+                return $consultorio;
+            }
+        }
+        return null;
+    }
+
+    private function buildAvailableGeoLocations(array $consultorios): array
+    {
+        $grouped = [];
+        foreach ($consultorios as $consultorio) {
+            if (!is_array($consultorio)) {
+                continue;
+            }
+            if (!(bool)($consultorio['is_public'] ?? false) || !(bool)($consultorio['is_active'] ?? false)) {
+                continue;
+            }
+
+            $stateName = $this->firstNonEmpty($consultorio['state'] ?? null);
+            $cityName = $this->resolveConsultorioCity($consultorio);
+            if ($stateName === null && $cityName === null) {
+                continue;
+            }
+
+            $stateSlug = $this->slugifyGeoText($stateName);
+            $citySlug = $this->slugifyGeoText($cityName);
+            $key = ($stateSlug ?? '_') . '|' . ($citySlug ?? '_');
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'state_name' => $stateName,
+                    'state_slug' => $stateSlug,
+                    'city_name' => $cityName,
+                    'city_slug' => $citySlug,
+                    'consultorio_ids' => [],
+                ];
+            }
+
+            $consultorioId = $this->firstNonEmpty($consultorio['consultorio_id'] ?? null);
+            if ($consultorioId !== null && !in_array($consultorioId, $grouped[$key]['consultorio_ids'], true)) {
+                $grouped[$key]['consultorio_ids'][] = $consultorioId;
+            }
+        }
+
+        return array_values($grouped);
+    }
+
+    private function resolveConsultorioCity(array $consultorio): ?string
+    {
+        return $this->firstNonEmpty($consultorio['city'] ?? null)
+            ?? $this->firstNonEmpty($consultorio['municipality'] ?? null);
+    }
+
+    private function slugifyGeoText(?string $value): ?string
+    {
+        $text = $this->firstNonEmpty($value);
+        if ($text === null) {
+            return null;
+        }
+
+        $text = strtr($text, [
+            'Á' => 'A', 'À' => 'A', 'Â' => 'A', 'Ä' => 'A', 'Ã' => 'A', 'Å' => 'A',
+            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'å' => 'a',
+            'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E',
+            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'Í' => 'I', 'Ì' => 'I', 'Î' => 'I', 'Ï' => 'I',
+            'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+            'Ó' => 'O', 'Ò' => 'O', 'Ô' => 'O', 'Ö' => 'O', 'Õ' => 'O',
+            'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'ö' => 'o', 'õ' => 'o',
+            'Ú' => 'U', 'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U',
+            'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+            'Ñ' => 'N', 'ñ' => 'n', 'Ç' => 'C', 'ç' => 'c',
+        ]);
+        $text = function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+        $text = preg_replace('/[^a-z0-9]+/', '-', $text) ?? '';
+        $text = trim($text, '-');
+
+        return $text === '' ? null : $text;
     }
 
     private function buildPublicContactPayload(array $rows, string $planCode): array

@@ -90,6 +90,30 @@ Reglas:
 - prioridad a coordenadas confirmadas para mapa publico
 - no exponer metadatos privados no autorizados
 
+### 9.1) `geo_context` publico
+El DTO publico del perfil medico puede exponer un contexto geografico explicito para preparar header geografico, rutas SEO y navegacion contextual futura.
+
+Campos iniciales:
+- `country_label`
+- `state_name`
+- `state_slug`
+- `city_name`
+- `city_slug`
+- `source`
+- `source_consultorio_id`
+- `is_national`
+- `available_locations`
+
+Fuente actual:
+- Si hay consultorios publicos visibles, se usa el primer consultorio visible como fuente inicial (`profile_consultorio_primary`).
+- `available_locations` agrupa consultorios visibles por estado y ciudad.
+- Si no hay datos publicos suficientes, se devuelve contexto nacional (`national_default`).
+
+Notas:
+- Los slugs de estado/ciudad son transitorios y se generan desde el texto disponible.
+- No sustituyen un catalogo geografico canonico.
+- No implican todavia rutas SEO funcionales ni canonical publico definitivo.
+
 ## 10) Relacion con Agenda publica
 - Agenda publica se habilita solo si el plan lo permite.
 - Debe usar la disponibilidad publica existente.
