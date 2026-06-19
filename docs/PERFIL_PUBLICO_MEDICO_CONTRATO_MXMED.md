@@ -873,6 +873,57 @@ Regla vigente:
 
 ---
 
+## Adenda PP-Decisiones 08 — Read-model de breadcrumbs publicos
+
+### A) Campo DTO publico
+- El perfil publico expone `public_breadcrumbs` como read-model formal derivado de `public_url_context.breadcrumbs`.
+- Fuente actual: `public_url_context`.
+- Version actual: `breadcrumb-v1`.
+- `render_enabled`: `false`.
+- `json_ld_enabled`: `false`.
+- `route_enabled`: `false`.
+
+### B) Proposito
+- Normalizar breadcrumbs candidatos para una futura microfase visual.
+- Mantener una capa separada de `seo.breadcrumb` para no activar SEO indexable antes de tener rutas reales y canonical.
+- Permitir que el SSR futuro consuma una estructura estable sin depender directamente de `public_url_context`.
+
+### C) Estructura de items
+Cada item de `public_breadcrumbs.items` incluye:
+- `label`: texto candidato visible.
+- `candidate_url`: URL candidata derivada desde `public_url_context.breadcrumbs`.
+- `url`: siempre `null` en esta fase.
+- `route_enabled`: siempre `false` en esta fase.
+- `is_current`: `true` solo para el item actual cuando aplique.
+- `position`: posicion 1-based.
+
+### D) Warnings
+Warnings minimos esperados:
+- `seo_routes_not_implemented`
+- `canonical_pending`
+- `route_disabled`
+- `breadcrumb_visual_not_enabled`
+- `json_ld_not_enabled`
+
+Puede conservar warnings relevantes derivados de `public_url_context.warnings`, por ejemplo:
+- `profile_slug_transient`
+- `geo_slug_transient`
+- `specialty_slug_transient`
+- `slug_history_missing`
+- `singular_specialty_not_canonical`
+
+### E) Limites vigentes
+- `public_breadcrumbs` no renderiza breadcrumb visual todavia.
+- `public_breadcrumbs` no genera JSON-LD todavia.
+- `public_breadcrumbs` no llena `seo.breadcrumb` todavia.
+- `public_breadcrumbs` no activa rutas reales.
+- `public_breadcrumbs` no cambia canonical.
+- `public_breadcrumbs` no cambia robots.
+- `public_breadcrumbs.items[].url` permanece `null`.
+- `public_breadcrumbs.items[].route_enabled` permanece `false`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf

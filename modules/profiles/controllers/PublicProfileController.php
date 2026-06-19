@@ -158,6 +158,7 @@ final class PublicProfileController
             'geo_context' => $geoContext,
             'public_navigation_taxonomy' => $publicNavigationTaxonomy,
             'public_url_context' => $publicUrlContext,
+            'public_breadcrumbs' => $this->buildPublicBreadcrumbs($publicUrlContext),
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -484,6 +485,56 @@ final class PublicProfileController
                 $preferredCandidateUrl ?? $fallbackCandidateUrl
             ),
             'warnings' => array_values(array_unique($warnings)),
+        ];
+    }
+
+    private function buildPublicBreadcrumbs(array $publicUrlContext): array
+    {
+        $sourceItems = is_array($publicUrlContext['breadcrumbs'] ?? null)
+            ? array_values(array_filter($publicUrlContext['breadcrumbs'], static fn($item): bool => is_array($item)))
+            : [];
+        $lastIndex = count($sourceItems) - 1;
+        $items = [];
+
+        foreach ($sourceItems as $index => $item) {
+            $label = $this->firstNonEmpty($item['label'] ?? null);
+            if ($label === null) {
+                continue;
+            }
+
+            $items[] = [
+                'label' => $label,
+                'candidate_url' => $this->firstNonEmpty($item['candidate_url'] ?? null),
+                'url' => null,
+                'route_enabled' => false,
+                'is_current' => array_key_exists('is_current', $item) ? (bool)$item['is_current'] : ($index === $lastIndex),
+                'position' => count($items) + 1,
+            ];
+        }
+
+        $warnings = [
+            'seo_routes_not_implemented',
+            'canonical_pending',
+            'route_disabled',
+            'breadcrumb_visual_not_enabled',
+            'json_ld_not_enabled',
+        ];
+        $contextWarnings = is_array($publicUrlContext['warnings'] ?? null) ? $publicUrlContext['warnings'] : [];
+        foreach ($contextWarnings as $warning) {
+            $warningText = $this->firstNonEmpty($warning);
+            if ($warningText !== null) {
+                $this->appendWarning($warnings, $warningText);
+            }
+        }
+
+        return [
+            'source' => 'public_url_context',
+            'version' => 'breadcrumb-v1',
+            'render_enabled' => false,
+            'json_ld_enabled' => false,
+            'route_enabled' => false,
+            'items' => $items,
+            'warnings' => $warnings,
         ];
     }
 
