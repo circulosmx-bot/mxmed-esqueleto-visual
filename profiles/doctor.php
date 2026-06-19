@@ -329,6 +329,7 @@ $seo = safeArray($data['seo'] ?? []);
 $jsonLd = $data['json_ld'] ?? null;
 $featureFlags = safeArray($data['feature_flags'] ?? []);
 $plan = safeArray($data['plan'] ?? []);
+$geoContext = safeArray($data['geo_context'] ?? []);
 
 $displayName = toText($identity['display_name'] ?? null);
 $profileStatus = toText($profile['status'] ?? null) ?? 'hidden';
@@ -340,6 +341,13 @@ $pageTitle = toText($seo['title'] ?? null) ?? 'Perfil Médico | México Médico'
 $pageDescription = toText($seo['description'] ?? null) ?? 'Ficha pública informativa del perfil médico en México Médico.';
 $pageRobots = toText($seo['robots'] ?? null) ?? 'noindex,nofollow';
 $canonicalUrl = toText($seo['canonical_url'] ?? null);
+$geoStateName = toText($geoContext['state_name'] ?? null);
+$geoStateSlug = toText($geoContext['state_slug'] ?? null);
+$geoCityName = toText($geoContext['city_name'] ?? null);
+$geoCitySlug = toText($geoContext['city_slug'] ?? null);
+$geoSource = toText($geoContext['source'] ?? null);
+$geoIsNational = toBool($geoContext['is_national'] ?? false);
+$platformRegionLabel = $geoStateName;
 
 $consultorioPanels = [];
 foreach ($consultorios as $index => $consultorio) {
@@ -484,37 +492,39 @@ if (isLocalDevRequest()) {
   <?php endif; ?>
 </head>
 <body>
-  <header class="mxpp-header" aria-label="Encabezado público México Médico">
-    <div class="mxpp-header__top">
-      <div class="mxpp-wrap mxpp-header__brand-wrap">
-        <div class="mxpp-brand" aria-label="México Médico">
-          <div class="mxpp-brand__grid" aria-hidden="true">
+  <header class="mxpp-platform-header" aria-label="México Médico">
+    <div class="mxpp-platform-header__brand">
+      <div class="mxpp-wrap mxpp-platform-header__inner">
+        <div
+          class="mxpp-platform-brand"
+          aria-label="<?= h($platformRegionLabel !== null ? 'México Médico ' . $platformRegionLabel : 'México Médico') ?>"
+          <?php if ($geoStateSlug !== null): ?>data-state-slug="<?= h($geoStateSlug) ?>"<?php endif; ?>
+          <?php if ($geoCitySlug !== null): ?>data-city-slug="<?= h($geoCitySlug) ?>"<?php endif; ?>
+          <?php if ($geoSource !== null): ?>data-geo-source="<?= h($geoSource) ?>"<?php endif; ?>
+        >
+          <div class="mxpp-platform-brand__grid" aria-hidden="true">
             <span></span><span></span><span></span>
             <span></span><span></span><span></span>
             <span></span><span></span><span></span>
           </div>
-          <div class="mxpp-brand__copy">
-            <p class="mxpp-brand__line1">méxico</p>
-            <p class="mxpp-brand__line2">Médico</p>
-            <p class="mxpp-brand__line3">encuentra a tu médico fácilmente</p>
+          <div class="mxpp-platform-brand__copy">
+            <p class="mxpp-platform-brand__mark">MÉXICO MÉDICO</p>
+            <?php if ($platformRegionLabel !== null): ?>
+              <p class="mxpp-platform-brand__region"><?= h($platformRegionLabel) ?></p>
+            <?php endif; ?>
+            <p class="mxpp-platform-brand__tagline">encuentra a tu médico fácilmente</p>
           </div>
         </div>
       </div>
     </div>
-    <div class="mxpp-header__bar">
-      <div class="mxpp-wrap mxpp-header__bar-wrap">
-        <form class="mxpp-search" action="#" method="get" onsubmit="return false;">
-          <div class="mxpp-search__field">
-            <input id="mxpp-public-search" type="search" placeholder="Médico / Clínica / Laboratorio / Padecimiento" aria-label="Buscar" disabled />
-            <button type="button" disabled>Buscar</button>
-          </div>
-        </form>
-        <nav class="mxpp-nav" aria-label="Navegación pública">
-          <span>Especialistas</span>
-          <span>Servicios</span>
-          <span>Hospitales</span>
-          <span>Laboratorios</span>
-        </nav>
+    <div class="mxpp-platform-nav" aria-label="Secciones de México Médico">
+      <div class="mxpp-wrap mxpp-platform-nav__inner">
+        <button type="button" class="mxpp-platform-nav__item">Especialistas Médicos</button>
+        <button type="button" class="mxpp-platform-nav__item">Especialistas Dentales</button>
+        <button type="button" class="mxpp-platform-nav__item">Otros servicios</button>
+        <button type="button" class="mxpp-platform-nav__item">Hospitales</button>
+        <button type="button" class="mxpp-platform-nav__item">Clínicas</button>
+        <button type="button" class="mxpp-platform-nav__item">Laboratorios</button>
       </div>
     </div>
   </header>
