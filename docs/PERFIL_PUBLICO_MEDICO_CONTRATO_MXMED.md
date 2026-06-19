@@ -1127,6 +1127,49 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 14 — Seed candidato de ruta canonica doctor 1
+
+### A) Seed controlado
+- Se agrega el SQL idempotente `modules/profiles/db/2026_06_19_seed_public_profile_seo_route_doctor_1_candidate.sql`.
+- El seed crea o actualiza un unico registro candidato para `doctor_id=1`.
+- El registro vive en `public_profile_seo_routes`.
+- El seed existe para validar que el read-model `public_canonical_route` lea rutas persistidas.
+
+### B) Ruta candidata
+- `entity_type=doctor`.
+- `entity_id=1`.
+- `profile_type=doctor`.
+- `profile_slug=dra-leticia-munoz-romo`.
+- `canonical_path=/aguascalientes/aguascalientes/medicos/dra-leticia-munoz-romo`.
+- `canonical_state_slug=aguascalientes`.
+- `canonical_city_slug=aguascalientes`.
+- `canonical_specialty_slug=NULL`.
+
+### C) Estado desactivado
+- `status=candidate`.
+- `route_enabled=0`.
+- `canonical_enabled=0`.
+- `source=derived_public_url_builder`.
+- `version=seo-route-v1`.
+- No se usa `status=active`.
+- No se activa router.
+- No se activa canonical real.
+- No se activa JSON-LD real.
+- No se cambia `seo.robots`.
+- No se genera `<link rel="canonical">` en SSR.
+- No se generan redirects 301.
+- El seed no crea aliases ni historial.
+
+### D) Limites vigentes
+- `profile.canonical_url` permanece `null`.
+- `seo.canonical_url` permanece `null`.
+- `seo.robots` permanece `noindex,nofollow`.
+- `json_ld` real permanece `null`.
+- El router SEO sigue sin existir.
+- `.htaccess` no cambia.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
