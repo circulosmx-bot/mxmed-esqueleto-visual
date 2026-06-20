@@ -2635,6 +2635,123 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 28 — Decision de guard sesion/scope para endpoint privado de suscripciones
+
+### A) Contexto
+Ya existe el endpoint privado de solo lectura:
+
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Tambien existe la bandera estricta:
+
+- `MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED`.
+
+Estado validado:
+- El endpoint ya paso QA post-push.
+- El endpoint sigue aislado.
+- No esta conectado a UI.
+- No esta conectado a perfil publico.
+- No esta conectado a `PublicProfilePlanCapabilities`.
+- No activa capacidades productivas.
+- No modifica DB.
+- No crea suscripciones.
+
+### B) Diagnostico aprobado
+El diagnostico `DIAG-Suscripciones-PrivateEndpoint-SessionScopeGuard-01` concluye:
+
+- No existe un helper central reutilizable de auth/scope.
+- Existen patrones parciales en perfiles y agenda.
+- Agenda maneja `actorContext`, `actor_role`, `operator_id` y `doctor_id` activo.
+- Agenda ya tiene permisos de operador, pero no existe todavia un permiso especifico `subscriptions.read`.
+- El ownership multi-entidad no esta formalizado.
+- El guard actual basta para QA local.
+- El guard actual no basta para uso real/productivo de UI.
+
+### C) Decision funcional
+Decisiones obligatorias antes de integrar UI real:
+
+- No conectar `p-suscripcion` todavia.
+- No conectar UI real al endpoint hasta tener guard real.
+- No conectar capacidades publicas a suscripciones hasta resolver scope real.
+- No confiar en headers QA como seguridad productiva.
+- Permitir headers QA solo en local/dev y pruebas controladas.
+- Con `strict ON`, bloquear `local_dev_open`.
+- Exigir identidad y scope suficiente para leer suscripcion actual.
+- El medico principal solo puede consultar su propio `doctor_id`.
+- Un operador solo podra consultar si pertenece al doctor y tiene permiso explicito futuro.
+- La multi-entidad queda bloqueada para uso real hasta definir ownership formal por tipo.
+
+### D) Matriz conceptual de acceso
+Caso A - Medico principal:
+- Permitir `entity_type=doctor`.
+- Permitir `entity_id` igual al `doctor_id` activo de sesion.
+- Bloquear `doctor_id` ajeno.
+- Bloquear `entity_id` ajeno.
+- Bloquear `entity_type` no soportado.
+
+Caso B - Operador autorizado:
+- Permitir solo si `operator_id` esta activo.
+- Permitir solo si pertenece al doctor solicitado.
+- Permitir solo si tiene permiso futuro `subscriptions.read` o equivalente.
+- Permitir solo si el scope coincide con doctor/entity solicitado.
+- Bloquear operador de otro doctor.
+- Bloquear operador sin permiso.
+- Bloquear mismatch de doctor/entity.
+
+Caso C - Headers QA:
+- Permitir solo en local/dev.
+- Permitir solo para pruebas controladas.
+- Bloquear su uso como seguridad productiva.
+- Bloquear host no-local con solo headers QA.
+
+Caso D - Multi-entidad futura:
+- Bloquear por ahora `clinic`.
+- Bloquear por ahora `hospital`.
+- Bloquear por ahora `laboratory`.
+- Bloquear por ahora `insurer`.
+- Bloquear por ahora `pharmaceutical_lab` y cualquier equivalente `pharmaceutical` sin ownership formal.
+- Bloquear cualquier otra entidad sin ownership formal.
+
+### E) Riesgos documentados
+Riesgos antes de conectar cualquier UI:
+
+- Confiar solo en `X-User-Id`.
+- Confiar en headers QA fuera de local.
+- No validar ownership usuario-doctor.
+- No distinguir medico principal de operador.
+- No tener permiso futuro `subscriptions.read`.
+- Conectar `p-suscripcion` antes del guard real.
+- Exponer suscripcion de una entidad ajena.
+- Activar capacidades desde un scope incompleto.
+- Habilitar multi-entidad sin ownership formal.
+
+### F) Secuencia recomendada
+Secuencia segura recomendada:
+
+1. Documentar esta decision.
+2. Implementar guard minimo real para endpoint privado de suscripciones.
+3. Ejecutar QA del guard real sin conectar UI.
+4. Solo despues diagnosticar integracion read-only de `p-suscripcion`.
+5. Mantener bloqueada contratacion, renovacion, cancelacion y pagos hasta microfases posteriores.
+6. Mantener bloqueada la conexion con `PublicProfilePlanCapabilities` hasta resolver plan efectivo productivo y scope suficiente.
+
+### G) Limites de esta adenda
+Esta adenda no implica:
+
+- Implementacion nueva en backend.
+- Modificacion de `api/subscriptions/index.php`.
+- Conexion de `p-suscripcion`.
+- Conexion de perfil publico.
+- Conexion de `PublicProfilePlanCapabilities`.
+- Activacion de capacidades productivas.
+- Soporte real multi-entidad.
+- Creacion de permisos `subscriptions.read`.
+- Cambios de DB.
+- Ejecucion SQL.
+- Cambios SEO productivos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
