@@ -2092,6 +2092,213 @@ Esta decision no implica todavia:
 
 ---
 
+## Adenda PP-Decisiones 25 — Read-model de suscripción vigente y API de sólo lectura
+
+### A) Objetivo del read-model
+- El sistema necesita un read-model central para resolver la suscripcion vigente y el plan efectivo de una entidad publicable.
+- El read-model debe concentrar:
+  - suscripcion vigente;
+  - plan contratado;
+  - plan efectivo;
+  - vigencia contractual;
+  - estado;
+  - periodo de gracia;
+  - fallback gratuito permanente;
+  - contexto que luego podran usar perfil publico, UI de Suscripcion y APIs futuras.
+- Esta decision no conecta todavia backend, UI ni capacidades publicas.
+
+### B) Nombre conceptual y ubicacion futura
+Nombre sugerido:
+
+- `CurrentSubscriptionReadModel`.
+
+Ubicacion futura sugerida:
+
+- `modules/subscriptions/`.
+
+Componentes futuros posibles:
+
+- `CurrentSubscriptionRepository`.
+- `CurrentSubscriptionService`.
+- `SubscriptionPlanCatalogRepository`.
+- Controller API en `api/subscriptions/index.php`.
+
+Estos archivos no se crean en esta fase.
+
+### C) Campos conceptuales recomendados
+El read-model debe exponer, como minimo:
+
+- `entity_type`.
+- `entity_id`.
+- `contracted_plan_code`.
+- `effective_plan_code`.
+- `plan_label`.
+- `billing_period`.
+- `duration_days`.
+- `status`.
+- `contract_accepted_at`.
+- `starts_at`.
+- `expires_at`.
+- `grace_starts_at`.
+- `grace_ends_at`.
+- `grace_status`.
+- `is_free_fallback`.
+- `is_paid_plan`.
+- `is_active`.
+- `is_expired`.
+- `is_in_grace`.
+- `days_until_expiration`.
+- `source`.
+- `version`.
+
+### D) Caso sin suscripcion
+Si no existe una suscripcion real en `profile_subscriptions`, el read-model debe devolver el plan gratuito permanente desde `subscription_plans`:
+
+- `effective_plan_code = free`.
+- `plan_label = Gratuito`.
+- `billing_period = lifetime`.
+- `duration_days = 0`.
+- `status = free_default`.
+- `expires_at = null`.
+- `grace_status = null`.
+- `source = subscription_plans/default_free`.
+
+Notas:
+- No debe crearse fila automatica en `profile_subscriptions`.
+- `is_free_fallback` puede ser `false` para el caso base sin suscripcion o ajustarse segun politica de lectura; debe distinguirse del fallback posterior a una suscripcion vencida.
+- La ausencia de suscripcion contractual no es error para perfiles gratuitos.
+
+### E) Caso plan pagado vigente
+Si existe una suscripcion pagada activa y dentro de vigencia:
+
+- `contracted_plan_code` conserva el plan contratado.
+- `effective_plan_code` debe ser el plan contratado aplicable.
+- `is_paid_plan = true`.
+- `is_active = true`.
+- `expires_at` debe ser visible para el usuario medico.
+- `days_until_expiration` puede calcularse en lectura.
+- Las fechas contractuales no deben recalcularse dinamicamente.
+
+### F) Caso vencido en gracia
+Si una suscripcion pagada vencio pero sigue dentro del periodo de gracia:
+
+- Debe aplicarse la politica de gracia pendiente de definicion funcional.
+- `is_in_grace = true`.
+- `grace_status = active` o valor equivalente.
+- No deben borrarse datos.
+- No deben recalcularse `starts_at`, `expires_at`, `grace_starts_at` ni `grace_ends_at`.
+- La politica exacta de capacidades durante gracia queda pendiente para una microfase posterior.
+
+### G) Caso vencido fuera de gracia
+Si una suscripcion pagada vencio y ya no esta en gracia:
+
+- `contracted_plan_code` conserva el plan historico contratado.
+- `effective_plan_code = free`.
+- `is_free_fallback = true`.
+- `is_expired = true`.
+- No deben borrarse perfil, agenda, contactos, expediente, configuracion ni historial.
+- Deben retirarse capacidades premium segun la lectura efectiva del plan `free`.
+
+### H) Algoritmo conceptual
+1. Buscar la suscripcion relevante por `entity_type + entity_id`, excluyendo filas con `deleted_at`.
+2. Si no existe suscripcion, devolver el plan `free` desde `subscription_plans`.
+3. Si existe suscripcion activa y vigente, aplicar el plan contratado.
+4. Si existe suscripcion vencida dentro de gracia, aplicar la politica de gracia.
+5. Si existe suscripcion vencida fuera de gracia, resolver `effective_plan_code=free`.
+6. Nunca crear fila `free` automatica para perfiles gratuitos.
+7. Nunca borrar datos al vencer una suscripcion.
+8. Separar siempre `contracted_plan_code` de `effective_plan_code`.
+
+### I) Relacion con `PublicProfilePlanCapabilities`
+- `PublicProfilePlanCapabilities` no debe consultar DB directamente.
+- Debe recibir `effective_plan_code` ya resuelto.
+- En una fase posterior podria recibir tambien:
+  - `expires_at`;
+  - `grace_status`;
+  - `subscription_context`.
+- No se modifican capacidades en esta fase.
+- No se conecta productivamente todavia.
+
+### J) Relacion con `PublicProfileRepository` y DTO publico
+- `PublicProfileRepository` hoy usa fallback desde columnas legacy de `profiles_doctors`: `plan_code`, `profile_plan`, `plan_name`, `subscription_plan` y `commercial_plan`.
+- `PublicProfileRepository` no debe contener toda la logica contractual.
+- En el futuro, el controller o un servicio intermedio debe consultar el read-model y enriquecer el DTO.
+- El DTO publico podria exponer un bloque seguro `subscription_context`.
+- Ese bloque no debe exponer datos sensibles como:
+  - IP de aceptacion;
+  - user-agent de aceptacion;
+  - datos privados del contrato;
+  - datos de pago;
+  - referencias internas de facturacion.
+
+### K) Override DEV `mxmed_plan`
+- `mxmed_plan` debe seguir existiendo solo como override local/dev.
+- No debe confundirse con una suscripcion contractual.
+- Debe marcarse como `dev_override`.
+- En produccion no debe ser fuente de verdad.
+- El read-model real debe prevalecer fuera de entornos controlados.
+
+### L) API futura de solo lectura
+Ruta recomendada:
+
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Contrato esperado:
+- Debe ser autenticada.
+- No debe ser publica.
+- Debe ser multi-entidad.
+- Debe validar scope del usuario sobre la entidad.
+- Debe estar separada de `api/profiles`.
+- No debe exponer datos contractuales sensibles.
+
+Alternativas descartadas:
+- `GET /api/profiles/index.php/me/subscription`: util como alias futuro para UI, pero no como nucleo multi-entidad.
+- `GET /api/profiles/index.php/doctors/{doctor_id}/subscription`: acopla el contrato a medicos.
+- Exponerlo dentro del endpoint publico de perfil: riesgo de exposicion publica de datos privados.
+
+### M) UI `p-suscripcion`
+- La UI `p-suscripcion` actual es maqueta/demo.
+- No tiene API real.
+- Primero necesita endpoint de solo lectura para mostrar plan, vigencia, gracia y estado efectivo.
+- La escritura de contratacion, renovacion y cancelacion queda para fases posteriores.
+- La aceptacion contractual queda para fases posteriores.
+
+### N) Riesgos de integracion temprana
+- Activar premium desde `plan_code` legacy.
+- Confundir plan contratado con plan efectivo.
+- Tratar `free` como anual.
+- Crear suscripciones gratuitas masivas.
+- Consultar DB desde `PublicProfilePlanCapabilities`.
+- Exponer datos privados de suscripcion en perfil publico.
+- Activar capacidades antes de tener reglas de vencimiento y gracia.
+- Acoplar la solucion solo a medicos y romper multi-entidad futura.
+
+### O) Que no se activa todavia
+Esta decision no activa:
+
+- Endpoints reales.
+- Backend de suscripciones.
+- UI real.
+- Contratacion.
+- Renovacion.
+- Cancelacion.
+- Aceptacion de contrato.
+- Capacidades desde DB.
+- SEO productivo.
+- Cambios en perfil publico.
+
+### P) Limites de esta adenda
+- No modifica codigo.
+- No modifica DB.
+- No ejecuta SQL.
+- No crea endpoints.
+- No conecta backend.
+- No toca UI.
+- No cambia capacidades publicas.
+- No modifica SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
