@@ -40,13 +40,16 @@ function subscriptionRespond(array $response, int $status = 200): void
     echo $json;
 }
 
-function subscriptionMeta(string $authMode = 'unknown'): array
+function subscriptionMeta(string $authMode = 'unknown', ?bool $strictAuthRequired = null): array
 {
+    $strictAuthRequired ??= subscriptionStrictAuthRequired();
+
     return [
         'contract' => 'subscription_current_readmodel_private',
         'version' => 'SUB-READ-1',
         'generated_at' => gmdate('c'),
         'auth_mode' => $authMode,
+        'strict_auth_required' => $strictAuthRequired,
     ];
 }
 
@@ -110,6 +113,23 @@ function subscriptionBoolEnvFlag($value): bool
     return in_array($raw, ['1', 'true', 'yes', 'on'], true);
 }
 
+function subscriptionStrictAuthRequired(): bool
+{
+    $name = 'MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED';
+    $value = getenv($name);
+    if ($value !== false && trim((string)$value) !== '') {
+        return subscriptionBoolEnvFlag($value);
+    }
+
+    foreach ([$_ENV[$name] ?? null, $_SERVER[$name] ?? null] as $candidate) {
+        if ($candidate !== null && trim((string)$candidate) !== '') {
+            return subscriptionBoolEnvFlag($candidate);
+        }
+    }
+
+    return false;
+}
+
 function subscriptionIsLocalRequest(): bool
 {
     $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
@@ -124,7 +144,7 @@ function subscriptionIsLocalRequest(): bool
 
 function subscriptionResolvePrivateContext(string $entityType, string $entityId): array
 {
-    $strict = subscriptionBoolEnvFlag(getenv('MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED'));
+    $strict = subscriptionStrictAuthRequired();
     $headers = subscriptionHeaders();
 
     $headerUserId = trim((string)($headers['x-user-id'] ?? ''));
@@ -161,7 +181,13 @@ function subscriptionResolvePrivateContext(string $entityType, string $entityId)
     $scopeEntityId = $sessionEntityId !== '' ? $sessionEntityId : $headerEntityId;
 
     $isLocal = subscriptionIsLocalRequest();
-    $authMode = $userId !== '' ? 'header_or_session' : ($isLocal && !$strict ? 'local_dev_open' : 'strict');
+    if ($sessionUserId !== '') {
+        $authMode = 'session_scope';
+    } elseif ($headerUserId !== '') {
+        $authMode = 'header_scope';
+    } else {
+        $authMode = ($isLocal && !$strict) ? 'local_dev_open' : 'strict';
+    }
 
     if ($strict && $userId === '') {
         return [
@@ -171,12 +197,32 @@ function subscriptionResolvePrivateContext(string $entityType, string $entityId)
         ];
     }
 
+    if ($strict && !$isLocal && $sessionUserId === '') {
+        return [
+            'ok' => false,
+            'status' => 401,
+            'response' => subscriptionError('unauthorized', 'session authentication required', $authMode),
+        ];
+    }
+
     if (!$isLocal && $userId === '') {
         return [
             'ok' => false,
             'status' => 401,
             'response' => subscriptionError('unauthorized', 'authentication required', $authMode),
         ];
+    }
+
+    if ($strict && $userId !== '') {
+        $hasDoctorScope = ($entityType === 'doctor' && $scopeDoctorId !== '');
+        $hasEntityScope = ($scopeEntityType !== '' && $scopeEntityId !== '');
+        if (!$hasDoctorScope && !$hasEntityScope) {
+            return [
+                'ok' => false,
+                'status' => 403,
+                'response' => subscriptionError('forbidden', 'entity scope required', $authMode),
+            ];
+        }
     }
 
     if ($entityType === 'doctor' && $scopeDoctorId !== '' && $scopeDoctorId !== $entityId) {
