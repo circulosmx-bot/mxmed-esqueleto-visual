@@ -1845,6 +1845,158 @@ La unicidad de una sola suscripcion vigente por entidad requiere validacion back
 
 ---
 
+## Adenda PP-Decisiones 23 — Constraints y compatibilidad MySQL para suscripciones
+
+### A) Contexto
+- Esta adenda formaliza las decisiones tecnicas posteriores al draft `modules/profiles/db/2026_06_19_create_subscription_plan_lifecycle_draft.sql`.
+- El objetivo es preparar una futura migracion ejecutable sin activar planes reales ni conectar backend, UI o capacidades publicas.
+- Las decisiones aplican al modelo inicial `subscription_plans` + `profile_subscriptions`.
+
+### B) FK hacia `subscription_plans`
+Decision:
+- No usar FK real en la primera migracion.
+- Mantener indice y validacion backend por `plan_code + billing_period`.
+
+Motivo:
+- El catalogo comercial aun esta inmaduro.
+- Evita bloquear migraciones tempranas por cambios de catalogo.
+- Mantiene separacion entre definicion de planes y vigencias contractuales.
+- Reduce acoplamiento operativo mientras pagos, UI y contratacion real siguen postergados.
+
+### C) FK hacia entidad, medico o perfil
+Decision:
+- No usar FKs reales por ahora para `entity_type + entity_id`, `doctor_id` ni `profile_id`.
+- `entity_type + entity_id` debe seguir como identificador multi-entidad.
+- `doctor_id` y `profile_id` quedan como auxiliares nullable.
+
+Motivo:
+- No existe una tabla universal de entidades publicables.
+- El modelo debe soportar medico, dental, hospital, clinica, laboratorio, diagnostico, aseguradora, farmaceutica y servicio.
+- `doctor_id` puede ser `VARCHAR(64)` y no debe forzar una solucion solo para medicos.
+
+### D) Unicidad de suscripcion vigente por entidad
+Decision:
+- Primera fase: validacion backend obligatoria para impedir multiples suscripciones vigentes por entidad.
+- Estrategia DB futura: evaluar columna generada tipo `active_subscription_entity_key` con indice `UNIQUE`.
+- Referencia conceptual: patron similar al usado en `doctor_contact_points` para unicidad condicional.
+- No implementar todavia en esta adenda.
+
+Implicacion:
+- La futura migracion ejecutable debe documentar si deja esta unicidad solo en backend o si agrega una columna generada compatible con el motor disponible.
+
+### E) Estados permitidos
+Decision:
+- Usar `VARCHAR(32)` con validacion backend.
+- No usar `ENUM` inicial.
+- No usar `CHECK` inicial.
+- No crear tabla catalogo de estados todavia.
+
+Estados conceptuales:
+- `draft`.
+- `active`.
+- `expiring_soon`.
+- `grace_period`.
+- `expired`.
+- `inactive`.
+- `cancelled`.
+- `renewed`.
+
+Nota:
+- `expiring_soon` debe ser preferentemente calculado y no persistido como estado contractual principal.
+
+### F) `effective_plan_code`
+Decision:
+- Mantener `effective_plan_code` como snapshot/read-model en la suscripcion.
+- No tratarlo como unica fuente de verdad permanente.
+- En lecturas efectivas debe recalcularse o validarse contra `status`, `starts_at`, `expires_at`, `grace_starts_at` y `grace_ends_at`.
+
+Contrato semantico:
+- `contracted_plan_code` representa el plan contratado.
+- `effective_plan_code` representa el plan que se debe aplicar al perfil publico en un momento dado.
+
+Riesgo:
+- Puede quedar stale si no se recalcula o valida durante la lectura.
+
+### G) Tipo de fechas contractuales
+Decision:
+- Usar `DATETIME` para:
+  - `contract_accepted_at`.
+  - `starts_at`.
+  - `expires_at`.
+  - `grace_starts_at`.
+  - `grace_ends_at`.
+  - `cancelled_at`.
+  - `deleted_at`.
+- Mantener timestamps tecnicos `created_at` y `updated_at` como `TIMESTAMP`.
+
+Motivo:
+- Evita conversion implicita de zona horaria de `TIMESTAMP` en fechas contractuales.
+- Conserva fechas inamovibles y visibles para el usuario medico.
+
+### H) Soft delete
+Decision:
+- Mantener `deleted_at` desde la primera fase.
+
+Motivo:
+- Preserva historial contractual.
+- Evita borrado accidental.
+- El borrado logico no debe borrar perfil, agenda, contactos, expediente ni configuracion.
+
+### I) Pagos y facturacion
+Decision:
+- No incluir campos de pago en la primera migracion ejecutable.
+- No incluir todavia `payment_status`, `payment_reference` ni `billing_account_id`.
+
+Motivo:
+- Pagos y facturacion requieren modelo separado, evidencia propia y QA dedicado.
+- Quedan postergadas tablas de pagos, recibos, facturas y evidencia de pago.
+
+### J) Seeds de planes
+Decision:
+- La migracion ejecutable de tablas no debe incluir seeds.
+- Crear seed idempotente separado posterior para:
+  - `free`.
+  - `basic`.
+  - `standard`.
+  - `optimum`.
+  - `professional`.
+
+Motivo:
+- Separa estructura de datos base y datos iniciales.
+- Evita activar planes por accidente durante la creacion de tablas.
+
+### K) Archivo ejecutable futuro
+Decision:
+- Conservar el draft:
+  - `modules/profiles/db/2026_06_19_create_subscription_plan_lifecycle_draft.sql`.
+- Crear archivo ejecutable futuro separado:
+  - `modules/profiles/db/2026_06_19_create_subscription_plan_lifecycle.sql`.
+- No renombrar el draft.
+- No crear el ejecutable en esta microfase.
+
+### L) Implicaciones para el SQL ejecutable futuro
+El SQL ejecutable futuro debe:
+- Mantener `subscription_plans`.
+- Mantener `profile_subscriptions`.
+- Mantener campos contractuales y de vigencia.
+- Mantener indices base.
+- Mantener `deleted_at`.
+- No incluir seeds.
+- No incluir pagos.
+- No conectar aun backend, UI ni capacidades publicas.
+- Documentar claramente cualquier estrategia de unicidad vigente.
+
+### M) Limites de esta adenda
+- No crea SQL.
+- No edita el draft SQL.
+- No modifica DB.
+- No ejecuta SQL.
+- No modifica backend, UI ni capacidades publicas.
+- No activa planes reales.
+- No modifica SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
