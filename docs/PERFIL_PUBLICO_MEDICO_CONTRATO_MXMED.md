@@ -2462,6 +2462,179 @@ Esta decision no activa:
 
 ---
 
+## Adenda PP-Decisiones 27 — Hardening de auth y scope para endpoint privado de suscripciones
+
+### A) Estado actual del endpoint
+Endpoint existente:
+
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Estado validado:
+- Es un endpoint privado de solo lectura.
+- No modifica DB.
+- No crea suscripciones.
+- No crea filas `free`.
+- No activa capacidades productivas.
+- No conecta perfil publico.
+- No conecta UI.
+- Usa `local_dev_open` para QA local.
+- Responde `401` fuera de local cuando no hay identidad.
+- Responde `403` cuando hay mismatch de scope.
+
+### B) Politica `local_dev_open`
+- `local_dev_open` existe solo para QA local controlado.
+- Debe estar limitado a:
+  - `127.0.0.1`.
+  - `localhost`.
+  - `::1`.
+- No debe tratarse como seguridad productiva.
+- No debe habilitarse en staging ni produccion.
+- Debe poder bloquearse con modo estricto antes de cualquier uso real.
+
+### C) Politica estricta
+Politica futura:
+
+- `MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED=1`.
+
+Cuando este activa:
+- No se permite `local_dev_open`.
+- Se exige identidad real.
+- Se exige scope valido.
+- Sin identidad debe responder `401`.
+- Con identidad pero sin scope suficiente debe responder `403`.
+- Los headers QA no deben bastar por si solos salvo entorno local controlado.
+
+### D) Headers QA
+Headers actualmente reconocidos por el endpoint:
+
+- `X-User-Id`.
+- `X-Doctor-Id`.
+- `X-Entity-Type`.
+- `X-Entity-Id`.
+
+Regla:
+- Solo deben permitirse para QA local/dev.
+- No deben ser fuente productiva de verdad.
+- En modo estricto deben ignorarse o requerir validacion adicional.
+- No deben permitir acceso si no hay sesion real o scope real suficiente.
+
+### E) Sesion real
+La fuente primaria futura debe ser la sesion real del sistema, usando patrones existentes cuando se formalicen:
+
+- `user_id`.
+- `mxmed_user_id`.
+- `auth_user_id`.
+- `doctor_id`.
+- `active_doctor_id`.
+- `mxmed_doctor_id`.
+
+Decision:
+- Aun falta un helper central reutilizable de autenticacion/scope.
+- El endpoint de suscripciones no debe depender de headers QA como identidad productiva.
+- La sesion real debe resolver usuario, doctor principal, operador y alcance autorizado antes de conectar UI real.
+
+### F) Scope doctor
+Para `entity_type=doctor`:
+
+- El doctor principal solo puede consultar su propio `doctor_id`.
+- Un operador solo puede consultar un `doctor_id` autorizado.
+- Un mismatch debe responder `403`.
+- Un admin interno podria tener alcance amplio si existe un rol futuro.
+- No se debe asumir admin global todavia.
+
+### G) Scope operador
+Los operadores deben validarse contra doctor o entidad autorizada.
+
+Aprendizajes reutilizables de agenda:
+- `actor_role`.
+- `operator_id`.
+- `actorContext`.
+- Roles normalizados.
+
+Decision:
+- La UI `p-suscripcion` no debe conectarse para uso real hasta que exista scope suficiente para doctor/operador.
+- El scope de operador debe poder distinguir operador autorizado, doctor propietario y futuros roles internos.
+
+### H) Scope multi-entidad
+Para futuros tipos:
+
+- `dental`.
+- `hospital`.
+- `clinic`.
+- `laboratory`.
+- `diagnostic`.
+- `insurer`.
+- `pharmaceutical`.
+- `service`.
+
+Regla:
+- Cada tipo requiere resolver ownership/scope especifico antes de habilitar acceso real.
+- El endpoint puede conservar contrato multi-entidad, pero no debe asumir que todo scope equivale a `doctor_id`.
+
+### I) Datos permitidos y prohibidos
+Datos permitidos en el endpoint privado de lectura:
+
+- `effective_plan_code`.
+- `plan_label`.
+- `billing_period`.
+- `duration_days`.
+- `status`.
+- `starts_at`.
+- `expires_at`.
+- `grace_status`.
+
+Datos prohibidos:
+
+- `contract_acceptance_ip`.
+- `contract_acceptance_user_agent`.
+- Datos de pago.
+- Datos administrativos privados.
+- Datos SEO publicos.
+- Capacidades publicas productivas calculadas.
+
+### J) UI `p-suscripcion`
+- No debe conectarse para uso real antes del hardening.
+- Puede conectarse solo en QA local controlado si se autoriza explicitamente.
+- Antes de uso real debe existir guard estricto.
+- La primera integracion UI debe ser solo lectura.
+- La contratacion, renovacion, cancelacion y aceptacion contractual quedan fuera de esta decision.
+
+### K) Secuencia recomendada
+Secuencia segura:
+
+1. `DOCS-Suscripciones-PrivateEndpoint-AuthHardening-01`.
+2. `BE-Suscripciones-PrivateEndpoint-StrictAuthFlag-01`.
+3. `QA-Suscripciones-PrivateEndpoint-StrictAuthFlag-01`.
+4. `BE/DIAG-Suscripciones-PrivateEndpoint-SessionScopeGuard-01`.
+5. `FE-Suscripciones-PanelReadOnly-ConnectEndpoint-01`.
+
+### L) Que no se activa todavia
+Esta adenda no activa:
+
+- UI real.
+- Contratacion.
+- Renovacion.
+- Cancelacion.
+- Aceptacion contractual.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+- Pagos.
+- Facturacion.
+
+### M) Limites de esta adenda
+- No modifica DB.
+- No ejecuta SQL.
+- No modifica `api/subscriptions/index.php`.
+- No crea endpoints.
+- No modifica PHP, JS, CSS ni UI.
+- No modifica `PublicProfilePlanCapabilities`.
+- No modifica `PublicProfileRepository`.
+- No cambia capacidades productivas.
+- No modifica SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
