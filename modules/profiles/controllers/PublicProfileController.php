@@ -146,6 +146,15 @@ final class PublicProfileController
             $jsonLdRenderGuard,
             $seo
         );
+        $seoActivationSummary = $this->buildSeoActivationSummary(
+            $publicUrlContext,
+            $publicCanonicalRoute,
+            $publicBreadcrumbs,
+            $canonicalRenderGuard,
+            $jsonLdRenderGuard,
+            $publicRouteGuard,
+            $seo
+        );
 
         $data = [
             'profile' => [
@@ -195,6 +204,7 @@ final class PublicProfileController
             'public_breadcrumbs' => $publicBreadcrumbs,
             'json_ld_render_guard' => $jsonLdRenderGuard,
             'public_route_guard' => $publicRouteGuard,
+            'seo_activation_summary' => $seoActivationSummary,
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -839,6 +849,88 @@ final class PublicProfileController
                 'canonical_ready' => $canonicalReady,
                 'robots_index_allowed' => $robotsIndexAllowed,
                 'redirect_policy_ready' => $redirectPolicyReady,
+            ],
+            'blocking_reasons' => array_values(array_unique($blockingReasons)),
+        ];
+    }
+
+    private function buildSeoActivationSummary(
+        array $publicUrlContext,
+        array $publicCanonicalRoute,
+        array $publicBreadcrumbs,
+        array $canonicalRenderGuard,
+        array $jsonLdRenderGuard,
+        array $publicRouteGuard,
+        array $seo
+    ): array {
+        $robots = $this->firstNonEmpty($seo['robots'] ?? null) ?? 'noindex,nofollow';
+        $robotsIndexAllowed = !str_contains(strtolower($robots), 'noindex');
+        $routeEnabled = (bool)($publicRouteGuard['enabled'] ?? false);
+        $canRoute = (
+            (bool)($publicRouteGuard['can_route'] ?? false)
+            && (bool)($publicCanonicalRoute['can_route'] ?? false)
+        );
+        $canonicalEnabled = (bool)($canonicalRenderGuard['enabled'] ?? false);
+        $canRenderCanonical = (bool)($canonicalRenderGuard['can_render'] ?? false);
+        $jsonLdEnabled = (bool)($jsonLdRenderGuard['enabled'] ?? false);
+        $canRenderJsonLd = (bool)($jsonLdRenderGuard['can_render'] ?? false);
+        $isPublicRouteActive = ($routeEnabled && $canRoute);
+        $isCanonicalActive = ($canonicalEnabled && $canRenderCanonical);
+        $isJsonLdActive = ($jsonLdEnabled && $canRenderJsonLd);
+
+        $blockingReasons = [];
+        if (!$isPublicRouteActive) {
+            $blockingReasons[] = 'public_route_not_active';
+        }
+        if (!$isCanonicalActive) {
+            $blockingReasons[] = 'canonical_not_active';
+        }
+        if (!$isJsonLdActive) {
+            $blockingReasons[] = 'json_ld_not_active';
+        }
+        if (!$robotsIndexAllowed) {
+            $blockingReasons[] = 'robots_noindex_active';
+        }
+        if (!(bool)(($publicRouteGuard['requires']['seo_router_enabled'] ?? false))) {
+            $blockingReasons[] = 'seo_router_not_implemented';
+        }
+
+        return [
+            'source' => 'seo_activation_guards',
+            'version' => 'seo-activation-summary-v1',
+            'overall_state' => 'not_active',
+            'is_indexable' => false,
+            'is_public_route_active' => false,
+            'is_canonical_active' => false,
+            'is_json_ld_active' => false,
+            'robots' => $robots,
+            'current_url' => $this->firstNonEmpty($publicUrlContext['profile']['current_url'] ?? null),
+            'candidate_route' => $this->firstNonEmpty($publicRouteGuard['candidate_path'] ?? null),
+            'active_url' => null,
+            'components' => [
+                'route' => [
+                    'guard' => 'public_route_guard',
+                    'state' => 'blocked',
+                    'enabled' => $routeEnabled,
+                    'can_route' => $canRoute,
+                ],
+                'canonical' => [
+                    'guard' => 'canonical_render_guard',
+                    'state' => 'blocked',
+                    'enabled' => $canonicalEnabled,
+                    'can_render' => $canRenderCanonical,
+                ],
+                'json_ld' => [
+                    'guard' => 'json_ld_render_guard',
+                    'state' => 'blocked',
+                    'enabled' => $jsonLdEnabled,
+                    'can_render' => $canRenderJsonLd,
+                ],
+                'breadcrumbs' => [
+                    'visual_render_enabled' => (bool)($publicBreadcrumbs['render_enabled'] ?? false),
+                    'json_ld_enabled' => (bool)($publicBreadcrumbs['json_ld_enabled'] ?? false),
+                    'route_enabled' => (bool)($publicBreadcrumbs['route_enabled'] ?? false),
+                ],
             ],
             'blocking_reasons' => array_values(array_unique($blockingReasons)),
         ];

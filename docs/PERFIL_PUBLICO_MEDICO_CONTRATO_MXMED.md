@@ -1387,6 +1387,63 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 19 — SEO Activation Summary
+
+### A) Campo del DTO
+- El DTO publico expone `seo_activation_summary` como llave de primer nivel.
+- La fuente del resumen es `seo_activation_guards`.
+- Version actual: `seo-activation-summary-v1`.
+- El objetivo es concentrar el estado global de activacion SEO del perfil publico.
+
+### B) Componentes resumidos
+- Ruta publica SEO desde `public_route_guard`.
+- Canonical desde `canonical_render_guard`.
+- JSON-LD desde `json_ld_render_guard`.
+- Robots desde `seo.robots`.
+- Breadcrumb visual y candidato JSON-LD desde `public_breadcrumbs`.
+- Bloqueos principales para QA y futuras activaciones.
+
+### C) Estado actual de doctor_id=1
+- `overall_state=not_active`.
+- `is_indexable=false`.
+- `is_public_route_active=false`.
+- `is_canonical_active=false`.
+- `is_json_ld_active=false`.
+- `robots=noindex,nofollow`.
+- `current_url=/profiles/doctor.php?doctor_id=1`.
+- `candidate_route=/aguascalientes/aguascalientes/medicos/dra-leticia-munoz-romo`.
+- `active_url=null`.
+- `components.route.state=blocked`.
+- `components.canonical.state=blocked`.
+- `components.json_ld.state=blocked`.
+- `components.breadcrumbs.visual_render_enabled=true`.
+- `components.breadcrumbs.json_ld_enabled=false`.
+- `components.breadcrumbs.route_enabled=false`.
+- `blocking_reasons` incluye `public_route_not_active`, `canonical_not_active`, `json_ld_not_active`, `robots_noindex_active` y `seo_router_not_implemented`.
+
+### D) Limites vigentes
+- La existencia de candidatos no implica activacion SEO.
+- `robots=noindex,nofollow` bloquea indexacion.
+- Los guards siguen bloqueando route, canonical y JSON-LD.
+- `public_route_guard.can_route` permanece `false`.
+- `canonical_render_guard.can_render` permanece `false`.
+- `json_ld_render_guard.can_render` permanece `false`.
+- `public_canonical_route.can_route` permanece `false`.
+- `profile.canonical_url` permanece `null`.
+- `seo.canonical_url` permanece `null`.
+- `json_ld` real permanece `null`.
+- `seo.breadcrumb` permanece `[]`.
+- No se modifica SSR.
+- No se modifica DB.
+- No se modifica `.htaccess`.
+- No se crea router.
+- No se crean redirects.
+- No se activa canonical.
+- No se activa JSON-LD real.
+- No se cambia `seo.robots`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
