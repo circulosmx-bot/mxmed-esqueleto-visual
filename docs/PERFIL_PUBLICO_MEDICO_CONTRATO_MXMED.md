@@ -1997,6 +1997,101 @@ El SQL ejecutable futuro debe:
 
 ---
 
+## Adenda PP-Decisiones 24 — Plan gratuito permanente y fallback post-vencimiento
+
+### A) Regla funcional
+- El plan Gratuito / `free` no tiene limite de tiempo.
+- El plan Gratuito / `free` no vence.
+- El plan Gratuito / `free` es el plan base permanente de la plataforma.
+- Miles de perfiles iniciales pueden estar en plan gratuito.
+- No deben crearse suscripciones contractuales masivas para todos los perfiles gratuitos.
+- Un perfil puede operar como gratuito sin fila activa en `profile_subscriptions`.
+
+### B) Representacion recomendada en catalogo
+En `subscription_plans`, el plan gratuito debe representarse como:
+
+- `plan_code = free`.
+- `plan_label = Gratuito`.
+- `billing_period = lifetime`.
+- `duration_days = 0`.
+- `is_active = 1`.
+- `sort_order = 10`.
+
+Motivo:
+- `free` no corresponde a una anualidad.
+- `duration_days=0` expresa que no hay ventana contractual de vencimiento.
+- `billing_period=lifetime` distingue el plan base permanente de los planes pagados anuales.
+
+### C) Planes pagados iniciales
+Los planes pagados iniciales conservan:
+
+- `billing_period = annual`.
+- `duration_days = 365`.
+
+Aplica para:
+- `basic`.
+- `standard`.
+- `optimum`.
+- `professional`.
+
+### D) Relacion con `profile_subscriptions`
+- No deben crearse filas en `profile_subscriptions` para todos los perfiles gratuitos.
+- `profile_subscriptions` debe reservarse para eventos contractuales de suscripcion, contratacion, aceptacion, vigencia, renovacion, cancelacion o historial relevante.
+- Un perfil gratuito puede existir sin suscripcion contractual activa.
+- La ausencia de suscripcion vigente debe resolverse como plan efectivo gratuito, salvo que una politica futura indique otro fallback.
+
+### E) Fallback post-vencimiento
+Cuando un perfil con plan pagado vence y termina su periodo de gracia:
+
+- El plan efectivo debe caer a `free`.
+- El plan contratado historico debe conservarse en la suscripcion vencida o inactiva.
+- No deben borrarse perfil, agenda, contactos, configuracion, expediente ni historial.
+- Solo deben retirarse capacidades premium segun `effective_plan_code=free`.
+
+### F) Plan contratado vs plan efectivo
+- `contracted_plan_code` conserva el plan que el medico contrato.
+- `effective_plan_code` refleja el plan aplicable en lectura.
+- Si una suscripcion pagada vencio y ya no esta en gracia:
+  - `contracted_plan_code` puede seguir siendo `standard`, `optimum`, `professional` u otro plan pagado historico;
+  - `effective_plan_code` debe resolverse como `free`.
+- `effective_plan_code` debe calcularse o validarse en lectura contra `status`, `starts_at`, `expires_at`, `grace_starts_at` y `grace_ends_at`.
+
+### G) Correccion pendiente del seed
+Queda pendiente una microfase posterior para corregir:
+
+- `modules/profiles/db/2026_06_19_seed_subscription_plans_catalog.sql`.
+
+Correccion requerida:
+- Cambiar solo `free` de `annual/365` a `lifetime/0`.
+- Mantener los planes pagados como `annual/365`.
+- Reaplicar el seed idempotentemente en DB local.
+- Validar que `subscription_plans` siga con 5 filas.
+- Validar que `profile_subscriptions` siga en 0.
+
+### H) Que no cambia todavia
+Esta decision no implica todavia:
+
+- Conectar backend.
+- Conectar UI.
+- Conectar `PublicProfilePlanCapabilities`.
+- Activar capacidades desde DB.
+- Crear suscripciones reales.
+- Crear pagos.
+- Crear facturacion.
+- Activar SEO productivo.
+
+### I) Limites de esta adenda
+- No modifica DB.
+- No ejecuta SQL.
+- No edita seed.
+- No edita schema.
+- No crea SQL nuevo.
+- No modifica backend, UI ni capacidades publicas.
+- No activa planes reales.
+- No modifica SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
