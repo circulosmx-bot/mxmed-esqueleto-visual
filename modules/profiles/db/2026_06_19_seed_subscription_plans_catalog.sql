@@ -22,8 +22,8 @@ INSERT INTO subscription_plans (
   (
     'free',
     'Gratuito',
-    'annual',
-    365,
+    'lifetime',
+    0,
     1,
     10,
     'mxmed_seed_subscription_plans_v1'
