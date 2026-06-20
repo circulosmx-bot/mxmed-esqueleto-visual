@@ -142,48 +142,94 @@ function subscriptionIsLocalRequest(): bool
     return in_array($host, ['127.0.0.1', 'localhost', '::1'], true);
 }
 
+function subscriptionSessionValue(array $keys): string
+{
+    foreach ($keys as $key) {
+        $value = trim((string)($_SESSION[$key] ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+    return '';
+}
+
+function subscriptionSessionHasPermission(string $permission): bool
+{
+    $permission = strtolower(trim($permission));
+    if ($permission === '') {
+        return false;
+    }
+
+    $sources = [
+        $_SESSION['permissions'] ?? null,
+        $_SESSION['mxmed_permissions'] ?? null,
+        $_SESSION['scopes'] ?? null,
+        $_SESSION['operator_permissions'] ?? null,
+    ];
+    $aliases = [
+        $permission,
+        str_replace('.', ':', $permission),
+        str_replace('.', '_', $permission),
+        'subscriptions',
+    ];
+
+    foreach ($sources as $source) {
+        if (is_string($source)) {
+            $items = preg_split('/[\s,;|]+/', strtolower($source)) ?: [];
+        } elseif (is_array($source)) {
+            $items = [];
+            foreach ($source as $key => $value) {
+                if (is_string($key) && ($value === true || $value === 1 || $value === '1')) {
+                    $items[] = strtolower(trim($key));
+                }
+                if (is_string($value) && trim($value) !== '') {
+                    $items[] = strtolower(trim($value));
+                }
+            }
+        } else {
+            $items = [];
+        }
+
+        foreach ($items as $item) {
+            $item = strtolower(trim((string)$item));
+            if ($item !== '' && in_array($item, $aliases, true)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 function subscriptionResolvePrivateContext(string $entityType, string $entityId): array
 {
     $strict = subscriptionStrictAuthRequired();
+    $isLocal = subscriptionIsLocalRequest();
     $headers = subscriptionHeaders();
 
-    $headerUserId = trim((string)($headers['x-user-id'] ?? ''));
-    $sessionUserId = trim((string)(
-        $_SESSION['user_id']
-        ?? $_SESSION['mxmed_user_id']
-        ?? $_SESSION['auth_user_id']
-        ?? ''
-    ));
+    $allowHeaderScope = $isLocal;
+    $headerUserId = $allowHeaderScope ? trim((string)($headers['x-user-id'] ?? '')) : '';
+    $sessionUserId = subscriptionSessionValue(['user_id', 'mxmed_user_id', 'auth_user_id']);
     $userId = $sessionUserId !== '' ? $sessionUserId : $headerUserId;
 
-    $headerDoctorId = trim((string)($headers['x-doctor-id'] ?? ''));
-    $sessionDoctorId = trim((string)(
-        $_SESSION['doctor_id']
-        ?? $_SESSION['active_doctor_id']
-        ?? $_SESSION['mxmed_doctor_id']
-        ?? ''
-    ));
+    $headerDoctorId = $allowHeaderScope ? trim((string)($headers['x-doctor-id'] ?? '')) : '';
+    $sessionDoctorId = subscriptionSessionValue(['doctor_id', 'active_doctor_id', 'mxmed_doctor_id']);
     $scopeDoctorId = $sessionDoctorId !== '' ? $sessionDoctorId : $headerDoctorId;
 
-    $headerEntityType = trim((string)($headers['x-entity-type'] ?? ''));
-    $headerEntityId = trim((string)($headers['x-entity-id'] ?? ''));
-    $sessionEntityType = trim((string)(
-        $_SESSION['entity_type']
-        ?? $_SESSION['active_entity_type']
-        ?? ''
-    ));
-    $sessionEntityId = trim((string)(
-        $_SESSION['entity_id']
-        ?? $_SESSION['active_entity_id']
-        ?? ''
-    ));
+    $headerEntityType = $allowHeaderScope ? trim((string)($headers['x-entity-type'] ?? '')) : '';
+    $headerEntityId = $allowHeaderScope ? trim((string)($headers['x-entity-id'] ?? '')) : '';
+    $sessionEntityType = subscriptionSessionValue(['entity_type', 'active_entity_type']);
+    $sessionEntityId = subscriptionSessionValue(['entity_id', 'active_entity_id']);
     $scopeEntityType = $sessionEntityType !== '' ? $sessionEntityType : $headerEntityType;
     $scopeEntityId = $sessionEntityId !== '' ? $sessionEntityId : $headerEntityId;
 
-    $isLocal = subscriptionIsLocalRequest();
+    $actorRole = strtolower(subscriptionSessionValue(['actor_role', 'user_role', 'role', 'mxmed_user_role']));
+    $operatorId = subscriptionSessionValue(['operator_id']);
+    $isOperator = ($actorRole === 'operator' || $operatorId !== '');
+
     if ($sessionUserId !== '') {
         $authMode = 'session_scope';
-    } elseif ($headerUserId !== '') {
+    } elseif ($allowHeaderScope && $headerUserId !== '') {
         $authMode = 'header_scope';
     } else {
         $authMode = ($isLocal && !$strict) ? 'local_dev_open' : 'strict';
@@ -213,8 +259,16 @@ function subscriptionResolvePrivateContext(string $entityType, string $entityId)
         ];
     }
 
+    if ($strict && $entityType !== 'doctor') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionError('forbidden', 'entity ownership not available', $authMode),
+        ];
+    }
+
     if ($strict && $userId !== '') {
-        $hasDoctorScope = ($entityType === 'doctor' && $scopeDoctorId !== '');
+        $hasDoctorScope = ($scopeDoctorId !== '');
         $hasEntityScope = ($scopeEntityType !== '' && $scopeEntityId !== '');
         if (!$hasDoctorScope && !$hasEntityScope) {
             return [
@@ -223,6 +277,14 @@ function subscriptionResolvePrivateContext(string $entityType, string $entityId)
                 'response' => subscriptionError('forbidden', 'entity scope required', $authMode),
             ];
         }
+    }
+
+    if ($strict && $isOperator && !subscriptionSessionHasPermission('subscriptions.read')) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionError('forbidden', 'operator subscription scope required', $authMode),
+        ];
     }
 
     if ($entityType === 'doctor' && $scopeDoctorId !== '' && $scopeDoctorId !== $entityId) {
