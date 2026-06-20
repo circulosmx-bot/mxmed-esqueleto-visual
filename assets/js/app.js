@@ -58851,7 +58851,7 @@ function mxResetLogoPreview(){
 
 
 
-// ================== SUSCRIPCIÓN (maqueta) ==================
+// ================== SUSCRIPCIÓN (read-only DEV/local) ==================
 (()=>{
   const pane = document.getElementById('p-suscripcion');
   if(!pane) return;
@@ -58880,19 +58880,37 @@ function mxResetLogoPreview(){
     billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
   };
 
+  const READONLY_NOTICE = 'Modo lectura: suscripción actual consultada desde read-model. Acciones comerciales deshabilitadas en esta fase.';
+  const STATUS_LABELS = {
+    free_default: 'Plan base permanente',
+    active: 'Activo',
+    expired: 'Vencido',
+    cancelled: 'Cancelado',
+    canceled: 'Cancelado',
+    grace: 'En periodo de gracia',
+    grace_active: 'En periodo de gracia',
+    in_grace: 'En periodo de gracia',
+    pending: 'Pendiente'
+  };
+  const PERIOD_LABELS = {
+    lifetime: 'Permanente',
+    annual: 'Anual',
+    monthly: 'Mensual'
+  };
+
   const data = {
     billing: 'monthly',
     current: {
-      id: 'optimo',
-      name: 'Óptimo',
-      since: '22 Dic 2024',
-      until: '22 Dic 2025',
-      status: 'Activo',
-      nextBill: '22 Dic 2025',
-      autorenew: true,
-      note: 'Tu perfil está en línea / tienes acceso a:',
-      alert: 'Tu anualidad vence el 22 Diciembre 2025 · RENUEVA AHORA',
-      features: ['Perfil en línea','Agenda','Expediente','Recetas']
+      id: 'loading',
+      name: 'Cargando',
+      since: 'No aplica',
+      until: 'No aplica',
+      status: 'Modo lectura',
+      nextBill: 'No aplica',
+      autorenew: false,
+      note: 'Consultando suscripción actual...',
+      alert: READONLY_NOTICE,
+      features: ['Lectura del estado actual sin acciones comerciales']
     },
     plans: [
       { id:'pro', name:'Profesional', monthly:0, yearly:0, features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] },
@@ -58900,11 +58918,197 @@ function mxResetLogoPreview(){
       { id:'estandar', name:'Estándar', monthly:0, yearly:0, features:['Perfil en línea','Agenda'] },
       { id:'basico', name:'Básico', monthly:0, yearly:0, features:['Perfil en línea'] }
     ],
-    history: [
-      {fecha:'2025-06-01', plan:'Óptimo', mov:'Renovación', vig:'22 Dic 2025', est:'Activo', apoyo:'—'},
-      {fecha:'2024-12-22', plan:'Estándar', mov:'Upgrade', vig:'22 Dic 2024', est:'Activo', apoyo:'—'}
-    ]
+    history: []
   };
+
+  function clean(value){
+    return String(value ?? '').trim();
+  }
+
+  function escapeHtml(value){
+    return clean(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function safeDoctorId(value){
+    const id = clean(value);
+    if(!id || id.length > 64) return '';
+    return /^[A-Za-z0-9._:-]+$/.test(id) ? id : '';
+  }
+
+  function resolveSubscriptionDoctorId(){
+    const candidates = [];
+    try{
+      const active = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+        ? window.mxmedResolveActiveProfessionalContext()
+        : null;
+      candidates.push(active?.doctor_id);
+    }catch(_){}
+    candidates.push(window.activeProfessionalContext?.doctor_id);
+    candidates.push(window.mxmedStore?.activeProfessionalContext?.doctor_id);
+    candidates.push(window.mxmedStore?.doctor_id);
+    candidates.push(window.mxmedStore?.doctorId);
+    candidates.push(window.mxmedDoctor?.doctor_id);
+    candidates.push(document.body?.dataset?.doctorId);
+    for(const candidate of candidates){
+      const id = safeDoctorId(candidate);
+      if(id) return id;
+    }
+    return '';
+  }
+
+  function buildSubscriptionEndpoint(doctorId){
+    return `/api/subscriptions/index.php/entities/doctor/${encodeURIComponent(doctorId)}/current`;
+  }
+
+  function labelFromMap(map, value, fallback){
+    const key = clean(value).toLowerCase();
+    return map[key] || fallback || clean(value) || 'No disponible';
+  }
+
+  function formatDate(value){
+    const raw = clean(value);
+    if(!raw) return 'No aplica';
+    const normalized = raw.includes('T') ? raw : `${raw}T00:00:00`;
+    const date = new Date(normalized);
+    if(Number.isNaN(date.getTime())) return raw;
+    return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: '2-digit' });
+  }
+
+  function formatDuration(days, billingPeriod){
+    if(Number(days) === 0 || clean(billingPeriod).toLowerCase() === 'lifetime') return 'Permanente';
+    const total = Number(days);
+    if(!Number.isFinite(total) || total <= 0) return 'No aplica';
+    return total === 1 ? '1 día' : `${total} días`;
+  }
+
+  function formatDaysRemaining(days){
+    if(days === null || days === undefined || clean(days) === '') return 'No aplica';
+    const total = Number(days);
+    if(!Number.isFinite(total)) return 'No aplica';
+    if(total < 0) return 'Vencido';
+    if(total === 0) return 'Hoy';
+    return total === 1 ? '1 día' : `${total} días`;
+  }
+
+  function buildReadModelFeatures(model, meta){
+    const contracted = clean(model?.contracted_plan_code);
+    const effective = clean(model?.effective_plan_code);
+    const period = labelFromMap(PERIOD_LABELS, model?.billing_period, 'No aplica');
+    const grace = clean(model?.grace_status) || 'No aplica';
+    const version = clean(model?.version || meta?.version);
+    const source = clean(model?.source);
+    return [
+      `Plan efectivo: ${effective || 'No disponible'}`,
+      `Plan contratado: ${contracted || 'Sin plan contratado vigente'}`,
+      `Periodo: ${period}`,
+      `Duración: ${formatDuration(model?.duration_days, model?.billing_period)}`,
+      `Días restantes: ${formatDaysRemaining(model?.days_until_expiration)}`,
+      `Gracia: ${grace}`,
+      source ? `Fuente: ${source}` : '',
+      version ? `Versión: ${version}` : ''
+    ].filter(Boolean);
+  }
+
+  function applyReadModel(model, meta){
+    const planLabel = clean(model?.plan_label) || 'No disponible';
+    const status = clean(model?.status);
+    const statusLabel = labelFromMap(STATUS_LABELS, status, status || 'Estado no disponible');
+    const effectivePlan = clean(model?.effective_plan_code);
+    const contractedPlan = clean(model?.contracted_plan_code);
+    const hasContract = contractedPlan !== '';
+    const startsAt = formatDate(model?.starts_at);
+    const expiresAt = formatDate(model?.expires_at);
+
+    data.current = {
+      id: effectivePlan || 'unknown',
+      name: planLabel,
+      since: startsAt,
+      until: expiresAt,
+      status: statusLabel,
+      nextBill: 'No aplica',
+      autorenew: false,
+      note: hasContract
+        ? `Plan contratado: ${contractedPlan}. Plan efectivo: ${effectivePlan || planLabel}.`
+        : `Sin plan contratado vigente. Plan efectivo actual: ${planLabel}.`,
+      alert: READONLY_NOTICE,
+      features: buildReadModelFeatures(model || {}, meta || {})
+    };
+
+    if(clean(model?.billing_period).toLowerCase() === 'lifetime' || Number(model?.duration_days) === 0){
+      data.current.until = 'No aplica';
+      data.current.nextBill = 'No aplica';
+    }
+
+    if(els.currentTitle){
+      els.currentTitle.dataset.subscriptionStatus = status || '';
+      els.currentTitle.dataset.subscriptionPeriod = clean(model?.billing_period);
+      els.currentTitle.dataset.subscriptionDurationDays = clean(model?.duration_days);
+    }
+
+    if(els.currentNote){
+      els.currentNote.dataset.subscriptionContractedPlan = contractedPlan;
+      els.currentNote.dataset.subscriptionEffectivePlan = effectivePlan;
+    }
+
+    renderCurrent();
+    renderCatalog();
+    renderHistory(model);
+  }
+
+  function applyReadOnlyError(httpStatus){
+    let message = 'No se pudo cargar la suscripción. Intenta más tarde.';
+    if(httpStatus === 401){
+      message = 'Sesión no válida o no iniciada para consultar la suscripción.';
+    }else if(httpStatus === 403){
+      message = 'No tienes permiso para consultar esta suscripción.';
+    }else if(httpStatus === 404 || httpStatus === 422){
+      message = 'No se pudo resolver la suscripción para el contexto actual.';
+    }
+    data.current = {
+      id: 'read-only-error',
+      name: 'Suscripción',
+      since: 'No aplica',
+      until: 'No aplica',
+      status: httpStatus ? `Error ${httpStatus}` : 'Error',
+      nextBill: 'No aplica',
+      autorenew: false,
+      note: message,
+      alert: READONLY_NOTICE,
+      features: [message, 'El resto del panel permanece en modo lectura.']
+    };
+    renderCurrent();
+    renderCatalog();
+    renderHistory();
+  }
+
+  async function loadCurrentSubscription(){
+    const doctorId = resolveSubscriptionDoctorId();
+    if(!doctorId){
+      applyReadOnlyError(422);
+      return;
+    }
+
+    try{
+      const response = await fetch(buildSubscriptionEndpoint(doctorId), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const payload = await response.json().catch(()=> null);
+      if(!response.ok || !payload || payload.ok !== true || !payload.data){
+        applyReadOnlyError(Number(response.status || 0));
+        return;
+      }
+      applyReadModel(payload.data, payload.meta || {});
+    }catch(_){
+      applyReadOnlyError(0);
+    }
+  }
 
   function fmtMoney(n){
     return `$${n.toLocaleString('es-MX')} MXN`;
@@ -58923,7 +59127,7 @@ function mxResetLogoPreview(){
     if(els.currentNote) els.currentNote.textContent = data.current.note || '';
     if(els.nextBill) els.nextBill.textContent = data.current.nextBill || '—';
     if(els.currentFeat){
-      els.currentFeat.innerHTML = data.current.features.map(f=>`<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${f}</span></li>`).join('');
+      els.currentFeat.innerHTML = data.current.features.map(f=>`<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></li>`).join('');
     }
     if(els.currentAlert){
       if(data.current.alert){
@@ -58935,27 +59139,21 @@ function mxResetLogoPreview(){
     }
   }
 
-  function renderHistory(){
+  function renderHistory(model){
     if(!els.historyBody) return;
-    const today = new Date();
-    const ymNow = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
     const hist = [...data.history];
-    // Simular una línea del mes en curso con opción de facturar
-    if(!hist.some(h => (h.fecha || '').startsWith(ymNow))){
-      const iso = today.toISOString().slice(0,10);
+    if(model){
       hist.unshift({
-        fecha: iso,
+        fecha: formatDate(model.starts_at),
         plan: data.current.name || '—',
-        mov: 'Renovación',
-        vig: data.current.until || iso,
-        est: 'Pagado',
-        apoyo: '—'
+        mov: clean(model.contracted_plan_code) ? 'Lectura plan contratado' : 'Lectura plan base',
+        vig: data.current.until || 'No aplica',
+        est: data.current.status || 'Modo lectura',
+        apoyo: 'Read-model'
       });
     }
     els.historyBody.innerHTML = hist.map(h=>{
-      const isCurrentMonth = (h.fecha || '').startsWith(ymNow);
-      const facturaBtn = isCurrentMonth ? `<button class="btn btn-primary btn-sm" type="button">Solicitar factura</button>` : '';
-      return `<tr><td>${h.fecha}</td><td>${h.plan}</td><td>${h.mov}</td><td>${h.vig}</td><td>${h.est}</td><td>${h.apoyo}</td><td>${facturaBtn}</td></tr>`;
+      return `<tr><td>${escapeHtml(h.fecha)}</td><td>${escapeHtml(h.plan)}</td><td>${escapeHtml(h.mov)}</td><td>${escapeHtml(h.vig)}</td><td>${escapeHtml(h.est)}</td><td>${escapeHtml(h.apoyo)}</td><td><button class="btn btn-outline-secondary btn-sm" type="button" disabled>Modo lectura</button></td></tr>`;
     }).join('');
   }
 
@@ -58966,19 +59164,21 @@ function mxResetLogoPreview(){
       const price = yearly ? p.yearly : p.monthly;
       const save = yearly ? (p.monthly*12 - p.yearly) : 0;
       const isCurrent = p.id === data.current.id;
-      return `<div class="subp-plan ${isCurrent?'current':''}" data-plan="${p.id}">
+      return `<div class="subp-plan ${isCurrent?'current':''}" data-plan="${escapeHtml(p.id)}">
         ${isCurrent?'<div class="subp-plan-badge">Plan actual</div>':''}
-        <div class="subp-plan-title">${p.name}</div>
+        <div class="subp-plan-title">${escapeHtml(p.name)}</div>
         <div class="subp-price">${fmtMoney(price)} <small>${yearly?'/ año':'/ mes'}</small></div>
-        <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${f}</span></div>`).join('')}</div>
+        <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         ${save>0?`<div class="subp-save">Ahorra $${save.toLocaleString('es-MX')} al contratar anual</div>`:''}
-        <button class="btn ${isCurrent?'btn-outline-primary':'btn-primary'} subp-btn" type="button" data-subp-select="${p.id}">${isCurrent?'Renovar':'Seleccionar'}</button>
+        <button class="btn ${isCurrent?'btn-outline-primary':'btn-primary'} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" disabled>Próximamente</button>
       </div>`;
     }).join('');
     els.catalog.querySelectorAll('[data-subp-select]').forEach(btn=>{
       btn.addEventListener('click',()=>{
-        const id = btn.getAttribute('data-subp-select');
-        console.log('Seleccionar plan', id);
+        if(els.currentAlert){
+          els.currentAlert.textContent = 'Acción no disponible en esta fase. El panel está en modo lectura.';
+          els.currentAlert.classList.remove('d-none');
+        }
       });
     });
   }
@@ -58990,22 +59190,49 @@ function mxResetLogoPreview(){
       renderCatalog();
     });
   });
-  els.renewBtn?.addEventListener('click', ()=>console.log('Renovar plan actual'));
-  els.renewCTA?.addEventListener('click', ()=>console.log('Renovar plan actual'));
+  function markReadOnlyAction(){
+    if(els.currentAlert){
+      els.currentAlert.textContent = 'Acción no disponible en esta fase. El panel está en modo lectura.';
+      els.currentAlert.classList.remove('d-none');
+    }
+  }
+  const staticReadOnlyButtons = [
+    els.renewBtn,
+    els.renewCTA,
+    els.couponApply,
+    els.invoiceBtn,
+    els.historyRefresh,
+    ...pane.querySelectorAll('.subp-card button')
+  ].filter(Boolean);
+  staticReadOnlyButtons.forEach((button)=>{
+    if(button){
+      button.setAttribute('aria-disabled', 'true');
+      button.disabled = true;
+      button.classList.add('disabled');
+    }
+  });
+  els.renewBtn?.addEventListener('click', markReadOnlyAction);
+  els.renewCTA?.addEventListener('click', markReadOnlyAction);
   els.couponApply?.addEventListener('click', ()=>{
-    const code = (els.couponInput?.value||'').trim();
-    els.couponMsg.textContent = code ? `Cupón "${code}" aplicado (demo)` : 'Sin cupón aplicado';
+    if(els.couponMsg) els.couponMsg.textContent = 'Cupones no disponibles en esta fase. Modo lectura.';
+    markReadOnlyAction();
   });
   els.invoiceBtn?.addEventListener('click', ()=>{
-    els.invoiceHint.textContent = 'Solicitud de factura registrada (demo)';
+    if(els.invoiceHint) els.invoiceHint.textContent = 'Facturación no disponible en esta fase. Modo lectura.';
+    markReadOnlyAction();
   });
   els.historyRefresh?.addEventListener('click', ()=>{
-    renderHistory();
+    markReadOnlyAction();
   });
+  if(els.autorenew) els.autorenew.disabled = true;
+  if(els.couponInput) els.couponInput.disabled = true;
+  if(els.couponMsg) els.couponMsg.textContent = 'Cupones deshabilitados en modo lectura.';
+  if(els.invoiceHint) els.invoiceHint.textContent = 'Facturación deshabilitada en modo lectura.';
 
   renderCurrent();
   renderCatalog();
   renderHistory();
+  loadCurrentSubscription();
 })();
 
 // ====== Estudios: modal catálogo laboratorio ======
