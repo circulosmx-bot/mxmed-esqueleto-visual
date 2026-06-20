@@ -1682,6 +1682,169 @@ Despues de gracia:
 
 ---
 
+## Adenda PP-Decisiones 22 — Decisión de schema para suscripciones de planes
+
+### A) Contexto
+- Actualmente no existe un modelo formal de suscripciones de planes.
+- No existen tablas canonicas de suscripciones, planes, pagos/facturacion de plataforma ni aceptacion contractual.
+- La UI `p-suscripcion` existe como maqueta/demo, sin API real de contratacion, renovacion, cancelacion o vigencia.
+- `PublicProfilePlanCapabilities` aun no resuelve capacidades desde una suscripcion vigente.
+- La decision funcional requiere vigencias contractuales inamovibles, visibles para el usuario y usadas como eje de beneficios, recordatorios, periodo de gracia e inactivacion.
+
+### B) Decision tecnica
+La primera fase futura de schema debe usar dos tablas:
+
+- `subscription_plans`.
+- `profile_subscriptions`.
+
+Esta fase no crea SQL todavia. La decision queda como contrato tecnico previo a una microfase DB explicita.
+
+### C) Justificacion
+- Separa el catalogo de planes de los contratos/vigencias de suscripcion.
+- Evita duplicar definicion de planes en cada suscripcion.
+- Permite un modelo multi-entidad desde la primera fase.
+- Permite que perfiles futuros usen la misma base: medico, dental, hospital, clinica, laboratorio, diagnostico, aseguradora, farmaceutica y servicio.
+- Conserva la aceptacion contractual embebida en `profile_subscriptions` para la primera implementacion segura.
+- Evita sobrediseno con eventos, aceptaciones multiples o pagos antes de tener el flujo base estable.
+
+### D) Tabla `subscription_plans`
+Proposito conceptual:
+- Catalogo canonico de planes disponibles.
+- Debe representar, como minimo, `free`, `basic`, `standard`, `optimum` y `professional`.
+- Debe permitir activar/desactivar planes sin borrar historico.
+
+Campos conceptuales minimos:
+- `id`.
+- `plan_code`.
+- `plan_label`.
+- `billing_period`.
+- `duration_days`.
+- `is_active`.
+- `sort_order`.
+- `source`.
+- `created_at`.
+- `updated_at`.
+
+### E) Tabla `profile_subscriptions`
+Proposito conceptual:
+- Fuente canonica de suscripcion contratada o vigente por entidad publicable.
+- Debe soportar medico, dental, hospital, clinica, laboratorio, diagnostico, aseguradora, farmaceutica y servicio.
+- Para medico, debe respetar que `doctor_id` / `entity_id` puede ser `VARCHAR(64)`.
+
+Identidad:
+- `id`.
+- `subscription_id`.
+- `entity_type`.
+- `entity_id`.
+- `doctor_id`.
+- `profile_id`.
+
+Plan:
+- `plan_code`.
+- `plan_label`.
+- `billing_period`.
+- `duration_days`.
+- `contracted_plan_code`.
+- `effective_plan_code`.
+
+Contrato:
+- `contract_version`.
+- `contract_accepted_at`.
+- `contract_accepted_by_user_id`.
+- `contract_acceptance_source`.
+- `contract_acceptance_ip`.
+- `contract_acceptance_user_agent`.
+
+Vigencia:
+- `starts_at`.
+- `expires_at`.
+- `grace_starts_at`.
+- `grace_ends_at`.
+
+Estado:
+- `status`.
+- `auto_renew`.
+- `cancelled_at`.
+- `renewed_from_subscription_id`.
+- `renewed_to_subscription_id`.
+
+Auditoria:
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+### F) Estados conceptuales
+- `draft`.
+- `active`.
+- `expiring_soon`.
+- `grace_period`.
+- `expired`.
+- `inactive`.
+- `cancelled`.
+- `renewed`.
+
+Nota: `expiring_soon` puede ser estado calculado y no necesariamente persistido, segun se defina en la microfase de implementacion.
+
+### G) Reglas de negocio
+- Una suscripcion inicia como `draft` hasta aceptacion contractual valida.
+- Al aceptar contrato se fija `contract_accepted_at`.
+- `starts_at` se fija al contratar/aceptar.
+- `expires_at` se calcula una sola vez.
+- Anualidad base: 365 dias.
+- Las fechas contractuales no deben recalcularse dinamicamente por lecturas.
+- Renovaciones crean una nueva fila y enlazan con `renewed_from_subscription_id`.
+- La fila anterior puede enlazarse con `renewed_to_subscription_id`.
+- Cancelar no borra datos.
+- Vencer no borra perfil, agenda, contactos, expediente ni configuracion.
+- Despues de gracia se retiran capacidades premium segun `effective_plan_code`.
+
+### H) Indices futuros sugeridos
+Decision conceptual, sin SQL en esta fase:
+
+- `subscription_id` unico.
+- `entity_type + entity_id + status`.
+- `entity_type + entity_id + starts_at + expires_at`.
+- `plan_code + status`.
+- `status + expires_at`.
+- `status + grace_ends_at`.
+- `renewed_from_subscription_id`.
+- `renewed_to_subscription_id`.
+
+La unicidad de una sola suscripcion vigente por entidad requiere validacion backend y/o estrategia MySQL posterior. Si se requiere enforcement fuerte, puede evaluarse columna generada o constraint compatible con el motor disponible.
+
+### I) Elementos postergados
+- `profile_subscription_events`.
+- `profile_subscription_contract_acceptances`.
+- Pagos/facturacion real.
+- Recibos/facturas.
+- Jobs de recordatorios.
+- Integracion real con `PublicProfilePlanCapabilities`.
+- Conexion UI `p-suscripcion`.
+- Endpoint de contratacion.
+- Endpoint de renovacion.
+- Endpoint de cancelacion.
+
+### J) Puntos pendientes de decision funcional
+- Duracion exacta del periodo de gracia.
+- Capacidades disponibles durante gracia.
+- Corte exacto de `expires_at`: timestamp exacto o fin de dia local.
+- Fallback post-vencimiento: `free`, `inactive` u otro.
+- Relacion definitiva entre `doctor_id` y `profile_id` para tipos no medicos.
+- Integracion futura con pagos y evidencia de pago.
+
+### K) Limites de esta decision
+- No crea SQL.
+- No crea tablas.
+- No modifica DB.
+- No modifica PHP, JS, CSS ni UI.
+- No activa planes reales.
+- No cambia capacidades publicas.
+- No modifica SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
