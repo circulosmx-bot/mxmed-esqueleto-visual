@@ -3528,6 +3528,166 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 33 — Cierre QA visual del panel Suscripcion read-only
+
+### A) Contexto
+Ya existe una integracion DEV/local read-only del panel `p-suscripcion`.
+
+La integracion fue implementada en:
+
+- `assets/js/app.js`
+
+El endpoint consultado es:
+
+- `GET /api/subscriptions/index.php/entities/doctor/{doctor_id}/current`
+
+La integracion sigue sin writes y sin acciones comerciales reales. Esta adenda documenta el cierre de la QA visual/manual del panel `Suscripcion`, cerrada con PASS.
+
+### B) QA visual/manual cerrada
+La microfase `QA-Suscripciones-PanelReadOnly-VisualManual-01` cerro con PASS sin cambios.
+
+Resumen tecnico:
+
+- Rama limpia y alineada.
+- HEAD: `fe019e0`.
+- PHP lint PASS:
+  - Endpoint `api/subscriptions/index.php`.
+  - Repository `CurrentSubscriptionRepository.php`.
+  - Service `CurrentSubscriptionReadModelService.php`.
+- JS parse PASS via JXA.
+- Node no disponible.
+- `/index.html` HTTP 200.
+- `/assets/js/app.js` HTTP 200.
+- Endpoint `doctor/1/current` HTTP 200.
+- `effective_plan_code=free`.
+- `status=free_default`.
+- `auth_mode=local_dev_open`.
+- `strict_auth_required=false`.
+
+### C) Resultado visual validado
+En el panel `Suscripcion` se valido:
+
+- El panel abre correctamente.
+- `p-suscripcion` queda activo y visible.
+- La navegacion queda intacta.
+- El layout queda intacto.
+- No hay ruptura visual observada por DOM/Safari.
+- Plan mostrado: `Gratuito`.
+- Estado mostrado: `Plan base permanente`.
+- Vigencia/vencimiento: `No aplica`.
+- Dias restantes: `No aplica`.
+- Plan contratado: `Sin plan contratado vigente`.
+- Modo lectura visible.
+- Copy comprensible.
+- El copy indica read-model y acciones comerciales deshabilitadas.
+
+### D) Acciones comerciales bloqueadas
+Siguen bloqueadas:
+
+- Contratar: bloqueado / `Proximamente`.
+- Renovar: deshabilitado.
+- Cambiar plan: botones de catalogo deshabilitados.
+- Cancelar: sin accion real activa.
+- Pagar: sin accion real activa.
+- Cupon: input y boton deshabilitados.
+- Facturacion: deshabilitada en modo lectura.
+- Historial/facturas: refresh deshabilitado; filas en modo lectura.
+
+Validaciones explicitas:
+
+- Ninguna accion ejecuta write.
+- No se ejecutan `POST`/`PUT`/`PATCH`/`DELETE` hacia `/api/subscriptions`.
+- La llamada de suscripcion es `GET`.
+- No se usan headers QA frontend para suscripciones.
+
+### E) Estados de error
+Los estados de error no se forzaron modificando codigo ni servidor.
+
+Queda documentado:
+
+- `401` no fue simulado, pero existe copy controlado en codigo.
+- `403` no fue simulado, pero existe copy controlado en codigo.
+- Error backend no fue simulado, pero existe copy controlado en codigo.
+- No se modifico codigo ni servidor para forzar errores.
+
+### F) DB y aislamiento
+La QA visual/manual confirmo:
+
+- `subscription_plans count = 5`.
+- `profile_subscriptions count = 0`.
+- DB intacta.
+- No se ejecuto SQL de escritura.
+- No se modificaron archivos.
+- No se modifico backend.
+- No se modifico UI.
+- No se conecto `PublicProfilePlanCapabilities`.
+- No se activaron capacidades productivas.
+- No se implemento contratacion.
+- No se implemento renovacion.
+- No se implemento cancelacion.
+- No se implementaron pagos.
+- No se toco SEO productivo.
+
+### G) Estado funcional final del bloque
+El bloque read-only DEV/local del panel `Suscripcion` queda visualmente cerrado para DEV/local.
+
+Permitido:
+
+- Mostrar suscripcion actual desde read-model.
+- Mostrar plan gratuito permanente.
+- Mostrar modo lectura.
+- Mostrar acciones comerciales bloqueadas.
+- Usar backend como autoridad.
+
+Bloqueado:
+
+- Uso productivo sin contexto activo canonico.
+- Writes de suscripcion.
+- Crear suscripciones.
+- Crear filas `free`.
+- Contratar.
+- Aceptar contrato.
+- Renovar.
+- Cancelar.
+- Pagar.
+- Facturar.
+- Conectar `PublicProfilePlanCapabilities`.
+- Activar capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+### H) Secuencia recomendada
+Opciones siguientes:
+
+1. `FE/UX-Suscripciones-PanelReadOnly-VisualPolish-01`
+   - Objetivo: afinar copy, jerarquia visual y estados del panel, sin writes ni capacidades.
+2. `BE/DIAG-Suscripciones-ActiveEntityContext-EndpointDesign-01`
+   - Objetivo: disenar contexto activo canonico antes de uso productivo.
+3. `DIAG-Suscripciones-ContractFlow-Readiness-01`
+   - Objetivo: diagnosticar que falta para contratacion real, aceptacion de contrato y vigencia contractual, sin implementar todavia.
+
+Recomendacion:
+
+- Si el panel visual ya es aceptable en DEV/local, priorizar diseno backend productivo de contexto activo antes de uso real.
+
+### I) Limites de esta adenda
+Esta adenda no activa:
+
+- Uso productivo.
+- Writes de suscripcion.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
