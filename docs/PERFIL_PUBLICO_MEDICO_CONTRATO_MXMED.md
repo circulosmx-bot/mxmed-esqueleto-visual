@@ -3132,6 +3132,229 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 31 — Readiness de contexto activo doctor/entity para Suscripciones
+
+### A) Contexto
+Ya existe el endpoint privado de suscripcion actual:
+
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`
+
+Tambien existe:
+
+- Read-model de suscripcion actual.
+- Guard sesion/scope reforzado para el endpoint privado.
+- Strict flag `MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED`.
+- Documentacion de readiness read-only de `p-suscripcion`.
+
+Antes de conectar cualquier UI se diagnostico si existe una fuente confiable para resolver:
+
+- `doctor_id`.
+- `entity_type`.
+- `entity_id`.
+- Actor u operador.
+- Permisos y scope.
+
+Esta adenda documenta la decision de readiness. No conecta `p-suscripcion`, no crea endpoint auxiliar y no activa writes ni capacidades productivas.
+
+### B) Diagnostico aprobado
+Hallazgos de la microfase `BE/DIAG-Suscripciones-ActiveEntityContext-Readiness-01`:
+
+- No existe endpoint canonico tipo `/api/me/context`.
+- No existe endpoint canonico tipo `/api/subscriptions/index.php/context/current`.
+- No existe helper global backend de contexto activo.
+- Existen fuentes frontend utiles como pista visual o DEV/local, pero no como autoridad productiva.
+- La fuente mas segura hoy es la sesion validada por `api/subscriptions/index.php`.
+- Agenda tiene un patron parcial robusto con `actorContext`, `actor_role`, `operator_id`, `doctor_id` y validacion de operador.
+- Ese patron de agenda todavia no es un helper global reutilizable.
+- Suscripciones ya valida sesion/scope en su endpoint privado.
+- Para UI productiva hace falta contexto activo backend con sesion real, ownership/scope y permisos formales.
+
+### C) Fuentes actuales doctor/entity
+Fuentes detectadas y nivel de confianza:
+
+- `body[data-doctor-id]`:
+  - Existe en `index.html`.
+  - Hoy contiene `doctor_id=1`.
+  - Es util como pista visual o DEV/local.
+  - No es confiable para uso productivo.
+- `window.mxmedStore.doctor_id`:
+  - Se alimenta desde `body.dataset.doctorId`.
+  - Es manipulable en cliente.
+  - Puede usarse como sugerencia, no como autoridad.
+- `doctorId`:
+  - Es alias en `window.mxmedStore.doctorId`.
+  - Tiene el mismo nivel de confianza que `window.mxmedStore.doctor_id`.
+- `activeProfessionalContext.doctor_id`:
+  - Se resuelve en `assets/js/app.js`.
+  - Es la mejor fuente frontend actual.
+  - Sigue siendo estado cliente, no fuente backend de verdad.
+- `window.mxmedDoctor.doctor_id`:
+  - Global frontend poblado desde dataset/store.
+  - No es fuente productiva de verdad.
+- `window.mxmedResolveActiveProfessionalContext()`:
+  - Helper frontend existente.
+  - Consolida doctor, usuario, rol y operador.
+  - Es util para DEV/local y como UI hint.
+  - No es autoridad backend.
+- Sesion backend:
+  - Presente en `api/subscriptions`, `api/profiles` y `api/agenda`.
+  - Usa aliases como `user_id`, `mxmed_user_id`, `auth_user_id`, `doctor_id`, `active_doctor_id` y `mxmed_doctor_id`.
+  - Es la fuente mas segura actual cuando el endpoint valida scope.
+- `actorContext` de agenda:
+  - Patron parcial robusto.
+  - Maneja `actor_role`, `operator_id` y `doctor_id`.
+  - No esta convertido en helper global.
+- Otras fuentes:
+  - `window.mxmedStore.currentActor`.
+  - `body[data-user-id]`.
+  - `body[data-user-role]`.
+  - `body[data-operator-slot]`.
+
+### D) Matriz de confianza
+Nivel 0 - No confiable:
+
+- Valores hardcoded.
+- Datos demo.
+- Datos visibles y manipulables sin validacion backend.
+
+Nivel 1 - Util solo para DEV/local:
+
+- `body[data-doctor-id]`.
+- Variables globales frontend.
+- Contexto visual no validado.
+
+Nivel 2 - Util para UI read-only si backend valida:
+
+- `doctor_id` visual usado solo como sugerencia.
+- Endpoint privado valida sesion/scope.
+- Errores `401`/`403` son manejados visualmente.
+- No hay writes.
+
+Nivel 3 - Confiable productivo:
+
+- Contexto activo obtenido desde backend con sesion real.
+- Ownership/scope validado.
+- Operador y permisos resueltos formalmente.
+- Permisos canonicos persistidos.
+
+Estado actual de MXMed para `p-suscripcion`:
+
+- Nivel 1 si se mira solo la fuente visual.
+- Nivel 2 si el `doctor_id` visual se usa solo como sugerencia y el endpoint privado valida sesion/scope.
+- Todavia no llega a Nivel 3 productivo.
+
+### E) Opciones evaluadas
+Opcion A - DEV-only sin endpoint auxiliar:
+
+- Viable con condiciones.
+- Usar `doctor_id` visual solo como sugerencia.
+- Consumir el endpoint privado de suscripcion actual.
+- El backend debe bloquear con `401`/`403` si no hay identidad o scope suficiente.
+- Solo local/dev.
+- Sin writes.
+- Riesgo: el contexto visual puede ser demo.
+
+Opcion B - Endpoint auxiliar de contexto activo:
+
+- Recomendado antes de UI productiva.
+- Posibles rutas futuras:
+  - `GET /api/me/context`.
+  - `GET /api/subscriptions/index.php/context/current`.
+- Debe devolver como minimo:
+  - `ok`.
+  - `user_id`.
+  - `doctor_id` activo.
+  - `entity_type`.
+  - `entity_id`.
+  - `actor_role`.
+  - `operator_id`.
+  - Permisos minimos o flags.
+  - `source`.
+  - `version`.
+- No debe exponer datos sensibles.
+
+Opcion C - Reutilizar patron existente:
+
+- Reutilizar conceptos de agenda y perfiles.
+- No existe helper listo.
+- Requiere extraccion y normalizacion futura.
+
+Opcion D - Bloquear FE:
+
+- Necesaria para productivo si no hay contexto canonico.
+- No es imprescindible para DEV-only controlado.
+
+### F) Decision funcional
+Queda decidido:
+
+- No existe contexto activo canonico productivo hoy.
+- No se debe conectar `p-suscripcion` para uso productivo todavia.
+- Se puede considerar una conexion read-only DEV/local con condiciones estrictas:
+  - Usar `doctor_id` visual solo como sugerencia.
+  - El endpoint privado debe validar sesion/scope.
+  - Manejar visualmente `401`/`403`.
+  - No ejecutar writes.
+  - No habilitar botones reales.
+  - No activar capacidades productivas.
+- Para produccion se recomienda crear o formalizar contexto activo backend.
+- Los writes de suscripcion siguen bloqueados.
+- Las capacidades productivas siguen bloqueadas.
+- `PublicProfilePlanCapabilities` sigue desconectado.
+
+### G) Riesgos documentados
+Riesgos antes de conectar UI:
+
+- Tratar `body[data-doctor-id]` como autoridad productiva.
+- Confiar en variables frontend manipulables.
+- Conectar operador sin scope visual/backend formal.
+- No distinguir contexto demo de contexto real.
+- Llamar el endpoint con doctor incorrecto.
+- Ocultar errores `401`/`403`.
+- Activar UI como si fuera productiva.
+- Extender a multi-entidad sin ownership formal.
+- Conectar capacidades antes de resolver contexto activo productivo.
+
+### H) Secuencia recomendada
+Camino seguro recomendado:
+
+1. Documentar readiness de contexto activo.
+2. Si se desea avanzar visualmente, hacer integracion `DEV-only` read-only de `p-suscripcion` con guardas estrictas.
+3. Mantener `doctor_id` visual como sugerencia, no como autoridad.
+4. Hacer que el backend sea quien autorice o bloquee.
+5. Manejar visualmente `401`/`403`.
+6. Mantener deshabilitados writes, contratacion, pagos, renovacion y cancelacion.
+7. Antes de produccion, disenar endpoint/contexto activo canonico.
+8. Mantener bloqueadas capacidades productivas y `PublicProfilePlanCapabilities`.
+
+Siguiente microfase recomendada si se desea avanzar de forma controlada:
+
+- `FE-Suscripciones-PanelReadOnly-DevIntegration-01`.
+
+Siguiente microfase alternativa mas backend/productiva:
+
+- `BE/DIAG-Suscripciones-ActiveEntityContext-EndpointDesign-01`.
+
+### I) Limites de esta adenda
+Esta adenda no activa:
+
+- Conexion de `p-suscripcion`.
+- Endpoint auxiliar.
+- Backend nuevo.
+- UI real.
+- Writes de suscripcion.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
