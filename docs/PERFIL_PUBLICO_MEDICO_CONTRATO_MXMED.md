@@ -3355,6 +3355,179 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 32 — Cierre de integracion read-only DEV/local del panel Suscripcion
+
+### A) Contexto
+Ya existe el endpoint privado read-only:
+
+- `GET /api/subscriptions/index.php/entities/doctor/{doctor_id}/current`
+
+Tambien existe:
+
+- Read-model actual de suscripcion.
+- Guard sesion/scope reforzado.
+- Documentacion de readiness read-only de `p-suscripcion`.
+- Decision documentada de que no existe contexto activo productivo canonico.
+
+Se autorizo una integracion DEV/local read-only del panel `p-suscripcion`, con el backend como autoridad de sesion/scope y sin activar writes ni capacidades productivas.
+
+### B) Implementacion cerrada
+En el commit `bffcdef feat(suscripciones): conecta panel read-only en dev` se integro `p-suscripcion` en modo DEV/local read-only desde:
+
+- `assets/js/app.js`
+
+La integracion:
+
+- Usa `doctor_id` frontend solo como sugerencia.
+- Usa unicamente `entity_type=doctor`.
+- Llama al endpoint privado con metodo `GET`.
+- Usa `credentials: same-origin`.
+- Usa `Accept: application/json`.
+- No usa headers QA frontend:
+  - No `X-User-Id`.
+  - No `X-Doctor-Id`.
+  - No `X-Entity-Type`.
+  - No `X-Entity-Id`.
+- Deja al backend como autoridad de sesion/scope.
+- Renderiza el read-model actual.
+- Muestra plan efectivo.
+- Muestra plan contratado si existe.
+- Mapea `free_default` a copy visual comprensible.
+- Muestra `No aplica` para vencimiento y dias restantes cuando el plan efectivo es `free/lifetime/0`.
+- Muestra modo lectura.
+- Mantiene acciones comerciales bloqueadas.
+
+### C) Estado visual esperado actual
+Con la DB local actual:
+
+- `subscription_plans = 5`.
+- `profile_subscriptions = 0`.
+- `free = Gratuito / lifetime / 0`.
+
+El panel debe mostrar:
+
+- Plan: `Gratuito`.
+- Estado: `Plan base permanente`.
+- Vigencia/Vencimiento: `No aplica`.
+- Dias restantes: `No aplica`.
+- Sin plan contratado vigente.
+- Modo lectura.
+- Acciones comerciales deshabilitadas, placeholder o proximamente.
+
+### D) Acciones que siguen bloqueadas
+Siguen bloqueadas:
+
+- Contratar.
+- Aceptar contrato.
+- Renovar.
+- Cancelar.
+- Cambiar plan.
+- Pagar.
+- Aplicar cupon real.
+- Facturacion real.
+- Historial real de pagos/facturas.
+- Creacion de suscripciones.
+- Creacion de filas `free`.
+- Conexion con `PublicProfilePlanCapabilities`.
+- Activacion de capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+### E) QA post-push cerrado
+La microfase `QA-Suscripciones-PanelReadOnly-DevIntegration-PostPush-01` cerro con PASS sin cambios.
+
+Resumen de QA:
+
+- Rama limpia y alineada.
+- HEAD: `bffcdef`.
+- JS parse PASS via `osascript/JXA`.
+- Node no disponible en el entorno local.
+- PHP lint PASS en:
+  - `api/subscriptions/index.php`.
+  - `CurrentSubscriptionRepository.php`.
+  - `CurrentSubscriptionReadModelService.php`.
+- Fetch read-only PASS.
+- Sin writes hacia suscripciones.
+- Sin headers QA frontend para suscripciones.
+- `/index.html` HTTP 200.
+- `/assets/js/app.js` HTTP 200.
+- Backend:
+  - `GET doctor/1/current` HTTP 200.
+  - `effective_plan_code=free`.
+  - `status=free_default`.
+  - `auth_mode=local_dev_open`.
+  - `strict_auth_required=false`.
+- DB intacta:
+  - `subscription_plans=5`.
+  - `profile_subscriptions=0`.
+- Sin cambios en backend, DB, perfil publico, SEO ni capacidades.
+- QA visual manual en navegador interactivo queda pendiente.
+
+### F) Riesgos mitigados
+La integracion mitiga:
+
+- Uso de headers QA desde frontend.
+- Writes accidentales desde el panel.
+- Creacion accidental de suscripciones `free`.
+- Activacion prematura de capacidades.
+- Conexion prematura con `PublicProfilePlanCapabilities`.
+- Confundir acciones comerciales con acciones reales.
+- Tratar el frontend como autoridad de scope.
+
+### G) Riesgos pendientes
+Siguen pendientes:
+
+- QA visual manual en navegador interactivo.
+- Contexto activo canonico productivo.
+- Endpoint tipo `/api/me/context` o equivalente, si se decide.
+- Permiso persistido/canonico `subscriptions.read`.
+- Ownership multi-entidad.
+- Flujo contractual real.
+- Aceptacion de contrato.
+- Creacion de suscripcion.
+- Renovacion/cancelacion.
+- Pagos/facturacion.
+- Conexion futura con capacidades publicas.
+
+### H) Secuencia recomendada
+Camino seguro recomendado:
+
+1. Cerrar documentalmente la integracion read-only DEV/local.
+2. Ejecutar QA visual manual del panel `Suscripcion` en navegador.
+3. Si la UX read-only es correcta, decidir entre:
+   - Disenar contexto activo productivo.
+   - Seguir refinando solo DEV/local.
+4. Mantener writes contractuales bloqueados.
+5. Mantener capacidades productivas bloqueadas.
+6. Mantener `PublicProfilePlanCapabilities` desconectado.
+7. Antes de uso productivo, resolver contexto activo backend, ownership/scope y permisos.
+
+Siguiente microfase recomendada:
+
+- `QA-Suscripciones-PanelReadOnly-VisualManual-01`.
+
+Alternativa backend/productiva:
+
+- `BE/DIAG-Suscripciones-ActiveEntityContext-EndpointDesign-01`.
+
+### I) Limites de esta adenda
+Esta adenda no activa:
+
+- Uso productivo de `p-suscripcion`.
+- Writes contractuales.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
