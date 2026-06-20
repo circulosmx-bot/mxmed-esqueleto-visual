@@ -2752,6 +2752,166 @@ Esta adenda no implica:
 
 ---
 
+## Adenda PP-Decisiones 29 — Cierre del guard sesion/scope para endpoint privado de suscripciones
+
+### A) Contexto
+Ya existe el endpoint privado de solo lectura:
+
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Tambien existen:
+
+- Read-model de suscripcion actual.
+- Bandera estricta `MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED`.
+
+Estado de integracion:
+- El endpoint no esta conectado todavia a UI real.
+- El endpoint no esta conectado a `p-suscripcion`.
+- El endpoint no esta conectado a perfil publico.
+- El endpoint no esta conectado a `PublicProfilePlanCapabilities`.
+- El endpoint no activa capacidades productivas.
+
+### B) Implementacion cerrada
+En el commit `3173ce8 fix(suscripciones): refuerza guard de sesion del endpoint privado` se reforzo el guard del endpoint privado con:
+
+- Sesion como fuente primaria.
+- `session_scope` para sesion valida.
+- Medico principal limitado a su propio `doctor_id`.
+- Headers QA limitados a local/dev.
+- `local_dev_open` solo con strict OFF y host local.
+- Strict ON bloqueando `local_dev_open`.
+- `X-User-Id` solo sin autorizar.
+- `401` sin identidad valida.
+- `403` con identidad pero scope insuficiente, mismatch o operador sin permiso.
+- Operador bloqueado si no tiene permiso explicito futuro o equivalente.
+- Soporte de operador con permiso explicito si la estructura de sesion lo provee.
+- Meta conservando `auth_mode` y `strict_auth_required`.
+
+### C) QA post-implementacion cerrado
+La microfase `QA-Suscripciones-PrivateEndpoint-SessionScopeGuard-PostImplementacion-01` cerro con PASS y sin cambios.
+
+Resumen de QA:
+- Rama limpia y alineada.
+- HEAD `3173ce8`.
+- Lint PASS en:
+  - `api/subscriptions/index.php`.
+  - `CurrentSubscriptionRepository.php`.
+  - `CurrentSubscriptionReadModelService.php`.
+- Endpoint sigue siendo solo lectura.
+- Sin escrituras SQL.
+- DB intacta:
+  - `subscription_plans = 5`.
+  - `profile_subscriptions = 0`.
+  - `free = Gratuito / lifetime / 0`.
+
+Strict OFF:
+- GET local respondio HTTP 200.
+- `auth_mode=local_dev_open`.
+- `strict_auth_required=false`.
+
+Strict ON:
+- Sin headers/sesion respondio HTTP 401.
+- Headers validos locales respondieron HTTP 200 con `auth_mode=header_scope`.
+- `X-User-Id` solo respondio HTTP 403.
+- Doctor mismatch respondio HTTP 403.
+- Entity mismatch respondio HTTP 403.
+- Host no-local con headers QA respondio HTTP 401.
+
+Sesion simulada:
+- Medico principal valido respondio HTTP 200 con `auth_mode=session_scope`.
+- Doctor mismatch respondio HTTP 403.
+- Sin doctor scope respondio HTTP 403.
+- Operador sin permiso respondio HTTP 403.
+- Operador con permiso explicito respondio HTTP 200 con `auth_mode=session_scope`, cuando la estructura de sesion lo provee.
+
+HTTP general:
+- POST respondio HTTP 405.
+- Ruta invalida no respondio 500.
+- Entity type invalido respondio HTTP 422.
+- Entity id raro no respondio 500.
+- Entidad inexistente en strict OFF devolvio fallback `free_default`.
+- DB post-QA siguio sin cambios.
+
+### D) Estado funcional final
+Queda permitido:
+
+- QA local controlado.
+- Consulta privada read-only con sesion valida y scope suficiente.
+- Consulta local/dev con headers QA validos bajo reglas estrictas.
+- Consulta de medico principal solo para su propio `doctor_id`.
+- Consulta de operador solo si existe permiso explicito en sesion.
+
+Sigue bloqueado:
+
+- `p-suscripcion` real.
+- UI real.
+- `PublicProfilePlanCapabilities`.
+- Perfil publico.
+- Capacidades productivas.
+- Contratacion real.
+- Aceptacion contractual real.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- Multi-entidad sin ownership formal.
+- SEO productivo.
+
+### E) Riesgos mitigados
+Este cierre mitiga:
+
+- `X-User-Id` como autorizacion unica.
+- Headers QA fuera de local.
+- `local_dev_open` con strict ON.
+- Mismatch doctor/entity.
+- Operador sin permiso explicito.
+- Acceso a entidad ajena via endpoint privado.
+
+### F) Riesgos pendientes
+Siguen pendientes:
+
+- Permiso canonico persistido `subscriptions.read`.
+- Ownership formal multi-entidad.
+- Integracion real con `p-suscripcion` read-only.
+- Definicion de flujo contractual real.
+- Aceptacion de contrato.
+- Creacion de suscripcion.
+- Renovacion y cancelacion.
+- Pagos y facturacion.
+- Conexion futura con capacidades publicas.
+
+### G) Secuencia recomendada
+Siguiente camino seguro:
+
+1. Cerrar documentalmente el guard sesion/scope.
+2. Diagnosticar integracion read-only de `p-suscripcion`.
+3. Disenar consumo UI solo lectura del endpoint privado.
+4. Mantener bloqueados writes de suscripcion.
+5. Mantener bloqueadas capacidades productivas.
+6. Antes de conectar capacidades, resolver plan efectivo productivo y ownership/scope suficiente.
+
+Siguiente microfase recomendada:
+
+- `DIAG-Suscripciones-PanelReadOnly-IntegrationReadiness-01`.
+
+### H) Limites de esta adenda
+Esta adenda no activa:
+
+- UI real.
+- `p-suscripcion`.
+- Perfil publico.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratacion.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- Multi-entidad productiva.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
