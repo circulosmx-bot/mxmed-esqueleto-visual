@@ -3688,6 +3688,266 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 34 — Diseño de endpoint de contexto activo para Suscripciones
+
+### A) Contexto
+Ya existe el endpoint privado de suscripcion actual:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`
+
+Tambien existen:
+
+- Guard sesion/scope reforzado para el endpoint privado.
+- Integracion DEV/local read-only de `p-suscripcion`.
+- QA visual/manual del panel read-only cerrada con PASS.
+
+Para uso productivo todavia falta un contexto activo canonico backend. El diagnostico `BE/DIAG-Suscripciones-ActiveEntityContext-EndpointDesign-01` confirmo:
+
+- No existe endpoint canonico `/api/me/context`.
+- No existe endpoint `/api/subscriptions/index.php/context/current`.
+- No existe helper global backend reutilizable de auth/contexto activo.
+- Las fuentes frontend (`body[data-doctor-id]`, `window.mxmedStore`, `window.mxmedDoctor`, `activeProfessionalContext`) son pistas visuales o DEV/local, no autoridad productiva.
+
+Esta adenda documenta el diseno. No implementa endpoint, no crea helper, no conecta UI productiva y no activa writes ni capacidades productivas.
+
+### B) Decision de alcance
+Decision:
+
+- No crear todavia un endpoint global `/api/me/context`.
+- Disenar primero un endpoint bajo suscripciones.
+
+Endpoint recomendado:
+
+`GET /api/subscriptions/index.php/context/current`
+
+Motivo:
+
+- Menor alcance.
+- Aprovecha el guard ya endurecido de suscripciones.
+- Evita crear prematuramente arquitectura global.
+- Cubre la necesidad inmediata de `p-suscripcion`.
+- Permite evolucionar despues hacia un contexto global si otros modulos lo requieren.
+
+### C) Naturaleza del endpoint futuro
+El endpoint futuro debe ser:
+
+- Read-only.
+- Privado.
+- Minimo.
+- Sin datos sensibles.
+- Sin writes.
+- Sin creacion de sesiones.
+- Sin creacion de suscripciones.
+- Sin activacion de capacidades.
+- Sin pagos.
+- Sin facturacion.
+- Sin tocar perfil publico.
+- Sin tocar SEO productivo.
+
+Su unica funcion sera permitir que la UI conozca el contexto activo autorizado y despues consulte el endpoint actual de suscripcion.
+
+Version propuesta:
+
+- `active-entity-context-v1`
+
+### D) Contrato OK propuesto
+Contrato conceptual:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "user_id": 1,
+    "doctor_id": 1,
+    "entity_type": "doctor",
+    "entity_id": "1",
+    "actor_role": "doctor",
+    "operator_id": null,
+    "permissions": {
+      "subscriptions_read": true
+    },
+    "can_read_subscriptions": true
+  },
+  "meta": {
+    "source": "session_scope",
+    "version": "active-entity-context-v1"
+  }
+}
+```
+
+Este contrato es conceptual y puede ajustarse durante la implementacion, siempre que mantenga alcance minimo, privacidad y doble validacion.
+
+### E) Contrato error propuesto
+Contrato conceptual de error:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "...",
+    "message": "..."
+  },
+  "data": null,
+  "meta": {
+    "version": "active-entity-context-v1"
+  }
+}
+```
+
+Codigos esperados:
+
+- `unauthorized` para ausencia de identidad valida.
+- `forbidden` para identidad con scope insuficiente.
+- `context_unavailable` si no se puede resolver contexto activo de forma segura.
+
+### F) Campos minimos
+Campos minimos propuestos:
+
+- `user_id`
+- `doctor_id`
+- `entity_type`
+- `entity_id`
+- `actor_role`
+- `operator_id`
+- `permissions.subscriptions_read`
+- `can_read_subscriptions`
+- `source`
+- `version`
+
+### G) Campos excluidos
+El endpoint no debe devolver:
+
+- Tokens.
+- Sesion cruda.
+- IP.
+- User-agent contractual.
+- Datos administrativos privados.
+- Pagos.
+- Facturacion.
+- Metodos de pago.
+- Capacidades productivas.
+- Datos SEO.
+- Datos clinicos.
+- Permisos amplios innecesarios.
+- Informacion sensible del usuario.
+
+### H) Reglas de autorizacion
+Medico principal:
+
+- Puede resolver solo `entity_type=doctor`.
+- Puede resolver solo `entity_id=doctor_id` activo de sesion.
+- Debe bloquear doctor ajeno.
+- Debe bloquear entidad ajena.
+- Debe bloquear `entity_type` no soportado.
+
+Operador:
+
+- Solo podra resolver contexto si `operator_id` existe.
+- Debe pertenecer al doctor.
+- Debe estar activo.
+- Debe tener permiso explicito futuro `subscriptions.read`, `subscriptions_read` o equivalente documentado.
+- Debe bloquear operador sin permiso.
+- Debe bloquear operador de otro doctor.
+- Debe bloquear operador con scope ambiguo.
+
+DEV/local:
+
+- Puede informar pista DEV/local solo marcada como tal.
+- No debe tratarse como autoridad productiva.
+- Los endpoints protegidos deben seguir validando sesion/scope.
+
+Multi-entidad:
+
+- Queda pendiente y bloqueada hasta definir ownership formal para clinica, hospital, laboratorio, aseguradora, laboratorio farmaceutico y otras entidades publicables.
+
+### I) Relacion con endpoint actual de suscripcion
+Flujo futuro:
+
+1. UI llama a `GET /api/subscriptions/index.php/context/current`.
+2. Backend devuelve contexto autorizado minimo.
+3. UI llama a `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+4. El endpoint de suscripcion vuelve a validar sesion/scope.
+5. UI renderiza read-only.
+6. Writes siguen bloqueados hasta microfases futuras.
+
+Aclaraciones:
+
+- El endpoint de contexto no reemplaza la autorizacion del endpoint de suscripcion.
+- Debe existir doble validacion.
+- El contexto ayuda a resolver la ruta; no autoriza writes.
+- No habilita contratacion, renovacion, cancelacion, pagos ni facturacion.
+- No habilita capacidades productivas.
+- No conecta `PublicProfilePlanCapabilities`.
+
+### J) Riesgos documentados
+Riesgos a controlar:
+
+- Confiar en contexto frontend.
+- Duplicar reglas de auth en varios endpoints.
+- Devolver permisos excesivos.
+- Exponer datos personales innecesarios.
+- Autorizar operador sin ownership o permiso formal.
+- Abrir multi-entidad sin modelo de ownership.
+- Confundir contexto con autorizacion final.
+- Usar contexto para writes contractuales antes de tiempo.
+- Activar capacidades desde este contexto antes de resolver plan efectivo productivo.
+
+### K) Opciones futuras documentadas
+Opcion A - Implementar endpoint bajo subscriptions:
+
+- Microfase: `BE-Suscripciones-ActiveEntityContext-Endpoint-01`.
+- Objetivo: crear `GET /api/subscriptions/index.php/context/current`, read-only, sin conectar uso productivo amplio.
+
+Opcion B - Diagnosticar endpoint global:
+
+- Microfase: `BE/DIAG-Auth-ActiveContext-GlobalEndpoint-01`.
+- Objetivo: evaluar si conviene crear un `/api/me/context` compartido para todo MXMed.
+
+Opcion C - Refinar UI read-only:
+
+- Microfase: `FE/UX-Suscripciones-PanelReadOnly-VisualPolish-01`.
+- Objetivo: mejorar jerarquia, copy y estados del panel, manteniendo read-only.
+
+Opcion D - Diagnosticar flujo contractual:
+
+- Microfase: `DIAG-Suscripciones-ContractFlow-Readiness-01`.
+- Objetivo: diagnosticar contratacion real, aceptacion de contrato, vigencia, renovacion, cancelacion y pagos, sin implementar.
+
+### L) Recomendacion
+Ruta recomendada:
+
+1. Documentar este diseno.
+2. Implementar despues el endpoint bajo `subscriptions`, no global.
+3. Mantener doble validacion.
+4. Mantener writes bloqueados.
+5. Mantener capacidades productivas bloqueadas.
+6. Mantener `PublicProfilePlanCapabilities` desconectado.
+7. Mantener SEO productivo intacto.
+
+Siguiente microfase recomendada:
+
+- `BE-Suscripciones-ActiveEntityContext-Endpoint-01`
+
+### M) Limites de esta adenda
+Esta adenda no implementa:
+
+- Endpoint de contexto.
+- Helper global.
+- UI productiva.
+- Writes de suscripcion.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
