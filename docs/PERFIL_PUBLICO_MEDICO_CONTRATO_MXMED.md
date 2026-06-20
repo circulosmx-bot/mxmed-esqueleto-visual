@@ -1269,6 +1269,63 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 17 — JSON-LD Render Guard
+
+### A) Campo del DTO
+- El DTO publico expone `json_ld_render_guard` como llave de primer nivel.
+- La fuente del guard es `public_breadcrumbs`.
+- Version actual: `jsonld-render-guard-v1`.
+- El objetivo es centralizar las condiciones futuras para renderizar JSON-LD real.
+
+### B) Candidatos detectados
+- `candidate_sources.breadcrumb_list.available=true` cuando existe `public_breadcrumbs.json_ld_candidate` con items.
+- `candidate_sources.breadcrumb_list.source=public_breadcrumbs.json_ld_candidate`.
+- `candidate_sources.breadcrumb_list.enabled=false`.
+- `candidate_sources.breadcrumb_list.script_render_enabled=false`.
+- Para `doctor_id=1`, `candidate_sources.breadcrumb_list.item_count=4`.
+- `candidate_sources.profile.available=false`.
+- `candidate_sources.profile.reason=profile_jsonld_not_implemented`.
+
+### C) Requisitos futuros
+- `canonical_ready`.
+- `canonical_render_enabled`.
+- `route_enabled`.
+- `robots_index_allowed`.
+- `breadcrumb_jsonld_enabled`.
+- `jsonld_renderer_enabled`.
+
+### D) Estado actual de doctor_id=1
+- `enabled=false`.
+- `can_render=false`.
+- `json_ld=null`.
+- `script_render_enabled=false`.
+- `requires.canonical_ready=false`.
+- `requires.canonical_render_enabled=false`.
+- `requires.route_enabled=false`.
+- `requires.robots_index_allowed=false`.
+- `requires.breadcrumb_jsonld_enabled=false`.
+- `requires.jsonld_renderer_enabled=false`.
+- `blocking_reasons` incluye `canonical_not_ready`, `canonical_render_disabled`, `route_disabled`, `robots_noindex_active`, `breadcrumb_jsonld_disabled` y `jsonld_renderer_not_enabled`.
+
+### E) Limites vigentes
+- `json_ld` real permanece `null`.
+- `public_breadcrumbs.json_ld_enabled` permanece `false`.
+- `public_breadcrumbs.json_ld_candidate.enabled` permanece `false`.
+- `public_breadcrumbs.json_ld_candidate.script_render_enabled` permanece `false`.
+- `canonical_render_guard.can_render` permanece `false`.
+- `profile.canonical_url` permanece `null`.
+- `seo.canonical_url` permanece `null`.
+- `seo.robots` permanece `noindex,nofollow`.
+- No se renderiza `<script type="application/ld+json">`.
+- No se renderiza `<link rel="canonical">`.
+- No se modifica SSR.
+- No se modifica DB.
+- No se activa canonical.
+- No se activa JSON-LD real.
+- No se modifica `.htaccess`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf

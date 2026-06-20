@@ -132,6 +132,13 @@ final class PublicProfileController
             'breadcrumb' => [],
         ];
         $canonicalRenderGuard = $this->buildCanonicalRenderGuard($publicCanonicalRoute, $seo);
+        $publicBreadcrumbs = $this->buildPublicBreadcrumbs($publicUrlContext, $geoContext);
+        $jsonLdRenderGuard = $this->buildJsonLdRenderGuard(
+            $publicBreadcrumbs,
+            $canonicalRenderGuard,
+            $publicCanonicalRoute,
+            $seo
+        );
 
         $data = [
             'profile' => [
@@ -178,7 +185,8 @@ final class PublicProfileController
             'public_url_context' => $publicUrlContext,
             'public_canonical_route' => $publicCanonicalRoute,
             'canonical_render_guard' => $canonicalRenderGuard,
-            'public_breadcrumbs' => $this->buildPublicBreadcrumbs($publicUrlContext, $geoContext),
+            'public_breadcrumbs' => $publicBreadcrumbs,
+            'json_ld_render_guard' => $jsonLdRenderGuard,
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -671,6 +679,84 @@ final class PublicProfileController
                 'robots_index_allowed' => $robotsIndexAllowed,
                 'seo_router_enabled' => $seoRouterEnabled,
                 'canonical_renderer_enabled' => $canonicalRendererEnabled,
+            ],
+            'blocking_reasons' => array_values(array_unique($blockingReasons)),
+        ];
+    }
+
+    private function buildJsonLdRenderGuard(
+        array $publicBreadcrumbs,
+        array $canonicalRenderGuard,
+        array $publicCanonicalRoute,
+        array $seo
+    ): array {
+        $breadcrumbCandidate = is_array($publicBreadcrumbs['json_ld_candidate'] ?? null)
+            ? $publicBreadcrumbs['json_ld_candidate']
+            : [];
+        $breadcrumbItems = is_array($breadcrumbCandidate['items'] ?? null)
+            ? $breadcrumbCandidate['items']
+            : [];
+        $breadcrumbAvailable = ($breadcrumbCandidate !== [] && count($breadcrumbItems) > 0);
+        $breadcrumbEnabled = (bool)($breadcrumbCandidate['enabled'] ?? false);
+        $breadcrumbScriptRenderEnabled = (bool)($breadcrumbCandidate['script_render_enabled'] ?? false);
+        $canonicalReady = (
+            (bool)($publicCanonicalRoute['found'] ?? false)
+            && (bool)($canonicalRenderGuard['can_render'] ?? false)
+            && $this->firstNonEmpty($canonicalRenderGuard['canonical_url'] ?? null) !== null
+        );
+        $canonicalRenderEnabled = (bool)($canonicalRenderGuard['can_render'] ?? false);
+        $routeEnabled = (bool)($publicCanonicalRoute['route_enabled'] ?? false);
+        $robots = strtolower((string)($seo['robots'] ?? ''));
+        $robotsIndexAllowed = ($robots !== '' && !str_contains($robots, 'noindex'));
+        $jsonLdRendererEnabled = false;
+
+        $blockingReasons = [];
+        if (!$canonicalReady) {
+            $blockingReasons[] = 'canonical_not_ready';
+        }
+        if (!$canonicalRenderEnabled) {
+            $blockingReasons[] = 'canonical_render_disabled';
+        }
+        if (!$routeEnabled) {
+            $blockingReasons[] = 'route_disabled';
+        }
+        if (!$robotsIndexAllowed) {
+            $blockingReasons[] = 'robots_noindex_active';
+        }
+        if (!$breadcrumbEnabled) {
+            $blockingReasons[] = 'breadcrumb_jsonld_disabled';
+        }
+        if (!$jsonLdRendererEnabled) {
+            $blockingReasons[] = 'jsonld_renderer_not_enabled';
+        }
+
+        return [
+            'source' => 'public_breadcrumbs',
+            'version' => 'jsonld-render-guard-v1',
+            'enabled' => false,
+            'can_render' => false,
+            'json_ld' => null,
+            'script_render_enabled' => false,
+            'candidate_sources' => [
+                'breadcrumb_list' => [
+                    'available' => $breadcrumbAvailable,
+                    'source' => 'public_breadcrumbs.json_ld_candidate',
+                    'enabled' => $breadcrumbEnabled,
+                    'script_render_enabled' => $breadcrumbScriptRenderEnabled,
+                    'item_count' => count($breadcrumbItems),
+                ],
+                'profile' => [
+                    'available' => false,
+                    'reason' => 'profile_jsonld_not_implemented',
+                ],
+            ],
+            'requires' => [
+                'canonical_ready' => $canonicalReady,
+                'canonical_render_enabled' => $canonicalRenderEnabled,
+                'route_enabled' => $routeEnabled,
+                'robots_index_allowed' => $robotsIndexAllowed,
+                'breadcrumb_jsonld_enabled' => $breadcrumbEnabled,
+                'jsonld_renderer_enabled' => $jsonLdRendererEnabled,
             ],
             'blocking_reasons' => array_values(array_unique($blockingReasons)),
         ];
