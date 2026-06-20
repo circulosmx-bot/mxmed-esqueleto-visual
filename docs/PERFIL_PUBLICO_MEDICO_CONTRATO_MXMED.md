@@ -1444,6 +1444,104 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 20 — Runbook de activación SEO pública
+
+### A) Estado actual
+- El estado global actual del SEO publico del perfil permanece en `overall_state=not_active`.
+- `is_indexable=false`.
+- `is_public_route_active=false`.
+- `is_canonical_active=false`.
+- `is_json_ld_active=false`.
+- `robots=noindex,nofollow`.
+- `active_url=null`.
+- Actualmente existen solo capas preparatorias de contrato y diagnostico:
+  - `public_canonical_route`.
+  - `canonical_render_guard`.
+  - `json_ld_render_guard`.
+  - `public_route_guard`.
+  - `seo_activation_summary`.
+
+### B) Orden futuro de activacion
+1. Router SEO real.
+   - Primero debe existir un router publico real para URLs como `/aguascalientes/aguascalientes/medicos/dra-leticia-munoz-romo`.
+   - La URL SEO debe resolver hacia el perfil correcto sin romper `/profiles/doctor.php?doctor_id=1`.
+   - No se deben usar rutas candidatas como productivas antes de tener router.
+   - No se deben cambiar `robots`, canonical, JSON-LD ni redirects en esta etapa.
+
+2. Activación controlada de route_enabled.
+   - Despues de implementar y probar el router se podra evaluar `public_profile_seo_routes.route_enabled=1`.
+   - Requisitos minimos:
+     - `status=active`.
+     - Router probado.
+     - Perfil resuelve por URL SEO.
+     - No hay ambiguedad de slug.
+     - No hay colision de `canonical_path`.
+     - Fallback legacy sigue funcionando.
+
+3. Canonical real.
+   - Solo despues de router estable se podra evaluar `canonical_enabled=1`.
+   - Esta etapa habilitaria, en una microfase futura, `canonical_render_guard.can_render=true`, `seo.canonical_url != null`, `profile.canonical_url != null` y `<link rel="canonical">`.
+   - Requisitos minimos:
+     - `route_enabled=1`.
+     - `status=active`.
+     - Router operativo.
+     - Robots con indexacion permitida.
+     - `canonical_path` validado.
+     - URL canonica absoluta definida si aplica.
+
+4. Robots index.
+   - `robots=index,follow` solo debe evaluarse despues de validar router y canonical.
+   - Cambiar robots antes de router y canonical puede exponer URLs inestables, duplicadas o candidatas.
+
+5. JSON-LD real.
+   - JSON-LD real debe activarse al final, despues de:
+     - Canonical listo.
+     - Robots con indexacion permitida.
+     - `BreadcrumbList` validado.
+     - Schema de perfil definido.
+     - Renderer de script habilitado.
+   - La activacion futura esperada seria `json_ld_render_guard.can_render=true`, `json_ld != null` y `<script type="application/ld+json">`.
+
+6. Redirects / aliases / 301.
+   - Redirects, aliases, historial de slugs y 301 deben vivir en una fase separada posterior.
+   - No deben mezclarse con la primera activacion de router/canonical.
+
+### C) Riesgos principales
+- Indexar rutas candidatas antes de validar router.
+- Usar slug singular o generizado de especialidad como canonical sin catalogo formal.
+- Activar JSON-LD sin canonical real.
+- Activar robots index antes de resolver duplicidad.
+- Activar redirects sin historial de slugs.
+- Cambiar `.htaccess` sin QA de rutas legacy.
+- Confundir `candidate_path` con `active_url`.
+
+### D) Checklist futuro de activacion
+- [ ] Tabla `public_profile_seo_routes` con `status=active` para la entidad.
+- [ ] `route_enabled=1` solo despues de router probado.
+- [ ] `canonical_enabled=1` solo despues de `route_enabled`.
+- [ ] `canonical_render_guard.can_render=true`.
+- [ ] `public_route_guard.can_route=true`.
+- [ ] `seo_activation_summary.is_public_route_active=true`.
+- [ ] `seo_activation_summary.is_canonical_active=true`.
+- [ ] `robots` cambia a `index,follow` solo despues de canonical.
+- [ ] `json_ld_render_guard.can_render=true` solo al final.
+- [ ] SSR renderiza canonical link solo cuando el guard lo permite.
+- [ ] SSR renderiza JSON-LD solo cuando el guard lo permite.
+- [ ] No hay POST reales de agenda, OTP ni reservas en QA SEO.
+- [ ] No se rompen URLs legacy actuales.
+
+### E) Limites vigentes
+- Este runbook no implementa router.
+- No modifica `.htaccess`.
+- No crea redirects.
+- No activa canonical.
+- No activa JSON-LD real.
+- No cambia `seo.robots`.
+- No modifica SSR.
+- No modifica DB.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
