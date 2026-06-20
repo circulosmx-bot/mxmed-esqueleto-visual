@@ -2912,6 +2912,226 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 30 — Readiness de integración read-only para panel Suscripción
+
+### A) Contexto
+Ya existe el endpoint privado de solo lectura:
+
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Tambien existen:
+
+- Read-model de suscripcion actual.
+- Guard sesion/scope reforzado y validado.
+- Bandera estricta `MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED`.
+
+Estado de integracion:
+
+- El panel `p-suscripcion` existe.
+- El panel `p-suscripcion` no esta conectado todavia al endpoint privado.
+- Esta decision prepara una futura integracion read-only.
+- Esta decision no implementa conexion UI.
+
+### B) Diagnostico aprobado de `p-suscripcion`
+Hallazgos de la microfase `DIAG-Suscripciones-PanelReadOnly-IntegrationReadiness-01`:
+
+- `p-suscripcion` existe en `index.html`.
+- La navegacion llega al panel mediante dropdown superior y menu lateral.
+- La logica relacionada vive en `assets/js/app.js`, IIFE `SUSCRIPCION (maqueta)`.
+- La navegacion usa `showPanel()` en `assets/js/core/navigation.js`.
+- El panel actual es maqueta/demo.
+- El panel muestra datos hardcoded:
+  - Plan `Optimo`.
+  - Vigencia demo.
+  - Catalogo de planes.
+  - Historial.
+  - Cupones.
+  - Facturacion.
+- Acciones como renovar, seleccionar plan, aplicar cupon, facturacion e historial son placeholders/demo.
+- No existen writes reales desde este panel.
+- El panel no usa API actualmente.
+- El panel no tiene manejo propio para errores `401`/`403`.
+
+### C) Decision funcional
+Queda decidido:
+
+- No conectar todavia `p-suscripcion` en esta fase.
+- La primera integracion futura, si se autoriza, debe ser solo read-only.
+- No crear suscripciones desde `p-suscripcion`.
+- No crear filas `free`.
+- No contratar planes.
+- No aceptar contrato.
+- No renovar.
+- No cancelar.
+- No pagar.
+- No emitir facturas.
+- No activar capacidades productivas.
+- No conectar `PublicProfilePlanCapabilities`.
+- No alterar perfil publico ni SEO.
+- Las acciones comerciales deben quedar deshabilitadas o marcadas como placeholder hasta microfases futuras.
+
+### D) Contrato read-only requerido
+El panel podria consumir estos campos del read-model actual:
+
+- `effective_plan_code`.
+- `contracted_plan_code`.
+- `plan_label`.
+- `billing_period`.
+- `duration_days`.
+- `status`.
+- `starts_at`.
+- `expires_at`.
+- `grace_status`.
+- `is_free_fallback`.
+- `is_paid_plan`.
+- `is_active`.
+- `is_expired`.
+- `is_in_grace`.
+- `days_until_expiration`.
+- `source`.
+- `version`.
+
+Estos campos ya estan disponibles en el read-model actual.
+
+Campos pendientes para versiones futuras:
+
+- Catalogo comercial completo.
+- Precios.
+- Moneda.
+- Siguiente cobro.
+- Autorenovacion visible.
+- Historial de movimientos.
+- Facturas.
+- Cupones reales.
+- Metodo de pago.
+- Contrato aceptado visible para usuario.
+
+### E) Resolucion doctor/entity
+Fuentes actuales detectadas en UI:
+
+- `body[data-doctor-id]`.
+- `window.mxmedStore.doctor_id`.
+- `doctorId`.
+- `activeProfessionalContext.doctor_id`.
+- `window.mxmedDoctor.doctor_id`.
+- `window.mxmedResolveActiveProfessionalContext()`.
+
+Riesgos:
+
+- Algunos valores pueden ser demo o hardcoded.
+- El contexto local/dev puede no equivaler a sesion productiva.
+- El operador todavia no tiene scope visual formal.
+- No existe endpoint canonico de entidad activa.
+- Para uso productivo real conviene resolver antes un contexto activo confiable.
+
+Decision:
+
+- Para una futura integracion DEV-only podria usarse el doctor activo existente con guardas estrictas.
+- Para integracion real/productiva se recomienda resolver antes un contexto activo canonico y confiable.
+
+### F) Matriz UI read-only propuesta
+Caso A - Sin suscripcion real:
+
+- Mostrar plan `Gratuito`.
+- Mostrar "Plan base permanente".
+- Vencimiento: "No aplica".
+- No crear fila `free`.
+- Mantener acciones comerciales deshabilitadas o como placeholder.
+
+Caso B - Plan pagado vigente:
+
+- Mostrar plan contratado.
+- Mostrar plan efectivo.
+- Mostrar inicio y vencimiento si existen.
+- Mostrar dias restantes.
+- No permitir acciones reales todavia.
+
+Caso C - Vencido en gracia:
+
+- Mostrar estado de gracia.
+- Mostrar limite de gracia.
+- No definir todavia capacidades durante gracia.
+
+Caso D - Vencido fuera de gracia:
+
+- Mostrar plan efectivo `Gratuito`.
+- Mostrar que el plan contratado anterior vencio.
+- No borrar datos.
+- No ejecutar writes.
+
+Caso E - `401`/`403`:
+
+- `401`: sesion no valida o iniciar sesion.
+- `403`: sin permiso para ver esta suscripcion.
+- No mostrar datos sensibles.
+
+Caso F - Error backend:
+
+- Mostrar mensaje controlado.
+- No bloquear navegacion general del panel.
+
+### G) Riesgos documentados
+Riesgos antes de conectar UI:
+
+- Llamar el endpoint con `doctor_id` incorrecto.
+- Mostrar plan efectivo como si fuera plan contratado editable.
+- Dejar botones de contratar, pagar o renovar como acciones reales.
+- Confundir plan gratuito permanente con plan vencido.
+- Crear suscripciones `free` por error.
+- Activar capacidades desde UI.
+- Usar headers QA en UI productiva.
+- Exponer datos a operador sin scope.
+- Romper navegacion actual de paneles.
+- Generar expectativa de pagos o renovacion antes de existir flujo.
+
+### H) Secuencia recomendada
+Camino seguro recomendado:
+
+1. Documentar readiness read-only.
+2. Definir si la primera conexion sera DEV-only o si requiere contexto activo canonico.
+3. Si se autoriza DEV-only, implementar conexion read-only con:
+   - Sin writes.
+   - Sin botones reales.
+   - Sin contratacion.
+   - Sin pagos.
+   - Sin capacidades.
+   - Manejo visual `401`/`403`.
+   - Fallback visual seguro.
+4. Si hay incertidumbre sobre doctor/entity activo, diagnosticar primero endpoint o contexto activo.
+5. Mantener bloqueada conexion con `PublicProfilePlanCapabilities`.
+6. Mantener bloqueadas capacidades productivas.
+7. Mantener bloqueados writes contractuales.
+
+Siguiente microfase recomendada con maxima seguridad:
+
+- `BE/DIAG-Suscripciones-ActiveEntityContext-Readiness-01`.
+
+Alternativa si el usuario autoriza conexion controlada local:
+
+- `FE-Suscripciones-PanelReadOnly-DevIntegration-01`.
+
+### I) Limites de esta adenda
+Esta adenda no activa:
+
+- Conexion de `p-suscripcion`.
+- UI real.
+- Backend nuevo.
+- Modificacion de `api/subscriptions/index.php`.
+- Modificacion de `modules/subscriptions`.
+- Writes de suscripcion.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
