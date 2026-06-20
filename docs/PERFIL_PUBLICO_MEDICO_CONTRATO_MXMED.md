@@ -2299,6 +2299,169 @@ Esta decision no activa:
 
 ---
 
+## Adenda PP-Decisiones 26 — Endpoint privado de sólo lectura para suscripción actual
+
+### A) Endpoint implementado
+Ruta implementada:
+
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Proposito:
+- Exponer el `CurrentSubscriptionReadModel`.
+- Devolver la suscripcion actual y el plan efectivo de una entidad.
+- Operar como endpoint privado de solo lectura.
+- No crear, modificar ni borrar suscripciones.
+- No activar capacidades productivas.
+
+### B) Archivo implementado y dependencias
+Archivo implementado:
+
+- `api/subscriptions/index.php`.
+
+Dependencias usadas:
+- `modules/subscriptions/repositories/CurrentSubscriptionRepository.php`.
+- `modules/subscriptions/services/CurrentSubscriptionReadModelService.php`.
+- `api/_lib/db.php` para obtener la conexion local/proyecto mediante `mxmed_pdo`.
+
+### C) Formato de respuesta exitosa
+Formato conceptual:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "...": "read-model"
+  },
+  "meta": {
+    "...": "contexto de ejecucion"
+  }
+}
+```
+
+Ejemplo conceptual para entidad sin suscripcion:
+
+- `entity_type = doctor`.
+- `entity_id = 1`.
+- `effective_plan_code = free`.
+- `plan_label = Gratuito`.
+- `billing_period = lifetime`.
+- `duration_days = 0`.
+- `status = free_default`.
+- `expires_at = null`.
+- `source = subscription_plans.default_free`.
+- `version = current-subscription-readmodel-v1`.
+
+### D) Formato de error
+Formato conceptual:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "...",
+    "message": "..."
+  },
+  "data": null,
+  "meta": {
+    "...": "contexto de ejecucion"
+  }
+}
+```
+
+Errores validados:
+- `401` sin autorizacion fuera de entorno local.
+- `403` por mismatch de scope.
+- `404` por ruta invalida.
+- `405` por metodo no permitido.
+- `422` por request invalido.
+
+### E) Auth y guard
+- El endpoint es privado.
+- En entorno local permite `local_dev_open` solamente para QA local.
+- `local_dev_open` queda acotado a:
+  - `127.0.0.1`.
+  - `localhost`.
+  - `::1`.
+- Fuera de local, sin usuario o scope, responde `401`.
+- Si hay mismatch de doctor o entidad, responde `403`.
+- Antes de exponer en entorno real debe endurecerse con:
+  - `MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED=1`;
+  - o la politica final de autenticacion/scope que defina el proyecto.
+
+### F) Seguridad y privacidad
+El endpoint no debe exponer:
+
+- `contract_acceptance_ip`.
+- `contract_acceptance_user_agent`.
+- Datos de pago.
+- Datos privados sensibles.
+- Informacion publica SEO.
+- Capacidades calculadas para perfil publico.
+
+Puede exponer timestamps contractuales minimos porque es un endpoint privado, pero no debe convertirse en fuente publica.
+
+### G) Relacion con perfil publico
+- No esta conectado a `profiles/doctor.php`.
+- No esta conectado a `api/profiles/index.php`.
+- No modifica `PublicProfileRepository`.
+- No modifica `PublicProfilePlanCapabilities`.
+- No activa capacidades publicas.
+- No cambia SSR publico.
+- No cambia SEO productivo.
+
+### H) Casos validados
+QA validado:
+
+- `GET /api/subscriptions/index.php/entities/doctor/1/current` en local devuelve fallback `free_default`.
+- `POST` sobre la misma ruta devuelve `405`.
+- Ruta incompleta devuelve `404`.
+- `entity_type` invalido devuelve `422`.
+- `entity_id` raro devuelve `422`.
+- Entidad inexistente devuelve fallback `free_default` sin crear registros.
+- Host no-local sin auth devuelve `401`.
+- Mismatch de `X-Doctor-Id` devuelve `403`.
+- Mismatch de `X-Entity-Type` / `X-Entity-Id` devuelve `403`.
+- `subscription_plans` permanece en `5`.
+- `profile_subscriptions` permanece en `0`.
+
+### I) Pendientes
+- Endurecer auth/scope antes de uso productivo.
+- Crear QA con sesion real.
+- Conectar UI `p-suscripcion` en fase posterior.
+- Crear endpoint de contratacion en fase posterior.
+- Crear aceptacion contractual en fase posterior.
+- Crear renovacion y cancelacion en fases posteriores.
+- Conectar capacidades publicas solo despues de resolver reglas de vencimiento y gracia.
+- No conectar todavia perfil publico.
+
+### J) Que no se activa todavia
+Esta decision no activa:
+
+- Planes reales.
+- Capacidades premium.
+- Perfil publico.
+- UI real de suscripcion.
+- Contratacion.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- SEO productivo.
+
+### K) Limites de esta adenda
+- No modifica DB.
+- No ejecuta SQL.
+- No crea endpoints adicionales.
+- No modifica PHP, JS, CSS ni UI.
+- No modifica `PublicProfilePlanCapabilities`.
+- No modifica `PublicProfileRepository`.
+- No modifica perfil publico.
+- No activa planes reales.
+- No cambia capacidades productivas.
+- No modifica SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
