@@ -1542,6 +1542,146 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 21 — Ciclo de vida de suscripciones y vigencia contractual de planes
+
+### A) Diagnostico actual
+- No existe en el repo una tabla canonica de suscripciones de planes medicos.
+- No existe tabla canonica de catalogo de planes comerciales conectada a backend.
+- No existe tabla canonica de pagos de suscripcion de plataforma.
+- No existe tabla canonica de aceptacion de contrato comercial para planes.
+- No existen campos persistidos y canonicos para `contract_accepted_at`, `starts_at`, `expires_at`, `grace_starts_at` o `grace_ends_at`.
+- No existe API real para contratar, renovar, cambiar o cancelar plan.
+- No existe job programado de recordatorios, vencimiento, periodo de gracia o inactivacion por plan.
+- La UI `p-suscripcion` actual existe como maqueta en `docs/index.html` y `docs/assets/js/app.js`; muestra plan, vigencia, renovacion, facturacion e historial con datos demo.
+- `PublicProfilePlanCapabilities` resuelve capacidades publicas por `plan_code`, pero hoy opera como contrato/read-model transicional:
+  - normaliza planes `free`, `basic`, `standard`, `optimum` y `professional`;
+  - expone `expires_at=null`;
+  - expone `grace_status=null`;
+  - no consulta una suscripcion vigente real.
+- `PublicProfileRepository` busca fuente de plan en columnas candidatas de `profiles_doctors` si existen: `plan_code`, `profile_plan`, `plan_name`, `subscription_plan` o `commercial_plan`.
+- `profiles/doctor.php` conserva un selector temporal `mxmed_plan` solo para QA/dev local.
+- `doctor_contact_points` ya contempla `visibility_plan_min`, pero eso es gating por visibilidad de contacto, no contrato de suscripcion ni vigencia comercial.
+
+### B) Principio central
+- Una mejora de plan no es solo un cambio visual ni un override de QA.
+- Al contratar un plan mejorado debe generarse un registro formal de suscripcion con fechas inamovibles.
+- La suscripcion vigente debe ser la fuente futura para calcular capacidades publicas, avisos, vencimiento, periodo de gracia e inactivacion.
+- Las fechas contractuales deben quedar visibles para el usuario medico.
+
+### C) Evento de contratacion
+Cuando el usuario medico elige un plan mejorado:
+
+1. Selecciona plan.
+2. Revisa condiciones comerciales y contrato de plataforma.
+3. Acepta contrato.
+4. Se registra `contract_accepted_at`.
+5. Se fija `starts_at`.
+6. Se calcula `expires_at` segun duracion contratada.
+7. Para plan anual, `expires_at = starts_at + 365 dias`.
+8. Se guarda la suscripcion como `active`.
+9. Las fechas `starts_at` y `expires_at` quedan visibles para el usuario.
+
+### D) Campos minimos futuros
+Campos conceptuales para una tabla futura de suscripciones, sin crear DB en esta fase:
+
+- `subscription_id`.
+- `doctor_id` / `profile_id` / `entity_id`.
+- `plan_code`.
+- `plan_label`.
+- `billing_period`.
+- `duration_days`.
+- `contract_accepted_at`.
+- `starts_at`.
+- `expires_at`.
+- `grace_starts_at`.
+- `grace_ends_at`.
+- `status`.
+- `auto_renew`.
+- `source`.
+- `created_at`.
+- `updated_at`.
+
+### E) Estados minimos
+- `draft`: seleccion o preparacion antes de aceptacion contractual.
+- `active`: suscripcion vigente y beneficios aplicables.
+- `expiring_soon`: ventana de aviso previa al vencimiento.
+- `grace_period`: vencida pero dentro de periodo de gracia definido.
+- `expired`: vencida y pendiente de resolver politica final.
+- `inactive`: sin beneficios premium despues de vencimiento/gracia.
+- `cancelled`: cancelada por usuario, soporte o regla administrativa.
+- `renewed`: renovada y ligada a una vigencia posterior.
+
+### F) Reglas de calculo
+- `starts_at` se fija al momento valido de contratacion y aceptacion.
+- `expires_at` se calcula una vez y no debe recalcularse dinamicamente por consultas de lectura.
+- Para anualidad, la duracion base es 365 dias.
+- `expires_at` debe mostrarse en UI al usuario medico.
+- Los beneficios del plan dependen de `status`, fechas y politica de gracia.
+- El sistema debe impedir que un usuario conserve capacidades premium despues de vencimiento y gracia.
+- Las fechas contractuales no deben editarse manualmente desde UI comun.
+
+### G) Acciones automaticas futuras
+Antes de vencimiento:
+- Recordatorio 30 dias antes.
+- Recordatorio 15 dias antes.
+- Recordatorio 7 dias antes.
+- Recordatorio 1 dia antes.
+
+En vencimiento:
+- Marcar como `expired` o `grace_period` segun politica comercial vigente.
+
+Durante periodo de gracia:
+- Mostrar aviso persistente.
+- Permitir renovacion.
+- Limitar o mantener temporalmente capacidades segun politica.
+
+Despues de gracia:
+- Cambiar a `inactive`.
+- Retirar capacidades premium.
+- Conservar datos historicos.
+- No borrar perfil, agenda, contactos, configuracion ni expediente.
+
+### H) Relacion con perfil publico
+- `PublicProfilePlanCapabilities` debe resolverse en el futuro desde la suscripcion vigente, no desde `mxmed_plan` ni solo desde columnas candidatas.
+- El contrato futuro debe distinguir:
+  - plan contratado;
+  - suscripcion vigente;
+  - periodo de gracia;
+  - plan efectivo;
+  - capacidades publicas.
+- Si no hay suscripcion vigente, el plan efectivo debe caer a la politica definida para gratuito/inactivo.
+- La agenda publica, contacto, reseñas, promociones, mapa GPS y otras capacidades deben depender del plan efectivo, no de una etiqueta visual.
+
+### I) Reglas de seguridad y auditoria
+- No borrar datos al vencer una suscripcion.
+- No borrar contactos, agenda, configuracion ni historial clinico.
+- Solo cambiar capacidades, visibilidad o acceso segun plan efectivo.
+- Mantener historial contractual.
+- Mantener evidencia de aceptacion de contrato.
+- Mantener trazabilidad de fuente (`source`) y timestamps.
+- No permitir edicion manual de fechas inamovibles desde UI comun.
+- Cualquier ajuste administrativo debe auditar actor, motivo y fecha.
+
+### J) Brechas para implementacion futura
+- Definir schema canonico de suscripciones.
+- Definir catalogo canonico de planes.
+- Definir endpoint de contratacion/renovacion con aceptacion contractual.
+- Definir integracion con pagos/facturacion sin mezclarla con perfil publico.
+- Definir jobs de recordatorio, vencimiento, gracia e inactivacion.
+- Conectar `PublicProfilePlanCapabilities` a la suscripcion vigente.
+- Sustituir `mxmed_plan` por una fuente real fuera de QA/dev.
+
+### K) Limites de esta adenda
+- No crea tablas.
+- No crea SQL.
+- No modifica DB.
+- No implementa API.
+- No activa planes reales.
+- No cambia capacidades productivas.
+- No modifica SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
