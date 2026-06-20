@@ -139,6 +139,13 @@ final class PublicProfileController
             $publicCanonicalRoute,
             $seo
         );
+        $publicRouteGuard = $this->buildPublicRouteGuard(
+            $publicUrlContext,
+            $publicCanonicalRoute,
+            $canonicalRenderGuard,
+            $jsonLdRenderGuard,
+            $seo
+        );
 
         $data = [
             'profile' => [
@@ -187,6 +194,7 @@ final class PublicProfileController
             'canonical_render_guard' => $canonicalRenderGuard,
             'public_breadcrumbs' => $publicBreadcrumbs,
             'json_ld_render_guard' => $jsonLdRenderGuard,
+            'public_route_guard' => $publicRouteGuard,
             'schedule' => $schedule,
             'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
@@ -757,6 +765,80 @@ final class PublicProfileController
                 'robots_index_allowed' => $robotsIndexAllowed,
                 'breadcrumb_jsonld_enabled' => $breadcrumbEnabled,
                 'jsonld_renderer_enabled' => $jsonLdRendererEnabled,
+            ],
+            'blocking_reasons' => array_values(array_unique($blockingReasons)),
+        ];
+    }
+
+    private function buildPublicRouteGuard(
+        array $publicUrlContext,
+        array $publicCanonicalRoute,
+        array $canonicalRenderGuard,
+        array $jsonLdRenderGuard,
+        array $seo
+    ): array {
+        $status = $this->firstNonEmpty($publicCanonicalRoute['status'] ?? null);
+        $candidatePath = $this->firstNonEmpty($publicCanonicalRoute['canonical_path'] ?? null)
+            ?? $this->firstNonEmpty($publicUrlContext['profile']['fallback_candidate_url'] ?? null);
+        $currentUrl = $this->firstNonEmpty($publicUrlContext['profile']['current_url'] ?? null);
+        $routeGeneration = $this->firstNonEmpty($publicUrlContext['route_generation'] ?? null) ?? 'candidate_only';
+        $routePersisted = (bool)($publicCanonicalRoute['found'] ?? false);
+        $statusActive = ($status === 'active');
+        $routeEnabled = (
+            (bool)($publicUrlContext['route_enabled'] ?? false)
+            && (bool)($publicCanonicalRoute['route_enabled'] ?? false)
+            && (bool)($publicCanonicalRoute['can_route'] ?? false)
+        );
+        $seoRouterEnabled = false;
+        $canonicalReady = (
+            (bool)($canonicalRenderGuard['can_render'] ?? false)
+            && $this->firstNonEmpty($canonicalRenderGuard['canonical_url'] ?? null) !== null
+        );
+        $robots = strtolower((string)($seo['robots'] ?? ''));
+        $robotsIndexAllowed = ($robots !== '' && !str_contains($robots, 'noindex'));
+        $redirectPolicyReady = false;
+
+        $blockingReasons = [];
+        if (!$routePersisted) {
+            $blockingReasons[] = 'canonical_route_not_persisted';
+        }
+        if (!$statusActive) {
+            $blockingReasons[] = $status ? ('status_' . $status) : 'status_unknown';
+        }
+        if (!$routeEnabled) {
+            $blockingReasons[] = 'route_disabled';
+        }
+        if (!$seoRouterEnabled) {
+            $blockingReasons[] = 'seo_router_not_implemented';
+        }
+        if (!$canonicalReady) {
+            $blockingReasons[] = 'canonical_not_ready';
+        }
+        if (!$robotsIndexAllowed) {
+            $blockingReasons[] = 'robots_noindex_active';
+        }
+        if (!$redirectPolicyReady) {
+            $blockingReasons[] = 'redirect_policy_not_implemented';
+        }
+
+        return [
+            'source' => 'public_canonical_route',
+            'version' => 'public-route-guard-v1',
+            'enabled' => false,
+            'can_route' => false,
+            'route_url' => null,
+            'route_type' => 'profile',
+            'candidate_path' => $candidatePath,
+            'current_url' => $currentUrl,
+            'route_generation' => $routeGeneration,
+            'requires' => [
+                'route_persisted' => $routePersisted,
+                'status_active' => $statusActive,
+                'route_enabled' => $routeEnabled,
+                'seo_router_enabled' => $seoRouterEnabled,
+                'canonical_ready' => $canonicalReady,
+                'robots_index_allowed' => $robotsIndexAllowed,
+                'redirect_policy_ready' => $redirectPolicyReady,
             ],
             'blocking_reasons' => array_values(array_unique($blockingReasons)),
         ];

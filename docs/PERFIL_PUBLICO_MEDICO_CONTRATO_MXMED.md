@@ -1326,6 +1326,67 @@ Ejemplo con estado y ciudad distintos:
 
 ---
 
+## Adenda PP-Decisiones 18 — Public Route Guard
+
+### A) Campo del DTO
+- El DTO publico expone `public_route_guard` como llave de primer nivel.
+- La fuente del guard es `public_canonical_route`.
+- Version actual: `public-route-guard-v1`.
+- El objetivo es centralizar las condiciones futuras para servir una URL publica SEO real.
+
+### B) Condiciones futuras requeridas
+- Ruta canonica persistida en `public_profile_seo_routes`.
+- `status=active`.
+- `route_enabled=1`.
+- Router SEO publico implementado.
+- Canonical listo.
+- `robots` debe permitir indexacion.
+- Politica de redirects/aliases lista.
+
+### C) Estado actual de doctor_id=1
+- `enabled=false`.
+- `can_route=false`.
+- `route_url=null`.
+- `route_type=profile`.
+- `candidate_path=/aguascalientes/aguascalientes/medicos/dra-leticia-munoz-romo`.
+- `current_url=/profiles/doctor.php?doctor_id=1`.
+- `route_generation=candidate_only`.
+- `requires.route_persisted=true`.
+- `requires.status_active=false`.
+- `requires.route_enabled=false`.
+- `requires.seo_router_enabled=false`.
+- `requires.canonical_ready=false`.
+- `requires.robots_index_allowed=false`.
+- `requires.redirect_policy_ready=false`.
+- `blocking_reasons` incluye `status_candidate`, `route_disabled`, `seo_router_not_implemented`, `canonical_not_ready`, `robots_noindex_active` y `redirect_policy_not_implemented`.
+
+### D) Limites vigentes
+- La existencia de `canonical_path` candidato no implica ruta publica real.
+- `route_url` permanece `null`.
+- `status=candidate` bloquea la ruta.
+- `route_enabled=false` bloquea la ruta.
+- `seo_router_enabled=false` bloquea rutas SEO reales.
+- `robots=noindex,nofollow` bloquea indexacion.
+- `redirect_policy_ready=false` bloquea aliases y redirects 301.
+- `public_url_context.route_enabled` permanece `false`.
+- `public_canonical_route.can_route` permanece `false`.
+- `canonical_render_guard.can_render` permanece `false`.
+- `json_ld_render_guard.can_render` permanece `false`.
+- `profile.canonical_url` permanece `null`.
+- `seo.canonical_url` permanece `null`.
+- `json_ld` real permanece `null`.
+- `seo.breadcrumb` permanece `[]`.
+- No se modifica SSR.
+- No se modifica DB.
+- No se modifica `.htaccess`.
+- No se crea router.
+- No se crean redirects.
+- No se activa canonical.
+- No se activa JSON-LD real.
+- No se cambia `seo.robots`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
