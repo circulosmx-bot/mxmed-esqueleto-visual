@@ -4921,6 +4921,302 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 39 — Decisión de almacenamiento de aceptación contractual de suscripciones
+
+### A) Contexto
+El bloque de suscripciones ya cuenta con las piezas read-only y documentales necesarias para decidir el almacenamiento de la aceptacion contractual antes de cualquier write real:
+
+- Ya existe `subscription_plans`.
+- Ya existe `profile_subscriptions`.
+- Ya existe read-model actual de suscripcion.
+- Ya existe endpoint privado de suscripcion actual:
+  - `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+- Ya existe endpoint privado de contexto activo:
+  - `GET /api/subscriptions/index.php/context/current`.
+- Ya existe panel `p-suscripcion` read-only DEV/local.
+- Todavia no existen writes reales de contratacion.
+- Todavia no existe tabla separada de aceptacion contractual.
+
+La microfase `DB/DIAG-Suscripciones-ContractAcceptance-StorageDecision-01` cerro con PASS y diagnostico donde conviene almacenar la aceptacion contractual antes de crear cualquier endpoint write.
+
+### B) Estado actual del schema
+`profile_subscriptions` ya contempla campos embebidos de aceptacion contractual:
+
+- `contract_version`.
+- `contract_accepted_at`.
+- `contract_accepted_by_user_id`.
+- `contract_acceptance_source`.
+- `contract_acceptance_ip`.
+- `contract_acceptance_user_agent`.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Limitaciones del enfoque actual si se usa como unico storage:
+
+- Una sola aceptacion embebida por suscripcion.
+- No conserva reaceptaciones.
+- No hay `contract_hash`.
+- No hay snapshot o URL del contrato aceptado.
+- No hay actor/operator detallado.
+- No hay tabla auditable separada.
+- El read-model actual solo expone `contract_accepted_at`.
+
+### C) Opciones evaluadas
+Opcion A — Solo campos embebidos en `profile_subscriptions`:
+
+Ventajas:
+
+- Menor complejidad.
+- No requiere tabla adicional.
+- Menos joins.
+- Suficiente para una primera lectura operativa simple.
+
+Riesgos:
+
+- Auditoria legal debil.
+- Reaceptaciones dificiles.
+- Cambios de contrato dificiles.
+- Operador/admin poco trazable.
+- Snapshot/hash no natural.
+- Mezcla aceptacion con alta/renovacion.
+
+Conclusion:
+
+- Es suficiente solo para un MVP muy simple.
+- Es insuficiente para renovacion, cambio de condiciones, operador, soporte administrativo y evidencia legal robusta.
+
+Opcion B — Tabla separada `subscription_contract_acceptances`:
+
+Tabla candidata:
+
+- `subscription_contract_acceptances`.
+
+Campos conceptuales:
+
+- `id`.
+- `uuid`.
+- `entity_type`.
+- `entity_id`.
+- `doctor_id`.
+- `profile_id`.
+- `subscription_id`.
+- `plan_code`.
+- `billing_period`.
+- `contract_version`.
+- `contract_hash`.
+- `contract_snapshot_url`.
+- `accepted_at`.
+- `accepted_by_user_id`.
+- `accepted_by_actor_role`.
+- `accepted_by_operator_id`.
+- `acceptance_source`.
+- `ip_address`.
+- `user_agent`.
+- `status`.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Ventajas:
+
+- Auditoria fuerte.
+- Multiples aceptaciones.
+- Cambios de contrato.
+- Renovacion/reaceptacion.
+- Evidencia legal.
+- Relacion futura con pagos, checkout y eventos.
+
+Riesgos:
+
+- Mas complejidad.
+- Requiere transacciones.
+- Requiere evitar aceptaciones huerfanas.
+- Requiere definir relacion con suscripcion.
+- Requiere definir fuente de verdad.
+
+Conclusion:
+
+- Es suficiente para auditoria legal.
+- Como unica fuente puede complicar el read-model operativo.
+
+Opcion C — Hibrida:
+
+Descripcion:
+
+- `profile_subscriptions` conserva snapshot minimo operativo.
+- `subscription_contract_acceptances` guarda evidencia/auditoria completa.
+
+Ventajas:
+
+- Read-model simple.
+- Auditoria fuerte.
+- Trazabilidad legal.
+- Soporte de reaceptaciones.
+- Balance entre MVP y crecimiento contractual.
+
+Riesgos:
+
+- Duplicacion controlada.
+- Requiere sincronia transaccional.
+- Requiere reglas claras de consistencia.
+
+Fuente de verdad:
+
+- `subscription_contract_acceptances` = evidencia legal/auditoria.
+- `profile_subscriptions` = snapshot operacional de vigencia y lectura.
+
+### D) Decision recomendada
+Decision:
+
+- Adoptar Opcion C — enfoque hibrido.
+
+Motivo:
+
+- Mexico Medico manejara planes comerciales.
+- La aceptacion debe ocurrir antes de activar un plan.
+- Debe existir evidencia contractual.
+- En el futuro puede haber operadores/admin.
+- En el futuro habra pagos/facturacion.
+- En el futuro pueden cambiar condiciones/contratos.
+- No conviene sacrificar auditoria legal.
+- Tampoco conviene complicar el read-model operativo.
+
+### E) Snapshot minimo en `profile_subscriptions`
+`profile_subscriptions` debe conservar un snapshot minimo para operacion y lectura:
+
+- `contract_version`.
+- `contract_accepted_at`.
+- `contract_accepted_by_user_id`.
+- `contract_acceptance_source`.
+
+Campo opcional futuro:
+
+- `contract_acceptance_id`.
+
+Proposito:
+
+- Lectura rapida.
+- Read-model simple.
+- Vigencia operativa.
+- Mostrar datos minimos al usuario.
+
+### F) Evidencia completa en `subscription_contract_acceptances`
+La tabla separada debe guardar evidencia completa:
+
+- Entidad.
+- Usuario.
+- Actor/operator.
+- Plan.
+- Periodo.
+- Version de contrato.
+- Hash/snapshot.
+- IP.
+- User-agent.
+- Timestamps.
+- Estado.
+- Source.
+- Notas.
+
+Proposito:
+
+- Evidencia legal.
+- Auditoria.
+- Soporte de reaceptaciones.
+- Soporte de cambios de contrato.
+- Relacion futura con pagos/checkout/eventos.
+
+### G) Lo que no se implementa todavia
+Esta decision no implementa:
+
+- SQL.
+- Tabla.
+- Endpoints write.
+- Contratacion.
+- Aceptacion real.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- Conexion con `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+### H) Relacion con flujo futuro
+Flujo conceptual futuro:
+
+1. Usuario selecciona plan pagado.
+2. Backend valida que el plan este activo.
+3. Se impide contratar `free`.
+4. No se crean filas `free`.
+5. Usuario acepta contrato.
+6. Se crea evidencia en `subscription_contract_acceptances`.
+7. Se crea `profile_subscriptions` transaccionalmente con snapshot y vigencia congelada.
+8. Read-model sigue leyendo `profile_subscriptions`.
+9. Auditoria consulta `subscription_contract_acceptances`.
+
+### I) Riesgos documentados
+Riesgos que debe controlar el diseno futuro:
+
+- Activar plan sin aceptacion.
+- No guardar IP/user-agent/hash.
+- Perder auditoria si solo se embebe.
+- Crear aceptacion sin suscripcion.
+- Crear suscripcion sin aceptacion.
+- Permitir multiples activas sin control.
+- Aceptar por operador sin permiso.
+- Recalcular fechas contractuales.
+- Tratar `free` como contrato pagado.
+- Mezclar pagos con aceptacion sin diseno claro.
+- Conectar capacidades antes de aceptacion/vigencia.
+
+### J) Secuencia recomendada
+Secuencia segura propuesta:
+
+1. `DOCS-Suscripciones-ContractAcceptance-StorageDecision-01`.
+2. `DB-Suscripciones-ContractAcceptance-CreateSchemaDraft-01`.
+3. `DB/DIAG-Suscripciones-ContractAcceptance-ConstraintsDecision-01`.
+4. `DB-Suscripciones-ContractAcceptance-CreateSchemaExecutable-01`.
+5. `QA-Suscripciones-ContractAcceptance-SchemaStaticReview-01`.
+6. `BE/DIAG-Suscripciones-ContractAcceptance-EndpointDesign-01`.
+
+### K) Conclusion
+Decision de cierre:
+
+- Si hace falta tabla separada.
+- Si conviene enfoque hibrido.
+- No esta listo para SQL ejecutable todavia.
+- Primero debe documentarse esta decision.
+
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-ContractAcceptance-CreateSchemaDraft-01`.
+
+### L) Limites de esta adenda
+Esta adenda no implementa:
+
+- Backend.
+- UI.
+- DB.
+- SQL.
+- Endpoints.
+- Writes.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratacion.
+- Renovacion.
+- Cancelacion.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
