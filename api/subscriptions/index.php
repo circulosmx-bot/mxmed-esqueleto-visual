@@ -66,6 +66,30 @@ function subscriptionError(string $code, string $message, string $authMode = 'un
     ];
 }
 
+function subscriptionContextMeta(string $source = 'none'): array
+{
+    return [
+        'contract' => 'subscription_active_entity_context_private',
+        'version' => 'active-entity-context-v1',
+        'generated_at' => gmdate('c'),
+        'source' => $source,
+        'strict_auth_required' => subscriptionStrictAuthRequired(),
+    ];
+}
+
+function subscriptionContextError(string $code, string $message, string $source = 'none'): array
+{
+    return [
+        'ok' => false,
+        'error' => [
+            'code' => $code,
+            'message' => $message,
+        ],
+        'data' => null,
+        'meta' => subscriptionContextMeta($source),
+    ];
+}
+
 function subscriptionRelativeSegments(): array
 {
     $uri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -173,6 +197,13 @@ function subscriptionSessionHasPermission(string $permission): bool
         'subscriptions',
     ];
 
+    foreach (array_merge($aliases, ['can_read_subscriptions']) as $sessionKey) {
+        $sessionValue = $_SESSION[$sessionKey] ?? null;
+        if ($sessionValue === true || $sessionValue === 1 || $sessionValue === '1') {
+            return true;
+        }
+    }
+
     foreach ($sources as $source) {
         if (is_string($source)) {
             $items = preg_split('/[\s,;|]+/', strtolower($source)) ?: [];
@@ -199,6 +230,172 @@ function subscriptionSessionHasPermission(string $permission): bool
     }
 
     return false;
+}
+
+function subscriptionNormalizeActorRole(string $actorRole, string $operatorId = ''): string
+{
+    $normalized = strtolower(trim($actorRole));
+
+    if (in_array($normalized, ['operator', 'operador', 'assistant', 'asistente'], true) || $operatorId !== '') {
+        return 'operator';
+    }
+
+    if (in_array($normalized, ['doctor', 'medico', 'principal', 'owner'], true)) {
+        return 'doctor';
+    }
+
+    return 'doctor';
+}
+
+function subscriptionJsonId(string $value)
+{
+    return ctype_digit($value) ? (int)$value : $value;
+}
+
+function subscriptionResolveActiveEntityContext(): array
+{
+    $strict = subscriptionStrictAuthRequired();
+    $isLocal = subscriptionIsLocalRequest();
+    $headers = subscriptionHeaders();
+    $allowHeaderScope = $isLocal;
+
+    $sessionUserId = subscriptionSessionValue(['user_id', 'mxmed_user_id', 'auth_user_id']);
+    $headerUserId = $allowHeaderScope ? trim((string)($headers['x-user-id'] ?? '')) : '';
+    $userId = $sessionUserId !== '' ? $sessionUserId : $headerUserId;
+
+    $sessionDoctorId = subscriptionSessionValue(['doctor_id', 'active_doctor_id', 'mxmed_doctor_id']);
+    $headerDoctorId = $allowHeaderScope ? trim((string)($headers['x-doctor-id'] ?? '')) : '';
+
+    $sessionEntityType = strtolower(subscriptionSessionValue(['entity_type', 'active_entity_type']));
+    $sessionEntityId = subscriptionSessionValue(['entity_id', 'active_entity_id']);
+    $headerEntityType = $allowHeaderScope ? strtolower(trim((string)($headers['x-entity-type'] ?? ''))) : '';
+    $headerEntityId = $allowHeaderScope ? trim((string)($headers['x-entity-id'] ?? '')) : '';
+
+    $doctorId = $sessionDoctorId !== '' ? $sessionDoctorId : $headerDoctorId;
+    if ($doctorId === '' && $sessionEntityType === 'doctor') {
+        $doctorId = $sessionEntityId;
+    }
+    if ($doctorId === '' && $headerEntityType === 'doctor') {
+        $doctorId = $headerEntityId;
+    }
+
+    $source = 'none';
+    if ($sessionUserId !== '') {
+        $source = 'session_scope';
+    } elseif ($allowHeaderScope && $headerUserId !== '') {
+        $source = 'header_scope';
+    }
+
+    if ($userId === '') {
+        return [
+            'ok' => false,
+            'status' => 401,
+            'response' => subscriptionContextError('unauthorized', 'authentication required', $source),
+        ];
+    }
+
+    if ($strict && !$isLocal && $sessionUserId === '') {
+        return [
+            'ok' => false,
+            'status' => 401,
+            'response' => subscriptionContextError('unauthorized', 'session authentication required', $source),
+        ];
+    }
+
+    if ($source === 'header_scope' && !$isLocal) {
+        return [
+            'ok' => false,
+            'status' => 401,
+            'response' => subscriptionContextError('unauthorized', 'session authentication required', $source),
+        ];
+    }
+
+    if ($doctorId === '') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionContextError('forbidden', 'doctor scope required', $source),
+        ];
+    }
+
+    if ($sessionEntityType !== '' && $sessionEntityType !== 'doctor') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionContextError('forbidden', 'entity scope mismatch', $source),
+        ];
+    }
+
+    if ($sessionEntityType !== '' && $sessionEntityId !== '' && $sessionEntityId !== $doctorId) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionContextError('forbidden', 'entity scope mismatch', $source),
+        ];
+    }
+
+    if ($headerEntityType !== '' && $headerEntityType !== 'doctor') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionContextError('forbidden', 'entity scope mismatch', $source),
+        ];
+    }
+
+    if ($headerEntityType !== '' && $headerEntityId !== '' && $headerEntityId !== $doctorId) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionContextError('forbidden', 'entity scope mismatch', $source),
+        ];
+    }
+
+    if (!subscriptionValidEntityId($doctorId)) {
+        return [
+            'ok' => false,
+            'status' => 422,
+            'response' => subscriptionContextError('invalid_request', 'invalid context', $source),
+        ];
+    }
+
+    $operatorId = subscriptionSessionValue(['operator_id']);
+    $actorRole = subscriptionNormalizeActorRole(
+        subscriptionSessionValue(['actor_role', 'user_role', 'role', 'mxmed_user_role']),
+        $operatorId
+    );
+    $subscriptionsRead = true;
+
+    if ($actorRole === 'operator') {
+        $subscriptionsRead = subscriptionSessionHasPermission('subscriptions.read');
+        if (!$subscriptionsRead) {
+            return [
+                'ok' => false,
+                'status' => 403,
+                'response' => subscriptionContextError('forbidden', 'operator subscription scope required', $source),
+            ];
+        }
+    }
+
+    return [
+        'ok' => true,
+        'status' => 200,
+        'response' => [
+            'ok' => true,
+            'data' => [
+                'user_id' => subscriptionJsonId($userId),
+                'doctor_id' => subscriptionJsonId($doctorId),
+                'entity_type' => 'doctor',
+                'entity_id' => $doctorId,
+                'actor_role' => $actorRole,
+                'operator_id' => $operatorId !== '' ? subscriptionJsonId($operatorId) : null,
+                'permissions' => [
+                    'subscriptions_read' => $subscriptionsRead,
+                ],
+                'can_read_subscriptions' => $subscriptionsRead,
+            ],
+            'meta' => subscriptionContextMeta($source),
+        ],
+    ];
 }
 
 function subscriptionResolvePrivateContext(string $entityType, string $entityId): array
@@ -342,6 +539,22 @@ function subscriptionValidEntityId(string $entityId): bool
 try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = subscriptionRelativeSegments();
+
+    if (count($segments) === 2 && $segments[0] === 'context' && $segments[1] === 'current') {
+        if ($method !== 'GET') {
+            subscriptionRespond(subscriptionContextError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        $context = subscriptionResolveActiveEntityContext();
+        subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 500));
+        return;
+    }
+
+    if (!empty($segments) && $segments[0] === 'context') {
+        subscriptionRespond(subscriptionContextError('not_found', 'route not found'), 404);
+        return;
+    }
 
     if (
         count($segments) !== 4
