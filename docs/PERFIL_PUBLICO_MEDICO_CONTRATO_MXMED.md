@@ -4561,6 +4561,366 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 38 — Readiness del flujo contractual real de suscripciones
+
+### A) Contexto
+El bloque de suscripciones ya cuenta con piezas preparatorias importantes:
+
+- Catalogo de planes `subscription_plans`.
+- Tabla contractual base `profile_subscriptions`.
+- Read-model actual de suscripcion.
+- Endpoint privado de suscripcion actual:
+  - `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+- Endpoint privado de contexto activo:
+  - `GET /api/subscriptions/index.php/context/current`.
+- Panel `p-suscripcion` en modo DEV/local read-only.
+- QA visual/network del panel read-only con flujo contexto primero.
+
+Todavia no existen writes reales de contratacion, aceptacion contractual, renovacion, cancelacion, pagos ni facturacion.
+
+### B) Estado actual del modelo
+Tablas existentes:
+
+- `subscription_plans`:
+  - Catalogo canonico de planes.
+  - Incluye `free`, `basic`, `standard`, `optimum` y `professional`.
+  - `free = lifetime / 0`.
+  - Planes pagados = `annual / 365`.
+- `profile_subscriptions`:
+  - Tabla contractual/vigencia por entidad.
+  - Actualmente sin registros reales.
+  - No se crean filas `free`.
+
+Campos existentes o conceptuales cubiertos por el schema actual:
+
+- `plan_code`.
+- `billing_period`.
+- `duration_days`.
+- `contract_version`.
+- `contract_accepted_at`.
+- `contract_accepted_by_user_id`.
+- `contract_acceptance_source`.
+- `contract_acceptance_ip`.
+- `contract_acceptance_user_agent`.
+- `starts_at`.
+- `expires_at`.
+- `grace_starts_at`.
+- `grace_ends_at`.
+- `status`.
+- `auto_renew`.
+- `cancelled_at`.
+- `renewed_from_subscription_id`.
+- `renewed_to_subscription_id`.
+- `source`.
+- `notes`.
+- `deleted_at`.
+
+### C) Gaps identificados
+Antes de habilitar un flujo contractual real faltan:
+
+- Endpoints write.
+- Storage/auditoria separada de aceptacion contractual.
+- Politica final de gracia.
+- Politica de capacidades durante gracia.
+- Unicidad fuerte de suscripcion vigente.
+- Transacciones de alta.
+- Permisos persistidos `subscriptions.read`.
+- Pagos.
+- Facturacion.
+- Comprobantes.
+- Eventos/historial contractual.
+- Jobs de vencimiento y recordatorios.
+- Conexion productiva con capacidades publicas.
+
+### D) Read-model actual
+Casos ya resueltos por el read-model:
+
+- Sin suscripcion real devuelve `free_default`.
+- Plan activo/candidato si existiera en `profile_subscriptions`.
+- Vencido fuera de gracia resuelve `effective_plan_code=free`.
+- Ventana de gracia si existen fechas/estado.
+- Endpoint privado read-only de suscripcion actual.
+- Endpoint contexto activo read-only.
+
+Casos que siguen conceptuales o pendientes:
+
+- Contratacion real.
+- Aceptacion contractual real.
+- Pago real.
+- Creacion transaccional de suscripcion pagada.
+- Renovacion.
+- Cancelacion.
+- Historial contractual.
+- Capacidades publicas.
+- UI productiva.
+
+### E) UI actual
+Datos reales que ya muestra `p-suscripcion`:
+
+- Contexto activo.
+- Suscripcion actual read-only.
+- `effective_plan_code`.
+- Estado.
+- Vigencia.
+- Gracia.
+- Fuente/version.
+
+Datos demo/placeholders:
+
+- Catalogo visual.
+- Precios `$0`.
+- Features de planes.
+- Frecuencia mensual/anual.
+- Cupones.
+- Facturacion.
+- Historial.
+
+Acciones bloqueadas:
+
+- Renovar.
+- Seleccionar plan.
+- Cupon.
+- Facturacion.
+- Historial.
+- Autorrenovacion.
+
+Riesgo UI:
+
+- Textos como `Mejora tu plan`, precios y facturacion pueden parecer comerciales reales si se desbloquean antes de tener backend write, contrato, pago y auditoria.
+
+### F) Flujo contractual futuro propuesto
+Seleccion de plan:
+
+- Validar que el plan este activo en `subscription_plans`.
+- Impedir contratar `free`.
+- No crear filas `free`.
+- Validar `plan_code`, `billing_period` y `duration_days`.
+- Validar scope del medico u operador.
+
+Aceptacion de contrato:
+
+- Antes de activar plan, el usuario debe aceptar condiciones/contrato.
+- Persistir:
+  - Version de contrato.
+  - Fecha de aceptacion.
+  - Usuario que acepta.
+  - Origen.
+  - IP.
+  - User-agent.
+  - Preferiblemente hash o snapshot del contrato aceptado.
+
+Inicio de vigencia:
+
+- Fijar `starts_at`.
+- Calcular `expires_at` una sola vez.
+- Para plan anual pagado: 365 dias.
+- Para plan `free`: `lifetime/0`, sin `expires_at`.
+
+Plan efectivo:
+
+- Si el plan pagado esta vigente:
+  - `contracted_plan_code = plan pagado`.
+  - `effective_plan_code = plan pagado`.
+- Si vence fuera de gracia:
+  - Conservar `contracted_plan_code` historico.
+  - Resolver `effective_plan_code=free`.
+  - No borrar datos.
+
+Periodo de gracia:
+
+- Falta definir si aplica por plan.
+- Falta definir cuantos dias dura.
+- Falta definir si se persiste o se calcula.
+- Falta definir que capacidades se mantienen.
+- Falta definir que capacidades se retiran.
+- Falta definir copy para el usuario.
+
+Renovacion:
+
+- Falta definir renovacion manual.
+- Falta definir auto-renew futuro.
+- Falta definir si renueva desde vencimiento o desde fecha de pago.
+- Falta definir si crea nueva fila o actualiza la existente.
+- Falta definir relacion con `renewed_from_subscription_id` / `renewed_to_subscription_id`.
+
+Cancelacion:
+
+- Falta definir cancelacion inmediata.
+- Falta definir cancelacion al final del periodo.
+- Falta definir cancelacion administrativa.
+- Falta definir efecto en `effective_plan_code`.
+- Falta definir copy mostrado al usuario.
+
+Pagos/facturacion:
+
+- Falta definir tabla de pagos.
+- Falta definir tabla de facturas/invoices.
+- Falta definir comprobantes.
+- Falta definir pago offline/manual.
+- Falta definir pasarela futura.
+- Falta definir conciliacion.
+- Falta definir QA fiscal.
+- Pagos/facturacion quedan fuera de la etapa inicial.
+
+### G) Endpoints futuros propuestos
+Read-only existentes:
+
+- `GET /api/subscriptions/index.php/context/current`.
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Endpoints futuros conceptuales, no implementados:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intent`:
+  - Write preparatorio.
+  - Requiere plan activo, scope y contrato de pagos.
+  - No implementar todavia.
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/contract-acceptance`:
+  - Write de aceptacion contractual.
+  - Requiere version contractual y auditoria.
+  - No implementar todavia.
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/subscriptions`:
+  - Write de alta.
+  - Requiere aceptacion y pago/criterio comercial.
+  - No implementar todavia.
+- `POST /api/subscriptions/index.php/subscriptions/{subscription_id}/renew`:
+  - Write futuro.
+  - Requiere politica de renovacion.
+- `POST /api/subscriptions/index.php/subscriptions/{subscription_id}/cancel`:
+  - Write futuro.
+  - Requiere politica de cancelacion.
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/history`:
+  - Read-only futuro.
+  - Requiere eventos/historial.
+
+### H) Tablas futuras propuestas
+`subscription_contract_acceptances`:
+
+- Recomendable antes de writes reales.
+- Objetivo: auditar aceptacion contractual.
+- Campos minimos: entidad, usuario, `contract_version`, `accepted_at`, `source`, IP, user-agent y snapshot/hash.
+
+`subscription_payments`:
+
+- Necesaria antes de pagos.
+- Objetivo: registrar pagos, estado, referencia, metodo y conciliacion.
+
+`subscription_invoices`:
+
+- Necesaria antes de facturacion.
+- Objetivo: registrar facturas/invoices, estado y datos CFDI/fiscales si aplica.
+
+`subscription_events`:
+
+- Recomendable para auditoria/historial.
+- Objetivo: registrar alta, renovacion, cancelacion, vencimiento, gracia y fallback.
+
+`subscription_coupons`:
+
+- Posterior, solo si habra descuentos reales.
+
+`subscription_plan_prices`:
+
+- Posterior, si precios/moneda cambian por periodo.
+
+`subscription_renewals`:
+
+- Opcional.
+- Puede iniciar con links en `profile_subscriptions`.
+
+### I) Relacion con capacidades publicas
+Decision vigente:
+
+- `PublicProfilePlanCapabilities` no debe conectarse todavia.
+- En el futuro debe recibir un `effective_plan_code` confiable.
+- Perfil publico no debe consumir datos privados ni plan legacy como contrato.
+- Capacidades productivas deben esperar:
+  - Plan efectivo productivo.
+  - Vigencia/gracia definida.
+  - Ownership/scope suficiente.
+  - QA.
+- SEO productivo no debe tocarse todavia.
+
+### J) Riesgos documentados
+Riesgos antes de habilitar writes:
+
+- Activar plan sin aceptacion contractual.
+- Recalcular `expires_at` dinamicamente.
+- Tratar `free` como anual.
+- Crear filas `free`.
+- Borrar datos al vencer.
+- Activar capacidades antes de pago/contrato.
+- Desbloquear botones antes del backend.
+- Permitir operador sin permiso.
+- No auditar aceptacion.
+- No conservar historico.
+- Confundir plan contratado con plan efectivo.
+- Implementar pagos sin facturacion clara.
+- Activar renovaciones sin politica definida.
+
+### K) Secuencia de microfases recomendada
+Secuencia segura propuesta:
+
+1. `DOCS-Suscripciones-ContractFlow-Readiness-01`.
+2. `DB/DIAG-Suscripciones-ContractAcceptance-StorageDecision-01`.
+3. `DB-Suscripciones-ContractAcceptance-CreateSchemaDraft-01`.
+4. `BE/DIAG-Suscripciones-CheckoutIntent-Design-01`.
+5. `BE-Suscripciones-ContractAcceptance-ReadWriteEndpoint-Guarded-01`.
+6. `BE-Suscripciones-SubscriptionCreate-Guarded-01`.
+7. `QA-Suscripciones-SubscriptionCreate-NoFreeRows-01`.
+8. `FE-Suscripciones-PanelContractFlow-DevOnly-01`.
+9. `DOCS-Suscripciones-ContractFlow-Cierre-01`.
+
+### L) Conclusion
+El flujo no esta listo para writes.
+
+Antes de crear suscripciones reales falta:
+
+- Storage/auditoria de aceptacion.
+- Endpoint write con guard.
+- Validacion de plan activo.
+- Transacciones.
+- Permisos.
+- Garantia de no crear filas `free`.
+
+Antes de pagos falta:
+
+- Modelo de pagos.
+- Facturas/comprobantes.
+- Politica offline/pasarela.
+- Conciliacion.
+- QA fiscal.
+
+Antes de capacidades falta:
+
+- Plan efectivo productivo confiable.
+- Gracia definida.
+- Ownership/scope.
+- Conexion controlada con `PublicProfilePlanCapabilities`.
+
+Siguiente microfase recomendada:
+
+- `DB/DIAG-Suscripciones-ContractAcceptance-StorageDecision-01`.
+
+### M) Limites de esta adenda
+Esta adenda no implementa:
+
+- Backend.
+- UI.
+- DB.
+- SQL.
+- Endpoints nuevos.
+- Writes.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratacion.
+- Renovacion.
+- Cancelacion.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
