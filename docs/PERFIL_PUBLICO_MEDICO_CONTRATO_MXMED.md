@@ -5217,6 +5217,306 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 40 — Constraints de aceptación contractual de suscripciones
+
+### A) Contexto
+Ya existe la decision de almacenamiento hibrido para aceptacion contractual de suscripciones:
+
+- `profile_subscriptions` conserva el snapshot operativo/read-model.
+- `subscription_contract_acceptances` conserva la auditoria/evidencia legal completa.
+
+Tambien existe el draft SQL versionado:
+
+- `modules/profiles/db/2026_06_20_create_subscription_contract_acceptances_draft.sql`.
+
+Ese draft no fue ejecutado, no creo tablas y no modifico DB local. Antes de convertirlo en SQL ejecutable, la microfase `DB/DIAG-Suscripciones-ContractAcceptance-ConstraintsDecision-01` diagnostico constraints, tipos, nullability, indices y reglas de integridad. La conclusion fue que el draft requiere ajustes antes de convertirse en ejecutable.
+
+### B) Decision sobre FKs reales
+La primera version ejecutable no debe usar FKs reales.
+
+Reglas:
+
+- Validar relaciones por backend.
+- Mantener indices para relaciones futuras.
+- Evitar fragilidad mientras evolucionan multi-entidad, ownership, operadores, linkage perfil/suscripcion y migraciones futuras.
+
+Aplica para:
+
+- `subscription_id`.
+- `doctor_id`.
+- `profile_id`.
+- `accepted_by_user_id`.
+- `accepted_by_operator_id`.
+
+### C) Tipos alineados con `profile_subscriptions`
+Antes del ejecutable se debe alinear el draft con el patron vigente de `profile_subscriptions`:
+
+- `subscription_id` debe ser `CHAR(36) NULL`, porque apunta conceptualmente a `profile_subscriptions.subscription_id`.
+- `entity_id` debe ser `VARCHAR(64) NOT NULL`, alineado con `profile_subscriptions.entity_id`.
+- `doctor_id` debe ser `VARCHAR(64) NULL`, alineado con `profile_subscriptions.doctor_id`.
+- `profile_id` debe ser `VARCHAR(64) NULL`, alineado con `profile_subscriptions.profile_id`.
+
+Esta decision reemplaza el uso inicial de `BIGINT UNSIGNED` en el draft para esos campos.
+
+### D) `subscription_id` nullable
+`subscription_id` debe mantenerse nullable en la primera version.
+
+Motivo:
+
+- La aceptacion puede crearse antes o dentro de la misma transaccion que crea `profile_subscriptions`.
+- El backend futuro debe enlazarla transaccionalmente cuando la suscripcion se cree.
+
+Riesgo:
+
+- Aceptaciones huerfanas.
+
+Mitigaciones futuras:
+
+- Estado `pending_link`.
+- Validacion transaccional.
+- Cleanup controlado.
+- No activar plan sin suscripcion enlazada.
+
+### E) Estados conceptuales
+`status` debe mantenerse como `VARCHAR`, sin `ENUM` y sin `CHECK`.
+
+Estados conceptuales iniciales:
+
+- `accepted`.
+- `pending_link`.
+- `superseded`.
+- `void`.
+- `expired`.
+- `cancelled`.
+
+Significado:
+
+- `accepted`: evidencia activa/principal.
+- `pending_link`: aceptacion aun no enlazada a suscripcion.
+- `superseded`: reaceptacion o cambio de contrato posterior.
+- `void`: anulacion controlada.
+- `expired`: evidencia vencida por contexto contractual.
+- `cancelled`: flujo cancelado.
+
+Las reglas de transicion deben validarse por backend.
+
+### F) `uuid`
+Decision:
+
+- `uuid CHAR(36) NOT NULL`.
+- `UNIQUE KEY ux_subscription_contract_acceptances_uuid`.
+
+`uuid` es suficiente como identificador publico/externo del registro. No se requiere otro identificador publico en esta fase.
+
+### G) Unicidad
+No se deben agregar unicidades adicionales en la primera version:
+
+- No unique por `entity_type/entity_id/contract_version`.
+- No unique por `subscription_id`.
+- No unique por entidad/contrato.
+
+Motivo:
+
+- Pueden existir multiples aceptaciones.
+- Puede existir reaceptacion.
+- Pueden cambiar condiciones.
+- Una suscripcion podria tener mas de una aceptacion asociada si cambian terminos.
+
+La aceptacion principal se resolvera por backend/status, no por unique constraint inicial.
+
+### H) Plan, periodo y duracion
+Decision:
+
+- `plan_code` y `billing_period` deben mantenerse `NOT NULL`.
+- Se validan contra `subscription_plans` por backend.
+- No debe existir FK real inicial.
+- Sirven como snapshot historico aunque cambie el catalogo.
+- `duration_days INT UNSIGNED NOT NULL DEFAULT 0`.
+
+Reglas:
+
+- Planes pagados anuales actuales usan 365 dias.
+- `free` no debe pasar por contratacion.
+- Backend futuro debe bloquear `plan_code=free` en el flujo normal.
+
+### I) Contrato: hash, snapshot y titulo
+Nullability inicial:
+
+- `contract_hash` nullable.
+- `contract_snapshot_url` nullable.
+- `contract_title` nullable.
+
+Para produccion real, el endpoint write deberia exigir:
+
+- `contract_version`.
+- `contract_hash`.
+- Snapshot o evidencia equivalente.
+
+El schema inicial puede permitir null para facilitar migraciones y etapas controladas, pero el uso productivo debe endurecerse en backend.
+
+### J) Evidencia tecnica
+Decision:
+
+- `ip_address VARCHAR(45) NULL`.
+- `user_agent VARCHAR(512) NULL`.
+
+`ip_address` cubre IPv4 e IPv6. `user_agent` de 512 caracteres es aceptable para la fase inicial. No deben almacenarse datos sensibles adicionales innecesarios.
+
+### K) Actor y fuente
+`accepted_by_actor_role VARCHAR(32) NULL`.
+
+Valores conceptuales:
+
+- `doctor`.
+- `operator`.
+- `admin`.
+- `system`.
+
+`acceptance_source VARCHAR(64) NOT NULL`.
+
+Valores conceptuales:
+
+- `panel_subscription`.
+- `admin_panel`.
+- `checkout`.
+- `migration`.
+- `system`.
+
+No usar `ENUM`. La validacion corresponde al backend. Los operadores requeriran permisos futuros explicitos.
+
+### L) Soft delete
+Mantener `deleted_at`.
+
+Reglas:
+
+- La evidencia legal no debe borrarse fisicamente en el flujo normal.
+- `deleted_at` solo sirve para ocultamiento logico o correccion controlada.
+- Anulaciones reales deben quedar auditadas con `status`, `notes` y timestamps.
+
+### M) Timestamps
+Decision:
+
+- `accepted_at DATETIME NOT NULL`.
+- `created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`.
+- `updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`.
+
+Compatibilidad:
+
+- Compatible con MySQL/MariaDB usado localmente.
+- `accepted_at` representa el momento contractual.
+- `created_at` y `updated_at` representan auditoria tecnica.
+
+### N) Indices
+Indices base:
+
+- Unique `uuid`.
+- `entity_type`, `entity_id`.
+- `doctor_id`.
+- `profile_id`.
+- `subscription_id`.
+- `plan_code`, `billing_period`.
+- `contract_version`.
+- `accepted_at`.
+- `accepted_by_user_id`.
+- `status`.
+- `deleted_at`.
+
+Indices compuestos adicionales recomendados antes del ejecutable:
+
+- `(entity_type, entity_id, accepted_at)`.
+- `(subscription_id, status)`.
+- `(doctor_id, accepted_at)`.
+
+Convencion:
+
+- Acortar nombres a `idx_sub_contract_acceptances_*`.
+- Mantener `ux_subscription_contract_acceptances_uuid` si no excede el limite.
+- Cuidar el limite de 64 caracteres de MySQL.
+
+### O) Relacion con `profile_subscriptions`
+Decision:
+
+- No agregar todavia `contract_acceptance_id` a `profile_subscriptions`.
+- Evaluarlo en microfase posterior si se necesita link inverso rapido.
+- Por ahora, `subscription_id` en `subscription_contract_acceptances` sera el enlace principal hacia `profile_subscriptions.subscription_id`.
+- El read-model seguira leyendo `profile_subscriptions`.
+- La auditoria legal consultara `subscription_contract_acceptances`.
+
+### P) Relacion con pagos y checkout
+No incluir campos de pago en `subscription_contract_acceptances`.
+
+Reglas:
+
+- Aceptacion contractual y pago son dominios distintos.
+- Futuras tablas de pago o checkout deberan enlazar por `subscription_id`, `acceptance_id` o checkout intent, segun diseno posterior.
+- No implementar pagos todavia.
+
+### Q) Relacion con `free`
+Decision vigente:
+
+- `free` no se contrata.
+- No se crean aceptaciones para `free` por default.
+- No se crean filas `free`.
+- Si aparece `plan_code=free`, debe ser caso excepcional/migracion y no flujo normal.
+- Backend futuro debe bloquearlo.
+
+### R) Riesgos documentados
+Riesgos a controlar antes de SQL ejecutable y writes:
+
+- FK real prematura.
+- Aceptacion huerfana.
+- Multiples aceptaciones sin estado claro.
+- Falta de hash/snapshot en produccion.
+- Operador sin permiso.
+- Datos sensibles excesivos.
+- Mezclar pagos con aceptacion.
+- No relacionar aceptacion con suscripcion.
+- Borrar evidencia legal.
+- Crear aceptacion para `free`.
+- No auditar cambios de contrato.
+- No alinear tipos con `profile_subscriptions`.
+
+### S) Conclusion
+El draft requiere ajustes antes de ejecutable.
+
+Ajustes requeridos:
+
+- Alinear tipos con `profile_subscriptions`.
+- Cambiar `subscription_id` a `CHAR(36) NULL`.
+- Cambiar `entity_id`, `doctor_id` y `profile_id` a `VARCHAR(64)`.
+- Acortar nombres de indices.
+- Agregar indices compuestos.
+- Documentar estados conceptuales.
+- Mantener sin FKs reales.
+- Mantener sin `ENUM` ni `CHECK`.
+
+El draft no esta listo para SQL ejecutable todavia.
+
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-ContractAcceptance-UpdateSchemaDraft-01`.
+
+### T) Limites de esta adenda
+Esta adenda no implementa:
+
+- Backend.
+- UI.
+- DB.
+- SQL.
+- Cambios al draft SQL.
+- Endpoints.
+- Writes.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratacion.
+- Renovacion.
+- Cancelacion.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
