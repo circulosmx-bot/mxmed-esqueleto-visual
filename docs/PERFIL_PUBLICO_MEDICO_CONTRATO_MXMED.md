@@ -7128,6 +7128,166 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 49 — Cierre de implementación backend mínima del endpoint write contractual
+
+### A) Cierre de implementación
+Queda cerrada la implementación backend mínima del endpoint:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/subscriptions`.
+
+Alcance inicial soportado:
+
+- `entity_type=doctor`.
+- Implementación backend-only.
+- Sin frontend write.
+- Sin pagos.
+- Sin checkout.
+- Sin facturación.
+- Sin capacidades productivas.
+
+Archivos versionados en la implementación:
+
+- `api/subscriptions/index.php`.
+- `modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php`.
+- `modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php`.
+
+Commit remoto/alineado:
+
+- `16ff64f feat(suscripciones): implementa write contractual minimo`.
+
+### B) Alcance técnico implementado
+La implementación incluye:
+
+- Routing `POST` para el endpoint de suscripción.
+- Service transaccional para crear aceptación contractual y suscripción operativa.
+- Repository dedicado para insertar evidencia en `subscription_contract_acceptances`.
+- Inserción conceptual de aceptación contractual en `subscription_contract_acceptances`.
+- Inserción operativa en `profile_subscriptions`.
+- Uso del mismo `subscription_id` en ambas tablas.
+- Bloqueo de `free`.
+- Validación de `plan_code` y `billing_period` contra catálogo.
+- Uso de `duration_days` desde `subscription_plans`, no desde cliente.
+- Validación de contrato:
+  - `version`.
+  - `hash` con prefijo `sha256:`.
+  - `snapshot_url`.
+- Validación de `acceptance_source`.
+- Rechazo de campos prohibidos enviados por cliente.
+- Cálculo backend de `accepted_at`, `starts_at` y `expires_at`.
+- Rollback ante fallo transaccional.
+- Reconsulta del read-model para respuesta.
+- Respuesta `201` definida para caso válido con sesión real `session_scope`.
+
+La implementación no crea filas `free` ni aceptaciones contractuales `free`.
+
+### C) Guard de escritura
+El write queda protegido por estas reglas:
+
+- Strict/session guard requerido para writes.
+- `local_dev_open` bloqueado para `POST`.
+- `header_scope` bloqueado para `POST`.
+- Sólo `session_scope` puede permitir write.
+- Médico principal sólo puede escribir para su propio `doctor_id`.
+- Operador bloqueado inicialmente.
+- Futuro operador requerirá permiso explícito `subscriptions.write`.
+- Sin identidad o scope válido se responde `401`/`403` según el caso.
+- Scope mismatch responde `403`.
+- No se acepta identidad sólo por headers QA.
+
+Esta decisión evita que el endpoint parezca contratación productiva abierta.
+
+### D) QA post-push confirmado
+Microfase de QA post-push:
+
+- `QA-Suscripciones-ContractAcceptance-WriteEndpoint-Minimal-PostPush-01`.
+
+Resultado:
+
+- PASS sin cambios.
+
+Validaciones confirmadas:
+
+- Rama limpia y alineada con origin.
+- `php -l api/subscriptions/index.php`: PASS.
+- `php -l modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php`: PASS.
+- `php -l modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php`: PASS.
+- `git diff --check`: limpio.
+- GET `context/current` intacto; sin sesión respondió `401` seguro.
+- GET current intacto; en local/dev read-only respondió `200` con `free_default`.
+- POST sin sesión/local_dev_open/headers QA bloqueado con `403`.
+- Nunca hubo respuesta `201` durante el QA post-push.
+- No se ejecutó QA de éxito `201` por ausencia de sesión real `session_scope`.
+- No hubo DB writes durante el QA post-push.
+
+### E) Fuera de alcance preservado
+Este cierre no incluye:
+
+- Frontend.
+- Cambios en `index.html`.
+- Cambios en `assets/js/app.js`.
+- Conexión de `p-suscripcion` a writes.
+- Pagos.
+- Checkout.
+- Facturación.
+- Capacidades productivas.
+- `PublicProfilePlanCapabilities`.
+- Perfil público.
+- SEO.
+- Cambios SQL/schema.
+- DDL.
+- Seeds.
+- Ejecución de éxito `201` sin sesión real.
+
+### F) Estado funcional actual
+Estado actual:
+
+- El backend write mínimo existe y está versionado.
+- En condiciones sin sesión real, el endpoint permanece cerrado.
+- El endpoint no puede considerarse contratación productiva completa.
+- La tabla `subscription_contract_acceptances` sigue siendo auditoría/evidencia legal.
+- `profile_subscriptions` sigue siendo snapshot operativo/read-model.
+- La existencia del endpoint no activa pagos, checkout, facturación, capacidades, perfil público ni SEO.
+
+Pendientes:
+
+- QA de éxito `201` con sesión real `session_scope`.
+- Decidir cómo obtener o simular de forma segura una sesión real local/dev sin usar headers QA.
+- Decidir cuándo probar caso exitoso sin activar capacidades ni pagos.
+- Frontend write en microfase separada futura, no ahora.
+- Integración con pagos, checkout y facturación en fase posterior.
+- Conexión de capacidades productivas sólo en fase posterior y tras decisión explícita.
+
+### G) Riesgos residuales
+Riesgos vigentes:
+
+- No hay idempotencia robusta con storage dedicado.
+- La mitigación actual es conflicto activo `409` más transacción.
+- Persiste riesgo residual de doble submit concurrente.
+- No hay QA de éxito `201` todavía.
+- No hay pago ni checkout, por lo que no debe usarse como contratación productiva real.
+- Operador sigue bloqueado hasta definir y persistir permiso `subscriptions.write`.
+
+Controles:
+
+- No dejar aceptación huérfana.
+- No dejar suscripción sin aceptación.
+- No crear filas `free`.
+- No crear aceptaciones `free`.
+- No activar capacidades desde este flujo.
+
+### H) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `QA-Suscripciones-ContractAcceptance-WriteEndpoint-SessionScope-SuccessReadiness-01`.
+
+Objetivo:
+
+- Diagnosticar cómo obtener o simular de forma segura una sesión real `session_scope` local/dev para ejecutar QA de éxito `201`, sin usar headers QA, sin activar frontend, sin pagos, sin capacidades y sin tocar producción.
+
+La siguiente microfase debe ser diagnóstico sin cambios, no ejecución directa del caso éxito.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
