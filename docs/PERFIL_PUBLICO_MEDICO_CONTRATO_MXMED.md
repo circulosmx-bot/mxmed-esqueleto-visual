@@ -5517,6 +5517,178 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 41 — Readiness para SQL ejecutable de aceptación contractual de suscripciones
+
+### A) Microfase diagnóstica cerrada
+La microfase `DB/DIAG-Suscripciones-ContractAcceptance-ExecutableReadiness-01` cerró con PASS sin cambios.
+
+Conclusiones:
+
+- El draft actual puede ser base para un SQL ejecutable final.
+- No se requiere ajuste adicional del draft.
+- No se identificó riesgo bloqueante.
+- Conviene documentar esta decisión antes de crear el SQL ejecutable.
+- Esta adenda no crea el SQL ejecutable y no ejecuta SQL.
+
+### B) Archivo draft evaluado
+Archivo evaluado:
+
+- `modules/profiles/db/2026_06_20_create_subscription_contract_acceptances_draft.sql`.
+
+Estado confirmado:
+
+- Sigue marcado como `DRAFT ONLY`.
+- No fue ejecutado.
+- No modificó DB.
+- No crea seeds.
+- No crea FKs reales.
+- No usa `ENUM`.
+- No usa `CHECK`.
+- No activa contratación.
+- No activa pagos.
+- No activa capacidades productivas.
+
+### C) Decisión de readiness
+El draft queda aprobado como base para una futura microfase de creación del SQL ejecutable final.
+
+Condiciones:
+
+- El SQL ejecutable se creará en una microfase separada.
+- El SQL ejecutable no deberá ejecutarse automáticamente.
+- La ejecución contra DB local o remota requerirá una microfase posterior explícita.
+- La tabla futura seguirá siendo `subscription_contract_acceptances`.
+- La tabla futura será auditoría/evidencia legal de aceptación contractual.
+- `profile_subscriptions` seguirá siendo el snapshot operativo/read-model.
+
+### D) Decisiones confirmadas
+Se confirma el enfoque híbrido:
+
+- `subscription_contract_acceptances` = evidencia legal/auditoría.
+- `profile_subscriptions` = snapshot operativo/read-model.
+
+Decisiones técnicas confirmadas:
+
+- `subscription_id CHAR(36) NULL` queda como enlace conceptual hacia `profile_subscriptions.subscription_id`.
+- No se agrega todavía `contract_acceptance_id` a `profile_subscriptions`.
+- No usar FKs reales en la primera versión ejecutable.
+- No usar `ENUM`.
+- No usar `CHECK`.
+- La validación de relaciones, estados, fuentes y permisos queda para backend futuro.
+
+Estados conceptuales:
+
+- `accepted`.
+- `pending_link`.
+- `superseded`.
+- `void`.
+- `expired`.
+- `cancelled`.
+
+Roles conceptuales:
+
+- `doctor`.
+- `operator`.
+- `admin`.
+- `system`.
+
+Fuentes conceptuales:
+
+- `panel_subscription`.
+- `admin_panel`.
+- `checkout`.
+- `migration`.
+- `system`.
+
+### E) Relación con `free`
+Decisión vigente:
+
+- `free` no se contrata.
+- No se crean filas `free`.
+- No se crean aceptaciones contractuales `free` por default.
+- `free_default` sigue siendo fallback/read-model cuando no hay suscripción real.
+- Backend futuro debe bloquear aceptación o contratación normal de `free`.
+
+### F) Pagos, checkout y capacidades
+Pagos, checkout y facturación son dominios separados.
+
+Reglas:
+
+- No se agregan campos de pago en `subscription_contract_acceptances`.
+- No se conecta `PublicProfilePlanCapabilities`.
+- No se activan capacidades productivas.
+- No se toca perfil público.
+- No se toca SEO productivo.
+
+Secuencia futura correcta:
+
+1. Storage.
+2. Aceptación.
+3. Suscripción real.
+4. Vigencia.
+5. Read-model.
+6. QA.
+7. Capacidades en microfase separada.
+
+### G) Campos potenciales evaluados como no bloqueantes
+Los siguientes campos se evaluaron y no bloquean la creación del SQL ejecutable final:
+
+- `legal_terms_url`: no bloqueante; queda cubierto inicialmente por `contract_snapshot_url`.
+- `contract_locale`: no bloqueante; puede agregarse en el futuro si hay multi-idioma.
+- `accepted_by_display_name`: no bloqueante; se evita duplicar PII.
+- `accepted_by_email`: no bloqueante; se evita duplicar PII.
+- `consent_text`: no bloqueante; `contract_version`, `contract_hash` y snapshot cubren la fase inicial.
+- `acceptance_method`: no bloqueante; `acceptance_source` cubre el origen inicial.
+- `request_id`: no bloqueante; útil futuro para trazabilidad.
+- `previous_acceptance_id`: no bloqueante; puede resolverse por entidad, suscripción, fecha y `status`.
+- `superseded_by_acceptance_id`: no bloqueante; útil futuro.
+- `void_reason`: no bloqueante; `status` y `notes` cubren la fase inicial.
+- `metadata_json`: no bloqueante; se evita una bolsa genérica antes de necesitarla.
+
+### H) Riesgos pendientes para backend futuro
+Antes de writes reales, el backend futuro debe:
+
+- Exigir `contract_version`.
+- En producción, exigir `contract_hash` y/o snapshot/evidencia equivalente.
+- Enlazar `subscription_id` transaccionalmente.
+- Evitar aceptaciones huérfanas.
+- Bloquear `free`.
+- Validar el plan contra `subscription_plans`.
+- Validar permisos de operador.
+- No activar plan sin aceptación válida.
+- No crear suscripción real sin aceptación válida.
+- No borrar físicamente evidencia legal en el flujo normal.
+
+### I) Próxima microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-ContractAcceptance-CreateSchemaExecutable-01`.
+
+Objetivo futuro:
+
+- Crear el archivo SQL ejecutable final de `subscription_contract_acceptances`, sin ejecutarlo todavía.
+
+### J) Límites de esta adenda
+Esta adenda no implementa:
+
+- SQL ejecutable.
+- Ejecución SQL.
+- Cambios DB.
+- Backend.
+- Frontend.
+- Writes.
+- Pagos.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratación.
+- Aceptación real.
+- Renovación.
+- Cancelación.
+- Perfil público.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
