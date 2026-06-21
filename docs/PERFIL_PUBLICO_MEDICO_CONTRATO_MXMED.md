@@ -6176,6 +6176,247 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 46 — Diseño del write flow de aceptación contractual y suscripción
+
+### A) Microfase diagnóstica cerrada
+La microfase `BE/DIAG-Suscripciones-ContractAcceptance-WriteFlowDesign-01` cerró con PASS sin cambios.
+
+Tipo de microfase:
+
+- Diagnóstico sin implementación.
+
+Conclusión:
+
+- No se debe implementar todavía un endpoint write.
+- Primero queda documentado el diseño del flujo de aceptación contractual y creación/enlace de suscripción.
+
+### B) Backend actual
+Rutas existentes:
+
+- `GET /api/subscriptions/index.php/context/current`.
+- `GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`.
+
+Estado actual:
+
+- El módulo actual de suscripciones es read-only.
+- No hay writes de suscripciones.
+- No hay endpoint de aceptación contractual.
+- No hay contratación real.
+- `CurrentSubscriptionReadModelService` sigue leyendo `profile_subscriptions`.
+- Si no hay suscripción real, el read-model cae a `free_default`.
+
+### C) Endpoint futuro recomendado
+Endpoint recomendado para la primera versión mínima segura:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/subscriptions`.
+
+Motivo:
+
+- La aceptación contractual y la creación de suscripción deben ocurrir juntas en la primera versión segura.
+- Una sola transacción reduce el riesgo de aceptación huérfana.
+- El endpoint representa una intención comercial de suscripción, no sólo una aceptación aislada.
+
+No se recomienda inicialmente separar en:
+
+- Endpoint sólo de aceptación.
+- Endpoint separado de suscripción.
+
+Una separación posterior puede evaluarse si checkout, pagos o flujo comercial requieren otro orden.
+
+### D) Transacción recomendada
+Orden conceptual de la transacción futura:
+
+1. Validar auth/actor.
+2. Validar entidad y doctor scope.
+3. Validar plan contra `subscription_plans`.
+4. Bloquear `free`.
+5. Validar contrato/evidencia.
+6. Generar `subscription_id`.
+7. Insertar aceptación en `subscription_contract_acceptances`.
+8. Insertar suscripción operativa en `profile_subscriptions`.
+9. Copiar snapshot mínimo de aceptación a `profile_subscriptions`.
+10. Calcular `starts_at`.
+11. Calcular `expires_at` una sola vez según duración del plan.
+12. Confirmar transacción.
+13. Devolver read-model actualizado.
+
+### E) Relación aceptación/suscripción
+Decisiones de enlace:
+
+- `subscription_id` debe generarse antes de insertar los registros.
+- `subscription_contract_acceptances.subscription_id` debe quedar lleno desde el inicio en v1 productiva.
+- `profile_subscriptions.subscription_id` debe usar el mismo id.
+- Se debe evitar `pending_link` en la primera versión productiva.
+- `pending_link` queda reservado para migraciones o casos excepcionales.
+- No se agrega todavía `contract_acceptance_id` a `profile_subscriptions`.
+- `profile_subscriptions` sigue como snapshot operativo/read-model.
+- `subscription_contract_acceptances` sigue como auditoría/evidencia legal.
+
+### F) Planes y duración
+Reglas de plan:
+
+- Validar `plan_code` contra `subscription_plans`.
+- Validar `billing_period`.
+- Validar `duration_days`.
+- Bloquear `free` siempre en el flujo normal.
+- Los planes pagados anuales actuales usan 365 días.
+- `expires_at` debe calcularse una sola vez.
+- No recalcular vigencias después por lecturas o renders.
+- Plan inválido, inactivo o no contratable debe rechazarse.
+
+### G) Contrato y evidencia legal
+Campos requeridos conceptualmente en producción:
+
+- `contract_version`.
+- `contract_hash`.
+- `contract_snapshot_url` o evidencia equivalente.
+- `contract_title`.
+- `accepted_at`.
+- `acceptance_source`.
+- `accepted_by_user_id`.
+- `accepted_by_actor_role`.
+- `accepted_by_operator_id`, si aplica.
+- `ip_address`.
+- `user_agent`.
+
+Reglas:
+
+- Producción debe exigir `contract_hash` y snapshot/evidencia antes de activar un plan.
+- Si falta contrato válido, el backend debe responder error y no crear suscripción.
+- No exponer IP, hash ni user-agent en read-model público o privado salvo decisión futura explícita.
+
+### H) Auth y permisos
+Reglas de autorización:
+
+- Reutilizar el guard privado actual.
+- Para writes, strict auth debe ser obligatorio.
+- `local_dev_open` no debe autorizar writes.
+- Headers QA deben seguir limitados a local/dev y sólo si se decide explícitamente para pruebas controladas.
+- Médico principal puede aceptar/contratar únicamente para su propio `doctor_id`.
+- Operador queda bloqueado inicialmente.
+- Operador futuro requeriría permiso explícito `subscriptions.write`.
+- Admin queda fuera de la primera versión.
+
+### I) Estados HTTP recomendados
+Códigos recomendados:
+
+- `400`: payload inválido.
+- `401`: sin identidad.
+- `403`: scope o permiso insuficiente.
+- `404`: entidad o plan no encontrado.
+- `409`: suscripción activa conflictiva o doble submit.
+- `422`: contrato faltante/inválido o plan no contratable.
+- `500`: error inesperado transaccional.
+
+### J) Idempotencia y duplicados
+Reglas recomendadas:
+
+- Usar `Idempotency-Key`.
+- Bloquear doble click o doble submit.
+- Bloquear nueva suscripción si ya existe una activa incompatible.
+- Una repetición segura debe devolver resultado consistente o conflicto controlado.
+- Si falla la creación de suscripción, el rollback debe eliminar la aceptación de la misma transacción.
+- No dejar aceptación huérfana.
+
+### K) Read-model
+Después del commit:
+
+- Backend debe devolver el read-model actualizado.
+- `CurrentSubscriptionReadModelService` puede seguir leyendo `profile_subscriptions`.
+- Campos contractuales mínimos pueden exponerse desde el snapshot operativo.
+- No exponer IP, user-agent, hash ni evidencia legal completa en el read-model normal.
+- Auditoría legal se consulta desde `subscription_contract_acceptances`, no desde el panel público.
+
+### L) Frontend / panel
+Reglas de UI:
+
+- `p-suscripcion` sigue read-only por ahora.
+- No conectar botones ni acciones todavía.
+- La UI de contratación futura debe quedar en microfase separada.
+- No enviar writes desde frontend hasta tener backend, QA, contrato y reglas comerciales cerradas.
+
+### M) Pagos / checkout
+Decisiones vigentes:
+
+- Pagos, checkout y facturación son dominios separados.
+- No activar plan pagado sin criterio comercial/pago definido.
+- No agregar campos de pago todavía en `subscription_contract_acceptances`.
+- Si checkout futuro requiere orden distinto, deberá diagnosticarse en microfase separada.
+- Esta etapa no implementa cobro ni facturación.
+
+### N) Capacidades
+Decisiones vigentes:
+
+- No conectar `PublicProfilePlanCapabilities` todavía.
+- La tabla y el write flow no activan capacidades.
+- La activación de capacidades requerirá microfase posterior con read-model confiable y QA.
+- No tocar perfil público ni SEO.
+
+### O) Riesgos documentados
+Riesgos a controlar:
+
+- Aceptación huérfana.
+- Suscripción sin aceptación.
+- Activación sin pago.
+- Doble submit.
+- Operador sin permiso.
+- `free` contratado por error.
+- Capacidades prematuras.
+- Datos legales incompletos.
+- Exposición innecesaria de IP/user-agent/hash.
+- Recalcular `expires_at`.
+
+### P) QA futuro recomendado
+Pruebas mínimas futuras:
+
+- Auth médico principal.
+- Sin identidad.
+- Scope mismatch.
+- Operador bloqueado.
+- Plan `free` bloqueado.
+- Plan pagado válido.
+- Contrato faltante.
+- Contract hash/snapshot faltante.
+- Suscripción activa duplicada.
+- Idempotencia/doble submit.
+- Rollback transaccional.
+- Read-model actualizado.
+- Sin pagos activados.
+- Sin capacidades activadas.
+- Sin frontend write.
+
+### Q) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-ContractAcceptance-WriteEndpoint-01`.
+
+Objetivo futuro:
+
+- Especificar el contrato técnico exacto del endpoint write, payload, validaciones, respuesta, errores y QA, sin implementarlo todavía.
+
+### R) Límites de esta adenda
+Esta adenda no implementa:
+
+- Endpoint write.
+- Backend.
+- Frontend.
+- SQL.
+- Cambios DB.
+- Writes.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratación.
+- Aceptación real productiva.
+- Renovación.
+- Cancelación.
+- Perfil público.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
