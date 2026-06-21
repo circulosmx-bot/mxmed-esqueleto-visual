@@ -3948,6 +3948,279 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 35 — Cierre del endpoint de contexto activo para Suscripciones
+
+### A) Contexto
+Ya existe el endpoint privado de suscripcion actual:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`
+
+Tambien existe la integracion DEV/local read-only del panel `p-suscripcion` y ya quedo documentado el diseno del endpoint de contexto activo para suscripciones.
+
+En la microfase `BE-Suscripciones-ActiveEntityContext-Endpoint-01` se implemento el endpoint:
+
+`GET /api/subscriptions/index.php/context/current`
+
+Archivo de implementacion:
+
+- `api/subscriptions/index.php`
+
+Version del contrato:
+
+- `active-entity-context-v1`
+
+### B) Implementacion cerrada
+En el commit `7e5cfc3 feat(suscripciones): agrega contexto activo privado` se agrego el endpoint:
+
+`GET /api/subscriptions/index.php/context/current`
+
+Caracteristicas cerradas:
+
+- Privado.
+- Read-only.
+- Minimo.
+- Orientado a suscripciones.
+- No global todavia.
+- No reemplaza la autorizacion del endpoint de suscripcion actual.
+- Mantiene doble validacion.
+- No escribe DB.
+- No crea sesiones.
+- No crea suscripciones.
+- No activa capacidades.
+- No conecta `PublicProfilePlanCapabilities`.
+- No toca UI.
+- No toca perfil publico.
+- No toca SEO productivo.
+
+### C) Contrato funcional documentado
+En caso OK, el endpoint devuelve contexto minimo:
+
+- `user_id`
+- `doctor_id`
+- `entity_type=doctor`
+- `entity_id`
+- `actor_role`
+- `operator_id`
+- `permissions.subscriptions_read`
+- `can_read_subscriptions`
+- `meta.source`
+- `meta.version=active-entity-context-v1`
+
+En caso de error, devuelve:
+
+- `ok=false`
+- `error.code`
+- `error.message`
+- `data=null`
+- `meta.version=active-entity-context-v1`
+
+### D) Campos excluidos
+El endpoint no devuelve:
+
+- Tokens.
+- Sesion cruda.
+- IP.
+- User-agent contractual.
+- Pagos.
+- Facturacion.
+- Metodos de pago.
+- Datos clinicos.
+- Datos SEO.
+- Capacidades productivas.
+- Permisos amplios.
+- Informacion sensible innecesaria.
+
+### E) QA post-push cerrada
+La microfase `QA-Suscripciones-ActiveEntityContext-Endpoint-PostPush-01` cerro con PASS sin cambios.
+
+Resumen:
+
+- Rama limpia y alineada.
+- HEAD: `7e5cfc3`.
+- PHP lint PASS en:
+  - `api/subscriptions/index.php`
+  - `CurrentSubscriptionRepository.php`
+  - `CurrentSubscriptionReadModelService.php`
+- Sin dependencias de perfil publico.
+- Sin dependencias de `PublicProfilePlanCapabilities`.
+- Sin writes SQL ejecutables.
+- DB intacta:
+  - `subscription_plans=5`
+  - `profile_subscriptions=0`
+
+### F) QA contexto strict OFF
+Prueba:
+
+`GET /api/subscriptions/index.php/context/current`
+
+Strict OFF local sin sesion:
+
+- HTTP 401.
+- `ok=false`.
+- `error.code=unauthorized`.
+- `meta.version=active-entity-context-v1`.
+
+Decision importante:
+
+- El endpoint no entrega contexto productivo solo por estar en local.
+- Este comportamiento es seguro y aceptado.
+
+### G) QA contexto strict ON
+Sin headers/sesion:
+
+- HTTP 401.
+- `ok=false`.
+
+Headers validos locales:
+
+- `X-User-Id: 1`
+- `X-Doctor-Id: 1`
+- HTTP 200.
+- `entity_type=doctor`.
+- `entity_id=1`.
+- `doctor_id=1`.
+- `meta.source=header_scope`.
+
+`X-User-Id` solo:
+
+- HTTP 403.
+- `ok=false`.
+
+Host no-local con headers QA:
+
+- HTTP 401.
+- `ok=false`.
+- Sin `header_scope`.
+
+### H) QA sesion simulada
+Medico principal valido:
+
+- HTTP 200.
+- `source=session_scope`.
+- `can_read_subscriptions=true`.
+
+Sesion sin `doctor_id`:
+
+- HTTP 403.
+- No inventa `doctor_id`.
+
+Operador sin permiso:
+
+- HTTP 403.
+
+Operador con permiso explicito:
+
+- HTTP 200.
+- `actor_role=operator`.
+- `operator_id=1`.
+
+### I) QA ruta existente no rota
+La ruta existente sigue funcionando:
+
+`GET /api/subscriptions/index.php/entities/doctor/1/current`
+
+Resultado:
+
+- HTTP 200.
+- `effective_plan_code=free`.
+- `status=free_default`.
+- `auth_mode=local_dev_open`.
+
+### J) QA general
+Metodo no permitido:
+
+- `POST /api/subscriptions/index.php/context/current`
+- HTTP 405.
+
+Ruta invalida:
+
+- `GET /api/subscriptions/index.php/context`
+- HTTP 404.
+
+Resultado:
+
+- No hubo 500.
+
+### K) Estado frontend
+Estado posterior al cierre:
+
+- `p-suscripcion` aun no usa `context/current`.
+- UI productiva no esta conectada al endpoint nuevo.
+- La integracion DEV/local read-only existente sigue funcionando con el endpoint de suscripcion actual.
+- No se modifico `assets/js/app.js`.
+- No se modifico `index.html`.
+
+### L) Bloqueos vigentes
+Siguen bloqueados:
+
+- Writes de suscripcion.
+- Crear suscripciones.
+- Crear filas `free`.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- Conexion con `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+- Uso productivo sin politica completa.
+
+### M) Riesgos pendientes
+Siguen pendientes:
+
+- Decidir si `p-suscripcion` DEV/local debe migrar a usar `context/current`.
+- Disenar uso productivo del contexto activo.
+- Permiso canonico persistido `subscriptions.read`.
+- Ownership multi-entidad.
+- Endpoint global `/api/me/context`, si otros modulos lo requieren.
+- Flujo contractual real.
+- Aceptacion de contrato.
+- Alta de suscripcion.
+- Renovacion/cancelacion.
+- Pagos/facturacion.
+- Conexion futura con capacidades publicas.
+
+### N) Secuencia recomendada
+Opcion A - Conectar `p-suscripcion` DEV/local al endpoint de contexto:
+
+- Microfase: `FE-Suscripciones-PanelReadOnly-UseActiveContext-Dev-01`.
+- Objetivo: hacer que el panel read-only consulte primero `context/current` y luego `entities/{entity_type}/{entity_id}/current`, manteniendo DEV/local, sin writes y sin capacidades.
+
+Opcion B - Documentar diseno productivo global:
+
+- Microfase: `BE/DIAG-Auth-ActiveContext-GlobalEndpoint-01`.
+- Objetivo: evaluar `/api/me/context` si otros modulos necesitan contexto activo comun.
+
+Opcion C - Diagnostico de flujo contractual:
+
+- Microfase: `DIAG-Suscripciones-ContractFlow-Readiness-01`.
+- Objetivo: diagnosticar contratacion real, aceptacion de contrato, vigencia, renovacion/cancelacion y pagos.
+
+Recomendacion:
+
+- Antes de writes contractuales o capacidades productivas, primero conectar `p-suscripcion` read-only al contexto activo en DEV/local o cerrar diseno global si se decide ir a productivo.
+
+### O) Limites de esta adenda
+Esta adenda no activa:
+
+- UI productiva.
+- Writes de suscripcion.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
