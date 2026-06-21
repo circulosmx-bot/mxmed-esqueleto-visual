@@ -58965,6 +58965,22 @@ function mxResetLogoPreview(){
     return `/api/subscriptions/index.php/entities/doctor/${encodeURIComponent(doctorId)}/current`;
   }
 
+  function buildSubscriptionEndpointFromContext(entityType, entityId){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    if(type !== 'doctor' || !id) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/current`;
+  }
+
+  function buildSubscriptionContextEndpoint(){
+    return '/api/subscriptions/index.php/context/current';
+  }
+
+  function isSubscriptionLocalDevHost(){
+    const host = clean(window.location?.hostname).toLowerCase();
+    return host === '127.0.0.1' || host === 'localhost' || host === '::1';
+  }
+
   function labelFromMap(map, value, fallback){
     const key = clean(value).toLowerCase();
     return map[key] || fallback || clean(value) || 'No disponible';
@@ -58995,13 +59011,16 @@ function mxResetLogoPreview(){
     return total === 1 ? '1 día' : `${total} días`;
   }
 
-  function buildReadModelFeatures(model, meta){
+  function buildReadModelFeatures(model, meta, contextInfo){
     const contracted = clean(model?.contracted_plan_code);
     const effective = clean(model?.effective_plan_code);
     const period = labelFromMap(PERIOD_LABELS, model?.billing_period, 'No aplica');
     const grace = clean(model?.grace_status) || 'No aplica';
     const version = clean(model?.version || meta?.version);
     const source = clean(model?.source);
+    const contextEntityType = clean(contextInfo?.entity_type);
+    const contextEntityId = clean(contextInfo?.entity_id || contextInfo?.doctor_id);
+    const contextSource = clean(contextInfo?.source);
     return [
       `Plan efectivo: ${effective || 'No disponible'}`,
       `Plan contratado: ${contracted || 'Sin plan contratado vigente'}`,
@@ -59009,12 +59028,14 @@ function mxResetLogoPreview(){
       `Duración: ${formatDuration(model?.duration_days, model?.billing_period)}`,
       `Días restantes: ${formatDaysRemaining(model?.days_until_expiration)}`,
       `Gracia: ${grace}`,
+      contextEntityType && contextEntityId ? `Contexto: ${contextEntityType} #${contextEntityId}` : '',
+      contextSource ? `Fuente contexto: ${contextSource}` : '',
       source ? `Fuente: ${source}` : '',
       version ? `Versión: ${version}` : ''
     ].filter(Boolean);
   }
 
-  function applyReadModel(model, meta){
+  function applyReadModel(model, meta, contextInfo){
     const planLabel = clean(model?.plan_label) || 'No disponible';
     const status = clean(model?.status);
     const statusLabel = labelFromMap(STATUS_LABELS, status, status || 'Estado no disponible');
@@ -59036,7 +59057,7 @@ function mxResetLogoPreview(){
         ? `Plan contratado: ${contractedPlan}. Plan efectivo: ${effectivePlan || planLabel}.`
         : `Sin plan contratado vigente. Plan efectivo actual: ${planLabel}.`,
       alert: READONLY_NOTICE,
-      features: buildReadModelFeatures(model || {}, meta || {})
+      features: buildReadModelFeatures(model || {}, meta || {}, contextInfo || {})
     };
 
     if(clean(model?.billing_period).toLowerCase() === 'lifetime' || Number(model?.duration_days) === 0){
@@ -59060,7 +59081,7 @@ function mxResetLogoPreview(){
     renderHistory(model);
   }
 
-  function applyReadOnlyError(httpStatus){
+  function applyReadOnlyError(httpStatus, customMessage){
     let message = 'No se pudo cargar la suscripción. Intenta más tarde.';
     if(httpStatus === 401){
       message = 'Sesión no válida o no iniciada para consultar la suscripción.';
@@ -59069,6 +59090,7 @@ function mxResetLogoPreview(){
     }else if(httpStatus === 404 || httpStatus === 422){
       message = 'No se pudo resolver la suscripción para el contexto actual.';
     }
+    if(customMessage) message = customMessage;
     data.current = {
       id: 'read-only-error',
       name: 'Suscripción',
@@ -59086,15 +59108,9 @@ function mxResetLogoPreview(){
     renderHistory();
   }
 
-  async function loadCurrentSubscription(){
-    const doctorId = resolveSubscriptionDoctorId();
-    if(!doctorId){
-      applyReadOnlyError(422);
-      return;
-    }
-
+  async function fetchSubscriptionReadModel(endpoint, contextInfo){
     try{
-      const response = await fetch(buildSubscriptionEndpoint(doctorId), {
+      const response = await fetch(endpoint, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin'
@@ -59104,9 +59120,65 @@ function mxResetLogoPreview(){
         applyReadOnlyError(Number(response.status || 0));
         return;
       }
-      applyReadModel(payload.data, payload.meta || {});
+      applyReadModel(payload.data, payload.meta || {}, contextInfo || {});
     }catch(_){
       applyReadOnlyError(0);
+    }
+  }
+
+  async function loadSubscriptionViaDevFallback(){
+    const doctorId = resolveSubscriptionDoctorId();
+    if(!doctorId){
+      applyReadOnlyError(422);
+      return;
+    }
+    await fetchSubscriptionReadModel(buildSubscriptionEndpoint(doctorId), {
+      entity_type: 'doctor',
+      entity_id: doctorId,
+      doctor_id: doctorId,
+      source: 'dev_only'
+    });
+  }
+
+  async function loadCurrentSubscription(){
+    try{
+      const contextResponse = await fetch(buildSubscriptionContextEndpoint(), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const contextPayload = await contextResponse.json().catch(()=> null);
+
+      if(!contextResponse.ok || !contextPayload || contextPayload.ok !== true || !contextPayload.data){
+        if(contextResponse.status === 401 && isSubscriptionLocalDevHost() && resolveSubscriptionDoctorId()){
+          await loadSubscriptionViaDevFallback();
+          return;
+        }
+
+        const message = contextResponse.status === 401
+          ? 'Sesión no válida o no iniciada para consultar la suscripción.'
+          : contextResponse.status === 403
+            ? 'No tienes permiso para consultar esta suscripción.'
+            : 'No se pudo cargar el contexto de suscripción.';
+        applyReadOnlyError(Number(contextResponse.status || 0), message);
+        return;
+      }
+
+      const contextData = contextPayload.data || {};
+      const endpoint = buildSubscriptionEndpointFromContext(contextData.entity_type, contextData.entity_id);
+      if(!endpoint){
+        applyReadOnlyError(422, 'No se pudo resolver la suscripción para el contexto actual.');
+        return;
+      }
+
+      await fetchSubscriptionReadModel(endpoint, {
+        entity_type: contextData.entity_type,
+        entity_id: contextData.entity_id,
+        doctor_id: contextData.doctor_id,
+        source: contextPayload.meta?.source || 'context'
+      });
+    }catch(_){
+      applyReadOnlyError(0, 'No se pudo cargar el contexto de suscripción.');
     }
   }
 
