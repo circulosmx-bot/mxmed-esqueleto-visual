@@ -5942,6 +5942,112 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 44 — Cierre de ejecución local/dev del schema de aceptación contractual de suscripciones
+
+### A) Microfase cerrada
+La microfase `DB-Suscripciones-ContractAcceptance-ExecuteSchemaLocalDev-01` cerró con PASS.
+
+Tipo de microfase:
+
+- Ejecución controlada de schema en DB local/dev.
+
+SQL ejecutado:
+
+- `modules/profiles/db/2026_06_20_create_subscription_contract_acceptances.sql`.
+
+### B) Entorno de ejecución
+Entorno confirmado para la ejecución:
+
+- Host seguro/local-dev: `127.0.0.1:3306`.
+- Base de datos: `mxmed`.
+- Producción descartada: sí.
+- Credenciales expuestas en reporte: no.
+- Fuente de configuración revisada: `api/_lib/db.php` y `api/mxmed-db.config.php`.
+
+### C) Resultado de DB
+Resultado confirmado:
+
+- Tabla creada: `subscription_contract_acceptances`.
+- Columnas esperadas: 27/27.
+- Primary key: `PRIMARY KEY (id)`.
+- Unique: `ux_subscription_contract_acceptances_uuid`.
+- Índices base: presentes.
+- Índices compuestos: presentes.
+- Engine/collation: `InnoDB / utf8mb4_unicode_ci`.
+- Conteo de registros: 0.
+- Seeds insertados: no.
+- `profile_subscriptions` modificado: no.
+- `subscription_plans` modificado: no.
+
+### D) Alcance bloqueado
+Este cierre no incluye:
+
+- Endpoint write.
+- Aceptación contractual real productiva.
+- Contratación real.
+- Renovación.
+- Cancelación.
+- Checkout.
+- Pagos.
+- Facturación.
+- Conexión con `PublicProfilePlanCapabilities`.
+- Activación de capacidades productivas.
+- Cambios de perfil público.
+- Cambios SEO productivos.
+- Modificación de backend.
+- Modificación de frontend.
+
+### E) Decisión arquitectónica vigente
+Decisión vigente después de la creación local/dev de la tabla:
+
+- La tabla existe ahora en DB local/dev como infraestructura de auditoría/evidencia.
+- `subscription_contract_acceptances` sigue siendo auditoría/evidencia legal.
+- `profile_subscriptions` sigue siendo snapshot operativo/read-model.
+- La creación de la tabla no activa planes ni capacidades.
+- `free` sigue siendo fallback/read-model.
+- `free` no se contrata.
+- No se crean filas `free`.
+- No se crean aceptaciones `free` por default.
+
+### F) Riesgos y controles posteriores
+A partir de esta fase:
+
+- Cualquier endpoint write futuro debe validar contrato, plan, actor, permisos y `free`.
+- Cualquier activación de suscripción real debe quedar en microfase separada.
+- Cualquier conexión con capacidades debe quedar en microfase separada.
+- No debe asumirse que la tabla creada permite contratación por sí misma.
+- Producción o staging requerirán microfase separada y autorización explícita.
+
+### G) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `QA-Suscripciones-ContractAcceptance-LocalSchema-PostExecution-01`.
+
+Objetivo futuro:
+
+- Verificar de forma independiente, sólo lectura, que la tabla local/dev existe con estructura correcta y cero registros, sin modificar DB ni archivos.
+
+### H) Límites de esta adenda
+Esta adenda no implementa:
+
+- Ejecución SQL adicional.
+- Cambios DB adicionales.
+- Backend.
+- Frontend.
+- Writes.
+- Pagos.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratación.
+- Aceptación real productiva.
+- Renovación.
+- Cancelación.
+- Perfil público.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
