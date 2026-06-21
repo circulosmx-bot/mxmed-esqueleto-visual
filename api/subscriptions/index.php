@@ -3,10 +3,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/CurrentSubscriptionRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
+use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
+use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
+use Subscriptions\Services\SubscriptionWriteException;
 
 header('Content-Type: application/json; charset=UTF-8');
 if (session_status() === PHP_SESSION_NONE) {
@@ -63,6 +68,31 @@ function subscriptionError(string $code, string $message, string $authMode = 'un
         ],
         'data' => null,
         'meta' => subscriptionMeta($authMode),
+    ];
+}
+
+function subscriptionWriteMeta(string $authMode = 'unknown'): array
+{
+    return [
+        'contract' => 'subscription_contract_acceptance_write_private',
+        'version' => 'SUB-WRITE-1',
+        'generated_at' => gmdate('c'),
+        'auth_mode' => $authMode,
+        'strict_auth_required' => true,
+        'source' => 'subscriptions_write_v1',
+    ];
+}
+
+function subscriptionWriteError(string $code, string $message, string $authMode = 'unknown'): array
+{
+    return [
+        'ok' => false,
+        'error' => [
+            'code' => $code,
+            'message' => $message,
+        ],
+        'data' => null,
+        'meta' => subscriptionWriteMeta($authMode),
     ];
 }
 
@@ -512,6 +542,205 @@ function subscriptionResolvePrivateContext(string $entityType, string $entityId)
     ];
 }
 
+function subscriptionReadJsonPayload(): array
+{
+    $contentType = strtolower(trim((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '')));
+    if ($contentType !== '' && strpos($contentType, 'application/json') === false) {
+        return [
+            'ok' => false,
+            'status' => 400,
+            'response' => subscriptionWriteError('invalid_payload', 'content-type must be application/json', 'unknown'),
+        ];
+    }
+
+    $raw = file_get_contents('php://input');
+    if (!is_string($raw) || trim($raw) === '') {
+        return [
+            'ok' => false,
+            'status' => 400,
+            'response' => subscriptionWriteError('invalid_payload', 'request body is required', 'unknown'),
+        ];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded) || $decoded === [] || array_values($decoded) === $decoded) {
+        return [
+            'ok' => false,
+            'status' => 400,
+            'response' => subscriptionWriteError('invalid_payload', 'invalid json payload', 'unknown'),
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'payload' => $decoded,
+    ];
+}
+
+function subscriptionForbiddenPayloadFields(array $payload, array $forbidden, string $prefix = ''): array
+{
+    $found = [];
+    foreach ($payload as $key => $value) {
+        $key = (string)$key;
+        $path = $prefix === '' ? $key : $prefix . '.' . $key;
+        if (in_array($key, $forbidden, true)) {
+            $found[] = $path;
+        }
+        if (is_array($value)) {
+            $found = array_merge($found, subscriptionForbiddenPayloadFields($value, $forbidden, $path));
+        }
+    }
+
+    return array_values(array_unique($found));
+}
+
+function subscriptionRequestIpAddress(): ?string
+{
+    $remoteAddr = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    if ($remoteAddr === '' || strlen($remoteAddr) > 45) {
+        return null;
+    }
+
+    return $remoteAddr;
+}
+
+function subscriptionRequestUserAgent(): ?string
+{
+    $userAgent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+    if ($userAgent === '') {
+        return null;
+    }
+
+    return strlen($userAgent) > 512 ? substr($userAgent, 0, 512) : $userAgent;
+}
+
+function subscriptionResolveWriteContext(string $entityType, string $entityId): array
+{
+    $headers = subscriptionHeaders();
+    $isLocal = subscriptionIsLocalRequest();
+    $sessionUserId = subscriptionSessionValue(['user_id', 'mxmed_user_id', 'auth_user_id']);
+    $hasHeaderIdentity = (
+        trim((string)($headers['x-user-id'] ?? '')) !== ''
+        || trim((string)($headers['x-doctor-id'] ?? '')) !== ''
+        || trim((string)($headers['x-entity-type'] ?? '')) !== ''
+        || trim((string)($headers['x-entity-id'] ?? '')) !== ''
+    );
+
+    if (!$isLocal) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'subscription writes are limited to local/dev', 'strict'),
+        ];
+    }
+
+    if ($hasHeaderIdentity) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'header scope does not authorize writes', 'header_scope'),
+        ];
+    }
+
+    if ($sessionUserId === '') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'local_dev_open does not authorize writes', 'local_dev_open'),
+        ];
+    }
+
+    if (!ctype_digit($sessionUserId)) {
+        return [
+            'ok' => false,
+            'status' => 401,
+            'response' => subscriptionWriteError('unauthorized', 'valid session authentication required', 'session_scope'),
+        ];
+    }
+
+    if ($entityType !== 'doctor') {
+        return [
+            'ok' => false,
+            'status' => 422,
+            'response' => subscriptionWriteError('invalid_entity', 'only doctor subscriptions are supported', 'session_scope'),
+        ];
+    }
+
+    $sessionDoctorId = subscriptionSessionValue(['doctor_id', 'active_doctor_id', 'mxmed_doctor_id']);
+    $sessionEntityType = strtolower(subscriptionSessionValue(['entity_type', 'active_entity_type']));
+    $sessionEntityId = subscriptionSessionValue(['entity_id', 'active_entity_id']);
+    if ($sessionDoctorId === '' && $sessionEntityType === 'doctor') {
+        $sessionDoctorId = $sessionEntityId;
+    }
+
+    if ($sessionDoctorId === '') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'doctor scope required', 'session_scope'),
+        ];
+    }
+
+    if ($sessionEntityType !== '' && $sessionEntityType !== 'doctor') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'entity scope mismatch', 'session_scope'),
+        ];
+    }
+
+    if ($sessionEntityType !== '' && $sessionEntityId !== '' && $sessionEntityId !== $sessionDoctorId) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'entity scope mismatch', 'session_scope'),
+        ];
+    }
+
+    if ($sessionDoctorId !== $entityId) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'doctor scope mismatch', 'session_scope'),
+        ];
+    }
+
+    $operatorId = subscriptionSessionValue(['operator_id']);
+    $rawActorRole = strtolower(subscriptionSessionValue(['actor_role', 'user_role', 'role', 'mxmed_user_role']));
+    if (
+        $operatorId !== ''
+        || in_array($rawActorRole, ['operator', 'operador', 'assistant', 'asistente'], true)
+    ) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'operator subscription writes are not enabled', 'session_scope'),
+        ];
+    }
+    if (
+        $rawActorRole !== ''
+        && !in_array($rawActorRole, ['doctor', 'medico', 'principal', 'owner'], true)
+    ) {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'actor role is not enabled for subscription writes', 'session_scope'),
+        ];
+    }
+
+    $profileId = subscriptionSessionValue(['profile_id', 'active_profile_id', 'mxmed_profile_id']);
+
+    return [
+        'ok' => true,
+        'auth_mode' => 'session_scope',
+        'actor_user_id' => $sessionUserId,
+        'actor_role' => 'doctor',
+        'operator_id' => null,
+        'doctor_id' => $sessionDoctorId,
+        'profile_id' => $profileId !== '' ? $profileId : null,
+    ];
+}
+
 function subscriptionValidEntityType(string $entityType): bool
 {
     return in_array($entityType, [
@@ -553,6 +782,105 @@ try {
 
     if (!empty($segments) && $segments[0] === 'context') {
         subscriptionRespond(subscriptionContextError('not_found', 'route not found'), 404);
+        return;
+    }
+
+    if (
+        count($segments) === 4
+        && $segments[0] === 'entities'
+        && $segments[3] === 'subscriptions'
+    ) {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionWriteError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        if ($entityType !== 'doctor' || !subscriptionValidEntityId($entityId)) {
+            subscriptionRespond(subscriptionWriteError('invalid_entity', 'invalid entity'), 422);
+            return;
+        }
+
+        $payloadResult = subscriptionReadJsonPayload();
+        if (!(bool)($payloadResult['ok'] ?? false)) {
+            subscriptionRespond((array)($payloadResult['response'] ?? []), (int)($payloadResult['status'] ?? 400));
+            return;
+        }
+
+        $payload = (array)($payloadResult['payload'] ?? []);
+        $forbiddenFields = subscriptionForbiddenPayloadFields($payload, [
+            'subscription_id',
+            'starts_at',
+            'expires_at',
+            'status',
+            'accepted_by_user_id',
+            'accepted_by_actor_role',
+            'accepted_by_operator_id',
+            'ip_address',
+            'user_agent',
+            'duration_days',
+            'price',
+            'capabilities',
+            'deleted_at',
+            'contract_acceptance_uuid',
+            'contract_acceptance_id',
+        ]);
+        if (array_key_exists('source', $payload)) {
+            $forbiddenFields[] = 'source';
+        }
+        if ($forbiddenFields !== []) {
+            subscriptionRespond(
+                subscriptionWriteError(
+                    'forbidden_fields',
+                    'payload contains backend-controlled fields: ' . implode(', ', array_values(array_unique($forbiddenFields)))
+                ),
+                422
+            );
+            return;
+        }
+
+        $context = subscriptionResolveWriteContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+
+        $authMode = (string)($context['auth_mode'] ?? 'session_scope');
+        $pdo = mxmed_pdo();
+        $repository = new CurrentSubscriptionRepository($pdo);
+        $readModelService = new CurrentSubscriptionReadModelService($repository);
+        $acceptanceRepository = new SubscriptionContractAcceptanceRepository($pdo);
+        $writeService = new CreateSubscriptionWithAcceptanceService(
+            $pdo,
+            $repository,
+            $readModelService,
+            $acceptanceRepository
+        );
+
+        try {
+            $result = $writeService->create([
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'doctor_id' => (string)($context['doctor_id'] ?? ''),
+                'profile_id' => $context['profile_id'] ?? null,
+                'actor_user_id' => (string)($context['actor_user_id'] ?? ''),
+                'actor_role' => (string)($context['actor_role'] ?? ''),
+                'operator_id' => $context['operator_id'] ?? null,
+                'ip_address' => subscriptionRequestIpAddress(),
+                'user_agent' => subscriptionRequestUserAgent(),
+                'payload' => $payload,
+            ]);
+        } catch (SubscriptionWriteException $e) {
+            subscriptionRespond(subscriptionWriteError($e->errorCode(), $e->getMessage(), $authMode), $e->status());
+            return;
+        }
+
+        subscriptionRespond([
+            'ok' => true,
+            'data' => $result,
+            'meta' => subscriptionWriteMeta($authMode),
+        ], 201);
         return;
     }
 
