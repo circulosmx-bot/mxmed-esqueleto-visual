@@ -6781,6 +6781,353 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 48 — Plan técnico de implementación del endpoint write de aceptación contractual y suscripción
+
+### A) Objetivo de la futura implementación
+La futura microfase backend deberá implementar el endpoint mínimo:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/subscriptions`.
+
+Alcance inicial:
+
+- Aceptación contractual.
+- Creación de `profile_subscriptions`.
+- Enlace entre aceptación y suscripción mediante `subscription_id`.
+- Una sola transacción.
+
+Entidad inicial:
+
+- `entity_type = doctor`.
+
+Alcance recomendado:
+
+- Local/dev o controlado manualmente.
+- Sin pagos.
+- Sin checkout.
+- Sin capacidades productivas.
+
+Fuera de alcance:
+
+- Checkout.
+- Pagos.
+- Facturación.
+- Renovación.
+- Cancelación.
+- Capacidades.
+- Perfil público.
+- SEO.
+- Frontend write.
+
+### B) Archivos permitidos para la futura microfase backend
+Archivos recomendados para permitir en la futura microfase de implementación:
+
+- `api/subscriptions/index.php`.
+- `modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php`.
+- `modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php`.
+
+Archivos reutilizables en lectura o integración:
+
+- `modules/subscriptions/services/CurrentSubscriptionReadModelService.php`, para devolver read-model actualizado.
+- `modules/subscriptions/repositories/CurrentSubscriptionRepository.php`, para lectura/validación si no rompe responsabilidades.
+
+Regla de alcance:
+
+- No tocar frontend en la microfase backend mínima.
+- No modificar `assets/js/app.js`.
+- No modificar `index.html`.
+
+### C) Diseño recomendado de responsabilidades
+`api/subscriptions/index.php`:
+
+- Routing `POST`.
+- Parseo JSON.
+- Llamada a guard write.
+- Llamada al service transaccional.
+- Respuesta HTTP/JSON.
+
+`CreateSubscriptionWithAcceptanceService`:
+
+- Orquestación transaccional.
+- Validación de plan.
+- Bloqueo de `free`.
+- Validación de contrato.
+- Detección de conflicto activo.
+- Generación de `subscription_id`.
+- Inserción de aceptación.
+- Inserción de `profile_subscriptions`.
+- Commit/rollback.
+- Obtención del read-model actualizado.
+
+`SubscriptionContractAcceptanceRepository`:
+
+- Insert en `subscription_contract_acceptances`.
+- Generación o uso de `uuid`.
+- Persistencia de evidencia técnica.
+
+Repository o lógica operativa para `profile_subscriptions`:
+
+- Insert operativo mínimo.
+- No crear `free`.
+- No borrar histórico.
+
+### D) Write guard / auth
+Reglas:
+
+- Strict auth obligatorio para writes.
+- `local_dev_open` siempre bloqueado para writes.
+- Headers QA bloqueados por defecto.
+- Headers QA sólo podrían permitirse en microfase QA local separada, si se define explícitamente.
+- Médico principal puede escribir sólo para su propio `doctor_id`.
+- Operador bloqueado inicialmente.
+- Operador futuro requiere permiso explícito `subscriptions.write`.
+- No aceptar identidad sólo por `X-User-Id`.
+- Mismatch entity/doctor debe devolver `403`.
+- Sin identidad válida debe devolver `401`.
+
+### E) Validaciones del payload
+Payload mínimo esperado:
+
+```json
+{
+  "plan_code": "standard",
+  "billing_period": "annual",
+  "contract": {
+    "version": "mxmed-subscriptions-v1",
+    "hash": "sha256:...",
+    "snapshot_url": "/legal/subscriptions/mxmed-subscriptions-v1.html",
+    "title": "Contrato de suscripción México Médico"
+  },
+  "acceptance": {
+    "source": "panel_subscription"
+  }
+}
+```
+
+Validaciones:
+
+- `plan_code` requerido.
+- `billing_period` requerido.
+- `plan_code=free` debe devolver `422`.
+- Plan inexistente debe devolver `404` o `422`, según criterio final.
+- `billing_period` debe coincidir con catálogo.
+- `duration_days` debe venir del catálogo, no del cliente.
+- `contract.version` requerido.
+- `contract.hash` requerido para producción.
+- `contract.hash` debe validar formato `sha256:` cuando aplique.
+- `contract.snapshot_url` requerido para producción o evidencia equivalente.
+- `contract.title` recomendado.
+- `acceptance.source` requerido.
+- `acceptance.source` debe validarse contra lista permitida.
+- `accepted_at` siempre lo fija backend.
+- IP y user-agent siempre los deriva backend.
+- No aceptar `starts_at`, `expires_at`, `status`, `price`, `duration_days` ni `capabilities` desde cliente.
+
+### F) Campos prohibidos desde cliente
+El endpoint no debe aceptar desde cliente:
+
+- `subscription_id`.
+- `starts_at`.
+- `expires_at`.
+- `status`.
+- `accepted_by_user_id`.
+- `accepted_by_actor_role`.
+- `accepted_by_operator_id`.
+- `ip_address`.
+- `user_agent`.
+- `duration_days`.
+- `price`.
+- `capabilities`.
+- `source` interno.
+- `deleted_at`.
+- `contract_acceptance_uuid`.
+- Cualquier campo operativo calculado por backend.
+
+### G) Orden transaccional recomendado
+Orden mínimo:
+
+1. Validar método `POST` y ruta.
+2. Validar JSON.
+3. Resolver auth/contexto con strict write.
+4. Validar `entity_type=doctor`.
+5. Validar `entity_id` contra `doctor_id` permitido.
+6. Bloquear operador inicialmente.
+7. Validar plan en `subscription_plans`.
+8. Bloquear `free`.
+9. Validar `billing_period` y `duration_days` desde catálogo.
+10. Validar contrato/evidencia.
+11. Validar `acceptance_source`.
+12. Buscar suscripción activa existente.
+13. Si existe suscripción activa, responder `409`.
+14. Iniciar transacción.
+15. Generar `subscription_id`.
+16. Generar `contract_acceptance_uuid`.
+17. Calcular `starts_at` con hora servidor.
+18. Calcular `expires_at` una sola vez según `duration_days`.
+19. Insertar `subscription_contract_acceptances`.
+20. Insertar `profile_subscriptions` con snapshot operativo.
+21. Reconsultar read-model.
+22. Commit.
+23. Responder `201`.
+24. Rollback ante cualquier error transaccional.
+
+### H) Reglas de fechas
+Reglas:
+
+- `starts_at` lo fija backend.
+- `expires_at` se calcula una sola vez.
+- Planes pagados anuales actuales: `duration_days=365`.
+- `free` no tiene vigencia contratada.
+- No recalcular `expires_at` automáticamente.
+- Gracia y renovación quedan fuera de esta microfase.
+- Jobs de vencimiento o recordatorios quedan fuera.
+
+### I) Conflicto e idempotencia
+Decisiones:
+
+- En v1 no es obligatorio resolver idempotencia completa.
+- `Idempotency-Key` es recomendado para fase posterior.
+- No existe storage actual para idempotency key.
+
+Mitigación inicial:
+
+- Consultar suscripción activa antes de insertar.
+- Usar transacción.
+- Devolver `409` si ya existe activa.
+- No crear segunda suscripción activa.
+
+Riesgo restante:
+
+- Doble submit concurrente sin storage dedicado.
+
+Decisión:
+
+- Idempotencia robusta debe quedar como microfase separada si se requiere.
+
+### J) Pagos / criterio comercial
+Reglas:
+
+- La implementación mínima puede existir sólo como local/dev o controlada manualmente.
+- No debe presentarse como contratación productiva.
+- No debe cobrar.
+- No debe generar factura.
+- No debe conectar checkout.
+- No debe activar capacidades.
+- Si se crea `profile_subscriptions` activa sin pago, debe quedar documentado como alcance dev/manual/controlado.
+- Antes de producción se requiere decisión comercial/pagos/checkout.
+
+### K) Respuesta JSON esperada
+Respuesta de éxito sugerida:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "subscription_id": "...",
+    "contract_acceptance_uuid": "...",
+    "current_subscription": {
+      "effective_plan_code": "standard",
+      "status": "active",
+      "starts_at": "...",
+      "expires_at": "...",
+      "contract_accepted_at": "..."
+    }
+  },
+  "meta": {
+    "source": "subscriptions_write_v1",
+    "auth_mode": "session_scope"
+  }
+}
+```
+
+No exponer:
+
+- IP.
+- User-agent.
+- Hash completo si se decide ocultarlo.
+- Evidencia legal completa.
+- Datos sensibles.
+- Capacidades productivas.
+
+### L) Errores HTTP mínimos
+Códigos:
+
+- `400`: JSON inválido o payload inválido.
+- `401`: sin identidad válida.
+- `403`: scope inválido, `local_dev_open`, operador bloqueado o actor sin permiso.
+- `404`: entidad o plan no encontrado.
+- `409`: suscripción activa existente o doble submit básico.
+- `422`: `free`, contrato faltante, hash/snapshot inválidos, plan no contratable.
+- `500`: error inesperado con rollback.
+
+### M) QA futuro mínimo
+Checklist para la futura microfase backend:
+
+- Precondición Git limpia.
+- `php -l api/subscriptions/index.php`.
+- `php -l` en services/repositories nuevos si se crean.
+- Sin identidad -> `401`.
+- `local_dev_open` -> bloqueado para `POST`.
+- Scope mismatch -> `403`.
+- Médico principal propio -> permitido.
+- Operador -> `403`.
+- `free` -> `422`.
+- Plan inexistente -> `404`/`422`.
+- Contrato faltante -> `422`.
+- Hash inválido -> `422`.
+- Snapshot faltante -> `422`.
+- Plan pagado válido -> `201`.
+- Conteo previo/posterior en `subscription_contract_acceptances`.
+- Conteo previo/posterior en `profile_subscriptions`.
+- Un éxito crea exactamente 1 aceptación y 1 suscripción.
+- Falla después de iniciar transacción hace rollback completo.
+- Suscripción activa existente -> `409`.
+- Read-model posterior devuelve plan pagado activo.
+- No frontend modificado.
+- No pagos.
+- No checkout.
+- No capacidades.
+- No perfil público.
+- No SEO.
+- `p-suscripcion` sigue read-only.
+
+### N) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE-Suscripciones-ContractAcceptance-WriteEndpoint-Minimal-01`.
+
+Objetivo:
+
+- Implementar endpoint backend mínimo con service/repository transaccional, sólo después de esta documentación.
+
+Antes de esa implementación se debe revalidar en lectura:
+
+- Columnas reales de `profile_subscriptions`.
+- Nombres exactos de `status` y `source`.
+- Compatibilidad con `CurrentSubscriptionReadModelService`.
+- Que no haya cambios Git pendientes.
+
+### O) Límites de esta adenda
+Esta adenda no implementa:
+
+- Endpoint.
+- Backend.
+- Rutas.
+- Services reales.
+- Repositories reales.
+- Frontend.
+- SQL.
+- Cambios DB.
+- Pagos.
+- Checkout.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratación real productiva.
+- Aceptación real productiva.
+- Perfil público.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
