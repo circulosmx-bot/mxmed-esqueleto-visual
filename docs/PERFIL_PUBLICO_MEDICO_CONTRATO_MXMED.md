@@ -5689,6 +5689,123 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 42 — Cierre del SQL ejecutable de aceptación contractual de suscripciones
+
+### A) Microfases cerradas
+Quedan cerradas las microfases:
+
+- `DB-Suscripciones-ContractAcceptance-CreateSchemaExecutable-01`: PASS.
+- `QA-Suscripciones-ContractAcceptance-SchemaExecutable-PostPush-01`: PASS sin cambios.
+
+Commit remoto/alineado validado:
+
+- `947bad6 db(suscripciones): crea SQL ejecutable de aceptacion contractual`.
+
+### B) Estado del archivo SQL
+Archivo creado y versionado:
+
+- `modules/profiles/db/2026_06_20_create_subscription_contract_acceptances.sql`.
+
+Estado confirmado:
+
+- Existe.
+- Está versionado.
+- Es SQL ejecutable.
+- Contiene `CREATE TABLE IF NOT EXISTS subscription_contract_acceptances`.
+- No fue ejecutado.
+- No modificó DB.
+- No creó tabla en DB local.
+- No crea seeds.
+- No modifica tablas existentes.
+- No modifica `profile_subscriptions`.
+- No crea FKs reales.
+- No usa `ENUM`.
+- No usa `CHECK`.
+
+### C) Decisión arquitectónica cerrada
+Se confirma el enfoque híbrido:
+
+- `subscription_contract_acceptances` = auditoría/evidencia legal.
+- `profile_subscriptions` = snapshot operativo/read-model.
+
+Decisiones técnicas vigentes:
+
+- `subscription_id CHAR(36) NULL` queda como enlace conceptual hacia `profile_subscriptions.subscription_id`.
+- No se agrega todavía `contract_acceptance_id` a `profile_subscriptions`.
+- Las relaciones se validarán por backend futuro.
+- La tabla de aceptación contractual no sustituye el read-model operativo.
+
+### D) Alcance bloqueado
+Este cierre no incluye:
+
+- Ejecución SQL.
+- Modificación DB.
+- Creación real de tabla.
+- Endpoint write.
+- Aceptación contractual real.
+- Contratación real.
+- Renovación.
+- Cancelación.
+- Checkout.
+- Pagos.
+- Facturación.
+- Conexión con `PublicProfilePlanCapabilities`.
+- Activación de capacidades productivas.
+- Cambios de perfil público.
+- Cambios SEO productivos.
+
+### E) Relación con `free`
+Decisión vigente:
+
+- `free` sigue siendo fallback/read-model.
+- `free` no se contrata.
+- No se crean filas `free`.
+- No se crean aceptaciones contractuales `free` por default.
+- Backend futuro debe bloquear aceptación o contratación normal de `free`.
+
+### F) Condición antes de ejecutar SQL
+Antes de ejecutar el SQL en DB local o cualquier entorno se requiere una microfase posterior explícita con:
+
+- Precondición Git limpia.
+- Revisión del archivo ejecutable.
+- Validación del entorno DB.
+- Respaldo o confirmación de entorno local según aplique.
+- Ejecución controlada.
+- Verificación de tabla creada.
+- Verificación de que no se insertaron datos.
+- QA post-ejecución.
+
+### G) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB/DIAG-Suscripciones-ContractAcceptance-ExecutionReadiness-01`.
+
+Objetivo:
+
+- Diagnosticar si ya es seguro ejecutar el SQL en DB local/dev, sin ejecutarlo todavía.
+
+### H) Límites de esta adenda
+Esta adenda no implementa:
+
+- SQL adicional.
+- Ejecución SQL.
+- Cambios DB.
+- Backend.
+- Frontend.
+- Writes.
+- Pagos.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratación.
+- Aceptación real.
+- Renovación.
+- Cancelación.
+- Perfil público.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
