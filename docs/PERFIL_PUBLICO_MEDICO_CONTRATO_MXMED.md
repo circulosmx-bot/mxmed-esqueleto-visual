@@ -5806,6 +5806,142 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 43 — Readiness de ejecución del SQL de aceptación contractual de suscripciones
+
+### A) Microfase diagnóstica cerrada
+La microfase `DB/DIAG-Suscripciones-ContractAcceptance-ExecutionReadiness-01` cerró con PASS sin cambios.
+
+Conclusiones:
+
+- El SQL ejecutable está listo para preparar una futura microfase de ejecución local/dev.
+- No debe ejecutarse todavía desde esta fase documental.
+- No requiere ajuste del SQL.
+- No se identificó riesgo bloqueante.
+- Conviene documentar primero las condiciones de ejecución.
+
+### B) Estado actual del SQL ejecutable
+Archivo evaluado:
+
+- `modules/profiles/db/2026_06_20_create_subscription_contract_acceptances.sql`.
+
+Estado confirmado:
+
+- Existe.
+- Está versionado.
+- Es ejecutable.
+- No ha sido ejecutado.
+- No ha modificado DB.
+- No ha creado tabla en DB local/dev.
+- No crea seeds.
+- No modifica `profile_subscriptions`.
+- No crea FKs reales.
+- No usa `ENUM`.
+- No usa `CHECK`.
+
+### C) Diagnóstico del entorno DB
+El proyecto tiene una forma conocida de conexión a DB local/dev:
+
+- `api/_lib/db.php`.
+- `api/mxmed-db.config.php`.
+- Variables de entorno `MXMED_DB_*`.
+
+Reglas de documentación:
+
+- No exponer credenciales en este documento.
+- La ejecución futura debe restringirse a entorno local/dev.
+- Debe confirmarse explícitamente el nombre de la DB.
+- Debe confirmarse explícitamente que no es producción.
+- La convención del proyecto usa scripts SQL versionados y ejecución manual/controlada por microfase.
+
+### D) Condiciones obligatorias antes de ejecutar
+La futura microfase de ejecución deberá exigir:
+
+- Git limpio y rama alineada.
+- Confirmación explícita de entorno local/dev.
+- Confirmación explícita del nombre de la base de datos.
+- Confirmación explícita de no producción.
+- Revisión del archivo SQL ejecutable correcto, sin usar el archivo `_draft`.
+- Ejecución controlada una sola vez.
+- Captura de salida completa.
+- Verificación posterior de tabla creada.
+- Verificación posterior de estructura esperada.
+- Verificación posterior de cero registros.
+- Confirmación de que no se insertaron seeds.
+- Confirmación de que no se modificó backend/UI.
+- Confirmación de que no se activaron contratación, pagos ni capacidades.
+
+### E) Riesgos identificados antes de ejecutar
+Riesgos a controlar:
+
+- Tabla preexistente con estructura distinta.
+- DB equivocada.
+- Ejecución en producción por error.
+- Falta de permisos `CREATE`.
+- Diferencias menores de engine/collation.
+- Confusión entre draft y ejecutable.
+- Interpretar la creación de tabla como activación funcional.
+- Conexión backend prematura si se pierde el alcance de la fase.
+
+### F) Decisión actual
+Decisión:
+
+- Sí está listo para preparar una microfase de ejecución local/dev.
+- No debe ejecutarse todavía desde esta fase.
+- No requiere ajuste del SQL antes de planear ejecución.
+- No requiere nueva decisión de schema.
+- Sí requiere microfase posterior explícita de ejecución controlada.
+
+### G) Relación con `free` y alcance bloqueado
+Decisión vigente:
+
+- `free` sigue siendo fallback/read-model.
+- `free` no se contrata.
+- No se crean filas `free`.
+- No se crean aceptaciones `free` por default.
+
+Sigue bloqueado:
+
+- Contratación real.
+- Aceptación contractual real.
+- Pagos.
+- Checkout.
+- Facturación.
+- Capacidades productivas.
+- Conexión con `PublicProfilePlanCapabilities`.
+- Cambios de perfil público.
+- Cambios SEO productivos.
+
+### H) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-ContractAcceptance-ExecuteSchemaLocalDev-01`.
+
+Objetivo futuro:
+
+- Ejecutar de forma controlada el SQL en DB local/dev, con validaciones previas y posteriores, sin tocar producción.
+
+### I) Límites de esta adenda
+Esta adenda no implementa:
+
+- Ejecución SQL.
+- Cambios DB.
+- Creación de tabla.
+- Backend.
+- Frontend.
+- Writes.
+- Pagos.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Contratación.
+- Aceptación real.
+- Renovación.
+- Cancelación.
+- Perfil público.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
