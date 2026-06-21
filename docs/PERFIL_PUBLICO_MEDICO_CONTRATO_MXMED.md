@@ -4371,6 +4371,196 @@ Esta adenda no activa:
 
 ---
 
+## Adenda PP-Decisiones 37 — Cierre QA visual/network del flujo contexto primero en Suscripción
+
+### A) Contexto
+Ya existe el endpoint de contexto activo:
+
+`GET /api/subscriptions/index.php/context/current`
+
+Ya existe el endpoint de suscripcion actual:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`
+
+El panel `p-suscripcion` esta en modo DEV/local read-only y fue actualizado para consultar primero el contexto activo. Esta adenda documenta el cierre de la QA visual/network que valido el flujo real del navegador.
+
+### B) QA visual/network cerrada
+La microfase `QA-Suscripciones-PanelReadOnly-UseActiveContext-VisualNetwork-01` cerro con PASS sin cambios.
+
+Resumen:
+
+- Rama limpia y alineada.
+- HEAD: `ba26ad2`.
+- PHP lint PASS en:
+  - Endpoint.
+  - Repository.
+  - Service.
+- JS parse PASS via JXA.
+- Node no disponible.
+- `/index.html` HTTP 200.
+- `/assets/js/app.js` HTTP 200.
+- DB intacta:
+  - `subscription_plans=5`
+  - `profile_subscriptions=0`
+
+### C) Flujo Network validado
+En Chrome/Playwright/Network se observo el orden correcto:
+
+1. `GET /api/subscriptions/index.php/context/current`
+2. `GET /api/subscriptions/index.php/entities/doctor/1/current`
+
+Resultado de `context/current`:
+
+- Metodo: GET.
+- Status: HTTP 401.
+- Respuesta: `ok=false`.
+- `error.code=unauthorized`.
+- `version=active-entity-context-v1`.
+- Comportamiento esperado en local sin sesion.
+
+Resultado de `entities/doctor/1/current`:
+
+- Metodo: GET.
+- Status: HTTP 200.
+- Respuesta: `ok=true`.
+- `effective_plan_code=free`.
+- `status=free_default`.
+- `auth_mode=local_dev_open`.
+
+Decision validada:
+
+- El fallback `dev_only` quedo confirmado.
+- No habia sesion real en esta QA.
+- El flujo validado fue local sin sesion con fallback controlado.
+
+### D) Headers y metodos
+Se confirmo que la UI no envio headers QA frontend a `/api/subscriptions`:
+
+- No `X-User-Id`.
+- No `X-Doctor-Id`.
+- No `X-Entity-Type`.
+- No `X-Entity-Id`.
+
+Tambien se confirmo:
+
+- No hubo POST a `/api/subscriptions`.
+- No hubo PUT a `/api/subscriptions`.
+- No hubo PATCH a `/api/subscriptions`.
+- No hubo DELETE a `/api/subscriptions`.
+- Solo se usaron metodos GET para suscripciones.
+
+### E) Estado visual validado
+Estado observado del panel:
+
+- El panel abre correctamente.
+- No se observo ruptura visual de navegacion/layout.
+- `p-suscripcion` se activo via `showPanel('p-suscripcion')`.
+- El boton lateral no estaba visible para click directo en headless; esto no afecto la QA del panel.
+- Plan mostrado: `Gratuito`.
+- Estado mostrado: `Plan base permanente`.
+- Vigencia/vencimiento: `No aplica`.
+- Dias restantes: `No aplica`.
+- Plan contratado: `Sin plan contratado vigente`.
+- Modo lectura visible.
+- Fuente contexto visible: `dev_only`.
+
+### F) Acciones comerciales
+Se revisaron 7 controles comerciales y estaban:
+
+- Deshabilitados.
+- En modo lectura.
+- O bloqueados.
+
+Resultado:
+
+- No ejecutaron writes.
+- No dispararon llamadas de escritura a `/api/subscriptions`.
+- Las acciones comerciales siguen bloqueadas.
+
+### G) Consola y errores
+Resultado de consola:
+
+- No hubo error JS critico.
+- El unico 401 observado fue el esperado de `context/current`.
+- Hubo logs/debug y warnings no bloqueantes preexistentes.
+- No hubo impacto en navegacion ni render del panel.
+
+### H) Bloqueos vigentes
+Siguen bloqueados:
+
+- Writes de suscripcion.
+- Crear suscripciones.
+- Crear filas `free`.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- Conexion con `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+- Uso productivo sin sesion/contexto completo, ownership y permisos formales.
+
+### I) Riesgos pendientes
+Siguen pendientes:
+
+- Validar flujo con sesion real productiva.
+- Validar operador real con permiso persistido/canonico.
+- Permiso persistido `subscriptions.read`.
+- Ownership multi-entidad.
+- Endpoint global `/api/me/context`, si se decide.
+- Flujo contractual real.
+- Aceptacion de contrato.
+- Alta de suscripcion.
+- Renovacion/cancelacion.
+- Pagos/facturacion.
+- Conexion futura con capacidades publicas.
+
+### J) Secuencia recomendada
+Opcion A - Refinamiento UX read-only:
+
+- Microfase: `FE/UX-Suscripciones-PanelReadOnly-VisualPolish-01`.
+- Objetivo: mejorar jerarquia visual, copy, mensajes y claridad del modo lectura, sin writes.
+
+Opcion B - Diagnostico de flujo contractual:
+
+- Microfase: `DIAG-Suscripciones-ContractFlow-Readiness-01`.
+- Objetivo: diagnosticar contratacion real, aceptacion de contrato, vigencia, renovacion/cancelacion y pagos, sin implementar.
+
+Opcion C - Diseno global de contexto activo:
+
+- Microfase: `BE/DIAG-Auth-ActiveContext-GlobalEndpoint-01`.
+- Objetivo: evaluar `/api/me/context` si otros modulos requieren contexto activo comun.
+
+Opcion D - QA con sesion/operador real:
+
+- Microfase: `QA-Suscripciones-PanelReadOnly-UseActiveContext-SessionOperator-01`.
+- Objetivo: validar el flujo con sesion simulada/real y operador con/sin permiso, sin modificar UI.
+
+Recomendacion:
+
+- Antes de avanzar a writes contractuales, priorizar diagnostico de flujo contractual o QA de sesion/operador, manteniendo capacidades productivas bloqueadas.
+
+### K) Limites de esta adenda
+Esta adenda no activa:
+
+- Uso productivo.
+- Writes de suscripcion.
+- Contratacion.
+- Aceptacion contractual.
+- Renovacion.
+- Cancelacion.
+- Pagos.
+- Facturacion.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil publico.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
