@@ -9845,6 +9845,215 @@ Esta adenda no conecta:
 
 ---
 
+## Adenda PP-Decisiones 60 — Cierre del lock de concurrencia contractual
+
+### A) Alcance cerrado
+Se cerró la implementación del advisory lock por entidad/operación para el write contractual de suscripciones.
+
+Queda implementado:
+
+- Advisory lock MySQL/MariaDB `GET_LOCK` / `RELEASE_LOCK`.
+- Integración alrededor del write contractual.
+- Combinación con `Idempotency-Key`.
+- Protección v1 sin schema nuevo.
+- Sin frontend.
+- Sin pagos.
+- Sin checkout.
+- Sin facturación.
+- Sin capacidades productivas.
+
+Commit de implementación:
+
+- `d2bd437 feat(suscripciones): agrega lock de concurrencia contractual`.
+
+Archivos implementados:
+
+- `api/subscriptions/index.php`.
+- `modules/subscriptions/services/SubscriptionEntityWriteLockService.php`.
+
+### B) Comportamiento técnico
+Servicio:
+
+- `SubscriptionEntityWriteLockService`.
+
+Lock:
+
+- `GET_LOCK`.
+
+Release:
+
+- `RELEASE_LOCK`.
+
+Nombre determinístico:
+
+- `mxmed:subscriptions:{entity_type}:{entity_id}:create`.
+
+Timeout:
+
+- 2 segundos.
+
+Error de timeout:
+
+- HTTP `409`.
+- Error: `subscription_write_lock_timeout`.
+- Mensaje: `subscription write already in progress for this entity`.
+
+Liberación:
+
+- En `finally`.
+
+Revalidación:
+
+- Se conserva dentro de `CreateSubscriptionWithAcceptanceService::create()`.
+- La validación de suscripción activa se ejecuta dentro del lock antes de crear aceptación/suscripción.
+
+Auth preservada:
+
+- No se relajó auth.
+- `local_dev_open` sigue sin autorizar writes.
+- Headers QA siguen sin autorizar writes.
+- Sólo `session_scope` médico principal llega a negocio.
+
+### C) QA validado
+#### Entidad activa
+QA controlado con doctor activo:
+
+- POST con sesión real y key nueva.
+- Resultado: `409 active_subscription_exists`.
+- Se creó una fila idempotencia `failed` por el `409`.
+- Lock liberado: `IS_FREE_LOCK(...) = 1`.
+- No se creó nueva suscripción.
+- No se creó nueva aceptación.
+
+QA con headers QA sin sesión:
+
+- Resultado: `403 forbidden`.
+- Headers QA siguen sin autorizar write.
+- No se intentó write contractual.
+- No se creó suscripción.
+- No se creó aceptación.
+
+#### Concurrencia real con doctor 3
+Microfase:
+
+- `QA-Suscripciones-ContractAcceptance-EntityLock-ConcurrentDifferentKeys-Doctor3-01`.
+
+Doctor fixture:
+
+- `doctor_id=3`.
+- `display_name=QA Concurrency Doctor`.
+- Current previo: `free_default`.
+
+Requests concurrentes con keys distintas:
+
+- Request A:
+  - HTTP `201`.
+  - `subscription_id=92b2887b-241d-4d16-9b41-196fd4aff3a8`.
+  - `contract_acceptance_uuid=184f2880-24b6-43cc-8288-53bd548f67af`.
+- Request B:
+  - HTTP `409`.
+  - Error: `active_subscription_exists`.
+
+Resultado:
+
+- No hubo duplicados.
+- Una sola suscripción nueva.
+- Una sola aceptación contractual nueva.
+- Dos filas de idempotencia para doctor 3:
+  - una `completed`, HTTP `201`, con referencias;
+  - una `failed`, HTTP `409`, sin referencias.
+- Lock liberado: `IS_FREE_LOCK('mxmed:subscriptions:doctor:3:create') = 1`.
+- Doctor 1 siguió `standard / active`.
+- Doctor 2 siguió `standard / active`.
+
+### D) Estado local/dev
+Estado DB local/dev después del QA concurrente:
+
+- `profile_subscriptions=3`.
+- `subscription_contract_acceptances=3`.
+- `subscription_write_idempotency_keys=5`.
+
+Estado por doctor:
+
+- Doctor 1: `standard / active`.
+- Doctor 2: `standard / active`.
+- Doctor 3: `standard / active` tras QA concurrente.
+
+Estos datos son estado local/dev derivado de QA. No representan producción.
+
+### E) Estado funcional del bloque
+El write contractual ya cuenta con:
+
+- Protección por key:
+  - replay misma key;
+  - payload distinto con misma key bloqueado.
+- Protección por entidad:
+  - serialización de requests concurrentes con keys distintas.
+- Evidencia legal:
+  - aceptación contractual en `subscription_contract_acceptances`.
+- Snapshot operativo:
+  - `profile_subscriptions`.
+- Ledger de idempotencia:
+  - `subscription_write_idempotency_keys`.
+
+El flujo sigue sin conectar:
+
+- Pagos.
+- Checkout.
+- Facturación.
+- Capacidades productivas.
+- `PublicProfilePlanCapabilities`.
+
+### F) Pendientes
+Sigue pendiente:
+
+- Checkout/pagos productivos.
+- Facturación.
+- Activación real de capacidades.
+- Conexión con `PublicProfilePlanCapabilities`.
+- UX contractual productiva.
+- Cleanup/TTL job de idempotencia.
+- Política productiva de TTL.
+- Hardening adicional antes de producción.
+- Definir política para retirar o mantener fixtures dev-only/local-only.
+
+### G) Siguiente bloque recomendado
+Siguiente bloque recomendado:
+
+- `FE/UX-Suscripciones-PanelDev-ContractFlow-Polish-01`.
+
+Objetivo:
+
+- Pulir el flujo visual DEV/local de contratación contractual y preparar transición futura a UX productiva, sin pagos todavía.
+
+Alternativa técnica:
+
+- `BE/SPEC-Suscripciones-Checkout-Readiness-01`.
+
+Objetivo:
+
+- Diagnosticar prerequisites para checkout/pagos sin implementarlos.
+
+### H) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- POST contractual.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
