@@ -8803,6 +8803,417 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 56 — Decisión de storage de idempotencia del endpoint write contractual
+
+### A) Objetivo de la decisión
+Esta adenda formaliza la decisión de storage de idempotencia antes de crear cualquier SQL draft.
+
+Objetivos:
+
+- Separar el control de reintentos del snapshot operativo.
+- Separar el control de reintentos de la evidencia legal.
+- Separar idempotencia de pagos, checkout y capacidades.
+- Preparar una base auditable para replay seguro.
+- Preparar control de doble submit con la misma key.
+- Mantener fuera de alcance la ejecución de DDL y cualquier cambio de DB.
+
+La decisión aplica al endpoint:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/subscriptions`.
+
+### B) Tabla dedicada
+Tabla decidida para futuro draft SQL:
+
+- `subscription_write_idempotency_keys`.
+
+Motivos:
+
+- Separa idempotencia del read-model operativo.
+- Separa idempotencia de la evidencia contractual.
+- Permite modelar estados `processing`, `completed`, `failed`, `expired` y `cancelled`.
+- Permite TTL por request.
+- Permite replay controlado.
+- Permite guardar referencias sin duplicar aceptación ni suscripción.
+- Es extensible a checkout futuro sin acoplar pagos ahora.
+
+### C) Por qué no usar tablas existentes
+No usar `profile_subscriptions`:
+
+- Es snapshot operativo/read-model.
+- No debe modelar requests.
+- No modela `processing`.
+- No modela TTL.
+- No modela replay.
+- Mezclaría vigencia de suscripción con transporte/idempotencia.
+
+No usar `subscription_contract_acceptances`:
+
+- Es evidencia legal/auditoría contractual.
+- Debe conservar aceptaciones contractuales.
+- No debe registrar requests fallidos o en `processing`.
+- No debe convertirse en lock ledger.
+- No debe mezclar evidencia legal con control de reintentos.
+
+No usar sólo locks:
+
+- Ayudan en concurrencia.
+- No resuelven replay tras timeout.
+- No devuelven respuesta estable.
+- No guardan referencias de la operación completada.
+- No auditan reintentos del cliente.
+
+### D) Columnas decididas
+Columnas conceptuales para el futuro draft:
+
+- `id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT`.
+- `uuid CHAR(36) NOT NULL`.
+- `idempotency_key_hash CHAR(64) NOT NULL`.
+- `request_hash CHAR(64) NOT NULL`.
+- `entity_type VARCHAR(64) NOT NULL`.
+- `entity_id VARCHAR(64) NOT NULL`.
+- `doctor_id VARCHAR(64) NULL`.
+- `profile_id VARCHAR(64) NULL`.
+- `user_id BIGINT UNSIGNED NOT NULL`.
+- `actor_role VARCHAR(32) NULL`.
+- `operation VARCHAR(96) NOT NULL`.
+- `status VARCHAR(32) NOT NULL DEFAULT 'processing'`.
+- `subscription_id CHAR(36) NULL`.
+- `contract_acceptance_uuid CHAR(36) NULL`.
+- `response_http_status SMALLINT UNSIGNED NULL`.
+- `response_body_text TEXT NULL`.
+- `locked_at DATETIME NULL`.
+- `completed_at DATETIME NULL`.
+- `expires_at DATETIME NOT NULL`.
+- `source VARCHAR(128) NOT NULL DEFAULT 'mxmed_subscription_idempotency_v1'`.
+- `notes TEXT NULL`.
+- `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+- `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`.
+- `deleted_at DATETIME NULL`.
+
+Tipos decididos:
+
+- `BIGINT UNSIGNED` para ids técnicos y `user_id`.
+- `CHAR(36)` para uuid y `subscription_id`.
+- `CHAR(64)` para hashes `sha256`.
+- `VARCHAR(64)` para entidad, doctor y profile.
+- `VARCHAR(32)` para status y actor role.
+- `VARCHAR(96)` para operación.
+- `VARCHAR(128)` para source.
+- `SMALLINT UNSIGNED` para HTTP status.
+- `DATETIME` para fechas de negocio/control.
+- `TIMESTAMP` para timestamps técnicos.
+- `TEXT` para respuesta sanitizada opcional y notas.
+
+### E) Columnas descartadas para v1
+No incluir en v1:
+
+- Payload completo.
+- IP.
+- User-agent.
+- `payment_id`.
+- `checkout_id`.
+- `invoice_id`.
+- Capacidades.
+- Datos sensibles.
+- Campos de UI.
+
+Motivos:
+
+- Evitar almacenar datos innecesarios.
+- Mantener la tabla enfocada en el write contractual.
+- Evitar mezclar pagos/checkout antes de su diseño propio.
+- Reducir exposición de datos si una key o payload llega mal formado.
+
+### F) Key cruda vs hash
+Decisión:
+
+- No usar key cruda como fuente principal.
+- Guardar `idempotency_key_hash CHAR(64) NOT NULL`.
+- Calcular hash `sha256` de la key normalizada.
+
+Motivos:
+
+- Evita índices largos.
+- Reduce exposición si el cliente manda una key con datos indebidos.
+- Mantiene unicidad estable.
+- Evita depender de collation para comparar keys crudas.
+
+Regla futura:
+
+- Si se requiere depuración, evaluar un preview no sensible en microfase separada.
+- No guardar la key cruda en el primer draft.
+
+### G) Request hash
+Columna decidida:
+
+- `request_hash CHAR(64) NOT NULL`.
+
+Reglas:
+
+- Debe calcularse con `sha256` sobre request canonicalizado.
+- Debe detectar misma key con payload distinto.
+- No debe almacenar payload completo.
+
+Debe incluir:
+
+- Operación.
+- Ruta conceptual.
+- `entity_type`.
+- `entity_id`.
+- `doctor_id`.
+- `user_id`.
+- `actor_role`.
+- `plan_code`.
+- `billing_period`.
+- `contract.version`.
+- `contract.hash`.
+- `contract.snapshot_url`.
+- `acceptance.source`.
+
+Debe excluir:
+
+- Fechas de servidor.
+- IP.
+- User-agent.
+- `subscription_id`.
+- Campos prohibidos.
+- Datos sensibles.
+
+### H) Response storage
+Fuente principal de replay:
+
+- `subscription_id`.
+- `contract_acceptance_uuid`.
+- `response_http_status`.
+
+Columna opcional:
+
+- `response_body_text TEXT NULL`.
+
+Decisiones:
+
+- Preferir referencias + HTTP status.
+- No usar `JSON` inicialmente.
+- Usar `TEXT` si se necesita respuesta sanitizada.
+- Evitar fragilidad MySQL/MariaDB con diferencias de tipo `JSON`.
+- No guardar payload completo.
+- No guardar evidencia legal completa.
+- No guardar IP/user-agent.
+
+Si se requiere replay exacto:
+
+- Debe documentarse en una fase posterior.
+- Debe guardarse sólo respuesta sanitizada.
+
+### I) Estados
+Estados conceptuales:
+
+- `processing`.
+- `completed`.
+- `failed`.
+- `expired`.
+- `cancelled`.
+
+Reglas:
+
+- Sin `ENUM`.
+- Sin `CHECK`.
+- Validación por backend.
+- `processing` como default.
+- `completed` debe tener referencias si el write contractual completó.
+- `failed` no debe dejar aceptación/suscripción huérfana.
+- `expired` se maneja por TTL y job futuro.
+- `cancelled` queda reservado para corrección administrativa/controlada.
+
+### J) TTL y cleanup
+Columna obligatoria:
+
+- `expires_at DATETIME NOT NULL`.
+
+TTL inicial:
+
+- Local/dev: 24 horas.
+- Producción/checkout futuro: 24 horas a 7 días, pendiente decisión comercial/técnica.
+
+Reglas:
+
+- Cleanup debe vivir en job futuro separado.
+- No hay borrado físico en flujo normal.
+- `deleted_at` queda para soft delete administrativo/controlado.
+- Debe existir índice por `status, expires_at`.
+
+### K) Unicidad
+Uniques decididos para futuro draft:
+
+- `uuid` unique.
+- Unique de scope idempotente:
+  - `idempotency_key_hash`.
+  - `user_id`.
+  - `entity_type`.
+  - `entity_id`.
+  - `operation`.
+
+Motivos:
+
+- Evita key repetida dentro del mismo scope.
+- Acota replay a usuario, entidad y operación.
+- Evita índices largos usando hash.
+- Permite que una misma key enviada por accidente en otro scope no afecte al scope actual.
+
+Reglas:
+
+- No usar unique global sólo por key cruda.
+- No usar key cruda larga en unique compuesto.
+- No usar esta unique como sustituto de auth.
+
+### L) Índices recomendados
+Índices conceptuales para validar en SQL draft:
+
+- `ux_sub_write_idem_uuid`.
+- `ux_sub_write_idem_scope`.
+- `idx_sub_write_idem_entity`.
+- `idx_sub_write_idem_doctor`.
+- `idx_sub_write_idem_user`.
+- `idx_sub_write_idem_operation_status`.
+- `idx_sub_write_idem_status_expires`.
+- `idx_sub_write_idem_subscription`.
+- `idx_sub_write_idem_acceptance`.
+- `idx_sub_write_idem_deleted_at`.
+- `idx_sub_write_idem_created_at`.
+
+Aclaración:
+
+- Los nombres exactos deben validarse en el SQL draft contra límites MySQL/MariaDB.
+- La unique de scope debe usar `idempotency_key_hash` para controlar longitud.
+
+### M) FKs y relaciones
+Decisión:
+
+- Sin FKs reales iniciales.
+
+Motivos:
+
+- Sigue el criterio usado en `subscription_contract_acceptances`.
+- Mantiene compatibilidad inicial MySQL/MariaDB.
+- Evita acoplar dominios antes de pagos/checkout.
+- Las relaciones se validan por backend.
+
+Relaciones conceptuales:
+
+- `subscription_id CHAR(36) NULL` se llena al completar.
+- `contract_acceptance_uuid CHAR(36) NULL` se llena al completar.
+- `processing` puede tener referencias `NULL`.
+- `completed` debe tener referencias si el endpoint creó datos.
+- `failed` puede quedar sin referencias.
+
+Reglas:
+
+- No agregar columnas a `profile_subscriptions`.
+- No agregar columnas a `subscription_contract_acceptances`.
+- Mantener índices para consultas y auditoría futura.
+
+### N) Concurrencia y riesgo residual
+La tabla resuelve:
+
+- Reintentos con la misma key.
+- Replay tras timeout.
+- Detección de estado `processing`.
+- Respuesta estable basada en referencias.
+
+La tabla no resuelve por sí sola:
+
+- Dos requests concurrentes con keys distintas.
+- Doble click si el frontend genera dos keys diferentes.
+- Creación simultánea sin lock adicional por entidad.
+
+Para producción/checkout conviene diagnosticar además:
+
+- Entity lock.
+- Unique activo por entidad.
+- Advisory lock.
+- Estrategia equivalente de exclusión por entidad.
+
+Ese diagnóstico queda como microfase futura separada.
+
+### O) Compatibilidad
+Decisiones de compatibilidad:
+
+- `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`.
+- Tipos alineados con `profile_subscriptions`.
+- Tipos alineados con `subscription_contract_acceptances`.
+- `TEXT` preferido sobre `JSON` para respuesta opcional.
+- Sin `ENUM`.
+- Sin `CHECK`.
+- Sin FKs reales iniciales.
+- Estados y constraints se validan en backend.
+
+### P) Relación futura
+Frontend:
+
+- UI write futura debe enviar `Idempotency-Key`.
+- `p-suscripcion` sigue read-only hasta microfase explícita.
+
+Pagos/checkout:
+
+- No se conectan todavía.
+- La tabla puede ampliarse en el futuro con referencias a checkout/payment intent.
+- No incluir campos de pago en v1.
+- No diseñar cobros en este storage.
+
+Capacidades:
+
+- No activar capacidades.
+- No conectar `PublicProfilePlanCapabilities`.
+
+Producción:
+
+- Producción/checkout no debe avanzar sin idempotencia implementada.
+- Producción/checkout también requiere decisión de lock/unique activo por entidad.
+
+### Q) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-ContractAcceptance-IdempotencySchemaDraft-01`.
+
+Objetivo:
+
+- Crear un SQL draft, no ejecutable todavía, para la tabla `subscription_write_idempotency_keys`, alineado con esta decisión.
+
+Restricciones esperadas:
+
+- Sólo draft SQL.
+- No ejecutar SQL.
+- No modificar DB.
+- No conectar backend.
+- No frontend.
+- No pagos.
+- No checkout.
+- No capacidades.
+
+### R) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Migrations.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- POST contractual.
+- QA con DB writes.
+- Headers QA para write.
+- Relajación de guards.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
