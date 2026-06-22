@@ -257,7 +257,7 @@ function subscriptionProductionEnvironmentDetected(): bool
     return false;
 }
 
-function subscriptionCreateDevSessionFixture(): array
+function subscriptionApplyDevDoctorSessionFixture(string $doctorId, string $userId): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         session_regenerate_id(true);
@@ -274,12 +274,17 @@ function subscriptionCreateDevSessionFixture(): array
         $_SESSION['mxmed_user_role']
     );
 
-    $_SESSION['user_id'] = '1';
-    $_SESSION['doctor_id'] = '1';
+    $_SESSION['user_id'] = $userId;
+    $_SESSION['doctor_id'] = $doctorId;
     $_SESSION['entity_type'] = 'doctor';
-    $_SESSION['entity_id'] = '1';
+    $_SESSION['entity_id'] = $doctorId;
     $_SESSION['actor_role'] = 'doctor';
     $_SESSION['subscriptions_dev_session_fixture'] = '1';
+}
+
+function subscriptionCreateDevSessionFixture(): array
+{
+    subscriptionApplyDevDoctorSessionFixture('1', '1');
 
     return [
         'ok' => true,
@@ -289,6 +294,65 @@ function subscriptionCreateDevSessionFixture(): array
             'entity_id' => '1',
             'doctor_id' => '1',
             'fixture' => 'subscriptions_dev_session_fixture',
+        ],
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
+}
+
+function subscriptionDoctorFixtureExists(string $doctorId): bool
+{
+    $stmt = mxmed_pdo()->prepare(
+        'SELECT COUNT(*) AS total
+         FROM profiles_doctors
+         WHERE doctor_id = :doctor_id'
+    );
+    $stmt->execute(['doctor_id' => $doctorId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int)($row['total'] ?? 0) > 0;
+}
+
+function subscriptionDoctorHasActiveSubscription(string $doctorId): bool
+{
+    $stmt = mxmed_pdo()->prepare(
+        'SELECT COUNT(*) AS total
+         FROM profile_subscriptions
+         WHERE entity_type = \'doctor\'
+           AND entity_id = :doctor_id
+           AND deleted_at IS NULL
+           AND status IN (\'active\', \'expiring_soon\', \'grace_period\')
+           AND (starts_at IS NULL OR starts_at <= UTC_TIMESTAMP())
+           AND (expires_at IS NULL OR expires_at >= UTC_TIMESTAMP())'
+    );
+    $stmt->execute(['doctor_id' => $doctorId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int)($row['total'] ?? 0) > 0;
+}
+
+function subscriptionCreateAlternateDoctorSessionFixture(): array
+{
+    $doctorId = '2';
+    $userId = '2';
+    if (!subscriptionDoctorFixtureExists($doctorId)) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'alternate doctor fixture not found');
+    }
+
+    $hasActiveSubscription = subscriptionDoctorHasActiveSubscription($doctorId);
+    if ($hasActiveSubscription) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_has_active_subscription', 'alternate doctor fixture has active subscription');
+    }
+
+    subscriptionApplyDevDoctorSessionFixture($doctorId, $userId);
+
+    return [
+        'ok' => true,
+        'data' => [
+            'auth_mode' => 'session_scope',
+            'entity_type' => 'doctor',
+            'entity_id' => $doctorId,
+            'doctor_id' => $doctorId,
+            'operator_id' => null,
+            'fixture' => 'alternate_doctor',
+            'has_active_subscription' => false,
         ],
         'meta' => subscriptionDevSessionFixtureMeta(),
     ];
@@ -855,6 +919,33 @@ function subscriptionValidEntityId(string $entityId): bool
 try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = subscriptionRelativeSegments();
+
+    if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'alternate-doctor') {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        if (!subscriptionDevSessionFixtureEnabled()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
+            return;
+        }
+
+        if (!subscriptionIsLocalRequest()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
+            return;
+        }
+
+        if (subscriptionProductionEnvironmentDetected()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+            return;
+        }
+
+        $fixtureResponse = subscriptionCreateAlternateDoctorSessionFixture();
+        $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
+        subscriptionRespond($fixtureResponse, $fixtureStatus);
+        return;
+    }
 
     if (count($segments) === 2 && $segments[0] === 'dev' && $segments[1] === 'session-fixture') {
         if ($method !== 'POST') {
