@@ -11795,6 +11795,152 @@ Motivo:
 
 - El endpoint `checkout-intents` necesita una fuente server-side de precio versionada antes de implementarse. El siguiente paso es diseñar esa tabla sin tocar todavía DB/schema real.
 
+## Adenda PP-Decisiones 68 — Cierre del draft SQL de precios versionados de suscripciones
+
+### A) Microfase cerrada
+Microfase cerrada:
+
+- `DB/SPEC-Suscripciones-PlanPrices-SchemaDraft-01`.
+
+QA cerrada:
+
+- `QA-Suscripciones-PlanPrices-SchemaDraft-PendingDiff-01`.
+
+Commit:
+
+- `a84f765 db(suscripciones): agrega draft de precios versionados`.
+
+Archivo:
+
+- `modules/profiles/db/2026_06_22_create_subscription_plan_prices_draft.sql`.
+
+### B) Propósito del draft
+El draft conceptual define la futura tabla:
+
+- `subscription_plan_prices`.
+
+Propósito:
+
+- Ser la fuente server-side canónica de precios/versiones para checkout intents.
+- Separar precio comercial versionado del catálogo técnico de planes.
+- Permitir que el endpoint futuro `checkout-intents` copie un snapshot de precio a `subscription_checkout_intents`.
+
+### C) Relación con PP-Decisiones 67
+El draft materializa a nivel conceptual la decisión PP-Decisiones 67.
+
+Reglas:
+
+- `subscription_plans` queda como catálogo técnico.
+- `subscription_plan_prices` será fuente futura de `amount_cents`, `currency`, `price_source`, `price_version`, `valid_from`, `valid_until` e `is_active`.
+- El endpoint futuro `checkout-intents` resolverá precio server-side y copiará el snapshot a `subscription_checkout_intents`.
+- Cambios futuros de precio no deben modificar checkout intents ya creados.
+
+### D) Contenido del draft
+Identidad:
+
+- `id`.
+- `uuid`.
+
+Plan/periodo:
+
+- `plan_code`.
+- `billing_period`.
+
+Precio:
+
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+
+Vigencia:
+
+- `valid_from`.
+- `valid_until`.
+- `is_active`.
+
+Auditoría:
+
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Índices/uniques conceptuales:
+
+- `uuid` unique.
+- Unique por `plan_code + billing_period + currency + price_version`.
+- Lookup por `plan_code + billing_period + currency + is_active + vigencias`.
+- Índices por plan, activo, vigencia, `created_at` y `deleted_at`.
+
+### E) Validaciones de QA
+La QA de pending diff confirmó:
+
+- El archivo es `DRAFT ONLY`.
+- No existe SQL ejecutable final.
+- Define sólo `subscription_plan_prices`.
+- No contiene FK ni `REFERENCES`.
+- No contiene `ENUM`.
+- No contiene `CHECK`.
+- No contiene `JSON`.
+- No contiene seeds ni `INSERT`.
+- No contiene `ALTER` ni `DROP`.
+- No inserta precios.
+- No toca tablas existentes.
+- No modifica backend, frontend ni documentación.
+- No ejecuta SQL.
+- `git diff --check` quedó limpio.
+
+### F) Errores conceptuales asociados
+El draft conserva los errores conceptuales definidos en PP-Decisiones 67:
+
+- `plan_price_not_configured`.
+- `pricing_configuration_conflict`.
+- `pricing_source_unavailable`.
+
+### G) Alcance explícito
+Esta adenda no implica:
+
+- SQL ejecutable creado.
+- SQL ejecutado.
+- Tabla real creada.
+- Precios insertados.
+- Seeds creados.
+- Cambios en `subscription_plans`.
+- Endpoint `checkout-intents` implementado.
+- Provider adapter implementado.
+- Webhook implementado.
+- Facturación conectada.
+- Capacidades activadas.
+- Perfil público o SEO tocados.
+
+### H) Pendientes posteriores
+Pendientes:
+
+1. Convertir el draft a SQL ejecutable: `modules/profiles/db/2026_06_22_create_subscription_plan_prices.sql`.
+2. Hacer QA del SQL ejecutable.
+3. Ejecutar el SQL en local/dev en microfase autorizada.
+4. Hacer QA post-ejecución local/dev.
+5. Decidir estrategia de precios iniciales:
+   - Sin seeds en SQL de schema.
+   - Posible microfase futura separada para precios DEV/local.
+   - Precios reales/productivos sujetos a decisión comercial.
+6. Definir si `free` tendrá precio `0` o si queda fuera de la tabla de precios pagados.
+7. Integrar resolución de precio server-side en endpoint `checkout-intents` futuro.
+8. Validar `amount`/`currency` contra snapshot en webhook futuro antes de activar.
+9. Mantener facturación como flujo separado.
+10. Conectar capacidades sólo en fase posterior.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-PlanPrices-ExecutableSql-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness para convertir el draft conceptual de `subscription_plan_prices` en SQL ejecutable versionado, sin crear todavía el SQL ejecutable y sin ejecutar SQL.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
