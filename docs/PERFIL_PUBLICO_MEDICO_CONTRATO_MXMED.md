@@ -8196,6 +8196,228 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 54 — Cierre del QA de matriz auth del endpoint write contractual
+
+### A) Objetivo del QA cerrado
+Se cerró la microfase:
+
+- `QA-Suscripciones-ContractAcceptance-WriteEndpoint-AuthMatrix-01`.
+
+Resultado:
+
+- PASS sin cambios.
+
+Objetivo validado:
+
+- Validar la matriz de autenticación/autorización del endpoint write contractual.
+- Confirmar que `local_dev_open` no autoriza writes.
+- Confirmar que headers QA no autorizan writes.
+- Confirmar que sólo `session_scope` de médico principal permite llegar a negocio.
+- Confirmar que no se crean nuevas filas.
+- Confirmar que no se modifica DB local/dev.
+
+### B) Endpoint probado
+Endpoint probado:
+
+- `POST /api/subscriptions/index.php/entities/doctor/1/subscriptions`.
+
+### C) Sesión / fixture usado
+Se usó el fixture dev-only/local-only:
+
+- `POST /api/subscriptions/index.php/dev/session-fixture`.
+
+Condiciones:
+
+- Servidor local temporal: `127.0.0.1:8099`.
+- Env flag temporal: `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`.
+- Cookie PHP real creada.
+- `context/current` devolvió `session_scope`.
+- `doctor_id=1`.
+- `operator_id=null`.
+
+### D) Estado previo de DB local/dev
+Antes del QA de matriz auth:
+
+- Ya existía una suscripción activa para `doctor_id=1`.
+- `subscription_id` existente: `9700c0d5-6dc5-490b-bdb4-766dee490590`.
+- Plan/status previo: `standard / active`.
+
+Conteos antes:
+
+- `subscription_contract_acceptances=1`.
+- `profile_subscriptions=1`.
+- Aceptaciones doctor 1: `1`.
+- Suscripciones doctor 1: `1`.
+
+### E) Casos de auth validados
+Caso 1 — Sin sesión / `local_dev_open`:
+
+- HTTP `403`.
+- Error `forbidden`.
+- Mensaje `local_dev_open does not authorize writes`.
+- No hubo `201`.
+- No hubo DB writes.
+
+Caso 2 — `local_dev_open`:
+
+- HTTP `403`.
+- Error `forbidden`.
+- Mensaje `local_dev_open does not authorize writes`.
+- No hubo `201`.
+- No hubo DB writes.
+
+Caso 3 — Headers QA:
+
+- HTTP `403`.
+- Error `forbidden`.
+- Mensaje `header scope does not authorize writes`.
+- No hubo `201`.
+- No hubo DB writes.
+
+Caso 4 — `session_scope` médico principal:
+
+- HTTP `409`.
+- Error `active_subscription_exists`.
+- Sí llegó a validación de negocio.
+- Confirma que `session_scope` pasa el auth/write guard.
+- No hubo `201` porque ya existe suscripción activa.
+- No hubo DB writes.
+
+Caso 5 — Operador:
+
+- No ejecutado.
+- Motivo: no existe fixture seguro de operador sin modificar DB/archivos.
+- Simularlo con headers QA sólo probaría `header_scope`.
+- Queda pendiente únicamente si se diseña fixture/permiso operador futuro.
+
+### F) Conclusión de matriz
+Conclusiones:
+
+- Sólo `session_scope` médico principal permite llegar a negocio.
+- Sin sesión y `local_dev_open` se bloquean antes de negocio.
+- Headers QA se bloquean para write.
+- `local_dev_open` no autoriza writes.
+- El endpoint conserva separación entre QA headers de lectura y writes contractuales.
+- Operador sigue bloqueado hasta permiso/fixture seguro futuro.
+- No se relajaron guards.
+
+### G) Conteos después
+Conteos después:
+
+- `subscription_contract_acceptances=1`.
+- `profile_subscriptions=1`.
+- Aceptaciones doctor 1: `1`.
+- Suscripciones doctor 1: `1`.
+
+Delta:
+
+- Aceptaciones: `0`.
+- Suscripciones: `0`.
+
+### H) Integridad
+Integridad confirmada:
+
+- No se creó nueva aceptación.
+- No se creó nueva suscripción.
+- La suscripción existente quedó intacta.
+- La aceptación existente quedó intacta.
+- No se creó fila `free`.
+- No se creó aceptación `free`.
+- No hubo limpieza.
+
+### I) Read-model posterior
+Read-model posterior:
+
+- HTTP `200`.
+- `effective_plan_code=standard`.
+- `status=active`.
+- `starts_at` presente.
+- `expires_at` presente.
+- `contract_accepted_at` presente.
+- No volvió a `free_default`.
+- No expone evidencia legal completa.
+- No expone IP/user-agent.
+- No activa capacidades.
+
+### J) Alcance preservado
+El QA preservó explícitamente:
+
+- No frontend.
+- No `p-suscripcion` write.
+- No pagos.
+- No checkout.
+- No facturación.
+- No capacidades productivas.
+- No `PublicProfilePlanCapabilities`.
+- No perfil público.
+- No SEO.
+- No SQL DDL.
+- No cambios de schema.
+- No escritura manual por SQL.
+- No headers QA para write exitoso.
+- No guards relajados.
+- No limpieza de datos.
+
+### K) Estado funcional actual
+Estado funcional:
+
+- Endpoint write contractual ya tiene QA de éxito `201` validado.
+- Endpoint write contractual ya tiene QA de conflicto activo `409` validado.
+- Endpoint write contractual ya tiene QA de payload inválido `422` validado.
+- Endpoint write contractual ya tiene QA de matriz auth validado.
+- Doctor 1 permanece con suscripción activa local/dev.
+- Repetir QA `201` con doctor 1 ya no aplica mientras exista esa suscripción activa.
+- Futuros QA de éxito deben usar otro doctor fixture o una microfase explícita de limpieza/rollback local/dev.
+- No se deben limpiar datos sin autorización y microfase explícita.
+
+### L) Riesgos residuales
+Riesgos residuales:
+
+- Sigue pendiente idempotencia robusta con storage dedicado.
+- Doble submit concurrente sigue como riesgo residual.
+- Operador write sigue bloqueado y no validado con fixture real.
+- El fixture dev-only debe permanecer desactivado por default.
+- La suscripción local/dev no implica pago real.
+- La suscripción local/dev no implica checkout.
+- La suscripción local/dev no activa capacidades productivas.
+- Producción sigue fuera de alcance.
+
+### M) Siguiente microfase recomendada
+Preferencia de cierre:
+
+- Primero cerrar documentalmente y pushear esta adenda.
+
+Siguiente microfase recomendada después del cierre documental:
+
+- `BE/DIAG-Suscripciones-ContractAcceptance-WriteEndpoint-IdempotencyReadiness-01`.
+
+Objetivo:
+
+- Diagnosticar si conviene implementar idempotencia robusta con storage dedicado para el endpoint write contractual, considerando que ya existen mitigaciones por payload validation y conflicto activo `409`, pero sigue el riesgo de doble submit concurrente.
+
+### N) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- Nuevo QA con DB writes.
+- POST contractual.
+- Headers QA para write.
+- Relajación de guards.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
