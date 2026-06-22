@@ -58879,9 +58879,15 @@ function mxResetLogoPreview(){
     historyRefresh: pane.querySelector('[data-subp-history-refresh]'),
     devWrite: pane.querySelector('[data-subp-dev-write]'),
     devContractBtn: pane.querySelector('[data-subp-dev-contract]'),
+    devCurrent: pane.querySelector('[data-subp-dev-current]'),
     devStatus: pane.querySelector('[data-subp-dev-status]'),
-    devResult: pane.querySelector('[data-subp-dev-result]'),
     devKey: pane.querySelector('[data-subp-dev-key]'),
+    devHttp: pane.querySelector('[data-subp-dev-http]'),
+    devError: pane.querySelector('[data-subp-dev-error]'),
+    devSubscription: pane.querySelector('[data-subp-dev-subscription]'),
+    devAcceptance: pane.querySelector('[data-subp-dev-acceptance]'),
+    devReplay: pane.querySelector('[data-subp-dev-replay]'),
+    devAt: pane.querySelector('[data-subp-dev-at]'),
     billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
   };
 
@@ -59065,6 +59071,38 @@ function mxResetLogoPreview(){
     return status === 'active' && (effectivePlan !== 'free' || !!contractedPlan || model?.is_paid_plan === true);
   }
 
+  function devWriteStatusMessage(result){
+    if(!result) return '';
+    if(result.idempotent_replay){
+      return 'Replay idempotente: no se duplicó la suscripción.';
+    }
+    if(result.httpStatus === 201 && result.ok){
+      return 'Suscripción DEV creada correctamente.';
+    }
+    if(result.httpStatus === 409 && result.error === 'active_subscription_exists'){
+      return 'Ya existe una suscripción activa.';
+    }
+    if(result.httpStatus === 409 && result.error === 'idempotency_key_reused_with_different_payload'){
+      return 'La misma Idempotency-Key no puede reutilizarse con payload distinto.';
+    }
+    if(result.httpStatus === 403){
+      return 'La sesión actual no autoriza writes contractuales.';
+    }
+    if(result.httpStatus === 422){
+      return result.error ? `Error de validación: ${result.error}.` : 'Error de validación en la solicitud.';
+    }
+    if(result.error){
+      return `Respuesta controlada: ${result.error}.`;
+    }
+    return `Respuesta HTTP ${result.httpStatus}.`;
+  }
+
+  function setDevStatusClass(kind){
+    if(!els.devStatus) return;
+    els.devStatus.classList.remove('alert-secondary','alert-warning','alert-info','alert-success','alert-danger');
+    els.devStatus.classList.add(kind);
+  }
+
   function renderDevWrite(){
     if(!els.devWrite) return;
     if(!isSubscriptionLocalDevHost()){
@@ -59078,41 +59116,53 @@ function mxResetLogoPreview(){
     const endpoint = buildSubscriptionWriteEndpoint(context.entity_type, context.entity_id || context.doctor_id);
     const activePaid = hasPaidActiveSubscription(model);
     const disabled = data.devWrite.state === 'sending' || activePaid || !endpoint;
+    const entityType = clean(context.entity_type) || 'No disponible';
+    const entityId = clean(context.entity_id || context.doctor_id) || 'No disponible';
+    const doctorId = clean(context.doctor_id) || 'No disponible';
+    const effectivePlan = clean(model?.effective_plan_code) || 'No disponible';
+    const status = clean(model?.status) || 'No disponible';
+    const startsAt = formatDate(model?.starts_at);
+    const expiresAt = formatDate(model?.expires_at);
 
     if(els.devContractBtn){
       els.devContractBtn.disabled = disabled;
       els.devContractBtn.classList.toggle('disabled', disabled);
     }
+    if(els.devCurrent){
+      els.devCurrent.textContent = `Entidad: ${entityType} #${entityId} · doctor_id=${doctorId} · plan=${effectivePlan} · status=${status} · inicio=${startsAt} · fin=${expiresAt}`;
+    }
     if(els.devStatus){
       if(activePaid){
+        setDevStatusClass('alert-warning');
         els.devStatus.textContent = 'Ya existe una suscripción activa; el endpoint respondería conflicto.';
       }else if(!endpoint){
+        setDevStatusClass('alert-warning');
         els.devStatus.textContent = 'No hay contexto doctor session_scope disponible para el write DEV.';
       }else if(data.devWrite.state === 'sending'){
+        setDevStatusClass('alert-info');
         els.devStatus.textContent = 'Enviando contratación DEV con Idempotency-Key...';
+      }else if(data.devWrite.result){
+        const isSuccess = data.devWrite.result.ok === true || data.devWrite.result.idempotent_replay === true;
+        setDevStatusClass(isSuccess ? 'alert-success' : 'alert-warning');
+        els.devStatus.textContent = devWriteStatusMessage(data.devWrite.result);
+      }else if(data.devWrite.message){
+        setDevStatusClass('alert-danger');
+        els.devStatus.textContent = data.devWrite.message;
       }else{
-        els.devStatus.textContent = 'Listo para prueba DEV/local con plan standard annual.';
+        setDevStatusClass('alert-secondary');
+        els.devStatus.textContent = 'Listo para prueba DEV/local.';
       }
     }
     if(els.devKey){
-      els.devKey.textContent = data.devWrite.lastKey ? `Key DEV: ${data.devWrite.lastKey}` : '';
+      els.devKey.textContent = data.devWrite.lastKey || 'Sin intento';
     }
-    if(els.devResult){
-      const result = data.devWrite.result;
-      if(result){
-        const details = [
-          `HTTP ${result.httpStatus}`,
-          `ok=${result.ok === true ? 'true' : 'false'}`,
-          result.error ? `error=${result.error}` : '',
-          result.subscription_id ? `subscription_id=${result.subscription_id}` : '',
-          result.contract_acceptance_uuid ? `contract_acceptance_uuid=${result.contract_acceptance_uuid}` : '',
-          result.idempotent_replay ? 'idempotent_replay=true' : ''
-        ].filter(Boolean);
-        els.devResult.textContent = details.join(' · ');
-      }else{
-        els.devResult.textContent = data.devWrite.message || '';
-      }
-    }
+    const result = data.devWrite.result || {};
+    if(els.devHttp) els.devHttp.textContent = result.httpStatus ? `HTTP ${result.httpStatus}` : 'No aplica';
+    if(els.devError) els.devError.textContent = result.error || 'No aplica';
+    if(els.devSubscription) els.devSubscription.textContent = result.subscription_id || 'No aplica';
+    if(els.devAcceptance) els.devAcceptance.textContent = result.contract_acceptance_uuid || 'No aplica';
+    if(els.devReplay) els.devReplay.textContent = result.idempotent_replay ? 'Sí' : 'No';
+    if(els.devAt) els.devAt.textContent = data.devWrite.lastAttemptAt || 'Sin intento';
   }
 
   function buildReadModelFeatures(model, meta, contextInfo){
@@ -59234,7 +59284,8 @@ function mxResetLogoPreview(){
       state: 'sending',
       lastKey: key,
       message: '',
-      result: null
+      result: null,
+      lastAttemptAt: new Date().toLocaleString('es-MX')
     };
     renderDevWrite();
 
@@ -59261,7 +59312,8 @@ function mxResetLogoPreview(){
           subscription_id: payload?.data?.subscription_id || '',
           contract_acceptance_uuid: payload?.data?.contract_acceptance_uuid || '',
           idempotent_replay: payload?.meta?.idempotent_replay === true
-        }
+        },
+        lastAttemptAt: new Date().toLocaleString('es-MX')
       };
       renderDevWrite();
       await loadCurrentSubscription();
@@ -59271,7 +59323,8 @@ function mxResetLogoPreview(){
         state: 'idle',
         lastKey: key,
         message: 'Error de red al ejecutar contratación DEV.',
-        result: null
+        result: null,
+        lastAttemptAt: new Date().toLocaleString('es-MX')
       };
       renderDevWrite();
     }

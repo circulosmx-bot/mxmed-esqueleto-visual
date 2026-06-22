@@ -2969,27 +2969,46 @@
 
             <div class="card subp-card border-0 shadow-sm p-3 mt-4 d-none" data-subp-dev-write>
               <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-                <div>
+                <div class="flex-grow-1">
                   <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="material-symbols-rounded mat-ico text-warning" aria-hidden="true">developer_mode</span>
                     <div class="h6 mb-0">Contratación DEV controlada</div>
                   </div>
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <span class="badge text-bg-warning">Sólo local/dev</span>
+                    <span class="badge text-bg-light">Sin pagos</span>
+                    <span class="badge text-bg-light">Sin checkout</span>
+                    <span class="badge text-bg-light">Sin capacidades</span>
+                  </div>
                   <div class="text-muted small mb-2">
-                    DEV/local · sin pagos · sin checkout · sin facturación · sin capacidades productivas.
+                    Acción controlada para validar el write contractual con <code>Idempotency-Key</code>. No cobra, no factura y no activa capacidades productivas.
                   </div>
                   <ul class="list-unstyled small mb-2">
                     <li>Plan de prueba: <strong>standard / annual</strong></li>
                     <li>Contrato: <strong>mxmed-subscriptions-v1</strong></li>
-                    <li>Usa <code>Idempotency-Key</code> por intento.</li>
+                    <li>Key por intento: <code>mxmed-dev-subscription-*</code></li>
                   </ul>
-                  <div class="small" data-subp-dev-status>Disponible sólo en entorno local.</div>
-                  <div class="small text-muted mt-2" data-subp-dev-result></div>
+                  <div class="border rounded-3 p-2 small mb-2 bg-light" data-subp-dev-current>
+                    Contexto: pendiente de lectura.
+                  </div>
+                  <div class="alert alert-secondary py-2 px-3 small mb-2" role="status" data-subp-dev-status>
+                    Disponible sólo en entorno local.
+                  </div>
+                  <dl class="row small mb-0 text-muted" data-subp-dev-debug>
+                    <dt class="col-sm-4">Última key</dt><dd class="col-sm-8 mb-1" data-subp-dev-key>Sin intento</dd>
+                    <dt class="col-sm-4">HTTP</dt><dd class="col-sm-8 mb-1" data-subp-dev-http>No aplica</dd>
+                    <dt class="col-sm-4">Error</dt><dd class="col-sm-8 mb-1" data-subp-dev-error>No aplica</dd>
+                    <dt class="col-sm-4">Suscripción</dt><dd class="col-sm-8 mb-1" data-subp-dev-subscription>No aplica</dd>
+                    <dt class="col-sm-4">Aceptación</dt><dd class="col-sm-8 mb-1" data-subp-dev-acceptance>No aplica</dd>
+                    <dt class="col-sm-4">Replay</dt><dd class="col-sm-8 mb-1" data-subp-dev-replay>No</dd>
+                    <dt class="col-sm-4">Último intento</dt><dd class="col-sm-8 mb-0" data-subp-dev-at>Sin intento</dd>
+                  </dl>
                 </div>
                 <div class="text-end">
                   <button class="btn btn-warning btn-sm" type="button" data-subp-dev-contract>
                     Contratar Standard DEV
                   </button>
-                  <div class="small text-muted mt-2" data-subp-dev-key></div>
+                  <div class="small text-muted mt-2">Se deshabilita con suscripción activa.</div>
                 </div>
               </div>
             </div>
