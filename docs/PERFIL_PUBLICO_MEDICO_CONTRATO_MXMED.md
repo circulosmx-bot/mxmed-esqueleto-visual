@@ -10296,6 +10296,344 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 62 — Decisión de storage para checkout intents y pagos de suscripciones
+
+### A) Problema de storage
+El flujo `checkout-first` requiere storage propio.
+
+Las tablas actuales no modelan checkout ni pagos:
+
+- `profile_subscriptions` es snapshot operativo/read-model y no debe registrar intentos de pago.
+- `subscription_contract_acceptances` es evidencia legal y no debe convertirse en ledger de provider events.
+- `subscription_write_idempotency_keys` protege writes contractuales, pero no debe ser el único ledger de eventos de proveedor.
+- `subscription_plans` no tiene hoy `amount`, `currency` ni precio persistido.
+
+Por lo tanto, checkout, payment intents y payment events deben tener storage dedicado antes de cualquier SQL ejecutable o backend productivo.
+
+### B) Decisión de tablas futuras
+#### 1. `subscription_checkout_intents`
+Propósito:
+
+- Registrar intención de checkout antes del pago.
+- No activar suscripción por sí sola.
+- Guardar snapshot contractual y comercial del intento.
+
+Campos conceptuales:
+
+- `id`.
+- `uuid`.
+- `entity_type`.
+- `entity_id`.
+- `doctor_id`.
+- `profile_id`.
+- `user_id`.
+- `actor_role`.
+- `plan_code`.
+- `billing_period`.
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+- `status`.
+- `contract_version`.
+- `contract_hash`.
+- `contract_snapshot_url`.
+- `contract_acceptance_uuid` nullable.
+- `idempotency_key_hash` nullable.
+- `request_hash` nullable.
+- `provider` nullable.
+- `provider_checkout_id` nullable.
+- `provider_payment_id` nullable.
+- `checkout_url` nullable.
+- `expires_at`.
+- `completed_at`.
+- `cancelled_at`.
+- `activated_at`.
+- `subscription_id` nullable.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Estados conceptuales:
+
+- `draft`.
+- `pending_contract`.
+- `pending_payment`.
+- `payment_processing`.
+- `paid`.
+- `failed`.
+- `expired`.
+- `cancelled`.
+- `activated`.
+
+#### 2. `subscription_payment_intents`
+Propósito:
+
+- Modelar el intento de pago vivo con proveedor.
+- Guardar estado normalizado del pago.
+- Separar estado de pago del checkout intent general.
+
+Campos conceptuales:
+
+- `id`.
+- `uuid`.
+- `checkout_intent_uuid`.
+- `provider`.
+- `provider_payment_id`.
+- `provider_checkout_id` nullable.
+- `normalized_status`.
+- `provider_status`.
+- `amount_cents`.
+- `currency`.
+- `created_at_provider` nullable.
+- `expires_at`.
+- `paid_at` nullable.
+- `failed_at` nullable.
+- `cancelled_at` nullable.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Estados conceptuales:
+
+- `created`.
+- `requires_action`.
+- `processing`.
+- `paid`.
+- `failed`.
+- `cancelled`.
+- `expired`.
+- `refunded`.
+- `disputed`.
+
+#### 3. `subscription_payment_events`
+Propósito:
+
+- Ledger idempotente de eventos/webhooks del proveedor.
+- Evitar procesar dos veces el mismo webhook.
+- Guardar evidencia técnica mínima y sanitizada.
+
+Campos conceptuales:
+
+- `id`.
+- `uuid`.
+- `checkout_intent_uuid` nullable.
+- `payment_intent_uuid` nullable.
+- `provider`.
+- `provider_event_id`.
+- `provider_payment_id` nullable.
+- `event_type`.
+- `provider_status` nullable.
+- `normalized_status` nullable.
+- `amount_cents` nullable.
+- `currency` nullable.
+- `event_hash`.
+- `signature_validated_at` nullable.
+- `received_at`.
+- `processed_at` nullable.
+- `processing_status`.
+- `error_message` nullable.
+- `payload_text_sanitized` nullable.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Estados conceptuales:
+
+- `received`.
+- `ignored`.
+- `processing`.
+- `processed`.
+- `failed`.
+- `duplicate`.
+
+### C) Tabla que no se crea en v1
+No se recomienda crear `subscription_activation_log` en v1.
+
+La activación debe quedar reflejada en:
+
+- `profile_subscriptions`.
+- Relación desde checkout/payment hacia `subscription_id`.
+- `subscription_payment_events` como ledger técnico de eventos del proveedor.
+
+Si auditoría futura exige una bitácora explícita de activación, se evaluará una tabla adicional.
+
+### D) Relación con aceptación contractual
+El checkout intent debe poder relacionarse con `contract_acceptance_uuid`.
+
+Queda pendiente cerrar una decisión antes del SQL draft final:
+
+- Crear aceptación como `accepted_pending_payment`.
+- O crear/ratificar aceptación al confirmar pago.
+
+En cualquier caso:
+
+- No debe duplicarse la aceptación contractual.
+- El contrato, hash y snapshot deben quedar congelados para el checkout intent.
+- `subscription_contract_acceptances` debe seguir siendo evidencia legal, no ledger de provider events.
+
+### E) Relación con activación
+`subscription_id` debe generarse al activar después del pago confirmado, no al crear checkout.
+
+`profile_subscriptions` debe crearse o activarse sólo con pago confirmado.
+
+La activación debe ser interna, no endpoint público directo.
+
+Debe usar lock por entidad:
+
+- `mxmed:subscriptions:{entity_type}:{entity_id}:activate`.
+
+También debe:
+
+- Revalidar que no exista suscripción activa.
+- Ser idempotente frente a webhooks duplicados.
+- Relacionar la activación con checkout, payment y aceptación contractual.
+
+### F) Relación con idempotencia
+La creación de checkout intent puede usar `subscription_write_idempotency_keys` con operación nueva:
+
+- `subscriptions.checkout_intent.create`.
+
+La activación post-pago puede usar operación interna:
+
+- `subscriptions.activate_after_payment`.
+
+Los webhooks deben tener idempotencia propia en `subscription_payment_events` usando:
+
+- Unique conceptual `provider + provider_event_id`.
+- Fallback `event_hash`.
+
+No se debe reutilizar sin más `subscription_write_idempotency_keys` como ledger de eventos de proveedor.
+
+### G) Pricing snapshot
+`subscription_plans` no tiene `amount` ni `currency` hoy.
+
+Antes de checkout real se debe decidir la fuente de precio:
+
+- Columnas futuras en `subscription_plans`.
+- Tabla comercial de precios.
+- Catálogo de proveedor.
+- Configuración controlada por backend.
+
+El checkout intent debe guardar snapshot:
+
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+
+Motivo:
+
+- Auditoría.
+- Evitar cambios retroactivos si el catálogo cambia.
+- Conciliación con proveedor.
+- Reproducibilidad del contrato comercial.
+
+### H) Seguridad
+Reglas de seguridad para el storage futuro:
+
+- No guardar PAN.
+- No guardar CVV.
+- No guardar payload completo sensible.
+- Sanitizar payload si se conserva.
+- Validar firma de webhook.
+- No confiar en `amount` enviado por cliente.
+- Recalcular `amount` server-side.
+- Validar plan contractable.
+- Validar entidad, sesión y ownership.
+- Preparar rate limiting futuro.
+- Mantener logs mínimos.
+- Separar frontend checkout de activación interna.
+
+### I) Unicidad e índices conceptuales
+Para `subscription_checkout_intents`:
+
+- `uuid` unique.
+- Índice por `entity_type, entity_id, status`.
+- Índice por `user_id, status`.
+- Índice o unique por `provider_checkout_id` si aplica.
+- Índice o unique por `provider_payment_id` si aplica.
+- Índice por `status, expires_at`.
+- Índice por `subscription_id`.
+- Índice por `contract_acceptance_uuid`.
+- Índice por `created_at`.
+
+Para `subscription_payment_intents`:
+
+- `uuid` unique.
+- Índice por `checkout_intent_uuid`.
+- Unique por `provider, provider_payment_id`.
+- Índice por `normalized_status`.
+- Índice por `provider_status`.
+- Índice por `created_at`.
+
+Para `subscription_payment_events`:
+
+- `uuid` unique.
+- Unique por `provider, provider_event_id`.
+- Unique o índice por `event_hash`, según decisión final.
+- Índice por `provider_payment_id`.
+- Índice por `checkout_intent_uuid`.
+- Índice por `payment_intent_uuid`.
+- Índice por `processing_status`.
+- Índice por `received_at`.
+- Índice por `processed_at`.
+
+### J) Pendientes antes de SQL draft
+Antes de crear SQL draft deben cerrarse:
+
+- Decisión `accepted_pending_payment` vs aceptación al pagar.
+- Fuente de precio.
+- Estados definitivos.
+- Proveedor inicial o abstracción provider-agnostic.
+- Campos mínimos de provider ids.
+- Si se guarda payload sanitizado.
+- Relación exacta con `subscription_contract_acceptances`.
+- Si `subscription_plans` requiere `amount/currency` o si habrá tabla comercial de precios.
+- TTL/expiración de checkout intents.
+
+### K) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DOCS-Suscripciones-CheckoutIntent-ContractAcceptanceTimingDecision-01`.
+
+Objetivo:
+
+- Decidir si la aceptación contractual se registra como pendiente de pago al crear checkout intent o si se crea/ratifica hasta pago confirmado.
+
+Alternativa:
+
+- `DB/SPEC-Suscripciones-CheckoutIntent-SchemaDraft-01`.
+
+Sólo debe avanzar a schema draft si ya se considera suficiente la decisión de timing.
+
+### L) Límites de esta adenda
+Esta adenda no implementa:
+
+- Backend.
+- Frontend.
+- SQL.
+- SQL draft.
+- DDL.
+- Cambios de schema.
+- Checkout.
+- Pagos.
+- Webhooks.
+- Proveedor de pago.
+- Facturación.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Perfil público.
+- SEO.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
