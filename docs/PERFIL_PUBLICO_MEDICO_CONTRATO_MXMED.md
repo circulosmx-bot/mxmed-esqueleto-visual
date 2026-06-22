@@ -7532,6 +7532,260 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 51 — Cierre del QA 201 con sesión real del endpoint write contractual
+
+### A) Objetivo del QA cerrado
+Se cerró la microfase:
+
+- `QA-Suscripciones-ContractAcceptance-WriteEndpoint-SessionScope-Success-01`.
+
+Resultado:
+
+- PASS.
+
+Objetivo validado:
+
+- Validar el endpoint write contractual con sesión real `session_scope`.
+- Confirmar que el endpoint crea aceptación contractual y suscripción operativa.
+- Confirmar que ambas filas comparten el mismo `subscription_id`.
+- Confirmar que el read-model cambia de `free_default` a plan pagado activo.
+- Confirmar que el QA fue ejecutado únicamente en DB local/dev.
+
+### B) Endpoint probado
+Endpoint probado:
+
+- `POST /api/subscriptions/index.php/entities/doctor/1/subscriptions`.
+
+Alcance:
+
+- Ejecución local/dev controlada.
+- Sin frontend.
+- Sin pagos.
+- Sin checkout.
+- Sin capacidades productivas.
+
+### C) Sesión usada
+Se usó el fixture dev-only/local-only:
+
+- `POST /api/subscriptions/index.php/dev/session-fixture`.
+
+Condiciones de sesión:
+
+- Servidor local temporal: `127.0.0.1:8099`.
+- Env flag temporal: `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`.
+- Cookie PHP real creada.
+- `context/current` devolvió `session_scope`.
+- `doctor_id=1`.
+- `operator_id=null`.
+- No se usaron headers QA para write.
+- No se relajaron guards.
+
+### D) Payload usado
+Payload conceptual usado:
+
+```json
+{
+  "plan_code": "standard",
+  "billing_period": "annual",
+  "contract": {
+    "version": "mxmed-subscriptions-v1",
+    "hash": "sha256:qa-local-dev-contract-placeholder",
+    "snapshot_url": "/legal/subscriptions/mxmed-subscriptions-v1.html",
+    "title": "Contrato de suscripción México Médico"
+  },
+  "acceptance": {
+    "source": "panel_subscription"
+  }
+}
+```
+
+Campos no enviados:
+
+- `subscription_id`.
+- `starts_at`.
+- `expires_at`.
+- `status`.
+- `accepted_by_user_id`.
+- `accepted_by_actor_role`.
+- `accepted_by_operator_id`.
+- `ip_address`.
+- `user_agent`.
+- `duration_days`.
+- `price`.
+- `capabilities`.
+- `source` interno.
+- `deleted_at`.
+- `contract_acceptance_uuid`.
+
+### E) Resultado HTTP
+Resultado del POST contractual:
+
+- HTTP `201`.
+- `ok=true`.
+- `meta.source=subscriptions_write_v1`.
+- `meta.auth_mode=session_scope`.
+
+La respuesta no expuso:
+
+- IP.
+- User-agent.
+- Evidencia legal completa.
+- Capacidades.
+- Datos sensibles.
+
+### F) Identificadores creados
+Identificadores creados en DB local/dev:
+
+- `subscription_id`: `9700c0d5-6dc5-490b-bdb4-766dee490590`.
+- `contract_acceptance_uuid`: `e25d09de-1e54-45c5-95ae-3b0637151d20`.
+
+Estos identificadores pertenecen únicamente al entorno local/dev usado en el QA.
+
+### G) Conteos DB local/dev
+Conteos antes:
+
+- `subscription_contract_acceptances=0`.
+- `profile_subscriptions=0`.
+- Aceptaciones doctor 1: `0`.
+- Suscripciones doctor 1: `0`.
+
+Conteos después:
+
+- `subscription_contract_acceptances=1`.
+- `profile_subscriptions=1`.
+- Aceptaciones doctor 1: `1`.
+- Suscripciones doctor 1: `1`.
+
+Delta:
+
+- Aceptación contractual: `+1`.
+- Suscripción operativa: `+1`.
+
+### H) Validación de filas
+Aceptación contractual validada:
+
+- `entity_type=doctor`.
+- `entity_id=1`.
+- `doctor_id=1`.
+- `plan_code=standard`.
+- `billing_period=annual`.
+- `duration_days=365`.
+- `contract_version=mxmed-subscriptions-v1`.
+- `contract_hash` con prefijo `sha256:`.
+- `contract_snapshot_url` presente.
+- `accepted_by_user_id` presente.
+- `accepted_by_actor_role=doctor`.
+- `accepted_by_operator_id=null`.
+- `acceptance_source=panel_subscription`.
+- `status=accepted`.
+- `deleted_at=null`.
+
+Suscripción operativa validada:
+
+- Mismo `subscription_id`.
+- Plan `standard`.
+- Billing `annual`.
+- Status `active`.
+- `starts_at` presente.
+- `expires_at` presente.
+- `contract_accepted_at` presente.
+- `contract_version` presente.
+- `contract_acceptance_source=panel_subscription`.
+- `deleted_at=null`.
+
+### I) Read-model
+Read-model antes:
+
+- `effective_plan_code=free`.
+- `status=free_default`.
+
+Read-model después:
+
+- `effective_plan_code=standard`.
+- `status=active`.
+- `starts_at` presente.
+- `expires_at` presente.
+- `contract_accepted_at` presente.
+- Ya no es `free_default`.
+
+### J) Alcance preservado
+El QA preservó explícitamente:
+
+- No frontend.
+- No `p-suscripcion` write.
+- No pagos.
+- No checkout.
+- No facturación.
+- No capacidades productivas.
+- No `PublicProfilePlanCapabilities`.
+- No perfil público.
+- No SEO.
+- No filas `free`.
+- No aceptación `free`.
+- No limpieza de datos.
+- No SQL DDL.
+- No cambios de schema.
+- No escritura manual por SQL.
+- No headers QA para write.
+- No guards relajados.
+
+### K) Estado de DB local/dev
+Estado posterior:
+
+- La DB local/dev quedó modificada por el endpoint contractual de forma esperada.
+- No hubo cambios Git durante el QA.
+- No se debe limpiar ni borrar la evidencia sin microfase explícita.
+- El doctor 1 ahora tiene una suscripción activa local/dev.
+- Futuros QA sobre doctor 1 pueden recibir `409` si intentan crear otra suscripción activa.
+
+### L) Riesgos residuales
+Riesgos residuales:
+
+- No hay idempotencia robusta con storage dedicado.
+- Doble submit concurrente sigue como riesgo residual.
+- El fixture dev-only debe permanecer desactivado por default.
+- La suscripción creada no implica pago real.
+- La suscripción creada no implica checkout.
+- La suscripción creada no activa capacidades productivas.
+- Producción sigue fuera de alcance.
+- Si se requiere repetir QA `201`, se debe elegir otro fixture o diseñar limpieza local/dev explícita.
+
+### M) Siguiente microfase recomendada
+Preferencia de cierre:
+
+- Primero cerrar documentalmente y pushear esta adenda.
+
+Siguiente microfase recomendada después del cierre documental:
+
+- `QA-Suscripciones-ContractAcceptance-WriteEndpoint-ActiveConflict-01`.
+
+Objetivo:
+
+- Validar que, después de existir una suscripción activa para doctor 1 en local/dev, un segundo POST contractual controlado con la misma sesión devuelva `409` y no cree una segunda aceptación ni una segunda suscripción.
+
+### N) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- Nuevo QA con DB writes.
+- Nuevo POST contractual `201`.
+- Headers QA para write.
+- Relajación de guards.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
