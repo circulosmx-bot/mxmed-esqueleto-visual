@@ -8418,6 +8418,391 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 55 — Diseño de idempotencia del endpoint write contractual
+
+### A) Problema a resolver
+El endpoint write contractual ya funciona para el flujo normal:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/subscriptions`.
+- Ya cuenta con QA de éxito `201`.
+- Ya cuenta con QA de conflicto activo `409`.
+- Ya cuenta con QA de payload inválido `422`.
+- Ya cuenta con QA de matriz auth.
+- Ya inserta aceptación contractual y suscripción operativa en una sola transacción.
+- Ya ejecuta rollback ante fallo transaccional.
+
+Riesgo pendiente:
+
+- Falta idempotencia robusta.
+- `409 active_subscription_exists` protege reintentos secuenciales después de existir una suscripción activa.
+- `409 active_subscription_exists` no cubre completamente doble submit concurrente.
+- Existe ventana si dos requests concurrentes pasan la consulta de suscripción activa antes del commit.
+- Sin idempotencia, un cliente que reintenta tras timeout no sabe si el primer request completó.
+- Antes de conectar UI write, pagos o checkout, conviene definir idempotencia robusta.
+
+### B) Objetivo de idempotencia
+La idempotencia debe permitir:
+
+- Evitar duplicar aceptación contractual.
+- Evitar duplicar `profile_subscriptions`.
+- Permitir reintentos seguros del mismo request.
+- Responder de forma estable a replays.
+- Detectar misma key con payload distinto.
+- Bloquear o controlar requests en estado `processing`.
+- Mantener trazabilidad sin guardar datos sensibles innecesarios.
+- Preparar una base compatible con futuro checkout/pagos.
+
+### C) Header recomendado
+Header recomendado:
+
+- `Idempotency-Key`.
+
+Reglas sugeridas:
+
+- Recomendado para v1 backend.
+- Obligatorio antes de UI write, pagos o checkout productivo.
+- Debe ser string.
+- Debe tener longitud mínima y máxima razonable.
+- Debe aceptar valores generados por cliente, preferentemente UUID v4.
+- Debe rechazarse si contiene caracteres peligrosos.
+- No debe contener datos sensibles.
+- No debe reutilizarse entre entidades, usuarios u operaciones distintas.
+
+### D) Scope recomendado
+La key debe estar acotada por:
+
+- `user_id`.
+- `entity_type`.
+- `entity_id`.
+- `doctor_id`.
+- Operación: `subscriptions.create_with_contract_acceptance`.
+- Actor role.
+
+Reglas:
+
+- Una key usada por otro usuario no debe aplicar.
+- Una key usada para otra entidad no debe aplicar.
+- Una key usada para otro endpoint no debe aplicar.
+- El scope evita replay indebido entre actores.
+
+### E) Request hash
+El backend debe calcular un hash del request canonicalizado.
+
+Debe incluir:
+
+- Ruta/acción.
+- `entity_type`.
+- `entity_id`.
+- `user_id`.
+- `plan_code`.
+- `billing_period`.
+- `contract.version`.
+- `contract.hash`.
+- `contract.snapshot_url`.
+- `acceptance.source`.
+
+Debe excluir:
+
+- Fechas generadas por backend.
+- IP.
+- User-agent.
+- `subscription_id`.
+- Campos prohibidos.
+- Datos sensibles.
+
+Reglas:
+
+- Usar hash tipo `sha256`.
+- El request hash permite detectar replay del mismo payload.
+- El request hash permite detectar la misma key con payload distinto.
+- No guardar payload completo si basta con guardar hash canonicalizado.
+
+### F) Comportamiento de replay
+Primera vez con key válida:
+
+- Crear registro de idempotencia en estado `processing`.
+- Ejecutar transacción contractual.
+- Crear aceptación contractual.
+- Crear `profile_subscriptions`.
+- Guardar referencias:
+  - `subscription_id`.
+  - `contract_acceptance_uuid`.
+  - HTTP status.
+  - Estado `completed`.
+- Responder `201`.
+
+Misma key + mismo payload + `completed`:
+
+- No crear filas nuevas.
+- Devolver la misma respuesta o reconstruirla desde referencias.
+- HTTP recomendado: `200` o `201` repetido, según decisión futura.
+- La decisión debe ser consistente y documentada antes de implementar.
+
+Misma key + payload distinto:
+
+- Rechazar.
+- HTTP recomendado: `409 idempotency_key_reused_with_different_payload`.
+- Alternativa posible: `422` si se decide tratarlo como payload inválido.
+- Preferencia inicial: `409`.
+
+Misma key en estado `processing`:
+
+- No iniciar segunda transacción.
+- Responder `409 request_already_processing`.
+- Alternativa posible: `425 Too Early`.
+- Preferencia inicial: `409`.
+
+Key expirada:
+
+- Requiere decisión explícita.
+- Si existe operación completada, conviene seguir devolviendo referencia mientras esté disponible.
+- Si expiró sin completar, marcar `expired` y exigir nueva key.
+- No reutilizar silenciosamente la misma key vencida sin decisión de producto/seguridad.
+
+### G) Storage recomendado
+Tabla sugerida:
+
+- `subscription_write_idempotency_keys`.
+
+Campos conceptuales mínimos:
+
+- `id BIGINT UNSIGNED AUTO_INCREMENT`.
+- `idempotency_key VARCHAR(128) NOT NULL`.
+- `request_hash CHAR(64) NOT NULL`.
+- `entity_type VARCHAR(64) NOT NULL`.
+- `entity_id VARCHAR(64) NOT NULL`.
+- `doctor_id VARCHAR(64) NULL`.
+- `user_id BIGINT UNSIGNED NOT NULL`.
+- `actor_role VARCHAR(32) NULL`.
+- `operation VARCHAR(96) NOT NULL`.
+- `status VARCHAR(32) NOT NULL`.
+- `subscription_id CHAR(36) NULL`.
+- `contract_acceptance_uuid CHAR(36) NULL`.
+- `response_http_status SMALLINT UNSIGNED NULL`.
+- `response_body_json JSON NULL` o `TEXT NULL`, según compatibilidad DB.
+- `locked_at DATETIME NULL`.
+- `completed_at DATETIME NULL`.
+- `expires_at DATETIME NOT NULL`.
+- `created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`.
+- `updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`.
+- `deleted_at DATETIME NULL`.
+
+Estados conceptuales:
+
+- `processing`.
+- `completed`.
+- `failed`.
+- `expired`.
+- `cancelled`.
+
+### H) Índices y unicidad sugeridos
+Unique recomendado por scope:
+
+- `idempotency_key`.
+- `user_id`.
+- `entity_type`.
+- `entity_id`.
+- `operation`.
+
+Alternativa:
+
+- Unique por hash de scope si los índices largos preocupan.
+
+Índices sugeridos:
+
+- `status`.
+- `expires_at`.
+- `entity_type, entity_id`.
+- `doctor_id`.
+- `subscription_id`.
+- `contract_acceptance_uuid`.
+- `created_at`.
+
+Regla:
+
+- No definir índices ni DDL todavía sin microfase DB específica.
+
+### I) Guardado de response
+Opción A — guardar response completa sanitizada:
+
+- Ventaja: replay exacto.
+- Ventaja: comportamiento consistente.
+- Riesgo: guardar datos innecesarios.
+- Riesgo: compatibilidad `JSON`/`TEXT`.
+- Riesgo: cuidado adicional con datos sensibles.
+
+Opción B — guardar sólo referencias y reconstruir respuesta:
+
+- Ventaja: menos datos.
+- Ventaja: menos riesgo de exponer información.
+- Riesgo: la respuesta reconstruida puede variar si cambia el read-model.
+
+Recomendación v1:
+
+- Guardar referencias + HTTP status.
+- Guardar response sanitizada sólo si se requiere replay exacto.
+- Nunca guardar IP/user-agent si no es necesario.
+- Nunca guardar payload completo.
+- Guardar `request_hash` en lugar de payload.
+
+### J) TTL y limpieza
+TTL sugerido:
+
+- 24 horas para QA/local/dev.
+- 24 horas a 7 días para producción, según decisión futura de checkout.
+
+Reglas:
+
+- `expires_at` debe ser obligatorio.
+- Cleanup futuro debe vivir en job separado.
+- No borrar registros activos manualmente.
+- Expirar lógicamente antes de limpieza física.
+- `deleted_at` queda reservado para soft delete administrativo/controlado.
+
+### K) Integración transaccional futura
+Flujo sugerido:
+
+1. Validar auth/write guard.
+2. Validar payload básico.
+3. Validar `Idempotency-Key`.
+4. Calcular scope y request hash.
+5. Intentar crear registro idempotency `processing`.
+6. Si hay unique collision:
+   - leer registro existente;
+   - comparar scope/hash/status;
+   - responder replay, conflict o processing.
+7. Ejecutar transacción contractual.
+8. Crear aceptación contractual.
+9. Crear `profile_subscriptions`.
+10. Guardar referencias en registro idempotency.
+11. Marcar `completed`.
+12. Responder.
+13. Si falla:
+   - rollback contractual;
+   - marcar `failed` o liberar según decisión;
+   - no dejar `processing` colgado sin TTL.
+
+### L) Alternativas evaluadas
+Mantener mitigación actual:
+
+- Ventaja: no toca schema.
+- Riesgo: no cubre doble submit concurrente.
+- Estado: aceptable temporalmente local/dev sin UI/pagos.
+
+Lock transaccional / `SELECT FOR UPDATE`:
+
+- Puede ayudar.
+- Requiere fila bloqueable.
+- Bloquear ausencia de fila es delicado.
+- No sustituye replay semántico.
+
+Advisory lock MySQL `GET_LOCK`:
+
+- Puede mitigar concurrencia.
+- Es menos auditable.
+- Depende de conexión/timeouts.
+- No resuelve replay tras timeout.
+
+Unique compuesto por entidad/status:
+
+- MySQL/MariaDB no tiene unique parcial simple.
+- Requeriría columna auxiliar/generada o diseño adicional.
+- Puede ayudar a integridad.
+- No resuelve replay de cliente.
+
+Tabla de idempotencia dedicada:
+
+- Más robusta.
+- Auditable.
+- Preparada para checkout.
+- Requiere diseño DB y QA.
+- Opción recomendada.
+
+### M) Relación con frontend, pagos y checkout
+Reglas:
+
+- `p-suscripcion` debe seguir read-only hasta decisión explícita.
+- Cuando exista UI write, frontend debe enviar `Idempotency-Key`.
+- Antes de pagos/checkout productivo conviene tener idempotencia robusta.
+- La idempotencia no debe activar capacidades.
+- La idempotencia no debe conectar pagos.
+- La idempotencia debe poder enlazar en el futuro con checkout intent/payment intent.
+- No diseñar cobros todavía.
+
+### N) Seguridad
+Reglas de seguridad:
+
+- La key debe ligarse a usuario y entidad.
+- No permitir replay entre usuarios.
+- No permitir replay entre entidades.
+- No guardar datos sensibles.
+- No guardar payload completo.
+- Validar formato y longitud.
+- Rate limit futuro recomendado.
+- No confiar en la key para auth.
+- Auth/session debe validarse antes de idempotencia.
+- Si cambia sesión/actor, la key no debe aplicar.
+
+### O) QA futuro
+Checklist mínimo:
+
+- Sin key.
+- Key inválida.
+- Primera request con key válida.
+- Misma key + mismo payload.
+- Misma key + payload distinto.
+- Misma key en `processing`.
+- Key expirada.
+- Falla durante inserción de aceptación.
+- Falla durante inserción de suscripción.
+- Rollback completo.
+- No doble fila en `subscription_contract_acceptances`.
+- No doble fila en `profile_subscriptions`.
+- Dos requests concurrentes.
+- Replay no expone datos sensibles.
+- Auth sigue bloqueando `local_dev_open`.
+- Auth sigue bloqueando headers QA para write.
+
+### P) Decisión recomendada
+Decisión:
+
+- No implementar idempotencia directa todavía.
+- Documentar primero el storage exacto antes de tocar schema/backend.
+- La mitigación actual es aceptable temporalmente en local/dev sin UI/pagos.
+- No llevar a checkout/productivo sin resolver idempotencia o lock robusto.
+
+Siguiente paso seguro:
+
+- `DB/DIAG-Suscripciones-ContractAcceptance-IdempotencyStorageDecision-01`.
+
+Objetivo:
+
+- Diagnosticar el storage exacto de idempotencia, tipos, índices, unicidad, TTL, `JSON`/`TEXT` y compatibilidad MySQL/MariaDB antes de crear SQL draft.
+
+### Q) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Migrations.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- POST contractual.
+- QA con DB writes.
+- Headers QA para write.
+- Relajación de guards.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
