@@ -10876,6 +10876,169 @@ Tampoco conecta:
 - Capacidades productivas.
 - `PublicProfilePlanCapabilities`.
 
+## Adenda PP-Decisiones 64 — Cierre del draft SQL de checkout y pagos de suscripciones
+
+### A) Microfase cerrada
+Microfase cerrada:
+
+- `DB/SPEC-Suscripciones-CheckoutIntent-SchemaDraft-01`.
+
+Commit del draft:
+
+- `3dcc6d6 db(suscripciones): agrega draft de checkout y pagos`.
+
+Archivo creado:
+
+- `modules/profiles/db/2026_06_22_create_subscription_checkout_intents_draft.sql`.
+
+### B) Alcance del draft
+El archivo creado es un SQL draft conceptual para el storage futuro del flujo checkout-first de suscripciones productivas.
+
+Define conceptualmente tres tablas futuras:
+
+#### 1. `subscription_checkout_intents`
+Propósito:
+
+- Registrar intención de checkout.
+- No activar suscripción por sí sola.
+- Guardar snapshot contractual/comercial.
+- Relacionar aceptación pendiente mediante `contract_acceptance_uuid`.
+- Guardar pricing snapshot:
+  - `amount_cents`.
+  - `currency`.
+  - `price_source`.
+  - `price_version`.
+- Guardar `subscription_id` nullable para llenarse al activar.
+
+#### 2. `subscription_payment_intents`
+Propósito:
+
+- Modelar intento de pago vivo con proveedor.
+- Guardar `provider_payment_id`.
+- Guardar `provider_checkout_id` si aplica.
+- Guardar status normalizado y status del proveedor.
+- Separar estado de pago del checkout intent general.
+
+#### 3. `subscription_payment_events`
+Propósito:
+
+- Ser ledger idempotente de webhooks/eventos del proveedor.
+- Evitar reprocesar eventos.
+- Usar:
+  - `provider + provider_event_id`.
+  - `event_hash`.
+- Guardar payload sanitizado opcional:
+  - `payload_text_sanitized`.
+- No guardar datos sensibles de tarjeta.
+
+### C) Decisiones respetadas
+El draft respeta las decisiones previas:
+
+- Flujo checkout-first.
+- Aceptación contractual pendiente `accepted_pending_payment`.
+- No crear `profile_subscriptions` hasta pago confirmado.
+- No alterar `subscription_contract_acceptances` en v1.
+- No crear `subscription_activation_log` en v1.
+- `subscription_id` se genera al activar.
+- Activación futura con lock:
+  - `mxmed:subscriptions:{entity_type}:{entity_id}:activate`.
+- Webhook idempotente por provider event.
+- Pricing snapshot obligatorio.
+- Sin FKs reales en v1.
+- Sin `ENUM`.
+- Sin `CHECK`.
+- Sin `JSON`.
+- Sin seeds.
+- Sin `INSERT`.
+- Sin `ALTER`/`DROP`.
+- Engine/collation:
+  - InnoDB / `utf8mb4_unicode_ci`.
+
+### D) Estado explícito después del cierre
+Estado del bloque:
+
+- SQL draft creado y versionado.
+- SQL draft validado en pending diff.
+- No SQL ejecutado.
+- No DB/schema modificado.
+- No tablas reales creadas.
+- No SQL ejecutable final creado.
+- No backend modificado.
+- No frontend modificado.
+- No checkout implementado.
+- No pagos conectados.
+- No webhooks implementados.
+- No facturación conectada.
+- No capacidades activadas.
+- No `PublicProfilePlanCapabilities`.
+- No perfil público.
+- No SEO.
+
+### E) Relación con decisiones anteriores
+Esta adenda cierra el draft derivado de:
+
+- PP-Decisiones 61 — Decisión de flujo checkout-first para suscripciones productivas.
+- PP-Decisiones 62 — Decisión de storage para checkout intents y pagos de suscripciones.
+- PP-Decisiones 63 — Decisión de timing de aceptación contractual en checkout-first.
+
+### F) Pendientes antes de ejecución real
+Antes de crear o ejecutar SQL real faltan:
+
+- Convertir draft a SQL ejecutable en microfase posterior.
+- QA de SQL ejecutable.
+- Ejecución local/dev controlada.
+- Definir proveedor de pago real.
+- Definir fuente real de precio.
+- Definir adapter de provider.
+- Definir webhook y firma.
+- Definir endpoint `checkout-intents`.
+- Definir activación interna post-pago.
+- Definir TTL/cleanup de checkout intents.
+- Definir facturación.
+- Definir activación de capacidades en fase posterior.
+
+### G) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-CheckoutIntent-ExecutableSql-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness para convertir el draft de checkout/payment en SQL ejecutable, sin ejecutar SQL todavía.
+
+Motivo:
+
+- El storage conceptual ya existe y fue validado como pending diff. Antes de especificar endpoints o provider adapters conviene confirmar que el draft puede convertirse en SQL ejecutable de forma controlada, manteniendo el límite de no ejecutar DDL todavía.
+
+Alternativa si se prioriza contrato backend antes de SQL:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-Endpoint-01`.
+
+Objetivo:
+
+- Especificar endpoint futuro de checkout intent sin implementarlo.
+
+### H) Límites de esta adenda
+Esta adenda no modifica:
+
+- Backend.
+- Frontend.
+- SQL.
+- DB/schema.
+- Datos.
+
+Tampoco implementa ni conecta:
+
+- Checkout.
+- Pagos.
+- Webhooks.
+- Proveedor de pago.
+- Facturación.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Perfil público.
+- SEO.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
