@@ -10634,6 +10634,250 @@ Esta adenda no implementa:
 
 ---
 
+## Adenda PP-Decisiones 63 — Decisión de timing de aceptación contractual en checkout-first
+
+### A) Problema
+En el flujo `checkout-first`, el usuario puede aceptar el contrato antes de pagar.
+
+La suscripción no debe activarse hasta que exista pago confirmado.
+
+Debe decidirse si la aceptación contractual se registra:
+
+- Al iniciar checkout.
+- O hasta que el pago se confirme.
+
+La decisión impacta:
+
+- Evidencia legal.
+- Abandono de checkout.
+- Pagos tardíos.
+- Duplicados.
+- Auditoría.
+- Relación con `subscription_checkout_intents`.
+- Relación con `profile_subscriptions`.
+
+### B) Opciones evaluadas
+#### 1. Crear aceptación contractual al iniciar checkout como `accepted_pending_payment`
+Descripción:
+
+- Al crear checkout intent, se registra aceptación contractual.
+- La aceptación queda asociada al checkout intent.
+- La suscripción operativa todavía no se crea ni se activa.
+- `profile_subscriptions` se crea sólo después de pago confirmado.
+
+Ventajas:
+
+- Captura evidencia del consentimiento en el momento exacto en que el usuario acepta.
+- Permite auditar abandono de checkout.
+- Congela versión, hash y snapshot del contrato antes del pago.
+- Facilita conciliación entre contrato aceptado y pago posterior.
+
+Riesgos:
+
+- Puede haber aceptaciones sin pago.
+- Requiere estado claro para no confundir aceptación legal con suscripción activa.
+- Requiere expiración/cancelación del checkout intent.
+- Debe evitarse que una aceptación pendiente se interprete como plan activo.
+
+#### 2. Crear o ratificar aceptación hasta pago confirmado
+Descripción:
+
+- Durante checkout se conserva snapshot contractual en `subscription_checkout_intents`.
+- La aceptación formal se crea sólo cuando el pago se confirma.
+
+Ventajas:
+
+- Evita aceptaciones sin pago.
+- Mantiene `subscription_contract_acceptances` sólo con operaciones completadas.
+
+Riesgos:
+
+- Puede perder evidencia exacta del momento en que el usuario aceptó antes de pagar.
+- Si el pago se confirma por webhook, la aceptación podría quedar registrada por backend, no por acto directo del usuario.
+- Requiere confiar en snapshot/metadata del checkout intent para reconstruir consentimiento.
+
+#### 3. Doble etapa: acceptance event pendiente + ratificación al pagar
+Descripción:
+
+- Registrar aceptación al iniciar checkout como pendiente.
+- Al confirmar pago, ratificar o enlazar esa aceptación a la suscripción activada.
+
+Ventajas:
+
+- Conserva evidencia del acto de aceptación.
+- Permite distinguir aceptación pendiente vs activada.
+- Encaja con checkout-first.
+
+Riesgos:
+
+- Requiere estados adicionales.
+- Requiere claridad de schema y read-model.
+- Requiere no duplicar aceptaciones.
+
+### C) Decisión
+Adoptar modelo de aceptación contractual pendiente al crear checkout intent.
+
+Decisión:
+
+- Registrar aceptación como `accepted_pending_payment` o estado equivalente.
+- Asociarla a `subscription_checkout_intents`.
+- No crear ni activar `profile_subscriptions` en ese momento.
+- Mantener la misma `contract_acceptance_uuid` al confirmar pago si la aceptación pendiente es válida.
+- No duplicar aceptación contractual al activar.
+
+Al confirmar pago:
+
+- Activar suscripción.
+- Enlazar `subscription_id`.
+- Marcar checkout intent como `activated`.
+- Mantener trazabilidad entre checkout, pago, aceptación y suscripción.
+
+Si el checkout expira, se cancela o falla:
+
+- La aceptación queda como evidencia de intento abandonado/cancelado.
+- No se interpreta como suscripción activa.
+- Debe quedar vinculada al checkout intent y su estado final.
+
+El read-model de suscripción no debe tomar `accepted_pending_payment` como plan activo.
+
+### D) Cambios conceptuales necesarios
+En fases futuras se requiere extender o acordar estados para `subscription_contract_acceptances`, por ejemplo:
+
+- `accepted`.
+- `accepted_pending_payment`.
+- `cancelled`.
+- `expired`.
+
+También se requiere:
+
+- Relacionar `subscription_checkout_intents.contract_acceptance_uuid`.
+- Asegurar que `profile_subscriptions` sólo se crea tras pago confirmado.
+- Asegurar que el read-model sólo usa `profile_subscriptions`, no aceptación pendiente.
+- Asegurar idempotencia: una aceptación pendiente por checkout intent.
+- Asegurar que replay no duplique aceptación.
+- Asegurar lock de activación:
+  - `mxmed:subscriptions:{entity_type}:{entity_id}:activate`.
+
+### E) Flujo futuro conceptual
+1. Usuario selecciona plan y acepta contrato.
+2. Backend crea `subscription_checkout_intent`.
+3. Backend registra aceptación contractual en estado pendiente de pago.
+4. Backend inicia payment intent/provider.
+5. Usuario paga o abandona.
+6. Webhook confirma pago.
+7. Backend valida firma e idempotencia de evento.
+8. Backend toma lock de activación.
+9. Backend revalida que no exista suscripción activa.
+10. Backend crea `profile_subscriptions`.
+11. Backend enlaza `subscription_id` a checkout intent y aceptación.
+12. Backend marca checkout intent `activated`.
+13. Capacidades quedan para fase posterior.
+
+### F) Estados recomendados
+Para `subscription_checkout_intents`:
+
+- `pending_contract`.
+- `pending_payment`.
+- `payment_processing`.
+- `paid`.
+- `failed`.
+- `expired`.
+- `cancelled`.
+- `activated`.
+
+Para `subscription_contract_acceptances`:
+
+- `accepted_pending_payment`.
+- `accepted`.
+- `expired`.
+- `cancelled`.
+
+Si el schema actual no soporta estos estados, se diseñará en SQL draft futuro.
+
+No se implementa ahora.
+
+### G) Casos a considerar
+El diseño futuro debe cubrir:
+
+1. Usuario acepta contrato pero abandona pago.
+2. Checkout expira.
+3. Pago se confirma tarde.
+4. Pago falla.
+5. Usuario reintenta checkout con mismo plan.
+6. Usuario cambia de plan antes de pagar.
+7. Ya existe suscripción activa al llegar webhook.
+8. Webhook llega duplicado.
+9. Provider confirma pago pero checkout intent está expirado.
+10. Contrato cambia entre aceptación pendiente y pago.
+
+### H) Seguridad y auditoría
+Reglas:
+
+- Guardar contrato version/hash/snapshot en checkout intent.
+- Guardar `accepted_at`, `user_id`, `actor_role` y `source`.
+- No guardar datos sensibles de pago en aceptación.
+- No mezclar evidencia legal con payload de proveedor.
+- Validar que aceptación pendiente no active capacidades.
+- Mantener trazabilidad del estado final del checkout.
+- Mantener `subscription_contract_acceptances` como evidencia legal, no como ledger técnico de webhooks.
+
+### I) Restricciones
+Esta decisión no implementa:
+
+- Checkout.
+- Pagos.
+- Webhooks.
+- Cambios de schema.
+- SQL.
+- SQL draft.
+- Backend.
+- Frontend.
+- Activación sin pago.
+- Facturación.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Perfil público.
+- SEO.
+
+### J) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB/DIAG-Suscripciones-ContractAcceptance-StatusExtensionReadiness-01`.
+
+Objetivo:
+
+- Diagnosticar si `subscription_contract_acceptances.status` y campos actuales soportan `accepted_pending_payment`, `expired`, `cancelled` sin romper datos existentes.
+
+Motivo:
+
+- La decisión de timing depende de estados de aceptación contractual. Conviene validar compatibilidad del storage actual antes de crear SQL draft de checkout intents.
+
+Siguiente alternativa, después de esa validación:
+
+- `DB/SPEC-Suscripciones-CheckoutIntent-SchemaDraft-01`.
+
+Objetivo:
+
+- Crear SQL draft conceptual para `subscription_checkout_intents`, `subscription_payment_intents` y `subscription_payment_events`, incorporando aceptación pendiente de pago y activación post-pago, sin ejecutar SQL.
+
+### K) Límites de esta adenda
+Esta adenda no modifica:
+
+- Backend.
+- Frontend.
+- SQL.
+- DB/schema.
+- Datos.
+
+Tampoco conecta:
+
+- Proveedor de pago.
+- Facturación.
+- Capacidades productivas.
+- `PublicProfilePlanCapabilities`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
