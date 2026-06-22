@@ -7982,6 +7982,220 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 53 — Cierre del QA de payload inválido del endpoint write contractual
+
+### A) Objetivo del QA cerrado
+Se cerró la microfase:
+
+- `QA-Suscripciones-ContractAcceptance-WriteEndpoint-InvalidPayload-01`.
+
+Resultado:
+
+- PASS sin cambios.
+
+Objetivo validado:
+
+- Validar que el endpoint write contractual rechaza payloads inválidos.
+- Confirmar respuestas `422`.
+- Confirmar que no se crean nuevas aceptaciones contractuales.
+- Confirmar que no se crean nuevas suscripciones operativas.
+- Confirmar que el read-model permanece en `standard active`.
+- Confirmar que no se activan pagos, capacidades ni frontend.
+
+### B) Endpoint probado
+Endpoint probado:
+
+- `POST /api/subscriptions/index.php/entities/doctor/1/subscriptions`.
+
+### C) Sesión usada
+Se usó el fixture dev-only/local-only:
+
+- `POST /api/subscriptions/index.php/dev/session-fixture`.
+
+Condiciones:
+
+- Servidor local temporal: `127.0.0.1:8099`.
+- Env flag temporal: `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`.
+- Cookie PHP real creada.
+- `context/current` devolvió `session_scope`.
+- `doctor_id=1`.
+- `operator_id=null`.
+- No se usaron headers QA para write.
+
+### D) Estado previo de DB local/dev
+Antes del QA de payload inválido:
+
+- Ya existía una suscripción activa para `doctor_id=1`.
+- `subscription_id` existente: `9700c0d5-6dc5-490b-bdb4-766dee490590`.
+- Plan/status previo: `standard / active`.
+
+Conteos antes:
+
+- `subscription_contract_acceptances=1`.
+- `profile_subscriptions=1`.
+- Aceptaciones doctor 1: `1`.
+- Suscripciones doctor 1: `1`.
+
+### E) Casos probados y resultados
+Caso 1 — `plan_code=free`:
+
+- HTTP `422`.
+- Error `plan_not_contractable`.
+- No hubo `201`.
+
+Caso 2 — Contrato faltante:
+
+- HTTP `422`.
+- Error `contract_invalid`.
+- No hubo `201`.
+
+Caso 3 — Hash inválido sin prefijo `sha256:`:
+
+- HTTP `422`.
+- Error `contract_invalid`.
+- No hubo `201`.
+
+Caso 4 — Snapshot faltante:
+
+- HTTP `422`.
+- Error `contract_invalid`.
+- No hubo `201`.
+
+Caso 5 — Campos prohibidos enviados desde cliente:
+
+- HTTP `422`.
+- Error `forbidden_fields`.
+- No hubo `201`.
+
+### F) Orden de validación observado
+Hallazgos:
+
+- Los cinco casos inválidos devolvieron `422`.
+- No se observó `409` por conflicto activo en estos casos.
+- El endpoint valida payload antes de evaluar conflicto activo.
+- Esto permite rechazar payloads inválidos sin crear filas, incluso con suscripción activa previa.
+
+### G) Conteos después
+Conteos después:
+
+- `subscription_contract_acceptances=1`.
+- `profile_subscriptions=1`.
+- Aceptaciones doctor 1: `1`.
+- Suscripciones doctor 1: `1`.
+
+Delta:
+
+- Aceptaciones: `0`.
+- Suscripciones: `0`.
+
+### H) Validación de integridad
+Integridad confirmada:
+
+- No se creó nueva aceptación.
+- No se creó nueva suscripción.
+- La suscripción existente quedó intacta.
+- La aceptación existente quedó intacta.
+- No se creó fila `free`.
+- No se creó aceptación `free`.
+- No hubo limpieza.
+
+### I) Read-model posterior
+Read-model posterior:
+
+- HTTP `200`.
+- `effective_plan_code=standard`.
+- `status=active`.
+- `starts_at` presente.
+- `expires_at` presente.
+- `contract_accepted_at` presente.
+- No volvió a `free_default`.
+- No expone evidencia legal completa.
+- No expone IP/user-agent.
+- No activa capacidades.
+
+### J) Alcance preservado
+El QA preservó explícitamente:
+
+- No frontend.
+- No `p-suscripcion` write.
+- No pagos.
+- No checkout.
+- No facturación.
+- No capacidades productivas.
+- No `PublicProfilePlanCapabilities`.
+- No perfil público.
+- No SEO.
+- No SQL DDL.
+- No cambios de schema.
+- No escritura manual por SQL.
+- No headers QA para write.
+- No guards relajados.
+- No limpieza de datos.
+
+### K) Estado funcional actual
+Estado funcional:
+
+- Endpoint write contractual ya tiene QA de éxito `201` validado.
+- Endpoint write contractual ya tiene QA de conflicto activo `409` validado.
+- Endpoint write contractual ya tiene QA de payload inválido `422` validado.
+- Doctor 1 permanece con suscripción activa local/dev.
+- Repetir QA `201` con doctor 1 ya no aplica mientras exista esa suscripción activa.
+- Futuros QA de éxito deben usar otro doctor fixture o una microfase explícita de limpieza/rollback local/dev.
+- No se deben limpiar datos sin autorización y microfase explícita.
+
+### L) Riesgos residuales
+Riesgos residuales:
+
+- Sigue pendiente idempotencia robusta con storage dedicado.
+- Doble submit concurrente sigue como riesgo residual.
+- El fixture dev-only debe permanecer desactivado por default.
+- La suscripción local/dev no implica pago real.
+- La suscripción local/dev no implica checkout.
+- La suscripción local/dev no activa capacidades productivas.
+- Producción sigue fuera de alcance.
+
+### M) Siguiente microfase recomendada
+Preferencia de cierre:
+
+- Primero cerrar documentalmente y pushear esta adenda.
+
+Siguiente microfase recomendada después del cierre documental:
+
+- `QA-Suscripciones-ContractAcceptance-WriteEndpoint-AuthMatrix-01`.
+
+Objetivo:
+
+- Validar matriz de auth del endpoint write:
+  - sin sesión;
+  - `local_dev_open`;
+  - headers QA;
+  - fixture `session_scope`;
+  - operador bloqueado si se puede simular sin DB writes;
+  - confirmar que sólo `session_scope` médico principal permite pasar a validaciones de negocio.
+
+### N) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- Nuevo QA con DB writes.
+- POST contractual.
+- Headers QA para write.
+- Relajación de guards.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
