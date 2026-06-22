@@ -167,21 +167,26 @@ function subscriptionBoolEnvFlag($value): bool
     return in_array($raw, ['1', 'true', 'yes', 'on'], true);
 }
 
-function subscriptionStrictAuthRequired(): bool
+function subscriptionEnvValue(string $name): string
 {
-    $name = 'MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED';
     $value = getenv($name);
     if ($value !== false && trim((string)$value) !== '') {
-        return subscriptionBoolEnvFlag($value);
+        return trim((string)$value);
     }
 
     foreach ([$_ENV[$name] ?? null, $_SERVER[$name] ?? null] as $candidate) {
         if ($candidate !== null && trim((string)$candidate) !== '') {
-            return subscriptionBoolEnvFlag($candidate);
+            return trim((string)$candidate);
         }
     }
 
-    return false;
+    return '';
+}
+
+function subscriptionStrictAuthRequired(): bool
+{
+    $name = 'MXMED_SUBSCRIPTIONS_PRIVATE_AUTH_REQUIRED';
+    return subscriptionBoolEnvFlag(subscriptionEnvValue($name));
 }
 
 function subscriptionIsLocalRequest(): bool
@@ -205,6 +210,84 @@ function subscriptionSessionValue(array $keys): string
         }
     }
     return '';
+}
+
+function subscriptionDevSessionFixtureMeta(): array
+{
+    return [
+        'contract' => 'subscription_dev_session_fixture_private',
+        'version' => 'SUB-DEV-SESSION-FIXTURE-1',
+        'generated_at' => gmdate('c'),
+        'source' => 'subscriptions_dev_session_fixture_v1',
+        'dev_only' => true,
+    ];
+}
+
+function subscriptionDevSessionFixtureError(string $code, string $message): array
+{
+    return [
+        'ok' => false,
+        'error' => [
+            'code' => $code,
+            'message' => $message,
+        ],
+        'data' => null,
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
+}
+
+function subscriptionDevSessionFixtureEnabled(): bool
+{
+    return subscriptionEnvValue('MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED') === '1';
+}
+
+function subscriptionProductionEnvironmentDetected(): bool
+{
+    foreach (['APP_ENV', 'MXMED_ENV', 'ENVIRONMENT'] as $name) {
+        $value = strtolower(subscriptionEnvValue($name));
+        if (in_array($value, ['prod', 'production'], true)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function subscriptionCreateDevSessionFixture(): array
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
+
+    unset(
+        $_SESSION['operator_id'],
+        $_SESSION['operator_permissions'],
+        $_SESSION['permissions'],
+        $_SESSION['mxmed_permissions'],
+        $_SESSION['scopes'],
+        $_SESSION['user_role'],
+        $_SESSION['role'],
+        $_SESSION['mxmed_user_role']
+    );
+
+    $_SESSION['user_id'] = '1';
+    $_SESSION['doctor_id'] = '1';
+    $_SESSION['entity_type'] = 'doctor';
+    $_SESSION['entity_id'] = '1';
+    $_SESSION['actor_role'] = 'doctor';
+    $_SESSION['subscriptions_dev_session_fixture'] = '1';
+
+    return [
+        'ok' => true,
+        'data' => [
+            'auth_mode' => 'session_scope',
+            'entity_type' => 'doctor',
+            'entity_id' => '1',
+            'doctor_id' => '1',
+            'fixture' => 'subscriptions_dev_session_fixture',
+        ],
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
 }
 
 function subscriptionSessionHasPermission(string $permission): bool
@@ -768,6 +851,36 @@ function subscriptionValidEntityId(string $entityId): bool
 try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = subscriptionRelativeSegments();
+
+    if (count($segments) === 2 && $segments[0] === 'dev' && $segments[1] === 'session-fixture') {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        if (!subscriptionDevSessionFixtureEnabled()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
+            return;
+        }
+
+        if (!subscriptionIsLocalRequest()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
+            return;
+        }
+
+        if (subscriptionProductionEnvironmentDetected()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+            return;
+        }
+
+        subscriptionRespond(subscriptionCreateDevSessionFixture(), 200);
+        return;
+    }
+
+    if (!empty($segments) && $segments[0] === 'dev') {
+        subscriptionRespond(subscriptionDevSessionFixtureError('not_found', 'route not found'), 404);
+        return;
+    }
 
     if (count($segments) === 2 && $segments[0] === 'context' && $segments[1] === 'current') {
         if ($method !== 'GET') {
