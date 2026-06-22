@@ -11039,6 +11039,150 @@ Tampoco implementa ni conecta:
 - Perfil público.
 - SEO.
 
+## Adenda PP-Decisiones 65 — Cierre de ejecución local/dev del SQL de checkout y pagos de suscripciones
+
+### A) Microfases cerradas
+Queda cerrado el tramo de creación, validación y ejecución local/dev del SQL de checkout/payment:
+
+- `DB-Suscripciones-CheckoutIntent-ExecutableSql-Readiness-01`.
+- `DB-Suscripciones-CheckoutIntent-ExecutableSql-Create-01`.
+- `QA-Suscripciones-CheckoutIntent-ExecutableSql-PendingDiff-01`.
+- `DB-Suscripciones-CheckoutIntent-ExecutableSql-ApplyLocalDev-Readiness-01`.
+- `DB-Suscripciones-CheckoutIntent-ExecutableSql-ApplyLocalDev-01`.
+- `QA-Suscripciones-CheckoutIntent-ExecutableSql-PostApplyLocalDev-01`.
+
+Commit del SQL ejecutable:
+
+- `9fe267c db(suscripciones): agrega SQL ejecutable de checkout y pagos`.
+
+Archivo SQL ejecutable:
+
+- `modules/profiles/db/2026_06_22_create_subscription_checkout_intents.sql`.
+
+### B) Tablas creadas en local/dev
+La ejecución local/dev creó las tres tablas de storage futuro para checkout-first:
+
+- `subscription_checkout_intents`.
+- `subscription_payment_intents`.
+- `subscription_payment_events`.
+
+Estado local/dev posterior a la ejecución:
+
+- `subscription_checkout_intents` = 0 filas.
+- `subscription_payment_intents` = 0 filas.
+- `subscription_payment_events` = 0 filas.
+- `profile_subscriptions` = 3.
+- `subscription_contract_acceptances` = 3.
+- `subscription_write_idempotency_keys` = 5.
+
+### C) QA post-ejecución
+La QA post-ejecución local/dev confirmó:
+
+- DB local/dev accesible.
+- Versión reportada: `9.6.0`.
+- Las tres tablas existen.
+- Las tres tablas usan InnoDB.
+- Las tres tablas usan `utf8mb4_unicode_ci`.
+- No hay FKs reales.
+- No hay `REFERENCES`.
+- No hay `CHECK`.
+- No hay `JSON`.
+- No hay seeds ni datos iniciales.
+- No hay columnas sensibles de tarjeta.
+- No hay facturación operativa.
+- No hay capacidades productivas.
+- No hay `subscription_activation_log`.
+- Índices críticos presentes.
+
+Defaults principales validados:
+
+- `subscription_checkout_intents.status` = `pending_contract`.
+- `subscription_checkout_intents.currency` = `MXN`.
+- `subscription_payment_intents.normalized_status` = `created`.
+- `subscription_payment_intents.currency` = `MXN`.
+- `subscription_payment_events.processing_status` = `received`.
+- `created_at` / `updated_at` con timestamps esperados.
+
+### D) Alcance explícito
+Esta ejecución fue exclusivamente local/dev.
+
+Este cierre no implementa:
+
+- Checkout productivo.
+- Pagos.
+- Webhooks.
+- Proveedor de pago.
+- Facturación.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Perfil público.
+- SEO.
+- Endpoints nuevos.
+
+Tampoco inserta datos.
+
+### E) Relación con decisiones previas
+Este cierre respeta y continúa:
+
+- PP-Decisiones 61 — checkout-first.
+- PP-Decisiones 62 — storage checkout/payment.
+- PP-Decisiones 63 — aceptación contractual pending payment.
+- PP-Decisiones 64 — cierre del draft SQL de checkout y pagos.
+
+La diferencia con PP-Decisiones 64 es que esta adenda cierra la ejecución local/dev del SQL ejecutable ya versionado.
+
+### F) Pendientes posteriores
+Pendientes antes de cualquier flujo productivo:
+
+- Diseñar/crear fuente real de precio.
+- Diseñar endpoint futuro:
+  - `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents`.
+- Diseñar provider adapter.
+- Diseñar webhook futuro:
+  - `POST /api/subscriptions/index.php/payments/webhooks/{provider}`.
+- Diseñar firma e idempotencia de webhook.
+- Diseñar activación interna post-pago con lock:
+  - `mxmed:subscriptions:{entity_type}:{entity_id}:activate`.
+- Diseñar actualización de aceptación `accepted_pending_payment` -> `accepted`.
+- Diseñar expiración/cancelación de checkout intents.
+- Diseñar facturación por separado.
+- Diseñar conexión futura de capacidades en fase posterior.
+- No ejecutar nada productivo todavía.
+
+### G) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-Endpoint-01`.
+
+Objetivo:
+
+- Especificar el endpoint futuro de checkout intent sin implementarlo todavía.
+
+Motivo:
+
+- El storage local/dev ya existe y está validado. El siguiente paso lógico es definir contrato backend, payload, auth, idempotencia, estados y límites del endpoint antes de implementar código o conectar proveedor de pago.
+
+### H) Límites de esta adenda
+Esta adenda no modifica:
+
+- Backend.
+- Frontend.
+- SQL.
+- DB/schema.
+- Datos.
+
+Tampoco implementa ni conecta:
+
+- Checkout.
+- Pagos.
+- Webhooks.
+- Proveedor de pago.
+- Facturación.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Perfil público.
+- SEO.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
