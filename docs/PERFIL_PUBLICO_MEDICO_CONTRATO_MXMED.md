@@ -7288,6 +7288,250 @@ La siguiente microfase debe ser diagnóstico sin cambios, no ejecución directa 
 
 ---
 
+## Adenda PP-Decisiones 50 — Especificación de fixture local/dev para sesión `session_scope` contractual
+
+### A) Problema a resolver
+El endpoint write contractual ya existe:
+
+- `POST /api/subscriptions/index.php/entities/doctor/1/subscriptions`.
+
+Estado confirmado:
+
+- El endpoint requiere sesión real `session_scope`.
+- No se identificó login médico real usable para crear esa sesión.
+- `api/verify-password.php` es un stub de verificación y no crea sesión.
+- No hay usuario médico principal asociado confirmado para `doctor_id=1`.
+- Los operadores existentes no sirven para este QA porque el guard write los bloquea.
+- No se puede usar `header_scope` para writes.
+- No se puede usar `local_dev_open` para writes.
+- No se puede relajar el guard.
+- No se puede ejecutar QA de éxito `201` sin una sesión real segura.
+- El QA de éxito `201` sigue pendiente.
+
+### B) Reglas de seguridad del fixture
+Cualquier fixture futuro debe cumplir:
+
+- Sólo local/dev.
+- Prohibido en producción.
+- Debe exigir host local:
+  - `127.0.0.1`.
+  - `localhost`.
+  - `::1` o equivalente explícitamente local.
+- Debe exigir bandera de entorno explícita, por ejemplo:
+  - `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`.
+- Debe fallar cerrado si la bandera no existe.
+- Debe fallar cerrado si el host no es local.
+- Debe fallar cerrado si detecta ambiente productivo.
+- Debe crear cookie PHP/session real, no headers QA.
+- Debe producir `auth_mode=session_scope`.
+- Debe crear sesión de médico principal, no operador.
+- Debe limitarse al doctor fixture autorizado, inicialmente `doctor_id=1`.
+- Debe ser temporal/dev-only.
+- No debe crear usuarios.
+- No debe cambiar contraseñas.
+- No debe escribir DB.
+- No debe modificar suscripciones.
+- No debe ejecutar POST contractual.
+- No debe activar capacidades.
+- No debe conectar pagos.
+- No debe tocar frontend productivo.
+- Debe ser fácil de remover o quedar inactivo por default.
+
+### C) Opciones evaluadas
+Opción A — Login médico real existente:
+
+- Sería ideal si existiera.
+- No requeriría fixture especial.
+- Problema: no se encontró flujo real usable que cree sesión de médico principal.
+- Estado: no viable por ahora.
+
+Opción B — Headers QA para write:
+
+- Ya existen o se usan para lecturas locales.
+- Problema: para el write contractual están explícitamente bloqueados.
+- Riesgo: saltarse sesión real.
+- Estado: rechazado.
+
+Opción C — Insertar sesión manual por SQL o manipular session files:
+
+- Problema: inseguro y frágil.
+- Riesgo: sesión artificial no controlada y difícil de auditar.
+- Estado: rechazado.
+
+Opción D — Endpoint dev-only para crear sesión fixture:
+
+- Ejemplo conceptual:
+  - `POST /api/subscriptions/index.php/dev/session-fixture`.
+- Sólo local/dev.
+- Requiere bandera explícita.
+- No escribe DB.
+- Sólo crea `$_SESSION` y cookie PHP real.
+- Asigna variables mínimas para `session_scope`.
+- Permite validar con `GET /api/subscriptions/index.php/context/current`.
+- Luego permite ejecutar POST contractual en microfase QA posterior usando cookie real.
+- Riesgo: si no se protege bien, podría abrir acceso indebido.
+- Mitigación: host local, env flag, fail closed y bloqueo en producción.
+- Estado: opción recomendada para una microfase futura.
+
+Opción E — Script CLI/dev que prepare cookie/session local:
+
+- Ventaja: no expone endpoint HTTP.
+- Problema: compatibilidad con `session_save_path`, cookie jar y servidor local puede ser frágil.
+- Riesgo: menos parecido al flujo HTTP real.
+- Estado: alternativa secundaria.
+
+### D) Opción recomendada
+La opción recomendada es:
+
+- Opción D — Endpoint dev-only de fixture de sesión local/dev.
+
+Condiciones:
+
+- No se implementa en esta microfase.
+- Debe implementarse en microfase separada.
+- Debe quedar inactivo por default.
+- Debe requerir host local.
+- Debe requerir bandera explícita.
+- Debe bloquear ambiente productivo.
+- Debe limitarse al doctor fixture permitido.
+- Debe crear sesión PHP real compatible con el guard actual.
+- No debe cambiar el guard del endpoint contractual.
+- No debe permitir write por headers QA.
+- No debe crear DB writes.
+
+### E) Variables mínimas de sesión a crear
+Variables candidatas detectadas por el guard:
+
+- `user_id`.
+- `mxmed_user_id`.
+- `auth_user_id`.
+- `doctor_id`.
+- `active_doctor_id`.
+- `mxmed_doctor_id`.
+- `entity_type=doctor`.
+- `entity_id=1`.
+- Rol opcional compatible:
+  - `doctor`.
+  - `medico`.
+  - `principal`.
+  - `owner`.
+
+Reglas:
+
+- La implementación futura debe usar el set mínimo que el guard actual realmente reconoce.
+- No debe sobrepoblar la sesión.
+- `user_id` fixture local/dev puede ser un entero controlado, por ejemplo `1`, sólo si el guard lo acepta y no implica DB write.
+- `doctor_id` fixture inicial: `1`.
+- `actor_role`: `doctor` o equivalente compatible.
+- `operator_id`: ausente o `null`, para evitar bloqueo por operador.
+
+### F) Validación posterior del fixture
+La futura implementación del fixture debe probar:
+
+1. Sin bandera env:
+   - El fixture responde `403` o `404`.
+2. Con bandera env pero host no local:
+   - El fixture responde `403`.
+3. Con bandera env y host local:
+   - El fixture crea sesión PHP real.
+4. GET `context/current` con cookie:
+   - Devuelve `auth_mode=session_scope`.
+   - Devuelve `doctor_id=1`.
+   - Identifica médico principal.
+5. POST contractual con esa cookie:
+   - Queda para microfase posterior; no debe ejecutarse durante la implementación del fixture si se separa el QA.
+6. POST con headers QA:
+   - Sigue bloqueado.
+7. `local_dev_open`:
+   - Sigue bloqueado para POST write.
+
+### G) Alcance fuera del fixture
+El fixture no incluye:
+
+- Pagos.
+- Checkout.
+- Facturación.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Frontend productivo.
+- Perfil público.
+- SEO.
+- Creación de usuarios.
+- Cambio de contraseñas.
+- Modificación de DB.
+- Ejecución automática del endpoint contractual.
+- Limpieza de suscripciones.
+
+### H) Secuencia futura recomendada
+Secuencia:
+
+1. `BE-Suscripciones-ContractAcceptance-LocalSessionFixture-DevOnly-01`.
+   - Implementar endpoint/dev fixture local-only.
+   - Inactivo por default.
+   - Sin DB writes.
+   - Sin POST contractual.
+   - Sin frontend.
+2. `QA-Suscripciones-ContractAcceptance-LocalSessionFixture-DevOnly-01`.
+   - Validar que el fixture sólo funciona con host local y env flag.
+   - Validar que crea `session_scope`.
+   - Validar que headers QA siguen bloqueados para write.
+   - Sin POST contractual `201` todavía, si se decide separar.
+3. `QA-Suscripciones-ContractAcceptance-WriteEndpoint-SessionScope-Success-01`.
+   - Ejecutar el POST `201` con cookie real.
+   - Validar +1 aceptación.
+   - Validar +1 suscripción.
+   - Validar mismo `subscription_id`.
+   - Validar read-model pagado activo.
+   - Documentar que DB local/dev quedó modificada.
+   - Sin frontend, sin pagos, sin capacidades.
+
+### I) Riesgos residuales
+Riesgos:
+
+- Un fixture mal protegido podría ser riesgoso.
+- Debe fallar cerrado.
+- Debe ser local/dev-only.
+- Debe estar desactivado por default.
+- QA `201` generará datos persistentes local/dev.
+- No se deben limpiar datos sin microfase explícita.
+- No debe confundirse fixture con login productivo real.
+- No debe usarse para operadores.
+- No debe usarse para pacientes ni otros módulos.
+
+### J) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE-Suscripciones-ContractAcceptance-LocalSessionFixture-DevOnly-01`.
+
+Objetivo:
+
+- Implementar un fixture dev-only, local-only, desactivado por default, para crear sesión PHP real `session_scope` de médico principal `doctor_id=1`, sin DB writes, sin frontend, sin pagos y sin tocar el endpoint contractual.
+
+### K) Límites de esta adenda
+Esta adenda no implementa:
+
+- Backend.
+- Endpoint.
+- Script.
+- Frontend.
+- SQL.
+- Cambios DB.
+- Sesión real.
+- Usuario.
+- POST contractual.
+- QA `201`.
+- Headers QA para write.
+- Relajación de guards.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
