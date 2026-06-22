@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionCo
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityWriteLockService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionWriteIdempotencyService.php';
 
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
@@ -14,6 +15,7 @@ use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
 use Subscriptions\Repositories\SubscriptionWriteIdempotencyRepository;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
+use Subscriptions\Services\SubscriptionEntityWriteLockService;
 use Subscriptions\Services\SubscriptionWriteIdempotencyService;
 use Subscriptions\Services\SubscriptionWriteException;
 
@@ -352,6 +354,36 @@ function subscriptionCreateAlternateDoctorSessionFixture(): array
             'doctor_id' => $doctorId,
             'operator_id' => null,
             'fixture' => 'alternate_doctor',
+            'has_active_subscription' => false,
+        ],
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
+}
+
+function subscriptionCreateConcurrencyDoctorSessionFixture(): array
+{
+    $doctorId = '3';
+    $userId = '3';
+    if (!subscriptionDoctorFixtureExists($doctorId)) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'concurrency doctor fixture not found');
+    }
+
+    $hasActiveSubscription = subscriptionDoctorHasActiveSubscription($doctorId);
+    if ($hasActiveSubscription) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_has_active_subscription', 'concurrency doctor fixture has active subscription');
+    }
+
+    subscriptionApplyDevDoctorSessionFixture($doctorId, $userId);
+
+    return [
+        'ok' => true,
+        'data' => [
+            'auth_mode' => 'session_scope',
+            'entity_type' => 'doctor',
+            'entity_id' => $doctorId,
+            'doctor_id' => $doctorId,
+            'operator_id' => null,
+            'fixture' => 'concurrency_doctor',
             'has_active_subscription' => false,
         ],
         'meta' => subscriptionDevSessionFixtureMeta(),
@@ -920,6 +952,33 @@ try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = subscriptionRelativeSegments();
 
+    if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'concurrency-doctor') {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        if (!subscriptionDevSessionFixtureEnabled()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
+            return;
+        }
+
+        if (!subscriptionIsLocalRequest()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
+            return;
+        }
+
+        if (subscriptionProductionEnvironmentDetected()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+            return;
+        }
+
+        $fixtureResponse = subscriptionCreateConcurrencyDoctorSessionFixture();
+        $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
+        subscriptionRespond($fixtureResponse, $fixtureStatus);
+        return;
+    }
+
     if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'alternate-doctor') {
         if ($method !== 'POST') {
             subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
@@ -1062,6 +1121,7 @@ try {
         $idempotencyService = new SubscriptionWriteIdempotencyService(
             new SubscriptionWriteIdempotencyRepository($pdo)
         );
+        $lockService = new SubscriptionEntityWriteLockService($pdo);
         $writeService = new CreateSubscriptionWithAcceptanceService(
             $pdo,
             $repository,
@@ -1095,7 +1155,24 @@ try {
             return;
         }
 
+        $writeLockName = null;
         try {
+            $writeLockName = $lockService->acquire($entityType, $entityId, 2);
+            if ($writeLockName === null) {
+                if ($idempotencyDecision->shouldProceed() && $idempotencyDecision->record() !== null) {
+                    $idempotencyService->markFailed($idempotencyDecision->record(), 409);
+                }
+                subscriptionRespond(
+                    subscriptionWriteError(
+                        'subscription_write_lock_timeout',
+                        'subscription write already in progress for this entity',
+                        $authMode
+                    ),
+                    409
+                );
+                return;
+            }
+
             $result = $writeService->create([
                 'entity_type' => $entityType,
                 'entity_id' => $entityId,
@@ -1119,6 +1196,8 @@ try {
                 $idempotencyService->markFailed($idempotencyDecision->record(), 500);
             }
             throw $e;
+        } finally {
+            $lockService->release($writeLockName);
         }
 
         $writeResponse = [
