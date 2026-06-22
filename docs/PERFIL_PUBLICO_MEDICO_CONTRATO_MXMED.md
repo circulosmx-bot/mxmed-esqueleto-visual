@@ -11183,6 +11183,356 @@ Tampoco implementa ni conecta:
 - Perfil público.
 - SEO.
 
+## Adenda PP-Decisiones 66 — Diseño del endpoint checkout-intents de suscripciones
+
+### A) Propósito del endpoint
+Endpoint futuro:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents`.
+
+Propósito:
+
+- Crear una intención de checkout para contratar o renovar plan.
+- Registrar aceptación contractual en estado `accepted_pending_payment`.
+- Crear o preparar el registro `subscription_checkout_intents`.
+- Preparar la relación futura con `subscription_payment_intents`.
+- No activar `profile_subscriptions`.
+- No activar capacidades.
+- No facturar.
+- No procesar webhook.
+- No confirmar pago.
+
+### B) Modelo checkout-first
+Este endpoint pertenece al flujo checkout-first definido para suscripciones productivas.
+
+Reglas:
+
+- Es distinto del endpoint DEV/local actual:
+  - `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/subscriptions`.
+- No debe convertir el write contractual DEV/local en checkout productivo.
+- Debe crear estado pendiente y esperar pago confirmado.
+- La activación real ocurrirá después mediante servicio interno post-pago.
+
+### C) Autorización esperada
+El endpoint futuro debe requerir sesión real autorizada.
+
+Reglas de autorización:
+
+- Sólo `session_scope` médico principal o actor autorizado futuro.
+- `local_dev_open` no autoriza writes productivos.
+- Headers QA no autorizan writes productivos.
+- No confiar en `X-User-Id`.
+- Validar relación usuario/entidad.
+- `entity_type` inicial permitido: `doctor`.
+- No aceptar entidad arbitraria fuera de scope.
+- Mantener separación con fixtures DEV/local.
+
+### D) Request esperado
+Request JSON conceptual:
+
+```json
+{
+  "plan_code": "standard",
+  "billing_period": "annual",
+  "contract": {
+    "version": "mxmed-subscriptions-v1",
+    "hash": "sha256:...",
+    "snapshot_url": "/legal/subscriptions/mxmed-subscriptions-v1.html",
+    "title": "Contrato de suscripción México Médico"
+  },
+  "acceptance": {
+    "source": "panel_subscription"
+  }
+}
+```
+
+Validaciones:
+
+- `plan_code` obligatorio.
+- No permitir `free` como checkout pagado.
+- `billing_period` obligatorio y compatible con catálogo.
+- Plan debe existir y estar activo.
+- Plan debe ser contratable.
+- `contract.version` obligatorio.
+- `contract.hash` obligatorio y debe iniciar con `sha256:`.
+- `contract.snapshot_url` obligatorio.
+- `acceptance.source` obligatorio y permitido.
+
+Campos cliente-prohibidos:
+
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+- `status`.
+- `user_id`.
+- `doctor_id`.
+- `profile_id`.
+- `subscription_id`.
+- Provider ids.
+- `checkout_url`.
+- `accepted_at`.
+- `starts_at`.
+- `expires_at`.
+- `activated_at`.
+
+### E) Pricing server-side
+El cliente no envía precio.
+
+El backend debe calcular:
+
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+
+Antes de implementación real falta decidir fuente de precio.
+
+Reglas:
+
+- No usar `subscription_plans` como precio final si no tiene `amount`/`currency`.
+- Si no existe fuente de precio, el endpoint real debe responder error controlado.
+- Sin fuente de precio resuelta no debe crear checkout productivo.
+
+### F) Idempotencia
+El endpoint requiere header:
+
+- `Idempotency-Key`.
+
+Validación esperada:
+
+- Longitud de 8 a 128 caracteres.
+- Caracteres permitidos: letras, números, `.`, `_`, `:`, `-`.
+- No guardar key cruda.
+- Guardar hash `sha256`.
+
+Operación conceptual:
+
+- `subscriptions.checkout_intent.create`.
+
+El `request_hash` debe incluir:
+
+- Scope de usuario/entidad.
+- `plan_code`.
+- `billing_period`.
+- Contrato.
+- `acceptance.source`.
+- Pricing snapshot calculado server-side o `price_version` resuelta.
+
+Comportamiento:
+
+- Misma key + mismo payload: replay estable.
+- Misma key + payload distinto: `409 idempotency_key_reused_with_different_payload`.
+- Key en `processing`: `409 request_already_processing`.
+- Key `failed`, `expired` o `cancelled`: no reusable.
+
+La creación de checkout intent puede reutilizar `subscription_write_idempotency_keys` con operación nueva.
+
+Los webhooks no deben usar esa tabla como ledger principal; usan `subscription_payment_events`.
+
+### G) Locks
+Lock recomendado para creación de checkout intent:
+
+- `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+
+Uso esperado:
+
+- Tomar lock alrededor de la creación del checkout intent y aceptación pending.
+- Revalidar que no exista suscripción activa antes de crear checkout.
+- Evitar intents concurrentes conflictivos.
+- Timeout conceptual: 2 segundos o similar al lock contractual.
+- Error conceptual:
+  - `409 subscription_checkout_lock_timeout`.
+
+La activación post-pago usará otro lock:
+
+- `mxmed:subscriptions:{entity_type}:{entity_id}:activate`.
+
+No se implementa en esta microfase.
+
+### H) Escrituras futuras esperadas
+En una implementación futura, el endpoint hará en transacción:
+
+1. Validar auth/session/scope.
+2. Validar entidad.
+3. Validar plan/billing.
+4. Resolver pricing server-side.
+5. Validar contrato y acceptance.
+6. Validar idempotencia.
+7. Tomar lock de `checkout_create`.
+8. Revalidar que no exista suscripción activa.
+9. Crear `subscription_contract_acceptances` con:
+   - `status = accepted_pending_payment`.
+   - `subscription_id = NULL`.
+10. Crear `subscription_checkout_intents` con:
+   - status inicial `pending_payment` o `pending_contract` según momento exacto.
+   - `contract_acceptance_uuid`.
+   - `amount_cents` / `currency` / `price_source` / `price_version`.
+   - `expires_at`.
+   - `idempotency_key_hash` / `request_hash`.
+11. Preparar `subscription_payment_intents` si ya existe provider adapter.
+12. Devolver respuesta con checkout intent y, si aplica, `checkout_url`.
+13. No crear `profile_subscriptions`.
+
+Si todavía no hay provider adapter, puede diseñarse respuesta `provider_not_configured` o `checkout_provider_unavailable`. Esta decisión debe cerrarse antes de implementación.
+
+### I) Estados
+Estados esperados de `subscription_checkout_intents`:
+
+- `pending_contract`.
+- `pending_payment`.
+- `payment_processing`.
+- `paid`.
+- `failed`.
+- `expired`.
+- `cancelled`.
+- `activated`.
+
+Estado inicial recomendado:
+
+- Si la aceptación se crea dentro del endpoint, el checkout puede avanzar a `pending_payment`.
+- Si se separa confirmación contractual previa, usar `pending_contract`.
+- Para este diseño, se recomienda `pending_payment` después de crear aceptación `accepted_pending_payment`.
+
+Estados de aceptación:
+
+- `accepted_pending_payment` al crear checkout.
+- `accepted` al activar post-pago.
+- `expired` / `cancelled` si checkout expira o se cancela.
+
+### J) Response esperado
+Response 201 conceptual:
+
+```json
+{
+  "ok": true,
+  "checkout_intent": {
+    "uuid": "...",
+    "entity_type": "doctor",
+    "entity_id": "1",
+    "plan_code": "standard",
+    "billing_period": "annual",
+    "amount_cents": 0,
+    "currency": "MXN",
+    "status": "pending_payment",
+    "expires_at": "...",
+    "contract_acceptance_uuid": "...",
+    "provider": null,
+    "checkout_url": null
+  },
+  "payment_intent": null,
+  "current_subscription": {
+    "plan_code": "free",
+    "status": "free_default"
+  },
+  "idempotent_replay": false
+}
+```
+
+Si hay provider adapter futuro:
+
+- `provider` puede ir poblado.
+- `checkout_url` puede ir poblado.
+- `payment_intent` puede ir poblado.
+
+Aclaraciones:
+
+- `current_subscription` no debe cambiar a plan pagado hasta pago confirmado.
+- No devolver datos sensibles.
+- No devolver payload completo de proveedor.
+
+### K) Errores esperados
+Errores conceptuales:
+
+- `400 invalid_json`.
+- `401 unauthenticated`.
+- `403 forbidden`.
+- `404 entity_not_found`.
+- `409 active_subscription_exists`.
+- `409 checkout_already_pending`.
+- `409 idempotency_key_reused_with_different_payload`.
+- `409 request_already_processing`.
+- `409 subscription_checkout_lock_timeout`.
+- `422 plan_not_contractable`.
+- `422 billing_period_invalid`.
+- `422 contract_invalid`.
+- `422 acceptance_source_invalid`.
+- `422 idempotency_key_invalid`.
+- `503 checkout_provider_unavailable`.
+- `500 checkout_intent_create_failed`.
+
+### L) Relación con tablas
+`subscription_checkout_intents`:
+
+- Tabla principal del endpoint.
+- Guarda snapshot comercial/contractual.
+- No activa por sí misma.
+
+`subscription_contract_acceptances`:
+
+- Guarda aceptación legal pending payment.
+- `subscription_id` queda `NULL` hasta activación.
+- Luego cambia a `accepted` al confirmar pago.
+
+`subscription_payment_intents`:
+
+- Se usará cuando exista provider adapter.
+- Modela intento vivo de proveedor.
+
+`subscription_payment_events`:
+
+- No lo escribe este endpoint normalmente.
+- Lo escriben webhooks/eventos del proveedor.
+- Es ledger idempotente.
+
+`profile_subscriptions`:
+
+- No se crea ni modifica por este endpoint.
+- Sólo cambia en activación post-pago.
+
+### M) Seguridad
+Reglas:
+
+- No guardar PAN/CVV.
+- No guardar payload sensible de proveedor.
+- No confiar en amount del cliente.
+- Rate limit futuro.
+- Idempotencia obligatoria.
+- Lock por entidad.
+- Logs mínimos.
+- Firma webhook queda para endpoint webhook, no para checkout create.
+- No activar capacidades desde frontend.
+
+### N) Fuera de alcance explícito
+Esta microfase no:
+
+- Implementa endpoint.
+- Implementa provider adapter.
+- Implementa webhook.
+- Implementa firma.
+- Implementa activación post-pago.
+- Ejecuta SQL.
+- Modifica tablas.
+- Crea datos.
+- Implementa frontend checkout.
+- Conecta facturación.
+- Activa capacidades.
+- Toca perfil público.
+- Toca SEO.
+
+### O) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-PricingSourceDecision-01`.
+
+Objetivo:
+
+- Decidir fuente server-side de precio para checkout intents antes de implementar endpoint productivo, ya que `subscription_plans` no tiene `amount`/`currency` persistidos.
+
+Motivo:
+
+- El endpoint no debe confiar en precio enviado por cliente. Sin fuente server-side de precio no debe crearse checkout productivo.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
