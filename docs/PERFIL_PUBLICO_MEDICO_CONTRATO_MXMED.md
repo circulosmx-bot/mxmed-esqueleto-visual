@@ -10054,6 +10054,248 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 61 — Decisión de flujo checkout-first para suscripciones productivas
+
+### A) Problema
+El flujo contractual DEV/local actual ya crea evidencia contractual y una fila operativa en `profile_subscriptions`.
+
+Ese flujo es útil para validar localmente:
+
+- Aceptación contractual.
+- Write contractual controlado.
+- `Idempotency-Key`.
+- Replay sin duplicados.
+- Advisory lock por entidad.
+- QA del panel `p-suscripcion`.
+
+Pero no debe usarse como checkout productivo porque activa `standard active` antes de que exista pago confirmado.
+
+En producción debe existir una separación explícita entre:
+
+- Intención de contratar.
+- Aceptación contractual.
+- Checkout.
+- Pago confirmado.
+- Activación de suscripción.
+- Capacidades.
+- Facturación.
+
+### B) Estado actual validado
+Ya existen y fueron validados en DEV/local:
+
+- `subscription_contract_acceptances`.
+- `subscription_write_idempotency_keys`.
+- Backend con `Idempotency-Key`.
+- Advisory lock MySQL/MariaDB `GET_LOCK` por entidad/operación.
+- Replay sin duplicados.
+- QA concurrente con keys distintas sin duplicados.
+- Panel `p-suscripcion` DEV/local con acción de contratación controlada.
+
+Estado aproximado de DB local/dev después de QA:
+
+- `profile_subscriptions=3`.
+- `subscription_contract_acceptances=3`.
+- `subscription_write_idempotency_keys=5`.
+
+Este estado sigue sin conectar:
+
+- Pagos.
+- Checkout.
+- Facturación.
+- Capacidades productivas.
+- `PublicProfilePlanCapabilities`.
+
+### C) Decisión
+Adoptar modelo `checkout-first` para el flujo productivo de suscripciones.
+
+El endpoint contractual actual queda como base DEV/local/manual validada y no se convierte directamente en endpoint productivo de cobro.
+
+El flujo productivo futuro debe usar un endpoint separado:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents`.
+
+El webhook futuro debe quedar separado:
+
+- `POST /api/subscriptions/index.php/payments/webhooks/{provider}`.
+
+La activación de suscripción debe hacerse mediante un servicio interno no público después de pago confirmado.
+
+### D) Separación conceptual
+#### 1. Aceptación contractual
+La aceptación contractual es la evidencia legal del contrato y del plan.
+
+Debe ser:
+
+- Trazable.
+- Relacionable con el checkout intent.
+- No duplicada.
+- Consultable para auditoría.
+
+Queda pendiente decidir si se registra como `pending_payment` antes de pago o si se registra/ratifica al confirmar pago.
+
+#### 2. Checkout intent
+El checkout intent representa la intención de pago.
+
+Debe modelar, como mínimo:
+
+- `uuid` propio.
+- `entity_type`.
+- `entity_id`.
+- `doctor_id`.
+- `user_id`.
+- `plan_code`.
+- `billing_period`.
+- `amount`.
+- `currency`.
+- `status`.
+- `expires_at`.
+- Relación con contrato o aceptación contractual.
+- Relación con idempotencia.
+
+No activa suscripción por sí solo.
+
+#### 3. Payment intent / provider
+El payment intent representa la relación con el proveedor de pago futuro.
+
+Debe modelar:
+
+- Proveedor.
+- `provider_payment_id`.
+- `provider_status`.
+- Payload mínimo o sanitizado.
+- Timestamps de creación, actualización y confirmación.
+
+No debe guardar:
+
+- PAN.
+- CVV.
+- Datos sensibles de tarjeta.
+- Payload completo si no es necesario.
+
+#### 4. Webhook
+El webhook debe:
+
+- Validar firma.
+- Ser idempotente.
+- Mapear `provider_payment_id` al checkout intent.
+- Manejar retries del proveedor.
+- No duplicar activación.
+- Registrar eventos útiles para auditoría operativa.
+
+#### 5. Activación interna
+La activación interna debe:
+
+- Crear o activar `profile_subscriptions` sólo después de pago confirmado.
+- Usar `Idempotency-Key`, lock por entidad o mecanismo equivalente.
+- Evitar doble suscripción activa.
+- Relacionar `subscription_id` con aceptación, checkout y pago.
+- Resolver qué hacer si el pago llega tarde o ya existe una suscripción activa.
+
+#### 6. Capacidades
+Las capacidades quedan en fase posterior.
+
+No se activan en el checkout inicial.
+
+`PublicProfilePlanCapabilities` no debe conectarse hasta tener estado contractual y de pago confiable.
+
+#### 7. Facturación
+La facturación es un flujo separado.
+
+Requiere:
+
+- Datos fiscales.
+- Modelo propio de invoices/CFDI/recibos.
+- Política de emisión.
+- Conciliación con pago.
+
+No se mezcla con el checkout inicial.
+
+### E) Opciones evaluadas
+#### 1. Mantener write actual como productivo
+No recomendado.
+
+Riesgo principal:
+
+- Activa suscripción antes de pago confirmado.
+
+#### 2. Checkout-first
+Recomendado.
+
+Ventaja:
+
+- Separa intención, pago confirmado y activación.
+- Permite que el read-model sólo suba a plan pagado después de confirmación.
+
+Riesgo:
+
+- Requiere schema y endpoints nuevos.
+
+#### 3. Acceptance pending + activation
+Compatible con checkout-first.
+
+Requiere decidir:
+
+- Estados.
+- Schema.
+- Si la aceptación se guarda antes de pago, al confirmar pago o en ambos momentos con relación explícita.
+
+#### 4. Endpoint productivo separado
+Recomendado.
+
+Motivo:
+
+- Evita contaminar el endpoint DEV/local ya validado.
+- Permite diseñar checkout, webhook y activación con contratos propios.
+
+### F) Gaps documentados
+Antes de implementar checkout faltan decisiones y diseño para:
+
+- Proveedor de pago.
+- Fuente de precio.
+- `amount`.
+- `currency`.
+- Schema de checkout intents.
+- Schema de payment intents/events.
+- Estados de checkout.
+- Expiración y cancelación de intents.
+- Relación con aceptación contractual.
+- Webhook.
+- Verificación de firma.
+- Idempotencia de webhook.
+- Activación interna post-pago.
+- Pago confirmado tardío.
+- Caso donde ya existe suscripción activa.
+- Facturación.
+- Activación de capacidades.
+- Limpieza de intents expirados.
+
+### G) Restricciones
+Esta decisión no implementa:
+
+- Checkout.
+- Pagos.
+- Webhooks.
+- Adapter de proveedor.
+- Schema nuevo.
+- Backend nuevo.
+- Frontend nuevo.
+- Facturación.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Perfil público.
+- SEO.
+
+### H) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB/DIAG-Suscripciones-CheckoutIntent-StorageReadiness-01`.
+
+Objetivo:
+
+- Diagnosticar el storage necesario para checkout intents, payment intents/events y relación con aceptación contractual, sin crear SQL todavía.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
