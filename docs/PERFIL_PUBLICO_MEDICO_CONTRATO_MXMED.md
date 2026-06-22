@@ -11533,6 +11533,268 @@ Motivo:
 
 - El endpoint no debe confiar en precio enviado por cliente. Sin fuente server-side de precio no debe crearse checkout productivo.
 
+## Adenda PP-Decisiones 67 — Decisión de fuente de precio server-side para checkout intents
+
+### A) Problema
+El endpoint futuro `checkout-intents` requiere calcular precio en backend antes de crear un checkout productivo.
+
+La tabla `subscription_checkout_intents` ya contiene campos para snapshot comercial:
+
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+
+Reglas:
+
+- El cliente no debe enviar ni controlar precio.
+- `subscription_plans` actualmente no tiene monto ni moneda.
+- `subscription_plans` tampoco tiene `price_source` ni `price_version`.
+- No se debe implementar checkout productivo sin fuente de precio server-side.
+
+Diagnóstico local/dev:
+
+- `subscription_plans` funciona como catálogo técnico de `plan_code`, `billing_period`, `duration_days`, `is_active` y `sort_order`.
+- Planes actuales observados: `free`, `basic`, `standard`, `optimum`, `professional`.
+- No contiene `amount_cents`, `currency`, `price_source` ni `price_version`.
+
+### B) Opciones evaluadas
+#### 1. Agregar precio directamente a `subscription_plans`
+Ventaja:
+
+- Simple y cercano al catálogo actual.
+
+Desventajas:
+
+- Mezcla catálogo técnico/duración con precio comercial.
+- Riesgo de cambios de precio retroactivos si no se versiona bien.
+- No resuelve por sí solo vigencias ni versiones comerciales.
+
+Decisión:
+
+- No recomendado como decisión inmediata si se necesita historial/versionado.
+
+#### 2. Crear tabla dedicada de precios/versiones
+Tabla conceptual:
+
+- `subscription_plan_prices`.
+
+Ventajas:
+
+- Permite versionar precios.
+- Permite vigencia desde/hasta.
+- Permite moneda.
+- Permite fuente y versión.
+- Permite preservar snapshot en checkout intent.
+- Separa catálogo técnico de política comercial.
+
+Decisión:
+
+- Recomendado como fuente canónica futura.
+
+#### 3. Usar configuración hardcodeada temporal en backend
+Ventaja:
+
+- Rápido para DEV/local.
+
+Desventajas:
+
+- No auditable.
+- Riesgo de divergencia entre código, docs y DB.
+- Difícil de conciliar con provider y webhooks.
+
+Decisión:
+
+- No recomendado para productivo.
+
+#### 4. Usar proveedor de pago como fuente de precio
+Ventaja:
+
+- El proveedor controla productos/precios.
+
+Desventajas:
+
+- Acopla catálogo MXMed al proveedor.
+- Dificulta auditar antes de crear checkout.
+- Puede complicar conciliación si MXMed no resuelve precio primero.
+
+Decisión:
+
+- No recomendado como única fuente canónica MXMed.
+
+### C) Decisión recomendada
+Crear en microfase futura una tabla dedicada de precios versionados:
+
+- `subscription_plan_prices`.
+
+Esta tabla será la fuente server-side canónica para checkout intents.
+
+`subscription_plans` se mantiene como catálogo técnico de planes:
+
+- `plan_code`.
+- `billing_period`.
+- `duration_days`.
+- `is_active`.
+- `sort_order`.
+
+`subscription_plan_prices` será la fuente de precio:
+
+- `plan_code`.
+- `billing_period`.
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+- `valid_from`.
+- `valid_until`.
+- `is_active`.
+
+El endpoint futuro resolverá precio server-side consultando esta tabla y copiará snapshot a `subscription_checkout_intents`.
+
+### D) Campos conceptuales de `subscription_plan_prices`
+Campos sugeridos:
+
+- `id BIGINT UNSIGNED AUTO_INCREMENT`.
+- `uuid CHAR(36) NOT NULL`.
+- `plan_code VARCHAR(64) NOT NULL`.
+- `billing_period VARCHAR(32) NOT NULL`.
+- `amount_cents BIGINT UNSIGNED NOT NULL`.
+- `currency CHAR(3) NOT NULL DEFAULT 'MXN'`.
+- `price_source VARCHAR(128) NOT NULL DEFAULT 'subscription_plan_prices'`.
+- `price_version VARCHAR(64) NOT NULL`.
+- `valid_from DATETIME NOT NULL`.
+- `valid_until DATETIME NULL DEFAULT NULL`.
+- `is_active TINYINT(1) NOT NULL DEFAULT 1`.
+- `source VARCHAR(128) NOT NULL DEFAULT 'mxmed_subscription_plan_price_v1'`.
+- `notes TEXT NULL`.
+- `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+- `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`.
+- `deleted_at DATETIME NULL DEFAULT NULL`.
+
+Índices conceptuales:
+
+- `uuid` unique.
+- `plan_code + billing_period + currency + price_version` unique.
+- `plan_code + billing_period + is_active`.
+- `valid_from` / `valid_until`.
+- `deleted_at`.
+
+El SQL de esta tabla no se crea en esta microfase.
+
+### E) Regla de resolución de precio
+Algoritmo futuro:
+
+1. Validar `plan_code` y `billing_period` contra `subscription_plans`.
+2. Confirmar plan activo y contratable.
+3. Buscar precio activo en `subscription_plan_prices` para:
+   - `plan_code`.
+   - `billing_period`.
+   - `currency = MXN`.
+   - `is_active = 1`.
+   - `deleted_at IS NULL`.
+   - `valid_from <= now`.
+   - `valid_until IS NULL` o `valid_until > now`.
+4. Si hay más de un precio activo para el mismo plan/periodo/moneda:
+   - responder `500 pricing_configuration_conflict`.
+   - no crear checkout intent.
+5. Si no hay precio:
+   - responder `422 plan_price_not_configured`.
+   - no crear checkout intent.
+6. Si la fuente de pricing falla por error técnico:
+   - responder `503 pricing_source_unavailable`.
+   - no crear checkout intent.
+7. Copiar snapshot a `subscription_checkout_intents`:
+   - `amount_cents`.
+   - `currency`.
+   - `price_source`.
+   - `price_version`.
+8. No recalcular monto desde frontend.
+9. No modificar el checkout intent si el precio cambia después.
+
+### F) Errores conceptuales
+Errores recomendados:
+
+- `422 plan_price_not_configured`: el plan existe, pero no tiene precio configurado vigente.
+- `500 pricing_configuration_conflict`: existe más de un precio activo para el mismo plan/periodo/moneda.
+- `503 pricing_source_unavailable`: la fuente de pricing no está disponible por error técnico.
+
+### G) Relación con provider de pago
+MXMed debe resolver precio antes de llamar al proveedor.
+
+Reglas:
+
+- El provider adapter debe recibir el precio ya resuelto por MXMed.
+- El provider no debe ser la única fuente canónica de precio.
+- Al crear payment intent, el monto enviado al proveedor debe coincidir con el snapshot guardado en `subscription_checkout_intents`.
+- El webhook posterior debe validar `amount`/`currency` contra snapshot antes de activar.
+
+### H) Relación con checkout intent
+`subscription_checkout_intents.amount_cents` guarda snapshot inmutable del precio resuelto.
+
+Campos de auditoría comercial:
+
+- `currency` guarda moneda.
+- `price_source` indica origen, recomendado: `subscription_plan_prices`.
+- `price_version` identifica versión comercial.
+
+Uso:
+
+- Auditoría.
+- Conciliación con proveedor.
+- Evitar cambios retroactivos si el catálogo cambia.
+
+Cambios futuros de precio no alteran checkout intents ya creados.
+
+### I) Relación con facturación
+La tabla de precios no implementa facturación.
+
+Reglas:
+
+- No contiene CFDI.
+- No contiene datos fiscales.
+- Facturación seguirá en flujo separado.
+- Puede usar el snapshot de checkout/payment como referencia.
+- No se implementa ahora.
+
+### J) Seguridad y auditoría
+Reglas:
+
+- No confiar en precio enviado por cliente.
+- No aceptar `amount_cents`, `currency`, `price_source`, `price_version` desde request.
+- Versionar precios.
+- Mantener vigencias.
+- No borrar físicamente precios usados en checkout histórico.
+- Soft delete sólo para ocultar/desactivar, no para destruir trazabilidad.
+- Registrar `price_version` suficiente para auditoría.
+- Validar `amount`/`currency` en webhook antes de activación.
+
+### K) Fuera de alcance explícito
+Esta microfase no:
+
+- Crea `subscription_plan_prices`.
+- Altera `subscription_plans`.
+- Inserta precios.
+- Implementa endpoint.
+- Implementa provider adapter.
+- Implementa webhook.
+- Implementa activación post-pago.
+- Implementa facturación.
+- Conecta capacidades.
+- Ejecuta SQL.
+
+### L) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB/SPEC-Suscripciones-PlanPrices-SchemaDraft-01`.
+
+Objetivo:
+
+- Diseñar el SQL draft conceptual de `subscription_plan_prices`, sin crear SQL ejecutable y sin ejecutar SQL.
+
+Motivo:
+
+- El endpoint `checkout-intents` necesita una fuente server-side de precio versionada antes de implementarse. El siguiente paso es diseñar esa tabla sin tocar todavía DB/schema real.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
