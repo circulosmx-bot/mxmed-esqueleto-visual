@@ -4,13 +4,17 @@ declare(strict_types=1);
 require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/CurrentSubscriptionRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionWriteIdempotencyService.php';
 
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
+use Subscriptions\Repositories\SubscriptionWriteIdempotencyRepository;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
+use Subscriptions\Services\SubscriptionWriteIdempotencyService;
 use Subscriptions\Services\SubscriptionWriteException;
 
 header('Content-Type: application/json; charset=UTF-8');
@@ -964,12 +968,41 @@ try {
         $repository = new CurrentSubscriptionRepository($pdo);
         $readModelService = new CurrentSubscriptionReadModelService($repository);
         $acceptanceRepository = new SubscriptionContractAcceptanceRepository($pdo);
+        $idempotencyService = new SubscriptionWriteIdempotencyService(
+            new SubscriptionWriteIdempotencyRepository($pdo)
+        );
         $writeService = new CreateSubscriptionWithAcceptanceService(
             $pdo,
             $repository,
             $readModelService,
             $acceptanceRepository
         );
+        $headers = subscriptionHeaders();
+        $idempotencyDecision = $idempotencyService->begin(
+            $headers['idempotency-key'] ?? null,
+            [
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'doctor_id' => (string)($context['doctor_id'] ?? ''),
+                'profile_id' => $context['profile_id'] ?? null,
+                'user_id' => (string)($context['actor_user_id'] ?? ''),
+                'actor_role' => (string)($context['actor_role'] ?? ''),
+            ],
+            $payload
+        );
+
+        if ($idempotencyDecision->shouldReject()) {
+            subscriptionRespond(
+                subscriptionWriteError($idempotencyDecision->errorCode(), $idempotencyDecision->message(), $authMode),
+                $idempotencyDecision->httpStatus()
+            );
+            return;
+        }
+
+        if ($idempotencyDecision->shouldReplay()) {
+            subscriptionRespond($idempotencyDecision->response(), $idempotencyDecision->httpStatus());
+            return;
+        }
 
         try {
             $result = $writeService->create([
@@ -985,15 +1018,27 @@ try {
                 'payload' => $payload,
             ]);
         } catch (SubscriptionWriteException $e) {
+            if ($idempotencyDecision->shouldProceed() && $idempotencyDecision->record() !== null) {
+                $idempotencyService->markFailed($idempotencyDecision->record(), $e->status());
+            }
             subscriptionRespond(subscriptionWriteError($e->errorCode(), $e->getMessage(), $authMode), $e->status());
             return;
+        } catch (Throwable $e) {
+            if ($idempotencyDecision->shouldProceed() && $idempotencyDecision->record() !== null) {
+                $idempotencyService->markFailed($idempotencyDecision->record(), 500);
+            }
+            throw $e;
         }
 
-        subscriptionRespond([
+        $writeResponse = [
             'ok' => true,
             'data' => $result,
             'meta' => subscriptionWriteMeta($authMode),
-        ], 201);
+        ];
+        if ($idempotencyDecision->shouldProceed() && $idempotencyDecision->record() !== null) {
+            $idempotencyService->markCompleted($idempotencyDecision->record(), $writeResponse, 201);
+        }
+        subscriptionRespond($writeResponse, 201);
         return;
     }
 
