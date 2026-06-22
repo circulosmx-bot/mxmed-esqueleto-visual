@@ -58877,6 +58877,11 @@ function mxResetLogoPreview(){
     invoiceHint: pane.querySelector('[data-subp-invoice-hint]'),
     historyBody: pane.querySelector('[data-subp-history]'),
     historyRefresh: pane.querySelector('[data-subp-history-refresh]'),
+    devWrite: pane.querySelector('[data-subp-dev-write]'),
+    devContractBtn: pane.querySelector('[data-subp-dev-contract]'),
+    devStatus: pane.querySelector('[data-subp-dev-status]'),
+    devResult: pane.querySelector('[data-subp-dev-result]'),
+    devKey: pane.querySelector('[data-subp-dev-key]'),
     billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
   };
 
@@ -58918,7 +58923,16 @@ function mxResetLogoPreview(){
       { id:'estandar', name:'Estándar', monthly:0, yearly:0, features:['Perfil en línea','Agenda'] },
       { id:'basico', name:'Básico', monthly:0, yearly:0, features:['Perfil en línea'] }
     ],
-    history: []
+    history: [],
+    currentModel: null,
+    currentMeta: null,
+    contextInfo: null,
+    devWrite: {
+      state: 'idle',
+      lastKey: '',
+      message: '',
+      result: null
+    }
   };
 
   function clean(value){
@@ -58972,6 +58986,13 @@ function mxResetLogoPreview(){
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/current`;
   }
 
+  function buildSubscriptionWriteEndpoint(entityType, entityId){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    if(type !== 'doctor' || !id) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/subscriptions`;
+  }
+
   function buildSubscriptionContextEndpoint(){
     return '/api/subscriptions/index.php/context/current';
   }
@@ -59011,6 +59032,89 @@ function mxResetLogoPreview(){
     return total === 1 ? '1 día' : `${total} días`;
   }
 
+  function generateDevIdempotencyKey(){
+    const prefix = 'mxmed-dev-subscription-';
+    if(window.crypto && typeof window.crypto.randomUUID === 'function'){
+      return `${prefix}${window.crypto.randomUUID()}`;
+    }
+    return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function devContractPayload(){
+    return {
+      plan_code: 'standard',
+      billing_period: 'annual',
+      contract: {
+        version: 'mxmed-subscriptions-v1',
+        hash: 'sha256:qa-local-dev-contract-placeholder',
+        snapshot_url: '/legal/subscriptions/mxmed-subscriptions-v1.html',
+        title: 'Contrato de suscripción México Médico'
+      },
+      acceptance: {
+        source: 'panel_subscription'
+      }
+    };
+  }
+
+  function hasPaidActiveSubscription(model){
+    const status = clean(model?.status).toLowerCase();
+    const effectivePlan = clean(model?.effective_plan_code).toLowerCase();
+    const contractedPlan = clean(model?.contracted_plan_code).toLowerCase();
+    if(status === 'free_default') return false;
+    if(effectivePlan === 'free' && !contractedPlan) return false;
+    return status === 'active' && (effectivePlan !== 'free' || !!contractedPlan || model?.is_paid_plan === true);
+  }
+
+  function renderDevWrite(){
+    if(!els.devWrite) return;
+    if(!isSubscriptionLocalDevHost()){
+      els.devWrite.classList.add('d-none');
+      return;
+    }
+    els.devWrite.classList.remove('d-none');
+
+    const model = data.currentModel || {};
+    const context = data.contextInfo || {};
+    const endpoint = buildSubscriptionWriteEndpoint(context.entity_type, context.entity_id || context.doctor_id);
+    const activePaid = hasPaidActiveSubscription(model);
+    const disabled = data.devWrite.state === 'sending' || activePaid || !endpoint;
+
+    if(els.devContractBtn){
+      els.devContractBtn.disabled = disabled;
+      els.devContractBtn.classList.toggle('disabled', disabled);
+    }
+    if(els.devStatus){
+      if(activePaid){
+        els.devStatus.textContent = 'Ya existe una suscripción activa; el endpoint respondería conflicto.';
+      }else if(!endpoint){
+        els.devStatus.textContent = 'No hay contexto doctor session_scope disponible para el write DEV.';
+      }else if(data.devWrite.state === 'sending'){
+        els.devStatus.textContent = 'Enviando contratación DEV con Idempotency-Key...';
+      }else{
+        els.devStatus.textContent = 'Listo para prueba DEV/local con plan standard annual.';
+      }
+    }
+    if(els.devKey){
+      els.devKey.textContent = data.devWrite.lastKey ? `Key DEV: ${data.devWrite.lastKey}` : '';
+    }
+    if(els.devResult){
+      const result = data.devWrite.result;
+      if(result){
+        const details = [
+          `HTTP ${result.httpStatus}`,
+          `ok=${result.ok === true ? 'true' : 'false'}`,
+          result.error ? `error=${result.error}` : '',
+          result.subscription_id ? `subscription_id=${result.subscription_id}` : '',
+          result.contract_acceptance_uuid ? `contract_acceptance_uuid=${result.contract_acceptance_uuid}` : '',
+          result.idempotent_replay ? 'idempotent_replay=true' : ''
+        ].filter(Boolean);
+        els.devResult.textContent = details.join(' · ');
+      }else{
+        els.devResult.textContent = data.devWrite.message || '';
+      }
+    }
+  }
+
   function buildReadModelFeatures(model, meta, contextInfo){
     const contracted = clean(model?.contracted_plan_code);
     const effective = clean(model?.effective_plan_code);
@@ -59036,6 +59140,9 @@ function mxResetLogoPreview(){
   }
 
   function applyReadModel(model, meta, contextInfo){
+    data.currentModel = model || {};
+    data.currentMeta = meta || {};
+    data.contextInfo = contextInfo || {};
     const planLabel = clean(model?.plan_label) || 'No disponible';
     const status = clean(model?.status);
     const statusLabel = labelFromMap(STATUS_LABELS, status, status || 'Estado no disponible');
@@ -59079,9 +59186,13 @@ function mxResetLogoPreview(){
     renderCurrent();
     renderCatalog();
     renderHistory(model);
+    renderDevWrite();
   }
 
   function applyReadOnlyError(httpStatus, customMessage){
+    data.currentModel = null;
+    data.currentMeta = null;
+    data.contextInfo = null;
     let message = 'No se pudo cargar la suscripción. Intenta más tarde.';
     if(httpStatus === 401){
       message = 'Sesión no válida o no iniciada para consultar la suscripción.';
@@ -59106,6 +59217,64 @@ function mxResetLogoPreview(){
     renderCurrent();
     renderCatalog();
     renderHistory();
+    renderDevWrite();
+  }
+
+  async function submitDevContract(){
+    if(!isSubscriptionLocalDevHost()) return;
+    const context = data.contextInfo || {};
+    const endpoint = buildSubscriptionWriteEndpoint(context.entity_type, context.entity_id || context.doctor_id);
+    if(!endpoint || hasPaidActiveSubscription(data.currentModel || {})){
+      renderDevWrite();
+      return;
+    }
+
+    const key = generateDevIdempotencyKey();
+    data.devWrite = {
+      state: 'sending',
+      lastKey: key,
+      message: '',
+      result: null
+    };
+    renderDevWrite();
+
+    try{
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': key
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(devContractPayload())
+      });
+      const payload = await response.json().catch(()=> null);
+      data.devWrite = {
+        state: 'idle',
+        lastKey: key,
+        message: '',
+        result: {
+          httpStatus: response.status,
+          ok: payload?.ok === true,
+          error: payload?.error?.code || '',
+          subscription_id: payload?.data?.subscription_id || '',
+          contract_acceptance_uuid: payload?.data?.contract_acceptance_uuid || '',
+          idempotent_replay: payload?.meta?.idempotent_replay === true
+        }
+      };
+      renderDevWrite();
+      await loadCurrentSubscription();
+      renderDevWrite();
+    }catch(_){
+      data.devWrite = {
+        state: 'idle',
+        lastKey: key,
+        message: 'Error de red al ejecutar contratación DEV.',
+        result: null
+      };
+      renderDevWrite();
+    }
   }
 
   async function fetchSubscriptionReadModel(endpoint, contextInfo){
@@ -59275,7 +59444,7 @@ function mxResetLogoPreview(){
     els.invoiceBtn,
     els.historyRefresh,
     ...pane.querySelectorAll('.subp-card button')
-  ].filter(Boolean);
+  ].filter((button)=> button && !button.matches('[data-subp-dev-contract]'));
   staticReadOnlyButtons.forEach((button)=>{
     if(button){
       button.setAttribute('aria-disabled', 'true');
@@ -59296,6 +59465,10 @@ function mxResetLogoPreview(){
   els.historyRefresh?.addEventListener('click', ()=>{
     markReadOnlyAction();
   });
+  els.devContractBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    submitDevContract();
+  });
   if(els.autorenew) els.autorenew.disabled = true;
   if(els.couponInput) els.couponInput.disabled = true;
   if(els.couponMsg) els.couponMsg.textContent = 'Cupones deshabilitados en modo lectura.';
@@ -59304,6 +59477,7 @@ function mxResetLogoPreview(){
   renderCurrent();
   renderCatalog();
   renderHistory();
+  renderDevWrite();
   loadCurrentSubscription();
 })();
 
