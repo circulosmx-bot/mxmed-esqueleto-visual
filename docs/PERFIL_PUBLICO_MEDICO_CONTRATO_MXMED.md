@@ -9619,6 +9619,232 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 59 — Decisión de lock por entidad para concurrencia contractual
+
+### A) Problema
+La implementación actual de `Idempotency-Key` protege reintentos con la misma key, pero no protege por sí sola dos requests concurrentes con keys distintas para la misma entidad.
+
+Riesgo específico:
+
+- Dos keys distintas pueden crear dos registros `processing` distintos.
+- Ambas requests podrían llegar al servicio contractual.
+- La validación de "no existe suscripción activa" se revalida dentro de la transacción, pero no existe lock explícito por entidad.
+- No existe unique activo por entidad.
+- No existe `SELECT ... FOR UPDATE`.
+- No existe `GET_LOCK`.
+- No existe lock table.
+
+### B) Hallazgos del diagnóstico
+Microfase diagnóstica:
+
+- `BE/DIAG-Suscripciones-ContractAcceptance-EntityLock-ActiveSubscriptionConcurrency-01`.
+
+Resultado:
+
+- PASS sin cambios.
+
+Hallazgos:
+
+- `profile_subscriptions` tiene unique sólo por `subscription_id`.
+- `profile_subscriptions` tiene índices por entidad/status/fechas, pero no unique activo por entidad.
+- `subscription_write_idempotency_keys` tiene unique por `idempotency_key_hash,user_id,entity_type,entity_id,operation`.
+- Ese unique sólo protege la misma key en el mismo scope.
+- La validación de activa vive en `CreateSubscriptionWithAcceptanceService::activeSubscriptionExists()`.
+- La validación de activa ocurre antes y dentro de la transacción.
+- La transacción actual cubre aceptación contractual + `profile_subscriptions`.
+- Falta lock por entidad para serializar keys distintas.
+
+### C) Opciones evaluadas
+#### 1. Advisory lock `GET_LOCK`
+Nombre conceptual:
+
+- `mxmed:subscriptions:{entity_type}:{entity_id}:create`.
+
+Reglas sugeridas:
+
+- Timeout corto.
+- `RELEASE_LOCK` en `finally`.
+- Revalidar suscripción activa dentro del lock.
+- No requiere schema nuevo.
+- Compatible como v1 local/dev antes de checkout.
+
+Riesgos:
+
+- Depende de conexión.
+- Requiere release seguro.
+- Requiere manejo explícito de timeout.
+- Es menos auditable que una tabla dedicada.
+
+#### 2. Tabla dedicada de entity locks
+Ventajas:
+
+- Más auditable.
+- Permite estado, TTL, expiración y limpieza.
+
+Costos:
+
+- Requiere nuevo schema.
+- Requiere TTL/cleanup.
+- Es más pesada para esta fase.
+
+Decisión:
+
+- Reservarla si `GET_LOCK` no basta o si producción/checkout exige auditoría explícita del lock.
+
+#### 3. Unique activo por entidad
+Ventajas:
+
+- Garantía DB fuerte.
+
+Riesgos:
+
+- Es invasivo en MySQL/MariaDB por falta de unique parcial simple.
+- Requeriría columna auxiliar/generada o rediseño del lifecycle.
+- Puede afectar histórico, cancelación, gracia, vencimiento y renovación.
+
+Decisión:
+
+- No recomendado como siguiente paso inmediato.
+
+#### 4. `SELECT ... FOR UPDATE`
+Limitación:
+
+- Es insuficiente como solución única cuando no existe fila activa.
+- Para entidades sin suscripción no hay fila segura que bloquear.
+
+Decisión:
+
+- No usarlo como única protección de concurrencia.
+
+#### 5. Combinación idempotency + entity lock
+Estrategia recomendada:
+
+- La idempotencia maneja replay por key.
+- El lock por entidad serializa keys distintas.
+
+### D) Decisión
+Decisión técnica:
+
+- Usar en v1 un advisory lock MySQL/MariaDB `GET_LOCK` por entidad/operación, combinado con la idempotencia actual.
+
+Flujo conceptual futuro:
+
+1. Validar auth/write guard.
+2. Validar payload.
+3. Validar/registrar `Idempotency-Key`.
+4. Si idempotencia decide `proceed`, tomar lock por entidad:
+   `mxmed:subscriptions:{entity_type}:{entity_id}:create`.
+5. Si no se obtiene lock, responder preferentemente `409 subscription_write_lock_timeout`.
+6. Dentro del lock:
+   - revalidar suscripción activa;
+   - ejecutar transacción contractual;
+   - completar idempotencia.
+7. Liberar lock en `finally`.
+8. No relajar auth.
+9. No usar headers QA para write.
+10. No conectar pagos, checkout, facturación ni capacidades.
+
+Código de respuesta preferido para timeout:
+
+- HTTP `409`.
+- Error: `subscription_write_lock_timeout`.
+
+### E) Archivos futuros a tocar
+Implementación futura probable:
+
+- `api/subscriptions/index.php`.
+- Posible nuevo servicio: `modules/subscriptions/services/SubscriptionEntityWriteLockService.php`.
+- Opcional helper/repositorio sólo si la implementación lo requiere.
+
+Alcance v1 esperado:
+
+- No requiere SQL/schema.
+- No requiere frontend.
+- No requiere pagos.
+- No requiere checkout.
+- No requiere capacidades.
+
+### F) QA futuro recomendado
+QA mínimo futuro:
+
+- Dos requests concurrentes con keys distintas para el mismo doctor sin suscripción activa.
+
+Resultado esperado:
+
+- Una request crea `201`.
+- La otra no duplica.
+- La segunda puede responder `409 active_subscription_exists` después del lock o `409 subscription_write_lock_timeout`, según timing.
+
+Confirmaciones requeridas:
+
+- Una sola fila nueva en `profile_subscriptions`.
+- Una sola aceptación contractual.
+- Idempotencia coherente.
+- Lock liberado.
+- Sin deadlocks.
+- Headers QA siguen bloqueados para write.
+- `local_dev_open` sigue bloqueado para write.
+- Sin pagos.
+- Sin checkout.
+- Sin capacidades productivas.
+
+### G) Estado explícito
+Esta adenda sólo documenta decisión.
+
+No se implementa:
+
+- Lock por entidad.
+- `GET_LOCK`.
+- SQL DDL.
+- Cambios de schema.
+- Backend.
+- Frontend.
+- Checkout/productivo.
+
+No se ejecuta:
+
+- SQL.
+- POST contractual.
+- Escrituras manuales.
+
+### H) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE-Suscripciones-ContractAcceptance-EntityLock-AdvisoryLock-01`.
+
+Objetivo:
+
+- Implementar advisory lock `GET_LOCK` por entidad/operación alrededor del write contractual cuando idempotencia decide `proceed`, sin frontend ni pagos.
+
+Restricciones esperadas:
+
+- No modificar frontend.
+- No modificar SQL/schema.
+- No conectar pagos.
+- No conectar checkout.
+- No activar capacidades.
+- Mantener bloqueados headers QA y `local_dev_open` para write.
+
+### I) Límites de esta adenda
+Esta adenda no modifica:
+
+- Backend.
+- Frontend.
+- SQL.
+- DB/schema.
+- Perfil público.
+- SEO.
+
+Esta adenda no conecta:
+
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
