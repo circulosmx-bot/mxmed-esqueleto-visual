@@ -9369,6 +9369,256 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 58 — Cierre consolidado del bloque de idempotencia contractual
+
+### A) Alcance cerrado
+El bloque de idempotencia contractual de suscripciones ya pasó de diseño/documentación a un estado tangible local/dev.
+
+Quedan cerrados y validados en local/dev:
+
+- SQL ejecutable versionado.
+- Tabla real local/dev `subscription_write_idempotency_keys`.
+- Backend mínimo usando `Idempotency-Key`.
+- Fixture alterno dev-only/local-only para QA `201`.
+- QA funcional de conflicto activo con doctor 1.
+- QA funcional exitosa `201` con doctor 2.
+- Replay con la misma key sin duplicados.
+- Bloque DEV/local visible en `p-suscripcion`.
+- QA visual post-push del panel.
+
+### B) Tabla real local/dev
+Tabla creada:
+
+- `subscription_write_idempotency_keys`.
+
+Estado local/dev:
+
+- DB: `mxmed`.
+- Engine/collation: `InnoDB / utf8mb4_unicode_ci`.
+- Columnas, uniques e índices esperados validados.
+- Sin FKs reales iniciales.
+- Sin key cruda.
+- Sin payload completo.
+- Sin IP/user-agent.
+- Sin pagos.
+- Sin checkout.
+- Sin invoice.
+- Sin capacidades productivas.
+
+Campos centrales:
+
+- `idempotency_key_hash`.
+- `request_hash`.
+- `status`.
+- `response_http_status`.
+- `subscription_id`.
+- `contract_acceptance_uuid`.
+- `expires_at`.
+
+SQL ejecutable versionado:
+
+- Commit: `e681ee3 db(suscripciones): agrega SQL ejecutable de idempotencia contractual`.
+- Archivo: `modules/profiles/db/2026_06_22_create_subscription_write_idempotency_keys.sql`.
+
+### C) Backend mínimo
+Commit:
+
+- `5407bfa feat(suscripciones): agrega idempotencia minima al write contractual`.
+
+Archivos:
+
+- `api/subscriptions/index.php`.
+- `modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php`.
+- `modules/subscriptions/services/SubscriptionWriteIdempotencyService.php`.
+
+Contrato implementado:
+
+- Header: `Idempotency-Key`.
+- Operation: `subscriptions.create_with_contract_acceptance`.
+
+Comportamientos validados:
+
+- Key inválida: `422 idempotency_key_invalid`.
+- Misma key en `processing`: `409 request_already_processing`.
+- Misma key con payload distinto: `409 idempotency_key_reused_with_different_payload`.
+- Replay `completed`: respuesta estable sin duplicados.
+- Estados `failed`, `expired` o `cancelled`: key no reutilizable.
+
+Alcance preservado:
+
+- No relaja auth.
+- `local_dev_open` sigue sin autorizar writes.
+- Headers QA siguen sin autorizar writes.
+- Sólo `session_scope` médico principal llega a negocio.
+- No conecta pagos, checkout, facturación ni capacidades.
+
+### D) QA funcional
+#### Doctor 1: conflicto activo
+Doctor 1 ya tenía suscripción activa `standard / active`.
+
+Validaciones cerradas:
+
+- Sin key: `409 active_subscription_exists`.
+- Key inválida: `422 idempotency_key_invalid`.
+- Key válida con conflicto activo: fila idempotencia `failed`, HTTP `409`.
+- Replay de key `failed`: no reutilizable.
+- Misma key con payload distinto: conflicto de idempotencia.
+- Headers QA: `403`.
+- Sin nueva suscripción.
+- Sin nueva aceptación contractual.
+
+Suscripción original de doctor 1:
+
+- `subscription_id=9700c0d5-6dc5-490b-bdb4-766dee490590`.
+- Estado: `standard / active`.
+
+#### Doctor 2: éxito 201
+Se preparó un fixture local/dev alterno:
+
+- Commit: `f207b0a test(suscripciones): agrega fixture alterno para idempotencia`.
+- Doctor fixture: `doctor_id=2`.
+- Session scope: doctor 2.
+- Sin tocar doctor 1.
+
+QA exitosa:
+
+- POST contractual con key válida: `201`.
+- `subscription_id=e7f9c04f-4145-409e-98a9-a4f7b6714b14`.
+- `contract_acceptance_uuid=6bffe5af-ecd4-47f4-90a7-fa5c24873411`.
+- Fila de idempotencia: `completed`.
+- `response_http_status=201`.
+- Replay misma key/mismo payload: `idempotent_replay=true`, sin duplicados.
+- Misma key con payload distinto: `409`.
+- Doctor 1 quedó intacto.
+
+### E) Frontend DEV/local
+Commit:
+
+- `1a51abe feat(suscripciones): agrega contratacion dev con idempotencia`.
+
+Archivos:
+
+- `index.html`.
+- `assets/js/app.js`.
+
+Panel:
+
+- `p-suscripcion`.
+
+Bloque visible:
+
+- `Contratación DEV controlada`.
+
+Botón:
+
+- `Contratar Standard DEV`.
+
+Comportamiento:
+
+- Visible sólo en local/dev.
+- Genera `Idempotency-Key` con prefijo `mxmed-dev-subscription-`.
+- Payload fijo `standard / annual`.
+- Usa `credentials: same-origin`.
+- No usa headers QA.
+- Reconsulta current después de respuesta controlada.
+- Deshabilita el botón si ya hay suscripción activa.
+- No es checkout.
+- No es flujo productivo.
+- No activa capacidades.
+
+QA visual post-push:
+
+- Microfase: `QA-Suscripciones-PanelDev-WriteContractual-VisualPostPush-01`.
+- Navegador: Safari.
+- Servidor local temporal: `127.0.0.1:8099`.
+- Bloque visible confirmado.
+- Botón visible confirmado.
+- Botón deshabilitado por suscripción activa en el contexto observado.
+- No se ejecutó POST contractual.
+- No se creó suscripción.
+- No se creó aceptación.
+- No se creó fila de idempotencia.
+
+Conteos DB sin cambios durante QA visual:
+
+- `profile_subscriptions`: `2 / 2`.
+- `subscription_contract_acceptances`: `2 / 2`.
+- `subscription_write_idempotency_keys`: `2 / 2`.
+
+### F) Estado final del bloque
+Estado DB local/dev al cierre:
+
+- `profile_subscriptions=2`.
+- `subscription_contract_acceptances=2`.
+- `subscription_write_idempotency_keys=2`.
+
+Estado funcional:
+
+- Doctor 1: `standard / active`, suscripción original intacta.
+- Doctor 2: fixture local/dev, `standard / active` después del QA `201`.
+- Backend idempotente mínimo operativo para misma key.
+- Panel `p-suscripcion` tiene acción DEV/local controlada.
+
+Alcance no conectado:
+
+- No pagos.
+- No checkout.
+- No facturación.
+- No activación de capacidades productivas.
+- No `PublicProfilePlanCapabilities`.
+- No perfil público modificado.
+- No SEO modificado.
+- `p-suscripcion` sigue en modo DEV/local controlado, no productivo.
+
+### G) Riesgos y residuos pendientes
+Pendientes antes de producción/checkout:
+
+- La idempotencia actual cubre reintentos con la misma key, no dos requests concurrentes con keys distintas.
+- Falta estrategia de entity lock / unique activo por entidad o equivalente.
+- Falta convertir el flujo DEV/local en flujo productivo con pagos/checkout.
+- Falta UX real de selección y confirmación contractual.
+- Falta cleanup/TTL job para `subscription_write_idempotency_keys`.
+- Falta política productiva de duración de TTL.
+- Falta hardening productivo.
+- El fixture alterno es dev-only/local-only y no debe usarse en producción.
+
+### H) Siguiente bloque recomendado
+Siguiente bloque recomendado:
+
+- `BE/DIAG-Suscripciones-ContractAcceptance-EntityLock-ActiveSubscriptionConcurrency-01`.
+
+Objetivo:
+
+- Diagnosticar estrategia para evitar doble write con keys distintas concurrentes antes de checkout/productivo.
+
+Alternativa si se prioriza UI antes del diagnóstico de concurrencia:
+
+- `FE/UX-Suscripciones-PanelDev-ContractFlow-Polish-01`.
+
+Objetivo:
+
+- Pulir visualmente el flujo DEV/local de contratación contractual sin pagos.
+
+### I) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- POST contractual.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
