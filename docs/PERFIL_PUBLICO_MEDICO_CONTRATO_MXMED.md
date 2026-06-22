@@ -9214,6 +9214,161 @@ Esta adenda no ejecuta ni implementa:
 
 ---
 
+## Adenda PP-Decisiones 57 — Cierre del draft SQL de idempotencia contractual
+
+### A) Microfase cerrada
+Se cerró la microfase:
+
+- `DB-Suscripciones-ContractAcceptance-IdempotencySchemaDraft-01`.
+
+Commit remoto/alineado:
+
+- `d413a34 db(suscripciones): agrega draft de idempotencia contractual`.
+
+Archivo creado:
+
+- `modules/profiles/db/2026_06_22_create_subscription_write_idempotency_keys_draft.sql`.
+
+### B) QA asociado
+QA del draft:
+
+- `QA-Suscripciones-ContractAcceptance-IdempotencySchemaDraft-PendingDiff-01`.
+- Resultado: PASS.
+
+QA post-push:
+
+- `QA-Suscripciones-ContractAcceptance-IdempotencySchemaDraft-PostPush-01`.
+- Resultado: PASS sin cambios.
+
+Confirmaciones del QA:
+
+- Rama limpia y alineada.
+- Draft trackeado por Git.
+- Draft incluido en `HEAD`.
+- Commit esperado validado.
+- Contenido del draft validado.
+- Sin SQL ejecutado.
+- Sin efectos colaterales.
+
+### C) Alcance del draft
+El draft define conceptualmente la tabla:
+
+- `subscription_write_idempotency_keys`.
+
+La tabla queda planteada para soportar en fases futuras:
+
+- `Idempotency-Key`.
+- `idempotency_key_hash`.
+- `request_hash`.
+- Scope por `user_id`, entidad y operación.
+- Estados `processing`, `completed`, `failed`, `expired` y `cancelled`.
+- Referencias a `subscription_id`.
+- Referencias a `contract_acceptance_uuid`.
+- `response_http_status`.
+- `response_body_text` opcional.
+- TTL mediante `expires_at`.
+- Cleanup futuro.
+- Soft delete mediante `deleted_at`.
+
+### D) Decisiones respetadas
+El draft respeta las decisiones ya cerradas:
+
+- Tabla dedicada.
+- No usar `profile_subscriptions`.
+- No usar `subscription_contract_acceptances`.
+- No usar sólo locks.
+- No guardar payload completo.
+- No guardar key cruda como fuente principal.
+- No guardar IP.
+- No guardar user-agent.
+- No guardar payment/checkout/invoice.
+- No guardar capacidades.
+- No guardar datos sensibles.
+- Response opcional como `TEXT`, no `JSON` inicial.
+- Sin `ENUM`.
+- Sin `CHECK`.
+- Sin FKs reales iniciales.
+- Engine/collation: `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`.
+
+### E) Estado explícito después del cierre
+Estado actual:
+
+- SQL draft creado y versionado.
+- SQL draft validado.
+- SQL draft pusheado.
+- No SQL ejecutado.
+- No DB/schema modificado.
+- No tabla real creada.
+- No SQL ejecutable final creado.
+- No backend modificado.
+- No frontend modificado.
+- No `Idempotency-Key` conectado.
+- No pagos.
+- No checkout.
+- No facturación.
+- No capacidades.
+- No `PublicProfilePlanCapabilities`.
+- No perfil público.
+- No SEO.
+
+### F) Riesgo residual
+Riesgo residual:
+
+- La tabla de idempotencia futura protegerá reintentos con la misma key.
+- La tabla no resuelve por sí sola dos requests concurrentes con keys distintas.
+- Antes de producción/checkout sigue pendiente una microfase de diagnóstico de lock/unique activo por entidad o estrategia equivalente.
+
+### G) Siguiente paso recomendado
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-ContractAcceptance-IdempotencyExecutableSql-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness para convertir el draft en SQL ejecutable, sin ejecutar SQL todavía.
+
+Restricciones esperadas:
+
+- No ejecutar SQL.
+- No modificar DB/schema.
+- No conectar backend.
+- No frontend.
+- No pagos.
+- No checkout.
+- No capacidades.
+
+Microfase alternativa posterior, antes de producción/checkout:
+
+- `DB/DIAG-Suscripciones-ContractAcceptance-EntityLock-ActiveSubscriptionConcurrency-01`.
+
+Objetivo:
+
+- Diagnosticar estrategia de lock/unique activo por entidad para cubrir concurrencia con keys distintas.
+
+### H) Límites de esta adenda
+Esta adenda no ejecuta ni implementa:
+
+- Backend.
+- Frontend.
+- SQL DDL.
+- Migrations.
+- Cambios de schema.
+- Escrituras SQL manuales.
+- POST contractual.
+- QA con DB writes.
+- Headers QA para write.
+- Relajación de guards.
+- Pagos.
+- Checkout.
+- Facturación.
+- `PublicProfilePlanCapabilities`.
+- Capacidades productivas.
+- Perfil público.
+- SEO productivo.
+- Limpieza de datos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
