@@ -11941,6 +11941,156 @@ Objetivo:
 
 - Validar readiness para convertir el draft conceptual de `subscription_plan_prices` en SQL ejecutable versionado, sin crear todavía el SQL ejecutable y sin ejecutar SQL.
 
+## Adenda PP-Decisiones 69 — Cierre de ejecución local/dev del SQL de precios versionados de suscripciones
+
+### A) Microfases cerradas
+Microfases cerradas:
+
+- `DB-Suscripciones-PlanPrices-ExecutableSql-Readiness-01`.
+- `DB-Suscripciones-PlanPrices-ExecutableSql-Create-01`.
+- `QA-Suscripciones-PlanPrices-ExecutableSql-PendingDiff-01`.
+- `DB-Suscripciones-PlanPrices-ExecutableSql-ApplyLocalDev-Readiness-01`.
+- `DB-Suscripciones-PlanPrices-ExecutableSql-ApplyLocalDev-01`.
+- `QA-Suscripciones-PlanPrices-ExecutableSql-PostApplyLocalDev-01`.
+
+### B) Commit SQL ejecutable
+Commit:
+
+- `bf94085 db(suscripciones): agrega SQL ejecutable de precios versionados`.
+
+### C) Archivo SQL ejecutable
+Archivo:
+
+- `modules/profiles/db/2026_06_22_create_subscription_plan_prices.sql`.
+
+### D) Tabla creada en DB local/dev
+Tabla creada:
+
+- `subscription_plan_prices`.
+
+### E) Estado DB local/dev despues de ejecucion
+Conteos despues de la ejecucion local/dev:
+
+- `subscription_plan_prices = 0`.
+- `active_plan_prices = 0`.
+- `subscription_checkout_intents = 0`.
+- `subscription_payment_intents = 0`.
+- `subscription_payment_events = 0`.
+- `profile_subscriptions = 3`.
+- `subscription_contract_acceptances = 3`.
+- `subscription_write_idempotency_keys = 5`.
+
+### F) Validaciones QA post-ejecucion
+La QA post-ejecucion confirmo:
+
+- DB local/dev accesible.
+- Version reportada: `9.6.0`.
+- Tabla `subscription_plan_prices` existe.
+- Tabla vacia.
+- Sin precios/seeds activos.
+- Engine `InnoDB`.
+- Collation `utf8mb4_unicode_ci`.
+- Sin FKs reales.
+- Sin `REFERENCES`.
+- Sin `CHECK`.
+- Sin `JSON`.
+- Sin datos sensibles de tarjeta.
+- Sin facturacion operativa.
+- Sin capacidades productivas.
+- Sin `subscription_activation_log`.
+
+Columnas presentes:
+
+- `id`.
+- `uuid`.
+- `plan_code`.
+- `billing_period`.
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+- `valid_from`.
+- `valid_until`.
+- `is_active`.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Defaults principales:
+
+- `currency = MXN`.
+- `price_source = subscription_plan_prices`.
+- `is_active = 1`.
+- `source = mxmed_subscription_plan_price_v1`.
+- `created_at` / `updated_at` con timestamps esperados.
+- `valid_until` / `deleted_at` nullable.
+
+Indices criticos:
+
+- `PRIMARY`.
+- `ux_sub_plan_prices_uuid`.
+- `ux_sub_plan_prices_version`.
+- `idx_sub_plan_prices_lookup`.
+- `idx_sub_plan_prices_plan`.
+- `idx_sub_plan_prices_active`.
+- `idx_sub_plan_prices_validity`.
+- `idx_sub_plan_prices_created_at`.
+- `idx_sub_plan_prices_deleted_at`.
+
+### G) Alcance explicito
+Este cierre:
+
+- Es local/dev.
+- Solo crea infraestructura DB.
+- No inserta precios.
+- No crea seeds.
+- No define precios reales.
+- No decide todavia si `free` tendra precio `0` o quedara fuera de precios pagados.
+- No altera `subscription_plans`.
+- No implementa endpoint `checkout-intents`.
+- No implementa provider adapter.
+- No implementa webhook.
+- No activa suscripciones.
+- No activa capacidades.
+- No conecta facturacion.
+- No toca perfil publico ni SEO.
+
+### H) Relacion con decisiones previas
+Este cierre:
+
+- Continua PP-Decisiones 67.
+- Cierra la ejecucion practica posterior al draft cerrado en PP-Decisiones 68.
+- Deja lista la tabla para que el endpoint futuro resuelva pricing server-side.
+- No vuelve usable checkout productivo todavia: faltan precios/versiones y backend de resolucion.
+
+### I) Pendientes posteriores
+Pendientes:
+
+1. Decidir estrategia de precios iniciales:
+   - DEV/local separado.
+   - Productivo sujeto a decision comercial.
+   - Sin mezclar seeds con schema.
+2. Decidir si `free` tendra precio `0` o queda fuera de tabla de precios pagados.
+3. Disenar/crear microfase de seeds DEV/local si aplica.
+4. Disenar repositorio/servicio de resolucion de precio.
+5. Validar "un solo precio activo vigente" en backend/QA v1.
+6. Integrar precio server-side en endpoint `checkout-intents` futuro.
+7. Copiar snapshot a `subscription_checkout_intents`.
+8. Validar `amount`/`currency` contra snapshot en webhook futuro.
+9. Mantener facturacion como flujo separado.
+10. Conectar capacidades solo en fase posterior.
+
+### J) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB/SPEC-Suscripciones-PlanPrices-SeedStrategyDecision-01`.
+
+Objetivo:
+
+- Decidir estrategia de precios iniciales y seeds DEV/local para `subscription_plan_prices`, sin insertar todavia precios y sin ejecutar SQL.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
