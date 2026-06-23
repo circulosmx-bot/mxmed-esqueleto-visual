@@ -12394,6 +12394,150 @@ Objetivo:
 
 - Validar readiness para convertir el draft DEV/local de seeds de precios en SQL ejecutable versionado, sin crear todavia el SQL ejecutable final y sin ejecutar SQL.
 
+## Adenda PP-Decisiones 72 — Cierre de ejecución local/dev del seed de precios de suscripciones
+
+### A) Microfases cerradas
+Microfases cerradas:
+
+- `DB-Suscripciones-PlanPrices-DevSeedExecutableSql-Readiness-01`.
+- `DB-Suscripciones-PlanPrices-DevSeedExecutableSql-Create-01`.
+- `DB-Suscripciones-PlanPrices-DevSeedExecutableSql-ApplyLocalDev-Readiness-01`.
+- `DB-Suscripciones-PlanPrices-DevSeedExecutableSql-ApplyLocalDev-01`.
+- `QA-Suscripciones-PlanPrices-DevSeedExecutableSql-PostApplyLocalDev-01`.
+
+Commit del SQL ejecutable DEV/local:
+
+- `aad9d0a db(suscripciones): agrega seed dev ejecutable de precios`.
+
+Archivo:
+
+- `modules/profiles/db/2026_06_22_seed_subscription_plan_prices_dev.sql`.
+
+### B) Alcance del seed
+El seed cerrado en esta adenda:
+
+- Es `DEV/LOCAL ONLY`.
+- No es seed productivo.
+- No contiene precios reales.
+- No contiene precios comerciales aprobados.
+- Sirve solo para pruebas DEV/local futuras de resolucion server-side de precio y `checkout-intents`.
+- No incluye `free` como fila.
+- No incluye mensualidades no decididas.
+- No incluye provider ids.
+- No incluye facturacion.
+- No incluye capacidades.
+- No incluye datos fiscales.
+- No implementa checkout.
+
+### C) Ejecucion local/dev
+El seed fue ejecutado en DB local/dev `mxmed` con el comando autorizado:
+
+```bash
+mysql -u root mxmed < modules/profiles/db/2026_06_22_seed_subscription_plan_prices_dev.sql
+```
+
+Estado antes de ejecutar:
+
+- `subscription_plan_prices = 0`.
+- `active_plan_prices = 0`.
+- `dev_seed_price_rows = 0`.
+
+Estado despues de ejecutar:
+
+- `subscription_plan_prices = 4`.
+- `active_plan_prices = 4`.
+- `dev_seed_price_rows = 4`.
+- `free_seed_rows = 0`.
+- `distinct_seed_uuids = 4`.
+
+### D) Filas insertadas
+Filas DEV/local insertadas:
+
+- `basic annual = 10000` centavos MXN.
+- `standard annual = 20000` centavos MXN.
+- `optimum annual = 30000` centavos MXN.
+- `professional annual = 40000` centavos MXN.
+
+Convenciones aplicadas:
+
+- `currency = MXN`.
+- `price_source = subscription_plan_prices_dev_seed`.
+- `price_version = mxmed-dev-pricing-2026-v1`.
+- `source = mxmed_subscription_plan_price_dev_seed_v1`.
+- `valid_from = 2026-06-22 00:00:00`.
+- `valid_until = NULL`.
+- `is_active = 1`.
+- 4 UUIDs fijos distintos.
+
+### E) QA post-ejecucion
+La QA post-ejecucion local/dev confirmo:
+
+- `subscription_plan_prices = 4`.
+- `active_plan_prices = 4`.
+- `dev_seed_price_rows = 4`.
+- `free_seed_rows = 0`.
+- `distinct_seed_uuids = 4`.
+- Una fila activa por plan/periodo/moneda.
+- `unexpected_billing_period_rows = 0`.
+- `unexpected_currency_rows = 0`.
+- Schema/indices siguen correctos.
+- Sin FKs reales.
+- Sin `CHECK`.
+- Sin `JSON`.
+- Sin datos sensibles.
+- Sin facturacion/capacidades operativas.
+- No se ejecuto de nuevo el seed durante QA.
+- No se ejecuto SQL de escritura durante QA.
+- No se modificaron archivos durante ejecucion/QA.
+
+### F) Impacto no esperado descartado
+Conteos base conservados:
+
+- `subscription_checkout_intents = 0`.
+- `subscription_payment_intents = 0`.
+- `subscription_payment_events = 0`.
+- `profile_subscriptions = 3`.
+- `subscription_contract_acceptances = 3`.
+- `subscription_write_idempotency_keys = 5`.
+
+### G) Alcance explicito
+Este cierre no implica:
+
+- Checkout productivo implementado.
+- Resolucion backend de precios implementada.
+- Endpoint `checkout-intents` implementado.
+- Provider adapter implementado.
+- Webhook implementado.
+- Activacion post-pago implementada.
+- Facturacion conectada.
+- Capacidades activadas.
+- `PublicProfilePlanCapabilities` tocado.
+- Perfil publico o SEO tocados.
+- Precios reales/productivos aprobados.
+
+### H) Pendientes posteriores
+Pendientes:
+
+1. Disenar repositorio/servicio de resolucion de precios server-side.
+2. Validar un solo precio activo vigente por plan/periodo/moneda.
+3. Integrar resolucion de precios con endpoint futuro `checkout-intents`.
+4. Disenar/implementar manejo de errores:
+   - `plan_price_not_configured`.
+   - `pricing_configuration_conflict`.
+   - `pricing_source_unavailable`.
+5. Validar `amount/currency` contra snapshot en webhook futuro.
+6. Mantener provider/webhook/facturacion/capacidades fuera hasta microfase explicita.
+7. Decidir precios reales/productivos en fase comercial separada.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-PriceResolverDesign-01`.
+
+Objetivo:
+
+- Disenar documentalmente el repositorio/servicio server-side que resolvera el precio vigente desde `subscription_plan_prices` para `checkout-intents` futuros, sin implementar backend todavia.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
