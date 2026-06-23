@@ -12538,6 +12538,264 @@ Objetivo:
 
 - Disenar documentalmente el repositorio/servicio server-side que resolvera el precio vigente desde `subscription_plan_prices` para `checkout-intents` futuros, sin implementar backend todavia.
 
+## Adenda PP-Decisiones 73 — Diseño del resolver server-side de precios para checkout-intents
+
+### A) Proposito
+Se define el diseno documental del futuro resolver server-side de precios que consultara `subscription_plan_prices` para determinar el precio vigente y copiarlo como snapshot en `subscription_checkout_intents`.
+
+Reglas base:
+
+- El cliente no enviara `amount_cents`, `currency`, `price_source` ni `price_version`.
+- El servidor resolvera esos campos antes de crear el checkout intent.
+- `subscription_plans` seguira siendo catalogo tecnico.
+- `subscription_plan_prices` sera la fuente server-side de precio.
+- El provider adapter recibira el precio ya resuelto por MXMed.
+- El webhook futuro debera validar `amount/currency` contra el snapshot antes de activar suscripcion.
+
+### B) Componentes futuros propuestos
+Repositorio conceptual futuro:
+
+- `SubscriptionPlanPriceRepository`.
+
+Responsabilidad:
+
+- Consultar `subscription_plan_prices`.
+- Filtrar por `plan_code`.
+- Filtrar por `billing_period`.
+- Filtrar por `currency`.
+- Filtrar por `is_active = 1`.
+- Filtrar por `deleted_at IS NULL`.
+- Filtrar por `valid_from <= now`.
+- Filtrar por `valid_until IS NULL OR valid_until > now`.
+- Ordenar y devolver candidatos vigentes.
+- No decidir negocio por si solo.
+- No crear checkout intents.
+- No activar suscripciones.
+- No llamar al provider.
+
+Servicio conceptual futuro:
+
+- `SubscriptionPlanPriceResolverService`.
+
+Responsabilidad:
+
+- Validar que el plan sea contratable.
+- Bloquear `free` para checkout pagado.
+- Validar `billing_period`.
+- Pedir candidatos al repositorio.
+- Resolver exactamente un precio vigente.
+- Retornar snapshot normalizado:
+  - `plan_code`.
+  - `billing_period`.
+  - `amount_cents`.
+  - `currency`.
+  - `price_source`.
+  - `price_version`.
+  - `valid_from`.
+  - `valid_until`.
+  - `price_uuid`.
+- Mapear errores conceptuales.
+- No crear checkout intent.
+- No escribir payment intent.
+- No activar plan.
+- No conectar capacidades.
+
+### C) Metodo conceptual
+Firma documental sugerida:
+
+```text
+resolveForCheckout(string entityType, string entityId, string planCode, string billingPeriod, ?string currency = 'MXN', ?DateTimeImmutable now = null): ResolvedSubscriptionPlanPrice
+```
+
+Aclaraciones:
+
+- `entityType/entityId` pueden usarse para contexto/auditoria futura, pero el precio v1 se resuelve por plan/periodo/moneda.
+- La moneda v1 sera `MXN`.
+- `now` permite pruebas deterministas.
+- El resultado sera inmutable para el checkout intent.
+- El snapshot guardado en `subscription_checkout_intents` no debe cambiar aunque despues cambien precios.
+
+### D) Reglas de resolucion
+Reglas del resolver:
+
+1. Rechazar `free` para checkout pagado:
+   - Error conceptual: `plan_not_contractable` o equivalente ya documentado para checkout.
+2. Validar plan/billing contra `subscription_plans`:
+   - El plan debe existir.
+   - Debe estar activo.
+   - Debe corresponder al billing period solicitado.
+   - `subscription_plans` no aporta precio.
+3. Consultar precio vigente en `subscription_plan_prices`:
+   - `plan_code = planCode`.
+   - `billing_period = billingPeriod`.
+   - `currency = MXN`.
+   - `is_active = 1`.
+   - `deleted_at IS NULL`.
+   - `valid_from <= now`.
+   - `valid_until IS NULL OR valid_until > now`.
+4. Si no hay precio:
+   - `422 plan_price_not_configured`.
+5. Si hay mas de un precio vigente:
+   - `500 pricing_configuration_conflict`.
+6. Si hay error tecnico consultando la fuente:
+   - `503 pricing_source_unavailable`.
+7. Si hay exactamente uno:
+   - Devolver snapshot server-side.
+
+### E) Snapshot para checkout-intents
+El endpoint futuro:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents
+```
+
+debera copiar desde el resolver hacia `subscription_checkout_intents`:
+
+- `plan_code`.
+- `billing_period`.
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+
+Si la tabla/DTO futuro lo contempla:
+
+- `price_uuid`.
+- `price_valid_from`.
+- `price_valid_until`.
+
+El snapshot:
+
+- Debe ser auditado.
+- No debe recalcularse despues para ese checkout intent.
+- Debe usarse para comparar contra payment intent/provider/webhook.
+- Debe permanecer aunque la tabla de precios cambie posteriormente.
+
+### F) Relacion con seed DEV/local actual
+Estado y alcance del seed actual:
+
+- El seed DEV/local dejo 4 precios activos de prueba.
+- Estos precios permiten probar el resolver futuro en DEV/local.
+- Son placeholders no productivos.
+- No deben usarse en produccion.
+- `free` sigue fuera.
+- No hay mensualidades todavia.
+- No hay precios comerciales aprobados.
+
+Estado DB local/dev actual:
+
+- `subscription_plan_prices = 4`.
+- `active_plan_prices = 4`.
+- `dev_seed_price_rows = 4`.
+- `free_seed_rows = 0`.
+
+### G) Relacion con idempotencia y lock
+El resolver:
+
+- No reemplaza idempotencia.
+- No reemplaza lock.
+
+El endpoint `checkout-intents` futuro debera seguir usando:
+
+- `Idempotency-Key` con operacion conceptual `subscriptions.checkout_intent.create`.
+- Lock conceptual `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+
+Reglas de flujo:
+
+- El precio debe resolverse dentro del flujo server-side controlado, antes de crear payment intent.
+- Si el checkout intent se reintenta con la misma idempotency key, el snapshot debe ser estable por replay.
+- Si se usa otra key y el precio cambio, la politica debera definirse en la microfase de implementacion del endpoint, no aqui.
+
+### H) Relacion con provider/webhook
+Reglas futuras:
+
+- El provider no sera fuente canonica unica.
+- El provider adapter recibira `amount_cents` y `currency` desde MXMed.
+- El payment intent debera guardar/usar el snapshot del checkout intent.
+- El webhook futuro debera validar:
+  - amount recibido.
+  - currency recibida.
+  - provider status.
+  - relacion con checkout intent.
+- No debe activarse suscripcion si `amount/currency` no coincide con snapshot.
+
+### I) Relacion con facturacion y capacidades
+El resolver:
+
+- No implementa facturacion.
+- No contiene CFDI.
+- No contiene datos fiscales.
+- No activa capacidades.
+- No toca `PublicProfilePlanCapabilities`.
+
+Separacion de responsabilidades:
+
+- La facturacion se disenara por separado.
+- Las capacidades se conectaran despues de activacion post-pago en fase separada.
+
+### J) Errores conceptuales
+Errores esperados:
+
+- `plan_not_contractable`: para `free` o planes que no pueden contratarse por checkout pagado.
+- `billing_period_invalid`: para periodos no soportados o no activos.
+- `plan_price_not_configured`: plan valido, pero sin precio vigente.
+- `pricing_configuration_conflict`: mas de un precio activo vigente para plan/periodo/moneda.
+- `pricing_source_unavailable`: error tecnico al consultar fuente de pricing.
+
+Errores opcionales documentales:
+
+- `plan_not_found`.
+- `plan_inactive`.
+
+Estos ultimos podrian normalizarse dentro de `plan_not_contractable` o errores existentes del endpoint `checkout-intents`.
+
+### K) Fuera de alcance
+Esta adenda no implementa:
+
+- Repositorio PHP.
+- Servicio PHP.
+- Endpoint `checkout-intents`.
+- Provider adapter.
+- Webhook.
+- Activacion post-pago.
+- Facturacion.
+- Capacidades.
+- Perfil publico.
+- SEO.
+- Cambios de DB/schema.
+- Nuevos SQL.
+- Ejecucion SQL.
+- Precios reales/productivos.
+
+### L) Pendientes posteriores
+Pendientes:
+
+1. Crear readiness para implementacion del repositorio/servicio.
+2. Implementar `SubscriptionPlanPriceRepository`.
+3. Implementar `SubscriptionPlanPriceResolverService`.
+4. Agregar pruebas/QA para:
+   - precio encontrado.
+   - precio faltante.
+   - conflicto por duplicidad vigente.
+   - `free` excluido.
+   - billing invalido.
+   - source unavailable simulado.
+5. Integrar resolver con endpoint futuro `checkout-intents`.
+6. Guardar snapshot en `subscription_checkout_intents`.
+7. Validar snapshot contra payment intent/provider/webhook.
+8. Disenar activacion post-pago.
+9. Mantener facturacion/capacidades fuera hasta microfase explicita.
+10. Definir precios reales/productivos en fase comercial separada.
+
+### M) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-PriceResolverImplementation-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness tecnica para implementar repositorio/servicio de resolucion server-side de precios, sin escribir codigo todavia.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
