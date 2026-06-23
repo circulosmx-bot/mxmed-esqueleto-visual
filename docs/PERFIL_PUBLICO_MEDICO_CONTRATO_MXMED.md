@@ -12958,6 +12958,258 @@ Objetivo:
 
 - Validar readiness para iniciar implementacion controlada del endpoint `checkout-intents`, integrando el resolver de precios, idempotencia y lock, sin implementar todavia el endpoint.
 
+## Adenda PP-Decisiones 75 — Decisión del primer write de checkout-intents
+
+### A) Problema a resolver
+Antes de implementar el endpoint:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents`.
+
+se decide el alcance exacto del primer write futuro.
+
+Alternativas evaluadas:
+
+1. Crear `subscription_checkout_intents` mas aceptacion contractual `accepted_pending_payment`.
+2. Crear `subscription_checkout_intents` mas aceptacion contractual `accepted_pending_payment` mas `subscription_payment_intents` placeholder.
+
+El endpoint `checkout-intents` no debe:
+
+- activar `profile_subscriptions`;
+- marcar aceptacion como `accepted` final;
+- simular pago confirmado;
+- activar capacidades;
+- tocar facturacion;
+- depender todavia de provider real.
+
+### B) Decision
+Para la primera implementacion controlada del endpoint `checkout-intents`, MXMed creara solo:
+
+1. Una aceptacion contractual con status `accepted_pending_payment`.
+2. Un registro en `subscription_checkout_intents`.
+
+No creara todavia:
+
+- `subscription_payment_intents`;
+- `subscription_payment_events`;
+- `profile_subscriptions`;
+- activacion post-pago;
+- capacidades;
+- facturacion.
+
+Razon:
+
+- `subscription_checkout_intents` representa la intencion de contratar y preserva el snapshot contractual/comercial.
+- `subscription_payment_intents` debe esperar a que exista provider adapter o una decision explicita de payment placeholder.
+- Crear payment intent sin provider puede introducir estado artificial dificil de auditar.
+- La separacion mantiene el primer write pequeno, testeable y reversible en DEV/local.
+- El pago sigue siendo una fase posterior.
+
+### C) Estado inicial recomendado
+El status inicial recomendado para `subscription_checkout_intents` es:
+
+- `pending_payment`.
+
+Motivo:
+
+- La aceptacion contractual ya se recibio en el request y queda registrada como `accepted_pending_payment`.
+- El checkout queda esperando inicializacion de pago/provider en fase posterior.
+- No se considera `paid`, `activated` ni `payment_processing`.
+
+Aunque el schema tiene default `pending_contract`, para este primer write el contrato ya fue aceptado dentro del flujo, por lo que el registro puede iniciar en `pending_payment` de forma explicita.
+
+### D) Orden conceptual del primer write
+Orden futuro, sin implementar en esta adenda:
+
+1. Validar auth/session_scope.
+2. Validar entidad.
+3. Validar que no exista suscripcion activa.
+4. Validar payload.
+5. Validar contrato.
+6. Validar acceptance source.
+7. Resolver precio server-side con `SubscriptionPlanPriceResolverService`.
+8. Procesar `Idempotency-Key` con operacion `subscriptions.checkout_intent.create`.
+9. Adquirir lock `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+10. Revalidar dentro del lock:
+    - no suscripcion activa;
+    - no checkout pendiente incompatible, si aplica.
+11. Crear aceptacion contractual:
+    - status `accepted_pending_payment`;
+    - `subscription_id = NULL`.
+12. Crear `subscription_checkout_intents`:
+    - status `pending_payment`;
+    - snapshot plan/billing/precio/contrato/aceptacion.
+13. Marcar idempotencia completed con respuesta estable.
+14. Liberar lock.
+15. Responder `201` con checkout intent y snapshot.
+
+### E) Snapshot minimo de checkout intent
+`subscription_checkout_intents` debe guardar:
+
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`, `profile_id` y `user_id`, segun contexto disponible;
+- `plan_code`;
+- `billing_period`;
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `contract_acceptance_uuid`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `status = pending_payment`;
+- `source`;
+- timestamps.
+
+Si el schema incluye campos provider pero aun no se usan:
+
+- dejarlos `NULL`;
+- no inventar provider;
+- no crear payment intent placeholder.
+
+### F) Idempotencia
+La operacion idempotente futura sera:
+
+- `subscriptions.checkout_intent.create`.
+
+Reglas:
+
+- Replay con misma key y mismo payload debe devolver el mismo checkout intent.
+- Misma key con payload distinto debe responder `idempotency_key_reused_with_different_payload`.
+- El request hash debe cubrir:
+  - `entity_type`;
+  - `entity_id`;
+  - `plan_code`;
+  - `billing_period`;
+  - contract `version`, `hash` y `snapshot_url`;
+  - acceptance `source`.
+
+La politica sobre incluir precio resuelto en el hash debe decidirse con cuidado. Recomendacion: el replay estable se basa en el snapshot guardado del primer intento; si el precio cambia despues, no debe alterar replay del mismo `Idempotency-Key`.
+
+### G) Lock
+El lock futuro sera:
+
+- `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+
+Reglas:
+
+- Evita dos checkout intents competidores para la misma entidad.
+- Se libera en `finally`.
+- Requiere revalidacion dentro del lock.
+- No reemplaza idempotencia.
+
+### H) Relacion con aceptacion contractual
+La aceptacion contractual del primer write:
+
+- se crea con status `accepted_pending_payment`;
+- deja `subscription_id = NULL`;
+- no activa plan;
+- se enlaza al checkout intent mediante `contract_acceptance_uuid`.
+
+Si el checkout expira, se cancela o falla, la aceptacion queda como evidencia del intento. Si el pago se confirma en fase posterior, se usara esa aceptacion para activacion sin duplicarla.
+
+### I) Relacion con payment intents
+`subscription_payment_intents` queda fuera del primer write.
+
+Se disenara cuando exista:
+
+- provider adapter;
+- o decision explicita de placeholder sin provider.
+
+No se escribira payment intent en esta primera implementacion. `subscription_payment_events` queda reservado para webhooks/event ledger. No se simula pago ni provider.
+
+### J) Errores conceptuales del primer write
+Errores esperados:
+
+- `invalid_json`;
+- `unauthenticated`;
+- `forbidden`;
+- `entity_not_found`;
+- `active_subscription_exists`;
+- `checkout_already_pending`;
+- `idempotency_key_invalid`;
+- `idempotency_key_reused_with_different_payload`;
+- `request_already_processing`;
+- `subscription_checkout_lock_timeout`;
+- `plan_not_contractable`;
+- `billing_period_invalid`;
+- `contract_invalid`;
+- `acceptance_source_invalid`;
+- `plan_price_not_configured`;
+- `pricing_configuration_conflict`;
+- `pricing_source_unavailable`;
+- `checkout_intent_create_failed`.
+
+`checkout_provider_unavailable` no debe usarse todavia si el primer write no llama provider.
+
+### K) QA futura minima
+QA futura esperada:
+
+1. `201` con `standard annual` y snapshot `20000 MXN`.
+2. Replay misma key/mismo payload devuelve mismo checkout intent.
+3. Misma key/payload distinto devuelve `409`.
+4. `free` devuelve `plan_not_contractable`.
+5. `monthly` devuelve `billing_period_invalid`.
+6. Sin sesion real devuelve `403`.
+7. Headers QA sin sesion devuelven `403`.
+8. `local_dev_open` sin sesion devuelve `403`.
+9. Entidad con suscripcion activa devuelve `active_subscription_exists`.
+10. No se crea `profile_subscriptions`.
+11. Se crea una aceptacion `accepted_pending_payment`.
+12. Se crea un `subscription_checkout_intents`.
+13. No se crea `subscription_payment_intents`.
+14. No se crea `subscription_payment_events`.
+15. No se activan capacidades.
+16. Lock liberado.
+17. Idempotencia completed/failed segun caso.
+
+### L) Fuera de alcance
+Esta adenda no implementa:
+
+- endpoint;
+- rutas;
+- repositorio checkout intent;
+- servicio checkout intent;
+- payment intent;
+- provider adapter;
+- webhook;
+- activacion post-pago;
+- facturacion;
+- capacidades;
+- perfil publico;
+- SEO;
+- cambios DB/schema;
+- SQL nuevo;
+- ejecucion SQL.
+
+### M) Pendientes posteriores
+Pendientes:
+
+1. Readiness para implementar repositorio/servicio de checkout intent.
+2. Implementar repositorio para insertar `subscription_checkout_intents`.
+3. Ajustar o extender repositorio de aceptacion contractual para permitir status `accepted_pending_payment`.
+4. Disenar servicio de creacion de checkout intent.
+5. Integrar resolver de precios.
+6. Integrar idempotencia con operation `subscriptions.checkout_intent.create`.
+7. Integrar lock `checkout_create`.
+8. Implementar ruta endpoint `checkout-intents`.
+9. QA funcional 201/replay/409/auth/precio.
+10. Disenar provider adapter.
+11. Disenar payment intent.
+12. Disenar webhook.
+13. Disenar activacion post-pago.
+14. Mantener facturacion/capacidades en fases separadas.
+
+### N) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-StorageRepositoryDesign-01`.
+
+Objetivo:
+
+- Disenar documentalmente el repositorio/servicio minimo para insertar `subscription_checkout_intents` y enlazar aceptacion `accepted_pending_payment`, sin implementar codigo todavia.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
