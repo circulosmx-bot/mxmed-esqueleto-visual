@@ -12796,6 +12796,168 @@ Objetivo:
 
 - Validar readiness tecnica para implementar repositorio/servicio de resolucion server-side de precios, sin escribir codigo todavia.
 
+## Adenda PP-Decisiones 74 — Cierre de implementación mínima del resolver server-side de precios
+
+### A) Microfases cerradas
+Microfases cerradas:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-PriceResolverDesign-01`.
+- `BE/SPEC-Suscripciones-CheckoutIntent-PriceResolverImplementation-Readiness-01`.
+- `BE-Suscripciones-CheckoutIntent-PriceResolverRepositoryService-Create-01`.
+- `QA-Suscripciones-CheckoutIntent-PriceResolverRepositoryService-PostPush-01`.
+
+Commit de implementacion:
+
+- `64d5091 feat(suscripciones): agrega resolver de precios checkout`.
+
+Archivos creados:
+
+- `modules/subscriptions/repositories/SubscriptionPlanPriceRepository.php`.
+- `modules/subscriptions/services/SubscriptionPlanPriceResolverService.php`.
+
+### B) Repositorio implementado
+Repositorio:
+
+- Clase: `SubscriptionPlanPriceRepository`.
+- Metodo principal: `findActiveCandidates(...)`.
+- Consulta solo `subscription_plan_prices`.
+
+Filtros aplicados:
+
+- `plan_code`.
+- `billing_period`.
+- `currency`.
+- `is_active = 1`.
+- `deleted_at IS NULL`.
+- Vigencia por `valid_from / valid_until`.
+
+Comportamiento:
+
+- Retorna candidatos como arrays asociativos.
+- Usa `LIMIT 2` para permitir detectar conflictos sin cargar mas filas de las necesarias.
+- No escribe DB.
+- No consulta checkout/payment.
+- No activa suscripciones.
+- No llama provider.
+
+### C) Servicio implementado
+Servicio:
+
+- Clase: `SubscriptionPlanPriceResolverService`.
+- Metodo principal: `resolveForCheckout(...)`.
+
+Normaliza:
+
+- `planCode`.
+- `billingPeriod`.
+- `currency`.
+
+Reglas implementadas:
+
+- Bloquea `free`.
+- Permite por ahora `annual`.
+- Resuelve precio vigente via repositorio.
+
+Snapshot devuelto:
+
+- `plan_code`.
+- `billing_period`.
+- `amount_cents`.
+- `currency`.
+- `price_source`.
+- `price_version`.
+- `valid_from`.
+- `valid_until`.
+- `price_uuid`.
+- `source`.
+
+Alcance:
+
+- No crea checkout intent.
+- No crea payment intent.
+- No activa suscripcion.
+- No conecta capacidades.
+
+### D) Errores conceptuales implementados/validados
+Errores conceptuales:
+
+- `plan_not_contractable`.
+- `billing_period_invalid`.
+- `plan_price_not_configured`.
+- `pricing_configuration_conflict`.
+- `pricing_source_unavailable`.
+
+### E) QA post-push
+La QA post-push confirmo:
+
+- Ambas clases existen y estan trackeadas.
+- `php -l` PASS en ambas clases.
+- QA estatica PASS:
+  - sin `INSERT/UPDATE/DELETE/TRUNCATE/ALTER/DROP/CREATE TABLE`.
+  - sin alcance indebido hacia checkout/payment, contractuales, capacidades, provider, webhook, facturacion o SEO.
+- `api/subscriptions/index.php` no integra estas clases ni `checkout-intents`.
+- QA funcional con `php -r` PASS:
+  - `standard annual` -> `20000 MXN`.
+  - `basic annual` -> `10000 MXN`.
+  - `optimum annual` -> `30000 MXN`.
+  - `professional annual` -> `40000 MXN`.
+  - `free annual` -> `plan_not_contractable`.
+  - `standard monthly` -> `billing_period_invalid`.
+  - `nonexistent annual` -> `plan_price_not_configured`.
+- No hubo writes DB durante QA.
+
+### F) DB local/dev validada
+Estado DB local/dev validado:
+
+- `subscription_plan_prices = 4`.
+- `active_plan_prices = 4`.
+- `dev_seed_price_rows = 4`.
+- `free_seed_rows = 0`.
+- Checkout/payment: `0 / 0 / 0`.
+- Contractuales: `3 / 3 / 5`.
+
+### G) Alcance explicito
+Este cierre no implica:
+
+- Endpoint `checkout-intents` implementado.
+- Integracion en `api/subscriptions/index.php`.
+- Creacion de checkout intent.
+- Creacion de payment intent.
+- Provider adapter.
+- Webhook.
+- Activacion post-pago.
+- Facturacion.
+- Capacidades.
+- Perfil publico.
+- SEO.
+- Cambios de DB/schema.
+- Nuevos SQL.
+- Precios reales/productivos.
+
+### H) Pendientes posteriores
+Pendientes:
+
+1. Disenar readiness para integracion controlada del resolver en endpoint futuro `checkout-intents`.
+2. Implementar endpoint `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents`.
+3. Integrar auth/session_scope real.
+4. Integrar idempotencia con operacion `subscriptions.checkout_intent.create`.
+5. Integrar lock `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+6. Copiar snapshot del resolver a `subscription_checkout_intents`.
+7. Disenar provider adapter.
+8. Disenar webhook y validar `amount/currency` contra snapshot.
+9. Disenar activacion post-pago.
+10. Mantener facturacion/capacidades fuera hasta microfase explicita.
+11. Definir precios reales/productivos en fase comercial separada.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-EndpointImplementation-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness para iniciar implementacion controlada del endpoint `checkout-intents`, integrando el resolver de precios, idempotencia y lock, sin implementar todavia el endpoint.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
