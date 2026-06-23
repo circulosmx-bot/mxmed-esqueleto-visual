@@ -14219,6 +14219,302 @@ Objetivo:
 
 - Validar readiness tecnica final para implementar el servicio `CreateSubscriptionPendingPaymentAcceptanceService` o metodo equivalente, sin escribir codigo todavia.
 
+## Adenda PP-Decisiones 80 — Readiness de implementación del servicio accepted_pending_payment
+
+### A) Propósito
+Esta adenda valida la readiness tecnica final para implementar posteriormente:
+
+- `CreateSubscriptionPendingPaymentAcceptanceService`.
+
+Metodo conceptual:
+
+- `createPendingPaymentAcceptance(array $input): array`.
+
+La microfase no implementa el servicio, no crea archivos PHP, no modifica rutas, no crea SQL y no cambia DB/schema. Solo confirma que el diseno ya es suficiente para una microfase futura de codigo controlada.
+
+### B) Estado técnico observado
+Convenciones de servicios existentes:
+
+- Los servicios viven en `modules/subscriptions/services`.
+- Usan `declare(strict_types=1);` y namespace `Subscriptions\Services`.
+- Reciben dependencias por constructor.
+- Devuelven arrays para operaciones de escritura o lectura compuesta.
+- Usan excepciones controladas basadas en `RuntimeException` cuando el flujo requiere `status` y `errorCode`.
+- Validan input con helpers privados dentro del servicio cuando no existe helper compartido.
+
+Repositorio `SubscriptionContractAcceptanceRepository`:
+
+- Existe en `modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php`.
+- Expone `insert(array $data): void`.
+- Recibe `uuid`, `subscription_id`, `status`, `source`, `contract_version`, `contract_hash`, `contract_snapshot_url` y campos de actor/evidencia.
+- No crea `profile_subscriptions`.
+- No devuelve fila ni UUID.
+
+Servicio `CreateSubscriptionWithAcceptanceService`:
+
+- Genera UUIDs con `random_bytes`.
+- Usa `DateTimeImmutable` y zona UTC.
+- Fija `status = accepted`.
+- Crea `profile_subscriptions`.
+- Usa transaccion para aceptacion contractual + suscripcion activa.
+- Asume activacion inmediata.
+
+Riesgo observado:
+
+- El servicio actual esta acoplado a `profile_subscriptions`; no debe reutilizarse tal cual para checkout-intents.
+
+### C) Decisión de ubicación futura
+Archivo futuro confirmado:
+
+- `modules/subscriptions/services/CreateSubscriptionPendingPaymentAcceptanceService.php`.
+
+Clase futura:
+
+- `CreateSubscriptionPendingPaymentAcceptanceService`.
+
+Metodo futuro:
+
+- `createPendingPaymentAcceptance(array $input): array`.
+
+Se prefiere un servicio nuevo porque:
+
+- reduce el riesgo de romper el flujo contractual actual;
+- mantiene intacto `CreateSubscriptionWithAcceptanceService`;
+- separa `accepted_pending_payment` de `accepted` activo;
+- evita activacion accidental;
+- permite QA especifico de no creacion de `profile_subscriptions`.
+
+### D) Dependencias listas / necesarias
+Dependencias futuras:
+
+- `SubscriptionContractAcceptanceRepository`.
+- Generacion UUID local segura, siguiendo el patron actual con `random_bytes`, si no se extrae helper comun.
+- `DateTimeImmutable` para timestamps.
+- Validacion contractual minima.
+- `Throwable` / `RuntimeException` o excepcion especifica equivalente al patron actual.
+- `PDO` o transaccion recibida solo si la arquitectura final lo requiere.
+
+No depende de:
+
+- `SubscriptionPlanPriceResolverService`;
+- `SubscriptionCheckoutIntentRepository`;
+- `SubscriptionWriteIdempotencyService`;
+- `SubscriptionEntityWriteLockService`;
+- provider/payment/webhook.
+
+Estas responsabilidades viven en el futuro `CreateSubscriptionCheckoutIntentService`.
+
+### E) Contrato final de input
+Input recomendado para `createPendingPaymentAcceptance(array $input): array`:
+
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `user_id` o `actor_user_id`;
+- `plan_code`;
+- `billing_period`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `acceptance_source = checkout_intent`;
+- `accepted_at` opcional;
+- request context minimo opcional;
+- metadata opcional si el schema actual lo permite.
+
+Valores que el metodo debe forzar o validar:
+
+- `status` debe ser `accepted_pending_payment`.
+- `subscription_id` debe ser `NULL`.
+- `source` debe ser `checkout_intent`.
+
+No debe recibir:
+
+- `amount_cents`;
+- `currency`;
+- `provider_payment_id`;
+- `payment_intent_id`;
+- profile subscription id activo;
+- status arbitrario enviado por cliente.
+
+### F) Contrato final de output
+Output recomendado:
+
+- `contract_acceptance_uuid`;
+- `status = accepted_pending_payment`;
+- `subscription_id = NULL`;
+- `source = checkout_intent`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `accepted_at` / `created_at`;
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`, si aplica;
+- `profile_id`, si aplica;
+- `plan_code`;
+- `billing_period`.
+
+El output alimentara el snapshot de `subscription_checkout_intents`.
+
+El servicio debe conservar y devolver el UUID generado porque el repositorio actual no devuelve fila ni UUID.
+
+### G) Validaciones mínimas
+Validaciones minimas futuras:
+
+- `entity_type` permitido.
+- `entity_id` presente.
+- `plan_code` presente.
+- `billing_period` presente.
+- `contract_version` presente.
+- `contract_hash` presente.
+- `contract_snapshot_url` presente, o nullable solo si el contrato actual lo permite.
+- `acceptance_source` debe ser `checkout_intent`.
+- Status interno debe ser `accepted_pending_payment`.
+- `subscription_id` debe ser `NULL`.
+- No aceptar status externo arbitrario.
+- No aceptar source externo arbitrario fuera de allowlist.
+
+### H) Política de errores
+Errores conceptuales propios de este servicio:
+
+- `invalid_pending_payment_acceptance_payload`.
+- `contract_invalid`.
+- `acceptance_source_invalid`.
+- `contract_acceptance_create_failed`.
+- `pending_payment_acceptance_unexpected_subscription_id`.
+- `pending_payment_acceptance_unexpected_status`.
+- `pending_payment_acceptance_unexpected_source`.
+
+Errores que pertenecen a capa superior:
+
+- `active_subscription_exists`.
+- `checkout_already_pending`.
+- `idempotency_key_reused_with_different_payload`.
+- `request_already_processing`.
+- `subscription_checkout_lock_timeout`.
+- `plan_not_contractable`.
+- `billing_period_invalid`.
+- `plan_price_not_configured`.
+- `pricing_configuration_conflict`.
+- `pricing_source_unavailable`.
+
+### I) Transacción futura
+Decision de readiness:
+
+- Este servicio no debe ser dueno final de la transaccion completa de checkout.
+- La transaccion completa debe vivir en `CreateSubscriptionCheckoutIntentService`.
+- El servicio pending payment debe poder ejecutarse dentro de una transaccion ya abierta si la infraestructura lo permite.
+- Si el servicio abre transaccion propia en una implementacion minima, debe documentarse como riesgo porque el checkout intent posterior podria fallar y dejar aceptacion huerfana.
+- La implementacion recomendada debe evitar aceptacion huerfana.
+
+### J) Invariantes de seguridad
+Invariantes obligatorias:
+
+- Nunca crear `profile_subscriptions`.
+- Nunca crear payment intents.
+- Nunca crear payment events.
+- Nunca activar capacidades.
+- Nunca usar `status = accepted` en este flujo.
+- Nunca setear `subscription_id` distinto de `NULL`.
+- Nunca aceptar `source` distinto de `checkout_intent`.
+- Nunca llamar provider.
+- Nunca tocar el endpoint contractual actual.
+- Nunca modificar `CreateSubscriptionWithAcceptanceService` en la implementacion minima salvo microfase explicita.
+
+### K) Plan de implementación futuro mínimo
+Plan recomendado para la siguiente microfase de codigo, sin ejecutarlo ahora:
+
+1. Crear archivo de servicio nuevo.
+2. Inyectar `SubscriptionContractAcceptanceRepository`.
+3. Implementar constructor segun patron existente.
+4. Implementar `createPendingPaymentAcceptance(array $input): array`.
+5. Generar `contract_acceptance_uuid` antes del insert.
+6. Normalizar/validar input.
+7. Construir payload para `repository->insert(...)`.
+8. Forzar `status = accepted_pending_payment`.
+9. Forzar `subscription_id = NULL`.
+10. Forzar `source = checkout_intent`.
+11. Llamar `repository->insert($payload)`.
+12. Devolver array con UUID y snapshot contractual.
+13. No tocar endpoint.
+14. No tocar `CreateSubscriptionWithAcceptanceService`.
+15. No crear `profile_subscriptions`.
+
+### L) QA futura de implementación
+QA minima para la microfase de codigo:
+
+- `php -l` del nuevo archivo.
+- `grep` para confirmar que el nuevo servicio no contiene writes a `profile_subscriptions`.
+- `grep` para confirmar `accepted_pending_payment`.
+- `grep` para confirmar `subscription_id = NULL`.
+- `grep` para confirmar `source = checkout_intent`.
+- Inspeccion de diff para confirmar que solo se agrego el nuevo servicio, si esa microfase lo permite.
+- Si se permite prueba PHP aislada posterior, validar que el metodo construye payload esperado usando stub/mock controlado.
+- Confirmar que `api/subscriptions/index.php` no cambio.
+- Confirmar que `CreateSubscriptionWithAcceptanceService` no cambio.
+
+### M) Riesgos y bloqueos
+Bloqueantes antes de endpoint:
+
+- Falta implementar este servicio.
+- Falta integrar con `CreateSubscriptionCheckoutIntentService`.
+- Falta transaccion acceptance + checkout intent.
+- Falta integracion idempotencia/lock checkout.
+
+No bloqueantes para implementar este servicio:
+
+- Provider no existe.
+- Payment intent no existe.
+- Webhook no existe.
+- Facturacion no existe.
+- Capacidades productivas no estan conectadas.
+
+### N) Decisiones que se mantienen
+Se reafirma:
+
+- Primer write checkout-intents crea aceptacion `accepted_pending_payment`.
+- Primer write checkout-intents crea `subscription_checkout_intents`.
+- Primer write NO crea `profile_subscriptions`.
+- Primer write NO crea payment intents.
+- Primer write NO crea payment events.
+- Checkout intent inicia `pending_payment`.
+- Provider, webhook, facturacion y capacidades quedan fuera.
+- Idempotencia checkout operation = `subscriptions.checkout_intent.create`.
+- Lock checkout = `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+
+### O) Fuera de alcance
+Esta adenda no implementa:
+
+- repositorio;
+- servicio;
+- endpoint;
+- rutas;
+- SQL;
+- migraciones;
+- DB/schema;
+- provider;
+- payment intents;
+- payment events;
+- webhook;
+- activacion post-pago;
+- `profile_subscriptions`;
+- facturacion;
+- capacidades;
+- conexion con `PublicProfilePlanCapabilities`;
+- perfil publico;
+- SEO;
+- frontend.
+
+### P) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/Suscripciones-ContractAcceptance-PendingPayment-Service-01`.
+
+Objetivo:
+
+- Implementar el servicio `CreateSubscriptionPendingPaymentAcceptanceService` con metodo `createPendingPaymentAcceptance(array $input): array`, sin endpoint, sin SQL, sin DB/schema y sin crear `profile_subscriptions`.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
