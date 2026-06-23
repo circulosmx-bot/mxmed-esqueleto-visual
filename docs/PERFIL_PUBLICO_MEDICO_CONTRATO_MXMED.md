@@ -12091,6 +12091,172 @@ Objetivo:
 
 - Decidir estrategia de precios iniciales y seeds DEV/local para `subscription_plan_prices`, sin insertar todavia precios y sin ejecutar SQL.
 
+## Adenda PP-Decisiones 70 — Estrategia de precios iniciales y seeds DEV/local para suscripciones
+
+### A) Problema
+La tabla `subscription_plan_prices` ya existe en local/dev, pero esta vacia:
+
+- `subscription_plan_prices = 0`.
+- `active_plan_prices = 0`.
+
+Implicaciones:
+
+- El endpoint futuro `checkout-intents` no puede crear checkout real si no existe un precio server-side vigente.
+- No se deben mezclar seeds de precios con SQL de schema.
+- No se deben confundir precios DEV/local con precios reales/productivos.
+- Falta decidir si `free` entra o no en `subscription_plan_prices`.
+
+### B) Principios de decision
+Principios:
+
+1. El schema no debe insertar precios.
+2. Los precios iniciales deben ir en una microfase separada.
+3. Los precios DEV/local deben quedar claramente marcados como dev/local.
+4. Los precios productivos requieren decision comercial explicita.
+5. El cliente nunca envia precio.
+6. El endpoint `checkout-intents` debe fallar controladamente si no hay precio activo.
+7. Los cambios de precio deben versionarse, no sobrescribirse.
+8. No se deben borrar fisicamente precios usados historicamente.
+9. Facturacion sigue separada.
+10. Capacidades siguen separadas.
+
+### C) Decision sobre seeds
+Decision:
+
+- No incluir seeds en SQL de schema.
+- Crear, si se autoriza despues, un archivo SQL separado para seeds DEV/local.
+
+Nombre futuro sugerido:
+
+- `modules/profiles/db/2026_06_22_seed_subscription_plan_prices_dev.sql`.
+
+Reglas del archivo futuro:
+
+- Sera DEV/local only.
+- No sera productivo.
+- Insertara precios de prueba.
+- Se ejecutara solo por microfase explicita.
+- No se mezclara con schema.
+- Debera documentarse y validarse por QA.
+
+### D) Decision sobre plan `free`
+Decision recomendada:
+
+- `free` no debe tener fila de precio en `subscription_plan_prices` para checkout pagado v1.
+
+Motivos:
+
+- `free` no requiere checkout ni pago.
+- Evita confundir flujo gratuito con flujo de cobro.
+- El read-model actual ya puede resolver `free_default` sin precio.
+- Los checkout-intents pagados deben rechazar `free`.
+
+Si en el futuro se requiere auditar plan `free` con monto `0`, se disenara en microfase separada.
+
+### E) Precios DEV/local sugeridos
+Se podran usar precios placeholder DEV/local no productivos en una microfase futura.
+
+Planes candidatos DEV/local:
+
+- `basic annual`.
+- `standard annual`.
+- `optimum annual`.
+- `professional annual`.
+
+Valores simbolicos sugeridos:
+
+- `basic annual = 10000` MXN cents.
+- `standard annual = 20000` MXN cents.
+- `optimum annual = 30000` MXN cents.
+- `professional annual = 40000` MXN cents.
+
+Aclaraciones:
+
+- No son precios reales.
+- No son precios comerciales aprobados.
+- No deben usarse en produccion.
+- Solo sirven para probar resolucion server-side y `checkout-intents` en DEV/local.
+
+### F) Versionado de precios DEV/local
+Convencion para seed DEV/local futuro:
+
+- `price_source = subscription_plan_prices_dev_seed`.
+- `price_version = mxmed-dev-pricing-2026-v1`.
+- `currency = MXN`.
+- `valid_from = fecha fija futura o NOW controlado en seed autorizado`.
+- `valid_until = NULL`.
+- `is_active = 1`.
+- `source = mxmed_subscription_plan_price_dev_seed_v1`.
+
+Esta convencion es solo para un seed DEV/local futuro.
+
+### G) Reglas de unicidad y conflictos
+Reglas:
+
+- Debe existir maximo un precio activo vigente por `plan_code + billing_period + currency`.
+- En v1 esta regla se validara en backend/QA, no solo por constraint SQL.
+
+Errores:
+
+- Si hay mas de un precio activo vigente: `pricing_configuration_conflict`.
+- Si no hay precio activo vigente: `plan_price_not_configured`.
+- Si la fuente falla: `pricing_source_unavailable`.
+
+### H) Relacion con endpoint checkout-intents
+El endpoint futuro consultara `subscription_plan_prices`.
+
+Reglas:
+
+- Si el plan es `free`, debe responder `plan_not_contractable` o equivalente en flujo de checkout pagado.
+- Si no hay precio activo, no debe crear checkout intent.
+- Si hay precio activo unico, copiara snapshot a `subscription_checkout_intents`:
+  - `amount_cents`.
+  - `currency`.
+  - `price_source`.
+  - `price_version`.
+
+### I) Relacion con provider/webhook
+Reglas:
+
+- El provider adapter recibira el monto resuelto por MXMed.
+- El webhook futuro validara `amount`/`currency` contra snapshot.
+- No se activa suscripcion si `amount`/`currency` no coincide.
+- El seed DEV/local no implementa provider ni webhook.
+
+### J) Relacion con facturacion
+Reglas:
+
+- Precios en `subscription_plan_prices` no son factura.
+- No contienen CFDI.
+- No contienen datos fiscales.
+- Facturacion se disena por separado.
+- El snapshot de checkout/payment puede alimentar facturacion futura, pero no se implementa aqui.
+
+### K) Fuera de alcance explicito
+Esta microfase no:
+
+- Inserta precios.
+- Crea seed SQL.
+- Ejecuta SQL.
+- Modifica DB/schema.
+- Modifica backend.
+- Modifica frontend.
+- Implementa checkout.
+- Implementa provider adapter.
+- Implementa webhook.
+- Conecta facturacion.
+- Activa capacidades.
+- Decide precios reales/productivos.
+
+### L) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB/SPEC-Suscripciones-PlanPrices-DevSeedDraft-01`.
+
+Objetivo:
+
+- Crear un SQL draft conceptual DEV/local only para seeds de precios de prueba en `subscription_plan_prices`, sin crear SQL ejecutable y sin ejecutar SQL.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
