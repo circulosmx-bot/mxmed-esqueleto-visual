@@ -14515,6 +14515,328 @@ Objetivo:
 
 - Implementar el servicio `CreateSubscriptionPendingPaymentAcceptanceService` con metodo `createPendingPaymentAcceptance(array $input): array`, sin endpoint, sin SQL, sin DB/schema y sin crear `profile_subscriptions`.
 
+## Adenda PP-Decisiones 81 — Readiness de implementación del repositorio checkout-intents
+
+### A) Propósito
+Esta adenda valida readiness tecnica para implementar posteriormente:
+
+- `SubscriptionCheckoutIntentRepository`.
+
+La adenda prepara solo el repository de storage para `subscription_checkout_intents`. No implementa codigo, no crea repositorios reales, no crea servicio orquestador, no crea endpoint, no crea SQL y no cambia DB/schema.
+
+### B) Estado técnico observado
+Schema `subscription_checkout_intents`:
+
+- Existe en `modules/profiles/db/2026_06_22_create_subscription_checkout_intents.sql`.
+- Contempla `uuid`, entidad, actor, plan, precio, contrato, idempotencia, provider nullable, `subscription_id` nullable, fechas y soft-delete.
+- Contempla `status`, con default `pending_contract`; el primer write debe setear explicitamente `pending_payment`.
+- Contempla `contract_acceptance_uuid`.
+- Contempla `idempotency_key_hash` y `request_hash`.
+- Contempla `deleted_at`.
+- Tiene indice unico por `uuid`.
+- Tiene indices por entidad, doctor, usuario, status/expiracion, plan/periodo, aceptacion contractual, suscripcion, provider y `deleted_at`.
+
+Estilo de repositories existentes:
+
+- Usan `declare(strict_types=1);`.
+- Namespace `Subscriptions\Repositories`.
+- Reciben `PDO` por constructor.
+- Usan `prepare(...)`, `execute(...)`, `fetch(...)` o `fetchAll(...)`.
+- Retornan `array`, `?array`, `void` o booleanos segun responsabilidad.
+- No abren transacciones por si mismos.
+
+Servicio `accepted_pending_payment`:
+
+- `CreateSubscriptionPendingPaymentAcceptanceService` ya existe y fue validado post-push.
+- Devuelve `contract_acceptance_uuid` y snapshot contractual para alimentar el futuro checkout intent.
+
+Relacion futura:
+
+- `CreateSubscriptionCheckoutIntentService` orquestara aceptacion pending payment + checkout intent + idempotencia + lock.
+- `SubscriptionCheckoutIntentRepository` sera solo storage sobre `subscription_checkout_intents`.
+
+### C) Ubicación futura
+Archivo futuro:
+
+- `modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php`.
+
+Clase futura:
+
+- `SubscriptionCheckoutIntentRepository`.
+
+Namespace:
+
+- `Subscriptions\Repositories`.
+
+### D) Métodos futuros recomendados
+Metodos recomendados:
+
+- `create(array $snapshot): array`.
+
+Responsabilidad:
+
+- Insertar checkout intent y devolver snapshot/fila minima creada.
+
+- `findByUuid(string $uuid): ?array`.
+
+Responsabilidad:
+
+- Buscar checkout intent por `uuid`.
+
+- `findPendingByEntity(string $entityType, string $entityId): ?array`.
+
+Responsabilidad:
+
+- Buscar checkout intent `pending_payment` vigente/no eliminado para una entidad.
+
+- `findPendingByEntityPlanAndBilling(string $entityType, string $entityId, string $planCode, string $billingPeriod): ?array`.
+
+Responsabilidad:
+
+- Buscar pending compatible para la misma entidad, plan y periodo.
+
+La decision final de error, replay idempotente o continuidad del flujo queda en capa superior, no en el repository.
+
+### E) Payload de `create(array $snapshot)`
+Input recomendado:
+
+- `uuid`;
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `user_id`;
+- `actor_role`;
+- `plan_code`;
+- `billing_period`;
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `contract_acceptance_uuid`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `status = pending_payment`;
+- `source`;
+- `idempotency_key_hash`, si la capa superior decide copiarlo;
+- `request_hash`, si la capa superior decide copiarlo;
+- `expires_at`;
+- `created_at`, si se requiere snapshot de retorno;
+- `updated_at`, si se requiere snapshot de retorno;
+- `deleted_at = NULL`.
+
+Aclaraciones:
+
+- `amount_cents`, `currency`, `price_source` y `price_version` vienen del resolver server-side.
+- `contract_acceptance_uuid` viene del servicio `accepted_pending_payment`.
+- `status` debe ser `pending_payment`.
+- `source` debe identificar el flujo de checkout intent, por ejemplo `mxmed_subscription_checkout_intent_v1` o equivalente documentado.
+- El cliente no envia precio canonico.
+
+### F) Validaciones mínimas del repository futuro
+Validaciones minimas:
+
+- `uuid` requerido.
+- `entity_type` requerido.
+- `entity_id` requerido.
+- `user_id` requerido.
+- `plan_code` requerido.
+- `billing_period` requerido.
+- `amount_cents` requerido y entero no negativo; en checkout pagado debe ser positivo porque `free` no es contratable.
+- `currency` requerido.
+- `price_source` requerido.
+- `price_version` requerido.
+- `contract_acceptance_uuid` requerido.
+- `contract_version` requerido.
+- `contract_hash` requerido.
+- `contract_snapshot_url` requerido por el schema actual.
+- `expires_at` requerido por el schema actual.
+- `status` debe ser `pending_payment`.
+- `source` requerido.
+- No aceptar status externo arbitrario si el repository recibe payload desde capa superior.
+
+### G) Normalización de salida
+Los metodos deben devolver arrays normalizados con keys estables:
+
+- `uuid`;
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `user_id`;
+- `actor_role`;
+- `plan_code`;
+- `billing_period`;
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `contract_acceptance_uuid`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `status`;
+- `source`;
+- `idempotency_key_hash`, si existe;
+- `request_hash`, si existe;
+- `expires_at`;
+- `completed_at`;
+- `cancelled_at`;
+- `activated_at`;
+- `created_at`;
+- `updated_at`;
+- `deleted_at`.
+
+### H) Pending checkout
+El repository solo consulta pending y no decide negocio.
+
+La capa superior futura `CreateSubscriptionCheckoutIntentService` decidira:
+
+- si corresponde replay idempotente;
+- si corresponde `checkout_already_pending`;
+- si existe `active_subscription_exists`;
+- si puede continuar con `create(...)`.
+
+El repository no debe:
+
+- cerrar pending automaticamente;
+- sobrescribir pending;
+- crear uno nuevo si ya existe pending;
+- decidir compatibilidad de negocio mas alla del lookup solicitado.
+
+### I) Transacción futura
+`SubscriptionCheckoutIntentRepository` no debe abrir transaccion propia.
+
+Debe poder usarse dentro de una transaccion superior controlada por `CreateSubscriptionCheckoutIntentService`.
+
+La unidad atomica futura sera:
+
+1. Crear `subscription_contract_acceptances` con `accepted_pending_payment`.
+2. Crear `subscription_checkout_intents` con `pending_payment`.
+
+### J) Responsabilidades fuera del repository
+El repository no debe:
+
+- validar auth/session;
+- validar entidad real;
+- validar `active_subscription_exists`;
+- resolver precio;
+- validar contrato;
+- crear aceptacion contractual;
+- manejar idempotencia;
+- manejar lock;
+- crear payment intents;
+- crear payment events;
+- crear `profile_subscriptions`;
+- activar capacidades;
+- llamar provider;
+- manejar webhooks;
+- facturar;
+- tocar perfil publico/SEO.
+
+### K) Política de errores
+Errores propios del repository:
+
+- `invalid_checkout_intent_payload`.
+- `checkout_intent_create_failed`.
+- `checkout_intent_lookup_failed`.
+- `checkout_intent_not_found`, solo si aplica a metodos estrictos futuros.
+- `pricing_snapshot_missing`.
+- `contract_acceptance_uuid_missing`.
+
+Errores de capa superior, no del repository:
+
+- `checkout_already_pending`.
+- `active_subscription_exists`.
+- `plan_not_contractable`.
+- `billing_period_invalid`.
+- `plan_price_not_configured`.
+- `pricing_configuration_conflict`.
+- `pricing_source_unavailable`.
+- `contract_invalid`.
+- `idempotency_key_reused_with_different_payload`.
+- `request_already_processing`.
+- `subscription_checkout_lock_timeout`.
+
+### L) QA futura de implementación
+QA futura cuando se implemente el repository:
+
+- `php -l` del nuevo archivo.
+- `grep` de clase y metodos.
+- `grep` de `pending_payment`.
+- `grep` de `contract_acceptance_uuid`.
+- `grep` de prohibidos:
+  - `profile_subscriptions`;
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`;
+  - provider;
+  - webhook;
+  - `PublicProfilePlanCapabilities`.
+- Diff confirma solo archivo nuevo repository, si esa microfase lo permite.
+- Pruebas aisladas sin DB real solo si hay patron existente.
+- No endpoint.
+- No SQL.
+- No DB/schema.
+
+### M) Riesgos y brechas
+Riesgos/brechas:
+
+- Confirmar nombres exactos de columnas antes de implementar.
+- `idempotency_key_hash` y `request_hash` existen en schema, pero deben copiarse solo si la capa de orquestacion lo decide.
+- No confundir repository con service orquestador.
+- No abrir transaccion propia.
+- No crear payment intent.
+- No crear `profile_subscriptions`.
+- Necesidad posterior de `CreateSubscriptionCheckoutIntentService`.
+- Necesidad posterior de integracion con idempotencia/lock.
+- Necesidad posterior de QA DB/local cuando se conecte endpoint o servicio orquestador.
+
+### N) Decisiones que se mantienen
+Se reafirma:
+
+- Primer write checkout-intents crea aceptacion `accepted_pending_payment`.
+- Primer write checkout-intents crea `subscription_checkout_intents`.
+- Primer write NO crea `profile_subscriptions`.
+- Primer write NO crea payment intents.
+- Primer write NO crea payment events.
+- Checkout intent inicia `pending_payment`.
+- Provider, webhook, facturacion y capacidades quedan fuera.
+- Idempotencia checkout operation = `subscriptions.checkout_intent.create`.
+- Lock checkout = `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+
+### O) Fuera de alcance
+Esta adenda no implementa:
+
+- repositorio;
+- servicio orquestador;
+- endpoint;
+- rutas;
+- SQL;
+- migraciones;
+- DB/schema;
+- provider;
+- payment intents;
+- payment events;
+- webhook;
+- activacion post-pago;
+- `profile_subscriptions`;
+- facturacion;
+- capacidades;
+- conexion con `PublicProfilePlanCapabilities`;
+- perfil publico;
+- SEO;
+- frontend.
+
+### P) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/Suscripciones-CheckoutIntent-Repository-01`.
+
+Objetivo:
+
+- Implementar `SubscriptionCheckoutIntentRepository` con metodos `create`, `findByUuid`, `findPendingByEntity` y `findPendingByEntityPlanAndBilling`, sin endpoint, sin SQL, sin DB/schema, sin provider y sin crear payment/profile_subscriptions.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
