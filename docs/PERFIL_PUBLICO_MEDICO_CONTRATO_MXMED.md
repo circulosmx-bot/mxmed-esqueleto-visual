@@ -12257,6 +12257,143 @@ Objetivo:
 
 - Crear un SQL draft conceptual DEV/local only para seeds de precios de prueba en `subscription_plan_prices`, sin crear SQL ejecutable y sin ejecutar SQL.
 
+## Adenda PP-Decisiones 71 — Cierre del draft DEV/local de seeds de precios de suscripciones
+
+### A) Microfase cerrada
+Microfase cerrada:
+
+- `DB/SPEC-Suscripciones-PlanPrices-DevSeedDraft-01`.
+
+QA cerrada:
+
+- `QA-Suscripciones-PlanPrices-DevSeedDraft-PendingDiff-01`.
+
+Commit:
+
+- `fa4e4a5 db(suscripciones): agrega draft seed dev de precios`.
+
+Archivo:
+
+- `modules/profiles/db/2026_06_22_seed_subscription_plan_prices_dev_draft.sql`.
+
+### B) Proposito
+El archivo es un draft conceptual DEV/local para un futuro seed de precios de prueba en:
+
+- `subscription_plan_prices`.
+
+Uso futuro:
+
+- Probar resolucion server-side de precios.
+- Probar `checkout-intents` en DEV/local.
+- Mantener separados schema, seeds DEV/local y precios reales/productivos.
+
+### C) Relacion con PP-Decisiones 70
+El draft respeta PP-Decisiones 70:
+
+- No mezcla seeds con schema.
+- Es un archivo separado.
+- Es `DEV/LOCAL ONLY`.
+- Los precios son placeholders no productivos.
+- No son precios reales ni comerciales aprobados.
+- No deben usarse en produccion.
+- `free` queda fuera de precios pagados v1.
+
+### D) Contenido
+Planes incluidos como placeholders DEV/local:
+
+- `basic annual = 10000` centavos MXN.
+- `standard annual = 20000` centavos MXN.
+- `optimum annual = 30000` centavos MXN.
+- `professional annual = 40000` centavos MXN.
+
+Exclusiones:
+
+- `free`.
+- Mensualidades no decididas.
+- Provider ids.
+- Facturacion.
+- Capacidades.
+- Datos fiscales.
+
+### E) Convenciones
+Convenciones del draft:
+
+- `price_source = subscription_plan_prices_dev_seed`.
+- `price_version = mxmed-dev-pricing-2026-v1`.
+- `source = mxmed_subscription_plan_price_dev_seed_v1`.
+- `currency = MXN`.
+- `valid_from = 2026-06-22 00:00:00`.
+- `valid_until = NULL`.
+- `is_active = 1`.
+- `notes` indica `DEV/LOCAL placeholder` y no produccion.
+- 4 UUIDs fijos distintos para reproducibilidad.
+
+### F) QA del draft
+La QA de pending diff confirmo:
+
+- El archivo es `DRAFT ONLY`.
+- El archivo es `DEV/LOCAL ONLY`.
+- No existe SQL ejecutable final.
+- Contiene `INSERT` conceptual solo a `subscription_plan_prices`.
+- Incluye `basic annual`, `standard annual`, `optimum annual` y `professional annual`.
+- Excluye `free` como fila seed.
+- No contiene `ALTER`.
+- No contiene `DROP`.
+- No contiene `DELETE`.
+- No contiene `TRUNCATE`.
+- No contiene `UPDATE`.
+- No contiene `CREATE TABLE`.
+- No toca payment events/intents.
+- No contiene datos sensibles.
+- No contiene facturacion/capacidades operativas.
+- No se ejecuto SQL.
+- No se modifico DB/schema.
+- `git diff --check` quedo limpio.
+
+### G) Alcance explicito
+Esta adenda no implica:
+
+- SQL ejecutable creado.
+- SQL ejecutado.
+- Precios insertados.
+- Seeds ejecutados.
+- Cambios DB/schema.
+- Cambios backend/frontend.
+- Endpoint `checkout-intents` implementado.
+- Provider adapter implementado.
+- Webhook implementado.
+- Facturacion conectada.
+- Capacidades activadas.
+- Perfil publico o SEO tocados.
+
+### H) Pendientes posteriores
+Pendientes:
+
+1. Convertir el draft DEV/local a SQL ejecutable: `modules/profiles/db/2026_06_22_seed_subscription_plan_prices_dev.sql`.
+2. Hacer QA del SQL ejecutable DEV/local.
+3. Ejecutar el seed en local/dev en microfase autorizada.
+4. Hacer QA post-seed:
+   - 4 filas esperadas.
+   - `active_plan_prices = 4`.
+   - `free` excluido.
+   - `price_version` correcta.
+   - `price_source` correcto.
+5. Documentar cierre de ejecucion local/dev del seed.
+6. Disenar repositorio/servicio de resolucion de precios.
+7. Validar un solo precio activo vigente por plan/periodo/moneda.
+8. Integrar resolucion de precio con `checkout-intents` futuro.
+9. Mantener provider/webhook/facturacion/capacidades fuera de esta fase.
+10. Decidir precios reales/productivos en fase comercial separada.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `DB-Suscripciones-PlanPrices-DevSeedExecutableSql-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness para convertir el draft DEV/local de seeds de precios en SQL ejecutable versionado, sin crear todavia el SQL ejecutable final y sin ejecutar SQL.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
