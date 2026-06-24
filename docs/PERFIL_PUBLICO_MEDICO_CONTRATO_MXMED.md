@@ -16615,6 +16615,296 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 88 - Plan de lock checkout para CreateSubscriptionCheckoutIntentService
+
+### A) Proposito
+Esta adenda planifica el ajuste minimo de lock para el futuro checkout-intent:
+
+- `CreateSubscriptionCheckoutIntentService::createCheckoutIntent(array $input): array`.
+
+Esta adenda no implementa codigo y no reabre decisiones cerradas sobre:
+
+- checkout-first;
+- primer write;
+- `accepted_pending_payment`;
+- `pending_payment`;
+- resolver server-side de precios;
+- idempotencia checkout;
+- operation `subscriptions.checkout_intent.create`;
+- lock final `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+
+### B) Estado actual inspeccionado
+#### 1. SubscriptionEntityWriteLockService
+Estado observado:
+
+- Existe `SubscriptionEntityWriteLockService`.
+- Constructor actual: recibe `PDO`.
+- Metodo publico principal actual: `acquire(string $entityType, string $entityId, int $timeoutSeconds = 2): ?string`.
+- Metodo publico de liberacion: `release(?string $lockName): void`.
+- Purpose actual fijo: `create`.
+- Prefijo actual: `mxmed:subscriptions`.
+- Nombre contractual actual conceptual: `mxmed:subscriptions:{entity_type}:{entity_id}:create`.
+- Construye el lock name en metodo privado `lockName(...)`.
+- Usa `GET_LOCK(:lock_name, :timeout_seconds)`.
+- Usa `RELEASE_LOCK(:lock_name)`.
+- Timeout actual default: `2` segundos, normalizado con `max(0, $timeoutSeconds)`.
+- Si `GET_LOCK` no devuelve `1`, `acquire(...)` devuelve `null`.
+- Si el scope es invalido, lanza `InvalidArgumentException`.
+- No permite purpose configurable actualmente.
+- Puede reutilizarse sin SQL/schema porque usa locks nativos de MySQL por nombre.
+
+Brecha exacta para checkout:
+
+- Necesita generar purpose `checkout_create`.
+- Necesita poder construir `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+- Debe conservar el lock contractual actual sin cambiar el comportamiento de `acquire(...)`.
+
+#### 2. CreateSubscriptionWithAcceptanceService
+Estado observado:
+
+- El servicio contractual actual no consume directamente `SubscriptionEntityWriteLockService`.
+- El lock contractual se adquiere desde `api/subscriptions/index.php` antes de llamar a `CreateSubscriptionWithAcceptanceService`.
+- El flujo contractual actual espera que `acquire(...)` mantenga su firma y semantics actuales.
+
+Compatibilidad obligatoria:
+
+- No romper `acquire(...)`.
+- No romper `release(...)`.
+- No cambiar el timeout contractual actual.
+- No cambiar el error actual del endpoint contractual `subscription_write_lock_timeout`.
+
+#### 3. api/subscriptions/index.php
+Estado observado:
+
+- El endpoint contractual actual existe.
+- Usa `SubscriptionEntityWriteLockService`.
+- Llama `acquire($entityType, $entityId, 2)`.
+- Libera con `release($writeLockName)` en `finally`.
+- No existe ruta `checkout-intents`.
+- Esta microfase no debe modificar el endpoint.
+
+#### 4. Idempotencia checkout
+Estado observado:
+
+- Ya existe operation `subscriptions.checkout_intent.create`.
+- Ya existen metodos de soporte checkout en idempotencia.
+- Esta microfase no debe tocar idempotencia.
+
+### C) Requerimiento checkout
+Contrato de lock checkout:
+
+- Purpose: `checkout_create`.
+- Lock name final: `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+
+Debe proteger:
+
+- lookup de checkout pending;
+- validacion final de pending concurrente;
+- resolucion final previa al write, si aplica;
+- transaccion futura acceptance + checkout intent.
+
+Debe evitar:
+
+- doble checkout pending concurrente;
+- aceptacion `accepted_pending_payment` huerfana por carrera;
+- checkout intent sin aceptacion;
+- duplicados cuando hay requests simultaneos con distintas `Idempotency-Key`.
+
+Error conceptual:
+
+- `subscription_checkout_lock_timeout`.
+
+### D) Estrategia de compatibilidad
+Reglas para evitar romper el flujo contractual existente:
+
+- Mantener lock contractual actual.
+- Mantener purpose actual contractual `create`.
+- No cambiar semantica del endpoint contractual.
+- No cambiar timeout contractual salvo microfase explicita.
+- No cambiar `CreateSubscriptionWithAcceptanceService`.
+- Agregar soporte checkout como purpose adicional.
+- Preferir metodo nuevo o purpose parametrizable manteniendo wrappers actuales.
+
+### E) Decision tecnica recomendada
+Decision para implementacion posterior:
+
+- Mantener `acquire(string $entityType, string $entityId, int $timeoutSeconds = 2): ?string` como wrapper compatible del purpose contractual `create`.
+- Mantener `release(?string $lockName): void`.
+- Agregar metodo nuevo o parametrizacion segura para purpose `checkout_create`.
+- Usar allowlist estricta de purposes:
+  - `create`;
+  - `checkout_create`.
+- Generar lock name como `mxmed:subscriptions:{entity_type}:{entity_id}:{purpose}`.
+- Conservar timeout actual configurable por parametro.
+- No cambiar schema.
+- No cambiar endpoint.
+
+Se conserva intacto:
+
+- purpose contractual `create`;
+- firma actual de `acquire(...)`;
+- firma actual de `release(...)`;
+- uso de `GET_LOCK`;
+- uso de `RELEASE_LOCK`;
+- endpoint contractual actual.
+
+Se agrega o parametriza:
+
+- purpose `checkout_create`;
+- metodo checkout-specific o metodo `acquireForPurpose(...)`;
+- validacion de purpose con allowlist;
+- builder centralizado de lock name, si se expone como helper privado.
+
+No se toca:
+
+- endpoint;
+- rutas;
+- SQL/schema;
+- idempotencia;
+- provider;
+- payment intents/events;
+- `profile_subscriptions`.
+
+### F) Contrato interno futuro
+Firmas conceptuales futuras, sin implementarlas en esta adenda:
+
+- `acquire(string $entityType, string $entityId, int $timeoutSeconds = 2): ?string`
+  - Wrapper actual compatible para purpose `create`.
+
+- `acquireForPurpose(string $entityType, string $entityId, string $purpose, int $timeoutSeconds = 2): ?string`
+  - Variante parametrizable con allowlist de purposes.
+
+- `acquireCheckoutCreate(string $entityType, string $entityId, int $timeoutSeconds = 2): ?string`
+  - Wrapper especifico para `checkout_create`.
+
+- `release(?string $lockName): void`
+  - Metodo actual de liberacion.
+
+- `buildLockName(string $entityType, string $entityId, string $purpose): string`
+  - Constructor centralizado de lock names.
+
+Los metodos actuales deben conservarse como wrappers para el contrato actual.
+
+### G) Validacion de purpose
+Purpose permitido contractual:
+
+- `create`.
+
+Purpose permitido checkout:
+
+- `checkout_create`.
+
+Si llega purpose invalido:
+
+- `subscription_lock_purpose_invalid`.
+
+Reglas:
+
+- `entity_type` y `entity_id` deben normalizarse antes de construir lock.
+- El nombre no debe contener datos sensibles.
+- El nombre debe ser estable.
+- El lock checkout no debe colisionar con el lock contractual actual.
+- El lock checkout debe usar la misma conexion `PDO` o una conexion controlada segun patron actual.
+- Si el lock name excede el maximo actual, debe conservarse el patron de hash de `entity_id` ya existente.
+
+### H) Riesgos y mitigaciones
+Riesgos:
+
+- romper lock contractual existente;
+- liberar lock incorrecto;
+- colisionar lock contractual y checkout;
+- no liberar lock si hay excepcion;
+- timeout mal mapeado;
+- permitir purpose arbitrario;
+- usar nombres inconsistentes entre endpoint/servicio;
+- doble checkout pending concurrente si el lock no envuelve lookup + transaccion.
+
+Mitigaciones:
+
+- wrappers compatibles;
+- allowlist estricta de purposes;
+- metodo `buildLockName` centralizado;
+- `try/finally` en futuro servicio orquestador;
+- QA con grep de lock names;
+- no tocar endpoint en esta fase;
+- QA concurrente en microfase posterior autorizada.
+
+### I) Errores conceptuales
+Errores conceptuales:
+
+- `subscription_checkout_lock_timeout`;
+- `subscription_lock_purpose_invalid`;
+- `subscription_lock_acquire_failed`;
+- `subscription_lock_release_failed`;
+- `checkout_already_pending`;
+- `checkout_intent_transaction_failed`.
+
+### J) QA futura para implementacion
+QA esperada para la microfase posterior:
+
+- `php -l modules/subscriptions/services/SubscriptionEntityWriteLockService.php`.
+- Grep `checkout_create`.
+- Grep `mxmed:subscriptions`.
+- Grep `GET_LOCK`.
+- Grep `RELEASE_LOCK`.
+- Grep `subscription_checkout_lock_timeout`.
+- Grep `subscription_lock_purpose_invalid`.
+- Grep `create` para compatibilidad contractual.
+- Confirmar que `CreateSubscriptionWithAcceptanceService` no se rompe.
+- Confirmar que `api/subscriptions/index.php` no se modifica.
+- Grep prohibidos:
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`;
+  - `provider`;
+  - `webhook`;
+  - `PublicProfilePlanCapabilities`;
+  - `profile_subscriptions`, salvo compatibilidad contractual existente.
+- Confirmar que no crea SQL.
+- Confirmar que no ejecuta SQL.
+- Confirmar que no toca frontend/perfil publico/SEO.
+
+### K) Decision por microfases
+Decision: no se requiere SQL/schema para el ajuste de lock checkout.
+
+Ruta recomendada:
+
+1. `BE/SPEC-Suscripciones-CheckoutIntent-LockDependency-Implementation-Readiness-01`.
+2. `BE/Suscripciones-CheckoutIntent-LockDependency-01`.
+3. `QA-Suscripciones-CheckoutIntent-LockDependency-PostPush-01`.
+
+### L) Fuera de alcance
+Esta adenda no implementa:
+
+- servicio orquestador;
+- endpoint;
+- rutas;
+- SQL;
+- migraciones;
+- DB/schema;
+- provider;
+- payment intents;
+- payment events;
+- webhook;
+- activacion post-pago;
+- `profile_subscriptions`;
+- facturacion;
+- capacidades;
+- conexion con `PublicProfilePlanCapabilities`;
+- perfil publico;
+- SEO;
+- frontend.
+
+### M) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-LockDependency-Implementation-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness de implementacion del ajuste minimo de lock checkout en `SubscriptionEntityWriteLockService`, sin endpoint y sin SQL.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
