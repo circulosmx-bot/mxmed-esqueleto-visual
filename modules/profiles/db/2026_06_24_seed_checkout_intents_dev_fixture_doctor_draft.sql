@@ -14,6 +14,10 @@
 -- If executed in a future authorized DEV/local DB microphase, keep the row as a persistent local fixture.
 -- No cleanup policy: do not update, delete, truncate, drop or manually roll back this fixture destructively.
 -- Based on PP-Decisiones 96.
+-- Collation fix:
+--   Future execution previously failed with ERROR 1267 Illegal mix of collations.
+--   Comparisons against profiles_doctors.display_name use explicit utf8mb4_unicode_ci.
+--   This does not change fixture scope and does not authorize execution in this microphase.
 
 -- Fixture target:
 --   table: profiles_doctors
@@ -33,7 +37,7 @@ SELECT
   profile_status,
   is_public_candidate
 FROM profiles_doctors
-WHERE display_name = @mxmed_checkout_qa_display_name;
+WHERE display_name COLLATE utf8mb4_unicode_ci = @mxmed_checkout_qa_display_name COLLATE utf8mb4_unicode_ci;
 
 -- 2) Confirm the proposed doctor_id does not already exist and is not 1, 2 or 3.
 SELECT
@@ -111,7 +115,7 @@ WHERE NOT EXISTS (
   SELECT 1
   FROM profiles_doctors
   WHERE doctor_id = @mxmed_checkout_qa_doctor_id
-     OR display_name = @mxmed_checkout_qa_display_name
+     OR display_name COLLATE utf8mb4_unicode_ci = @mxmed_checkout_qa_display_name COLLATE utf8mb4_unicode_ci
 );
 
 -- Future post-execution validations.
@@ -122,7 +126,7 @@ SELECT
   profile_status,
   is_public_candidate
 FROM profiles_doctors
-WHERE display_name = 'QA Checkout Doctor Libre';
+WHERE display_name COLLATE utf8mb4_unicode_ci = 'QA Checkout Doctor Libre' COLLATE utf8mb4_unicode_ci;
 
 -- 2) The fixture still has zero profile_subscriptions.
 SELECT COUNT(*) AS fixture_profile_subscriptions_rows
