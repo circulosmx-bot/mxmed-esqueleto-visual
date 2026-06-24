@@ -17493,6 +17493,327 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 91 - Readiness de implementacion de active_subscription_exists
+
+### A) Proposito
+Esta adenda valida la readiness para implementar posteriormente una lectura reutilizable `active_subscription_exists` antes del futuro servicio orquestador checkout.
+
+El objetivo tecnico posterior es agregar soporte read-only en `CurrentSubscriptionRepository` para:
+
+```php
+activeSubscriptionExists(string $entityType, string $entityId): bool
+```
+
+Opcionalmente, si la implementacion lo necesita para diagnostico o respuesta controlada:
+
+```php
+findActiveByEntity(string $entityType, string $entityId): ?array
+```
+
+Esta adenda no implementa codigo y no reabre decisiones cerradas:
+
+- checkout-first;
+- primer write de checkout-intents;
+- aceptacion contractual `accepted_pending_payment`;
+- checkout intent `pending_payment`;
+- resolver server-side de precios;
+- idempotencia checkout;
+- lock checkout;
+- no crear `profile_subscriptions` en el primer write checkout.
+
+### B) Estado actual confirmado
+Inspeccion read-only confirmada:
+
+- `CurrentSubscriptionRepository` existe en `modules/subscriptions/repositories/CurrentSubscriptionRepository.php`.
+- Usa `declare(strict_types=1);`, namespace `Subscriptions\Repositories`, constructor con `PDO` y manejo defensivo con `PDOException`.
+- Metodos publicos actuales:
+  - `findPlanByCodeAndPeriod(string $planCode, string $billingPeriod): ?array`;
+  - `findFallbackFreePlan(): ?array`;
+  - `findCurrentCandidateForEntity(string $entityType, string $entityId): ?array`.
+- `findCurrentCandidateForEntity(...)` ya lee `profile_subscriptions`.
+- La lectura actual usa `entity_type` y `entity_id`, no depende solo de `doctor_id`.
+- La lectura actual filtra `deleted_at IS NULL`.
+- La lectura actual ordena candidatos por prioridad de status y fechas, pero no es todavia un guard booleano de suscripcion activa.
+- `findCurrentCandidateForEntity(...)` devuelve candidatos con status como `active`, `grace_period`, `expired`, `inactive`, `renewed`, `cancelled` y otros, por lo que no equivale directamente a `active_subscription_exists`.
+- El endpoint actual contiene helper DEV `subscriptionDoctorHasActiveSubscription(...)`, acoplado a doctor.
+- Ese helper DEV consulta `profile_subscriptions`, status activos y vigencia temporal, pero no debe reutilizarse tal cual para checkout.
+- `CreateSubscriptionWithAcceptanceService` valida active subscription internamente con metodo privado `activeSubscriptionExists(...)`.
+- `CreateSubscriptionWithAcceptanceService` tambien crea `profile_subscriptions`, por lo que no debe reutilizarse tal cual para checkout-first.
+- Idempotencia checkout ya existe con operation `subscriptions.checkout_intent.create`.
+- Lock checkout ya existe con purpose `checkout_create`.
+- Endpoint `checkout-intents` todavia no existe.
+- `CreateSubscriptionCheckoutIntentService` todavia no existe.
+- No se requiere SQL/schema inmediato.
+
+### C) Brecha exacta a resolver
+Brecha confirmada:
+
+- `CurrentSubscriptionRepository` no tiene todavia metodo explicito `activeSubscriptionExists(...)`.
+- Checkout necesita una validacion read-only, entity-agnostic y reutilizable.
+- La logica del endpoint actual esta acoplada a helpers DEV doctor-specific.
+- La logica del servicio contractual actual esta acoplada a creacion de suscripcion activa.
+- El futuro checkout debe consultar suscripcion activa sin escribir en `profile_subscriptions`.
+- La validacion debe poder ejecutarse dentro del lock checkout.
+
+Esta brecha es de implementacion read-only en repositorio existente. No requiere SQL/schema ni source decision.
+
+### D) Definicion final propuesta de active subscription
+Definicion recomendada para la implementacion posterior:
+
+Una suscripcion activa existe si hay una fila en `profile_subscriptions` para la entidad con:
+
+- `entity_type = :entity_type`;
+- `entity_id = :entity_id`;
+- `deleted_at IS NULL`;
+- `status IN ('active', 'expiring_soon', 'grace_period')`;
+- `starts_at IS NULL OR starts_at <= :now`;
+- `expires_at IS NULL OR expires_at >= :now`.
+
+Nota de frontera temporal:
+
+- El codigo actual usa `expires_at >= now`.
+- Si una microfase futura decide usar frontera estricta `expires_at > now`, debe documentarlo como ajuste semantico explicito.
+- Para readiness actual, se recomienda preservar la semantica existente para no romper compatibilidad contractual.
+
+No se consideran activas:
+
+- `expired`;
+- `inactive`;
+- `renewed`;
+- `cancelled`;
+- filas con `deleted_at` no nulo;
+- filas fuera de vigencia temporal.
+
+El schema versionado actual contempla los campos necesarios:
+
+- `subscription_id`;
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `plan_code`;
+- `billing_period`;
+- `starts_at`;
+- `expires_at`;
+- `grace_starts_at`;
+- `grace_ends_at`;
+- `status`;
+- `source`;
+- `created_at`;
+- `updated_at`;
+- `deleted_at`.
+
+### E) Decision tecnica recomendada
+Decision recomendada:
+
+- Agregar en una microfase posterior un metodo read-only a `CurrentSubscriptionRepository`.
+- Metodo principal:
+  `activeSubscriptionExists(string $entityType, string $entityId): bool`.
+- Metodo opcional si la implementacion necesita la fila:
+  `findActiveByEntity(string $entityType, string $entityId): ?array`.
+- Reutilizar la misma conexion `PDO` del repository.
+- No crear SQL/schema.
+- No crear servicio nuevo todavia.
+- No modificar endpoint.
+- No modificar `CreateSubscriptionWithAcceptanceService`.
+- No escribir en `profile_subscriptions`.
+- No activar capacidades.
+
+No se recomienda `ActiveSubscriptionDependency-SourceDecision`, porque la fuente canonica ya esta identificada: `profile_subscriptions`.
+
+### F) Contrato interno futuro propuesto
+Firmas conceptuales:
+
+```php
+activeSubscriptionExists(string $entityType, string $entityId): bool
+findActiveByEntity(string $entityType, string $entityId): ?array
+```
+
+Normalizacion minima:
+
+- `entity_type` debe trimmease y no puede quedar vacio.
+- `entity_id` debe trimmease y no puede quedar vacio.
+- La lectura debe ser entity-agnostic.
+- `doctor_id` y `profile_id` pueden devolverse si existen, pero no deben ser el criterio primario del guard.
+
+Contrato de retorno:
+
+- `activeSubscriptionExists(...)` devuelve `true` si existe fila activa vigente.
+- `activeSubscriptionExists(...)` devuelve `false` si no existe fila activa vigente.
+- Si falla la consulta y no puede determinarse el estado, la capa superior debe mapear el fallo a `active_subscription_check_unavailable`.
+
+Si se implementa `findActiveByEntity(...)`, debe devolver una fila normalizada o `null` con campos minimos:
+
+- `subscription_id`;
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `plan_code`;
+- `billing_period`;
+- `status`;
+- `starts_at`;
+- `expires_at`;
+- `grace_starts_at`;
+- `grace_ends_at`;
+- `source`;
+- `created_at`;
+- `updated_at`.
+
+### G) Ubicacion en el flujo futuro
+Ubicacion recomendada en `CreateSubscriptionCheckoutIntentService`:
+
+1. Validar payload minimo.
+2. Validar auth/session/entity.
+3. Entrar idempotencia checkout.
+4. Tomar lock checkout.
+5. Dentro del lock, ejecutar `active_subscription_exists`.
+6. Si devuelve `true`, responder `active_subscription_exists`.
+7. Dentro del lock, revisar pending checkout.
+8. Resolver precio server-side.
+9. Abrir transaccion superior.
+10. Crear aceptacion `accepted_pending_payment`.
+11. Crear checkout intent `pending_payment`.
+12. Commit.
+13. Guardar resultado idempotente.
+14. Liberar lock.
+
+Se permite una prevalidacion fuera del lock para respuesta rapida, pero la validacion autoritativa debe hacerse dentro del lock.
+
+No debe abrirse una transaccion solo para leer active subscription, salvo decision posterior documentada.
+
+### H) Compatibilidad contractual obligatoria
+La implementacion posterior debe confirmar:
+
+- Endpoint contractual actual no cambia.
+- Helper DEV actual no se elimina.
+- `CreateSubscriptionWithAcceptanceService` no cambia.
+- Creacion contractual actual de `profile_subscriptions` no cambia.
+- `CurrentSubscriptionRepository` conserva sus metodos existentes.
+- La nueva lectura es adicional.
+- No se modifica idempotencia.
+- No se modifica lock.
+- No se modifica schema.
+
+### I) Riesgos y mitigaciones
+Riesgos:
+
+- bloquear checkout por una suscripcion expirada mal interpretada;
+- permitir checkout con suscripcion activa por status incompleto;
+- divergir del read-model actual;
+- consultar por `doctor_id` cuando checkout usa `entity_type/entity_id`;
+- ignorar `deleted_at`;
+- ignorar vigencia temporal;
+- reutilizar el servicio contractual que crea `profile_subscriptions`;
+- crear dependencia circular con checkout service;
+- tocar endpoint o DB accidentalmente.
+
+Mitigaciones:
+
+- metodo read-only centralizado en `CurrentSubscriptionRepository`;
+- definicion explicita de statuses activos;
+- mantener filtros `deleted_at`, `starts_at` y `expires_at`;
+- pruebas con fixtures conocidos;
+- grep prohibidos de `INSERT/UPDATE/DELETE profile_subscriptions`;
+- validacion autoritativa dentro del lock checkout;
+- no tocar endpoint en esta fase;
+- no tocar `CreateSubscriptionWithAcceptanceService`;
+- QA post-push.
+
+### J) Errores conceptuales
+Errores conceptuales:
+
+- `active_subscription_exists`;
+- `active_subscription_check_unavailable`;
+- `entity_not_found`;
+- `forbidden`;
+- `unauthenticated`;
+- `invalid_checkout_intent_payload`.
+
+`active_subscription_exists` se dispara cuando el guard confirma una suscripcion activa vigente.
+
+`active_subscription_check_unavailable` se reserva para fallo de lectura o estado indeterminado.
+
+### K) QA futura para implementacion
+QA esperada para la microfase posterior:
+
+- `php -l modules/subscriptions/repositories/CurrentSubscriptionRepository.php`.
+- Grep `activeSubscriptionExists`.
+- Grep `findActiveByEntity` si se implementa.
+- Grep `profile_subscriptions`.
+- Grep statuses:
+  - `active`;
+  - `expiring_soon`;
+  - `grace_period`.
+- Grep `deleted_at`.
+- Grep `starts_at`.
+- Grep `expires_at`.
+- Grep prohibidos:
+  - `INSERT INTO profile_subscriptions`;
+  - `UPDATE profile_subscriptions`;
+  - `DELETE FROM profile_subscriptions`;
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`;
+  - `provider`;
+  - `webhook`;
+  - `PublicProfilePlanCapabilities`.
+- Confirmar que no modifica endpoint.
+- Confirmar que no modifica `CreateSubscriptionWithAcceptanceService`.
+- Confirmar que no crea SQL.
+- Confirmar que no ejecuta SQL.
+- Confirmar que no toca frontend/perfil publico/SEO.
+- Prueba aislada opcional con script PHP solo si se disena explicitamente y sin modificar DB.
+
+### L) Decision por microfases
+Readiness confirmada sin SQL/schema.
+
+Ruta recomendada:
+
+1. `BE/Suscripciones-CheckoutIntent-ActiveSubscriptionDependency-01`.
+2. `QA-Suscripciones-CheckoutIntent-ActiveSubscriptionDependency-PostPush-01`.
+
+No se requiere:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-ActiveSubscriptionDependency-SourceDecision-01`;
+- `DB/SPEC-Suscripciones-CheckoutIntent-ActiveSubscriptionDependency-SchemaPlan-01`.
+
+### M) Fuera de alcance
+Esta adenda no implementa:
+
+- `activeSubscriptionExists`;
+- `findActiveByEntity`;
+- helper `active_subscription_exists`;
+- servicio/repository nuevo;
+- servicio orquestador;
+- endpoint;
+- rutas;
+- SQL;
+- migraciones;
+- DB/schema;
+- provider;
+- payment intents;
+- payment events;
+- webhook;
+- activacion post-pago;
+- creacion/modificacion de `profile_subscriptions`;
+- facturacion;
+- capacidades;
+- conexion con `PublicProfilePlanCapabilities`;
+- perfil publico;
+- SEO;
+- frontend.
+
+### N) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/Suscripciones-CheckoutIntent-ActiveSubscriptionDependency-01`.
+
+Objetivo:
+
+- Implementar metodo read-only `activeSubscriptionExists(...)` en `CurrentSubscriptionRepository`, sin endpoint y sin SQL.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
