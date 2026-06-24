@@ -17814,6 +17814,280 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 92 - Plan de validacion entity_type/entity_id para checkout-intents
+
+### A) Objetivo
+Esta adenda planifica la validacion reutilizable de `entity_type` / `entity_id` para el futuro:
+
+```php
+CreateSubscriptionCheckoutIntentService::createCheckoutIntent(array $input): array
+```
+
+La validacion debe confirmar que la entidad existe, que es del tipo soportado y que puede participar en el flujo checkout-first antes de resolver precio, crear aceptacion contractual `accepted_pending_payment` o crear `subscription_checkout_intents`.
+
+Esta microfase es solo documental. No implementa codigo, endpoint, rutas, SQL ni cambios de DB/schema.
+
+### B) Problema
+El futuro servicio orquestador checkout necesita saber si la entidad solicitada es valida y contratable antes de:
+
+- entrar a decisiones de negocio;
+- validar `active_subscription_exists`;
+- resolver precio server-side;
+- crear aceptacion contractual;
+- crear checkout intent.
+
+Hoy la validacion operativa esta repartida y acoplada:
+
+- `api/subscriptions/index.php` valida el endpoint contractual actual con `subscriptionValidEntityId(...)`, `subscriptionResolveWriteContext(...)` y scope doctor-only.
+- El helper DEV `subscriptionDoctorFixtureExists(...)` consulta `profiles_doctors` por `doctor_id`, pero esta orientado a fixtures locales.
+- `CreateSubscriptionWithAcceptanceService` valida que `entity_type === doctor` y `entity_id === doctor_id`, pero tambien crea `profile_subscriptions`; no debe reutilizarse tal cual para checkout-intents.
+
+No conviene duplicar validacion entre endpoint futuro y servicio futuro. La validacion debe vivir como dependencia read-only reutilizable.
+
+### C) Alcance
+Alcance de esta adenda:
+
+- planificar la dependencia futura;
+- documentar fuente de verdad;
+- definir snapshot minimo;
+- definir errores conceptuales;
+- definir orden futuro en checkout.
+
+Fuera de esta microfase:
+
+- codigo PHP;
+- endpoint checkout-intents;
+- servicios/repositorios nuevos;
+- SQL;
+- migraciones;
+- DB/schema;
+- frontend;
+- provider/payment/webhook/facturacion/capacidades.
+
+### D) Entidades soportadas
+Inspeccion actual:
+
+- `subscriptionValidEntityType(...)` enumera varios tipos futuros: `doctor`, `dental`, `hospital`, `clinic`, `laboratory`, `diagnostic`, `insurer`, `pharmaceutical`, `service`.
+- El write contractual actual solo permite `doctor`.
+- `subscriptionResolveWriteContext(...)` rechaza tipos distintos a `doctor` para writes de suscripcion.
+- `CreateSubscriptionWithAcceptanceService` exige `entity_type = doctor` y `entity_id = doctor_id`.
+
+Decision:
+
+- Para checkout-intents, el soporte inicial debe ser `doctor`.
+- No se habilitan nuevos tipos productivos en esta etapa.
+- La extension futura a otros tipos de perfil queda abierta, pero requiere microfases especificas de fuente de verdad, ownership y contractabilidad por tipo.
+
+### E) Fuente de verdad
+Fuente detectada para existencia inicial de doctor:
+
+- Tabla: `profiles_doctors`.
+- Campo: `doctor_id`.
+- Uso actual: `subscriptionDoctorFixtureExists(...)` consulta `profiles_doctors WHERE doctor_id = :doctor_id`.
+- Repositorios existentes relacionados: `modules/profiles/repositories/PrivateProfileRepository.php` y `modules/profiles/repositories/PublicProfileRepository.php` usan `profiles_doctors`, pero no son una dependencia actual de subscriptions.
+
+Decision documental:
+
+- La validacion de entidad para checkout debe usar `profiles_doctors` como fuente de existencia para `entity_type = doctor`.
+- No debe inventar tablas nuevas.
+- No debe depender de helpers DEV del endpoint.
+- No debe escribir en `profiles_doctors`.
+- No debe escribir en `profile_subscriptions`.
+
+### F) Decision tecnica
+Decision recomendada:
+
+- Crear en microfase posterior una dependencia read-only pequena para resolver entidad.
+- Nombre sugerido:
+  `SubscriptionEntityResolverService`.
+- Ubicacion sugerida:
+  `modules/subscriptions/services/SubscriptionEntityResolverService.php`.
+- Metodo conceptual:
+
+```php
+resolveForCheckout(string $entityType, string $entityId): array
+```
+
+Responsabilidades:
+
+- normalizar `entity_type`;
+- validar formato de `entity_id`;
+- permitir inicialmente solo `doctor`;
+- verificar existencia en `profiles_doctors`;
+- devolver snapshot minimo;
+- mapear razones de rechazo;
+- no crear ni modificar entidades;
+- no tocar `profile_subscriptions`;
+- no tocar capacidades;
+- no resolver precio;
+- no manejar idempotencia;
+- no manejar lock.
+
+Alternativa aceptable para implementacion futura:
+
+- Si se prefiere evitar un servicio nuevo, puede agregarse un metodo read-only en un repositorio existente de perfiles y envolverlo desde el service checkout. Esa alternativa no debe acoplar checkout al endpoint actual.
+
+### G) Snapshot minimo sugerido
+El resolver futuro debe devolver un snapshot estable:
+
+```text
+entity_type
+entity_id
+entity_exists
+entity_is_contractable
+display_name o label, si existe
+source
+reason/error si no es valida
+```
+
+Para `doctor`, snapshot recomendado:
+
+- `entity_type = doctor`;
+- `entity_id = doctor_id`;
+- `entity_exists = true|false`;
+- `entity_is_contractable = true|false`;
+- `display_name`, `nombre`, `name` o equivalente si la fuente lo expone;
+- `source = profiles_doctors`;
+- `reason` con `entity_not_found`, `entity_not_contractable` o `entity_type_invalid` segun corresponda.
+
+El snapshot no debe incluir precio, suscripcion activa, payment intent, capacidades ni datos privados innecesarios.
+
+### H) Errores conceptuales
+Errores conceptuales del resolver o capa checkout:
+
+- `entity_type_invalid`;
+- `entity_not_found`;
+- `entity_not_contractable`;
+- `entity_validation_unavailable`.
+
+Mapeo recomendado:
+
+- `entity_type_invalid`: tipo distinto a los soportados para checkout.
+- `entity_not_found`: no existe fila canonica en la fuente esperada.
+- `entity_not_contractable`: existe pero no debe contratar en esta fase.
+- `entity_validation_unavailable`: falla tecnica de lectura o estado indeterminado.
+
+### I) Orden futuro dentro de checkout
+Orden recomendado:
+
+1. Validar request basico.
+2. Validar formato inicial de `entity_type` / `entity_id`.
+3. Iniciar idempotencia checkout.
+4. Entrar a lock checkout:
+   `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+5. Revalidar entidad dentro del lock mediante dependencia read-only.
+6. Si no existe o no es contratable, responder error conceptual.
+7. Validar `active_subscription_exists` dentro del lock.
+8. Revisar checkout pending.
+9. Resolver precio server-side.
+10. Abrir transaccion superior.
+11. Crear aceptacion `accepted_pending_payment`.
+12. Crear checkout intent `pending_payment`.
+13. Marcar idempotencia completed.
+14. Liberar lock.
+
+Se permite una prevalidacion fuera del lock para respuesta rapida, pero la validacion autoritativa debe ocurrir dentro del lock si puede haber carreras de estado.
+
+### J) Restricciones
+La dependencia futura no debe:
+
+- crear `profile_subscriptions`;
+- modificar `profile_subscriptions`;
+- crear payment intents;
+- crear payment events;
+- conectar provider;
+- conectar webhook;
+- conectar facturacion;
+- activar capacidades;
+- tocar `PublicProfilePlanCapabilities`;
+- tocar perfil publico/SEO;
+- resolver precio;
+- manejar idempotencia;
+- manejar lock;
+- crear endpoint/rutas.
+
+### K) Riesgos y mitigaciones
+Riesgos:
+
+- habilitar tipos distintos a `doctor` sin fuente de ownership;
+- duplicar validacion entre endpoint y servicio;
+- usar helpers DEV como dependencia productiva;
+- validar solo formato y no existencia;
+- consultar fuente equivocada;
+- mezclar validacion de entidad con suscripcion activa;
+- filtrar por datos publicos no contractuales;
+- tocar perfil publico/SEO accidentalmente.
+
+Mitigaciones:
+
+- soporte inicial cerrado a `doctor`;
+- fuente canonica `profiles_doctors` para existencia;
+- dependencia read-only separada;
+- snapshot minimo;
+- errores conceptuales explicitos;
+- QA grep de ausencia de writes;
+- no modificar endpoint actual;
+- no modificar `CreateSubscriptionWithAcceptanceService`.
+
+### L) QA futura para implementacion
+QA esperada cuando se implemente la dependencia:
+
+- `php -l` de archivos modificados.
+- Grep del nombre de la dependencia, si aplica.
+- Grep `entity_type_invalid`.
+- Grep `entity_not_found`.
+- Grep `entity_not_contractable`.
+- Grep `entity_validation_unavailable`.
+- Grep `profiles_doctors` solo como lectura.
+- Grep prohibidos:
+  - `INSERT INTO profile_subscriptions`;
+  - `UPDATE profile_subscriptions`;
+  - `DELETE FROM profile_subscriptions`;
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`;
+  - `provider`;
+  - `webhook`;
+  - `PublicProfilePlanCapabilities`.
+- Confirmar que no modifica endpoint.
+- Confirmar que no crea SQL.
+- Confirmar que no ejecuta SQL.
+- Confirmar que no toca frontend/perfil publico/SEO.
+
+### M) Fuera de alcance
+Esta adenda no implementa:
+
+- `CreateSubscriptionCheckoutIntentService`;
+- endpoint checkout-intents;
+- rutas;
+- servicios nuevos;
+- repositorios nuevos;
+- SQL;
+- migraciones;
+- DB/schema;
+- frontend;
+- provider;
+- payment intents;
+- payment events;
+- webhooks;
+- activacion post-pago;
+- writes a `profile_subscriptions`;
+- facturacion;
+- capacidades;
+- conexion con `PublicProfilePlanCapabilities`;
+- perfil publico;
+- SEO.
+
+### N) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-EntityValidationDependency-Implementation-Readiness-01`.
+
+Objetivo:
+
+- Validar readiness tecnica para implementar la dependencia read-only de `entity_type` / `entity_id`, sin endpoint, sin SQL y sin DB/schema.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
