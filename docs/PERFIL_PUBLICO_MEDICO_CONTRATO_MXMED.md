@@ -15473,6 +15473,331 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 84 - Plan de implementacion minima de CreateSubscriptionCheckoutIntentService
+
+### A) Proposito
+Esta adenda documenta el plan minimo para implementar posteriormente:
+
+- `CreateSubscriptionCheckoutIntentService::createCheckoutIntent(array $input): array`.
+
+No escribe codigo y no crea el servicio. Convierte el diseno cerrado en PP-Decisiones 83 en un plan tecnico de implementacion y clasifica brechas previas.
+
+Esta adenda no reabre:
+
+- checkout-first;
+- primer write;
+- `accepted_pending_payment`;
+- `pending_payment`;
+- resolver server-side de precios;
+- operation de idempotencia `subscriptions.checkout_intent.create`;
+- lock `checkout_create`.
+
+### B) Estado base confirmado
+Ya existen:
+
+- `CreateSubscriptionPendingPaymentAcceptanceService`.
+- `SubscriptionCheckoutIntentRepository`.
+- `SubscriptionPlanPriceResolverService`.
+- `SubscriptionWriteIdempotencyService`.
+- `SubscriptionEntityWriteLockService`.
+- Schema local/dev de `subscription_checkout_intents`.
+- Schema local/dev de `subscription_plan_prices`.
+- Seed DEV/local de precios.
+
+Todavia no existe:
+
+- `CreateSubscriptionCheckoutIntentService`.
+- Endpoint `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents`.
+- Integracion real de idempotencia checkout.
+- Integracion real de lock checkout.
+- Transaccion coordinada acceptance + checkout intent.
+- Provider.
+- Payment intents/events.
+- Webhooks.
+- Facturacion.
+- Activacion de capacidades.
+- `profile_subscriptions` dentro de checkout-first.
+
+### C) Contrato conceptual del servicio futuro
+Archivo futuro:
+
+- `modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php`.
+
+Clase futura:
+
+- `CreateSubscriptionCheckoutIntentService`.
+
+Metodo futuro:
+
+- `createCheckoutIntent(array $input): array`.
+
+Responsabilidad:
+
+- validar input;
+- validar entidad;
+- validar ausencia de suscripcion activa;
+- validar idempotencia;
+- tomar lock checkout;
+- revisar pending checkout;
+- resolver precio server-side;
+- abrir transaccion;
+- crear aceptacion `accepted_pending_payment`;
+- crear checkout intent `pending_payment`;
+- guardar resultado idempotente;
+- devolver respuesta minima.
+
+### D) Dependencias minimas esperadas
+Dependencias esperadas del constructor o factory futuro:
+
+- `PDO` o conexion compartida.
+- `SubscriptionPlanPriceResolverService`.
+- `CreateSubscriptionPendingPaymentAcceptanceService`.
+- `SubscriptionCheckoutIntentRepository`.
+- `SubscriptionWriteIdempotencyService`.
+- `SubscriptionEntityWriteLockService`.
+- Helper/repository futuro para `active_subscription_exists`.
+- Helper futuro de validacion `entity_type`/`entity_id` si no se extrae desde endpoint/capa superior.
+- Reloj/fecha UTC si aplica.
+- Generador UUID solo si el servicio lo requiere; preferentemente el UUID queda en servicios/repositorios existentes cuando aplique.
+
+No son dependencias del servicio minimo:
+
+- provider;
+- payment intents/events;
+- webhooks;
+- facturacion;
+- capacidades;
+- `PublicProfilePlanCapabilities`.
+
+### E) Input minimo esperado
+Campos conceptuales minimos de `createCheckoutIntent(array $input): array`:
+
+- `entity_type`;
+- `entity_id`;
+- `plan_code`;
+- `billing_period`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `acceptance_source`;
+- `source`;
+- `idempotency_key`;
+- actor/session context si aplica;
+- request metadata minimo si aplica.
+
+El cliente no envia:
+
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `price_uuid`.
+
+El precio siempre se resuelve server-side mediante `SubscriptionPlanPriceResolverService::resolveForCheckout(...)`.
+
+### F) Output minimo esperado
+Respuesta conceptual:
+
+- `checkout_intent_uuid`;
+- `checkout_status = pending_payment`;
+- `contract_acceptance_uuid`;
+- `acceptance_status = accepted_pending_payment`;
+- `entity_type`;
+- `entity_id`;
+- `plan_code`;
+- `billing_period`;
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `price_uuid`, si viene del resolver;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `expires_at`, si aplica;
+- `created_at`;
+- `idempotency_replay`, si aplica.
+
+No debe devolver datos de provider, payment intent, activacion ni suscripcion activa.
+
+### G) Secuencia de implementacion futura
+Orden interno recomendado del metodo futuro:
+
+1. Normalizar input.
+2. Validar payload minimo.
+3. Validar auth/session scope si no viene resuelto.
+4. Validar `entity_type`/`entity_id`.
+5. Validar ausencia de suscripcion activa.
+6. Validar `Idempotency-Key`.
+7. Calcular `request_hash`.
+8. Entrar a idempotencia con operation `subscriptions.checkout_intent.create`.
+9. Resolver replay estable si existe.
+10. Bloquear payload distinto.
+11. Bloquear request `processing`.
+12. Tomar lock `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+13. Revisar pending checkout con:
+    - `findPendingByEntity`;
+    - `findPendingByEntityPlanAndBilling`.
+14. Rechazar pending existente con `checkout_already_pending`.
+15. Resolver precio server-side con `SubscriptionPlanPriceResolverService::resolveForCheckout(...)`.
+16. Abrir transaccion superior en este servicio.
+17. Crear aceptacion con `CreateSubscriptionPendingPaymentAcceptanceService::createPendingPaymentAcceptance(...)`.
+18. Crear checkout intent con `SubscriptionCheckoutIntentRepository::create(...)`.
+19. Commit.
+20. Guardar resultado idempotente.
+21. Liberar lock.
+22. Devolver respuesta.
+23. En error:
+    - rollback si transaccion abierta;
+    - liberar lock;
+    - marcar/limpiar idempotencia segun patron futuro;
+    - no dejar aceptacion huerfana;
+    - no dejar checkout sin aceptacion.
+
+### H) Brechas clasificadas
+#### 1. `SubscriptionWriteIdempotencyService`
+
+- Operation configurable: requiere ajuste previo.
+- Operation `subscriptions.checkout_intent.create`: requiere ajuste previo.
+- Guardar resultado checkout: requiere ajuste previo.
+- Replay estable del resultado checkout: requiere ajuste previo.
+- Manejo de `processing`/failure: listo parcialmente; existe patron, pero debe parametrizarse para checkout.
+
+Clasificacion: bloqueante antes de implementar `CreateSubscriptionCheckoutIntentService`, porque el servicio futuro depende de operation y replay correctos.
+
+#### 2. `SubscriptionEntityWriteLockService`
+
+- Lock purpose configurable: requiere ajuste previo.
+- `checkout_create`: requiere ajuste previo.
+- Nombre final `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`: requiere parametrizacion o extension.
+- Timeout esperado: listo parcialmente, existe timeout en `acquire(...)`.
+
+Clasificacion: bloqueante antes de implementar el servicio si la implementacion debe usar el lock exacto cerrado documentalmente.
+
+#### 3. Transaccion
+
+- Repositorios/servicios usan `PDO` compartible: listo para implementacion si se construyen con la misma conexion.
+- `CreateSubscriptionPendingPaymentAcceptanceService` no abre transaccion propia: listo.
+- `SubscriptionCheckoutIntentRepository` no abre transaccion propia: listo.
+- El servicio orquestador puede abrir transaccion superior: listo para implementar con `PDO`.
+
+Clasificacion: listo para implementacion.
+
+#### 4. Active subscription
+
+- Helper/repository listo para `active_subscription_exists`: requiere ajuste previo.
+- Existe logica privada en `CreateSubscriptionWithAcceptanceService`, pero esta acoplada al flujo contractual actual y no debe reutilizarse copiando efectos secundarios.
+
+Clasificacion: bloqueante o ajuste previo recomendado, porque checkout debe validar ausencia de suscripcion activa sin crear `profile_subscriptions`.
+
+#### 5. Validacion entity
+
+- Validacion reutilizable de `entity_type`/`entity_id`: requiere ajuste previo o definicion explicita de contrato de input desde endpoint.
+- El endpoint actual resuelve contexto de escritura, pero no existe ruta checkout-intents ni helper independiente para el servicio.
+
+Clasificacion: requiere ajuste previo; puede ser no bloqueante si la implementacion del servicio asume input ya normalizado por capa superior, pero debe quedar explicitado antes de escribir codigo.
+
+### I) Decision de implementacion por etapas
+Decision: no implementar todavia `CreateSubscriptionCheckoutIntentService`.
+
+La siguiente microfase debe planificar primero los ajustes minimos de dependencias, porque hay brechas bloqueantes en:
+
+- idempotencia para operation `subscriptions.checkout_intent.create`;
+- guardado/replay de resultado checkout;
+- lock `checkout_create`;
+- helper o contrato claro para `active_subscription_exists`;
+- contrato de validacion de entidad.
+
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-DependenciesImplementation-Plan-01`.
+
+Objetivo:
+
+- Planificar ajustes minimos previos de idempotencia, lock y helpers necesarios antes de implementar `CreateSubscriptionCheckoutIntentService`.
+
+### J) Errores conceptuales del servicio futuro
+Errores que debe manejar o propagar el servicio futuro:
+
+- `invalid_checkout_intent_payload`;
+- `unauthenticated`;
+- `forbidden`;
+- `entity_not_found`;
+- `active_subscription_exists`;
+- `checkout_already_pending`;
+- `idempotency_key_invalid`;
+- `idempotency_key_reused_with_different_payload`;
+- `request_already_processing`;
+- `subscription_checkout_lock_timeout`;
+- `plan_not_contractable`;
+- `billing_period_invalid`;
+- `plan_price_not_configured`;
+- `pricing_configuration_conflict`;
+- `pricing_source_unavailable`;
+- `contract_invalid`;
+- `acceptance_source_invalid`;
+- `contract_acceptance_create_failed`;
+- `checkout_intent_create_failed`;
+- `checkout_intent_transaction_failed`;
+- `checkout_intent_unavailable`.
+
+### K) Fuera de alcance
+Esta adenda no implementa:
+
+- servicio orquestador;
+- endpoint;
+- rutas;
+- SQL;
+- migraciones;
+- DB/schema;
+- provider;
+- payment intents;
+- payment events;
+- webhook;
+- activacion post-pago;
+- `profile_subscriptions`;
+- facturacion;
+- capacidades;
+- conexion con `PublicProfilePlanCapabilities`;
+- perfil publico;
+- SEO;
+- frontend.
+
+### L) QA futura
+QA futura para la implementacion posterior:
+
+- `php -l` del nuevo servicio.
+- Grep clase `CreateSubscriptionCheckoutIntentService`.
+- Grep metodo `createCheckoutIntent`.
+- Grep dependencies esperadas.
+- Grep `subscriptions.checkout_intent.create`.
+- Grep `checkout_create`.
+- Grep `pending_payment`.
+- Grep `accepted_pending_payment`.
+- Grep prohibidos:
+  - `profile_subscriptions`;
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`;
+  - `provider`;
+  - `webhook`;
+  - `PublicProfilePlanCapabilities`.
+- Confirmar que no modifica endpoint.
+- Confirmar que no crea SQL.
+- Confirmar que no ejecuta SQL.
+- Prueba aislada con stubs solo si se disena explicitamente.
+- QA DB/local solo en microfase posterior autorizada.
+
+### M) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+- `BE/SPEC-Suscripciones-CheckoutIntent-DependenciesImplementation-Plan-01`.
+
+Objetivo:
+
+- Planificar ajustes minimos previos de idempotencia, lock y helpers necesarios antes de implementar `CreateSubscriptionCheckoutIntentService`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
