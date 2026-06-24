@@ -115,6 +115,22 @@ final class SubscriptionWriteIdempotencyRepository
         int $httpStatus,
         ?string $responseBodyText
     ): void {
+        $this->markCompletedWithResponse(
+            $uuid,
+            $subscriptionId,
+            $contractAcceptanceUuid,
+            $httpStatus,
+            $responseBodyText
+        );
+    }
+
+    public function markCompletedWithResponse(
+        string $uuid,
+        ?string $subscriptionId,
+        ?string $contractAcceptanceUuid,
+        int $httpStatus,
+        ?string $responseBodyText
+    ): void {
         $stmt = $this->pdo->prepare(
             'UPDATE subscription_write_idempotency_keys
              SET status = \'completed\',

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Subscriptions\Services;
 
+use RuntimeException;
 use Subscriptions\Repositories\SubscriptionWriteIdempotencyRepository;
 
 final class SubscriptionWriteIdempotencyDecision
@@ -102,6 +103,7 @@ final class SubscriptionWriteIdempotencyDecision
 final class SubscriptionWriteIdempotencyService
 {
     public const OPERATION = 'subscriptions.create_with_contract_acceptance';
+    public const CHECKOUT_OPERATION = 'subscriptions.checkout_intent.create';
 
     private SubscriptionWriteIdempotencyRepository $repository;
 
@@ -112,9 +114,36 @@ final class SubscriptionWriteIdempotencyService
 
     public function begin(?string $headerValue, array $scope, array $payload): SubscriptionWriteIdempotencyDecision
     {
+        return $this->beginOperation($headerValue, self::OPERATION, $scope, $payload);
+    }
+
+    public function beginCheckoutIntent(
+        ?string $headerValue,
+        array $scope,
+        array $payload
+    ): SubscriptionWriteIdempotencyDecision {
+        return $this->beginOperation($headerValue, self::CHECKOUT_OPERATION, $scope, $payload);
+    }
+
+    public function beginOperation(
+        ?string $headerValue,
+        string $operation,
+        array $scope,
+        array $payload
+    ): SubscriptionWriteIdempotencyDecision
+    {
         $key = $this->normalizeKey($headerValue);
         if ($key === null) {
             return SubscriptionWriteIdempotencyDecision::disabled();
+        }
+
+        $operation = trim($operation);
+        if (!$this->isAllowedOperation($operation)) {
+            return SubscriptionWriteIdempotencyDecision::reject(
+                422,
+                'idempotency_operation_invalid',
+                'idempotency operation is invalid'
+            );
         }
 
         if (!$this->isValidKey($key)) {
@@ -126,7 +155,7 @@ final class SubscriptionWriteIdempotencyService
         }
 
         $keyHash = hash('sha256', $key);
-        $requestHash = $this->requestHash($scope, $payload);
+        $requestHash = $this->requestHashForOperation($operation, $scope, $payload);
         $record = [
             'uuid' => $this->uuidV4(),
             'idempotency_key_hash' => $keyHash,
@@ -137,7 +166,7 @@ final class SubscriptionWriteIdempotencyService
             'profile_id' => $this->nullableText($scope['profile_id'] ?? null),
             'user_id' => (string)($scope['user_id'] ?? ''),
             'actor_role' => (string)($scope['actor_role'] ?? ''),
-            'operation' => self::OPERATION,
+            'operation' => $operation,
         ];
 
         if ($this->repository->insertProcessing($record)) {
@@ -149,7 +178,7 @@ final class SubscriptionWriteIdempotencyService
             $record['user_id'],
             $record['entity_type'],
             $record['entity_id'],
-            self::OPERATION
+            $operation
         );
 
         if ($existing === null) {
@@ -178,9 +207,18 @@ final class SubscriptionWriteIdempotencyService
         }
 
         if ($status === 'completed') {
+            $response = $this->completedReplayResponse($existing, $operation === self::CHECKOUT_OPERATION);
+            if ($response === null) {
+                return SubscriptionWriteIdempotencyDecision::reject(
+                    409,
+                    'checkout_idempotency_result_unavailable',
+                    'checkout idempotency result is unavailable'
+                );
+            }
+
             return SubscriptionWriteIdempotencyDecision::replay(
                 $this->completedReplayStatus($existing),
-                $this->completedReplayResponse($existing)
+                $response
             );
         }
 
@@ -209,9 +247,53 @@ final class SubscriptionWriteIdempotencyService
         );
     }
 
+    public function markCheckoutIntentCompleted(array $record, array $response, int $httpStatus): void
+    {
+        $data = is_array($response['data'] ?? null) ? $response['data'] : $response;
+        $checkoutIntentUuid = (string)($data['checkout_intent_uuid'] ?? '');
+        if ($checkoutIntentUuid === '') {
+            throw new RuntimeException('checkout_idempotency_complete_failed: checkout_intent_uuid is required');
+        }
+
+        $body = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($body === false) {
+            throw new RuntimeException('checkout_idempotency_complete_failed: response payload is not serializable');
+        }
+
+        $acceptanceUuid = $this->nullableText($data['contract_acceptance_uuid'] ?? null);
+        $this->repository->markCompletedWithResponse(
+            (string)$record['uuid'],
+            null,
+            $acceptanceUuid,
+            $httpStatus,
+            $body
+        );
+    }
+
+    public function markOperationCompleted(array $record, array $response, int $httpStatus): void
+    {
+        $operation = (string)($record['operation'] ?? '');
+        if ($operation === self::CHECKOUT_OPERATION) {
+            $this->markCheckoutIntentCompleted($record, $response, $httpStatus);
+            return;
+        }
+
+        if ($operation === self::OPERATION || $operation === '') {
+            $this->markCompleted($record, $response, $httpStatus);
+            return;
+        }
+
+        throw new RuntimeException('idempotency_operation_invalid: idempotency operation is invalid');
+    }
+
     public function markFailed(array $record, int $httpStatus): void
     {
         $this->repository->markFailed((string)$record['uuid'], $httpStatus);
+    }
+
+    public function markOperationFailed(array $record, int $httpStatus): void
+    {
+        $this->markFailed($record, $httpStatus);
     }
 
     private function normalizeKey(?string $headerValue): ?string
@@ -230,6 +312,44 @@ final class SubscriptionWriteIdempotencyService
         return $length >= 8
             && $length <= 128
             && preg_match('/^[A-Za-z0-9._:-]+$/', $key) === 1;
+    }
+
+    private function isAllowedOperation(string $operation): bool
+    {
+        return in_array($operation, [self::OPERATION, self::CHECKOUT_OPERATION], true);
+    }
+
+    private function requestHashForOperation(string $operation, array $scope, array $payload): string
+    {
+        if ($operation === self::CHECKOUT_OPERATION) {
+            return $this->buildCheckoutRequestHash($scope, $payload);
+        }
+
+        return $this->requestHash($scope, $payload);
+    }
+
+    public function buildCheckoutRequestHash(array $scope, array $payload): string
+    {
+        $contract = is_array($payload['contract'] ?? null) ? $payload['contract'] : [];
+        $acceptance = is_array($payload['acceptance'] ?? null) ? $payload['acceptance'] : [];
+        $canonical = [
+            'operation' => self::CHECKOUT_OPERATION,
+            'entity_type' => (string)($scope['entity_type'] ?? $payload['entity_type'] ?? ''),
+            'entity_id' => (string)($scope['entity_id'] ?? $payload['entity_id'] ?? ''),
+            'plan_code' => (string)($payload['plan_code'] ?? ''),
+            'billing_period' => (string)($payload['billing_period'] ?? ''),
+            'contract' => [
+                'version' => (string)($contract['version'] ?? $payload['contract_version'] ?? ''),
+                'hash' => (string)($contract['hash'] ?? $payload['contract_hash'] ?? ''),
+                'snapshot_url' => (string)($contract['snapshot_url'] ?? $payload['contract_snapshot_url'] ?? ''),
+            ],
+            'acceptance' => [
+                'source' => (string)($acceptance['source'] ?? $payload['acceptance_source'] ?? ''),
+            ],
+            'source' => (string)($payload['source'] ?? ''),
+        ];
+
+        return hash('sha256', $this->canonicalJson($canonical));
     }
 
     private function requestHash(array $scope, array $payload): string
@@ -281,7 +401,7 @@ final class SubscriptionWriteIdempotencyService
         return $status >= 200 && $status < 600 ? $status : 200;
     }
 
-    private function completedReplayResponse(array $record): array
+    private function completedReplayResponse(array $record, bool $requireStoredResponse = false): ?array
     {
         $body = trim((string)($record['response_body_text'] ?? ''));
         if ($body !== '') {
@@ -291,6 +411,10 @@ final class SubscriptionWriteIdempotencyService
                 $decoded['meta']['idempotent_replay'] = true;
                 return $decoded;
             }
+        }
+
+        if ($requireStoredResponse) {
+            return null;
         }
 
         return [
