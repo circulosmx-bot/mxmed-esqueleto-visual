@@ -18088,6 +18088,286 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 93 - Readiness de implementacion de validacion entity_type/entity_id para checkout-intents
+
+### A) Objetivo
+Esta adenda valida si esta lista la implementacion futura de una dependencia read-only para resolver entidad en checkout-intents.
+
+Dependencia probable:
+
+```text
+modules/subscriptions/services/SubscriptionEntityResolverService.php
+```
+
+Metodo conceptual:
+
+```php
+resolveForCheckout(string $entityType, string $entityId): array
+```
+
+Esta microfase no implementa el servicio. Solo confirma readiness tecnica, dependencias, contrato de salida, errores y restricciones.
+
+### B) Hallazgos de inspeccion
+Hallazgos sobre PP-Decisiones 92:
+
+- PP-Decisiones 92 existe y define el plan de validacion `entity_type/entity_id`.
+- Recomienda `SubscriptionEntityResolverService`.
+- Recomienda `resolveForCheckout(string $entityType, string $entityId): array`.
+- Define errores conceptuales:
+  - `entity_type_invalid`;
+  - `entity_not_found`;
+  - `entity_not_contractable`;
+  - `entity_validation_unavailable`.
+- Define fuente inicial `profiles_doctors` para `doctor`.
+
+Hallazgos sobre `api/subscriptions/index.php`:
+
+- `subscriptionValidEntityType(...)` enumera tipos futuros, pero writes actuales de suscripcion solo permiten `doctor`.
+- `subscriptionValidEntityId(...)` valida id no vacio, maximo 64 caracteres y patron `[A-Za-z0-9._:-]+`.
+- `subscriptionResolveWriteContext(...)` rechaza writes para `entity_type` distinto de `doctor`.
+- `subscriptionResolveWriteContext(...)` exige scope de doctor y mismatch devuelve `forbidden`.
+- `subscriptionDoctorFixtureExists(...)` consulta `profiles_doctors WHERE doctor_id = :doctor_id`, pero es helper DEV para fixtures, no dependencia reutilizable.
+- No existe endpoint `checkout-intents`.
+
+Hallazgos sobre `CreateSubscriptionWithAcceptanceService`:
+
+- Esta acoplado al flujo contractual actual.
+- Exige `entity_type = doctor` y `entity_id = doctor_id`.
+- Crea aceptacion contractual final y `profile_subscriptions`.
+- No debe reutilizarse tal cual para checkout-first.
+
+Hallazgos sobre `CurrentSubscriptionRepository`:
+
+- Ya tiene `activeSubscriptionExists(...)`.
+- Ya tiene `findActiveByEntity(...)`.
+- Lee `profile_subscriptions`.
+- No valida existencia real de entidad.
+- No debe mezclarse con el resolver de entidad para evitar combinar estado de suscripcion con identidad/contractabilidad.
+
+Hallazgos sobre `profiles_doctors`:
+
+- Schema versionado: `modules/profiles/db/profiles_doctors_schema.sql`.
+- Columna de identificacion: `doctor_id`.
+- Tiene `display_name`.
+- Tiene `profile_status`.
+- Tiene `is_public_candidate`.
+- No se observo `deleted_at` en el schema versionado.
+- `PublicProfileRepository` lee `profiles_doctors` por `doctor_id`.
+- `PrivateProfileRepository::fetchIdentity(...)` lee `profiles_doctors` por `doctor_id`.
+
+### C) Decision de readiness
+Readiness aprobada para implementar una dependencia read-only en microfase posterior.
+
+Archivo futuro recomendado:
+
+```text
+modules/subscriptions/services/SubscriptionEntityResolverService.php
+```
+
+Clase futura recomendada:
+
+```php
+SubscriptionEntityResolverService
+```
+
+Metodo futuro recomendado:
+
+```php
+resolveForCheckout(string $entityType, string $entityId): array
+```
+
+Motivo:
+
+- El endpoint actual tiene helpers utiles, pero estan acoplados al entry point y a DEV/session scope.
+- El servicio contractual actual valida entidad, pero tambien crea suscripcion activa.
+- `CurrentSubscriptionRepository` resuelve estado de suscripcion, no existencia de entidad.
+- Una dependencia read-only separada permite que el futuro `CreateSubscriptionCheckoutIntentService` valide entidad sin crear writes ni acoplarse al endpoint.
+
+No se requiere SQL/schema antes de implementar la primera version.
+
+### D) Alcance futuro
+Alcance de la implementacion futura:
+
+- Read-only.
+- Soporte inicial solo `doctor`.
+- Fuente de existencia: `profiles_doctors.doctor_id`.
+- Sin activar nuevos `entity_type`.
+- Sin escribir `profile_subscriptions`.
+- Sin escribir `profiles_doctors`.
+- Sin endpoint.
+- Sin `CreateSubscriptionCheckoutIntentService`.
+- Sin payment/provider/webhook/facturacion/capacidades.
+
+La implementacion futura debe aceptar otros tipos solo como rejection controlado con `entity_type_invalid`, no como soporte productivo.
+
+### E) Dependencias futuras
+Dependencias sugeridas:
+
+- `PDO`, siguiendo el patron de servicios/repositories actuales.
+- Consulta read-only a `profiles_doctors`.
+- Formato de `entity_id` alineado con `subscriptionValidEntityId(...)`:
+  - no vacio;
+  - longitud maxima 64;
+  - patron `[A-Za-z0-9._:-]+`.
+
+No depender de:
+
+- `CurrentSubscriptionRepository` para existencia de entidad;
+- `CreateSubscriptionWithAcceptanceService`;
+- endpoint `api/subscriptions/index.php`;
+- helpers DEV;
+- `profile_subscriptions`;
+- `PublicProfilePlanCapabilities`.
+
+### F) Snapshot minimo futuro
+Snapshot minimo recomendado:
+
+```text
+entity_type
+entity_id
+entity_exists
+entity_is_contractable
+label
+display_name
+source
+reason
+error
+```
+
+Para `doctor`:
+
+- `entity_type = doctor`;
+- `entity_id = doctor_id`;
+- `entity_exists = true` cuando exista fila en `profiles_doctors`;
+- `entity_is_contractable = true` en la primera version si existe fila y el tipo es `doctor`;
+- `display_name` si existe en `profiles_doctors`;
+- `label` puede derivarse de `display_name` o `doctor_id`;
+- `source = profiles_doctors`;
+- `reason = null` en exito;
+- `error = null` en exito.
+
+Para rechazo:
+
+- `entity_exists = false` si no hay fila;
+- `entity_is_contractable = false`;
+- `reason` y `error` deben usar codigo conceptual estable.
+
+### G) Errores conceptuales
+Errores que debe soportar la implementacion futura:
+
+- `entity_type_invalid`;
+- `entity_id_invalid`;
+- `entity_not_found`;
+- `entity_not_contractable`;
+- `entity_validation_unavailable`.
+
+Mapeo recomendado:
+
+- `entity_type_invalid`: tipo no soportado para checkout.
+- `entity_id_invalid`: formato de `entity_id` invalido.
+- `entity_not_found`: no existe `profiles_doctors.doctor_id`.
+- `entity_not_contractable`: existe entidad pero una regla de contractabilidad la bloquea.
+- `entity_validation_unavailable`: error tecnico de lectura o fuente indeterminada.
+
+### H) Contractabilidad
+Para la primera version, `entity_is_contractable` significa:
+
+- `entity_type = doctor`;
+- `entity_id` valido;
+- existe fila en `profiles_doctors` para `doctor_id = entity_id`.
+
+No se debe inventar una regla de contractabilidad no soportada por codigo/schema actual.
+
+Campos observados:
+
+- `profile_status`;
+- `is_public_candidate`.
+
+Decision:
+
+- No usar `profile_status` ni `is_public_candidate` como bloqueo obligatorio en la primera implementacion, salvo microfase posterior explicita.
+- Documentar esos campos como candidatos para una politica futura de contractabilidad/publicacion.
+- No usar `deleted_at` porque no existe en el schema versionado observado.
+
+### I) Orden futuro dentro de CreateSubscriptionCheckoutIntentService
+Orden recomendado:
+
+1. Validar request basico.
+2. Resolver entidad con `SubscriptionEntityResolverService::resolveForCheckout(...)`.
+3. Iniciar idempotencia checkout.
+4. Entrar a lock checkout.
+5. Revalidar entidad dentro del lock.
+6. Validar `activeSubscriptionExists(...)` dentro del lock.
+7. Revisar checkout pending.
+8. Resolver precio server-side.
+9. Abrir transaccion superior.
+10. Crear aceptacion `accepted_pending_payment`.
+11. Crear checkout intent `pending_payment`.
+12. Marcar idempotencia completed.
+13. Liberar lock.
+
+La revalidacion dentro del lock evita carreras con cambios de estado de entidad antes del write.
+
+### J) QA futura esperada para implementacion
+QA minima para la microfase de implementacion:
+
+- `php -l modules/subscriptions/services/SubscriptionEntityResolverService.php`.
+- Grep `class SubscriptionEntityResolverService`.
+- Grep `function resolveForCheckout`.
+- Grep `profiles_doctors`.
+- Grep `entity_type_invalid`.
+- Grep `entity_id_invalid`.
+- Grep `entity_not_found`.
+- Grep `entity_not_contractable`.
+- Grep `entity_validation_unavailable`.
+- Grep prohibidos:
+  - `INSERT`;
+  - `UPDATE`;
+  - `DELETE`;
+  - `profile_subscriptions`;
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`;
+  - `provider`;
+  - `webhook`;
+  - `PublicProfilePlanCapabilities`.
+- Confirmar que no se crea endpoint.
+- Confirmar que no se crea `CreateSubscriptionCheckoutIntentService`.
+- Confirmar que no se crea SQL.
+- Confirmar que no se ejecuta SQL.
+
+### K) Restricciones
+Esta readiness mantiene fuera de alcance:
+
+- endpoint checkout-intents;
+- `CreateSubscriptionCheckoutIntentService`;
+- payment intents/events;
+- provider;
+- webhooks;
+- facturacion;
+- capacidades;
+- `PublicProfilePlanCapabilities`;
+- perfil publico/SEO;
+- SQL;
+- migraciones;
+- DB/schema;
+- consultas DB durante la microfase documental;
+- writes a `profile_subscriptions`.
+
+### L) Siguiente microfase recomendada
+Readiness aprobada.
+
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-CheckoutIntent-EntityValidationDependency-01
+```
+
+Objetivo:
+
+- Implementar `SubscriptionEntityResolverService::resolveForCheckout(...)` como dependencia read-only para `doctor`, sin endpoint, sin checkout service, sin SQL y sin writes.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
