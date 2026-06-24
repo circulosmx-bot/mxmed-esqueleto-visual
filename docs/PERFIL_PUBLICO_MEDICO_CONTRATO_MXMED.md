@@ -18812,6 +18812,160 @@ No avanzar a frontend ni pagos hasta cerrar endpoint, commit, push y QA post-pus
 
 ---
 
+## Adenda PP-Decisiones 96 - Plan de fixture DEV/local para QA funcional checkout-intents
+
+### A) Objetivo
+Definir un fixture DEV/local seguro para habilitar una prueba positiva `201` del endpoint privado:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents
+```
+
+Esta adenda es solo documental. No ejecuta SQL, no consulta DB, no crea fixture real, no modifica schema y no toca datos existentes.
+
+### B) Problema
+El diagnostico read-only previo de fixture libre dejo cerrado el siguiente estado local/dev:
+
+- La DB local/dev solo tiene doctores `1`, `2` y `3`.
+- Los doctores `1`, `2` y `3` tienen suscripcion activa.
+- Esos doctores sirven para validar bloqueo `active_subscription_exists`, no para positive `201`.
+- No existe doctor libre para crear checkout intent positivo sin tocar datos existentes.
+- Counts base observados en el diagnostico:
+  - `subscription_checkout_intents = 0`;
+  - `subscription_contract_acceptances = 3`;
+  - `profile_subscriptions = 3`;
+  - `subscription_payment_intents = 0`;
+  - `subscription_payment_events = 0`.
+
+Para probar `201` se necesita una entidad `doctor` existente, sin suscripcion activa y sin checkout intent `pending_payment` compatible.
+
+### C) Decision
+La estrategia aprobada es crear en una microfase posterior un doctor fixture DEV/local controlado.
+
+Reglas de la decision:
+
+- No tocar doctores `1`, `2` ni `3`.
+- No tocar doctores 1/2/3.
+- No limpiar datos previos.
+- No borrar suscripciones existentes.
+- No actualizar suscripciones existentes.
+- No truncar tablas.
+- No usar este fixture en produccion.
+- No usar migracion productiva.
+- No modificar DB/schema.
+- No crear `profile_subscriptions` directamente.
+- No crear payment intents/events.
+
+### D) Fixture recomendado
+Fixture recomendado:
+
+```text
+QA Checkout Doctor Libre
+```
+
+Caracteristicas requeridas:
+
+- Debe existir en `profiles_doctors`.
+- Debe usar un `doctor_id` nuevo, no usado y distinto de `1`, `2` y `3`.
+- Debe tener `display_name` identificable, por ejemplo `QA Checkout Doctor Libre`.
+- `profile_status` e `is_public_candidate` solo deben definirse si el schema los requiere o si el resolver necesita valores consistentes.
+- No debe tener filas en `profile_subscriptions`.
+- No debe tener checkout intent `pending_payment` al inicio.
+- Debe poder ser resuelto por `SubscriptionEntityResolverService::resolveForCheckout(...)`.
+
+El resolver de entidad usa `profiles_doctors.doctor_id` y lee como campos informativos `display_name`, `profile_status` e `is_public_candidate`.
+
+### E) Estrategia SQL futura
+La creacion real del fixture debe quedar para una microfase separada.
+
+Estrategia recomendada:
+
+- Preparar un SQL draft DEV/local-only.
+- Mantenerlo fuera de migraciones productivas.
+- Limitarlo a insertar un doctor fixture en `profiles_doctors`.
+- No crear tablas.
+- No alterar columnas.
+- No crear `profile_subscriptions`.
+- No crear `subscription_checkout_intents`.
+- No crear `subscription_contract_acceptances`.
+- No crear `subscription_payment_intents`.
+- No crear `subscription_payment_events`.
+- No usar `DELETE`.
+- No usar `UPDATE`.
+- No usar `TRUNCATE`.
+- No limpiar datos despues.
+
+La siguiente fase debe revisar el SQL draft sin ejecutarlo. La ejecucion, si se autoriza, debe ocurrir en otra microfase explicita.
+
+### F) Validaciones futuras previas al positive 201
+Antes de ejecutar el caso positivo `201`, una microfase funcional posterior debe confirmar:
+
+- El doctor fixture existe en `profiles_doctors`.
+- El doctor fixture no es `1`, `2` ni `3`.
+- El doctor fixture no tiene suscripcion activa en `profile_subscriptions`.
+- El doctor fixture no tiene checkout intent `pending_payment` compatible en `subscription_checkout_intents`.
+- Los counts base antes de la prueba:
+  - `subscription_checkout_intents`;
+  - `subscription_contract_acceptances`;
+  - `profile_subscriptions`;
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`.
+
+### G) QA funcional futura
+La QA funcional posterior debe usar el doctor fixture nuevo para el caso positive `201`.
+
+Validacion esperada:
+
+- Request valido con `standard / annual`.
+- Header `Idempotency-Key` estable.
+- Respuesta `201`.
+- Incrementa exactamente:
+  - `subscription_contract_acceptances +1`;
+  - `subscription_checkout_intents +1`.
+- No incrementa:
+  - `profile_subscriptions`;
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`.
+- La aceptacion contractual queda con `status = accepted_pending_payment`.
+- El checkout intent queda con `status = pending_payment`.
+- El replay idempotente con misma key y mismo payload no duplica filas.
+- La misma key con payload distinto devuelve `idempotency_key_reused_with_different_payload`.
+- Un segundo request con checkout pending compatible devuelve `checkout_intent_already_pending` o el comportamiento documentado por el servicio.
+- No se limpian datos despues.
+
+### H) Restricciones
+Restricciones para fixture y QA funcional:
+
+- DEV/local only.
+- No produccion.
+- No crear fixture real en esta microfase.
+- No ejecutar SQL en esta microfase.
+- No consultar DB en esta microfase.
+- No ejecutar HTTP en esta microfase.
+- No modificar codigo PHP.
+- No modificar `api/subscriptions/index.php`.
+- No modificar servicios/repositorios.
+- No modificar DB/schema.
+- No tocar doctores `1`, `2` ni `3`.
+- No hacer write directo a `profile_subscriptions`.
+- No payment intents/events.
+- No provider/webhook/facturacion/capacidades.
+- No perfil publico/SEO.
+- No frontend.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+DB/SPEC-Suscripciones-CheckoutIntent-Endpoint-DevFixture-SQLDraft-01
+```
+
+Objetivo:
+
+- Crear un SQL draft DEV/local-only para insertar el doctor fixture seguro `QA Checkout Doctor Libre`, sin ejecutarlo todavia, sin modificar DB/schema, sin tocar doctores `1`, `2` ni `3`, sin limpiar datos y sin crear `profile_subscriptions`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
