@@ -17,6 +17,7 @@
 -- Collation fix:
 --   Future execution previously failed with ERROR 1267 Illegal mix of collations.
 --   Comparisons against profiles_doctors.display_name use explicit utf8mb4_unicode_ci.
+--   Second fix also normalizes the display_name variable/literal to utf8mb4_unicode_ci.
 --   This does not change fixture scope and does not authorize execution in this microphase.
 
 -- Fixture target:
@@ -27,7 +28,7 @@
 -- Proposed DEV/local-only variables.
 -- The high doctor_id avoids doctors 1, 2 and 3 and remains easy to identify in local QA.
 SET @mxmed_checkout_qa_doctor_id := '900001';
-SET @mxmed_checkout_qa_display_name := 'QA Checkout Doctor Libre';
+SET @mxmed_checkout_qa_display_name := CONVERT('QA Checkout Doctor Libre' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
 
 -- Future pre-execution validations.
 -- 1) Confirm the fixture display_name does not already exist.
