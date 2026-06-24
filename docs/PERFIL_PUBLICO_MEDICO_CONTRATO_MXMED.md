@@ -18595,6 +18595,223 @@ No avanzar a endpoint hasta cerrar servicio, commit, push y QA post-push del ser
 
 ---
 
+## Adenda PP-Decisiones 95 - Readiness de implementacion del endpoint checkout-intents
+
+### A) Objetivo
+Esta adenda valida la readiness para implementar posteriormente el endpoint privado:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents
+```
+
+El endpoint futuro debe conectar de forma minima el servicio ya implementado:
+
+```php
+CreateSubscriptionCheckoutIntentService::createCheckoutIntent(array $input): array
+```
+
+Esta microfase es documental. No implementa endpoint, no modifica `api/subscriptions/index.php` y no cambia DB/schema.
+
+### B) Estado de dependencias
+Dependencias disponibles para la futura ruta:
+
+- Servicio orquestador: listo. `CreateSubscriptionCheckoutIntentService::createCheckoutIntent(...)` existe y orquesta el primer write checkout-first.
+- Entity resolver: listo. `SubscriptionEntityResolverService::resolveForCheckout(...)` valida `doctor` contra `profiles_doctors`.
+- `active_subscription_exists`: listo. `CurrentSubscriptionRepository::activeSubscriptionExists(...)` valida suscripcion activa vigente.
+- Idempotencia checkout: lista. `SubscriptionWriteIdempotencyService` soporta `subscriptions.checkout_intent.create`, `beginCheckoutIntent(...)`, `buildCheckoutRequestHash(...)` y `markCheckoutIntentCompleted(...)`.
+- Lock checkout: listo. `SubscriptionEntityWriteLockService::acquireCheckoutCreate(...)` genera el lock `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+- Resolver de precios: listo. `SubscriptionPlanPriceResolverService::resolveForCheckout(...)` resuelve precio server-side y bloquea planes no contratables.
+- Aceptacion pending payment: lista. `CreateSubscriptionPendingPaymentAcceptanceService::createPendingPaymentAcceptance(...)` fuerza `accepted_pending_payment`, `subscription_id = null` y `source = checkout_intent`.
+- Repository checkout-intents: listo. `SubscriptionCheckoutIntentRepository` crea `subscription_checkout_intents` con `pending_payment` y lookups pending.
+
+### C) Hallazgos del endpoint actual
+Hallazgos read-only sobre `api/subscriptions/index.php`:
+
+- Routing: usa `subscriptionRelativeSegments()` y compara segmentos dentro del bloque principal `try`.
+- Metodo HTTP: se normaliza con `$_SERVER['REQUEST_METHOD']` y `strtoupper(...)`.
+- Path: rutas actuales se expresan como arrays de segmentos, por ejemplo `entities/{entity_type}/{entity_id}/subscriptions` y `entities/{entity_type}/{entity_id}/current`.
+- JSON body: `subscriptionReadJsonPayload()` valida `Content-Type: application/json`, lee `php://input`, decodifica JSON y devuelve error `invalid_payload`.
+- Respuesta JSON: `subscriptionRespond(...)` centraliza `http_response_code(...)` y `json_encode(...)`.
+- Errores: existen helpers `subscriptionError(...)`, `subscriptionWriteError(...)`, `subscriptionContextError(...)` y metas por contrato.
+- PDO: se instancia con `mxmed_pdo()` desde `api/_lib/db.php`.
+- Dependencias: se cargan con `require_once` al inicio del archivo y se importan con `use`.
+- Auth/private write: el flujo de writes actual usa `subscriptionResolveWriteContext(...)`, exige local/dev, rechaza header scope para writes, exige sesion real y restringe writes a `doctor`.
+- Idempotencia actual: lee `Idempotency-Key` desde `subscriptionHeaders()` y usa servicios de idempotencia antes del write contractual actual.
+- Endpoint checkout-intents: no existe todavia ruta `checkout-intents` en `api/subscriptions/index.php`.
+
+### D) Decision de readiness
+Readiness aprobada.
+
+El endpoint privado checkout-intents ya puede implementarse en una siguiente microfase con alcance minimo controlado.
+
+Archivo futuro a modificar:
+
+```text
+api/subscriptions/index.php
+```
+
+Ruta futura:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents
+```
+
+La implementacion futura debe limitarse a cablear dependencias, validar request/context, llamar `CreateSubscriptionCheckoutIntentService::createCheckoutIntent(...)` y responder JSON.
+
+### E) Alcance minimo futuro del endpoint
+El endpoint futuro debe:
+
+- aceptar solo `POST`;
+- ser privado y usar el patron de write context existente;
+- recibir `entity_type` y `entity_id` desde path;
+- leer `Idempotency-Key` desde header;
+- leer JSON body con `subscriptionReadJsonPayload()`;
+- recibir desde body:
+  - `plan_code`;
+  - `billing_period`;
+  - `contract_version`;
+  - `contract_hash`;
+  - `contract_snapshot_url`;
+  - `source`;
+  - campos contractuales opcionales permitidos, si se deciden en la microfase de endpoint;
+- construir input para `CreateSubscriptionCheckoutIntentService`;
+- inyectar contexto server-side:
+  - `actor_user_id`;
+  - `actor_role`;
+  - `doctor_id`;
+  - `profile_id`;
+  - `operator_id`;
+  - `ip_address`;
+  - `user_agent`;
+- invocar `createCheckoutIntent(...)`;
+- responder JSON estable con `201` para creacion o con el status de replay idempotente si el servicio lo devuelve asi;
+- mapear errores conceptuales a HTTP segun el contrato de esta adenda.
+
+El endpoint no debe aceptar como canonicos desde el cliente:
+
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `price_uuid`.
+
+El precio debe seguir resolviendose server-side.
+
+### F) Mapeo HTTP conceptual sugerido
+Mapeo sugerido para la futura implementacion:
+
+- `201`: checkout intent creado.
+- `200`: replay idempotente completed si el servicio lo devuelve asi.
+- `400`: JSON mal formado, body ausente o content-type invalido.
+- `401`: autenticacion ausente cuando el patron actual lo requiera.
+- `403`: contexto privado/write no autorizado.
+- `404`: `entity_not_found`.
+- `409`: `active_subscription_exists`, `checkout_intent_already_pending`, `request_already_processing`, `idempotency_key_reused_with_different_payload`, lock timeout.
+- `422`: `entity_type_invalid`, `entity_id_invalid`, `entity_not_contractable`, `plan_not_contractable`, `billing_period_invalid`, `plan_price_not_configured`, `pricing_configuration_conflict`, `contract_invalid`, `acceptance_source_invalid`, payload invalido.
+- `500`: `checkout_intent_unavailable`, `entity_validation_unavailable` y errores inesperados.
+
+Si el servicio expone una excepcion con `status()` y `errorCode()`, el endpoint futuro debe respetar esos valores.
+
+### G) Request minimo futuro
+Request minimo esperado:
+
+```json
+{
+  "plan_code": "standard",
+  "billing_period": "annual",
+  "contract_version": "mxmed-contract-v1",
+  "contract_hash": "sha256:...",
+  "contract_snapshot_url": "https://...",
+  "source": "checkout_intent"
+}
+```
+
+Header requerido para idempotencia:
+
+```text
+Idempotency-Key: <stable-client-key>
+```
+
+Campos backend-controlled que deben rechazarse si aparecen como fuente canonica:
+
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `price_uuid`;
+- `status`;
+- `subscription_id`;
+- `contract_acceptance_uuid`;
+- `checkout_intent_uuid`;
+- provider/payment/capabilities fields.
+
+### H) Response minima futura
+La respuesta minima debe preservar la estructura del servicio:
+
+- `checkout_intent_uuid`;
+- `status = pending_payment`;
+- `entity`;
+- `plan_code`;
+- `billing_period`;
+- `price`;
+- `contract_acceptance_uuid`;
+- `contract`;
+- `idempotency`;
+- `source`.
+
+La respuesta no debe incluir activacion de plan, capacidades, `profile_subscriptions`, payment intent ni provider.
+
+### I) Restricciones obligatorias
+La futura implementacion del endpoint no debe:
+
+- crear `profile_subscriptions`;
+- crear `subscription_payment_intents`;
+- crear `subscription_payment_events`;
+- conectar provider;
+- conectar webhooks;
+- conectar facturacion;
+- activar capacidades;
+- tocar `PublicProfilePlanCapabilities`;
+- tocar perfil publico/SEO;
+- modificar frontend;
+- crear SQL;
+- modificar DB/schema;
+- ejecutar SQL fuera de las operaciones normales del servicio al recibir request.
+
+### J) QA esperada para futura implementacion
+QA minima cuando se implemente la ruta:
+
+- `php -l api/subscriptions/index.php`;
+- `php -l modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php`;
+- grep de `checkout-intents`;
+- grep de route `POST`;
+- grep de `require_once` de dependencias nuevas;
+- grep de `Idempotency-Key`;
+- grep de `createCheckoutIntent`;
+- grep de mapeo de errores conceptuales;
+- grep prohibidos para `INSERT INTO profile_subscriptions`, `UPDATE profile_subscriptions`, `DELETE FROM profile_subscriptions`;
+- grep prohibidos para `subscription_payment_intents`, `subscription_payment_events`, `provider`, `webhook`, `PublicProfilePlanCapabilities`;
+- confirmar sin SQL nuevo;
+- confirmar sin DB/schema;
+- confirmar sin frontend.
+
+### K) Siguiente microfase recomendada
+Readiness aprobada.
+
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-CheckoutIntent-Endpoint-01
+```
+
+Objetivo:
+
+- Implementar la ruta privada `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents` conectando `CreateSubscriptionCheckoutIntentService::createCheckoutIntent(...)`, sin frontend, sin SQL, sin DB/schema, sin provider, sin payment intents/events, sin `profile_subscriptions` y sin activar capacidades.
+
+No avanzar a frontend ni pagos hasta cerrar endpoint, commit, push y QA post-push.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
