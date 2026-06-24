@@ -16374,6 +16374,247 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 87 - Readiness de implementacion de idempotencia checkout
+
+### A) Proposito
+Esta adenda valida la readiness de implementacion para agregar soporte de idempotencia checkout sin SQL/schema inmediato y sin modificar endpoint.
+
+Esta adenda no implementa codigo y no reabre decisiones cerradas sobre:
+
+- checkout-first;
+- primer write;
+- `accepted_pending_payment`;
+- `pending_payment`;
+- resolver server-side de precios;
+- operation checkout `subscriptions.checkout_intent.create`;
+- uso de `response_body_text` para replay checkout.
+
+### B) Estado actual confirmado
+Estado confirmado en inspeccion read-only:
+
+- `SubscriptionWriteIdempotencyService` existe.
+- `SubscriptionWriteIdempotencyRepository` existe.
+- El flujo contractual actual usa `subscriptions.create_with_contract_acceptance`.
+- El repository ya maneja `operation`.
+- El repository ya maneja `request_hash`.
+- El repository ya maneja `status`.
+- El repository ya maneja `response_http_status`.
+- El repository ya maneja `response_body_text`.
+- El schema versionado permite `subscription_id` nullable.
+- No se requiere SQL/schema inmediato para el ajuste minimo propuesto.
+- El endpoint checkout-intents todavia no existe en `api/subscriptions/index.php`.
+- `CreateSubscriptionCheckoutIntentService` todavia no existe.
+
+### C) Brecha exacta a resolver
+Brecha precisa:
+
+- `SubscriptionWriteIdempotencyService` esta acoplado al flujo contractual actual.
+- La operation contractual `subscriptions.create_with_contract_acceptance` no debe reemplazarse.
+- Checkout requiere una operation adicional: `subscriptions.checkout_intent.create`.
+- `markCompleted(...)` actual esta orientado al resultado contractual y exige `subscription_id` + `contract_acceptance_uuid`.
+- Checkout requiere guardar resultado idempotente con `checkout_intent_uuid` y snapshot minimo en `response_body_text`.
+- Replay checkout debe reconstruir/devolver el resultado desde `response_body_text`.
+- Payload distinto debe seguir bloqueandose por `request_hash`.
+- `processing` debe seguir bloqueando doble write.
+- Failure debe quedar trazable sin dejar la operacion colgada.
+
+### D) Decision tecnica recomendada
+Decision para la implementacion posterior:
+
+- Mantener intactos los metodos actuales usados por el flujo contractual.
+- Agregar soporte checkout como operation adicional, no como reemplazo.
+- Usar operation como argumento explicito en metodos nuevos o wrappers internos.
+- Agregar builder de `request_hash` checkout.
+- Agregar complete generico o complete checkout que persista JSON de respuesta en `response_body_text`.
+- Reutilizar `response_body_text` como fuente principal de replay checkout.
+- No cambiar schema.
+- No tocar endpoint contractual.
+- No tocar endpoint checkout-intents porque todavia no existe.
+
+Se conserva intacto:
+
+- operation contractual `subscriptions.create_with_contract_acceptance`;
+- firmas llamadas hoy por `api/subscriptions/index.php`;
+- replay contractual existente;
+- `markFailed(...)` actual, salvo wrapper compatible si se decide.
+
+Se agrega o parametriza:
+
+- operation `subscriptions.checkout_intent.create`;
+- `request_hash` checkout;
+- completed checkout sin `subscription_id` activo;
+- decode de replay checkout desde `response_body_text`;
+- allowlist de operations validas.
+
+No se toca:
+
+- endpoint;
+- rutas;
+- SQL/schema;
+- provider;
+- payment intents/events;
+- `profile_subscriptions`.
+
+### E) Contrato interno futuro
+Firmas conceptuales futuras, sin implementarlas en esta adenda:
+
+- `beginOperation(?string $headerValue, string $operation, array $scope, array $payload): SubscriptionWriteIdempotencyDecision`
+  - Variante parametrizable de `begin(...)`.
+
+- `beginCheckoutIntent(?string $headerValue, array $scope, array $payload): SubscriptionWriteIdempotencyDecision`
+  - Wrapper especifico que use `subscriptions.checkout_intent.create`.
+
+- `buildCheckoutRequestHash(array $scope, array $payload): string`
+  - Canonicaliza el payload checkout y mantiene hash estable ante orden de campos.
+
+- `markOperationCompleted(array $record, array $responsePayload, int $httpStatus, array $references = []): void`
+  - Completa operaciones con JSON generico en `response_body_text`.
+
+- `markCheckoutIntentCompleted(array $record, array $responsePayload, int $httpStatus): void`
+  - Wrapper especifico para resultado checkout.
+
+- `markOperationFailed(array $record, int $httpStatus): void`
+  - Wrapper compatible sobre `markFailed(...)`, si se requiere.
+
+- `decodeReplayResponse(array $idempotencyRow): ?array`
+  - Decodifica `response_body_text` y devuelve replay estable.
+
+Los metodos actuales `begin(...)`, `markCompleted(...)` y `markFailed(...)` deben conservarse como wrappers compatibles para el contrato actual o mantenerse sin cambios si se agregan metodos nuevos.
+
+### F) Request hash checkout
+El hash checkout debe cubrir, como minimo:
+
+- `entity_type`;
+- `entity_id`;
+- `plan_code`;
+- `billing_period`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `acceptance_source`;
+- `source`.
+
+Aclaraciones:
+
+- El cliente no envia precio canonico.
+- El precio no debe formar parte del hash si se resuelve despues, salvo decision explicita posterior.
+- El hash debe ser estable ante orden de campos.
+- Misma key con payload distinto debe producir `idempotency_key_reused_with_different_payload`.
+
+### G) Response payload checkout para replay
+Estructura minima a guardar en `response_body_text`:
+
+- `checkout_intent_uuid`;
+- `checkout_status = pending_payment`;
+- `contract_acceptance_uuid`;
+- `acceptance_status = accepted_pending_payment`;
+- `entity_type`;
+- `entity_id`;
+- `plan_code`;
+- `billing_period`;
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `price_uuid`, si aplica;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `created_at`.
+
+Reglas:
+
+- Replay estable devuelve ese payload sin crear aceptacion nueva.
+- Replay estable no crea checkout intent nuevo.
+- Si `response_body_text` esta vacio o invalido, debe responderse error conceptual `checkout_idempotency_result_unavailable`.
+
+### H) Compatibilidad contractual obligatoria
+La implementacion posterior debe confirmar:
+
+- `create_with_contract_acceptance` sigue funcionando.
+- Las firmas usadas por `api/subscriptions/index.php` no se rompen.
+- Las llamadas actuales a `begin(...)`, `markCompleted(...)` y `markFailed(...)` siguen validas.
+- El resultado contractual actual no cambia.
+- El endpoint contractual actual no cambia.
+- Replay contractual actual no cambia.
+- La nueva operation checkout es adicional, no reemplazo.
+
+### I) Riesgos y mitigaciones
+Riesgos:
+
+- romper replay contractual existente;
+- guardar JSON invalido en `response_body_text`;
+- permitir operation incorrecta;
+- marcar completed sin payload checkout;
+- dejar `processing` sin fail en error;
+- doble write si checkout no consume begin correctamente;
+- mezclar resultado contractual con resultado checkout.
+
+Mitigaciones:
+
+- wrappers compatibles;
+- allowlist de operations;
+- validacion estricta de response payload;
+- pruebas de replay contractual y checkout aislado;
+- grep de operaciones;
+- no tocar endpoint en esta fase.
+
+### J) Errores conceptuales
+Errores conceptuales:
+
+- `idempotency_key_invalid`;
+- `idempotency_key_reused_with_different_payload`;
+- `request_already_processing`;
+- `checkout_idempotency_result_unavailable`;
+- `checkout_idempotency_complete_failed`;
+- `checkout_idempotency_failure_mark_failed`;
+- `checkout_intent_unavailable`;
+- `idempotency_operation_invalid`.
+
+### K) QA futura para implementacion
+QA esperada para la microfase posterior:
+
+- `php -l modules/subscriptions/services/SubscriptionWriteIdempotencyService.php`.
+- `php -l modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php`, si se modifica.
+- Grep `subscriptions.checkout_intent.create`.
+- Grep `subscriptions.create_with_contract_acceptance`.
+- Grep `request_hash`.
+- Grep `response_body_text`.
+- Grep `checkout_intent_uuid`.
+- Grep `idempotency_key_reused_with_different_payload`.
+- Grep `request_already_processing`.
+- Grep `idempotency_operation_invalid`.
+- Prueba o script aislado, si se disena:
+  - begin checkout nuevo;
+  - replay checkout completed;
+  - payload distinto;
+  - processing;
+  - compatibilidad contractual existente.
+- Grep prohibidos:
+  - `subscription_payment_intents`;
+  - `subscription_payment_events`;
+  - `provider`;
+  - `webhook`;
+  - `PublicProfilePlanCapabilities`;
+  - `profile_subscriptions`, salvo compatibilidad contractual existente.
+- Confirmar que no modifica endpoint.
+- Confirmar que no crea SQL.
+- Confirmar que no ejecuta SQL.
+- Confirmar que no toca frontend/perfil publico/SEO.
+
+### L) Siguiente microfase recomendada
+Readiness confirmada sin SQL/schema inmediato.
+
+Siguiente microfase recomendada:
+
+- `BE/Suscripciones-CheckoutIntent-IdempotencyDependency-01`.
+
+Objetivo:
+
+- Implementar el ajuste minimo de idempotencia checkout en `SubscriptionWriteIdempotencyService` y, solo si es necesario, `SubscriptionWriteIdempotencyRepository`, sin endpoint y sin SQL.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
