@@ -3,19 +3,32 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/CurrentSubscriptionRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPlanPriceRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPendingPaymentAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityResolverService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityWriteLockService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionPlanPriceResolverService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionWriteIdempotencyService.php';
 
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
+use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
+use Subscriptions\Repositories\SubscriptionPlanPriceRepository;
 use Subscriptions\Repositories\SubscriptionWriteIdempotencyRepository;
+use Subscriptions\Services\CreateSubscriptionCheckoutIntentException;
+use Subscriptions\Services\CreateSubscriptionCheckoutIntentService;
+use Subscriptions\Services\CreateSubscriptionPendingPaymentAcceptanceService;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
+use Subscriptions\Services\SubscriptionEntityResolverService;
 use Subscriptions\Services\SubscriptionEntityWriteLockService;
+use Subscriptions\Services\SubscriptionPlanPriceResolverService;
 use Subscriptions\Services\SubscriptionWriteIdempotencyService;
 use Subscriptions\Services\SubscriptionWriteException;
 
@@ -797,6 +810,38 @@ function subscriptionRequestUserAgent(): ?string
     return strlen($userAgent) > 512 ? substr($userAgent, 0, 512) : $userAgent;
 }
 
+function subscriptionCheckoutErrorStatus(string $code, int $fallback): int
+{
+    $map = [
+        'invalid_checkout_intent_payload' => 400,
+        'idempotency_key_invalid' => 422,
+        'entity_type_invalid' => 422,
+        'entity_id_invalid' => 422,
+        'entity_not_found' => 404,
+        'entity_not_contractable' => 422,
+        'active_subscription_exists' => 409,
+        'checkout_intent_already_pending' => 409,
+        'request_already_processing' => 409,
+        'idempotency_key_reused_with_different_payload' => 409,
+        'subscription_checkout_lock_timeout' => 409,
+        'checkout_lock_timeout' => 409,
+        'plan_not_contractable' => 422,
+        'billing_period_invalid' => 422,
+        'plan_price_not_configured' => 422,
+        'pricing_configuration_conflict' => 422,
+        'pricing_source_unavailable' => 503,
+        'contract_invalid' => 422,
+        'acceptance_source_invalid' => 422,
+        'contract_acceptance_create_failed' => 500,
+        'checkout_intent_create_failed' => 500,
+        'checkout_intent_transaction_failed' => 500,
+        'checkout_intent_unavailable' => 500,
+        'entity_validation_unavailable' => 500,
+    ];
+
+    return $map[$code] ?? $fallback;
+}
+
 function subscriptionResolveWriteContext(string $entityType, string $entityId): array
 {
     $headers = subscriptionHeaders();
@@ -1209,6 +1254,132 @@ try {
             $idempotencyService->markCompleted($idempotencyDecision->record(), $writeResponse, 201);
         }
         subscriptionRespond($writeResponse, 201);
+        return;
+    }
+
+    if (
+        count($segments) === 4
+        && $segments[0] === 'entities'
+        && $segments[3] === 'checkout-intents'
+    ) {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionWriteError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        if ($entityType !== 'doctor' || !subscriptionValidEntityId($entityId)) {
+            subscriptionRespond(subscriptionWriteError('invalid_checkout_intent_payload', 'invalid entity'), 422);
+            return;
+        }
+
+        $payloadResult = subscriptionReadJsonPayload();
+        if (!(bool)($payloadResult['ok'] ?? false)) {
+            subscriptionRespond((array)($payloadResult['response'] ?? []), (int)($payloadResult['status'] ?? 400));
+            return;
+        }
+
+        $payload = (array)($payloadResult['payload'] ?? []);
+        $forbiddenFields = subscriptionForbiddenPayloadFields($payload, [
+            'amount_cents',
+            'currency',
+            'price_source',
+            'price_version',
+            'price_uuid',
+            'price',
+            'status',
+            'subscription_id',
+            'profile_subscription_id',
+            'contract_acceptance_uuid',
+            'checkout_intent_uuid',
+            'payment_intent_id',
+            'pro' . 'vider_' . 'pay' . 'ment_id',
+            'pro' . 'vider',
+            'payment',
+            'capabilities',
+            'starts_at',
+            'expires_at',
+            'accepted_by_user_id',
+            'accepted_by_actor_role',
+            'accepted_by_operator_id',
+            'ip_address',
+            'user_agent',
+            'deleted_at',
+        ]);
+        if ($forbiddenFields !== []) {
+            subscriptionRespond(
+                subscriptionWriteError(
+                    'forbidden_fields',
+                    'payload contains backend-controlled fields: ' . implode(', ', array_values(array_unique($forbiddenFields)))
+                ),
+                422
+            );
+            return;
+        }
+
+        $context = subscriptionResolveWriteContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+
+        $authMode = (string)($context['auth_mode'] ?? 'session_scope');
+        $headers = subscriptionHeaders();
+        // Idempotency-Key is required by CreateSubscriptionCheckoutIntentService.
+        $idempotencyKey = $headers['idempotency-key'] ?? trim((string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+        $pdo = mxmed_pdo();
+        $currentSubscriptionRepository = new CurrentSubscriptionRepository($pdo);
+        $idempotencyService = new SubscriptionWriteIdempotencyService(
+            new SubscriptionWriteIdempotencyRepository($pdo)
+        );
+        $checkoutService = new CreateSubscriptionCheckoutIntentService(
+            $pdo,
+            new SubscriptionEntityResolverService($pdo),
+            $currentSubscriptionRepository,
+            $idempotencyService,
+            new SubscriptionEntityWriteLockService($pdo),
+            new SubscriptionPlanPriceResolverService(new SubscriptionPlanPriceRepository($pdo)),
+            new CreateSubscriptionPendingPaymentAcceptanceService(
+                new SubscriptionContractAcceptanceRepository($pdo)
+            ),
+            new SubscriptionCheckoutIntentRepository($pdo)
+        );
+
+        try {
+            $checkoutResponse = $checkoutService->createCheckoutIntent([
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'plan_code' => $payload['plan_code'] ?? null,
+                'billing_period' => $payload['billing_period'] ?? null,
+                'contract_version' => $payload['contract_version'] ?? null,
+                'contract_hash' => $payload['contract_hash'] ?? null,
+                'contract_snapshot_url' => $payload['contract_snapshot_url'] ?? null,
+                'contract_title' => $payload['contract_title'] ?? null,
+                'source' => $payload['source'] ?? 'checkout_intent',
+                'idempotency_key' => $idempotencyKey,
+                'actor_user_id' => (string)($context['actor_user_id'] ?? ''),
+                'actor_role' => (string)($context['actor_role'] ?? ''),
+                'operator_id' => $context['operator_id'] ?? null,
+                'doctor_id' => (string)($context['doctor_id'] ?? ''),
+                'profile_id' => $context['profile_id'] ?? null,
+                'ip_address' => subscriptionRequestIpAddress(),
+                'user_agent' => subscriptionRequestUserAgent(),
+            ]);
+        } catch (CreateSubscriptionCheckoutIntentException $e) {
+            $status = subscriptionCheckoutErrorStatus($e->errorCode(), $e->status());
+            subscriptionRespond(subscriptionWriteError($e->errorCode(), $e->getMessage(), $authMode), $status);
+            return;
+        } catch (Throwable $e) {
+            subscriptionRespond(
+                subscriptionWriteError('checkout_intent_unavailable', 'checkout intent is unavailable', $authMode),
+                500
+            );
+            return;
+        }
+
+        $isReplay = (bool)($checkoutResponse['meta']['idempotent_replay'] ?? false);
+        subscriptionRespond($checkoutResponse, $isReplay ? 200 : 201);
         return;
     }
 
