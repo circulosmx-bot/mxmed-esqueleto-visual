@@ -5,6 +5,7 @@ namespace Subscriptions\Repositories;
 
 use PDO;
 use PDOException;
+use RuntimeException;
 
 final class CurrentSubscriptionRepository
 {
@@ -53,6 +54,68 @@ final class CurrentSubscriptionRepository
     public function findFallbackFreePlan(): ?array
     {
         return $this->findPlanByCodeAndPeriod('free', 'lifetime');
+    }
+
+    public function activeSubscriptionExists(string $entityType, string $entityId): bool
+    {
+        return $this->findActiveByEntity($entityType, $entityId) !== null;
+    }
+
+    public function findActiveByEntity(string $entityType, string $entityId): ?array
+    {
+        $entityType = trim($entityType);
+        $entityId = trim($entityId);
+        if ($entityType === '' || $entityId === '') {
+            return null;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT
+                    subscription_id,
+                    entity_type,
+                    entity_id,
+                    doctor_id,
+                    profile_id,
+                    plan_code,
+                    billing_period,
+                    starts_at,
+                    expires_at,
+                    grace_starts_at,
+                    grace_ends_at,
+                    status,
+                    source,
+                    created_at,
+                    updated_at
+                 FROM profile_subscriptions
+                 WHERE entity_type = :entity_type
+                   AND entity_id = :entity_id
+                   AND deleted_at IS NULL
+                   AND status IN (\'active\', \'expiring_soon\', \'grace_period\')
+                   AND (starts_at IS NULL OR starts_at <= UTC_TIMESTAMP())
+                   AND (expires_at IS NULL OR expires_at >= UTC_TIMESTAMP())
+                 ORDER BY
+                    CASE status
+                        WHEN "active" THEN 0
+                        WHEN "expiring_soon" THEN 1
+                        WHEN "grace_period" THEN 2
+                        ELSE 3
+                    END ASC,
+                    starts_at DESC,
+                    expires_at DESC,
+                    created_at DESC
+                 LIMIT 1'
+            );
+            $stmt->execute([
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+            ]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            throw new RuntimeException('active_subscription_check_unavailable', 0, $e);
+        }
+
+        return is_array($row) ? $row : null;
     }
 
     public function findCurrentCandidateForEntity(string $entityType, string $entityId): ?array
