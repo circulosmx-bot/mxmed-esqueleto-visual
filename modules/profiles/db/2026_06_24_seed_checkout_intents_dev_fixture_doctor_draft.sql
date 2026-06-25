@@ -18,6 +18,8 @@
 --   Future execution previously failed with ERROR 1267 Illegal mix of collations.
 --   Comparisons against profiles_doctors.display_name use explicit utf8mb4_unicode_ci.
 --   Second fix also normalizes the display_name variable/literal to utf8mb4_unicode_ci.
+--   Third fix removes display_name comparisons from the executable INSERT guard.
+--   The INSERT guard uses doctor_id only; display_name checks remain read-only validations.
 --   This does not change fixture scope and does not authorize execution in this microphase.
 
 -- Fixture target:
@@ -116,7 +118,6 @@ WHERE NOT EXISTS (
   SELECT 1
   FROM profiles_doctors
   WHERE doctor_id = @mxmed_checkout_qa_doctor_id
-     OR display_name COLLATE utf8mb4_unicode_ci = @mxmed_checkout_qa_display_name COLLATE utf8mb4_unicode_ci
 );
 
 -- Future post-execution validations.
