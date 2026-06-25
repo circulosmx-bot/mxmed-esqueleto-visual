@@ -19220,6 +19220,194 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 99 - Cierre de QA funcional controlada del endpoint checkout-intents
+
+### A) Alcance del cierre
+Esta adenda cierra documentalmente la QA funcional controlada del endpoint:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents
+```
+
+Alcance validado:
+
+- Entorno local/dev.
+- Fixture principal `doctor/900001`.
+- Helper DEV/local de sesion para generar `session_scope` valido.
+- Endpoint checkout-first sin provider, sin pagos, sin webhooks y sin facturacion.
+- Verificaciones read-only de DB local/dev posteriores a los casos funcionales.
+
+Fuera de este cierre:
+
+- Provider adapter.
+- `subscription_payment_intents`.
+- `subscription_payment_events`.
+- Activacion post-pago.
+- `profile_subscriptions` productiva para el checkout.
+- Facturacion.
+- Webhooks.
+- Limpieza de fixture local/dev.
+
+### B) Casos PASS documentados
+Los siguientes casos quedaron ejecutados y aprobados:
+
+1. Positive201:
+   - Resultado: `HTTP 201`.
+   - Creo `subscription_checkout_intents` con `status = pending_payment`.
+   - Creo `subscription_contract_acceptances` con `status = accepted_pending_payment`.
+   - Checkout creado: `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`.
+   - Acceptance creada: `ae137e4c-75f7-42cb-a6be-7cd24e051ca9`.
+   - Plan: `standard`.
+   - Billing: `annual`.
+   - Monto: `20000 MXN`.
+
+2. Replay same key:
+   - Resultado: `HTTP 200`.
+   - `meta.idempotent_replay = true`.
+   - Devolvio el mismo checkout intent y la misma acceptance.
+   - No duplico `subscription_checkout_intents`.
+   - No duplico `subscription_contract_acceptances`.
+
+3. Different payload same key:
+   - Resultado: `HTTP 409`.
+   - Error: `idempotency_key_reused_with_different_payload`.
+   - Bloqueo el reuso de la misma `Idempotency-Key` con payload distinto.
+   - No duplico filas funcionales.
+
+4. Pending existing new key:
+   - Resultado: `HTTP 409`.
+   - Error: `checkout_intent_already_pending`.
+   - Bloqueo una nueva creacion con otra `Idempotency-Key` porque ya existia checkout `pending_payment`.
+   - No duplico checkout ni acceptance.
+
+5. Active subscription exists:
+   - Resultado: `HTTP 409`.
+   - Error: `active_subscription_exists`.
+   - Doctor activo usado: `doctor/1`.
+   - Confirmo que una suscripcion activa bloquea el checkout.
+   - No creo filas funcionales nuevas.
+
+6. Invalid payload:
+   - Resultado: `HTTP 422`.
+   - Error: `contract_invalid`.
+   - Caso ejecutado con `contract_hash` y `contract_snapshot_url` omitidos.
+   - Bloqueo antes de writes funcionales.
+
+7. No session auth:
+   - Resultado: `HTTP 403`.
+   - Error: `forbidden`.
+   - Mensaje observado: `local_dev_open does not authorize writes`.
+   - Confirmo que headers/local dev open no autorizan writes privados.
+   - No creo filas funcionales nuevas.
+
+8. Missing Idempotency-Key:
+   - Resultado: `HTTP 422`.
+   - Error: `idempotency_key_invalid`.
+   - Mensaje observado: `Idempotency-Key is required`.
+   - Bloqueo antes de `buildCheckoutRequestHash(...)` y antes de `beginCheckoutIntent(...)`.
+   - No creo idempotencia nueva ni filas funcionales.
+
+### C) Estado funcional DB final
+Estado read-only final confirmado en local/dev:
+
+- `profiles_doctors = 4`.
+- `subscription_checkout_intents = 1`.
+- `subscription_contract_acceptances = 4`.
+- `profile_subscriptions = 3`.
+- `subscription_payment_intents = 0`.
+- `subscription_payment_events = 0`.
+
+Checkout funcional creado para el fixture:
+
+- `uuid = 7d4beec3-b62a-40e1-a9f2-9edcc1a83364`.
+- `entity_type = doctor`.
+- `entity_id = 900001`.
+- `status = pending_payment`.
+- `plan_code = standard`.
+- `billing_period = annual`.
+- `amount_cents = 20000`.
+- `currency = MXN`.
+- `deleted_at = NULL`.
+
+Acceptance contractual creada para el fixture:
+
+- `uuid = ae137e4c-75f7-42cb-a6be-7cd24e051ca9`.
+- `entity_type = doctor`.
+- `entity_id = 900001`.
+- `status = accepted_pending_payment`.
+- `plan_code = standard`.
+- `billing_period = annual`.
+
+Resumen read-only de idempotencia observado, sin exponer hashes:
+
+- `subscriptions.checkout_intent.create`, `completed`, `response_http_status = 201`, total `1`.
+- `subscriptions.checkout_intent.create`, `failed`, `response_http_status = 409`, total `2`.
+- `subscriptions.create_with_contract_acceptance`, `completed`, `response_http_status = 201`, total `2`.
+- `subscriptions.create_with_contract_acceptance`, `failed`, `response_http_status = 409`, total `3`.
+
+### D) Confirmaciones de contrato
+Quedan confirmadas para el endpoint checkout-intents:
+
+- El flujo checkout-first crea acceptance contractual pending y checkout intent pending.
+- La acceptance queda en `accepted_pending_payment`.
+- El checkout intent queda en `pending_payment`.
+- No se crea `profile_subscriptions` hasta pago confirmado y activacion posterior.
+- No se crean `subscription_payment_intents` en este endpoint.
+- No se crean `subscription_payment_events` en este endpoint.
+- No se ejecutan providers.
+- No se ejecutan webhooks.
+- No se ejecuta facturacion.
+- La idempotencia positiva no duplica filas.
+- El replay con la misma key devuelve respuesta estable.
+- El reuso de la misma key con payload distinto bloquea con `idempotency_key_reused_with_different_payload`.
+- Un checkout `pending_payment` existente bloquea nueva creacion con `checkout_intent_already_pending`.
+- Una suscripcion activa bloquea el checkout con `active_subscription_exists`.
+- Los writes privados requieren `session_scope`.
+- `local_dev_open` y headers sin sesion no autorizan writes.
+- Payload invalido bloquea antes de writes funcionales.
+- La falta de `Idempotency-Key` bloquea antes de crear idempotencia.
+
+### E) Restricciones confirmadas
+Durante la QA funcional controlada:
+
+- No se creo `profile_subscriptions` para `doctor/900001`.
+- No se crearon `subscription_payment_intents`.
+- No se crearon `subscription_payment_events`.
+- No se conecto provider.
+- No se ejecuto webhook.
+- No se hizo facturacion.
+- No se activaron capacidades.
+- No se tocaron funcionalmente doctores `1`, `2` ni `3`, salvo sesion y POST de prueba para validar `active_subscription_exists` sin writes funcionales.
+- No se limpiaron datos locales/dev.
+
+### F) Advertencias no bloqueantes
+Advertencias observadas:
+
+- En el servidor local, algunos `HTTP 422` se muestran como `422 Unknown Status Code`; el codigo numerico y el JSON de error son correctos.
+- Algunas pruebas negativas posteriores a `beginCheckoutIntent(...)` generan filas de idempotencia `failed`; esas filas no duplican checkout, acceptance, pagos ni suscripciones.
+- La prueba `Missing Idempotency-Key` bloquea antes de idempotencia y no crea fila nueva en `subscription_write_idempotency_keys`.
+- La DB local/dev conserva el fixture `doctor/900001` con checkout `pending_payment` para pruebas posteriores.
+- La DB local/dev conserva los doctores `1`, `2` y `3` con suscripciones activas para casos de bloqueo.
+
+### G) Siguiente recomendacion
+Siguiente microfase recomendada:
+
+```text
+QA-Suscripciones-CheckoutIntent-Endpoint-FunctionalControlled-QAClosure-PostPush-01
+```
+
+Objetivo:
+
+- Validar post-push que `PP-Decisiones 99` quedo versionada, que el working tree esta limpio, que no hay cambios PHP y que el cierre documental de QA funcional controlada conserva los resultados y restricciones confirmadas.
+
+Despues de ese post-push, decidir una sola ruta:
+
+- Documentacion final del endpoint checkout-intents.
+- Limpieza controlada DEV/local del fixture, si se autoriza expresamente.
+- Siguiente bloque de diseno/implementacion de pagos/provider.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
