@@ -19086,6 +19086,140 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 98 — Readiness de helper DEV/local para sesión checkout doctor 900001
+
+### A) Resultado de readiness
+Readiness aprobada para implementar, en una microfase futura, un helper DEV/local que cree una sesion PHP real con `session_scope` para `doctor_id = 900001`.
+
+Esta readiness no implementa el helper y no cambia el endpoint checkout-intents.
+
+### B) Patron existente confirmado
+`api/subscriptions/index.php` ya contiene un patron de helpers DEV/local para sesion:
+
+- `POST /api/subscriptions/index.php/dev/session-fixture`.
+- `POST /api/subscriptions/index.php/dev/session-fixture/alternate-doctor`.
+- `POST /api/subscriptions/index.php/dev/session-fixture/concurrency-doctor`.
+
+El patron existente:
+
+- exige metodo `POST`;
+- exige `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- exige host local;
+- bloquea ambiente productivo;
+- crea sesion PHP real mediante `subscriptionApplyDevDoctorSessionFixture(...)`;
+- no hace SQL writes para crear la sesion;
+- devuelve `auth_mode = session_scope`.
+
+### C) Ruta futura compatible
+La ruta futura compatible es:
+
+```text
+POST /api/subscriptions/index.php/dev/session-fixture/checkout-doctor
+```
+
+Puede implementarse en `api/subscriptions/index.php` junto a los helpers DEV/local existentes, antes del bloque generico que responde `not_found` para rutas `dev`.
+
+### D) Archivo futuro permitido
+Archivo futuro permitido para implementar el helper:
+
+```text
+api/subscriptions/index.php
+```
+
+No se requiere modificar servicios ni repositorios para esta pieza.
+
+### E) Guardas obligatorias
+El helper futuro debe conservar las guardas existentes:
+
+- `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`.
+- Host local:
+  - `127.0.0.1`;
+  - `localhost`;
+  - `::1`.
+- Bloqueo si `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT` indican produccion.
+- Metodo `POST`.
+- Fallar cerrado si el fixture `doctor_id = 900001` no existe.
+- Fallar cerrado si `doctor_id = 900001` tiene suscripcion activa.
+- No aceptar headers de identidad como autorizacion de write.
+
+### F) Sesion minima futura
+La sesion futura debe poblar las mismas claves que el patron existente:
+
+- `user_id`: valor numerico local/dev controlado.
+- `doctor_id = 900001`.
+- `entity_type = doctor`.
+- `entity_id = 900001`.
+- `actor_role = doctor`.
+- `subscriptions_dev_session_fixture = 1`.
+- `operator_id` ausente.
+- `operator_permissions` ausente.
+- `permissions` ausente.
+- `mxmed_permissions` ausente.
+- `scopes` ausente.
+- `user_role`, `role` y `mxmed_user_role` ausentes, salvo decision futura explicita.
+
+Compatibilidad con `subscriptionResolveWriteContext(...)`:
+
+- Rechaza `header_scope` para writes.
+- Rechaza `local_dev_open` para writes.
+- Exige `user_id` numerico.
+- Exige `entity_type = doctor`.
+- Exige `doctor_id` o `entity_id` igual al path `900001`.
+- Rechaza `operator_id`.
+- Acepta `actor_role = doctor`.
+
+### G) Estado DB read-only observado
+El fixture `doctor_id = 900001` sigue listo para la implementacion futura:
+
+- Existe en `profiles_doctors`.
+- `profile_status = active`.
+- `is_public_candidate = 1`.
+- No tiene `profile_subscriptions`.
+- No tiene `subscription_checkout_intents`.
+- No tiene `subscription_contract_acceptances`.
+
+Counts base esperados para la siguiente fase:
+
+- `profiles_doctors = 4`.
+- `subscription_checkout_intents = 0`.
+- `subscription_contract_acceptances = 3`.
+- `profile_subscriptions = 3`.
+- `subscription_payment_intents = 0`.
+- `subscription_payment_events = 0`.
+
+### H) Prohibiciones
+La implementacion futura del helper no debe:
+
+- Ejecutar checkout-intents.
+- Ejecutar HTTP/POST funcional del checkout.
+- Ejecutar SQL writes.
+- Modificar DB/schema.
+- Crear `profile_subscriptions`.
+- Crear `subscription_checkout_intents`.
+- Crear `subscription_contract_acceptances`.
+- Crear `subscription_payment_intents`.
+- Crear `subscription_payment_events`.
+- Conectar provider.
+- Implementar webhooks.
+- Conectar facturacion.
+- Activar capacidades.
+- Limpiar datos.
+- Tocar doctores `1`, `2` ni `3`.
+- Modificar servicios/repositorios.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-CheckoutIntent-Endpoint-DevSessionFixture-Doctor900001-01
+```
+
+Objetivo:
+
+- Implementar en `api/subscriptions/index.php` el helper DEV/local `POST /api/subscriptions/index.php/dev/session-fixture/checkout-doctor`, protegido por flag, host local, bloqueo produccion y metodo `POST`, sin ejecutar checkout-intents, sin SQL writes y sin modificar DB/schema.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
