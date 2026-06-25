@@ -19408,6 +19408,295 @@ Despues de ese post-push, decidir una sola ruta:
 
 ---
 
+## Adenda PP-Decisiones 100 - Plan de repositorio y servicio de payment intent
+
+### A) Proposito
+Esta adenda documenta el plan tecnico para implementar, en microfases posteriores, la capa interna de payment intents de suscripciones:
+
+- `SubscriptionPaymentIntentRepository`.
+- `CreateSubscriptionPaymentIntentService` o servicio equivalente.
+- Relacion controlada con `subscription_checkout_intents`.
+- Idempotencia de creacion de payment intent.
+- Estados normalizados iniciales.
+- Anti-duplicado por checkout intent.
+- Preparacion para provider mock/dev futuro.
+
+Esta adenda es solo documental. No implementa repositorio, servicio, endpoint, provider, webhook, SQL, migraciones, DB/schema ni activacion de suscripcion.
+
+### B) Estado actual
+Estado confirmado:
+
+- El flujo checkout-first ya fue validado funcionalmente y cerrado en `PP-Decisiones 99`.
+- Existe un checkout pending local/dev para `doctor/900001`, plan `standard`, periodo `annual`, monto `20000 MXN`, status `pending_payment`.
+- Existe acceptance contractual relacionada con status `accepted_pending_payment`.
+- El schema local/dev contempla `subscription_payment_intents`.
+- El schema local/dev contempla `subscription_payment_events`.
+- `subscription_payment_intents` esta vacia en el estado inspeccionado.
+- `subscription_payment_events` esta vacia en el estado inspeccionado.
+- No existe aun repositorio PHP de payment intents.
+- No existe aun servicio PHP de payment intents.
+- No existe aun repositorio/servicio PHP de payment events.
+- No existe provider adapter.
+- No existe webhook de pagos.
+- No existe provider real integrado.
+
+Columnas observadas en `subscription_payment_intents`:
+
+- Identidad y relacion: `id`, `uuid`, `checkout_intent_uuid`.
+- Provider: `provider`, `provider_payment_id`, `provider_checkout_id`.
+- Estado: `normalized_status`, `provider_status`.
+- Monto: `amount_cents`, `currency`.
+- Fechas provider: `created_at_provider`, `expires_at`, `paid_at`, `failed_at`, `cancelled_at`.
+- Auditoria: `source`, `notes`, `created_at`, `updated_at`, `deleted_at`.
+
+Columnas observadas en `subscription_payment_events`:
+
+- Identidad y relacion: `id`, `uuid`, `checkout_intent_uuid`, `payment_intent_uuid`.
+- Provider/evento: `provider`, `provider_event_id`, `provider_payment_id`, `event_type`, `provider_status`, `normalized_status`.
+- Monto/event hash: `amount_cents`, `currency`, `event_hash`.
+- Proceso: `signature_validated_at`, `received_at`, `processed_at`, `processing_status`, `error_message`, `payload_text_sanitized`.
+- Auditoria: `source`, `notes`, `created_at`, `updated_at`, `deleted_at`.
+
+### C) Decision
+Se decide planificar primero la capa interna repository/service de payment intent antes de conectar provider real.
+
+La ruta recomendada es:
+
+1. Validar readiness especifica del repositorio `SubscriptionPaymentIntentRepository`.
+2. Implementar repositorio aislado de `subscription_payment_intents`.
+3. Validar readiness del servicio `CreateSubscriptionPaymentIntentService`.
+4. Implementar servicio aislado de creacion de payment intent.
+5. Disenar provider mock/dev antes de cualquier provider real.
+6. Disenar eventos/webhooks despues de tener adapter y validacion de firma.
+7. Disenar activacion post-pago en microfase separada.
+
+No se debe activar suscripcion hasta confirmacion de pago en un flujo posterior explicitamente autorizado.
+
+### D) Responsabilidad del futuro repositorio
+Repositorio futuro sugerido:
+
+```text
+modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php
+```
+
+Clase futura sugerida:
+
+```text
+SubscriptionPaymentIntentRepository
+```
+
+Responsabilidades:
+
+- Buscar payment intent por `uuid`.
+- Buscar payment intents por `checkout_intent_uuid`.
+- Buscar payment intent activo/pending por `checkout_intent_uuid`.
+- Crear payment intent de forma atomica en `subscription_payment_intents`.
+- Persistir snapshot recibido de provider, amount y currency.
+- Persistir `provider_checkout_id`, `provider_payment_id` y `provider_status` cuando existan.
+- Usar los indices reales para evitar duplicados por `uuid` y por pares provider.
+- Devolver arrays normalizados con keys estables.
+- Filtrar `deleted_at IS NULL` en consultas operativas.
+
+El repositorio NO debe:
+
+- Modificar `subscription_checkout_intents` salvo microfase explicita posterior.
+- Crear `subscription_payment_events`.
+- Crear `profile_subscriptions`.
+- Resolver precios.
+- Validar contrato.
+- Validar auth/session.
+- Manejar idempotencia.
+- Manejar lock.
+- Llamar provider real.
+- Ejecutar webhook.
+- Facturar.
+- Activar capacidades.
+
+Metodos conceptuales sugeridos:
+
+```text
+create(array $snapshot): array
+findByUuid(string $uuid): ?array
+findByCheckoutIntentUuid(string $checkoutIntentUuid): array
+findActiveByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+findByProviderPaymentId(string $provider, string $providerPaymentId): ?array
+findByProviderCheckoutId(string $provider, string $providerCheckoutId): ?array
+```
+
+### E) Responsabilidad del futuro servicio
+Servicio futuro sugerido:
+
+```text
+modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php
+```
+
+Clase futura sugerida:
+
+```text
+CreateSubscriptionPaymentIntentService
+```
+
+Responsabilidades:
+
+- Recibir un checkout intent `pending_payment`.
+- Validar que el checkout intent existe.
+- Validar que el checkout intent no esta eliminado.
+- Validar que el checkout intent sigue en `pending_payment`.
+- Validar `amount_cents` y `currency` contra el snapshot MXMed del checkout intent.
+- Validar que no exista payment intent activo/pending para el mismo checkout.
+- Crear payment intent con status normalizado inicial.
+- Preparar datos para provider mock/dev.
+- Devolver respuesta minima para que una capa superior exponga el siguiente paso de pago en microfase futura.
+
+El servicio NO debe:
+
+- Crear `profile_subscriptions`.
+- Crear `subscription_payment_events`.
+- Ejecutar provider real.
+- Ejecutar webhook.
+- Confirmar pago.
+- Facturar.
+- Activar capacidades.
+- Activar suscripcion.
+- Cambiar el endpoint checkout-intents.
+- Limpiar datos locales/dev.
+
+### F) Estados normalizados
+Estados normalizados propuestos para `subscription_payment_intents.normalized_status`:
+
+- `created`: fila interna creada, aun sin entrega efectiva a provider/mock.
+- `pending_provider`: solicitud preparada o enviada a provider/mock, pendiente de respuesta util.
+- `pending_payment`: provider/mock devolvio una intencion o checkout pendiente de pago.
+- `failed`: intento fallido.
+- `cancelled`: intento cancelado.
+- `paid`: pago confirmado en flujo futuro; no debe activar suscripcion dentro de esta capa.
+
+La transicion a `paid` no debe crear `profile_subscriptions` por si misma. La activacion post-pago requiere microfase separada y contrato propio.
+
+### G) Idempotencia
+Operacion futura sugerida:
+
+```text
+subscriptions.payment_intent.create
+```
+
+Reglas:
+
+- Reusar `subscription_write_idempotency_keys` si la capa existente aplica a esta operacion.
+- El `request_hash` debe incluir al menos `checkout_intent_uuid`, `provider`, `amount_cents` y `currency`.
+- Un replay con misma key y mismo hash debe devolver resultado estable sin duplicar payment intent.
+- Un replay con misma key y payload distinto debe bloquear con error conceptual de mismatch.
+- Una request en proceso debe bloquear o devolver estado controlado segun el patron existente.
+- El repositorio de payment intent no debe conocer idempotencia; esta vive en servicio/orquestacion.
+
+Errores conceptuales esperados:
+
+- `idempotency_key_invalid`.
+- `idempotency_key_reused_with_different_payload`.
+- `request_already_processing`.
+- `payment_intent_create_failed`.
+- `payment_intent_unavailable`.
+
+### H) Anti-duplicado
+Reglas anti-duplicado:
+
+- No permitir mas de un payment intent activo/pending para el mismo `checkout_intent_uuid`.
+- Si ya existe payment intent pendiente para el checkout, la capa superior debe responder conflict/existing segun contrato futuro.
+- No duplicar por `provider_checkout_id`.
+- No duplicar por `provider_payment_id`.
+- No crear payment intent si el checkout intent ya no esta en `pending_payment`.
+- No crear payment intent si el checkout intent esta eliminado.
+
+Errores conceptuales esperados:
+
+- `payment_intent_already_pending`.
+- `payment_intent_provider_reference_conflict`.
+- `checkout_intent_not_found`.
+- `checkout_intent_not_pending_payment`.
+- `payment_intent_invalid_checkout_snapshot`.
+
+### I) Provider mock/dev
+Antes de provider real se recomienda una microfase de provider mock/dev.
+
+El provider mock/dev debe:
+
+- Ser local/dev only.
+- Estar bloqueado en produccion.
+- Generar `provider_checkout_id` simulado si aplica.
+- Generar `provider_payment_id` simulado si aplica.
+- Generar `checkout_url` simulada si la capa futura lo necesita.
+- Permitir QA controlada sin contactar proveedor real.
+- No confirmar pago real.
+- No emitir webhook real.
+- No facturar.
+- No activar suscripcion.
+
+El provider real queda fuera de esta adenda y debe disenar sus propias reglas de credenciales, firma, errores, retries, timeouts y observabilidad.
+
+### J) Webhooks y payment_events
+`subscription_payment_events` permanece fuera de esta microfase.
+
+Decision:
+
+- `subscription_payment_events` sera ledger futuro para eventos provider/webhook.
+- No se deben procesar eventos hasta tener adapter y validacion de firma.
+- No se debe crear payment event dentro de `CreateSubscriptionPaymentIntentService`.
+- No se debe usar `payment_events` para activar suscripcion sin microfase de post-payment activation.
+
+Microfases futuras necesarias:
+
+- Diseno de provider adapter.
+- Diseno de webhook de provider.
+- Diseno de validacion de firma/event hash.
+- Diseno de ledger `subscription_payment_events`.
+- Diseno de procesamiento post-pago.
+
+### K) Activacion de suscripcion
+Reglas:
+
+- `profile_subscriptions` no se crea en payment intent create.
+- `profile_subscriptions` no se crea por provider mock/dev.
+- La activacion futura solo debe ocurrir tras pago confirmado.
+- La activacion futura requiere microfase separada de post-payment activation.
+- La capa de payment intent no debe conectar `PublicProfilePlanCapabilities`.
+- La capa de payment intent no debe activar capacidades.
+
+### L) Fuera de alcance
+Esta adenda NO implementa:
+
+- Repositorio PHP.
+- Servicio PHP.
+- Endpoint.
+- Rutas.
+- SQL.
+- Migraciones.
+- DB/schema.
+- Provider mock/dev.
+- Provider real.
+- Payment events.
+- Webhook.
+- Facturacion.
+- Activacion post-pago.
+- `profile_subscriptions`.
+- Capacidades.
+- Conexion con `PublicProfilePlanCapabilities`.
+- Perfil publico.
+- SEO.
+- Frontend.
+
+### M) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-Repository-Readiness-01
+```
+
+Objetivo:
+
+- Validar readiness tecnica para implementar `SubscriptionPaymentIntentRepository`, usando el schema real de `subscription_payment_intents`, sin escribir codigo todavia, sin provider, sin payment events, sin endpoint, sin SQL y sin DB/schema.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
