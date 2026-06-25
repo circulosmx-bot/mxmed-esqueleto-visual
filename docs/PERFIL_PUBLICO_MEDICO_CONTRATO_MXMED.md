@@ -20683,6 +20683,297 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 104 - Readiness de idempotencia para payment intent
+
+### A) Motivo
+PP-Decisiones 103 dejo la idempotencia de payment intent como dependencia bloqueante antes de implementar:
+
+```text
+modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php
+```
+
+Esta adenda valida si la infraestructura actual de idempotencia puede soportar la operacion futura:
+
+```text
+subscriptions.payment_intent.create
+```
+
+No se debe crear `CreateSubscriptionPaymentIntentService.php` hasta cerrar este contrato minimo de idempotencia.
+
+Esta adenda no implementa codigo y no reabre:
+
+- Checkout-first.
+- Primer write checkout-intents.
+- Repository `SubscriptionPaymentIntentRepository`.
+- Provider mock/dev.
+- Provider real.
+- Webhooks.
+- `payment_events`.
+- `profile_subscriptions`.
+- Activacion post-payment.
+
+### B) Infraestructura existente observada
+La tabla `subscription_write_idempotency_keys` ya contiene campos suficientes para idempotencia general de writes:
+
+- `idempotency_key_hash`.
+- `request_hash`.
+- `entity_type`.
+- `entity_id`.
+- `user_id`.
+- `operation`.
+- `status`.
+- `response_http_status`.
+- `response_body_text`.
+- `locked_at`.
+- `completed_at`.
+- `expires_at`.
+- `deleted_at`.
+
+Indices observados:
+
+- Unique por `uuid`.
+- Unique por `idempotency_key_hash`, `user_id`, `entity_type`, `entity_id`, `operation`.
+- Indice por `operation`, `status`.
+- Indice por `status`, `expires_at`.
+- Indices por entidad, doctor, usuario y `deleted_at`.
+
+Operaciones existentes en DB local/dev:
+
+- `subscriptions.checkout_intent.create`.
+- `subscriptions.create_with_contract_acceptance`.
+
+La infraestructura de storage puede reutilizarse porque la columna `operation` separa scopes y evita colisiones entre operaciones distintas.
+
+Brecha observada:
+
+- `SubscriptionWriteIdempotencyService::isAllowedOperation(...)` aun no permite `subscriptions.payment_intent.create`.
+- `requestHashForOperation(...)` no tiene builder especifico para payment intent.
+- `markOperationCompleted(...)` no tiene rama especifica para response de payment intent.
+
+Clasificacion:
+
+- Schema: listo para reutilizar.
+- Repository: listo como base.
+- Service: requiere ajuste previo minimo para operacion, hash y completion de payment intent.
+- Bloqueante antes de `CreateSubscriptionPaymentIntentService`: si no se habilita `subscriptions.payment_intent.create`.
+
+### C) Operacion futura
+Operacion futura:
+
+```text
+subscriptions.payment_intent.create
+```
+
+Debe ser distinta de:
+
+```text
+subscriptions.checkout_intent.create
+```
+
+Reglas:
+
+- No reutilizar la operacion de checkout para payment intent.
+- No mezclar resultados de checkout intent con resultados de payment intent.
+- El unique scope de `subscription_write_idempotency_keys` debe quedar separado por `operation`.
+- La respuesta persistida debe describir el payment intent creado, no el checkout intent.
+
+### D) Idempotency-Key
+El `Idempotency-Key` debe ser obligatorio para el futuro write de payment intent.
+
+Reglas minimas:
+
+- Se valida antes de crear `subscription_payment_intents`.
+- Missing key debe responder `idempotency_key_invalid` o error equivalente.
+- Key con formato invalido debe responder `idempotency_key_invalid`.
+- Payload invalido no debe crear payment intent funcional.
+- Payload invalido no debe crear `payment_events`, `profile_subscriptions` ni activacion.
+
+Decision documental:
+
+- Si falta o es invalido el `Idempotency-Key`, no se debe abrir el flujo de storage de payment intent.
+- Para payload invalido despues de iniciar idempotencia, se debe seguir el patron de checkout: marcar failure controlado si ya existe record `processing`, sin crear payment intent.
+- Si el payload falla antes de calcular scope/hash canonico, no debe crear fila idempotente.
+
+### E) `request_hash` futuro
+El `request_hash` de `subscriptions.payment_intent.create` debe construirse de forma canonica y estable.
+
+Campos minimos:
+
+- `checkout_intent_uuid`.
+- `provider`.
+- `provider_payment_id`.
+- `provider_checkout_id`, si aplica.
+- `amount_cents`.
+- `currency`.
+- `source`, si aplica.
+
+Reglas de canonicalizacion:
+
+- Usar orden estable de keys antes de serializar.
+- Normalizar strings con `trim`.
+- Normalizar `provider` en lowercase si el contrato provider mock/dev lo define asi.
+- Normalizar `currency` en uppercase.
+- Convertir `amount_cents` a entero.
+- Representar ausencias opcionales como `null` o string vacio de forma consistente.
+- Incluir el literal de operacion `subscriptions.payment_intent.create`.
+
+Monto y moneda:
+
+- El cliente no debe ser fuente canonica de precio.
+- `amount_cents` y `currency` deben validarse contra el checkout intent almacenado antes de completar el write.
+- Si el servicio futuro permite recibir monto/moneda desde un adapter mock/dev, debe compararlos contra el snapshot del checkout intent.
+
+### F) Replay mismo request
+Para misma `Idempotency-Key` y mismo `request_hash`:
+
+- Debe devolver el mismo payment intent.
+- No debe insertar una segunda fila en `subscription_payment_intents`.
+- Debe devolver metadata `idempotent_replay` o equivalente.
+- Debe preservar el HTTP status original cuando exista `response_http_status`.
+- Debe usar `response_body_text` como fuente de replay estable cuando este disponible.
+
+Respuesta persistida minima esperada:
+
+- `payment_intent_uuid`.
+- `checkout_intent_uuid`.
+- `provider`.
+- `provider_payment_id`.
+- `provider_checkout_id`, si aplica.
+- `normalized_status`.
+- `amount_cents`.
+- `currency`.
+- `source`.
+
+Readiness observada:
+
+- El replay de checkout ya usa `response_body_text`.
+- El mismo patron es reutilizable para payment intent si se agrega completion especifico o generico compatible.
+
+### G) Conflict misma key con payload distinto
+Para misma `Idempotency-Key` y `request_hash` distinto:
+
+- Debe bloquear con `idempotency_key_reused_with_different_payload`.
+- El status recomendado es `409`.
+- No debe crear un nuevo payment intent.
+- No debe crear `payment_events`.
+- No debe crear `profile_subscriptions`.
+- No debe llamar provider.
+
+Para status `processing` existente:
+
+- Debe bloquear con `request_already_processing`.
+- No debe reintentar insert paralelo.
+
+### H) Relacion con anti-duplicado
+La idempotencia no sustituye el anti-duplicado de negocio.
+
+Antes de crear un payment intent nuevo, el servicio futuro debe consultar:
+
+```php
+SubscriptionPaymentIntentRepository::findActiveByCheckoutIntentUuid(...)
+```
+
+Reglas:
+
+- Si ya existe payment intent activo para el checkout, el servicio debe bloquear o devolver el existente segun contrato posterior.
+- La idempotencia protege retries de la misma intencion.
+- El lookup anti-duplicado protege requests con keys distintas sobre el mismo checkout.
+- Como no hay unique por `checkout_intent_uuid`, el control completo debe ser:
+  - lookup anti-duplicado;
+  - idempotencia;
+  - lock por `checkout_intent_uuid`.
+
+### I) Relacion con lock
+La idempotencia necesita complementarse con lock por checkout intent.
+
+Lock futuro documentado:
+
+```text
+mxmed:subscriptions:checkout_intents:{checkout_intent_uuid}:payment_intent_create
+```
+
+Motivo:
+
+- Evitar carrera entre dos `Idempotency-Key` distintas para el mismo checkout.
+- Proteger el intervalo entre `findActiveByCheckoutIntentUuid(...)` e insert.
+- Evitar doble payment intent activo para `checkout_intent_uuid`.
+
+Esta adenda no cierra el lock. La siguiente microfase debe ser:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-Lock-Readiness-01
+```
+
+### J) Contrato minimo de ajuste posterior
+Para que `subscriptions.payment_intent.create` quede listo, una microfase futura de implementacion debera:
+
+1. Agregar constante conceptual `PAYMENT_INTENT_OPERATION = subscriptions.payment_intent.create`.
+2. Permitir esa operacion en la allowlist.
+3. Implementar builder canonico `buildPaymentIntentRequestHash(...)`.
+4. Hacer que `requestHashForOperation(...)` use el builder de payment intent.
+5. Agregar completion/replay para resultado de payment intent.
+6. Persistir `response_body_text` con respuesta minima del payment intent.
+7. Mantener `idempotency_key_reused_with_different_payload`.
+8. Mantener `request_already_processing`.
+9. No cambiar el comportamiento existente de checkout-intents.
+10. No cambiar el comportamiento existente de aceptacion contractual.
+
+### K) No responsabilidades
+Esta readiness de idempotencia NO implementa:
+
+- Servicio `CreateSubscriptionPaymentIntentService`.
+- Provider mock/dev.
+- Provider real.
+- Endpoint.
+- HTTP/POST.
+- SQL write.
+- DB/schema.
+- `payment_events`.
+- Webhook.
+- `profile_subscriptions`.
+- Activacion post-payment.
+- Facturacion.
+- Capacidades.
+- `PublicProfilePlanCapabilities`.
+- Perfil publico.
+- SEO.
+- Frontend.
+
+### L) Decision de readiness
+Decision:
+
+- `subscription_write_idempotency_keys` esta lista como infraestructura de storage.
+- `SubscriptionWriteIdempotencyRepository` esta listo como base reusable.
+- `SubscriptionWriteIdempotencyService` requiere ajuste minimo antes del servicio payment intent.
+- La operacion `subscriptions.payment_intent.create` debe ser soportada antes de implementar `CreateSubscriptionPaymentIntentService`.
+
+Riesgo bloqueante:
+
+- No implementar `CreateSubscriptionPaymentIntentService` hasta cerrar la extension de idempotencia y luego la readiness de lock.
+
+### M) Siguiente microfase recomendada
+Siguiente microfase inmediata:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-Lock-Readiness-01
+```
+
+Objetivo:
+
+- Validar readiness tecnica para lock `payment_intent_create` por `checkout_intent_uuid`, sin escribir codigo todavia.
+
+Microfase posterior:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-ProviderMock-Plan-01
+```
+
+Objetivo:
+
+- Definir el contrato mock/dev que entregara `provider_payment_id` y datos minimos de provider para crear payment intents sin provider real.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
