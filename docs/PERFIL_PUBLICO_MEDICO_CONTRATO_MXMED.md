@@ -19697,6 +19697,307 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 101 - Readiness de repositorio payment intent
+
+### A) Proposito
+Esta adenda valida la readiness tecnica para implementar posteriormente:
+
+```text
+modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php
+```
+
+El repositorio sera la primera capa interna para consultar y persistir payment intents de suscripciones sobre la tabla:
+
+```text
+subscription_payment_intents
+```
+
+Esta adenda no implementa codigo, no modifica PHP, no ejecuta HTTP/POST, no hace SQL write, no modifica DB/schema y no crea filas.
+
+### B) Estado observado
+Estado confirmado en modo read-only:
+
+- `subscription_payment_intents` existe.
+- `subscription_payment_intents` esta vacia en el estado inspeccionado.
+- `subscription_payment_events` existe y tambien esta vacia.
+- Existe checkout pending fixture `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`.
+- El checkout fixture corresponde a `doctor/900001`, `standard/annual`, `pending_payment`, `20000 MXN`.
+- `SubscriptionPaymentIntentRepository` aun no existe.
+- No existe servicio payment intent.
+- No existe provider adapter.
+- No existe webhook de pagos.
+
+### C) Schema disponible
+Columnas disponibles en `subscription_payment_intents`:
+
+- `id`.
+- `uuid`.
+- `checkout_intent_uuid`.
+- `provider`.
+- `provider_payment_id`.
+- `provider_checkout_id`.
+- `normalized_status`.
+- `provider_status`.
+- `amount_cents`.
+- `currency`.
+- `created_at_provider`.
+- `expires_at`.
+- `paid_at`.
+- `failed_at`.
+- `cancelled_at`.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+Indices observados:
+
+- Primary key por `id`.
+- Unique por `uuid`.
+- Unique por `provider`, `provider_payment_id`.
+- Indice por `checkout_intent_uuid`.
+- Indice por `normalized_status`.
+- Indice por `provider`, `provider_status`.
+- Indice por `created_at`.
+- Indice por `deleted_at`.
+
+Readiness de schema:
+
+- El schema es suficiente para crear el repositorio inicial.
+- El schema permite lookup por `uuid`.
+- El schema permite lookup por `checkout_intent_uuid`.
+- El schema permite deduplicacion por `provider_payment_id` dentro de `provider`.
+- El schema permite filtrar soft delete con `deleted_at IS NULL`.
+- No hay unique activo por `checkout_intent_uuid`; por tanto el anti-duplicado por checkout debe combinar lookup previo, idempotencia/lock en capa superior y contrato del servicio futuro.
+
+### D) Patron de repositorios existente
+Patrones existentes en `modules/subscriptions/repositories`:
+
+- `declare(strict_types=1);`.
+- Namespace `Subscriptions\Repositories`.
+- Clases `final`.
+- Constructor `__construct(PDO $pdo)`.
+- Uso de `prepare`, `execute`, `fetch` y `fetchAll`.
+- Uso de `PDO::FETCH_ASSOC`.
+- Validaciones defensivas con `InvalidArgumentException` en repositorios de storage.
+- Errores de storage/query con `RuntimeException` cuando aplica.
+- Consultas operativas filtran `deleted_at IS NULL`.
+- Inserciones usan payloads normalizados y despues pueden consultar por `uuid` para devolver fila creada.
+
+### E) Archivo y clase futuros
+Archivo futuro permitido:
+
+```text
+modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php
+```
+
+Clase futura:
+
+```text
+SubscriptionPaymentIntentRepository
+```
+
+Constructor esperado:
+
+```text
+__construct(PDO $pdo)
+```
+
+### F) Metodos minimos recomendados
+Metodos minimos para la primera implementacion:
+
+```text
+findByUuid(string $uuid): ?array
+findByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+findActiveByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+create(array $input): array
+```
+
+Responsabilidades:
+
+- `findByUuid(...)`: buscar una fila no eliminada por `uuid`.
+- `findByCheckoutIntentUuid(...)`: buscar el payment intent mas reciente asociado a un checkout.
+- `findActiveByCheckoutIntentUuid(...)`: buscar un payment intent no eliminado con status operativo activo/pending para el checkout.
+- `create(...)`: insertar payment intent y devolver fila normalizada, preferentemente releyendo por `uuid`.
+
+El metodo `findByCheckoutIntentUuid(...)` debe ordenar de forma estable por `created_at DESC, id DESC`.
+
+### G) Metodos opcionales
+Metodos opcionales justificados por indices provider:
+
+```text
+findByProviderPaymentId(string $provider, string $providerPaymentId): ?array
+findByProviderCheckoutId(string $provider, string $providerCheckoutId): ?array
+```
+
+Notas:
+
+- `findByProviderPaymentId(...)` esta respaldado por unique `provider + provider_payment_id`.
+- `findByProviderCheckoutId(...)` es util por contrato, aunque no hay unique directo observado para `provider_checkout_id`.
+- `markFailed(...)` no debe implementarse en la primera microfase del repositorio salvo decision posterior.
+- `markPaid(...)` no debe implementarse todavia.
+- Cambios de estado quedan para microfases de provider/webhook/post-payment posteriores.
+
+### H) Campos requeridos para create
+Campos requeridos del payload para `create(array $input): array`:
+
+- `uuid`.
+- `checkout_intent_uuid`.
+- `provider`.
+- `provider_payment_id`.
+- `normalized_status`.
+- `amount_cents`.
+- `currency`.
+- `source`.
+
+Campos opcionales segun schema:
+
+- `provider_checkout_id`.
+- `provider_status`.
+- `created_at_provider`.
+- `expires_at`.
+- `paid_at`.
+- `failed_at`.
+- `cancelled_at`.
+- `notes`.
+
+Reglas:
+
+- `uuid` debe ser requerido y no vacio.
+- `checkout_intent_uuid` debe ser requerido y no vacio.
+- `provider` debe ser requerido y no vacio.
+- `provider_payment_id` debe ser requerido por schema actual.
+- `amount_cents` debe ser requerido y entero no negativo.
+- `currency` debe ser requerido, normalizado a mayusculas y compatible con el snapshot del checkout.
+- `normalized_status` debe limitarse a estados iniciales permitidos.
+- `deleted_at` debe insertarse como `NULL` o dejarse en su default si el schema lo permite.
+
+### I) Estados iniciales
+Estados iniciales permitidos para `create(...)`:
+
+- `created`.
+- `pending_provider`.
+
+No se debe usar `paid` en la creacion inicial.
+No se debe activar suscripcion desde este repositorio.
+No se debe asumir confirmacion de pago por crear payment intent.
+
+### J) Anti-duplicado
+Reglas de anti-duplicado:
+
+- No debe existir mas de un payment intent activo/pending por `checkout_intent_uuid`.
+- Como no hay unique por `checkout_intent_uuid`, el repositorio debe exponer lookup previo y el servicio futuro debe controlar idempotencia y lock.
+- La capa superior futura debe usar la operacion idempotente `subscriptions.payment_intent.create`.
+- `provider + provider_payment_id` tiene unique y debe respetarse.
+- `provider_checkout_id` debe consultarse si el provider mock/dev o provider real lo entrega.
+- `subscription_payment_events` no debe usarse para anti-duplicado de creacion del payment intent.
+
+Estados considerados activos/pending para lookup inicial:
+
+- `created`.
+- `pending_provider`.
+- `pending_payment`.
+
+### K) Soft delete
+Reglas:
+
+- Todos los lookups operativos deben filtrar `deleted_at IS NULL`.
+- `findActiveByCheckoutIntentUuid(...)` debe excluir filas eliminadas.
+- `findByUuid(...)` debe excluir filas eliminadas salvo que una microfase futura defina lookup administrativo.
+- `create(...)` no debe crear filas con `deleted_at` distinto de `NULL`.
+
+### L) Normalizacion de salida
+Los metodos deben devolver arrays con keys estables:
+
+- `id`.
+- `uuid`.
+- `checkout_intent_uuid`.
+- `provider`.
+- `provider_payment_id`.
+- `provider_checkout_id`.
+- `normalized_status`.
+- `provider_status`.
+- `amount_cents`.
+- `currency`.
+- `created_at_provider`.
+- `expires_at`.
+- `paid_at`.
+- `failed_at`.
+- `cancelled_at`.
+- `source`.
+- `notes`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+`amount_cents` debe normalizarse a entero. Los timestamps y strings deben conservarse como strings/null.
+
+### M) No responsabilidades
+El repositorio `SubscriptionPaymentIntentRepository` NO debe:
+
+- Contactar provider real.
+- Implementar provider mock/dev.
+- Ejecutar webhook.
+- Crear `subscription_payment_events`.
+- Crear `profile_subscriptions`.
+- Activar suscripcion.
+- Activar capacidades.
+- Facturar.
+- Resolver precio.
+- Validar contrato.
+- Manejar auth/session.
+- Manejar idempotencia directamente.
+- Manejar lock directamente.
+- Modificar `subscription_checkout_intents`.
+- Implementar endpoint o rutas.
+- Ejecutar SQL DDL.
+- Modificar DB/schema.
+
+### N) Riesgos y advertencias
+Riesgos no bloqueantes para implementar el repositorio:
+
+- No hay unique por `checkout_intent_uuid`; se requiere lookup previo mas idempotencia/lock en capa superior.
+- `provider_payment_id` es `NOT NULL`; el provider mock/dev futuro debera poder generar un id simulado antes de crear la fila.
+- `provider_checkout_id` es nullable y no tiene unique observado; se recomienda lookup defensivo si se usa.
+- `paid`, `failed` y `cancelled` existen como campos temporales, pero sus transiciones quedan fuera de la primera implementacion.
+
+No hay brecha bloqueante para implementar el repositorio aislado si se limita a create/lookups y no conecta provider ni activacion.
+
+### O) QA futura de implementacion
+QA minima para la microfase de implementacion posterior:
+
+- `php -l modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php`.
+- Grep de clase `SubscriptionPaymentIntentRepository`.
+- Grep de metodos `create`, `findByUuid`, `findByCheckoutIntentUuid`, `findActiveByCheckoutIntentUuid`.
+- Grep de `subscription_payment_intents`.
+- Grep de `provider_payment_id`.
+- Grep de `deleted_at IS NULL`.
+- Grep de prohibidos:
+  - `profile_subscriptions`.
+  - `subscription_payment_events`.
+  - `provider real`.
+  - `webhook`.
+  - `PublicProfilePlanCapabilities`.
+  - `api/subscriptions`.
+- Confirmar que no modifica endpoint.
+- Confirmar que no crea SQL.
+- Confirmar que no ejecuta SQL write.
+- Confirmar que no modifica DB/schema.
+
+### P) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-PaymentIntent-Repository-01
+```
+
+Objetivo:
+
+- Implementar `SubscriptionPaymentIntentRepository` con los metodos minimos `findByUuid`, `findByCheckoutIntentUuid`, `findActiveByCheckoutIntentUuid` y `create`, sin endpoint, sin provider, sin payment events, sin profile_subscriptions, sin SQL y sin DB/schema.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
