@@ -21186,6 +21186,274 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 106 - Plan de provider mock/dev para payment intent
+
+### A) Motivo
+Esta adenda documenta el contrato minimo del provider mock/dev que permitira crear payment intents internos en DEV/local sin integrar un provider real.
+
+Motivos:
+
+- PP-Decisiones 103 dejo provider mock/dev como dependencia bloqueante antes de `CreateSubscriptionPaymentIntentService`.
+- PP-Decisiones 104 cerro el contrato documental de idempotencia para `subscriptions.payment_intent.create`.
+- PP-Decisiones 105 cerro el contrato documental de lock `payment_intent_create` por `checkout_intent_uuid`.
+- El provider real no esta listo.
+- No se debe crear `CreateSubscriptionPaymentIntentService.php` hasta definir el contrato minimo del provider mock/dev.
+- `subscription_payment_intents.provider_payment_id` es `NOT NULL`.
+- El provider mock/dev permitira avanzar a flujo DEV end-to-end sin llamadas externas, sin credenciales reales y sin representar pago real.
+
+Esta adenda NO implementa provider mock/dev, servicio, idempotencia, lock, endpoint, HTTP/POST ni SQL write.
+
+### B) Provider mock/dev tentativo
+Provider tentativo:
+
+```text
+mxmed_mock
+```
+
+Reglas:
+
+- Debe ser explicitamente no productivo.
+- Debe limitarse a DEV/local o ambiente controlado.
+- No debe hacer llamadas externas.
+- No debe requerir credenciales reales.
+- No debe representar pago real.
+- No debe activar suscripcion.
+- No debe crear `payment_events`.
+- No debe crear `profile_subscriptions`.
+- No debe ejecutar post-payment activation.
+
+El provider real queda fuera de esta etapa.
+
+### C) provider_payment_id
+`provider_payment_id` debe ser generado por el flujo mock/dev porque la columna `subscription_payment_intents.provider_payment_id` es `NOT NULL`.
+
+Requisitos:
+
+- Debe ser estable y trazable.
+- Debe ser unico para `provider = mxmed_mock`.
+- Debe permitir replay idempotente sin generar ids distintos para la misma operacion.
+- Debe integrarse con el unique existente `provider + provider_payment_id`.
+- No debe depender de llamadas externas.
+- No debe ser enviado por el cliente como fuente canonica.
+
+Propuesta conceptual:
+
+```text
+mxmed_mock_pi_{uuid_o_token_deterministico}
+```
+
+El token deterministico debe derivarse de datos controlados por backend, por ejemplo:
+
+- `checkout_intent_uuid`;
+- `request_hash` canonico de `subscriptions.payment_intent.create`;
+- o UUID interno generado dentro del flujo idempotente y persistido como resultado.
+
+Decision documental:
+
+- Para replay estable, el servicio futuro debe recuperar el resultado idempotente completado antes de generar un nuevo `provider_payment_id`.
+- Si se genera antes del insert, debe guardarse dentro del resultado idempotente exitoso.
+- Misma `Idempotency-Key` + mismo `request_hash` debe devolver el mismo `provider_payment_id`.
+- Misma `Idempotency-Key` + request distinto debe bloquear con `idempotency_key_reused_with_different_payload`.
+
+### D) provider_checkout_id
+`provider_checkout_id` es nullable en `subscription_payment_intents`.
+
+Decision:
+
+- Puede quedar `NULL` si el provider mock/dev no simula un checkout externo.
+- Si se usa, debe ser opcional y trazable.
+- No debe confundirse con `subscription_checkout_intents.uuid`.
+
+Propuesta conceptual opcional:
+
+```text
+mxmed_mock_chk_{checkout_intent_uuid_o_token}
+```
+
+Si se documenta o implementa mas adelante, su uso debe ser defensivo:
+
+- lookup opcional por `provider + provider_checkout_id`;
+- sin asumir unique directo por `provider_checkout_id`;
+- sin reemplazar `provider_payment_id`.
+
+### E) Estado inicial del payment intent
+Estados iniciales permitidos por el repository actual:
+
+```text
+created
+pending_provider
+```
+
+Estado inicial recomendado para mock/dev minimo:
+
+```text
+created
+```
+
+Alternativa permitida si el mock simula envio a provider:
+
+```text
+pending_provider
+```
+
+Regla critica:
+
+- No usar `paid` en create inicial.
+- `paid` solo podra existir despues de confirmacion mock/dev o real de pago en una microfase posterior.
+- El create de payment intent no debe activar suscripcion.
+- El create de payment intent no debe crear `profile_subscriptions`.
+- El create de payment intent no debe crear `payment_events`.
+
+### F) Input futuro del provider mock/dev
+Input conceptual minimo:
+
+- `checkout_intent_uuid`.
+- `amount_cents`.
+- `currency`.
+- `provider = mxmed_mock`.
+- `source`.
+- `idempotency_key`.
+- `request_hash`, si la capa superior ya lo calculo.
+- `metadata` o `notes` opcional si el servicio futuro lo permite.
+
+El cliente no debe enviar como canonicos:
+
+- `provider_payment_id`.
+- `provider_checkout_id`.
+- `normalized_status`.
+- `paid_at`.
+- datos de provider real.
+
+### G) Salida futura del provider mock/dev
+Salida conceptual minima:
+
+- `provider = mxmed_mock`.
+- `provider_payment_id`.
+- `provider_checkout_id`, opcional.
+- `provider_status`, por ejemplo `mock_created`.
+- `normalized_status`, recomendado `created` o `pending_provider`.
+- `amount_cents`.
+- `currency`.
+- `created_at_provider`, si aplica.
+- `raw_response` opcional si el schema o servicio futuro lo soporta como metadata/notes.
+
+La salida debe ser suficiente para construir el payload de:
+
+```text
+SubscriptionPaymentIntentRepository::create(...)
+```
+
+### H) Relacion con idempotencia
+El provider mock/dev debe ser compatible con:
+
+```text
+subscriptions.payment_intent.create
+```
+
+Reglas:
+
+- Replay con misma `Idempotency-Key` y mismo `request_hash` debe devolver el mismo `provider_payment_id`.
+- Misma key con request distinto debe bloquear.
+- El mock no debe cambiar el `request_hash` canonico documentado en PP-Decisiones 104.
+- La generacion de `provider_payment_id` debe ocurrir despues de validar idempotencia y antes de persistir el resultado exitoso.
+- El resultado idempotente debe incluir `provider`, `provider_payment_id`, `provider_checkout_id` si aplica, `normalized_status`, amount/currency y `payment_intent_uuid`.
+
+### I) Relacion con lock
+La creacion mock/dev debe ocurrir dentro del lock:
+
+```text
+mxmed:subscriptions:checkout_intents:{checkout_intent_uuid}:payment_intent_create
+```
+
+Reglas:
+
+- El provider mock/dev no sustituye el lock.
+- El lock debe proteger la seccion critica entre anti-duplicado y creacion.
+- Si no se obtiene lock, no se debe generar ni persistir payment intent.
+- El lock debe liberarse siempre.
+- El lock no debe vivir en el repository.
+
+### J) Relacion con anti-duplicado
+Antes de crear el payment intent debe validarse:
+
+```text
+SubscriptionPaymentIntentRepository::findActiveByCheckoutIntentUuid(...)
+```
+
+Reglas:
+
+- Si ya existe payment intent activo para el checkout, no debe crearse otro.
+- El unique `provider + provider_payment_id` ayuda como defensa adicional.
+- Como no hay unique por `checkout_intent_uuid`, el control completo sigue siendo:
+  - lookup `findActiveByCheckoutIntentUuid(...)`;
+  - idempotencia `subscriptions.payment_intent.create`;
+  - lock `payment_intent_create`;
+  - unique `provider + provider_payment_id`.
+
+### K) No responsabilidades
+Esta adenda NO implementa ni habilita:
+
+- Provider mock/dev.
+- Adapter/provider class.
+- Provider real.
+- Credenciales reales.
+- Servicio `CreateSubscriptionPaymentIntentService`.
+- `CreateSubscriptionPaymentIntentService.php`.
+- Endpoint.
+- HTTP/POST.
+- SQL write.
+- DB/schema.
+- Idempotencia tecnica.
+- Lock tecnico.
+- Webhook.
+- `payment_events`.
+- Confirmacion de pago.
+- Marcar `paid`.
+- `profile_subscriptions`.
+- Post-payment activation.
+- Facturacion.
+- Capacidades.
+- Frontend.
+
+### L) Orden recomendado posterior
+Orden seguro antes de implementar el servicio:
+
+1. `BE/Suscripciones-PaymentIntent-IdempotencyOperation-01`
+   - Permitir/implementar operacion `subscriptions.payment_intent.create` en la infraestructura existente.
+2. `BE/Suscripciones-PaymentIntent-LockOperation-01`
+   - Permitir/implementar lock `payment_intent_create` por `checkout_intent_uuid`.
+3. `BE/Suscripciones-PaymentIntent-ProviderMock-Contract-01`
+   - Cerrar contrato tecnico del mock si la implementacion requiere adapter/helper separado.
+4. `BE/Suscripciones-PaymentIntent-Service-01`
+   - Crear `CreateSubscriptionPaymentIntentService.php` cuando idempotencia, lock y contrato mock esten listos.
+
+Decision documental:
+
+- El provider mock/dev puede quedar planificado en esta adenda.
+- Antes del servicio son bloqueantes los ajustes tecnicos de idempotencia y lock.
+- Si el servicio futuro implementa generacion local simple de `mxmed_mock_pi_...` sin adapter separado, la microfase `ProviderMock-Contract-01` puede omitirse o convertirse en readiness puntual.
+
+### M) Readiness del plan
+Clasificacion:
+
+- Provider tentativo `mxmed_mock`: listo documentalmente.
+- `provider_payment_id` NOT NULL: confirmado por schema y repository.
+- Generacion conceptual `mxmed_mock_pi_...`: lista documentalmente.
+- `provider_checkout_id` opcional `mxmed_mock_chk_...`: listo documentalmente.
+- Estados iniciales `created` o `pending_provider`: soportados por repository.
+- `paid` fuera de create inicial: decision cerrada documentalmente.
+- Relacion con idempotencia: lista documentalmente.
+- Relacion con lock: lista documentalmente.
+- Relacion con anti-duplicado: lista documentalmente.
+
+Riesgos bloqueantes antes de `CreateSubscriptionPaymentIntentService`:
+
+- Falta implementar operacion idempotente `subscriptions.payment_intent.create`.
+- Falta implementar lock `payment_intent_create`.
+- Falta decidir si el mock sera helper interno del servicio o adapter separado.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
