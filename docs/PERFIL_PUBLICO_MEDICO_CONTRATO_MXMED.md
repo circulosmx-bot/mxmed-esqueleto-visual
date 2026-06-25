@@ -18966,6 +18966,126 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 97 — Plan de helper DEV/local para sesion checkout doctor 900001
+
+### A) Problema
+La prueba funcional positive `201` del endpoint:
+
+```text
+POST /api/subscriptions/index.php/entities/doctor/900001/checkout-intents
+```
+
+requiere una sesion PHP local/dev real con `session_scope` para `doctor 900001`.
+
+Estado confirmado:
+
+- El fixture `doctor_id = 900001` existe en DEV/local.
+- El endpoint checkout-intents rechaza writes con headers de identidad.
+- `local_dev_open` no autoriza writes.
+- No existe actualmente una sesion PHP valida para `doctor 900001`.
+- No se debe ejecutar el POST positive `201` hasta contar con una sesion valida.
+
+### B) Decision
+Crear en una microfase futura un helper DEV/local especifico para generar una sesion PHP real de checkout para `doctor 900001`.
+
+Ruta conceptual futura:
+
+```text
+POST /api/subscriptions/index.php/dev/session-fixture/checkout-doctor
+```
+
+El helper debe reutilizar el patron local/dev existente de `dev/session-fixture`, pero apuntando al fixture de checkout `doctor 900001`.
+
+### C) Guardas obligatorias
+El helper futuro debe fallar cerrado salvo que se cumplan todas estas condiciones:
+
+- `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`.
+- Host local permitido:
+  - `127.0.0.1`;
+  - `localhost`;
+  - `::1`.
+- Bloqueo explicito si se detecta ambiente productivo.
+- Metodo permitido: `POST`.
+- No debe aceptar headers de identidad como bypass de autorizacion.
+- No debe relajar `subscriptionResolveWriteContext(...)`.
+- No debe modificar el endpoint checkout-intents.
+
+### D) Sesion conceptual
+La sesion creada por el helper futuro debe ser una sesion PHP real, compatible con `session_scope`, con valores conceptuales:
+
+- `user_id`: valor local/dev numerico controlado.
+- `doctor_id = 900001`.
+- `entity_type = doctor`.
+- `entity_id = 900001`.
+- `actor_role = doctor` o vacio si el guard actual lo permite de forma segura.
+- Sin `operator_id`.
+- Sin permisos de operador.
+- Sin headers de identidad para autorizar el write.
+- Cookie `PHPSESSID` real para usar en la microfase funcional posterior.
+
+### E) Prohibiciones
+El helper futuro no debe:
+
+- Ejecutarse en produccion.
+- Usar headers como bypass de write.
+- Ejecutar SQL writes.
+- Crear `profile_subscriptions`.
+- Crear `subscription_checkout_intents`.
+- Crear `subscription_contract_acceptances`.
+- Crear `subscription_payment_intents`.
+- Crear `subscription_payment_events`.
+- Conectar provider.
+- Implementar webhooks.
+- Conectar facturacion.
+- Activar capacidades.
+- Limpiar datos.
+- Tocar doctores `1`, `2` ni `3`.
+- Modificar DB/schema.
+
+### F) QA futura
+Microfases futuras recomendadas:
+
+1. `BE/SPEC-Suscripciones-CheckoutIntent-Endpoint-DevSessionFixture-Doctor900001-Readiness-01`
+   - Validar readiness tecnica para agregar el helper DEV/local sin ejecutar checkout-intents.
+2. `BE/Suscripciones-CheckoutIntent-Endpoint-DevSessionFixture-Doctor900001-01`
+   - Implementar el helper DEV/local para `doctor 900001`, sin SQL writes y sin endpoint checkout-intents.
+3. `QA-Suscripciones-CheckoutIntent-Endpoint-DevSessionFixture-Doctor900001-PostPush-01`
+   - Validar post-push que el helper esta protegido por bandera, host local, bloqueo produccion y metodo POST.
+4. `QA/Suscripciones-CheckoutIntent-Endpoint-SessionScope-Doctor900001-Generate-01`
+   - Generar una cookie `PHPSESSID` real para `doctor 900001`, sin ejecutar checkout-intents.
+5. `QA/Suscripciones-CheckoutIntent-Endpoint-FunctionalControlled-Positive201-Execute-01`
+   - Reintentar el positive `201` usando la cookie real generada.
+
+### G) Alcance de esta adenda
+Esta adenda solo planifica el helper DEV/local.
+
+No implementa:
+
+- Helper DEV/local.
+- Endpoint checkout-intents.
+- HTTP/POST.
+- SQL writes.
+- DB/schema.
+- Sesion real.
+- Checkout intent.
+- Aceptacion contractual.
+- `profile_subscriptions`.
+- Payment intents/events.
+- Provider/webhook/facturacion/capacidades.
+
+### H) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-CheckoutIntent-Endpoint-DevSessionFixture-Doctor900001-Readiness-01
+```
+
+Objetivo:
+
+- Validar readiness tecnica para implementar un helper DEV/local que genere una sesion PHP real con `session_scope` para `doctor 900001`, sin ejecutar checkout-intents, sin SQL writes y sin modificar DB/schema.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
