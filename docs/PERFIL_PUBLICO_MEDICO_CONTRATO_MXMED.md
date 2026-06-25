@@ -20974,6 +20974,218 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 105 - Readiness de lock para payment intent
+
+### A) Motivo
+Esta adenda valida la readiness tecnica del lock requerido para crear payment intents desde checkout-intents, antes de implementar el servicio futuro:
+
+```text
+modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php
+```
+
+El objetivo es evitar carreras entre solicitudes concurrentes que intenten crear mas de un payment intent activo para el mismo `checkout_intent_uuid`.
+
+Esta adenda parte de:
+
+- PP-Decisiones 103, que dejo el lock por `checkout_intent_uuid` como dependencia del servicio payment intent.
+- PP-Decisiones 104, que confirmo que `subscriptions.payment_intent.create` requiere idempotencia propia.
+- El repositorio `SubscriptionPaymentIntentRepository`, que ya expone `findActiveByCheckoutIntentUuid(...)` para apoyar el anti-duplicado.
+
+Esta adenda NO implementa el lock ni crea el servicio payment intent.
+
+### B) Patron de lock existente
+El patron actual observado para checkout-intents vive en `SubscriptionEntityWriteLockService`:
+
+- Usa prefijo `mxmed:subscriptions`.
+- Usa lock de checkout con forma conceptual `mxmed:subscriptions:{entity_type}:{entity_id}:checkout_create`.
+- Usa `GET_LOCK(...)` y `RELEASE_LOCK(...)` sobre la conexion PDO compartida.
+- Usa timeout observado de 2 segundos en el flujo checkout.
+- Libera el lock en bloque `finally` desde `CreateSubscriptionCheckoutIntentService`.
+- Tiene limite de nombre de lock y fallback por hash para no exceder la longitud permitida.
+- Mantiene una allowlist de propositos permitidos.
+
+Estado actual:
+
+- `checkout_create` esta soportado.
+- `payment_intent_create` todavia no esta soportado en la allowlist.
+- El patron es reutilizable, pero requiere ajuste minimo antes de `CreateSubscriptionPaymentIntentService`.
+
+### C) Lock futuro requerido
+El lock futuro recomendado para payment intent es:
+
+```text
+mxmed:subscriptions:checkout_intents:{checkout_intent_uuid}:payment_intent_create
+```
+
+Scope:
+
+- Un lock por `checkout_intent_uuid`.
+- El lock protege la creacion del payment intent interno para un checkout intent especifico.
+- No bloquea otros checkout-intents de la misma entidad.
+- No reemplaza idempotencia ni anti-duplicado de storage.
+
+Operacion conceptual:
+
+```text
+payment_intent_create
+```
+
+Error conceptual esperado si no se puede tomar el lock:
+
+```text
+payment_intent_lock_timeout
+```
+
+Si se mantiene una convencion generica de lock, tambien puede mapearse a `lock_acquisition_failed`, pero el servicio futuro debe exponer un codigo estable para payment intent.
+
+### D) Orden logico futuro
+El flujo futuro de `CreateSubscriptionPaymentIntentService::createPaymentIntent(array $input): array` debe seguir este orden minimo:
+
+1. Normalizar input.
+2. Validar payload minimo.
+3. Validar `Idempotency-Key`.
+4. Calcular `request_hash` canonico.
+5. Iniciar idempotencia con operacion `subscriptions.payment_intent.create`.
+6. Resolver replay estable si ya existe resultado completado.
+7. Bloquear payload distinto con `idempotency_key_reused_with_different_payload`.
+8. Bloquear request en proceso con `request_already_processing`.
+9. Cargar checkout intent por `checkout_intent_uuid`.
+10. Validar que exista, no este eliminado y siga en `pending_payment`.
+11. Tomar lock `mxmed:subscriptions:checkout_intents:{checkout_intent_uuid}:payment_intent_create`.
+12. Dentro del lock, revalidar anti-duplicado con `findActiveByCheckoutIntentUuid(...)`.
+13. Si ya existe payment intent activo, devolver replay o error controlado segun idempotencia.
+14. Validar amount/currency desde snapshot server-side del checkout intent.
+15. Crear payment intent interno con provider mock/dev cuando exista esa dependencia.
+16. Persistir resultado idempotente.
+17. Liberar lock siempre.
+18. Devolver respuesta minima.
+
+En caso de error:
+
+- Liberar lock siempre.
+- No crear `payment_events`.
+- No crear `profile_subscriptions`.
+- No activar capacidades.
+- No marcar el checkout como pagado.
+- No ejecutar compensaciones fuera de una microfase autorizada.
+
+### E) Relacion con idempotencia
+El lock futuro no reemplaza la idempotencia.
+
+La idempotencia debe seguir usando:
+
+```text
+subscriptions.payment_intent.create
+```
+
+Responsabilidades de idempotencia:
+
+- Rechazar `Idempotency-Key` invalida.
+- Rechazar misma key con payload distinto.
+- Reproducir respuesta estable si la request ya fue completada.
+- Bloquear request concurrente en estado processing.
+- Persistir respuesta minima del payment intent.
+
+Responsabilidades del lock:
+
+- Serializar la seccion critica por `checkout_intent_uuid`.
+- Evitar que dos procesos creen payment intents activos simultaneamente.
+- Permitir que la revalidacion anti-duplicado ocurra dentro del lock.
+
+### F) Relacion con anti-duplicado
+El anti-duplicado futuro debe combinar tres controles:
+
+1. Idempotencia por `subscriptions.payment_intent.create`.
+2. Lock por `mxmed:subscriptions:checkout_intents:{checkout_intent_uuid}:payment_intent_create`.
+3. Lookup de storage con `findActiveByCheckoutIntentUuid(...)`.
+
+El schema de `subscription_payment_intents` tiene indice por `checkout_intent_uuid`, pero no se observo una restriccion unica que impida por si sola multiples payment intents activos para el mismo checkout intent.
+
+Tambien existe unicidad por `(provider, provider_payment_id)`. Ese control ayuda contra duplicados externos de provider, pero no sustituye:
+
+- lock por checkout intent;
+- idempotencia por operacion;
+- lookup activo antes de crear.
+
+### G) Errores conceptuales
+Errores que debe contemplar el servicio futuro alrededor del lock:
+
+- `payment_intent_lock_timeout`.
+- `lock_acquisition_failed`.
+- `payment_intent_already_exists`.
+- `checkout_intent_not_found`.
+- `checkout_intent_not_pending_payment`.
+- `checkout_intent_deleted`.
+- `idempotency_key_invalid`.
+- `idempotency_key_reused_with_different_payload`.
+- `request_already_processing`.
+- `payment_intent_create_failed`.
+- `payment_intent_unavailable`.
+
+La decision de exponer `payment_intent_already_exists` o replay idempotente depende del estado de idempotencia asociado a la request. El repository no debe decidir esa politica.
+
+### H) No responsabilidades del lock
+El lock de payment intent NO debe:
+
+- Resolver precio.
+- Validar contrato.
+- Crear accepted_pending_payment.
+- Crear checkout intent.
+- Crear `payment_events`.
+- Crear `profile_subscriptions`.
+- Activar capacidades.
+- Facturar.
+- Llamar provider real.
+- Manejar webhooks.
+- Modificar SEO o perfil publico.
+- Ejecutar SQL write fuera del servicio autorizado.
+- Hacer limpieza de datos.
+
+El lock tampoco debe vivir en `SubscriptionPaymentIntentRepository`; debe ser una dependencia de la capa de servicio/orquestacion.
+
+### I) Brechas y readiness
+Clasificacion:
+
+- `SubscriptionEntityWriteLockService`: requiere ajuste previo para soportar `payment_intent_create`.
+- Nombre de lock futuro: listo documentalmente.
+- Scope por `checkout_intent_uuid`: listo documentalmente.
+- Patron de acquire/release: listo como referencia tecnica.
+- Timeout observado: listo como referencia inicial, sujeto a ajuste de implementacion.
+- Relacion con idempotencia: lista documentalmente.
+- Relacion con anti-duplicado: lista documentalmente.
+- `findActiveByCheckoutIntentUuid(...)`: disponible en repository de payment intents.
+
+Riesgo bloqueante antes de implementar `CreateSubscriptionPaymentIntentService`:
+
+- `payment_intent_create` no esta soportado todavia por el servicio de lock existente.
+
+Advertencia:
+
+- No implementar el servicio payment intent hasta cerrar la extension tecnica de lock y la extension tecnica de idempotencia para `subscriptions.payment_intent.create`.
+
+### J) Siguiente microfase recomendada
+Siguiente microfase inmediata:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-ProviderMock-Plan-01
+```
+
+Objetivo:
+
+- Definir el contrato mock/dev que entregara `provider_payment_id` y datos minimos de provider para crear payment intents sin provider real.
+
+Microfase tecnica posterior requerida antes del servicio:
+
+```text
+BE/Suscripciones-PaymentIntent-LockDependency-01
+```
+
+Objetivo:
+
+- Extender el lock existente para permitir `payment_intent_create` por `checkout_intent_uuid`, sin endpoint y sin provider real.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
