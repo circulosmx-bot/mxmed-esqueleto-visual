@@ -20,6 +20,8 @@
 --   Second fix also normalizes the display_name variable/literal to utf8mb4_unicode_ci.
 --   Third fix removes display_name comparisons from the executable INSERT guard.
 --   The INSERT guard uses doctor_id only; display_name checks remain read-only validations.
+--   Fourth fix removes all executable display_name comparisons after another ERROR 1267.
+--   All executable validations now depend on doctor_id only.
 --   This does not change fixture scope and does not authorize execution in this microphase.
 
 -- Fixture target:
@@ -29,28 +31,27 @@
 
 -- Proposed DEV/local-only variables.
 -- The high doctor_id avoids doctors 1, 2 and 3 and remains easy to identify in local QA.
-SET @mxmed_checkout_qa_doctor_id := '900001';
+SET @mxmed_checkout_qa_doctor_id := CONVERT('900001' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
 SET @mxmed_checkout_qa_display_name := CONVERT('QA Checkout Doctor Libre' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
 
 -- Future pre-execution validations.
--- 1) Confirm the fixture display_name does not already exist.
+-- 1) Confirm the proposed doctor_id does not already exist.
 SELECT
   doctor_id,
   display_name,
   profile_status,
   is_public_candidate
 FROM profiles_doctors
-WHERE display_name COLLATE utf8mb4_unicode_ci = @mxmed_checkout_qa_display_name COLLATE utf8mb4_unicode_ci;
+WHERE doctor_id = @mxmed_checkout_qa_doctor_id;
 
--- 2) Confirm the proposed doctor_id does not already exist and is not 1, 2 or 3.
+-- 2) Confirm doctors 1, 2 and 3 remain visible for inspection only.
 SELECT
   doctor_id,
   display_name,
   profile_status,
   is_public_candidate
 FROM profiles_doctors
-WHERE doctor_id = @mxmed_checkout_qa_doctor_id
-   OR doctor_id IN ('1', '2', '3');
+WHERE doctor_id IN ('1', '2', '3');
 
 -- 3) Inspect the next numeric doctor_id available in DEV/local before choosing a final id.
 SELECT
@@ -128,7 +129,7 @@ SELECT
   profile_status,
   is_public_candidate
 FROM profiles_doctors
-WHERE display_name COLLATE utf8mb4_unicode_ci = 'QA Checkout Doctor Libre' COLLATE utf8mb4_unicode_ci;
+WHERE doctor_id = @mxmed_checkout_qa_doctor_id;
 
 -- 2) The fixture still has zero profile_subscriptions.
 SELECT COUNT(*) AS fixture_profile_subscriptions_rows
