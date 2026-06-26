@@ -42,6 +42,7 @@ final class SubscriptionEntityWriteLockService
         return $this->acquireForPurpose($entityType, $entityId, self::CHECKOUT_CREATE_OPERATION, $timeoutSeconds);
     }
 
+    // Lock scope: checkout_intent_uuid.
     public function acquirePaymentIntentCreate(string $checkoutIntentUuid, int $timeoutSeconds = 2): ?string
     {
         return $this->acquireLockName(
