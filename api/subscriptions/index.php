@@ -5,29 +5,36 @@ require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/CurrentSubscriptionRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPlanPriceRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPendingPaymentAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityResolverService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityWriteLockService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionPaymentIntentMockProvider.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionPlanPriceResolverService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionWriteIdempotencyService.php';
 
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
+use Subscriptions\Repositories\SubscriptionPaymentIntentRepository;
 use Subscriptions\Repositories\SubscriptionPlanPriceRepository;
 use Subscriptions\Repositories\SubscriptionWriteIdempotencyRepository;
 use Subscriptions\Services\CreateSubscriptionCheckoutIntentException;
 use Subscriptions\Services\CreateSubscriptionCheckoutIntentService;
+use Subscriptions\Services\CreateSubscriptionPaymentIntentException;
+use Subscriptions\Services\CreateSubscriptionPaymentIntentService;
 use Subscriptions\Services\CreateSubscriptionPendingPaymentAcceptanceService;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
 use Subscriptions\Services\SubscriptionEntityResolverService;
 use Subscriptions\Services\SubscriptionEntityWriteLockService;
+use Subscriptions\Services\SubscriptionPaymentIntentMockProvider;
 use Subscriptions\Services\SubscriptionPlanPriceResolverService;
 use Subscriptions\Services\SubscriptionWriteIdempotencyService;
 use Subscriptions\Services\SubscriptionWriteException;
@@ -876,6 +883,29 @@ function subscriptionCheckoutErrorStatus(string $code, int $fallback): int
     return $map[$code] ?? $fallback;
 }
 
+function subscriptionPaymentIntentErrorStatus(string $code, int $fallback): int
+{
+    $map = [
+        'invalid_payment_intent_payload' => 422,
+        'idempotency_key_invalid' => 422,
+        'idempotency_key_reused_with_different_payload' => 409,
+        'request_already_processing' => 409,
+        'checkout_intent_uuid_required' => 422,
+        'checkout_intent_not_found' => 404,
+        'checkout_intent_not_pending_payment' => 409,
+        'payment_intent_already_exists' => 409,
+        'payment_intent_lock_timeout' => 409,
+        'lock_acquisition_failed' => 409,
+        'payment_intent_provider_invalid' => 422,
+        'payment_intent_invalid_checkout_snapshot' => 422,
+        'payment_intent_create_failed' => 500,
+        'payment_intent_lookup_failed' => 500,
+        'payment_intent_unavailable' => 500,
+    ];
+
+    return $map[$code] ?? $fallback;
+}
+
 function subscriptionResolveWriteContext(string $entityType, string $entityId): array
 {
     $headers = subscriptionHeaders();
@@ -1441,6 +1471,149 @@ try {
 
         $isReplay = (bool)($checkoutResponse['meta']['idempotent_replay'] ?? false);
         subscriptionRespond($checkoutResponse, $isReplay ? 200 : 201);
+        return;
+    }
+
+    if (
+        count($segments) === 6
+        && $segments[0] === 'entities'
+        && $segments[3] === 'checkout-intents'
+        && $segments[5] === 'payment-intents'
+    ) {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionWriteError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        $checkoutIntentUuid = trim((string)$segments[4]);
+        if ($entityType !== 'doctor' || !subscriptionValidEntityId($entityId) || $checkoutIntentUuid === '') {
+            subscriptionRespond(subscriptionWriteError('invalid_payment_intent_payload', 'invalid request'), 422);
+            return;
+        }
+
+        $payloadResult = subscriptionReadJsonPayload();
+        if (!(bool)($payloadResult['ok'] ?? false)) {
+            subscriptionRespond((array)($payloadResult['response'] ?? []), (int)($payloadResult['status'] ?? 400));
+            return;
+        }
+
+        $payload = (array)($payloadResult['payload'] ?? []);
+        $forbiddenFields = subscriptionForbiddenPayloadFields($payload, [
+            'amount_cents',
+            'currency',
+            'price_source',
+            'price_version',
+            'price_uuid',
+            'price',
+            'status',
+            'normalized_status',
+            'provider_payment_id',
+            'provider_checkout_id',
+            'checkout_intent_uuid',
+            'payment_intent_uuid',
+            'payment_intent_id',
+            'paid_at',
+            'failed_at',
+            'cancelled_at',
+            'created_at_provider',
+            'ip_address',
+            'user_agent',
+            'deleted_at',
+        ]);
+        if ($forbiddenFields !== []) {
+            subscriptionRespond(
+                subscriptionWriteError(
+                    'forbidden_fields',
+                    'payload contains backend-controlled fields: ' . implode(', ', array_values(array_unique($forbiddenFields)))
+                ),
+                422
+            );
+            return;
+        }
+
+        $context = subscriptionResolveWriteContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+
+        $authMode = (string)($context['auth_mode'] ?? 'session_scope');
+        $headers = subscriptionHeaders();
+        $idempotencyKey = trim((string)($headers['idempotency-key'] ?? ($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? '')));
+        if ($idempotencyKey === '') {
+            subscriptionRespond(
+                subscriptionWriteError('idempotency_key_invalid', 'Idempotency-Key is required', $authMode),
+                422
+            );
+            return;
+        }
+
+        $pdo = mxmed_pdo();
+        $checkoutIntentRepository = new SubscriptionCheckoutIntentRepository($pdo);
+        try {
+            $checkoutIntent = $checkoutIntentRepository->findByUuid($checkoutIntentUuid);
+        } catch (Throwable $e) {
+            subscriptionRespond(
+                subscriptionWriteError('payment_intent_unavailable', 'payment intent is unavailable', $authMode),
+                500
+            );
+            return;
+        }
+        if ($checkoutIntent === null) {
+            subscriptionRespond(subscriptionWriteError('checkout_intent_not_found', 'checkout intent was not found', $authMode), 404);
+            return;
+        }
+        if (
+            (string)($checkoutIntent['entity_type'] ?? '') !== $entityType
+            || (string)($checkoutIntent['entity_id'] ?? '') !== $entityId
+        ) {
+            subscriptionRespond(subscriptionWriteError('forbidden', 'entity scope mismatch', $authMode), 403);
+            return;
+        }
+
+        $input = [
+            'checkout_intent_uuid' => $checkoutIntentUuid,
+            'idempotency_key' => $idempotencyKey,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'actor_user_id' => (string)($context['actor_user_id'] ?? ''),
+            'actor_role' => (string)($context['actor_role'] ?? ''),
+            'operator_id' => $context['operator_id'] ?? null,
+            'doctor_id' => (string)($context['doctor_id'] ?? ''),
+            'profile_id' => $context['profile_id'] ?? null,
+        ];
+        foreach (['provider', 'source', 'notes', 'metadata'] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $input[$key] = $payload[$key];
+            }
+        }
+
+        $paymentIntentService = new CreateSubscriptionPaymentIntentService(
+            $checkoutIntentRepository,
+            new SubscriptionPaymentIntentRepository($pdo),
+            new SubscriptionWriteIdempotencyService(new SubscriptionWriteIdempotencyRepository($pdo)),
+            new SubscriptionEntityWriteLockService($pdo),
+            new SubscriptionPaymentIntentMockProvider()
+        );
+
+        try {
+            $paymentIntentResponse = $paymentIntentService->createPaymentIntent($input);
+        } catch (CreateSubscriptionPaymentIntentException $e) {
+            $status = subscriptionPaymentIntentErrorStatus($e->errorCode(), $e->status());
+            subscriptionRespond(subscriptionWriteError($e->errorCode(), $e->getMessage(), $authMode), $status);
+            return;
+        } catch (Throwable $e) {
+            subscriptionRespond(
+                subscriptionWriteError('payment_intent_unavailable', 'payment intent is unavailable', $authMode),
+                500
+            );
+            return;
+        }
+
+        $isReplay = (bool)($paymentIntentResponse['meta']['idempotent_replay'] ?? false);
+        subscriptionRespond($paymentIntentResponse, $isReplay ? 200 : 201);
         return;
     }
 
