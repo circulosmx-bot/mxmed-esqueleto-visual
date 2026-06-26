@@ -21724,6 +21724,280 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 108 - Readiness de endpoint payment intent
+
+### A) Motivo
+Ya existe el servicio interno:
+
+```text
+modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php
+```
+
+con metodo publico:
+
+```text
+CreateSubscriptionPaymentIntentService::createPaymentIntent(array $input): array
+```
+
+La microfase actual valida readiness tecnica para exponerlo posteriormente mediante un endpoint privado/controlado. Esta adenda no implementa endpoint, no modifica `api/subscriptions/index.php`, no duplica logica de negocio y no ejecuta HTTP/POST.
+
+Antes de modificar el router se cierra el contrato del endpoint futuro para asegurar que el endpoint:
+
+- invoque `CreateSubscriptionPaymentIntentService`;
+- no duplique validacion de checkout `pending_payment`;
+- no duplique idempotencia;
+- no duplique lock;
+- no duplique provider mock/dev;
+- no duplique anti-duplicado;
+- no cree `payment_events`;
+- no cree ni toque `profile_subscriptions`;
+- no active plan;
+- no conecte provider real ni webhook.
+
+### B) Estado tecnico observado
+Inspeccion read-only:
+
+- Router actual: `api/subscriptions/index.php` ya expone `checkout-intents`, pero no expone `payment-intents`.
+- Patron de writes: `subscriptionResolveWriteContext(...)` exige request local/dev, sesion PHP real `session_scope`, rechaza headers de identidad para writes y restringe el actor inicial a doctor.
+- Idempotencia: el patron actual lee `Idempotency-Key` desde headers y lo pasa al servicio de write.
+- Servicio payment intent: `CreateSubscriptionPaymentIntentService` ya existe y valida `checkout_intent_uuid`, `Idempotency-Key`, checkout `pending_payment`, provider `mxmed_mock`, lock `payment_intent_create` y anti-duplicado por `findActiveByCheckoutIntentUuid(...)`.
+- Provider mock/dev: `SubscriptionPaymentIntentMockProvider` ya existe y usa `mxmed_mock`.
+- Repository payment intent: `SubscriptionPaymentIntentRepository` ya existe y crea solo `subscription_payment_intents`.
+- Repository checkout intent: `SubscriptionCheckoutIntentRepository::findByUuid(...)` permite recuperar el checkout server-side.
+- DB read-only: `subscription_payment_intents = 0`, `subscription_payment_events = 0`, `subscription_checkout_intents = 1`; el fixture `7d4beec3-b62a-40e1-a9f2-9edcc1a83364` existe para `doctor 900001` en `pending_payment`, con `amount_cents = 20000`, `currency = MXN` y provider fields nulos.
+
+Brecha detectada:
+
+- Falta cablear el endpoint futuro en `api/subscriptions/index.php`.
+- Falta agregar `require_once`/`use` de `CreateSubscriptionPaymentIntentService`, `SubscriptionPaymentIntentRepository` y `SubscriptionPaymentIntentMockProvider` cuando se implemente el endpoint.
+- Falta mapper HTTP especifico para `CreateSubscriptionPaymentIntentException`.
+
+No se detectan brechas bloqueantes para implementar el endpoint privado/controlado en una siguiente microfase, siempre que el alcance se limite a cablear el servicio ya existente.
+
+### C) Endpoint futuro recomendado
+Ruta recomendada:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents
+```
+
+Fixture actual:
+
+```text
+POST /api/subscriptions/index.php/entities/doctor/900001/checkout-intents/7d4beec3-b62a-40e1-a9f2-9edcc1a83364/payment-intents
+```
+
+Justificacion:
+
+- Mantiene jerarquia sobre el checkout intent ya creado.
+- Evita endpoint suelto de payment intent sin entidad.
+- Permite reutilizar `subscriptionResolveWriteContext(entity_type, entity_id)`.
+- Permite pasar `checkout_intent_uuid` por path y no confiar en un body controlado por cliente para identificar el checkout.
+
+### D) Autorizacion
+El endpoint futuro debe exigir:
+
+- metodo `POST`;
+- sesion PHP valida;
+- `session_scope`;
+- `entity_type = doctor` en la primera version;
+- `entity_id` compatible con la sesion;
+- `actor_role` compatible con doctor;
+- `operator_id = null` en esta etapa;
+- request local/dev si se mantiene el mismo guard de writes actual;
+- no autorizacion por headers sueltos.
+
+Debe reutilizar el patron actual de writes de checkout-intents:
+
+```text
+subscriptionResolveWriteContext($entityType, $entityId)
+```
+
+No debe relajar el rechazo de headers de identidad para writes.
+
+### E) Idempotencia
+El endpoint futuro debe exigir header:
+
+```text
+Idempotency-Key
+```
+
+El endpoint debe mapearlo hacia el input del servicio:
+
+```text
+idempotency_key
+```
+
+Si falta o es invalido, debe responder con error equivalente a:
+
+```text
+idempotency_key_invalid
+```
+
+La idempotencia de negocio vive en `CreateSubscriptionPaymentIntentService` mediante:
+
+- `buildPaymentIntentRequestHash(...)`;
+- `beginPaymentIntent(...)`;
+- `markPaymentIntentCompleted(...)`;
+- `markOperationFailed(...)`.
+
+El endpoint no debe recalcular ni persistir idempotencia por fuera del servicio.
+
+### F) Input body futuro
+Payload minimo recomendado:
+
+```json
+{
+  "provider": "mxmed_mock",
+  "source": "payment_intent",
+  "notes": "optional",
+  "metadata": {
+    "qa": "optional"
+  }
+}
+```
+
+Reglas:
+
+- `provider` es opcional y default `mxmed_mock`.
+- `source` es opcional y default `payment_intent`.
+- `notes` es opcional.
+- `metadata` es opcional si se decide soportar notas JSON en el servicio.
+- `checkout_intent_uuid` debe venir del path.
+- `idempotency_key` debe venir de `Idempotency-Key`.
+
+El cliente NO debe enviar ni controlar:
+
+- `amount_cents`;
+- `currency`;
+- `price_source`;
+- `price_version`;
+- `provider_payment_id`;
+- `provider_checkout_id`;
+- `normalized_status = paid`;
+- `paid_at`;
+- `profile_subscription_id`;
+- `payment_events`;
+- `profile_subscriptions`.
+
+`amount_cents` y `currency` deben venir del checkout server-side cargado por `SubscriptionCheckoutIntentRepository::findByUuid(...)`.
+
+### G) Servicio invocado
+El endpoint futuro debe instanciar e invocar:
+
+```text
+CreateSubscriptionPaymentIntentService::createPaymentIntent(...)
+```
+
+Input conceptual hacia el servicio:
+
+```php
+[
+    'checkout_intent_uuid' => $checkoutIntentUuid,
+    'idempotency_key' => $idempotencyKey,
+    'provider' => $payload['provider'] ?? 'mxmed_mock',
+    'source' => $payload['source'] ?? 'payment_intent',
+    'notes' => $payload['notes'] ?? null,
+    'metadata' => $payload['metadata'] ?? null,
+]
+```
+
+El endpoint no debe duplicar:
+
+- validacion de checkout `pending_payment`;
+- obtencion server-side de `amount_cents` y `currency`;
+- idempotencia;
+- lock;
+- provider mock;
+- anti-duplicado;
+- creacion en repository;
+- generacion de `provider_payment_id`.
+
+### H) Respuestas esperadas
+Respuestas conceptuales:
+
+- `201 Created`: se crea un payment intent nuevo.
+- `200 OK`: replay idempotente devuelve resultado previo.
+- `409 Conflict`: `idempotency_key_reused_with_different_payload`.
+- `409 Conflict`: `payment_intent_already_exists`.
+- `409 Conflict`: `payment_intent_lock_timeout` o conflicto equivalente.
+- `422 Unprocessable Entity`: `idempotency_key_invalid`.
+- `422 Unprocessable Entity`: `checkout_intent_uuid_required`.
+- `422 Unprocessable Entity`: payload invalido.
+- `404 Not Found`: `checkout_intent_not_found`, si se conserva el status del servicio.
+- `409 Conflict`: `checkout_intent_not_pending_payment`, si se conserva el status del servicio.
+- `500 Internal Server Error`: `payment_intent_create_failed` o `payment_intent_unavailable`.
+
+El mapper HTTP futuro debe ser explicito para `CreateSubscriptionPaymentIntentException`.
+
+### I) No responsabilidades
+El endpoint inicial NO debe:
+
+- implementar provider real;
+- llamar provider real;
+- implementar webhook;
+- crear `payment_events`;
+- crear `subscription_payment_events`;
+- crear ni tocar `profile_subscriptions`;
+- ejecutar post-payment activation;
+- marcar payment intent como `paid`;
+- activar plan;
+- facturar;
+- modificar DB/schema;
+- crear SQL;
+- aceptar writes por headers sueltos;
+- exponer endpoint publico;
+- limpiar datos de QA;
+- modificar checkout-intents existentes fuera del payment intent creado.
+
+### J) QA futura recomendada
+QA futura controlada, todavia no ejecutada:
+
+```text
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-Positive201-01
+```
+
+Casos futuros:
+
+- Positive201 con `doctor 900001` y checkout fixture `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`.
+- Replay same key.
+- Same key different payload.
+- Existing payment intent.
+- Missing `Idempotency-Key`.
+- No session auth.
+- Checkout not found.
+- Checkout not `pending_payment`.
+
+La QA futura debe validar counts antes/despues:
+
+- `subscription_payment_intents` incrementa solo en Positive201.
+- `subscription_payment_events` no cambia.
+- `profile_subscriptions` no cambia.
+- No se crea post-payment activation.
+
+### K) Siguiente microfase recomendada
+Siguiente microfase inmediata:
+
+```text
+BE/Suscripciones-PaymentIntent-Endpoint-01
+```
+
+Objetivo:
+
+- Implementar el endpoint privado/controlado `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents`, invocando `CreateSubscriptionPaymentIntentService::createPaymentIntent(...)`, sin provider real, sin webhooks, sin `payment_events`, sin `profile_subscriptions`, sin post-payment activation, sin SQL nuevo y sin DB/schema.
+
+Microfase posterior:
+
+```text
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-Positive201-01
+```
+
+Objetivo:
+
+- Ejecutar QA funcional controlada Positive201 del endpoint payment intent con sesion `session_scope` y fixture `doctor 900001`.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
