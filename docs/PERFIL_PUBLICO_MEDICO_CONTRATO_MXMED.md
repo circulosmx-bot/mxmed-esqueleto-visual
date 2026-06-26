@@ -21998,6 +21998,289 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 109 - Plan de QA funcional controlada del endpoint payment intent
+
+### A) Motivo
+El endpoint payment intent ya fue implementado y validado post-push en:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents
+```
+
+El endpoint invoca `CreateSubscriptionPaymentIntentService::createPaymentIntent(array $input): array`, reutiliza `subscriptionResolveWriteContext(...)`, exige `Idempotency-Key`, usa provider mock/dev `mxmed_mock` y conserva el flujo sin provider real.
+
+Antes de ejecutar un POST real se cierra este plan de QA funcional controlada porque el caso positivo puede crear una fila en `subscription_payment_intents`. La ejecucion futura debe ser controlada, auditable y con counts antes/despues.
+
+Esta adenda no ejecuta HTTP/POST, no hace SQL write, no modifica DB/schema y no crea filas.
+
+### B) Estado inicial observado/esperado
+Estado Git esperado para la QA funcional futura:
+
+- HEAD: `50e4fb4 feat(suscripciones): agrega endpoint payment intent`.
+- Rama: `fix/agenda-dia-mes-rescate-controlado`.
+- Working tree limpio.
+- Ahead/behind `0 0`.
+
+Estado DB read-only observado para plan:
+
+- `subscription_payment_intents`: `0`.
+- `subscription_payment_events`: `0`.
+- `profile_subscriptions`: `3` filas globales observadas; la QA futura debe confirmar que este count no cambia.
+- `subscription_checkout_intents`: `1`.
+
+Checkout fixture base:
+
+- `uuid`: `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`.
+- `entity_type`: `doctor`.
+- `entity_id`: `900001`.
+- `plan_code`: `standard`.
+- `billing_period`: `annual`.
+- `status`: `pending_payment`.
+- `amount_cents`: `20000`.
+- `currency`: `MXN`.
+- `provider`, `provider_checkout_id`, `provider_payment_id`, `checkout_url`: `NULL`.
+- `deleted_at`: `NULL`.
+
+### C) Endpoint a probar en QA futura
+La QA funcional futura debe probar exactamente:
+
+```text
+POST /api/subscriptions/index.php/entities/doctor/900001/checkout-intents/7d4beec3-b62a-40e1-a9f2-9edcc1a83364/payment-intents
+```
+
+Requisitos:
+
+- sesion PHP valida con `session_scope` para `doctor 900001`;
+- header `Idempotency-Key`;
+- payload JSON minimo:
+
+```json
+{
+  "provider": "mxmed_mock",
+  "source": "qa_functional_payment_intent",
+  "notes": "QA funcional controlada payment intent doctor 900001"
+}
+```
+
+`provider` es opcional porque el servicio default es `mxmed_mock`; se permite enviarlo explicitamente para trazabilidad QA. El cliente no debe enviar `amount_cents`, `currency`, status, provider ids, checkout URL ni campos de pago canonicos.
+
+### D) Preparacion de sesion
+Antes del primer POST funcional se debe validar o regenerar sesion local/dev con:
+
+```text
+POST /api/subscriptions/index.php/dev/session-fixture/checkout-doctor
+```
+
+Condiciones:
+
+- usar solo ambiente local/dev;
+- helper habilitado por flag DEV/local correspondiente;
+- host local;
+- bloqueo de produccion activo;
+- metodo `POST`;
+- sesion resultante compatible con `session_scope`, `doctor_id = 900001`, `entity_type = doctor`, `entity_id = 900001`;
+- sin `operator_id`;
+- no autorizar writes con headers sueltos como `x-user-id`, `x-doctor-id`, `x-entity-type` o `x-entity-id`.
+
+### E) Casos QA funcional futura
+#### A. Positive201
+Request:
+
+- POST valido al endpoint payment intent.
+- `Idempotency-Key`: `qa-payment-intent-900001-standard-annual-001`.
+- Payload recomendado: `provider = mxmed_mock`, `source = qa_functional_payment_intent`, `notes` opcional.
+
+Esperado:
+
+- HTTP `201`.
+- `ok = true`.
+- `data.payment_intent.checkout_intent_uuid = 7d4beec3-b62a-40e1-a9f2-9edcc1a83364`.
+- `data.payment_intent.provider = mxmed_mock`.
+- `provider_payment_id` con prefijo `mxmed_mock_pi_`.
+- `provider_checkout_id` con prefijo `mxmed_mock_chk_`.
+- `normalized_status` inicial `created` o `pending_provider`; no `paid`.
+- `amount_cents = 20000`.
+- `currency = MXN`.
+- `subscription_payment_intents` incrementa de `0` a `1`.
+- `subscription_payment_events` sigue en `0`.
+- `profile_subscriptions` no cambia.
+
+#### B. Replay same key
+Request:
+
+- mismo `Idempotency-Key`;
+- mismo payload.
+
+Esperado:
+
+- HTTP `200`.
+- mismo payment intent que Positive201.
+- `meta.idempotent_replay = true` o equivalente.
+- no duplica filas en `subscription_payment_intents`.
+- counts de `subscription_payment_events` y `profile_subscriptions` no cambian.
+
+#### C. Same key different payload
+Request:
+
+- misma key `qa-payment-intent-900001-standard-annual-001`;
+- payload distinto, por ejemplo cambiar `source` o `notes`.
+
+Esperado:
+
+- HTTP `409`.
+- error `idempotency_key_reused_with_different_payload`.
+- no crea payment intent nuevo.
+- counts sin cambio.
+
+#### D. Existing payment intent new key
+Request:
+
+- nueva `Idempotency-Key`;
+- mismo checkout que ya tiene payment intent activo.
+
+Esperado:
+
+- HTTP `409`.
+- error `payment_intent_already_exists` o equivalente.
+- no duplica filas.
+- counts sin cambio.
+
+#### E. Missing Idempotency-Key
+Request:
+
+- POST valido sin header `Idempotency-Key`.
+
+Esperado:
+
+- HTTP `422`.
+- error `idempotency_key_invalid`.
+- no crea filas.
+
+#### F. No session auth
+Request:
+
+- POST sin `PHPSESSID` valido.
+
+Esperado:
+
+- HTTP `403`.
+- error `forbidden`.
+- no crea filas.
+
+#### G. Checkout not found
+Request:
+
+- `checkout_intent_uuid` inexistente y bien formado.
+
+Esperado:
+
+- HTTP `404` o patron local documentado.
+- error `checkout_intent_not_found`.
+- no crea filas.
+
+#### H. Checkout not pending_payment
+Este caso queda conceptual/pendiente de fixture seguro. No debe ejecutarse si requiere modificar DB manualmente.
+
+Esperado conceptual:
+
+- HTTP `409` o `422` segun patron vigente;
+- error `checkout_intent_not_pending_payment`;
+- no crea filas.
+
+### F) Counts y consultas read-only antes/despues
+La QA futura debe capturar antes y despues:
+
+```sql
+SELECT COUNT(*) AS payment_intents_total FROM subscription_payment_intents;
+SELECT COUNT(*) AS payment_events_total FROM subscription_payment_events;
+SELECT COUNT(*) AS profile_subscriptions_total FROM profile_subscriptions;
+SELECT COUNT(*) AS checkout_intents_total FROM subscription_checkout_intents;
+```
+
+Lookup del fixture:
+
+```sql
+SELECT
+  id,
+  uuid,
+  entity_type,
+  entity_id,
+  plan_code,
+  billing_period,
+  status,
+  amount_cents,
+  currency,
+  provider,
+  provider_checkout_id,
+  provider_payment_id,
+  checkout_url,
+  expires_at,
+  created_at,
+  deleted_at
+FROM subscription_checkout_intents
+WHERE uuid = '7d4beec3-b62a-40e1-a9f2-9edcc1a83364'
+LIMIT 1;
+```
+
+Lookup del payment intent creado:
+
+```sql
+SELECT
+  uuid,
+  checkout_intent_uuid,
+  provider,
+  provider_payment_id,
+  provider_checkout_id,
+  normalized_status,
+  provider_status,
+  amount_cents,
+  currency,
+  source,
+  created_at,
+  deleted_at
+FROM subscription_payment_intents
+WHERE checkout_intent_uuid = '7d4beec3-b62a-40e1-a9f2-9edcc1a83364'
+  AND deleted_at IS NULL
+ORDER BY id DESC
+LIMIT 5;
+```
+
+### G) No responsabilidades de la QA funcional futura
+La QA funcional futura no debe:
+
+- crear `payment_events`;
+- crear `subscription_payment_events`;
+- crear ni tocar `profile_subscriptions`;
+- ejecutar post-payment activation;
+- marcar payment intent como `paid`;
+- activar plan;
+- llamar provider real;
+- implementar webhook;
+- facturar;
+- modificar DB/schema;
+- ejecutar SQL write manual;
+- limpiar, borrar o resetear filas;
+- hacer `stash`, `reset` o `restore`;
+- modificar PHP;
+- modificar documentacion durante la ejecucion de casos funcionales.
+
+### H) Microfases futuras recomendadas
+Orden recomendado:
+
+```text
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-Session-01
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-Positive201-01
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-ReplaySameKey-01
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-DifferentPayload409-01
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-ExistingPaymentIntent409-01
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-MissingIdempotencyKey422-01
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-NoSessionAuth403-01
+```
+
+Cada microfase de ejecucion debe repetir precondicion Git, capturar counts antes/despues, ejecutar solo el POST autorizado por su caso y no hacer SQL write manual.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
