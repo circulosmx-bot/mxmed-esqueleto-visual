@@ -21454,6 +21454,276 @@ Riesgos bloqueantes antes de `CreateSubscriptionPaymentIntentService`:
 
 ---
 
+## Adenda PP-Decisiones 107 - Readiness final de implementación del servicio payment intent
+
+### A) Motivo
+Esta adenda valida la readiness final antes de implementar en una microfase posterior:
+
+```text
+modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php
+```
+
+Metodo conceptual futuro:
+
+```text
+CreateSubscriptionPaymentIntentService::createPaymentIntent(array $input): array
+```
+
+Quedan como base cerrada y versionada:
+
+- PP-Decisiones 103: plan de dependencias del servicio payment intent.
+- PP-Decisiones 104: readiness de idempotencia para payment intent.
+- PP-Decisiones 105: readiness de lock para payment intent.
+- PP-Decisiones 106: plan de provider mock/dev para payment intent.
+
+Tambien ya existen implementaciones tecnicas de:
+
+- Idempotencia payment intent con operacion `subscriptions.payment_intent.create`.
+- Lock payment intent con operacion `payment_intent_create`.
+- Provider mock/dev `SubscriptionPaymentIntentMockProvider`.
+
+Esta microfase NO crea `CreateSubscriptionPaymentIntentService.php`, no implementa endpoint, no modifica PHP y no cambia DB/schema.
+
+### B) Estado tecnico confirmado
+Inspeccion read-only confirmada:
+
+- `CreateSubscriptionPaymentIntentService.php` aun no existe.
+- `SubscriptionPaymentIntentRepository` existe y opera sobre `subscription_payment_intents`.
+- `SubscriptionPaymentIntentRepository::create(...)` inserta payment intents iniciales.
+- `SubscriptionPaymentIntentRepository::findActiveByCheckoutIntentUuid(...)` permite anti-duplicado por checkout.
+- `SubscriptionWriteIdempotencyService` soporta `PAYMENT_INTENT_OPERATION = subscriptions.payment_intent.create`.
+- `SubscriptionWriteIdempotencyService::beginPaymentIntent(...)` existe.
+- `SubscriptionWriteIdempotencyService::buildPaymentIntentRequestHash(...)` existe.
+- `SubscriptionEntityWriteLockService::acquirePaymentIntentCreate(...)` existe.
+- El lock usa scope conceptual `checkout_intent_uuid` y operacion `payment_intent_create`.
+- `SubscriptionPaymentIntentMockProvider::create(...)` existe.
+- El provider mock/dev fuerza `mxmed_mock`, genera `mxmed_mock_pi_...` y `mxmed_mock_chk_...`.
+- El provider mock/dev permite `created` o `pending_provider` como estados iniciales.
+- El provider mock/dev rechaza `paid` en create inicial.
+- `SubscriptionCheckoutIntentRepository::findByUuid(...)` permite cargar el checkout por UUID si el servicio futuro lo requiere.
+
+Inspeccion DB read-only confirmada:
+
+- `subscription_payment_intents` existe.
+- `subscription_payment_intents.provider_payment_id` es `NOT NULL`.
+- Existe unique por `uuid`.
+- Existe unique por `provider + provider_payment_id`.
+- Existe indice no unico por `checkout_intent_uuid`.
+- No se observo unique por `checkout_intent_uuid`.
+- `subscription_payment_intents` tiene `0` filas en el estado inspeccionado.
+- `subscription_payment_events` tiene `0` filas en el estado inspeccionado.
+- `subscription_checkout_intents` tiene `1` fila en el estado inspeccionado.
+- Fixture checkout pendiente confirmado:
+
+```text
+uuid = 7d4beec3-b62a-40e1-a9f2-9edcc1a83364
+entity_type = doctor
+entity_id = 900001
+plan_code = standard
+billing_period = annual
+status = pending_payment
+amount_cents = 20000
+currency = MXN
+deleted_at = NULL
+```
+
+### C) Dependencias confirmadas
+El servicio futuro puede construirse sobre estas dependencias ya disponibles:
+
+- `SubscriptionPaymentIntentRepository`.
+- `SubscriptionPaymentIntentRepository::findActiveByCheckoutIntentUuid(...)`.
+- `SubscriptionPaymentIntentRepository::create(...)`.
+- `SubscriptionWriteIdempotencyService::beginPaymentIntent(...)`.
+- `SubscriptionWriteIdempotencyService::buildPaymentIntentRequestHash(...)`.
+- `SubscriptionEntityWriteLockService::acquirePaymentIntentCreate(...)`.
+- `SubscriptionPaymentIntentMockProvider::create(...)`.
+- `SubscriptionCheckoutIntentRepository`, para cargar checkout por UUID si aplica.
+
+Dependencias que siguen fuera de esta readiness:
+
+- Provider real.
+- Webhooks.
+- `payment_events`.
+- Activacion post-pago.
+- `profile_subscriptions`.
+- Facturacion.
+- Capacidades productivas.
+
+### D) Input futuro recomendado
+Contrato minimo recomendado para:
+
+```text
+createPaymentIntent(array $input): array
+```
+
+Input minimo:
+
+- `checkout_intent_uuid`.
+- `idempotency_key`.
+- `provider`, opcional; default `mxmed_mock`.
+- `source`, opcional.
+- `notes` o metadata minima opcional, si el repositorio lo permite.
+
+Reglas:
+
+- `amount_cents` y `currency` deben salir del checkout server-side.
+- Si el caller envia `amount_cents` o `currency`, no se deben confiar sin compararlos contra el checkout.
+- `provider_payment_id` no debe venir del cliente como valor canonico.
+- `normalized_status` no debe venir del cliente como valor canonico.
+- `paid_at` no debe aceptarse para create inicial.
+
+### E) Flujo interno futuro recomendado
+Orden minimo recomendado para `CreateSubscriptionPaymentIntentService::createPaymentIntent(...)`:
+
+1. Normalizar input.
+2. Validar payload minimo.
+3. Validar `Idempotency-Key`.
+4. Cargar checkout intent por `checkout_intent_uuid`.
+5. Validar que el checkout existe, no esta eliminado y sigue en `pending_payment`.
+6. Resolver `amount_cents` y `currency` desde el checkout.
+7. Construir `request_hash` canonico con `buildPaymentIntentRequestHash(...)`.
+8. Iniciar idempotencia con operation `subscriptions.payment_intent.create` usando `beginPaymentIntent(...)`.
+9. Si existe replay estable, devolver el resultado idempotente.
+10. Si la key se reutilizo con payload distinto, bloquear con error de idempotencia.
+11. Adquirir lock `payment_intent_create` por `checkout_intent_uuid` usando `acquirePaymentIntentCreate(...)`.
+12. Dentro del lock, revalidar `findActiveByCheckoutIntentUuid(...)`.
+13. Si ya existe payment intent activo, bloquear o devolver segun contrato final.
+14. Llamar `SubscriptionPaymentIntentMockProvider::create(...)`.
+15. Crear payment intent con `SubscriptionPaymentIntentRepository::create(...)`.
+16. Persistir respuesta idempotente exitosa.
+17. Liberar lock en `finally`.
+18. Devolver payment intent interno.
+
+En error:
+
+- Liberar lock si fue adquirido.
+- Marcar idempotencia fallida segun patron existente.
+- No crear segunda fila.
+- No crear `payment_events`.
+- No crear `profile_subscriptions`.
+- No activar suscripcion.
+
+### F) Estados
+Estados iniciales permitidos para create inicial:
+
+```text
+created
+pending_provider
+```
+
+Reglas:
+
+- `created` es el estado inicial recomendado para mock/dev minimo.
+- `pending_provider` puede usarse si el mock simula una entrega pendiente al provider.
+- `paid` esta prohibido en create inicial.
+- `paid` solo debe llegar despues de confirmacion mock/dev o real de pago en una microfase posterior.
+- El cambio a `paid` no debe ocurrir dentro de `CreateSubscriptionPaymentIntentService` inicial.
+
+### G) No responsabilidades del servicio inicial
+El servicio inicial `CreateSubscriptionPaymentIntentService` NO debe:
+
+- Integrar provider real.
+- Ejecutar HTTP externo.
+- Ejecutar webhook.
+- Crear `payment_events`.
+- Crear `profile_subscriptions`.
+- Hacer post-payment activation.
+- Marcar `paid` en create inicial.
+- Facturar.
+- Activar capacidades.
+- Crear endpoint.
+- Modificar `api/subscriptions/index.php`.
+- Ejecutar SQL directo fuera de repositorios.
+- Modificar DB/schema.
+- Limpiar datos locales/dev.
+
+### H) Riesgos y guardas
+Riesgo observado:
+
+- No hay unique por `checkout_intent_uuid` en `subscription_payment_intents`.
+
+Mitigacion obligatoria:
+
+- Lookup `SubscriptionPaymentIntentRepository::findActiveByCheckoutIntentUuid(...)`.
+- Idempotencia `subscriptions.payment_intent.create`.
+- Lock `payment_intent_create` por `checkout_intent_uuid`.
+- Unique `provider + provider_payment_id`.
+
+Guardas adicionales:
+
+- `provider_payment_id` es `NOT NULL`, por lo que el mock/dev debe generarlo antes de persistir.
+- `SubscriptionPaymentIntentMockProvider` genera `provider_payment_id` estable con prefijo `mxmed_mock_pi_`.
+- `SubscriptionPaymentIntentMockProvider` genera `provider_checkout_id` estable con prefijo `mxmed_mock_chk_`.
+- El checkout debe seguir en `pending_payment`.
+- El servicio debe usar el snapshot server-side del checkout para monto y moneda.
+- No debe confiar en amount/currency enviados por cliente sin comparacion.
+
+### I) Errores conceptuales esperados
+Errores que debe manejar o propagar el servicio futuro:
+
+- `invalid_payment_intent_payload`.
+- `idempotency_key_invalid`.
+- `idempotency_key_reused_with_different_payload`.
+- `request_already_processing`.
+- `payment_intent_lock_timeout`.
+- `checkout_intent_not_found`.
+- `checkout_intent_not_pending_payment`.
+- `payment_intent_already_pending`.
+- `payment_intent_provider_reference_conflict`.
+- `payment_intent_create_failed`.
+- `payment_intent_lookup_failed`.
+- `payment_intent_unavailable`.
+
+Errores fuera de esta capa inicial:
+
+- Errores de provider real.
+- Errores de webhook.
+- Errores de `payment_events`.
+- Errores de activacion post-pago.
+- Errores de facturacion.
+
+### J) Readiness final
+Clasificacion:
+
+- `SubscriptionPaymentIntentRepository`: listo.
+- Anti-duplicado por `findActiveByCheckoutIntentUuid(...)`: listo como guarda de servicio.
+- Idempotencia `subscriptions.payment_intent.create`: lista.
+- `beginPaymentIntent(...)`: listo.
+- `buildPaymentIntentRequestHash(...)`: listo.
+- Lock `payment_intent_create`: listo.
+- `acquirePaymentIntentCreate(...)`: listo.
+- Provider mock/dev `SubscriptionPaymentIntentMockProvider`: listo.
+- Fixture checkout `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`: listo para QA local/dev.
+- Regla no `payment_events`: lista.
+- Regla no `profile_subscriptions`: lista.
+- Regla no `post-payment activation`: lista.
+- Regla no `paid` inicial: lista.
+
+No se detectan brechas bloqueantes para implementar el servicio aislado en una siguiente microfase, siempre que esa microfase no implemente endpoint, provider real, webhook, payment events, facturacion ni activacion post-pago.
+
+### K) Siguiente microfase recomendada
+Siguiente microfase inmediata:
+
+```text
+BE/Suscripciones-PaymentIntent-Service-01
+```
+
+Objetivo:
+
+- Implementar `CreateSubscriptionPaymentIntentService` con metodo `createPaymentIntent(array $input): array`, usando repository, idempotencia, lock y provider mock/dev ya existentes, sin endpoint, sin provider real, sin `payment_events`, sin `profile_subscriptions`, sin post-payment activation y sin DB/schema.
+
+QA posterior recomendada:
+
+```text
+QA-Suscripciones-PaymentIntent-Service-01
+```
+
+Objetivo:
+
+- Validar `php -l`, dependencias, idempotencia, lock, mock provider, anti-duplicado, estados iniciales `created`/`pending_provider`, prohibicion de `paid`, ausencia de `payment_events`, ausencia de `profile_subscriptions` y ausencia de post-payment activation.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
