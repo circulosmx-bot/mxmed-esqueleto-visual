@@ -104,6 +104,7 @@ final class SubscriptionWriteIdempotencyService
 {
     public const OPERATION = 'subscriptions.create_with_contract_acceptance';
     public const CHECKOUT_OPERATION = 'subscriptions.checkout_intent.create';
+    public const PAYMENT_INTENT_OPERATION = 'subscriptions.payment_intent.create';
 
     private SubscriptionWriteIdempotencyRepository $repository;
 
@@ -123,6 +124,14 @@ final class SubscriptionWriteIdempotencyService
         array $payload
     ): SubscriptionWriteIdempotencyDecision {
         return $this->beginOperation($headerValue, self::CHECKOUT_OPERATION, $scope, $payload);
+    }
+
+    public function beginPaymentIntent(
+        ?string $headerValue,
+        array $scope,
+        array $payload
+    ): SubscriptionWriteIdempotencyDecision {
+        return $this->beginOperation($headerValue, self::PAYMENT_INTENT_OPERATION, $scope, $payload);
     }
 
     public function beginOperation(
@@ -207,12 +216,12 @@ final class SubscriptionWriteIdempotencyService
         }
 
         if ($status === 'completed') {
-            $response = $this->completedReplayResponse($existing, $operation === self::CHECKOUT_OPERATION);
+            $response = $this->completedReplayResponse($existing, $this->requiresStoredReplayResponse($operation));
             if ($response === null) {
                 return SubscriptionWriteIdempotencyDecision::reject(
                     409,
-                    'checkout_idempotency_result_unavailable',
-                    'checkout idempotency result is unavailable'
+                    'idempotency_result_unavailable',
+                    'idempotency result is unavailable'
                 );
             }
 
@@ -270,11 +279,32 @@ final class SubscriptionWriteIdempotencyService
         );
     }
 
+    public function markPaymentIntentCompleted(array $record, array $response, int $httpStatus): void
+    {
+        $body = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($body === false) {
+            throw new RuntimeException('payment_intent_idempotency_complete_failed: response payload is not serializable');
+        }
+
+        $this->repository->markCompletedWithResponse(
+            (string)$record['uuid'],
+            null,
+            null,
+            $httpStatus,
+            $body
+        );
+    }
+
     public function markOperationCompleted(array $record, array $response, int $httpStatus): void
     {
         $operation = (string)($record['operation'] ?? '');
         if ($operation === self::CHECKOUT_OPERATION) {
             $this->markCheckoutIntentCompleted($record, $response, $httpStatus);
+            return;
+        }
+
+        if ($operation === self::PAYMENT_INTENT_OPERATION) {
+            $this->markPaymentIntentCompleted($record, $response, $httpStatus);
             return;
         }
 
@@ -316,13 +346,16 @@ final class SubscriptionWriteIdempotencyService
 
     private function isAllowedOperation(string $operation): bool
     {
-        return in_array($operation, [self::OPERATION, self::CHECKOUT_OPERATION], true);
+        return in_array($operation, [self::OPERATION, self::CHECKOUT_OPERATION, self::PAYMENT_INTENT_OPERATION], true);
     }
 
     private function requestHashForOperation(string $operation, array $scope, array $payload): string
     {
         if ($operation === self::CHECKOUT_OPERATION) {
             return $this->buildCheckoutRequestHash($scope, $payload);
+        }
+        if ($operation === self::PAYMENT_INTENT_OPERATION) {
+            return $this->buildPaymentIntentRequestHash($scope, $payload);
         }
 
         return $this->requestHash($scope, $payload);
@@ -346,6 +379,25 @@ final class SubscriptionWriteIdempotencyService
             'acceptance' => [
                 'source' => (string)($acceptance['source'] ?? $payload['acceptance_source'] ?? ''),
             ],
+            'source' => (string)($payload['source'] ?? ''),
+        ];
+
+        return hash('sha256', $this->canonicalJson($canonical));
+    }
+
+    public function buildPaymentIntentRequestHash(array $scope, array $payload): string
+    {
+        $canonical = [
+            'operation' => self::PAYMENT_INTENT_OPERATION,
+            'entity_type' => (string)($scope['entity_type'] ?? ''),
+            'entity_id' => (string)($scope['entity_id'] ?? ''),
+            'user_id' => (string)($scope['user_id'] ?? ''),
+            'checkout_intent_uuid' => (string)($payload['checkout_intent_uuid'] ?? $scope['checkout_intent_uuid'] ?? ''),
+            'provider' => (string)($payload['provider'] ?? ''),
+            'provider_payment_id' => (string)($payload['provider_payment_id'] ?? ''),
+            'provider_checkout_id' => (string)($payload['provider_checkout_id'] ?? ''),
+            'amount_cents' => isset($payload['amount_cents']) ? (int)$payload['amount_cents'] : null,
+            'currency' => (string)($payload['currency'] ?? ''),
             'source' => (string)($payload['source'] ?? ''),
         ];
 
@@ -399,6 +451,11 @@ final class SubscriptionWriteIdempotencyService
     {
         $status = (int)($record['response_http_status'] ?? 0);
         return $status >= 200 && $status < 600 ? $status : 200;
+    }
+
+    private function requiresStoredReplayResponse(string $operation): bool
+    {
+        return in_array($operation, [self::CHECKOUT_OPERATION, self::PAYMENT_INTENT_OPERATION], true);
     }
 
     private function completedReplayResponse(array $record, bool $requireStoredResponse = false): ?array
