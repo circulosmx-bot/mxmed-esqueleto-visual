@@ -22281,6 +22281,83 @@ Cada microfase de ejecucion debe repetir precondicion Git, capturar counts antes
 
 ---
 
+## Adenda PP-Decisiones 110 - Precedencia de errores en QA funcional payment intent
+
+### A) Hallazgo
+Durante la QA funcional del caso `ExistingPaymentIntent409` se observo una respuesta:
+
+- HTTP `409`;
+- `error/code = idempotency_key_not_reusable`;
+- sin nuevas filas en `subscription_payment_intents`;
+- sin filas en `subscription_payment_events`;
+- sin cambios en `profile_subscriptions`;
+- checkout fixture aun en `pending_payment`.
+
+El caso se produjo al reutilizar una `Idempotency-Key` que ya habia quedado registrada con status `failed`. El error originalmente esperado por el plan para un intento con key nueva era `payment_intent_already_exists`.
+
+### B) Causa y orden real
+El orden real del servicio payment intent es:
+
+1. Lookup del checkout intent.
+2. Validacion de checkout `pending_payment`.
+3. Inicio de idempotencia con `beginPaymentIntent(...)`.
+4. Si idempotencia permite continuar, toma lock `payment_intent_create`.
+5. Anti-duplicado con `findActiveByCheckoutIntentUuid(...)`.
+6. Provider mock/dev.
+7. Creacion del payment intent.
+
+Por esta precedencia, si `beginPaymentIntent(...)` rechaza antes, el flujo no llega al lock ni al anti-duplicado que genera `payment_intent_already_exists`.
+
+### C) Regla QA corregida
+Para pruebas negativas funcionales del endpoint payment intent:
+
+- Para probar `payment_intent_already_exists`, la QA debe usar una `Idempotency-Key` nueva, fresca y nunca usada previamente.
+- Si una key ya fallo y se reutiliza con el mismo `request_hash`, el error correcto es `idempotency_key_not_reusable`.
+- Si una key completada se reutiliza con el mismo payload, el resultado correcto es replay idempotente.
+- Si una key completada se reutiliza con payload distinto, el resultado correcto es `idempotency_key_reused_with_different_payload`.
+- Cada microfase negativa debe reservar una key unica salvo que el objetivo explicito sea probar replay, payload distinto o reuso de key fallida.
+
+### D) Impacto sobre `ExistingPaymentIntent409`
+La expectativa corregida queda asi:
+
+- PASS esperado con key verdaderamente nueva sobre checkout que ya tiene payment intent activo: HTTP `409`, `payment_intent_already_exists`, sin duplicar filas.
+- PASS esperado al repetir una key ya fallida con el mismo request: HTTP `409`, `idempotency_key_not_reusable`, sin duplicar filas.
+
+El caso `QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-ExistingPaymentIntent409-01` sigue siendo valido si se ejecuta una sola vez con una key fresca. Si se repite con la misma key fallida, debe reclasificarse como verificacion de precedencia de idempotencia, no como prueba primaria del anti-duplicado.
+
+### E) No responsabilidades
+Este ajuste documental:
+
+- no cambia backend;
+- no cambia contrato runtime;
+- no modifica `api/subscriptions/index.php`;
+- no modifica servicios, repositorios, idempotencia, lock ni provider mock/dev;
+- no modifica DB/schema;
+- no limpia filas;
+- no crea `subscription_payment_events`;
+- no toca `profile_subscriptions`;
+- no activa suscripciones;
+- no marca payment intent como `paid`;
+- no integra provider real.
+
+### F) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+QA/Suscripciones-PaymentIntent-Endpoint-FunctionalControlled-ExistingPaymentIntent409-RetryFreshKey-01
+```
+
+Objetivo futuro:
+
+- Repetir el caso existing payment intent con una `Idempotency-Key` fresca/no usada para confirmar HTTP `409` con `payment_intent_already_exists`.
+- Confirmar que `subscription_payment_intents` sigue en `1`.
+- Confirmar que `subscription_payment_events` sigue en `0`.
+- Confirmar que `profile_subscriptions` no cambia.
+- Confirmar que el checkout sigue `pending_payment`.
+- No ejecutar SQL write manual, no modificar DB/schema, no limpiar datos y no modificar archivos.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
