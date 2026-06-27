@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 namespace Subscriptions\Repositories;
 
+use InvalidArgumentException;
 use PDO;
+use RuntimeException;
+use Throwable;
 
 final class SubscriptionContractAcceptanceRepository
 {
@@ -95,5 +98,141 @@ final class SubscriptionContractAcceptanceRepository
             'source' => $data['source'],
             'notes' => $data['notes'],
         ]);
+    }
+
+    public function findByUuid(string $acceptanceUuid): ?array
+    {
+        $acceptanceUuid = trim($acceptanceUuid);
+        if ($acceptanceUuid === '') {
+            throw new InvalidArgumentException('invalid_contract_acceptance_payload: uuid is required');
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_contract_acceptances
+             WHERE uuid = :uuid
+               AND deleted_at IS NULL
+             LIMIT 1',
+            ['uuid' => $acceptanceUuid]
+        );
+    }
+
+    public function linkSubscriptionId(string $acceptanceUuid, string $subscriptionId): ?array
+    {
+        $acceptanceUuid = trim($acceptanceUuid);
+        $subscriptionId = trim($subscriptionId);
+        if ($acceptanceUuid === '' || $subscriptionId === '') {
+            throw new InvalidArgumentException('invalid_contract_acceptance_payload: uuid and subscription_id are required');
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE subscription_contract_acceptances
+                 SET subscription_id = :subscription_id
+                 WHERE uuid = :uuid
+                   AND status = :status
+                   AND subscription_id IS NULL
+                   AND deleted_at IS NULL'
+            );
+            $stmt->execute([
+                'uuid' => $acceptanceUuid,
+                'subscription_id' => $subscriptionId,
+                'status' => 'accepted_pending_payment',
+            ]);
+        } catch (Throwable $e) {
+            throw new RuntimeException('contract_acceptance_subscription_link_failed', 0, $e);
+        }
+
+        if ($stmt->rowCount() < 1) {
+            return null;
+        }
+
+        return $this->findByUuid($acceptanceUuid);
+    }
+
+    private function findOne(string $sql, array $params): ?array
+    {
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            throw new RuntimeException('contract_acceptance_lookup_failed', 0, $e);
+        }
+
+        return is_array($row) ? $this->normalizeRow($row) : null;
+    }
+
+    private function normalizeRow(array $row): array
+    {
+        return [
+            'id' => isset($row['id']) ? (int)$row['id'] : null,
+            'uuid' => (string)($row['uuid'] ?? ''),
+            'entity_type' => (string)($row['entity_type'] ?? ''),
+            'entity_id' => (string)($row['entity_id'] ?? ''),
+            'doctor_id' => $this->nullableString($row['doctor_id'] ?? null),
+            'profile_id' => $this->nullableString($row['profile_id'] ?? null),
+            'subscription_id' => $this->nullableString($row['subscription_id'] ?? null),
+            'plan_code' => (string)($row['plan_code'] ?? ''),
+            'billing_period' => (string)($row['billing_period'] ?? ''),
+            'duration_days' => isset($row['duration_days']) ? (int)$row['duration_days'] : null,
+            'contract_version' => (string)($row['contract_version'] ?? ''),
+            'contract_hash' => $this->nullableString($row['contract_hash'] ?? null),
+            'contract_snapshot_url' => $this->nullableString($row['contract_snapshot_url'] ?? null),
+            'contract_title' => $this->nullableString($row['contract_title'] ?? null),
+            'accepted_at' => (string)($row['accepted_at'] ?? ''),
+            'accepted_by_user_id' => isset($row['accepted_by_user_id']) ? (int)$row['accepted_by_user_id'] : null,
+            'accepted_by_actor_role' => $this->nullableString($row['accepted_by_actor_role'] ?? null),
+            'accepted_by_operator_id' => isset($row['accepted_by_operator_id']) ? (int)$row['accepted_by_operator_id'] : null,
+            'acceptance_source' => (string)($row['acceptance_source'] ?? ''),
+            'ip_address' => $this->nullableString($row['ip_address'] ?? null),
+            'user_agent' => $this->nullableString($row['user_agent'] ?? null),
+            'status' => (string)($row['status'] ?? ''),
+            'source' => (string)($row['source'] ?? ''),
+            'notes' => $this->nullableString($row['notes'] ?? null),
+            'created_at' => (string)($row['created_at'] ?? ''),
+            'updated_at' => (string)($row['updated_at'] ?? ''),
+            'deleted_at' => $this->nullableString($row['deleted_at'] ?? null),
+        ];
+    }
+
+    private function selectColumns(): string
+    {
+        return 'id,
+                uuid,
+                entity_type,
+                entity_id,
+                doctor_id,
+                profile_id,
+                subscription_id,
+                plan_code,
+                billing_period,
+                duration_days,
+                contract_version,
+                contract_hash,
+                contract_snapshot_url,
+                contract_title,
+                accepted_at,
+                accepted_by_user_id,
+                accepted_by_actor_role,
+                accepted_by_operator_id,
+                acceptance_source,
+                ip_address,
+                user_agent,
+                status,
+                source,
+                notes,
+                created_at,
+                updated_at,
+                deleted_at';
+    }
+
+    private function nullableString($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $text = (string)$value;
+        return $text === '' ? null : $text;
     }
 }

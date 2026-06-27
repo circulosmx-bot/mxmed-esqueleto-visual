@@ -224,6 +224,48 @@ final class SubscriptionCheckoutIntentRepository
         );
     }
 
+    public function markActivatedAfterPayment(string $checkoutIntentUuid, string $subscriptionId, array $metadata = []): ?array
+    {
+        $checkoutIntentUuid = trim($checkoutIntentUuid);
+        $subscriptionId = trim($subscriptionId);
+        if ($checkoutIntentUuid === '' || $subscriptionId === '') {
+            throw new InvalidArgumentException('invalid_checkout_intent_payload: checkout_intent_uuid and subscription_id are required');
+        }
+
+        $notes = $this->optionalText($metadata['notes'] ?? null, 65535);
+        $source = $this->optionalText($metadata['source'] ?? null, 128);
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE subscription_checkout_intents
+                 SET status = :activated_status,
+                     subscription_id = :subscription_id,
+                     activated_at = UTC_TIMESTAMP(),
+                     notes = COALESCE(:notes, notes),
+                     source = COALESCE(:source, source)
+                 WHERE uuid = :uuid
+                   AND status = :pending_status
+                   AND deleted_at IS NULL'
+            );
+            $stmt->execute([
+                'uuid' => $checkoutIntentUuid,
+                'subscription_id' => $subscriptionId,
+                'activated_status' => 'activated',
+                'pending_status' => self::STATUS_PENDING,
+                'notes' => $notes,
+                'source' => $source,
+            ]);
+        } catch (Throwable $e) {
+            throw new RuntimeException('checkout_activation_transition_failed', 0, $e);
+        }
+
+        if ($stmt->rowCount() < 1) {
+            return null;
+        }
+
+        return $this->findByUuid($checkoutIntentUuid);
+    }
+
     private function findOne(string $sql, array $params): ?array
     {
         try {
@@ -261,7 +303,15 @@ final class SubscriptionCheckoutIntentRepository
             'contract_acceptance_uuid' => $this->nullableString($row['contract_acceptance_uuid'] ?? null),
             'idempotency_key_hash' => $this->nullableString($row['idempotency_key_hash'] ?? null),
             'request_hash' => $this->nullableString($row['request_hash'] ?? null),
+            'provider' => $this->nullableString($row['provider'] ?? null),
+            'provider_checkout_id' => $this->nullableString($row['provider_checkout_id'] ?? null),
+            'provider_payment_id' => $this->nullableString($row['provider_payment_id'] ?? null),
+            'checkout_url' => $this->nullableString($row['checkout_url'] ?? null),
+            'subscription_id' => $this->nullableString($row['subscription_id'] ?? null),
             'expires_at' => (string)($row['expires_at'] ?? ''),
+            'completed_at' => $this->nullableString($row['completed_at'] ?? null),
+            'cancelled_at' => $this->nullableString($row['cancelled_at'] ?? null),
+            'activated_at' => $this->nullableString($row['activated_at'] ?? null),
             'source' => (string)($row['source'] ?? ''),
             'notes' => $this->nullableString($row['notes'] ?? null),
             'created_at' => (string)($row['created_at'] ?? ''),
@@ -293,7 +343,15 @@ final class SubscriptionCheckoutIntentRepository
                 contract_acceptance_uuid,
                 idempotency_key_hash,
                 request_hash,
+                provider,
+                provider_checkout_id,
+                provider_payment_id,
+                checkout_url,
+                subscription_id,
                 expires_at,
+                completed_at,
+                cancelled_at,
+                activated_at,
                 source,
                 notes,
                 created_at,
