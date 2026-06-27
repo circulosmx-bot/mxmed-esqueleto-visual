@@ -105,6 +105,7 @@ final class SubscriptionWriteIdempotencyService
     public const OPERATION = 'subscriptions.create_with_contract_acceptance';
     public const CHECKOUT_OPERATION = 'subscriptions.checkout_intent.create';
     public const PAYMENT_INTENT_OPERATION = 'subscriptions.payment_intent.create';
+    public const PAYMENT_INTENT_CONFIRM_MOCK_OPERATION = 'subscriptions.payment_intent.confirm_mock';
 
     private SubscriptionWriteIdempotencyRepository $repository;
 
@@ -132,6 +133,14 @@ final class SubscriptionWriteIdempotencyService
         array $payload
     ): SubscriptionWriteIdempotencyDecision {
         return $this->beginOperation($headerValue, self::PAYMENT_INTENT_OPERATION, $scope, $payload);
+    }
+
+    public function beginPaymentIntentConfirmMock(
+        ?string $headerValue,
+        array $scope,
+        array $payload
+    ): SubscriptionWriteIdempotencyDecision {
+        return $this->beginOperation($headerValue, self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION, $scope, $payload);
     }
 
     public function beginOperation(
@@ -295,6 +304,22 @@ final class SubscriptionWriteIdempotencyService
         );
     }
 
+    public function markPaymentIntentConfirmMockCompleted(array $record, array $response, int $httpStatus): void
+    {
+        $body = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($body === false) {
+            throw new RuntimeException('payment_intent_confirm_mock_idempotency_complete_failed: response payload is not serializable');
+        }
+
+        $this->repository->markCompletedWithResponse(
+            (string)$record['uuid'],
+            null,
+            null,
+            $httpStatus,
+            $body
+        );
+    }
+
     public function markOperationCompleted(array $record, array $response, int $httpStatus): void
     {
         $operation = (string)($record['operation'] ?? '');
@@ -305,6 +330,11 @@ final class SubscriptionWriteIdempotencyService
 
         if ($operation === self::PAYMENT_INTENT_OPERATION) {
             $this->markPaymentIntentCompleted($record, $response, $httpStatus);
+            return;
+        }
+
+        if ($operation === self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION) {
+            $this->markPaymentIntentConfirmMockCompleted($record, $response, $httpStatus);
             return;
         }
 
@@ -346,7 +376,16 @@ final class SubscriptionWriteIdempotencyService
 
     private function isAllowedOperation(string $operation): bool
     {
-        return in_array($operation, [self::OPERATION, self::CHECKOUT_OPERATION, self::PAYMENT_INTENT_OPERATION], true);
+        return in_array(
+            $operation,
+            [
+                self::OPERATION,
+                self::CHECKOUT_OPERATION,
+                self::PAYMENT_INTENT_OPERATION,
+                self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION,
+            ],
+            true
+        );
     }
 
     private function requestHashForOperation(string $operation, array $scope, array $payload): string
@@ -356,6 +395,9 @@ final class SubscriptionWriteIdempotencyService
         }
         if ($operation === self::PAYMENT_INTENT_OPERATION) {
             return $this->buildPaymentIntentRequestHash($scope, $payload);
+        }
+        if ($operation === self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION) {
+            return $this->buildPaymentIntentConfirmMockRequestHash($scope, $payload);
         }
 
         return $this->requestHash($scope, $payload);
@@ -398,6 +440,23 @@ final class SubscriptionWriteIdempotencyService
             'provider_checkout_id' => (string)($payload['provider_checkout_id'] ?? ''),
             'amount_cents' => isset($payload['amount_cents']) ? (int)$payload['amount_cents'] : null,
             'currency' => (string)($payload['currency'] ?? ''),
+            'source' => (string)($payload['source'] ?? ''),
+        ];
+
+        return hash('sha256', $this->canonicalJson($canonical));
+    }
+
+    public function buildPaymentIntentConfirmMockRequestHash(array $scope, array $payload): string
+    {
+        $canonical = [
+            'operation' => self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION,
+            'entity_type' => (string)($scope['entity_type'] ?? ''),
+            'entity_id' => (string)($scope['entity_id'] ?? ''),
+            'user_id' => (string)($scope['user_id'] ?? ''),
+            'checkout_intent_uuid' => (string)($payload['checkout_intent_uuid'] ?? $scope['checkout_intent_uuid'] ?? ''),
+            'payment_intent_uuid' => (string)($payload['payment_intent_uuid'] ?? $scope['payment_intent_uuid'] ?? ''),
+            'provider' => (string)($payload['provider'] ?? 'mxmed_mock'),
+            'action' => 'confirm_mock',
             'source' => (string)($payload['source'] ?? ''),
         ];
 
