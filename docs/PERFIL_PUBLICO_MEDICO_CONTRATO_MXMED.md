@@ -22987,6 +22987,176 @@ La implementación de idempotencia `subscriptions.payment_intent.confirm_mock` d
 
 ---
 
+## Adenda PP-Decisiones 115 - Readiness de lock confirm_mock de payment intent
+
+### A) Estado actual del lock payment_intent_create
+El lock actual para create de payment intent ya existe con:
+
+- operación `payment_intent_create`;
+- wrapper `acquirePaymentIntentCreate(...)`;
+- builder `buildPaymentIntentCreateLockName(...)`;
+- uso de `GET_LOCK`;
+- liberación con `release(...)`;
+- liberación en `finally` dentro del servicio de create;
+- timeout inicial observado de `2` segundos;
+- scope actual por `checkout_intent_uuid`;
+- fallback corto cuando el nombre excede el límite permitido.
+
+Ese lock protege la creación inicial de un payment intent por checkout. No confirma pago, no crea `subscription_payment_events`, no marca `paid` y no toca `profile_subscriptions`.
+
+### B) Brecha para payment_intent_confirm
+Todavía no existe soporte de lock explícito para:
+
+```text
+payment_intent_confirm
+```
+
+Brechas antes de implementar confirmación mock/dev:
+
+- falta constante futura para `payment_intent_confirm`;
+- falta permitir esa operación si se integra al allowlist general;
+- falta wrapper `acquirePaymentIntentConfirm(...)`;
+- falta builder `buildPaymentIntentConfirmLockName(...)` si se conserva el patrón actual;
+- falta scope por `payment_intent_uuid`;
+- falta error específico `payment_intent_confirm_lock_timeout`;
+- falta error general `payment_intent_confirm_unavailable`;
+- falta decidir longitud/fallback hash del lock name;
+- falta validar el orden final con `beginPaymentIntentConfirmMock(...)`.
+
+`confirm_mock` necesita lock separado de `payment_intent_create` porque protege una zona crítica distinta: confirmar un pago existente, no crear uno nuevo.
+
+### C) Scope futuro recomendado
+Scope recomendado:
+
+```text
+mxmed:subscriptions:payment_intents:{payment_intent_uuid}:payment_intent_confirm
+```
+
+Justificación:
+
+- la unidad de concurrencia de confirmación es el `payment_intent_uuid`;
+- dos requests con Idempotency-Key distintas no deben confirmar el mismo payment intent en paralelo;
+- el lock por payment intent evita duplicar `subscription_payment_events`;
+- el lock por payment intent evita doble transición a `paid`;
+- el checkout puede tener relaciones de lectura, pero el recurso que se confirma es el payment intent.
+
+El lock futuro debe seguir validando caracteres seguros y aplicar fallback hash si el nombre excede la longitud máxima.
+
+### D) Orden recomendado idempotencia / lock / writes
+Orden recomendado:
+
+1. Validar input mínimo.
+2. Validar sesión y scope.
+3. Lookup básico de `checkout_intent_uuid` y `payment_intent_uuid`.
+4. Ejecutar `beginPaymentIntentConfirmMock(...)` para `subscriptions.payment_intent.confirm_mock`.
+5. Resolver replay o rechazo idempotente antes de tomar lock.
+6. Tomar lock `payment_intent_confirm`.
+7. Revalidar estado profundo bajo lock.
+8. Ejecutar writes futuros autorizados.
+9. Marcar idempotencia completed.
+10. Liberar lock siempre en `finally`.
+
+`request_already_processing` queda como error de idempotencia previo, no como error de lock.
+
+### E) Zona crítica protegida
+El lock debe proteger el intervalo entre:
+
+- validación profunda bajo lock;
+- verificación de que el payment intent existe y no está eliminado;
+- verificación de que el checkout asociado existe;
+- verificación de que el checkout sigue `pending_payment`;
+- verificación de `provider = mxmed_mock`;
+- verificación de `normalized_status = created` o `pending_provider`;
+- verificación de que `normalized_status` no es `paid`;
+- verificación futura de que no hay evento confirmatorio duplicado;
+- creación futura de `subscription_payment_events`;
+- transición futura a `paid`, si se autoriza;
+- actualización futura de `provider_status` y `paid_at`, si se autoriza.
+
+El lock debe evitar:
+
+- doble confirmación concurrente del mismo payment intent;
+- duplicación de `subscription_payment_events`;
+- carreras entre dos requests con Idempotency-Key distintas;
+- transición doble o inconsistente a `paid`.
+
+El lock no crea eventos por sí mismo, no marca `paid`, no toca `profile_subscriptions` y no activa suscripción.
+
+### F) Métodos futuros recomendados
+Métodos futuros recomendados:
+
+```text
+acquirePaymentIntentConfirm(...)
+buildPaymentIntentConfirmLockName(...)
+release(...)
+```
+
+`release(...)` ya existe y debe seguir usándose en `finally` o en un mecanismo equivalente que garantice liberación del lock incluso si hay error durante los writes futuros.
+
+Timeout recomendado inicial: `2` segundos, salvo decisión futura.
+
+### G) Errores futuros recomendados
+Errores futuros de lock:
+
+- `payment_intent_confirm_lock_timeout`;
+- `payment_intent_confirm_unavailable`.
+
+Error relacionado, pero no de lock:
+
+- `request_already_processing`, sólo como error de idempotencia previo.
+
+La capa del servicio futuro deberá mapear timeout de lock a `409`, salvo decisión posterior.
+
+### H) Prohibiciones de esta microfase
+Esta microfase mantiene fuera de alcance:
+
+- no implementar código en esta microfase;
+- no modificar PHP;
+- no agregar métodos a `SubscriptionEntityWriteLockService`;
+- no crear endpoint;
+- no crear servicio;
+- no modificar repositorios;
+- no ejecutar HTTP/POST;
+- no ejecutar SQL write;
+- no modificar DB/schema;
+- no crear `subscription_payment_events`;
+- no tocar `profile_subscriptions`;
+- no marcar `paid`;
+- no activar suscripción;
+- no provider real;
+- no webhook;
+- no facturación real;
+- no hacer commit;
+- no hacer push.
+
+### I) Riesgos / decisiones pendientes
+Riesgos y decisiones antes de implementar:
+
+- confirmar si `payment_intent_confirm` debe entrar en el allowlist de `buildLockName(...)` o usar sólo builder dedicado;
+- definir fallback hash para `mxmed:subscriptions:payment_intents:{payment_intent_uuid}:payment_intent_confirm`;
+- decidir si el timeout inicial de `2` segundos se conserva;
+- confirmar error final para timeout como `payment_intent_confirm_lock_timeout`;
+- confirmar error general como `payment_intent_confirm_unavailable`;
+- asegurar compatibilidad con `payment_intent_create`;
+- mantener `acquirePaymentIntentCreate(...)` sin cambios;
+- coordinar lock con idempotencia `subscriptions.payment_intent.confirm_mock`;
+- validar posteriormente si hace falta consulta anti-duplicado para `subscription_payment_events`.
+
+### J) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-PaymentIntent-ConfirmationMock-IdempotencyOperation-01
+```
+
+Objetivo:
+
+- implementar soporte mínimo de idempotencia para `subscriptions.payment_intent.confirm_mock`, incluyendo operación permitida, `beginPaymentIntentConfirmMock(...)`, `buildPaymentIntentConfirmMockRequestHash(...)` y `markPaymentIntentConfirmMockCompleted(...)`, sin endpoint, sin servicio de confirmación, sin SQL, sin HTTP/POST y sin writes de pago.
+
+La implementación del lock `payment_intent_confirm` debe quedar para la microfase posterior, después de cerrar la operación de idempotencia.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
