@@ -22809,6 +22809,184 @@ Queda pospuesta hasta cerrar readiness de idempotencia de confirmación.
 
 ---
 
+## Adenda PP-Decisiones 114 - Readiness de idempotencia confirm_mock de payment intent
+
+### A) Estado actual de idempotencia payment_intent.create
+La idempotencia actual ya soporta el create interno de payment intent con:
+
+- operation `subscriptions.payment_intent.create`;
+- wrapper `beginPaymentIntent(...)`;
+- builder `buildPaymentIntentRequestHash(...)`;
+- completion `markPaymentIntentCompleted(...)`;
+- fail reusable `markOperationFailed(...)`;
+- replay estable desde `response_body_text` cuando el registro queda `completed`;
+- rechazo por `idempotency_key_invalid`;
+- rechazo por `idempotency_key_reused_with_different_payload`;
+- rechazo por `request_already_processing`;
+- rechazo por `idempotency_result_unavailable`;
+- rechazo de keys fallidas/no reutilizables con `idempotency_key_not_reusable`.
+
+Ese soporte está acotado al create de payment intent. No debe reutilizarse semanticamente para confirmación mock/dev.
+
+### B) Brecha para subscriptions.payment_intent.confirm_mock
+Todavía no existe soporte explícito para:
+
+```text
+subscriptions.payment_intent.confirm_mock
+```
+
+Brechas identificadas antes de implementar confirmación:
+
+- falta constante de operación para `subscriptions.payment_intent.confirm_mock`;
+- falta permitir esa operation en el allowlist de idempotencia;
+- falta wrapper futuro `beginPaymentIntentConfirmMock(...)`;
+- falta builder `buildPaymentIntentConfirmMockRequestHash(...)`;
+- falta completion dedicado `markPaymentIntentConfirmMockCompleted(...)`;
+- falta decisión de replay y response body para confirmación;
+- falta asegurar que una misma key no pueda confirmar otro `payment_intent_uuid`;
+- falta documentar precedencia final entre lookup, begin idempotency, lock `payment_intent_confirm` y writes.
+
+La idempotencia debe proteger la confirmación, no la creación. No debe reutilizar `subscriptions.payment_intent.create`.
+
+### C) Operación y request_hash futuro
+Operation futura:
+
+```text
+subscriptions.payment_intent.confirm_mock
+```
+
+El `request_hash` futuro debe ser estable y derivarse sólo de campos controlados. Debe incluir como mínimo:
+
+- `operation = subscriptions.payment_intent.confirm_mock`;
+- `entity_type`;
+- `entity_id`;
+- `user_id` si el patrón actual lo conserva en scope;
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `provider = mxmed_mock`;
+- `action = confirm_mock`;
+- `source` sólo si la implementación futura decide aceptarlo como parte estable del contrato;
+- `notes` sólo si se documenta que afecta la idempotencia; recomendación inicial: no incluir notes libres en el hash.
+
+El builder recomendado es:
+
+```text
+buildPaymentIntentConfirmMockRequestHash(...)
+```
+
+Ese hash debe impedir:
+
+- confirmar otro `payment_intent_uuid` con la misma key;
+- confirmar otro `checkout_intent_uuid` con la misma key;
+- cambiar provider distinto a `mxmed_mock`;
+- cambiar action distinta de `confirm_mock`;
+- repetir la key con payload distinto.
+
+### D) Precedencia recomendada de validaciones
+Se recomienda esta precedencia principal:
+
+1. Validar sintaxis mínima de input y `Idempotency-Key`.
+2. Validar sesión/escritura y scope base.
+3. Hacer lookup básico de `checkout_intent_uuid` y `payment_intent_uuid` antes de `beginPaymentIntentConfirmMock(...)`.
+4. Rechazar inexistentes sin crear idempotency key cuando el checkout o payment intent no existen.
+5. Construir scope canónico con entidad, checkout y payment intent.
+6. Ejecutar `beginPaymentIntentConfirmMock(...)`.
+7. Resolver replay `completed` si aplica.
+8. Rechazar misma key con payload distinto.
+9. Rechazar `processing` con `request_already_processing`.
+10. Tomar lock `payment_intent_confirm`.
+11. Validar estado profundo bajo lock: provider `mxmed_mock`, checkout `pending_payment`, payment intent `created` o `pending_provider`, no `paid`.
+12. Ejecutar writes futuros autorizados.
+13. Marcar idempotencia completed con `markPaymentIntentConfirmMockCompleted(...)`.
+14. En error posterior al begin, usar `markOperationFailed(...)` si aplica.
+
+Justificación:
+
+- evita llenar `subscription_write_idempotency_keys` con intentos sobre IDs inexistentes;
+- conserva trazabilidad de requests válidos una vez identificado el recurso;
+- mantiene lock después de begin idempotency y antes de cualquier write;
+- preserva la precedencia ya observada para payload distinto y keys fallidas.
+
+### E) Métodos futuros recomendados
+Métodos futuros recomendados en idempotencia:
+
+```text
+beginPaymentIntentConfirmMock(...)
+buildPaymentIntentConfirmMockRequestHash(...)
+markPaymentIntentConfirmMockCompleted(...)
+markOperationFailed(...)
+```
+
+`markOperationFailed(...)` ya existe como reutilizable y puede conservarse si la operación futura se integra en el dispatcher de operaciones. La completion dedicada debe persistir response body suficiente para replay estable, incluyendo `payment_intent_uuid`, `checkout_intent_uuid`, estado resultante y metadatos de evento si en una microfase futura se crea `subscription_payment_events`.
+
+### F) Errores y replay esperados
+La operación futura debe conservar y reutilizar estos errores:
+
+- `idempotency_key_invalid`;
+- `idempotency_key_reused_with_different_payload`;
+- `idempotency_key_not_reusable`;
+- `request_already_processing`;
+- `idempotency_result_unavailable`.
+
+Comportamiento esperado:
+
+- mismo `Idempotency-Key` y mismo `request_hash` con status `completed`: replay estable;
+- mismo key con `request_hash` distinto: `idempotency_key_reused_with_different_payload`;
+- mismo key con status `processing`: `request_already_processing`;
+- mismo key con status `failed`: `idempotency_key_not_reusable` si se mantiene el contrato actual;
+- completed sin response persistida: `idempotency_result_unavailable`.
+
+La idempotencia no debe crear `subscription_payment_events`, no debe marcar `paid` y no debe tocar `profile_subscriptions`; sólo debe coordinar seguridad de repetición y replay.
+
+### G) Prohibiciones de esta microfase
+Esta microfase mantiene fuera de alcance:
+
+- no implementar código en esta microfase;
+- no modificar PHP;
+- no agregar métodos a `SubscriptionWriteIdempotencyService`;
+- no crear endpoint;
+- no crear servicio;
+- no modificar repositorios;
+- no ejecutar HTTP/POST;
+- no ejecutar SQL write;
+- no modificar DB/schema;
+- no crear `subscription_payment_events`;
+- no tocar `profile_subscriptions`;
+- no marcar `paid`;
+- no activar suscripción;
+- no provider real;
+- no webhook;
+- no facturación real;
+- no hacer commit;
+- no hacer push.
+
+### H) Riesgos / decisiones pendientes
+Riesgos y decisiones antes de implementar:
+
+- decidir si `source` participa en `buildPaymentIntentConfirmMockRequestHash(...)`;
+- decidir si `notes` queda excluido del hash para evitar falsos mismatches por texto libre;
+- confirmar que `subscriptions.payment_intent.confirm_mock` requiera stored response obligatoria para replay;
+- extender allowlist sin romper `subscriptions.payment_intent.create`;
+- decidir si `markPaymentIntentConfirmMockCompleted(...)` reutiliza `markPaymentIntentCompleted(...)` o queda dedicado;
+- asegurar que el error de failed key se mantiene como `idempotency_key_not_reusable`;
+- coordinar precedencia con `payment_intent_confirm` para no crear eventos duplicados;
+- validar en microfase posterior si el lock service ya soporta `payment_intent_confirm`.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-ConfirmationMock-Lock-Readiness-01
+```
+
+Objetivo:
+
+- validar documentalmente readiness del lock `payment_intent_confirm`, scope `mxmed:subscriptions:payment_intents:{payment_intent_uuid}:payment_intent_confirm`, errores de timeout y compatibilidad con el lock actual `payment_intent_create`, sin implementar código todavía.
+
+La implementación de idempotencia `subscriptions.payment_intent.confirm_mock` debe quedar para una microfase posterior, después de cerrar la readiness del lock de confirmación.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
