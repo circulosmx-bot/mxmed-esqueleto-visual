@@ -12,10 +12,13 @@ final class SubscriptionEntityWriteLockService
     private const LOCK_OPERATION = 'create';
     private const CHECKOUT_CREATE_OPERATION = 'checkout_create';
     private const PAYMENT_INTENT_CREATE_OPERATION = 'payment_intent_create';
+    private const PAYMENT_INTENT_CONFIRM_OPERATION = 'payment_intent_confirm';
     private const CHECKOUT_INTENTS_SCOPE = 'checkout_intents';
+    private const PAYMENT_INTENTS_SCOPE = 'payment_intents';
     private const MAX_LOCK_NAME_LENGTH = 64;
     public const ERROR_CHECKOUT_LOCK_TIMEOUT = 'subscription_checkout_lock_timeout';
     public const ERROR_PAYMENT_INTENT_LOCK_TIMEOUT = 'payment_intent_lock_timeout';
+    public const ERROR_PAYMENT_INTENT_CONFIRM_LOCK_TIMEOUT = 'payment_intent_confirm_lock_timeout';
     public const ERROR_LOCK_PURPOSE_INVALID = 'subscription_lock_purpose_invalid';
     public const ERROR_LOCK_ACQUIRE_FAILED = 'subscription_lock_acquire_failed';
     public const ERROR_LOCK_RELEASE_FAILED = 'subscription_lock_release_failed';
@@ -47,6 +50,15 @@ final class SubscriptionEntityWriteLockService
     {
         return $this->acquireLockName(
             $this->buildPaymentIntentCreateLockName($checkoutIntentUuid),
+            $timeoutSeconds
+        );
+    }
+
+    // Lock scope: payment_intent_uuid.
+    public function acquirePaymentIntentConfirm(string $paymentIntentUuid, int $timeoutSeconds = 2): ?string
+    {
+        return $this->acquireLockName(
+            $this->buildPaymentIntentConfirmLockName($paymentIntentUuid),
             $timeoutSeconds
         );
     }
@@ -124,5 +136,26 @@ final class SubscriptionEntityWriteLockService
             . ':pi:'
             . substr(hash('sha256', $uuid), 0, 19)
             . ':' . self::PAYMENT_INTENT_CREATE_OPERATION;
+    }
+
+    public function buildPaymentIntentConfirmLockName(string $paymentIntentUuid): string
+    {
+        $uuid = trim($paymentIntentUuid);
+        if ($uuid === '' || !preg_match('/^[A-Za-z0-9._:-]+$/', $uuid)) {
+            throw new InvalidArgumentException('invalid payment intent confirm lock scope');
+        }
+
+        $lockName = self::LOCK_PREFIX
+            . ':' . self::PAYMENT_INTENTS_SCOPE
+            . ':' . $uuid
+            . ':' . self::PAYMENT_INTENT_CONFIRM_OPERATION;
+        if (strlen($lockName) <= self::MAX_LOCK_NAME_LENGTH) {
+            return $lockName;
+        }
+
+        return self::LOCK_PREFIX
+            . ':pic:'
+            . substr(hash('sha256', $uuid), 0, 18)
+            . ':' . self::PAYMENT_INTENT_CONFIRM_OPERATION;
     }
 }
