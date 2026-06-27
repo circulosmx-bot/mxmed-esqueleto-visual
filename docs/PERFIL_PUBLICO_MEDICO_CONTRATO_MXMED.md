@@ -23157,6 +23157,136 @@ La implementación del lock `payment_intent_confirm` debe quedar para la microfa
 
 ---
 
+## Adenda PP-Decisiones 116 - Plan de fix replay idempotente confirm_mock
+
+### A) Estado actual confirmado
+La QA funcional de confirmación mock/dev de payment intent confirmó el siguiente estado:
+
+- `confirm_mock` positivo funcionó con la Idempotency-Key `mxmed-confirm-mock-qa-20260626-002`;
+- el payment intent `85493a1c-4a66-40ec-928a-09cb0eb5d007` quedó en `paid` / `mock_paid`;
+- se creó exactamente 1 registro en `subscription_payment_events`;
+- el evento creado es `86c29828-4537-4402-93cb-28d0947e81a7`, con `event_type = payment_intent_confirm`;
+- `profile_subscriptions` sigue intacto en `3`;
+- el replay con la misma key y el mismo payload devolvió HTTP `409` con `payment_intent_already_paid`;
+- la idempotencia `confirm_mock` reciente conserva `id=26`, `completed`, `response_http_status=200`;
+- el intento previo fallido conserva `id=24`, `failed`, `response_http_status=500`;
+- no hubo duplicados de payment intent ni de payment event;
+- no se activó suscripción;
+- no se tocó `profile_subscriptions`.
+
+Observación de schema real: la tabla `subscription_write_idempotency_keys` no tiene columnas `error_code` ni `error_message`. Las consultas SQL futuras sobre esa tabla no deben asumir esas columnas salvo que una microfase previa confirme explícitamente que existen.
+
+### B) Bug confirmado
+La idempotencia completada existe para `subscriptions.payment_intent.confirm_mock`, la response cacheada existe y corresponde a HTTP `200`.
+
+El bug confirmado es de precedencia:
+
+- `ConfirmSubscriptionPaymentIntentMockService::assertConfirmable()` valida `payment_intent_already_paid` antes de resolver el replay cacheado de `beginPaymentIntentConfirmMock(...)`;
+- el camino de replay existe en `SubscriptionWriteIdempotencyService`;
+- ese camino no se alcanza cuando el payment intent ya está `paid`;
+- el resultado incumple el contrato esperado de replay idempotente para una key completada con el mismo `request_hash`.
+
+### C) Regla técnica deseada
+La validación de existencia y scope básico puede ocurrir antes de abrir idempotencia:
+
+- validar input mínimo;
+- localizar payment intent;
+- localizar checkout intent;
+- construir scope estable;
+- calcular payload canónico.
+
+Después de construir scope y request hash, `beginPaymentIntentConfirmMock(...)` debe ocurrir antes de guards terminales como:
+
+- `payment_intent_already_paid`;
+- evento `confirm_mock` ya existente;
+- cualquier validación de estado que bloquee un replay completado.
+
+Reglas esperadas:
+
+- si `beginPaymentIntentConfirmMock(...)` devuelve replay completed con el mismo `request_hash`, el servicio debe retornar la response cacheada sin entrar a zona crítica, sin lock y sin crear eventos nuevos;
+- si la key es nueva y el payment intent ya está `paid`, debe seguir devolviendo `payment_intent_already_paid`;
+- si la key completada se reutiliza con payload distinto, debe seguir devolviendo `idempotency_key_reused_with_different_payload`;
+- si la key está en `processing`, debe seguir devolviendo `request_already_processing`;
+- si la key completada no tiene response utilizable, debe seguir devolviendo `idempotency_result_unavailable`.
+
+### D) Fix recomendado
+Fix recomendado para una microfase BE posterior:
+
+1. Reordenar `ConfirmSubscriptionPaymentIntentMockService::confirmMock(...)`.
+2. Mantener validación de input básico al inicio.
+3. Mantener lookup básico de payment intent y checkout intent para construir scope.
+4. Construir el payload idempotente con:
+   - `checkout_intent_uuid`;
+   - `payment_intent_uuid`;
+   - `provider`;
+   - `source`.
+5. Ejecutar `beginPaymentIntentConfirmMock(...)` antes del guard `payment_intent_already_paid`.
+6. Si la decisión es replay, retornar inmediatamente la response cacheada.
+7. Si la decisión es reject, devolver el error idempotente correspondiente.
+8. Sólo si la idempotencia permite continuar:
+   - validar estado confirmable;
+   - adquirir lock `payment_intent_confirm`;
+   - reconsultar estado bajo lock;
+   - validar anti-duplicado de evento;
+   - abrir transacción;
+   - crear `subscription_payment_events`;
+   - marcar payment intent como `paid` / `mock_paid`;
+   - marcar idempotencia completed;
+   - liberar lock en `finally`.
+
+El fix no debe cambiar schema, no debe cambiar endpoint público, no debe tocar `profile_subscriptions`, no debe activar suscripción y no debe introducir provider real, webhook ni facturación real.
+
+### E) QA posterior recomendada
+QA posterior recomendada después del fix:
+
+- repetir replay same key `mxmed-confirm-mock-qa-20260626-002`;
+- validar HTTP `200`;
+- validar `idempotent_replay=true`;
+- validar que `subscription_payment_events` sigue en `1`;
+- validar que los eventos para `payment_intent_uuid = 85493a1c-4a66-40ec-928a-09cb0eb5d007` siguen en `1`;
+- validar que `profile_subscriptions` sigue en `3`;
+- validar que una key nueva contra payment intent ya `paid` devuelve `409 payment_intent_already_paid`;
+- validar que payload distinto con key completada devuelve `409 idempotency_key_reused_with_different_payload`;
+- validar que no se crean nuevos payment intents;
+- validar que no se activa suscripción;
+- validar que no se ejecuta provider real, webhook ni facturación real.
+
+En SQL futuro sobre `subscription_write_idempotency_keys`, no consultar `error_code` ni `error_message` salvo que una microfase previa confirme que esas columnas existen en el schema local.
+
+### F) Prohibiciones de esta microfase
+Esta microfase mantiene fuera de alcance:
+
+- no modificar PHP;
+- no implementar fix;
+- no ejecutar `confirm-mock`;
+- no ejecutar HTTP/POST;
+- no ejecutar curl;
+- no ejecutar SQL;
+- no modificar DB/schema;
+- no crear `subscription_payment_events`;
+- no marcar `paid`;
+- no tocar `profile_subscriptions`;
+- no activar suscripción;
+- no provider real;
+- no webhook;
+- no facturación real;
+- no hacer commit;
+- no hacer push;
+- no hacer stash/reset/restore.
+
+### G) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-PaymentIntent-ConfirmationMock-ReplayPrecedence-Fix-01
+```
+
+Objetivo:
+
+- reordenar la precedencia de `ConfirmSubscriptionPaymentIntentMockService::confirmMock(...)` para que un replay idempotente completed con mismo request hash retorne la response cacheada antes de aplicar guards terminales como `payment_intent_already_paid`, sin cambiar schema, sin cambiar endpoint, sin tocar `profile_subscriptions`, sin provider real, sin webhook y sin facturación real.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
