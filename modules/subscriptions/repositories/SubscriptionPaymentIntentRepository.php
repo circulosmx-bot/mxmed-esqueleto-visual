@@ -228,6 +228,58 @@ final class SubscriptionPaymentIntentRepository
         return $created;
     }
 
+    public function markMockPaid(string $paymentIntentUuid, array $input): ?array
+    {
+        $paymentIntentUuid = trim($paymentIntentUuid);
+        if ($paymentIntentUuid === '') {
+            throw new InvalidArgumentException('invalid_payment_intent_payload: uuid is required');
+        }
+
+        $paidAt = $this->requiredText($input['paid_at'] ?? null, 'invalid_payment_intent_payload', 19);
+        $source = $this->requiredText($input['source'] ?? null, 'invalid_payment_intent_payload', 128);
+        $notes = $this->optionalText($input['notes'] ?? null, 65535);
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE subscription_payment_intents
+                 SET normalized_status = :normalized_status,
+                     provider_status = :provider_status,
+                     paid_at = :paid_at,
+                     source = :source,
+                     notes = :notes
+                 WHERE uuid = :uuid
+                   AND provider = :provider
+                   AND normalized_status <> :paid_status
+                   AND deleted_at IS NULL'
+            );
+            $stmt->execute([
+                'uuid' => $paymentIntentUuid,
+                'provider' => 'mxmed_mock',
+                'normalized_status' => 'paid',
+                'paid_status' => 'paid',
+                'provider_status' => 'mock_paid',
+                'paid_at' => $paidAt,
+                'source' => $source,
+                'notes' => $notes,
+            ]);
+        } catch (Throwable $e) {
+            throw new RuntimeException('payment_intent_update_failed', 0, $e);
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_intents
+             WHERE uuid = :uuid
+               AND provider = :provider
+               AND deleted_at IS NULL
+             LIMIT 1',
+            [
+                'uuid' => $paymentIntentUuid,
+                'provider' => 'mxmed_mock',
+            ]
+        );
+    }
+
     private function findOne(string $sql, array $params): ?array
     {
         try {
