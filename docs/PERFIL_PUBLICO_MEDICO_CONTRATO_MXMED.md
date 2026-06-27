@@ -22592,6 +22592,223 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 113 - Plan técnico de confirmación mock/dev de payment intent
+
+### A) Propósito
+Esta adenda documenta el plan técnico futuro para implementar la confirmación controlada mock/dev de un payment intent existente.
+
+No implementa código, no crea endpoint, no crea servicio, no ejecuta HTTP/POST, no ejecuta SQL write, no modifica DB/schema, no crea `subscription_payment_events`, no toca `profile_subscriptions` y no marca `paid`.
+
+La confirmación mock/dev queda separada del create de payment intent ya cerrado. No debe repetir create payment intent ni mezclar la creación con la confirmación.
+
+### B) Estado base confirmado
+El estado heredado de PP-Decisiones 111 y PP-Decisiones 112 es:
+
+- existe payment intent `85493a1c-4a66-40ec-928a-09cb0eb5d007`;
+- pertenece al checkout `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`;
+- `provider = mxmed_mock`;
+- `provider_status = mock_created`;
+- `normalized_status = created`;
+- `amount_cents = 20000`;
+- `currency = MXN`;
+- `deleted_at = NULL`;
+- checkout sigue `pending_payment`;
+- `subscription_payment_events = 0`;
+- `profile_subscriptions = 3`;
+- no existe payment intent `paid`;
+- no hay webhook, no provider real y no facturación real.
+
+El bloque actual disponible crea payment intents internos con provider mock/dev. Todavía no confirma pago.
+
+### C) Endpoint futuro recomendado
+Endpoint futuro recomendado:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents/{payment_intent_uuid}/confirm-mock
+```
+
+El endpoint debe aceptar sólo confirmación mock/dev sobre un payment intent existente. Debe validar sesión, entidad, checkout, payment intent e idempotencia antes de ejecutar cualquier write.
+
+No implementar endpoint en esta microfase.
+
+### D) Servicio futuro recomendado
+Servicio futuro recomendado:
+
+```text
+ConfirmSubscriptionPaymentIntentMockService::confirmMock(array $input): array
+```
+
+Responsabilidad conceptual:
+
+- validar input mínimo;
+- validar sesión/escritura con `session_scope`;
+- validar `entity_type` y `entity_id`;
+- validar `checkout_intent_uuid`;
+- validar `payment_intent_uuid`;
+- validar `Idempotency-Key`;
+- validar provider permitido `mxmed_mock`;
+- validar payment intent existente, activo y no eliminado;
+- validar pertenencia payment intent -> checkout;
+- validar pertenencia checkout -> entidad solicitada;
+- validar checkout `pending_payment`;
+- validar estado actual `created` o `pending_provider`;
+- rechazar `paid`;
+- ejecutar confirmación mock/dev dentro de la unidad transaccional futura;
+- devolver respuesta estable e idempotente.
+
+No crear servicio en esta microfase.
+
+### E) Idempotencia futura
+Operation futura recomendada:
+
+```text
+subscriptions.payment_intent.confirm_mock
+```
+
+Reglas mínimas:
+
+- `Idempotency-Key` requerida;
+- replay estable cuando una confirmación ya completada se repite con el mismo payload;
+- rechazo de payload distinto con `idempotency_key_reused_with_different_payload`;
+- protección contra request concurrente con `request_already_processing`;
+- respuesta persistida suficiente para replay sin crear eventos duplicados;
+- scope ligado a entidad, checkout y payment intent.
+
+La idempotencia de confirmación debe ser independiente de `subscriptions.payment_intent.create`.
+
+### F) Lock futuro
+Lock futuro:
+
+```text
+payment_intent_confirm
+```
+
+Scope recomendado:
+
+```text
+mxmed:subscriptions:payment_intents:{payment_intent_uuid}:payment_intent_confirm
+```
+
+El lock debe cubrir:
+
+1. lookup del payment intent;
+2. validación de estado;
+3. validación de checkout `pending_payment`;
+4. inserción de `subscription_payment_events`;
+5. cambio a `paid`, si se autoriza;
+6. activación posterior, si una decisión futura la incluye.
+
+El lock de confirmación no debe reutilizar `payment_intent_create`.
+
+### G) Validaciones futuras mínimas
+La implementación futura debe validar:
+
+- sesión/escritura con `session_scope`;
+- `entity_type` y `entity_id`;
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `Idempotency-Key`;
+- provider permitido `mxmed_mock`;
+- payment intent existente y `deleted_at = NULL`;
+- payment intent pertenece al checkout;
+- checkout pertenece a la entidad solicitada;
+- checkout status `pending_payment`;
+- payment intent status `created` o `pending_provider`;
+- payment intent no está `paid`;
+- no existe evento confirmado duplicado;
+- request no reutiliza idempotency key con payload distinto.
+
+Debe rechazar:
+
+- `payment_intent_not_found`;
+- `checkout_intent_not_found`;
+- `payment_intent_checkout_mismatch`;
+- `payment_intent_provider_invalid`;
+- `checkout_intent_not_pending_payment`;
+- `payment_intent_already_paid`;
+- `payment_intent_not_confirmable`.
+
+### H) Writes futuros bajo confirmación mock/dev
+Writes futuros permitidos sólo bajo confirmación mock/dev:
+
+- insertar exactamente un `subscription_payment_events` de tipo/estado mock confirmado;
+- actualizar `subscription_payment_intents.normalized_status` a `paid` sólo si la microfase futura lo autoriza;
+- registrar `provider_status = mock_paid` o equivalente dev;
+- registrar `paid_at` si la columna existe y el contrato futuro lo confirma;
+- persistir respuesta idempotente para replay;
+- opcionalmente cerrar o actualizar checkout intent sólo si se documenta en microfase separada.
+
+No activar suscripción automáticamente sin decisión explícita. No crear `profile_subscriptions` sin confirmación y decisión separada.
+
+### I) Errores futuros recomendados
+Errores conceptuales mínimos:
+
+- `payment_intent_not_found`;
+- `payment_intent_not_confirmable`;
+- `payment_intent_already_paid`;
+- `checkout_intent_not_found`;
+- `checkout_intent_not_pending_payment`;
+- `payment_intent_checkout_mismatch`;
+- `payment_intent_provider_invalid`;
+- `idempotency_key_invalid`;
+- `idempotency_key_reused_with_different_payload`;
+- `request_already_processing`;
+- `payment_intent_confirm_lock_timeout`;
+- `payment_intent_confirm_unavailable`.
+
+### J) HTTP status recomendado
+Status HTTP recomendado:
+
+- `200` para replay idempotente completado;
+- `201` o `200` para confirmación mock/dev exitosa, a definir en microfase futura;
+- `404` para `payment_intent_not_found` o `checkout_intent_not_found`;
+- `409` para `payment_intent_already_paid`, `payment_intent_checkout_mismatch`, `checkout_intent_not_pending_payment`, payload distinto o request processing;
+- `422` para payload inválido o `Idempotency-Key` faltante/inválida;
+- `403` para auth insuficiente.
+
+### K) Prohibiciones explícitas
+Este plan mantiene fuera de alcance:
+
+- no provider real;
+- no webhook;
+- no facturación real;
+- no activar suscripción automáticamente;
+- no crear `profile_subscriptions` sin confirmación y decisión separada;
+- no marcar `paid` sin `subscription_payment_events` si el diseño futuro exige ledger;
+- no mezclar create payment intent con confirmación;
+- no repetir create payment intent;
+- no implementar endpoint en esta microfase;
+- no crear servicio en esta microfase;
+- no modificar PHP;
+- no ejecutar HTTP/POST;
+- no ejecutar SQL write;
+- no modificar DB/schema;
+- no hacer commit;
+- no hacer push.
+
+### L) Decisión de siguiente microfase
+Siguiente microfase recomendada principal:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-ConfirmationMock-Idempotency-Readiness-01
+```
+
+Justificación:
+
+- antes de implementar `ConfirmSubscriptionPaymentIntentMockService` conviene validar si la infraestructura actual de idempotencia puede aceptar `subscriptions.payment_intent.confirm_mock`, replay estable, payload hash, estado failed/completed y precedencia de errores sin afectar `subscriptions.payment_intent.create`;
+- la confirmación mock/dev escribirá `subscription_payment_events` y posiblemente marcará `paid`, por lo que la idempotencia debe quedar cerrada antes del servicio;
+- el servicio readiness puede venir después, una vez confirmada la dependencia de idempotencia.
+
+Microfase alternativa no inmediata:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-ConfirmationMock-Service-Readiness-01
+```
+
+Queda pospuesta hasta cerrar readiness de idempotencia de confirmación.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
