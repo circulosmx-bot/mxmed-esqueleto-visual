@@ -23845,6 +23845,384 @@ Alcance futuro:
 - no tocar `profile_subscriptions`;
 - no activar suscripción.
 
+## Adenda PP-Decisiones 120 - Contrato de dependencias de escritura para activación post-pago
+
+### A) Estado y decisión de alcance
+La readiness del servicio `ActivateSubscriptionAfterPaymentService` quedó bloqueada porque faltan dependencias de escritura reutilizables. Esta adenda cierra el contrato técnico de esas dependencias antes de implementar el servicio de activación.
+
+La confirmación `confirm_mock` ya dejó evidencia de pago mock/dev:
+
+- payment intent `paid` / `mock_paid`;
+- exactamente 1 `subscription_payment_events` con `payment_intent_confirm` / `processed`;
+- checkout todavía en `pending_payment`;
+- `profile_subscriptions` sin activación para `doctor/900001`.
+
+Esta adenda no implementa código, no crea endpoint, no ejecuta writes, no activa suscripciones, no cambia DB/schema, no integra provider real, no crea webhooks, no factura y no crea `payment_events` adicionales.
+
+### B) Soporte reusable para profile_subscriptions
+Nombre recomendado:
+
+```text
+ProfileSubscriptionRepository
+```
+
+Archivo recomendado:
+
+```text
+modules/subscriptions/repositories/ProfileSubscriptionRepository.php
+```
+
+Método público recomendado:
+
+```php
+createActiveFromPaidCheckout(array $snapshot): array
+```
+
+Input requerido:
+
+- `subscription_id`;
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `plan_code`;
+- `plan_label`;
+- `billing_period`;
+- `duration_days`;
+- `contracted_plan_code`;
+- `effective_plan_code`;
+- `contract_version`;
+- `contract_accepted_at`;
+- `contract_accepted_by_user_id`;
+- `contract_acceptance_source`;
+- `contract_acceptance_ip`;
+- `contract_acceptance_user_agent`;
+- `starts_at`;
+- `expires_at`;
+- `status=active`;
+- `auto_renew=0`;
+- `source`;
+- `notes`.
+
+Output requerido:
+
+- fila normalizada de `profile_subscriptions`;
+- `subscription_id`;
+- `entity_type`;
+- `entity_id`;
+- `plan_code`;
+- `billing_period`;
+- `status`;
+- `starts_at`;
+- `expires_at`;
+- timestamps auditables disponibles.
+
+Columnas mínimas a insertar:
+
+- `subscription_id`;
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `plan_code`;
+- `plan_label`;
+- `billing_period`;
+- `duration_days`;
+- `contracted_plan_code`;
+- `effective_plan_code`;
+- `contract_version`;
+- `contract_accepted_at`;
+- `contract_accepted_by_user_id`;
+- `contract_acceptance_source`;
+- `contract_acceptance_ip`;
+- `contract_acceptance_user_agent`;
+- `starts_at`;
+- `expires_at`;
+- `status`;
+- `auto_renew`;
+- `source`;
+- `notes`;
+- `deleted_at=NULL`.
+
+Datos desde checkout:
+
+- `entity_type`;
+- `entity_id`;
+- `doctor_id`;
+- `profile_id`;
+- `plan_code`;
+- `billing_period`;
+- `amount_cents`;
+- `currency`;
+- `contract_acceptance_uuid`;
+- snapshot contractual disponible en checkout.
+
+Datos desde payment intent:
+
+- `payment_intent_uuid`;
+- `checkout_intent_uuid`;
+- `provider`;
+- `provider_payment_id`;
+- `provider_checkout_id`;
+- `normalized_status=paid`;
+- `provider_status=mock_paid`;
+- `paid_at`;
+- `amount_cents`;
+- `currency`.
+
+Datos desde payment event:
+
+- `payment_event_uuid`;
+- `event_type=payment_intent_confirm`;
+- `processing_status=processed`;
+- `provider`;
+- `provider_event_id`;
+- `processed_at`;
+- `amount_cents`;
+- `currency`.
+
+Datos desde aceptación contractual `accepted_pending_payment`:
+
+- `uuid`;
+- `status=accepted_pending_payment`;
+- `accepted_at`;
+- `accepted_by_user_id`;
+- `accepted_by_actor_role`;
+- `accepted_by_operator_id`;
+- `acceptance_source`;
+- `ip_address`;
+- `user_agent`;
+- `contract_version`;
+- `contract_hash`;
+- `contract_snapshot_url`;
+- `contract_title`.
+
+Datos desde plan/price snapshot:
+
+- `plan_label`;
+- `duration_days`;
+- vigencia calculada;
+- plan contratado y plan efectivo;
+- precio/currency sólo como validación cruzada, no como columna obligatoria de `profile_subscriptions` si el schema actual no la define.
+
+Validaciones propias del repository:
+
+- payload mínimo presente;
+- `subscription_id` no vacío;
+- `entity_type` / `entity_id` válidos;
+- `status=active`;
+- `duration_days > 0`;
+- `starts_at` y `expires_at` coherentes;
+- truncado/normalización de campos textuales según schema;
+- retornar la fila creada o fallar con error semántico.
+
+Validaciones que NO debe duplicar si pertenecen al orquestador:
+
+- payment intent `paid` / `mock_paid`;
+- payment event `payment_intent_confirm` / `processed`;
+- checkout `pending_payment`;
+- entity match entre checkout, payment intent y request;
+- `active_subscription_exists=false`;
+- idempotency begin/replay;
+- adquisición/liberación de lock;
+- transición de checkout.
+
+### C) Transición post-pago del checkout
+Estado actual:
+
+```text
+pending_payment
+```
+
+Estado final recomendado después de activación:
+
+```text
+activated
+```
+
+El nombre `activated` evita confundir checkout con payment intent `paid` y expresa que la suscripción ya fue creada desde ese checkout.
+
+Repository recomendado:
+
+```text
+SubscriptionCheckoutIntentRepository
+```
+
+Método recomendado:
+
+```php
+markActivatedAfterPayment(string $checkoutIntentUuid, string $subscriptionId, array $metadata = []): ?array
+```
+
+Input requerido:
+
+- `checkout_intent_uuid`;
+- `subscription_id`;
+- timestamp de activación;
+- `payment_intent_uuid`;
+- `payment_event_uuid`;
+- `source`;
+- `notes`.
+
+Output requerido:
+
+- checkout actualizado normalizado;
+- `uuid`;
+- `status=activated`;
+- datos de entidad/plan;
+- trazabilidad en `notes` si el schema no tiene columnas dedicadas.
+
+Condiciones para permitir transición:
+
+- checkout existe;
+- `deleted_at IS NULL`;
+- status actual `pending_payment`;
+- pertenece a `entity_type` / `entity_id` esperados;
+- coincide con el `checkout_intent_uuid` del payment intent;
+- la transición ocurre dentro de la misma transacción que crea `profile_subscriptions`.
+
+Si checkout ya no está `pending_payment`:
+
+- si el replay idempotente completed tiene response almacenada, debe responder replay;
+- si es key nueva y ya existe activación, responder `active_subscription_exists` o `checkout_intent_not_pending_payment` según precedencia decidida;
+- no debe crear otra `profile_subscriptions`.
+
+### D) Aceptación contractual pending payment
+La aceptación `accepted_pending_payment` debe ligarse con la nueva `profile_subscriptions` mediante el `subscription_id` generado.
+
+Repository recomendado:
+
+```text
+SubscriptionContractAcceptanceRepository
+```
+
+Métodos recomendados:
+
+```php
+findByUuid(string $uuid): ?array
+linkSubscriptionId(string $acceptanceUuid, string $subscriptionId): ?array
+```
+
+Condiciones de seguridad:
+
+- aceptación existe;
+- `deleted_at IS NULL`;
+- `status=accepted_pending_payment`;
+- `subscription_id IS NULL`;
+- `entity_type`, `entity_id`, `plan_code` y `billing_period` coinciden con checkout;
+- el update ocurre dentro de la misma transacción que inserta `profile_subscriptions`;
+- si ya tiene `subscription_id` y coincide con replay completed, no se crea duplicado.
+
+Si la aceptación no existe:
+
+```text
+contract_acceptance_not_found
+```
+
+Si no está `accepted_pending_payment` o ya tiene `subscription_id` incompatible:
+
+```text
+contract_acceptance_not_pending_payment
+```
+
+Si falla el enlace:
+
+```text
+contract_acceptance_subscription_link_failed
+```
+
+### E) Orden transaccional recomendado
+Orden futuro para `ActivateSubscriptionAfterPaymentService`:
+
+1. Resolver idempotency begin/replay con `subscriptions.payment_intent.activate_after_payment`.
+2. Si hay replay completed, responder sin intentar lock.
+3. Cargar checkout, payment intent, payment event y aceptación contractual.
+4. Adquirir lock por `payment_intent_uuid` con `payment_intent_activate_subscription`.
+5. Abrir transacción.
+6. Releer checkout, payment intent, payment event y aceptación dentro de la transacción.
+7. Revalidar payment intent `paid` / `mock_paid`.
+8. Revalidar payment event `payment_intent_confirm` / `processed`.
+9. Revalidar checkout `pending_payment`.
+10. Revalidar entity match.
+11. Revalidar `active_subscription_exists=false`.
+12. Generar `subscription_id`.
+13. Insertar exactamente 1 `profile_subscriptions` activa.
+14. Ligar `subscription_contract_acceptances.subscription_id` si aplica.
+15. Actualizar checkout a `activated`.
+16. Completar idempotencia con response almacenada.
+17. Commit.
+18. Liberar lock en `finally`.
+
+Rollback obligatorio si falla cualquier paso entre la apertura de transacción y el commit.
+
+### F) Errores esperados
+Errores semánticos recomendados:
+
+- `payment_intent_not_found`;
+- `payment_event_not_found`;
+- `payment_event_not_processed`;
+- `checkout_intent_not_found`;
+- `checkout_intent_not_pending_payment`;
+- `contract_acceptance_not_found`;
+- `contract_acceptance_not_pending_payment`;
+- `active_subscription_exists`;
+- `profile_subscription_create_failed`;
+- `checkout_activation_transition_failed`;
+- `contract_acceptance_subscription_link_failed`;
+- `payment_intent_activate_subscription_lock_timeout`;
+- `payment_intent_activation_unavailable`.
+
+La precedencia debe favorecer replay completed antes de guards terminales, como ya se corrigió en confirmación mock.
+
+### G) Límites explícitos
+Esta microfase no autoriza:
+
+- implementar código;
+- crear endpoint;
+- ejecutar writes;
+- activar suscripciones;
+- cambiar DB/schema;
+- integrar provider real;
+- crear webhooks;
+- facturar;
+- crear `payment_events` adicionales;
+- cambiar checkout status;
+- cambiar payment intent;
+- tocar `profile_subscriptions`.
+
+### H) Criterio de cierre
+La siguiente microfase recomendada NO debe ser todavía `ActivateSubscriptionAfterPaymentService` completo.
+
+Primero debe implementarse soporte de escritura reusable:
+
+- repository/método reusable para `profile_subscriptions`;
+- método de transición de checkout post-pago;
+- finder/update para ligar `subscription_contract_acceptances` con `subscription_id`.
+
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-WriteDependencies-01
+```
+
+Tipo:
+
+```text
+Backend / Implementación controlada de dependencias de escritura post-pago
+```
+
+Alcance:
+
+- agregar soporte reusable mínimo para crear `profile_subscriptions`;
+- agregar transición segura de checkout a `activated`;
+- agregar finder/link de aceptación contractual;
+- no crear `ActivateSubscriptionAfterPaymentService`;
+- no crear endpoint;
+- no ejecutar HTTP/POST;
+- no ejecutar SQL manual;
+- no modificar DB/schema;
+- no activar suscripción fuera de pruebas explícitamente autorizadas.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
