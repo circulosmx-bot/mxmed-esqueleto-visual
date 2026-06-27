@@ -125,7 +125,7 @@ final class ConfirmSubscriptionPaymentIntentMockService
             );
         }
 
-        $this->assertConfirmable($paymentIntent, $checkoutIntent, $entityType, $entityId, $provider);
+        $this->assertConfirmScope($paymentIntent, $checkoutIntent, $entityType, $entityId, $provider);
 
         $scope = $this->idempotencyScope($checkoutIntent, $paymentIntent);
         $payload = [
@@ -157,6 +157,8 @@ final class ConfirmSubscriptionPaymentIntentMockService
         $transactionOpen = false;
 
         try {
+            $this->assertConfirmable($paymentIntent, $checkoutIntent, $entityType, $entityId, $provider);
+
             $lockName = $this->lockService->acquirePaymentIntentConfirm($paymentIntentUuid, 2);
             if ($lockName === null) {
                 throw new ConfirmSubscriptionPaymentIntentMockException(
@@ -265,6 +267,40 @@ final class ConfirmSubscriptionPaymentIntentMockService
         string $entityId,
         string $provider
     ): void {
+        $this->assertConfirmScope($paymentIntent, $checkoutIntent, $entityType, $entityId, $provider);
+
+        if ((string)($checkoutIntent['status'] ?? '') !== self::CHECKOUT_STATUS_PENDING_PAYMENT) {
+            throw new ConfirmSubscriptionPaymentIntentMockException(
+                409,
+                'checkout_intent_not_pending_payment',
+                'checkout intent is not pending payment'
+            );
+        }
+
+        $status = (string)($paymentIntent['normalized_status'] ?? '');
+        if ($status === self::STATUS_PAID) {
+            throw new ConfirmSubscriptionPaymentIntentMockException(
+                409,
+                'payment_intent_already_paid',
+                'payment intent is already paid'
+            );
+        }
+        if (!in_array($status, [self::STATUS_CREATED, self::STATUS_PENDING_PROVIDER], true)) {
+            throw new ConfirmSubscriptionPaymentIntentMockException(
+                409,
+                'payment_intent_not_confirmable',
+                'payment intent is not confirmable'
+            );
+        }
+    }
+
+    private function assertConfirmScope(
+        array $paymentIntent,
+        array $checkoutIntent,
+        string $entityType,
+        string $entityId,
+        string $provider
+    ): void {
         if ((string)($paymentIntent['checkout_intent_uuid'] ?? '') !== (string)($checkoutIntent['uuid'] ?? '')) {
             throw new ConfirmSubscriptionPaymentIntentMockException(
                 409,
@@ -288,30 +324,6 @@ final class ConfirmSubscriptionPaymentIntentMockService
                 422,
                 'payment_intent_provider_invalid',
                 'provider is invalid'
-            );
-        }
-
-        if ((string)($checkoutIntent['status'] ?? '') !== self::CHECKOUT_STATUS_PENDING_PAYMENT) {
-            throw new ConfirmSubscriptionPaymentIntentMockException(
-                409,
-                'checkout_intent_not_pending_payment',
-                'checkout intent is not pending payment'
-            );
-        }
-
-        $status = (string)($paymentIntent['normalized_status'] ?? '');
-        if ($status === self::STATUS_PAID) {
-            throw new ConfirmSubscriptionPaymentIntentMockException(
-                409,
-                'payment_intent_already_paid',
-                'payment intent is already paid'
-            );
-        }
-        if (!in_array($status, [self::STATUS_CREATED, self::STATUS_PENDING_PROVIDER], true)) {
-            throw new ConfirmSubscriptionPaymentIntentMockException(
-                409,
-                'payment_intent_not_confirmable',
-                'payment intent is not confirmable'
             );
         }
     }
