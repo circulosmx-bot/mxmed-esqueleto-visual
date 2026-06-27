@@ -22437,6 +22437,161 @@ Esta adenda no implementa ese bloque futuro, no ejecuta HTTP/POST, no hace SQL w
 
 ---
 
+## Adenda PP-Decisiones 112 - Readiness para confirmación mock/dev de payment intent
+
+### A) Estado actual heredado de PP-Decisiones 111
+El bloque de create del endpoint `payment-intents` queda cerrado como PASS funcional controlado.
+
+Estado observado y heredado:
+
+- existe un payment intent interno `85493a1c-4a66-40ec-928a-09cb0eb5d007`;
+- pertenece al checkout `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`;
+- `provider = mxmed_mock`;
+- `provider_status = mock_created`;
+- `normalized_status = created`;
+- `amount_cents = 20000`;
+- `currency = MXN`;
+- `deleted_at = NULL`;
+- checkout sigue `pending_payment`;
+- `subscription_payment_events = 0`;
+- `profile_subscriptions = 3`;
+- no hay payment intent `paid`;
+- no hay activacion de suscripcion.
+
+El codigo actual ya cubre create de payment intent con `CreateSubscriptionPaymentIntentService`, `SubscriptionPaymentIntentMockProvider`, `SubscriptionPaymentIntentRepository`, idempotencia `subscriptions.payment_intent.create` y lock `payment_intent_create`. Ese bloque no confirma pago.
+
+### B) Brecha funcional: que falta para confirmar pago
+Todavia no existe un bloque de confirmacion mock/dev de payment intent.
+
+No existe todavia:
+
+- endpoint de confirmacion mock/dev;
+- servicio de confirmacion mock/dev;
+- operation de idempotencia `subscriptions.payment_intent.confirm_mock`;
+- lock separado `payment_intent_confirm`;
+- transicion controlada de `created` o `pending_provider` a `paid`;
+- insercion de `subscription_payment_events`;
+- activacion de `profile_subscriptions`;
+- webhook;
+- provider real;
+- facturacion real.
+
+La confirmacion mock/dev debe ser un bloque separado del create de payment intent. No debe mezclar create payment intent con confirmacion.
+
+### C) Alcance futuro recomendado para confirmacion mock/dev
+La confirmacion mock/dev futura debe aceptar solo payment intents existentes, activos y no eliminados.
+
+Alcance seguro recomendado:
+
+- recibir un `payment_intent_uuid` existente;
+- validar que pertenece a un checkout vigente;
+- validar que el checkout sigue `pending_payment`;
+- validar que el payment intent esta en estado inicial permitido, por ejemplo `created` o `pending_provider`;
+- rechazar payment intent inexistente;
+- rechazar payment intent eliminado;
+- rechazar payment intent ya `paid`;
+- rechazar payment intent con checkout no `pending_payment`, salvo decision futura documentada;
+- mantener provider `mxmed_mock` como unico provider permitido en DEV/local;
+- registrar trazabilidad clara del provider mock/dev;
+- crear `subscription_payment_events` solo dentro del bloque de confirmacion;
+- dejar activacion de `profile_subscriptions` para una decision explicita de transaccion futura o servicio de activacion posterior.
+
+La confirmacion mock/dev NO es provider real, NO es webhook y NO es facturacion real.
+
+### D) Idempotencia y lock recomendados
+La confirmacion mock/dev debe usar idempotencia separada de create:
+
+```text
+subscriptions.payment_intent.confirm_mock
+```
+
+El lock futuro recomendado es separado de create:
+
+```text
+payment_intent_confirm
+```
+
+El lock debe proteger el intervalo entre:
+
+1. lookup del payment intent;
+2. validacion de estado;
+3. insercion de `subscription_payment_events`;
+4. cambio de estado a `paid`, si se autoriza;
+5. activacion posterior, si se decide incluirla en la misma unidad atomica futura.
+
+La idempotencia debe permitir replay estable de una confirmacion ya completada y debe bloquear payload distinto con la misma key.
+
+### E) Validaciones minimas futuras
+La confirmacion mock/dev futura debe validar como minimo:
+
+- `payment_intent_uuid` requerido y valido;
+- payment intent existe;
+- payment intent no esta eliminado;
+- `provider = mxmed_mock`;
+- estado actual permitido: `created` o `pending_provider`;
+- estado actual no debe ser `paid`;
+- checkout asociado existe y sigue `pending_payment`;
+- monto y moneda coinciden con el payment intent y checkout;
+- no existe evento confirmado duplicado para el mismo provider/payment intent;
+- `Idempotency-Key` presente y valida;
+- request se ejecuta solo en ambiente DEV/local o bajo guardas explicitas de QA.
+
+Debe fallar sin crear filas si cualquiera de esas validaciones falla.
+
+### F) Writes futuros permitidos solo bajo confirmacion
+Los writes que deben ocurrir solo cuando se confirme pago son:
+
+- crear `subscription_payment_events` con evento mock/dev confirmado;
+- actualizar o registrar estado de payment intent como `paid`, si la microfase futura lo autoriza;
+- ejecutar activacion de `profile_subscriptions` solo despues de confirmacion, idealmente en la misma transaccion futura o en un servicio explicito documentado;
+- registrar auditoria de confirmacion mock/dev.
+
+No se debe marcar `paid` sin evento/confirmacion controlada documentada. No se debe activar suscripcion solo por create de payment intent.
+
+### G) Prohibiciones explicitas
+Esta readiness mantiene fuera de alcance:
+
+- no implementar endpoint en esta microfase;
+- no crear servicio;
+- no modificar repositorios;
+- no ejecutar HTTP/POST;
+- no ejecutar SQL write;
+- no modificar DB/schema;
+- no crear `subscription_payment_events`;
+- no tocar `profile_subscriptions`;
+- no marcar `paid`;
+- no activar suscripcion;
+- no webhook;
+- no provider real;
+- no facturación real;
+- no crear fixtures;
+- no hacer commit;
+- no hacer push.
+
+### H) Riesgos y decisiones pendientes
+Riesgos y decisiones antes de implementar confirmacion mock/dev:
+
+- definir si la confirmacion cambia `subscription_payment_intents.normalized_status` a `paid` en la misma transaccion que crea `subscription_payment_events`;
+- definir si la activacion de `profile_subscriptions` ocurre en la misma transaccion de confirmacion o en microfase posterior;
+- definir estructura exacta de evento mock/dev y deduplicacion por `event_hash` o provider event id;
+- definir operation y respuesta estable de `subscriptions.payment_intent.confirm_mock`;
+- extender lock service con `payment_intent_confirm` sin romper `payment_intent_create`;
+- asegurar que el checkout `pending_payment` no se cierre ni active antes de confirmar pago;
+- mantener separacion estricta entre mock/dev, provider real, webhook y facturacion real.
+
+### I) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-ConfirmationMock-Plan-01
+```
+
+Objetivo:
+
+- planificar el contrato tecnico de la confirmacion mock/dev de payment intent, incluyendo endpoint futuro, servicio futuro, `subscription_payment_events`, idempotencia `subscriptions.payment_intent.confirm_mock`, lock `payment_intent_confirm`, transicion a `paid` y limites de activacion, sin implementar codigo todavia.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
