@@ -3,12 +3,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/CurrentSubscriptionRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/repositories/ProfileSubscriptionRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPlanPriceRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ConfirmSubscriptionPaymentIntentMockService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php';
@@ -22,12 +24,15 @@ require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionPlanPr
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionWriteIdempotencyService.php';
 
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
+use Subscriptions\Repositories\ProfileSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
 use Subscriptions\Repositories\SubscriptionPaymentEventRepository;
 use Subscriptions\Repositories\SubscriptionPaymentIntentRepository;
 use Subscriptions\Repositories\SubscriptionPlanPriceRepository;
 use Subscriptions\Repositories\SubscriptionWriteIdempotencyRepository;
+use Subscriptions\Services\ActivateSubscriptionAfterPaymentException;
+use Subscriptions\Services\ActivateSubscriptionAfterPaymentService;
 use Subscriptions\Services\ConfirmSubscriptionPaymentIntentMockException;
 use Subscriptions\Services\ConfirmSubscriptionPaymentIntentMockService;
 use Subscriptions\Services\CreateSubscriptionCheckoutIntentException;
@@ -938,6 +943,37 @@ function subscriptionPaymentIntentConfirmMockErrorStatus(string $code, int $fall
     return $map[$code] ?? $fallback;
 }
 
+function subscriptionPaymentIntentActivationErrorStatus(string $code, int $fallback): int
+{
+    $map = [
+        'invalid_payment_intent_activation_payload' => 422,
+        'idempotency_key_invalid' => 422,
+        'idempotency_key_reused_with_different_payload' => 409,
+        'idempotency_key_not_reusable' => 409,
+        'idempotency_result_unavailable' => 409,
+        'request_already_processing' => 409,
+        'payment_intent_not_found' => 404,
+        'checkout_intent_not_found' => 404,
+        'payment_event_not_found' => 404,
+        'contract_acceptance_not_found' => 404,
+        'payment_intent_not_paid' => 409,
+        'payment_event_not_processed' => 409,
+        'checkout_intent_not_pending_payment' => 409,
+        'contract_acceptance_not_pending_payment' => 409,
+        'payment_intent_checkout_mismatch' => 409,
+        'payment_event_payment_intent_mismatch' => 409,
+        'checkout_intent_entity_mismatch' => 409,
+        'active_subscription_exists' => 409,
+        'profile_subscription_create_failed' => 500,
+        'checkout_activation_transition_failed' => 409,
+        'contract_acceptance_subscription_link_failed' => 409,
+        'payment_intent_activate_subscription_lock_timeout' => 409,
+        'payment_intent_activation_unavailable' => 500,
+    ];
+
+    return $map[$code] ?? $fallback;
+}
+
 function subscriptionResolveWriteContext(string $entityType, string $entityId): array
 {
     $headers = subscriptionHeaders();
@@ -1651,6 +1687,157 @@ try {
         }
 
         subscriptionRespond($confirmResponse, 200);
+        return;
+    }
+
+    if (
+        count($segments) === 8
+        && $segments[0] === 'entities'
+        && $segments[3] === 'checkout-intents'
+        && $segments[5] === 'payment-intents'
+        && $segments[7] === 'activate-after-payment'
+    ) {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionWriteError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        $checkoutIntentUuid = trim((string)$segments[4]);
+        $paymentIntentUuid = trim((string)$segments[6]);
+        if (
+            $entityType !== 'doctor'
+            || !subscriptionValidEntityId($entityId)
+            || $checkoutIntentUuid === ''
+            || $paymentIntentUuid === ''
+        ) {
+            subscriptionRespond(subscriptionWriteError('invalid_payment_intent_activation_payload', 'invalid request'), 422);
+            return;
+        }
+
+        $payloadResult = subscriptionReadJsonPayload();
+        if (!(bool)($payloadResult['ok'] ?? false)) {
+            subscriptionRespond((array)($payloadResult['response'] ?? []), (int)($payloadResult['status'] ?? 400));
+            return;
+        }
+
+        $payload = (array)($payloadResult['payload'] ?? []);
+        $forbiddenFields = subscriptionForbiddenPayloadFields($payload, [
+            'status',
+            'subscription_id',
+            'profile_subscription',
+            'checkout_status',
+            'payment_status',
+            'normalized_status',
+            'provider_status',
+            'paid_at',
+            'processed_at',
+            'activated_at',
+            'starts_at',
+            'expires_at',
+            'duration_days',
+            'plan_code',
+            'billing_period',
+            'amount_cents',
+            'currency',
+            'contract_acceptance_uuid',
+            'contract_status',
+            'event_type',
+            'processing_status',
+            'provider_payment_id',
+            'provider_checkout_id',
+            'provider_event_id',
+            'checkout_intent_uuid',
+            'payment_intent_uuid',
+            'payment_intent_id',
+            'payment_event_id',
+            'price',
+            'price_source',
+            'price_uuid',
+            'price_version',
+            'auto_renew',
+            'deleted_at',
+        ]);
+        if ($forbiddenFields !== []) {
+            subscriptionRespond(
+                subscriptionWriteError(
+                    'forbidden_fields',
+                    'payload contains backend-controlled fields: ' . implode(', ', array_values(array_unique($forbiddenFields)))
+                ),
+                422
+            );
+            return;
+        }
+
+        $paymentEventUuid = trim((string)($payload['payment_event_uuid'] ?? ''));
+        if ($paymentEventUuid === '' || strlen($paymentEventUuid) > 36) {
+            subscriptionRespond(
+                subscriptionWriteError(
+                    'invalid_payment_intent_activation_payload',
+                    'payment_event_uuid is required'
+                ),
+                422
+            );
+            return;
+        }
+
+        $context = subscriptionResolveWriteContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+
+        $authMode = (string)($context['auth_mode'] ?? 'session_scope');
+        $headers = subscriptionHeaders();
+        $idempotencyKey = trim((string)($headers['idempotency-key'] ?? ($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? '')));
+        if ($idempotencyKey === '') {
+            subscriptionRespond(
+                subscriptionWriteError('idempotency_key_invalid', 'Idempotency-Key is required', $authMode),
+                422
+            );
+            return;
+        }
+
+        $input = [
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'checkout_intent_uuid' => $checkoutIntentUuid,
+            'payment_intent_uuid' => $paymentIntentUuid,
+            'payment_event_uuid' => $paymentEventUuid,
+            'idempotency_key' => $idempotencyKey,
+            'user_id' => (string)($context['actor_user_id'] ?? ''),
+            'actor_role' => (string)($context['actor_role'] ?? ''),
+        ];
+
+        $pdo = mxmed_pdo();
+        $service = new ActivateSubscriptionAfterPaymentService(
+            $pdo,
+            new SubscriptionWriteIdempotencyService(new SubscriptionWriteIdempotencyRepository($pdo)),
+            new SubscriptionEntityWriteLockService($pdo),
+            new SubscriptionCheckoutIntentRepository($pdo),
+            new SubscriptionPaymentIntentRepository($pdo),
+            new SubscriptionPaymentEventRepository($pdo),
+            new SubscriptionContractAcceptanceRepository($pdo),
+            new ProfileSubscriptionRepository($pdo),
+            new CurrentSubscriptionRepository($pdo)
+        );
+
+        try {
+            $activationResponse = $service->activateAfterPayment($input);
+        } catch (ActivateSubscriptionAfterPaymentException $e) {
+            $status = subscriptionPaymentIntentActivationErrorStatus($e->errorCode(), $e->status());
+            subscriptionRespond(subscriptionWriteError($e->errorCode(), $e->getMessage(), $authMode), $status);
+            return;
+        } catch (Throwable $e) {
+            subscriptionRespond(
+                subscriptionWriteError('payment_intent_activation_unavailable', 'payment intent activation is unavailable', $authMode),
+                500
+            );
+            return;
+        }
+
+        subscriptionRespond($activationResponse, 200);
         return;
     }
 
