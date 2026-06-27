@@ -23428,6 +23428,258 @@ No iniciar activación sin nueva decisión explícita.
 
 ---
 
+## Adenda PP-Decisiones 118 - Plan de activación post-pago de suscripción
+
+### A) Estado actual confirmado
+El bloque `confirm_mock` de payment intent queda cerrado y no activa suscripción por sí mismo.
+
+Estado funcional observado:
+
+- `confirm_mock` cerrado con PASS;
+- payment intent `85493a1c-4a66-40ec-928a-09cb0eb5d007` queda `paid` / `mock_paid`;
+- existe exactamente `1` `subscription_payment_events`;
+- checkout `7d4beec3-b62a-40e1-a9f2-9edcc1a83364` sigue `pending_payment`;
+- `profile_subscriptions_total=3`;
+- doctor `900001` tiene `profile_subscriptions=0`;
+- doctor `900001` tiene `active_subscription=0`;
+- no provider real;
+- no webhook;
+- no facturación real.
+
+La evidencia de pago mock/dev existe, pero todavía no hay activación contractual operativa.
+
+### B) Decisión de diseño
+La activación post-pago debe implementarse como servicio propio y separado.
+
+No se debe reutilizar directamente `CreateSubscriptionWithAcceptanceService`, porque ese servicio mezcla aceptación contractual final, creación de `profile_subscriptions` activa y resolución read-model en una sola transacción. Ese flujo no representa correctamente el camino checkout-first con aceptación `accepted_pending_payment` ya creada antes del pago.
+
+La activación futura debe partir de evidencia ya confirmada:
+
+- `subscription_payment_events` con `event_type=payment_intent_confirm` y `processing_status=processed`;
+- payment intent `paid` / `mock_paid`;
+- checkout `pending_payment`;
+- aceptación contractual relacionada en `accepted_pending_payment`;
+- ausencia de suscripción activa para la entidad.
+
+### C) Servicio futuro recomendado
+Servicio sugerido:
+
+```text
+ActivateSubscriptionAfterPaymentService
+```
+
+Método sugerido:
+
+```text
+activateAfterPayment(array $input): array
+```
+
+Entrada mínima:
+
+- `entity_type`;
+- `entity_id`;
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `payment_event_uuid`;
+- `idempotency_key`;
+- actor/contexto técnico autorizado.
+
+Este servicio no debe depender de provider real ni webhook en esta fase. El provider mock/dev ya dejó evidencia suficiente para una activación controlada, siempre que la microfase futura lo autorice explícitamente.
+
+### D) Idempotencia futura
+Operación sugerida:
+
+```text
+subscriptions.payment_intent.activate_after_payment
+```
+
+Scope recomendado:
+
+- `entity_type`;
+- `entity_id`;
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `payment_event_uuid`.
+
+Reglas:
+
+- misma `Idempotency-Key` + mismo payload debe devolver replay;
+- misma `Idempotency-Key` + payload distinto debe devolver `idempotency_key_reused_with_different_payload`;
+- key nueva contra suscripción ya activada debe devolver `409` semántico, por ejemplo `subscription_already_activated` o `active_subscription_exists`;
+- si el resultado de activación no está disponible, debe mantener error idempotente explícito y no ejecutar activación parcial.
+
+La idempotencia debe completarse sólo después de crear `profile_subscriptions` y cerrar la transición de estado decidida.
+
+### E) Lock futuro
+Operación sugerida:
+
+```text
+payment_intent_activate_subscription
+```
+
+Scope posible:
+
+- por `payment_intent_uuid`: protege directamente la evidencia que gatilla la activación;
+- por `checkout_intent_uuid`: protege todo el flujo de checkout y evita doble transición del checkout.
+
+Decisión recomendada inicial:
+
+- usar `checkout_intent_uuid` como scope si la misma transacción también cambia checkout;
+- usar `payment_intent_uuid` si la activación se trata como una consecuencia estricta del evento de pago.
+
+Objetivo del lock:
+
+- evitar doble inserción en `profile_subscriptions`;
+- evitar doble transición de checkout;
+- evitar activación concurrente con keys distintas.
+
+Timeout sugerido: `2` segundos.
+
+### F) Validaciones previas obligatorias
+Antes de activar, el servicio futuro debe validar:
+
+- `payment_intent_uuid` existe;
+- payment intent tiene `normalized_status=paid`;
+- payment intent tiene `provider_status=mock_paid` o estado equivalente aceptado por contrato;
+- `payment_event_uuid` existe;
+- payment event tiene `event_type=payment_intent_confirm`;
+- payment event tiene `processing_status=processed`;
+- checkout existe;
+- checkout tiene `status=pending_payment`;
+- checkout, payment intent y payment event pertenecen al mismo `checkout_intent_uuid`;
+- `entity_type` y `entity_id` coinciden con el checkout;
+- `contract_acceptance_uuid` existe en el checkout;
+- la aceptación relacionada tiene `status=accepted_pending_payment`;
+- no existe `active_subscription_exists` para la entidad;
+- `amount_cents` y `currency` coinciden entre checkout, payment intent y payment event;
+- `plan_code` y `billing_period` son válidos contra catálogo;
+- no existe ya una fila activa en `profile_subscriptions` para la entidad.
+
+Si cualquier validación falla, la activación debe abortar sin writes.
+
+### G) Transacción futura
+Dentro de una transacción futura:
+
+1. Revalidar payment intent `paid`.
+2. Revalidar payment event único/procesado.
+3. Revalidar checkout `pending_payment`.
+4. Revalidar `active_subscription_exists=false`.
+5. Crear exactamente 1 fila en `profile_subscriptions` con snapshot operativo.
+6. Opcional y por decisión explícita: cambiar checkout a `paid`, `confirmed` o estado equivalente.
+7. Opcional y por decisión explícita: ligar `subscription_id` a la aceptación si el schema lo permite; si no, mantener enlace conceptual por `contract_acceptance_uuid`, `checkout_intent_uuid`, `payment_intent_uuid` y `payment_event_uuid`.
+8. Completar idempotencia `subscriptions.payment_intent.activate_after_payment`.
+
+Si cualquier paso falla, ejecutar rollback. No debe quedar `profile_subscriptions` creada sin idempotencia completed ni transición consistente.
+
+### H) Snapshot canónico para `profile_subscriptions`
+La fila futura de `profile_subscriptions` debe construirse con un snapshot canónico, no con datos arbitrarios del cliente.
+
+Campos esperados:
+
+- `subscription_id` nuevo;
+- `entity_type` / `entity_id`;
+- `doctor_id` / `profile_id`, si aplican;
+- `plan_code`;
+- `contracted_plan_code`;
+- `effective_plan_code`;
+- `billing_period`;
+- `duration_days` desde catálogo;
+- `status=active`;
+- `contract_version`;
+- `contract_accepted_at` desde aceptación `accepted_pending_payment`;
+- `contract_accepted_by_user_id`;
+- `contract_acceptance_source`;
+- `starts_at` desde fecha de activación o pago confirmado;
+- `expires_at` calculado según duración del plan;
+- `grace_starts_at` / `grace_ends_at` según decisión futura;
+- `source`;
+- `notes`;
+- campos auditables disponibles.
+
+Referencias de pago/checkout:
+
+- si el schema futuro agrega columnas específicas, guardar `checkout_intent_uuid`, `payment_intent_uuid` y `payment_event_uuid`;
+- si no hay columnas específicas, documentar trazabilidad externa por tablas relacionadas y notas/audit, sin modificar DB/schema en esta fase documental.
+
+### I) Estados esperados
+Checkout:
+
+- debe decidirse si pasa de `pending_payment` a `paid`, `confirmed` o un estado equivalente en la misma transacción.
+
+Payment intent:
+
+- ya queda `paid` / `mock_paid`;
+- no debe mutarse salvo campos audit si una microfase futura lo justifica.
+
+Payment event:
+
+- ya queda `processed`;
+- no debe crearse otro evento para activar.
+
+`profile_subscriptions`:
+
+- debe crearse exactamente 1 fila activa;
+- no debe duplicarse en replay ni con key nueva.
+
+Read-model:
+
+- después de la activación debe devolver el plan contratado, no `free` fallback.
+
+### J) Prohibiciones
+Esta planificación no autoriza:
+
+- implementar activación;
+- crear servicio PHP;
+- crear endpoint;
+- modificar repositorios;
+- ejecutar HTTP/POST;
+- ejecutar SQL;
+- modificar DB/schema;
+- insertar en `profile_subscriptions`;
+- actualizar `profile_subscriptions`;
+- cambiar checkout status;
+- cambiar payment intent;
+- crear `subscription_payment_events`;
+- activar capacidades públicas fuera del read-model;
+- usar provider real;
+- ejecutar webhook;
+- ejecutar facturación real;
+- activar sin idempotencia/lock;
+- reutilizar `CreateSubscriptionWithAcceptanceService` tal cual.
+
+### K) QA futura
+QA futura mínima:
+
+- preflight read-only antes de activar;
+- activación positiva controlada con exactamente 1 POST o llamada backend cuando exista endpoint/servicio;
+- replay idempotente con misma key y mismo payload;
+- key nueva contra suscripción ya activada;
+- misma key con payload distinto;
+- confirmar que no se duplica `profile_subscriptions`;
+- confirmar que no se crean `subscription_payment_events` adicionales;
+- confirmar que checkout cambia sólo si esa transición fue decidida;
+- confirmar que payment intent no se muta indebidamente;
+- confirmar que read-model cambia de `free` a plan contratado;
+- confirmar que no hay provider real, webhook ni facturación real.
+
+### L) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-Idempotency-Readiness-01
+```
+
+Justificación:
+
+- la activación crea `profile_subscriptions`, que es un write de alto impacto;
+- antes de diseñar lock o servicio conviene fijar operación, scope, replay y precedencia de errores;
+- la idempotencia define cómo responder ante replay, payload distinto y activación ya realizada;
+- sin ese contrato, el lock no basta para evitar duplicidad semántica.
+
+No implementar activación hasta cerrar idempotencia y lock como contratos separados.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
