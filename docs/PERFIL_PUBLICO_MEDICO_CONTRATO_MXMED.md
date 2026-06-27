@@ -23287,6 +23287,147 @@ Objetivo:
 
 ---
 
+## Adenda PP-Decisiones 117 - Cierre QA funcional confirm_mock payment intent
+
+### A) Resumen ejecutivo
+La QA funcional controlada del endpoint `confirm-mock` para payment intent queda cerrada con PASS después de los fixes aplicados.
+
+El endpoint ya confirma en modo mock/dev un payment intent existente:
+
+- marca el payment intent como `paid` / `mock_paid`;
+- registra exactamente 1 evento en `subscription_payment_events`;
+- conserva el checkout en `pending_payment`;
+- no activa suscripción;
+- no crea ni modifica `profile_subscriptions`;
+- no integra provider real;
+- no ejecuta webhook;
+- no ejecuta facturación real.
+
+La activación post-pago de `profile_subscriptions` queda fuera de este cierre y requiere una microfase futura separada con contrato explícito.
+
+### B) Incidentes detectados y corregidos
+Incidente 1: lock name mayor al límite de MySQL `GET_LOCK()`.
+
+- Primer intento `confirm_mock`: HTTP `500`.
+- DB quedó segura.
+- Idempotencia `confirm_mock`: `id=24`, `failed`, `response_http_status=500`.
+- Fix aplicado: `36f0379 fix(suscripciones): acorta lock confirmacion mock payment intent`.
+- Patrón nuevo del lock: `mxmed:sub:pi:{hash12}:confirm`.
+- Longitud esperada del lock: `33` caracteres.
+
+Incidente 2: replay idempotente bloqueado por `payment_intent_already_paid`.
+
+- Replay con misma Idempotency-Key `mxmed-confirm-mock-qa-20260626-002` antes del fix: HTTP `409 payment_intent_already_paid`.
+- DB quedó estable, sin duplicados.
+- Causa confirmada: `assertConfirmable(...)` corría antes de resolver el replay idempotente completed.
+- Plan documental: `0a933d9 docs(suscripciones): planifica fix replay confirmacion mock`.
+- Fix aplicado: `101a03e fix(suscripciones): corrige replay confirmacion mock`.
+- Resultado del fix: `beginPaymentIntentConfirmMock(...)` se ejecuta antes del guard `payment_intent_already_paid`, y el replay completed retorna antes de lock, transacción, creación de evento o update.
+
+### C) Matriz QA funcional final
+Matriz final validada:
+
+| Caso | Resultado | Estado |
+| --- | --- | --- |
+| Confirm successful fresh key 002 | HTTP `200`, payment intent `paid` / `mock_paid`, `payment_events_total=1` | PASS |
+| Replay same key 002 after fix | HTTP `200`, `meta.idempotent_replay=true`, `payment_events_total` sigue `1` | PASS |
+| Fresh key 003 already paid | HTTP `409 payment_intent_already_paid`, `payment_events_total` sigue `1` | PASS |
+| Same key 002 different payload | HTTP `409 idempotency_key_reused_with_different_payload`, no devuelve `payment_intent_already_paid`, `payment_events_total` sigue `1` | PASS |
+
+Detalles relevantes:
+
+- Idempotency-Key exitosa: `mxmed-confirm-mock-qa-20260626-002`.
+- Idempotency-Key fresh already paid: `mxmed-confirm-mock-qa-20260626-003-already-paid`.
+- Payload distinto con key completada bloquea por `idempotency_key_reused_with_different_payload`.
+- No se crearon eventos duplicados.
+- No se tocó `profile_subscriptions`.
+- No se activó suscripción.
+
+### D) Estado DB final
+Estado DB final observado:
+
+- `payment_intents_total=1`;
+- `payment_events_total=1`;
+- `profile_subscriptions_total=3`;
+- checkout `7d4beec3-b62a-40e1-a9f2-9edcc1a83364` queda `pending_payment`;
+- payment intent `85493a1c-4a66-40ec-928a-09cb0eb5d007` queda `paid` / `mock_paid`;
+- `paid_at=2026-06-27 04:33:20`;
+- `payment_intents_for_checkout=1`;
+- `events_for_payment_intent=1`;
+- `paid_payment_intents_total=1`.
+
+Payment event único:
+
+- `id=1`;
+- `uuid=86c29828-4537-4402-93cb-28d0947e81a7`;
+- `event_type=payment_intent_confirm`;
+- `provider=mxmed_mock`;
+- `provider_event_id=mxmed_mock_confirm:85493a1c-4a66-40ec-928a-09cb0eb5d007`;
+- `amount_cents=20000`;
+- `currency=MXN`.
+
+Idempotencia `confirm_mock` reciente:
+
+- `id=28`, `failed`, `response_http_status=409`;
+- `id=26`, `completed`, `response_http_status=200`;
+- `id=24`, `failed`, `response_http_status=500`.
+
+### E) Decisiones y contratos cerrados
+Decisiones cerradas para este alcance:
+
+- `confirm_mock` es exclusivamente mock/dev;
+- `confirm_mock` no es provider real;
+- `confirm_mock` no es webhook;
+- `confirm_mock` no es facturación real;
+- `confirm_mock` no activa `profile_subscriptions`;
+- `confirm_mock` no crea suscripción activa;
+- `profile_subscriptions` permanece en `3`;
+- checkout sigue `pending_payment` por diseño actual;
+- el payment event funciona como evidencia de confirmación mock/dev;
+- la activación post-pago requiere microfase y contrato separados.
+
+La tabla `subscription_write_idempotency_keys` no debe asumirse con columnas `error_code` ni `error_message`. Las consultas futuras deben usar columnas reales observadas, por ejemplo:
+
+- `id`;
+- `uuid`;
+- `operation`;
+- `status`;
+- `response_http_status`;
+- `entity_type`;
+- `entity_id`;
+- `created_at`;
+- `updated_at`;
+- `response_body_json`, si existe y una microfase la requiere.
+
+### F) Prohibiciones del cierre
+Este cierre no autoriza:
+
+- activar `profile_subscriptions`;
+- crear suscripción activa;
+- ejecutar provider real;
+- ejecutar webhook;
+- ejecutar facturación real;
+- modificar DB/schema;
+- crear payment events adicionales para el mismo payment intent;
+- marcar paid nuevamente;
+- limpiar datos de QA;
+- cambiar el estado del checkout fuera de una microfase explícita.
+
+### G) Siguiente bloque recomendado
+Siguiente bloque recomendado:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-Readiness-01
+```
+
+Objetivo recomendado:
+
+- diseñar o validar la activación post-pago controlada como microfase separada, definiendo si y cuándo el payment event `payment_intent_confirm` puede activar `profile_subscriptions`, sin mezclar provider real, webhook ni facturación real.
+
+No iniciar activación sin nueva decisión explícita.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
