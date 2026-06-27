@@ -153,9 +153,8 @@ final class SubscriptionEntityWriteLockService
             return $lockName;
         }
 
-        return self::LOCK_PREFIX
-            . ':pic:'
-            . substr(hash('sha256', $uuid), 0, 18)
-            . ':' . self::PAYMENT_INTENT_CONFIRM_OPERATION;
+        return 'mxmed:sub:pi:'
+            . substr(hash('sha256', $uuid), 0, 12)
+            . ':confirm';
     }
 }
