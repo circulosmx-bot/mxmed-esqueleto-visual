@@ -22358,6 +22358,85 @@ Objetivo futuro:
 
 ---
 
+## Adenda PP-Decisiones 111 - Cierre QA funcional controlada del endpoint payment-intents
+
+### A) Resultado de cierre
+El endpoint `payment-intents` queda validado funcionalmente en modo controlado/dev para el flujo interno con provider mock/dev.
+
+El bloque QA funcional controlada cerro como PASS operativo con estas condiciones:
+
+- `payment_intents=1`;
+- `payment_events=0`;
+- `profile_subscriptions=3`;
+- checkout real `7d4beec3-b62a-40e1-a9f2-9edcc1a83364` sigue en `pending_payment`;
+- payment intent unico `85493a1c-4a66-40ec-928a-09cb0eb5d007` sigue en `created`;
+- no hay payment intent `paid`;
+- no hay duplicados para el checkout real;
+- no hay payment intent para el checkout inexistente `00000000-0000-4000-8000-000000000404`.
+
+### B) Payment intent creado
+El primer create controlado genero un unico payment intent interno:
+
+- `uuid = 85493a1c-4a66-40ec-928a-09cb0eb5d007`;
+- `checkout_intent_uuid = 7d4beec3-b62a-40e1-a9f2-9edcc1a83364`;
+- `provider = mxmed_mock`;
+- `provider_status = mock_created`;
+- `normalized_status = created`;
+- `amount_cents = 20000`;
+- `currency = MXN`;
+- `deleted_at = NULL`.
+
+Ese write no activo suscripcion, no creo `payment_events`, no modifico `profile_subscriptions`, no marco `paid`, no ejecuto webhook, no integro provider real y no facturo.
+
+### C) Pruebas funcionales cerradas
+Quedan aprobadas las pruebas funcionales controladas principales:
+
+- Positive201 recuperada por StateRecovery: existe un unico payment intent correcto con provider mock/dev.
+- Same key different payload: HTTP `409`, `idempotency_key_reused_with_different_payload`, sin duplicados.
+- Existing payment intent con RetryFreshKey: HTTP `409`, `payment_intent_already_exists`, reconciliado con la precedencia documentada en PP-Decisiones 110.
+- Missing Idempotency-Key: HTTP `422`, `idempotency_key_invalid`, sin nuevas filas.
+- Sin sesion/cookie valida: HTTP `403`, `forbidden`, `auth_mode = local_dev_open`, sin nuevas filas.
+- Checkout inexistente: HTTP `404`, `checkout_intent_not_found`, sin nuevas filas.
+
+### D) Estado DB de cierre
+El estado de cierre observado queda:
+
+- `subscription_payment_intents = 1`;
+- `subscription_payment_events = 0`;
+- `profile_subscriptions = 3`;
+- `subscription_write_idempotency_keys = 11`;
+- `payment_intents_for_real_checkout = 1`;
+- `payment_intents_for_missing_checkout = 0`;
+- `paid_payment_intents_total = 0`;
+- checkout real sigue `pending_payment`;
+- payment intent unico sigue `created`.
+
+La idempotencia reciente observada para `subscriptions.payment_intent.create` incluye:
+
+- id `22`, `failed`, HTTP `409`;
+- id `19`, `failed`, HTTP `409`;
+- id `15`, `completed`, HTTP `201`.
+
+### E) Limites confirmados
+El bloque QA confirma que el flujo payment intent todavia:
+
+- no activa suscripción;
+- no crea payment_events;
+- no toca profile_subscriptions;
+- no marca payment intent como `paid`;
+- no webhook;
+- no provider real;
+- no facturación real;
+- no crea `subscription_payment_events`;
+- no modifica DB/schema.
+
+### F) Siguiente bloque recomendado
+El siguiente bloque futuro recomendado es planificar/readiness para confirmacion controlada de pago mock/dev o diseno de `payment_events`.
+
+Esta adenda no implementa ese bloque futuro, no ejecuta HTTP/POST, no hace SQL write, no modifica backend, no modifica DB/schema y no crea filas.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
