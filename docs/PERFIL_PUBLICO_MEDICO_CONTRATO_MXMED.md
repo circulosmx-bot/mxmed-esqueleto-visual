@@ -23678,6 +23678,173 @@ Justificación:
 
 No implementar activación hasta cerrar idempotencia y lock como contratos separados.
 
+## Adenda PP-Decisiones 119 - Plan de lock para activación post-pago
+
+### A) Estado actual
+La idempotencia preparatoria para la activación post-pago ya existe con la operación:
+
+```text
+subscriptions.payment_intent.activate_after_payment
+```
+
+El lock específico de activación aún no existe. Tampoco existe el servicio `ActivateSubscriptionAfterPaymentService` ni un endpoint de activación post-pago.
+
+Esta adenda no autoriza tocar `profile_subscriptions`, no activa suscripción, no cambia checkout status, no cambia payment intent y no crea `subscription_payment_events`.
+
+### B) Decisión de scope
+El scope primario recomendado para el lock futuro es:
+
+```text
+payment_intent_uuid
+```
+
+Justificación:
+
+- la activación nace de un payment intent confirmado;
+- protege la doble activación del mismo pago;
+- mantiene el lock name corto;
+- reduce bloqueo innecesario frente a un lock por `entity_type` / `entity_id`;
+- es coherente con el patrón corregido de confirmación mock;
+- debe complementarse con revalidación transaccional de `active_subscription_exists`.
+
+### C) Operación futura
+Nombre de operación de lock recomendado:
+
+```text
+payment_intent_activate_subscription
+```
+
+Error de timeout sugerido:
+
+```text
+payment_intent_activate_subscription_lock_timeout
+```
+
+Método futuro sugerido:
+
+```php
+acquirePaymentIntentActivateSubscription(string $paymentIntentUuid, int $timeoutSeconds = 2): ?string
+```
+
+Builder futuro sugerido:
+
+```php
+buildPaymentIntentActivateSubscriptionLockName(string $paymentIntentUuid): string
+```
+
+### D) Patrón de lock name
+El lock name futuro debe usar hash corto, no el UUID crudo completo:
+
+```text
+mxmed:sub:pi:{hash12}:activate
+```
+
+Donde:
+
+```php
+substr(hash('sha256', $paymentIntentUuid), 0, 12)
+```
+
+Longitud estimada:
+
+- `mxmed` = 5
+- `:` = 1
+- `sub` = 3
+- `:` = 1
+- `pi` = 2
+- `:` = 1
+- `hash12` = 12
+- `:` = 1
+- `activate` = 8
+- total = 34 caracteres
+
+El patrón queda muy por debajo del límite de 64 caracteres de MySQL `GET_LOCK()`.
+
+### E) Comparativa de scopes
+`payment_intent_uuid`:
+
+- pros: protege el pago específico, mantiene lock corto y es coherente con `confirm_mock`;
+- contras: exige revalidar `active_subscription_exists` dentro de la transacción.
+
+`checkout_intent_uuid`:
+
+- pros: protege el checkout completo;
+- contras: acopla activación a checkout y no al evento/pago confirmado; también requiere hash corto para evitar exceder 64 caracteres.
+
+`entity_type` / `entity_id`:
+
+- pros: protege contra activaciones simultáneas por entidad;
+- contras: serializa demasiado, puede bloquear flujos legítimos no relacionados y aumenta la contención.
+
+### F) Reglas futuras de uso
+La implementación futura debe seguir este orden:
+
+1. Resolver replay idempotente completed antes de intentar lock cuando aplique.
+2. Para key nueva o no replay, adquirir lock por `payment_intent_uuid`.
+3. Dentro del lock y de la transacción:
+   - revalidar payment intent `paid`;
+   - revalidar payment event `processed`;
+   - revalidar checkout `pending_payment`;
+   - revalidar `active_subscription_exists=false`;
+   - crear exactamente 1 fila en `profile_subscriptions`;
+   - cerrar transición de checkout si esa decisión queda aprobada;
+   - completar idempotencia.
+4. Liberar lock siempre en `finally`.
+
+### G) Riesgos
+Riesgos identificados:
+
+- doble activación si sólo se confía en idempotencia;
+- carrera con key fresca;
+- carrera contra `active_subscription_exists`;
+- lock demasiado largo si se usa UUID crudo;
+- lock demasiado amplio si se usa entity scope;
+- lock demasiado estrecho si no se revalida entidad dentro de la transacción.
+
+### H) Mitigaciones
+Mitigaciones obligatorias para la implementación futura:
+
+- lock corto hasheado;
+- timeout de 2 segundos;
+- revalidación transaccional;
+- idempotencia completed/replay;
+- no crear `profile_subscriptions` fuera de transacción;
+- no mutar checkout/payment intent fuera del servicio autorizado;
+- no provider real;
+- no webhook;
+- no facturación real.
+
+### I) QA futura
+QA futura mínima para la microfase de lock:
+
+- `php -l modules/subscriptions/services/SubscriptionEntityWriteLockService.php`;
+- grep de nueva constante/error/métodos;
+- validar longitud de lock name menor a 64 caracteres;
+- validar que usa hash `sha256` corto;
+- validar que no usa UUID crudo completo;
+- validar que no toca `profile_subscriptions`;
+- validar que no crea endpoint;
+- validar que no activa suscripción;
+- futura QA funcional deberá probar doble submit/concurrencia cuando exista servicio.
+
+### J) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-LockOperation-01
+```
+
+Alcance futuro:
+
+- modificar únicamente `SubscriptionEntityWriteLockService.php`;
+- agregar constante/error/método/builder del lock de activación;
+- no crear servicio de activación;
+- no crear endpoint;
+- no ejecutar SQL;
+- no modificar DB/schema;
+- no tocar `profile_subscriptions`;
+- no activar suscripción.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
