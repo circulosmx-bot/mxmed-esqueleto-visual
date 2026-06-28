@@ -26755,3 +26755,118 @@ QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping
 Motivo:
 
 Después de tocar `assets/js/app.js`, se debe validar estáticamente que la integración es mínima, que el wrapper existe, que `devWriteStatusMessage` conserva fallback local, que `applyReadOnlyError` no se reemplazó, que no se conectó `activate-after-payment` y que Git queda limpio.
+
+---
+
+## Adenda PP-Decisiones 136 - Cierre QA estática de integración del mapper en app.js
+
+### Objetivo
+
+Esta adenda documenta el cierre PASS de la QA estática post-implementación de la integración mínima del mapper dedicado en `assets/js/app.js`.
+
+La QA validada corresponde a:
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-AppIntegration-PostImplementation-StaticQA-01
+```
+
+### Resultado validado
+
+La QA estática cerró PASS.
+
+Estado Git validado:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local: `68185a0`;
+- origin: `68185a0`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio;
+- working tree final: limpio;
+- último commit validado: `68185a0 feat(suscripciones): integra mapper errores post pago`.
+
+El último commit validado incluyó únicamente:
+
+- `assets/js/app.js`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Validaciones estáticas cerradas
+
+La QA confirmó que `assets/js/app.js` contiene:
+
+- `mapSubscriptionMessage(code, options)`;
+- lectura defensiva de `window.MXMedSubscriptions.mapActivationError`;
+- `try/catch` alrededor del mapper;
+- retorno seguro `null` cuando no hay mapper, falla o no hay mensaje;
+- integración limitada a `devWriteStatusMessage`;
+- fallback local preservado.
+
+También confirmó los códigos controlados:
+
+- `active_subscription_exists`;
+- `idempotency_key_reused_with_different_payload`;
+- `idempotency_key_invalid`;
+- `invalid_payload`.
+
+### Preservaciones confirmadas
+
+La QA confirmó que no se modificó ni reemplazó `applyReadOnlyError`.
+
+También confirmó que no hubo diff en:
+
+- `index.html`;
+- `assets/js/subscription-messages.js`;
+- `assets/js/messages.js`;
+- backend PHP;
+- SQL/schema/seeds;
+- fixtures.
+
+No se conectó `activate-after-payment` al frontend.
+
+No se agregó `payment_event_uuid` al frontend.
+
+No se ejecutó SQL.
+
+No se ejecutó HTTP/POST ni curl.
+
+No se modificó DB/schema.
+
+### Observación operativa
+
+`node --check assets/js/app.js` no pudo ejecutarse porque `node` no estaba disponible en el entorno local de la QA.
+
+La observación se clasificó como no bloqueante porque:
+
+- Git quedó limpio y alineado;
+- `git diff --check` quedó limpio;
+- la revisión estática de alcance pasó;
+- no hubo writes;
+- no se ejecutó SQL;
+- no se ejecutó HTTP/POST ni curl.
+
+### Decisiones preservadas
+
+Se preservan:
+
+- PP-Decisiones 124: contrato técnico de errores `activate-after-payment`;
+- PP-Decisiones 126: mapeo frontend/soporte;
+- PP-Decisiones 132: implementación mínima de `assets/js/subscription-messages.js`;
+- PP-Decisiones 134: cierre del readiness de integración en `assets/js/app.js`;
+- PP-Decisiones 135: implementación mínima de integración del mapper en `assets/js/app.js`.
+
+También se preserva que:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` sigue sin conectarse al frontend;
+- `payment_event_uuid` no se introduce en frontend;
+- `applyReadOnlyError` queda fuera de esta integración mínima.
+
+### Siguiente microfase recomendada
+
+```text
+GIT-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-AppIntegration-PostImplementation-StaticQA-Closure-Commit-01
+```
+
+Motivo:
+
+El cierre documental quedó agregado como pending diff controlado y debe versionarse en una microfase Git separada.
