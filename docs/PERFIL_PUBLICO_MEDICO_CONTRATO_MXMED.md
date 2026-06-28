@@ -27008,3 +27008,233 @@ Si se desea avanzar hacia una activación real desde frontend, antes de tocar UI
 - guards visibles para usuario,
 - relación con el mapper ya implementado,
 - límites para no mezclar panel DEV/local con flujo real.
+
+---
+
+## PP-Decisiones 138 - Readiness del flujo frontend de activacion post-pago
+
+Fecha de readiness documental: 2026-06-28
+
+### Microfase
+
+`BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendActivationFlow-Readiness-01`
+
+### Tipo
+
+BE/SPEC / Readiness documental del flujo frontend futuro de activacion post-pago.
+
+### Objetivo
+
+Esta adenda documenta el readiness del flujo frontend futuro que podria disparar la activacion post-pago mediante el endpoint backend explicito:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents/{payment_intent_uuid}/activate-after-payment
+```
+
+No implementa UI.
+
+No modifica JS, HTML, backend, SQL, schema, seeds, frontend ni fixtures.
+
+No conecta `activate-after-payment` al frontend.
+
+No ejecuta SQL, HTTP/POST ni curl.
+
+### Contexto cerrado
+
+El readiness parte de los bloques ya cerrados:
+
+- backend `activate-after-payment` implementado;
+- `ActivateSubscriptionAfterPaymentService` implementado;
+- QA funcional con replay y guards cerrada;
+- contrato tecnico de errores cerrado;
+- activacion post-pago validada con fixture `doctor/900001`;
+- mapper frontend/soporte documentado;
+- modulo dedicado `assets/js/subscription-messages.js` implementado;
+- integracion minima en `assets/js/app.js` cerrada;
+- bloque `FrontendSupportErrorMapping/AppIntegration` cerrado en PP-Decisiones 137.
+
+### Pantallas candidatas
+
+Las pantallas candidatas para una futura activacion desde frontend son:
+
+1. Panel DEV/local de contratacion controlada.
+2. Futura pantalla de checkout/pago.
+3. Futura pantalla soporte/admin.
+4. Vista de detalle de checkout/payment intent.
+
+Decision de readiness:
+
+- no se elige implementacion todavia;
+- el primer flujo controlado debe priorizar un panel DEV/local o soporte/admin;
+- no debe exponerse inicialmente a usuario final publico;
+- no debe mezclarse con el panel DEV/local existente sin una decision futura explicita.
+
+### Origen de payment_event_uuid
+
+`payment_event_uuid` no debe ser capturado manualmente por usuario.
+
+`payment_event_uuid` no debe ser inventado por frontend.
+
+Debe provenir de evidencia backend confiable:
+
+- respuesta controlada de `confirm_mock` en DEV/local, si esa respuesta expone el evento;
+- lectura backend futura de checkout/payment intent/event;
+- webhook/provider real futuro, cuando exista el flujo productivo.
+
+Si el frontend no tiene un `payment_event_uuid` confiable, no debe habilitar `activate-after-payment`.
+
+### Precondiciones minimas
+
+Antes de permitir una activacion post-pago desde frontend deben existir:
+
+- `entity_type`;
+- `entity_id`;
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `payment_event_uuid`;
+- checkout leido desde backend en estado compatible con `pending_payment`;
+- payment intent leido desde backend en estado `paid` o `mock_paid`;
+- payment event leido desde backend con `payment_intent_confirm` y `processed`;
+- ausencia de `active_subscription_exists`;
+- sesion/autorizacion valida;
+- `Idempotency-Key` unica por intento;
+- confirmacion UX explicita antes de ejecutar el POST.
+
+### UX guards requeridos
+
+El frontend futuro debe impedir:
+
+- doble click;
+- reintento simultaneo;
+- accion si faltan UUIDs;
+- accion si ya hay suscripcion activa;
+- accion si checkout ya esta `activated` o no esta `pending_payment`;
+- accion si payment intent no esta `paid`/`mock_paid`;
+- accion si payment event no esta `processed`;
+- accion sin `Idempotency-Key`;
+- accion fuera de DEV/local o soporte/admin si aun no existe flujo productivo definido.
+
+El boton o accion debe quedar deshabilitado mientras la operacion esta en curso.
+
+Despues de una respuesta, el frontend debe consultar o refrescar estado antes de permitir otro intento.
+
+### Estado visual minimo
+
+La UI futura debe mostrar como minimo:
+
+- estado de checkout;
+- estado de payment intent;
+- estado de payment event;
+- resultado de activacion;
+- mensaje mapeado por `window.MXMedSubscriptions`;
+- advertencia visible si el flujo es DEV/local;
+- estado de bloqueo mientras hay request en curso.
+
+La UI no debe mostrar:
+
+- secretos;
+- hashes;
+- SQL;
+- stacktrace;
+- payload sensible;
+- `supportHint` a usuario final;
+- codigo tecnico a audiencia `user`.
+
+### Idempotencia frontend
+
+El frontend futuro debe:
+
+- generar una `Idempotency-Key` por intento de activacion;
+- conservar la misma key durante replay controlado del mismo intento;
+- no reutilizar la key con payload distinto;
+- deshabilitar la accion mientras la operacion esta en curso;
+- mapear replay exitoso como resultado estable;
+- consultar estado posterior antes de permitir una key nueva.
+
+### Errores y mapping
+
+La implementacion futura debe usar el mapper existente `window.MXMedSubscriptions` para errores canonicos como:
+
+- `active_subscription_exists`;
+- `checkout_intent_not_pending_payment`;
+- `payment_intent_not_paid`;
+- `payment_event_not_processed`;
+- `idempotency_key_reused_with_different_payload`;
+- `payment_intent_activation_unavailable`;
+- fallback interno seguro.
+
+El mapper no debe usarse para ocultar errores de diseno de flujo ni para habilitar acciones con datos incompletos.
+
+### Limites de primera implementacion futura
+
+La primera implementacion futura no debe:
+
+- exponer el flujo a usuario final publico;
+- crear ni inventar `payment_event_uuid`;
+- ejecutar `confirm_mock` y `activate-after-payment` en una sola accion sin decision explicita;
+- modificar backend;
+- modificar contrato tecnico;
+- crear SQL;
+- crear nuevos fixtures;
+- reemplazar completo `applyReadOnlyError`;
+- activar automaticamente al cargar una pantalla;
+- asumir que el panel DEV/local actual ya tiene todos los datos necesarios.
+
+### QA futura requerida
+
+Antes de cerrar una implementacion real debe existir:
+
+- QA estatica;
+- QA read-only sin POST confirmando UI deshabilitada si faltan datos;
+- QA controlada con fixture DEV/local si se autoriza;
+- validacion de replay idempotente;
+- validacion de fresh-key guard;
+- validacion de no duplicados en DB;
+- SQL read-only post si se ejecuta POST real;
+- QA post-push.
+
+### Riesgos
+
+Riesgos vigentes:
+
+- el frontend actual todavia no tiene confirmada la disponibilidad de `payment_event_uuid`;
+- habilitar el POST sin evidencia backend confiable podria producir errores de activacion;
+- mezclar flujo DEV/local con flujo real puede generar confusion operativa;
+- una UI publica temprana podria exponer accion de activacion sin guards suficientes;
+- falta revisar si `app.js` ya contiene estado visual suficiente para checkout/payment intent/event;
+- cualquier POST futuro debe hacerse en microfase funcional controlada.
+
+### Decisiones preservadas
+
+Se preserva que:
+
+- `confirm_mock` no activa suscripcion;
+- `confirm_mock` solo confirma evidencia de pago mock/dev;
+- `activate-after-payment` sigue siendo endpoint backend explicito de activacion real post-pago;
+- el frontend todavia no ejecuta `activate-after-payment`;
+- `payment_event_uuid` no debe inventarse en frontend;
+- `payment_event_uuid` solo debe venir de evidencia backend confiable;
+- `Idempotency-Key` sigue siendo obligatoria en futuros POST controlados;
+- `applyReadOnlyError` queda preservado;
+- no se duplica `profile_subscriptions`;
+- backend, SQL, schema, seeds y fixtures quedan intactos.
+
+### Recomendacion de readiness
+
+El siguiente paso no debe ser implementacion directa.
+
+Antes de disenar o implementar UI debe revisarse read-only si el panel actual contiene o puede obtener:
+
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `payment_event_uuid`;
+- estado visual suficiente para una futura accion controlada;
+- guards UX existentes reutilizables.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendActivationFlow-CurrentState-ReadOnly-01`
+
+Motivo:
+
+Antes de tocar UI o ejecutar POST, se debe revisar en modo read-only si el frontend actual tiene datos suficientes para armar un flujo seguro de activacion post-pago y si existe un estado visual adecuado para una futura accion controlada.
