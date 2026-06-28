@@ -59071,6 +59071,47 @@ function mxResetLogoPreview(){
     return status === 'active' && (effectivePlan !== 'free' || !!contractedPlan || model?.is_paid_plan === true);
   }
 
+  const SUBSCRIPTION_MAPPER_DEV_WRITE_CODES = {
+    active_subscription_exists: true,
+    idempotency_key_reused_with_different_payload: true,
+    idempotency_key_invalid: true,
+    invalid_payload: true
+  };
+
+  function readDevWriteErrorCode(result){
+    const direct = clean((result && (result.error || result.code)) || '').toLowerCase();
+    if(direct) return direct;
+    const payload = result && result.payload && typeof result.payload === 'object' ? result.payload : null;
+    const payloadError = payload && payload.error && typeof payload.error === 'object' ? payload.error : null;
+    return clean(payloadError && payloadError.code).toLowerCase();
+  }
+
+  function mapSubscriptionMessage(code, options = {}){
+    const safeCode = clean(code).toLowerCase();
+    if(!safeCode) return null;
+    const namespace = window.MXMedSubscriptions && typeof window.MXMedSubscriptions === 'object'
+      ? window.MXMedSubscriptions
+      : null;
+    const mapper = namespace && typeof namespace.mapActivationError === 'function'
+      ? namespace.mapActivationError
+      : null;
+    if(!mapper) return null;
+
+    try{
+      const mapped = mapper.call(namespace, {
+        code: safeCode,
+        httpStatus: options.httpStatus,
+        audience: options.audience || 'dev',
+        context: options.context || 'checkout',
+        fallback: options.fallback || ''
+      });
+      const message = clean(mapped && mapped.message);
+      return message ? mapped : null;
+    }catch(_){
+      return null;
+    }
+  }
+
   function devWriteStatusMessage(result){
     if(!result) return '';
     if(result.idempotent_replay){
@@ -59078,6 +59119,11 @@ function mxResetLogoPreview(){
     }
     if(result.httpStatus === 201 && result.ok){
       return 'Suscripción DEV creada correctamente.';
+    }
+    const errorCode = readDevWriteErrorCode(result);
+    if(SUBSCRIPTION_MAPPER_DEV_WRITE_CODES[errorCode]){
+      const mapped = mapSubscriptionMessage(errorCode, { httpStatus: result.httpStatus });
+      if(mapped && mapped.message) return mapped.message;
     }
     if(result.httpStatus === 409 && result.error === 'active_subscription_exists'){
       return 'Ya existe una suscripción activa.';

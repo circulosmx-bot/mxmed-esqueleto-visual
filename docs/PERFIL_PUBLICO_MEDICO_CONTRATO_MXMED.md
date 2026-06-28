@@ -26648,3 +26648,110 @@ BE/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping
 Motivo:
 
 Una vez cerrado documentalmente el plan de integración, el siguiente paso controlado puede ser una implementación mínima en `assets/js/app.js`, limitada a `devWriteStatusMessage` y con fallback local.
+
+---
+
+## Adenda PP-Decisiones 135 - Implementación mínima de integración del mapper en app.js
+
+### Objetivo
+
+Esta adenda documenta la implementación mínima del mapper dedicado `window.MXMedSubscriptions` dentro del bloque local de suscripciones en `assets/js/app.js`.
+
+La integración se limita a `devWriteStatusMessage` y no conecta `activate-after-payment` al frontend.
+
+### Alcance implementado
+
+Se modificó únicamente:
+
+- `assets/js/app.js`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+En `assets/js/app.js` se agregó:
+
+- `SUBSCRIPTION_MAPPER_DEV_WRITE_CODES`;
+- `readDevWriteErrorCode(result)`;
+- `mapSubscriptionMessage(code, options)`.
+
+`mapSubscriptionMessage(code, options)`:
+
+- consulta de forma segura `window.MXMedSubscriptions`;
+- valida que `mapActivationError` exista;
+- llama el mapper dentro de `try/catch`;
+- usa `audience: dev` por defecto;
+- usa `context: checkout` por defecto;
+- permite `httpStatus`, `fallback`, `audience` y `context`;
+- devuelve `null` si el mapper no existe, falla o no devuelve mensaje;
+- conserva fallback local.
+
+### Integración limitada
+
+La integración quedó limitada a `devWriteStatusMessage`.
+
+Códigos controlados:
+
+- `active_subscription_exists`;
+- `idempotency_key_reused_with_different_payload`;
+- `idempotency_key_invalid`;
+- `invalid_payload`.
+
+Si el mapper devuelve mensaje, `devWriteStatusMessage` usa ese mensaje.
+
+Si el mapper no existe, falla o no devuelve mensaje, `devWriteStatusMessage` conserva su comportamiento local previo.
+
+### Preservaciones
+
+No se modificó `applyReadOnlyError`.
+
+No se modificó:
+
+- `assets/js/subscription-messages.js`;
+- `assets/js/messages.js`;
+- `index.html`;
+- backend PHP;
+- endpoints;
+- respuestas HTTP;
+- SQL/schema/seeds;
+- fixtures.
+
+No se ejecutó SQL, HTTP/POST ni curl.
+
+No se agregó `payment_event_uuid`.
+
+No se conectó `activate-after-payment`.
+
+### Seguridad
+
+La integración usa el mapper con audiencia `dev` para el panel DEV/local.
+
+No se expone `supportHint` en UI.
+
+No se expone código técnico a audiencia `user`.
+
+La UI conserva fallback local si el namespace no está disponible.
+
+### Decisiones preservadas
+
+Se preservan:
+
+- PP-Decisiones 124: contrato técnico de errores `activate-after-payment`;
+- PP-Decisiones 126: mapeo frontend/soporte;
+- PP-Decisiones 132: implementación mínima de `assets/js/subscription-messages.js`;
+- PP-Decisiones 134: cierre del readiness de integración en `assets/js/app.js`.
+
+También se preserva que:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` sigue sin conectarse al frontend;
+- `payment_event_uuid` no se introduce en frontend;
+- `applyReadOnlyError` queda para microfase futura explícita.
+
+### Siguiente microfase recomendada
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-AppIntegration-PostImplementation-StaticQA-01
+```
+
+Motivo:
+
+Después de tocar `assets/js/app.js`, se debe validar estáticamente que la integración es mínima, que el wrapper existe, que `devWriteStatusMessage` conserva fallback local, que `applyReadOnlyError` no se reemplazó, que no se conectó `activate-after-payment` y que Git queda limpio.
