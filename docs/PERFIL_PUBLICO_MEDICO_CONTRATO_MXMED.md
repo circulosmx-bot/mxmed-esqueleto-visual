@@ -25750,3 +25750,232 @@ QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping
 Motivo:
 
 Antes de implementar, se debe revisar read-only la estructura real de `assets/js/messages.js`, `assets/js/app.js` e `index.html` para confirmar si la ubicación candidata es viable o si conviene crear un módulo dedicado.
+
+---
+
+## Adenda PP-Decisiones 130 - Readiness de módulo dedicado para mapeo de errores activate-after-payment
+
+### Objetivo
+
+Esta adenda documenta el readiness para una futura implementación de un módulo JS dedicado de mapeo frontend/soporte de errores de suscripciones, enfocado inicialmente en el flujo `activate-after-payment`.
+
+La microfase no implementa helper, no crea archivos JS, no modifica `index.html`, no modifica `assets/js/app.js`, no modifica backend, no ejecuta SQL y no ejecuta HTTP/POST o curl.
+
+### Evidencia static read-only
+
+La revisión estática previa confirmó:
+
+- `index.html` carga `assets/js/app.js` antes que `assets/js/messages.js`;
+- `assets/js/messages.js` existe, pero es un IIFE aislado inmediato;
+- `assets/js/messages.js` no expone `window.MXMed`;
+- `assets/js/messages.js` no expone `window.mxmed...`;
+- `assets/js/messages.js` no expone objeto global reusable;
+- `assets/js/messages.js` no expone API reusable;
+- `assets/js/messages.js` está orientado a inbox/badge UI;
+- `assets/js/messages.js` usa DOM directo;
+- `assets/js/messages.js` usa `localStorage`;
+- `assets/js/messages.js` depende de `jumpTo`;
+- `assets/js/messages.js` no es catálogo ni mapper reusable;
+- `assets/js/app.js` no consume `assets/js/messages.js`;
+- `assets/js/app.js` ya contiene lógica local de suscripciones con `devWriteStatusMessage`, `applyReadOnlyError`, endpoints `/api/subscriptions` e `Idempotency-Key`.
+
+Con esta evidencia, `assets/js/messages.js` queda descartado como ubicación inicial limpia para el helper de mapeo de errores de suscripciones.
+
+### Decisión candidata
+
+La futura implementación debe preferir un módulo dedicado sobre `assets/js/messages.js`.
+
+Ubicación candidata preferente:
+
+```text
+assets/js/subscription-messages.js
+```
+
+Ubicación alternativa:
+
+```text
+assets/js/subscriptions/messages.js
+```
+
+Criterio de elección:
+
+- `assets/js/subscription-messages.js` es preferible si se busca un cambio pequeño, de bajo impacto y fácil de cargar antes de `assets/js/app.js`;
+- `assets/js/subscriptions/messages.js` puede ser preferible si se prevé crecer a más módulos de suscripciones, pero requiere crear directorio o confirmar convención de estructura.
+
+Esta adenda no crea esos archivos.
+
+### Orden de carga futuro
+
+Si `assets/js/app.js` va a consumir el helper durante inicialización, el módulo dedicado debe cargarse antes de `assets/js/app.js`.
+
+Ejemplo conceptual futuro:
+
+```html
+<script src="assets/js/subscription-messages.js"></script>
+<script src="assets/js/app.js?v=..."></script>
+```
+
+Esta microfase no modifica `index.html`.
+
+### Namespace y función conceptual
+
+Namespace/global conceptual preferente:
+
+```text
+window.MXMedSubscriptions
+```
+
+Namespace alternativo:
+
+```text
+window.mxmedSubscriptions
+```
+
+Función conceptual preferente:
+
+```text
+mapActivationError
+```
+
+Función alternativa:
+
+```text
+errorMessageFor
+```
+
+Alias conceptual:
+
+```text
+mxmedSubscriptionErrorMapper
+```
+
+### Interfaz conceptual
+
+Entrada:
+
+```text
+code: string
+httpStatus?: number
+context?: string
+audience?: string
+fallback?: string
+```
+
+Valores esperados para `context`:
+
+- `activation`;
+- `checkout`;
+- `payment_intent`;
+- `support`.
+
+Valores esperados para `audience`:
+
+- `user`;
+- `support`;
+- `dev`.
+
+Salida:
+
+```text
+message: string
+severity: string
+retryable: boolean
+supportHint?: string
+exposeCode: boolean
+```
+
+Valores esperados para `severity`:
+
+- `info`;
+- `warning`;
+- `error`;
+- `critical`.
+
+### Grupos mínimos
+
+El módulo dedicado debe cubrir al menos:
+
+- request/base;
+- idempotencia;
+- recursos no encontrados;
+- mismatch/scope;
+- estados inválidos;
+- lock timeout;
+- fallback interno.
+
+El grupo `mismatch/scope` no debe introducir `payment_event_checkout_mismatch` como código canónico actual. Ese código no forma parte del contrato canónico vigente.
+
+### Compatibilidad y fallback
+
+La implementación futura debe ser compatible con el estado actual:
+
+- `assets/js/app.js` podrá consumir el helper si existe;
+- si el helper no existe, `assets/js/app.js` debe conservar fallback local para no romper UI;
+- no debe romper `devWriteStatusMessage`;
+- no debe romper `applyReadOnlyError`;
+- no debe conectar todavía `activate-after-payment` al frontend;
+- no debe cambiar mensajes reales sin microfase explícita;
+- no debe modificar contrato backend.
+
+### Seguridad
+
+El módulo dedicado no debe exponer:
+
+- stacktrace;
+- SQL;
+- detalles PDO;
+- provider secrets;
+- hashes de idempotencia;
+- IDs internos autoincrementales;
+- payload sensible;
+- datos clínicos o personales no necesarios.
+
+Puede exponer:
+
+- mensaje seguro de usuario;
+- código técnico controlado para soporte/dev;
+- `supportHint` sanitizado;
+- `severity`;
+- `retryable`.
+
+### Límites de implementación futura
+
+Una implementación futura debe ser pequeña y controlada:
+
+1. Crear el archivo dedicado.
+2. Exponer namespace mínimo.
+3. No tocar backend.
+4. No tocar endpoints.
+5. No conectar `activate-after-payment` todavía.
+6. Validar carga antes de `assets/js/app.js`.
+7. Agregar fallback seguro.
+8. Ejecutar QA read-only/post estático después.
+
+Esta adenda no autoriza implementación inmediata.
+
+### Decisiones preservadas
+
+Se preservan:
+
+- PP-Decisiones 124: contrato técnico de errores `activate-after-payment`;
+- PP-Decisiones 126: cierre de mapeo frontend/soporte;
+- PP-Decisiones 127: hallazgos de integración;
+- PP-Decisiones 128: readiness de diseño del helper;
+- PP-Decisiones 129: cierre documental del diseño del helper.
+
+También se preserva que:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` es el endpoint explícito de activación real post-pago;
+- `payment_event_checkout_mismatch` no es canónico actual.
+
+### Siguiente microfase recomendada
+
+```text
+DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-DedicatedModule-Closure-01
+```
+
+Motivo:
+
+Cerrar documentalmente la decisión de módulo dedicado antes de autorizar una microfase de implementación JS.
