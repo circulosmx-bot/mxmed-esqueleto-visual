@@ -26870,3 +26870,141 @@ GIT-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMappin
 Motivo:
 
 El cierre documental quedó agregado como pending diff controlado y debe versionarse en una microfase Git separada.
+
+---
+
+## PP-Decisiones 137 — Cierre del bloque frontend support error mapping e integracion app.js
+
+Fecha de cierre documental: 2026-06-28
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-AppIntegration-BlockClosure-01`
+
+### Tipo
+
+DOCS / Cierre documental del bloque de mapeo frontend/soporte e integración mínima en `assets/js/app.js`.
+
+### Objetivo
+
+Esta adenda cierra el bloque completo de `FrontendSupportErrorMapping/AppIntegration` relacionado con post-payment activation.
+
+No modifica JS, HTML, backend, SQL, schema, seeds, frontend ni fixtures. No ejecuta SQL, HTTP/POST ni curl.
+
+### Base de cierre
+
+Este cierre toma como base:
+
+- `PP-Decisiones 124` — Cierre del contrato técnico de errores `activate-after-payment`.
+- `PP-Decisiones 126` — Cierre del mapeo frontend/soporte.
+- `PP-Decisiones 127` — Cierre de hallazgos de integración frontend/soporte.
+- `PP-Decisiones 128` — Readiness de diseño de helper.
+- `PP-Decisiones 129` — Cierre de diseño de helper.
+- `PP-Decisiones 130` — Readiness de módulo dedicado.
+- `PP-Decisiones 131` — Cierre de módulo dedicado.
+- `PP-Decisiones 132` — Implementación mínima de `assets/js/subscription-messages.js`.
+- `PP-Decisiones 133` — Readiness de integración en `assets/js/app.js`.
+- `PP-Decisiones 134` — Cierre de readiness de integración en `assets/js/app.js`.
+- `PP-Decisiones 135` — Implementación mínima de integración del mapper en `assets/js/app.js`.
+- `PP-Decisiones 136` — Cierre QA estática de integración del mapper en `assets/js/app.js`.
+
+### Estado técnico final
+
+El bloque queda cerrado con el siguiente estado:
+
+- `assets/js/subscription-messages.js` existe.
+- `index.html` carga `assets/js/subscription-messages.js` antes de `assets/js/app.js`.
+- `window.MXMedSubscriptions` existe.
+- Funciones expuestas:
+  - `mapActivationError`
+  - `errorMessageFor`
+  - `mxmedSubscriptionErrorMapper`
+- `assets/js/app.js` contiene wrapper local:
+  - `mapSubscriptionMessage(code, options)`
+- `devWriteStatusMessage` consume el wrapper sólo para códigos controlados:
+  - `active_subscription_exists`
+  - `idempotency_key_reused_with_different_payload`
+  - `idempotency_key_invalid`
+  - `invalid_payload`
+- Fallback local preservado.
+- `applyReadOnlyError` preservado.
+- `assets/js/messages.js` no se usa como mapper.
+- Backend sin cambios por este bloque.
+- SQL/schema/seeds sin cambios por este bloque.
+
+### QA y post-push
+
+La QA estática post-integración confirmó:
+
+- `mapSubscriptionMessage` existe.
+- Consulta `window.MXMedSubscriptions.mapActivationError`.
+- Usa `try/catch`.
+- Tiene fallback null seguro.
+- `devWriteStatusMessage` usa wrapper.
+- Los cuatro códigos controlados están presentes.
+- `applyReadOnlyError` no fue reemplazado.
+- No existe `activate-after-payment` en `assets/js/app.js`.
+- No existe `payment_event_uuid` en frontend.
+- `index.html`, `subscription-messages.js`, `messages.js` y backend no fueron modificados en el commit de integración.
+- `git diff --check` limpio.
+- Rama limpia y alineada.
+
+La QA post-push del cierre documental confirmó:
+
+- HEAD local/origin: `5ff8b59`.
+- Ahead/behind: `0/0`.
+- Working tree limpio.
+- Último commit sólo modificó documentación.
+- `PP-Decisiones 136` presente.
+
+### Decisiones funcionales preservadas
+
+- `confirm_mock` NO activa suscripción.
+- `confirm_mock` sólo confirma evidencia de pago mock/dev.
+- `activate-after-payment` sigue siendo endpoint explícito backend de activación real post-pago.
+- El frontend todavía no ejecuta `activate-after-payment`.
+- `payment_event_uuid` no existe en frontend.
+- `payment_event_checkout_mismatch` NO es canónico actual.
+- El mapper no debe exponer `supportHint` a usuario final.
+- El mapper no debe exponer código técnico a audiencia `user`.
+- `applyReadOnlyError` queda reservado para microfase futura explícita si se decide integrarlo.
+
+### Riesgos restantes
+
+Quedan fuera de este bloque:
+
+1. Integración frontend real de `activate-after-payment`.
+2. UI para `payment_event_uuid`.
+3. Flujo funcional de activación post-pago desde frontend.
+4. Integración de `applyReadOnlyError` con el mapper.
+5. QA funcional con writes del panel DEV/local.
+6. Cualquier POST futuro de activación desde frontend.
+
+Cualquier avance en esos puntos requiere microfase específica.
+
+### Decisión de cierre
+
+El bloque `FrontendSupportErrorMapping/AppIntegration` queda cerrado.
+
+La plataforma ya cuenta con:
+
+- contrato técnico de errores documentado,
+- mapeo frontend/soporte documentado,
+- módulo dedicado implementado,
+- integración mínima en `app.js`,
+- QA estática y post-push completadas.
+
+### Siguiente microfase recomendada
+
+`BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendActivationFlow-Readiness-01`
+
+Motivo:
+
+Si se desea avanzar hacia una activación real desde frontend, antes de tocar UI o ejecutar POST debe diseñarse el readiness del flujo frontend de activación post-pago, incluyendo:
+
+- origen de `payment_event_uuid`,
+- pantalla o acción que dispara activación,
+- reglas UX para evitar duplicados,
+- guards visibles para usuario,
+- relación con el mapper ya implementado,
+- límites para no mezclar panel DEV/local con flujo real.
