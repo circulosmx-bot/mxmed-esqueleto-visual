@@ -24225,6 +24225,123 @@ Alcance:
 
 ---
 
+## Adenda PP-Decisiones 121 - Cierre QA funcional post-activación payment intent
+
+### A) Microfase cerrada
+La microfase `QA/Suscripciones-PaymentIntent-PostPaymentActivation-Endpoint-FunctionalControlled-ReplayAndGuards-01` cerró con `PASS`.
+
+El estado Git validado durante el cierre fue:
+
+- branch: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `dc1b29f feat(suscripciones): agrega endpoint activacion post pago`;
+- working tree limpio;
+- ahead/behind `0/0`.
+
+Esta adenda documenta el cierre funcional de replay y guards terminales después de activar la suscripción post-pago del fixture `doctor/900001`.
+
+### B) Casos HTTP validados
+Fixture validado:
+
+- `entity_type`: `doctor`;
+- `entity_id`: `900001`;
+- `checkout_intent_uuid`: `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`;
+- `payment_intent_uuid`: `85493a1c-4a66-40ec-928a-09cb0eb5d007`;
+- `payment_event_uuid`: `86c29828-4537-4402-93cb-28d0947e81a7`;
+- `contract_acceptance_uuid`: `ae137e4c-75f7-42cb-a6be-7cd24e051ca9`;
+- `subscription_id` creado: `0d2c0113-5390-4548-9b61-3cbddfdfff06`.
+
+Casos ejecutados y validados:
+
+1. Replay misma key / mismo payload:
+   - HTTP `200`;
+   - `ok=true`;
+   - `subscription_id=0d2c0113-5390-4548-9b61-3cbddfdfff06`;
+   - replay idempotente sin duplicados.
+
+2. Misma key / payload distinto:
+   - HTTP `409`;
+   - code `idempotency_key_reused_with_different_payload`;
+   - sin duplicados funcionales.
+
+3. Fresh-key después de activación:
+   - HTTP `409`;
+   - code `checkout_intent_not_pending_payment`;
+   - guard terminal aceptado;
+   - sólo registro idempotente `failed/409`;
+   - sin duplicados funcionales.
+
+### C) Estado DB post-QA
+La validación SQL read-only posterior confirmó:
+
+- `checkout_intents=1`;
+- `payment_intents=1`;
+- `payment_events=1`;
+- `profile_subscriptions=4`;
+- `contract_acceptances=4`;
+- checkout fixture en `activated`;
+- checkout `subscription_id=0d2c0113-5390-4548-9b61-3cbddfdfff06`;
+- contract acceptance `accepted_pending_payment` con el mismo `subscription_id`;
+- `doctor/900001` tiene exactamente 1 `profile_subscription`;
+- `doctor/900001` tiene exactamente 1 `active_subscription`;
+- payment intent sigue `paid` / `mock_paid`;
+- payment event sigue `payment_intent_confirm` / `processed`;
+- idempotencia original `id=30` quedó `completed/200`;
+- fresh-key guard `id=34` quedó `failed/409`;
+- columnas reales usadas para idempotencia: `response_http_status` y `response_body_text`.
+
+No se observaron duplicados de `profile_subscriptions`, `payment_intents` ni `payment_events`.
+
+### D) Observación de terminal
+Durante la corrida terminal, VS Code/zsh reportó:
+
+```text
+The terminal process "/bin/zsh '-l'" terminated with exit code: 1.
+```
+
+Esta observación no invalida el `PASS` funcional porque:
+
+- los casos HTTP fueron verificados;
+- el SQL read-only post confirmó estado estable;
+- no hubo duplicados funcionales;
+- Git quedó limpio y alineado.
+
+Se registra como observación de terminal/wrapper, no como fallo funcional.
+
+### E) Decisión
+La activación post-pago queda validada para replay y guards terminales.
+
+La separación funcional queda ratificada:
+
+- `confirm_mock` se mantiene separado y no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- la activación real de `profile_subscriptions` ocurre únicamente en el endpoint/servicio explícito `activate-after-payment`.
+
+### F) Límites preservados
+El cierre no autoriza:
+
+- provider real;
+- webhook;
+- facturación real;
+- activaciones fuera del endpoint controlado;
+- cambios manuales de DB;
+- duplicar `profile_subscriptions`;
+- cambiar el contrato de `confirm_mock`.
+
+### G) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-NextHardening-Readiness-01
+```
+
+Alternativa si se decide cerrar el bloque antes:
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-RegressionMatrix-ReadOnly-01
+```
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
