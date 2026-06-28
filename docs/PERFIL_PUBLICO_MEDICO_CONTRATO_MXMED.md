@@ -24734,3 +24734,286 @@ Motivo: el contrato técnico de errores ya queda cerrado documentalmente; el sig
 - MODULOS DE INTELIGENCIA ARTIFICIAL CONTEMPLADOS.pdf
 - INTEGRACION DE VIDEOCONSULTAS FLUJO TECNICO Y FINANCIERO.pdf
 - SNIPPET DE PLANTILLA JSON-LD PARAMETRIZABLE.pdf
+
+---
+
+## Adenda PP-Decisiones 125 - Readiness de mapeo frontend y soporte para errores activate-after-payment
+
+Fecha de readiness documental: 2026-06-27
+
+### Microfase
+
+`BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-Readiness-01`
+
+### Tipo
+
+BE/SPEC / Readiness documental de mapeo seguro de errores para frontend y soporte.
+
+### Objetivo
+
+Esta adenda prepara el mapeo seguro entre códigos técnicos del endpoint `activate-after-payment` y mensajes destinados a frontend y soporte.
+
+No implementa cambios en backend, frontend, base de datos, endpoints, servicios, repositorios, fixtures ni guards.
+
+### Base documental
+
+Este readiness toma como base:
+
+- `PP-Decisiones 121` — Cierre QA funcional post-activación payment intent.
+- `PP-Decisiones 122` — Readiness de hardening posterior a activación post-pago.
+- `PP-Decisiones 123` — Readiness del contrato de errores activate-after-payment.
+- `PP-Decisiones 124` — Cierre documental del contrato de errores activate-after-payment.
+
+### Endpoint bajo mapeo
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents/{payment_intent_uuid}/activate-after-payment`
+
+### Decisiones preservadas
+
+1. `confirm_mock` NO activa suscripción.
+2. `confirm_mock` sólo confirma evidencia de pago mock/dev.
+3. `activate-after-payment` es el endpoint explícito que activa `profile_subscriptions` post-pago.
+4. El contrato técnico cerrado en `PP-Decisiones 124` no se modifica en esta microfase.
+5. `payment_event_checkout_mismatch` no es canónico actual.
+6. La equivalencia funcional para ese caso permanece compuesta por:
+   - `payment_event_payment_intent_mismatch`
+   - `payment_intent_checkout_mismatch`
+   - validación de scope checkout/entidad
+7. El frontend no decide activación; sólo presenta estado y mensajes seguros.
+8. Soporte puede recibir más contexto operativo, pero sin secretos ni datos sensibles.
+
+### Principios de seguridad del mapeo
+
+Los mensajes para frontend y soporte no deben exponer:
+
+- Stacktrace.
+- SQL.
+- Detalles PDO.
+- Provider secrets.
+- Payload sensible.
+- Hashes de idempotencia.
+- IDs internos autoincrementales.
+- Datos clínicos o personales no necesarios.
+- Detalles técnicos que faciliten abuso del endpoint.
+
+Sí puede exponerse:
+
+- Un mensaje general accionable.
+- Un código técnico controlado.
+- Una recomendación segura para el usuario.
+- Una guía operativa para soporte.
+
+### Propuesta candidata de mapeo
+
+#### A) Request/base
+
+Códigos incluidos:
+
+- `method_not_allowed`
+- `invalid_payment_intent_activation_payload`
+- `invalid_payload`
+- `idempotency_key_invalid`
+
+Mensaje frontend sugerido:
+
+> No pudimos procesar la solicitud. Actualiza la página y vuelve a intentarlo.
+
+Mensaje soporte sugerido:
+
+> Solicitud inválida o incompleta para activación post-pago. Revisar método, payload y encabezado `Idempotency-Key`.
+
+Reintentabilidad:
+
+- Sí, corrigiendo la solicitud.
+- No insistir con el mismo request inválido.
+
+Severidad sugerida:
+
+- Media si ocurre en operación normal.
+- Alta si se repite masivamente.
+
+#### B) Idempotencia
+
+Códigos incluidos:
+
+- `idempotency_key_reused_with_different_payload`
+- `idempotency_key_not_reusable`
+- `idempotency_result_unavailable`
+
+Mensaje frontend sugerido:
+
+> Esta operación ya fue procesada o no puede repetirse con los mismos datos. Actualiza la página y revisa el estado de la suscripción.
+
+Mensaje soporte sugerido:
+
+> Conflicto de idempotencia. Revisar que la misma `Idempotency-Key` no se reutilice con payload distinto y confirmar estado actual de checkout/suscripción.
+
+Reintentabilidad:
+
+- No con la misma key si el payload cambió.
+- Sí con flujo nuevo controlado después de revisar estado.
+
+Severidad sugerida:
+
+- Media.
+- Alta si causa bloqueo recurrente de activaciones válidas.
+
+#### C) Recursos no encontrados
+
+Códigos incluidos:
+
+- `payment_intent_not_found`
+- `checkout_intent_not_found`
+- `payment_event_not_found`
+- `contract_acceptance_not_found`
+
+Mensaje frontend sugerido:
+
+> No encontramos la información necesaria para completar la activación. Actualiza la página o contacta a soporte.
+
+Mensaje soporte sugerido:
+
+> Falta un recurso requerido para activar: checkout, payment intent, payment event o aceptación contractual.
+
+Reintentabilidad:
+
+- No hasta revisar fixture, estado o relación de recursos.
+- No forzar activación sin diagnóstico.
+
+Severidad sugerida:
+
+- Alta si ocurre en flujo real de pago confirmado.
+
+#### D) Mismatch / scope
+
+Códigos incluidos:
+
+- `payment_intent_checkout_mismatch`
+- `payment_event_payment_intent_mismatch`
+- `checkout_intent_entity_mismatch`
+
+Mensaje frontend sugerido:
+
+> No pudimos validar la relación entre el pago y la contratación. Contacta a soporte.
+
+Mensaje soporte sugerido:
+
+> Conflicto de relación o scope entre payment event, payment intent, checkout o entidad. No forzar activación sin diagnóstico.
+
+Reintentabilidad:
+
+- No automáticamente.
+- Requiere diagnóstico técnico.
+
+Severidad sugerida:
+
+- Alta.
+
+Nota:
+
+`payment_event_checkout_mismatch` no debe mostrarse como código canónico actual porque no existe como literal implementado. Su cobertura funcional se mantiene por composición de guards.
+
+#### E) Estados inválidos
+
+Códigos incluidos:
+
+- `payment_intent_not_paid`
+- `payment_event_not_processed`
+- `checkout_intent_not_pending_payment`
+- `contract_acceptance_not_pending_payment`
+- `active_subscription_exists`
+
+Mensajes frontend sugeridos:
+
+| Código | Mensaje frontend |
+|---|---|
+| `payment_intent_not_paid` | El pago todavía no aparece como confirmado. Espera unos momentos y vuelve a revisar. |
+| `payment_event_not_processed` | La confirmación del pago aún no está lista. Intenta nuevamente más tarde. |
+| `checkout_intent_not_pending_payment` | Esta contratación ya no está disponible para activación. |
+| `contract_acceptance_not_pending_payment` | La aceptación contractual ya no está disponible para esta activación. |
+| `active_subscription_exists` | Este perfil ya tiene una suscripción activa. |
+
+Mensaje soporte sugerido:
+
+> Guard de estado impidió activación. Revisar estado terminal actual antes de intentar cualquier corrección.
+
+Reintentabilidad:
+
+| Código | Reintentable |
+|---|---|
+| `payment_intent_not_paid` | Sí, tras confirmación de pago. |
+| `payment_event_not_processed` | Sí, tras procesamiento. |
+| `checkout_intent_not_pending_payment` | No automáticamente. |
+| `contract_acceptance_not_pending_payment` | No automáticamente. |
+| `active_subscription_exists` | No. |
+
+Severidad sugerida:
+
+- Media si corresponde a flujo esperado.
+- Alta si contradice evidencia de pago o estado visible al usuario.
+
+#### F) Lock timeout
+
+Mensaje frontend sugerido:
+
+> El sistema está procesando esta operación. Espera unos segundos y vuelve a intentar.
+
+Mensaje soporte sugerido:
+
+> Timeout de lock de activación. Puede indicar concurrencia o reintento simultáneo.
+
+Reintentabilidad:
+
+- Sí, tras espera breve.
+- Si persiste, revisar concurrencia e idempotencia.
+
+Severidad sugerida:
+
+- Baja si es aislado.
+- Media si es recurrente.
+
+#### G) Fallback interno
+
+Código incluido:
+
+- `payment_intent_activation_unavailable`
+
+Mensaje frontend sugerido:
+
+> No pudimos completar la activación en este momento. Intenta más tarde o contacta a soporte.
+
+Mensaje soporte sugerido:
+
+> Error interno controlado en activación post-pago. Revisar logs sin exponer detalles al usuario.
+
+Reintentabilidad:
+
+- Sí, después de revisar disponibilidad o logs.
+- No repetir indefinidamente sin diagnóstico.
+
+Severidad sugerida:
+
+- Alta.
+
+### Decisión de readiness
+
+El mapeo frontend/soporte queda definido como propuesta candidata, no implementada.
+
+Este readiness no cambia:
+
+- Contrato técnico backend.
+- Códigos actuales.
+- Status HTTP.
+- Orden de guards.
+- Respuestas existentes.
+- Frontend.
+- Soporte real.
+- Base de datos.
+
+### Siguiente microfase recomendada
+
+`DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-Closure-01`
+
+Motivo:
+
+Antes de implementar mensajes en frontend o backend, conviene cerrar documentalmente el mapeo candidato y decidir si será consumido por frontend, soporte interno o ambos.
