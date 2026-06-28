@@ -24599,6 +24599,129 @@ BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-ErrorContract-Implemen
 
 ---
 
+## Adenda PP-Decisiones 124 - Cierre del contrato de errores activate-after-payment
+
+### A) Objetivo de cierre
+Esta microfase cierra documentalmente el contrato de errores candidato del endpoint de activación post-pago:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents/{payment_intent_uuid}/activate-after-payment
+```
+
+El cierre toma como base `PP-Decisiones 123 - Readiness del contrato de errores activate-after-payment`.
+
+Este cierre no autoriza cambios de implementación. No modifica PHP, SQL versionado, schema, seeds, frontend ni fixtures. No ejecuta SQL, POST ni curl.
+
+### B) Contrato canónico actual
+Para el estado actual del endpoint, los siguientes códigos quedan aceptados como contrato interno actual.
+
+#### Request/base
+
+| Código | HTTP | Estado |
+| --- | ---: | --- |
+| `method_not_allowed` | 405 | Canónico actual |
+| `invalid_payload` | 400 | Canónico actual cuando aplica desde capa API común |
+| `invalid_payment_intent_activation_payload` | 422 | Canónico actual |
+| `idempotency_key_invalid` | 422 | Canónico actual |
+
+#### Idempotencia
+
+| Código | HTTP | Estado |
+| --- | ---: | --- |
+| `idempotency_key_reused_with_different_payload` | 409 | Canónico actual |
+| `idempotency_key_not_reusable` | 409 | Canónico actual si aplica desde servicio común |
+| `idempotency_result_unavailable` | 409 | Canónico actual si aplica desde servicio común |
+
+#### Recursos no encontrados
+
+| Código | HTTP | Estado |
+| --- | ---: | --- |
+| `payment_intent_not_found` | 404 | Canónico actual |
+| `checkout_intent_not_found` | 404 | Canónico actual |
+| `payment_event_not_found` | 404 | Canónico actual |
+| `contract_acceptance_not_found` | 404 | Canónico actual |
+
+#### Mismatch / scope
+
+| Código | HTTP | Estado |
+| --- | ---: | --- |
+| `payment_intent_checkout_mismatch` | 409 | Canónico actual |
+| `payment_event_payment_intent_mismatch` | 409 | Canónico actual |
+| `checkout_intent_entity_mismatch` | 409 | Canónico actual si aplica desde guard actual |
+
+#### Estados no válidos
+
+| Código | HTTP | Estado |
+| --- | ---: | --- |
+| `payment_intent_not_paid` | 409 | Canónico actual |
+| `payment_event_not_processed` | 409 | Canónico actual |
+| `checkout_intent_not_pending_payment` | 409 | Canónico actual |
+| `contract_acceptance_not_pending_payment` | 409 | Canónico actual |
+| `active_subscription_exists` | 409 | Canónico actual |
+
+#### Locks y fallback
+
+| Código | HTTP | Estado |
+| --- | ---: | --- |
+| lock timeout de activación payment intent | 409 | Guard actual; no convertir nombre literal en contrato público estable sin microfase específica |
+| `payment_intent_activation_unavailable` | 500 | Fallback público actual |
+
+Los errores internos de repositorio/DB deben mantenerse detrás de fallback seguro. No se deben filtrar stacktraces, SQL, detalles PDO, provider secrets ni payload sensible.
+
+### C) Equivalencia funcional cerrada
+`payment_event_checkout_mismatch` no forma parte del contrato canónico actual porque no existe como literal implementado.
+
+La equivalencia funcional actual queda cerrada así:
+
+- `payment_event_payment_intent_mismatch` valida que el evento pertenezca al payment intent solicitado;
+- `payment_intent_checkout_mismatch` valida que el payment intent pertenezca al checkout solicitado;
+- la validación de scope checkout/entidad completa la cobertura funcional.
+
+Si en el futuro se desea exponer `payment_event_checkout_mismatch` como alias o código normalizado, debe abrirse una microfase específica. Esta adenda no ordena ni autoriza esa implementación.
+
+### D) Separación funcional preservada
+El cierre del contrato preserva las decisiones funcionales ya validadas:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` activa `profile_subscriptions` post-pago;
+- replay misma key/mismo payload devuelve HTTP `200`;
+- misma key/payload distinto devuelve HTTP `409` con `idempotency_key_reused_with_different_payload`;
+- fresh-key post-activación devuelve HTTP `409` con guard terminal;
+- `checkout_intent_not_pending_payment` se acepta para checkout ya `activated`;
+- no se duplican `profile_subscriptions`.
+
+### E) Dudas futuras fuera de este cierre
+Quedan fuera de esta microfase:
+
+1. Normalizar o crear alias `payment_event_checkout_mismatch`.
+2. Convertir el literal del lock timeout en contrato público estable.
+3. Cambiar el estado de `subscription_contract_acceptances.status` después de activación.
+4. Modificar la precedencia entre `checkout_intent_not_pending_payment` y `active_subscription_exists`.
+5. Ajustar respuestas para frontend o soporte.
+
+Estas dudas deben tratarse en microfases futuras, sin mezclar documentación con cambios de backend.
+
+### F) Uso del contrato
+Este contrato documental queda listo para:
+
+- QA futura de errores y guards;
+- mapeo seguro para frontend;
+- soporte operativo;
+- documentación de comportamiento esperado;
+- microfases de normalización si se decide que son necesarias.
+
+### G) Siguiente microfase recomendada
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-Readiness-01
+```
+
+Motivo: el contrato técnico de errores ya queda cerrado documentalmente; el siguiente paso razonable es preparar cómo traducir esos códigos a mensajes seguros para frontend/soporte sin cambiar todavía backend.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
