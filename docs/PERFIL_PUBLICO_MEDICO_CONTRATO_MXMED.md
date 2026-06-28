@@ -24342,6 +24342,138 @@ QA/Suscripciones-PaymentIntent-PostPaymentActivation-RegressionMatrix-ReadOnly-0
 
 ---
 
+## Adenda PP-Decisiones 122 - Readiness de hardening post-activación payment intent
+
+### A) Objetivo de readiness
+Esta microfase no implementa hardening. Su objetivo es dejar documentado el estado técnico desde el cual se deben planificar microfases futuras de endurecimiento del flujo de activación post-pago de payment intent.
+
+La base documental inmediata es `PP-Decisiones 121 - Cierre QA funcional post-activación payment intent`, que cerró el bloque funcional con `PASS`.
+
+Estado base validado:
+
+- branch: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `48284ee docs(suscripciones): cierra qa activacion post pago`;
+- working tree limpio;
+- ahead/behind `0/0`.
+
+### B) Bloque funcional cerrado
+El bloque post-payment activation queda funcionalmente cerrado en:
+
+- implementación del endpoint `activate-after-payment`;
+- implementación de `ActivateSubscriptionAfterPaymentService`;
+- dependencias de escritura para `profile_subscriptions`, checkout y contract acceptance;
+- QA funcional controlada con POST real;
+- replay idempotente con misma key/mismo payload;
+- rechazo de payload distinto con `idempotency_key_reused_with_different_payload`;
+- guard terminal fresh-key posterior a activación con HTTP `409`;
+- cierre documental en `PP-Decisiones 121`.
+
+Fixture de referencia validado:
+
+- `entity_type=doctor`;
+- `entity_id=900001`;
+- `checkout_intent_uuid=7d4beec3-b62a-40e1-a9f2-9edcc1a83364`;
+- `payment_intent_uuid=85493a1c-4a66-40ec-928a-09cb0eb5d007`;
+- `payment_event_uuid=86c29828-4537-4402-93cb-28d0947e81a7`;
+- `subscription_id=0d2c0113-5390-4548-9b61-3cbddfdfff06`.
+
+Estados post-QA preservados:
+
+- checkout fixture `activated`;
+- payment intent `paid` / `mock_paid`;
+- payment event `payment_intent_confirm` / `processed`;
+- `doctor/900001` con exactamente una `profile_subscription` activa;
+- sin duplicados funcionales;
+- idempotencia original `completed/200`;
+- fresh-key guard `failed/409`.
+
+### C) Decisiones críticas a preservar
+El hardening futuro no debe reabrir arquitectura ya cerrada.
+
+Decisiones obligatorias:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- la activación real de `profile_subscriptions` ocurre únicamente en `activate-after-payment`;
+- replay de activación con misma key/mismo payload debe conservar respuesta HTTP `200` estable;
+- misma key con payload distinto debe devolver HTTP `409` con `idempotency_key_reused_with_different_payload`;
+- fresh-key después de activación terminal debe rechazarse con HTTP `409`;
+- para fixture ya `activated`, `checkout_intent_not_pending_payment` es guard terminal aceptado;
+- no debe haber duplicados funcionales de `profile_subscriptions`.
+
+### D) Candidatos de hardening permitidos
+Las microfases futuras de hardening deben ser pequeñas, controladas y verificables. Candidatos permitidos:
+
+1. Matriz de regresión read-only para endpoint `activate-after-payment`.
+2. Revisión de consistencia de códigos de error terminales.
+3. Observabilidad mínima de idempotencia y guards.
+4. Readiness de pruebas para estados no felices:
+   - payment intent no pagado;
+   - payment event inexistente;
+   - payment event no `processed`;
+   - checkout de otra entidad;
+   - payment intent de otro checkout;
+   - active subscription preexistente.
+5. Revisión documental del estado `subscription_contract_acceptances.status=accepted_pending_payment` después de activación.
+6. Posible decisión futura sobre si `contract_acceptance` debe permanecer como `accepted_pending_payment` o si conviene un estado adicional.
+
+La decisión sobre un eventual estado adicional de contract acceptance queda expresamente fuera de esta microfase y no autoriza cambios de schema ni de implementación.
+
+### E) Límites explícitos
+Esta microfase no autoriza:
+
+- cambiar endpoint;
+- cambiar servicio;
+- cambiar repositorios;
+- tocar DB;
+- modificar DB/schema;
+- crear nuevos fixtures;
+- volver a ejecutar activación;
+- ejecutar SQL;
+- ejecutar POST/curl;
+- tocar PHP;
+- tocar SQL versionado;
+- tocar seeds;
+- tocar frontend.
+
+### F) Criterio de continuidad
+Antes de implementar nuevos cambios conviene levantar una matriz read-only de estados, rutas, guards y dependencias. Esto evita endurecer el flujo sobre supuestos.
+
+Siguiente microfase recomendada:
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-RegressionMatrix-ReadOnly-01
+```
+
+La matriz debe confirmar, sin writes:
+
+- estado actual del fixture activado;
+- ruta `activate-after-payment`;
+- dependencias del endpoint y servicio;
+- reglas idempotentes;
+- guards terminales aceptados;
+- ausencia de duplicados;
+- separación `confirm_mock` vs `activate-after-payment`.
+
+### G) Observación operativa
+Durante corridas recientes de terminal en VS Code/zsh se reportó:
+
+```text
+The terminal process "/bin/zsh '-l'" terminated with exit code: 1.
+```
+
+Esta observación no debe tratarse como fallo funcional si:
+
+- Codex confirma `PASS`;
+- el commit se crea;
+- el push se completa;
+- ahead/behind final queda `0/0`;
+- working tree final queda limpio.
+
+Se conserva como observación operativa de terminal/wrapper si vuelve a ocurrir.
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
