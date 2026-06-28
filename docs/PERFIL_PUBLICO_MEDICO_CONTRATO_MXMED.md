@@ -26203,3 +26203,133 @@ BE/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping
 Motivo:
 
 Una vez cerrado documentalmente el módulo dedicado, el siguiente paso controlado puede ser una implementación mínima del archivo `assets/js/subscription-messages.js`, sin conectar todavía `activate-after-payment` al frontend, sólo exponiendo el namespace y mapper seguro.
+
+---
+
+## Adenda PP-Decisiones 132 - Implementación mínima de módulo dedicado de mapeo de errores activate-after-payment
+
+### Objetivo
+
+Esta adenda documenta el cierre de la implementación mínima del módulo dedicado de mapeo frontend/soporte de errores de suscripciones.
+
+Archivo creado:
+
+```text
+assets/js/subscription-messages.js
+```
+
+El módulo queda cargado antes de `assets/js/app.js` desde `index.html`.
+
+### Alcance implementado
+
+La implementación mínima:
+
+- expone el namespace global `window.MXMedSubscriptions`;
+- expone `mapActivationError`;
+- expone el alias `errorMessageFor`;
+- expone el alias `mxmedSubscriptionErrorMapper`;
+- acepta `code` como string directo;
+- acepta entrada objeto con `code`, `httpStatus`, `context`, `audience` y `fallback`;
+- devuelve `message`, `severity`, `retryable`, `supportHint`, `exposeCode`, `code` y `httpStatus`;
+- cubre los grupos mínimos definidos en PP-Decisiones 131;
+- mantiene fallback seguro para códigos desconocidos;
+- no depende de DOM;
+- no depende de `localStorage`;
+- no depende de `jumpTo`;
+- no depende de Bootstrap;
+- no depende de `assets/js/app.js`;
+- no usa `import` ni `export`.
+
+### Orden de carga
+
+`index.html` carga el módulo dedicado antes de `assets/js/app.js`:
+
+```html
+<script src="assets/js/subscription-messages.js"></script>
+<script src="assets/js/app.js?v=qa-visual-20260511-day-nav-operational"></script>
+```
+
+No se movió `assets/js/messages.js`.
+
+### Grupos cubiertos
+
+El mapper cubre:
+
+- request/base;
+- idempotencia;
+- recursos no encontrados;
+- mismatch/scope;
+- estados inválidos;
+- lock timeout;
+- fallback interno.
+
+`payment_event_checkout_mismatch` no se introduce como código canónico actual. Si se recibe defensivamente, se trata como desconocido con mensaje seguro.
+
+### Seguridad implementada
+
+El módulo no expone al usuario final detalles sensibles.
+
+No debe exponer:
+
+- stacktrace;
+- SQL;
+- detalles PDO;
+- provider secrets;
+- hashes de idempotencia;
+- IDs internos autoincrementales;
+- payload sensible;
+- datos clínicos o personales no necesarios.
+
+`exposeCode` queda en `false` por defecto para audiencia `user`.
+
+`exposeCode` queda en `true` para audiencias `support` y `dev`.
+
+`supportHint` se devuelve sólo para audiencias `support` y `dev`, con contenido sanitizado y sin detalles internos sensibles.
+
+### Límites preservados
+
+Esta implementación mínima no conecta `activate-after-payment` al frontend.
+
+No se modificó:
+
+- backend PHP;
+- `api/subscriptions/index.php`;
+- `ActivateSubscriptionAfterPaymentService.php`;
+- `assets/js/app.js`;
+- `assets/js/messages.js`;
+- endpoints;
+- respuestas HTTP;
+- schema;
+- seeds;
+- fixtures.
+
+No se ejecutó SQL, HTTP/POST ni curl.
+
+### Decisiones preservadas
+
+Se preservan:
+
+- PP-Decisiones 124: contrato técnico de errores `activate-after-payment`;
+- PP-Decisiones 126: mapeo frontend/soporte;
+- PP-Decisiones 127: hallazgos de integración;
+- PP-Decisiones 128: readiness de diseño helper;
+- PP-Decisiones 129: cierre de diseño helper;
+- PP-Decisiones 130: readiness de módulo dedicado;
+- PP-Decisiones 131: cierre documental de módulo dedicado.
+
+También se preserva que:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` sigue siendo el endpoint explícito de activación real post-pago;
+- el módulo dedicado no conecta todavía ese endpoint al frontend.
+
+### Siguiente microfase recomendada
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-DedicatedModule-PostImplementation-StaticQA-01
+```
+
+Motivo:
+
+Después de crear el módulo y cargarlo antes de `assets/js/app.js`, se debe validar estáticamente que el archivo existe, que el orden de carga es correcto, que `assets/js/app.js` y `assets/js/messages.js` no se modificaron, que el namespace queda definido y que el mapper devuelve salidas seguras.
