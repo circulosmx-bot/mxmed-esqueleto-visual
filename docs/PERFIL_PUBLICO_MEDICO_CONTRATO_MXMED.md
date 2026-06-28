@@ -24474,6 +24474,131 @@ Se conserva como observación operativa de terminal/wrapper si vuelve a ocurrir.
 
 ---
 
+## Adenda PP-Decisiones 123 - Readiness del contrato de errores activate-after-payment
+
+### A) Objetivo documental
+Esta microfase es readiness documental y no implementación.
+
+El objetivo es definir el contrato de errores candidato para el endpoint de activación post-pago:
+
+```text
+POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents/{payment_intent_uuid}/activate-after-payment
+```
+
+No se cambia código PHP, SQL versionado, schema, seeds, frontend ni fixtures. Tampoco se ejecuta SQL, POST ni curl.
+
+La base técnica validada por matriz read-only y lint verification confirma:
+
+- endpoint `activate-after-payment` presente;
+- servicio `ActivateSubscriptionAfterPaymentService` presente;
+- repositorios de checkout, payment intent, payment event, contract acceptance y profile subscription presentes;
+- idempotencia `subscriptions.payment_intent.activate_after_payment` presente;
+- lock `payment_intent_activate_subscription` presente;
+- `php -l` correcto en los 11 archivos críticos;
+- Git limpio y alineado en `2da416b docs(suscripciones): define readiness hardening post pago`.
+
+### B) Separación funcional preservada
+El contrato de errores de `activate-after-payment` debe preservar la separación ya cerrada:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` es el único flujo que crea `profile_subscriptions` post-pago;
+- replay misma `Idempotency-Key` y mismo payload conserva HTTP `200`;
+- misma `Idempotency-Key` con payload distinto devuelve HTTP `409` con `idempotency_key_reused_with_different_payload`;
+- fresh-key después de activación terminal devuelve HTTP `409`;
+- para checkout ya `activated`, `checkout_intent_not_pending_payment` es guard terminal aceptado;
+- no debe duplicarse `profile_subscriptions`.
+
+### C) Códigos canónicos actuales
+La matriz read-only detectó que los siguientes códigos existen actualmente en API/servicio y pueden tratarse como contrato canónico actual para `activate-after-payment`.
+
+| Código | HTTP esperado | Origen/guard | Estado de contrato | Notas |
+| --- | ---: | --- | --- | --- |
+| `method_not_allowed` | 405 | API route method guard | Canónico actual | Método distinto a `POST`. |
+| `invalid_payload` | 400 | API JSON/content-type guard | Canónico actual | Aplica desde parsing base del payload. |
+| `invalid_payment_intent_activation_payload` | 422 | API/servicio input guard | Canónico actual | Payload incompleto o inválido para activación. |
+| `idempotency_key_invalid` | 422 | API/idempotency service | Canónico actual | Falta o invalidez de `Idempotency-Key`. |
+| `idempotency_key_reused_with_different_payload` | 409 | Idempotency service | Canónico actual | Validado funcionalmente. |
+| `idempotency_key_not_reusable` | 409 | Idempotency service común | Canónico actual | Aplica si la key quedó en estado no reutilizable. |
+| `idempotency_result_unavailable` | 409 | Idempotency service común | Canónico actual | Aplica si no se puede reconstruir replay completed. |
+| `payment_intent_activate_subscription_lock_timeout` | 409 | Lock service | Canónico actual | Literal real definido en `SubscriptionEntityWriteLockService`. |
+| `payment_intent_not_found` | 404 | Payment intent lookup | Canónico actual | Recurso inexistente. |
+| `checkout_intent_not_found` | 404 | Checkout lookup | Canónico actual | Recurso inexistente. |
+| `payment_event_not_found` | 404 | Payment event lookup | Canónico actual | Recurso inexistente. |
+| `contract_acceptance_not_found` | 404 | Contract acceptance lookup | Canónico actual | Recurso inexistente o checkout sin acceptance vinculada. |
+| `payment_intent_checkout_mismatch` | 409 | Scope guard | Canónico actual | Payment intent no pertenece al checkout solicitado. |
+| `payment_event_payment_intent_mismatch` | 409 | Scope guard | Canónico actual | Payment event no pertenece al payment intent solicitado. |
+| `checkout_intent_entity_mismatch` | 409 | Scope guard | Canónico actual | Checkout no pertenece a `entity_type/entity_id`. |
+| `payment_intent_not_paid` | 409 | State guard | Canónico actual | Payment intent no está `paid`. |
+| `payment_event_not_processed` | 409 | State guard | Canónico actual | Payment event no está procesado o no es `payment_intent_confirm`. |
+| `checkout_intent_not_pending_payment` | 409 | State guard | Canónico actual | Guard terminal aceptado para checkout ya `activated`. |
+| `contract_acceptance_not_pending_payment` | 409 | State guard | Canónico actual | Contract acceptance no está lista para activación post-pago. |
+| `active_subscription_exists` | 409 | Active subscription guard | Canónico actual | Evita duplicar suscripción activa. |
+| `payment_intent_activation_unavailable` | 500 | Fallback interno | Canónico actual | No debe filtrar detalles sensibles de repositorio/DB. |
+
+### D) Equivalencia funcional actual
+`payment_event_checkout_mismatch` no existe como literal actualmente.
+
+La cobertura equivalente actual se expresa con:
+
+- `payment_event_payment_intent_mismatch`;
+- `payment_intent_checkout_mismatch`;
+- validación del payment intent contra el checkout solicitado.
+
+Esta combinación cubre el alcance funcional relevante sin requerir un alias nuevo en esta microfase.
+
+Por lo tanto:
+
+- `payment_event_checkout_mismatch` no debe documentarse como canónico actual;
+- puede quedar como candidato futuro si se decide normalizar nombres;
+- cualquier alias futuro debe ser planificado en una microfase separada.
+
+### E) Dudas futuras de normalización
+No hay inconsistencias críticas para el flujo actual, pero quedan dudas de contrato:
+
+1. Decidir si conviene crear alias `payment_event_checkout_mismatch` o mantener sólo `payment_event_payment_intent_mismatch`.
+2. Decidir si el contrato público debe agrupar mismatches de scope o conservar códigos específicos.
+3. Decidir si `contract_acceptance.status=accepted_pending_payment` después de activación debe permanecer como está o si requiere estado adicional futuro.
+4. Confirmar si `payment_intent_activation_unavailable` debe ser el único fallback público para errores de repositorio/DB.
+5. Confirmar si la documentación pública debe exponer `idempotency_result_unavailable` o dejarlo como error técnico interno con HTTP `409`.
+
+Estas dudas no autorizan cambios de código todavía.
+
+### F) Límites preservados
+Esta adenda no autoriza:
+
+- implementar normalización de errores;
+- cambiar lógica de guards;
+- modificar endpoint;
+- modificar servicio;
+- modificar repositorios;
+- ejecutar SQL;
+- ejecutar POST/curl;
+- tocar DB/schema;
+- crear fixtures;
+- tocar `profile_subscriptions`;
+- ejecutar activaciones nuevas;
+- modificar `confirm_mock`.
+
+### G) Decisión
+El contrato candidato queda documentado como readiness.
+
+Se recomienda cerrar documentalmente el contrato antes de implementar cualquier cambio de normalización.
+
+Siguiente microfase recomendada:
+
+```text
+DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-ErrorContract-Closure-01
+```
+
+Alternativa si se decide preparar normalización futura sin tocar código todavía:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-ErrorContract-Implementation-Readiness-01
+```
+
+---
+
 ## Fuentes de referencia entregadas para este contrato
 - 00-YA-FSD_Parcial_Perfiles_Medicos.pdf
 - 00-YA-Funcionalidades por Tipo de Perfil.pdf
