@@ -25979,3 +25979,227 @@ DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMappi
 Motivo:
 
 Cerrar documentalmente la decisión de módulo dedicado antes de autorizar una microfase de implementación JS.
+
+---
+
+## Adenda PP-Decisiones 131 - Cierre documental de módulo dedicado para mapeo de errores activate-after-payment
+
+### Objetivo de cierre
+
+Esta adenda cierra documentalmente la decisión de usar un módulo JS dedicado para el mapeo frontend/soporte de errores de suscripciones, tomando como base la evidencia y el readiness documentados en PP-Decisiones 130.
+
+La microfase no crea archivos JS, no modifica `index.html`, no modifica `assets/js/app.js`, no implementa helper, no modifica backend, no ejecuta SQL y no ejecuta HTTP/POST o curl.
+
+### Decisión cerrada
+
+Se cierra como decisión documental que el mapper de errores de suscripciones debe vivir en un módulo dedicado.
+
+`assets/js/messages.js` queda descartado como ubicación inicial limpia porque:
+
+- carga después de `assets/js/app.js`;
+- es un IIFE aislado;
+- está orientado a inbox/badge UI;
+- usa DOM directo;
+- usa `localStorage`;
+- depende de `jumpTo`;
+- no expone namespace;
+- no expone API reusable;
+- `assets/js/app.js` no lo consume.
+
+La decisión no cambia el contrato backend y no cambia mensajes reales.
+
+### Ubicación futura cerrada
+
+Ubicación preferente futura:
+
+```text
+assets/js/subscription-messages.js
+```
+
+Ubicación alternativa futura:
+
+```text
+assets/js/subscriptions/messages.js
+```
+
+`assets/js/subscription-messages.js` queda como opción preferente para una implementación mínima controlada porque permite un cambio pequeño, explícito y de bajo impacto.
+
+`assets/js/subscriptions/messages.js` queda reservada como alternativa si una microfase futura decide crear una estructura más amplia de módulos de suscripciones.
+
+### Orden de carga cerrado
+
+Si `assets/js/app.js` va a consumir el helper durante inicialización, el módulo dedicado debe cargarse antes de `assets/js/app.js`.
+
+Ejemplo conceptual futuro:
+
+```html
+<script src="assets/js/subscription-messages.js"></script>
+<script src="assets/js/app.js?v=..."></script>
+```
+
+Esta adenda no modifica `index.html`.
+
+### Namespace y funciones cerradas
+
+Namespace/global preferente:
+
+```text
+window.MXMedSubscriptions
+```
+
+Namespace alternativo:
+
+```text
+window.mxmedSubscriptions
+```
+
+Función preferente:
+
+```text
+mapActivationError
+```
+
+Función alternativa:
+
+```text
+errorMessageFor
+```
+
+Alias conceptual:
+
+```text
+mxmedSubscriptionErrorMapper
+```
+
+### Interfaz conceptual cerrada
+
+Entrada:
+
+```text
+code: string
+httpStatus?: number
+context?: string
+audience?: string
+fallback?: string
+```
+
+Valores cerrados para `context`:
+
+- `activation`;
+- `checkout`;
+- `payment_intent`;
+- `support`.
+
+Valores cerrados para `audience`:
+
+- `user`;
+- `support`;
+- `dev`.
+
+Salida:
+
+```text
+message: string
+severity: string
+retryable: boolean
+supportHint?: string
+exposeCode: boolean
+```
+
+Valores cerrados para `severity`:
+
+- `info`;
+- `warning`;
+- `error`;
+- `critical`.
+
+### Grupos mínimos cerrados
+
+El módulo dedicado debe cubrir como mínimo:
+
+- request/base;
+- idempotencia;
+- recursos no encontrados;
+- mismatch/scope;
+- estados inválidos;
+- lock timeout;
+- fallback interno.
+
+El grupo `mismatch/scope` no convierte `payment_event_checkout_mismatch` en código canónico actual. El contrato canónico vigente se mantiene sin ese alias.
+
+### Compatibilidad y fallback cerrados
+
+La futura implementación debe cumplir:
+
+- `assets/js/app.js` podrá consumir el helper si existe;
+- si el helper no existe, `assets/js/app.js` debe conservar fallback local;
+- no debe romper `devWriteStatusMessage`;
+- no debe romper `applyReadOnlyError`;
+- no debe conectar todavía `activate-after-payment` al frontend;
+- no debe cambiar endpoints;
+- no debe cambiar backend;
+- no debe cambiar respuestas HTTP;
+- no debe cambiar el contrato técnico de errores.
+
+### Seguridad cerrada
+
+El módulo dedicado no debe exponer:
+
+- stacktrace;
+- SQL;
+- detalles PDO;
+- provider secrets;
+- hashes de idempotencia;
+- IDs internos autoincrementales;
+- payload sensible;
+- datos clínicos o personales no necesarios.
+
+Puede exponer:
+
+- mensaje seguro de usuario;
+- código técnico controlado para soporte/dev;
+- `supportHint` sanitizado;
+- `severity`;
+- `retryable`.
+
+### Límites del cierre
+
+Este cierre no autoriza implementación automática.
+
+No se autoriza en esta microfase:
+
+- crear archivo JS;
+- modificar `index.html`;
+- modificar `assets/js/app.js`;
+- cambiar backend;
+- conectar `activate-after-payment` al frontend;
+- modificar contrato técnico;
+- modificar mapeo previo;
+- cambiar mensajes reales.
+
+### Decisiones preservadas
+
+Se preservan:
+
+- PP-Decisiones 124: contrato técnico de errores `activate-after-payment`;
+- PP-Decisiones 126: cierre de mapeo frontend/soporte;
+- PP-Decisiones 127: hallazgos de integración;
+- PP-Decisiones 128: readiness de diseño del helper;
+- PP-Decisiones 129: cierre documental del diseño del helper;
+- PP-Decisiones 130: readiness de módulo dedicado.
+
+También se preserva que:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` es el endpoint explícito de activación real post-pago.
+
+### Siguiente microfase recomendada
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-DedicatedModule-Implementation-01
+```
+
+Motivo:
+
+Una vez cerrado documentalmente el módulo dedicado, el siguiente paso controlado puede ser una implementación mínima del archivo `assets/js/subscription-messages.js`, sin conectar todavía `activate-after-payment` al frontend, sólo exponiendo el namespace y mapper seguro.
