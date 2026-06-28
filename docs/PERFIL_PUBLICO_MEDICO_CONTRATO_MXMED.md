@@ -26509,3 +26509,142 @@ DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMappi
 Motivo:
 
 Cerrar documentalmente el plan de integración en `assets/js/app.js` antes de tocar un archivo grande y sensible.
+
+---
+
+## Adenda PP-Decisiones 134 - Cierre del readiness de integración del mapper en app.js
+
+### Objetivo de cierre
+
+Esta adenda cierra documentalmente el plan de integración futura del mapper dedicado `window.MXMedSubscriptions` dentro del bloque local de suscripciones en `assets/js/app.js`.
+
+Esta microfase no modifica `assets/js/app.js`, no modifica `assets/js/subscription-messages.js`, no modifica `index.html`, no modifica backend, no ejecuta SQL y no ejecuta HTTP/POST o curl.
+
+### Decisión cerrada
+
+La futura integración del mapper en `assets/js/app.js` debe ser incremental, mínima y limitada inicialmente a mensajes de suscripciones ya existentes.
+
+No debe activar nuevos flujos.
+
+No debe conectar `activate-after-payment`.
+
+No debe introducir `payment_event_uuid` en frontend.
+
+No debe cambiar endpoints.
+
+No debe cambiar respuestas HTTP.
+
+No debe mostrar `supportHint` ni código técnico a audiencia `user`.
+
+### Wrapper local cerrado
+
+La implementación futura debe crear un wrapper local dentro del bloque de suscripciones de `assets/js/app.js`, por ejemplo:
+
+```text
+mapSubscriptionMessage(code, options)
+```
+
+El wrapper debe:
+
+- consultar de forma segura `window.MXMedSubscriptions.mapActivationError` si existe;
+- pasar `code`, `httpStatus`, `audience`, `context` y `fallback`;
+- devolver `message`, `severity`, `retryable`, `supportHint` y `exposeCode`;
+- conservar fallback local si el mapper no existe;
+- proteger la UI si `assets/js/subscription-messages.js` no carga;
+- no introducir dependencia dura del namespace;
+- no exponer `supportHint` a usuario final;
+- no exponer código técnico a audiencia `user`.
+
+### Integración mínima futura
+
+La primera implementación debe limitarse a `devWriteStatusMessage`.
+
+Códigos candidatos iniciales:
+
+- `active_subscription_exists`;
+- `idempotency_key_reused_with_different_payload`;
+- `idempotency_key_invalid`;
+- `invalid_payload`.
+
+La integración debe mantener fallback actual para cualquier código no cubierto.
+
+No debe reemplazar completa la lógica de `devWriteStatusMessage` en una sola microfase.
+
+No debe cambiar `setDevStatusClass` salvo que una microfase explícita lo autorice.
+
+No debe cambiar asignaciones visuales fuera de mensajes equivalentes.
+
+### applyReadOnlyError preservado
+
+`applyReadOnlyError` debe conservar su lógica actual por HTTP status.
+
+Sólo podrá usar el mapper cuando exista `payload.error.code` en una microfase futura explícita.
+
+No debe reemplazarse todavía.
+
+No debe depender del mapper para mantener el panel de suscripción en modo lectura.
+
+### Riesgos cerrados
+
+Riesgos documentados para la implementación futura:
+
+- `assets/js/app.js` es grande y sensible;
+- cambios amplios pueden introducir regresiones visuales;
+- reemplazar completo `devWriteStatusMessage` podría alterar mensajes actuales;
+- `applyReadOnlyError` trabaja principalmente por HTTP status;
+- el panel DEV/local no debe confundirse con flujo real;
+- no debe introducirse dependencia dura del namespace;
+- no debe exponerse `supportHint` a usuario final;
+- no debe exponerse código técnico a audiencia `user`;
+- no se debe conectar `activate-after-payment`;
+- no se debe introducir `payment_event_uuid`.
+
+### Alcance futuro recomendado
+
+Microfase futura recomendada:
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-AppIntegration-Implementation-01
+```
+
+Alcance futuro sugerido:
+
+- modificar sólo `assets/js/app.js` y documentación;
+- crear wrapper local de lectura segura del mapper;
+- usar mapper sólo en `devWriteStatusMessage` para códigos controlados;
+- mantener fallback actual;
+- no tocar `index.html`;
+- no tocar `assets/js/subscription-messages.js`;
+- no tocar `assets/js/messages.js`;
+- no tocar backend;
+- no conectar `activate-after-payment`;
+- no agregar `payment_event_uuid`;
+- ejecutar QA estática posterior.
+
+### Decisiones preservadas
+
+Se preservan:
+
+- PP-Decisiones 124: contrato técnico de errores `activate-after-payment`;
+- PP-Decisiones 126: mapeo frontend/soporte;
+- PP-Decisiones 131: cierre de módulo dedicado;
+- PP-Decisiones 132: implementación mínima de `assets/js/subscription-messages.js`;
+- PP-Decisiones 133: readiness de integración futura del mapper en `assets/js/app.js`.
+
+También se preserva que:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` sigue sin conectarse al frontend;
+- `assets/js/app.js` todavía no consume el mapper en esta microfase;
+- `assets/js/messages.js` no se usa como mapper.
+
+### Siguiente microfase recomendada
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-AppIntegration-Implementation-01
+```
+
+Motivo:
+
+Una vez cerrado documentalmente el plan de integración, el siguiente paso controlado puede ser una implementación mínima en `assets/js/app.js`, limitada a `devWriteStatusMessage` y con fallback local.
