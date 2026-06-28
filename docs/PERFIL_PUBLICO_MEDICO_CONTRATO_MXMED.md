@@ -25577,3 +25577,176 @@ DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMappi
 Motivo:
 
 Antes de tocar JS o backend, conviene cerrar documentalmente la decisión de ubicación e interfaz conceptual del helper/módulo.
+
+---
+
+## Adenda PP-Decisiones 129 - Cierre del diseño de helper de mapeo de errores activate-after-payment
+
+### Objetivo de cierre
+
+Esta adenda cierra documentalmente la decisión de diseño para el helper o módulo frontend/soporte que mapeará errores técnicos del flujo `activate-after-payment` a mensajes seguros, reutilizables y consistentes.
+
+La decisión no implementa helper, no crea archivos JS, no modifica backend, no modifica HTML, no ejecuta HTTP/POST y no ejecuta SQL.
+
+### Decisión adoptada
+
+Se adopta como diseño preferente la opción E - combinación controlada.
+
+La combinación controlada significa:
+
+- el backend conserva códigos técnicos estables;
+- el frontend consume esos códigos mediante un helper o módulo central de suscripciones;
+- soporte/admin queda como extensión futura con contexto adicional;
+- el flujo DEV/local no debe ser el único consumidor del mapeo;
+- el helper debe poder reutilizarse por panel DEV/local, futuro checkout real, soporte/admin y posibles vistas de suscripción.
+
+Esta decisión mantiene el contrato de backend estable y evita duplicar reglas de mensajes en distintos puntos de UI.
+
+### Ubicación candidata
+
+La ubicación candidata inicial para el helper es:
+
+```text
+assets/js/messages.js
+```
+
+Esta ubicación queda sujeta a una validación read-only de estructura real antes de implementar.
+
+Si `assets/js/messages.js` no resulta viable por acoplamiento, tamaño, carga o responsabilidad, una microfase futura podrá crear un módulo dedicado, por ejemplo:
+
+```text
+assets/js/subscription-messages.js
+assets/js/subscriptions/messages.js
+```
+
+No se crean archivos en esta microfase.
+
+### Nombre conceptual
+
+Nombre conceptual preferente:
+
+```text
+mxmedSubscriptionErrorMapper
+```
+
+Nombre alterno aceptable:
+
+```text
+mxmedSubscriptionErrorMessage
+```
+
+El nombre final debe decidirse en implementación con base en el patrón real de `assets/js/messages.js` y `assets/js/app.js`.
+
+### Interfaz conceptual
+
+Entrada conceptual:
+
+```text
+code: string
+httpStatus?: number
+context?: string
+audience?: string
+fallback?: string
+```
+
+Valores esperados para `context`:
+
+- `activation`;
+- `checkout`;
+- `payment_intent`;
+- `support`.
+
+Valores esperados para `audience`:
+
+- `user`;
+- `support`;
+- `dev`.
+
+Salida conceptual:
+
+```text
+message: string
+severity: string
+retryable: boolean
+supportHint?: string
+exposeCode: boolean
+```
+
+Valores esperados para `severity`:
+
+- `info`;
+- `warning`;
+- `error`;
+- `critical`.
+
+### Grupos mínimos
+
+El helper debe cubrir como mínimo estos grupos:
+
+- request/base;
+- idempotencia;
+- recursos no encontrados;
+- mismatch/scope;
+- estados inválidos;
+- lock timeout;
+- fallback interno.
+
+Estos grupos deben incluir los errores del contrato `activate-after-payment` sin asumir que todos los códigos pertenecen sólo a ese endpoint.
+
+### Principios de seguridad
+
+El helper no debe exponer al usuario final:
+
+- stacktrace;
+- SQL;
+- PDO;
+- provider secrets;
+- hashes de idempotencia;
+- IDs internos autoincrementales;
+- payload sensible;
+- datos clínicos o personales innecesarios.
+
+El código técnico puede exponerse sólo en contextos controlados:
+
+- soporte;
+- DEV/local;
+- diagnóstico controlado;
+- una decisión futura explícita.
+
+Para usuario final, el mensaje debe ser breve, seguro, accionable y sin detalles internos.
+
+### Límites de esta decisión
+
+Esta adenda no autoriza:
+
+- implementar el helper;
+- crear archivos JS;
+- decidir carga final de bundle;
+- modificar `assets/js/app.js`;
+- modificar HTML;
+- definir UI final;
+- crear soporte/admin real;
+- conectar `activate-after-payment` al frontend.
+
+La decisión sólo cierra el diseño documental del helper/módulo y deja listo el siguiente paso de validación estática.
+
+### Preservación de decisiones previas
+
+Se preservan las decisiones anteriores:
+
+- PP-Decisiones 124;
+- PP-Decisiones 126;
+- PP-Decisiones 127;
+- PP-Decisiones 128.
+
+PP-Decisiones 129 complementa esas decisiones y no reemplaza el contrato de errores backend ni el cierre funcional de activación post-pago.
+
+### Siguiente microfase recomendada
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-HelperDesign-StaticReadiness-ReadOnly-01
+```
+
+Motivo:
+
+Antes de implementar, se debe revisar read-only la estructura real de `assets/js/messages.js`, `assets/js/app.js` e `index.html` para confirmar si la ubicación candidata es viable o si conviene crear un módulo dedicado.
