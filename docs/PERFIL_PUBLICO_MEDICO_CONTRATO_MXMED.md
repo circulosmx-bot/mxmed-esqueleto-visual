@@ -25377,3 +25377,203 @@ BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMa
 Motivo:
 
 Antes de implementar mensajes reales, conviene decidir si el mapeo vivirá en un helper JS central, en `assets/js/messages.js`, en backend `meta`, en panel local o en soporte/admin.
+
+---
+
+## Adenda PP-Decisiones 128 - Readiness de diseño de helper de mapeo de errores activate-after-payment
+
+### Objetivo de readiness
+
+Esta adenda documenta el diseño candidato para decidir dónde debe vivir el mapeo de errores frontend/soporte del flujo `activate-after-payment`.
+
+Esta microfase no implementa helper, no modifica JS, no modifica backend, no toca HTML, no cambia respuestas HTTP, no ejecuta SQL y no ejecuta POST/curl.
+
+### Base documental preservada
+
+El diseño toma como base:
+
+- `PP-Decisiones 124` - contrato técnico de errores `activate-after-payment`;
+- `PP-Decisiones 126` - mapeo frontend/soporte cerrado;
+- `PP-Decisiones 127` - hallazgos de integración read-only.
+
+Se preserva que:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` es el endpoint explícito de activación real post-pago;
+- `payment_event_checkout_mismatch` no es canónico actual;
+- no se mezcla flujo DEV/local con flujo real sin decisión futura explícita.
+
+### Opción A - Helper JS central en assets/js/messages.js
+
+Descripción:
+
+- Reutilizar o extender `assets/js/messages.js` como punto central de mensajes reutilizables.
+- Agregar en el futuro una función específica, por ejemplo `mxmedSubscriptionErrorMessage(code, context)` o `subscriptionErrorMessage(code, options)`.
+
+Ventajas:
+
+- Evita dispersión en `assets/js/app.js`.
+- Puede reutilizarse por panel DEV/local, checkout real y soporte/admin.
+- Mantiene frontend como responsable del texto visible.
+- No requiere cambiar contrato técnico backend.
+
+Riesgos:
+
+- Hay que confirmar si `assets/js/messages.js` ya tiene patrón estable para utilidades compartidas.
+- Puede crecer demasiado si centraliza todo sin estructura.
+- Requiere cuidar namespace para no romper otros mensajes.
+
+### Opción B - Helper local dentro de assets/js/app.js
+
+Descripción:
+
+- Crear en el futuro una función local dentro del bloque de suscripciones.
+- Ejemplo conceptual: `getSubscriptionActivationUserMessage(errorCode)`.
+
+Ventajas:
+
+- Implementación pequeña.
+- Menos impacto global.
+- Rápida para panel DEV/local.
+
+Riesgos:
+
+- Aumenta la dispersión ya detectada.
+- Es difícil de reutilizar por checkout real o soporte/admin.
+- Puede duplicar mensajes en futuras pantallas.
+
+### Opción C - Backend meta/message mapping
+
+Descripción:
+
+- Backend respondería, además del `code`, un mensaje seguro o metadata de severidad/retry.
+- Frontend mostraría lo indicado por backend.
+
+Ventajas:
+
+- Unifica contrato desde backend.
+- Reduce duplicación frontend.
+- Puede ser útil para soporte/admin.
+
+Riesgos:
+
+- Cambia contrato de respuesta.
+- Requiere implementación backend.
+- Puede mezclar códigos técnicos con mensajes de usuario.
+- Aumenta riesgo si no se diseña sanitización.
+
+### Opción D - Módulo soporte/admin separado
+
+Descripción:
+
+- Mantener frontend usuario simple.
+- Crear mapeo detallado sólo en soporte/admin.
+
+Ventajas:
+
+- Soporte recibe más contexto.
+- Usuario final no ve detalle técnico.
+- Puede integrarse con herramientas internas.
+
+Riesgos:
+
+- No resuelve mensajes del flujo usuario.
+- Requiere una vista soporte/admin aún no confirmada.
+- Puede dejar duplicidad entre usuario y soporte.
+
+### Opción E - Combinación controlada
+
+Descripción:
+
+- Helper JS central para usuario.
+- Mapeo soporte/admin separado o extendido.
+- Backend conserva sólo `code` técnico.
+
+Ventajas:
+
+- Mantiene contrato backend estable.
+- Permite mensajes seguros para usuario.
+- Permite soporte con contexto más rico.
+- Evita acoplar flujo DEV/local con checkout real.
+
+Riesgos:
+
+- Requiere diseño claro de namespaces.
+- Requiere decidir interfaz antes de implementar.
+
+### Recomendación preferente
+
+La opción preferente es la opción E - combinación controlada, con primer paso pequeño:
+
+1. Crear primero un helper JS central de suscripciones.
+2. Apoyarlo en `assets/js/messages.js` sólo si su estructura lo permite.
+3. Mantener backend sin cambios.
+4. Mantener soporte/admin como extensión futura.
+5. No conectar todavía `activate-after-payment` hasta cerrar el diseño del helper.
+
+Esta recomendación evita dispersar más lógica en `assets/js/app.js` y mantiene estable el contrato técnico de backend.
+
+### Interfaz conceptual del helper
+
+Nombre conceptual:
+
+- `mxmedSubscriptionErrorMessage`;
+- o `mxmedSubscriptionErrorMapper`.
+
+Entrada conceptual:
+
+- `code`;
+- `httpStatus` opcional;
+- `context` opcional: `activation`, `checkout`, `payment_intent`, `support`;
+- `audience` opcional: `user`, `support`;
+- `fallback` opcional.
+
+Salida conceptual:
+
+- `message`;
+- `severity`;
+- `retryable`;
+- `supportHint` opcional;
+- `exposeCode` booleano.
+
+Grupos mínimos a cubrir:
+
+- request/base;
+- idempotencia;
+- recursos no encontrados;
+- mismatch/scope;
+- estados inválidos;
+- lock timeout;
+- fallback interno.
+
+### Principios de seguridad
+
+El helper o módulo futuro no debe exponer:
+
+- stacktrace;
+- SQL;
+- PDO;
+- provider secrets;
+- hashes de idempotencia;
+- IDs internos autoincrementales;
+- payload sensible;
+- datos clínicos o personales no necesarios.
+
+Puede mostrar código técnico sólo si una decisión futura lo habilita para soporte o modo DEV. Para usuario final, los mensajes deben ser breves, seguros y accionables.
+
+### Decisión de readiness
+
+Esta microfase sólo documenta readiness de diseño. No ordena implementación.
+
+Antes de tocar JS o backend se debe cerrar documentalmente la decisión de ubicación e interfaz conceptual del helper/módulo.
+
+Siguiente microfase recomendada:
+
+```text
+DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-HelperDesign-Closure-01
+```
+
+Motivo:
+
+Antes de tocar JS o backend, conviene cerrar documentalmente la decisión de ubicación e interfaz conceptual del helper/módulo.
