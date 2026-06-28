@@ -25017,3 +25017,212 @@ Este readiness no cambia:
 Motivo:
 
 Antes de implementar mensajes en frontend o backend, conviene cerrar documentalmente el mapeo candidato y decidir si será consumido por frontend, soporte interno o ambos.
+
+---
+
+## Adenda PP-Decisiones 126 - Cierre de mapeo frontend y soporte para errores activate-after-payment
+
+### Objetivo de cierre
+
+Esta adenda cierra documentalmente el mapeo candidato entre códigos técnicos del endpoint `activate-after-payment` y mensajes seguros para frontend y soporte.
+
+El cierre toma como base:
+
+- `PP-Decisiones 124` - Cierre del contrato de errores activate-after-payment.
+- `PP-Decisiones 125` - Readiness de mapeo frontend y soporte para errores activate-after-payment.
+
+Esta microfase no implementa mensajes, no toca frontend, no toca backend, no cambia respuestas HTTP y no modifica la lógica de activación post-pago.
+
+### Decisiones preservadas
+
+1. `confirm_mock` no activa suscripción.
+2. `confirm_mock` sólo confirma evidencia de pago mock/dev.
+3. `activate-after-payment` es el endpoint explícito que activa `profile_subscriptions` post-pago.
+4. El contrato técnico cerrado en `PP-Decisiones 124` no se modifica.
+5. El readiness de mapeo documentado en `PP-Decisiones 125` queda cerrado como contrato documental candidato.
+6. `payment_event_checkout_mismatch` no es canónico actual.
+7. El frontend no decide activación; sólo presenta estado y mensajes seguros.
+8. Soporte puede recibir más contexto operativo, pero sin secretos ni datos sensibles.
+
+### Principios de comunicación segura
+
+Los mensajes de frontend quedan cerrados como mensajes:
+
+- seguros;
+- breves;
+- accionables;
+- no técnicos en exceso;
+- sin datos sensibles.
+
+Los mensajes de soporte pueden ser más precisos, pero no deben exponer:
+
+- stacktrace;
+- SQL;
+- detalles PDO;
+- provider secrets;
+- payload sensible;
+- hashes de idempotencia;
+- IDs internos autoincrementales;
+- datos clínicos o personales no necesarios.
+
+El código técnico backend puede conservarse para trazabilidad controlada, siempre separado del mensaje de usuario final.
+
+### Mapeo cerrado por grupo
+
+#### A) Request/base
+
+Códigos:
+
+- `method_not_allowed`
+- `invalid_payment_intent_activation_payload`
+- `invalid_payload`
+- `idempotency_key_invalid`
+
+Mensaje frontend cerrado:
+
+> No pudimos procesar la solicitud. Actualiza la página y vuelve a intentarlo.
+
+Mensaje soporte cerrado:
+
+> Solicitud inválida o incompleta para activación post-pago. Revisar método, payload y encabezado Idempotency-Key.
+
+Reintentabilidad:
+
+- Sí, corrigiendo la solicitud.
+
+#### B) Idempotencia
+
+Códigos:
+
+- `idempotency_key_reused_with_different_payload`
+- `idempotency_key_not_reusable`
+- `idempotency_result_unavailable`
+
+Mensaje frontend cerrado:
+
+> Esta operación ya fue procesada o no puede repetirse con los mismos datos. Actualiza la página y revisa el estado de la suscripción.
+
+Mensaje soporte cerrado:
+
+> Conflicto de idempotencia. Revisar que la misma Idempotency-Key no se reutilice con payload distinto y confirmar estado actual de checkout/suscripción.
+
+Reintentabilidad:
+
+- No con la misma key si el payload cambió.
+- Sí con flujo nuevo controlado después de revisar estado.
+
+#### C) Recursos no encontrados
+
+Códigos:
+
+- `payment_intent_not_found`
+- `checkout_intent_not_found`
+- `payment_event_not_found`
+- `contract_acceptance_not_found`
+
+Mensaje frontend cerrado:
+
+> No encontramos la información necesaria para completar la activación. Actualiza la página o contacta a soporte.
+
+Mensaje soporte cerrado:
+
+> Falta un recurso requerido para activar: checkout, payment intent, payment event o aceptación contractual.
+
+Reintentabilidad:
+
+- No hasta revisar fixture, estado o relación de recursos.
+
+#### D) Mismatch / scope
+
+Códigos:
+
+- `payment_intent_checkout_mismatch`
+- `payment_event_payment_intent_mismatch`
+- `checkout_intent_entity_mismatch`
+
+Mensaje frontend cerrado:
+
+> No pudimos validar la relación entre el pago y la contratación. Contacta a soporte.
+
+Mensaje soporte cerrado:
+
+> Conflicto de relación o scope entre payment event, payment intent, checkout o entidad. No forzar activación sin diagnóstico.
+
+Reintentabilidad:
+
+- No automática.
+
+Nota: `payment_event_checkout_mismatch` no debe mostrarse como canónico actual.
+
+#### E) Estados inválidos
+
+| Código | Mensaje frontend cerrado | Reintentabilidad |
+| --- | --- | --- |
+| `payment_intent_not_paid` | El pago todavía no aparece como confirmado. Espera unos momentos y vuelve a revisar. | Sí, tras confirmación de pago. |
+| `payment_event_not_processed` | La confirmación del pago aún no está lista. Intenta nuevamente más tarde. | Sí, tras procesamiento. |
+| `checkout_intent_not_pending_payment` | Esta contratación ya no está disponible para activación. | No automáticamente. |
+| `contract_acceptance_not_pending_payment` | La aceptación contractual ya no está disponible para esta activación. | No automáticamente. |
+| `active_subscription_exists` | Este perfil ya tiene una suscripción activa. | No. |
+
+Mensaje soporte cerrado:
+
+> Guard de estado impidió activación. Revisar estado terminal actual antes de intentar cualquier corrección.
+
+#### F) Lock timeout
+
+Mensaje frontend cerrado:
+
+> El sistema está procesando esta operación. Espera unos segundos y vuelve a intentar.
+
+Mensaje soporte cerrado:
+
+> Timeout de lock de activación. Puede indicar concurrencia o reintento simultáneo.
+
+Reintentabilidad:
+
+- Sí, tras espera breve.
+
+#### G) Fallback interno
+
+Código:
+
+- `payment_intent_activation_unavailable`
+
+Mensaje frontend cerrado:
+
+> No pudimos completar la activación en este momento. Intenta más tarde o contacta a soporte.
+
+Mensaje soporte cerrado:
+
+> Error interno controlado en activación post-pago. Revisar logs sin exponer detalles al usuario.
+
+Reintentabilidad:
+
+- Sí, después de revisar disponibilidad o logs.
+
+### Alcance de este cierre
+
+Este cierre documental no ordena implementación automática.
+
+No autoriza:
+
+- modificar backend;
+- modificar frontend;
+- cambiar status HTTP;
+- cambiar códigos técnicos;
+- cambiar orden de guards;
+- tocar DB/schema;
+- ejecutar activaciones;
+- exponer datos sensibles en UI o soporte.
+
+### Siguiente microfase recomendada
+
+Siguiente microfase recomendada:
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-IntegrationReadiness-ReadOnly-01
+```
+
+Motivo:
+
+Antes de implementar mensajes, conviene revisar read-only dónde se consumirían actualmente los errores en frontend/admin/soporte y si existe una capa central de mensajes.
