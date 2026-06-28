@@ -25226,3 +25226,154 @@ QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping
 Motivo:
 
 Antes de implementar mensajes, conviene revisar read-only dónde se consumirían actualmente los errores en frontend/admin/soporte y si existe una capa central de mensajes.
+
+---
+
+## Adenda PP-Decisiones 127 - Cierre de hallazgos de integración frontend y soporte activate-after-payment
+
+### Objetivo de cierre
+
+Esta adenda cierra documentalmente los hallazgos de la revisión read-only de integración futura para el mapeo frontend/soporte de errores del endpoint `activate-after-payment`.
+
+La microfase de referencia es:
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-IntegrationReadiness-ReadOnly-01
+```
+
+Resultado de esa revisión:
+
+- `PASS`;
+- Git limpio;
+- HEAD local/origin `2b0fb9a`;
+- ahead/behind `0/0`;
+- sin SQL;
+- sin POST/curl;
+- sin archivos modificados.
+
+Esta adenda no implementa mensajes, no toca frontend, no toca backend, no cambia respuestas HTTP y no modifica el contrato técnico de errores.
+
+### Base documental preservada
+
+El cierre preserva:
+
+- `PP-Decisiones 124` - Cierre del contrato técnico de errores `activate-after-payment`;
+- `PP-Decisiones 126` - Cierre de mapeo frontend y soporte para errores `activate-after-payment`.
+
+También preserva las decisiones funcionales:
+
+- `confirm_mock` no activa suscripción;
+- `confirm_mock` sólo confirma evidencia de pago mock/dev;
+- `activate-after-payment` es el endpoint explícito de activación real post-pago;
+- `payment_event_checkout_mismatch` no es canónico actual;
+- no se mezcla flujo DEV/local con flujo real sin una decisión futura.
+
+### Hallazgos backend
+
+La revisión read-only confirmó:
+
+- endpoint `activate-after-payment` detectado en `api/subscriptions/index.php`;
+- servicio `ActivateSubscriptionAfterPaymentService` detectado;
+- contrato técnico preservado;
+- mapeo documental preservado;
+- `php -l` PASS en API y servicio.
+
+No se detectaron cambios requeridos en backend para esta microfase.
+
+### Archivos candidatos frontend/admin
+
+Los archivos candidatos detectados son:
+
+- `assets/js/app.js`;
+- `index.html`;
+- `assets/js/messages.js`.
+
+`assets/js/app.js` ya consume `/api/subscriptions` para:
+
+- read-model `current`;
+- contexto `context/current`;
+- write DEV `/subscriptions`.
+
+`index.html` contiene el panel DEV/local:
+
+```text
+Contratación DEV controlada
+```
+
+Ese panel valida write contractual DEV con `Idempotency-Key`, pero no consume `activate-after-payment`.
+
+`assets/js/messages.js` existe como módulo de mensajes/notificaciones de UI, pero no quedó confirmado como capa central de mapeo de errores de suscripciones.
+
+### Ausencias confirmadas
+
+La revisión no detectó integración frontend actual para:
+
+- `activate-after-payment`;
+- `payment_event_uuid`;
+- ruta `payment-intents/.../activate-after-payment`;
+- activación post-pago desde frontend;
+- vista soporte/admin específica para errores de activación post-pago.
+
+Tampoco se confirmó una capa central clara de mapeo de errores de suscripciones.
+
+### Patrones locales detectados
+
+Hay manejo local de errores y mensajes en `assets/js/app.js`, con ejemplos como:
+
+- `devWriteStatusMessage`;
+- `applyReadOnlyError`;
+- `els.devStatus.textContent`;
+- manejo parcial por `payload.error.code`;
+- manejo parcial por HTTP status;
+- mensajes genéricos tipo `No se pudo cargar...`;
+- fallback tipo `Respuesta HTTP ...`.
+
+En otros módulos, como agenda y clínica, existen patrones de errores y alertas locales. Esto confirma que el sistema usa manejo disperso/local de errores, no una capa central única para suscripciones.
+
+### Riesgos confirmados
+
+1. No existe integración frontend actual para `activate-after-payment`.
+2. No existe capa central confirmada de mapeo de errores de suscripciones.
+3. El patrón actual de mensajes está disperso.
+4. Reutilizar `devWriteStatusMessage` sin diseño podría aumentar la dispersión.
+5. Implementar directamente mensajes en el panel actual podría acoplar demasiado el flujo DEV/local con un futuro flujo real de checkout/pago.
+
+### Inferencias razonables
+
+1. La futura integración podría reutilizar patrones existentes de `assets/js/app.js`.
+2. Conviene crear o definir primero un helper/módulo de mapeo de errores de suscripciones antes de implementar mensajes.
+3. La capa de mensajes podría vivir en:
+   - helper JS central;
+   - `assets/js/messages.js`;
+   - backend `meta`;
+   - frontend local del panel de suscripción;
+   - módulo soporte/admin;
+   - o una combinación controlada.
+4. La opción más segura parece un helper JS central o módulo de mapeo frontend dedicado, pero esta microfase no decide implementación.
+
+### Dudas futuras
+
+Quedan abiertas estas decisiones:
+
+1. Si el mapeo debe vivir en frontend, backend o ambos.
+2. Si `assets/js/messages.js` debe ser el lugar natural para mensajes reutilizables.
+3. Si conviene centralizar sólo errores de suscripciones o todos los errores operativos del panel.
+4. Si el panel DEV/local debe consumir el mismo mapeo que un futuro checkout real.
+5. Si debe existir una vista soporte/admin para ver detalle técnico controlado.
+6. Si el código técnico debe mostrarse al usuario final o sólo a soporte.
+
+### Decisión de cierre
+
+Los hallazgos de integración quedan cerrados documentalmente.
+
+No se recomienda implementar mensajes directamente todavía. Antes debe definirse el diseño del helper o módulo de mapeo.
+
+Siguiente microfase recomendada:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-FrontendSupportErrorMapping-HelperDesign-Readiness-01
+```
+
+Motivo:
+
+Antes de implementar mensajes reales, conviene decidir si el mapeo vivirá en un helper JS central, en `assets/js/messages.js`, en backend `meta`, en panel local o en soporte/admin.
