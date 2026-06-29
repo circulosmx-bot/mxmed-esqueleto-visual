@@ -30400,3 +30400,160 @@ La microfase:
 Objetivo futuro:
 
 Agregar soporte backend controlado para `intent_type=upgrade` en checkout intent, sin conectar frontend todavia.
+
+## PP-Decisiones 160 - Implementacion contrato upgrade checkout intent
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-CheckoutContract-Implementation-01`
+
+### Resultado
+
+PASS de implementacion backend controlada.
+
+Se agrego soporte backend para que el endpoint existente de `checkout-intents` acepte `intent_type` con estos valores:
+
+- `new_subscription`;
+- `upgrade`.
+
+Si `intent_type` no se envia, el backend conserva el comportamiento previo y asume `new_subscription`.
+
+### Archivos modificados
+
+- `api/subscriptions/index.php`;
+- `modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php`;
+- `modules/subscriptions/services/SubscriptionPlanPriceResolverService.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron:
+
+- frontend;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- SQL/schema/seeds;
+- DB;
+- fixtures.
+
+### Contrato backend implementado
+
+Para `new_subscription`:
+
+- se conserva el bloqueo por `active_subscription_exists`;
+- se conserva la regla anual previa;
+- se conserva el flujo de checkout intent existente.
+
+Para `upgrade`:
+
+- requiere suscripcion activa vigente;
+- valida plan actual y plan destino con jerarquia:
+  - `basic`;
+  - `standard`;
+  - `optimum`;
+  - `professional`;
+- rechaza target plan menor o igual con `upgrade_target_plan_not_higher`;
+- rechaza cambio de billing period con `upgrade_billing_period_change_not_supported`;
+- rechaza ausencia de suscripcion activa con `active_subscription_required`;
+- rechaza precio no resoluble con `upgrade_price_unavailable`;
+- rechaza ajuste no positivo con `upgrade_adjustment_not_positive`;
+- rechaza periodo vigente invalido con `upgrade_period_invalid`.
+
+### Pricing implementado
+
+La primera version calcula ajuste por diferencia proporcional:
+
+- `pricing_strategy = prorated_difference`;
+- `price_difference = target_price_period - current_price_period`;
+- `adjustment_amount_cents = round(price_difference * remaining_days / period_days)`.
+
+La resolucion de precio ahora soporta:
+
+- anual con precio anual activo;
+- mensual con precio mensual activo;
+- mensual derivado desde anual cuando no exista precio mensual, usando:
+  - `monthly_price = round((annual_price / 12) * 1.25)`.
+
+La derivacion mensual se marca con:
+
+- `price_source = derived_monthly_markup_25`;
+- `source = derived_from_annual_price`;
+- `monthly_markup_percent = 25`.
+
+### Snapshot sin schema nuevo
+
+No se agrego schema nuevo.
+
+El snapshot de upgrade se guarda de forma controlada en `subscription_checkout_intents.notes`, porque el schema actual ya tiene columna `notes` y el repositorio ya la persiste.
+
+El snapshot incluye:
+
+- `intent_type`;
+- `source_subscription_id`;
+- `current_plan_code`;
+- `target_plan_code`;
+- `current_billing_period`;
+- `target_billing_period`;
+- precios periodo actual/destino;
+- diferencia de precio;
+- `remaining_days`;
+- `period_days`;
+- `adjustment_amount_cents`;
+- `pricing_strategy`.
+
+### Respuesta backend de upgrade
+
+La respuesta de checkout intent de upgrade incluye:
+
+- `intent_type = upgrade`;
+- `current_plan_code`;
+- `target_plan_code`;
+- `current_billing_period`;
+- `target_billing_period`;
+- `adjustment_amount_cents`;
+- `currency`;
+- `pricing_strategy`;
+- `remaining_days`;
+- `period_days`;
+- `next_step = create_payment_intent`.
+
+### Idempotencia
+
+Limitacion documentada:
+
+- la operacion logica futura es `subscriptions.checkout_intent.upgrade`;
+- la microfase no modifico `SubscriptionWriteIdempotencyService`;
+- por lo tanto, el registro tecnico sigue usando `subscriptions.checkout_intent.create`;
+- el `request_hash` incluye `intent_type`, por lo que `new_subscription` y `upgrade` no comparten payload idempotente equivalente.
+
+### Alcance no ejecutado
+
+La microfase no:
+
+- conecto frontend;
+- conecto `Mejorar ahora`;
+- creo endpoint nuevo;
+- ejecuto SQL;
+- ejecuto POST/curl;
+- creo checkout real;
+- creo payment intent;
+- ejecuto confirm_mock;
+- ejecuto activate-after-payment;
+- creo `Idempotency-Key` en frontend;
+- hardcodeo UUIDs fixture.
+
+### Validacion tecnica esperada
+
+Validaciones de implementacion:
+
+- `php -l api/subscriptions/index.php`: PASS;
+- `php -l modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php`: PASS;
+- `php -l modules/subscriptions/services/SubscriptionPlanPriceResolverService.php`: PASS;
+- `git diff --check`: limpio.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-CheckoutContract-StaticQA-01`
+
+Objetivo:
+
+Validar estaticamente que el contrato backend de upgrade no toca frontend, no toca schema, no ejecuta writes desde terminal y mantiene el comportamiento previo de `new_subscription`.

@@ -41,6 +41,17 @@ final class CreateSubscriptionCheckoutIntentService
     private const ACCEPTANCE_STATUS_PENDING_PAYMENT = 'accepted_pending_payment';
     private const SOURCE_CHECKOUT_INTENT = 'checkout_intent';
     private const DEFAULT_EXPIRES_MINUTES = 30;
+    private const BILLING_PERIOD_ANNUAL = 'annual';
+    private const INTENT_TYPE_NEW_SUBSCRIPTION = 'new_subscription';
+    private const INTENT_TYPE_UPGRADE = 'upgrade';
+    private const PRICING_STRATEGY_PRORATED_DIFFERENCE = 'prorated_difference';
+    private const LOGICAL_UPGRADE_OPERATION = 'subscriptions.checkout_intent.upgrade';
+    private const PLAN_RANKS = [
+        'basic' => 1,
+        'standard' => 2,
+        'optimum' => 3,
+        'professional' => 4,
+    ];
 
     private PDO $pdo;
     private SubscriptionEntityResolverService $entityResolver;
@@ -75,8 +86,12 @@ final class CreateSubscriptionCheckoutIntentService
     {
         $entityType = strtolower($this->requiredText($input['entity_type'] ?? null, 'invalid_checkout_intent_payload', 'entity_type is required', 64));
         $entityId = $this->requiredText($input['entity_id'] ?? null, 'invalid_checkout_intent_payload', 'entity_id is required', 64);
-        $planCode = strtolower($this->requiredText($input['plan_code'] ?? null, 'invalid_checkout_intent_payload', 'plan_code is required', 64));
+        $intentType = $this->intentType($input['intent_type'] ?? self::INTENT_TYPE_NEW_SUBSCRIPTION);
+        $planCode = $this->canonicalPlanCode($this->requiredText($input['plan_code'] ?? ($input['target_plan_code'] ?? null), 'invalid_checkout_intent_payload', 'plan_code is required', 64));
         $billingPeriod = strtolower($this->requiredText($input['billing_period'] ?? null, 'invalid_checkout_intent_payload', 'billing_period is required', 32));
+        if ($intentType === self::INTENT_TYPE_NEW_SUBSCRIPTION && $billingPeriod !== self::BILLING_PERIOD_ANNUAL) {
+            throw new CreateSubscriptionCheckoutIntentException(422, 'billing_period_invalid', 'billing period is invalid for checkout pricing');
+        }
         $contractVersion = $this->requiredText($input['contract_version'] ?? null, 'contract_invalid', 'contract_version is required', 64);
         $contractHash = $this->requiredText($input['contract_hash'] ?? null, 'contract_invalid', 'contract_hash is required', 128);
         $contractSnapshotUrl = $this->requiredText($input['contract_snapshot_url'] ?? null, 'contract_invalid', 'contract_snapshot_url is required', 255);
@@ -104,6 +119,7 @@ final class CreateSubscriptionCheckoutIntentService
         $payload = [
             'entity_type' => $entityType,
             'entity_id' => $entityId,
+            'intent_type' => $intentType,
             'plan_code' => $planCode,
             'billing_period' => $billingPeriod,
             'contract_version' => $contractVersion,
@@ -148,9 +164,13 @@ final class CreateSubscriptionCheckoutIntentService
             }
 
             $entity = $this->resolvedEntity($entityType, $entityId);
+            $activeSubscription = $this->currentSubscriptionRepository->findActiveByEntity($entityType, $entityId);
 
-            if ($this->currentSubscriptionRepository->activeSubscriptionExists($entityType, $entityId)) {
+            if ($intentType === self::INTENT_TYPE_NEW_SUBSCRIPTION && $activeSubscription !== null) {
                 throw new CreateSubscriptionCheckoutIntentException(409, 'active_subscription_exists', 'active subscription already exists');
+            }
+            if ($intentType === self::INTENT_TYPE_UPGRADE && $activeSubscription === null) {
+                throw new CreateSubscriptionCheckoutIntentException(409, 'active_subscription_required', 'active subscription is required for upgrade checkout');
             }
 
             if ($this->checkoutIntentRepository->findPendingByEntityPlanAndBilling($entityType, $entityId, $planCode, $billingPeriod) !== null) {
@@ -160,8 +180,10 @@ final class CreateSubscriptionCheckoutIntentService
                 throw new CreateSubscriptionCheckoutIntentException(409, 'checkout_intent_already_pending', 'checkout intent is already pending');
             }
 
-            $price = $this->priceResolver->resolveForCheckout($entityType, $entityId, $planCode, $billingPeriod);
             $now = $this->now();
+            $price = $intentType === self::INTENT_TYPE_UPGRADE
+                ? $this->upgradePrice($entityType, $entityId, $activeSubscription ?? [], $planCode, $billingPeriod, $now)
+                : $this->priceResolver->resolveForCheckout($entityType, $entityId, $planCode, $billingPeriod);
             $expiresAt = $this->expiresAt($input['expires_at'] ?? null, $now);
 
             $this->pdo->beginTransaction();
@@ -214,10 +236,10 @@ final class CreateSubscriptionCheckoutIntentService
                     : hash('sha256', $idempotencyKey),
                 'request_hash' => $requestHash,
                 'expires_at' => $expiresAt,
-                'notes' => 'Created by checkout intent service; awaiting payment initialization.',
+                'notes' => $this->checkoutNotes($intentType, $price),
             ]);
 
-            $response = $this->response($checkoutIntent, $entity, $price, $acceptance, false);
+            $response = $this->response($checkoutIntent, $entity, $price, $acceptance, $intentType, false);
             $this->pdo->commit();
             $transactionOpen = false;
 
@@ -261,45 +283,244 @@ final class CreateSubscriptionCheckoutIntentService
         return $entity;
     }
 
-    private function response(array $checkoutIntent, array $entity, array $price, array $acceptance, bool $idempotentReplay): array
+    private function upgradePrice(
+        string $entityType,
+        string $entityId,
+        array $activeSubscription,
+        string $targetPlanCode,
+        string $targetBillingPeriod,
+        string $now
+    ): array {
+        $currentPlanCode = $this->canonicalPlanCode((string)($activeSubscription['plan_code'] ?? ''));
+        $currentBillingPeriod = strtolower(trim((string)($activeSubscription['billing_period'] ?? '')));
+        $currentRank = $this->planRank($currentPlanCode);
+        $targetRank = $this->planRank($targetPlanCode);
+        if ($currentRank <= 0) {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_current_plan_unsupported', 'current subscription plan is not supported for upgrade');
+        }
+        if ($targetRank <= 0) {
+            throw new CreateSubscriptionCheckoutIntentException(422, 'invalid_checkout_intent_payload', 'target plan is not supported for upgrade');
+        }
+        if ($targetRank <= $currentRank) {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_target_plan_not_higher', 'target plan must be higher than current plan');
+        }
+        if ($targetBillingPeriod !== $currentBillingPeriod) {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_billing_period_change_not_supported', 'billing period change is not supported for upgrade checkout');
+        }
+
+        $currentPrice = $this->upgradeResolvedPrice($entityType, $entityId, $currentPlanCode, $currentBillingPeriod);
+        $targetPrice = $this->upgradeResolvedPrice($entityType, $entityId, $targetPlanCode, $targetBillingPeriod);
+        $currentAmount = (int)($currentPrice['amount_cents'] ?? 0);
+        $targetAmount = (int)($targetPrice['amount_cents'] ?? 0);
+        $priceDifference = $targetAmount - $currentAmount;
+        if ($currentAmount <= 0 || $targetAmount <= 0 || $priceDifference <= 0) {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_adjustment_not_positive', 'upgrade adjustment is not positive');
+        }
+
+        $period = $this->activeSubscriptionPeriod($activeSubscription, $now);
+        $adjustmentAmount = (int)round($priceDifference * ((int)$period['remaining_days'] / (int)$period['period_days']));
+        if ($adjustmentAmount <= 0) {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_adjustment_not_positive', 'upgrade adjustment is not positive');
+        }
+
+        $price = $targetPrice;
+        $price['amount_cents'] = $adjustmentAmount;
+        $price['price_source'] = 'upgrade_prorated_difference';
+        $price['price_version'] = substr((string)($targetPrice['price_version'] ?? 'target') . ':upgrade-prorated', 0, 64);
+        $price['upgrade_context'] = [
+            'intent_type' => self::INTENT_TYPE_UPGRADE,
+            'source_subscription_id' => (string)($activeSubscription['subscription_id'] ?? ''),
+            'current_plan_code' => $currentPlanCode,
+            'target_plan_code' => $targetPlanCode,
+            'current_billing_period' => $currentBillingPeriod,
+            'target_billing_period' => $targetBillingPeriod,
+            'current_price_period_cents' => $currentAmount,
+            'target_price_period_cents' => $targetAmount,
+            'price_difference_cents' => $priceDifference,
+            'remaining_days' => (int)$period['remaining_days'],
+            'period_days' => (int)$period['period_days'],
+            'adjustment_amount_cents' => $adjustmentAmount,
+            'currency' => (string)($targetPrice['currency'] ?? ''),
+            'pricing_strategy' => self::PRICING_STRATEGY_PRORATED_DIFFERENCE,
+            'current_price_snapshot' => $this->compactPriceSnapshot($currentPrice),
+            'target_price_snapshot' => $this->compactPriceSnapshot($targetPrice),
+        ];
+        if (isset($currentPrice['monthly_markup_percent']) || isset($targetPrice['monthly_markup_percent'])) {
+            $price['upgrade_context']['monthly_markup_percent'] = 25;
+        }
+
+        return $price;
+    }
+
+    private function upgradeResolvedPrice(string $entityType, string $entityId, string $planCode, string $billingPeriod): array
+    {
+        try {
+            return $this->priceResolver->resolveForCheckout($entityType, $entityId, $planCode, $billingPeriod);
+        } catch (SubscriptionPlanPriceResolverException $e) {
+            $status = $e->status() === 503 ? 503 : 422;
+            throw new CreateSubscriptionCheckoutIntentException($status, 'upgrade_price_unavailable', 'upgrade price is unavailable', $e);
+        }
+    }
+
+    private function activeSubscriptionPeriod(array $activeSubscription, string $now): array
+    {
+        $startsAt = trim((string)($activeSubscription['starts_at'] ?? ''));
+        $expiresAt = trim((string)($activeSubscription['expires_at'] ?? ''));
+        if ($startsAt === '' || $expiresAt === '') {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_period_invalid', 'active subscription period is invalid for upgrade checkout');
+        }
+
+        try {
+            $nowDate = new DateTimeImmutable($now, new DateTimeZone('UTC'));
+            $startsAtDate = new DateTimeImmutable($startsAt, new DateTimeZone('UTC'));
+            $expiresAtDate = new DateTimeImmutable($expiresAt, new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_period_invalid', 'active subscription period is invalid for upgrade checkout', $e);
+        }
+
+        $periodSeconds = $expiresAtDate->getTimestamp() - $startsAtDate->getTimestamp();
+        $remainingSeconds = $expiresAtDate->getTimestamp() - $nowDate->getTimestamp();
+        if ($periodSeconds <= 0 || $remainingSeconds <= 0) {
+            throw new CreateSubscriptionCheckoutIntentException(409, 'upgrade_period_invalid', 'active subscription period is invalid for upgrade checkout');
+        }
+
+        $periodDays = max(1, (int)ceil($periodSeconds / 86400));
+        $remainingDays = min($periodDays, max(1, (int)ceil($remainingSeconds / 86400)));
+
+        return [
+            'period_days' => $periodDays,
+            'remaining_days' => $remainingDays,
+        ];
+    }
+
+    private function compactPriceSnapshot(array $price): array
     {
         return [
-            'ok' => true,
-            'data' => [
-                'checkout_intent_uuid' => (string)($checkoutIntent['uuid'] ?? ''),
-                'status' => self::STATUS_PENDING_PAYMENT,
-                'entity' => $entity,
-                'plan_code' => (string)($checkoutIntent['plan_code'] ?? $price['plan_code'] ?? ''),
-                'billing_period' => (string)($checkoutIntent['billing_period'] ?? $price['billing_period'] ?? ''),
-                'price' => [
-                    'amount_cents' => (int)($checkoutIntent['amount_cents'] ?? $price['amount_cents'] ?? 0),
-                    'currency' => (string)($checkoutIntent['currency'] ?? $price['currency'] ?? ''),
-                    'price_source' => (string)($checkoutIntent['price_source'] ?? $price['price_source'] ?? ''),
-                    'price_version' => (string)($checkoutIntent['price_version'] ?? $price['price_version'] ?? ''),
-                    'price_uuid' => (string)($price['price_uuid'] ?? ''),
-                    'valid_from' => (string)($price['valid_from'] ?? ''),
-                    'valid_until' => $price['valid_until'] ?? null,
-                    'source' => (string)($price['source'] ?? ''),
-                ],
-                'contract_acceptance_uuid' => (string)($acceptance['contract_acceptance_uuid'] ?? ''),
-                'contract' => [
-                    'version' => (string)($acceptance['contract_version'] ?? $checkoutIntent['contract_version'] ?? ''),
-                    'hash' => (string)($acceptance['contract_hash'] ?? $checkoutIntent['contract_hash'] ?? ''),
-                    'snapshot_url' => (string)($acceptance['contract_snapshot_url'] ?? $checkoutIntent['contract_snapshot_url'] ?? ''),
-                    'acceptance_status' => self::ACCEPTANCE_STATUS_PENDING_PAYMENT,
-                ],
-                'expires_at' => (string)($checkoutIntent['expires_at'] ?? ''),
-                'created_at' => (string)($checkoutIntent['created_at'] ?? ''),
-                'source' => self::SOURCE_CHECKOUT_INTENT,
-                'idempotency' => [
-                    'operation' => SubscriptionWriteIdempotencyService::CHECKOUT_OPERATION,
-                    'idempotent_replay' => $idempotentReplay,
-                ],
+            'plan_code' => (string)($price['plan_code'] ?? ''),
+            'billing_period' => (string)($price['billing_period'] ?? ''),
+            'amount_cents' => (int)($price['amount_cents'] ?? 0),
+            'currency' => (string)($price['currency'] ?? ''),
+            'price_source' => (string)($price['price_source'] ?? ''),
+            'price_version' => (string)($price['price_version'] ?? ''),
+            'price_uuid' => (string)($price['price_uuid'] ?? ''),
+            'derived_from_billing_period' => $price['derived_from_billing_period'] ?? null,
+            'monthly_markup_percent' => $price['monthly_markup_percent'] ?? null,
+        ];
+    }
+
+    private function checkoutNotes(string $intentType, array $price): string
+    {
+        if ($intentType !== self::INTENT_TYPE_UPGRADE) {
+            return 'Created by checkout intent service; awaiting payment initialization.';
+        }
+
+        $notes = [
+            'intent_type' => self::INTENT_TYPE_UPGRADE,
+            'pricing_strategy' => self::PRICING_STRATEGY_PRORATED_DIFFERENCE,
+            'upgrade_context' => $price['upgrade_context'] ?? [],
+        ];
+        $json = json_encode($notes, JSON_UNESCAPED_SLASHES);
+
+        return is_string($json) && $json !== ''
+            ? $json
+            : 'Created by checkout intent service for upgrade; awaiting payment initialization.';
+    }
+
+    private function response(array $checkoutIntent, array $entity, array $price, array $acceptance, string $intentType, bool $idempotentReplay): array
+    {
+        $data = [
+            'checkout_intent_uuid' => (string)($checkoutIntent['uuid'] ?? ''),
+            'status' => self::STATUS_PENDING_PAYMENT,
+            'intent_type' => $intentType,
+            'entity' => $entity,
+            'plan_code' => (string)($checkoutIntent['plan_code'] ?? $price['plan_code'] ?? ''),
+            'billing_period' => (string)($checkoutIntent['billing_period'] ?? $price['billing_period'] ?? ''),
+            'price' => [
+                'amount_cents' => (int)($checkoutIntent['amount_cents'] ?? $price['amount_cents'] ?? 0),
+                'currency' => (string)($checkoutIntent['currency'] ?? $price['currency'] ?? ''),
+                'price_source' => (string)($checkoutIntent['price_source'] ?? $price['price_source'] ?? ''),
+                'price_version' => (string)($checkoutIntent['price_version'] ?? $price['price_version'] ?? ''),
+                'price_uuid' => (string)($price['price_uuid'] ?? ''),
+                'valid_from' => (string)($price['valid_from'] ?? ''),
+                'valid_until' => $price['valid_until'] ?? null,
+                'source' => (string)($price['source'] ?? ''),
             ],
+            'contract_acceptance_uuid' => (string)($acceptance['contract_acceptance_uuid'] ?? ''),
+            'contract' => [
+                'version' => (string)($acceptance['contract_version'] ?? $checkoutIntent['contract_version'] ?? ''),
+                'hash' => (string)($acceptance['contract_hash'] ?? $checkoutIntent['contract_hash'] ?? ''),
+                'snapshot_url' => (string)($acceptance['contract_snapshot_url'] ?? $checkoutIntent['contract_snapshot_url'] ?? ''),
+                'acceptance_status' => self::ACCEPTANCE_STATUS_PENDING_PAYMENT,
+            ],
+            'expires_at' => (string)($checkoutIntent['expires_at'] ?? ''),
+            'created_at' => (string)($checkoutIntent['created_at'] ?? ''),
+            'source' => self::SOURCE_CHECKOUT_INTENT,
+            'idempotency' => [
+                'operation' => SubscriptionWriteIdempotencyService::CHECKOUT_OPERATION,
+                'idempotent_replay' => $idempotentReplay,
+            ],
+        ];
+
+        if ($intentType === self::INTENT_TYPE_UPGRADE) {
+            $context = is_array($price['upgrade_context'] ?? null) ? $price['upgrade_context'] : [];
+            $data['current_plan_code'] = (string)($context['current_plan_code'] ?? '');
+            $data['target_plan_code'] = (string)($context['target_plan_code'] ?? $data['plan_code']);
+            $data['current_billing_period'] = (string)($context['current_billing_period'] ?? '');
+            $data['target_billing_period'] = (string)($context['target_billing_period'] ?? $data['billing_period']);
+            $data['adjustment_amount_cents'] = (int)($context['adjustment_amount_cents'] ?? $data['price']['amount_cents']);
+            $data['currency'] = (string)($context['currency'] ?? $data['price']['currency']);
+            $data['pricing_strategy'] = self::PRICING_STRATEGY_PRORATED_DIFFERENCE;
+            $data['remaining_days'] = (int)($context['remaining_days'] ?? 0);
+            $data['period_days'] = (int)($context['period_days'] ?? 0);
+            $data['next_step'] = 'create_payment_intent';
+            $data['idempotency']['logical_operation'] = self::LOGICAL_UPGRADE_OPERATION;
+        }
+
+        return [
+            'ok' => true,
+            'data' => $data,
             'meta' => [
                 'source' => 'subscriptions_checkout_intent_service_v1',
             ],
         ];
+    }
+
+    private function intentType($value): string
+    {
+        $intentType = strtolower(trim((string)($value ?? self::INTENT_TYPE_NEW_SUBSCRIPTION)));
+        if ($intentType === '') {
+            $intentType = self::INTENT_TYPE_NEW_SUBSCRIPTION;
+        }
+        if (!in_array($intentType, [self::INTENT_TYPE_NEW_SUBSCRIPTION, self::INTENT_TYPE_UPGRADE], true)) {
+            throw new CreateSubscriptionCheckoutIntentException(422, 'checkout_intent_type_invalid', 'checkout intent type is invalid');
+        }
+
+        return $intentType;
+    }
+
+    private function canonicalPlanCode(string $planCode): string
+    {
+        $planCode = strtolower(trim($planCode));
+        $map = [
+            'basico' => 'basic',
+            'básico' => 'basic',
+            'basic' => 'basic',
+            'estandar' => 'standard',
+            'estándar' => 'standard',
+            'standard' => 'standard',
+            'optimo' => 'optimum',
+            'óptimo' => 'optimum',
+            'optimum' => 'optimum',
+            'profesional' => 'professional',
+            'professional' => 'professional',
+        ];
+
+        return $map[$planCode] ?? $planCode;
+    }
+
+    private function planRank(string $planCode): int
+    {
+        return self::PLAN_RANKS[$this->canonicalPlanCode($planCode)] ?? 0;
     }
 
     private function requiredText($value, string $code, string $message, int $maxLength): string
@@ -360,7 +581,21 @@ final class CreateSubscriptionCheckoutIntentService
 
     private function assertClientDidNotSendCanonicalPrice(array $input): void
     {
-        foreach (['amount_cents', 'currency', 'price_source', 'price_version'] as $field) {
+        foreach ([
+            'amount_cents',
+            'currency',
+            'price_source',
+            'price_version',
+            'adjustment_amount_cents',
+            'current_price_period_cents',
+            'target_price_period_cents',
+            'price_difference_cents',
+            'remaining_days',
+            'period_days',
+            'pricing_strategy',
+            'next_step',
+            'current_subscription_id',
+        ] as $field) {
             if (array_key_exists($field, $input)) {
                 throw new CreateSubscriptionCheckoutIntentException(
                     422,
