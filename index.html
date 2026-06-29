@@ -2945,6 +2945,20 @@
 
             <div class="subp-plan-grid" data-subp-catalog></div>
 
+            <section class="card subp-card border-0 shadow-sm p-3 mt-3" data-subp-plan-selection>
+              <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                <div>
+                  <div class="text-muted small">Plan seleccionado</div>
+                  <div class="h6 mb-1" data-subp-selected-plan-title>Selecciona una opción para continuar</div>
+                  <div class="text-muted small" data-subp-selected-plan-summary>Elige un plan disponible para preparar el siguiente paso.</div>
+                </div>
+                <button class="btn btn-primary btn-sm" type="button" data-subp-plan-continue disabled>
+                  Continuar con este plan
+                </button>
+              </div>
+              <div class="subp-alert mt-3 d-none" data-subp-plan-selection-message></div>
+            </section>
+
             <div class="row g-3 mt-4">
               <div class="col-lg-6">
                 <div class="card h-100 subp-card border-0 shadow-sm p-3">

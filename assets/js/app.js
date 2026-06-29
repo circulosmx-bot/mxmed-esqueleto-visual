@@ -58870,6 +58870,11 @@ function mxResetLogoPreview(){
     nextBill: pane.querySelector('[data-subp-next-bill]'),
     renewCTA: pane.querySelector('[data-subp-renew-cta]'),
     catalog: pane.querySelector('[data-subp-catalog]'),
+    planSelection: pane.querySelector('[data-subp-plan-selection]'),
+    selectedPlanTitle: pane.querySelector('[data-subp-selected-plan-title]'),
+    selectedPlanSummary: pane.querySelector('[data-subp-selected-plan-summary]'),
+    selectedPlanMessage: pane.querySelector('[data-subp-plan-selection-message]'),
+    planContinue: pane.querySelector('[data-subp-plan-continue]'),
     couponInput: pane.querySelector('[data-subp-coupon-input]'),
     couponApply: pane.querySelector('[data-subp-coupon-apply]'),
     couponMsg: pane.querySelector('[data-subp-coupon-msg]'),
@@ -58899,6 +58904,8 @@ function mxResetLogoPreview(){
 
   const SUBSCRIPTION_ACTION_NOTICE = 'Puedes mejorar tu plan al renovar o solicitar cambio de plan.';
   const SUBSCRIPTION_ACTIVE_NOTICE = 'Tu suscripción está activa. Puedes mejorar tu plan al renovar o solicitar cambio de plan.';
+  const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Ya tienes una suscripción activa. Podrás cambiar o mejorar tu plan al renovar o solicitando cambio de plan.';
+  const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
   const STATUS_LABELS = {
     free_default: 'Plan base permanente',
     active: 'Activo',
@@ -58936,6 +58943,7 @@ function mxResetLogoPreview(){
       { id:'estandar', name:'Estándar', monthly:0, yearly:0, features:['Perfil en línea','Agenda'] },
       { id:'basico', name:'Básico', monthly:0, yearly:0, features:['Perfil en línea'] }
     ],
+    selectedPlanId: '',
     history: [],
     currentModel: null,
     currentMeta: null,
@@ -59672,6 +59680,91 @@ function mxResetLogoPreview(){
     return `$${n.toLocaleString('es-MX')} MXN`;
   }
 
+  function normalizePlanId(value){
+    const id = clean(value).toLowerCase();
+    const aliases = {
+      standard: 'estandar',
+      estándar: 'estandar',
+      basic: 'basico',
+      básico: 'basico',
+      optimal: 'optimo',
+      óptimo: 'optimo',
+      professional: 'pro',
+      profesional: 'pro',
+      free: 'basico',
+      free_default: 'basico'
+    };
+    return aliases[id] || id;
+  }
+
+  function findPlanById(planId){
+    const id = normalizePlanId(planId);
+    return data.plans.find((plan)=> normalizePlanId(plan.id) === id) || null;
+  }
+
+  function recommendedPlanId(){
+    return data.plans.some((plan)=> plan.id === 'estandar') ? 'estandar' : (data.plans[0]?.id || '');
+  }
+
+  function ensureSelectedPlan(activePaid){
+    if(activePaid){
+      data.selectedPlanId = '';
+      return null;
+    }
+    const current = findPlanById(data.selectedPlanId);
+    if(current) return current;
+    const recommended = findPlanById(recommendedPlanId());
+    data.selectedPlanId = recommended?.id || data.plans[0]?.id || '';
+    return findPlanById(data.selectedPlanId);
+  }
+
+  function planPriceLabel(plan){
+    if(!plan) return 'Sin plan seleccionado';
+    const yearly = data.billing === 'yearly';
+    const price = yearly ? plan.yearly : plan.monthly;
+    return `${fmtMoney(price)} ${yearly ? 'al año' : 'al mes'}`;
+  }
+
+  function renderPlanSelection(activePaid){
+    if(!els.planSelection) return;
+    const selected = ensureSelectedPlan(activePaid);
+    if(activePaid){
+      if(els.selectedPlanTitle) els.selectedPlanTitle.textContent = 'Cambio de plan disponible al renovar';
+      if(els.selectedPlanSummary) els.selectedPlanSummary.textContent = SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
+      if(els.planContinue){
+        els.planContinue.textContent = 'Disponible al renovar';
+        els.planContinue.disabled = true;
+        els.planContinue.classList.add('disabled');
+      }
+      if(els.selectedPlanMessage){
+        els.selectedPlanMessage.textContent = SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
+        els.selectedPlanMessage.classList.remove('d-none');
+      }
+      return;
+    }
+    if(els.selectedPlanTitle){
+      els.selectedPlanTitle.textContent = selected
+        ? `${selected.name} seleccionado`
+        : 'Selecciona una opción para continuar';
+    }
+    if(els.selectedPlanSummary){
+      els.selectedPlanSummary.textContent = selected
+        ? `${planPriceLabel(selected)}. ${selected.features.join(', ')}.`
+        : 'Elige un plan disponible para preparar el siguiente paso.';
+    }
+    if(els.planContinue){
+      els.planContinue.textContent = 'Continuar con este plan';
+      els.planContinue.disabled = !selected;
+      els.planContinue.classList.toggle('disabled', !selected);
+    }
+    if(els.selectedPlanMessage){
+      els.selectedPlanMessage.textContent = selected
+        ? SUBSCRIPTION_SELECTION_READY_NOTICE
+        : '';
+      els.selectedPlanMessage.classList.toggle('d-none', !selected);
+    }
+  }
+
   function renderCurrent(){
     if(els.planName){
       els.planName.textContent = data.current.name;
@@ -59718,27 +59811,68 @@ function mxResetLogoPreview(){
   function renderCatalog(){
     if(!els.catalog) return;
     const yearly = data.billing === 'yearly';
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const selected = ensureSelectedPlan(activePaid);
+    const currentPlanId = normalizePlanId(data.current.id);
+    const recommendedId = recommendedPlanId();
     els.catalog.innerHTML = data.plans.map(p=>{
       const price = yearly ? p.yearly : p.monthly;
       const save = yearly ? (p.monthly*12 - p.yearly) : 0;
-      const isCurrent = p.id === data.current.id;
-      return `<div class="subp-plan ${isCurrent?'current':''}" data-plan="${escapeHtml(p.id)}">
-        ${isCurrent?'<div class="subp-plan-badge">Plan actual</div>':''}
+      const isCurrent = normalizePlanId(p.id) === currentPlanId;
+      const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
+      const isRecommended = p.id === recommendedId;
+      const unavailable = activePaid;
+      const badge = isCurrent
+        ? 'Plan actual'
+        : unavailable
+          ? 'No disponible por suscripción activa'
+          : isSelected
+            ? 'Seleccionado'
+            : isRecommended
+              ? 'Recomendado'
+              : 'Disponible';
+      const buttonLabel = unavailable
+        ? (isCurrent ? 'Plan actual' : 'No disponible')
+        : isSelected
+          ? 'Seleccionado'
+          : 'Seleccionar plan';
+      const buttonClass = isSelected || isCurrent ? 'btn-outline-primary' : 'btn-primary';
+      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''}" data-plan="${escapeHtml(p.id)}" data-subp-plan-card="${escapeHtml(p.id)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${unavailable ? 'false' : 'true'}" tabindex="${unavailable ? '-1' : '0'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${unavailable ? 'true' : 'false'}">
+        <div class="subp-plan-badge">${escapeHtml(badge)}</div>
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
         <div class="subp-price">${fmtMoney(price)} <small>${yearly?'/ año':'/ mes'}</small></div>
         <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         ${save>0?`<div class="subp-save">Ahorra $${save.toLocaleString('es-MX')} al contratar anual</div>`:''}
-        <button class="btn ${isCurrent?'btn-outline-primary':'btn-primary'} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" disabled>Próximamente</button>
+        <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${unavailable ? 'disabled' : ''}>${escapeHtml(buttonLabel)}</button>
       </div>`;
     }).join('');
+    const selectPlan = (planId)=>{
+      if(activePaid) return;
+      const plan = findPlanById(planId);
+      if(!plan) return;
+      data.selectedPlanId = plan.id;
+      renderCatalog();
+    };
     els.catalog.querySelectorAll('[data-subp-select]').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        if(els.currentAlert){
-          els.currentAlert.textContent = 'Acción no disponible en esta fase. El panel está en modo lectura.';
-          els.currentAlert.classList.remove('d-none');
-        }
+      btn.addEventListener('click',(event)=>{
+        event.preventDefault();
+        selectPlan(btn.dataset.subpSelect);
       });
     });
+    els.catalog.querySelectorAll('[data-subp-plan-card]').forEach(card=>{
+      card.addEventListener('click',(event)=>{
+        if(event.target && event.target.closest('[data-subp-select]')) return;
+        if(card.dataset.available === 'false') return;
+        selectPlan(card.dataset.subpPlanCard);
+      });
+      card.addEventListener('keydown',(event)=>{
+        if(event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        if(card.dataset.available === 'false') return;
+        selectPlan(card.dataset.subpPlanCard);
+      });
+    });
+    renderPlanSelection(activePaid);
   }
 
   // Eventos
@@ -59754,6 +59888,18 @@ function mxResetLogoPreview(){
       els.currentAlert.classList.remove('d-none');
     }
   }
+  function confirmVisualPlanSelection(){
+    const selected = findPlanById(data.selectedPlanId);
+    if(!selected || hasPaidActiveSubscription(data.currentModel || {})) return;
+    if(els.selectedPlanMessage){
+      els.selectedPlanMessage.textContent = `${selected.name} quedó seleccionado visualmente. El checkout se conectará en la siguiente fase.`;
+      els.selectedPlanMessage.classList.remove('d-none');
+    }
+    if(els.currentAlert){
+      els.currentAlert.textContent = SUBSCRIPTION_SELECTION_READY_NOTICE;
+      els.currentAlert.classList.remove('d-none');
+    }
+  }
   const staticReadOnlyButtons = [
     els.renewBtn,
     els.renewCTA,
@@ -59761,7 +59907,7 @@ function mxResetLogoPreview(){
     els.invoiceBtn,
     els.historyRefresh,
     ...pane.querySelectorAll('.subp-card button')
-  ].filter((button)=> button && !button.matches('[data-subp-dev-contract]') && !button.matches('[data-subp-activation-refresh]'));
+  ].filter((button)=> button && !button.matches('[data-subp-dev-contract]') && !button.matches('[data-subp-activation-refresh]') && !button.matches('[data-subp-plan-continue]'));
   staticReadOnlyButtons.forEach((button)=>{
     if(button){
       button.setAttribute('aria-disabled', 'true');
@@ -59781,6 +59927,10 @@ function mxResetLogoPreview(){
   });
   els.historyRefresh?.addEventListener('click', ()=>{
     markReadOnlyAction();
+  });
+  els.planContinue?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    confirmVisualPlanSelection();
   });
   els.activationRefresh?.addEventListener('click', (ev)=>{
     ev.preventDefault();

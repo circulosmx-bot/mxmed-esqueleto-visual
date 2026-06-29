@@ -29807,3 +29807,77 @@ La implementacion:
 ### Siguiente microfase recomendada
 
 `QA/Suscripciones-PanelUX-RetiroBloquesTemporalesDev-DesignRestore-StaticQA-01`
+
+## PP-Decisiones 155 - Readiness visual seleccion de planes panel suscripciones
+
+Microfase:
+
+`FE/Suscripciones-PanelUX-PlanCards-SelectionReadiness-Implementation-01`
+
+Objetivo:
+
+Retomar el diseno comercial principal del panel de suscripciones y preparar las tarjetas de planes para seleccion visual real, sin iniciar checkout ni ejecutar writes.
+
+### Archivos modificados
+
+- `index.html`;
+- `assets/js/app.js`.
+
+### Cambios UX
+
+El panel conserva el foco en:
+
+- plan actual;
+- vigencia;
+- beneficios;
+- opciones para mejorar plan;
+- historial;
+- mensajes comerciales claros.
+
+Las cards de planes ahora comunican estados de negocio:
+
+- `Plan actual`;
+- `Disponible`;
+- `Recomendado`;
+- `Seleccionado`;
+- `No disponible por suscripcion activa`.
+
+### Seleccion visual preparada
+
+Se agrega un resumen de plan seleccionado dentro del panel:
+
+- nombre del plan seleccionado;
+- precio segun periodicidad elegida;
+- beneficios principales;
+- boton `Continuar con este plan`.
+
+El boton no inicia checkout. Solo confirma localmente que la seleccion visual quedo lista para la siguiente fase.
+
+### Comportamiento con suscripcion activa
+
+Si el read-model indica suscripcion activa, la seleccion de planes queda bloqueada visualmente y se muestra el mensaje comercial:
+
+`Ya tienes una suscripcion activa. Podras cambiar o mejorar tu plan al renovar o solicitando cambio de plan.`
+
+No se inicia contratacion nueva desde esta microfase.
+
+### Limites preservados
+
+La implementacion:
+
+- no modifica `api/subscriptions/index.php`;
+- no modifica PHP/backend;
+- no modifica SQL/schema/seeds;
+- no ejecuta SQL;
+- no ejecuta POST/curl;
+- no inicia checkout;
+- no crea payment intent;
+- no ejecuta `confirm_mock`;
+- no llama `activate-after-payment`;
+- no crea `Idempotency-Key`;
+- no hardcodea UUIDs fixture;
+- no crea usuarios.
+
+### Siguiente microfase recomendada
+
+`FE/Suscripciones-CheckoutFirst-PlanSelection-CheckoutIntent-Implementation-01`
