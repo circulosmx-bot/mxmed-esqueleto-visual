@@ -58865,6 +58865,7 @@ function mxResetLogoPreview(){
     renewBtn: pane.querySelector('[data-subp-renew]'),
     currentTitle: pane.querySelector('[data-subp-current-title]'),
     currentNote: pane.querySelector('[data-subp-current-note]'),
+    currentSourceNote: pane.querySelector('[data-subp-current-source-note]'),
     currentFeat: pane.querySelector('[data-subp-current-features]'),
     currentAlert: pane.querySelector('[data-subp-current-alert]'),
     nextBill: pane.querySelector('[data-subp-next-bill]'),
@@ -58906,6 +58907,14 @@ function mxResetLogoPreview(){
   const SUBSCRIPTION_ACTIVE_NOTICE = 'Tu suscripción está activa. Puedes mejorar tu plan al renovar o solicitar cambio de plan.';
   const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Ya tienes una suscripción activa. Podrás cambiar o mejorar tu plan al renovar o solicitando cambio de plan.';
   const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
+  const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
+  const UI_PLAN_TO_BACKEND_PLAN = Object.freeze({
+    basico: 'basic',
+    estandar: 'standard',
+    optimo: 'optimum',
+    pro: 'professional',
+    profesional: 'professional'
+  });
   const STATUS_LABELS = {
     free_default: 'Plan base permanente',
     active: 'Activo',
@@ -58924,7 +58933,7 @@ function mxResetLogoPreview(){
   };
 
   const data = {
-    billing: 'monthly',
+    billing: 'yearly',
     current: {
       id: 'loading',
       name: 'Cargando',
@@ -58934,14 +58943,15 @@ function mxResetLogoPreview(){
       nextBill: 'No aplica',
       autorenew: false,
       note: 'Consultando suscripción actual...',
+      sourceNote: 'Este panel muestra el estado vigente de suscripción.',
       alert: SUBSCRIPTION_ACTION_NOTICE,
       features: ['Consulta tu plan actual, vigencia y beneficios disponibles']
     },
     plans: [
-      { id:'pro', name:'Profesional', monthly:0, yearly:0, features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] },
-      { id:'optimo', name:'Óptimo', monthly:0, yearly:0, features:['Perfil en línea','Agenda','Expediente','Recetas'] },
-      { id:'estandar', name:'Estándar', monthly:0, yearly:0, features:['Perfil en línea','Agenda'] },
-      { id:'basico', name:'Básico', monthly:0, yearly:0, features:['Perfil en línea'] }
+      { id:'basico', name:'Básico', yearly:6990, tagline:'Perfil público esencial', features:['Perfil en línea','Presencia profesional básica'] },
+      { id:'estandar', name:'Estándar', yearly:9990, tagline:'Agenda y presencia profesional', features:['Perfil en línea','Agenda'] },
+      { id:'optimo', name:'Óptimo', yearly:12990, tagline:'Gestión clínica ampliada', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
+      { id:'pro', name:'Profesional', yearly:21990, tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
     ],
     selectedPlanId: '',
     history: [],
@@ -59468,6 +59478,10 @@ function mxResetLogoPreview(){
     const hasContract = contractedPlan !== '';
     const startsAt = formatDate(model?.starts_at);
     const expiresAt = formatDate(model?.expires_at);
+    const headerPlanName = readHeaderPlanName();
+    const headerMismatch = headerPlanName
+      && planLabel
+      && normalizePlanId(headerPlanName) !== normalizePlanId(planLabel);
 
     data.current = {
       id: effectivePlan || 'unknown',
@@ -59480,6 +59494,9 @@ function mxResetLogoPreview(){
       note: hasContract
         ? `Plan contratado: ${contractedPlan}. Plan efectivo: ${effectivePlan || planLabel}.`
         : `Sin plan contratado vigente. Plan efectivo actual: ${planLabel}.`,
+      sourceNote: headerMismatch
+        ? `Según el estado actual de suscripción: ${planLabel}. El encabezado puede reflejar configuración comercial anterior.`
+        : `Según el estado actual de suscripción: ${planLabel}.`,
       alert: hasPaidActiveSubscription(model || {}) ? SUBSCRIPTION_ACTIVE_NOTICE : SUBSCRIPTION_ACTION_NOTICE,
       features: buildReadModelFeatures(model || {}, meta || {}, contextInfo || {})
     };
@@ -59529,6 +59546,7 @@ function mxResetLogoPreview(){
       nextBill: 'No aplica',
       autorenew: false,
       note: message,
+      sourceNote: 'Este panel muestra el estado vigente de suscripción cuando la lectura está disponible.',
       alert: SUBSCRIPTION_ACTION_NOTICE,
       features: [message, 'El resto del panel permanece en modo lectura.']
     };
@@ -59697,6 +59715,10 @@ function mxResetLogoPreview(){
     return aliases[id] || id;
   }
 
+  function backendPlanCodeFromUiPlan(planId){
+    return UI_PLAN_TO_BACKEND_PLAN[normalizePlanId(planId)] || '';
+  }
+
   function findPlanById(planId){
     const id = normalizePlanId(planId);
     return data.plans.find((plan)=> normalizePlanId(plan.id) === id) || null;
@@ -59707,37 +59729,63 @@ function mxResetLogoPreview(){
   }
 
   function ensureSelectedPlan(activePaid){
+    const selected = findPlanById(data.selectedPlanId);
     if(activePaid){
+      if(selected && normalizePlanId(selected.id) !== normalizePlanId(data.current.id)){
+        return selected;
+      }
       data.selectedPlanId = '';
       return null;
     }
-    const current = findPlanById(data.selectedPlanId);
-    if(current) return current;
+    if(selected) return selected;
     const recommended = findPlanById(recommendedPlanId());
     data.selectedPlanId = recommended?.id || data.plans[0]?.id || '';
     return findPlanById(data.selectedPlanId);
   }
 
+  function monthlyEquivalent(plan){
+    const yearly = Number(plan?.yearly || 0);
+    return yearly > 0 ? Math.round(yearly / 12) : 0;
+  }
+
   function planPriceLabel(plan){
     if(!plan) return 'Sin plan seleccionado';
-    const yearly = data.billing === 'yearly';
-    const price = yearly ? plan.yearly : plan.monthly;
-    return `${fmtMoney(price)} ${yearly ? 'al año' : 'al mes'}`;
+    return `${fmtMoney(Number(plan.yearly || 0))} al año`;
+  }
+
+  function planMonthlyEquivalentLabel(plan){
+    const monthly = monthlyEquivalent(plan);
+    return monthly > 0 ? `Equivale a ${fmtMoney(monthly)} / mes` : 'Equivalencia mensual no disponible';
+  }
+
+  function readHeaderPlanName(){
+    const raw = clean(document.querySelector('.mx-gh-current-plan-name')?.textContent);
+    return raw.replace(/^Plan\s+/i, '').trim();
   }
 
   function renderPlanSelection(activePaid){
     if(!els.planSelection) return;
     const selected = ensureSelectedPlan(activePaid);
     if(activePaid){
-      if(els.selectedPlanTitle) els.selectedPlanTitle.textContent = 'Cambio de plan disponible al renovar';
-      if(els.selectedPlanSummary) els.selectedPlanSummary.textContent = SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
+      if(els.selectedPlanTitle){
+        els.selectedPlanTitle.textContent = selected
+          ? `${selected.name} para cambio de plan`
+          : 'Cambio de plan disponible al renovar';
+      }
+      if(els.selectedPlanSummary){
+        els.selectedPlanSummary.textContent = selected
+          ? `${planPriceLabel(selected)}. ${planMonthlyEquivalentLabel(selected)}. ${SUBSCRIPTION_ACTIVE_BLOCK_NOTICE}`
+          : SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
+      }
       if(els.planContinue){
-        els.planContinue.textContent = 'Disponible al renovar';
-        els.planContinue.disabled = true;
-        els.planContinue.classList.add('disabled');
+        els.planContinue.textContent = 'Solicitar cambio de plan';
+        els.planContinue.disabled = !selected;
+        els.planContinue.classList.toggle('disabled', !selected);
       }
       if(els.selectedPlanMessage){
-        els.selectedPlanMessage.textContent = SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
+        els.selectedPlanMessage.textContent = selected
+          ? SUBSCRIPTION_CHECKOUT_PENDING_NOTICE
+          : SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
         els.selectedPlanMessage.classList.remove('d-none');
       }
       return;
@@ -59749,7 +59797,7 @@ function mxResetLogoPreview(){
     }
     if(els.selectedPlanSummary){
       els.selectedPlanSummary.textContent = selected
-        ? `${planPriceLabel(selected)}. ${selected.features.join(', ')}.`
+        ? `${planPriceLabel(selected)}. ${planMonthlyEquivalentLabel(selected)}. ${selected.features.join(', ')}.`
         : 'Elige un plan disponible para preparar el siguiente paso.';
     }
     if(els.planContinue){
@@ -59776,6 +59824,7 @@ function mxResetLogoPreview(){
     if(els.autorenew) els.autorenew.checked = !!data.current.autorenew;
     if(els.currentTitle) els.currentTitle.textContent = `${data.current.name} · Tu plan actual`;
     if(els.currentNote) els.currentNote.textContent = data.current.note || '';
+    if(els.currentSourceNote) els.currentSourceNote.textContent = data.current.sourceNote || 'Este panel muestra el estado vigente de suscripción.';
     if(els.nextBill) els.nextBill.textContent = data.current.nextBill || '—';
     if(els.currentFeat){
       els.currentFeat.innerHTML = data.current.features.map(f=>`<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></li>`).join('');
@@ -59810,46 +59859,57 @@ function mxResetLogoPreview(){
 
   function renderCatalog(){
     if(!els.catalog) return;
-    const yearly = data.billing === 'yearly';
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const selected = ensureSelectedPlan(activePaid);
     const currentPlanId = normalizePlanId(data.current.id);
     const recommendedId = recommendedPlanId();
     els.catalog.innerHTML = data.plans.map(p=>{
-      const price = yearly ? p.yearly : p.monthly;
-      const save = yearly ? (p.monthly*12 - p.yearly) : 0;
       const isCurrent = normalizePlanId(p.id) === currentPlanId;
       const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
       const isRecommended = p.id === recommendedId;
-      const unavailable = activePaid;
+      const cardSelectable = !isCurrent;
       const badge = isCurrent
         ? 'Plan actual'
-        : unavailable
-          ? 'No disponible por suscripción activa'
-          : isSelected
-            ? 'Seleccionado'
+        : isSelected
+          ? 'Seleccionado'
+          : activePaid
+            ? 'Disponible al renovar'
             : isRecommended
               ? 'Recomendado'
               : 'Disponible';
-      const buttonLabel = unavailable
-        ? (isCurrent ? 'Plan actual' : 'No disponible')
-        : isSelected
-          ? 'Seleccionado'
-          : 'Seleccionar plan';
+      const buttonLabel = isCurrent
+        ? 'Plan actual'
+        : activePaid
+          ? 'Solicitar cambio'
+          : isSelected
+            ? 'Seleccionado'
+            : 'Seleccionar plan';
       const buttonClass = isSelected || isCurrent ? 'btn-outline-primary' : 'btn-primary';
-      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''}" data-plan="${escapeHtml(p.id)}" data-subp-plan-card="${escapeHtml(p.id)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${unavailable ? 'false' : 'true'}" tabindex="${unavailable ? '-1' : '0'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${unavailable ? 'true' : 'false'}">
+      const cardNote = isCurrent
+        ? 'Este es tu plan vigente según el estado actual de suscripción.'
+        : activePaid
+          ? 'No disponible por suscripción activa. Podrás solicitar cambio o mejora al renovar.'
+          : isSelected
+            ? SUBSCRIPTION_CHECKOUT_PENDING_NOTICE
+            : isRecommended
+              ? 'Recomendado para comenzar contratación anual.'
+              : 'Disponible para selección visual.';
+      const backendPlanCode = backendPlanCodeFromUiPlan(p.id);
+      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
         <div class="subp-plan-badge">${escapeHtml(badge)}</div>
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
-        <div class="subp-price">${fmtMoney(price)} <small>${yearly?'/ año':'/ mes'}</small></div>
+        <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
+        <div class="subp-price">${fmtMoney(Number(p.yearly || 0))} <small>/ año</small></div>
+        <div class="text-muted small mb-2">${escapeHtml(planMonthlyEquivalentLabel(p))}</div>
         <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
-        ${save>0?`<div class="subp-save">Ahorra $${save.toLocaleString('es-MX')} al contratar anual</div>`:''}
-        <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${unavailable ? 'disabled' : ''}>${escapeHtml(buttonLabel)}</button>
+        <div class="subp-save">${escapeHtml(cardNote)}</div>
+        <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
       </div>`;
     }).join('');
     const selectPlan = (planId)=>{
-      if(activePaid) return;
       const plan = findPlanById(planId);
       if(!plan) return;
+      if(normalizePlanId(plan.id) === currentPlanId) return;
       data.selectedPlanId = plan.id;
       renderCatalog();
     };
@@ -59862,13 +59922,13 @@ function mxResetLogoPreview(){
     els.catalog.querySelectorAll('[data-subp-plan-card]').forEach(card=>{
       card.addEventListener('click',(event)=>{
         if(event.target && event.target.closest('[data-subp-select]')) return;
-        if(card.dataset.available === 'false') return;
+        if(card.dataset.available !== 'true') return;
         selectPlan(card.dataset.subpPlanCard);
       });
       card.addEventListener('keydown',(event)=>{
         if(event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
-        if(card.dataset.available === 'false') return;
+        if(card.dataset.available !== 'true') return;
         selectPlan(card.dataset.subpPlanCard);
       });
     });
@@ -59890,13 +59950,18 @@ function mxResetLogoPreview(){
   }
   function confirmVisualPlanSelection(){
     const selected = findPlanById(data.selectedPlanId);
-    if(!selected || hasPaidActiveSubscription(data.currentModel || {})) return;
+    if(!selected) return;
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     if(els.selectedPlanMessage){
-      els.selectedPlanMessage.textContent = `${selected.name} quedó seleccionado visualmente. El checkout se conectará en la siguiente fase.`;
+      els.selectedPlanMessage.textContent = activePaid
+        ? `${selected.name} quedó preparado como cambio de plan futuro. ${SUBSCRIPTION_CHECKOUT_PENDING_NOTICE}`
+        : `${selected.name} quedó seleccionado visualmente. ${SUBSCRIPTION_CHECKOUT_PENDING_NOTICE}`;
       els.selectedPlanMessage.classList.remove('d-none');
     }
     if(els.currentAlert){
-      els.currentAlert.textContent = SUBSCRIPTION_SELECTION_READY_NOTICE;
+      els.currentAlert.textContent = activePaid
+        ? SUBSCRIPTION_ACTIVE_BLOCK_NOTICE
+        : SUBSCRIPTION_SELECTION_READY_NOTICE;
       els.currentAlert.classList.remove('d-none');
     }
   }

@@ -29881,3 +29881,88 @@ La implementacion:
 ### Siguiente microfase recomendada
 
 `FE/Suscripciones-CheckoutFirst-PlanSelection-CheckoutIntent-Implementation-01`
+
+## PP-Decisiones 156 - Pulido comercial de cards de planes en panel suscripciones
+
+Microfase:
+
+`FE/Suscripciones-PanelUX-PlanCards-CommercialPolish-Implementation-01`
+
+Objetivo:
+
+Pulir visual y comercialmente las cards de planes del panel de suscripciones antes de conectar checkout real.
+
+### Archivos modificados
+
+- `index.html`;
+- `assets/js/app.js`.
+
+### Precios UI/comerciales
+
+Se incorporan precios anuales de referencia solo para UI:
+
+- Basico: `$6,990 MXN / año`;
+- Estandar: `$9,990 MXN / año`;
+- Optimo: `$12,990 MXN / año`;
+- Profesional: `$21,990 MXN / año`.
+
+Tambien se muestra equivalencia mensual informativa. Estos valores no se usan para writes ni sustituyen el resolver backend de precios.
+
+### Mapper visual de planes
+
+Se centraliza un mapper UI -> backend para preparacion futura, sin usarlo todavia en writes:
+
+- `basico -> basic`;
+- `estandar -> standard`;
+- `optimo -> optimum`;
+- `profesional/pro -> professional`.
+
+### Estados comerciales de card
+
+Las cards expresan estados visibles:
+
+- `Plan actual`;
+- `Recomendado`;
+- `Disponible`;
+- `Disponible al renovar`;
+- `Seleccionado`;
+- `No disponible por suscripcion activa`.
+
+### CTA contextual
+
+El CTA se mantiene como preparacion visual:
+
+- sin suscripcion activa: `Continuar con este plan`;
+- con suscripcion activa y otro plan seleccionado: `Solicitar cambio de plan`;
+- plan vigente: `Plan actual`.
+
+La UI muestra la nota:
+
+`La contratacion en linea se activara en la siguiente fase.`
+
+### Fuente vigente de suscripcion
+
+Dentro del panel de suscripciones, el read-model es la fuente visual de verdad. Si el encabezado global muestra un plan distinto al read-model, el panel muestra una nota discreta indicando que el encabezado puede reflejar configuracion comercial anterior.
+
+### Limites preservados
+
+La implementacion:
+
+- no modifica `api/subscriptions/index.php`;
+- no modifica PHP/backend;
+- no modifica SQL/schema/seeds;
+- no ejecuta SQL;
+- no ejecuta POST/curl;
+- no conecta checkout;
+- no llama `checkout-intents`;
+- no llama `payment-intents`;
+- no ejecuta `confirm_mock`;
+- no llama `activate-after-payment`;
+- no crea `Idempotency-Key`;
+- no hardcodea UUIDs fixture;
+- no crea usuarios;
+- no modifica BD.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PanelUX-PlanCards-CommercialPolish-PostImplementation-StaticQA-01`
