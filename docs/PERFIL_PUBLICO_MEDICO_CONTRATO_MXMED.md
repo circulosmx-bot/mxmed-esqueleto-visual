@@ -28082,3 +28082,223 @@ BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMe
 ```
 
 No se recomienda implementar endpoint ni conectar frontend antes de cerrar estos contratos read-only.
+
+---
+
+## PP-Decisiones 142 - Cierre readiness de metodos read-only para state read-model post-pago
+
+Fecha de cierre documental: 2026-06-28
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-Readiness-Closure-01`
+
+### Tipo
+
+DOCS / Cierre documental del readiness de metodos read-only para state read-model post-pago.
+
+### Objetivo
+
+Se cierra documentalmente la decision iniciada en:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-Readiness-01
+```
+
+El cierre confirma que el state read-model futuro `payment-activation-state` requiere primero metodos PHP read-only minimos en repositorios existentes.
+
+Esta decision no implementa PHP, endpoints, servicios, JS, HTML ni cambios frontend.
+
+No ejecuta SQL, HTTP, POST ni curl.
+
+No modifica schema, seeds ni fixtures.
+
+No conecta `activate-after-payment`.
+
+No agrega `payment_event_uuid` al frontend.
+
+### Base documental cerrada
+
+Se toman como base:
+
+- PP-Decisiones 140: cierre readiness de state read-model para activacion post-pago;
+- QA repository coverage read-only: cobertura parcial de repositorios para construir eligibility;
+- PP-Decisiones 141: readiness de metodos read-only faltantes para state read-model post-pago.
+
+La decision queda cerrada como preparatoria para una implementacion PHP read-only controlada.
+
+### Metodos cerrados para SubscriptionPaymentEventRepository
+
+Metodo minimo preferente:
+
+```php
+findProcessedConfirmByPaymentIntentUuid(string $paymentIntentUuid): ?array
+```
+
+Metodo alternativo u opcional:
+
+```php
+findProcessedConfirmByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+```
+
+Reglas cerradas:
+
+- devolver solo evento de confirmacion procesado;
+- exigir `event_type = payment_intent_confirm`;
+- exigir `processing_status = processed`;
+- respetar `deleted_at IS NULL` si aplica;
+- validar pertenencia al payment intent y, si aplica, al checkout;
+- no crear eventos;
+- no cambiar estado;
+- no exponer raw payload sensible;
+- no devolver datos cross-entity.
+
+### Metodos cerrados para SubscriptionContractAcceptanceRepository
+
+Metodo minimo preferente:
+
+```php
+findPendingPaymentByUuid(string $contractAcceptanceUuid): ?array
+```
+
+Metodo adicional candidato:
+
+```php
+findPendingPaymentByEntity(string $entityType, int $entityId): ?array
+```
+
+Metodo opcional si existe relacion directa con checkout:
+
+```php
+findPendingPaymentByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+```
+
+Reglas cerradas:
+
+- devolver solo aceptacion con `status = accepted_pending_payment`;
+- respetar entidad y scope;
+- permitir validar `subscription_id`;
+- permitir validar snapshot contractual;
+- no crear aceptacion;
+- no modificar aceptacion;
+- no ejecutar `linkSubscriptionId`;
+- no activar suscripcion.
+
+### Metodo cerrado para SubscriptionCheckoutIntentRepository
+
+El metodo actual queda aceptado para checkout explicito:
+
+```php
+findByUuid(string $uuid): ?array
+```
+
+Metodo opcional si se aprueba endpoint por entidad sin checkout uuid:
+
+```php
+findLatestPendingPaymentByEntity(string $entityType, int $entityId): ?array
+```
+
+Reglas cerradas:
+
+- solo aplica si una ruta futura permite consultar state por entidad sin `checkout_intent_uuid`;
+- ante multiples candidatos, debe devolver estado ambiguo o usar un orden estable documentado;
+- no debe inventar seleccion insegura;
+- no debe marcar checkout como `activated`;
+- no debe poblar `subscription_id`;
+- no debe ejecutar writes.
+
+### Resolver de entidad y scope cerrado
+
+Contrato conceptual cerrado:
+
+```php
+resolveForPaymentActivationState(array $input): array
+```
+
+Ubicacion aceptable:
+
+- `SubscriptionEntityResolverService`; o
+- resolver read-only dedicado para payment activation state.
+
+Reglas cerradas:
+
+- validar `entity_type`;
+- validar y normalizar `entity_id`;
+- validar scope de sesion;
+- no asumir checkout escribible;
+- no ejecutar writes;
+- no consultar datos innecesarios;
+- no filtrar datos de otra entidad.
+
+### Servicio futuro documentado
+
+Servicio futuro habilitado por esta decision:
+
+```php
+BuildSubscriptionPaymentActivationStateService::build(array $input): array
+```
+
+Responsabilidades futuras:
+
+- agregar checkout intent;
+- agregar payment intent;
+- agregar payment event procesado;
+- agregar contract acceptance pendiente;
+- agregar active subscription vigente;
+- calcular `can_activate`;
+- calcular `reasons`;
+- preparar metadata UI segura;
+- preparar estrategia segura de idempotencia.
+
+El servicio futuro no debe:
+
+- llamar `ActivateSubscriptionAfterPaymentService` como write;
+- activar suscripcion;
+- crear `profile_subscriptions`;
+- modificar checkout;
+- modificar payment intent;
+- crear payment events;
+- escribir idempotency keys;
+- depender de POST;
+- exponer datos de otra entidad.
+
+### Seguridad cerrada
+
+Ningun metodo read-only ni el futuro servicio de state debe devolver:
+
+- SQL;
+- stacktrace;
+- detalles PDO;
+- provider secrets;
+- hashes de idempotencia;
+- raw provider payload completo;
+- datos clinicos;
+- datos personales no necesarios;
+- datos de otra entidad;
+- IDs internos autoincrementales cuando no sean necesarios para UI.
+
+La conversion a payload frontend debe quedar fuera de los repositorios y vivir en servicio/capa de response futura.
+
+### Sin SQL/schema
+
+El cierre confirma que no se requiere SQL/schema para la siguiente etapa.
+
+No se requiere:
+
+- migracion;
+- seed;
+- fixture;
+- columna nueva;
+- tabla nueva.
+
+La siguiente implementacion debe limitarse a metodos PHP read-only minimos, sin endpoint y sin servicio completo.
+
+### Siguiente microfase recomendada
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-Implementation-01
+```
+
+Motivo:
+
+Implementar unicamente metodos PHP read-only minimos en repositorios existentes, sin endpoint, sin servicio state read-model completo, sin SQL/schema, sin frontend y sin writes.
