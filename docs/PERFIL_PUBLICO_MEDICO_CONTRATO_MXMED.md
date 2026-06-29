@@ -30760,3 +30760,117 @@ Validaciones obligatorias:
 Objetivo:
 
 Validar estaticamente que el soporte de activacion upgrade conserva el flujo de alta nueva, no toca frontend ni schema, y solo habilita la activacion post-pago cuando el checkout contiene contexto `intent_type=upgrade` valido.
+
+## PP-Decisiones 163 - Cierre de activacion post-pago para upgrade
+
+### Microfase
+
+`DOCS/Suscripciones-UpgradeIntent-PostPaymentActivation-Closure-01`
+
+### Objetivo
+
+Se documenta el cierre funcional y tecnico del flujo de activacion post-pago para `intent_type=upgrade`.
+
+Commit base implementado:
+
+- `40f0950 feat(suscripciones): soporta activacion upgrade post pago`.
+
+### Implementacion cerrada
+
+`BuildSubscriptionPaymentActivationStateService.php` distingue entre:
+
+- `new_subscription`;
+- `upgrade`.
+
+Para `new_subscription`, `active_subscription_exists` sigue siendo un bloqueo.
+
+Para `upgrade`, la suscripcion activa es un requisito funcional, no un bloqueo.
+
+`ActivateSubscriptionAfterPaymentService.php` soporta una rama especifica para `upgrade`:
+
+- valida checkout, payment intent, payment event y aceptacion contractual;
+- conserva la vigencia actual;
+- crea una nueva suscripcion activa con el plan destino;
+- enlaza la nueva suscripcion con la anterior mediante `renewed_from_subscription_id`;
+- enlaza la anterior hacia la nueva mediante `renewed_to_subscription_id`;
+- marca la suscripcion anterior como `renewed`;
+- deja la nueva suscripcion como `active`;
+- mantiene idempotencia del flujo `activate-after-payment`.
+
+No se agrego schema nuevo. El cierre usa columnas ya existentes en `profile_subscriptions`.
+
+### QA cerradas
+
+Se cerraron las siguientes microfases:
+
+- `QA/Suscripciones-UpgradeIntent-PostPaymentActivation-StaticQA-01`: PASS;
+- `QA/Suscripciones-UpgradeIntent-PostPaymentActivation-StateReadModel-01`: PASS;
+- `QA/Suscripciones-UpgradeIntent-PostPaymentActivation-ActivateControlled-01`: PASS;
+- `QA/Suscripciones-UpgradeIntent-PostPaymentActivation-ReplayGuard-01`: PASS con WARN no bloqueante;
+- `QA/Suscripciones-UpgradeIntent-PostPaymentActivation-CurrentReadModel-01`: PASS;
+- `QA/Suscripciones-UpgradeIntent-PostPaymentActivation-FrontendPlanReflection-01`: PASS.
+
+### Fixture validado
+
+Flujo validado:
+
+- entity: `doctor/900001`;
+- plan anterior: `standard`;
+- plan destino: `optimum`;
+- modalidad: `annual`;
+- ajuste: `9973` centavos MXN;
+- checkout upgrade: `a752d558-0f3c-4a95-8e00-c1b5ae688fd6`;
+- payment intent: `5e429aff-ea26-4b90-bfdf-92aed8a5f56d`;
+- payment event: `cbb402aa-6f23-4d13-8d11-6bcdbf474f6f`;
+- contract acceptance: `530f8f71-2ea1-446f-ad5a-d80820363646`;
+- suscripcion anterior: `0d2c0113-5390-4548-9b61-3cbddfdfff06`;
+- suscripcion nueva: `10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- vigencia conservada: `2027-06-27 22:03:34`.
+
+### Estado final validado
+
+El estado final validado queda asi:
+
+- current backend devuelve `optimum / Optimo`;
+- el panel frontend `#p-suscripcion` muestra `Optimo - Tu plan actual`;
+- `standard` ya no aparece como plan vigente;
+- Basico y Estandar quedan como `Disponible al renovar`;
+- Optimo queda como `Plan actual`;
+- Profesional queda como upgrade futuro posible;
+- no hubo POST durante QA frontend;
+- no hay dos suscripciones activas incompatibles;
+- el replay de activacion es seguro e idempotente.
+
+### WARNs no bloqueantes
+
+Quedan dos pendientes opcionales de pulido:
+
+- despues de activado, el state posterior muestra `checkout_intent.intent_type = new_subscription`, aunque la trazabilidad DB old/new es correcta;
+- en replay, `meta.idempotent_replay = true`, pero `data.idempotency.idempotent_replay` conserva el valor original `false`.
+
+Ambos puntos no afectan:
+
+- seguridad;
+- current read-model;
+- frontend;
+- idempotencia;
+- trazabilidad old/new.
+
+### Exclusiones confirmadas
+
+El cierre confirma:
+
+- no se toco frontend en la implementacion backend;
+- no se toco SQL/schema/seeds;
+- no se creo schema nuevo;
+- no se ejecuto SQL write manual;
+- no se dejo activacion pendiente;
+- no se expusieron raw `notes`.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-UpgradeIntent-PostActivation-StateOutputPolish-01`
+
+Objetivo sugerido:
+
+Pulir la salida posterior a activacion para conservar semantica segura de `intent_type=upgrade` y normalizar `idempotent_replay` en respuestas anidadas, sin cambiar storage ni flujo de activacion.
