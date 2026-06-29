@@ -28941,3 +28941,216 @@ Despues del cierre documental, la implementacion futura podria ser:
 ```text
 BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Implementation-01
 ```
+
+---
+
+## PP-Decisiones 146 - Cierre readiness del servicio state read-model para activacion post-pago
+
+Fecha de cierre documental: 2026-06-29
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Readiness-Closure-01`
+
+### Tipo
+
+DOCS / Cierre documental del readiness del servicio state read-model para activacion post-pago.
+
+### Objetivo
+
+Esta adenda cierra documentalmente el readiness del futuro servicio `BuildSubscriptionPaymentActivationStateService`.
+
+El cierre toma como base:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Readiness-01
+```
+
+No implementa servicio.
+
+No crea endpoint.
+
+No modifica PHP funcional, JS ni HTML.
+
+No ejecuta SQL, HTTP, POST ni curl.
+
+No conecta `activate-after-payment` al frontend.
+
+No agrega `payment_event_uuid` al frontend.
+
+### Base de cierre
+
+Este cierre toma como base:
+
+- PP-Decisiones 140: cierre readiness de state read-model;
+- PP-Decisiones 142: cierre readiness de metodos read-only;
+- PP-Decisiones 143: implementacion de metodos read-only;
+- PP-Decisiones 144: cierre QA estatica post-implementacion de metodos read-only;
+- PP-Decisiones 145: readiness del servicio state read-model.
+
+Commit validado:
+
+```text
+64b03e5 docs(suscripciones): documenta readiness servicio readmodel post pago
+```
+
+### Decision cerrada
+
+El servicio futuro se define conceptualmente como:
+
+```php
+BuildSubscriptionPaymentActivationStateService
+```
+
+Ubicacion conceptual:
+
+```text
+modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php
+```
+
+Metodo conceptual:
+
+```php
+public function build(array $input): array
+```
+
+### Naturaleza del servicio
+
+El servicio sera agregador read-only.
+
+No debe:
+
+- ejecutar writes;
+- activar suscripcion;
+- llamar `markActivatedAfterPayment`;
+- llamar `linkSubscriptionId`;
+- reemplazar `ActivateSubscriptionAfterPaymentService`;
+- crear endpoint;
+- modificar frontend.
+
+`ActivateSubscriptionAfterPaymentService` sigue siendo el unico responsable del write real de activacion.
+
+### Dependencias conceptuales cerradas
+
+El servicio podra depender de:
+
+- `SubscriptionCheckoutIntentRepository`;
+- `SubscriptionPaymentIntentRepository`;
+- `SubscriptionPaymentEventRepository`;
+- `SubscriptionContractAcceptanceRepository`;
+- `CurrentSubscriptionRepository`;
+- `ProfileSubscriptionRepository` si se requiere lookup por `subscription_id`;
+- `SubscriptionEntityResolverService` o validacion equivalente futura.
+
+### Input conceptual cerrado
+
+El servicio podra recibir:
+
+- `entity_type`;
+- `entity_id`;
+- `checkout_intent_uuid` opcional;
+- `payment_intent_uuid` opcional;
+- `audience` opcional: `dev`, `support`, `admin`, `user`;
+- contexto de sesion/scope si aplica.
+
+### Output conceptual cerrado
+
+El output debera incluir:
+
+- `ok`;
+- `entity`;
+- `checkout_intent`;
+- `payment_intent`;
+- `payment_event`;
+- `contract_acceptance`;
+- `active_subscription`;
+- `activation_eligibility`;
+- `idempotency`;
+- `ui`.
+
+### Reglas de elegibilidad cerradas
+
+`can_activate` solo puede ser `true` si:
+
+- entity scope es valido;
+- checkout intent existe;
+- checkout intent esta en `pending_payment`;
+- payment intent existe;
+- payment intent esta en `paid`;
+- provider status es compatible con `mock_paid` o equivalente;
+- payment event existe;
+- payment event es `payment_intent_confirm`;
+- payment event esta `processed`;
+- contract acceptance existe;
+- contract acceptance esta en `accepted_pending_payment`;
+- no existe active subscription vigente;
+- no hay mismatch entre entity, checkout, payment intent y payment event;
+- no hay activacion previa;
+- no falta `payment_event_uuid` o evidencia equivalente segura.
+
+### Reasons cerradas
+
+El servicio podra devolver reasons como:
+
+- `entity_scope_invalid`;
+- `checkout_intent_missing`;
+- `checkout_intent_not_pending_payment`;
+- `payment_intent_missing`;
+- `payment_intent_not_paid`;
+- `payment_event_missing`;
+- `payment_event_not_processed`;
+- `contract_acceptance_missing`;
+- `contract_acceptance_not_pending_payment`;
+- `active_subscription_exists`;
+- `checkout_payment_mismatch`;
+- `payment_event_payment_intent_mismatch`;
+- `activation_already_done`;
+- `activation_state_unavailable`.
+
+### Relacion frontend/mapper cerrada
+
+El servicio puede devolver reason codes.
+
+El frontend podra mapear estos reasons con `MXMedSubscriptions` en una fase futura.
+
+El backend puede devolver `recommended_message_code` seguro.
+
+El backend no debe obligar textos finales si el frontend manejara copy/mensajes.
+
+### Seguridad cerrada
+
+El servicio no debe exponer:
+
+- SQL;
+- stacktrace;
+- detalles PDO;
+- provider secrets;
+- hashes de idempotencia;
+- raw provider payload completo;
+- datos clinicos;
+- datos de otra entidad;
+- IDs internos autoincrementales si no son necesarios.
+
+### Limites cerrados
+
+Este cierre preserva:
+
+- no implementar servicio todavia;
+- no crear endpoint todavia;
+- no tocar frontend;
+- no ejecutar POST;
+- no activar suscripcion;
+- no modificar DB/schema;
+- no reemplazar `ActivateSubscriptionAfterPaymentService`;
+- no conectar `activate-after-payment` al frontend;
+- no agregar `payment_event_uuid` al frontend.
+
+### Siguiente microfase recomendada
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Implementation-01
+```
+
+Motivo:
+
+Implementar el servicio PHP read-only `BuildSubscriptionPaymentActivationStateService`, sin endpoint, sin frontend, sin SQL/schema y sin writes.
