@@ -28636,3 +28636,308 @@ BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service
 ```
 
 para disenar el servicio `BuildSubscriptionPaymentActivationStateService`.
+
+---
+
+## PP-Decisiones 145 - Readiness del servicio state read-model para activacion post-pago
+
+Fecha de readiness documental: 2026-06-29
+
+### Microfase
+
+`BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Readiness-01`
+
+### Tipo
+
+BE/SPEC / Readiness documental del servicio state read-model para activacion post-pago.
+
+### Objetivo
+
+Esta adenda documenta el diseno del futuro servicio `BuildSubscriptionPaymentActivationStateService`, responsable de construir el read-model `payment-activation-state`.
+
+El servicio futuro permitira que frontend, soporte o admin sepan si una activacion post-pago puede mostrarse o habilitarse de forma segura.
+
+Esta decision no implementa servicio.
+
+No crea endpoint.
+
+No modifica PHP funcional, JS ni HTML.
+
+No ejecuta SQL, HTTP, POST ni curl.
+
+No conecta `activate-after-payment` al frontend.
+
+No agrega `payment_event_uuid` al frontend.
+
+### Base de cierre previa
+
+Este readiness toma como base:
+
+- PP-Decisiones 140: cierre readiness de state read-model;
+- PP-Decisiones 142: cierre readiness de metodos read-only;
+- PP-Decisiones 143: implementacion de metodos read-only;
+- PP-Decisiones 144: cierre QA estatica post-implementacion de metodos read-only.
+
+Commit funcional validado:
+
+```text
+f5f0a25 feat(suscripciones): agrega metodos read model post pago
+```
+
+### Metodos read-only disponibles
+
+Metodos ya implementados y validados:
+
+- `SubscriptionPaymentEventRepository::findProcessedConfirmByPaymentIntentUuid`;
+- `SubscriptionPaymentEventRepository::findProcessedConfirmByCheckoutIntentUuid`;
+- `SubscriptionContractAcceptanceRepository::findPendingPaymentByUuid`;
+- `SubscriptionContractAcceptanceRepository::findPendingPaymentByEntity`;
+- `SubscriptionCheckoutIntentRepository::findLatestPendingPaymentByEntity`.
+
+Metodos ausentes esperados:
+
+- `SubscriptionContractAcceptanceRepository::findPendingPaymentByCheckoutIntentUuid`;
+- `SubscriptionEntityResolverService::resolveForPaymentActivationState`.
+
+La ausencia de estos metodos no bloquea el diseno inicial; el servicio puede usar `contract_acceptance_uuid` desde checkout y resolver scope con validacion equivalente futura.
+
+### Servicio futuro
+
+Nombre conceptual:
+
+```php
+BuildSubscriptionPaymentActivationStateService
+```
+
+Ubicacion conceptual:
+
+```text
+modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php
+```
+
+Metodo conceptual:
+
+```php
+public function build(array $input): array
+```
+
+### Input conceptual
+
+El servicio futuro podra recibir:
+
+- `entity_type`;
+- `entity_id`;
+- `checkout_intent_uuid` opcional;
+- `payment_intent_uuid` opcional;
+- `audience` opcional: `dev`, `support`, `admin`, `user`;
+- contexto de sesion/scope si aplica.
+
+### Dependencias conceptuales
+
+El servicio futuro podra depender de:
+
+- `SubscriptionCheckoutIntentRepository`;
+- `SubscriptionPaymentIntentRepository`;
+- `SubscriptionPaymentEventRepository`;
+- `SubscriptionContractAcceptanceRepository`;
+- `CurrentSubscriptionRepository`;
+- `ProfileSubscriptionRepository` si se requiere lookup por `subscription_id`;
+- `SubscriptionEntityResolverService` o validacion equivalente futura;
+- logger MXMed opcional si existe patron, sin filtrar datos sensibles.
+
+### Responsabilidades
+
+El servicio debera:
+
+1. Resolver entidad y scope.
+2. Localizar checkout intent por `checkout_intent_uuid` explicito si se proporciona.
+3. Localizar checkout intent por `findLatestPendingPaymentByEntity` si se decide flujo por entidad.
+4. Localizar payment intent por `payment_intent_uuid` explicito si se proporciona.
+5. Localizar payment intent por `checkout_intent_uuid` usando metodos existentes si aplica.
+6. Localizar payment event procesado por payment intent con `findProcessedConfirmByPaymentIntentUuid`.
+7. Localizar payment event procesado por checkout con `findProcessedConfirmByCheckoutIntentUuid`.
+8. Localizar contract acceptance por `contract_acceptance_uuid` del checkout con `findPendingPaymentByUuid`.
+9. Localizar contract acceptance por entidad con `findPendingPaymentByEntity` como fallback controlado.
+10. Consultar active subscription vigente.
+11. Calcular `activation_eligibility`.
+12. Calcular `can_activate`.
+13. Calcular `reasons`.
+14. Calcular `required_action`.
+15. Preparar metadata UI segura.
+
+El servicio no debe:
+
+- ejecutar writes;
+- activar suscripcion;
+- llamar `ActivateSubscriptionAfterPaymentService` como write;
+- llamar `markActivatedAfterPayment`;
+- llamar `linkSubscriptionId`;
+- crear payment events;
+- modificar payment intents;
+- modificar checkout intents;
+- escribir idempotency keys;
+- exponer payload sensible.
+
+### Output conceptual
+
+El output conceptual debera incluir:
+
+```json
+{
+  "ok": true,
+  "entity": {
+    "entity_type": "doctor",
+    "entity_id": 900001,
+    "scope_valid": true
+  },
+  "checkout_intent": {
+    "uuid": "...",
+    "status": "pending_payment",
+    "plan_code": "...",
+    "billing_period": "...",
+    "amount_cents": 20000,
+    "currency": "MXN",
+    "expires_at": "...",
+    "subscription_id": null,
+    "contract_acceptance_uuid": "..."
+  },
+  "payment_intent": {
+    "uuid": "...",
+    "checkout_intent_uuid": "...",
+    "provider": "mxmed_mock",
+    "normalized_status": "paid",
+    "provider_status": "mock_paid",
+    "paid_at": "..."
+  },
+  "payment_event": {
+    "uuid": "...",
+    "payment_intent_uuid": "...",
+    "checkout_intent_uuid": "...",
+    "event_type": "payment_intent_confirm",
+    "processing_status": "processed",
+    "processed_at": "..."
+  },
+  "contract_acceptance": {
+    "uuid": "...",
+    "status": "accepted_pending_payment",
+    "subscription_id": null
+  },
+  "active_subscription": {
+    "exists": false,
+    "subscription_id": null,
+    "status": null,
+    "plan_code": null
+  },
+  "activation_eligibility": {
+    "can_activate": true,
+    "reasons": [],
+    "required_action": "activate_after_payment"
+  },
+  "idempotency": {
+    "key_strategy": "client_generated_per_activation_attempt",
+    "replay_safe": true
+  },
+  "ui": {
+    "recommended_label": "Activar suscripcion",
+    "recommended_message_code": "payment_activation_ready",
+    "severity": "info",
+    "retryable": false
+  }
+}
+```
+
+### Reglas de elegibilidad
+
+`can_activate` solo puede ser `true` si:
+
+- entity scope es valido;
+- checkout intent existe;
+- checkout intent esta en `pending_payment`;
+- payment intent existe;
+- payment intent esta en `paid`;
+- `provider_status` es compatible con `mock_paid` o equivalente;
+- payment event existe;
+- payment event es `payment_intent_confirm`;
+- payment event esta `processed`;
+- contract acceptance existe;
+- contract acceptance esta en `accepted_pending_payment`;
+- no existe active subscription vigente;
+- no hay mismatch entre entity, checkout, payment intent y payment event;
+- no hay activacion previa;
+- no falta `payment_event_uuid` o evidencia equivalente segura.
+
+### Reasons candidatas
+
+El servicio podra devolver reasons como:
+
+- `entity_scope_invalid`;
+- `checkout_intent_missing`;
+- `checkout_intent_not_pending_payment`;
+- `payment_intent_missing`;
+- `payment_intent_not_paid`;
+- `payment_event_missing`;
+- `payment_event_not_processed`;
+- `contract_acceptance_missing`;
+- `contract_acceptance_not_pending_payment`;
+- `active_subscription_exists`;
+- `checkout_payment_mismatch`;
+- `payment_event_payment_intent_mismatch`;
+- `activation_already_done`;
+- `activation_state_unavailable`.
+
+### Relacion con mapper/frontend
+
+El servicio puede devolver reason codes.
+
+El frontend podra mapear estos reasons con `MXMedSubscriptions` en una fase futura.
+
+El backend puede devolver `recommended_message_code` seguro.
+
+El backend no debe obligar textos finales si el frontend manejara copy/mensajes.
+
+Esta microfase no conecta `activate-after-payment` al frontend.
+
+Esta microfase no agrega `payment_event_uuid` al frontend.
+
+### Seguridad
+
+El servicio no debe exponer:
+
+- SQL;
+- stacktrace;
+- detalles PDO;
+- provider secrets;
+- hashes de idempotencia;
+- raw provider payload completo;
+- datos clinicos;
+- datos de otra entidad;
+- IDs internos autoincrementales si no son necesarios.
+
+### Limites
+
+Esta decision preserva:
+
+- no implementar servicio todavia;
+- no crear endpoint todavia;
+- no tocar frontend;
+- no ejecutar POST;
+- no activar suscripcion;
+- no modificar DB/schema;
+- no reemplazar `ActivateSubscriptionAfterPaymentService`;
+- `ActivateSubscriptionAfterPaymentService` sigue siendo el unico responsable del write real de activacion.
+
+### Siguiente microfase recomendada
+
+```text
+DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Readiness-Closure-01
+```
+
+Motivo:
+
+Cerrar documentalmente el diseno del servicio antes de implementar PHP.
+
+Despues del cierre documental, la implementacion futura podria ser:
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Implementation-01
+```
