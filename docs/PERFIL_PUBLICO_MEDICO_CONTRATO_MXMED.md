@@ -29409,3 +29409,55 @@ BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-Imp
 Motivo:
 
 Con el servicio read-only validado estaticamente, el siguiente paso natural es implementar el endpoint backend que exponga el state read-model de activacion post-pago sin ejecutar writes ni activar suscripciones.
+
+## PP-Decisiones 149 - Implementacion endpoint state read-model post-pago
+
+Microfase:
+
+`BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-Implementation-01`
+
+Resultado esperado:
+
+Endpoint GET read-only para exponer estado de activacion post-pago.
+
+Endpoint implementado:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-activation-state`
+
+Archivo backend modificado:
+
+`api/subscriptions/index.php`
+
+Servicio utilizado:
+
+`modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`
+
+Clase utilizada:
+
+`BuildSubscriptionPaymentActivationStateService`
+
+Alcance funcional:
+
+- Lee `entity_type` y `entity_id` desde path.
+- Lee `checkout_intent_uuid` opcional desde query string.
+- Lee `payment_intent_uuid` opcional desde query string.
+- Lee `audience` opcional desde query string.
+- Construye estado read-only mediante `build(array $input): array`.
+- Devuelve JSON seguro para futura UI/soporte.
+- No activa suscripcion.
+- No ejecuta writes.
+- No inventa `payment_event_uuid`.
+
+Limites:
+
+- No se modificó frontend.
+- No se modificó SQL/schema/seeds.
+- No se ejecuto SQL.
+- No se ejecuto POST/curl.
+- No se conecto UI.
+- No se ejecuto activacion real.
+- No se modifico `ActivateSubscriptionAfterPaymentService`.
+
+Siguiente microfase recomendada:
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-StaticQA-01`

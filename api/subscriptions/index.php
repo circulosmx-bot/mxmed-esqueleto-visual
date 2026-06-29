@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPa
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionPlanPriceRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionWriteIdempotencyRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ConfirmSubscriptionPaymentIntentMockService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php';
@@ -33,6 +34,7 @@ use Subscriptions\Repositories\SubscriptionPlanPriceRepository;
 use Subscriptions\Repositories\SubscriptionWriteIdempotencyRepository;
 use Subscriptions\Services\ActivateSubscriptionAfterPaymentException;
 use Subscriptions\Services\ActivateSubscriptionAfterPaymentService;
+use Subscriptions\Services\BuildSubscriptionPaymentActivationStateService;
 use Subscriptions\Services\ConfirmSubscriptionPaymentIntentMockException;
 use Subscriptions\Services\ConfirmSubscriptionPaymentIntentMockService;
 use Subscriptions\Services\CreateSubscriptionCheckoutIntentException;
@@ -1981,6 +1983,59 @@ try {
 
         $isReplay = (bool)($paymentIntentResponse['meta']['idempotent_replay'] ?? false);
         subscriptionRespond($paymentIntentResponse, $isReplay ? 200 : 201);
+        return;
+    }
+
+    if (
+        count($segments) === 4
+        && $segments[0] === 'entities'
+        && $segments[3] === 'payment-activation-state'
+    ) {
+        if ($method !== 'GET') {
+            subscriptionRespond(subscriptionError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        if (!subscriptionValidEntityType($entityType) || !subscriptionValidEntityId($entityId)) {
+            subscriptionRespond(subscriptionError('invalid_request', 'invalid entity'), 422);
+            return;
+        }
+
+        $context = subscriptionResolvePrivateContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+        $authMode = (string)($context['auth_mode'] ?? 'unknown');
+
+        $checkoutIntentUuid = trim((string)($_GET['checkout_intent_uuid'] ?? ''));
+        $paymentIntentUuid = trim((string)($_GET['payment_intent_uuid'] ?? ''));
+        $audience = trim((string)($_GET['audience'] ?? 'support'));
+
+        $pdo = mxmed_pdo();
+        $service = new BuildSubscriptionPaymentActivationStateService(
+            new SubscriptionCheckoutIntentRepository($pdo),
+            new SubscriptionPaymentIntentRepository($pdo),
+            new SubscriptionPaymentEventRepository($pdo),
+            new SubscriptionContractAcceptanceRepository($pdo),
+            new CurrentSubscriptionRepository($pdo)
+        );
+
+        $activationState = $service->build([
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'checkout_intent_uuid' => $checkoutIntentUuid,
+            'payment_intent_uuid' => $paymentIntentUuid,
+            'audience' => $audience !== '' ? $audience : 'support',
+        ]);
+
+        subscriptionRespond([
+            'ok' => true,
+            'data' => $activationState,
+            'meta' => subscriptionMeta($authMode),
+        ], 200);
         return;
     }
 
