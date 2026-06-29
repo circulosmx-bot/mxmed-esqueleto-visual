@@ -11,6 +11,7 @@ use Throwable;
 final class ProfileSubscriptionRepository
 {
     private const STATUS_ACTIVE = 'active';
+    private const STATUS_RENEWED = 'renewed';
 
     private PDO $pdo;
 
@@ -42,6 +43,8 @@ final class ProfileSubscriptionRepository
         $expiresAt = $this->requiredText($snapshot['expires_at'] ?? null, 'invalid_profile_subscription_payload', 19);
         $status = $this->requiredText($snapshot['status'] ?? null, 'invalid_profile_subscription_payload', 32);
         $autoRenew = $this->optionalBoolInt($snapshot['auto_renew'] ?? null);
+        $renewedFromSubscriptionId = $this->optionalText($snapshot['renewed_from_subscription_id'] ?? null, 36);
+        $renewedToSubscriptionId = $this->optionalText($snapshot['renewed_to_subscription_id'] ?? null, 36);
         $source = $this->optionalText($snapshot['source'] ?? null, 64) ?? 'mxmed_subscription_activation_v1';
         $notes = $this->optionalText($snapshot['notes'] ?? null, 65535);
 
@@ -76,6 +79,8 @@ final class ProfileSubscriptionRepository
                     expires_at,
                     status,
                     auto_renew,
+                    renewed_from_subscription_id,
+                    renewed_to_subscription_id,
                     source,
                     notes,
                     deleted_at
@@ -101,6 +106,8 @@ final class ProfileSubscriptionRepository
                     :expires_at,
                     :status,
                     :auto_renew,
+                    :renewed_from_subscription_id,
+                    :renewed_to_subscription_id,
                     :source,
                     :notes,
                     NULL
@@ -128,6 +135,8 @@ final class ProfileSubscriptionRepository
                 'expires_at' => $expiresAt,
                 'status' => $status,
                 'auto_renew' => $autoRenew,
+                'renewed_from_subscription_id' => $renewedFromSubscriptionId,
+                'renewed_to_subscription_id' => $renewedToSubscriptionId,
                 'source' => $source,
                 'notes' => $notes,
             ]);
@@ -141,6 +150,50 @@ final class ProfileSubscriptionRepository
         }
 
         return $created;
+    }
+
+    public function markRenewedTo(string $subscriptionId, string $renewedToSubscriptionId, array $metadata = []): ?array
+    {
+        $subscriptionId = trim($subscriptionId);
+        $renewedToSubscriptionId = trim($renewedToSubscriptionId);
+        if ($subscriptionId === '' || $renewedToSubscriptionId === '') {
+            throw new InvalidArgumentException('invalid_profile_subscription_payload: subscription ids are required');
+        }
+
+        $notes = $this->optionalText($metadata['notes'] ?? null, 65535);
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE profile_subscriptions
+                 SET status = :renewed_status,
+                     renewed_to_subscription_id = :renewed_to_subscription_id,
+                     notes = CASE
+                         WHEN :notes_guard IS NULL THEN notes
+                         WHEN notes IS NULL OR notes = "" THEN :notes_value
+                         ELSE CONCAT(notes, "\n", :notes_append)
+                     END
+                 WHERE subscription_id = :subscription_id
+                   AND renewed_to_subscription_id IS NULL
+                   AND status IN ("active", "expiring_soon", "grace_period")
+                   AND deleted_at IS NULL'
+            );
+            $stmt->execute([
+                'subscription_id' => $subscriptionId,
+                'renewed_to_subscription_id' => $renewedToSubscriptionId,
+                'renewed_status' => self::STATUS_RENEWED,
+                'notes_guard' => $notes,
+                'notes_value' => $notes,
+                'notes_append' => $notes,
+            ]);
+        } catch (Throwable $e) {
+            throw new RuntimeException('profile_subscription_upgrade_link_failed', 0, $e);
+        }
+
+        if ($stmt->rowCount() < 1) {
+            return null;
+        }
+
+        return $this->findBySubscriptionId($subscriptionId);
     }
 
     public function findBySubscriptionId(string $subscriptionId): ?array

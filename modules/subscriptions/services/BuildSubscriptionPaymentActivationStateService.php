@@ -18,6 +18,15 @@ final class BuildSubscriptionPaymentActivationStateService
     private const PROVIDER_STATUS_MOCK_PAID = 'mock_paid';
     private const EVENT_TYPE_CONFIRM = 'payment_intent_confirm';
     private const EVENT_PROCESSING_STATUS_PROCESSED = 'processed';
+    private const INTENT_TYPE_NEW_SUBSCRIPTION = 'new_subscription';
+    private const INTENT_TYPE_UPGRADE = 'upgrade';
+    private const PRICING_STRATEGY_PRORATED_DIFFERENCE = 'prorated_difference';
+    private const PLAN_RANKS = [
+        'basic' => 1,
+        'standard' => 2,
+        'optimum' => 3,
+        'professional' => 4,
+    ];
 
     private SubscriptionCheckoutIntentRepository $checkoutIntentRepository;
     private SubscriptionPaymentIntentRepository $paymentIntentRepository;
@@ -65,6 +74,8 @@ final class BuildSubscriptionPaymentActivationStateService
         $paymentEvent = $this->lookupPaymentEvent($paymentIntent, $checkoutIntent, $reasons);
         $contractAcceptance = $this->lookupContractAcceptance($checkoutIntent, $entityType, $entityId, $reasons);
         $activeSubscription = $this->lookupActiveSubscription($entityType, $entityId, $reasons);
+        $isUpgradeCheckout = $this->checkoutIntentDeclaresUpgrade($checkoutIntent);
+        $upgradeContext = $this->upgradeContext($checkoutIntent, $isUpgradeCheckout, $reasons);
 
         $this->evaluateState(
             $entityType,
@@ -74,6 +85,8 @@ final class BuildSubscriptionPaymentActivationStateService
             $paymentEvent,
             $contractAcceptance,
             $activeSubscription,
+            $isUpgradeCheckout,
+            $upgradeContext,
             $reasons
         );
 
@@ -87,11 +100,12 @@ final class BuildSubscriptionPaymentActivationStateService
                 'scope_valid' => $scopeValid && !in_array('entity_scope_invalid', $reasons, true),
                 'audience' => $audience,
             ],
-            'checkout_intent' => $this->checkoutIntentState($checkoutIntent),
+            'checkout_intent' => $this->checkoutIntentState($checkoutIntent, $isUpgradeCheckout),
             'payment_intent' => $this->paymentIntentState($paymentIntent),
             'payment_event' => $this->paymentEventState($paymentEvent),
             'contract_acceptance' => $this->contractAcceptanceState($contractAcceptance),
             'active_subscription' => $this->activeSubscriptionState($activeSubscription),
+            'upgrade' => $this->upgradeState($upgradeContext),
             'activation_eligibility' => [
                 'can_activate' => $canActivate,
                 'reasons' => array_values($reasons),
@@ -101,7 +115,7 @@ final class BuildSubscriptionPaymentActivationStateService
                 'key_strategy' => 'client_generated_per_activation_attempt',
                 'replay_safe' => true,
             ],
-            'ui' => $this->uiState($canActivate, $reasons),
+            'ui' => $this->uiState($canActivate, $reasons, $upgradeContext !== null),
         ];
     }
 
@@ -207,6 +221,8 @@ final class BuildSubscriptionPaymentActivationStateService
         ?array $paymentEvent,
         ?array $contractAcceptance,
         ?array $activeSubscription,
+        bool $isUpgradeCheckout,
+        ?array $upgradeContext,
         array &$reasons
     ): void {
         if ($checkoutIntent === null) {
@@ -287,12 +303,44 @@ final class BuildSubscriptionPaymentActivationStateService
             }
         }
 
+        if ($isUpgradeCheckout) {
+            if ($upgradeContext === null) {
+                return;
+            }
+            $this->evaluateUpgradeState($checkoutIntent, $activeSubscription, $upgradeContext, $reasons);
+            return;
+        }
+
         if ($activeSubscription !== null) {
             $this->addReason($reasons, 'active_subscription_exists');
         }
     }
 
-    private function checkoutIntentState(?array $checkoutIntent): ?array
+    private function evaluateUpgradeState(?array $checkoutIntent, ?array $activeSubscription, array $upgradeContext, array &$reasons): void
+    {
+        if ($activeSubscription === null) {
+            $this->addReason($reasons, 'active_subscription_required_for_upgrade');
+            return;
+        }
+
+        if ((string)($activeSubscription['plan_code'] ?? '') !== (string)$upgradeContext['current_plan_code']) {
+            $this->addReason($reasons, 'upgrade_current_plan_mismatch');
+        }
+        if ((string)($activeSubscription['billing_period'] ?? '') !== (string)$upgradeContext['current_billing_period']) {
+            $this->addReason($reasons, 'upgrade_billing_period_mismatch');
+        }
+
+        if ($checkoutIntent !== null) {
+            if ((string)($checkoutIntent['plan_code'] ?? '') !== (string)$upgradeContext['target_plan_code']) {
+                $this->addReason($reasons, 'upgrade_target_plan_mismatch');
+            }
+            if ((string)($checkoutIntent['billing_period'] ?? '') !== (string)$upgradeContext['target_billing_period']) {
+                $this->addReason($reasons, 'upgrade_billing_period_mismatch');
+            }
+        }
+    }
+
+    private function checkoutIntentState(?array $checkoutIntent, bool $isUpgradeCheckout): ?array
     {
         if ($checkoutIntent === null) {
             return null;
@@ -309,6 +357,7 @@ final class BuildSubscriptionPaymentActivationStateService
             'subscription_id' => $this->cleanText($checkoutIntent['subscription_id'] ?? null, 36),
             'contract_acceptance_uuid' => $this->cleanText($checkoutIntent['contract_acceptance_uuid'] ?? null, 36),
             'activated_at' => $this->cleanText($checkoutIntent['activated_at'] ?? null, 32),
+            'intent_type' => $isUpgradeCheckout ? self::INTENT_TYPE_UPGRADE : self::INTENT_TYPE_NEW_SUBSCRIPTION,
         ];
     }
 
@@ -373,9 +422,36 @@ final class BuildSubscriptionPaymentActivationStateService
         ];
     }
 
-    private function uiState(bool $canActivate, array $reasons): array
+    private function upgradeState(?array $upgradeContext): ?array
+    {
+        if ($upgradeContext === null) {
+            return null;
+        }
+
+        return [
+            'intent_type' => self::INTENT_TYPE_UPGRADE,
+            'current_plan_code' => $upgradeContext['current_plan_code'],
+            'target_plan_code' => $upgradeContext['target_plan_code'],
+            'current_billing_period' => $upgradeContext['current_billing_period'],
+            'target_billing_period' => $upgradeContext['target_billing_period'],
+            'adjustment_amount_cents' => $upgradeContext['adjustment_amount_cents'],
+            'currency' => $upgradeContext['currency'],
+            'pricing_strategy' => $upgradeContext['pricing_strategy'],
+        ];
+    }
+
+    private function uiState(bool $canActivate, array $reasons, bool $isUpgradeReady): array
     {
         if ($canActivate) {
+            if ($isUpgradeReady) {
+                return [
+                    'recommended_label' => 'Activar mejora de plan',
+                    'recommended_message_code' => 'payment_activation_upgrade_ready',
+                    'severity' => 'info',
+                    'retryable' => false,
+                ];
+            }
+
             return [
                 'recommended_label' => 'Activar suscripcion',
                 'recommended_message_code' => 'payment_activation_ready',
@@ -395,12 +471,124 @@ final class BuildSubscriptionPaymentActivationStateService
             ];
         }
 
+        if (in_array('active_subscription_required_for_upgrade', $reasons, true)
+            || in_array('upgrade_context_invalid', $reasons, true)
+            || in_array('upgrade_target_plan_not_higher', $reasons, true)
+        ) {
+            return [
+                'recommended_label' => 'Mejora no disponible',
+                'recommended_message_code' => 'payment_activation_upgrade_not_ready',
+                'severity' => 'warning',
+                'retryable' => false,
+            ];
+        }
+
         return [
             'recommended_label' => 'Activacion no disponible',
             'recommended_message_code' => 'payment_activation_not_ready',
             'severity' => 'warning',
             'retryable' => false,
         ];
+    }
+
+    private function checkoutIntentDeclaresUpgrade(?array $checkoutIntent): bool
+    {
+        $notes = $this->cleanText($checkoutIntent['notes'] ?? null, 65535);
+        if ($notes === null) {
+            return false;
+        }
+
+        $decoded = json_decode($notes, true);
+        if (!is_array($decoded)) {
+            return false;
+        }
+
+        return strtolower(trim((string)($decoded['intent_type'] ?? ''))) === self::INTENT_TYPE_UPGRADE;
+    }
+
+    private function upgradeContext(?array $checkoutIntent, bool $isUpgradeCheckout, array &$reasons): ?array
+    {
+        if (!$isUpgradeCheckout) {
+            return null;
+        }
+
+        $notes = $this->cleanText($checkoutIntent['notes'] ?? null, 65535);
+        $decoded = is_string($notes) ? json_decode($notes, true) : null;
+        if (!is_array($decoded) || !is_array($decoded['upgrade_context'] ?? null)) {
+            $this->addReason($reasons, 'upgrade_context_invalid');
+            return null;
+        }
+
+        $context = $decoded['upgrade_context'];
+        $currentPlanCode = $this->canonicalPlanCode($context['current_plan_code'] ?? null);
+        $targetPlanCode = $this->canonicalPlanCode($context['target_plan_code'] ?? null);
+        $currentBillingPeriod = strtolower($this->cleanText($context['current_billing_period'] ?? null, 32) ?? '');
+        $targetBillingPeriod = strtolower($this->cleanText($context['target_billing_period'] ?? null, 32) ?? '');
+        $pricingStrategy = strtolower($this->cleanText($decoded['pricing_strategy'] ?? ($context['pricing_strategy'] ?? null), 64) ?? '');
+        $adjustmentAmountCents = $this->positiveAmount($context['adjustment_amount_cents'] ?? null);
+        $currency = strtoupper($this->cleanText($context['currency'] ?? null, 3) ?? '');
+
+        if ($currentPlanCode === '' || $targetPlanCode === ''
+            || $currentBillingPeriod === '' || $targetBillingPeriod === ''
+            || $pricingStrategy !== self::PRICING_STRATEGY_PRORATED_DIFFERENCE
+            || $adjustmentAmountCents <= 0
+            || $currency === ''
+        ) {
+            $this->addReason($reasons, 'upgrade_context_invalid');
+            return null;
+        }
+
+        if ($currentBillingPeriod !== $targetBillingPeriod) {
+            $this->addReason($reasons, 'upgrade_billing_period_mismatch');
+        }
+        if ($this->planRank($targetPlanCode) <= $this->planRank($currentPlanCode)) {
+            $this->addReason($reasons, 'upgrade_target_plan_not_higher');
+        }
+
+        return [
+            'current_plan_code' => $currentPlanCode,
+            'target_plan_code' => $targetPlanCode,
+            'current_billing_period' => $currentBillingPeriod,
+            'target_billing_period' => $targetBillingPeriod,
+            'adjustment_amount_cents' => $adjustmentAmountCents,
+            'currency' => $currency,
+            'pricing_strategy' => $pricingStrategy,
+        ];
+    }
+
+    private function canonicalPlanCode($value): string
+    {
+        $planCode = strtolower($this->cleanText($value, 64) ?? '');
+        $map = [
+            'basico' => 'basic',
+            'básico' => 'basic',
+            'basic' => 'basic',
+            'estandar' => 'standard',
+            'estándar' => 'standard',
+            'standard' => 'standard',
+            'optimo' => 'optimum',
+            'óptimo' => 'optimum',
+            'optimum' => 'optimum',
+            'profesional' => 'professional',
+            'professional' => 'professional',
+        ];
+
+        return $map[$planCode] ?? $planCode;
+    }
+
+    private function planRank(string $planCode): int
+    {
+        return self::PLAN_RANKS[$planCode] ?? 0;
+    }
+
+    private function positiveAmount($value): int
+    {
+        if (is_int($value)) {
+            return $value > 0 ? $value : 0;
+        }
+
+        $text = trim((string)($value ?? ''));
+        return ctype_digit($text) ? max(0, (int)$text) : 0;
     }
 
     private function safeLookup(callable $lookup, array &$reasons): ?array

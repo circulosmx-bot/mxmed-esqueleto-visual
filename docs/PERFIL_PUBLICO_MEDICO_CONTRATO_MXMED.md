@@ -30637,3 +30637,126 @@ La microfase no:
 Objetivo:
 
 Crear la sesion DEV/local mediante el fixture `upgrade-doctor` y ejecutar una unica QA HTTP controlada del checkout upgrade con `session_scope`.
+
+## PP-Decisiones 162 - Soporte backend de activacion post-pago para upgrade
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-PostPaymentActivation-Implementation-01`
+
+### Objetivo
+
+Se implemento soporte backend controlado para que la activacion post-pago pueda distinguir entre:
+
+- `new_subscription`;
+- `upgrade`.
+
+El comportamiento existente de alta nueva se conserva: si una alta nueva detecta una suscripcion activa, `active_subscription_exists` sigue siendo bloqueo.
+
+Para `upgrade`, la suscripcion activa deja de ser bloqueo y pasa a ser requisito funcional.
+
+### Contexto upgrade
+
+El contexto de upgrade se lee exclusivamente desde `subscription_checkout_intents.notes` cuando contiene JSON valido con:
+
+- `intent_type = upgrade`;
+- `upgrade_context.current_plan_code`;
+- `upgrade_context.target_plan_code`;
+- `upgrade_context.current_billing_period`;
+- `upgrade_context.target_billing_period`;
+- `upgrade_context.adjustment_amount_cents`;
+- `pricing_strategy = prorated_difference`.
+
+No se asume upgrade por heuristica si el snapshot no existe o no es valido.
+
+El read-model expone solo un resumen seguro del upgrade; no devuelve raw `notes`.
+
+### Read-model de activacion
+
+`BuildSubscriptionPaymentActivationStateService` ahora:
+
+- mantiene `active_subscription_exists` para `new_subscription`;
+- para `upgrade`, exige suscripcion activa;
+- devuelve `active_subscription_required_for_upgrade` si falta suscripcion activa;
+- valida que el plan destino sea superior al plan actual;
+- valida que la periodicidad destino coincida con la vigente en v1;
+- valida checkout, payment intent, payment event y aceptacion contractual;
+- puede devolver `can_activate=true` para upgrade cuando todo esta listo;
+- usa mensaje seguro `payment_activation_upgrade_ready` cuando la mejora puede activarse.
+
+### Activacion post-pago upgrade
+
+`ActivateSubscriptionAfterPaymentService` conserva el flujo existente para alta nueva y agrega una rama especifica para `upgrade`.
+
+Para `upgrade`, el servicio:
+
+- exige suscripcion activa vigente;
+- valida que la suscripcion activa coincida con `current_plan_code`;
+- valida que `target_plan_code` sea superior;
+- valida que no haya cambio de periodicidad;
+- valida payment intent pagado;
+- valida payment event procesado;
+- valida aceptacion contractual pendiente de pago;
+- conserva `expires_at` de la suscripcion vigente;
+- crea una nueva suscripcion activa con el plan destino;
+- enlaza la nueva suscripcion con la anterior mediante `renewed_from_subscription_id`;
+- marca la suscripcion anterior como `renewed` y la enlaza con `renewed_to_subscription_id`;
+- marca el checkout como `activated`;
+- mantiene idempotencia del flujo `activate-after-payment`.
+
+### Storage usado
+
+No se agrego schema nuevo.
+
+Se reutilizan columnas existentes de `profile_subscriptions`:
+
+- `status`;
+- `plan_code`;
+- `contracted_plan_code`;
+- `effective_plan_code`;
+- `starts_at`;
+- `expires_at`;
+- `renewed_from_subscription_id`;
+- `renewed_to_subscription_id`;
+- `source`;
+- `notes`.
+
+`ProfileSubscriptionRepository` agrega metodos pequeños para:
+
+- guardar enlaces `renewed_from_subscription_id` / `renewed_to_subscription_id`;
+- marcar la suscripcion anterior como `renewed` apuntando a la nueva.
+
+### Alcance no ejecutado
+
+La microfase no:
+
+- modifico frontend;
+- modifico `index.html`;
+- modifico `assets/js/app.js`;
+- modifico `assets/js/subscription-messages.js`;
+- modifico `api/subscriptions/index.php`;
+- modifico SQL/schema/seeds;
+- ejecuto SQL;
+- ejecuto POST/curl;
+- ejecuto `confirm_mock`;
+- ejecuto `payment-intents`;
+- ejecuto `activate-after-payment`;
+- activo suscripciones en runtime;
+- hizo writes manuales en BD.
+
+### Validacion tecnica
+
+Validaciones obligatorias:
+
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`: PASS;
+- `php -l modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`: PASS;
+- `php -l modules/subscriptions/repositories/ProfileSubscriptionRepository.php`: PASS;
+- `git diff --check`: limpio.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-PostPaymentActivation-StaticQA-01`
+
+Objetivo:
+
+Validar estaticamente que el soporte de activacion upgrade conserva el flujo de alta nueva, no toca frontend ni schema, y solo habilita la activacion post-pago cuando el checkout contiene contexto `intent_type=upgrade` valido.

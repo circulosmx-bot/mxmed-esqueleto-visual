@@ -49,6 +49,15 @@ final class ActivateSubscriptionAfterPaymentService
     private const EVENT_TYPE_CONFIRM = 'payment_intent_confirm';
     private const EVENT_PROCESSING_STATUS_PROCESSED = 'processed';
     private const SOURCE_ACTIVATION = 'mxmed_payment_intent_activation_v1';
+    private const SOURCE_UPGRADE_ACTIVATION = 'mxmed_payment_intent_upgrade_activation_v1';
+    private const INTENT_TYPE_UPGRADE = 'upgrade';
+    private const PRICING_STRATEGY_PRORATED_DIFFERENCE = 'prorated_difference';
+    private const PLAN_RANKS = [
+        'basic' => 1,
+        'standard' => 2,
+        'optimum' => 3,
+        'professional' => 4,
+    ];
 
     private PDO $pdo;
     private SubscriptionWriteIdempotencyService $idempotencyService;
@@ -228,17 +237,44 @@ final class ActivateSubscriptionAfterPaymentService
             $this->assertAcceptanceReady($acceptance);
             $this->assertAcceptanceMatchesCheckout($acceptance, $checkoutIntent);
 
-            if ($this->currentSubscriptionRepository->activeSubscriptionExists($entityType, $entityId)) {
-                throw new ActivateSubscriptionAfterPaymentException(
-                    409,
-                    'active_subscription_exists',
-                    'active subscription already exists for entity'
+            $isUpgradeCheckout = $this->checkoutIntentDeclaresUpgrade($checkoutIntent);
+            $upgradeContext = $this->upgradeContext($checkoutIntent, $isUpgradeCheckout);
+            $previousSubscription = null;
+
+            if ($isUpgradeCheckout) {
+                $previousSubscription = $this->currentSubscriptionRepository->findActiveByEntity($entityType, $entityId);
+                if ($previousSubscription === null) {
+                    throw new ActivateSubscriptionAfterPaymentException(
+                        409,
+                        'active_subscription_required_for_upgrade',
+                        'active subscription is required for upgrade activation'
+                    );
+                }
+
+                $this->assertUpgradeReady($checkoutIntent, $paymentIntent, $previousSubscription, $upgradeContext);
+                $subscription = $this->profileSubscriptionRepository->createActiveFromPaidCheckout(
+                    $this->upgradeSubscriptionSnapshot(
+                        $checkoutIntent,
+                        $paymentIntent,
+                        $paymentEvent,
+                        $acceptance,
+                        $previousSubscription,
+                        $upgradeContext
+                    )
+                );
+            } else {
+                if ($this->currentSubscriptionRepository->activeSubscriptionExists($entityType, $entityId)) {
+                    throw new ActivateSubscriptionAfterPaymentException(
+                        409,
+                        'active_subscription_exists',
+                        'active subscription already exists for entity'
+                    );
+                }
+
+                $subscription = $this->profileSubscriptionRepository->createActiveFromPaidCheckout(
+                    $this->subscriptionSnapshot($checkoutIntent, $paymentIntent, $paymentEvent, $acceptance)
                 );
             }
-
-            $subscription = $this->profileSubscriptionRepository->createActiveFromPaidCheckout(
-                $this->subscriptionSnapshot($checkoutIntent, $paymentIntent, $paymentEvent, $acceptance)
-            );
             $subscriptionId = (string)($subscription['subscription_id'] ?? '');
             if ($subscriptionId === '') {
                 throw new ActivateSubscriptionAfterPaymentException(
@@ -246,6 +282,26 @@ final class ActivateSubscriptionAfterPaymentService
                     'profile_subscription_create_failed',
                     'profile subscription was not created'
                 );
+            }
+
+            if ($isUpgradeCheckout && $previousSubscription !== null) {
+                $previousSubscription = $this->profileSubscriptionRepository->markRenewedTo(
+                    (string)($previousSubscription['subscription_id'] ?? ''),
+                    $subscriptionId,
+                    [
+                        'notes' => 'replaced by upgrade checkout '
+                            . $checkoutIntentUuid
+                            . ', payment intent '
+                            . $paymentIntentUuid,
+                    ]
+                );
+                if ($previousSubscription === null) {
+                    throw new ActivateSubscriptionAfterPaymentException(
+                        409,
+                        'profile_subscription_upgrade_link_failed',
+                        'previous subscription could not be linked to upgrade'
+                    );
+                }
             }
 
             $acceptance = $this->contractAcceptanceRepository->linkSubscriptionId($contractAcceptanceUuid, $subscriptionId);
@@ -258,8 +314,9 @@ final class ActivateSubscriptionAfterPaymentService
             }
 
             $checkoutIntent = $this->checkoutIntentRepository->markActivatedAfterPayment($checkoutIntentUuid, $subscriptionId, [
-                'source' => self::SOURCE_ACTIVATION,
-                'notes' => 'activated after paid payment intent ' . $paymentIntentUuid,
+                'source' => $isUpgradeCheckout ? self::SOURCE_UPGRADE_ACTIVATION : self::SOURCE_ACTIVATION,
+                'notes' => ($isUpgradeCheckout ? 'upgrade activated after paid payment intent ' : 'activated after paid payment intent ')
+                    . $paymentIntentUuid,
             ]);
             if ($checkoutIntent === null) {
                 throw new ActivateSubscriptionAfterPaymentException(
@@ -276,7 +333,9 @@ final class ActivateSubscriptionAfterPaymentService
                 $paymentEvent,
                 $acceptance,
                 $requestHash,
-                false
+                false,
+                $upgradeContext,
+                $previousSubscription
             );
 
             if ($idempotencyRecord !== null) {
@@ -397,6 +456,71 @@ final class ActivateSubscriptionAfterPaymentService
         }
     }
 
+    private function assertUpgradeReady(array $checkoutIntent, array $paymentIntent, array $activeSubscription, array $upgradeContext): void
+    {
+        $activeSubscriptionId = (string)($activeSubscription['subscription_id'] ?? '');
+        $sourceSubscriptionId = (string)($upgradeContext['source_subscription_id'] ?? '');
+        if ($activeSubscriptionId === '' || ($sourceSubscriptionId !== '' && $sourceSubscriptionId !== $activeSubscriptionId)) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_active_subscription_mismatch',
+                'active subscription does not match upgrade checkout'
+            );
+        }
+
+        if ((string)($activeSubscription['plan_code'] ?? '') !== (string)$upgradeContext['current_plan_code']
+            || (string)($checkoutIntent['plan_code'] ?? '') !== (string)$upgradeContext['target_plan_code']
+        ) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_plan_mismatch',
+                'upgrade checkout plan does not match active subscription'
+            );
+        }
+
+        if ((string)($activeSubscription['billing_period'] ?? '') !== (string)$upgradeContext['current_billing_period']
+            || (string)($checkoutIntent['billing_period'] ?? '') !== (string)$upgradeContext['target_billing_period']
+            || (string)$upgradeContext['current_billing_period'] !== (string)$upgradeContext['target_billing_period']
+        ) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_billing_period_mismatch',
+                'upgrade billing period does not match active subscription'
+            );
+        }
+
+        if ($this->planRank((string)$upgradeContext['target_plan_code']) <= $this->planRank((string)$upgradeContext['current_plan_code'])) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_target_plan_not_higher',
+                'target plan must be higher than current plan'
+            );
+        }
+
+        $adjustmentAmount = (int)($upgradeContext['adjustment_amount_cents'] ?? 0);
+        $currency = (string)($upgradeContext['currency'] ?? '');
+        if ((int)($checkoutIntent['amount_cents'] ?? 0) !== $adjustmentAmount
+            || (int)($paymentIntent['amount_cents'] ?? 0) !== $adjustmentAmount
+            || (string)($checkoutIntent['currency'] ?? '') !== $currency
+            || (string)($paymentIntent['currency'] ?? '') !== $currency
+        ) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_adjustment_mismatch',
+                'upgrade adjustment does not match paid payment intent'
+            );
+        }
+
+        $expiresAt = $this->nullableText($activeSubscription['expires_at'] ?? null);
+        if ($expiresAt === null) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_period_invalid',
+                'active subscription period is invalid for upgrade activation'
+            );
+        }
+    }
+
     private function subscriptionSnapshot(
         array $checkoutIntent,
         array $paymentIntent,
@@ -444,7 +568,92 @@ final class ActivateSubscriptionAfterPaymentService
                 . (string)($paymentIntent['uuid'] ?? '')
                 . ', payment event '
                 . (string)($paymentEvent['uuid'] ?? ''),
+            ];
+    }
+
+    private function upgradeSubscriptionSnapshot(
+        array $checkoutIntent,
+        array $paymentIntent,
+        array $paymentEvent,
+        array $acceptance,
+        array $activeSubscription,
+        array $upgradeContext
+    ): array {
+        $snapshot = $this->subscriptionSnapshot($checkoutIntent, $paymentIntent, $paymentEvent, $acceptance);
+        $now = $this->now();
+        $expiresAt = $this->nullableText($activeSubscription['expires_at'] ?? null);
+        if ($expiresAt === null) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_period_invalid',
+                'active subscription period is invalid for upgrade activation'
+            );
+        }
+
+        $snapshot['starts_at'] = $now;
+        $snapshot['expires_at'] = $expiresAt;
+        $snapshot['duration_days'] = $this->remainingDurationDays($now, $expiresAt);
+        $snapshot['contracted_plan_code'] = (string)$upgradeContext['target_plan_code'];
+        $snapshot['effective_plan_code'] = (string)$upgradeContext['target_plan_code'];
+        $snapshot['renewed_from_subscription_id'] = (string)($activeSubscription['subscription_id'] ?? '');
+        $snapshot['source'] = self::SOURCE_UPGRADE_ACTIVATION;
+        $snapshot['notes'] = $this->upgradeNotes($checkoutIntent, $paymentIntent, $paymentEvent, $activeSubscription, $upgradeContext);
+
+        return $snapshot;
+    }
+
+    private function upgradeNotes(
+        array $checkoutIntent,
+        array $paymentIntent,
+        array $paymentEvent,
+        array $activeSubscription,
+        array $upgradeContext
+    ): string {
+        $notes = [
+            'intent_type' => self::INTENT_TYPE_UPGRADE,
+            'source_subscription_id' => (string)($activeSubscription['subscription_id'] ?? ''),
+            'current_plan_code' => (string)$upgradeContext['current_plan_code'],
+            'target_plan_code' => (string)$upgradeContext['target_plan_code'],
+            'current_billing_period' => (string)$upgradeContext['current_billing_period'],
+            'target_billing_period' => (string)$upgradeContext['target_billing_period'],
+            'adjustment_amount_cents' => (int)$upgradeContext['adjustment_amount_cents'],
+            'currency' => (string)$upgradeContext['currency'],
+            'pricing_strategy' => (string)$upgradeContext['pricing_strategy'],
+            'checkout_intent_uuid' => (string)($checkoutIntent['uuid'] ?? ''),
+            'payment_intent_uuid' => (string)($paymentIntent['uuid'] ?? ''),
+            'payment_event_uuid' => (string)($paymentEvent['uuid'] ?? ''),
         ];
+        $encoded = json_encode($notes, JSON_UNESCAPED_SLASHES);
+
+        return is_string($encoded) && $encoded !== ''
+            ? $encoded
+            : 'upgrade activated from checkout ' . (string)($checkoutIntent['uuid'] ?? '');
+    }
+
+    private function remainingDurationDays(string $startsAt, string $expiresAt): int
+    {
+        try {
+            $startsAtDate = new DateTimeImmutable($startsAt, new DateTimeZone('UTC'));
+            $expiresAtDate = new DateTimeImmutable($expiresAt, new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_period_invalid',
+                'active subscription period is invalid for upgrade activation',
+                $e
+            );
+        }
+
+        $seconds = $expiresAtDate->getTimestamp() - $startsAtDate->getTimestamp();
+        if ($seconds <= 0) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_period_invalid',
+                'active subscription period is invalid for upgrade activation'
+            );
+        }
+
+        return max(1, (int)ceil($seconds / 86400));
     }
 
     private function durationDays(array $acceptance): int
@@ -466,53 +675,142 @@ final class ActivateSubscriptionAfterPaymentService
         array $paymentEvent,
         array $acceptance,
         string $requestHash,
-        bool $idempotentReplay
+        bool $idempotentReplay,
+        ?array $upgradeContext = null,
+        ?array $previousSubscription = null
     ): array {
+        $data = [
+            'subscription_id' => (string)($subscription['subscription_id'] ?? ''),
+            'contract_acceptance_uuid' => (string)($acceptance['uuid'] ?? ''),
+            'profile_subscription' => [
+                'subscription_id' => (string)($subscription['subscription_id'] ?? ''),
+                'entity_type' => (string)($subscription['entity_type'] ?? ''),
+                'entity_id' => (string)($subscription['entity_id'] ?? ''),
+                'plan_code' => (string)($subscription['plan_code'] ?? ''),
+                'billing_period' => (string)($subscription['billing_period'] ?? ''),
+                'status' => (string)($subscription['status'] ?? ''),
+                'starts_at' => $subscription['starts_at'] ?? null,
+                'expires_at' => $subscription['expires_at'] ?? null,
+                'renewed_from_subscription_id' => $subscription['renewed_from_subscription_id'] ?? null,
+                'renewed_to_subscription_id' => $subscription['renewed_to_subscription_id'] ?? null,
+            ],
+            'checkout_intent' => [
+                'uuid' => (string)($checkoutIntent['uuid'] ?? ''),
+                'status' => (string)($checkoutIntent['status'] ?? ''),
+                'subscription_id' => $checkoutIntent['subscription_id'] ?? null,
+                'activated_at' => $checkoutIntent['activated_at'] ?? null,
+            ],
+            'payment_intent' => [
+                'uuid' => (string)($paymentIntent['uuid'] ?? ''),
+                'checkout_intent_uuid' => (string)($paymentIntent['checkout_intent_uuid'] ?? ''),
+                'normalized_status' => (string)($paymentIntent['normalized_status'] ?? ''),
+                'provider_status' => $paymentIntent['provider_status'] ?? null,
+                'paid_at' => $paymentIntent['paid_at'] ?? null,
+            ],
+            'payment_event' => [
+                'uuid' => (string)($paymentEvent['uuid'] ?? ''),
+                'payment_intent_uuid' => (string)($paymentEvent['payment_intent_uuid'] ?? ''),
+                'event_type' => (string)($paymentEvent['event_type'] ?? ''),
+                'processing_status' => (string)($paymentEvent['processing_status'] ?? ''),
+                'processed_at' => $paymentEvent['processed_at'] ?? null,
+            ],
+            'idempotency' => [
+                'operation' => SubscriptionWriteIdempotencyService::PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION,
+                'request_hash' => $requestHash,
+                'idempotent_replay' => $idempotentReplay,
+            ],
+        ];
+
+        if ($upgradeContext !== null) {
+            $data['upgrade'] = [
+                'intent_type' => self::INTENT_TYPE_UPGRADE,
+                'previous_subscription_id' => is_array($previousSubscription)
+                    ? ($previousSubscription['subscription_id'] ?? null)
+                    : ($subscription['renewed_from_subscription_id'] ?? null),
+                'new_subscription_id' => (string)($subscription['subscription_id'] ?? ''),
+                'current_plan_code' => (string)$upgradeContext['current_plan_code'],
+                'target_plan_code' => (string)$upgradeContext['target_plan_code'],
+                'current_billing_period' => (string)$upgradeContext['current_billing_period'],
+                'target_billing_period' => (string)$upgradeContext['target_billing_period'],
+                'adjustment_amount_cents' => (int)$upgradeContext['adjustment_amount_cents'],
+                'currency' => (string)$upgradeContext['currency'],
+                'pricing_strategy' => (string)$upgradeContext['pricing_strategy'],
+            ];
+        }
+
         return [
             'ok' => true,
-            'data' => [
-                'subscription_id' => (string)($subscription['subscription_id'] ?? ''),
-                'contract_acceptance_uuid' => (string)($acceptance['uuid'] ?? ''),
-                'profile_subscription' => [
-                    'subscription_id' => (string)($subscription['subscription_id'] ?? ''),
-                    'entity_type' => (string)($subscription['entity_type'] ?? ''),
-                    'entity_id' => (string)($subscription['entity_id'] ?? ''),
-                    'plan_code' => (string)($subscription['plan_code'] ?? ''),
-                    'billing_period' => (string)($subscription['billing_period'] ?? ''),
-                    'status' => (string)($subscription['status'] ?? ''),
-                    'starts_at' => $subscription['starts_at'] ?? null,
-                    'expires_at' => $subscription['expires_at'] ?? null,
-                ],
-                'checkout_intent' => [
-                    'uuid' => (string)($checkoutIntent['uuid'] ?? ''),
-                    'status' => (string)($checkoutIntent['status'] ?? ''),
-                    'subscription_id' => $checkoutIntent['subscription_id'] ?? null,
-                    'activated_at' => $checkoutIntent['activated_at'] ?? null,
-                ],
-                'payment_intent' => [
-                    'uuid' => (string)($paymentIntent['uuid'] ?? ''),
-                    'checkout_intent_uuid' => (string)($paymentIntent['checkout_intent_uuid'] ?? ''),
-                    'normalized_status' => (string)($paymentIntent['normalized_status'] ?? ''),
-                    'provider_status' => $paymentIntent['provider_status'] ?? null,
-                    'paid_at' => $paymentIntent['paid_at'] ?? null,
-                ],
-                'payment_event' => [
-                    'uuid' => (string)($paymentEvent['uuid'] ?? ''),
-                    'payment_intent_uuid' => (string)($paymentEvent['payment_intent_uuid'] ?? ''),
-                    'event_type' => (string)($paymentEvent['event_type'] ?? ''),
-                    'processing_status' => (string)($paymentEvent['processing_status'] ?? ''),
-                    'processed_at' => $paymentEvent['processed_at'] ?? null,
-                ],
-                'idempotency' => [
-                    'operation' => SubscriptionWriteIdempotencyService::PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION,
-                    'request_hash' => $requestHash,
-                    'idempotent_replay' => $idempotentReplay,
-                ],
-            ],
+            'data' => $data,
             'meta' => [
                 'source' => 'subscriptions_payment_intent_activate_after_payment_service_v1',
                 'idempotent_replay' => $idempotentReplay,
             ],
+        ];
+    }
+
+    private function checkoutIntentDeclaresUpgrade(array $checkoutIntent): bool
+    {
+        $notes = $this->nullableText($checkoutIntent['notes'] ?? null);
+        if ($notes === null) {
+            return false;
+        }
+
+        $decoded = json_decode($notes, true);
+        if (!is_array($decoded)) {
+            return false;
+        }
+
+        return strtolower(trim((string)($decoded['intent_type'] ?? ''))) === self::INTENT_TYPE_UPGRADE;
+    }
+
+    private function upgradeContext(array $checkoutIntent, bool $isUpgradeCheckout): ?array
+    {
+        if (!$isUpgradeCheckout) {
+            return null;
+        }
+
+        $notes = $this->nullableText($checkoutIntent['notes'] ?? null);
+        $decoded = is_string($notes) ? json_decode($notes, true) : null;
+        if (!is_array($decoded) || !is_array($decoded['upgrade_context'] ?? null)) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_context_invalid',
+                'upgrade context is invalid'
+            );
+        }
+
+        $context = $decoded['upgrade_context'];
+        $currentPlanCode = $this->canonicalPlanCode($context['current_plan_code'] ?? null);
+        $targetPlanCode = $this->canonicalPlanCode($context['target_plan_code'] ?? null);
+        $currentBillingPeriod = strtolower($this->requiredUpgradeText($context['current_billing_period'] ?? null, 'current_billing_period'));
+        $targetBillingPeriod = strtolower($this->requiredUpgradeText($context['target_billing_period'] ?? null, 'target_billing_period'));
+        $sourceSubscriptionId = $this->nullableText($context['source_subscription_id'] ?? null);
+        $adjustmentAmountCents = $this->positiveAmount($context['adjustment_amount_cents'] ?? null);
+        $currency = strtoupper($this->requiredUpgradeText($context['currency'] ?? null, 'currency'));
+        $pricingStrategy = strtolower($this->requiredUpgradeText($decoded['pricing_strategy'] ?? ($context['pricing_strategy'] ?? null), 'pricing_strategy'));
+
+        if ($currentPlanCode === '' || $targetPlanCode === ''
+            || $adjustmentAmountCents <= 0
+            || $pricingStrategy !== self::PRICING_STRATEGY_PRORATED_DIFFERENCE
+            || $this->planRank($targetPlanCode) <= $this->planRank($currentPlanCode)
+            || $currentBillingPeriod !== $targetBillingPeriod
+        ) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_context_invalid',
+                'upgrade context is invalid'
+            );
+        }
+
+        return [
+            'source_subscription_id' => $sourceSubscriptionId,
+            'current_plan_code' => $currentPlanCode,
+            'target_plan_code' => $targetPlanCode,
+            'current_billing_period' => $currentBillingPeriod,
+            'target_billing_period' => $targetBillingPeriod,
+            'adjustment_amount_cents' => $adjustmentAmountCents,
+            'currency' => $currency,
+            'pricing_strategy' => $pricingStrategy,
         ];
     }
 
@@ -543,6 +841,55 @@ final class ActivateSubscriptionAfterPaymentService
     {
         $text = trim((string)($value ?? ''));
         return $text !== '' ? $text : null;
+    }
+
+    private function requiredUpgradeText($value, string $field): string
+    {
+        $text = $this->nullableText($value);
+        if ($text === null) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'upgrade_context_invalid',
+                'upgrade context field is required: ' . $field
+            );
+        }
+
+        return $text;
+    }
+
+    private function canonicalPlanCode($value): string
+    {
+        $planCode = strtolower($this->nullableText($value) ?? '');
+        $map = [
+            'basico' => 'basic',
+            'básico' => 'basic',
+            'basic' => 'basic',
+            'estandar' => 'standard',
+            'estándar' => 'standard',
+            'standard' => 'standard',
+            'optimo' => 'optimum',
+            'óptimo' => 'optimum',
+            'optimum' => 'optimum',
+            'profesional' => 'professional',
+            'professional' => 'professional',
+        ];
+
+        return $map[$planCode] ?? $planCode;
+    }
+
+    private function planRank(string $planCode): int
+    {
+        return self::PLAN_RANKS[$planCode] ?? 0;
+    }
+
+    private function positiveAmount($value): int
+    {
+        if (is_int($value)) {
+            return $value > 0 ? $value : 0;
+        }
+
+        $text = trim((string)($value ?? ''));
+        return ctype_digit($text) ? max(0, (int)$text) : 0;
     }
 
     private function now(): string
