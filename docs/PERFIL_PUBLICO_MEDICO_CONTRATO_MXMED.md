@@ -29461,3 +29461,61 @@ Limites:
 Siguiente microfase recomendada:
 
 `QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-StaticQA-01`
+
+## PP-Decisiones 150 - Cierre QA estatica endpoint state read-model post-pago
+
+Microfase cerrada:
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-StaticQA-01`
+
+Resultado:
+
+`PASS`
+
+HEAD validado:
+
+`3a8d023 feat(suscripciones): agrega endpoint readmodel activacion post pago`
+
+Endpoint validado:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-activation-state`
+
+### Validaciones cerradas
+
+La QA estatica confirmo:
+
+- endpoint validado como `GET` read-only;
+- usa `BuildSubscriptionPaymentActivationStateService`;
+- lee `checkout_intent_uuid` desde query string opcional;
+- lee `payment_intent_uuid` desde query string opcional;
+- lee `audience` desde query string opcional con default `support`;
+- usa `subscriptionResolvePrivateContext`;
+- responde mediante `subscriptionRespond`;
+- `php -l api/subscriptions/index.php` PASS;
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php` PASS;
+- el commit validado solo incluyo `api/subscriptions/index.php` y `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`;
+- Git quedo limpio y alineado.
+
+### Seguridad validada
+
+La QA confirmo:
+
+- no se modifico frontend;
+- no se modifico SQL/schema/seeds;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se agregaron writes;
+- no se agregaron llamadas write prohibidas;
+- el endpoint nuevo no llama `ActivateSubscriptionAfterPaymentService`;
+- el endpoint nuevo no llama `markActivatedAfterPayment`;
+- el endpoint nuevo no llama `linkSubscriptionId`;
+- el endpoint nuevo no llama `createActiveFromPaidCheckout`;
+- el endpoint nuevo no llama `markMockPaid`.
+
+### Observacion operativa
+
+La observacion terminal `RPROMPT`/`zsh` queda clasificada como no bloqueante cuando las validaciones tecnicas confirman `php -l` PASS, Git limpio, rama alineada, ausencia de writes, ausencia de SQL y ausencia de POST/curl.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-HTTPReadOnly-01`
