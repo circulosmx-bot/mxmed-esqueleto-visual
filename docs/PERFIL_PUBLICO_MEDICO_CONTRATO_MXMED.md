@@ -27590,3 +27590,248 @@ DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendActivationFlow-St
 Motivo:
 
 Cerrar documentalmente esta decision antes de revisar cobertura de repositorios o implementar endpoint.
+
+---
+
+## PP-Decisiones 140 - Cierre readiness de state read-model para activacion post-pago
+
+Fecha de cierre documental: 2026-06-28
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-FrontendActivationFlow-StateReadModel-Readiness-Closure-01`
+
+### Tipo
+
+DOCS / Cierre documental del readiness de state read-model para flujo frontend de activacion post-pago.
+
+### Objetivo
+
+Esta adenda cierra documentalmente la decision de readiness del state read-model/backend activation state requerido antes de cualquier implementacion de UI o POST desde frontend.
+
+No implementa endpoint.
+
+No modifica PHP, JS, HTML, SQL, schema, seeds, frontend ni fixtures.
+
+No conecta `activate-after-payment` al frontend.
+
+No ejecuta SQL, HTTP/POST ni curl.
+
+### Base de cierre
+
+Este cierre toma como base:
+
+- PP-Decisiones 138: readiness del flujo frontend de activacion post-pago;
+- QA current-state read-only: decision B, el frontend actual no tiene datos suficientes;
+- PP-Decisiones 139: readiness de state read-model para activacion post-pago.
+
+La decision base queda cerrada:
+
+El flujo frontend de activacion post-pago requiere primero un state read-model/backend activation state.
+
+### Hallazgos preservados
+
+El frontend actual no tiene:
+
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `payment_event_uuid`;
+- checkout status;
+- payment intent status;
+- payment event status.
+
+El frontend actual si tiene:
+
+- `entity_type` y `entity_id` via `context/current`;
+- active subscription inferible desde el read-model actual;
+- `Idempotency-Key` solo para write DEV `/subscriptions`.
+
+El frontend actual no consume:
+
+- `checkout-intents`;
+- `payment-intents`;
+- `confirm_mock`;
+- `activate-after-payment`.
+
+`payment_event_uuid` no debe inventarse en frontend.
+
+### Opcion recomendada cerrada
+
+Queda cerrada como preferente la Opcion B: endpoint especifico de activation state.
+
+Motivo:
+
+- separa estado transaccional de checkout/pago del read-model de suscripcion actual;
+- evita contaminar `current`;
+- entrega `payment_event_uuid` desde backend confiable;
+- permite calcular `activation_eligibility.can_activate` server-side;
+- permite devolver reasons seguros para UI;
+- evita habilitar POST con datos incompletos.
+
+La primera exposicion recomendada debe ser DEV/local o soporte/admin, no usuario final publico.
+
+### Rutas conceptuales cerradas
+
+Ruta conceptual por entidad:
+
+```text
+GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-activation-state
+```
+
+Ruta conceptual con checkout explicito:
+
+```text
+GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-activation-state
+```
+
+Decision de seleccion:
+
+- si existe un unico checkout candidato activo/pendiente por entidad, puede evaluarse ruta por entidad;
+- si hay mas de un checkout posible, debe preferirse ruta con `checkout_intent_uuid` explicito;
+- esta microfase no decide la ruta final de implementacion;
+- la ruta final debe validarse despues de revisar cobertura de repositorios.
+
+### Datos minimos cerrados
+
+El state read-model debe considerar estas secciones:
+
+- `entity`;
+- `checkout_intent`;
+- `payment_intent`;
+- `payment_event`;
+- `contract_acceptance`;
+- `active_subscription`;
+- `activation_eligibility`;
+- `idempotency`;
+- `ui` o metadata de mensaje.
+
+Campos minimos esperados:
+
+- `entity_type`;
+- `entity_id`;
+- `scope_valid`;
+- checkout `uuid`, `status`, `plan_code`, `billing_period`, `amount_cents`, `currency`, `expires_at`, `subscription_id`, `contract_acceptance_uuid`;
+- payment intent `uuid`, `checkout_intent_uuid`, `provider`, `normalized_status`, `provider_status`, `paid_at`;
+- payment event `uuid`, `payment_intent_uuid`, `checkout_intent_uuid`, `event_type`, `processing_status`, `processed_at`;
+- contract acceptance `uuid`, `status`, `subscription_id`;
+- active subscription `exists`, `subscription_id`, `status`, `plan_code`;
+- activation eligibility `can_activate`, `reasons`, `required_action`;
+- idempotency `suggested_key_prefix` o `key_strategy`, `replay_safe`;
+- UI `recommended_label`, `recommended_message_code`, `severity`, `retryable`.
+
+### Eligibility cerrada
+
+`can_activate` solo puede ser `true` si:
+
+- checkout intent existe;
+- checkout intent esta `pending_payment`;
+- checkout intent pertenece al scope de entidad;
+- payment intent existe;
+- payment intent pertenece al checkout;
+- payment intent esta `paid`;
+- `provider_status` es compatible con `mock_paid` o equivalente futuro;
+- payment event existe;
+- payment event pertenece al payment intent y checkout;
+- payment event esta `processed`;
+- payment event es `payment_intent_confirm`;
+- contract acceptance existe;
+- contract acceptance esta `accepted_pending_payment`;
+- contract acceptance tiene `subscription_id` compatible con la regla backend actual;
+- no existe active subscription vigente;
+- sesion/autorizacion es valida.
+
+### Reasons cerradas
+
+Reasons seguras cerradas:
+
+- `checkout_intent_missing`;
+- `payment_intent_missing`;
+- `payment_event_missing`;
+- `payment_event_not_processed`;
+- `payment_intent_not_paid`;
+- `checkout_intent_not_pending_payment`;
+- `contract_acceptance_not_pending_payment`;
+- `active_subscription_exists`;
+- `scope_mismatch`;
+- `activation_already_done`;
+- `activation_state_unavailable`.
+
+Estas reasons no deben incluir SQL, stacktrace, provider secrets, hashes, payload sensible ni informacion de otra entidad.
+
+### Seguridad cerrada
+
+El read-model no debe exponer:
+
+- SQL;
+- stacktrace;
+- detalles PDO;
+- provider secrets;
+- hashes de idempotencia;
+- raw payload provider completo;
+- IDs internos autoincrementales si no son necesarios;
+- datos clinicos o personales no necesarios;
+- informacion de otra entidad.
+
+El endpoint futuro debe validar:
+
+- autorizacion;
+- scope de entidad;
+- pertenencia checkout/payment/payment_event;
+- visibilidad del usuario actual;
+- ausencia de filtrado cross-entity.
+
+### Relacion frontend cerrada
+
+El frontend futuro solo debe:
+
+- leer este estado;
+- mostrar estado;
+- habilitar o deshabilitar accion;
+- generar `Idempotency-Key` si `can_activate=true`;
+- ejecutar POST solo en microfase futura explicita.
+
+El frontend no debe:
+
+- inferir `payment_event_uuid`;
+- buscarlo en DOM oculto no confiable;
+- inventarlo;
+- activar si `can_activate=false`;
+- mezclar `confirm_mock` y `activate-after-payment` sin decision explicita.
+
+### Alcance fuera de esta decision
+
+Este cierre no crea endpoint.
+
+No modifica:
+
+- `api/subscriptions/index.php`;
+- `modules/subscriptions/**`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- `assets/js/messages.js`;
+- `index.html`;
+- SQL/schema/seeds;
+- fixtures.
+
+No conecta `activate-after-payment`.
+
+No agrega `payment_event_uuid` al frontend.
+
+### Siguiente microfase recomendada
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryCoverage-ReadOnly-01
+```
+
+Motivo:
+
+Antes de implementar endpoint real, se debe validar read-only si los repositorios actuales ya permiten leer:
+
+- checkout intent;
+- payment intent;
+- payment event;
+- contract acceptance;
+- active subscription;
+- eligibility preliminar;
+
+sin agregar SQL/schema.
