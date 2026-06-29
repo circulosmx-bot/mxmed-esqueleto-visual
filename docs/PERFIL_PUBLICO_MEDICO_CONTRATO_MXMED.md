@@ -29966,3 +29966,80 @@ La implementacion:
 ### Siguiente microfase recomendada
 
 `QA/Suscripciones-PanelUX-PlanCards-CommercialPolish-PostImplementation-StaticQA-01`
+
+## PP-Decisiones 157 - Politica visual upgrade/downgrade de planes en panel suscripciones
+
+Microfase:
+
+`FE/Suscripciones-PanelUX-UpgradeDowngradePolicy-Implementation-01`
+
+Objetivo:
+
+Ajustar la logica visual de cards de planes para reflejar la politica comercial correcta antes de conectar checkout real.
+
+### Regla comercial aplicada en UI
+
+La jerarquia visual de planes queda:
+
+1. `basic` / Basico;
+2. `standard` / Estandar;
+3. `optimum` / Optimo;
+4. `professional` / Profesional.
+
+Con suscripcion activa:
+
+- un plan inferior queda como `Disponible al renovar`;
+- el plan vigente queda como `Plan actual`;
+- un plan superior queda como `Mejorar ahora`.
+
+Sin suscripcion activa:
+
+- los planes contratables quedan como `Disponible`;
+- el CTA visual es `Continuar con este plan`.
+
+### Upgrade/downgrade
+
+El upgrade queda permitido visualmente durante la vigencia. La UI muestra:
+
+- `Mejorar ahora`;
+- `Mejorar a [Nombre del plan]`;
+- nota de ajuste: `Se calculara el ajuste correspondiente al periodo restante.`
+
+El downgrade queda bloqueado para contratacion inmediata. La UI muestra:
+
+- `Disponible al renovar`;
+- nota: `Puedes cambiar a este plan al finalizar tu periodo actual.`
+
+### Matriz y mapeo
+
+Se conserva un mapper visual/backend:
+
+- `basico`, `básico`, `basic` -> `basic`;
+- `estandar`, `estándar`, `standard` -> `standard`;
+- `optimo`, `óptimo`, `optimum` -> `optimum`;
+- `profesional`, `professional` -> `professional`.
+
+La matriz de precios queda centralizada en frontend como referencia visual temporal y queda marcada para reemplazo posterior por una matriz editable por operador principal/backend/admin. No es regla permanente ni fuente de verdad para writes.
+
+### Limites preservados
+
+La implementacion:
+
+- no modifica `api/subscriptions/index.php`;
+- no modifica PHP/backend;
+- no modifica SQL/schema/seeds;
+- no ejecuta SQL;
+- no ejecuta POST/curl;
+- no conecta checkout;
+- no llama `checkout-intents`;
+- no llama `payment-intents`;
+- no ejecuta `confirm_mock`;
+- no llama `activate-after-payment`;
+- no crea `Idempotency-Key`;
+- no hardcodea UUIDs fixture;
+- no crea usuarios;
+- no modifica BD.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PanelUX-UpgradeDowngradePolicy-StaticQA-01`

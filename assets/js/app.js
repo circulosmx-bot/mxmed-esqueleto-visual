@@ -58910,10 +58910,33 @@ function mxResetLogoPreview(){
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
   const UI_PLAN_TO_BACKEND_PLAN = Object.freeze({
     basico: 'basic',
+    'básico': 'basic',
+    basic: 'basic',
     estandar: 'standard',
+    'estándar': 'standard',
+    standard: 'standard',
     optimo: 'optimum',
+    'óptimo': 'optimum',
+    optimum: 'optimum',
     pro: 'professional',
-    profesional: 'professional'
+    profesional: 'professional',
+    professional: 'professional'
+  });
+  const SUBSCRIPTION_PLAN_RANK = Object.freeze({
+    basic: 1,
+    standard: 2,
+    optimum: 3,
+    professional: 4
+  });
+  const SUBSCRIPTION_PLAN_PRICE_MATRIX = Object.freeze({
+    source: 'ui_reference_pending_operator_matrix',
+    billingPeriod: 'annual',
+    plans: Object.freeze({
+      basic: Object.freeze({ yearly: 6990 }),
+      standard: Object.freeze({ yearly: 9990 }),
+      optimum: Object.freeze({ yearly: 12990 }),
+      professional: Object.freeze({ yearly: 21990 })
+    })
   });
   const STATUS_LABELS = {
     free_default: 'Plan base permanente',
@@ -58948,10 +58971,10 @@ function mxResetLogoPreview(){
       features: ['Consulta tu plan actual, vigencia y beneficios disponibles']
     },
     plans: [
-      { id:'basico', name:'Básico', yearly:6990, tagline:'Perfil público esencial', features:['Perfil en línea','Presencia profesional básica'] },
-      { id:'estandar', name:'Estándar', yearly:9990, tagline:'Agenda y presencia profesional', features:['Perfil en línea','Agenda'] },
-      { id:'optimo', name:'Óptimo', yearly:12990, tagline:'Gestión clínica ampliada', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
-      { id:'pro', name:'Profesional', yearly:21990, tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
+      { id:'basico', name:'Básico', tagline:'Perfil público esencial', features:['Perfil en línea','Presencia profesional básica'] },
+      { id:'estandar', name:'Estándar', tagline:'Agenda y presencia profesional', features:['Perfil en línea','Agenda'] },
+      { id:'optimo', name:'Óptimo', tagline:'Gestión clínica ampliada', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
+      { id:'pro', name:'Profesional', tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
     ],
     selectedPlanId: '',
     history: [],
@@ -59698,25 +59721,30 @@ function mxResetLogoPreview(){
     return `$${n.toLocaleString('es-MX')} MXN`;
   }
 
-  function normalizePlanId(value){
+  function canonicalBackendPlanCode(value){
     const id = clean(value).toLowerCase();
-    const aliases = {
-      standard: 'estandar',
-      estándar: 'estandar',
+    if(id === 'free' || id === 'free_default') return 'basic';
+    return UI_PLAN_TO_BACKEND_PLAN[id] || id;
+  }
+
+  function normalizePlanId(value){
+    const canonical = canonicalBackendPlanCode(value);
+    const uiByBackend = {
       basic: 'basico',
-      básico: 'basico',
-      optimal: 'optimo',
-      óptimo: 'optimo',
-      professional: 'pro',
-      profesional: 'pro',
-      free: 'basico',
-      free_default: 'basico'
+      standard: 'estandar',
+      optimum: 'optimo',
+      professional: 'pro'
     };
-    return aliases[id] || id;
+    return uiByBackend[canonical] || clean(value).toLowerCase();
   }
 
   function backendPlanCodeFromUiPlan(planId){
-    return UI_PLAN_TO_BACKEND_PLAN[normalizePlanId(planId)] || '';
+    return canonicalBackendPlanCode(planId);
+  }
+
+  function planRank(planId){
+    const canonical = canonicalBackendPlanCode(planId);
+    return SUBSCRIPTION_PLAN_RANK[canonical] || 0;
   }
 
   function findPlanById(planId){
@@ -59731,7 +59759,8 @@ function mxResetLogoPreview(){
   function ensureSelectedPlan(activePaid){
     const selected = findPlanById(data.selectedPlanId);
     if(activePaid){
-      if(selected && normalizePlanId(selected.id) !== normalizePlanId(data.current.id)){
+      const currentRank = planRank(data.current.id);
+      if(selected && planRank(selected.id) > currentRank){
         return selected;
       }
       data.selectedPlanId = '';
@@ -59744,13 +59773,19 @@ function mxResetLogoPreview(){
   }
 
   function monthlyEquivalent(plan){
-    const yearly = Number(plan?.yearly || 0);
+    const yearly = Number(planCommercialPrice(plan).yearly || 0);
     return yearly > 0 ? Math.round(yearly / 12) : 0;
+  }
+
+  function planCommercialPrice(plan){
+    const canonical = canonicalBackendPlanCode(plan?.id);
+    return SUBSCRIPTION_PLAN_PRICE_MATRIX.plans[canonical] || { yearly: 0 };
   }
 
   function planPriceLabel(plan){
     if(!plan) return 'Sin plan seleccionado';
-    return `${fmtMoney(Number(plan.yearly || 0))} al año`;
+    const yearly = Number(planCommercialPrice(plan).yearly || 0);
+    return yearly > 0 ? `${fmtMoney(yearly)} al año` : 'Precio anual configurable';
   }
 
   function planMonthlyEquivalentLabel(plan){
@@ -59763,28 +59798,39 @@ function mxResetLogoPreview(){
     return raw.replace(/^Plan\s+/i, '').trim();
   }
 
+  function planFlowType(plan, activePaid){
+    const currentRank = planRank(data.current.id);
+    const cardRank = planRank(plan?.id);
+    if(!activePaid) return 'new_subscription';
+    if(!currentRank || !cardRank) return 'unknown_active';
+    if(cardRank < currentRank) return 'downgrade_at_renewal';
+    if(cardRank === currentRank) return 'current';
+    return 'upgrade_now';
+  }
+
   function renderPlanSelection(activePaid){
     if(!els.planSelection) return;
     const selected = ensureSelectedPlan(activePaid);
     if(activePaid){
+      const currentPlan = findPlanById(data.current.id);
       if(els.selectedPlanTitle){
         els.selectedPlanTitle.textContent = selected
-          ? `${selected.name} para cambio de plan`
+          ? 'Mejora de plan seleccionada'
           : 'Cambio de plan disponible al renovar';
       }
       if(els.selectedPlanSummary){
         els.selectedPlanSummary.textContent = selected
-          ? `${planPriceLabel(selected)}. ${planMonthlyEquivalentLabel(selected)}. ${SUBSCRIPTION_ACTIVE_BLOCK_NOTICE}`
-          : SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
+          ? `${currentPlan?.name || data.current.name || 'Plan actual'} → ${selected.name}. ${planPriceLabel(selected)}. El ajuste de precio se calculará antes de confirmar.`
+          : 'Selecciona un plan superior para preparar una mejora durante tu vigencia. Los cambios a un plan inferior aplican al finalizar la vigencia actual.';
       }
       if(els.planContinue){
-        els.planContinue.textContent = 'Solicitar cambio de plan';
+        els.planContinue.textContent = selected ? `Mejorar a ${selected.name}` : 'Solicitar cambio de plan';
         els.planContinue.disabled = !selected;
         els.planContinue.classList.toggle('disabled', !selected);
       }
       if(els.selectedPlanMessage){
         els.selectedPlanMessage.textContent = selected
-          ? SUBSCRIPTION_CHECKOUT_PENDING_NOTICE
+          ? 'Se calculará el ajuste correspondiente al periodo restante antes de confirmar.'
           : SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
         els.selectedPlanMessage.classList.remove('d-none');
       }
@@ -59792,7 +59838,7 @@ function mxResetLogoPreview(){
     }
     if(els.selectedPlanTitle){
       els.selectedPlanTitle.textContent = selected
-        ? `${selected.name} seleccionado`
+        ? 'Plan seleccionado'
         : 'Selecciona una opción para continuar';
     }
     if(els.selectedPlanSummary){
@@ -59861,45 +59907,43 @@ function mxResetLogoPreview(){
     if(!els.catalog) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const selected = ensureSelectedPlan(activePaid);
-    const currentPlanId = normalizePlanId(data.current.id);
-    const recommendedId = recommendedPlanId();
     els.catalog.innerHTML = data.plans.map(p=>{
-      const isCurrent = normalizePlanId(p.id) === currentPlanId;
+      const flowType = planFlowType(p, activePaid);
+      const isCurrent = flowType === 'current';
       const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
-      const isRecommended = p.id === recommendedId;
-      const cardSelectable = !isCurrent;
-      const badge = isCurrent
-        ? 'Plan actual'
-        : isSelected
-          ? 'Seleccionado'
-          : activePaid
-            ? 'Disponible al renovar'
-            : isRecommended
-              ? 'Recomendado'
+      const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
+      const badge = isSelected
+        ? 'Seleccionado'
+        : flowType === 'current'
+          ? 'Plan actual'
+          : flowType === 'upgrade_now'
+            ? 'Mejorar ahora'
+            : flowType === 'downgrade_at_renewal'
+              ? 'Disponible al renovar'
               : 'Disponible';
-      const buttonLabel = isCurrent
+      const buttonLabel = flowType === 'current'
         ? 'Plan actual'
-        : activePaid
-          ? 'Solicitar cambio'
-          : isSelected
-            ? 'Seleccionado'
-            : 'Seleccionar plan';
+        : flowType === 'downgrade_at_renewal'
+          ? 'Disponible al renovar'
+          : flowType === 'upgrade_now'
+            ? `Mejorar a ${p.name}`
+            : isSelected
+              ? 'Seleccionado'
+              : 'Continuar con este plan';
       const buttonClass = isSelected || isCurrent ? 'btn-outline-primary' : 'btn-primary';
-      const cardNote = isCurrent
-        ? 'Este es tu plan vigente según el estado actual de suscripción.'
-        : activePaid
-          ? 'No disponible por suscripción activa. Podrás solicitar cambio o mejora al renovar.'
-          : isSelected
-            ? SUBSCRIPTION_CHECKOUT_PENDING_NOTICE
-            : isRecommended
-              ? 'Recomendado para comenzar contratación anual.'
-              : 'Disponible para selección visual.';
+      const cardNote = flowType === 'current'
+        ? 'Este es tu plan vigente. Tu suscripción está activa.'
+        : flowType === 'downgrade_at_renewal'
+          ? 'Puedes cambiar a este plan al finalizar tu periodo actual.'
+          : flowType === 'upgrade_now'
+            ? 'Puedes mejorar tu plan durante tu vigencia. El sistema calculará el ajuste correspondiente.'
+            : SUBSCRIPTION_CHECKOUT_PENDING_NOTICE;
       const backendPlanCode = backendPlanCodeFromUiPlan(p.id);
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
         <div class="subp-plan-badge">${escapeHtml(badge)}</div>
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
-        <div class="subp-price">${fmtMoney(Number(p.yearly || 0))} <small>/ año</small></div>
+        <div class="subp-price">${escapeHtml(planPriceLabel(p))}</div>
         <div class="text-muted small mb-2">${escapeHtml(planMonthlyEquivalentLabel(p))}</div>
         <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         <div class="subp-save">${escapeHtml(cardNote)}</div>
@@ -59909,7 +59953,7 @@ function mxResetLogoPreview(){
     const selectPlan = (planId)=>{
       const plan = findPlanById(planId);
       if(!plan) return;
-      if(normalizePlanId(plan.id) === currentPlanId) return;
+      if(planFlowType(plan, activePaid) !== 'new_subscription' && planFlowType(plan, activePaid) !== 'upgrade_now') return;
       data.selectedPlanId = plan.id;
       renderCatalog();
     };
@@ -59954,13 +59998,13 @@ function mxResetLogoPreview(){
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     if(els.selectedPlanMessage){
       els.selectedPlanMessage.textContent = activePaid
-        ? `${selected.name} quedó preparado como cambio de plan futuro. ${SUBSCRIPTION_CHECKOUT_PENDING_NOTICE}`
+        ? `${selected.name} quedó preparado como mejora de plan. Se calculará el ajuste correspondiente al periodo restante.`
         : `${selected.name} quedó seleccionado visualmente. ${SUBSCRIPTION_CHECKOUT_PENDING_NOTICE}`;
       els.selectedPlanMessage.classList.remove('d-none');
     }
     if(els.currentAlert){
       els.currentAlert.textContent = activePaid
-        ? SUBSCRIPTION_ACTIVE_BLOCK_NOTICE
+        ? 'La mejora de plan se confirmará en una fase posterior; no se ejecutó ningún cobro ni checkout.'
         : SUBSCRIPTION_SELECTION_READY_NOTICE;
       els.currentAlert.classList.remove('d-none');
     }
