@@ -29154,3 +29154,184 @@ BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Impl
 Motivo:
 
 Implementar el servicio PHP read-only `BuildSubscriptionPaymentActivationStateService`, sin endpoint, sin frontend, sin SQL/schema y sin writes.
+
+---
+
+## PP-Decisiones 147 - Implementacion servicio read-only state read-model post-pago
+
+Fecha de implementacion controlada: 2026-06-29
+
+### Microfase
+
+`BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Implementation-01`
+
+### Tipo
+
+BE / Implementacion read-only del servicio state read-model para activacion post-pago.
+
+### Objetivo
+
+Se implementa el servicio PHP read-only:
+
+```text
+modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php
+```
+
+El servicio construye un estado backend seguro para una futura activacion post-pago, sin activar nada todavia.
+
+No crea endpoint.
+
+No modifica `api/subscriptions/index.php`.
+
+No modifica frontend.
+
+No modifica SQL/schema/seeds.
+
+No ejecuta SQL, HTTP, POST ni curl.
+
+### Servicio implementado
+
+Clase final:
+
+```php
+BuildSubscriptionPaymentActivationStateService
+```
+
+Metodo publico:
+
+```php
+public function build(array $input): array
+```
+
+### Dependencias read-only usadas
+
+El servicio usa repositorios existentes:
+
+- `SubscriptionCheckoutIntentRepository`;
+- `SubscriptionPaymentIntentRepository`;
+- `SubscriptionPaymentEventRepository`;
+- `SubscriptionContractAcceptanceRepository`;
+- `CurrentSubscriptionRepository`.
+
+No usa `ProfileSubscriptionRepository` porque el estado activo puede resolverse con `CurrentSubscriptionRepository` sin crear ni modificar suscripciones.
+
+### Input soportado
+
+El metodo `build` recibe:
+
+- `entity_type`;
+- `entity_id`;
+- `checkout_intent_uuid` opcional;
+- `payment_intent_uuid` opcional;
+- `audience` opcional.
+
+`entity_type` se normaliza a lowercase.
+
+El checkout puede resolverse por UUID explicito, por entidad pendiente o desde el `checkout_intent_uuid` asociado al payment intent.
+
+### Output implementado
+
+El output mantiene las llaves base:
+
+- `ok`;
+- `entity`;
+- `checkout_intent`;
+- `payment_intent`;
+- `payment_event`;
+- `contract_acceptance`;
+- `active_subscription`;
+- `activation_eligibility`;
+- `idempotency`;
+- `ui`.
+
+Las secciones devuelven solo campos whitelisted necesarios para UI/soporte.
+
+No se devuelven filas completas.
+
+No se devuelven hashes, provider payloads crudos, provider ids sensibles ni detalles internos innecesarios.
+
+### Eligibility implementada
+
+`can_activate` solo queda `true` si no existen reasons y se cumple:
+
+- entity scope valido;
+- checkout intent encontrado;
+- checkout status `pending_payment`;
+- payment intent encontrado;
+- payment intent `normalized_status = paid`;
+- payment intent `provider_status = mock_paid`;
+- payment event encontrado;
+- payment event `event_type = payment_intent_confirm`;
+- payment event `processing_status = processed`;
+- contract acceptance encontrada;
+- contract acceptance `status = accepted_pending_payment`;
+- no existe active subscription vigente;
+- no hay mismatch entre entity, checkout, payment intent y payment event;
+- no hay activacion previa;
+- existe `payment_event.uuid`.
+
+### Reasons implementadas
+
+El servicio puede devolver:
+
+- `entity_scope_invalid`;
+- `checkout_intent_missing`;
+- `checkout_intent_not_pending_payment`;
+- `payment_intent_missing`;
+- `payment_intent_not_paid`;
+- `payment_event_missing`;
+- `payment_event_not_processed`;
+- `contract_acceptance_missing`;
+- `contract_acceptance_not_pending_payment`;
+- `active_subscription_exists`;
+- `checkout_payment_mismatch`;
+- `payment_event_payment_intent_mismatch`;
+- `activation_already_done`;
+- `activation_state_unavailable`.
+
+### Seguridad read-only
+
+El servicio no llama:
+
+- `ActivateSubscriptionAfterPaymentService`;
+- `markActivatedAfterPayment`;
+- `linkSubscriptionId`;
+- `createActiveFromPaidCheckout`;
+- `markMockPaid`.
+
+El servicio no ejecuta:
+
+- `INSERT`;
+- `UPDATE`;
+- `DELETE`;
+- `REPLACE`;
+- `ALTER`;
+- `DROP`;
+- `TRUNCATE`;
+- transacciones.
+
+El servicio solo invoca metodos read-only de repositorios.
+
+### Limites preservados
+
+Esta microfase no crea endpoint `payment-activation-state`.
+
+No conecta `activate-after-payment` al frontend.
+
+No agrega `payment_event_uuid` al frontend.
+
+No modifica HTML, JS, assets ni API.
+
+No activa suscripcion.
+
+`ActivateSubscriptionAfterPaymentService` sigue siendo el unico responsable del write real de activacion.
+
+### Siguiente microfase recomendada
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-PostImplementation-StaticQA-01
+```
+
+Motivo:
+
+Validar estaticamente el servicio nuevo, ejecutar `php -l`, confirmar ausencia de writes, confirmar que no hay endpoint/frontend/SQL/schema y verificar que la salida es whitelisted.
