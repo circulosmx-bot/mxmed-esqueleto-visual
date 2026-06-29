@@ -58875,6 +58875,12 @@ function mxResetLogoPreview(){
     couponMsg: pane.querySelector('[data-subp-coupon-msg]'),
     invoiceBtn: pane.querySelector('[data-subp-invoice]'),
     invoiceHint: pane.querySelector('[data-subp-invoice-hint]'),
+    activationState: pane.querySelector('[data-subp-activation-state]'),
+    activationMessage: pane.querySelector('[data-subp-activation-message]'),
+    activationCanActivate: pane.querySelector('[data-subp-activation-can-activate]'),
+    activationReasons: pane.querySelector('[data-subp-activation-reasons]'),
+    activationDebug: pane.querySelector('[data-subp-activation-debug]'),
+    activationRefresh: pane.querySelector('[data-subp-activation-refresh]'),
     historyBody: pane.querySelector('[data-subp-history]'),
     historyRefresh: pane.querySelector('[data-subp-history-refresh]'),
     devWrite: pane.querySelector('[data-subp-dev-write]'),
@@ -58933,6 +58939,13 @@ function mxResetLogoPreview(){
     currentModel: null,
     currentMeta: null,
     contextInfo: null,
+    activationState: {
+      state: 'idle',
+      httpStatus: 0,
+      payload: null,
+      error: '',
+      message: ''
+    },
     devWrite: {
       state: 'idle',
       lastKey: '',
@@ -58997,6 +59010,21 @@ function mxResetLogoPreview(){
     const id = safeDoctorId(entityId);
     if(type !== 'doctor' || !id) return '';
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/subscriptions`;
+  }
+
+  function buildPaymentActivationStateEndpoint(entityType, entityId, options = {}){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    if(type !== 'doctor' || !id) return '';
+    const params = new URLSearchParams();
+    const checkoutIntentUuid = clean(options.checkout_intent_uuid);
+    const paymentIntentUuid = clean(options.payment_intent_uuid);
+    const audience = clean(options.audience) || 'support';
+    if(checkoutIntentUuid) params.set('checkout_intent_uuid', checkoutIntentUuid);
+    if(paymentIntentUuid) params.set('payment_intent_uuid', paymentIntentUuid);
+    if(audience) params.set('audience', audience);
+    const query = params.toString();
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/payment-activation-state${query ? `?${query}` : ''}`;
   }
 
   function buildSubscriptionContextEndpoint(){
@@ -59109,6 +59137,174 @@ function mxResetLogoPreview(){
       return message ? mapped : null;
     }catch(_){
       return null;
+    }
+  }
+
+  function readActivationStateOptions(){
+    const external = window.mxmedStore?.subscriptionPaymentActivationState || {};
+    const model = data.currentModel || {};
+    return {
+      checkout_intent_uuid:
+        clean(data.activationState?.checkout_intent_uuid)
+        || clean(external.checkout_intent_uuid)
+        || clean(model.checkout_intent_uuid)
+        || clean(pane.dataset.subpActivationCheckoutIntentUuid),
+      payment_intent_uuid:
+        clean(data.activationState?.payment_intent_uuid)
+        || clean(external.payment_intent_uuid)
+        || clean(model.payment_intent_uuid)
+        || clean(pane.dataset.subpActivationPaymentIntentUuid),
+      audience:
+        clean(external.audience)
+        || clean(pane.dataset.subpActivationAudience)
+        || 'support'
+    };
+  }
+
+  function activationStateEndpointFromContext(){
+    const context = data.contextInfo || {};
+    const entityType = clean(context.entity_type);
+    const entityId = clean(context.entity_id || context.doctor_id);
+    return buildPaymentActivationStateEndpoint(entityType, entityId, readActivationStateOptions());
+  }
+
+  function activationMessageFromState(state, httpStatus){
+    const ui = state?.ui || {};
+    const code = clean(ui.recommended_message_code);
+    const mapped = code ? mapSubscriptionMessage(code, {
+      httpStatus,
+      audience: 'support',
+      context: 'activation',
+      fallback: clean(ui.recommended_label)
+    }) : null;
+    if(mapped?.message) return mapped.message;
+    if(clean(ui.recommended_label)) return clean(ui.recommended_label);
+    if(state?.activation_eligibility?.can_activate === true) return 'La activación post-pago está lista para revisión.';
+    return 'La activación post-pago no está disponible para este contexto.';
+  }
+
+  function renderActivationState(){
+    if(!els.activationState) return;
+    const current = data.activationState || {};
+    const payload = current.payload || null;
+    const state = payload?.data && typeof payload.data === 'object' ? payload.data : null;
+    const eligibility = state?.activation_eligibility || {};
+    const ui = state?.ui || {};
+    const reasons = Array.isArray(eligibility.reasons) ? eligibility.reasons.map(clean).filter(Boolean) : [];
+    const canActivate = eligibility.can_activate === true;
+    const severity = clean(ui.severity || (canActivate ? 'info' : 'warning')).toLowerCase();
+
+    els.activationState.dataset.state = current.state || 'idle';
+    els.activationState.dataset.severity = severity || 'warning';
+
+    if(els.activationMessage){
+      if(current.state === 'loading'){
+        els.activationMessage.textContent = 'Consultando estado de activación post-pago...';
+      }else if(current.state === 'error'){
+        els.activationMessage.textContent = current.message || 'No pudimos consultar el estado de activación post-pago.';
+      }else if(state){
+        els.activationMessage.textContent = activationMessageFromState(state, current.httpStatus);
+      }else{
+        els.activationMessage.textContent = 'Estado de activación pendiente de lectura.';
+      }
+    }
+
+    if(els.activationCanActivate){
+      if(current.state === 'loading'){
+        els.activationCanActivate.textContent = 'Consultando';
+      }else if(state){
+        els.activationCanActivate.textContent = canActivate ? 'Sí' : 'No';
+      }else{
+        els.activationCanActivate.textContent = 'No disponible';
+      }
+    }
+
+    if(els.activationReasons){
+      if(reasons.length){
+        els.activationReasons.textContent = reasons.join(', ');
+      }else if(state && canActivate){
+        els.activationReasons.textContent = 'Sin bloqueos';
+      }else if(current.error){
+        els.activationReasons.textContent = current.error;
+      }else{
+        els.activationReasons.textContent = 'Sin lectura';
+      }
+    }
+
+    if(els.activationDebug){
+      const code = clean(ui.recommended_message_code) || clean(current.error);
+      const status = current.httpStatus ? `HTTP ${current.httpStatus}` : 'HTTP pendiente';
+      els.activationDebug.textContent = code ? `${status} · ${code}` : status;
+    }
+
+    if(els.activationRefresh){
+      els.activationRefresh.disabled = current.state === 'loading';
+      els.activationRefresh.classList.toggle('disabled', current.state === 'loading');
+    }
+  }
+
+  function applyActivationStateError(httpStatus, code, message){
+    const safeCode = clean(code) || (httpStatus === 403 ? 'forbidden' : 'payment_activation_unavailable');
+    const mapped = mapSubscriptionMessage(safeCode, {
+      httpStatus,
+      audience: 'support',
+      context: 'activation',
+      fallback: message || ''
+    });
+    data.activationState = {
+      state: 'error',
+      httpStatus: Number(httpStatus || 0),
+      payload: null,
+      error: safeCode,
+      message: mapped?.message || clean(message) || 'No pudimos consultar el estado de activación post-pago.'
+    };
+    renderActivationState();
+  }
+
+  async function loadPaymentActivationState(){
+    const endpoint = activationStateEndpointFromContext();
+    if(!endpoint){
+      applyActivationStateError(422, 'invalid_request', 'No se pudo resolver el contexto para consultar activación post-pago.');
+      return false;
+    }
+
+    data.activationState = {
+      state: 'loading',
+      httpStatus: 0,
+      payload: null,
+      error: '',
+      message: ''
+    };
+    renderActivationState();
+
+    try{
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const payload = await response.json().catch(()=> null);
+      if(!payload || typeof payload !== 'object'){
+        applyActivationStateError(Number(response.status || 0), 'invalid_json', 'Respuesta inválida del estado de activación.');
+        return false;
+      }
+      if(!response.ok || payload.ok !== true || !payload.data){
+        const code = clean(payload?.error?.code) || `http_${response.status}`;
+        applyActivationStateError(Number(response.status || 0), code, clean(payload?.error?.message));
+        return false;
+      }
+      data.activationState = {
+        state: 'ready',
+        httpStatus: Number(response.status || 0),
+        payload,
+        error: '',
+        message: ''
+      };
+      renderActivationState();
+      return true;
+    }catch(_){
+      applyActivationStateError(0, 'payment_activation_unavailable', 'No pudimos consultar el estado de activación post-pago.');
+      return false;
     }
   }
 
@@ -59283,6 +59479,7 @@ function mxResetLogoPreview(){
     renderCatalog();
     renderHistory(model);
     renderDevWrite();
+    renderActivationState();
   }
 
   function applyReadOnlyError(httpStatus, customMessage){
@@ -59314,6 +59511,7 @@ function mxResetLogoPreview(){
     renderCatalog();
     renderHistory();
     renderDevWrite();
+    applyActivationStateError(httpStatus, 'payment_activation_unavailable', message);
   }
 
   async function submitDevContract(){
@@ -59386,11 +59584,14 @@ function mxResetLogoPreview(){
       const payload = await response.json().catch(()=> null);
       if(!response.ok || !payload || payload.ok !== true || !payload.data){
         applyReadOnlyError(Number(response.status || 0));
-        return;
+        return false;
       }
       applyReadModel(payload.data, payload.meta || {}, contextInfo || {});
+      await loadPaymentActivationState();
+      return true;
     }catch(_){
       applyReadOnlyError(0);
+      return false;
     }
   }
 
@@ -59400,7 +59601,7 @@ function mxResetLogoPreview(){
       applyReadOnlyError(422);
       return;
     }
-    await fetchSubscriptionReadModel(buildSubscriptionEndpoint(doctorId), {
+    return fetchSubscriptionReadModel(buildSubscriptionEndpoint(doctorId), {
       entity_type: 'doctor',
       entity_id: doctorId,
       doctor_id: doctorId,
@@ -59543,7 +59744,7 @@ function mxResetLogoPreview(){
     els.invoiceBtn,
     els.historyRefresh,
     ...pane.querySelectorAll('.subp-card button')
-  ].filter((button)=> button && !button.matches('[data-subp-dev-contract]'));
+  ].filter((button)=> button && !button.matches('[data-subp-dev-contract]') && !button.matches('[data-subp-activation-refresh]'));
   staticReadOnlyButtons.forEach((button)=>{
     if(button){
       button.setAttribute('aria-disabled', 'true');
@@ -59564,6 +59765,10 @@ function mxResetLogoPreview(){
   els.historyRefresh?.addEventListener('click', ()=>{
     markReadOnlyAction();
   });
+  els.activationRefresh?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    loadPaymentActivationState();
+  });
   els.devContractBtn?.addEventListener('click', (ev)=>{
     ev.preventDefault();
     submitDevContract();
@@ -59577,6 +59782,7 @@ function mxResetLogoPreview(){
   renderCatalog();
   renderHistory();
   renderDevWrite();
+  renderActivationState();
   loadCurrentSubscription();
 })();
 

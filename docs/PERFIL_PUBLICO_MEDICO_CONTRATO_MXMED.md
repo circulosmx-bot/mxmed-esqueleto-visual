@@ -29596,3 +29596,79 @@ La observacion terminal `exit code 127` queda clasificada como no bloqueante cua
 ### Siguiente microfase recomendada
 
 `FE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-Implementation-01`
+
+## PP-Decisiones 152 - Implementacion integracion panel state read-model post-pago
+
+Microfase:
+
+`FE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-Implementation-01`
+
+Objetivo:
+
+Integrar en el panel privado de suscripciones una lectura visual read-only del endpoint:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-activation-state`
+
+### Archivos modificados
+
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`.
+
+### Integracion visual
+
+Se agrega dentro de `#p-suscripcion` una seccion read-only:
+
+`Estado de activacion post-pago`
+
+La seccion usa atributos dedicados:
+
+- `data-subp-activation-state`;
+- `data-subp-activation-message`;
+- `data-subp-activation-can-activate`;
+- `data-subp-activation-reasons`;
+- `data-subp-activation-debug`;
+- `data-subp-activation-refresh`.
+
+### Integracion JavaScript
+
+La integracion en `assets/js/app.js` agrega:
+
+- helper `buildPaymentActivationStateEndpoint(...)`;
+- funcion `loadPaymentActivationState()`;
+- funcion `renderActivationState()`;
+- manejo de errores controlados para `403`, errores de ruta, JSON invalido y red;
+- lectura de `entity_type` y `entity_id` desde el contexto ya resuelto del panel;
+- soporte futuro para `checkout_intent_uuid` y `payment_intent_uuid` si llegan en estado local o dataset;
+- default `audience=support`;
+- boton `Actualizar` que ejecuta solo `GET`.
+
+La integracion no hardcodea fixtures ni UUIDs.
+
+### Mensajes UI
+
+Se agregan mensajes seguros en `assets/js/subscription-messages.js` para:
+
+- `payment_activation_ready`;
+- `payment_activation_blocked`;
+- `payment_activation_unavailable`;
+- `payment_activation_already_done`.
+
+### Limites preservados
+
+La implementacion:
+
+- no modifica `api/subscriptions/index.php`;
+- no modifica PHP;
+- no modifica SQL/schema/seeds;
+- no ejecuta SQL;
+- no ejecuta POST/curl;
+- no llama `activate-after-payment`;
+- no crea activacion real;
+- no crea `Idempotency-Key` de activacion;
+- no inventa `payment_event_uuid`;
+- no conecta boton funcional de activacion.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-PostImplementation-StaticQA-01`

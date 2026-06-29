@@ -181,6 +181,34 @@
       retryable: true,
       supportHint: 'La activación post-pago no está disponible.'
     },
+    payment_activation_ready: {
+      group: 'state read-model',
+      message: 'La activación post-pago está lista para revisión.',
+      severity: 'info',
+      retryable: false,
+      supportHint: 'El state read-model indica can_activate=true.'
+    },
+    payment_activation_blocked: {
+      group: 'state read-model',
+      message: 'La activación post-pago aún no está disponible.',
+      severity: 'warning',
+      retryable: true,
+      supportHint: 'Revisar reasons del state read-model antes de habilitar acciones.'
+    },
+    payment_activation_unavailable: {
+      group: 'state read-model',
+      message: 'No pudimos consultar el estado de activación post-pago.',
+      severity: 'error',
+      retryable: true,
+      supportHint: 'Validar disponibilidad del endpoint payment-activation-state.'
+    },
+    payment_activation_already_done: {
+      group: 'state read-model',
+      message: 'La suscripción ya fue activada.',
+      severity: 'info',
+      retryable: false,
+      supportHint: 'El state read-model indica activación previa o suscripción activa.'
+    },
     unknown: {
       group: 'fallback interno',
       message: FALLBACK_MESSAGE,
