@@ -29672,3 +29672,67 @@ La implementacion:
 ### Siguiente microfase recomendada
 
 `QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-PostImplementation-StaticQA-01`
+
+## PP-Decisiones 153 - Cierre QA estatica integracion panel state read-model post-pago
+
+Microfase cerrada:
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-PostImplementation-StaticQA-01`
+
+Resultado:
+
+`PASS`
+
+HEAD validado:
+
+`9026e25 feat(suscripciones): integra panel readmodel post pago`
+
+Commit validado:
+
+`feat(suscripciones): integra panel readmodel post pago`
+
+### Archivos validados
+
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Validaciones frontend cerradas
+
+La QA estatica confirmo:
+
+- seccion `data-subp-activation-*` presente;
+- endpoint `payment-activation-state` integrado;
+- HTTP nuevo solo `GET`;
+- render de `activation_eligibility` presente;
+- render de `can_activate` presente;
+- render de `reasons` presente;
+- render de `ui.recommended_message_code` presente;
+- mensajes `payment_activation_*` presentes;
+- `PP-Decisiones 152` presente.
+
+### Seguridad validada
+
+La QA confirmo:
+
+- API/PHP no tocado;
+- SQL/schema/seeds no tocado;
+- `activate-after-payment` no fue agregado al frontend;
+- `POST` no fue agregado;
+- `Idempotency-Key` de activacion no fue agregado;
+- UUIDs fixture no fueron hardcodeados;
+- `payment_event_uuid` no fue inventado;
+- SQL no fue ejecutado;
+- POST/curl no fue ejecutado;
+- working tree limpio.
+
+### Observaciones no bloqueantes
+
+`node --check` quedo omitido porque no habia runtime `node`, `deno`, `qjs` ni `quickjs` instalado en el entorno. Esta omision no bloquea el cierre porque la microfase fue estatica, el diff quedo acotado, `git diff --check` paso limpio y no hubo cambios fuera de alcance.
+
+La observacion `RPROMPT`/`zsh` queda clasificada sin impacto funcional cuando Git queda limpio/alineado y las validaciones read-only confirman ausencia de POST, SQL, API/PHP y schema.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-HTTPReadOnly-01`
