@@ -30043,3 +30043,70 @@ La implementacion:
 ### Siguiente microfase recomendada
 
 `QA/Suscripciones-PanelUX-UpgradeDowngradePolicy-StaticQA-01`
+
+## PP-Decisiones 158 - Cierre QA visual y copy upgrade/downgrade de planes
+
+Microfase:
+
+`FE/Suscripciones-PanelUX-UpgradeDowngradePolicy-CopyPolish-ManualQAClosure-01`
+
+Objetivo:
+
+Pulir el copy comercial del panel de suscripciones para eliminar la ambiguedad detectada en QA visual y documentar el cierre PASS de la validacion manual.
+
+### QA visual manual cerrada
+
+La microfase `QA/Suscripciones-PanelUX-UpgradeDowngradePolicy-ManualVisualQA-01` queda documentada como PASS.
+
+Validacion realizada:
+
+- navegador: Chrome via Playwright;
+- servidor local: `127.0.0.1:8765`;
+- plan activo renderizado: `Estandar`;
+- `Basico` queda como `Disponible al renovar`;
+- `Estandar` queda como `Plan actual`;
+- `Optimo` queda como `Mejorar ahora`;
+- `Profesional` queda como `Mejorar ahora`;
+- la seleccion de `Optimo` o `Profesional` muestra `Mejora de plan seleccionada`;
+- la UI muestra nota de ajuste economico futuro;
+- no hubo POST;
+- no hubo SQL;
+- no hubo checkout;
+- no hubo modificacion de BD.
+
+### Copy corregido
+
+El aviso superior anterior podia interpretarse como que cualquier cambio de plan, incluso upgrade, dependia de renovacion.
+
+Se corrige para reflejar la regla comercial vigente:
+
+- upgrade a plan superior permitido durante la vigencia;
+- downgrade a plan inferior disponible al renovar o al finalizar el periodo;
+- sin prometer checkout ni cobro inmediato en esta fase.
+
+Copy operativo:
+
+- `Tu suscripción está activa. Puedes mejorar a un plan superior durante tu vigencia; los cambios a un plan inferior estarán disponibles al renovar.`
+- `Puedes mejorar a un plan superior durante tu vigencia. Los cambios a un plan inferior aplican al renovar.`
+
+### Limites preservados
+
+La microfase:
+
+- no modifica `api/subscriptions/index.php`;
+- no modifica PHP/backend;
+- no modifica SQL/schema/seeds;
+- no ejecuta SQL;
+- no ejecuta POST/curl;
+- no conecta checkout;
+- no llama `checkout-intents`;
+- no llama `payment-intents`;
+- no ejecuta `confirm_mock`;
+- no llama `activate-after-payment`;
+- no crea `Idempotency-Key`;
+- no hardcodea UUIDs fixture;
+- no modifica BD.
+
+### Siguiente microfase recomendada
+
+`FE/Suscripciones-CheckoutFirst-UpgradeIntent-Readiness-01`

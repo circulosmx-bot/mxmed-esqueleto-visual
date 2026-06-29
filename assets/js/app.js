@@ -58903,9 +58903,9 @@ function mxResetLogoPreview(){
     billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
   };
 
-  const SUBSCRIPTION_ACTION_NOTICE = 'Puedes mejorar tu plan al renovar o solicitar cambio de plan.';
-  const SUBSCRIPTION_ACTIVE_NOTICE = 'Tu suscripción está activa. Puedes mejorar tu plan al renovar o solicitar cambio de plan.';
-  const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Ya tienes una suscripción activa. Podrás cambiar o mejorar tu plan al renovar o solicitando cambio de plan.';
+  const SUBSCRIPTION_ACTION_NOTICE = 'Elige un plan disponible para preparar el siguiente paso. La contratación en línea se activará en la siguiente fase.';
+  const SUBSCRIPTION_ACTIVE_NOTICE = 'Tu suscripción está activa. Puedes mejorar a un plan superior durante tu vigencia; los cambios a un plan inferior estarán disponibles al renovar.';
+  const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Puedes mejorar a un plan superior durante tu vigencia. Los cambios a un plan inferior aplican al renovar.';
   const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
   const UI_PLAN_TO_BACKEND_PLAN = Object.freeze({
