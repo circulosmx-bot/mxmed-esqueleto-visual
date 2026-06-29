@@ -29335,3 +29335,77 @@ QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Post
 Motivo:
 
 Validar estaticamente el servicio nuevo, ejecutar `php -l`, confirmar ausencia de writes, confirmar que no hay endpoint/frontend/SQL/schema y verificar que la salida es whitelisted.
+
+## PP-Decisiones 148 - Cierre QA estatica del servicio state read-model post-pago
+
+### Microfase cerrada
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-PostImplementation-StaticQA-01
+```
+
+Resultado: `PASS`.
+
+HEAD validado: `0bb8ff9 feat(suscripciones): agrega servicio readmodel post pago`.
+
+### Servicio validado
+
+Archivo:
+
+```text
+modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php
+```
+
+La QA estatica confirmo:
+
+- el archivo existe;
+- la clase final `BuildSubscriptionPaymentActivationStateService` existe;
+- el metodo publico `build(array $input): array` existe;
+- `php -l` pasa sin errores;
+- el output base incluye `ok`, `entity`, `checkout_intent`, `payment_intent`, `payment_event`, `contract_acceptance`, `active_subscription`, `activation_eligibility`, `idempotency` y `ui`;
+- las reasons esperadas estan presentes;
+- el servicio queda validado como read-only.
+
+### Seguridad validada
+
+La QA confirmo que el servicio:
+
+- no ejecuta writes;
+- no llama servicios ni metodos prohibidos;
+- no llama `ActivateSubscriptionAfterPaymentService`;
+- no llama `markActivatedAfterPayment`;
+- no llama `linkSubscriptionId`;
+- no llama `createActiveFromPaidCheckout`;
+- no llama `markMockPaid`;
+- no crea endpoint;
+- no toca frontend;
+- no modifica API;
+- no modifica SQL/schema/seeds;
+- no ejecuta SQL;
+- no ejecuta POST/curl.
+
+### Estado Git validado
+
+La QA confirmo:
+
+- rama `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local `0bb8ff9`;
+- origin `0bb8ff9`;
+- ahead/behind `0/0`;
+- working tree limpio;
+- `git diff --stat` sin cambios;
+- `git diff --check` limpio.
+
+### Observacion operativa
+
+La observacion de terminal `zsh` con `exit code 1` queda clasificada como no bloqueante cuando el reporte de QA confirma estado Git limpio, rama alineada, `php -l` PASS y ausencia de cambios no esperados.
+
+### Siguiente microfase recomendada
+
+```text
+BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-Implementation-01
+```
+
+Motivo:
+
+Con el servicio read-only validado estaticamente, el siguiente paso natural es implementar el endpoint backend que exponga el state read-model de activacion post-pago sin ejecutar writes ni activar suscripciones.
