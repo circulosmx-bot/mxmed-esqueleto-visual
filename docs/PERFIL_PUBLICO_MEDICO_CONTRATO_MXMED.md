@@ -30110,3 +30110,293 @@ La microfase:
 ### Siguiente microfase recomendada
 
 `FE/Suscripciones-CheckoutFirst-UpgradeIntent-Readiness-01`
+
+## PP-Decisiones 159 - Readiness pricing upgrade checkout de planes
+
+Microfase:
+
+`BE/SPEC-Suscripciones-UpgradeIntent-PricingAdjustment-Readiness-01`
+
+Objetivo:
+
+Documentar la especificacion funcional y tecnica para soportar upgrades de plan durante una suscripcion activa, considerando modalidad anual y mensual, antes de modificar backend o conectar frontend.
+
+### Tipos de intencion de checkout
+
+`subscription_checkout_intents` debera distinguir al menos:
+
+- `new_subscription`;
+- `upgrade`;
+- `renewal` futuro;
+- `downgrade_at_renewal` futuro, si aplica.
+
+Para la primera fase de esta linea de trabajo solo se prepara `upgrade`.
+
+### Elegibilidad de upgrade
+
+Upgrade permitido si:
+
+- existe suscripcion activa;
+- el plan destino tiene rango superior al plan actual;
+- la misma entidad (`entity_type`, `entity_id`) solicita la operacion;
+- la suscripcion activa pertenece a esa entidad;
+- el plan destino existe y esta activo;
+- el periodo actual no esta vencido;
+- el `billing_period` esta permitido;
+- no hay checkout upgrade pendiente duplicado para la misma entidad, plan destino y modalidad;
+- la idempotencia es valida.
+
+Upgrade no permitido si:
+
+- el plan destino es igual al plan actual;
+- el plan destino es inferior;
+- no existe suscripcion activa;
+- la suscripcion activa esta vencida o cancelada;
+- hay mismatch de entidad;
+- existe un checkout activo incompatible;
+- la modalidad destino no esta soportada;
+- se intenta hacer downgrade inmediato.
+
+### Jerarquia canonica de planes
+
+La jerarquia canonica queda:
+
+1. `basic` = 1;
+2. `standard` = 2;
+3. `optimum` = 3;
+4. `professional` = 4.
+
+Mapeos visuales:
+
+- `Basico`, `basico`, `basic` -> `basic`;
+- `Estandar`, `estandar`, `standard` -> `standard`;
+- `Optimo`, `optimo`, `optimum` -> `optimum`;
+- `Profesional`, `professional` -> `professional`.
+
+### Modalidades de precio
+
+Modalidades:
+
+- `annual`: precio anual base;
+- `monthly`: modalidad mensual con costo 25% mayor que el equivalente mensual anual.
+
+Formula conceptual:
+
+- `monthly_price = (annual_price / 12) * 1.25`;
+- `monthly_annualized_price = annual_price * 1.25`.
+
+La matriz de precios debe poder guardar o resolver precios por:
+
+- `plan_code`;
+- `billing_period`;
+- `currency`;
+- ventana de vigencia (`effective_from` / `effective_to`) o version vigente.
+
+Reglas:
+
+- el frontend no define precios finales;
+- el operador principal, backend o admin debe poder ajustar la matriz de precios;
+- si el precio mensual se almacena explicitamente en BD, ese valor es fuente de verdad;
+- si el precio mensual se deriva, la regla 25% vive en backend/configuracion administrable, no en frontend.
+
+### Ajuste economico recomendado
+
+Variables:
+
+- `current_plan_code`;
+- `target_plan_code`;
+- `current_billing_period`;
+- `target_billing_period`;
+- `current_price_period`;
+- `target_price_period`;
+- `current_price_annualized`;
+- `target_price_annualized`;
+- `remaining_days`;
+- `period_days`;
+- `price_difference`;
+- `adjustment_amount`.
+
+Caso base recomendado para primera version:
+
+- mantener la misma modalidad de pago de la suscripcion vigente;
+- si la suscripcion actual es anual, calcular contra precios anuales;
+- si la suscripcion actual es mensual, calcular contra precios mensuales;
+- no permitir cambio de periodicidad en el mismo upgrade hasta una microfase futura.
+
+Formula conceptual:
+
+- `price_difference = target_price_period - current_price_period`;
+- `adjustment_amount = max(0, price_difference * remaining_days / period_days)`.
+
+Donde:
+
+- para anual, `current_price_period` y `target_price_period` son precios anuales;
+- para mensual, `current_price_period` y `target_price_period` son precios mensuales;
+- `remaining_days` y `period_days` corresponden al periodo vigente actual.
+
+Reglas:
+
+- si el resultado es menor o igual a 0, no procede upgrade con cobro;
+- el backend redondea segun politica MXN;
+- la UI solo muestra estimados o el texto `se calculara antes de confirmar`;
+- el monto final viene del backend;
+- los precios vienen de matriz administrable, no del frontend.
+
+### Cambio de periodicidad
+
+Fuera de alcance de la primera version:
+
+- `annual` -> `monthly`;
+- `monthly` -> `annual`.
+
+Decision:
+
+No mezclar cambio de plan y cambio de periodicidad en la primera version de upgrade, salvo que se disene una microfase especifica.
+
+Microfase futura sugerida:
+
+`BE/SPEC-Suscripciones-BillingPeriodChange-Readiness-01`
+
+### Datos conceptuales del checkout intent de upgrade
+
+Campos necesarios, aunque aun no se modifique schema:
+
+- `intent_type` o `checkout_type`: `upgrade`;
+- `source_subscription_id`;
+- `current_plan_code`;
+- `target_plan_code`;
+- `current_billing_period`;
+- `target_billing_period`;
+- `current_period_start`;
+- `current_period_end`;
+- `remaining_days`;
+- `period_days`;
+- `current_price_snapshot`;
+- `target_price_snapshot`;
+- `current_price_period_cents`;
+- `target_price_period_cents`;
+- `price_difference_snapshot`;
+- `adjustment_amount_cents`;
+- `pricing_strategy`: `prorated_difference`;
+- `monthly_markup_percent`: `25` cuando aplique;
+- `operator_price_version` o referencia a price matrix;
+- `contract_acceptance_uuid`;
+- `idempotency_key`.
+
+Si el schema actual no soporta estos campos, se requerira microfase backend/schema o almacenamiento JSON/snapshot controlado antes de writes reales.
+
+### Payload futuro recomendado
+
+Payload conceptual para `checkout-intents` upgrade:
+
+```json
+{
+  "intent_type": "upgrade",
+  "target_plan_code": "optimum",
+  "billing_period": "annual",
+  "contract_version": "mxmed-subscriptions-v1",
+  "source": "private_subscription_panel"
+}
+```
+
+Reglas:
+
+- en primera version, `billing_period` debe coincidir con la modalidad vigente;
+- si no coincide, backend debe rechazar o devolver error controlado hasta que exista cambio de periodicidad.
+
+El backend debe resolver:
+
+- entidad;
+- suscripcion actual;
+- plan actual;
+- modalidad actual;
+- plan destino;
+- matriz de precios;
+- markup mensual si aplica;
+- ajuste economico;
+- snapshot contractual.
+
+El frontend no debe mandar:
+
+- `current_subscription_id` inventado;
+- `amount`;
+- `price`;
+- `remaining_days`;
+- `payment_event_uuid`;
+- `subscription_id` manual;
+- calculo de ajuste;
+- monthly markup calculado.
+
+### Impacto en CreateSubscriptionCheckoutIntentService
+
+El servicio actual bloquea `active_subscription_exists` porque solo soporta contratacion nueva.
+
+Para soportar upgrade, debera cambiar de:
+
+- si existe suscripcion activa => conflicto.
+
+a:
+
+- si `intent_type = new_subscription` y existe activa => conflicto;
+- si `intent_type = upgrade` y existe activa => validar elegibilidad upgrade;
+- si `intent_type = upgrade` y no existe activa => error controlado;
+- si `intent_type = upgrade` y target plan es inferior o igual => error controlado;
+- si `intent_type = upgrade` y billing period no coincide con la suscripcion actual => error controlado en primera version.
+
+### Idempotencia
+
+Operacion futura:
+
+- `subscriptions.checkout_intent.upgrade`.
+
+Debe separarse de:
+
+- `subscriptions.checkout_intent.create`.
+
+Key frontend futura sugerida:
+
+- `mxmed-dev-upgrade-checkout-*`.
+
+La key todavia no se implementa en esta microfase.
+
+### Respuesta backend futura
+
+El checkout intent de upgrade debe devolver:
+
+- `checkout_intent_uuid`;
+- `intent_type`;
+- `current_plan_code`;
+- `target_plan_code`;
+- `current_billing_period`;
+- `target_billing_period`;
+- `adjustment_amount_cents`;
+- `currency`;
+- `pricing_strategy`;
+- `monthly_markup_percent`, si aplica;
+- `period_remaining`;
+- `status`;
+- `contract_acceptance_uuid`;
+- `next_step`: `create_payment_intent`.
+
+### Limites de esta microfase
+
+La microfase:
+
+- no modifico backend;
+- no modifico frontend;
+- no modifico SQL/schema/seeds;
+- no ejecuto SQL;
+- no ejecuto POST/curl;
+- no creo checkout;
+- no calculo precio real en runtime;
+- no toco BD;
+- no conecto `Mejorar ahora`;
+- no creo `Idempotency-Key`.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-UpgradeIntent-CheckoutContract-Implementation-01`
+
+Objetivo futuro:
+
+Agregar soporte backend controlado para `intent_type=upgrade` en checkout intent, sin conectar frontend todavia.
