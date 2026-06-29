@@ -28302,3 +28302,165 @@ BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMe
 Motivo:
 
 Implementar unicamente metodos PHP read-only minimos en repositorios existentes, sin endpoint, sin servicio state read-model completo, sin SQL/schema, sin frontend y sin writes.
+
+---
+
+## PP-Decisiones 143 - Implementacion read-only de metodos para state read-model post-pago
+
+Fecha de implementacion controlada: 2026-06-28
+
+### Microfase
+
+`BE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-Implementation-01`
+
+### Tipo
+
+BE / Implementacion PHP read-only de metodos minimos para futuro state read-model post-pago.
+
+### Objetivo
+
+Se implementan unicamente metodos PHP read-only en repositorios existentes para habilitar posteriormente el state read-model `payment-activation-state`.
+
+Esta decision no crea endpoint.
+
+No crea servicio `BuildSubscriptionPaymentActivationStateService`.
+
+No modifica frontend.
+
+No ejecuta SQL, HTTP, POST ni curl.
+
+No modifica SQL/schema/seeds ni fixtures.
+
+No ejecuta writes funcionales.
+
+### Archivos modificados
+
+- `modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modifica `SubscriptionEntityResolverService.php` porque no es necesario para esta microfase; el resolver read-only queda pendiente para la fase del servicio state read-model si se requiere.
+
+### SubscriptionPaymentEventRepository
+
+Metodos implementados:
+
+```php
+findProcessedConfirmByPaymentIntentUuid(string $paymentIntentUuid): ?array
+findProcessedConfirmByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+```
+
+Reglas implementadas:
+
+- normalizan y aplican trim a UUID;
+- devuelven `null` si el UUID esta vacio;
+- filtran `event_type = payment_intent_confirm`;
+- filtran `processing_status = processed`;
+- filtran `deleted_at IS NULL`;
+- usan orden estable `processed_at DESC, id DESC`;
+- usan `LIMIT 1`;
+- no insertan eventos;
+- no actualizan eventos;
+- no cambian estado.
+
+`findProcessedConfirmByCheckoutIntentUuid` se implementa porque `subscription_payment_events` tiene columna directa `checkout_intent_uuid` versionada en schema.
+
+### SubscriptionContractAcceptanceRepository
+
+Metodos implementados:
+
+```php
+findPendingPaymentByUuid(string $contractAcceptanceUuid): ?array
+findPendingPaymentByEntity(string $entityType, int $entityId): ?array
+```
+
+Reglas implementadas:
+
+- normalizan input;
+- devuelven `null` cuando el input no es usable;
+- filtran `status = accepted_pending_payment`;
+- filtran `deleted_at IS NULL`;
+- `findPendingPaymentByEntity` valida `entity_id > 0`;
+- `findPendingPaymentByEntity` usa orden estable `created_at DESC, id DESC`;
+- usan `LIMIT 1`;
+- no crean aceptacion;
+- no modifican aceptacion;
+- no ejecutan `linkSubscriptionId`;
+- no activan suscripcion.
+
+Metodo no implementado:
+
+```php
+findPendingPaymentByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+```
+
+Motivo:
+
+`subscription_contract_acceptances` no tiene columna directa `checkout_intent_uuid` en el schema versionado. No se inventa JOIN ni relacion indirecta insegura en esta microfase.
+
+### SubscriptionCheckoutIntentRepository
+
+Metodo implementado:
+
+```php
+findLatestPendingPaymentByEntity(string $entityType, int $entityId): ?array
+```
+
+Reglas implementadas:
+
+- normaliza `entity_type`;
+- valida `entity_id > 0`;
+- devuelve `null` si el input no es usable;
+- reutiliza el metodo read-only existente `findPendingByEntity`;
+- conserva filtro `status = pending_payment`;
+- conserva filtro `deleted_at IS NULL`;
+- conserva orden estable `created_at DESC, id DESC`;
+- no cambia checkout;
+- no ejecuta `markActivatedAfterPayment`;
+- no pobla `subscription_id`.
+
+### Resolver de entidad
+
+No modificado.
+
+Metodo conceptual pendiente:
+
+```php
+resolveForPaymentActivationState(array $input): array
+```
+
+Queda reservado para la fase de servicio state read-model si se confirma que la agregacion requiere resolver dedicado de scope/sesion.
+
+### Sin SQL/schema
+
+No se requiere:
+
+- migracion;
+- columna nueva;
+- tabla nueva;
+- seed;
+- fixture.
+
+La implementacion se limita a queries read-only dentro de repositorios existentes.
+
+### Sin endpoint, servicio completo ni frontend
+
+Esta microfase no crea:
+
+- endpoint `payment-activation-state`;
+- servicio `BuildSubscriptionPaymentActivationStateService`;
+- conexion con `activate-after-payment`;
+- UI nueva;
+- JS nuevo;
+- `payment_event_uuid` en frontend.
+
+### Siguiente microfase recomendada
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-PostImplementation-StaticQA-01
+```
+
+Motivo:
+
+Validar estaticamente los metodos nuevos, ejecutar `php -l`, confirmar que no hay endpoint, no hay SQL/schema, no hay frontend y que los metodos agregados son read-only.

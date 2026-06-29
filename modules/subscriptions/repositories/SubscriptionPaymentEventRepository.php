@@ -12,6 +12,7 @@ final class SubscriptionPaymentEventRepository
 {
     private const MOCK_PROVIDER = 'mxmed_mock';
     private const CONFIRM_MOCK_EVENT_TYPE = 'payment_intent_confirm';
+    private const PROCESSING_STATUS_PROCESSED = 'processed';
 
     private PDO $pdo;
 
@@ -40,6 +41,54 @@ final class SubscriptionPaymentEventRepository
                 'payment_intent_uuid' => $paymentIntentUuid,
                 'provider' => self::MOCK_PROVIDER,
                 'event_type' => self::CONFIRM_MOCK_EVENT_TYPE,
+            ]
+        );
+    }
+
+    public function findProcessedConfirmByPaymentIntentUuid(string $paymentIntentUuid): ?array
+    {
+        $paymentIntentUuid = trim($paymentIntentUuid);
+        if ($paymentIntentUuid === '') {
+            return null;
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_events
+             WHERE payment_intent_uuid = :payment_intent_uuid
+               AND event_type = :event_type
+               AND processing_status = :processing_status
+               AND deleted_at IS NULL
+             ORDER BY processed_at DESC, id DESC
+             LIMIT 1',
+            [
+                'payment_intent_uuid' => $paymentIntentUuid,
+                'event_type' => self::CONFIRM_MOCK_EVENT_TYPE,
+                'processing_status' => self::PROCESSING_STATUS_PROCESSED,
+            ]
+        );
+    }
+
+    public function findProcessedConfirmByCheckoutIntentUuid(string $checkoutIntentUuid): ?array
+    {
+        $checkoutIntentUuid = trim($checkoutIntentUuid);
+        if ($checkoutIntentUuid === '') {
+            return null;
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_events
+             WHERE checkout_intent_uuid = :checkout_intent_uuid
+               AND event_type = :event_type
+               AND processing_status = :processing_status
+               AND deleted_at IS NULL
+             ORDER BY processed_at DESC, id DESC
+             LIMIT 1',
+            [
+                'checkout_intent_uuid' => $checkoutIntentUuid,
+                'event_type' => self::CONFIRM_MOCK_EVENT_TYPE,
+                'processing_status' => self::PROCESSING_STATUS_PROCESSED,
             ]
         );
     }

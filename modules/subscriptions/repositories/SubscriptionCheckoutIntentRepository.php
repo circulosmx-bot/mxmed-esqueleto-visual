@@ -189,6 +189,16 @@ final class SubscriptionCheckoutIntentRepository
         );
     }
 
+    public function findLatestPendingPaymentByEntity(string $entityType, int $entityId): ?array
+    {
+        $entityType = trim($entityType);
+        if ($entityType === '' || $entityId <= 0) {
+            return null;
+        }
+
+        return $this->findPendingByEntity($entityType, (string)$entityId);
+    }
+
     public function findPendingByEntityPlanAndBilling(
         string $entityType,
         string $entityId,

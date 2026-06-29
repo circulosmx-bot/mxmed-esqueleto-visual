@@ -10,6 +10,8 @@ use Throwable;
 
 final class SubscriptionContractAcceptanceRepository
 {
+    private const STATUS_ACCEPTED_PENDING_PAYMENT = 'accepted_pending_payment';
+
     private PDO $pdo;
 
     public function __construct(PDO $pdo)
@@ -117,6 +119,51 @@ final class SubscriptionContractAcceptanceRepository
         );
     }
 
+    public function findPendingPaymentByUuid(string $contractAcceptanceUuid): ?array
+    {
+        $contractAcceptanceUuid = trim($contractAcceptanceUuid);
+        if ($contractAcceptanceUuid === '') {
+            return null;
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_contract_acceptances
+             WHERE uuid = :uuid
+               AND status = :status
+               AND deleted_at IS NULL
+             LIMIT 1',
+            [
+                'uuid' => $contractAcceptanceUuid,
+                'status' => self::STATUS_ACCEPTED_PENDING_PAYMENT,
+            ]
+        );
+    }
+
+    public function findPendingPaymentByEntity(string $entityType, int $entityId): ?array
+    {
+        $entityType = trim(strtolower($entityType));
+        if ($entityType === '' || $entityId <= 0) {
+            return null;
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_contract_acceptances
+             WHERE entity_type = :entity_type
+               AND entity_id = :entity_id
+               AND status = :status
+               AND deleted_at IS NULL
+             ORDER BY created_at DESC, id DESC
+             LIMIT 1',
+            [
+                'entity_type' => $entityType,
+                'entity_id' => (string)$entityId,
+                'status' => self::STATUS_ACCEPTED_PENDING_PAYMENT,
+            ]
+        );
+    }
+
     public function linkSubscriptionId(string $acceptanceUuid, string $subscriptionId): ?array
     {
         $acceptanceUuid = trim($acceptanceUuid);
@@ -137,7 +184,7 @@ final class SubscriptionContractAcceptanceRepository
             $stmt->execute([
                 'uuid' => $acceptanceUuid,
                 'subscription_id' => $subscriptionId,
-                'status' => 'accepted_pending_payment',
+                'status' => self::STATUS_ACCEPTED_PENDING_PAYMENT,
             ]);
         } catch (Throwable $e) {
             throw new RuntimeException('contract_acceptance_subscription_link_failed', 0, $e);
