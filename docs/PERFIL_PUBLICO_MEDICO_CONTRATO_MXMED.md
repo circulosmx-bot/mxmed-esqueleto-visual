@@ -30557,3 +30557,83 @@ Validaciones de implementacion:
 Objetivo:
 
 Validar estaticamente que el contrato backend de upgrade no toca frontend, no toca schema, no ejecuta writes desde terminal y mantiene el comportamiento previo de `new_subscription`.
+
+## PP-Decisiones 161 - Fixture DEV/local de sesion upgrade doctor 900001
+
+### Microfase
+
+`BE/DEV-Suscripciones-SessionFixture-Doctor900001-Implementation-01`
+
+### Objetivo
+
+Se agrego un fixture DEV/local especifico para crear una sesion PHP real autorizada para `doctor/900001`, con uso exclusivo en QA controlada del checkout upgrade.
+
+Ruta agregada:
+
+- `POST /api/subscriptions/index.php/dev/session-fixture/upgrade-doctor`
+
+### Protecciones obligatorias
+
+El fixture reutiliza el mismo cerco de los fixtures DEV/local existentes:
+
+- requiere `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- solo acepta host local (`localhost`, `127.0.0.1`, `::1`);
+- bloquea entornos `prod`/`production` mediante `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT`;
+- solo acepta metodo `POST`;
+- no usa headers magicos;
+- no relaja `subscriptionResolveWriteContext(...)`.
+
+### Validaciones read-only internas
+
+Antes de aplicar la sesion, el fixture valida:
+
+- que exista el doctor fixture `900001`;
+- que `doctor/900001` tenga suscripcion activa vigente;
+- que el plan vigente sea `standard`.
+
+Errores controlados:
+
+- `fixture_doctor_has_no_active_subscription`;
+- `fixture_doctor_active_subscription_not_standard`;
+- `fixture_active_subscription_unavailable`.
+
+### Alcance funcional
+
+Si las validaciones pasan, el fixture solo aplica sesion PHP DEV/local para:
+
+- `entity_type = doctor`;
+- `entity_id = 900001`;
+- `doctor_id = 900001`;
+- `session_scope = true`;
+- `intended_use = upgrade_checkout_qa`.
+
+La respuesta confirma:
+
+- `ok = true`;
+- `fixture = upgrade-doctor`;
+- `source = dev_session_fixture`;
+- `warning = DEV/local only`.
+
+### Prohibiciones mantenidas
+
+La microfase no:
+
+- toca BD manualmente;
+- ejecuta SQL desde terminal;
+- crea checkout intent;
+- crea payment intent;
+- ejecuta `confirm_mock`;
+- ejecuta `activate-after-payment`;
+- activa suscripcion;
+- modifica frontend;
+- modifica schema/seeds;
+- cambia repositorios;
+- cambia servicios de negocio.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-CheckoutContract-HTTPControlled-SessionFixture-01`
+
+Objetivo:
+
+Crear la sesion DEV/local mediante el fixture `upgrade-doctor` y ejecutar una unica QA HTTP controlada del checkout upgrade con `session_scope`.

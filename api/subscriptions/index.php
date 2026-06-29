@@ -362,6 +362,12 @@ function subscriptionDoctorHasActiveSubscription(string $doctorId): bool
     return (int)($row['total'] ?? 0) > 0;
 }
 
+function subscriptionFindActiveDoctorSubscriptionFixture(string $doctorId): ?array
+{
+    $repository = new CurrentSubscriptionRepository(mxmed_pdo());
+    return $repository->findActiveByEntity('doctor', $doctorId);
+}
+
 function subscriptionCreateAlternateDoctorSessionFixture(): array
 {
     $doctorId = '2';
@@ -450,6 +456,67 @@ function subscriptionCreateCheckoutDoctorSessionFixture(): array
             'operator_id' => null,
             'fixture' => 'checkout_doctor',
             'has_active_subscription' => false,
+            'warning' => 'DEV/local only',
+        ],
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
+}
+
+function subscriptionCreateUpgradeDoctorSessionFixture(): array
+{
+    $doctorId = '900001';
+    $userId = '900001';
+    if (!subscriptionDoctorFixtureExists($doctorId)) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'upgrade doctor fixture not found');
+    }
+
+    try {
+        $activeSubscription = subscriptionFindActiveDoctorSubscriptionFixture($doctorId);
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_active_subscription_unavailable',
+            'upgrade doctor active subscription could not be validated'
+        );
+    }
+
+    if (!is_array($activeSubscription)) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_doctor_has_no_active_subscription',
+            'upgrade doctor fixture has no active subscription'
+        );
+    }
+
+    $planCode = strtolower(trim((string)($activeSubscription['plan_code'] ?? '')));
+    if ($planCode !== 'standard') {
+        return subscriptionDevSessionFixtureError(
+            'fixture_doctor_active_subscription_not_standard',
+            'upgrade doctor active subscription is not standard'
+        );
+    }
+
+    subscriptionApplyDevDoctorSessionFixture($doctorId, $userId);
+
+    return [
+        'ok' => true,
+        'data' => [
+            'auth_mode' => 'session_scope',
+            'source' => 'dev_session_fixture',
+            'route' => 'dev/session-fixture/upgrade-doctor',
+            'entity_type' => 'doctor',
+            'entity_id' => $doctorId,
+            'doctor_id' => $doctorId,
+            'actor_role' => 'doctor',
+            'operator_id' => null,
+            'fixture' => 'upgrade-doctor',
+            'session_scope' => true,
+            'intended_use' => 'upgrade_checkout_qa',
+            'active_subscription' => [
+                'exists' => true,
+                'subscription_id' => (string)($activeSubscription['subscription_id'] ?? ''),
+                'plan_code' => $planCode,
+                'billing_period' => (string)($activeSubscription['billing_period'] ?? ''),
+                'status' => (string)($activeSubscription['status'] ?? ''),
+            ],
             'warning' => 'DEV/local only',
         ],
         'meta' => subscriptionDevSessionFixtureMeta(),
@@ -1188,6 +1255,33 @@ try {
         }
 
         $fixtureResponse = subscriptionCreateCheckoutDoctorSessionFixture();
+        $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
+        subscriptionRespond($fixtureResponse, $fixtureStatus);
+        return;
+    }
+
+    if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'upgrade-doctor') {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        if (!subscriptionDevSessionFixtureEnabled()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
+            return;
+        }
+
+        if (!subscriptionIsLocalRequest()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
+            return;
+        }
+
+        if (subscriptionProductionEnvironmentDetected()) {
+            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+            return;
+        }
+
+        $fixtureResponse = subscriptionCreateUpgradeDoctorSessionFixture();
         $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
         subscriptionRespond($fixtureResponse, $fixtureStatus);
         return;
