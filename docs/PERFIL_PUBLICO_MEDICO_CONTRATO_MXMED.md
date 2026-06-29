@@ -29519,3 +29519,80 @@ La observacion terminal `RPROMPT`/`zsh` queda clasificada como no bloqueante cua
 ### Siguiente microfase recomendada
 
 `QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-HTTPReadOnly-01`
+
+## PP-Decisiones 151 - Cierre QA HTTP read-only endpoint state read-model post-pago
+
+Microfase cerrada:
+
+`QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Endpoint-HTTPReadOnly-01`
+
+Resultado:
+
+`PASS`
+
+HEAD validado:
+
+`630d392 docs(suscripciones): cierra qa estatica endpoint readmodel post pago`
+
+Endpoint probado:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-activation-state`
+
+Fixture probado:
+
+- `entity_type`: `doctor`;
+- `entity_id`: `900001`;
+- `checkout_intent_uuid`: `7d4beec3-b62a-40e1-a9f2-9edcc1a83364`;
+- `payment_intent_uuid`: `85493a1c-4a66-40ec-928a-09cb0eb5d007`;
+- `audience`: `support`.
+
+### Resultado HTTP
+
+La QA HTTP read-only confirmo:
+
+- metodo ejecutado: `GET`;
+- HTTP status: `200`;
+- JSON controlado;
+- `ok = true`;
+- `data` presente;
+- `data.activation_eligibility` presente;
+- `data.payment_event` presente;
+- `data.idempotency` presente;
+- `data.ui` presente;
+- sin stacktrace ni error crudo.
+
+### Estado funcional observado
+
+La respuesta mostro:
+
+- `can_activate = false`;
+- `reasons`:
+  - `checkout_intent_not_pending_payment`;
+  - `activation_already_done`;
+  - `active_subscription_exists`;
+- `ui.recommended_message_code = payment_activation_already_done`.
+
+Interpretacion:
+
+El resultado es esperado porque el fixture `doctor/900001` ya fue activado previamente. Por eso el endpoint read-only reporta estado ya activado y no elegible para una nueva activacion.
+
+### Limites preservados
+
+La QA confirmo:
+
+- no se ejecuto POST;
+- no se ejecuto SQL;
+- no se modificaron archivos durante la QA;
+- no se activo suscripcion;
+- no se llamo `activate-after-payment`;
+- no se toco frontend;
+- no se hizo commit;
+- no se hizo push.
+
+### Observacion operativa
+
+La observacion terminal `exit code 127` queda clasificada como no bloqueante cuando la evidencia tecnica confirma HTTP `200`, JSON controlado, Git limpio/alineado y ausencia de POST, SQL o cambios de archivos.
+
+### Siguiente microfase recomendada
+
+`FE/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-Implementation-01`
