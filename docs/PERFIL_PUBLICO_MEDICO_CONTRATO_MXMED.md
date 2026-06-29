@@ -28464,3 +28464,175 @@ QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMe
 Motivo:
 
 Validar estaticamente los metodos nuevos, ejecutar `php -l`, confirmar que no hay endpoint, no hay SQL/schema, no hay frontend y que los metodos agregados son read-only.
+
+---
+
+## PP-Decisiones 144 - Cierre QA estatica de metodos read-only state read-model post-pago
+
+Fecha de cierre documental: 2026-06-29
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-PostImplementation-StaticQA-Closure-01`
+
+### Tipo
+
+DOCS / Cierre documental de QA estatica post-implementacion de metodos read-only para state read-model post-pago.
+
+### Objetivo
+
+Esta adenda documenta el cierre PASS de la QA estatica post-implementacion de los metodos PHP read-only agregados para el futuro state read-model `payment-activation-state`.
+
+No modifica PHP, JS, HTML ni backend funcional.
+
+No ejecuta SQL, HTTP, POST ni curl.
+
+No crea endpoint.
+
+No crea servicio state read-model.
+
+### Base validada
+
+Microfase QA validada:
+
+```text
+QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-PostImplementation-StaticQA-01
+```
+
+Resultado:
+
+```text
+PASS
+```
+
+Commit validado:
+
+```text
+f5f0a25 feat(suscripciones): agrega metodos read model post pago
+```
+
+Archivos del commit validado:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`;
+- `modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionContractAcceptanceRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php`.
+
+### Validaciones Git
+
+La QA confirmo:
+
+- HEAD local/origin: `f5f0a25`;
+- ahead/behind: `0/0`;
+- working tree inicial limpio;
+- working tree final limpio;
+- no archivos modificados durante QA.
+
+### Validaciones PHP
+
+La QA confirmo `php -l` PASS en:
+
+- `SubscriptionPaymentEventRepository.php`;
+- `SubscriptionContractAcceptanceRepository.php`;
+- `SubscriptionCheckoutIntentRepository.php`.
+
+### Metodos validados
+
+#### SubscriptionPaymentEventRepository
+
+Metodos presentes:
+
+- `findProcessedConfirmByPaymentIntentUuid`;
+- `findProcessedConfirmByCheckoutIntentUuid`.
+
+Ambos quedaron validados como read-only y filtran:
+
+- `event_type`;
+- `processing_status`;
+- `deleted_at`.
+
+No agregan `INSERT`, `UPDATE` ni `DELETE`.
+
+No crean eventos.
+
+No modifican estados.
+
+#### SubscriptionContractAcceptanceRepository
+
+Metodos presentes:
+
+- `findPendingPaymentByUuid`;
+- `findPendingPaymentByEntity`.
+
+Ambos quedaron validados como read-only y filtran `accepted_pending_payment`.
+
+La ausencia de `findPendingPaymentByCheckoutIntentUuid` queda validada como esperada porque no existe columna directa `checkout_intent_uuid` en `subscription_contract_acceptances`.
+
+No llaman `linkSubscriptionId`.
+
+No modifican aceptaciones.
+
+#### SubscriptionCheckoutIntentRepository
+
+Metodo presente:
+
+- `findLatestPendingPaymentByEntity`.
+
+Quedo validado como wrapper read-only sobre `findPendingByEntity`.
+
+No llama `markActivatedAfterPayment`.
+
+No cambia estados.
+
+#### SubscriptionEntityResolverService
+
+`resolveForPaymentActivationState` sigue ausente, como estaba previsto.
+
+### Seguridad read-only
+
+La QA confirmo:
+
+- no hay `INSERT`, `UPDATE` ni `DELETE` en metodos nuevos;
+- no se detectaron writes funcionales;
+- no hay llamadas a `markActivatedAfterPayment` en metodos nuevos;
+- no hay llamadas a `linkSubscriptionId` en metodos nuevos;
+- no se creo endpoint;
+- no se creo servicio state read-model;
+- no se modifico frontend;
+- no se modifico SQL/schema.
+
+### Limites preservados
+
+Este cierre mantiene:
+
+- sin endpoint `payment-activation-state`;
+- sin `BuildSubscriptionPaymentActivationStateService`;
+- sin cambios en frontend;
+- sin cambios en `api/subscriptions/index.php`;
+- sin cambios SQL/schema/seeds;
+- sin ejecucion SQL;
+- sin ejecucion HTTP/POST o curl;
+- sin conexion de `activate-after-payment` al frontend;
+- sin agregar `payment_event_uuid` al frontend.
+
+### Decision de cierre
+
+La implementacion read-only de metodos minimos queda validada como segura para servir de base a un futuro servicio state read-model.
+
+### Siguiente microfase recomendada
+
+```text
+GIT/QA-Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-RepositoryMethods-PostImplementation-StaticQA-Closure-PostPush-01
+```
+
+Motivo:
+
+Validar post-push read-only que este cierre documental quedo versionado, que solo toco documentacion y que la rama quedo limpia/alineada.
+
+Despues de ese post-push, puede prepararse:
+
+```text
+BE/SPEC-Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-Service-Readiness-01
+```
+
+para disenar el servicio `BuildSubscriptionPaymentActivationStateService`.
