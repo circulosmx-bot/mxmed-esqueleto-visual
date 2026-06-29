@@ -58897,7 +58897,8 @@ function mxResetLogoPreview(){
     billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
   };
 
-  const READONLY_NOTICE = 'Modo lectura: suscripción actual consultada desde read-model. Acciones comerciales deshabilitadas en esta fase.';
+  const SUBSCRIPTION_ACTION_NOTICE = 'Puedes mejorar tu plan al renovar o solicitar cambio de plan.';
+  const SUBSCRIPTION_ACTIVE_NOTICE = 'Tu suscripción está activa. Puedes mejorar tu plan al renovar o solicitar cambio de plan.';
   const STATUS_LABELS = {
     free_default: 'Plan base permanente',
     active: 'Activo',
@@ -58926,8 +58927,8 @@ function mxResetLogoPreview(){
       nextBill: 'No aplica',
       autorenew: false,
       note: 'Consultando suscripción actual...',
-      alert: READONLY_NOTICE,
-      features: ['Lectura del estado actual sin acciones comerciales']
+      alert: SUBSCRIPTION_ACTION_NOTICE,
+      features: ['Consulta tu plan actual, vigencia y beneficios disponibles']
     },
     plans: [
       { id:'pro', name:'Profesional', monthly:0, yearly:0, features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] },
@@ -59034,6 +59035,17 @@ function mxResetLogoPreview(){
   function isSubscriptionLocalDevHost(){
     const host = clean(window.location?.hostname).toLowerCase();
     return host === '127.0.0.1' || host === 'localhost' || host === '::1';
+  }
+
+  function isSubscriptionDebugPanelEnabled(){
+    if(!isSubscriptionLocalDevHost()) return false;
+    const search = new URLSearchParams(window.location?.search || '');
+    if(search.get('subp_debug') === '1' || search.get('mxmed_subp_debug') === '1') return true;
+    try{
+      return window.localStorage?.getItem('mxmed_subp_debug') === '1';
+    }catch(_){
+      return false;
+    }
   }
 
   function labelFromMap(map, value, fallback){
@@ -59185,6 +59197,11 @@ function mxResetLogoPreview(){
 
   function renderActivationState(){
     if(!els.activationState) return;
+    if(!isSubscriptionDebugPanelEnabled()){
+      els.activationState.classList.add('d-none');
+      return;
+    }
+    els.activationState.classList.remove('d-none');
     const current = data.activationState || {};
     const payload = current.payload || null;
     const state = payload?.data && typeof payload.data === 'object' ? payload.data : null;
@@ -59347,7 +59364,7 @@ function mxResetLogoPreview(){
 
   function renderDevWrite(){
     if(!els.devWrite) return;
-    if(!isSubscriptionLocalDevHost()){
+    if(!isSubscriptionDebugPanelEnabled()){
       els.devWrite.classList.add('d-none');
       return;
     }
@@ -59455,7 +59472,7 @@ function mxResetLogoPreview(){
       note: hasContract
         ? `Plan contratado: ${contractedPlan}. Plan efectivo: ${effectivePlan || planLabel}.`
         : `Sin plan contratado vigente. Plan efectivo actual: ${planLabel}.`,
-      alert: READONLY_NOTICE,
+      alert: hasPaidActiveSubscription(model || {}) ? SUBSCRIPTION_ACTIVE_NOTICE : SUBSCRIPTION_ACTION_NOTICE,
       features: buildReadModelFeatures(model || {}, meta || {}, contextInfo || {})
     };
 
@@ -59504,7 +59521,7 @@ function mxResetLogoPreview(){
       nextBill: 'No aplica',
       autorenew: false,
       note: message,
-      alert: READONLY_NOTICE,
+      alert: SUBSCRIPTION_ACTION_NOTICE,
       features: [message, 'El resto del panel permanece en modo lectura.']
     };
     renderCurrent();

@@ -29736,3 +29736,74 @@ La observacion `RPROMPT`/`zsh` queda clasificada sin impacto funcional cuando Gi
 ### Siguiente microfase recomendada
 
 `QA/Suscripciones-PaymentIntent-PostPaymentActivation-StateReadModel-PanelIntegration-HTTPReadOnly-01`
+
+## PP-Decisiones 154 - Restore UX panel suscripciones sin bloques temporales DEV
+
+Microfase:
+
+`FE/Suscripciones-PanelUX-RetiroBloquesTemporalesDev-DesignRestore-01`
+
+Objetivo:
+
+Retirar de la UX principal del panel de suscripciones los bloques temporales usados durante microfases DEV, preservando las herramientas tecnicas solo para soporte/debug local.
+
+### Archivos modificados
+
+- `index.html`;
+- `assets/js/app.js`.
+
+### Restauracion UX principal
+
+El panel visible para el medico queda enfocado en:
+
+- plan actual;
+- vigencia;
+- beneficios;
+- opciones comerciales para mejorar plan;
+- historial;
+- mensajes claros para usuario final.
+
+Se reemplaza el mensaje tecnico de modo lectura por mensajes comerciales:
+
+- `Tu suscripcion esta activa. Puedes mejorar tu plan al renovar o solicitar cambio de plan.`;
+- `Puedes mejorar tu plan al renovar o solicitar cambio de plan.`
+
+### Bloques temporales retirados de la vista principal
+
+Quedan ocultos por defecto:
+
+- `Estado de activacion post-pago`;
+- `Contratacion DEV controlada`;
+- razones tecnicas como `checkout_intent_missing`, `payment_intent_missing`, `payment_event_missing`, `contract_acceptance_missing`, `active_subscription_exists`;
+- detalles HTTP y codigos `payment_activation_*`;
+- bloque visual `developer_mode`;
+- datos tecnicos como `Idempotency-Key`.
+
+### Debug local preservado
+
+Los bloques tecnicos no se eliminan porque siguen siendo utiles para soporte/dev. Quedan disponibles solo en entorno local cuando se habilita explicitamente:
+
+- query string `subp_debug=1`;
+- query string `mxmed_subp_debug=1`;
+- `localStorage.mxmed_subp_debug = "1"`.
+
+Fuera de ese modo, la UX principal no muestra codigos internos, estados HTTP, razones tecnicas ni textos DEV.
+
+### Limites preservados
+
+La implementacion:
+
+- no modifica `api/subscriptions/index.php`;
+- no modifica PHP/backend;
+- no modifica SQL/schema/seeds;
+- no ejecuta SQL;
+- no ejecuta POST/curl;
+- no llama `activate-after-payment`;
+- no conecta activacion real;
+- no crea `Idempotency-Key` de activacion;
+- no hardcodea UUIDs fixture;
+- no elimina el endpoint `payment-activation-state`.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PanelUX-RetiroBloquesTemporalesDev-DesignRestore-StaticQA-01`
