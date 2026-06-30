@@ -32697,3 +32697,392 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Convertir este readiness en un plan tecnico priorizado para hardening productivo: pagos reales, webhooks, backoffice, permisos, auditoria, pricing administrable, matriz multi-entidad y limpieza DEV/local.
+
+## PP-Decisiones 177 - Plan de hardening productivo para upgrades
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-ProductionHardening-Plan-01`
+
+### Objetivo
+
+Convertir el readiness productivo de upgrades en un plan tecnico priorizado para llevar el flujo validado en DEV/local hacia un flujo productivo seguro.
+
+El flujo DEV/local ya esta validado, pero este plan no habilita produccion. El objetivo es ordenar las microfases necesarias, separar dependencias y minimizar riesgo antes de conectar pagos reales.
+
+### Base de planificacion
+
+La planificacion parte de `PP-Decisiones 176`, donde quedaron identificados estos bloques pendientes:
+
+- proveedor de pago real;
+- webhooks reales;
+- backoffice/reconciliacion;
+- permisos y seguridad;
+- auditoria/logging;
+- matriz multi-entidad;
+- planes/precios productivos;
+- UX productiva;
+- limpieza DEV/local;
+- QA productiva, concurrencia y fallos parciales.
+
+La base tecnica validada sigue siendo DEV/local:
+
+- upgrades encadenados `standard -> optimum -> professional`;
+- current final `professional`;
+- payment intents mock;
+- `confirm_mock` local;
+- activacion post-pago;
+- idempotencia;
+- frontend sincronizado con el read-model.
+
+### Orden recomendado
+
+El hardening productivo debe ejecutarse en este orden:
+
+1. Auditar y aislar fixtures DEV/local.
+2. Definir contrato de proveedor real.
+3. Disenar webhooks e idempotencia provider.
+4. Disenar backoffice/reconciliacion.
+5. Reforzar permisos y `entity_scope`.
+6. Preparar precios productivos administrables.
+7. Preparar UX productiva.
+8. Ejecutar QA multi-entidad, concurrencia y fallos.
+9. Evaluar activacion productiva controlada.
+
+No se recomienda iniciar pagos reales antes de cerrar los primeros cinco bloques.
+
+### Bloque 1 - Seguridad de entorno y fixtures
+
+Objetivo:
+
+Auditar las rutas DEV/local y asegurar que no puedan ejecutarse en produccion.
+
+Tareas:
+
+- auditar `dev/session-fixture/upgrade-doctor`;
+- auditar fixtures de session, checkout, payment y confirmacion mock;
+- confirmar bloqueo por ambiente;
+- confirmar bloqueo por host local;
+- revisar flags DEV/local/debug;
+- separar rutas DEV de rutas productivas;
+- documentar politica de eliminacion o permanencia controlada;
+- validar que `session_scope` no sea dependencia productiva;
+- validar que `doctor/900001` no sea supuesto productivo.
+
+Criterio de salida:
+
+- fixtures catalogados;
+- bloqueo productivo verificado;
+- decision documentada sobre permanencia, flag o eliminacion.
+
+Microfase sugerida:
+
+`BE/Suscripciones-ProductionHardening-FixturesAudit-01`
+
+### Bloque 2 - Proveedor de pago real
+
+Objetivo:
+
+Definir el contrato tecnico del proveedor real y eliminar la dependencia productiva de `mxmed_mock`.
+
+Tareas:
+
+- seleccionar proveedor o proveedores soportados;
+- definir configuracion productiva;
+- crear o validar abstraccion de provider;
+- mapear provider states a `normalized_status`;
+- validar `provider_payment_id`;
+- validar `provider_checkout_id`;
+- definir error contract para proveedor;
+- definir respuesta para pagos pendientes, fallidos o bajo revision;
+- documentar que `confirm_mock` queda solo DEV/local.
+
+Criterio de salida:
+
+- contrato provider documentado;
+- estados productivos mapeados;
+- decision clara de como crear payment intents reales.
+
+Microfase sugerida:
+
+`BE/Suscripciones-PaymentProvider-ContractReadiness-01`
+
+### Bloque 3 - Webhooks reales
+
+Objetivo:
+
+Definir recepcion confiable de eventos de proveedor antes de activar pagos reales.
+
+Tareas:
+
+- disenar endpoint webhook productivo;
+- validar firma de proveedor;
+- definir idempotencia por `provider_event_id`;
+- manejar retries;
+- manejar eventos duplicados;
+- manejar eventos tardios;
+- manejar eventos fuera de orden;
+- manejar eventos fallidos;
+- mapear eventos a `subscription_payment_events`;
+- bloquear activacion con eventos no confiables;
+- reconciliar monto, moneda y payment intent.
+
+Criterio de salida:
+
+- contrato webhook listo;
+- firma definida;
+- idempotencia provider definida;
+- reglas de activacion por evento confiable documentadas.
+
+Microfase sugerida:
+
+`BE/Suscripciones-Webhooks-ProviderSignature-Readiness-01`
+
+### Bloque 4 - Reconciliacion/backoffice
+
+Objetivo:
+
+Disenar soporte interno para operar pagos cobrados, pagos no activados y fallos parciales.
+
+Tareas:
+
+- panel interno de busqueda por entidad;
+- busqueda por checkout intent;
+- busqueda por payment intent;
+- busqueda por provider id;
+- vista de payment events;
+- vista de idempotency keys relevantes;
+- vista de estado pagado/no activado;
+- acciones manuales permitidas;
+- acciones manuales prohibidas;
+- trazabilidad de operador, fecha, motivo y evidencia;
+- flujo de soporte para pago cobrado sin activacion.
+
+Criterio de salida:
+
+- alcance minimo de backoffice documentado;
+- acciones manuales permitidas/prohibidas definidas;
+- auditoria de intervencion humana definida.
+
+Microfase sugerida:
+
+`BE/Suscripciones-ReconciliationBackoffice-Readiness-01`
+
+### Bloque 5 - Permisos y entity scope
+
+Objetivo:
+
+Cerrar autorizacion productiva para checkout, payment y activacion.
+
+Tareas:
+
+- definir roles de medicos;
+- definir operadores;
+- definir administradores/backoffice;
+- validar `entity_type`;
+- validar `entity_id`;
+- evitar writes cross-entity;
+- revisar ownership de entidad;
+- revisar `session_scope` como mecanismo DEV/local;
+- impedir headers magicos para writes;
+- asegurar que frontend no controle monto, moneda, vigencia ni plan efectivo.
+
+Criterio de salida:
+
+- matriz de permisos documentada;
+- validaciones de scope definidas;
+- limites de actor por operacion definidos.
+
+Microfase sugerida:
+
+`BE/Suscripciones-PermissionsEntityScope-Hardening-01`
+
+### Bloque 6 - Planes, precios y periodicidad
+
+Objetivo:
+
+Pasar de precios de referencia a precios administrables y auditables.
+
+Tareas:
+
+- definir fuente admin/operator de precios;
+- versionar precios;
+- definir vigencia de precios;
+- definir moneda;
+- conservar snapshot de precio en checkout;
+- auditar precio usado;
+- definir regla mensual `+25%`;
+- mantener fuera de alcance cambio de periodicidad en upgrade v1;
+- preparar soporte futuro mensual/anual;
+- bloquear frontend hardcode como fuente de verdad.
+
+Criterio de salida:
+
+- contrato de precios productivos definido;
+- snapshot auditable definido;
+- regla de periodicidad v1/futuro documentada.
+
+Microfase sugerida:
+
+`BE/Suscripciones-PlanPrices-ProductionAdmin-Readiness-01`
+
+### Bloque 7 - UX productiva
+
+Objetivo:
+
+Preparar UX para checkout real sin exponer estados tecnicos innecesarios.
+
+Tareas:
+
+- conectar checkout real solo cuando backend este listo;
+- mostrar pago pendiente;
+- mostrar pago confirmado;
+- mostrar pago fallido;
+- mostrar activacion pendiente;
+- recuperar errores controlados;
+- mostrar soporte visible para pago bajo revision;
+- bloquear downgrade inmediato;
+- mostrar upgrade superior disponible;
+- no ofrecer cambio de periodicidad en v1;
+- ocultar debug tecnico por defecto.
+
+Criterio de salida:
+
+- flujos UI productivos definidos;
+- copies de soporte definidos;
+- acciones no disponibles comunicadas sin detalle tecnico.
+
+Microfase sugerida:
+
+`FE/Suscripciones-CheckoutProductivo-UXReadiness-01`
+
+### Bloque 8 - QA productiva y matriz multi-entidad
+
+Objetivo:
+
+Validar que el flujo no depende de `doctor/900001` ni de supuestos DEV/local.
+
+Matriz minima:
+
+- doctor;
+- dental;
+- clinica;
+- hospital;
+- laboratorio;
+- aseguradora;
+- otros `entity_type` soportados.
+
+Pruebas por entidad:
+
+- current subscription;
+- permisos;
+- checkout upgrade;
+- price snapshot;
+- payment intent;
+- webhook/payment event;
+- activacion post-pago;
+- replay idempotente;
+- errores 409/422;
+- expiracion;
+- renovacion;
+- concurrencia;
+- fallos parciales.
+
+Criterio de salida:
+
+- matriz de QA definida;
+- casos minimos por entidad documentados;
+- bloqueos por entidad identificados antes de produccion.
+
+Microfase sugerida:
+
+`QA/Suscripciones-UpgradeIntent-MultiEntity-MatrixPlan-01`
+
+### Microfases sugeridas
+
+Lista ordenada:
+
+1. `BE/Suscripciones-ProductionHardening-FixturesAudit-01`
+2. `BE/Suscripciones-PaymentProvider-ContractReadiness-01`
+3. `BE/Suscripciones-Webhooks-ProviderSignature-Readiness-01`
+4. `BE/Suscripciones-ReconciliationBackoffice-Readiness-01`
+5. `BE/Suscripciones-PermissionsEntityScope-Hardening-01`
+6. `BE/Suscripciones-PlanPrices-ProductionAdmin-Readiness-01`
+7. `FE/Suscripciones-CheckoutProductivo-UXReadiness-01`
+8. `QA/Suscripciones-UpgradeIntent-MultiEntity-MatrixPlan-01`
+
+### Criterios para no avanzar a produccion
+
+No se debe habilitar produccion si falta cualquiera de estos puntos:
+
+- proveedor real;
+- validacion de webhook real;
+- backoffice minimo;
+- permisos productivos;
+- logging/auditoria;
+- QA multi-entidad;
+- pruebas de concurrencia;
+- politica de soporte para pagos cobrados/no activados;
+- bloqueo verificado de fixtures DEV/local;
+- matriz de precios administrable;
+- reconciliacion de proveedor contra DB local.
+
+### Dependencias principales
+
+Dependencias entre bloques:
+
+- fixtures auditados antes de pruebas productivas;
+- provider real antes de webhooks productivos;
+- webhooks antes de activacion con pagos reales;
+- backoffice antes de liberar cobros reales;
+- permisos antes de UI productiva con writes;
+- precios administrables antes de checkout productivo;
+- QA multi-entidad antes de habilitacion general.
+
+### Riesgos del plan
+
+Riesgos principales:
+
+- activar con evidencia de pago no confiable;
+- permitir writes cross-entity;
+- duplicar eventos por retries;
+- dejar fixture disponible fuera de DEV/local;
+- operar pagos cobrados sin backoffice;
+- usar precio frontend como fuente de verdad;
+- asumir cobertura multi-entidad sin QA;
+- no tener trazabilidad de intervenciones humanas.
+
+### Resultado de microfase
+
+Resultado:
+
+- `PASS plan documental`.
+
+No se detecta una dependencia bloqueante no decidida para documentar el plan.
+
+El plan no habilita produccion; solo define el orden tecnico recomendado para llegar a una activacion productiva controlada.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se tocaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-ProductionHardening-FixturesAudit-01`
+
+Objetivo sugerido:
+
+Auditar y documentar todas las rutas/fixtures DEV/local relacionadas con suscripciones y upgrades para asegurar que no puedan ejecutarse en produccion.
