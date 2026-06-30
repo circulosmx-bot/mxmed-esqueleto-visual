@@ -31432,3 +31432,124 @@ El upgrade encadenado `optimum -> professional` queda cerrado funcional y tecnic
 Objetivo sugerido:
 
 Corregir el header global para que use el current read-model real de suscripcion y deje de mostrar `Plan Optimo` cuando el plan activo ya es `professional`, sin afectar el panel `#p-suscripcion`.
+
+## PP-Decisiones 169 - Cierre de sincronizacion de header global con plan vigente
+
+### Microfase
+
+`DOCS/Suscripciones-HeaderGlobal-PlanFechaActualSync-Closure-01`
+
+### Objetivo
+
+Documentar el cierre del ajuste visual que sincroniza el header global con el current read-model real de suscripcion, dejando asentado que ahora muestra `Plan Profesional` y la vigencia real para `doctor/900001`.
+
+### Commit validado
+
+Commit validado:
+
+`651c036 fix(suscripciones): sincroniza header con plan y vigencia actual`
+
+Archivos modificados por el commit:
+
+- `index.html`;
+- `assets/js/app.js`.
+
+### Problema corregido
+
+Antes del ajuste:
+
+- el header global seguia mostrando `Plan Optimo`;
+- el panel `#p-suscripcion` ya mostraba correctamente `Profesional`;
+- esto generaba una contradiccion visual despues del upgrade `optimum -> professional`;
+- la vigencia del header global podia quedar como fecha anterior, estatica o comercial vieja.
+
+### Solucion aplicada
+
+El ajuste deja el header global sincronizado con el current read-model:
+
+- el header global ya no usa fallback viejo `Plan Optimo`;
+- el fallback neutral queda como:
+  - `Plan vigente`;
+  - `Vigencia por consultar`;
+- `assets/js/app.js` sincroniza el header desde el current read-model;
+- el plan se toma desde `plan_label` o, si hace falta, desde plan efectivo/contratado;
+- la vigencia se toma desde `expires_at`;
+- no se hardcodeo `Profesional`;
+- no se altero el panel `#p-suscripcion`.
+
+### QA cerrada
+
+Microfase cerrada:
+
+- `QA/Suscripciones-HeaderGlobal-PlanFechaActualSync-01`: PASS.
+
+Evidencia backend current:
+
+- HTTP `200`;
+- `contracted_plan_code = professional`;
+- `effective_plan_code = professional`;
+- `plan_label = Profesional`;
+- `status = active`;
+- `expires_at = 2027-06-27 22:03:34`.
+
+### Resultado visual validado
+
+Resultado validado en frontend DEV/local:
+
+- header global: `Plan Profesional`;
+- header vigencia: `Vigencia 27 jun 2027`;
+- `data-subscription-expires-at = 2027-06-27 22:03:34`;
+- ya no aparece `Plan Optimo`;
+- ya no aparece vigencia vieja;
+- panel `#p-suscripcion`: `Profesional · Tu plan actual`;
+- card Profesional: `Plan actual`;
+- Basico/Estandar/Optimo: `Disponible al renovar`;
+- CTA upgrade superior: no existe;
+- downgrade inmediato: no disponible;
+- POSTs durante QA: `0`.
+
+### WARNs no bloqueantes
+
+Se observaron warnings externos de Google Maps y deprecacion de marker.
+
+Estos warnings:
+
+- no estan relacionados con suscripciones;
+- no afectan current read-model;
+- no afectan la sincronizacion del header global;
+- no bloquean esta QA.
+
+### Exclusiones
+
+Durante esta documentacion:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se toco SQL/schema/seeds;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout-intents;
+- no se ejecuto payment-intents;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modificaron archivos durante QA.
+
+### Decision
+
+El cierre queda aprobado:
+
+- header global sincronizado con current real;
+- header y panel `#p-suscripcion` ya no se contradicen;
+- plan vigente visible: `Plan Profesional`;
+- vigencia visible derivada de `expires_at`;
+- sin writes ejecutados;
+- sin cambios backend/API/SQL;
+- sin riesgos bloqueantes conocidos.
+
+### Siguiente microfase recomendada
+
+`DOCS/Suscripciones-UpgradeIntent-FullCycle-Closure-01`
+
+Objetivo sugerido:
+
+Cerrar documentalmente el ciclo completo de upgrades encadenados `standard -> optimum -> professional`, incluyendo backend, QA, frontend y estado final actual de `doctor/900001`.
