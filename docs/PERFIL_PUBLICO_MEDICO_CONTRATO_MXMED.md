@@ -31282,3 +31282,153 @@ Validaciones esperadas para el cierre:
 Objetivo sugerido:
 
 Validar por HTTP controlado que el fixture DEV/local crea sesion real para `doctor/900001` con plan actual `optimum`, target `professional`, billing `annual` y `session_scope = true`, sin ejecutar checkout todavia.
+
+## PP-Decisiones 168 - Cierre de upgrade encadenado Optimum a Professional
+
+### Microfase
+
+`DOCS/Suscripciones-UpgradeIntent-ProfessionalUpgrade-Closure-01`
+
+### Objetivo
+
+Documentar el cierre funcional y tecnico del upgrade encadenado `optimum -> professional` para `doctor/900001`, incluyendo checkout, payment intent, confirmacion mock, activacion post-pago, replay guards, current read-model, reflejo frontend y WARN visual no bloqueante del header global.
+
+### Contexto del flujo cerrado
+
+El flujo controlado cerro para:
+
+- `entity_type = doctor`;
+- `entity_id = 900001`;
+- plan anterior: `optimum`;
+- plan final: `professional`;
+- billing: `annual`;
+- vigencia conservada: `2027-06-27 22:03:34`;
+- `checkout_intent_uuid = 92c5a9fa-0930-4eed-9175-25ea5c08dcef`;
+- `contract_acceptance_uuid = 111cad72-8df0-4dbd-a322-9ff143b28f23`;
+- `payment_intent_uuid = c9c49470-f4de-4926-b09d-bb24fa887904`;
+- `payment_event_uuid = 3346400e-6dc1-4017-92ae-4535285c37a1`;
+- suscripcion anterior `optimum = 10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- nueva suscripcion `professional = 2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`;
+- `amount_cents = 10000`;
+- `currency = MXN`;
+- `pricing_strategy = prorated_difference`.
+
+### Microfases cerradas
+
+Quedan registradas como cerradas:
+
+- `BE/Suscripciones-UpgradeIntent-ProfessionalUpgrade-Readiness-01`: WARN, bloqueo de fixture identificado.
+- `BE/Suscripciones-UpgradeIntent-ProfessionalUpgrade-FixtureReadiness-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-FixtureSession-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-CheckoutReadiness-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-CheckoutCreate-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-CheckoutReplay-01`: PASS con WARN no bloqueante.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-PaymentIntentCreate-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-PaymentIntentReplay-01`: PASS con WARN no bloqueante.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-ConfirmMock-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-StateReadModel-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-ActivateControlled-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-ReplayGuard-01`: PASS.
+- `QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-CurrentFrontendReflection-01`: PASS.
+
+### Estado final backend
+
+El current backend devuelve `professional / Profesional` para `doctor/900001`.
+
+Estado final validado:
+
+- status: `active`;
+- suscripciones activas compatibles: `1`;
+- `professional_active_rows = 1`;
+- `optimum_active_rows = 0`;
+- anterior `optimum` quedo `renewed`;
+- anterior `renewed_to_subscription_id = 2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`;
+- nueva `professional.renewed_from_subscription_id = 10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- checkout `92c5a9fa-0930-4eed-9175-25ea5c08dcef` quedo `activated`;
+- checkout `activated_at = 2026-06-30 02:05:45`;
+- checkout apunta a `subscription_id = 2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`;
+- contract acceptance `111cad72-8df0-4dbd-a322-9ff143b28f23` quedo enlazada a la nueva suscripcion;
+- payment intent `c9c49470-f4de-4926-b09d-bb24fa887904` sigue `paid / mock_paid`;
+- payment event `3346400e-6dc1-4017-92ae-4535285c37a1` sigue `payment_intent_confirm / processed`.
+
+### State read-model final
+
+El state read-model final respondio HTTP `200` y conserva semantica de upgrade:
+
+- `checkout_intent.intent_type = upgrade`;
+- `checkout_intent.status = activated`;
+- `activation_eligibility.can_activate = false`;
+- reasons:
+  - `checkout_intent_not_pending_payment`;
+  - `activation_already_done`;
+- current: `professional`;
+- segunda activacion insegura bloqueada.
+
+### Estado final frontend
+
+El panel privado `#p-suscripcion` refleja el current real:
+
+- plan vigente mostrado: `Profesional`;
+- titulo: `Profesional · Tu plan actual`;
+- estado: `Activo`;
+- vigencia visible: `2027-06-27 22:03:34`;
+- card Profesional: `Plan actual`, boton deshabilitado;
+- cards Basico/Estandar/Optimo: `Disponible al renovar`, deshabilitadas;
+- CTA principal: `Solicitar cambio de plan`, deshabilitado;
+- no CTA de upgrade superior;
+- no downgrade inmediato;
+- no pago/activacion repetida;
+- bloques debug/dev ocultos por defecto;
+- POSTs durante QA frontend: `0`.
+
+### WARNs no bloqueantes
+
+WARNs registrados:
+
+- en checkout replay y payment intent replay, `meta.idempotent_replay=true`, pero `data.idempotency.idempotent_replay=false`;
+- no bloqueo seguridad porque no duplico checkout/payment intent ni ejecuto efectos indebidos;
+- el replay guard de activacion si quedo normalizado con:
+  - `meta.idempotent_replay=true`;
+  - `data.idempotency.idempotent_replay=true`;
+- el header global fuera del panel sigue mostrando `Plan Optimo`;
+- dentro del panel de suscripcion se corrige con `Segun el estado actual de suscripcion: Profesional` y nota de encabezado comercial anterior;
+- el WARN del header no bloquea backend/current ni seguridad, pero conviene corregirlo en una microfase visual posterior.
+
+### Exclusiones
+
+Durante esta documentacion:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se toco SQL/schema/seeds;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout-intents;
+- no se ejecuto payment-intents;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se creo schema nuevo;
+- no se modificaron fixtures.
+
+### Decision
+
+El upgrade encadenado `optimum -> professional` queda cerrado funcional y tecnicamente:
+
+- checkout upgrade creado y replay validado;
+- payment intent creado y replay validado;
+- confirmacion mock validada;
+- activacion post-pago validada;
+- replay guard de activacion validado;
+- current read-model final en `professional`;
+- frontend del panel privado refleja `Profesional`;
+- sin duplicados activos incompatibles;
+- sin perdida de vigencia;
+- sin riesgos bloqueantes conocidos.
+
+### Siguiente microfase recomendada
+
+`FE/Suscripciones-HeaderGlobal-PlanActualSync-01`
+
+Objetivo sugerido:
+
+Corregir el header global para que use el current read-model real de suscripcion y deje de mostrar `Plan Optimo` cuando el plan activo ya es `professional`, sin afectar el panel `#p-suscripcion`.
