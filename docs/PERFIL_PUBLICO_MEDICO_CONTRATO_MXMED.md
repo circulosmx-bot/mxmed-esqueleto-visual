@@ -36594,3 +36594,240 @@ Warnings no bloqueantes:
 Objetivo sugerido:
 
 Validar estaticamente el servicio `ProcessStripeSubscriptionWebhookService`, incluyendo input/output, dedupe, conflicto por hash, amount/currency mismatch, transiciones seguras, persistencia de eventos y ausencia de activacion/endpoint.
+
+## PP-Decisiones 191 - Implementacion endpoint webhook Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-EndpointImplementation-01`
+
+### Objetivo
+
+Implementar el endpoint backend `POST /api/subscriptions/index.php/webhooks/stripe` para recibir webhooks Stripe, validar raw body/firma, normalizar el evento y delegar procesamiento a `ProcessStripeSubscriptionWebhookService`, sin activar suscripciones automaticamente.
+
+### Commit base
+
+`8b4fa65 feat(suscripciones): agrega servicio webhook stripe`
+
+### Archivos modificados
+
+- `api/subscriptions/index.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron:
+
+- frontend;
+- SQL/schema/seeds;
+- fixtures;
+- flujo `confirm-mock`;
+- flujo `activate-after-payment`;
+- flujo checkout/payment intent existente, salvo wiring aislado del endpoint webhook.
+
+### Ruta implementada
+
+Ruta:
+
+`POST /api/subscriptions/index.php/webhooks/stripe`
+
+Reglas:
+
+- solo acepta `POST`;
+- no usa `session_scope`;
+- no requiere sesion de usuario;
+- no acepta autorizacion de frontend;
+- no llama `confirm-mock`;
+- no llama `activate-after-payment`;
+- responde JSON controlado.
+
+Las rutas no existentes bajo `/webhooks` responden `not_found` controlado.
+
+### Raw body y firma
+
+El endpoint:
+
+- lee raw body desde `php://input`;
+- conserva el raw body intacto antes de validar firma;
+- rechaza payload vacio con `stripe_webhook_payload_empty`;
+- parsea JSON despues de validar firma;
+- no reconstruye el payload para calcular firma;
+- no expone raw payload completo.
+
+Configuracion esperada:
+
+- variable/configuracion `STRIPE_WEBHOOK_SECRET`.
+
+Errores controlados:
+
+- `stripe_webhook_secret_missing` si falta el secret;
+- `stripe_webhook_signature_missing` si falta `Stripe-Signature`;
+- `stripe_webhook_signature_invalid` si falla la firma;
+- `stripe_webhook_payload_invalid` si el JSON no es un objeto Stripe valido.
+
+Como no existe SDK Stripe PHP instalado en el repo, la verificacion v1 queda implementada localmente con HMAC SHA-256:
+
+- header `Stripe-Signature`;
+- timestamp `t`;
+- firmas `v1`;
+- mensaje firmado `t.raw_body`;
+- tolerancia temporal de 300 segundos;
+- comparacion con `hash_equals`.
+
+Esto queda encapsulado para sustitucion futura por SDK oficial si el proyecto incorpora dependencia Stripe.
+
+### Normalizacion hacia el servicio
+
+Despues de firma valida, el endpoint construye input para `ProcessStripeSubscriptionWebhookService::process(...)` con:
+
+- `provider=stripe`;
+- `provider_event_id`;
+- `provider_event_type`;
+- `provider_event_created_at`;
+- `provider_payment_id`;
+- `provider_status`;
+- `amount_cents`;
+- `currency`;
+- `livemode`;
+- `api_version`;
+- `event_hash`;
+- `payload_text_sanitized`;
+- `raw_event_reference`;
+- `received_at`;
+- `signature_validated_at`.
+
+El `event_hash` se calcula como SHA-256 del raw body validado.
+
+`payload_text_sanitized` contiene solo resumen seguro:
+
+- event id/type;
+- object id/type;
+- status;
+- amount/currency;
+- livemode;
+- api version.
+
+No se persiste ni responde raw payload completo desde el endpoint.
+
+### Procesamiento delegado
+
+El endpoint instancia:
+
+- `SubscriptionPaymentIntentRepository`;
+- `SubscriptionPaymentEventRepository`;
+- `ProcessStripeSubscriptionWebhookService`.
+
+El servicio conserva la responsabilidad de:
+
+- dedupe por `provider_event_id`;
+- conflicto por `event_hash`;
+- lookup por `provider_payment_id`;
+- validacion amount/currency;
+- persistencia de payment event procesado/fallido;
+- transicion segura de payment intent local;
+- guard anti-degradacion de estados terminales.
+
+### Respuestas HTTP
+
+El endpoint usa `http_status_recommended` del servicio y mantiene respuestas controladas.
+
+Reglas v1:
+
+- `200` para evento procesado o duplicate/replay exacto aceptado;
+- `400` para raw body/JSON invalido;
+- `401` para firma faltante o invalida;
+- `409` para conflicto de hash/provider event o conflicto de estado terminal;
+- `422` para mismatch amount/currency o payload normalizado incompleto;
+- `500` solo para falta de configuracion o error inesperado controlado.
+
+Las respuestas no incluyen stacktrace ni raw payload.
+
+### Logging seguro
+
+Se agrego logging interno seguro con prefijo:
+
+`[subscriptions.stripe_webhook]`
+
+Solo registra:
+
+- route;
+- provider event id;
+- provider event type;
+- livemode;
+- reason controlado.
+
+No registra:
+
+- raw body completo;
+- firma completa;
+- datos sensibles;
+- raw notes.
+
+### Separacion de activacion
+
+El endpoint Stripe no:
+
+- llama `ActivateSubscriptionAfterPaymentService`;
+- modifica `profile_subscriptions`;
+- modifica contract acceptance;
+- marca checkout como activado;
+- activa plan;
+- ejecuta checkout;
+- crea payment intent;
+- usa frontend/session como autorizacion.
+
+La activacion post-pago sigue separada y controlada por el flujo `activate-after-payment`.
+
+### Compatibilidad
+
+La implementacion conserva compatibilidad con:
+
+- `mxmed_mock`;
+- `confirm-mock`;
+- payment events mock;
+- state read-model post-pago;
+- `activate-after-payment`;
+- fixtures DEV/local protegidos.
+
+No se cambiaron rutas existentes ni reglas de mock provider.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se activo suscripcion;
+- no se modifico DB ni storage manualmente.
+
+### Validaciones
+
+Validaciones requeridas:
+
+- `php -l api/subscriptions/index.php`;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`;
+- `git diff --check`;
+- verificacion de alcance: sin frontend, sin schema.
+
+Resultado esperado:
+
+`PASS endpoint implementation`.
+
+Warnings no bloqueantes:
+
+- la verificacion de firma usa implementacion HMAC v1 local por ausencia de SDK Stripe PHP en el repo;
+- QA funcional queda pendiente con payload Stripe sandbox firmado;
+- eventos Stripe no accionables quedan controlados por servicio v1.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripeWebhook-EndpointStaticQA-01`
+
+Objetivo sugerido:
+
+Validar estaticamente el endpoint `POST /api/subscriptions/index.php/webhooks/stripe`, incluyendo raw body, firma, normalizacion, wiring del servicio, respuestas HTTP controladas, logging seguro y ausencia de activacion automatica.

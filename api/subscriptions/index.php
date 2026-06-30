@@ -18,6 +18,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscription
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPendingPaymentAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityResolverService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityWriteLockService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionPaymentIntentMockProvider.php';
@@ -44,6 +45,7 @@ use Subscriptions\Services\CreateSubscriptionPaymentIntentService;
 use Subscriptions\Services\CreateSubscriptionPendingPaymentAcceptanceService;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
+use Subscriptions\Services\ProcessStripeSubscriptionWebhookService;
 use Subscriptions\Services\SubscriptionEntityResolverService;
 use Subscriptions\Services\SubscriptionEntityWriteLockService;
 use Subscriptions\Services\SubscriptionPaymentIntentMockProvider;
@@ -134,6 +136,30 @@ function subscriptionWriteError(string $code, string $message, string $authMode 
     ];
 }
 
+function subscriptionStripeWebhookMeta(): array
+{
+    return [
+        'contract' => 'subscription_stripe_webhook',
+        'version' => 'SUB-STRIPE-WEBHOOK-1',
+        'generated_at' => gmdate('c'),
+        'provider' => 'stripe',
+        'source' => 'stripe_webhook_v1',
+    ];
+}
+
+function subscriptionStripeWebhookError(string $code, string $message): array
+{
+    return [
+        'ok' => false,
+        'error' => [
+            'code' => $code,
+            'message' => $message,
+        ],
+        'data' => null,
+        'meta' => subscriptionStripeWebhookMeta(),
+    ];
+}
+
 function subscriptionContextMeta(string $source = 'none'): array
 {
     return [
@@ -219,6 +245,153 @@ function subscriptionEnvValue(string $name): string
     }
 
     return '';
+}
+
+function subscriptionStripeWebhookSecret(): string
+{
+    return subscriptionEnvValue('STRIPE_WEBHOOK_SECRET');
+}
+
+function subscriptionStripeWebhookSignatureHeader(array $headers): string
+{
+    $header = trim((string)($headers['stripe-signature'] ?? ''));
+    if ($header !== '') {
+        return $header;
+    }
+
+    return trim((string)($_SERVER['HTTP_STRIPE_SIGNATURE'] ?? ''));
+}
+
+function subscriptionStripeWebhookVerifySignature(string $rawBody, string $signatureHeader, string $secret): array
+{
+    $timestamp = null;
+    $signatures = [];
+    foreach (explode(',', $signatureHeader) as $part) {
+        $pieces = explode('=', trim($part), 2);
+        if (count($pieces) !== 2) {
+            continue;
+        }
+
+        $key = trim($pieces[0]);
+        $value = trim($pieces[1]);
+        if ($key === 't') {
+            $timestamp = $value;
+        } elseif ($key === 'v1' && $value !== '') {
+            $signatures[] = $value;
+        }
+    }
+
+    if ($timestamp === null || !ctype_digit($timestamp) || $signatures === []) {
+        return [
+            'ok' => false,
+            'code' => 'stripe_webhook_signature_invalid',
+            'message' => 'stripe webhook signature is invalid',
+        ];
+    }
+
+    $toleranceSeconds = 300;
+    if (abs(time() - (int)$timestamp) > $toleranceSeconds) {
+        return [
+            'ok' => false,
+            'code' => 'stripe_webhook_signature_invalid',
+            'message' => 'stripe webhook signature is invalid',
+        ];
+    }
+
+    $expected = hash_hmac('sha256', $timestamp . '.' . $rawBody, $secret);
+    foreach ($signatures as $signature) {
+        if (hash_equals($expected, $signature)) {
+            return ['ok' => true];
+        }
+    }
+
+    return [
+        'ok' => false,
+        'code' => 'stripe_webhook_signature_invalid',
+        'message' => 'stripe webhook signature is invalid',
+    ];
+}
+
+function subscriptionStripeWebhookPayloadSummary(array $event): ?string
+{
+    $object = $event['data']['object'] ?? null;
+    $object = is_array($object) ? $object : [];
+    $summary = [
+        'event_id' => $event['id'] ?? null,
+        'event_type' => $event['type'] ?? null,
+        'object_id' => $object['id'] ?? null,
+        'object_type' => $object['object'] ?? null,
+        'status' => $object['status'] ?? null,
+        'amount' => $object['amount'] ?? ($object['amount_received'] ?? null),
+        'currency' => $object['currency'] ?? null,
+        'livemode' => $event['livemode'] ?? null,
+        'api_version' => $event['api_version'] ?? null,
+    ];
+    $summary = array_filter($summary, static fn($value): bool => $value !== null && $value !== '');
+    $json = json_encode($summary, JSON_UNESCAPED_SLASHES);
+    if (!is_string($json) || $json === '') {
+        return null;
+    }
+
+    return strlen($json) > 4096 ? substr($json, 0, 4096) : $json;
+}
+
+function subscriptionStripeWebhookNormalizeEvent(array $event, string $rawBody): array
+{
+    $object = $event['data']['object'] ?? null;
+    $object = is_array($object) ? $object : [];
+    $amount = $object['amount'] ?? ($object['amount_received'] ?? null);
+
+    return [
+        'provider' => 'stripe',
+        'provider_event_id' => $event['id'] ?? null,
+        'provider_event_type' => $event['type'] ?? null,
+        'provider_event_created_at' => $event['created'] ?? null,
+        'provider_payment_id' => $object['id'] ?? null,
+        'provider_status' => $object['status'] ?? null,
+        'amount_cents' => $amount,
+        'currency' => $object['currency'] ?? null,
+        'livemode' => isset($event['livemode']) ? (bool)$event['livemode'] : null,
+        'api_version' => $event['api_version'] ?? null,
+        'event_hash' => hash('sha256', $rawBody),
+        'payload_text_sanitized' => subscriptionStripeWebhookPayloadSummary($event),
+        'raw_event_reference' => $event['id'] ?? null,
+        'received_at' => gmdate('Y-m-d H:i:s'),
+        'signature_validated_at' => gmdate('Y-m-d H:i:s'),
+    ];
+}
+
+function subscriptionStripeWebhookResponse(array $result): array
+{
+    $status = (int)($result['http_status_recommended'] ?? 200);
+    $data = $result;
+    unset($data['http_status_recommended']);
+
+    $ok = $status >= 200 && $status < 300 && !(bool)($data['conflict'] ?? false);
+    $response = [
+        'ok' => $ok,
+        'data' => $data,
+        'meta' => subscriptionStripeWebhookMeta(),
+    ];
+    if (!$ok) {
+        $reason = trim((string)($data['reason'] ?? 'stripe_webhook_unprocessable'));
+        $response['error'] = [
+            'code' => $reason !== '' ? $reason : 'stripe_webhook_unprocessable',
+            'message' => 'stripe webhook event could not be processed',
+        ];
+    }
+
+    return $response;
+}
+
+function subscriptionStripeWebhookLog(string $message, array $context = []): void
+{
+    $safe = [];
+    foreach ($context as $key => $value) {
+        $safe[(string)$key] = subscriptionSafeLogValue($value);
+    }
+
+    error_log('[subscriptions.stripe_webhook] ' . $message . ' ' . json_encode($safe, JSON_UNESCAPED_SLASHES));
 }
 
 function subscriptionStrictAuthRequired(): bool
@@ -1447,6 +1620,118 @@ try {
 
     if (!empty($segments) && $segments[0] === 'dev') {
         subscriptionRespond(subscriptionDevSessionFixtureError('not_found', 'route not found'), 404);
+        return;
+    }
+
+    if (count($segments) === 2 && $segments[0] === 'webhooks' && $segments[1] === 'stripe') {
+        if ($method !== 'POST') {
+            subscriptionRespond(subscriptionStripeWebhookError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+
+        $rawBody = file_get_contents('php://input');
+        if (!is_string($rawBody) || trim($rawBody) === '') {
+            subscriptionRespond(
+                subscriptionStripeWebhookError('stripe_webhook_payload_empty', 'stripe webhook payload is required'),
+                400
+            );
+            return;
+        }
+
+        $secret = subscriptionStripeWebhookSecret();
+        if ($secret === '') {
+            subscriptionStripeWebhookLog('secret_missing', [
+                'route' => 'webhooks/stripe',
+            ]);
+            subscriptionRespond(
+                subscriptionStripeWebhookError('stripe_webhook_secret_missing', 'stripe webhook secret is not configured'),
+                500
+            );
+            return;
+        }
+
+        $headers = subscriptionHeaders();
+        $signatureHeader = subscriptionStripeWebhookSignatureHeader($headers);
+        if ($signatureHeader === '') {
+            subscriptionStripeWebhookLog('signature_missing', [
+                'route' => 'webhooks/stripe',
+            ]);
+            subscriptionRespond(
+                subscriptionStripeWebhookError('stripe_webhook_signature_missing', 'stripe webhook signature is required'),
+                401
+            );
+            return;
+        }
+
+        $signature = subscriptionStripeWebhookVerifySignature($rawBody, $signatureHeader, $secret);
+        if (!(bool)($signature['ok'] ?? false)) {
+            subscriptionStripeWebhookLog('signature_invalid', [
+                'route' => 'webhooks/stripe',
+            ]);
+            subscriptionRespond(
+                subscriptionStripeWebhookError(
+                    (string)($signature['code'] ?? 'stripe_webhook_signature_invalid'),
+                    (string)($signature['message'] ?? 'stripe webhook signature is invalid')
+                ),
+                401
+            );
+            return;
+        }
+
+        $decoded = json_decode($rawBody, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded) || array_values($decoded) === $decoded) {
+            subscriptionRespond(
+                subscriptionStripeWebhookError('stripe_webhook_payload_invalid', 'stripe webhook payload is invalid'),
+                400
+            );
+            return;
+        }
+
+        $input = subscriptionStripeWebhookNormalizeEvent($decoded, $rawBody);
+        subscriptionStripeWebhookLog('received', [
+            'provider_event_id' => $input['provider_event_id'] ?? null,
+            'provider_event_type' => $input['provider_event_type'] ?? null,
+            'livemode' => $input['livemode'] ?? null,
+        ]);
+
+        try {
+            $pdo = mxmed_pdo();
+            $service = new ProcessStripeSubscriptionWebhookService(
+                $pdo,
+                new SubscriptionPaymentIntentRepository($pdo),
+                new SubscriptionPaymentEventRepository($pdo)
+            );
+            $result = $service->process($input);
+        } catch (Throwable $e) {
+            subscriptionStripeWebhookLog('processing_unavailable', [
+                'provider_event_id' => $input['provider_event_id'] ?? null,
+                'provider_event_type' => $input['provider_event_type'] ?? null,
+            ]);
+            subscriptionRespond(
+                subscriptionStripeWebhookError('stripe_webhook_unavailable', 'stripe webhook is unavailable'),
+                500
+            );
+            return;
+        }
+
+        $status = (int)($result['http_status_recommended'] ?? 200);
+        if ($status < 100 || $status > 599) {
+            $status = 500;
+        }
+        if ($status >= 400 || (bool)($result['conflict'] ?? false)) {
+            subscriptionStripeWebhookLog('processed_with_error', [
+                'provider_event_id' => $result['provider_event_id'] ?? null,
+                'provider_event_type' => $result['provider_event_type'] ?? null,
+                'reason' => $result['reason'] ?? null,
+            ]);
+        }
+
+        subscriptionRespond(subscriptionStripeWebhookResponse($result), $status);
+        return;
+    }
+
+    if (!empty($segments) && $segments[0] === 'webhooks') {
+        subscriptionRespond(subscriptionStripeWebhookError('not_found', 'route not found'), 404);
         return;
     }
 
