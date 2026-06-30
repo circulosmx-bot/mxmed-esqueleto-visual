@@ -33377,3 +33377,314 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Definir politica explicita de fixtures DEV/local para produccion: flags requeridos, bloqueo por entorno, naming, logging, documentacion y criterios para eliminar o conservar rutas DEV.
+
+## PP-Decisiones 179 - Politica de fixtures DEV/local para suscripciones
+
+### Microfase
+
+`BE/Suscripciones-ProductionHardening-FixturesPolicy-01`
+
+### Objetivo
+
+Definir una politica explicita para fixtures DEV/local, `confirm-mock`, `mxmed_mock`, `session_scope` e IDs fijos usados en QA, estableciendo reglas de bloqueo productivo, flags requeridos, naming, logging, documentacion y criterios para eliminar o conservar estas rutas antes de produccion.
+
+Esta microfase es documental/tecnica. No implementa cambios, no modifica codigo, no ejecuta endpoints y no toca DB.
+
+### Base
+
+La politica parte de la auditoria documentada en `PP-Decisiones 178`.
+
+Hallazgo base:
+
+- no se detecto `BLOCKER` de exposicion productiva directa;
+- `confirm-mock`, `mxmed_mock`, `session_scope` y fixtures con IDs fijos estan protegidos para DEV/local;
+- queda pendiente convertir esas protecciones en politica explicita antes de produccion.
+
+### Politica general
+
+Reglas obligatorias para cualquier fixture DEV/local de suscripciones:
+
+- debe estar bloqueado en produccion;
+- debe depender de flag explicito;
+- debe requerir request local o entorno permitido;
+- debe usar naming claro con prefijo `dev` o equivalente;
+- debe responder error controlado si el flag no esta activo;
+- debe responder error controlado si el request no es local;
+- debe responder error controlado si detecta ambiente productivo;
+- no debe ser usado por UI productiva;
+- no debe generar pagos reales;
+- no debe activar suscripciones productivas;
+- no debe relajar permisos productivos;
+- no debe depender de datos sensibles reales;
+- debe ser removible sin afectar el flujo productivo;
+- debe quedar documentado con uso permitido, riesgos y criterio de retiro.
+
+Si una ruta DEV/local no cumple estas reglas, no debe avanzar hacia produccion sin microfase correctiva.
+
+### Politica para upgrade-doctor
+
+Ruta actual:
+
+`POST /api/subscriptions/index.php/dev/session-fixture/upgrade-doctor`
+
+Uso permitido:
+
+- QA DEV/local de upgrades;
+- preparacion de sesion para escenarios controlados;
+- pruebas de `standard -> optimum`;
+- pruebas de `optimum -> professional`.
+
+Reglas obligatorias:
+
+- validar plan activo real;
+- validar billing `annual`;
+- validar target superior;
+- mantener `session_scope=true` solo como contexto QA;
+- no crear checkout;
+- no crear payment intent;
+- no confirmar pago;
+- no ejecutar `activate-after-payment`;
+- no activar suscripcion;
+- bloquear produccion;
+- no conectarse a UI productiva;
+- no convertirse en autorizacion productiva.
+
+Decision de politica:
+
+- conservar temporalmente para QA local mientras existan microfases DEV/local de upgrades;
+- exigir flag y bloqueo productivo verificable;
+- mover, eliminar o aislar antes de produccion si ya no se requiere;
+- nunca tratar `doctor/900001` como contrato productivo.
+
+### Politica para confirm-mock
+
+Ruta:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents/{payment_intent_uuid}/confirm-mock`
+
+Uso permitido:
+
+- DEV/local/debug;
+- QA controlada de payment intents mock;
+- validacion de idempotencia mock;
+- generacion de evento mock bajo contrato de QA.
+
+Reglas obligatorias:
+
+- operar solo con provider mock;
+- no sustituir webhooks reales;
+- no activar suscripcion;
+- no representar pago real;
+- no quedar disponible como mecanismo productivo;
+- requerir contexto de write DEV/local o flag dedicado;
+- crear evento mock controlado solo bajo contrato de QA;
+- responder errores controlados;
+- ser reemplazado por webhooks reales firmados antes de produccion.
+
+Decision de politica:
+
+- `confirm-mock` debe quedar deshabilitado o inaccesible en produccion;
+- si se conserva, debe estar detras de flag explicito y bloqueo productivo;
+- no puede ser usado por backoffice productivo;
+- no puede ser usado por frontend productivo.
+
+### Politica para mxmed_mock
+
+Uso permitido:
+
+- provider mock para DEV/local;
+- generacion local de `provider_payment_id` y `provider_checkout_id`;
+- QA de payment intent sin llamadas externas.
+
+Reglas obligatorias:
+
+- no usar como provider productivo;
+- no mezclar con transacciones productivas;
+- no registrar cobros reales;
+- no alimentar conciliacion productiva;
+- no usar para webhooks reales;
+- no permitir activacion productiva basada en `mxmed_mock`.
+
+Provider real futuro debe tener:
+
+- firma/verificacion;
+- IDs reales;
+- estados reales;
+- reconciliacion;
+- webhook idempotente;
+- auditoria de eventos;
+- manejo de retries;
+- manejo de eventos fallidos o tardios.
+
+Decision de politica:
+
+- `mxmed_mock` queda autorizado solo para QA DEV/local;
+- toda ruta productiva debe reemplazarlo por contrato de proveedor real;
+- el bloque provider real es obligatorio antes de produccion.
+
+### Politica para session_scope
+
+Uso actual:
+
+- sesion PHP real creada por contexto local/dev;
+- mecanismo de QA para atravesar guards de write sin headers magicos.
+
+Reglas obligatorias:
+
+- `session_scope` no es autorizacion productiva final;
+- produccion debe usar roles/permisos reales;
+- backend debe validar `entity_type` y `entity_id`;
+- backend debe validar ownership o permisos de operador;
+- no debe habilitar writes cross-entity;
+- debe poder auditarse donde se establece;
+- debe poder auditarse donde se consume;
+- no debe depender de fixtures con IDs fijos;
+- operadores/admins productivos deben tener contrato separado.
+
+Decision de politica:
+
+- `session_scope` puede seguir como mecanismo QA local;
+- no debe ser tratado como modelo productivo de permisos;
+- la microfase de permisos productivos debe reemplazar o endurecer este modelo.
+
+### Politica para IDs fijos
+
+IDs fijos identificados:
+
+- `doctor/900001`;
+- doctores auxiliares de QA local;
+- checkout/payment/subscription UUIDs historicos de microfases.
+
+Reglas obligatorias:
+
+- los IDs fijos solo pueden existir bajo bloque DEV/local;
+- no deben aparecer como reglas productivas;
+- no deben hardcodearse en frontend productivo;
+- no deben ser condicion de negocio;
+- no deben ser necesarios para iniciar produccion;
+- deben poder reemplazarse por fixtures controlados por entorno.
+
+Decision de politica:
+
+- `doctor/900001` queda como fixture/control QA;
+- no es dependencia productiva;
+- futuras QA deben tender a fixtures generados o parametrizados por entorno;
+- antes de produccion se debe confirmar ausencia de IDs magicos en rutas o reglas productivas.
+
+### Politica para rutas/debug helpers DEV/local
+
+Reglas:
+
+- cualquier ruta DEV debe empezar por `dev/` o naming equivalente claro;
+- cualquier helper debug debe estar oculto por defecto;
+- cualquier accion write debug debe requerir host local;
+- cualquier accion write debug debe requerir flag explicito;
+- cualquier helper debug frontend debe estar deshabilitado fuera de local;
+- ningun helper debug debe crear pagos reales;
+- ningun helper debug debe activar suscripciones productivas.
+
+Decision:
+
+- mantener debug solo como herramienta de QA local;
+- documentar cada ruta o helper que permanezca;
+- eliminar o aislar helpers que no tengan uso QA vigente.
+
+### Logging y auditoria minima
+
+En DEV/local:
+
+- registrar uso de fixture cuando aplique;
+- identificar ruta;
+- identificar entidad;
+- identificar target;
+- identificar resultado;
+- evitar datos sensibles innecesarios;
+- no exponer raw `notes`;
+- no registrar Idempotency-Key cruda.
+
+En produccion:
+
+- cualquier intento de usar fixture debe bloquearse;
+- el intento bloqueado debe poder auditarse;
+- debe registrarse ruta, ambiente, origen permitido/no permitido y resultado;
+- no debe incluir payload sensible.
+
+La politica de logging no habilita writes; solo define trazabilidad minima.
+
+### Criterios de conservacion o eliminacion
+
+Conservar temporalmente un fixture solo si:
+
+- tiene uso QA vigente;
+- esta protegido por flag;
+- esta protegido por host local o entorno permitido;
+- bloquea produccion;
+- esta documentado;
+- no ejecuta pagos reales;
+- no activa suscripciones productivas;
+- puede eliminarse sin romper flujo productivo.
+
+Eliminar o aislar un fixture si:
+
+- no tiene uso QA vigente;
+- no tiene flag explicito;
+- no bloquea produccion;
+- usa IDs fijos como regla de negocio;
+- aparece en frontend productivo;
+- permite writes fuera de DEV/local;
+- crea pagos reales;
+- activa suscripciones productivas.
+
+### Criterios de aceptacion para produccion
+
+Antes de produccion debe cumplirse:
+
+- rutas DEV/local inaccesibles en produccion;
+- `confirm-mock` deshabilitado o inaccesible en produccion;
+- `mxmed_mock` sustituido por provider real;
+- `session_scope` no usado como autorizacion productiva final;
+- fixtures no visibles desde frontend productivo;
+- permisos reales implementados;
+- entity scope productivo validado;
+- webhooks reales firmados;
+- backoffice/reconciliacion definido;
+- logging/auditoria para intentos bloqueados;
+- QA de intento de acceso a fixture en produccion o entorno simulado;
+- documentacion actualizada de rutas conservadas o eliminadas.
+
+Si falta cualquiera de estos puntos, no debe habilitarse produccion.
+
+### Resultado de politica
+
+Resultado:
+
+- `PASS policy documental`.
+
+La politica queda explicita y accionable.
+
+No se detecta una ruta que requiera cambio inmediato antes de documentar enforcement; la siguiente fase debe revisar que el codigo actual cumpla cada punto de esta politica.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se tocaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-ProductionHardening-FixturesEnforcement-Readiness-01`
+
+Objetivo sugerido:
+
+Revisar que enforcement real falta en codigo para cumplir la politica de fixtures DEV/local: flags, bloqueo produccion, logs de intento, separacion de rutas y pruebas negativas.
