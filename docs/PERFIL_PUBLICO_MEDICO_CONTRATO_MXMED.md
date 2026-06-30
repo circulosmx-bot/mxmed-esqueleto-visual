@@ -32384,3 +32384,316 @@ El resumen final de readiness queda asentado:
 Objetivo sugerido:
 
 Identificar los requisitos minimos para convertir el flujo DEV/local validado en un flujo productivo seguro: proveedor de pago real, backoffice, permisos, logging, auditoria, limpieza de fixtures y matriz multi-entidad.
+
+## PP-Decisiones 176 - Readiness de hardening productivo para upgrades
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-ProductionHardening-Readiness-01`
+
+### Objetivo
+
+Identificar los requisitos minimos para convertir el flujo de upgrades validado en DEV/local en un flujo productivo seguro.
+
+Esta microfase es documental/readiness. No implementa proveedor real, no modifica backend, no modifica frontend, no ejecuta pagos, no ejecuta SQL y no toca storage.
+
+### Base DEV/local validada
+
+Queda como base funcional validada:
+
+- upgrades encadenados `standard -> optimum -> professional`;
+- checkout upgrade con `intent_type=upgrade`;
+- payment intent mock con `mxmed_mock`;
+- `confirm_mock` controlado para DEV/local;
+- `activate-after-payment` como unico punto de activacion;
+- idempotencia de checkout, payment intent y activacion;
+- current read-model final en `professional`;
+- header global y panel de suscripcion sincronizados con `Profesional`;
+- `doctor/900001` como fixture validado, no como supuesto productivo.
+
+Esta base no implica readiness productivo. El flujo aun depende de controles DEV/local, proveedor mock y fixtures.
+
+### Proveedor de pago real
+
+Antes de produccion se requiere reemplazar `mxmed_mock` por proveedor real.
+
+Requisitos minimos:
+
+- definir proveedor o proveedores productivos soportados;
+- crear payment intents contra proveedor real;
+- mapear estados reales de proveedor a estados normalizados locales;
+- validar firma de webhooks;
+- tolerar retries del proveedor sin duplicar eventos;
+- registrar `provider_payment_id` y referencias externas suficientes;
+- reconciliar estado del proveedor contra `subscription_payment_intents`;
+- reconciliar eventos del proveedor contra `subscription_payment_events`;
+- bloquear activacion con eventos no confiables o no firmados;
+- separar claramente `confirm_mock` como ruta DEV/local/debug;
+- impedir que `confirm_mock` quede disponible como mecanismo productivo.
+
+La activacion productiva solo debe depender de evidencia confiable de pago real o de backoffice autorizado con auditoria.
+
+### Webhooks y estados de pago
+
+El flujo productivo debe definir el contrato de webhooks antes de activar cobros reales.
+
+Pendientes:
+
+- endpoint o endpoints de webhook por proveedor;
+- validacion criptografica de firma;
+- idempotencia por `provider_event_id`;
+- manejo de eventos duplicados, atrasados o fuera de orden;
+- normalizacion de estados `created`, `requires_action`, `processing`, `paid`, `failed`, `refunded`, `disputed` o equivalentes;
+- estrategia para pagos bajo revision;
+- estrategia para pagos confirmados por proveedor pero no activados localmente;
+- estrategia para pagos fallidos despues de checkout creado;
+- estrategia de conciliacion periodica.
+
+Un webhook no debe activar si:
+
+- la firma es invalida;
+- el evento no corresponde al payment intent local;
+- el monto o moneda no coinciden con el snapshot local;
+- el checkout ya fue cerrado de forma incompatible;
+- el evento no esta en estado final confiable.
+
+### Backoffice y reconciliacion
+
+Se requiere herramienta interna para soporte y operaciones.
+
+Capacidades esperadas:
+
+- busqueda por entidad;
+- busqueda por checkout intent;
+- busqueda por payment intent local;
+- busqueda por id de proveedor;
+- busqueda por payment event;
+- vista de checkout, payment intent, payment events, contract acceptance y suscripcion;
+- filtro por eventos procesados, fallidos, duplicados o pendientes;
+- lectura de idempotency keys relevantes;
+- trazabilidad de respuesta idempotente;
+- vista de diferencias entre proveedor y DB local;
+- acciones manuales permitidas de forma explicita;
+- acciones manuales prohibidas de forma explicita.
+
+Caso de soporte minimo:
+
+- pago cobrado por proveedor;
+- payment intent local sin activacion;
+- evento recibido pero fallido;
+- evento no recibido;
+- checkout expirado o en estado inesperado.
+
+Toda intervencion debe registrar:
+
+- operador;
+- fecha/hora;
+- entidad afectada;
+- recurso afectado;
+- motivo;
+- evidencia;
+- resultado.
+
+### Permisos y seguridad
+
+El flujo productivo debe cerrar permisos antes de conectarse a pagos reales.
+
+Reglas minimas:
+
+- solo actores autorizados pueden crear checkout;
+- solo actores autorizados pueden iniciar upgrade;
+- `session_scope` no debe tratarse como mecanismo productivo general;
+- fixtures DEV/local deben estar bloqueados en produccion;
+- roles de doctor, operador y administrador deben quedar separados;
+- frontend no controla precio, monto, moneda, vigencia ni plan efectivo;
+- frontend puede proponer plan destino, pero backend decide elegibilidad;
+- cada operacion valida `entity_type` y `entity_id`;
+- cada operacion valida que el actor pueda operar sobre esa entidad;
+- no se aceptan headers magicos para writes productivos;
+- no se expone `notes` crudo ni payloads sensibles en UI.
+
+Tambien se requiere revisar permisos para entidades distintas a doctor.
+
+### Auditoria y logging
+
+Se requiere logging seguro y correlacionable.
+
+Eventos minimos a auditar:
+
+- creacion de checkout upgrade;
+- creacion de payment intent;
+- recepcion de webhook;
+- creacion/procesamiento de payment event;
+- activacion post-pago;
+- replay idempotente;
+- errores 409;
+- errores 422;
+- errores 500;
+- intervenciones de backoffice.
+
+Campos recomendados:
+
+- correlation id;
+- entity scope;
+- checkout intent uuid;
+- payment intent uuid;
+- payment event uuid;
+- provider payment id si aplica;
+- provider event id si aplica;
+- operation;
+- idempotency key hash, nunca key cruda;
+- resultado;
+- HTTP status;
+- timestamp.
+
+No se deben registrar datos sensibles innecesarios ni exponer `notes` crudo.
+
+### Matriz multi-entidad
+
+El flujo fue validado en `doctor/900001`.
+
+Queda pendiente matriz por tipo de entidad:
+
+- doctor;
+- dental;
+- clinica;
+- hospital;
+- laboratorio;
+- aseguradora;
+- otros tipos soportados por producto.
+
+Por cada entidad se debe validar:
+
+- permisos;
+- current subscription;
+- checkout upgrade;
+- price snapshot;
+- payment intent;
+- webhook/payment event;
+- activacion post-pago;
+- idempotencia;
+- errores esperados;
+- UI asociada.
+
+Aunque el servicio sea generico, no debe asumirse cobertura multi-entidad sin QA especifica.
+
+### Planes y precios productivos
+
+El pricing productivo debe salir de una fuente administrable por operador principal o backend/admin.
+
+Requisitos minimos:
+
+- matriz de precios vigente;
+- moneda;
+- periodo anual y futura transicion mensual;
+- regla mensual con incremento de `25%` cuando se implemente;
+- versionado de precios;
+- vigencia de precios;
+- snapshot de precio en checkout;
+- auditoria de precio usado;
+- bloqueo de precios hardcodeados en frontend como verdad final;
+- validacion server-side de monto y moneda;
+- manejo de diferencias proporcionales en upgrade.
+
+El frontend puede mostrar precios comerciales, pero no debe ser fuente de verdad de cobro.
+
+### UX productiva
+
+La UX productiva debe separar lectura, checkout real y recuperacion de errores.
+
+Pendientes UX:
+
+- inicio real de checkout;
+- mensajes de pago pendiente;
+- mensajes de pago confirmado;
+- estado de activacion;
+- errores recuperables;
+- pago bajo revision;
+- soporte cuando pago se cobro pero no activo;
+- bloqueo claro de downgrade durante vigencia;
+- upgrade superior disponible;
+- ausencia de cambio de periodicidad en v1;
+- copy para acciones no disponibles;
+- no mostrar detalles tecnicos salvo modo soporte/debug autorizado.
+
+La UI no debe prometer activacion si el pago aun no esta confirmado por proveedor real.
+
+### Limpieza DEV/local
+
+Antes de produccion debe revisarse el uso de fixtures.
+
+Pendientes:
+
+- revisar `dev/session-fixture/upgrade-doctor`;
+- confirmar bloqueo por ambiente;
+- confirmar bloqueo por host local;
+- decidir si se elimina, se mueve o queda detras de flag estricto;
+- documentar que no forma parte del contrato productivo;
+- separar fixtures de contratos productivos;
+- evitar dependencia productiva de `doctor/900001`;
+- verificar que `confirm_mock` queda fuera de flujos productivos.
+
+Los fixtures pueden mantenerse para QA local solo si el bloqueo productivo es explicito y verificable.
+
+### Riesgos pendientes
+
+Riesgos no bloqueantes para el cierre DEV/local, pero bloqueantes para produccion:
+
+- proveedor real no integrado;
+- webhooks reales no validados;
+- firma de webhook no validada;
+- backoffice no construido;
+- permisos productivos no cerrados;
+- matriz multi-entidad pendiente;
+- precios administrables no validados;
+- QA de concurrencia real pendiente;
+- expiracion y renovacion pendientes;
+- fallos parciales de proveedor pendientes;
+- limpieza de fixtures DEV/local pendiente.
+
+### Conclusion de readiness
+
+Resultado documental:
+
+- `PASS readiness documental`.
+
+El mapa de hardening productivo queda delimitado y accionable.
+
+El flujo DEV/local de upgrades queda cerrado como base tecnica, pero no debe considerarse productivo hasta completar:
+
+- pagos reales;
+- webhooks;
+- permisos;
+- backoffice;
+- auditoria;
+- pricing administrable;
+- matriz multi-entidad;
+- limpieza DEV/local;
+- QA productiva.
+
+No se detecta una decision base faltante que bloquee documentar este mapa.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se tocaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-UpgradeIntent-ProductionHardening-Plan-01`
+
+Objetivo sugerido:
+
+Convertir este readiness en un plan tecnico priorizado para hardening productivo: pagos reales, webhooks, backoffice, permisos, auditoria, pricing administrable, matriz multi-entidad y limpieza DEV/local.
