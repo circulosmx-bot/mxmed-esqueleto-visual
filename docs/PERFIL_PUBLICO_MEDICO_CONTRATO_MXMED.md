@@ -35072,3 +35072,323 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Disenar el servicio backend futuro para procesar webhooks Stripe, validar firma, deduplicar provider events, mapear estados y persistir payment events sin activar suscripcion.
+
+## PP-Decisiones 186 - Readiness del servicio webhook Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-ServiceReadiness-01`
+
+### Objetivo
+
+Disenar documentalmente el servicio backend futuro para procesar webhooks de Stripe, validando firma, deduplicando eventos, correlacionando con payment intents locales, mapeando estados y persistiendo payment events sin activar suscripcion automaticamente.
+
+### Base revisada
+
+Decision previa revisada:
+
+- `PP-Decisiones 185 - Readiness de contrato webhook Stripe`.
+
+Elementos extraidos:
+
+- endpoint conceptual: `POST /api/subscriptions/index.php/webhooks/stripe`;
+- firma Stripe por header `Stripe-Signature`;
+- secreto `MXMED_STRIPE_WEBHOOK_SECRET`;
+- eventos Stripe relevantes: `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `payment_intent.processing`, `payment_intent.requires_action`;
+- mapeo de estados Stripe -> MXMed;
+- correlacion por `provider_payment_id`, `provider_checkout_id` y metadata segura server-side;
+- idempotencia por `provider_event_id`;
+- persistencia en `subscription_payment_events`;
+- separacion estricta de `activate-after-payment`.
+
+### Servicio propuesto
+
+Nombre sugerido:
+
+`ProcessStripeSubscriptionWebhookService`
+
+Responsabilidad:
+
+- recibir evento Stripe ya autenticado/verificado;
+- validar estructura minima;
+- mapear evento a payment intent local;
+- validar amount/currency;
+- deduplicar por provider event id;
+- actualizar payment intent local si corresponde;
+- persistir payment event local;
+- devolver resultado controlado al endpoint webhook;
+- no activar suscripcion.
+
+### Limite con verificacion criptografica
+
+El servicio no debe recibir eventos sin firma validada.
+
+La validacion criptografica puede vivir antes del servicio:
+
+- endpoint webhook;
+- helper `StripeWebhookSignatureVerifier`;
+- adapter del SDK oficial Stripe.
+
+El servicio recibe un DTO normalizado cuya autenticidad ya fue validada. Si el endpoint no puede verificar firma, no debe invocar el servicio.
+
+### Input conceptual
+
+Input esperado:
+
+- `provider`: `stripe`;
+- `provider_event_id`;
+- `provider_event_type`;
+- `provider_event_created_at`;
+- `provider_payment_id`;
+- `provider_checkout_id`, si aplica;
+- `provider_status`;
+- `amount_cents`;
+- `currency`;
+- `raw_event_reference` o referencia segura;
+- `event_hash`;
+- payload verificado o DTO normalizado;
+- headers relevantes ya validados por endpoint/helper.
+
+Reglas:
+
+- no aceptar provider distinto de `stripe`;
+- no aceptar evento sin `provider_event_id`;
+- no confiar en datos del frontend;
+- no recalcular amount desde input cliente;
+- no aceptar payload si firma no fue validada previamente.
+
+### Output conceptual
+
+Salida esperada:
+
+- `processed`: true/false;
+- `duplicate`: true/false;
+- `provider_event_id`;
+- `payment_intent_uuid`;
+- `checkout_intent_uuid`;
+- `payment_event_uuid`, si se creo o recupero;
+- `normalized_status`;
+- `processing_status`;
+- `reason`, si no procesa;
+- `http_status_recommended`;
+- `action`: `processed`, `ignored`, `duplicate`, `failed` o `conflict`.
+
+### Dependencias futuras
+
+Dependencias probables:
+
+- `SubscriptionPaymentIntentRepository`;
+- `SubscriptionPaymentEventRepository`;
+- `SubscriptionCheckoutIntentRepository`;
+- servicio de mapeo `StripePaymentStatusMapper` o equivalente;
+- helper/servicio de idempotencia por provider event id;
+- logger seguro;
+- config/env para provider y webhook secret;
+- generador de UUID;
+- clock/time provider si el proyecto lo estandariza;
+- helper de hash canonico de evento.
+
+Brechas de repositorio no bloqueantes:
+
+- `SubscriptionPaymentIntentRepository` ya permite buscar por `provider_payment_id` y `provider_checkout_id`;
+- hoy solo expone `markMockPaid(...)` para transicion a paid;
+- se requerira metodo generico futuro para provider real, por ejemplo `markProviderPaid(...)`, `markProviderFailed(...)` o `applyProviderStatus(...)`;
+- `SubscriptionPaymentEventRepository` ya puede crear eventos con `provider_event_id`, `event_hash`, `processing_status`, `error_message` y `payload_text_sanitized`;
+- se requeriran metodos de lookup por `provider + provider_event_id` y por `event_hash` para replay/conflicto.
+
+### Flujo interno del servicio
+
+Pasos esperados:
+
+1. Recibir evento normalizado/verificado.
+2. Validar `provider=stripe`.
+3. Validar `provider_event_id`.
+4. Buscar si el evento ya fue procesado.
+5. Si es replay exacto, devolver resultado idempotente.
+6. Si mismo event id llega con payload conflictivo, marcar conflicto.
+7. Correlacionar `provider_payment_id` con payment intent local.
+8. Si aplica, usar `provider_checkout_id` o metadata segura para apoyo de correlacion.
+9. Validar checkout local.
+10. Validar amount/currency contra checkout/payment intent local.
+11. Mapear status provider a status normalizado.
+12. Validar transicion permitida.
+13. Actualizar payment intent local solo si la transicion es segura.
+14. Crear payment event local.
+15. Marcar `processing_status` como `processed`, `ignored`, `failed` o `conflict`.
+16. No activar suscripcion.
+17. Devolver resultado controlado al endpoint.
+
+### Reglas de transicion
+
+Reglas:
+
+- `created` o `pending_provider` puede pasar a `paid`, `failed` o `cancelled` segun evento Stripe valido;
+- `pending` puede pasar a `paid`, `failed` o `cancelled` segun evento valido;
+- `paid` no debe degradarse a `pending`;
+- `paid` no debe cambiarse por evento tardio ambiguo;
+- evento tardio de `processing` sobre payment intent local `paid` debe ignorarse o registrarse como no accionable;
+- eventos de refund/chargeback no deben revertir automaticamente suscripcion en v1;
+- eventos no accionables deben registrarse o ignorarse con reason controlada;
+- amount mismatch debe fallar y no marcar paid;
+- currency mismatch debe fallar y no marcar paid;
+- provider mismatch debe fallar y no marcar paid.
+
+### Errores controlados
+
+Codigos propuestos:
+
+- `stripe_webhook_signature_not_verified`;
+- `stripe_event_id_missing`;
+- `stripe_event_duplicate`;
+- `stripe_event_conflict`;
+- `stripe_payment_intent_not_found`;
+- `stripe_payment_provider_mismatch`;
+- `stripe_checkout_not_found`;
+- `stripe_amount_mismatch`;
+- `stripe_currency_mismatch`;
+- `stripe_status_not_actionable`;
+- `stripe_payment_intent_state_conflict`;
+- `stripe_event_processing_failed`.
+
+### Persistencia esperada
+
+En payment intent local:
+
+- `provider_payment_id`;
+- `provider_status`;
+- `normalized_status`;
+- `paid_at`, `failed_at` o `cancelled_at` segun aplique;
+- `source` indicando `stripe_webhook`;
+- no alterar `amount_cents` ni `currency` si ya fueron fijados server-side;
+- no guardar raw payload.
+
+En payment event local:
+
+- `provider=stripe`;
+- `provider_event_id`;
+- `event_type` con el tipo de evento Stripe o tipo local acordado;
+- `provider_payment_id`;
+- `provider_status`;
+- `normalized_status`;
+- `event_hash`;
+- `signature_validated_at`;
+- `received_at`;
+- `processed_at`;
+- `processing_status`;
+- `error_message`, si aplica;
+- `payload_text_sanitized` o referencia segura;
+- relacion con payment intent local;
+- relacion con checkout local.
+
+### Evaluacion de schema actual
+
+Lectura read-only de repositorios y SQL versionado:
+
+- `subscription_payment_events` incluye `provider_event_id`;
+- incluye `provider_payment_id`;
+- incluye `event_type`;
+- incluye `provider_status`;
+- incluye `normalized_status`;
+- incluye `event_hash`;
+- incluye `signature_validated_at`;
+- incluye `received_at`;
+- incluye `processed_at`;
+- incluye `processing_status`;
+- incluye `error_message`;
+- incluye `payload_text_sanitized`;
+- incluye `UNIQUE KEY ux_sub_payment_events_provider_event (provider, provider_event_id)`;
+- incluye indices por `event_hash`, `provider_payment_id`, `checkout_intent_uuid`, `payment_intent_uuid` y `processing_status`.
+
+Decision:
+
+- no se requiere schema inmediato para v1 si `event_type` almacena el tipo Stripe y `payload_text_sanitized` conserva solo referencia/sanitizacion segura;
+- si se requiere separar `provider_event_type` de `event_type`, o guardar referencia privada a payload crudo, debera abrirse microfase DB posterior;
+- para implementacion inicial, la brecha principal es de metodos/repositorios, no de storage.
+
+### Relacion con state read-model
+
+El state read-model debe funcionar igual que con `confirm_mock`.
+
+Para poder activar, debe detectar:
+
+- payment intent `paid`;
+- payment event `processed`;
+- checkout elegible;
+- contract acceptance valida;
+- no mismatch de entity/payment/checkout.
+
+El webhook no llama `activate-after-payment`.
+
+La activacion queda en flujo posterior autorizado o backoffice.
+
+### QA futuras
+
+Matriz futura recomendada:
+
+- webhook con firma valida y `payment_intent.succeeded`;
+- webhook con firma faltante;
+- webhook con firma invalida;
+- webhook duplicado exacto;
+- webhook duplicado conflictivo;
+- amount mismatch;
+- currency mismatch;
+- provider payment id no encontrado;
+- provider mismatch;
+- evento no accionable;
+- evento tardio sobre payment intent ya `paid`;
+- pago confirmado sin activacion;
+- state read-model post-webhook;
+- `activate-after-payment` post-webhook;
+- replay de Stripe despues de respuesta 2xx;
+- evento fuera de orden.
+
+### Seguridad y logging
+
+Reglas:
+
+- no loggear raw payload completo;
+- no loggear tarjetas ni datos sensibles;
+- no exponer payload crudo en respuestas;
+- incluir correlation id;
+- incluir `provider_event_id`;
+- incluir `provider_event_type`;
+- incluir payment intent local si se resolvio;
+- auditar eventos fallidos;
+- auditar eventos duplicados/conflictivos;
+- auditar eventos rechazados por firma en el endpoint previo;
+- limitar acceso backoffice a payloads o referencias privadas.
+
+### Resultado de readiness
+
+`PASS service readiness`.
+
+El diseno del servicio queda claro y el schema actual permite una primera version sin migracion inmediata.
+
+`WARN`: faltan metodos de repositorio para transiciones reales de provider Stripe y lookup idempotente por provider event id.
+
+`BLOCKED`: no aplica.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico backend/API;
+- no se modificaron servicios ni repositorios;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-EndpointReadiness-01`
+
+Objetivo sugerido:
+
+Disenar documentalmente el endpoint futuro `POST /api/subscriptions/index.php/webhooks/stripe`, incluyendo lectura de raw body, validacion de firma, construccion del DTO normalizado, invocacion de `ProcessStripeSubscriptionWebhookService`, respuestas HTTP y pruebas negativas sin implementar aun el endpoint.
