@@ -31746,3 +31746,98 @@ El ciclo completo de upgrades encadenados queda cerrado:
 Objetivo sugerido:
 
 Normalizar `data.idempotency.idempotent_replay = true` en replay de checkout y payment intent de upgrade, alineandolo con el replay de activacion, sin cambios de storage ni reglas de negocio.
+
+## PP-Decisiones 171 - Pulido de respuesta idempotente checkout y payment intent
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-IdempotencyResponsePolish-01`
+
+### Objetivo
+
+Normalizar el contrato de respuesta de replay idempotente para checkout intent y payment intent, de forma que cuando `meta.idempotent_replay = true` tambien se devuelva `data.idempotency.idempotent_replay = true`.
+
+El ciclo de upgrades encadenados ya era seguro antes de este ajuste:
+
+- no se duplicaron checkout intents;
+- no se duplicaron payment intents;
+- no se duplicaron payment events;
+- no se duplicaron suscripciones activas incompatibles;
+- los replay guards mantuvieron la proteccion funcional.
+
+El cambio es de contrato de salida y no cambia storage ni reglas de negocio.
+
+### Ajuste realizado
+
+Se ajusto la reconstruccion de respuestas almacenadas en `SubscriptionWriteIdempotencyService` para operaciones:
+
+- `subscriptions.checkout_intent.create`;
+- `subscriptions.payment_intent.create`.
+
+Cuando una respuesta almacenada se devuelve como replay:
+
+- `meta.idempotent_replay` se conserva como `true`;
+- `data.idempotency.idempotent_replay` se normaliza a `true`;
+- el payload de negocio se conserva;
+- no se recalculan montos;
+- no se modifica checkout;
+- no se modifica payment intent;
+- no se crea payment event;
+- no se ejecuta confirmacion;
+- no se ejecuta activacion.
+
+### Alcance
+
+El ajuste aplica a:
+
+- replay de checkout intent;
+- replay de payment intent.
+
+No aplica cambios funcionales a:
+
+- `confirm_mock`;
+- `activate-after-payment`;
+- calculo de precio;
+- activacion upgrade;
+- state read-model;
+- frontend.
+
+`activate-after-payment` ya mantenia normalizado su replay:
+
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco SQL/schema/seeds;
+- no se tocaron fixtures;
+- no se cambio storage;
+- no se agregaron migraciones;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`.
+
+### Decision
+
+El contrato de replay queda alineado:
+
+- checkout replay queda preparado para devolver `data.idempotency.idempotent_replay = true`;
+- payment intent replay queda preparado para devolver `data.idempotency.idempotent_replay = true`;
+- se conserva `meta.idempotent_replay = true`;
+- no hay cambios de reglas de negocio;
+- no hay cambios de persistencia;
+- no hay cambios en frontend.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-IdempotencyResponsePolish-01`
+
+Objetivo sugerido:
+
+Validar por HTTP controlado que el replay de checkout intent y payment intent devuelve `meta.idempotent_replay = true` y `data.idempotency.idempotent_replay = true`, sin generar duplicados ni ejecutar pasos posteriores.

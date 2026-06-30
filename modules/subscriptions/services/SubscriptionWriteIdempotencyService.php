@@ -601,6 +601,13 @@ final class SubscriptionWriteIdempotencyService
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                 $decoded['meta'] = is_array($decoded['meta'] ?? null) ? $decoded['meta'] : [];
                 $decoded['meta']['idempotent_replay'] = true;
+                $operation = trim((string)($record['operation'] ?? ''));
+                if ($this->normalizesNestedIdempotencyReplay($operation) && is_array($decoded['data'] ?? null)) {
+                    $decoded['data']['idempotency'] = is_array($decoded['data']['idempotency'] ?? null)
+                        ? $decoded['data']['idempotency']
+                        : [];
+                    $decoded['data']['idempotency']['idempotent_replay'] = true;
+                }
                 return $decoded;
             }
         }
@@ -620,6 +627,18 @@ final class SubscriptionWriteIdempotencyService
                 'idempotent_replay' => true,
             ],
         ];
+    }
+
+    private function normalizesNestedIdempotencyReplay(string $operation): bool
+    {
+        return in_array(
+            $operation,
+            [
+                self::CHECKOUT_OPERATION,
+                self::PAYMENT_INTENT_OPERATION,
+            ],
+            true
+        );
     }
 
     private function nullableText($value): ?string
