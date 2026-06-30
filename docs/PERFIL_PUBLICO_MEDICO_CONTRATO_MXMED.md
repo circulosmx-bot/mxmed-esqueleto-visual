@@ -35756,3 +35756,331 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Revisar metodos de repositorio necesarios para procesar webhooks Stripe: lookup por `provider_payment_id`, deduplicacion por `provider_event_id`, actualizacion segura de payment intent y persistencia de payment event.
+
+## PP-Decisiones 188 - Readiness de repositorios webhook Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-RepositoryReadiness-01`
+
+### Objetivo
+
+Revisar los repositorios actuales de suscripciones y documentar los metodos necesarios para procesar webhooks Stripe de forma segura en una microfase posterior.
+
+Esta decision no implementa Stripe, no crea endpoint, no ejecuta checkout, no confirma pagos y no activa suscripciones.
+
+### Contexto
+
+Microfases previas relacionadas:
+
+- `PP-Decisiones 185`: contrato de provider Stripe;
+- `PP-Decisiones 186`: servicio futuro `ProcessStripeSubscriptionWebhookService`;
+- `PP-Decisiones 187`: endpoint futuro `POST /api/subscriptions/index.php/webhooks/stripe`.
+
+Commit base revisado:
+
+`9a225ee docs(suscripciones): diseña endpoint webhook stripe`
+
+Objetivo tecnico del siguiente bloque:
+
+- localizar payment intents por identificador de provider real;
+- deduplicar eventos Stripe por `provider_event_id`;
+- persistir eventos de pago Stripe procesados o fallidos;
+- actualizar status de payment intent con transiciones seguras;
+- dejar el webhook listo para delegar en servicio sin tocar `profile_subscriptions`.
+
+### Archivos inspeccionados
+
+Se revisaron en modo read-only:
+
+- `modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php`;
+- `modules/profiles/db/2026_06_22_create_subscription_checkout_intents.sql`;
+- `api/subscriptions/index.php`;
+- decisiones documentales recientes de suscripciones.
+
+No se editaron estos archivos durante la revision.
+
+### Repositorio de payment intents
+
+Repositorio revisado:
+
+`modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php`
+
+Metodos existentes utiles:
+
+- `findByUuid(string $uuid)`;
+- `findByCheckoutIntentUuid(string $checkoutIntentUuid)`;
+- `findActiveByCheckoutIntentUuid(string $checkoutIntentUuid)`;
+- `findByProviderPaymentId(string $provider, string $providerPaymentId)`;
+- `findByProviderCheckoutId(string $provider, string $providerCheckoutId)`;
+- `create(array $input)`;
+- `markMockPaid(string $paymentIntentUuid, array $input)`.
+
+Lectura:
+
+- ya existe lookup por `provider_payment_id`;
+- ya existe lookup por `provider_checkout_id`;
+- `markMockPaid(...)` esta limitado a provider mock y no debe reutilizarse para Stripe;
+- no existe todavia metodo generico seguro para transiciones de provider real.
+
+Metodos recomendados para Stripe v1:
+
+- `markProviderPaid(string $paymentIntentUuid, array $input): bool`;
+- `markProviderFailed(string $paymentIntentUuid, array $input): bool`;
+- `markProviderCanceled(string $paymentIntentUuid, array $input): bool`;
+- `findPayableProviderIntent(string $provider, string $providerPaymentId): ?array`, si se prefiere encapsular filtros;
+- guard interno para no degradar un intent ya `paid`.
+
+Reglas del repositorio:
+
+- aceptar solo provider real esperado, por ejemplo `stripe`;
+- no permitir que un evento tardio cambie `paid` a `created`, `pending`, `failed` o `canceled`;
+- registrar `provider_status`;
+- registrar `paid_at` solo cuando el evento sea pagado y validado;
+- no derivar amount/currency desde frontend;
+- no activar suscripciones.
+
+### Repositorio de payment events
+
+Repositorio revisado:
+
+`modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php`
+
+Metodos existentes utiles:
+
+- `findConfirmMockByPaymentIntentUuid(string $paymentIntentUuid)`;
+- `findProcessedConfirmByPaymentIntentUuid(string $paymentIntentUuid)`;
+- `findProcessedConfirmByCheckoutIntentUuid(string $checkoutIntentUuid)`;
+- `findByUuid(string $uuid)`;
+- `create(array $input)`.
+
+Campos soportados por `create(...)`:
+
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `provider`;
+- `provider_event_id`;
+- `provider_payment_id`;
+- `event_type`;
+- `provider_status`;
+- `normalized_status`;
+- `amount_cents`;
+- `currency`;
+- `event_hash`;
+- `signature_validated_at`;
+- `received_at`;
+- `processed_at`;
+- `processing_status`;
+- `error_message`;
+- `payload_text_sanitized`;
+- `source`;
+- `notes`.
+
+Metodos recomendados para Stripe v1:
+
+- `findByProviderEventId(string $provider, string $providerEventId): ?array`;
+- `findByEventHash(string $provider, string $eventHash): ?array`, opcional para auditoria;
+- `createProcessedProviderEvent(array $input): array`;
+- `createFailedProviderEvent(array $input): array`;
+- `recordStripeProcessingFailure(array $input): array`, si se quiere separar semantica;
+- helper de replay exacto/conflicto para deduplicacion.
+
+Reglas del repositorio:
+
+- dedupe primario por provider + `provider_event_id`;
+- `event_hash` como control adicional de payload;
+- `payload_text_sanitized` solo con datos seguros;
+- no guardar secretos ni raw payload sensible;
+- `processing_status=processed` solo cuando el evento haya sido validado y aplicado;
+- `processing_status=failed` para errores controlados de provider, amount, currency o transicion;
+- no activar suscripcion desde este repositorio.
+
+### Repositorio de checkout intents
+
+Repositorio revisado:
+
+`modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php`
+
+Metodos existentes utiles:
+
+- `create(array $input)`;
+- `findByUuid(string $uuid)`;
+- `findPendingByEntity(...)`;
+- `findLatestPendingPaymentByEntity(...)`;
+- `findPendingByEntityPlanAndBilling(...)`;
+- `markActivatedAfterPayment(...)`.
+
+Lectura:
+
+- el webhook puede resolver checkout via payment intent y luego `findByUuid(...)`;
+- `markActivatedAfterPayment(...)` pertenece al servicio de activacion post-pago, no al webhook;
+- el webhook Stripe no debe marcar checkout como activado.
+
+Metodos opcionales para v1:
+
+- `findByProviderCheckoutId(string $provider, string $providerCheckoutId): ?array`, si Stripe Checkout se usa como fuente primaria;
+- helper read-only para validar entidad, monto y moneda del checkout contra payment intent;
+- no agregar metodo de activacion en webhook.
+
+### Schema actual
+
+Schema revisado:
+
+`modules/profiles/db/2026_06_22_create_subscription_checkout_intents.sql`
+
+La tabla `subscription_payment_events` ya contiene campos suficientes para v1:
+
+- `provider_event_id`;
+- `provider_payment_id`;
+- `event_type`;
+- `provider_status`;
+- `normalized_status`;
+- `amount_cents`;
+- `currency`;
+- `event_hash`;
+- `signature_validated_at`;
+- `received_at`;
+- `processed_at`;
+- `processing_status`;
+- `error_message`;
+- `payload_text_sanitized`;
+- indice unico `ux_sub_payment_events_provider_event (provider, provider_event_id)`;
+- indices por `event_hash`, `provider_payment_id`, checkout, payment intent y estado de procesamiento.
+
+Decision de schema:
+
+`no schema immediate`.
+
+No se requiere migracion inmediata para un v1 de webhook Stripe.
+
+Warnings no bloqueantes:
+
+- no existe columna separada `provider_event_type`, pero `event_type` cubre la semantica v1;
+- no existe columna separada `failed_reason`, pero `error_message` cubre fallo controlado v1;
+- si en el futuro se requiere referencia externa a payload completo en storage seguro, se debera abrir microfase DB especifica;
+- si se requiere auditoria avanzada de reintentos Stripe, puede agregarse tabla o columnas dedicadas en una fase posterior.
+
+### Transiciones de payment intent
+
+Transiciones permitidas para provider real v1:
+
+- `created` o `pending` -> `paid`;
+- `created` o `pending` -> `failed`;
+- `created` o `pending` -> `canceled`;
+- `paid` -> `paid` solo si el replay es consistente;
+- `failed` -> `paid` solo si Stripe confirma pago posterior y el negocio lo permite explicitamente;
+- `canceled` -> `paid` no debe ocurrir sin revision especifica.
+
+Reglas duras:
+
+- `paid` no debe degradarse a `created`, `pending`, `failed` o `canceled`;
+- amount mismatch no puede marcar `paid`;
+- currency mismatch no puede marcar `paid`;
+- provider mismatch no puede marcar `paid`;
+- payment intent inexistente no debe crear uno nuevo desde webhook;
+- refund/chargeback quedan fuera de automatizacion v1.
+
+### Idempotencia por provider
+
+La idempotencia del webhook no debe depender de `Idempotency-Key` de frontend.
+
+Para Stripe:
+
+- dedupe primario: `provider=stripe` + `provider_event_id`;
+- dedupe secundario/auditoria: `event_hash`;
+- duplicado exacto: responder 2xx y no re-aplicar efectos;
+- duplicado conflictivo: registrar fallo controlado y no degradar estado;
+- evento sin payment intent local: registrar o responder controlado segun politica de servicio, sin crear checkout ni suscripcion.
+
+Respuesta recomendada:
+
+- duplicado exacto procesado: HTTP 200/204;
+- conflicto: error controlado de servicio, sin stacktrace;
+- firma invalida: rechazo antes de repositorios.
+
+### Persistencia de eventos
+
+Evento Stripe exitoso debe persistir:
+
+- provider `stripe`;
+- `provider_event_id`;
+- `provider_payment_id`;
+- `event_type`;
+- status de provider;
+- status normalizado;
+- amount/currency validados;
+- timestamps de recepcion, firma y procesamiento;
+- `event_hash`;
+- payload sanitizado;
+- `processing_status=processed`.
+
+Evento Stripe fallido o no aplicable debe persistir cuando sea seguro:
+
+- provider y event id;
+- `processing_status=failed` o equivalente;
+- `error_message` controlado;
+- payload sanitizado;
+- sin marcar payment intent como pagado.
+
+No se debe persistir:
+
+- secrets;
+- raw payload sensible completo;
+- datos de tarjeta;
+- headers sensibles completos;
+- campos de frontend como fuente de verdad.
+
+### Orden recomendado de implementacion
+
+Orden recomendado para la siguiente microfase backend:
+
+1. Agregar lookup `findByProviderEventId(...)` en `SubscriptionPaymentEventRepository`.
+2. Agregar helpers de creacion de eventos provider Stripe procesados/fallidos.
+3. Agregar metodos de transicion provider real en `SubscriptionPaymentIntentRepository`.
+4. Encapsular guard de no degradacion `paid`.
+5. Reutilizar `SubscriptionCheckoutIntentRepository::findByUuid(...)` para validar checkout relacionado.
+6. Validar con `php -l`.
+7. No implementar aun endpoint productivo si el servicio webhook no esta conectado.
+
+### Resultado de readiness
+
+`PASS repository readiness`.
+
+El schema actual permite un primer v1 sin migracion inmediata y los gaps son de metodos de repositorio, no de storage bloqueante.
+
+Decision:
+
+- `no schema immediate`;
+- implementar metodos de repositorio antes del endpoint Stripe productivo;
+- mantener activacion post-pago separada del webhook.
+
+`WARN`: faltan metodos de repositorio para transiciones reales Stripe, dedupe por `provider_event_id` y persistencia semantica de eventos procesados/fallidos.
+
+`BLOCKED`: no aplica.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico backend/API funcional;
+- no se modificaron servicios ni repositorios;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-RepositoryImplementation-01`
+
+Objetivo sugerido:
+
+Implementar los metodos de repositorio necesarios para webhook Stripe v1: lookup por `provider_event_id`, persistencia segura de eventos Stripe procesados/fallidos, transiciones provider real de payment intent y guards de no degradacion de estado pagado.
