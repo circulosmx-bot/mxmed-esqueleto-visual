@@ -32193,3 +32193,194 @@ El bloque de pulidos de idempotencia upgrade queda cerrado:
 Objetivo sugerido:
 
 Preparar un resumen final de readiness del servicio de upgrades para dejar claro que ya esta listo, que queda como pendiente futuro y cual seria el siguiente bloque funcional recomendable.
+
+## PP-Decisiones 175 - Readiness final del servicio de upgrades
+
+### Microfase
+
+`DOCS/Suscripciones-UpgradeIntent-ServiceReadiness-FinalSummary-01`
+
+### Objetivo
+
+Preparar el resumen final de readiness del servicio de upgrades de suscripciones, consolidando lo que quedo listo tras el ciclo `standard -> optimum -> professional`, las reglas funcionales validadas, los componentes involucrados y los pendientes futuros fuera de este cierre.
+
+### Estado final del servicio
+
+El servicio de upgrades queda validado en DEV/local para upgrades encadenados.
+
+Flujo validado:
+
+- `standard -> optimum`;
+- `optimum -> professional`.
+
+Entidad validada:
+
+- `doctor/900001`.
+
+Estado final:
+
+- plan actual: `professional / Profesional`;
+- status final: `active`;
+- vigencia conservada: `2027-06-27 22:03:34`;
+- suscripciones activas compatibles: `1`.
+
+### Capacidades listas
+
+Quedan validadas estas capacidades:
+
+- checkout upgrade con `intent_type=upgrade`;
+- contract acceptance `accepted_pending_payment`;
+- payment intent mock;
+- `confirm_mock`;
+- payment event `payment_intent_confirm / processed`;
+- state read-model post-pago;
+- activacion post-pago por `activate-after-payment`;
+- replay guard de checkout;
+- replay guard de payment intent;
+- replay guard de activacion;
+- current read-model;
+- reflejo frontend de plan actual;
+- header global sincronizado con plan y vigencia actual.
+
+### Reglas funcionales consolidadas
+
+Reglas validadas:
+
+- upgrade solo aplica si hay suscripcion activa;
+- `active_subscription_exists` bloquea alta nueva, pero no bloquea upgrade valido;
+- el plan destino debe ser superior;
+- no se permite downgrade inmediato durante vigencia;
+- no se mezcla cambio de periodicidad en v1;
+- upgrade conserva la vigencia actual;
+- el monto se calcula server-side;
+- frontend no controla precio, `amount` ni `currency`;
+- `confirm_mock` solo confirma pago y no activa;
+- `activate-after-payment` es el unico punto de activacion;
+- replay exacto devuelve respuesta idempotente;
+- requests nuevas sobre estados cerrados siguen bloqueadas;
+- no quedan dos suscripciones activas incompatibles.
+
+### Componentes involucrados
+
+Componentes principales que participaron en el flujo:
+
+- `BuildSubscriptionPaymentActivationStateService.php`;
+- `ActivateSubscriptionAfterPaymentService.php`;
+- `CreateSubscriptionPaymentIntentService.php`;
+- `SubscriptionWriteIdempotencyService.php`;
+- `ProfileSubscriptionRepository.php`;
+- `api/subscriptions/index.php`;
+- `index.html`;
+- `assets/js/app.js`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+Esta microfase no modifica esos componentes; solo documenta su participacion en el readiness final.
+
+### Trazabilidad final
+
+Cadena de suscripciones:
+
+- `standard`: `0d2c0113-5390-4548-9b61-3cbddfdfff06`;
+- `optimum`: `10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- `professional`: `2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`.
+
+Estado de la cadena:
+
+- `standard` queda `renewed`;
+- `optimum` queda `renewed`;
+- `professional` queda `active`;
+- enlaces old/new quedan intactos;
+- vigencia se conserva en la cadena.
+
+### Payment flow validado
+
+Primer upgrade `standard -> optimum`:
+
+- checkout: `a752d558-0f3c-4a95-8e00-c1b5ae688fd6`;
+- payment intent: `5e429aff-ea26-4b90-bfdf-92aed8a5f56d`;
+- payment event: `cbb402aa-6f23-4d13-8d11-6bcdbf474f6f`;
+- amount: `9973` centavos MXN.
+
+Segundo upgrade `optimum -> professional`:
+
+- checkout: `92c5a9fa-0930-4eed-9175-25ea5c08dcef`;
+- payment intent: `c9c49470-f4de-4926-b09d-bb24fa887904`;
+- payment event: `3346400e-6dc1-4017-92ae-4535285c37a1`;
+- amount: `10000` centavos MXN.
+
+### Frontend final
+
+Estado frontend final validado:
+
+- header global: `Plan Profesional`;
+- header vigencia: `Vigencia 27 jun 2027`;
+- panel `#p-suscripcion`: `Profesional · Tu plan actual`;
+- card Profesional: `Plan actual`;
+- Basico/Estandar/Optimo: `Disponible al renovar`;
+- no CTA de upgrade superior;
+- no downgrade inmediato;
+- no pago/activacion repetida.
+
+### Pendientes futuros fuera de alcance
+
+Pendientes recomendables no bloqueantes:
+
+- soporte de upgrade con cambio de periodicidad;
+- downgrade programado al renovar;
+- UI productiva final de checkout real;
+- integracion con proveedor de pagos real;
+- reconciliacion/backoffice de pagos;
+- pruebas con entidades distintas a `doctor/900001`;
+- pruebas con planes/precios administrados por operador;
+- limpieza posterior de fixtures DEV/local antes de produccion;
+- revision de warnings externos Google Maps si se decide abordarlos.
+
+### Conclusion de readiness
+
+Readiness backend/QA/frontend de upgrades queda aprobado en DEV/local.
+
+El servicio queda listo para disenar el siguiente bloque funcional, pero no queda listo aun para produccion sin:
+
+- proveedor real;
+- backoffice;
+- hardening multi-entidad;
+- permisos productivos;
+- logging/auditoria;
+- limpieza de fixtures DEV/local;
+- QA productiva.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico storage/schema.
+
+### Decision
+
+El resumen final de readiness queda asentado:
+
+- upgrades encadenados listos en DEV/local;
+- reglas de upgrade consolidadas;
+- idempotencia cerrada;
+- current/frontend sincronizados;
+- trazabilidad old/new validada;
+- pendientes productivos delimitados.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-UpgradeIntent-ProductionHardening-Readiness-01`
+
+Objetivo sugerido:
+
+Identificar los requisitos minimos para convertir el flujo DEV/local validado en un flujo productivo seguro: proveedor de pago real, backoffice, permisos, logging, auditoria, limpieza de fixtures y matriz multi-entidad.
