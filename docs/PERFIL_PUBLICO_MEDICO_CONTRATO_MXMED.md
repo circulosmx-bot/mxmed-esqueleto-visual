@@ -34402,3 +34402,312 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Crear matriz de seleccion del proveedor de pago real para MXMed: compatibilidad Mexico, webhooks, tarjetas, SPEI/transferencia si aplica, comisiones, soporte, conciliacion, facturacion y facilidad de integracion.
+
+## PP-Decisiones 184 - Matriz de seleccion de proveedor de pago real
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-SelectionMatrix-01`
+
+### Objetivo
+
+Crear una matriz documental de seleccion del proveedor de pago real para MXMed, evaluando compatibilidad con Mexico, webhooks firmados, tarjetas, SPEI/transferencia si aplica, comisiones, conciliacion, soporte operativo, facilidad de integracion y capacidad para reemplazar `mxmed_mock` en el flujo productivo de suscripciones y upgrades.
+
+### Base contractual
+
+La matriz parte de `PP-Decisiones 183`.
+
+Reglas no negociables:
+
+- `mxmed_mock` queda solo DEV/local;
+- el proveedor real debe emitir evidencia externa verificable;
+- MXMed mantiene `checkout_intent`, `payment_intent`, `payment_event` y `activate-after-payment` como modelo interno;
+- el frontend no controla `amount_cents`, `currency` ni estado final de pago;
+- el webhook real no debe activar suscripcion automaticamente sin decision futura explicita;
+- `activate-after-payment` sigue siendo el punto unico de activacion mientras no se apruebe otro contrato.
+
+### Fuentes revisadas
+
+Fuentes oficiales revisadas durante esta microfase:
+
+- Stripe Mexico/OXXO y Payment Intents:
+  `https://docs.stripe.com/payments/oxxo/accept-a-payment`
+- Stripe webhooks y firmas:
+  `https://docs.stripe.com/webhooks`
+- Stripe idempotency:
+  `https://docs.stripe.com/api/idempotent_requests`
+- Stripe Billing/subscriptions:
+  `https://docs.stripe.com/billing/subscriptions/overview`
+- Mercado Pago Mexico notifications/webhooks:
+  `https://www.mercadopago.com.mx/developers/en/docs/your-integrations/notifications`
+- Mercado Pago webhooks signature:
+  `https://www.mercadopago.com.mx/developers/en/docs/your-integrations/notifications/webhooks`
+- Mercado Pago subscriptions:
+  `https://www.mercadopago.com.mx/developers/en/docs/subscriptions/overview`
+- Mercado Pago Checkout Bricks/metodos:
+  `https://www.mercadopago.com.mx/developers/en/docs/checkout-bricks/overview`
+- Openpay webhooks:
+  `https://docs.openpay.co/en/docs/webhooks.html`
+- Openpay API:
+  `https://documents.openpay.mx/docs/api`
+- Openpay PHP SDK:
+  `https://github.com/open-pay/openpay-php`
+- Conekta Developers:
+  `https://developers.conekta.com/docs/welcome`
+- Conekta webhooks API:
+  `https://developers.conekta.com/reference/getwebhooks`
+- Conekta authentication/sandbox:
+  `https://developers.conekta.com/reference/autenticaci%C3%B3n`
+- Conekta PHP SDK:
+  `https://github.com/conekta/conekta-php`
+
+Las comisiones no se fijan en esta decision porque deben validarse comercialmente contra contrato vigente, moneda, giro, volumen, contracargos y metodo de pago.
+
+### Candidatos evaluados
+
+Proveedores principales:
+
+- Stripe Mexico;
+- Mercado Pago;
+- Openpay;
+- Conekta.
+
+Candidato secundario no matriculado:
+
+- Adyen u otro PSP enterprise, solo si MXMed requiere adquirencia multi-pais, mas metodos alternativos o conciliacion empresarial avanzada. No se incluye en la matriz principal para no dispersar la decision actual.
+
+### Criterios de evaluacion
+
+La matriz compara:
+
+- operacion en Mexico;
+- tarjetas;
+- SPEI/transferencia bancaria;
+- OXXO/efectivo;
+- pagos recurrentes o suscripciones;
+- pagos unicos para upgrade;
+- webhooks firmados;
+- idempotencia;
+- provider payment id;
+- provider event id;
+- dashboard/conciliacion;
+- exportacion/reportes;
+- documentacion tecnica;
+- SDK/API PHP o REST simple;
+- soporte en espanol/Mexico;
+- facilidad de pruebas sandbox;
+- complejidad de integracion;
+- costos/comisiones a validar;
+- riesgos operativos;
+- compatibilidad con `checkout_intent`, `payment_intent`, `payment_event` y `activate-after-payment` separado.
+
+### Matriz comparativa
+
+| Proveedor | Ventajas | Riesgos | Compatibilidad MXMed | Dudas por confirmar | Recomendacion preliminar |
+| --- | --- | --- | --- | --- | --- |
+| Stripe Mexico | API madura, Payment Intents, webhooks firmados, idempotency documentada, sandbox, Dashboard, Billing/subscriptions, OXXO para Mexico, buena documentacion. | SPEI/transferencia y algunos metodos pueden depender de producto/configuracion; soporte local/comercial y disponibilidad exacta deben validarse; costos por metodo requieren contrato. | Alta para `payment_intent` local y eventos webhook; facil mapear `payment_intent.succeeded` a `subscription_payment_events`; `activate-after-payment` puede mantenerse separado. | Condiciones Mexico, metodos exactos en cuenta MXMed, facturacion fiscal, settlement y soporte en espanol. | Candidato principal tecnico por robustez de webhooks/idempotencia y menor riesgo de implementacion. |
+| Mercado Pago | Fuerte presencia Mexico/LATAM, metodos locales: tarjeta, SPEI, OXXO, Paycash y bancos, subscriptions, webhooks con `x-signature`, SDKs y soporte local. | Ecosistema mas amplio y con varias familias de checkout; requiere elegir producto exacto para evitar acoplamiento; conciliacion y campos exactos deben validarse por API seleccionada. | Alta para mercado mexicano; viable para checkout local si MXMed controla amount/currency y procesa webhooks. | Producto exacto recomendado: Checkout API, Bricks, Pro o Subscriptions; comisiones; experiencia sin cuenta Mercado Pago; campos idempotentes por operacion. | Alterno fuerte, especialmente si prioridad es adopcion local y metodos offline. |
+| Openpay | Mexico, REST API, PHP SDK, webhooks para transacciones, sandbox/dashboard, soporte local, tarjetas y metodos offline/bancarios segun producto. | Firma criptografica de webhook no queda confirmada en la evidencia revisada; docs indican verificacion de webhook y posibilidad de duplicados, por lo que MXMed debe reforzar deduplicacion local. | Media-alta si se confirma firma o mecanismo equivalente; puede mapear transaction id y webhook `charge.succeeded` a payment events. | Firma de webhook/HMAC, idempotencia de creacion, metodos disponibles para suscripciones y upgrade, contrato comercial BBVA/Openpay. | Candidato viable si se valida seguridad de webhook y conciliacion antes de implementacion. |
+| Conekta | Enfoque Mexico, tarjetas, efectivo y SPEI, suscripciones/recurrentes, Checkout Component y Direct API, sandbox/production keys, webhooks API, PHP SDK. | Debe confirmarse mecanismo exacto de firma/autenticidad de webhooks en version actual; documentacion tiene varias rutas/productos; costos y soporte requieren validacion. | Alta para metodos locales y upgrades si se usa Direct API o checkout compatible; payment events pueden deduplicarse por event/order id. | Firma webhook, idempotency de API, producto exacto recomendado, conciliacion y soporte operativo. | Alterno local competitivo; pasar a implementacion solo tras validar firma webhook e idempotencia. |
+
+### Lectura por criterio
+
+Operacion en Mexico:
+
+- Stripe, Mercado Pago, Openpay y Conekta operan o documentan producto para Mexico.
+
+Tarjetas:
+
+- Los cuatro candidatos soportan tarjetas.
+
+SPEI/transferencia:
+
+- Mercado Pago y Conekta documentan SPEI/transferencia de forma clara.
+- Openpay debe validarse por producto comercial y API vigente.
+- Stripe tiene producto de transferencia bancaria para Mexico, pero su encaje con checkout custom de MXMed debe validarse.
+
+OXXO/efectivo:
+
+- Stripe documenta OXXO en Mexico.
+- Mercado Pago documenta OXXO/Paycash/bancos.
+- Conekta documenta efectivo y OXXO Pay.
+- Openpay debe validarse en contrato/API vigente para el producto exacto.
+
+Suscripciones:
+
+- Stripe Billing, Mercado Pago Subscriptions y Conekta Subscriptions tienen soporte documentado.
+- Openpay declara soportar modelos de suscripcion, pero requiere validacion del flujo exacto para MXMed.
+
+Pagos unicos para upgrade:
+
+- Los cuatro pueden ser candidatos si permiten crear cargo por monto definido desde backend y confirmar por webhook.
+- MXMed debe conservar el calculo del ajuste proporcional y no delegarlo al proveedor.
+
+Webhooks firmados:
+
+- Stripe: fuerte, firma `Stripe-Signature`.
+- Mercado Pago: fuerte, firma `x-signature`.
+- Openpay: por confirmar, docs revisadas muestran verificacion de webhook y duplicados, no firma HMAC clara.
+- Conekta: por confirmar en la evidencia revisada, aunque tiene webhooks API/eventos.
+
+Idempotencia:
+
+- Stripe: fuerte, idempotency keys documentadas.
+- Mercado Pago: fuerte, `X-Idempotency-Key` documentada para operaciones sensibles.
+- Openpay: por confirmar para creacion; MXMed debe compensar con idempotencia local.
+- Conekta: por confirmar para creacion; MXMed debe compensar con idempotencia local.
+
+### Criterios minimos obligatorios
+
+Un proveedor no debe pasar a implementacion si no cumple:
+
+- webhook firmado o mecanismo equivalente verificable;
+- sandbox funcional;
+- provider ids estables;
+- eventos con ids estables o forma confiable de deduplicacion;
+- soporte para `amount_cents` y `currency=MXN`;
+- conciliacion consultable;
+- documentacion suficiente;
+- capacidad de confirmar pago sin depender del frontend;
+- trazabilidad entre checkout local, payment intent local y evento externo;
+- respuesta estable ante reintentos del proveedor;
+- soporte operativo antes de produccion.
+
+### Recomendacion preliminar
+
+Resultado:
+
+- `PASS matriz documental`.
+
+Proveedor candidato principal:
+
+- Stripe Mexico.
+
+Razones:
+
+- contrato tecnico mas cercano a la arquitectura MXMed actual: Payment Intent, event object, webhook firmado, idempotency keys, sandbox y dashboard;
+- facilita mantener `CreateSubscriptionPaymentIntentService` como abstraccion local;
+- permite separar webhook real de `activate-after-payment`;
+- menor incertidumbre tecnica para firma e idempotencia.
+
+Proveedor alterno:
+
+- Mercado Pago.
+
+Razones:
+
+- presencia fuerte en Mexico;
+- metodos locales amplios;
+- subscriptions y webhooks con firma;
+- candidato solido si el objetivo comercial prioriza adopcion local, OXXO/SPEI y experiencia regional.
+
+Riesgos a validar antes de implementacion:
+
+- costos por metodo y liquidacion;
+- contrato comercial y soporte;
+- disponibilidad real de metodos en cuenta MXMed;
+- conciliacion/exportacion;
+- facturacion fiscal;
+- tratamiento de refunds/chargebacks;
+- restricciones del giro medico/salud.
+
+### Impacto arquitectonico MXMed
+
+`CreateSubscriptionPaymentIntentService`:
+
+- debera aceptar provider real configurado por entorno;
+- no debera defaultar a `mxmed_mock` en produccion;
+- debera crear objeto externo o checkout externo segun provider;
+- debera persistir `provider_payment_id` y/o `provider_checkout_id`.
+
+Almacenamiento provider ids:
+
+- usar campos existentes si bastan;
+- si falta `provider_customer_id`, `provider_event_id` o referencia segura a raw payload, definir migracion posterior;
+- no guardar tarjetas ni payloads sensibles.
+
+Webhook futuro:
+
+- ruta productiva separada de `confirm-mock`;
+- firma obligatoria;
+- idempotencia por `provider_event_id`;
+- deduplicacion de eventos;
+- validacion de amount/currency contra checkout local;
+- persistencia en `subscription_payment_events`.
+
+`subscription_payment_events`:
+
+- debe registrar evento procesado/fallido;
+- debe conservar `provider_event_id`;
+- debe distinguir pago real de pago mock/dev;
+- debe permitir reconciliacion.
+
+State read-model post-pago:
+
+- debe tratar payment event real procesado igual que payment event mock procesado;
+- no debe exponer raw payload;
+- debe conservar reasons y `can_activate` segun checkout/payment/event/acceptance.
+
+Backoffice/reconciliacion:
+
+- requerira busqueda por checkout uuid, payment intent uuid, provider payment id y provider event id;
+- debe listar pagos confirmados sin activacion;
+- debe listar webhooks fallidos;
+- no debe permitir marcar pagado sin evidencia provider.
+
+Separacion `confirm_mock` vs webhook real:
+
+- `confirm-mock` queda DEV/local;
+- webhook real queda productivo, firmado y separado;
+- ningun flujo productivo debe depender de `mxmed_mock`.
+
+### Datos comerciales pendientes
+
+No se fija proveedor definitivo hasta validar:
+
+- comisiones por tarjeta, OXXO, SPEI/transferencia y suscripcion;
+- IVA/comisiones/facturacion de comisiones;
+- tiempos de liquidacion;
+- manejo de contracargos;
+- soporte y SLA;
+- exportaciones contables;
+- conciliacion bancaria;
+- requisitos KYC/contrato;
+- restricciones por giro medico;
+- ambiente sandbox y credenciales para MXMed.
+
+### Conclusion
+
+La matriz deja un candidato tecnico principal y un alterno viable:
+
+- principal: Stripe Mexico;
+- alterno: Mercado Pago.
+
+Openpay y Conekta quedan como candidatos locales viables, pero requieren confirmar firma webhook/idempotencia y condiciones comerciales antes de pasar a implementacion.
+
+No se elige proveedor definitivo en esta microfase.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico backend/API;
+- no se modificaron servicios ni repositorios;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-WebhookContract-Readiness-01`
+
+Objetivo sugerido:
+
+Disenar el contrato del webhook productivo para el proveedor candidato principal, incluyendo firma, eventos, mapeo de estados, idempotencia y persistencia de payment events.
