@@ -31066,3 +31066,123 @@ El bloque de activacion upgrade post-pago queda cerrado:
 Objetivo sugerido:
 
 Preparar el siguiente upgrade controlado `optimum -> professional` desde el estado real actual de `doctor/900001`, sin ejecutar checkout ni writes todavia.
+
+## PP-Decisiones 166 - Readiness de upgrade Optimum a Professional
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-ProfessionalUpgrade-Readiness-01`
+
+### Resultado
+
+WARN.
+
+El backend de checkout upgrade esta preparado conceptualmente para calcular y crear un futuro checkout `optimum -> professional`, pero la QA HTTP controlada no debe avanzar todavia porque el fixture DEV/local disponible para crear sesion autorizada de upgrade sigue limitado al caso `standard -> optimum`.
+
+### Estado real validado
+
+Para `doctor/900001`, la lectura read-only del current read-model confirmo:
+
+- plan vigente: `optimum`;
+- etiqueta visible: `Optimo`;
+- status: `active`;
+- billing period: `annual`;
+- suscripcion activa: `10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- suscripcion anterior: `0d2c0113-5390-4548-9b61-3cbddfdfff06`;
+- vigencia conservada: `2027-06-27 22:03:34`;
+- origen de la suscripcion activa: `mxmed_payment_intent_upgrade_activation_v1`.
+
+La consulta SELECT read-only confirmo que solo existe una suscripcion activa compatible para `doctor/900001`.
+
+### Precio y jerarquia
+
+La jerarquia canonica disponible en backend reconoce:
+
+1. `basic`;
+2. `standard`;
+3. `optimum`;
+4. `professional`.
+
+Por lo tanto, `professional` es superior a `optimum` y es el unico upgrade superior disponible desde el estado actual.
+
+La consulta SELECT read-only sobre `subscription_plan_prices` confirmo precios activos DEV/local:
+
+- `optimum annual = 30000` centavos MXN;
+- `professional annual = 40000` centavos MXN;
+- currency: `MXN`;
+- `price_source = subscription_plan_prices_dev_seed`;
+- `price_version = mxmed-dev-pricing-2026-v1`.
+
+El frontend no es fuente de verdad del monto. El monto debe seguir resolviendose server-side desde `SubscriptionPlanPriceResolverService` y `SubscriptionPlanPriceRepository`.
+
+### Readiness backend
+
+`CreateSubscriptionCheckoutIntentService` no esta hardcodeado a `standard -> optimum`.
+
+El servicio:
+
+- acepta `intent_type = upgrade`;
+- canoniza planes visuales/backend;
+- usa ranking generico para validar target superior;
+- permite `professional` como target superior a `optimum`;
+- exige conservar el mismo `billing_period` en v1;
+- resuelve precio actual y destino via fuente server-side;
+- calcula ajuste como diferencia prorrateada;
+- guarda snapshot controlado en `subscription_checkout_intents.notes`.
+
+El snapshot de upgrade puede representar:
+
+- `current_plan_code = optimum`;
+- `target_plan_code = professional`;
+- `current_billing_period = annual`;
+- `target_billing_period = annual`;
+- `pricing_strategy = prorated_difference`;
+- `adjustment_amount_cents`.
+
+El storage actual no bloquea por si mismo el upgrade encadenado:
+
+- la suscripcion activa actual tiene `renewed_to_subscription_id = NULL`;
+- `ProfileSubscriptionRepository::markRenewedTo(...)` puede marcar la suscripcion activa actual como `renewed` al aplicar un nuevo upgrade;
+- la nueva suscripcion puede conservar `renewed_from_subscription_id` hacia la suscripcion `optimum`.
+
+### Bloqueo practico detectado
+
+El fixture DEV/local:
+
+`POST /api/subscriptions/index.php/dev/session-fixture/upgrade-doctor`
+
+esta hardcodeado para validar que la suscripcion activa sea `standard`.
+
+Con el estado real actual (`optimum`), ese fixture responderia error controlado `fixture_doctor_active_subscription_not_standard` y no permite preparar de forma segura la QA HTTP del checkout `optimum -> professional`.
+
+No se recomienda usar headers magicos ni relajar `subscriptionResolveWriteContext(...)`.
+
+### Alcance excluido
+
+En esta microfase:
+
+- no se ejecuto checkout;
+- no se creo payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se activo suscripcion;
+- no se ejecuto SQL write manual;
+- no se modifico frontend;
+- no se modifico API;
+- no se modifico backend PHP;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures.
+
+### Decision
+
+El contrato backend para `optimum -> professional` queda tecnicamente viable, pero la siguiente QA controlada necesita primero ajustar o agregar un fixture DEV/local especifico para el nuevo estado real de `doctor/900001`.
+
+No se debe avanzar a crear checkout hasta contar con sesion DEV/local autorizada para el plan actual `optimum`.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-UpgradeIntent-ProfessionalUpgrade-FixtureReadiness-01`
+
+Objetivo sugerido:
+
+Preparar un fixture DEV/local seguro para `doctor/900001` con plan activo `optimum`, destinado exclusivamente a QA controlada del checkout upgrade `optimum -> professional`, sin ejecutar checkout ni writes de negocio durante la preparacion.
