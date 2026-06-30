@@ -37092,3 +37092,125 @@ El cambio no:
 Objetivo sugerido:
 
 Validar funcionalmente que el harness DEV/local selecciona o acepta un doctor fixture seguro sin suscripcion activa, crea checkout/contract acceptance/payment intent local `provider=stripe` en estado inicial, no toca `doctor/900001` y mantiene el endpoint normal limitado a `mxmed_mock`.
+
+## PP-Decisiones 194 - Disponibilidad de doctor fixture para Stripe harness
+
+### Microfase
+
+`BE/DEV-Suscripciones-PaymentProvider-StripePaymentIntent-FixtureDoctorAvailability-Implementation-01`
+
+### Objetivo
+
+Preparar disponibilidad controlada de un doctor fixture DEV/local sin suscripcion activa para desbloquear la QA funcional del harness `stripe-payment-intent`, sin abrir Stripe productivo, sin tocar frontend y sin modificar SQL/schema/seeds.
+
+### Contexto
+
+La microfase `QA/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-02` quedo en `FAIL` controlado:
+
+- el harness corregido rechazo `doctor/900001`;
+- rechazo campos controlados por cliente;
+- mantuvo cerrado el endpoint normal de `payment-intents` a provider `stripe`;
+- no toco `doctor/900001`;
+- no creo checkout/payment/event/activation en casos inseguros;
+- pero no pudo ejecutar el caso positivo porque los candidatos existentes detectados tenian suscripcion activa:
+  - `doctor/3`;
+  - `doctor/2`;
+  - `doctor/900001`.
+
+Resultado previo:
+
+- auto-selection: `409 stripe_fixture_doctor_unavailable`;
+- `doctor_id=900001`: `409 fixture_doctor_not_allowed`;
+- payload con `amount/currency/provider ids`: `409 stripe_fixture_payload_forbidden_fields`.
+
+### Estrategia elegida
+
+Se implemento Opcion B: ensure DEV/local de doctor fixture dentro del harness protegido.
+
+El harness ahora puede asegurar el doctor fixture:
+
+- `doctor_id=990099`;
+- `display_name=MXMed DEV Stripe Harness Doctor`;
+- `profile_status=hidden`;
+- `is_public_candidate=0`;
+- datos claramente ficticios DEV/local;
+- sin crear suscripcion;
+- sin crear checkout/payment por fuera del flujo del harness;
+- sin modificar doctores reales;
+- sin tocar `doctor/900001`.
+
+El ensure se ejecuta solo despues de pasar:
+
+- `subscriptionAssertDevFixtureAllowed(...)`;
+- flag `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- request local;
+- bloqueo de produccion;
+- metodo `POST`.
+
+### Seguridad del ensure
+
+El ensure es cerrado por defecto:
+
+- si `doctor/990099` no existe, lo inserta con datos DEV/local minimos;
+- si `doctor/990099` existe pero no tiene la marca DEV/local esperada, responde `stripe_fixture_doctor_ensure_failed`;
+- si `doctor/990099` tiene suscripcion activa, responde `fixture_doctor_has_active_subscription`;
+- si no puede asegurar el fixture, responde `stripe_fixture_doctor_ensure_failed`;
+- no actualiza ni normaliza registros preexistentes no marcados como DEV/local;
+- no acepta `doctor/900001`;
+- no acepta doctores fuera de la lista permitida;
+- no acepta `amount`, `currency`, `provider_payment_id`, `provider_checkout_id`, `provider` ni `price` desde cliente.
+
+### Separacion productiva
+
+El cambio no:
+
+- abre provider `stripe` en el endpoint normal de `payment-intents`;
+- modifica `CreateSubscriptionPaymentIntentService::provider()`;
+- modifica `SubscriptionPaymentIntentMockProvider`;
+- conecta Stripe real;
+- requiere `STRIPE_WEBHOOK_SECRET`;
+- ejecuta webhook Stripe;
+- ejecuta `confirm_mock`;
+- ejecuta `activate-after-payment`;
+- crea payment event processed;
+- activa suscripcion;
+- toca frontend;
+- toca SQL/schema/seeds.
+
+### Archivos modificados
+
+- `api/subscriptions/index.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron:
+
+- frontend;
+- servicios productivos de payment intent;
+- repositorios;
+- SQL/schema/seeds;
+- flujo `confirm-mock`;
+- flujo `activate-after-payment`;
+- reglas de pricing;
+- reglas de suscripcion activa.
+
+### Validaciones esperadas
+
+- `php -l api/subscriptions/index.php`;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`;
+- `git diff --check`;
+- verificacion de alcance sin frontend;
+- verificacion de alcance sin SQL/schema/seeds;
+- verificacion de que no se ejecuto SQL manual;
+- verificacion de que no se ejecuto POST/curl;
+- verificacion de que no se ejecuto webhook Stripe;
+- verificacion de que no se ejecuto `confirm_mock`;
+- verificacion de que no se ejecuto `activate-after-payment`;
+- verificacion de que no se conecto Stripe real.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-03`
+
+Objetivo sugerido:
+
+Validar funcionalmente que el harness DEV/local asegura o reutiliza `doctor/990099`, crea checkout/contract acceptance/payment intent local `provider=stripe` en estado inicial, conserva provider ids server-side, no toca `doctor/900001` y deja preparado el matched synthetic QA del webhook Stripe.

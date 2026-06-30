@@ -648,7 +648,12 @@ function subscriptionReadOptionalDevFixtureJsonPayload(): array
 
 function subscriptionStripePaymentIntentFixtureAllowedDoctorIds(): array
 {
-    return ['3', '4', '5', '6', '7', '8', '9', '10', '2'];
+    return ['990099', '3', '4', '5', '6', '7', '8', '9', '10', '2'];
+}
+
+function subscriptionStripePaymentIntentFixtureEnsureDoctorId(): string
+{
+    return '990099';
 }
 
 function subscriptionNormalizeDevFixtureDoctorId($value): string
@@ -686,6 +691,14 @@ function subscriptionResolveStripePaymentIntentFixtureDoctor(array $payload): ar
                 'stripe payment intent fixture doctor is not allowed'
             );
         }
+        if ($doctorId === subscriptionStripePaymentIntentFixtureEnsureDoctorId()) {
+            $ensuredDoctor = subscriptionEnsureStripePaymentIntentFixtureDoctor();
+            if ((bool)($ensuredDoctor['ok'] ?? false)) {
+                $ensuredDoctor['selection'] = 'requested_' . (string)($ensuredDoctor['selection'] ?? 'ensured');
+            }
+
+            return $ensuredDoctor;
+        }
         if (!subscriptionDoctorFixtureExists($doctorId)) {
             return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'stripe payment intent fixture doctor not found');
         }
@@ -704,7 +717,7 @@ function subscriptionResolveStripePaymentIntentFixtureDoctor(array $payload): ar
     }
 
     foreach ($allowedDoctorIds as $candidateDoctorId) {
-        if ($candidateDoctorId === '900001') {
+        if ($candidateDoctorId === '900001' || $candidateDoctorId === subscriptionStripePaymentIntentFixtureEnsureDoctorId()) {
             continue;
         }
 
@@ -726,10 +739,130 @@ function subscriptionResolveStripePaymentIntentFixtureDoctor(array $payload): ar
         ];
     }
 
+    $ensuredDoctor = subscriptionEnsureStripePaymentIntentFixtureDoctor();
+    if ((bool)($ensuredDoctor['ok'] ?? false)) {
+        return $ensuredDoctor;
+    }
+
     return subscriptionDevSessionFixtureError(
         'stripe_fixture_doctor_unavailable',
         'stripe payment intent fixture doctor is unavailable'
     );
+}
+
+function subscriptionFetchStripePaymentIntentFixtureDoctor(string $doctorId): ?array
+{
+    $stmt = mxmed_pdo()->prepare(
+        'SELECT doctor_id, display_name, profile_status, is_public_candidate
+         FROM profiles_doctors
+         WHERE doctor_id = :doctor_id
+         LIMIT 1'
+    );
+    $stmt->execute(['doctor_id' => $doctorId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
+}
+
+function subscriptionStripePaymentIntentFixtureDoctorIsMarked(array $doctor): bool
+{
+    return (string)($doctor['doctor_id'] ?? '') === subscriptionStripePaymentIntentFixtureEnsureDoctorId()
+        && (string)($doctor['display_name'] ?? '') === 'MXMed DEV Stripe Harness Doctor'
+        && (string)($doctor['profile_status'] ?? '') === 'hidden'
+        && (int)($doctor['is_public_candidate'] ?? 1) === 0;
+}
+
+function subscriptionInsertStripePaymentIntentFixtureDoctor(PDO $pdo, string $doctorId): void
+{
+    $columnsStmt = $pdo->query('SHOW COLUMNS FROM profiles_doctors');
+    $columns = [];
+    foreach ($columnsStmt->fetchAll(PDO::FETCH_ASSOC) as $column) {
+        $field = (string)($column['Field'] ?? '');
+        if ($field !== '') {
+            $columns[$field] = true;
+        }
+    }
+
+    if (!isset($columns['doctor_id'])) {
+        throw new RuntimeException('profiles_doctors doctor_id column missing');
+    }
+
+    $values = ['doctor_id' => $doctorId];
+    $fixtureValues = [
+        'display_name' => 'MXMed DEV Stripe Harness Doctor',
+        'prefix' => 'Dr.',
+        'gender_label' => 'No especificado',
+        'professional_license' => 'DEV-STRIPE-HARNESS',
+        'specialty_license' => 'DEV-STRIPE-HARNESS',
+        'specialty_primary' => 'Medicina General',
+        'specialty_secondary_json' => '[]',
+        'bio_short' => 'Fixture DEV/local para QA de webhook Stripe sintetico.',
+        'profile_status' => 'hidden',
+        'is_public_candidate' => 0,
+    ];
+
+    foreach ($fixtureValues as $column => $value) {
+        if (isset($columns[$column])) {
+            $values[$column] = $value;
+        }
+    }
+
+    $insertColumns = array_keys($values);
+    $sql = sprintf(
+        'INSERT INTO profiles_doctors (%s) VALUES (%s)',
+        implode(', ', array_map(static fn(string $column): string => '`' . $column . '`', $insertColumns)),
+        implode(', ', array_map(static fn(string $column): string => ':' . $column, $insertColumns))
+    );
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($values);
+}
+
+function subscriptionEnsureStripePaymentIntentFixtureDoctor(): array
+{
+    $doctorId = subscriptionStripePaymentIntentFixtureEnsureDoctorId();
+    try {
+        $existingDoctor = subscriptionFetchStripePaymentIntentFixtureDoctor($doctorId);
+        if ($existingDoctor !== null) {
+            if (!subscriptionStripePaymentIntentFixtureDoctorIsMarked($existingDoctor)) {
+                return subscriptionDevSessionFixtureError(
+                    'stripe_fixture_doctor_ensure_failed',
+                    'stripe payment intent fixture doctor is not marked as dev local'
+                );
+            }
+            if (subscriptionDoctorHasActiveSubscription($doctorId)) {
+                return subscriptionDevSessionFixtureError(
+                    'fixture_doctor_has_active_subscription',
+                    'stripe payment intent fixture doctor has active subscription'
+                );
+            }
+
+            return [
+                'ok' => true,
+                'doctor_id' => $doctorId,
+                'selection' => 'ensured_existing',
+            ];
+        }
+
+        subscriptionInsertStripePaymentIntentFixtureDoctor(mxmed_pdo(), $doctorId);
+        if (subscriptionDoctorHasActiveSubscription($doctorId)) {
+            return subscriptionDevSessionFixtureError(
+                'fixture_doctor_has_active_subscription',
+                'stripe payment intent fixture doctor has active subscription'
+            );
+        }
+
+        return [
+            'ok' => true,
+            'doctor_id' => $doctorId,
+            'selection' => 'ensured_created',
+        ];
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'stripe_fixture_doctor_ensure_failed',
+            'stripe payment intent fixture doctor could not be ensured'
+        );
+    }
 }
 
 function subscriptionCreateStripePaymentIntentFixture(): array
