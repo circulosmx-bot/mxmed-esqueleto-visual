@@ -32053,3 +32053,143 @@ El replay de payment intent post-activacion queda cerrado:
 Objetivo sugerido:
 
 Cerrar documentalmente el bloque completo de pulidos de idempotencia, incluyendo checkout replay, payment intent replay post-activacion y `activate-after-payment` replay.
+
+## PP-Decisiones 174 - Cierre final de pulidos de idempotencia upgrade
+
+### Microfase
+
+`DOCS/Suscripciones-UpgradeIntent-IdempotencyPolish-FinalClosure-01`
+
+### Objetivo
+
+Cerrar documentalmente el bloque completo de pulidos de idempotencia del flujo de upgrades, incluyendo replay de checkout intent, replay de payment intent post-activacion y replay de `activate-after-payment`.
+
+### Bloque cerrado
+
+El flujo de upgrades encadenados `standard -> optimum -> professional` ya estaba funcionalmente cerrado antes de estos pulidos.
+
+Los ajustes posteriores cerraron consistencia de contrato de respuesta idempotente:
+
+- no cambiaron storage;
+- no cambiaron reglas de negocio;
+- no cambiaron calculo de precios;
+- no cambiaron activacion;
+- no tocaron frontend;
+- no relajaron guards de seguridad.
+
+### Commits relevantes
+
+Commits del bloque de idempotencia:
+
+- `d7f6f8f fix(suscripciones): normaliza respuesta idempotente checkout payment`;
+- `5a8a22e fix(suscripciones): permite replay payment intent post activacion`;
+- `a27426f docs(suscripciones): cierra replay payment intent post activacion`.
+
+### Replay de checkout intent
+
+Operacion validada:
+
+- `subscriptions.checkout_intent.create`.
+
+Resultado validado:
+
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`;
+- checkout validado: `92c5a9fa-0930-4eed-9175-25ea5c08dcef`;
+- no creo checkout duplicado;
+- no duplico contract acceptance;
+- no creo payment intent;
+- no activo suscripcion.
+
+### Replay de payment intent
+
+Operacion validada:
+
+- `subscriptions.payment_intent.create`.
+
+Resultado final validado:
+
+- replay exacto post-activacion HTTP `200`;
+- payment intent validado: `c9c49470-f4de-4926-b09d-bb24fa887904`;
+- checkout vinculado: `92c5a9fa-0930-4eed-9175-25ea5c08dcef`;
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`;
+- amount/currency: `10000 / MXN`;
+- ya no devuelve `checkout_intent_not_pending_payment` para replay exacto completado.
+
+Control negativo validado:
+
+- request nueva/no idempotente sobre checkout activado sigue bloqueada;
+- error controlado: `checkout_intent_not_pending_payment`;
+- no creo payment intent;
+- no creo payment event;
+- no confirmo pago;
+- no activo suscripcion.
+
+### Replay de activate-after-payment
+
+Replay de activacion ya estaba normalizado.
+
+Resultado validado:
+
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`;
+- subscription devuelta: `2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`;
+- no creo segunda suscripcion;
+- no altero enlaces old/new;
+- no cambio vigencia.
+
+### Estado final de seguridad
+
+Estado final validado:
+
+- current: `professional / active`;
+- suscripciones activas compatibles: `1`;
+- checkout professional: `activated`;
+- payment intent: `paid / mock_paid`;
+- payment event: `payment_intent_confirm / processed`;
+- contract acceptance apunta a `2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`;
+- no hay duplicados de checkout;
+- no hay duplicados de payment intent;
+- no hay duplicados de payment event;
+- no hay duplicados de subscription;
+- replays exactos devuelven respuesta almacenada;
+- requests nuevas sobre estados cerrados siguen bloqueadas.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico storage/schema.
+
+### Decision
+
+El bloque de pulidos de idempotencia upgrade queda cerrado:
+
+- checkout replay: normalizado;
+- payment intent replay post-activacion: normalizado;
+- activate-after-payment replay: normalizado;
+- creaciones nuevas sobre estados cerrados: bloqueadas;
+- sin duplicados;
+- sin cambios de storage;
+- sin cambios de negocio;
+- sin riesgos bloqueantes conocidos.
+
+### Siguiente microfase recomendada
+
+`DOCS/Suscripciones-UpgradeIntent-ServiceReadiness-FinalSummary-01`
+
+Objetivo sugerido:
+
+Preparar un resumen final de readiness del servicio de upgrades para dejar claro que ya esta listo, que queda como pendiente futuro y cual seria el siguiente bloque funcional recomendable.
