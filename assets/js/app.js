@@ -59501,6 +59501,7 @@ function mxResetLogoPreview(){
     const hasContract = contractedPlan !== '';
     const startsAt = formatDate(model?.starts_at);
     const expiresAt = formatDate(model?.expires_at);
+    syncGlobalSubscriptionHeader(model || {}, planLabel);
     const headerPlanName = readHeaderPlanName();
     const headerMismatch = headerPlanName
       && planLabel
@@ -59796,6 +59797,70 @@ function mxResetLogoPreview(){
   function readHeaderPlanName(){
     const raw = clean(document.querySelector('.mx-gh-current-plan-name')?.textContent);
     return raw.replace(/^Plan\s+/i, '').trim();
+  }
+
+  function headerPlanLabelFromModel(model, planLabel){
+    const directLabel = clean(planLabel) || clean(model?.plan_label);
+    if(directLabel && directLabel.toLowerCase() !== 'no disponible') return directLabel;
+    const code = clean(model?.effective_plan_code)
+      || clean(model?.contracted_plan_code)
+      || clean(model?.plan_code);
+    const plan = findPlanById(code);
+    return clean(plan?.name) || code;
+  }
+
+  function headerRenewalLabelFromModel(model){
+    const billingPeriod = clean(model?.billing_period).toLowerCase();
+    if(billingPeriod === 'lifetime' || Number(model?.duration_days) === 0){
+      return 'Vigencia permanente';
+    }
+
+    const expiresAt = clean(model?.expires_at);
+    if(!expiresAt) return '';
+    const match = expiresAt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(!match) return `Vigencia ${expiresAt}`;
+
+    const [, year, month, day] = match;
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+    if(Number.isNaN(date.getTime())) return `Vigencia ${expiresAt}`;
+
+    return `Vigencia ${date.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    })}`;
+  }
+
+  function syncGlobalSubscriptionHeader(model, planLabel){
+    const planNameEl = document.querySelector('.mx-gh-current-plan-name');
+    const renewalEl = document.querySelector('.mx-gh-current-plan-renewal');
+    const container = document.querySelector('.mx-gh-current-plan');
+    const resolvedPlanLabel = headerPlanLabelFromModel(model, planLabel);
+    const renewalLabel = headerRenewalLabelFromModel(model);
+
+    if(planNameEl && resolvedPlanLabel){
+      planNameEl.textContent = /^Plan\b/i.test(resolvedPlanLabel)
+        ? resolvedPlanLabel
+        : `Plan ${resolvedPlanLabel}`;
+      planNameEl.dataset.subscriptionPlanCode = clean(model?.effective_plan_code)
+        || clean(model?.contracted_plan_code)
+        || clean(model?.plan_code);
+      planNameEl.dataset.subscriptionPlanLabel = resolvedPlanLabel;
+    }
+
+    if(renewalEl && renewalLabel){
+      renewalEl.textContent = renewalLabel;
+      renewalEl.dataset.subscriptionExpiresAt = clean(model?.expires_at);
+    }
+
+    if(container && (resolvedPlanLabel || renewalLabel)){
+      container.setAttribute(
+        'aria-label',
+        [resolvedPlanLabel ? `Plan actual ${resolvedPlanLabel}` : '', renewalLabel]
+          .filter(Boolean)
+          .join('. ')
+      );
+    }
   }
 
   function planFlowType(plan, activePaid){
