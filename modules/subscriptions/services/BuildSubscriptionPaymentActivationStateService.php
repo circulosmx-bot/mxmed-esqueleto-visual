@@ -21,6 +21,7 @@ final class BuildSubscriptionPaymentActivationStateService
     private const INTENT_TYPE_NEW_SUBSCRIPTION = 'new_subscription';
     private const INTENT_TYPE_UPGRADE = 'upgrade';
     private const PRICING_STRATEGY_PRORATED_DIFFERENCE = 'prorated_difference';
+    private const SOURCE_UPGRADE_ACTIVATION = 'mxmed_payment_intent_upgrade_activation_v1';
     private const PLAN_RANKS = [
         'basic' => 1,
         'standard' => 2,
@@ -74,8 +75,9 @@ final class BuildSubscriptionPaymentActivationStateService
         $paymentEvent = $this->lookupPaymentEvent($paymentIntent, $checkoutIntent, $reasons);
         $contractAcceptance = $this->lookupContractAcceptance($checkoutIntent, $entityType, $entityId, $reasons);
         $activeSubscription = $this->lookupActiveSubscription($entityType, $entityId, $reasons);
-        $isUpgradeCheckout = $this->checkoutIntentDeclaresUpgrade($checkoutIntent);
-        $upgradeContext = $this->upgradeContext($checkoutIntent, $isUpgradeCheckout, $reasons);
+        $checkoutDeclaresUpgrade = $this->checkoutIntentDeclaresUpgrade($checkoutIntent);
+        $isUpgradeCheckout = $checkoutDeclaresUpgrade || $this->checkoutIntentHasSafeUpgradeActivationTrace($checkoutIntent);
+        $upgradeContext = $this->upgradeContext($checkoutIntent, $checkoutDeclaresUpgrade, $reasons);
 
         $this->evaluateState(
             $entityType,
@@ -304,6 +306,9 @@ final class BuildSubscriptionPaymentActivationStateService
         }
 
         if ($isUpgradeCheckout) {
+            if (in_array('activation_already_done', $reasons, true)) {
+                return;
+            }
             if ($upgradeContext === null) {
                 return;
             }
@@ -504,6 +509,21 @@ final class BuildSubscriptionPaymentActivationStateService
         }
 
         return strtolower(trim((string)($decoded['intent_type'] ?? ''))) === self::INTENT_TYPE_UPGRADE;
+    }
+
+    private function checkoutIntentHasSafeUpgradeActivationTrace(?array $checkoutIntent): bool
+    {
+        if ($checkoutIntent === null) {
+            return false;
+        }
+
+        $source = $this->cleanText($checkoutIntent['source'] ?? null, 128);
+        if ($source !== self::SOURCE_UPGRADE_ACTIVATION) {
+            return false;
+        }
+
+        return $this->cleanText($checkoutIntent['subscription_id'] ?? null, 36) !== null
+            && $this->cleanText($checkoutIntent['activated_at'] ?? null, 32) !== null;
     }
 
     private function upgradeContext(?array $checkoutIntent, bool $isUpgradeCheckout, array &$reasons): ?array

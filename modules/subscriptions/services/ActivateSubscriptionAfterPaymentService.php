@@ -162,7 +162,7 @@ final class ActivateSubscriptionAfterPaymentService
         );
 
         if ($idempotencyDecision->shouldReplay()) {
-            return $idempotencyDecision->response();
+            return $this->normalizeActivationReplayResponse($idempotencyDecision->response());
         }
         if ($idempotencyDecision->shouldReject()) {
             throw new ActivateSubscriptionAfterPaymentException(
@@ -315,8 +315,7 @@ final class ActivateSubscriptionAfterPaymentService
 
             $checkoutIntent = $this->checkoutIntentRepository->markActivatedAfterPayment($checkoutIntentUuid, $subscriptionId, [
                 'source' => $isUpgradeCheckout ? self::SOURCE_UPGRADE_ACTIVATION : self::SOURCE_ACTIVATION,
-                'notes' => ($isUpgradeCheckout ? 'upgrade activated after paid payment intent ' : 'activated after paid payment intent ')
-                    . $paymentIntentUuid,
+                'notes' => $this->checkoutActivationNotes($isUpgradeCheckout, $paymentIntentUuid, $upgradeContext),
             ]);
             if ($checkoutIntent === null) {
                 throw new ActivateSubscriptionAfterPaymentException(
@@ -748,6 +747,21 @@ final class ActivateSubscriptionAfterPaymentService
         ];
     }
 
+    private function normalizeActivationReplayResponse(array $response): array
+    {
+        $response['meta'] = is_array($response['meta'] ?? null) ? $response['meta'] : [];
+        $response['meta']['idempotent_replay'] = true;
+
+        if (is_array($response['data'] ?? null)) {
+            $response['data']['idempotency'] = is_array($response['data']['idempotency'] ?? null)
+                ? $response['data']['idempotency']
+                : [];
+            $response['data']['idempotency']['idempotent_replay'] = true;
+        }
+
+        return $response;
+    }
+
     private function checkoutIntentDeclaresUpgrade(array $checkoutIntent): bool
     {
         $notes = $this->nullableText($checkoutIntent['notes'] ?? null);
@@ -761,6 +775,35 @@ final class ActivateSubscriptionAfterPaymentService
         }
 
         return strtolower(trim((string)($decoded['intent_type'] ?? ''))) === self::INTENT_TYPE_UPGRADE;
+    }
+
+    private function checkoutActivationNotes(bool $isUpgradeCheckout, string $paymentIntentUuid, ?array $upgradeContext): string
+    {
+        if (!$isUpgradeCheckout || $upgradeContext === null) {
+            return 'activated after paid payment intent ' . $paymentIntentUuid;
+        }
+
+        $notes = [
+            'intent_type' => self::INTENT_TYPE_UPGRADE,
+            'pricing_strategy' => self::PRICING_STRATEGY_PRORATED_DIFFERENCE,
+            'upgrade_context' => [
+                'current_plan_code' => (string)$upgradeContext['current_plan_code'],
+                'target_plan_code' => (string)$upgradeContext['target_plan_code'],
+                'current_billing_period' => (string)$upgradeContext['current_billing_period'],
+                'target_billing_period' => (string)$upgradeContext['target_billing_period'],
+                'adjustment_amount_cents' => (int)$upgradeContext['adjustment_amount_cents'],
+                'currency' => (string)$upgradeContext['currency'],
+            ],
+            'activation' => [
+                'source' => self::SOURCE_UPGRADE_ACTIVATION,
+                'payment_intent_uuid' => $paymentIntentUuid,
+            ],
+        ];
+        $json = json_encode($notes, JSON_UNESCAPED_SLASHES);
+
+        return is_string($json) && $json !== ''
+            ? $json
+            : 'upgrade activated after paid payment intent ' . $paymentIntentUuid;
     }
 
     private function upgradeContext(array $checkoutIntent, bool $isUpgradeCheckout): ?array

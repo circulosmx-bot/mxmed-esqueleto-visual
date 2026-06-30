@@ -30874,3 +30874,90 @@ El cierre confirma:
 Objetivo sugerido:
 
 Pulir la salida posterior a activacion para conservar semantica segura de `intent_type=upgrade` y normalizar `idempotent_replay` en respuestas anidadas, sin cambiar storage ni flujo de activacion.
+
+## PP-Decisiones 164 - Pulido de salida post-activacion upgrade
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-PostActivation-StateOutputPolish-01`
+
+### Objetivo
+
+El flujo de activacion post-pago para `intent_type=upgrade` ya estaba funcional y validado con PASS.
+
+Esta microfase solo pule contrato de salida backend para resolver WARNs no bloqueantes detectados despues del cierre funcional.
+
+### Ajuste state read-model posterior
+
+`BuildSubscriptionPaymentActivationStateService.php` conserva semantica segura de `upgrade` despues de activado cuando existe evidencia backend-controlled:
+
+- snapshot JSON valido en `subscription_checkout_intents.notes`; o
+- `source = mxmed_payment_intent_upgrade_activation_v1` con `subscription_id` y `activated_at` presentes.
+
+El ajuste no reactiva elegibilidad:
+
+- checkout activado sigue bloqueado;
+- `activation_already_done` sigue presente;
+- `can_activate` sigue en `false`;
+- `required_action` sigue resolviendo estado de activacion;
+- no se expone raw `notes`.
+
+La regla previa se conserva:
+
+- para `new_subscription`, `active_subscription_exists` sigue bloqueando;
+- para `upgrade` pendiente y valido, la suscripcion activa sigue siendo requisito.
+
+### Ajuste replay idempotente
+
+`ActivateSubscriptionAfterPaymentService.php` normaliza la salida de replay de `activate-after-payment`:
+
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`.
+
+No se cambio la logica de idempotencia, ni se agregaron estados nuevos.
+
+### Notas de activacion futuras
+
+Cuando un upgrade se active en el futuro, las notas de checkout se guardan como JSON seguro con:
+
+- `intent_type = upgrade`;
+- `pricing_strategy = prorated_difference`;
+- `upgrade_context` minimo;
+- bloque `activation` con `source` y `payment_intent_uuid`.
+
+Esto evita perder semantica de `upgrade` en lecturas posteriores sin exponer raw notes en el output del state.
+
+### Alcance excluido
+
+La microfase no:
+
+- modifico frontend;
+- modifico `index.html`;
+- modifico `assets/js/app.js`;
+- modifico `assets/js/subscription-messages.js`;
+- modifico `api/subscriptions/index.php`;
+- modifico SQL/schema/seeds;
+- agrego storage nuevo;
+- ejecuto SQL;
+- ejecuto POST/curl;
+- ejecuto `confirm_mock`;
+- ejecuto `payment-intents`;
+- ejecuto `checkout`;
+- ejecuto `activate-after-payment`;
+- hizo writes manuales en BD.
+
+### Validacion tecnica
+
+Validaciones obligatorias:
+
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`: PASS;
+- `php -l modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`: PASS;
+- `git diff --check`: limpio.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-PostActivation-StateOutputPolish-01`
+
+Objetivo:
+
+Validar estaticamente y por GET read-only que la salida posterior a activacion conserva semantica `upgrade` segura, bloquea una nueva activacion y normaliza el replay idempotente en el contrato de respuesta.
