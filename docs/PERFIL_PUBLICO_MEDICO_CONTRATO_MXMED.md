@@ -31553,3 +31553,196 @@ El cierre queda aprobado:
 Objetivo sugerido:
 
 Cerrar documentalmente el ciclo completo de upgrades encadenados `standard -> optimum -> professional`, incluyendo backend, QA, frontend y estado final actual de `doctor/900001`.
+
+## PP-Decisiones 170 - Cierre de ciclo completo de upgrades encadenados
+
+### Microfase
+
+`DOCS/Suscripciones-UpgradeIntent-FullCycle-Closure-01`
+
+### Objetivo
+
+Cerrar documentalmente el ciclo completo de upgrades encadenados para `doctor/900001`, integrando backend, QA funcional, state read-model, frontend y estado final actual.
+
+Esta decision consolida el flujo:
+
+- estado inicial del bloque: plan `standard`;
+- primer upgrade controlado: `standard -> optimum`;
+- segundo upgrade controlado: `optimum -> professional`;
+- estado final: plan `professional`, etiqueta `Profesional`, status `active`;
+- vigencia final conservada: `2027-06-27 22:03:34`;
+- suscripciones activas compatibles para `doctor/900001`: `1`.
+
+### Entidad y estado final
+
+Entidad validada:
+
+- `entity_type = doctor`;
+- `entity_id = 900001`;
+- plan final contratado: `professional`;
+- plan final efectivo: `professional`;
+- etiqueta final: `Profesional`;
+- status final: `active`;
+- vigencia final: `2027-06-27 22:03:34`;
+- current read-model final: `professional / Profesional`;
+- frontend final: `Plan Profesional`.
+
+### Cadena de suscripciones
+
+Cadena validada:
+
+- suscripcion original Standard: `0d2c0113-5390-4548-9b61-3cbddfdfff06`;
+- suscripcion Optimum: `10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- suscripcion Professional: `2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`.
+
+Trazabilidad validada:
+
+- Standard `renewed_to` -> Optimum;
+- Optimum `renewed_from` -> Standard;
+- Optimum `renewed_to` -> Professional;
+- Professional `renewed_from` -> Optimum;
+- Standard queda en status `renewed`;
+- Optimum queda en status `renewed`;
+- Professional queda en status `active`.
+
+La cadena mantiene una sola suscripcion activa compatible y conserva la vigencia final del periodo actual.
+
+### Primer upgrade: Standard a Optimum
+
+Flujo validado:
+
+- checkout intent: `a752d558-0f3c-4a95-8e00-c1b5ae688fd6`;
+- contract acceptance: `530f8f71-2ea1-446f-ad5a-d80820363646`;
+- payment intent: `5e429aff-ea26-4b90-bfdf-92aed8a5f56d`;
+- payment event: `cbb402aa-6f23-4d13-8d11-6bcdbf474f6f`;
+- monto: `9973` centavos;
+- moneda: `MXN`;
+- resultado: `optimum / active`;
+- replay guard validado;
+- current/frontend reflejaron `Optimo`.
+
+### Segundo upgrade: Optimum a Professional
+
+Flujo validado:
+
+- checkout intent: `92c5a9fa-0930-4eed-9175-25ea5c08dcef`;
+- contract acceptance: `111cad72-8df0-4dbd-a322-9ff143b28f23`;
+- payment intent: `c9c49470-f4de-4926-b09d-bb24fa887904`;
+- payment event: `3346400e-6dc1-4017-92ae-4535285c37a1`;
+- monto: `10000` centavos;
+- moneda: `MXN`;
+- pricing strategy: `prorated_difference`;
+- checkout status: `activated`;
+- `activated_at = 2026-06-30 02:05:45`;
+- resultado: `professional / active`;
+- replay guard validado;
+- current/frontend reflejaron `Profesional`.
+
+### Commits relevantes
+
+Commits integrados en el cierre:
+
+- `40f0950 feat(suscripciones): soporta activacion upgrade post pago`;
+- `8b19595 docs(suscripciones): cierra activacion upgrade post pago`;
+- `0cc1f2f fix(suscripciones): pule salida post activacion upgrade`;
+- `cb4ad7b docs(suscripciones): cierra pulido salida upgrade`;
+- `e8c183f feat(suscripciones): prepara fixture upgrade professional`;
+- `b8ceccd docs(suscripciones): cierra upgrade encadenado professional`;
+- `651c036 fix(suscripciones): sincroniza header con plan y vigencia actual`;
+- `3153e61 docs(suscripciones): cierra sincronizacion header plan vigente`.
+
+### QA consolidada
+
+Microfases validadas con PASS:
+
+- state read-model para upgrade;
+- activacion `standard -> optimum`;
+- replay guard `standard -> optimum`;
+- current/frontend `optimum`;
+- fixture `optimum -> professional`;
+- checkout create/replay `optimum -> professional`;
+- payment intent create/replay `optimum -> professional`;
+- confirm mock `optimum -> professional`;
+- state read-model `optimum -> professional`;
+- activacion controlada `optimum -> professional`;
+- replay guard `optimum -> professional`;
+- current/frontend `professional`;
+- sincronizacion de header global con plan y vigencia.
+
+### Reglas funcionales validadas
+
+El ciclo deja validadas estas reglas:
+
+- upgrade requiere suscripcion activa vigente;
+- `active_subscription_exists` bloquea nuevas suscripciones, pero no bloquea upgrades validos;
+- el plan destino debe ser superior al plan actual;
+- no se mezcla cambio de periodo de facturacion en el upgrade validado;
+- la vigencia se conserva al sustituir la suscripcion activa;
+- el monto se calcula en backend;
+- frontend no controla `amount` ni `currency`;
+- `confirm_mock` no activa suscripcion;
+- `activate-after-payment` es el unico punto de activacion;
+- los replay guards evitan duplicados;
+- no quedan suscripciones activas incompatibles.
+
+### Frontend final
+
+Estado visual final validado:
+
+- header global: `Plan Profesional`;
+- header vigencia: `Vigencia 27 jun 2027`;
+- `data-subscription-expires-at = 2027-06-27 22:03:34`;
+- panel `#p-suscripcion`: `Profesional · Tu plan actual`;
+- card Profesional: `Plan actual`;
+- cards Basico/Estandar/Optimo: `Disponible al renovar`;
+- CTA de upgrade superior: no existe;
+- downgrade inmediato: no disponible;
+- pago o activacion repetida: no disponible.
+
+### WARNs no bloqueantes
+
+Se mantiene como advertencia no bloqueante:
+
+- en el flujo Professional, el replay de checkout y payment intent devuelve `meta.idempotent_replay = true`, pero `data.idempotency.idempotent_replay = false`;
+- no implica riesgo funcional inmediato porque no se generaron duplicados ni efectos adicionales;
+- conviene normalizar esa salida para que coincida con el replay de activacion.
+
+Tambien se observaron warnings externos de Google Maps/deprecacion de marker, sin impacto en suscripciones.
+
+### Exclusiones
+
+Durante este cierre documental:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se tocaron fixtures;
+- no se toco SQL/schema/seeds;
+- no se agrego storage/schema nuevo;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se ejecuto fixture DEV/local.
+
+### Decision
+
+El ciclo completo de upgrades encadenados queda cerrado:
+
+- activacion upgrade post-pago: cerrada para `standard -> optimum` y `optimum -> professional`;
+- state post-activacion: pulido y validado;
+- replay idempotente: protegido contra duplicados y validado;
+- current read-model final: `professional`;
+- frontend final: `Plan Profesional`;
+- suscripcion final activa: `2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`;
+- riesgos bloqueantes conocidos: ninguno.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-UpgradeIntent-IdempotencyResponsePolish-01`
+
+Objetivo sugerido:
+
+Normalizar `data.idempotency.idempotent_replay = true` en replay de checkout y payment intent de upgrade, alineandolo con el replay de activacion, sin cambios de storage ni reglas de negocio.
