@@ -13,6 +13,7 @@ final class SubscriptionPaymentEventRepository
     private const MOCK_PROVIDER = 'mxmed_mock';
     private const CONFIRM_MOCK_EVENT_TYPE = 'payment_intent_confirm';
     private const PROCESSING_STATUS_PROCESSED = 'processed';
+    private const PROCESSING_STATUS_FAILED = 'failed';
 
     private PDO $pdo;
 
@@ -206,6 +207,30 @@ final class SubscriptionPaymentEventRepository
         return $created;
     }
 
+    public function createProcessedProviderEvent(array $input): array
+    {
+        $event = $input;
+        $event['processing_status'] = self::PROCESSING_STATUS_PROCESSED;
+        $event['processed_at'] = $this->processedAt($event);
+        $event['error_message'] = null;
+
+        return $this->create($event);
+    }
+
+    public function createFailedProviderEvent(array $input): array
+    {
+        $event = $input;
+        $event['processing_status'] = self::PROCESSING_STATUS_FAILED;
+        $event['processed_at'] = $this->processedAt($event);
+        $event['error_message'] = $this->requiredText(
+            $event['error_message'] ?? null,
+            'invalid_payment_event_payload',
+            65535
+        );
+
+        return $this->create($event);
+    }
+
     public function findByUuid(string $uuid): ?array
     {
         $uuid = trim($uuid);
@@ -220,6 +245,51 @@ final class SubscriptionPaymentEventRepository
                AND deleted_at IS NULL
              LIMIT 1',
             ['uuid' => $uuid]
+        );
+    }
+
+    public function findByProviderEventId(string $provider, string $providerEventId): ?array
+    {
+        $provider = trim($provider);
+        $providerEventId = trim($providerEventId);
+        if ($provider === '' || $providerEventId === '') {
+            throw new InvalidArgumentException('invalid_payment_event_payload: provider and provider_event_id are required');
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_events
+             WHERE provider = :provider
+               AND provider_event_id = :provider_event_id
+               AND deleted_at IS NULL
+             LIMIT 1',
+            [
+                'provider' => $provider,
+                'provider_event_id' => $providerEventId,
+            ]
+        );
+    }
+
+    public function findByEventHash(string $provider, string $eventHash): ?array
+    {
+        $provider = trim($provider);
+        $eventHash = trim($eventHash);
+        if ($provider === '' || $eventHash === '') {
+            throw new InvalidArgumentException('invalid_payment_event_payload: provider and event_hash are required');
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_events
+             WHERE provider = :provider
+               AND event_hash = :event_hash
+               AND deleted_at IS NULL
+             ORDER BY id DESC
+             LIMIT 1',
+            [
+                'provider' => $provider,
+                'event_hash' => $eventHash,
+            ]
         );
     }
 
@@ -335,6 +405,16 @@ final class SubscriptionPaymentEventRepository
     {
         $currency = $this->optionalText($value, 3);
         return $currency === null ? null : strtoupper($currency);
+    }
+
+    private function processedAt(array $input): string
+    {
+        $processedAt = $this->optionalText($input['processed_at'] ?? null, 19);
+        if ($processedAt !== null) {
+            return $processedAt;
+        }
+
+        return $this->requiredText($input['received_at'] ?? null, 'invalid_payment_event_payload', 19);
     }
 
     private function nullableString($value): ?string

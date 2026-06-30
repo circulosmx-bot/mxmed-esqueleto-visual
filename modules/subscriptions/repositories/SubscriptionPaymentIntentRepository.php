@@ -11,6 +11,7 @@ use Throwable;
 final class SubscriptionPaymentIntentRepository
 {
     private const INITIAL_STATUSES = ['created', 'pending_provider'];
+    private const PROVIDER_TRANSITIONABLE_STATUSES = ['created', 'pending_provider', 'pending'];
     private const TERMINAL_STATUSES = ['failed', 'cancelled', 'paid'];
 
     private PDO $pdo;
@@ -93,6 +94,29 @@ final class SubscriptionPaymentIntentRepository
              WHERE provider = :provider
                AND provider_payment_id = :provider_payment_id
                AND deleted_at IS NULL
+             LIMIT 1',
+            [
+                'provider' => $provider,
+                'provider_payment_id' => $providerPaymentId,
+            ]
+        );
+    }
+
+    public function findActiveByProviderPaymentId(string $provider, string $providerPaymentId): ?array
+    {
+        $provider = trim($provider);
+        $providerPaymentId = trim($providerPaymentId);
+        if ($provider === '' || $providerPaymentId === '') {
+            throw new InvalidArgumentException('invalid_payment_intent_payload: provider and provider_payment_id are required');
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_intents
+             WHERE provider = :provider
+               AND provider_payment_id = :provider_payment_id
+               AND deleted_at IS NULL
+             ORDER BY id DESC
              LIMIT 1',
             [
                 'provider' => $provider,
@@ -276,6 +300,121 @@ final class SubscriptionPaymentIntentRepository
             [
                 'uuid' => $paymentIntentUuid,
                 'provider' => 'mxmed_mock',
+            ]
+        );
+    }
+
+    public function markProviderPaid(string $paymentIntentUuid, array $input): ?array
+    {
+        return $this->markProviderTransition($paymentIntentUuid, $input, 'paid', 'paid_at', 'paid_at');
+    }
+
+    public function markProviderFailed(string $paymentIntentUuid, array $input): ?array
+    {
+        return $this->markProviderTransition($paymentIntentUuid, $input, 'failed', 'failed_at', 'failed_at');
+    }
+
+    public function markProviderCanceled(string $paymentIntentUuid, array $input): ?array
+    {
+        return $this->markProviderTransition(
+            $paymentIntentUuid,
+            $input,
+            'cancelled',
+            'cancelled_at',
+            'cancelled_at'
+        );
+    }
+
+    public function markProviderCancelled(string $paymentIntentUuid, array $input): ?array
+    {
+        return $this->markProviderCanceled($paymentIntentUuid, $input);
+    }
+
+    private function markProviderTransition(
+        string $paymentIntentUuid,
+        array $input,
+        string $normalizedStatus,
+        string $timestampColumn,
+        string $timestampInputKey
+    ): ?array {
+        $paymentIntentUuid = trim($paymentIntentUuid);
+        if ($paymentIntentUuid === '') {
+            throw new InvalidArgumentException('invalid_payment_intent_payload: uuid is required');
+        }
+
+        $provider = $this->requiredText($input['provider'] ?? null, 'invalid_payment_intent_payload', 64);
+        $providerStatus = $this->requiredText($input['provider_status'] ?? null, 'invalid_payment_intent_payload', 64);
+        $timestampValue = $input[$timestampInputKey] ?? null;
+        if ($timestampInputKey === 'cancelled_at' && $timestampValue === null) {
+            $timestampValue = $input['canceled_at'] ?? null;
+        }
+        $transitionedAt = $this->requiredText($timestampValue, 'invalid_payment_intent_payload', 19);
+        $source = $this->optionalText($input['source'] ?? null, 128);
+        $notes = $this->optionalText($input['notes'] ?? null, 65535);
+
+        $current = $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_intents
+             WHERE uuid = :uuid
+               AND provider = :provider
+               AND deleted_at IS NULL
+             LIMIT 1',
+            [
+                'uuid' => $paymentIntentUuid,
+                'provider' => $provider,
+            ]
+        );
+        if ($current === null) {
+            return null;
+        }
+
+        $currentStatus = (string)($current['normalized_status'] ?? '');
+        if ($currentStatus === $normalizedStatus) {
+            return $current;
+        }
+        if (!in_array($currentStatus, self::PROVIDER_TRANSITIONABLE_STATUSES, true)) {
+            return $current;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE subscription_payment_intents
+                 SET normalized_status = :normalized_status,
+                     provider_status = :provider_status,
+                     ' . $timestampColumn . ' = :' . $timestampInputKey . ',
+                     source = COALESCE(:source, source),
+                     notes = COALESCE(:notes, notes)
+                 WHERE uuid = :uuid
+                   AND provider = :provider
+                   AND normalized_status IN (:created_status, :pending_provider_status, :pending_status)
+                   AND deleted_at IS NULL'
+            );
+            $stmt->execute([
+                'uuid' => $paymentIntentUuid,
+                'provider' => $provider,
+                'normalized_status' => $normalizedStatus,
+                'provider_status' => $providerStatus,
+                $timestampInputKey => $transitionedAt,
+                'source' => $source,
+                'notes' => $notes,
+                'created_status' => self::PROVIDER_TRANSITIONABLE_STATUSES[0],
+                'pending_provider_status' => self::PROVIDER_TRANSITIONABLE_STATUSES[1],
+                'pending_status' => self::PROVIDER_TRANSITIONABLE_STATUSES[2],
+            ]);
+        } catch (Throwable $e) {
+            throw new RuntimeException('payment_intent_update_failed', 0, $e);
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_payment_intents
+             WHERE uuid = :uuid
+               AND provider = :provider
+               AND deleted_at IS NULL
+             LIMIT 1',
+            [
+                'uuid' => $paymentIntentUuid,
+                'provider' => $provider,
             ]
         );
     }

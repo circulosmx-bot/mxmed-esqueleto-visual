@@ -36084,3 +36084,210 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Implementar los metodos de repositorio necesarios para webhook Stripe v1: lookup por `provider_event_id`, persistencia segura de eventos Stripe procesados/fallidos, transiciones provider real de payment intent y guards de no degradacion de estado pagado.
+
+## PP-Decisiones 189 - Implementacion repositorios webhook Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-RepositoryImplementation-01`
+
+### Objetivo
+
+Implementar metodos minimos de repositorio para soportar el futuro procesamiento de webhooks Stripe, sin crear endpoint webhook y sin conectar aun el servicio completo de procesamiento.
+
+### Commit base
+
+`b77b187 docs(suscripciones): valida repositorios webhook stripe`
+
+### Archivos modificados
+
+- `modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron:
+
+- `api/subscriptions/index.php`;
+- frontend;
+- SQL/schema/seeds;
+- fixtures;
+- servicios de confirmacion mock;
+- servicios de activacion post-pago.
+
+### Metodos agregados en payment intents
+
+Repositorio:
+
+`SubscriptionPaymentIntentRepository`
+
+Metodos agregados:
+
+- `findActiveByProviderPaymentId(string $provider, string $providerPaymentId): ?array`;
+- `markProviderPaid(string $paymentIntentUuid, array $input): ?array`;
+- `markProviderFailed(string $paymentIntentUuid, array $input): ?array`;
+- `markProviderCanceled(string $paymentIntentUuid, array $input): ?array`;
+- `markProviderCancelled(string $paymentIntentUuid, array $input): ?array`.
+
+Decision:
+
+- `findActiveByProviderPaymentId(...)` filtra por provider, provider payment id y `deleted_at IS NULL`;
+- las transiciones provider real exigen provider, provider status y timestamp aplicable;
+- `markProviderCanceled(...)` acepta `cancelled_at` y tambien `canceled_at` como alias de entrada, pero persiste en la columna real `cancelled_at`;
+- no se modifica amount/currency;
+- no se modifica checkout;
+- no se crea payment event dentro de payment intent repository;
+- no se toca `profile_subscriptions`.
+
+### Guard de transiciones
+
+Las transiciones provider real solo aplican desde estados iniciales:
+
+- `created`;
+- `pending_provider`;
+- `pending`.
+
+Estados finales protegidos:
+
+- `paid`;
+- `failed`;
+- `cancelled`.
+
+Reglas implementadas:
+
+- si el intent ya esta en el mismo estado destino, se devuelve sin re-aplicar transicion;
+- si el intent esta en estado terminal distinto, se devuelve sin degradar;
+- `paid` no puede degradarse a `failed` o `cancelled`;
+- `failed` o `cancelled` no se transforman implicitamente a `paid`;
+- el servicio futuro debera decidir si algun caso excepcional requiere reconciliacion manual.
+
+Resultado:
+
+- repositorio listo para que el servicio webhook aplique eventos Stripe sin degradar estados pagados;
+- idempotencia y conflictos siguen siendo responsabilidad del servicio usando el ledger de events.
+
+### Metodos agregados en payment events
+
+Repositorio:
+
+`SubscriptionPaymentEventRepository`
+
+Metodos agregados:
+
+- `findByProviderEventId(string $provider, string $providerEventId): ?array`;
+- `findByEventHash(string $provider, string $eventHash): ?array`;
+- `createProcessedProviderEvent(array $input): array`;
+- `createFailedProviderEvent(array $input): array`.
+
+Decision:
+
+- dedupe primario por provider + `provider_event_id`;
+- `event_hash` queda como apoyo para detectar replay/conflicto;
+- `createProcessedProviderEvent(...)` fuerza `processing_status=processed`;
+- `createFailedProviderEvent(...)` fuerza `processing_status=failed` y exige `error_message`;
+- ambos wrappers reutilizan `create(...)` y columnas existentes;
+- no se guarda raw payload completo;
+- `payload_text_sanitized` se mantiene como referencia segura opcional.
+
+### Schema
+
+No hubo schema nuevo.
+
+Decision:
+
+`no schema immediate`.
+
+Columnas existentes usadas:
+
+- `provider_event_id`;
+- `provider_payment_id`;
+- `event_type`;
+- `provider_status`;
+- `normalized_status`;
+- `amount_cents`;
+- `currency`;
+- `event_hash`;
+- `signature_validated_at`;
+- `received_at`;
+- `processed_at`;
+- `processing_status`;
+- `error_message`;
+- `payload_text_sanitized`;
+- `paid_at`;
+- `failed_at`;
+- `cancelled_at`.
+
+Warnings no bloqueantes:
+
+- `provider_event_type` sigue representado por `event_type`;
+- `failed_reason` sigue representado por `error_message`;
+- si se requiere storage externo de raw payload seguro, debe abrirse microfase especifica posterior;
+- los metodos quedan preparados, pero aun no estan conectados a servicio webhook ni endpoint productivo.
+
+### Compatibilidad con mock existente
+
+Se conserva:
+
+- `markMockPaid(...)`;
+- `findConfirmMockByPaymentIntentUuid(...)`;
+- `findProcessedConfirmByPaymentIntentUuid(...)`;
+- `findProcessedConfirmByCheckoutIntentUuid(...)`;
+- flujo `confirm-mock`;
+- state read-model post-pago;
+- `activate-after-payment`.
+
+La implementacion no cambia rutas existentes ni modifica comportamiento de `mxmed_mock`.
+
+### Limites pendientes para servicio webhook
+
+El servicio futuro `ProcessStripeSubscriptionWebhookService` aun debe:
+
+- validar firma antes de llamar repositorios;
+- construir DTO normalizado;
+- buscar payment intent por provider id;
+- validar provider, amount y currency;
+- deduplicar por provider event id;
+- decidir duplicate exacto vs conflictivo;
+- crear event processed/failed;
+- aplicar transicion segura al payment intent;
+- no activar suscripcion directamente;
+- devolver respuesta HTTP controlada mediante endpoint futuro.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se creo endpoint webhook;
+- no se modifico `api/subscriptions/index.php`;
+- no se creo servicio webhook completo;
+- no se modifico frontend;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se activo suscripcion;
+- no se modifico DB ni storage manualmente.
+
+### Validaciones
+
+Validaciones requeridas:
+
+- `php -l modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php`;
+- `php -l modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php`;
+- `git diff --check`;
+- verificacion de alcance: sin frontend, sin API, sin schema.
+
+Resultado esperado:
+
+`PASS repository implementation`.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripeWebhook-RepositoryStaticQA-01`
+
+Objetivo sugerido:
+
+Validar estaticamente los metodos nuevos de repositorio, confirmar compatibilidad con mock existente, revisar guards de transicion y asegurar que no se creo endpoint webhook ni se tocaron frontend/schema.
