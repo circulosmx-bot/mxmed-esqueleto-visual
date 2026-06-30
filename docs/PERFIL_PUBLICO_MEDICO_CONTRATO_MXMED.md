@@ -34711,3 +34711,364 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Disenar el contrato del webhook productivo para el proveedor candidato principal, incluyendo firma, eventos, mapeo de estados, idempotencia y persistencia de payment events.
+
+## PP-Decisiones 185 - Readiness de contrato webhook Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-WebhookContract-Readiness-01`
+
+### Objetivo
+
+Disenar documentalmente el contrato del webhook productivo para el proveedor candidato principal `Stripe Mexico`, dejando definido como MXMed recibira eventos de pago reales, validara firma, mapeara estados, aplicara idempotencia, persistira payment events y mantendra separada la activacion post-pago.
+
+### Contexto
+
+La microfase `BE/Suscripciones-PaymentProvider-SelectionMatrix-01` cerro con PASS.
+
+Resultado de matriz:
+
+- candidato tecnico preliminar: `Stripe Mexico`;
+- alterno fuerte: `Mercado Pago`;
+- Openpay y Conekta: viables, pero con validaciones pendientes;
+- `mxmed_mock` queda solo DEV/local.
+
+Esta decision no implementa webhook ni modifica schema. Define el contrato tecnico para la siguiente fase de servicio.
+
+### Fuentes oficiales Stripe revisadas
+
+Fuentes oficiales revisadas:
+
+- Stripe webhooks:
+  `https://docs.stripe.com/webhooks`
+- Stripe Event object:
+  `https://docs.stripe.com/api/events/object`
+- Stripe event types:
+  `https://docs.stripe.com/api/events/types`
+- Stripe PaymentIntent object:
+  `https://docs.stripe.com/api/payment_intents/object`
+- Stripe idempotent requests:
+  `https://docs.stripe.com/api/idempotent_requests`
+
+Conceptos confirmados:
+
+- Stripe envia eventos a endpoints webhook via `POST`.
+- El endpoint productivo debe verificar firma usando `Stripe-Signature`.
+- Stripe recomienda validar con librerias oficiales usando raw body, signature header y endpoint secret.
+- El endpoint secret es unico por endpoint y tiene formato operativo tipo `whsec_...`.
+- Stripe incluye timestamp en `Stripe-Signature` para proteccion contra replay.
+- Las librerias Stripe usan tolerancia default de 5 minutos para timestamp.
+- Stripe puede reintentar eventos por hasta tres dias en modo live con backoff exponencial.
+- Stripe no garantiza orden de entrega de eventos.
+- Stripe recomienda responder rapidamente con codigo `2xx`.
+- Stripe recomienda deduplicar eventos usando event IDs procesados.
+
+### Endpoint futuro
+
+Endpoint conceptual:
+
+`POST /api/subscriptions/index.php/webhooks/stripe`
+
+Audiencia:
+
+- proveedor de pago real Stripe;
+- no frontend;
+- no panel privado;
+- no fixture DEV/local.
+
+Reglas:
+
+- no debe usar `session_scope`;
+- no debe depender de usuario autenticado;
+- debe depender de firma valida Stripe;
+- debe leer raw body antes de parsear JSON;
+- debe responder HTTP/JSON controlado segun contrato final;
+- debe tener ruta separada de `confirm-mock`;
+- no debe aceptar `mxmed_mock`.
+
+### Firma y secreto
+
+Header esperado:
+
+- `Stripe-Signature`
+
+Variable de entorno sugerida:
+
+- `MXMED_STRIPE_WEBHOOK_SECRET`
+
+Reglas:
+
+- si falta `Stripe-Signature`, responder error controlado `webhook_signature_missing`;
+- si falta secreto configurado, responder error controlado interno y no procesar;
+- si la firma no es valida, responder `webhook_signature_invalid`;
+- si el timestamp esta fuera de tolerancia, responder `webhook_signature_invalid` o `webhook_replay_rejected`;
+- no procesar evento si la firma falla;
+- no parsear acciones de negocio antes de verificar firma;
+- usar raw body sin transformarlo antes de la verificacion;
+- no registrar raw payload completo en logs publicos;
+- conservar referencia segura si se decide almacenar payload crudo en area privada.
+
+### Eventos Stripe relevantes
+
+Eventos confirmados en documentacion Stripe:
+
+Eventos accionables para payment intent:
+
+- `payment_intent.succeeded`: pago completado exitosamente; candidato principal para mapear a `paid`;
+- `payment_intent.payment_failed`: intento de pago fallido; mapear a `failed`;
+- `payment_intent.canceled`: PaymentIntent cancelado; mapear a `canceled`;
+- `payment_intent.processing`: PaymentIntent en procesamiento; mapear a `pending`;
+- `payment_intent.requires_action`: requiere accion del cliente; mapear a `requires_action` o `pending` segun contrato local final.
+
+Eventos de Checkout que pueden ser utiles si MXMed usa Stripe Checkout:
+
+- `checkout.session.completed`;
+- `checkout.session.async_payment_succeeded`;
+- `checkout.session.async_payment_failed`;
+- `checkout.session.expired`.
+
+Eventos fuera de activacion automatica:
+
+- `charge.refunded`;
+- `charge.dispute.created`;
+- `charge.dispute.updated`;
+- `charge.dispute.closed`.
+
+Decision:
+
+- Solo `payment_intent.succeeded` con firma valida, amount/currency correctos y correlacion local valida puede dejar el payment intent local en `paid`.
+- `checkout.session.completed` por si solo no debe activar ni marcar pagado si no se valida el PaymentIntent relacionado y el estado confiable.
+- Refunds y chargebacks no activan automaticamente; requieren decision futura.
+- Eventos no reconocidos deben registrarse como no accionables o ignorarse de forma segura.
+
+### Mapeo de estados
+
+Mapeo conceptual inicial:
+
+| Stripe event/status | Estado local MXMed | Accion |
+| --- | --- | --- |
+| `payment_intent.succeeded` / `succeeded` | `paid` | registrar payment event procesado y marcar payment intent pagado |
+| `payment_intent.processing` / `processing` | `pending` | registrar estado no terminal; no activar |
+| `payment_intent.requires_action` / `requires_action` | `requires_action` o `pending` | registrar estado accion requerida; no activar |
+| `requires_payment_method` | `pending` o `failed` segun causa | no activar |
+| `payment_intent.payment_failed` | `failed` | registrar fallo; no activar |
+| `payment_intent.canceled` / `canceled` | `canceled` | registrar cancelacion; no activar |
+| `charge.refunded` | decision futura | no activar automaticamente |
+| `charge.dispute.*` | decision futura | no activar automaticamente |
+
+El mapeo definitivo debera ajustarse al producto Stripe elegido: Payment Intents directo o Stripe Checkout.
+
+### Correlacion con payment intent local
+
+MXMed debe encontrar el payment intent local usando, en orden recomendado:
+
+1. `provider=stripe` y `provider_payment_id` igual al Stripe PaymentIntent id (`pi_...`).
+2. `provider_checkout_id` si se usa Stripe Checkout Session (`cs_...`).
+3. Metadata segura enviada por backend a Stripe, por ejemplo:
+   - `mxmed_checkout_intent_uuid`;
+   - `mxmed_payment_intent_uuid`;
+   - `mxmed_entity_type`;
+   - `mxmed_entity_id`.
+
+Reglas:
+
+- nunca correlacionar por datos controlados solo por frontend;
+- no confiar en amount/currency enviados por frontend;
+- no permitir que metadata sustituya validaciones locales;
+- `provider_payment_id` debe quedar persistido al crear el PaymentIntent real;
+- si se usa Checkout Session, guardar tambien `provider_checkout_id`.
+
+Campos minimos a persistir o usar:
+
+- `provider=stripe`;
+- `provider_payment_id`;
+- `provider_checkout_id`, si aplica;
+- `provider_event_id`;
+- `provider_event_type`;
+- `provider_status`;
+- `normalized_status`;
+- `amount_cents`;
+- `currency`;
+- `paid_at`;
+- `failed_at`, si aplica;
+- `canceled_at`, si aplica;
+- referencia segura a payload si aplica.
+
+### Validaciones antes de marcar pagado
+
+Antes de marcar un payment intent local como `paid`:
+
+- firma valida;
+- provider permitido: `stripe`;
+- `provider_event_id` no procesado antes;
+- payment intent local existe;
+- checkout local existe;
+- `amount_cents` coincide con checkout local;
+- `currency` coincide;
+- `provider_payment_id` coincide con el PaymentIntent local;
+- entity scope coincide;
+- checkout no fue cancelado ni expirado;
+- estado provider es pago confirmado (`succeeded`);
+- no hay mismatch de contrato;
+- payment intent local no esta en estado terminal conflictivo;
+- si el evento viene por Checkout Session, se valida el PaymentIntent relacionado antes de marcar localmente como pagado.
+
+### Idempotencia del webhook
+
+Reglas:
+
+- idempotencia primaria por `provider_event_id` de Stripe (`evt_...`);
+- deduplicar eventos repetidos;
+- replay exacto del mismo evento debe responder seguro y no duplicar writes;
+- mismo `provider_event_id` con payload conflictivo debe responder o registrar `webhook_event_conflict`;
+- no duplicar `subscription_payment_events`;
+- no cambiar un estado terminal pagado de forma insegura;
+- no degradar `paid` a `pending`;
+- no activar suscripcion desde webhook en esta version;
+- cuando Stripe reintente por fallo HTTP previo, el backend debe poder reconocer el mismo evento y responder estable.
+
+Regla complementaria:
+
+- Las llamadas salientes de MXMed a Stripe para crear PaymentIntent/Checkout deben usar idempotency key Stripe propia, pero eso pertenece al contrato de creacion de payment intent, no al procesamiento del webhook.
+
+### Persistencia de payment event
+
+Mapeo hacia `subscription_payment_events`:
+
+- `event_type`: `payment_intent_provider_webhook` o decision equivalente;
+- `provider`: `stripe`;
+- `provider_event_id`: Stripe event id (`evt_...`);
+- `provider_event_type`: Stripe event type (`payment_intent.succeeded`, etc.);
+- `payment_intent_uuid`: payment intent local;
+- `checkout_intent_uuid`: checkout local;
+- `normalized_status`: estado MXMed resultante;
+- `provider_status`: status Stripe del objeto relevante;
+- `amount_cents`: amount validado;
+- `currency`: currency validada;
+- `processing_status`: `processed`, `ignored`, `failed` o equivalente;
+- `processed_at`: UTC cuando se proceso;
+- `failed_reason`: razon controlada si falla;
+- `raw_payload_reference`: referencia segura si se conserva payload;
+- `source`: `stripe_webhook`.
+
+Reglas:
+
+- eventos fallidos deben quedar auditables;
+- eventos ignorados deben quedar trazables si son relevantes para conciliacion;
+- no almacenar tarjetas ni datos sensibles;
+- no exponer raw payload en read-model ni frontend.
+
+### Relacion con activacion
+
+El webhook real no activa suscripcion en v1.
+
+El webhook solo:
+
+- confirma pago;
+- registra evento procesado;
+- actualiza payment intent local si las validaciones pasan.
+
+`activate-after-payment` sigue siendo el unico punto de activacion.
+
+El state read-model debe detectar:
+
+- payment intent `paid`;
+- payment event `processed`;
+- checkout y contract acceptance validos;
+- eligibility segun reglas existentes de new subscription o upgrade.
+
+Backoffice o flujo autorizado posterior decide cuando activar.
+
+### Errores controlados
+
+Codigos propuestos:
+
+- `webhook_signature_missing`;
+- `webhook_signature_invalid`;
+- `webhook_replay_rejected`;
+- `webhook_event_duplicate`;
+- `webhook_event_conflict`;
+- `provider_event_type_unsupported`;
+- `provider_payment_not_found`;
+- `provider_checkout_not_found`;
+- `payment_amount_mismatch`;
+- `payment_currency_mismatch`;
+- `provider_status_not_payable`;
+- `payment_intent_state_conflict`;
+- `payment_event_processing_failed`.
+
+### Seguridad y logging
+
+Logging:
+
+- incluir correlation id interno;
+- incluir `provider_event_id`;
+- incluir `provider_event_type`;
+- incluir payment intent local si se resolvio;
+- incluir razon controlada de rechazo o fallo;
+- no loggear payload completo en logs normales;
+- no loggear datos de tarjeta;
+- no loggear secrets;
+- no exponer raw payload en respuestas.
+
+Auditoria:
+
+- auditar eventos fallidos;
+- auditar eventos rechazados por firma;
+- auditar eventos duplicados/conflictivos;
+- limitar acceso backoffice a eventos raw o referencias privadas;
+- registrar intervenciones manuales futuras.
+
+### Brechas para implementacion
+
+Antes de implementar se requiere revisar o crear:
+
+- endpoint webhook nuevo `POST /api/subscriptions/index.php/webhooks/stripe`;
+- servicio `ProcessStripeWebhookService` o equivalente;
+- helper de lectura de raw body;
+- verificacion de firma con Stripe PHP SDK o implementacion oficial/manual segura;
+- variable `MXMED_STRIPE_WEBHOOK_SECRET`;
+- repositorio para buscar payment intent por `provider_payment_id`;
+- repositorio o metodo de idempotencia por `provider_event_id`;
+- posible indice unico para provider/event si schema actual no lo garantiza;
+- ajuste a `subscription_payment_events` si faltan campos para `provider_event_type`, `raw_payload_reference` o `failed_reason`;
+- pruebas con payload Stripe sandbox y Stripe CLI;
+- manejo de ordering no garantizado;
+- backoffice de eventos fallidos;
+- politica de retencion de payload privado;
+- contrato de creacion de PaymentIntent Stripe con metadata segura.
+
+### Resultado de readiness
+
+`PASS webhook contract readiness`.
+
+El contrato queda claro y accionable para disenar el servicio backend futuro.
+
+`WARN`: falta confirmar si MXMed usara Payment Intents directo o Stripe Checkout para la primera version productiva. No bloquea este contrato porque ambos caminos convergen en validar PaymentIntent y persistir payment events.
+
+`BLOCKED`: no aplica.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico backend/API;
+- no se modificaron servicios ni repositorios;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-ServiceReadiness-01`
+
+Objetivo sugerido:
+
+Disenar el servicio backend futuro para procesar webhooks Stripe, validar firma, deduplicar provider events, mapear estados y persistir payment events sin activar suscripcion.
