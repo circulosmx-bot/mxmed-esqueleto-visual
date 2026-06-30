@@ -15,7 +15,11 @@ final class BuildSubscriptionPaymentActivationStateService
     private const CHECKOUT_STATUS_PENDING_PAYMENT = 'pending_payment';
     private const ACCEPTANCE_STATUS_PENDING_PAYMENT = 'accepted_pending_payment';
     private const PAYMENT_INTENT_STATUS_PAID = 'paid';
+    private const PROVIDER_MXMED_MOCK = 'mxmed_mock';
+    private const PROVIDER_STRIPE = 'stripe';
     private const PROVIDER_STATUS_MOCK_PAID = 'mock_paid';
+    private const PROVIDER_STATUS_PAID = 'paid';
+    private const PROVIDER_STATUS_STRIPE_SUCCEEDED = 'succeeded';
     private const EVENT_TYPE_CONFIRM = 'payment_intent_confirm';
     private const EVENT_PROCESSING_STATUS_PROCESSED = 'processed';
     private const INTENT_TYPE_NEW_SUBSCRIPTION = 'new_subscription';
@@ -250,9 +254,7 @@ final class BuildSubscriptionPaymentActivationStateService
         if ($paymentIntent === null) {
             $this->addReason($reasons, 'payment_intent_missing');
         } else {
-            if ((string)($paymentIntent['normalized_status'] ?? '') !== self::PAYMENT_INTENT_STATUS_PAID
-                || (string)($paymentIntent['provider_status'] ?? '') !== self::PROVIDER_STATUS_MOCK_PAID
-            ) {
+            if (!$this->paymentIntentIsConfirmed($paymentIntent)) {
                 $this->addReason($reasons, 'payment_intent_not_paid');
             }
             if ($checkoutIntent !== null
@@ -319,6 +321,32 @@ final class BuildSubscriptionPaymentActivationStateService
         if ($activeSubscription !== null) {
             $this->addReason($reasons, 'active_subscription_exists');
         }
+    }
+
+    private function paymentIntentIsConfirmed(array $paymentIntent): bool
+    {
+        if ((string)($paymentIntent['normalized_status'] ?? '') !== self::PAYMENT_INTENT_STATUS_PAID) {
+            return false;
+        }
+
+        $provider = strtolower((string)($paymentIntent['provider'] ?? ''));
+        $providerStatus = strtolower((string)($paymentIntent['provider_status'] ?? ''));
+
+        if ($provider === self::PROVIDER_MXMED_MOCK) {
+            return in_array($providerStatus, [
+                self::PROVIDER_STATUS_MOCK_PAID,
+                self::PROVIDER_STATUS_PAID,
+            ], true);
+        }
+
+        if ($provider === self::PROVIDER_STRIPE) {
+            return in_array($providerStatus, [
+                self::PROVIDER_STATUS_STRIPE_SUCCEEDED,
+                self::PROVIDER_STATUS_PAID,
+            ], true);
+        }
+
+        return $providerStatus === self::PROVIDER_STATUS_PAID;
     }
 
     private function evaluateUpgradeState(?array $checkoutIntent, ?array $activeSubscription, array $upgradeContext, array &$reasons): void

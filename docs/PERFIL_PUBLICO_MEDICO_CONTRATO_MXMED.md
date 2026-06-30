@@ -37214,3 +37214,138 @@ No se modificaron:
 Objetivo sugerido:
 
 Validar funcionalmente que el harness DEV/local asegura o reutiliza `doctor/990099`, crea checkout/contract acceptance/payment intent local `provider=stripe` en estado inicial, conserva provider ids server-side, no toca `doctor/900001` y deja preparado el matched synthetic QA del webhook Stripe.
+
+## PP-Decisiones 195 - Eligibility state read-model para pagos Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-StateReadModelEligibilityFix-01`
+
+### Objetivo
+
+Corregir la evaluacion de elegibilidad del state read-model post-pago para reconocer pagos confirmados por Stripe sin relajar las demas condiciones de activacion.
+
+### Contexto
+
+La microfase `QA/Suscripciones-PaymentProvider-StripeWebhook-StateReadModelPostWebhookQA-01` cerro con `WARN` porque el state read-model detectaba correctamente:
+
+- payment intent `provider=stripe`;
+- `normalized_status=paid`;
+- `provider_status=succeeded`;
+- `paid_at=2026-06-30 23:10:00`;
+- payment event `payment_intent_confirm / processed`;
+- checkout `pending_payment`;
+- contract acceptance `accepted_pending_payment`;
+- `doctor/990099` sin suscripcion activa.
+
+Sin embargo, `activation_eligibility.can_activate` quedaba en `false` con reason `payment_intent_not_paid`.
+
+### Problema detectado
+
+La validacion anterior estaba acoplada al proveedor mock:
+
+- exigia `normalized_status=paid`;
+- exigia tambien `provider_status=mock_paid`.
+
+Ese criterio era correcto para `mxmed_mock`, pero no para Stripe, donde el webhook confirmado normaliza el payment intent como:
+
+- `normalized_status=paid`;
+- `provider_status=succeeded`.
+
+### Decision tecnica
+
+`BuildSubscriptionPaymentActivationStateService` ahora centraliza la validacion local de pago confirmado en un helper privado de estado de payment intent.
+
+Regla base:
+
+- `normalized_status` debe ser siempre `paid`.
+
+Estados confirmados permitidos por proveedor:
+
+- `mxmed_mock`:
+  - `mock_paid`;
+  - `paid`.
+- `stripe`:
+  - `succeeded`;
+  - `paid`.
+- proveedor futuro:
+  - solo `paid` como fallback conservador.
+
+Estados no aceptados como pagados:
+
+- `created`;
+- `mock_created`;
+- `requires_payment_method`;
+- `requires_action`;
+- `processing`;
+- `pending`;
+- `failed`;
+- `canceled`;
+- `cancelled`.
+
+### Seguridad mantenida
+
+La correccion no permite activar solo por `provider_status`.
+
+El state read-model sigue exigiendo:
+
+- payment intent `normalized_status=paid`;
+- provider status confirmado segun proveedor;
+- payment event `payment_intent_confirm / processed`;
+- checkout `pending_payment`;
+- contract acceptance valida;
+- ausencia de suscripcion activa para `new_subscription`;
+- reglas especificas de upgrade cuando `intent_type=upgrade`;
+- guards existentes de `activation_already_done`;
+- guards existentes de mismatches entre checkout, payment intent y payment event.
+
+### Alcance
+
+Archivos modificados:
+
+- `modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modifico:
+
+- endpoint Stripe webhook;
+- `ProcessStripeSubscriptionWebhookService`;
+- `api/subscriptions/index.php`;
+- repositorios;
+- frontend;
+- SQL/schema/seeds;
+- fixtures.
+
+No se ejecuto:
+
+- SQL;
+- POST/curl;
+- webhook Stripe;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- fixture DEV/local;
+- Stripe real.
+
+### Validaciones esperadas
+
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`;
+- `php -l api/subscriptions/index.php`;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`;
+- `git diff --check`;
+- verificacion de alcance sin frontend;
+- verificacion de alcance sin SQL/schema/seeds;
+- verificacion de que no se ejecuto SQL;
+- verificacion de que no se ejecuto POST/curl;
+- verificacion de que no se ejecuto `confirm_mock`;
+- verificacion de que no se ejecuto `activate-after-payment`;
+- verificacion de que no se ejecuto webhook Stripe;
+- verificacion de que no se conecto Stripe real.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripeWebhook-StateReadModelPostWebhookQA-02`
+
+Objetivo sugerido:
+
+Validar por GET read-only que el state read-model post-webhook Stripe reconoce `provider=stripe`, `normalized_status=paid`, `provider_status=succeeded` y payment event `processed` como elegibles para `activate_after_payment`, sin activar suscripcion ni ejecutar writes.
