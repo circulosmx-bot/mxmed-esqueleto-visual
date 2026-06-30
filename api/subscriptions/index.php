@@ -479,6 +479,15 @@ function subscriptionSafeLogValue($value, int $maxLength = 96): string
     return $text;
 }
 
+function subscriptionGenerateUuidV4(): string
+{
+    $bytes = random_bytes(16);
+    $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+    $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
+}
+
 function subscriptionLogDevGuardBlocked(string $action, string $reason, array $context = []): void
 {
     $event = [
@@ -603,6 +612,191 @@ function subscriptionApplyDevDoctorSessionFixture(string $doctorId, string $user
     $_SESSION['entity_id'] = $doctorId;
     $_SESSION['actor_role'] = 'doctor';
     $_SESSION['subscriptions_dev_session_fixture'] = '1';
+}
+
+function subscriptionCreateStripePaymentIntentFixture(): array
+{
+    $doctorId = '2';
+    $userId = '2';
+    $planCode = 'basic';
+    $billingPeriod = 'annual';
+    $contractVersion = 'mxmed-subscriptions-v1';
+    $contractHash = 'sha256:qa-local-dev-stripe-payment-intent-harness';
+    $contractSnapshotUrl = '/legal/subscriptions/mxmed-subscriptions-v1.html';
+    $contractTitle = 'Contrato de suscripción México Médico';
+    $idempotencyKey = 'mxmed-dev-stripe-payment-intent-fixture-doctor-2-basic-annual-qa-01';
+
+    if (!subscriptionDoctorFixtureExists($doctorId)) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'stripe payment intent fixture doctor not found');
+    }
+    if (subscriptionDoctorHasActiveSubscription($doctorId)) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_doctor_has_active_subscription',
+            'stripe payment intent fixture doctor has active subscription'
+        );
+    }
+
+    $pdo = mxmed_pdo();
+    $checkoutRepository = new SubscriptionCheckoutIntentRepository($pdo);
+    $paymentIntentRepository = new SubscriptionPaymentIntentRepository($pdo);
+    $checkoutService = new CreateSubscriptionCheckoutIntentService(
+        $pdo,
+        new SubscriptionEntityResolverService($pdo),
+        new CurrentSubscriptionRepository($pdo),
+        new SubscriptionWriteIdempotencyService(new SubscriptionWriteIdempotencyRepository($pdo)),
+        new SubscriptionEntityWriteLockService($pdo),
+        new SubscriptionPlanPriceResolverService(new SubscriptionPlanPriceRepository($pdo)),
+        new CreateSubscriptionPendingPaymentAcceptanceService(
+            new SubscriptionContractAcceptanceRepository($pdo)
+        ),
+        $checkoutRepository
+    );
+
+    try {
+        $checkoutResponse = $checkoutService->createCheckoutIntent([
+            'entity_type' => 'doctor',
+            'entity_id' => $doctorId,
+            'intent_type' => 'new_subscription',
+            'plan_code' => $planCode,
+            'billing_period' => $billingPeriod,
+            'contract_version' => $contractVersion,
+            'contract_hash' => $contractHash,
+            'contract_snapshot_url' => $contractSnapshotUrl,
+            'contract_title' => $contractTitle,
+            'source' => 'checkout_intent',
+            'idempotency_key' => $idempotencyKey,
+            'actor_user_id' => $userId,
+            'actor_role' => 'doctor',
+            'doctor_id' => $doctorId,
+            'profile_id' => null,
+            'ip_address' => subscriptionRequestIpAddress(),
+            'user_agent' => subscriptionRequestUserAgent(),
+        ]);
+    } catch (CreateSubscriptionCheckoutIntentException $e) {
+        return subscriptionDevSessionFixtureError(
+            $e->errorCode(),
+            'stripe payment intent fixture checkout failed: ' . $e->getMessage()
+        );
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'stripe_payment_intent_fixture_unavailable',
+            'stripe payment intent fixture is unavailable'
+        );
+    }
+
+    $checkoutData = is_array($checkoutResponse['data'] ?? null) ? $checkoutResponse['data'] : [];
+    $checkoutIntentUuid = trim((string)($checkoutData['checkout_intent_uuid'] ?? ''));
+    if ($checkoutIntentUuid === '') {
+        return subscriptionDevSessionFixtureError(
+            'stripe_payment_intent_fixture_checkout_missing',
+            'stripe payment intent fixture checkout is missing'
+        );
+    }
+
+    try {
+        $checkoutIntent = $checkoutRepository->findByUuid($checkoutIntentUuid);
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'stripe_payment_intent_fixture_checkout_lookup_failed',
+            'stripe payment intent fixture checkout lookup failed'
+        );
+    }
+    if ($checkoutIntent === null) {
+        return subscriptionDevSessionFixtureError(
+            'stripe_payment_intent_fixture_checkout_not_found',
+            'stripe payment intent fixture checkout was not found'
+        );
+    }
+
+    $amountCents = (int)($checkoutIntent['amount_cents'] ?? 0);
+    $currency = strtoupper(trim((string)($checkoutIntent['currency'] ?? '')));
+    if ($amountCents <= 0 || $currency === '') {
+        return subscriptionDevSessionFixtureError(
+            'stripe_payment_intent_fixture_invalid_checkout_snapshot',
+            'stripe payment intent fixture checkout snapshot is invalid'
+        );
+    }
+
+    $providerPaymentId = 'pi_mxmed_stripe_synthetic_' . substr(hash('sha256', $checkoutIntentUuid), 0, 24);
+    $providerCheckoutId = 'cs_mxmed_stripe_synthetic_' . substr(hash('sha256', $checkoutIntentUuid), 0, 24);
+
+    try {
+        $existingPaymentIntent = $paymentIntentRepository->findByProviderPaymentId('stripe', $providerPaymentId);
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'stripe_payment_intent_fixture_lookup_failed',
+            'stripe payment intent fixture lookup failed'
+        );
+    }
+
+    if ($existingPaymentIntent !== null) {
+        $existingStatus = (string)($existingPaymentIntent['normalized_status'] ?? '');
+        if (!in_array($existingStatus, ['created', 'pending', 'pending_provider'], true)) {
+            return subscriptionDevSessionFixtureError(
+                'stripe_payment_intent_fixture_already_finalized',
+                'stripe payment intent fixture is already finalized'
+            );
+        }
+
+        return subscriptionStripePaymentIntentFixtureResponse($checkoutIntent, $existingPaymentIntent, true);
+    }
+
+    try {
+        $paymentIntent = $paymentIntentRepository->create([
+            'uuid' => subscriptionGenerateUuidV4(),
+            'checkout_intent_uuid' => $checkoutIntentUuid,
+            'provider' => 'stripe',
+            'provider_payment_id' => $providerPaymentId,
+            'provider_checkout_id' => $providerCheckoutId,
+            'normalized_status' => 'created',
+            'provider_status' => 'requires_payment_method',
+            'amount_cents' => $amountCents,
+            'currency' => $currency,
+            'created_at_provider' => gmdate('Y-m-d H:i:s'),
+            'source' => 'stripe_payment_intent_test_harness',
+            'notes' => json_encode([
+                'fixture' => 'stripe-payment-intent',
+                'dev_only' => true,
+                'intended_use' => 'stripe_webhook_matched_synthetic_qa',
+            ], JSON_UNESCAPED_SLASHES),
+        ]);
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'stripe_payment_intent_fixture_create_failed',
+            'stripe payment intent fixture could not be created'
+        );
+    }
+
+    return subscriptionStripePaymentIntentFixtureResponse($checkoutIntent, $paymentIntent, false);
+}
+
+function subscriptionStripePaymentIntentFixtureResponse(
+    array $checkoutIntent,
+    array $paymentIntent,
+    bool $idempotentReplay
+): array {
+    return [
+        'ok' => true,
+        'data' => [
+            'fixture' => 'stripe-payment-intent',
+            'entity_type' => (string)($checkoutIntent['entity_type'] ?? 'doctor'),
+            'entity_id' => (string)($checkoutIntent['entity_id'] ?? ''),
+            'doctor_id' => (string)($checkoutIntent['doctor_id'] ?? ''),
+            'checkout_intent_uuid' => (string)($checkoutIntent['uuid'] ?? ''),
+            'contract_acceptance_uuid' => (string)($checkoutIntent['contract_acceptance_uuid'] ?? ''),
+            'payment_intent_uuid' => (string)($paymentIntent['uuid'] ?? ''),
+            'provider' => (string)($paymentIntent['provider'] ?? 'stripe'),
+            'provider_payment_id' => (string)($paymentIntent['provider_payment_id'] ?? ''),
+            'provider_checkout_id' => (string)($paymentIntent['provider_checkout_id'] ?? ''),
+            'amount_cents' => (int)($paymentIntent['amount_cents'] ?? 0),
+            'currency' => (string)($paymentIntent['currency'] ?? ''),
+            'normalized_status' => (string)($paymentIntent['normalized_status'] ?? ''),
+            'provider_status' => (string)($paymentIntent['provider_status'] ?? ''),
+            'next_step' => 'send_synthetic_stripe_webhook',
+            'idempotent_replay' => $idempotentReplay,
+        ],
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
 }
 
 function subscriptionCreateDevSessionFixture(): array
@@ -1583,6 +1777,22 @@ try {
         }
 
         $fixtureResponse = subscriptionCreateUpgradeDoctorSessionFixture();
+        $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
+        subscriptionRespond($fixtureResponse, $fixtureStatus);
+        return;
+    }
+
+    if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'stripe-payment-intent') {
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/stripe-payment-intent', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
+            return;
+        }
+
+        $fixtureResponse = subscriptionCreateStripePaymentIntentFixture();
         $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
         subscriptionRespond($fixtureResponse, $fixtureStatus);
         return;

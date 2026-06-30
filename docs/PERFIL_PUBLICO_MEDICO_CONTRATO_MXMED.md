@@ -36831,3 +36831,169 @@ Warnings no bloqueantes:
 Objetivo sugerido:
 
 Validar estaticamente el endpoint `POST /api/subscriptions/index.php/webhooks/stripe`, incluyendo raw body, firma, normalizacion, wiring del servicio, respuestas HTTP controladas, logging seguro y ausencia de activacion automatica.
+
+## PP-Decisiones 192 - Harness DEV/local para payment intent Stripe sintetico
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-01`
+
+### Objetivo
+
+Implementar un harness DEV/local seguro para preparar un payment intent local `provider=stripe` en estado inicial, permitiendo validar posteriormente el webhook Stripe matched synthetic QA sin conectar Stripe real, sin confirmar pago real y sin activar suscripcion.
+
+### Commit base
+
+`64d5b31 feat(suscripciones): agrega endpoint webhook stripe`
+
+### Motivo
+
+La microfase `QA/Suscripciones-PaymentProvider-StripeWebhook-PaymentIntentMatchedSyntheticQA-01` quedo `BLOCKED` porque:
+
+- no existia payment intent local `provider=stripe`;
+- `stripe_initial=0`;
+- `stripe_all=0`;
+- el endpoint normal de `payment-intents` conserva provider `mxmed_mock` como unico provider permitido;
+- `CreateSubscriptionPaymentIntentService::provider()` rechaza provider distinto a `mxmed_mock`;
+- `SubscriptionPaymentIntentMockProvider` exige `mxmed_mock`.
+
+Se requiere un escenario local controlado para probar que el webhook Stripe puede correlacionar `provider_payment_id`, crear payment event processed y transicionar payment intent local a `paid`.
+
+### Ruta implementada
+
+Ruta DEV/local:
+
+`POST /api/subscriptions/index.php/dev/session-fixture/stripe-payment-intent`
+
+Protecciones:
+
+- usa `subscriptionAssertDevFixtureAllowed(...)`;
+- requiere flag `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- requiere request local;
+- bloquea entorno productivo por `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT`;
+- exige metodo `POST`;
+- registra intentos bloqueados con logging seguro existente.
+
+### Escenario preparado
+
+El harness prepara un escenario controlado sobre fixture alterno:
+
+- `entity_type=doctor`;
+- `entity_id=2`;
+- `doctor_id=2`;
+- `plan_code=basic`;
+- `billing_period=annual`;
+- checkout intent local `pending_payment`;
+- contract acceptance `accepted_pending_payment` creada por el flujo checkout existente;
+- payment intent local `provider=stripe`;
+- `provider_payment_id` sintetico server-side con prefijo `pi_mxmed_stripe_synthetic_`;
+- `provider_checkout_id` sintetico server-side con prefijo `cs_mxmed_stripe_synthetic_`;
+- `normalized_status=created`;
+- `provider_status=requires_payment_method`;
+- `amount_cents` y `currency` tomados del checkout server-side.
+
+No se usan valores de amount/currency enviados por cliente.
+
+### Idempotencia y duplicados
+
+El harness usa idempotency key server-side fija:
+
+`mxmed-dev-stripe-payment-intent-fixture-doctor-2-basic-annual-qa-01`
+
+Comportamiento:
+
+- si el checkout ya existe por replay del checkout service, se reutiliza;
+- si el payment intent Stripe fixture existe en estado inicial, se devuelve con `idempotent_replay=true`;
+- si el payment intent Stripe fixture ya fue finalizado, devuelve `stripe_payment_intent_fixture_already_finalized`;
+- evita crear multiples payment intents Stripe pendientes innecesarios;
+- no altera `doctor/900001` ni su estado `professional`.
+
+### Output esperado
+
+Cuando se ejecute en QA posterior, la respuesta controlada incluye:
+
+- `checkout_intent_uuid`;
+- `contract_acceptance_uuid`;
+- `payment_intent_uuid`;
+- `provider=stripe`;
+- `provider_payment_id`;
+- `provider_checkout_id`;
+- `amount_cents`;
+- `currency`;
+- `normalized_status`;
+- `provider_status`;
+- `next_step=send_synthetic_stripe_webhook`;
+- `idempotent_replay`.
+
+La respuesta no devuelve secretos ni firma.
+
+### Separacion de provider real
+
+El harness no:
+
+- abre provider `stripe` en el endpoint productivo general de `payment-intents`;
+- conecta Stripe real;
+- requiere `STRIPE_WEBHOOK_SECRET`;
+- firma payloads;
+- ejecuta webhook;
+- ejecuta `confirm_mock`;
+- ejecuta `activate-after-payment`;
+- crea payment event processed;
+- activa suscripcion;
+- toca frontend;
+- toca SQL/schema/seeds.
+
+El endpoint normal conserva `mxmed_mock` como provider permitido para creacion de payment intent desde UI/API local existente.
+
+### Alcance tecnico
+
+Archivos modificados:
+
+- `api/subscriptions/index.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron:
+
+- frontend;
+- servicios productivos de payment intent;
+- repositorios;
+- SQL/schema/seeds;
+- fixtures no relacionados;
+- flujo `confirm-mock`;
+- flujo `activate-after-payment`.
+
+### Validaciones
+
+Validaciones requeridas:
+
+- `php -l api/subscriptions/index.php`;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`;
+- `git diff --check`;
+- verificacion de alcance: sin frontend, sin schema.
+
+Durante esta microfase no se ejecuto:
+
+- harness DEV/local;
+- SQL manual;
+- POST/curl;
+- webhook Stripe real;
+- `confirm_mock`;
+- `activate-after-payment`;
+- migraciones/seeds.
+
+Resultado esperado:
+
+`PASS stripe payment intent test harness implementation`.
+
+Warnings no bloqueantes:
+
+- la ejecucion funcional del harness queda pendiente para QA posterior;
+- el harness prepara un payment intent Stripe sintetico, no una integracion Stripe productiva.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-01`
+
+Objetivo sugerido:
+
+Validar funcionalmente que la ruta DEV/local `stripe-payment-intent` prepara un checkout/payment intent Stripe sintetico seguro, con provider payment id estable, sin activar suscripcion y sin conectar Stripe real.
