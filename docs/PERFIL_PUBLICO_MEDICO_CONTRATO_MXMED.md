@@ -31186,3 +31186,99 @@ No se debe avanzar a crear checkout hasta contar con sesion DEV/local autorizada
 Objetivo sugerido:
 
 Preparar un fixture DEV/local seguro para `doctor/900001` con plan activo `optimum`, destinado exclusivamente a QA controlada del checkout upgrade `optimum -> professional`, sin ejecutar checkout ni writes de negocio durante la preparacion.
+
+## PP-Decisiones 167 - Readiness de fixture upgrade Professional
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-ProfessionalUpgrade-FixtureReadiness-01`
+
+### Objetivo
+
+Preparar el fixture DEV/local de sesion para que la siguiente QA controlada pueda iniciar desde el estado real actual de `doctor/900001`:
+
+- current plan: `optimum`;
+- target plan: `professional`;
+- billing period: `annual`;
+- suscripcion activa: `10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- vigencia: `2027-06-27 22:03:34`.
+
+### Decision implementada
+
+Se mantiene la ruta DEV/local existente:
+
+`POST /api/subscriptions/index.php/dev/session-fixture/upgrade-doctor`
+
+El fixture deja de estar limitado al caso `standard -> optimum` y pasa a resolver el siguiente target permitido segun el plan activo real de `doctor/900001`.
+
+Targets DEV/local permitidos:
+
+- `standard -> optimum`;
+- `optimum -> professional`.
+
+El fixture conserva protecciones existentes:
+
+- `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED = 1`;
+- request local;
+- bloqueo de entorno productivo por `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT`;
+- metodo `POST`;
+- sesion PHP real con `session_scope = true`;
+- sin headers magicos;
+- sin relajar `subscriptionResolveWriteContext(...)`.
+
+### Validaciones del fixture
+
+El fixture valida de forma read-only:
+
+- existe `doctor/900001`;
+- existe suscripcion activa;
+- el plan activo tiene target superior soportado;
+- el billing period activo es `annual`;
+- el target es superior segun jerarquia canonica.
+
+La respuesta del fixture expone contexto seguro para QA:
+
+- `entity_type = doctor`;
+- `entity_id = 900001`;
+- `session_scope = true`;
+- `intended_use = upgrade_checkout_qa`;
+- `active_subscription.plan_code`;
+- `active_subscription.billing_period`;
+- `upgrade.current_plan_code`;
+- `upgrade.target_plan_code`;
+- `upgrade.pricing_strategy = prorated_difference`.
+
+### Alcance excluido
+
+Esta microfase no:
+
+- ejecuto checkout;
+- creo contract acceptance;
+- creo payment intent;
+- creo payment event;
+- ejecuto `confirm_mock`;
+- ejecuto `activate-after-payment`;
+- activo suscripcion;
+- ejecuto SQL write manual;
+- modifico frontend;
+- modifico SQL/schema/seeds;
+- modifico calculo productivo de precios;
+- modifico endpoints productivos fuera del fixture DEV/local.
+
+### Validacion tecnica
+
+Validaciones esperadas para el cierre:
+
+- `php -l api/subscriptions/index.php`: PASS;
+- `git diff --check`: limpio;
+- cambios limitados a fixture DEV/local y documentacion;
+- sin POST/curl ejecutado durante implementacion;
+- sin SQL ejecutado durante implementacion.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-ProfessionalUpgrade-FixtureSession-01`
+
+Objetivo sugerido:
+
+Validar por HTTP controlado que el fixture DEV/local crea sesion real para `doctor/900001` con plan actual `optimum`, target `professional`, billing `annual` y `session_scope = true`, sin ejecutar checkout todavia.

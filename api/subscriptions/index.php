@@ -466,6 +466,16 @@ function subscriptionCreateUpgradeDoctorSessionFixture(): array
 {
     $doctorId = '900001';
     $userId = '900001';
+    $allowedUpgradeTargets = [
+        'standard' => 'optimum',
+        'optimum' => 'professional',
+    ];
+    $planRanks = [
+        'basic' => 1,
+        'standard' => 2,
+        'optimum' => 3,
+        'professional' => 4,
+    ];
     if (!subscriptionDoctorFixtureExists($doctorId)) {
         return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'upgrade doctor fixture not found');
     }
@@ -487,10 +497,24 @@ function subscriptionCreateUpgradeDoctorSessionFixture(): array
     }
 
     $planCode = strtolower(trim((string)($activeSubscription['plan_code'] ?? '')));
-    if ($planCode !== 'standard') {
+    $billingPeriod = strtolower(trim((string)($activeSubscription['billing_period'] ?? '')));
+    $targetPlanCode = $allowedUpgradeTargets[$planCode] ?? null;
+    if ($targetPlanCode === null) {
         return subscriptionDevSessionFixtureError(
-            'fixture_doctor_active_subscription_not_standard',
-            'upgrade doctor active subscription is not standard'
+            'fixture_doctor_active_subscription_not_upgradeable',
+            'upgrade doctor active subscription does not have a supported higher target'
+        );
+    }
+    if ($billingPeriod !== 'annual') {
+        return subscriptionDevSessionFixtureError(
+            'fixture_doctor_active_subscription_not_annual',
+            'upgrade doctor active subscription is not annual'
+        );
+    }
+    if (($planRanks[$targetPlanCode] ?? 0) <= ($planRanks[$planCode] ?? 0)) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_upgrade_target_not_higher',
+            'upgrade doctor target plan is not higher than current plan'
         );
     }
 
@@ -514,8 +538,18 @@ function subscriptionCreateUpgradeDoctorSessionFixture(): array
                 'exists' => true,
                 'subscription_id' => (string)($activeSubscription['subscription_id'] ?? ''),
                 'plan_code' => $planCode,
-                'billing_period' => (string)($activeSubscription['billing_period'] ?? ''),
+                'billing_period' => $billingPeriod,
                 'status' => (string)($activeSubscription['status'] ?? ''),
+                'starts_at' => (string)($activeSubscription['starts_at'] ?? ''),
+                'expires_at' => (string)($activeSubscription['expires_at'] ?? ''),
+            ],
+            'upgrade' => [
+                'intent_type' => 'upgrade',
+                'current_plan_code' => $planCode,
+                'target_plan_code' => $targetPlanCode,
+                'current_billing_period' => $billingPeriod,
+                'target_billing_period' => $billingPeriod,
+                'pricing_strategy' => 'prorated_difference',
             ],
             'warning' => 'DEV/local only',
         ],
