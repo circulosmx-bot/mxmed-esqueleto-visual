@@ -31928,3 +31928,128 @@ No cambia la regla de negocio: un checkout activado sigue bloqueando cualquier c
 Objetivo sugerido:
 
 Validar por HTTP controlado que el replay exacto del payment intent post-activacion devuelve la respuesta almacenada con `meta.idempotent_replay = true` y `data.idempotency.idempotent_replay = true`, sin duplicados ni efectos adicionales.
+
+## PP-Decisiones 173 - Cierre de replay payment intent post-activacion
+
+### Microfase
+
+`DOCS/Suscripciones-UpgradeIntent-PaymentIntentReplayAfterActivation-Closure-01`
+
+### Objetivo
+
+Cerrar documentalmente el pulido de replay idempotente de payment intent post-activacion, dejando asentado que el replay exacto devuelve la respuesta almacenada y que una request nueva sobre checkout activado sigue bloqueada.
+
+### Commit implementado
+
+Commit validado:
+
+- `5a8a22e fix(suscripciones): permite replay payment intent post activacion`.
+
+Archivos modificados por el commit:
+
+- `modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php`;
+- `modules/subscriptions/services/SubscriptionWriteIdempotencyService.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Problema corregido
+
+Antes del ajuste, el replay de `subscriptions.payment_intent.create` despues de activacion devolvia:
+
+- `checkout_intent_not_pending_payment`.
+
+La causa era de orden de validacion:
+
+- el guard `checkout_intent_not_pending_payment` se ejecutaba antes de recuperar la respuesta idempotente almacenada;
+- no habia duplicados ni efectos de negocio;
+- el contrato de replay quedaba incompleto para una operacion ya completada.
+
+### Solucion
+
+El cierre valida que:
+
+- `CreateSubscriptionPaymentIntentService` consulta replay completado antes del guard `checkout_intent_not_pending_payment`;
+- `SubscriptionWriteIdempotencyService` cuenta con consulta replay-only sin insertar nueva key;
+- si existe replay exacto completado, se devuelve la respuesta almacenada;
+- la respuesta normaliza `meta.idempotent_replay = true`;
+- la respuesta normaliza `data.idempotency.idempotent_replay = true`;
+- si no existe replay exacto, el checkout activado sigue bloqueando nueva creacion;
+- el error controlado se mantiene como `checkout_intent_not_pending_payment`.
+
+### QA cerrada
+
+Microfase cerrada:
+
+- `QA/Suscripciones-UpgradeIntent-PaymentIntentReplayAfterActivation-Polish-01`: PASS.
+
+Evidencia del replay exacto:
+
+- HTTP status: `200`;
+- payment intent devuelto: `c9c49470-f4de-4926-b09d-bb24fa887904`;
+- checkout vinculado: `92c5a9fa-0930-4eed-9175-25ea5c08dcef`;
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`;
+- amount/currency: `10000 / MXN`;
+- ya no devolvio `checkout_intent_not_pending_payment`.
+
+### Control negativo
+
+Se ejecuto una request con Idempotency-Key nueva sobre el mismo checkout activado.
+
+Resultado validado:
+
+- HTTP status: `409`;
+- error controlado: `checkout_intent_not_pending_payment`;
+- no permitio crear nuevo payment intent;
+- no creo payment event;
+- no confirmo pago;
+- no activo suscripcion.
+
+### Persistencia validada
+
+Persistencia posterior validada:
+
+- current: `professional / active`;
+- suscripciones activas compatibles: `1`;
+- payment intents para checkout professional: `1`;
+- payment events para el intent: `1`;
+- checkout: `activated`;
+- contract acceptance apunta a `2e1ab8b1-8b29-4077-b88f-074ad3d3bc92`;
+- no hubo duplicados;
+- no se alteraron enlaces old/new;
+- no hubo nueva suscripcion;
+- no hubo nueva activacion.
+
+### Exclusiones
+
+Durante esta documentacion:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no hubo cambio de storage/schema.
+
+### Decision
+
+El replay de payment intent post-activacion queda cerrado:
+
+- replay exacto devuelve respuesta almacenada;
+- nueva request sobre checkout activado sigue bloqueada;
+- no hay duplicados;
+- no hay efectos de negocio adicionales;
+- no hay riesgos bloqueantes conocidos.
+
+### Siguiente microfase recomendada
+
+`DOCS/Suscripciones-UpgradeIntent-IdempotencyPolish-FinalClosure-01`
+
+Objetivo sugerido:
+
+Cerrar documentalmente el bloque completo de pulidos de idempotencia, incluyendo checkout replay, payment intent replay post-activacion y `activate-after-payment` replay.
