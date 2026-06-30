@@ -33996,3 +33996,139 @@ El enforcement inicial de fixtures DEV/local queda implementado con helper centr
 Objetivo sugerido:
 
 Ejecutar la matriz negativa controlada de fixtures DEV/local y mocks de suscripciones, verificando respuestas controladas para produccion simulada, flags deshabilitados, requests no locales, metodos no permitidos, `confirm-mock` bloqueado y provider `mxmed_mock` bloqueado fuera de politica DEV/local.
+
+## PP-Decisiones 182 - Cierre de enforcement fixtures DEV/local
+
+### Microfase
+
+`DOCS/Suscripciones-ProductionHardening-FixturesEnforcement-Closure-01`
+
+### Objetivo
+
+Documentar el cierre del enforcement inicial de fixtures DEV/local de suscripciones, incluyendo helper/guard, bloqueos negativos validados, logs seguros y persistencia intacta tras la matriz negativa.
+
+### Implementacion validada
+
+Commit implementado:
+
+`241f889 fix(suscripciones): refuerza fixtures dev suscripciones`
+
+Archivos modificados por ese commit:
+
+- `api/subscriptions/index.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+Controles validados:
+
+- helper central para fixtures DEV/local;
+- logging seguro de intentos bloqueados;
+- policy guard para `confirm-mock`;
+- guard productivo/local para `mxmed_mock`;
+- bloqueo explicito de `session_scope` en entorno productivo.
+
+### QA cerrada
+
+`QA/Suscripciones-ProductionHardening-FixturesNegativeMatrix-01`: PASS.
+
+### Matriz negativa validada
+
+Fixture `GET /dev/session-fixture/upgrade-doctor`:
+
+- HTTP `405`;
+- `method_not_allowed`.
+
+Fixture `POST /dev/session-fixture/upgrade-doctor` con flag deshabilitado:
+
+- HTTP `403`;
+- `fixture_disabled`;
+- sin `session_scope`.
+
+`confirm-mock` con flag deshabilitado:
+
+- HTTP `403`;
+- `confirm_mock_disabled`.
+
+Fixture con entorno productivo simulado:
+
+- HTTP `403`;
+- `production_blocked`.
+
+`confirm-mock` con entorno productivo simulado y `mxmed_mock`:
+
+- HTTP `403`;
+- `confirm_mock_production_blocked`.
+
+`checkout-intents` con entorno productivo simulado:
+
+- HTTP `403`;
+- `forbidden`;
+- `auth_mode=strict`;
+- bloqueado por write context productivo.
+
+### Persistencia intacta
+
+Despues de la matriz negativa:
+
+- current `doctor/900001`: `professional / active`;
+- suscripciones activas compatibles: `1`;
+- checkout `92c5a9fa-0930-4eed-9175-25ea5c08dcef`: sigue `activated`;
+- payment intent `c9c49470-f4de-4926-b09d-bb24fa887904`: sigue `paid / mock_paid`;
+- payment event `3346400e-6dc1-4017-92ae-4535285c37a1`: sigue `payment_intent_confirm / processed`;
+- eventos para ese payment intent: `1`;
+- no se creo checkout nuevo;
+- no se creo payment intent nuevo;
+- no se creo payment event nuevo;
+- no hubo activacion.
+
+### Logs seguros
+
+Se observaron logs:
+
+`subscriptions_dev_guard_blocked`
+
+Incluyen:
+
+- accion;
+- ruta;
+- razon;
+- host;
+- env;
+- timestamp.
+
+No incluyen:
+
+- payload completo;
+- raw notes;
+- datos sensibles innecesarios.
+
+### Alcance de QA
+
+Durante la QA:
+
+- archivos modificados: no;
+- SQL write: no;
+- SQL ejecutado: solo SELECT read-only;
+- POSTs ejecutados: solo negativos autorizados;
+- checkout valido: no;
+- payment intent valido: no;
+- confirm mock valido: no;
+- `activate-after-payment`: no;
+- activacion: no.
+
+### Conclusion
+
+El enforcement negativo queda validado.
+
+`session_scope`, fixtures DEV/local, `confirm-mock` y `mxmed_mock` quedan bloqueados fuera del contexto permitido.
+
+No se detecto exposicion productiva directa tras el enforcement inicial.
+
+El bloque queda listo para avanzar al siguiente hardening productivo.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-ContractReadiness-01`
+
+Objetivo sugerido:
+
+Definir el contrato tecnico del proveedor de pago real que sustituira a `mxmed_mock`, incluyendo estados, webhooks, firmas, provider ids, idempotencia y reconciliacion.
