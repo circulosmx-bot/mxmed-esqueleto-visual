@@ -33857,3 +33857,142 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Implementar enforcement centralizado para fixtures DEV/local y mock de suscripciones: helper unico de permiso DEV/local, bloqueo productivo uniforme, logging seguro de intentos bloqueados, flag/policy para `confirm-mock`, guard de `mxmed_mock` productivo y base para pruebas negativas.
+
+## PP-Decisiones 181 - Enforcement inicial de fixtures DEV/local
+
+### Microfase
+
+`BE/Suscripciones-ProductionHardening-FixturesEnforcement-Implementation-01`
+
+### Objetivo
+
+Implementar controles minimos de hardening backend para que los fixtures DEV/local de suscripciones, `confirm-mock`, provider `mxmed_mock` y `session_scope` queden bajo una politica explicita antes de avanzar a pruebas negativas.
+
+### Commit esperado
+
+`fix(suscripciones): refuerza fixtures dev suscripciones`
+
+### Implementacion
+
+Archivo backend modificado:
+
+- `api/subscriptions/index.php`
+
+Controles agregados:
+
+- helper central `subscriptionAssertDevFixtureAllowed(...)` para rutas `dev/session-fixture*`;
+- helper `subscriptionAssertConfirmMockAllowed(...)` para politica explicita de `confirm-mock`;
+- helper `subscriptionAssertMockProviderAllowed(...)` para impedir `mxmed_mock` fuera de DEV/local o cuando el flag opcional lo deshabilite;
+- helper `subscriptionLogDevGuardBlocked(...)` para logging seguro de intentos bloqueados;
+- guard explicito en `subscriptionResolveWriteContext(...)` para bloquear `session_scope` en entorno productivo;
+- reutilizacion del helper central en:
+  - `dev/session-fixture`;
+  - `dev/session-fixture/checkout-doctor`;
+  - `dev/session-fixture/upgrade-doctor`;
+  - `dev/session-fixture/alternate-doctor`;
+  - `dev/session-fixture/concurrency-doctor`;
+- validacion de provider mock antes de crear payment intent mock;
+- validacion de provider mock antes de ejecutar `confirm-mock`.
+
+### Logging seguro
+
+El logging de intentos bloqueados queda limitado a datos no sensibles:
+
+- evento;
+- accion;
+- razon;
+- ruta;
+- metodo;
+- host;
+- variables de entorno de ambiente (`APP_ENV`, `MXMED_ENV`, `ENVIRONMENT`);
+- timestamp UTC.
+
+No se registra payload completo, `notes`, cuerpos JSON, `Idempotency-Key`, datos contractuales, payment ids completos ni raw responses.
+
+### Politica aplicada
+
+Fixtures DEV/local:
+
+- requieren metodo `POST`;
+- requieren `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- requieren request local;
+- quedan bloqueados si `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT` indican `prod` o `production`;
+- devuelven errores controlados.
+
+`confirm-mock`:
+
+- requiere metodo `POST`;
+- queda bloqueado en produccion;
+- queda limitado a request local/dev;
+- soporta flag opcional `MXMED_SUBSCRIPTIONS_CONFIRM_MOCK_ENABLED`;
+- conserva idempotencia y no activa suscripcion.
+
+`mxmed_mock`:
+
+- queda bloqueado en produccion;
+- queda limitado a request local/dev;
+- soporta flag opcional `MXMED_SUBSCRIPTIONS_MOCK_PAYMENTS_ENABLED`;
+- no se convierte en provider productivo.
+
+`session_scope`:
+
+- conserva validacion de sesion PHP y entity scope;
+- queda bloqueado explicitamente en entorno productivo dentro del write context;
+- no se relaja como autorizacion productiva.
+
+### Compatibilidad
+
+La implementacion no cambia el contrato funcional de:
+
+- checkout;
+- payment intents;
+- `confirm-mock` en DEV/local permitido;
+- `activate-after-payment`;
+- state read-model;
+- frontend.
+
+Los flujos DEV/local siguen disponibles cuando cumplen host local, flags y entorno no productivo. Fuera de esa politica, responden con errores controlados.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico `index.html`;
+- no se modifico `assets/js/app.js`;
+- no se modifico `assets/js/subscription-messages.js`;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures de datos;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se activo suscripcion.
+
+### Validaciones
+
+Validaciones esperadas para el cierre Git:
+
+- `php -l api/subscriptions/index.php`: PASS;
+- `git diff --check`: PASS;
+- archivos versionados limitados a:
+  - `api/subscriptions/index.php`;
+  - `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`;
+- frontend no tocado;
+- SQL/schema/seeds no tocado.
+
+### Resultado
+
+`PASS implementation`.
+
+El enforcement inicial de fixtures DEV/local queda implementado con helper central, bloqueo productivo uniforme, logging seguro, politica explicita para `confirm-mock`, guard productivo de `mxmed_mock` y proteccion mas clara de `session_scope`.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-ProductionHardening-FixturesNegativeMatrix-01`
+
+Objetivo sugerido:
+
+Ejecutar la matriz negativa controlada de fixtures DEV/local y mocks de suscripciones, verificando respuestas controladas para produccion simulada, flags deshabilitados, requests no locales, metodos no permitidos, `confirm-mock` bloqueado y provider `mxmed_mock` bloqueado fuera de politica DEV/local.

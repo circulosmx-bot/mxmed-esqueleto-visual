@@ -291,6 +291,122 @@ function subscriptionProductionEnvironmentDetected(): bool
     return false;
 }
 
+function subscriptionSafeLogValue($value, int $maxLength = 96): string
+{
+    $text = trim((string)($value ?? ''));
+    if ($text === '') {
+        return '';
+    }
+
+    $text = preg_replace('/[^A-Za-z0-9_.:\/ -]/', '?', $text) ?? '';
+    if (strlen($text) > $maxLength) {
+        return substr($text, 0, $maxLength);
+    }
+
+    return $text;
+}
+
+function subscriptionLogDevGuardBlocked(string $action, string $reason, array $context = []): void
+{
+    $event = [
+        'event' => 'subscriptions_dev_guard_blocked',
+        'action' => subscriptionSafeLogValue($action, 64),
+        'reason' => subscriptionSafeLogValue($reason, 64),
+        'route' => subscriptionSafeLogValue($context['route'] ?? '', 128),
+        'method' => subscriptionSafeLogValue($_SERVER['REQUEST_METHOD'] ?? '', 16),
+        'host' => subscriptionSafeLogValue($_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? ''), 128),
+        'app_env' => subscriptionSafeLogValue(subscriptionEnvValue('APP_ENV'), 32),
+        'mxmed_env' => subscriptionSafeLogValue(subscriptionEnvValue('MXMED_ENV'), 32),
+        'environment' => subscriptionSafeLogValue(subscriptionEnvValue('ENVIRONMENT'), 32),
+        'generated_at' => gmdate('c'),
+    ];
+
+    $json = json_encode($event, JSON_UNESCAPED_SLASHES);
+    error_log('[mxmed-subscriptions] ' . ($json !== false ? $json : 'subscriptions_dev_guard_blocked'));
+}
+
+function subscriptionDevGuardFailure(
+    string $action,
+    string $route,
+    string $code,
+    string $message,
+    int $status
+): array {
+    subscriptionLogDevGuardBlocked($action, $code, ['route' => $route]);
+
+    return [
+        'ok' => false,
+        'status' => $status,
+        'code' => $code,
+        'message' => $message,
+    ];
+}
+
+function subscriptionAssertDevFixtureAllowed(string $route, string $method): array
+{
+    if ($method !== 'POST') {
+        return subscriptionDevGuardFailure('dev_session_fixture', $route, 'method_not_allowed', 'method not allowed', 405);
+    }
+
+    if (!subscriptionDevSessionFixtureEnabled()) {
+        return subscriptionDevGuardFailure('dev_session_fixture', $route, 'fixture_disabled', 'dev session fixture disabled', 403);
+    }
+
+    if (!subscriptionIsLocalRequest()) {
+        return subscriptionDevGuardFailure('dev_session_fixture', $route, 'local_only', 'dev session fixture is local only', 403);
+    }
+
+    if (subscriptionProductionEnvironmentDetected()) {
+        return subscriptionDevGuardFailure('dev_session_fixture', $route, 'production_blocked', 'dev session fixture is blocked in production', 403);
+    }
+
+    return ['ok' => true];
+}
+
+function subscriptionAssertConfirmMockAllowed(string $route, string $method): array
+{
+    if ($method !== 'POST') {
+        return subscriptionDevGuardFailure('confirm_mock', $route, 'method_not_allowed', 'method not allowed', 405);
+    }
+
+    if (subscriptionProductionEnvironmentDetected()) {
+        return subscriptionDevGuardFailure('confirm_mock', $route, 'confirm_mock_production_blocked', 'confirm mock is blocked in production', 403);
+    }
+
+    if (!subscriptionIsLocalRequest()) {
+        return subscriptionDevGuardFailure('confirm_mock', $route, 'confirm_mock_local_only', 'confirm mock is local/dev only', 403);
+    }
+
+    $flag = subscriptionEnvValue('MXMED_SUBSCRIPTIONS_CONFIRM_MOCK_ENABLED');
+    if ($flag !== '' && !subscriptionBoolEnvFlag($flag)) {
+        return subscriptionDevGuardFailure('confirm_mock', $route, 'confirm_mock_disabled', 'confirm mock is disabled', 403);
+    }
+
+    return ['ok' => true];
+}
+
+function subscriptionAssertMockProviderAllowed(string $provider, string $route): array
+{
+    if ($provider !== 'mxmed_mock') {
+        return ['ok' => true];
+    }
+
+    if (subscriptionProductionEnvironmentDetected()) {
+        return subscriptionDevGuardFailure('mock_provider', $route, 'mock_provider_production_blocked', 'mxmed_mock is blocked in production', 403);
+    }
+
+    if (!subscriptionIsLocalRequest()) {
+        return subscriptionDevGuardFailure('mock_provider', $route, 'mock_provider_local_only', 'mxmed_mock is local/dev only', 403);
+    }
+
+    $flag = subscriptionEnvValue('MXMED_SUBSCRIPTIONS_MOCK_PAYMENTS_ENABLED');
+    if ($flag !== '' && !subscriptionBoolEnvFlag($flag)) {
+        return subscriptionDevGuardFailure('mock_provider', $route, 'mock_provider_disabled', 'mxmed_mock is disabled', 403);
+    }
+
+    return ['ok' => true];
+}
+
 function subscriptionApplyDevDoctorSessionFixture(string $doctorId, string $userId): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -1097,6 +1213,17 @@ function subscriptionResolveWriteContext(string $entityType, string $entityId): 
         || trim((string)($headers['x-entity-id'] ?? '')) !== ''
     );
 
+    if (subscriptionProductionEnvironmentDetected()) {
+        subscriptionLogDevGuardBlocked('write_context', 'session_scope_production_blocked', [
+            'route' => implode('/', subscriptionRelativeSegments()),
+        ]);
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => subscriptionWriteError('forbidden', 'subscription writes require production authorization', 'strict'),
+        ];
+    }
+
     if (!$isLocal) {
         return [
             'ok' => false,
@@ -1241,23 +1368,12 @@ try {
     $segments = subscriptionRelativeSegments();
 
     if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'concurrency-doctor') {
-        if ($method !== 'POST') {
-            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
-            return;
-        }
-
-        if (!subscriptionDevSessionFixtureEnabled()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
-            return;
-        }
-
-        if (!subscriptionIsLocalRequest()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
-            return;
-        }
-
-        if (subscriptionProductionEnvironmentDetected()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/concurrency-doctor', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
             return;
         }
 
@@ -1268,23 +1384,12 @@ try {
     }
 
     if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'checkout-doctor') {
-        if ($method !== 'POST') {
-            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
-            return;
-        }
-
-        if (!subscriptionDevSessionFixtureEnabled()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
-            return;
-        }
-
-        if (!subscriptionIsLocalRequest()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
-            return;
-        }
-
-        if (subscriptionProductionEnvironmentDetected()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/checkout-doctor', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
             return;
         }
 
@@ -1295,23 +1400,12 @@ try {
     }
 
     if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'upgrade-doctor') {
-        if ($method !== 'POST') {
-            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
-            return;
-        }
-
-        if (!subscriptionDevSessionFixtureEnabled()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
-            return;
-        }
-
-        if (!subscriptionIsLocalRequest()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
-            return;
-        }
-
-        if (subscriptionProductionEnvironmentDetected()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/upgrade-doctor', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
             return;
         }
 
@@ -1322,23 +1416,12 @@ try {
     }
 
     if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'alternate-doctor') {
-        if ($method !== 'POST') {
-            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
-            return;
-        }
-
-        if (!subscriptionDevSessionFixtureEnabled()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
-            return;
-        }
-
-        if (!subscriptionIsLocalRequest()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
-            return;
-        }
-
-        if (subscriptionProductionEnvironmentDetected()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/alternate-doctor', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
             return;
         }
 
@@ -1349,23 +1432,12 @@ try {
     }
 
     if (count($segments) === 2 && $segments[0] === 'dev' && $segments[1] === 'session-fixture') {
-        if ($method !== 'POST') {
-            subscriptionRespond(subscriptionDevSessionFixtureError('method_not_allowed', 'method not allowed'), 405);
-            return;
-        }
-
-        if (!subscriptionDevSessionFixtureEnabled()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('fixture_disabled', 'dev session fixture disabled'), 403);
-            return;
-        }
-
-        if (!subscriptionIsLocalRequest()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('local_only', 'dev session fixture is local only'), 403);
-            return;
-        }
-
-        if (subscriptionProductionEnvironmentDetected()) {
-            subscriptionRespond(subscriptionDevSessionFixtureError('production_blocked', 'dev session fixture is blocked in production'), 403);
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
             return;
         }
 
@@ -1698,8 +1770,12 @@ try {
         && $segments[5] === 'payment-intents'
         && $segments[7] === 'confirm-mock'
     ) {
-        if ($method !== 'POST') {
-            subscriptionRespond(subscriptionWriteError('method_not_allowed', 'method not allowed'), 405);
+        $confirmMockGuard = subscriptionAssertConfirmMockAllowed('confirm-mock', $method);
+        if (!(bool)($confirmMockGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionWriteError((string)$confirmMockGuard['code'], (string)$confirmMockGuard['message'], 'mock_policy'),
+                (int)$confirmMockGuard['status']
+            );
             return;
         }
 
@@ -1798,13 +1874,23 @@ try {
             return;
         }
 
+        $provider = (string)($payload['provider'] ?? 'mxmed_mock');
+        $mockProviderGuard = subscriptionAssertMockProviderAllowed($provider, 'confirm-mock');
+        if (!(bool)($mockProviderGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionWriteError((string)$mockProviderGuard['code'], (string)$mockProviderGuard['message'], $authMode),
+                (int)$mockProviderGuard['status']
+            );
+            return;
+        }
+
         $input = [
             'entity_type' => $entityType,
             'entity_id' => $entityId,
             'checkout_intent_uuid' => $checkoutIntentUuid,
             'payment_intent_uuid' => $paymentIntentUuid,
             'idempotency_key' => $idempotencyKey,
-            'provider' => $payload['provider'] ?? 'mxmed_mock',
+            'provider' => $provider,
             'source' => $payload['source'] ?? 'payment_intent_confirm_mock_endpoint',
         ];
         if (array_key_exists('notes', $payload)) {
@@ -2066,6 +2152,16 @@ try {
             return;
         }
 
+        $provider = (string)($payload['provider'] ?? 'mxmed_mock');
+        $mockProviderGuard = subscriptionAssertMockProviderAllowed($provider, 'payment-intents');
+        if (!(bool)($mockProviderGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionWriteError((string)$mockProviderGuard['code'], (string)$mockProviderGuard['message'], $authMode),
+                (int)$mockProviderGuard['status']
+            );
+            return;
+        }
+
         $pdo = mxmed_pdo();
         $checkoutIntentRepository = new SubscriptionCheckoutIntentRepository($pdo);
         try {
@@ -2099,8 +2195,9 @@ try {
             'operator_id' => $context['operator_id'] ?? null,
             'doctor_id' => (string)($context['doctor_id'] ?? ''),
             'profile_id' => $context['profile_id'] ?? null,
+            'provider' => $provider,
         ];
-        foreach (['provider', 'source', 'notes', 'metadata'] as $key) {
+        foreach (['source', 'notes', 'metadata'] as $key) {
             if (array_key_exists($key, $payload)) {
                 $input[$key] = $payload[$key];
             }
