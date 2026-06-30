@@ -30961,3 +30961,108 @@ Validaciones obligatorias:
 Objetivo:
 
 Validar estaticamente y por GET read-only que la salida posterior a activacion conserva semantica `upgrade` segura, bloquea una nueva activacion y normaliza el replay idempotente en el contrato de respuesta.
+
+## PP-Decisiones 165 - Cierre del pulido de salida post-activacion upgrade
+
+### Microfase cerrada
+
+`QA/Suscripciones-UpgradeIntent-PostActivation-StateOutputPolish-01`
+
+### Commit validado
+
+`0cc1f2f fix(suscripciones): pule salida post activacion upgrade`
+
+Archivos modificados por el commit validado:
+
+- `modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`;
+- `modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Resultado QA
+
+La QA funcional controlada del contrato de salida cerro con PASS.
+
+El state posterior a activacion conserva semantica segura de upgrade:
+
+- `checkout_intent.intent_type = upgrade`;
+- `checkout_intent.status = activated`;
+- `activation_eligibility.can_activate = false`;
+- reasons validadas:
+  - `checkout_intent_not_pending_payment`;
+  - `activation_already_done`;
+- UI message: `payment_activation_already_done`;
+- no se expone raw `notes`;
+- current subscription sigue siendo `optimum`.
+
+### Replay idempotente normalizado
+
+El replay controlado de `activate-after-payment` sobre el checkout ya activado fue validado con HTTP 200.
+
+La respuesta quedo normalizada en ambos niveles:
+
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`.
+
+La subscription devuelta fue:
+
+`10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`
+
+La validacion confirma:
+
+- no se creo duplicado;
+- no hubo stacktrace;
+- no hubo error crudo;
+- no se expuso raw `notes`.
+
+### Consistencia DB read-only validada
+
+La validacion read-only posterior confirmo:
+
+- suscripciones activas compatibles para `doctor/900001`: `1`;
+- nueva suscripcion activa: `10b2f7df-75eb-4bf1-9ae0-f3c99ac21f89`;
+- suscripcion anterior: `0d2c0113-5390-4548-9b61-3cbddfdfff06`;
+- estado anterior: `renewed`;
+- enlace anterior -> nueva: intacto;
+- enlace nueva -> anterior: intacto;
+- `expires_at` conservado: `2027-06-27 22:03:34`;
+- checkout sigue `activated`;
+- contract acceptance apunta a la nueva suscripcion;
+- payment intent sigue `paid / mock_paid`.
+
+### Exclusiones confirmadas
+
+Este cierre no incluye cambios adicionales de producto ni storage.
+
+Queda documentado que:
+
+- no hubo frontend;
+- no hubo cambios en `index.html`;
+- no hubo cambios en `assets/js/app.js`;
+- no hubo cambios en `assets/js/subscription-messages.js`;
+- no hubo API endpoint nuevo;
+- no hubo cambios en `api/subscriptions/index.php`;
+- no hubo SQL/schema/seeds;
+- no hubo storage/schema nuevo;
+- no hubo SQL write manual;
+- no se ejecuto activacion real durante esta documentacion;
+- no se modificaron archivos durante la QA;
+- no se ejecutaron `confirm_mock`, `payment-intents` ni `checkout` durante la QA de cierre.
+
+### Estado final del bloque upgrade
+
+El bloque de activacion upgrade post-pago queda cerrado:
+
+- activacion upgrade post-pago: cerrada;
+- state post-activacion: pulido y validado;
+- replay idempotente: normalizado y validado;
+- current read-model: `optimum`;
+- frontend: refleja `Optimo`;
+- riesgos bloqueantes: ninguno conocido.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-UpgradeIntent-ProfessionalUpgrade-Readiness-01`
+
+Objetivo sugerido:
+
+Preparar el siguiente upgrade controlado `optimum -> professional` desde el estado real actual de `doctor/900001`, sin ejecutar checkout ni writes todavia.
