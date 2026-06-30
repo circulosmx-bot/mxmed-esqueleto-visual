@@ -35392,3 +35392,367 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Disenar documentalmente el endpoint futuro `POST /api/subscriptions/index.php/webhooks/stripe`, incluyendo lectura de raw body, validacion de firma, construccion del DTO normalizado, invocacion de `ProcessStripeSubscriptionWebhookService`, respuestas HTTP y pruebas negativas sin implementar aun el endpoint.
+
+## PP-Decisiones 187 - Readiness del endpoint webhook Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-EndpointReadiness-01`
+
+### Objetivo
+
+Disenar documentalmente el endpoint backend futuro que recibira webhooks Stripe productivos, validara firma, normalizara el payload y delegara el procesamiento al servicio `ProcessStripeSubscriptionWebhookService`, sin activar suscripciones automaticamente.
+
+### Contexto
+
+La microfase `BE/Suscripciones-PaymentProvider-StripeWebhook-ServiceReadiness-01` cerro con PASS.
+
+Commit base:
+
+`d90573a docs(suscripciones): diseña servicio webhook stripe`
+
+Documento actual:
+
+- `PP-Decisiones 185`: contrato webhook Stripe;
+- `PP-Decisiones 186`: servicio `ProcessStripeSubscriptionWebhookService`.
+
+WARN no bloqueante heredado:
+
+- haran falta metodos de repositorio para transiciones reales Stripe;
+- hara falta lookup idempotente por `provider_event_id`;
+- no se requiere schema inmediato para v1, segun readiness previa.
+
+### Endpoint futuro
+
+Ruta conceptual:
+
+`POST /api/subscriptions/index.php/webhooks/stripe`
+
+Audiencia:
+
+- Stripe;
+- no frontend;
+- no panel privado;
+- no fixture DEV/local.
+
+Autenticacion:
+
+- firma Stripe;
+- no sesion de usuario;
+- no `session_scope`;
+- no headers magicos.
+
+Reglas:
+
+- no usa fixtures;
+- no usa `confirm-mock`;
+- no acepta `mxmed_mock`;
+- no activa suscripcion directamente;
+- no crea perfil ni modifica plan activo;
+- no depende de usuario autenticado.
+
+### Responsabilidades del endpoint
+
+El endpoint debe:
+
+- recibir raw body sin alterarlo antes de verificar firma;
+- leer header `Stripe-Signature`;
+- validar webhook secret desde variable de entorno;
+- rechazar si falta secret configurado;
+- rechazar si falta firma;
+- rechazar si firma es invalida;
+- validar tolerancia de timestamp si se configura;
+- normalizar evento minimo;
+- construir DTO para `ProcessStripeSubscriptionWebhookService`;
+- delegar procesamiento al servicio;
+- devolver HTTP controlado a Stripe;
+- no exponer raw payload;
+- loggear de forma segura;
+- terminar rapido para evitar reintentos innecesarios.
+
+El endpoint no debe:
+
+- parsear JSON antes de verificar firma;
+- reconstruir payload para firma;
+- usar `subscriptionReadJsonPayload()` si ese helper altera body/encoding antes de firma;
+- llamar `activate-after-payment`;
+- crear `profile_subscriptions`;
+- llamar `confirm-mock`;
+- aceptar requests desde frontend como mecanismo de confirmacion.
+
+### Variables y configuracion futuras
+
+Nombres sugeridos, sujetos al sistema real de configuracion:
+
+- `STRIPE_WEBHOOK_SECRET` o `MXMED_STRIPE_WEBHOOK_SECRET`;
+- `STRIPE_PROVIDER_ENABLED`;
+- `STRIPE_WEBHOOK_TOLERANCE_SECONDS`;
+- `PAYMENT_PROVIDER_PRIMARY=stripe`;
+- `STRIPE_MODE=sandbox|live`;
+- `STRIPE_API_VERSION`, si se fija version.
+
+Reglas:
+
+- si el secret falta, no procesar evento;
+- distinguir sandbox/live antes de produccion;
+- no mezclar claves sandbox y live;
+- no registrar secrets;
+- documentar rotacion de secret antes de produccion.
+
+### Contrato HTTP de respuesta
+
+Respuestas esperadas:
+
+| Caso | HTTP recomendado | Decision |
+| --- | --- | --- |
+| Evento procesado | `200` o `204` | Stripe no deberia reintentar |
+| Evento duplicado exacto aceptado | `200` o `204` | Stripe no deberia reintentar |
+| Evento no accionable pero aceptado | `200` o `204` | Stripe no deberia reintentar |
+| Payload invalido | `400` | Stripe podria reintentar segun politica; registrar controlado |
+| Firma faltante | `401` o `403` | rechazar; no procesar |
+| Firma invalida | `401` o `403` | rechazar; no procesar |
+| Secret no configurado | `500` o `503` controlado | configuracion incompleta; no procesar |
+| Provider event conflictivo | `409` | no procesar; requiere revision |
+| Amount/currency/provider mismatch | `422` | no marcar paid; registrar fallo |
+| Error inesperado | `500` | minimizar; Stripe reintentara |
+
+Decision:
+
+- duplicados exactos deben responder exitosamente para evitar reintentos innecesarios;
+- conflictos y mismatches deben quedar auditados;
+- errores de firma no deben procesar ni crear payment events exitosos.
+
+### Raw body y firma
+
+Reglas:
+
+- la firma Stripe requiere raw body original;
+- leer `php://input` una sola vez o preservarlo explicitamente;
+- no parsear JSON antes de verificar;
+- no modificar encoding;
+- no usar payload reconstruido;
+- usar header `Stripe-Signature`;
+- usar endpoint secret `whsec_...` desde variable de entorno;
+- una vez verificado, convertir a evento/DTO normalizado.
+
+Si se usa SDK oficial:
+
+- endpoint/helper debe invocar el verificador oficial con raw body, signature header y secret;
+- si el SDK no esta disponible, abrir microfase de signature readiness antes de implementar.
+
+### DTO normalizado para el servicio
+
+Campos que el endpoint pasara a `ProcessStripeSubscriptionWebhookService`:
+
+- `provider`: `stripe`;
+- `provider_event_id`;
+- `provider_event_type`;
+- `provider_event_created_at`;
+- `provider_payment_id`;
+- `provider_checkout_id`, si aplica;
+- `provider_status`;
+- `amount_cents`;
+- `currency`;
+- `raw_event_reference`;
+- `event_hash`;
+- `livemode`;
+- `api_version`, si existe;
+- metadata segura:
+  - `mxmed_checkout_intent_uuid`, si se envio;
+  - `mxmed_payment_intent_uuid`, si se envio;
+  - `mxmed_entity_type`, si se envio;
+  - `mxmed_entity_id`, si se envio.
+
+El DTO no debe incluir:
+
+- tarjeta completa;
+- datos sensibles de pago;
+- secret;
+- raw payload completo en respuestas;
+- campos controlados por frontend como fuente de verdad.
+
+### Normalizacion por tipo de evento
+
+Eventos prioritarios:
+
+- `payment_intent.succeeded`;
+- `payment_intent.payment_failed`;
+- `payment_intent.canceled`;
+- `payment_intent.processing`;
+- `payment_intent.requires_action`.
+
+Eventos de apoyo si se usa Stripe Checkout:
+
+- `checkout.session.completed`;
+- `checkout.session.async_payment_succeeded`;
+- `checkout.session.async_payment_failed`;
+- `checkout.session.expired`.
+
+Reglas:
+
+- para marcar localmente como `paid`, el DTO debe resolver Stripe PaymentIntent id;
+- `checkout.session.completed` no basta por si solo para activar ni marcar pagado si no se valida el PaymentIntent relacionado;
+- eventos no accionables deben devolverse como aceptados/ignorados si no requieren reintento;
+- refunds/chargebacks quedan fuera de automatizacion v1.
+
+### Errores controlados del endpoint
+
+Codigos propuestos:
+
+- `stripe_webhook_secret_missing`;
+- `stripe_webhook_signature_missing`;
+- `stripe_webhook_signature_invalid`;
+- `stripe_webhook_payload_invalid`;
+- `stripe_webhook_event_unhandled`;
+- `stripe_webhook_event_conflict`;
+- `stripe_webhook_processing_failed`.
+
+Errores que delega o traduce desde el servicio:
+
+- `stripe_event_duplicate`;
+- `stripe_payment_intent_not_found`;
+- `stripe_payment_provider_mismatch`;
+- `stripe_checkout_not_found`;
+- `stripe_amount_mismatch`;
+- `stripe_currency_mismatch`;
+- `stripe_status_not_actionable`;
+- `stripe_payment_intent_state_conflict`.
+
+### Logging seguro
+
+El endpoint debe loggear:
+
+- evento recibido con `provider_event_id`;
+- `provider_event_type`;
+- `livemode`;
+- timestamp;
+- resultado de verificacion de firma sin payload;
+- mismatch amount/currency;
+- duplicado;
+- conflicto;
+- error controlado.
+
+El endpoint no debe loggear:
+
+- raw payload completo en logs normales;
+- datos de tarjeta;
+- secrets;
+- headers sensibles completos;
+- payload crudo en respuesta HTTP.
+
+### Relacion con confirm-mock
+
+`confirm-mock` permanece solo DEV/local.
+
+El endpoint Stripe productivo reemplaza confirmacion mock para pagos reales.
+
+Separacion:
+
+- `confirm-mock`: ruta DEV/local, provider `mxmed_mock`, idempotencia local, sin firma externa;
+- webhook Stripe: ruta productiva, provider `stripe`, firma Stripe, eventos externos.
+
+Ambos pueden producir el mismo efecto local final:
+
+- payment intent `paid`;
+- payment event `processed`.
+
+Pero solo webhook Stripe acepta eventos externos firmados.
+
+### Relacion con activacion
+
+El webhook Stripe:
+
+- no llama `activate-after-payment`;
+- no crea suscripcion;
+- no modifica plan activo;
+- no toca `profile_subscriptions`;
+- no marca checkout como activated por si mismo.
+
+El state read-model detectara:
+
+- payment intent `paid`;
+- payment event `processed`;
+- checkout/contract acceptance elegibles.
+
+La activacion queda para flujo autorizado/backoffice o microfase futura.
+
+### Pruebas futuras del endpoint
+
+QA futuras:
+
+- firma valida + evento `payment_intent.succeeded`;
+- firma invalida;
+- firma faltante;
+- secret faltante;
+- payload invalido;
+- evento duplicado exacto;
+- evento conflictivo;
+- amount mismatch;
+- currency mismatch;
+- provider payment id no encontrado;
+- evento no accionable;
+- no activacion post-webhook;
+- state read-model post-webhook;
+- respuesta 2xx para duplicado exacto;
+- respuesta controlada para conflicto;
+- no exposicion de raw payload;
+- no logs con datos sensibles.
+
+### Orden recomendado de implementacion
+
+No conviene implementar primero un endpoint funcional completo si faltan metodos de repositorio.
+
+Orden recomendado:
+
+1. `BE/Suscripciones-PaymentProvider-StripeWebhook-RepositoryReadiness-01`.
+2. Implementar metodos de repositorio para:
+   - lookup por `provider_payment_id`;
+   - lookup por `provider_event_id`;
+   - deduplicacion por `provider_event_id`;
+   - transicion segura de payment intent por provider real;
+   - persistencia de payment event Stripe.
+3. Implementar `ProcessStripeSubscriptionWebhookService`.
+4. Implementar endpoint skeleton con firma y DTO.
+5. QA negativa de firma/payload.
+6. QA sandbox con Stripe CLI.
+
+Motivo:
+
+- el endpoint debe delegar a un servicio con repositorios listos;
+- implementar endpoint antes puede dejar una ruta productiva sin persistencia robusta;
+- signature readiness puede correr en paralelo si se decide libreria/SDK.
+
+### Resultado de readiness
+
+`PASS endpoint readiness`.
+
+El endpoint queda claro y accionable.
+
+`WARN`: falta confirmar si se usara SDK oficial Stripe PHP o verificacion manual segura de firma. No bloquea el diseno, pero debe resolverse antes de implementar.
+
+`BLOCKED`: no aplica.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico backend/API;
+- no se modificaron servicios ni repositorios;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-RepositoryReadiness-01`
+
+Objetivo sugerido:
+
+Revisar metodos de repositorio necesarios para procesar webhooks Stripe: lookup por `provider_payment_id`, deduplicacion por `provider_event_id`, actualizacion segura de payment intent y persistencia de payment event.
