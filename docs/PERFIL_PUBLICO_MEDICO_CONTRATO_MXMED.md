@@ -33086,3 +33086,294 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Auditar y documentar todas las rutas/fixtures DEV/local relacionadas con suscripciones y upgrades para asegurar que no puedan ejecutarse en produccion.
+
+## PP-Decisiones 178 - Auditoria de fixtures DEV/local para suscripciones
+
+### Microfase
+
+`BE/Suscripciones-ProductionHardening-FixturesAudit-01`
+
+### Objetivo
+
+Auditar rutas, fixtures y mecanismos DEV/local relacionados con suscripciones, checkout, upgrades, payment intents, `confirm_mock` y activacion, para confirmar protecciones contra uso productivo y documentar riesgos antes de avanzar al hardening productivo.
+
+Esta microfase es auditoria tecnica/read-only mas documentacion. No implementa cambios de codigo, no ejecuta endpoints y no toca DB.
+
+### Base validada
+
+Base Git:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin esperado: `42cb914`;
+- working tree inicial: limpio;
+- PP-Decisiones 177 presente.
+
+### Inventario revisado
+
+Archivos revisados en modo read-only:
+
+- `api/subscriptions/index.php`;
+- `modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php`;
+- `modules/subscriptions/services/SubscriptionPaymentIntentMockProvider.php`;
+- `modules/subscriptions/services/ConfirmSubscriptionPaymentIntentMockService.php`;
+- `modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`;
+- `modules/subscriptions/repositories/SubscriptionPaymentEventRepository.php`;
+- `modules/subscriptions/repositories/SubscriptionPaymentIntentRepository.php`;
+- `assets/js/app.js`, solo para confirmar que la UI DEV/debug no expone flujo productivo por defecto.
+
+No se revisaron ni modificaron fixtures de datos externos a codigo, porque la auditoria solicitada se concentro en rutas, helpers y guards.
+
+### Rutas DEV/local identificadas
+
+Rutas detectadas en `api/subscriptions/index.php`:
+
+- `POST /api/subscriptions/index.php/dev/session-fixture`;
+- `POST /api/subscriptions/index.php/dev/session-fixture/checkout-doctor`;
+- `POST /api/subscriptions/index.php/dev/session-fixture/alternate-doctor`;
+- `POST /api/subscriptions/index.php/dev/session-fixture/concurrency-doctor`;
+- `POST /api/subscriptions/index.php/dev/session-fixture/upgrade-doctor`.
+
+Protecciones comunes encontradas:
+
+- metodo obligatorio `POST`;
+- flag `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- host local por `subscriptionIsLocalRequest()`;
+- bloqueo de produccion por `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT` con valores `prod`/`production`;
+- respuesta controlada cuando el fixture esta deshabilitado;
+- respuesta controlada cuando el request no es local;
+- respuesta controlada cuando se detecta produccion;
+- meta `dev_only=true`.
+
+Clasificacion:
+
+- `OK`: las rutas de fixture estan acotadas a DEV/local por flag, host local, metodo y bloqueo de entorno productivo.
+- `WARN`: conviene consolidar politica explicita de naming, logging y eliminacion/permanencia antes de produccion.
+
+### Fixture upgrade-doctor
+
+Ruta:
+
+`POST /api/subscriptions/index.php/dev/session-fixture/upgrade-doctor`
+
+Hallazgos:
+
+- crea sesion PHP real con `session_scope=true`;
+- entity fija `doctor/900001`;
+- valida existencia del doctor;
+- valida active subscription real mediante current repository;
+- soporta escenarios conocidos:
+  - `standard -> optimum`;
+  - `optimum -> professional`;
+- valida billing `annual`;
+- valida target superior por ranking;
+- devuelve `intended_use=upgrade_checkout_qa`;
+- no crea checkout intent;
+- no crea payment intent;
+- no ejecuta `confirm_mock`;
+- no ejecuta `activate-after-payment`;
+- no activa suscripcion;
+- queda protegido por flag, host local, metodo POST y bloqueo produccion.
+
+Clasificacion:
+
+- `OK`: fixture funcional y protegido para QA DEV/local.
+- `WARN`: depende de fixture `doctor/900001`; no debe ser supuesto productivo ni quedar como contrato permanente.
+
+Decision:
+
+- mantenerlo solo para QA DEV/local mientras se cierre hardening;
+- auditarlo de nuevo en la politica de fixtures;
+- no conectarlo a frontend productivo;
+- no usarlo como mecanismo de permisos productivos.
+
+### Fixtures checkout, alternate y concurrency doctor
+
+Hallazgos:
+
+- `checkout-doctor` apunta a `doctor/900001`;
+- `alternate-doctor` apunta a `doctor/2`;
+- `concurrency-doctor` apunta a `doctor/3`;
+- validan existencia del doctor;
+- validan ausencia de suscripcion activa cuando aplica;
+- aplican `session_scope`;
+- no crean checkout/payment/activacion por si mismos;
+- comparten protecciones DEV/local.
+
+Clasificacion:
+
+- `OK`: protegidos para QA local.
+- `WARN`: conviene inventariarlos formalmente para decidir si se eliminan, se mueven o quedan detras de flag estricto.
+
+### confirm-mock
+
+Ruta identificada:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents/{payment_intent_uuid}/confirm-mock`
+
+Protecciones observadas:
+
+- metodo obligatorio `POST`;
+- valida `Content-Type` JSON cuando viene informado;
+- bloquea campos backend-controlled;
+- requiere `subscriptionResolveWriteContext(...)`;
+- `subscriptionResolveWriteContext(...)` limita writes a request local/dev;
+- bloquea headers de identidad para writes;
+- bloquea `local_dev_open` para writes;
+- exige sesion PHP real;
+- valida scope doctor/entity;
+- exige `Idempotency-Key`;
+- servicio `ConfirmSubscriptionPaymentIntentMockService` acepta solo provider `mxmed_mock`;
+- valida checkout/payment/entity scope;
+- valida checkout `pending_payment`;
+- valida payment intent en estado confirmable;
+- crea payment event mock y marca payment intent como `paid/mock_paid`;
+- no activa suscripcion por si mismo.
+
+Clasificacion:
+
+- `OK`: no es confirmacion productiva; queda limitado por write context local/dev y provider mock.
+- `WARN`: antes de produccion conviene agregar politica explicita para que `confirm-mock` quede fuera de rutas productivas o detras de flag dedicado, aunque el write context actual ya evita uso no local.
+
+Decision:
+
+- `confirm-mock` permanece como herramienta DEV/local/controlada;
+- no debe usarse como webhook real;
+- no debe usarse como facturacion real;
+- no debe activar suscripcion;
+- debe sustituirse por proveedor real y webhooks firmados antes de produccion.
+
+### Provider mxmed_mock
+
+Usos identificados:
+
+- `CreateSubscriptionPaymentIntentService` default `mxmed_mock`;
+- `SubscriptionPaymentIntentMockProvider` como provider unico de mock payment intent;
+- `ConfirmSubscriptionPaymentIntentMockService` como confirmacion mock;
+- `SubscriptionPaymentEventRepository` para eventos confirm mock;
+- `SubscriptionPaymentIntentRepository::markMockPaid(...)`;
+- `ActivateSubscriptionAfterPaymentService` todavia arma request hash con provider `mxmed_mock` para el flujo DEV/local validado.
+
+Hallazgos:
+
+- `SubscriptionPaymentIntentMockProvider` rechaza provider distinto de `mxmed_mock`;
+- provider ids tienen prefijos `mxmed_mock_pi_` y `mxmed_mock_chk_`;
+- `raw_response` marca `external_calls=false` y `real_payment=false`;
+- `confirm_mock` genera provider event id `mxmed_mock_confirm:{payment_intent_uuid}`;
+- activacion post-pago actual valida evidencia mock/dev ya procesada.
+
+Clasificacion:
+
+- `OK`: dependencia mock es explicita y trazable en DEV/local.
+- `WARN`: todo el flujo productivo debe reemplazarla por provider real, webhooks firmados y reconciliacion. No hay readiness productivo mientras `mxmed_mock` sea la unica via de pago.
+
+Decision:
+
+- `mxmed_mock` se acepta solo para QA DEV/local;
+- no se debe habilitar cobro real con `mxmed_mock`;
+- el bloque provider real debe preceder cualquier produccion.
+
+### session_scope y write context
+
+Hallazgos:
+
+- `session_scope` se establece por sesion PHP;
+- fixtures limpian permisos/operator previo y setean `user_id`, `doctor_id`, `entity_type`, `entity_id`, `actor_role=doctor`;
+- `subscriptionResolveWriteContext(...)` rechaza requests no locales;
+- rechaza headers de identidad para writes;
+- rechaza `local_dev_open` para writes;
+- exige `sessionUserId` numerico;
+- limita writes actuales a `entity_type=doctor`;
+- exige `doctor scope`;
+- bloquea mismatch `entity_type/entity_id`;
+- bloquea operadores para writes de suscripcion;
+- retorna `auth_mode=session_scope` solo si pasa el guard.
+
+Clasificacion:
+
+- `OK`: como mecanismo DEV/local actual, protege writes contra `local_dev_open` y headers magicos.
+- `WARN`: no es modelo productivo suficiente; produccion requiere auth real, roles, ownership y permisos por entidad.
+
+Decision:
+
+- `session_scope` queda aceptado como mecanismo local/dev para QA;
+- no debe tratarse como contrato productivo final;
+- la microfase de permisos/entity scope debe definir reemplazo o endurecimiento productivo.
+
+### Frontend/debug
+
+Hallazgos:
+
+- `assets/js/app.js` conserva panel DEV/debug oculto por defecto;
+- `isSubscriptionDebugPanelEnabled()` exige host local;
+- debug se activa solo por `subp_debug=1`, `mxmed_subp_debug=1` o `localStorage.mxmed_subp_debug=1`;
+- el submit DEV valida host local antes de ejecutar;
+- no se encontraron referencias frontend a `dev/session-fixture`, `upgrade-doctor`, `confirm-mock` ni `mxmed_mock`;
+- la referencia visible a `session_scope` pertenece al mensaje de debug DEV.
+
+Clasificacion:
+
+- `OK`: no hay exposicion productiva directa desde frontend principal.
+- `WARN`: mantener revision visual antes de produccion para asegurar que paneles debug no aparezcan por defecto.
+
+### Riesgos clasificados
+
+Clasificacion por hallazgo:
+
+- `OK` - rutas `dev/session-fixture*`: protegidas por flag, local-only, production block y POST.
+- `OK` - `upgrade-doctor`: valida estado real y no ejecuta writes de negocio.
+- `OK` - `local_dev_open`: no autoriza writes.
+- `OK` - headers de identidad: no autorizan writes.
+- `OK` - frontend principal: no expone fixtures ni confirm mock por defecto.
+- `WARN` - `confirm-mock`: protegido por write context local/dev, pero conviene flag/politica dedicada antes de produccion.
+- `WARN` - `mxmed_mock`: dependencia necesaria para DEV/local, bloqueante funcional para produccion hasta integrar provider real.
+- `WARN` - `session_scope`: aceptable para QA local, no suficiente como contrato productivo final.
+- `WARN` - fixtures con ids fijos: utiles en QA, no deben quedar como contratos productivos.
+
+No se detecto `BLOCKER` de exposicion productiva directa en esta auditoria read-only.
+
+### Resultado de auditoria
+
+Resultado:
+
+- `WARN audit`.
+
+Motivo:
+
+- no hay blockers detectados;
+- las rutas DEV/local revisadas tienen protecciones razonables;
+- existen pendientes no bloqueantes que deben formalizarse antes de produccion: politica de fixtures, flag dedicado para `confirm-mock`, provider real, permisos productivos y eliminacion/aislamiento de dependencias fixture.
+
+### Decisiones
+
+Decisiones documentadas:
+
+- `upgrade-doctor` queda permitido solo para QA DEV/local y no forma parte del contrato productivo.
+- `confirm-mock` queda permitido solo para QA DEV/local; no es webhook, no es provider real y no activa suscripcion.
+- `mxmed_mock` queda permitido solo para QA DEV/local; debe ser sustituido por provider real.
+- `session_scope` queda permitido para QA local; produccion requiere modelo de permisos real.
+- no se requiere correccion inmediata antes de documentar la politica, porque no se encontro exposicion productiva directa.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se tocaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-ProductionHardening-FixturesPolicy-01`
+
+Objetivo sugerido:
+
+Definir politica explicita de fixtures DEV/local para produccion: flags requeridos, bloqueo por entorno, naming, logging, documentacion y criterios para eliminar o conservar rutas DEV.
