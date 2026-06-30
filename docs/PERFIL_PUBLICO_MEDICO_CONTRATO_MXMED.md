@@ -34132,3 +34132,273 @@ El bloque queda listo para avanzar al siguiente hardening productivo.
 Objetivo sugerido:
 
 Definir el contrato tecnico del proveedor de pago real que sustituira a `mxmed_mock`, incluyendo estados, webhooks, firmas, provider ids, idempotencia y reconciliacion.
+
+## PP-Decisiones 183 - Readiness de contrato proveedor de pago real
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-ContractReadiness-01`
+
+### Objetivo
+
+Definir el contrato tecnico minimo del proveedor de pago real que sustituira a `mxmed_mock` en el flujo productivo de suscripciones y upgrades, incluyendo estados, provider ids, webhooks, firmas, idempotencia, reconciliacion y limites de responsabilidad entre proveedor, backend y activacion post-pago.
+
+### Contexto
+
+El hardening inicial de fixtures DEV/local ya quedo validado y cerrado:
+
+- fixtures DEV/local protegidos;
+- `confirm-mock` protegido;
+- `mxmed_mock` protegido para DEV/local;
+- `session_scope` bloqueado como autorizacion productiva;
+- current final de `doctor/900001`: `professional / active`.
+
+Esta decision no selecciona proveedor concreto ni implementa webhook. Define el contrato base para poder comparar proveedores y disenar la integracion real sin depender de `mxmed_mock`.
+
+### Responsabilidades
+
+`mxmed_mock`:
+
+- queda limitado a DEV/local;
+- no es proveedor productivo;
+- no sustituye webhook real;
+- no debe usarse como evidencia externa de pago.
+
+Proveedor real:
+
+- debe ser fuente externa de confirmacion de pago;
+- debe emitir ids de pago, checkout y eventos verificables;
+- debe firmar webhooks;
+- debe permitir reconciliacion de estados.
+
+Backend MXMed:
+
+- sigue siendo fuente de verdad de checkout intent;
+- controla `amount_cents` y `currency`;
+- controla contract acceptance;
+- crea y conserva payment intent local;
+- registra payment events procesados;
+- ejecuta activacion post-pago solo por el servicio autorizado;
+- no delega al frontend la decision de estado final de pago.
+
+Frontend:
+
+- no controla `amount_cents`;
+- no controla `currency`;
+- no marca pagos como pagados;
+- no decide activacion;
+- solo inicia flujo de checkout cuando exista contrato productivo.
+
+### Entidades y campos minimos
+
+Campos esperados para integrar proveedor real:
+
+- `provider`;
+- `provider_payment_id`;
+- `provider_checkout_id`;
+- `provider_customer_id`, si aplica;
+- `provider_status`;
+- `normalized_status`;
+- `amount_cents`;
+- `currency`;
+- `paid_at`;
+- `failed_at`, si aplica;
+- `canceled_at`, si aplica;
+- `provider_event_id`;
+- `provider_event_type`;
+- `provider_event_created_at`;
+- `raw_payload_reference` o equivalente seguro.
+
+Regla de privacidad:
+
+- no exponer payload crudo en frontend;
+- no devolver payload crudo en respuestas publicas o privadas de panel;
+- conservar solo referencia segura o almacenamiento interno auditado si hace falta diagnostico.
+
+### Mapeo conceptual de estados
+
+Mapeo inicial propuesto:
+
+| Estado proveedor | Estado normalizado MXMed | Decision |
+| --- | --- | --- |
+| `created` / `pending` | `created` | no activa |
+| `requires_action` / `pending_payment` | `pending` | no activa |
+| `paid` / `succeeded` | `paid` | puede habilitar activacion si validaciones locales pasan |
+| `failed` | `failed` | no activa |
+| `canceled` / `expired` | `canceled` | no activa |
+| `refunded` / `chargeback` | pendiente decision futura | no activa automaticamente |
+
+Reglas:
+
+- solo `paid` confirmado por webhook valido puede habilitar activacion;
+- estados ambiguos no deben activar;
+- refund y chargeback requieren decision posterior;
+- confirmacion manual/backoffice queda fuera de esta primera decision o debe tratarse como flujo posterior con auditoria especifica.
+
+### Contrato de webhooks
+
+El webhook productivo debe ser endpoint separado de `confirm-mock`.
+
+Requisitos minimos:
+
+- validacion de firma antes de ejecutar acciones de negocio;
+- validacion de timestamp;
+- proteccion contra replay;
+- idempotencia por `provider_event_id`;
+- deduplicacion de eventos;
+- manejo de eventos fuera de orden;
+- soporte para reintentos del proveedor;
+- respuesta HTTP estable al proveedor;
+- logging seguro;
+- almacenamiento de evento procesado o fallido;
+- rechazo controlado si firma falla;
+- rechazo controlado si amount/currency no coincide con checkout local.
+
+El webhook no debe:
+
+- activar suscripcion automaticamente en esta fase;
+- aceptar payload sin firma valida;
+- confiar en amount/currency enviado por frontend;
+- exponer payload crudo en UI.
+
+### Validaciones antes de registrar pago
+
+Antes de marcar un payment intent como pagado:
+
+- el provider debe estar permitido;
+- el payment intent local debe existir;
+- el checkout local debe existir;
+- `amount_cents` debe coincidir con el checkout local;
+- `currency` debe coincidir con el checkout local;
+- entity scope debe coincidir;
+- `provider_payment_id` debe coincidir o poder reconciliarse;
+- checkout no debe estar cancelado ni expirado;
+- evento no debe haber sido procesado antes;
+- estado provider debe ser terminal pagado o equivalente confiable;
+- contract acceptance asociada debe existir cuando aplique;
+- payment intent local no debe estar ya en estado conflictivo.
+
+### Relacion con activacion post-pago
+
+El webhook real solo debe:
+
+- registrar payment event;
+- normalizar estado;
+- marcar payment intent local como pagado/procesado cuando corresponda.
+
+`activate-after-payment` sigue siendo punto unico de activacion, salvo decision futura explicita.
+
+El state read-model debe detectar el payment event procesado igual que con mock.
+
+Activacion automatica por webhook queda fuera de alcance hasta una microfase futura.
+
+Soporte/backoffice podra usar state read-model para activar si corresponde y si existe permiso productivo definido.
+
+### Idempotencia provider
+
+Reglas de idempotencia:
+
+- idempotencia local por `provider_event_id`;
+- idempotencia por operacion local;
+- no procesar dos veces el mismo evento;
+- replay benigno de webhook debe responder de forma segura;
+- payload conflictivo para el mismo `provider_event_id` debe quedar como error controlado;
+- eventos fuera de orden no deben degradar un pago confirmado;
+- eventos duplicados no deben crear payment events activos duplicados;
+- eventos duplicados no deben activar mas de una vez.
+
+### Reconciliacion y backoffice minimo
+
+Consultas y filtros requeridos:
+
+- checkout uuid;
+- payment intent uuid;
+- provider payment id;
+- provider event id;
+- entity type/entity id;
+- estado local vs estado provider;
+- eventos fallidos;
+- pagos confirmados sin activacion;
+- pagos con mismatch de amount/currency;
+- pagos con firma fallida;
+- pagos con evento duplicado o conflictivo.
+
+Acciones manuales futuras permitidas o prohibidas deben documentarse antes de implementar backoffice.
+
+Acciones manuales futuras permitidas podrian incluir:
+
+- reintentar procesamiento de evento fallido no aplicado;
+- marcar evento como revisado;
+- solicitar reconciliacion externa.
+
+Acciones manuales que no deben existir sin decision adicional:
+
+- marcar pagado sin evidencia provider;
+- modificar amount/currency;
+- activar suscripcion sin payment event procesado;
+- borrar eventos para ocultar inconsistencias.
+
+### Seguridad y privacidad
+
+Reglas:
+
+- no exponer raw payload en frontend;
+- no guardar tarjetas ni datos sensibles de pago;
+- no loggear datos sensibles;
+- validar firma antes de acciones de negocio;
+- limitar acceso backoffice;
+- auditar intervencion manual;
+- no confiar en headers magicos;
+- no usar `session_scope` como autorizacion productiva final;
+- no mezclar `confirm-mock` con webhook productivo.
+
+### Pendientes fuera de alcance
+
+Quedan fuera de esta decision:
+
+- seleccion de proveedor exacto;
+- implementacion del webhook;
+- schema/migracion si falta campo para provider real;
+- backoffice visual;
+- conciliacion contable;
+- reembolsos;
+- chargebacks;
+- facturacion fiscal;
+- activacion automatica por webhook;
+- QA productiva real;
+- contrato comercial con proveedor.
+
+### Resultado de readiness
+
+`PASS readiness provider contract`.
+
+El contrato conceptual queda claro y accionable para la siguiente fase.
+
+`WARN`: falta seleccionar proveedor exacto, pero esto no bloquea la definicion base del contrato.
+
+`BLOCKED`: no aplica en esta microfase.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se modifico frontend;
+- no se modifico backend/API;
+- no se modificaron servicios ni repositorios;
+- no se modifico SQL/schema/seeds;
+- no se modificaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-SelectionMatrix-01`
+
+Objetivo sugerido:
+
+Crear matriz de seleccion del proveedor de pago real para MXMed: compatibilidad Mexico, webhooks, tarjetas, SPEI/transferencia si aplica, comisiones, soporte, conciliacion, facturacion y facilidad de integracion.
