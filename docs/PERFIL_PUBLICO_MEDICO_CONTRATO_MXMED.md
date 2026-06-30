@@ -33688,3 +33688,172 @@ Durante esta microfase:
 Objetivo sugerido:
 
 Revisar que enforcement real falta en codigo para cumplir la politica de fixtures DEV/local: flags, bloqueo produccion, logs de intento, separacion de rutas y pruebas negativas.
+
+## PP-Decisiones 180 - Readiness de enforcement para fixtures DEV/local
+
+### Microfase
+
+`BE/Suscripciones-ProductionHardening-FixturesEnforcement-Readiness-01`
+
+### Objetivo
+
+Revisar que enforcement real falta o ya existe en codigo para cumplir la politica DEV/local de fixtures de suscripciones, incluyendo flags, bloqueo produccion, request local, logs de intento, separacion de rutas y pruebas negativas requeridas antes de produccion.
+
+Esta microfase es readiness tecnico/documental. No implementa enforcement, no modifica codigo, no ejecuta endpoints y no toca DB.
+
+### Base
+
+Base validada:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin esperado: `7fa9d38`;
+- PP-Decisiones 179 presente;
+- working tree inicial limpio.
+
+La politica de PP-Decisiones 179 define que todo fixture DEV/local debe:
+
+- bloquear produccion;
+- depender de flag explicito;
+- requerir request local o entorno permitido;
+- usar naming `dev`;
+- no usarse por UI productiva;
+- no generar pagos reales;
+- no activar suscripciones productivas;
+- no depender de datos sensibles reales;
+- ser removible sin afectar produccion.
+
+### Enforcement actual encontrado
+
+En `api/subscriptions/index.php` existen controles base:
+
+- `subscriptionIsLocalRequest()` valida host local contra `127.0.0.1`, `localhost` y `::1`;
+- `subscriptionDevSessionFixtureEnabled()` exige `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- `subscriptionProductionEnvironmentDetected()` bloquea `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT` con valores `prod` o `production`;
+- las rutas `dev/session-fixture*` exigen metodo `POST`;
+- las rutas `dev/session-fixture*` devuelven errores controlados `fixture_disabled`, `local_only` y `production_blocked`;
+- las rutas DEV quedan bajo segmento `dev/session-fixture`;
+- `subscriptionResolveWriteContext(...)` rechaza requests no locales;
+- `subscriptionResolveWriteContext(...)` rechaza headers de identidad para writes;
+- `subscriptionResolveWriteContext(...)` rechaza `local_dev_open` para writes;
+- `subscriptionResolveWriteContext(...)` exige sesion PHP numerica;
+- `subscriptionResolveWriteContext(...)` valida doctor/entity scope;
+- `subscriptionResolveWriteContext(...)` bloquea operadores para writes actuales.
+
+En servicios de pago mock:
+
+- `CreateSubscriptionPaymentIntentService` usa `mxmed_mock` como provider default;
+- `SubscriptionPaymentIntentMockProvider` rechaza provider distinto de `mxmed_mock`;
+- `ConfirmSubscriptionPaymentIntentMockService` acepta solo provider `mxmed_mock`;
+- `confirm-mock` exige `subscriptionResolveWriteContext(...)` e `Idempotency-Key`;
+- `confirm-mock` valida scope de checkout, payment intent y entidad;
+- `confirm-mock` no activa suscripcion.
+
+En frontend:
+
+- el panel DEV/debug esta oculto por defecto;
+- `isSubscriptionDebugPanelEnabled()` exige host local;
+- no se detectan llamadas frontend a `dev/session-fixture`, `upgrade-doctor`, `confirm-mock` ni `mxmed_mock`.
+
+### Matriz de enforcement
+
+| Elemento | Proteccion existente | Proteccion faltante | Riesgo | Severidad | Microfase recomendada |
+| --- | --- | --- | --- | --- | --- |
+| `dev/session-fixture/upgrade-doctor` | ruta `dev`, POST, flag, local-only, production block, valida plan/billing/target | helper central, logging/auditoria de intento bloqueado, prueba negativa automatizada | uso accidental si se copia el patron sin checks | `WARN` | `BE/Suscripciones-ProductionHardening-FixturesEnforcement-Implementation-01` |
+| otros `dev/session-fixture*` | POST, flag, local-only, production block | helper central y logging uniforme | duplicacion de checks por ruta | `WARN` | `BE/Suscripciones-ProductionHardening-FixturesEnforcement-Implementation-01` |
+| `confirm-mock` | POST, write context local/dev, provider `mxmed_mock`, idempotencia, no activa | flag dedicado o policy guard explicito para confirm mock; prueba negativa no local/productiva | ruta mock accesible en codigo aunque write context la bloquea fuera de local | `WARN` | `BE/Suscripciones-ProductionHardening-FixturesEnforcement-Implementation-01` |
+| `mxmed_mock` | provider mock explicito, adapter rechaza providers distintos, sin llamadas externas | config/guard para deshabilitarlo en produccion y contrato provider real | dependencia funcional de mock hasta implementar provider real | `WARN` | `BE/Suscripciones-PaymentProvider-ContractReadiness-01` |
+| `session_scope` | sesion PHP, local-only write context, entity scope, bloqueo headers magicos | modelo productivo de roles/permisos; auditoria de origen de sesion | usarlo indebidamente como auth productiva futura | `WARN` | `BE/Suscripciones-PermissionsEntityScope-Hardening-01` |
+| IDs fijos | encapsulados en fixtures DEV/local y documentacion QA | eliminar/parametrizar antes de produccion; prueba de ausencia en rutas productivas | acoplamiento accidental a `doctor/900001` | `WARN` | `BE/Suscripciones-ProductionHardening-FixturesEnforcement-Implementation-01` |
+| debug frontend | oculto por defecto, requiere host local/debug flag | QA negativa visual productiva | exposicion visual si se relaja debug | `OK` | `QA/Suscripciones-ProductionHardening-FixturesNegativeMatrix-01` |
+
+No se detecto `BLOCKER` de exposicion productiva directa.
+
+### Brechas tecnicas
+
+Brechas no bloqueantes:
+
+- no existe helper central tipo `assertDevFixtureAllowed(...)`;
+- los checks de fixture estan repetidos por ruta;
+- no se detecto logging/auditoria explicita de intentos bloqueados;
+- `confirm-mock` depende del write context local/dev, pero no tiene flag dedicado propio;
+- `mxmed_mock` no tiene config productiva de deshabilitacion global;
+- `session_scope` no es contrato productivo de roles/permisos;
+- no existen pruebas negativas documentadas como suite ejecutable para produccion simulada.
+
+Estas brechas no obligan a hotfix inmediato, pero si justifican una microfase de implementacion de enforcement antes de cualquier produccion.
+
+### Pruebas negativas requeridas
+
+Pruebas futuras, no ejecutadas en esta microfase:
+
+- fixture con `APP_ENV=production` debe responder `403 production_blocked`;
+- fixture con `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED` ausente o distinto de `1` debe responder `403 fixture_disabled`;
+- fixture desde host no local debe responder `403 local_only`;
+- fixture con metodo distinto de `POST` debe responder `405 method_not_allowed`;
+- `confirm-mock` desde entorno no local debe responder `403`;
+- `confirm-mock` sin sesion debe responder `403 local_dev_open does not authorize writes`;
+- `confirm-mock` con provider distinto de `mxmed_mock` debe responder error controlado;
+- payment intent con provider productivo inexistente no debe pasar por mock;
+- intento de crear `session_scope` fuera de fixture/control permitido debe fallar;
+- write cross-entity debe responder `403`;
+- ID fijo fuera de rutas DEV/local no debe existir como regla productiva;
+- debug frontend no debe aparecer fuera de host local.
+
+### Enforcement minimo recomendado
+
+Controles recomendados para implementacion:
+
+- helper central `subscriptionAssertDevFixtureAllowed(...)` o equivalente;
+- helper central `subscriptionIsProductionEnvironment(...)` o estandarizacion de `subscriptionProductionEnvironmentDetected()`;
+- flag unico y explicito para fixtures;
+- flag dedicado o policy guard para `confirm-mock`;
+- bloqueo por host/IP/request local centralizado;
+- logging/auditoria de intentos bloqueados por `fixture_disabled`, `local_only` y `production_blocked`;
+- respuesta 403/404 controlada para rutas DEV en produccion, segun decision de seguridad;
+- separacion visible de rutas DEV;
+- configuracion para deshabilitar `mxmed_mock` en produccion;
+- guard para impedir que `session_scope` sea autorizacion productiva final;
+- pruebas negativas automatizables para entorno simulado.
+
+### Decision de readiness
+
+Resultado:
+
+- `WARN readiness`.
+
+Motivo:
+
+- enforcement actual protege fixtures DEV/local contra exposicion productiva directa;
+- no se encontro `BLOCKER`;
+- faltan controles de hardening recomendados: helper central, logs de intento bloqueado, flag/policy dedicado para `confirm-mock`, deshabilitacion productiva de `mxmed_mock` y pruebas negativas.
+
+Decision:
+
+- se puede pasar a implementacion de enforcement;
+- no se debe pasar directamente a QA negativa final sin reforzar primero las brechas `WARN`;
+- no se habilita produccion.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco backend/API;
+- no se tocaron servicios ni repositorios;
+- no se toco SQL/schema/seeds;
+- no se tocaron fixtures;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se modifico DB ni storage.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-ProductionHardening-FixturesEnforcement-Implementation-01`
+
+Objetivo sugerido:
+
+Implementar enforcement centralizado para fixtures DEV/local y mock de suscripciones: helper unico de permiso DEV/local, bloqueo productivo uniforme, logging seguro de intentos bloqueados, flag/policy para `confirm-mock`, guard de `mxmed_mock` productivo y base para pruebas negativas.
