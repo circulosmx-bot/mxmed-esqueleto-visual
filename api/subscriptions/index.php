@@ -614,27 +614,148 @@ function subscriptionApplyDevDoctorSessionFixture(string $doctorId, string $user
     $_SESSION['subscriptions_dev_session_fixture'] = '1';
 }
 
+function subscriptionReadOptionalDevFixtureJsonPayload(): array
+{
+    $contentType = strtolower(trim((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '')));
+    if ($contentType !== '' && strpos($contentType, 'application/json') === false) {
+        return [
+            'ok' => false,
+            'error' => subscriptionDevSessionFixtureError('invalid_payload', 'content-type must be application/json'),
+        ];
+    }
+
+    $raw = file_get_contents('php://input');
+    if (!is_string($raw) || trim($raw) === '') {
+        return [
+            'ok' => true,
+            'payload' => [],
+        ];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded) || array_values($decoded) === $decoded) {
+        return [
+            'ok' => false,
+            'error' => subscriptionDevSessionFixtureError('invalid_payload', 'invalid json payload'),
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'payload' => $decoded,
+    ];
+}
+
+function subscriptionStripePaymentIntentFixtureAllowedDoctorIds(): array
+{
+    return ['3', '4', '5', '6', '7', '8', '9', '10', '2'];
+}
+
+function subscriptionNormalizeDevFixtureDoctorId($value): string
+{
+    if (!is_scalar($value) || is_bool($value)) {
+        return '';
+    }
+
+    $doctorId = trim((string)$value);
+    if ($doctorId === '' || strlen($doctorId) > 20 || !ctype_digit($doctorId)) {
+        return '';
+    }
+
+    $doctorId = ltrim($doctorId, '0');
+    return $doctorId === '' ? '0' : $doctorId;
+}
+
+function subscriptionResolveStripePaymentIntentFixtureDoctor(array $payload): array
+{
+    $allowedFields = ['doctor_id'];
+    $unsupportedFields = array_values(array_diff(array_keys($payload), $allowedFields));
+    if ($unsupportedFields !== []) {
+        return subscriptionDevSessionFixtureError(
+            'stripe_fixture_payload_forbidden_fields',
+            'stripe payment intent fixture payload contains unsupported fields'
+        );
+    }
+
+    $allowedDoctorIds = subscriptionStripePaymentIntentFixtureAllowedDoctorIds();
+    if (array_key_exists('doctor_id', $payload)) {
+        $doctorId = subscriptionNormalizeDevFixtureDoctorId($payload['doctor_id']);
+        if ($doctorId === '' || $doctorId === '0' || $doctorId === '900001' || !in_array($doctorId, $allowedDoctorIds, true)) {
+            return subscriptionDevSessionFixtureError(
+                'fixture_doctor_not_allowed',
+                'stripe payment intent fixture doctor is not allowed'
+            );
+        }
+        if (!subscriptionDoctorFixtureExists($doctorId)) {
+            return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'stripe payment intent fixture doctor not found');
+        }
+        if (subscriptionDoctorHasActiveSubscription($doctorId)) {
+            return subscriptionDevSessionFixtureError(
+                'fixture_doctor_has_active_subscription',
+                'stripe payment intent fixture doctor has active subscription'
+            );
+        }
+
+        return [
+            'ok' => true,
+            'doctor_id' => $doctorId,
+            'selection' => 'requested',
+        ];
+    }
+
+    foreach ($allowedDoctorIds as $candidateDoctorId) {
+        if ($candidateDoctorId === '900001') {
+            continue;
+        }
+
+        try {
+            if (!subscriptionDoctorFixtureExists($candidateDoctorId)) {
+                continue;
+            }
+            if (subscriptionDoctorHasActiveSubscription($candidateDoctorId)) {
+                continue;
+            }
+        } catch (Throwable $e) {
+            continue;
+        }
+
+        return [
+            'ok' => true,
+            'doctor_id' => $candidateDoctorId,
+            'selection' => 'auto',
+        ];
+    }
+
+    return subscriptionDevSessionFixtureError(
+        'stripe_fixture_doctor_unavailable',
+        'stripe payment intent fixture doctor is unavailable'
+    );
+}
+
 function subscriptionCreateStripePaymentIntentFixture(): array
 {
-    $doctorId = '2';
-    $userId = '2';
+    $payloadResult = subscriptionReadOptionalDevFixtureJsonPayload();
+    if (!(bool)($payloadResult['ok'] ?? false)) {
+        return $payloadResult['error'] ?? subscriptionDevSessionFixtureError('invalid_payload', 'invalid json payload');
+    }
+
+    $fixtureDoctor = subscriptionResolveStripePaymentIntentFixtureDoctor(
+        is_array($payloadResult['payload'] ?? null) ? $payloadResult['payload'] : []
+    );
+    if (!(bool)($fixtureDoctor['ok'] ?? false)) {
+        return $fixtureDoctor;
+    }
+
+    $doctorId = (string)$fixtureDoctor['doctor_id'];
+    $userId = $doctorId;
+    $fixtureDoctorSelection = (string)($fixtureDoctor['selection'] ?? 'auto');
     $planCode = 'basic';
     $billingPeriod = 'annual';
     $contractVersion = 'mxmed-subscriptions-v1';
     $contractHash = 'sha256:qa-local-dev-stripe-payment-intent-harness';
     $contractSnapshotUrl = '/legal/subscriptions/mxmed-subscriptions-v1.html';
     $contractTitle = 'Contrato de suscripción México Médico';
-    $idempotencyKey = 'mxmed-dev-stripe-payment-intent-fixture-doctor-2-basic-annual-qa-01';
-
-    if (!subscriptionDoctorFixtureExists($doctorId)) {
-        return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'stripe payment intent fixture doctor not found');
-    }
-    if (subscriptionDoctorHasActiveSubscription($doctorId)) {
-        return subscriptionDevSessionFixtureError(
-            'fixture_doctor_has_active_subscription',
-            'stripe payment intent fixture doctor has active subscription'
-        );
-    }
+    $idempotencyKey = 'mxmed-dev-stripe-payment-intent-fixture-doctor-' . $doctorId . '-basic-annual-qa-01';
 
     $pdo = mxmed_pdo();
     $checkoutRepository = new SubscriptionCheckoutIntentRepository($pdo);
@@ -738,7 +859,12 @@ function subscriptionCreateStripePaymentIntentFixture(): array
             );
         }
 
-        return subscriptionStripePaymentIntentFixtureResponse($checkoutIntent, $existingPaymentIntent, true);
+        return subscriptionStripePaymentIntentFixtureResponse(
+            $checkoutIntent,
+            $existingPaymentIntent,
+            true,
+            $fixtureDoctorSelection
+        );
     }
 
     try {
@@ -767,18 +893,20 @@ function subscriptionCreateStripePaymentIntentFixture(): array
         );
     }
 
-    return subscriptionStripePaymentIntentFixtureResponse($checkoutIntent, $paymentIntent, false);
+    return subscriptionStripePaymentIntentFixtureResponse($checkoutIntent, $paymentIntent, false, $fixtureDoctorSelection);
 }
 
 function subscriptionStripePaymentIntentFixtureResponse(
     array $checkoutIntent,
     array $paymentIntent,
-    bool $idempotentReplay
+    bool $idempotentReplay,
+    string $fixtureDoctorSelection = 'auto'
 ): array {
     return [
         'ok' => true,
         'data' => [
             'fixture' => 'stripe-payment-intent',
+            'fixture_doctor_selection' => $fixtureDoctorSelection,
             'entity_type' => (string)($checkoutIntent['entity_type'] ?? 'doctor'),
             'entity_id' => (string)($checkoutIntent['entity_id'] ?? ''),
             'doctor_id' => (string)($checkoutIntent['doctor_id'] ?? ''),

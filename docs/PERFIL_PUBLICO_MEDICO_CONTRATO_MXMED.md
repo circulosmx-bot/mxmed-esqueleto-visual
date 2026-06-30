@@ -36997,3 +36997,98 @@ Warnings no bloqueantes:
 Objetivo sugerido:
 
 Validar funcionalmente que la ruta DEV/local `stripe-payment-intent` prepara un checkout/payment intent Stripe sintetico seguro, con provider payment id estable, sin activar suscripcion y sin conectar Stripe real.
+
+## PP-Decisiones 193 - Seleccion segura de doctor fixture para Stripe harness
+
+### Microfase
+
+`BE/DEV-Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-FixtureDoctorSelection-Implementation-01`
+
+### Objetivo
+
+Corregir el harness DEV/local `stripe-payment-intent` para que no dependa rigidamente de `doctor/2` cuando ese fixture ya no es seguro, manteniendo el escenario sintetico Stripe protegido y separado del flujo productivo normal.
+
+### Contexto
+
+La microfase `QA/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-01` quedo en `FAIL` controlado porque:
+
+- el harness usaba `doctor/2` de forma fija;
+- `doctor/2` existe, pero ya tiene una suscripcion activa `standard / active`;
+- el harness respondio `HTTP 409`;
+- el error fue controlado: `fixture_doctor_has_active_subscription`;
+- no se creo checkout;
+- no se creo payment intent Stripe;
+- no se creo payment event;
+- no se activo suscripcion;
+- `doctor/900001` quedo intacto.
+
+### Decision tecnica
+
+El harness DEV/local ahora resuelve un doctor fixture seguro antes de crear el escenario Stripe sintetico:
+
+- acepta solo `doctor_id` opcional en el payload DEV/local;
+- si no se envia `doctor_id`, usa una lista interna de candidatos fixture permitidos;
+- valida que el doctor exista;
+- valida que el doctor no tenga suscripcion activa vigente;
+- excluye explicitamente `doctor/900001`;
+- rechaza campos no soportados en el payload;
+- rechaza doctores no permitidos con error controlado;
+- rechaza doctores con suscripcion activa con `fixture_doctor_has_active_subscription`;
+- responde `stripe_fixture_doctor_unavailable` si no hay fixture seguro disponible.
+
+La respuesta exitosa del harness incluye `fixture_doctor_selection` para distinguir seleccion `auto` o `requested`.
+
+### Seguridad y alcance
+
+El cambio mantiene:
+
+- proteccion `subscriptionAssertDevFixtureAllowed(...)`;
+- ejecucion DEV/local only;
+- bloqueo en produccion;
+- request local obligatorio;
+- metodo `POST` obligatorio;
+- `doctor/900001` fuera del harness Stripe;
+- amount/currency tomados del checkout server-side;
+- `provider_payment_id` sintetico generado server-side;
+- ausencia de `STRIPE_WEBHOOK_SECRET`;
+- ausencia de Stripe real.
+
+El cambio no:
+
+- abre provider `stripe` en el endpoint normal de `payment-intents`;
+- modifica `CreateSubscriptionPaymentIntentService::provider()`;
+- modifica `SubscriptionPaymentIntentMockProvider`;
+- conecta Stripe productivo;
+- ejecuta webhook Stripe;
+- ejecuta `confirm_mock`;
+- ejecuta `activate-after-payment`;
+- crea suscripcion;
+- activa suscripcion;
+- toca frontend;
+- toca SQL/schema/seeds.
+
+### Archivos modificados
+
+- `api/subscriptions/index.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Validaciones esperadas
+
+- `php -l api/subscriptions/index.php`;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`;
+- `git diff --check`;
+- verificacion de alcance sin frontend;
+- verificacion de alcance sin SQL/schema/seeds;
+- verificacion de que no se ejecuto SQL manual;
+- verificacion de que no se ejecuto POST/curl;
+- verificacion de que no se ejecuto webhook Stripe;
+- verificacion de que no se ejecuto `confirm_mock`;
+- verificacion de que no se ejecuto `activate-after-payment`.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-02`
+
+Objetivo sugerido:
+
+Validar funcionalmente que el harness DEV/local selecciona o acepta un doctor fixture seguro sin suscripcion activa, crea checkout/contract acceptance/payment intent local `provider=stripe` en estado inicial, no toca `doctor/900001` y mantiene el endpoint normal limitado a `mxmed_mock`.
