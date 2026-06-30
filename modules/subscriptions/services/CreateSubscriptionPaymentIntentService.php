@@ -90,8 +90,6 @@ final class CreateSubscriptionPaymentIntentService
             );
         }
 
-        $this->assertCheckoutReadyForPayment($checkoutIntent);
-
         $amountCents = (int)($checkoutIntent['amount_cents'] ?? 0);
         $currency = strtoupper(trim((string)($checkoutIntent['currency'] ?? '')));
         $scope = $this->idempotencyScope($checkoutIntent);
@@ -103,6 +101,22 @@ final class CreateSubscriptionPaymentIntentService
             'source' => $source,
         ];
         $requestHash = $this->idempotencyService->buildPaymentIntentRequestHash($scope, $payload);
+        $completedReplay = $this->idempotencyService->completedPaymentIntentReplay($idempotencyKey, $scope, $payload);
+        if ($completedReplay !== null) {
+            if ($completedReplay->shouldReplay()) {
+                return $completedReplay->response();
+            }
+            if ($completedReplay->shouldReject()) {
+                throw new CreateSubscriptionPaymentIntentException(
+                    $completedReplay->httpStatus(),
+                    $completedReplay->errorCode(),
+                    $completedReplay->message()
+                );
+            }
+        }
+
+        $this->assertCheckoutReadyForPayment($checkoutIntent);
+
         $idempotencyDecision = $this->idempotencyService->beginPaymentIntent($idempotencyKey, $scope, $payload);
 
         if ($idempotencyDecision->shouldReplay()) {

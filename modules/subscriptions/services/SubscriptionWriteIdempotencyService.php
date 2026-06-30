@@ -136,6 +136,19 @@ final class SubscriptionWriteIdempotencyService
         return $this->beginOperation($headerValue, self::PAYMENT_INTENT_OPERATION, $scope, $payload);
     }
 
+    public function completedPaymentIntentReplay(
+        ?string $headerValue,
+        array $scope,
+        array $payload
+    ): ?SubscriptionWriteIdempotencyDecision {
+        return $this->completedOperationReplay(
+            $headerValue,
+            self::PAYMENT_INTENT_OPERATION,
+            $scope,
+            $payload
+        );
+    }
+
     public function beginPaymentIntentConfirmMock(
         ?string $headerValue,
         array $scope,
@@ -219,6 +232,87 @@ final class SubscriptionWriteIdempotencyService
                 'request_already_processing',
                 'idempotent request is already processing'
             );
+        }
+
+        if ((string)($existing['request_hash'] ?? '') !== $requestHash) {
+            return SubscriptionWriteIdempotencyDecision::reject(
+                409,
+                'idempotency_key_reused_with_different_payload',
+                'Idempotency-Key was reused with a different payload'
+            );
+        }
+
+        $status = strtolower(trim((string)($existing['status'] ?? '')));
+        if ($status === 'processing') {
+            return SubscriptionWriteIdempotencyDecision::reject(
+                409,
+                'request_already_processing',
+                'idempotent request is already processing'
+            );
+        }
+
+        if ($status === 'completed') {
+            $response = $this->completedReplayResponse($existing, $this->requiresStoredReplayResponse($operation));
+            if ($response === null) {
+                return SubscriptionWriteIdempotencyDecision::reject(
+                    409,
+                    'idempotency_result_unavailable',
+                    'idempotency result is unavailable'
+                );
+            }
+
+            return SubscriptionWriteIdempotencyDecision::replay(
+                $this->completedReplayStatus($existing),
+                $response
+            );
+        }
+
+        return SubscriptionWriteIdempotencyDecision::reject(
+            409,
+            'idempotency_key_not_reusable',
+            'Idempotency-Key is not reusable'
+        );
+    }
+
+    private function completedOperationReplay(
+        ?string $headerValue,
+        string $operation,
+        array $scope,
+        array $payload
+    ): ?SubscriptionWriteIdempotencyDecision {
+        $key = $this->normalizeKey($headerValue);
+        if ($key === null) {
+            return null;
+        }
+
+        $operation = trim($operation);
+        if (!$this->isAllowedOperation($operation)) {
+            return SubscriptionWriteIdempotencyDecision::reject(
+                422,
+                'idempotency_operation_invalid',
+                'idempotency operation is invalid'
+            );
+        }
+
+        if (!$this->isValidKey($key)) {
+            return SubscriptionWriteIdempotencyDecision::reject(
+                422,
+                'idempotency_key_invalid',
+                'Idempotency-Key is invalid'
+            );
+        }
+
+        $keyHash = hash('sha256', $key);
+        $requestHash = $this->requestHashForOperation($operation, $scope, $payload);
+        $existing = $this->repository->findByScope(
+            $keyHash,
+            (string)($scope['user_id'] ?? ''),
+            (string)($scope['entity_type'] ?? ''),
+            (string)($scope['entity_id'] ?? ''),
+            $operation
+        );
+        if ($existing === null) {
+            return null;
         }
 
         if ((string)($existing['request_hash'] ?? '') !== $requestHash) {

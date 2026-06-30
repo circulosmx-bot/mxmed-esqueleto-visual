@@ -31841,3 +31841,90 @@ El contrato de replay queda alineado:
 Objetivo sugerido:
 
 Validar por HTTP controlado que el replay de checkout intent y payment intent devuelve `meta.idempotent_replay = true` y `data.idempotency.idempotent_replay = true`, sin generar duplicados ni ejecutar pasos posteriores.
+
+## PP-Decisiones 172 - Pulido replay payment intent post-activacion
+
+### Microfase
+
+`BE/Suscripciones-UpgradeIntent-PaymentIntentReplayAfterActivation-Polish-01`
+
+### Objetivo
+
+Permitir que el replay exacto de `subscriptions.payment_intent.create` devuelva la respuesta idempotente almacenada aunque el checkout intent ya haya sido activado.
+
+El problema era de orden de validacion:
+
+- el checkout `activated` bloqueaba con `checkout_intent_not_pending_payment`;
+- ese guard se ejecutaba antes de consultar la respuesta idempotente completada;
+- por ello el replay exacto no alcanzaba a devolver el contrato almacenado.
+
+### Ajuste realizado
+
+Se ajusto `CreateSubscriptionPaymentIntentService` para que:
+
+- localice el checkout;
+- calcule scope, payload y request hash desde el snapshot backend;
+- consulte replay completado de `subscriptions.payment_intent.create` sin insertar una nueva key;
+- si la decision es replay, devuelva la respuesta almacenada;
+- si la decision es reject, conserve el error idempotente correspondiente;
+- si la decision es proceed, entonces aplique el guard de checkout `pending_payment`.
+
+Esto preserva el bloqueo para creaciones nuevas o requests no idempotentes sobre checkout activado sin abrir registros de idempotencia nuevos antes del guard.
+
+### Seguridad funcional
+
+El ajuste NO permite:
+
+- crear un nuevo payment intent sobre checkout `activated`;
+- crear payment event;
+- confirmar pago;
+- activar suscripcion;
+- saltarse el guard con otra `Idempotency-Key`;
+- reutilizar la misma key con payload distinto;
+- usar checkout de otra entidad;
+- controlar `amount` o `currency` desde cliente.
+
+Para request nueva/no replay, el checkout no `pending_payment` sigue bloqueado con `checkout_intent_not_pending_payment` o error controlado equivalente.
+
+### Contrato esperado
+
+Replay exacto de payment intent post-activacion debe devolver:
+
+- HTTP `200` o contrato idempotente equivalente;
+- mismo payment intent;
+- `meta.idempotent_replay = true`;
+- `data.idempotency.idempotent_replay = true`;
+- sin duplicar payment intent;
+- sin crear payment event;
+- sin confirmar;
+- sin activar.
+
+### Exclusiones
+
+Durante esta microfase:
+
+- no se toco frontend;
+- no se toco SQL/schema/seeds;
+- no se tocaron fixtures;
+- no se cambio storage;
+- no se agregaron migraciones;
+- no se ejecuto SQL;
+- no se ejecuto POST/curl;
+- no se ejecuto checkout;
+- no se ejecuto payment intent;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`.
+
+### Decision
+
+El replay idempotente de payment intent queda preparado para ganar precedencia sobre guards de estado posteriores cuando la operacion ya fue completada con la misma key y el mismo request hash.
+
+No cambia la regla de negocio: un checkout activado sigue bloqueando cualquier creacion nueva de payment intent.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-PaymentIntentReplayAfterActivation-Polish-01`
+
+Objetivo sugerido:
+
+Validar por HTTP controlado que el replay exacto del payment intent post-activacion devuelve la respuesta almacenada con `meta.idempotent_replay = true` y `data.idempotency.idempotent_replay = true`, sin duplicados ni efectos adicionales.
