@@ -37722,3 +37722,233 @@ No se ejecuto:
 Objetivo sugerido:
 
 Documentar lo faltante para pasar del flujo Stripe sintetico validado al flujo Stripe productivo real: SDK oficial, llaves reales/sandbox, endpoint publico, payloads reales Stripe, backoffice, reconciliacion y QA con eventos reales.
+
+## PP-Decisiones 198 - Brecha de readiness productivo Stripe
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentProvider-StripeWebhook-ProductionReadinessGap-01`
+
+### Objetivo
+
+Documentar las brechas pendientes para pasar del flujo Stripe sintetico validado al flujo Stripe productivo real, sin implementar cambios y sin habilitar produccion.
+
+### Contexto validado
+
+La microfase `DOCS/Suscripciones-PaymentProvider-StripeWebhook-SyntheticFlowClosure-01` cerro con PASS y dejo documentado el cierre del flujo sintetico en `PP-Decisiones 197`.
+
+Ya quedo validado:
+
+- webhook Stripe sintetico firmado;
+- firma HMAC SHA-256 v1 local;
+- raw body leido desde `php://input`;
+- normalizacion del evento hacia `ProcessStripeSubscriptionWebhookService`;
+- dedupe por `provider_event_id`;
+- conflicto por `event_hash`;
+- rechazo de amount/currency mismatch;
+- rechazo/control de estados no accionables;
+- rechazo/control de estados negativos sobre payment intent ya pagado;
+- payment intent `paid / succeeded`;
+- payment event `payment_intent_confirm / processed`;
+- state read-model con `can_activate=true`;
+- activacion por `activate-after-payment`;
+- replay guard idempotente.
+
+Estado funcional actual:
+
+- doctor `990099`: suscripcion activa `basic / annual`;
+- doctor `900001`: `professional / active`, intacto;
+- Stripe real: no conectado;
+- SDK Stripe PHP: no instalado;
+- payloads reales Stripe: no validados;
+- webhook publico productivo: no validado.
+
+### Brecha SDK Stripe oficial
+
+Estado actual:
+
+- no existe `composer.json`;
+- no existe `vendor/stripe`;
+- no hay SDK oficial Stripe PHP integrado al repositorio;
+- la firma actual HMAC v1 local esta encapsulada como validacion sintetica/controlada.
+
+Pendientes:
+
+- definir estrategia de dependencias del proyecto;
+- decidir si se incorpora SDK oficial Stripe PHP o una validacion equivalente formal;
+- validar compatibilidad con la version PHP actual del monolito;
+- definir instalacion, versionado y despliegue de dependencias;
+- no usar la implementacion local como sustituto definitivo sin revision de seguridad.
+
+### Brecha de llaves y configuracion
+
+Pendientes productivos:
+
+- `STRIPE_WEBHOOK_SECRET` sandbox;
+- `STRIPE_WEBHOOK_SECRET` produccion;
+- API keys secret/public de Stripe;
+- separacion estricta sandbox/productivo;
+- rotacion de llaves;
+- manejo seguro de env vars;
+- prohibicion de commitear secretos;
+- politica de acceso a claves;
+- logging sin secretos, firmas completas ni payloads sensibles.
+
+### Brecha de endpoint publico
+
+Pendientes:
+
+- definir URL publica final del webhook Stripe;
+- exigir HTTPS;
+- aceptar solo metodo `POST`;
+- responder rapido a Stripe;
+- definir timeout operativo;
+- documentar retry behavior de Stripe;
+- proteger contra payloads grandes;
+- evaluar rate limiting o controles equivalentes;
+- monitorear errores y rechazos;
+- evitar dependencia de sesion, cookies o frontend.
+
+### Brecha de payloads reales Stripe
+
+Payloads y campos pendientes de validar:
+
+- payload real `payment_intent.succeeded`;
+- payload real `payment_intent.payment_failed`;
+- payload real `payment_intent.canceled`;
+- eventos no accionables reales;
+- estructura real de `data.object`;
+- `amount_received` vs `amount`, si aplica;
+- moneda `mxn`;
+- metadata real;
+- `livemode`;
+- `api_version`;
+- event ids reales;
+- diferencias entre payload sintetico y payload real;
+- ajustes necesarios al normalizador si Stripe real difiere del harness.
+
+### Brecha de creacion de payment intent Stripe real
+
+Estado actual:
+
+- el endpoint normal de `payment-intents` sigue limitado a `mxmed_mock`;
+- el harness creo provider `stripe` solo en modo DEV/local;
+- frontend no debe controlar `amount` ni `currency`;
+- backend debe calcular monto server-side desde checkout/precio vigente.
+
+Pendientes:
+
+- implementar provider real para crear PaymentIntents Stripe, si esa es la decision de producto;
+- decidir si MXMed usara PaymentIntents, Checkout Sessions u otro flujo Stripe;
+- mapear checkout/payment intent local hacia provider ids reales;
+- persistir `provider_payment_id` real;
+- definir metadata minima segura enviada a Stripe;
+- asegurar que amount/currency salgan solo de backend.
+
+### Brecha de backoffice y reconciliacion
+
+Backoffice requerido antes de produccion:
+
+- buscar por checkout UUID;
+- buscar por payment intent UUID;
+- buscar por `provider_payment_id`;
+- buscar por `provider_event_id`;
+- listar eventos `failed`;
+- listar pagos `paid` sin activacion;
+- mostrar state read-model;
+- permitir acciones autorizadas y auditadas;
+- prohibir acciones peligrosas sin rol adecuado;
+- auditar intervencion manual;
+- exponer correlation ids para soporte.
+
+### Brecha de QA real/sandbox
+
+QA pendientes con Stripe sandbox/real:
+
+- webhook con firma real Stripe sandbox;
+- payload real `succeeded`;
+- payload real `failed`;
+- payload real `canceled`;
+- evento duplicado real;
+- evento fuera de orden;
+- reintento Stripe;
+- mismatch amount/currency real;
+- payment intent no encontrado;
+- state read-model post-webhook real;
+- `activate-after-payment` post-webhook real;
+- replay guard post-activacion real.
+
+### Brecha de seguridad y operacion
+
+Pendientes operativos:
+
+- monitoreo de webhook failures;
+- alertas de pagos confirmados sin activacion;
+- alertas de mismatch amount/currency;
+- auditoria de eventos rechazados por firma;
+- auditoria de intentos con secret faltante;
+- no exponer raw payload al frontend;
+- no guardar datos sensibles de tarjeta;
+- revisar PCI scope;
+- definir permisos de backoffice;
+- logs con correlation ids;
+- runbook de incidentes y reconciliacion.
+
+### Brecha de metodos de pago Mexico
+
+Decision pendiente para v1:
+
+- tarjetas;
+- MSI;
+- OXXO;
+- transferencia/SPEI o transferencias bancarias MXN si aplica;
+- que metodos entran en lanzamiento;
+- que metodos quedan fuera;
+- SEPA queda fuera del lanzamiento Mexico salvo decision internacional posterior.
+
+### Decision de estado
+
+Resultado:
+
+- `PASS gap documental`.
+
+La brecha queda identificada y no bloquea el avance tecnico ordenado.
+
+Aclaraciones:
+
+- el flujo Stripe sintetico esta aprobado;
+- el flujo Stripe productivo todavia no esta listo;
+- no habilitar produccion hasta resolver SDK/keys/payload real/backoffice/QA real.
+
+### Alcance de esta microfase
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios;
+- repositorios;
+- SQL/schema/seeds;
+- fixtures.
+
+No se ejecuto:
+
+- SQL;
+- POST/curl;
+- webhook Stripe;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- migraciones/seeds;
+- writes manuales en BD;
+- Stripe real.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeSDK-DependencyReadiness-01`
+
+Objetivo sugerido:
+
+Definir como incorporar o no el SDK oficial Stripe PHP al proyecto, considerando ausencia actual de `composer.json`, estrategia de dependencias, validacion de firma oficial y compatibilidad con el monolito PHP actual.
