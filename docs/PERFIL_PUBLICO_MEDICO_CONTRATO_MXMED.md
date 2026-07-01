@@ -41254,3 +41254,174 @@ Codigo de estado:
 Objetivo sugerido:
 
 Autenticar Stripe CLI en sandbox/test, ejecutar `stripe listen --forward-to` contra el endpoint local/dev, capturar de forma segura la presencia de un `whsec_...` temporal sin imprimirlo completo, y dejar listas variables temporales para reintentar `QA/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayloadQA-01`.
+
+## PP-Decisiones 212 - Auth Stripe CLI y secret webhook sandbox
+
+### Microfase
+
+Microfase:
+
+`DEVOPS/Suscripciones-PaymentProvider-StripeSandboxWebhook-AuthSecret-01`
+
+Resultado:
+
+- `WARN` controlado con bloqueo pendiente de usuario.
+
+Codigo de estado:
+
+- `USER_ACTION_REQUIRED_STRIPE_LOGIN`.
+
+### Base validada
+
+Estado Git inicial:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `4122c63`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+### Stripe CLI
+
+Estado:
+
+- Stripe CLI disponible;
+- version detectada: `stripe version 1.43.2`;
+- instalacion fuera del repo;
+- no se agrego nada a `vendor/`;
+- no se agrego nada al repositorio.
+
+Autenticacion:
+
+- `stripe whoami`: `Authenticated: false`;
+- se inicio `stripe login` de forma controlada;
+- el flujo genero autorizacion pendiente de usuario;
+- no se completo autenticacion;
+- no se obtuvo `whsec_...` temporal;
+- no se inicio `stripe listen`.
+
+Regla aplicada:
+
+- al requerir autorizacion del usuario en navegador/confirmacion, la microfase se detuvo antes de listener y antes de cualquier webhook/evento.
+
+### Endpoint local/dev
+
+Endpoint preparado:
+
+`http://127.0.0.1:8091/api/subscriptions/index.php/webhooks/stripe`
+
+Estado local:
+
+- servidor PHP local activo en `127.0.0.1:8091`;
+- no se uso endpoint productivo;
+- no se uso `ngrok`;
+- no se abrio tunel nuevo.
+
+### Listener sandbox/test
+
+Comando preparado para ejecutar solo despues de completar login sandbox/test:
+
+```bash
+stripe listen \
+  --events payment_intent.succeeded,payment_intent.payment_failed,payment_intent.canceled \
+  --forward-to http://127.0.0.1:8091/api/subscriptions/index.php/webhooks/stripe
+```
+
+Estado:
+
+- listener no ejecutado;
+- no quedo listener activo;
+- no se genero `whsec_...`;
+- no se disparo ningun evento.
+
+### Variables temporales pendientes
+
+Variables requeridas para la siguiente QA, una vez obtenido el secret temporal:
+
+```bash
+STRIPE_WEBHOOK_SECRET=<whsec_temporal_redactado>
+STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false
+```
+
+Reglas:
+
+- no guardar en `.env`;
+- no guardar en config real;
+- no commitear;
+- no imprimir secret completo;
+- usar solo test/sandbox;
+- no usar `--live`;
+- no usar llaves productivas.
+
+### Seguridad
+
+Validaciones:
+
+- no se uso llave live;
+- no se uso `livemode=true`;
+- no se imprimio API key completa;
+- no se imprimio `whsec_...` completo;
+- no se guardo secret en repo;
+- no se toco `.env`;
+- no se toco config real;
+- no se creo archivo temporal dentro del repo;
+- no quedo proceso `stripe listen` activo;
+- no quedo proceso `stripe trigger` activo.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios/repositorios;
+- SQL/schema/seeds;
+- fixtures;
+- `.env`;
+- archivos de configuracion reales;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- webhook productivo;
+- PaymentIntent productivo;
+- PaymentIntent sandbox;
+- llaves live;
+- `livemode=true`;
+- QA funcional del payload real sandbox;
+- `stripe trigger`;
+- POST/curl manual al webhook;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint interno `payment-intents`;
+- endpoint interno `checkout-intents`;
+- fixtures DEV/local;
+- migraciones/seeds;
+- SQL write;
+- Composer.
+
+### Estado final de precondiciones
+
+Listo:
+
+- Stripe CLI instalada y disponible;
+- endpoint local/dev identificado;
+- comando `stripe listen --forward-to` definido;
+- estrategia de variables temporales definida.
+
+Pendiente:
+
+- usuario debe completar autenticacion Stripe CLI en sandbox/test;
+- despues del login, ejecutar listener para obtener `whsec_...` temporal;
+- exportar `STRIPE_WEBHOOK_SECRET` solo al proceso local de QA;
+- exportar `STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false`;
+- reintentar QA funcional de payload real sandbox.
+
+### Siguiente microfase recomendada
+
+`DEVOPS/Suscripciones-PaymentProvider-StripeSandboxWebhook-AuthSecret-02`
+
+Objetivo sugerido:
+
+Completar `stripe login` con accion del usuario, iniciar `stripe listen --forward-to` contra el endpoint local/dev, confirmar de forma redactada que existe un `whsec_...` temporal, y dejarlo listo solo en la shell/proceso de QA para reintentar `QA/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayloadQA-01`.
