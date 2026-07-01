@@ -40655,3 +40655,383 @@ La estrategia `STRIPE_WEBHOOK_EXPECTED_LIVEMODE` queda validada:
 Objetivo sugerido:
 
 Preparar la siguiente validacion con payload sandbox real de Stripe, sin habilitar produccion, sin Stripe CLI productivo y manteniendo `STRIPE_WEBHOOK_EXPECTED_LIVEMODE` como precondicion explicita.
+## PP-Decisiones 210 - Readiness de payload real Stripe sandbox
+
+### Microfase
+
+Microfase:
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayload-Readiness-01`
+
+Resultado:
+
+- `PASS sandbox real payload readiness`.
+
+Base validada:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `6d3676c`;
+- ahead/behind inicial: `0/0`;
+- working tree inicial: limpio.
+
+### Contexto actual
+
+La microfase `QA/Suscripciones-PaymentProvider-StripeRealPayload-LivemodeStrategyQA-01` cerro con PASS con WARN no bloqueante.
+
+Estado tecnico validado:
+
+- `StripeWebhookPayloadNormalizer` esta implementado y validado;
+- `StripeWebhookSignatureVerifier` esta implementado y validado;
+- `ProcessStripeSubscriptionWebhookService` procesa eventos Stripe normalizados;
+- `STRIPE_WEBHOOK_EXPECTED_LIVEMODE` esta implementado y validado;
+- en local/dev, `expected_livemode=false` + payload `livemode=false` llega al service;
+- mismatch `livemode` falla con `422 stripe_livemode_mismatch`;
+- firma invalida, timestamp vencido y secret faltante conservan precedencia segura;
+- produccion Stripe sigue bloqueada;
+- no existe `composer.json`;
+- no existe `composer.lock`;
+- no existe `vendor/`;
+- no existe SDK Stripe PHP instalado;
+- no se ha validado todavia un payload real Stripe sandbox.
+
+### Fuentes oficiales Stripe consultadas
+
+Se reviso documentacion oficial vigente de Stripe para confirmar estructura y supuestos minimos:
+
+- Event object: `https://docs.stripe.com/api/events/object`;
+- PaymentIntent object: `https://docs.stripe.com/api/payment_intents/object`;
+- Event types: `https://docs.stripe.com/api/events/types`;
+- webhook signatures: `https://docs.stripe.com/webhooks/signature`;
+- metadata: `https://docs.stripe.com/metadata`;
+- payment status updates: `https://docs.stripe.com/payments/payment-intents/verifying-status`.
+
+Conclusiones relevantes para MXMed:
+
+- el Event incluye `id`, `type`, `created`, `livemode`, `api_version` y `data.object`;
+- para eventos `payment_intent.*`, `data.object` es un `payment_intent`;
+- el PaymentIntent incluye `id`, `object`, `status`, `amount`, `currency`, `livemode` y `metadata`;
+- Stripe envia metadata del objeto dentro del Event cuando existe metadata en el PaymentIntent;
+- la verificacion de firma depende del raw body exacto, el header `Stripe-Signature` y el endpoint secret;
+- `livemode=false` corresponde a modo test/sandbox.
+
+### Proposito de la futura validacion sandbox
+
+La siguiente validacion real/sandbox debera comprobar:
+
+- que Stripe envia un payload compatible con `StripeWebhookPayloadNormalizer`;
+- que `livemode=false` se valida correctamente;
+- que `STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false` permite sandbox/test;
+- que la firma real sandbox se valida con `StripeWebhookSignatureVerifier`;
+- que el payload real puede mapearse al contrato interno MXMed;
+- que `provider_payment_id` real puede correlacionarse con un payment intent local;
+- que `amount_cents` y `currency` se comparan contra snapshot local;
+- que el webhook no activa suscripcion;
+- que `activate-after-payment` sigue siendo el unico punto de activacion.
+
+### Precondiciones antes de ejecutar sandbox real
+
+No debe ejecutarse prueba real sandbox hasta tener:
+
+- endpoint local/dev accesible para Stripe o tunel seguro definido;
+- `STRIPE_WEBHOOK_SECRET` sandbox/test configurado solo en entorno de prueba;
+- `STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false` configurado explicitamente;
+- llave secreta Stripe test/sandbox disponible fuera del repo;
+- mecanismo seguro para crear PaymentIntent sandbox sin exponer llaves;
+- PaymentIntent local MXMed correlacionable con provider `stripe`;
+- metadata MXMed definida;
+- baseline DB read-only antes de la prueba;
+- plan de rollback/no-op documentado;
+- revision de logs seguros;
+- confirmacion de que produccion sigue bloqueada.
+
+Bloqueos previos:
+
+- no usar llave productiva;
+- no usar `livemode=true`;
+- no guardar secrets en repo;
+- no tocar `.env` ni config real persistente;
+- no instalar SDK ni Composer en esta readiness;
+- no ejecutar Stripe CLI en esta readiness;
+- no crear PaymentIntent real o sandbox en esta readiness.
+
+### Metadata minima recomendada
+
+Metadata recomendada para el PaymentIntent sandbox:
+
+- `mxmed_checkout_intent_uuid`;
+- `mxmed_payment_intent_uuid`;
+- `mxmed_entity_type`;
+- `mxmed_entity_id`;
+- `mxmed_plan_code`;
+- `mxmed_billing_period`;
+- `mxmed_environment`.
+
+Reglas:
+
+- metadata ayuda a diagnostico y correlacion;
+- metadata no reemplaza validacion server-side;
+- la correlacion primaria debe seguir protegida por `provider_payment_id` y snapshot local;
+- no incluir datos clinicos;
+- no incluir datos de tarjeta;
+- no incluir secrets;
+- no incluir datos personales innecesarios.
+
+### Datos minimos esperados del Event real
+
+Evento Stripe minimo:
+
+- `id`;
+- `type`;
+- `livemode=false`;
+- `api_version`;
+- `created`;
+- `data.object`.
+
+PaymentIntent minimo en `data.object`:
+
+- `object=payment_intent`;
+- `id`;
+- `status`;
+- `amount`;
+- `currency`;
+- `metadata`.
+
+Campos diagnosticos opcionales:
+
+- `amount_received`;
+- `latest_charge`;
+- `payment_method_types`.
+
+Contrato local actual:
+
+- `StripeWebhookPayloadNormalizer` requiere `Event.id`;
+- requiere `Event.type`;
+- requiere `data.object` como array;
+- requiere `data.object.object=payment_intent`;
+- requiere `data.object.id`;
+- requiere `data.object.status`;
+- requiere `data.object.amount` o `amount_received`;
+- requiere `data.object.currency`;
+- si `expected_livemode` esta definido, requiere `Event.livemode` presente y coincidente;
+- normaliza currency a mayusculas, por ejemplo `mxn` -> `MXN`;
+- solo conserva metadata segura con prefijo `mxmed_`.
+
+### Eventos sandbox minimos futuros
+
+Matriz minima futura:
+
+1. `payment_intent.succeeded`
+
+   - debe mapear a `normalized_status=paid`;
+   - debe llegar al service;
+   - si correlaciona y amount/currency coinciden, debe marcar PI local como `paid`;
+   - debe crear `payment_event` processed;
+   - no debe activar suscripcion.
+
+2. `payment_intent.payment_failed`
+
+   - debe mapear a `normalized_status=failed`;
+   - debe crear evento controlado;
+   - no debe degradar un PI ya `paid`;
+   - debe fallar controlado si hay conflicto de estado.
+
+3. `payment_intent.canceled`
+
+   - debe mapear a `normalized_status=cancelled`;
+   - debe crear evento controlado;
+   - no debe activar;
+   - no debe degradar `paid`.
+
+### Estrategia de PaymentIntent local correlacionable
+
+Para validar `payment_intent.succeeded` con payload real sandbox se requiere una preparacion controlada:
+
+- crear o reutilizar checkout/payment intent local DEV con provider `stripe`;
+- asociar `provider_payment_id` real sandbox al registro local;
+- asegurar `amount_cents` y `currency` desde snapshot local;
+- evitar `doctor/900001`;
+- evitar dañar `doctor/990099`;
+- usar fixture nuevo o doctor seguro solo si hay microfase explicita;
+- capturar baseline read-only antes y despues;
+- confirmar que el webhook no active suscripcion.
+
+Si no existe PI local correlacionable, el resultado esperado de un payload real sandbox sera:
+
+- HTTP recomendado: `404`;
+- error: `stripe_payment_intent_not_found`;
+- `payment_event` failed controlado;
+- sin activacion.
+
+### Amount y currency
+
+Reglas:
+
+- Stripe envia `amount` en unidad minima de la moneda;
+- para MXN se interpreta como centavos;
+- `currency` puede venir lower-case, por ejemplo `mxn`;
+- el normalizador convierte a `MXN`;
+- `ProcessStripeSubscriptionWebhookService` compara contra snapshot local;
+- mismatch de amount debe fallar como `stripe_amount_mismatch`;
+- mismatch de currency debe fallar como `stripe_currency_mismatch`;
+- frontend nunca controla `amount` ni `currency`.
+
+### Livemode
+
+Reglas sandbox/test:
+
+- `STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false` debe estar configurado explicitamente;
+- payload real sandbox debe traer `livemode=false`;
+- payload `livemode=true` debe rechazarse;
+- produccion no debe aceptar payload test;
+- produccion sigue bloqueada hasta microfase explicita.
+
+### Firma y secrets
+
+Reglas:
+
+- usar solo `STRIPE_WEBHOOK_SECRET` sandbox/test;
+- no guardar secrets en repo;
+- no documentar valores reales;
+- no loggear secret;
+- no loggear firma completa;
+- firma invalida debe fallar antes del normalizador/service;
+- secret faltante debe fallar controlado;
+- el raw body exacto debe preservarse para validar firma.
+
+### Seguridad de logs
+
+En QA sandbox solo se permite loggear:
+
+- provider;
+- endpoint;
+- event id;
+- event type;
+- payment intent id;
+- status;
+- amount;
+- currency;
+- livemode;
+- api_version;
+- error code;
+- IDs MXMed seguros.
+
+No loggear:
+
+- raw body completo;
+- secret;
+- firma completa;
+- datos de tarjeta;
+- billing details sensibles;
+- datos clinicos;
+- datos personales innecesarios;
+- stacktrace.
+
+### Matriz QA futura recomendada
+
+Siguiente microfase funcional recomendada:
+
+`QA/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayloadQA-01`
+
+Casos minimos:
+
+- webhook con firma sandbox valida + `livemode=false`;
+- payload real sandbox no correlacionado:
+  - esperado `stripe_payment_intent_not_found`;
+- payload real sandbox correlacionado:
+  - esperado PI local `paid/succeeded`;
+  - payment event `processed`;
+  - checkout sigue `pending_payment`;
+  - no activacion;
+- replay exacto:
+  - idempotente;
+- event conflict:
+  - `stripe_event_conflict`;
+- amount mismatch:
+  - `stripe_amount_mismatch`;
+- currency mismatch:
+  - `stripe_currency_mismatch`;
+- firma invalida:
+  - HTTP `401`;
+- livemode mismatch:
+  - HTTP `422`;
+- logs seguros;
+- DB sin nueva suscripcion activa hasta `activate-after-payment`.
+
+### Criterios de bloqueo
+
+Bloquear avance si:
+
+- se requiere llave productiva;
+- se requiere `livemode=true`;
+- falta webhook secret sandbox;
+- no hay forma segura de exponer endpoint dev/local;
+- no hay PI local correlacionable cuando el objetivo sea marcar PI `paid`;
+- payload real difiere y el normalizador no lo soporta;
+- logs exponen datos sensibles;
+- amount/currency no se pueden validar;
+- se observa activacion automatica desde webhook;
+- se toca produccion;
+- se requiere instalar Composer/SDK Stripe sin microfase explicita;
+- se requiere tocar `.env` o config real persistente.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios/repositorios;
+- SQL/schema/seeds;
+- fixtures;
+- `.env`;
+- archivos de configuracion reales;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- POST/curl;
+- SQL;
+- Stripe CLI;
+- webhook Stripe real;
+- creacion real de PaymentIntent;
+- creacion sandbox de PaymentIntent;
+- confirmacion real/sandbox de PaymentIntent;
+- `confirm_mock`;
+- `activate-after-payment`;
+- `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- Composer;
+- migraciones/seeds;
+- writes manuales en BD.
+
+### Resultado
+
+Resultado:
+
+- `PASS sandbox real payload readiness`.
+
+Quedan definidos:
+
+- precondiciones;
+- datos minimos;
+- metadata;
+- eventos minimos;
+- correlacion local;
+- amount/currency;
+- livemode;
+- firma/secrets;
+- logs;
+- matriz QA futura;
+- criterios de bloqueo;
+- produccion sigue bloqueada.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayloadQA-01`
+
+Objetivo sugerido:
+
+Ejecutar validacion controlada con payload real Stripe sandbox/test, primero no correlacionado y luego correlacionado si existe PI local seguro, sin activacion automatica y sin produccion.
