@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Subscriptions\Services;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
@@ -26,6 +28,8 @@ final class BuildSubscriptionPaymentActivationStateService
     private const INTENT_TYPE_UPGRADE = 'upgrade';
     private const PRICING_STRATEGY_PRORATED_DIFFERENCE = 'prorated_difference';
     private const SOURCE_UPGRADE_ACTIVATION = 'mxmed_payment_intent_upgrade_activation_v1';
+    private const MONTHLY_MARKUP_FACTOR = 1.25;
+    private const MONTHLY_MARKUP_PERCENT = 25;
     private const PLAN_RANKS = [
         'basic' => 1,
         'standard' => 2,
@@ -112,6 +116,7 @@ final class BuildSubscriptionPaymentActivationStateService
             'contract_acceptance' => $this->contractAcceptanceState($contractAcceptance),
             'active_subscription' => $this->activeSubscriptionState($activeSubscription),
             'upgrade' => $this->upgradeState($upgradeContext),
+            'upgrade_explanation' => $this->upgradeExplanation($upgradeContext, $activeSubscription),
             'activation_eligibility' => [
                 'can_activate' => $canActivate,
                 'reasons' => array_values($reasons),
@@ -452,6 +457,15 @@ final class BuildSubscriptionPaymentActivationStateService
             'plan_code' => $activeSubscription !== null
                 ? $this->cleanText($activeSubscription['plan_code'] ?? null, 64)
                 : null,
+            'billing_period' => $activeSubscription !== null
+                ? $this->cleanText($activeSubscription['billing_period'] ?? null, 32)
+                : null,
+            'starts_at' => $activeSubscription !== null
+                ? $this->cleanText($activeSubscription['starts_at'] ?? null, 32)
+                : null,
+            'expires_at' => $activeSubscription !== null
+                ? $this->cleanText($activeSubscription['expires_at'] ?? null, 32)
+                : null,
         ];
     }
 
@@ -470,6 +484,77 @@ final class BuildSubscriptionPaymentActivationStateService
             'adjustment_amount_cents' => $upgradeContext['adjustment_amount_cents'],
             'currency' => $upgradeContext['currency'],
             'pricing_strategy' => $upgradeContext['pricing_strategy'],
+        ];
+    }
+
+    private function upgradeExplanation(?array $upgradeContext, ?array $activeSubscription): ?array
+    {
+        if ($upgradeContext === null) {
+            return null;
+        }
+
+        $currentPlanCode = (string)$upgradeContext['current_plan_code'];
+        $targetPlanCode = (string)$upgradeContext['target_plan_code'];
+        $targetBillingPeriod = (string)$upgradeContext['target_billing_period'];
+        $currentPlanPrice = $this->nullablePositiveAmount($upgradeContext['current_price_period_cents'] ?? null);
+        $targetPlanPrice = $this->nullablePositiveAmount($upgradeContext['target_price_period_cents'] ?? null);
+        $differenceCents = $this->nullablePositiveAmount($upgradeContext['price_difference_cents'] ?? null);
+        if ($differenceCents === null && $currentPlanPrice !== null && $targetPlanPrice !== null) {
+            $calculatedDifference = $targetPlanPrice - $currentPlanPrice;
+            $differenceCents = $calculatedDifference > 0 ? $calculatedDifference : null;
+        }
+
+        $totalPeriodDays = $this->nullablePositiveAmount($upgradeContext['total_period_days'] ?? null);
+        $remainingDays = $this->nullablePositiveAmount($upgradeContext['remaining_days'] ?? null);
+        $elapsedDays = $totalPeriodDays !== null && $remainingDays !== null
+            ? max(0, $totalPeriodDays - $remainingDays)
+            : null;
+
+        $coveredUntil = $this->cleanText($activeSubscription['expires_at'] ?? null, 32);
+        $targetLabel = $this->planLabel($targetPlanCode);
+        $annualPrice = $targetBillingPeriod === 'annual' ? $targetPlanPrice : null;
+        $monthlyPrice = $annualPrice !== null
+            ? (int)round(($annualPrice / 12) * self::MONTHLY_MARKUP_FACTOR)
+            : ($targetBillingPeriod === 'monthly' ? $targetPlanPrice : null);
+
+        return [
+            'current_plan' => [
+                'code' => $currentPlanCode,
+                'label' => $this->planLabel($currentPlanCode),
+            ],
+            'target_plan' => [
+                'code' => $targetPlanCode,
+                'label' => $targetLabel,
+            ],
+            'benefits_summary' => [],
+            'benefits_source' => 'pending_plan_capabilities_mapping',
+            'pricing_explanation' => [
+                'strategy' => (string)$upgradeContext['pricing_strategy'],
+                'reason' => 'Solo pagas la diferencia proporcional por el tiempo restante de tu suscripcion actual.',
+                'current_plan_price_cents' => $currentPlanPrice,
+                'target_plan_price_cents' => $targetPlanPrice,
+                'difference_cents' => $differenceCents,
+                'elapsed_days' => $elapsedDays,
+                'remaining_days' => $remainingDays,
+                'total_period_days' => $totalPeriodDays,
+                'adjustment_amount_cents' => (int)$upgradeContext['adjustment_amount_cents'],
+                'currency' => (string)$upgradeContext['currency'],
+            ],
+            'coverage' => [
+                'covered_until' => $coveredUntil,
+                'message' => $this->coverageMessage($targetLabel, $coveredUntil),
+            ],
+            'renewal_after_coverage' => [
+                'annual_price_cents' => $annualPrice,
+                'monthly_price_cents' => $monthlyPrice,
+                'monthly_price_formula' => 'annual_price / 12 * 1.25',
+                'monthly_markup_percent' => self::MONTHLY_MARKUP_PERCENT,
+                'message' => 'Al renovar despues de esa fecha, se aplicara el precio regular vigente del plan ' . $targetLabel . '.',
+            ],
+            'activation_rule' => [
+                'recalculates_on_activation' => false,
+                'message' => 'El monto ya fue calculado al crear el checkout y no se recalcula al activar.',
+            ],
         ];
     }
 
@@ -601,6 +686,11 @@ final class BuildSubscriptionPaymentActivationStateService
             'adjustment_amount_cents' => $adjustmentAmountCents,
             'currency' => $currency,
             'pricing_strategy' => $pricingStrategy,
+            'current_price_period_cents' => $this->nullablePositiveAmount($context['current_price_period_cents'] ?? null),
+            'target_price_period_cents' => $this->nullablePositiveAmount($context['target_price_period_cents'] ?? null),
+            'price_difference_cents' => $this->nullablePositiveAmount($context['price_difference_cents'] ?? null),
+            'remaining_days' => $this->nullablePositiveAmount($context['remaining_days'] ?? null),
+            'total_period_days' => $this->nullablePositiveAmount($context['period_days'] ?? null),
         ];
     }
 
@@ -637,6 +727,71 @@ final class BuildSubscriptionPaymentActivationStateService
 
         $text = trim((string)($value ?? ''));
         return ctype_digit($text) ? max(0, (int)$text) : 0;
+    }
+
+    private function nullablePositiveAmount($value): ?int
+    {
+        $amount = $this->positiveAmount($value);
+
+        return $amount > 0 ? $amount : null;
+    }
+
+    private function planLabel(string $planCode): string
+    {
+        $labels = [
+            'basic' => 'Básico',
+            'standard' => 'Estándar',
+            'optimum' => 'Óptimo',
+            'professional' => 'Profesional',
+        ];
+
+        return $labels[$planCode] ?? $planCode;
+    }
+
+    private function coverageMessage(string $targetLabel, ?string $coveredUntil): string
+    {
+        $dateLabel = $this->spanishDateLabel($coveredUntil);
+        if ($dateLabel === null) {
+            return 'Con este pago tu perfil queda cubierto como ' . $targetLabel . ' hasta la fecha de fin de tu suscripcion vigente.';
+        }
+
+        return 'Con este pago tu perfil queda cubierto como ' . $targetLabel . ' hasta el ' . $dateLabel . '.';
+    }
+
+    private function spanishDateLabel(?string $value): ?string
+    {
+        $value = $this->cleanText($value, 32);
+        if ($value === null) {
+            return null;
+        }
+
+        try {
+            $date = new DateTimeImmutable($value, new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            return null;
+        }
+
+        $months = [
+            1 => 'enero',
+            2 => 'febrero',
+            3 => 'marzo',
+            4 => 'abril',
+            5 => 'mayo',
+            6 => 'junio',
+            7 => 'julio',
+            8 => 'agosto',
+            9 => 'septiembre',
+            10 => 'octubre',
+            11 => 'noviembre',
+            12 => 'diciembre',
+        ];
+
+        $month = $months[(int)$date->format('n')] ?? '';
+        if ($month === '') {
+            return null;
+        }
+
+        return $date->format('d') . ' de ' . $month . ' de ' . $date->format('Y');
     }
 
     private function safeLookup(callable $lookup, array &$reasons): ?array

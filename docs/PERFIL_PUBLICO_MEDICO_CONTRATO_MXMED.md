@@ -41766,3 +41766,161 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar estaticamente que el provider Stripe ya no llama `curl_close()` directamente en PHP `8.5`, que `php -l` pasa, que no se altero el contrato de PaymentIntent Stripe y que no hubo cambios en frontend, API ni SQL/schema/seeds.
+
+## PP-Decisiones 216 - Read-model de explicacion de pricing para upgrade
+
+### Microfase cerrada
+
+`BE/Suscripciones-UpgradeIntent-PricingExplanation-ReadModel-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+Se prepara el contrato de datos backend para que la UX pueda explicar un upgrade de plan antes de activar la mejora:
+
+- que plan tiene el usuario;
+- a que plan sube;
+- que obtiene al subir;
+- por que se cobra el monto del checkout;
+- que el cobro es una diferencia proporcional;
+- hasta que fecha queda cubierto;
+- cuanto pagara al renovar despues de esa fecha;
+- que la activacion no recalcula el ajuste economico.
+
+### Archivo backend modificado
+
+- `modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`
+
+### Contrato agregado
+
+El read-model `payment-activation-state` agrega la seccion:
+
+`upgrade_explanation`
+
+Para checkouts que no sean upgrade, la seccion queda en `null`.
+
+Para upgrade, la seccion se construye desde el snapshot backend-controlled guardado al crear el checkout, especialmente desde `notes.upgrade_context`.
+
+### Estructura de datos
+
+`upgrade_explanation` incluye:
+
+- `current_plan`:
+  - `code`;
+  - `label`.
+- `target_plan`:
+  - `code`;
+  - `label`.
+- `benefits_summary`: lista segura, por ahora vacia.
+- `benefits_source`: `pending_plan_capabilities_mapping`.
+- `pricing_explanation`:
+  - `strategy=prorated_difference`;
+  - reason comercial;
+  - precio del plan actual;
+  - precio del plan destino;
+  - diferencia de precio;
+  - dias transcurridos;
+  - dias restantes;
+  - dias totales del periodo;
+  - monto de ajuste ya calculado;
+  - moneda.
+- `coverage`:
+  - `covered_until`;
+  - mensaje comercial de cobertura hasta el fin de vigencia actual.
+- `renewal_after_coverage`:
+  - precio anual regular del plan destino si existe en el snapshot;
+  - precio mensual informativo derivado si aplica;
+  - formula `annual_price / 12 * 1.25`;
+  - `monthly_markup_percent=25`;
+  - mensaje de renovacion futura.
+- `activation_rule`:
+  - `recalculates_on_activation=false`;
+  - mensaje de que el monto ya fue calculado al crear el checkout.
+
+### Regla de pricing documentada
+
+La activacion post-pago no recalcula el ajuste.
+
+El ajuste se calcula al crear el checkout upgrade y queda guardado como snapshot. La activacion solo debe validar:
+
+- checkout upgrade pagado;
+- PaymentIntent por el monto del checkout;
+- evento de pago procesado;
+- plan destino activable;
+- vigencia conservada.
+
+### Regla comercial
+
+El usuario ya pago un plan inferior.
+
+Al subir de plan durante la vigencia, paga solo la diferencia proporcional por el tiempo restante:
+
+`ajuste = (precio_plan_destino - precio_plan_actual) * (dias_restantes / dias_totales_periodo)`
+
+La vigencia no se reinicia. La cobertura del plan nuevo termina el mismo dia que terminaba la suscripcion actual.
+
+Al renovar despues de esa fecha, se aplicara el precio regular vigente del plan destino.
+
+### Precio mensual informativo
+
+Cuando el snapshot anual existe y el precio mensual no esta persistido como fuente primaria del checkout, el read-model puede exponer un mensual informativo derivado:
+
+`monthly_price = (annual_price / 12) * 1.25`
+
+El sobreprecio mensual queda documentado como `25%` contra el equivalente mensual anual.
+
+### Beneficios de plan
+
+No existe todavia una fuente limpia y centralizada para diferencias comparativas de capacidades entre planes.
+
+Por eso el read-model deja:
+
+- `benefits_summary=[]`;
+- `benefits_source=pending_plan_capabilities_mapping`.
+
+Esto evita inventar beneficios y deja preparado el contrato para una microfase futura de matriz de capacidades.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend visual final;
+- CSS;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- checkout productivo;
+- Stripe webhook;
+- `activate-after-payment`;
+- SQL/schema/seeds;
+- precios productivos reales.
+
+No se ejecuto:
+
+- SQL manual;
+- `stripe trigger`;
+- `confirm_mock`;
+- `activate-after-payment`;
+- creacion de checkout nuevo;
+- creacion de PaymentIntent nuevo;
+- activacion de suscripcion.
+
+### Validacion
+
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`: PASS.
+- `git diff --check`: PASS.
+- frontend no tocado.
+- SQL/schema/seeds no tocado.
+- Stripe no ejecutado.
+- `activate-after-payment` no ejecutado.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-PricingExplanation-ReadModel-PostPush-01`
+
+Objetivo sugerido:
+
+Validar que `payment-activation-state` expone `upgrade_explanation` para el checkout Stripe correlacionado `df8c0a2b-9959-4927-9238-ae08c77e30b7`, que el monto de ajuste sale del snapshot del checkout, que la cobertura usa la vigencia actual y que no se ejecuta activacion.
