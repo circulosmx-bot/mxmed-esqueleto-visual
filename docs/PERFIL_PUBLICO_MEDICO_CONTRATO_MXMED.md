@@ -39104,3 +39104,432 @@ No se ejecuto:
 Objetivo sugerido:
 
 Disenar el normalizador de payload real Stripe hacia el contrato interno de `ProcessStripeSubscriptionWebhookService`, manteniendo compatibilidad con payload sintetico y preparando QA sandbox real.
+
+## PP-Decisiones 204 - Readiness de normalizador de payload real Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-NormalizerReadiness-01`
+
+### Objetivo
+
+Disenar documentalmente el normalizador de payload real Stripe hacia el contrato interno actual de `ProcessStripeSubscriptionWebhookService`, manteniendo compatibilidad con payload sintetico y preparando una implementacion posterior segura sin activar produccion.
+
+### Base
+
+Estado Git inicial:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `2e57bd9`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+Microfase previa cerrada:
+
+- `BE/Suscripciones-PaymentProvider-StripeRealPayload-Readiness-01`: PASS.
+
+Estado actual:
+
+- flujo Stripe sintetico validado completo;
+- `StripeWebhookSignatureVerifier` implementado;
+- webhook Stripe conserva contrato HTTP/JSON;
+- payload real Stripe sandbox todavia no validado;
+- produccion sigue bloqueada;
+- no existe `composer.json`;
+- no existe `composer.lock`;
+- no existe `vendor/`;
+- no existe SDK Stripe PHP instalado.
+
+### Contrato interno actual detectado
+
+El endpoint `api/subscriptions/index.php` arma actualmente input para `ProcessStripeSubscriptionWebhookService::process(...)` mediante `subscriptionStripeWebhookNormalizeEvent(...)`.
+
+Campos reales enviados:
+
+- `provider`: valor fijo `stripe`;
+- `provider_event_id`: `event.id`;
+- `provider_event_type`: `event.type`;
+- `provider_event_created_at`: `event.created`;
+- `provider_payment_id`: `data.object.id`;
+- `provider_status`: `data.object.status`;
+- `amount_cents`: `data.object.amount` o `data.object.amount_received`;
+- `currency`: `data.object.currency`;
+- `livemode`: `event.livemode`, si existe;
+- `api_version`: `event.api_version`;
+- `event_hash`: `sha256` del raw body;
+- `payload_text_sanitized`: resumen seguro del evento;
+- `raw_event_reference`: `event.id`;
+- `received_at`: timestamp local en UTC;
+- `signature_validated_at`: timestamp local en UTC.
+
+Campos que el service normaliza internamente:
+
+- `currency` se normaliza a uppercase;
+- `provider_event_created_at` se convierte a `transitioned_at`;
+- `normalized_status` no se recibe desde el endpoint;
+- `normalized_status` se calcula dentro de `ProcessStripeSubscriptionWebhookService` con base en `provider_event_type` y `provider_status`;
+- `event_type` interno tambien se determina dentro del service.
+
+Validaciones internas actuales del service:
+
+- provider debe ser `stripe`;
+- `provider_event_id` requerido;
+- `provider_event_type` requerido;
+- `provider_payment_id` requerido;
+- `provider_status` requerido;
+- `event_hash` requerido;
+- `amount_cents` requerido;
+- `currency` requerida;
+- dedupe por `provider_event_id`;
+- conflicto por `event_hash` distinto;
+- correlacion por `provider_payment_id`;
+- mismatch amount/currency contra payment intent local;
+- estados no accionables quedan como failed controlado.
+
+### Responsabilidad del normalizador futuro
+
+`StripeWebhookPayloadNormalizer` debe:
+
+- recibir event payload Stripe ya verificado por firma;
+- validar estructura minima;
+- extraer `event.id`;
+- extraer `event.type`;
+- extraer `event.livemode`;
+- extraer `event.api_version`;
+- extraer `event.created`;
+- extraer `data.object`;
+- validar que `data.object.object=payment_intent`;
+- extraer `data.object.id` como `provider_payment_id`;
+- extraer status real del PaymentIntent;
+- extraer amount/currency;
+- extraer metadata MXMed;
+- producir el input interno esperado por `ProcessStripeSubscriptionWebhookService`;
+- no consultar DB;
+- no activar suscripciones;
+- no verificar firma;
+- no hacer writes;
+- no conocer logica de activacion de suscripcion.
+
+### Ubicacion sugerida
+
+Ruta recomendada para la implementacion inicial:
+
+`modules/subscriptions/services/StripeWebhookPayloadNormalizer.php`
+
+Motivo:
+
+- es la ruta menos invasiva compatible con la carga manual actual;
+- mantiene el patron de servicios usados por `api/subscriptions/index.php`;
+- evita introducir autoload nuevo;
+- permite mover despues a una carpeta provider dedicada si se ordena una capa Stripe mas amplia.
+
+Alternativa futura:
+
+`modules/subscriptions/payment_providers/stripe/StripeWebhookPayloadNormalizer.php`
+
+### Contrato conceptual de entrada
+
+Input propuesto:
+
+- `event_payload`: array obligatorio, ya parseado desde JSON;
+- `raw_body`: string opcional, necesario si el normalizador calcula `event_hash`;
+- `expected_livemode`: bool o null;
+- `expected_currency`: string, default `MXN`;
+- `environment`: string opcional, por ejemplo `local`, `dev`, `sandbox`, `production`.
+
+Precondicion:
+
+- la firma ya fue validada por `StripeWebhookSignatureVerifier`;
+- el normalizador no debe recibir ni verificar secrets;
+- el normalizador no debe leer `php://input`.
+
+### Contrato conceptual de salida exitosa
+
+Output para alimentar a `ProcessStripeSubscriptionWebhookService`:
+
+- `provider=stripe`;
+- `provider_event_id`;
+- `provider_event_type`;
+- `provider_event_created_at`;
+- `provider_payment_id`;
+- `provider_status`;
+- `amount_cents`;
+- `currency`;
+- `livemode`;
+- `api_version`;
+- `event_hash`;
+- `payload_text_sanitized`;
+- `raw_event_reference`;
+- `received_at`;
+- `signature_validated_at`.
+
+Campos conceptuales que puede devolver adicionalmente para diagnostico del endpoint o logs seguros:
+
+- `provider_payload_object=payment_intent`;
+- `metadata`;
+- `normalized_status_preview`;
+- `internal_event_type_preview`.
+
+Regla:
+
+- si se incluyen campos extras, no deben romper `ProcessStripeSubscriptionWebhookService`;
+- la implementacion debe decidir si filtra al contrato actual antes de llamar al service.
+
+### Contrato de error controlado
+
+Errores sugeridos:
+
+- `stripe_event_id_missing`;
+- `stripe_event_type_missing`;
+- `stripe_event_data_object_missing`;
+- `stripe_payment_intent_object_invalid`;
+- `stripe_payment_intent_id_missing`;
+- `stripe_payment_intent_status_missing`;
+- `stripe_payment_intent_amount_missing`;
+- `stripe_payment_intent_currency_missing`;
+- `stripe_livemode_mismatch`;
+- `stripe_unsupported_event_type`;
+- `stripe_metadata_missing`;
+- `stripe_payload_invalid`.
+
+HTTP sugerido:
+
+- payload malformado: `400`;
+- mismatch critico: `422`;
+- evento no soportado/no accionable: mantener contrato actual, preferentemente `200` con failed/no actionable o resultado controlado equivalente.
+
+Reglas:
+
+- ante error no debe activarse nada;
+- ante error no debe crearse checkout;
+- ante error no debe crearse payment intent;
+- ante error no debe mutarse `profile_subscriptions`;
+- el endpoint debe responder JSON controlado, sin stacktrace.
+
+### Mapeo de eventos
+
+Mapeo minimo:
+
+- `payment_intent.succeeded`:
+  - `provider_status=succeeded`;
+  - `normalized_status=paid`;
+  - event_type interno compatible actual: `payment_intent_confirm`;
+- `payment_intent.payment_failed`:
+  - provider status desde PaymentIntent real;
+  - `normalized_status=failed`;
+  - event_type interno compatible actual: `payment_intent_failed`;
+- `payment_intent.canceled`:
+  - provider status `canceled`;
+  - `normalized_status=cancelled`;
+  - event_type interno compatible actual: `payment_intent_cancelled`.
+
+Estados intermedios:
+
+- `processing`;
+- `requires_action`;
+- `requires_payment_method`;
+- `requires_confirmation`;
+- `requires_capture`.
+
+Regla:
+
+- estados intermedios no deben activar;
+- deben quedar como no accionables o failed controlado segun contrato actual;
+- webhook no debe activar suscripcion automaticamente.
+
+### Amount y currency
+
+Reglas:
+
+- usar `data.object.amount` o `amount_received` segun decision futura con payload real;
+- para v1, el amount local sigue siendo snapshot server-side;
+- currency Stripe puede venir lower-case;
+- normalizar currency internamente a upper-case;
+- `mxn` -> `MXN`;
+- amount debe compararse contra snapshot local en `ProcessStripeSubscriptionWebhookService`;
+- mismatch amount debe fallar;
+- mismatch currency debe fallar;
+- frontend nunca controla amount/currency.
+
+Decision pendiente:
+
+- confirmar con payload real sandbox si se usara `amount`, `amount_received` o una regla por tipo de evento/status.
+
+### Metadata MXMed esperada
+
+Metadata minima esperada en PaymentIntent real futuro:
+
+- `mxmed_checkout_intent_uuid`;
+- `mxmed_payment_intent_uuid`;
+- `mxmed_entity_type`;
+- `mxmed_entity_id`;
+- `mxmed_plan_code`;
+- `mxmed_billing_period`;
+- `mxmed_environment`.
+
+Aclaraciones:
+
+- metadata ayuda a diagnostico y correlacion;
+- la correlacion primaria puede seguir siendo `provider_payment_id`;
+- metadata no reemplaza validacion server-side;
+- no incluir datos sensibles;
+- no incluir datos clinicos;
+- no incluir secretos;
+- no incluir datos de tarjeta;
+- no incluir payloads completos.
+
+### Livemode
+
+Reglas:
+
+- sandbox/test espera `livemode=false`;
+- produccion espera `livemode=true`;
+- mismatch debe bloquear procesamiento o marcar error controlado;
+- no mezclar eventos test con produccion;
+- no aceptar payload productivo como sandbox/dev;
+- registrar modo recibido de forma segura.
+
+Pendientes:
+
+- definir `expected_livemode` desde entorno;
+- definir error y HTTP exactos para mismatch;
+- validar con QA sandbox real.
+
+### API version
+
+Reglas:
+
+- capturar `api_version`;
+- registrar version observada;
+- no depender silenciosamente de campos que puedan cambiar;
+- si payload real difiere del sintetico, ajustar normalizador con QA;
+- si faltan campos criticos, bloquear procesamiento;
+- no activar si faltan campos criticos.
+
+Pendientes:
+
+- definir politica para `api_version` desconocida;
+- documentar version observada en sandbox;
+- agregar QA cuando Stripe cambie estructura o version.
+
+### Payload sanitizado
+
+`payload_text_sanitized` no debe incluir raw completo si contiene datos sensibles.
+
+Resumen seguro permitido:
+
+- event id;
+- event type;
+- payment intent id;
+- status;
+- amount;
+- currency;
+- livemode;
+- api_version;
+- metadata MXMed permitida.
+
+Prohibido:
+
+- datos de tarjeta;
+- billing details sensibles;
+- raw completo;
+- secrets;
+- firma;
+- datos clinicos;
+- datos personales innecesarios.
+
+### Compatibilidad con payload sintetico
+
+La implementacion posterior debe mantener compatibilidad con QA sintetica o adaptar el harness para pasar por el mismo normalizador.
+
+No debe romper:
+
+- firma negativa;
+- firma positiva no encontrada;
+- webhook matched synthetic;
+- duplicate event;
+- conflict event;
+- amount/currency mismatch;
+- non-actionable statuses;
+- failed/canceled no degradan paid;
+- state read-model post-webhook;
+- activacion post-webhook;
+- replay guard.
+
+### Matriz QA posterior
+
+QA recomendada despues de implementar normalizador:
+
+- payload sintetico actual sigue pasando;
+- payload real-like `payment_intent.succeeded`;
+- payload real-like `payment_intent.payment_failed`;
+- payload real-like `payment_intent.canceled`;
+- payload sin `data.object`;
+- payload con `data.object.object` distinto;
+- payload sin amount;
+- payload sin currency;
+- livemode mismatch;
+- metadata faltante;
+- `api_version` presente;
+- duplicate `provider_event_id`;
+- `event_hash` conflict;
+- amount mismatch;
+- currency mismatch;
+- contrato HTTP/JSON conservado.
+
+### Resultado de readiness
+
+Resultado:
+
+- `PASS normalizer readiness`.
+
+Queda definido:
+
+- responsabilidad;
+- input/output;
+- errores;
+- mapeos;
+- metadata;
+- livemode;
+- `api_version`;
+- sanitizacion;
+- compatibilidad con flujo sintetico;
+- matriz QA posterior;
+- siguiente microfase de implementacion.
+
+### Alcance de esta microfase
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios/repositorios;
+- SQL/schema/seeds;
+- fixtures;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- POST/curl;
+- webhook Stripe real;
+- Stripe CLI;
+- creacion real de PaymentIntent;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- SQL;
+- migraciones/seeds;
+- Composer;
+- writes manuales en BD.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-NormalizerImplementation-01`
+
+Objetivo sugerido:
+
+Implementar `StripeWebhookPayloadNormalizer` y hacer que el endpoint webhook Stripe delegue la normalizacion del payload antes de llamar a `ProcessStripeSubscriptionWebhookService`, conservando contrato HTTP y compatibilidad con QA sintetica.
