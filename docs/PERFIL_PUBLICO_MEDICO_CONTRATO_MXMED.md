@@ -38633,3 +38633,171 @@ Queda implementada y conectada la capa aislada `StripeWebhookSignatureVerifier` 
 Objetivo sugerido:
 
 Validar por QA regresiva que el webhook Stripe conserva contrato HTTP para secret/header/firma/timestamp/payload, que multiples firmas `v1` siguen soportadas y que `ProcessStripeSubscriptionWebhookService` permanece intacto.
+
+## PP-Decisiones 202 - Cierre de StripeWebhookSignatureVerifier
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentProvider-StripeSignatureVerifier-Closure-01`
+
+### Objetivo
+
+Documentar el cierre de implementacion y regresion de `StripeWebhookSignatureVerifier`, dejando constancia de que la verificacion HMAC v1 quedo encapsulada, que el contrato HTTP/JSON del webhook Stripe se conserva y que produccion sigue bloqueada hasta validar payload real Stripe, sandbox y secret real.
+
+### Base
+
+Estado Git inicial:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `4a72951`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+Microfase QA cerrada:
+
+- `QA/Suscripciones-PaymentProvider-StripeSignatureVerifier-RegressionQA-01`: PASS.
+
+### Implementacion cerrada
+
+Archivo nuevo validado:
+
+`modules/subscriptions/services/StripeWebhookSignatureVerifier.php`
+
+Endpoint actualizado:
+
+`api/subscriptions/index.php`
+
+Cambios cerrados:
+
+- el endpoint delega la verificacion HMAC SHA-256 v1 al verifier;
+- se removio el helper inline `subscriptionStripeWebhookVerifySignature`;
+- la responsabilidad encapsulada es exclusivamente la verificacion de firma Stripe;
+- `ProcessStripeSubscriptionWebhookService.php` no fue modificado;
+- la logica de negocio del webhook queda intacta.
+
+### Contrato HTTP/JSON validado
+
+Resultados de QA regresiva:
+
+- sin `Stripe-Signature`:
+  - HTTP `401`;
+  - `stripe_webhook_signature_missing`;
+- firma invalida:
+  - HTTP `401`;
+  - `stripe_webhook_signature_invalid`;
+- timestamp vencido:
+  - HTTP `401`;
+  - `stripe_webhook_signature_invalid`;
+- secret faltante:
+  - HTTP `500`;
+  - `stripe_webhook_secret_missing`;
+- firma valida con payment intent inexistente:
+  - HTTP `404`;
+  - `stripe_payment_intent_not_found`;
+  - flujo llego a `ProcessStripeSubscriptionWebhookService`;
+  - se creo payment event failed controlado:
+    `80ee96ac-b67d-40c4-a300-7642855703f8`.
+
+### Persistencia QA validada
+
+Estado DB read-only validado:
+
+- `payment_intents`: `4 -> 4`;
+- `payment_events`: `13 -> 14`;
+- `checkout_intents`: `4 -> 4`;
+- `profile_subscriptions`: `7 -> 7`;
+- `contract_acceptances`: `7 -> 7`;
+- evento positivo QA creado: `1`;
+- eventos negativos creados: `0`;
+- doctor `900001`: `professional / active`;
+- doctor `990099`: `basic / annual / active`;
+- PI Stripe sintetico `aec410a6-9f9a-4d3d-a3bc-27b380205643` sigue `paid / succeeded`.
+
+El unico write de negocio generado por la QA fue el evento failed esperado para el caso firmado valido sin payment intent local correlacionado.
+
+### Seguridad de logs
+
+Se valido logging seguro con:
+
+- provider;
+- error_code/reason;
+- timestamp;
+- tolerancia;
+- longitud de header;
+- ruta;
+- IDs seguros.
+
+No se observo:
+
+- raw body;
+- secret;
+- firma completa;
+- stacktrace.
+
+### Warning no bloqueante
+
+Durante el harness local de QA se observo warning de deprecacion de `curl_close()` en PHP `8.5`.
+
+Conclusion:
+
+- pertenece al harness PHP local usado para ejecutar requests sinteticos;
+- no pertenece al API;
+- no afecta `StripeWebhookSignatureVerifier`;
+- no bloquea el cierre;
+- puede atenderse despues en microfase separada de limpieza del harness QA/local si conviene.
+
+### Exclusiones confirmadas
+
+No se introdujo:
+
+- Composer;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`;
+- SDK oficial Stripe;
+- `stripe-php`.
+
+No se modifico:
+
+- frontend;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- SQL/schema/seeds;
+- fixtures;
+- servicios de negocio durante la QA;
+- repositorios.
+
+No se ejecuto:
+
+- SQL manual;
+- Stripe real;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- migraciones/seeds;
+- Composer.
+
+### Estado de readiness
+
+Resultado:
+
+- `PASS verifier closure`.
+
+Conclusiones:
+
+- el verifier queda aprobado para flujo sintetico/local;
+- el contrato HTTP/JSON del webhook se conserva;
+- firma valida llega a `ProcessStripeSubscriptionWebhookService`;
+- firma faltante, invalida, vencida o sin secret se rechaza correctamente;
+- produccion sigue bloqueada hasta validar payload real Stripe, secret sandbox y estrategia de llaves/deploy.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-Readiness-01`
+
+Objetivo sugerido:
+
+Disenar la validacion con payload real Stripe sandbox, sin activar produccion todavia, definiendo eventos reales minimos, campos obligatorios, metadata esperada, `livemode`, `api_version`, amount/currency y correlacion con payment intents locales.
