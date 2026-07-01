@@ -41554,3 +41554,125 @@ La implementacion se alinea con el contrato oficial de Stripe PaymentIntent: `am
 Objetivo sugerido:
 
 Validar estaticamente el provider Stripe, el wiring del endpoint `payment-intents`, las guardas de `STRIPE_SECRET_KEY`, el bloqueo de live keys, la no persistencia de `client_secret`, la metadata de correlacion y la ausencia de cambios en frontend, SQL/schema/seeds y webhook.
+
+## PP-Decisiones 214 - Fixture DEV local para sesion de upgrade Stripe
+
+### Microfase cerrada
+
+`BE/DEV-Suscripciones-SessionFixture-StripeUpgradeDoctor-Implementation-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+Se agrego un fixture DEV/local session-only para preparar QA de PaymentIntent Stripe real en un flujo de upgrade, sin depender de `doctor/900001`, porque ese doctor ya se encuentra en `professional / annual / active` y no tiene un plan superior disponible.
+
+### Archivo modificado
+
+- `api/subscriptions/index.php`
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`
+
+### Ruta agregada
+
+`POST /api/subscriptions/index.php/dev/session-fixture/stripe-upgrade-doctor`
+
+### Protecciones
+
+El fixture reutiliza las guardas DEV/local existentes:
+
+- `MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED=1`;
+- host local;
+- bloqueo en produccion por `APP_ENV`, `MXMED_ENV` o `ENVIRONMENT`;
+- metodo `POST`;
+- helper `subscriptionApplyDevDoctorSessionFixture(...)`;
+- no relaja `subscriptionResolveWriteContext(...)`;
+- no usa headers magicos.
+
+### Comportamiento
+
+El fixture:
+
+- busca candidatos DEV/local ya permitidos por el harness Stripe;
+- valida por lectura que exista suscripcion activa;
+- acepta planes actuales upgradeables:
+  - `basic -> standard`;
+  - `standard -> optimum`;
+  - `optimum -> professional`;
+- rechaza `professional` como plan actual porque no tiene upgrade superior;
+- acepta opcionalmente `doctor_id` para validar un candidato especifico;
+- acepta opcionalmente `target_plan_code` para validar que el destino esperado corresponde al siguiente upgrade;
+- acepta opcionalmente `billing_period` para validar que coincide con la suscripcion activa;
+- crea solo una sesion PHP real con `session_scope=true`;
+- no crea checkout intent;
+- no crea payment intent;
+- no confirma pago;
+- no activa suscripcion;
+- no modifica BD;
+- no ejecuta Stripe.
+
+### Respuesta esperada
+
+Cuando encuentra candidato upgradeable, responde JSON controlado con:
+
+- `fixture=stripe-upgrade-doctor`;
+- `entity_type=doctor`;
+- `entity_id`;
+- `doctor_id`;
+- `session_scope=true`;
+- `current_plan_code`;
+- `target_plan_code`;
+- `billing_period`;
+- `intended_use=stripe_payment_intent_upgrade_qa`;
+- `dev_only=true`.
+
+### Errores controlados
+
+- `fixture_upgrade_candidate_not_found`;
+- `fixture_doctor_not_upgradeable`;
+- `fixture_doctor_has_no_active_subscription`;
+- `fixture_doctor_active_subscription_plan_unsupported`;
+- `fixture_disabled`;
+- `production_blocked`;
+- `local_only`;
+- `method_not_allowed`.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- `modules/**/*.php`;
+- SQL/schema/seeds.
+
+No se ejecuto:
+
+- SQL manual;
+- checkout;
+- payment-intents;
+- `stripe trigger`;
+- `confirm_mock`;
+- `activate-after-payment`;
+- writes manuales de BD.
+
+### Validacion
+
+- `php -l api/subscriptions/index.php`: PASS.
+- `git diff --check`: PASS.
+- frontend no tocado.
+- SQL/schema/seeds no tocado.
+- SQL no ejecutado.
+- POST/curl no ejecutado durante implementacion.
+- `stripe trigger` no ejecutado.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripePaymentIntentProvider-HTTPControlled-StripeUpgradeFixture-01`
+
+Objetivo sugerido:
+
+Validar por HTTP controlado que el nuevo fixture `stripe-upgrade-doctor` entrega una sesion `session_scope=true` para una entidad DEV/local con suscripcion activa upgradeable y, con esa sesion, crear checkout upgrade fresco y PaymentIntent Stripe real sandbox sin ejecutar webhook, `confirm_mock` ni activacion.

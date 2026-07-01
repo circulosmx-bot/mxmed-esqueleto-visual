@@ -1293,6 +1293,212 @@ function subscriptionCreateUpgradeDoctorSessionFixture(): array
     ];
 }
 
+function subscriptionStripeUpgradeFixturePlanTargets(): array
+{
+    return [
+        'basic' => 'standard',
+        'standard' => 'optimum',
+        'optimum' => 'professional',
+    ];
+}
+
+function subscriptionStripeUpgradeFixturePlanRanks(): array
+{
+    return [
+        'basic' => 1,
+        'standard' => 2,
+        'optimum' => 3,
+        'professional' => 4,
+    ];
+}
+
+function subscriptionStripeUpgradeFixtureCandidateDoctorIds(): array
+{
+    return array_values(array_unique(subscriptionStripePaymentIntentFixtureAllowedDoctorIds()));
+}
+
+function subscriptionNormalizeStripeUpgradeFixturePlan($value): string
+{
+    $plan = strtolower(trim((string)($value ?? '')));
+    $map = [
+        'basico' => 'basic',
+        'básico' => 'basic',
+        'basic' => 'basic',
+        'estandar' => 'standard',
+        'estándar' => 'standard',
+        'standard' => 'standard',
+        'optimo' => 'optimum',
+        'óptimo' => 'optimum',
+        'optimum' => 'optimum',
+        'profesional' => 'professional',
+        'professional' => 'professional',
+    ];
+
+    return $map[$plan] ?? $plan;
+}
+
+function subscriptionBuildStripeUpgradeDoctorSessionFixture(
+    string $doctorId,
+    array $payload,
+    string $selection
+): array {
+    if (!subscriptionDoctorFixtureExists($doctorId)) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_upgrade_candidate_not_found',
+            'stripe upgrade doctor fixture candidate was not found'
+        );
+    }
+
+    try {
+        $activeSubscription = subscriptionFindActiveDoctorSubscriptionFixture($doctorId);
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_upgrade_candidate_not_found',
+            'stripe upgrade doctor fixture candidate could not be validated'
+        );
+    }
+
+    if (!is_array($activeSubscription)) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_doctor_has_no_active_subscription',
+            'stripe upgrade doctor fixture has no active subscription'
+        );
+    }
+
+    $targets = subscriptionStripeUpgradeFixturePlanTargets();
+    $ranks = subscriptionStripeUpgradeFixturePlanRanks();
+    $planCode = subscriptionNormalizeStripeUpgradeFixturePlan($activeSubscription['plan_code'] ?? '');
+    $targetPlanCode = $targets[$planCode] ?? null;
+    if ($targetPlanCode === null) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_doctor_active_subscription_plan_unsupported',
+            'stripe upgrade doctor active subscription plan is unsupported'
+        );
+    }
+
+    if (array_key_exists('target_plan_code', $payload)) {
+        $requestedTargetPlan = subscriptionNormalizeStripeUpgradeFixturePlan($payload['target_plan_code']);
+        if ($requestedTargetPlan === '' || $requestedTargetPlan !== $targetPlanCode) {
+            return subscriptionDevSessionFixtureError(
+                'fixture_doctor_not_upgradeable',
+                'stripe upgrade doctor target is not supported for current plan'
+            );
+        }
+    }
+
+    $billingPeriod = strtolower(trim((string)($activeSubscription['billing_period'] ?? '')));
+    if (array_key_exists('billing_period', $payload)) {
+        $requestedBillingPeriod = strtolower(trim((string)($payload['billing_period'] ?? '')));
+        if ($requestedBillingPeriod === '' || $requestedBillingPeriod !== $billingPeriod) {
+            return subscriptionDevSessionFixtureError(
+                'fixture_doctor_not_upgradeable',
+                'stripe upgrade doctor billing period does not match active subscription'
+            );
+        }
+    }
+
+    if (($ranks[$targetPlanCode] ?? 0) <= ($ranks[$planCode] ?? 0)) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_doctor_not_upgradeable',
+            'stripe upgrade doctor target plan is not higher than current plan'
+        );
+    }
+
+    subscriptionApplyDevDoctorSessionFixture($doctorId, $doctorId);
+
+    return [
+        'ok' => true,
+        'data' => [
+            'auth_mode' => 'session_scope',
+            'source' => 'dev_session_fixture',
+            'route' => 'dev/session-fixture/stripe-upgrade-doctor',
+            'fixture' => 'stripe-upgrade-doctor',
+            'selection' => $selection,
+            'entity_type' => 'doctor',
+            'entity_id' => $doctorId,
+            'doctor_id' => $doctorId,
+            'actor_role' => 'doctor',
+            'operator_id' => null,
+            'session_scope' => true,
+            'current_plan_code' => $planCode,
+            'target_plan_code' => $targetPlanCode,
+            'billing_period' => $billingPeriod,
+            'intended_use' => 'stripe_payment_intent_upgrade_qa',
+            'dev_only' => true,
+            'active_subscription' => [
+                'exists' => true,
+                'subscription_id' => (string)($activeSubscription['subscription_id'] ?? ''),
+                'plan_code' => $planCode,
+                'billing_period' => $billingPeriod,
+                'status' => (string)($activeSubscription['status'] ?? ''),
+                'starts_at' => (string)($activeSubscription['starts_at'] ?? ''),
+                'expires_at' => (string)($activeSubscription['expires_at'] ?? ''),
+            ],
+            'upgrade' => [
+                'intent_type' => 'upgrade',
+                'current_plan_code' => $planCode,
+                'target_plan_code' => $targetPlanCode,
+                'current_billing_period' => $billingPeriod,
+                'target_billing_period' => $billingPeriod,
+                'pricing_strategy' => 'prorated_difference',
+            ],
+            'warning' => 'DEV/local only',
+        ],
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
+}
+
+function subscriptionCreateStripeUpgradeDoctorSessionFixture(): array
+{
+    $payloadResult = subscriptionReadOptionalDevFixtureJsonPayload();
+    if (!(bool)($payloadResult['ok'] ?? false)) {
+        return $payloadResult['error'] ?? subscriptionDevSessionFixtureError('invalid_payload', 'invalid json payload');
+    }
+
+    $payload = is_array($payloadResult['payload'] ?? null) ? $payloadResult['payload'] : [];
+    $allowedFields = ['doctor_id', 'target_plan_code', 'billing_period'];
+    $unsupportedFields = array_values(array_diff(array_keys($payload), $allowedFields));
+    if ($unsupportedFields !== []) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_upgrade_candidate_not_found',
+            'stripe upgrade doctor fixture payload contains unsupported fields'
+        );
+    }
+
+    $candidateDoctorIds = subscriptionStripeUpgradeFixtureCandidateDoctorIds();
+    if (array_key_exists('doctor_id', $payload)) {
+        $doctorId = subscriptionNormalizeDevFixtureDoctorId($payload['doctor_id']);
+        if (
+            $doctorId === ''
+            || $doctorId === '0'
+            || ($doctorId !== '900001' && !in_array($doctorId, $candidateDoctorIds, true))
+        ) {
+            return subscriptionDevSessionFixtureError(
+                'fixture_upgrade_candidate_not_found',
+                'stripe upgrade doctor fixture candidate was not found'
+            );
+        }
+
+        return subscriptionBuildStripeUpgradeDoctorSessionFixture($doctorId, $payload, 'requested');
+    }
+
+    foreach ($candidateDoctorIds as $candidateDoctorId) {
+        if ($candidateDoctorId === '900001') {
+            continue;
+        }
+
+        $candidate = subscriptionBuildStripeUpgradeDoctorSessionFixture($candidateDoctorId, $payload, 'auto');
+        if ((bool)($candidate['ok'] ?? false)) {
+            return $candidate;
+        }
+    }
+
+    return subscriptionDevSessionFixtureError(
+        'fixture_upgrade_candidate_not_found',
+        'stripe upgrade doctor fixture candidate was not found'
+    );
+}
+
 function subscriptionSessionHasPermission(string $permission): bool
 {
     $permission = strtolower(trim($permission));
@@ -2030,6 +2236,22 @@ try {
         }
 
         $fixtureResponse = subscriptionCreateUpgradeDoctorSessionFixture();
+        $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
+        subscriptionRespond($fixtureResponse, $fixtureStatus);
+        return;
+    }
+
+    if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'stripe-upgrade-doctor') {
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/stripe-upgrade-doctor', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
+            return;
+        }
+
+        $fixtureResponse = subscriptionCreateStripeUpgradeDoctorSessionFixture();
         $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
         subscriptionRespond($fixtureResponse, $fixtureStatus);
         return;
