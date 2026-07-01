@@ -37952,3 +37952,235 @@ No se ejecuto:
 Objetivo sugerido:
 
 Definir como incorporar o no el SDK oficial Stripe PHP al proyecto, considerando ausencia actual de `composer.json`, estrategia de dependencias, validacion de firma oficial y compatibilidad con el monolito PHP actual.
+
+## PP-Decisiones 199 - Readiness de dependencia Stripe PHP SDK
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeSDK-DependencyReadiness-01`
+
+### Objetivo
+
+Definir documentalmente la estrategia para incorporar, aislar o posponer el SDK oficial Stripe PHP dentro del monolito MXMed, considerando que actualmente no existe `composer.json` ni `vendor/stripe`, y que la validacion de firma HMAC v1 local ya funciona para QA sintetica pero no debe tratarse como decision productiva final sin revision.
+
+### Base tecnica local revisada
+
+Estado Git inicial:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `92e0183`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+Estado de dependencias:
+
+- `composer.json`: no existe;
+- `composer.lock`: no existe;
+- `vendor/`: no existe;
+- `vendor/stripe`: no existe;
+- autoload Composer confirmado: no;
+- patron actual de carga PHP: `require_once` explicito desde endpoints hacia repositorios/servicios;
+- `api/subscriptions/index.php` carga dependencias de suscripciones manualmente con `require_once`.
+
+No se ejecuto Composer.
+
+### Fuentes oficiales Stripe consultadas
+
+Se revisaron fuentes oficiales vigentes:
+
+- Stripe SDKs: `https://docs.stripe.com/sdks`;
+- setup PHP con Composer: `https://docs.stripe.com/get-started/development-environment?lang=php`;
+- webhook signature verification: `https://docs.stripe.com/webhooks/signature`;
+- webhooks y raw body: `https://docs.stripe.com/webhooks`;
+- API keys y webhook signing secrets: `https://docs.stripe.com/keys`.
+
+Puntos utiles para MXMed:
+
+- Stripe publica SDKs server-side, incluido PHP, para interactuar con APIs Stripe, reducir boilerplate y acceder a capacidades actuales.
+- La guia PHP documenta instalacion del SDK mediante Composer (`stripe/stripe-php`) y uso de autoload Composer.
+- La verificacion oficial de webhook requiere payload raw, header `Stripe-Signature` y endpoint secret.
+- Stripe recomienda verificar firmas con librerias oficiales, aunque documenta verificacion manual.
+- Stripe exige conservar el raw body sin mutaciones antes de verificar firma.
+- Los webhook signing secrets no son API keys; son secretos por endpoint.
+- Sandbox y live mode usan llaves separadas; solo las publishable keys son seguras fuera del backend.
+
+### Problema actual
+
+El flujo Stripe sintetico esta aprobado, pero produccion sigue sin readiness por dependencias:
+
+- no hay `composer.json`;
+- no hay `vendor/stripe`;
+- no hay autoload Composer confirmado;
+- la firma HMAC v1 local funciona para QA sintetica;
+- produccion necesita SDK oficial o verificacion formal equivalente;
+- no se debe instalar una dependencia sin estrategia de empaquetado, autoload, deploy, rollback y actualizacion.
+
+### Opciones de estrategia
+
+#### Opcion A - Incorporar Composer al monolito
+
+Implicaciones:
+
+- crear `composer.json`;
+- agregar Stripe PHP SDK;
+- usar autoload Composer;
+- definir impacto en despliegue;
+- decidir si `vendor/` se versiona o se instala durante deploy;
+- establecer politica de dependencias, actualizacion y rollback.
+
+Ventaja:
+
+- alinea MXMed con el flujo oficial Stripe PHP.
+
+Riesgo:
+
+- introduce Composer tarde en un monolito que actualmente carga clases manualmente.
+
+#### Opcion B - Mantener verificacion HMAC local encapsulada en v1
+
+Implicaciones:
+
+- no instalar SDK por ahora;
+- mantener helper local encapsulado;
+- reforzar QA con payloads reales Stripe;
+- comparar comportamiento contra documentacion oficial;
+- exigir revision de seguridad antes de produccion.
+
+Ventaja:
+
+- menor cambio arquitectonico inmediato.
+
+Riesgo:
+
+- mayor responsabilidad interna y riesgo de divergencia contra Stripe oficial.
+
+#### Opcion C - Crear modulo aislado de provider Stripe
+
+Implicaciones:
+
+- encapsular la verificacion en una capa `StripeWebhookSignatureVerifier`;
+- mantener el endpoint desacoplado del detalle HMAC local;
+- permitir que la capa use SDK oficial o implementacion local validada;
+- cambiar implementacion interna sin tocar logica de negocio;
+- minimizar impacto sobre el monolito.
+
+Ventaja:
+
+- permite transicion ordenada y reduce acoplamiento.
+
+Riesgo:
+
+- requiere una microfase adicional de diseno/implementacion de capa, aun sin resolver Composer de fondo.
+
+### Riesgos por opcion
+
+Riesgos comunes:
+
+- introducir Composer sin estrategia de deploy;
+- versionado no controlado de dependencias;
+- conflicto sobre versionar o no `vendor/`;
+- incompatibilidad con hosting actual;
+- verificacion local incompleta;
+- divergencia frente al comportamiento oficial Stripe;
+- mantenimiento de firma manual;
+- seguridad insuficiente si no se prueba con payload real;
+- errores al manejar raw body si algun middleware lo modifica.
+
+### Recomendacion preliminar
+
+Ruta recomendada para MXMed:
+
+- elegir `Opcion C` como ruta preferida;
+- crear una capa aislada `StripeWebhookSignatureVerifier`;
+- dejar el endpoint Stripe sin acoplarse al detalle HMAC local;
+- decidir en una microfase posterior si esa capa usa SDK oficial o mantiene HMAC local validado;
+- no introducir Composer hasta tener decision de dependencias del proyecto;
+- no habilitar produccion hasta validar con payload real y secreto sandbox.
+
+Resultado:
+
+- `PASS dependency readiness`;
+- readiness documental clara;
+- siguiente microfase tecnica identificada.
+
+WARN no bloqueante:
+
+- falta informacion final de hosting/deploy para decidir Composer y manejo de `vendor/`.
+
+### Criterios antes de instalar SDK oficial
+
+Antes de instalar Stripe SDK debe definirse:
+
+- si se usara Composer;
+- donde vivira `composer.json`;
+- si `vendor/` se versiona o se instala en deploy;
+- compatibilidad con hosting actual;
+- version PHP;
+- politica de actualizacion;
+- entorno local/dev/produccion;
+- rollback;
+- pruebas de firma con payload real Stripe;
+- manejo de `STRIPE_WEBHOOK_SECRET` sandbox y produccion;
+- manejo de API keys secret/public;
+- control de secrets fuera del repo.
+
+### Criterios para mantener HMAC local temporal
+
+Si se mantiene HMAC local en una etapa transitoria:
+
+- debe quedar encapsulado;
+- no debe dispersarse en logica de negocio;
+- debe tener QA con firma valida;
+- debe tener QA con firma invalida;
+- debe tener QA con timestamp vencido;
+- debe tener QA con secret faltante;
+- debe tener QA con payload real Stripe sandbox;
+- debe compararse contra comportamiento oficial Stripe;
+- no debe considerarse decision productiva final sin revision de seguridad.
+
+### Microfases siguientes posibles
+
+Ruta recomendada:
+
+`BE/Suscripciones-PaymentProvider-StripeSignatureVerifier-Readiness-01`
+
+Objetivo sugerido:
+
+Disenar la capa `StripeWebhookSignatureVerifier` que encapsule la verificacion actual HMAC v1 y permita reemplazo futuro por SDK oficial.
+
+Ruta alternativa si se decide instalar Composer/SDK:
+
+`BE/Infra-PHP-ComposerDependencyStrategy-Readiness-01`
+
+Objetivo sugerido:
+
+Definir estrategia Composer para el monolito antes de agregar Stripe SDK.
+
+### Alcance de esta microfase
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios;
+- repositorios;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`;
+- SQL/schema/seeds;
+- fixtures.
+
+No se ejecuto:
+
+- Composer;
+- SQL;
+- POST/curl;
+- webhook Stripe;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- migraciones/seeds;
+- writes manuales en BD;
+- Stripe real.
