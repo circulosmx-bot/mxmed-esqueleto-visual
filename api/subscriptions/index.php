@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscription
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/StripePaymentIntentProviderService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookPayloadNormalizer.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookSignatureVerifier.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityResolverService.php';
@@ -48,6 +49,7 @@ use Subscriptions\Services\CreateSubscriptionPendingPaymentAcceptanceService;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
 use Subscriptions\Services\ProcessStripeSubscriptionWebhookService;
+use Subscriptions\Services\StripePaymentIntentProviderService;
 use Subscriptions\Services\StripeWebhookPayloadNormalizer;
 use Subscriptions\Services\StripeWebhookSignatureVerifier;
 use Subscriptions\Services\SubscriptionEntityResolverService;
@@ -2991,7 +2993,8 @@ try {
             new SubscriptionPaymentIntentRepository($pdo),
             new SubscriptionWriteIdempotencyService(new SubscriptionWriteIdempotencyRepository($pdo)),
             new SubscriptionEntityWriteLockService($pdo),
-            new SubscriptionPaymentIntentMockProvider()
+            new SubscriptionPaymentIntentMockProvider(),
+            new StripePaymentIntentProviderService()
         );
 
         try {

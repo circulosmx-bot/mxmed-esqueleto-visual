@@ -38,6 +38,7 @@ final class CreateSubscriptionPaymentIntentService
 {
     private const CHECKOUT_STATUS_PENDING_PAYMENT = 'pending_payment';
     private const PROVIDER_MOCK = 'mxmed_mock';
+    private const PROVIDER_STRIPE = 'stripe';
     private const STATUS_CREATED = 'created';
     private const STATUS_PENDING_PROVIDER = 'pending_provider';
     private const SOURCE_PAYMENT_INTENT = 'payment_intent';
@@ -47,19 +48,22 @@ final class CreateSubscriptionPaymentIntentService
     private SubscriptionWriteIdempotencyService $idempotencyService;
     private SubscriptionEntityWriteLockService $lockService;
     private SubscriptionPaymentIntentMockProvider $mockProvider;
+    private ?StripePaymentIntentProviderService $stripeProvider;
 
     public function __construct(
         SubscriptionCheckoutIntentRepository $checkoutIntentRepository,
         SubscriptionPaymentIntentRepository $paymentIntentRepository,
         SubscriptionWriteIdempotencyService $idempotencyService,
         SubscriptionEntityWriteLockService $lockService,
-        SubscriptionPaymentIntentMockProvider $mockProvider
+        SubscriptionPaymentIntentMockProvider $mockProvider,
+        ?StripePaymentIntentProviderService $stripeProvider = null
     ) {
         $this->checkoutIntentRepository = $checkoutIntentRepository;
         $this->paymentIntentRepository = $paymentIntentRepository;
         $this->idempotencyService = $idempotencyService;
         $this->lockService = $lockService;
         $this->mockProvider = $mockProvider;
+        $this->stripeProvider = $stripeProvider;
     }
 
     public function createPaymentIntent(array $input): array
@@ -151,17 +155,25 @@ final class CreateSubscriptionPaymentIntentService
                 );
             }
 
-            $providerResult = $this->mockProvider->create([
+            $paymentIntentUuid = $this->generateUuidV4();
+            $providerResult = $this->createProviderPaymentIntent([
                 'checkout_intent_uuid' => $checkoutIntentUuid,
+                'payment_intent_uuid' => $paymentIntentUuid,
                 'amount_cents' => $amountCents,
                 'currency' => $currency,
                 'provider' => $provider,
                 'normalized_status' => $normalizedStatus,
                 'source' => $source,
+                'idempotency_key' => $idempotencyKey,
+                'provider_idempotency_key' => $this->providerIdempotencyKey($idempotencyKey, $requestHash),
+                'entity_type' => (string)($checkoutIntent['entity_type'] ?? ''),
+                'entity_id' => (string)($checkoutIntent['entity_id'] ?? ''),
+                'plan_code' => (string)($checkoutIntent['plan_code'] ?? ''),
+                'billing_period' => (string)($checkoutIntent['billing_period'] ?? ''),
             ]);
 
             $paymentIntent = $this->paymentIntentRepository->create([
-                'uuid' => $this->generateUuidV4(),
+                'uuid' => $paymentIntentUuid,
                 'checkout_intent_uuid' => $checkoutIntentUuid,
                 'provider' => (string)($providerResult['provider'] ?? $provider),
                 'provider_payment_id' => (string)($providerResult['provider_payment_id'] ?? ''),
@@ -170,7 +182,7 @@ final class CreateSubscriptionPaymentIntentService
                 'provider_status' => $providerResult['provider_status'] ?? null,
                 'amount_cents' => $amountCents,
                 'currency' => $currency,
-                'created_at_provider' => $this->now(),
+                'created_at_provider' => $providerResult['created_at_provider'] ?? $this->now(),
                 'expires_at' => $this->nullableText($checkoutIntent['expires_at'] ?? null),
                 'paid_at' => null,
                 'failed_at' => null,
@@ -292,7 +304,7 @@ final class CreateSubscriptionPaymentIntentService
             'provider is invalid',
             64
         );
-        if ($provider !== self::PROVIDER_MOCK) {
+        if (!in_array($provider, [self::PROVIDER_MOCK, self::PROVIDER_STRIPE], true)) {
             throw new CreateSubscriptionPaymentIntentException(
                 422,
                 'payment_intent_provider_invalid',
@@ -301,6 +313,36 @@ final class CreateSubscriptionPaymentIntentService
         }
 
         return $provider;
+    }
+
+    private function createProviderPaymentIntent(array $input): array
+    {
+        $provider = (string)($input['provider'] ?? self::PROVIDER_MOCK);
+        if ($provider === self::PROVIDER_MOCK) {
+            return $this->mockProvider->create($input);
+        }
+        if ($provider === self::PROVIDER_STRIPE) {
+            if ($this->stripeProvider === null) {
+                throw new CreateSubscriptionPaymentIntentException(
+                    503,
+                    'payment_intent_provider_unavailable',
+                    'payment intent provider is unavailable'
+                );
+            }
+
+            return $this->stripeProvider->create($input);
+        }
+
+        throw new CreateSubscriptionPaymentIntentException(
+            422,
+            'payment_intent_provider_invalid',
+            'provider is invalid'
+        );
+    }
+
+    private function providerIdempotencyKey(string $idempotencyKey, string $requestHash): string
+    {
+        return 'mxmed-sub-payment-intent-' . substr(hash('sha256', $idempotencyKey . ':' . $requestHash), 0, 48);
     }
 
     private function initialStatus($value): string

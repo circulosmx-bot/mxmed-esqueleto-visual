@@ -41425,3 +41425,132 @@ Pendiente:
 Objetivo sugerido:
 
 Completar `stripe login` con accion del usuario, iniciar `stripe listen --forward-to` contra el endpoint local/dev, confirmar de forma redactada que existe un `whsec_...` temporal, y dejarlo listo solo en la shell/proceso de QA para reintentar `QA/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayloadQA-01`.
+
+## PP-Decisiones 213 - Soporte provider Stripe para PaymentIntent correlacionado
+
+### Microfase cerrada
+
+`BE/Suscripciones-PaymentProvider-StripePaymentIntentProvider-Implementation-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+Se agrego soporte backend controlado para que el flujo existente de `payment-intents` pueda crear un PaymentIntent real de Stripe sandbox usando `provider=stripe`, persistiendo la correlacion local por `provider_payment_id` para que el webhook Stripe pueda encontrar el pago cuando llegue `payment_intent.succeeded`.
+
+### Archivos modificados
+
+- `api/subscriptions/index.php`
+- `modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php`
+- `modules/subscriptions/services/StripePaymentIntentProviderService.php`
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`
+
+### Contrato implementado
+
+- Se mantiene intacto el proveedor `mxmed_mock`.
+- Se agrega provider `stripe` en `CreateSubscriptionPaymentIntentService`.
+- Se agrega `StripePaymentIntentProviderService` sin modificar Composer ni agregar SDK.
+- Stripe se invoca en runtime mediante HTTP nativo desde PHP.
+- El importe `amount` sale del checkout intent local.
+- La moneda `currency` sale del checkout intent local.
+- No se aceptan `amount`, `currency`, `provider_payment_id`, `provider_checkout_id` ni timestamps desde cliente.
+- La correlacion local queda en `subscription_payment_intents.provider_payment_id` con el `pi_...` real devuelto por Stripe.
+- El webhook sigue correlacionando por `provider=stripe` y `provider_payment_id`.
+- No se llama `activate-after-payment`.
+- No se llama webhook manualmente.
+- No se conecta frontend.
+
+### Variables
+
+- `STRIPE_SECRET_KEY`: requerida para crear PaymentIntent Stripe.
+- `STRIPE_WEBHOOK_SECRET`: sigue reservado para validar webhooks, no para crear PaymentIntent.
+- `STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false`: sigue reservado para validar webhooks sandbox/test.
+
+Reglas de seguridad:
+
+- `STRIPE_SECRET_KEY` debe ser test key (`sk_test_` o `rk_test_`).
+- Las llaves live (`sk_live_` o `rk_live_`) quedan bloqueadas en este provider.
+- Si falta `STRIPE_SECRET_KEY`, se responde error controlado `stripe_secret_key_missing`.
+- Si el cliente HTTP runtime no esta disponible, se responde `stripe_provider_unavailable`.
+- Si Stripe falla al crear PaymentIntent, se responde `stripe_payment_intent_create_failed`.
+- Si Stripe devuelve `livemode=true`, se responde `stripe_live_mode_not_allowed`.
+
+### Metadata enviada a Stripe
+
+El provider envia metadata segura para correlacion y diagnostico:
+
+- `mxmed_checkout_intent_uuid`
+- `mxmed_payment_intent_uuid`
+- `mxmed_entity_type`
+- `mxmed_entity_id`
+- `mxmed_plan_code`
+- `mxmed_billing_period`
+- `mxmed_environment`
+
+### Persistencia local
+
+Se persiste en `subscription_payment_intents`:
+
+- `provider=stripe`
+- `provider_payment_id=pi_...`
+- `provider_status` inicial de Stripe
+- `normalized_status=created` o `pending_provider`
+- `amount_cents`
+- `currency`
+- `source`
+- `created_at_provider`
+
+No se persiste `client_secret` en `notes`, logs ni documentacion.
+
+### Idempotencia
+
+Se reutiliza la idempotencia local existente para `subscriptions.payment_intent.create` y se envia una idempotency key derivada del request hash al provider Stripe para reducir riesgo de duplicados externos ante retry de la misma operacion.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- SQL/schema/seeds;
+- webhook;
+- Composer;
+- `.env`.
+
+No se ejecuto:
+
+- SQL;
+- POST/curl;
+- `stripe trigger`;
+- PaymentIntent real durante implementacion;
+- confirmaciones;
+- `activate-after-payment`;
+- frontend.
+
+### Validacion
+
+- `php -l api/subscriptions/index.php`: PASS.
+- `php -l modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php`: PASS.
+- `php -l modules/subscriptions/services/StripePaymentIntentProviderService.php`: PASS.
+- `git diff --check`: PASS.
+- frontend no tocado.
+- SQL/schema/seeds no tocado.
+- SQL no ejecutado.
+- POST/curl no ejecutado.
+- `stripe trigger` no ejecutado.
+
+### Referencia Stripe
+
+La implementacion se alinea con el contrato oficial de Stripe PaymentIntent: `amount` y `currency` son requeridos y `metadata` es soportado en la creacion del PaymentIntent. La validacion de webhooks sigue separada mediante `Stripe-Signature` y el endpoint secret correspondiente.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripePaymentIntentProvider-StaticQA-01`
+
+Objetivo sugerido:
+
+Validar estaticamente el provider Stripe, el wiring del endpoint `payment-intents`, las guardas de `STRIPE_SECRET_KEY`, el bloqueo de live keys, la no persistencia de `client_secret`, la metadata de correlacion y la ausencia de cambios en frontend, SQL/schema/seeds y webhook.
