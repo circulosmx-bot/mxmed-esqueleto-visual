@@ -37349,3 +37349,162 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar por GET read-only que el state read-model post-webhook Stripe reconoce `provider=stripe`, `normalized_status=paid`, `provider_status=succeeded` y payment event `processed` como elegibles para `activate_after_payment`, sin activar suscripcion ni ejecutar writes.
+
+## PP-Decisiones 196 - Activacion post-pago con payment provider Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeWebhook-ActivateAfterPaymentProviderStatusFix-01`
+
+### Objetivo
+
+Corregir el servicio de activacion post-pago para reconocer pagos confirmados por proveedor real Stripe, manteniendo intactos los guards de idempotencia, evento procesado, checkout, contrato y scope de entidad.
+
+### Contexto
+
+La microfase `QA/Suscripciones-PaymentProvider-StripeWebhook-ActivateAfterPaymentSyntheticQA-01` quedo en `FAIL` controlado:
+
+- el state read-model ya reconocia correctamente el payment intent Stripe;
+- `activation_eligibility.can_activate=true`;
+- `activation_eligibility.reasons=[]`;
+- `required_action=activate_after_payment`;
+- el POST controlado a `activate-after-payment` devolvio HTTP `409`;
+- el error fue `payment_intent_not_paid`;
+- no se activo suscripcion;
+- no se modifico checkout ni contract acceptance;
+- no se modifico `doctor/900001`.
+
+El payment intent bajo prueba estaba en:
+
+- `provider=stripe`;
+- `normalized_status=paid`;
+- `provider_status=succeeded`;
+- `amount_cents=10000`;
+- `currency=MXN`;
+- `paid_at=2026-06-30 23:10:00`.
+
+El payment event asociado estaba en:
+
+- `event_type=payment_intent_confirm`;
+- `processing_status=processed`.
+
+### Problema detectado
+
+`BuildSubscriptionPaymentActivationStateService` ya habia sido corregido para aceptar `stripe/succeeded`, pero `ActivateSubscriptionAfterPaymentService` seguia acoplado al provider mock:
+
+- exigia `normalized_status=paid`;
+- exigia tambien `provider_status=mock_paid`.
+
+Ese guard impedia activar checkouts pagados por Stripe aunque existiera payment event procesado.
+
+### Decision tecnica
+
+`ActivateSubscriptionAfterPaymentService` ahora valida el payment intent confirmado mediante un helper privado provider-aware.
+
+Regla base:
+
+- `normalized_status` debe ser siempre `paid`.
+
+Estados confirmados permitidos por proveedor:
+
+- `mxmed_mock`:
+  - `mock_paid`;
+  - `paid`.
+- `stripe`:
+  - `succeeded`;
+  - `paid`.
+- proveedor futuro:
+  - solo `paid` como fallback conservador.
+
+Estados no aceptados como pagados:
+
+- `created`;
+- `mock_created`;
+- `requires_payment_method`;
+- `requires_action`;
+- `processing`;
+- `pending`;
+- `pending_provider`;
+- `failed`;
+- `canceled`;
+- `cancelled`.
+
+### Seguridad mantenida
+
+La correccion no permite activar solo por `provider_status`.
+
+La activacion sigue exigiendo:
+
+- payment intent confirmado;
+- payment event `payment_intent_confirm / processed`;
+- checkout `pending_payment`;
+- contract acceptance valida;
+- idempotencia de write;
+- lock de activacion;
+- entity scope correcto;
+- ausencia de suscripcion activa para `new_subscription`;
+- reglas upgrade ya validadas para `upgrade`.
+
+### Idempotencia previa
+
+La QA fallida anterior dejo un registro de idempotencia fallido:
+
+- operation `subscriptions.payment_intent.activate_after_payment`;
+- entity `doctor/990099`;
+- HTTP `409`;
+- status `failed`.
+
+Ese registro no se limpio ni se altero manualmente. La siguiente QA debe usar una nueva `Idempotency-Key`.
+
+### Alcance
+
+Archivos modificados:
+
+- `modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modifico:
+
+- `BuildSubscriptionPaymentActivationStateService.php`;
+- endpoint Stripe webhook;
+- `ProcessStripeSubscriptionWebhookService`;
+- `api/subscriptions/index.php`;
+- repositorios;
+- frontend;
+- SQL/schema/seeds;
+- fixtures.
+
+No se ejecuto:
+
+- SQL;
+- POST/curl;
+- webhook Stripe;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- fixture DEV/local;
+- Stripe real.
+
+### Validaciones esperadas
+
+- `php -l modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`;
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`;
+- `php -l api/subscriptions/index.php`;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`;
+- `git diff --check`;
+- verificacion de alcance sin frontend;
+- verificacion de alcance sin SQL/schema/seeds;
+- verificacion de que no se ejecuto SQL;
+- verificacion de que no se ejecuto POST/curl;
+- verificacion de que no se ejecuto webhook Stripe;
+- verificacion de que no se ejecuto `confirm_mock`;
+- verificacion de que no se ejecuto `activate-after-payment`;
+- verificacion de que no se conecto Stripe real.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripeWebhook-ActivateAfterPaymentSyntheticQA-02`
+
+Objetivo sugerido:
+
+Repetir la activacion post-pago del checkout Stripe sintetico de `doctor/990099` usando una nueva `Idempotency-Key`, validando que `activate-after-payment` cree la suscripcion activa, enlace checkout y contract acceptance, preserve payment intent/event Stripe y no toque `doctor/900001`.
