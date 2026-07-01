@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscription
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookSignatureVerifier.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityResolverService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityWriteLockService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionPaymentIntentMockProvider.php';
@@ -46,6 +47,7 @@ use Subscriptions\Services\CreateSubscriptionPendingPaymentAcceptanceService;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
 use Subscriptions\Services\ProcessStripeSubscriptionWebhookService;
+use Subscriptions\Services\StripeWebhookSignatureVerifier;
 use Subscriptions\Services\SubscriptionEntityResolverService;
 use Subscriptions\Services\SubscriptionEntityWriteLockService;
 use Subscriptions\Services\SubscriptionPaymentIntentMockProvider;
@@ -260,56 +262,6 @@ function subscriptionStripeWebhookSignatureHeader(array $headers): string
     }
 
     return trim((string)($_SERVER['HTTP_STRIPE_SIGNATURE'] ?? ''));
-}
-
-function subscriptionStripeWebhookVerifySignature(string $rawBody, string $signatureHeader, string $secret): array
-{
-    $timestamp = null;
-    $signatures = [];
-    foreach (explode(',', $signatureHeader) as $part) {
-        $pieces = explode('=', trim($part), 2);
-        if (count($pieces) !== 2) {
-            continue;
-        }
-
-        $key = trim($pieces[0]);
-        $value = trim($pieces[1]);
-        if ($key === 't') {
-            $timestamp = $value;
-        } elseif ($key === 'v1' && $value !== '') {
-            $signatures[] = $value;
-        }
-    }
-
-    if ($timestamp === null || !ctype_digit($timestamp) || $signatures === []) {
-        return [
-            'ok' => false,
-            'code' => 'stripe_webhook_signature_invalid',
-            'message' => 'stripe webhook signature is invalid',
-        ];
-    }
-
-    $toleranceSeconds = 300;
-    if (abs(time() - (int)$timestamp) > $toleranceSeconds) {
-        return [
-            'ok' => false,
-            'code' => 'stripe_webhook_signature_invalid',
-            'message' => 'stripe webhook signature is invalid',
-        ];
-    }
-
-    $expected = hash_hmac('sha256', $timestamp . '.' . $rawBody, $secret);
-    foreach ($signatures as $signature) {
-        if (hash_equals($expected, $signature)) {
-            return ['ok' => true];
-        }
-    }
-
-    return [
-        'ok' => false,
-        'code' => 'stripe_webhook_signature_invalid',
-        'message' => 'stripe webhook signature is invalid',
-    ];
 }
 
 function subscriptionStripeWebhookPayloadSummary(array $event): ?string
@@ -2110,44 +2062,42 @@ try {
         }
 
         $secret = subscriptionStripeWebhookSecret();
-        if ($secret === '') {
-            subscriptionStripeWebhookLog('secret_missing', [
-                'route' => 'webhooks/stripe',
-            ]);
-            subscriptionRespond(
-                subscriptionStripeWebhookError('stripe_webhook_secret_missing', 'stripe webhook secret is not configured'),
-                500
-            );
-            return;
-        }
-
         $headers = subscriptionHeaders();
         $signatureHeader = subscriptionStripeWebhookSignatureHeader($headers);
-        if ($signatureHeader === '') {
-            subscriptionStripeWebhookLog('signature_missing', [
-                'route' => 'webhooks/stripe',
-            ]);
+        $signature = (new StripeWebhookSignatureVerifier())->verify([
+            'raw_body' => $rawBody,
+            'signature_header' => $signatureHeader,
+            'webhook_secret' => $secret,
+            'tolerance_seconds' => 300,
+        ]);
+        if (!(bool)($signature['ok'] ?? false)) {
+            $signatureCode = (string)($signature['code'] ?? 'stripe_webhook_signature_invalid');
+            $logContext = $signature['log_context'] ?? [];
+            $logContext = is_array($logContext) ? $logContext : [];
+            $logContext['route'] = 'webhooks/stripe';
+            $logName = 'signature_invalid';
+            if ($signatureCode === 'stripe_webhook_secret_missing') {
+                $logName = 'secret_missing';
+            } elseif ($signatureCode === 'stripe_webhook_signature_missing') {
+                $logName = 'signature_missing';
+            }
+            subscriptionStripeWebhookLog($logName, $logContext);
             subscriptionRespond(
-                subscriptionStripeWebhookError('stripe_webhook_signature_missing', 'stripe webhook signature is required'),
-                401
+                subscriptionStripeWebhookError(
+                    $signatureCode,
+                    (string)($signature['message'] ?? 'stripe webhook signature is invalid')
+                ),
+                (int)($signature['http_status'] ?? 401)
             );
             return;
         }
 
-        $signature = subscriptionStripeWebhookVerifySignature($rawBody, $signatureHeader, $secret);
-        if (!(bool)($signature['ok'] ?? false)) {
-            subscriptionStripeWebhookLog('signature_invalid', [
-                'route' => 'webhooks/stripe',
-            ]);
-            subscriptionRespond(
-                subscriptionStripeWebhookError(
-                    (string)($signature['code'] ?? 'stripe_webhook_signature_invalid'),
-                    (string)($signature['message'] ?? 'stripe webhook signature is invalid')
-                ),
-                401
-            );
-            return;
-        }
+        subscriptionStripeWebhookLog('signature_verified', [
+            'route' => 'webhooks/stripe',
+            'provider' => $signature['provider'] ?? 'stripe',
+            'timestamp' => $signature['timestamp'] ?? null,
+            'signature_version' => $signature['signature_version'] ?? 'v1',
+        ]);
 
         $decoded = json_decode($rawBody, true);
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded) || array_values($decoded) === $decoded) {

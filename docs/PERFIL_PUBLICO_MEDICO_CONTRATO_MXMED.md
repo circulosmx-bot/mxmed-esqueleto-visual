@@ -38426,3 +38426,210 @@ No se ejecuto:
 Objetivo sugerido:
 
 Implementar `StripeWebhookSignatureVerifier` con la logica HMAC v1 actual extraida del endpoint, sin cambiar contrato HTTP del webhook Stripe.
+
+## PP-Decisiones 201 - Implementacion de StripeWebhookSignatureVerifier
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeSignatureVerifier-Implementation-01`
+
+### Objetivo
+
+Implementar la clase `StripeWebhookSignatureVerifier` para encapsular la verificacion actual de firma Stripe HMAC SHA-256 v1, manteniendo el contrato HTTP actual del webhook Stripe y sin introducir Composer ni SDK oficial Stripe.
+
+### Base tecnica
+
+Estado Git inicial:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `65789d8`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+Microfase previa cerrada:
+
+- `BE/Suscripciones-PaymentProvider-StripeSignatureVerifier-Readiness-01`: PASS.
+
+### Clase creada
+
+Archivo:
+
+`modules/subscriptions/services/StripeWebhookSignatureVerifier.php`
+
+Contrato implementado:
+
+- clase final `StripeWebhookSignatureVerifier`;
+- metodo publico `verify(array $input): array`;
+- input:
+  - `raw_body`;
+  - `signature_header`;
+  - `webhook_secret`;
+  - `tolerance_seconds`, default `300`;
+- output exitoso:
+  - `ok=true`;
+  - `provider=stripe`;
+  - `verified=true`;
+  - `timestamp`;
+  - `signature_version=v1`;
+- output de error:
+  - `ok=false`;
+  - `error_code`;
+  - `code`;
+  - `http_status`;
+  - `safe_message`;
+  - `message`;
+  - `log_context` seguro.
+
+### Logica encapsulada
+
+El verifier encapsula:
+
+- validacion de secret faltante;
+- validacion de header `Stripe-Signature` faltante;
+- parseo de timestamp `t`;
+- parseo de una o multiples firmas `v1`;
+- validacion de header malformado;
+- tolerancia de timestamp de `300` segundos;
+- construccion de signed payload `timestamp.raw_body`;
+- calculo HMAC SHA-256;
+- comparacion con `hash_equals`;
+- respuesta controlada sin conocer negocio.
+
+### Contrato HTTP conservado
+
+Se conservaron los codigos y mensajes actuales del webhook Stripe:
+
+- secret faltante:
+  - `stripe_webhook_secret_missing`;
+  - HTTP `500`;
+  - `stripe webhook secret is not configured`;
+- firma/header faltante:
+  - `stripe_webhook_signature_missing`;
+  - HTTP `401`;
+  - `stripe webhook signature is required`;
+- firma invalida, timestamp vencido o header malformado:
+  - `stripe_webhook_signature_invalid`;
+  - HTTP `401`;
+  - `stripe webhook signature is invalid`;
+- payload vacio:
+  - sigue validado por el endpoint;
+  - `stripe_webhook_payload_empty`;
+  - HTTP `400`.
+
+### Integracion en endpoint
+
+Archivo modificado:
+
+`api/subscriptions/index.php`
+
+Cambios:
+
+- se agrego `require_once` de `StripeWebhookSignatureVerifier.php`;
+- se agrego `use Subscriptions\Services\StripeWebhookSignatureVerifier`;
+- se removio el helper inline `subscriptionStripeWebhookVerifySignature`;
+- el endpoint `webhooks/stripe` conserva lectura de raw body;
+- el endpoint conserva lectura de header `Stripe-Signature`;
+- el endpoint conserva resolucion de `STRIPE_WEBHOOK_SECRET`;
+- el endpoint delega verificacion a `StripeWebhookSignatureVerifier`;
+- si el verifier falla, el endpoint responde con el mismo contrato HTTP;
+- si el verifier pasa, el endpoint continua con parseo JSON y flujo existente.
+
+### Logica de negocio intacta
+
+No se modifico:
+
+- `ProcessStripeSubscriptionWebhookService`;
+- normalizacion de payload Stripe;
+- dedupe por `provider_event_id`;
+- calculo de `event_hash`;
+- validacion amount/currency;
+- marcado de payment intent por webhook;
+- creacion de payment_event;
+- regla de no activar suscripcion automaticamente desde webhook.
+
+### Seguridad de logs
+
+El verifier no devuelve ni loguea:
+
+- raw body completo;
+- webhook secret;
+- firma completa;
+- payload de tarjeta;
+- datos sensibles.
+
+El contexto seguro queda limitado a:
+
+- provider;
+- error_code;
+- timestamp recibido cuando es numerico;
+- tolerancia;
+- longitud del header.
+
+### Dependencias
+
+No se introdujo:
+
+- Composer;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`;
+- SDK oficial Stripe;
+- `stripe-php`.
+
+La implementacion mantiene HMAC local v1 y permite reemplazo interno futuro por SDK oficial sin cambiar el contrato publico del verifier.
+
+### Validaciones tecnicas
+
+Validaciones esperadas:
+
+- `php -l modules/subscriptions/services/StripeWebhookSignatureVerifier.php`: PASS;
+- `php -l api/subscriptions/index.php`: PASS;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`: PASS;
+- `git diff --check`: limpio.
+
+### Alcance de esta microfase
+
+No se modifico:
+
+- frontend;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- repositorios;
+- otros servicios de negocio;
+- SQL/schema/seeds;
+- fixtures;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- Composer;
+- SQL;
+- POST/curl;
+- webhook Stripe real;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- migraciones/seeds;
+- writes manuales en BD;
+- Stripe real.
+
+### Resultado
+
+Resultado:
+
+- `PASS implementacion`.
+
+Queda implementada y conectada la capa aislada `StripeWebhookSignatureVerifier` sin alterar el procesamiento de eventos Stripe ni introducir dependencias externas.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripeSignatureVerifier-RegressionQA-01`
+
+Objetivo sugerido:
+
+Validar por QA regresiva que el webhook Stripe conserva contrato HTTP para secret/header/firma/timestamp/payload, que multiples firmas `v1` siguen soportadas y que `ProcessStripeSubscriptionWebhookService` permanece intacto.
