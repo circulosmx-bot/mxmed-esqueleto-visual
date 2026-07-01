@@ -41924,3 +41924,142 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar que `payment-activation-state` expone `upgrade_explanation` para el checkout Stripe correlacionado `df8c0a2b-9959-4927-9238-ae08c77e30b7`, que el monto de ajuste sale del snapshot del checkout, que la cobertura usa la vigencia actual y que no se ejecuta activacion.
+
+## PP-Decisiones 217 - Beneficios comparativos en read-model de upgrade
+
+### Microfase cerrada
+
+`BE/Suscripciones-UpgradeIntent-BenefitsSummary-ReadModel-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+Se completa el contrato backend de `upgrade_explanation` para que la UX pueda explicar beneficios concretos al subir de plan, sin inventar capacidades no respaldadas por una fuente existente.
+
+### Archivo backend modificado
+
+- `modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`
+
+### Fuente de beneficios
+
+El read-model usa `PublicProfilePlanCapabilities` como fuente central ya existente de capacidades por plan.
+
+No consulta DB desde el read-model de beneficios y no conecta el perfil publico ni SEO. Solo compara la matriz estatica de capacidades ya disponible en backend.
+
+### Regla de comparacion
+
+`benefits_summary` se calcula como diff entre:
+
+- plan actual del upgrade;
+- plan destino del upgrade.
+
+Solo se listan capacidades donde:
+
+- `current_plan_included=false`;
+- `target_plan_included=true`.
+
+No se listan capacidades que el plan actual ya tenia. No se listan capacidades ausentes en el plan destino.
+
+### Contrato de salida
+
+Cada beneficio incluye:
+
+- `key`;
+- `label`;
+- `description`;
+- `current_plan_included`;
+- `target_plan_included`.
+
+El campo `benefits_source` queda como:
+
+`public_profile_plan_capabilities`
+
+### Beneficios iniciales soportados
+
+El catalogo conservador cubre solo capacidades presentes en `PublicProfilePlanCapabilities`:
+
+- agenda publica en perfil;
+- promociones y paquetes visibles;
+- gestion de respuestas a resenas;
+- galeria en perfil publico;
+- aseguradoras visibles;
+- detalles comerciales de consulta.
+
+Los textos usan lenguaje seguro:
+
+- habilita;
+- permite;
+- segun configuracion;
+- cuando exista informacion configurada.
+
+No prometen resultados, pacientes, posicionamiento ni conversion comercial garantizada.
+
+### Comportamiento por upgrade
+
+Para `basic -> standard`, la matriz actual produce beneficios concretos porque `standard` agrega capacidades que `basic` no tenia.
+
+Para upgrades donde la matriz actual no tenga diferencias reales, `benefits_summary` puede quedar vacio de forma controlada. Esto no se considera error: evita inventar beneficios.
+
+### Pricing y activacion
+
+Esta microfase no cambia:
+
+- `pricing_explanation`;
+- `coverage`;
+- `renewal_after_coverage`;
+- `activation_rule.recalculates_on_activation=false`;
+- regla de no recalculo al activar;
+- activacion post-pago;
+- idempotencia;
+- provider Stripe;
+- webhook Stripe.
+
+El monto del upgrade sigue saliendo del snapshot backend del checkout.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend visual;
+- CSS;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- Stripe provider;
+- Stripe webhook;
+- `activate-after-payment`;
+- endpoints/rutas API;
+- SQL/schema/seeds;
+- precios.
+
+No se ejecuto:
+
+- SQL manual;
+- Stripe;
+- `stripe trigger`;
+- `confirm_mock`;
+- checkout nuevo;
+- PaymentIntent nuevo;
+- webhook nuevo;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Validacion
+
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`: PASS.
+- `git diff --check`: PASS.
+- frontend no tocado.
+- SQL/schema/seeds no tocado.
+- Stripe no ejecutado.
+- `activate-after-payment` no ejecutado.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-BenefitsSummary-ReadModel-PostPush-01`
+
+Objetivo sugerido:
+
+Validar post-push que `payment-activation-state` expone `upgrade_explanation.benefits_summary` con beneficios concretos para el upgrade `basic -> standard`, que `benefits_source=public_profile_plan_capabilities` y que pricing, cobertura, renovacion futura y bloqueo de reactivacion siguen intactos.

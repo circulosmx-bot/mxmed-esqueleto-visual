@@ -5,12 +5,15 @@ namespace Subscriptions\Services;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Profiles\Services\PublicProfilePlanCapabilities;
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
 use Subscriptions\Repositories\SubscriptionPaymentEventRepository;
 use Subscriptions\Repositories\SubscriptionPaymentIntentRepository;
 use Throwable;
+
+require_once __DIR__ . '/../../profiles/services/PublicProfilePlanCapabilities.php';
 
 final class BuildSubscriptionPaymentActivationStateService
 {
@@ -516,6 +519,7 @@ final class BuildSubscriptionPaymentActivationStateService
         $monthlyPrice = $annualPrice !== null
             ? (int)round(($annualPrice / 12) * self::MONTHLY_MARKUP_FACTOR)
             : ($targetBillingPeriod === 'monthly' ? $targetPlanPrice : null);
+        $benefitsSummary = $this->upgradeBenefitsSummary($currentPlanCode, $targetPlanCode);
 
         return [
             'current_plan' => [
@@ -526,8 +530,8 @@ final class BuildSubscriptionPaymentActivationStateService
                 'code' => $targetPlanCode,
                 'label' => $targetLabel,
             ],
-            'benefits_summary' => [],
-            'benefits_source' => 'pending_plan_capabilities_mapping',
+            'benefits_summary' => $benefitsSummary,
+            'benefits_source' => 'public_profile_plan_capabilities',
             'pricing_explanation' => [
                 'strategy' => (string)$upgradeContext['pricing_strategy'],
                 'reason' => 'Solo pagas la diferencia proporcional por el tiempo restante de tu suscripcion actual.',
@@ -554,6 +558,86 @@ final class BuildSubscriptionPaymentActivationStateService
             'activation_rule' => [
                 'recalculates_on_activation' => false,
                 'message' => 'El monto ya fue calculado al crear el checkout y no se recalcula al activar.',
+            ],
+        ];
+    }
+
+    private function upgradeBenefitsSummary(string $currentPlanCode, string $targetPlanCode): array
+    {
+        $currentPlanCode = PublicProfilePlanCapabilities::normalizePlanCode($currentPlanCode);
+        $targetPlanCode = PublicProfilePlanCapabilities::normalizePlanCode($targetPlanCode);
+        if ($currentPlanCode === $targetPlanCode) {
+            return [];
+        }
+
+        $currentCapabilities = $this->publicProfileCapabilities($currentPlanCode);
+        $targetCapabilities = $this->publicProfileCapabilities($targetPlanCode);
+        if ($currentCapabilities === [] || $targetCapabilities === []) {
+            return [];
+        }
+
+        $summary = [];
+        foreach ($this->upgradeBenefitCatalog() as $capabilityKey => $copy) {
+            $currentIncluded = (bool)($currentCapabilities[$capabilityKey] ?? false);
+            $targetIncluded = (bool)($targetCapabilities[$capabilityKey] ?? false);
+            if ($currentIncluded || !$targetIncluded) {
+                continue;
+            }
+
+            $summary[] = [
+                'key' => (string)$copy['key'],
+                'label' => (string)$copy['label'],
+                'description' => (string)$copy['description'],
+                'current_plan_included' => false,
+                'target_plan_included' => true,
+            ];
+        }
+
+        return $summary;
+    }
+
+    private function publicProfileCapabilities(string $planCode): array
+    {
+        $contract = PublicProfilePlanCapabilities::build($planCode, [
+            'plan_source' => 'subscription_upgrade_explanation',
+        ]);
+        $capabilities = $contract['plan']['capabilities'] ?? [];
+
+        return is_array($capabilities) ? $capabilities : [];
+    }
+
+    private function upgradeBenefitCatalog(): array
+    {
+        return [
+            'show_public_agenda' => [
+                'key' => 'public_agenda_visibility',
+                'label' => 'Agenda publica en perfil',
+                'description' => 'El plan destino habilita mostrar acceso a agenda publica en tu perfil, segun configuracion y disponibilidad.',
+            ],
+            'show_promotional_packages' => [
+                'key' => 'promotional_packages_visibility',
+                'label' => 'Promociones y paquetes visibles',
+                'description' => 'El plan destino permite mostrar promociones o paquetes comerciales cuando exista informacion configurada para el perfil.',
+            ],
+            'allow_review_replies' => [
+                'key' => 'review_replies',
+                'label' => 'Gestion de respuestas a resenas',
+                'description' => 'El plan destino habilita capacidades para responder resenas desde el perfil cuando el modulo correspondiente este disponible.',
+            ],
+            'show_gallery' => [
+                'key' => 'public_profile_gallery',
+                'label' => 'Galeria en perfil publico',
+                'description' => 'El plan destino permite enriquecer la presentacion del perfil con galeria, segun el contenido disponible.',
+            ],
+            'show_insurances' => [
+                'key' => 'accepted_insurances_visibility',
+                'label' => 'Aseguradoras visibles',
+                'description' => 'El plan destino permite mostrar aseguradoras aceptadas cuando exista informacion comercial configurada.',
+            ],
+            'show_consultation_details' => [
+                'key' => 'consultation_details_visibility',
+                'label' => 'Detalles comerciales de consulta',
+                'description' => 'El plan destino permite mostrar detalles comerciales de consulta segun la configuracion vigente del perfil.',
             ],
         ];
     }
