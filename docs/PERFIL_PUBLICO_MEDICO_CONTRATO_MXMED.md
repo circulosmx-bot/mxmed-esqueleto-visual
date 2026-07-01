@@ -40435,3 +40435,223 @@ Queda implementado el enforcement configurable de `livemode` para el webhook Str
 Objetivo sugerido:
 
 Validar por POST sintetico controlado que `expected_livemode=false` permite payload `livemode=false`, bloquea `livemode=true`, falla controlado con expectativa faltante/invalida y no crea payment events ni activaciones en mismatch.
+
+## PP-Decisiones 209 - QA estrategia livemode Stripe
+
+### Microfase
+
+Microfase cerrada:
+
+`QA/Suscripciones-PaymentProvider-StripeRealPayload-LivemodeStrategyQA-01`
+
+Resultado:
+
+- `PASS` con `WARN` no bloqueante por default local/dev conservador cuando falta `STRIPE_WEBHOOK_EXPECTED_LIVEMODE`.
+
+Base validada:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `5a128a3`;
+- ahead/behind inicial: `0/0`;
+- working tree inicial: limpio.
+
+### Lint
+
+Validaciones ejecutadas:
+
+- `php -l api/subscriptions/index.php`: PASS;
+- `php -l modules/subscriptions/services/StripeWebhookPayloadNormalizer.php`: PASS;
+- `php -l modules/subscriptions/services/StripeWebhookSignatureVerifier.php`: PASS;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`: PASS;
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`: PASS;
+- `php -l modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`: PASS.
+
+### Baseline DB read-only
+
+Baseline previo:
+
+- `subscription_payment_intents`: `4`;
+- `subscription_payment_events`: `16`;
+- `subscription_checkout_intents`: `4`;
+- `profile_subscriptions`: `7`;
+- `subscription_contract_acceptances`: `7`;
+- `doctor/900001`: `professional / active`;
+- `doctor/990099`: `basic / active`;
+- PI sintetico Stripe `aec410a6-9f9a-4d3d-a3bc-27b380205643`: `paid / succeeded`;
+- checkout sintetico `a1d2144f-13ba-41c0-9b85-ac67625b2fe2`: `activated`.
+
+Baseline posterior:
+
+- `subscription_payment_intents`: `4`;
+- `subscription_payment_events`: `17`;
+- `subscription_checkout_intents`: `4`;
+- `profile_subscriptions`: `7`;
+- `subscription_contract_acceptances`: `7`;
+- `doctor/900001`: `professional / active`;
+- `doctor/990099`: `basic / active`;
+- PI sintetico Stripe `aec410a6-9f9a-4d3d-a3bc-27b380205643`: `paid / succeeded`;
+- checkout sintetico `a1d2144f-13ba-41c0-9b85-ac67625b2fe2`: `activated`.
+
+El incremento unico permitido fue `subscription_payment_events +1` por el caso A, que alcanzo el service y fallo controladamente por payment intent inexistente.
+
+### Casos QA ejecutados
+
+Se usaron variables de entorno temporales por proceso local, sin tocar `.env` ni configuracion real.
+
+Caso A - expected `false` + payload `livemode=false`:
+
+- HTTP: `404`;
+- error: `stripe_payment_intent_not_found`;
+- resultado: firma valida, normalizador acepta `livemode=false`, llega a `ProcessStripeSubscriptionWebhookService`;
+- `payment_event` creado: `27ba8697-ac5b-4c7e-a049-1bea0ffb4b2f`;
+- `provider_event_id`: `evt_mxmed_livemode_false_allowed_qa_01`;
+- `processing_status`: `failed`;
+- `amount_cents`: `10000`;
+- `currency`: `MXN`;
+- no creo payment intent;
+- no creo checkout;
+- no activo suscripcion.
+
+Caso B - expected `false` + payload `livemode=true`:
+
+- HTTP: `422`;
+- error: `stripe_livemode_mismatch`;
+- no llego al service;
+- no creo `payment_event`;
+- no activo suscripcion.
+
+Caso C - expected `true` + payload `livemode=false`:
+
+- HTTP: `422`;
+- error: `stripe_livemode_mismatch`;
+- no llego al service;
+- no creo `payment_event`;
+- no activo suscripcion.
+
+Caso D - expected `false` + payload sin `livemode`:
+
+- HTTP: `422`;
+- error: `stripe_livemode_mismatch`;
+- no llego al service;
+- no creo `payment_event`;
+- no activo suscripcion.
+
+Caso E - expected invalido `maybe`:
+
+- HTTP: `500`;
+- error: `stripe_livemode_expectation_invalid`;
+- no llamo al normalizador efectivo;
+- no llamo al service;
+- no creo `payment_event`;
+- no activo suscripcion.
+
+Caso F - expected faltante en entorno local/dev:
+
+- HTTP: `422`;
+- error: `stripe_livemode_mismatch`;
+- comportamiento: aplico default conservador local/dev `expected_livemode=false` y bloqueo payload `livemode=true`;
+- resultado documentado como `WARN` no bloqueante porque no habilita produccion ni permite avanzar al service.
+
+Caso G - firma invalida:
+
+- HTTP: `401`;
+- error: `stripe_webhook_signature_invalid`;
+- la firma invalida conservo precedencia;
+- no creo `payment_event`;
+- no activo suscripcion.
+
+Caso H - timestamp vencido:
+
+- HTTP: `401`;
+- error: `stripe_webhook_signature_invalid`;
+- la validacion de firma/tolerancia conservo precedencia;
+- no creo `payment_event`;
+- no activo suscripcion.
+
+Caso I - secret faltante:
+
+- HTTP: `500`;
+- error: `stripe_webhook_secret_missing`;
+- el secret faltante conservo precedencia;
+- no normalizo payload;
+- no llamo al service;
+- no creo `payment_event`;
+- no activo suscripcion.
+
+### Logs seguros
+
+Logs locales revisados:
+
+- no raw body completo;
+- no valor de `STRIPE_WEBHOOK_SECRET`;
+- no firma completa;
+- no datos de tarjeta;
+- no billing details sensibles;
+- no stacktrace;
+- no datos clinicos;
+- no datos personales innecesarios.
+
+Solo aparecieron metadatos seguros:
+
+- provider `stripe`;
+- error code;
+- route;
+- timestamp;
+- event id;
+- `livemode` recibido;
+- `expected_livemode`;
+- longitud de header de firma.
+
+### Alcance excluido
+
+No se ejecuto:
+
+- Stripe CLI;
+- webhook Stripe real;
+- PaymentIntent real;
+- Composer;
+- migraciones/seeds;
+- SQL write;
+- writes manuales en BD;
+- `confirm_mock`;
+- `activate-after-payment`;
+- `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local.
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios/repositorios;
+- SQL/schema/seeds;
+- fixtures;
+- `.env`;
+- configuracion real;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+### Resultado
+
+La estrategia `STRIPE_WEBHOOK_EXPECTED_LIVEMODE` queda validada:
+
+- `expected_livemode=false` acepta payload `livemode=false` y permite llegar al service;
+- `expected_livemode=false` rechaza payload `livemode=true`;
+- `expected_livemode=true` rechaza payload `livemode=false`;
+- payload sin `livemode` falla controlado;
+- expected invalido falla controlado;
+- expected faltante en local/dev queda en default conservador `false`;
+- firma invalida, timestamp vencido y secret faltante conservan precedencia;
+- produccion Stripe sigue bloqueada;
+- no hubo activacion;
+- no hubo Stripe real;
+- logs seguros.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayload-Readiness-01`
+
+Objetivo sugerido:
+
+Preparar la siguiente validacion con payload sandbox real de Stripe, sin habilitar produccion, sin Stripe CLI productivo y manteniendo `STRIPE_WEBHOOK_EXPECTED_LIVEMODE` como precondicion explicita.
