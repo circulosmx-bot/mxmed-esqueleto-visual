@@ -39928,3 +39928,279 @@ Queda validado:
 Objetivo sugerido:
 
 Definir estrategia `expected_livemode` sandbox/production para el endpoint Stripe antes de activar enforcement contra payload real sandbox/productivo.
+
+## PP-Decisiones 207 - Readiness de estrategia livemode Stripe
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-LivemodeStrategy-Readiness-01`
+
+### Objetivo
+
+Disenar documentalmente la estrategia de enforcement de `livemode` para webhooks Stripe, definiendo como MXMed distinguira eventos sandbox/test y produccion antes de pasar `expected_livemode` al `StripeWebhookPayloadNormalizer`, sin habilitar produccion y sin modificar codigo funcional.
+
+### Estado Git inicial
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `a9ce0f7`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+### Estado tecnico revisado
+
+Revision read-only:
+
+- `api/subscriptions/index.php` obtiene `STRIPE_WEBHOOK_SECRET` mediante `subscriptionStripeWebhookSecret()`;
+- el endpoint `webhooks/stripe` valida firma con `StripeWebhookSignatureVerifier`;
+- el endpoint instancia `StripeWebhookPayloadNormalizer`;
+- actualmente pasa `expected_currency=MXN`;
+- actualmente pasa `environment` desde `MXMED_ENV`, `APP_ENV` o `ENVIRONMENT`;
+- el endpoint todavia no pasa `expected_livemode`;
+- `StripeWebhookPayloadNormalizer` ya soporta `expected_livemode`;
+- si `expected_livemode` viene definido y no coincide con `event.livemode`, devuelve `stripe_livemode_mismatch` con HTTP `422`.
+
+### Problema a resolver
+
+Stripe distingue ambiente mediante `livemode`:
+
+- eventos test/sandbox: `livemode=false`;
+- eventos productivos: `livemode=true`.
+
+Riesgos que deben bloquearse:
+
+- mezclar payloads test con produccion;
+- aceptar payload productivo en local/dev/sandbox;
+- aceptar payload test como productivo;
+- procesar eventos con firma valida pero ambiente incorrecto;
+- inferir la expectativa desde el propio payload;
+- habilitar produccion antes de tener estrategia explicita.
+
+Estado actual:
+
+- el normalizador ya soporta el guard;
+- el endpoint aun no le pasa una expectativa;
+- produccion Stripe sigue bloqueada.
+
+### Estrategia por entorno
+
+#### Local / dev
+
+Regla:
+
+- `expected_livemode=false`;
+- solo aceptar eventos test/sandbox;
+- rechazar `livemode=true`;
+- usar secrets de prueba/locales;
+- no habilitar Stripe productivo.
+
+#### Sandbox / staging de pagos
+
+Regla:
+
+- `expected_livemode=false`;
+- usar webhook secret sandbox/test;
+- rechazar `livemode=true`;
+- mantener logs seguros;
+- no activar produccion.
+
+#### Production
+
+Regla:
+
+- `expected_livemode=true`;
+- usar webhook secret productivo;
+- rechazar `livemode=false`;
+- fallar cerrado si falta configuracion;
+- nunca aceptar payload test como productivo.
+
+#### Entorno desconocido
+
+Regla:
+
+- no procesar webhook;
+- responder error controlado de configuracion;
+- no llamar a `ProcessStripeSubscriptionWebhookService`;
+- no crear `payment_event`;
+- no modificar `payment_intent`;
+- no activar suscripcion.
+
+### Fuente de verdad
+
+La expectativa de `livemode` no debe venir de:
+
+- frontend;
+- payload Stripe;
+- metadata enviada por Stripe;
+- query string;
+- headers cliente no confiables.
+
+Fuentes seguras posibles:
+
+- `MXMED_ENV`;
+- `APP_ENV`;
+- `ENVIRONMENT`;
+- variable explicita de Stripe.
+
+Decision recomendada para implementacion posterior:
+
+- usar variable explicita `STRIPE_WEBHOOK_EXPECTED_LIVEMODE`;
+- valores permitidos:
+  - `false`;
+  - `true`;
+- si falta:
+  - en local/dev puede default conservador `false` solo si el proyecto confirma patron DEV claro;
+  - en produccion debe fallar cerrado;
+- nunca inferir desde `event.livemode`.
+
+### Relacion con webhook secret
+
+Reglas:
+
+- secret test/sandbox debe corresponder a eventos `livemode=false`;
+- secret productivo debe corresponder a eventos `livemode=true`;
+- firma valida no sustituye validacion de `livemode`;
+- firma valida + `livemode` incorrecto debe bloquear procesamiento;
+- no loggear secret;
+- no loggear firma completa.
+
+La verificacion esperada queda en dos capas:
+
+1. `StripeWebhookSignatureVerifier`: valida raw body, header `Stripe-Signature` y secret configurado.
+2. `StripeWebhookPayloadNormalizer`: valida que `event.livemode` coincida con `expected_livemode`.
+
+### Errores controlados
+
+Errores recomendados:
+
+- `stripe_livemode_mismatch`;
+- `stripe_livemode_expectation_missing`;
+- `stripe_livemode_expectation_invalid`.
+
+HTTP sugerido:
+
+- `422` para `stripe_livemode_mismatch`, porque el payload puede estar bien formado pero pertenece al ambiente incorrecto;
+- `500` para expectativa faltante o invalida, porque es falla de configuracion interna.
+
+Reglas:
+
+- no llegar a `ProcessStripeSubscriptionWebhookService` cuando hay mismatch;
+- no crear `payment_event`;
+- no modificar `payment_intent`;
+- no activar suscripcion;
+- no exponer payload completo;
+- no exponer stacktrace.
+
+### Logging seguro
+
+Campos permitidos:
+
+- provider `stripe`;
+- endpoint;
+- `livemode` recibido;
+- `expected_livemode`;
+- error code;
+- event id, si ya fue extraido sin riesgo;
+- timestamp;
+- environment logico.
+
+Campos prohibidos:
+
+- raw body completo;
+- secret;
+- firma completa;
+- datos de tarjeta;
+- `billing_details`;
+- datos clinicos;
+- stacktrace.
+
+### Compatibilidad con QA sintetica
+
+La implementacion posterior debe conservar:
+
+- firma faltante/invalida/timestamp vencido;
+- secret faltante;
+- payload sintetico no correlacionado;
+- payload real-like no correlacionado;
+- payload invalido HTTP `400`;
+- eventos failed controlados;
+- no activacion desde webhook;
+- logs seguros.
+
+En DEV/local, los payloads sinteticos deberan usar o asumir:
+
+- `livemode=false`.
+
+### Matriz QA posterior
+
+Microfase recomendada:
+
+`QA/Suscripciones-PaymentProvider-StripeRealPayload-LivemodeStrategyQA-01`
+
+Casos minimos:
+
+- local/dev con `expected_livemode=false` + payload `livemode=false`: permite continuar;
+- local/dev con `expected_livemode=false` + payload `livemode=true`: HTTP `422`, `stripe_livemode_mismatch`;
+- expectativa faltante en modo estricto: HTTP `500`, error controlado;
+- expectativa invalida: HTTP `500`, error controlado;
+- firma invalida sigue fallando antes del normalizador;
+- payload sin `livemode` falla controlado si es real-like y la politica lo exige;
+- mismatch no crea `payment_event`;
+- mismatch no activa suscripcion;
+- logs seguros.
+
+### Resultado
+
+Resultado:
+
+- `PASS livemode strategy readiness`.
+
+Queda definido:
+
+- problema;
+- estrategia por entorno;
+- fuente de verdad;
+- relacion con webhook secret;
+- errores controlados;
+- logging seguro;
+- compatibilidad con QA sintetica;
+- matriz QA posterior;
+- produccion sigue bloqueada.
+
+### Alcance de esta microfase
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios/repositorios;
+- SQL/schema/seeds;
+- fixtures;
+- `.env`;
+- archivos de configuracion reales;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- POST/curl;
+- webhook Stripe real;
+- Stripe CLI;
+- creacion real de PaymentIntent;
+- `confirm_mock`;
+- `activate-after-payment`;
+- `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- SQL;
+- migraciones/seeds;
+- Composer;
+- writes manuales en BD.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-LivemodeStrategy-Implementation-01`
+
+Objetivo sugerido:
+
+Hacer que el endpoint webhook Stripe determine `expected_livemode` desde configuracion segura y lo pase a `StripeWebhookPayloadNormalizer`, sin habilitar produccion y conservando compatibilidad con QA sintetica.
