@@ -39724,3 +39724,207 @@ Queda implementada la capa `StripeWebhookPayloadNormalizer`, conectada al endpoi
 Objetivo sugerido:
 
 Validar por regresion controlada que el webhook Stripe conserva el flujo sintetico validado, acepta payload real-like `payment_intent.*`, mantiene errores controlados y no altera activacion, SQL/schema, Composer ni produccion Stripe.
+
+## PP-Decisiones 206 - QA regresion de normalizador payload Stripe
+
+### Microfase
+
+`QA/Suscripciones-PaymentProvider-StripeRealPayload-NormalizerRegressionQA-01`
+
+### Objetivo
+
+Validar que la implementacion de `StripeWebhookPayloadNormalizer` no rompio el contrato HTTP/JSON del webhook Stripe, la verificacion de firma, el procesamiento de payload sintetico existente ni el comportamiento seguro ante errores, sin conectar Stripe real y sin activar produccion.
+
+### Estado Git inicial
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `701fac9`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+### Lint
+
+Validaciones PHP:
+
+- `php -l modules/subscriptions/services/StripeWebhookPayloadNormalizer.php`: PASS;
+- `php -l api/subscriptions/index.php`: PASS;
+- `php -l modules/subscriptions/services/StripeWebhookSignatureVerifier.php`: PASS;
+- `php -l modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php`: PASS;
+- `php -l modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php`: PASS;
+- `php -l modules/subscriptions/services/ActivateSubscriptionAfterPaymentService.php`: PASS.
+
+### Baseline read-only antes de la QA
+
+Conteos iniciales:
+
+- `subscription_payment_intents`: `4`;
+- `subscription_payment_events`: `14`;
+- `subscription_checkout_intents`: `4`;
+- `profile_subscriptions`: `7`;
+- `subscription_contract_acceptances`: `7`.
+
+Estado inicial relevante:
+
+- `doctor/900001`: `professional / active`;
+- `doctor/990099`: `basic / annual / active`;
+- PI Stripe sintetico `aec410a6-9f9a-4d3d-a3bc-27b380205643`: `paid / succeeded`;
+- checkout sintetico `a1d2144f-13ba-41c0-9b85-ac67625b2fe2`: `activated`.
+
+### Matriz ejecutada
+
+Se ejecutaron POST sinteticos unicamente contra:
+
+`POST /api/subscriptions/index.php/webhooks/stripe`
+
+No se ejecuto Stripe CLI, webhook real ni PaymentIntent real.
+
+Resultados:
+
+- Caso A, firma faltante:
+  - HTTP `401`;
+  - error `stripe_webhook_signature_missing`;
+  - no llego al normalizador ni al servicio de negocio.
+- Caso B, firma invalida:
+  - HTTP `401`;
+  - error `stripe_webhook_signature_invalid`;
+  - no proceso evento.
+- Caso C, timestamp vencido:
+  - HTTP `401`;
+  - error `stripe_webhook_signature_invalid`;
+  - no proceso evento.
+- Caso D, secret faltante simulado:
+  - HTTP `500`;
+  - error `stripe_webhook_secret_missing`;
+  - sin valor de secret, sin firma completa, sin raw body y sin stacktrace.
+- Caso E, PaymentIntent inexistente:
+  - HTTP `404`;
+  - error `stripe_payment_intent_not_found`;
+  - provider event `evt_mxmed_normalizer_not_found_qa_01`;
+  - creo un `payment_event` failed controlado:
+    `f52123b4-2cb2-456a-a546-bfd6f7536f3e`;
+  - `processing_status=failed`.
+- Caso F, payload real-like `payment_intent.succeeded` no correlacionado:
+  - HTTP `404`;
+  - error `stripe_payment_intent_not_found`;
+  - provider event `evt_mxmed_real_like_succeeded_not_found_qa_01`;
+  - creo un `payment_event` failed controlado:
+    `1f8643b1-fe08-4c79-9141-664c25fe2c35`;
+  - currency de payload `mxn` normalizada internamente a `MXN`;
+  - `processing_status=failed`.
+- Caso G, payload sin `data.object`:
+  - HTTP `400`;
+  - error `stripe_event_data_object_missing`;
+  - no llego al service para crear payment event.
+- Caso H, `data.object.object=charge`:
+  - HTTP `400`;
+  - error `stripe_payment_intent_object_invalid`;
+  - no llego al service para marcar payment intent.
+- Caso I, PaymentIntent sin amount:
+  - HTTP `400`;
+  - error `stripe_payment_intent_amount_missing`;
+  - no creo payment event.
+- Caso J, PaymentIntent sin currency:
+  - HTTP `400`;
+  - error `stripe_payment_intent_currency_missing`;
+  - no creo payment event.
+
+### Livemode
+
+Resultado:
+
+- WARN no bloqueante.
+
+El normalizador ya soporta `expected_livemode`, pero el endpoint aun no pasa una expectativa de `livemode`. Por tanto no se ejecuto Caso K de mismatch. Queda pendiente definir estrategia sandbox/production antes de activar enforcement.
+
+### Logs seguros
+
+Revision local:
+
+- logs incluyen `signature_header_length`, `timestamp`, `provider_event_id`, `provider_event_type`, `provider_payment_id` y codigos de error;
+- no incluyen raw body completo;
+- no incluyen valor de `STRIPE_WEBHOOK_SECRET`;
+- no incluyen firma completa;
+- no incluyen datos de tarjeta;
+- no incluyen `billing_details`;
+- no incluyen stacktrace.
+
+Observacion:
+
+- el body del caso D contiene el codigo esperado `stripe_webhook_secret_missing`; esto no expone el valor del secret ni la variable de entorno.
+
+### Baseline read-only despues de la QA
+
+Conteos finales:
+
+- `subscription_payment_intents`: `4`;
+- `subscription_payment_events`: `16`;
+- `subscription_checkout_intents`: `4`;
+- `profile_subscriptions`: `7`;
+- `subscription_contract_acceptances`: `7`.
+
+Interpretacion:
+
+- `subscription_payment_events` incremento solo de `14` a `16` por los dos eventos failed controlados de los casos E y F;
+- no hubo incremento de payment intents;
+- no hubo incremento de checkout intents;
+- no hubo incremento de profile subscriptions;
+- no hubo incremento de contract acceptances.
+
+Estado final relevante:
+
+- `doctor/900001`: sigue `professional / active`;
+- `doctor/990099`: sigue `basic / annual / active`;
+- PI Stripe sintetico `aec410a6-9f9a-4d3d-a3bc-27b380205643`: sigue `paid / succeeded`;
+- checkout sintetico `a1d2144f-13ba-41c0-9b85-ac67625b2fe2`: sigue `activated`;
+- errores pre-service no generaron payment events.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend;
+- codigo backend/API/servicios/repositorios durante la QA;
+- SQL/schema/seeds;
+- fixtures;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- Stripe CLI;
+- webhook Stripe real;
+- PaymentIntent real;
+- Composer;
+- migraciones/seeds;
+- SQL write manual;
+- `confirm_mock`;
+- `activate-after-payment`;
+- `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local.
+
+### Resultado
+
+Resultado:
+
+- `PASS` con `WARN` no bloqueante por enforcement de `livemode` pendiente.
+
+Queda validado:
+
+- firma negativa conserva contrato;
+- secret faltante conserva contrato;
+- payload real-like valido llega al service;
+- payload real-like invalido falla controlado desde el normalizador;
+- no hay activacion desde webhook;
+- produccion Stripe sigue bloqueada;
+- logs se mantienen seguros;
+- el normalizador no rompe el flujo sintetico existente.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-LivemodeStrategy-Readiness-01`
+
+Objetivo sugerido:
+
+Definir estrategia `expected_livemode` sandbox/production para el endpoint Stripe antes de activar enforcement contra payload real sandbox/productivo.
