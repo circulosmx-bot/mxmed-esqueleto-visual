@@ -41035,3 +41035,222 @@ Quedan definidos:
 Objetivo sugerido:
 
 Ejecutar validacion controlada con payload real Stripe sandbox/test, primero no correlacionado y luego correlacionado si existe PI local seguro, sin activacion automatica y sin produccion.
+
+## PP-Decisiones 211 - Setup Stripe sandbox webhook local
+
+### Microfase
+
+Microfase:
+
+`DEVOPS/Suscripciones-PaymentProvider-StripeSandboxWebhook-Setup-01`
+
+Resultado:
+
+- `WARN` controlado.
+
+Motivo:
+
+- Stripe CLI quedo instalado y disponible localmente;
+- el endpoint local/dev quedo identificado;
+- el mecanismo oficial `stripe listen --forward-to` quedo preparado;
+- la autenticacion sandbox/test no esta disponible todavia;
+- no se obtuvo `whsec_...` temporal;
+- no se ejecuto QA funcional de payload real.
+
+### Base validada
+
+Estado Git inicial:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `9c6181b`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+Contexto:
+
+- la microfase `QA/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayloadQA-01` quedo `BLOCKED`;
+- causa: faltaban Stripe CLI, secret sandbox/test, expected livemode temporal y mecanismo de entrega local;
+- repo y DB quedaron intactos en ese bloqueo.
+
+### Documentacion oficial Stripe revisada
+
+Fuentes oficiales consultadas:
+
+- `https://docs.stripe.com/stripe-cli`;
+- `https://docs.stripe.com/stripe-cli/install`;
+- `https://docs.stripe.com/stripe-cli/use-cli`;
+- `https://docs.stripe.com/stripe-cli/triggers`;
+- `https://docs.stripe.com/webhooks/signature`;
+- `https://docs.stripe.com/stripe-cli/keys`.
+
+Conclusiones relevantes:
+
+- Stripe CLI permite instalarse via Homebrew en macOS;
+- `stripe login` autentica la CLI y puede requerir navegador;
+- `stripe listen --forward-to <local_webhook>` reenvia eventos sandbox/test al endpoint local;
+- `stripe listen` imprime un webhook signing secret temporal con prefijo `whsec_`;
+- el secret del CLI no debe mezclarse con secrets de endpoints creados en Dashboard;
+- `stripe trigger payment_intent.succeeded` puede generar eventos sandbox/test;
+- Stripe CLI opera por default en test/sandbox salvo que se use `--live`;
+- no se debe usar `--live` para estas microfases.
+
+### Estado local verificado
+
+Stripe CLI:
+
+- estado previo: ausente;
+- accion: instalado fuera del repo con Homebrew;
+- version instalada: `stripe version 1.43.2`;
+- ubicacion: gestionada por Homebrew;
+- no se creo archivo dentro del repositorio.
+
+Autenticacion:
+
+- `stripe whoami`: `Authenticated: false`;
+- `stripe listen --print-secret --forward-to ...` no pudo obtener secret porque no hay API keys configuradas;
+- accion requerida:
+  - ejecutar `stripe login` con cuenta sandbox/test, o
+  - configurar `STRIPE_API_KEY` test/sandbox de forma temporal fuera del repo, o
+  - crear sandbox temporal oficial fuera del repo si se autoriza explicitamente.
+
+Endpoint local/dev identificado:
+
+- servidor local PHP activo:
+  - `php -S 127.0.0.1:8091 -t .`;
+- endpoint preparado:
+  - `http://127.0.0.1:8091/api/subscriptions/index.php/webhooks/stripe`;
+- no se uso endpoint productivo;
+- `ngrok` no esta disponible y no es necesario si Stripe CLI puede reenviar a localhost.
+
+### Comando preparado para listener
+
+Comando conceptual para la siguiente microfase, una vez autenticada la CLI:
+
+```bash
+stripe listen \
+  --events payment_intent.succeeded,payment_intent.payment_failed,payment_intent.canceled \
+  --forward-to http://127.0.0.1:8091/api/subscriptions/index.php/webhooks/stripe
+```
+
+Reglas:
+
+- no usar `--live`;
+- no usar endpoint productivo;
+- no copiar el `whsec_...` al repo;
+- no imprimir el secret completo en reportes;
+- detener el listener al finalizar QA;
+- usar el `whsec_...` del listener CLI, no un secret de Dashboard diferente.
+
+### Variables temporales requeridas
+
+Variables para el proceso local MXMed durante la QA posterior:
+
+```bash
+STRIPE_WEBHOOK_SECRET=<whsec_sandbox_temporal>
+STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false
+```
+
+Reglas:
+
+- no guardar en `.env`;
+- no guardar en config real;
+- no commitear;
+- no pegar el valor completo en documentacion;
+- usar solo sandbox/test;
+- no usar llaves live.
+
+### Evento test preparado
+
+Mecanismo oficial preferente para la siguiente QA:
+
+```bash
+stripe trigger payment_intent.succeeded
+```
+
+Reglas:
+
+- ejecutar solo con CLI autenticada en sandbox/test;
+- no usar `--live`;
+- no crear PaymentIntent productivo;
+- no crear registro local correlacionado en esta primera QA;
+- el resultado esperado para payload real no correlacionado sigue siendo `stripe_payment_intent_not_found`.
+
+### Correlacion posterior
+
+Esta preparacion habilita primero QA no correlacionada.
+
+Para QA correlacionada posterior hara falta microfase adicional:
+
+- crear o mapear un PaymentIntent local `provider=stripe`;
+- asociar `provider_payment_id` real sandbox;
+- validar amount/currency contra snapshot local;
+- evitar `doctor/900001`;
+- evitar dañar `doctor/990099`;
+- no activar suscripcion desde webhook.
+
+### Seguridad de secretos
+
+Validaciones:
+
+- no se imprimio `STRIPE_WEBHOOK_SECRET` completo;
+- no se imprimio API key completa;
+- no se usaron llaves live;
+- no se uso `livemode=true`;
+- no se toco `.env`;
+- no se toco config real;
+- no se agrego archivo temporal al repo;
+- no quedo listener Stripe activo;
+- no quedo tunel expuesto.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios/repositorios;
+- SQL/schema/seeds;
+- fixtures;
+- `.env`;
+- archivos de configuracion reales;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- webhook productivo;
+- PaymentIntent productivo;
+- llaves live;
+- `livemode=true`;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint interno `payment-intents`;
+- endpoint interno `checkout-intents`;
+- fixtures DEV/local;
+- migraciones/seeds;
+- SQL write;
+- Composer;
+- QA funcional de payload real sandbox.
+
+### Estado de bloqueo restante
+
+Queda pendiente:
+
+- autenticar Stripe CLI en sandbox/test;
+- obtener `whsec_...` temporal via `stripe listen`;
+- exportar `STRIPE_WEBHOOK_SECRET` solo en proceso temporal MXMed;
+- exportar `STRIPE_WEBHOOK_EXPECTED_LIVEMODE=false`;
+- ejecutar la QA funcional posterior.
+
+Codigo de estado:
+
+- `USER_ACTION_REQUIRED_STRIPE_LOGIN`.
+
+### Siguiente microfase recomendada
+
+`DEVOPS/Suscripciones-PaymentProvider-StripeSandboxWebhook-AuthSecret-01`
+
+Objetivo sugerido:
+
+Autenticar Stripe CLI en sandbox/test, ejecutar `stripe listen --forward-to` contra el endpoint local/dev, capturar de forma segura la presencia de un `whsec_...` temporal sin imprimirlo completo, y dejar listas variables temporales para reintentar `QA/Suscripciones-PaymentProvider-StripeRealPayload-SandboxRealPayloadQA-01`.
