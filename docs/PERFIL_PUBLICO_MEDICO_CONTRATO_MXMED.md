@@ -41676,3 +41676,93 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar por HTTP controlado que el nuevo fixture `stripe-upgrade-doctor` entrega una sesion `session_scope=true` para una entidad DEV/local con suscripcion activa upgradeable y, con esa sesion, crear checkout upgrade fresco y PaymentIntent Stripe real sandbox sin ejecutar webhook, `confirm_mock` ni activacion.
+
+## PP-Decisiones 215 - Fix warning PHP 8.5 en provider Stripe PaymentIntent
+
+### Microfase cerrada
+
+`BE/Suscripciones-PaymentProvider-StripePaymentIntentProvider-Php85WarningFix-01`
+
+### Resultado
+
+PASS.
+
+### Contexto
+
+La QA `QA/Suscripciones-PaymentProvider-StripePaymentIntentProvider-HTTPControlled-StripeUpgradeFixture-01` cerro como PASS con WARN porque el flujo creo correctamente un PaymentIntent Stripe sandbox, pero PHP `8.5` emitio un warning de deprecacion antes del JSON:
+
+`Function curl_close() is deprecated since 8.5...`
+
+Ese warning contaminaba la respuesta HTTP y podia romper clientes que esperan JSON puro.
+
+### Evidencia funcional previa
+
+La QA previa valido:
+
+- fixture `stripe-upgrade-doctor`: PASS;
+- entidad usada: `doctor/990099`;
+- upgrade: `basic -> standard`;
+- checkout upgrade creado: `df8c0a2b-9959-4927-9238-ae08c77e30b7`;
+- PaymentIntent Stripe local creado: `a15b1eef-4d39-4a0e-838d-8410a410673e`;
+- `provider_payment_id` Stripe presente e inicia con `pi_`;
+- `amount_cents=10000`;
+- `currency=MXN`;
+- `normalized_status=created`;
+- `provider_status=requires_payment_method`;
+- `client_secret` no persistido ni impreso completo.
+
+### Cambio aplicado
+
+En `modules/subscriptions/services/StripePaymentIntentProviderService.php` se reemplazo el cierre directo del handle cURL por un helper compatible con PHP `8.5`.
+
+El helper conserva `curl_close()` para runtimes anteriores y lo omite en PHP `8.5+`, donde ya no tiene efecto funcional y emite deprecacion.
+
+### Alcance tecnico
+
+- Se mantiene intacto el contrato de `provider=stripe`.
+- Se mantiene intacto `provider=mxmed_mock`.
+- No cambia metadata enviada a Stripe.
+- No cambia persistencia local.
+- No cambia idempotencia.
+- No cambia bloqueo de live keys.
+- No cambia no persistencia de `client_secret`.
+- No cambia webhook.
+
+### Alcance excluido
+
+No se modifico:
+
+- frontend;
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/js/subscription-messages.js`;
+- `api/subscriptions/index.php`;
+- SQL/schema/seeds;
+- fixtures.
+
+No se ejecuto:
+
+- SQL;
+- `stripe trigger`;
+- `confirm_mock`;
+- `activate-after-payment`;
+- writes manuales de BD;
+- activacion de suscripcion.
+
+### Validacion
+
+- `php -l modules/subscriptions/services/StripePaymentIntentProviderService.php`: PASS.
+- `git diff --check`: PASS.
+- frontend no tocado.
+- API no tocada.
+- SQL/schema/seeds no tocado.
+- SQL no ejecutado.
+- Stripe trigger no ejecutado.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentProvider-StripePaymentIntentProvider-Php85WarningFix-StaticQA-01`
+
+Objetivo sugerido:
+
+Validar estaticamente que el provider Stripe ya no llama `curl_close()` directamente en PHP `8.5`, que `php -l` pasa, que no se altero el contrato de PaymentIntent Stripe y que no hubo cambios en frontend, API ni SQL/schema/seeds.

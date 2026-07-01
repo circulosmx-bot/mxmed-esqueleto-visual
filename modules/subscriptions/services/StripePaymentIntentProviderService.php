@@ -108,7 +108,7 @@ final class StripePaymentIntentProviderService
         $raw = curl_exec($handle);
         $httpStatus = (int)curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $curlError = curl_error($handle);
-        curl_close($handle);
+        $this->closeCurlHandle($handle);
 
         if (!is_string($raw) || $raw === '') {
             throw new RuntimeException(
@@ -120,6 +120,15 @@ final class StripePaymentIntentProviderService
         }
 
         return $this->decodeResponse($raw, $httpStatus);
+    }
+
+    private function closeCurlHandle($handle): void
+    {
+        if (PHP_VERSION_ID >= 80500) {
+            return;
+        }
+
+        curl_close($handle);
     }
 
     private function requestWithStream(array $headers, string $body): array
