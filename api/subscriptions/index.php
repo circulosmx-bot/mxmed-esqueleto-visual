@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscription
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookPayloadNormalizer.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookSignatureVerifier.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityResolverService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/SubscriptionEntityWriteLockService.php';
@@ -47,6 +48,7 @@ use Subscriptions\Services\CreateSubscriptionPendingPaymentAcceptanceService;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
 use Subscriptions\Services\ProcessStripeSubscriptionWebhookService;
+use Subscriptions\Services\StripeWebhookPayloadNormalizer;
 use Subscriptions\Services\StripeWebhookSignatureVerifier;
 use Subscriptions\Services\SubscriptionEntityResolverService;
 use Subscriptions\Services\SubscriptionEntityWriteLockService;
@@ -262,55 +264,6 @@ function subscriptionStripeWebhookSignatureHeader(array $headers): string
     }
 
     return trim((string)($_SERVER['HTTP_STRIPE_SIGNATURE'] ?? ''));
-}
-
-function subscriptionStripeWebhookPayloadSummary(array $event): ?string
-{
-    $object = $event['data']['object'] ?? null;
-    $object = is_array($object) ? $object : [];
-    $summary = [
-        'event_id' => $event['id'] ?? null,
-        'event_type' => $event['type'] ?? null,
-        'object_id' => $object['id'] ?? null,
-        'object_type' => $object['object'] ?? null,
-        'status' => $object['status'] ?? null,
-        'amount' => $object['amount'] ?? ($object['amount_received'] ?? null),
-        'currency' => $object['currency'] ?? null,
-        'livemode' => $event['livemode'] ?? null,
-        'api_version' => $event['api_version'] ?? null,
-    ];
-    $summary = array_filter($summary, static fn($value): bool => $value !== null && $value !== '');
-    $json = json_encode($summary, JSON_UNESCAPED_SLASHES);
-    if (!is_string($json) || $json === '') {
-        return null;
-    }
-
-    return strlen($json) > 4096 ? substr($json, 0, 4096) : $json;
-}
-
-function subscriptionStripeWebhookNormalizeEvent(array $event, string $rawBody): array
-{
-    $object = $event['data']['object'] ?? null;
-    $object = is_array($object) ? $object : [];
-    $amount = $object['amount'] ?? ($object['amount_received'] ?? null);
-
-    return [
-        'provider' => 'stripe',
-        'provider_event_id' => $event['id'] ?? null,
-        'provider_event_type' => $event['type'] ?? null,
-        'provider_event_created_at' => $event['created'] ?? null,
-        'provider_payment_id' => $object['id'] ?? null,
-        'provider_status' => $object['status'] ?? null,
-        'amount_cents' => $amount,
-        'currency' => $object['currency'] ?? null,
-        'livemode' => isset($event['livemode']) ? (bool)$event['livemode'] : null,
-        'api_version' => $event['api_version'] ?? null,
-        'event_hash' => hash('sha256', $rawBody),
-        'payload_text_sanitized' => subscriptionStripeWebhookPayloadSummary($event),
-        'raw_event_reference' => $event['id'] ?? null,
-        'received_at' => gmdate('Y-m-d H:i:s'),
-        'signature_validated_at' => gmdate('Y-m-d H:i:s'),
-    ];
 }
 
 function subscriptionStripeWebhookResponse(array $result): array
@@ -2108,7 +2061,29 @@ try {
             return;
         }
 
-        $input = subscriptionStripeWebhookNormalizeEvent($decoded, $rawBody);
+        $normalizedPayload = (new StripeWebhookPayloadNormalizer())->normalize($decoded, $rawBody, [
+            'expected_currency' => 'MXN',
+            'environment' => subscriptionEnvValue('MXMED_ENV')
+                ?: (subscriptionEnvValue('APP_ENV') ?: subscriptionEnvValue('ENVIRONMENT')),
+        ]);
+        if (!(bool)($normalizedPayload['ok'] ?? false)) {
+            $normalizerCode = (string)($normalizedPayload['code'] ?? 'stripe_payload_invalid');
+            $logContext = $normalizedPayload['log_context'] ?? [];
+            $logContext = is_array($logContext) ? $logContext : [];
+            $logContext['route'] = 'webhooks/stripe';
+            subscriptionStripeWebhookLog('payload_invalid', $logContext);
+            subscriptionRespond(
+                subscriptionStripeWebhookError(
+                    $normalizerCode,
+                    (string)($normalizedPayload['message'] ?? 'stripe webhook payload is invalid')
+                ),
+                (int)($normalizedPayload['http_status'] ?? 400)
+            );
+            return;
+        }
+
+        $input = $normalizedPayload['data'] ?? [];
+        $input = is_array($input) ? $input : [];
         subscriptionStripeWebhookLog('received', [
             'provider_event_id' => $input['provider_event_id'] ?? null,
             'provider_event_type' => $input['provider_event_type'] ?? null,
