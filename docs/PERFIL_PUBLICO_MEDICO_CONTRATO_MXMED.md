@@ -37508,3 +37508,217 @@ No se ejecuto:
 Objetivo sugerido:
 
 Repetir la activacion post-pago del checkout Stripe sintetico de `doctor/990099` usando una nueva `Idempotency-Key`, validando que `activate-after-payment` cree la suscripcion activa, enlace checkout y contract acceptance, preserve payment intent/event Stripe y no toque `doctor/900001`.
+
+## PP-Decisiones 197 - Cierre de flujo Stripe sintetico post-pago
+
+### Microfase
+
+`DOCS/Suscripciones-PaymentProvider-StripeWebhook-SyntheticFlowClosure-01`
+
+### Objetivo
+
+Cerrar documentalmente el flujo Stripe sintetico completo para suscripciones: webhook Stripe, firma HMAC v1, procesamiento de evento firmado, payment intent `paid / succeeded`, state read-model elegible, activacion por `activate-after-payment` y replay guard idempotente.
+
+### Contexto validado
+
+Fixture y trazabilidad principal:
+
+- provider: `stripe`;
+- doctor fixture: `990099`;
+- checkout_intent_uuid: `a1d2144f-13ba-41c0-9b85-ac67625b2fe2`;
+- contract_acceptance_uuid: `cef18fd6-8efe-4045-85ea-5cc439a3d671`;
+- payment_intent_uuid: `aec410a6-9f9a-4d3d-a3bc-27b380205643`;
+- provider_payment_id: `pi_mxmed_stripe_synthetic_4daca055f5e1b611058e2b2b`;
+- payment_event_uuid: `46db3a47-c97a-4ebc-98b1-c6b3a147686f`;
+- subscription_id activada: `f7de25be-6e93-43db-93d5-f3f526658aea`;
+- plan activado: `basic / annual`;
+- amount/currency: `10000 / MXN`.
+
+### Microfases cerradas del bloque Stripe
+
+Quedan documentadas como cerradas:
+
+- `BE/Suscripciones-PaymentProvider-StripeWebhook-RepositoryImplementation-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-RepositoryStaticQA-01`: PASS.
+- `BE/Suscripciones-PaymentProvider-StripeWebhook-ServiceImplementation-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-ServiceStaticQA-01`: PASS.
+- `BE/Suscripciones-PaymentProvider-StripeWebhook-EndpointImplementation-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-EndpointStaticQA-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-SignatureNegativeQA-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-SignaturePositiveSyntheticQA-01`: PASS con WARN no bloqueante.
+- `BE/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-01`: PASS.
+- `BE/DEV-Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-FixtureDoctorSelection-Implementation-01`: PASS.
+- `BE/DEV-Suscripciones-PaymentProvider-StripePaymentIntent-FixtureDoctorAvailability-Implementation-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripePaymentIntent-TestHarness-03`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-PaymentIntentMatchedSyntheticQA-02`: PASS con WARN no bloqueante.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-DuplicateEventQA-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-ConflictEventQA-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-MismatchAmountCurrencyQA-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-NonActionableStatusQA-01`: PASS con WARN no bloqueante.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-FailedCanceledStatusQA-01`: PASS.
+- `BE/Suscripciones-PaymentProvider-StripeWebhook-StateReadModelEligibilityFix-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-StateReadModelPostWebhookQA-02`: PASS.
+- `BE/Suscripciones-PaymentProvider-StripeWebhook-ActivateAfterPaymentProviderStatusFix-01`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-ActivateAfterPaymentSyntheticQA-02`: PASS.
+- `QA/Suscripciones-PaymentProvider-StripeWebhook-ActivateReplayGuardQA-01`: PASS.
+
+### Resultado del webhook Stripe sintetico
+
+Endpoint validado:
+
+- `POST /api/subscriptions/index.php/webhooks/stripe`.
+
+Contrato tecnico validado:
+
+- firma HMAC SHA-256 v1 mediante header `Stripe-Signature` y `STRIPE_WEBHOOK_SECRET`;
+- raw body leido desde `php://input`;
+- evento exitoso: `evt_mxmed_matched_pi_succeeded_qa_02`;
+- provider event type: `payment_intent.succeeded`;
+- resultado sobre payment intent: `paid / succeeded`;
+- payment event creado/procesado: `payment_intent_confirm / processed`;
+- el webhook no activa suscripcion automaticamente.
+
+### Seguridad del webhook
+
+Pruebas documentadas como cerradas:
+
+- firma faltante bloqueada;
+- firma invalida bloqueada;
+- timestamp fuera de tolerancia bloqueado;
+- secret faltante bloqueado;
+- evento duplicado exacto tratado como duplicate/idempotente;
+- mismo `provider_event_id` con `event_hash` distinto tratado como conflicto;
+- amount mismatch rechazado;
+- currency mismatch rechazado;
+- estados no accionables persisten `failed` controlado;
+- estados negativos contra payment intent ya pagado no degradan `paid`;
+- no se expuso raw payload, firma completa ni secret.
+
+### Fix de state read-model
+
+Problema previo:
+
+- el state podia bloquear con `payment_intent_not_paid` por acoplamiento a `mock_paid`.
+
+Fix aplicado:
+
+- `BuildSubscriptionPaymentActivationStateService.php` reconoce payment intents confirmados por proveedor;
+- `mxmed_mock / mock_paid` sigue valido;
+- `stripe / succeeded` queda valido;
+- en todos los casos se exige `normalized_status=paid`.
+
+Resultado validado para `doctor/990099`:
+
+- `activation_eligibility.can_activate=true`;
+- `activation_eligibility.reasons=[]`;
+- `required_action=activate_after_payment`.
+
+### Fix de activacion
+
+Problema previo:
+
+- `ActivateSubscriptionAfterPaymentService` exigia `provider_status=mock_paid`;
+- eso impedia activar pagos Stripe aunque el payment intent estuviera `paid / succeeded` y existiera payment event procesado.
+
+Fix aplicado:
+
+- el servicio reconoce `provider=stripe`;
+- exige `normalized_status=paid`;
+- acepta `provider_status=succeeded|paid`;
+- conserva compatibilidad con `mxmed_mock / mock_paid|paid`;
+- rechaza estados no pagados.
+
+Resultado:
+
+- activacion Stripe sintetica paso con HTTP `200`;
+- no dependio de `mock_paid`;
+- se mantuvieron guards de checkout, payment event, contract acceptance, idempotencia y scope.
+
+### Activacion final
+
+POST autorizado:
+
+- `activate-after-payment`.
+
+Estado confirmado durante activacion:
+
+- payment intent: `paid / succeeded`;
+- payment event: `payment_intent_confirm / processed`;
+- nueva subscription: `f7de25be-6e93-43db-93d5-f3f526658aea`;
+- doctor `990099`: 1 suscripcion activa `basic / annual`;
+- checkout: `activated`;
+- checkout `subscription_id`: `f7de25be-6e93-43db-93d5-f3f526658aea`;
+- contract acceptance enlazada a la misma subscription;
+- doctor `900001`: intacto, `professional / active`.
+
+### Replay guard de activacion
+
+Replay ejecutado sobre `activate-after-payment` con la misma Idempotency-Key exitosa.
+
+Resultado:
+
+- HTTP `200`;
+- respuesta idempotente;
+- `meta.idempotent_replay=true`;
+- `data.idempotency.idempotent_replay=true`;
+- subscription devuelta: `f7de25be-6e93-43db-93d5-f3f526658aea`;
+- no se creo segunda suscripcion.
+
+Conteos post replay:
+
+- checkout intents: `4`;
+- payment intents: `4`;
+- payment events: `13`;
+- profile subscriptions: `7`;
+- contract acceptances: `7`.
+
+### Estado final del bloque
+
+- doctor `990099`: `basic / annual`, `active`;
+- doctor `900001`: `professional / active`, intacto;
+- checkout Stripe sintetico: `activated`;
+- payment intent Stripe: `paid / succeeded`;
+- payment event: `payment_intent_confirm / processed`;
+- activacion automatica por webhook: no;
+- activacion por `activate-after-payment`: si, validada;
+- replay guard: validado.
+
+### WARNs no bloqueantes
+
+- No hay SDK Stripe PHP; la firma HMAC v1 local queda encapsulada y documentada para futuro reemplazo por SDK oficial.
+- Eventos no accionables se persisten como `failed` con reason controlado.
+- Payload reference limitado a `payload_text_sanitized` / notas seguras.
+- Algunos SELECT iniciales usaron columnas inexistentes durante QA y se corrigieron sin writes.
+
+### Exclusiones de esta microfase documental
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios;
+- repositorios;
+- SQL/schema/seeds;
+- fixtures.
+
+No se ejecuto:
+
+- SQL;
+- POST/curl;
+- webhook Stripe;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- migraciones/seeds;
+- writes manuales en BD;
+- Stripe real.
+
+### Siguiente microfase recomendada
+
+`DOCS/Suscripciones-PaymentProvider-StripeWebhook-ProductionReadinessGap-01`
+
+Objetivo sugerido:
+
+Documentar lo faltante para pasar del flujo Stripe sintetico validado al flujo Stripe productivo real: SDK oficial, llaves reales/sandbox, endpoint publico, payloads reales Stripe, backoffice, reconciliacion y QA con eventos reales.
