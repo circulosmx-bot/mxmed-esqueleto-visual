@@ -38801,3 +38801,306 @@ Conclusiones:
 Objetivo sugerido:
 
 Disenar la validacion con payload real Stripe sandbox, sin activar produccion todavia, definiendo eventos reales minimos, campos obligatorios, metadata esperada, `livemode`, `api_version`, amount/currency y correlacion con payment intents locales.
+
+## PP-Decisiones 203 - Readiness de payload real Stripe sandbox
+
+### Microfase
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-Readiness-01`
+
+### Objetivo
+
+Disenar documentalmente la validacion con payload real Stripe sandbox, sin activar produccion todavia, definiendo eventos reales minimos, campos obligatorios, metadata esperada, `livemode`, `api_version`, amount/currency y correlacion con payment intents locales.
+
+### Base
+
+Estado Git inicial:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD local/origin: `492a229`;
+- ahead/behind: `0/0`;
+- working tree inicial: limpio.
+
+Microfase previa cerrada:
+
+- `DOCS/Suscripciones-PaymentProvider-StripeSignatureVerifier-Closure-01`: PASS.
+
+Estado actual:
+
+- `StripeWebhookSignatureVerifier` implementado;
+- endpoint webhook Stripe conserva contrato HTTP/JSON;
+- firma HMAC v1 sintetica validada;
+- flujo Stripe sintetico aprobado hasta activacion y replay guard;
+- produccion sigue bloqueada;
+- no existe `composer.json`;
+- no existe `composer.lock`;
+- no existe `vendor/`;
+- no existe SDK Stripe PHP instalado.
+
+### Fuentes oficiales revisadas
+
+Se reviso documentacion oficial Stripe sobre:
+
+- verificacion de firma webhook y uso de raw body + `Stripe-Signature` + endpoint secret;
+- objeto `Event`;
+- tipos de evento `payment_intent.*`;
+- objeto `PaymentIntent`;
+- metadata;
+- `livemode`;
+- `api_version`;
+- amount/currency.
+
+Decisiones utiles para MXMed:
+
+- Stripe firma eventos con `Stripe-Signature`; el raw body no debe mutarse antes de verificar;
+- cada webhook endpoint tiene secret propio y los secrets test/live no son equivalentes;
+- `Event.api_version` representa la version usada para renderizar `data` cuando el evento fue creado;
+- `Event.data.object` contiene el recurso Stripe relevante para el evento;
+- `Event.livemode=false` corresponde a test/sandbox y `true` a live;
+- `PaymentIntent.amount` usa la unidad minima de la moneda;
+- `PaymentIntent.currency` se presenta como codigo ISO de tres letras en minusculas;
+- `PaymentIntent.metadata` es el lugar adecuado para pares clave/valor no sensibles de correlacion;
+- `PaymentIntent.status` incluye estados terminales y no terminales que no deben mapearse todos como pago.
+
+### Proposito de esta fase
+
+Esta fase:
+
+- no conecta produccion;
+- no crea pagos reales;
+- no habilita Stripe real para usuarios;
+- no ejecuta webhook real;
+- solo define como validar payload real sandbox;
+- reduce riesgo antes de tocar creacion real de PaymentIntents.
+
+### Eventos reales minimos a validar
+
+Eventos minimos para la siguiente matriz sandbox:
+
+- `payment_intent.succeeded`;
+- `payment_intent.payment_failed`;
+- `payment_intent.canceled`.
+
+Eventos y escenarios opcionales para una fase posterior:
+
+- eventos intermedios o no accionables;
+- eventos duplicados;
+- eventos fuera de orden;
+- eventos con `api_version` distinta;
+- eventos con estructura expandida distinta.
+
+### Campos minimos del evento Stripe
+
+El normalizador debe validar o capturar:
+
+- `id` del event como `provider_event_id`;
+- `type` como `provider_event_type`;
+- `livemode`;
+- `api_version`;
+- `created`;
+- `data.object`;
+- `data.object.id` como `provider_payment_id`;
+- `data.object.object=payment_intent`;
+- `data.object.status`;
+- `data.object.amount`;
+- `data.object.amount_received`, si aplica;
+- `data.object.currency`;
+- `data.object.metadata`;
+- `data.object.latest_charge`, si aplica;
+- `data.object.payment_method_types`, si aplica.
+
+Estado actual MXMed:
+
+- `api/subscriptions/index.php` ya normaliza `id`, `type`, `created`, `data.object.id`, `data.object.status`, `amount` o `amount_received`, `currency`, `livemode`, `api_version`, `event_hash`, `payload_text_sanitized`, `received_at` y `signature_validated_at`;
+- falta definir explicitamente metadata MXMed real y validacion de `data.object.object=payment_intent` para payload real;
+- falta definir matriz sandbox real antes de habilitar produccion.
+
+### Mapeo de estados
+
+Propuesta de mapeo:
+
+- Stripe `payment_intent.succeeded` o status `succeeded` -> local `normalized_status=paid`;
+- Stripe `payment_intent.payment_failed` o status fallido -> local `failed`;
+- Stripe `payment_intent.canceled` o status `canceled` -> local `cancelled`;
+- estados intermedios como `processing`, `requires_action`, `requires_payment_method`, `requires_confirmation` y `requires_capture` no deben activar;
+- solo `normalized_status=paid` + provider status confirmado + amount/currency correctos puede avanzar a activacion.
+
+Estado actual MXMed:
+
+- `ProcessStripeSubscriptionWebhookService` ya mapea `payment_intent.succeeded`, `payment_intent.payment_failed` y `payment_intent.canceled`;
+- los estados intermedios quedan sin transicion procesable;
+- debe mantenerse la regla de no activar automaticamente desde webhook.
+
+### Correlacion local obligatoria
+
+El payload real debe correlacionarse con MXMed mediante al menos uno de estos mecanismos:
+
+- `provider_payment_id` guardado localmente;
+- metadata Stripe emitida al crear el PaymentIntent real;
+- estrategia equivalente definida antes de crear PaymentIntent real.
+
+Metadata recomendada al crear PaymentIntent real:
+
+- `mxmed_checkout_intent_uuid`;
+- `mxmed_payment_intent_uuid`;
+- `mxmed_entity_type`;
+- `mxmed_entity_id`;
+- `mxmed_plan_code`;
+- `mxmed_billing_period`;
+- `mxmed_environment`.
+
+Regla:
+
+- sin correlacion confiable no debe activarse nada;
+- si `provider_payment_id` no existe localmente, el webhook debe responder controlado como no encontrado y registrar evento failed si aplica;
+- si metadata contradice el registro local, debe bloquearse procesamiento o activacion.
+
+No incluir en metadata:
+
+- datos sensibles del paciente;
+- datos de tarjeta;
+- notas clinicas;
+- secretos;
+- payloads completos;
+- datos medicos.
+
+### Validaciones amount/currency
+
+Reglas:
+
+- amount/currency siguen siendo server-side;
+- frontend no controla monto;
+- Stripe envia `amount` en unidad minima;
+- currency esperada para v1: `mxn`, normalizada localmente a `MXN`;
+- amount real Stripe debe coincidir con snapshot local;
+- mismatch amount debe fallar;
+- mismatch currency debe fallar;
+- no activar con mismatch.
+
+Estado actual MXMed:
+
+- `ProcessStripeSubscriptionWebhookService` ya compara amount/currency contra el payment intent local;
+- la siguiente QA real debe cubrir mismatch amount y mismatch currency con payload sandbox real o fixture realista.
+
+### Validacion de livemode
+
+Reglas esperadas:
+
+- sandbox/test debe venir con `livemode=false`;
+- produccion debe venir con `livemode=true`;
+- entorno local/dev no debe aceptar payload productivo como si fuera sandbox;
+- entorno productivo no debe aceptar payload test como productivo;
+- mismatch de modo debe loguearse de forma segura;
+- no activar si `livemode` contradice el entorno esperado.
+
+Pendiente:
+
+- definir variable de entorno o configuracion que indique modo Stripe esperado (`test`/`live`);
+- validar que el webhook secret corresponda al modo esperado;
+- documentar comportamiento cuando el modo no coincide.
+
+### Validacion de api_version
+
+Reglas:
+
+- capturar `api_version` del evento;
+- registrar version observada;
+- no depender de un unico valor sin documentarlo;
+- si payload cambia por version, ajustar normalizador con QA especifica;
+- no activar si faltan campos criticos por diferencia de version;
+- conservar trazabilidad de la version usada por Stripe al crear el evento.
+
+Estado actual MXMed:
+
+- `api_version` ya se normaliza y llega al servicio;
+- aun falta una politica explicita para versiones desconocidas o campos criticos faltantes.
+
+### Matriz QA sandbox futura
+
+QA pendiente con payload real Stripe sandbox:
+
+- firma real sandbox valida;
+- firma real sandbox invalida;
+- payload real `payment_intent.succeeded`;
+- payload real `payment_intent.payment_failed`;
+- payload real `payment_intent.canceled`;
+- amount mismatch real;
+- currency mismatch real;
+- `provider_payment_id` no encontrado;
+- metadata faltante;
+- metadata contradictoria;
+- `livemode` incorrecto;
+- evento duplicado real;
+- evento fuera de orden;
+- `api_version` observada;
+- state read-model post-webhook real;
+- `activate-after-payment` post-webhook real;
+- replay guard post-activacion real.
+
+### Brecha antes de implementar creacion real
+
+Pendientes:
+
+- decidir PaymentIntents vs Checkout Sessions;
+- decidir como crear PaymentIntent real;
+- decidir metadata final;
+- definir llaves sandbox;
+- definir webhook secret sandbox;
+- definir configuracion de entorno;
+- definir endpoint publico sandbox;
+- definir operacion de backoffice;
+- definir reconciliacion;
+- definir rotacion y almacenamiento de secrets;
+- decidir si se mantendra HMAC local o se introducira SDK oficial en una fase posterior;
+- definir pruebas con Stripe CLI o Dashboard sandbox sin tocar produccion.
+
+### Decision de estado
+
+Resultado:
+
+- `PASS readiness`.
+
+Conclusion:
+
+- el flujo sintetico esta aprobado;
+- payload real Stripe sandbox aun no esta validado;
+- produccion sigue bloqueada;
+- siguiente paso debe preparar captura/validacion real sandbox sin activar produccion;
+- no se debe crear PaymentIntent real hasta cerrar normalizador, metadata y matriz QA sandbox.
+
+### Alcance de esta microfase
+
+No se modifico:
+
+- frontend;
+- backend/API;
+- servicios/repositorios;
+- SQL/schema/seeds;
+- fixtures;
+- `composer.json`;
+- `composer.lock`;
+- `vendor/`.
+
+No se ejecuto:
+
+- POST/curl;
+- webhook Stripe real;
+- Stripe CLI;
+- creacion real de PaymentIntent;
+- `confirm_mock`;
+- `activate-after-payment`;
+- endpoint normal `payment-intents`;
+- `checkout-intents`;
+- fixture DEV/local;
+- SQL;
+- migraciones/seeds;
+- Composer;
+- writes manuales en BD.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentProvider-StripeRealPayload-NormalizerReadiness-01`
+
+Objetivo sugerido:
+
+Disenar el normalizador de payload real Stripe hacia el contrato interno de `ProcessStripeSubscriptionWebhookService`, manteniendo compatibilidad con payload sintetico y preparando QA sandbox real.
