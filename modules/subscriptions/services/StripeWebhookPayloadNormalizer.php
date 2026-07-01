@@ -77,19 +77,19 @@ final class StripeWebhookPayloadNormalizer
             ]);
         }
 
-        $livemode = array_key_exists('livemode', $eventPayload) ? (bool)$eventPayload['livemode'] : null;
-        if (array_key_exists('expected_livemode', $options)
-            && $options['expected_livemode'] !== null
-            && $livemode !== null
-            && (bool)$options['expected_livemode'] !== $livemode
-        ) {
-            return $this->error('stripe_livemode_mismatch', 422, [
-                'provider_event_id' => $eventId,
-                'provider_event_type' => $eventType,
-                'provider_payment_id' => $paymentIntentId,
-                'livemode' => $livemode,
-                'expected_livemode' => (bool)$options['expected_livemode'],
-            ]);
+        $livemodePresent = array_key_exists('livemode', $eventPayload);
+        $livemode = $livemodePresent ? (bool)$eventPayload['livemode'] : null;
+        if (array_key_exists('expected_livemode', $options) && $options['expected_livemode'] !== null) {
+            $expectedLivemode = (bool)$options['expected_livemode'];
+            if (!$livemodePresent || $expectedLivemode !== $livemode) {
+                return $this->error('stripe_livemode_mismatch', 422, [
+                    'provider_event_id' => $eventId,
+                    'provider_event_type' => $eventType,
+                    'provider_payment_id' => $paymentIntentId,
+                    'livemode' => $livemode,
+                    'expected_livemode' => $expectedLivemode,
+                ]);
+            }
         }
 
         $metadata = $this->mxmedMetadata($paymentIntent['metadata'] ?? null);

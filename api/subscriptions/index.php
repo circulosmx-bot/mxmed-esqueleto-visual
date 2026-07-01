@@ -266,6 +266,91 @@ function subscriptionStripeWebhookSignatureHeader(array $headers): string
     return trim((string)($_SERVER['HTTP_STRIPE_SIGNATURE'] ?? ''));
 }
 
+function subscriptionStripeWebhookEnvironment(): string
+{
+    return subscriptionEnvValue('MXMED_ENV')
+        ?: (subscriptionEnvValue('APP_ENV') ?: subscriptionEnvValue('ENVIRONMENT'));
+}
+
+function subscriptionStripeWebhookExpectedLivemode(): array
+{
+    $environment = subscriptionStripeWebhookEnvironment();
+    $configured = trim(subscriptionEnvValue('STRIPE_WEBHOOK_EXPECTED_LIVEMODE'));
+    if ($configured !== '') {
+        $normalized = strtolower($configured);
+        if ($normalized === 'true' || $normalized === '1') {
+            return [
+                'ok' => true,
+                'expected_livemode' => true,
+                'source' => 'STRIPE_WEBHOOK_EXPECTED_LIVEMODE',
+                'environment' => $environment,
+            ];
+        }
+        if ($normalized === 'false' || $normalized === '0') {
+            return [
+                'ok' => true,
+                'expected_livemode' => false,
+                'source' => 'STRIPE_WEBHOOK_EXPECTED_LIVEMODE',
+                'environment' => $environment,
+            ];
+        }
+
+        return subscriptionStripeWebhookLivemodeExpectationError(
+            'stripe_livemode_expectation_invalid',
+            'stripe webhook livemode expectation is invalid',
+            $environment,
+            'STRIPE_WEBHOOK_EXPECTED_LIVEMODE'
+        );
+    }
+
+    $environmentKey = strtolower($environment);
+    if (subscriptionProductionEnvironmentDetected()) {
+        return subscriptionStripeWebhookLivemodeExpectationError(
+            'stripe_livemode_expectation_missing',
+            'stripe webhook livemode expectation is required',
+            $environment,
+            'environment_production'
+        );
+    }
+
+    $devEnvironments = ['local', 'dev', 'development', 'test', 'testing', 'qa', 'sandbox', 'staging'];
+    if (in_array($environmentKey, $devEnvironments, true) || subscriptionIsLocalRequest()) {
+        return [
+            'ok' => true,
+            'expected_livemode' => false,
+            'source' => $environmentKey !== '' ? 'environment_default' : 'local_request_default',
+            'environment' => $environment,
+        ];
+    }
+
+    return subscriptionStripeWebhookLivemodeExpectationError(
+        'stripe_livemode_expectation_missing',
+        'stripe webhook livemode expectation is required',
+        $environment,
+        'environment_unknown'
+    );
+}
+
+function subscriptionStripeWebhookLivemodeExpectationError(
+    string $code,
+    string $message,
+    string $environment,
+    string $source
+): array {
+    return [
+        'ok' => false,
+        'code' => $code,
+        'http_status' => 500,
+        'message' => $message,
+        'log_context' => [
+            'provider' => 'stripe',
+            'error_code' => $code,
+            'expectation_source' => $source,
+            'environment' => $environment,
+        ],
+    ];
+}
+
 function subscriptionStripeWebhookResponse(array $result): array
 {
     $status = (int)($result['http_status_recommended'] ?? 200);
@@ -2061,10 +2146,27 @@ try {
             return;
         }
 
+        $livemodeExpectation = subscriptionStripeWebhookExpectedLivemode();
+        if (!(bool)($livemodeExpectation['ok'] ?? false)) {
+            $expectationCode = (string)($livemodeExpectation['code'] ?? 'stripe_livemode_expectation_missing');
+            $logContext = $livemodeExpectation['log_context'] ?? [];
+            $logContext = is_array($logContext) ? $logContext : [];
+            $logContext['route'] = 'webhooks/stripe';
+            subscriptionStripeWebhookLog('livemode_expectation_invalid', $logContext);
+            subscriptionRespond(
+                subscriptionStripeWebhookError(
+                    $expectationCode,
+                    (string)($livemodeExpectation['message'] ?? 'stripe webhook livemode expectation is required')
+                ),
+                (int)($livemodeExpectation['http_status'] ?? 500)
+            );
+            return;
+        }
+
         $normalizedPayload = (new StripeWebhookPayloadNormalizer())->normalize($decoded, $rawBody, [
+            'expected_livemode' => (bool)$livemodeExpectation['expected_livemode'],
             'expected_currency' => 'MXN',
-            'environment' => subscriptionEnvValue('MXMED_ENV')
-                ?: (subscriptionEnvValue('APP_ENV') ?: subscriptionEnvValue('ENVIRONMENT')),
+            'environment' => (string)($livemodeExpectation['environment'] ?? subscriptionStripeWebhookEnvironment()),
         ]);
         if (!(bool)($normalizedPayload['ok'] ?? false)) {
             $normalizerCode = (string)($normalizedPayload['code'] ?? 'stripe_payload_invalid');
