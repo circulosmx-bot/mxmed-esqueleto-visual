@@ -42063,3 +42063,116 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar post-push que `payment-activation-state` expone `upgrade_explanation.benefits_summary` con beneficios concretos para el upgrade `basic -> standard`, que `benefits_source=public_profile_plan_capabilities` y que pricing, cobertura, renovacion futura y bloqueo de reactivacion siguen intactos.
+
+## PP-Decisiones 218 - Integracion UX de explicacion de upgrade en panel Suscripcion
+
+### Microfase cerrada
+
+`FE/Suscripciones-UpgradeIntent-ExplanationUX-ReadModelIntegration-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+El panel privado de Suscripcion integra un bloque comercial para explicar al medico la mejora de plan usando el contrato backend `upgrade_explanation`.
+
+### Archivos frontend modificados
+
+- `index.html`
+- `assets/js/app.js`
+
+### Contrato consumido
+
+La UX pinta exclusivamente datos entregados por:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-activation-state`
+
+Bloque consumido:
+
+`data.upgrade_explanation`
+
+### Comportamiento UX
+
+Se agrega una seccion visible solo si existe `upgrade_explanation`:
+
+`Resumen de tu mejora de plan`
+
+La seccion muestra:
+
+- cambio de plan: plan actual -> plan destino;
+- monto de ajuste formateado como MXN desde `pricing_explanation.adjustment_amount_cents`;
+- razon del cobro desde `pricing_explanation.reason`;
+- cobertura desde `coverage.message` o `coverage.covered_until`;
+- renovacion futura desde `renewal_after_coverage`;
+- beneficios desde `benefits_summary`;
+- nota de no recalculo cuando `activation_rule.recalculates_on_activation=false`.
+
+Si `upgrade_explanation` no existe, el bloque se oculta y el panel sigue funcionando.
+
+### Reglas de frontend
+
+El frontend:
+
+- no calcula pricing;
+- no calcula prorrateos;
+- no calcula beneficios;
+- no hardcodea precios;
+- no hardcodea beneficios;
+- no muestra JSON crudo;
+- no muestra IDs tecnicos en este bloque;
+- no muestra `checkout_intent_uuid`;
+- no muestra `payment_intent_uuid`;
+- no muestra `provider_payment_id`;
+- no muestra `payment_event_uuid`;
+- no muestra `can_activate`, `reasons` ni `required_action` en la seccion comercial.
+
+El frontend solo formatea para UX:
+
+- centavos a moneda visible;
+- fechas de backend a formato legible en espanol.
+
+### Seguridad y alcance
+
+No se modifico:
+
+- backend PHP;
+- API/rutas;
+- Stripe provider;
+- Stripe webhook;
+- `activate-after-payment`;
+- SQL/schema/seeds;
+- precios;
+- matriz/capacidades de planes.
+
+No se ejecuto:
+
+- SQL manual;
+- Stripe;
+- `stripe trigger`;
+- `confirm_mock`;
+- checkout nuevo;
+- PaymentIntent nuevo;
+- webhook nuevo;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Validacion
+
+- `git diff --check`: PASS.
+- Validacion HTTP read-only del caso `doctor/990099`: PASS.
+- `upgrade_explanation` visible con `basic -> standard`.
+- monto visible: `$100 MXN`.
+- beneficios visibles: 6.
+- pricing, cobertura, renovacion y regla de no recalculo se conservan.
+- estado post-activacion sigue cerrado: checkout `activated`, plan activo `standard`, `can_activate=false`.
+- sin secretos ni `client_secret`.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-ExplanationUX-ReadModelIntegration-PostPush-01`
+
+Objetivo sugerido:
+
+Validar post-push en navegador/HTTP que el panel muestra el bloque `Resumen de tu mejora de plan`, sin IDs tecnicos, sin errores JS y sin ejecutar checkout, PaymentIntent, Stripe ni activacion.

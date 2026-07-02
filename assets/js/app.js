@@ -58876,6 +58876,15 @@ function mxResetLogoPreview(){
     selectedPlanSummary: pane.querySelector('[data-subp-selected-plan-summary]'),
     selectedPlanMessage: pane.querySelector('[data-subp-plan-selection-message]'),
     planContinue: pane.querySelector('[data-subp-plan-continue]'),
+    upgradeExplanation: pane.querySelector('[data-subp-upgrade-explanation]'),
+    upgradeRoute: pane.querySelector('[data-subp-upgrade-route]'),
+    upgradeAmount: pane.querySelector('[data-subp-upgrade-amount]'),
+    upgradeReason: pane.querySelector('[data-subp-upgrade-reason]'),
+    upgradeCoverage: pane.querySelector('[data-subp-upgrade-coverage]'),
+    upgradeRenewal: pane.querySelector('[data-subp-upgrade-renewal]'),
+    upgradeBenefitsWrap: pane.querySelector('[data-subp-upgrade-benefits-wrap]'),
+    upgradeBenefits: pane.querySelector('[data-subp-upgrade-benefits]'),
+    upgradeActivationRule: pane.querySelector('[data-subp-upgrade-activation-rule]'),
     couponInput: pane.querySelector('[data-subp-coupon-input]'),
     couponApply: pane.querySelector('[data-subp-coupon-apply]'),
     couponMsg: pane.querySelector('[data-subp-coupon-msg]'),
@@ -59103,6 +59112,45 @@ function mxResetLogoPreview(){
     return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: '2-digit' });
   }
 
+  function formatLongDate(value){
+    const raw = clean(value);
+    if(!raw) return '';
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const date = match
+      ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+      : new Date(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+    if(Number.isNaN(date.getTime())) return raw;
+    return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: '2-digit' });
+  }
+
+  function formatSubscriptionCents(cents, currency = 'MXN'){
+    if(cents === null || cents === undefined || clean(cents) === '') return '';
+    const amountCents = Number(cents);
+    if(!Number.isFinite(amountCents)) return '';
+    const code = clean(currency).toUpperCase() || 'MXN';
+    const amount = amountCents / 100;
+    const hasFraction = Math.abs(amountCents % 100) > 0;
+    const formatted = new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: code,
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: hasFraction ? 2 : 0,
+      maximumFractionDigits: hasFraction ? 2 : 0
+    }).format(amount);
+    return `${formatted} ${code}`;
+  }
+
+  function humanizeSubscriptionDateText(text, rawDate){
+    const message = clean(text);
+    const longDate = formatLongDate(rawDate);
+    if(!message || !longDate) return message;
+    const raw = clean(rawDate);
+    const dateOnly = raw.slice(0, 10);
+    return message
+      .replace(raw, longDate)
+      .replace(dateOnly, longDate);
+  }
+
   function formatDuration(days, billingPeriod){
     if(Number(days) === 0 || clean(billingPeriod).toLowerCase() === 'lifetime') return 'Permanente';
     const total = Number(days);
@@ -59237,6 +59285,7 @@ function mxResetLogoPreview(){
   }
 
   function renderActivationState(){
+    renderSubscriptionUpgradeExplanation();
     if(!els.activationState) return;
     if(!isSubscriptionDebugPanelEnabled()){
       els.activationState.classList.add('d-none');
@@ -59298,6 +59347,85 @@ function mxResetLogoPreview(){
     if(els.activationRefresh){
       els.activationRefresh.disabled = current.state === 'loading';
       els.activationRefresh.classList.toggle('disabled', current.state === 'loading');
+    }
+  }
+
+  function renderSubscriptionUpgradeExplanation(){
+    if(!els.upgradeExplanation) return;
+    const payload = data.activationState?.payload || null;
+    const state = payload?.data && typeof payload.data === 'object' ? payload.data : null;
+    const explanation = state?.upgrade_explanation && typeof state.upgrade_explanation === 'object'
+      ? state.upgrade_explanation
+      : null;
+    if(!explanation){
+      els.upgradeExplanation.classList.add('d-none');
+      return;
+    }
+
+    const currentPlan = explanation.current_plan || {};
+    const targetPlan = explanation.target_plan || {};
+    const pricing = explanation.pricing_explanation || {};
+    const coverage = explanation.coverage || {};
+    const renewal = explanation.renewal_after_coverage || {};
+    const activationRule = explanation.activation_rule || {};
+    const benefits = Array.isArray(explanation.benefits_summary)
+      ? explanation.benefits_summary.filter((item)=> item && typeof item === 'object')
+      : [];
+    const currentLabel = clean(currentPlan.label || currentPlan.code) || 'Plan actual';
+    const targetLabel = clean(targetPlan.label || targetPlan.code) || 'Plan destino';
+    const currency = clean(pricing.currency) || 'MXN';
+    const amountLabel = formatSubscriptionCents(pricing.adjustment_amount_cents, currency);
+    const coverageDate = clean(coverage.covered_until);
+    const coverageMessage = clean(coverage.message)
+      ? humanizeSubscriptionDateText(coverage.message, coverageDate)
+      : (coverageDate ? `Tu cobertura se mantiene hasta ${formatLongDate(coverageDate) || coverageDate}.` : '');
+    const annualLabel = formatSubscriptionCents(renewal.annual_price_cents, currency);
+    const monthlyLabel = formatSubscriptionCents(renewal.monthly_price_cents, currency);
+    const renewalParts = [];
+    if(annualLabel) renewalParts.push(`${annualLabel} al año`);
+    if(monthlyLabel) renewalParts.push(`${monthlyLabel} al mes`);
+    const renewalMessage = clean(renewal.message)
+      ? humanizeSubscriptionDateText(renewal.message, coverageDate)
+      : '';
+    const renewalText = [
+      renewalParts.length ? `Precio regular: ${renewalParts.join(' o ')}.` : '',
+      renewalMessage
+    ].filter(Boolean).join(' ');
+
+    els.upgradeExplanation.classList.remove('d-none');
+
+    if(els.upgradeRoute){
+      els.upgradeRoute.textContent = `De ${currentLabel} a ${targetLabel}`;
+    }
+    if(els.upgradeAmount){
+      els.upgradeAmount.textContent = amountLabel || 'Monto calculado por backend';
+    }
+    if(els.upgradeReason){
+      els.upgradeReason.textContent = clean(pricing.reason) || 'El ajuste fue calculado por el backend con el snapshot del checkout.';
+    }
+    if(els.upgradeCoverage){
+      els.upgradeCoverage.textContent = coverageMessage || 'Cobertura calculada por el backend.';
+    }
+    if(els.upgradeRenewal){
+      els.upgradeRenewal.textContent = renewalText || 'El precio de renovación se mostrará cuando esté disponible.';
+    }
+    if(els.upgradeBenefitsWrap){
+      els.upgradeBenefitsWrap.classList.toggle('d-none', benefits.length === 0);
+    }
+    if(els.upgradeBenefits){
+      els.upgradeBenefits.innerHTML = benefits.map((benefit)=>{
+        const label = clean(benefit.label);
+        const description = clean(benefit.description);
+        if(!label && !description) return '';
+        return `<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span><strong>${escapeHtml(label || 'Beneficio agregado')}</strong>${description ? `<br><span class="text-muted">${escapeHtml(description)}</span>` : ''}</span></li>`;
+      }).filter(Boolean).join('');
+    }
+    if(els.upgradeActivationRule){
+      const noRecalculation = activationRule.recalculates_on_activation === false;
+      els.upgradeActivationRule.textContent = noRecalculation
+        ? (clean(activationRule.message) || 'Este monto ya fue calculado al crear el checkout y no se recalcula al activar.')
+        : '';
+      els.upgradeActivationRule.classList.toggle('d-none', !noRecalculation);
     }
   }
 
