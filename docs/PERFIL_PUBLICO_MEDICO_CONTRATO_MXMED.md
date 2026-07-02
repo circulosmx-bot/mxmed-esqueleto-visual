@@ -42176,3 +42176,101 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar post-push en navegador/HTTP que el panel muestra el bloque `Resumen de tu mejora de plan`, sin IDs tecnicos, sin errores JS y sin ejecutar checkout, PaymentIntent, Stripe ni activacion.
+
+## PP-Decisiones 219 - Pulido visual de metadatos tecnicos en plan actual
+
+### Microfase cerrada
+
+`FE/Suscripciones-UpgradeIntent-ExplanationUX-VisualPolish-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+Pulir la UX normal del panel de Suscripcion para que la tarjeta de plan actual no muestre metadatos internos del read-model.
+
+### Problema detectado
+
+La QA visual manual del bloque `Resumen de tu mejora de plan` paso con WARN menor porque, fuera del bloque de upgrade, la tarjeta de plan actual mostraba campos tecnicos:
+
+- `Contexto`;
+- `Fuente contexto`;
+- `Fuente`;
+- `Version`.
+
+Estos campos son utiles para soporte/debug, pero no para la vista normal del medico.
+
+### Decision implementada
+
+`assets/js/app.js` mantiene una lista comercial en la tarjeta de plan actual con:
+
+- plan actual;
+- estado;
+- periodo;
+- vigencia en formato legible;
+- dias restantes;
+- gracia solo si existe.
+
+Los metadatos internos se conservan solo cuando esta activo el modo debug existente:
+
+- `?subp_debug=1`;
+- `?mxmed_subp_debug=1`;
+- `localStorage.mxmed_subp_debug = "1"`.
+
+No se creo un segundo mecanismo de debug.
+
+### Bloque de upgrade
+
+El bloque `Resumen de tu mejora de plan` queda intacto:
+
+- usa `upgrade_explanation` del backend;
+- conserva cambio `basic -> standard`;
+- conserva monto `$100 MXN`;
+- conserva cobertura, renovacion futura, beneficios y regla de no recalculo;
+- no muestra IDs tecnicos ni reasons tecnicas.
+
+### Alcance
+
+No se modifico:
+
+- backend PHP;
+- API/rutas;
+- servicios de suscripciones;
+- Stripe provider;
+- Stripe webhook;
+- `activate-after-payment`;
+- SQL/schema/seeds;
+- precios;
+- capacidades de planes.
+
+No se ejecuto:
+
+- SQL manual;
+- Stripe;
+- `stripe trigger`;
+- `confirm_mock`;
+- checkout nuevo;
+- PaymentIntent nuevo;
+- webhook nuevo;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Validacion
+
+- `git diff --check`: PASS.
+- Validacion visual/headless del panel `#p-suscripcion`: PASS.
+- La tarjeta de plan actual ya no muestra `Contexto`, `Fuente` ni `Version` en vista normal.
+- La vigencia del plan actual se presenta como fecha legible, no como timestamp tecnico.
+- El bloque `Resumen de tu mejora de plan` sigue visible y correcto.
+- Bloques debug/DEV permanecen ocultos por defecto.
+- No hubo POSTs de negocio durante la validacion.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-ExplanationUX-VisualPolish-PostPush-01`
+
+Objetivo sugerido:
+
+Validar post-push que la vista normal del panel de Suscripcion no muestra metadatos tecnicos del read-model, que el bloque `upgrade_explanation` sigue correcto y que debug conserva esos datos solo bajo activacion explicita.

@@ -59106,7 +59106,9 @@ function mxResetLogoPreview(){
   function formatDate(value){
     const raw = clean(value);
     if(!raw) return 'No aplica';
-    const normalized = raw.includes('T') ? raw : `${raw}T00:00:00`;
+    const normalized = raw.includes('T')
+      ? raw
+      : (raw.includes(' ') ? raw.replace(' ', 'T') : `${raw}T00:00:00`);
     const date = new Date(normalized);
     if(Number.isNaN(date.getTime())) return raw;
     return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: '2-digit' });
@@ -59596,25 +59598,38 @@ function mxResetLogoPreview(){
   function buildReadModelFeatures(model, meta, contextInfo){
     const contracted = clean(model?.contracted_plan_code);
     const effective = clean(model?.effective_plan_code);
+    const planLabel = clean(model?.plan_label) || clean(model?.plan_name) || effective || contracted || 'No disponible';
+    const status = clean(model?.status);
+    const statusLabel = labelFromMap(STATUS_LABELS, status, status || 'Estado no disponible');
     const period = labelFromMap(PERIOD_LABELS, model?.billing_period, 'No aplica');
     const grace = clean(model?.grace_status) || 'No aplica';
+    const startsAt = formatDate(model?.starts_at);
+    const expiresAt = (clean(model?.billing_period).toLowerCase() === 'lifetime' || Number(model?.duration_days) === 0)
+      ? 'No aplica'
+      : formatDate(model?.expires_at);
     const version = clean(model?.version || meta?.version);
     const source = clean(model?.source);
     const contextEntityType = clean(contextInfo?.entity_type);
     const contextEntityId = clean(contextInfo?.entity_id || contextInfo?.doctor_id);
     const contextSource = clean(contextInfo?.source);
-    return [
+    const commercialFeatures = [
+      `Plan actual: ${planLabel}`,
+      `Estado: ${statusLabel}`,
+      `Periodo: ${period}`,
+      startsAt !== 'No aplica' ? `Activo desde: ${startsAt}` : '',
+      `Vigencia: ${expiresAt}`,
+      `Días restantes: ${formatDaysRemaining(model?.days_until_expiration)}`,
+      grace !== 'No aplica' ? `Gracia: ${grace}` : ''
+    ];
+    const debugFeatures = isSubscriptionDebugPanelEnabled() ? [
       `Plan efectivo: ${effective || 'No disponible'}`,
       `Plan contratado: ${contracted || 'Sin plan contratado vigente'}`,
-      `Periodo: ${period}`,
-      `Duración: ${formatDuration(model?.duration_days, model?.billing_period)}`,
-      `Días restantes: ${formatDaysRemaining(model?.days_until_expiration)}`,
-      `Gracia: ${grace}`,
       contextEntityType && contextEntityId ? `Contexto: ${contextEntityType} #${contextEntityId}` : '',
       contextSource ? `Fuente contexto: ${contextSource}` : '',
       source ? `Fuente: ${source}` : '',
       version ? `Versión: ${version}` : ''
-    ].filter(Boolean);
+    ] : [];
+    return [...commercialFeatures, ...debugFeatures].filter(Boolean);
   }
 
   function applyReadModel(model, meta, contextInfo){
@@ -59644,7 +59659,7 @@ function mxResetLogoPreview(){
       nextBill: 'No aplica',
       autorenew: false,
       note: hasContract
-        ? `Plan contratado: ${contractedPlan}. Plan efectivo: ${effectivePlan || planLabel}.`
+        ? `Tu plan vigente es ${planLabel}.`
         : `Sin plan contratado vigente. Plan efectivo actual: ${planLabel}.`,
       sourceNote: headerMismatch
         ? `Según el estado actual de suscripción: ${planLabel}. El encabezado puede reflejar configuración comercial anterior.`
