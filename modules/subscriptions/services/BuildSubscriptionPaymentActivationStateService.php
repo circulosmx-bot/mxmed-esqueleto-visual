@@ -245,6 +245,9 @@ final class BuildSubscriptionPaymentActivationStateService
             if ((string)($checkoutIntent['status'] ?? '') !== self::CHECKOUT_STATUS_PENDING_PAYMENT) {
                 $this->addReason($reasons, 'checkout_intent_not_pending_payment');
             }
+            if ($this->checkoutIntentIsExpired($checkoutIntent)) {
+                $this->addReason($reasons, 'checkout_intent_expired');
+            }
             if ($entityType !== null
                 && $entityId !== null
                 && ((string)($checkoutIntent['entity_type'] ?? '') !== $entityType
@@ -400,6 +403,23 @@ final class BuildSubscriptionPaymentActivationStateService
             'activated_at' => $this->cleanText($checkoutIntent['activated_at'] ?? null, 32),
             'intent_type' => $isUpgradeCheckout ? self::INTENT_TYPE_UPGRADE : self::INTENT_TYPE_NEW_SUBSCRIPTION,
         ];
+    }
+
+    private function checkoutIntentIsExpired(array $checkoutIntent): bool
+    {
+        $expiresAt = $this->cleanText($checkoutIntent['expires_at'] ?? null, 32);
+        if ($expiresAt === null) {
+            return false;
+        }
+
+        try {
+            $expiresAtDate = new DateTimeImmutable($expiresAt, new DateTimeZone('UTC'));
+            $nowDate = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            return true;
+        }
+
+        return $expiresAtDate < $nowDate;
     }
 
     private function paymentIntentState(?array $paymentIntent): ?array

@@ -1956,6 +1956,7 @@ function subscriptionPaymentIntentErrorStatus(string $code, int $fallback): int
         'checkout_intent_uuid_required' => 422,
         'checkout_intent_not_found' => 404,
         'checkout_intent_not_pending_payment' => 409,
+        'checkout_intent_expired' => 409,
         'payment_intent_already_exists' => 409,
         'payment_intent_lock_timeout' => 409,
         'lock_acquisition_failed' => 409,

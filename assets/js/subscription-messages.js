@@ -139,6 +139,13 @@
       retryable: false,
       supportHint: 'El checkout ya no está en pending_payment.'
     },
+    checkout_intent_expired: {
+      group: 'estados inválidos',
+      message: 'Esta contratación expiró. Inicia nuevamente la mejora de plan.',
+      severity: 'warning',
+      retryable: false,
+      supportHint: 'El checkout pendiente superó su vigencia antes de crear el pago.'
+    },
     contract_acceptance_not_pending_payment: {
       group: 'estados inválidos',
       message: 'La aceptación contractual ya no está disponible para esta activación.',

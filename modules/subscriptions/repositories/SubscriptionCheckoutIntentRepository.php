@@ -178,6 +178,7 @@ final class SubscriptionCheckoutIntentRepository
              WHERE entity_type = :entity_type
                AND entity_id = :entity_id
                AND status = :status
+               AND expires_at >= UTC_TIMESTAMP()
                AND deleted_at IS NULL
              ORDER BY created_at DESC, id DESC
              LIMIT 1',
@@ -221,6 +222,7 @@ final class SubscriptionCheckoutIntentRepository
                AND plan_code = :plan_code
                AND billing_period = :billing_period
                AND status = :status
+               AND expires_at >= UTC_TIMESTAMP()
                AND deleted_at IS NULL
              ORDER BY created_at DESC, id DESC
              LIMIT 1',

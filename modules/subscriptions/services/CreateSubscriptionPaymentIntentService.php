@@ -226,6 +226,8 @@ final class CreateSubscriptionPaymentIntentService
             );
         }
 
+        $this->assertCheckoutNotExpired($checkoutIntent);
+
         $amountCents = (int)($checkoutIntent['amount_cents'] ?? 0);
         $currency = trim((string)($checkoutIntent['currency'] ?? ''));
         if ($amountCents <= 0 || $currency === '') {
@@ -233,6 +235,34 @@ final class CreateSubscriptionPaymentIntentService
                 422,
                 'payment_intent_invalid_checkout_snapshot',
                 'checkout intent payment snapshot is invalid'
+            );
+        }
+    }
+
+    private function assertCheckoutNotExpired(array $checkoutIntent): void
+    {
+        $expiresAt = $this->nullableText($checkoutIntent['expires_at'] ?? null);
+        if ($expiresAt === null) {
+            return;
+        }
+
+        try {
+            $expiresAtDate = new DateTimeImmutable($expiresAt, new DateTimeZone('UTC'));
+            $nowDate = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            throw new CreateSubscriptionPaymentIntentException(
+                422,
+                'payment_intent_invalid_checkout_snapshot',
+                'checkout intent expiry is invalid',
+                $e
+            );
+        }
+
+        if ($expiresAtDate < $nowDate) {
+            throw new CreateSubscriptionPaymentIntentException(
+                409,
+                'checkout_intent_expired',
+                'checkout intent is expired'
             );
         }
     }
