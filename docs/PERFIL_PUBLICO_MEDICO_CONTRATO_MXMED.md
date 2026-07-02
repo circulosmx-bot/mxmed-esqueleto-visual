@@ -42274,3 +42274,226 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar post-push que la vista normal del panel de Suscripcion no muestra metadatos tecnicos del read-model, que el bloque `upgrade_explanation` sigue correcto y que debug conserva esos datos solo bajo activacion explicita.
+
+## PP-Decisiones 220 - Cierre end-to-end upgrade Stripe sandbox
+
+### Microfase cerrada
+
+`DOCS/Suscripciones-StripeUpgrade-EndToEnd-Closure-01`
+
+### Resultado
+
+PASS end-to-end DEV/local Stripe sandbox.
+
+### Alcance cerrado
+
+Se cierra documentalmente el flujo completo de upgrade de plan con Stripe sandbox, probado de extremo a extremo en entorno DEV/local.
+
+Caso validado:
+
+- entidad: `doctor/990099`;
+- upgrade: `basic -> standard`;
+- billing: `annual`;
+- amount: `10000` cents;
+- currency: `MXN`;
+- pricing_strategy: `prorated_difference`.
+
+El flujo probado incluyo:
+
+- fixture DEV/local seguro para seleccionar un doctor upgradeable;
+- checkout upgrade con snapshot backend;
+- PaymentIntent real Stripe sandbox creado desde MXMed;
+- webhook real `payment_intent.succeeded` reenviado con `stripe events resend`;
+- correlacion local por `provider_payment_id`;
+- actualizacion local del PaymentIntent a `paid`;
+- creacion de payment event `payment_intent_confirm / processed`;
+- state read-model con `can_activate=true` antes de activar;
+- activacion post-pago ejecutada una sola vez;
+- upgrade aplicado correctamente de `basic` a `standard`;
+- vigencia conservada en `2027-07-01 01:19:13`;
+- checkout final en `activated`;
+- bloqueo correcto de reactivacion.
+
+### Commits principales del cierre
+
+- `35208ba feat(suscripciones): agrega provider stripe payment intent`;
+- `49b2976 feat(suscripciones): agrega fixture stripe upgrade doctor`;
+- `1e55b78 fix(suscripciones): evita warning php85 provider stripe`;
+- `9cbf475 feat(suscripciones): agrega explicacion pricing upgrade`;
+- `d8ad45f feat(suscripciones): agrega beneficios upgrade readmodel`;
+- `f03521c feat(suscripciones): integra ux explicacion upgrade`;
+- `87425dd fix(suscripciones): oculta metadatos tecnicos plan actual`.
+
+Commits previos relevantes ya cerrados en decisiones anteriores:
+
+- `40f0950 feat(suscripciones): soporta activacion upgrade post pago`;
+- `0cc1f2f fix(suscripciones): pule salida post activacion upgrade`.
+
+### Estado tecnico final validado
+
+PaymentIntent Stripe sandbox:
+
+- fue creado por MXMed;
+- quedo persistido localmente con `provider=stripe`;
+- guardo `provider_payment_id` Stripe para correlacion;
+- no persistio `client_secret`;
+- no expuso secretos.
+
+Webhook Stripe:
+
+- recibio evento real `payment_intent.succeeded`;
+- valido firma con el webhook secret temporal del listener;
+- acepto `livemode=false`;
+- no uso `stripe trigger` para la validacion correlacionada final;
+- correlaciono por `provider_payment_id`;
+- no devolvio `stripe_payment_intent_not_found`.
+
+Estado local del pago:
+
+- `provider=stripe`;
+- `provider_status=succeeded`;
+- `normalized_status=paid`;
+- payment event: `payment_intent_confirm`;
+- processing status: `processed`.
+
+Estado local del checkout y suscripcion:
+
+- checkout status: `activated`;
+- current subscription: `standard / Estándar`;
+- status: `active`;
+- billing: `annual`;
+- vigencia conservada: `2027-07-01 01:19:13`;
+- sin dos suscripciones activas incompatibles;
+- sin activacion duplicada.
+
+Re-activacion del mismo checkout:
+
+- `activation_eligibility.can_activate=false`;
+- reasons:
+  - `checkout_intent_not_pending_payment`;
+  - `activation_already_done`.
+
+### Regla economica validada
+
+La regla economica queda cerrada asi:
+
+- el ajuste se calcula al crear el checkout upgrade;
+- el monto se conserva desde el snapshot backend;
+- la activacion no recalcula pricing;
+- el ajuste representa diferencia proporcional por el tiempo restante;
+- la vigencia no se reinicia;
+- la renovacion futura usara el precio regular vigente del plan destino.
+
+### Read-model validado
+
+`upgrade_explanation` expone:
+
+- plan actual;
+- plan destino;
+- `benefits_summary`;
+- `pricing_explanation`;
+- `coverage`;
+- `renewal_after_coverage`;
+- `activation_rule.recalculates_on_activation=false`.
+
+`benefits_summary` usa `PublicProfilePlanCapabilities`.
+
+`benefits_source=public_profile_plan_capabilities`.
+
+Para `basic -> standard` se validaron 6 beneficios:
+
+- `public_agenda_visibility`;
+- `promotional_packages_visibility`;
+- `review_replies`;
+- `public_profile_gallery`;
+- `accepted_insurances_visibility`;
+- `consultation_details_visibility`.
+
+### UX validada
+
+El bloque comercial `Resumen de tu mejora de plan` queda visible cuando existe `upgrade_explanation` y muestra:
+
+- `Básico -> Estándar`;
+- `$100 MXN`;
+- explicacion de diferencia proporcional;
+- cobertura hasta julio 2027;
+- renovacion futura;
+- 6 beneficios;
+- nota de no recalculo.
+
+La UX normal no muestra:
+
+- UUIDs tecnicos;
+- `client_secret`;
+- JSON crudo;
+- `undefined`;
+- `null`;
+- reasons tecnicas;
+- stacktrace.
+
+Los metadatos tecnicos del read-model:
+
+- `Contexto`;
+- `Fuente contexto`;
+- `Fuente`;
+- `Version`;
+
+no aparecen en UX normal y quedan disponibles solo bajo debug local explicito:
+
+- `?subp_debug=1`;
+- `?mxmed_subp_debug=1`;
+- `localStorage.mxmed_subp_debug = "1"`.
+
+### Seguridad y limites confirmados
+
+Se confirmo:
+
+- no se expusieron secretos;
+- no se persistio `client_secret`;
+- no se usaron llaves live;
+- no hubo Stripe productivo;
+- no hubo SQL manual en las QA finales;
+- no hubo activacion duplicada;
+- no quedaron dos suscripciones activas incompatibles;
+- no se reactivo el mismo checkout.
+
+### Exclusiones de esta microfase documental
+
+No se modifico:
+
+- frontend;
+- backend PHP;
+- API/rutas;
+- servicios;
+- Stripe provider;
+- Stripe webhook;
+- `activate-after-payment`;
+- SQL/schema/seeds;
+- precios;
+- capacidades de planes.
+
+No se ejecuto:
+
+- SQL manual;
+- Stripe;
+- `stripe trigger`;
+- `confirm_mock`;
+- checkout nuevo;
+- PaymentIntent nuevo;
+- webhook nuevo;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Estado de cierre
+
+El flujo de upgrade Stripe sandbox queda cerrado como:
+
+`PASS end-to-end DEV/local Stripe sandbox`.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-StripePaymentIntent-AutomaticPaymentMethods-AllowRedirectsNever-01`
+
+Objetivo sugerido:
+
+Crear PaymentIntent Stripe con `automatic_payment_methods[allow_redirects]=never` o documentar explicitamente el manejo de `return_url`, para evitar bloqueos de confirmacion en QA/UX futura.
