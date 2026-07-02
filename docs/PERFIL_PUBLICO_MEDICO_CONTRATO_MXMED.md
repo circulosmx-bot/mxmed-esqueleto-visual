@@ -42497,3 +42497,109 @@ El flujo de upgrade Stripe sandbox queda cerrado como:
 Objetivo sugerido:
 
 Crear PaymentIntent Stripe con `automatic_payment_methods[allow_redirects]=never` o documentar explicitamente el manejo de `return_url`, para evitar bloqueos de confirmacion en QA/UX futura.
+
+## PP-Decisiones 221 - PaymentIntent Stripe sin redirects automaticos
+
+### Microfase cerrada
+
+`BE/Suscripciones-StripePaymentIntent-AutomaticPaymentMethods-AllowRedirectsNever-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+Ajustar la creacion de futuros PaymentIntents Stripe sandbox para evitar que Stripe exija `return_url` durante confirmaciones controladas mientras MXMed no tenga una UX completa de retorno.
+
+### Contexto
+
+En la QA correlacionada del webhook Stripe, el PaymentIntent creado por MXMed uso automatic payment methods y Stripe exigio `return_url` al confirmarlo porque podia seleccionar metodos con redireccion.
+
+La confirmacion avanzo al manejar ese requerimiento, pero para el flujo controlado actual conviene limitar los metodos con redireccion desde la creacion del PaymentIntent.
+
+### Decision implementada
+
+`modules/subscriptions/services/StripePaymentIntentProviderService.php` ahora crea PaymentIntents Stripe con:
+
+- `automatic_payment_methods[enabled]=true`;
+- `automatic_payment_methods[allow_redirects]=never`.
+
+El provider sigue usando `application/x-www-form-urlencoded`; el arreglo se serializa por el helper existente `flatten(...)` y `http_build_query(...)`.
+
+### Alcance funcional
+
+El cambio aplica solo al provider Stripe.
+
+Se conserva:
+
+- amount desde backend;
+- currency desde backend;
+- metadata segura `mxmed_*`;
+- bloqueo de llaves live;
+- requerimiento de `STRIPE_SECRET_KEY`;
+- no persistencia de `client_secret`;
+- no impresion completa de `client_secret`;
+- compatibilidad PHP 8.5 del cierre de cURL;
+- normalizacion de estados;
+- idempotencia local.
+
+No se modifica `mxmed_mock`.
+
+### Error handling
+
+Si Stripe rechaza el parametro en un runtime futuro, el provider seguira devolviendo un error controlado como `stripe_payment_intent_create_failed`, sin stacktrace ni secretos.
+
+No se implemento fallback silencioso que retire `allow_redirects=never`.
+
+### Limites
+
+Esta microfase no modifica retroactivamente PaymentIntents ya creados.
+
+No se modifico:
+
+- frontend;
+- API/rutas;
+- Stripe webhook;
+- `activate-after-payment`;
+- servicios de activacion;
+- read-models;
+- SQL/schema/seeds;
+- precios;
+- capacidades de planes.
+
+No se ejecuto:
+
+- SQL manual;
+- Stripe CLI;
+- `stripe trigger`;
+- creacion real de PaymentIntent;
+- checkout nuevo;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Validacion
+
+- `php -l modules/subscriptions/services/StripePaymentIntentProviderService.php`: PASS.
+- `git diff --check`: PASS.
+- Solo se modificaron:
+  - `modules/subscriptions/services/StripePaymentIntentProviderService.php`;
+  - `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+- Frontend no tocado.
+- API/rutas no tocadas.
+- Webhook no tocado.
+- `activate-after-payment` no tocado.
+- SQL/schema/seeds no tocado.
+- Stripe no ejecutado.
+- Checkout nuevo no ejecutado.
+- PaymentIntent nuevo no ejecutado.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-StripePaymentIntent-AllowRedirectsNever-PostPush-01`
+
+Objetivo sugerido:
+
+Validar estaticamente post-push que futuros PaymentIntents Stripe incluyen `automatic_payment_methods[allow_redirects]=never`, que `mxmed_mock` no fue afectado y que no se tocaron webhook, activacion, frontend ni SQL/schema/seeds.

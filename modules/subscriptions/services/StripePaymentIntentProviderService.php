@@ -43,6 +43,7 @@ final class StripePaymentIntentProviderService
             'currency' => strtolower($currency),
             'automatic_payment_methods' => [
                 'enabled' => 'true',
+                'allow_redirects' => 'never',
             ],
             'metadata' => $metadata,
         ];
