@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use PDO;
 use RuntimeException;
+use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Subscriptions\Repositories\SubscriptionPaymentEventRepository;
 use Subscriptions\Repositories\SubscriptionPaymentIntentRepository;
 use Throwable;
@@ -32,15 +33,18 @@ final class ProcessStripeSubscriptionWebhookService
     ];
 
     private PDO $pdo;
+    private SubscriptionCheckoutIntentRepository $checkoutIntentRepository;
     private SubscriptionPaymentIntentRepository $paymentIntentRepository;
     private SubscriptionPaymentEventRepository $paymentEventRepository;
 
     public function __construct(
         PDO $pdo,
+        SubscriptionCheckoutIntentRepository $checkoutIntentRepository,
         SubscriptionPaymentIntentRepository $paymentIntentRepository,
         SubscriptionPaymentEventRepository $paymentEventRepository
     ) {
         $this->pdo = $pdo;
+        $this->checkoutIntentRepository = $checkoutIntentRepository;
         $this->paymentIntentRepository = $paymentIntentRepository;
         $this->paymentEventRepository = $paymentEventRepository;
     }
@@ -110,6 +114,17 @@ final class ProcessStripeSubscriptionWebhookService
             ]);
         }
 
+        $transition = $this->transitionForEvent($event);
+        $checkoutExpiryGuard = $this->checkoutExpiryGuardForPaidTransition($paymentIntent, $transition);
+        if ($checkoutExpiryGuard !== null) {
+            return $this->response($event, [
+                'processed' => false,
+                'reason' => $checkoutExpiryGuard['reason'],
+                'payment_intent' => $paymentIntent,
+                'http_status_recommended' => $checkoutExpiryGuard['http_status'],
+            ]);
+        }
+
         $amountMismatch = $this->amountMismatch($paymentIntent, $event);
         if ($amountMismatch !== null) {
             $paymentEvent = $this->createFailedEvent($event, $paymentIntent, $amountMismatch);
@@ -124,7 +139,6 @@ final class ProcessStripeSubscriptionWebhookService
             ]);
         }
 
-        $transition = $this->transitionForEvent($event);
         if ($transition === null) {
             $paymentEvent = $this->createFailedEvent($event, $paymentIntent, 'stripe_status_not_actionable');
 
@@ -353,6 +367,66 @@ final class ProcessStripeSubscriptionWebhookService
         }
         if (strtoupper((string)($paymentIntent['currency'] ?? '')) !== (string)$event['currency']) {
             return 'stripe_currency_mismatch';
+        }
+
+        return null;
+    }
+
+    private function checkoutExpiryGuardForPaidTransition(array $paymentIntent, ?array $transition): ?array
+    {
+        if ($transition === null || (string)($transition['normalized_status'] ?? '') !== self::STATUS_PAID) {
+            return null;
+        }
+
+        $checkoutIntentUuid = $this->cleanText($paymentIntent['checkout_intent_uuid'] ?? null, 36);
+        if ($checkoutIntentUuid === null) {
+            return [
+                'reason' => 'checkout_intent_not_found',
+                'http_status' => 404,
+            ];
+        }
+
+        try {
+            $checkoutIntent = $this->checkoutIntentRepository->findByUuid($checkoutIntentUuid);
+        } catch (Throwable $e) {
+            return [
+                'reason' => 'checkout_intent_lookup_failed',
+                'http_status' => 500,
+            ];
+        }
+
+        if ($checkoutIntent === null) {
+            return [
+                'reason' => 'checkout_intent_not_found',
+                'http_status' => 404,
+            ];
+        }
+
+        return $this->checkoutExpiryGuard($checkoutIntent);
+    }
+
+    private function checkoutExpiryGuard(array $checkoutIntent): ?array
+    {
+        $expiresAt = $this->cleanText($checkoutIntent['expires_at'] ?? null, 32);
+        if ($expiresAt === null) {
+            return null;
+        }
+
+        try {
+            $expiresAtDate = new DateTimeImmutable($expiresAt, new DateTimeZone('UTC'));
+            $nowDate = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            return [
+                'reason' => 'invalid_checkout_intent_payload',
+                'http_status' => 422,
+            ];
+        }
+
+        if ($expiresAtDate < $nowDate) {
+            return [
+                'reason' => 'checkout_intent_expired',
+                'http_status' => 409,
+            ];
         }
 
         return null;

@@ -2017,6 +2017,8 @@ function subscriptionPaymentIntentActivationErrorStatus(string $code, int $fallb
         'payment_intent_checkout_mismatch' => 409,
         'payment_event_payment_intent_mismatch' => 409,
         'checkout_intent_entity_mismatch' => 409,
+        'checkout_intent_expired' => 409,
+        'invalid_checkout_intent_payload' => 422,
         'active_subscription_exists' => 409,
         'profile_subscription_create_failed' => 500,
         'checkout_activation_transition_failed' => 409,
@@ -2421,6 +2423,7 @@ try {
             $pdo = mxmed_pdo();
             $service = new ProcessStripeSubscriptionWebhookService(
                 $pdo,
+                new SubscriptionCheckoutIntentRepository($pdo),
                 new SubscriptionPaymentIntentRepository($pdo),
                 new SubscriptionPaymentEventRepository($pdo)
             );

@@ -427,6 +427,36 @@ final class ActivateSubscriptionAfterPaymentService
                 'checkout intent is not pending payment'
             );
         }
+
+        $this->assertCheckoutNotExpired($checkoutIntent);
+    }
+
+    private function assertCheckoutNotExpired(array $checkoutIntent): void
+    {
+        $expiresAt = $this->nullableText($checkoutIntent['expires_at'] ?? null);
+        if ($expiresAt === null) {
+            return;
+        }
+
+        try {
+            $expiresAtDate = new DateTimeImmutable($expiresAt, new DateTimeZone('UTC'));
+            $nowDate = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                422,
+                'invalid_checkout_intent_payload',
+                'checkout intent expiry is invalid',
+                $e
+            );
+        }
+
+        if ($expiresAtDate < $nowDate) {
+            throw new ActivateSubscriptionAfterPaymentException(
+                409,
+                'checkout_intent_expired',
+                'checkout intent is expired'
+            );
+        }
     }
 
     private function paymentIntentIsConfirmed(array $paymentIntent): bool
