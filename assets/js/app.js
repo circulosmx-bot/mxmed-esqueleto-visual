@@ -58885,6 +58885,19 @@ function mxResetLogoPreview(){
     upgradeBenefitsWrap: pane.querySelector('[data-subp-upgrade-benefits-wrap]'),
     upgradeBenefits: pane.querySelector('[data-subp-upgrade-benefits]'),
     upgradeActivationRule: pane.querySelector('[data-subp-upgrade-activation-rule]'),
+    upgradeCheckoutFlow: pane.querySelector('[data-subp-upgrade-checkout-flow]'),
+    upgradeCheckoutRoute: pane.querySelector('[data-subp-upgrade-checkout-route]'),
+    upgradeCheckoutPeriod: pane.querySelector('[data-subp-upgrade-checkout-period]'),
+    upgradeCheckoutCurrent: pane.querySelector('[data-subp-upgrade-checkout-current]'),
+    upgradeCheckoutTarget: pane.querySelector('[data-subp-upgrade-checkout-target]'),
+    upgradeCheckoutCoverage: pane.querySelector('[data-subp-upgrade-checkout-coverage]'),
+    upgradeCheckoutPricing: pane.querySelector('[data-subp-upgrade-checkout-pricing]'),
+    upgradeCheckoutNote: pane.querySelector('[data-subp-upgrade-checkout-note]'),
+    upgradeCheckoutAccept: pane.querySelector('[data-subp-upgrade-checkout-accept]'),
+    upgradeCheckoutNext: pane.querySelector('[data-subp-upgrade-checkout-next]'),
+    upgradeCheckoutCancel: pane.querySelector('[data-subp-upgrade-checkout-cancel]'),
+    upgradeCheckoutCreate: pane.querySelector('[data-subp-upgrade-checkout-create]'),
+    upgradeCheckoutStatus: pane.querySelector('[data-subp-upgrade-checkout-status]'),
     couponInput: pane.querySelector('[data-subp-coupon-input]'),
     couponApply: pane.querySelector('[data-subp-coupon-apply]'),
     couponMsg: pane.querySelector('[data-subp-coupon-msg]'),
@@ -58917,6 +58930,7 @@ function mxResetLogoPreview(){
   const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Puedes mejorar a un plan superior durante tu vigencia. Los cambios a un plan inferior aplican al renovar.';
   const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
+  const SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE = 'Revisa y acepta los términos para calcular el ajuste proporcional antes de pagar.';
   const UI_PLAN_TO_BACKEND_PLAN = Object.freeze({
     basico: 'basic',
     'básico': 'basic',
@@ -59002,6 +59016,17 @@ function mxResetLogoPreview(){
       lastKey: '',
       message: '',
       result: null
+    },
+    upgradeCheckout: {
+      visible: false,
+      accepted: false,
+      state: 'idle',
+      httpStatus: 0,
+      message: '',
+      error: '',
+      checkoutIntentUuid: '',
+      contractAcceptanceUuid: '',
+      idempotencyKey: ''
     }
   };
 
@@ -59061,6 +59086,13 @@ function mxResetLogoPreview(){
     const id = safeDoctorId(entityId);
     if(type !== 'doctor' || !id) return '';
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/subscriptions`;
+  }
+
+  function buildSubscriptionCheckoutIntentEndpoint(entityType, entityId){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    if(type !== 'doctor' || !id) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/checkout-intents`;
   }
 
   function buildPaymentActivationStateEndpoint(entityType, entityId, options = {}){
@@ -59175,6 +59207,16 @@ function mxResetLogoPreview(){
       return `${prefix}${window.crypto.randomUUID()}`;
     }
     return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function generateUpgradeCheckoutIdempotencyKey(entityType, entityId, targetPlanCode){
+    const type = clean(entityType).toLowerCase() || 'entity';
+    const id = safeDoctorId(entityId) || 'unknown';
+    const target = canonicalBackendPlanCode(targetPlanCode) || 'plan';
+    const entropy = (window.crypto && typeof window.crypto.randomUUID === 'function')
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `mxmed-ui-upgrade-checkout-${type}-${id}-${target}-${entropy}`;
   }
 
   function devContractPayload(){
@@ -60016,6 +60058,249 @@ function mxResetLogoPreview(){
     return 'upgrade_now';
   }
 
+  function currentBillingPeriod(){
+    return clean(data.currentModel?.billing_period).toLowerCase();
+  }
+
+  function currentPlanLabel(){
+    return clean(data.currentModel?.plan_label)
+      || clean(findPlanById(data.current.id)?.name)
+      || clean(data.current.name)
+      || 'Plan actual';
+  }
+
+  function selectedUpgradePlan(){
+    const selected = findPlanById(data.selectedPlanId);
+    if(!selected) return null;
+    return planFlowType(selected, hasPaidActiveSubscription(data.currentModel || {})) === 'upgrade_now'
+      ? selected
+      : null;
+  }
+
+  function upgradeCheckoutErrorMessage(httpStatus, code, fallback){
+    const safeCode = clean(code).toLowerCase();
+    const mapped = safeCode ? mapSubscriptionMessage(safeCode, {
+      httpStatus,
+      audience: 'user',
+      context: 'checkout',
+      fallback: fallback || ''
+    }) : null;
+    if(mapped?.message) return mapped.message;
+    if(httpStatus === 401) return 'Inicia sesión nuevamente para preparar tu mejora de plan.';
+    if(httpStatus === 403) return 'Tu sesión no autoriza crear este checkout de mejora.';
+    if(httpStatus === 409) return 'Ya existe una contratación o pago en proceso para esta suscripción.';
+    if(httpStatus === 422) return 'No pudimos validar la mejora seleccionada. Revisa el plan y vuelve a intentar.';
+    return clean(fallback) || 'No pudimos preparar el checkout de mejora. Intenta más tarde.';
+  }
+
+  function setUpgradeCheckoutStatus(kind, message){
+    if(!els.upgradeCheckoutStatus) return;
+    const text = clean(message);
+    els.upgradeCheckoutStatus.classList.remove('d-none', 'alert-secondary', 'alert-info', 'alert-success', 'alert-warning', 'alert-danger');
+    if(!text){
+      els.upgradeCheckoutStatus.classList.add('d-none');
+      els.upgradeCheckoutStatus.textContent = '';
+      return;
+    }
+    const className = kind === 'success'
+      ? 'alert-success'
+      : kind === 'error'
+        ? 'alert-danger'
+        : kind === 'warning'
+          ? 'alert-warning'
+          : 'alert-info';
+    els.upgradeCheckoutStatus.classList.add(className);
+    els.upgradeCheckoutStatus.textContent = text;
+  }
+
+  function renderUpgradeCheckoutFlow(){
+    if(!els.upgradeCheckoutFlow) return;
+    const state = data.upgradeCheckout;
+    const selected = selectedUpgradePlan();
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const billingPeriod = currentBillingPeriod();
+    const hasBilling = billingPeriod !== '';
+    const canShow = state.visible && activePaid && !!selected;
+
+    els.upgradeCheckoutFlow.classList.toggle('d-none', !canShow);
+    if(!canShow){
+      if(els.upgradeCheckoutAccept) els.upgradeCheckoutAccept.checked = false;
+      setUpgradeCheckoutStatus('', '');
+      return;
+    }
+
+    const currentLabel = currentPlanLabel();
+    const targetLabel = selected.name;
+    const periodLabel = labelFromMap(PERIOD_LABELS, billingPeriod, billingPeriod || 'No disponible');
+    const coverageLabel = data.current.until && data.current.until !== 'No aplica'
+      ? `Hasta ${data.current.until}`
+      : 'Vigencia actual por consultar';
+    const readyToSubmit = state.accepted && hasBilling && state.state !== 'submitting';
+
+    if(els.upgradeCheckoutRoute) els.upgradeCheckoutRoute.textContent = `${currentLabel} → ${targetLabel}`;
+    if(els.upgradeCheckoutPeriod) els.upgradeCheckoutPeriod.textContent = periodLabel;
+    if(els.upgradeCheckoutCurrent) els.upgradeCheckoutCurrent.textContent = currentLabel;
+    if(els.upgradeCheckoutTarget) els.upgradeCheckoutTarget.textContent = targetLabel;
+    if(els.upgradeCheckoutCoverage) els.upgradeCheckoutCoverage.textContent = coverageLabel;
+    if(els.upgradeCheckoutPricing){
+      els.upgradeCheckoutPricing.textContent = 'El backend calculará la diferencia proporcional antes de pagar.';
+    }
+    if(els.upgradeCheckoutNote){
+      els.upgradeCheckoutNote.textContent = hasBilling
+        ? 'No se cobrará el plan completo si ya tienes una suscripción activa; el monto exacto se calculará antes de pagar y la vigencia no se reinicia.'
+        : 'No se puede preparar el checkout porque falta el periodo vigente de la suscripción.';
+    }
+    if(els.upgradeCheckoutAccept) els.upgradeCheckoutAccept.checked = state.accepted;
+    if(els.upgradeCheckoutCreate){
+      els.upgradeCheckoutCreate.disabled = !readyToSubmit;
+      els.upgradeCheckoutCreate.classList.toggle('disabled', !readyToSubmit);
+      els.upgradeCheckoutCreate.textContent = state.state === 'submitting'
+        ? 'Preparando checkout...'
+        : 'Crear checkout de mejora';
+    }
+    if(els.upgradeCheckoutNext){
+      els.upgradeCheckoutNext.textContent = state.state === 'created'
+        ? 'Checkout creado. El siguiente paso será integrar el formulario seguro de pago.'
+        : 'El siguiente paso será integrar el formulario seguro de pago.';
+    }
+
+    if(state.message){
+      setUpgradeCheckoutStatus(state.state === 'created' ? 'success' : (state.state === 'error' ? 'error' : 'info'), state.message);
+    }else{
+      setUpgradeCheckoutStatus('info', SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE);
+    }
+  }
+
+  function openUpgradeCheckoutFlow(){
+    data.upgradeCheckout.visible = true;
+    data.upgradeCheckout.accepted = false;
+    data.upgradeCheckout.state = 'idle';
+    data.upgradeCheckout.httpStatus = 0;
+    data.upgradeCheckout.message = '';
+    data.upgradeCheckout.error = '';
+    data.upgradeCheckout.checkoutIntentUuid = '';
+    data.upgradeCheckout.contractAcceptanceUuid = '';
+    data.upgradeCheckout.idempotencyKey = '';
+    renderUpgradeCheckoutFlow();
+    try{
+      els.upgradeCheckoutFlow?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }catch(_){}
+  }
+
+  function closeUpgradeCheckoutFlow(){
+    data.upgradeCheckout.visible = false;
+    data.upgradeCheckout.accepted = false;
+    data.upgradeCheckout.state = 'idle';
+    data.upgradeCheckout.message = '';
+    data.upgradeCheckout.error = '';
+    renderUpgradeCheckoutFlow();
+  }
+
+  function buildUpgradeCheckoutPayload(targetPlanCode, billingPeriod){
+    return {
+      intent_type: 'upgrade',
+      plan_code: targetPlanCode,
+      billing_period: billingPeriod,
+      contract_version: 'mxmed-subscriptions-v1',
+      contract_hash: 'sha256:qa-local-dev-contract-placeholder',
+      contract_snapshot_url: '/legal/subscriptions/mxmed-subscriptions-v1.html',
+      contract_title: 'Contrato de suscripción México Médico',
+      source: 'subscription_panel_upgrade_checkout'
+    };
+  }
+
+  async function submitUpgradeCheckout(){
+    const selected = selectedUpgradePlan();
+    const context = data.contextInfo || {};
+    const entityType = clean(context.entity_type);
+    const entityId = clean(context.entity_id || context.doctor_id);
+    const targetPlanCode = selected ? backendPlanCodeFromUiPlan(selected.id) : '';
+    const billingPeriod = currentBillingPeriod();
+    const endpoint = buildSubscriptionCheckoutIntentEndpoint(entityType, entityId);
+
+    if(!selected || !targetPlanCode || !endpoint){
+      data.upgradeCheckout.state = 'error';
+      data.upgradeCheckout.message = 'No pudimos resolver el plan o la sesión para preparar tu mejora.';
+      renderUpgradeCheckoutFlow();
+      return;
+    }
+    if(!billingPeriod){
+      data.upgradeCheckout.state = 'error';
+      data.upgradeCheckout.message = 'No se puede preparar el checkout porque falta el periodo vigente de la suscripción.';
+      renderUpgradeCheckoutFlow();
+      return;
+    }
+    if(!data.upgradeCheckout.accepted){
+      data.upgradeCheckout.state = 'idle';
+      data.upgradeCheckout.message = 'Acepta los términos para preparar el checkout de mejora.';
+      renderUpgradeCheckoutFlow();
+      return;
+    }
+
+    const idempotencyKey = generateUpgradeCheckoutIdempotencyKey(entityType, entityId, targetPlanCode);
+    data.upgradeCheckout.state = 'submitting';
+    data.upgradeCheckout.httpStatus = 0;
+    data.upgradeCheckout.message = 'Preparando checkout de mejora...';
+    data.upgradeCheckout.error = '';
+    data.upgradeCheckout.idempotencyKey = idempotencyKey;
+    renderUpgradeCheckoutFlow();
+
+    try{
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(buildUpgradeCheckoutPayload(targetPlanCode, billingPeriod))
+      });
+      const payload = await response.json().catch(()=> null);
+      if(!payload || typeof payload !== 'object'){
+        data.upgradeCheckout.state = 'error';
+        data.upgradeCheckout.httpStatus = Number(response.status || 0);
+        data.upgradeCheckout.message = 'La respuesta del checkout no pudo leerse. Intenta nuevamente.';
+        renderUpgradeCheckoutFlow();
+        return;
+      }
+      if(!response.ok || payload.ok !== true || !payload.data){
+        const code = clean(payload?.error?.code) || `http_${response.status}`;
+        data.upgradeCheckout.state = 'error';
+        data.upgradeCheckout.httpStatus = Number(response.status || 0);
+        data.upgradeCheckout.error = code;
+        data.upgradeCheckout.message = upgradeCheckoutErrorMessage(Number(response.status || 0), code, clean(payload?.error?.message));
+        renderUpgradeCheckoutFlow();
+        return;
+      }
+
+      const checkoutUuid = clean(payload.data.checkout_intent_uuid);
+      data.upgradeCheckout.state = 'created';
+      data.upgradeCheckout.httpStatus = Number(response.status || 0);
+      data.upgradeCheckout.checkoutIntentUuid = checkoutUuid;
+      data.upgradeCheckout.contractAcceptanceUuid = clean(payload.data.contract_acceptance_uuid);
+      data.upgradeCheckout.message = 'Checkout de mejora creado. Revisa el resumen calculado por backend antes de continuar al pago.';
+      if(checkoutUuid){
+        window.mxmedStore = window.mxmedStore && typeof window.mxmedStore === 'object' ? window.mxmedStore : {};
+        window.mxmedStore.subscriptionPaymentActivationState = {
+          ...(window.mxmedStore.subscriptionPaymentActivationState && typeof window.mxmedStore.subscriptionPaymentActivationState === 'object'
+            ? window.mxmedStore.subscriptionPaymentActivationState
+            : {}),
+          checkout_intent_uuid: checkoutUuid,
+          payment_intent_uuid: '',
+          audience: 'support'
+        };
+        await loadPaymentActivationState();
+      }
+      renderUpgradeCheckoutFlow();
+    }catch(_){
+      data.upgradeCheckout.state = 'error';
+      data.upgradeCheckout.httpStatus = 0;
+      data.upgradeCheckout.message = 'No pudimos conectar con el servicio de checkout. Intenta más tarde.';
+      renderUpgradeCheckoutFlow();
+    }
+  }
+
   function renderPlanSelection(activePaid){
     if(!els.planSelection) return;
     const selected = ensureSelectedPlan(activePaid);
@@ -60028,20 +60313,21 @@ function mxResetLogoPreview(){
       }
       if(els.selectedPlanSummary){
         els.selectedPlanSummary.textContent = selected
-          ? `${currentPlan?.name || data.current.name || 'Plan actual'} → ${selected.name}. ${planPriceLabel(selected)}. El ajuste de precio se calculará antes de confirmar.`
+          ? `${currentPlan?.name || data.current.name || 'Plan actual'} → ${selected.name}. El ajuste proporcional se calculará con el snapshot backend antes de pagar.`
           : 'Selecciona un plan superior para preparar una mejora durante tu vigencia. Los cambios a un plan inferior aplican al finalizar la vigencia actual.';
       }
       if(els.planContinue){
-        els.planContinue.textContent = selected ? `Mejorar a ${selected.name}` : 'Solicitar cambio de plan';
+        els.planContinue.textContent = selected ? `Revisar mejora a ${selected.name}` : 'Solicitar cambio de plan';
         els.planContinue.disabled = !selected;
         els.planContinue.classList.toggle('disabled', !selected);
       }
       if(els.selectedPlanMessage){
         els.selectedPlanMessage.textContent = selected
-          ? 'Se calculará el ajuste correspondiente al periodo restante antes de confirmar.'
+          ? SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE
           : SUBSCRIPTION_ACTIVE_BLOCK_NOTICE;
         els.selectedPlanMessage.classList.remove('d-none');
       }
+      renderUpgradeCheckoutFlow();
       return;
     }
     if(els.selectedPlanTitle){
@@ -60065,6 +60351,7 @@ function mxResetLogoPreview(){
         : '';
       els.selectedPlanMessage.classList.toggle('d-none', !selected);
     }
+    renderUpgradeCheckoutFlow();
   }
 
   function renderCurrent(){
@@ -60161,8 +60448,17 @@ function mxResetLogoPreview(){
     const selectPlan = (planId)=>{
       const plan = findPlanById(planId);
       if(!plan) return;
-      if(planFlowType(plan, activePaid) !== 'new_subscription' && planFlowType(plan, activePaid) !== 'upgrade_now') return;
+      const flowType = planFlowType(plan, activePaid);
+      if(flowType !== 'new_subscription' && flowType !== 'upgrade_now') return;
       data.selectedPlanId = plan.id;
+      data.upgradeCheckout.visible = flowType === 'upgrade_now';
+      data.upgradeCheckout.accepted = false;
+      data.upgradeCheckout.state = 'idle';
+      data.upgradeCheckout.message = '';
+      data.upgradeCheckout.error = '';
+      data.upgradeCheckout.checkoutIntentUuid = '';
+      data.upgradeCheckout.contractAcceptanceUuid = '';
+      data.upgradeCheckout.idempotencyKey = '';
       renderCatalog();
     };
     els.catalog.querySelectorAll('[data-subp-select]').forEach(btn=>{
@@ -60204,6 +60500,14 @@ function mxResetLogoPreview(){
     const selected = findPlanById(data.selectedPlanId);
     if(!selected) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    if(activePaid && planFlowType(selected, activePaid) === 'upgrade_now'){
+      openUpgradeCheckoutFlow();
+      if(els.selectedPlanMessage){
+        els.selectedPlanMessage.textContent = 'Revisa la mejora y acepta los términos antes de crear el checkout.';
+        els.selectedPlanMessage.classList.remove('d-none');
+      }
+      return;
+    }
     if(els.selectedPlanMessage){
       els.selectedPlanMessage.textContent = activePaid
         ? `${selected.name} quedó preparado como mejora de plan. Se calculará el ajuste correspondiente al periodo restante.`
@@ -60224,7 +60528,12 @@ function mxResetLogoPreview(){
     els.invoiceBtn,
     els.historyRefresh,
     ...pane.querySelectorAll('.subp-card button')
-  ].filter((button)=> button && !button.matches('[data-subp-dev-contract]') && !button.matches('[data-subp-activation-refresh]') && !button.matches('[data-subp-plan-continue]'));
+  ].filter((button)=> button
+    && !button.matches('[data-subp-dev-contract]')
+    && !button.matches('[data-subp-activation-refresh]')
+    && !button.matches('[data-subp-plan-continue]')
+    && !button.matches('[data-subp-upgrade-checkout-cancel]')
+    && !button.matches('[data-subp-upgrade-checkout-create]'));
   staticReadOnlyButtons.forEach((button)=>{
     if(button){
       button.setAttribute('aria-disabled', 'true');
@@ -60248,6 +60557,25 @@ function mxResetLogoPreview(){
   els.planContinue?.addEventListener('click', (ev)=>{
     ev.preventDefault();
     confirmVisualPlanSelection();
+  });
+  els.upgradeCheckoutAccept?.addEventListener('change', ()=>{
+    data.upgradeCheckout.accepted = els.upgradeCheckoutAccept.checked === true;
+    if(data.upgradeCheckout.state !== 'created'){
+      data.upgradeCheckout.state = 'idle';
+      data.upgradeCheckout.message = data.upgradeCheckout.accepted
+        ? 'Listo para crear el checkout de mejora.'
+        : SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE;
+      data.upgradeCheckout.error = '';
+    }
+    renderUpgradeCheckoutFlow();
+  });
+  els.upgradeCheckoutCancel?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    closeUpgradeCheckoutFlow();
+  });
+  els.upgradeCheckoutCreate?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    submitUpgradeCheckout();
   });
   els.activationRefresh?.addEventListener('click', (ev)=>{
     ev.preventDefault();

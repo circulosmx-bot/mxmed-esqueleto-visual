@@ -2958,6 +2958,57 @@
               <div class="subp-alert mt-3 d-none" data-subp-plan-selection-message></div>
             </section>
 
+            <section class="card subp-card border-0 shadow-sm p-3 mt-3 d-none" data-subp-upgrade-checkout-flow>
+              <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                  <div class="text-muted small">Antes de pagar</div>
+                  <div class="h6 mb-1">Confirma tu mejora de plan</div>
+                  <div class="text-muted small" data-subp-upgrade-checkout-route>Selecciona un plan superior para continuar.</div>
+                </div>
+                <div class="text-end">
+                  <div class="text-muted small">Periodo vigente</div>
+                  <div class="fw-semibold" data-subp-upgrade-checkout-period>&mdash;</div>
+                </div>
+              </div>
+              <div class="row g-3 small">
+                <div class="col-md-6">
+                  <div class="text-muted">Plan actual</div>
+                  <div class="fw-semibold" data-subp-upgrade-checkout-current>&mdash;</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="text-muted">Plan destino</div>
+                  <div class="fw-semibold" data-subp-upgrade-checkout-target>&mdash;</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="text-muted">Cobertura</div>
+                  <div class="fw-semibold" data-subp-upgrade-checkout-coverage>&mdash;</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="text-muted">Cálculo</div>
+                  <div class="fw-semibold" data-subp-upgrade-checkout-pricing>El backend calculará el ajuste proporcional.</div>
+                </div>
+              </div>
+              <div class="subp-alert mt-3" data-subp-upgrade-checkout-note>
+                No se cobrará el plan completo si ya tienes una suscripción activa; el monto exacto se calculará antes de pagar y la vigencia no se reinicia.
+              </div>
+              <label class="form-check d-flex align-items-start gap-2 mt-3 mb-0">
+                <input class="form-check-input mt-1" type="checkbox" data-subp-upgrade-checkout-accept>
+                <span class="form-check-label">
+                  Acepto el contrato de suscripción y entiendo que se calculará un ajuste proporcional hasta la fecha de vencimiento actual.
+                </span>
+              </label>
+              <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+                <div class="text-muted small" data-subp-upgrade-checkout-next>
+                  El siguiente paso será integrar el formulario seguro de pago.
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-outline-secondary btn-sm" type="button" data-subp-upgrade-checkout-cancel>Cancelar</button>
+                  <button class="btn btn-primary btn-sm" type="button" data-subp-upgrade-checkout-create disabled>Crear checkout de mejora</button>
+                </div>
+              </div>
+              <div class="subp-alert mt-3 d-none" data-subp-upgrade-checkout-status></div>
+            </section>
+
             <section class="card subp-card border-0 shadow-sm p-3 mt-3 d-none" data-subp-upgrade-explanation>
               <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
                 <div>

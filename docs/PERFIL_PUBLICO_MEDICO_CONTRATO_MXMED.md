@@ -42603,3 +42603,166 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar estaticamente post-push que futuros PaymentIntents Stripe incluyen `automatic_payment_methods[allow_redirects]=never`, que `mxmed_mock` no fue afectado y que no se tocaron webhook, activacion, frontend ni SQL/schema/seeds.
+
+## PP-Decisiones 222 - Flujo UX previo a checkout upgrade
+
+### Microfase cerrada
+
+`FE/Suscripciones-UpgradeIntent-CheckoutUX-UserFlow-01`
+
+### Resultado
+
+PASS.
+
+### Objetivo
+
+Implementar en el panel de Suscripcion el flujo UX previo al pago para que un medico con suscripcion activa pueda seleccionar un plan superior, revisar la mejora y aceptar terminos antes de crear el checkout upgrade.
+
+### Decision implementada
+
+El panel mantiene la lectura comercial actual:
+
+- plan vigente;
+- estado;
+- periodo;
+- vigencia;
+- cards de planes con jerarquia visual.
+
+Para planes superiores se agrega un flujo de preconfirmacion:
+
+- seleccion de plan superior;
+- resumen `plan actual -> plan destino`;
+- periodo vigente;
+- cobertura hasta la vigencia actual;
+- aviso de que el ajuste sera proporcional;
+- aviso de que la vigencia no se reinicia;
+- aviso de que no se cobra el plan completo si ya existe suscripcion activa;
+- aceptacion contractual explicita antes de habilitar la creacion de checkout.
+
+### Checkout preparado
+
+La accion `Crear checkout de mejora` queda preparada para llamar el endpoint existente solo tras accion explicita del usuario:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents`
+
+Payload preparado para upgrade:
+
+- `intent_type=upgrade`;
+- `plan_code=<target_plan_code>`;
+- `billing_period=<billing_period vigente>`;
+- `contract_version=mxmed-subscriptions-v1`;
+- `contract_hash=sha256:qa-local-dev-contract-placeholder`;
+- `contract_snapshot_url=/legal/subscriptions/mxmed-subscriptions-v1.html`;
+- `contract_title=Contrato de suscripcion México Médico`;
+- `source=subscription_panel_upgrade_checkout`.
+
+El header `Idempotency-Key` se genera por intento explicito con prefijo:
+
+`mxmed-ui-upgrade-checkout-{entity_type}-{entity_id}-{target_plan_code}-{random}`
+
+No se hardcodea una key fija.
+
+### Reglas de frontend
+
+El frontend:
+
+- no calcula precio;
+- no calcula prorrateo;
+- no calcula beneficios;
+- no inventa cobertura;
+- no permite cambio de periodicidad;
+- no permite checkout si el plan destino no es superior;
+- no permite checkout sin `billing_period`;
+- no permite checkout sin aceptacion contractual;
+- no llama PaymentIntent;
+- no llama Stripe;
+- no llama `activate-after-payment`.
+
+El monto exacto y los beneficios siguen saliendo del backend mediante snapshot/read-model.
+
+### Estados UX
+
+Se agregan estados controlados para:
+
+- listo para revisar;
+- aceptacion pendiente;
+- preparando checkout;
+- checkout creado;
+- sesion no autorizada;
+- conflicto `409`;
+- validacion `422`;
+- error controlado sin JSON crudo.
+
+La UX normal no muestra:
+
+- `checkout_intent_uuid`;
+- `payment_intent_uuid`;
+- `provider_payment_id`;
+- `payment_event_uuid`;
+- `client_secret`;
+- JSON crudo;
+- stacktrace;
+- `undefined`;
+- `null`;
+- reasons tecnicas.
+
+Los identificadores tecnicos siguen reservados para debug/local cuando aplique.
+
+### Siguiente paso de pago
+
+Despues de crear checkout, el panel queda en estado controlado:
+
+`El siguiente paso será integrar el formulario seguro de pago.`
+
+Stripe Elements, `client_secret`, PaymentIntent real y cobro quedan fuera de esta microfase.
+
+### Alcance
+
+Se modificaron:
+
+- `index.html`;
+- `assets/js/app.js`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modifico:
+
+- backend PHP;
+- API/rutas;
+- servicios de suscripciones;
+- Stripe provider;
+- Stripe webhook;
+- `activate-after-payment`;
+- read-models backend;
+- SQL/schema/seeds;
+- precios;
+- capacidades de planes.
+
+No se ejecuto:
+
+- SQL manual;
+- Stripe;
+- `stripe trigger`;
+- `confirm_mock`;
+- checkout real;
+- PaymentIntent nuevo;
+- webhook nuevo;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Validacion
+
+- `git diff --check`: PASS.
+- Validacion visual/headless: PASS.
+- No se ejecutaron POSTs durante la validacion.
+- No se mostraron secretos, JSON crudo, `undefined`, `null` ni stacktrace en la UX normal.
+- El flujo abre preconfirmacion para plan superior.
+- El boton de checkout queda deshabilitado hasta aceptar terminos.
+- El payload y la Idempotency-Key quedan preparados sin ejecutar checkout real en esta microfase.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-CheckoutUX-UserFlow-PostPush-01`
+
+Objetivo sugerido:
+
+Validar post-push que la UX de precheckout permite seleccionar plan superior, exige aceptacion contractual, prepara payload e Idempotency-Key correctamente y no ejecuta checkout durante la validacion estatica/visual.
