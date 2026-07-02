@@ -42766,3 +42766,124 @@ No se ejecuto:
 Objetivo sugerido:
 
 Validar post-push que la UX de precheckout permite seleccionar plan superior, exige aceptacion contractual, prepara payload e Idempotency-Key correctamente y no ejecuta checkout durante la validacion estatica/visual.
+
+## PP-Decisiones 223 - Cierre QA UX checkout upgrade previo al pago
+
+### Microfase cerrada
+
+Se cierra con resultado **PASS** la microfase:
+
+`QA/Suscripciones-UpgradeIntent-CheckoutUX-UserFlow-PostPush-01`
+
+Commit validado:
+
+`19e98ff feat(suscripciones): agrega flujo ux checkout upgrade`
+
+Archivos del commit validado:
+
+- `index.html`;
+- `assets/js/app.js`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Alcance validado
+
+La QA post-push valido el flujo visual previo al pago para upgrade:
+
+- seleccion de plan superior desde cards;
+- preconfirmacion antes de crear checkout;
+- aceptacion contractual obligatoria;
+- boton `Crear checkout de mejora` bloqueado hasta aceptar terminos;
+- ausencia de creacion real de checkout durante la QA.
+
+El flujo queda preparado para que el checkout upgrade ocurra solo despues de una accion explicita del usuario.
+
+### Caso visual validado
+
+Caso headless validado:
+
+- plan actual: `Estándar`;
+- plan inferior `Básico`: `Disponible al renovar`;
+- plan superior `Óptimo`: `Mejorar ahora`;
+- plan superior `Profesional`: `Mejorar ahora`;
+- preconfirmacion visible: `Estándar -> Óptimo`;
+- periodo vigente visible: `Anual`;
+- cobertura visible derivada de la vigencia actual.
+
+El resumen comunica que:
+
+- el ajuste proporcional lo calcula backend;
+- la vigencia no se reinicia;
+- no se cobra el plan completo si ya existe una suscripcion activa.
+
+### Aceptacion contractual
+
+Se valido que el boton `Crear checkout de mejora`:
+
+- permanece deshabilitado antes de aceptar terminos;
+- queda habilitado despues de aceptar terminos;
+- no implica aceptacion implicita;
+- no dispara POST por seleccion de plan ni por abrir la preconfirmacion.
+
+### Seguridad UX validada
+
+La UX normal no mostro:
+
+- secretos;
+- `client_secret`;
+- JSON crudo;
+- stacktrace;
+- errores tecnicos;
+- `undefined`;
+- `null`;
+- ids tecnicos como `checkout_intent_uuid`, `payment_intent_uuid`, `provider_payment_id` o `payment_event_uuid`.
+
+No se detectaron errores JS durante la validacion headless.
+
+### Limites confirmados
+
+Durante la QA:
+
+- requests HTTP de escritura ejecutadas: `0`;
+- solo se observaron GETs de lectura del contexto/current/state;
+- no se ejecuto checkout real;
+- no se ejecuto PaymentIntent;
+- no se ejecuto Stripe;
+- no se ejecuto `stripe trigger`;
+- no se ejecuto webhook;
+- no se ejecuto `confirm_mock`;
+- no se ejecuto `activate-after-payment`;
+- no se ejecuto SQL;
+- no se activo suscripcion;
+- no se modificaron archivos;
+- no hubo commit ni push durante la QA.
+
+### Alcance no tocado
+
+Este cierre documental no modifica:
+
+- frontend;
+- backend PHP;
+- API/rutas;
+- servicios de suscripciones;
+- Stripe provider;
+- Stripe webhook;
+- `activate-after-payment`;
+- SQL/schema/seeds;
+- precios;
+- capacidades de planes.
+
+### Estado de cierre
+
+Resultado final:
+
+`PASS`
+
+El flujo UX previo al pago queda validado post-push como seguro para seleccion y aceptacion contractual antes de checkout, sin writes durante la validacion.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-UpgradeIntent-CheckoutUX-CreateCheckout-Controlled-01`
+
+Objetivo sugerido:
+
+Ejecutar de forma controlada el primer checkout real desde la UX de upgrade, validando que el POST ocurre solo tras seleccion de plan superior y aceptacion explicita de terminos.
