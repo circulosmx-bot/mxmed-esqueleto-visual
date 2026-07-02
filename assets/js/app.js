@@ -60205,7 +60205,7 @@ function mxResetLogoPreview(){
       contract_hash: 'sha256:qa-local-dev-contract-placeholder',
       contract_snapshot_url: '/legal/subscriptions/mxmed-subscriptions-v1.html',
       contract_title: 'Contrato de suscripción México Médico',
-      source: 'subscription_panel_upgrade_checkout'
+      source: 'checkout_intent'
     };
   }
 
