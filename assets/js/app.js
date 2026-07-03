@@ -60077,6 +60077,115 @@ function mxResetLogoPreview(){
       : null;
   }
 
+  function planStateClass(flowType, isSelected){
+    const classes = [];
+    if(flowType === 'current') classes.push('subp-plan--current');
+    if(flowType === 'upgrade_now') classes.push('subp-plan--upgrade-now');
+    if(flowType === 'downgrade_at_renewal') classes.push('subp-plan--renewal-only', 'subp-plan--disabled');
+    if(flowType === 'unknown_active') classes.push('subp-plan--disabled');
+    if(isSelected) classes.push('subp-plan--selected');
+    return classes.join(' ');
+  }
+
+  function planStateValue(flowType, isSelected){
+    if(isSelected) return 'selected';
+    if(flowType === 'current') return 'current';
+    if(flowType === 'upgrade_now') return 'upgrade_now';
+    if(flowType === 'downgrade_at_renewal') return 'renewal_only';
+    return flowType || 'available';
+  }
+
+  function inlineUpgradeStatusMessage(){
+    const state = data.upgradeCheckout;
+    return clean(state.message) || SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE;
+  }
+
+  function inlineUpgradeStatusKind(){
+    const state = data.upgradeCheckout;
+    if(state.state === 'created') return 'success';
+    if(state.state === 'error') return 'error';
+    if(state.state === 'submitting') return 'info';
+    return state.accepted ? 'info' : 'warning';
+  }
+
+  function inlineUpgradeDetailHtml(plan){
+    const currentLabel = currentPlanLabel();
+    const targetLabel = clean(plan?.name) || 'plan seleccionado';
+    const benefits = Array.isArray(plan?.features) && plan.features.length
+      ? plan.features
+      : ['Mayor presencia profesional', 'Herramientas adicionales para tu consulta'];
+    const billingPeriod = currentBillingPeriod();
+    const periodLabel = labelFromMap(PERIOD_LABELS, billingPeriod, billingPeriod || 'tu periodo vigente');
+    const coverageLabel = data.current.until && data.current.until !== 'No aplica'
+      ? data.current.until
+      : 'tu vigencia actual';
+    const state = data.upgradeCheckout;
+    const readyToSubmit = state.accepted && billingPeriod !== '' && state.state !== 'submitting';
+    const createLabel = state.state === 'submitting'
+      ? 'Preparando checkout...'
+      : `Continuar con ${targetLabel}`;
+    const statusKind = inlineUpgradeStatusKind();
+    const statusClass = statusKind === 'success'
+      ? 'subp-inline-status--success'
+      : statusKind === 'error'
+        ? 'subp-inline-status--error'
+        : statusKind === 'info'
+          ? 'subp-inline-status--info'
+          : 'subp-inline-status--warning';
+
+    return `<div class="subp-plan-detail" data-subp-inline-upgrade-detail>
+        <div class="subp-plan-detail-kicker">Mejora seleccionada</div>
+        <p class="subp-plan-detail-lead">Al elevar tu plan ${escapeHtml(currentLabel)} a un plan ${escapeHtml(targetLabel)} obtendrás:</p>
+        <ul class="subp-plan-detail-benefits">
+          ${benefits.map((benefit)=>`<li><span class="material-symbols-rounded mat-ico" aria-hidden="true">check_circle</span><span>${escapeHtml(benefit)}</span></li>`).join('')}
+        </ul>
+        <div class="subp-plan-detail-notes">
+          <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">event_available</span><span>Tu vigencia actual no se reinicia; se mantiene hasta ${escapeHtml(coverageLabel)}.</span></div>
+          <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">calculate</span><span>El ajuste se calcula antes de pagar sobre tu periodo ${escapeHtml(periodLabel.toLowerCase())}.</span></div>
+          <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">swap_horiz</span><span>Puedes continuar o elegir otro plan antes de crear el checkout.</span></div>
+        </div>
+        <label class="form-check subp-plan-detail-accept">
+          <input class="form-check-input" type="checkbox" data-subp-inline-upgrade-accept ${state.accepted ? 'checked' : ''}>
+          <span class="form-check-label">Acepto el contrato de suscripción y el cálculo proporcional antes de pagar.</span>
+        </label>
+        <div class="subp-inline-status ${statusClass}" data-subp-inline-upgrade-status>${escapeHtml(inlineUpgradeStatusMessage())}</div>
+        <div class="subp-plan-detail-actions">
+          <button class="btn btn-primary subp-btn subp-btn--inline" type="button" data-subp-inline-upgrade-create ${readyToSubmit ? '' : 'disabled'}>${escapeHtml(createLabel)}</button>
+          <button class="btn btn-outline-secondary subp-btn subp-btn--secondary" type="button" data-subp-inline-upgrade-cancel>Elegir otro plan</button>
+        </div>
+      </div>`;
+  }
+
+  function updateInlineUpgradeCheckoutState(){
+    if(!els.catalog) return;
+    const selected = selectedUpgradePlan();
+    if(!selected) return;
+    const state = data.upgradeCheckout;
+    const billingPeriod = currentBillingPeriod();
+    const readyToSubmit = state.accepted && billingPeriod !== '' && state.state !== 'submitting';
+    const accept = els.catalog.querySelector('[data-subp-inline-upgrade-accept]');
+    const create = els.catalog.querySelector('[data-subp-inline-upgrade-create]');
+    const status = els.catalog.querySelector('[data-subp-inline-upgrade-status]');
+    if(accept) accept.checked = state.accepted;
+    if(create){
+      create.disabled = !readyToSubmit;
+      create.classList.toggle('disabled', !readyToSubmit);
+      create.textContent = state.state === 'submitting'
+        ? 'Preparando checkout...'
+        : `Continuar con ${selected.name}`;
+    }
+    if(status){
+      status.classList.remove(
+        'subp-inline-status--success',
+        'subp-inline-status--error',
+        'subp-inline-status--info',
+        'subp-inline-status--warning'
+      );
+      status.classList.add(`subp-inline-status--${inlineUpgradeStatusKind()}`);
+      status.textContent = inlineUpgradeStatusMessage();
+    }
+  }
+
   function upgradeCheckoutErrorMessage(httpStatus, code, fallback){
     const safeCode = clean(code).toLowerCase();
     const mapped = safeCode ? mapSubscriptionMessage(safeCode, {
@@ -60122,10 +60231,11 @@ function mxResetLogoPreview(){
     const hasBilling = billingPeriod !== '';
     const canShow = state.visible && activePaid && !!selected;
 
-    els.upgradeCheckoutFlow.classList.toggle('d-none', !canShow);
+    els.upgradeCheckoutFlow.classList.toggle('d-none', true);
     if(!canShow){
       if(els.upgradeCheckoutAccept) els.upgradeCheckoutAccept.checked = false;
       setUpgradeCheckoutStatus('', '');
+      updateInlineUpgradeCheckoutState();
       return;
     }
 
@@ -60156,7 +60266,7 @@ function mxResetLogoPreview(){
       els.upgradeCheckoutCreate.classList.toggle('disabled', !readyToSubmit);
       els.upgradeCheckoutCreate.textContent = state.state === 'submitting'
         ? 'Preparando checkout...'
-        : 'Crear checkout de mejora';
+        : `Continuar con ${targetLabel}`;
     }
     if(els.upgradeCheckoutNext){
       els.upgradeCheckoutNext.textContent = state.state === 'created'
@@ -60169,6 +60279,7 @@ function mxResetLogoPreview(){
     }else{
       setUpgradeCheckoutStatus('info', SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE);
     }
+    updateInlineUpgradeCheckoutState();
   }
 
   function openUpgradeCheckoutFlow(){
@@ -60183,7 +60294,7 @@ function mxResetLogoPreview(){
     data.upgradeCheckout.idempotencyKey = '';
     renderUpgradeCheckoutFlow();
     try{
-      els.upgradeCheckoutFlow?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      els.catalog?.querySelector('.subp-plan--selected')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }catch(_){}
   }
 
@@ -60193,7 +60304,9 @@ function mxResetLogoPreview(){
     data.upgradeCheckout.state = 'idle';
     data.upgradeCheckout.message = '';
     data.upgradeCheckout.error = '';
+    data.selectedPlanId = '';
     renderUpgradeCheckoutFlow();
+    renderCatalog();
   }
 
   function buildUpgradeCheckoutPayload(targetPlanCode, billingPeriod){
@@ -60305,6 +60418,7 @@ function mxResetLogoPreview(){
     if(!els.planSelection) return;
     const selected = ensureSelectedPlan(activePaid);
     if(activePaid){
+      els.planSelection.classList.add('d-none');
       const currentPlan = findPlanById(data.current.id);
       if(els.selectedPlanTitle){
         els.selectedPlanTitle.textContent = selected
@@ -60317,7 +60431,7 @@ function mxResetLogoPreview(){
           : 'Selecciona un plan superior para preparar una mejora durante tu vigencia. Los cambios a un plan inferior aplican al finalizar la vigencia actual.';
       }
       if(els.planContinue){
-        els.planContinue.textContent = selected ? `Revisar mejora a ${selected.name}` : 'Solicitar cambio de plan';
+        els.planContinue.textContent = selected ? `Continuar con ${selected.name}` : 'Solicitar cambio de plan';
         els.planContinue.disabled = !selected;
         els.planContinue.classList.toggle('disabled', !selected);
       }
@@ -60330,6 +60444,7 @@ function mxResetLogoPreview(){
       renderUpgradeCheckoutFlow();
       return;
     }
+    els.planSelection.classList.remove('d-none');
     if(els.selectedPlanTitle){
       els.selectedPlanTitle.textContent = selected
         ? 'Plan seleccionado'
@@ -60363,9 +60478,9 @@ function mxResetLogoPreview(){
     if(els.since) els.since.textContent = data.current.since;
     if(els.until) els.until.textContent = data.current.until;
     if(els.autorenew) els.autorenew.checked = !!data.current.autorenew;
-    if(els.currentTitle) els.currentTitle.textContent = `${data.current.name} · Tu plan actual`;
-    if(els.currentNote) els.currentNote.textContent = data.current.note || '';
-    if(els.currentSourceNote) els.currentSourceNote.textContent = data.current.sourceNote || 'Este panel muestra el estado vigente de suscripción.';
+    if(els.currentTitle) els.currentTitle.textContent = 'Tu plan actual';
+    if(els.currentNote) els.currentNote.textContent = `${data.current.name} · ${data.current.status}`;
+    if(els.currentSourceNote) els.currentSourceNote.textContent = 'Beneficios vigentes de tu suscripción.';
     if(els.nextBill) els.nextBill.textContent = data.current.nextBill || '—';
     if(els.currentFeat){
       els.currentFeat.innerHTML = data.current.features.map(f=>`<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></li>`).join('');
@@ -60421,7 +60536,7 @@ function mxResetLogoPreview(){
         : flowType === 'downgrade_at_renewal'
           ? 'Disponible al renovar'
           : flowType === 'upgrade_now'
-            ? `Mejorar a ${p.name}`
+            ? `Ver plan ${p.name}`
             : isSelected
               ? 'Seleccionado'
               : 'Continuar con este plan';
@@ -60434,7 +60549,12 @@ function mxResetLogoPreview(){
             ? 'Puedes mejorar tu plan durante tu vigencia. El sistema calculará el ajuste correspondiente.'
             : SUBSCRIPTION_CHECKOUT_PENDING_NOTICE;
       const backendPlanCode = backendPlanCodeFromUiPlan(p.id);
-      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
+      const inlineDetail = flowType === 'upgrade_now' && isSelected
+        ? inlineUpgradeDetailHtml(p)
+        : '';
+      const stateValue = planStateValue(flowType, isSelected);
+      const stateClasses = planStateClass(flowType, isSelected);
+      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
         <div class="subp-plan-badge">${escapeHtml(badge)}</div>
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
@@ -60443,6 +60563,7 @@ function mxResetLogoPreview(){
         <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         <div class="subp-save">${escapeHtml(cardNote)}</div>
         <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
+        ${inlineDetail}
       </div>`;
     }).join('');
     const selectPlan = (planId)=>{
@@ -60470,6 +60591,7 @@ function mxResetLogoPreview(){
     els.catalog.querySelectorAll('[data-subp-plan-card]').forEach(card=>{
       card.addEventListener('click',(event)=>{
         if(event.target && event.target.closest('[data-subp-select]')) return;
+        if(event.target && event.target.closest('[data-subp-inline-upgrade-detail]')) return;
         if(card.dataset.available !== 'true') return;
         selectPlan(card.dataset.subpPlanCard);
       });
@@ -60480,6 +60602,35 @@ function mxResetLogoPreview(){
         selectPlan(card.dataset.subpPlanCard);
       });
     });
+    els.catalog.querySelectorAll('[data-subp-inline-upgrade-accept]').forEach((input)=>{
+      input.addEventListener('click', (event)=> event.stopPropagation());
+      input.addEventListener('change', ()=>{
+        data.upgradeCheckout.accepted = input.checked === true;
+        if(data.upgradeCheckout.state !== 'created'){
+          data.upgradeCheckout.state = 'idle';
+          data.upgradeCheckout.message = data.upgradeCheckout.accepted
+            ? 'Listo para continuar al cálculo de la mejora.'
+            : SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE;
+          data.upgradeCheckout.error = '';
+        }
+        renderUpgradeCheckoutFlow();
+      });
+    });
+    els.catalog.querySelectorAll('[data-subp-inline-upgrade-create]').forEach((button)=>{
+      button.addEventListener('click', (event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+        submitUpgradeCheckout();
+      });
+    });
+    els.catalog.querySelectorAll('[data-subp-inline-upgrade-cancel]').forEach((button)=>{
+      button.addEventListener('click', (event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+        closeUpgradeCheckoutFlow();
+      });
+    });
+    updateInlineUpgradeCheckoutState();
     renderPlanSelection(activePaid);
   }
 

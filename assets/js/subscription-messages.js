@@ -144,7 +144,7 @@
       message: 'Esta contratación expiró. Inicia nuevamente la mejora de plan.',
       severity: 'warning',
       retryable: false,
-      supportHint: 'El checkout pendiente superó su vigencia antes de crear el pago.'
+      supportHint: 'El checkout superó su vigencia y no existe evidencia válida para activarlo con la política actual.'
     },
     contract_acceptance_not_pending_payment: {
       group: 'estados inválidos',
@@ -194,6 +194,20 @@
       severity: 'info',
       retryable: false,
       supportHint: 'El state read-model indica can_activate=true.'
+    },
+    payment_activation_upgrade_ready: {
+      group: 'state read-model',
+      message: 'El pago está confirmado y la mejora de plan está lista para activarse.',
+      severity: 'info',
+      retryable: false,
+      supportHint: 'El state read-model indica upgrade can_activate=true.'
+    },
+    payment_activation_not_ready: {
+      group: 'state read-model',
+      message: 'La activación todavía no está lista. Revisa el estado del pago o intenta más tarde.',
+      severity: 'warning',
+      retryable: true,
+      supportHint: 'El state read-model indica can_activate=false.'
     },
     payment_activation_blocked: {
       group: 'state read-model',
