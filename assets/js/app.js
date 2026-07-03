@@ -59963,20 +59963,46 @@ function mxResetLogoPreview(){
     return yearly > 0 ? Math.round(yearly / 12) : 0;
   }
 
+  function roundUpToPriceEndingIn90(value){
+    const numeric = Number(value || 0);
+    if(!Number.isFinite(numeric) || numeric <= 0) return 0;
+    return Math.max(90, Math.ceil((numeric - 90) / 100) * 100 + 90);
+  }
+
   function planCommercialPrice(plan){
     const canonical = canonicalBackendPlanCode(plan?.id);
     return SUBSCRIPTION_PLAN_PRICE_MATRIX.plans[canonical] || { yearly: 0 };
   }
 
+  function planAnnualPrice(plan){
+    return Number(planCommercialPrice(plan).yearly || 0);
+  }
+
+  function planMonthlyPaymentPrice(plan){
+    const annual = planAnnualPrice(plan);
+    if(annual <= 0) return 0;
+    return roundUpToPriceEndingIn90((annual / 12) * 1.25);
+  }
+
   function planPriceLabel(plan){
     if(!plan) return 'Sin plan seleccionado';
-    const yearly = Number(planCommercialPrice(plan).yearly || 0);
+    const yearly = planAnnualPrice(plan);
     return yearly > 0 ? `${fmtMoney(yearly)} al año` : 'Precio anual configurable';
   }
 
   function planMonthlyEquivalentLabel(plan){
-    const monthly = monthlyEquivalent(plan);
-    return monthly > 0 ? `Equivale a ${fmtMoney(monthly)} / mes` : 'Equivalencia mensual no disponible';
+    const monthly = planMonthlyPaymentPrice(plan);
+    return monthly > 0 ? `Pago mensual: ${fmtMoney(monthly)} / mes` : 'Pago mensual no disponible';
+  }
+
+  function planDailyEquivalentLabel(plan){
+    const yearly = planAnnualPrice(plan);
+    if(yearly <= 0) return 'Equivalencia diaria no disponible';
+    return `Desde ${fmtMoney(Math.ceil(yearly / 365))} al día pagando anual`;
+  }
+
+  function planAnnualPaymentBadge(){
+    return 'Pago anual · ahorra 25%';
   }
 
   function readHeaderPlanName(){
@@ -60187,6 +60213,24 @@ function mxResetLogoPreview(){
     return `Puedes mejorar tu plan hoy mismo pagando un ajuste estimado de ${fmtMoney(estimate.amount)} por los ${estimate.remainingDays} días restantes de tu vigencia actual.`;
   }
 
+  function proratedUpgradeEstimateHtml(plan){
+    const estimate = proratedUpgradeEstimate(plan);
+    if(!estimate){
+      return `<div class="subp-plan-estimate">
+          <div class="subp-plan-estimate-title">Mejora hoy por un ajuste proporcional</div>
+          <div class="subp-plan-estimate-copy">El ajuste proporcional se calculará antes de pagar.</div>
+          <div class="subp-plan-estimate-note">Monto final sujeto a confirmación antes del pago.</div>
+        </div>`;
+    }
+
+    return `<div class="subp-plan-estimate">
+        <div class="subp-plan-estimate-title">Mejora hoy por un ajuste proporcional</div>
+        <div class="subp-plan-estimate-copy">Por los ${estimate.remainingDays} días restantes de tu vigencia actual, tu ajuste estimado sería de:</div>
+        <div class="subp-plan-estimate-amount">${escapeHtml(fmtMoney(estimate.amount))}</div>
+        <div class="subp-plan-estimate-note">Monto final sujeto a confirmación antes del pago.</div>
+      </div>`;
+  }
+
   function inlineUpgradeDetailHtml(plan){
     const currentLabel = currentPlanLabel();
     const targetLabel = clean(plan?.name) || 'plan seleccionado';
@@ -60220,7 +60264,7 @@ function mxResetLogoPreview(){
             </ul>
           </div>
           <div class="subp-plan-detail-side">
-            <div class="subp-plan-estimate">${escapeHtml(proratedUpgradeEstimateText(plan))}</div>
+            ${proratedUpgradeEstimateHtml(plan)}
             <div class="subp-plan-detail-notes">
               <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">event_available</span><span>Tu vigencia no se reinicia: se mantiene hasta ${escapeHtml(coverageLabel)}.</span></div>
               <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">swap_horiz</span><span>Puedes elegir otro plan antes de continuar.</span></div>
@@ -60644,7 +60688,9 @@ function mxResetLogoPreview(){
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
         <div class="subp-price">${escapeHtml(planPriceLabel(p))}</div>
-        <div class="text-muted small mb-2">${escapeHtml(planMonthlyEquivalentLabel(p))}</div>
+        <div class="subp-plan-price-badge">${escapeHtml(planAnnualPaymentBadge())}</div>
+        <div class="subp-plan-daily">${escapeHtml(planDailyEquivalentLabel(p))}</div>
+        <div class="subp-plan-monthly">${escapeHtml(planMonthlyEquivalentLabel(p))}</div>
         <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         <div class="subp-save">${escapeHtml(cardNote)}</div>
         <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
