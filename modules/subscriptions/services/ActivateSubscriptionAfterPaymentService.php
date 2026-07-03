@@ -412,7 +412,9 @@ final class ActivateSubscriptionAfterPaymentService
             );
         }
 
-        if ((string)($paymentEvent['processing_status'] ?? '') !== self::EVENT_PROCESSING_STATUS_PROCESSED) {
+        if ((string)($paymentEvent['processing_status'] ?? '') !== self::EVENT_PROCESSING_STATUS_PROCESSED
+            || (string)($paymentEvent['normalized_status'] ?? '') !== self::PAYMENT_INTENT_STATUS_PAID
+        ) {
             throw new ActivateSubscriptionAfterPaymentException(
                 409,
                 'payment_event_not_processed',
@@ -428,10 +430,14 @@ final class ActivateSubscriptionAfterPaymentService
             );
         }
 
-        $this->assertCheckoutNotExpired($checkoutIntent);
+        $this->assertCheckoutNotExpiredForActivation($checkoutIntent, $paymentIntent, $paymentEvent);
     }
 
-    private function assertCheckoutNotExpired(array $checkoutIntent): void
+    private function assertCheckoutNotExpiredForActivation(
+        array $checkoutIntent,
+        array $paymentIntent,
+        array $paymentEvent
+    ): void
     {
         $expiresAt = $this->nullableText($checkoutIntent['expires_at'] ?? null);
         if ($expiresAt === null) {
@@ -451,11 +457,67 @@ final class ActivateSubscriptionAfterPaymentService
         }
 
         if ($expiresAtDate < $nowDate) {
+            if ($this->paidAndProcessedBeforeCheckoutExpiry($checkoutIntent, $paymentIntent, $paymentEvent, $expiresAtDate)) {
+                return;
+            }
+
             throw new ActivateSubscriptionAfterPaymentException(
                 409,
                 'checkout_intent_expired',
                 'checkout intent is expired'
             );
+        }
+    }
+
+    private function paidAndProcessedBeforeCheckoutExpiry(
+        array $checkoutIntent,
+        array $paymentIntent,
+        array $paymentEvent,
+        DateTimeImmutable $expiresAtDate
+    ): bool {
+        if (!$this->paymentIntentIsConfirmed($paymentIntent)) {
+            return false;
+        }
+
+        if ((string)($paymentIntent['checkout_intent_uuid'] ?? '') !== (string)($checkoutIntent['uuid'] ?? '')) {
+            return false;
+        }
+
+        if ((string)($paymentEvent['event_type'] ?? '') !== self::EVENT_TYPE_CONFIRM
+            || (string)($paymentEvent['normalized_status'] ?? '') !== self::PAYMENT_INTENT_STATUS_PAID
+            || (string)($paymentEvent['processing_status'] ?? '') !== self::EVENT_PROCESSING_STATUS_PROCESSED
+            || (string)($paymentEvent['payment_intent_uuid'] ?? '') !== (string)($paymentIntent['uuid'] ?? '')
+        ) {
+            return false;
+        }
+
+        $paymentEventCheckoutUuid = $this->nullableText($paymentEvent['checkout_intent_uuid'] ?? null);
+        if ($paymentEventCheckoutUuid !== null
+            && $paymentEventCheckoutUuid !== (string)($checkoutIntent['uuid'] ?? '')
+        ) {
+            return false;
+        }
+
+        $paidAtDate = $this->parseUtcDate($paymentIntent['paid_at'] ?? null);
+        $processedAtDate = $this->parseUtcDate($paymentEvent['processed_at'] ?? null);
+        if ($paidAtDate === null || $processedAtDate === null) {
+            return false;
+        }
+
+        return $paidAtDate <= $expiresAtDate && $processedAtDate <= $expiresAtDate;
+    }
+
+    private function parseUtcDate($value): ?DateTimeImmutable
+    {
+        $text = $this->nullableText($value);
+        if ($text === null) {
+            return null;
+        }
+
+        try {
+            return new DateTimeImmutable($text, new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            return null;
         }
     }
 

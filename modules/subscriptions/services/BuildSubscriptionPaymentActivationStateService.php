@@ -245,7 +245,9 @@ final class BuildSubscriptionPaymentActivationStateService
             if ((string)($checkoutIntent['status'] ?? '') !== self::CHECKOUT_STATUS_PENDING_PAYMENT) {
                 $this->addReason($reasons, 'checkout_intent_not_pending_payment');
             }
-            if ($this->checkoutIntentIsExpired($checkoutIntent)) {
+            if ($this->checkoutIntentIsExpired($checkoutIntent)
+                && !$this->paidAndProcessedBeforeCheckoutExpiry($checkoutIntent, $paymentIntent, $paymentEvent)
+            ) {
                 $this->addReason($reasons, 'checkout_intent_expired');
             }
             if ($entityType !== null
@@ -420,6 +422,65 @@ final class BuildSubscriptionPaymentActivationStateService
         }
 
         return $expiresAtDate < $nowDate;
+    }
+
+    private function paidAndProcessedBeforeCheckoutExpiry(
+        array $checkoutIntent,
+        ?array $paymentIntent,
+        ?array $paymentEvent
+    ): bool {
+        $expiresAtDate = $this->parseUtcDate($checkoutIntent['expires_at'] ?? null);
+        if ($expiresAtDate === null || $paymentIntent === null || $paymentEvent === null) {
+            return false;
+        }
+
+        if (!$this->paymentIntentIsConfirmed($paymentIntent)) {
+            return false;
+        }
+
+        if ((string)($paymentIntent['checkout_intent_uuid'] ?? '') !== (string)($checkoutIntent['uuid'] ?? '')) {
+            return false;
+        }
+
+        if ((string)($paymentEvent['event_type'] ?? '') !== self::EVENT_TYPE_CONFIRM
+            || (string)($paymentEvent['normalized_status'] ?? '') !== self::PAYMENT_INTENT_STATUS_PAID
+            || (string)($paymentEvent['processing_status'] ?? '') !== self::EVENT_PROCESSING_STATUS_PROCESSED
+        ) {
+            return false;
+        }
+
+        if ((string)($paymentEvent['payment_intent_uuid'] ?? '') !== (string)($paymentIntent['uuid'] ?? '')) {
+            return false;
+        }
+
+        $paymentEventCheckoutUuid = $this->cleanText($paymentEvent['checkout_intent_uuid'] ?? null, 36);
+        if ($paymentEventCheckoutUuid !== null
+            && $paymentEventCheckoutUuid !== (string)($checkoutIntent['uuid'] ?? '')
+        ) {
+            return false;
+        }
+
+        $paidAtDate = $this->parseUtcDate($paymentIntent['paid_at'] ?? null);
+        $processedAtDate = $this->parseUtcDate($paymentEvent['processed_at'] ?? null);
+        if ($paidAtDate === null || $processedAtDate === null) {
+            return false;
+        }
+
+        return $paidAtDate <= $expiresAtDate && $processedAtDate <= $expiresAtDate;
+    }
+
+    private function parseUtcDate($value): ?DateTimeImmutable
+    {
+        $text = $this->cleanText($value, 32);
+        if ($text === null) {
+            return null;
+        }
+
+        try {
+            return new DateTimeImmutable($text, new DateTimeZone('UTC'));
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 
     private function paymentIntentState(?array $paymentIntent): ?array

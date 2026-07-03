@@ -402,10 +402,10 @@ final class ProcessStripeSubscriptionWebhookService
             ];
         }
 
-        return $this->checkoutExpiryGuard($checkoutIntent);
+        return $this->checkoutExpiryGuard($checkoutIntent, $event);
     }
 
-    private function checkoutExpiryGuard(array $checkoutIntent): ?array
+    private function checkoutExpiryGuard(array $checkoutIntent, array $event): ?array
     {
         $expiresAt = $this->cleanText($checkoutIntent['expires_at'] ?? null, 32);
         if ($expiresAt === null) {
@@ -415,6 +415,7 @@ final class ProcessStripeSubscriptionWebhookService
         try {
             $expiresAtDate = new DateTimeImmutable($expiresAt, new DateTimeZone('UTC'));
             $nowDate = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+            $transitionedAtDate = new DateTimeImmutable((string)$event['transitioned_at'], new DateTimeZone('UTC'));
         } catch (Throwable $e) {
             return [
                 'reason' => 'invalid_checkout_intent_payload',
@@ -423,6 +424,10 @@ final class ProcessStripeSubscriptionWebhookService
         }
 
         if ($expiresAtDate < $nowDate) {
+            if ($transitionedAtDate <= $expiresAtDate) {
+                return null;
+            }
+
             return [
                 'reason' => 'checkout_intent_expired',
                 'http_status' => 409,
