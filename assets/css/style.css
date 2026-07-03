@@ -6653,7 +6653,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--upgrade-now:hover{ border-color:#017290; box-shadow:0 12px 24px rgba(1,114,144,0.16); transform:translateY(-1px) }
 .subp-plan--renewal-only{ background:#f6f8f9; border-style:dashed; box-shadow:none }
 .subp-plan--disabled{ color:#5e6d73 }
-.subp-plan--selected{ border:2px solid #017290; box-shadow:0 16px 34px rgba(1,49,84,0.16); grid-row:span 2 }
+.subp-plan--selected{ border:2px solid #017290; box-shadow:0 14px 28px rgba(1,49,84,0.14); grid-column:span 2 }
 .subp-plan .subp-plan-title{ font-weight:800; font-size:1.34rem; color:#fff; background:#0b7595; padding:10px 12px; border-radius:8px 8px 6px 6px; margin:-16px -16px 12px -16px; text-align:left }
 .subp-price{ font-size:1.5rem; font-weight:800; color:#0b3750; line-height:1.1 }
 .subp-price small{ font-size:.8rem; color:#4c6470 }
@@ -6668,16 +6668,25 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--upgrade-now .subp-plan-badge{ background:#017290 }
 .subp-plan--renewal-only .subp-plan-badge{ background:#6d7d85 }
 .subp-plan--selected .subp-plan-badge{ background:#003154 }
-.subp-plan-detail{ margin-top:14px; padding:14px; border:1px solid #c8e4ec; border-radius:8px; background:#f7fbfc }
-.subp-plan-detail-kicker{ color:#017290; font-size:.76rem; font-weight:800; letter-spacing:.02em; text-transform:uppercase; margin-bottom:6px }
-.subp-plan-detail-lead{ color:#183746; font-size:.98rem; font-weight:700; margin-bottom:10px }
-.subp-plan-detail-benefits{ list-style:none; padding:0; margin:0 0 10px; display:grid; gap:7px }
+.subp-plan--selected > .subp-feature,
+.subp-plan--selected > .mt-2,
+.subp-plan--selected > .subp-save,
+.subp-plan--selected > [data-subp-select]{ display:none }
+.subp-plan-detail{ margin-top:10px; padding:12px; border:1px solid #c8e4ec; border-radius:8px; background:#f7fbfc }
+.subp-plan-detail-grid{ display:grid; grid-template-columns:minmax(0,1.08fr) minmax(220px,.92fr); gap:12px; align-items:start }
+.subp-plan-detail-lead{ color:#183746; font-size:1rem; font-weight:800; margin-bottom:8px }
+.subp-plan-detail-benefits{ list-style:none; padding:0; margin:0; display:grid; gap:6px }
 .subp-plan-detail-benefits li,
 .subp-plan-detail-notes div{ display:flex; align-items:flex-start; gap:7px; color:#243f4c; font-size:.92rem }
-.subp-plan-detail-benefits .mat-ico{ color:#1fbf75; font-size:19px; line-height:1 }
-.subp-plan-detail-notes{ display:grid; gap:7px; padding:10px; border-radius:8px; background:#fff; border:1px solid #e0edf1; margin-bottom:10px }
+.subp-plan-detail-benefits li{ align-items:center; font-size:1.02rem; font-weight:750 }
+.subp-benefit-marker{ flex:0 0 26px; width:26px; height:26px; border-radius:50%; display:inline-grid; place-items:center; font-weight:900; line-height:1 }
+.subp-benefit-marker .mat-ico{ color:#1d7f4f; font-size:22px; line-height:1 }
+.subp-benefit-marker--included{ background:#eaf8ef; color:#1d7f4f }
+.subp-benefit-marker--additional{ background:#017290; color:#fff; font-size:1.35rem; box-shadow:0 5px 12px rgba(1,114,144,0.2) }
+.subp-plan-estimate{ background:#eaf7fb; border:1px solid #bce2ed; border-radius:8px; color:#0b5061; font-size:.94rem; font-weight:750; padding:9px 10px; margin-bottom:8px }
+.subp-plan-detail-notes{ display:grid; gap:6px; padding:9px 10px; border-radius:8px; background:#fff; border:1px solid #e0edf1; margin-bottom:8px }
 .subp-plan-detail-notes .mat-ico{ color:#017290; font-size:18px; line-height:1 }
-.subp-plan-detail-accept{ align-items:flex-start; display:flex; gap:8px; margin:10px 0; color:#243f4c; font-size:.9rem }
+.subp-plan-detail-accept{ align-items:flex-start; display:flex; gap:8px; margin:8px 0; color:#243f4c; font-size:.88rem }
 .subp-inline-status{ padding:8px 10px; border-radius:8px; font-size:.88rem; font-weight:600; margin-bottom:10px }
 .subp-inline-status--warning{ background:#fff7e6; border:1px solid #ffdca8; color:#6b4d03 }
 .subp-inline-status--info{ background:#eaf7fb; border:1px solid #bce2ed; color:#0b5061 }
@@ -6702,6 +6711,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan[data-plan] .subp-btn:hover{ filter:brightness(0.92); }
 .subp-plan--renewal-only .subp-btn,
 .subp-plan--current .subp-btn{ background:#fff; border-color:#b9cbd2; color:#274653; filter:none }
+@media (max-width: 900px){
+  .subp-plan--selected{ grid-column:span 1 }
+  .subp-plan-detail-grid{ grid-template-columns:1fr }
+}
 
 /* Botones generales de cupones/factura/renovar */
 .subp-wrap [data-subp-renew],

@@ -58930,7 +58930,7 @@ function mxResetLogoPreview(){
   const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Puedes mejorar a un plan superior durante tu vigencia. Los cambios a un plan inferior aplican al renovar.';
   const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
-  const SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE = 'Revisa y acepta los términos para calcular el ajuste proporcional antes de pagar.';
+  const SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE = 'Revisa la mejora dentro de la card del plan seleccionado.';
   const UI_PLAN_TO_BACKEND_PLAN = Object.freeze({
     basico: 'basic',
     'básico': 'basic',
@@ -60097,7 +60097,9 @@ function mxResetLogoPreview(){
 
   function inlineUpgradeStatusMessage(){
     const state = data.upgradeCheckout;
-    return clean(state.message) || SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE;
+    const message = clean(state.message);
+    if(!message || state.state === 'idle') return '';
+    return message;
   }
 
   function inlineUpgradeStatusKind(){
@@ -60108,14 +60110,88 @@ function mxResetLogoPreview(){
     return state.accepted ? 'info' : 'warning';
   }
 
+  function normalizeBenefitKey(value){
+    return clean(value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ');
+  }
+
+  function currentPlanForUpgradeComparison(){
+    return findPlanById(clean(data.currentModel?.effective_plan_code) || data.current.id);
+  }
+
+  function currentPlanFeatureKeys(){
+    const currentPlan = currentPlanForUpgradeComparison();
+    const features = Array.isArray(currentPlan?.features) ? currentPlan.features : [];
+    return new Set(features.map(normalizeBenefitKey).filter(Boolean));
+  }
+
+  function upgradeBenefitItems(plan){
+    const currentKeys = currentPlanFeatureKeys();
+    const features = Array.isArray(plan?.features) && plan.features.length
+      ? plan.features
+      : ['Mayor presencia profesional', 'Herramientas adicionales para tu consulta'];
+    return features.map((label)=>({
+      label,
+      isAdditional: !currentKeys.has(normalizeBenefitKey(label))
+    }));
+  }
+
+  function parseSubscriptionDate(value){
+    const match = clean(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if(!match) return null;
+    const [, year, month, day, hour = '0', minute = '0', second = '0'] = match;
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second)
+    );
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  function proratedUpgradeEstimate(plan){
+    const currentPlan = currentPlanForUpgradeComparison();
+    const currentYearly = Number(planCommercialPrice(currentPlan).yearly || 0);
+    const targetYearly = Number(planCommercialPrice(plan).yearly || 0);
+    const startsAt = parseSubscriptionDate(data.currentModel?.starts_at);
+    const expiresAt = parseSubscriptionDate(data.currentModel?.expires_at);
+    if(!currentYearly || !targetYearly || !expiresAt) return null;
+
+    const dayMs = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const annualDifference = Math.max(0, targetYearly - currentYearly);
+    const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / dayMs));
+    const periodDays = startsAt
+      ? Math.max(1, Math.ceil((expiresAt.getTime() - startsAt.getTime()) / dayMs))
+      : 365;
+    const amount = Math.max(0, Math.round(annualDifference * remainingDays / periodDays));
+    if(!annualDifference || !remainingDays) return null;
+
+    return {
+      amount,
+      remainingDays,
+      periodDays
+    };
+  }
+
+  function proratedUpgradeEstimateText(plan){
+    const estimate = proratedUpgradeEstimate(plan);
+    if(!estimate){
+      return 'Puedes mejorar tu plan hoy mismo. El ajuste proporcional se calculará antes de pagar.';
+    }
+    return `Puedes mejorar tu plan hoy mismo pagando un ajuste estimado de ${fmtMoney(estimate.amount)} por los ${estimate.remainingDays} días restantes de tu vigencia actual.`;
+  }
+
   function inlineUpgradeDetailHtml(plan){
     const currentLabel = currentPlanLabel();
     const targetLabel = clean(plan?.name) || 'plan seleccionado';
-    const benefits = Array.isArray(plan?.features) && plan.features.length
-      ? plan.features
-      : ['Mayor presencia profesional', 'Herramientas adicionales para tu consulta'];
+    const benefits = upgradeBenefitItems(plan);
     const billingPeriod = currentBillingPeriod();
-    const periodLabel = labelFromMap(PERIOD_LABELS, billingPeriod, billingPeriod || 'tu periodo vigente');
     const coverageLabel = data.current.until && data.current.until !== 'No aplica'
       ? data.current.until
       : 'tu vigencia actual';
@@ -60132,26 +60208,33 @@ function mxResetLogoPreview(){
         : statusKind === 'info'
           ? 'subp-inline-status--info'
           : 'subp-inline-status--warning';
+    const statusMessage = inlineUpgradeStatusMessage();
+    const statusHidden = statusMessage ? '' : ' d-none';
 
     return `<div class="subp-plan-detail" data-subp-inline-upgrade-detail>
-        <div class="subp-plan-detail-kicker">Mejora seleccionada</div>
-        <p class="subp-plan-detail-lead">Al elevar tu plan ${escapeHtml(currentLabel)} a un plan ${escapeHtml(targetLabel)} obtendrás:</p>
-        <ul class="subp-plan-detail-benefits">
-          ${benefits.map((benefit)=>`<li><span class="material-symbols-rounded mat-ico" aria-hidden="true">check_circle</span><span>${escapeHtml(benefit)}</span></li>`).join('')}
-        </ul>
-        <div class="subp-plan-detail-notes">
-          <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">event_available</span><span>Tu vigencia actual no se reinicia; se mantiene hasta ${escapeHtml(coverageLabel)}.</span></div>
-          <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">calculate</span><span>El ajuste se calcula antes de pagar sobre tu periodo ${escapeHtml(periodLabel.toLowerCase())}.</span></div>
-          <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">swap_horiz</span><span>Puedes continuar o elegir otro plan antes de crear el checkout.</span></div>
-        </div>
-        <label class="form-check subp-plan-detail-accept">
-          <input class="form-check-input" type="checkbox" data-subp-inline-upgrade-accept ${state.accepted ? 'checked' : ''}>
-          <span class="form-check-label">Acepto el contrato de suscripción y el cálculo proporcional antes de pagar.</span>
-        </label>
-        <div class="subp-inline-status ${statusClass}" data-subp-inline-upgrade-status>${escapeHtml(inlineUpgradeStatusMessage())}</div>
-        <div class="subp-plan-detail-actions">
-          <button class="btn btn-primary subp-btn subp-btn--inline" type="button" data-subp-inline-upgrade-create ${readyToSubmit ? '' : 'disabled'}>${escapeHtml(createLabel)}</button>
-          <button class="btn btn-outline-secondary subp-btn subp-btn--secondary" type="button" data-subp-inline-upgrade-cancel>Elegir otro plan</button>
+        <div class="subp-plan-detail-grid">
+          <div class="subp-plan-detail-benefit-col">
+            <p class="subp-plan-detail-lead">Al elevar tu plan ${escapeHtml(currentLabel)} a un plan ${escapeHtml(targetLabel)} obtendrás:</p>
+            <ul class="subp-plan-detail-benefits">
+              ${benefits.map((benefit)=>`<li class="${benefit.isAdditional ? 'is-additional' : 'is-included'}"><span class="subp-benefit-marker ${benefit.isAdditional ? 'subp-benefit-marker--additional' : 'subp-benefit-marker--included'}" aria-hidden="true">${benefit.isAdditional ? '+' : '<span class="material-symbols-rounded mat-ico">check_circle</span>'}</span><span>${escapeHtml(benefit.label)}</span></li>`).join('')}
+            </ul>
+          </div>
+          <div class="subp-plan-detail-side">
+            <div class="subp-plan-estimate">${escapeHtml(proratedUpgradeEstimateText(plan))}</div>
+            <div class="subp-plan-detail-notes">
+              <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">event_available</span><span>Tu vigencia no se reinicia: se mantiene hasta ${escapeHtml(coverageLabel)}.</span></div>
+              <div><span class="material-symbols-rounded mat-ico" aria-hidden="true">swap_horiz</span><span>Puedes elegir otro plan antes de continuar.</span></div>
+            </div>
+            <label class="form-check subp-plan-detail-accept">
+              <input class="form-check-input" type="checkbox" data-subp-inline-upgrade-accept ${state.accepted ? 'checked' : ''}>
+              <span class="form-check-label">Acepto los términos de la mejora.</span>
+            </label>
+            <div class="subp-inline-status ${statusClass}${statusHidden}" data-subp-inline-upgrade-status>${escapeHtml(statusMessage)}</div>
+            <div class="subp-plan-detail-actions">
+              <button class="btn btn-primary subp-btn subp-btn--inline" type="button" data-subp-inline-upgrade-create ${readyToSubmit ? '' : 'disabled'}>${escapeHtml(createLabel)}</button>
+              <button class="btn btn-outline-secondary subp-btn subp-btn--secondary" type="button" data-subp-inline-upgrade-cancel>Elegir otro plan</button>
+            </div>
+          </div>
         </div>
       </div>`;
   }
@@ -60175,6 +60258,7 @@ function mxResetLogoPreview(){
         : `Continuar con ${selected.name}`;
     }
     if(status){
+      const statusMessage = inlineUpgradeStatusMessage();
       status.classList.remove(
         'subp-inline-status--success',
         'subp-inline-status--error',
@@ -60182,7 +60266,8 @@ function mxResetLogoPreview(){
         'subp-inline-status--warning'
       );
       status.classList.add(`subp-inline-status--${inlineUpgradeStatusKind()}`);
-      status.textContent = inlineUpgradeStatusMessage();
+      status.classList.toggle('d-none', !statusMessage);
+      status.textContent = statusMessage;
     }
   }
 
