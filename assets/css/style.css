@@ -1928,6 +1928,23 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 @media (min-width:993px){
+  body:has(#p-suscripcion:not(.d-none)) .mx-global-header .wrap{
+    padding-inline:0 18px;
+  }
+  body:has(#p-suscripcion:not(.d-none)) .mx-gh-toggle{
+    position:absolute;
+    left:12px;
+  }
+  body:has(#p-suscripcion:not(.d-none)) .mx-gh-brand{
+    --mx-gh-brand-offset-x:0px;
+    margin-inline-start:calc(var(--mm-sidebar-expanded-w) + 18px);
+  }
+  body.mx-sidebar-collapsed:has(#p-suscripcion:not(.d-none)) .mx-gh-brand{
+    margin-inline-start:calc(var(--mm-sidebar-collapsed-w) + 18px);
+  }
+  body:has(#p-suscripcion:not(.d-none)) .mx-gh-account-summary{
+    padding-left:22px;
+  }
   .mx-gh-brand{
     --mx-gh-brand-offset-x:25px;
   }
