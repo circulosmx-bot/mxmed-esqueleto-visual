@@ -6759,7 +6759,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-wrap{ background:#f2fbfc; border:1px solid #00adc1; border-radius:14px; padding:20px; box-shadow:0 10px 20px rgba(0,0,0,0.07) }
 .subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:#009ab0; color:#fff; border-radius:12px; padding:14px 18px }
 .subp-band-main{ min-width:0; flex:1 1 560px }
-.subp-plan-stack{ display:grid; gap:4px; justify-items:start; transform:translateX(-20px) }
+.subp-plan-stack{ display:grid; gap:4px; justify-items:start; transform:translateX(-5px) }
 .subp-plan-context{ color:rgba(255,255,255,.88); font-size:.89rem; font-weight:800; line-height:1; margin-left:15px; text-align:left }
 .subp-plan-pill{ display:inline-flex; align-items:center; justify-content:center; background:#006b82; color:#fff; padding:8px 15px; border-radius:12px; font-size:1.2rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; line-height:1.05 }
 .subp-status{ background:rgba(255,255,255,0.18); color:#fff; padding:6px 12px; border-radius:10px; font-weight:600 }
@@ -6781,7 +6781,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-current [data-subp-current-features] .subp-feature{ margin-bottom:0; font-weight:700 }
 .subp-current .subp-alert{ display:inline-flex; width:auto; max-width:100%; padding:7px 10px; margin-top:1px; font-size:.86rem }
 .subp-card{ background:#fff; border:1px solid #d7e8ef; border-radius:14px }
-.subp-plans-head > div:first-child{ margin-left:10px }
+.subp-plans-head > div:first-child{ margin-left:25px }
 .subp-plans-head .btn-check:checked + .btn{ background:#00adc1; color:#fff; border-color:#00adc1 }
 .subp-pricing-toggle{ display:inline-flex; align-items:center; gap:4px; padding:4px; border:1px solid #b7dce6; border-radius:10px; background:#fff; box-shadow:0 6px 14px rgba(0,49,84,0.08) }
 .subp-pricing-toggle-btn{ border:0; border-radius:8px; background:transparent; color:#315c6c; font-weight:800; font-size:.88rem; padding:8px 12px; line-height:1; white-space:nowrap }
