@@ -59939,6 +59939,20 @@ function mxResetLogoPreview(){
     return data.plans.find((plan)=> normalizePlanId(plan.id) === id) || null;
   }
 
+  function planIconPanelHtml(planId){
+    const icons = {
+      basico: 'person',
+      estandar: 'calendar_month',
+      optimo: 'clinical_notes',
+      pro: 'psychology'
+    };
+    const id = normalizePlanId(planId);
+    const icon = icons[id] || 'workspace_premium';
+    return `<div class="subp-plan-icon-panel subp-plan-icon-panel--${escapeHtml(id)}" aria-hidden="true">
+      <span class="material-symbols-rounded subp-plan-icon">${escapeHtml(icon)}</span>
+    </div>`;
+  }
+
   function recommendedPlanId(){
     return data.plans.some((plan)=> plan.id === 'estandar') ? 'estandar' : (data.plans[0]?.id || '');
   }
@@ -60786,6 +60800,7 @@ function mxResetLogoPreview(){
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
         <div class="subp-plan-badge">${escapeHtml(badge)}</div>
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
+        ${planIconPanelHtml(p.id)}
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
         ${planPricingBlockHtml(p)}
         <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>

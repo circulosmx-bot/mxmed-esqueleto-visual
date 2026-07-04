@@ -6800,6 +6800,18 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--disabled{ color:#5e6d73 }
 .subp-plan--selected{ border:2px solid #017290; box-shadow:0 14px 28px rgba(1,49,84,0.14); grid-column:span 2 }
 .subp-plan .subp-plan-title{ font-weight:800; font-size:1.34rem; color:#fff; background:#0b7595; padding:10px 12px; border-radius:8px 8px 6px 6px; margin:-16px -16px 12px -16px; text-align:left }
+.subp-plan-icon-panel{ display:grid; place-items:center; min-height:96px; margin:0 0 10px; border-radius:8px; border:1px solid rgba(0,173,193,.16); background:linear-gradient(135deg,#f4fbfd 0%,#e5f7fa 100%); overflow:hidden }
+.subp-plan-icon{ color:#007f96; font-size:4.25rem; line-height:1; font-variation-settings:'FILL' 0,'wght' 600,'GRAD' 0,'opsz' 48 }
+.subp-plan-icon-panel--basico{ background:linear-gradient(135deg,#f7f9fa 0%,#edf2f4 100%); border-color:#dce6ea }
+.subp-plan-icon-panel--basico .subp-plan-icon{ color:#8fa1ab }
+.subp-plan-icon-panel--estandar{ background:linear-gradient(135deg,#eefcfd 0%,#d8f5f8 100%); border-color:#b8e8ef }
+.subp-plan-icon-panel--estandar .subp-plan-icon{ color:#008fa3 }
+.subp-plan-icon-panel--optimo{ background:linear-gradient(135deg,#eef6fb 0%,#dcecf7 100%); border-color:#b7d4e8 }
+.subp-plan-icon-panel--optimo .subp-plan-icon{ color:#003154 }
+.subp-plan-icon-panel--pro{ background:linear-gradient(135deg,#eefcfd 0%,#e1f4f8 48%,#d7edf5 100%); border-color:#b2dee9 }
+.subp-plan-icon-panel--pro .subp-plan-icon{ color:#017290 }
+.subp-plan--renewal-only .subp-plan-icon-panel{ opacity:.72; filter:saturate(.65) }
+.subp-plan--current .subp-plan-icon-panel{ box-shadow:inset 0 0 0 1px rgba(0,173,193,.14) }
 .subp-price{ font-size:1.5rem; font-weight:800; color:#0b3750; line-height:1.1 }
 .subp-price small{ font-size:.8rem; color:#4c6470 }
 .subp-plan-price-badge{ display:inline-flex; align-items:center; width:max-content; max-width:100%; background:#eaf8ef; border:1px solid #b9e6c9; color:#116637; border-radius:8px; padding:4px 8px; font-size:.78rem; font-weight:800; margin-top:8px }
