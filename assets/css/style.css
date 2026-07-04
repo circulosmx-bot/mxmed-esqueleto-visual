@@ -6643,6 +6643,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-pill{ background:#006b82; color:#fff; padding:7px 13px; border-radius:12px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; line-height:1.05 }
 .subp-plan-pill::after{ content:"Tu plan actual"; display:block; margin-top:3px; font-size:.66rem; font-weight:750; letter-spacing:0; line-height:1; text-transform:none; opacity:.86 }
 .subp-status{ background:rgba(255,255,255,0.18); color:#fff; padding:6px 12px; border-radius:10px; font-weight:600 }
+.subp-dates{ line-height:1.25 }
+.subp-date-start{ opacity:.88; font-weight:600 }
+.subp-date-expiry{ font-size:1.15em; font-weight:800; letter-spacing:0 }
 .subp-current{ border:1px solid #d7e8ef; margin-bottom:14px !important; padding:11px 14px !important }
 .subp-current > .d-flex{ align-items:center !important }
 .subp-current-renewal{ display:none !important }
