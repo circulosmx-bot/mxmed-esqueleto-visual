@@ -6763,7 +6763,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-context{ color:rgba(255,255,255,.88); font-size:.89rem; font-weight:800; line-height:1; margin-left:15px; text-align:left }
 .subp-plan-pill{ display:inline-flex; align-items:center; justify-content:center; background:#006b82; color:#fff; padding:8px 15px; border-radius:12px; font-size:1.2rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; line-height:1.05 }
 .subp-status{ background:rgba(255,255,255,0.18); color:#fff; padding:6px 12px; border-radius:10px; font-weight:600 }
-.subp-band-summary{ display:grid; gap:5px; min-width:0 }
+.subp-band-summary{ display:grid; gap:5px; min-width:0; border-left:3px solid rgba(255,255,255,.45); padding-left:16px }
 .subp-dates{ line-height:1.25 }
 .subp-date-start{ opacity:.88; font-size:1.2em; font-weight:600 }
 .subp-date-expiry{ font-size:1.38em; font-weight:800; letter-spacing:0 }
