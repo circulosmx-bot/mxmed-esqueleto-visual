@@ -58922,6 +58922,7 @@ function mxResetLogoPreview(){
     devAcceptance: pane.querySelector('[data-subp-dev-acceptance]'),
     devReplay: pane.querySelector('[data-subp-dev-replay]'),
     devAt: pane.querySelector('[data-subp-dev-at]'),
+    pricingModeButtons: pane.querySelectorAll('[data-subp-pricing-mode]'),
     billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
   };
 
@@ -59907,6 +59908,10 @@ function mxResetLogoPreview(){
     return `$${n.toLocaleString('es-MX')} MXN`;
   }
 
+  function fmtMoneyShort(n){
+    return `$${Number(n || 0).toLocaleString('es-MX')}`;
+  }
+
   function canonicalBackendPlanCode(value){
     const id = clean(value).toLowerCase();
     if(id === 'free' || id === 'free_default') return 'basic';
@@ -59984,6 +59989,57 @@ function mxResetLogoPreview(){
     return roundUpToPriceEndingIn90((annual / 12) * 1.25);
   }
 
+  function pricingMode(){
+    return data.billing === 'monthly' ? 'monthly' : 'yearly';
+  }
+
+  function planAnnualPricingViewModel(plan){
+    const annual = planAnnualPrice(plan);
+    const daily = annual > 0 ? Math.ceil(annual / 365) : 0;
+    return {
+      mode: 'yearly',
+      price: annual > 0 ? fmtMoney(annual) : 'Precio anual configurable',
+      badge: planAnnualPaymentBadge(),
+      dailyPrefix: '',
+      dailyAmount: daily > 0 ? fmtMoneyShort(daily) : '',
+      dailyText: daily > 0 ? 'MXN al día pagando anual' : 'Equivalencia diaria no disponible'
+    };
+  }
+
+  function planMonthlyPricingViewModel(plan){
+    const monthly = planMonthlyPaymentPrice(plan);
+    const daily = monthly > 0 ? Math.ceil((monthly * 12) / 365) : 0;
+    return {
+      mode: 'monthly',
+      price: monthly > 0 ? `${fmtMoney(monthly)} / mes` : 'Pago mensual no disponible',
+      badge: 'Pago mensual',
+      dailyPrefix: daily > 0 ? 'Equivale a' : '',
+      dailyAmount: daily > 0 ? fmtMoneyShort(daily) : '',
+      dailyText: daily > 0 ? 'MXN al día pagando mensual' : 'Equivalencia diaria no disponible'
+    };
+  }
+
+  function planPricingViewModel(plan){
+    return pricingMode() === 'monthly'
+      ? planMonthlyPricingViewModel(plan)
+      : planAnnualPricingViewModel(plan);
+  }
+
+  function planPricingBlockHtml(plan){
+    const view = planPricingViewModel(plan);
+    const dailyContent = view.dailyAmount
+      ? `${view.dailyPrefix ? `<span class="subp-plan-pricing-daily-prefix">${escapeHtml(view.dailyPrefix)}</span>` : ''}<span class="subp-plan-pricing-daily-amount">${escapeHtml(view.dailyAmount)}</span><span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`
+      : `<span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`;
+
+    return `<div class="subp-plan-pricing subp-plan-pricing--${escapeHtml(view.mode)}" data-subp-pricing-block="${escapeHtml(view.mode)}">
+        <div class="subp-plan-pricing-top">
+          <div class="subp-plan-pricing-main">${escapeHtml(view.price)}</div>
+          <div class="subp-plan-pricing-badge">${escapeHtml(view.badge)}</div>
+        </div>
+        <div class="subp-plan-pricing-daily">${dailyContent}</div>
+      </div>`;
+  }
+
   function planPriceLabel(plan){
     if(!plan) return 'Sin plan seleccionado';
     const yearly = planAnnualPrice(plan);
@@ -59998,11 +60054,19 @@ function mxResetLogoPreview(){
   function planDailyEquivalentLabel(plan){
     const yearly = planAnnualPrice(plan);
     if(yearly <= 0) return 'Equivalencia diaria no disponible';
-    return `Desde ${fmtMoney(Math.ceil(yearly / 365))} al día pagando anual`;
+    return `${fmtMoney(Math.ceil(yearly / 365))} al día pagando anual`;
   }
 
   function planAnnualPaymentBadge(){
     return 'Pago anual · ahorra 25%';
+  }
+
+  function renderPricingModeToggle(){
+    els.pricingModeButtons.forEach((button)=>{
+      const active = clean(button.dataset.subpPricingMode) === pricingMode();
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
   }
 
   function readHeaderPlanName(){
@@ -60243,7 +60307,7 @@ function mxResetLogoPreview(){
     const readyToSubmit = state.accepted && billingPeriod !== '' && state.state !== 'submitting';
     const createLabel = state.state === 'submitting'
       ? 'Preparando checkout...'
-      : `Continuar con ${targetLabel}`;
+      : `Solicitar mejora a ${targetLabel}`;
     const statusKind = inlineUpgradeStatusKind();
     const statusClass = statusKind === 'success'
       ? 'subp-inline-status--success'
@@ -60299,7 +60363,7 @@ function mxResetLogoPreview(){
       create.classList.toggle('disabled', !readyToSubmit);
       create.textContent = state.state === 'submitting'
         ? 'Preparando checkout...'
-        : `Continuar con ${selected.name}`;
+        : `Solicitar mejora a ${selected.name}`;
     }
     if(status){
       const statusMessage = inlineUpgradeStatusMessage();
@@ -60395,7 +60459,7 @@ function mxResetLogoPreview(){
       els.upgradeCheckoutCreate.classList.toggle('disabled', !readyToSubmit);
       els.upgradeCheckoutCreate.textContent = state.state === 'submitting'
         ? 'Preparando checkout...'
-        : `Continuar con ${targetLabel}`;
+        : `Solicitar mejora a ${targetLabel}`;
     }
     if(els.upgradeCheckoutNext){
       els.upgradeCheckoutNext.textContent = state.state === 'created'
@@ -60560,7 +60624,7 @@ function mxResetLogoPreview(){
           : 'Selecciona un plan superior para preparar una mejora durante tu vigencia. Los cambios a un plan inferior aplican al finalizar la vigencia actual.';
       }
       if(els.planContinue){
-        els.planContinue.textContent = selected ? `Continuar con ${selected.name}` : 'Solicitar cambio de plan';
+        els.planContinue.textContent = selected ? `Solicitar mejora a ${selected.name}` : 'Solicitar cambio de plan';
         els.planContinue.disabled = !selected;
         els.planContinue.classList.toggle('disabled', !selected);
       }
@@ -60646,6 +60710,7 @@ function mxResetLogoPreview(){
     if(!els.catalog) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const selected = ensureSelectedPlan(activePaid);
+    renderPricingModeToggle();
     els.catalog.innerHTML = data.plans.map(p=>{
       const flowType = planFlowType(p, activePaid);
       const isCurrent = flowType === 'current';
@@ -60687,10 +60752,7 @@ function mxResetLogoPreview(){
         <div class="subp-plan-badge">${escapeHtml(badge)}</div>
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
-        <div class="subp-price">${escapeHtml(planPriceLabel(p))}</div>
-        <div class="subp-plan-price-badge">${escapeHtml(planAnnualPaymentBadge())}</div>
-        <div class="subp-plan-daily">${escapeHtml(planDailyEquivalentLabel(p))}</div>
-        <div class="subp-plan-monthly">${escapeHtml(planMonthlyEquivalentLabel(p))}</div>
+        ${planPricingBlockHtml(p)}
         <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         <div class="subp-save">${escapeHtml(cardNote)}</div>
         <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
@@ -60766,6 +60828,14 @@ function mxResetLogoPreview(){
   }
 
   // Eventos
+  els.pricingModeButtons.forEach((button)=>{
+    button.addEventListener('click', ()=>{
+      const mode = clean(button.dataset.subpPricingMode) === 'monthly' ? 'monthly' : 'yearly';
+      if(data.billing === mode) return;
+      data.billing = mode;
+      renderCatalog();
+    });
+  });
   els.billingRadios.forEach(r=>{
     r.addEventListener('change', ()=>{
       data.billing = r.value === 'yearly' ? 'yearly' : 'monthly';
