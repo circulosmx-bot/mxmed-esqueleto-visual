@@ -6664,16 +6664,20 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-price-badge{ display:inline-flex; align-items:center; width:max-content; max-width:100%; background:#eaf8ef; border:1px solid #b9e6c9; color:#116637; border-radius:8px; padding:4px 8px; font-size:.78rem; font-weight:800; margin-top:8px }
 .subp-plan-daily{ color:#003154; font-size:.98rem; font-weight:800; margin-top:8px }
 .subp-plan-monthly{ color:#52666f; font-size:.88rem; font-weight:650; margin-top:4px }
-.subp-plan-pricing{ display:grid; gap:9px; margin:2px 0 12px; padding:12px; border:1px solid #bde4ec; border-radius:8px; background:linear-gradient(180deg,#f2fbfd 0%,#ffffff 100%); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.8) }
+.subp-plan-pricing{ display:grid; gap:7px; margin:2px 0 12px; padding:12px; border:1px solid #bde4ec; border-radius:8px; background:linear-gradient(180deg,#f2fbfd 0%,#ffffff 100%); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.8) }
 .subp-plan-pricing-top{ display:flex; align-items:center; justify-content:space-between; gap:10px }
-.subp-plan-pricing-main{ color:#003154; font-size:1.52rem; font-weight:900; line-height:1.05; letter-spacing:0 }
-.subp-plan-pricing-badge{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; max-width:46%; border-radius:8px; padding:5px 8px; background:#eaf8ef; border:1px solid #b9e6c9; color:#116637; font-size:.74rem; font-weight:850; line-height:1.15; text-align:center }
-.subp-plan-pricing-daily{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; padding-top:8px; border-top:1px solid #d7ecf2; color:#315c6c; line-height:1.1 }
+.subp-plan-pricing-main{ display:flex; align-items:baseline; flex-wrap:wrap; gap:5px; color:#003154; font-weight:900; line-height:1.05; letter-spacing:0 }
+.subp-plan-pricing-amount{ font-size:1.72rem; line-height:1 }
+.subp-plan-pricing-currency{ color:#315c6c; font-size:.86rem; font-weight:850; line-height:1 }
+.subp-plan-pricing-terms{ display:grid; justify-items:end; gap:1px; flex:0 0 auto; max-width:43%; color:#006b82; line-height:1.05; text-align:right }
+.subp-plan-pricing-mode-label{ color:#315c6c; font-size:.78rem; font-weight:800 }
+.subp-plan-pricing-savings{ color:#148044; font-size:1.08rem; font-weight:950 }
+.subp-plan-pricing-daily{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; color:#315c6c; line-height:1.1 }
 .subp-plan-pricing-daily-prefix{ color:#5b7280; font-size:.8rem; font-weight:700; margin-right:2px }
 .subp-plan-pricing-daily-amount{ color:#007f96; font-size:1.24rem; font-weight:950; line-height:1 }
 .subp-plan-pricing-daily-text{ color:#365966; font-size:.82rem; font-weight:750 }
 .subp-plan-pricing--monthly{ border-color:#cae1e8; background:linear-gradient(180deg,#f7fbfc 0%,#ffffff 100%) }
-.subp-plan-pricing--monthly .subp-plan-pricing-badge{ background:#eaf7fb; border-color:#bce2ed; color:#006b82 }
+.subp-plan-pricing--monthly .subp-plan-pricing-terms{ color:#006b82 }
 .subp-plan-pricing--monthly .subp-plan-pricing-daily-amount{ color:#003154 }
 .subp-feature{ display:flex; align-items:flex-start; gap:6px; margin-bottom:6px; color:#2b3c42; font-size:.95rem }
 .subp-feature .mat-ico{ font-size:18px; color:#1fbf75; line-height:1 }
@@ -6693,6 +6697,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-detail{ margin-top:10px; padding:12px; border:1px solid #c8e4ec; border-radius:8px; background:#f7fbfc }
 .subp-plan-detail-grid{ display:grid; grid-template-columns:minmax(0,1.08fr) minmax(220px,.92fr); gap:12px; align-items:start }
 .subp-plan-detail-lead{ color:#183746; font-size:1rem; font-weight:800; margin-bottom:8px }
+.subp-plan-detail-benefit-group{ display:grid; gap:5px; margin-bottom:10px }
+.subp-plan-detail-benefit-group:last-child{ margin-bottom:0 }
+.subp-plan-detail-benefit-title{ color:#003154; font-size:.9rem; font-weight:900 }
+.subp-plan-detail-empty{ color:#49636f; font-size:.9rem; font-weight:650; margin:0 }
 .subp-plan-detail-benefits{ list-style:none; padding:0; margin:0; display:grid; gap:6px }
 .subp-plan-detail-benefits li,
 .subp-plan-detail-notes div{ display:flex; align-items:flex-start; gap:7px; color:#243f4c; font-size:.92rem }
@@ -6737,7 +6745,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-plan--selected{ grid-column:span 1 }
   .subp-plan-detail-grid{ grid-template-columns:1fr }
   .subp-plan-pricing-top{ align-items:flex-start; flex-direction:column }
-  .subp-plan-pricing-badge{ max-width:100% }
+  .subp-plan-pricing-terms{ justify-items:start; max-width:100%; text-align:left }
 }
 
 /* Botones generales de cupones/factura/renovar */

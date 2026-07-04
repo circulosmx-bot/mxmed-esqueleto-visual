@@ -59998,8 +59998,10 @@ function mxResetLogoPreview(){
     const daily = annual > 0 ? Math.ceil(annual / 365) : 0;
     return {
       mode: 'yearly',
-      price: annual > 0 ? fmtMoney(annual) : 'Precio anual configurable',
-      badge: planAnnualPaymentBadge(),
+      priceAmount: annual > 0 ? fmtMoneyShort(annual) : 'Precio anual configurable',
+      priceSuffix: annual > 0 ? 'MXN' : '',
+      modeLabel: 'Pago anual',
+      savingsLabel: 'ahorra 25%',
       dailyPrefix: '',
       dailyAmount: daily > 0 ? fmtMoneyShort(daily) : '',
       dailyText: daily > 0 ? 'MXN al día pagando anual' : 'Equivalencia diaria no disponible'
@@ -60011,8 +60013,10 @@ function mxResetLogoPreview(){
     const daily = monthly > 0 ? Math.ceil((monthly * 12) / 365) : 0;
     return {
       mode: 'monthly',
-      price: monthly > 0 ? `${fmtMoney(monthly)} / mes` : 'Pago mensual no disponible',
-      badge: 'Pago mensual',
+      priceAmount: monthly > 0 ? fmtMoneyShort(monthly) : 'Pago mensual no disponible',
+      priceSuffix: monthly > 0 ? 'MXN / mes' : '',
+      modeLabel: 'Pago mensual',
+      savingsLabel: '',
       dailyPrefix: daily > 0 ? 'Equivale a' : '',
       dailyAmount: daily > 0 ? fmtMoneyShort(daily) : '',
       dailyText: daily > 0 ? 'MXN al día pagando mensual' : 'Equivalencia diaria no disponible'
@@ -60027,14 +60031,20 @@ function mxResetLogoPreview(){
 
   function planPricingBlockHtml(plan){
     const view = planPricingViewModel(plan);
+    const priceContent = view.priceSuffix
+      ? `<span class="subp-plan-pricing-amount">${escapeHtml(view.priceAmount)}</span><span class="subp-plan-pricing-currency">${escapeHtml(view.priceSuffix)}</span>`
+      : `<span class="subp-plan-pricing-amount">${escapeHtml(view.priceAmount)}</span>`;
+    const termsContent = view.savingsLabel
+      ? `<span class="subp-plan-pricing-mode-label">${escapeHtml(view.modeLabel)}</span><span class="subp-plan-pricing-savings">${escapeHtml(view.savingsLabel)}</span>`
+      : `<span class="subp-plan-pricing-mode-label">${escapeHtml(view.modeLabel)}</span>`;
     const dailyContent = view.dailyAmount
       ? `${view.dailyPrefix ? `<span class="subp-plan-pricing-daily-prefix">${escapeHtml(view.dailyPrefix)}</span>` : ''}<span class="subp-plan-pricing-daily-amount">${escapeHtml(view.dailyAmount)}</span><span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`
       : `<span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`;
 
     return `<div class="subp-plan-pricing subp-plan-pricing--${escapeHtml(view.mode)}" data-subp-pricing-block="${escapeHtml(view.mode)}">
         <div class="subp-plan-pricing-top">
-          <div class="subp-plan-pricing-main">${escapeHtml(view.price)}</div>
-          <div class="subp-plan-pricing-badge">${escapeHtml(view.badge)}</div>
+          <div class="subp-plan-pricing-main">${priceContent}</div>
+          <div class="subp-plan-pricing-terms">${termsContent}</div>
         </div>
         <div class="subp-plan-pricing-daily">${dailyContent}</div>
       </div>`;
@@ -60055,10 +60065,6 @@ function mxResetLogoPreview(){
     const yearly = planAnnualPrice(plan);
     if(yearly <= 0) return 'Equivalencia diaria no disponible';
     return `${fmtMoney(Math.ceil(yearly / 365))} al día pagando anual`;
-  }
-
-  function planAnnualPaymentBadge(){
-    return 'Pago anual · ahorra 25%';
   }
 
   function renderPricingModeToggle(){
@@ -60299,6 +60305,8 @@ function mxResetLogoPreview(){
     const currentLabel = currentPlanLabel();
     const targetLabel = clean(plan?.name) || 'plan seleccionado';
     const benefits = upgradeBenefitItems(plan);
+    const includedBenefits = benefits.filter((benefit)=> !benefit.isAdditional);
+    const additionalBenefits = benefits.filter((benefit)=> benefit.isAdditional);
     const billingPeriod = currentBillingPeriod();
     const coverageLabel = data.current.until && data.current.until !== 'No aplica'
       ? data.current.until
@@ -60322,10 +60330,19 @@ function mxResetLogoPreview(){
     return `<div class="subp-plan-detail" data-subp-inline-upgrade-detail>
         <div class="subp-plan-detail-grid">
           <div class="subp-plan-detail-benefit-col">
-            <p class="subp-plan-detail-lead">Al elevar tu plan ${escapeHtml(currentLabel)} a un plan ${escapeHtml(targetLabel)} obtendrás:</p>
-            <ul class="subp-plan-detail-benefits">
-              ${benefits.map((benefit)=>`<li class="${benefit.isAdditional ? 'is-additional' : 'is-included'}"><span class="subp-benefit-marker ${benefit.isAdditional ? 'subp-benefit-marker--additional' : 'subp-benefit-marker--included'}" aria-hidden="true">${benefit.isAdditional ? '+' : '<span class="material-symbols-rounded mat-ico">check_circle</span>'}</span><span>${escapeHtml(benefit.label)}</span></li>`).join('')}
-            </ul>
+            <p class="subp-plan-detail-lead">Lleva tu consulta al siguiente nivel.</p>
+            ${includedBenefits.length ? `<div class="subp-plan-detail-benefit-group">
+              <div class="subp-plan-detail-benefit-title">Ya tienes:</div>
+              <ul class="subp-plan-detail-benefits">
+                ${includedBenefits.map((benefit)=>`<li class="is-included"><span class="subp-benefit-marker subp-benefit-marker--included" aria-hidden="true"><span class="material-symbols-rounded mat-ico">check_circle</span></span><span>${escapeHtml(benefit.label)}</span></li>`).join('')}
+              </ul>
+            </div>` : ''}
+            ${additionalBenefits.length ? `<div class="subp-plan-detail-benefit-group">
+              <div class="subp-plan-detail-benefit-title">Agrega:</div>
+              <ul class="subp-plan-detail-benefits">
+                ${additionalBenefits.map((benefit)=>`<li class="is-additional"><span class="subp-benefit-marker subp-benefit-marker--additional" aria-hidden="true">+</span><span>${escapeHtml(benefit.label)}</span></li>`).join('')}
+              </ul>
+            </div>` : `<div class="subp-plan-detail-benefit-group"><div class="subp-plan-detail-benefit-title">Agrega:</div><p class="subp-plan-detail-empty">Más herramientas incluidas en tu mejora.</p></div>`}
           </div>
           <div class="subp-plan-detail-side">
             ${proratedUpgradeEstimateHtml(plan)}
