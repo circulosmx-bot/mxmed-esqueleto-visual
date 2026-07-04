@@ -6639,22 +6639,22 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* ================== SUSCRIPCIÓN ================== */
 .subp-wrap{ background:#f2fbfc; border:1px solid #00adc1; border-radius:14px; padding:20px; box-shadow:0 10px 20px rgba(0,0,0,0.07) }
-.subp-band{ display:grid; grid-template-columns:max-content minmax(210px,.85fr) minmax(300px,1.15fr) max-content; align-items:center; gap:14px 18px; background:#009ab0; color:#fff; border-radius:12px; padding:14px 18px }
+.subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:#009ab0; color:#fff; border-radius:12px; padding:14px 18px }
 .subp-band-main{ min-width:0; flex:1 1 560px }
 .subp-plan-stack{ display:grid; gap:4px; justify-items:center }
-.subp-plan-context{ color:rgba(255,255,255,.88); font-size:.74rem; font-weight:800; line-height:1; text-align:center }
-.subp-plan-pill{ background:#006b82; color:#fff; padding:7px 13px; border-radius:12px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; line-height:1.05 }
+.subp-plan-context{ color:rgba(255,255,255,.88); font-size:.89rem; font-weight:800; line-height:1; text-align:center }
+.subp-plan-pill{ background:#006b82; color:#fff; padding:8px 15px; border-radius:12px; font-size:1.2rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; line-height:1.05 }
 .subp-status{ background:rgba(255,255,255,0.18); color:#fff; padding:6px 12px; border-radius:10px; font-weight:600 }
 .subp-band-summary{ display:grid; gap:5px; min-width:0 }
 .subp-dates{ line-height:1.25 }
-.subp-date-start{ opacity:.88; font-weight:600 }
-.subp-date-expiry{ font-size:1.15em; font-weight:800; letter-spacing:0 }
+.subp-date-start{ opacity:.88; font-size:1.2em; font-weight:600 }
+.subp-date-expiry{ font-size:1.38em; font-weight:800; letter-spacing:0 }
 .subp-band-benefit-zone{ display:grid; justify-items:start; gap:5px; min-width:0 }
-.subp-band-benefits{ display:flex; align-items:center; flex-wrap:wrap; gap:5px 10px; color:#fff; font-size:.98rem; font-weight:850; line-height:1.15 }
-.subp-band-benefits-label{ color:rgba(255,255,255,.82); font-size:.86rem; font-weight:800 }
+.subp-band-benefits{ display:flex; align-items:center; flex-wrap:wrap; gap:5px 10px; color:#fff; font-size:1.18rem; font-weight:850; line-height:1.15 }
+.subp-band-benefits-label{ color:rgba(255,255,255,.82); font-size:1.03rem; font-weight:800 }
 .subp-band-benefit{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap }
 .subp-band-benefit .mat-ico{ font-size:18px; line-height:1; color:#d7fff6 }
-.subp-band-note{ color:#e8fbff; font-size:.95rem; font-weight:850; line-height:1.15 }
+.subp-band-note{ color:#e8fbff; font-size:1.14rem; font-weight:850; line-height:1.15 }
 .subp-current{ display:none !important; border:1px solid #d7e8ef; margin-bottom:0 !important; padding:0 !important }
 .subp-current > .d-flex{ align-items:center !important }
 .subp-current-renewal{ display:none !important }
