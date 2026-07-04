@@ -60034,17 +60034,20 @@ function mxResetLogoPreview(){
     const priceContent = view.priceSuffix
       ? `<span class="subp-plan-pricing-amount">${escapeHtml(view.priceAmount)}</span><span class="subp-plan-pricing-currency">${escapeHtml(view.priceSuffix)}</span>`
       : `<span class="subp-plan-pricing-amount">${escapeHtml(view.priceAmount)}</span>`;
-    const termsContent = view.savingsLabel
-      ? `<span class="subp-plan-pricing-mode-label">${escapeHtml(view.modeLabel)}</span><span class="subp-plan-pricing-savings">${escapeHtml(view.savingsLabel)}</span>`
-      : `<span class="subp-plan-pricing-mode-label">${escapeHtml(view.modeLabel)}</span>`;
+    const savingsContent = view.savingsLabel
+      ? `<div class="subp-plan-pricing-savings">${escapeHtml(view.savingsLabel)}</div>`
+      : '';
     const dailyContent = view.dailyAmount
       ? `${view.dailyPrefix ? `<span class="subp-plan-pricing-daily-prefix">${escapeHtml(view.dailyPrefix)}</span>` : ''}<span class="subp-plan-pricing-daily-amount">${escapeHtml(view.dailyAmount)}</span><span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`
       : `<span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`;
 
     return `<div class="subp-plan-pricing subp-plan-pricing--${escapeHtml(view.mode)}" data-subp-pricing-block="${escapeHtml(view.mode)}">
         <div class="subp-plan-pricing-top">
-          <div class="subp-plan-pricing-main">${priceContent}</div>
-          <div class="subp-plan-pricing-terms">${termsContent}</div>
+          <div class="subp-plan-pricing-price-group">
+            <div class="subp-plan-pricing-main">${priceContent}</div>
+            <div class="subp-plan-pricing-mode-label">${escapeHtml(view.modeLabel)}</div>
+          </div>
+          ${savingsContent ? `<div class="subp-plan-pricing-terms">${savingsContent}</div>` : ''}
         </div>
         <div class="subp-plan-pricing-daily">${dailyContent}</div>
       </div>`;
