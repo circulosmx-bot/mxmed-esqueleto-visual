@@ -58927,7 +58927,7 @@ function mxResetLogoPreview(){
   };
 
   const SUBSCRIPTION_ACTION_NOTICE = 'Elige un plan disponible para preparar el siguiente paso. La contratación en línea se activará en la siguiente fase.';
-  const SUBSCRIPTION_ACTIVE_NOTICE = 'Tu suscripción está activa. Puedes mejorar a un plan superior durante tu vigencia; los cambios a un plan inferior estarán disponibles al renovar.';
+  const SUBSCRIPTION_ACTIVE_NOTICE = 'Activa más funciones mejorando tu plan.';
   const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Puedes mejorar a un plan superior durante tu vigencia. Los cambios a un plan inferior aplican al renovar.';
   const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
@@ -59641,32 +59641,20 @@ function mxResetLogoPreview(){
   function buildReadModelFeatures(model, meta, contextInfo){
     const contracted = clean(model?.contracted_plan_code);
     const effective = clean(model?.effective_plan_code);
-    const planLabel = clean(model?.plan_label) || clean(model?.plan_name) || effective || contracted || 'No disponible';
-    const status = clean(model?.status);
-    const statusLabel = labelFromMap(STATUS_LABELS, status, status || 'Estado no disponible');
-    const period = labelFromMap(PERIOD_LABELS, model?.billing_period, 'No aplica');
     const grace = clean(model?.grace_status) || 'No aplica';
-    const startsAt = formatDate(model?.starts_at);
-    const expiresAt = (clean(model?.billing_period).toLowerCase() === 'lifetime' || Number(model?.duration_days) === 0)
-      ? 'No aplica'
-      : formatDate(model?.expires_at);
     const version = clean(model?.version || meta?.version);
     const source = clean(model?.source);
     const contextEntityType = clean(contextInfo?.entity_type);
     const contextEntityId = clean(contextInfo?.entity_id || contextInfo?.doctor_id);
     const contextSource = clean(contextInfo?.source);
-    const commercialFeatures = [
-      `Plan actual: ${planLabel}`,
-      `Estado: ${statusLabel}`,
-      `Periodo: ${period}`,
-      startsAt !== 'No aplica' ? `Activo desde: ${startsAt}` : '',
-      `Vigencia: ${expiresAt}`,
-      `Días restantes: ${formatDaysRemaining(model?.days_until_expiration)}`,
-      grace !== 'No aplica' ? `Gracia: ${grace}` : ''
-    ];
+    const currentPlan = findPlanById(effective || contracted || model?.plan_label || model?.plan_name);
+    const commercialFeatures = Array.isArray(currentPlan?.features) && currentPlan.features.length
+      ? currentPlan.features
+      : ['Beneficios vigentes de tu suscripción'];
     const debugFeatures = isSubscriptionDebugPanelEnabled() ? [
       `Plan efectivo: ${effective || 'No disponible'}`,
       `Plan contratado: ${contracted || 'Sin plan contratado vigente'}`,
+      grace !== 'No aplica' ? `Gracia: ${grace}` : '',
       contextEntityType && contextEntityId ? `Contexto: ${contextEntityType} #${contextEntityId}` : '',
       contextSource ? `Fuente contexto: ${contextSource}` : '',
       source ? `Fuente: ${source}` : '',
@@ -59687,6 +59675,10 @@ function mxResetLogoPreview(){
     const hasContract = contractedPlan !== '';
     const startsAt = formatDate(model?.starts_at);
     const expiresAt = formatDate(model?.expires_at);
+    const remainingLabel = formatDaysRemaining(model?.days_until_expiration);
+    const untilSummary = expiresAt !== 'No aplica' && remainingLabel !== 'No aplica'
+      ? `${expiresAt} · ${remainingLabel} restantes`
+      : expiresAt;
     syncGlobalSubscriptionHeader(model || {}, planLabel);
     const headerPlanName = readHeaderPlanName();
     const headerMismatch = headerPlanName
@@ -59698,6 +59690,7 @@ function mxResetLogoPreview(){
       name: planLabel,
       since: startsAt,
       until: expiresAt,
+      untilSummary,
       status: statusLabel,
       nextBill: 'No aplica',
       autorenew: false,
@@ -59713,6 +59706,7 @@ function mxResetLogoPreview(){
 
     if(clean(model?.billing_period).toLowerCase() === 'lifetime' || Number(model?.duration_days) === 0){
       data.current.until = 'No aplica';
+      data.current.untilSummary = 'No aplica';
       data.current.nextBill = 'No aplica';
     }
 
@@ -60689,11 +60683,17 @@ function mxResetLogoPreview(){
     }
     if(els.status) els.status.textContent = data.current.status;
     if(els.since) els.since.textContent = data.current.since;
-    if(els.until) els.until.textContent = data.current.until;
+    if(els.until) els.until.textContent = data.current.untilSummary || data.current.until;
     if(els.autorenew) els.autorenew.checked = !!data.current.autorenew;
-    if(els.currentTitle) els.currentTitle.textContent = 'Tu plan actual';
-    if(els.currentNote) els.currentNote.textContent = `${data.current.name} · ${data.current.status}`;
-    if(els.currentSourceNote) els.currentSourceNote.textContent = 'Beneficios vigentes de tu suscripción.';
+    if(els.currentTitle) els.currentTitle.textContent = 'Beneficios vigentes de tu suscripción:';
+    if(els.currentNote){
+      els.currentNote.textContent = '';
+      els.currentNote.classList.add('d-none');
+    }
+    if(els.currentSourceNote){
+      els.currentSourceNote.textContent = '';
+      els.currentSourceNote.classList.add('d-none');
+    }
     if(els.nextBill) els.nextBill.textContent = data.current.nextBill || '—';
     if(els.currentFeat){
       els.currentFeat.innerHTML = data.current.features.map(f=>`<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></li>`).join('');
