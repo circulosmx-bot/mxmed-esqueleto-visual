@@ -58861,6 +58861,8 @@ function mxResetLogoPreview(){
     status: pane.querySelector('[data-subp-current-status]'),
     since: pane.querySelector('[data-subp-since]'),
     until: pane.querySelector('[data-subp-until]'),
+    headerBenefits: pane.querySelector('[data-subp-header-benefits]'),
+    headerNote: pane.querySelector('[data-subp-header-note]'),
     autorenew: pane.querySelector('#subp-autorenew'),
     renewBtn: pane.querySelector('[data-subp-renew]'),
     currentTitle: pane.querySelector('[data-subp-current-title]'),
@@ -60697,6 +60699,21 @@ function mxResetLogoPreview(){
     if(els.nextBill) els.nextBill.textContent = data.current.nextBill || '—';
     if(els.currentFeat){
       els.currentFeat.innerHTML = data.current.features.map(f=>`<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></li>`).join('');
+    }
+    const headerBenefits = data.current.features
+      .map(clean)
+      .filter((feature)=> feature && !feature.includes(':'))
+      .slice(0, 4);
+    if(els.headerBenefits){
+      els.headerBenefits.innerHTML = headerBenefits.length
+        ? `<span class="subp-band-benefits-label">Incluye:</span>${headerBenefits.map((feature)=>`<span class="subp-band-benefit"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check_circle</span>${escapeHtml(feature)}</span>`).join('')}`
+        : '';
+      els.headerBenefits.classList.toggle('d-none', headerBenefits.length === 0);
+    }
+    if(els.headerNote){
+      const note = clean(data.current.alert);
+      els.headerNote.textContent = note;
+      els.headerNote.classList.toggle('d-none', !note);
     }
     if(els.currentAlert){
       if(data.current.alert){
