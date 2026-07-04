@@ -6833,6 +6833,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-pricing--monthly{ border-color:#cae1e8; background:linear-gradient(180deg,#f7fbfc 0%,#ffffff 100%) }
 .subp-plan-pricing--monthly .subp-plan-pricing-terms{ color:#006b82 }
 .subp-plan-pricing--monthly .subp-plan-pricing-daily-amount{ color:#003154 }
+.subp-plan-pricing--monthly .subp-plan-pricing-mode-label{ color:rgb(37, 99, 235) }
 .subp-plan-pricing--yearly .subp-plan-pricing-mode-label{ color:rgb(22, 163, 74) }
 .subp-feature{ display:flex; align-items:flex-start; gap:6px; margin-bottom:6px; color:#2b3c42; font-size:.95rem }
 .subp-feature .mat-ico{ font-size:18px; color:#1fbf75; line-height:1 }
