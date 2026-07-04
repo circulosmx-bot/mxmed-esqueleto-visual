@@ -475,11 +475,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-gh-current-plan{
   margin-left:auto;
   flex:0 0 auto;
-  min-width:286px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  gap:4px;
+  min-width:118px;
+  position:relative;
+  display:inline-flex;
+  justify-content:flex-end;
   padding:0;
   border:0;
   border-radius:0;
@@ -488,17 +487,70 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   line-height:1.05;
 }
+.mx-gh-current-plan-trigger{
+  appearance:none;
+  border:0;
+  background:transparent;
+  display:grid;
+  justify-items:end;
+  gap:2px;
+  min-width:0;
+  padding:0;
+  color:inherit;
+  line-height:1.05;
+  cursor:pointer;
+}
+.mx-gh-current-plan-trigger:focus-visible{
+  outline:2px solid rgba(1,86,132,.35);
+  outline-offset:4px;
+  border-radius:8px;
+}
+.mx-gh-current-plan-label{
+  color:#02adc1;
+  font-size:.82rem;
+  font-weight:800;
+  letter-spacing:.03em;
+  text-transform:none;
+  white-space:nowrap;
+}
+.mx-gh-current-plan-name{
+  color:#015684;
+  font-size:1.4rem;
+  font-weight:800;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.mx-gh-current-plan-popover{
+  position:absolute;
+  z-index:20;
+  right:0;
+  top:calc(100% + 8px);
+  display:grid;
+  gap:6px;
+  min-width:190px;
+  max-width:min(280px, calc(100vw - 24px));
+  padding:10px 12px;
+  border:1px solid rgba(1,86,132,.14);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 12px 28px rgba(0,49,84,.16);
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(-4px);
+  transition:opacity .16s ease, transform .16s ease;
+}
+.mx-gh-current-plan:hover .mx-gh-current-plan-popover,
+.mx-gh-current-plan:focus-within .mx-gh-current-plan-popover{
+  opacity:1;
+  pointer-events:auto;
+  transform:translateY(0);
+}
 .mx-gh-current-plan-main{
   display:flex;
   align-items:center;
   min-width:0;
   gap:0;
-}
-.mx-gh-current-plan-name{
-  font-size:1.4rem;
-  font-weight:800;
-  color:#015684;
-  white-space:nowrap;
 }
 .mx-gh-current-plan-renewal{
   font-size:.97rem;
@@ -1724,8 +1776,10 @@ body{margin:0;background:var(--mm-fondo-base);}
     padding:3px 8px;
   }
   .mx-gh-current-plan{
-    min-width:244px;
-    gap:4px;
+    min-width:110px;
+  }
+  .mx-gh-current-plan-label{
+    font-size:.72rem;
   }
   .mx-gh-current-plan-name{
     font-size:1.08rem;
@@ -1773,7 +1827,7 @@ body{margin:0;background:var(--mm-fondo-base);}
     flex-basis:50px;
   }
   .mx-gh-current-plan{
-    min-width:260px;
+    min-width:118px;
   }
 }
 
@@ -1842,15 +1896,23 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mx-gh-current-plan{
     min-width:0;
   }
+  .mx-gh-current-plan-label{
+    font-size:.64rem;
+  }
   .mx-gh-current-plan-name{
     font-size:.82rem;
     white-space:nowrap;
   }
+  .mx-gh-current-plan-popover{
+    right:0;
+    min-width:180px;
+    padding:9px 10px;
+  }
   .mx-gh-current-plan-renewal{
-    display:none;
+    font-size:.78rem;
   }
   .mx-gh-current-plan-action{
-    display:none;
+    font-size:.72rem;
   }
 }
 

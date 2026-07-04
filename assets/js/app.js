@@ -60115,13 +60115,12 @@ function mxResetLogoPreview(){
     const planNameEl = document.querySelector('.mx-gh-current-plan-name');
     const renewalEl = document.querySelector('.mx-gh-current-plan-renewal');
     const container = document.querySelector('.mx-gh-current-plan');
+    const trigger = document.querySelector('.mx-gh-current-plan-trigger');
     const resolvedPlanLabel = headerPlanLabelFromModel(model, planLabel);
     const renewalLabel = headerRenewalLabelFromModel(model);
 
     if(planNameEl && resolvedPlanLabel){
-      planNameEl.textContent = /^Plan\b/i.test(resolvedPlanLabel)
-        ? resolvedPlanLabel
-        : `Plan ${resolvedPlanLabel}`;
+      planNameEl.textContent = clean(resolvedPlanLabel.replace(/^Plan\s+/i, ''));
       planNameEl.dataset.subscriptionPlanCode = clean(model?.effective_plan_code)
         || clean(model?.contracted_plan_code)
         || clean(model?.plan_code);
@@ -60134,12 +60133,11 @@ function mxResetLogoPreview(){
     }
 
     if(container && (resolvedPlanLabel || renewalLabel)){
-      container.setAttribute(
-        'aria-label',
-        [resolvedPlanLabel ? `Plan actual ${resolvedPlanLabel}` : '', renewalLabel]
-          .filter(Boolean)
-          .join('. ')
-      );
+      const label = [resolvedPlanLabel ? `Plan actual ${resolvedPlanLabel}` : '', renewalLabel]
+        .filter(Boolean)
+        .join('. ');
+      container.setAttribute('aria-label', label);
+      if(trigger) trigger.setAttribute('aria-label', label ? `${label}. Mostrar detalle de vigencia.` : 'Mostrar detalle de vigencia del plan');
     }
   }
 

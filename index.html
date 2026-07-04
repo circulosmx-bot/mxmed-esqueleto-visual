@@ -246,11 +246,14 @@
           </div>
         </div>
         <div class="mx-gh-current-plan" aria-label="Plan actual">
-          <span class="mx-gh-current-plan-main">
-            <span class="mx-gh-current-plan-name">Plan vigente</span>
-          </span>
-          <span class="mx-gh-current-plan-renewal">Vigencia por consultar</span>
-          <button class="mx-gh-current-plan-action" type="button" aria-label="Incrementar vigencia del plan"><span class="mx-gh-current-plan-action-plus" aria-hidden="true">+</span> Incrementar vigencia</button>
+          <button class="mx-gh-current-plan-trigger" type="button" aria-label="Mostrar vigencia del plan" aria-haspopup="true">
+            <span class="mx-gh-current-plan-label">Plan</span>
+            <span class="mx-gh-current-plan-name">Vigente</span>
+          </button>
+          <div class="mx-gh-current-plan-popover" role="tooltip">
+            <span class="mx-gh-current-plan-renewal">Vigencia por consultar</span>
+            <button class="mx-gh-current-plan-action" type="button" aria-label="Incrementar vigencia del plan"><span class="mx-gh-current-plan-action-plus" aria-hidden="true">+</span> Incrementar vigencia</button>
+          </div>
         </div>
       </div>
     </div>
