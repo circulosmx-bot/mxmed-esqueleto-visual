@@ -6781,7 +6781,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-current [data-subp-current-features] .subp-feature{ margin-bottom:0; font-weight:700 }
 .subp-current .subp-alert{ display:inline-flex; width:auto; max-width:100%; padding:7px 10px; margin-top:1px; font-size:.86rem }
 .subp-card{ background:#fff; border:1px solid #d7e8ef; border-radius:14px }
-.subp-plans-head > div:first-child{ margin-left:25px; transform:translateY(4px) }
+.subp-plans-head{ display:grid; justify-items:start; gap:8px; margin-left:25px; transform:translateY(4px) }
+.subp-plans-copy{ display:flex; align-items:baseline; gap:10px; min-width:0 }
+.subp-plans-copy .h5{ line-height:1.1; white-space:nowrap }
+.subp-plans-copy .small{ font-size:.96rem; line-height:1.1; white-space:nowrap }
 .subp-plans-head .btn-check:checked + .btn{ background:#00adc1; color:#fff; border-color:#00adc1 }
 .subp-pricing-toggle{ display:inline-flex; align-items:center; gap:4px; padding:4px; border:1px solid #b7dce6; border-radius:10px; background:#fff; box-shadow:0 6px 14px rgba(0,49,84,0.08) }
 .subp-pricing-toggle-btn{ border:0; border-radius:8px; background:transparent; color:#315c6c; font-weight:800; font-size:.88rem; padding:8px 12px; line-height:1; white-space:nowrap }
@@ -6884,6 +6887,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
   .subp-band-benefit-zone{ justify-items:start }
+  .subp-plans-copy{ flex-wrap:wrap; gap:4px 8px }
+  .subp-plans-copy .small{ white-space:normal }
   .subp-plan--selected{ grid-column:span 1 }
   .subp-plan-detail-grid{ grid-template-columns:1fr }
   .subp-plan-pricing-top{ align-items:flex-start; flex-direction:column }
