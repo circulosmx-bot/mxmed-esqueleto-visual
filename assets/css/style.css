@@ -475,7 +475,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-gh-current-plan{
   margin-left:auto;
   flex:0 0 auto;
-  min-width:118px;
+  min-width:156px;
   position:relative;
   display:inline-flex;
   justify-content:flex-end;
@@ -492,8 +492,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   border:0;
   background:transparent;
   display:grid;
-  justify-items:end;
-  gap:2px;
+  justify-items:start;
+  gap:4px;
   min-width:0;
   padding:0;
   color:inherit;
@@ -506,18 +506,27 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:8px;
 }
 .mx-gh-current-plan-label{
-  color:#02adc1;
-  font-size:.82rem;
+  color:#018fa4;
+  font-size:.89rem;
   font-weight:800;
-  letter-spacing:.03em;
+  letter-spacing:0;
   text-transform:none;
   white-space:nowrap;
 }
 .mx-gh-current-plan-name{
-  color:#015684;
-  font-size:1.4rem;
+  display:inline-flex;
+  align-items:center;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  background:#006b82;
+  color:#fff;
+  padding:8px 15px;
+  border-radius:12px;
+  font-size:1.2rem;
   font-weight:800;
-  letter-spacing:.03em;
+  letter-spacing:.6px;
+  line-height:1.05;
   text-transform:uppercase;
   white-space:nowrap;
 }
@@ -1776,13 +1785,14 @@ body{margin:0;background:var(--mm-fondo-base);}
     padding:3px 8px;
   }
   .mx-gh-current-plan{
-    min-width:110px;
+    min-width:140px;
   }
   .mx-gh-current-plan-label{
-    font-size:.72rem;
+    font-size:.78rem;
   }
   .mx-gh-current-plan-name{
-    font-size:1.08rem;
+    font-size:1.02rem;
+    padding:7px 12px;
   }
   .mx-gh-current-plan-renewal{
     font-size:.8rem;
@@ -1827,7 +1837,7 @@ body{margin:0;background:var(--mm-fondo-base);}
     flex-basis:50px;
   }
   .mx-gh-current-plan{
-    min-width:118px;
+    min-width:140px;
   }
 }
 
@@ -1897,10 +1907,11 @@ body{margin:0;background:var(--mm-fondo-base);}
     min-width:0;
   }
   .mx-gh-current-plan-label{
-    font-size:.64rem;
+    font-size:.68rem;
   }
   .mx-gh-current-plan-name{
-    font-size:.82rem;
+    font-size:.86rem;
+    padding:6px 10px;
     white-space:nowrap;
   }
   .mx-gh-current-plan-popover{
