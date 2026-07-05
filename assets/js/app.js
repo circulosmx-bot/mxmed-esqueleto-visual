@@ -61346,11 +61346,17 @@ function mxResetLogoPreview(){
       const planTitleCheckHtml = activePaid && flowType === 'current'
         ? '<img class="subp-plan-current-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy">'
         : '';
+      const planTitleBadgeHtml = activePaid && flowType === 'current'
+        ? `<span class="subp-plan-badge subp-plan-badge--inline">${escapeHtml(badge)}</span>`
+        : '';
+      const floatingBadgeHtml = planTitleBadgeHtml
+        ? ''
+        : `<div class="subp-plan-badge">${escapeHtml(badge)}</div>`;
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
-        <div class="subp-plan-badge">${escapeHtml(badge)}</div>
-        <div class="subp-plan-title${planTitleCheckHtml ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span>${planTitleCheckHtml}</div>
+        ${floatingBadgeHtml}
+        <div class="subp-plan-title${planTitleCheckHtml ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span>${planTitleCheckHtml}${planTitleBadgeHtml}</div>
         ${planIconPanelHtml(p.id)}
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
         ${pricingHtml}
