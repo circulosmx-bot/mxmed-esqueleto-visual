@@ -2542,7 +2542,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const PLAN_QA_OPTIONS = {
     real: { value: 'real', label: 'Real', plan: '' },
-    none: { value: 'none', label: 'Sin plan', plan: 'none' },
+    free: { value: 'free', label: 'Gratuito', plan: 'free' },
     basic: { value: 'basic', label: 'Básico', plan: 'basic' },
     standard: { value: 'standard', label: 'Estándar', plan: 'standard' },
     optimum: { value: 'optimum', label: 'Óptimo', plan: 'optimum' },
@@ -2571,7 +2571,7 @@ console.info('app.js loaded :: 20251123a');
 
   const normalizePlanQaState = (raw = {})=>{
     const value = clean(raw.value || raw.plan || raw.plan_code || raw.planCode || '').toLowerCase();
-    const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'free' ? 'none' : value;
+    const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'none' || value === 'null' ? 'free' : value;
     return PLAN_QA_OPTIONS[normalized] || PLAN_QA_OPTIONS.real;
   };
 
@@ -59332,10 +59332,10 @@ function mxResetLogoPreview(){
 
   function normalizeSubscriptionQaPlanState(raw = {}){
     const value = clean(raw.value || raw.plan || raw.plan_code || raw.planCode || '').toLowerCase();
-    const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'free' ? 'none' : value;
+    const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'none' || value === 'null' ? 'free' : value;
     const options = {
       real: { value: 'real', label: 'Real', planCode: '' },
-      none: { value: 'none', label: 'Sin plan', planCode: '' },
+      free: { value: 'free', label: 'Gratuito', planCode: '' },
       basic: { value: 'basic', label: 'Básico', planCode: 'basic' },
       standard: { value: 'standard', label: 'Estándar', planCode: 'standard' },
       optimum: { value: 'optimum', label: 'Óptimo', planCode: 'optimum' },
@@ -59362,6 +59362,10 @@ function mxResetLogoPreview(){
 
   function isQaPlanSimulationActive(){
     return clean(data.qaPlan?.value).toLowerCase() !== 'real';
+  }
+
+  function isQaFreePlanMode(){
+    return clean(data.qaPlan?.value).toLowerCase() === 'free';
   }
 
   function formatQaDateForModel(date){
@@ -59408,15 +59412,15 @@ function mxResetLogoPreview(){
 
     const base = realModel && typeof realModel === 'object' ? { ...realModel } : {};
     const validity = buildQaPlanValidity(realModel || {});
-    if(qaPlan.value === 'none'){
+    if(qaPlan.value === 'free'){
       return {
         ...base,
         status: 'free_default',
         effective_plan_code: '',
         contracted_plan_code: '',
         plan_code: '',
-        plan_label: 'Sin plan',
-        plan_name: 'Sin plan',
+        plan_label: 'Gratuito',
+        plan_name: 'Gratuito',
         billing_period: '',
         duration_days: null,
         starts_at: '',
@@ -59878,7 +59882,7 @@ function mxResetLogoPreview(){
       : ['Beneficios vigentes de tu suscripción'];
     const debugFeatures = isSubscriptionDebugPanelEnabled() ? [
       `Plan efectivo: ${effective || 'No disponible'}`,
-      `Plan contratado: ${contracted || 'Sin plan contratado vigente'}`,
+      `Plan contratado: ${contracted || 'Plan contratado no vigente'}`,
       grace !== 'No aplica' ? `Gracia: ${grace}` : '',
       contextEntityType && contextEntityId ? `Contexto: ${contextEntityType} #${contextEntityId}` : '',
       contextSource ? `Fuente contexto: ${contextSource}` : '',
@@ -59921,7 +59925,7 @@ function mxResetLogoPreview(){
       autorenew: false,
       note: hasContract
         ? `Tu plan vigente es ${planLabel}.`
-        : `Sin plan contratado vigente. Plan efectivo actual: ${planLabel}.`,
+        : `Plan contratado no vigente. Plan efectivo actual: ${planLabel}.`,
       sourceNote: headerMismatch
         ? `Según el estado actual de suscripción: ${planLabel}. El encabezado puede reflejar configuración comercial anterior.`
         : `Según el estado actual de suscripción: ${planLabel}.`,
@@ -60193,6 +60197,10 @@ function mxResetLogoPreview(){
 
   function ensureSelectedPlan(activePaid){
     const selected = findPlanById(data.selectedPlanId);
+    if(isQaFreePlanMode()){
+      data.selectedPlanId = '';
+      return null;
+    }
     if(activePaid){
       const currentRank = planRank(data.current.id);
       if(selected && planRank(selected.id) > currentRank){
@@ -60298,7 +60306,7 @@ function mxResetLogoPreview(){
   }
 
   function planPriceLabel(plan){
-    if(!plan) return 'Sin plan seleccionado';
+    if(!plan) return 'Plan no seleccionado';
     const yearly = planAnnualPrice(plan);
     return yearly > 0 ? `${fmtMoney(yearly)} al año` : 'Precio anual configurable';
   }
@@ -60364,8 +60372,14 @@ function mxResetLogoPreview(){
     const renewalEl = document.querySelector('.mx-gh-current-plan-renewal');
     const container = document.querySelector('.mx-gh-current-plan');
     const trigger = document.querySelector('.mx-gh-current-plan-trigger');
+    const labelEl = document.querySelector('.mx-gh-current-plan-label');
+    const isFreeQa = model?.qa_plan_simulated === true && clean(model?.qa_plan_mode) === 'free';
     const resolvedPlanLabel = headerPlanLabelFromModel(model, planLabel);
     const renewalLabel = headerRenewalLabelFromModel(model);
+
+    if(labelEl){
+      labelEl.textContent = isFreeQa ? 'Plan' : 'Tu plan actual';
+    }
 
     if(planNameEl && resolvedPlanLabel){
       planNameEl.textContent = clean(resolvedPlanLabel.replace(/^Plan\s+/i, ''));
@@ -60375,9 +60389,13 @@ function mxResetLogoPreview(){
       planNameEl.dataset.subscriptionPlanLabel = resolvedPlanLabel;
     }
 
-    if(renewalEl && renewalLabel){
+    if(renewalEl){
       renewalEl.textContent = renewalLabel;
       renewalEl.dataset.subscriptionExpiresAt = clean(model?.expires_at);
+    }
+
+    if(container){
+      container.classList.toggle('is-free-plan', isFreeQa);
     }
 
     if(container && (resolvedPlanLabel || renewalLabel)){
@@ -60941,6 +60959,11 @@ function mxResetLogoPreview(){
 
   function renderPlanSelection(activePaid){
     if(!els.planSelection) return;
+    if(isQaFreePlanMode()){
+      els.planSelection.classList.add('d-none');
+      renderUpgradeCheckoutFlow();
+      return;
+    }
     const selected = ensureSelectedPlan(activePaid);
     if(activePaid){
       els.planSelection.classList.add('d-none');
@@ -60995,6 +61018,12 @@ function mxResetLogoPreview(){
   }
 
   function renderCurrent(){
+    const freeQaMode = isQaFreePlanMode();
+    pane.classList.toggle('subp-qa-free', freeQaMode);
+    const planContext = pane.querySelector('.subp-plan-context');
+    if(planContext){
+      planContext.textContent = freeQaMode ? 'Plan' : 'Tu plan actual';
+    }
     if(els.planName){
       els.planName.textContent = data.current.name;
       els.planName.setAttribute('data-plan', data.current.id || '');
@@ -61062,6 +61091,7 @@ function mxResetLogoPreview(){
   function renderCatalog(){
     if(!els.catalog) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const freeQaMode = isQaFreePlanMode();
     const selected = ensureSelectedPlan(activePaid);
     renderPricingModeToggle();
     els.catalog.innerHTML = data.plans.map(p=>{
@@ -61069,7 +61099,9 @@ function mxResetLogoPreview(){
       const isCurrent = flowType === 'current';
       const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
       const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
-      const badge = isSelected
+      const badge = freeQaMode
+        ? 'Disponible'
+        : isSelected
         ? 'Seleccionado'
         : flowType === 'current'
           ? 'Plan actual'
@@ -61078,7 +61110,9 @@ function mxResetLogoPreview(){
             : flowType === 'downgrade_at_renewal'
               ? 'Disponible al renovar'
               : 'Disponible';
-      const buttonLabel = flowType === 'current'
+      const buttonLabel = freeQaMode
+        ? 'Contratar este plan'
+        : flowType === 'current'
         ? 'Plan actual'
         : flowType === 'downgrade_at_renewal'
           ? 'Disponible al renovar'
@@ -61087,7 +61121,7 @@ function mxResetLogoPreview(){
             : isSelected
               ? 'Seleccionado'
               : 'Continuar con este plan';
-      const buttonClass = isSelected || isCurrent ? 'btn-outline-primary' : 'btn-primary';
+      const buttonClass = !freeQaMode && (isSelected || isCurrent) ? 'btn-outline-primary' : 'btn-primary';
       const cardNote = flowType === 'current'
         ? 'Este es tu plan vigente. Tu suscripción está activa.'
         : flowType === 'downgrade_at_renewal'
@@ -61107,10 +61141,10 @@ function mxResetLogoPreview(){
         : activePaid && flowType === 'current'
           ? currentPlanConditionsHtml(p)
           : '';
-      const upgradeCardAdjustment = flowType === 'upgrade_now'
+      const upgradeCardAdjustment = !freeQaMode && flowType === 'upgrade_now'
         ? upgradeCardAdjustmentHtml(p)
         : '';
-      const cardNoteHtml = flowType === 'upgrade_now'
+      const cardNoteHtml = freeQaMode || flowType === 'upgrade_now'
         ? ''
         : `<div class="subp-save">${escapeHtml(cardNote)}</div>`;
       const stateValue = planStateValue(flowType, isSelected);
@@ -61134,6 +61168,13 @@ function mxResetLogoPreview(){
       if(!plan) return;
       const flowType = planFlowType(plan, activePaid);
       if(flowType !== 'new_subscription' && flowType !== 'upgrade_now') return;
+      if(freeQaMode){
+        if(els.currentAlert){
+          els.currentAlert.textContent = 'Modo Plan QA Gratuito: vista comparativa sin crear checkout.';
+          els.currentAlert.classList.remove('d-none');
+        }
+        return;
+      }
       data.selectedPlanId = plan.id;
       data.upgradeCheckout.visible = flowType === 'upgrade_now';
       data.upgradeCheckout.accepted = false;

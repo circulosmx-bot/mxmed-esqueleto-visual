@@ -557,6 +557,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   pointer-events:auto;
   transform:translateY(0);
 }
+.mx-gh-current-plan.is-free-plan .mx-gh-current-plan-popover{ display:none }
 .mx-gh-current-plan-main{
   display:flex;
   align-items:center;
@@ -6773,6 +6774,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-band-benefit{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap }
 .subp-band-benefit .mat-ico{ font-size:18px; line-height:1; color:#d7fff6 }
 .subp-band-note{ color:#e8fbff; font-size:1.14rem; font-weight:850; line-height:1.15 }
+#p-suscripcion.subp-qa-free .subp-band{ grid-template-columns:max-content minmax(320px,1fr) }
+#p-suscripcion.subp-qa-free .subp-band-summary,
+#p-suscripcion.subp-qa-free .subp-band > .d-flex,
+#p-suscripcion.subp-qa-free [data-subp-renew],
+#p-suscripcion.subp-qa-free #subp-autorenew{ display:none !important }
 .subp-current{ display:none !important; border:1px solid #d7e8ef; margin-bottom:0 !important; padding:0 !important }
 .subp-current > .d-flex{ align-items:center !important }
 .subp-current-renewal{ display:none !important }
