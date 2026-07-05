@@ -6837,6 +6837,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-pricing--yearly .subp-plan-pricing-mode-label{ color:rgb(22, 163, 74) }
 .subp-feature{ display:flex; align-items:flex-start; gap:6px; margin-bottom:6px; color:#2b3c42; font-size:.95rem }
 .subp-feature .mat-ico{ font-size:18px; color:#1fbf75; line-height:1 }
+.subp-plan-features{ display:grid; gap:8px }
+.subp-plan-features .subp-feature{ align-items:center; gap:9px; margin-bottom:0; font-size:1.14rem; font-weight:800; line-height:1.18 }
+.subp-feature-check{ flex:0 0 18px; width:18px; height:18px; object-fit:contain; display:block }
 .subp-save{ color:#00adc1; font-weight:700; font-size:.9rem; margin-top:6px }
 .subp-btn{ width:100%; margin-top:auto; margin-bottom:4px; background:#33b9c7; border-color:#33b9c7; font-weight:700 }
 .subp-btn:hover{ background:#2aa7b4; border-color:#2aa7b4 }

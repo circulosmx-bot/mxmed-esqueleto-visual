@@ -60803,7 +60803,7 @@ function mxResetLogoPreview(){
         ${planIconPanelHtml(p.id)}
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
         ${planPricingBlockHtml(p)}
-        <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${escapeHtml(f)}</span></div>`).join('')}</div>
+        <div class="subp-plan-features mt-2">${p.features.map(f=>`<div class="subp-feature"><img class="subp-feature-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy"><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         <div class="subp-save">${escapeHtml(cardNote)}</div>
         <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
         ${inlineDetail}
