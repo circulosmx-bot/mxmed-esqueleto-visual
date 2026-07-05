@@ -6851,6 +6851,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--selected .subp-plan-badge{ background:#003154 }
 .subp-plan--selected > .subp-feature,
 .subp-plan--selected > .mt-2,
+.subp-plan--selected > .subp-upgrade-card-adjustment,
 .subp-plan--selected > .subp-save,
 .subp-plan--selected > [data-subp-select]{ display:none }
 .subp-plan-detail{ margin-top:10px; padding:12px; border:1px solid #c8e4ec; border-radius:8px; background:#f7fbfc }
@@ -6873,6 +6874,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-estimate-copy{ font-size:.86rem; font-weight:650; line-height:1.35 }
 .subp-plan-estimate-amount{ color:#003154; font-size:1.68rem; font-weight:900; line-height:1.1; margin:6px 0 3px }
 .subp-plan-estimate-note{ color:#49636f; font-size:.78rem; font-weight:650; line-height:1.3 }
+.subp-upgrade-card-adjustment{ display:grid; gap:7px; margin:0 0 12px; padding:12px; border:1px solid #bce2ed; border-radius:8px; background:linear-gradient(180deg,#eefbfd 0%,#ffffff 100%); color:#0b5061 }
+.subp-upgrade-card-title{ color:#003154; font-size:1rem; font-weight:900; line-height:1.1 }
+.subp-upgrade-card-kicker{ color:#315c6c; font-size:.84rem; font-weight:850; line-height:1 }
+.subp-upgrade-card-benefits{ list-style:none; display:grid; gap:5px; padding:0; margin:0 }
+.subp-upgrade-card-benefits li{ display:flex; align-items:center; gap:7px; color:#143849; font-size:.95rem; line-height:1.15 }
+.subp-upgrade-card-benefits li > span{ display:inline-grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border-radius:50%; background:#00adc1; color:#fff; font-size:1.1rem; font-weight:950; line-height:1 }
+.subp-upgrade-card-empty{ color:#49636f; font-size:.86rem; font-weight:650; margin:0 }
+.subp-upgrade-card-copy{ color:#294f5f; font-size:.86rem; font-weight:650; line-height:1.35; margin:2px 0 0 }
+.subp-upgrade-card-amount{ color:#003154; font-size:1.34rem; font-weight:950; line-height:1.1 }
+.subp-upgrade-card-note{ color:#5a7380; font-size:.76rem; font-weight:650; line-height:1.3 }
 .subp-plan-detail-notes{ display:grid; gap:6px; padding:9px 10px; border-radius:8px; background:#fff; border:1px solid #e0edf1; margin-bottom:8px }
 .subp-plan-detail-notes .mat-ico{ color:#017290; font-size:18px; line-height:1 }
 .subp-plan-detail-accept{ align-items:flex-start; display:flex; gap:8px; margin:8px 0; color:#243f4c; font-size:.88rem }

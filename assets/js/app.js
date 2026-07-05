@@ -60312,6 +60312,28 @@ function mxResetLogoPreview(){
       </div>`;
   }
 
+  function upgradeCardAdjustmentHtml(plan){
+    const additionalBenefits = upgradeBenefitItems(plan).filter((benefit)=> benefit.isAdditional);
+    const estimate = proratedUpgradeEstimate(plan);
+    const benefitsHtml = additionalBenefits.length
+      ? `<ul class="subp-upgrade-card-benefits">
+          ${additionalBenefits.map((benefit)=>`<li><span aria-hidden="true">+</span><strong>${escapeHtml(benefit.label)}</strong></li>`).join('')}
+        </ul>`
+      : '<p class="subp-upgrade-card-empty">Más herramientas incluidas en tu mejora.</p>';
+    const estimateHtml = estimate
+      ? `<p class="subp-upgrade-card-copy">Por los <strong>${estimate.remainingDays} días</strong> que aún restan de tu vigencia, tu ajuste estimado sería:</p>
+        <div class="subp-upgrade-card-amount">de tan solo ${escapeHtml(fmtMoney(estimate.amount))}</div>`
+      : '<p class="subp-upgrade-card-copy">El ajuste proporcional se calculará antes de pagar.</p>';
+
+    return `<div class="subp-upgrade-card-adjustment">
+        <div class="subp-upgrade-card-title">Mejora tu plan hoy</div>
+        <div class="subp-upgrade-card-kicker">Agrega:</div>
+        ${benefitsHtml}
+        ${estimateHtml}
+        <div class="subp-upgrade-card-note">El monto final se confirmará antes de realizar el pago.</div>
+      </div>`;
+  }
+
   function inlineUpgradeDetailHtml(plan){
     const currentLabel = currentPlanLabel();
     const targetLabel = clean(plan?.name) || 'plan seleccionado';
@@ -60795,6 +60817,12 @@ function mxResetLogoPreview(){
       const inlineDetail = flowType === 'upgrade_now' && isSelected
         ? inlineUpgradeDetailHtml(p)
         : '';
+      const upgradeCardAdjustment = flowType === 'upgrade_now'
+        ? upgradeCardAdjustmentHtml(p)
+        : '';
+      const cardNoteHtml = flowType === 'upgrade_now'
+        ? ''
+        : `<div class="subp-save">${escapeHtml(cardNote)}</div>`;
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
@@ -60803,8 +60831,9 @@ function mxResetLogoPreview(){
         ${planIconPanelHtml(p.id)}
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
         ${planPricingBlockHtml(p)}
+        ${upgradeCardAdjustment}
         <div class="subp-plan-features mt-2">${p.features.map(f=>`<div class="subp-feature"><img class="subp-feature-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy"><span>${escapeHtml(f)}</span></div>`).join('')}</div>
-        <div class="subp-save">${escapeHtml(cardNote)}</div>
+        ${cardNoteHtml}
         <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
         ${inlineDetail}
       </div>`;
