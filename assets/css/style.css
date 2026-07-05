@@ -6842,6 +6842,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-feature .mat-ico{ font-size:18px; color:#1fbf75; line-height:1 }
 .subp-plan-features{ display:grid; gap:8px }
 .subp-plan-features .subp-feature{ align-items:center; gap:12px; margin-bottom:0; font-size:1.14rem; font-weight:800; line-height:1.18 }
+.subp-feature-label{ flex:1 1 auto; min-width:0 }
 .subp-feature-check{ flex:0 0 45px; width:45px; height:45px; object-fit:contain; display:block }
 .subp-plan--renewal-only .subp-plan-title{ background:#9aadb7 !important; color:rgba(255,255,255,.82) }
 .subp-plan--renewal-only .subp-plan-icon-panel{ opacity:.5; filter:grayscale(.42) saturate(.45) contrast(.9) }
@@ -6871,12 +6872,19 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-state-card--inactive .subp-plan-state-title{ color:#6a7c84; font-size:.72rem; letter-spacing:.08em; font-weight:950; line-height:1 }
 .subp-plan-state-card--inactive .subp-plan-state-copy{ display:none }
 .subp-plan-state-card--current{ background:linear-gradient(180deg,#eefbfd 0%,#ffffff 100%); border-color:#bce2ed }
+.subp-current-benefits-card{ display:grid; gap:8px; margin:0 0 12px; padding:12px; border:1px solid #bce2ed; border-radius:8px; background:linear-gradient(180deg,#eefbfd 0%,#ffffff 100%); color:#0b5061 }
+.subp-current-benefits-title{ color:#003154; font-size:.95rem; font-weight:900; line-height:1.18 }
+.subp-current-benefits-list{ display:grid; gap:7px }
+.subp-current-benefits-list .subp-feature{ align-items:center; gap:10px; margin-bottom:0; font-size:1rem; font-weight:850; line-height:1.18 }
+.subp-current-benefits-list .subp-feature-check{ flex-basis:34px; width:34px; height:34px }
+.subp-current-benefits-copy{ color:#006b82; font-size:.88rem; font-weight:800; line-height:1.32 }
+.subp-current-benefits-empty{ margin:0; color:#5a7380; font-size:.86rem; font-weight:650 }
 .subp-current-conditions-wrap{ display:grid; justify-items:start; gap:8px; margin:0 0 12px }
 .subp-current-conditions-toggle{ width:max-content; max-width:100%; color:#006b82; border-color:#9dceda; font-weight:800 }
 .subp-current-conditions-toggle:hover{ background:#eaf7fb; color:#003154; border-color:#75bfce }
 .subp-current-conditions{ display:grid; gap:6px; padding:10px; border-radius:8px; background:#fff; border:1px solid #d8edf2; color:#294f5f; font-size:.85rem; line-height:1.32 }
 .subp-current-conditions-benefits{ margin:5px 0 0; padding-left:18px }
-.subp-current-conditions-benefits li{ margin-bottom:2px }
+.subp-current-conditions-benefits li{ position:relative; display:flex; align-items:center; gap:7px; margin-bottom:4px }
 .subp-current-conditions-empty{ margin:4px 0 0; color:#6b7f87 }
 .subp-current-conditions-note{ color:#5a7380; font-size:.78rem; font-weight:650 }
 .subp-plan-detail{ margin-top:10px; padding:12px; border:1px solid #c8e4ec; border-radius:8px; background:#f7fbfc }
@@ -6904,7 +6912,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-upgrade-card-kicker{ color:#315c6c; font-size:.84rem; font-weight:850; line-height:1 }
 .subp-upgrade-card-benefits{ list-style:none; display:grid; gap:5px; padding:0; margin:0 }
 .subp-upgrade-card-benefits li{ display:flex; align-items:center; gap:7px; color:#143849; font-size:.95rem; line-height:1.15 }
-.subp-upgrade-card-benefits li > span{ display:inline-grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border-radius:50%; background:#00adc1; color:#fff; font-size:1.1rem; font-weight:950; line-height:1 }
+.subp-upgrade-card-benefits li > span:first-child{ display:inline-grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border-radius:50%; background:#00adc1; color:#fff; font-size:1.1rem; font-weight:950; line-height:1 }
+.subp-benefit-info{ position:relative; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; margin-left:auto }
+.subp-benefit-info-toggle{ width:22px; height:22px; border-radius:50%; border:1px solid #b7dce6; background:#f8fcfd; color:#006b82; display:inline-grid; place-items:center; padding:0; font-size:.78rem; line-height:1; font-weight:900; cursor:pointer }
+.subp-benefit-info-toggle:hover,
+.subp-benefit-info-toggle[aria-expanded="true"]{ background:#e6f8fb; border-color:#75bfce; color:#003154 }
+.subp-benefit-info-popover{ position:absolute; z-index:40; top:calc(100% + 7px); right:0; width:260px; max-width:min(260px,calc(100vw - 32px)); display:none; gap:5px; padding:10px 11px; border:1px solid #c8e4ec; border-radius:8px; background:#fff; color:#294f5f; box-shadow:0 12px 28px rgba(0,49,84,.18); font-size:.82rem; font-weight:650; line-height:1.32; pointer-events:none }
+.subp-benefit-info-popover.is-open{ display:grid }
+.subp-benefit-info-popover strong{ color:#006b82; font-size:.88rem; font-weight:900; line-height:1.18 }
+.subp-plan--renewal-only .subp-benefit-info{ display:none }
 .subp-upgrade-card-empty{ color:#49636f; font-size:.86rem; font-weight:650; margin:0 }
 .subp-upgrade-card-copy{ color:#294f5f; font-size:.86rem; font-weight:650; line-height:1.35; margin:2px 0 0 }
 .subp-upgrade-card-amount{ color:#003154; font-size:1.34rem; font-weight:950; line-height:1.1 }

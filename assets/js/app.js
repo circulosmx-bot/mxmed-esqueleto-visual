@@ -60454,6 +60454,27 @@ function mxResetLogoPreview(){
     return flowType || 'available';
   }
 
+  function closeBenefitInfoPopovers(scope = els.catalog){
+    if(!scope) return;
+    scope.querySelectorAll('[data-subp-benefit-info-popover].is-open').forEach((popover)=>{
+      popover.classList.remove('is-open');
+    });
+    scope.querySelectorAll('[data-subp-benefit-info-toggle][aria-expanded="true"]').forEach((button)=>{
+      button.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function openBenefitInfoPopover(button){
+    if(!button || !els.catalog) return;
+    const popoverId = button.getAttribute('aria-controls');
+    const popover = popoverId ? document.getElementById(popoverId) : null;
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+    closeBenefitInfoPopovers(els.catalog);
+    if(isOpen || !popover) return;
+    button.setAttribute('aria-expanded', 'true');
+    popover.classList.add('is-open');
+  }
+
   function inlineUpgradeStatusMessage(){
     const state = data.upgradeCheckout;
     const message = clean(state.message);
@@ -60477,6 +60498,92 @@ function mxResetLogoPreview(){
       .replace(/\s+/g, ' ');
   }
 
+  const SUBSCRIPTION_BENEFIT_DETAILS = Object.freeze({
+    'perfil en linea': Object.freeze({
+      label: 'Perfil en línea',
+      description: 'Tu perfil profesional puede mostrarse en México Médico para fortalecer tu presencia digital y facilitar que los pacientes encuentren tu información.'
+    }),
+    agenda: Object.freeze({
+      label: 'Agenda en línea',
+      description: 'Permite organizar horarios y citas desde tu panel, facilitando la administración de tu consulta.'
+    }),
+    'agenda en linea': Object.freeze({
+      label: 'Agenda en línea',
+      description: 'Permite organizar horarios y citas desde tu panel, facilitando la administración de tu consulta.'
+    }),
+    expediente: Object.freeze({
+      label: 'Expediente clínico',
+      description: 'Centraliza la información clínica de tus pacientes para consultar antecedentes, notas y seguimiento de atención.'
+    }),
+    'expediente clinico': Object.freeze({
+      label: 'Expediente clínico',
+      description: 'Centraliza la información clínica de tus pacientes para consultar antecedentes, notas y seguimiento de atención.'
+    }),
+    recetas: Object.freeze({
+      label: 'Recetas digitales',
+      description: 'Permite generar y administrar recetas de forma digital desde el expediente del paciente.'
+    }),
+    'recetas digitales': Object.freeze({
+      label: 'Recetas digitales',
+      description: 'Permite generar y administrar recetas de forma digital desde el expediente del paciente.'
+    }),
+    'asistente ia': Object.freeze({
+      label: 'Asistente IA',
+      description: 'Apoya tareas de organización y redacción dentro del sistema para agilizar el trabajo administrativo y clínico.'
+    })
+  });
+
+  function benefitInfoFor(label){
+    const key = normalizeBenefitKey(label);
+    const mapped = SUBSCRIPTION_BENEFIT_DETAILS[key];
+    if(mapped) return mapped;
+    const safeLabel = clean(label) || 'Beneficio';
+    return {
+      label: safeLabel,
+      description: 'Este beneficio forma parte de las herramientas disponibles para tu plan.'
+    };
+  }
+
+  function benefitDisplayLabel(label){
+    return benefitInfoFor(label).label;
+  }
+
+  function benefitInfoButtonHtml(label, contextKey, enabled = true){
+    if(!enabled) return '';
+    const info = benefitInfoFor(label);
+    const baseId = clean(contextKey)
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'benefit';
+    const popoverId = `subp-benefit-info-${baseId}`;
+    return `<span class="subp-benefit-info" data-subp-benefit-info>
+        <button class="subp-benefit-info-toggle" type="button" data-subp-benefit-info-toggle aria-expanded="false" aria-controls="${escapeHtml(popoverId)}" aria-label="Ver información de ${escapeHtml(info.label)}">i</button>
+        <span class="subp-benefit-info-popover" id="${escapeHtml(popoverId)}" role="dialog" aria-label="${escapeHtml(info.label)}" data-subp-benefit-info-popover>
+          <strong>${escapeHtml(info.label)}</strong>
+          <span>${escapeHtml(info.description)}</span>
+        </span>
+      </span>`;
+  }
+
+  function serviceFeatureRowHtml(label, options = {}){
+    const displayLabel = benefitDisplayLabel(label);
+    const contextKey = options.contextKey || displayLabel;
+    const infoHtml = benefitInfoButtonHtml(displayLabel, contextKey, options.infoEnabled === true);
+    return `<div class="subp-feature">
+        <img class="subp-feature-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy">
+        <span class="subp-feature-label">${escapeHtml(displayLabel)}</span>
+        ${infoHtml}
+      </div>`;
+  }
+
+  function planFeatureListHtml(features, options = {}){
+    const items = Array.isArray(features) ? features : [];
+    return items.map((feature, index)=> serviceFeatureRowHtml(feature, {
+      infoEnabled: options.infoEnabled === true,
+      contextKey: `${options.contextPrefix || 'feature'}-${index}-${normalizeBenefitKey(feature).replace(/[^a-z0-9]+/g, '-')}`
+    })).join('');
+  }
+
   function currentPlanForUpgradeComparison(){
     return findPlanById(clean(data.currentModel?.effective_plan_code) || data.current.id);
   }
@@ -60493,7 +60600,8 @@ function mxResetLogoPreview(){
       ? plan.features
       : ['Mayor presencia profesional', 'Herramientas adicionales para tu consulta'];
     return features.map((label)=>({
-      label,
+      label: benefitDisplayLabel(label),
+      rawLabel: label,
       isAdditional: !currentKeys.has(normalizeBenefitKey(label))
     }));
   }
@@ -60570,6 +60678,32 @@ function mxResetLogoPreview(){
       </div>`;
   }
 
+  function currentPlanBenefitsSummaryHtml(plan){
+    const features = Array.isArray(plan?.features) && plan.features.length
+      ? plan.features
+      : data.current.features;
+    const currentRank = planRank(plan?.id);
+    const hasUpgrade = data.plans.some((candidate)=> planRank(candidate?.id) > currentRank);
+    const title = hasUpgrade
+      ? 'Tu plan actual ya incluye lo esencial:'
+      : 'Tu plan actual incluye la suite completa:';
+    const closing = hasUpgrade
+      ? 'Mejora tu plan para acceder a más beneficios y aumentar tu visibilidad.'
+      : 'Ya cuentas con la suite más completa disponible.';
+    const benefitsHtml = Array.isArray(features) && features.length
+      ? planFeatureListHtml(features, {
+        infoEnabled: true,
+        contextPrefix: `current-${clean(plan?.id) || 'plan'}`
+      })
+      : '<p class="subp-current-benefits-empty">Beneficios vigentes por consultar.</p>';
+
+    return `<div class="subp-current-benefits-card">
+        <div class="subp-current-benefits-title">${escapeHtml(title)}</div>
+        <div class="subp-current-benefits-list">${benefitsHtml}</div>
+        <div class="subp-current-benefits-copy">${escapeHtml(closing)}</div>
+      </div>`;
+  }
+
   function currentPlanConditionsHtml(plan){
     const isOpen = data.currentConditionsOpen === true;
     const benefitItems = Array.isArray(plan?.features) && plan.features.length
@@ -60577,7 +60711,7 @@ function mxResetLogoPreview(){
       : data.current.features;
     const benefitsHtml = Array.isArray(benefitItems) && benefitItems.length
       ? `<ul class="subp-current-conditions-benefits">
-          ${benefitItems.map((benefit)=>`<li>${escapeHtml(benefit)}</li>`).join('')}
+          ${benefitItems.map((benefit, index)=>`<li><span>${escapeHtml(benefitDisplayLabel(benefit))}</span>${benefitInfoButtonHtml(benefit, `conditions-${clean(plan?.id) || 'plan'}-${index}`, true)}</li>`).join('')}
         </ul>`
       : '<p class="subp-current-conditions-empty">Beneficios vigentes por consultar.</p>';
 
@@ -60598,7 +60732,7 @@ function mxResetLogoPreview(){
     const estimate = proratedUpgradeEstimate(plan);
     const benefitsHtml = additionalBenefits.length
       ? `<ul class="subp-upgrade-card-benefits">
-          ${additionalBenefits.map((benefit)=>`<li><span aria-hidden="true">+</span><strong>${escapeHtml(benefit.label)}</strong></li>`).join('')}
+          ${additionalBenefits.map((benefit, index)=>`<li><span aria-hidden="true">+</span><strong>${escapeHtml(benefit.label)}</strong>${benefitInfoButtonHtml(benefit.rawLabel || benefit.label, `upgrade-card-${clean(plan?.id) || 'plan'}-${index}`, true)}</li>`).join('')}
         </ul>`
       : '<p class="subp-upgrade-card-empty">Más herramientas incluidas en tu mejora.</p>';
     const estimateHtml = estimate
@@ -60651,13 +60785,13 @@ function mxResetLogoPreview(){
             ${includedBenefits.length ? `<div class="subp-plan-detail-benefit-group">
               <div class="subp-plan-detail-benefit-title">Ya tienes:</div>
               <ul class="subp-plan-detail-benefits">
-                ${includedBenefits.map((benefit)=>`<li class="is-included"><span class="subp-benefit-marker subp-benefit-marker--included" aria-hidden="true"><span class="material-symbols-rounded mat-ico">check_circle</span></span><span>${escapeHtml(benefit.label)}</span></li>`).join('')}
+                ${includedBenefits.map((benefit, index)=>`<li class="is-included"><span class="subp-benefit-marker subp-benefit-marker--included" aria-hidden="true"><span class="material-symbols-rounded mat-ico">check_circle</span></span><span>${escapeHtml(benefit.label)}</span>${benefitInfoButtonHtml(benefit.rawLabel || benefit.label, `inline-included-${clean(plan?.id) || 'plan'}-${index}`, true)}</li>`).join('')}
               </ul>
             </div>` : ''}
             ${additionalBenefits.length ? `<div class="subp-plan-detail-benefit-group">
               <div class="subp-plan-detail-benefit-title">Agrega:</div>
               <ul class="subp-plan-detail-benefits">
-                ${additionalBenefits.map((benefit)=>`<li class="is-additional"><span class="subp-benefit-marker subp-benefit-marker--additional" aria-hidden="true">+</span><span>${escapeHtml(benefit.label)}</span></li>`).join('')}
+                ${additionalBenefits.map((benefit, index)=>`<li class="is-additional"><span class="subp-benefit-marker subp-benefit-marker--additional" aria-hidden="true">+</span><span>${escapeHtml(benefit.label)}</span>${benefitInfoButtonHtml(benefit.rawLabel || benefit.label, `inline-additional-${clean(plan?.id) || 'plan'}-${index}`, true)}</li>`).join('')}
               </ul>
             </div>` : `<div class="subp-plan-detail-benefit-group"><div class="subp-plan-detail-benefit-title">Agrega:</div><p class="subp-plan-detail-empty">Más herramientas incluidas en tu mejora.</p></div>`}
           </div>
@@ -61136,11 +61270,17 @@ function mxResetLogoPreview(){
       const stateCardHtml = activePaid && flowType === 'downgrade_at_renewal'
         ? inactivePlanInfoHtml()
         : activePaid && flowType === 'current'
-          ? currentPlanConditionsHtml(p)
+          ? `${currentPlanBenefitsSummaryHtml(p)}${currentPlanConditionsHtml(p)}`
           : '';
       const upgradeCardAdjustment = !freeQaMode && flowType === 'upgrade_now'
         ? upgradeCardAdjustmentHtml(p)
         : '';
+      const featuresHtml = activePaid && flowType === 'current'
+        ? ''
+        : planFeatureListHtml(p.features, {
+          infoEnabled: freeQaMode || flowType === 'new_subscription' || flowType === 'upgrade_now',
+          contextPrefix: `card-${clean(p.id) || 'plan'}`
+        });
       const cardNoteHtml = freeQaMode || flowType === 'upgrade_now' || flowType === 'current'
         ? ''
         : `<div class="subp-save">${escapeHtml(cardNote)}</div>`;
@@ -61157,7 +61297,7 @@ function mxResetLogoPreview(){
         ${pricingHtml}
         ${stateCardHtml}
         ${upgradeCardAdjustment}
-        <div class="subp-plan-features mt-2">${p.features.map(f=>`<div class="subp-feature"><img class="subp-feature-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy"><span>${escapeHtml(f)}</span></div>`).join('')}</div>
+        ${featuresHtml ? `<div class="subp-plan-features mt-2">${featuresHtml}</div>` : ''}
         ${cardNoteHtml}
         ${selectActionHtml}
         ${inlineDetail}
@@ -61201,11 +61341,19 @@ function mxResetLogoPreview(){
         renderCatalog();
       });
     });
+    els.catalog.querySelectorAll('[data-subp-benefit-info-toggle]').forEach((button)=>{
+      button.addEventListener('click', (event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+        openBenefitInfoPopover(button);
+      });
+    });
     els.catalog.querySelectorAll('[data-subp-plan-card]').forEach(card=>{
       card.addEventListener('click',(event)=>{
         if(event.target && event.target.closest('[data-subp-select]')) return;
         if(event.target && event.target.closest('[data-subp-current-conditions-toggle]')) return;
         if(event.target && event.target.closest('[data-subp-current-conditions-panel]')) return;
+        if(event.target && event.target.closest('[data-subp-benefit-info]')) return;
         if(event.target && event.target.closest('[data-subp-inline-upgrade-detail]')) return;
         if(card.dataset.available !== 'true') return;
         selectPlan(card.dataset.subpPlanCard);
@@ -61281,6 +61429,14 @@ function mxResetLogoPreview(){
       data.billing = mode;
       renderCatalog();
     });
+  });
+  document.addEventListener('click', (event)=>{
+    if(event.target && event.target.closest('[data-subp-benefit-info]')) return;
+    closeBenefitInfoPopovers(els.catalog);
+  });
+  document.addEventListener('keydown', (event)=>{
+    if(event.key !== 'Escape') return;
+    closeBenefitInfoPopovers(els.catalog);
   });
   els.billingRadios.forEach(r=>{
     r.addEventListener('change', ()=>{
