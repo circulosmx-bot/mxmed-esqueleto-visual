@@ -60454,7 +60454,62 @@ function mxResetLogoPreview(){
     return flowType || 'available';
   }
 
+  const benefitInfoSafeZone = {
+    padding: 20,
+    delayMs: 5000,
+    closeTimer: 0,
+    tracking: false
+  };
+
+  function clearBenefitInfoCloseTimer(){
+    if(benefitInfoSafeZone.closeTimer){
+      window.clearTimeout(benefitInfoSafeZone.closeTimer);
+      benefitInfoSafeZone.closeTimer = 0;
+    }
+  }
+
+  function openedBenefitInfoPopover(scope = els.catalog){
+    return scope ? scope.querySelector('[data-subp-benefit-info-popover].is-open') : null;
+  }
+
+  function handleBenefitInfoPointerMove(event){
+    if(event.pointerType && event.pointerType !== 'mouse') return;
+    const popover = openedBenefitInfoPopover();
+    if(!popover){
+      clearBenefitInfoCloseTimer();
+      return;
+    }
+    const rect = popover.getBoundingClientRect();
+    const padding = benefitInfoSafeZone.padding;
+    const insideSafeZone = event.clientX >= rect.left - padding
+      && event.clientX <= rect.right + padding
+      && event.clientY >= rect.top - padding
+      && event.clientY <= rect.bottom + padding;
+    if(insideSafeZone){
+      clearBenefitInfoCloseTimer();
+      return;
+    }
+    if(benefitInfoSafeZone.closeTimer) return;
+    benefitInfoSafeZone.closeTimer = window.setTimeout(()=>{
+      closeBenefitInfoPopovers(els.catalog);
+    }, benefitInfoSafeZone.delayMs);
+  }
+
+  function startBenefitInfoPointerTracking(){
+    if(benefitInfoSafeZone.tracking) return;
+    document.addEventListener('pointermove', handleBenefitInfoPointerMove);
+    benefitInfoSafeZone.tracking = true;
+  }
+
+  function stopBenefitInfoPointerTracking(){
+    if(!benefitInfoSafeZone.tracking) return;
+    document.removeEventListener('pointermove', handleBenefitInfoPointerMove);
+    benefitInfoSafeZone.tracking = false;
+  }
+
   function closeBenefitInfoPopovers(scope = els.catalog){
+    clearBenefitInfoCloseTimer();
+    stopBenefitInfoPointerTracking();
     if(!scope) return;
     scope.querySelectorAll('[data-subp-benefit-info-popover].is-open').forEach((popover)=>{
       popover.classList.remove('is-open');
@@ -60473,6 +60528,7 @@ function mxResetLogoPreview(){
     if(isOpen || !popover) return;
     button.setAttribute('aria-expanded', 'true');
     popover.classList.add('is-open');
+    startBenefitInfoPointerTracking();
   }
 
   function inlineUpgradeStatusMessage(){
@@ -61287,11 +61343,14 @@ function mxResetLogoPreview(){
       const selectActionHtml = flowType === 'current'
         ? ''
         : `<button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>`;
+      const planTitleCheckHtml = activePaid && flowType === 'current'
+        ? '<img class="subp-plan-current-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy">'
+        : '';
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
         <div class="subp-plan-badge">${escapeHtml(badge)}</div>
-        <div class="subp-plan-title">${escapeHtml(p.name)}</div>
+        <div class="subp-plan-title${planTitleCheckHtml ? ' subp-plan-title--current' : ''}">${planTitleCheckHtml}<span class="subp-plan-title-text">${escapeHtml(p.name)}</span></div>
         ${planIconPanelHtml(p.id)}
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
         ${pricingHtml}

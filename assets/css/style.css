@@ -6802,7 +6802,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--renewal-only{ background:#f8fafb; border-color:#d9e3e8; border-style:dashed; box-shadow:none; opacity:.72; filter:saturate(.55) contrast(.9) }
 .subp-plan--disabled{ color:#687a83 }
 .subp-plan--selected{ border:2px solid #017290; box-shadow:0 14px 28px rgba(1,49,84,0.14); grid-column:span 2 }
-.subp-plan .subp-plan-title{ font-weight:800; font-size:1.34rem; color:#fff; background:#0b7595; padding:10px 12px; border-radius:8px 8px 6px 6px; margin:-16px -16px 12px -16px; text-align:left; text-transform:uppercase }
+.subp-plan .subp-plan-title{ display:flex; align-items:center; font-weight:800; font-size:1.34rem; color:#fff; background:#0b7595; padding:10px 12px; border-radius:8px 8px 6px 6px; margin:-16px -16px 12px -16px; text-align:left; text-transform:uppercase }
+.subp-plan-title--current{ gap:10px; min-height:55px; padding-top:5px !important; padding-right:118px !important; padding-bottom:5px !important }
+.subp-plan-current-check{ flex:0 0 45px; width:45px; height:45px; object-fit:contain; display:block }
 .subp-plan-icon-panel{ display:grid; place-items:center; min-height:96px; margin:0 0 10px; border-radius:8px; border:1px solid rgba(0,173,193,.16); background:linear-gradient(135deg,#f4fbfd 0%,#e5f7fa 100%); overflow:hidden }
 .subp-plan-icon{ color:#007f96; font-size:4.25rem; line-height:1; font-variation-settings:'FILL' 0,'wght' 600,'GRAD' 0,'opsz' 48 }
 .subp-plan-icon-panel--basico{ background:linear-gradient(135deg,#f7f9fa 0%,#edf2f4 100%); border-color:#dce6ea }
