@@ -2513,6 +2513,7 @@ console.info('app.js loaded :: 20251123a');
   if(!isLocalDev) return;
 
   const STORAGE_KEY = 'mxmed.dev.rbac.role';
+  const PLAN_QA_STORAGE_KEY = 'mxmed.qa.plan';
   const ROLE_OPTIONS = {
     doctor: {
       value: 'doctor',
@@ -2539,6 +2540,14 @@ console.info('app.js loaded :: 20251123a');
       operator_alias: 'Operador 02'
     }
   };
+  const PLAN_QA_OPTIONS = {
+    real: { value: 'real', label: 'Real', plan: '' },
+    none: { value: 'none', label: 'Sin plan', plan: 'none' },
+    basic: { value: 'basic', label: 'Básico', plan: 'basic' },
+    standard: { value: 'standard', label: 'Estándar', plan: 'standard' },
+    optimum: { value: 'optimum', label: 'Óptimo', plan: 'optimum' },
+    professional: { value: 'professional', label: 'Profesional', plan: 'professional' }
+  };
 
   const normalizeState = (raw = {})=>{
     const role = clean(raw.role || raw.mxmed_role || raw.value || '').toLowerCase();
@@ -2558,6 +2567,32 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){
       return null;
     }
+  };
+
+  const normalizePlanQaState = (raw = {})=>{
+    const value = clean(raw.value || raw.plan || raw.plan_code || raw.planCode || '').toLowerCase();
+    const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'free' ? 'none' : value;
+    return PLAN_QA_OPTIONS[normalized] || PLAN_QA_OPTIONS.real;
+  };
+
+  const readStoredPlanQaState = ()=>{
+    try{
+      const raw = window.sessionStorage?.getItem(PLAN_QA_STORAGE_KEY)
+        || window.localStorage?.getItem(PLAN_QA_STORAGE_KEY)
+        || '';
+      return raw ? normalizePlanQaState(JSON.parse(raw)) : PLAN_QA_OPTIONS.real;
+    }catch(_){
+      return PLAN_QA_OPTIONS.real;
+    }
+  };
+
+  const persistPlanQaState = (state)=>{
+    try{
+      window.sessionStorage?.setItem(PLAN_QA_STORAGE_KEY, JSON.stringify({
+        value: state.value,
+        plan: state.plan
+      }));
+    }catch(_){}
   };
 
   const readQueryState = ()=>{
@@ -2665,26 +2700,50 @@ console.info('app.js loaded :: 20251123a');
     return state;
   };
 
-  const renderRoleSwitcher = (activeState)=>{
+  const applyPlanQaState = (nextState, options = {})=>{
+    const state = normalizePlanQaState(nextState);
+    if(options.persist !== false){
+      persistPlanQaState(state);
+    }
+    window.dispatchEvent(new CustomEvent('mxmed:qa-plan-changed', {
+      detail: {
+        value: state.value,
+        plan: state.plan,
+        label: state.label,
+        source: options.source || 'qa_plan_switcher'
+      }
+    }));
+    return state;
+  };
+
+  const buildSwitcherField = (labelText, control)=>{
+    const field = document.createElement('div');
+    field.className = 'd-flex align-items-center gap-2';
+    const label = document.createElement('label');
+    label.className = 'form-label m-0 small text-muted';
+    label.setAttribute('for', control.id);
+    label.textContent = labelText;
+    field.appendChild(label);
+    field.appendChild(control);
+    return field;
+  };
+
+  const renderRoleSwitcher = (activeState, activePlanQaState)=>{
     if(document.getElementById('mxmed_dev_role_switcher')) return;
     const wrap = document.createElement('div');
     wrap.id = 'mxmed_dev_role_switcher';
-    wrap.className = 'shadow bg-white border rounded-2 p-2 d-flex align-items-center gap-2';
+    wrap.className = 'shadow bg-white border rounded-2 p-2 d-flex align-items-center gap-2 flex-wrap';
     wrap.style.position = 'fixed';
     wrap.style.right = '12px';
     wrap.style.bottom = '12px';
     wrap.style.zIndex = '2300';
     wrap.style.fontSize = '12px';
-
-    const label = document.createElement('label');
-    label.className = 'form-label m-0 small text-muted';
-    label.setAttribute('for', 'mxmed_dev_role_select');
-    label.textContent = 'Rol QA';
+    wrap.style.maxWidth = '390px';
 
     const select = document.createElement('select');
     select.id = 'mxmed_dev_role_select';
     select.className = 'form-select form-select-sm';
-    select.style.width = '150px';
+    select.style.width = '138px';
     Object.values(ROLE_OPTIONS).forEach((optionState)=>{
       const option = document.createElement('option');
       option.value = optionState.value;
@@ -2697,8 +2756,24 @@ console.info('app.js loaded :: 20251123a');
       applyDevRole(selected, { source: 'dev_role_switcher_select' });
     });
 
-    wrap.appendChild(label);
-    wrap.appendChild(select);
+    const planSelect = document.createElement('select');
+    planSelect.id = 'mxmed_qa_plan_select';
+    planSelect.className = 'form-select form-select-sm';
+    planSelect.style.width = '136px';
+    Object.values(PLAN_QA_OPTIONS).forEach((optionState)=>{
+      const option = document.createElement('option');
+      option.value = optionState.value;
+      option.textContent = optionState.label;
+      planSelect.appendChild(option);
+    });
+    planSelect.value = normalizePlanQaState(activePlanQaState).value;
+    planSelect.addEventListener('change', ()=>{
+      const selected = PLAN_QA_OPTIONS[planSelect.value] || PLAN_QA_OPTIONS.real;
+      applyPlanQaState(selected, { source: 'qa_plan_switcher_select' });
+    });
+
+    wrap.appendChild(buildSwitcherField('Rol QA', select));
+    wrap.appendChild(buildSwitcherField('Plan QA', planSelect));
     document.body.appendChild(wrap);
   };
 
@@ -2708,17 +2783,20 @@ console.info('app.js loaded :: 20251123a');
     persist: true,
     source: queryState ? 'dev_role_query' : 'dev_role_initial'
   });
+  const initialPlanQaState = readStoredPlanQaState();
 
   window.mxmedApplyDevRole = applyDevRole;
   window.mxmedGetDevRole = ()=> normalizeState({
     role: window.mxmedStore?.role,
     operator_slot: window.mxmedStore?.operator_slot
   });
+  window.mxmedApplyQaPlan = applyPlanQaState;
+  window.mxmedGetQaPlan = ()=> readStoredPlanQaState();
 
   if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', ()=> renderRoleSwitcher(appliedState), { once: true });
+    document.addEventListener('DOMContentLoaded', ()=> renderRoleSwitcher(appliedState, initialPlanQaState), { once: true });
   }else{
-    renderRoleSwitcher(appliedState);
+    renderRoleSwitcher(appliedState, initialPlanQaState);
   }
 })();
 
@@ -59008,6 +59086,10 @@ function mxResetLogoPreview(){
     currentModel: null,
     currentMeta: null,
     contextInfo: null,
+    realCurrentModel: null,
+    realCurrentMeta: null,
+    realContextInfo: null,
+    qaPlan: { value: 'real', label: 'Real', planCode: '' },
     activationState: {
       state: 'idle',
       httpStatus: 0,
@@ -59246,6 +59328,143 @@ function mxResetLogoPreview(){
     if(status === 'free_default') return false;
     if(effectivePlan === 'free' && !contractedPlan) return false;
     return status === 'active' && (effectivePlan !== 'free' || !!contractedPlan || model?.is_paid_plan === true);
+  }
+
+  function normalizeSubscriptionQaPlanState(raw = {}){
+    const value = clean(raw.value || raw.plan || raw.plan_code || raw.planCode || '').toLowerCase();
+    const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'free' ? 'none' : value;
+    const options = {
+      real: { value: 'real', label: 'Real', planCode: '' },
+      none: { value: 'none', label: 'Sin plan', planCode: '' },
+      basic: { value: 'basic', label: 'Básico', planCode: 'basic' },
+      standard: { value: 'standard', label: 'Estándar', planCode: 'standard' },
+      optimum: { value: 'optimum', label: 'Óptimo', planCode: 'optimum' },
+      professional: { value: 'professional', label: 'Profesional', planCode: 'professional' }
+    };
+    return options[normalized] || options.real;
+  }
+
+  function readSubscriptionQaPlanState(){
+    try{
+      if(typeof window.mxmedGetQaPlan === 'function'){
+        return normalizeSubscriptionQaPlanState(window.mxmedGetQaPlan());
+      }
+    }catch(_){}
+    try{
+      const raw = window.sessionStorage?.getItem('mxmed.qa.plan')
+        || window.localStorage?.getItem('mxmed.qa.plan')
+        || '';
+      return raw ? normalizeSubscriptionQaPlanState(JSON.parse(raw)) : normalizeSubscriptionQaPlanState({ value: 'real' });
+    }catch(_){
+      return normalizeSubscriptionQaPlanState({ value: 'real' });
+    }
+  }
+
+  function isQaPlanSimulationActive(){
+    return clean(data.qaPlan?.value).toLowerCase() !== 'real';
+  }
+
+  function formatQaDateForModel(date){
+    if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day} 00:00:00`;
+  }
+
+  function qaDaysRemaining(expiresAt){
+    const parsed = parseSubscriptionDate(expiresAt);
+    if(!parsed) return null;
+    const dayMs = 24 * 60 * 60 * 1000;
+    return Math.max(0, Math.ceil((parsed.getTime() - Date.now()) / dayMs));
+  }
+
+  function buildQaPlanValidity(realModel = {}){
+    const realStartsAt = clean(realModel.starts_at);
+    const realExpiresAt = clean(realModel.expires_at);
+    if(realStartsAt && realExpiresAt){
+      return {
+        starts_at: realStartsAt,
+        expires_at: realExpiresAt,
+        duration_days: Number(realModel.duration_days || 365) || 365,
+        days_until_expiration: realModel.days_until_expiration ?? qaDaysRemaining(realExpiresAt)
+      };
+    }
+    const start = new Date();
+    start.setDate(start.getDate() - 12);
+    const end = new Date();
+    end.setDate(end.getDate() + 353);
+    return {
+      starts_at: formatQaDateForModel(start),
+      expires_at: formatQaDateForModel(end),
+      duration_days: 365,
+      days_until_expiration: 353
+    };
+  }
+
+  function buildQaSubscriptionModel(realModel = {}){
+    const qaPlan = normalizeSubscriptionQaPlanState(data.qaPlan || {});
+    if(qaPlan.value === 'real') return realModel || {};
+
+    const base = realModel && typeof realModel === 'object' ? { ...realModel } : {};
+    const validity = buildQaPlanValidity(realModel || {});
+    if(qaPlan.value === 'none'){
+      return {
+        ...base,
+        status: 'free_default',
+        effective_plan_code: '',
+        contracted_plan_code: '',
+        plan_code: '',
+        plan_label: 'Sin plan',
+        plan_name: 'Sin plan',
+        billing_period: '',
+        duration_days: null,
+        starts_at: '',
+        expires_at: '',
+        days_until_expiration: null,
+        is_active: false,
+        is_paid_plan: false,
+        is_free_fallback: true,
+        source: 'qa_plan_simulation',
+        qa_plan_simulated: true,
+        qa_plan_mode: qaPlan.value
+      };
+    }
+
+    const plan = findPlanById(qaPlan.planCode);
+    const planLabel = clean(plan?.name) || qaPlan.label;
+    const billingPeriod = clean(realModel?.billing_period).toLowerCase() === 'monthly' ? 'monthly' : 'annual';
+    return {
+      ...base,
+      status: 'active',
+      effective_plan_code: qaPlan.planCode,
+      contracted_plan_code: qaPlan.planCode,
+      plan_code: qaPlan.planCode,
+      plan_label: planLabel,
+      plan_name: planLabel,
+      billing_period: billingPeriod,
+      duration_days: validity.duration_days,
+      starts_at: validity.starts_at,
+      expires_at: validity.expires_at,
+      days_until_expiration: validity.days_until_expiration,
+      is_active: true,
+      is_paid_plan: true,
+      is_free_fallback: false,
+      source: 'qa_plan_simulation',
+      qa_plan_simulated: true,
+      qa_plan_mode: qaPlan.value
+    };
+  }
+
+  function applyEffectiveSubscriptionModel(){
+    const realModel = data.realCurrentModel || {};
+    const effectiveModel = buildQaSubscriptionModel(realModel);
+    applyReadModelToView(
+      effectiveModel,
+      data.realCurrentMeta || {},
+      data.realContextInfo || {},
+      { historyModel: effectiveModel }
+    );
   }
 
   const SUBSCRIPTION_MAPPER_DEV_WRITE_CODES = {
@@ -59642,6 +59861,9 @@ function mxResetLogoPreview(){
   }
 
   function buildReadModelFeatures(model, meta, contextInfo){
+    if(model?.qa_plan_simulated === true && !hasPaidActiveSubscription(model)){
+      return ['Compara los planes disponibles para activar tu suscripción'];
+    }
     const contracted = clean(model?.contracted_plan_code);
     const effective = clean(model?.effective_plan_code);
     const grace = clean(model?.grace_status) || 'No aplica';
@@ -59666,7 +59888,7 @@ function mxResetLogoPreview(){
     return [...commercialFeatures, ...debugFeatures].filter(Boolean);
   }
 
-  function applyReadModel(model, meta, contextInfo){
+  function applyReadModelToView(model, meta, contextInfo, options = {}){
     data.currentModel = model || {};
     data.currentMeta = meta || {};
     data.contextInfo = contextInfo || {};
@@ -59726,15 +59948,26 @@ function mxResetLogoPreview(){
 
     renderCurrent();
     renderCatalog();
-    renderHistory(model);
+    renderHistory(options.historyModel || model);
     renderDevWrite();
     renderActivationState();
+  }
+
+  function applyReadModel(model, meta, contextInfo){
+    data.realCurrentModel = model || {};
+    data.realCurrentMeta = meta || {};
+    data.realContextInfo = contextInfo || {};
+    data.qaPlan = readSubscriptionQaPlanState();
+    applyEffectiveSubscriptionModel();
   }
 
   function applyReadOnlyError(httpStatus, customMessage){
     data.currentModel = null;
     data.currentMeta = null;
     data.contextInfo = null;
+    data.realCurrentModel = null;
+    data.realCurrentMeta = null;
+    data.realContextInfo = null;
     let message = 'No se pudo cargar la suscripción. Intenta más tarde.';
     if(httpStatus === 401){
       message = 'Sesión no válida o no iniciada para consultar la suscripción.';
@@ -60378,8 +60611,11 @@ function mxResetLogoPreview(){
       ? data.current.until
       : 'tu vigencia actual';
     const state = data.upgradeCheckout;
-    const readyToSubmit = state.accepted && billingPeriod !== '' && state.state !== 'submitting';
-    const createLabel = state.state === 'submitting'
+    const simulatedQaPlan = isQaPlanSimulationActive();
+    const readyToSubmit = !simulatedQaPlan && state.accepted && billingPeriod !== '' && state.state !== 'submitting';
+    const createLabel = simulatedQaPlan
+      ? 'Simulación QA visual'
+      : state.state === 'submitting'
       ? 'Preparando checkout...'
       : `Solicitar mejora a ${targetLabel}`;
     const statusKind = inlineUpgradeStatusKind();
@@ -60436,7 +60672,7 @@ function mxResetLogoPreview(){
     if(!selected) return;
     const state = data.upgradeCheckout;
     const billingPeriod = currentBillingPeriod();
-    const readyToSubmit = state.accepted && billingPeriod !== '' && state.state !== 'submitting';
+    const readyToSubmit = !isQaPlanSimulationActive() && state.accepted && billingPeriod !== '' && state.state !== 'submitting';
     const accept = els.catalog.querySelector('[data-subp-inline-upgrade-accept]');
     const create = els.catalog.querySelector('[data-subp-inline-upgrade-create]');
     const status = els.catalog.querySelector('[data-subp-inline-upgrade-status]');
@@ -60444,7 +60680,9 @@ function mxResetLogoPreview(){
     if(create){
       create.disabled = !readyToSubmit;
       create.classList.toggle('disabled', !readyToSubmit);
-      create.textContent = state.state === 'submitting'
+      create.textContent = isQaPlanSimulationActive()
+        ? 'Simulación QA visual'
+        : state.state === 'submitting'
         ? 'Preparando checkout...'
         : `Solicitar mejora a ${selected.name}`;
     }
@@ -60521,7 +60759,7 @@ function mxResetLogoPreview(){
     const coverageLabel = data.current.until && data.current.until !== 'No aplica'
       ? `Hasta ${data.current.until}`
       : 'Vigencia actual por consultar';
-    const readyToSubmit = state.accepted && hasBilling && state.state !== 'submitting';
+    const readyToSubmit = !isQaPlanSimulationActive() && state.accepted && hasBilling && state.state !== 'submitting';
 
     if(els.upgradeCheckoutRoute) els.upgradeCheckoutRoute.textContent = `${currentLabel} → ${targetLabel}`;
     if(els.upgradeCheckoutPeriod) els.upgradeCheckoutPeriod.textContent = periodLabel;
@@ -60540,7 +60778,9 @@ function mxResetLogoPreview(){
     if(els.upgradeCheckoutCreate){
       els.upgradeCheckoutCreate.disabled = !readyToSubmit;
       els.upgradeCheckoutCreate.classList.toggle('disabled', !readyToSubmit);
-      els.upgradeCheckoutCreate.textContent = state.state === 'submitting'
+      els.upgradeCheckoutCreate.textContent = isQaPlanSimulationActive()
+        ? 'Simulación QA visual'
+        : state.state === 'submitting'
         ? 'Preparando checkout...'
         : `Solicitar mejora a ${targetLabel}`;
     }
@@ -60552,6 +60792,8 @@ function mxResetLogoPreview(){
 
     if(state.message){
       setUpgradeCheckoutStatus(state.state === 'created' ? 'success' : (state.state === 'error' ? 'error' : 'info'), state.message);
+    }else if(isQaPlanSimulationActive()){
+      setUpgradeCheckoutStatus('info', 'Modo Plan QA: revisión visual sin crear checkout.');
     }else{
       setUpgradeCheckoutStatus('info', SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE);
     }
@@ -60599,6 +60841,13 @@ function mxResetLogoPreview(){
   }
 
   async function submitUpgradeCheckout(){
+    if(isQaPlanSimulationActive()){
+      data.upgradeCheckout.state = 'idle';
+      data.upgradeCheckout.message = 'Modo Plan QA: simulación visual, no se creó checkout.';
+      data.upgradeCheckout.error = '';
+      renderUpgradeCheckoutFlow();
+      return;
+    }
     const selected = selectedUpgradePlan();
     const context = data.contextInfo || {};
     const entityType = clean(context.entity_type);
@@ -60958,6 +61207,30 @@ function mxResetLogoPreview(){
     updateInlineUpgradeCheckoutState();
     renderPlanSelection(activePaid);
   }
+
+  function resetPlanQaVisualSelection(){
+    data.selectedPlanId = '';
+    data.currentConditionsOpen = false;
+    data.upgradeCheckout.visible = false;
+    data.upgradeCheckout.accepted = false;
+    data.upgradeCheckout.state = 'idle';
+    data.upgradeCheckout.httpStatus = 0;
+    data.upgradeCheckout.message = '';
+    data.upgradeCheckout.error = '';
+    data.upgradeCheckout.checkoutIntentUuid = '';
+    data.upgradeCheckout.contractAcceptanceUuid = '';
+    data.upgradeCheckout.idempotencyKey = '';
+  }
+
+  window.addEventListener('mxmed:qa-plan-changed', (event)=>{
+    const next = normalizeSubscriptionQaPlanState(event?.detail || {});
+    if(data.qaPlan?.value === next.value && data.currentModel) return;
+    data.qaPlan = next;
+    resetPlanQaVisualSelection();
+    if(data.realCurrentModel || data.currentModel){
+      applyEffectiveSubscriptionModel();
+    }
+  });
 
   // Eventos
   els.pricingModeButtons.forEach((button)=>{
