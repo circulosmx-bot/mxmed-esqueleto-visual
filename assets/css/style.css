@@ -6840,6 +6840,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-features{ display:grid; gap:8px }
 .subp-plan-features .subp-feature{ align-items:center; gap:12px; margin-bottom:0; font-size:1.14rem; font-weight:800; line-height:1.18 }
 .subp-feature-check{ flex:0 0 45px; width:45px; height:45px; object-fit:contain; display:block }
+.subp-plan--renewal-only .subp-plan-title{ background:#8aa2af !important }
+.subp-plan--renewal-only .subp-plan-icon-panel{ opacity:.58; filter:grayscale(.25) saturate(.55) }
+.subp-plan--renewal-only .subp-plan-features,
+.subp-plan--renewal-only .text-muted{ opacity:.74 }
+.subp-plan--renewal-only .subp-feature-check{ opacity:.55 }
 .subp-save{ color:#00adc1; font-weight:700; font-size:.9rem; margin-top:6px }
 .subp-btn{ width:100%; margin-top:auto; margin-bottom:4px; background:#33b9c7; border-color:#33b9c7; font-weight:700 }
 .subp-btn:hover{ background:#2aa7b4; border-color:#2aa7b4 }
@@ -6851,9 +6856,23 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--selected .subp-plan-badge{ background:#003154 }
 .subp-plan--selected > .subp-feature,
 .subp-plan--selected > .mt-2,
+.subp-plan--selected > .subp-plan-state-card,
 .subp-plan--selected > .subp-upgrade-card-adjustment,
 .subp-plan--selected > .subp-save,
 .subp-plan--selected > [data-subp-select]{ display:none }
+.subp-plan-state-card{ display:grid; gap:7px; margin:0 0 12px; padding:12px; border-radius:8px; border:1px solid #d7e8ef; background:#f7fbfc; color:#294f5f }
+.subp-plan-state-title{ color:#003154; font-size:.96rem; font-weight:900; line-height:1.18 }
+.subp-plan-state-copy{ color:#49636f; font-size:.86rem; font-weight:650; line-height:1.35 }
+.subp-plan-state-card--inactive{ background:#f4f7f8; border-color:#dfe8ec }
+.subp-plan-state-card--inactive .subp-plan-state-title{ color:#58707b }
+.subp-plan-state-card--current{ background:linear-gradient(180deg,#eefbfd 0%,#ffffff 100%); border-color:#bce2ed }
+.subp-current-conditions-toggle{ width:max-content; max-width:100%; color:#006b82; border-color:#9dceda; font-weight:800 }
+.subp-current-conditions-toggle:hover{ background:#eaf7fb; color:#003154; border-color:#75bfce }
+.subp-current-conditions{ display:grid; gap:6px; padding:10px; border-radius:8px; background:#fff; border:1px solid #d8edf2; color:#294f5f; font-size:.85rem; line-height:1.32 }
+.subp-current-conditions-benefits{ margin:5px 0 0; padding-left:18px }
+.subp-current-conditions-benefits li{ margin-bottom:2px }
+.subp-current-conditions-empty{ margin:4px 0 0; color:#6b7f87 }
+.subp-current-conditions-note{ color:#5a7380; font-size:.78rem; font-weight:650 }
 .subp-plan-detail{ margin-top:10px; padding:12px; border:1px solid #c8e4ec; border-radius:8px; background:#f7fbfc }
 .subp-plan-detail-grid{ display:grid; grid-template-columns:minmax(0,1.08fr) minmax(220px,.92fr); gap:12px; align-items:start }
 .subp-plan-detail-lead{ color:#183746; font-size:1rem; font-weight:800; margin-bottom:8px }

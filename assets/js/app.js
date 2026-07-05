@@ -59003,6 +59003,7 @@ function mxResetLogoPreview(){
       { id:'pro', name:'Profesional', tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
     ],
     selectedPlanId: '',
+    currentConditionsOpen: false,
     history: [],
     currentModel: null,
     currentMeta: null,
@@ -60312,6 +60313,38 @@ function mxResetLogoPreview(){
       </div>`;
   }
 
+  function inactivePlanInfoHtml(){
+    return `<div class="subp-plan-state-card subp-plan-state-card--inactive">
+        <div class="subp-plan-state-title">Este plan no está disponible durante tu vigencia actual.</div>
+        <div class="subp-plan-state-copy">Podrás cambiar a este plan al renovar.</div>
+      </div>`;
+  }
+
+  function currentPlanConditionsHtml(plan){
+    const isOpen = data.currentConditionsOpen === true;
+    const benefitItems = Array.isArray(plan?.features) && plan.features.length
+      ? plan.features
+      : data.current.features;
+    const benefitsHtml = Array.isArray(benefitItems) && benefitItems.length
+      ? `<ul class="subp-current-conditions-benefits">
+          ${benefitItems.map((benefit)=>`<li>${escapeHtml(benefit)}</li>`).join('')}
+        </ul>`
+      : '<p class="subp-current-conditions-empty">Beneficios vigentes por consultar.</p>';
+
+    return `<div class="subp-plan-state-card subp-plan-state-card--current">
+        <div class="subp-plan-state-title">Este es tu plan vigente.</div>
+        <div class="subp-plan-state-copy">Tu suscripción está activa.</div>
+        <button class="btn btn-outline-secondary btn-sm subp-current-conditions-toggle" type="button" data-subp-current-conditions-toggle aria-expanded="${isOpen ? 'true' : 'false'}">${isOpen ? 'Ocultar condiciones' : 'Ver condiciones de mi plan'}</button>
+        <div class="subp-current-conditions${isOpen ? '' : ' d-none'}" data-subp-current-conditions-panel>
+          <div><strong>Plan actual:</strong> ${escapeHtml(currentPlanLabel())}</div>
+          <div><strong>Estado:</strong> ${escapeHtml(data.current.status || 'Activo')}</div>
+          <div><strong>Vigencia:</strong> ${escapeHtml(data.current.until || 'No aplica')}</div>
+          <div class="subp-current-conditions-list"><strong>Beneficios incluidos:</strong>${benefitsHtml}</div>
+          <div class="subp-current-conditions-note">Puedes renovar o mejorar tu plan cuando corresponda.</div>
+        </div>
+      </div>`;
+  }
+
   function upgradeCardAdjustmentHtml(plan){
     const additionalBenefits = upgradeBenefitItems(plan).filter((benefit)=> benefit.isAdditional);
     const estimate = proratedUpgradeEstimate(plan);
@@ -60817,6 +60850,14 @@ function mxResetLogoPreview(){
       const inlineDetail = flowType === 'upgrade_now' && isSelected
         ? inlineUpgradeDetailHtml(p)
         : '';
+      const pricingHtml = activePaid && (flowType === 'current' || flowType === 'downgrade_at_renewal')
+        ? ''
+        : planPricingBlockHtml(p);
+      const stateCardHtml = activePaid && flowType === 'downgrade_at_renewal'
+        ? inactivePlanInfoHtml()
+        : activePaid && flowType === 'current'
+          ? currentPlanConditionsHtml(p)
+          : '';
       const upgradeCardAdjustment = flowType === 'upgrade_now'
         ? upgradeCardAdjustmentHtml(p)
         : '';
@@ -60830,7 +60871,8 @@ function mxResetLogoPreview(){
         <div class="subp-plan-title">${escapeHtml(p.name)}</div>
         ${planIconPanelHtml(p.id)}
         <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
-        ${planPricingBlockHtml(p)}
+        ${pricingHtml}
+        ${stateCardHtml}
         ${upgradeCardAdjustment}
         <div class="subp-plan-features mt-2">${p.features.map(f=>`<div class="subp-feature"><img class="subp-feature-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy"><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         ${cardNoteHtml}
@@ -60852,6 +60894,7 @@ function mxResetLogoPreview(){
       data.upgradeCheckout.checkoutIntentUuid = '';
       data.upgradeCheckout.contractAcceptanceUuid = '';
       data.upgradeCheckout.idempotencyKey = '';
+      data.currentConditionsOpen = false;
       renderCatalog();
     };
     els.catalog.querySelectorAll('[data-subp-select]').forEach(btn=>{
@@ -60860,9 +60903,19 @@ function mxResetLogoPreview(){
         selectPlan(btn.dataset.subpSelect);
       });
     });
+    els.catalog.querySelectorAll('[data-subp-current-conditions-toggle]').forEach((button)=>{
+      button.addEventListener('click', (event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+        data.currentConditionsOpen = !data.currentConditionsOpen;
+        renderCatalog();
+      });
+    });
     els.catalog.querySelectorAll('[data-subp-plan-card]').forEach(card=>{
       card.addEventListener('click',(event)=>{
         if(event.target && event.target.closest('[data-subp-select]')) return;
+        if(event.target && event.target.closest('[data-subp-current-conditions-toggle]')) return;
+        if(event.target && event.target.closest('[data-subp-current-conditions-panel]')) return;
         if(event.target && event.target.closest('[data-subp-inline-upgrade-detail]')) return;
         if(card.dataset.available !== 'true') return;
         selectPlan(card.dataset.subpPlanCard);
