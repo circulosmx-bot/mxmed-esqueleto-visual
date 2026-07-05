@@ -60581,9 +60581,7 @@ function mxResetLogoPreview(){
         </ul>`
       : '<p class="subp-current-conditions-empty">Beneficios vigentes por consultar.</p>';
 
-    return `<div class="subp-plan-state-card subp-plan-state-card--current">
-        <div class="subp-plan-state-title">Este es tu plan vigente.</div>
-        <div class="subp-plan-state-copy">Tu suscripción está activa.</div>
+    return `<div class="subp-current-conditions-wrap">
         <button class="btn btn-outline-secondary btn-sm subp-current-conditions-toggle" type="button" data-subp-current-conditions-toggle aria-expanded="${isOpen ? 'true' : 'false'}">${isOpen ? 'Ocultar condiciones' : 'Ver condiciones de mi plan'}</button>
         <div class="subp-current-conditions${isOpen ? '' : ' d-none'}" data-subp-current-conditions-panel>
           <div><strong>Plan actual:</strong> ${escapeHtml(currentPlanLabel())}</div>
@@ -61103,7 +61101,7 @@ function mxResetLogoPreview(){
         : isSelected
         ? 'Seleccionado'
         : flowType === 'current'
-          ? 'Plan actual'
+          ? 'Tu plan actual'
           : flowType === 'upgrade_now'
             ? 'Mejorar ahora'
             : flowType === 'downgrade_at_renewal'
@@ -61112,7 +61110,7 @@ function mxResetLogoPreview(){
       const buttonLabel = freeQaMode
         ? 'Contratar este plan'
         : flowType === 'current'
-        ? 'Plan actual'
+        ? 'Tu plan actual'
         : flowType === 'downgrade_at_renewal'
           ? 'Disponible al renovar'
           : flowType === 'upgrade_now'
@@ -61122,7 +61120,7 @@ function mxResetLogoPreview(){
               : 'Continuar con este plan';
       const buttonClass = !freeQaMode && (isSelected || isCurrent) ? 'btn-outline-primary' : 'btn-primary';
       const cardNote = flowType === 'current'
-        ? 'Este es tu plan vigente. Tu suscripción está activa.'
+        ? ''
         : flowType === 'downgrade_at_renewal'
           ? 'Puedes cambiar a este plan al finalizar tu periodo actual.'
           : flowType === 'upgrade_now'
@@ -61143,9 +61141,12 @@ function mxResetLogoPreview(){
       const upgradeCardAdjustment = !freeQaMode && flowType === 'upgrade_now'
         ? upgradeCardAdjustmentHtml(p)
         : '';
-      const cardNoteHtml = freeQaMode || flowType === 'upgrade_now'
+      const cardNoteHtml = freeQaMode || flowType === 'upgrade_now' || flowType === 'current'
         ? ''
         : `<div class="subp-save">${escapeHtml(cardNote)}</div>`;
+      const selectActionHtml = flowType === 'current'
+        ? ''
+        : `<button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>`;
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
@@ -61158,7 +61159,7 @@ function mxResetLogoPreview(){
         ${upgradeCardAdjustment}
         <div class="subp-plan-features mt-2">${p.features.map(f=>`<div class="subp-feature"><img class="subp-feature-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy"><span>${escapeHtml(f)}</span></div>`).join('')}</div>
         ${cardNoteHtml}
-        <button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>
+        ${selectActionHtml}
         ${inlineDetail}
       </div>`;
     }).join('');
