@@ -59075,7 +59075,7 @@ function mxResetLogoPreview(){
       features: ['Consulta tu plan actual, vigencia y beneficios disponibles']
     },
     plans: [
-      { id:'basico', name:'Básico', tagline:'Perfil público esencial', features:['Perfil en línea','Presencia profesional básica'] },
+      { id:'basico', name:'Básico', tagline:'Perfil público esencial', features:['Perfil en línea'] },
       { id:'estandar', name:'Estándar', tagline:'Agenda y presencia profesional', features:['Perfil en línea','Agenda'] },
       { id:'optimo', name:'Óptimo', tagline:'Gestión clínica ampliada', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
       { id:'pro', name:'Profesional', tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
@@ -60566,8 +60566,7 @@ function mxResetLogoPreview(){
 
   function inactivePlanInfoHtml(){
     return `<div class="subp-plan-state-card subp-plan-state-card--inactive">
-        <div class="subp-plan-state-title">Este plan no está disponible durante tu vigencia actual.</div>
-        <div class="subp-plan-state-copy">Podrás cambiar a este plan al renovar.</div>
+        <div class="subp-plan-state-title">NO DISPONIBLE</div>
       </div>`;
   }
 
