@@ -6789,7 +6789,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-band-benefit{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap }
 .subp-band-benefit .mat-ico{ font-size:18px; line-height:1; color:#d7fff6 }
 .subp-band-note{ color:#e8fbff; font-size:1.14rem; font-weight:850; line-height:1.15 }
-.subp-band-note--max-plan{ color:rgba(255,255,255,.9); font-size:1.03rem; font-weight:400; line-height:1.28; max-width:100% }
+.subp-band-note--max-plan{ color:rgba(255,255,255,.9); font-size:.93rem; font-weight:400; line-height:1.28; max-width:100% }
 #p-suscripcion.subp-qa-free .subp-band,
 #p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:max-content minmax(320px,1fr) }
 #p-suscripcion.subp-qa-free .subp-band-summary,
