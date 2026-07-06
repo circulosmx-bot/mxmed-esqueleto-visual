@@ -61410,6 +61410,7 @@ function mxResetLogoPreview(){
     if(els.headerNote){
       const note = clean(data.current.alert);
       els.headerNote.textContent = note;
+      els.headerNote.classList.toggle('subp-band-note--max-plan', note === SUBSCRIPTION_MAX_PLAN_NOTICE);
       els.headerNote.classList.toggle('d-none', !note);
     }
     if(els.currentAlert){
