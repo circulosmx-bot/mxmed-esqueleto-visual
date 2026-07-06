@@ -6869,6 +6869,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-badge{ position:absolute; top:10px; right:4px; background:#00adc1; color:#fff; padding:4px 6px; border-radius:8px; font-weight:700; font-size:.75rem }
 .subp-plan-badge--inline{ position:static; flex:0 0 auto; align-self:center; margin-left:auto; white-space:nowrap; text-transform:none }
 .subp-plan--current .subp-plan-badge{ background:#006b82 }
+.subp-plan--current .subp-plan-badge--inline{ flex-shrink:0; transform:scale(1.35); transform-origin:right center }
 .subp-plan--upgrade-now .subp-plan-badge{ background:#017290 }
 .subp-plan--renewal-only .subp-plan-badge{ background:#8a9aa2; color:rgba(255,255,255,.8); opacity:.68 }
 .subp-plan--selected .subp-plan-badge{ background:#003154 }
@@ -6889,6 +6890,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-current-benefits-title{ color:#003154; font-size:.95rem; font-weight:900; line-height:1.18 }
 .subp-current-benefits-list{ display:grid; gap:7px }
 .subp-current-benefits-list .subp-feature{ align-items:center; gap:10px; margin-bottom:0; font-size:1rem; font-weight:850; line-height:1.18 }
+.subp-current-benefits-list .subp-feature-label{ font-size:1.35rem; line-height:1.14 }
 .subp-current-benefits-list .subp-feature-check{ flex-basis:34px; width:34px; height:34px }
 .subp-current-benefits-copy{ color:#006b82; font-size:.88rem; font-weight:800; line-height:1.32 }
 .subp-current-upgrade-cta{ display:grid; gap:6px; margin-top:2px; padding:10px 11px; border:1px solid #d5ebf1; border-radius:8px; background:#fff; color:#143849 }
