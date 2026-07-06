@@ -60734,6 +60734,23 @@ function mxResetLogoPreview(){
       </div>`;
   }
 
+  function currentPlanMarketingCopy(plan){
+    const planCode = backendPlanCodeFromUiPlan(plan?.id);
+    const messages = {
+      basic: 'Da el siguiente paso con el plan Estándar y activa una agenda en línea para facilitar la gestión de tus citas.',
+      standard: 'Lleva tu consulta a una gestión más completa con el plan Óptimo, integrando expediente clínico y recetas digitales.',
+      optimum: 'Lleva tu perfil al máximo nivel con el plan Profesional y un asistente IA trabajando para ti.',
+      professional: 'Ya cuentas con la suite más completa disponible para impulsar tu práctica profesional.'
+    };
+    if(messages[planCode]) return messages[planCode];
+
+    const currentRank = planRank(plan?.id);
+    const hasUpgrade = data.plans.some((candidate)=> planRank(candidate?.id) > currentRank);
+    return hasUpgrade
+      ? 'Mejora tu plan para acceder a más beneficios y aumentar tu visibilidad.'
+      : 'Ya cuentas con la suite más completa disponible para impulsar tu práctica profesional.';
+  }
+
   function currentPlanBenefitsSummaryHtml(plan){
     const features = Array.isArray(plan?.features) && plan.features.length
       ? plan.features
@@ -60743,9 +60760,7 @@ function mxResetLogoPreview(){
     const title = hasUpgrade
       ? 'Tu plan actual ya incluye lo esencial:'
       : 'Tu plan actual incluye la suite completa:';
-    const closing = hasUpgrade
-      ? 'Mejora tu plan para acceder a más beneficios y aumentar tu visibilidad.'
-      : 'Ya cuentas con la suite más completa disponible.';
+    const closing = currentPlanMarketingCopy(plan);
     const benefitsHtml = Array.isArray(features) && features.length
       ? planFeatureListHtml(features, {
         infoEnabled: true,
