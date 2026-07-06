@@ -59008,6 +59008,7 @@ function mxResetLogoPreview(){
 
   const SUBSCRIPTION_ACTION_NOTICE = 'Elige un plan disponible para preparar el siguiente paso. La contratación en línea se activará en la siguiente fase.';
   const SUBSCRIPTION_ACTIVE_NOTICE = 'Activa más funciones mejorando tu plan.';
+  const SUBSCRIPTION_MAX_PLAN_NOTICE = 'Ya cuentas con la suite completa para impulsar tu práctica profesional.';
   const SUBSCRIPTION_ACTIVE_BLOCK_NOTICE = 'Puedes mejorar a un plan superior durante tu vigencia. Los cambios a un plan inferior aplican al renovar.';
   const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
@@ -59901,6 +59902,8 @@ function mxResetLogoPreview(){
     const statusLabel = labelFromMap(STATUS_LABELS, status, status || 'Estado no disponible');
     const effectivePlan = clean(model?.effective_plan_code);
     const contractedPlan = clean(model?.contracted_plan_code);
+    const currentPlanIdentity = normalizePlanId(effectivePlan || contractedPlan || planLabel);
+    const hasActivePaidPlan = hasPaidActiveSubscription(model || {});
     const hasContract = contractedPlan !== '';
     const startsAt = formatDate(model?.starts_at);
     const expiresAt = formatDate(model?.expires_at);
@@ -59929,7 +59932,11 @@ function mxResetLogoPreview(){
       sourceNote: headerMismatch
         ? `Según el estado actual de suscripción: ${planLabel}. El encabezado puede reflejar configuración comercial anterior.`
         : `Según el estado actual de suscripción: ${planLabel}.`,
-      alert: hasPaidActiveSubscription(model || {}) ? SUBSCRIPTION_ACTIVE_NOTICE : SUBSCRIPTION_ACTION_NOTICE,
+      alert: hasActivePaidPlan
+        ? currentPlanIdentity === 'pro'
+          ? SUBSCRIPTION_MAX_PLAN_NOTICE
+          : SUBSCRIPTION_ACTIVE_NOTICE
+        : SUBSCRIPTION_ACTION_NOTICE,
       features: buildReadModelFeatures(model || {}, meta || {}, contextInfo || {})
     };
 
@@ -61393,8 +61400,7 @@ function mxResetLogoPreview(){
     }
     const headerBenefits = data.current.features
       .map(clean)
-      .filter((feature)=> feature && !feature.includes(':'))
-      .slice(0, 4);
+      .filter((feature)=> feature && !feature.includes(':'));
     if(els.headerBenefits){
       els.headerBenefits.innerHTML = headerBenefits.length
         ? `<span class="subp-band-benefits-label">Incluye:</span>${headerBenefits.map((feature)=>`<span class="subp-band-benefit"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check_circle</span>${escapeHtml(feature)}</span>`).join('')}`
