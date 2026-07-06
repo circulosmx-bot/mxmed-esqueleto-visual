@@ -61352,13 +61352,15 @@ function mxResetLogoPreview(){
       const floatingBadgeHtml = planTitleBadgeHtml
         ? ''
         : `<div class="subp-plan-badge">${escapeHtml(badge)}</div>`;
+      const planTaglineHtml = clean(p.tagline)
+        ? `<span class="subp-plan-title-tagline">${escapeHtml(p.tagline)}</span>`
+        : '';
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable ? 'false' : 'true'}">
         ${floatingBadgeHtml}
-        <div class="subp-plan-title${planTitleCheckHtml ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span>${planTitleCheckHtml}${planTitleBadgeHtml}</div>
+        <div class="subp-plan-title${planTitleCheckHtml ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-copy"><span class="subp-plan-title-line"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span>${planTitleCheckHtml}</span>${planTaglineHtml}</span>${planTitleBadgeHtml}</div>
         ${planIconPanelHtml(p.id)}
-        <div class="text-muted small mb-2">${escapeHtml(p.tagline || '')}</div>
         ${pricingHtml}
         ${stateCardHtml}
         ${upgradeCardAdjustment}
