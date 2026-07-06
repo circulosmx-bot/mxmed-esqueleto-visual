@@ -60378,11 +60378,19 @@ function mxResetLogoPreview(){
     const trigger = document.querySelector('.mx-gh-current-plan-trigger');
     const labelEl = document.querySelector('.mx-gh-current-plan-label');
     const isFreeQa = model?.qa_plan_simulated === true && clean(model?.qa_plan_mode) === 'free';
+    const hasCurrentPaidPlan = hasPaidActiveSubscription(model || {});
     const resolvedPlanLabel = headerPlanLabelFromModel(model, planLabel);
     const renewalLabel = headerRenewalLabelFromModel(model);
+    const resolvedPlanCode = clean(model?.effective_plan_code)
+      || clean(model?.contracted_plan_code)
+      || clean(model?.plan_code)
+      || resolvedPlanLabel;
+    const currentPlanIdentity = (isFreeQa || !hasCurrentPaidPlan)
+      ? 'free'
+      : normalizePlanId(resolvedPlanCode);
 
     if(labelEl){
-      labelEl.textContent = isFreeQa ? 'Plan' : 'Tu plan actual';
+      labelEl.textContent = currentPlanIdentity === 'free' ? 'Plan' : 'Tu plan actual';
     }
 
     if(planNameEl && resolvedPlanLabel){
@@ -60391,6 +60399,7 @@ function mxResetLogoPreview(){
         || clean(model?.contracted_plan_code)
         || clean(model?.plan_code);
       planNameEl.dataset.subscriptionPlanLabel = resolvedPlanLabel;
+      planNameEl.dataset.currentPlan = currentPlanIdentity;
     }
 
     if(renewalEl){
@@ -60399,7 +60408,8 @@ function mxResetLogoPreview(){
     }
 
     if(container){
-      container.classList.toggle('is-free-plan', isFreeQa);
+      container.dataset.currentPlan = currentPlanIdentity;
+      container.classList.toggle('is-free-plan', currentPlanIdentity === 'free');
     }
 
     if(container && (resolvedPlanLabel || renewalLabel)){
@@ -60807,22 +60817,24 @@ function mxResetLogoPreview(){
 
   function currentPlanDirectUpgradeHtml(prompt){
     const targetLabel = clean(prompt.targetPlanName).toLocaleUpperCase('es-MX');
+    const targetPlanIdentity = normalizePlanId(prompt.targetPlanId);
     return `<div class="subp-current-upgrade-cta">
         <div class="subp-current-upgrade-title">${escapeHtml(prompt.title)}</div>
         <div class="subp-current-upgrade-kicker">Agrega:</div>
         ${currentPlanUpgradeBenefitsHtml(prompt.benefits)}
-        <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(prompt.targetPlanId)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
+        <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(prompt.targetPlanId)}" data-subp-target-plan="${escapeHtml(targetPlanIdentity)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
       </div>`;
   }
 
   function currentPlanUpgradeOptionsHtml(plans){
     const optionsHtml = plans.map((targetPlan, index)=>{
       const targetLabel = clean(targetPlan.name).toLocaleUpperCase('es-MX');
+      const targetPlanIdentity = normalizePlanId(targetPlan.id);
       const meta = currentPlanUpgradeOptionMeta(targetPlan, index);
       const benefits = currentPlanIncrementalBenefitsFor(targetPlan);
       return `<div class="subp-current-upgrade-option">
           <div class="subp-current-upgrade-option-label">${escapeHtml(meta.label)}</div>
-          <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(targetPlan.id)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
+          <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(targetPlan.id)}" data-subp-target-plan="${escapeHtml(targetPlanIdentity)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
           <div class="subp-current-upgrade-kicker">Agrega:</div>
           ${currentPlanUpgradeBenefitsHtml(benefits)}
         </div>`;
@@ -61347,14 +61359,20 @@ function mxResetLogoPreview(){
 
   function renderCurrent(){
     const freeQaMode = isQaFreePlanMode();
+    const freePlanMode = freeQaMode || !hasPaidActiveSubscription(data.currentModel || {});
+    const currentPlanIdentity = freePlanMode
+      ? 'free'
+      : normalizePlanId(data.current.id || data.currentModel?.effective_plan_code || data.currentModel?.contracted_plan_code || data.current.name);
+    pane.dataset.currentPlan = currentPlanIdentity;
     pane.classList.toggle('subp-qa-free', freeQaMode);
+    pane.classList.toggle('subp-free-plan', freePlanMode);
     const planContext = pane.querySelector('.subp-plan-context');
     if(planContext){
-      planContext.textContent = freeQaMode ? 'Plan' : 'Tu plan actual';
+      planContext.textContent = freePlanMode ? 'Plan' : 'Tu plan actual';
     }
     if(els.planName){
       els.planName.textContent = data.current.name;
-      els.planName.setAttribute('data-plan', data.current.id || '');
+      els.planName.setAttribute('data-plan', currentPlanIdentity);
     }
     if(els.status) els.status.textContent = data.current.status;
     if(els.since) els.since.textContent = data.current.since;

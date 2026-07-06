@@ -473,6 +473,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:10px;
 }
 .mx-gh-current-plan{
+  --subp-current-plan-main:#00AFC4;
+  --subp-current-plan-dark:#008EA0;
+  --subp-current-plan-soft:#E6FAFC;
+  --subp-current-plan-border:#8EDDE8;
   margin-left:auto;
   flex:0 0 auto;
   min-width:156px;
@@ -487,6 +491,11 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   line-height:1.05;
 }
+.mx-gh-current-plan[data-current-plan="basico"]{ --subp-current-plan-main:#6F91A3; --subp-current-plan-dark:#587887; --subp-current-plan-soft:#EEF5F8; --subp-current-plan-border:#B7CAD3 }
+.mx-gh-current-plan[data-current-plan="estandar"]{ --subp-current-plan-main:#00AFC4; --subp-current-plan-dark:#008EA0; --subp-current-plan-soft:#E6FAFC; --subp-current-plan-border:#8EDDE8 }
+.mx-gh-current-plan[data-current-plan="optimo"]{ --subp-current-plan-main:#0A4F8F; --subp-current-plan-dark:#003F63; --subp-current-plan-soft:#EAF4FB; --subp-current-plan-border:#9BC8EA }
+.mx-gh-current-plan[data-current-plan="pro"]{ --subp-current-plan-main:#6750D8; --subp-current-plan-dark:#4B3DD1; --subp-current-plan-soft:#F2EFFF; --subp-current-plan-border:#C6B8FF }
+.mx-gh-current-plan[data-current-plan="free"]{ --subp-current-plan-main:#6F91A3; --subp-current-plan-dark:#587887; --subp-current-plan-soft:#F8FBFC; --subp-current-plan-border:#D7E8EF }
 .mx-gh-current-plan-trigger{
   appearance:none;
   border:0;
@@ -506,7 +515,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:8px;
 }
 .mx-gh-current-plan-label{
-  color:#018fa4;
+  color:var(--subp-current-plan-main);
   font-size:.89rem;
   font-weight:800;
   letter-spacing:0;
@@ -521,7 +530,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   max-width:100%;
   overflow:hidden;
   text-overflow:ellipsis;
-  background:#006b82;
+  background:linear-gradient(135deg,var(--subp-current-plan-main) 0%,var(--subp-current-plan-dark) 100%);
   color:#fff;
   padding:8px 15px;
   border-radius:12px;
@@ -542,7 +551,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   min-width:190px;
   max-width:min(280px, calc(100vw - 24px));
   padding:10px 12px;
-  border:1px solid rgba(1,86,132,.14);
+  border:1px solid var(--subp-current-plan-border);
   border-radius:12px;
   background:#fff;
   box-shadow:0 12px 28px rgba(0,49,84,.16);
@@ -567,7 +576,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-gh-current-plan-renewal{
   font-size:.97rem;
   font-weight:400;
-  color:#02adc1;
+  color:var(--subp-current-plan-dark);
   white-space:nowrap;
 }
 .mx-gh-current-plan-action{
@@ -577,7 +586,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:inline-flex;
   align-items:center;
   gap:4px;
-  color:#015684;
+  color:var(--subp-current-plan-dark);
   padding:0;
   font-size:.83rem;
   font-weight:800;
@@ -608,7 +617,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .mx-gh-current-plan-action:hover,
 .mx-gh-current-plan-action:focus-visible{
-  color:#01476d;
+  color:var(--subp-current-plan-dark);
   outline:0;
 }
 .mx-gh-current-plan-action-plus{
@@ -6758,11 +6767,17 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* ================== SUSCRIPCIÓN ================== */
 .subp-wrap{ background:#f2fbfc; border:1px solid #00adc1; border-radius:14px; padding:20px; box-shadow:0 10px 20px rgba(0,0,0,0.07) }
-.subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:#009ab0; color:#fff; border-radius:12px; padding:14px 18px }
+#p-suscripcion{ --subp-current-plan-main:#00AFC4; --subp-current-plan-dark:#008EA0; --subp-current-plan-soft:#E6FAFC; --subp-current-plan-border:#8EDDE8; --subp-current-plan-shadow-rgb:0,175,196 }
+#p-suscripcion[data-current-plan="basico"]{ --subp-current-plan-main:#6F91A3; --subp-current-plan-dark:#587887; --subp-current-plan-soft:#EEF5F8; --subp-current-plan-border:#B7CAD3; --subp-current-plan-shadow-rgb:111,145,163 }
+#p-suscripcion[data-current-plan="estandar"]{ --subp-current-plan-main:#00AFC4; --subp-current-plan-dark:#008EA0; --subp-current-plan-soft:#E6FAFC; --subp-current-plan-border:#8EDDE8; --subp-current-plan-shadow-rgb:0,175,196 }
+#p-suscripcion[data-current-plan="optimo"]{ --subp-current-plan-main:#0A4F8F; --subp-current-plan-dark:#003F63; --subp-current-plan-soft:#EAF4FB; --subp-current-plan-border:#9BC8EA; --subp-current-plan-shadow-rgb:10,79,143 }
+#p-suscripcion[data-current-plan="pro"]{ --subp-current-plan-main:#6750D8; --subp-current-plan-dark:#4B3DD1; --subp-current-plan-soft:#F2EFFF; --subp-current-plan-border:#C6B8FF; --subp-current-plan-shadow-rgb:103,80,216 }
+#p-suscripcion[data-current-plan="free"]{ --subp-current-plan-main:#6F91A3; --subp-current-plan-dark:#587887; --subp-current-plan-soft:#F8FBFC; --subp-current-plan-border:#D7E8EF; --subp-current-plan-shadow-rgb:111,145,163 }
+.subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:linear-gradient(135deg,var(--subp-current-plan-main) 0%,var(--subp-current-plan-dark) 100%); color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 18px; box-shadow:0 10px 20px rgba(var(--subp-current-plan-shadow-rgb),.1) }
 .subp-band-main{ min-width:0; flex:1 1 560px }
 .subp-plan-stack{ display:grid; gap:4px; justify-items:start; transform:translate(-5px, 4px) }
 .subp-plan-context{ color:rgba(255,255,255,.88); font-size:.89rem; font-weight:800; line-height:1; margin-left:15px; text-align:left }
-.subp-plan-pill{ display:inline-flex; align-items:center; justify-content:center; background:#006b82; color:#fff; padding:8px 15px; border-radius:12px; font-size:1.2rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; line-height:1.05 }
+.subp-plan-pill{ display:inline-flex; align-items:center; justify-content:center; background:var(--subp-current-plan-dark); color:#fff; padding:8px 15px; border-radius:12px; font-size:1.2rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; line-height:1.05; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14) }
 .subp-status{ background:rgba(255,255,255,0.18); color:#fff; padding:6px 12px; border-radius:10px; font-weight:600 }
 .subp-band-summary{ display:grid; gap:5px; min-width:0; border-left:3px solid rgba(255,255,255,.45); padding-left:16px }
 .subp-dates{ line-height:1.25 }
@@ -6774,11 +6789,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-band-benefit{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap }
 .subp-band-benefit .mat-ico{ font-size:18px; line-height:1; color:#d7fff6 }
 .subp-band-note{ color:#e8fbff; font-size:1.14rem; font-weight:850; line-height:1.15 }
-#p-suscripcion.subp-qa-free .subp-band{ grid-template-columns:max-content minmax(320px,1fr) }
+#p-suscripcion.subp-qa-free .subp-band,
+#p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:max-content minmax(320px,1fr) }
 #p-suscripcion.subp-qa-free .subp-band-summary,
 #p-suscripcion.subp-qa-free .subp-band > .d-flex,
 #p-suscripcion.subp-qa-free [data-subp-renew],
-#p-suscripcion.subp-qa-free #subp-autorenew{ display:none !important }
+#p-suscripcion.subp-qa-free #subp-autorenew,
+#p-suscripcion.subp-free-plan .subp-band-summary,
+#p-suscripcion.subp-free-plan .subp-band > .d-flex,
+#p-suscripcion.subp-free-plan [data-subp-renew],
+#p-suscripcion.subp-free-plan #subp-autorenew{ display:none !important }
 .subp-current{ display:none !important; border:1px solid #d7e8ef; margin-bottom:0 !important; padding:0 !important }
 .subp-current > .d-flex{ align-items:center !important }
 .subp-current-renewal{ display:none !important }
@@ -6906,9 +6926,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-current-upgrade-option .subp-current-upgrade-benefits{ gap:3px }
 .subp-current-upgrade-option .subp-current-upgrade-benefits li{ font-size:.82rem }
 .subp-current-upgrade-option .subp-current-upgrade-benefits li > span:first-child{ flex-basis:18px; width:18px; height:18px; font-size:1rem }
-.subp-current-upgrade-button{ justify-self:start; appearance:none; display:inline-flex; align-items:center; justify-content:center; min-height:34px; margin-top:2px; padding:7px 11px; border:1px solid #9dceda; border-radius:8px; background:#f6fcfd; color:#006b82; font:inherit; font-size:.82rem; font-weight:900; line-height:1; cursor:pointer; transition:background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease }
+.subp-current-upgrade-button{ --subp-target-plan-main:#00AFC4; --subp-target-plan-dark:#008EA0; --subp-target-plan-soft:#E6FAFC; --subp-target-plan-border:#8EDDE8; --subp-target-plan-shadow-rgb:0,175,196; justify-self:start; appearance:none; display:inline-flex; align-items:center; justify-content:center; min-height:34px; margin-top:2px; padding:7px 11px; border:1px solid var(--subp-target-plan-border); border-radius:8px; background:var(--subp-target-plan-soft); color:var(--subp-target-plan-dark); font:inherit; font-size:.82rem; font-weight:900; line-height:1; cursor:pointer; transition:background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease }
+.subp-current-upgrade-button[data-subp-target-plan="basico"]{ --subp-target-plan-main:#6F91A3; --subp-target-plan-dark:#587887; --subp-target-plan-soft:#EEF5F8; --subp-target-plan-border:#B7CAD3; --subp-target-plan-shadow-rgb:111,145,163 }
+.subp-current-upgrade-button[data-subp-target-plan="estandar"]{ --subp-target-plan-main:#00AFC4; --subp-target-plan-dark:#008EA0; --subp-target-plan-soft:#E6FAFC; --subp-target-plan-border:#8EDDE8; --subp-target-plan-shadow-rgb:0,175,196 }
+.subp-current-upgrade-button[data-subp-target-plan="optimo"]{ --subp-target-plan-main:#0A4F8F; --subp-target-plan-dark:#003F63; --subp-target-plan-soft:#EAF4FB; --subp-target-plan-border:#9BC8EA; --subp-target-plan-shadow-rgb:10,79,143 }
+.subp-current-upgrade-button[data-subp-target-plan="pro"]{ --subp-target-plan-main:#6750D8; --subp-target-plan-dark:#4B3DD1; --subp-target-plan-soft:#F2EFFF; --subp-target-plan-border:#C6B8FF; --subp-target-plan-shadow-rgb:103,80,216 }
 .subp-current-upgrade-button:hover,
-.subp-current-upgrade-button:focus-visible{ background:#e7f8fb; border-color:#75bfce; color:#003154; box-shadow:0 6px 14px rgba(0,49,84,.08); outline:0; transform:translateY(-1px) }
+.subp-current-upgrade-button:focus-visible{ background:var(--subp-target-plan-main); border-color:var(--subp-target-plan-main); color:#fff; box-shadow:0 6px 14px rgba(var(--subp-target-plan-shadow-rgb),.16); outline:0; transform:translateY(-1px) }
 .subp-current-benefits-empty{ margin:0; color:#5a7380; font-size:.86rem; font-weight:650 }
 .subp-current-conditions-wrap{ display:grid; justify-items:start; gap:8px; margin:0 0 12px }
 .subp-current-conditions-toggle{ width:max-content; max-width:100%; color:#006b82; border-color:#9dceda; font-weight:800 }
