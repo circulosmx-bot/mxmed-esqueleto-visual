@@ -6799,6 +6799,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--current{ border:2px solid #00adc1 }
 .subp-plan--upgrade-now{ border-color:#b9d9e5 }
 .subp-plan--upgrade-now:hover{ border-color:#017290; box-shadow:0 12px 24px rgba(1,114,144,0.16); transform:translateY(-1px) }
+.subp-plan--upgrade-focus{ border-color:#003154 !important; box-shadow:0 0 0 4px rgba(0,173,193,.22), 0 16px 28px rgba(0,49,84,.16) !important; transform:translateY(-2px) }
 .subp-plan--renewal-only{ background:#f8fafb; border-color:#d9e3e8; border-style:dashed; box-shadow:none; opacity:.72; filter:saturate(.55) contrast(.9) }
 .subp-plan--disabled{ color:#687a83 }
 .subp-plan--selected{ border:2px solid #017290; box-shadow:0 14px 28px rgba(1,49,84,0.14); grid-column:span 2 }
@@ -6885,6 +6886,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-current-benefits-list .subp-feature{ align-items:center; gap:10px; margin-bottom:0; font-size:1rem; font-weight:850; line-height:1.18 }
 .subp-current-benefits-list .subp-feature-check{ flex-basis:34px; width:34px; height:34px }
 .subp-current-benefits-copy{ color:#006b82; font-size:.88rem; font-weight:800; line-height:1.32 }
+.subp-current-upgrade-cta{ display:grid; gap:6px; margin-top:2px; padding:10px 11px; border:1px solid #d5ebf1; border-radius:8px; background:#fff; color:#143849 }
+.subp-current-upgrade-title{ color:#003154; font-size:.92rem; font-weight:900; line-height:1.16 }
+.subp-current-upgrade-kicker{ color:#4d6874; font-size:.78rem; font-weight:850; line-height:1 }
+.subp-current-upgrade-benefits{ display:grid; gap:4px; list-style:none; margin:0; padding:0 }
+.subp-current-upgrade-benefits li{ display:flex; align-items:center; gap:7px; color:#143849; font-size:.88rem; line-height:1.16 }
+.subp-current-upgrade-benefits li > span:first-child{ display:inline-grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border-radius:50%; background:#00adc1; color:#fff; font-size:1.12rem; font-weight:950; line-height:1 }
+.subp-current-upgrade-benefits strong{ font-weight:850 }
+.subp-current-upgrade-button{ justify-self:start; appearance:none; display:inline-flex; align-items:center; justify-content:center; min-height:34px; margin-top:2px; padding:7px 11px; border:1px solid #9dceda; border-radius:8px; background:#f6fcfd; color:#006b82; font:inherit; font-size:.82rem; font-weight:900; line-height:1; cursor:pointer; transition:background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease }
+.subp-current-upgrade-button:hover,
+.subp-current-upgrade-button:focus-visible{ background:#e7f8fb; border-color:#75bfce; color:#003154; box-shadow:0 6px 14px rgba(0,49,84,.08); outline:0; transform:translateY(-1px) }
 .subp-current-benefits-empty{ margin:0; color:#5a7380; font-size:.86rem; font-weight:650 }
 .subp-current-conditions-wrap{ display:grid; justify-items:start; gap:8px; margin:0 0 12px }
 .subp-current-conditions-toggle{ width:max-content; max-width:100%; color:#006b82; border-color:#9dceda; font-weight:800 }
