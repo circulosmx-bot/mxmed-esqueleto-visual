@@ -60177,7 +60177,7 @@ function mxResetLogoPreview(){
     return data.plans.find((plan)=> normalizePlanId(plan.id) === id) || null;
   }
 
-  function planIconPanelHtml(planId){
+  function planIconPanelHtml(planId, options = {}){
     const icons = {
       basico: 'person',
       estandar: 'calendar_month',
@@ -60186,7 +60186,11 @@ function mxResetLogoPreview(){
     };
     const id = normalizePlanId(planId);
     const icon = icons[id] || 'workspace_premium';
+    const checkHtml = options.current === true
+      ? '<img class="subp-plan-current-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy">'
+      : '';
     return `<div class="subp-plan-icon-panel subp-plan-icon-panel--${escapeHtml(id)}" aria-hidden="true">
+      ${checkHtml}
       <span class="material-symbols-rounded subp-plan-icon">${escapeHtml(icon)}</span>
     </div>`;
   }
@@ -61481,9 +61485,6 @@ function mxResetLogoPreview(){
       const selectActionHtml = flowType === 'current'
         ? ''
         : `<button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>`;
-      const planTitleCheckHtml = activePaid && flowType === 'current'
-        ? '<img class="subp-plan-current-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy">'
-        : '';
       const planTitleBadgeHtml = activePaid && flowType === 'current'
         ? `<span class="subp-plan-badge subp-plan-badge--inline">${escapeHtml(badge)}</span>`
         : '';
@@ -61497,8 +61498,8 @@ function mxResetLogoPreview(){
       const stateClasses = planStateClass(flowType, isSelected);
       return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt ? 'false' : 'true'}">
         ${floatingBadgeHtml}
-        <div class="subp-plan-title${planTitleCheckHtml ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-copy"><span class="subp-plan-title-line"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span>${planTitleCheckHtml}</span>${planTaglineHtml}</span>${planTitleBadgeHtml}</div>
-        ${planIconPanelHtml(p.id)}
+        <div class="subp-plan-title${activePaid && flowType === 'current' ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-copy"><span class="subp-plan-title-line"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span></span>${planTaglineHtml}</span>${planTitleBadgeHtml}</div>
+        ${planIconPanelHtml(p.id, { current: activePaid && flowType === 'current' })}
         ${pricingHtml}
         ${stateCardHtml}
         ${upgradeCardAdjustment}
