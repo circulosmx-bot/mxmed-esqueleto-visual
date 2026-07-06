@@ -6808,7 +6808,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-title-line{ display:inline-flex; align-items:center; position:relative; width:max-content; max-width:100% }
 .subp-plan-title--current .subp-plan-title-text{ position:relative; z-index:2; flex:0 1 auto; min-width:0; font-size:.9em }
 .subp-plan-title-tagline{ display:block; max-width:100%; color:rgba(255,255,255,.86); font-size:.6em; font-weight:700; line-height:1.15; text-transform:none; white-space:normal }
-.subp-plan-current-check{ position:absolute; left:100%; top:50%; width:95px; height:95px; margin:0; object-fit:contain; display:block; pointer-events:none; transform:translate(6px,calc(-54% - 8px)) }
+.subp-plan-current-check{ position:absolute; left:100%; top:50%; width:95px; height:95px; margin:0; object-fit:contain; display:block; pointer-events:none; transform:translate(6px,calc(-54% - 16px)) }
 .subp-plan-icon-panel{ display:grid; place-items:center; min-height:96px; margin:0 0 10px; border-radius:8px; border:1px solid rgba(0,173,193,.16); background:linear-gradient(135deg,#f4fbfd 0%,#e5f7fa 100%); overflow:hidden }
 .subp-plan-icon{ color:#007f96; font-size:4.25rem; line-height:1; font-variation-settings:'FILL' 0,'wght' 600,'GRAD' 0,'opsz' 48 }
 .subp-plan-icon-panel--basico{ background:linear-gradient(135deg,#f7f9fa 0%,#edf2f4 100%); border-color:#dce6ea }
