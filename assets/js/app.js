@@ -60734,51 +60734,93 @@ function mxResetLogoPreview(){
       </div>`;
   }
 
-  function nextUpgradePlanFor(plan){
+  function upgradePlansFor(plan){
     const currentRank = planRank(plan?.id);
-    if(!currentRank) return null;
+    if(!currentRank) return [];
     return data.plans
       .filter((candidate)=> planRank(candidate?.id) > currentRank)
-      .sort((a, b)=> planRank(a?.id) - planRank(b?.id))[0] || null;
+      .sort((a, b)=> planRank(a?.id) - planRank(b?.id));
   }
 
-  function currentPlanUpgradePrompt(plan){
+  function currentPlanUpgradeOptionMeta(plan, index){
     const planCode = backendPlanCodeFromUiPlan(plan?.id);
-    const nextPlan = nextUpgradePlanFor(plan);
+    const isRecommended = index === 0;
+    const labels = {
+      standard: 'Recomendado',
+      optimum: isRecommended ? 'Recomendado' : 'Más herramientas clínicas',
+      professional: 'Máximo nivel'
+    };
+    const descriptions = {
+      standard: 'Agenda en línea para gestionar tus citas.',
+      optimum: 'Expediente clínico y recetas digitales.',
+      professional: 'Suite completa con Asistente IA.'
+    };
+    return {
+      label: labels[planCode] || (isRecommended ? 'Recomendado' : 'Más beneficios'),
+      description: descriptions[planCode] || 'Más herramientas para tu práctica profesional.'
+    };
+  }
+
+  function currentPlanSingleUpgradePrompt(plan, targetPlan){
+    const planCode = backendPlanCodeFromUiPlan(plan?.id);
     const prompts = {
-      basic: {
-        title: 'Da el siguiente paso',
-        benefits: ['Agenda en línea para gestionar tus citas.']
-      },
-      standard: {
-        title: 'Lleva tu consulta a una gestión más completa',
-        benefits: ['Expediente clínico', 'Recetas digitales']
-      },
       optimum: {
         title: 'Lleva tu perfil al máximo nivel',
         benefits: ['Asistente IA trabajando para ti.']
       }
     };
     const prompt = prompts[planCode];
-    if(!prompt || !nextPlan) return null;
+    if(prompt){
+      return {
+        title: prompt.title,
+        benefits: prompt.benefits,
+        targetPlanId: targetPlan.id,
+        targetPlanName: targetPlan.name
+      };
+    }
+    const meta = currentPlanUpgradeOptionMeta(targetPlan, 0);
     return {
-      title: prompt.title,
-      benefits: prompt.benefits,
-      targetPlanId: nextPlan.id,
-      targetPlanName: nextPlan.name
+      title: meta.label,
+      benefits: [meta.description],
+      targetPlanId: targetPlan.id,
+      targetPlanName: targetPlan.name
     };
   }
 
-  function currentPlanUpgradePromptHtml(prompt){
-    if(!prompt) return '';
+  function currentPlanDirectUpgradeHtml(prompt){
     const targetLabel = clean(prompt.targetPlanName).toLocaleUpperCase('es-MX');
     const benefitsHtml = prompt.benefits.map((benefit)=>`<li><span aria-hidden="true">+</span><strong>${escapeHtml(benefit)}</strong></li>`).join('');
     return `<div class="subp-current-upgrade-cta">
         <div class="subp-current-upgrade-title">${escapeHtml(prompt.title)}</div>
         <div class="subp-current-upgrade-kicker">Agrega:</div>
         <ul class="subp-current-upgrade-benefits">${benefitsHtml}</ul>
-        <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(prompt.targetPlanId)}">Con un plan ${escapeHtml(targetLabel)}</button>
+        <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(prompt.targetPlanId)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
       </div>`;
+  }
+
+  function currentPlanUpgradeOptionsHtml(plans){
+    const optionsHtml = plans.map((targetPlan, index)=>{
+      const targetLabel = clean(targetPlan.name).toLocaleUpperCase('es-MX');
+      const meta = currentPlanUpgradeOptionMeta(targetPlan, index);
+      return `<div class="subp-current-upgrade-option">
+          <div class="subp-current-upgrade-option-label">${escapeHtml(meta.label)}</div>
+          <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(targetPlan.id)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
+          <div class="subp-current-upgrade-option-copy">${escapeHtml(meta.description)}</div>
+        </div>`;
+    }).join('');
+    return `<div class="subp-current-upgrade-cta subp-current-upgrade-cta--options">
+        <div class="subp-current-upgrade-title">Elige cómo quieres crecer</div>
+        <div class="subp-current-upgrade-options">${optionsHtml}</div>
+      </div>`;
+  }
+
+  function currentPlanUpgradeHtml(plan){
+    const upgradePlans = upgradePlansFor(plan);
+    if(upgradePlans.length === 0) return '';
+    if(upgradePlans.length === 1){
+      return currentPlanDirectUpgradeHtml(currentPlanSingleUpgradePrompt(plan, upgradePlans[0]));
+    }
+    return currentPlanUpgradeOptionsHtml(upgradePlans);
   }
 
   function currentPlanBenefitsSummaryHtml(plan){
@@ -60790,7 +60832,7 @@ function mxResetLogoPreview(){
     const title = hasUpgrade
       ? 'Tu plan actual ya incluye lo esencial:'
       : 'Tu plan actual incluye la suite completa:';
-    const upgradePrompt = currentPlanUpgradePrompt(plan);
+    const upgradeHtml = currentPlanUpgradeHtml(plan);
     const closing = 'Ya cuentas con la suite más completa disponible para impulsar tu práctica profesional.';
     const benefitsHtml = Array.isArray(features) && features.length
       ? planFeatureListHtml(features, {
@@ -60802,7 +60844,7 @@ function mxResetLogoPreview(){
     return `<div class="subp-current-benefits-card">
         <div class="subp-current-benefits-title">${escapeHtml(title)}</div>
         <div class="subp-current-benefits-list">${benefitsHtml}</div>
-        ${upgradePrompt ? currentPlanUpgradePromptHtml(upgradePrompt) : `<div class="subp-current-benefits-copy">${escapeHtml(closing)}</div>`}
+        ${upgradeHtml || `<div class="subp-current-benefits-copy">${escapeHtml(closing)}</div>`}
       </div>`;
   }
 
@@ -61078,27 +61120,38 @@ function mxResetLogoPreview(){
     renderCatalog();
   }
 
-  function focusCurrentUpgradeTarget(planId){
+  function clearCurrentUpgradeSpotlight(){
+    if(!els.catalog) return;
+    els.catalog.querySelectorAll('.subp-plan--upgrade-focus, .subp-plan--upgrade-source')
+      .forEach((card)=> card.classList.remove('subp-plan--upgrade-focus', 'subp-plan--upgrade-source'));
+  }
+
+  function focusCurrentUpgradeTarget(planId, sourceCard = null){
     if(!els.catalog) return;
     const targetPlanId = normalizePlanId(planId);
     const targetCard = Array.from(els.catalog.querySelectorAll('[data-subp-plan-card]'))
       .find((card)=> normalizePlanId(card.dataset.subpPlanCard) === targetPlanId);
     if(!targetCard) return;
+    const currentCard = sourceCard || els.catalog.querySelector('.subp-plan--current');
 
     closeBenefitInfoPopovers(els.catalog);
-    els.catalog.querySelectorAll('.subp-plan--upgrade-focus').forEach((card)=> card.classList.remove('subp-plan--upgrade-focus'));
-    targetCard.classList.add('subp-plan--upgrade-focus');
-    try{
-      targetCard.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-      targetCard.focus({ preventScroll: true });
-    }catch(_){}
-
     if(focusCurrentUpgradeTarget.clearTimer){
       window.clearTimeout(focusCurrentUpgradeTarget.clearTimer);
     }
+    clearCurrentUpgradeSpotlight();
+    if(currentCard && currentCard !== targetCard){
+      currentCard.classList.add('subp-plan--upgrade-source');
+    }
+    targetCard.classList.add('subp-plan--upgrade-focus');
+    try{
+      targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      const targetAction = targetCard.querySelector('[data-subp-select]:not([disabled])');
+      (targetAction || targetCard).focus({ preventScroll: true });
+    }catch(_){}
+
     focusCurrentUpgradeTarget.clearTimer = window.setTimeout(()=>{
-      targetCard.classList.remove('subp-plan--upgrade-focus');
-    }, 1800);
+      clearCurrentUpgradeSpotlight();
+    }, 4500);
   }
 
   function buildUpgradeCheckoutPayload(targetPlanCode, billingPeriod){
@@ -61355,7 +61408,7 @@ function mxResetLogoPreview(){
       const isCurrent = flowType === 'current';
       const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
       const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
-      const hasCurrentUpgradePrompt = isCurrent && Boolean(currentPlanUpgradePrompt(p));
+      const hasCurrentUpgradePrompt = isCurrent && upgradePlansFor(p).length > 0;
       const badge = freeQaMode
         ? 'Disponible'
         : isSelected
@@ -61482,7 +61535,7 @@ function mxResetLogoPreview(){
       button.addEventListener('click', (event)=>{
         event.preventDefault();
         event.stopPropagation();
-        focusCurrentUpgradeTarget(button.dataset.subpCurrentUpgradeTarget);
+        focusCurrentUpgradeTarget(button.dataset.subpCurrentUpgradeTarget, button.closest('[data-subp-plan-card]'));
       });
     });
     els.catalog.querySelectorAll('[data-subp-benefit-info-toggle]').forEach((button)=>{
