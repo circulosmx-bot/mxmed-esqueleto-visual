@@ -60750,15 +60750,29 @@ function mxResetLogoPreview(){
       optimum: isRecommended ? 'Recomendado' : 'Más herramientas clínicas',
       professional: 'Máximo nivel'
     };
-    const descriptions = {
-      standard: 'Agenda en línea para gestionar tus citas.',
-      optimum: 'Expediente clínico y recetas digitales.',
-      professional: 'Suite completa con Asistente IA.'
-    };
     return {
-      label: labels[planCode] || (isRecommended ? 'Recomendado' : 'Más beneficios'),
-      description: descriptions[planCode] || 'Más herramientas para tu práctica profesional.'
+      label: labels[planCode] || (isRecommended ? 'Recomendado' : 'Más beneficios')
     };
+  }
+
+  function currentPlanIncrementalBenefitsFor(plan, options = {}){
+    const benefits = upgradeBenefitItems(plan)
+      .filter((benefit)=> benefit.isAdditional)
+      .map((benefit)=> benefit.label)
+      .filter(Boolean);
+    if(options.aspirationalAi === true && benefits.length === 1 && normalizeBenefitKey(benefits[0]) === 'asistente ia'){
+      return ['Asistente IA trabajando para ti.'];
+    }
+    return benefits.length ? benefits : ['Más herramientas incluidas en tu mejora.'];
+  }
+
+  function currentPlanUpgradeBenefitsHtml(benefits){
+    const items = (Array.isArray(benefits) ? benefits : [])
+      .map((benefit)=>`<li><span aria-hidden="true">+</span><strong>${escapeHtml(benefit)}</strong></li>`)
+      .join('');
+    return items
+      ? `<ul class="subp-current-upgrade-benefits">${items}</ul>`
+      : '<p class="subp-current-upgrade-empty">Más herramientas incluidas en tu mejora.</p>';
   }
 
   function currentPlanSingleUpgradePrompt(plan, targetPlan){
@@ -60766,7 +60780,7 @@ function mxResetLogoPreview(){
     const prompts = {
       optimum: {
         title: 'Lleva tu perfil al máximo nivel',
-        benefits: ['Asistente IA trabajando para ti.']
+        benefits: currentPlanIncrementalBenefitsFor(targetPlan, { aspirationalAi: true })
       }
     };
     const prompt = prompts[planCode];
@@ -60781,7 +60795,7 @@ function mxResetLogoPreview(){
     const meta = currentPlanUpgradeOptionMeta(targetPlan, 0);
     return {
       title: meta.label,
-      benefits: [meta.description],
+      benefits: currentPlanIncrementalBenefitsFor(targetPlan),
       targetPlanId: targetPlan.id,
       targetPlanName: targetPlan.name
     };
@@ -60789,11 +60803,10 @@ function mxResetLogoPreview(){
 
   function currentPlanDirectUpgradeHtml(prompt){
     const targetLabel = clean(prompt.targetPlanName).toLocaleUpperCase('es-MX');
-    const benefitsHtml = prompt.benefits.map((benefit)=>`<li><span aria-hidden="true">+</span><strong>${escapeHtml(benefit)}</strong></li>`).join('');
     return `<div class="subp-current-upgrade-cta">
         <div class="subp-current-upgrade-title">${escapeHtml(prompt.title)}</div>
         <div class="subp-current-upgrade-kicker">Agrega:</div>
-        <ul class="subp-current-upgrade-benefits">${benefitsHtml}</ul>
+        ${currentPlanUpgradeBenefitsHtml(prompt.benefits)}
         <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(prompt.targetPlanId)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
       </div>`;
   }
@@ -60802,10 +60815,12 @@ function mxResetLogoPreview(){
     const optionsHtml = plans.map((targetPlan, index)=>{
       const targetLabel = clean(targetPlan.name).toLocaleUpperCase('es-MX');
       const meta = currentPlanUpgradeOptionMeta(targetPlan, index);
+      const benefits = currentPlanIncrementalBenefitsFor(targetPlan);
       return `<div class="subp-current-upgrade-option">
           <div class="subp-current-upgrade-option-label">${escapeHtml(meta.label)}</div>
           <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(targetPlan.id)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
-          <div class="subp-current-upgrade-option-copy">${escapeHtml(meta.description)}</div>
+          <div class="subp-current-upgrade-kicker">Agrega:</div>
+          ${currentPlanUpgradeBenefitsHtml(benefits)}
         </div>`;
     }).join('');
     return `<div class="subp-current-upgrade-cta subp-current-upgrade-cta--options">
