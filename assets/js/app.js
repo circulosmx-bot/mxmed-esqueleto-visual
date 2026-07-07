@@ -59082,6 +59082,7 @@ function mxResetLogoPreview(){
       { id:'pro', name:'Profesional', tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
     ],
     selectedPlanId: '',
+    focusedPlanId: '',
     currentConditionsOpen: false,
     history: [],
     currentModel: null,
@@ -61158,38 +61159,47 @@ function mxResetLogoPreview(){
     renderCatalog();
   }
 
-  function clearCurrentUpgradeSpotlight(){
+  function clearCurrentUpgradeFocus(){
+    data.focusedPlanId = '';
     if(!els.catalog) return;
-    els.catalog.querySelectorAll('.subp-plan--upgrade-focus, .subp-plan--upgrade-source')
-      .forEach((card)=> card.classList.remove('subp-plan--upgrade-focus', 'subp-plan--upgrade-source'));
+    els.catalog.classList.remove('subp-grid--focus-mode');
+    els.catalog.querySelectorAll('.subp-plan--focus-selected, .subp-plan--focus-muted')
+      .forEach((card)=> card.classList.remove('subp-plan--focus-selected', 'subp-plan--focus-muted'));
   }
 
-  function focusCurrentUpgradeTarget(planId, sourceCard = null){
+  function setPlanFocus(planId, options = {}){
     if(!els.catalog) return;
     const targetPlanId = normalizePlanId(planId);
     const targetCard = Array.from(els.catalog.querySelectorAll('[data-subp-plan-card]'))
       .find((card)=> normalizePlanId(card.dataset.subpPlanCard) === targetPlanId);
     if(!targetCard) return;
-    const currentCard = sourceCard || els.catalog.querySelector('.subp-plan--current');
 
     closeBenefitInfoPopovers(els.catalog);
-    if(focusCurrentUpgradeTarget.clearTimer){
-      window.clearTimeout(focusCurrentUpgradeTarget.clearTimer);
+    data.focusedPlanId = targetPlanId;
+    els.catalog.classList.add('subp-grid--focus-mode');
+    els.catalog.querySelectorAll('[data-subp-plan-card]').forEach((card)=>{
+      const isTarget = normalizePlanId(card.dataset.subpPlanCard) === targetPlanId;
+      card.classList.toggle('subp-plan--focus-selected', isTarget);
+      card.classList.toggle('subp-plan--focus-muted', !isTarget);
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-current', isTarget ? 'true' : 'false');
+      card.setAttribute('aria-disabled', 'false');
+      card.setAttribute('aria-pressed', isTarget ? 'true' : 'false');
+    });
+    if(options.scroll !== false){
+      try{
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }catch(_){}
     }
-    clearCurrentUpgradeSpotlight();
-    if(currentCard && currentCard !== targetCard){
-      currentCard.classList.add('subp-plan--upgrade-source');
+    if(options.focus !== false){
+      try{
+        targetCard.focus({ preventScroll: true });
+      }catch(_){}
     }
-    targetCard.classList.add('subp-plan--upgrade-focus');
-    try{
-      targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-      const targetAction = targetCard.querySelector('[data-subp-select]:not([disabled])');
-      (targetAction || targetCard).focus({ preventScroll: true });
-    }catch(_){}
+  }
 
-    focusCurrentUpgradeTarget.clearTimer = window.setTimeout(()=>{
-      clearCurrentUpgradeSpotlight();
-    }, 4500);
+  function focusCurrentUpgradeTarget(planId){
+    setPlanFocus(planId);
   }
 
   function buildUpgradeCheckoutPayload(targetPlanCode, billingPeriod){
@@ -61446,11 +61456,16 @@ function mxResetLogoPreview(){
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const freeQaMode = isQaFreePlanMode();
     const selected = ensureSelectedPlan(activePaid);
+    const focusedPlanId = activePaid && !freeQaMode ? normalizePlanId(data.focusedPlanId) : '';
+    const focusMode = !!focusedPlanId;
     renderPricingModeToggle();
+    els.catalog.classList.toggle('subp-grid--focus-mode', focusMode);
     els.catalog.innerHTML = data.plans.map(p=>{
       const flowType = planFlowType(p, activePaid);
       const isCurrent = flowType === 'current';
       const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
+      const isFocused = focusMode && normalizePlanId(p.id) === focusedPlanId;
+      const isMuted = focusMode && !isFocused;
       const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
       const hasCurrentUpgradePrompt = isCurrent && upgradePlansFor(p).length > 0;
       const badge = freeQaMode
@@ -61521,7 +61536,8 @@ function mxResetLogoPreview(){
         : '';
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
-      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${cardSelectable ? '0' : '-1'}" role="button" aria-pressed="${isSelected ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt ? 'false' : 'true'}">
+      const focusClasses = `${isFocused ? ' subp-plan--focus-selected' : ''}${isMuted ? ' subp-plan--focus-muted' : ''}`;
+      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}${focusClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${focusMode || cardSelectable || hasCurrentUpgradePrompt ? '0' : '-1'}" role="button" aria-pressed="${isFocused || isSelected ? 'true' : 'false'}" aria-current="${isFocused ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt || focusMode ? 'false' : 'true'}">
         ${floatingBadgeHtml}
         <div class="subp-plan-title${activePaid && flowType === 'current' ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-copy"><span class="subp-plan-title-line"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span></span>${planTaglineHtml}</span>${planTitleBadgeHtml}</div>
         ${planIconPanelHtml(p.id, { current: activePaid && flowType === 'current' })}
@@ -61576,7 +61592,7 @@ function mxResetLogoPreview(){
       button.addEventListener('click', (event)=>{
         event.preventDefault();
         event.stopPropagation();
-        focusCurrentUpgradeTarget(button.dataset.subpCurrentUpgradeTarget, button.closest('[data-subp-plan-card]'));
+        focusCurrentUpgradeTarget(button.dataset.subpCurrentUpgradeTarget);
       });
     });
     els.catalog.querySelectorAll('[data-subp-benefit-info-toggle]').forEach((button)=>{
@@ -61594,6 +61610,10 @@ function mxResetLogoPreview(){
         if(event.target && event.target.closest('[data-subp-current-conditions-panel]')) return;
         if(event.target && event.target.closest('[data-subp-benefit-info]')) return;
         if(event.target && event.target.closest('[data-subp-inline-upgrade-detail]')) return;
+        if(data.focusedPlanId){
+          setPlanFocus(card.dataset.subpPlanCard, { scroll: false, focus: false });
+          return;
+        }
         if(card.dataset.available !== 'true') return;
         selectPlan(card.dataset.subpPlanCard);
       });
@@ -61601,6 +61621,10 @@ function mxResetLogoPreview(){
         if(event.key !== 'Enter' && event.key !== ' ') return;
         if(event.target && event.target.closest('[data-subp-current-upgrade-target]')) return;
         event.preventDefault();
+        if(data.focusedPlanId){
+          setPlanFocus(card.dataset.subpPlanCard, { scroll: false });
+          return;
+        }
         if(card.dataset.available !== 'true') return;
         selectPlan(card.dataset.subpPlanCard);
       });
@@ -61639,6 +61663,7 @@ function mxResetLogoPreview(){
 
   function resetPlanQaVisualSelection(){
     data.selectedPlanId = '';
+    clearCurrentUpgradeFocus();
     data.currentConditionsOpen = false;
     data.upgradeCheckout.visible = false;
     data.upgradeCheckout.accepted = false;
@@ -61667,6 +61692,7 @@ function mxResetLogoPreview(){
       const mode = clean(button.dataset.subpPricingMode) === 'monthly' ? 'monthly' : 'yearly';
       if(data.billing === mode) return;
       data.billing = mode;
+      clearCurrentUpgradeFocus();
       renderCatalog();
     });
   });
@@ -61676,11 +61702,17 @@ function mxResetLogoPreview(){
   });
   document.addEventListener('keydown', (event)=>{
     if(event.key !== 'Escape') return;
+    const openPopover = openedBenefitInfoPopover(els.catalog);
     closeBenefitInfoPopovers(els.catalog);
+    if(!openPopover && data.focusedPlanId){
+      clearCurrentUpgradeFocus();
+      renderCatalog();
+    }
   });
   els.billingRadios.forEach(r=>{
     r.addEventListener('change', ()=>{
       data.billing = r.value === 'yearly' ? 'yearly' : 'monthly';
+      clearCurrentUpgradeFocus();
       renderCatalog();
     });
   });
