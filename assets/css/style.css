@@ -6802,6 +6802,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-payments-benefits .material-symbols-rounded{ color:var(--subp-current-plan-main); font-size:16px; line-height:1 }
 .subp-payments-switch{ display:flex; align-items:flex-start; gap:8px; color:#49636f; font-size:.86rem; font-weight:650; line-height:1.35 }
 .subp-payments-switch input{ margin-top:2px }
+.subp-payments-methods{ display:grid; gap:8px }
+.subp-payments-method{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:start; gap:9px; padding:10px; border:1px solid #d9edf2; border-radius:10px; background:#f8fcfd }
+.subp-payments-method > .material-symbols-rounded{ display:grid; place-items:center; width:32px; height:32px; border-radius:9px; background:var(--subp-current-plan-soft); color:var(--subp-current-plan-dark); font-size:22px; line-height:1 }
+.subp-payments-method strong{ display:block; color:#003154; font-size:.9rem; font-weight:900; line-height:1.12 }
+.subp-payments-method p{ margin:3px 0 0; color:#49636f; font-size:.8rem; font-weight:650; line-height:1.28 }
+.subp-payments-method em{ align-self:start; padding:4px 7px; border-radius:999px; background:#eef6f8; color:#49636f; font-style:normal; font-size:.7rem; font-weight:850; line-height:1; white-space:nowrap }
 .subp-payments-actions{ display:flex; flex-wrap:wrap; gap:8px }
 .subp-payments-actions--stack{ display:grid; justify-items:start }
 .subp-payments-actions button span{ margin-left:5px; color:#6b7f87; font-size:.76rem; font-weight:800 }
@@ -7043,6 +7049,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-payments-shell-head{ display:grid }
   .subp-payments-grid{ grid-template-columns:1fr }
   .subp-payments-card--empty{ grid-template-columns:1fr }
+  .subp-payments-method{ grid-template-columns:auto minmax(0,1fr) }
+  .subp-payments-method em{ grid-column:2 }
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
   .subp-band-benefit-zone{ justify-items:start }

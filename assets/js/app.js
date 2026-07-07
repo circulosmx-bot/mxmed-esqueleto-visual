@@ -60455,8 +60455,8 @@ function mxResetLogoPreview(){
 
   function currentBillingPeriodLabel(){
     const period = currentBillingPeriod();
-    if(period === 'annual') return 'Anual';
-    if(period === 'monthly') return 'Mensual';
+    if(period === 'annual') return 'Pago anual';
+    if(period === 'monthly') return 'Pago mensual';
     if(period === 'lifetime') return 'Vitalicio';
     return 'No disponible';
   }
@@ -60491,6 +60491,31 @@ function mxResetLogoPreview(){
     </ul>`;
   }
 
+  function subscriptionPaymentsMethodsHtml(){
+    return `<div class="subp-payments-methods">
+      <div class="subp-payments-method">
+        <span class="material-symbols-rounded" aria-hidden="true">credit_card</span>
+        <div>
+          <strong>Tarjeta</strong>
+          <p>Pago seguro con tarjeta. Permitirá renovación automática cuando exista un método guardado.</p>
+        </div>
+        <em>Próxima fase</em>
+      </div>
+      <div class="subp-payments-method">
+        <span class="material-symbols-rounded" aria-hidden="true">account_balance</span>
+        <div>
+          <strong>SPEI / transferencia bancaria</strong>
+          <p>Pago manual por transferencia. La renovación se activará cuando el pago sea conciliado.</p>
+        </div>
+        <em>Próxima fase</em>
+      </div>
+    </div>`;
+  }
+
+  function subscriptionPaymentsDisabledButton(label){
+    return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${escapeHtml(label)}</button>`;
+  }
+
   function renderSubscriptionPaymentsShell(){
     if(!els.paymentsContent) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
@@ -60501,7 +60526,7 @@ function mxResetLogoPreview(){
       : normalizePlanId(data.current.id || data.currentModel?.effective_plan_code || data.currentModel?.contracted_plan_code || data.current.name);
     const planName = freeMode ? 'Sin plan contratado' : currentPlanLabel();
     const status = freeMode ? 'Sin suscripción activa' : (data.current.status || 'Activo');
-    const vigencia = freeMode ? 'No aplica' : (data.current.until || 'No aplica');
+    const vigencia = freeMode ? 'No aplica' : (data.current.untilSummary || data.current.until || 'No aplica');
     const periodo = freeMode ? 'No aplica' : currentBillingPeriodLabel();
     const benefits = freeMode ? [] : data.current.features;
 
@@ -60514,16 +60539,52 @@ function mxResetLogoPreview(){
           </div>
           <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes disponibles</button>
         </article>
-        <article class="subp-payments-card" data-subp-payments-card="payment">
-          <h4>Pago y facturación</h4>
+        <article class="subp-payments-card" data-subp-payments-card="renewal">
+          <div class="subp-payments-card-head">
+            <div>
+              <div class="subp-payments-kicker">Renovación automática</div>
+              <h4>No disponible</h4>
+            </div>
+            <span class="subp-payments-status-chip">Sin plan</span>
+          </div>
+          <label class="subp-payments-switch">
+            <input type="checkbox" disabled>
+            <span>La renovación automática estará disponible cuando exista una suscripción activa y una forma de pago segura.</span>
+          </label>
+        </article>
+        <article class="subp-payments-card" data-subp-payments-card="payment-method">
+          <div class="subp-payments-kicker">Forma de pago principal</div>
+          <h4>Sin forma de pago guardada</h4>
+          <p>Las tarjetas se administrarán de forma segura mediante Stripe.</p>
+          <div class="subp-payments-actions">
+            ${subscriptionPaymentsDisabledButton('Agregar forma de pago')}
+            ${subscriptionPaymentsDisabledButton('Actualizar forma de pago')}
+          </div>
+        </article>
+        <article class="subp-payments-card" data-subp-payments-card="methods">
+          <div>
+            <div class="subp-payments-kicker">Métodos de pago disponibles</div>
+            <h4>Próxima fase</h4>
+          </div>
+          ${subscriptionPaymentsMethodsHtml()}
+        </article>
+        <article class="subp-payments-card" data-subp-payments-card="billing">
+          <h4>Facturación</h4>
           <dl class="subp-payments-dl">
-            <dt>Forma de pago</dt><dd>No disponible en esta fase</dd>
-            <dt>Facturación</dt><dd>Pendiente de conectar</dd>
+            <dt>Datos fiscales</dt><dd>Próxima fase</dd>
+            <dt>Historial de pagos</dt><dd>Próxima fase</dd>
+            <dt>Comprobantes</dt><dd>Próxima fase</dd>
           </dl>
           <div class="subp-payments-actions">
-            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Actualizar forma de pago</button>
-            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Datos fiscales</button>
-            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Historial de pagos</button>
+            ${subscriptionPaymentsDisabledButton('Datos fiscales')}
+            ${subscriptionPaymentsDisabledButton('Historial de pagos')}
+            ${subscriptionPaymentsDisabledButton('Comprobantes')}
+          </div>
+        </article>
+        <article class="subp-payments-card" data-subp-payments-card="actions">
+          <h4>Acciones administrativas</h4>
+          <div class="subp-payments-actions subp-payments-actions--stack">
+            <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes disponibles</button>
           </div>
         </article>`;
       return;
@@ -60550,30 +60611,47 @@ function mxResetLogoPreview(){
       <article class="subp-payments-card" data-subp-payments-card="renewal">
         <div class="subp-payments-card-head">
           <div>
-            <div class="subp-payments-kicker">Renovación automática</div>
-            <h4>No disponible</h4>
+          <div class="subp-payments-kicker">Renovación automática</div>
+            <h4>Desactivada</h4>
           </div>
           <span class="subp-payments-status-chip">Pendiente</span>
         </div>
         <label class="subp-payments-switch">
           <input type="checkbox" disabled>
-          <span>La administración de renovación automática se conectará en una fase posterior.</span>
+          <span>Podrás activarla cuando conectemos una forma de pago segura.</span>
         </label>
       </article>
-      <article class="subp-payments-card" data-subp-payments-card="payment">
-        <h4>Pago y facturación</h4>
+      <article class="subp-payments-card" data-subp-payments-card="payment-method">
+        <div class="subp-payments-kicker">Forma de pago principal</div>
+        <h4>Sin forma de pago guardada</h4>
+        <p>Las tarjetas se administrarán de forma segura mediante Stripe.</p>
+        <div class="subp-payments-actions">
+          ${subscriptionPaymentsDisabledButton('Agregar forma de pago')}
+          ${subscriptionPaymentsDisabledButton('Actualizar forma de pago')}
+        </div>
+      </article>
+      <article class="subp-payments-card" data-subp-payments-card="methods">
+        <div>
+          <div class="subp-payments-kicker">Métodos de pago disponibles</div>
+          <h4>Próxima fase</h4>
+        </div>
+        ${subscriptionPaymentsMethodsHtml()}
+      </article>
+      <article class="subp-payments-card" data-subp-payments-card="billing">
+        <h4>Facturación</h4>
         <dl class="subp-payments-dl">
-          <dt>Forma de pago</dt><dd>Pendiente de conectar</dd>
-          <dt>Facturación</dt><dd>Pendiente de conectar</dd>
+          <dt>Datos fiscales</dt><dd>Próxima fase</dd>
+          <dt>Historial de pagos</dt><dd>Próxima fase</dd>
+          <dt>Comprobantes</dt><dd>Próxima fase</dd>
         </dl>
         <div class="subp-payments-actions">
-          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Actualizar forma de pago</button>
-          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Datos fiscales</button>
-          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Historial de pagos</button>
+          ${subscriptionPaymentsDisabledButton('Datos fiscales')}
+          ${subscriptionPaymentsDisabledButton('Historial de pagos')}
+          ${subscriptionPaymentsDisabledButton('Comprobantes')}
         </div>
       </article>
       <article class="subp-payments-card" data-subp-payments-card="actions">
-        <h4>Acciones rápidas</h4>
+        <h4>Acciones administrativas</h4>
         <div class="subp-payments-actions subp-payments-actions--stack">
           <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Renovar mi plan <span>Próxima fase</span></button>
           <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
