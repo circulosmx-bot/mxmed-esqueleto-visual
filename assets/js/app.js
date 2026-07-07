@@ -59085,6 +59085,7 @@ function mxResetLogoPreview(){
       { id:'pro', name:'Profesional', tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
     ],
     activeSection: 'plans',
+    paymentsView: 'overview',
     selectedPlanId: '',
     focusedPlanId: '',
     history: [],
@@ -60464,6 +60465,9 @@ function mxResetLogoPreview(){
   function setSubscriptionSection(section){
     const next = section === 'billing' ? 'billing' : 'plans';
     data.activeSection = next;
+    if(next === 'plans'){
+      data.paymentsView = 'overview';
+    }
     closeBenefitInfoPopovers(els.catalog);
     els.sectionTabs.forEach((button)=>{
       const isActive = clean(button.dataset.subpSectionTab) === next;
@@ -60516,11 +60520,128 @@ function mxResetLogoPreview(){
     return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${escapeHtml(label)}</button>`;
   }
 
+  function renewalPriceLabel(plan){
+    const billingPeriod = currentBillingPeriod();
+    if(billingPeriod === 'annual'){
+      const annual = planAnnualPrice(plan);
+      return annual > 0 ? `${fmtMoney(annual)} al año` : 'Se confirmará antes del pago.';
+    }
+    if(billingPeriod === 'monthly'){
+      const monthly = planMonthlyPaymentPrice(plan);
+      return monthly > 0 ? `${fmtMoney(monthly)} / mes` : 'Se confirmará antes del pago.';
+    }
+    return 'Se confirmará antes del pago.';
+  }
+
+  function addDays(date, days){
+    if(!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+    const copy = new Date(date.getTime());
+    copy.setDate(copy.getDate() + Number(days || 0));
+    return Number.isNaN(copy.getTime()) ? null : copy;
+  }
+
+  function estimatedRenewalUntilLabel(){
+    const expiresAt = parseSubscriptionDate(data.currentModel?.expires_at);
+    const billingPeriod = currentBillingPeriod();
+    const modelDuration = Number(data.currentModel?.duration_days || 0);
+    const durationDays = modelDuration > 0
+      ? modelDuration
+      : (billingPeriod === 'annual' ? 365 : 0);
+    const renewedUntil = durationDays > 0 ? addDays(expiresAt, durationDays) : null;
+    return renewedUntil ? formatDate(formatQaDateForModel(renewedUntil)) : 'Se confirmará antes del pago.';
+  }
+
+  function remainingDaysLabel(){
+    const modelDays = Number(data.currentModel?.days_until_expiration);
+    if(Number.isFinite(modelDays) && modelDays >= 0){
+      return `${Math.round(modelDays)} días restantes`;
+    }
+    const expiresAt = parseSubscriptionDate(data.currentModel?.expires_at);
+    if(!expiresAt) return 'Se confirmará antes del pago.';
+    const dayMs = 24 * 60 * 60 * 1000;
+    return `${Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / dayMs))} días restantes`;
+  }
+
+  function renderSubscriptionRenewalSummary({ planIdentity, planName, status, vigencia, periodo, benefits }){
+    const plan = findPlanById(planIdentity);
+    const renewalPrice = renewalPriceLabel(plan);
+    const renewedUntil = estimatedRenewalUntilLabel();
+    els.paymentsContent.innerHTML = `<section class="subp-renewal-summary" data-subp-renewal-summary data-current-plan="${escapeHtml(planIdentity)}">
+        <div class="subp-renewal-summary-head">
+          <div>
+            <div class="subp-payments-kicker">Renovar mi plan</div>
+            <h3>Resumen de renovación</h3>
+            <p>Revisa los datos de tu renovación antes de continuar al pago seguro.</p>
+          </div>
+          <span class="subp-payments-status-chip">Modo lectura</span>
+        </div>
+        <div class="subp-renewal-summary-grid">
+          <article class="subp-payments-card subp-payments-card--plan" data-subp-renewal-card="plan">
+            <div class="subp-payments-card-head">
+              <div>
+                <div class="subp-payments-kicker">Plan a renovar</div>
+                <h4>${escapeHtml(planName)}</h4>
+              </div>
+              <span class="subp-payments-plan-pill">${escapeHtml(planName)}</span>
+            </div>
+            <dl class="subp-payments-dl">
+              <dt>Estado actual</dt><dd>${escapeHtml(status)}</dd>
+              <dt>Periodo</dt><dd>${escapeHtml(periodo)}</dd>
+            </dl>
+            <div class="subp-payments-benefits-wrap">
+              <div class="subp-payments-kicker">Beneficios incluidos</div>
+              ${subscriptionPaymentsBenefitsHtml(benefits)}
+            </div>
+          </article>
+          <article class="subp-payments-card" data-subp-renewal-card="validity">
+            <div class="subp-payments-kicker">Vigencia</div>
+            <h4>Datos de cobertura</h4>
+            <dl class="subp-payments-dl">
+              <dt>Vigencia actual</dt><dd>${escapeHtml(vigencia)}</dd>
+              <dt>Días restantes</dt><dd>${escapeHtml(remainingDaysLabel())}</dd>
+              <dt>Nueva vigencia estimada</dt><dd>${escapeHtml(renewedUntil)}</dd>
+            </dl>
+          </article>
+          <article class="subp-payments-card" data-subp-renewal-card="amount">
+            <div class="subp-payments-kicker">Importe estimado</div>
+            <h4>${escapeHtml(renewalPrice)}</h4>
+            <p>El importe final se confirmará antes del pago seguro. No se ejecutará ningún cobro desde esta pantalla.</p>
+          </article>
+          <article class="subp-payments-card" data-subp-renewal-card="autorenew">
+            <div class="subp-payments-card-head">
+              <div>
+                <div class="subp-payments-kicker">Renovación automática</div>
+                <h4>Desactivada</h4>
+              </div>
+              <span class="subp-payments-status-chip">Pendiente</span>
+            </div>
+            <label class="subp-payments-switch">
+              <input type="checkbox" disabled>
+              <span>Podrás activar la renovación automática cuando conectemos una forma de pago segura.</span>
+            </label>
+          </article>
+          <article class="subp-payments-card" data-subp-renewal-card="payment-method">
+            <div class="subp-payments-kicker">Forma de pago</div>
+            <h4>Sin forma de pago guardada</h4>
+            <p>La forma de pago se seleccionará en el flujo seguro de pago.</p>
+          </article>
+        </div>
+        <div class="subp-renewal-summary-actions">
+          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Continuar a pago seguro <span>Próxima fase</span></button>
+          <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="overview">Volver a Mi plan y pagos</button>
+          <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
+        </div>
+      </section>`;
+  }
+
   function renderSubscriptionPaymentsShell(){
     if(!els.paymentsContent) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const freeQaMode = isQaFreePlanMode();
     const freeMode = freeQaMode || !activePaid;
+    if(freeMode){
+      data.paymentsView = 'overview';
+    }
     const planIdentity = freeMode
       ? 'free'
       : normalizePlanId(data.current.id || data.currentModel?.effective_plan_code || data.currentModel?.contracted_plan_code || data.current.name);
@@ -60529,6 +60650,11 @@ function mxResetLogoPreview(){
     const vigencia = freeMode ? 'No aplica' : (data.current.untilSummary || data.current.until || 'No aplica');
     const periodo = freeMode ? 'No aplica' : currentBillingPeriodLabel();
     const benefits = freeMode ? [] : data.current.features;
+
+    if(!freeMode && data.paymentsView === 'renewal'){
+      renderSubscriptionRenewalSummary({ planIdentity, planName, status, vigencia, periodo, benefits });
+      return;
+    }
 
     if(freeMode){
       els.paymentsContent.innerHTML = `<article class="subp-payments-card subp-payments-card--empty" data-subp-payments-card="empty">
@@ -60653,7 +60779,7 @@ function mxResetLogoPreview(){
       <article class="subp-payments-card" data-subp-payments-card="actions">
         <h4>Acciones administrativas</h4>
         <div class="subp-payments-actions subp-payments-actions--stack">
-          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Renovar mi plan <span>Próxima fase</span></button>
+          <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="renewal-summary">Renovar mi plan</button>
           <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
           <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="conditions">Ver condiciones del plan</button>
         </div>
@@ -61948,7 +62074,24 @@ function mxResetLogoPreview(){
     const action = event.target && event.target.closest('[data-subp-payments-action]');
     if(action){
       event.preventDefault();
-      if(clean(action.dataset.subpPaymentsAction) === 'conditions'){
+      const actionName = clean(action.dataset.subpPaymentsAction);
+      if(actionName === 'renewal-summary'){
+        data.paymentsView = 'renewal';
+        renderSubscriptionPaymentsShell();
+        const summary = pane.querySelector('[data-subp-renewal-summary]');
+        if(summary){
+          try{
+            summary.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+          }catch(_){}
+        }
+        return;
+      }
+      if(actionName === 'overview'){
+        data.paymentsView = 'overview';
+        renderSubscriptionPaymentsShell();
+        return;
+      }
+      if(actionName === 'conditions'){
         setSubscriptionSection('plans');
         window.requestAnimationFrame(()=>{
           const button = pane.querySelector('[data-subp-plan-card][data-subp-flow-type="current"] [data-subp-current-conditions-popover-toggle]');

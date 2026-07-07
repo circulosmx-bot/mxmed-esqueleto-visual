@@ -6812,6 +6812,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-payments-actions--stack{ display:grid; justify-items:start }
 .subp-payments-actions button span{ margin-left:5px; color:#6b7f87; font-size:.76rem; font-weight:800 }
 .subp-payments-muted{ color:#6b7f87; font-size:.86rem; font-weight:650 }
+.subp-renewal-summary{ display:grid; gap:14px }
+.subp-renewal-summary-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:16px; border:1px solid var(--subp-current-plan-border); border-radius:12px; background:linear-gradient(180deg,var(--subp-current-plan-soft) 0%,#fff 100%); box-shadow:0 8px 18px rgba(var(--subp-current-plan-shadow-rgb),.07); color:#10394a }
+.subp-renewal-summary-head h3{ margin:0 0 4px; color:#003154; font-size:1.18rem; font-weight:900; line-height:1.1 }
+.subp-renewal-summary-head p{ margin:0; color:#49636f; font-size:.9rem; font-weight:650; line-height:1.35 }
+.subp-renewal-summary-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px }
+.subp-renewal-summary-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:14px; border:1px solid #d7e8ef; border-radius:12px; background:#fff; box-shadow:0 8px 18px rgba(0,49,84,.05) }
+.subp-renewal-summary-actions button span{ margin-left:5px; color:#6b7f87; font-size:.76rem; font-weight:800 }
 .subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:linear-gradient(135deg,var(--subp-current-plan-main) 0%,var(--subp-current-plan-dark) 100%); color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 18px; box-shadow:0 10px 20px rgba(var(--subp-current-plan-shadow-rgb),.1) }
 .subp-band-main{ min-width:0; flex:1 1 560px }
 .subp-plan-stack{ display:grid; gap:4px; justify-items:start; transform:translate(-5px, 4px) }
@@ -7051,6 +7058,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-payments-card--empty{ grid-template-columns:1fr }
   .subp-payments-method{ grid-template-columns:auto minmax(0,1fr) }
   .subp-payments-method em{ grid-column:2 }
+  .subp-renewal-summary-head{ display:grid }
+  .subp-renewal-summary-grid{ grid-template-columns:1fr }
+  .subp-renewal-summary-actions{ display:grid; justify-items:start }
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
   .subp-band-benefit-zone{ justify-items:start }
