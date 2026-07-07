@@ -60842,9 +60842,9 @@ function mxResetLogoPreview(){
       const benefits = currentPlanIncrementalBenefitsFor(targetPlan);
       return `<div class="subp-current-upgrade-option">
           <div class="subp-current-upgrade-option-label">${escapeHtml(meta.label)}</div>
-          <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(targetPlan.id)}" data-subp-target-plan="${escapeHtml(targetPlanIdentity)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
           <div class="subp-current-upgrade-kicker">Agrega:</div>
           ${currentPlanUpgradeBenefitsHtml(benefits)}
+          <button class="subp-current-upgrade-button" type="button" data-subp-current-upgrade-target="${escapeHtml(targetPlan.id)}" data-subp-target-plan="${escapeHtml(targetPlanIdentity)}" aria-label="Revisar plan ${escapeHtml(targetLabel)}">Con un plan ${escapeHtml(targetLabel)}</button>
         </div>`;
     }).join('');
     return `<div class="subp-current-upgrade-cta subp-current-upgrade-cta--options">
@@ -60883,6 +60883,7 @@ function mxResetLogoPreview(){
     return `<div class="subp-current-benefits-card">
         <div class="subp-current-benefits-title">${escapeHtml(title)}</div>
         <div class="subp-current-benefits-list">${benefitsHtml}</div>
+        ${currentPlanConditionsHtml(plan)}
         ${upgradeHtml || `<div class="subp-current-benefits-copy">${escapeHtml(closing)}</div>`}
       </div>`;
   }
@@ -61506,7 +61507,7 @@ function mxResetLogoPreview(){
       const stateCardHtml = activePaid && flowType === 'downgrade_at_renewal'
         ? inactivePlanInfoHtml()
         : activePaid && flowType === 'current'
-          ? `${currentPlanBenefitsSummaryHtml(p)}${currentPlanConditionsHtml(p)}`
+          ? currentPlanBenefitsSummaryHtml(p)
           : '';
       const upgradeCardAdjustment = !freeQaMode && flowType === 'upgrade_now'
         ? upgradeCardAdjustmentHtml(p)
