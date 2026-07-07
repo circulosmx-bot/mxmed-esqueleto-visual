@@ -61608,6 +61608,10 @@ function mxResetLogoPreview(){
         if(event.target && event.target.closest('[data-subp-current-conditions-panel]')) return;
         if(event.target && event.target.closest('[data-subp-benefit-info]')) return;
         if(event.target && event.target.closest('[data-subp-inline-upgrade-detail]')) return;
+        if(card.dataset.subpFlowType === 'downgrade_at_renewal'){
+          setPlanFocus(card.dataset.subpPlanCard, { scroll: false, focus: false });
+          return;
+        }
         if(data.focusedPlanId){
           setPlanFocus(card.dataset.subpPlanCard, { scroll: false, focus: false });
           return;
@@ -61619,6 +61623,10 @@ function mxResetLogoPreview(){
         if(event.key !== 'Enter' && event.key !== ' ') return;
         if(event.target && event.target.closest('[data-subp-current-upgrade-target]')) return;
         event.preventDefault();
+        if(card.dataset.subpFlowType === 'downgrade_at_renewal'){
+          setPlanFocus(card.dataset.subpPlanCard, { scroll: false });
+          return;
+        }
         if(data.focusedPlanId){
           setPlanFocus(card.dataset.subpPlanCard, { scroll: false });
           return;
