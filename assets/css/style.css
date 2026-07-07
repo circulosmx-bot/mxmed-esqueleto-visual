@@ -6819,6 +6819,27 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-renewal-summary-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px }
 .subp-renewal-summary-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:14px; border:1px solid #d7e8ef; border-radius:12px; background:#fff; box-shadow:0 8px 18px rgba(0,49,84,.05) }
 .subp-renewal-summary-actions button span{ margin-left:5px; color:#6b7f87; font-size:.76rem; font-weight:800 }
+.subp-checkout-summary{ --subp-summary-main:#00AFC4; --subp-summary-dark:#008EA0; --subp-summary-soft:#E6FAFC; --subp-summary-soft-2:#F7FEFF; --subp-summary-border:#8EDDE8; --subp-summary-shadow-rgb:0,175,196; display:grid; gap:14px; margin-top:12px }
+.subp-checkout-summary[data-target-plan="basico"]{ --subp-summary-main:#6F91A3; --subp-summary-dark:#587887; --subp-summary-soft:#EEF5F8; --subp-summary-soft-2:#F8FBFC; --subp-summary-border:#B7CAD3; --subp-summary-shadow-rgb:111,145,163 }
+.subp-checkout-summary[data-target-plan="estandar"]{ --subp-summary-main:#00AFC4; --subp-summary-dark:#008EA0; --subp-summary-soft:#E6FAFC; --subp-summary-soft-2:#F7FEFF; --subp-summary-border:#8EDDE8; --subp-summary-shadow-rgb:0,175,196 }
+.subp-checkout-summary[data-target-plan="optimo"]{ --subp-summary-main:#0A4F8F; --subp-summary-dark:#003F63; --subp-summary-soft:#EAF4FB; --subp-summary-soft-2:#F7FBFE; --subp-summary-border:#9BC8EA; --subp-summary-shadow-rgb:10,79,143 }
+.subp-checkout-summary[data-target-plan="pro"]{ --subp-summary-main:#6750D8; --subp-summary-dark:#4B3DD1; --subp-summary-soft:#F2EFFF; --subp-summary-soft-2:#FBFAFF; --subp-summary-border:#C6B8FF; --subp-summary-shadow-rgb:103,80,216 }
+.subp-checkout-summary-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:16px; border:1px solid var(--subp-summary-border); border-radius:12px; background:linear-gradient(180deg,var(--subp-summary-soft) 0%,#fff 100%); box-shadow:0 8px 18px rgba(var(--subp-summary-shadow-rgb),.08); color:#10394a }
+.subp-checkout-summary-head h3{ margin:0 0 4px; color:#003154; font-size:1.2rem; font-weight:900; line-height:1.1 }
+.subp-checkout-summary-head p{ margin:0; color:#49636f; font-size:.9rem; font-weight:650; line-height:1.35 }
+.subp-checkout-summary-grid{ display:grid; grid-template-columns:minmax(0,1.08fr) minmax(260px,.92fr); gap:14px; align-items:start }
+.subp-checkout-summary-card{ display:grid; align-content:start; gap:11px; min-width:0; padding:15px; border:1px solid #d7e8ef; border-radius:12px; background:#fff; box-shadow:0 8px 18px rgba(0,49,84,.06); color:#143849 }
+.subp-checkout-summary-card--plan{ grid-row:span 3; border-color:var(--subp-summary-border); background:linear-gradient(180deg,var(--subp-summary-soft-2) 0%,#fff 100%) }
+.subp-checkout-summary-card h4{ margin:0; color:#003154; font-size:1.04rem; font-weight:900; line-height:1.18 }
+.subp-checkout-summary-card p{ margin:0; color:#49636f; font-size:.88rem; font-weight:650; line-height:1.35 }
+.subp-checkout-summary-benefits{ display:grid; gap:8px }
+.subp-checkout-summary-list{ display:grid; gap:7px; list-style:none; margin:0; padding:0 }
+.subp-checkout-summary-list li{ display:flex; align-items:center; gap:8px; color:#143849; font-size:.95rem; font-weight:800; line-height:1.18 }
+.subp-checkout-summary-list .material-symbols-rounded{ color:var(--subp-summary-main); font-size:20px; line-height:1 }
+.subp-checkout-summary-list--added li > span:first-child{ display:inline-grid; place-items:center; flex:0 0 22px; width:22px; height:22px; border-radius:50%; background:var(--subp-summary-main); color:#fff; font-size:1.18rem; font-weight:950; line-height:1 }
+.subp-checkout-summary-muted{ margin:0; color:#6b7f87; font-size:.86rem; font-weight:650 }
+.subp-checkout-summary-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:14px; border:1px solid #d7e8ef; border-radius:12px; background:#fff; box-shadow:0 8px 18px rgba(0,49,84,.05) }
+.subp-checkout-summary-actions button span{ margin-left:5px; color:#6b7f87; font-size:.76rem; font-weight:800 }
 .subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:linear-gradient(135deg,var(--subp-current-plan-main) 0%,var(--subp-current-plan-dark) 100%); color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 18px; box-shadow:0 10px 20px rgba(var(--subp-current-plan-shadow-rgb),.1) }
 .subp-band-main{ min-width:0; flex:1 1 560px }
 .subp-plan-stack{ display:grid; gap:4px; justify-items:start; transform:translate(-5px, 4px) }
@@ -7061,6 +7082,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-renewal-summary-head{ display:grid }
   .subp-renewal-summary-grid{ grid-template-columns:1fr }
   .subp-renewal-summary-actions{ display:grid; justify-items:start }
+  .subp-checkout-summary-head{ display:grid }
+  .subp-checkout-summary-grid{ grid-template-columns:1fr }
+  .subp-checkout-summary-card--plan{ grid-row:auto }
+  .subp-checkout-summary-actions{ display:grid; justify-items:start }
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
   .subp-band-benefit-zone{ justify-items:start }

@@ -58954,6 +58954,7 @@ function mxResetLogoPreview(){
     nextBill: pane.querySelector('[data-subp-next-bill]'),
     renewCTA: pane.querySelector('[data-subp-renew-cta]'),
     catalog: pane.querySelector('[data-subp-catalog]'),
+    pricingToggle: pane.querySelector('[data-subp-pricing-toggle]'),
     planSelection: pane.querySelector('[data-subp-plan-selection]'),
     selectedPlanTitle: pane.querySelector('[data-subp-selected-plan-title]'),
     selectedPlanSummary: pane.querySelector('[data-subp-selected-plan-summary]'),
@@ -59008,6 +59009,13 @@ function mxResetLogoPreview(){
     pricingModeButtons: pane.querySelectorAll('[data-subp-pricing-mode]'),
     billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
   };
+  if(els.planSelection){
+    const checkoutSummary = document.createElement('section');
+    checkoutSummary.className = 'subp-checkout-summary d-none';
+    checkoutSummary.dataset.subpCheckoutSummary = '';
+    els.planSelection.insertAdjacentElement('afterend', checkoutSummary);
+    els.checkoutSummary = checkoutSummary;
+  }
 
   const SUBSCRIPTION_ACTION_NOTICE = 'Elige un plan disponible para preparar el siguiente paso. La contratación en línea se activará en la siguiente fase.';
   const SUBSCRIPTION_ACTIVE_NOTICE = 'Activa más funciones mejorando tu plan.';
@@ -59086,6 +59094,10 @@ function mxResetLogoPreview(){
     ],
     activeSection: 'plans',
     paymentsView: 'overview',
+    checkoutSummary: {
+      visible: false,
+      targetPlanId: ''
+    },
     selectedPlanId: '',
     focusedPlanId: '',
     history: [],
@@ -60467,6 +60479,8 @@ function mxResetLogoPreview(){
     data.activeSection = next;
     if(next === 'plans'){
       data.paymentsView = 'overview';
+    }else{
+      closePlanCheckoutSummary({ render: false });
     }
     closeBenefitInfoPopovers(els.catalog);
     els.sectionTabs.forEach((button)=>{
@@ -60480,6 +60494,8 @@ function mxResetLogoPreview(){
     });
     if(next === 'billing'){
       renderSubscriptionPaymentsShell();
+    }else{
+      renderCatalog();
     }
   }
 
@@ -60784,6 +60800,182 @@ function mxResetLogoPreview(){
           <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="conditions">Ver condiciones del plan</button>
         </div>
       </article>`;
+  }
+
+  function checkoutSummaryPeriodLabel(flowType){
+    if(flowType === 'upgrade_now'){
+      return currentBillingPeriodLabel();
+    }
+    return pricingMode() === 'monthly' ? 'Pago mensual' : 'Pago anual';
+  }
+
+  function checkoutSummaryPriceLabel(plan, flowType){
+    if(flowType === 'upgrade_now'){
+      const estimate = proratedUpgradeEstimate(plan);
+      return estimate ? fmtMoney(estimate.amount) : 'Se confirmará antes del pago.';
+    }
+    if(pricingMode() === 'monthly'){
+      const monthly = planMonthlyPaymentPrice(plan);
+      return monthly > 0 ? `${fmtMoney(monthly)} / mes` : 'Se confirmará antes del pago.';
+    }
+    const annual = planAnnualPrice(plan);
+    return annual > 0 ? `${fmtMoney(annual)} al año` : 'Se confirmará antes del pago.';
+  }
+
+  function checkoutSummaryDaysLabel(plan, flowType){
+    if(flowType !== 'upgrade_now') return '';
+    const estimate = proratedUpgradeEstimate(plan);
+    if(estimate?.remainingDays != null){
+      return `${estimate.remainingDays} días restantes`;
+    }
+    return remainingDaysLabel();
+  }
+
+  function checkoutSummaryIncludedBenefitsHtml(plan){
+    const items = Array.isArray(plan?.features)
+      ? plan.features.map(benefitDisplayLabel).filter(Boolean)
+      : [];
+    if(!items.length){
+      return '<p class="subp-checkout-summary-muted">Beneficios por confirmar antes del pago.</p>';
+    }
+    return `<ul class="subp-checkout-summary-list">
+      ${items.map((feature)=>`<li><span class="material-symbols-rounded" aria-hidden="true">check_circle</span>${escapeHtml(feature)}</li>`).join('')}
+    </ul>`;
+  }
+
+  function checkoutSummaryAddedBenefitsHtml(plan){
+    const items = upgradeBenefitItems(plan).filter((benefit)=> benefit.isAdditional);
+    if(!items.length){
+      return '<p class="subp-checkout-summary-muted">Más beneficios incluidos en tu mejora.</p>';
+    }
+    return `<ul class="subp-checkout-summary-list subp-checkout-summary-list--added">
+      ${items.map((benefit)=>`<li><span aria-hidden="true">+</span>${escapeHtml(benefit.label)}</li>`).join('')}
+    </ul>`;
+  }
+
+  function checkoutSummaryCurrentPlanLabel(){
+    return currentPlanLabel();
+  }
+
+  function validCheckoutSummary(activePaid){
+    if(!data.checkoutSummary.visible) return null;
+    const plan = findPlanById(data.checkoutSummary.targetPlanId);
+    if(!plan) return null;
+    const flowType = planFlowType(plan, activePaid);
+    if(flowType !== 'new_subscription' && flowType !== 'upgrade_now'){
+      return null;
+    }
+    return { plan, flowType };
+  }
+
+  function closePlanCheckoutSummary({ render = true } = {}){
+    data.checkoutSummary.visible = false;
+    data.checkoutSummary.targetPlanId = '';
+    if(render) renderCatalog();
+  }
+
+  function openPlanCheckoutSummary(planId){
+    const plan = findPlanById(planId);
+    if(!plan) return;
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const flowType = planFlowType(plan, activePaid);
+    if(flowType !== 'new_subscription' && flowType !== 'upgrade_now') return;
+    data.checkoutSummary.visible = true;
+    data.checkoutSummary.targetPlanId = plan.id;
+    data.selectedPlanId = plan.id;
+    data.upgradeCheckout.visible = false;
+    data.upgradeCheckout.accepted = false;
+    renderCatalog();
+    window.requestAnimationFrame(()=>{
+      const summary = els.checkoutSummary;
+      if(summary && !summary.classList.contains('d-none')){
+        try{
+          summary.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }catch(_){}
+      }
+    });
+  }
+
+  function renderPlanCheckoutSummary(plan, flowType){
+    if(!els.checkoutSummary) return;
+    const targetIdentity = normalizePlanId(plan?.id);
+    const targetLabel = clean(plan?.name) || 'Plan seleccionado';
+    const isUpgrade = flowType === 'upgrade_now';
+    const title = isUpgrade ? 'Resumen de mejora' : 'Resumen de contratación';
+    const currentLabel = checkoutSummaryCurrentPlanLabel();
+    const periodLabel = checkoutSummaryPeriodLabel(flowType);
+    const amountLabel = checkoutSummaryPriceLabel(plan, flowType);
+    const daysLabel = checkoutSummaryDaysLabel(plan, flowType);
+    const estimate = isUpgrade ? proratedUpgradeEstimate(plan) : null;
+    const benefitTitle = isUpgrade ? 'Agrega' : 'Incluye';
+    const benefitsHtml = isUpgrade
+      ? checkoutSummaryAddedBenefitsHtml(plan)
+      : checkoutSummaryIncludedBenefitsHtml(plan);
+    const amountNote = isUpgrade
+      ? 'El monto final se confirmará antes de realizar el pago.'
+      : 'El importe final se confirmará antes del pago seguro.';
+    const daysRow = isUpgrade
+      ? `<dt>Días restantes</dt><dd>${escapeHtml(daysLabel || 'Se confirmará antes del pago.')}</dd>`
+      : '';
+    const currentPlanRow = isUpgrade
+      ? `<dt>Plan actual</dt><dd>${escapeHtml(currentLabel)}</dd>`
+      : '';
+    const routeLabel = isUpgrade
+      ? `${currentLabel} → ${targetLabel}`
+      : targetLabel;
+    const amountKicker = isUpgrade ? 'Ajuste estimado' : 'Importe estimado';
+    const amountDetail = isUpgrade && estimate
+      ? `<p>Calculado visualmente con los días restantes de tu vigencia actual.</p>`
+      : `<p>${escapeHtml(amountNote)}</p>`;
+
+    els.checkoutSummary.dataset.targetPlan = targetIdentity;
+    els.checkoutSummary.innerHTML = `<div class="subp-checkout-summary-head">
+        <div>
+          <div class="subp-payments-kicker">Antes de pagar</div>
+          <h3>${escapeHtml(title)}</h3>
+          <p>Revisa los datos antes de continuar al pago seguro.</p>
+        </div>
+        <span class="subp-payments-status-chip">Próxima fase</span>
+      </div>
+      <div class="subp-checkout-summary-grid">
+        <article class="subp-checkout-summary-card subp-checkout-summary-card--plan">
+          <div class="subp-payments-kicker">${isUpgrade ? 'Mejora seleccionada' : 'Plan seleccionado'}</div>
+          <h4>${escapeHtml(routeLabel)}</h4>
+          <dl class="subp-payments-dl">
+            ${currentPlanRow}
+            <dt>${isUpgrade ? 'Nuevo plan' : 'Plan'}</dt><dd>${escapeHtml(targetLabel)}</dd>
+            <dt>Periodo</dt><dd>${escapeHtml(periodLabel)}</dd>
+            ${daysRow}
+          </dl>
+          <div class="subp-checkout-summary-benefits">
+            <div class="subp-payments-kicker">${escapeHtml(benefitTitle)}</div>
+            ${benefitsHtml}
+          </div>
+        </article>
+        <article class="subp-checkout-summary-card">
+          <div class="subp-payments-kicker">${escapeHtml(amountKicker)}</div>
+          <h4>${escapeHtml(amountLabel)}</h4>
+          ${amountDetail}
+        </article>
+        <article class="subp-checkout-summary-card">
+          <div class="subp-payments-kicker">Renovación automática</div>
+          <h4>Desactivada</h4>
+          <label class="subp-payments-switch">
+            <input type="checkbox" disabled>
+            <span>Podrás activar la renovación automática cuando conectemos una forma de pago segura.</span>
+          </label>
+        </article>
+        <article class="subp-checkout-summary-card">
+          <div class="subp-payments-kicker">Forma de pago</div>
+          <h4>Se seleccionará en el flujo seguro de pago</h4>
+          ${subscriptionPaymentsMethodsHtml()}
+        </article>
+      </div>
+      <div class="subp-checkout-summary-actions">
+        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Continuar a pago seguro <span>Próxima fase</span></button>
+        <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a planes y beneficios</button>
+        <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="billing">Ir a Mi plan y pagos</button>
+      </div>`;
   }
 
   function selectedUpgradePlan(){
@@ -61683,6 +61875,24 @@ function mxResetLogoPreview(){
 
   function renderPlanSelection(activePaid){
     if(!els.planSelection) return;
+    const summary = validCheckoutSummary(activePaid);
+    if(summary){
+      els.planSelection.classList.add('d-none');
+      if(els.checkoutSummary){
+        els.checkoutSummary.classList.remove('d-none');
+        renderPlanCheckoutSummary(summary.plan, summary.flowType);
+      }
+      renderUpgradeCheckoutFlow();
+      return;
+    }
+    if(data.checkoutSummary.visible){
+      closePlanCheckoutSummary({ render: false });
+    }
+    if(els.checkoutSummary){
+      els.checkoutSummary.classList.add('d-none');
+      els.checkoutSummary.innerHTML = '';
+      delete els.checkoutSummary.dataset.targetPlan;
+    }
     if(isQaFreePlanMode()){
       els.planSelection.classList.add('d-none');
       renderUpgradeCheckoutFlow();
@@ -61823,10 +62033,15 @@ function mxResetLogoPreview(){
     if(!els.catalog) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const freeQaMode = isQaFreePlanMode();
+    const summary = validCheckoutSummary(activePaid);
     const selected = ensureSelectedPlan(activePaid);
     const focusedPlanId = activePaid && !freeQaMode ? normalizePlanId(data.focusedPlanId) : '';
     const focusMode = !!focusedPlanId;
     renderPricingModeToggle();
+    els.catalog.classList.toggle('d-none', !!summary);
+    if(els.pricingToggle){
+      els.pricingToggle.classList.toggle('d-none', !!summary);
+    }
     els.catalog.classList.toggle('subp-grid--focus-mode', focusMode);
     els.catalog.innerHTML = data.plans.map(p=>{
       const flowType = planFlowType(p, activePaid);
@@ -61922,23 +62137,7 @@ function mxResetLogoPreview(){
       if(!plan) return;
       const flowType = planFlowType(plan, activePaid);
       if(flowType !== 'new_subscription' && flowType !== 'upgrade_now') return;
-      if(freeQaMode){
-        if(els.currentAlert){
-          els.currentAlert.textContent = 'Modo Plan QA Gratuito: vista comparativa sin crear checkout.';
-          els.currentAlert.classList.remove('d-none');
-        }
-        return;
-      }
-      data.selectedPlanId = plan.id;
-      data.upgradeCheckout.visible = flowType === 'upgrade_now';
-      data.upgradeCheckout.accepted = false;
-      data.upgradeCheckout.state = 'idle';
-      data.upgradeCheckout.message = '';
-      data.upgradeCheckout.error = '';
-      data.upgradeCheckout.checkoutIntentUuid = '';
-      data.upgradeCheckout.contractAcceptanceUuid = '';
-      data.upgradeCheckout.idempotencyKey = '';
-      renderCatalog();
+      openPlanCheckoutSummary(plan.id);
     };
     els.catalog.querySelectorAll('[data-subp-select]').forEach(btn=>{
       btn.addEventListener('click',(event)=>{
@@ -62036,6 +62235,8 @@ function mxResetLogoPreview(){
 
   function resetPlanQaVisualSelection(){
     data.selectedPlanId = '';
+    data.checkoutSummary.visible = false;
+    data.checkoutSummary.targetPlanId = '';
     clearCurrentUpgradeFocus();
     data.upgradeCheckout.visible = false;
     data.upgradeCheckout.accepted = false;
@@ -62068,7 +62269,21 @@ function mxResetLogoPreview(){
     const goto = event.target && event.target.closest('[data-subp-section-goto]');
     if(goto){
       event.preventDefault();
+      if(clean(goto.dataset.subpSectionGoto) === 'plans'){
+        closePlanCheckoutSummary({ render: false });
+      }
       setSubscriptionSection(goto.dataset.subpSectionGoto);
+      if(clean(goto.dataset.subpSectionGoto) === 'plans'){
+        renderCatalog();
+      }
+      return;
+    }
+    const checkoutAction = event.target && event.target.closest('[data-subp-checkout-summary-action]');
+    if(checkoutAction){
+      event.preventDefault();
+      if(clean(checkoutAction.dataset.subpCheckoutSummaryAction) === 'back'){
+        closePlanCheckoutSummary();
+      }
       return;
     }
     const action = event.target && event.target.closest('[data-subp-payments-action]');
@@ -62145,12 +62360,9 @@ function mxResetLogoPreview(){
     const selected = findPlanById(data.selectedPlanId);
     if(!selected) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
-    if(activePaid && planFlowType(selected, activePaid) === 'upgrade_now'){
-      openUpgradeCheckoutFlow();
-      if(els.selectedPlanMessage){
-        els.selectedPlanMessage.textContent = 'Revisa la mejora y acepta los términos antes de crear el checkout.';
-        els.selectedPlanMessage.classList.remove('d-none');
-      }
+    const flowType = planFlowType(selected, activePaid);
+    if(flowType === 'new_subscription' || flowType === 'upgrade_now'){
+      openPlanCheckoutSummary(selected.id);
       return;
     }
     if(els.selectedPlanMessage){
