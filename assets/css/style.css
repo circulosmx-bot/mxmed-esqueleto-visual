@@ -6885,6 +6885,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--renewal-only .subp-feature{ color:#6b7d85; font-weight:700 }
 .subp-plan--renewal-only .subp-feature-check{ opacity:.42; filter:grayscale(.4) saturate(.55) }
 .subp-save{ color:var(--subp-plan-main); font-weight:700; font-size:.9rem; margin-top:6px }
+.subp-plan-downgrade-note{ margin-top:8px; padding:9px 10px; border:1px solid #d2e5ed; border-radius:8px; background:#f6fbfd; color:#315c6c; font-size:.9rem; font-weight:750; line-height:1.32; opacity:.86 }
+.subp-plan--renewal-only.subp-plan--focus-selected .subp-plan-downgrade-note{ border-color:#9dc7d6; background:#eef8fb; color:#003154; box-shadow:0 8px 18px rgba(0,49,84,.08); opacity:1 }
 .subp-btn{ width:100%; margin-top:auto; margin-bottom:4px; background:var(--subp-plan-main); border-color:var(--subp-plan-main); color:var(--subp-plan-contrast); font-weight:700 }
 .subp-btn:hover{ background:var(--subp-plan-dark); border-color:var(--subp-plan-dark); color:var(--subp-plan-contrast) }
 .subp-alert{ background:#fff3cd; border:1px solid #ffe69c; color:#664d03; padding:8px 10px; border-radius:8px; font-size:.9rem }

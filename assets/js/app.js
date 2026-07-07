@@ -61494,7 +61494,7 @@ function mxResetLogoPreview(){
       const cardNote = flowType === 'current'
         ? ''
         : flowType === 'downgrade_at_renewal'
-          ? 'Puedes cambiar a este plan al finalizar tu periodo actual.'
+          ? 'Puedes descender a este plan al finalizar tu periodo actual.'
           : flowType === 'upgrade_now'
             ? 'Puedes mejorar tu plan durante tu vigencia. El sistema calculará el ajuste correspondiente.'
             : SUBSCRIPTION_CHECKOUT_PENDING_NOTICE;
@@ -61519,7 +61519,7 @@ function mxResetLogoPreview(){
         });
       const cardNoteHtml = freeQaMode || flowType === 'upgrade_now' || flowType === 'current'
         ? ''
-        : `<div class="subp-save">${escapeHtml(cardNote)}</div>`;
+        : `<div class="subp-save${flowType === 'downgrade_at_renewal' ? ' subp-plan-downgrade-note' : ''}">${escapeHtml(cardNote)}</div>`;
       const selectActionHtml = flowType === 'current'
         ? ''
         : `<button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>`;
