@@ -59098,6 +59098,10 @@ function mxResetLogoPreview(){
       visible: false,
       targetPlanId: ''
     },
+    paymentPayloadPreview: {
+      checkoutSummary: null,
+      renewal: null
+    },
     selectedPlanId: '',
     focusedPlanId: '',
     history: [],
@@ -60350,6 +60354,190 @@ function mxResetLogoPreview(){
     return `${fmtMoney(Math.ceil(yearly / 365))} al día pagando anual`;
   }
 
+  function amountPesosToCents(value){
+    const amount = Number(value || 0);
+    if(!Number.isFinite(amount) || amount <= 0) return null;
+    return Math.round(amount * 100);
+  }
+
+  function currentEntityContextForPaymentPayload(warnings){
+    const context = data.contextInfo || {};
+    const entityType = clean(context.entity_type).toLowerCase();
+    const entityId = clean(context.entity_id || context.doctor_id);
+    if(!entityType) warnings.push('missing_entity_type');
+    if(!entityId) warnings.push('missing_entity_id');
+    return {
+      entity_type: entityType || null,
+      entity_id: entityId || null
+    };
+  }
+
+  function currentBackendPlanCodeForPaymentPayload(warnings){
+    const rawCode = clean(data.currentModel?.effective_plan_code)
+      || clean(data.currentModel?.contracted_plan_code)
+      || clean(data.currentModel?.plan_code)
+      || clean(data.current.id);
+    const code = canonicalBackendPlanCode(rawCode);
+    if(!code) warnings.push('missing_current_plan_code');
+    return code || null;
+  }
+
+  function billingPeriodForPlanCheckoutPayload(flowType, warnings){
+    if(flowType === 'upgrade_now'){
+      const currentPeriod = currentBillingPeriod();
+      if(!currentPeriod) warnings.push('missing_billing_period');
+      return currentPeriod || null;
+    }
+    return pricingMode() === 'monthly' ? 'monthly' : 'annual';
+  }
+
+  function priceCentsForPlanAndPeriod(plan, billingPeriod){
+    if(!plan) return null;
+    if(clean(billingPeriod) === 'monthly'){
+      return amountPesosToCents(planMonthlyPaymentPrice(plan));
+    }
+    return amountPesosToCents(planAnnualPrice(plan));
+  }
+
+  function renewalDurationDaysForPayload(billingPeriod, warnings){
+    const modelDays = Number(data.currentModel?.duration_days || 0);
+    if(Number.isFinite(modelDays) && modelDays > 0) return Math.round(modelDays);
+    if(billingPeriod === 'annual') return 365;
+    if(billingPeriod === 'monthly') return 30;
+    warnings.push('missing_renewal_duration_days');
+    return null;
+  }
+
+  function basePaymentPayloadWarnings(){
+    return ['payment_method_not_selected'];
+  }
+
+  function finalizePaymentPayloadPreview(payload, warnings){
+    return {
+      ...payload,
+      payment_method_family: null,
+      idempotency_required: true,
+      idempotency_key: null,
+      warnings: Array.from(new Set((warnings || []).map(clean).filter(Boolean)))
+    };
+  }
+
+  function buildNewSubscriptionPaymentPayloadPreview(plan){
+    const warnings = basePaymentPayloadWarnings();
+    const context = currentEntityContextForPaymentPayload(warnings);
+    const targetPlanCode = backendPlanCodeFromUiPlan(plan?.id) || null;
+    const billingPeriod = billingPeriodForPlanCheckoutPayload('new_subscription', warnings);
+    const amountCents = priceCentsForPlanAndPeriod(plan, billingPeriod);
+    if(!targetPlanCode) warnings.push('missing_target_plan_code');
+    if(amountCents === null) warnings.push('missing_amount_cents');
+    return finalizePaymentPayloadPreview({
+      route_type: 'new_subscription',
+      entity_type: context.entity_type,
+      entity_id: context.entity_id,
+      target_plan_code: targetPlanCode,
+      billing_period: billingPeriod,
+      amount_cents: amountCents,
+      currency: 'MXN',
+      auto_renew_requested: false,
+      source: 'subscription_plan_selection',
+      terms_acceptance_required: true
+    }, warnings);
+  }
+
+  function buildUpgradeSubscriptionPaymentPayloadPreview(plan){
+    const warnings = basePaymentPayloadWarnings();
+    const context = currentEntityContextForPaymentPayload(warnings);
+    const currentPlanCode = currentBackendPlanCodeForPaymentPayload(warnings);
+    const currentPlan = currentPlanForUpgradeComparison();
+    const targetPlanCode = backendPlanCodeFromUiPlan(plan?.id) || null;
+    const billingPeriod = billingPeriodForPlanCheckoutPayload('upgrade_now', warnings);
+    const estimate = proratedUpgradeEstimate(plan);
+    const currentPriceCents = amountPesosToCents(planAnnualPrice(currentPlan));
+    const targetPriceCents = amountPesosToCents(planAnnualPrice(plan));
+    const adjustmentAmountCents = estimate ? amountPesosToCents(estimate.amount) : null;
+    const remainingDays = estimate?.remainingDays ?? Number(data.currentModel?.days_until_expiration);
+    const modelDurationDays = Number(data.currentModel?.duration_days || 0);
+    const periodDays = estimate?.periodDays || (Number.isFinite(modelDurationDays) && modelDurationDays > 0 ? Math.round(modelDurationDays) : null);
+
+    if(!targetPlanCode) warnings.push('missing_target_plan_code');
+    if(currentPriceCents === null) warnings.push('missing_current_price_cents');
+    if(targetPriceCents === null) warnings.push('missing_target_price_cents');
+    if(adjustmentAmountCents === null) warnings.push('missing_adjustment_amount_cents');
+    if(!Number.isFinite(Number(remainingDays))) warnings.push('missing_remaining_days');
+    if(!periodDays) warnings.push('missing_period_days');
+
+    return finalizePaymentPayloadPreview({
+      route_type: 'upgrade_subscription',
+      entity_type: context.entity_type,
+      entity_id: context.entity_id,
+      current_plan_code: currentPlanCode,
+      target_plan_code: targetPlanCode,
+      billing_period: billingPeriod,
+      remaining_days: Number.isFinite(Number(remainingDays)) ? Math.max(0, Math.round(Number(remainingDays))) : null,
+      period_days: periodDays || null,
+      current_price_cents: currentPriceCents,
+      target_price_cents: targetPriceCents,
+      adjustment_amount_cents: adjustmentAmountCents,
+      currency: 'MXN',
+      auto_renew_requested: false,
+      source: 'subscription_upgrade_summary'
+    }, warnings);
+  }
+
+  function buildCheckoutPaymentPayloadPreview(plan, flowType){
+    if(flowType === 'upgrade_now') return buildUpgradeSubscriptionPaymentPayloadPreview(plan);
+    return buildNewSubscriptionPaymentPayloadPreview(plan);
+  }
+
+  function buildRenewalPaymentPayloadPreview(plan){
+    const warnings = basePaymentPayloadWarnings();
+    const context = currentEntityContextForPaymentPayload(warnings);
+    const currentPlanCode = currentBackendPlanCodeForPaymentPayload(warnings);
+    const billingPeriod = currentBillingPeriod() || null;
+    const currentExpiresAt = clean(data.currentModel?.expires_at) || null;
+    const renewalAmountCents = priceCentsForPlanAndPeriod(plan, billingPeriod);
+    const renewalDurationDays = renewalDurationDaysForPayload(billingPeriod, warnings);
+
+    if(!billingPeriod) warnings.push('missing_billing_period');
+    if(!currentExpiresAt) warnings.push('missing_current_expires_at');
+    if(renewalAmountCents === null) warnings.push('missing_renewal_amount_cents');
+
+    return finalizePaymentPayloadPreview({
+      route_type: 'renewal',
+      entity_type: context.entity_type,
+      entity_id: context.entity_id,
+      current_plan_code: currentPlanCode,
+      billing_period: billingPeriod,
+      current_expires_at: currentExpiresAt,
+      renewal_duration_days: renewalDurationDays,
+      renewal_amount_cents: renewalAmountCents,
+      currency: 'MXN',
+      auto_renew_requested: false,
+      source: 'subscription_renewal_summary'
+    }, warnings);
+  }
+
+  function publishPaymentPayloadPreview(slot, payload){
+    if(slot === 'renewal') data.paymentPayloadPreview.renewal = payload || null;
+    else data.paymentPayloadPreview.checkoutSummary = payload || null;
+    try{
+      window.mxmedSubscriptionPaymentPayloadPreview = {
+        checkout_summary: data.paymentPayloadPreview.checkoutSummary,
+        renewal: data.paymentPayloadPreview.renewal
+      };
+    }catch(_){}
+  }
+
+  function paymentPayloadPreviewHtml(payload){
+    if(!payload || !isSubscriptionDebugPanelEnabled()) return '';
+    const json = JSON.stringify(payload, null, 2);
+    return `<details class="subp-payment-payload-preview" data-subp-payment-payload-preview>
+        <summary>QA payload conceptual read-only</summary>
+        <pre>${escapeHtml(json)}</pre>
+        <p>Vista frontend informativa. Backend debe recalcular importes, vigencias e idempotencia antes de crear cualquier pago.</p>
+      </details>`;
+  }
+
   function renderPricingModeToggle(){
     els.pricingModeButtons.forEach((button)=>{
       const active = clean(button.dataset.subpPricingMode) === pricingMode();
@@ -60582,6 +60770,8 @@ function mxResetLogoPreview(){
     const plan = findPlanById(planIdentity);
     const renewalPrice = renewalPriceLabel(plan);
     const renewedUntil = estimatedRenewalUntilLabel();
+    const payloadPreview = buildRenewalPaymentPayloadPreview(plan);
+    publishPaymentPayloadPreview('renewal', payloadPreview);
     els.paymentsContent.innerHTML = `<section class="subp-renewal-summary" data-subp-renewal-summary data-current-plan="${escapeHtml(planIdentity)}">
         <div class="subp-renewal-summary-head">
           <div>
@@ -60647,6 +60837,7 @@ function mxResetLogoPreview(){
           <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="overview">Volver a Mi plan y pagos</button>
           <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
         </div>
+        ${paymentPayloadPreviewHtml(payloadPreview)}
       </section>`;
   }
 
@@ -60671,6 +60862,7 @@ function mxResetLogoPreview(){
       renderSubscriptionRenewalSummary({ planIdentity, planName, status, vigencia, periodo, benefits });
       return;
     }
+    publishPaymentPayloadPreview('renewal', null);
 
     if(freeMode){
       els.paymentsContent.innerHTML = `<article class="subp-payments-card subp-payments-card--empty" data-subp-payments-card="empty">
@@ -60871,6 +61063,7 @@ function mxResetLogoPreview(){
   function closePlanCheckoutSummary({ render = true } = {}){
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = '';
+    publishPaymentPayloadPreview('checkoutSummary', null);
     if(render) renderCatalog();
   }
 
@@ -60927,8 +61120,11 @@ function mxResetLogoPreview(){
     const amountDetail = isUpgrade && estimate
       ? `<p>Calculado visualmente con los días restantes de tu vigencia actual.</p>`
       : `<p>${escapeHtml(amountNote)}</p>`;
+    const payloadPreview = buildCheckoutPaymentPayloadPreview(plan, flowType);
+    publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
 
     els.checkoutSummary.dataset.targetPlan = targetIdentity;
+    els.checkoutSummary.dataset.paymentRouteType = clean(payloadPreview.route_type);
     els.checkoutSummary.innerHTML = `<div class="subp-checkout-summary-head">
         <div>
           <div class="subp-payments-kicker">Antes de pagar</div>
@@ -60975,7 +61171,8 @@ function mxResetLogoPreview(){
         <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Continuar a pago seguro <span>Próxima fase</span></button>
         <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a planes y beneficios</button>
         <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="billing">Ir a Mi plan y pagos</button>
-      </div>`;
+      </div>
+      ${paymentPayloadPreviewHtml(payloadPreview)}`;
   }
 
   function selectedUpgradePlan(){
@@ -61892,6 +62089,7 @@ function mxResetLogoPreview(){
       els.checkoutSummary.classList.add('d-none');
       els.checkoutSummary.innerHTML = '';
       delete els.checkoutSummary.dataset.targetPlan;
+      delete els.checkoutSummary.dataset.paymentRouteType;
     }
     if(isQaFreePlanMode()){
       els.planSelection.classList.add('d-none');
