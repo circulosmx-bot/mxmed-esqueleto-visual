@@ -42887,3 +42887,358 @@ El flujo UX previo al pago queda validado post-push como seguro para seleccion y
 Objetivo sugerido:
 
 Ejecutar de forma controlada el primer checkout real desde la UX de upgrade, validando que el POST ocurre solo tras seleccion de plan superior y aceptacion explicita de terminos.
+
+## PP-Decisiones 224 - Readiness de matriz Stripe sandbox para rutas de pago de suscripcion
+
+### Microfase documental
+
+Se documenta la microfase:
+
+`DOCS/Suscripciones-StripeSandbox-PaymentRoutes-Matrix-Readiness-01`
+
+Esta adenda define la matriz funcional que conectara, en una fase posterior, los resumenes visuales actuales de suscripcion con Stripe sandbox/test mode.
+
+No se implementa Stripe en esta microfase.
+
+### Objetivo de Stripe sandbox en MXMed
+
+Stripe sandbox/test mode debera permitir probar los flujos de pago de suscripciones sin dinero real ni cargos reales.
+
+MXMed debe conservar la fuente de verdad de:
+
+- plan contratado;
+- vigencia;
+- permisos/capacidades;
+- upgrade;
+- renovacion;
+- read-model;
+- activacion posterior a pago confirmado.
+
+Los resumenes visuales actuales son informativos y no deben ser la fuente final de cobro. El backend futuro debe recalcular importes, validar elegibilidad e imponer idempotencia antes de crear cualquier intento de pago.
+
+### Rutas de pago a conectar despues
+
+#### A. Contratacion inicial
+
+Flujo conceptual:
+
+`Usuario Gratuito / sin plan contratado -> Planes y beneficios -> Resumen de contratacion -> Stripe sandbox -> Webhook sandbox -> Activacion futura`
+
+Objetivo:
+
+- contratar un plan desde cero;
+- cobrar el precio del plan y periodo elegido;
+- activar la suscripcion solo despues del pago confirmado por webhook.
+
+#### B. Mejora de plan
+
+Flujo conceptual:
+
+`Usuario con plan activo -> Planes y beneficios -> Resumen de mejora -> Stripe sandbox -> Webhook sandbox -> Activacion de mejora futura`
+
+Objetivo:
+
+- cobrar el ajuste proporcional calculado por backend;
+- mantener la vigencia vigente segun la politica de upgrade;
+- activar la mejora solo despues del pago confirmado.
+
+#### C. Renovacion manual
+
+Flujo conceptual:
+
+`Usuario con plan activo -> Mi plan y pagos -> Resumen de renovacion -> Stripe sandbox -> Webhook sandbox -> Renovacion futura`
+
+Objetivo:
+
+- renovar manualmente el plan actual;
+- extender vigencia solo despues de pago confirmado;
+- no mezclar renovacion manual con renovacion automatica hasta que exista forma de pago compatible guardada.
+
+#### D. Guardar forma de pago
+
+Flujo conceptual:
+
+`Usuario con plan activo o durante contratacion -> Mi plan y pagos / Resumen de pago -> Stripe setup sandbox -> Guardar referencia segura futura -> Sin guardar tarjeta en MXMed`
+
+Objetivo:
+
+- preparar un metodo reutilizable cuando el usuario de consentimiento explicito;
+- guardar solo referencias seguras futuras;
+- no activar plan ni renovar por el solo hecho de guardar una forma de pago.
+
+#### E. Renovacion automatica
+
+Flujo conceptual:
+
+`Usuario autoriza renovacion automatica -> requiere forma de pago compatible guardada -> ejecucion futura con metodo reutilizable`
+
+Regla:
+
+- la renovacion automatica debe depender de tarjeta o metodo reutilizable compatible;
+- no debe prometerse con SPEI/OXXO como cargo automatico;
+- requiere consentimiento explicito del usuario.
+
+### Matriz de metodos de pago
+
+| Metodo | Tipo | Uso esperado | Renovacion automatica | Consideraciones |
+| --- | --- | --- | --- | --- |
+| Tarjeta | Pago inmediato | Contratacion, mejora y renovacion manual | Candidato futuro | Probar sandbox con tarjetas de prueba, rechazos y posibles escenarios 3D Secure. MXMed no guarda PAN/CVC. |
+| Tarjeta guardada | Metodo reutilizable | Renovacion automatica futura | Si, con consentimiento | Requiere Customer/PaymentMethod o equivalente. MXMed solo guardaria referencia segura, marca, ultimos 4, expiracion y estado. |
+| SPEI / transferencia | Pago manual | Alternativa de pago diferido | No | Requiere conciliacion/confirmacion posterior. La UI debe separarlo de renovacion automatica. |
+| OXXO | Pago manual con voucher | Alternativa diferida si se habilita | No | Confirmacion diferida. Sandbox puede simular pago de voucher y eventos posteriores. |
+| Stripe Billing | Motor recurrente | Alternativa futura | Posible si se adopta Billing | No adoptarlo automaticamente. MXMed hoy conserva logica de plan, vigencia, upgrade y renovacion. |
+
+### Pago manual vs pago automatico
+
+Pago manual:
+
+- requiere accion del usuario o conciliacion posterior;
+- puede quedar pendiente;
+- puede depender de voucher, instruccion bancaria o transferencia;
+- no debe activar suscripcion hasta confirmacion de pago;
+- no debe comunicarse como renovacion automatica.
+
+Pago automatico:
+
+- requiere metodo compatible guardado;
+- requiere consentimiento explicito;
+- puede ejecutarse off-session o mediante mecanismo equivalente;
+- debe registrar exito/fallo y actualizar read-model solo despues de confirmacion.
+
+### Contrato conceptual por ruta
+
+#### Contratacion inicial
+
+Payload conceptual:
+
+```json
+{
+  "route_type": "new_subscription",
+  "entity_type": "doctor",
+  "entity_id": "<entity_id>",
+  "target_plan_code": "<plan>",
+  "billing_period": "annual|monthly",
+  "amount_cents": 0,
+  "currency": "MXN",
+  "auto_renew_requested": false,
+  "payment_method_family": "card|spei|oxxo",
+  "source": "subscription_plan_selection",
+  "terms_acceptance_required": true,
+  "idempotency_key": "<stable_key>"
+}
+```
+
+#### Mejora de plan
+
+Payload conceptual:
+
+```json
+{
+  "route_type": "upgrade_subscription",
+  "entity_type": "doctor",
+  "entity_id": "<entity_id>",
+  "current_plan_code": "<current_plan>",
+  "target_plan_code": "<target_plan>",
+  "billing_period": "annual|monthly",
+  "remaining_days": 0,
+  "period_days": 0,
+  "current_price_cents": 0,
+  "target_price_cents": 0,
+  "adjustment_amount_cents": 0,
+  "currency": "MXN",
+  "auto_renew_requested": false,
+  "payment_method_family": "card|spei|oxxo",
+  "source": "subscription_upgrade_summary",
+  "idempotency_key": "<stable_key>"
+}
+```
+
+#### Renovacion manual
+
+Payload conceptual:
+
+```json
+{
+  "route_type": "renewal",
+  "entity_type": "doctor",
+  "entity_id": "<entity_id>",
+  "current_plan_code": "<current_plan>",
+  "billing_period": "annual|monthly",
+  "current_expires_at": "<expires_at>",
+  "renewal_duration_days": 365,
+  "renewal_amount_cents": 0,
+  "currency": "MXN",
+  "auto_renew_requested": false,
+  "payment_method_family": "card|spei|oxxo",
+  "source": "subscription_renewal_summary",
+  "idempotency_key": "<stable_key>"
+}
+```
+
+#### Guardar forma de pago
+
+Payload conceptual:
+
+```json
+{
+  "route_type": "setup_payment_method",
+  "entity_type": "doctor",
+  "entity_id": "<entity_id>",
+  "customer_reference": "<stripe_customer_reference>",
+  "setup_usage": "off_session",
+  "source": "subscription_payment_preferences",
+  "idempotency_key": "<stable_key>"
+}
+```
+
+#### Renovacion automatica
+
+Payload conceptual:
+
+```json
+{
+  "route_type": "auto_renewal_preference",
+  "entity_type": "doctor",
+  "entity_id": "<entity_id>",
+  "current_plan_code": "<current_plan>",
+  "enabled": true,
+  "requires_saved_payment_method": true,
+  "source": "subscription_payment_preferences",
+  "idempotency_key": "<stable_key>"
+}
+```
+
+### Eventos esperados por tipo de flujo
+
+#### Pago inmediato con tarjeta
+
+Eventos esperados:
+
+- checkout/session created o payment intent created;
+- payment succeeded;
+- webhook processed;
+- activacion/renovacion/update MXMed despues del webhook.
+
+#### Pago fallido con tarjeta
+
+Eventos esperados:
+
+- payment failed;
+- webhook processed;
+- no activacion;
+- estado futuro de reintento en UI/read-model.
+
+#### Pago diferido SPEI/OXXO
+
+Eventos esperados:
+
+- pending payment / requires action / voucher or bank instruction created;
+- payment succeeded later;
+- webhook processed later;
+- activacion solo despues de pago confirmado.
+
+#### Setup de forma de pago
+
+Eventos esperados:
+
+- setup succeeded;
+- referencia segura guardada por backend futuro;
+- no activacion de plan por setup solo.
+
+#### Renovacion automatica futura
+
+Eventos esperados:
+
+- requiere metodo guardado;
+- evento programado o Billing-driven si se adopta Stripe Billing;
+- payment succeeded/failure;
+- read-model actualizado solo despues de pago confirmado.
+
+### Reglas de seguridad
+
+Las fases futuras deben cumplir:
+
+- MXMed no guarda numeros de tarjeta, CVC ni datos sensibles.
+- MXMed solo guarda referencias seguras de Stripe cuando exista backend para ello.
+- MXMed no activa suscripcion antes de confirmacion de pago.
+- El frontend no es fuente confiable para importes finales.
+- El backend recalcula importes, vigencia, ajuste y elegibilidad.
+- Todo write futuro debe usar idempotencia.
+- Todo webhook futuro debe verificar firma.
+- Todo evento de Stripe debe correlacionar contra registros locales.
+- Los resumenes visuales actuales son informativos y no fuente final de cobro.
+- SPEI/OXXO no deben prometer renovacion automatica.
+- Renovacion automatica requiere consentimiento explicito.
+- No se deben exponer `client_secret`, llaves `sk_`, `rk_`, `whsec_` ni payloads sensibles.
+
+### Fuera de alcance en esta microfase
+
+No se implementa:
+
+- endpoint nuevo;
+- Stripe Checkout real;
+- PaymentIntent nuevo;
+- SetupIntent nuevo;
+- Customer Portal;
+- SQL;
+- migraciones;
+- webhook nuevo;
+- activacion;
+- cambios funcionales en frontend;
+- habilitacion de `Continuar a pago seguro`;
+- cambios en backend/API/servicios;
+- conexion con Stripe CLI;
+- cambios en `.env`.
+
+### Orden recomendado de implementacion posterior
+
+1. Definir contrato backend para crear intento de pago sandbox desde:
+   - Resumen de contratacion;
+   - Resumen de mejora;
+   - Resumen de renovacion.
+2. Integrar Stripe Checkout sandbox para tarjeta, sin auto-renew inicial.
+3. Validar webhook sandbox y confirmacion de pago contra read-model, sin activar produccion.
+4. Implementar setup de forma de pago sandbox.
+5. Probar renovacion automatica sandbox con metodo guardado y consentimiento explicito.
+6. Evaluar metodos manuales SPEI/OXXO si se decide habilitarlos.
+7. Evaluar Stripe Billing contra la logica propia MXMed antes de delegar ciclos recurrentes.
+
+### Alcance modificado
+
+Esta microfase modifica solamente:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No modifica:
+
+- `index.html`;
+- `assets/js/app.js`;
+- `assets/css/style.css`;
+- backend PHP;
+- API/rutas;
+- servicios;
+- Stripe provider;
+- Stripe webhook;
+- SQL/schema/seeds;
+- composer/vendor;
+- `.env`.
+
+No se ejecuto:
+
+- SQL;
+- Stripe CLI;
+- POST;
+- checkout;
+- PaymentIntent;
+- SetupIntent;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`.
+
+### Estado de readiness
+
+Resultado documental:
+
+`PASS`
+
+La matriz conceptual queda lista para que una microfase posterior conecte los resumenes visuales read-only con endpoints backend de pago sandbox de forma segura, idempotente y verificable.
