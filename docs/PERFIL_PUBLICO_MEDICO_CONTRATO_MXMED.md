@@ -43242,3 +43242,545 @@ Resultado documental:
 `PASS`
 
 La matriz conceptual queda lista para que una microfase posterior conecte los resumenes visuales read-only con endpoints backend de pago sandbox de forma segura, idempotente y verificable.
+
+## PP-Decisiones 225 - Readiness de contrato backend para rutas de pago de suscripcion
+
+### Microfase documental
+
+Se documenta la microfase:
+
+`DOCS/Suscripciones-PaymentRoute-BackendContract-Readiness-01`
+
+Esta adenda define el contrato backend futuro que recibira los payloads conceptuales preparados por el frontend read-only y los convertira, en una fase posterior, en una ruta segura hacia Stripe sandbox/test mode.
+
+No se implementa endpoint en esta microfase.
+
+### Contexto validado
+
+Ya existe frontend read-only para preparar payload conceptual de:
+
+- `new_subscription`;
+- `upgrade_subscription`;
+- `renewal`.
+
+Ese frontend fue publicado en:
+
+`585ee94 ux(suscripciones): prepara payload visual para pagos`
+
+Tambien existe la matriz documental Stripe sandbox:
+
+`PP-Decisiones 224 - Readiness de matriz Stripe sandbox para rutas de pago de suscripcion`
+
+### Principio rector
+
+El payload frontend es informativo.
+
+El backend futuro no debe usar el payload frontend como fuente final de cobro.
+
+El backend debe recalcular todo dato sensible antes de crear cualquier intencion interna, checkout sandbox o integracion con Stripe.
+
+El backend debe recalcular y validar:
+
+- plan actual real;
+- plan destino permitido;
+- precios vigentes;
+- vigencia actual;
+- dias restantes;
+- periodo base;
+- ajuste proporcional;
+- monto final;
+- `currency`;
+- elegibilidad;
+- autorizacion;
+- session scope;
+- idempotencia;
+- concurrencia;
+- seguridad.
+
+Los campos estimados enviados por frontend sirven solamente para auditoria, diagnostico y comparacion UX.
+
+### Endpoint conceptual futuro
+
+Ruta conceptual preferida:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-routes`
+
+Alternativa conceptual:
+
+`POST /api/subscriptions/index.php/payment-routes`
+
+La decision final del path queda pendiente para la microfase de implementacion backend.
+
+La variante por entidad es preferible porque mantiene consistencia con endpoints existentes por entidad y reduce ambiguedad de autorizacion.
+
+### Route types soportados inicialmente
+
+La primera version futura debe soportar solamente:
+
+- `new_subscription`;
+- `upgrade_subscription`;
+- `renewal`.
+
+Quedan fuera de esta primera version:
+
+- `setup_payment_method`;
+- `auto_renewal_preference`.
+
+Esas rutas deben tener microfases posteriores propias porque requieren consentimiento, metodo reutilizable y reglas adicionales de seguridad.
+
+### Request conceptual comun
+
+El endpoint futuro recibira JSON con campos comunes:
+
+```json
+{
+  "route_type": "new_subscription|upgrade_subscription|renewal",
+  "entity_type": "doctor",
+  "entity_id": "<entity_id>",
+  "billing_period": "annual|monthly",
+  "payment_method_family": "card|spei|oxxo|not_selected",
+  "auto_renew_requested": false,
+  "source": "subscription_plan_selection|subscription_upgrade_summary|subscription_renewal_summary",
+  "terms_acceptance_required": true,
+  "client_payload_version": "subscription-payment-payload-preview-v1",
+  "frontend_summary_snapshot": {},
+  "idempotency_key": null
+}
+```
+
+El backend debe preferir `Idempotency-Key` en header para writes reales.
+
+Si se acepta `idempotency_key` en body, debe tratarse como equivalente controlado y no mezclarse con una key distinta en header.
+
+### Campos por ruta
+
+#### Contratacion inicial
+
+`route_type = new_subscription`
+
+Campos especificos:
+
+```json
+{
+  "target_plan_code": "basic|standard|optimum|professional"
+}
+```
+
+Reglas:
+
+- no debe requerir `current_plan_code`;
+- debe rechazar si ya existe plan pagado activo, salvo politica futura explicita;
+- debe recalcular `amount_cents` server-side segun plan y periodo.
+
+#### Mejora de plan
+
+`route_type = upgrade_subscription`
+
+Campos especificos:
+
+```json
+{
+  "current_plan_code": "basic|standard|optimum",
+  "target_plan_code": "standard|optimum|professional"
+}
+```
+
+Reglas:
+
+- el `current_plan_code` frontend es diagnostico;
+- el backend debe leer el plan actual real;
+- debe rechazar si `target_rank <= current_rank`;
+- debe rechazar si no hay suscripcion activa;
+- debe recalcular `remaining_days`, `period_days` y `adjustment_amount_cents` server-side.
+
+#### Renovacion manual
+
+`route_type = renewal`
+
+Campos especificos:
+
+```json
+{
+  "current_plan_code": "basic|standard|optimum|professional"
+}
+```
+
+Reglas:
+
+- el `current_plan_code` frontend es diagnostico;
+- el backend debe leer el plan activo real;
+- debe rechazar si no hay plan activo renovable;
+- debe recalcular `renewal_amount_cents`, `current_expires_at` y nueva vigencia estimada server-side.
+
+### Campos frontend estimados
+
+El frontend puede enviar, dentro de `frontend_summary_snapshot` o campos diagnosticos equivalentes:
+
+- `amount_cents`;
+- `current_price_cents`;
+- `target_price_cents`;
+- `adjustment_amount_cents`;
+- `remaining_days`;
+- `period_days`;
+- `renewal_amount_cents`;
+- `current_expires_at`.
+
+Regla:
+
+Estos campos nunca son authoritative.
+
+El backend debe:
+
+- recalcular el valor final;
+- comparar contra el snapshot frontend si existe;
+- registrar diferencias como diagnostico;
+- devolver el valor server-side como authoritative.
+
+### Validaciones server-side requeridas
+
+#### Auth y session scope
+
+El backend debe validar:
+
+- usuario autenticado;
+- entidad operable por el usuario;
+- `entity_type` permitido;
+- `entity_id` permitido;
+- session scope vigente;
+- permisos de la cuenta o rol actual.
+
+No debe confiar en `entity_id` enviado por frontend sin validar contra contexto/autorizacion real.
+
+#### Route type
+
+Reglas:
+
+- aceptar solo route types soportados;
+- rechazar route type desconocido con `422 validation_error`;
+- no aceptar `setup_payment_method` ni `auto_renewal_preference` en esta primera integracion.
+
+#### Planes
+
+Reglas:
+
+- normalizar plan codes;
+- validar que plan destino exista;
+- validar `current_plan_code` contra read-model real;
+- rechazar upgrade si `target_rank <= current_rank`;
+- rechazar renewal si no hay plan activo;
+- rechazar new subscription si ya existe plan pagado activo, salvo politica futura documentada.
+
+#### Billing period
+
+Reglas:
+
+- validar `billing_period` permitido;
+- no inventar mensual/anual desde frontend;
+- resolver catalogo de precios vigente server-side;
+- rechazar combinaciones plan/periodo no soportadas.
+
+#### Precios
+
+El backend debe resolver server-side:
+
+- precio de contratacion;
+- precio actual;
+- precio destino;
+- ajuste proporcional;
+- monto de renovacion;
+- `currency`.
+
+Respuesta debe indicar:
+
+- `amount_source = server_recalculated`;
+- `frontend_amount_cents` si se recibio diagnostico;
+- `amount_mismatch = true|false`.
+
+#### Vigencia
+
+Para `upgrade_subscription`:
+
+- obtener active subscription real;
+- validar que siga activa;
+- calcular `remaining_days`;
+- calcular `period_days`;
+- exigir `remaining_days > 0`;
+- calcular ajuste proporcional server-side;
+- no reiniciar vigencia si la politica de upgrade vigente lo impide.
+
+Para `renewal`:
+
+- obtener `current_expires_at` real;
+- validar plan activo renovable;
+- calcular nueva vigencia estimada server-side;
+- no renovar plan inexistente, inactivo o ambiguo sin politica definida.
+
+#### Renovacion automatica
+
+`auto_renew_requested` puede recibirse como preferencia, pero la primera integracion futura debe tratarla como pendiente.
+
+Reglas:
+
+- no activar auto-renew si no hay metodo reutilizable guardado;
+- no activar auto-renew si `payment_method_family` no es compatible;
+- no prometer auto-renew con SPEI/OXXO;
+- requerir consentimiento explicito;
+- devolver estado controlado en `auto_renew_status`.
+
+Estados conceptuales:
+
+- `pending_payment_method`;
+- `not_supported`;
+- `eligible`;
+- `disabled`.
+
+#### Payment method family
+
+Valores conceptuales permitidos:
+
+- `card`;
+- `spei`;
+- `oxxo`;
+- `not_selected`.
+
+Reglas:
+
+- `card` puede ser candidato a renovacion automatica futura;
+- `spei` es pago manual;
+- `oxxo` es pago manual diferido;
+- `not_selected` es valido en readiness mientras no exista selector real de pago;
+- combinaciones invalidas deben devolver error controlado.
+
+### Idempotencia
+
+El endpoint futuro debe requerir `Idempotency-Key` o equivalente controlado.
+
+Operacion sugerida:
+
+`subscriptions.payment_route.create`
+
+El `request_hash` debe incluir:
+
+- `route_type`;
+- `entity_type`;
+- `entity_id`;
+- `current_plan_code` real si aplica;
+- `target_plan_code`;
+- `billing_period`;
+- `payment_method_family`;
+- `auto_renew_requested`.
+
+Reglas:
+
+- replay con mismo hash devuelve la misma respuesta;
+- replay con hash distinto devuelve `409 idempotency_key_reused_with_different_payload`;
+- la respuesta idempotente no debe crear registros duplicados.
+
+### Lock de concurrencia
+
+Lock conceptual:
+
+`mxmed:subscriptions:{entity_type}:{entity_id}:payment_route_create`
+
+Reglas:
+
+- TTL corto;
+- scope por entidad;
+- evita rutas de pago duplicadas concurrentes;
+- debe liberar lock al terminar la operacion o por expiracion controlada.
+
+### Persistencia futura
+
+La implementacion futura podra:
+
+- crear un registro nuevo de intencion de ruta de pago;
+- o reutilizar/normalizar `subscription_checkout_intents` si se decide integrarlo con el modelo existente.
+
+Debe quedar explicito que esta intencion interna:
+
+- no crea suscripcion activa;
+- no activa plan;
+- no marca pago como `paid`;
+- no inserta `subscription_payment_event`;
+- no dispara `activate-after-payment`;
+- no crea Stripe PaymentIntent por si sola si se separa en dos fases.
+
+### Respuesta conceptual exitosa
+
+HTTP futuro esperado:
+
+`201 Created`
+
+Payload conceptual:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "payment_route_uuid": "<uuid>",
+    "checkout_intent_uuid": null,
+    "route_type": "upgrade_subscription",
+    "entity_type": "doctor",
+    "entity_id": "<entity_id>",
+    "current_plan_code": "standard",
+    "target_plan_code": "optimum",
+    "billing_period": "annual",
+    "amount_cents": 0,
+    "currency": "MXN",
+    "amount_source": "server_recalculated",
+    "frontend_amount_cents": null,
+    "amount_mismatch": false,
+    "auto_renew_requested": false,
+    "auto_renew_status": "disabled",
+    "payment_method_family": "not_selected",
+    "status": "ready_for_checkout_sandbox",
+    "next_action": {
+      "type": "stripe_checkout_sandbox_pending",
+      "enabled": false
+    },
+    "warnings": [],
+    "reasons": []
+  }
+}
+```
+
+### Errores conceptuales
+
+Errores controlados esperados:
+
+- `400 invalid_json`;
+- `401 unauthorized`;
+- `403 forbidden`;
+- `409 route_conflict`;
+- `409 active_subscription_exists`;
+- `409 invalid_upgrade`;
+- `409 payment_route_already_exists`;
+- `409 idempotency_key_reused_with_different_payload`;
+- `422 validation_error`;
+- `500 internal_error`.
+
+No debe haber stacktrace ni secretos en respuestas.
+
+### Relacion con Stripe sandbox
+
+Este endpoint futuro no debe mezclar responsabilidades.
+
+Responsabilidad MXMed:
+
+- validar autorizacion;
+- recalcular importes;
+- validar planes;
+- aplicar idempotencia;
+- crear intencion interna authoritative;
+- devolver estado listo para checkout sandbox.
+
+Responsabilidad Stripe sandbox posterior:
+
+- crear Checkout Session, PaymentIntent o flujo equivalente;
+- manejar confirmacion de pago;
+- enviar webhook firmado;
+- permitir correlacion posterior.
+
+Division recomendada:
+
+Fase A:
+
+`POST payment-routes` crea intencion MXMed authoritative.
+
+Fase B:
+
+`POST payment-routes/{uuid}/stripe-checkout-sandbox` crea la sesion o intento Stripe sandbox.
+
+Un endpoint unico podria crear ambas cosas, pero no se recomienda inicialmente porque reduce control de QA y hace mas dificil aislar errores de validacion MXMed vs Stripe.
+
+### Seguridad
+
+Reglas obligatorias:
+
+- no aceptar `amount_cents` frontend como definitivo;
+- no guardar PAN/CVC/tarjeta;
+- no guardar `customer_id` o `payment_method_id` inventados;
+- no aceptar IDs Stripe inventados;
+- no usar secretos en frontend;
+- no exponer llaves Stripe;
+- verificar webhooks futuros;
+- mantener idempotencia;
+- mantener auditabilidad;
+- registrar snapshots seguros;
+- evitar writes duplicados;
+- no activar suscripcion antes de pago confirmado.
+
+### Fuera de alcance en esta microfase
+
+No se implementa:
+
+- endpoint;
+- PHP;
+- JavaScript;
+- CSS;
+- SQL;
+- migraciones;
+- Stripe CLI;
+- PaymentIntent;
+- SetupIntent;
+- Checkout Session;
+- Customer Portal;
+- webhook;
+- activacion;
+- composer/vendor.
+
+No se ejecuta:
+
+- POST;
+- SQL;
+- Stripe;
+- checkout;
+- PaymentIntent;
+- SetupIntent;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`.
+
+### Orden recomendado posterior
+
+1. Readiness endpoint backend `payment-routes`.
+2. Implementar endpoint MXMed sin Stripe, con recalculo server-side y respuesta readiness/mock.
+3. QA endpoint con payloads frontend, sin Stripe.
+4. Integrar Stripe Checkout sandbox para tarjeta en `new_subscription`.
+5. Integrar Stripe Checkout sandbox para `upgrade_subscription`.
+6. Integrar Stripe Checkout sandbox para `renewal`.
+7. Validar webhook sandbox y activacion controlada.
+8. Implementar setup payment method para renovacion automatica.
+9. Evaluar SPEI/OXXO manuales si se decide habilitar.
+
+### Alcance modificado
+
+Esta microfase modifica solamente:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No modifica:
+
+- frontend;
+- backend PHP;
+- API/rutas;
+- servicios;
+- repositorios;
+- Stripe provider;
+- Stripe webhook;
+- checkout;
+- PaymentIntent;
+- SetupIntent;
+- PaymentEvents;
+- activacion;
+- SQL/schema/seeds;
+- composer/vendor;
+- `.env`.
+
+### Estado de readiness
+
+Resultado documental:
+
+`PASS`
+
+El contrato backend conceptual queda listo para que una microfase posterior implemente `payment-routes` de forma segura, authoritative, idempotente y separada de Stripe sandbox.
