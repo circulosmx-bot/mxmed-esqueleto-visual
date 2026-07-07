@@ -6837,7 +6837,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .subp-plan--renewal-only{ background:#f8fafb; border-color:#d9e3e8; border-style:dashed; box-shadow:none; opacity:.72; filter:saturate(.55) contrast(.9) }
 .subp-plan--disabled{ color:#687a83 }
-.subp-plan--selected{ border:2px solid var(--subp-plan-main); box-shadow:0 14px 28px rgba(var(--subp-plan-shadow-rgb),0.14); grid-column:span 2 }
+.subp-plan--selected{ border:2px solid var(--subp-plan-main); box-shadow:0 14px 28px rgba(var(--subp-plan-shadow-rgb),0.14) }
 .subp-plan .subp-plan-title{ display:flex; align-items:center; gap:8px; min-height:68px; font-weight:800; font-size:1.34rem; color:#fff; background:linear-gradient(135deg,var(--subp-plan-main) 0%,var(--subp-plan-dark) 100%); padding:8px 112px 8px 12px; border-radius:8px 8px 6px 6px; margin:-16px -16px 12px -16px; text-align:left; text-transform:uppercase; overflow:visible }
 .subp-plan-title--current{ position:relative; gap:7px; height:68px; min-height:0; padding-top:8px !important; padding-right:4px !important; padding-bottom:8px !important; z-index:1 }
 .subp-plan-title-copy{ display:grid; gap:2px; align-content:center; min-width:0; line-height:1.05 }
@@ -6895,12 +6895,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--upgrade-now .subp-plan-badge{ background:var(--subp-plan-dark) }
 .subp-plan--renewal-only .subp-plan-badge{ background:#8a9aa2; color:rgba(255,255,255,.8); opacity:.68 }
 .subp-plan--selected .subp-plan-badge{ background:var(--subp-plan-dark) }
-.subp-plan--selected > .subp-feature,
-.subp-plan--selected > .mt-2,
-.subp-plan--selected > .subp-plan-state-card,
-.subp-plan--selected > .subp-upgrade-card-adjustment,
-.subp-plan--selected > .subp-save,
-.subp-plan--selected > [data-subp-select]{ display:none }
 .subp-plan-state-card{ display:grid; gap:7px; margin:0 0 12px; padding:12px; border-radius:8px; border:1px solid #d7e8ef; background:#f7fbfc; color:#294f5f }
 .subp-plan-state-title{ color:#003154; font-size:.96rem; font-weight:900; line-height:1.18 }
 .subp-plan-state-copy{ color:#49636f; font-size:.86rem; font-weight:650; line-height:1.35 }
@@ -6984,6 +6978,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--renewal-only .subp-benefit-info{ display:none }
 .subp-upgrade-card-empty{ color:#49636f; font-size:.86rem; font-weight:650; margin:0 }
 .subp-upgrade-card-copy{ color:#294f5f; font-size:.86rem; font-weight:650; line-height:1.35; margin:2px 0 0 }
+.subp-upgrade-card-copy--estimate{ color:#FA003F }
 .subp-upgrade-card-amount{ color:var(--subp-plan-dark); font-size:1.34rem; font-weight:950; line-height:1.1 }
 .subp-upgrade-card-note{ color:#5a7380; font-size:.76rem; font-weight:650; line-height:1.3 }
 .subp-plan-detail-notes{ display:grid; gap:6px; padding:9px 10px; border-radius:8px; background:#fff; border:1px solid #e0edf1; margin-bottom:8px }
@@ -7008,7 +7003,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
   .subp-band-benefit-zone{ justify-items:start }
-  .subp-plan--selected{ grid-column:span 1 }
   .subp-plan-detail-grid{ grid-template-columns:1fr }
   .subp-plan-pricing-top{ align-items:flex-start; flex-direction:column }
   .subp-plan-pricing-terms{ justify-items:start; max-width:100%; text-align:left }

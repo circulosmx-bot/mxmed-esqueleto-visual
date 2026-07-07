@@ -60919,7 +60919,7 @@ function mxResetLogoPreview(){
         </ul>`
       : '<p class="subp-upgrade-card-empty">Más herramientas incluidas en tu mejora.</p>';
     const estimateHtml = estimate
-      ? `<p class="subp-upgrade-card-copy">Por los <strong>${estimate.remainingDays} días</strong> que aún restan de tu vigencia, tu ajuste estimado sería:</p>
+      ? `<p class="subp-upgrade-card-copy subp-upgrade-card-copy--estimate">Por los <strong>${estimate.remainingDays} días</strong> que aún restan de tu vigencia, tu ajuste estimado sería:</p>
         <div class="subp-upgrade-card-amount">de tan solo ${escapeHtml(fmtMoney(estimate.amount))}</div>`
       : '<p class="subp-upgrade-card-copy">El ajuste proporcional se calculará antes de pagar.</p>';
 
@@ -61499,9 +61499,7 @@ function mxResetLogoPreview(){
             ? 'Puedes mejorar tu plan durante tu vigencia. El sistema calculará el ajuste correspondiente.'
             : SUBSCRIPTION_CHECKOUT_PENDING_NOTICE;
       const backendPlanCode = backendPlanCodeFromUiPlan(p.id);
-      const inlineDetail = flowType === 'upgrade_now' && isSelected
-        ? inlineUpgradeDetailHtml(p)
-        : '';
+      const inlineDetail = '';
       const pricingHtml = activePaid && (flowType === 'current' || flowType === 'downgrade_at_renewal')
         ? ''
         : planPricingBlockHtml(p);
