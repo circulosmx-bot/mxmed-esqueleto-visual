@@ -58935,6 +58935,9 @@ function mxResetLogoPreview(){
   if(!pane) return;
 
   const els = {
+    sectionTabs: pane.querySelectorAll('[data-subp-section-tab]'),
+    sectionPanels: pane.querySelectorAll('[data-subp-section]'),
+    paymentsContent: pane.querySelector('[data-subp-payments-content]'),
     planName: pane.querySelector('[data-subp-current-name]'),
     status: pane.querySelector('[data-subp-current-status]'),
     since: pane.querySelector('[data-subp-since]'),
@@ -59081,6 +59084,7 @@ function mxResetLogoPreview(){
       { id:'optimo', name:'Óptimo', tagline:'Gestión clínica ampliada', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
       { id:'pro', name:'Profesional', tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
     ],
+    activeSection: 'plans',
     selectedPlanId: '',
     focusedPlanId: '',
     history: [],
@@ -60449,6 +60453,135 @@ function mxResetLogoPreview(){
       || 'Plan actual';
   }
 
+  function currentBillingPeriodLabel(){
+    const period = currentBillingPeriod();
+    if(period === 'annual') return 'Anual';
+    if(period === 'monthly') return 'Mensual';
+    if(period === 'lifetime') return 'Vitalicio';
+    return 'No disponible';
+  }
+
+  function setSubscriptionSection(section){
+    const next = section === 'billing' ? 'billing' : 'plans';
+    data.activeSection = next;
+    closeBenefitInfoPopovers(els.catalog);
+    els.sectionTabs.forEach((button)=>{
+      const isActive = clean(button.dataset.subpSectionTab) === next;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    els.sectionPanels.forEach((panel)=>{
+      const isActive = clean(panel.dataset.subpSection) === next;
+      panel.classList.toggle('d-none', !isActive);
+    });
+    if(next === 'billing'){
+      renderSubscriptionPaymentsShell();
+    }
+  }
+
+  function subscriptionPaymentsBenefitsHtml(features){
+    const items = Array.isArray(features)
+      ? features.map(clean).filter((feature)=> feature && !feature.includes(':')).slice(0, 6)
+      : [];
+    if(!items.length){
+      return '<p class="subp-payments-muted mb-0">Beneficios vigentes por consultar.</p>';
+    }
+    return `<ul class="subp-payments-benefits">
+      ${items.map((feature)=>`<li><span class="material-symbols-rounded" aria-hidden="true">check_circle</span>${escapeHtml(feature)}</li>`).join('')}
+    </ul>`;
+  }
+
+  function renderSubscriptionPaymentsShell(){
+    if(!els.paymentsContent) return;
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const freeQaMode = isQaFreePlanMode();
+    const freeMode = freeQaMode || !activePaid;
+    const planIdentity = freeMode
+      ? 'free'
+      : normalizePlanId(data.current.id || data.currentModel?.effective_plan_code || data.currentModel?.contracted_plan_code || data.current.name);
+    const planName = freeMode ? 'Sin plan contratado' : currentPlanLabel();
+    const status = freeMode ? 'Sin suscripción activa' : (data.current.status || 'Activo');
+    const vigencia = freeMode ? 'No aplica' : (data.current.until || 'No aplica');
+    const periodo = freeMode ? 'No aplica' : currentBillingPeriodLabel();
+    const benefits = freeMode ? [] : data.current.features;
+
+    if(freeMode){
+      els.paymentsContent.innerHTML = `<article class="subp-payments-card subp-payments-card--empty" data-subp-payments-card="empty">
+          <span class="material-symbols-rounded subp-payments-card-icon" aria-hidden="true">workspace_premium</span>
+          <div>
+            <h4>Aún no tienes un plan contratado.</h4>
+            <p>Elige un plan para activar beneficios profesionales.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes disponibles</button>
+        </article>
+        <article class="subp-payments-card" data-subp-payments-card="payment">
+          <h4>Pago y facturación</h4>
+          <dl class="subp-payments-dl">
+            <dt>Forma de pago</dt><dd>No disponible en esta fase</dd>
+            <dt>Facturación</dt><dd>Pendiente de conectar</dd>
+          </dl>
+          <div class="subp-payments-actions">
+            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Actualizar forma de pago</button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Datos fiscales</button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Historial de pagos</button>
+          </div>
+        </article>`;
+      return;
+    }
+
+    els.paymentsContent.innerHTML = `<article class="subp-payments-card subp-payments-card--plan" data-current-plan="${escapeHtml(planIdentity)}" data-subp-payments-card="plan">
+        <div class="subp-payments-card-head">
+          <div>
+            <div class="subp-payments-kicker">Plan actual</div>
+            <h4>${escapeHtml(planName)}</h4>
+          </div>
+          <span class="subp-payments-plan-pill">${escapeHtml(planName)}</span>
+        </div>
+        <dl class="subp-payments-dl">
+          <dt>Estado</dt><dd>${escapeHtml(status)}</dd>
+          <dt>Vigencia</dt><dd>${escapeHtml(vigencia)}</dd>
+          <dt>Periodo</dt><dd>${escapeHtml(periodo)}</dd>
+        </dl>
+        <div class="subp-payments-benefits-wrap">
+          <div class="subp-payments-kicker">Beneficios incluidos</div>
+          ${subscriptionPaymentsBenefitsHtml(benefits)}
+        </div>
+      </article>
+      <article class="subp-payments-card" data-subp-payments-card="renewal">
+        <div class="subp-payments-card-head">
+          <div>
+            <div class="subp-payments-kicker">Renovación automática</div>
+            <h4>No disponible</h4>
+          </div>
+          <span class="subp-payments-status-chip">Pendiente</span>
+        </div>
+        <label class="subp-payments-switch">
+          <input type="checkbox" disabled>
+          <span>La administración de renovación automática se conectará en una fase posterior.</span>
+        </label>
+      </article>
+      <article class="subp-payments-card" data-subp-payments-card="payment">
+        <h4>Pago y facturación</h4>
+        <dl class="subp-payments-dl">
+          <dt>Forma de pago</dt><dd>Pendiente de conectar</dd>
+          <dt>Facturación</dt><dd>Pendiente de conectar</dd>
+        </dl>
+        <div class="subp-payments-actions">
+          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Actualizar forma de pago</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Datos fiscales</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Historial de pagos</button>
+        </div>
+      </article>
+      <article class="subp-payments-card" data-subp-payments-card="actions">
+        <h4>Acciones rápidas</h4>
+        <div class="subp-payments-actions subp-payments-actions--stack">
+          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Renovar mi plan <span>Próxima fase</span></button>
+          <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
+          <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="conditions">Ver condiciones del plan</button>
+        </div>
+      </article>`;
+  }
+
   function selectedUpgradePlan(){
     const selected = findPlanById(data.selectedPlanId);
     if(!selected) return null;
@@ -61461,6 +61594,7 @@ function mxResetLogoPreview(){
         els.currentAlert.classList.add('d-none');
       }
     }
+    renderSubscriptionPaymentsShell();
   }
 
   function renderHistory(model){
@@ -61721,6 +61855,35 @@ function mxResetLogoPreview(){
   });
 
   // Eventos
+  els.sectionTabs.forEach((button)=>{
+    button.addEventListener('click', ()=>{
+      setSubscriptionSection(button.dataset.subpSectionTab);
+    });
+  });
+  pane.addEventListener('click', (event)=>{
+    const goto = event.target && event.target.closest('[data-subp-section-goto]');
+    if(goto){
+      event.preventDefault();
+      setSubscriptionSection(goto.dataset.subpSectionGoto);
+      return;
+    }
+    const action = event.target && event.target.closest('[data-subp-payments-action]');
+    if(action){
+      event.preventDefault();
+      if(clean(action.dataset.subpPaymentsAction) === 'conditions'){
+        setSubscriptionSection('plans');
+        window.requestAnimationFrame(()=>{
+          const button = pane.querySelector('[data-subp-plan-card][data-subp-flow-type="current"] [data-subp-current-conditions-popover-toggle]');
+          if(button){
+            openCurrentConditionsPopover(button);
+            try{
+              button.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            }catch(_){}
+          }
+        });
+      }
+    }
+  });
   els.pricingModeButtons.forEach((button)=>{
     button.addEventListener('click', ()=>{
       const mode = clean(button.dataset.subpPricingMode) === 'monthly' ? 'monthly' : 'yearly';

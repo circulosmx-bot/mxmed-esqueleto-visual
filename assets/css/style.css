@@ -6773,6 +6773,39 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-suscripcion[data-current-plan="optimo"]{ --subp-current-plan-main:#0A4F8F; --subp-current-plan-dark:#003F63; --subp-current-plan-soft:#EAF4FB; --subp-current-plan-border:#9BC8EA; --subp-current-plan-shadow-rgb:10,79,143 }
 #p-suscripcion[data-current-plan="pro"]{ --subp-current-plan-main:#6750D8; --subp-current-plan-dark:#4B3DD1; --subp-current-plan-soft:#F2EFFF; --subp-current-plan-border:#C6B8FF; --subp-current-plan-shadow-rgb:103,80,216 }
 #p-suscripcion[data-current-plan="free"]{ --subp-current-plan-main:#6F91A3; --subp-current-plan-dark:#587887; --subp-current-plan-soft:#F8FBFC; --subp-current-plan-border:#D7E8EF; --subp-current-plan-shadow-rgb:111,145,163 }
+.subp-section-tabs{ display:inline-flex; align-items:center; gap:4px; margin:0 0 14px; padding:4px; border:1px solid #b7dce6; border-radius:12px; background:#fff; box-shadow:0 6px 14px rgba(0,49,84,.08) }
+.subp-section-tab{ appearance:none; border:0; border-radius:9px; background:transparent; color:#315c6c; font:inherit; font-size:.9rem; font-weight:850; line-height:1; padding:9px 13px; white-space:nowrap; cursor:pointer }
+.subp-section-tab:hover{ background:#eaf7fb; color:#003154 }
+.subp-section-tab.is-active{ background:var(--subp-current-plan-main); color:#fff; box-shadow:0 6px 14px rgba(var(--subp-current-plan-shadow-rgb),.22) }
+.subp-section-panel{ min-width:0 }
+.subp-payments-shell{ display:grid; gap:14px }
+.subp-payments-shell-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:16px; border:1px solid var(--subp-current-plan-border); border-radius:12px; background:linear-gradient(180deg,var(--subp-current-plan-soft) 0%,#fff 100%); color:#10394a }
+.subp-payments-shell-head h3{ margin:0 0 4px; color:#003154; font-size:1.18rem; font-weight:900; line-height:1.1 }
+.subp-payments-shell-head p{ margin:0; color:#49636f; font-size:.9rem; font-weight:650; line-height:1.35 }
+.subp-payments-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px }
+.subp-payments-card{ display:grid; align-content:start; gap:12px; min-width:0; padding:15px; border:1px solid #d7e8ef; border-radius:12px; background:#fff; box-shadow:0 8px 18px rgba(0,49,84,.06); color:#143849 }
+.subp-payments-card--plan{ border-color:var(--subp-current-plan-border); background:linear-gradient(180deg,var(--subp-current-plan-soft) 0%,#fff 100%) }
+.subp-payments-card--empty{ grid-column:1/-1; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; border-color:var(--subp-current-plan-border); background:linear-gradient(180deg,var(--subp-current-plan-soft) 0%,#fff 100%) }
+.subp-payments-card-icon{ display:grid; place-items:center; width:44px; height:44px; border-radius:12px; background:var(--subp-current-plan-main); color:#fff; font-size:28px; line-height:1 }
+.subp-payments-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.subp-payments-card h4{ margin:0; color:#003154; font-size:1.02rem; font-weight:900; line-height:1.15 }
+.subp-payments-card p{ margin:0; color:#49636f; font-size:.9rem; font-weight:650; line-height:1.35 }
+.subp-payments-kicker{ color:#006b82; font-size:.78rem; font-weight:900; line-height:1; margin-bottom:4px }
+.subp-payments-plan-pill{ display:inline-flex; align-items:center; justify-content:center; max-width:150px; padding:6px 9px; border-radius:9px; background:var(--subp-current-plan-dark); color:#fff; font-size:.78rem; font-weight:900; line-height:1; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.subp-payments-status-chip{ display:inline-flex; align-items:center; padding:5px 8px; border-radius:999px; background:#eef6f8; color:#49636f; font-size:.74rem; font-weight:850; line-height:1 }
+.subp-payments-dl{ display:grid; grid-template-columns:max-content minmax(0,1fr); gap:6px 12px; margin:0; font-size:.88rem; line-height:1.25 }
+.subp-payments-dl dt{ color:#6b7f87; font-weight:800 }
+.subp-payments-dl dd{ margin:0; color:#143849; font-weight:750 }
+.subp-payments-benefits-wrap{ display:grid; gap:7px }
+.subp-payments-benefits{ display:flex; flex-wrap:wrap; gap:6px; list-style:none; margin:0; padding:0 }
+.subp-payments-benefits li{ display:inline-flex; align-items:center; gap:4px; padding:5px 7px; border:1px solid #d5ebf1; border-radius:999px; background:#fff; color:#143849; font-size:.8rem; font-weight:800; line-height:1 }
+.subp-payments-benefits .material-symbols-rounded{ color:var(--subp-current-plan-main); font-size:16px; line-height:1 }
+.subp-payments-switch{ display:flex; align-items:flex-start; gap:8px; color:#49636f; font-size:.86rem; font-weight:650; line-height:1.35 }
+.subp-payments-switch input{ margin-top:2px }
+.subp-payments-actions{ display:flex; flex-wrap:wrap; gap:8px }
+.subp-payments-actions--stack{ display:grid; justify-items:start }
+.subp-payments-actions button span{ margin-left:5px; color:#6b7f87; font-size:.76rem; font-weight:800 }
+.subp-payments-muted{ color:#6b7f87; font-size:.86rem; font-weight:650 }
 .subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:linear-gradient(135deg,var(--subp-current-plan-main) 0%,var(--subp-current-plan-dark) 100%); color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 18px; box-shadow:0 10px 20px rgba(var(--subp-current-plan-shadow-rgb),.1) }
 .subp-band-main{ min-width:0; flex:1 1 560px }
 .subp-plan-stack{ display:grid; gap:4px; justify-items:start; transform:translate(-5px, 4px) }
@@ -7006,6 +7039,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--renewal-only .subp-btn,
 .subp-plan--current .subp-btn{ background:#fff; border-color:#b9cbd2; color:#274653; filter:none }
 @media (max-width: 900px){
+  .subp-section-tabs{ width:100%; overflow-x:auto }
+  .subp-payments-shell-head{ display:grid }
+  .subp-payments-grid{ grid-template-columns:1fr }
+  .subp-payments-card--empty{ grid-template-columns:1fr }
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
   .subp-band-benefit-zone{ justify-items:start }

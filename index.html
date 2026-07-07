@@ -2899,7 +2899,13 @@
             </header>
           </div>
           <div class="body subp-wrap">
-            <div class="subp-band">
+            <div class="subp-section-tabs" role="tablist" aria-label="Secciones de suscripción">
+              <button class="subp-section-tab is-active" type="button" role="tab" aria-selected="true" data-subp-section-tab="plans">Planes y beneficios</button>
+              <button class="subp-section-tab" type="button" role="tab" aria-selected="false" data-subp-section-tab="billing">Mi plan y pagos</button>
+            </div>
+
+            <div class="subp-section-panel" data-subp-section="plans">
+              <div class="subp-band">
               <div class="subp-plan-stack">
                 <div class="subp-plan-context">Tu plan actual</div>
                 <div class="subp-plan-pill" data-subp-current-name>Pendiente</div>
@@ -3043,8 +3049,21 @@
               </div>
               <div class="text-muted small mt-3" data-subp-upgrade-activation-rule></div>
             </section>
+            </div>
 
-            <div class="row g-3 mt-4">
+            <div class="subp-section-panel d-none" data-subp-section="billing">
+              <section class="subp-payments-shell" data-subp-payments-shell>
+                <div class="subp-payments-shell-head">
+                  <div>
+                    <h3>Mi plan y pagos</h3>
+                    <p>Administra la renovación, pagos y condiciones de tu suscripción.</p>
+                  </div>
+                  <button class="btn btn-outline-secondary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
+                </div>
+                <div class="subp-payments-grid" data-subp-payments-content></div>
+              </section>
+
+            <div class="row g-3 mt-4 d-none">
               <div class="col-lg-6">
                 <div class="card h-100 subp-card border-0 shadow-sm p-3">
                   <label class="form-label mb-1">Cupones / Patrocinios</label>
@@ -3139,7 +3158,7 @@
               </div>
             </div>
 
-            <div class="card subp-card border-0 shadow-sm p-3 mt-4">
+            <div class="card subp-card border-0 shadow-sm p-3 mt-4 d-none">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <label class="form-label mb-0">Historial de renovaciones</label>
                 <button class="btn btn-outline-secondary btn-sm" type="button" data-subp-history-refresh>Actualizar</button>
@@ -3150,6 +3169,7 @@
                   <tbody data-subp-history></tbody>
                 </table>
               </div>
+            </div>
             </div>
           </div>
         </section>
