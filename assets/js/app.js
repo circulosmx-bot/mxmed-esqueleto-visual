@@ -59083,7 +59083,6 @@ function mxResetLogoPreview(){
     ],
     selectedPlanId: '',
     focusedPlanId: '',
-    currentConditionsOpen: false,
     history: [],
     currentModel: null,
     currentMeta: null,
@@ -60494,9 +60493,13 @@ function mxResetLogoPreview(){
     return scope ? scope.querySelector('[data-subp-benefit-info-popover].is-open') : null;
   }
 
+  function openedSubscriptionPopover(scope = els.catalog){
+    return scope ? scope.querySelector('[data-subp-benefit-info-popover].is-open, [data-subp-current-conditions-popover].is-open') : null;
+  }
+
   function handleBenefitInfoPointerMove(event){
     if(event.pointerType && event.pointerType !== 'mouse') return;
-    const popover = openedBenefitInfoPopover();
+    const popover = openedSubscriptionPopover();
     if(!popover){
       clearBenefitInfoCloseTimer();
       return;
@@ -60536,12 +60539,30 @@ function mxResetLogoPreview(){
     scope.querySelectorAll('[data-subp-benefit-info-popover].is-open').forEach((popover)=>{
       popover.classList.remove('is-open');
     });
+    scope.querySelectorAll('[data-subp-current-conditions-popover].is-open').forEach((popover)=>{
+      popover.classList.remove('is-open');
+    });
     scope.querySelectorAll('[data-subp-benefit-info-toggle][aria-expanded="true"]').forEach((button)=>{
+      button.setAttribute('aria-expanded', 'false');
+    });
+    scope.querySelectorAll('[data-subp-current-conditions-popover-toggle][aria-expanded="true"]').forEach((button)=>{
       button.setAttribute('aria-expanded', 'false');
     });
   }
 
   function openBenefitInfoPopover(button){
+    if(!button || !els.catalog) return;
+    const popoverId = button.getAttribute('aria-controls');
+    const popover = popoverId ? document.getElementById(popoverId) : null;
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+    closeBenefitInfoPopovers(els.catalog);
+    if(isOpen || !popover) return;
+    button.setAttribute('aria-expanded', 'true');
+    popover.classList.add('is-open');
+    startBenefitInfoPointerTracking();
+  }
+
+  function openCurrentConditionsPopover(button){
     if(!button || !els.catalog) return;
     const popoverId = button.getAttribute('aria-controls');
     const popover = popoverId ? document.getElementById(popoverId) : null;
@@ -60889,22 +60910,30 @@ function mxResetLogoPreview(){
   }
 
   function currentPlanConditionsHtml(plan){
-    const isOpen = data.currentConditionsOpen === true;
     const benefitItems = Array.isArray(plan?.features) && plan.features.length
       ? plan.features
       : data.current.features;
     const benefitsHtml = Array.isArray(benefitItems) && benefitItems.length
       ? `<ul class="subp-current-conditions-benefits">
-          ${benefitItems.map((benefit, index)=>`<li><span>${escapeHtml(benefitDisplayLabel(benefit))}</span>${benefitInfoButtonHtml(benefit, `conditions-${clean(plan?.id) || 'plan'}-${index}`, true)}</li>`).join('')}
+          ${benefitItems.map((benefit)=>`<li><span>${escapeHtml(benefitDisplayLabel(benefit))}</span></li>`).join('')}
         </ul>`
       : '<p class="subp-current-conditions-empty">Beneficios vigentes por consultar.</p>';
+    const popoverId = `subp-current-conditions-${clean(plan?.id) || 'plan'}`;
+    const billingPeriod = currentBillingPeriod();
+    const billingLabel = billingPeriod === 'annual'
+      ? 'Anual'
+      : billingPeriod === 'monthly'
+        ? 'Mensual'
+        : 'No disponible';
 
     return `<div class="subp-current-conditions-wrap">
-        <button class="btn btn-outline-secondary btn-sm subp-current-conditions-toggle" type="button" data-subp-current-conditions-toggle aria-expanded="${isOpen ? 'true' : 'false'}">${isOpen ? 'Ocultar condiciones' : 'Ver condiciones de mi plan'}</button>
-        <div class="subp-current-conditions${isOpen ? '' : ' d-none'}" data-subp-current-conditions-panel>
+        <button class="btn btn-outline-secondary btn-sm subp-current-conditions-toggle" type="button" data-subp-current-conditions-popover-toggle aria-expanded="false" aria-controls="${escapeHtml(popoverId)}">Ver condiciones de mi plan</button>
+        <div class="subp-current-conditions-popover" id="${escapeHtml(popoverId)}" role="dialog" aria-label="Condiciones de tu plan" data-subp-current-conditions-popover>
+          <div class="subp-current-conditions-title">Condiciones de tu plan</div>
           <div><strong>Plan actual:</strong> ${escapeHtml(currentPlanLabel())}</div>
           <div><strong>Estado:</strong> ${escapeHtml(data.current.status || 'Activo')}</div>
           <div><strong>Vigencia:</strong> ${escapeHtml(data.current.until || 'No aplica')}</div>
+          <div><strong>Facturación:</strong> ${escapeHtml(billingLabel)}</div>
           <div class="subp-current-conditions-list"><strong>Beneficios incluidos:</strong>${benefitsHtml}</div>
           <div class="subp-current-conditions-note">Puedes renovar o mejorar tu plan cuando corresponda.</div>
         </div>
@@ -61469,6 +61498,7 @@ function mxResetLogoPreview(){
       const isMuted = focusMode && !isFocused;
       const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
       const hasCurrentUpgradePrompt = isCurrent && upgradePlansFor(p).length > 0;
+      const hasCurrentConditionsControl = activePaid && isCurrent && !freeQaMode;
       const badge = freeQaMode
         ? 'Disponible'
         : isSelected
@@ -61536,7 +61566,7 @@ function mxResetLogoPreview(){
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       const focusClasses = `${isFocused ? ' subp-plan--focus-selected' : ''}${isMuted ? ' subp-plan--focus-muted' : ''}`;
-      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}${focusClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${focusMode || cardSelectable || hasCurrentUpgradePrompt ? '0' : '-1'}" role="button" aria-pressed="${isFocused || isSelected ? 'true' : 'false'}" aria-current="${isFocused ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt || focusMode ? 'false' : 'true'}">
+      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}${focusClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${focusMode || cardSelectable || hasCurrentUpgradePrompt ? '0' : '-1'}" role="button" aria-pressed="${isFocused || isSelected ? 'true' : 'false'}" aria-current="${isFocused ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt || hasCurrentConditionsControl || focusMode ? 'false' : 'true'}">
         ${floatingBadgeHtml}
         <div class="subp-plan-title${activePaid && flowType === 'current' ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-copy"><span class="subp-plan-title-line"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span></span>${planTaglineHtml}</span>${planTitleBadgeHtml}</div>
         ${planIconPanelHtml(p.id, { current: activePaid && flowType === 'current' })}
@@ -61570,7 +61600,6 @@ function mxResetLogoPreview(){
       data.upgradeCheckout.checkoutIntentUuid = '';
       data.upgradeCheckout.contractAcceptanceUuid = '';
       data.upgradeCheckout.idempotencyKey = '';
-      data.currentConditionsOpen = false;
       renderCatalog();
     };
     els.catalog.querySelectorAll('[data-subp-select]').forEach(btn=>{
@@ -61579,12 +61608,11 @@ function mxResetLogoPreview(){
         selectPlan(btn.dataset.subpSelect);
       });
     });
-    els.catalog.querySelectorAll('[data-subp-current-conditions-toggle]').forEach((button)=>{
+    els.catalog.querySelectorAll('[data-subp-current-conditions-popover-toggle]').forEach((button)=>{
       button.addEventListener('click', (event)=>{
         event.preventDefault();
         event.stopPropagation();
-        data.currentConditionsOpen = !data.currentConditionsOpen;
-        renderCatalog();
+        openCurrentConditionsPopover(button);
       });
     });
     els.catalog.querySelectorAll('[data-subp-current-upgrade-target]').forEach((button)=>{
@@ -61604,9 +61632,9 @@ function mxResetLogoPreview(){
     els.catalog.querySelectorAll('[data-subp-plan-card]').forEach(card=>{
       card.addEventListener('click',(event)=>{
         if(event.target && event.target.closest('[data-subp-select]')) return;
-        if(event.target && event.target.closest('[data-subp-current-conditions-toggle]')) return;
+        if(event.target && event.target.closest('[data-subp-current-conditions-popover-toggle]')) return;
         if(event.target && event.target.closest('[data-subp-current-upgrade-target]')) return;
-        if(event.target && event.target.closest('[data-subp-current-conditions-panel]')) return;
+        if(event.target && event.target.closest('[data-subp-current-conditions-popover]')) return;
         if(event.target && event.target.closest('[data-subp-benefit-info]')) return;
         if(event.target && event.target.closest('[data-subp-inline-upgrade-detail]')) return;
         if(card.dataset.subpFlowType === 'downgrade_at_renewal'){
@@ -61671,7 +61699,6 @@ function mxResetLogoPreview(){
   function resetPlanQaVisualSelection(){
     data.selectedPlanId = '';
     clearCurrentUpgradeFocus();
-    data.currentConditionsOpen = false;
     data.upgradeCheckout.visible = false;
     data.upgradeCheckout.accepted = false;
     data.upgradeCheckout.state = 'idle';
@@ -61705,11 +61732,12 @@ function mxResetLogoPreview(){
   });
   document.addEventListener('click', (event)=>{
     if(event.target && event.target.closest('[data-subp-benefit-info]')) return;
+    if(event.target && event.target.closest('.subp-current-conditions-wrap')) return;
     closeBenefitInfoPopovers(els.catalog);
   });
   document.addEventListener('keydown', (event)=>{
     if(event.key !== 'Escape') return;
-    const openPopover = openedBenefitInfoPopover(els.catalog);
+    const openPopover = openedSubscriptionPopover(els.catalog);
     closeBenefitInfoPopovers(els.catalog);
     if(!openPopover && data.focusedPlanId){
       clearCurrentUpgradeFocus();
