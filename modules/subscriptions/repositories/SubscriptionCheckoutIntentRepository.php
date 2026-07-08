@@ -45,6 +45,7 @@ final class SubscriptionCheckoutIntentRepository
         );
         $idempotencyKeyHash = $this->optionalText($snapshot['idempotency_key_hash'] ?? null, 64);
         $requestHash = $this->optionalText($snapshot['request_hash'] ?? null, 64);
+        $paymentRouteUuid = $this->optionalText($snapshot['payment_route_uuid'] ?? null, 36);
         $expiresAt = $this->requiredText($snapshot['expires_at'] ?? null, 'invalid_checkout_intent_payload', 19);
         $source = $this->requiredText($snapshot['source'] ?? null, 'invalid_checkout_intent_payload', 128);
         $notes = $this->optionalText($snapshot['notes'] ?? null, 65535);
@@ -79,6 +80,7 @@ final class SubscriptionCheckoutIntentRepository
                     contract_acceptance_uuid,
                     idempotency_key_hash,
                     request_hash,
+                    payment_route_uuid,
                     expires_at,
                     source,
                     notes,
@@ -104,6 +106,7 @@ final class SubscriptionCheckoutIntentRepository
                     :contract_acceptance_uuid,
                     :idempotency_key_hash,
                     :request_hash,
+                    :payment_route_uuid,
                     :expires_at,
                     :source,
                     :notes,
@@ -131,6 +134,7 @@ final class SubscriptionCheckoutIntentRepository
                 'contract_acceptance_uuid' => $contractAcceptanceUuid,
                 'idempotency_key_hash' => $idempotencyKeyHash,
                 'request_hash' => $requestHash,
+                'payment_route_uuid' => $paymentRouteUuid,
                 'expires_at' => $expiresAt,
                 'source' => $source,
                 'notes' => $notes,
@@ -161,6 +165,24 @@ final class SubscriptionCheckoutIntentRepository
                AND deleted_at IS NULL
              LIMIT 1',
             ['uuid' => $uuid]
+        );
+    }
+
+    public function findByPaymentRouteUuid(string $paymentRouteUuid): ?array
+    {
+        $paymentRouteUuid = trim($paymentRouteUuid);
+        if ($paymentRouteUuid === '') {
+            throw new InvalidArgumentException('invalid_checkout_intent_payload: payment_route_uuid is required');
+        }
+
+        return $this->findOne(
+            'SELECT ' . $this->selectColumns() . '
+             FROM subscription_checkout_intents
+             WHERE payment_route_uuid = :payment_route_uuid
+               AND deleted_at IS NULL
+             ORDER BY created_at DESC, id DESC
+             LIMIT 1',
+            ['payment_route_uuid' => $paymentRouteUuid]
         );
     }
 
@@ -315,6 +337,7 @@ final class SubscriptionCheckoutIntentRepository
             'contract_acceptance_uuid' => $this->nullableString($row['contract_acceptance_uuid'] ?? null),
             'idempotency_key_hash' => $this->nullableString($row['idempotency_key_hash'] ?? null),
             'request_hash' => $this->nullableString($row['request_hash'] ?? null),
+            'payment_route_uuid' => $this->nullableString($row['payment_route_uuid'] ?? null),
             'provider' => $this->nullableString($row['provider'] ?? null),
             'provider_checkout_id' => $this->nullableString($row['provider_checkout_id'] ?? null),
             'provider_payment_id' => $this->nullableString($row['provider_payment_id'] ?? null),
@@ -355,6 +378,7 @@ final class SubscriptionCheckoutIntentRepository
                 contract_acceptance_uuid,
                 idempotency_key_hash,
                 request_hash,
+                payment_route_uuid,
                 provider,
                 provider_checkout_id,
                 provider_payment_id,

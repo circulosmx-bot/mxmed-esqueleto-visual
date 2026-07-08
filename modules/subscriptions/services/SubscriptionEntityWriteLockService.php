@@ -12,6 +12,7 @@ final class SubscriptionEntityWriteLockService
     private const LOCK_OPERATION = 'create';
     private const CHECKOUT_CREATE_OPERATION = 'checkout_create';
     private const PAYMENT_ROUTE_CREATE_OPERATION = 'payment_route_create';
+    private const PAYMENT_ROUTE_CHECKOUT_CREATE_OPERATION = 'payment_route_checkout_create';
     private const PAYMENT_INTENT_CREATE_OPERATION = 'payment_intent_create';
     private const PAYMENT_INTENT_CONFIRM_OPERATION = 'payment_intent_confirm';
     private const PAYMENT_INTENT_ACTIVATE_SUBSCRIPTION_OPERATION = 'payment_intent_activate_subscription';
@@ -20,6 +21,7 @@ final class SubscriptionEntityWriteLockService
     private const MAX_LOCK_NAME_LENGTH = 64;
     public const ERROR_CHECKOUT_LOCK_TIMEOUT = 'subscription_checkout_lock_timeout';
     public const ERROR_PAYMENT_ROUTE_LOCK_TIMEOUT = 'payment_route_lock_timeout';
+    public const ERROR_PAYMENT_ROUTE_CHECKOUT_LOCK_TIMEOUT = 'payment_route_checkout_lock_timeout';
     public const ERROR_PAYMENT_INTENT_LOCK_TIMEOUT = 'payment_intent_lock_timeout';
     public const ERROR_PAYMENT_INTENT_CONFIRM_LOCK_TIMEOUT = 'payment_intent_confirm_lock_timeout';
     public const ERROR_PAYMENT_INTENT_ACTIVATE_SUBSCRIPTION_LOCK_TIMEOUT = 'payment_intent_activate_subscription_lock_timeout';
@@ -30,6 +32,7 @@ final class SubscriptionEntityWriteLockService
         self::LOCK_OPERATION,
         self::CHECKOUT_CREATE_OPERATION,
         self::PAYMENT_ROUTE_CREATE_OPERATION,
+        self::PAYMENT_ROUTE_CHECKOUT_CREATE_OPERATION,
         self::PAYMENT_INTENT_CREATE_OPERATION,
     ];
 
@@ -53,6 +56,11 @@ final class SubscriptionEntityWriteLockService
     public function acquirePaymentRouteCreate(string $entityType, string $entityId, int $timeoutSeconds = 2): ?string
     {
         return $this->acquireForPurpose($entityType, $entityId, self::PAYMENT_ROUTE_CREATE_OPERATION, $timeoutSeconds);
+    }
+
+    public function acquirePaymentRouteCheckoutCreate(string $entityType, string $entityId, int $timeoutSeconds = 2): ?string
+    {
+        return $this->acquireForPurpose($entityType, $entityId, self::PAYMENT_ROUTE_CHECKOUT_CREATE_OPERATION, $timeoutSeconds);
     }
 
     // Lock scope: checkout_intent_uuid.

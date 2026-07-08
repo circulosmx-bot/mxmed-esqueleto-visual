@@ -11,6 +11,7 @@ use Throwable;
 final class SubscriptionPaymentRouteRepository
 {
     private const STATUS_CREATED_NO_PROVIDER = 'created_no_provider';
+    public const STATUS_CHECKOUT_CREATED_NO_PROVIDER = 'checkout_created_no_provider';
 
     private PDO $pdo;
 
@@ -246,6 +247,47 @@ final class SubscriptionPaymentRouteRepository
         );
     }
 
+    public function markCheckoutCreated(string $paymentRouteUuid, string $checkoutIntentUuid): ?array
+    {
+        $paymentRouteUuid = trim($paymentRouteUuid);
+        $checkoutIntentUuid = trim($checkoutIntentUuid);
+        if ($paymentRouteUuid === '' || $checkoutIntentUuid === '') {
+            throw new InvalidArgumentException('invalid_payment_route_payload: route and checkout uuid are required');
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE subscription_payment_routes
+                 SET status = :next_status,
+                     checkout_intent_uuid = :checkout_intent_uuid,
+                     checkout_created_at = UTC_TIMESTAMP(),
+                     consumed_at = UTC_TIMESTAMP(),
+                     provider_status = :provider_status,
+                     next_action_type = :next_action_type,
+                     next_action_enabled = 0
+                 WHERE uuid = :uuid
+                   AND status = :current_status
+                   AND deleted_at IS NULL'
+            );
+            $stmt->execute([
+                'uuid' => $paymentRouteUuid,
+                'checkout_intent_uuid' => $checkoutIntentUuid,
+                'current_status' => self::STATUS_CREATED_NO_PROVIDER,
+                'next_status' => self::STATUS_CHECKOUT_CREATED_NO_PROVIDER,
+                'provider_status' => 'not_created',
+                'next_action_type' => 'payment_intent_provider_pending',
+            ]);
+        } catch (Throwable $e) {
+            throw new RuntimeException('payment_route_checkout_link_failed', 0, $e);
+        }
+
+        if ($stmt->rowCount() < 1) {
+            return null;
+        }
+
+        return $this->findByUuid($paymentRouteUuid);
+    }
+
     private function findOne(string $sql, array $params): ?array
     {
         try {
@@ -296,6 +338,9 @@ final class SubscriptionPaymentRouteRepository
             'provider_status' => (string)($row['provider_status'] ?? ''),
             'next_action_type' => (string)($row['next_action_type'] ?? ''),
             'next_action_enabled' => (bool)((int)($row['next_action_enabled'] ?? 0)),
+            'checkout_intent_uuid' => $this->nullableString($row['checkout_intent_uuid'] ?? null),
+            'checkout_created_at' => $this->nullableString($row['checkout_created_at'] ?? null),
+            'consumed_at' => $this->nullableString($row['consumed_at'] ?? null),
             'idempotency_key' => $this->nullableString($row['idempotency_key'] ?? null),
             'idempotency_key_hash' => $this->nullableString($row['idempotency_key_hash'] ?? null),
             'request_hash' => (string)($row['request_hash'] ?? ''),
@@ -348,6 +393,9 @@ final class SubscriptionPaymentRouteRepository
                 provider_status,
                 next_action_type,
                 next_action_enabled,
+                checkout_intent_uuid,
+                checkout_created_at,
+                consumed_at,
                 idempotency_key,
                 idempotency_key_hash,
                 request_hash,

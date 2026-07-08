@@ -15,6 +15,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/ActivateSubscripti
 require_once __DIR__ . '/../../modules/subscriptions/services/BuildSubscriptionPaymentActivationStateService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/BuildSubscriptionPaymentRoutePreviewService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ConfirmSubscriptionPaymentIntentMockService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionCheckoutFromPaymentRouteService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionCheckoutIntentService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentRouteService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php';
@@ -47,6 +48,8 @@ use Subscriptions\Services\BuildSubscriptionPaymentRoutePreviewException;
 use Subscriptions\Services\BuildSubscriptionPaymentRoutePreviewService;
 use Subscriptions\Services\ConfirmSubscriptionPaymentIntentMockException;
 use Subscriptions\Services\ConfirmSubscriptionPaymentIntentMockService;
+use Subscriptions\Services\CreateSubscriptionCheckoutFromPaymentRouteException;
+use Subscriptions\Services\CreateSubscriptionCheckoutFromPaymentRouteService;
 use Subscriptions\Services\CreateSubscriptionCheckoutIntentException;
 use Subscriptions\Services\CreateSubscriptionCheckoutIntentService;
 use Subscriptions\Services\CreateSubscriptionPaymentIntentException;
@@ -199,6 +202,32 @@ function subscriptionPaymentRouteCreateError(string $code, string $message, stri
         ],
         'data' => null,
         'meta' => subscriptionPaymentRouteCreateMeta($authMode),
+    ];
+}
+
+function subscriptionPaymentRouteCheckoutMeta(string $authMode = 'unknown'): array
+{
+    return [
+        'contract' => 'subscription_payment_route_checkout',
+        'version' => 'SUB-PAYMENT-ROUTE-CHECKOUT-1',
+        'generated_at' => gmdate('c'),
+        'auth_mode' => $authMode,
+        'strict_auth_required' => true,
+        'source' => 'subscriptions_payment_route_checkout',
+        'mode' => 'checkout_created_no_provider',
+    ];
+}
+
+function subscriptionPaymentRouteCheckoutError(string $code, string $message, string $authMode = 'unknown'): array
+{
+    return [
+        'ok' => false,
+        'error' => [
+            'code' => $code,
+            'message' => $message,
+        ],
+        'data' => null,
+        'meta' => subscriptionPaymentRouteCheckoutMeta($authMode),
     ];
 }
 
@@ -2625,6 +2654,157 @@ try {
             'data' => $preview,
             'meta' => subscriptionPaymentRoutePreviewMeta($authMode),
         ], 200);
+        return;
+    }
+
+    if (
+        count($segments) === 6
+        && $segments[0] === 'entities'
+        && $segments[3] === 'payment-routes'
+        && $segments[5] === 'checkout'
+    ) {
+        if ($method !== 'POST') {
+            subscriptionRespond(
+                subscriptionPaymentRouteCheckoutError('method_not_allowed', 'method not allowed'),
+                405
+            );
+            return;
+        }
+
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        $paymentRouteUuid = trim((string)$segments[4]);
+        if (!subscriptionValidEntityType($entityType)
+            || !subscriptionValidEntityId($entityId)
+            || $paymentRouteUuid === ''
+        ) {
+            subscriptionRespond(
+                subscriptionPaymentRouteCheckoutError('validation_error', 'invalid entity or payment route'),
+                422
+            );
+            return;
+        }
+
+        $payloadResult = subscriptionReadJsonPayload();
+        if (!(bool)($payloadResult['ok'] ?? false)) {
+            $message = 'invalid json payload';
+            $payloadResponse = (array)($payloadResult['response'] ?? []);
+            if (isset($payloadResponse['error']) && is_array($payloadResponse['error'])) {
+                $message = (string)($payloadResponse['error']['message'] ?? $message);
+            }
+            subscriptionRespond(
+                subscriptionPaymentRouteCheckoutError('invalid_json', $message),
+                (int)($payloadResult['status'] ?? 400)
+            );
+            return;
+        }
+
+        $payload = (array)($payloadResult['payload'] ?? []);
+        $forbiddenFields = subscriptionForbiddenPayloadFields($payload, [
+            'checkout_intent_uuid',
+            'payment_intent_uuid',
+            'payment_event_uuid',
+            'status',
+            'provider_status',
+            'amount_cents',
+            'source',
+            'actor_user_id',
+            'actor_role',
+            'operator_id',
+            'doctor_id',
+            'profile_id',
+            'user_id',
+            'entity_type',
+            'entity_id',
+            'contract_acceptance_uuid',
+            'subscription_id',
+            'activated_at',
+            'deleted_at',
+            'created_at',
+            'updated_at',
+        ]);
+        if ($forbiddenFields !== []) {
+            subscriptionRespond(
+                subscriptionPaymentRouteCheckoutError(
+                    'forbidden_fields',
+                    'payload contains backend-controlled fields: ' . implode(', ', array_values(array_unique($forbiddenFields)))
+                ),
+                422
+            );
+            return;
+        }
+
+        $provider = strtolower(trim((string)($payload['provider'] ?? 'none')));
+        if ($provider === '') {
+            $provider = 'none';
+        }
+        if ($provider !== 'none') {
+            subscriptionRespond(
+                subscriptionPaymentRouteCheckoutError('unsupported_provider', 'provider is not supported for this payment route checkout'),
+                422
+            );
+            return;
+        }
+
+        $context = subscriptionResolveWriteContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+        $authMode = (string)($context['auth_mode'] ?? 'session_scope');
+
+        $headers = subscriptionHeaders();
+        $idempotencyKey = $headers['idempotency-key'] ?? trim((string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+
+        $pdo = mxmed_pdo();
+        $currentRepository = new CurrentSubscriptionRepository($pdo);
+        $previewService = new BuildSubscriptionPaymentRoutePreviewService(
+            new CurrentSubscriptionReadModelService($currentRepository),
+            new SubscriptionPlanPriceResolverService(new SubscriptionPlanPriceRepository($pdo))
+        );
+        $checkoutService = new CreateSubscriptionCheckoutFromPaymentRouteService(
+            $pdo,
+            $previewService,
+            new SubscriptionPaymentRouteRepository($pdo),
+            new SubscriptionCheckoutIntentRepository($pdo),
+            $currentRepository,
+            new SubscriptionEntityResolverService($pdo),
+            new CreateSubscriptionPendingPaymentAcceptanceService(new SubscriptionContractAcceptanceRepository($pdo)),
+            new SubscriptionWriteIdempotencyService(new SubscriptionWriteIdempotencyRepository($pdo)),
+            new SubscriptionEntityWriteLockService($pdo)
+        );
+
+        try {
+            $checkoutResponse = $checkoutService->createCheckout([
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'payment_route_uuid' => $paymentRouteUuid,
+                'payload' => $payload,
+                'idempotency_key' => $idempotencyKey,
+                'actor_user_id' => (string)($context['actor_user_id'] ?? ''),
+                'actor_role' => (string)($context['actor_role'] ?? ''),
+                'doctor_id' => (string)($context['doctor_id'] ?? ''),
+                'profile_id' => $context['profile_id'] ?? null,
+            ]);
+        } catch (CreateSubscriptionCheckoutFromPaymentRouteException $e) {
+            subscriptionRespond(
+                subscriptionPaymentRouteCheckoutError($e->errorCode(), $e->getMessage(), $authMode),
+                $e->status()
+            );
+            return;
+        } catch (Throwable $e) {
+            subscriptionRespond(
+                subscriptionPaymentRouteCheckoutError('internal_error', 'payment route checkout is unavailable', $authMode),
+                500
+            );
+            return;
+        }
+
+        if (isset($checkoutResponse['meta']) && is_array($checkoutResponse['meta'])) {
+            $checkoutResponse['meta']['auth_mode'] = $authMode;
+        }
+        $isReplay = (bool)($checkoutResponse['meta']['idempotent_replay'] ?? false);
+        subscriptionRespond($checkoutResponse, $isReplay ? 200 : 201);
         return;
     }
 

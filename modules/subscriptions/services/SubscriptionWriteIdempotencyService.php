@@ -105,6 +105,7 @@ final class SubscriptionWriteIdempotencyService
     public const OPERATION = 'subscriptions.create_with_contract_acceptance';
     public const CHECKOUT_OPERATION = 'subscriptions.checkout_intent.create';
     public const PAYMENT_ROUTE_OPERATION = 'subscriptions.payment_route.create';
+    public const PAYMENT_ROUTE_CHECKOUT_OPERATION = 'subscriptions.payment_route.checkout.create';
     public const PAYMENT_INTENT_OPERATION = 'subscriptions.payment_intent.create';
     public const PAYMENT_INTENT_CONFIRM_MOCK_OPERATION = 'subscriptions.payment_intent.confirm_mock';
     public const PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION = 'subscriptions.payment_intent.activate_after_payment';
@@ -135,6 +136,14 @@ final class SubscriptionWriteIdempotencyService
         array $payload
     ): SubscriptionWriteIdempotencyDecision {
         return $this->beginOperation($headerValue, self::PAYMENT_ROUTE_OPERATION, $scope, $payload);
+    }
+
+    public function beginPaymentRouteCheckout(
+        ?string $headerValue,
+        array $scope,
+        array $payload
+    ): SubscriptionWriteIdempotencyDecision {
+        return $this->beginOperation($headerValue, self::PAYMENT_ROUTE_CHECKOUT_OPERATION, $scope, $payload);
     }
 
     public function beginPaymentIntent(
@@ -491,6 +500,11 @@ final class SubscriptionWriteIdempotencyService
             return;
         }
 
+        if ($operation === self::PAYMENT_ROUTE_CHECKOUT_OPERATION) {
+            $this->markPaymentRouteCompleted($record, $response, $httpStatus);
+            return;
+        }
+
         if ($operation === self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION) {
             $this->markPaymentIntentConfirmMockCompleted($record, $response, $httpStatus);
             return;
@@ -545,6 +559,7 @@ final class SubscriptionWriteIdempotencyService
                 self::OPERATION,
                 self::CHECKOUT_OPERATION,
                 self::PAYMENT_ROUTE_OPERATION,
+                self::PAYMENT_ROUTE_CHECKOUT_OPERATION,
                 self::PAYMENT_INTENT_OPERATION,
                 self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION,
                 self::PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION,
@@ -563,6 +578,9 @@ final class SubscriptionWriteIdempotencyService
         }
         if ($operation === self::PAYMENT_ROUTE_OPERATION) {
             return $this->buildPaymentRouteRequestHash($scope, $payload);
+        }
+        if ($operation === self::PAYMENT_ROUTE_CHECKOUT_OPERATION) {
+            return $this->buildPaymentRouteCheckoutRequestHash($scope, $payload);
         }
         if ($operation === self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION) {
             return $this->buildPaymentIntentConfirmMockRequestHash($scope, $payload);
@@ -629,6 +647,26 @@ final class SubscriptionWriteIdempotencyService
             'billing_period' => (string)($payload['billing_period'] ?? ''),
             'payment_method_family' => (string)($payload['payment_method_family'] ?? ''),
             'auto_renew_requested' => (bool)($payload['auto_renew_requested'] ?? false),
+        ];
+
+        return hash('sha256', $this->canonicalJson($canonical));
+    }
+
+    public function buildPaymentRouteCheckoutRequestHash(array $scope, array $payload): string
+    {
+        $canonical = [
+            'operation' => self::PAYMENT_ROUTE_CHECKOUT_OPERATION,
+            'entity_type' => (string)($scope['entity_type'] ?? $payload['entity_type'] ?? ''),
+            'entity_id' => (string)($scope['entity_id'] ?? $payload['entity_id'] ?? ''),
+            'payment_route_uuid' => (string)($payload['payment_route_uuid'] ?? ''),
+            'provider' => (string)($payload['provider'] ?? 'none'),
+            'route_type' => (string)($payload['route_type'] ?? ''),
+            'current_plan_code' => (string)($payload['current_plan_code'] ?? ''),
+            'target_plan_code' => (string)($payload['target_plan_code'] ?? ''),
+            'billing_period' => (string)($payload['billing_period'] ?? ''),
+            'amount_cents' => isset($payload['amount_cents']) ? (int)$payload['amount_cents'] : null,
+            'currency' => (string)($payload['currency'] ?? ''),
+            'request_payload_hash' => (string)($payload['request_payload_hash'] ?? ''),
         ];
 
         return hash('sha256', $this->canonicalJson($canonical));
@@ -732,6 +770,7 @@ final class SubscriptionWriteIdempotencyService
             [
                 self::CHECKOUT_OPERATION,
                 self::PAYMENT_ROUTE_OPERATION,
+                self::PAYMENT_ROUTE_CHECKOUT_OPERATION,
                 self::PAYMENT_INTENT_OPERATION,
                 self::PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION,
             ],
@@ -782,6 +821,7 @@ final class SubscriptionWriteIdempotencyService
             [
                 self::CHECKOUT_OPERATION,
                 self::PAYMENT_ROUTE_OPERATION,
+                self::PAYMENT_ROUTE_CHECKOUT_OPERATION,
                 self::PAYMENT_INTENT_OPERATION,
             ],
             true

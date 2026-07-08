@@ -46,6 +46,9 @@ CREATE TABLE IF NOT EXISTS subscription_payment_routes (
   provider_status VARCHAR(64) NOT NULL DEFAULT 'not_created',
   next_action_type VARCHAR(96) NOT NULL DEFAULT 'stripe_checkout_sandbox_pending',
   next_action_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  checkout_intent_uuid CHAR(36) NULL DEFAULT NULL,
+  checkout_created_at DATETIME NULL DEFAULT NULL,
+  consumed_at DATETIME NULL DEFAULT NULL,
 
   -- Hash sha256 de la key normalizada. No guarda la key cruda como fuente principal.
   idempotency_key VARCHAR(128) NULL DEFAULT NULL,
@@ -71,6 +74,7 @@ CREATE TABLE IF NOT EXISTS subscription_payment_routes (
   KEY idx_sub_payment_routes_user (user_id),
   KEY idx_sub_payment_routes_route_status (route_type, status),
   KEY idx_sub_payment_routes_entity_status_expires (entity_type, entity_id, status, expires_at),
+  KEY idx_sub_payment_routes_checkout (checkout_intent_uuid),
   KEY idx_sub_payment_routes_plan (current_plan_code, target_plan_code, billing_period),
   KEY idx_sub_payment_routes_idempotency_hash (idempotency_key_hash),
   KEY idx_sub_payment_routes_request_hash (request_hash),

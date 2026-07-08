@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS subscription_checkout_intents (
 
   idempotency_key_hash CHAR(64) NULL DEFAULT NULL,
   request_hash CHAR(64) NULL DEFAULT NULL,
+  payment_route_uuid CHAR(36) NULL DEFAULT NULL,
 
   provider VARCHAR(64) NULL DEFAULT NULL,
   provider_checkout_id VARCHAR(128) NULL DEFAULT NULL,
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS subscription_checkout_intents (
   KEY idx_sub_checkout_intents_status_expires (status, expires_at),
   KEY idx_sub_checkout_intents_plan (plan_code, billing_period),
   KEY idx_sub_checkout_intents_contract_acceptance (contract_acceptance_uuid),
+  UNIQUE KEY ux_sub_checkout_intents_payment_route (payment_route_uuid),
   KEY idx_sub_checkout_intents_subscription (subscription_id),
   KEY idx_sub_checkout_intents_provider_checkout (provider, provider_checkout_id),
   KEY idx_sub_checkout_intents_provider_payment (provider, provider_payment_id),

@@ -44227,3 +44227,166 @@ Resultado documental:
 `PASS`
 
 El contrato futuro queda definido para conectar `subscription_payment_routes.status=created_no_provider` con el flujo existente de checkout, manteniendo Stripe y PaymentIntent fuera de la siguiente fase inmediata.
+
+## PP-Decisiones 228 - Implementacion puente payment_route hacia checkout sin proveedor
+
+### Microfase
+
+`BE/Suscripciones-PaymentRoute-CheckoutBridge-Endpoint-NoProvider-01`
+
+### Decision
+
+Se implemento el puente backend que consume una `subscription_payment_routes` en estado `created_no_provider` y crea un `subscription_checkout_intent` interno sin proveedor.
+
+Endpoint implementado:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-routes/{payment_route_uuid}/checkout`
+
+Provider permitido en esta fase:
+
+- `none`
+
+Cualquier otro provider responde:
+
+- `422 unsupported_provider`
+
+### Alcance tecnico
+
+Se agrego el servicio:
+
+- `CreateSubscriptionCheckoutFromPaymentRouteService`
+
+Responsabilidades cerradas:
+
+- exige `session_scope`;
+- rechaza `local_dev_open`;
+- exige `Idempotency-Key`;
+- valida ownership de la route;
+- valida status `created_no_provider`;
+- valida expiracion de route;
+- recalcula preview server-side;
+- compara `amount_cents`, `route_type`, planes, periodo y moneda contra la route persistida;
+- crea `contract_acceptance` en `accepted_pending_payment`;
+- crea `subscription_checkout_intent` en `pending_payment`;
+- vincula route y checkout;
+- marca route como `checkout_created_no_provider`;
+- deja `next_action.enabled=false`;
+- conserva `provider=null` y `provider_status=not_created`.
+
+### Schema
+
+Se agrego schema minimo de vinculo:
+
+- `subscription_checkout_intents.payment_route_uuid`;
+- indice unico nullable `ux_sub_checkout_intents_payment_route`;
+- `subscription_payment_routes.checkout_intent_uuid`;
+- `subscription_payment_routes.checkout_created_at`;
+- `subscription_payment_routes.consumed_at`;
+- indice `idx_sub_payment_routes_checkout`.
+
+La migracion versionada queda en:
+
+- `modules/profiles/db/2026_07_08_add_payment_route_checkout_bridge.sql`.
+
+### Idempotencia y lock
+
+Operacion nueva:
+
+`subscriptions.payment_route.checkout.create`
+
+Lock nuevo:
+
+`payment_route_checkout_create`
+
+Comportamiento:
+
+- misma key y mismo payload: replay con mismo `checkout_intent_uuid`;
+- misma key y payload distinto: `409 idempotency_conflict`;
+- nueva key sobre route ya consumida: `409 route_already_consumed`;
+- no se crea segundo checkout para la misma route.
+
+### Validacion QA ejecutada
+
+Caso local validado:
+
+- entidad: `doctor/990099`;
+- plan actual: `optimum / annual / active`;
+- route creada: `upgrade_subscription optimum -> professional`;
+- `payment_route_uuid`: `8ecf4208-46dd-47ef-b0e1-a0b684fef9b7`;
+- `checkout_intent_uuid`: `68a1b3ec-854f-4c1c-9e2e-1b1651900ac9`;
+- `amount_cents`: `882740`;
+- `currency`: `MXN`;
+- `checkout_status`: `pending_payment`;
+- `provider`: `null`;
+- `provider_status`: `not_created`;
+- `next_action.type`: `payment_intent_provider_pending`;
+- `next_action.enabled`: `false`.
+
+Resultados HTTP validados:
+
+- GET current `doctor/990099`: `200`;
+- POST checkout-from-route sin sesion: `403 local_dev_open does not authorize writes`;
+- fixture DEV session_scope: `200`;
+- create payment_route: `201`;
+- consume route provider `none`: `201`;
+- replay misma key/payload: `200` con mismo checkout;
+- misma key payload distinto: `409 idempotency_conflict`;
+- misma route con nueva key: `409 route_already_consumed`;
+- provider `stripe`: `422 unsupported_provider`.
+
+Validacion DB read-only:
+
+- route quedo `checkout_created_no_provider`;
+- route conserva `checkout_intent_uuid`;
+- checkout existe y contiene `payment_route_uuid`;
+- `subscription_payment_intents` para ese checkout: `0`;
+- `subscription_payment_events` para ese checkout: `0`;
+- `profile_subscriptions` no cambio;
+- current sigue `optimum / annual / active`.
+
+### Limites confirmados
+
+No se ejecuto:
+
+- Stripe CLI;
+- Stripe Checkout;
+- PaymentIntent;
+- SetupIntent;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+No se modifico:
+
+- frontend;
+- Stripe provider;
+- webhook;
+- PaymentIntent service;
+- PaymentEvents;
+- `profile_subscriptions`;
+- precios;
+- capacidades;
+- `.env`.
+
+SQL ejecutado localmente:
+
+- limitado exclusivamente a columnas e indices de vinculo route-checkout.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-PaymentRoute-CheckoutBridge-Endpoint-NoProvider-PostPush-01`
+
+Objetivo sugerido:
+
+- validar post-push el endpoint checkout-from-route;
+- confirmar auth guard;
+- confirmar replay;
+- confirmar que no se crean PaymentIntent ni PaymentEvents;
+- confirmar que current sigue sin activacion.
+
+### Estado
+
+Resultado:
+
+`PASS`
