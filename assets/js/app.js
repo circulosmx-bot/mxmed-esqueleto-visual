@@ -59102,6 +59102,10 @@ function mxResetLogoPreview(){
       checkoutSummary: null,
       renewal: null
     },
+    paymentServerPreview: {
+      checkoutSummary: null,
+      renewal: null
+    },
     selectedPlanId: '',
     focusedPlanId: '',
     history: [],
@@ -59201,6 +59205,13 @@ function mxResetLogoPreview(){
     const id = safeDoctorId(entityId);
     if(type !== 'doctor' || !id) return '';
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/checkout-intents`;
+  }
+
+  function buildPaymentRoutePreviewEndpoint(entityType, entityId){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    if(type !== 'doctor' || !id) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/payment-routes/preview`;
   }
 
   function buildPaymentActivationStateEndpoint(entityType, entityId, options = {}){
@@ -60528,6 +60539,230 @@ function mxResetLogoPreview(){
     }catch(_){}
   }
 
+  function paymentServerPreviewSnapshot(payload){
+    const snapshot = {};
+    [
+      'amount_cents',
+      'adjustment_amount_cents',
+      'renewal_amount_cents',
+      'current_price_cents',
+      'target_price_cents',
+      'remaining_days',
+      'period_days'
+    ].forEach((key)=>{
+      if(payload && payload[key] !== null && payload[key] !== undefined && clean(payload[key]) !== ''){
+        snapshot[key] = payload[key];
+      }
+    });
+    return snapshot;
+  }
+
+  function buildPaymentServerPreviewPayload(payload){
+    const snapshot = paymentServerPreviewSnapshot(payload);
+    const request = {
+      route_type: clean(payload?.route_type),
+      current_plan_code: clean(payload?.current_plan_code) || null,
+      target_plan_code: clean(payload?.target_plan_code) || null,
+      billing_period: clean(payload?.billing_period) || null,
+      payment_method_family: clean(payload?.payment_method_family) || 'not_selected',
+      auto_renew_requested: payload?.auto_renew_requested === true,
+      client_payload_version: 'mxmed-subscription-payment-summary-v1',
+      frontend_summary_snapshot: snapshot
+    };
+    [
+      'amount_cents',
+      'adjustment_amount_cents',
+      'renewal_amount_cents',
+      'current_price_cents',
+      'target_price_cents',
+      'remaining_days',
+      'period_days',
+      'current_expires_at',
+      'renewal_duration_days'
+    ].forEach((key)=>{
+      if(payload && payload[key] !== null && payload[key] !== undefined && clean(payload[key]) !== ''){
+        request[key] = payload[key];
+      }
+    });
+    return request;
+  }
+
+  function generatePaymentServerPreviewKey(payload){
+    const routeType = clean(payload?.route_type) || 'route';
+    const entityType = clean(payload?.entity_type).toLowerCase() || 'entity';
+    const entityId = safeDoctorId(payload?.entity_id) || 'unknown';
+    const target = clean(payload?.target_plan_code) || clean(payload?.current_plan_code) || 'current';
+    return `mxmed-preview:${routeType}:${entityType}:${entityId}:${target}:${Date.now()}`;
+  }
+
+  function paymentServerPreviewElement(slot){
+    return pane.querySelector(`[data-subp-server-preview="${slot}"]`);
+  }
+
+  function paymentServerPreviewRouteLabel(routeType){
+    const route = clean(routeType);
+    if(route === 'upgrade_subscription') return 'Mejora de plan';
+    if(route === 'renewal') return 'Renovación';
+    if(route === 'new_subscription') return 'Contratación';
+    return route || 'Ruta de pago';
+  }
+
+  function paymentServerPreviewNextActionLabel(nextAction){
+    const type = clean(nextAction?.type);
+    const enabled = nextAction?.enabled === true;
+    const action = type === 'stripe_checkout_sandbox_pending'
+      ? 'Stripe sandbox pendiente'
+      : (type || 'Pendiente');
+    return `${action} · enabled=${enabled ? 'true' : 'false'}`;
+  }
+
+  function paymentServerPreviewHtml(slot){
+    const isSimulation = isQaPlanSimulationActive();
+    const chip = isSimulation ? 'QA local' : 'Backend preview';
+    const body = isSimulation
+      ? `<p class="subp-server-preview-note">Simulación QA local — sin consulta backend.</p>
+         <p class="subp-server-preview-muted">El cálculo backend sólo se consulta en modo Real.</p>`
+      : `<p class="subp-server-preview-note">Se calculará con backend antes de habilitar pago.</p>`;
+    return `<article class="subp-server-preview" data-subp-server-preview="${escapeHtml(slot)}" data-state="${isSimulation ? 'simulation' : 'idle'}">
+        <div class="subp-server-preview-head">
+          <div>
+            <div class="subp-payments-kicker">Vista previa segura del servidor</div>
+            <h4>Preview read-only</h4>
+          </div>
+          <span class="subp-payments-status-chip">${escapeHtml(chip)}</span>
+        </div>
+        <div class="subp-server-preview-body" data-subp-server-preview-body>${body}</div>
+      </article>`;
+  }
+
+  function renderPaymentServerPreviewState(slot, state){
+    const container = paymentServerPreviewElement(slot);
+    if(!container) return;
+    const body = container.querySelector('[data-subp-server-preview-body]');
+    if(!body) return;
+    const status = clean(state?.state) || 'idle';
+    container.dataset.state = status;
+
+    if(status === 'simulation'){
+      body.innerHTML = `<p class="subp-server-preview-note">Simulación QA local — sin consulta backend.</p>
+        <p class="subp-server-preview-muted">El cálculo backend sólo se consulta en modo Real.</p>`;
+      return;
+    }
+
+    if(status === 'loading'){
+      body.innerHTML = '<p class="subp-server-preview-note">Calculando vista previa segura...</p>';
+      return;
+    }
+
+    if(status === 'success'){
+      const preview = state?.data || {};
+      const amount = formatSubscriptionCents(preview.amount_cents, preview.currency) || 'Se confirmará antes del pago';
+      const warnings = Array.isArray(preview.warnings) ? preview.warnings.map(clean).filter(Boolean) : [];
+      const reasons = Array.isArray(preview.reasons) ? preview.reasons.map(clean).filter(Boolean) : [];
+      const notices = [...warnings, ...reasons];
+      body.innerHTML = `<dl class="subp-server-preview-dl">
+          <dt>Ruta</dt><dd>${escapeHtml(paymentServerPreviewRouteLabel(preview.route_type))}</dd>
+          <dt>Importe server-side</dt><dd>${escapeHtml(amount)}</dd>
+          <dt>Moneda</dt><dd>${escapeHtml(clean(preview.currency) || 'MXN')}</dd>
+          <dt>Fuente</dt><dd>${escapeHtml(clean(preview.amount_source) || 'server_recalculated')}</dd>
+          <dt>Diferencia con frontend</dt><dd>${preview.amount_mismatch === true ? 'Sí' : 'No'}</dd>
+          <dt>Siguiente acción</dt><dd>${escapeHtml(paymentServerPreviewNextActionLabel(preview.next_action))}</dd>
+        </dl>
+        ${notices.length ? `<p class="subp-server-preview-muted">Avisos: ${escapeHtml(notices.join(', '))}</p>` : ''}
+        ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta preview</summary><pre>${escapeHtml(JSON.stringify(preview, null, 2))}</pre></details>` : ''}`;
+      return;
+    }
+
+    if(status === 'error'){
+      const code = clean(state?.errorCode);
+      const message = clean(state?.message) || 'No fue posible calcular la vista previa server-side. El monto final se confirmará antes del pago.';
+      body.innerHTML = `<p class="subp-server-preview-note">${escapeHtml(message)}</p>
+        ${code ? `<p class="subp-server-preview-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}`;
+      return;
+    }
+
+    body.innerHTML = '<p class="subp-server-preview-note">Se calculará con backend antes de habilitar pago.</p>';
+  }
+
+  async function loadPaymentServerPreview(slot, payload){
+    if(!payload){
+      renderPaymentServerPreviewState(slot, {
+        state: 'error',
+        errorCode: 'missing_payload',
+        message: 'No fue posible preparar la vista previa server-side.'
+      });
+      return false;
+    }
+
+    if(isQaPlanSimulationActive()){
+      renderPaymentServerPreviewState(slot, { state: 'simulation' });
+      return true;
+    }
+
+    const endpoint = buildPaymentRoutePreviewEndpoint(payload.entity_type, payload.entity_id);
+    if(!endpoint){
+      renderPaymentServerPreviewState(slot, {
+        state: 'error',
+        errorCode: 'missing_entity_context',
+        message: 'No fue posible resolver la entidad para calcular la vista previa server-side.'
+      });
+      return false;
+    }
+
+    const requestId = Date.now() + Math.random();
+    if(!data.paymentServerPreview) data.paymentServerPreview = {};
+    data.paymentServerPreview[slot] = { state: 'loading', requestId };
+    renderPaymentServerPreviewState(slot, { state: 'loading' });
+
+    try{
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': generatePaymentServerPreviewKey(payload)
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(buildPaymentServerPreviewPayload(payload))
+      });
+      const responsePayload = await response.json().catch(()=> null);
+      if(data.paymentServerPreview?.[slot]?.requestId !== requestId) return false;
+      if(!response.ok || !responsePayload || responsePayload.ok !== true || !responsePayload.data){
+        const errorCode = clean(responsePayload?.error?.code) || `http_${response.status || 0}`;
+        const errorMessage = clean(responsePayload?.error?.message) || 'No fue posible calcular la vista previa server-side. El monto final se confirmará antes del pago.';
+        data.paymentServerPreview[slot] = {
+          state: 'error',
+          requestId,
+          httpStatus: Number(response.status || 0),
+          errorCode,
+          message: errorMessage
+        };
+        renderPaymentServerPreviewState(slot, data.paymentServerPreview[slot]);
+        return false;
+      }
+
+      data.paymentServerPreview[slot] = {
+        state: 'success',
+        requestId,
+        httpStatus: Number(response.status || 0),
+        data: responsePayload.data
+      };
+      renderPaymentServerPreviewState(slot, data.paymentServerPreview[slot]);
+      return true;
+    }catch(_){
+      if(data.paymentServerPreview?.[slot]?.requestId !== requestId) return false;
+      data.paymentServerPreview[slot] = {
+        state: 'error',
+        requestId,
+        httpStatus: 0,
+        errorCode: 'network_error',
+        message: 'No fue posible calcular la vista previa server-side. El monto final se confirmará antes del pago.'
+      };
+      renderPaymentServerPreviewState(slot, data.paymentServerPreview[slot]);
+      return false;
+    }
+  }
+
   function paymentPayloadPreviewHtml(payload){
     if(!payload || !isSubscriptionDebugPanelEnabled()) return '';
     const json = JSON.stringify(payload, null, 2);
@@ -60837,8 +61072,10 @@ function mxResetLogoPreview(){
           <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="overview">Volver a Mi plan y pagos</button>
           <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
         </div>
+        ${paymentServerPreviewHtml('renewal')}
         ${paymentPayloadPreviewHtml(payloadPreview)}
       </section>`;
+    loadPaymentServerPreview('renewal', payloadPreview);
   }
 
   function renderSubscriptionPaymentsShell(){
@@ -61172,7 +61409,9 @@ function mxResetLogoPreview(){
         <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a planes y beneficios</button>
         <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="billing">Ir a Mi plan y pagos</button>
       </div>
+      ${paymentServerPreviewHtml('checkoutSummary')}
       ${paymentPayloadPreviewHtml(payloadPreview)}`;
+    loadPaymentServerPreview('checkoutSummary', payloadPreview);
   }
 
   function selectedUpgradePlan(){
