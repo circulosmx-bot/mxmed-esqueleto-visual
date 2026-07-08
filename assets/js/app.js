@@ -60382,6 +60382,21 @@ function mxResetLogoPreview(){
     return Math.round(amount * 100);
   }
 
+  function proratedAdjustmentCents(currentPriceCents, targetPriceCents, remainingDays, periodDays){
+    if(currentPriceCents === null || currentPriceCents === undefined || targetPriceCents === null || targetPriceCents === undefined){
+      return null;
+    }
+    const current = Number(currentPriceCents);
+    const target = Number(targetPriceCents);
+    const remaining = Number(remainingDays);
+    const period = Number(periodDays);
+    if(!Number.isFinite(current) || !Number.isFinite(target) || !Number.isFinite(remaining) || !Number.isFinite(period) || period <= 0){
+      return null;
+    }
+    const difference = Math.max(0, target - current);
+    return Math.max(0, Math.round(difference * Math.max(0, remaining) / period));
+  }
+
   function currentEntityContextForPaymentPayload(warnings){
     const context = data.contextInfo || {};
     const entityType = clean(context.entity_type).toLowerCase();
@@ -60476,10 +60491,10 @@ function mxResetLogoPreview(){
     const estimate = proratedUpgradeEstimate(plan);
     const currentPriceCents = amountPesosToCents(planAnnualPrice(currentPlan));
     const targetPriceCents = amountPesosToCents(planAnnualPrice(plan));
-    const adjustmentAmountCents = estimate ? amountPesosToCents(estimate.amount) : null;
     const remainingDays = estimate?.remainingDays ?? Number(data.currentModel?.days_until_expiration);
     const modelDurationDays = Number(data.currentModel?.duration_days || 0);
     const periodDays = estimate?.periodDays || (Number.isFinite(modelDurationDays) && modelDurationDays > 0 ? Math.round(modelDurationDays) : null);
+    const adjustmentAmountCents = proratedAdjustmentCents(currentPriceCents, targetPriceCents, remainingDays, periodDays);
 
     if(!targetPlanCode) warnings.push('missing_target_plan_code');
     if(currentPriceCents === null) warnings.push('missing_current_price_cents');
@@ -60499,6 +60514,7 @@ function mxResetLogoPreview(){
       period_days: periodDays || null,
       current_price_cents: currentPriceCents,
       target_price_cents: targetPriceCents,
+      amount_cents: adjustmentAmountCents,
       adjustment_amount_cents: adjustmentAmountCents,
       currency: 'MXN',
       auto_renew_requested: false,
@@ -62018,21 +62034,50 @@ function mxResetLogoPreview(){
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
+  function readModelPositiveInteger(value){
+    const number = Number(value);
+    if(!Number.isFinite(number) || number <= 0) return null;
+    return Math.round(number);
+  }
+
+  function readModelNonNegativeInteger(value){
+    const number = Number(value);
+    if(!Number.isFinite(number) || number < 0) return null;
+    return Math.round(number);
+  }
+
+  function upgradeRemainingDaysFromModel(expiresAt){
+    const modelDays = readModelNonNegativeInteger(data.currentModel?.days_until_expiration);
+    if(modelDays !== null) return modelDays;
+    if(!expiresAt) return null;
+    const dayMs = 24 * 60 * 60 * 1000;
+    return Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / dayMs));
+  }
+
+  function upgradePeriodDaysFromModel(startsAt, expiresAt){
+    const modelDuration = readModelPositiveInteger(data.currentModel?.duration_days);
+    if(modelDuration !== null) return modelDuration;
+    const billingPeriod = currentBillingPeriod();
+    if(billingPeriod === 'annual') return 365;
+    if(billingPeriod === 'monthly') return 30;
+    if(startsAt && expiresAt){
+      const dayMs = 24 * 60 * 60 * 1000;
+      return Math.max(1, Math.ceil((expiresAt.getTime() - startsAt.getTime()) / dayMs));
+    }
+    return null;
+  }
+
   function proratedUpgradeEstimate(plan){
     const currentPlan = currentPlanForUpgradeComparison();
     const currentYearly = Number(planCommercialPrice(currentPlan).yearly || 0);
     const targetYearly = Number(planCommercialPrice(plan).yearly || 0);
     const startsAt = parseSubscriptionDate(data.currentModel?.starts_at);
     const expiresAt = parseSubscriptionDate(data.currentModel?.expires_at);
-    if(!currentYearly || !targetYearly || !expiresAt) return null;
+    const remainingDays = upgradeRemainingDaysFromModel(expiresAt);
+    const periodDays = upgradePeriodDaysFromModel(startsAt, expiresAt);
+    if(!currentYearly || !targetYearly || remainingDays === null || !periodDays) return null;
 
-    const dayMs = 24 * 60 * 60 * 1000;
-    const now = new Date();
     const annualDifference = Math.max(0, targetYearly - currentYearly);
-    const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / dayMs));
-    const periodDays = startsAt
-      ? Math.max(1, Math.ceil((expiresAt.getTime() - startsAt.getTime()) / dayMs))
-      : 365;
     const amount = Math.max(0, Math.round(annualDifference * remainingDays / periodDays));
     if(!annualDifference || !remainingDays) return null;
 
