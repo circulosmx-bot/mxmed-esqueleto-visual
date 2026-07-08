@@ -43241,6 +43241,181 @@ Resultado documental:
 
 `PASS`
 
+## PP-Decisiones 230 - Readiness de reutilizacion del servicio checkout existente desde payment_route
+
+### Contexto
+
+La ruta interna `payment_route` ya permite preparar una intencion de pago sin proveedor y despues crear un checkout interno mediante el bridge:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-routes/{payment_route_uuid}/checkout`
+
+El flujo historico de checkout sigue existiendo en:
+
+`CreateSubscriptionCheckoutIntentService`
+
+El bridge nuevo esta implementado en:
+
+`CreateSubscriptionCheckoutFromPaymentRouteService`
+
+La pregunta de readiness es si el bridge debe delegar inmediatamente al servicio historico de checkout o si puede mantenerse como adaptador restringido mientras se avanza hacia Stripe sandbox.
+
+### Comparativa tecnica
+
+| Responsabilidad | `CreateSubscriptionCheckoutIntentService` | `CreateSubscriptionCheckoutFromPaymentRouteService` | Decision |
+| --- | --- | --- | --- |
+| Entrada funcional | Payload directo de checkout | `payment_route` ya creada y validada | Mantener ambas entradas por ahora |
+| Validacion entidad/plan | Valida entidad, plan, periodo e intent_type | Revalida entidad, ruta, plan, periodo y ownership | Riesgo de divergencia futuro |
+| Pricing | Calcula precio desde backend | Recalcula preview desde snapshot de payment_route y compara | Aceptable para adapter con WARN |
+| Contrato | Crea contract acceptance de checkout | Crea contract acceptance antes de insertar checkout | Duplicacion parcial |
+| Idempotencia | `beginCheckoutIntent` | `beginPaymentRouteCheckout` | Separacion razonable por operacion |
+| Locks | Lock de creacion de checkout | Lock de bridge payment_route checkout | Separacion razonable por operacion |
+| Conflicto pending checkout | Bloquea pending por entidad/plan y entidad | Bloquea pending por entidad antes de consumir ruta | Reglas similares, vigilar consistencia |
+| Escritura checkout | Inserta `subscription_checkout_intents` | Inserta `subscription_checkout_intents` con `payment_route_uuid` | Mismo modelo interno |
+| Fuente/status | `source=checkout_intent` | `source=payment_route_checkout` | Diferenciacion util para auditoria |
+| Proveedor de pago | No crea proveedor | No crea proveedor | Correcto |
+| PaymentIntent | No crea PaymentIntent | No crea PaymentIntent | Reutilizar endpoint existente |
+| Stripe/webhook/activacion | Fuera de alcance | Fuera de alcance | No duplicar |
+
+### Decision
+
+Se elige **Opcion B con WARN**:
+
+Mantener `CreateSubscriptionCheckoutFromPaymentRouteService` como adaptador restringido por ahora, sin convertirlo en un segundo motor de pagos.
+
+Motivo:
+
+- el bridge escribe en el mismo modelo interno `subscription_checkout_intents`;
+- el checkout queda enlazado por `payment_route_uuid`;
+- no duplica PaymentIntent;
+- no duplica Stripe;
+- no duplica webhook;
+- no duplica `subscription_payment_events`;
+- no duplica `BuildSubscriptionPaymentActivationStateService`;
+- no duplica `ActivateSubscriptionAfterPaymentService`;
+- conserva la intencion/snapshot de UI antes de pasar al flujo de pago existente.
+
+WARN:
+
+El bridge si reimplementa parte de las reglas de checkout: validacion de plan, suscripcion activa, conflicto de pending checkout, contract acceptance, locks, idempotencia y payload de insercion. Antes de endurecer produccion conviene extraer una capa comun o agregar un modo interno seguro para que el checkout historico pueda recibir una entrada ya normalizada desde `payment_route`, sin relajar validaciones.
+
+### Arquitectura objetivo confirmada
+
+El flujo debe quedar asi:
+
+1. UI resumen.
+2. `payment_route` como adaptador de UX/snapshot.
+3. Bridge `payment_route -> checkout_intent` crea o recupera checkout interno.
+4. Endpoint existente:
+
+   `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/checkout-intents/{checkout_intent_uuid}/payment-intents`
+
+5. `CreateSubscriptionPaymentIntentService`.
+6. `StripePaymentIntentProviderService`.
+7. `ProcessStripeSubscriptionWebhookService`.
+8. `subscription_payment_events`.
+9. `BuildSubscriptionPaymentActivationStateService`.
+10. `ActivateSubscriptionAfterPaymentService`.
+11. `profile_subscriptions/current`.
+
+### Lo que `payment_route` no debe hacer
+
+`payment_route` no debe:
+
+- crear PaymentIntent;
+- llamar Stripe;
+- procesar webhooks;
+- escribir `subscription_payment_events`;
+- activar suscripciones;
+- escribir directamente `profile_subscriptions`;
+- reemplazar `CreateSubscriptionPaymentIntentService`;
+- reemplazar `StripePaymentIntentProviderService`;
+- reemplazar `ProcessStripeSubscriptionWebhookService`;
+- reemplazar `ActivateSubscriptionAfterPaymentService`.
+
+### Lo que `payment_route` si debe hacer
+
+`payment_route` debe:
+
+- preservar la intencion de UI;
+- guardar snapshot de resumen y preview server;
+- prevenir mismatch de monto;
+- prevenir duplicados de ruta/checkout;
+- servir como canal hacia el checkout interno;
+- exponer estado para la UI;
+- permitir trazabilidad entre resumen, checkout y pago futuro.
+
+### Criterio para refactor futuro
+
+La refactorizacion futura debe enfocarse en una de estas opciones:
+
+- extraer un componente comun de construccion de checkout;
+- permitir a `CreateSubscriptionCheckoutIntentService` recibir una entrada interna normalizada desde `payment_route`;
+- mantener el bridge, pero reduciendo su responsabilidad a validacion de ruta y delegacion de escritura.
+
+No se recomienda una refactorizacion amplia en este punto porque el flujo Stripe sandbox debe seguir apoyandose en los endpoints de PaymentIntent ya probados.
+
+### Siguiente microfase recomendada
+
+`QA/Suscripciones-ExistingPaymentIntentEndpoint-StripeSandbox-ReadinessMap-01`
+
+Objetivo:
+
+Validar el mapa exacto de payload y precondiciones para usar el endpoint existente de PaymentIntent con un checkout generado desde `payment_route`, sin ejecutar Stripe todavia.
+
+### Fuera de alcance explicito
+
+Esta microfase no implementa:
+
+- PHP;
+- frontend;
+- API/rutas;
+- servicios;
+- repositorios;
+- SQL;
+- checkout real;
+- PaymentIntent;
+- Stripe;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Validacion de esta microfase
+
+Esta microfase modifica solamente:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No modifica:
+
+- PHP;
+- frontend;
+- API/rutas;
+- servicios;
+- repositorios;
+- SQL/schema/seeds;
+- Stripe;
+- PaymentIntent;
+- webhook;
+- activacion.
+
+No se ejecuto:
+
+- SQL;
+- POST;
+- Stripe CLI;
+- checkout;
+- PaymentIntent;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`.
+
+### Estado
+
+Resultado documental:
+
+`PASS`
+
 La matriz conceptual queda lista para que una microfase posterior conecte los resumenes visuales read-only con endpoints backend de pago sandbox de forma segura, idempotente y verificable.
 
 ## PP-Decisiones 225 - Readiness de contrato backend para rutas de pago de suscripcion
