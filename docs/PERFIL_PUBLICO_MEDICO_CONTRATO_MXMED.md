@@ -43784,3 +43784,50 @@ Resultado documental:
 `PASS`
 
 El contrato backend conceptual queda listo para que una microfase posterior implemente `payment-routes` de forma segura, authoritative, idempotente y separada de Stripe sandbox.
+
+## PP-Decisiones 226 - Correccion de escala de precios preview payment-routes
+
+### Microfase backend
+
+Se documenta la microfase:
+
+`BE/Suscripciones-PaymentRoutes-PreviewEndpoint-AmountScale-Fix-01`
+
+### Decision
+
+Los campos `amount_cents`, `current_price_cents`, `target_price_cents`, `adjustment_amount_cents` y `renewal_amount_cents` deben representar centavos reales de MXN.
+
+El catalogo server-side DEV/local de `subscription_plan_prices` se alinea con la matriz visual vigente:
+
+- `basic annual = 699000`.
+- `standard annual = 999000`.
+- `optimum annual = 1299000`.
+- `professional annual = 2199000`.
+
+### Motivo
+
+La QA del endpoint preview detecto que el backend resolvia:
+
+- `optimum annual = 30000`;
+- `professional annual = 40000`.
+
+Eso era incompatible con el contrato `*_cents` y podia provocar cobros incorrectos al conectar Stripe sandbox.
+
+### Alcance
+
+Se corrigen seeds DEV/local versionados de `subscription_plan_prices` y la DB local/dev queda actualizada solo en esa tabla.
+
+No se modifica:
+
+- frontend;
+- Stripe provider;
+- webhook;
+- checkout real;
+- PaymentIntent;
+- activation;
+- tablas de pagos;
+- `profile_subscriptions`.
+
+### Estado
+
+Resultado esperado: `PASS` si el preview backend devuelve importes en centavos coherentes y `amount_mismatch=false` cuando el snapshot frontend coincide.
