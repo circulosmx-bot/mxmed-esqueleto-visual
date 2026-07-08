@@ -44390,3 +44390,307 @@ Objetivo sugerido:
 Resultado:
 
 `PASS`
+
+## PP-Decisiones 229 - Readiness read-model de estado payment_route/checkout
+
+### Microfase
+
+`BE/Suscripciones-PaymentRoute-CheckoutBridge-StateReadModel-Readiness-01`
+
+### Decision
+
+Se define documentalmente el read-model futuro que consolidara el estado del flujo de pago de suscripciones antes de avanzar a Stripe.
+
+Nota de numeracion: esta decision queda como `PP-Decisiones 229` porque `PP-Decisiones 228` ya esta publicada para la implementacion del puente `payment_route` hacia checkout sin proveedor.
+
+Esta decision no implementa endpoint, servicio, repositorio ni cambios de datos. Su objetivo es dejar preparado el contrato para que UI y backend puedan consultar, de forma read-only, si una entidad ya tiene:
+
+- `payment_route` creada;
+- checkout interno pendiente;
+- `payment_route` consumida;
+- `checkout_intent` pendiente;
+- siguiente accion pendiente;
+- conflicto por checkout existente.
+
+### Estado actual del flujo
+
+El flujo ya implementado queda ordenado asi:
+
+1. `payment_route preview`
+2. `payment_route create`
+3. `checkout bridge no provider`
+4. `checkout_intent pending_payment`
+5. provider pendiente, sin PaymentIntent
+6. PaymentIntent futuro
+7. webhook futuro
+8. `activate-after-payment` futuro
+
+Estados actuales validados:
+
+- `subscription_payment_routes.status=created_no_provider`;
+- route consumida: `checkout_created_no_provider`;
+- `subscription_checkout_intents.status=pending_payment`;
+- provider interno: `none / not_created`;
+- PaymentIntent: `0`;
+- PaymentEvent: `0`.
+
+Caso QA conocido:
+
+- entidad: `doctor/990099`;
+- suscripcion actual: `optimum / annual / active`;
+- route consumida: `8ecf4208-46dd-47ef-b0e1-a0b684fef9b7`;
+- checkout interno: `68a1b3ec-854f-4c1c-9e2e-1b1651900ac9`;
+- monto: `882740 MXN`.
+
+### Endpoint futuro recomendado
+
+Endpoint preferente:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-flow/state`
+
+Se prefiere `payment-flow/state` sobre `payment-routes/state` porque el read-model no leera solamente `payment_route`; debe consolidar route, checkout interno y, en fases futuras, PaymentIntent, PaymentEvent y elegibilidad de activacion.
+
+### Servicio futuro propuesto
+
+Servicio:
+
+`BuildSubscriptionPaymentFlowStateService`
+
+Responsabilidades:
+
+- recibir `entity_type` y `entity_id`;
+- leer current subscription;
+- buscar latest active `payment_route` no deleted;
+- buscar `checkout_intent` vinculado si existe;
+- buscar checkout pendiente para la entidad si existe;
+- no consultar Stripe directamente;
+- no crear nada;
+- no modificar DB;
+- devolver estado consolidado para UI/backend.
+
+### Repositorios a reutilizar
+
+Repositorios actuales:
+
+- `CurrentSubscriptionRepository` o read-model actual de current subscription;
+- `SubscriptionPaymentRouteRepository`;
+- `SubscriptionCheckoutIntentRepository`.
+
+Repositorios futuros:
+
+- `SubscriptionPaymentIntentRepository`;
+- `SubscriptionPaymentEventRepository`.
+
+### Estados consolidados
+
+Valores sugeridos de `flow_status`:
+
+- `no_payment_flow`;
+- `route_created_no_provider`;
+- `checkout_pending_no_provider`;
+- `checkout_pending_provider_required`;
+- `payment_intent_pending_future`;
+- `payment_pending_confirmation_future`;
+- `paid_pending_activation_future`;
+- `activated_future`;
+- `blocked_route_conflict`;
+- `blocked_route_amount_changed`;
+- `expired`;
+- `cancelled`.
+
+Estados relevantes para la etapa inmediata:
+
+- `no_payment_flow`;
+- `route_created_no_provider`;
+- `checkout_pending_no_provider`;
+- `blocked_route_conflict`.
+
+### Derivacion de estados
+
+Caso A: no hay `payment_route` activa ni checkout pendiente.
+
+- `flow_status=no_payment_flow`.
+
+Caso B: hay `payment_route` con `status=created_no_provider` y sin checkout.
+
+- `flow_status=route_created_no_provider`.
+
+Caso C: hay `payment_route` con `status=checkout_created_no_provider` y checkout `pending_payment`.
+
+- `flow_status=checkout_pending_no_provider`.
+
+Caso D: hay checkout `pending_payment` para la entidad y se intenta crear otro flujo.
+
+- `flow_status=blocked_route_conflict`.
+
+Caso E futuro: hay checkout `pending_payment` y PaymentIntent todavia no existe.
+
+- `flow_status=checkout_pending_provider_required`;
+- alternativa futura: `payment_intent_pending_future`.
+
+### Payload futuro de respuesta
+
+Ejemplo de contrato:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "entity_type": "doctor",
+    "entity_id": "990099",
+    "flow_status": "checkout_pending_no_provider",
+    "current_subscription": {
+      "plan_code": "optimum",
+      "billing_period": "annual",
+      "status": "active",
+      "expires_at": "2027-07-01 01:19:13"
+    },
+    "payment_route": {
+      "uuid": "8ecf4208-46dd-47ef-b0e1-a0b684fef9b7",
+      "route_type": "upgrade_subscription",
+      "status": "checkout_created_no_provider",
+      "target_plan_code": "professional",
+      "amount_cents": 882740,
+      "currency": "MXN",
+      "amount_source": "server_recalculated",
+      "created_at": "...",
+      "checkout_created_at": "..."
+    },
+    "checkout": {
+      "uuid": "68a1b3ec-854f-4c1c-9e2e-1b1651900ac9",
+      "status": "pending_payment",
+      "provider": null,
+      "provider_status": "not_created",
+      "amount_cents": 882740,
+      "currency": "MXN"
+    },
+    "next_action": {
+      "type": "payment_intent_provider_pending",
+      "enabled": false,
+      "label": "Pago seguro Stripe sandbox pendiente"
+    },
+    "ui_message": {
+      "title": "Ruta de pago preparada",
+      "body": "Ya existe un checkout interno pendiente. Todavia no se ha realizado ningun cargo."
+    },
+    "warnings": [],
+    "reasons": []
+  }
+}
+```
+
+### Seguridad del endpoint futuro
+
+El endpoint futuro debe ser `GET` y read-only.
+
+Debe:
+
+- permitir lectura con el mismo criterio que current/read-model privado;
+- no autorizar writes;
+- no crear sesion;
+- no usar fixture;
+- no ejecutar Stripe;
+- no crear PaymentIntent;
+- no exponer secretos;
+- no exponer `client_secret`;
+- no exponer `idempotency_key` completa;
+- no exponer `request_hash` completo;
+- no exponer payloads internos completos salvo modo QA explicito.
+
+Errores futuros sugeridos:
+
+- `401 unauthorized`;
+- `403 forbidden`;
+- `404 entity_not_found`;
+- `409 inconsistent_payment_flow`;
+- `500 internal_error`.
+
+### Relacion con frontend
+
+La UI podra usar este read-model para:
+
+- mostrar que la ruta de pago ya esta preparada;
+- mostrar que existe checkout interno pendiente;
+- deshabilitar el boton de preparar ruta si ya existe checkout;
+- reemplazar mensajes genericos de `route_conflict` por mensajes contextuales;
+- mostrar `Siguiente paso: pago seguro Stripe sandbox pendiente`;
+- evitar reintentos innecesarios;
+- mantener el boton de Stripe deshabilitado hasta la fase correspondiente.
+
+### Relacion con PaymentIntent futuro
+
+El contrato deja preparado el lugar para agregar despues:
+
+- `payment_intent_uuid`;
+- `payment_intent_status`;
+- `provider_payment_id` redactado;
+- `provider_status`;
+- `payment_event_status`;
+- `activation_eligibility`.
+
+Esta decision deja explicito que esos campos todavia no se implementan en esta microfase.
+
+### Fuera de alcance explicito
+
+Esta microfase no implementa:
+
+- endpoint;
+- servicio;
+- frontend;
+- SQL;
+- creacion de `payment_route`;
+- creacion de checkout;
+- PaymentIntent;
+- Stripe;
+- webhook;
+- `activate-after-payment`;
+- activacion de suscripcion.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentFlowState-ReadModel-Endpoint-ReadOnly-01`
+
+Alcance futuro recomendado:
+
+- implementar GET read-only;
+- consolidar current + route + checkout;
+- no hacer writes;
+- no llamar Stripe;
+- no crear PaymentIntent;
+- no tocar frontend.
+
+### Validacion de esta microfase
+
+Esta microfase modifica solamente:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No modifica:
+
+- PHP;
+- frontend;
+- API/rutas;
+- servicios;
+- repositorios;
+- SQL/schema/seeds;
+- Stripe;
+- PaymentIntent;
+- webhook;
+- activacion.
+
+No se ejecuto:
+
+- SQL;
+- POST;
+- Stripe CLI;
+- checkout;
+- PaymentIntent;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`.
+
+### Estado
+
+Resultado documental:
+
+`PASS`
