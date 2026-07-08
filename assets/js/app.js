@@ -59106,6 +59106,10 @@ function mxResetLogoPreview(){
       checkoutSummary: null,
       renewal: null
     },
+    paymentRouteCreate: {
+      checkoutSummary: null,
+      renewal: null
+    },
     selectedPlanId: '',
     focusedPlanId: '',
     history: [],
@@ -59212,6 +59216,13 @@ function mxResetLogoPreview(){
     const id = safeDoctorId(entityId);
     if(type !== 'doctor' || !id) return '';
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/payment-routes/preview`;
+  }
+
+  function buildPaymentRouteCreateEndpoint(entityType, entityId){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    if(type !== 'doctor' || !id) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/payment-routes`;
   }
 
   function buildPaymentActivationStateEndpoint(entityType, entityId, options = {}){
@@ -60531,6 +60542,17 @@ function mxResetLogoPreview(){
   function publishPaymentPayloadPreview(slot, payload){
     if(slot === 'renewal') data.paymentPayloadPreview.renewal = payload || null;
     else data.paymentPayloadPreview.checkoutSummary = payload || null;
+    if(payload){
+      const previousSignature = paymentRouteCreateState(slot).signature;
+      const nextSignature = paymentRouteCreateSignature(payload);
+      ensurePaymentRouteCreateSignature(slot, payload);
+      if(previousSignature !== nextSignature && data.paymentServerPreview){
+        data.paymentServerPreview[slot] = null;
+      }
+    }else{
+      resetPaymentRouteCreate(slot);
+      if(data.paymentServerPreview) data.paymentServerPreview[slot] = null;
+    }
     try{
       window.mxmedSubscriptionPaymentPayloadPreview = {
         checkout_summary: data.paymentPayloadPreview.checkoutSummary,
@@ -60585,6 +60607,208 @@ function mxResetLogoPreview(){
       }
     });
     return request;
+  }
+
+  function paymentRouteCreateInitialState(){
+    return {
+      state: 'idle',
+      httpStatus: 0,
+      data: null,
+      errorCode: '',
+      message: '',
+      idempotencyKey: '',
+      signature: ''
+    };
+  }
+
+  function paymentRouteCreateState(slot){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    if(!data.paymentRouteCreate) data.paymentRouteCreate = {};
+    if(!data.paymentRouteCreate[key]) data.paymentRouteCreate[key] = paymentRouteCreateInitialState();
+    return data.paymentRouteCreate[key];
+  }
+
+  function resetPaymentRouteCreate(slot){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    if(!data.paymentRouteCreate) data.paymentRouteCreate = {};
+    data.paymentRouteCreate[key] = paymentRouteCreateInitialState();
+  }
+
+  function paymentRouteCreateSignature(payload){
+    if(!payload) return '';
+    return [
+      clean(payload.route_type),
+      clean(payload.entity_type).toLowerCase(),
+      safeDoctorId(payload.entity_id),
+      clean(payload.target_plan_code) || 'current',
+      clean(payload.current_plan_code) || 'none',
+      clean(payload.billing_period) || 'none',
+      clean(payload.payment_method_family) || 'not_selected',
+      payload.auto_renew_requested === true ? 'auto_renew_yes' : 'auto_renew_no'
+    ].join(':');
+  }
+
+  function ensurePaymentRouteCreateSignature(slot, payload){
+    const state = paymentRouteCreateState(slot);
+    const signature = paymentRouteCreateSignature(payload);
+    if(state.signature !== signature){
+      resetPaymentRouteCreate(slot);
+      paymentRouteCreateState(slot).signature = signature;
+    }
+  }
+
+  function latestPaymentServerPreviewData(slot){
+    const preview = data.paymentServerPreview?.[slot];
+    return preview?.state === 'success' && preview.data ? preview.data : null;
+  }
+
+  function paymentRouteCreateSnapshot(payload, preview){
+    const source = preview && typeof preview === 'object' ? preview : payload;
+    return paymentServerPreviewSnapshot(source);
+  }
+
+  function buildPaymentRouteCreatePayload(payload, preview){
+    const request = {
+      route_type: clean(payload?.route_type),
+      current_plan_code: clean(payload?.current_plan_code) || null,
+      target_plan_code: clean(payload?.target_plan_code) || null,
+      billing_period: clean(payload?.billing_period) || null,
+      payment_method_family: clean(payload?.payment_method_family) || 'not_selected',
+      auto_renew_requested: payload?.auto_renew_requested === true,
+      client_payload_version: 'mxmed-subscription-payment-summary-v1',
+      frontend_summary_snapshot: paymentRouteCreateSnapshot(payload, preview)
+    };
+
+    if(!request.current_plan_code) delete request.current_plan_code;
+    if(!request.target_plan_code) delete request.target_plan_code;
+    if(!request.billing_period) delete request.billing_period;
+    return request;
+  }
+
+  function generatePaymentRouteCreateKey(payload){
+    const routeType = clean(payload?.route_type) || 'route';
+    const entityType = clean(payload?.entity_type).toLowerCase() || 'entity';
+    const entityId = safeDoctorId(payload?.entity_id) || 'unknown';
+    const target = clean(payload?.target_plan_code) || clean(payload?.current_plan_code) || 'current';
+    const billingPeriod = clean(payload?.billing_period) || 'period';
+    const entropy = (window.crypto && typeof window.crypto.randomUUID === 'function')
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `mxmed-route-create:${routeType}:${entityType}:${entityId}:${target}:${billingPeriod}:${entropy}`;
+  }
+
+  function paymentMethodFamilyLabel(value){
+    const method = clean(value).toLowerCase();
+    const labels = {
+      card: 'Tarjeta',
+      spei: 'SPEI',
+      oxxo: 'OXXO',
+      not_selected: 'Sin seleccionar'
+    };
+    return labels[method] || method || 'Sin seleccionar';
+  }
+
+  function paymentRouteCreateErrorMessage(errorCode, httpStatus, fallbackMessage){
+    const code = clean(errorCode);
+    const message = clean(fallbackMessage);
+    if(Number(httpStatus) === 403 && (code === 'forbidden' || message.includes('local_dev_open'))){
+      return 'No hay sesión autorizada para preparar la ruta de pago en este entorno DEV/local.';
+    }
+    const messages = {
+      route_conflict: 'Ya existe una ruta de pago pendiente para esta suscripción.',
+      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir el resumen para generar una nueva preparación.',
+      invalid_upgrade: 'Este cambio de plan no está disponible.',
+      active_subscription_exists: 'Ya existe una suscripción activa.',
+      missing_idempotency_key: 'No fue posible preparar la ruta. Falta identificador seguro de solicitud.'
+    };
+    if(messages[code]) return messages[code];
+    if(Number(httpStatus) >= 500) return 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+    return message || 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+  }
+
+  function paymentRouteCreateAvailable(slot){
+    if(isQaPlanSimulationActive()) return false;
+    const payload = data.paymentPayloadPreview?.[slot];
+    const preview = latestPaymentServerPreviewData(slot);
+    if(!payload || !preview) return false;
+    if(!['new_subscription', 'upgrade_subscription', 'renewal'].includes(clean(payload.route_type))) return false;
+    return preview.next_action?.enabled !== true;
+  }
+
+  function paymentRouteCreateActionHtml(slot){
+    const state = paymentRouteCreateState(slot);
+    if(isQaPlanSimulationActive()){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Disponible sólo en modo Real</button>';
+    }
+    if(state.state === 'creating'){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparando ruta de pago segura...</button>';
+    }
+    if(state.state === 'success'){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Pago seguro Stripe sandbox pendiente</button>';
+    }
+    if(!paymentRouteCreateAvailable(slot)){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparar ruta de pago <span>Preview requerido</span></button>';
+    }
+    return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">Preparar ruta de pago</button>`;
+  }
+
+  function paymentRouteCreateStatusHtml(slot){
+    const state = paymentRouteCreateState(slot);
+    if(state.state === 'creating'){
+      return `<article class="subp-payment-route-status" data-state="creating">
+          <h4>Preparando ruta de pago segura...</h4>
+          <p>No cierres esta vista mientras el servidor confirma la ruta interna.</p>
+        </article>`;
+    }
+    if(state.state === 'success'){
+      const route = state.data || {};
+      const amount = formatSubscriptionCents(route.amount_cents, route.currency) || 'Importe confirmado por backend';
+      const uuid = clean(route.payment_route_uuid) || 'No disponible';
+      const status = clean(route.status) || 'created_no_provider';
+      const providerStatus = clean(route.provider_status) || 'not_created';
+      const nextActionEnabled = route.next_action?.enabled === true;
+      return `<article class="subp-payment-route-status" data-state="success">
+          <div class="subp-payment-route-status-head">
+            <div>
+              <div class="subp-payments-kicker">Ruta interna MXMed</div>
+              <h4>Ruta de pago preparada</h4>
+            </div>
+            <span class="subp-payments-status-chip">Sin cargo</span>
+          </div>
+          <dl class="subp-payment-route-status-dl">
+            <dt>Folio/ruta</dt><dd>${escapeHtml(uuid)}</dd>
+            <dt>Estado</dt><dd>${escapeHtml(status)}</dd>
+            <dt>Provider status</dt><dd>${escapeHtml(providerStatus)}</dd>
+            <dt>Importe confirmado</dt><dd>${escapeHtml(amount)}</dd>
+            <dt>Método seleccionado</dt><dd>${escapeHtml(paymentMethodFamilyLabel(route.payment_method_family))}</dd>
+            <dt>Siguiente paso</dt><dd>Pago seguro Stripe sandbox pendiente · enabled=${nextActionEnabled ? 'true' : 'false'}</dd>
+          </dl>
+          <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
+          <p class="subp-payment-route-status-muted">El siguiente paso se habilitará en una microfase posterior.</p>
+          ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta create</summary><pre>${escapeHtml(JSON.stringify(route, null, 2))}</pre></details>` : ''}
+        </article>`;
+    }
+    if(state.state === 'error'){
+      const message = clean(state.message) || 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+      const code = clean(state.errorCode);
+      return `<article class="subp-payment-route-status" data-state="error">
+          <h4>No fue posible preparar la ruta</h4>
+          <p>${escapeHtml(message)}</p>
+          ${code ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+        </article>`;
+    }
+    return '';
+  }
+
+  function refreshPaymentRouteCreateUi(slot){
+    const actionContainer = pane.querySelector(`[data-subp-payment-route-create-action="${slot}"]`);
+    if(actionContainer){
+      actionContainer.innerHTML = paymentRouteCreateActionHtml(slot);
+    }
+    const statusContainer = pane.querySelector(`[data-subp-payment-route-create-status="${slot}"]`);
+    if(statusContainer){
+      statusContainer.innerHTML = paymentRouteCreateStatusHtml(slot);
+    }
   }
 
   function generatePaymentServerPreviewKey(payload){
@@ -60646,11 +60870,13 @@ function mxResetLogoPreview(){
     if(status === 'simulation'){
       body.innerHTML = `<p class="subp-server-preview-note">Simulación QA local — sin consulta backend.</p>
         <p class="subp-server-preview-muted">El cálculo backend sólo se consulta en modo Real.</p>`;
+      refreshPaymentRouteCreateUi(slot);
       return;
     }
 
     if(status === 'loading'){
       body.innerHTML = '<p class="subp-server-preview-note">Calculando vista previa segura...</p>';
+      refreshPaymentRouteCreateUi(slot);
       return;
     }
 
@@ -60670,6 +60896,7 @@ function mxResetLogoPreview(){
         </dl>
         ${notices.length ? `<p class="subp-server-preview-muted">Avisos: ${escapeHtml(notices.join(', '))}</p>` : ''}
         ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta preview</summary><pre>${escapeHtml(JSON.stringify(preview, null, 2))}</pre></details>` : ''}`;
+      refreshPaymentRouteCreateUi(slot);
       return;
     }
 
@@ -60678,10 +60905,12 @@ function mxResetLogoPreview(){
       const message = clean(state?.message) || 'No fue posible calcular la vista previa server-side. El monto final se confirmará antes del pago.';
       body.innerHTML = `<p class="subp-server-preview-note">${escapeHtml(message)}</p>
         ${code ? `<p class="subp-server-preview-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}`;
+      refreshPaymentRouteCreateUi(slot);
       return;
     }
 
     body.innerHTML = '<p class="subp-server-preview-note">Se calculará con backend antes de habilitar pago.</p>';
+    refreshPaymentRouteCreateUi(slot);
   }
 
   async function loadPaymentServerPreview(slot, payload){
@@ -60759,6 +60988,108 @@ function mxResetLogoPreview(){
         message: 'No fue posible calcular la vista previa server-side. El monto final se confirmará antes del pago.'
       };
       renderPaymentServerPreviewState(slot, data.paymentServerPreview[slot]);
+      return false;
+    }
+  }
+
+  async function createPaymentRouteFromSummary(slot){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    const payload = data.paymentPayloadPreview?.[key];
+    const state = paymentRouteCreateState(key);
+
+    if(isQaPlanSimulationActive()){
+      state.state = 'error';
+      state.httpStatus = 0;
+      state.errorCode = 'qa_simulation';
+      state.message = 'Disponible sólo en modo Real.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(!payload){
+      state.state = 'error';
+      state.httpStatus = 0;
+      state.errorCode = 'missing_payload';
+      state.message = 'No fue posible preparar los datos para la ruta de pago.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    const preview = latestPaymentServerPreviewData(key);
+    if(!preview){
+      state.state = 'error';
+      state.httpStatus = 0;
+      state.errorCode = 'preview_required';
+      state.message = 'Primero confirma el importe con backend.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    const endpoint = buildPaymentRouteCreateEndpoint(payload.entity_type, payload.entity_id);
+    if(!endpoint){
+      state.state = 'error';
+      state.httpStatus = 0;
+      state.errorCode = 'missing_entity_context';
+      state.message = 'No fue posible resolver la entidad para preparar la ruta de pago.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    const signature = paymentRouteCreateSignature(payload);
+    if(state.signature !== signature){
+      resetPaymentRouteCreate(key);
+      paymentRouteCreateState(key).signature = signature;
+    }
+    const currentState = paymentRouteCreateState(key);
+    if(!currentState.idempotencyKey){
+      currentState.idempotencyKey = generatePaymentRouteCreateKey(payload);
+    }
+    currentState.state = 'creating';
+    currentState.httpStatus = 0;
+    currentState.data = null;
+    currentState.errorCode = '';
+    currentState.message = '';
+    refreshPaymentRouteCreateUi(key);
+
+    try{
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': currentState.idempotencyKey
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(buildPaymentRouteCreatePayload(payload, preview))
+      });
+      const responsePayload = await response.json().catch(()=> null);
+      const responseData = responsePayload?.data || null;
+      if(response.ok && responsePayload?.ok === true && responseData){
+        currentState.state = 'success';
+        currentState.httpStatus = Number(response.status || 0);
+        currentState.data = responseData;
+        currentState.errorCode = '';
+        currentState.message = '';
+        refreshPaymentRouteCreateUi(key);
+        return true;
+      }
+
+      const errorCode = clean(responsePayload?.error?.code) || `http_${response.status || 0}`;
+      const errorMessage = clean(responsePayload?.error?.message) || clean(responsePayload?.message);
+      currentState.state = 'error';
+      currentState.httpStatus = Number(response.status || 0);
+      currentState.data = null;
+      currentState.errorCode = errorCode;
+      currentState.message = paymentRouteCreateErrorMessage(errorCode, response.status, errorMessage);
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }catch(_){
+      currentState.state = 'error';
+      currentState.httpStatus = 0;
+      currentState.data = null;
+      currentState.errorCode = 'network_error';
+      currentState.message = 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+      refreshPaymentRouteCreateUi(key);
       return false;
     }
   }
@@ -61068,10 +61399,11 @@ function mxResetLogoPreview(){
           </article>
         </div>
         <div class="subp-renewal-summary-actions">
-          <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Continuar a pago seguro <span>Próxima fase</span></button>
+          <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="renewal">${paymentRouteCreateActionHtml('renewal')}</div>
           <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="overview">Volver a Mi plan y pagos</button>
           <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="plans">Ver planes y beneficios</button>
         </div>
+        <div data-subp-payment-route-create-status="renewal">${paymentRouteCreateStatusHtml('renewal')}</div>
         ${paymentServerPreviewHtml('renewal')}
         ${paymentPayloadPreviewHtml(payloadPreview)}
       </section>`;
@@ -61405,10 +61737,11 @@ function mxResetLogoPreview(){
         </article>
       </div>
       <div class="subp-checkout-summary-actions">
-        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Continuar a pago seguro <span>Próxima fase</span></button>
+        <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${paymentRouteCreateActionHtml('checkoutSummary')}</div>
         <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a planes y beneficios</button>
         <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="billing">Ir a Mi plan y pagos</button>
       </div>
+      <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
       ${paymentServerPreviewHtml('checkoutSummary')}
       ${paymentPayloadPreviewHtml(payloadPreview)}`;
     loadPaymentServerPreview('checkoutSummary', payloadPreview);
@@ -62721,6 +63054,12 @@ function mxResetLogoPreview(){
       if(clean(checkoutAction.dataset.subpCheckoutSummaryAction) === 'back'){
         closePlanCheckoutSummary();
       }
+      return;
+    }
+    const paymentRouteCreate = event.target && event.target.closest('[data-subp-payment-route-create]');
+    if(paymentRouteCreate){
+      event.preventDefault();
+      createPaymentRouteFromSummary(clean(paymentRouteCreate.dataset.subpPaymentRouteCreate));
       return;
     }
     const action = event.target && event.target.closest('[data-subp-payments-action]');
