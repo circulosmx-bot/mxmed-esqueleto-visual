@@ -43831,3 +43831,399 @@ No se modifica:
 ### Estado
 
 Resultado esperado: `PASS` si el preview backend devuelve importes en centavos coherentes y `amount_mismatch=false` cuando el snapshot frontend coincide.
+
+## PP-Decisiones 227 - Readiness puente payment_route hacia checkout sin proveedor
+
+### Microfase documental
+
+Se documenta la microfase:
+
+`BE/Suscripciones-PaymentRoute-CreateCheckoutFromRoute-NoStripeProvider-Readiness-01`
+
+Esta decision define el contrato tecnico futuro para consumir una ruta interna de pago MXMed y convertirla en un `subscription_checkout_intent` sin crear proveedor, sin Stripe, sin PaymentIntent y sin activacion.
+
+No se implementa endpoint en esta microfase.
+
+### Estado actual
+
+El flujo vigente ya cuenta con:
+
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-routes/preview`.
+- `POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-routes`.
+- Tabla `subscription_payment_routes`.
+- Servicio `BuildSubscriptionPaymentRoutePreviewService`.
+- Servicio `CreateSubscriptionPaymentRouteService`.
+- Repositorio `SubscriptionPaymentRouteRepository`.
+- Idempotencia `subscriptions.payment_route.create`.
+- Lock `payment_route_create`.
+
+La ruta creada queda como intencion interna authoritative:
+
+- `status=created_no_provider`.
+- `provider=null`.
+- `provider_status=not_created`.
+- `next_action.type=stripe_checkout_sandbox_pending`.
+- `next_action.enabled=false`.
+
+Ese estado no crea:
+
+- `subscription_checkout_intents`;
+- `subscription_contract_acceptances`;
+- `subscription_payment_intents`;
+- `subscription_payment_events`;
+- cambios en `profile_subscriptions`;
+- llamadas a Stripe;
+- activacion de suscripcion.
+
+### Regla conceptual
+
+La ruta de pago no debe reemplazar al sistema de checkout/pago existente.
+
+Responsabilidades:
+
+- `payment_route`: decide que se quiere pagar y conserva el snapshot authoritative server-side.
+- `checkout_intent`: representa el intento contractual/pago pendiente.
+- `payment_intent`: representa el intento del proveedor.
+- `payment_event`: registra confirmacion procesada desde provider/webhook.
+- `activate-after-payment`: actualiza la suscripcion cuando el pago ya fue confirmado.
+
+El puente futuro debe conectar `payment_route` con `checkout_intent` sin crear un sistema paralelo.
+
+### Endpoint futuro propuesto
+
+Ruta preferida:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-routes/{payment_route_uuid}/checkout`
+
+Ruta alternativa si el router actual no soporta comodamente esa forma:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-routes/checkout`
+
+Body alternativo:
+
+```json
+{
+  "payment_route_uuid": "...",
+  "provider": "none"
+}
+```
+
+Para la siguiente fase inmediata, el unico provider permitido debe ser:
+
+`none`
+
+No debe aceptarse `stripe` en este puente inicial.
+
+### Servicio futuro propuesto
+
+Servicio recomendado:
+
+`CreateSubscriptionCheckoutFromPaymentRouteService`
+
+Responsabilidad:
+
+- recibir `payment_route_uuid`;
+- validar ownership y scope contra URL/contexto;
+- validar que la ruta exista y no este eliminada;
+- validar `status=created_no_provider`;
+- validar que la ruta no haya expirado;
+- recalcular preview server-side con `BuildSubscriptionPaymentRoutePreviewService`;
+- comparar monto/snapshot actual contra la ruta persistida;
+- detenerse con error controlado si el importe cambio;
+- asegurar/crear `subscription_contract_acceptance` en estado `accepted_pending_payment`;
+- crear `subscription_checkout_intent` reutilizando reglas existentes;
+- vincular conceptualmente `payment_route` con `checkout_intent`;
+- marcar la ruta como consumida por checkout sin proveedor;
+- devolver `checkout_intent_uuid`;
+- no crear PaymentIntent;
+- no llamar Stripe;
+- no activar suscripcion.
+
+### Relacion con `CreateSubscriptionCheckoutIntentService`
+
+Opcion preferente:
+
+- Crear un wrapper `CreateSubscriptionCheckoutFromPaymentRouteService`.
+- El wrapper valida y bloquea la `payment_route`.
+- Luego reutiliza o invoca la logica de `CreateSubscriptionCheckoutIntentService`.
+
+Motivo:
+
+- `CreateSubscriptionCheckoutIntentService` ya centraliza reglas de:
+  - entidad contractable;
+  - plan actual activo;
+  - upgrade valido;
+  - precios server-side;
+  - creacion de `contract_acceptance`;
+  - creacion de `subscription_checkout_intent`;
+  - idempotencia de checkout;
+  - lock de checkout;
+  - expiracion de checkout.
+
+No se debe duplicar esa logica en un segundo flujo de checkout.
+
+Refactor minimo futuro si hace falta:
+
+- permitir que `CreateSubscriptionCheckoutIntentService` reciba un origen interno controlado `payment_route_checkout`;
+- o exponer un metodo interno que acepte un snapshot ya validado por route;
+- conservar siempre el recalculo server-side final antes de crear checkout.
+
+### Estados futuros de `payment_route`
+
+Estado actual:
+
+- `created_no_provider`.
+
+Estados futuros propuestos:
+
+- `checkout_created_no_provider`;
+- `consumed_by_checkout`;
+- `expired`;
+- `cancelled`;
+- `provider_pending_future`.
+
+Decision para la siguiente fase inmediata:
+
+Usar `checkout_created_no_provider`.
+
+Motivo:
+
+- describe que ya existe checkout interno;
+- deja claro que todavia no existe provider;
+- evita ambiguedad con `consumed_by_checkout`, que podria ocultar si el consumo creo o no proveedor.
+
+### Validaciones de consumo
+
+Antes de crear checkout desde una route, el servicio futuro debe validar:
+
+- la route existe;
+- `deleted_at IS NULL`;
+- `entity_type` y `entity_id` coinciden con la URL;
+- `status=created_no_provider`;
+- `expires_at >= UTC_TIMESTAMP()`;
+- no existe checkout asociado a esa route;
+- no existe otro checkout pendiente incompatible para la misma entidad;
+- no existe otra route activa incompatible para la misma entidad;
+- la suscripcion actual sigue siendo compatible con la route;
+- `route_type` sigue siendo elegible.
+
+Reglas por tipo:
+
+- `upgrade_subscription`: el plan actual real debe seguir igual que `current_plan_code`, el target debe seguir siendo superior y el billing period debe seguir igual.
+- `renewal`: debe seguir existiendo plan pagado activo renovable.
+- `new_subscription`: no debe existir plan pagado activo.
+
+El monto debe recalcularse server-side. Si cambia contra la route persistida, no debe continuar automaticamente.
+
+Error recomendado:
+
+`409 route_amount_changed`
+
+### Idempotencia
+
+Operacion futura sugerida:
+
+`subscriptions.payment_route.checkout.create`
+
+Reglas:
+
+- `Idempotency-Key` requerida.
+- Misma key + mismo `request_hash` devuelve el mismo checkout.
+- Misma key + hash distinto devuelve `409 idempotency_conflict`.
+- Reintento mientras esta en proceso devuelve `409 request_already_processing`.
+
+El `request_hash` debe incluir:
+
+- `payment_route_uuid`;
+- `entity_type`;
+- `entity_id`;
+- `route_type`;
+- `current_plan_code` real;
+- `target_plan_code`;
+- `billing_period`;
+- `amount_cents` recalculado;
+- `currency`;
+- `provider=none`.
+
+### Lock
+
+Lock sugerido:
+
+`mxmed:subscriptions:{entity_type}:{entity_id}:payment_route_checkout_create`
+
+Debe impedir:
+
+- doble checkout desde la misma route;
+- doble checkout simultaneo para la misma entidad;
+- carrera entre consumo de route y creacion manual de checkout.
+
+Si se reutiliza `SubscriptionEntityWriteLockService`, debe agregarse una finalidad nueva y explicita para `payment_route_checkout_create` en la microfase de implementacion.
+
+### Contract acceptance
+
+Estado actual:
+
+- `payment_route create` no crea `subscription_contract_acceptance`.
+
+Decision:
+
+- Crear/asegurar `contract_acceptance` al convertir `payment_route` a checkout.
+- No crear acceptance al crear la route.
+
+Motivo:
+
+- `payment_route` es una intencion preliminar interna.
+- `checkout_intent` es el compromiso contractual/pago pendiente.
+- `CreateSubscriptionPendingPaymentAcceptanceService` ya crea `accepted_pending_payment` con `source=checkout_intent`.
+
+El wrapper futuro debe evitar duplicados mediante idempotencia y mediante el vinculo route-checkout.
+
+### Mapping `payment_route` -> `checkout_intent`
+
+Mapping conceptual:
+
+- `payment_route.route_type=new_subscription` -> `checkout_intent.intent_type=new_subscription`.
+- `payment_route.route_type=upgrade_subscription` -> `checkout_intent.intent_type=upgrade`.
+- `payment_route.target_plan_code` -> `checkout_intent.plan_code`.
+- `payment_route.billing_period` -> `checkout_intent.billing_period`.
+- `payment_route.amount_cents` -> monto esperado del checkout, validado contra recalculo final.
+- `payment_route.currency` -> `checkout_intent.currency`.
+- `payment_route.payment_method_family` -> metadata futura o `notes`.
+- `payment_route.uuid` -> `payment_route_uuid` futuro o metadata/notes controlado.
+
+Estado de schema actual:
+
+- `subscription_checkout_intents` no expone una columna dedicada `payment_route_uuid`.
+
+Decision de readiness:
+
+- No modificar schema en esta microfase.
+- La implementacion futura debe decidir entre:
+  - agregar columna `payment_route_uuid` con indice unico nullable;
+  - o registrar el vinculo temporalmente en `notes`/metadata controlada si se acepta para QA.
+
+Recomendacion productiva:
+
+- agregar columna `payment_route_uuid` a `subscription_checkout_intents`;
+- agregar indice unico para evitar doble checkout por route;
+- actualizar `SubscriptionCheckoutIntentRepository` para consultar por `payment_route_uuid`.
+
+### Respuesta futura exitosa
+
+HTTP esperado:
+
+`201 Created`
+
+Payload:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "mode": "checkout_created_no_provider",
+    "payment_route_uuid": "...",
+    "checkout_intent_uuid": "...",
+    "route_type": "upgrade_subscription",
+    "status": "checkout_created_no_provider",
+    "provider": null,
+    "provider_status": "not_created",
+    "amount_cents": 882740,
+    "currency": "MXN",
+    "next_action": {
+      "type": "payment_intent_provider_pending",
+      "enabled": false
+    }
+  }
+}
+```
+
+### Errores futuros
+
+Errores controlados esperados:
+
+- `401 unauthorized`;
+- `403 forbidden`;
+- `404 payment_route_not_found`;
+- `409 route_already_consumed`;
+- `409 route_conflict`;
+- `409 route_amount_changed`;
+- `409 active_subscription_exists`;
+- `409 active_subscription_required`;
+- `409 invalid_upgrade`;
+- `409 idempotency_conflict`;
+- `409 request_already_processing`;
+- `422 missing_idempotency_key`;
+- `422 validation_error`;
+- `500 internal_error`.
+
+No debe haber stacktrace ni secretos en respuestas.
+
+### Fuera de alcance explicito
+
+Esta microfase no implementa:
+
+- endpoint real;
+- servicio nuevo ejecutable;
+- repositorio nuevo;
+- tabla nueva;
+- columna nueva;
+- migracion;
+- SQL;
+- frontend;
+- Stripe Checkout;
+- Stripe PaymentIntent;
+- Stripe SetupIntent;
+- webhook;
+- `confirm_mock`;
+- `activate-after-payment`;
+- cambios en `profile_subscriptions`.
+
+### Siguiente microfase recomendada
+
+`BE/Suscripciones-PaymentRoute-CheckoutBridge-Endpoint-NoProvider-01`
+
+Alcance futuro recomendado:
+
+- implementar endpoint checkout-from-route;
+- crear wrapper `CreateSubscriptionCheckoutFromPaymentRouteService`;
+- requerir `session_scope` y `Idempotency-Key`;
+- validar route ownership/status/expiracion;
+- recalcular preview server-side;
+- crear/asegurar `contract_acceptance` pending payment;
+- crear checkout interno sin provider;
+- vincular route con checkout;
+- marcar route `checkout_created_no_provider`;
+- no crear PaymentIntent;
+- no llamar Stripe;
+- no activar suscripcion.
+
+### Alcance modificado
+
+Esta microfase modifica solamente:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No modifica:
+
+- frontend;
+- backend PHP;
+- API/rutas;
+- servicios;
+- repositorios;
+- Stripe provider;
+- Stripe webhook;
+- checkout real;
+- PaymentIntent;
+- PaymentEvents;
+- activacion;
+- SQL/schema/seeds;
+- composer/vendor;
+- `.env`.
+
+### Estado de readiness
+
+Resultado documental:
+
+`PASS`
+
+El contrato futuro queda definido para conectar `subscription_payment_routes.status=created_no_provider` con el flujo existente de checkout, manteniendo Stripe y PaymentIntent fuera de la siguiente fase inmediata.
