@@ -104,6 +104,7 @@ final class SubscriptionWriteIdempotencyService
 {
     public const OPERATION = 'subscriptions.create_with_contract_acceptance';
     public const CHECKOUT_OPERATION = 'subscriptions.checkout_intent.create';
+    public const PAYMENT_ROUTE_OPERATION = 'subscriptions.payment_route.create';
     public const PAYMENT_INTENT_OPERATION = 'subscriptions.payment_intent.create';
     public const PAYMENT_INTENT_CONFIRM_MOCK_OPERATION = 'subscriptions.payment_intent.confirm_mock';
     public const PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION = 'subscriptions.payment_intent.activate_after_payment';
@@ -126,6 +127,14 @@ final class SubscriptionWriteIdempotencyService
         array $payload
     ): SubscriptionWriteIdempotencyDecision {
         return $this->beginOperation($headerValue, self::CHECKOUT_OPERATION, $scope, $payload);
+    }
+
+    public function beginPaymentRoute(
+        ?string $headerValue,
+        array $scope,
+        array $payload
+    ): SubscriptionWriteIdempotencyDecision {
+        return $this->beginOperation($headerValue, self::PAYMENT_ROUTE_OPERATION, $scope, $payload);
     }
 
     public function beginPaymentIntent(
@@ -412,6 +421,22 @@ final class SubscriptionWriteIdempotencyService
         );
     }
 
+    public function markPaymentRouteCompleted(array $record, array $response, int $httpStatus): void
+    {
+        $body = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($body === false) {
+            throw new RuntimeException('payment_route_idempotency_complete_failed: response payload is not serializable');
+        }
+
+        $this->repository->markCompletedWithResponse(
+            (string)$record['uuid'],
+            null,
+            null,
+            $httpStatus,
+            $body
+        );
+    }
+
     public function markPaymentIntentConfirmMockCompleted(array $record, array $response, int $httpStatus): void
     {
         $body = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -458,6 +483,11 @@ final class SubscriptionWriteIdempotencyService
 
         if ($operation === self::PAYMENT_INTENT_OPERATION) {
             $this->markPaymentIntentCompleted($record, $response, $httpStatus);
+            return;
+        }
+
+        if ($operation === self::PAYMENT_ROUTE_OPERATION) {
+            $this->markPaymentRouteCompleted($record, $response, $httpStatus);
             return;
         }
 
@@ -514,6 +544,7 @@ final class SubscriptionWriteIdempotencyService
             [
                 self::OPERATION,
                 self::CHECKOUT_OPERATION,
+                self::PAYMENT_ROUTE_OPERATION,
                 self::PAYMENT_INTENT_OPERATION,
                 self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION,
                 self::PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION,
@@ -529,6 +560,9 @@ final class SubscriptionWriteIdempotencyService
         }
         if ($operation === self::PAYMENT_INTENT_OPERATION) {
             return $this->buildPaymentIntentRequestHash($scope, $payload);
+        }
+        if ($operation === self::PAYMENT_ROUTE_OPERATION) {
+            return $this->buildPaymentRouteRequestHash($scope, $payload);
         }
         if ($operation === self::PAYMENT_INTENT_CONFIRM_MOCK_OPERATION) {
             return $this->buildPaymentIntentConfirmMockRequestHash($scope, $payload);
@@ -578,6 +612,23 @@ final class SubscriptionWriteIdempotencyService
             'amount_cents' => isset($payload['amount_cents']) ? (int)$payload['amount_cents'] : null,
             'currency' => (string)($payload['currency'] ?? ''),
             'source' => (string)($payload['source'] ?? ''),
+        ];
+
+        return hash('sha256', $this->canonicalJson($canonical));
+    }
+
+    public function buildPaymentRouteRequestHash(array $scope, array $payload): string
+    {
+        $canonical = [
+            'operation' => self::PAYMENT_ROUTE_OPERATION,
+            'route_type' => (string)($payload['route_type'] ?? ''),
+            'entity_type' => (string)($scope['entity_type'] ?? $payload['entity_type'] ?? ''),
+            'entity_id' => (string)($scope['entity_id'] ?? $payload['entity_id'] ?? ''),
+            'current_plan_code' => (string)($payload['current_plan_code'] ?? ''),
+            'target_plan_code' => (string)($payload['target_plan_code'] ?? $payload['plan_code'] ?? ''),
+            'billing_period' => (string)($payload['billing_period'] ?? ''),
+            'payment_method_family' => (string)($payload['payment_method_family'] ?? ''),
+            'auto_renew_requested' => (bool)($payload['auto_renew_requested'] ?? false),
         ];
 
         return hash('sha256', $this->canonicalJson($canonical));
@@ -680,6 +731,7 @@ final class SubscriptionWriteIdempotencyService
             $operation,
             [
                 self::CHECKOUT_OPERATION,
+                self::PAYMENT_ROUTE_OPERATION,
                 self::PAYMENT_INTENT_OPERATION,
                 self::PAYMENT_INTENT_ACTIVATE_AFTER_PAYMENT_OPERATION,
             ],
@@ -729,6 +781,7 @@ final class SubscriptionWriteIdempotencyService
             $operation,
             [
                 self::CHECKOUT_OPERATION,
+                self::PAYMENT_ROUTE_OPERATION,
                 self::PAYMENT_INTENT_OPERATION,
             ],
             true
