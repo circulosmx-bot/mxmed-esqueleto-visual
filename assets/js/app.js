@@ -59223,6 +59223,7 @@ function mxResetLogoPreview(){
     annual: 'Anual',
     monthly: 'Mensual'
   };
+  const PAYMENT_ROUTE_PREPARED_STORAGE_KEY = 'mxmed.subscription.paymentRoutePrepared.v1';
 
   const data = {
     billing: 'yearly',
@@ -59389,6 +59390,14 @@ function mxResetLogoPreview(){
     const id = safeDoctorId(entityId);
     if(type !== 'doctor' || !id) return '';
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/payment-routes`;
+  }
+
+  function buildPaymentRouteCheckoutEndpoint(entityType, entityId, paymentRouteUuid){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    const routeUuid = clean(paymentRouteUuid);
+    if(type !== 'doctor' || !id || !routeUuid) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/payment-routes/${encodeURIComponent(routeUuid)}/checkout`;
   }
 
   function buildPaymentActivationStateEndpoint(entityType, entityId, options = {}){
@@ -60800,7 +60809,15 @@ function mxResetLogoPreview(){
       errorCode: '',
       message: '',
       idempotencyKey: '',
-      signature: ''
+      signature: '',
+      checkoutBridge: {
+        state: 'idle',
+        httpStatus: 0,
+        data: null,
+        errorCode: '',
+        message: '',
+        idempotencyKey: ''
+      }
     };
   }
 
@@ -60838,6 +60855,85 @@ function mxResetLogoPreview(){
       resetPaymentRouteCreate(slot);
       paymentRouteCreateState(slot).signature = signature;
     }
+    hydratePreparedPaymentRouteState(slot);
+  }
+
+  function paymentRouteCheckoutBridgeInitialState(){
+    return {
+      state: 'idle',
+      httpStatus: 0,
+      data: null,
+      errorCode: '',
+      message: '',
+      idempotencyKey: ''
+    };
+  }
+
+  function paymentRouteCheckoutBridgeState(slot){
+    const state = paymentRouteCreateState(slot);
+    if(!state.checkoutBridge || typeof state.checkoutBridge !== 'object'){
+      state.checkoutBridge = paymentRouteCheckoutBridgeInitialState();
+    }
+    return state.checkoutBridge;
+  }
+
+  function readPreparedPaymentRouteStore(){
+    try{
+      const raw = window.sessionStorage?.getItem(PAYMENT_ROUTE_PREPARED_STORAGE_KEY) || '';
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    }catch(_){
+      return {};
+    }
+  }
+
+  function writePreparedPaymentRouteStore(store){
+    try{
+      window.sessionStorage?.setItem(PAYMENT_ROUTE_PREPARED_STORAGE_KEY, JSON.stringify(store || {}));
+    }catch(_){}
+  }
+
+  function persistPreparedPaymentRouteState(slot){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    const state = paymentRouteCreateState(key);
+    const signature = clean(state.signature);
+    const route = state.data && typeof state.data === 'object' ? state.data : null;
+    const routeUuid = clean(route?.payment_route_uuid);
+    if(state.state !== 'success' || !signature || !routeUuid) return;
+
+    const store = readPreparedPaymentRouteStore();
+    store[signature] = {
+      slot: key,
+      signature,
+      state: 'success',
+      httpStatus: Number(state.httpStatus || 0),
+      data: route,
+      checkoutBridge: state.checkoutBridge && typeof state.checkoutBridge === 'object'
+        ? state.checkoutBridge
+        : paymentRouteCheckoutBridgeInitialState(),
+      saved_at: new Date().toISOString()
+    };
+    writePreparedPaymentRouteStore(store);
+  }
+
+  function hydratePreparedPaymentRouteState(slot){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    const state = paymentRouteCreateState(key);
+    const signature = clean(state.signature);
+    if(!signature || state.state === 'success') return false;
+    const stored = readPreparedPaymentRouteStore()[signature];
+    const routeUuid = clean(stored?.data?.payment_route_uuid);
+    if(!stored || stored.state !== 'success' || !routeUuid) return false;
+
+    state.state = 'success';
+    state.httpStatus = Number(stored.httpStatus || 0);
+    state.data = stored.data;
+    state.errorCode = '';
+    state.message = '';
+    state.checkoutBridge = stored.checkoutBridge && typeof stored.checkoutBridge === 'object'
+      ? stored.checkoutBridge
+      : paymentRouteCheckoutBridgeInitialState();
+    return true;
   }
 
   function latestPaymentServerPreviewData(slot){
@@ -60909,6 +61005,27 @@ function mxResetLogoPreview(){
     return message || 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
   }
 
+  function paymentRouteCheckoutBridgeErrorMessage(errorCode, httpStatus, fallbackMessage){
+    const code = clean(errorCode);
+    const message = clean(fallbackMessage);
+    if(Number(httpStatus) === 403 && (code === 'forbidden' || message.includes('local_dev_open'))){
+      return 'No hay sesión autorizada para preparar el checkout interno en este entorno DEV/local.';
+    }
+    const messages = {
+      route_already_consumed: 'Esta ruta ya tiene un checkout interno asociado.',
+      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir la ruta preparada antes de continuar.',
+      route_conflict: 'Ya existe un checkout pendiente para esta entidad.',
+      unsupported_provider: 'Este provider no está permitido para el checkout interno.',
+      missing_idempotency_key: 'No fue posible preparar el checkout. Falta identificador seguro de solicitud.',
+      payment_route_not_found: 'La ruta de pago ya no está disponible.',
+      route_expired: 'La ruta de pago expiró. Prepara una nueva ruta en una microfase controlada.',
+      validation_error: 'No fue posible validar la ruta para checkout interno.'
+    };
+    if(messages[code]) return messages[code];
+    if(Number(httpStatus) >= 500) return 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
+    return message || 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
+  }
+
   function paymentRouteCreateAvailable(slot){
     if(isQaPlanSimulationActive()) return false;
     const payload = data.paymentPayloadPreview?.[slot];
@@ -60933,6 +61050,65 @@ function mxResetLogoPreview(){
       return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparar ruta de pago <span>Preview requerido</span></button>';
     }
     return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">Preparar ruta de pago</button>`;
+  }
+
+  function paymentRouteCheckoutBridgeActionHtml(slot){
+    const routeState = paymentRouteCreateState(slot);
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    const routeUuid = clean(routeState.data?.payment_route_uuid);
+    if(routeState.state !== 'success' || !routeUuid) return '';
+    if(bridge.state === 'creating'){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparando checkout interno...</button>';
+    }
+    if(bridge.state === 'success'){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Checkout interno preparado</button>';
+    }
+    return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-route-checkout="${escapeHtml(slot)}">Preparar checkout interno</button>`;
+  }
+
+  function paymentRouteCheckoutBridgeStatusHtml(slot){
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    if(bridge.state === 'idle') return '';
+    if(bridge.state === 'creating'){
+      return `<article class="subp-payment-route-status" data-state="creating">
+          <h4>Preparando checkout interno...</h4>
+          <p>No cierres esta vista mientras el servidor crea el checkout interno.</p>
+        </article>`;
+    }
+    if(bridge.state === 'success'){
+      const checkout = bridge.data || {};
+      const checkoutUuid = clean(checkout.checkout_intent_uuid) || 'No disponible';
+      const checkoutStatus = clean(checkout.checkout_status) || clean(checkout.status) || 'pending_payment';
+      const amount = formatSubscriptionCents(checkout.amount_cents, checkout.currency) || 'Importe confirmado por backend';
+      return `<article class="subp-payment-route-status" data-state="success">
+          <div class="subp-payment-route-status-head">
+            <div>
+              <div class="subp-payments-kicker">Checkout interno MXMed</div>
+              <h4>Checkout interno preparado</h4>
+            </div>
+            <span class="subp-payments-status-chip">Sin cargo</span>
+          </div>
+          <dl class="subp-payment-route-status-dl">
+            <dt>Checkout</dt><dd>${escapeHtml(checkoutUuid)}</dd>
+            <dt>Estado checkout</dt><dd>${escapeHtml(checkoutStatus)}</dd>
+            <dt>Importe confirmado</dt><dd>${escapeHtml(amount)}</dd>
+            <dt>Siguiente paso</dt><dd>Pago seguro Stripe sandbox pendiente · enabled=${checkout.next_action?.enabled === true ? 'true' : 'false'}</dd>
+          </dl>
+          <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
+          <p class="subp-payment-route-status-muted">No se creó PaymentIntent ni se activó la suscripción.</p>
+          ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta checkout</summary><pre>${escapeHtml(JSON.stringify(checkout, null, 2))}</pre></details>` : ''}
+        </article>`;
+    }
+    if(bridge.state === 'error'){
+      const message = clean(bridge.message) || 'No fue posible preparar el checkout interno.';
+      const code = clean(bridge.errorCode);
+      return `<article class="subp-payment-route-status" data-state="error">
+          <h4>No fue posible preparar el checkout interno</h4>
+          <p>${escapeHtml(message)}</p>
+          ${code ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+        </article>`;
+    }
+    return '';
   }
 
   function paymentRouteCreateStatusHtml(slot){
@@ -60967,7 +61143,9 @@ function mxResetLogoPreview(){
             <dt>Siguiente paso</dt><dd>Pago seguro Stripe sandbox pendiente · enabled=${nextActionEnabled ? 'true' : 'false'}</dd>
           </dl>
           <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
-          <p class="subp-payment-route-status-muted">El siguiente paso se habilitará en una microfase posterior.</p>
+          <p class="subp-payment-route-status-muted">El siguiente paso prepara un checkout interno sin crear PaymentIntent.</p>
+          <div class="subp-payment-route-create-action" data-subp-payment-route-checkout-action="${escapeHtml(slot)}">${paymentRouteCheckoutBridgeActionHtml(slot)}</div>
+          <div data-subp-payment-route-checkout-status="${escapeHtml(slot)}">${paymentRouteCheckoutBridgeStatusHtml(slot)}</div>
           ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta create</summary><pre>${escapeHtml(JSON.stringify(route, null, 2))}</pre></details>` : ''}
         </article>`;
     }
@@ -61251,8 +61429,10 @@ function mxResetLogoPreview(){
         currentState.state = 'success';
         currentState.httpStatus = Number(response.status || 0);
         currentState.data = responseData;
+        currentState.checkoutBridge = paymentRouteCheckoutBridgeInitialState();
         currentState.errorCode = '';
         currentState.message = '';
+        persistPreparedPaymentRouteState(key);
         refreshPaymentRouteCreateUi(key);
         return true;
       }
@@ -61272,6 +61452,109 @@ function mxResetLogoPreview(){
       currentState.data = null;
       currentState.errorCode = 'network_error';
       currentState.message = 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+  }
+
+  async function createCheckoutFromPaymentRoute(slot){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    const routeState = paymentRouteCreateState(key);
+    const bridge = paymentRouteCheckoutBridgeState(key);
+    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
+    const routeUuid = clean(route?.payment_route_uuid);
+
+    if(isQaPlanSimulationActive()){
+      bridge.state = 'error';
+      bridge.httpStatus = 0;
+      bridge.errorCode = 'qa_simulation';
+      bridge.message = 'Disponible sólo en modo Real.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(routeState.state !== 'success' || !route || !routeUuid){
+      bridge.state = 'error';
+      bridge.httpStatus = 0;
+      bridge.errorCode = 'missing_payment_route';
+      bridge.message = 'Primero prepara una ruta de pago.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    const endpoint = buildPaymentRouteCheckoutEndpoint(route.entity_type, route.entity_id, routeUuid);
+    if(!endpoint){
+      bridge.state = 'error';
+      bridge.httpStatus = 0;
+      bridge.errorCode = 'missing_entity_context';
+      bridge.message = 'No fue posible resolver la ruta para preparar el checkout interno.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(!bridge.idempotencyKey){
+      bridge.idempotencyKey = `mxmed-ui-checkout-bridge-${routeUuid}`;
+    }
+    bridge.state = 'creating';
+    bridge.httpStatus = 0;
+    bridge.data = null;
+    bridge.errorCode = '';
+    bridge.message = '';
+    persistPreparedPaymentRouteState(key);
+    refreshPaymentRouteCreateUi(key);
+
+    try{
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': bridge.idempotencyKey
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          provider: 'none',
+          notes: 'QA checkout bridge from UI prepared route; no payment intent'
+        })
+      });
+      const responsePayload = await response.json().catch(()=> null);
+      const responseData = responsePayload?.data || null;
+      if(response.ok && responsePayload?.ok === true && responseData){
+        bridge.state = 'success';
+        bridge.httpStatus = Number(response.status || 0);
+        bridge.data = responseData;
+        bridge.errorCode = '';
+        bridge.message = '';
+        routeState.data = {
+          ...routeState.data,
+          status: clean(responseData.status) || clean(routeState.data.status),
+          checkout_intent_uuid: clean(responseData.checkout_intent_uuid) || routeState.data.checkout_intent_uuid,
+          checkout_created_at: clean(responseData.checkout_created_at) || routeState.data.checkout_created_at,
+          provider_status: clean(responseData.provider_status) || routeState.data.provider_status,
+          next_action: responseData.next_action || routeState.data.next_action
+        };
+        persistPreparedPaymentRouteState(key);
+        refreshPaymentRouteCreateUi(key);
+        return true;
+      }
+
+      const errorCode = clean(responsePayload?.error?.code) || `http_${response.status || 0}`;
+      const errorMessage = clean(responsePayload?.error?.message) || clean(responsePayload?.message);
+      bridge.state = 'error';
+      bridge.httpStatus = Number(response.status || 0);
+      bridge.data = null;
+      bridge.errorCode = errorCode;
+      bridge.message = paymentRouteCheckoutBridgeErrorMessage(errorCode, response.status, errorMessage);
+      persistPreparedPaymentRouteState(key);
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }catch(_){
+      bridge.state = 'error';
+      bridge.httpStatus = 0;
+      bridge.data = null;
+      bridge.errorCode = 'network_error';
+      bridge.message = 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
+      persistPreparedPaymentRouteState(key);
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -63280,6 +63563,12 @@ function mxResetLogoPreview(){
     if(paymentRouteCreate){
       event.preventDefault();
       createPaymentRouteFromSummary(clean(paymentRouteCreate.dataset.subpPaymentRouteCreate));
+      return;
+    }
+    const paymentRouteCheckout = event.target && event.target.closest('[data-subp-payment-route-checkout]');
+    if(paymentRouteCheckout){
+      event.preventDefault();
+      createCheckoutFromPaymentRoute(clean(paymentRouteCheckout.dataset.subpPaymentRouteCheckout));
       return;
     }
     const action = event.target && event.target.closest('[data-subp-payments-action]');
