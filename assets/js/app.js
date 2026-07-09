@@ -62807,8 +62807,11 @@ function mxResetLogoPreview(){
       els.currentNote.classList.add('d-none');
     }
     if(els.currentSourceNote){
-      els.currentSourceNote.textContent = '';
-      els.currentSourceNote.classList.add('d-none');
+      const isLocalSimulation = data.currentModel?.qa_plan_simulated === true;
+      els.currentSourceNote.textContent = isLocalSimulation
+        ? 'Simulación QA local — sin consulta backend.'
+        : '';
+      els.currentSourceNote.classList.toggle('d-none', !isLocalSimulation);
     }
     if(els.nextBill) els.nextBill.textContent = data.current.nextBill || '—';
     if(els.currentFeat){
