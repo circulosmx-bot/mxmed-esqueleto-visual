@@ -1588,6 +1588,171 @@ function subscriptionCreateStripeUpgradeDoctorSessionFixture(): array
     );
 }
 
+function subscriptionStripeE2EPlanDoctorFixtures(): array
+{
+    return [
+        '990101' => [
+            'plan_code' => 'free',
+            'billing_period' => 'lifetime',
+            'status' => 'free_default',
+            'label' => 'Gratuito',
+        ],
+        '990102' => [
+            'plan_code' => 'basic',
+            'billing_period' => 'annual',
+            'status' => 'active',
+            'label' => 'Básico',
+        ],
+        '990103' => [
+            'plan_code' => 'standard',
+            'billing_period' => 'annual',
+            'status' => 'active',
+            'label' => 'Estándar',
+        ],
+        '990104' => [
+            'plan_code' => 'optimum',
+            'billing_period' => 'annual',
+            'status' => 'active',
+            'label' => 'Óptimo',
+        ],
+        '990105' => [
+            'plan_code' => 'professional',
+            'billing_period' => 'annual',
+            'status' => 'active',
+            'label' => 'Profesional',
+        ],
+    ];
+}
+
+function subscriptionCreateStripeE2EPlanDoctorSessionFixture(): array
+{
+    $payloadResult = subscriptionReadOptionalDevFixtureJsonPayload();
+    if (!(bool)($payloadResult['ok'] ?? false)) {
+        return $payloadResult['error'] ?? subscriptionDevSessionFixtureError('invalid_payload', 'invalid json payload');
+    }
+
+    $payload = is_array($payloadResult['payload'] ?? null) ? $payloadResult['payload'] : [];
+    $allowedFields = ['doctor_id'];
+    $unsupportedFields = array_values(array_diff(array_keys($payload), $allowedFields));
+    if ($unsupportedFields !== []) {
+        return subscriptionDevSessionFixtureError(
+            'invalid_payload',
+            'stripe e2e plan doctor fixture payload contains unsupported fields'
+        );
+    }
+
+    if (!array_key_exists('doctor_id', $payload)) {
+        return subscriptionDevSessionFixtureError('missing_doctor_id', 'doctor_id is required');
+    }
+
+    if (!is_int($payload['doctor_id'])) {
+        return subscriptionDevSessionFixtureError('invalid_doctor_id', 'doctor_id must be an integer');
+    }
+
+    $doctorId = subscriptionNormalizeDevFixtureDoctorId($payload['doctor_id']);
+    if ($doctorId === '' || $doctorId === '0') {
+        return subscriptionDevSessionFixtureError('invalid_doctor_id', 'doctor_id must be an integer');
+    }
+    if ($doctorId === '990099') {
+        return subscriptionDevSessionFixtureError('fixture_doctor_not_allowed', 'doctor/990099 is closed and cannot be selected');
+    }
+
+    $fixtures = subscriptionStripeE2EPlanDoctorFixtures();
+    if (!isset($fixtures[$doctorId])) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_not_allowed', 'doctor_id is not allowed for stripe e2e plan fixture');
+    }
+    if (!subscriptionDoctorFixtureExists($doctorId)) {
+        return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'stripe e2e plan doctor fixture not found');
+    }
+
+    try {
+        $service = new CurrentSubscriptionReadModelService(new CurrentSubscriptionRepository(mxmed_pdo()));
+        $current = $service->resolveForEntity('doctor', $doctorId);
+    } catch (Throwable $e) {
+        return subscriptionDevSessionFixtureError(
+            'fixture_current_state_unavailable',
+            'stripe e2e plan doctor current state could not be validated'
+        );
+    }
+
+    $expected = $fixtures[$doctorId];
+    $currentPlan = strtolower(trim((string)($current['effective_plan_code'] ?? '')));
+    $currentPeriod = strtolower(trim((string)($current['billing_period'] ?? '')));
+    $currentStatus = strtolower(trim((string)($current['status'] ?? '')));
+    if (
+        $currentPlan !== $expected['plan_code']
+        || $currentPeriod !== $expected['billing_period']
+        || $currentStatus !== $expected['status']
+    ) {
+        return [
+            'ok' => false,
+            'error' => [
+                'code' => 'fixture_current_state_mismatch',
+                'message' => 'stripe e2e plan doctor current state does not match expected fixture state',
+            ],
+            'data' => [
+                'fixture' => 'stripe_e2e_plan_doctor',
+                'entity_type' => 'doctor',
+                'entity_id' => subscriptionJsonId($doctorId),
+                'doctor_id' => subscriptionJsonId($doctorId),
+                'expected' => $expected,
+                'current' => [
+                    'plan_code' => $currentPlan,
+                    'billing_period' => $currentPeriod,
+                    'status' => $currentStatus,
+                ],
+            ],
+            'meta' => subscriptionDevSessionFixtureMeta(),
+        ];
+    }
+
+    subscriptionApplyDevDoctorSessionFixture($doctorId, $doctorId);
+
+    return [
+        'ok' => true,
+        'data' => [
+            'auth_mode' => 'session_scope',
+            'source' => 'dev_session_fixture',
+            'route' => 'dev/session-fixture/stripe-e2e-plan-doctor',
+            'fixture' => 'stripe_e2e_plan_doctor',
+            'entity_type' => 'doctor',
+            'entity_id' => subscriptionJsonId($doctorId),
+            'doctor_id' => subscriptionJsonId($doctorId),
+            'actor_role' => 'doctor',
+            'operator_id' => null,
+            'session_scope' => true,
+            'plan_code' => $currentPlan,
+            'plan_label' => (string)($current['plan_label'] ?? $expected['label']),
+            'billing_period' => $currentPeriod,
+            'status' => $currentStatus,
+            'intended_use' => 'stripe_sandbox_e2e_by_plan_qa',
+            'dev_only' => true,
+            'warning' => 'DEV/local only; no payment_route, checkout, PaymentIntent, Stripe, webhook or activation executed',
+        ],
+        'meta' => subscriptionDevSessionFixtureMeta(),
+    ];
+}
+
+function subscriptionStripeE2EPlanDoctorFixtureStatus(array $response): int
+{
+    if ((bool)($response['ok'] ?? false)) {
+        return 200;
+    }
+
+    $code = (string)($response['error']['code'] ?? '');
+    $map = [
+        'missing_doctor_id' => 422,
+        'invalid_doctor_id' => 422,
+        'invalid_payload' => 422,
+        'fixture_doctor_not_allowed' => 422,
+        'fixture_doctor_not_found' => 404,
+        'fixture_current_state_mismatch' => 409,
+        'fixture_current_state_unavailable' => 409,
+    ];
+
+    return $map[$code] ?? 409;
+}
+
 function subscriptionSessionHasPermission(string $permission): bool
 {
     $permission = strtolower(trim($permission));
@@ -2346,6 +2511,21 @@ try {
         $fixtureResponse = subscriptionCreateStripeUpgradeDoctorSessionFixture();
         $fixtureStatus = (bool)($fixtureResponse['ok'] ?? false) ? 200 : 409;
         subscriptionRespond($fixtureResponse, $fixtureStatus);
+        return;
+    }
+
+    if (count($segments) === 3 && $segments[0] === 'dev' && $segments[1] === 'session-fixture' && $segments[2] === 'stripe-e2e-plan-doctor') {
+        $fixtureGuard = subscriptionAssertDevFixtureAllowed('dev/session-fixture/stripe-e2e-plan-doctor', $method);
+        if (!(bool)($fixtureGuard['ok'] ?? false)) {
+            subscriptionRespond(
+                subscriptionDevSessionFixtureError((string)$fixtureGuard['code'], (string)$fixtureGuard['message']),
+                (int)$fixtureGuard['status']
+            );
+            return;
+        }
+
+        $fixtureResponse = subscriptionCreateStripeE2EPlanDoctorSessionFixture();
+        subscriptionRespond($fixtureResponse, subscriptionStripeE2EPlanDoctorFixtureStatus($fixtureResponse));
         return;
     }
 

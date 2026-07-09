@@ -2514,6 +2514,7 @@ console.info('app.js loaded :: 20251123a');
 
   const STORAGE_KEY = 'mxmed.dev.rbac.role';
   const PLAN_QA_STORAGE_KEY = 'mxmed.qa.plan';
+  const QA_REAL_ENTITY_STORAGE_KEY = 'mxmed.qa.realEntity';
   const ROLE_OPTIONS = {
     doctor: {
       value: 'doctor',
@@ -2548,6 +2549,15 @@ console.info('app.js loaded :: 20251123a');
     optimum: { value: 'optimum', label: 'Óptimo', plan: 'optimum' },
     professional: { value: 'professional', label: 'Profesional', plan: 'professional' }
   };
+  const QA_REAL_ENTITY_OPTIONS = {
+    none: { doctor_id: '', label: 'Entidad QA real' },
+    '990101': { doctor_id: '990101', label: '990101 — Free', plan: 'free', planLabel: 'Gratuito' },
+    '990102': { doctor_id: '990102', label: '990102 — Básico', plan: 'basic', planLabel: 'Básico' },
+    '990103': { doctor_id: '990103', label: '990103 — Estándar', plan: 'standard', planLabel: 'Estándar' },
+    '990104': { doctor_id: '990104', label: '990104 — Óptimo', plan: 'optimum', planLabel: 'Óptimo' },
+    '990105': { doctor_id: '990105', label: '990105 — Profesional', plan: 'professional', planLabel: 'Profesional' }
+  };
+  const QA_REAL_ENTITY_OPTION_ORDER = ['', '990101', '990102', '990103', '990104', '990105'];
 
   const normalizeState = (raw = {})=>{
     const role = clean(raw.role || raw.mxmed_role || raw.value || '').toLowerCase();
@@ -2593,6 +2603,40 @@ console.info('app.js loaded :: 20251123a');
         plan: state.plan
       }));
     }catch(_){}
+  };
+
+  const normalizeQaRealEntityState = (raw = {})=>{
+    const rawId = clean(raw.doctor_id || raw.doctorId || raw.entity_id || raw.value || '');
+    const doctorId = /^[0-9]+$/.test(rawId) ? String(Number(rawId)) : '';
+    return QA_REAL_ENTITY_OPTIONS[doctorId] || QA_REAL_ENTITY_OPTIONS.none;
+  };
+
+  const readStoredQaRealEntityState = ()=>{
+    try{
+      const raw = window.sessionStorage?.getItem(QA_REAL_ENTITY_STORAGE_KEY)
+        || window.localStorage?.getItem(QA_REAL_ENTITY_STORAGE_KEY)
+        || '';
+      return raw ? normalizeQaRealEntityState(JSON.parse(raw)) : QA_REAL_ENTITY_OPTIONS.none;
+    }catch(_){
+      return QA_REAL_ENTITY_OPTIONS.none;
+    }
+  };
+
+  const persistQaRealEntityState = (state)=>{
+    try{
+      if(!state?.doctor_id){
+        window.sessionStorage?.removeItem(QA_REAL_ENTITY_STORAGE_KEY);
+        return;
+      }
+      window.sessionStorage?.setItem(QA_REAL_ENTITY_STORAGE_KEY, JSON.stringify({
+        doctor_id: state.doctor_id,
+        plan: state.plan
+      }));
+    }catch(_){}
+  };
+
+  const qaRealEntityFixtureEndpoint = ()=>{
+    return '/api/subscriptions/index.php/dev/session-fixture/stripe-e2e-plan-doctor';
   };
 
   const readQueryState = ()=>{
@@ -2716,6 +2760,87 @@ console.info('app.js loaded :: 20251123a');
     return state;
   };
 
+  let qaRealEntityStatus = null;
+  let qaRealEntitySelect = null;
+
+  const setQaRealEntityStatus = (message, tone = 'muted')=>{
+    if(!qaRealEntityStatus) return;
+    qaRealEntityStatus.textContent = message || '';
+    qaRealEntityStatus.className = 'small';
+    qaRealEntityStatus.style.color = tone === 'error'
+      ? '#b42318'
+      : tone === 'success'
+        ? '#0f766e'
+        : '#64748b';
+  };
+
+  const qaRealEntityErrorMessage = (payload, status)=>{
+    const code = clean(payload?.error?.code);
+    const message = clean(payload?.error?.message);
+    if(code === 'fixture_disabled') return 'Fixture DEV deshabilitado.';
+    if(code === 'fixture_doctor_not_allowed') return 'Entidad QA no permitida.';
+    if(code === 'fixture_current_state_mismatch') return 'El estado current no coincide con la matriz QA.';
+    if(code === 'missing_doctor_id' || code === 'invalid_doctor_id') return 'Selecciona una entidad QA válida.';
+    if(code === 'local_only') return 'Disponible sólo en entorno local.';
+    if(message) return message;
+    return status ? `No se pudo activar la entidad QA real. HTTP ${status}.` : 'Servidor no disponible.';
+  };
+
+  const applyQaRealEntity = async (nextState)=>{
+    const state = normalizeQaRealEntityState(nextState);
+    if(!state.doctor_id){
+      persistQaRealEntityState(state);
+      setQaRealEntityStatus('Sin entidad QA real seleccionada.', 'muted');
+      return false;
+    }
+
+    setQaRealEntityStatus(`Activando doctor/${state.doctor_id}...`, 'muted');
+    if(qaRealEntitySelect) qaRealEntitySelect.disabled = true;
+
+    try{
+      const response = await fetch(qaRealEntityFixtureEndpoint(), {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ doctor_id: Number(state.doctor_id) })
+      });
+      const payload = await response.json().catch(()=> null);
+      if(!response.ok || !payload || payload.ok !== true || !payload.data){
+        setQaRealEntityStatus(qaRealEntityErrorMessage(payload, response.status), 'error');
+        return false;
+      }
+
+      persistQaRealEntityState(state);
+      applyPlanQaState(PLAN_QA_OPTIONS.real, { source: 'qa_real_entity_session_fixture' });
+      const planSelect = document.getElementById('mxmed_qa_plan_select');
+      if(planSelect) planSelect.value = 'real';
+      const data = payload.data || {};
+      const planLabel = clean(data.plan_label) || state.planLabel;
+      setQaRealEntityStatus(`Entidad QA real activa: doctor/${state.doctor_id} · ${planLabel}`, 'success');
+      window.mxmedStore = window.mxmedStore || {};
+      window.mxmedStore.subscriptionQaRealEntity = {
+        doctor_id: state.doctor_id,
+        entity_type: 'doctor',
+        entity_id: state.doctor_id,
+        plan_code: clean(data.plan_code || state.plan),
+        plan_label: planLabel,
+        source: 'stripe_e2e_plan_doctor_session_fixture'
+      };
+      window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-selected', {
+        detail: window.mxmedStore.subscriptionQaRealEntity
+      }));
+      return true;
+    }catch(_){
+      setQaRealEntityStatus('Servidor no disponible para activar la entidad QA real.', 'error');
+      return false;
+    }finally{
+      if(qaRealEntitySelect) qaRealEntitySelect.disabled = false;
+    }
+  };
+
   const buildSwitcherField = (labelText, control)=>{
     const field = document.createElement('div');
     field.className = 'd-flex align-items-center gap-2';
@@ -2772,8 +2897,36 @@ console.info('app.js loaded :: 20251123a');
       applyPlanQaState(selected, { source: 'qa_plan_switcher_select' });
     });
 
+    qaRealEntitySelect = document.createElement('select');
+    qaRealEntitySelect.id = 'mxmed_qa_real_entity_select';
+    qaRealEntitySelect.className = 'form-select form-select-sm';
+    qaRealEntitySelect.style.width = '190px';
+    QA_REAL_ENTITY_OPTION_ORDER
+      .map((doctorId)=> QA_REAL_ENTITY_OPTIONS[doctorId || 'none'])
+      .filter(Boolean)
+      .forEach((optionState)=>{
+        const option = document.createElement('option');
+        option.value = optionState.doctor_id || '';
+        option.textContent = optionState.label;
+        qaRealEntitySelect.appendChild(option);
+      });
+    qaRealEntitySelect.value = normalizeQaRealEntityState(readStoredQaRealEntityState()).doctor_id || '';
+    qaRealEntitySelect.addEventListener('change', ()=>{
+      const selected = normalizeQaRealEntityState({ doctor_id: qaRealEntitySelect.value });
+      applyQaRealEntity(selected);
+    });
+
+    qaRealEntityStatus = document.createElement('span');
+    qaRealEntityStatus.className = 'small text-muted';
+    qaRealEntityStatus.style.flexBasis = '100%';
+    qaRealEntityStatus.textContent = qaRealEntitySelect.value
+      ? `Entidad QA real seleccionada: doctor/${qaRealEntitySelect.value}.`
+      : 'Stripe sandbox E2E: selecciona una entidad QA real para session_scope.';
+
     wrap.appendChild(buildSwitcherField('Rol QA', select));
     wrap.appendChild(buildSwitcherField('Plan QA', planSelect));
+    wrap.appendChild(buildSwitcherField('Entidad QA real', qaRealEntitySelect));
+    wrap.appendChild(qaRealEntityStatus);
     document.body.appendChild(wrap);
   };
 
@@ -63089,6 +63242,11 @@ function mxResetLogoPreview(){
     if(data.realCurrentModel || data.currentModel){
       applyEffectiveSubscriptionModel();
     }
+  });
+  window.addEventListener('mxmed:qa-real-entity-selected', async ()=>{
+    data.qaPlan = normalizeSubscriptionQaPlanState({ value: 'real' });
+    resetPlanQaVisualSelection();
+    await loadCurrentSubscription();
   });
 
   // Eventos
