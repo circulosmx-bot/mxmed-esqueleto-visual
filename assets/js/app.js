@@ -59165,7 +59165,20 @@ function mxResetLogoPreview(){
     return /^[A-Za-z0-9._:-]+$/.test(id) ? id : '';
   }
 
+  function resolveSubscriptionQaEntityContext(){
+    const host = clean(window.location?.hostname).toLowerCase();
+    const isLocalHost = host === '127.0.0.1' || host === 'localhost' || host === '::1';
+    if(!isLocalHost) return null;
+    const hasQaPlanSwitcher = typeof window.mxmedGetQaPlan === 'function'
+      || !!document.getElementById('mxmed_qa_plan_select');
+    if(!hasQaPlanSwitcher) return null;
+    // Fixture visual QA/local para validar el flujo Stripe end-to-end del doctor 990099.
+    return { entity_type: 'doctor', entity_id: '990099', doctor_id: '990099', source: 'qa_local_subscription_entity' };
+  }
+
   function resolveSubscriptionDoctorId(){
+    const qaContext = resolveSubscriptionQaEntityContext();
+    if(qaContext?.doctor_id) return qaContext.doctor_id;
     const candidates = [];
     try{
       const active = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
@@ -60133,16 +60146,17 @@ function mxResetLogoPreview(){
   }
 
   async function loadSubscriptionViaDevFallback(){
-    const doctorId = resolveSubscriptionDoctorId();
+    const qaContext = resolveSubscriptionQaEntityContext();
+    const doctorId = qaContext?.doctor_id || resolveSubscriptionDoctorId();
     if(!doctorId){
       applyReadOnlyError(422);
       return;
     }
     return fetchSubscriptionReadModel(buildSubscriptionEndpoint(doctorId), {
-      entity_type: 'doctor',
-      entity_id: doctorId,
+      entity_type: qaContext?.entity_type || 'doctor',
+      entity_id: qaContext?.entity_id || doctorId,
       doctor_id: doctorId,
-      source: 'dev_only'
+      source: qaContext?.source || 'dev_only'
     });
   }
 
