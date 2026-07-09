@@ -246,7 +246,7 @@ final class BuildSubscriptionPaymentActivationStateService
                 $this->addReason($reasons, 'checkout_intent_not_pending_payment');
             }
             if ($this->checkoutIntentIsExpired($checkoutIntent)
-                && !$this->paidAndProcessedBeforeCheckoutExpiry($checkoutIntent, $paymentIntent, $paymentEvent)
+                && !$this->paidBeforeCheckoutExpiry($checkoutIntent, $paymentIntent, $paymentEvent)
             ) {
                 $this->addReason($reasons, 'checkout_intent_expired');
             }
@@ -424,7 +424,7 @@ final class BuildSubscriptionPaymentActivationStateService
         return $expiresAtDate < $nowDate;
     }
 
-    private function paidAndProcessedBeforeCheckoutExpiry(
+    private function paidBeforeCheckoutExpiry(
         array $checkoutIntent,
         ?array $paymentIntent,
         ?array $paymentEvent
@@ -461,12 +461,11 @@ final class BuildSubscriptionPaymentActivationStateService
         }
 
         $paidAtDate = $this->parseUtcDate($paymentIntent['paid_at'] ?? null);
-        $processedAtDate = $this->parseUtcDate($paymentEvent['processed_at'] ?? null);
-        if ($paidAtDate === null || $processedAtDate === null) {
+        if ($paidAtDate === null || $this->parseUtcDate($paymentEvent['processed_at'] ?? null) === null) {
             return false;
         }
 
-        return $paidAtDate <= $expiresAtDate && $processedAtDate <= $expiresAtDate;
+        return $paidAtDate <= $expiresAtDate;
     }
 
     private function parseUtcDate($value): ?DateTimeImmutable

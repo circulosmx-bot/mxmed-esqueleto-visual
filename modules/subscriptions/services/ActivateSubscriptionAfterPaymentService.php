@@ -457,7 +457,7 @@ final class ActivateSubscriptionAfterPaymentService
         }
 
         if ($expiresAtDate < $nowDate) {
-            if ($this->paidAndProcessedBeforeCheckoutExpiry($checkoutIntent, $paymentIntent, $paymentEvent, $expiresAtDate)) {
+            if ($this->paidBeforeCheckoutExpiry($checkoutIntent, $paymentIntent, $paymentEvent, $expiresAtDate)) {
                 return;
             }
 
@@ -469,7 +469,7 @@ final class ActivateSubscriptionAfterPaymentService
         }
     }
 
-    private function paidAndProcessedBeforeCheckoutExpiry(
+    private function paidBeforeCheckoutExpiry(
         array $checkoutIntent,
         array $paymentIntent,
         array $paymentEvent,
@@ -499,12 +499,11 @@ final class ActivateSubscriptionAfterPaymentService
         }
 
         $paidAtDate = $this->parseUtcDate($paymentIntent['paid_at'] ?? null);
-        $processedAtDate = $this->parseUtcDate($paymentEvent['processed_at'] ?? null);
-        if ($paidAtDate === null || $processedAtDate === null) {
+        if ($paidAtDate === null || $this->parseUtcDate($paymentEvent['processed_at'] ?? null) === null) {
             return false;
         }
 
-        return $paidAtDate <= $expiresAtDate && $processedAtDate <= $expiresAtDate;
+        return $paidAtDate <= $expiresAtDate;
     }
 
     private function parseUtcDate($value): ?DateTimeImmutable
