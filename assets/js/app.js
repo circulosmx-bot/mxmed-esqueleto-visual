@@ -59400,6 +59400,14 @@ function mxResetLogoPreview(){
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/payment-routes/${encodeURIComponent(routeUuid)}/checkout`;
   }
 
+  function buildPaymentIntentCreateEndpoint(entityType, entityId, checkoutIntentUuid){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    const checkoutUuid = clean(checkoutIntentUuid);
+    if(type !== 'doctor' || !id || !checkoutUuid) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/checkout-intents/${encodeURIComponent(checkoutUuid)}/payment-intents`;
+  }
+
   function buildPaymentActivationStateEndpoint(entityType, entityId, options = {}){
     const type = clean(entityType).toLowerCase();
     const id = safeDoctorId(entityId);
@@ -60865,7 +60873,8 @@ function mxResetLogoPreview(){
       data: null,
       errorCode: '',
       message: '',
-      idempotencyKey: ''
+      idempotencyKey: '',
+      paymentIntent: paymentIntentCreateInitialState()
     };
   }
 
@@ -60875,6 +60884,39 @@ function mxResetLogoPreview(){
       state.checkoutBridge = paymentRouteCheckoutBridgeInitialState();
     }
     return state.checkoutBridge;
+  }
+
+  function paymentIntentCreateInitialState(){
+    return {
+      state: 'idle',
+      httpStatus: 0,
+      data: null,
+      errorCode: '',
+      message: '',
+      idempotencyKey: ''
+    };
+  }
+
+  function paymentIntentCreateState(slot){
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    if(!bridge.paymentIntent || typeof bridge.paymentIntent !== 'object'){
+      bridge.paymentIntent = paymentIntentCreateInitialState();
+    }
+    return bridge.paymentIntent;
+  }
+
+  function sanitizePaymentIntentResponse(value){
+    if(Array.isArray(value)){
+      return value.map((item)=> sanitizePaymentIntentResponse(item));
+    }
+    if(value && typeof value === 'object'){
+      return Object.keys(value).reduce((acc, key)=>{
+        if(clean(key).toLowerCase().includes('secret')) return acc;
+        acc[key] = sanitizePaymentIntentResponse(value[key]);
+        return acc;
+      }, {});
+    }
+    return value;
   }
 
   function readPreparedPaymentRouteStore(){
@@ -61026,6 +61068,29 @@ function mxResetLogoPreview(){
     return message || 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
   }
 
+  function paymentIntentCreateErrorMessage(errorCode, httpStatus, fallbackMessage){
+    const code = clean(errorCode);
+    const message = clean(fallbackMessage);
+    if(Number(httpStatus) === 403 && (code === 'forbidden' || message.includes('local_dev_open'))){
+      return 'No hay sesión autorizada para crear el pago seguro Stripe sandbox en este entorno DEV/local.';
+    }
+    const messages = {
+      checkout_intent_expired: 'El checkout interno expiró. Prepara un nuevo checkout en una microfase controlada.',
+      checkout_intent_not_pending_payment: 'El checkout interno ya no está pendiente de pago.',
+      checkout_intent_not_found: 'El checkout interno ya no está disponible.',
+      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir el checkout preparado antes de continuar.',
+      payment_intent_already_exists: 'Este checkout ya tiene un PaymentIntent asociado.',
+      payment_intent_provider_invalid: 'El provider solicitado no está disponible para este flujo.',
+      payment_intent_provider_unavailable: 'Stripe sandbox no está disponible en este entorno.',
+      invalid_payment_intent_payload: 'No fue posible validar la creación del pago seguro.',
+      forbidden_fields: 'El payload contiene campos controlados por backend.',
+      validation_error: 'No fue posible validar la creación del pago seguro.'
+    };
+    if(messages[code]) return messages[code];
+    if(Number(httpStatus) >= 500) return 'No fue posible crear el pago seguro Stripe sandbox. Inténtalo más tarde.';
+    return message || 'No fue posible crear el pago seguro Stripe sandbox. Inténtalo más tarde.';
+  }
+
   function paymentRouteCreateAvailable(slot){
     if(isQaPlanSimulationActive()) return false;
     const payload = data.paymentPayloadPreview?.[slot];
@@ -61066,6 +61131,73 @@ function mxResetLogoPreview(){
     return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-route-checkout="${escapeHtml(slot)}">Preparar checkout interno</button>`;
   }
 
+  function paymentIntentCreateActionHtml(slot){
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    const paymentIntent = paymentIntentCreateState(slot);
+    const checkoutUuid = clean(bridge.data?.checkout_intent_uuid);
+    if(bridge.state !== 'success' || !checkoutUuid) return '';
+    if(paymentIntent.state === 'creating'){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Creando pago seguro Stripe sandbox...</button>';
+    }
+    if(paymentIntent.state === 'success'){
+      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Pago seguro Stripe sandbox creado</button>';
+    }
+    return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-intent-create="${escapeHtml(slot)}">Crear pago seguro Stripe sandbox</button>`;
+  }
+
+  function paymentIntentCreateStatusHtml(slot){
+    const paymentIntent = paymentIntentCreateState(slot);
+    if(paymentIntent.state === 'idle') return '';
+    if(paymentIntent.state === 'creating'){
+      return `<article class="subp-payment-route-status" data-state="creating">
+          <h4>Creando pago seguro Stripe sandbox...</h4>
+          <p>No cierres esta vista mientras el servidor crea el PaymentIntent en Stripe sandbox.</p>
+        </article>`;
+    }
+    if(paymentIntent.state === 'success'){
+      const responseData = paymentIntent.data || {};
+      const intent = responseData.payment_intent && typeof responseData.payment_intent === 'object'
+        ? responseData.payment_intent
+        : responseData;
+      const paymentIntentUuid = clean(intent.uuid) || clean(responseData.payment_intent_uuid) || 'No disponible';
+      const providerPaymentId = clean(intent.provider_payment_id) || clean(responseData.provider_payment_id) || 'Registrado por backend';
+      const normalizedStatus = clean(intent.normalized_status) || 'created';
+      const providerStatus = clean(intent.provider_status) || 'requires_payment_method';
+      const amount = formatSubscriptionCents(intent.amount_cents, intent.currency) || 'Importe confirmado por backend';
+      return `<article class="subp-payment-route-status" data-state="success">
+          <div class="subp-payment-route-status-head">
+            <div>
+              <div class="subp-payments-kicker">PaymentIntent Stripe sandbox</div>
+              <h4>Pago seguro Stripe sandbox creado.</h4>
+            </div>
+            <span class="subp-payments-status-chip">Sin cargo confirmado</span>
+          </div>
+          <dl class="subp-payment-route-status-dl">
+            <dt>PaymentIntent</dt><dd>${escapeHtml(paymentIntentUuid)}</dd>
+            <dt>Provider</dt><dd>stripe</dd>
+            <dt>Provider payment</dt><dd>${escapeHtml(providerPaymentId)}</dd>
+            <dt>Estado local</dt><dd>${escapeHtml(normalizedStatus)}</dd>
+            <dt>Estado provider</dt><dd>${escapeHtml(providerStatus)}</dd>
+            <dt>Importe confirmado</dt><dd>${escapeHtml(amount)}</dd>
+          </dl>
+          <p class="subp-payment-route-status-note">PaymentIntent pendiente de confirmación.</p>
+          <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
+          <p class="subp-payment-route-status-muted">La suscripción aún no ha sido activada.</p>
+          ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta PaymentIntent sin secretos</summary><pre>${escapeHtml(JSON.stringify(responseData, null, 2))}</pre></details>` : ''}
+        </article>`;
+    }
+    if(paymentIntent.state === 'error'){
+      const message = clean(paymentIntent.message) || 'No fue posible crear el pago seguro Stripe sandbox.';
+      const code = clean(paymentIntent.errorCode);
+      return `<article class="subp-payment-route-status" data-state="error">
+          <h4>No fue posible crear el pago seguro Stripe sandbox</h4>
+          <p>${escapeHtml(message)}</p>
+          ${code ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+        </article>`;
+    }
+    return '';
+  }
+
   function paymentRouteCheckoutBridgeStatusHtml(slot){
     const bridge = paymentRouteCheckoutBridgeState(slot);
     if(bridge.state === 'idle') return '';
@@ -61096,6 +61228,8 @@ function mxResetLogoPreview(){
           </dl>
           <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
           <p class="subp-payment-route-status-muted">No se creó PaymentIntent ni se activó la suscripción.</p>
+          <div class="subp-payment-route-create-action" data-subp-payment-intent-create-action="${escapeHtml(slot)}">${paymentIntentCreateActionHtml(slot)}</div>
+          <div data-subp-payment-intent-create-status="${escapeHtml(slot)}">${paymentIntentCreateStatusHtml(slot)}</div>
           ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta checkout</summary><pre>${escapeHtml(JSON.stringify(checkout, null, 2))}</pre></details>` : ''}
         </article>`;
     }
@@ -61523,6 +61657,7 @@ function mxResetLogoPreview(){
         bridge.state = 'success';
         bridge.httpStatus = Number(response.status || 0);
         bridge.data = responseData;
+        bridge.paymentIntent = paymentIntentCreateInitialState();
         bridge.errorCode = '';
         bridge.message = '';
         routeState.data = {
@@ -61554,6 +61689,118 @@ function mxResetLogoPreview(){
       bridge.data = null;
       bridge.errorCode = 'network_error';
       bridge.message = 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
+      persistPreparedPaymentRouteState(key);
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+  }
+
+  async function createPaymentIntentFromCheckout(slot){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    const routeState = paymentRouteCreateState(key);
+    const bridge = paymentRouteCheckoutBridgeState(key);
+    const paymentIntent = paymentIntentCreateState(key);
+    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
+    const checkout = bridge.data && typeof bridge.data === 'object' ? bridge.data : null;
+    const checkoutUuid = clean(checkout?.checkout_intent_uuid);
+
+    if(isQaPlanSimulationActive()){
+      paymentIntent.state = 'error';
+      paymentIntent.httpStatus = 0;
+      paymentIntent.errorCode = 'qa_simulation';
+      paymentIntent.message = 'Disponible sólo en modo Real.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(routeState.state !== 'success' || !route){
+      paymentIntent.state = 'error';
+      paymentIntent.httpStatus = 0;
+      paymentIntent.errorCode = 'missing_payment_route';
+      paymentIntent.message = 'Primero prepara una ruta de pago.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(bridge.state !== 'success' || !checkoutUuid){
+      paymentIntent.state = 'error';
+      paymentIntent.httpStatus = 0;
+      paymentIntent.errorCode = 'missing_checkout_intent';
+      paymentIntent.message = 'Primero prepara el checkout interno.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    const endpoint = buildPaymentIntentCreateEndpoint(route.entity_type, route.entity_id, checkoutUuid);
+    if(!endpoint){
+      paymentIntent.state = 'error';
+      paymentIntent.httpStatus = 0;
+      paymentIntent.errorCode = 'missing_entity_context';
+      paymentIntent.message = 'No fue posible resolver el checkout para crear el pago seguro.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(!paymentIntent.idempotencyKey){
+      paymentIntent.idempotencyKey = `mxmed-ui-payment-intent-${checkoutUuid}`;
+    }
+    paymentIntent.state = 'creating';
+    paymentIntent.httpStatus = 0;
+    paymentIntent.data = null;
+    paymentIntent.errorCode = '';
+    paymentIntent.message = '';
+    persistPreparedPaymentRouteState(key);
+    refreshPaymentRouteCreateUi(key);
+
+    try{
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': paymentIntent.idempotencyKey
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          provider: 'stripe',
+          source: 'payment_intent',
+          notes: 'QA Stripe sandbox PaymentIntent from prepared checkout; no payment confirmation in this microphase',
+          metadata: {
+            qa: 'stripe_sandbox_ui_e2e',
+            flow: 'checkout_to_payment_intent',
+            activation: 'forbidden_in_this_microphase'
+          }
+        })
+      });
+      const responsePayload = await response.json().catch(()=> null);
+      const responseData = sanitizePaymentIntentResponse(responsePayload?.data || null);
+      if(response.ok && responsePayload?.ok === true && responseData){
+        paymentIntent.state = 'success';
+        paymentIntent.httpStatus = Number(response.status || 0);
+        paymentIntent.data = responseData;
+        paymentIntent.errorCode = '';
+        paymentIntent.message = '';
+        persistPreparedPaymentRouteState(key);
+        refreshPaymentRouteCreateUi(key);
+        return true;
+      }
+
+      const errorCode = clean(responsePayload?.error?.code) || `http_${response.status || 0}`;
+      const errorMessage = clean(responsePayload?.error?.message) || clean(responsePayload?.message);
+      paymentIntent.state = 'error';
+      paymentIntent.httpStatus = Number(response.status || 0);
+      paymentIntent.data = null;
+      paymentIntent.errorCode = errorCode;
+      paymentIntent.message = paymentIntentCreateErrorMessage(errorCode, response.status, errorMessage);
+      persistPreparedPaymentRouteState(key);
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }catch(_){
+      paymentIntent.state = 'error';
+      paymentIntent.httpStatus = 0;
+      paymentIntent.data = null;
+      paymentIntent.errorCode = 'network_error';
+      paymentIntent.message = 'No fue posible crear el pago seguro Stripe sandbox. Inténtalo más tarde.';
       persistPreparedPaymentRouteState(key);
       refreshPaymentRouteCreateUi(key);
       return false;
@@ -63569,6 +63816,12 @@ function mxResetLogoPreview(){
     if(paymentRouteCheckout){
       event.preventDefault();
       createCheckoutFromPaymentRoute(clean(paymentRouteCheckout.dataset.subpPaymentRouteCheckout));
+      return;
+    }
+    const paymentIntentCreate = event.target && event.target.closest('[data-subp-payment-intent-create]');
+    if(paymentIntentCreate){
+      event.preventDefault();
+      createPaymentIntentFromCheckout(clean(paymentIntentCreate.dataset.subpPaymentIntentCreate));
       return;
     }
     const action = event.target && event.target.closest('[data-subp-payments-action]');
