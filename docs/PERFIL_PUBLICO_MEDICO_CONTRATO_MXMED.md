@@ -44869,3 +44869,164 @@ No se ejecuto:
 Resultado documental:
 
 `PASS`
+
+---
+
+## PP-Decisiones 231 - Cierre de panel real Profesional activo post Stripe sandbox
+
+### Resumen
+
+Se documenta el cierre formal del flujo completo de suscripciones despues de pago Stripe sandbox real y activacion final del upgrade a Profesional para la entidad QA `doctor/990099`.
+
+El objetivo inmediato queda cerrado: el backend activo refleja `professional / annual / active` y la UI del panel privado, con `Plan QA = Real`, consume el current real de `doctor/990099` y muestra Profesional como plan actual.
+
+### Evidencia backend
+
+Estado final validado para `doctor/990099`:
+
+- plan contratado/effectivo: `professional`;
+- periodo: `annual`;
+- estado: `active`;
+- `expires_at = 2027-07-01 01:19:13`;
+- `active professional = 1`;
+- `active optimum = 0`;
+- sin duplicados `active professional`.
+
+El checkout final quedo:
+
+- `status = activated`;
+- asociado a la suscripcion final;
+- con `subscription_id` y `activated_at` poblados segun reglas del sistema.
+
+El PaymentIntent local quedo:
+
+- `provider = stripe`;
+- `paid / succeeded`;
+- correlacionado con el checkout final.
+
+El webhook Stripe sandbox quedo:
+
+- con `payment_event` procesado;
+- sin necesidad de mocks;
+- sin activacion automatica fuera del endpoint oficial.
+
+La activacion se ejecuto mediante el endpoint oficial `activate-after-payment` y fue validada sin writes manuales de SQL.
+
+### Evidencia UI
+
+QA visual final:
+
+- microfase: `QA/Suscripciones-PanelReal-ProfessionalAfterActivation-VisualClosure-01`;
+- resultado: `PASS`.
+
+Con `Plan QA = Real`, la UI del panel privado de suscripciones:
+
+- consulta `GET /api/subscriptions/index.php/entities/doctor/990099/current`;
+- ya no usa `GET /api/subscriptions/index.php/entities/doctor/1/current` como fuente del panel QA real;
+- muestra `Profesional` como plan actual;
+- muestra `Mi plan y pagos` con `Profesional / Activo / Pago anual`;
+- muestra la vigencia `01 jul 2027` derivada del `expires_at` final;
+- mantiene el copy de suite completa y `Asistente IA`;
+- muestra `Basico`, `Estandar` y `Optimo` como planes inferiores `renewal_only` / no disponibles durante la vigencia;
+- no muestra `Ver plan Profesional`;
+- no muestra `Mejorar a Profesional`;
+- no muestra pago pendiente;
+- no muestra ruta pendiente;
+- no muestra `Pago seguro Stripe sandbox pendiente`;
+- no muestra `Ruta de pago preparada` como estado pendiente actual;
+- no dispara POSTs de pago al cargar o navegar la validacion visual.
+
+POSTs de pago detectados en la QA visual final:
+
+- `0`.
+
+### Commits relacionados
+
+Fixes backend relevantes:
+
+- `950240b fix(suscripciones): corrige guard de expiracion webhook stripe`;
+- `3194fca fix(suscripciones): permite activar pagos previos a expiracion`.
+
+Fix UI relevante:
+
+- `a551220 fix(suscripciones): usa entidad qa real en panel`.
+
+### Reglas de no regresion
+
+Queda establecido que, salvo regresion futura demostrada, no se deben abrir nuevas microfases para repetir el flujo critico ya cerrado:
+
+- crear `payment_route`;
+- crear checkout;
+- crear PaymentIntent;
+- confirmar Stripe sandbox;
+- replay de webhook;
+- ejecutar `activate-after-payment`;
+- usar `confirm_mock`;
+- activar manualmente;
+- escribir SQL manual para ajustar estados.
+
+El flujo backend Stripe sandbox real y la UI post-activacion quedan cerrados para esta etapa.
+
+### Alcance cerrado
+
+Queda cerrado el objetivo inmediato de validar:
+
+- ruta interna de pago;
+- checkout;
+- PaymentIntent Stripe sandbox;
+- webhook real `payment_intent.succeeded`;
+- politica de pago antes de expiracion;
+- activacion posterior al pago;
+- current final `professional / annual / active`;
+- reflejo visual en panel privado con `Plan QA = Real`.
+
+### Fuera de alcance
+
+Este cierre documental no modifica ni reabre:
+
+- backend PHP;
+- frontend JS/CSS;
+- SQL/schema/seeds;
+- servicios de Stripe;
+- webhook;
+- PaymentIntent;
+- checkout;
+- `payment_route`;
+- `activate-after-payment`;
+- configuracion;
+- Composer;
+- vendor.
+
+No se documentan secretos, `client_secret`, `whsec`, `sk_test` ni `rk_test`.
+
+### Siguiente rumbo
+
+Despues de este cierre, el trabajo puede avanzar a otra area de UX/funcionalidad del panel de suscripciones o a refinamientos visuales menores.
+
+No se recomienda continuar con backend Stripe critico salvo que una regresion futura lo demuestre con evidencia nueva.
+
+### Validacion de esta microfase
+
+Esta microfase modifica solamente:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No modifica:
+
+- PHP;
+- frontend JS/CSS;
+- API/rutas;
+- servicios;
+- repositorios;
+- SQL/schema/seeds;
+- Stripe;
+- PaymentIntent;
+- webhook;
+- activacion;
+- configuracion.
+
+### Estado
+
+Resultado documental:
+
+`PASS`
