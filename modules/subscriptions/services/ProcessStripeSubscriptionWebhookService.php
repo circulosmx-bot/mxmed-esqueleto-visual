@@ -115,7 +115,7 @@ final class ProcessStripeSubscriptionWebhookService
         }
 
         $transition = $this->transitionForEvent($event);
-        $checkoutExpiryGuard = $this->checkoutExpiryGuardForPaidTransition($paymentIntent, $transition);
+        $checkoutExpiryGuard = $this->checkoutExpiryGuardForPaidTransition($paymentIntent, $transition, $event);
         if ($checkoutExpiryGuard !== null) {
             return $this->response($event, [
                 'processed' => false,
@@ -372,7 +372,7 @@ final class ProcessStripeSubscriptionWebhookService
         return null;
     }
 
-    private function checkoutExpiryGuardForPaidTransition(array $paymentIntent, ?array $transition): ?array
+    private function checkoutExpiryGuardForPaidTransition(array $paymentIntent, ?array $transition, array $event): ?array
     {
         if ($transition === null || (string)($transition['normalized_status'] ?? '') !== self::STATUS_PAID) {
             return null;
