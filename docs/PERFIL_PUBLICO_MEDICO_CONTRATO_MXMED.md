@@ -45116,6 +45116,46 @@ Despues de `activate-after-payment`, `doctor/990104` queda como caso E2E cerrado
 
 `doctor/990099` se mantiene como caso historico intacto y no fue usado para esta nueva prueba destructiva.
 
+### Cierre visual post-activacion en UI para doctor/990104
+
+La microfase `QA/Suscripciones-StripeSandboxE2E-UiPostActivation-Doctor990104-VisualClosure-02` cierra con `PASS` la validacion visual/read-only posterior a la activacion del flujo E2E UI Stripe sandbox.
+
+Con `Entidad QA real = 990104 — Profesional (post E2E)` y `Plan QA = Real`, el panel privado consulta correctamente el current real de `doctor/990104` y refleja el estado final `professional / annual / active`:
+
+- muestra `Profesional` como plan actual;
+- muestra estado `Activo`;
+- muestra `Pago anual`;
+- comunica suite completa y `Asistente IA`;
+- muestra `Basico`, `Estandar` y `Optimo` como planes inferiores/no disponibles durante la vigencia;
+- no muestra `Mejorar a Profesional`;
+- no muestra `Ver plan Profesional`;
+- no muestra `Preparar ruta de pago`;
+- no muestra `Preparar checkout interno`;
+- no muestra `Crear pago seguro Stripe sandbox`;
+- no muestra `Pago seguro Stripe sandbox pendiente`;
+- no muestra `PaymentIntent pendiente de confirmacion`;
+- no muestra `Checkout interno preparado`.
+
+La seleccion de entidad QA real para `990104` queda validada despues del ajuste del fixture DEV/local: el fixture responde `HTTP 200` y `GET /entities/doctor/990104/current` responde `HTTP 200`.
+
+La evidencia read-only confirma que `doctor/990104` conserva una sola suscripcion activa:
+
+- `active professional 990104 = 1`;
+- `active optimum 990104 = 0`;
+- `active total 990104 = 1`;
+- checkout final `activated`;
+- PaymentIntent final `paid / succeeded`;
+- PaymentEvent final: `1` evento `processed`;
+- conteos sin nuevas filas durante la QA visual: `routes = 4`, `checkouts = 3`, `payment_intents = 2`, `payment_events = 1`.
+
+`doctor/990099` permanece intacto en `professional / annual / active`.
+
+El selector `Plan QA` simulado sigue aislado: muestra `Simulación QA local — sin consulta backend`, no consulta `/api/subscriptions` para calcular estados simulados y, al volver a `Plan QA = Real` con `doctor/990104`, el panel vuelve a mostrar `Profesional` activo real.
+
+Durante esta validacion visual no hubo writes ni nuevas filas de pago. En Network solo se permitieron el `POST` del fixture DEV/local y el `GET current` de `doctor/990104`; los `POST` de pago, checkout, PaymentIntent, webhook y activacion permanecieron en `0`.
+
+Este cierre visual complementa el cierre funcional ya documentado en esta PP-Decisiones 232 y no reabre arquitectura Stripe ni pagos criticos.
+
 ### Seguridad y restricciones cumplidas
 
 Durante el cierre validado:
