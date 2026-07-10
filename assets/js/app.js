@@ -59178,6 +59178,10 @@ function mxResetLogoPreview(){
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
   const SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE = 'Revisa la mejora dentro de la card del plan seleccionado.';
   const UI_PLAN_TO_BACKEND_PLAN = Object.freeze({
+    free: 'free',
+    gratis: 'free',
+    gratuito: 'free',
+    free_default: 'free',
     basico: 'basic',
     'básico': 'basic',
     basic: 'basic',
@@ -59192,6 +59196,7 @@ function mxResetLogoPreview(){
     professional: 'professional'
   });
   const SUBSCRIPTION_PLAN_RANK = Object.freeze({
+    free: 0,
     basic: 1,
     standard: 2,
     optimum: 3,
@@ -59299,6 +59304,7 @@ function mxResetLogoPreview(){
       idempotencyKey: ''
     }
   };
+  let currentSubscriptionRequestSeq = 0;
 
   function clean(value){
     return String(value ?? '').trim();
@@ -59946,6 +59952,10 @@ function mxResetLogoPreview(){
   }
 
   async function loadPaymentActivationState(){
+    if(isQaPlanSimulationActive()){
+      return false;
+    }
+    const requestSeq = currentSubscriptionRequestSeq;
     const endpoint = activationStateEndpointFromContext();
     if(!endpoint){
       applyActivationStateError(422, 'invalid_request', 'No se pudo resolver el contexto para consultar activación post-pago.');
@@ -59968,6 +59978,7 @@ function mxResetLogoPreview(){
         credentials: 'same-origin'
       });
       const payload = await response.json().catch(()=> null);
+      if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
       if(!payload || typeof payload !== 'object'){
         applyActivationStateError(Number(response.status || 0), 'invalid_json', 'Respuesta inválida del estado de activación.');
         return false;
@@ -59987,6 +59998,7 @@ function mxResetLogoPreview(){
       renderActivationState();
       return true;
     }catch(_){
+      if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
       applyActivationStateError(0, 'payment_activation_unavailable', 'No pudimos consultar el estado de activación post-pago.');
       return false;
     }
@@ -60294,7 +60306,11 @@ function mxResetLogoPreview(){
     }
   }
 
-  async function fetchSubscriptionReadModel(endpoint, contextInfo){
+  function currentSubscriptionRequestIsActive(requestSeq){
+    return requestSeq === currentSubscriptionRequestSeq && !isQaPlanSimulationActive();
+  }
+
+  async function fetchSubscriptionReadModel(endpoint, contextInfo, requestSeq){
     try{
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -60302,6 +60318,7 @@ function mxResetLogoPreview(){
         credentials: 'same-origin'
       });
       const payload = await response.json().catch(()=> null);
+      if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
       if(!response.ok || !payload || payload.ok !== true || !payload.data){
         applyReadOnlyError(Number(response.status || 0));
         return false;
@@ -60310,15 +60327,17 @@ function mxResetLogoPreview(){
       await loadPaymentActivationState();
       return true;
     }catch(_){
+      if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
       applyReadOnlyError(0);
       return false;
     }
   }
 
-  async function loadSubscriptionViaDevFallback(){
+  async function loadSubscriptionViaDevFallback(requestSeq){
     const qaContext = resolveSubscriptionQaEntityContext();
     const doctorId = qaContext?.doctor_id || resolveSubscriptionDoctorId();
     if(!doctorId){
+      if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
       applyReadOnlyError(422);
       return;
     }
@@ -60327,10 +60346,15 @@ function mxResetLogoPreview(){
       entity_id: qaContext?.entity_id || doctorId,
       doctor_id: doctorId,
       source: qaContext?.source || 'dev_only'
-    });
+    }, requestSeq);
   }
 
   async function loadCurrentSubscription(){
+    if(isQaPlanSimulationActive()){
+      applyEffectiveSubscriptionModel();
+      return false;
+    }
+    const requestSeq = ++currentSubscriptionRequestSeq;
     try{
       const contextResponse = await fetch(buildSubscriptionContextEndpoint(), {
         method: 'GET',
@@ -60338,10 +60362,11 @@ function mxResetLogoPreview(){
         credentials: 'same-origin'
       });
       const contextPayload = await contextResponse.json().catch(()=> null);
+      if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
 
       if(!contextResponse.ok || !contextPayload || contextPayload.ok !== true || !contextPayload.data){
         if(contextResponse.status === 401 && isSubscriptionLocalDevHost() && resolveSubscriptionDoctorId()){
-          await loadSubscriptionViaDevFallback();
+          await loadSubscriptionViaDevFallback(requestSeq);
           return;
         }
 
@@ -60357,6 +60382,7 @@ function mxResetLogoPreview(){
       const contextData = contextPayload.data || {};
       const endpoint = buildSubscriptionEndpointFromContext(contextData.entity_type, contextData.entity_id);
       if(!endpoint){
+        if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
         applyReadOnlyError(422, 'No se pudo resolver la suscripción para el contexto actual.');
         return;
       }
@@ -60366,8 +60392,9 @@ function mxResetLogoPreview(){
         entity_id: contextData.entity_id,
         doctor_id: contextData.doctor_id,
         source: contextPayload.meta?.source || 'context'
-      });
+      }, requestSeq);
     }catch(_){
+      if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
       applyReadOnlyError(0, 'No se pudo cargar el contexto de suscripción.');
     }
   }
@@ -60381,8 +60408,10 @@ function mxResetLogoPreview(){
   }
 
   function canonicalBackendPlanCode(value){
-    const id = clean(value).toLowerCase();
-    if(id === 'free' || id === 'free_default') return 'basic';
+    const id = clean(value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
     return UI_PLAN_TO_BACKEND_PLAN[id] || id;
   }
 
@@ -60403,7 +60432,9 @@ function mxResetLogoPreview(){
 
   function planRank(planId){
     const canonical = canonicalBackendPlanCode(planId);
-    return SUBSCRIPTION_PLAN_RANK[canonical] || 0;
+    return Object.prototype.hasOwnProperty.call(SUBSCRIPTION_PLAN_RANK, canonical)
+      ? SUBSCRIPTION_PLAN_RANK[canonical]
+      : null;
   }
 
   function findPlanById(planId){
@@ -60441,7 +60472,7 @@ function mxResetLogoPreview(){
     }
     if(activePaid){
       const currentRank = planRank(data.current.id);
-      if(selected && planRank(selected.id) > currentRank){
+      if(currentRank !== null && selected && planRank(selected.id) > currentRank){
         return selected;
       }
       data.selectedPlanId = '';
@@ -62214,7 +62245,7 @@ function mxResetLogoPreview(){
     const currentRank = planRank(data.current.id);
     const cardRank = planRank(plan?.id);
     if(!activePaid) return 'new_subscription';
-    if(!currentRank || !cardRank) return 'unknown_active';
+    if(currentRank === null || cardRank === null) return 'unknown_active';
     if(cardRank < currentRank) return 'downgrade_at_renewal';
     if(cardRank === currentRank) return 'current';
     return 'upgrade_now';
@@ -63164,7 +63195,7 @@ function mxResetLogoPreview(){
 
   function upgradePlansFor(plan){
     const currentRank = planRank(plan?.id);
-    if(!currentRank) return [];
+    if(currentRank === null) return [];
     return data.plans
       .filter((candidate)=> planRank(candidate?.id) > currentRank)
       .sort((a, b)=> planRank(a?.id) - planRank(b?.id));
@@ -63273,7 +63304,7 @@ function mxResetLogoPreview(){
       ? plan.features
       : data.current.features;
     const currentRank = planRank(plan?.id);
-    const hasUpgrade = data.plans.some((candidate)=> planRank(candidate?.id) > currentRank);
+    const hasUpgrade = currentRank !== null && data.plans.some((candidate)=> planRank(candidate?.id) > currentRank);
     const title = hasUpgrade
       ? 'Tu plan actual ya incluye lo esencial:'
       : 'Tu plan actual incluye la suite completa:';
@@ -64094,9 +64125,19 @@ function mxResetLogoPreview(){
   }
 
   function resetPlanQaVisualSelection(){
+    currentSubscriptionRequestSeq += 1;
     data.selectedPlanId = '';
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = '';
+    data.paymentPayloadPreview.checkoutSummary = null;
+    data.paymentServerPreview.checkoutSummary = null;
+    resetPaymentRouteCreate('checkoutSummary');
+    try{
+      window.mxmedSubscriptionPaymentPayloadPreview = {
+        checkout_summary: null,
+        renewal: data.paymentPayloadPreview.renewal
+      };
+    }catch(_){}
     clearCurrentUpgradeFocus();
     data.upgradeCheckout.visible = false;
     data.upgradeCheckout.accepted = false;
@@ -64107,6 +64148,13 @@ function mxResetLogoPreview(){
     data.upgradeCheckout.checkoutIntentUuid = '';
     data.upgradeCheckout.contractAcceptanceUuid = '';
     data.upgradeCheckout.idempotencyKey = '';
+    data.activationState = {
+      state: 'idle',
+      httpStatus: 0,
+      payload: null,
+      error: '',
+      message: ''
+    };
   }
 
   window.addEventListener('mxmed:qa-plan-changed', (event)=>{
@@ -64114,7 +64162,11 @@ function mxResetLogoPreview(){
     if(data.qaPlan?.value === next.value && data.currentModel) return;
     data.qaPlan = next;
     resetPlanQaVisualSelection();
-    if(data.realCurrentModel || data.currentModel){
+    if(next.value === 'real' && !data.realCurrentModel){
+      loadCurrentSubscription();
+      return;
+    }
+    if(data.realCurrentModel || data.currentModel || next.value !== 'real'){
       applyEffectiveSubscriptionModel();
     }
   });
@@ -64330,12 +64382,17 @@ function mxResetLogoPreview(){
   if(els.couponMsg) els.couponMsg.textContent = 'Cupones deshabilitados en modo lectura.';
   if(els.invoiceHint) els.invoiceHint.textContent = 'Facturación deshabilitada en modo lectura.';
 
-  renderCurrent();
-  renderCatalog();
-  renderHistory();
-  renderDevWrite();
-  renderActivationState();
-  loadCurrentSubscription();
+  data.qaPlan = readSubscriptionQaPlanState();
+  if(isQaPlanSimulationActive()){
+    applyEffectiveSubscriptionModel();
+  }else{
+    renderCurrent();
+    renderCatalog();
+    renderHistory();
+    renderDevWrite();
+    renderActivationState();
+    loadCurrentSubscription();
+  }
 })();
 
 // ====== Estudios: modal catálogo laboratorio ======
