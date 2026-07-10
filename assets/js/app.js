@@ -2554,7 +2554,7 @@ console.info('app.js loaded :: 20251123a');
     '990101': { doctor_id: '990101', label: '990101 — Free', plan: 'free', planLabel: 'Gratuito' },
     '990102': { doctor_id: '990102', label: '990102 — Básico', plan: 'basic', planLabel: 'Básico' },
     '990103': { doctor_id: '990103', label: '990103 — Estándar', plan: 'standard', planLabel: 'Estándar' },
-    '990104': { doctor_id: '990104', label: '990104 — Óptimo', plan: 'optimum', planLabel: 'Óptimo' },
+    '990104': { doctor_id: '990104', label: '990104 — Profesional (post E2E)', plan: 'professional', planLabel: 'Profesional' },
     '990105': { doctor_id: '990105', label: '990105 — Profesional', plan: 'professional', planLabel: 'Profesional' }
   };
   const QA_REAL_ENTITY_OPTION_ORDER = ['', '990101', '990102', '990103', '990104', '990105'];

@@ -1610,10 +1610,10 @@ function subscriptionStripeE2EPlanDoctorFixtures(): array
             'label' => 'Estándar',
         ],
         '990104' => [
-            'plan_code' => 'optimum',
+            'plan_code' => 'professional',
             'billing_period' => 'annual',
             'status' => 'active',
-            'label' => 'Óptimo',
+            'label' => 'Profesional',
         ],
         '990105' => [
             'plan_code' => 'professional',
