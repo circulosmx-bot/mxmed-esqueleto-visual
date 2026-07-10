@@ -7192,7 +7192,14 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-checkout-summary-actions{ display:grid; justify-items:start }
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
-  .subp-band-benefit-zone{ justify-items:start }
+  #p-suscripcion.subp-qa-free .subp-band,
+  #p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:minmax(0,1fr) }
+  .subp-band-benefit-zone{ justify-items:start; width:100%; max-width:100%; grid-template-columns:minmax(0,1fr) }
+  .subp-band-benefits,
+  .subp-band-benefit,
+  .subp-band-note{ min-width:0; max-width:100%; overflow-wrap:anywhere }
+  .subp-band-benefits{ width:100% }
+  .subp-band-benefit{ white-space:normal }
   .subp-plan-detail-grid{ grid-template-columns:1fr }
   .subp-plan-pricing-top{ align-items:flex-start; flex-direction:column }
   .subp-plan-pricing-terms{ justify-items:start; max-width:100%; text-align:left }
