@@ -45030,3 +45030,189 @@ No modifica:
 Resultado documental:
 
 `PASS`
+
+---
+
+## PP-Decisiones 232 - Cierre E2E UI Stripe sandbox doctor/990104
+
+### Objetivo del cierre
+
+Se documenta el cierre completo del flujo E2E Stripe sandbox iniciado desde la UI del panel privado de suscripciones para la entidad QA real `doctor/990104`.
+
+El flujo validado queda cerrado como cadena funcional:
+
+`UI payment_route -> UI checkout interno -> UI PaymentIntent Stripe sandbox -> confirmacion externa Stripe sandbox -> webhook real local -> payment_event processed -> activate-after-payment -> current final Profesional activo`.
+
+Esta decision no reabre arquitectura de pago ni introduce nuevas reglas tecnicas. Solo registra evidencia validada en las microfases recientes.
+
+### Alcance validado
+
+La prueba se ejecuto sobre `doctor/990104`, que antes del flujo estaba en `optimum / annual / active` y quedo finalmente en `professional / annual / active`.
+
+Estado final validado:
+
+- `doctor/990104`: `professional / annual / active`;
+- `active professional 990104 = 1`;
+- `active optimum 990104 = 0`;
+- `active total 990104 = 1`;
+- sin duplicados `active professional` para `doctor/990104`;
+- `doctor/990099` quedo intacto como caso historico cerrado `professional / annual / active`.
+
+### Cadena tecnica completa
+
+Cadena final activada para `doctor/990104`:
+
+- `payment_route`: `fa61a495-6590-4ef8-a4b8-81daf8937768`;
+- checkout: `58bee4ee-802d-41c1-a879-294f1441d09d`;
+- PaymentIntent local: `3eced9fd-6a6e-4b53-befc-f76abec66c26`;
+- PaymentEvent: `1`, `payment_intent_confirm / paid / processed`;
+- nueva suscripcion: `3c7c7ac5-a2db-4f73-9608-7543647c0ffb`;
+- checkout final: `activated`;
+- `activated_at`: `2026-07-10 00:35:04`;
+- PaymentIntent local final: `paid / succeeded`;
+- `paid_at`: presente;
+- Stripe remoto: `succeeded`;
+- monto: `900000` centavos `MXN`;
+- moneda Stripe: `mxn`;
+- `livemode = false`.
+
+No se documentan valores completos de `provider_payment_id` ni `provider_event_id`. La evidencia operativa uso unicamente presencia, prefijo y longitud cuando fue necesario.
+
+### Evidencia por microfase
+
+Microfases relacionadas con el cierre:
+
+- `QA/Suscripciones-StripeSandboxE2E-UiCheckoutBridge-FreshRoute-Closure-01`;
+- `QA/Suscripciones-StripeSandboxE2E-UiPaymentIntent-FreshChain-Closure-01`;
+- `FE/Suscripciones-StripeSandboxE2E-PaymentConfirmation-Readiness-01`;
+- `DEVOPS/Suscripciones-StripeSandboxWebhook-ListenerLocal-Ready-01`;
+- `QA/Suscripciones-StripeSandboxE2E-PaymentConfirmation-ExternalSandbox-FreshChain-01`;
+- `QA/Suscripciones-StripeSandboxE2E-ActivationAfterPayment-FromFreshPaidPi-01`.
+
+Evidencia funcional consolidada:
+
+- la UI preparo una `payment_route` real para `doctor/990104`;
+- la UI preparo un checkout interno desde esa ruta;
+- la UI creo un PaymentIntent Stripe sandbox desde el checkout;
+- la confirmacion externa sandbox dejo Stripe remoto en `succeeded`;
+- el webhook real local proceso el pago;
+- el PaymentIntent local quedo `paid / succeeded`;
+- el PaymentEvent quedo `processed / paid`;
+- `activate-after-payment` ejecuto la activacion oficial;
+- el replay con la misma `Idempotency-Key` fue idempotente y no duplico suscripcion;
+- el current final de `doctor/990104` quedo en `professional / annual / active`.
+
+### Estado final de negocio
+
+Despues de `activate-after-payment`, `doctor/990104` queda como caso E2E cerrado para upgrade desde `Optimo` hacia `Profesional`:
+
+- plan activo unico: `professional`;
+- periodo: `annual`;
+- estado: `active`;
+- vigencia final: `2027-07-09 17:10:11`;
+- suscripcion anterior `optimum` deja de ser activa;
+- checkout asociado a la nueva suscripcion;
+- PaymentIntent y PaymentEvent conservan el estado pagado/procesado.
+
+`doctor/990099` se mantiene como caso historico intacto y no fue usado para esta nueva prueba destructiva.
+
+### Seguridad y restricciones cumplidas
+
+Durante el cierre validado:
+
+- no hubo SQL write manual;
+- no se modifico manualmente `profile_subscriptions`;
+- no se expuso `client_secret`;
+- no se expuso `STRIPE_SECRET_KEY`;
+- no se expuso `STRIPE_WEBHOOK_SECRET`;
+- no se expuso `whsec`, `sk_test` ni `rk_test`;
+- no se pego payload completo de Stripe en documentacion;
+- no se usaron `confirm_mock` ni `mxmed_mock`;
+- no se activo manualmente ninguna suscripcion fuera del endpoint oficial;
+- `doctor/990099` no fue usado para esta nueva prueba destructiva.
+
+### Diferencia entre doctor/990099 y doctor/990104
+
+`doctor/990099` permanece como caso historico cerrado de activacion Profesional real post Stripe sandbox y validacion visual con `Plan QA = Real`.
+
+`doctor/990104` queda documentado como el caso E2E desde UI para la matriz QA real:
+
+- parte de `optimum / annual / active`;
+- crea ruta, checkout y PaymentIntent desde UI;
+- confirma Stripe sandbox externamente;
+- procesa webhook real local;
+- activa por `activate-after-payment`;
+- termina en `professional / annual / active`.
+
+Esta separacion evita reusar `doctor/990099` para pruebas destructivas posteriores.
+
+### Estado Git final
+
+Estado validado durante el cierre:
+
+- rama: `fix/agenda-dia-mes-rescate-controlado`;
+- HEAD de referencia: `9cf8081` o posterior;
+- working tree limpio antes de la adenda documental;
+- `ahead/behind = 0/0` antes de la adenda documental.
+
+Commits relacionados:
+
+- `f82d1f6 feat(suscripciones): prepara checkout interno desde ruta ui`;
+- `9cf8081 feat(suscripciones): crea paymentintent stripe desde checkout ui`.
+
+### Reglas de no regresion
+
+Queda cerrado el flujo critico E2E UI Stripe sandbox para `doctor/990104`.
+
+No se debe reabrir esta cadena para crear nuevas rutas, checkouts, PaymentIntents, confirmaciones Stripe, webhooks o activaciones sobre el mismo objetivo salvo regresion futura demostrada con evidencia nueva.
+
+La confirmacion externa sandbox se mantiene como flujo QA controlado hasta que exista un contrato UI seguro para confirmacion de pago en navegador.
+
+### Decisiones abiertas y siguientes pasos
+
+Siguientes pasos sugeridos:
+
+- ejecutar QA visual post-activacion en UI para `doctor/990104` con `Plan QA = Real`;
+- cerrar la matriz QA real para otros estados: `990101`, `990102`, `990103`, `990105`;
+- si producto lo decide en una microfase futura, disenar una UX segura con Stripe.js/Elements y `client_secret` efimero;
+- mantener la confirmacion externa sandbox como flujo de QA controlado mientras no exista contrato UI seguro.
+
+Esta adenda no implementa ni propone cambios de arquitectura Stripe.js/Elements. Tampoco declara que falte backend Stripe critico para funcionar.
+
+### Validacion de esta microfase
+
+Esta microfase modifica solamente:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No modifica:
+
+- backend PHP;
+- frontend JS/CSS;
+- API/rutas;
+- servicios;
+- repositorios;
+- SQL/schema/seeds;
+- Stripe;
+- webhook;
+- PaymentIntent;
+- checkout;
+- `payment_route`;
+- `activate-after-payment`;
+- configuracion;
+- Composer;
+- vendor.
+
+No se ejecuta:
+
+- SQL;
+- Stripe CLI;
+- webhook;
+- activation;
+- cambios de datos.
+
+### Estado
+
+Resultado documental:
+
+`PASS`
