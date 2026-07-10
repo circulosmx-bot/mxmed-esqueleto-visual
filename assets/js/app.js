@@ -60911,7 +60911,12 @@ function mxResetLogoPreview(){
     }
     if(value && typeof value === 'object'){
       return Object.keys(value).reduce((acc, key)=>{
-        if(clean(key).toLowerCase().includes('secret')) return acc;
+        const normalizedKey = clean(key).toLowerCase();
+        if(normalizedKey.includes('secret')) return acc;
+        if((normalizedKey.includes('provider_payment_id') || normalizedKey.includes('provider_event_id')) && typeof value[key] === 'string'){
+          acc[key] = technicalIdLabel(value[key]);
+          return acc;
+        }
         acc[key] = sanitizePaymentIntentResponse(value[key]);
         return acc;
       }, {});
@@ -61033,62 +61038,62 @@ function mxResetLogoPreview(){
     const code = clean(errorCode);
     const message = clean(fallbackMessage);
     if(Number(httpStatus) === 403 && (code === 'forbidden' || message.includes('local_dev_open'))){
-      return 'No hay sesión autorizada para preparar la ruta de pago en este entorno DEV/local.';
+      return 'No hay sesión autorizada para preparar el pago en este entorno DEV/local.';
     }
     const messages = {
-      route_conflict: 'Ya existe una ruta de pago pendiente para esta suscripción.',
-      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir el resumen para generar una nueva preparación.',
+      route_conflict: 'Ya existe un pago pendiente para esta suscripción.',
+      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir el resumen para generar una nueva preparación segura.',
       invalid_upgrade: 'Este cambio de plan no está disponible.',
       active_subscription_exists: 'Ya existe una suscripción activa.',
-      missing_idempotency_key: 'No fue posible preparar la ruta. Falta identificador seguro de solicitud.'
+      missing_idempotency_key: 'No fue posible preparar el pago. Falta identificador seguro de solicitud.'
     };
     if(messages[code]) return messages[code];
-    if(Number(httpStatus) >= 500) return 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
-    return message || 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+    if(Number(httpStatus) >= 500) return 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
+    return message || 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
   }
 
   function paymentRouteCheckoutBridgeErrorMessage(errorCode, httpStatus, fallbackMessage){
     const code = clean(errorCode);
     const message = clean(fallbackMessage);
     if(Number(httpStatus) === 403 && (code === 'forbidden' || message.includes('local_dev_open'))){
-      return 'No hay sesión autorizada para preparar el checkout interno en este entorno DEV/local.';
+      return 'No hay sesión autorizada para preparar el pago en este entorno DEV/local.';
     }
     const messages = {
-      route_already_consumed: 'Esta ruta ya tiene un checkout interno asociado.',
-      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir la ruta preparada antes de continuar.',
-      route_conflict: 'Ya existe un checkout pendiente para esta entidad.',
-      unsupported_provider: 'Este provider no está permitido para el checkout interno.',
-      missing_idempotency_key: 'No fue posible preparar el checkout. Falta identificador seguro de solicitud.',
-      payment_route_not_found: 'La ruta de pago ya no está disponible.',
-      route_expired: 'La ruta de pago expiró. Prepara una nueva ruta en una microfase controlada.',
-      validation_error: 'No fue posible validar la ruta para checkout interno.'
+      route_already_consumed: 'Esta preparación de pago ya fue usada.',
+      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir el pago preparado antes de continuar.',
+      route_conflict: 'Ya existe un pago pendiente para esta entidad.',
+      unsupported_provider: 'Este método de preparación no está permitido.',
+      missing_idempotency_key: 'No fue posible preparar el pago. Falta identificador seguro de solicitud.',
+      payment_route_not_found: 'La preparación de pago ya no está disponible.',
+      route_expired: 'La preparación de pago expiró. Prepara una nueva en una microfase controlada.',
+      validation_error: 'No fue posible validar la preparación de pago.'
     };
     if(messages[code]) return messages[code];
-    if(Number(httpStatus) >= 500) return 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
-    return message || 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
+    if(Number(httpStatus) >= 500) return 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
+    return message || 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
   }
 
   function paymentIntentCreateErrorMessage(errorCode, httpStatus, fallbackMessage){
     const code = clean(errorCode);
     const message = clean(fallbackMessage);
     if(Number(httpStatus) === 403 && (code === 'forbidden' || message.includes('local_dev_open'))){
-      return 'No hay sesión autorizada para crear el pago seguro Stripe sandbox en este entorno DEV/local.';
+      return 'No hay sesión autorizada para crear el pago seguro en este entorno DEV/local.';
     }
     const messages = {
-      checkout_intent_expired: 'El checkout interno expiró. Prepara un nuevo checkout en una microfase controlada.',
-      checkout_intent_not_pending_payment: 'El checkout interno ya no está pendiente de pago.',
-      checkout_intent_not_found: 'El checkout interno ya no está disponible.',
-      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir el checkout preparado antes de continuar.',
-      payment_intent_already_exists: 'Este checkout ya tiene un PaymentIntent asociado.',
-      payment_intent_provider_invalid: 'El provider solicitado no está disponible para este flujo.',
-      payment_intent_provider_unavailable: 'Stripe sandbox no está disponible en este entorno.',
+      checkout_intent_expired: 'La preparación de pago expiró. Prepara una nueva en una microfase controlada.',
+      checkout_intent_not_pending_payment: 'La preparación de pago ya no está pendiente.',
+      checkout_intent_not_found: 'La preparación de pago ya no está disponible.',
+      idempotency_conflict: 'La solicitud cambió. Vuelve a abrir la preparación de pago antes de continuar.',
+      payment_intent_already_exists: 'Este pago ya fue preparado.',
+      payment_intent_provider_invalid: 'El pago seguro solicitado no está disponible para este flujo.',
+      payment_intent_provider_unavailable: 'El pago seguro no está disponible en este entorno.',
       invalid_payment_intent_payload: 'No fue posible validar la creación del pago seguro.',
       forbidden_fields: 'El payload contiene campos controlados por backend.',
       validation_error: 'No fue posible validar la creación del pago seguro.'
     };
     if(messages[code]) return messages[code];
-    if(Number(httpStatus) >= 500) return 'No fue posible crear el pago seguro Stripe sandbox. Inténtalo más tarde.';
-    return message || 'No fue posible crear el pago seguro Stripe sandbox. Inténtalo más tarde.';
+    if(Number(httpStatus) >= 500) return 'No fue posible crear el pago seguro. Inténtalo más tarde.';
+    return message || 'No fue posible crear el pago seguro. Inténtalo más tarde.';
   }
 
   function paymentRouteCreateAvailable(slot){
@@ -61100,21 +61105,162 @@ function mxResetLogoPreview(){
     return preview.next_action?.enabled !== true;
   }
 
+  function isCheckoutPaymentShellSlot(slot){
+    return clean(slot) !== 'renewal';
+  }
+
+  function technicalIdLabel(value){
+    const id = clean(value);
+    if(!id) return 'No disponible';
+    if(id.length <= 14) return id;
+    return `${id.slice(0, 8)}...${id.slice(-4)} (${id.length})`;
+  }
+
+  function paymentShellTechnicalRowsHtml(rows){
+    const items = (Array.isArray(rows) ? rows : [])
+      .map((row)=>{
+        const label = clean(row?.label);
+        const value = clean(row?.value);
+        if(!label || !value) return '';
+        return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`;
+      })
+      .filter(Boolean)
+      .join('');
+    return items ? `<dl class="subp-payment-route-status-dl">${items}</dl>` : '';
+  }
+
+  function paymentShellDebugDetailsHtml(title, rows, payload){
+    if(!isSubscriptionDebugPanelEnabled()) return '';
+    const body = [
+      paymentShellTechnicalRowsHtml(rows),
+      payload ? `<pre>${escapeHtml(JSON.stringify(sanitizePaymentIntentResponse(payload), null, 2))}</pre>` : ''
+    ].filter(Boolean).join('');
+    return `<details class="subp-payment-qa-details">
+        <summary>${escapeHtml(title || 'Detalles técnicos QA')}</summary>
+        ${body || '<p class="subp-payment-route-status-muted">Sin trazabilidad técnica disponible.</p>'}
+      </details>`;
+  }
+
+  function checkoutSummaryTargetConfirmed(plan){
+    const model = data.currentModel || {};
+    const targetCode = backendPlanCodeFromUiPlan(plan?.id);
+    const currentCode = clean(model.effective_plan_code)
+      || clean(model.contracted_plan_code)
+      || clean(model.plan_code)
+      || backendPlanCodeFromUiPlan(data.current?.id);
+    const expectedPeriod = clean(data.paymentPayloadPreview?.checkoutSummary?.billing_period)
+      || clean(model.billing_period);
+    const currentPeriod = clean(model.billing_period);
+    const isActive = clean(model.status).toLowerCase() === 'active' || data.current.status === STATUS_LABELS.active;
+    if(!targetCode || currentCode !== targetCode || !isActive) return false;
+    return !expectedPeriod || !currentPeriod || expectedPeriod === currentPeriod;
+  }
+
+  function checkoutSummaryShellStep(plan, flowType){
+    if(flowType === 'confirmation' || checkoutSummaryTargetConfirmed(plan)) return 'confirmation';
+    const routeState = paymentRouteCreateState('checkoutSummary');
+    const bridge = paymentRouteCheckoutBridgeState('checkoutSummary');
+    const paymentIntent = paymentIntentCreateState('checkoutSummary');
+    if(['creating', 'success'].includes(routeState.state)) return 'payment';
+    if(['creating', 'success'].includes(bridge.state)) return 'payment';
+    if(['creating', 'success'].includes(paymentIntent.state)) return 'payment';
+    if(data.activationState?.state === 'ready') return 'payment';
+    return 'summary';
+  }
+
+  function checkoutSummaryStepState(activeStep, step){
+    const order = { summary: 1, payment: 2, confirmation: 3 };
+    const activeOrder = order[activeStep] || 1;
+    const stepOrder = order[step] || 1;
+    if(stepOrder < activeOrder) return 'complete';
+    if(stepOrder === activeOrder) return 'active';
+    return 'pending';
+  }
+
+  function checkoutSummaryStepperHtml(activeStep){
+    const steps = [
+      { key: 'summary', label: 'Resumen' },
+      { key: 'payment', label: 'Pago seguro' },
+      { key: 'confirmation', label: 'Confirmación' }
+    ];
+    return `<ol class="subp-payment-stepper" aria-label="Progreso del pago seguro">
+      ${steps.map((step, index)=>{
+        const state = checkoutSummaryStepState(activeStep, step.key);
+        const number = state === 'complete' ? 'check' : String(index + 1);
+        const iconClass = state === 'complete' ? 'material-symbols-rounded' : '';
+        return `<li class="subp-payment-stepper-item" data-state="${escapeHtml(state)}" ${state === 'active' ? 'aria-current="step"' : ''}>
+          <span class="subp-payment-stepper-dot ${iconClass}" aria-hidden="true">${escapeHtml(number)}</span>
+          <span>${escapeHtml(step.label)}</span>
+        </li>`;
+      }).join('')}
+    </ol>`;
+  }
+
+  function checkoutSummaryPreviewAmountLabel(slot, fallback){
+    const preview = latestPaymentServerPreviewData(slot);
+    return formatSubscriptionCents(preview?.amount_cents, preview?.currency) || fallback || 'Se confirmará antes del pago seguro.';
+  }
+
+  function paymentShellPeriodLabel(slot, fallback = ''){
+    const period = clean(data.paymentPayloadPreview?.[slot]?.billing_period).toLowerCase();
+    return PERIOD_LABELS[period] || fallback || currentBillingPeriodLabel() || 'Periodo por confirmar';
+  }
+
+  function checkoutSummaryBackendAmountHtml(slot, fallback){
+    return `<strong data-subp-shell-amount="${escapeHtml(slot)}">${escapeHtml(checkoutSummaryPreviewAmountLabel(slot, fallback))}</strong>`;
+  }
+
+  function refreshCheckoutSummaryAmount(slot){
+    const target = pane.querySelector(`[data-subp-shell-amount="${slot}"]`);
+    if(!target) return;
+    const fallback = clean(target.dataset.fallback) || target.textContent;
+    target.textContent = checkoutSummaryPreviewAmountLabel(slot, fallback);
+  }
+
+  function checkoutSummaryValidityLabel(flowType){
+    if(flowType !== 'upgrade_now') return '';
+    const expiresAt = clean(data.currentModel?.expires_at);
+    if(!expiresAt) return '';
+    return formatLongDate(expiresAt) || formatDate(expiresAt) || '';
+  }
+
+  function checkoutSummaryAmountFromChain(slot, fallback){
+    const paymentIntent = paymentIntentCreateState(slot);
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    const routeState = paymentRouteCreateState(slot);
+    const intent = paymentIntent.data?.payment_intent && typeof paymentIntent.data.payment_intent === 'object'
+      ? paymentIntent.data.payment_intent
+      : paymentIntent.data;
+    return formatSubscriptionCents(intent?.amount_cents, intent?.currency)
+      || formatSubscriptionCents(bridge.data?.amount_cents, bridge.data?.currency)
+      || formatSubscriptionCents(routeState.data?.amount_cents, routeState.data?.currency)
+      || checkoutSummaryPreviewAmountLabel(slot, fallback);
+  }
+
+  function checkoutSummarySafePaymentNoteHtml(){
+    return `<div class="subp-payment-secure-note">
+      <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
+      <span>El pago se procesa de forma segura con Stripe.</span>
+    </div>`;
+  }
+
   function paymentRouteCreateActionHtml(slot){
     const state = paymentRouteCreateState(slot);
     if(isQaPlanSimulationActive()){
       return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Disponible sólo en modo Real</button>';
     }
     if(state.state === 'creating'){
-      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparando ruta de pago segura...</button>';
+      return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${isCheckoutPaymentShellSlot(slot) ? 'Preparando tu pago seguro...' : 'Preparando pago seguro...'}</button>`;
     }
     if(state.state === 'success'){
-      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Pago seguro Stripe sandbox pendiente</button>';
+      return isCheckoutPaymentShellSlot(slot)
+        ? ''
+        : '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Pago seguro pendiente</button>';
     }
     if(!paymentRouteCreateAvailable(slot)){
-      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparar ruta de pago <span>Preview requerido</span></button>';
+      return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${isCheckoutPaymentShellSlot(slot) ? 'Continuar al pago seguro' : 'Preparar pago seguro'} <span>Preview requerido</span></button>`;
     }
-    return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">Preparar ruta de pago</button>`;
+    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">${isCheckoutPaymentShellSlot(slot) ? 'Continuar al pago seguro' : 'Preparar pago seguro'}<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>`;
   }
 
   function paymentRouteCheckoutBridgeActionHtml(slot){
@@ -61123,12 +61269,14 @@ function mxResetLogoPreview(){
     const routeUuid = clean(routeState.data?.payment_route_uuid);
     if(routeState.state !== 'success' || !routeUuid) return '';
     if(bridge.state === 'creating'){
-      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparando checkout interno...</button>';
+      return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Preparando pago seguro...</button>`;
     }
     if(bridge.state === 'success'){
-      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Checkout interno preparado</button>';
+      return isCheckoutPaymentShellSlot(slot)
+        ? ''
+        : '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Pago seguro preparado</button>';
     }
-    return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-route-checkout="${escapeHtml(slot)}">Preparar checkout interno</button>`;
+    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-route-checkout="${escapeHtml(slot)}">Preparar pago seguro<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>`;
   }
 
   function paymentIntentCreateActionHtml(slot){
@@ -61137,21 +61285,32 @@ function mxResetLogoPreview(){
     const checkoutUuid = clean(bridge.data?.checkout_intent_uuid);
     if(bridge.state !== 'success' || !checkoutUuid) return '';
     if(paymentIntent.state === 'creating'){
-      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Creando pago seguro Stripe sandbox...</button>';
+      return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${isCheckoutPaymentShellSlot(slot) ? 'Preparando pago seguro...' : 'Creando pago seguro...'}</button>`;
     }
     if(paymentIntent.state === 'success'){
-      return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Pago seguro Stripe sandbox creado</button>';
+      return isCheckoutPaymentShellSlot(slot)
+        ? ''
+        : '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Pago seguro preparado</button>';
     }
-    return `<button class="btn btn-primary btn-sm" type="button" data-subp-payment-intent-create="${escapeHtml(slot)}">Crear pago seguro Stripe sandbox</button>`;
+    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-intent-create="${escapeHtml(slot)}">${isCheckoutPaymentShellSlot(slot) ? 'Continuar con el pago seguro' : 'Crear pago seguro'}<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>`;
   }
 
   function paymentIntentCreateStatusHtml(slot){
     const paymentIntent = paymentIntentCreateState(slot);
     if(paymentIntent.state === 'idle') return '';
     if(paymentIntent.state === 'creating'){
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<article class="subp-payment-shell-message" data-state="loading">
+          <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+          <div>
+            <h4>Estamos preparando tu pago seguro.</h4>
+            <p>No cierres esta ventana mientras se completa la preparación.</p>
+          </div>
+        </article>`;
+      }
       return `<article class="subp-payment-route-status" data-state="creating">
-          <h4>Creando pago seguro Stripe sandbox...</h4>
-          <p>No cierres esta vista mientras el servidor crea el PaymentIntent en Stripe sandbox.</p>
+          <h4>Creando pago seguro...</h4>
+          <p>No cierres esta vista mientras el servidor prepara el pago seguro.</p>
         </article>`;
     }
     if(paymentIntent.state === 'success'){
@@ -61164,35 +61323,58 @@ function mxResetLogoPreview(){
       const normalizedStatus = clean(intent.normalized_status) || 'created';
       const providerStatus = clean(intent.provider_status) || 'requires_payment_method';
       const amount = formatSubscriptionCents(intent.amount_cents, intent.currency) || 'Importe confirmado por backend';
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<article class="subp-payment-shell-message" data-state="waiting">
+            <span class="material-symbols-rounded" aria-hidden="true">pending</span>
+            <div>
+              <h4>Estamos esperando la confirmación del pago.</h4>
+              <p>Tu plan se activará cuando el pago haya sido confirmado.</p>
+            </div>
+          </article>
+          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+            { label: 'PaymentIntent local', value: technicalIdLabel(paymentIntentUuid) },
+            { label: 'Provider payment', value: technicalIdLabel(providerPaymentId) },
+            { label: 'Estado local', value: normalizedStatus },
+            { label: 'Estado provider', value: providerStatus },
+            { label: 'Importe confirmado', value: amount }
+          ], responseData)}`;
+      }
       return `<article class="subp-payment-route-status" data-state="success">
           <div class="subp-payment-route-status-head">
             <div>
-              <div class="subp-payments-kicker">PaymentIntent Stripe sandbox</div>
-              <h4>Pago seguro Stripe sandbox creado.</h4>
+              <div class="subp-payments-kicker">Pago seguro</div>
+              <h4>Pago seguro preparado.</h4>
             </div>
             <span class="subp-payments-status-chip">Sin cargo confirmado</span>
           </div>
-          <dl class="subp-payment-route-status-dl">
-            <dt>PaymentIntent</dt><dd>${escapeHtml(paymentIntentUuid)}</dd>
-            <dt>Provider</dt><dd>stripe</dd>
-            <dt>Provider payment</dt><dd>${escapeHtml(providerPaymentId)}</dd>
-            <dt>Estado local</dt><dd>${escapeHtml(normalizedStatus)}</dd>
-            <dt>Estado provider</dt><dd>${escapeHtml(providerStatus)}</dd>
-            <dt>Importe confirmado</dt><dd>${escapeHtml(amount)}</dd>
-          </dl>
-          <p class="subp-payment-route-status-note">PaymentIntent pendiente de confirmación.</p>
-          <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
+          <p class="subp-payment-route-status-note">Estamos esperando la confirmación del pago.</p>
           <p class="subp-payment-route-status-muted">La suscripción aún no ha sido activada.</p>
-          ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta PaymentIntent sin secretos</summary><pre>${escapeHtml(JSON.stringify(responseData, null, 2))}</pre></details>` : ''}
+          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+            { label: 'PaymentIntent local', value: technicalIdLabel(paymentIntentUuid) },
+            { label: 'Provider payment', value: technicalIdLabel(providerPaymentId) },
+            { label: 'Estado local', value: normalizedStatus },
+            { label: 'Estado provider', value: providerStatus },
+            { label: 'Importe confirmado', value: amount }
+          ], responseData)}
         </article>`;
     }
     if(paymentIntent.state === 'error'){
-      const message = clean(paymentIntent.message) || 'No fue posible crear el pago seguro Stripe sandbox.';
+      const message = clean(paymentIntent.message) || 'No fue posible crear el pago seguro.';
       const code = clean(paymentIntent.errorCode);
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<article class="subp-payment-shell-message" data-state="error">
+          <span class="material-symbols-rounded" aria-hidden="true">error</span>
+          <div>
+            <h4>No pudimos preparar el pago seguro.</h4>
+            <p>${escapeHtml(message)}</p>
+            ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+          </div>
+        </article>`;
+      }
       return `<article class="subp-payment-route-status" data-state="error">
-          <h4>No fue posible crear el pago seguro Stripe sandbox</h4>
+          <h4>No fue posible crear el pago seguro</h4>
           <p>${escapeHtml(message)}</p>
-          ${code ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+          ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
         </article>`;
     }
     return '';
@@ -61202,9 +61384,18 @@ function mxResetLogoPreview(){
     const bridge = paymentRouteCheckoutBridgeState(slot);
     if(bridge.state === 'idle') return '';
     if(bridge.state === 'creating'){
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<article class="subp-payment-shell-message" data-state="loading">
+          <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+          <div>
+            <h4>Estamos preparando tu pago seguro.</h4>
+            <p>No cierres esta ventana mientras se habilita el siguiente paso.</p>
+          </div>
+        </article>`;
+      }
       return `<article class="subp-payment-route-status" data-state="creating">
-          <h4>Preparando checkout interno...</h4>
-          <p>No cierres esta vista mientras el servidor crea el checkout interno.</p>
+          <h4>Preparando pago seguro...</h4>
+          <p>No cierres esta vista mientras el servidor prepara el pago seguro.</p>
         </article>`;
     }
     if(bridge.state === 'success'){
@@ -61212,34 +61403,56 @@ function mxResetLogoPreview(){
       const checkoutUuid = clean(checkout.checkout_intent_uuid) || 'No disponible';
       const checkoutStatus = clean(checkout.checkout_status) || clean(checkout.status) || 'pending_payment';
       const amount = formatSubscriptionCents(checkout.amount_cents, checkout.currency) || 'Importe confirmado por backend';
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<div class="subp-payment-next-action">
+            <h4>Siguiente acción disponible</h4>
+            <p>Debemos preparar el pago para que puedas completarlo de forma segura.</p>
+            <div class="subp-payment-route-create-action" data-subp-payment-intent-create-action="${escapeHtml(slot)}">${paymentIntentCreateActionHtml(slot)}</div>
+          </div>
+          <div data-subp-payment-intent-create-status="${escapeHtml(slot)}">${paymentIntentCreateStatusHtml(slot)}</div>
+          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+            { label: 'Checkout', value: technicalIdLabel(checkoutUuid) },
+            { label: 'Estado checkout', value: checkoutStatus },
+            { label: 'Importe confirmado', value: amount },
+            { label: 'Siguiente acción', value: paymentServerPreviewNextActionLabel(checkout.next_action) }
+          ], checkout)}`;
+      }
       return `<article class="subp-payment-route-status" data-state="success">
           <div class="subp-payment-route-status-head">
             <div>
-              <div class="subp-payments-kicker">Checkout interno MXMed</div>
-              <h4>Checkout interno preparado</h4>
+              <div class="subp-payments-kicker">Pago seguro</div>
+              <h4>Tu pago seguro está listo para continuar.</h4>
             </div>
             <span class="subp-payments-status-chip">Sin cargo</span>
           </div>
-          <dl class="subp-payment-route-status-dl">
-            <dt>Checkout</dt><dd>${escapeHtml(checkoutUuid)}</dd>
-            <dt>Estado checkout</dt><dd>${escapeHtml(checkoutStatus)}</dd>
-            <dt>Importe confirmado</dt><dd>${escapeHtml(amount)}</dd>
-            <dt>Siguiente paso</dt><dd>Pago seguro Stripe sandbox pendiente · enabled=${checkout.next_action?.enabled === true ? 'true' : 'false'}</dd>
-          </dl>
           <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
-          <p class="subp-payment-route-status-muted">No se creó PaymentIntent ni se activó la suscripción.</p>
           <div class="subp-payment-route-create-action" data-subp-payment-intent-create-action="${escapeHtml(slot)}">${paymentIntentCreateActionHtml(slot)}</div>
           <div data-subp-payment-intent-create-status="${escapeHtml(slot)}">${paymentIntentCreateStatusHtml(slot)}</div>
-          ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta checkout</summary><pre>${escapeHtml(JSON.stringify(checkout, null, 2))}</pre></details>` : ''}
+          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+            { label: 'Checkout', value: technicalIdLabel(checkoutUuid) },
+            { label: 'Estado checkout', value: checkoutStatus },
+            { label: 'Importe confirmado', value: amount },
+            { label: 'Siguiente acción', value: paymentServerPreviewNextActionLabel(checkout.next_action) }
+          ], checkout)}
         </article>`;
     }
     if(bridge.state === 'error'){
-      const message = clean(bridge.message) || 'No fue posible preparar el checkout interno.';
+      const message = clean(bridge.message) || 'No fue posible preparar el pago seguro.';
       const code = clean(bridge.errorCode);
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<article class="subp-payment-shell-message" data-state="error">
+          <span class="material-symbols-rounded" aria-hidden="true">error</span>
+          <div>
+            <h4>No pudimos preparar el pago seguro.</h4>
+            <p>${escapeHtml(message)}</p>
+            ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+          </div>
+        </article>`;
+      }
       return `<article class="subp-payment-route-status" data-state="error">
-          <h4>No fue posible preparar el checkout interno</h4>
+          <h4>No fue posible preparar el pago seguro</h4>
           <p>${escapeHtml(message)}</p>
-          ${code ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+          ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
         </article>`;
     }
     return '';
@@ -61248,9 +61461,28 @@ function mxResetLogoPreview(){
   function paymentRouteCreateStatusHtml(slot){
     const state = paymentRouteCreateState(slot);
     if(state.state === 'creating'){
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<section class="subp-payment-shell-card" data-subp-payment-shell data-step="payment">
+          ${checkoutSummaryStepperHtml('payment')}
+          <div class="subp-payment-shell-header">
+            <div>
+              <h3>Pago seguro</h3>
+              <p>Revisa el total y continúa con el proceso seguro de pago.</p>
+            </div>
+            <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>
+          </div>
+          <article class="subp-payment-shell-message" data-state="loading">
+            <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+            <div>
+              <h4>Estamos preparando tu pago seguro.</h4>
+              <p>No cierres esta ventana mientras se habilita el siguiente paso.</p>
+            </div>
+          </article>
+        </section>`;
+      }
       return `<article class="subp-payment-route-status" data-state="creating">
-          <h4>Preparando ruta de pago segura...</h4>
-          <p>No cierres esta vista mientras el servidor confirma la ruta interna.</p>
+          <h4>Preparando pago seguro...</h4>
+          <p>No cierres esta vista mientras el servidor confirma la preparación segura.</p>
         </article>`;
     }
     if(state.state === 'success'){
@@ -61260,42 +61492,107 @@ function mxResetLogoPreview(){
       const status = clean(route.status) || 'created_no_provider';
       const providerStatus = clean(route.provider_status) || 'not_created';
       const nextActionEnabled = route.next_action?.enabled === true;
+      if(isCheckoutPaymentShellSlot(slot)){
+        const bridge = paymentRouteCheckoutBridgeState(slot);
+        return `<section class="subp-payment-shell-card" data-subp-payment-shell data-step="payment">
+          ${checkoutSummaryStepperHtml('payment')}
+          <div class="subp-payment-shell-header">
+            <div>
+              <h3>Pago seguro</h3>
+              <p>Revisa el total y continúa con el proceso seguro de pago.</p>
+            </div>
+            <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>
+          </div>
+          <article class="subp-payment-total-card">
+            <div class="subp-payment-plan-inline">
+              <span class="subp-payment-plan-icon material-symbols-rounded" aria-hidden="true">workspace_premium</span>
+              <div>
+                <span>Plan seleccionado</span>
+                <strong>${escapeHtml(clean(findPlanById(data.checkoutSummary.targetPlanId)?.name) || 'Plan seleccionado')}</strong>
+                <small>${escapeHtml(paymentShellPeriodLabel(slot))}</small>
+              </div>
+            </div>
+            <div class="subp-payment-total-amount">
+              <span>Total a pagar</span>
+              <strong>${escapeHtml(amount)}</strong>
+            </div>
+          </article>
+          ${checkoutSummarySafePaymentNoteHtml()}
+          <article class="subp-payment-element-placeholder">
+            <span class="material-symbols-rounded" aria-hidden="true">credit_card</span>
+            <p>Aquí se mostrará el formulario de pago seguro cuando se integre Stripe Payment Element.</p>
+            <p>Los métodos disponibles se mostrarán en el formulario de pago seguro.</p>
+          </article>
+          ${bridge.state === 'idle'
+            ? `<div class="subp-payment-next-action">
+                <h4>Siguiente acción disponible</h4>
+                <p>Debemos preparar el pago para que puedas completarlo de forma segura.</p>
+                <div class="subp-payment-route-create-action" data-subp-payment-route-checkout-action="${escapeHtml(slot)}">${paymentRouteCheckoutBridgeActionHtml(slot)}</div>
+              </div>`
+            : paymentRouteCheckoutBridgeStatusHtml(slot)}
+          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+            { label: 'Ruta de pago', value: technicalIdLabel(uuid) },
+            { label: 'Estado ruta', value: status },
+            { label: 'Provider status', value: providerStatus },
+            { label: 'Importe confirmado', value: amount },
+            { label: 'Método seleccionado', value: paymentMethodFamilyLabel(route.payment_method_family) },
+            { label: 'Siguiente acción', value: `enabled=${nextActionEnabled ? 'true' : 'false'}` }
+          ], route)}
+        </section>`;
+      }
       return `<article class="subp-payment-route-status" data-state="success">
           <div class="subp-payment-route-status-head">
             <div>
-              <div class="subp-payments-kicker">Ruta interna MXMed</div>
-              <h4>Ruta de pago preparada</h4>
+              <div class="subp-payments-kicker">Pago seguro</div>
+              <h4>Preparación de pago lista</h4>
             </div>
             <span class="subp-payments-status-chip">Sin cargo</span>
           </div>
-          <dl class="subp-payment-route-status-dl">
-            <dt>Folio/ruta</dt><dd>${escapeHtml(uuid)}</dd>
-            <dt>Estado</dt><dd>${escapeHtml(status)}</dd>
-            <dt>Provider status</dt><dd>${escapeHtml(providerStatus)}</dd>
-            <dt>Importe confirmado</dt><dd>${escapeHtml(amount)}</dd>
-            <dt>Método seleccionado</dt><dd>${escapeHtml(paymentMethodFamilyLabel(route.payment_method_family))}</dd>
-            <dt>Siguiente paso</dt><dd>Pago seguro Stripe sandbox pendiente · enabled=${nextActionEnabled ? 'true' : 'false'}</dd>
-          </dl>
           <p class="subp-payment-route-status-note">Todavía no se ha realizado ningún cargo.</p>
-          <p class="subp-payment-route-status-muted">El siguiente paso prepara un checkout interno sin crear PaymentIntent.</p>
+          <p class="subp-payment-route-status-muted">El siguiente paso prepara el pago seguro.</p>
           <div class="subp-payment-route-create-action" data-subp-payment-route-checkout-action="${escapeHtml(slot)}">${paymentRouteCheckoutBridgeActionHtml(slot)}</div>
           <div data-subp-payment-route-checkout-status="${escapeHtml(slot)}">${paymentRouteCheckoutBridgeStatusHtml(slot)}</div>
-          ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta create</summary><pre>${escapeHtml(JSON.stringify(route, null, 2))}</pre></details>` : ''}
+          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+            { label: 'Ruta de pago', value: technicalIdLabel(uuid) },
+            { label: 'Estado ruta', value: status },
+            { label: 'Provider status', value: providerStatus },
+            { label: 'Importe confirmado', value: amount },
+            { label: 'Método seleccionado', value: paymentMethodFamilyLabel(route.payment_method_family) },
+            { label: 'Siguiente acción', value: `enabled=${nextActionEnabled ? 'true' : 'false'}` }
+          ], route)}
         </article>`;
     }
     if(state.state === 'error'){
-      const message = clean(state.message) || 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+      const message = clean(state.message) || 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
       const code = clean(state.errorCode);
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<article class="subp-payment-shell-message" data-state="error">
+          <span class="material-symbols-rounded" aria-hidden="true">error</span>
+          <div>
+            <h4>No pudimos continuar al pago seguro.</h4>
+            <p>${escapeHtml(message)}</p>
+            ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+          </div>
+        </article>`;
+      }
       return `<article class="subp-payment-route-status" data-state="error">
-          <h4>No fue posible preparar la ruta</h4>
+          <h4>No fue posible preparar el pago seguro</h4>
           <p>${escapeHtml(message)}</p>
-          ${code ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+          ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
         </article>`;
     }
     return '';
   }
 
   function refreshPaymentRouteCreateUi(slot){
+    if(isCheckoutPaymentShellSlot(slot) && data.checkoutSummary.visible && els.checkoutSummary && els.checkoutSummary.dataset.renderingPaymentShell !== '1'){
+      const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+      const summary = validCheckoutSummary(activePaid);
+      if(summary){
+        renderPlanCheckoutSummary(summary.plan, summary.flowType, { loadPreview: false });
+        return;
+      }
+    }
     const actionContainer = pane.querySelector(`[data-subp-payment-route-create-action="${slot}"]`);
     if(actionContainer){
       actionContainer.innerHTML = paymentRouteCreateActionHtml(slot);
@@ -61337,16 +61634,16 @@ function mxResetLogoPreview(){
 
   function paymentServerPreviewHtml(slot){
     const isSimulation = isQaPlanSimulationActive();
-    const chip = isSimulation ? 'QA local' : 'Backend preview';
+    const chip = isSimulation ? 'QA local' : 'Cálculo seguro';
     const body = isSimulation
       ? `<p class="subp-server-preview-note">Simulación QA local — sin consulta backend.</p>
          <p class="subp-server-preview-muted">El cálculo backend sólo se consulta en modo Real.</p>`
-      : `<p class="subp-server-preview-note">Se calculará con backend antes de habilitar pago.</p>`;
+      : `<p class="subp-server-preview-note">Estamos confirmando el importe seguro antes de habilitar el pago.</p>`;
     return `<article class="subp-server-preview" data-subp-server-preview="${escapeHtml(slot)}" data-state="${isSimulation ? 'simulation' : 'idle'}">
         <div class="subp-server-preview-head">
           <div>
-            <div class="subp-payments-kicker">Vista previa segura del servidor</div>
-            <h4>Preview read-only</h4>
+            <div class="subp-payments-kicker">Importe seguro</div>
+            <h4>Validación del pago</h4>
           </div>
           <span class="subp-payments-status-chip">${escapeHtml(chip)}</span>
         </div>
@@ -61370,7 +61667,7 @@ function mxResetLogoPreview(){
     }
 
     if(status === 'loading'){
-      body.innerHTML = '<p class="subp-server-preview-note">Calculando vista previa segura...</p>';
+      body.innerHTML = '<p class="subp-server-preview-note">Calculando importe seguro...</p>';
       refreshPaymentRouteCreateUi(slot);
       return;
     }
@@ -61381,16 +61678,17 @@ function mxResetLogoPreview(){
       const warnings = Array.isArray(preview.warnings) ? preview.warnings.map(clean).filter(Boolean) : [];
       const reasons = Array.isArray(preview.reasons) ? preview.reasons.map(clean).filter(Boolean) : [];
       const notices = [...warnings, ...reasons];
-      body.innerHTML = `<dl class="subp-server-preview-dl">
-          <dt>Ruta</dt><dd>${escapeHtml(paymentServerPreviewRouteLabel(preview.route_type))}</dd>
-          <dt>Importe server-side</dt><dd>${escapeHtml(amount)}</dd>
-          <dt>Moneda</dt><dd>${escapeHtml(clean(preview.currency) || 'MXN')}</dd>
-          <dt>Fuente</dt><dd>${escapeHtml(clean(preview.amount_source) || 'server_recalculated')}</dd>
-          <dt>Diferencia con frontend</dt><dd>${preview.amount_mismatch === true ? 'Sí' : 'No'}</dd>
-          <dt>Siguiente acción</dt><dd>${escapeHtml(paymentServerPreviewNextActionLabel(preview.next_action))}</dd>
-        </dl>
-        ${notices.length ? `<p class="subp-server-preview-muted">Avisos: ${escapeHtml(notices.join(', '))}</p>` : ''}
-        ${isSubscriptionDebugPanelEnabled() ? `<details class="subp-server-preview-debug"><summary>QA respuesta preview</summary><pre>${escapeHtml(JSON.stringify(preview, null, 2))}</pre></details>` : ''}`;
+      body.innerHTML = `<p class="subp-server-preview-note">Importe confirmado para continuar: <strong>${escapeHtml(amount)}</strong>.</p>
+        ${notices.length && isSubscriptionDebugPanelEnabled() ? `<p class="subp-server-preview-muted">Avisos QA: ${escapeHtml(notices.join(', '))}</p>` : ''}
+        ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+          { label: 'Ruta', value: paymentServerPreviewRouteLabel(preview.route_type) },
+          { label: 'Importe server-side', value: amount },
+          { label: 'Moneda', value: clean(preview.currency) || 'MXN' },
+          { label: 'Fuente', value: clean(preview.amount_source) || 'server_recalculated' },
+          { label: 'Diferencia con frontend', value: preview.amount_mismatch === true ? 'Sí' : 'No' },
+          { label: 'Siguiente acción', value: paymentServerPreviewNextActionLabel(preview.next_action) }
+        ], preview)}`;
+      refreshCheckoutSummaryAmount(slot);
       refreshPaymentRouteCreateUi(slot);
       return;
     }
@@ -61399,12 +61697,12 @@ function mxResetLogoPreview(){
       const code = clean(state?.errorCode);
       const message = clean(state?.message) || 'No fue posible calcular la vista previa server-side. El monto final se confirmará antes del pago.';
       body.innerHTML = `<p class="subp-server-preview-note">${escapeHtml(message)}</p>
-        ${code ? `<p class="subp-server-preview-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}`;
+        ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-server-preview-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}`;
       refreshPaymentRouteCreateUi(slot);
       return;
     }
 
-    body.innerHTML = '<p class="subp-server-preview-note">Se calculará con backend antes de habilitar pago.</p>';
+    body.innerHTML = '<p class="subp-server-preview-note">Estamos confirmando el importe seguro antes de habilitar el pago.</p>';
     refreshPaymentRouteCreateUi(slot);
   }
 
@@ -61505,7 +61803,7 @@ function mxResetLogoPreview(){
       state.state = 'error';
       state.httpStatus = 0;
       state.errorCode = 'missing_payload';
-      state.message = 'No fue posible preparar los datos para la ruta de pago.';
+      state.message = 'No fue posible preparar los datos para el pago seguro.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -61525,7 +61823,7 @@ function mxResetLogoPreview(){
       state.state = 'error';
       state.httpStatus = 0;
       state.errorCode = 'missing_entity_context';
-      state.message = 'No fue posible resolver la entidad para preparar la ruta de pago.';
+      state.message = 'No fue posible resolver la entidad para preparar el pago seguro.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -61585,7 +61883,7 @@ function mxResetLogoPreview(){
       currentState.httpStatus = 0;
       currentState.data = null;
       currentState.errorCode = 'network_error';
-      currentState.message = 'No fue posible preparar la ruta de pago. Inténtalo más tarde.';
+      currentState.message = 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -61611,7 +61909,7 @@ function mxResetLogoPreview(){
       bridge.state = 'error';
       bridge.httpStatus = 0;
       bridge.errorCode = 'missing_payment_route';
-      bridge.message = 'Primero prepara una ruta de pago.';
+      bridge.message = 'Primero prepara el pago seguro.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -61621,7 +61919,7 @@ function mxResetLogoPreview(){
       bridge.state = 'error';
       bridge.httpStatus = 0;
       bridge.errorCode = 'missing_entity_context';
-      bridge.message = 'No fue posible resolver la ruta para preparar el checkout interno.';
+      bridge.message = 'No fue posible resolver la preparación del pago seguro.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -61688,7 +61986,7 @@ function mxResetLogoPreview(){
       bridge.httpStatus = 0;
       bridge.data = null;
       bridge.errorCode = 'network_error';
-      bridge.message = 'No fue posible preparar el checkout interno. Inténtalo más tarde.';
+      bridge.message = 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
       persistPreparedPaymentRouteState(key);
       refreshPaymentRouteCreateUi(key);
       return false;
@@ -61717,7 +62015,7 @@ function mxResetLogoPreview(){
       paymentIntent.state = 'error';
       paymentIntent.httpStatus = 0;
       paymentIntent.errorCode = 'missing_payment_route';
-      paymentIntent.message = 'Primero prepara una ruta de pago.';
+      paymentIntent.message = 'Primero prepara el pago seguro.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -61726,7 +62024,7 @@ function mxResetLogoPreview(){
       paymentIntent.state = 'error';
       paymentIntent.httpStatus = 0;
       paymentIntent.errorCode = 'missing_checkout_intent';
-      paymentIntent.message = 'Primero prepara el checkout interno.';
+      paymentIntent.message = 'Primero prepara el pago seguro.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -61800,7 +62098,7 @@ function mxResetLogoPreview(){
       paymentIntent.httpStatus = 0;
       paymentIntent.data = null;
       paymentIntent.errorCode = 'network_error';
-      paymentIntent.message = 'No fue posible crear el pago seguro Stripe sandbox. Inténtalo más tarde.';
+      paymentIntent.message = 'No fue posible crear el pago seguro. Inténtalo más tarde.';
       persistPreparedPaymentRouteState(key);
       refreshPaymentRouteCreateUi(key);
       return false;
@@ -62336,6 +62634,9 @@ function mxResetLogoPreview(){
     const plan = findPlanById(data.checkoutSummary.targetPlanId);
     if(!plan) return null;
     const flowType = planFlowType(plan, activePaid);
+    if(checkoutSummaryTargetConfirmed(plan)){
+      return { plan, flowType: 'confirmation' };
+    }
     if(flowType !== 'new_subscription' && flowType !== 'upgrade_now'){
       return null;
     }
@@ -62371,93 +62672,137 @@ function mxResetLogoPreview(){
     });
   }
 
-  function renderPlanCheckoutSummary(plan, flowType){
+  function renderPlanCheckoutSummary(plan, flowType, options = {}){
     if(!els.checkoutSummary) return;
     const targetIdentity = normalizePlanId(plan?.id);
     const targetLabel = clean(plan?.name) || 'Plan seleccionado';
     const isUpgrade = flowType === 'upgrade_now';
-    const title = isUpgrade ? 'Resumen de mejora' : 'Resumen de contratación';
+    const shellStep = checkoutSummaryShellStep(plan, flowType);
     const currentLabel = checkoutSummaryCurrentPlanLabel();
     const periodLabel = checkoutSummaryPeriodLabel(flowType);
     const amountLabel = checkoutSummaryPriceLabel(plan, flowType);
     const daysLabel = checkoutSummaryDaysLabel(plan, flowType);
-    const estimate = isUpgrade ? proratedUpgradeEstimate(plan) : null;
-    const benefitTitle = isUpgrade ? 'Agrega' : 'Incluye';
     const benefitsHtml = isUpgrade
       ? checkoutSummaryAddedBenefitsHtml(plan)
       : checkoutSummaryIncludedBenefitsHtml(plan);
-    const amountNote = isUpgrade
-      ? 'El monto final se confirmará antes de realizar el pago.'
-      : 'El importe final se confirmará antes del pago seguro.';
-    const daysRow = isUpgrade
-      ? `<dt>Días restantes</dt><dd>${escapeHtml(daysLabel || 'Se confirmará antes del pago.')}</dd>`
-      : '';
-    const currentPlanRow = isUpgrade
-      ? `<dt>Plan actual</dt><dd>${escapeHtml(currentLabel)}</dd>`
-      : '';
-    const routeLabel = isUpgrade
-      ? `${currentLabel} → ${targetLabel}`
-      : targetLabel;
-    const amountKicker = isUpgrade ? 'Ajuste estimado' : 'Importe estimado';
-    const amountDetail = isUpgrade && estimate
-      ? `<p>Calculado visualmente con los días restantes de tu vigencia actual.</p>`
-      : `<p>${escapeHtml(amountNote)}</p>`;
-    const payloadPreview = buildCheckoutPaymentPayloadPreview(plan, flowType);
-    publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
+    const validityLabel = checkoutSummaryValidityLabel(flowType);
+    const payloadPreview = flowType === 'confirmation'
+      ? (data.paymentPayloadPreview.checkoutSummary || null)
+      : buildCheckoutPaymentPayloadPreview(plan, flowType);
+    if(flowType !== 'confirmation'){
+      publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
+    }
 
     els.checkoutSummary.dataset.targetPlan = targetIdentity;
-    els.checkoutSummary.dataset.paymentRouteType = clean(payloadPreview.route_type);
-    els.checkoutSummary.innerHTML = `<div class="subp-checkout-summary-head">
+    els.checkoutSummary.dataset.paymentRouteType = clean(payloadPreview?.route_type);
+    els.checkoutSummary.dataset.renderingPaymentShell = '1';
+
+    if(shellStep === 'payment'){
+      els.checkoutSummary.innerHTML = paymentRouteCreateStatusHtml('checkoutSummary');
+      delete els.checkoutSummary.dataset.renderingPaymentShell;
+      if(options.loadPreview !== false && paymentRouteCreateState('checkoutSummary').state !== 'success'){
+        loadPaymentServerPreview('checkoutSummary', payloadPreview);
+      }
+      return;
+    }
+
+    if(shellStep === 'confirmation'){
+      const paidAmount = checkoutSummaryAmountFromChain('checkoutSummary', amountLabel);
+      const activePlanLabel = currentPlanLabel() || targetLabel;
+      const activePeriod = currentBillingPeriodLabel() || periodLabel;
+      const finalValidity = formatLongDate(data.currentModel?.expires_at) || data.current.untilSummary || data.current.until || '';
+      els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card subp-payment-shell-card--confirmation" data-subp-payment-shell data-step="confirmation">
+        ${checkoutSummaryStepperHtml('confirmation')}
+        <div class="subp-payment-confirmation-hero">
+          <span class="material-symbols-rounded" aria-hidden="true">check</span>
+          <h3>Tu plan ${escapeHtml(activePlanLabel)} ya está activo</h3>
+          <p>Ya puedes disfrutar los beneficios de tu nuevo plan.</p>
+        </div>
+        <article class="subp-payment-confirmation-card">
+          <dl class="subp-payments-dl">
+            <dt>Plan activo</dt><dd>${escapeHtml(activePlanLabel)}</dd>
+            <dt>Estado</dt><dd><span class="subp-payment-active-pill">Activo</span></dd>
+            <dt>Periodo</dt><dd>${escapeHtml(activePeriod)}</dd>
+            ${paidAmount ? `<dt>Importe pagado</dt><dd>${escapeHtml(paidAmount)}</dd>` : ''}
+            ${finalValidity ? `<dt>Vigencia hasta</dt><dd>${escapeHtml(finalValidity)}</dd>` : ''}
+          </dl>
+        </article>
+        <article class="subp-payment-thanks">
+          <span class="material-symbols-rounded" aria-hidden="true">event_available</span>
+          <p>Gracias por confiar en México Médico para impulsar tu práctica.</p>
+        </article>
+        <div class="subp-checkout-summary-actions subp-payment-shell-actions">
+          <button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-section-goto="billing">Ir a Mi plan y pagos<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>
+          <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver al panel</button>
+        </div>
+      </section>`;
+      delete els.checkoutSummary.dataset.renderingPaymentShell;
+      return;
+    }
+
+    els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card" data-subp-payment-shell data-step="summary">
+      ${checkoutSummaryStepperHtml('summary')}
+      <div class="subp-payment-shell-header">
         <div>
-          <div class="subp-payments-kicker">Antes de pagar</div>
-          <h3>${escapeHtml(title)}</h3>
+          <h3>Confirma tu mejora de plan</h3>
           <p>Revisa los datos antes de continuar al pago seguro.</p>
         </div>
-        <span class="subp-payments-status-chip">Próxima fase</span>
+        <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>
       </div>
-      <div class="subp-checkout-summary-grid">
-        <article class="subp-checkout-summary-card subp-checkout-summary-card--plan">
-          <div class="subp-payments-kicker">${isUpgrade ? 'Mejora seleccionada' : 'Plan seleccionado'}</div>
-          <h4>${escapeHtml(routeLabel)}</h4>
-          <dl class="subp-payments-dl">
-            ${currentPlanRow}
-            <dt>${isUpgrade ? 'Nuevo plan' : 'Plan'}</dt><dd>${escapeHtml(targetLabel)}</dd>
-            <dt>Periodo</dt><dd>${escapeHtml(periodLabel)}</dd>
-            ${daysRow}
-          </dl>
-          <div class="subp-checkout-summary-benefits">
-            <div class="subp-payments-kicker">${escapeHtml(benefitTitle)}</div>
-            ${benefitsHtml}
+      <div class="subp-payment-plan-pair">
+        <article class="subp-checkout-summary-card">
+          <div class="subp-payments-kicker">Tu plan actual</div>
+          <div class="subp-payment-plan-inline">
+            <span class="subp-payment-plan-icon subp-payment-plan-icon--current material-symbols-rounded" aria-hidden="true">workspace_premium</span>
+            <div>
+              <strong>${escapeHtml(isUpgrade ? currentLabel : 'Sin plan contratado')}</strong>
+              <small>${escapeHtml(isUpgrade ? currentBillingPeriodLabel() : 'Nuevo plan')}</small>
+            </div>
           </div>
         </article>
         <article class="subp-checkout-summary-card">
-          <div class="subp-payments-kicker">${escapeHtml(amountKicker)}</div>
-          <h4>${escapeHtml(amountLabel)}</h4>
-          ${amountDetail}
-        </article>
-        <article class="subp-checkout-summary-card">
-          <div class="subp-payments-kicker">Renovación automática</div>
-          <h4>Desactivada</h4>
-          <label class="subp-payments-switch">
-            <input type="checkbox" disabled>
-            <span>Podrás activar la renovación automática cuando conectemos una forma de pago segura.</span>
-          </label>
-        </article>
-        <article class="subp-checkout-summary-card">
-          <div class="subp-payments-kicker">Forma de pago</div>
-          <h4>Se seleccionará en el flujo seguro de pago</h4>
-          ${subscriptionPaymentsMethodsHtml()}
+          <div class="subp-payments-kicker">Tu nuevo plan</div>
+          <div class="subp-payment-plan-inline">
+            <span class="subp-payment-plan-icon material-symbols-rounded" aria-hidden="true">workspace_premium</span>
+            <div>
+              <strong>${escapeHtml(targetLabel)}</strong>
+              <small>${escapeHtml(periodLabel)}</small>
+            </div>
+          </div>
         </article>
       </div>
-      <div class="subp-checkout-summary-actions">
+      <article class="subp-checkout-summary-card subp-checkout-summary-card--plan">
+        <div class="subp-checkout-summary-benefits">
+          <div class="subp-payments-kicker">Beneficios principales del plan ${escapeHtml(targetLabel)}</div>
+          ${benefitsHtml}
+        </div>
+      </article>
+      <div class="subp-payment-facts">
+        <article class="subp-checkout-summary-card">
+          <div class="subp-payments-kicker">Pagar hoy</div>
+          <h4>${checkoutSummaryBackendAmountHtml('checkoutSummary', amountLabel)}</h4>
+        </article>
+        <article class="subp-checkout-summary-card">
+          <div class="subp-payments-kicker">Periodo</div>
+          <h4>${escapeHtml(periodLabel)}</h4>
+        </article>
+        ${validityLabel ? `<article class="subp-checkout-summary-card">
+          <div class="subp-payments-kicker">Vigencia hasta</div>
+          <h4>${escapeHtml(validityLabel)}</h4>
+          ${daysLabel ? `<p>${escapeHtml(daysLabel)}</p>` : ''}
+        </article>` : ''}
+      </div>
+      ${checkoutSummarySafePaymentNoteHtml()}
+      ${paymentServerPreviewHtml('checkoutSummary')}
+      <div class="subp-checkout-summary-actions subp-payment-shell-actions">
         <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${paymentRouteCreateActionHtml('checkoutSummary')}</div>
         <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a planes y beneficios</button>
-        <button class="btn btn-primary btn-sm" type="button" data-subp-section-goto="billing">Ir a Mi plan y pagos</button>
       </div>
       <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
-      ${paymentServerPreviewHtml('checkoutSummary')}
-      ${paymentPayloadPreviewHtml(payloadPreview)}`;
-    loadPaymentServerPreview('checkoutSummary', payloadPreview);
+      ${paymentPayloadPreviewHtml(payloadPreview)}
+    </section>`;
+    delete els.checkoutSummary.dataset.renderingPaymentShell;
+    if(options.loadPreview !== false) loadPaymentServerPreview('checkoutSummary', payloadPreview);
   }
 
   function selectedUpgradePlan(){
