@@ -59255,7 +59255,10 @@ function mxResetLogoPreview(){
     paymentsView: 'overview',
     checkoutSummary: {
       visible: false,
-      targetPlanId: ''
+      targetPlanId: '',
+      preparing: false,
+      requestId: 0,
+      error: ''
     },
     paymentPayloadPreview: {
       checkoutSummary: null,
@@ -61195,7 +61198,6 @@ function mxResetLogoPreview(){
     if(['creating', 'success'].includes(routeState.state)) return 'payment';
     if(['creating', 'success'].includes(bridge.state)) return 'payment';
     if(['creating', 'success'].includes(paymentIntent.state)) return 'payment';
-    if(data.activationState?.state === 'ready') return 'payment';
     return 'summary';
   }
 
@@ -62251,6 +62253,14 @@ function mxResetLogoPreview(){
     return 'upgrade_now';
   }
 
+  function planActionCtaLabel(plan, flowType){
+    const planLabel = clean(plan?.name) || 'plan';
+    if(flowType === 'new_subscription') return `Contratar ${planLabel}`;
+    if(flowType === 'upgrade_now') return `Mejorar a ${planLabel}`;
+    if(flowType === 'renewal') return `Renovar ${planLabel}`;
+    return '';
+  }
+
   function currentBillingPeriod(){
     return clean(data.currentModel?.billing_period).toLowerCase();
   }
@@ -62677,21 +62687,66 @@ function mxResetLogoPreview(){
   function closePlanCheckoutSummary({ render = true } = {}){
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = '';
+    data.checkoutSummary.preparing = false;
+    data.checkoutSummary.requestId += 1;
+    data.checkoutSummary.error = '';
     publishPaymentPayloadPreview('checkoutSummary', null);
     if(render) renderCatalog();
   }
 
-  function openPlanCheckoutSummary(planId){
+  function checkoutSummaryRecoverableError(message){
+    data.checkoutSummary.visible = false;
+    data.checkoutSummary.preparing = false;
+    data.checkoutSummary.error = clean(message) || 'No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.';
+    publishPaymentPayloadPreview('checkoutSummary', null);
+  }
+
+  async function openPlanCheckoutSummary(planId){
     const plan = findPlanById(planId);
     if(!plan) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const flowType = planFlowType(plan, activePaid);
     if(flowType !== 'new_subscription' && flowType !== 'upgrade_now') return;
-    data.checkoutSummary.visible = true;
+    const targetPlanId = normalizePlanId(plan.id);
+    if(data.checkoutSummary.preparing && normalizePlanId(data.checkoutSummary.targetPlanId) === targetPlanId) return;
+    const requestId = Date.now() + Math.random();
+    data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = plan.id;
+    data.checkoutSummary.preparing = true;
+    data.checkoutSummary.requestId = requestId;
+    data.checkoutSummary.error = '';
     data.selectedPlanId = plan.id;
+    data.focusedPlanId = activePaid ? targetPlanId : data.focusedPlanId;
     data.upgradeCheckout.visible = false;
     data.upgradeCheckout.accepted = false;
+    renderCatalog();
+
+    try{
+      const payloadPreview = buildCheckoutPaymentPayloadPreview(plan, flowType);
+      if(!payloadPreview || typeof payloadPreview !== 'object'){
+        throw new Error('missing_payload');
+      }
+      publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
+
+      if(isQaPlanSimulationActive()){
+        if(!data.paymentServerPreview) data.paymentServerPreview = {};
+        data.paymentServerPreview.checkoutSummary = { state: 'simulation' };
+      }else{
+        const previewOk = await loadPaymentServerPreview('checkoutSummary', payloadPreview);
+        if(data.checkoutSummary.requestId !== requestId) return;
+        if(!previewOk) throw new Error('preview_failed');
+      }
+
+      if(data.checkoutSummary.requestId !== requestId) return;
+      data.checkoutSummary.visible = true;
+      data.checkoutSummary.preparing = false;
+      data.checkoutSummary.error = '';
+      data.checkoutSummary.targetPlanId = plan.id;
+    }catch(_){
+      if(data.checkoutSummary.requestId !== requestId) return;
+      checkoutSummaryRecoverableError('No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.');
+    }
+
     renderCatalog();
     window.requestAnimationFrame(()=>{
       const summary = els.checkoutSummary;
@@ -62827,13 +62882,19 @@ function mxResetLogoPreview(){
       ${paymentServerPreviewHtml('checkoutSummary')}
       <div class="subp-checkout-summary-actions subp-payment-shell-actions">
         <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${paymentRouteCreateActionHtml('checkoutSummary')}</div>
-        <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a planes y beneficios</button>
+        <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a comparar planes</button>
       </div>
       <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
       ${paymentPayloadPreviewHtml(payloadPreview)}
     </section>`;
+    const existingPreview = data.paymentServerPreview?.checkoutSummary || null;
+    if(existingPreview?.state){
+      renderPaymentServerPreviewState('checkoutSummary', existingPreview);
+    }
     delete els.checkoutSummary.dataset.renderingPaymentShell;
-    if(options.loadPreview !== false) loadPaymentServerPreview('checkoutSummary', payloadPreview);
+    if(options.loadPreview !== false && !['success', 'simulation'].includes(clean(existingPreview?.state))){
+      loadPaymentServerPreview('checkoutSummary', payloadPreview);
+    }
   }
 
   function selectedUpgradePlan(){
@@ -63767,7 +63828,19 @@ function mxResetLogoPreview(){
       els.planSelection.classList.add('d-none');
       if(els.checkoutSummary){
         els.checkoutSummary.classList.remove('d-none');
-        renderPlanCheckoutSummary(summary.plan, summary.flowType);
+        try{
+          renderPlanCheckoutSummary(summary.plan, summary.flowType, {
+            loadPreview: !['success', 'simulation'].includes(clean(data.paymentServerPreview?.checkoutSummary?.state))
+          });
+          if(!els.checkoutSummary.querySelector('[data-subp-payment-shell]')){
+            throw new Error('empty_summary_shell');
+          }
+        }catch(_){
+          checkoutSummaryRecoverableError('No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.');
+          els.checkoutSummary.classList.add('d-none');
+          els.checkoutSummary.innerHTML = '';
+          renderCatalog();
+        }
       }
       renderUpgradeCheckoutFlow();
       return;
@@ -63787,6 +63860,29 @@ function mxResetLogoPreview(){
       return;
     }
     const selected = ensureSelectedPlan(activePaid);
+    const summaryError = clean(data.checkoutSummary.error);
+    if(summaryError){
+      els.planSelection.classList.remove('d-none');
+      if(els.selectedPlanTitle){
+        els.selectedPlanTitle.textContent = 'No pudimos preparar el resumen';
+      }
+      if(els.selectedPlanSummary){
+        els.selectedPlanSummary.textContent = selected
+          ? `${selected.name} sigue seleccionado. Puedes reintentar sin perder la comparación de planes.`
+          : 'Puedes elegir de nuevo un plan superior para preparar el resumen.';
+      }
+      if(els.planContinue){
+        els.planContinue.textContent = selected ? 'Reintentar' : 'Elegir plan';
+        els.planContinue.disabled = !selected;
+        els.planContinue.classList.toggle('disabled', !selected);
+      }
+      if(els.selectedPlanMessage){
+        els.selectedPlanMessage.textContent = summaryError;
+        els.selectedPlanMessage.classList.remove('d-none');
+      }
+      renderUpgradeCheckoutFlow();
+      return;
+    }
     if(activePaid){
       els.planSelection.classList.add('d-none');
       const currentPlan = findPlanById(data.current.id);
@@ -63940,6 +64036,7 @@ function mxResetLogoPreview(){
       const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
       const isFocused = focusMode && normalizePlanId(p.id) === focusedPlanId;
       const isMuted = focusMode && !isFocused;
+      const isPreparingSummary = data.checkoutSummary.preparing && normalizePlanId(data.checkoutSummary.targetPlanId) === normalizePlanId(p.id);
       const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
       const hasCurrentUpgradePrompt = isCurrent && upgradePlansFor(p).length > 0;
       const hasCurrentConditionsControl = activePaid && isCurrent && !freeQaMode;
@@ -63954,17 +64051,18 @@ function mxResetLogoPreview(){
             : flowType === 'downgrade_at_renewal'
               ? 'Disponible al renovar'
               : 'Disponible';
-      const buttonLabel = freeQaMode
-        ? 'Contratar este plan'
+      const actionCtaLabel = planActionCtaLabel(p, flowType);
+      const buttonLabel = isPreparingSummary
+        ? 'Estamos preparando el resumen...'
         : flowType === 'current'
         ? 'Tu plan actual'
         : flowType === 'downgrade_at_renewal'
           ? 'Disponible al renovar'
           : flowType === 'upgrade_now'
-            ? `Ver plan ${p.name}`
+            ? actionCtaLabel
             : isSelected
               ? 'Seleccionado'
-              : 'Continuar con este plan';
+              : actionCtaLabel || 'Continuar con este plan';
       const buttonClass = !freeQaMode && (isSelected || isCurrent) ? 'btn-outline-primary' : 'btn-primary';
       const cardNote = flowType === 'current'
         ? ''
@@ -63997,7 +64095,7 @@ function mxResetLogoPreview(){
         : `<div class="subp-save${flowType === 'downgrade_at_renewal' ? ' subp-plan-downgrade-note' : ''}">${escapeHtml(cardNote)}</div>`;
       const selectActionHtml = flowType === 'current'
         ? ''
-        : `<button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>`;
+        : `<button class="btn ${buttonClass} subp-btn" type="button" data-subp-select="${escapeHtml(p.id)}" ${cardSelectable && !isPreparingSummary ? '' : 'disabled'}>${escapeHtml(buttonLabel)}</button>`;
       const planTitleBadgeHtml = activePaid && flowType === 'current'
         ? `<span class="subp-plan-badge subp-plan-badge--inline">${escapeHtml(badge)}</span>`
         : '';
@@ -64129,6 +64227,9 @@ function mxResetLogoPreview(){
     data.selectedPlanId = '';
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = '';
+    data.checkoutSummary.preparing = false;
+    data.checkoutSummary.requestId += 1;
+    data.checkoutSummary.error = '';
     data.paymentPayloadPreview.checkoutSummary = null;
     data.paymentServerPreview.checkoutSummary = null;
     resetPaymentRouteCreate('checkoutSummary');

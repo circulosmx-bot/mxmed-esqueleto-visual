@@ -6989,8 +6989,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--upgrade-source{ opacity:.62; filter:saturate(.85); transform:translateY(0) }
 .subp-plan--upgrade-focus{ border-color:var(--subp-plan-dark) !important; box-shadow:0 0 0 4px rgba(var(--subp-plan-shadow-rgb),.22), 0 16px 28px rgba(0,49,84,.16) !important; transform:translateY(-2px); animation:subp-upgrade-spotlight-pulse 1.2s ease-in-out 0s 2 }
 .subp-grid--focus-mode .subp-plan{ cursor:pointer }
-.subp-plan--focus-muted{ opacity:.5; filter:saturate(.82) contrast(.96) }
-.subp-plan--renewal-only.subp-plan--focus-muted{ opacity:.43; filter:saturate(.55) contrast(.9) }
+.subp-plan--focus-muted{ opacity:.4; filter:saturate(.78) contrast(.94) }
+.subp-plan--renewal-only.subp-plan--focus-muted{ opacity:.34; filter:saturate(.5) contrast(.88) }
 .subp-plan--focus-selected{ opacity:1; border-color:var(--subp-plan-dark) !important; box-shadow:0 0 0 4px rgba(var(--subp-plan-shadow-rgb),.2), 0 16px 30px rgba(0,49,84,.17) !important; transform:translateY(-2px) }
 .subp-plan--focus-selected.subp-plan--renewal-only{ opacity:1; filter:none }
 @keyframes subp-upgrade-spotlight-pulse{
@@ -7167,6 +7167,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan[data-plan] .subp-btn:hover{ filter:brightness(0.96); }
 .subp-plan--renewal-only .subp-btn,
 .subp-plan--current .subp-btn{ background:#fff; border-color:#b9cbd2; color:#274653; filter:none }
+@media (max-width: 1100px) and (min-width: 901px){
+  .subp-band{ grid-template-columns:max-content minmax(220px,1fr) minmax(280px,1fr) }
+  .subp-band > .d-flex:last-child{ grid-column:1 / -1; justify-self:end; max-width:100%; min-width:0 }
+}
 @media (max-width: 900px){
   .subp-section-tabs{ width:100%; overflow-x:auto }
   .subp-payments-shell-head{ display:grid }
