@@ -6966,11 +6966,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-band-benefit .mat-ico{ font-size:18px; line-height:1; color:#d7fff6 }
 .subp-band-note{ color:#e8fbff; font-size:1.14rem; font-weight:850; line-height:1.15 }
 .subp-band-note--max-plan{ color:rgba(255,255,255,.9); font-size:.93rem; font-weight:400; line-height:1.28; max-width:100% }
-.subp-band-benefits--free-hero{ display:grid; align-items:center; gap:4px; max-width:none; min-width:0; font-size:1rem; line-height:1.1 }
+.subp-band-benefits--free-hero{ display:grid; align-items:center; gap:3px; width:100%; max-width:none; min-width:0; font-size:1rem; line-height:1.1 }
 .subp-free-hero-kicker{ display:inline-flex; align-items:center; justify-content:center; width:max-content; max-width:100%; padding:4px 9px; border-radius:999px; background:rgba(255,255,255,.14); color:#dffaff; font-size:.64rem; font-weight:950; line-height:1; text-transform:uppercase; letter-spacing:.035em }
 .subp-free-hero-main{ display:grid; gap:3px; min-width:0 }
-.subp-free-hero-copy{ display:block; min-width:0; max-width:100%; color:#fff; font-size:1.04rem; font-weight:900; line-height:1.12; overflow-wrap:anywhere }
-.subp-free-hero-subtitle{ display:block; min-width:0; max-width:100%; color:#edfdff; font-size:.72rem; font-weight:650; line-height:1.25; overflow-wrap:anywhere }
+.subp-free-hero-copy{ display:block; min-width:0; max-width:100%; color:#fff; font-size:1.18rem; font-weight:950; line-height:1.12; overflow-wrap:anywhere }
+.subp-free-hero-subtitle{ display:block; min-width:0; max-width:100%; color:#edfdff; font-size:.76rem; font-weight:700; line-height:1.24; overflow-wrap:anywhere }
 .subp-free-hero-simulation{ display:block; width:max-content; max-width:100%; color:#d9fbff; font-size:.68rem; font-weight:850; line-height:1.2; overflow-wrap:anywhere }
 .subp-free-hero-icon{ display:grid; place-items:center; flex:0 0 82px; width:82px; height:82px; border-radius:22px; background:rgba(255,255,255,.16); color:#d9fbff; font-size:54px; line-height:1; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14) }
 #p-suscripcion .mx-panel-subheader-icon.material-symbols-rounded,
@@ -6979,10 +6979,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-suscripcion .mx-panel-subheader-icon.material-symbols-rounded,
 #p-suscripcion .subp-plan-icon.material-symbols-rounded{ width:1em; max-width:1em }
 #p-suscripcion.subp-qa-free .subp-band,
-#p-suscripcion.subp-free-plan .subp-band{ position:relative; grid-template-columns:max-content minmax(0,1fr); align-items:center; min-height:0; padding:11px 16px; gap:12px 16px; overflow:visible; background:linear-gradient(135deg,#00aebe 0%,#0075c9 100%) }
+#p-suscripcion.subp-free-plan .subp-band{ position:relative; grid-template-columns:minmax(0,1fr); align-items:center; min-height:0; padding:12px 16px; gap:0; overflow:visible; background:linear-gradient(135deg,#00aebe 0%,#0075c9 100%) }
 #p-suscripcion.subp-free-summary-active .subp-band{ background:linear-gradient(135deg,#00aebe 0%,#086bc6 100%) }
 #p-suscripcion.subp-qa-free .subp-plan-stack,
-#p-suscripcion.subp-free-plan .subp-plan-stack{ display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:7px 8px; min-width:0; padding-right:16px; border-right:1px solid rgba(255,255,255,.24); transform:none }
+#p-suscripcion.subp-free-plan .subp-plan-stack{ display:none }
 #p-suscripcion.subp-qa-free .subp-plan-stack::before,
 #p-suscripcion.subp-free-plan .subp-plan-stack::before{ content:"badge"; grid-row:1 / span 2; display:grid; place-items:center; width:32px; height:32px; border-radius:9px; background:rgba(255,255,255,.14); color:#d9fbff; font-family:"Material Symbols Rounded"; font-size:20px; line-height:1; font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24; overflow:hidden; white-space:nowrap }
 #p-suscripcion.subp-qa-free .subp-plan-context,
@@ -6998,8 +6998,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-suscripcion.subp-free-plan .subp-band > .d-flex,
 #p-suscripcion.subp-free-plan [data-subp-renew],
 #p-suscripcion.subp-free-plan #subp-autorenew{ display:none !important }
-#p-suscripcion.subp-free-plan .subp-band-benefit-zone{ display:grid; grid-template-columns:minmax(0,1fr) max-content; align-items:center; gap:10px 16px; max-width:100%; width:100% }
-#p-suscripcion.subp-free-plan .subp-band-note{ justify-self:end; max-width:210px; margin:0; padding-left:14px; border-left:1px solid rgba(255,255,255,.24); color:#edfdff; font-size:.75rem; font-weight:750; line-height:1.2 }
+#p-suscripcion.subp-free-plan .subp-band-benefit-zone{ display:grid; grid-template-columns:minmax(0,1fr); align-items:center; gap:0; max-width:100%; width:100% }
+#p-suscripcion.subp-free-plan .subp-band-note{ display:none }
 #p-suscripcion.subp-free-plan .subp-free-secure{ display:flex; align-items:center; gap:7px; min-width:0; color:#fff }
 #p-suscripcion.subp-free-plan .subp-free-secure > .material-symbols-rounded{ display:grid; place-items:center; flex:0 0 28px; width:28px; height:28px; border-radius:9px; background:rgba(255,255,255,.14); color:#d9fbff; font-size:18px; line-height:1; overflow:hidden; white-space:nowrap }
 #p-suscripcion.subp-free-plan .subp-free-secure strong{ display:block; color:#fff; font-size:.72rem; font-weight:850; line-height:1.12 }
@@ -7242,7 +7242,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-band{ grid-template-columns:1fr; align-items:start }
   .subp-plan-stack{ justify-items:start }
   #p-suscripcion.subp-qa-free .subp-band,
-  #p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:minmax(0,1fr); padding:13px 14px; gap:9px }
+  #p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:minmax(0,1fr); min-height:95px; padding:13px 14px; gap:9px }
   #p-suscripcion.subp-qa-free .subp-plan-stack,
   #p-suscripcion.subp-free-plan .subp-plan-stack{ padding-right:0; border-right:0 }
   #p-suscripcion.subp-free-plan .subp-band-benefit-zone{ grid-template-columns:minmax(0,1fr); gap:8px }
@@ -7251,6 +7251,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-free-hero-main{ gap:3px }
   .subp-free-hero-copy{ font-size:1rem }
   .subp-free-hero-subtitle{ font-size:.71rem }
+  #p-suscripcion.subp-free-summary-active .subp-free-hero-copy{ font-size:.86rem; line-height:1.08 }
+  #p-suscripcion.subp-free-summary-active .subp-free-hero-subtitle{ font-size:.66rem; line-height:1.16 }
   .subp-free-hero-icon{ flex-basis:58px; width:58px; height:58px; border-radius:16px; font-size:38px }
   .subp-band-benefit-zone{ justify-items:start; width:100%; max-width:100%; grid-template-columns:minmax(0,1fr) }
   .subp-band-benefits,
@@ -7264,11 +7266,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 @media (min-width: 701px) and (max-width: 900px){
   #p-suscripcion.subp-qa-free .subp-band,
-  #p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:max-content minmax(0,1fr); padding:11px 16px; gap:12px 16px }
+  #p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:minmax(0,1fr); padding:12px 16px; gap:0 }
   #p-suscripcion.subp-qa-free .subp-plan-stack,
-  #p-suscripcion.subp-free-plan .subp-plan-stack{ padding-right:16px; border-right:1px solid rgba(255,255,255,.24) }
-  #p-suscripcion.subp-free-plan .subp-band-benefit-zone{ grid-template-columns:minmax(0,1fr) max-content; gap:10px 16px }
-  #p-suscripcion.subp-free-plan .subp-band-note{ justify-self:end; max-width:210px; padding:0 0 0 14px; border-top:0; border-left:1px solid rgba(255,255,255,.24) }
+  #p-suscripcion.subp-free-plan .subp-plan-stack{ display:none; padding-right:0; border-right:0 }
+  #p-suscripcion.subp-free-plan .subp-band-benefit-zone{ grid-template-columns:minmax(0,1fr); gap:0 }
+  #p-suscripcion.subp-free-plan .subp-band-note{ display:none; justify-self:stretch; max-width:none; padding:0; border:0 }
 }
 
 /* Botones generales de cupones/factura/renovar */

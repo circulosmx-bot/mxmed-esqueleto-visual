@@ -60539,16 +60539,14 @@ function mxResetLogoPreview(){
     return summary && summary.flowType === 'new_subscription';
   }
 
-  function freeCommercialHeaderHtml(hasTarget, commercialNote = '', simulationNotice = ''){
+  function freeCommercialHeaderHtml(hasTarget, commercialNote = ''){
     const title = hasTarget
       ? 'Tu Perfil continúa en Modo Gratuito, pero estás a un paso de llevarlo al siguiente nivel.'
       : 'Actualmente tu Perfil se encuentra en Modo Gratuito';
-    return `<span class="subp-free-hero-kicker">${hasTarget ? 'Siguiente paso' : 'Planes'}</span>
-      <span class="subp-free-hero-main">
-        <span class="subp-free-hero-copy">${escapeHtml(title)}</span>
-        ${commercialNote ? `<span class="subp-free-hero-subtitle">${escapeHtml(commercialNote)}</span>` : ''}
-        ${simulationNotice ? `<span class="subp-free-hero-simulation">${escapeHtml(simulationNotice)}</span>` : ''}
-      </span>`;
+    return `<span class="subp-free-hero-main">
+      <span class="subp-free-hero-copy">${escapeHtml(title)}</span>
+      ${commercialNote ? `<span class="subp-free-hero-subtitle">${escapeHtml(commercialNote)}</span>` : ''}
+    </span>`;
   }
 
   function updateFreeCommercialHeader(activePaid, summary = null){
@@ -60562,19 +60560,17 @@ function mxResetLogoPreview(){
       return false;
     }
 
-    const simulationNotice = data.currentModel?.qa_plan_simulated === true
-      ? 'Simulación QA local — sin consulta backend.'
-      : '';
     const commercialNote = hasTarget
       ? 'Revisa tu elección y continúa al siguiente paso de forma segura.'
       : 'Impulsa tu práctica médica con el plan que mejor se adapte a tus necesidades.';
     const planContext = pane.querySelector('.subp-plan-context');
     if(planContext) planContext.textContent = hasTarget ? 'Siguiente paso' : 'Plan actual';
     if(els.planName) els.planName.textContent = 'Modo Gratuito';
-    els.headerBenefits.innerHTML = freeCommercialHeaderHtml(hasTarget, commercialNote, simulationNotice);
+    els.headerBenefits.innerHTML = freeCommercialHeaderHtml(hasTarget, commercialNote);
     els.headerBenefits.classList.remove('d-none');
-    els.headerNote.innerHTML = '<span class="subp-free-secure"><span class="material-symbols-rounded" aria-hidden="true">shield_lock</span><span><strong>Pago 100% seguro con Stripe</strong><small>Tus datos están protegidos.</small></span></span>';
-    els.headerNote.classList.remove('d-none', 'subp-band-note--max-plan');
+    els.headerNote.innerHTML = '';
+    els.headerNote.classList.add('d-none');
+    els.headerNote.classList.remove('subp-band-note--max-plan');
     return true;
   }
 
@@ -62971,7 +62967,7 @@ function mxResetLogoPreview(){
           <h3>${escapeHtml(isNewSubscription ? 'Confirma tu elección' : 'Confirma tu mejora de plan')}</h3>
           <p>${escapeHtml(isNewSubscription ? 'Revisa tu elección y continúa al siguiente paso de forma segura.' : 'Revisa los datos antes de continuar al pago seguro.')}</p>
         </div>
-        <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>
+        ${isNewSubscription ? '' : '<span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>'}
       </div>
       <div class="subp-payment-plan-pair">
         <article class="subp-checkout-summary-card">
