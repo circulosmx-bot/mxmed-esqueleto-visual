@@ -6971,6 +6971,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-free-hero-main{ display:flex; align-items:center; justify-content:space-between; gap:24px; min-width:0 }
 .subp-free-hero-copy{ display:block; min-width:0; max-width:690px; color:#fff; font-size:1.72rem; font-weight:950; line-height:1.12; overflow-wrap:anywhere }
 .subp-free-hero-icon{ display:grid; place-items:center; flex:0 0 82px; width:82px; height:82px; border-radius:22px; background:rgba(255,255,255,.16); color:#d9fbff; font-size:54px; line-height:1; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14) }
+#p-suscripcion .mx-panel-subheader-icon.material-symbols-rounded,
+#p-suscripcion .subp-free-hero-icon.material-symbols-rounded,
+#p-suscripcion .subp-plan-icon.material-symbols-rounded{ overflow:hidden; white-space:nowrap }
+#p-suscripcion .mx-panel-subheader-icon.material-symbols-rounded,
+#p-suscripcion .subp-plan-icon.material-symbols-rounded{ width:1em; max-width:1em }
 #p-suscripcion.subp-qa-free .subp-band,
 #p-suscripcion.subp-free-plan .subp-band{ position:relative; grid-template-columns:minmax(0,1fr); align-items:center; min-height:164px; padding:26px 30px; overflow:hidden; background:linear-gradient(135deg,#00aebe 0%,#0075c9 100%) }
 #p-suscripcion.subp-free-summary-active .subp-band{ background:linear-gradient(135deg,#00aebe 0%,#086bc6 100%) }
@@ -7070,31 +7075,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--renewal-only .text-muted{ opacity:.58 }
 .subp-plan--renewal-only .subp-feature{ color:#6b7d85; font-weight:700 }
 .subp-plan--renewal-only .subp-feature-check{ opacity:.42; filter:grayscale(.4) saturate(.55) }
-#p-suscripcion.subp-free-plan .subp-plan-grid{ gap:16px }
-#p-suscripcion.subp-free-plan .subp-plan{ min-height:430px; padding:18px; border-color:#dbeaf0; border-radius:14px; box-shadow:0 12px 30px rgba(0,49,84,.08) }
-#p-suscripcion.subp-free-plan .subp-plan:hover{ border-color:var(--subp-plan-border); box-shadow:0 16px 34px rgba(var(--subp-plan-shadow-rgb),.13); transform:translateY(-1px) }
-#p-suscripcion.subp-free-plan .subp-plan--selected{ border-color:var(--subp-plan-main); box-shadow:0 0 0 4px rgba(var(--subp-plan-shadow-rgb),.18), 0 16px 34px rgba(0,49,84,.12) }
-#p-suscripcion.subp-free-plan .subp-plan .subp-plan-title{ display:grid; justify-items:center; min-height:0; margin:0 0 14px; padding:0 8px; background:transparent; color:#071943; text-align:center; text-transform:none }
-#p-suscripcion.subp-free-plan .subp-plan-title-copy{ justify-items:center; gap:7px; width:100% }
-#p-suscripcion.subp-free-plan .subp-plan-title-line{ width:auto; justify-content:center }
-#p-suscripcion.subp-free-plan .subp-plan-title-text{ font-size:1.02em; line-height:1.05 }
-#p-suscripcion.subp-free-plan .subp-plan-title-tagline{ max-width:210px; color:#49636f; font-size:.58em; font-weight:750; line-height:1.28; text-align:center }
-#p-suscripcion.subp-free-plan .subp-plan-icon-panel{ min-height:88px; margin:2px 0 14px; border:0; border-radius:18px; background:linear-gradient(180deg,var(--subp-plan-soft-2) 0%,var(--subp-plan-soft) 100%) }
-#p-suscripcion.subp-free-plan .subp-plan-icon{ font-size:3.5rem }
-#p-suscripcion.subp-free-plan .subp-plan-pricing{ margin-top:auto; border-color:#dbeaf0; border-radius:12px; background:#fff; box-shadow:0 8px 20px rgba(0,49,84,.05) }
-#p-suscripcion.subp-free-plan .subp-plan-pricing-top{ display:grid; justify-items:center; text-align:center }
-#p-suscripcion.subp-free-plan .subp-plan-pricing-main{ justify-content:center }
-#p-suscripcion.subp-free-plan .subp-plan-pricing-terms{ justify-items:center; max-width:100%; text-align:center }
-#p-suscripcion.subp-free-plan .subp-plan-pricing-daily{ justify-content:center; text-align:center }
-#p-suscripcion.subp-free-plan .subp-plan-features{ gap:7px; margin-top:0 !important }
-#p-suscripcion.subp-free-plan .subp-plan-features .subp-feature{ gap:9px; color:#34445b; font-size:.92rem; font-weight:750 }
-#p-suscripcion.subp-free-plan .subp-feature-check{ flex-basis:18px; width:18px; height:18px }
-#p-suscripcion.subp-free-plan .subp-btn{ min-height:42px; margin-top:16px; border-radius:9px; background:#fff; color:#164edb; border-color:#164edb; font-weight:900 }
-#p-suscripcion.subp-free-plan .subp-btn:hover,
-#p-suscripcion.subp-free-plan .subp-btn:focus-visible{ background:#164edb; color:#fff; border-color:#164edb; outline:0 }
-#p-suscripcion.subp-free-plan .subp-plan-badge{ top:-10px; right:18px; border-radius:999px; padding:6px 10px; background:#eef7fb; color:#587887; border:1px solid #d1e7ef; box-shadow:0 6px 16px rgba(0,49,84,.08) }
-#p-suscripcion.subp-free-plan .subp-plan[data-plan="estandar"] .subp-plan-badge{ background:#dff9fb; color:#008EA0; border-color:#a7e7ee }
-#p-suscripcion.subp-free-plan .subp-plan--selected .subp-plan-badge{ background:var(--subp-plan-main); color:#fff; border-color:var(--subp-plan-main) }
 .subp-save{ color:var(--subp-plan-main); font-weight:700; font-size:.9rem; margin-top:6px }
 .subp-plan-downgrade-note{ margin-top:8px; padding:9px 10px; border:1px solid #d2e5ed; border-radius:8px; background:#f6fbfd; color:#315c6c; font-size:.9rem; font-weight:750; line-height:1.32; opacity:.86 }
 .subp-plan--renewal-only.subp-plan--focus-selected .subp-plan-downgrade-note{ border-color:var(--subp-plan-border); background:var(--subp-plan-soft); color:var(--subp-plan-dark); box-shadow:0 8px 18px rgba(var(--subp-plan-shadow-rgb),.16); opacity:1; filter:none }
