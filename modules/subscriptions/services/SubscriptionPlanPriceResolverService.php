@@ -39,8 +39,11 @@ final class SubscriptionPlanPriceResolverService
     private const FREE_PLAN_CODE = 'free';
     private const BILLING_PERIOD_ANNUAL = 'annual';
     private const BILLING_PERIOD_MONTHLY = 'monthly';
-    private const MONTHLY_MARKUP_FACTOR = 1.25;
     private const MONTHLY_MARKUP_PERCENT = 25;
+    private const MONTHLY_MARKUP_NUMERATOR = 125;
+    private const MONTHLY_MARKUP_DENOMINATOR = 1200;
+    private const MONTHLY_PRICE_ENDING_CENTS = 9000;
+    private const MONTHLY_PRICE_INCREMENT_CENTS = 10000;
 
     private SubscriptionPlanPriceRepository $repository;
 
@@ -142,6 +145,7 @@ final class SubscriptionPlanPriceResolverService
             'valid_until' => $price['valid_until'] ?? null,
             'price_uuid' => (string)($price['uuid'] ?? ''),
             'source' => (string)($price['source'] ?? ''),
+            'is_derived' => false,
         ];
     }
 
@@ -149,7 +153,7 @@ final class SubscriptionPlanPriceResolverService
     {
         $annualSnapshot = $this->snapshot($annualPrice);
         $annualAmountCents = (int)($annualSnapshot['amount_cents'] ?? 0);
-        $monthlyAmountCents = (int)round(($annualAmountCents / 12) * self::MONTHLY_MARKUP_FACTOR);
+        $monthlyAmountCents = $this->derivedCommercialMonthlyAmountCents($annualAmountCents);
         if ($monthlyAmountCents <= 0) {
             throw new SubscriptionPlanPriceResolverException(
                 422,
@@ -168,16 +172,71 @@ final class SubscriptionPlanPriceResolverService
             'billing_period' => self::BILLING_PERIOD_MONTHLY,
             'amount_cents' => $monthlyAmountCents,
             'currency' => (string)($annualSnapshot['currency'] ?? self::DEFAULT_CURRENCY),
-            'price_source' => 'derived_monthly_markup_25',
-            'price_version' => substr($version . ':monthly25', 0, 64),
+            'price_source' => 'derived_from_annual_commercial_rounding',
+            'price_version' => substr($version . ':monthly-commercial-v1', 0, 64),
             'valid_from' => (string)($annualSnapshot['valid_from'] ?? ''),
             'valid_until' => $annualSnapshot['valid_until'] ?? null,
             'price_uuid' => '',
             'source' => 'derived_from_annual_price',
+            'is_derived' => true,
             'derived_from_billing_period' => self::BILLING_PERIOD_ANNUAL,
             'derived_from_amount_cents' => $annualAmountCents,
             'derived_from_price_uuid' => (string)($annualSnapshot['price_uuid'] ?? ''),
             'monthly_markup_percent' => self::MONTHLY_MARKUP_PERCENT,
+            'commercial_rounding' => [
+                'version' => 'monthly-commercial-v1',
+                'formula' => 'annual_amount_cents * 125 / 1200',
+                'rounding' => 'ceil_to_price_ending_90_mxn',
+            ],
         ];
+    }
+
+    private function derivedCommercialMonthlyAmountCents(int $annualAmountCents): int
+    {
+        if ($annualAmountCents <= 0) {
+            return 0;
+        }
+        if ($annualAmountCents > intdiv(PHP_INT_MAX, self::MONTHLY_MARKUP_NUMERATOR)) {
+            throw new SubscriptionPlanPriceResolverException(
+                500,
+                'pricing_configuration_conflict',
+                'subscription plan price is too large'
+            );
+        }
+
+        $numerator = $annualAmountCents * self::MONTHLY_MARKUP_NUMERATOR;
+        $baseNumerator = self::MONTHLY_PRICE_ENDING_CENTS * self::MONTHLY_MARKUP_DENOMINATOR;
+        if ($numerator <= $baseNumerator) {
+            return self::MONTHLY_PRICE_ENDING_CENTS;
+        }
+
+        $incrementNumerator = self::MONTHLY_PRICE_INCREMENT_CENTS * self::MONTHLY_MARKUP_DENOMINATOR;
+        $steps = $this->ceilDiv($numerator - $baseNumerator, $incrementNumerator);
+        $amountCents = self::MONTHLY_PRICE_ENDING_CENTS + ($steps * self::MONTHLY_PRICE_INCREMENT_CENTS);
+        if ($amountCents <= 0) {
+            throw new SubscriptionPlanPriceResolverException(
+                500,
+                'pricing_configuration_conflict',
+                'monthly price derivation overflowed'
+            );
+        }
+
+        return $amountCents;
+    }
+
+    private function ceilDiv(int $numerator, int $denominator): int
+    {
+        if ($denominator <= 0) {
+            throw new SubscriptionPlanPriceResolverException(
+                500,
+                'pricing_configuration_conflict',
+                'invalid pricing divisor'
+            );
+        }
+        if ($numerator <= 0) {
+            return 0;
+        }
+
+        return intdiv($numerator + $denominator - 1, $denominator);
     }
 }

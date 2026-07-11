@@ -60579,12 +60579,6 @@ function mxResetLogoPreview(){
     return yearly > 0 ? Math.round(yearly / 12) : 0;
   }
 
-  function roundUpToPriceEndingIn90(value){
-    const numeric = Number(value || 0);
-    if(!Number.isFinite(numeric) || numeric <= 0) return 0;
-    return Math.max(90, Math.ceil((numeric - 90) / 100) * 100 + 90);
-  }
-
   function planCommercialPrice(plan){
     const canonical = canonicalBackendPlanCode(plan?.id);
     return SUBSCRIPTION_PLAN_PRICE_MATRIX.plans[canonical] || { yearly: 0 };
@@ -60594,10 +60588,84 @@ function mxResetLogoPreview(){
     return Number(planCommercialPrice(plan).yearly || 0);
   }
 
+  function roundUpToPriceEndingIn90Cents(valueCents){
+    const cents = Math.ceil(Number(valueCents || 0));
+    if(!Number.isFinite(cents) || cents <= 0) return 0;
+    return Math.max(9000, Math.ceil((cents - 9000) / 10000) * 10000 + 9000);
+  }
+
+  function derivedMonthlyUnitCentsFromAnnualCents(annualCents){
+    const annual = Math.round(Number(annualCents || 0));
+    if(!Number.isFinite(annual) || annual <= 0) return null;
+    return roundUpToPriceEndingIn90Cents((annual * 125) / 1200);
+  }
+
+  function planAnnualPriceCents(plan){
+    return amountPesosToCents(planAnnualPrice(plan));
+  }
+
+  function planMonthlyPaymentCents(plan){
+    const annualCents = planAnnualPriceCents(plan);
+    return annualCents !== null ? derivedMonthlyUnitCentsFromAnnualCents(annualCents) : null;
+  }
+
   function planMonthlyPaymentPrice(plan){
-    const annual = planAnnualPrice(plan);
-    if(annual <= 0) return 0;
-    return roundUpToPriceEndingIn90((annual / 12) * 1.25);
+    const monthlyCents = planMonthlyPaymentCents(plan);
+    return monthlyCents !== null ? monthlyCents / 100 : 0;
+  }
+
+  function planMonthlyAdvanceContract(plan){
+    const unitAmountCents = planMonthlyPaymentCents(plan);
+    const annualAmountCents = planAnnualPriceCents(plan);
+    if(unitAmountCents === null || annualAmountCents === null) return null;
+    const monthlyAnnualizedAmountCents = unitAmountCents * 12;
+    return {
+      contract_version: 'free_monthly_advance_v1',
+      plan_code: backendPlanCodeFromUiPlan(plan?.id) || canonicalBackendPlanCode(plan?.id) || null,
+      billing_period: 'monthly',
+      currency: 'MXN',
+      unit_amount_cents: unitAmountCents,
+      initial_cycles: 3,
+      initial_amount_cents: unitAmountCents * 3,
+      regular_recurring_amount_cents: unitAmountCents,
+      annual_amount_cents: annualAmountCents,
+      monthly_annualized_amount_cents: monthlyAnnualizedAmountCents,
+      annual_savings_amount_cents: Math.max(0, monthlyAnnualizedAmountCents - annualAmountCents),
+      is_prorated: false,
+      payment_execution_enabled: false,
+      payment_execution_block_reason: 'stripe_billing_not_ready',
+      price_source: 'frontend_fallback_derived_from_annual_commercial_rounding',
+      price_version: 'monthly-commercial-v1'
+    };
+  }
+
+  function planAnnualContract(plan){
+    const annualAmountCents = planAnnualPriceCents(plan);
+    if(annualAmountCents === null) return null;
+    return {
+      contract_version: 'free_monthly_advance_v1',
+      plan_code: backendPlanCodeFromUiPlan(plan?.id) || canonicalBackendPlanCode(plan?.id) || null,
+      billing_period: 'annual',
+      currency: 'MXN',
+      unit_amount_cents: annualAmountCents,
+      initial_cycles: 1,
+      initial_amount_cents: annualAmountCents,
+      regular_recurring_amount_cents: annualAmountCents,
+      annual_amount_cents: annualAmountCents,
+      monthly_annualized_amount_cents: null,
+      annual_savings_amount_cents: 0,
+      is_prorated: false,
+      payment_execution_enabled: true,
+      payment_execution_block_reason: null,
+      price_source: 'frontend_annual_catalog',
+      price_version: 'mxmed-ui-catalog-v1'
+    };
+  }
+
+  function planPricingContract(plan, billingPeriod){
+    return clean(billingPeriod) === 'monthly'
+      ? planMonthlyAdvanceContract(plan)
+      : planAnnualContract(plan);
   }
 
   function pricingMode(){
@@ -60607,12 +60675,14 @@ function mxResetLogoPreview(){
   function planAnnualPricingViewModel(plan){
     const annual = planAnnualPrice(plan);
     const daily = annual > 0 ? Math.ceil(annual / 365) : 0;
+    const monthlyContract = planMonthlyAdvanceContract(plan);
+    const savingsCents = Number(monthlyContract?.annual_savings_amount_cents || 0);
     return {
       mode: 'yearly',
       priceAmount: annual > 0 ? fmtMoneyShort(annual) : 'Precio anual configurable',
       priceSuffix: annual > 0 ? 'MXN' : '',
       modeLabel: 'Pago anual',
-      savingsLabel: 'ahorra 25%',
+      savingsLabel: savingsCents > 0 ? `Ahorras ${formatSubscriptionCents(savingsCents, 'MXN')} al año` : '',
       dailyPrefix: '',
       dailyAmount: daily > 0 ? fmtMoneyShort(daily) : '',
       dailyText: daily > 0 ? 'MXN al día pagando anual' : 'Equivalencia diaria no disponible'
@@ -60620,17 +60690,21 @@ function mxResetLogoPreview(){
   }
 
   function planMonthlyPricingViewModel(plan){
-    const monthly = planMonthlyPaymentPrice(plan);
-    const daily = monthly > 0 ? Math.ceil((monthly * 12) / 365) : 0;
+    const contract = planMonthlyAdvanceContract(plan);
+    const monthlyCents = Number(contract?.unit_amount_cents || 0);
+    const initialCents = Number(contract?.initial_amount_cents || 0);
     return {
       mode: 'monthly',
-      priceAmount: monthly > 0 ? fmtMoneyShort(monthly) : 'Pago mensual no disponible',
-      priceSuffix: monthly > 0 ? 'MXN / mes' : '',
+      priceAmount: monthlyCents > 0 ? fmtMoneyShort(monthlyCents / 100) : 'Pago mensual no disponible',
+      priceSuffix: monthlyCents > 0 ? 'MXN al mes' : '',
       modeLabel: 'Pago mensual',
       savingsLabel: '',
-      dailyPrefix: daily > 0 ? 'Equivale a' : '',
-      dailyAmount: daily > 0 ? fmtMoneyShort(daily) : '',
-      dailyText: daily > 0 ? 'MXN al día pagando mensual' : 'Equivalencia diaria no disponible'
+      dailyPrefix: '',
+      dailyAmount: '',
+      dailyText: monthlyCents > 0 ? 'Inicia con 3 meses por adelantado' : 'Pago mensual no disponible',
+      detailLines: initialCents > 0
+        ? ['Inicia con 3 meses por adelantado', `Primer pago: ${formatSubscriptionCents(initialCents, 'MXN')}`]
+        : ['Pago mensual no disponible']
     };
   }
 
@@ -60648,9 +60722,14 @@ function mxResetLogoPreview(){
     const savingsContent = view.savingsLabel
       ? `<div class="subp-plan-pricing-savings">${escapeHtml(view.savingsLabel)}</div>`
       : '';
-    const dailyContent = view.dailyAmount
-      ? `${view.dailyPrefix ? `<span class="subp-plan-pricing-daily-prefix">${escapeHtml(view.dailyPrefix)}</span>` : ''}<span class="subp-plan-pricing-daily-amount">${escapeHtml(view.dailyAmount)}</span><span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`
-      : `<span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`;
+    const detailLines = Array.isArray(view.detailLines)
+      ? view.detailLines.map(clean).filter(Boolean)
+      : [];
+    const dailyContent = detailLines.length
+      ? detailLines.map((line)=>`<span class="subp-plan-pricing-daily-text">${escapeHtml(line)}</span>`).join('')
+      : (view.dailyAmount
+        ? `${view.dailyPrefix ? `<span class="subp-plan-pricing-daily-prefix">${escapeHtml(view.dailyPrefix)}</span>` : ''}<span class="subp-plan-pricing-daily-amount">${escapeHtml(view.dailyAmount)}</span><span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`
+        : `<span class="subp-plan-pricing-daily-text">${escapeHtml(view.dailyText)}</span>`);
 
     return `<div class="subp-plan-pricing subp-plan-pricing--${escapeHtml(view.mode)}" data-subp-pricing-block="${escapeHtml(view.mode)}">
         <div class="subp-plan-pricing-top">
@@ -60671,8 +60750,12 @@ function mxResetLogoPreview(){
   }
 
   function planMonthlyEquivalentLabel(plan){
-    const monthly = planMonthlyPaymentPrice(plan);
-    return monthly > 0 ? `Pago mensual: ${fmtMoney(monthly)} / mes` : 'Pago mensual no disponible';
+    const contract = planMonthlyAdvanceContract(plan);
+    const monthly = Number(contract?.unit_amount_cents || 0);
+    const initial = Number(contract?.initial_amount_cents || 0);
+    return monthly > 0 && initial > 0
+      ? `Pago mensual: ${formatSubscriptionCents(monthly, 'MXN')} al mes. Primer pago: ${formatSubscriptionCents(initial, 'MXN')}.`
+      : 'Pago mensual no disponible';
   }
 
   function planDailyEquivalentLabel(plan){
@@ -60736,7 +60819,8 @@ function mxResetLogoPreview(){
   function priceCentsForPlanAndPeriod(plan, billingPeriod){
     if(!plan) return null;
     if(clean(billingPeriod) === 'monthly'){
-      return amountPesosToCents(planMonthlyPaymentPrice(plan));
+      const contract = planMonthlyAdvanceContract(plan);
+      return contract ? contract.initial_amount_cents : null;
     }
     return amountPesosToCents(planAnnualPrice(plan));
   }
@@ -60770,8 +60854,10 @@ function mxResetLogoPreview(){
     const targetPlanCode = backendPlanCodeFromUiPlan(plan?.id) || null;
     const billingPeriod = billingPeriodForPlanCheckoutPayload('new_subscription', warnings);
     const amountCents = priceCentsForPlanAndPeriod(plan, billingPeriod);
+    const pricingContract = planPricingContract(plan, billingPeriod);
     if(!targetPlanCode) warnings.push('missing_target_plan_code');
     if(amountCents === null) warnings.push('missing_amount_cents');
+    if(!pricingContract) warnings.push('missing_pricing_contract');
     return finalizePaymentPayloadPreview({
       route_type: 'new_subscription',
       entity_type: context.entity_type,
@@ -60779,6 +60865,7 @@ function mxResetLogoPreview(){
       target_plan_code: targetPlanCode,
       billing_period: billingPeriod,
       amount_cents: amountCents,
+      pricing_contract: pricingContract,
       currency: 'MXN',
       auto_renew_requested: false,
       source: 'subscription_plan_selection',
@@ -61166,6 +61253,7 @@ function mxResetLogoPreview(){
       idempotency_conflict: 'La solicitud cambió. Vuelve a abrir el resumen para generar una nueva preparación segura.',
       invalid_upgrade: 'Este cambio de plan no está disponible.',
       active_subscription_exists: 'Ya existe una suscripción activa.',
+      monthly_recurring_not_ready: 'Pago mensual automático en preparación.',
       missing_idempotency_key: 'No fue posible preparar el pago. Falta identificador seguro de solicitud.'
     };
     if(messages[code]) return messages[code];
@@ -61321,6 +61409,57 @@ function mxResetLogoPreview(){
     return formatSubscriptionCents(preview?.amount_cents, preview?.currency) || fallback || 'Se confirmará antes del pago seguro.';
   }
 
+  function pricingContractFromPreviewOrPayload(slot){
+    const preview = latestPaymentServerPreviewData(slot);
+    if(preview?.pricing_contract && typeof preview.pricing_contract === 'object') return preview.pricing_contract;
+    const payload = data.paymentPayloadPreview?.[slot] || null;
+    if(payload?.pricing_contract && typeof payload.pricing_contract === 'object') return payload.pricing_contract;
+    return null;
+  }
+
+  function paymentExecutionBlockReason(slot){
+    const contract = pricingContractFromPreviewOrPayload(slot);
+    if(!contract || contract.payment_execution_enabled !== false) return '';
+    return clean(contract.payment_execution_block_reason) || 'payment_execution_disabled';
+  }
+
+  function checkoutSummaryMonthlyContractHtml(slot){
+    const contract = pricingContractFromPreviewOrPayload(slot);
+    if(clean(contract?.billing_period) !== 'monthly') return '';
+    const unit = Number(contract.unit_amount_cents || 0);
+    const initial = Number(contract.initial_amount_cents || 0);
+    const cycles = Number(contract.initial_cycles || 0);
+    if(unit <= 0 || initial <= 0 || cycles <= 0) return '';
+    const unitLabel = formatSubscriptionCents(unit, contract.currency) || 'Se confirmará';
+    const initialLabel = formatSubscriptionCents(initial, contract.currency) || 'Se confirmará';
+    return `<article class="subp-checkout-summary-card subp-checkout-summary-card--monthly-contract">
+      <div class="subp-payments-kicker">Contrato mensual</div>
+      <dl class="subp-payments-dl">
+        <dt>Precio mensual</dt><dd>${escapeHtml(unitLabel)}</dd>
+        <dt>Primer pago</dt><dd>${escapeHtml(initialLabel)}</dd>
+        <dt>Cobertura inicial</dt><dd>${escapeHtml(`${cycles} meses`)}</dd>
+        <dt>Después</dt><dd>${escapeHtml(`${unitLabel} al mes`)}</dd>
+      </dl>
+      <p>Hoy pagarás ${escapeHtml(initialLabel)}, correspondientes a tus primeros ${escapeHtml(String(cycles))} meses.</p>
+      <p>Después del periodo inicial, el precio será de ${escapeHtml(unitLabel)} al mes.</p>
+    </article>`;
+  }
+
+  function checkoutSummaryAnnualSavingsHtml(plan, slot){
+    const payload = data.paymentPayloadPreview?.[slot] || null;
+    if(clean(payload?.route_type) !== 'new_subscription') return '';
+    if(clean(payload?.billing_period) !== 'annual') return '';
+    const monthlyContract = planMonthlyAdvanceContract(plan);
+    const savings = Number(monthlyContract?.annual_savings_amount_cents || 0);
+    if(savings <= 0) return '';
+
+    return `<article class="subp-checkout-summary-card subp-checkout-summary-card--annual-savings">
+      <div class="subp-payments-kicker">Ahorro anual</div>
+      <h4>${escapeHtml(formatSubscriptionCents(savings, 'MXN'))}</h4>
+      <p>Comparado con pagar mes a mes.</p>
+    </article>`;
+  }
+
   function paymentShellPeriodLabel(slot, fallback = ''){
     const period = clean(data.paymentPayloadPreview?.[slot]?.billing_period).toLowerCase();
     return PERIOD_LABELS[period] || fallback || currentBillingPeriodLabel() || 'Periodo por confirmar';
@@ -61391,6 +61530,12 @@ function mxResetLogoPreview(){
   function checkoutSummaryPrimaryActionSubcopy(slot){
     const payload = data.paymentPayloadPreview?.[slot] || null;
     if(!isCheckoutPaymentShellSlot(slot) || clean(payload?.route_type) !== 'new_subscription') return '';
+    if(paymentExecutionBlockReason(slot) === 'stripe_billing_not_ready'){
+      const contract = pricingContractFromPreviewOrPayload(slot);
+      const unit = formatSubscriptionCents(contract?.unit_amount_cents, contract?.currency) || 'tu precio mensual';
+      const initial = formatSubscriptionCents(contract?.initial_amount_cents, contract?.currency) || 'el anticipo';
+      return `Tu precio de ${unit} al mes y el primer pago de ${initial} ya están confirmados.`;
+    }
     return `Pagaré ${checkoutSummaryPreviewAmountLabel(slot, '')} de forma segura con Stripe.`;
   }
 
@@ -61409,6 +61554,9 @@ function mxResetLogoPreview(){
     }
     if(!paymentRouteCreateAvailable(slot)){
       return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${isCheckoutPaymentShellSlot(slot) ? 'Continuar al pago seguro' : 'Preparar pago seguro'} <span>Preview requerido</span></button>`;
+    }
+    if(paymentExecutionBlockReason(slot) === 'stripe_billing_not_ready'){
+      return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled><span class="subp-payment-primary-copy"><span>Pago mensual automático en preparación</span><small>Tu precio y el anticipo de 3 meses ya están confirmados. La contratación mensual se habilitará al completar la integración de cobros recurrentes.</small></span></button>`;
     }
     const label = checkoutSummaryPrimaryActionLabel(slot);
     const subcopy = checkoutSummaryPrimaryActionSubcopy(slot);
@@ -61969,6 +62117,15 @@ function mxResetLogoPreview(){
       state.httpStatus = 0;
       state.errorCode = 'preview_required';
       state.message = 'Primero confirma el importe con backend.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(paymentExecutionBlockReason(key) === 'stripe_billing_not_ready'){
+      state.state = 'error';
+      state.httpStatus = 409;
+      state.errorCode = 'monthly_recurring_not_ready';
+      state.message = 'Pago mensual automático en preparación.';
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -62750,8 +62907,10 @@ function mxResetLogoPreview(){
       return estimate ? fmtMoney(estimate.amount) : 'Se confirmará antes del pago.';
     }
     if(pricingMode() === 'monthly'){
-      const monthly = planMonthlyPaymentPrice(plan);
-      return monthly > 0 ? `${fmtMoney(monthly)} / mes` : 'Se confirmará antes del pago.';
+      const contract = planMonthlyAdvanceContract(plan);
+      return contract?.initial_amount_cents > 0
+        ? formatSubscriptionCents(contract.initial_amount_cents, contract.currency)
+        : 'Se confirmará antes del pago.';
     }
     const annual = planAnnualPrice(plan);
     return annual > 0 ? `${fmtMoney(annual)} al año` : 'Se confirmará antes del pago.';
@@ -63012,6 +63171,8 @@ function mxResetLogoPreview(){
           ${daysLabel ? `<p>${escapeHtml(daysLabel)}</p>` : ''}
         </article>` : ''}
       </div>
+      ${isNewSubscription ? checkoutSummaryMonthlyContractHtml('checkoutSummary') : ''}
+      ${isNewSubscription ? checkoutSummaryAnnualSavingsHtml(plan, 'checkoutSummary') : ''}
       ${checkoutSummarySecurePaymentBlockHtml(isNewSubscription)}
       ${paymentServerPreviewHtml('checkoutSummary')}
       <div class="subp-checkout-summary-actions subp-payment-shell-actions">

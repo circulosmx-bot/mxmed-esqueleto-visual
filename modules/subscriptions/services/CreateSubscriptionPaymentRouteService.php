@@ -90,6 +90,7 @@ final class CreateSubscriptionPaymentRouteService
                 $e
             );
         }
+        $this->assertPaymentExecutionAllowed($preview);
 
         $scope = [
             'entity_type' => $entityType,
@@ -357,6 +358,26 @@ final class CreateSubscriptionPaymentRouteService
                 'idempotent_replay' => $idempotentReplay,
             ],
         ];
+    }
+
+    private function assertPaymentExecutionAllowed(array $preview): void
+    {
+        if ((string)($preview['route_type'] ?? '') !== 'new_subscription'
+            || (string)($preview['billing_period'] ?? '') !== 'monthly'
+        ) {
+            return;
+        }
+
+        $contract = is_array($preview['pricing_contract'] ?? null) ? $preview['pricing_contract'] : [];
+        if (($contract['payment_execution_enabled'] ?? null) !== false) {
+            return;
+        }
+
+        throw new CreateSubscriptionPaymentRouteException(
+            409,
+            'monthly_recurring_not_ready',
+            'monthly recurring payments are not ready'
+        );
     }
 
     private function idempotencyErrorCode(string $code): string

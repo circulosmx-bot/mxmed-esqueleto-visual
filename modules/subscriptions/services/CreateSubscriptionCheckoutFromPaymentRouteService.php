@@ -447,6 +447,13 @@ final class CreateSubscriptionCheckoutFromPaymentRouteService
     private function assertRouteBusinessState(array $route, ?array $activeSubscription): void
     {
         $routeType = (string)$route['route_type'];
+        if ($routeType === self::ROUTE_NEW_SUBSCRIPTION && (string)($route['billing_period'] ?? '') === 'monthly') {
+            throw new CreateSubscriptionCheckoutFromPaymentRouteException(
+                409,
+                'monthly_recurring_not_ready',
+                'monthly recurring payments are not ready'
+            );
+        }
         if ($routeType === self::ROUTE_NEW_SUBSCRIPTION && $activeSubscription !== null) {
             throw new CreateSubscriptionCheckoutFromPaymentRouteException(
                 409,

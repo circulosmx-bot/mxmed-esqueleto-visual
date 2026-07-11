@@ -40,6 +40,8 @@ final class BuildSubscriptionPaymentRoutePreviewService
     private const STATUS_READY = 'preview_ready_for_checkout_sandbox';
     private const BILLING_PERIOD_ANNUAL = 'annual';
     private const BILLING_PERIOD_MONTHLY = 'monthly';
+    private const FREE_MONTHLY_ADVANCE_CONTRACT_VERSION = 'free_monthly_advance_v1';
+    private const MONTHLY_INITIAL_CYCLES = 3;
 
     private const PLAN_RANKS = [
         'basic' => 1,
@@ -155,7 +157,11 @@ final class BuildSubscriptionPaymentRoutePreviewService
         $targetPlanCode = $this->requireTargetPlan($payload);
         $billingPeriod = $this->normalizeBillingPeriod($payload['billing_period'] ?? null);
         $targetPrice = $this->resolvePrice($entityType, $entityId, $targetPlanCode, $billingPeriod);
-        $amountCents = (int)$targetPrice['amount_cents'];
+        $annualPrice = $billingPeriod === self::BILLING_PERIOD_ANNUAL
+            ? $targetPrice
+            : $this->resolvePrice($entityType, $entityId, $targetPlanCode, self::BILLING_PERIOD_ANNUAL);
+        $pricingContract = $this->newSubscriptionPricingContract($targetPlanCode, $billingPeriod, $targetPrice, $annualPrice);
+        $amountCents = (int)$pricingContract['initial_amount_cents'];
         $frontendAmount = $this->frontendAmountCents($payload, self::ROUTE_NEW_SUBSCRIPTION);
 
         return $this->baseResponse(
@@ -171,7 +177,8 @@ final class BuildSubscriptionPaymentRoutePreviewService
             $paymentMethodFamily,
             $autoRenewRequested
         ) + [
-            'target_price_cents' => $amountCents,
+            'target_price_cents' => (int)$targetPrice['amount_cents'],
+            'pricing_contract' => $pricingContract,
         ];
     }
 
@@ -507,6 +514,92 @@ final class BuildSubscriptionPaymentRoutePreviewService
                 $e
             );
         }
+    }
+
+    private function newSubscriptionPricingContract(
+        string $planCode,
+        string $billingPeriod,
+        array $targetPrice,
+        array $annualPrice
+    ): array {
+        $currency = strtoupper(trim((string)($targetPrice['currency'] ?? self::DEFAULT_CURRENCY)));
+        if ($currency === '') {
+            $currency = self::DEFAULT_CURRENCY;
+        }
+
+        $unitAmountCents = (int)($targetPrice['amount_cents'] ?? 0);
+        if ($unitAmountCents <= 0) {
+            throw new BuildSubscriptionPaymentRoutePreviewException(
+                409,
+                'price_not_resolved',
+                'price could not be resolved'
+            );
+        }
+
+        $annualAmountCents = (int)($annualPrice['amount_cents'] ?? 0);
+        if ($annualAmountCents <= 0) {
+            throw new BuildSubscriptionPaymentRoutePreviewException(
+                409,
+                'price_not_resolved',
+                'annual price could not be resolved'
+            );
+        }
+
+        if ($billingPeriod === self::BILLING_PERIOD_MONTHLY) {
+            $initialAmountCents = $this->safeMultiply($unitAmountCents, self::MONTHLY_INITIAL_CYCLES);
+            $monthlyAnnualizedAmountCents = $this->safeMultiply($unitAmountCents, 12);
+
+            return [
+                'contract_version' => self::FREE_MONTHLY_ADVANCE_CONTRACT_VERSION,
+                'plan_code' => $planCode,
+                'billing_period' => self::BILLING_PERIOD_MONTHLY,
+                'currency' => $currency,
+                'unit_amount_cents' => $unitAmountCents,
+                'initial_cycles' => self::MONTHLY_INITIAL_CYCLES,
+                'initial_amount_cents' => $initialAmountCents,
+                'regular_recurring_amount_cents' => $unitAmountCents,
+                'annual_amount_cents' => $annualAmountCents,
+                'monthly_annualized_amount_cents' => $monthlyAnnualizedAmountCents,
+                'annual_savings_amount_cents' => max(0, $monthlyAnnualizedAmountCents - $annualAmountCents),
+                'is_prorated' => false,
+                'payment_execution_enabled' => false,
+                'payment_execution_block_reason' => 'stripe_billing_not_ready',
+                'price_source' => (string)($targetPrice['price_source'] ?? ''),
+                'price_version' => (string)($targetPrice['price_version'] ?? ''),
+            ];
+        }
+
+        return [
+            'contract_version' => self::FREE_MONTHLY_ADVANCE_CONTRACT_VERSION,
+            'plan_code' => $planCode,
+            'billing_period' => self::BILLING_PERIOD_ANNUAL,
+            'currency' => $currency,
+            'unit_amount_cents' => $unitAmountCents,
+            'initial_cycles' => 1,
+            'initial_amount_cents' => $unitAmountCents,
+            'regular_recurring_amount_cents' => $unitAmountCents,
+            'annual_amount_cents' => $annualAmountCents,
+            'monthly_annualized_amount_cents' => null,
+            'annual_savings_amount_cents' => 0,
+            'is_prorated' => false,
+            'payment_execution_enabled' => true,
+            'payment_execution_block_reason' => null,
+            'price_source' => (string)($targetPrice['price_source'] ?? ''),
+            'price_version' => (string)($targetPrice['price_version'] ?? ''),
+        ];
+    }
+
+    private function safeMultiply(int $amountCents, int $multiplier): int
+    {
+        if ($amountCents < 0 || $multiplier < 0 || ($multiplier > 0 && $amountCents > intdiv(PHP_INT_MAX, $multiplier))) {
+            throw new BuildSubscriptionPaymentRoutePreviewException(
+                500,
+                'internal_error',
+                'payment route preview is unavailable'
+            );
+        }
+
+        return $amountCents * $multiplier;
     }
 
     private function remainingDays(array $currentModel): int

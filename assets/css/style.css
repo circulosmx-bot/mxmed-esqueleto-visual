@@ -7066,13 +7066,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan-pricing-currency{ color:#315c6c; font-size:.86rem; font-weight:850; line-height:1 }
 .subp-plan-pricing-terms{ display:grid; justify-items:end; flex:0 0 auto; max-width:43%; color:#006b82; line-height:1.05; text-align:right }
 .subp-plan-pricing-mode-label{ color:#315c6c; font-size:.78rem; font-weight:800 }
-.subp-plan-pricing-savings{ color:#148044; font-size:1.35rem; font-weight:950 }
+.subp-plan-pricing-savings{ color:#148044; font-size:1.02rem; font-weight:950 }
 .subp-plan-pricing-daily{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; color:#315c6c; line-height:1.1 }
 .subp-plan-pricing-daily-prefix{ color:#5b7280; font-size:.8rem; font-weight:700; margin-right:2px }
 .subp-plan-pricing-daily-amount{ color:var(--subp-plan-main); font-size:1.24rem; font-weight:950; line-height:1 }
 .subp-plan-pricing-daily-text{ color:#365966; font-size:.82rem; font-weight:750 }
 .subp-plan-pricing--monthly{ border-color:var(--subp-plan-border); background:linear-gradient(180deg,var(--subp-plan-soft-2) 0%,#ffffff 100%) }
 .subp-plan-pricing--monthly .subp-plan-pricing-terms{ color:var(--subp-plan-dark) }
+.subp-plan-pricing--monthly .subp-plan-pricing-daily{ display:grid; gap:3px }
 .subp-plan-pricing--monthly .subp-plan-pricing-daily-amount{ color:var(--subp-plan-main) }
 .subp-plan-pricing--monthly .subp-plan-pricing-mode-label{ color:rgb(37, 99, 235) }
 .subp-plan-pricing--yearly .subp-plan-pricing-mode-label{ color:rgb(22, 163, 74) }
