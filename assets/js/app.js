@@ -60531,6 +60531,50 @@ function mxResetLogoPreview(){
     return null;
   }
 
+  function isFreeSubscriptionVisualMode(activePaid = hasPaidActiveSubscription(data.currentModel || {})){
+    return isQaFreePlanMode() || !activePaid;
+  }
+
+  function isFreeCheckoutSummary(summary){
+    return summary && summary.flowType === 'new_subscription';
+  }
+
+  function freeCommercialHeaderHtml(hasTarget){
+    const title = hasTarget
+      ? 'Tu Perfil continúa en Modo Gratuito, pero estás a un paso de llevarlo al siguiente nivel.'
+      : 'Actualmente tu Perfil se encuentra en Modo Gratuito';
+    const icon = hasTarget ? 'trending_up' : 'workspace_premium';
+    return `<span class="subp-free-hero-kicker">${hasTarget ? 'Siguiente paso' : 'Planes'}</span>
+      <span class="subp-free-hero-main">
+        <span class="subp-free-hero-copy">${escapeHtml(title)}</span>
+        <span class="material-symbols-rounded subp-free-hero-icon" aria-hidden="true">${escapeHtml(icon)}</span>
+      </span>`;
+  }
+
+  function updateFreeCommercialHeader(activePaid, summary = null){
+    const freeMode = isFreeSubscriptionVisualMode(activePaid);
+    const hasTarget = freeMode && isFreeCheckoutSummary(summary);
+    pane.classList.toggle('subp-free-summary-active', hasTarget);
+    if(!els.headerBenefits || !els.headerNote) return freeMode;
+
+    els.headerBenefits.classList.toggle('subp-band-benefits--free-hero', freeMode);
+    if(!freeMode){
+      return false;
+    }
+
+    els.headerBenefits.innerHTML = freeCommercialHeaderHtml(hasTarget);
+    els.headerBenefits.classList.remove('d-none');
+    const simulationNotice = data.currentModel?.qa_plan_simulated === true
+      ? 'Simulación QA local — sin consulta backend.'
+      : '';
+    const commercialNote = hasTarget
+      ? 'Revisa tu elección y continúa al siguiente paso de forma segura.'
+      : 'Impulsa tu práctica médica con el plan que mejor se adapte a tus necesidades.';
+    els.headerNote.textContent = [commercialNote, simulationNotice].filter(Boolean).join(' ');
+    els.headerNote.classList.remove('d-none', 'subp-band-note--max-plan');
+    return true;
+  }
+
   function monthlyEquivalent(plan){
     const yearly = Number(planCommercialPrice(plan).yearly || 0);
     return yearly > 0 ? Math.round(yearly / 12) : 0;
@@ -61321,6 +61365,36 @@ function mxResetLogoPreview(){
     </div>`;
   }
 
+  function checkoutSummarySecurePaymentBlockHtml(isNewSubscription){
+    if(!isNewSubscription) return checkoutSummarySafePaymentNoteHtml();
+    return `<div class="subp-payment-secure-note subp-payment-secure-note--detailed">
+      <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
+      <span><strong>Pago 100% seguro con Stripe</strong><small>Tus datos están protegidos durante el proceso de pago.</small></span>
+    </div>`;
+  }
+
+  function checkoutSummaryPlanFromPayload(slot){
+    const payload = data.paymentPayloadPreview?.[slot] || null;
+    return findPlanById(clean(payload?.target_plan_code)) || findPlanById(data.checkoutSummary?.targetPlanId);
+  }
+
+  function checkoutSummaryPrimaryActionLabel(slot){
+    if(!isCheckoutPaymentShellSlot(slot)) return 'Preparar pago seguro';
+    const payload = data.paymentPayloadPreview?.[slot] || null;
+    if(clean(payload?.route_type) === 'new_subscription'){
+      const plan = checkoutSummaryPlanFromPayload(slot);
+      const planLabel = clean(plan?.name) || 'seleccionado';
+      return `Confirmo mi plan ${planLabel} y continúo con el pago`;
+    }
+    return 'Continuar al pago seguro';
+  }
+
+  function checkoutSummaryPrimaryActionSubcopy(slot){
+    const payload = data.paymentPayloadPreview?.[slot] || null;
+    if(!isCheckoutPaymentShellSlot(slot) || clean(payload?.route_type) !== 'new_subscription') return '';
+    return `Pagaré ${checkoutSummaryPreviewAmountLabel(slot, '')} de forma segura con Stripe.`;
+  }
+
   function paymentRouteCreateActionHtml(slot){
     const state = paymentRouteCreateState(slot);
     if(isQaPlanSimulationActive()){
@@ -61337,7 +61411,12 @@ function mxResetLogoPreview(){
     if(!paymentRouteCreateAvailable(slot)){
       return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${isCheckoutPaymentShellSlot(slot) ? 'Continuar al pago seguro' : 'Preparar pago seguro'} <span>Preview requerido</span></button>`;
     }
-    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">${isCheckoutPaymentShellSlot(slot) ? 'Continuar al pago seguro' : 'Preparar pago seguro'}<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>`;
+    const label = checkoutSummaryPrimaryActionLabel(slot);
+    const subcopy = checkoutSummaryPrimaryActionSubcopy(slot);
+    const content = subcopy
+      ? `<span class="subp-payment-primary-copy"><span>${escapeHtml(label)}</span><small>${escapeHtml(subcopy)}</small></span>`
+      : escapeHtml(label);
+    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">${content}<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>`;
   }
 
   function paymentRouteCheckoutBridgeActionHtml(slot){
@@ -62299,7 +62378,7 @@ function mxResetLogoPreview(){
 
   function planActionCtaLabel(plan, flowType){
     const planLabel = clean(plan?.name) || 'plan';
-    if(flowType === 'new_subscription') return `Contratar ${planLabel}`;
+    if(flowType === 'new_subscription') return 'Elegir este plan';
     if(flowType === 'upgrade_now') return `Mejorar a ${planLabel}`;
     if(flowType === 'renewal') return `Renovar ${planLabel}`;
     return '';
@@ -62730,12 +62809,16 @@ function mxResetLogoPreview(){
   }
 
   function closePlanCheckoutSummary({ render = true } = {}){
+    const closingFreeSelection = !hasPaidActiveSubscription(data.currentModel || {});
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = '';
     data.checkoutSummary.preparing = false;
     data.checkoutSummary.requestId += 1;
     data.checkoutSummary.error = '';
     data.checkoutSummary.contextKey = '';
+    if(closingFreeSelection){
+      clearExplicitPlanSelection();
+    }
     publishPaymentPayloadPreview('checkoutSummary', null);
     if(render) renderCatalog();
   }
@@ -62814,6 +62897,7 @@ function mxResetLogoPreview(){
     const targetIdentity = normalizePlanId(plan?.id);
     const targetLabel = clean(plan?.name) || 'Plan seleccionado';
     const isUpgrade = flowType === 'upgrade_now';
+    const isNewSubscription = flowType === 'new_subscription';
     const shellStep = checkoutSummaryShellStep(plan, flowType);
     const currentLabel = checkoutSummaryCurrentPlanLabel();
     const periodLabel = checkoutSummaryPeriodLabel(flowType);
@@ -62877,23 +62961,23 @@ function mxResetLogoPreview(){
       return;
     }
 
-    els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card" data-subp-payment-shell data-step="summary">
+    els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card${isNewSubscription ? ' subp-payment-shell-card--new-subscription' : ''}" data-subp-payment-shell data-step="summary">
       ${checkoutSummaryStepperHtml('summary')}
       <div class="subp-payment-shell-header">
         <div>
-          <h3>Confirma tu mejora de plan</h3>
-          <p>Revisa los datos antes de continuar al pago seguro.</p>
+          <h3>${escapeHtml(isNewSubscription ? 'Confirma tu elección' : 'Confirma tu mejora de plan')}</h3>
+          <p>${escapeHtml(isNewSubscription ? 'Revisa tu elección y continúa al siguiente paso de forma segura.' : 'Revisa los datos antes de continuar al pago seguro.')}</p>
         </div>
         <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>
       </div>
       <div class="subp-payment-plan-pair">
         <article class="subp-checkout-summary-card">
-          <div class="subp-payments-kicker">Tu plan actual</div>
+          <div class="subp-payments-kicker">${escapeHtml(isNewSubscription ? 'Tu estado actual' : 'Tu plan actual')}</div>
           <div class="subp-payment-plan-inline">
             <span class="subp-payment-plan-icon subp-payment-plan-icon--current material-symbols-rounded" aria-hidden="true">workspace_premium</span>
             <div>
               <strong>${escapeHtml(isUpgrade ? currentLabel : 'Sin plan contratado')}</strong>
-              <small>${escapeHtml(isUpgrade ? currentBillingPeriodLabel() : 'Nuevo plan')}</small>
+              <small>${escapeHtml(isUpgrade ? currentBillingPeriodLabel() : 'Modo Gratuito')}</small>
             </div>
           </div>
         </article>
@@ -62910,13 +62994,13 @@ function mxResetLogoPreview(){
       </div>
       <article class="subp-checkout-summary-card subp-checkout-summary-card--plan">
         <div class="subp-checkout-summary-benefits">
-          <div class="subp-payments-kicker">Beneficios principales del plan ${escapeHtml(targetLabel)}</div>
+          <div class="subp-payments-kicker">${escapeHtml(isNewSubscription ? `Beneficios destacados del plan ${targetLabel}` : `Beneficios principales del plan ${targetLabel}`)}</div>
           ${benefitsHtml}
         </div>
       </article>
       <div class="subp-payment-facts">
         <article class="subp-checkout-summary-card">
-          <div class="subp-payments-kicker">Pagar hoy</div>
+          <div class="subp-payments-kicker">${escapeHtml(isNewSubscription ? 'Total a pagar' : 'Pagar hoy')}</div>
           <h4>${checkoutSummaryBackendAmountHtml('checkoutSummary', amountLabel)}</h4>
         </article>
         <article class="subp-checkout-summary-card">
@@ -62929,7 +63013,7 @@ function mxResetLogoPreview(){
           ${daysLabel ? `<p>${escapeHtml(daysLabel)}</p>` : ''}
         </article>` : ''}
       </div>
-      ${checkoutSummarySafePaymentNoteHtml()}
+      ${checkoutSummarySecurePaymentBlockHtml(isNewSubscription)}
       ${paymentServerPreviewHtml('checkoutSummary')}
       <div class="subp-checkout-summary-actions subp-payment-shell-actions">
         <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${paymentRouteCreateActionHtml('checkoutSummary')}</div>
@@ -64004,7 +64088,8 @@ function mxResetLogoPreview(){
 
   function renderCurrent(){
     const freeQaMode = isQaFreePlanMode();
-    const freePlanMode = freeQaMode || !hasPaidActiveSubscription(data.currentModel || {});
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const freePlanMode = freeQaMode || !activePaid;
     const currentPlanIdentity = freePlanMode
       ? 'free'
       : normalizePlanId(data.current.id || data.currentModel?.effective_plan_code || data.currentModel?.contracted_plan_code || data.current.name);
@@ -64042,13 +64127,15 @@ function mxResetLogoPreview(){
     const headerBenefits = data.current.features
       .map(clean)
       .filter((feature)=> feature && !feature.includes(':'));
-    if(els.headerBenefits){
+    const freeHeaderRendered = updateFreeCommercialHeader(activePaid, validCheckoutSummary(activePaid));
+    if(els.headerBenefits && !freeHeaderRendered){
+      els.headerBenefits.classList.remove('subp-band-benefits--free-hero');
       els.headerBenefits.innerHTML = headerBenefits.length
         ? `<span class="subp-band-benefits-label">Incluye:</span>${headerBenefits.map((feature)=>`<span class="subp-band-benefit"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check_circle</span>${escapeHtml(feature)}</span>`).join('')}`
         : '';
       els.headerBenefits.classList.toggle('d-none', headerBenefits.length === 0);
     }
-    if(els.headerNote){
+    if(els.headerNote && !freeHeaderRendered){
       const note = clean(data.current.alert);
       const simulationNotice = data.currentModel?.qa_plan_simulated === true
         ? 'Simulación QA local — sin consulta backend.'
@@ -64096,6 +64183,7 @@ function mxResetLogoPreview(){
     const focusedPlanId = activePaid && !freeQaMode ? normalizePlanId(data.focusedPlanId) : '';
     const focusMode = !!focusedPlanId;
     const recommendedId = !activePaid ? normalizePlanId(recommendedPlanId()) : '';
+    updateFreeCommercialHeader(activePaid, summary);
     renderPricingModeToggle();
     els.catalog.classList.toggle('d-none', !!summary);
     if(els.pricingToggle){

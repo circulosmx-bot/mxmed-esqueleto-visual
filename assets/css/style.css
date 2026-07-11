@@ -6825,6 +6825,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-checkout-summary[data-target-plan="optimo"]{ --subp-summary-main:#0A4F8F; --subp-summary-dark:#003F63; --subp-summary-soft:#EAF4FB; --subp-summary-soft-2:#F7FBFE; --subp-summary-border:#9BC8EA; --subp-summary-shadow-rgb:10,79,143 }
 .subp-checkout-summary[data-target-plan="pro"]{ --subp-summary-main:#6750D8; --subp-summary-dark:#4B3DD1; --subp-summary-soft:#F2EFFF; --subp-summary-soft-2:#FBFAFF; --subp-summary-border:#C6B8FF; --subp-summary-shadow-rgb:103,80,216 }
 .subp-payment-shell-card{ display:grid; gap:14px; padding:18px; border:1px solid #d7e8ef; border-radius:14px; background:#fff; box-shadow:0 14px 30px rgba(0,49,84,.08); color:#071943 }
+.subp-payment-shell-card--new-subscription{ gap:16px; border-color:#dbe6f2; border-radius:16px; box-shadow:0 16px 34px rgba(0,49,84,.09) }
 .subp-payment-stepper{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0 0 4px; padding:0; list-style:none }
 .subp-payment-stepper-item{ display:flex; align-items:center; gap:8px; min-width:0; color:#8a98aa; font-size:.84rem; font-weight:850; line-height:1.1 }
 .subp-payment-stepper-item:not(:last-child)::after{ content:""; flex:1 1 auto; height:1px; min-width:18px; background:#d8e0eb; margin-left:4px }
@@ -6839,6 +6840,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-payment-safe{ display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; color:#071943; font-size:.82rem; font-weight:800; line-height:1.25; text-align:right }
 .subp-payment-safe .material-symbols-rounded{ color:#071943; font-size:20px; line-height:1 }
 .subp-payment-plan-pair{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.subp-payment-shell-card--new-subscription .subp-payment-plan-pair{ gap:14px }
+.subp-payment-shell-card--new-subscription .subp-payment-plan-pair .subp-checkout-summary-card{ border-radius:14px }
 .subp-payment-plan-inline{ display:flex; align-items:center; gap:12px; min-width:0 }
 .subp-payment-plan-inline > div{ display:grid; gap:2px; min-width:0 }
 .subp-payment-plan-inline span:not(.material-symbols-rounded){ color:#34445b; font-size:.78rem; font-weight:800; line-height:1 }
@@ -6846,13 +6849,24 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-payment-plan-inline small{ color:#34445b; font-size:.82rem; font-weight:700; line-height:1.12 }
 .subp-payment-plan-icon{ display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border-radius:50%; background:var(--subp-summary-main); color:#fff; font-size:26px; line-height:1; box-shadow:0 8px 18px rgba(var(--subp-summary-shadow-rgb),.18) }
 .subp-payment-plan-icon--current{ background:#4f62d9 }
+.subp-payment-shell-card--new-subscription .subp-payment-plan-icon--current{ background:#eef4f8; color:#8a9aa8; box-shadow:none }
+.subp-payment-shell-card--new-subscription .subp-payment-plan-icon:not(.subp-payment-plan-icon--current){ background:var(--subp-summary-main); box-shadow:0 10px 22px rgba(var(--subp-summary-shadow-rgb),.22) }
 .subp-payment-facts{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px }
+.subp-payment-shell-card--new-subscription .subp-payment-facts{ grid-template-columns:1fr 1fr minmax(230px,1fr); border:1px solid #dbe6f2; border-radius:14px; background:#fff; overflow:hidden }
+.subp-payment-shell-card--new-subscription .subp-payment-facts .subp-checkout-summary-card{ border:0; border-radius:0; box-shadow:none; border-right:1px solid #e3edf5 }
+.subp-payment-shell-card--new-subscription .subp-payment-facts .subp-checkout-summary-card:last-child{ border-right:0 }
 .subp-payment-facts .subp-checkout-summary-card h4{ font-size:1rem; line-height:1.2 }
 .subp-payment-facts .subp-checkout-summary-card:first-child h4{ font-size:1.15rem }
 .subp-payment-secure-note{ display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border:1px solid #d9e5ff; border-radius:10px; background:#f2f6ff; color:#164edb; font-size:.86rem; font-weight:750; line-height:1.32 }
 .subp-payment-secure-note .material-symbols-rounded{ flex:0 0 auto; color:#164edb; font-size:20px; line-height:1 }
+.subp-payment-secure-note--detailed{ border-color:#d8e8ff; background:#f4f8ff; color:#0d3f96 }
+.subp-payment-secure-note--detailed span:last-child{ display:grid; gap:2px }
+.subp-payment-secure-note--detailed strong{ color:#0d3f96; font-size:.9rem; font-weight:950; line-height:1.15 }
+.subp-payment-secure-note--detailed small{ color:#49636f; font-size:.8rem; font-weight:650; line-height:1.25 }
 .subp-payment-primary-action{ display:inline-flex !important; align-items:center; justify-content:center; gap:8px; min-height:42px; padding-inline:18px !important; font-weight:900 !important }
 .subp-payment-primary-action .material-symbols-rounded{ font-size:20px; line-height:1 }
+.subp-payment-primary-copy{ display:grid; gap:2px; justify-items:center; line-height:1.12 }
+.subp-payment-primary-copy small{ color:rgba(255,255,255,.86); font-size:.76rem; font-weight:750; line-height:1.15 }
 .subp-payment-total-card{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px; border:1px solid #d7e8ef; border-radius:12px; background:#fff; box-shadow:0 8px 18px rgba(0,49,84,.05) }
 .subp-payment-total-amount{ display:grid; gap:4px; justify-items:end; text-align:right }
 .subp-payment-total-amount span{ color:#34445b; font-size:.82rem; font-weight:750; line-height:1 }
@@ -6952,8 +6966,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-band-benefit .mat-ico{ font-size:18px; line-height:1; color:#d7fff6 }
 .subp-band-note{ color:#e8fbff; font-size:1.14rem; font-weight:850; line-height:1.15 }
 .subp-band-note--max-plan{ color:rgba(255,255,255,.9); font-size:.93rem; font-weight:400; line-height:1.28; max-width:100% }
+.subp-band-benefits--free-hero{ display:grid; align-items:start; gap:10px; max-width:780px; font-size:1rem; line-height:1.1 }
+.subp-free-hero-kicker{ display:inline-flex; align-items:center; justify-content:center; width:max-content; max-width:100%; padding:6px 13px; border-radius:999px; background:rgba(255,255,255,.16); color:#dffaff; font-size:.78rem; font-weight:950; line-height:1; text-transform:uppercase; letter-spacing:.03em }
+.subp-free-hero-main{ display:flex; align-items:center; justify-content:space-between; gap:24px; min-width:0 }
+.subp-free-hero-copy{ display:block; min-width:0; max-width:690px; color:#fff; font-size:1.72rem; font-weight:950; line-height:1.12; overflow-wrap:anywhere }
+.subp-free-hero-icon{ display:grid; place-items:center; flex:0 0 82px; width:82px; height:82px; border-radius:22px; background:rgba(255,255,255,.16); color:#d9fbff; font-size:54px; line-height:1; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14) }
 #p-suscripcion.subp-qa-free .subp-band,
-#p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:max-content minmax(320px,1fr) }
+#p-suscripcion.subp-free-plan .subp-band{ position:relative; grid-template-columns:minmax(0,1fr); align-items:center; min-height:164px; padding:26px 30px; overflow:hidden; background:linear-gradient(135deg,#00aebe 0%,#0075c9 100%) }
+#p-suscripcion.subp-free-summary-active .subp-band{ background:linear-gradient(135deg,#00aebe 0%,#086bc6 100%) }
+#p-suscripcion.subp-qa-free .subp-plan-stack,
+#p-suscripcion.subp-free-plan .subp-plan-stack{ display:none }
 #p-suscripcion.subp-qa-free .subp-band-summary,
 #p-suscripcion.subp-qa-free .subp-band > .d-flex,
 #p-suscripcion.subp-qa-free [data-subp-renew],
@@ -6962,6 +6984,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-suscripcion.subp-free-plan .subp-band > .d-flex,
 #p-suscripcion.subp-free-plan [data-subp-renew],
 #p-suscripcion.subp-free-plan #subp-autorenew{ display:none !important }
+#p-suscripcion.subp-free-plan .subp-band-benefit-zone{ max-width:100%; width:100% }
+#p-suscripcion.subp-free-plan .subp-band-note{ max-width:580px; color:#edfdff; font-size:1rem; font-weight:750; line-height:1.35 }
 .subp-current{ display:none !important; border:1px solid #d7e8ef; margin-bottom:0 !important; padding:0 !important }
 .subp-current > .d-flex{ align-items:center !important }
 .subp-current-renewal{ display:none !important }
@@ -7046,6 +7070,31 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan--renewal-only .text-muted{ opacity:.58 }
 .subp-plan--renewal-only .subp-feature{ color:#6b7d85; font-weight:700 }
 .subp-plan--renewal-only .subp-feature-check{ opacity:.42; filter:grayscale(.4) saturate(.55) }
+#p-suscripcion.subp-free-plan .subp-plan-grid{ gap:16px }
+#p-suscripcion.subp-free-plan .subp-plan{ min-height:430px; padding:18px; border-color:#dbeaf0; border-radius:14px; box-shadow:0 12px 30px rgba(0,49,84,.08) }
+#p-suscripcion.subp-free-plan .subp-plan:hover{ border-color:var(--subp-plan-border); box-shadow:0 16px 34px rgba(var(--subp-plan-shadow-rgb),.13); transform:translateY(-1px) }
+#p-suscripcion.subp-free-plan .subp-plan--selected{ border-color:var(--subp-plan-main); box-shadow:0 0 0 4px rgba(var(--subp-plan-shadow-rgb),.18), 0 16px 34px rgba(0,49,84,.12) }
+#p-suscripcion.subp-free-plan .subp-plan .subp-plan-title{ display:grid; justify-items:center; min-height:0; margin:0 0 14px; padding:0 8px; background:transparent; color:#071943; text-align:center; text-transform:none }
+#p-suscripcion.subp-free-plan .subp-plan-title-copy{ justify-items:center; gap:7px; width:100% }
+#p-suscripcion.subp-free-plan .subp-plan-title-line{ width:auto; justify-content:center }
+#p-suscripcion.subp-free-plan .subp-plan-title-text{ font-size:1.02em; line-height:1.05 }
+#p-suscripcion.subp-free-plan .subp-plan-title-tagline{ max-width:210px; color:#49636f; font-size:.58em; font-weight:750; line-height:1.28; text-align:center }
+#p-suscripcion.subp-free-plan .subp-plan-icon-panel{ min-height:88px; margin:2px 0 14px; border:0; border-radius:18px; background:linear-gradient(180deg,var(--subp-plan-soft-2) 0%,var(--subp-plan-soft) 100%) }
+#p-suscripcion.subp-free-plan .subp-plan-icon{ font-size:3.5rem }
+#p-suscripcion.subp-free-plan .subp-plan-pricing{ margin-top:auto; border-color:#dbeaf0; border-radius:12px; background:#fff; box-shadow:0 8px 20px rgba(0,49,84,.05) }
+#p-suscripcion.subp-free-plan .subp-plan-pricing-top{ display:grid; justify-items:center; text-align:center }
+#p-suscripcion.subp-free-plan .subp-plan-pricing-main{ justify-content:center }
+#p-suscripcion.subp-free-plan .subp-plan-pricing-terms{ justify-items:center; max-width:100%; text-align:center }
+#p-suscripcion.subp-free-plan .subp-plan-pricing-daily{ justify-content:center; text-align:center }
+#p-suscripcion.subp-free-plan .subp-plan-features{ gap:7px; margin-top:0 !important }
+#p-suscripcion.subp-free-plan .subp-plan-features .subp-feature{ gap:9px; color:#34445b; font-size:.92rem; font-weight:750 }
+#p-suscripcion.subp-free-plan .subp-feature-check{ flex-basis:18px; width:18px; height:18px }
+#p-suscripcion.subp-free-plan .subp-btn{ min-height:42px; margin-top:16px; border-radius:9px; background:#fff; color:#164edb; border-color:#164edb; font-weight:900 }
+#p-suscripcion.subp-free-plan .subp-btn:hover,
+#p-suscripcion.subp-free-plan .subp-btn:focus-visible{ background:#164edb; color:#fff; border-color:#164edb; outline:0 }
+#p-suscripcion.subp-free-plan .subp-plan-badge{ top:-10px; right:18px; border-radius:999px; padding:6px 10px; background:#eef7fb; color:#587887; border:1px solid #d1e7ef; box-shadow:0 6px 16px rgba(0,49,84,.08) }
+#p-suscripcion.subp-free-plan .subp-plan[data-plan="estandar"] .subp-plan-badge{ background:#dff9fb; color:#008EA0; border-color:#a7e7ee }
+#p-suscripcion.subp-free-plan .subp-plan--selected .subp-plan-badge{ background:var(--subp-plan-main); color:#fff; border-color:var(--subp-plan-main) }
 .subp-save{ color:var(--subp-plan-main); font-weight:700; font-size:.9rem; margin-top:6px }
 .subp-plan-downgrade-note{ margin-top:8px; padding:9px 10px; border:1px solid #d2e5ed; border-radius:8px; background:#f6fbfd; color:#315c6c; font-size:.9rem; font-weight:750; line-height:1.32; opacity:.86 }
 .subp-plan--renewal-only.subp-plan--focus-selected .subp-plan-downgrade-note{ border-color:var(--subp-plan-border); background:var(--subp-plan-soft); color:var(--subp-plan-dark); box-shadow:0 8px 18px rgba(var(--subp-plan-shadow-rgb),.16); opacity:1; filter:none }
@@ -7188,6 +7237,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-payment-safe{ justify-content:flex-start; text-align:left }
   .subp-payment-plan-pair{ grid-template-columns:1fr }
   .subp-payment-facts{ grid-template-columns:1fr }
+  .subp-payment-shell-card--new-subscription .subp-payment-facts{ grid-template-columns:1fr }
+  .subp-payment-shell-card--new-subscription .subp-payment-facts .subp-checkout-summary-card{ border-right:0; border-bottom:1px solid #e3edf5 }
+  .subp-payment-shell-card--new-subscription .subp-payment-facts .subp-checkout-summary-card:last-child{ border-bottom:0 }
   .subp-payment-total-card{ display:grid; justify-items:start }
   .subp-payment-total-amount{ justify-items:start; text-align:left }
   .subp-checkout-summary-head{ display:grid }
@@ -7198,6 +7250,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-plan-stack{ justify-items:start }
   #p-suscripcion.subp-qa-free .subp-band,
   #p-suscripcion.subp-free-plan .subp-band{ grid-template-columns:minmax(0,1fr) }
+  .subp-free-hero-main{ align-items:flex-start; gap:14px }
+  .subp-free-hero-copy{ font-size:1.32rem }
+  .subp-free-hero-icon{ flex-basis:58px; width:58px; height:58px; border-radius:16px; font-size:38px }
   .subp-band-benefit-zone{ justify-items:start; width:100%; max-width:100%; grid-template-columns:minmax(0,1fr) }
   .subp-band-benefits,
   .subp-band-benefit,
