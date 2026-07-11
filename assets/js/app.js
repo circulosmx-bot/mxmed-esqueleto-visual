@@ -60539,15 +60539,15 @@ function mxResetLogoPreview(){
     return summary && summary.flowType === 'new_subscription';
   }
 
-  function freeCommercialHeaderHtml(hasTarget){
+  function freeCommercialHeaderHtml(hasTarget, commercialNote = '', simulationNotice = ''){
     const title = hasTarget
       ? 'Tu Perfil continúa en Modo Gratuito, pero estás a un paso de llevarlo al siguiente nivel.'
       : 'Actualmente tu Perfil se encuentra en Modo Gratuito';
-    const icon = hasTarget ? 'trending_up' : 'workspace_premium';
     return `<span class="subp-free-hero-kicker">${hasTarget ? 'Siguiente paso' : 'Planes'}</span>
       <span class="subp-free-hero-main">
         <span class="subp-free-hero-copy">${escapeHtml(title)}</span>
-        <span class="material-symbols-rounded subp-free-hero-icon" aria-hidden="true">${escapeHtml(icon)}</span>
+        ${commercialNote ? `<span class="subp-free-hero-subtitle">${escapeHtml(commercialNote)}</span>` : ''}
+        ${simulationNotice ? `<span class="subp-free-hero-simulation">${escapeHtml(simulationNotice)}</span>` : ''}
       </span>`;
   }
 
@@ -60562,15 +60562,18 @@ function mxResetLogoPreview(){
       return false;
     }
 
-    els.headerBenefits.innerHTML = freeCommercialHeaderHtml(hasTarget);
-    els.headerBenefits.classList.remove('d-none');
     const simulationNotice = data.currentModel?.qa_plan_simulated === true
       ? 'Simulación QA local — sin consulta backend.'
       : '';
     const commercialNote = hasTarget
       ? 'Revisa tu elección y continúa al siguiente paso de forma segura.'
       : 'Impulsa tu práctica médica con el plan que mejor se adapte a tus necesidades.';
-    els.headerNote.textContent = [commercialNote, simulationNotice].filter(Boolean).join(' ');
+    const planContext = pane.querySelector('.subp-plan-context');
+    if(planContext) planContext.textContent = hasTarget ? 'Siguiente paso' : 'Plan actual';
+    if(els.planName) els.planName.textContent = 'Modo Gratuito';
+    els.headerBenefits.innerHTML = freeCommercialHeaderHtml(hasTarget, commercialNote, simulationNotice);
+    els.headerBenefits.classList.remove('d-none');
+    els.headerNote.innerHTML = '<span class="subp-free-secure"><span class="material-symbols-rounded" aria-hidden="true">shield_lock</span><span><strong>Pago 100% seguro con Stripe</strong><small>Tus datos están protegidos.</small></span></span>';
     els.headerNote.classList.remove('d-none', 'subp-band-note--max-plan');
     return true;
   }
