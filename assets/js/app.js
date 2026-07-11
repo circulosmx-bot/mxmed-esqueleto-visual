@@ -59258,7 +59258,8 @@ function mxResetLogoPreview(){
       targetPlanId: '',
       preparing: false,
       requestId: 0,
-      error: ''
+      error: '',
+      contextKey: ''
     },
     paymentPayloadPreview: {
       checkoutSummary: null,
@@ -59273,6 +59274,7 @@ function mxResetLogoPreview(){
       renewal: null
     },
     selectedPlanId: '',
+    selectedPlanContextKey: '',
     focusedPlanId: '',
     history: [],
     currentModel: null,
@@ -59769,11 +59771,15 @@ function mxResetLogoPreview(){
     };
   }
 
-  function activationStateEndpointFromContext(){
+  function hasPaymentActivationStateReference(options = readActivationStateOptions()){
+    return !!(clean(options.checkout_intent_uuid) || clean(options.payment_intent_uuid));
+  }
+
+  function activationStateEndpointFromContext(options = readActivationStateOptions()){
     const context = data.contextInfo || {};
     const entityType = clean(context.entity_type);
     const entityId = clean(context.entity_id || context.doctor_id);
-    return buildPaymentActivationStateEndpoint(entityType, entityId, readActivationStateOptions());
+    return buildPaymentActivationStateEndpoint(entityType, entityId, options);
   }
 
   function activationMessageFromState(state, httpStatus){
@@ -59958,8 +59964,20 @@ function mxResetLogoPreview(){
     if(isQaPlanSimulationActive()){
       return false;
     }
+    const options = readActivationStateOptions();
+    if(!hasPaymentActivationStateReference(options)){
+      data.activationState = {
+        state: 'idle',
+        httpStatus: 0,
+        payload: null,
+        error: '',
+        message: ''
+      };
+      renderActivationState();
+      return false;
+    }
     const requestSeq = currentSubscriptionRequestSeq;
-    const endpoint = activationStateEndpointFromContext();
+    const endpoint = activationStateEndpointFromContext(options);
     if(!endpoint){
       applyActivationStateError(422, 'invalid_request', 'No se pudo resolver el contexto para consultar activación post-pago.');
       return false;
@@ -60327,7 +60345,9 @@ function mxResetLogoPreview(){
         return false;
       }
       applyReadModel(payload.data, payload.meta || {}, contextInfo || {});
-      await loadPaymentActivationState();
+      if(hasPaymentActivationStateReference()){
+        await loadPaymentActivationState();
+      }
       return true;
     }catch(_){
       if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
@@ -60467,24 +60487,48 @@ function mxResetLogoPreview(){
     return data.plans.some((plan)=> plan.id === 'estandar') ? 'estandar' : (data.plans[0]?.id || '');
   }
 
+  function currentPlanSelectionContextKey(){
+    const context = data.contextInfo || {};
+    const entityType = clean(context.entity_type).toLowerCase() || 'doctor';
+    const entityId = clean(context.entity_id || context.doctor_id || '');
+    const qaPlan = clean(data.qaPlan?.value).toLowerCase() || 'real';
+    const currentPlan = canonicalBackendPlanCode(
+      clean(data.currentModel?.effective_plan_code)
+      || clean(data.currentModel?.contracted_plan_code)
+      || clean(data.currentModel?.plan_code)
+      || clean(data.current?.id)
+    ) || 'free';
+    return [qaPlan, entityType, entityId, currentPlan].join(':');
+  }
+
+  function clearExplicitPlanSelection(){
+    data.selectedPlanId = '';
+    data.selectedPlanContextKey = '';
+  }
+
   function ensureSelectedPlan(activePaid){
     const selected = findPlanById(data.selectedPlanId);
-    if(isQaFreePlanMode()){
-      data.selectedPlanId = '';
+    if(!selected){
+      clearExplicitPlanSelection();
       return null;
     }
+    if(clean(data.selectedPlanContextKey) !== currentPlanSelectionContextKey()){
+      clearExplicitPlanSelection();
+      return null;
+    }
+
     if(activePaid){
       const currentRank = planRank(data.current.id);
       if(currentRank !== null && selected && planRank(selected.id) > currentRank){
         return selected;
       }
-      data.selectedPlanId = '';
+      clearExplicitPlanSelection();
       return null;
     }
-    if(selected) return selected;
-    const recommended = findPlanById(recommendedPlanId());
-    data.selectedPlanId = recommended?.id || data.plans[0]?.id || '';
-    return findPlanById(data.selectedPlanId);
+
+    if(planFlowType(selected, false) === 'new_subscription') return selected;
+    clearExplicitPlanSelection();
+    return null;
   }
 
   function monthlyEquivalent(plan){
@@ -62672,6 +62716,7 @@ function mxResetLogoPreview(){
 
   function validCheckoutSummary(activePaid){
     if(!data.checkoutSummary.visible) return null;
+    if(clean(data.checkoutSummary.contextKey) !== currentPlanSelectionContextKey()) return null;
     const plan = findPlanById(data.checkoutSummary.targetPlanId);
     if(!plan) return null;
     const flowType = planFlowType(plan, activePaid);
@@ -62690,6 +62735,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.preparing = false;
     data.checkoutSummary.requestId += 1;
     data.checkoutSummary.error = '';
+    data.checkoutSummary.contextKey = '';
     publishPaymentPayloadPreview('checkoutSummary', null);
     if(render) renderCatalog();
   }
@@ -62698,6 +62744,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.visible = false;
     data.checkoutSummary.preparing = false;
     data.checkoutSummary.error = clean(message) || 'No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.';
+    data.checkoutSummary.contextKey = '';
     publishPaymentPayloadPreview('checkoutSummary', null);
   }
 
@@ -62710,12 +62757,15 @@ function mxResetLogoPreview(){
     const targetPlanId = normalizePlanId(plan.id);
     if(data.checkoutSummary.preparing && normalizePlanId(data.checkoutSummary.targetPlanId) === targetPlanId) return;
     const requestId = Date.now() + Math.random();
+    const contextKey = currentPlanSelectionContextKey();
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = plan.id;
     data.checkoutSummary.preparing = true;
     data.checkoutSummary.requestId = requestId;
     data.checkoutSummary.error = '';
+    data.checkoutSummary.contextKey = contextKey;
     data.selectedPlanId = plan.id;
+    data.selectedPlanContextKey = contextKey;
     data.focusedPlanId = activePaid ? targetPlanId : data.focusedPlanId;
     data.upgradeCheckout.visible = false;
     data.upgradeCheckout.accepted = false;
@@ -62742,6 +62792,7 @@ function mxResetLogoPreview(){
       data.checkoutSummary.preparing = false;
       data.checkoutSummary.error = '';
       data.checkoutSummary.targetPlanId = plan.id;
+      data.checkoutSummary.contextKey = contextKey;
     }catch(_){
       if(data.checkoutSummary.requestId !== requestId) return;
       checkoutSummaryRecoverableError('No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.');
@@ -63661,7 +63712,7 @@ function mxResetLogoPreview(){
     data.upgradeCheckout.state = 'idle';
     data.upgradeCheckout.message = '';
     data.upgradeCheckout.error = '';
-    data.selectedPlanId = '';
+    clearExplicitPlanSelection();
     renderUpgradeCheckoutFlow();
     renderCatalog();
   }
@@ -63910,6 +63961,22 @@ function mxResetLogoPreview(){
       renderUpgradeCheckoutFlow();
       return;
     }
+    if(!selected){
+      els.planSelection.classList.add('d-none');
+      if(els.selectedPlanTitle) els.selectedPlanTitle.textContent = '';
+      if(els.selectedPlanSummary) els.selectedPlanSummary.textContent = '';
+      if(els.planContinue){
+        els.planContinue.textContent = 'Continuar con este plan';
+        els.planContinue.disabled = true;
+        els.planContinue.classList.add('disabled');
+      }
+      if(els.selectedPlanMessage){
+        els.selectedPlanMessage.textContent = '';
+        els.selectedPlanMessage.classList.add('d-none');
+      }
+      renderUpgradeCheckoutFlow();
+      return;
+    }
     els.planSelection.classList.remove('d-none');
     if(els.selectedPlanTitle){
       els.selectedPlanTitle.textContent = selected
@@ -63983,9 +64050,13 @@ function mxResetLogoPreview(){
     }
     if(els.headerNote){
       const note = clean(data.current.alert);
-      els.headerNote.textContent = note;
-      els.headerNote.classList.toggle('subp-band-note--max-plan', note === SUBSCRIPTION_MAX_PLAN_NOTICE);
-      els.headerNote.classList.toggle('d-none', !note);
+      const simulationNotice = data.currentModel?.qa_plan_simulated === true
+        ? 'Simulación QA local — sin consulta backend.'
+        : '';
+      const visibleNote = [note, simulationNotice].filter(Boolean).join(' ');
+      els.headerNote.textContent = visibleNote;
+      els.headerNote.classList.toggle('subp-band-note--max-plan', note === SUBSCRIPTION_MAX_PLAN_NOTICE && !simulationNotice);
+      els.headerNote.classList.toggle('d-none', !visibleNote);
     }
     if(els.currentAlert){
       if(data.current.alert){
@@ -64024,6 +64095,7 @@ function mxResetLogoPreview(){
     const selected = ensureSelectedPlan(activePaid);
     const focusedPlanId = activePaid && !freeQaMode ? normalizePlanId(data.focusedPlanId) : '';
     const focusMode = !!focusedPlanId;
+    const recommendedId = !activePaid ? normalizePlanId(recommendedPlanId()) : '';
     renderPricingModeToggle();
     els.catalog.classList.toggle('d-none', !!summary);
     if(els.pricingToggle){
@@ -64034,18 +64106,19 @@ function mxResetLogoPreview(){
       const flowType = planFlowType(p, activePaid);
       const isCurrent = flowType === 'current';
       const isSelected = selected && normalizePlanId(selected.id) === normalizePlanId(p.id);
+      const isRecommended = !isSelected && flowType === 'new_subscription' && normalizePlanId(p.id) === recommendedId;
       const isFocused = focusMode && normalizePlanId(p.id) === focusedPlanId;
       const isMuted = focusMode && !isFocused;
       const isPreparingSummary = data.checkoutSummary.preparing && normalizePlanId(data.checkoutSummary.targetPlanId) === normalizePlanId(p.id);
       const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
       const hasCurrentUpgradePrompt = isCurrent && upgradePlansFor(p).length > 0;
       const hasCurrentConditionsControl = activePaid && isCurrent && !freeQaMode;
-      const badge = freeQaMode
-        ? 'Disponible'
-        : isSelected
+      const badge = isSelected
         ? 'Seleccionado'
         : flowType === 'current'
           ? 'Tu plan actual'
+          : isRecommended
+            ? 'Recomendado'
           : flowType === 'upgrade_now'
             ? 'Mejorar ahora'
             : flowType === 'downgrade_at_renewal'
@@ -64224,12 +64297,13 @@ function mxResetLogoPreview(){
 
   function resetPlanQaVisualSelection(){
     currentSubscriptionRequestSeq += 1;
-    data.selectedPlanId = '';
+    clearExplicitPlanSelection();
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = '';
     data.checkoutSummary.preparing = false;
     data.checkoutSummary.requestId += 1;
     data.checkoutSummary.error = '';
+    data.checkoutSummary.contextKey = '';
     data.paymentPayloadPreview.checkoutSummary = null;
     data.paymentServerPreview.checkoutSummary = null;
     resetPaymentRouteCreate('checkoutSummary');
