@@ -61562,7 +61562,7 @@ function mxResetLogoPreview(){
     return `<ol class="subp-payment-stepper" aria-label="Progreso del pago seguro">
       ${steps.map((step, index)=>{
         const state = checkoutSummaryStepState(activeStep, step.key);
-        const number = state === 'complete' ? '✓' : String(index + 1);
+        const number = String(index + 1);
         const iconClass = '';
         return `<li class="subp-payment-stepper-item" data-state="${escapeHtml(state)}" ${state === 'active' ? 'aria-current="step"' : ''}>
           <span class="subp-payment-stepper-dot ${iconClass}" aria-hidden="true">${escapeHtml(number)}</span>
@@ -61729,7 +61729,9 @@ function mxResetLogoPreview(){
     const content = subcopy
       ? `<span class="subp-payment-primary-copy"><span>${escapeHtml(label)}</span><small>${escapeHtml(subcopy)}</small></span>`
       : escapeHtml(label);
-    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">${content}<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>`;
+    const actionIcon = clean(payload?.route_type) === 'new_subscription' ? 'lock' : 'arrow_forward';
+    const iconHtml = `<span class="material-symbols-rounded" aria-hidden="true">${escapeHtml(actionIcon)}</span>`;
+    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-route-create="${escapeHtml(slot)}">${actionIcon === 'lock' ? iconHtml : ''}${content}${actionIcon !== 'lock' ? iconHtml : ''}</button>`;
   }
 
   function paymentRouteCheckoutBridgeActionHtml(slot){
@@ -63299,20 +63301,22 @@ function mxResetLogoPreview(){
     els.checkoutSummary.dataset.renderingPaymentShell = '1';
     els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card subp-payment-shell-card--new-subscription subp-payment-shell-card--cadence" data-subp-payment-shell data-step="summary">
       ${checkoutSummaryStepperHtml('summary')}
-      <article class="subp-new-summary-hero">
-        <div class="subp-new-summary-hero-icon">
-          <span class="material-symbols-rounded" aria-hidden="true">${escapeHtml(checkoutSummaryPlanIconSymbol(plan?.id))}</span>
-        </div>
-        <div class="subp-new-summary-hero-copy">
-          <h3>Has elegido el Plan <span>${escapeHtml(targetLabel)}</span></h3>
-          <p>${escapeHtml(tagline)}</p>
-          <small>Periodo por confirmar</small>
-        </div>
-      </article>
-      <article class="subp-new-summary-benefits">
-        <h4>Funciones que activarás con este plan</h4>
-        ${checkoutSummaryTargetBenefitsGridHtml(plan)}
-      </article>
+      <section class="subp-new-summary-overview" aria-label="Resumen del plan elegido">
+        <article class="subp-new-summary-hero">
+          <div class="subp-new-summary-hero-icon">
+            <span class="material-symbols-rounded" aria-hidden="true">${escapeHtml(checkoutSummaryPlanIconSymbol(plan?.id))}</span>
+          </div>
+          <div class="subp-new-summary-hero-copy">
+            <h3>Has elegido el Plan <span>${escapeHtml(targetLabel)}</span></h3>
+            <p>${escapeHtml(tagline)}</p>
+            <small>Periodo por confirmar</small>
+          </div>
+        </article>
+        <article class="subp-new-summary-benefits">
+          <h4>Funciones que activarás con este plan</h4>
+          ${checkoutSummaryTargetBenefitsGridHtml(plan)}
+        </article>
+      </section>
       <section class="subp-new-summary-cadence" aria-labelledby="subp-new-summary-cadence-title">
         <h4 id="subp-new-summary-cadence-title">¿Cómo prefieres pagar?</h4>
         <div class="subp-new-summary-cadence-grid">
