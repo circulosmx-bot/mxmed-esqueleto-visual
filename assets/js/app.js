@@ -59229,6 +59229,10 @@ function mxResetLogoPreview(){
     monthly: 'Mensual'
   };
   const PAYMENT_ROUTE_PREPARED_STORAGE_KEY = 'mxmed.subscription.paymentRoutePrepared.v1';
+  const CHECKOUT_SUMMARY_CADENCE_PREVIEW_SLOTS = Object.freeze({
+    annual: 'checkoutSummaryAnnual',
+    monthly: 'checkoutSummaryMonthly'
+  });
 
   const data = {
     billing: 'yearly',
@@ -59259,7 +59263,22 @@ function mxResetLogoPreview(){
       preparing: false,
       requestId: 0,
       error: '',
-      contextKey: ''
+      contextKey: '',
+      selectedBillingPeriod: '',
+      cadencePreviews: {
+        annual: null,
+        monthly: null
+      },
+      cadencePayloads: {
+        annual: null,
+        monthly: null
+      },
+      cadenceErrors: {
+        annual: '',
+        monthly: ''
+      },
+      cadenceLoading: false,
+      cadenceRequestId: 0
     },
     paymentPayloadPreview: {
       checkoutSummary: null,
@@ -60848,11 +60867,14 @@ function mxResetLogoPreview(){
     };
   }
 
-  function buildNewSubscriptionPaymentPayloadPreview(plan){
+  function buildNewSubscriptionPaymentPayloadPreview(plan, billingPeriodOverride = ''){
     const warnings = basePaymentPayloadWarnings();
     const context = currentEntityContextForPaymentPayload(warnings);
     const targetPlanCode = backendPlanCodeFromUiPlan(plan?.id) || null;
-    const billingPeriod = billingPeriodForPlanCheckoutPayload('new_subscription', warnings);
+    const normalizedOverride = clean(billingPeriodOverride).toLowerCase();
+    const billingPeriod = normalizedOverride === 'annual' || normalizedOverride === 'monthly'
+      ? normalizedOverride
+      : billingPeriodForPlanCheckoutPayload('new_subscription', warnings);
     const amountCents = priceCentsForPlanAndPeriod(plan, billingPeriod);
     const pricingContract = planPricingContract(plan, billingPeriod);
     if(!targetPlanCode) warnings.push('missing_target_plan_code');
@@ -60917,6 +60939,151 @@ function mxResetLogoPreview(){
   function buildCheckoutPaymentPayloadPreview(plan, flowType){
     if(flowType === 'upgrade_now') return buildUpgradeSubscriptionPaymentPayloadPreview(plan);
     return buildNewSubscriptionPaymentPayloadPreview(plan);
+  }
+
+  function checkoutSummaryCadenceSlot(billingPeriod){
+    const period = clean(billingPeriod).toLowerCase();
+    return CHECKOUT_SUMMARY_CADENCE_PREVIEW_SLOTS[period] || '';
+  }
+
+  function checkoutSummaryCadenceLabel(billingPeriod){
+    const period = clean(billingPeriod).toLowerCase();
+    if(period === 'annual') return 'Anual';
+    if(period === 'monthly') return 'Mensual';
+    return 'pendiente';
+  }
+
+  function resetCheckoutSummaryCadenceState({ bumpRequest = true } = {}){
+    data.checkoutSummary.selectedBillingPeriod = '';
+    data.checkoutSummary.cadencePreviews = { annual: null, monthly: null };
+    data.checkoutSummary.cadencePayloads = { annual: null, monthly: null };
+    data.checkoutSummary.cadenceErrors = { annual: '', monthly: '' };
+    data.checkoutSummary.cadenceLoading = false;
+    if(bumpRequest) data.checkoutSummary.cadenceRequestId += 1;
+    if(data.paymentServerPreview){
+      data.paymentServerPreview.checkoutSummaryAnnual = null;
+      data.paymentServerPreview.checkoutSummaryMonthly = null;
+    }
+  }
+
+  function checkoutSummaryCadencePayload(billingPeriod){
+    const period = clean(billingPeriod).toLowerCase();
+    return data.checkoutSummary?.cadencePayloads?.[period] || null;
+  }
+
+  function checkoutSummaryCadencePreviewState(billingPeriod){
+    const period = clean(billingPeriod).toLowerCase();
+    const stored = data.checkoutSummary?.cadencePreviews?.[period] || null;
+    if(stored) return stored;
+    const slot = checkoutSummaryCadenceSlot(period);
+    return slot ? data.paymentServerPreview?.[slot] || null : null;
+  }
+
+  function checkoutSummaryCadencePreviewData(billingPeriod){
+    const state = checkoutSummaryCadencePreviewState(billingPeriod);
+    return state?.state === 'success' && state.data ? state.data : null;
+  }
+
+  function checkoutSummaryCadenceAvailable(billingPeriod){
+    const period = clean(billingPeriod).toLowerCase();
+    if(period !== 'annual' && period !== 'monthly') return false;
+    const payload = checkoutSummaryCadencePayload(period);
+    if(!payload) return false;
+    if(isQaPlanSimulationActive()) return true;
+    const state = checkoutSummaryCadencePreviewState(period);
+    return state?.state === 'success';
+  }
+
+  function checkoutSummaryCadenceContract(billingPeriod, plan){
+    const period = clean(billingPeriod).toLowerCase();
+    const preview = checkoutSummaryCadencePreviewData(period);
+    if(preview?.pricing_contract && typeof preview.pricing_contract === 'object') return preview.pricing_contract;
+    const payload = checkoutSummaryCadencePayload(period);
+    if(payload?.pricing_contract && typeof payload.pricing_contract === 'object') return payload.pricing_contract;
+    return planPricingContract(plan, period);
+  }
+
+  function checkoutSummaryCadenceAmountLabel(billingPeriod, plan){
+    const period = clean(billingPeriod).toLowerCase();
+    const preview = checkoutSummaryCadencePreviewData(period);
+    const previewAmount = formatSubscriptionCents(preview?.amount_cents, preview?.currency);
+    if(previewAmount) return previewAmount;
+    const contract = checkoutSummaryCadenceContract(period, plan);
+    if(period === 'monthly'){
+      return formatSubscriptionCents(contract?.initial_amount_cents, contract?.currency) || 'pendiente';
+    }
+    return formatSubscriptionCents(contract?.annual_amount_cents || contract?.amount_cents || contract?.unit_amount_cents, contract?.currency) || 'pendiente';
+  }
+
+  function checkoutSummaryPublishSelectedCadence(billingPeriod){
+    const period = clean(billingPeriod).toLowerCase();
+    if(period !== 'annual' && period !== 'monthly'){
+      data.checkoutSummary.selectedBillingPeriod = '';
+      publishPaymentPayloadPreview('checkoutSummary', null);
+      return;
+    }
+    if(!checkoutSummaryCadenceAvailable(period)){
+      return;
+    }
+    const payload = checkoutSummaryCadencePayload(period);
+    const previewState = checkoutSummaryCadencePreviewState(period);
+    data.checkoutSummary.selectedBillingPeriod = period;
+    publishPaymentPayloadPreview('checkoutSummary', payload);
+    if(data.paymentServerPreview){
+      data.paymentServerPreview.checkoutSummary = previewState || null;
+    }
+  }
+
+  async function prepareCheckoutSummaryCadencePreviews(plan, requestId){
+    const cadenceRequestId = requestId || (Date.now() + Math.random());
+    data.checkoutSummary.cadenceRequestId = cadenceRequestId;
+    data.checkoutSummary.cadenceLoading = true;
+    data.checkoutSummary.selectedBillingPeriod = '';
+    data.checkoutSummary.cadencePayloads = {
+      annual: buildNewSubscriptionPaymentPayloadPreview(plan, 'annual'),
+      monthly: buildNewSubscriptionPaymentPayloadPreview(plan, 'monthly')
+    };
+    data.checkoutSummary.cadencePreviews = { annual: null, monthly: null };
+    data.checkoutSummary.cadenceErrors = { annual: '', monthly: '' };
+    publishPaymentPayloadPreview('checkoutSummary', null);
+
+    if(isQaPlanSimulationActive()){
+      data.checkoutSummary.cadencePreviews = {
+        annual: { state: 'simulation' },
+        monthly: { state: 'simulation' }
+      };
+      data.checkoutSummary.cadenceLoading = false;
+      return true;
+    }
+
+    const periods = ['annual', 'monthly'];
+    const results = await Promise.all(periods.map(async (period)=>{
+      const slot = checkoutSummaryCadenceSlot(period);
+      const payload = checkoutSummaryCadencePayload(period);
+      const ok = await loadPaymentServerPreview(slot, payload);
+      return {
+        period,
+        ok,
+        state: data.paymentServerPreview?.[slot] || null
+      };
+    }));
+
+    if(data.checkoutSummary.cadenceRequestId !== cadenceRequestId || data.checkoutSummary.requestId !== requestId){
+      return false;
+    }
+
+    let successCount = 0;
+    results.forEach((result)=>{
+      data.checkoutSummary.cadencePreviews[result.period] = result.state || { state: result.ok ? 'success' : 'error' };
+      if(result.ok){
+        successCount += 1;
+        data.checkoutSummary.cadenceErrors[result.period] = '';
+      }else{
+        data.checkoutSummary.cadenceErrors[result.period] = clean(result.state?.message) || 'No disponible';
+      }
+    });
+    data.checkoutSummary.cadenceLoading = false;
+    return successCount > 0;
   }
 
   function buildRenewalPaymentPayloadPreview(plan){
@@ -61377,9 +61544,9 @@ function mxResetLogoPreview(){
   }
 
   function checkoutSummaryStepState(activeStep, step){
-    const order = { summary: 1, payment: 2, confirmation: 3 };
-    const activeOrder = order[activeStep] || 1;
-    const stepOrder = order[step] || 1;
+    const order = { panel: 1, summary: 2, payment: 3, confirmation: 4 };
+    const activeOrder = order[activeStep] || order.summary;
+    const stepOrder = order[step] || order.summary;
     if(stepOrder < activeOrder) return 'complete';
     if(stepOrder === activeOrder) return 'active';
     return 'pending';
@@ -61387,6 +61554,7 @@ function mxResetLogoPreview(){
 
   function checkoutSummaryStepperHtml(activeStep){
     const steps = [
+      { key: 'panel', label: 'Panel' },
       { key: 'summary', label: 'Resumen' },
       { key: 'payment', label: 'Pago seguro' },
       { key: 'confirmation', label: 'Confirmación' }
@@ -61394,8 +61562,8 @@ function mxResetLogoPreview(){
     return `<ol class="subp-payment-stepper" aria-label="Progreso del pago seguro">
       ${steps.map((step, index)=>{
         const state = checkoutSummaryStepState(activeStep, step.key);
-        const number = state === 'complete' ? 'check' : String(index + 1);
-        const iconClass = state === 'complete' ? 'material-symbols-rounded' : '';
+        const number = state === 'complete' ? '✓' : String(index + 1);
+        const iconClass = '';
         return `<li class="subp-payment-stepper-item" data-state="${escapeHtml(state)}" ${state === 'active' ? 'aria-current="step"' : ''}>
           <span class="subp-payment-stepper-dot ${iconClass}" aria-hidden="true">${escapeHtml(number)}</span>
           <span>${escapeHtml(step.label)}</span>
@@ -61520,9 +61688,7 @@ function mxResetLogoPreview(){
     if(!isCheckoutPaymentShellSlot(slot)) return 'Preparar pago seguro';
     const payload = data.paymentPayloadPreview?.[slot] || null;
     if(clean(payload?.route_type) === 'new_subscription'){
-      const plan = checkoutSummaryPlanFromPayload(slot);
-      const planLabel = clean(plan?.name) || 'seleccionado';
-      return `Confirmo mi plan ${planLabel} y continúo con el pago`;
+      return 'Continuar al método de pago';
     }
     return 'Continuar al pago seguro';
   }
@@ -62898,7 +63064,11 @@ function mxResetLogoPreview(){
     if(flowType === 'upgrade_now'){
       return currentBillingPeriodLabel();
     }
-    return pricingMode() === 'monthly' ? 'Pago mensual' : 'Pago anual';
+    const selected = clean(data.checkoutSummary.selectedBillingPeriod)
+      || clean(data.paymentPayloadPreview?.checkoutSummary?.billing_period);
+    if(selected === 'monthly') return 'Pago mensual';
+    if(selected === 'annual') return 'Pago anual';
+    return 'Periodo por confirmar';
   }
 
   function checkoutSummaryPriceLabel(plan, flowType){
@@ -62906,14 +63076,18 @@ function mxResetLogoPreview(){
       const estimate = proratedUpgradeEstimate(plan);
       return estimate ? fmtMoney(estimate.amount) : 'Se confirmará antes del pago.';
     }
-    if(pricingMode() === 'monthly'){
-      const contract = planMonthlyAdvanceContract(plan);
+    const selected = clean(data.checkoutSummary.selectedBillingPeriod)
+      || clean(data.paymentPayloadPreview?.checkoutSummary?.billing_period);
+    if(selected === 'monthly'){
+      const contract = checkoutSummaryCadenceContract('monthly', plan) || planMonthlyAdvanceContract(plan);
       return contract?.initial_amount_cents > 0
         ? formatSubscriptionCents(contract.initial_amount_cents, contract.currency)
         : 'Se confirmará antes del pago.';
     }
-    const annual = planAnnualPrice(plan);
-    return annual > 0 ? `${fmtMoney(annual)} al año` : 'Se confirmará antes del pago.';
+    if(selected === 'annual'){
+      return checkoutSummaryCadenceAmountLabel('annual', plan);
+    }
+    return 'Se confirmará antes del pago.';
   }
 
   function checkoutSummaryDaysLabel(plan, flowType){
@@ -62947,6 +63121,224 @@ function mxResetLogoPreview(){
     </ul>`;
   }
 
+  function checkoutSummaryPlanIconSymbol(planId){
+    const icons = {
+      basico: 'person',
+      estandar: 'calendar_month',
+      optimo: 'clinical_notes',
+      pro: 'psychology'
+    };
+    return icons[normalizePlanId(planId)] || 'workspace_premium';
+  }
+
+  function checkoutSummaryTargetBenefitsGridHtml(plan){
+    const items = Array.isArray(plan?.features)
+      ? plan.features.map(benefitDisplayLabel).filter(Boolean)
+      : [];
+    if(!items.length){
+      return '<p class="subp-checkout-summary-muted">Beneficios por confirmar antes del pago.</p>';
+    }
+    return `<div class="subp-new-summary-benefit-grid">
+      ${items.map((feature)=>`<span class="subp-new-summary-benefit"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span>${escapeHtml(feature)}</span>`).join('')}
+    </div>`;
+  }
+
+  function checkoutSummaryCadencePreviewBadge(period){
+    const state = checkoutSummaryCadencePreviewState(period);
+    const status = clean(state?.state);
+    if(status === 'loading') return 'Preparando';
+    if(status === 'error') return 'No disponible';
+    return '';
+  }
+
+  function checkoutSummaryCadenceOptionHtml(plan, period){
+    const normalizedPeriod = clean(period).toLowerCase();
+    const contract = checkoutSummaryCadenceContract(normalizedPeriod, plan);
+    const selected = clean(data.checkoutSummary.selectedBillingPeriod) === normalizedPeriod;
+    const available = checkoutSummaryCadenceAvailable(normalizedPeriod);
+    const disabled = !available;
+    const currency = clean(contract?.currency) || 'MXN';
+    const badge = checkoutSummaryCadencePreviewBadge(normalizedPeriod);
+    const icon = normalizedPeriod === 'monthly' ? 'calendar_month' : 'sell';
+    let title = 'Pago anual';
+    let main = formatSubscriptionCents(contract?.annual_amount_cents || contract?.unit_amount_cents, currency) || 'Por confirmar';
+    let meta = 'Un solo pago';
+    let accent = '';
+    let detail = '';
+
+    if(normalizedPeriod === 'annual'){
+      const monthlyContract = checkoutSummaryCadenceContract('monthly', plan);
+      const savings = Number(monthlyContract?.annual_savings_amount_cents || contract?.annual_savings_amount_cents || 0);
+      accent = savings > 0 ? `Ahorras ${formatSubscriptionCents(savings, currency)} al año` : '';
+    }else{
+      const unit = formatSubscriptionCents(contract?.unit_amount_cents, currency) || 'Por confirmar';
+      const initial = formatSubscriptionCents(contract?.initial_amount_cents, currency) || 'Por confirmar';
+      const recurring = formatSubscriptionCents(contract?.regular_recurring_amount_cents, currency) || unit;
+      const cycles = Number(contract?.initial_cycles || 3);
+      title = 'Pago mensual';
+      main = `${unit} al mes`;
+      meta = `Inicia con ${Number.isFinite(cycles) && cycles > 0 ? Math.round(cycles) : 3} meses por adelantado`;
+      accent = `Pagarás hoy: ${initial}`;
+      detail = `Después: ${recurring} al mes`;
+    }
+
+    const disabledReason = disabled
+      ? clean(data.checkoutSummary.cadenceErrors?.[normalizedPeriod]) || 'No disponible por ahora.'
+      : '';
+
+    return `<button class="subp-new-summary-cadence-card" type="button" data-subp-checkout-cadence="${escapeHtml(normalizedPeriod)}" data-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled aria-disabled="true"' : ''}>
+      <span class="subp-new-summary-cadence-mark" aria-hidden="true"></span>
+      <span class="subp-new-summary-cadence-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(icon)}</span>
+      <span class="subp-new-summary-cadence-copy">
+        <strong>${escapeHtml(title)}</strong>
+        <span class="subp-new-summary-cadence-main">${escapeHtml(main)}</span>
+        <span>${escapeHtml(meta)}</span>
+        ${accent ? `<em>${escapeHtml(accent)}</em>` : ''}
+        ${detail ? `<small>${escapeHtml(detail)}</small>` : ''}
+        ${badge ? `<small>${escapeHtml(badge)}</small>` : ''}
+        ${disabledReason ? `<small>${escapeHtml(disabledReason)}</small>` : ''}
+      </span>
+    </button>`;
+  }
+
+  function checkoutSummaryChoiceSummaryHtml(plan){
+    const selected = clean(data.checkoutSummary.selectedBillingPeriod);
+    const planLabel = clean(plan?.name) || 'Plan seleccionado';
+    const currency = 'MXN';
+    let modality = 'pendiente';
+    let today = 'pendiente';
+    let extra = '';
+
+    if(selected === 'annual'){
+      const contract = checkoutSummaryCadenceContract('annual', plan);
+      const monthlyContract = checkoutSummaryCadenceContract('monthly', plan);
+      const savings = Number(monthlyContract?.annual_savings_amount_cents || 0);
+      modality = 'Anual';
+      today = checkoutSummaryCadenceAmountLabel('annual', plan);
+      extra = savings > 0 ? `Ahorro anual: ${formatSubscriptionCents(savings, currency)}` : '';
+    }else if(selected === 'monthly'){
+      const contract = checkoutSummaryCadenceContract('monthly', plan);
+      const initialCycles = Number(contract?.initial_cycles || 3);
+      const recurring = formatSubscriptionCents(contract?.regular_recurring_amount_cents, contract?.currency) || 'pendiente';
+      modality = 'Mensual';
+      today = checkoutSummaryCadenceAmountLabel('monthly', plan);
+      extra = `Cobertura inicial: ${Number.isFinite(initialCycles) && initialCycles > 0 ? Math.round(initialCycles) : 3} meses · Después: ${recurring} al mes`;
+    }
+
+    return `<article class="subp-new-summary-choice" aria-live="polite">
+      <div class="subp-payments-kicker">Resumen de tu elección</div>
+      <div class="subp-new-summary-choice-grid">
+        <div>
+          <span class="material-symbols-rounded" aria-hidden="true">description</span>
+          <small>Plan</small>
+          <strong>${escapeHtml(planLabel)}</strong>
+        </div>
+        <div>
+          <span class="material-symbols-rounded" aria-hidden="true">event_repeat</span>
+          <small>Modalidad</small>
+          <strong>${escapeHtml(modality)}</strong>
+        </div>
+        <div>
+          <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
+          <small>Pago de hoy</small>
+          <strong>${escapeHtml(today)}</strong>
+          ${extra ? `<em>${escapeHtml(extra)}</em>` : ''}
+        </div>
+      </div>
+      <span class="visually-hidden">${escapeHtml(selected ? `Modalidad seleccionada: ${checkoutSummaryCadenceLabel(selected)}.` : 'Selecciona cómo prefieres pagar.')}</span>
+    </article>`;
+  }
+
+  function checkoutSummaryCadenceActionHtml(plan){
+    const selected = clean(data.checkoutSummary.selectedBillingPeriod);
+    if(!selected){
+      return '<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>Selecciona una modalidad de pago</button>';
+    }
+    if(selected === 'monthly'){
+      return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
+        <span class="subp-payment-primary-copy">
+          <span>Pago mensual automático en preparación</span>
+          <small>Tu mensualidad y el anticipo de 3 meses están confirmados. Esta modalidad se habilitará al completar la integración de cobros recurrentes.</small>
+        </span>
+      </button>`;
+    }
+    return paymentRouteCreateActionHtml('checkoutSummary');
+  }
+
+  function checkoutSummaryCadenceDebugHtml(){
+    if(!isSubscriptionDebugPanelEnabled()) return '';
+    const annual = checkoutSummaryCadencePreviewState('annual');
+    const monthly = checkoutSummaryCadencePreviewState('monthly');
+    const rows = [
+      { label: 'Preview anual', value: clean(annual?.state) || 'idle' },
+      { label: 'Preview mensual', value: clean(monthly?.state) || 'idle' },
+      { label: 'Modalidad seleccionada', value: checkoutSummaryCadenceLabel(data.checkoutSummary.selectedBillingPeriod) }
+    ];
+    const payload = {
+      annual: sanitizePaymentIntentResponse(annual?.data || data.checkoutSummary.cadencePayloads?.annual || null),
+      monthly: sanitizePaymentIntentResponse(monthly?.data || data.checkoutSummary.cadencePayloads?.monthly || null)
+    };
+    return paymentShellDebugDetailsHtml('Detalles técnicos QA', rows, payload);
+  }
+
+  function renderNewSubscriptionCheckoutSummary(plan, options = {}){
+    if(!els.checkoutSummary) return;
+    const targetIdentity = normalizePlanId(plan?.id);
+    const targetLabel = clean(plan?.name) || 'Plan seleccionado';
+    const tagline = clean(plan?.tagline) || 'Plan seleccionado para tu práctica.';
+    const selected = clean(data.checkoutSummary.selectedBillingPeriod);
+    const payloadPreview = selected ? checkoutSummaryCadencePayload(selected) : null;
+    if(selected && payloadPreview){
+      checkoutSummaryPublishSelectedCadence(selected);
+    }else{
+      publishPaymentPayloadPreview('checkoutSummary', null);
+    }
+
+    els.checkoutSummary.dataset.targetPlan = targetIdentity;
+    els.checkoutSummary.dataset.paymentRouteType = clean(payloadPreview?.route_type || 'new_subscription');
+    els.checkoutSummary.dataset.renderingPaymentShell = '1';
+    els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card subp-payment-shell-card--new-subscription subp-payment-shell-card--cadence" data-subp-payment-shell data-step="summary">
+      ${checkoutSummaryStepperHtml('summary')}
+      <article class="subp-new-summary-hero">
+        <div class="subp-new-summary-hero-icon">
+          <span class="material-symbols-rounded" aria-hidden="true">${escapeHtml(checkoutSummaryPlanIconSymbol(plan?.id))}</span>
+        </div>
+        <div class="subp-new-summary-hero-copy">
+          <h3>Has elegido el Plan ${escapeHtml(targetLabel)}</h3>
+          <p>${escapeHtml(tagline)}</p>
+          <small>Periodo por confirmar</small>
+        </div>
+      </article>
+      <article class="subp-new-summary-benefits">
+        <h4>Funciones que activarás con este plan</h4>
+        ${checkoutSummaryTargetBenefitsGridHtml(plan)}
+      </article>
+      <section class="subp-new-summary-cadence" aria-labelledby="subp-new-summary-cadence-title">
+        <h4 id="subp-new-summary-cadence-title">¿Cómo prefieres pagar?</h4>
+        <div class="subp-new-summary-cadence-grid">
+          ${checkoutSummaryCadenceOptionHtml(plan, 'annual')}
+          ${checkoutSummaryCadenceOptionHtml(plan, 'monthly')}
+        </div>
+      </section>
+      ${checkoutSummaryChoiceSummaryHtml(plan)}
+      ${checkoutSummarySecurePaymentBlockHtml(true)}
+      <div class="subp-checkout-summary-actions subp-payment-shell-actions">
+        <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${checkoutSummaryCadenceActionHtml(plan)}</div>
+        <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a comparar planes</button>
+      </div>
+      <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
+      ${checkoutSummaryCadenceDebugHtml()}
+      ${paymentPayloadPreviewHtml(payloadPreview)}
+    </section>`;
+    delete els.checkoutSummary.dataset.renderingPaymentShell;
+    if(options.loadPreview !== false && selected && payloadPreview && !['success', 'simulation'].includes(clean(data.paymentServerPreview?.checkoutSummary?.state))){
+      const previewState = checkoutSummaryCadencePreviewState(selected);
+      if(previewState){
+        data.paymentServerPreview.checkoutSummary = previewState;
+      }
+    }
+  }
+
   function checkoutSummaryCurrentPlanLabel(){
     return currentPlanLabel();
   }
@@ -62977,6 +63369,7 @@ function mxResetLogoPreview(){
     if(closingFreeSelection){
       clearExplicitPlanSelection();
     }
+    resetCheckoutSummaryCadenceState();
     publishPaymentPayloadPreview('checkoutSummary', null);
     if(render) renderCatalog();
   }
@@ -62986,6 +63379,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.preparing = false;
     data.checkoutSummary.error = clean(message) || 'No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.';
     data.checkoutSummary.contextKey = '';
+    resetCheckoutSummaryCadenceState();
     publishPaymentPayloadPreview('checkoutSummary', null);
   }
 
@@ -63005,6 +63399,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.requestId = requestId;
     data.checkoutSummary.error = '';
     data.checkoutSummary.contextKey = contextKey;
+    resetCheckoutSummaryCadenceState({ bumpRequest: false });
     data.selectedPlanId = plan.id;
     data.selectedPlanContextKey = contextKey;
     data.focusedPlanId = activePaid ? targetPlanId : data.focusedPlanId;
@@ -63013,19 +63408,25 @@ function mxResetLogoPreview(){
     renderCatalog();
 
     try{
-      const payloadPreview = buildCheckoutPaymentPayloadPreview(plan, flowType);
-      if(!payloadPreview || typeof payloadPreview !== 'object'){
-        throw new Error('missing_payload');
-      }
-      publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
-
-      if(isQaPlanSimulationActive()){
-        if(!data.paymentServerPreview) data.paymentServerPreview = {};
-        data.paymentServerPreview.checkoutSummary = { state: 'simulation' };
-      }else{
-        const previewOk = await loadPaymentServerPreview('checkoutSummary', payloadPreview);
+      if(flowType === 'new_subscription'){
+        const cadenceOk = await prepareCheckoutSummaryCadencePreviews(plan, requestId);
         if(data.checkoutSummary.requestId !== requestId) return;
-        if(!previewOk) throw new Error('preview_failed');
+        if(!cadenceOk) throw new Error('cadence_preview_failed');
+      }else{
+        const payloadPreview = buildCheckoutPaymentPayloadPreview(plan, flowType);
+        if(!payloadPreview || typeof payloadPreview !== 'object'){
+          throw new Error('missing_payload');
+        }
+        publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
+
+        if(isQaPlanSimulationActive()){
+          if(!data.paymentServerPreview) data.paymentServerPreview = {};
+          data.paymentServerPreview.checkoutSummary = { state: 'simulation' };
+        }else{
+          const previewOk = await loadPaymentServerPreview('checkoutSummary', payloadPreview);
+          if(data.checkoutSummary.requestId !== requestId) return;
+          if(!previewOk) throw new Error('preview_failed');
+        }
       }
 
       if(data.checkoutSummary.requestId !== requestId) return;
@@ -63036,7 +63437,9 @@ function mxResetLogoPreview(){
       data.checkoutSummary.contextKey = contextKey;
     }catch(_){
       if(data.checkoutSummary.requestId !== requestId) return;
-      checkoutSummaryRecoverableError('No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.');
+      checkoutSummaryRecoverableError(flowType === 'new_subscription'
+        ? 'No pudimos preparar las opciones de pago de este plan. Inténtalo nuevamente.'
+        : 'No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.');
     }
 
     renderCatalog();
@@ -63065,9 +63468,15 @@ function mxResetLogoPreview(){
       ? checkoutSummaryAddedBenefitsHtml(plan)
       : checkoutSummaryIncludedBenefitsHtml(plan);
     const validityLabel = checkoutSummaryValidityLabel(flowType);
+    if(isNewSubscription && shellStep === 'summary'){
+      renderNewSubscriptionCheckoutSummary(plan, options);
+      return;
+    }
     const payloadPreview = flowType === 'confirmation'
       ? (data.paymentPayloadPreview.checkoutSummary || null)
-      : buildCheckoutPaymentPayloadPreview(plan, flowType);
+      : isNewSubscription
+        ? (data.paymentPayloadPreview.checkoutSummary || checkoutSummaryCadencePayload(data.checkoutSummary.selectedBillingPeriod) || buildNewSubscriptionPaymentPayloadPreview(plan, 'annual'))
+        : buildCheckoutPaymentPayloadPreview(plan, flowType);
     if(flowType !== 'confirmation'){
       publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
     }
@@ -64552,6 +64961,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.requestId += 1;
     data.checkoutSummary.error = '';
     data.checkoutSummary.contextKey = '';
+    resetCheckoutSummaryCadenceState();
     data.paymentPayloadPreview.checkoutSummary = null;
     data.paymentServerPreview.checkoutSummary = null;
     resetPaymentRouteCreate('checkoutSummary');
@@ -64623,6 +65033,20 @@ function mxResetLogoPreview(){
       event.preventDefault();
       if(clean(checkoutAction.dataset.subpCheckoutSummaryAction) === 'back'){
         closePlanCheckoutSummary();
+      }
+      return;
+    }
+    const checkoutCadence = event.target && event.target.closest('[data-subp-checkout-cadence]');
+    if(checkoutCadence){
+      event.preventDefault();
+      const period = clean(checkoutCadence.dataset.subpCheckoutCadence).toLowerCase();
+      if(period !== 'annual' && period !== 'monthly') return;
+      if(!checkoutSummaryCadenceAvailable(period)) return;
+      checkoutSummaryPublishSelectedCadence(period);
+      const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+      const summary = validCheckoutSummary(activePaid);
+      if(summary){
+        renderPlanCheckoutSummary(summary.plan, summary.flowType, { loadPreview: false });
       }
       return;
     }
