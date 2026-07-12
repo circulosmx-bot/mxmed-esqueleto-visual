@@ -64150,15 +64150,13 @@ function mxResetLogoPreview(){
       return `<div class="subp-plan-estimate">
           <div class="subp-plan-estimate-title">Mejora hoy por un ajuste proporcional</div>
           <div class="subp-plan-estimate-copy">El ajuste proporcional se calculará antes de pagar.</div>
-          <div class="subp-plan-estimate-note">Monto final sujeto a confirmación antes del pago.</div>
         </div>`;
     }
 
     return `<div class="subp-plan-estimate">
         <div class="subp-plan-estimate-title">Mejora hoy por un ajuste proporcional</div>
-        <div class="subp-plan-estimate-copy">Por los ${estimate.remainingDays} días restantes de tu vigencia actual, tu ajuste estimado sería de:</div>
-        <div class="subp-plan-estimate-amount">${escapeHtml(fmtMoney(estimate.amount))}</div>
-        <div class="subp-plan-estimate-note">Monto final sujeto a confirmación antes del pago.</div>
+        <div class="subp-plan-estimate-copy">Por los <strong>${estimate.remainingDays} días</strong> que aún restan de tu vigencia, tu ajuste estimado sería:</div>
+        <div class="subp-plan-estimate-amount">de tan solo ${escapeHtml(fmtMoney(estimate.amount))}</div>
       </div>`;
   }
 
@@ -64349,7 +64347,6 @@ function mxResetLogoPreview(){
         <div class="subp-upgrade-card-kicker">Agrega:</div>
         ${benefitsHtml}
         ${estimateHtml}
-        <div class="subp-upgrade-card-note">El monto final se confirmará antes de realizar el pago.</div>
       </div>`;
   }
 
