@@ -63186,7 +63186,7 @@ function mxResetLogoPreview(){
       ? clean(data.checkoutSummary.cadenceErrors?.[normalizedPeriod]) || 'No disponible por ahora.'
       : '';
 
-    return `<button class="subp-new-summary-cadence-card" type="button" data-subp-checkout-cadence="${escapeHtml(normalizedPeriod)}" data-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled aria-disabled="true"' : ''}>
+    return `<button class="subp-new-summary-cadence-card" type="button" data-period="${escapeHtml(normalizedPeriod)}" data-subp-checkout-cadence="${escapeHtml(normalizedPeriod)}" data-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled aria-disabled="true"' : ''}>
       <span class="subp-new-summary-cadence-mark" aria-hidden="true"></span>
       <span class="subp-new-summary-cadence-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(icon)}</span>
       <span class="subp-new-summary-cadence-copy">
@@ -63304,7 +63304,7 @@ function mxResetLogoPreview(){
           <span class="material-symbols-rounded" aria-hidden="true">${escapeHtml(checkoutSummaryPlanIconSymbol(plan?.id))}</span>
         </div>
         <div class="subp-new-summary-hero-copy">
-          <h3>Has elegido el Plan ${escapeHtml(targetLabel)}</h3>
+          <h3>Has elegido el Plan <span>${escapeHtml(targetLabel)}</span></h3>
           <p>${escapeHtml(tagline)}</p>
           <small>Periodo por confirmar</small>
         </div>
@@ -63324,7 +63324,7 @@ function mxResetLogoPreview(){
       ${checkoutSummarySecurePaymentBlockHtml(true)}
       <div class="subp-checkout-summary-actions subp-payment-shell-actions">
         <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${checkoutSummaryCadenceActionHtml(plan)}</div>
-        <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a comparar planes</button>
+        <button class="btn btn-outline-primary btn-sm subp-new-summary-back" type="button" data-subp-checkout-summary-action="back"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver a comparar planes</button>
       </div>
       <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
       ${checkoutSummaryCadenceDebugHtml()}
