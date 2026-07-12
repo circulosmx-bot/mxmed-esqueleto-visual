@@ -61691,7 +61691,8 @@ function mxResetLogoPreview(){
   function checkoutSummaryPrimaryActionLabel(slot){
     if(!isCheckoutPaymentShellSlot(slot)) return 'Preparar pago seguro';
     const payload = data.paymentPayloadPreview?.[slot] || null;
-    if(clean(payload?.route_type) === 'new_subscription'){
+    const routeType = clean(payload?.route_type);
+    if(routeType === 'new_subscription' || routeType === 'upgrade_subscription'){
       return 'Continuar al método de pago';
     }
     return 'Continuar al pago seguro';
@@ -61713,6 +61714,14 @@ function mxResetLogoPreview(){
     const state = paymentRouteCreateState(slot);
     const payload = data.paymentPayloadPreview?.[slot] || null;
     if(isQaPlanSimulationActive()){
+      if(isCheckoutPaymentShellSlot(slot)){
+        return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
+          <span class="subp-payment-primary-copy">
+            <span>Continuar al método de pago</span>
+            <small>Simulación QA local — sin consulta backend.</small>
+          </span>
+        </button>`;
+      }
       return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Disponible sólo en modo Real</button>';
     }
     if(state.state === 'creating'){
@@ -63311,6 +63320,85 @@ function mxResetLogoPreview(){
     </div>`;
   }
 
+  function paidUpgradeFeatureAvailabilityHtml(feature, targetPlan){
+    const targetRank = planRank(targetPlan?.id);
+    const plans = (Array.isArray(feature?.plans) ? feature.plans : [])
+      .map((planId)=> {
+        const normalized = normalizePlanId(planId);
+        const plan = findPlanById(normalized);
+        const label = clean(plan?.name);
+        const rank = planRank(normalized);
+        return normalized && label && rank !== null ? { id: normalized, label, rank } : null;
+      })
+      .filter((plan)=> plan && (targetRank === null || plan.rank > targetRank))
+      .sort((a, b)=> a.rank - b.rank);
+    if(!plans.length) return 'Esta función no está incluida en el plan seleccionado.';
+
+    const planButton = (plan)=> `<button class="subp-benefit-plan-link subp-current-upgrade-button" type="button" data-subp-target-plan="${escapeHtml(plan.id)}" data-subp-benefit-focus-plan="${escapeHtml(plan.id)}">${escapeHtml(plan.label)}</button>`;
+    const planControls = plans.map(planButton);
+    if(planControls.length === 1){
+      return `Esta función está disponible si eliges el plan ${planControls[0]}.`;
+    }
+    if(planControls.length === 2){
+      return `Esta función está disponible si eliges ${planControls[0]} o ${planControls[1]}.`;
+    }
+    const last = planControls[planControls.length - 1];
+    return `Esta función está disponible si eliges ${planControls.slice(0, -1).join(', ')} o ${last}.`;
+  }
+
+  function paidUpgradeSummaryBenefitsGridHtml(currentPlan, targetPlan){
+    const currentPlanId = normalizePlanId(currentPlan?.id);
+    const targetPlanId = normalizePlanId(targetPlan?.id);
+    const targetLabel = clean(targetPlan?.name) || 'tu nuevo plan';
+    const items = SUBSCRIPTION_SUMMARY_FEATURE_CHIPS.map((feature)=>{
+      const meta = subscriptionBenefitVisualMeta(feature.label);
+      const currentIncluded = feature.plans.includes(currentPlanId);
+      const targetIncluded = feature.plans.includes(targetPlanId);
+      const state = targetIncluded
+        ? (currentIncluded ? 'included' : 'activates')
+        : 'not_included';
+      const popover = state === 'included'
+        ? 'Esta función ya forma parte de tu plan actual.'
+        : state === 'activates'
+          ? `Esta función se activará cuando completes la mejora al Plan ${targetLabel}.`
+          : paidUpgradeFeatureAvailabilityHtml(feature, targetPlan);
+      return {
+        ...feature,
+        ...meta,
+        state,
+        targetIncluded,
+        popover
+      };
+    });
+
+    return `<div class="subp-new-summary-benefit-grid subp-paid-upgrade-benefit-grid">
+      ${items.map((benefit, index)=>{
+        const popoverId = `subp-paid-upgrade-benefit-${escapeHtml(clean(benefit.key))}-${escapeHtml(targetPlanId || 'plan')}-${index}`;
+        const statusIcon = benefit.state === 'not_included' ? 'block' : 'check_circle';
+        const stateLabel = benefit.state === 'included'
+          ? 'Ya incluido'
+          : benefit.state === 'activates'
+            ? 'Se activa con tu mejora'
+            : 'No incluido';
+        return `<span class="subp-new-summary-benefit-wrap">
+          <button class="subp-new-summary-benefit" type="button" data-tone="${escapeHtml(benefit.tone)}" data-included="${benefit.targetIncluded ? 'true' : 'false'}" data-upgrade-state="${escapeHtml(benefit.state)}" data-subp-summary-benefit-chip aria-expanded="false" aria-controls="${popoverId}">
+            <span class="subp-new-summary-benefit-status-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(statusIcon)}</span>
+            <span class="subp-new-summary-benefit-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(benefit.icon)}</span>
+            <span class="subp-new-summary-benefit-copy">
+              <strong>${escapeHtml(benefit.label)}</strong>
+              ${benefit.description ? `<small>${escapeHtml(benefit.description)}</small>` : ''}
+            </span>
+            <span class="subp-new-summary-benefit-state">
+              <span class="material-symbols-rounded" aria-hidden="true">${escapeHtml(statusIcon)}</span>
+              ${escapeHtml(stateLabel)}
+            </span>
+          </button>
+          <span class="subp-new-summary-benefit-popover" id="${popoverId}" role="dialog" aria-label="${escapeHtml(benefit.label)}" data-subp-summary-benefit-popover hidden>${benefit.state === 'not_included' ? benefit.popover : escapeHtml(benefit.popover)}</span>
+        </span>`;
+      }).join('')}
+    </div>`;
+  }
+
   function checkoutSummaryCadencePreviewBadge(period){
     const state = checkoutSummaryCadencePreviewState(period);
     const status = clean(state?.state);
@@ -63425,6 +63513,145 @@ function mxResetLogoPreview(){
         }).join('')}
       </div>
     </aside>`;
+  }
+
+  function paidUpgradeSummaryPreviewStatus(){
+    const state = data.paymentServerPreview?.checkoutSummary;
+    return clean(state?.state) || 'idle';
+  }
+
+  function paidUpgradeSummaryAmountCents(payloadPreview, preview, estimate){
+    const candidates = [
+      preview?.amount_cents,
+      preview?.adjustment_amount_cents,
+      payloadPreview?.amount_cents,
+      payloadPreview?.adjustment_amount_cents,
+      estimate ? amountPesosToCents(estimate.amount) : null
+    ];
+    for(const candidate of candidates){
+      if(candidate === null || candidate === undefined || clean(candidate) === '') continue;
+      const amount = Number(candidate);
+      if(Number.isFinite(amount) && amount >= 0) return Math.round(amount);
+    }
+    return null;
+  }
+
+  function paidUpgradeSummaryRemainingDays(payloadPreview, preview, estimate){
+    const candidates = [
+      preview?.remaining_days,
+      payloadPreview?.remaining_days,
+      estimate?.remainingDays,
+      data.currentModel?.days_until_expiration
+    ];
+    for(const candidate of candidates){
+      if(candidate === null || candidate === undefined || clean(candidate) === '') continue;
+      const days = Number(candidate);
+      if(Number.isFinite(days) && days >= 0) return Math.round(days);
+    }
+    return null;
+  }
+
+  function paidUpgradeSummaryFinancialCardHtml(plan, payloadPreview){
+    const previewState = data.paymentServerPreview?.checkoutSummary || null;
+    const preview = latestPaymentServerPreviewData('checkoutSummary');
+    const status = paidUpgradeSummaryPreviewStatus();
+    const estimate = proratedUpgradeEstimate(plan);
+    const amountCents = paidUpgradeSummaryAmountCents(payloadPreview, preview, estimate);
+    const amountLabel = formatSubscriptionCents(amountCents, clean(preview?.currency || payloadPreview?.currency) || 'MXN') || checkoutSummaryPriceLabel(plan, 'upgrade_now');
+    const remainingDays = paidUpgradeSummaryRemainingDays(payloadPreview, preview, estimate);
+    const daysCopy = remainingDays !== null
+      ? `Por los ${remainingDays} días que aún restan de tu vigencia, tu ajuste estimado sería:`
+      : 'Por los días que aún restan de tu vigencia, tu ajuste estimado sería:';
+    const isLoading = !isQaPlanSimulationActive() && (status === 'loading' || status === 'idle');
+    const isError = status === 'error';
+    const errorMessage = clean(previewState?.message) || 'No pudimos calcular el ajuste de tu mejora. Inténtalo nuevamente.';
+
+    if(isLoading){
+      return `<article class="subp-paid-upgrade-finance" data-state="loading" aria-live="polite">
+        <div class="subp-paid-upgrade-finance-copy">
+          <span class="subp-payments-kicker">Tu ajuste de hoy</span>
+          <h4>Estamos calculando tu ajuste…</h4>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>Continuar al método de pago</button>
+      </article>`;
+    }
+
+    if(isError){
+      return `<article class="subp-paid-upgrade-finance" data-state="error" aria-live="polite">
+        <div class="subp-paid-upgrade-finance-copy">
+          <span class="subp-payments-kicker">Tu ajuste de hoy</span>
+          <h4>No pudimos calcular el ajuste</h4>
+          <p>${escapeHtml(errorMessage)}</p>
+        </div>
+        <button class="btn btn-outline-primary btn-sm" type="button" data-subp-paid-upgrade-retry>Reintentar</button>
+      </article>`;
+    }
+
+    const actionHtml = isQaPlanSimulationActive()
+      ? `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
+          <span class="subp-payment-primary-copy">
+            <span>Continuar al método de pago</span>
+            <small>Simulación QA local — sin consulta backend.</small>
+          </span>
+        </button>`
+      : paymentRouteCreateActionHtml('checkoutSummary');
+
+    return `<article class="subp-paid-upgrade-finance" data-state="${isQaPlanSimulationActive() ? 'simulation' : 'ready'}">
+      <div class="subp-paid-upgrade-finance-copy">
+        <span class="subp-payments-kicker">Tu ajuste de hoy</span>
+        <p>${escapeHtml(daysCopy)}</p>
+        <h4>de tan solo <span data-subp-shell-amount="checkoutSummary" data-fallback="${escapeHtml(amountLabel)}">${escapeHtml(amountLabel)}</span></h4>
+      </div>
+      <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${actionHtml}</div>
+    </article>`;
+  }
+
+  function renderPaidUpgradeCheckoutSummary(plan, options = {}){
+    if(!els.checkoutSummary) return;
+    const targetIdentity = normalizePlanId(plan?.id);
+    const targetLabel = clean(plan?.name) || 'Plan seleccionado';
+    const currentPlan = currentPlanForUpgradeComparison();
+    const currentLabel = checkoutSummaryCurrentPlanLabel();
+    const payloadPreview = buildCheckoutPaymentPayloadPreview(plan, 'upgrade_now');
+    publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
+
+    els.checkoutSummary.dataset.targetPlan = targetIdentity;
+    els.checkoutSummary.dataset.paymentRouteType = clean(payloadPreview?.route_type || 'upgrade_subscription');
+    els.checkoutSummary.dataset.renderingPaymentShell = '1';
+    els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card subp-payment-shell-card--new-subscription subp-payment-shell-card--cadence subp-payment-shell-card--paid-upgrade" data-subp-payment-shell data-step="summary">
+      ${checkoutSummaryStepperHtml('summary')}
+      <section class="subp-new-summary-overview subp-paid-upgrade-overview" aria-label="Resumen de mejora de plan">
+        <article class="subp-new-summary-hero">
+          <div class="subp-new-summary-hero-icon">
+            <span class="material-symbols-rounded" aria-hidden="true">${escapeHtml(checkoutSummaryPlanIconSymbol(plan?.id))}</span>
+          </div>
+          <div class="subp-new-summary-hero-copy">
+            <h3>Mejora tu plan a <span>${escapeHtml(targetLabel)}</span></h3>
+            <p>${escapeHtml(clean(plan?.tagline) || 'Más herramientas para impulsar tu práctica profesional.')}</p>
+            <small>${escapeHtml(currentLabel)} → ${escapeHtml(targetLabel)} · ${escapeHtml(currentBillingPeriodLabel())}</small>
+          </div>
+        </article>
+        <article class="subp-new-summary-benefits">
+          <h4>Funciones de tu mejora</h4>
+          ${paidUpgradeSummaryBenefitsGridHtml(currentPlan, plan)}
+        </article>
+      </section>
+      ${paidUpgradeSummaryFinancialCardHtml(plan, payloadPreview)}
+      <button class="btn btn-outline-primary btn-sm subp-new-summary-back subp-paid-upgrade-back" type="button" data-subp-checkout-summary-action="back"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver a comparar planes</button>
+      ${checkoutSummaryUpsellHtml(plan)}
+      ${checkoutSummarySecurePaymentBlockHtml(true)}
+      <div class="subp-paid-upgrade-server-preview-host" aria-hidden="true">${paymentServerPreviewHtml('checkoutSummary')}</div>
+      <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
+      ${paymentPayloadPreviewHtml(payloadPreview)}
+    </section>`;
+    const existingPreview = data.paymentServerPreview?.checkoutSummary || null;
+    if(existingPreview?.state){
+      renderPaymentServerPreviewState('checkoutSummary', existingPreview);
+    }
+    delete els.checkoutSummary.dataset.renderingPaymentShell;
+    if(options.loadPreview !== false && !['success', 'simulation'].includes(clean(existingPreview?.state))){
+      loadPaymentServerPreview('checkoutSummary', payloadPreview);
+    }
   }
 
   function checkoutSummaryCadenceActionHtml(plan){
@@ -63680,6 +63907,10 @@ function mxResetLogoPreview(){
     const validityLabel = checkoutSummaryValidityLabel(flowType);
     if(isNewSubscription && shellStep === 'summary'){
       renderNewSubscriptionCheckoutSummary(plan, options);
+      return;
+    }
+    if(isUpgrade && shellStep === 'summary'){
+      renderPaidUpgradeCheckoutSummary(plan, options);
       return;
     }
     const payloadPreview = flowType === 'confirmation'
@@ -65260,6 +65491,15 @@ function mxResetLogoPreview(){
     if(checkoutUpsell){
       event.preventDefault();
       const targetPlanId = clean(checkoutUpsell.dataset.subpCheckoutUpsellTarget);
+      if(targetPlanId){
+        openPlanCheckoutSummary(targetPlanId);
+      }
+      return;
+    }
+    const paidUpgradeRetry = event.target && event.target.closest('[data-subp-paid-upgrade-retry]');
+    if(paidUpgradeRetry){
+      event.preventDefault();
+      const targetPlanId = clean(data.checkoutSummary?.targetPlanId);
       if(targetPlanId){
         openPlanCheckoutSummary(targetPlanId);
       }

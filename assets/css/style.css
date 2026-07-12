@@ -7069,6 +7069,37 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-checkout-summary-actions button .subp-payment-primary-copy{ margin-left:0; color:inherit; font-size:inherit; font-weight:inherit }
 .subp-checkout-summary-actions .subp-payment-primary-copy > span{ margin-left:0; color:inherit; font-size:inherit; font-weight:900 }
 .subp-checkout-summary-actions .btn-outline-secondary .subp-payment-primary-copy small{ color:#52666f }
+.subp-payment-shell-card--paid-upgrade{ gap:16px }
+.subp-paid-upgrade-overview .subp-new-summary-hero-copy p{ max-width:760px }
+.subp-paid-upgrade-benefit-grid{ grid-template-columns:repeat(5,minmax(0,1fr)) }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit{ min-height:198px; padding-top:16px }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="included"]{ opacity:.88; background:linear-gradient(180deg,rgba(var(--subp-benefit-rgb),.06) 0%,#fff 100%) }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="included"]:hover,
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="included"]:focus-visible{ opacity:1 }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="activates"]{ border-color:rgba(var(--subp-benefit-rgb),.42); background:linear-gradient(180deg,rgba(var(--subp-benefit-rgb),.13) 0%,#fff 100%); box-shadow:0 12px 26px rgba(var(--subp-benefit-rgb),.12) }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="activates"] .subp-new-summary-benefit-status-icon{ background:#16a34a; color:#fff; box-shadow:0 7px 16px rgba(22,163,74,.25) }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="activates"] .subp-new-summary-benefit-state{ color:var(--subp-benefit-color) }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="activates"] .subp-new-summary-benefit-state .material-symbols-rounded{ color:#16a34a }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="not_included"]{ opacity:.5 }
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="not_included"]:hover,
+.subp-paid-upgrade-benefit-grid .subp-new-summary-benefit[data-upgrade-state="not_included"]:focus-visible{ opacity:.72 }
+.subp-paid-upgrade-finance{ display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,360px); gap:18px; align-items:center; padding:18px 20px; border:1px solid rgba(32,119,142,.28); border-radius:14px; background:linear-gradient(180deg,#f5fcfd 0%,#fff 100%); box-shadow:0 8px 22px rgba(32,119,142,.08); color:#12354a }
+.subp-paid-upgrade-finance-copy{ display:grid; gap:5px; min-width:0 }
+.subp-paid-upgrade-finance-copy .subp-payments-kicker{ color:#20778e }
+.subp-paid-upgrade-finance-copy p{ max-width:680px; margin:0; color:rgb(32,119,142); font-size:1rem; font-weight:760; line-height:1.32 }
+.subp-paid-upgrade-finance-copy h4{ margin:0; color:rgb(32,119,142); font-size:1.72rem; font-weight:900; line-height:1.08 }
+.subp-paid-upgrade-finance-copy h4 span{ color:rgb(32,119,142) }
+.subp-paid-upgrade-finance-copy small{ color:#536b78; font-size:.88rem; font-weight:650; line-height:1.28 }
+.subp-paid-upgrade-finance .subp-payment-route-create-action{ display:grid; width:100% }
+.subp-paid-upgrade-finance .subp-payment-primary-action{ width:100%; min-height:52px; border-radius:8px; background:linear-gradient(90deg,#0a8fa0 0%,#20778e 100%); border-color:#20778e; color:#fff; box-shadow:0 8px 18px rgba(32,119,142,.16); font-size:1rem !important }
+.subp-paid-upgrade-finance .subp-payment-primary-action:hover:not(:disabled),
+.subp-paid-upgrade-finance .subp-payment-primary-action:focus:not(:disabled){ filter:brightness(.97); color:#fff }
+.subp-paid-upgrade-finance .subp-payment-primary-action:disabled{ background:#dfe8f1; border-color:#d5e0ea; color:#395263; box-shadow:none; cursor:not-allowed }
+.subp-paid-upgrade-finance[data-state="error"]{ border-color:#f2c4c4; background:linear-gradient(180deg,#fff8f8 0%,#fff 100%) }
+.subp-paid-upgrade-finance[data-state="error"] .subp-paid-upgrade-finance-copy p{ color:#9f1239 }
+.subp-paid-upgrade-finance[data-state="loading"] .subp-paid-upgrade-finance-copy h4{ color:#20778e }
+.subp-paid-upgrade-back{ justify-self:center; margin:-2px 0 2px }
+.subp-paid-upgrade-server-preview-host{ display:none }
 .subp-payment-payload-preview{ padding:12px; border:1px dashed #b9dbe5; border-radius:10px; background:#f8fcfd; color:#274653; font-size:.78rem; line-height:1.35 }
 .subp-payment-payload-preview summary{ cursor:pointer; color:#006b82; font-weight:900 }
 .subp-payment-payload-preview pre{ max-height:260px; overflow:auto; margin:10px 0 0; padding:10px; border-radius:8px; background:#f2f8fa; color:#143849; font-size:.75rem; line-height:1.32; white-space:pre-wrap; word-break:break-word }
@@ -7102,6 +7133,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-payment-route-status[data-state="success"]{ border-color:#b8e4ce; background:linear-gradient(180deg,#f4fbf7 0%,#fff 100%) }
 .subp-payment-route-status[data-state="error"]{ border-color:#f2c4c4; background:linear-gradient(180deg,#fff8f8 0%,#fff 100%) }
 .subp-payment-route-status[data-state="creating"]{ border-color:#b9dbe5 }
+@media (max-width: 1200px) and (min-width: 901px){
+  .subp-paid-upgrade-benefit-grid{ grid-template-columns:repeat(auto-fit,minmax(180px,1fr)) }
+}
 .subp-band{ display:grid; grid-template-columns:max-content minmax(250px,.9fr) minmax(340px,1.1fr) max-content; align-items:center; gap:14px 18px; background:linear-gradient(135deg,var(--subp-current-plan-main) 0%,var(--subp-current-plan-dark) 100%); color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 18px; box-shadow:0 10px 20px rgba(var(--subp-current-plan-shadow-rgb),.1) }
 .subp-band-main{ min-width:0; flex:1 1 560px }
 .subp-plan-stack{ display:grid; gap:4px; justify-items:start; transform:translate(-5px, 4px) }
@@ -7404,9 +7438,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-new-summary-benefit-grid,
   .subp-new-summary-cadence-grid,
   .subp-new-summary-upsell-options{ grid-template-columns:1fr }
+  .subp-paid-upgrade-benefit-grid{ grid-template-columns:1fr }
   .subp-new-summary-benefit{ min-height:0; padding:16px 13px 13px }
   .subp-new-summary-benefit-icon{ width:46px; height:46px; font-size:27px }
   .subp-new-summary-benefit-popover{ left:0; right:auto; width:min(100%,calc(100vw - 34px)); transform:none }
+  .subp-paid-upgrade-finance{ grid-template-columns:1fr; gap:12px; padding:15px }
+  .subp-paid-upgrade-finance-copy h4{ font-size:1.38rem }
   .subp-new-summary-cadence-card{ min-height:0; gap:14px; padding:18px 48px 18px 16px }
   .subp-new-summary-cadence-icon{ width:58px; height:58px; font-size:32px }
   .subp-new-summary-cadence-copy strong{ font-size:1.12rem }
