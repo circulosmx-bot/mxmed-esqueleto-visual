@@ -63164,7 +63164,7 @@ function mxResetLogoPreview(){
       visibility: { icon: 'visibility', tone: 'orange' },
       support: { icon: 'headset_mic', tone: 'green' },
       clinical: { icon: 'clinical_notes', tone: 'blue' },
-      prescription: { icon: 'prescriptions', tone: 'purple' },
+      prescription: { icon: 'prescriptions', tone: 'orange' },
       reports: { icon: 'monitoring', tone: 'orange' },
       ai: { icon: 'psychology_alt', tone: 'violet' },
       default: { icon: 'check_circle', tone: 'neutral' }
@@ -63177,21 +63177,104 @@ function mxResetLogoPreview(){
     };
   }
 
-  function checkoutSummaryTargetBenefitsGridHtml(plan){
-    const items = Array.isArray(plan?.features)
-      ? plan.features.map(subscriptionBenefitVisualMeta).filter((benefit)=> clean(benefit.label))
-      : [];
-    if(!items.length){
-      return '<p class="subp-checkout-summary-muted">Beneficios por confirmar antes del pago.</p>';
+  const SUBSCRIPTION_SUMMARY_FEATURE_CHIPS = Object.freeze([
+    Object.freeze({
+      key: 'perfil',
+      label: 'Perfil en línea',
+      plans: Object.freeze(['basico', 'estandar', 'optimo', 'pro'])
+    }),
+    Object.freeze({
+      key: 'agenda',
+      label: 'Agenda en línea',
+      plans: Object.freeze(['estandar', 'optimo', 'pro'])
+    }),
+    Object.freeze({
+      key: 'expediente',
+      label: 'Expediente clínico',
+      plans: Object.freeze(['optimo', 'pro'])
+    }),
+    Object.freeze({
+      key: 'recetas',
+      label: 'Recetas digitales',
+      plans: Object.freeze(['optimo', 'pro'])
+    }),
+    Object.freeze({
+      key: 'asistente-ia',
+      label: 'Asistente IA',
+      plans: Object.freeze(['pro'])
+    })
+  ]);
+
+  function checkoutSummaryFeatureAvailabilityText(feature){
+    const names = (Array.isArray(feature?.plans) ? feature.plans : [])
+      .map((planId)=> clean(findPlanById(planId)?.name))
+      .filter(Boolean);
+    if(names.length === 1) return `Esta función solo está disponible en el plan ${names[0]}.`;
+    if(names.length === 2) return `Esta función solo está disponible en los planes ${names[0]} y ${names[1]}.`;
+    if(names.length > 2){
+      const last = names[names.length - 1];
+      return `Esta función solo está disponible en los planes ${names.slice(0, -1).join(', ')} y ${last}.`;
     }
+    return 'Esta función no está incluida en el plan seleccionado.';
+  }
+
+  function closeSummaryBenefitPopovers(root = pane){
+    const scope = root || document;
+    scope.querySelectorAll('[data-subp-summary-benefit-popover].is-open').forEach((popover)=>{
+      popover.classList.remove('is-open');
+      popover.hidden = true;
+    });
+    scope.querySelectorAll('[data-subp-summary-benefit-chip][aria-expanded="true"]').forEach((button)=>{
+      button.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function toggleSummaryBenefitPopover(button){
+    if(!button) return;
+    const popoverId = clean(button.getAttribute('aria-controls'));
+    const popover = popoverId ? document.getElementById(popoverId) : null;
+    if(!popover) return;
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+    closeSummaryBenefitPopovers();
+    if(isOpen) return;
+    button.setAttribute('aria-expanded', 'true');
+    popover.hidden = false;
+    popover.classList.add('is-open');
+  }
+
+  function checkoutSummaryTargetBenefitsGridHtml(plan){
+    const targetPlanId = normalizePlanId(plan?.id);
+    const items = SUBSCRIPTION_SUMMARY_FEATURE_CHIPS.map((feature)=>{
+      const meta = subscriptionBenefitVisualMeta(feature.label);
+      const included = feature.plans.includes(targetPlanId);
+      return {
+        ...feature,
+        ...meta,
+        included,
+        popover: included
+          ? 'Esta función está incluida en el plan seleccionado.'
+          : checkoutSummaryFeatureAvailabilityText(feature)
+      };
+    });
     return `<div class="subp-new-summary-benefit-grid">
-      ${items.map((benefit)=>`<span class="subp-new-summary-benefit" data-tone="${escapeHtml(benefit.tone)}">
-        <span class="subp-new-summary-benefit-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(benefit.icon)}</span>
-        <span class="subp-new-summary-benefit-copy">
-          <strong>${escapeHtml(benefit.label)}</strong>
-          ${benefit.description ? `<small>${escapeHtml(benefit.description)}</small>` : ''}
-        </span>
-      </span>`).join('')}
+      ${items.map((benefit, index)=>{
+        const popoverId = `subp-summary-benefit-${escapeHtml(clean(benefit.key))}-${escapeHtml(targetPlanId || 'plan')}-${index}`;
+        return `<span class="subp-new-summary-benefit-wrap">
+          <button class="subp-new-summary-benefit" type="button" data-tone="${escapeHtml(benefit.tone)}" data-included="${benefit.included ? 'true' : 'false'}" data-subp-summary-benefit-chip aria-expanded="false" aria-controls="${popoverId}">
+            <span class="subp-new-summary-benefit-status-icon material-symbols-rounded" aria-hidden="true">${benefit.included ? 'check_circle' : 'block'}</span>
+            <span class="subp-new-summary-benefit-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(benefit.icon)}</span>
+            <span class="subp-new-summary-benefit-copy">
+              <strong>${escapeHtml(benefit.label)}</strong>
+              ${benefit.description ? `<small>${escapeHtml(benefit.description)}</small>` : ''}
+            </span>
+            <span class="subp-new-summary-benefit-state">
+              <span class="material-symbols-rounded" aria-hidden="true">${benefit.included ? 'check_circle' : 'block'}</span>
+              ${benefit.included ? 'Incluido' : 'No incluido'}
+            </span>
+          </button>
+          <span class="subp-new-summary-benefit-popover" id="${popoverId}" role="dialog" aria-label="${escapeHtml(benefit.label)}" data-subp-summary-benefit-popover hidden>${escapeHtml(benefit.popover)}</span>
+        </span>`;
+      }).join('')}
     </div>`;
   }
 
@@ -63391,7 +63474,8 @@ function mxResetLogoPreview(){
           </div>
         </article>
         <article class="subp-new-summary-benefits">
-          <h4>Funciones que activarás con este plan</h4>
+          <h4>Funciones que incluye tu plan</h4>
+          <p class="subp-new-summary-benefits-note">Cinco beneficios siempre visibles para que sepas exactamente qué obtienes.</p>
           ${checkoutSummaryTargetBenefitsGridHtml(plan)}
         </article>
       </section>
@@ -65111,6 +65195,12 @@ function mxResetLogoPreview(){
       }
       return;
     }
+    const summaryBenefitChip = event.target && event.target.closest('[data-subp-summary-benefit-chip]');
+    if(summaryBenefitChip){
+      event.preventDefault();
+      toggleSummaryBenefitPopover(summaryBenefitChip);
+      return;
+    }
     const checkoutAction = event.target && event.target.closest('[data-subp-checkout-summary-action]');
     if(checkoutAction){
       event.preventDefault();
@@ -65205,14 +65295,19 @@ function mxResetLogoPreview(){
   });
   document.addEventListener('click', (event)=>{
     if(event.target && event.target.closest('[data-subp-benefit-info]')) return;
+    if(event.target && event.target.closest('[data-subp-summary-benefit-chip]')) return;
+    if(event.target && event.target.closest('[data-subp-summary-benefit-popover]')) return;
     if(event.target && event.target.closest('.subp-current-conditions-wrap')) return;
+    closeSummaryBenefitPopovers(pane);
     closeBenefitInfoPopovers(els.catalog);
   });
   document.addEventListener('keydown', (event)=>{
     if(event.key !== 'Escape') return;
     const openPopover = openedSubscriptionPopover(els.catalog);
+    const openSummaryPopover = pane.querySelector('[data-subp-summary-benefit-popover].is-open');
+    closeSummaryBenefitPopovers(pane);
     closeBenefitInfoPopovers(els.catalog);
-    if(!openPopover && data.focusedPlanId){
+    if(!openPopover && !openSummaryPopover && data.focusedPlanId){
       clearCurrentUpgradeFocus();
       renderCatalog();
     }
