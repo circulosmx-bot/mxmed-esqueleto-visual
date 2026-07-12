@@ -63138,15 +63138,60 @@ function mxResetLogoPreview(){
     return icons[normalizePlanId(planId)] || 'workspace_premium';
   }
 
+  function subscriptionBenefitVisualKey(feature){
+    const label = benefitDisplayLabel(feature);
+    const key = normalizeBenefitKey(label || feature);
+    if(key.includes('perfil')) return 'profile';
+    if(key.includes('agenda')) return 'calendar';
+    if(key.includes('visibilidad') || key.includes('presencia') || key.includes('posicion')) return 'visibility';
+    if(key.includes('soporte')) return 'support';
+    if(key.includes('expediente')) return 'clinical';
+    if(key.includes('receta')) return 'prescription';
+    if(key.includes('reporte') || key.includes('analitica')) return 'reports';
+    if(key.includes('asistente') || key.includes('ia')) return 'ai';
+    return 'default';
+  }
+
+  function subscriptionBenefitVisualMeta(feature){
+    const raw = clean(feature);
+    const label = benefitDisplayLabel(raw);
+    const normalizedRaw = normalizeBenefitKey(raw);
+    const normalizedLabel = normalizeBenefitKey(label);
+    const mapped = SUBSCRIPTION_BENEFIT_DETAILS[normalizedRaw] || SUBSCRIPTION_BENEFIT_DETAILS[normalizedLabel] || null;
+    const config = {
+      profile: { icon: 'person', tone: 'teal' },
+      calendar: { icon: 'calendar_month', tone: 'violet' },
+      visibility: { icon: 'visibility', tone: 'orange' },
+      support: { icon: 'headset_mic', tone: 'green' },
+      clinical: { icon: 'clinical_notes', tone: 'blue' },
+      prescription: { icon: 'prescriptions', tone: 'purple' },
+      reports: { icon: 'monitoring', tone: 'orange' },
+      ai: { icon: 'psychology_alt', tone: 'violet' },
+      default: { icon: 'check_circle', tone: 'neutral' }
+    }[subscriptionBenefitVisualKey(raw)] || { icon: 'check_circle', tone: 'neutral' };
+    return {
+      label: clean(label) || raw || 'Beneficio',
+      description: clean(mapped?.description),
+      icon: config.icon,
+      tone: config.tone
+    };
+  }
+
   function checkoutSummaryTargetBenefitsGridHtml(plan){
     const items = Array.isArray(plan?.features)
-      ? plan.features.map(benefitDisplayLabel).filter(Boolean)
+      ? plan.features.map(subscriptionBenefitVisualMeta).filter((benefit)=> clean(benefit.label))
       : [];
     if(!items.length){
       return '<p class="subp-checkout-summary-muted">Beneficios por confirmar antes del pago.</p>';
     }
     return `<div class="subp-new-summary-benefit-grid">
-      ${items.map((feature)=>`<span class="subp-new-summary-benefit"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span>${escapeHtml(feature)}</span>`).join('')}
+      ${items.map((benefit)=>`<span class="subp-new-summary-benefit" data-tone="${escapeHtml(benefit.tone)}">
+        <span class="subp-new-summary-benefit-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(benefit.icon)}</span>
+        <span class="subp-new-summary-benefit-copy">
+          <strong>${escapeHtml(benefit.label)}</strong>
+          ${benefit.description ? `<small>${escapeHtml(benefit.description)}</small>` : ''}
+        </span>
+      </span>`).join('')}
     </div>`;
   }
 
@@ -63208,47 +63253,93 @@ function mxResetLogoPreview(){
     </button>`;
   }
 
-  function checkoutSummaryUpsellPlan(plan){
-    const planId = normalizePlanId(plan?.id);
-    if(planId === 'basico') return findPlanById('estandar');
-    if(planId === 'estandar') return findPlanById('optimo');
-    return null;
+  function checkoutSummarySuperiorPlans(plan){
+    const currentRank = planRank(plan?.id);
+    if(currentRank === null) return [];
+    return data.plans
+      .filter((candidate)=>{
+        const candidateRank = planRank(candidate?.id);
+        return candidateRank !== null && candidateRank > currentRank;
+      })
+      .sort((a, b)=> planRank(a?.id) - planRank(b?.id));
+  }
+
+  function checkoutSummaryBenefitCompareKey(feature){
+    return normalizeBenefitKey(benefitDisplayLabel(feature));
+  }
+
+  function checkoutSummarySuperiorPlanDetail(plan, targetPlan){
+    const tagline = clean(targetPlan?.tagline);
+    if(tagline) return tagline;
+    const currentFeatures = new Set((Array.isArray(plan?.features) ? plan.features : []).map(checkoutSummaryBenefitCompareKey));
+    const targetFeatures = Array.isArray(targetPlan?.features) ? targetPlan.features : [];
+    const added = targetFeatures.find((feature)=> !currentFeatures.has(checkoutSummaryBenefitCompareKey(feature)));
+    if(added) return `Agrega ${benefitDisplayLabel(added)}`;
+    return 'Más herramientas para tu práctica.';
   }
 
   function checkoutSummaryUpsellHtml(plan){
-    const nextPlan = checkoutSummaryUpsellPlan(plan);
-    if(!nextPlan) return '';
-    const currentPlanId = normalizePlanId(plan?.id);
-    const nextPlanId = normalizePlanId(nextPlan.id);
-    const nextPlanLabel = clean(nextPlan.name) || 'el siguiente plan';
-    const title = currentPlanId === 'basico'
-      ? '¿Quieres dar un paso más?'
-      : '¿Necesitas más herramientas clínicas?';
-    const copy = currentPlanId === 'basico'
-      ? 'Con el Plan Estándar agregas agenda en línea y más herramientas para hacer crecer tu práctica.'
-      : 'Con el Plan Óptimo incorporas funciones clínicas avanzadas para ampliar la gestión de tu consulta.';
-    return `<aside class="subp-new-summary-upsell" data-recommended-plan="${escapeHtml(nextPlanId)}">
-      <span class="subp-new-summary-upsell-icon material-symbols-rounded" aria-hidden="true">trending_up</span>
-      <div class="subp-new-summary-upsell-copy">
-        <strong>${escapeHtml(title)}</strong>
-        <span>${escapeHtml(copy)}</span>
+    const superiorPlans = checkoutSummarySuperiorPlans(plan);
+    if(!superiorPlans.length) return '';
+    return `<aside class="subp-new-summary-upsell" aria-labelledby="subp-new-summary-upsell-title">
+      <div class="subp-new-summary-upsell-head">
+        <span class="subp-new-summary-upsell-icon material-symbols-rounded" aria-hidden="true">trending_up</span>
+        <div class="subp-new-summary-upsell-copy">
+          <strong id="subp-new-summary-upsell-title">¿Quieres explorar un plan superior?</strong>
+          <span>Compara otras opciones sin salir del resumen. La modalidad se elegirá de nuevo.</span>
+        </div>
       </div>
-      <button class="btn btn-outline-primary btn-sm subp-new-summary-upsell-action" type="button" data-subp-checkout-upsell-target="${escapeHtml(nextPlan.id)}">Conocer Plan ${escapeHtml(nextPlanLabel)}</button>
+      <div class="subp-new-summary-upsell-options">
+        ${superiorPlans.map((targetPlan)=>{
+          const targetPlanId = normalizePlanId(targetPlan?.id);
+          const targetLabel = clean(targetPlan?.name) || 'plan superior';
+          const detail = checkoutSummarySuperiorPlanDetail(plan, targetPlan);
+          return `<button class="subp-new-summary-upsell-option subp-current-upgrade-button" type="button" data-subp-target-plan="${escapeHtml(targetPlanId)}" data-subp-checkout-upsell-target="${escapeHtml(targetPlan.id)}" aria-label="Elegir ${escapeHtml(targetLabel)}">
+            <span class="subp-new-summary-upsell-option-copy">
+              <strong>${escapeHtml(targetLabel)}</strong>
+              <small>${escapeHtml(detail)}</small>
+            </span>
+            <span class="subp-new-summary-upsell-option-action">Elegir ${escapeHtml(targetLabel)}</span>
+          </button>`;
+        }).join('')}
+      </div>
     </aside>`;
   }
 
   function checkoutSummaryCadenceActionHtml(plan){
     const selected = clean(data.checkoutSummary.selectedBillingPeriod);
     if(!selected){
-      return '<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>Selecciona una modalidad de pago</button>';
+      const simulation = isQaPlanSimulationActive()
+        ? '<p class="subp-new-summary-action-note subp-new-summary-action-note--simulation">Simulación QA local — sin consulta backend.</p>'
+        : '';
+      return `<div class="subp-new-summary-action-stack">
+        <p class="subp-new-summary-action-hint">Elige cómo prefieres pagar para continuar.</p>
+        ${simulation}
+      </div>`;
     }
     if(selected === 'monthly'){
-      return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
-        <span class="subp-payment-primary-copy">
-          <span>Pago mensual automático en preparación</span>
-          <small>Tu precio y el anticipo de 3 meses están confirmados.</small>
-        </span>
-      </button>`;
+      const noteId = 'subp-new-summary-monthly-action-note';
+      return `<div class="subp-new-summary-action-stack">
+        <button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled aria-describedby="${escapeHtml(noteId)}">
+          <span class="subp-payment-primary-copy">
+            <span>Continuar</span>
+          </span>
+        </button>
+        <p class="subp-new-summary-action-note" id="${escapeHtml(noteId)}">
+          <strong>Pago mensual automático en preparación.</strong>
+          <span>Tu mensualidad y el anticipo de 3 meses ya están confirmados.</span>
+        </p>
+      </div>`;
+    }
+    if(isQaPlanSimulationActive()){
+      return `<div class="subp-new-summary-action-stack">
+        <button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
+          <span class="subp-payment-primary-copy">
+            <span>Continuar al método de pago</span>
+            <small>Simulación QA local — sin consulta backend.</small>
+          </span>
+        </button>
+      </div>`;
     }
     return paymentRouteCreateActionHtml('checkoutSummary');
   }
