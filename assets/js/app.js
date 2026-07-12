@@ -61015,15 +61015,18 @@ function mxResetLogoPreview(){
     return formatSubscriptionCents(contract?.annual_amount_cents || contract?.amount_cents || contract?.unit_amount_cents, contract?.currency) || 'pendiente';
   }
 
-  function checkoutSummaryPublishSelectedCadence(billingPeriod){
+  function checkoutSummaryPublishSelectedCadence(billingPeriod, options = {}){
     const period = clean(billingPeriod).toLowerCase();
     if(period !== 'annual' && period !== 'monthly'){
       data.checkoutSummary.selectedBillingPeriod = '';
       publishPaymentPayloadPreview('checkoutSummary', null);
-      return;
+      return false;
     }
     if(!checkoutSummaryCadenceAvailable(period)){
-      return;
+      const allowRenderedPayload = options && options.allowRenderedPayload === true;
+      if(!allowRenderedPayload || !checkoutSummaryCadencePayload(period)){
+        return false;
+      }
     }
     const payload = checkoutSummaryCadencePayload(period);
     const previewState = checkoutSummaryCadencePreviewState(period);
@@ -61032,6 +61035,7 @@ function mxResetLogoPreview(){
     if(data.paymentServerPreview){
       data.paymentServerPreview.checkoutSummary = previewState || null;
     }
+    return true;
   }
 
   async function prepareCheckoutSummaryCadencePreviews(plan, requestId){
@@ -61707,6 +61711,7 @@ function mxResetLogoPreview(){
 
   function paymentRouteCreateActionHtml(slot){
     const state = paymentRouteCreateState(slot);
+    const payload = data.paymentPayloadPreview?.[slot] || null;
     if(isQaPlanSimulationActive()){
       return '<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Disponible sólo en modo Real</button>';
     }
@@ -63203,52 +63208,33 @@ function mxResetLogoPreview(){
     </button>`;
   }
 
-  function checkoutSummaryChoiceSummaryHtml(plan){
-    const selected = clean(data.checkoutSummary.selectedBillingPeriod);
-    const planLabel = clean(plan?.name) || 'Plan seleccionado';
-    const currency = 'MXN';
-    let modality = 'pendiente';
-    let today = 'pendiente';
-    let extra = '';
+  function checkoutSummaryUpsellPlan(plan){
+    const planId = normalizePlanId(plan?.id);
+    if(planId === 'basico') return findPlanById('estandar');
+    if(planId === 'estandar') return findPlanById('optimo');
+    return null;
+  }
 
-    if(selected === 'annual'){
-      const contract = checkoutSummaryCadenceContract('annual', plan);
-      const monthlyContract = checkoutSummaryCadenceContract('monthly', plan);
-      const savings = Number(monthlyContract?.annual_savings_amount_cents || 0);
-      modality = 'Anual';
-      today = checkoutSummaryCadenceAmountLabel('annual', plan);
-      extra = savings > 0 ? `Ahorro anual: ${formatSubscriptionCents(savings, currency)}` : '';
-    }else if(selected === 'monthly'){
-      const contract = checkoutSummaryCadenceContract('monthly', plan);
-      const initialCycles = Number(contract?.initial_cycles || 3);
-      const recurring = formatSubscriptionCents(contract?.regular_recurring_amount_cents, contract?.currency) || 'pendiente';
-      modality = 'Mensual';
-      today = checkoutSummaryCadenceAmountLabel('monthly', plan);
-      extra = `Cobertura inicial: ${Number.isFinite(initialCycles) && initialCycles > 0 ? Math.round(initialCycles) : 3} meses · Después: ${recurring} al mes`;
-    }
-
-    return `<article class="subp-new-summary-choice" aria-live="polite">
-      <div class="subp-payments-kicker">Resumen de tu elección</div>
-      <div class="subp-new-summary-choice-grid">
-        <div>
-          <span class="material-symbols-rounded" aria-hidden="true">description</span>
-          <small>Plan</small>
-          <strong>${escapeHtml(planLabel)}</strong>
-        </div>
-        <div>
-          <span class="material-symbols-rounded" aria-hidden="true">event_repeat</span>
-          <small>Modalidad</small>
-          <strong>${escapeHtml(modality)}</strong>
-        </div>
-        <div>
-          <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
-          <small>Pago de hoy</small>
-          <strong>${escapeHtml(today)}</strong>
-          ${extra ? `<em>${escapeHtml(extra)}</em>` : ''}
-        </div>
+  function checkoutSummaryUpsellHtml(plan){
+    const nextPlan = checkoutSummaryUpsellPlan(plan);
+    if(!nextPlan) return '';
+    const currentPlanId = normalizePlanId(plan?.id);
+    const nextPlanId = normalizePlanId(nextPlan.id);
+    const nextPlanLabel = clean(nextPlan.name) || 'el siguiente plan';
+    const title = currentPlanId === 'basico'
+      ? '¿Quieres dar un paso más?'
+      : '¿Necesitas más herramientas clínicas?';
+    const copy = currentPlanId === 'basico'
+      ? 'Con el Plan Estándar agregas agenda en línea y más herramientas para hacer crecer tu práctica.'
+      : 'Con el Plan Óptimo incorporas funciones clínicas avanzadas para ampliar la gestión de tu consulta.';
+    return `<aside class="subp-new-summary-upsell" data-recommended-plan="${escapeHtml(nextPlanId)}">
+      <span class="subp-new-summary-upsell-icon material-symbols-rounded" aria-hidden="true">trending_up</span>
+      <div class="subp-new-summary-upsell-copy">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(copy)}</span>
       </div>
-      <span class="visually-hidden">${escapeHtml(selected ? `Modalidad seleccionada: ${checkoutSummaryCadenceLabel(selected)}.` : 'Selecciona cómo prefieres pagar.')}</span>
-    </article>`;
+      <button class="btn btn-outline-primary btn-sm subp-new-summary-upsell-action" type="button" data-subp-checkout-upsell-target="${escapeHtml(nextPlan.id)}">Conocer Plan ${escapeHtml(nextPlanLabel)}</button>
+    </aside>`;
   }
 
   function checkoutSummaryCadenceActionHtml(plan){
@@ -63260,7 +63246,7 @@ function mxResetLogoPreview(){
       return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
         <span class="subp-payment-primary-copy">
           <span>Pago mensual automático en preparación</span>
-          <small>Tu mensualidad y el anticipo de 3 meses están confirmados. Esta modalidad se habilitará al completar la integración de cobros recurrentes.</small>
+          <small>Tu precio y el anticipo de 3 meses están confirmados.</small>
         </span>
       </button>`;
     }
@@ -63299,6 +63285,7 @@ function mxResetLogoPreview(){
     els.checkoutSummary.dataset.targetPlan = targetIdentity;
     els.checkoutSummary.dataset.paymentRouteType = clean(payloadPreview?.route_type || 'new_subscription');
     els.checkoutSummary.dataset.renderingPaymentShell = '1';
+    const periodBadge = selected ? `Pago ${checkoutSummaryCadenceLabel(selected).toLowerCase()}` : 'Periodo por confirmar';
     els.checkoutSummary.innerHTML = `<section class="subp-payment-shell-card subp-payment-shell-card--new-subscription subp-payment-shell-card--cadence" data-subp-payment-shell data-step="summary">
       ${checkoutSummaryStepperHtml('summary')}
       <section class="subp-new-summary-overview" aria-label="Resumen del plan elegido">
@@ -63309,7 +63296,7 @@ function mxResetLogoPreview(){
           <div class="subp-new-summary-hero-copy">
             <h3>Has elegido el Plan <span>${escapeHtml(targetLabel)}</span></h3>
             <p>${escapeHtml(tagline)}</p>
-            <small>Periodo por confirmar</small>
+            <small>${escapeHtml(periodBadge)}</small>
           </div>
         </article>
         <article class="subp-new-summary-benefits">
@@ -63323,12 +63310,13 @@ function mxResetLogoPreview(){
           ${checkoutSummaryCadenceOptionHtml(plan, 'annual')}
           ${checkoutSummaryCadenceOptionHtml(plan, 'monthly')}
         </div>
+        <button class="btn btn-outline-primary btn-sm subp-new-summary-back" type="button" data-subp-checkout-summary-action="back"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver a comparar planes</button>
+        <span class="visually-hidden" aria-live="polite">${escapeHtml(selected ? `Modalidad seleccionada: ${checkoutSummaryCadenceLabel(selected)}.` : 'Selecciona cómo prefieres pagar.')}</span>
       </section>
-      ${checkoutSummaryChoiceSummaryHtml(plan)}
+      ${checkoutSummaryUpsellHtml(plan)}
       ${checkoutSummarySecurePaymentBlockHtml(true)}
       <div class="subp-checkout-summary-actions subp-payment-shell-actions">
         <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${checkoutSummaryCadenceActionHtml(plan)}</div>
-        <button class="btn btn-outline-primary btn-sm subp-new-summary-back" type="button" data-subp-checkout-summary-action="back"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver a comparar planes</button>
       </div>
       <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
       ${checkoutSummaryCadenceDebugHtml()}
@@ -65040,13 +65028,22 @@ function mxResetLogoPreview(){
       }
       return;
     }
+    const checkoutUpsell = event.target && event.target.closest('[data-subp-checkout-upsell-target]');
+    if(checkoutUpsell){
+      event.preventDefault();
+      const targetPlanId = clean(checkoutUpsell.dataset.subpCheckoutUpsellTarget);
+      if(targetPlanId){
+        openPlanCheckoutSummary(targetPlanId);
+      }
+      return;
+    }
     const checkoutCadence = event.target && event.target.closest('[data-subp-checkout-cadence]');
     if(checkoutCadence){
       event.preventDefault();
       const period = clean(checkoutCadence.dataset.subpCheckoutCadence).toLowerCase();
       if(period !== 'annual' && period !== 'monthly') return;
-      if(!checkoutSummaryCadenceAvailable(period)) return;
-      checkoutSummaryPublishSelectedCadence(period);
+      if(checkoutCadence.disabled || clean(checkoutCadence.getAttribute('aria-disabled')) === 'true') return;
+      if(!checkoutSummaryPublishSelectedCadence(period, { allowRenderedPayload: true })) return;
       const activePaid = hasPaidActiveSubscription(data.currentModel || {});
       const summary = validCheckoutSummary(activePaid);
       if(summary){
