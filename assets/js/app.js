@@ -59250,10 +59250,10 @@ function mxResetLogoPreview(){
       features: ['Consulta tu plan actual, vigencia y beneficios disponibles']
     },
     plans: [
-      { id:'basico', name:'Básico', tagline:'Perfil público esencial', features:['Perfil en línea'] },
-      { id:'estandar', name:'Estándar', tagline:'Agenda y presencia profesional', features:['Perfil en línea','Agenda'] },
-      { id:'optimo', name:'Óptimo', tagline:'Gestión clínica ampliada', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
-      { id:'pro', name:'Profesional', tagline:'Suite completa para consulta', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
+      { id:'basico', name:'Básico', tagline:'Incluye 1 de las 5 funciones', features:['Perfil en línea'] },
+      { id:'estandar', name:'Estándar', tagline:'Incluye 2 de las 5 funciones', features:['Perfil en línea','Agenda'] },
+      { id:'optimo', name:'Óptimo', tagline:'Incluye 4 de las 5 funciones', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
+      { id:'pro', name:'Profesional', tagline:'Suite completa para tu consulta, incluye todas las funciones.', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
     ],
     activeSection: 'plans',
     paymentsView: 'overview',
@@ -63963,15 +63963,15 @@ function mxResetLogoPreview(){
   const SUBSCRIPTION_BENEFIT_DETAILS = Object.freeze({
     'perfil en linea': Object.freeze({
       label: 'Perfil en línea',
-      description: 'Tu perfil profesional puede mostrarse en México Médico para fortalecer tu presencia digital y facilitar que los pacientes encuentren tu información.'
+      description: 'Tu perfil publicado en línea con datos completos y clasificado en México Médico para fortalecer tu presencia, facilita que los pacientes te encuentren.'
     }),
     agenda: Object.freeze({
       label: 'Agenda en línea',
-      description: 'Permite organizar horarios y citas desde tu panel, facilitando la administración de tu consulta.'
+      description: 'Simplifica la gestión de citas, permite que tus pacientes agenden 24/7 y reduce inasistencias con recordatorios automáticos.'
     }),
     'agenda en linea': Object.freeze({
       label: 'Agenda en línea',
-      description: 'Permite organizar horarios y citas desde tu panel, facilitando la administración de tu consulta.'
+      description: 'Simplifica la gestión de citas, permite que tus pacientes agenden 24/7 y reduce inasistencias con recordatorios automáticos.'
     }),
     expediente: Object.freeze({
       label: 'Expediente clínico',
@@ -63979,19 +63979,19 @@ function mxResetLogoPreview(){
     }),
     'expediente clinico': Object.freeze({
       label: 'Expediente clínico',
-      description: 'Centraliza la información clínica de tus pacientes para consultar antecedentes, notas y seguimiento de atención.'
+      description: 'Mantén organizada la información de tus pacientes, accede fácilmente a sus antecedentes, notas y seguimiento desde cualquier lugar.'
     }),
     recetas: Object.freeze({
       label: 'Recetas digitales',
-      description: 'Permite generar y administrar recetas de forma digital desde el expediente del paciente.'
+      description: 'Permite generar y consultar recetas de forma digital desde el expediente de tus pacientes.'
     }),
     'recetas digitales': Object.freeze({
       label: 'Recetas digitales',
-      description: 'Permite generar y administrar recetas de forma digital desde el expediente del paciente.'
+      description: 'Permite generar y consultar recetas de forma digital desde el expediente de tus pacientes.'
     }),
     'asistente ia': Object.freeze({
       label: 'Asistente IA',
-      description: 'Apoya tareas de organización y redacción dentro del sistema para agilizar el trabajo administrativo y clínico.'
+      description: 'Ayuda a los pacientes a encontrar citas disponibles en tu agenda y les ayuda a reservar 24/7.'
     })
   });
 
