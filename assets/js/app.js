@@ -63521,7 +63521,6 @@ function mxResetLogoPreview(){
         </article>
         <article class="subp-new-summary-benefits">
           <h4>Funciones que incluye tu plan</h4>
-          <p class="subp-new-summary-benefits-note">Cinco beneficios siempre visibles para que sepas exactamente qué obtienes.</p>
           ${checkoutSummaryTargetBenefitsGridHtml(plan)}
         </article>
       </section>
