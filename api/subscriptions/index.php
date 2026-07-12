@@ -1621,6 +1621,12 @@ function subscriptionStripeE2EPlanDoctorFixtures(): array
             'status' => 'active',
             'label' => 'Profesional',
         ],
+        '990106' => [
+            'plan_code' => 'optimum',
+            'billing_period' => 'annual',
+            'status' => 'active',
+            'label' => 'Óptimo',
+        ],
     ];
 }
 

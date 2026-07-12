@@ -2554,10 +2554,12 @@ console.info('app.js loaded :: 20251123a');
     '990101': { doctor_id: '990101', label: '990101 — Free', plan: 'free', planLabel: 'Gratuito' },
     '990102': { doctor_id: '990102', label: '990102 — Básico', plan: 'basic', planLabel: 'Básico' },
     '990103': { doctor_id: '990103', label: '990103 — Estándar', plan: 'standard', planLabel: 'Estándar' },
+    // 990104 permanece autorizado como evidencia post-E2E, pero se oculta del selector cotidiano.
     '990104': { doctor_id: '990104', label: '990104 — Profesional (post E2E)', plan: 'professional', planLabel: 'Profesional' },
+    '990106': { doctor_id: '990106', label: '990106 — Óptimo', plan: 'optimum', planLabel: 'Óptimo' },
     '990105': { doctor_id: '990105', label: '990105 — Profesional', plan: 'professional', planLabel: 'Profesional' }
   };
-  const QA_REAL_ENTITY_OPTION_ORDER = ['', '990101', '990102', '990103', '990104', '990105'];
+  const QA_REAL_ENTITY_OPTION_ORDER = ['', '990101', '990102', '990103', '990106', '990105'];
 
   const normalizeState = (raw = {})=>{
     const role = clean(raw.role || raw.mxmed_role || raw.value || '').toLowerCase();
@@ -2762,6 +2764,7 @@ console.info('app.js loaded :: 20251123a');
 
   let qaRealEntityStatus = null;
   let qaRealEntitySelect = null;
+  let qaRealEntityRequestSeq = 0;
 
   const setQaRealEntityStatus = (message, tone = 'muted')=>{
     if(!qaRealEntityStatus) return;
@@ -2788,6 +2791,9 @@ console.info('app.js loaded :: 20251123a');
 
   const applyQaRealEntity = async (nextState)=>{
     const state = normalizeQaRealEntityState(nextState);
+    const requestSeq = ++qaRealEntityRequestSeq;
+    const isCurrentRequest = ()=> requestSeq === qaRealEntityRequestSeq
+      && (!qaRealEntitySelect || qaRealEntitySelect.value === state.doctor_id);
     if(!state.doctor_id){
       persistQaRealEntityState(state);
       setQaRealEntityStatus('Sin entidad QA real seleccionada.', 'muted');
@@ -2808,6 +2814,7 @@ console.info('app.js loaded :: 20251123a');
         body: JSON.stringify({ doctor_id: Number(state.doctor_id) })
       });
       const payload = await response.json().catch(()=> null);
+      if(!isCurrentRequest()) return false;
       if(!response.ok || !payload || payload.ok !== true || !payload.data){
         setQaRealEntityStatus(qaRealEntityErrorMessage(payload, response.status), 'error');
         return false;
@@ -2834,10 +2841,12 @@ console.info('app.js loaded :: 20251123a');
       }));
       return true;
     }catch(_){
-      setQaRealEntityStatus('Servidor no disponible para activar la entidad QA real.', 'error');
+      if(isCurrentRequest()){
+        setQaRealEntityStatus('Servidor no disponible para activar la entidad QA real.', 'error');
+      }
       return false;
     }finally{
-      if(qaRealEntitySelect) qaRealEntitySelect.disabled = false;
+      if(isCurrentRequest() && qaRealEntitySelect) qaRealEntitySelect.disabled = false;
     }
   };
 
