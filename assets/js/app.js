@@ -63218,6 +63218,29 @@ function mxResetLogoPreview(){
     return 'Esta función no está incluida en el plan seleccionado.';
   }
 
+  function checkoutSummaryFeatureAvailabilityHtml(feature){
+    const plans = (Array.isArray(feature?.plans) ? feature.plans : [])
+      .map((planId)=> {
+        const normalized = normalizePlanId(planId);
+        const plan = findPlanById(normalized);
+        const label = clean(plan?.name);
+        return normalized && label ? { id: normalized, label } : null;
+      })
+      .filter(Boolean);
+    if(!plans.length) return escapeHtml(checkoutSummaryFeatureAvailabilityText(feature));
+
+    const planButton = (plan)=> `<button class="subp-benefit-plan-link subp-current-upgrade-button" type="button" data-subp-target-plan="${escapeHtml(plan.id)}" data-subp-benefit-focus-plan="${escapeHtml(plan.id)}">${escapeHtml(plan.label)}</button>`;
+    const planControls = plans.map(planButton);
+    if(planControls.length === 1){
+      return `Esta función solo está disponible en el plan ${planControls[0]}.`;
+    }
+    if(planControls.length === 2){
+      return `Esta función solo está disponible en los planes ${planControls[0]} y ${planControls[1]}.`;
+    }
+    const last = planControls[planControls.length - 1];
+    return `Esta función solo está disponible en los planes ${planControls.slice(0, -1).join(', ')} y ${last}.`;
+  }
+
   function closeSummaryBenefitPopovers(root = pane){
     const scope = root || document;
     scope.querySelectorAll('[data-subp-summary-benefit-popover].is-open').forEach((popover)=>{
@@ -63242,6 +63265,16 @@ function mxResetLogoPreview(){
     popover.classList.add('is-open');
   }
 
+  function focusPlanFromBenefitPopover(planId){
+    const targetPlanId = normalizePlanId(planId);
+    if(!targetPlanId || !findPlanById(targetPlanId)) return;
+    closeSummaryBenefitPopovers(pane);
+    closePlanCheckoutSummary({ render: true });
+    window.requestAnimationFrame(()=>{
+      setPlanFocus(targetPlanId);
+    });
+  }
+
   function checkoutSummaryTargetBenefitsGridHtml(plan){
     const targetPlanId = normalizePlanId(plan?.id);
     const items = SUBSCRIPTION_SUMMARY_FEATURE_CHIPS.map((feature)=>{
@@ -63253,7 +63286,7 @@ function mxResetLogoPreview(){
         included,
         popover: included
           ? 'Esta función está incluida en el plan seleccionado.'
-          : checkoutSummaryFeatureAvailabilityText(feature)
+          : checkoutSummaryFeatureAvailabilityHtml(feature)
       };
     });
     return `<div class="subp-new-summary-benefit-grid">
@@ -63272,7 +63305,7 @@ function mxResetLogoPreview(){
               ${benefit.included ? 'Incluido' : 'No incluido'}
             </span>
           </button>
-          <span class="subp-new-summary-benefit-popover" id="${popoverId}" role="dialog" aria-label="${escapeHtml(benefit.label)}" data-subp-summary-benefit-popover hidden>${escapeHtml(benefit.popover)}</span>
+          <span class="subp-new-summary-benefit-popover" id="${popoverId}" role="dialog" aria-label="${escapeHtml(benefit.label)}" data-subp-summary-benefit-popover hidden>${benefit.included ? escapeHtml(benefit.popover) : benefit.popover}</span>
         </span>`;
       }).join('')}
     </div>`;
@@ -63321,7 +63354,11 @@ function mxResetLogoPreview(){
       ? clean(data.checkoutSummary.cadenceErrors?.[normalizedPeriod]) || 'No disponible por ahora.'
       : '';
 
-    return `<button class="subp-new-summary-cadence-card" type="button" data-period="${escapeHtml(normalizedPeriod)}" data-subp-checkout-cadence="${escapeHtml(normalizedPeriod)}" data-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled aria-disabled="true"' : ''}>
+    const selectedAction = selected
+      ? `<div class="subp-new-summary-cadence-action-slot" data-subp-payment-route-create-action="checkoutSummary">${checkoutSummaryCadenceActionHtml(plan)}</div>`
+      : '<div class="subp-new-summary-cadence-action-slot" aria-hidden="true"></div>';
+
+    return `<div class="subp-new-summary-cadence-card" role="button" tabindex="${disabled ? '-1' : '0'}" data-period="${escapeHtml(normalizedPeriod)}" data-subp-checkout-cadence="${escapeHtml(normalizedPeriod)}" data-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'aria-disabled="true"' : ''}>
       <span class="subp-new-summary-cadence-mark" aria-hidden="true"></span>
       <span class="subp-new-summary-cadence-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(icon)}</span>
       <span class="subp-new-summary-cadence-copy">
@@ -63333,7 +63370,8 @@ function mxResetLogoPreview(){
         ${badge ? `<small>${escapeHtml(badge)}</small>` : ''}
         ${disabledReason ? `<small>${escapeHtml(disabledReason)}</small>` : ''}
       </span>
-    </button>`;
+      ${selectedAction}
+    </div>`;
   }
 
   function checkoutSummarySuperiorPlans(plan){
@@ -63427,6 +63465,14 @@ function mxResetLogoPreview(){
     return paymentRouteCreateActionHtml('checkoutSummary');
   }
 
+  function checkoutSummaryCadenceHintHtml(){
+    if(clean(data.checkoutSummary.selectedBillingPeriod)) return '';
+    const simulation = isQaPlanSimulationActive()
+      ? '<span>Simulación QA local — sin consulta backend.</span>'
+      : '';
+    return `<p class="subp-new-summary-cadence-hint">Elige cómo prefieres pagar para continuar.${simulation}</p>`;
+  }
+
   function checkoutSummaryCadenceDebugHtml(){
     if(!isSubscriptionDebugPanelEnabled()) return '';
     const annual = checkoutSummaryCadencePreviewState('annual');
@@ -63485,14 +63531,12 @@ function mxResetLogoPreview(){
           ${checkoutSummaryCadenceOptionHtml(plan, 'annual')}
           ${checkoutSummaryCadenceOptionHtml(plan, 'monthly')}
         </div>
+        ${checkoutSummaryCadenceHintHtml()}
         <button class="btn btn-outline-primary btn-sm subp-new-summary-back" type="button" data-subp-checkout-summary-action="back"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver a comparar planes</button>
         <span class="visually-hidden" aria-live="polite">${escapeHtml(selected ? `Modalidad seleccionada: ${checkoutSummaryCadenceLabel(selected)}.` : 'Selecciona cómo prefieres pagar.')}</span>
       </section>
       ${checkoutSummaryUpsellHtml(plan)}
       ${checkoutSummarySecurePaymentBlockHtml(true)}
-      <div class="subp-checkout-summary-actions subp-payment-shell-actions">
-        <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${checkoutSummaryCadenceActionHtml(plan)}</div>
-      </div>
       <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
       ${checkoutSummaryCadenceDebugHtml()}
       ${paymentPayloadPreviewHtml(payloadPreview)}
@@ -65201,6 +65245,13 @@ function mxResetLogoPreview(){
       toggleSummaryBenefitPopover(summaryBenefitChip);
       return;
     }
+    const benefitFocusPlan = event.target && event.target.closest('[data-subp-benefit-focus-plan]');
+    if(benefitFocusPlan){
+      event.preventDefault();
+      event.stopPropagation();
+      focusPlanFromBenefitPopover(benefitFocusPlan.dataset.subpBenefitFocusPlan);
+      return;
+    }
     const checkoutAction = event.target && event.target.closest('[data-subp-checkout-summary-action]');
     if(checkoutAction){
       event.preventDefault();
@@ -65218,8 +65269,16 @@ function mxResetLogoPreview(){
       }
       return;
     }
+    const paymentRouteCreate = event.target && event.target.closest('[data-subp-payment-route-create]');
+    if(paymentRouteCreate){
+      event.preventDefault();
+      event.stopPropagation();
+      createPaymentRouteFromSummary(clean(paymentRouteCreate.dataset.subpPaymentRouteCreate));
+      return;
+    }
     const checkoutCadence = event.target && event.target.closest('[data-subp-checkout-cadence]');
     if(checkoutCadence){
+      if(event.target && event.target.closest('[data-subp-payment-route-create]')) return;
       event.preventDefault();
       const period = clean(checkoutCadence.dataset.subpCheckoutCadence).toLowerCase();
       if(period !== 'annual' && period !== 'monthly') return;
@@ -65230,12 +65289,6 @@ function mxResetLogoPreview(){
       if(summary){
         renderPlanCheckoutSummary(summary.plan, summary.flowType, { loadPreview: false });
       }
-      return;
-    }
-    const paymentRouteCreate = event.target && event.target.closest('[data-subp-payment-route-create]');
-    if(paymentRouteCreate){
-      event.preventDefault();
-      createPaymentRouteFromSummary(clean(paymentRouteCreate.dataset.subpPaymentRouteCreate));
       return;
     }
     const paymentRouteCheckout = event.target && event.target.closest('[data-subp-payment-route-checkout]');
@@ -65282,6 +65335,21 @@ function mxResetLogoPreview(){
           }
         });
       }
+    }
+  });
+  pane.addEventListener('keydown', (event)=>{
+    if(event.key !== 'Enter' && event.key !== ' ') return;
+    const checkoutCadence = event.target && event.target.closest('[data-subp-checkout-cadence]');
+    if(!checkoutCadence || event.target !== checkoutCadence) return;
+    event.preventDefault();
+    const period = clean(checkoutCadence.dataset.subpCheckoutCadence).toLowerCase();
+    if(period !== 'annual' && period !== 'monthly') return;
+    if(clean(checkoutCadence.getAttribute('aria-disabled')) === 'true') return;
+    if(!checkoutSummaryPublishSelectedCadence(period, { allowRenderedPayload: true })) return;
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const summary = validCheckoutSummary(activePaid);
+    if(summary){
+      renderPlanCheckoutSummary(summary.plan, summary.flowType, { loadPreview: false });
     }
   });
   els.pricingModeButtons.forEach((button)=>{
