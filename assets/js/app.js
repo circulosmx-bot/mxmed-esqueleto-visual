@@ -63706,10 +63706,8 @@ function mxResetLogoPreview(){
   ]);
 
   function checkoutSummaryFeatureAvailabilityText(feature){
-    const names = (Array.isArray(feature?.plans) ? feature.plans : [])
-      .map((planId)=> clean(findPlanById(planId)?.name))
-      .filter(Boolean);
-    if(names.length === 1) return `Esta función solo está disponible en el plan ${names[0]}.`;
+    const names = summaryBenefitAvailabilityPlanItems(feature?.plans).map((plan)=> plan.label);
+    if(names.length === 1) return `Esta función solo está disponible en el Plan ${names[0]}.`;
     if(names.length === 2) return `Esta función solo está disponible en los planes ${names[0]} y ${names[1]}.`;
     if(names.length > 2){
       const last = names[names.length - 1];
@@ -63718,27 +63716,44 @@ function mxResetLogoPreview(){
     return 'Esta función no está incluida en el plan seleccionado.';
   }
 
-  function checkoutSummaryFeatureAvailabilityHtml(feature){
-    const plans = (Array.isArray(feature?.plans) ? feature.plans : [])
-      .map((planId)=> {
-        const normalized = normalizePlanId(planId);
-        const plan = findPlanById(normalized);
-        const label = clean(plan?.name);
-        return normalized && label ? { id: normalized, label } : null;
-      })
-      .filter(Boolean);
-    if(!plans.length) return escapeHtml(checkoutSummaryFeatureAvailabilityText(feature));
+  function summaryBenefitAvailabilityPlanItems(plans){
+    const unique = new Map();
+    (Array.isArray(plans) ? plans : []).forEach((planRef)=>{
+      const normalized = normalizePlanId(typeof planRef === 'string'
+        ? planRef
+        : planRef?.id || planRef?.plan_id || planRef?.planId || planRef?.code || '');
+      const plan = findPlanById(normalized);
+      const label = clean(plan?.name || planRef?.label || '');
+      const rank = planRank(normalized);
+      if(!normalized || !label || unique.has(normalized)) return;
+      unique.set(normalized, { id: normalized, label, rank });
+    });
+    return Array.from(unique.values()).sort((a, b)=>{
+      const rankA = a.rank === null || a.rank === undefined ? Number.MAX_SAFE_INTEGER : a.rank;
+      const rankB = b.rank === null || b.rank === undefined ? Number.MAX_SAFE_INTEGER : b.rank;
+      return rankA - rankB;
+    });
+  }
+
+  function benefitAvailabilityPlansInteractiveHtml(plans){
+    const planItems = summaryBenefitAvailabilityPlanItems(plans);
+    if(!planItems.length) return '';
 
     const planButton = (plan)=> `<button class="subp-benefit-plan-link subp-current-upgrade-button" type="button" data-subp-target-plan="${escapeHtml(plan.id)}" data-subp-benefit-focus-plan="${escapeHtml(plan.id)}">${escapeHtml(plan.label)}</button>`;
-    const planControls = plans.map(planButton);
+    const planControls = planItems.map(planButton);
     if(planControls.length === 1){
-      return `Esta función solo está disponible en el plan ${planControls[0]}.`;
+      return `Esta función solo está disponible en el Plan ${planControls[0]}.`;
     }
     if(planControls.length === 2){
       return `Esta función solo está disponible en los planes ${planControls[0]} y ${planControls[1]}.`;
     }
     const last = planControls[planControls.length - 1];
     return `Esta función solo está disponible en los planes ${planControls.slice(0, -1).join(', ')} y ${last}.`;
+  }
+
+  function checkoutSummaryFeatureAvailabilityHtml(feature){
+    return benefitAvailabilityPlansInteractiveHtml(feature?.plans)
+      || escapeHtml(checkoutSummaryFeatureAvailabilityText(feature));
   }
 
   function closeSummaryBenefitPopovers(root = pane){
@@ -63813,28 +63828,12 @@ function mxResetLogoPreview(){
 
   function paidUpgradeFeatureAvailabilityHtml(feature, targetPlan){
     const targetRank = planRank(targetPlan?.id);
-    const plans = (Array.isArray(feature?.plans) ? feature.plans : [])
-      .map((planId)=> {
-        const normalized = normalizePlanId(planId);
-        const plan = findPlanById(normalized);
-        const label = clean(plan?.name);
-        const rank = planRank(normalized);
-        return normalized && label && rank !== null ? { id: normalized, label, rank } : null;
-      })
+    const plans = summaryBenefitAvailabilityPlanItems(feature?.plans)
       .filter((plan)=> plan && (targetRank === null || plan.rank > targetRank))
       .sort((a, b)=> a.rank - b.rank);
     if(!plans.length) return 'Esta función no está incluida en el plan seleccionado.';
 
-    const planButton = (plan)=> `<button class="subp-benefit-plan-link subp-current-upgrade-button" type="button" data-subp-target-plan="${escapeHtml(plan.id)}" data-subp-benefit-focus-plan="${escapeHtml(plan.id)}">${escapeHtml(plan.label)}</button>`;
-    const planControls = plans.map(planButton);
-    if(planControls.length === 1){
-      return `Esta función está disponible si eliges el plan ${planControls[0]}.`;
-    }
-    if(planControls.length === 2){
-      return `Esta función está disponible si eliges ${planControls[0]} o ${planControls[1]}.`;
-    }
-    const last = planControls[planControls.length - 1];
-    return `Esta función está disponible si eliges ${planControls.slice(0, -1).join(', ')} o ${last}.`;
+    return benefitAvailabilityPlansInteractiveHtml(plans);
   }
 
   function paidUpgradeSummaryBenefitsGridHtml(currentPlan, targetPlan){
