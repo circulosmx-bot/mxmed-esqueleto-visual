@@ -60331,6 +60331,7 @@ function mxResetLogoPreview(){
       if(data.requestedRealQaEntityId === contextId){
         data.realQaEntityHydrationPending = false;
       }
+      prunePreparedPaymentRouteStoreForContext(contextInfo || {});
     }
     data.qaPlan = readSubscriptionQaPlanState();
     applyEffectiveSubscriptionModel();
@@ -61589,6 +61590,54 @@ function mxResetLogoPreview(){
     }catch(_){}
   }
 
+  function preparedPaymentRouteSignatureEntity(signature){
+    const parts = clean(signature).split(':').map((part)=> clean(part).toLowerCase()).filter(Boolean);
+    const entityTypeIndex = parts.findIndex((part)=> part === 'doctor');
+    if(entityTypeIndex === -1) return { entity_type: '', entity_id: '' };
+    return {
+      entity_type: parts[entityTypeIndex],
+      entity_id: safeDoctorId(parts[entityTypeIndex + 1] || '')
+    };
+  }
+
+  function preparedPaymentRouteEntryMatchesContext(storeKey, entry, contextInfo = {}){
+    const contextType = clean(contextInfo.entity_type).toLowerCase() || 'doctor';
+    const contextId = safeDoctorId(contextInfo.entity_id || contextInfo.doctor_id);
+    if(contextType !== 'doctor' || !contextId) return false;
+    const signature = clean(entry?.signature) || clean(storeKey);
+    const signatureEntity = preparedPaymentRouteSignatureEntity(signature);
+    const route = entry?.data && typeof entry.data === 'object' ? entry.data : null;
+    const routeEntityType = clean(route?.entity_type).toLowerCase();
+    const routeEntityId = safeDoctorId(route?.entity_id);
+    const hasRouteContext = !!(routeEntityType || routeEntityId);
+    const hasSignatureContext = !!(signatureEntity.entity_type || signatureEntity.entity_id);
+    if(!hasRouteContext && !hasSignatureContext) return false;
+    return (!routeEntityType || routeEntityType === contextType)
+      && (!routeEntityId || routeEntityId === contextId)
+      && (!signatureEntity.entity_type || signatureEntity.entity_type === contextType)
+      && (!signatureEntity.entity_id || signatureEntity.entity_id === contextId);
+  }
+
+  function prunePreparedPaymentRouteStoreForContext(contextInfo = {}){
+    const store = readPreparedPaymentRouteStore();
+    const keys = Object.keys(store);
+    if(!keys.length) return;
+    const nextStore = {};
+    keys.forEach((key)=>{
+      const entry = store[key];
+      if(preparedPaymentRouteEntryMatchesContext(key, entry, contextInfo)){
+        nextStore[key] = entry;
+      }
+    });
+    if(Object.keys(nextStore).length === 0){
+      clearPreparedPaymentRouteStore();
+      return;
+    }
+    if(Object.keys(nextStore).length !== keys.length){
+      writePreparedPaymentRouteStore(nextStore);
+    }
+  }
+
   function resetCheckoutSummaryDom(){
     if(!els.checkoutSummary) return;
     els.checkoutSummary.classList.add('d-none');
@@ -61714,7 +61763,8 @@ function mxResetLogoPreview(){
     data.confirmedRealQaEntityId = '';
     data.realQaEntityHydrationPending = true;
     data.realQaEntityHydrationRequestId = Number(contextInfo.request_seq || contextInfo.requestSeq || data.realQaEntityHydrationRequestId + 1);
-    resetSubscriptionPaymentFlowState({ invalidateRequests: false });
+    resetSubscriptionPaymentFlowState({ invalidateRequests: false, clearPreparedStore: false });
+    prunePreparedPaymentRouteStoreForContext(context);
     setSubscriptionNeutralLoading(
       context.doctor_id ? `Confirmando entidad QA real doctor/${context.doctor_id}...` : 'Confirmando entidad QA real...',
       context
