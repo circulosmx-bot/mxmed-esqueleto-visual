@@ -71,6 +71,31 @@ final class StripePaymentIntentProviderService
         ];
     }
 
+    public function retrieveClientSecret(string $providerPaymentId): array
+    {
+        $providerPaymentId = $this->requiredText(
+            $providerPaymentId,
+            'stripe_payment_intent_retrieve_failed: payment intent id is required',
+            128
+        );
+        if (preg_match('/^pi_[A-Za-z0-9_]+$/', $providerPaymentId) !== 1) {
+            throw new RuntimeException('stripe_payment_intent_retrieve_failed: payment intent id is invalid');
+        }
+
+        $response = $this->retrieve($this->stripeSecretKey(), $providerPaymentId);
+        $this->assertRetrieveResponse($response, $providerPaymentId);
+
+        return [
+            'id' => (string)$response['id'],
+            'status' => (string)($response['status'] ?? ''),
+            'amount' => isset($response['amount']) ? (int)$response['amount'] : null,
+            'currency' => strtolower((string)($response['currency'] ?? '')),
+            'livemode' => (bool)($response['livemode'] ?? false),
+            'metadata' => is_array($response['metadata'] ?? null) ? $response['metadata'] : [],
+            'client_secret' => (string)($response['client_secret'] ?? ''),
+        ];
+    }
+
     private function request(string $secretKey, array $payload, ?string $idempotencyKey): array
     {
         $headers = [
@@ -84,27 +109,47 @@ final class StripePaymentIntentProviderService
 
         $body = http_build_query($this->flatten($payload), '', '&', PHP_QUERY_RFC3986);
         if (function_exists('curl_init')) {
-            return $this->requestWithCurl($headers, $body);
+            return $this->requestWithCurl(self::API_URL, $headers, 'POST', $body);
         }
 
-        return $this->requestWithStream($headers, $body);
+        return $this->requestWithStream(self::API_URL, $headers, 'POST', $body);
     }
 
-    private function requestWithCurl(array $headers, string $body): array
+    private function retrieve(string $secretKey, string $providerPaymentId): array
     {
-        $handle = curl_init(self::API_URL);
+        $headers = [
+            'Authorization: Basic ' . base64_encode($secretKey . ':'),
+            'Accept: application/json',
+        ];
+        $url = self::API_URL . '/' . rawurlencode($providerPaymentId);
+
+        if (function_exists('curl_init')) {
+            return $this->requestWithCurl($url, $headers, 'GET');
+        }
+
+        return $this->requestWithStream($url, $headers, 'GET');
+    }
+
+    private function requestWithCurl(string $url, array $headers, string $method, ?string $body = null): array
+    {
+        $handle = curl_init($url);
         if ($handle === false) {
             throw new RuntimeException('stripe_provider_unavailable: stripe http client is unavailable');
         }
 
-        curl_setopt_array($handle, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
+        $options = [
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER => false,
             CURLOPT_TIMEOUT => 20,
-        ]);
+        ];
+        if ($method === 'POST') {
+            $options[CURLOPT_POST] = true;
+            $options[CURLOPT_POSTFIELDS] = (string)$body;
+        } else {
+            $options[CURLOPT_HTTPGET] = true;
+        }
+        curl_setopt_array($handle, $options);
 
         $raw = curl_exec($handle);
         $httpStatus = (int)curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
@@ -113,11 +158,11 @@ final class StripePaymentIntentProviderService
 
         if (!is_string($raw) || $raw === '') {
             throw new RuntimeException(
-                'stripe_payment_intent_create_failed: stripe returned an empty response'
+                'stripe_payment_intent_request_failed: stripe returned an empty response'
             );
         }
         if ($curlError !== '') {
-            throw new RuntimeException('stripe_payment_intent_create_failed: stripe request failed');
+            throw new RuntimeException('stripe_payment_intent_request_failed: stripe request failed');
         }
 
         return $this->decodeResponse($raw, $httpStatus);
@@ -132,25 +177,28 @@ final class StripePaymentIntentProviderService
         curl_close($handle);
     }
 
-    private function requestWithStream(array $headers, string $body): array
+    private function requestWithStream(string $url, array $headers, string $method, ?string $body = null): array
     {
         if (!filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)) {
             throw new RuntimeException('stripe_provider_unavailable: stripe http client is unavailable');
         }
 
+        $httpOptions = [
+            'method' => $method,
+            'header' => implode("\r\n", $headers),
+            'timeout' => 20,
+            'ignore_errors' => true,
+        ];
+        if ($method === 'POST') {
+            $httpOptions['content'] = (string)$body;
+        }
         $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers),
-                'content' => $body,
-                'timeout' => 20,
-                'ignore_errors' => true,
-            ],
+            'http' => $httpOptions,
         ]);
-        $raw = file_get_contents(self::API_URL, false, $context);
+        $raw = file_get_contents($url, false, $context);
         if (!is_string($raw) || $raw === '') {
             throw new RuntimeException(
-                'stripe_payment_intent_create_failed: stripe returned an empty response'
+                'stripe_payment_intent_request_failed: stripe returned an empty response'
             );
         }
 
@@ -198,6 +246,16 @@ final class StripePaymentIntentProviderService
         }
         if (strtoupper((string)($response['currency'] ?? '')) !== $currency) {
             throw new RuntimeException('stripe_payment_intent_create_failed: stripe currency mismatch');
+        }
+    }
+
+    private function assertRetrieveResponse(array $response, string $providerPaymentId): void
+    {
+        if ((string)($response['object'] ?? '') !== 'payment_intent') {
+            throw new RuntimeException('stripe_payment_intent_retrieve_failed: stripe object is invalid');
+        }
+        if ((string)($response['id'] ?? '') !== $providerPaymentId) {
+            throw new RuntimeException('stripe_payment_intent_retrieve_failed: stripe payment intent id mismatch');
         }
     }
 

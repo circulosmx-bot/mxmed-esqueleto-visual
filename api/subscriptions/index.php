@@ -23,6 +23,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscription
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/RetrieveSubscriptionPaymentIntentClientSecretService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripePaymentIntentProviderService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookPayloadNormalizer.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookSignatureVerifier.php';
@@ -60,6 +61,8 @@ use Subscriptions\Services\CreateSubscriptionPendingPaymentAcceptanceService;
 use Subscriptions\Services\CreateSubscriptionWithAcceptanceService;
 use Subscriptions\Services\CurrentSubscriptionReadModelService;
 use Subscriptions\Services\ProcessStripeSubscriptionWebhookService;
+use Subscriptions\Services\RetrieveSubscriptionPaymentIntentClientSecretException;
+use Subscriptions\Services\RetrieveSubscriptionPaymentIntentClientSecretService;
 use Subscriptions\Services\StripePaymentIntentProviderService;
 use Subscriptions\Services\StripeWebhookPayloadNormalizer;
 use Subscriptions\Services\StripeWebhookSignatureVerifier;
@@ -151,6 +154,64 @@ function subscriptionWriteError(string $code, string $message, string $authMode 
         'data' => null,
         'meta' => subscriptionWriteMeta($authMode),
     ];
+}
+
+function subscriptionClientSecretMeta(string $authMode = 'unknown'): array
+{
+    return [
+        'contract' => 'subscription_payment_intent_client_secret',
+        'version' => 'SUB-PI-CLIENT-SECRET-1',
+        'generated_at' => gmdate('c'),
+        'auth_mode' => $authMode,
+        'strict_auth_required' => true,
+        'source' => 'subscriptions_payment_intent_client_secret',
+    ];
+}
+
+function subscriptionClientSecretError(string $code, string $message, string $authMode = 'unknown'): array
+{
+    return [
+        'ok' => false,
+        'error' => [
+            'code' => $code,
+            'message' => $message,
+        ],
+        'data' => null,
+        'meta' => subscriptionClientSecretMeta($authMode),
+    ];
+}
+
+function subscriptionClientSecretRespond(array $response, int $status = 200): void
+{
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('X-Content-Type-Options: nosniff');
+
+    if (isset($response['meta']) && is_array($response['meta'])) {
+        $response['meta'] = (object)$response['meta'];
+    } elseif (!isset($response['meta']) || !is_object($response['meta'])) {
+        $response['meta'] = (object)[];
+    }
+
+    http_response_code($status);
+    $json = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        http_response_code(500);
+        echo json_encode([
+            'ok' => false,
+            'error' => [
+                'code' => 'payment_intent_client_secret_unavailable',
+                'message' => 'No pudimos preparar de forma segura esta operación. Inténtalo nuevamente.',
+            ],
+            'data' => null,
+            'meta' => (object)subscriptionClientSecretMeta('unknown'),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return;
+    }
+
+    echo $json;
 }
 
 function subscriptionPaymentRoutePreviewMeta(string $authMode = 'unknown'): array
@@ -2129,6 +2190,49 @@ function subscriptionReadJsonPayload(): array
     ];
 }
 
+function subscriptionReadClientSecretPayload(string $authMode = 'unknown'): array
+{
+    $contentType = strtolower(trim((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '')));
+    $raw = file_get_contents('php://input');
+    if (!is_string($raw) || trim($raw) === '') {
+        return [
+            'ok' => true,
+            'payload' => [],
+        ];
+    }
+
+    if ($contentType !== '' && strpos($contentType, 'application/json') === false) {
+        return [
+            'ok' => false,
+            'status' => 422,
+            'response' => subscriptionClientSecretError('invalid_payload', 'La solicitud no es válida.', $authMode),
+        ];
+    }
+
+    $decodedObject = json_decode($raw);
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_object($decodedObject) || !is_array($decoded)) {
+        return [
+            'ok' => false,
+            'status' => 422,
+            'response' => subscriptionClientSecretError('invalid_payload', 'La solicitud no es válida.', $authMode),
+        ];
+    }
+
+    if ($decoded !== []) {
+        return [
+            'ok' => false,
+            'status' => 422,
+            'response' => subscriptionClientSecretError('forbidden_fields', 'La solicitud no acepta campos.', $authMode),
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'payload' => [],
+    ];
+}
+
 function subscriptionForbiddenPayloadFields(array $payload, array $forbidden, string $prefix = ''): array
 {
     $found = [];
@@ -3410,6 +3514,107 @@ try {
 
         $isReplay = (bool)($checkoutResponse['meta']['idempotent_replay'] ?? false);
         subscriptionRespond($checkoutResponse, $isReplay ? 200 : 201);
+        return;
+    }
+
+    if (
+        count($segments) === 6
+        && $segments[0] === 'entities'
+        && $segments[3] === 'payment-intents'
+        && $segments[5] === 'client-secret'
+    ) {
+        if ($method !== 'POST') {
+            subscriptionClientSecretRespond(
+                subscriptionClientSecretError('method_not_allowed', 'method not allowed'),
+                405
+            );
+            return;
+        }
+
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        $paymentIntentUuid = trim((string)$segments[4]);
+        if ($entityType !== 'doctor' || !subscriptionValidEntityId($entityId) || $paymentIntentUuid === '') {
+            subscriptionClientSecretRespond(
+                subscriptionClientSecretError('invalid_request', 'La solicitud no es válida.'),
+                422
+            );
+            return;
+        }
+
+        $context = subscriptionResolveWriteContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            $contextResponse = (array)($context['response'] ?? []);
+            $contextMeta = (array)($contextResponse['meta'] ?? []);
+            $contextError = (array)($contextResponse['error'] ?? []);
+            $authMode = (string)($contextMeta['auth_mode'] ?? 'unknown');
+            $status = (int)($context['status'] ?? 403);
+            $code = (string)($contextError['code'] ?? 'forbidden');
+            $message = (string)($contextError['message'] ?? 'authentication required');
+            if ($status === 403 && in_array($authMode, ['local_dev_open', 'strict'], true)) {
+                $status = 401;
+                $code = 'unauthorized';
+                $message = 'authentication required';
+            }
+            subscriptionClientSecretRespond(
+                subscriptionClientSecretError($code, $message, $authMode),
+                $status
+            );
+            return;
+        }
+
+        $authMode = (string)($context['auth_mode'] ?? 'session_scope');
+        $payloadResult = subscriptionReadClientSecretPayload($authMode);
+        if (!(bool)($payloadResult['ok'] ?? false)) {
+            subscriptionClientSecretRespond(
+                (array)($payloadResult['response'] ?? []),
+                (int)($payloadResult['status'] ?? 422)
+            );
+            return;
+        }
+
+        $pdo = mxmed_pdo();
+        $service = new RetrieveSubscriptionPaymentIntentClientSecretService(
+            new SubscriptionPaymentIntentRepository($pdo),
+            new SubscriptionCheckoutIntentRepository($pdo),
+            new SubscriptionPaymentRouteRepository($pdo),
+            new StripePaymentIntentProviderService()
+        );
+
+        try {
+            $result = $service->retrieve([
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'actor_user_id' => (string)($context['actor_user_id'] ?? ''),
+                'actor_role' => (string)($context['actor_role'] ?? ''),
+                'doctor_id' => (string)($context['doctor_id'] ?? ''),
+                'profile_id' => $context['profile_id'] ?? null,
+            ], $paymentIntentUuid);
+        } catch (RetrieveSubscriptionPaymentIntentClientSecretException $e) {
+            subscriptionClientSecretRespond(
+                subscriptionClientSecretError($e->errorCode(), $e->publicMessage(), $authMode),
+                $e->status()
+            );
+            return;
+        } catch (Throwable $e) {
+            subscriptionClientSecretRespond(
+                subscriptionClientSecretError(
+                    'payment_provider_unavailable',
+                    'No pudimos preparar de forma segura esta operación. Inténtalo nuevamente.',
+                    $authMode
+                ),
+                502
+            );
+            return;
+        }
+
+        subscriptionClientSecretRespond([
+            'ok' => true,
+            'data' => [
+                'client_secret' => (string)($result['client_secret'] ?? ''),
+            ],
+            'meta' => subscriptionClientSecretMeta($authMode),
+        ], 200);
         return;
     }
 
