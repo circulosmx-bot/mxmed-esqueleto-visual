@@ -6903,14 +6903,33 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-payment-element-placeholder{ display:grid; justify-items:center; gap:8px; padding:28px 18px; border:1px dashed #cbd6e6; border-radius:12px; background:#fbfdff; color:#071943; text-align:center }
 .subp-payment-element-placeholder .material-symbols-rounded{ display:grid; place-items:center; width:52px; height:52px; border-radius:50%; background:#edf3ff; color:#164edb; font-size:28px; line-height:1 }
 .subp-payment-element-placeholder p{ max-width:430px; margin:0; color:#34445b; font-size:.9rem; font-weight:650; line-height:1.35 }
+.subp-secure-payment-shell{ gap:18px }
+.subp-secure-payment-layout{ display:grid; grid-template-columns:minmax(0,1.8fr) minmax(280px,.9fr); gap:18px; align-items:start }
+.subp-secure-payment-main{ display:grid; gap:14px; min-width:0 }
+.subp-secure-payment-form-card,
+.subp-secure-payment-summary{ display:grid; gap:12px; min-width:0; padding:16px; border:1px solid #d7e8ef; border-radius:13px; background:#fff; box-shadow:0 8px 18px rgba(0,49,84,.05) }
+.subp-secure-payment-form-card h4{ margin:0; color:#071943; font-size:1.16rem; font-weight:950; line-height:1.12 }
+.subp-secure-payment-summary{ position:sticky; top:12px; align-content:start; background:linear-gradient(180deg,var(--subp-summary-soft-2) 0%,#fff 100%) }
+.subp-secure-payment-summary h4{ margin:0; color:#071943; font-size:1.08rem; font-weight:950; line-height:1.15 }
+.subp-secure-payment-summary-plan{ display:flex; align-items:center; gap:12px; min-width:0; padding-bottom:12px; border-bottom:1px solid #e2edf4 }
+.subp-secure-payment-summary-plan > div{ display:grid; gap:3px; min-width:0 }
+.subp-secure-payment-summary-plan strong{ color:#071943; font-size:1.08rem; font-weight:950; line-height:1.08; overflow:hidden; text-overflow:ellipsis }
+.subp-secure-payment-summary-plan small{ color:#49636f; font-size:.82rem; font-weight:750; line-height:1.15 }
+.subp-secure-payment-summary .subp-payments-dl{ gap:10px 12px }
+.subp-secure-payment-summary .subp-payments-dl dd:last-child{ color:var(--subp-summary-dark); font-size:1.05rem; font-weight:950 }
+.subp-secure-payment-trust{ align-items:center; background:#f4f8ff }
+.subp-secure-payment-back{ justify-self:start; display:inline-flex; align-items:center; gap:6px }
 .subp-payment-next-action{ display:grid; gap:8px; padding-top:4px; border-top:1px solid #e4ebf5 }
 .subp-payment-next-action h4{ margin:0; color:#071943; font-size:1rem; font-weight:950; line-height:1.15 }
 .subp-payment-next-action p{ margin:0; color:#34445b; font-size:.86rem; font-weight:650; line-height:1.35 }
+.subp-payment-next-action small{ margin:0; color:#536b78; font-size:.82rem; font-weight:700; line-height:1.3 }
 .subp-payment-shell-message{ display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid #d9e5ff; border-radius:11px; background:#f5f7ff; color:#071943 }
 .subp-payment-shell-message > .material-symbols-rounded{ flex:0 0 auto; color:#164edb; font-size:24px; line-height:1 }
 .subp-payment-shell-message h4{ margin:0 0 3px; color:#071943; font-size:1rem; font-weight:950; line-height:1.15 }
 .subp-payment-shell-message p{ margin:0; color:#34445b; font-size:.88rem; font-weight:650; line-height:1.35 }
 .subp-payment-shell-message[data-state="waiting"]{ border-color:#d8cfff; background:#f7f4ff }
+.subp-payment-shell-message[data-state="success"]{ border-color:#cfead7; background:#f2fbf5 }
+.subp-payment-shell-message[data-state="success"] > .material-symbols-rounded{ color:#159447 }
 .subp-payment-shell-message[data-state="error"]{ border-color:#f2c4c4; background:#fff8f8 }
 .subp-payment-shell-message[data-state="error"] > .material-symbols-rounded{ color:#b42318 }
 .subp-payment-qa-details{ padding:12px; border:1px dashed #b9dbe5; border-radius:10px; background:#f8fcfd }
@@ -7429,6 +7448,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-payment-shell-card--new-subscription .subp-payment-facts .subp-checkout-summary-card:last-child{ border-bottom:0 }
   .subp-payment-total-card{ display:grid; justify-items:start }
   .subp-payment-total-amount{ justify-items:start; text-align:left }
+  .subp-secure-payment-layout{ grid-template-columns:1fr; gap:14px }
+  .subp-secure-payment-summary{ position:static; order:-1 }
+  .subp-secure-payment-form-card,
+  .subp-secure-payment-summary{ padding:14px }
+  .subp-secure-payment-summary .subp-payments-dl{ grid-template-columns:minmax(0,1fr); gap:5px }
+  .subp-secure-payment-summary .subp-payments-dl dd{ text-align:left }
+  .subp-secure-payment-back{ width:100%; justify-content:center }
   .subp-new-summary-overview{ gap:14px; padding:14px }
   .subp-new-summary-overview .subp-new-summary-hero{ grid-template-columns:1fr; justify-items:start; gap:12px; padding-bottom:13px }
   .subp-new-summary-hero{ grid-template-columns:1fr; justify-items:start; gap:12px; padding:14px }

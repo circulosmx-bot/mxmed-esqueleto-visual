@@ -59321,7 +59321,10 @@ function mxResetLogoPreview(){
         monthly: ''
       },
       cadenceLoading: false,
-      cadenceRequestId: 0
+      cadenceRequestId: 0,
+      securePaymentVisible: false,
+      securePaymentDismissed: false,
+      securePaymentMessage: ''
     },
     paymentPayloadPreview: {
       checkoutSummary: null,
@@ -61147,6 +61150,9 @@ function mxResetLogoPreview(){
     data.checkoutSummary.cadencePayloads = { annual: null, monthly: null };
     data.checkoutSummary.cadenceErrors = { annual: '', monthly: '' };
     data.checkoutSummary.cadenceLoading = false;
+    data.checkoutSummary.securePaymentVisible = false;
+    data.checkoutSummary.securePaymentDismissed = false;
+    data.checkoutSummary.securePaymentMessage = '';
     if(bumpRequest) data.checkoutSummary.cadenceRequestId += 1;
     if(data.paymentServerPreview){
       data.paymentServerPreview.checkoutSummaryAnnual = null;
@@ -61221,6 +61227,9 @@ function mxResetLogoPreview(){
     const previousPeriod = clean(data.checkoutSummary.selectedBillingPeriod).toLowerCase();
     if(previousPeriod && previousPeriod !== period){
       resetPaymentExecutionForSlot('checkoutSummary');
+      data.checkoutSummary.securePaymentVisible = false;
+      data.checkoutSummary.securePaymentDismissed = false;
+      data.checkoutSummary.securePaymentMessage = '';
     }
     data.checkoutSummary.selectedBillingPeriod = period;
     publishPaymentPayloadPreview('checkoutSummary', payload);
@@ -62003,12 +62012,13 @@ function mxResetLogoPreview(){
     if(!paymentExecutionStateMatchesCurrentSummary('checkoutSummary')){
       return 'summary';
     }
+    if(data.checkoutSummary.securePaymentVisible) return 'payment';
     const routeState = paymentRouteCreateState('checkoutSummary');
     const bridge = paymentRouteCheckoutBridgeState('checkoutSummary');
     const paymentIntent = paymentIntentCreateState('checkoutSummary');
-    if(['creating', 'success'].includes(routeState.state)) return 'payment';
-    if(['creating', 'success'].includes(bridge.state)) return 'payment';
-    if(['creating', 'success'].includes(paymentIntent.state)) return 'payment';
+    if(!data.checkoutSummary.securePaymentDismissed && ['creating', 'success', 'error'].includes(routeState.state)) return 'payment';
+    if(!data.checkoutSummary.securePaymentDismissed && ['creating', 'success', 'error'].includes(bridge.state)) return 'payment';
+    if(!data.checkoutSummary.securePaymentDismissed && ['creating', 'success', 'error'].includes(paymentIntent.state)) return 'payment';
     return 'summary';
   }
 
@@ -62175,6 +62185,316 @@ function mxResetLogoPreview(){
     return `Pagaré ${checkoutSummaryPreviewAmountLabel(slot, '')} de forma segura con Stripe.`;
   }
 
+  function checkoutSummarySecurePaymentValidation(slot){
+    const key = isCheckoutPaymentShellSlot(slot) ? 'checkoutSummary' : clean(slot);
+    const payload = data.paymentPayloadPreview?.[key] || null;
+    const preview = latestPaymentServerPreviewData(key);
+    const routeType = clean(payload?.route_type);
+    const billingPeriod = clean(payload?.billing_period).toLowerCase();
+    const amountCents = Number(preview?.amount_cents ?? payload?.amount_cents);
+    const currency = clean(preview?.currency || payload?.currency).toUpperCase();
+    if(key !== 'checkoutSummary') return { ok: false, message: 'Resumen requerido.' };
+    if(isQaPlanSimulationActive()){
+      return { ok: false, message: 'Simulación QA local — sin consulta backend.' };
+    }
+    if(data.realQaEntityHydrationPending){
+      return { ok: false, message: 'Cargando entidad real antes de continuar.' };
+    }
+    if(!paymentExecutionStateMatchesCurrentSummary(key, { reset: false })){
+      return { ok: false, message: 'Resumen requerido.' };
+    }
+    if(!payload || !paymentPayloadMatchesCurrentEntity(payload)){
+      return { ok: false, message: 'Resumen requerido.' };
+    }
+    if(!preview){
+      return { ok: false, message: 'Importe pendiente de confirmar.' };
+    }
+    if(!Number.isFinite(amountCents) || amountCents < 0 || !currency){
+      return { ok: false, message: 'Importe pendiente de confirmar.' };
+    }
+    if(routeType !== 'new_subscription' && routeType !== 'upgrade_subscription'){
+      return { ok: false, message: 'Operación no disponible.' };
+    }
+    if(billingPeriod !== 'annual'){
+      return { ok: false, message: 'Pago mensual automático en preparación.' };
+    }
+    if(routeType === 'upgrade_subscription'){
+      const currentPeriod = clean(data.currentModel?.billing_period).toLowerCase();
+      if(currentPeriod && currentPeriod !== billingPeriod){
+        return { ok: false, message: 'El periodo vigente debe coincidir antes de continuar.' };
+      }
+    }
+    if(paymentExecutionBlockReason(key)){
+      return { ok: false, message: 'Esta modalidad de pago aún está en preparación.' };
+    }
+    return { ok: true, message: '' };
+  }
+
+  function checkoutSummaryOpenSecurePaymentActionHtml(slot){
+    const validation = checkoutSummarySecurePaymentValidation(slot);
+    if(!validation.ok){
+      return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
+        <span class="subp-payment-primary-copy">
+          <span>Continuar al método de pago</span>
+          <small>${escapeHtml(validation.message || 'Resumen requerido.')}</small>
+        </span>
+      </button>`;
+    }
+    const subcopy = checkoutSummaryPrimaryActionSubcopy(slot);
+    const content = subcopy
+      ? `<span class="subp-payment-primary-copy"><span>Continuar al método de pago</span><small>${escapeHtml(subcopy)}</small></span>`
+      : 'Continuar al método de pago';
+    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-open-secure-payment="${escapeHtml(slot)}"><span class="material-symbols-rounded" aria-hidden="true">lock</span>${content}</button>`;
+  }
+
+  function setCheckoutSummarySecurePaymentVisible(visible, options = {}){
+    data.checkoutSummary.securePaymentVisible = visible === true;
+    data.checkoutSummary.securePaymentDismissed = visible === true ? false : options.dismissed === true;
+    data.checkoutSummary.securePaymentMessage = clean(options.message);
+  }
+
+  function securePaymentRouteCreateActionHtml(slot){
+    const state = paymentRouteCreateState(slot);
+    const validation = checkoutSummarySecurePaymentValidation(slot);
+    if(!validation.ok){
+      return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
+        <span class="subp-payment-primary-copy">
+          <span>Preparar pago seguro</span>
+          <small>${escapeHtml(validation.message || 'Resumen requerido.')}</small>
+        </span>
+      </button>`;
+    }
+    if(state.state === 'creating'){
+      return '<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>Preparando pago seguro...</button>';
+    }
+    if(state.state === 'success') return '';
+    if(!paymentRouteCreateAvailable(slot)){
+      return '<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>Preparar pago seguro <span>Preview requerido</span></button>';
+    }
+    return `<button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-payment-route-create="${escapeHtml(slot)}"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Preparar pago seguro</button>`;
+  }
+
+  function checkoutSummarySelectedPlanForShell(slot){
+    const payload = data.paymentPayloadPreview?.[slot] || null;
+    const payloadTarget = clean(payload?.target_plan_code);
+    return findPlanById(data.checkoutSummary?.targetPlanId)
+      || findPlanById(payloadTarget)
+      || checkoutSummaryPlanFromPayload(slot);
+  }
+
+  function securePaymentShellViewModel(slot){
+    const payload = data.paymentPayloadPreview?.[slot] || null;
+    const preview = latestPaymentServerPreviewData(slot) || {};
+    const plan = checkoutSummarySelectedPlanForShell(slot);
+    const planLabel = clean(plan?.name) || 'Plan seleccionado';
+    const planId = normalizePlanId(plan?.id || payload?.target_plan_code);
+    const routeType = clean(payload?.route_type);
+    const isUpgrade = routeType === 'upgrade_subscription';
+    const amount = formatSubscriptionCents(preview.amount_cents, preview.currency)
+      || formatSubscriptionCents(payload?.amount_cents, payload?.currency)
+      || checkoutSummaryPreviewAmountLabel(slot, '');
+    const currentLabel = checkoutSummaryCurrentPlanLabel() || 'Plan actual';
+    const periodLabel = paymentShellPeriodLabel(slot, 'Anual');
+    const remainingDays = Number(preview.remaining_days ?? payload?.remaining_days ?? data.currentModel?.days_until_expiration);
+    const daysLabel = Number.isFinite(remainingDays) && remainingDays >= 0 ? Math.round(remainingDays) : null;
+    return {
+      plan,
+      planId,
+      planLabel,
+      periodLabel,
+      amount: amount || 'Se confirmará antes del pago.',
+      operationLabel: isUpgrade ? 'Mejora de plan' : 'Nueva contratación',
+      identityLabel: isUpgrade ? `${currentLabel} → ${planLabel}` : planLabel,
+      contextLabel: isUpgrade && daysLabel !== null
+        ? `Ajuste por los ${daysLabel} días restantes de tu vigencia.`
+        : isUpgrade
+          ? 'Ajuste proporcional de tu vigencia actual.'
+          : 'Vigencia anual',
+      targetIcon: checkoutSummaryPlanIconSymbol(planId)
+    };
+  }
+
+  function securePaymentTrustMessageHtml(){
+    return `<div class="subp-payment-secure-note subp-secure-payment-trust">
+      <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
+      <span>Tus datos se capturarán directamente en el formulario seguro de Stripe.</span>
+    </div>`;
+  }
+
+  function securePaymentFormPlaceholderHtml(){
+    const debug = isSubscriptionDebugPanelEnabled()
+      ? '<p class="subp-payment-route-status-muted">Espacio reservado para Stripe Payment Element.</p>'
+      : '';
+    return `<article class="subp-secure-payment-form-card" aria-labelledby="subp-secure-payment-form-title">
+      <span class="subp-payments-kicker">Forma de pago</span>
+      <h4 id="subp-secure-payment-form-title">Elige cómo pagar</h4>
+      <div class="subp-payment-element-placeholder">
+        <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
+        <p>Tus opciones de pago aparecerán aquí.</p>
+        <p>Stripe mostrará únicamente los métodos disponibles para completar esta operación.</p>
+        <p>Tus datos se capturarán directamente en el formulario seguro de Stripe.</p>
+        ${debug}
+      </div>
+    </article>`;
+  }
+
+  function securePaymentSideSummaryHtml(slot){
+    const view = securePaymentShellViewModel(slot);
+    return `<aside class="subp-secure-payment-summary" aria-labelledby="subp-secure-payment-summary-title">
+      <h4 id="subp-secure-payment-summary-title">Resumen de pago</h4>
+      <div class="subp-secure-payment-summary-plan">
+        <span class="subp-payment-plan-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(view.targetIcon)}</span>
+        <div>
+          <strong>${escapeHtml(view.planLabel)}</strong>
+          <small>${escapeHtml(view.identityLabel)}</small>
+        </div>
+      </div>
+      <dl class="subp-payments-dl">
+        <dt>Operación</dt><dd>${escapeHtml(view.operationLabel)}</dd>
+        <dt>Periodo</dt><dd>${escapeHtml(view.periodLabel)}</dd>
+        <dt>Vigencia</dt><dd>${escapeHtml(view.contextLabel)}</dd>
+        <dt>Total a pagar hoy</dt><dd>${escapeHtml(view.amount)}</dd>
+      </dl>
+    </aside>`;
+  }
+
+  function securePaymentProcessStatusHtml(slot){
+    const routeState = paymentRouteCreateState(slot);
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    const paymentIntent = paymentIntentCreateState(slot);
+    if(paymentIntent.state !== 'idle') return paymentIntentCreateStatusHtml(slot);
+    if(bridge.state !== 'idle') return paymentRouteCheckoutBridgeStatusHtml(slot);
+    if(routeState.state === 'creating'){
+      return `<article class="subp-payment-shell-message" data-state="loading">
+        <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+        <div>
+          <h4>Estamos preparando tu pago seguro.</h4>
+          <p>Esto puede tomar unos segundos.</p>
+        </div>
+      </article>`;
+    }
+    if(routeState.state === 'error'){
+      const message = clean(routeState.message) || 'Vuelve a intentarlo desde esta pantalla.';
+      const code = clean(routeState.errorCode);
+      return `<article class="subp-payment-shell-message" data-state="error" role="alert">
+        <span class="material-symbols-rounded" aria-hidden="true">error</span>
+        <div>
+          <h4>No pudimos preparar el pago seguro.</h4>
+          <p>${escapeHtml(message || 'Vuelve a intentarlo desde esta pantalla.')}</p>
+          ${code && isSubscriptionDebugPanelEnabled() ? `<p class="subp-payment-route-status-muted">Respuesta controlada: ${escapeHtml(code)}.</p>` : ''}
+        </div>
+      </article>`;
+    }
+    if(routeState.state === 'success'){
+      return `<article class="subp-payment-shell-message" data-state="success">
+        <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+        <div>
+          <h4>Tu pago está listo para continuar.</h4>
+          <p>No se ha realizado ningún cargo.</p>
+        </div>
+      </article>
+      <div class="subp-payment-next-action">
+        <h4>Siguiente acción disponible</h4>
+        <p>Estamos habilitando el formulario seguro.</p>
+        <div class="subp-payment-route-create-action" data-subp-payment-route-checkout-action="${escapeHtml(slot)}">${paymentRouteCheckoutBridgeActionHtml(slot)}</div>
+      </div>`;
+    }
+    return '';
+  }
+
+  function securePaymentShellActionsHtml(slot){
+    const routeState = paymentRouteCreateState(slot);
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    const paymentIntent = paymentIntentCreateState(slot);
+    if(routeState.state === 'success' || bridge.state !== 'idle' || paymentIntent.state !== 'idle') return '';
+    return `<div class="subp-payment-next-action">
+      <h4>Siguiente acción disponible</h4>
+      <p>Continúa sólo cuando estés listo para preparar el pago seguro.</p>
+      <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="${escapeHtml(slot)}">${securePaymentRouteCreateActionHtml(slot)}</div>
+      <small>Todavía no se realizará ningún cargo.</small>
+    </div>`;
+  }
+
+  function securePaymentShellHtml(slot){
+    const routeState = paymentRouteCreateState(slot);
+    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
+    const routeUuid = clean(route?.payment_route_uuid) || 'No disponible';
+    const status = clean(route?.status) || clean(routeState.state) || 'idle';
+    const amount = securePaymentShellViewModel(slot).amount;
+    return `<section class="subp-payment-shell-card subp-payment-shell-card--new-subscription subp-payment-shell-card--cadence subp-secure-payment-shell" data-subp-payment-shell data-step="payment">
+      ${checkoutSummaryStepperHtml('payment')}
+      <div class="subp-payment-shell-header">
+        <div>
+          <h3>Pago seguro</h3>
+          <p>Revisa el importe y continúa cuando estés listo para elegir tu forma de pago.</p>
+        </div>
+        <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Protegido por Stripe</span>
+      </div>
+      <div class="subp-secure-payment-layout">
+        <div class="subp-secure-payment-main">
+          ${securePaymentTrustMessageHtml()}
+          ${securePaymentFormPlaceholderHtml()}
+          ${securePaymentProcessStatusHtml(slot)}
+          ${securePaymentShellActionsHtml(slot)}
+        </div>
+        ${securePaymentSideSummaryHtml(slot)}
+      </div>
+      <button class="btn btn-outline-primary btn-sm subp-secure-payment-back" type="button" data-subp-secure-payment-back="${escapeHtml(slot)}"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver al Resumen</button>
+      ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+        { label: 'Ruta de pago', value: technicalIdLabel(routeUuid) },
+        { label: 'Estado ruta', value: status },
+        { label: 'Importe confirmado', value: amount }
+      ], routeState.data || data.paymentServerPreview?.[slot]?.data || data.paymentPayloadPreview?.[slot])}
+    </section>`;
+  }
+
+  function renderActiveCheckoutSummary(options = {}){
+    const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const summary = validCheckoutSummary(activePaid);
+    if(!summary) return false;
+    renderPlanCheckoutSummary(summary.plan, summary.flowType, { loadPreview: options.loadPreview === true });
+    return true;
+  }
+
+  function openCheckoutSummarySecurePayment(slot){
+    const key = isCheckoutPaymentShellSlot(slot) ? 'checkoutSummary' : clean(slot);
+    const validation = checkoutSummarySecurePaymentValidation(key);
+    if(!validation.ok){
+      data.checkoutSummary.securePaymentMessage = validation.message;
+      renderActiveCheckoutSummary({ loadPreview: false });
+      return false;
+    }
+    setCheckoutSummarySecurePaymentVisible(true);
+    if(!renderActiveCheckoutSummary({ loadPreview: false })) return false;
+    window.requestAnimationFrame(()=>{
+      const shell = els.checkoutSummary?.querySelector('[data-subp-payment-shell][data-step="payment"]');
+      const title = shell?.querySelector('h3');
+      if(title){
+        title.setAttribute('tabindex', '-1');
+        try{ title.focus({ preventScroll: true }); }catch(_){ try{ title.focus(); }catch(__){} }
+      }
+      if(shell){
+        try{ shell.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }); }catch(_){}
+      }
+    });
+    return true;
+  }
+
+  function closeCheckoutSummarySecurePayment(){
+    setCheckoutSummarySecurePaymentVisible(false, { dismissed: true });
+    if(!renderActiveCheckoutSummary({ loadPreview: false })) return false;
+    window.requestAnimationFrame(()=>{
+      const opener = els.checkoutSummary?.querySelector('[data-subp-open-secure-payment]');
+      if(opener){
+        try{ opener.focus({ preventScroll: true }); }catch(_){ try{ opener.focus(); }catch(__){} }
+      }
+      if(els.checkoutSummary){
+        try{ els.checkoutSummary.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }); }catch(_){}
+      }
+    });
+    return true;
+  }
+
   function paymentRouteCreateActionHtml(slot){
     const state = paymentRouteCreateState(slot);
     const payload = data.paymentPayloadPreview?.[slot] || null;
@@ -62256,8 +62576,8 @@ function mxResetLogoPreview(){
         return `<article class="subp-payment-shell-message" data-state="loading">
           <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
           <div>
-            <h4>Estamos preparando tu pago seguro.</h4>
-            <p>No cierres esta ventana mientras se completa la preparación.</p>
+            <h4>Estamos habilitando el formulario seguro.</h4>
+            <p>Esto puede tomar unos segundos.</p>
           </div>
         </article>`;
       }
@@ -62281,7 +62601,7 @@ function mxResetLogoPreview(){
             <span class="material-symbols-rounded" aria-hidden="true">pending</span>
             <div>
               <h4>Estamos esperando la confirmación del pago.</h4>
-              <p>Tu plan se activará cuando el pago haya sido confirmado.</p>
+              <p>Tu plan se activará después de que el pago sea confirmado.</p>
             </div>
           </article>
           ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
@@ -62315,7 +62635,7 @@ function mxResetLogoPreview(){
       const message = clean(paymentIntent.message) || 'No fue posible crear el pago seguro.';
       const code = clean(paymentIntent.errorCode);
       if(isCheckoutPaymentShellSlot(slot)){
-        return `<article class="subp-payment-shell-message" data-state="error">
+        return `<article class="subp-payment-shell-message" data-state="error" role="alert">
           <span class="material-symbols-rounded" aria-hidden="true">error</span>
           <div>
             <h4>No pudimos preparar el pago seguro.</h4>
@@ -62341,8 +62661,8 @@ function mxResetLogoPreview(){
         return `<article class="subp-payment-shell-message" data-state="loading">
           <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
           <div>
-            <h4>Estamos preparando tu pago seguro.</h4>
-            <p>No cierres esta ventana mientras se habilita el siguiente paso.</p>
+            <h4>Estamos habilitando el formulario seguro.</h4>
+            <p>Esto puede tomar unos segundos.</p>
           </div>
         </article>`;
       }
@@ -62393,7 +62713,7 @@ function mxResetLogoPreview(){
       const message = clean(bridge.message) || 'No fue posible preparar el pago seguro.';
       const code = clean(bridge.errorCode);
       if(isCheckoutPaymentShellSlot(slot)){
-        return `<article class="subp-payment-shell-message" data-state="error">
+        return `<article class="subp-payment-shell-message" data-state="error" role="alert">
           <span class="material-symbols-rounded" aria-hidden="true">error</span>
           <div>
             <h4>No pudimos preparar el pago seguro.</h4>
@@ -62416,6 +62736,17 @@ function mxResetLogoPreview(){
       return '';
     }
     const state = paymentRouteCreateState(slot);
+    if(isCheckoutPaymentShellSlot(slot)){
+      const bridge = paymentRouteCheckoutBridgeState(slot);
+      const paymentIntent = paymentIntentCreateState(slot);
+      const shouldRenderShell = data.checkoutSummary.securePaymentVisible
+        || (!data.checkoutSummary.securePaymentDismissed && (
+          ['creating', 'success', 'error'].includes(state.state)
+          || ['creating', 'success', 'error'].includes(bridge.state)
+          || ['creating', 'success', 'error'].includes(paymentIntent.state)
+        ));
+      return shouldRenderShell ? securePaymentShellHtml(slot) : '';
+    }
     if(state.state === 'creating'){
       if(isCheckoutPaymentShellSlot(slot)){
         return `<section class="subp-payment-shell-card" data-subp-payment-shell data-step="payment">
@@ -62425,7 +62756,7 @@ function mxResetLogoPreview(){
               <h3>Pago seguro</h3>
               <p>Revisa el total y continúa con el proceso seguro de pago.</p>
             </div>
-            <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>
+            <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Protegido por Stripe</span>
           </div>
           <article class="subp-payment-shell-message" data-state="loading">
             <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
@@ -62457,7 +62788,7 @@ function mxResetLogoPreview(){
               <h3>Pago seguro</h3>
               <p>Revisa el total y continúa con el proceso seguro de pago.</p>
             </div>
-            <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>
+            <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Protegido por Stripe</span>
           </div>
           <article class="subp-payment-total-card">
             <div class="subp-payment-plan-inline">
@@ -62476,7 +62807,7 @@ function mxResetLogoPreview(){
           ${checkoutSummarySafePaymentNoteHtml()}
           <article class="subp-payment-element-placeholder">
             <span class="material-symbols-rounded" aria-hidden="true">credit_card</span>
-            <p>Aquí se mostrará el formulario de pago seguro cuando se integre Stripe Payment Element.</p>
+            <p>Tus opciones de pago aparecerán aquí.</p>
             <p>Los métodos disponibles se mostrarán en el formulario de pago seguro.</p>
           </article>
           ${bridge.state === 'idle'
@@ -62522,7 +62853,7 @@ function mxResetLogoPreview(){
       const message = clean(state.message) || 'No fue posible preparar el pago seguro. Inténtalo más tarde.';
       const code = clean(state.errorCode);
       if(isCheckoutPaymentShellSlot(slot)){
-        return `<article class="subp-payment-shell-message" data-state="error">
+        return `<article class="subp-payment-shell-message" data-state="error" role="alert">
           <span class="material-symbols-rounded" aria-hidden="true">error</span>
           <div>
             <h4>No pudimos continuar al pago seguro.</h4>
@@ -62551,7 +62882,12 @@ function mxResetLogoPreview(){
     }
     const actionContainer = pane.querySelector(`[data-subp-payment-route-create-action="${slot}"]`);
     if(actionContainer){
-      actionContainer.innerHTML = paymentRouteCreateActionHtml(slot);
+      const inPaymentShell = !!actionContainer.closest('[data-subp-payment-shell][data-step="payment"]');
+      actionContainer.innerHTML = isCheckoutPaymentShellSlot(slot)
+        ? inPaymentShell
+          ? securePaymentRouteCreateActionHtml(slot)
+          : checkoutSummaryOpenSecurePaymentActionHtml(slot)
+        : paymentRouteCreateActionHtml(slot);
     }
     const statusContainer = pane.querySelector(`[data-subp-payment-route-create-status="${slot}"]`);
     if(statusContainer){
@@ -62791,6 +63127,9 @@ function mxResetLogoPreview(){
     if(key === 'checkoutSummary' && !paymentExecutionStateMatchesCurrentSummary(key)){
       refreshPaymentRouteCreateUi(key);
       return false;
+    }
+    if(key === 'checkoutSummary'){
+      setCheckoutSummarySecurePaymentVisible(true);
     }
 
     const endpoint = buildPaymentRouteCreateEndpoint(payload.entity_type, payload.entity_id);
@@ -64084,7 +64423,7 @@ function mxResetLogoPreview(){
             <small>Simulación QA local — sin consulta backend.</small>
           </span>
         </button>`
-      : paymentRouteCreateActionHtml('checkoutSummary');
+      : checkoutSummaryOpenSecurePaymentActionHtml('checkoutSummary');
 
     return `<article class="subp-paid-upgrade-finance" data-state="${isQaPlanSimulationActive() ? 'simulation' : 'ready'}">
       <div class="subp-paid-upgrade-finance-copy">
@@ -64179,7 +64518,7 @@ function mxResetLogoPreview(){
         </button>
       </div>`;
     }
-    return paymentRouteCreateActionHtml('checkoutSummary');
+    return checkoutSummaryOpenSecurePaymentActionHtml('checkoutSummary');
   }
 
   function checkoutSummaryCadenceHintHtml(){
@@ -64523,7 +64862,7 @@ function mxResetLogoPreview(){
       ${checkoutSummarySecurePaymentBlockHtml(isNewSubscription)}
       ${paymentServerPreviewHtml('checkoutSummary')}
       <div class="subp-checkout-summary-actions subp-payment-shell-actions">
-        <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${paymentRouteCreateActionHtml('checkoutSummary')}</div>
+        <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${checkoutSummaryOpenSecurePaymentActionHtml('checkoutSummary')}</div>
         <button class="btn btn-outline-primary btn-sm" type="button" data-subp-checkout-summary-action="back">Volver a comparar planes</button>
       </div>
       <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
@@ -66016,6 +66355,20 @@ function mxResetLogoPreview(){
       }
       return;
     }
+    const openSecurePayment = event.target && event.target.closest('[data-subp-open-secure-payment]');
+    if(openSecurePayment){
+      event.preventDefault();
+      event.stopPropagation();
+      openCheckoutSummarySecurePayment(clean(openSecurePayment.dataset.subpOpenSecurePayment));
+      return;
+    }
+    const securePaymentBack = event.target && event.target.closest('[data-subp-secure-payment-back]');
+    if(securePaymentBack){
+      event.preventDefault();
+      event.stopPropagation();
+      closeCheckoutSummarySecurePayment();
+      return;
+    }
     const paymentRouteCreate = event.target && event.target.closest('[data-subp-payment-route-create]');
     if(paymentRouteCreate){
       event.preventDefault();
@@ -66025,7 +66378,7 @@ function mxResetLogoPreview(){
     }
     const checkoutCadence = event.target && event.target.closest('[data-subp-checkout-cadence]');
     if(checkoutCadence){
-      if(event.target && event.target.closest('[data-subp-payment-route-create]')) return;
+      if(event.target && event.target.closest('[data-subp-payment-route-create],[data-subp-open-secure-payment]')) return;
       event.preventDefault();
       const period = clean(checkoutCadence.dataset.subpCheckoutCadence).toLowerCase();
       if(period !== 'annual' && period !== 'monthly') return;
