@@ -2789,7 +2789,7 @@ console.info('app.js loaded :: 20251123a');
     return status ? `No se pudo activar la entidad QA real. HTTP ${status}.` : 'Servidor no disponible.';
   };
 
-  const applyQaRealEntity = async (nextState)=>{
+  const applyQaRealEntity = async (nextState, options = {})=>{
     const state = normalizeQaRealEntityState(nextState);
     const requestSeq = ++qaRealEntityRequestSeq;
     const isCurrentRequest = ()=> requestSeq === qaRealEntityRequestSeq
@@ -2800,6 +2800,15 @@ console.info('app.js loaded :: 20251123a');
       return false;
     }
 
+    window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-hydration-start', {
+      detail: {
+        doctor_id: state.doctor_id,
+        entity_type: 'doctor',
+        entity_id: state.doctor_id,
+        request_seq: requestSeq,
+        source: options.source || 'qa_real_entity_session_fixture_start'
+      }
+    }));
     setQaRealEntityStatus(`Activando doctor/${state.doctor_id}...`, 'muted');
     if(qaRealEntitySelect) qaRealEntitySelect.disabled = true;
 
@@ -2817,6 +2826,16 @@ console.info('app.js loaded :: 20251123a');
       if(!isCurrentRequest()) return false;
       if(!response.ok || !payload || payload.ok !== true || !payload.data){
         setQaRealEntityStatus(qaRealEntityErrorMessage(payload, response.status), 'error');
+        window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-hydration-error', {
+          detail: {
+            doctor_id: state.doctor_id,
+            entity_type: 'doctor',
+            entity_id: state.doctor_id,
+            request_seq: requestSeq,
+            http_status: Number(response.status || 0),
+            message: qaRealEntityErrorMessage(payload, response.status)
+          }
+        }));
         return false;
       }
 
@@ -2834,7 +2853,8 @@ console.info('app.js loaded :: 20251123a');
         entity_id: state.doctor_id,
         plan_code: clean(data.plan_code || state.plan),
         plan_label: planLabel,
-        source: 'stripe_e2e_plan_doctor_session_fixture'
+        source: 'stripe_e2e_plan_doctor_session_fixture',
+        request_seq: requestSeq
       };
       window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-selected', {
         detail: window.mxmedStore.subscriptionQaRealEntity
@@ -2843,6 +2863,16 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){
       if(isCurrentRequest()){
         setQaRealEntityStatus('Servidor no disponible para activar la entidad QA real.', 'error');
+        window.dispatchEvent(new CustomEvent('mxmed:qa-real-entity-hydration-error', {
+          detail: {
+            doctor_id: state.doctor_id,
+            entity_type: 'doctor',
+            entity_id: state.doctor_id,
+            request_seq: requestSeq,
+            http_status: 0,
+            message: 'Servidor no disponible para activar la entidad QA real.'
+          }
+        }));
       }
       return false;
     }finally{
@@ -2954,6 +2984,8 @@ console.info('app.js loaded :: 20251123a');
   });
   window.mxmedApplyQaPlan = applyPlanQaState;
   window.mxmedGetQaPlan = ()=> readStoredPlanQaState();
+  window.mxmedApplyQaRealEntity = applyQaRealEntity;
+  window.mxmedGetQaRealEntity = ()=> readStoredQaRealEntityState();
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', ()=> renderRoleSwitcher(appliedState, initialPlanQaState), { once: true });
@@ -59238,6 +59270,8 @@ function mxResetLogoPreview(){
     monthly: 'Mensual'
   };
   const PAYMENT_ROUTE_PREPARED_STORAGE_KEY = 'mxmed.subscription.paymentRoutePrepared.v1';
+  const QA_REAL_ENTITY_STORAGE_KEY_SUBSCRIPTIONS = 'mxmed.qa.realEntity';
+  const SUBSCRIPTION_QA_REAL_ALLOWED_ENTITY_IDS = new Set(['990101', '990102', '990103', '990104', '990105', '990106']);
   const CHECKOUT_SUMMARY_CADENCE_PREVIEW_SLOTS = Object.freeze({
     annual: 'checkoutSummaryAnnual',
     monthly: 'checkoutSummaryMonthly'
@@ -59311,6 +59345,10 @@ function mxResetLogoPreview(){
     realCurrentModel: null,
     realCurrentMeta: null,
     realContextInfo: null,
+    requestedRealQaEntityId: '',
+    confirmedRealQaEntityId: '',
+    realQaEntityHydrationRequestId: 0,
+    realQaEntityHydrationPending: false,
     qaPlan: { value: 'real', label: 'Real', planCode: '' },
     activationState: {
       state: 'idle',
@@ -59358,6 +59396,37 @@ function mxResetLogoPreview(){
     return /^[A-Za-z0-9._:-]+$/.test(id) ? id : '';
   }
 
+  function normalizeSubscriptionQaRealEntityState(value){
+    const source = value && typeof value === 'object' ? value : {};
+    const doctorId = safeDoctorId(source.doctor_id || source.doctorId || source.entity_id || source.id || source.value);
+    if(!doctorId || !SUBSCRIPTION_QA_REAL_ALLOWED_ENTITY_IDS.has(doctorId)) return null;
+    return {
+      entity_type: 'doctor',
+      entity_id: doctorId,
+      doctor_id: doctorId,
+      plan_code: clean(source.plan_code || source.plan || source.planCode),
+      source: clean(source.source) || 'qa_real_entity_selected',
+      request_seq: Number(source.request_seq || source.requestSeq || 0) || 0
+    };
+  }
+
+  function readSubscriptionQaRealEntityState(){
+    try{
+      if(typeof window.mxmedGetQaRealEntity === 'function'){
+        const external = normalizeSubscriptionQaRealEntityState(window.mxmedGetQaRealEntity());
+        if(external) return external;
+      }
+    }catch(_){}
+    try{
+      const raw = window.sessionStorage?.getItem(QA_REAL_ENTITY_STORAGE_KEY_SUBSCRIPTIONS)
+        || window.localStorage?.getItem(QA_REAL_ENTITY_STORAGE_KEY_SUBSCRIPTIONS)
+        || '';
+      return raw ? normalizeSubscriptionQaRealEntityState(JSON.parse(raw)) : null;
+    }catch(_){
+      return null;
+    }
+  }
+
   function resolveSubscriptionQaEntityContext(){
     const host = clean(window.location?.hostname).toLowerCase();
     const isLocalHost = host === '127.0.0.1' || host === 'localhost' || host === '::1';
@@ -59365,8 +59434,9 @@ function mxResetLogoPreview(){
     const hasQaPlanSwitcher = typeof window.mxmedGetQaPlan === 'function'
       || !!document.getElementById('mxmed_qa_plan_select');
     if(!hasQaPlanSwitcher) return null;
-    // Fixture visual QA/local para validar el flujo Stripe end-to-end del doctor 990099.
-    return { entity_type: 'doctor', entity_id: '990099', doctor_id: '990099', source: 'qa_local_subscription_entity' };
+    const selected = readSubscriptionQaRealEntityState();
+    if(selected) return selected;
+    return null;
   }
 
   function resolveSubscriptionDoctorId(){
@@ -60255,11 +60325,19 @@ function mxResetLogoPreview(){
     data.realCurrentModel = model || {};
     data.realCurrentMeta = meta || {};
     data.realContextInfo = contextInfo || {};
+    const contextId = safeDoctorId(contextInfo?.entity_id || contextInfo?.doctor_id);
+    if(contextId){
+      data.confirmedRealQaEntityId = contextId;
+      if(data.requestedRealQaEntityId === contextId){
+        data.realQaEntityHydrationPending = false;
+      }
+    }
     data.qaPlan = readSubscriptionQaPlanState();
     applyEffectiveSubscriptionModel();
   }
 
   function applyReadOnlyError(httpStatus, customMessage){
+    data.realQaEntityHydrationPending = false;
     data.currentModel = null;
     data.currentMeta = null;
     data.contextInfo = null;
@@ -60359,7 +60437,45 @@ function mxResetLogoPreview(){
     return requestSeq === currentSubscriptionRequestSeq && !isQaPlanSimulationActive();
   }
 
-  async function fetchSubscriptionReadModel(endpoint, contextInfo, requestSeq){
+  function readSubscriptionModelEntityId(model, meta){
+    const candidates = [
+      model?.entity_id,
+      model?.doctor_id,
+      model?.doctor?.id,
+      model?.subscription?.entity_id,
+      model?.subscription?.doctor_id,
+      meta?.entity_id,
+      meta?.doctor_id,
+      meta?.context?.entity_id,
+      meta?.context?.doctor_id,
+      meta?.read_model?.entity_id,
+      meta?.read_model?.doctor_id
+    ].map(safeDoctorId).filter(Boolean);
+    return candidates.length ? candidates[0] : '';
+  }
+
+  function readModelMatchesContext(model, meta, contextInfo){
+    const expectedType = clean(contextInfo?.entity_type).toLowerCase();
+    const expectedId = safeDoctorId(contextInfo?.entity_id || contextInfo?.doctor_id);
+    if(!expectedType || !expectedId) return false;
+    if(expectedType !== 'doctor') return false;
+    const explicitIds = [
+      model?.entity_id,
+      model?.doctor_id,
+      model?.doctor?.id,
+      model?.subscription?.entity_id,
+      model?.subscription?.doctor_id,
+      meta?.entity_id,
+      meta?.doctor_id,
+      meta?.context?.entity_id,
+      meta?.context?.doctor_id,
+      meta?.read_model?.entity_id,
+      meta?.read_model?.doctor_id
+    ].map(safeDoctorId).filter(Boolean);
+    return explicitIds.length === 0 || explicitIds.every((id)=> id === expectedId);
+  }
+
+  async function fetchSubscriptionReadModel(endpoint, contextInfo, requestSeq, options = {}){
     try{
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -60368,9 +60484,20 @@ function mxResetLogoPreview(){
       });
       const payload = await response.json().catch(()=> null);
       if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
+      if(options.hydrationRequestId && options.hydrationRequestId !== data.realQaEntityHydrationRequestId) return false;
       if(!response.ok || !payload || payload.ok !== true || !payload.data){
+        data.realQaEntityHydrationPending = false;
         applyReadOnlyError(Number(response.status || 0));
         return false;
+      }
+      if(!readModelMatchesContext(payload.data, payload.meta || {}, contextInfo || {})){
+        data.realQaEntityHydrationPending = false;
+        applyReadOnlyError(409, 'La respuesta de suscripción no corresponde a la entidad QA real seleccionada.');
+        return false;
+      }
+      if(typeof options.beforeApply === 'function'){
+        const shouldApply = options.beforeApply(payload.data, payload.meta || {}, contextInfo || {});
+        if(shouldApply === false) return false;
       }
       applyReadModel(payload.data, payload.meta || {}, contextInfo || {});
       if(hasPaymentActivationStateReference()){
@@ -60379,6 +60506,7 @@ function mxResetLogoPreview(){
       return true;
     }catch(_){
       if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
+      data.realQaEntityHydrationPending = false;
       applyReadOnlyError(0);
       return false;
     }
@@ -60405,7 +60533,19 @@ function mxResetLogoPreview(){
       applyEffectiveSubscriptionModel();
       return false;
     }
+    if(data.realQaEntityHydrationPending){
+      return false;
+    }
     const requestSeq = ++currentSubscriptionRequestSeq;
+    const qaContext = resolveSubscriptionQaEntityContext();
+    if(qaContext?.doctor_id){
+      return fetchSubscriptionReadModel(buildSubscriptionEndpoint(qaContext.doctor_id), {
+        entity_type: qaContext.entity_type,
+        entity_id: qaContext.entity_id,
+        doctor_id: qaContext.doctor_id,
+        source: qaContext.source || 'qa_real_entity_current'
+      }, requestSeq);
+    }
     try{
       const contextResponse = await fetch(buildSubscriptionContextEndpoint(), {
         method: 'GET',
@@ -60448,6 +60588,44 @@ function mxResetLogoPreview(){
       if(!currentSubscriptionRequestIsActive(requestSeq)) return false;
       applyReadOnlyError(0, 'No se pudo cargar el contexto de suscripción.');
     }
+  }
+
+  async function hydrateSelectedQaRealEntityCurrent(detail = {}){
+    const context = normalizeSubscriptionQaRealEntityState(detail);
+    if(!context) return false;
+    data.qaPlan = normalizeSubscriptionQaPlanState({ value: 'real' });
+    const hydrationRequestId = Number(detail.request_seq || detail.requestSeq || data.realQaEntityHydrationRequestId || 0);
+    if(!data.realQaEntityHydrationPending || data.requestedRealQaEntityId !== context.doctor_id){
+      resetSubscriptionFlowForEntityChange({
+        ...context,
+        request_seq: hydrationRequestId || undefined,
+        source: 'qa_real_entity_selected_recovery'
+      });
+    }
+    const activeHydrationId = data.realQaEntityHydrationRequestId;
+    if(hydrationRequestId && hydrationRequestId !== activeHydrationId) return false;
+    const requestSeq = ++currentSubscriptionRequestSeq;
+    const endpoint = buildSubscriptionEndpoint(context.doctor_id);
+    return fetchSubscriptionReadModel(endpoint, {
+      entity_type: 'doctor',
+      entity_id: context.doctor_id,
+      doctor_id: context.doctor_id,
+      source: 'qa_real_entity_current'
+    }, requestSeq, {
+      hydrationRequestId: activeHydrationId,
+      beforeApply: (model, meta)=>{
+        if(activeHydrationId !== data.realQaEntityHydrationRequestId) return false;
+        const responseEntityId = readSubscriptionModelEntityId(model, meta);
+        if(responseEntityId && responseEntityId !== context.doctor_id){
+          data.realQaEntityHydrationPending = false;
+          applyReadOnlyError(409, 'La respuesta de suscripción no corresponde a la entidad QA real seleccionada.');
+          return false;
+        }
+        data.confirmedRealQaEntityId = context.doctor_id;
+        data.realQaEntityHydrationPending = false;
+        return true;
+      }
+    });
   }
 
   function fmtMoney(n){
@@ -60518,7 +60696,7 @@ function mxResetLogoPreview(){
   function currentPlanSelectionContextKey(){
     const context = data.contextInfo || {};
     const entityType = clean(context.entity_type).toLowerCase() || 'doctor';
-    const entityId = clean(context.entity_id || context.doctor_id || '');
+    const entityId = safeDoctorId(context.entity_id || context.doctor_id || '');
     const qaPlan = clean(data.qaPlan?.value).toLowerCase() || 'real';
     const currentPlan = canonicalBackendPlanCode(
       clean(data.currentModel?.effective_plan_code)
@@ -61039,6 +61217,10 @@ function mxResetLogoPreview(){
     }
     const payload = checkoutSummaryCadencePayload(period);
     const previewState = checkoutSummaryCadencePreviewState(period);
+    const previousPeriod = clean(data.checkoutSummary.selectedBillingPeriod).toLowerCase();
+    if(previousPeriod && previousPeriod !== period){
+      resetPaymentExecutionForSlot('checkoutSummary');
+    }
     data.checkoutSummary.selectedBillingPeriod = period;
     publishPaymentPayloadPreview('checkoutSummary', payload);
     if(data.paymentServerPreview){
@@ -61254,6 +61436,79 @@ function mxResetLogoPreview(){
     hydratePreparedPaymentRouteState(slot);
   }
 
+  function activePaymentExecutionState(slot){
+    const state = paymentRouteCreateState(slot);
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    const paymentIntent = paymentIntentCreateState(slot);
+    return ['creating', 'success', 'error'].includes(state.state)
+      || ['creating', 'success', 'error'].includes(bridge.state)
+      || ['creating', 'success', 'error'].includes(paymentIntent.state);
+  }
+
+  function resetPaymentExecutionForSlot(slot){
+    resetPaymentRouteCreate(slot);
+    if(slot === 'checkoutSummary'){
+      data.paymentServerPreview.checkoutSummary = null;
+    }
+    clearPreparedPaymentRouteStore();
+  }
+
+  function paymentPayloadMatchesCurrentEntity(payload){
+    const context = data.contextInfo || {};
+    const payloadType = clean(payload?.entity_type).toLowerCase();
+    const payloadId = safeDoctorId(payload?.entity_id);
+    const currentType = clean(context.entity_type).toLowerCase();
+    const currentId = safeDoctorId(context.entity_id || context.doctor_id);
+    return payloadType === 'doctor' && payloadType === currentType && payloadId && payloadId === currentId;
+  }
+
+  function paymentExecutionStateMatchesCurrentSummary(slot, options = {}){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    if(key !== 'checkoutSummary') return true;
+    const reset = options.reset !== false;
+    const state = paymentRouteCreateState(key);
+    if(!activePaymentExecutionState(key) && !clean(state.signature)) return true;
+    const payload = data.paymentPayloadPreview?.checkoutSummary || null;
+    const summaryContextKey = clean(data.checkoutSummary.contextKey);
+    const currentContextKey = currentPlanSelectionContextKey();
+    const targetPlanId = normalizePlanId(data.checkoutSummary.targetPlanId);
+    const targetPlanCode = backendPlanCodeFromUiPlan(targetPlanId);
+    const payloadTarget = clean(payload?.target_plan_code);
+    const payloadBilling = clean(payload?.billing_period).toLowerCase();
+    const selectedBilling = clean(data.checkoutSummary.selectedBillingPeriod).toLowerCase();
+    const signature = paymentRouteCreateSignature(payload);
+    const route = state.data && typeof state.data === 'object' ? state.data : null;
+    const routeTarget = clean(route?.target_plan_code || route?.plan_code);
+    const routeBilling = clean(route?.billing_period).toLowerCase();
+    const routeEntityId = safeDoctorId(route?.entity_id);
+    const contextEntityId = safeDoctorId(data.contextInfo?.entity_id || data.contextInfo?.doctor_id);
+    const routeType = clean(payload?.route_type);
+
+    const matches = !!(
+      !data.realQaEntityHydrationPending
+      && data.checkoutSummary.visible
+      && payload
+      && paymentPayloadMatchesCurrentEntity(payload)
+      && summaryContextKey
+      && summaryContextKey === currentContextKey
+      && targetPlanId
+      && payloadTarget === targetPlanCode
+      && signature
+      && (!state.signature || state.signature === signature)
+      && (routeType !== 'new_subscription' || (selectedBilling && selectedBilling === payloadBilling))
+      && (!route || (
+        (!routeEntityId || routeEntityId === contextEntityId)
+        && (!routeTarget || routeTarget === payloadTarget)
+        && (!routeBilling || routeBilling === payloadBilling)
+      ))
+    );
+
+    if(!matches && reset){
+      resetPaymentExecutionForSlot(key);
+    }
+    return matches;
+  }
+
   function paymentRouteCheckoutBridgeInitialState(){
     return {
       state: 'idle',
@@ -61328,6 +61583,144 @@ function mxResetLogoPreview(){
     }catch(_){}
   }
 
+  function clearPreparedPaymentRouteStore(){
+    try{
+      window.sessionStorage?.removeItem(PAYMENT_ROUTE_PREPARED_STORAGE_KEY);
+    }catch(_){}
+  }
+
+  function resetCheckoutSummaryDom(){
+    if(!els.checkoutSummary) return;
+    els.checkoutSummary.classList.add('d-none');
+    els.checkoutSummary.innerHTML = '';
+    delete els.checkoutSummary.dataset.targetPlan;
+    delete els.checkoutSummary.dataset.paymentRouteType;
+    delete els.checkoutSummary.dataset.renderingPaymentShell;
+  }
+
+  function resetUpgradeCheckoutState(){
+    data.upgradeCheckout = {
+      visible: false,
+      accepted: false,
+      state: 'idle',
+      httpStatus: 0,
+      message: '',
+      error: '',
+      checkoutIntentUuid: '',
+      contractAcceptanceUuid: '',
+      idempotencyKey: ''
+    };
+  }
+
+  function resetActivationState(){
+    data.activationState = {
+      state: 'idle',
+      httpStatus: 0,
+      payload: null,
+      error: '',
+      message: ''
+    };
+    try{
+      if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+        delete window.mxmedStore.subscriptionPaymentActivationState;
+      }
+    }catch(_){}
+  }
+
+  function resetSubscriptionPaymentFlowState(options = {}){
+    const clearPreparedStore = options.clearPreparedStore !== false;
+    if(options.invalidateRequests === true){
+      currentSubscriptionRequestSeq += 1;
+    }
+    clearExplicitPlanSelection();
+    clearCurrentUpgradeFocus();
+    closeSummaryBenefitPopovers(pane);
+    closeBenefitInfoPopovers(els.catalog);
+
+    data.selectedPlanId = '';
+    data.selectedPlanContextKey = '';
+    data.focusedPlanId = '';
+    data.checkoutSummary.visible = false;
+    data.checkoutSummary.targetPlanId = '';
+    data.checkoutSummary.preparing = false;
+    data.checkoutSummary.requestId += 1;
+    data.checkoutSummary.error = '';
+    data.checkoutSummary.contextKey = '';
+    resetCheckoutSummaryCadenceState();
+
+    data.paymentPayloadPreview = {
+      checkoutSummary: null,
+      renewal: null
+    };
+    data.paymentServerPreview = {
+      checkoutSummary: null,
+      renewal: null,
+      checkoutSummaryAnnual: null,
+      checkoutSummaryMonthly: null
+    };
+    resetPaymentRouteCreate('checkoutSummary');
+    resetPaymentRouteCreate('renewal');
+    if(clearPreparedStore) clearPreparedPaymentRouteStore();
+    resetUpgradeCheckoutState();
+    resetActivationState();
+    data.paymentsView = 'overview';
+    setSubscriptionSection('plans');
+    resetCheckoutSummaryDom();
+    try{
+      window.mxmedSubscriptionPaymentPayloadPreview = {
+        checkout_summary: null,
+        renewal: null
+      };
+    }catch(_){}
+  }
+
+  function setSubscriptionNeutralLoading(message, contextInfo = {}){
+    const context = contextInfo && typeof contextInfo === 'object' ? contextInfo : {};
+    data.currentModel = null;
+    data.currentMeta = null;
+    data.contextInfo = context;
+    data.realCurrentModel = null;
+    data.realCurrentMeta = null;
+    data.realContextInfo = context;
+    data.current = {
+      id: 'loading',
+      name: 'Cargando',
+      since: 'No aplica',
+      until: 'No aplica',
+      status: 'Modo lectura',
+      nextBill: 'No aplica',
+      autorenew: false,
+      note: clean(message) || 'Consultando suscripción actual...',
+      sourceNote: 'Se está confirmando la entidad QA real antes de mostrar planes.',
+      alert: SUBSCRIPTION_ACTION_NOTICE,
+      features: [clean(message) || 'Consultando suscripción actual...']
+    };
+    renderCurrent();
+    renderCatalog();
+    renderHistory();
+    renderDevWrite();
+    renderActivationState();
+  }
+
+  function resetSubscriptionFlowForEntityChange(contextInfo = {}){
+    const context = {
+      entity_type: 'doctor',
+      entity_id: safeDoctorId(contextInfo.entity_id || contextInfo.doctor_id),
+      doctor_id: safeDoctorId(contextInfo.doctor_id || contextInfo.entity_id),
+      source: clean(contextInfo.source) || 'qa_real_entity_hydration'
+    };
+    currentSubscriptionRequestSeq += 1;
+    data.requestedRealQaEntityId = context.doctor_id || context.entity_id || '';
+    data.confirmedRealQaEntityId = '';
+    data.realQaEntityHydrationPending = true;
+    data.realQaEntityHydrationRequestId = Number(contextInfo.request_seq || contextInfo.requestSeq || data.realQaEntityHydrationRequestId + 1);
+    resetSubscriptionPaymentFlowState({ invalidateRequests: false });
+    setSubscriptionNeutralLoading(
+      context.doctor_id ? `Confirmando entidad QA real doctor/${context.doctor_id}...` : 'Confirmando entidad QA real...',
+      context
+    );
+  }
+
   function persistPreparedPaymentRouteState(slot){
     const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
     const state = paymentRouteCreateState(key);
@@ -61358,9 +61751,17 @@ function mxResetLogoPreview(){
     if(!signature || state.state === 'success') return false;
     const stored = readPreparedPaymentRouteStore()[signature];
     const routeUuid = clean(stored?.data?.payment_route_uuid);
-    if(!stored || stored.state !== 'success' || !routeUuid) return false;
+    if(!stored || stored.state !== 'success' || !routeUuid || clean(stored.signature) !== signature){
+      if(stored){
+        const store = readPreparedPaymentRouteStore();
+        delete store[signature];
+        writePreparedPaymentRouteStore(store);
+      }
+      return false;
+    }
 
     state.state = 'success';
+    state.signature = signature;
     state.httpStatus = Number(stored.httpStatus || 0);
     state.data = stored.data;
     state.errorCode = '';
@@ -61487,9 +61888,11 @@ function mxResetLogoPreview(){
 
   function paymentRouteCreateAvailable(slot){
     if(isQaPlanSimulationActive()) return false;
+    if(data.realQaEntityHydrationPending) return false;
     const payload = data.paymentPayloadPreview?.[slot];
     const preview = latestPaymentServerPreviewData(slot);
     if(!payload || !preview) return false;
+    if(isCheckoutPaymentShellSlot(slot) && !paymentExecutionStateMatchesCurrentSummary(slot, { reset: false })) return false;
     if(!['new_subscription', 'upgrade_subscription', 'renewal'].includes(clean(payload.route_type))) return false;
     return preview.next_action?.enabled !== true;
   }
@@ -61547,6 +61950,9 @@ function mxResetLogoPreview(){
 
   function checkoutSummaryShellStep(plan, flowType){
     if(flowType === 'confirmation' || checkoutSummaryTargetConfirmed(plan)) return 'confirmation';
+    if(!paymentExecutionStateMatchesCurrentSummary('checkoutSummary')){
+      return 'summary';
+    }
     const routeState = paymentRouteCreateState('checkoutSummary');
     const bridge = paymentRouteCheckoutBridgeState('checkoutSummary');
     const paymentIntent = paymentIntentCreateState('checkoutSummary');
@@ -61722,6 +62128,9 @@ function mxResetLogoPreview(){
   function paymentRouteCreateActionHtml(slot){
     const state = paymentRouteCreateState(slot);
     const payload = data.paymentPayloadPreview?.[slot] || null;
+    if(isCheckoutPaymentShellSlot(slot) && !paymentExecutionStateMatchesCurrentSummary(slot)){
+      return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>Continuar al pago seguro <span>Resumen requerido</span></button>`;
+    }
     if(isQaPlanSimulationActive()){
       if(isCheckoutPaymentShellSlot(slot)){
         return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
@@ -61953,6 +62362,9 @@ function mxResetLogoPreview(){
   }
 
   function paymentRouteCreateStatusHtml(slot){
+    if(isCheckoutPaymentShellSlot(slot) && !paymentExecutionStateMatchesCurrentSummary(slot)){
+      return '';
+    }
     const state = paymentRouteCreateState(slot);
     if(state.state === 'creating'){
       if(isCheckoutPaymentShellSlot(slot)){
@@ -62293,6 +62705,11 @@ function mxResetLogoPreview(){
       return false;
     }
 
+    if(key === 'checkoutSummary' && !paymentExecutionStateMatchesCurrentSummary(key)){
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
     if(!payload){
       state.state = 'error';
       state.httpStatus = 0;
@@ -62317,6 +62734,11 @@ function mxResetLogoPreview(){
       state.httpStatus = 409;
       state.errorCode = 'monthly_recurring_not_ready';
       state.message = 'Pago mensual automático en preparación.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(key === 'checkoutSummary' && !paymentExecutionStateMatchesCurrentSummary(key)){
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -62404,6 +62826,11 @@ function mxResetLogoPreview(){
       bridge.httpStatus = 0;
       bridge.errorCode = 'qa_simulation';
       bridge.message = 'Disponible sólo en modo Real.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(key === 'checkoutSummary' && !paymentExecutionStateMatchesCurrentSummary(key)){
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -62510,6 +62937,11 @@ function mxResetLogoPreview(){
       paymentIntent.httpStatus = 0;
       paymentIntent.errorCode = 'qa_simulation';
       paymentIntent.message = 'Disponible sólo en modo Real.';
+      refreshPaymentRouteCreateUi(key);
+      return false;
+    }
+
+    if(key === 'checkoutSummary' && !paymentExecutionStateMatchesCurrentSummary(key)){
       refreshPaymentRouteCreateUi(key);
       return false;
     }
@@ -63830,6 +64262,7 @@ function mxResetLogoPreview(){
   }
 
   async function openPlanCheckoutSummary(planId){
+    if(data.realQaEntityHydrationPending) return;
     const plan = findPlanById(planId);
     if(!plan) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
@@ -63839,6 +64272,12 @@ function mxResetLogoPreview(){
     if(data.checkoutSummary.preparing && normalizePlanId(data.checkoutSummary.targetPlanId) === targetPlanId) return;
     const requestId = Date.now() + Math.random();
     const contextKey = currentPlanSelectionContextKey();
+    resetPaymentExecutionForSlot('checkoutSummary');
+    if(data.paymentServerPreview){
+      data.paymentServerPreview.checkoutSummary = null;
+      data.paymentServerPreview.checkoutSummaryAnnual = null;
+      data.paymentServerPreview.checkoutSummaryMonthly = null;
+    }
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = plan.id;
     data.checkoutSummary.preparing = true;
@@ -65192,6 +65631,22 @@ function mxResetLogoPreview(){
 
   function renderCatalog(){
     if(!els.catalog) return;
+    if(data.realQaEntityHydrationPending){
+      updateFreeCommercialHeader(false, null);
+      renderPricingModeToggle();
+      els.catalog.classList.remove('d-none', 'subp-grid--focus-mode');
+      if(els.pricingToggle){
+        els.pricingToggle.classList.add('d-none');
+      }
+      resetCheckoutSummaryDom();
+      els.catalog.innerHTML = `<div class="subp-empty" data-subp-qa-real-loading="true">
+        <span class="material-symbols-rounded" aria-hidden="true">sync</span>
+        <h3>Confirmando entidad QA real</h3>
+        <p>${escapeHtml(data.current.note || 'Consultando el estado vigente antes de mostrar planes.')}</p>
+      </div>`;
+      renderPlanSelection(false);
+      return;
+    }
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
     const freeQaMode = isQaFreePlanMode();
     const summary = validCheckoutSummary(activePaid);
@@ -65400,49 +65855,28 @@ function mxResetLogoPreview(){
   }
 
   function resetPlanQaVisualSelection(){
-    currentSubscriptionRequestSeq += 1;
-    clearExplicitPlanSelection();
-    data.checkoutSummary.visible = false;
-    data.checkoutSummary.targetPlanId = '';
-    data.checkoutSummary.preparing = false;
-    data.checkoutSummary.requestId += 1;
-    data.checkoutSummary.error = '';
-    data.checkoutSummary.contextKey = '';
-    resetCheckoutSummaryCadenceState();
-    data.paymentPayloadPreview.checkoutSummary = null;
-    data.paymentServerPreview.checkoutSummary = null;
-    resetPaymentRouteCreate('checkoutSummary');
-    try{
-      window.mxmedSubscriptionPaymentPayloadPreview = {
-        checkout_summary: null,
-        renewal: data.paymentPayloadPreview.renewal
-      };
-    }catch(_){}
-    clearCurrentUpgradeFocus();
-    data.upgradeCheckout.visible = false;
-    data.upgradeCheckout.accepted = false;
-    data.upgradeCheckout.state = 'idle';
-    data.upgradeCheckout.httpStatus = 0;
-    data.upgradeCheckout.message = '';
-    data.upgradeCheckout.error = '';
-    data.upgradeCheckout.checkoutIntentUuid = '';
-    data.upgradeCheckout.contractAcceptanceUuid = '';
-    data.upgradeCheckout.idempotencyKey = '';
-    data.activationState = {
-      state: 'idle',
-      httpStatus: 0,
-      payload: null,
-      error: '',
-      message: ''
-    };
+    resetSubscriptionPaymentFlowState({ invalidateRequests: true });
   }
 
   window.addEventListener('mxmed:qa-plan-changed', (event)=>{
     const next = normalizeSubscriptionQaPlanState(event?.detail || {});
     if(data.qaPlan?.value === next.value && data.currentModel) return;
     data.qaPlan = next;
+    if(next.value === 'real' && data.realQaEntityHydrationPending){
+      return;
+    }
+    if(next.value !== 'real'){
+      data.realQaEntityHydrationPending = false;
+      data.requestedRealQaEntityId = '';
+      data.confirmedRealQaEntityId = '';
+    }
     resetPlanQaVisualSelection();
-    if(next.value === 'real' && !data.realCurrentModel){
+    if(next.value === 'real'){
+      const selectedEntity = readSubscriptionQaRealEntityState();
+      if(selectedEntity && typeof window.mxmedApplyQaRealEntity === 'function'){
+        window.mxmedApplyQaRealEntity(selectedEntity, { source: 'subscription_qa_plan_real_hydration' });
+        return;
+      }
       loadCurrentSubscription();
       return;
     }
@@ -65450,10 +65884,29 @@ function mxResetLogoPreview(){
       applyEffectiveSubscriptionModel();
     }
   });
-  window.addEventListener('mxmed:qa-real-entity-selected', async ()=>{
+  window.addEventListener('mxmed:qa-real-entity-hydration-start', (event)=>{
+    const detail = event?.detail || {};
+    const context = normalizeSubscriptionQaRealEntityState(detail);
+    if(!context) return;
     data.qaPlan = normalizeSubscriptionQaPlanState({ value: 'real' });
-    resetPlanQaVisualSelection();
-    await loadCurrentSubscription();
+    resetSubscriptionFlowForEntityChange({
+      ...context,
+      request_seq: Number(detail.request_seq || detail.requestSeq || 0) || undefined,
+      source: clean(detail.source) || 'qa_real_entity_hydration_start'
+    });
+  });
+  window.addEventListener('mxmed:qa-real-entity-selected', async (event)=>{
+    await hydrateSelectedQaRealEntityCurrent(event?.detail || {});
+  });
+  window.addEventListener('mxmed:qa-real-entity-hydration-error', (event)=>{
+    const detail = event?.detail || {};
+    const context = normalizeSubscriptionQaRealEntityState(detail);
+    if(!context) return;
+    const requestSeq = Number(detail.request_seq || detail.requestSeq || 0) || 0;
+    if(requestSeq && requestSeq !== data.realQaEntityHydrationRequestId) return;
+    data.realQaEntityHydrationPending = false;
+    data.confirmedRealQaEntityId = '';
+    applyReadOnlyError(Number(detail.http_status || 0), clean(detail.message) || 'No se pudo activar la entidad QA real.');
   });
 
   // Eventos
@@ -65733,12 +66186,17 @@ function mxResetLogoPreview(){
   if(isQaPlanSimulationActive()){
     applyEffectiveSubscriptionModel();
   }else{
-    renderCurrent();
-    renderCatalog();
-    renderHistory();
-    renderDevWrite();
-    renderActivationState();
-    loadCurrentSubscription();
+    const selectedEntity = readSubscriptionQaRealEntityState();
+    if(selectedEntity && typeof window.mxmedApplyQaRealEntity === 'function'){
+      window.mxmedApplyQaRealEntity(selectedEntity, { source: 'subscription_startup' });
+    }else{
+      renderCurrent();
+      renderCatalog();
+      renderHistory();
+      renderDevWrite();
+      renderActivationState();
+      loadCurrentSubscription();
+    }
   }
 })();
 
