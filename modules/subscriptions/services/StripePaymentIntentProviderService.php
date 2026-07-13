@@ -5,6 +5,103 @@ namespace Subscriptions\Services;
 
 use RuntimeException;
 
+final class StripePaymentIntentProviderFailure extends RuntimeException
+{
+    private const STAGES = [
+        'configuration',
+        'transport',
+        'provider_http',
+        'response_decode',
+        'response_validation',
+    ];
+
+    private string $stage;
+    private string $errorCode;
+    private ?int $providerHttpStatus;
+    private ?string $providerErrorType;
+    private ?string $providerErrorCode;
+    private ?string $providerErrorParam;
+    private bool $curlFailed;
+    private ?int $curlErrno;
+    private bool $responseDecodeFailed;
+    private bool $responseValidationFailed;
+
+    public function __construct(
+        string $stage,
+        string $errorCode,
+        array $diagnostics = [],
+        ?string $publicErrorCode = null
+    ) {
+        $this->stage = in_array($stage, self::STAGES, true) ? $stage : 'transport';
+        $this->errorCode = self::safeCode($errorCode, 'stripe_payment_intent_create_failed');
+        $this->providerHttpStatus = self::safeHttpStatus($diagnostics['provider_http_status'] ?? null);
+        $this->providerErrorType = self::safeProviderText($diagnostics['provider_error_type'] ?? null);
+        $this->providerErrorCode = self::safeProviderText($diagnostics['provider_error_code'] ?? null);
+        $this->providerErrorParam = self::safeProviderText($diagnostics['provider_error_param'] ?? null);
+        $this->curlFailed = (bool)($diagnostics['curl_failed'] ?? false);
+        $this->curlErrno = self::safeCurlErrno($diagnostics['curl_errno'] ?? null);
+        $this->responseDecodeFailed = (bool)($diagnostics['response_decode_failed'] ?? false);
+        $this->responseValidationFailed = (bool)($diagnostics['response_validation_failed'] ?? false);
+
+        parent::__construct(self::safeCode($publicErrorCode ?? $this->errorCode, 'stripe_payment_intent_create_failed'));
+    }
+
+    public function safeDiagnostics(): array
+    {
+        return [
+            'stage' => $this->stage,
+            'error_code' => $this->errorCode,
+            'provider_http_status' => $this->providerHttpStatus,
+            'provider_error_type' => $this->providerErrorType,
+            'provider_error_code' => $this->providerErrorCode,
+            'provider_error_param' => $this->providerErrorParam,
+            'curl_failed' => $this->curlFailed,
+            'curl_errno' => $this->curlErrno,
+            'response_decode_failed' => $this->responseDecodeFailed,
+            'response_validation_failed' => $this->responseValidationFailed,
+        ];
+    }
+
+    private static function safeCode($value, string $fallback): string
+    {
+        $text = trim((string)($value ?? ''));
+        if ($text === '' || preg_match('/^[A-Za-z0-9_.:-]{1,96}$/', $text) !== 1) {
+            return $fallback;
+        }
+
+        return $text;
+    }
+
+    private static function safeProviderText($value): ?string
+    {
+        $text = trim((string)($value ?? ''));
+        if ($text === '') {
+            return null;
+        }
+        if (strlen($text) > 96) {
+            $text = substr($text, 0, 96);
+        }
+
+        return preg_match('/^[A-Za-z0-9_.:\-\[\]]{1,96}$/', $text) === 1 ? $text : null;
+    }
+
+    private static function safeHttpStatus($value): ?int
+    {
+        $status = is_int($value) ? $value : (int)trim((string)($value ?? ''));
+        return $status >= 100 && $status <= 599 ? $status : null;
+    }
+
+    private static function safeCurlErrno($value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $errno = is_int($value) ? $value : (int)trim((string)$value);
+
+        return $errno >= 0 ? $errno : null;
+    }
+}
+
 final class StripePaymentIntentProviderService
 {
     public const PROVIDER = 'stripe';
@@ -134,7 +231,14 @@ final class StripePaymentIntentProviderService
     {
         $handle = curl_init($url);
         if ($handle === false) {
-            throw new RuntimeException('stripe_provider_unavailable: stripe http client is unavailable');
+            throw new StripePaymentIntentProviderFailure(
+                'transport',
+                'stripe_provider_unavailable',
+                [
+                    'curl_failed' => true,
+                ],
+                'stripe_provider_unavailable'
+            );
         }
 
         $options = [
@@ -153,16 +257,29 @@ final class StripePaymentIntentProviderService
 
         $raw = curl_exec($handle);
         $httpStatus = (int)curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
-        $curlError = curl_error($handle);
+        $curlErrno = function_exists('curl_errno') ? (int)curl_errno($handle) : 0;
         $this->closeCurlHandle($handle);
 
-        if (!is_string($raw) || $raw === '') {
-            throw new RuntimeException(
-                'stripe_payment_intent_request_failed: stripe returned an empty response'
+        if ($curlErrno !== 0) {
+            throw new StripePaymentIntentProviderFailure(
+                'transport',
+                'stripe_transport_failed',
+                [
+                    'curl_failed' => true,
+                    'curl_errno' => $curlErrno,
+                ],
+                'stripe_payment_intent_request_failed'
             );
         }
-        if ($curlError !== '') {
-            throw new RuntimeException('stripe_payment_intent_request_failed: stripe request failed');
+        if (!is_string($raw) || $raw === '') {
+            throw new StripePaymentIntentProviderFailure(
+                'transport',
+                'stripe_empty_response',
+                [
+                    'curl_failed' => false,
+                ],
+                'stripe_payment_intent_request_failed'
+            );
         }
 
         return $this->decodeResponse($raw, $httpStatus);
@@ -180,7 +297,12 @@ final class StripePaymentIntentProviderService
     private function requestWithStream(string $url, array $headers, string $method, ?string $body = null): array
     {
         if (!filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)) {
-            throw new RuntimeException('stripe_provider_unavailable: stripe http client is unavailable');
+            throw new StripePaymentIntentProviderFailure(
+                'transport',
+                'stripe_provider_unavailable',
+                [],
+                'stripe_provider_unavailable'
+            );
         }
 
         $httpOptions = [
@@ -197,8 +319,11 @@ final class StripePaymentIntentProviderService
         ]);
         $raw = file_get_contents($url, false, $context);
         if (!is_string($raw) || $raw === '') {
-            throw new RuntimeException(
-                'stripe_payment_intent_request_failed: stripe returned an empty response'
+            throw new StripePaymentIntentProviderFailure(
+                'transport',
+                'stripe_empty_response',
+                [],
+                'stripe_payment_intent_request_failed'
             );
         }
 
@@ -217,13 +342,27 @@ final class StripePaymentIntentProviderService
     {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('stripe_payment_intent_create_failed: stripe response is invalid');
+            throw new StripePaymentIntentProviderFailure(
+                'response_decode',
+                'stripe_response_decode_failed',
+                [
+                    'response_decode_failed' => true,
+                ],
+                'stripe_payment_intent_create_failed'
+            );
         }
         if ($httpStatus < 200 || $httpStatus >= 300) {
-            $code = $this->optionalText($decoded['error']['code'] ?? null, 96)
-                ?? $this->optionalText($decoded['error']['type'] ?? null, 96)
-                ?? 'stripe_error';
-            throw new RuntimeException('stripe_payment_intent_create_failed: ' . $code);
+            throw new StripePaymentIntentProviderFailure(
+                'provider_http',
+                'stripe_provider_http_error',
+                [
+                    'provider_http_status' => $httpStatus,
+                    'provider_error_type' => $decoded['error']['type'] ?? null,
+                    'provider_error_code' => $decoded['error']['code'] ?? null,
+                    'provider_error_param' => $decoded['error']['param'] ?? null,
+                ],
+                'stripe_payment_intent_create_failed'
+            );
         }
 
         return $decoded;
@@ -232,21 +371,35 @@ final class StripePaymentIntentProviderService
     private function assertProviderResponse(array $response, int $amountCents, string $currency): void
     {
         if ((string)($response['object'] ?? '') !== 'payment_intent') {
-            throw new RuntimeException('stripe_payment_intent_create_failed: stripe object is invalid');
+            throw $this->responseValidationFailure('stripe_object_invalid');
         }
         $providerPaymentId = trim((string)($response['id'] ?? ''));
         if ($providerPaymentId === '' || strpos($providerPaymentId, 'pi_') !== 0) {
-            throw new RuntimeException('stripe_payment_intent_create_failed: stripe payment intent id is invalid');
+            throw $this->responseValidationFailure('stripe_payment_intent_id_invalid');
         }
         if ((bool)($response['livemode'] ?? false)) {
-            throw new RuntimeException('stripe_live_mode_not_allowed: stripe live mode is not allowed');
+            throw $this->responseValidationFailure('stripe_live_mode_not_allowed', 'stripe_live_mode_not_allowed');
         }
         if ((int)($response['amount'] ?? -1) !== $amountCents) {
-            throw new RuntimeException('stripe_payment_intent_create_failed: stripe amount mismatch');
+            throw $this->responseValidationFailure('stripe_amount_mismatch');
         }
         if (strtoupper((string)($response['currency'] ?? '')) !== $currency) {
-            throw new RuntimeException('stripe_payment_intent_create_failed: stripe currency mismatch');
+            throw $this->responseValidationFailure('stripe_currency_mismatch');
         }
+    }
+
+    private function responseValidationFailure(
+        string $errorCode,
+        string $publicErrorCode = 'stripe_payment_intent_create_failed'
+    ): StripePaymentIntentProviderFailure {
+        return new StripePaymentIntentProviderFailure(
+            'response_validation',
+            $errorCode,
+            [
+                'response_validation_failed' => true,
+            ],
+            $publicErrorCode
+        );
     }
 
     private function assertRetrieveResponse(array $response, string $providerPaymentId): void
@@ -263,13 +416,28 @@ final class StripePaymentIntentProviderService
     {
         $secretKey = $this->envValue('STRIPE_SECRET_KEY');
         if ($secretKey === '') {
-            throw new RuntimeException('stripe_secret_key_missing: STRIPE_SECRET_KEY is required');
+            throw new StripePaymentIntentProviderFailure(
+                'configuration',
+                'stripe_secret_key_missing',
+                [],
+                'stripe_secret_key_missing'
+            );
         }
         if (strpos($secretKey, 'sk_live_') === 0 || strpos($secretKey, 'rk_live_') === 0) {
-            throw new RuntimeException('stripe_live_mode_not_allowed: stripe live mode is not allowed');
+            throw new StripePaymentIntentProviderFailure(
+                'configuration',
+                'stripe_live_mode_not_allowed',
+                [],
+                'stripe_live_mode_not_allowed'
+            );
         }
         if (strpos($secretKey, 'sk_test_') !== 0 && strpos($secretKey, 'rk_test_') !== 0) {
-            throw new RuntimeException('stripe_provider_unavailable: STRIPE_SECRET_KEY must be a test key');
+            throw new StripePaymentIntentProviderFailure(
+                'configuration',
+                'stripe_provider_unavailable',
+                [],
+                'stripe_provider_unavailable'
+            );
         }
 
         return $secretKey;

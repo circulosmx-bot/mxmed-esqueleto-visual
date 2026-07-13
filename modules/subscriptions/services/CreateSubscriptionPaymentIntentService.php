@@ -42,6 +42,16 @@ final class CreateSubscriptionPaymentIntentService
     private const STATUS_CREATED = 'created';
     private const STATUS_PENDING_PROVIDER = 'pending_provider';
     private const SOURCE_PAYMENT_INTENT = 'payment_intent';
+    private const FAILURE_LOG_PREFIX = 'MXMED_SUBSCRIPTION_PAYMENT_INTENT_FAILURE';
+    private const FAILURE_EVENT = 'mxmed_subscription_payment_intent_create_failure';
+    private const FAILURE_STAGES = [
+        'idempotency_begin',
+        'lock_acquire',
+        'active_payment_intent_check',
+        'provider_create',
+        'local_persistence',
+        'idempotency_complete',
+    ];
 
     private SubscriptionCheckoutIntentRepository $checkoutIntentRepository;
     private SubscriptionPaymentIntentRepository $paymentIntentRepository;
@@ -121,23 +131,27 @@ final class CreateSubscriptionPaymentIntentService
 
         $this->assertCheckoutReadyForPayment($checkoutIntent);
 
-        $idempotencyDecision = $this->idempotencyService->beginPaymentIntent($idempotencyKey, $scope, $payload);
-
-        if ($idempotencyDecision->shouldReplay()) {
-            return $idempotencyDecision->response();
-        }
-        if ($idempotencyDecision->shouldReject()) {
-            throw new CreateSubscriptionPaymentIntentException(
-                $idempotencyDecision->httpStatus(),
-                $idempotencyDecision->errorCode(),
-                $idempotencyDecision->message()
-            );
-        }
-
-        $idempotencyRecord = $idempotencyDecision->record();
+        $idempotencyRecord = null;
         $lockName = null;
+        $failureStage = 'idempotency_begin';
 
         try {
+            $idempotencyDecision = $this->idempotencyService->beginPaymentIntent($idempotencyKey, $scope, $payload);
+
+            if ($idempotencyDecision->shouldReplay()) {
+                return $idempotencyDecision->response();
+            }
+            if ($idempotencyDecision->shouldReject()) {
+                throw new CreateSubscriptionPaymentIntentException(
+                    $idempotencyDecision->httpStatus(),
+                    $idempotencyDecision->errorCode(),
+                    $idempotencyDecision->message()
+                );
+            }
+
+            $idempotencyRecord = $idempotencyDecision->record();
+
+            $failureStage = 'lock_acquire';
             $lockName = $this->lockService->acquirePaymentIntentCreate($checkoutIntentUuid, 2);
             if ($lockName === null) {
                 throw new CreateSubscriptionPaymentIntentException(
@@ -147,6 +161,7 @@ final class CreateSubscriptionPaymentIntentService
                 );
             }
 
+            $failureStage = 'active_payment_intent_check';
             if ($this->paymentIntentRepository->findActiveByCheckoutIntentUuid($checkoutIntentUuid) !== null) {
                 throw new CreateSubscriptionPaymentIntentException(
                     409,
@@ -156,6 +171,7 @@ final class CreateSubscriptionPaymentIntentService
             }
 
             $paymentIntentUuid = $this->generateUuidV4();
+            $failureStage = 'provider_create';
             $providerResult = $this->createProviderPaymentIntent([
                 'checkout_intent_uuid' => $checkoutIntentUuid,
                 'payment_intent_uuid' => $paymentIntentUuid,
@@ -172,6 +188,7 @@ final class CreateSubscriptionPaymentIntentService
                 'billing_period' => (string)($checkoutIntent['billing_period'] ?? ''),
             ]);
 
+            $failureStage = 'local_persistence';
             $paymentIntent = $this->paymentIntentRepository->create([
                 'uuid' => $paymentIntentUuid,
                 'checkout_intent_uuid' => $checkoutIntentUuid,
@@ -193,6 +210,7 @@ final class CreateSubscriptionPaymentIntentService
 
             $response = $this->response($paymentIntent, $checkoutIntent, $requestHash, false);
             if ($idempotencyRecord !== null) {
+                $failureStage = 'idempotency_complete';
                 $this->idempotencyService->markPaymentIntentCompleted($idempotencyRecord, $response, 201);
             }
 
@@ -201,6 +219,8 @@ final class CreateSubscriptionPaymentIntentService
             if ($idempotencyRecord !== null) {
                 $this->markIdempotencyFailed($idempotencyRecord, $this->statusForThrowable($e));
             }
+
+            $this->logPaymentIntentFailure($e, $failureStage);
 
             throw $this->asPaymentIntentException($e);
         } finally {
@@ -456,6 +476,60 @@ final class CreateSubscriptionPaymentIntentService
             $this->idempotencyService->markOperationFailed($record, $status);
         } catch (Throwable $ignored) {
         }
+    }
+
+    private function logPaymentIntentFailure(Throwable $e, string $failureStage): void
+    {
+        $diagnostics = $this->failureDiagnostics($e, $failureStage);
+        $encoded = json_encode($diagnostics, JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            $encoded = '{"event":"' . self::FAILURE_EVENT . '","stage":"idempotency_begin","error_code":"payment_intent_unavailable"}';
+        }
+
+        error_log(self::FAILURE_LOG_PREFIX . ' ' . $encoded);
+    }
+
+    private function failureDiagnostics(Throwable $e, string $failureStage): array
+    {
+        $stage = $this->safeFailureStage($failureStage);
+        $base = [
+            'event' => self::FAILURE_EVENT,
+            'stage' => $stage,
+            'error_code' => 'payment_intent_unavailable',
+            'provider_http_status' => null,
+            'provider_error_type' => null,
+            'provider_error_code' => null,
+            'provider_error_param' => null,
+            'curl_failed' => false,
+            'curl_errno' => null,
+            'response_decode_failed' => false,
+            'response_validation_failed' => false,
+            'local_persistence_failed' => false,
+            'idempotency_completion_failed' => false,
+        ];
+
+        if ($e instanceof StripePaymentIntentProviderFailure) {
+            return array_merge($base, $e->safeDiagnostics());
+        }
+
+        if ($stage === 'local_persistence') {
+            $base['error_code'] = 'payment_intent_local_persistence_failed';
+            $base['local_persistence_failed'] = true;
+            return $base;
+        }
+
+        if ($stage === 'idempotency_complete') {
+            $base['error_code'] = 'payment_intent_idempotency_completion_failed';
+            $base['idempotency_completion_failed'] = true;
+            return $base;
+        }
+
+        return $base;
+    }
+
+    private function safeFailureStage(string $stage): string
+    {
+        return in_array($stage, self::FAILURE_STAGES, true) ? $stage : 'idempotency_begin';
     }
 
     private function statusForThrowable(Throwable $e): int
