@@ -44880,6 +44880,535 @@ Runtime Stripe invocado:
 
 ---
 
+## PP-Decisiones 240 - Readiness de montaje seguro de Stripe Payment Element
+
+### Microfase
+
+`FE-UX/Suscripciones-StripePaymentElement-Mount-Readiness-01`
+
+### Resultado y limite de esta decision
+
+Se define una unica arquitectura futura para montar y destruir Stripe Payment Element dentro del skeleton de Pago seguro. La decision enlaza los contratos cerrados en PP-Decisiones 233 a 239 sin volver a ejecutar sus pruebas ni modificar sus implementaciones.
+
+Esta microfase es exclusivamente documental y de arquitectura. No carga Stripe.js, no consulta configuracion publica, no solicita `client_secret`, no crea `Elements`, no crea ni monta Payment Element o Express Checkout Element y no confirma pagos. Tampoco ejecuta route, checkout, PaymentIntent, webhook, activation, Stripe API/CLI, SQL, fixture, servidor o navegador.
+
+Resultado:
+
+`PASS`
+
+### Fuentes tecnicas oficiales consultadas
+
+Contrato revisado el `2026-07-14` contra documentacion oficial de Stripe:
+
+- [Appearance API](https://docs.stripe.com/elements/appearance-api), para temas, variables, reglas de estilo y legibilidad movil;
+- [crear un objeto Elements](https://docs.stripe.com/js/elements_object/create), para `clientSecret`, `appearance` y `loader`;
+- [crear Payment Element](https://docs.stripe.com/js/elements_object/create_payment_element), para el contrato de `layout`;
+- [referencia del Element](https://docs.stripe.com/js/element), para `mount`, `destroy`, `unmount` y eventos;
+- [Payment Element](https://docs.stripe.com/payments/payment-element), para metodos dinamicos y convivencia con Express Checkout Element;
+- [PaymentIntents](https://docs.stripe.com/payments/payment-intents), para entrega segura del `client_secret`, TLS y continuidad posterior mediante webhook;
+- [Express Checkout Element](https://docs.stripe.com/elements/express-checkout-element), para disponibilidad real, evento `ready` y reutilizacion futura del objeto `Elements`.
+
+La seleccion de tokens visuales, estados frontend, politica de concurrencia y destruccion antes de rerender son decisiones MXMed derivadas del renderer y CSS locales; no se atribuyen a Stripe.
+
+### Registro de componentes cerrados reutilizados
+
+Esta decision consume, sin reabrirlos:
+
+| Decision | Contrato consumido |
+| --- | --- |
+| PP233 | endpoint futuro de configuracion publica y coherencia de modo |
+| PP234 | loader unico de Stripe.js y singleton `Stripe` |
+| PP235 | endpoint same-origin y efimero de `client_secret` |
+| PP236 | runtime frontend dormido, deduplicado y con `locale: es` |
+| PP237 | especificacion visual y jerarquia de Pago seguro |
+| PP238 | `0` assets de marcas aprobados para integrar |
+| PP239 | skeleton, hosts, view model, responsive y placeholders neutrales |
+
+No se repite inventario general de imagenes, auditoria de licencias, fixture, Plan QA Real/Simulado, Network guard ni QA visual.
+
+### Auditoria read-only de hosts y renderer
+
+| Componente | Renderer/selector estable | Existencia y estado actual | Regla futura |
+| --- | --- | --- | --- |
+| shell | `securePaymentShellHtml` / `[data-subp-secure-payment-skeleton]` | existe cuando el resumen alcanza el panel; el nodo completo se recrea en cada render | todo montaje pertenece a una sola encarnacion conectada del shell |
+| host Payment Element | `securePaymentFormPlaceholderHtml` / `[data-subp-stripe-payment-element-host]` | existe en el shell, contiene placeholder, `data-interactive="false"` y estado no montado/no disponible | vaciar solo sus hijos inmediatamente antes de `mount`; nunca insertar inputs propios |
+| host Express Checkout | `securePaymentMethodsPanelHtml` / `[data-subp-express-checkout-host]` | existe en el shell como placeholder neutral, no interactivo y no montado | queda dormido en la siguiente microfase; su futuro contenido depende de Stripe |
+| estado de metodos | `[data-subp-payment-methods-status]` | region visible de estado con anuncio educado | comunica disponibilidad sin enumerar marcas manualmente |
+| estado del pago | `[data-subp-payment-status-message]` | region de estado recreada con el shell | comunica carga, error o disponibilidad; nunca recibe secretos ni errores crudos |
+| CTA final | `securePaymentFinalSubmitHtml` / `[data-subp-payment-final-submit]` | solo se renderiza en la rama visual de PaymentIntent preparado y permanece deshabilitado | su readiness futuro usa el contrato estricto de esta decision; no confirma en la microfase siguiente |
+
+`renderPlanCheckoutSummary` reemplaza `els.checkoutSummary.innerHTML` con un nuevo `securePaymentShellHtml`. Por tanto, los hosts no son estables entre renders, cierre/reapertura, cambio de plan/modalidad o recuperacion de error: el nodo anterior queda desconectado. La regla obligatoria es destruir el Element activo **antes** de toda operacion que pueda reemplazar ese HTML. Observar despues que `isConnected === false` solo sirve como defensa tardia, no como teardown principal.
+
+Restaurar el placeholder se hace mediante el renderer canonico despues de destruir. No se conserva una copia paralela de markup ni se reconstruye el placeholder dentro del orquestador.
+
+### Elegibilidad de montaje en dos compuertas
+
+El frontend no convierte el estado visual de PP239 en autorizacion de pago. Cada intento atraviesa dos compuertas fail-closed.
+
+#### Compuerta A - candidato local
+
+Antes de inicializar runtime o solicitar secreto, deben cumplirse simultaneamente:
+
+1. sesion real autenticada con scope privado; Plan QA Simulado queda excluido;
+2. `entity_type` y `entity_id` actuales coinciden con el scope de sesion y con route, checkout y PaymentIntent en memoria;
+3. seleccion, plan, modalidad, firma y contexto siguen siendo los del resumen visible;
+4. route local enlazada al checkout vigente, en `checkout_created_no_provider`, no expirada y con tipo permitido;
+5. el backend vigente solo permite route anual para esta transicion; mensual queda ineligible hasta que su contrato backend sea ampliado en otra microfase;
+6. checkout local en `pending_payment`, sin `subscription_id`, sin `activated_at` y no expirado;
+7. PaymentIntent local pertenece al checkout, usa provider `stripe`, tiene estado normalizado `created` y provider status `requires_payment_method`;
+8. importe es entero positivo, moneda es valida y ambos coinciden exactamente entre resumen, route, checkout y PaymentIntent;
+9. no existe en el estado frontend una senal posterior de evento de pago, webhook aplicado, pago, cancelacion o activacion; si en el futuro aparece una senal de ese tipo, el candidato se rechaza;
+10. existe exactamente un host Payment Element conectado para el shell actual, aun no interactivo ni montado;
+11. no hay destruccion, transicion de operacion, montaje distinto o intento obsoleto en curso;
+12. el reloj local no supera ningun `expires_at` conocido. El reloj local solo rechaza; nunca extiende vigencia ni sustituye al servidor.
+
+La ausencia actual de `payment_event` en el view model no se interpreta como prueba de inexistencia. El frontend solo puede aplicar las senales locales disponibles y debe tratar cualquier ambiguedad como ineligible.
+
+#### Compuerta B - autorizacion efimera del servidor
+
+Tras volver a validar la compuerta A, el unico endpoint autorizado es:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-intents/{payment_intent_uuid}/client-secret`
+
+La peticion es same-origin, `session_scope`, JSON vacio, sin query parameters y con respuesta `no-store`. Solo se acepta el envelope:
+
+- `meta.contract = subscription_payment_intent_client_secret`;
+- `meta.version = SUB-PI-CLIENT-SECRET-1`;
+- `meta.auth_mode = session_scope`;
+- `meta.source = subscriptions_payment_intent_client_secret`;
+- `meta.strict_auth_required = true`;
+- `data.client_secret` como unica carga util esperada.
+
+El servicio existente vuelve a validar ownership, estados locales, expiracion, tipo de route, importes, moneda y correspondencia con el PaymentIntent remoto. Esta respuesta exitosa es la compuerta autoritativa final para crear `Elements`; no autoriza confirmar el pago ni activar la suscripcion.
+
+No hay montaje para sesion incorrecta, entidad distinta, estado parcial, mensual aun no soportado por el backend, operacion expirada, simulacion, respuesta ambigua o fallo de red.
+
+### Orquestador unico
+
+La siguiente microfase debe introducir un solo punto de entrada dentro del mismo IIFE de suscripciones:
+
+`mountSubscriptionStripePaymentElementOnce({ entityType, entityId, paymentIntentUuid, operationContextKey })`
+
+Y un solo punto de salida:
+
+`destroySubscriptionStripePaymentElement({ reason })`
+
+No se permiten montajes directos desde handlers, renderers, callbacks de fetch ni observers. El orquestador es el unico propietario de controller, promesa en curso, listeners, `Elements`, Payment Element, host y `AbortController` del fetch efimero.
+
+Secuencia unica:
+
+1. serializar la transicion y capturar un `attemptId` monotono;
+2. validar compuerta A y conectividad del host;
+3. si ya existe un montaje listo para el mismo contexto y el mismo host conectado, devolver su snapshot seguro sin recrear;
+4. si existe otro contexto, destruirlo completamente antes de continuar;
+5. obtener el runtime cerrado en PP236 mediante `ensureSubscriptionStripeReady()`;
+6. volver a validar contexto, host, expiracion y `attemptId` despues del `await`;
+7. solicitar el secreto exactamente una vez para este intento;
+8. validar el envelope y volver a validar contexto/host/expiracion;
+9. crear `Elements`, crear Payment Element, registrar listeners y montar en el nodo conectado;
+10. borrar la referencia lexical al secreto en `finally`;
+11. mantener CTA fisico deshabilitado por alcance de la microfase de montaje, aunque se calcule readiness de entrada;
+12. ante cualquier fallo o obsolescencia, abortar cuando sea posible, destruir lo creado y publicar solo un codigo sanitizado.
+
+No existe un segundo camino para `elements.create('payment')` ni para `paymentElement.mount(...)`.
+
+### `operationContextKey`
+
+Es una clave opaca y solo en memoria, construida de forma canonica a partir de:
+
+1. tipo de entidad normalizado;
+2. identificador local de entidad;
+3. UUID local del checkout;
+4. UUID local del PaymentIntent;
+5. modalidad vigente;
+6. importe entero en unidad menor;
+7. moneda normalizada en mayusculas.
+
+La igualdad requiere coincidencia byte a byte de la representacion canonica. La clave no incluye provider PaymentIntent ID, publishable key ni `client_secret`. Tampoco se escribe en DOM, URL, storage, logs, telemetria, mensajes UI, snapshot o evidencia. El orquestador recibe la clave ya calculada por la capa de estado y vuelve a comparar los campos fuente; no confia en una cadena suministrada aisladamente.
+
+### Concurrencia y obsolescencia
+
+Habra un controller activo como maximo y una cola privada de transiciones:
+
+- dos llamadas concurrentes del mismo contexto y host comparten la misma `mountPromise`;
+- una llamada del mismo contexto despues de `ready` es idempotente;
+- una llamada de contexto diferente se encola, invalida el `attemptId`, destruye el controller anterior y solo despues reevalua el nuevo;
+- cierre, back, rerender o cambio de seleccion invalidan el intento antes de tocar DOM;
+- cada continuacion asincrona compara `attemptId`, contexto, host exacto e `isConnected`;
+- una respuesta tardia nunca puede montar, cambiar CTA ni sobrescribir el error/estado de una operacion nueva;
+- `destroy` es idempotente y puede ejecutarse aunque la creacion haya quedado a medias;
+- no se crea una segunda instancia `Elements` para el mismo intento.
+
+La cola serializa cambios de propiedad; no se usa un debounce temporal como garantia de exclusividad.
+
+### Contrato del `client_secret` en memoria
+
+- se solicita una sola vez por intento nuevo, despues de runtime listo y doble elegibilidad;
+- vive unicamente en una variable lexical de la continuacion que crea `Elements`;
+- no se agrega al controller, estado global, bridge, view model, DOM, dataset, atributo, error, snapshot, storage, URL, log, analytics o evidencia;
+- no se compara, parsea, enmascara ni imprime;
+- se pasa directamente como `clientSecret` al constructor de `Elements` y la variable se limpia en `finally`;
+- si falla cualquier paso posterior, se destruye el arbol y un retry explicito obtiene uno nuevo; no se reutiliza el valor anterior;
+- una respuesta fuera de contrato se descarta completa sin intentar extraer valores alternos.
+
+La publishable key sigue el runtime de PP233/PP236 y no se mezcla con este valor efimero.
+
+### Creacion exacta de `Elements`
+
+El unico contrato permitido equivale a estos parametros, sin agregar datos de negocio:
+
+| Parametro | Valor |
+| --- | --- |
+| `clientSecret` | valor efimero validado, pasado de forma directa |
+| `appearance` | `SUBSCRIPTION_STRIPE_PAYMENT_APPEARANCE` definido abajo |
+| `loader` | `auto` |
+
+No se pasan `amount`, `currency`, `mode`, `paymentMethodTypes`, `paymentMethodCreation`, `customer`, `locale` ni valores de plan. El PaymentIntent ya es la fuente autoritativa de importe, moneda y metodos; el singleton Stripe de PP236 ya fija `locale: es`.
+
+### Appearance API y tokens MXMed
+
+Objeto inmutable unico `SUBSCRIPTION_STRIPE_PAYMENT_APPEARANCE`:
+
+| Ruta | Valor exacto |
+| --- | --- |
+| `theme` | `stripe` |
+| `variables.colorPrimary` | `#0758d8` |
+| `variables.colorBackground` | `#ffffff` |
+| `variables.colorText` | `#081b3f` |
+| `variables.colorDanger` | `#a82d27` |
+| `variables.fontFamily` | `Carlito, IBM Plex Sans, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif` |
+| `variables.fontSizeBase` | `16px` |
+| `variables.spacingUnit` | `4px` |
+| `variables.borderRadius` | `11px` |
+| `variables.focusOutline` | `3px solid rgba(7, 88, 216, 0.34)` |
+| `variables.focusBoxShadow` | `0 0 0 3px rgba(7, 88, 216, 0.18)` |
+| `variables.iconColor` | `#087f97` |
+| `variables.colorTextPlaceholder` | `#607087` |
+
+No se cargan fuentes remotas ni se intenta estilizar DOM interno de Stripe con CSS local. No se usan reglas no documentadas. El tamano base de `16px` evita zoom involuntario en navegadores moviles y coincide con la recomendacion oficial.
+
+### Opciones exactas de Payment Element
+
+La unica configuracion inicial permitida es:
+
+| Ruta | Valor |
+| --- | --- |
+| `layout.type` | `accordion` |
+| `layout.defaultCollapsed` | `false` |
+| `layout.radios` | `auto` |
+| `layout.spacedAccordionItems` | `false` |
+
+No se define `paymentMethodOrder`, wallets, `fields`, `defaultValues`, `terms`, `business` ni lista manual de metodos. Stripe presenta lo disponible segun PaymentIntent, Dashboard, pais, moneda, dispositivo y soporte real.
+
+### Eventos y estado
+
+El controller conserva referencias nominadas a cuatro handlers y las retira antes de destruir:
+
+| Evento | Transicion autorizada | Efecto UI |
+| --- | --- | --- |
+| `loaderstart` | `mounting` a `loading` | anuncia carga, deshabilita CTA, sin retry aun |
+| `ready` | `loading` a `ready` | confirma que el Element puede recibir foco; entrada sigue `unknown/incomplete` hasta `change` |
+| `change` | actualiza `complete` y error sanitizado del input | readiness solo si `ready`, `complete === true`, contexto vigente y sin error |
+| `loaderror` | cualquier pre-ready a `error` | deshabilita CTA, publica error recuperable, destruye el arbol y habilita retry explicito |
+
+Eventos de un `attemptId` obsoleto no mutan estado. Nunca se registra el objeto completo del evento. No se agregan listeners de confirmacion en la siguiente microfase.
+
+### Readiness del CTA final
+
+Se calcula `paymentInputReady` solo cuando todas estas condiciones son verdaderas:
+
+- compuertas A y B superadas para el contexto actual;
+- controller y host exactos siguen vigentes y conectados;
+- mount state `ready`;
+- ultimo `change.complete === true` y sin error vigente;
+- no hay retry, fetch, mount, teardown, cambio de operacion ni expiracion en curso.
+
+Todo `loaderstart`, input incompleto/invalido, `loaderror`, desconexion, cambio de resumen, expiracion, back, cierre, retry o contexto obsoleto lo vuelve `false` sin demora.
+
+La siguiente microfase, `SecureMount-Implementation-01`, puede reflejar este valor en un atributo seguro de readiness, pero el boton fisico debe permanecer `disabled` porque aun no existira un handler de confirmacion. Habilitar el boton requerira ademas `confirmationHandlerReady === true` en una microfase posterior. Asi se evita un control habilitado e inerte y no se anticipa `confirmPayment`.
+
+### Convivencia futura con Express Checkout Element
+
+Express Checkout no se crea ni monta en la siguiente microfase. Cuando su propia microfase lo habilite:
+
+- reutilizara el mismo objeto `Elements`, el mismo PaymentIntent y el mismo controller de operacion;
+- tendra un unico host `[data-subp-express-checkout-host]` y lifecycle coordinado;
+- se montara antes del Payment Element y solo se mostrara tras `ready` si `availablePaymentMethods` contiene disponibilidad real;
+- si no hay disponibilidad, el host quedara oculto/neutral y Payment Element seguira siendo la alternativa;
+- no se forzara disponibilidad con opciones equivalentes a `always` ni se inferira por logos locales;
+- no se definira una lista manual de wallets o metodos;
+- Stripe evitara la duplicacion de wallets en Payment Element cuando ambos Elements convivan, segun su contrato oficial;
+- confirmacion, shipping y callbacks propios de Express Checkout quedan fuera de PP240 y de la siguiente microfase.
+
+### Contrato DOM de montaje
+
+Inmediatamente antes de montar, el orquestador debe:
+
+1. resolver exactamente un `[data-subp-stripe-payment-element-host]` dentro del shell actual;
+2. comprobar identidad del nodo, `isConnected`, contexto vigente y ausencia de controller ajeno;
+3. cambiar el estado externo a preparacion sin marcarlo disponible;
+4. retirar el placeholder mediante `host.replaceChildren()`;
+5. fijar `data-interactive="true"` y un estado `mounting` solo para la encarnacion vigente;
+6. pasar el nodo DOM exacto a `paymentElement.mount(host)`;
+7. mantener titulos, instrucciones y live regions fuera del nodo administrado por Stripe.
+
+Mientras el Element este montado, MXMed no escribe hijos, errores ni loaders dentro del host. CSS externo solo dimensiona el contenedor; el contenido seguro pertenece a Stripe.
+
+### Teardown definitivo
+
+Para la primera implementacion se selecciona `destroy()` siempre. No se usa `unmount()` ni se conserva un Element para reabrirlo, porque el renderer reemplaza los hosts y una operacion reabierta debe revalidar servidor, expiracion y contexto.
+
+Orden idempotente:
+
+1. invalidar `attemptId` y readiness;
+2. abortar el fetch efimero si continua;
+3. retirar handlers con `off` cuando la instancia disponible lo soporte;
+4. ejecutar `paymentElement.destroy()` una sola vez si fue creado;
+5. liberar referencias a Payment Element, `Elements`, host, promesa y controller;
+6. no destruir ni duplicar el singleton Stripe/loader de PP236;
+7. permitir que el renderer canonico reponga el placeholder.
+
+Disparadores obligatorios: antes de todo rerender que sustituya el shell; back; cierre; cambio de entidad, plan, modalidad, route, checkout o PaymentIntent; expiracion; logout/scope perdido; desconexion de host; error de carga; retry; y navegacion fuera del panel.
+
+### Retry, expiracion y respuestas tardias
+
+No hay retry automatico. El error recuperable ofrece una accion real `Reintentar formulario seguro` fuera del host de Stripe. Esa accion:
+
+1. destruye cualquier resto;
+2. vuelve a leer estado actual;
+3. vuelve a ejecutar ambas compuertas;
+4. genera un intento/contexto vigente;
+5. obtiene un secreto nuevo una sola vez.
+
+Errores de autenticacion, ownership, estado, expiracion o contrato no son recuperables en el mismo contexto: se vuelve al resumen o se pide actualizar la operacion. Un timeout o fallo de red puede reintentarse manualmente. Una respuesta que llega tras destroy, cambio de contexto o expiry se descarta sin montar y sin mostrar datos de la operacion anterior.
+
+### Mapa de errores sanitizados
+
+| Codigo frontend | Causa agrupada | Copy publico | Retry |
+| --- | --- | --- | --- |
+| `SUBP_PE_INELIGIBLE` | compuerta A no satisfecha | `Esta operacion ya no esta lista para capturar el pago.` | no; volver/actualizar |
+| `SUBP_PE_CONTEXT_STALE` | contexto o respuesta obsoleta | `La operacion cambio. Revisa el resumen actualizado.` | no sobre el contexto anterior |
+| `SUBP_PE_EXPIRED` | expiracion local o servidor | `La operacion vencio. Prepara nuevamente el pago.` | no |
+| `SUBP_PE_HOST_UNAVAILABLE` | host ausente, duplicado o desconectado | `No pudimos preparar el formulario seguro.` | si, tras rerender estable |
+| `SUBP_PE_RUNTIME_UNAVAILABLE` | config, script o Stripe no disponible | `No pudimos cargar el formulario seguro.` | si, manual |
+| `SUBP_PE_SECRET_UNAVAILABLE` | endpoint, auth o red | `No pudimos autorizar el formulario seguro.` | solo red/temporal |
+| `SUBP_PE_SECRET_CONTRACT_INVALID` | envelope inesperado | `La respuesta de pago no fue valida.` | no en el mismo estado |
+| `SUBP_PE_ELEMENTS_CREATE_FAILED` | fallo al crear `Elements` | `No pudimos preparar el formulario seguro.` | si, manual |
+| `SUBP_PE_ELEMENT_CREATE_FAILED` | fallo al crear Payment Element | `No pudimos preparar el formulario seguro.` | si, manual |
+| `SUBP_PE_MOUNT_FAILED` | excepcion de mount | `No pudimos mostrar el formulario seguro.` | si, manual |
+| `SUBP_PE_LOAD_ERROR` | evento `loaderror` | `El formulario seguro no termino de cargar.` | si, manual |
+
+Detalles HTTP, objetos Stripe, stack traces, provider IDs, UUIDs, mensajes crudos y secretos nunca llegan al copy publico.
+
+### Snapshot runtime seguro
+
+El unico inspector futuro sera:
+
+`getSubscriptionStripePaymentElementSnapshot()`
+
+Devuelve una copia inmutable con allowlist:
+
+- `contract_version`;
+- `mount_state`;
+- `input_state`;
+- `operation_state`;
+- booleanos `has_controller`, `has_inflight_attempt`, `host_connected`, `element_created`, `element_mounted`, `element_ready`, `input_complete`, `payment_input_ready` y `cta_physically_enabled`;
+- `last_transition_reason` como enum cerrado;
+- `error_code` sanitizado o `null`.
+
+No devuelve identificadores de entidad/checkout/PaymentIntent, `operationContextKey`, importes, moneda, publishable key, `client_secret`, instancias Stripe/Elements/Element, DOM nodes, eventos, errores crudos, responses ni timestamps correlacionables.
+
+### Maquina de estados frontend
+
+#### Mount state - diez estados cerrados
+
+| Estado | Salida valida | Copy/ARIA | CTA | Retry | Teardown |
+| --- | --- | --- | --- | --- | --- |
+| `idle` | `preparing` | formulario aun no preparado; anuncio solo si lo causa el usuario | off | no | no |
+| `preparing` | `loading_runtime`, `error`, `destroying` | `Preparando formulario seguro`; `status/polite` | off | no | si al abortar |
+| `loading_runtime` | `retrieving_secret`, `error`, `destroying` | `Cargando formulario seguro`; `status/polite` | off | no | si |
+| `retrieving_secret` | `creating_elements`, `error`, `destroying` | `Autorizando formulario seguro`; `status/polite` | off | no | si, aborta fetch |
+| `creating_elements` | `mounting`, `error`, `destroying` | conserva mensaje de preparacion, sin anuncio repetido | off | no | si |
+| `mounting` | `loading`, `ready`, `error`, `destroying` | `Mostrando formulario seguro`; `status/polite` | off | no | si |
+| `loading` | `ready`, `error`, `destroying` | `Cargando opciones de pago`; `status/polite` | off | no | si |
+| `ready` | `error`, `destroying` | `Formulario seguro disponible`; un anuncio | readiness logico | no | si ante trigger |
+| `error` | `destroying`, `preparing` | copy del codigo; `alert` solo una vez | off | segun mapa | obligatorio antes de retry |
+| `destroying` | `idle`, `preparing` | `Actualizando formulario seguro` solo si visible; `status/polite` | off | no | en curso/idempotente |
+
+#### Input state - cinco estados cerrados
+
+| Estado | Salida valida | Copy/ARIA | CTA | Retry | Teardown |
+| --- | --- | --- | --- | --- | --- |
+| `unknown` | `incomplete`, `complete`, `invalid`, `unavailable` | sin error; instrucciones visibles del panel | off | no | no |
+| `incomplete` | `complete`, `invalid`, `unavailable` | `Completa los datos solicitados`; no anunciar en cada tecla | off | no | no |
+| `complete` | `incomplete`, `invalid`, `unavailable` | sin claim de pago; no anuncio repetitivo | readiness logico | no | no |
+| `invalid` | `incomplete`, `complete`, `unavailable` | mensaje sanitizado del evento en region asociada | off | no | no, salvo loaderror |
+| `unavailable` | `unknown` tras nuevo intento | mensaje del mapa de error | off | si, si recuperable | si |
+
+#### Operation state - cuatro estados cerrados
+
+| Estado | Salida valida | Copy/ARIA | CTA | Retry | Teardown |
+| --- | --- | --- | --- | --- | --- |
+| `eligible` | `ineligible`, `stale`, `expired` | sin claim adicional; estado normal | readiness logico | no | al salir |
+| `ineligible` | `eligible` tras nueva operacion valida | operacion no lista; `status/polite` | off | no sobre la misma | si |
+| `stale` | `eligible` con contexto nuevo | resumen cambio; `status/polite` | off | no sobre la anterior | si |
+| `expired` | `eligible` con operacion nueva | operacion vencida; `alert` una vez | off | no | si |
+
+`paymentInputReady` requiere simultaneamente `mount_state=ready`, `input_state=complete` y `operation_state=eligible`. Ninguna transicion visual altera estados de servidor.
+
+### Accesibilidad
+
+- los labels, ayudas y errores internos de medios de pago pertenecen al Element seguro;
+- el panel conserva un titulo visible antes del host y una descripcion que no promete disponibilidad anticipada;
+- cambios de carga usan `role=status`/`aria-live=polite`; errores terminales se anuncian una vez, sin bucles al rerender;
+- no se mueve foco durante `loaderstart`; tras `ready`, el usuario decide entrar al Element;
+- en retry iniciado por teclado, al quedar listo se devuelve foco a la region/titulo del formulario, no a un iframe interno de forma forzada;
+- si falla, foco va a la accion de retry o al retorno al resumen segun recuperabilidad;
+- el CTA conserva nombre accesible y `disabled` real, no solo `aria-disabled`;
+- disponibilidad, error y completitud nunca dependen solo del color;
+- el orden DOM sigue titulo, instrucciones, Express futuro, Payment Element, estado y acciones;
+- se respeta `prefers-reduced-motion` del skeleton y no se anima el contenido interno de Stripe.
+
+### Responsive
+
+- el host ocupa `width: 100%`, sin ancho minimo superior al contenedor y sin altura fija;
+- el panel permite que iframes y acordeones de Stripe definan su altura natural;
+- a `1440` y `1024 px` conserva la composicion aprobada sin superponer status/CTA;
+- a `768 px` el cuerpo se apila antes de reducir el ancho util del Element;
+- a `390 px` no hay scroll horizontal, zoom por tipografia menor a `16px`, CTA sticky ni recorte del acordeon;
+- cambios de breakpoint no recrean el Element por si solos; solo un rerender real del shell activa teardown;
+- orientacion, resize y contenido dinamico no se resuelven midiendo DOM interno de Stripe.
+
+### Seguridad, TLS y limites de confianza
+
+- produccion requiere HTTPS/TLS para la pagina, Stripe.js y endpoints; no hay downgrade ni excepcion localhost en contrato productivo;
+- Stripe.js solo procede del loader oficial cerrado en PP234; no se empaqueta, proxyfica ni autoaloja;
+- el endpoint de secreto es same-origin, POST autenticado y `no-store`;
+- ninguna credencial, PAN, fecha, CVC o titular se captura en inputs MXMed;
+- CSP, headers, cookies y configuracion de servidor no cambian en esta microfase;
+- readiness frontend no prueba pago: el estado final continuara dependiendo del backend/webhook en una microfase posterior;
+- no se loguean objetos de eventos Stripe, responses, claves, secretos ni identificadores operativos;
+- mensajes UI usan codigos cerrados y no incluyen causas internas.
+
+### Matriz QA futura para la implementacion
+
+Esta matriz es especificacion; no fue ejecutada en PP240.
+
+| ID | Caso futuro | Resultado esperado |
+| --- | --- | --- |
+| Q01 | sesion real, anual y estados coherentes | candidato local elegible |
+| Q02 | Plan QA Simulado | cero runtime, fetch y mount |
+| Q03 | sesion ausente | ineligible, sin endpoint |
+| Q04 | entidad fuera de scope | ineligible, sin endpoint |
+| Q05 | plan cambiado | contexto stale y destroy |
+| Q06 | modalidad cambiada | contexto stale y destroy |
+| Q07 | mensual con backend actual | ineligible fail-closed |
+| Q08 | route no preparada | ineligible |
+| Q09 | checkout no pending | ineligible |
+| Q10 | PaymentIntent no created | ineligible |
+| Q11 | provider status distinto | ineligible |
+| Q12 | importe/moneda divergentes | ineligible |
+| Q13 | mismo contexto llamado dos veces simultaneas | una promesa y un mount |
+| Q14 | mismo contexto ya ready | snapshot idempotente |
+| Q15 | contexto B durante fetch de A | A abortado/descartado, B serializado |
+| Q16 | respuesta A llega tras B | cero mutacion de B |
+| Q17 | back durante runtime load | intento invalidado, cero mount |
+| Q18 | close durante secret fetch | abort y destroy idempotente |
+| Q19 | rerender durante create | nodo viejo nunca recibe mount |
+| Q20 | host desconectado antes de mount | error sanitizado y destroy |
+| Q21 | dos hosts en shell | fail-closed |
+| Q22 | destroy repetido | sin excepcion ni referencias vivas |
+| Q23 | endpoint exitoso con envelope exacto | continua una vez |
+| Q24 | envelope/version inesperado | contrato invalido, cero create |
+| Q25 | `client_secret` ausente | contrato invalido |
+| Q26 | endpoint 401/403 | no retry automatico |
+| Q27 | endpoint 409/422 por estado | volver/actualizar operacion |
+| Q28 | timeout/red | retry manual disponible |
+| Q29 | auditoria de memoria/log/DOM/storage | secreto ausente |
+| Q30 | retry despues de fallo | fetch nuevo; nunca reutiliza secreto |
+| Q31 | runtime PP236 listo | una instancia Stripe compartida |
+| Q32 | create Elements | solo clientSecret, appearance y loader |
+| Q33 | create Payment Element | opciones exactas de accordion |
+| Q34 | `loaderstart` | loading, CTA off |
+| Q35 | `ready` sin change complete | CTA off |
+| Q36 | `change.complete=false` | input incomplete, CTA off |
+| Q37 | `change.complete=true` | readiness logico true si todo vigente |
+| Q38 | change con error | input invalid, error accesible, CTA off |
+| Q39 | `loaderror` | destroy y retry manual |
+| Q40 | evento de instancia destruida | ignorado por attemptId |
+| Q41 | microfase SecureMount sin confirm handler | CTA fisico siempre disabled |
+| Q42 | futura confirmacion con readiness total | unico caso habilitable |
+| Q43 | expiracion mientras ready | destroy inmediato y CTA off |
+| Q44 | Express futuro sin disponibilidad | host oculto/neutral |
+| Q45 | Express futuro con disponibilidad real | botones definidos por Stripe |
+| Q46 | Express + Payment Element | un Elements y wallets sin duplicacion manual |
+| Q47 | teclado y foco de retry | foco predecible, sin salto forzado a iframe |
+| Q48 | anuncios de carga/error | sin duplicacion ni spam |
+| Q49 | contraste/foco externo | tokens aprobados y estado no solo por color |
+| Q50 | viewport `1440 px` | composicion estable, altura natural |
+| Q51 | viewport `1024 px` | sin solapamiento ni recorte |
+| Q52 | viewport `768 px` | panel apilado y host ancho completo |
+| Q53 | viewport `390 px` | sin overflow, zoom, sticky ni corte |
+
+### Evidencia contractual
+
+Raiz sanitizada:
+
+`/tmp/mxmed-stripe-payment-element-mount-readiness-01/`
+
+Contiene baseline, mapas de contratos PP233-PP239, auditoria de hosts, elegibilidad, orquestacion, contexto, concurrencia, memoria, creacion, Appearance, opciones, eventos, CTA, convivencia futura, DOM, teardown, retry, expiracion, errores, snapshot, estados, accesibilidad, responsive, TLS, matriz QA, no repeticion, auditorias documentales/secretos, resultado y estado Git final.
+
+Unico archivo versionado modificado:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### No repeticion y fuera de alcance
+
+Conteos de PP240:
+
+```json
+{
+  "fixture_calls": 0,
+  "browser_runs": 0,
+  "public_config_calls": 0,
+  "stripejs_network_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_retrieve": 0,
+  "elements_create": 0,
+  "payment_element_create": 0,
+  "payment_element_mount": 0,
+  "confirm_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "stripe_api_calls": 0,
+  "stripe_cli_calls": 0,
+  "sql_calls": 0,
+  "brand_asset_audit_repeated": false
+}
+```
+
+No se modificaron JS, CSS, PHP, HTML, endpoints, servicios, assets, configuracion, dependencias, SQL ni historicos. No se escribieron valores de llaves, secretos, provider IDs o datos personales en documentacion/evidencia.
+
+### Siguiente microfase
+
+`FE-UX/Suscripciones-StripePaymentElement-SecureMount-Implementation-01`
+
+Implementara exclusivamente el orquestador, montaje/destruccion, Appearance, eventos y readiness aqui cerrados. Seguira sin ejecutar `confirmPayment`, confirmaciones, webhooks o activacion.
+
+### Estado
+
+Readiness de montaje Payment Element:
+
+`PASS`
+
+Implementacion runtime ejecutada:
+
+`0`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
