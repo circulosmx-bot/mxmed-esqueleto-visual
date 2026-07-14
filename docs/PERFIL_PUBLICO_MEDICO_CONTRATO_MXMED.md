@@ -43931,6 +43931,394 @@ Resultado de implementacion:
 
 ---
 
+## PP-Decisiones 237 - Blueprint visual de Pago seguro y auditoria dirigida de assets
+
+### Microfase
+
+`UX-FE/Suscripciones-PagoSeguro-VisualBlueprint-AndExistingAssets-01`
+
+### Resultado
+
+Se recibio como referencia visual externa `03_pago_seguro_metodos.png` y se tradujo a una especificacion implementable para el shell existente de Pago seguro.
+
+La imagen se uso solo como guia de estructura, jerarquia, proporciones, mensajes, separacion de bloques, tratamiento de metodos y responsive. No se copio al repositorio, no se usa como background y no se tomaron de ella precios, plan, modalidad ni datos operativos.
+
+Esta microfase es exclusivamente documental y read-only sobre frontend/assets. No modifica HTML, CSS, JavaScript, PHP, CSP, configuracion ni imagenes.
+
+### Lectura no literal de la referencia
+
+La referencia define cinco capas visuales, en este orden:
+
+1. encabezado de contexto y proposito;
+2. progreso de cuatro pasos con Pago seguro activo;
+3. resumen comercial compacto de la operacion;
+4. franja de confianza y procesamiento seguro;
+5. area principal de metodos/pago, seguida por total y acciones.
+
+Se conserva esa jerarquia, pero no se copian los campos de tarjeta dibujados, los metodos marcados como activos, los importes, el plan, la modalidad mensual ni la disponibilidad aparente de wallets o metodos locales.
+
+El fondo azul/cian del encabezado puede interpretarse en una futura implementacion mediante gradiente CSS y tokens existentes. No requiere extraer ni recrear las ondas raster de la referencia.
+
+### Base frontend reutilizable
+
+El shell existente ya aporta:
+
+- `securePaymentShellHtml(slot)` como contenedor de `[data-subp-payment-shell][data-step="payment"]`;
+- `checkoutSummaryStepperHtml('payment')` con los cuatro pasos y `aria-current`;
+- `securePaymentShellViewModel(slot)` para plan, operacion, modalidad, contexto e importe;
+- `pricingContractFromPreviewOrPayload(slot)` para cadencia y condiciones comerciales;
+- `securePaymentTrustMessageHtml()` para la franja de confianza;
+- `securePaymentFormPlaceholderHtml()` y `.subp-payment-element-placeholder` como reserva del futuro Payment Element;
+- `securePaymentProcessStatusHtml(slot)` para waiting/success/error controlados;
+- `securePaymentShellActionsHtml(slot)` y el regreso a Resumen;
+- responsive existente en `assets/css/style.css`, con colapso principal a una columna en `900 px`.
+
+La futura implementacion visual debe evolucionar estas piezas; no debe crear un segundo shell, duplicar el stepper ni introducir un formulario de tarjeta paralelo.
+
+### Arquitectura visual aprobada
+
+#### 1. Encabezado
+
+Bloque de ancho completo con:
+
+- titulo: `Pago seguro para completar tu suscripcion`;
+- apoyo: `Revisa el importe final y continua con los metodos disponibles para esta operacion.`;
+- decoracion exclusivamente CSS;
+- contraste AA como minimo;
+- sin precios, plan ni modalidad dentro del copy fijo.
+
+Para mejora de plan puede mantenerse el mismo titulo. El tipo de operacion se comunica en el resumen de datos y no se concatena como texto inventado.
+
+#### 2. Stepper
+
+Se reutiliza el stepper actual:
+
+1. Panel;
+2. Resumen;
+3. Pago seguro;
+4. Confirmacion.
+
+Pago seguro permanece como paso activo. Los pasos previos se muestran completos de forma visual, pero no se convierten en links nuevos. Confirmacion permanece pendiente.
+
+#### 3. Franja de resumen comercial
+
+Debajo del stepper se dispone una franja de hasta cuatro celdas:
+
+| Celda | Etiqueta | Fuente unica permitida | Regla de ausencia |
+| --- | --- | --- | --- |
+| plan | `Plan` | seleccion actual validada y `target_plan_code` del preview/payload existente | usar `Plan seleccionado`, nunca un nombre de ejemplo |
+| modalidad | `Modalidad` | `billing_period` normalizado por `paymentShellPeriodLabel()` | `Periodo por confirmar` |
+| hoy | `Pago de hoy` | `amount_cents` y `currency` del preview/backend; el payload solo conserva el fallback ya existente | `Se confirmara antes del pago` |
+| despues | `Despues` | contrato de pricing/renovacion recibido: importe, moneda, unidad y cadencia | omitir la celda si el contrato no lo confirma |
+
+No se calculan ni copian importes desde el boceto. La franja debe funcionar con:
+
+- anual;
+- mensual;
+- nueva contratacion;
+- mejora de plan.
+
+Una celda ausente no deja un hueco: el grid redistribuye las restantes.
+
+#### 4. Franja de confianza
+
+Bloque de ancho completo, visualmente separado y de menor peso que el encabezado:
+
+- icono del sistema `verified_user` o `shield_lock`;
+- titulo recomendado: `Pago seguro procesado por Stripe`;
+- apoyo: `Tus datos de pago se capturan directamente en el formulario seguro.`;
+- indicador textual `Conexion segura` con icono de candado;
+- logo Stripe solo si existe una ruta local verificada y autorizada.
+
+No se muestran claims absolutos adicionales, detalles PCI, claves, estados tecnicos ni codigos de proveedor.
+
+#### 5. Cuerpo principal
+
+En escritorio se usa un grid de dos columnas equilibradas. La referencia se interpreta asi:
+
+- izquierda: contexto de disponibilidad de metodos, mensajes de cadencia y estados;
+- derecha: superficie reservada exclusivamente para el futuro Stripe Payment Element.
+
+La columna derecha no contiene inputs HTML propios para nombre, numero de tarjeta, expiracion, CVC, codigo postal ni cualquier dato de pago. Tampoco dibuja campos falsos para parecer cargada.
+
+La superficie futura de Stripe debe reservar:
+
+- encabezado de seccion;
+- contenedor Express Checkout independiente, inicialmente ausente;
+- separador accesible cuando ambos Elements esten disponibles;
+- contenedor Payment Element;
+- estado loading;
+- zona de error con `role="alert"`;
+- espacio estable que reduzca layout shift durante el montaje futuro.
+
+En esta microfase esos contenedores no se crean ni se montan; solo se especifica su ubicacion.
+
+### Tratamiento de metodos de pago
+
+Los mosaicos de la referencia son una guia de proporcion y agrupacion, no un contrato para construir selectores propios.
+
+Reglas cerradas:
+
+- tarjeta, OXXO y SPEI solo pueden aparecer como disponibles cuando un contrato futuro de Stripe para la operacion los confirme;
+- la seleccion real de esos metodos pertenece a Payment Element, no a botones HTML de MXMed;
+- Apple Pay, Google Pay y Link solo se presentan mediante Express Checkout Element y su disponibilidad real;
+- los logos locales nunca sustituyen los botones oficiales creados por Stripe;
+- un logo por si solo no implica disponibilidad, seleccion ni elegibilidad;
+- mientras Stripe no haya resuelto capacidades, se muestra copy neutral: `Los metodos disponibles apareceran al preparar el formulario seguro.`;
+- un metodo no confirmado se omite; no se muestra seleccionado, habilitado ni con check visual;
+- no existe un metodo seleccionado por defecto en el skeleton visual.
+
+Si una fase futura necesita una lista informativa separada de Payment Element, requerira primero un contrato sanitizado de capacidades. Esa lista sera informativa y no controlara el Element por simulacion de clicks.
+
+### Mensajes de cadencia
+
+El bloque informativo inferior de la columna izquierda usa plantillas condicionadas por datos existentes.
+
+Mensual:
+
+- solo muestra anticipo/cobertura inicial si `initial_amount_cents`, `initial_cycles`, moneda y unidad estan presentes en `pricing_contract`;
+- el numero de ciclos nunca se fija desde el boceto;
+- el importe posterior usa `regular_recurring_amount_cents` o la unidad contractual aprobada;
+- si la ejecucion mensual sigue bloqueada, conserva el estado no ejecutable y el CTA deshabilitado.
+
+Anual:
+
+- comunica pago anual y vigencia solo con periodo/importe confirmados;
+- no inventa mensualidad posterior;
+- ahorro u otras comparaciones se muestran unicamente si ya existen en el contrato/preview.
+
+Mejora de plan:
+
+- muestra `Mejora de plan` como operacion;
+- puede usar dias restantes y ajuste proporcional recibidos por preview;
+- no promete una recurrencia distinta de la suscripcion vigente;
+- no calcula prorrateo en la capa visual.
+
+Nueva contratacion:
+
+- muestra `Nueva contratacion`;
+- presenta plan y modalidad seleccionados;
+- los importes siguen las mismas reglas backend-first.
+
+### Total y acciones
+
+Debajo del cuerpo principal se reserva una franja de total:
+
+- `Pago de hoy`: importe confirmado;
+- `Despues`: solo cuando el contrato de cadencia lo confirme;
+- moneda visible;
+- sin valores derivados del screenshot.
+
+Acciones:
+
+- secundaria: `Volver al resumen`, reutilizando el handler existente;
+- primaria futura: copy construido con el tipo de operacion y plan validados;
+- la accion primaria no se habilita hasta que una fase posterior tenga operacion elegible, Stripe readiness y Element listo;
+- en el skeleton visual permanece ausente o deshabilitada, sin ejecutar route, checkout, PaymentIntent ni confirmacion.
+
+El nombre del plan nunca forma parte de HTML fijo.
+
+### Estados visuales previstos
+
+| Estado | Superficie principal | Accion primaria |
+| --- | --- | --- |
+| `payment_element_not_requested` | placeholder neutral sin logos activos | ausente/deshabilitada |
+| dependencias pendientes | skeleton estable y copy de preparacion | deshabilitada |
+| metodos por determinar | mensaje neutral, sin mosaico seleccionado | deshabilitada |
+| Element listo futuro | UI propiedad de Stripe | condicionada por validacion |
+| no disponible | copy comercial generico y retry explicito si aplica | deshabilitada |
+| error | alerta accesible sanitizada | deshabilitada |
+| QA simulada | aviso de simulacion; cero Stripe | deshabilitada |
+
+No se representan estados ready falsos durante esta microfase.
+
+### Proporciones y espaciado
+
+Guia para la implementacion posterior:
+
+- contenedor alineado al ancho disponible del panel, sin tomar medidas absolutas del PNG;
+- ritmo vertical basado en los tokens existentes de `14-20 px` entre bloques;
+- radio coherente con `.subp-payment-shell-card--new-subscription` y cards actuales;
+- resumen comercial mas compacto que el cuerpo de pago;
+- franja de confianza de altura visual secundaria;
+- columnas principales cercanas a `1fr 1fr`, permitiendo que Payment Element crezca sin overflow;
+- area de acciones centrada o alineada con el grid, con CTA primaria de mayor peso;
+- no usar la referencia como textura, mascara o imagen de fondo.
+
+### Responsive
+
+Escritorio amplio:
+
+- cuatro celdas de resumen en una fila cuando todas existan;
+- cuerpo en dos columnas equilibradas;
+- total y acciones en una franja inferior;
+- maximo ancho gobernado por el panel actual, no por el screenshot.
+
+Tablet / panel angosto:
+
+- resumen en `2 x 2` o columnas automaticas;
+- cuerpo puede conservar dos columnas solo si cada una mantiene el ancho minimo seguro de Stripe;
+- si no, colapsa antes de provocar overflow;
+- logos informativos, si llegan a estar autorizados, deben envolver sin deformarse.
+
+Movil, alineado al breakpoint actual de `900 px`:
+
+1. encabezado;
+2. stepper compacto;
+3. resumen comercial;
+4. franja de confianza;
+5. disponibilidad/estado de metodos;
+6. futuro Express Checkout cuando sea elegible;
+7. futuro Payment Element;
+8. mensaje de cadencia;
+9. total;
+10. acciones apiladas, primaria primero y regreso despues.
+
+En movil no hay sticky summary. Ninguna columna conserva un ancho fijo y ningun logo define el ancho del layout.
+
+### Accesibilidad
+
+- un solo `h3` principal dentro del shell y jerarquia posterior ordenada;
+- stepper como `ol` con `aria-current="step"`;
+- regiones Stripe futuras con labels visibles;
+- mensajes de error con `role="alert"` y estados de carga anunciables sin repeticion agresiva;
+- foco visible y orden DOM igual al orden movil;
+- logos decorativos con `alt=""`; marcas informativas con nombre accesible no redundante;
+- contraste AA minimo;
+- no depender solo de color/check para disponibilidad;
+- targets tactiles suficientes;
+- respetar `prefers-reduced-motion` si se agrega transicion visual.
+
+### Auditoria dirigida de `assets/img`
+
+Se audito exclusivamente la ruta indicada y las marcas relacionadas con la referencia; no se repitio un inventario general del repositorio.
+
+Resultado verificado en el checkout actual:
+
+- archivos versionados bajo `assets/img`: `9`;
+- placeholders de carpeta: `1`;
+- avatares de pacientes: `6`;
+- recursos graficos clinicos no relacionados con pagos: `2`;
+- coincidencias por nombre para Stripe, Visa, Mastercard, American Express, Carnet, OXXO, SPEI, Apple Pay, Google Pay o Link: `0`;
+- logos de pago presentes en este HEAD: `0`.
+
+Los dos recursos no-avatar se verificaron como marcas clinicas y no son reutilizables como medios de pago.
+
+La busqueda dirigida en el historial local encontro el intake existente:
+
+- rama: `assets/suscripciones-payment-method-brand-assets-intake`;
+- commit: `81f7af4c842aa95f556190817dd0467c2de588f5`;
+- estado respecto al HEAD de este blueprint: rama divergente desde un ancestro comun; los assets no forman parte del working tree actual.
+
+Rutas existentes en ese intake:
+
+| Ruta estable | Contenido auditado | Uso futuro permitido |
+| --- | --- | --- |
+| `assets/img/payment-methods/stripe.svg` | marca Stripe | franja de confianza, solo tras autorizacion de marca |
+| `assets/img/payment-methods/card-brands.png` | composicion Visa, Mastercard y American Express | apoyo informativo cuando tarjeta este confirmada; no sustituye UI de Stripe |
+| `assets/img/payment-methods/oxxo.png` | marca OXXO | solo si el contrato futuro confirma OXXO para la operacion |
+| `assets/img/payment-methods/spei.svg` | marca SPEI | solo si el contrato futuro confirma SPEI para la operacion |
+| `assets/img/payment-methods/apple-pay.png` | marca Apple Pay | nunca como boton activo; Express Checkout Element conserva control de elegibilidad/UI |
+| `assets/img/payment-methods/google-pay.png` | marca Google Pay | nunca como boton activo; Express Checkout Element conserva control de elegibilidad/UI |
+
+Hallazgos de cobertura:
+
+- Link: no tiene asset local en el intake;
+- Carnet: no tiene asset independiente ni aparece en la composicion auditada;
+- Visa, Mastercard y American Express comparten un unico raster; no se deben recortar ni duplicar en archivos nuevos;
+- el README del intake clasifica todos los archivos como candidatos entregados por producto y exige confirmar procedencia, licencia y autorizacion antes de uso productivo;
+- el README tambien confirma que presencia de archivo no equivale a metodo habilitado y que Payment Element es la fuente preferida dentro del formulario.
+
+Por lo tanto, las rutas solicitadas si existen en Git, pero aun no estan integradas en la linea de este blueprint ni tienen autorizacion de marca cerrada en su propio contrato de intake.
+
+No se descargaron, redibujaron, duplicaron, renombraron, movieron ni incorporaron logos durante esta microfase. Tampoco se hizo merge, cherry-pick o checkout de la rama de assets.
+
+Antes de una implementacion que muestre marcas se requiere:
+
+1. integrar de forma autorizada el intake conservando exactamente sus rutas;
+2. cerrar procedencia/licencia/autorizacion indicada por su README;
+3. mantener el skeleton funcional sin logos y sin metodos activos mientras no exista capacidad Stripe confirmada.
+
+### Intake de la referencia
+
+- archivo externo inspeccionado: `03_pago_seguro_metodos.png`;
+- resolucion observada: `1672 x 941`;
+- agregado al repositorio: no;
+- copiado a `assets/img`: no;
+- importes o plan extraidos: no;
+- formulario de tarjeta copiado: no.
+
+### No ejecucion
+
+Durante esta microfase:
+
+- carga de Stripe.js: `0`;
+- GET real de configuracion publica: `0`;
+- retrieval de secreto efimero: `0`;
+- Payment Element mounts: `0`;
+- Express Checkout mounts: `0`;
+- confirmaciones de pago: `0`;
+- payment routes, checkouts y PaymentIntents creados: `0`;
+- Stripe API/CLI: `0`;
+- webhooks y activaciones: `0`;
+- SQL: `0`;
+- entidades QA usadas: `0`.
+
+### Archivos modificados
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+La referencia y `assets/img/` permanecen sin cambios.
+
+### Fuera de alcance
+
+No se implementa en esta microfase:
+
+- cambios visuales en app.js/style.css;
+- inputs de pago propios;
+- selector funcional de metodo;
+- Stripe.js o configuracion publica;
+- Payment Element;
+- Express Checkout Element;
+- solicitud de secreto efimero;
+- creacion o confirmacion de pagos;
+- route, checkout, PaymentIntent, webhook o activacion;
+- CSP;
+- descarga, generacion o movimiento de logos.
+
+### Siguiente microfase
+
+Antes de implementar el skeleton visual debe integrarse de forma autorizada el intake existente y cerrarse su guard de procedencia/licencia. No se deben copiar manualmente los archivos entre ramas.
+
+Una vez resuelto, la siguiente microfase propuesta es:
+
+`UX-FE/Suscripciones-PagoSeguro-VisualSkeleton-Implementation-01`
+
+Alcance maximo:
+
+- adaptar el shell existente a la arquitectura aprobada;
+- consumir solo preview/backend actual;
+- colocar placeholders seguros sin inputs propios;
+- reutilizar exclusivamente assets locales confirmados;
+- mantener Stripe runtime dormido;
+- no montar Elements ni ejecutar pagos.
+
+### Estado
+
+Blueprint visual:
+
+`PASS`
+
+Mapeo de logos de pago en el HEAD actual:
+
+`BLOCKED_ASSET_INTAKE_NOT_IN_BASELINE`
+
+Autorizacion de marca indicada por el README del intake:
+
+`BLOCKED_ASSET_PROVENANCE_PENDING`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
