@@ -61730,6 +61730,10 @@ function mxResetLogoPreview(){
     const contract = planMonthlyAdvanceContract(plan);
     const monthlyCents = Number(contract?.unit_amount_cents || 0);
     const initialCents = Number(contract?.initial_amount_cents || 0);
+    const initialCycles = Number(contract?.initial_cycles || 0);
+    const initialCoverage = initialCycles > 0
+      ? `Inicia con ${initialCycles} ${initialCycles === 1 ? 'mes' : 'meses'} por adelantado`
+      : 'Cobertura inicial por confirmar';
     return {
       mode: 'monthly',
       priceAmount: monthlyCents > 0 ? fmtMoneyShort(monthlyCents / 100) : 'Pago mensual no disponible',
@@ -61738,9 +61742,9 @@ function mxResetLogoPreview(){
       savingsLabel: '',
       dailyPrefix: '',
       dailyAmount: '',
-      dailyText: monthlyCents > 0 ? 'Inicia con 3 meses por adelantado' : 'Pago mensual no disponible',
+      dailyText: monthlyCents > 0 ? initialCoverage : 'Pago mensual no disponible',
       detailLines: initialCents > 0
-        ? ['Inicia con 3 meses por adelantado', `Primer pago: ${formatSubscriptionCents(initialCents, 'MXN')}`]
+        ? [initialCoverage, `Primer pago: ${formatSubscriptionCents(initialCents, contract?.currency)}`]
         : ['Pago mensual no disponible']
     };
   }
@@ -62981,7 +62985,7 @@ function mxResetLogoPreview(){
     if(!isNewSubscription) return checkoutSummarySafePaymentNoteHtml();
     return `<div class="subp-payment-secure-note subp-payment-secure-note--detailed">
       <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
-      <span><strong>Pago 100% seguro con Stripe</strong><small>Tus datos están protegidos durante el proceso de pago.</small></span>
+      <span><strong>Pago seguro</strong><small>Tus datos se capturarán directamente en el formulario seguro de Stripe.</small></span>
     </div>`;
   }
 
@@ -63059,7 +63063,8 @@ function mxResetLogoPreview(){
 
   function checkoutSummaryOpenSecurePaymentActionHtml(slot){
     const validation = checkoutSummarySecurePaymentValidation(slot);
-    if(!validation.ok){
+    const visualSimulation = isQaPlanSimulationActive() && !!data.paymentPayloadPreview?.[slot];
+    if(!validation.ok && !visualSimulation){
       return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
         <span class="subp-payment-primary-copy">
           <span>Continuar al método de pago</span>
@@ -63067,7 +63072,9 @@ function mxResetLogoPreview(){
         </span>
       </button>`;
     }
-    const subcopy = checkoutSummaryPrimaryActionSubcopy(slot);
+    const subcopy = visualSimulation
+      ? 'Vista local de Plan QA — no prepara ni ejecuta pagos.'
+      : checkoutSummaryPrimaryActionSubcopy(slot);
     const content = subcopy
       ? `<span class="subp-payment-primary-copy"><span>Continuar al método de pago</span><small>${escapeHtml(subcopy)}</small></span>`
       : 'Continuar al método de pago';
@@ -63112,83 +63119,232 @@ function mxResetLogoPreview(){
   function securePaymentShellViewModel(slot){
     const payload = data.paymentPayloadPreview?.[slot] || null;
     const preview = latestPaymentServerPreviewData(slot) || {};
+    const contract = pricingContractFromPreviewOrPayload(slot) || {};
     const plan = checkoutSummarySelectedPlanForShell(slot);
     const planLabel = clean(plan?.name) || 'Plan seleccionado';
     const planId = normalizePlanId(plan?.id || payload?.target_plan_code);
     const routeType = clean(payload?.route_type);
     const isUpgrade = routeType === 'upgrade_subscription';
-    const amount = formatSubscriptionCents(preview.amount_cents, preview.currency)
-      || formatSubscriptionCents(payload?.amount_cents, payload?.currency)
+    const billingPeriod = clean(payload?.billing_period || contract.billing_period).toLowerCase();
+    const currency = clean(preview.currency || payload?.currency || contract.currency).toUpperCase();
+    const todayAmount = formatSubscriptionCents(
+      preview.amount_cents ?? payload?.amount_cents ?? contract.initial_amount_cents ?? contract.annual_amount_cents,
+      currency
+    )
       || checkoutSummaryPreviewAmountLabel(slot, '');
+    const recurringAmount = formatSubscriptionCents(
+      contract.regular_recurring_amount_cents ?? contract.unit_amount_cents,
+      currency
+    );
     const currentLabel = checkoutSummaryCurrentPlanLabel() || 'Plan actual';
-    const periodLabel = paymentShellPeriodLabel(slot, 'Anual');
+    const periodLabel = paymentShellPeriodLabel(slot, 'Periodo por confirmar');
     const remainingDays = Number(preview.remaining_days ?? payload?.remaining_days ?? data.currentModel?.days_until_expiration);
     const daysLabel = Number.isFinite(remainingDays) && remainingDays >= 0 ? Math.round(remainingDays) : null;
+    const initialCyclesValue = Number(contract.initial_cycles);
+    const initialCycles = Number.isFinite(initialCyclesValue) && initialCyclesValue > 0
+      ? Math.round(initialCyclesValue)
+      : null;
+    const savingsCents = Number(contract.annual_savings_amount_cents || 0);
+    const savingsAmount = Number.isFinite(savingsCents) && savingsCents > 0
+      ? formatSubscriptionCents(savingsCents, currency)
+      : '';
+    const contextLabel = isUpgrade && daysLabel !== null
+      ? `${daysLabel} días restantes de tu vigencia`
+      : isUpgrade
+        ? 'Ajuste proporcional de tu vigencia actual'
+        : billingPeriod === 'annual'
+          ? 'Vigencia anual'
+          : 'Cobertura inicial confirmada en el resumen';
+    const followupLabel = billingPeriod === 'monthly' ? 'Después' : 'Vigencia';
+    const followupValue = billingPeriod === 'monthly'
+      ? (recurringAmount ? `${recurringAmount} al mes` : 'Se confirmará antes del pago')
+      : contextLabel;
+    const routeState = paymentRouteCreateState(slot);
+    const bridge = paymentRouteCheckoutBridgeState(slot);
+    const paymentIntent = paymentIntentCreateState(slot);
+    const hasError = routeState.state === 'error' || bridge.state === 'error' || paymentIntent.state === 'error';
+    const isPreparing = routeState.state === 'creating' || bridge.state === 'creating' || paymentIntent.state === 'creating';
+    const formState = hasError
+      ? 'unavailable'
+      : paymentIntent.state === 'success'
+        ? 'awaiting_mount'
+        : isPreparing
+          ? 'preparing'
+          : 'not_ready';
     return {
       plan,
       planId,
       planLabel,
+      billingPeriod,
       periodLabel,
-      amount: amount || 'Se confirmará antes del pago.',
+      currency,
+      todayAmount: todayAmount || 'Se confirmará antes del pago',
+      recurringAmount,
+      initialCycles,
+      savingsAmount,
+      followupLabel,
+      followupValue,
+      formState,
       operationLabel: isUpgrade ? 'Mejora de plan' : 'Nueva contratación',
       identityLabel: isUpgrade ? `${currentLabel} → ${planLabel}` : planLabel,
-      contextLabel: isUpgrade && daysLabel !== null
-        ? `Ajuste por los ${daysLabel} días restantes de tu vigencia.`
-        : isUpgrade
-          ? 'Ajuste proporcional de tu vigencia actual.'
-          : 'Vigencia anual',
+      contextLabel,
       targetIcon: checkoutSummaryPlanIconSymbol(planId)
     };
   }
 
-  function securePaymentTrustMessageHtml(){
-    return `<div class="subp-payment-secure-note subp-secure-payment-trust">
-      <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
-      <span>Tus datos se capturarán directamente en el formulario seguro de Stripe.</span>
-    </div>`;
+  function securePaymentOperationSummaryHtml(view){
+    const cells = [
+      { icon: view.targetIcon || 'workspace_premium', label: 'Plan', value: view.planLabel, detail: view.operationLabel },
+      { icon: 'sync', label: 'Modalidad', value: view.periodLabel, detail: '' },
+      { icon: 'account_balance_wallet', label: 'Pago de hoy', value: view.todayAmount, detail: '' },
+      { icon: view.billingPeriod === 'monthly' ? 'event_repeat' : 'calendar_month', label: view.followupLabel, value: view.followupValue, detail: '' }
+    ];
+    return `<section class="subp-secure-payment-operation-summary" data-subp-payment-operation-summary aria-label="Resumen de la operación">
+      ${cells.map((cell)=>`<article class="subp-secure-payment-operation-cell">
+        <span class="subp-secure-payment-operation-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(cell.icon)}</span>
+        <div>
+          <span>${escapeHtml(cell.label)}</span>
+          <strong>${escapeHtml(cell.value)}</strong>
+          ${cell.detail ? `<small>${escapeHtml(cell.detail)}</small>` : ''}
+        </div>
+      </article>`).join('')}
+    </section>`;
   }
 
-  function securePaymentFormPlaceholderHtml(){
+  function securePaymentTrustMessageHtml(){
+    return `<section class="subp-secure-payment-trust" data-subp-payment-security-strip aria-labelledby="subp-secure-payment-trust-title">
+      <span class="subp-secure-payment-trust-icon material-symbols-rounded" aria-hidden="true">verified_user</span>
+      <div>
+        <h4 id="subp-secure-payment-trust-title">Pago seguro</h4>
+        <p>Tus datos se capturarán directamente en el formulario seguro de Stripe.</p>
+      </div>
+      <span class="subp-secure-payment-connection"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Conexión segura</span>
+    </section>`;
+  }
+
+  function securePaymentCadenceNoticeHtml(view){
+    if(view.billingPeriod === 'monthly'){
+      if(view.initialCycles){
+        const unit = view.initialCycles === 1 ? 'mes' : 'meses';
+        const installments = view.initialCycles === 1 ? 'mensualidad' : 'mensualidades';
+        return `<aside class="subp-secure-payment-cadence-note" data-period="monthly">
+          <span class="material-symbols-rounded" aria-hidden="true">calendar_month</span>
+          <div>
+            <h5>Cobro inicial de ${escapeHtml(String(view.initialCycles))} ${escapeHtml(unit)} por modalidad mensual</h5>
+            <p>El primer pago cubre ${escapeHtml(String(view.initialCycles))} ${escapeHtml(installments)} por adelantado. Después de este periodo, se realizarán los cobros mensuales correspondientes.</p>
+          </div>
+        </aside>`;
+      }
+      return `<aside class="subp-secure-payment-cadence-note" data-period="monthly">
+        <span class="material-symbols-rounded" aria-hidden="true">calendar_month</span>
+        <div><h5>Modalidad mensual</h5><p>La cobertura inicial y los cobros posteriores se confirmarán con los datos vigentes de la operación.</p></div>
+      </aside>`;
+    }
+    const savings = view.savingsAmount
+      ? `<p class="subp-secure-payment-savings">Ahorro informado por el preview: <strong>${escapeHtml(view.savingsAmount)}</strong>.</p>`
+      : '';
+    return `<aside class="subp-secure-payment-cadence-note" data-period="annual">
+      <span class="material-symbols-rounded" aria-hidden="true">event_available</span>
+      <div><h5>Vigencia anual</h5><p>Tu pago cubre la vigencia anual de este plan.</p>${savings}</div>
+    </aside>`;
+  }
+
+  function securePaymentMethodsPanelHtml(view){
+    return `<article class="subp-secure-payment-panel" aria-labelledby="subp-secure-payment-methods-title">
+      <div class="subp-secure-payment-panel-head">
+        <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
+        <div><span>Opciones</span><h4 id="subp-secure-payment-methods-title">Formas de pago disponibles</h4></div>
+      </div>
+      <div class="subp-stripe-element-host subp-stripe-element-host--express" data-subp-express-checkout-host data-interactive="false" data-state="not-mounted">
+        <div class="subp-stripe-placeholder-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p>Stripe mostrará únicamente las opciones disponibles para esta operación.</p>
+      </div>
+      <p class="subp-secure-payment-methods-status" data-subp-payment-methods-status role="status" aria-live="polite">No hay métodos mostrados hasta que el formulario seguro esté disponible.</p>
+      ${securePaymentCadenceNoticeHtml(view)}
+    </article>`;
+  }
+
+  function securePaymentFormPlaceholderHtml(view){
     const debug = isSubscriptionDebugPanelEnabled()
       ? '<p class="subp-payment-route-status-muted">Espacio reservado para Stripe Payment Element.</p>'
       : '';
-    return `<article class="subp-secure-payment-form-card" aria-labelledby="subp-secure-payment-form-title">
-      <span class="subp-payments-kicker">Forma de pago</span>
-      <h4 id="subp-secure-payment-form-title">Elige cómo pagar</h4>
-      <div class="subp-payment-element-placeholder">
+    const stateCopy = view.formState === 'unavailable'
+      ? 'El formulario seguro no está disponible por el momento.'
+      : view.formState === 'preparing'
+        ? 'Estamos preparando el espacio para el formulario seguro.'
+        : 'El formulario seguro aparecerá aquí cuando el pago esté listo.';
+    return `<article class="subp-secure-payment-panel subp-secure-payment-form-card" aria-labelledby="subp-secure-payment-form-title">
+      <div class="subp-secure-payment-panel-head">
         <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
-        <p>Tus opciones de pago aparecerán aquí.</p>
-        <p>Stripe mostrará únicamente los métodos disponibles para completar esta operación.</p>
-        <p>Tus datos se capturarán directamente en el formulario seguro de Stripe.</p>
+        <div><span>Captura protegida</span><h4 id="subp-secure-payment-form-title">Formulario de pago seguro</h4></div>
+      </div>
+      <div class="subp-stripe-element-host subp-stripe-element-host--payment" data-subp-stripe-payment-element-host data-interactive="false" data-state="${escapeHtml(view.formState)}">
+        <span class="material-symbols-rounded" aria-hidden="true">lock</span>
+        <div class="subp-stripe-placeholder-lines" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <p>${escapeHtml(stateCopy)}</p>
         ${debug}
       </div>
     </article>`;
   }
 
-  function securePaymentSideSummaryHtml(slot){
-    const view = securePaymentShellViewModel(slot);
-    return `<aside class="subp-secure-payment-summary" aria-labelledby="subp-secure-payment-summary-title">
-      <h4 id="subp-secure-payment-summary-title">Resumen de pago</h4>
-      <div class="subp-secure-payment-summary-plan">
-        <span class="subp-payment-plan-icon material-symbols-rounded" aria-hidden="true">${escapeHtml(view.targetIcon)}</span>
-        <div>
-          <strong>${escapeHtml(view.planLabel)}</strong>
-          <small>${escapeHtml(view.identityLabel)}</small>
-        </div>
+  function securePaymentPricingSummaryHtml(view){
+    return `<section class="subp-secure-payment-pricing-summary" data-subp-payment-pricing-summary aria-label="Resumen económico">
+      <div class="subp-secure-payment-pricing-icon"><span class="material-symbols-rounded" aria-hidden="true">sell</span></div>
+      <div class="subp-secure-payment-pricing-item">
+        <span>${escapeHtml(view.billingPeriod === 'monthly' ? 'Primer pago de hoy' : 'Pago de hoy')}</span>
+        <strong>${escapeHtml(view.todayAmount)}</strong>
       </div>
-      <dl class="subp-payments-dl">
-        <dt>Operación</dt><dd>${escapeHtml(view.operationLabel)}</dd>
-        <dt>Periodo</dt><dd>${escapeHtml(view.periodLabel)}</dd>
-        <dt>Vigencia</dt><dd>${escapeHtml(view.contextLabel)}</dd>
-        <dt>Total a pagar hoy</dt><dd>${escapeHtml(view.amount)}</dd>
-      </dl>
-    </aside>`;
+      <div class="subp-secure-payment-pricing-divider" aria-hidden="true"></div>
+      <div class="subp-secure-payment-pricing-item">
+        <span>${escapeHtml(view.followupLabel)}</span>
+        <strong>${escapeHtml(view.followupValue)}</strong>
+      </div>
+    </section>`;
+  }
+
+  function securePaymentFinalSubmitHtml(slot){
+    const paymentIntent = paymentIntentCreateState(slot);
+    const responseData = paymentIntent.data || {};
+    const intent = responseData.payment_intent && typeof responseData.payment_intent === 'object'
+      ? responseData.payment_intent
+      : responseData;
+    const normalizedStatus = clean(intent.normalized_status || intent.status);
+    const providerStatus = clean(intent.provider_status);
+    const waitingForMethod = paymentIntent.state === 'success'
+      && (normalizedStatus === 'created' || providerStatus === 'requires_payment_method');
+    if(!waitingForMethod) return '';
+    return `<div class="subp-secure-payment-final-action">
+      <button class="btn btn-primary subp-payment-primary-action" type="button" data-subp-payment-final-submit="${escapeHtml(slot)}" disabled aria-disabled="true">
+        <span class="material-symbols-rounded" aria-hidden="true">lock</span>Pagar de forma segura
+      </button>
+      <small>El formulario de pago debe estar disponible antes de continuar.</small>
+    </div>`;
+  }
+
+  function securePaymentDebugSummaryHtml(slot, view){
+    const routeState = paymentRouteCreateState(slot);
+    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
+    const routeUuid = clean(route?.payment_route_uuid) || 'No disponible';
+    const status = clean(route?.status) || clean(routeState.state) || 'idle';
+    return paymentShellDebugDetailsHtml('Detalles técnicos QA', [
+      { label: 'Ruta de pago', value: technicalIdLabel(routeUuid) },
+      { label: 'Estado ruta', value: status },
+      { label: 'Importe confirmado', value: view.todayAmount }
+    ], routeState.data || data.paymentServerPreview?.[slot]?.data || data.paymentPayloadPreview?.[slot]);
+  }
+
+  function securePaymentSimulationStatusHtml(){
+    return `<article class="subp-payment-shell-message" data-state="simulation">
+      <span class="material-symbols-rounded" aria-hidden="true">preview</span>
+      <div><h4>Vista simulada de Pago seguro.</h4><p>Esta revisión visual no consulta APIs ni prepara un pago.</p></div>
+    </article>`;
   }
 
   function securePaymentProcessStatusHtml(slot){
     const routeState = paymentRouteCreateState(slot);
     const bridge = paymentRouteCheckoutBridgeState(slot);
     const paymentIntent = paymentIntentCreateState(slot);
+    if(isQaPlanSimulationActive()) return securePaymentSimulationStatusHtml();
     if(paymentIntent.state !== 'idle') return paymentIntentCreateStatusHtml(slot);
     if(bridge.state !== 'idle') return paymentRouteCheckoutBridgeStatusHtml(slot);
     if(routeState.state === 'creating'){
@@ -63216,8 +63372,8 @@ function mxResetLogoPreview(){
       return `<article class="subp-payment-shell-message" data-state="success">
         <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
         <div>
-          <h4>Tu pago está listo para continuar.</h4>
-          <p>No se ha realizado ningún cargo.</p>
+          <h4>La ruta de pago está preparada.</h4>
+          <p>No se ha realizado ningún cargo. Continúa para preparar el checkout.</p>
         </div>
       </article>
       <div class="subp-payment-next-action">
@@ -63226,7 +63382,10 @@ function mxResetLogoPreview(){
         <div class="subp-payment-route-create-action" data-subp-payment-route-checkout-action="${escapeHtml(slot)}">${paymentRouteCheckoutBridgeActionHtml(slot)}</div>
       </div>`;
     }
-    return '';
+    return `<article class="subp-payment-shell-message" data-state="idle">
+      <span class="material-symbols-rounded" aria-hidden="true">info</span>
+      <div><h4>Tu operación está seleccionada.</h4><p>Prepara el pago únicamente cuando hayas revisado el resumen.</p></div>
+    </article>`;
   }
 
   function securePaymentShellActionsHtml(slot){
@@ -63243,35 +63402,32 @@ function mxResetLogoPreview(){
   }
 
   function securePaymentShellHtml(slot){
-    const routeState = paymentRouteCreateState(slot);
-    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
-    const routeUuid = clean(route?.payment_route_uuid) || 'No disponible';
-    const status = clean(route?.status) || clean(routeState.state) || 'idle';
-    const amount = securePaymentShellViewModel(slot).amount;
-    return `<section class="subp-payment-shell-card subp-payment-shell-card--new-subscription subp-payment-shell-card--cadence subp-secure-payment-shell" data-subp-payment-shell data-step="payment">
-      ${checkoutSummaryStepperHtml('payment')}
-      <div class="subp-payment-shell-header">
+    const view = securePaymentShellViewModel(slot);
+    return `<section class="subp-payment-shell-card subp-payment-shell-card--new-subscription subp-payment-shell-card--cadence subp-secure-payment-shell" data-subp-payment-shell data-subp-secure-payment-skeleton data-step="payment">
+      <header class="subp-secure-payment-hero">
         <div>
-          <h3>Pago seguro</h3>
-          <p>Revisa el importe y continúa cuando estés listo para elegir tu forma de pago.</p>
+          <h3>Pago seguro para completar tu suscripción</h3>
+          <p>Revisa tu forma de pago y el importe final antes de confirmar.</p>
         </div>
-        <span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Protegido por Stripe</span>
-      </div>
+        <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
+      </header>
+      ${checkoutSummaryStepperHtml('payment')}
+      ${securePaymentOperationSummaryHtml(view)}
+      ${securePaymentTrustMessageHtml()}
       <div class="subp-secure-payment-layout">
-        <div class="subp-secure-payment-main">
-          ${securePaymentTrustMessageHtml()}
-          ${securePaymentFormPlaceholderHtml()}
-          ${securePaymentProcessStatusHtml(slot)}
-          ${securePaymentShellActionsHtml(slot)}
-        </div>
-        ${securePaymentSideSummaryHtml(slot)}
+        ${securePaymentMethodsPanelHtml(view)}
+        ${securePaymentFormPlaceholderHtml(view)}
       </div>
-      <button class="btn btn-outline-primary btn-sm subp-secure-payment-back" type="button" data-subp-secure-payment-back="${escapeHtml(slot)}"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver al Resumen</button>
-      ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
-        { label: 'Ruta de pago', value: technicalIdLabel(routeUuid) },
-        { label: 'Estado ruta', value: status },
-        { label: 'Importe confirmado', value: amount }
-      ], routeState.data || data.paymentServerPreview?.[slot]?.data || data.paymentPayloadPreview?.[slot])}
+      <div data-subp-payment-status-message aria-live="polite">
+        ${securePaymentProcessStatusHtml(slot)}
+      </div>
+      ${securePaymentPricingSummaryHtml(view)}
+      <div class="subp-secure-payment-actions">
+        ${securePaymentShellActionsHtml(slot)}
+        ${securePaymentFinalSubmitHtml(slot)}
+        <button class="btn btn-outline-primary btn-sm subp-secure-payment-back" type="button" data-subp-secure-payment-back="${escapeHtml(slot)}"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver al resumen</button>
+      </div>
+      ${securePaymentDebugSummaryHtml(slot, view)}
     </section>`;
   }
 
@@ -63286,7 +63442,8 @@ function mxResetLogoPreview(){
   function openCheckoutSummarySecurePayment(slot){
     const key = isCheckoutPaymentShellSlot(slot) ? 'checkoutSummary' : clean(slot);
     const validation = checkoutSummarySecurePaymentValidation(key);
-    if(!validation.ok){
+    const visualSimulation = isQaPlanSimulationActive() && !!data.paymentPayloadPreview?.[key];
+    if(!validation.ok && !visualSimulation){
       data.checkoutSummary.securePaymentMessage = validation.message;
       renderActiveCheckoutSummary({ loadPreview: false });
       return false;
@@ -63351,7 +63508,12 @@ function mxResetLogoPreview(){
       return `<button class="btn btn-outline-secondary btn-sm" type="button" disabled>${isCheckoutPaymentShellSlot(slot) ? 'Continuar al pago seguro' : 'Preparar pago seguro'} <span>Preview requerido</span></button>`;
     }
     if(paymentExecutionBlockReason(slot) === 'stripe_billing_not_ready'){
-      return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled><span class="subp-payment-primary-copy"><span>Pago mensual automático en preparación</span><small>Tu precio y el anticipo de 3 meses ya están confirmados. La contratación mensual se habilitará al completar la integración de cobros recurrentes.</small></span></button>`;
+      const contract = pricingContractFromPreviewOrPayload(slot);
+      const cycles = Number(contract?.initial_cycles || 0);
+      const advance = cycles > 0
+        ? `el anticipo de ${cycles} ${cycles === 1 ? 'mes' : 'meses'}`
+        : 'el anticipo inicial';
+      return `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled><span class="subp-payment-primary-copy"><span>Pago mensual automático en preparación</span><small>Tu precio y ${escapeHtml(advance)} ya están confirmados. La contratación mensual se habilitará al completar la integración de cobros recurrentes.</small></span></button>`;
     }
     const label = checkoutSummaryPrimaryActionLabel(slot);
     const subcopy = checkoutSummaryPrimaryActionSubcopy(slot);
@@ -63425,10 +63587,10 @@ function mxResetLogoPreview(){
       const amount = formatSubscriptionCents(intent.amount_cents, intent.currency) || 'Importe confirmado por backend';
       if(isCheckoutPaymentShellSlot(slot)){
         return `<article class="subp-payment-shell-message" data-state="waiting">
-            <span class="material-symbols-rounded" aria-hidden="true">pending</span>
+            <span class="material-symbols-rounded" aria-hidden="true">task_alt</span>
             <div>
-              <h4>Estamos esperando la confirmación del pago.</h4>
-              <p>Tu plan se activará después de que el pago sea confirmado.</p>
+              <h4>Tu pago está listo para continuar.</h4>
+              <p>Enseguida podrás elegir tu forma de pago de manera segura.</p>
             </div>
           </article>
           ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
@@ -63447,8 +63609,8 @@ function mxResetLogoPreview(){
             </div>
             <span class="subp-payments-status-chip">Sin cargo confirmado</span>
           </div>
-          <p class="subp-payment-route-status-note">Estamos esperando la confirmación del pago.</p>
-          <p class="subp-payment-route-status-muted">La suscripción aún no ha sido activada.</p>
+          <p class="subp-payment-route-status-note">Tu pago está listo para continuar.</p>
+          <p class="subp-payment-route-status-muted">Todavía falta elegir y confirmar una forma de pago.</p>
           ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
             { label: 'PaymentIntent local', value: technicalIdLabel(paymentIntentUuid) },
             { label: 'Provider payment', value: technicalIdLabel(providerPaymentId) },
@@ -65086,10 +65248,12 @@ function mxResetLogoPreview(){
       const unit = formatSubscriptionCents(contract?.unit_amount_cents, currency) || 'Por confirmar';
       const initial = formatSubscriptionCents(contract?.initial_amount_cents, currency) || 'Por confirmar';
       const recurring = formatSubscriptionCents(contract?.regular_recurring_amount_cents, currency) || unit;
-      const cycles = Number(contract?.initial_cycles || 3);
+      const cycles = Number(contract?.initial_cycles || 0);
       title = 'Pago mensual';
       main = `${unit} al mes`;
-      meta = `Inicia con ${Number.isFinite(cycles) && cycles > 0 ? Math.round(cycles) : 3} meses por adelantado`;
+      meta = Number.isFinite(cycles) && cycles > 0
+        ? `Inicia con ${Math.round(cycles)} ${Math.round(cycles) === 1 ? 'mes' : 'meses'} por adelantado`
+        : 'Cobertura inicial por confirmar';
       accent = `Pagarás hoy: ${initial}`;
       detail = `Después: ${recurring} al mes`;
     }
@@ -65321,8 +65485,24 @@ function mxResetLogoPreview(){
         ${simulation}
       </div>`;
     }
+    if(isQaPlanSimulationActive()){
+      return `<div class="subp-new-summary-action-stack">
+        <button class="btn btn-primary btn-sm subp-payment-primary-action" type="button" data-subp-open-secure-payment="checkoutSummary">
+          <span class="material-symbols-rounded" aria-hidden="true">preview</span>
+          <span class="subp-payment-primary-copy">
+            <span>Revisar Pago seguro</span>
+            <small>Vista local sin consultas ni pagos.</small>
+          </span>
+        </button>
+      </div>`;
+    }
     if(selected === 'monthly'){
       const noteId = 'subp-new-summary-monthly-action-note';
+      const contract = checkoutSummaryCadenceContract(selected, plan);
+      const cycles = Number(contract?.initial_cycles || 0);
+      const advance = cycles > 0
+        ? `el anticipo de ${cycles} ${cycles === 1 ? 'mes' : 'meses'}`
+        : 'el anticipo inicial';
       return `<div class="subp-new-summary-action-stack">
         <button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled aria-describedby="${escapeHtml(noteId)}">
           <span class="subp-payment-primary-copy">
@@ -65331,18 +65511,8 @@ function mxResetLogoPreview(){
         </button>
         <p class="subp-new-summary-action-note" id="${escapeHtml(noteId)}">
           <strong>Pago mensual automático en preparación.</strong>
-          <span>Tu mensualidad y el anticipo de 3 meses ya están confirmados.</span>
+          <span>Tu mensualidad y ${escapeHtml(advance)} ya están confirmados.</span>
         </p>
-      </div>`;
-    }
-    if(isQaPlanSimulationActive()){
-      return `<div class="subp-new-summary-action-stack">
-        <button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
-          <span class="subp-payment-primary-copy">
-            <span>Continuar al método de pago</span>
-            <small>Simulación QA local — sin consulta backend.</small>
-          </span>
-        </button>
       </div>`;
     }
     return checkoutSummaryOpenSecurePaymentActionHtml('checkoutSummary');
@@ -65639,7 +65809,7 @@ function mxResetLogoPreview(){
           <h3>${escapeHtml(isNewSubscription ? 'Confirma tu elección' : 'Confirma tu mejora de plan')}</h3>
           <p>${escapeHtml(isNewSubscription ? 'Revisa tu elección y continúa al siguiente paso de forma segura.' : 'Revisa los datos antes de continuar al pago seguro.')}</p>
         </div>
-        ${isNewSubscription ? '' : '<span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago 100% seguro con Stripe</span>'}
+        ${isNewSubscription ? '' : '<span class="subp-payment-safe"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Pago seguro con Stripe</span>'}
       </div>
       <div class="subp-payment-plan-pair">
         <article class="subp-checkout-summary-card">

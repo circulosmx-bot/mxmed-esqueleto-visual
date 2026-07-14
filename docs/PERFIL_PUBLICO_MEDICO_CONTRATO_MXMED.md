@@ -44670,6 +44670,216 @@ Decision de integracion:
 
 ---
 
+## PP-Decisiones 239 - Skeleton visual de Pago seguro sin marcas de terceros
+
+### Microfase
+
+`UX-FE/Suscripciones-PagoSeguro-VisualSkeleton-WithoutThirdPartyBrandAssets-01`
+
+### Resultado
+
+Se implemento el skeleton visual de Pago seguro definido por PP-Decisiones 237 y se aplico la decision de PP-Decisiones 238: ningun asset del intake de marcas entra a esta linea.
+
+El shell conserva la progresion real ya existente de route, checkout y PaymentIntent, pero esta microfase no invoca esos procesos ni agrega funcionalidad Stripe. Plan QA Simulado permite revisar el panel de forma local, sin API ni writes.
+
+Resultado:
+
+`PASS`
+
+### Estructura implementada
+
+El panel contiene, en orden DOM y visual:
+
+1. encabezado con el titulo y subtitulo aprobados;
+2. stepper no navegable de cuatro pasos, con Pago seguro como paso actual;
+3. resumen de la operacion en cuatro celdas;
+4. franja neutral de seguridad;
+5. dos paneles para opciones disponibles y formulario seguro;
+6. aviso contextual anual o mensual;
+7. estado real del proceso;
+8. resumen economico inferior;
+9. acciones existentes y retorno al resumen;
+10. detalles tecnicos solo cuando el modo debug existente los permite.
+
+No se agregaron imagenes, logos, inputs de pago, selectores de metodo, radio buttons, enlaces falsos ni controles con apariencia de wallet/tarjeta.
+
+### Datos dinamicos
+
+El view model del shell deriva sus valores de las fuentes existentes:
+
+| Dato | Fuente vigente |
+| --- | --- |
+| plan e identidad de operacion | seleccion y payload de checkout existentes |
+| modalidad | `billing_period` del payload o contrato de pricing |
+| operacion nueva/mejora | `route_type` |
+| pago de hoy | preview de servidor, payload o contrato vigente, en ese orden |
+| importe posterior | `regular_recurring_amount_cents` o `unit_amount_cents` del contrato |
+| moneda | preview, payload o contrato |
+| mensualidades iniciales | `initial_cycles` del contrato |
+| vigencia restante | preview, payload o modelo vigente |
+| ahorro | `annual_savings_amount_cents`, solo cuando es positivo |
+
+El frontend no fija nombres de planes, importes ni porcentajes. Si un valor contractual no existe, muestra una leyenda neutral de confirmacion pendiente en vez de inventar un dato. La cadencia visible ya no usa un fallback numerico para mensualidades iniciales.
+
+### Variantes anual y mensual
+
+Para anual, la cuarta celda y la franja economica expresan vigencia, y el aviso confirma que el pago cubre la vigencia anual. El ahorro aparece unicamente si llega en el contrato vigente.
+
+Para mensual, la cuarta celda y la franja economica muestran el importe posterior. El aviso usa `initial_cycles` y explica el anticipo sin recalcular importes. El pago de hoy se toma del preview/payload/contrato ya existente.
+
+La misma estructura admite nueva contratacion y mejora de plan. En mejora, usa la identidad origen-destino y, cuando existe, la vigencia restante entregada por el estado actual.
+
+### Seguridad y ausencia de marcas
+
+La franja utiliza iconografia generica del sistema y texto plano veraz:
+
+- titulo: `Pago seguro`;
+- captura de datos en el futuro formulario seguro de Stripe;
+- estado secundario: `Conexion segura`.
+
+No usa claims de seguridad absoluta, wordmarks dibujados ni certificaciones. No se integro el commit intake `81f7af4c842aa95f556190817dd0467c2de588f5` y no se referencio ninguna de sus rutas. Apple Pay, Google Pay, Link, OXXO, SPEI y redes de tarjeta permanecen ausentes; su futura elegibilidad y presentacion pertenecen a Elements.
+
+### Hosts futuros y placeholders
+
+Se reservaron contenedores no interactivos para una microfase funcional posterior:
+
+- `data-subp-express-checkout-host`;
+- `data-subp-payment-methods-status`;
+- `data-subp-stripe-payment-element-host`.
+
+Los placeholders usan bloques visuales, iconografia neutral, borde tenue y copy explicativo. Declaran `data-interactive="false"`, no tienen `role="button"` y no contienen inputs ni datos de tarjeta simulados.
+
+### Estados visuales
+
+| Estado | Representacion |
+| --- | --- |
+| operacion seleccionada | invita a revisar y preparar el pago, sin afirmar que existe un cobro |
+| route en preparacion/preparada | conserva la accion y el atributo real de route |
+| checkout en preparacion/preparado | conserva el bridge y su atributo real |
+| PaymentIntent `created/requires_payment_method` | informa que el pago esta listo para continuar y que falta elegir la forma de pago |
+| formulario no disponible | placeholder y mensaje sanitizado de indisponibilidad |
+| error | componente de error existente, sin exponer detalles sensibles |
+| anual | aviso y resumen de vigencia anual |
+| mensual | aviso de anticipo y mensualidad posterior desde contrato |
+| Plan QA Simulado | aviso explicito de vista local sin API ni preparacion de pago |
+
+No se simulan estados `paid`, `succeeded` o `activated`. Antes de capturar una forma de pago no aparece un mensaje de espera de confirmacion.
+
+### Acciones y atributos estables
+
+Se conservaron los handlers y atributos existentes:
+
+- `data-subp-payment-route-create`;
+- `data-subp-payment-route-checkout`;
+- `data-subp-payment-intent-create`;
+- `data-subp-secure-payment-back`.
+
+Se agregaron los atributos de contrato visual:
+
+- `data-subp-secure-payment-skeleton`;
+- `data-subp-payment-operation-summary`;
+- `data-subp-payment-security-strip`;
+- `data-subp-express-checkout-host`;
+- `data-subp-payment-methods-status`;
+- `data-subp-stripe-payment-element-host`;
+- `data-subp-payment-pricing-summary`;
+- `data-subp-payment-status-message`;
+- `data-subp-payment-final-submit`.
+
+El CTA final solo se renderiza al llegar a `created/requires_payment_method`; permanece deshabilitado, sin handler Stripe, y explica que el formulario debe estar disponible. No promete activacion, que continua dependiendo del webhook.
+
+### Runtime Stripe dormido y Network guard
+
+La implementacion no llama los loaders cerrados en PP-Decisiones 236, no obtiene configuracion publica, no carga `js.stripe.com`, no crea una instancia Stripe y no monta Payment Element ni Express Checkout Element.
+
+La QA visual se ejecuto con un harness local y sanitizado. Conteos observados:
+
+- configuracion publica Stripe: `0`;
+- Stripe.js: `0`;
+- payment routes creadas: `0`;
+- checkouts creados: `0`;
+- PaymentIntents creados: `0`;
+- secretos efimeros obtenidos: `0`;
+- confirmaciones: `0`;
+- webhooks: `0`;
+- activaciones: `0`;
+- Stripe API/CLI: `0`;
+- SQL: `0`.
+
+### Responsive
+
+Se validaron `1440`, `1024`, `768` y `390 px`:
+
+- escritorio amplio: resumen en cuatro columnas y cuerpo en dos columnas;
+- tablet: resumen `2 x 2`; el cuerpo colapsa antes de comprometer el ancho seguro del futuro Element;
+- movil: resumen y paneles apilados, acciones de ancho completo, stepper sin overflow e importes sin corte;
+- no se usan alturas fijas para el contenido del panel ni sticky summary movil.
+
+### Accesibilidad
+
+- jerarquia interna encabezada por un unico `h3`;
+- stepper como `ol` y paso tres con `aria-current="step"`;
+- hosts con titulos visibles y placeholders no interactivos;
+- estado del proceso y disponibilidad con `aria-live="polite"`/`role="status"` donde corresponde;
+- botones reales para acciones;
+- foco visible, contraste AA y orden DOM equivalente al orden movil;
+- soporte de `prefers-reduced-motion`;
+- la disponibilidad no se comunica solo mediante color.
+
+### QA visual y DOM
+
+Escenarios sanitizados inspeccionados:
+
+- contratacion anual en `1440`, `1024`, `768` y `390 px`;
+- contratacion mensual con anticipo en `1440` y `390 px`;
+- mejora anual en `1440 px`;
+- `requires_payment_method` en `1440 px`;
+- formulario no disponible/error generico en `1440 px`.
+
+La auditoria DOM sobre el renderer real obtuvo `27/27` checks. Confirmo cuatro celdas, hosts futuros, CTA final deshabilitado, ausencia de inputs, imagenes y botones falsos, diferencias anual/mensual y copy correcto para `requires_payment_method`.
+
+### Archivos modificados
+
+- `assets/js/app.js`;
+- `assets/css/style.css`, stylesheet canonico que ya contenia los selectores `subp-*`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No cambiaron PHP, HTML estatico, endpoints, configuracion, CSP, dependencias, SQL, `assets/img` ni otros recursos graficos.
+
+### Evidencia
+
+Evidencia sanitizada:
+
+`/tmp/mxmed-pago-seguro-visual-skeleton-no-brands-01/`
+
+Incluye matrices de implementacion/estados, auditorias DOM, responsive, accesibilidad, runtime, Network, secretos, marcas, no repeticion, indice de capturas y estado Git final.
+
+### No repeticion y fuera de alcance
+
+No se repitieron fixtures, llamadas reales, auditoria de licencias, inventario general de imagenes ni integracion del intake. Tampoco se implementaron configuracion publica, Stripe.js, Elements, `client_secret`, confirmacion, webhook o activacion.
+
+### Siguiente microfase
+
+`FE-UX/Suscripciones-StripePaymentElement-Mount-Readiness-01`
+
+Su alcance sera definir montaje/desmontaje de Payment Element, relacion con `client_secret`, Appearance API y eventos `ready/change/loaderror`. Todavia no confirmara pagos.
+
+### Estado
+
+Skeleton visual:
+
+`PASS`
+
+Marcas de terceros usadas:
+
+`0`
+
+Runtime Stripe invocado:
+
+`0`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
