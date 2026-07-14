@@ -44319,6 +44319,357 @@ Autorizacion de marca indicada por el README del intake:
 
 ---
 
+## PP-Decisiones 238 - Auditoria de procedencia, licencia e integracion de marcas de pago
+
+### Microfase
+
+`QA-DOC/Suscripciones-PaymentBrandAssets-Provenance-License-AndIntegrationDecision-01`
+
+### Resultado
+
+Se audito en modo read-only el intake de seis grupos de marcas de pago contenido exclusivamente en:
+
+- rama: `assets/suscripciones-payment-method-brand-assets-intake`;
+- commit: `81f7af4c842aa95f556190817dd0467c2de588f5`;
+- directorio: `assets/img/payment-methods/`.
+
+No se cambio a esa rama, no se hizo merge ni cherry-pick, no se copiaron assets al working tree y no se modifico el README del intake.
+
+Resultado de adjudicacion:
+
+- assets aprobados para repositorio/UI: `0`;
+- assets aprobados solo para exhibicion informativa: `0`;
+- assets delegados a controles renderizados por Stripe: `3`;
+- assets que requieren sustitucion oficial: `1`;
+- assets rechazados por procedencia no verificada: `2`.
+
+El audit es `PASS`: los seis assets reciben una decision inequivoca y queda una ruta implementable sin marcas de terceros. Que un archivo no resulte aprobado no bloquea el skeleton sin marcas.
+
+### Alcance y metodologia
+
+La inspeccion se limito a:
+
+1. `git show`, `git diff-tree`, `git cat-file` y metadata del commit intake;
+2. README incluido en ese mismo commit;
+3. los seis archivos/grupos ya identificados;
+4. un `git archive` temporal bajo `/tmp/mxmed-payment-brand-assets-provenance-01/intake-inspection/` para lectura tecnica;
+5. fuentes oficiales primarias consultadas el `2026-07-14`.
+
+Los hashes SHA-256 se usan solo para identificar los bytes auditados. No acreditan autor, fuente, licencia, autenticidad de marca ni permiso de uso.
+
+No se comparo contra un inventario general de `assets/img`, buscadores, Wikipedia, blogs, marketplaces, repositorios genericos de iconos ni screenshots.
+
+### Mapa del commit intake
+
+Commit auditado:
+
+- tree: `6f3ba970bac9cfa656276e1b1046373bcf8f8695`;
+- parent: `2a9268da209db29d4d2ed884e71386dd0f3d31c8`;
+- autor/committer: `circulosmx-bot`;
+- fecha: `2026-07-11T22:11:43-06:00`;
+- asunto: `chore(assets): resguarda logos candidatos de metodos de pago`;
+- firma Git verificable: no.
+
+El commit agrega un README y seis archivos de imagen; no aporta manifiesto externo, factura, correo de autorizacion, registro de descarga oficial ni firma que vincule los bytes con cada titular de marca.
+
+### Procedencia declarada por el README
+
+El README declara unicamente que los archivos son candidatos entregados por el equipo de producto para una futura pantalla de Pago seguro.
+
+Para ninguno de los seis assets declara:
+
+- fuente concreta;
+- URL de origen;
+- fecha de obtencion;
+- persona que obtuvo el archivo;
+- licencia o permiso aplicable;
+- comprobante verificable;
+- checksum publicado por el titular;
+- confirmacion de que el archivo procede de un Brand Center oficial.
+
+El README reconoce expresamente que procedencia, licencia y autorizacion deben confirmarse antes de uso productivo. Tambien establece que presencia del archivo no equivale a metodo habilitado y que Payment Element debe ser la fuente preferida para logos/metodos dentro del formulario.
+
+La autoria del commit prueba quien incorporo los bytes a Git, no quien creo o autorizo las marcas.
+
+### Inventario tecnico acotado
+
+| Grupo | Ruta | MIME | Dimensiones | Bytes | Alfa/perfil | SHA-256 |
+| --- | --- | --- | --- | ---: | --- | --- |
+| Stripe | `assets/img/payment-methods/stripe.svg` | `image/svg+xml` | `1200 x 800`, viewBox vectorial | 1626 | sin canal raster; sin perfil | `f52fde54f4ecd9b51ae63ea82e8b201af9ac954d3f46bbd6dd872b334e8ca226` |
+| tarjetas | `assets/img/payment-methods/card-brands.png` | `image/png` | `840 x 859` | 69324 | RGBA; sin perfil embebido | `27ffcb72b187514be595ffb34a9df2bee377cab7db4f3e1986caad1a89f8fc4c` |
+| OXXO | `assets/img/payment-methods/oxxo.png` | `image/png` | `480 x 244` | 34280 | RGBA; sRGB IEC61966-2.1 | `a301b9032eea8945a910d004ced0ab5848774505724da65c37e21b4a277d9daa` |
+| SPEI | `assets/img/payment-methods/spei.svg` | `image/svg+xml` | `2500 x 833`, viewBox vectorial | 2213 | sin canal raster; sin perfil | `d930545887f0d4ae6a778c92f050d9ba7b0a982b5356a9c2554d68603e958de9` |
+| Apple Pay | `assets/img/payment-methods/apple-pay.png` | `image/png` | `3000 x 2000` | 36312 | RGBA; sRGB IEC61966-2.1 | `0175ca8fec0b421f97873e387486ea5a2bd44aaddcece77985fe9e6f59b91d3d` |
+| Google Pay | `assets/img/payment-methods/google-pay.png` | `image/png` | `512 x 512` | 16642 | RGBA; sin perfil embebido | `f87a5c557b68eebceb9f3cb42172f669e3276a6406a26d819a6ede98130ee615` |
+
+### Metadata, composicion y aptitud visual
+
+Stripe SVG:
+
+- paths vectoriales y un grupo; color principal `#32325d`;
+- sin `title`, `desc` o metadata de origen;
+- viewport mas alto que la proporcion del viewBox, con margen visual esperable;
+- sin background incorporado;
+- resolucion vectorial suficiente para uso pequeno;
+- no se observa evidencia tecnica que lo vincule con un recurso oficial.
+
+Tarjetas PNG:
+
+- composicion unica de Visa, Mastercard y American Express;
+- no contiene Carnet;
+- gran margen transparente vertical y separacion fija entre marcas;
+- no hay fuente/licencia por componente;
+- resolucion suficiente para una franja pequena, pero el raster compuesto impide ajustar paridad o reemplazar una marca sin alterar el archivo;
+- no se aprobara el compuesto si una sola marca carece de procedencia independiente.
+
+OXXO PNG:
+
+- una marca OXXO, canvas ajustado y fondo transparente;
+- metadata de fecha `2024-08-05T18:18:02+00:00` para creacion/modificacion;
+- la fecha embebida no identifica fuente, autor ni licencia;
+- resolucion suficiente para uso pequeno; sin deformacion aparente.
+
+SPEI SVG:
+
+- cuatro paths vectoriales, colores `#343084` y `#ff9400`;
+- sin `title`, `desc`, metadata de origen o background incorporado;
+- resolucion vectorial suficiente; sin deformacion aparente;
+- no contiene referencia a Banco de Mexico ni permiso aplicable.
+
+Apple Pay PNG:
+
+- composicion unica de simbolo Apple y palabra Pay en negro;
+- canvas de alta resolucion con margen transparente considerable;
+- sin metadata de fuente/licencia;
+- no coincide documentalmente con un archivo oficial provisto por Apple y no puede aprobarse por parecido visual;
+- resolucion mas que suficiente, sin deformacion aparente.
+
+Google Pay PNG:
+
+- composicion unica de la marca Google Pay;
+- margen transparente vertical considerable;
+- metadata `Software=www.inkscape.org`;
+- esa herramienta no identifica la fuente original ni concede permiso;
+- resolucion suficiente para uso pequeno, sin deformacion aparente.
+
+### Seguridad de los SVG
+
+Ambos SVG son XML bien formado y presentan:
+
+- tags `script`: `0`;
+- atributos de eventos: `0`;
+- URIs `javascript:`: `0`;
+- `foreignObject`: `0`;
+- atributos `href`/`xlink:href`: `0`;
+- referencias CSS `url(...)`: `0`;
+- imagenes o fuentes embebidas: `0`;
+- referencias HTTP operativas: `0`.
+
+La unica URL textual de cada SVG es el namespace W3C `http://www.w3.org/2000/svg`; no provoca una carga externa. Esta limpieza tecnica no prueba procedencia/licencia.
+
+### Fuentes oficiales consultadas
+
+Consulta: `2026-07-14`. Se resumen reglas aplicables sin descargar artwork.
+
+| Marca/producto | Fuente primaria | Regla relevante | Permiso aplicable al archivo intake |
+| --- | --- | --- | --- |
+| Stripe | [Stripe Mark Usage Terms](https://stripe.com/legal/marks) | un usuario puede referir verazmente a Stripe en la parte que usa sus servicios; no alterar, confundir ni implicar endorsement; Stripe puede requerir cambios | no vincula el SVG local con artwork oficial; no prueba sus bytes |
+| Stripe Elements | [Express Checkout Element](https://docs.stripe.com/elements/express-checkout-element), [Payment Element](https://docs.stripe.com/payments/payment-element) | Elements muestra metodos activos/elegibles segun entorno; Express Checkout controla botones/logos y Payment Element ordena metodos dinamicamente | respalda delegar controles, no aprobar logos locales |
+| Apple Pay | [Apple Pay Marketing Guidelines](https://developer.apple.com/apple-pay/marketing/), [Apple Pay HIG](https://developer.apple.com/design/human-interface-guidelines/apple-pay) | usar solo artwork provisto por Apple, sin alterar/aspect ratio; comunicar disponibilidad solo en experiencia autentica; el boton sigue el mecanismo oficial | no existe comprobante que el PNG sea el artwork provisto; no aprobar como marca ni boton |
+| Google Pay | [Google Pay Web Brand Guidelines](https://developers.google.com/pay/api/web/guides/brand-guidelines) | el boton siempre llama Google Pay API; usar botones/marca provistos, sin recrear; integracion productiva requiere revision/aprobacion | no existe comprobante que el PNG proceda del asset oficial; no aprobar como boton local |
+| Visa | [Visa Brand Center](https://corporate.visa.com/en/about-visa/brand.html), [Visa Merchant Signage](https://merchantsignage.visa.com/brandguidelines) | los assets aprobados se obtienen de portales oficiales y siguen requisitos digitales/merchant signage | el raster compuesto no tiene cadena de origen ni puede vincularse a una descarga oficial |
+| Mastercard | [Mastercard Brand Center](https://www.mastercard.com/brandcenter/us/en/brand-requirements.html) | acceptance mark para merchants que realmente aceptan Mastercard; usar artwork oficial sin alteracion y con paridad | el componente del raster no tiene cadena de origen ni prueba de aceptacion contractual |
+| American Express | [Merchant Operating Guide, abril 2026](https://www.americanexpress.com/merchantopguide), [Digital Signage](https://www.americanexpress.com/digitalsignage) | las reglas aplican a merchants con acuerdo; Blue Box preaprobado, paridad y uso solo conforme al acuerdo, sin endorsement | no consta acuerdo ni fuente del componente; el compuesto no se aprueba |
+| SPEI | [Banco de Mexico: informacion SPEI](https://www.banxico.org.mx/servicios/spei_-informacion-banco-mex.html), [normativa SPEI](https://www.banxico.org.mx/marco-normativo/normativa-emitida-por-el-banco-de-mexico/circular-14-2017/sistema-pagos-spei-disposicio.html) | Banco de Mexico identifica SPEI como sistema que administra/opera; las paginas revisadas no publican permiso que adjudique este SVG | ausencia de permiso y fuente verificable; no aprobar |
+| OXXO | [OXXO oficial](https://www.oxxo.com/), [FEMSA OXXO](https://www.femsa.com/es/unidades-de-negocio/proximidad-y-salud/oxxo/), [Stripe OXXO](https://docs.stripe.com/payments/oxxo) | OXXO/FEMSA confirman identidad de marca, no licencia del PNG; Stripe confirma metodo MXN domestico, no recurrente, disponible via Payment Element y sujeto a configuracion/relevancia | no adjudica el PNG; el metodo/control debe delegarse a Stripe cuando sea elegible |
+
+No se encontro una fuente oficial que publique un hash coincidente, URL declarada por el intake o permiso especifico para estos bytes. La ausencia de prueba se trata como no aprobacion; no se infiere prohibicion legal general.
+
+### Clasificacion individual obligatoria
+
+#### Stripe
+
+Decision: `requires_official_replacement`.
+
+El uso informativo en un checkout que realmente usa Stripe podria ser compatible con sus Mark Usage Terms, pero el SVG local no acredita origen oficial. Si se necesitara marca grafica, debe ingresar como recurso oficial trazable en otra microfase; mientras tanto puede usarse copy veraz sin logo, sin claims de certificacion.
+
+#### Marcas de tarjeta
+
+Decision: `rejected_due_to_unverified_provenance`.
+
+El raster mezcla tres titulares, no ofrece fuente individual ni permite demostrar que las tres versiones son acceptance marks oficiales. La elegibilidad real de tarjetas y su presentacion se delegan a Payment Element. Un solo componente no adjudicado impide aprobar todo el archivo.
+
+#### OXXO
+
+Decision: `replace_with_stripe_rendered_control`.
+
+El PNG local no se usa como selector ni prueba de disponibilidad. Si OXXO esta activo y es elegible, Payment Element debe presentar el metodo. Stripe confirma que OXXO no soporta recurrencia; no puede anunciarse como mensualidad automatica.
+
+#### SPEI
+
+Decision: `rejected_due_to_unverified_provenance`.
+
+Banco de Mexico confirma el sistema, pero no se encontro permiso oficial que adjudique este SVG ni contrato Stripe que habilite SPEI para esta operacion. No se muestra por mera presencia del archivo.
+
+#### Apple Pay
+
+Decision: `replace_with_stripe_rendered_control`.
+
+El PNG local no se usa como boton ni marca activa. Express Checkout Element debe determinar elegibilidad y renderizar el control oficial; una imagen local no puede imitarlo.
+
+#### Google Pay
+
+Decision: `replace_with_stripe_rendered_control`.
+
+El PNG local no se usa como boton ni marca activa. Express Checkout Element debe determinar elegibilidad y renderizar el control; la guia Google exige que el boton real inicie la API y que la integracion productiva sea aprobada.
+
+### Matriz de decision y permisos
+
+| Asset | Procedencia | Fuente oficial | Licencia/permiso | Uso propuesto | Restricciones | Decision | can_enter_repository | can_render_in_skeleton | can_render_when_method_unavailable | can_act_as_button | must_be_rendered_by_stripe | needs_official_replacement | blocking_reason |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `stripe.svg` | equipo de producto; origen por asset no declarado | no acreditada para estos bytes | no acreditado para estos bytes | marca informativa junto a copy veraz | no alterar, confundir ni sugerir endorsement | `requires_official_replacement` | false | false | false | false | false | true | sin cadena de origen oficial para el SVG |
+| `card-brands.png` | equipo de producto; origen por componente no declarado | no acreditada para Visa, Mastercard ni AmEx | no acreditado por componente ni aceptacion merchant | franja informativa de redes aceptadas | solo acceptance marks oficiales y redes realmente aceptadas; paridad | `rejected_due_to_unverified_provenance` | false | false | false | false | true | true | compuesto multi-marca sin procedencia/licencia por componente |
+| `oxxo.png` | equipo de producto; origen por asset no declarado | identidad de marca confirmada, PNG no acreditado | no acreditado para el PNG | metodo OXXO cuando sea elegible | disponibilidad desde Stripe; no soporta recurrencia | `replace_with_stripe_rendered_control` | false | false | false | false | true | false | PNG no adjudicado; disponibilidad y control pertenecen a Payment Element |
+| `spei.svg` | equipo de producto; origen por asset no declarado | sistema confirmado por Banxico, SVG no acreditado | no acreditado para el SVG | metodo SPEI si un contrato futuro lo habilita | no mostrar sin proveedor, operacion y presentacion confirmados | `rejected_due_to_unverified_provenance` | false | false | false | false | false | true | SVG no adjudicado y metodo no confirmado para la operacion |
+| `apple-pay.png` | equipo de producto; origen por asset no declarado | no acreditada para estos bytes | no acreditado como artwork Apple-provided | wallet funcional si es elegible | solo control oficial; no imitar boton ni anunciar disponibilidad falsa | `replace_with_stripe_rendered_control` | false | false | false | false | true | false | wallet debe usar control oficial elegible de Express Checkout |
+| `google-pay.png` | equipo de producto; metadata Inkscape sin origen | no acreditada para estos bytes | no acreditado como artwork provisto por Google | wallet funcional si es elegible | el boton real llama la API y la integracion productiva requiere revision | `replace_with_stripe_rendered_control` | false | false | false | false | true | false | wallet debe usar control oficial elegible de Express Checkout |
+
+Ninguna marca puede renderizarse cuando el metodo no esta disponible. Ningun asset local actua como boton.
+
+### Decision de integracion
+
+A. Archivos que pueden integrarse mas adelante desde el intake actual:
+
+- ninguno.
+
+B. Archivos que permanecen exclusivamente en la rama intake:
+
+- los seis assets auditados.
+
+C. Tratamiento antes de cualquier integracion:
+
+- `stripe.svg`: sustituir por un recurso oficial trazable si el logo sigue siendo necesario;
+- `card-brands.png`: excluir; solo reconsiderar acceptance marks oficiales individuales con aceptacion real confirmada;
+- `oxxo.png`: excluir y delegar el metodo a Payment Element;
+- `spei.svg`: excluir hasta contar con procedencia/permiso y contrato real de metodo;
+- `apple-pay.png`: excluir; Express Checkout renderiza el boton;
+- `google-pay.png`: excluir; Express Checkout renderiza el boton.
+
+No se ordena borrar la rama intake: conserva evidencia de lo recibido. La regla es no llevar esos blobs a la linea productiva.
+
+D. Estrategia de Git:
+
+- no merge completo del commit `81f7af4`;
+- no cherry-pick completo;
+- no integracion selectiva de ninguno de los seis hashes actuales;
+- una sustitucion futura debe llegar en commit nuevo con fuente, fecha, permiso y archivo oficial trazables.
+
+E. Skeleton visual:
+
+- puede avanzar sin marcas de terceros;
+- usar texto neutral e iconografia generica del sistema;
+- no mostrar mosaicos de metodos disponibles;
+- reservar contenedores vacios/estados para Elements;
+- el runtime Stripe permanece dormido;
+- Payment Element y Express Checkout seran la fuente de metodos/controles cuando exista una microfase funcional autorizada.
+
+### Relacion con Elements y disponibilidad
+
+Payment Element:
+
+- presenta metodos activos/relevantes segun configuracion, ubicacion, moneda e importe;
+- debe controlar tarjeta y OXXO si resultan elegibles;
+- no se complementa con selectores HTML falsos ni logos locales que parezcan activos.
+
+Express Checkout Element:
+
+- controla Apple Pay, Google Pay y Link;
+- solo muestra botones activos, soportados y configurados para el entorno;
+- determina disponibilidad por navegador, dispositivo, moneda, pais, dominio y setup;
+- los PNG locales de wallets no se montan antes, durante ni despues como sustituto del control.
+
+SPEI:
+
+- permanece ausente hasta que un contrato futuro confirme proveedor, operacion y presentacion segura;
+- no se infiere de la existencia del SVG.
+
+Regla global: si Stripe/contrato no confirma un metodo para la operacion actual, el skeleton no muestra su nombre, logo, check, tile activo ni CTA.
+
+### No repeticion
+
+Durante esta microfase:
+
+- fixtures: `0`;
+- HTTP de suscripciones: `0`;
+- Stripe API/CLI: `0`;
+- payment routes, checkouts y PaymentIntents: `0`;
+- retrieval de secreto efimero: `0`;
+- webhooks y activaciones: `0`;
+- SQL: `0`;
+- entidades QA: `0`;
+- inventario general de `assets/img`: no repetido;
+- intake integrado: no;
+- assets copiados al working tree: `0`;
+- logos oficiales descargados: `0`.
+
+### Archivo modificado
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+PP-Decisiones 237 no se reescribio. Frontend, CSS, HTML, PHP, configuracion, README e imagenes permanecen intactos.
+
+### Fuera de alcance
+
+No se ejecuta:
+
+- integracion de assets;
+- correccion, conversion, optimizacion o reexport de imagenes;
+- implementacion del skeleton;
+- carga de Stripe.js;
+- Payment Element o Express Checkout;
+- proceso de pago;
+- validacion contractual de la cuenta merchant con cada red;
+- opinion legal sobre derechos no documentados.
+
+### Evidencia
+
+Evidencia local sanitizada:
+
+`/tmp/mxmed-payment-brand-assets-provenance-01/`
+
+La copia temporal de inspeccion se elimina antes del cierre. La evidencia final no contiene logos ni material descargado.
+
+### Siguiente microfase
+
+Como ningun asset local resulta aprobado:
+
+`UX-FE/Suscripciones-PagoSeguro-VisualSkeleton-WithoutThirdPartyBrandAssets-01`
+
+Alcance maximo:
+
+- implementar la jerarquia visual de PP-Decisiones 237;
+- usar texto e iconografia generica;
+- conservar placeholders seguros para Stripe;
+- consumir solo preview/backend actual;
+- no mostrar marcas/metodos no disponibles;
+- no montar Elements ni ejecutar pagos.
+
+### Estado
+
+Auditoria documental/tecnica:
+
+`PASS`
+
+Assets locales aprobados:
+
+`0`
+
+Decision de integracion:
+
+`DO_NOT_INTEGRATE_INTAKE_COMMIT`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
