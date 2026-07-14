@@ -59380,6 +59380,833 @@ function mxResetLogoPreview(){
   };
   let currentSubscriptionRequestSeq = 0;
 
+  // SUBSCRIPTION_STRIPE_RUNTIME_START
+  function createSubscriptionStripeRuntime(options = {}){
+    const STRIPE_CONFIG_ENDPOINT = '/api/subscriptions/index.php/config/public/stripe';
+    const STRIPE_JS_URL = 'https://js.stripe.com/dahlia/stripe.js';
+    const STRIPE_SCRIPT_ID = 'mxmed-subscription-stripe-js-dahlia';
+    const STRIPE_JS_TIMEOUT_MS = 15000;
+    const CONFIG_DATA_FIELDS = new Set([
+      'provider',
+      'publishable_key',
+      'livemode',
+      'payment_element_enabled'
+    ]);
+    const FORBIDDEN_CONFIG_FIELDS = new Set([
+      'secret_key',
+      'restricted_key',
+      'webhook_secret',
+      'client_secret',
+      'authorization',
+      'provider_payment_id',
+      'raw_provider_object'
+    ]);
+    const RETRYABLE_CONFIG_STATES = new Set(['config_missing', 'config_failed']);
+    const RETRYABLE_STRIPE_JS_CODES = new Set([
+      'SUB_STRIPE_JS_UNAVAILABLE',
+      'SUB_STRIPE_JS_TIMEOUT',
+      'SUB_STRIPE_JS_GLOBAL_MISSING'
+    ]);
+
+    const runtimeWindow = options.windowRef
+      || (typeof window !== 'undefined' ? window : null);
+    const runtimeDocument = options.documentRef
+      || (typeof document !== 'undefined' ? document : null);
+    const fetchImpl = options.fetchImpl
+      || (runtimeWindow && typeof runtimeWindow.fetch === 'function'
+        ? runtimeWindow.fetch.bind(runtimeWindow)
+        : null);
+    const setTimeoutImpl = options.setTimeoutImpl
+      || (runtimeWindow && typeof runtimeWindow.setTimeout === 'function'
+        ? runtimeWindow.setTimeout.bind(runtimeWindow)
+        : (typeof setTimeout === 'function' ? setTimeout : null));
+    const clearTimeoutImpl = options.clearTimeoutImpl
+      || (runtimeWindow && typeof runtimeWindow.clearTimeout === 'function'
+        ? runtimeWindow.clearTimeout.bind(runtimeWindow)
+        : (typeof clearTimeout === 'function' ? clearTimeout : null));
+
+    const runtimeState = {
+      configState: 'config_idle',
+      stripeJsState: 'stripe_js_idle',
+      stripeInstanceState: 'stripe_instance_idle',
+      paymentElementState: 'payment_element_not_requested',
+      lastErrorCode: '',
+      retryAvailable: false,
+      resolvedLivemode: null,
+      paymentElementEnabled: null,
+      configPromiseCreated: false,
+      scriptPromiseCreated: false,
+      stripeInstancePromiseCreated: false,
+      readinessPromiseCreated: false
+    };
+
+    let subscriptionStripeConfigPromise = null;
+    let subscriptionStripeConfig = null;
+    let subscriptionStripeConfigIdentity = '';
+    let subscriptionStripeJsPromise = null;
+    let subscriptionStripeInstancePromise = null;
+    let subscriptionStripeInstance = null;
+    let subscriptionStripeReadinessPromise = null;
+    let stripeJsAttempt = 0;
+    let stripeJsTimedOut = false;
+    let lastFailedScriptOwned = false;
+    const ownedScriptElements = typeof WeakSet === 'function' ? new WeakSet() : new Set();
+
+    function isPlainObject(value){
+      return !!value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function safeRuntimeError(code){
+      const safeCode = /^[A-Z0-9_]{3,96}$/.test(String(code || ''))
+        ? String(code)
+        : 'SUB_STRIPE_RUNTIME_FAILED';
+      const error = new Error(safeCode);
+      error.name = 'SubscriptionStripeRuntimeError';
+      error.code = safeCode;
+      return error;
+    }
+
+    function isSafeRuntimeError(error){
+      return error?.name === 'SubscriptionStripeRuntimeError'
+        && /^[A-Z0-9_]{3,96}$/.test(String(error?.code || ''));
+    }
+
+    function setRuntimeFailure(area, stateName, code, retryAvailable){
+      if(area === 'config') runtimeState.configState = stateName;
+      if(area === 'stripe_js') runtimeState.stripeJsState = stateName;
+      if(area === 'instance') runtimeState.stripeInstanceState = stateName;
+      runtimeState.lastErrorCode = code;
+      runtimeState.retryAvailable = retryAvailable === true;
+      return safeRuntimeError(code);
+    }
+
+    function normalizedFieldName(value){
+      return String(value || '')
+        .trim()
+        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+        .replace(/[\s-]+/g, '_')
+        .toLowerCase();
+    }
+
+    function hasForbiddenConfigField(value, seen = new Set()){
+      if(!value || typeof value !== 'object') return false;
+      if(seen.has(value)) return false;
+      seen.add(value);
+      if(Array.isArray(value)){
+        return value.some((item)=> hasForbiddenConfigField(item, seen));
+      }
+      return Object.keys(value).some((key)=>{
+        const normalized = normalizedFieldName(key);
+        if(Array.from(FORBIDDEN_CONFIG_FIELDS).some((forbidden)=>
+          normalized === forbidden
+          || normalized.startsWith(`${forbidden}_`)
+          || normalized.endsWith(`_${forbidden}`)
+        )) return true;
+        return hasForbiddenConfigField(value[key], seen);
+      });
+    }
+
+    function hasOnlyFields(value, allowed){
+      return Object.keys(value).every((key)=> allowed.has(key));
+    }
+
+    function normalizeSubscriptionStripePublicConfig(payload){
+      if(!isPlainObject(payload) || hasForbiddenConfigField(payload)){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_INVALID');
+      }
+      if(!hasOnlyFields(payload, new Set(['ok', 'data', 'meta']))
+        || payload.ok !== true
+        || !isPlainObject(payload.data)
+        || !isPlainObject(payload.meta)){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_INVALID');
+      }
+      if(payload.meta.contract !== 'subscription_stripe_public_config'
+        || payload.meta.version !== 'SUB-STRIPE-PUBLIC-CONFIG-1'
+        || payload.meta.auth_mode !== 'session_scope'){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_INVALID');
+      }
+      if(!hasOnlyFields(payload.data, CONFIG_DATA_FIELDS)
+        || Object.keys(payload.data).length !== CONFIG_DATA_FIELDS.size
+        || payload.data.provider !== 'stripe'){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_INVALID');
+      }
+
+      const publishableKey = payload.data.publishable_key;
+      if(typeof publishableKey !== 'string'
+        || publishableKey !== publishableKey.trim()
+        || publishableKey.length < 12
+        || publishableKey.length > 255
+        || !/^pk_(test|live)_[A-Za-z0-9_]+$/.test(publishableKey)){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_INVALID');
+      }
+      if(typeof payload.data.livemode !== 'boolean'
+        || typeof payload.data.payment_element_enabled !== 'boolean'){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_INVALID');
+      }
+
+      const keyLivemode = publishableKey.startsWith('pk_live_');
+      if(keyLivemode !== payload.data.livemode){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_INCOMPATIBLE');
+      }
+      if(payload.data.payment_element_enabled !== true){
+        throw safeRuntimeError('SUB_STRIPE_CONFIG_UNAVAILABLE');
+      }
+
+      return Object.freeze({
+        provider: 'stripe',
+        publishableKey,
+        livemode: payload.data.livemode,
+        paymentElementEnabled: true,
+        logicalIdentity: `stripe:${payload.data.livemode ? 'live' : 'test'}:payment_element`
+      });
+    }
+
+    function commitSubscriptionStripeConfig(normalizedConfig){
+      if(subscriptionStripeConfig !== null){
+        throw setRuntimeFailure(
+          'config',
+          'config_mode_mismatch',
+          'SUB_STRIPE_CONFIG_CHANGED',
+          false
+        );
+      }
+      if(subscriptionStripeConfigIdentity
+        && subscriptionStripeConfigIdentity !== normalizedConfig.logicalIdentity){
+        throw setRuntimeFailure(
+          'config',
+          'config_mode_mismatch',
+          'SUB_STRIPE_CONFIG_INCOMPATIBLE',
+          false
+        );
+      }
+      subscriptionStripeConfig = normalizedConfig;
+      subscriptionStripeConfigIdentity = normalizedConfig.logicalIdentity;
+      runtimeState.resolvedLivemode = normalizedConfig.livemode;
+      runtimeState.paymentElementEnabled = normalizedConfig.paymentElementEnabled;
+      runtimeState.configState = 'config_ready';
+      runtimeState.lastErrorCode = '';
+      runtimeState.retryAvailable = false;
+      return subscriptionStripeConfig;
+    }
+
+    function responseContentType(response){
+      try{
+        return String(response?.headers?.get?.('Content-Type') || '').toLowerCase();
+      }catch(_){
+        return '';
+      }
+    }
+
+    async function readControlledConfigErrorCode(response){
+      if(!responseContentType(response).includes('application/json')) return '';
+      try{
+        const payload = await response.json();
+        const code = String(payload?.error?.code || '').trim().toLowerCase();
+        return /^[a-z0-9_]{3,96}$/.test(code) ? code : '';
+      }catch(_){
+        return '';
+      }
+    }
+
+    function configFailureForHttpStatus(status, controlledCode){
+      if(status === 401 || status === 403){
+        return setRuntimeFailure(
+          'config',
+          'config_unauthorized',
+          'SUB_STRIPE_CONFIG_UNAUTHORIZED',
+          false
+        );
+      }
+      if(status === 503){
+        return setRuntimeFailure(
+          'config',
+          'config_missing',
+          'SUB_STRIPE_CONFIG_UNAVAILABLE',
+          true
+        );
+      }
+      if(controlledCode === 'stripe_livemode_mismatch'){
+        return setRuntimeFailure(
+          'config',
+          'config_mode_mismatch',
+          'SUB_STRIPE_CONFIG_INCOMPATIBLE',
+          false
+        );
+      }
+      if(controlledCode === 'stripe_publishable_key_invalid'){
+        return setRuntimeFailure(
+          'config',
+          'config_invalid',
+          'SUB_STRIPE_CONFIG_INVALID',
+          false
+        );
+      }
+      return setRuntimeFailure(
+        'config',
+        'config_failed',
+        'SUB_STRIPE_CONFIG_FETCH_FAILED',
+        true
+      );
+    }
+
+    function loadSubscriptionStripePublicConfigOnce(){
+      if(subscriptionStripeConfigPromise) return subscriptionStripeConfigPromise;
+      runtimeState.configState = 'config_loading';
+      runtimeState.configPromiseCreated = true;
+      runtimeState.lastErrorCode = '';
+      runtimeState.retryAvailable = false;
+
+      subscriptionStripeConfigPromise = (async ()=>{
+        try{
+          if(typeof fetchImpl !== 'function'){
+            throw setRuntimeFailure(
+              'config',
+              'config_failed',
+              'SUB_STRIPE_CONFIG_FETCH_FAILED',
+              true
+            );
+          }
+          const response = await fetchImpl(STRIPE_CONFIG_ENDPOINT, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          const status = Number(response?.status || 0);
+          if(status !== 200){
+            const controlledCode = status >= 500
+              ? await readControlledConfigErrorCode(response)
+              : '';
+            throw configFailureForHttpStatus(status, controlledCode);
+          }
+          if(!responseContentType(response).includes('application/json')){
+            throw setRuntimeFailure(
+              'config',
+              'config_invalid',
+              'SUB_STRIPE_CONFIG_INVALID',
+              false
+            );
+          }
+
+          let payload = null;
+          try{
+            payload = await response.json();
+          }catch(_){
+            throw setRuntimeFailure(
+              'config',
+              'config_invalid',
+              'SUB_STRIPE_CONFIG_INVALID',
+              false
+            );
+          }
+
+          let normalizedConfig = null;
+          try{
+            normalizedConfig = normalizeSubscriptionStripePublicConfig(payload);
+          }catch(error){
+            const code = String(error?.code || '');
+            if(code === 'SUB_STRIPE_CONFIG_INCOMPATIBLE'){
+              throw setRuntimeFailure(
+                'config',
+                'config_mode_mismatch',
+                code,
+                false
+              );
+            }
+            if(code === 'SUB_STRIPE_CONFIG_UNAVAILABLE'){
+              throw setRuntimeFailure(
+                'config',
+                'config_missing',
+                code,
+                true
+              );
+            }
+            throw setRuntimeFailure(
+              'config',
+              'config_invalid',
+              'SUB_STRIPE_CONFIG_INVALID',
+              false
+            );
+          }
+          return commitSubscriptionStripeConfig(normalizedConfig);
+        }catch(error){
+          if(isSafeRuntimeError(error)) throw error;
+          throw setRuntimeFailure(
+            'config',
+            'config_failed',
+            'SUB_STRIPE_CONFIG_FETCH_FAILED',
+            true
+          );
+        }
+      })();
+
+      return subscriptionStripeConfigPromise;
+    }
+
+    function normalizedScriptUrl(value){
+      const raw = String(value || '').trim();
+      if(!raw) return '';
+      try{
+        const base = String(runtimeWindow?.location?.href || STRIPE_JS_URL);
+        return new URL(raw, base).href;
+      }catch(_){
+        return raw;
+      }
+    }
+
+    function isStripeScriptUrl(value){
+      const normalized = normalizedScriptUrl(value);
+      if(/^https:\/\/([a-z0-9-]+\.)?js\.stripe\.com\//i.test(normalized)) return true;
+      try{
+        const url = new URL(normalized);
+        return url.protocol === 'https:'
+          && (url.hostname === 'js.stripe.com' || url.hostname.endsWith('.js.stripe.com'));
+      }catch(_){
+        return false;
+      }
+    }
+
+    function scriptSource(script){
+      try{
+        return String(script?.getAttribute?.('src') || script?.src || '').trim();
+      }catch(_){
+        return '';
+      }
+    }
+
+    function stripeScriptElements(){
+      if(!runtimeDocument || typeof runtimeDocument.querySelectorAll !== 'function') return [];
+      const scripts = Array.from(runtimeDocument.querySelectorAll('script[src]') || [])
+        .filter((script)=> isStripeScriptUrl(scriptSource(script)));
+      const byId = typeof runtimeDocument.getElementById === 'function'
+        ? runtimeDocument.getElementById(STRIPE_SCRIPT_ID)
+        : null;
+      if(byId && !scripts.includes(byId)) scripts.push(byId);
+      return scripts;
+    }
+
+    function isOwnedScript(script){
+      try{
+        return ownedScriptElements.has(script);
+      }catch(_){
+        return false;
+      }
+    }
+
+    function removeOwnedFailedScript(){
+      const script = typeof runtimeDocument?.getElementById === 'function'
+        ? runtimeDocument.getElementById(STRIPE_SCRIPT_ID)
+        : null;
+      if(!script || !isOwnedScript(script)) return false;
+      if(normalizedScriptUrl(scriptSource(script)) !== STRIPE_JS_URL) return false;
+      if(typeof runtimeWindow?.Stripe === 'function') return false;
+      try{
+        script.parentNode?.removeChild?.(script);
+        return true;
+      }catch(_){
+        return false;
+      }
+    }
+
+    function stripeJsFailure(stateName, code, retryAvailable, script){
+      lastFailedScriptOwned = !!script && isOwnedScript(script);
+      return setRuntimeFailure('stripe_js', stateName, code, retryAvailable);
+    }
+
+    function waitForSubscriptionStripeScript(script, attempt, startLoading = null){
+      return new Promise((resolve, reject)=>{
+        let settled = false;
+        let timerId = null;
+
+        const cleanup = ()=>{
+          try{ script.removeEventListener?.('load', handleLoad); }catch(_){}
+          try{ script.removeEventListener?.('error', handleError); }catch(_){}
+          if(timerId !== null && typeof clearTimeoutImpl === 'function'){
+            try{ clearTimeoutImpl(timerId); }catch(_){}
+          }
+        };
+        const finish = (callback)=>{
+          if(settled || attempt !== stripeJsAttempt) return;
+          settled = true;
+          cleanup();
+          callback();
+        };
+        const handleLoad = ()=>{
+          finish(()=>{
+            if(typeof runtimeWindow?.Stripe !== 'function'){
+              reject(stripeJsFailure(
+                'stripe_js_failed',
+                'SUB_STRIPE_JS_GLOBAL_MISSING',
+                isOwnedScript(script),
+                script
+              ));
+              return;
+            }
+            stripeJsTimedOut = false;
+            lastFailedScriptOwned = false;
+            runtimeState.stripeJsState = 'stripe_js_ready';
+            runtimeState.lastErrorCode = '';
+            runtimeState.retryAvailable = false;
+            resolve(runtimeWindow.Stripe);
+          });
+        };
+        const handleError = ()=>{
+          finish(()=>{
+            reject(stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_UNAVAILABLE',
+              isOwnedScript(script),
+              script
+            ));
+          });
+        };
+
+        try{
+          script.addEventListener?.('load', handleLoad, { once: true });
+          script.addEventListener?.('error', handleError, { once: true });
+        }catch(_){
+          reject(stripeJsFailure(
+            'stripe_js_failed',
+            'SUB_STRIPE_JS_UNAVAILABLE',
+            false,
+            script
+          ));
+          return;
+        }
+
+        if(typeof setTimeoutImpl !== 'function'){
+          cleanup();
+          reject(stripeJsFailure(
+            'stripe_js_failed',
+            'SUB_STRIPE_JS_UNAVAILABLE',
+            false,
+            script
+          ));
+          return;
+        }
+        timerId = setTimeoutImpl(()=>{
+          finish(()=>{
+            stripeJsTimedOut = true;
+            reject(stripeJsFailure(
+              'stripe_js_timeout',
+              'SUB_STRIPE_JS_TIMEOUT',
+              isOwnedScript(script),
+              script
+            ));
+          });
+        }, STRIPE_JS_TIMEOUT_MS);
+
+        if(typeof startLoading === 'function'){
+          try{
+            startLoading();
+          }catch(_){
+            finish(()=>{
+              reject(stripeJsFailure(
+                'stripe_js_failed',
+                'SUB_STRIPE_JS_UNAVAILABLE',
+                isOwnedScript(script),
+                script
+              ));
+            });
+            return;
+          }
+        }
+
+        if(typeof runtimeWindow?.Stripe === 'function') handleLoad();
+      });
+    }
+
+    function loadSubscriptionStripeJsOnce(){
+      if(subscriptionStripeJsPromise) return subscriptionStripeJsPromise;
+      if(runtimeState.configState !== 'config_ready' || !subscriptionStripeConfig){
+        return Promise.reject(safeRuntimeError('SUB_STRIPE_DEPENDENCIES_NOT_READY'));
+      }
+      runtimeState.stripeJsState = 'stripe_js_loading';
+      runtimeState.scriptPromiseCreated = true;
+      runtimeState.lastErrorCode = '';
+      runtimeState.retryAvailable = false;
+      stripeJsAttempt += 1;
+      const attempt = stripeJsAttempt;
+
+      subscriptionStripeJsPromise = (async ()=>{
+        try{
+          if(!runtimeWindow || !runtimeDocument){
+            throw stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_UNAVAILABLE',
+              false,
+              null
+            );
+          }
+          const scripts = stripeScriptElements();
+          const scriptWithId = typeof runtimeDocument.getElementById === 'function'
+            ? runtimeDocument.getElementById(STRIPE_SCRIPT_ID)
+            : null;
+
+          if(scripts.length > 1){
+            throw stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_CONFLICT',
+              false,
+              null
+            );
+          }
+          if(scriptWithId && normalizedScriptUrl(scriptSource(scriptWithId)) !== STRIPE_JS_URL){
+            throw stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_CONFLICT',
+              false,
+              scriptWithId
+            );
+          }
+
+          let script = scripts[0] || null;
+          if(script && normalizedScriptUrl(scriptSource(script)) !== STRIPE_JS_URL){
+            throw stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_CONFLICT',
+              false,
+              script
+            );
+          }
+          if(!script && typeof runtimeWindow.Stripe === 'function'){
+            throw stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_CONFLICT',
+              false,
+              null
+            );
+          }
+
+          if(script){
+            if(scriptWithId && scriptWithId !== script){
+              throw stripeJsFailure(
+                'stripe_js_failed',
+                'SUB_STRIPE_JS_CONFLICT',
+                false,
+                script
+              );
+            }
+            if(!script.id) script.id = STRIPE_SCRIPT_ID;
+            if(script.id !== STRIPE_SCRIPT_ID){
+              if(scriptWithId){
+                throw stripeJsFailure(
+                  'stripe_js_failed',
+                  'SUB_STRIPE_JS_CONFLICT',
+                  false,
+                  script
+                );
+              }
+              script.id = STRIPE_SCRIPT_ID;
+            }
+            if(typeof runtimeWindow.Stripe === 'function'){
+              stripeJsTimedOut = false;
+              runtimeState.stripeJsState = 'stripe_js_ready';
+              runtimeState.lastErrorCode = '';
+              runtimeState.retryAvailable = false;
+              return runtimeWindow.Stripe;
+            }
+            return waitForSubscriptionStripeScript(script, attempt);
+          }
+
+          if(typeof runtimeDocument.createElement !== 'function'){
+            throw stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_UNAVAILABLE',
+              false,
+              null
+            );
+          }
+          script = runtimeDocument.createElement('script');
+          script.id = STRIPE_SCRIPT_ID;
+          script.async = true;
+          script.src = STRIPE_JS_URL;
+          try{ script.setAttribute?.('src', STRIPE_JS_URL); }catch(_){}
+          ownedScriptElements.add(script);
+          const parent = runtimeDocument.head || runtimeDocument.documentElement;
+          if(!parent || typeof parent.appendChild !== 'function'){
+            throw stripeJsFailure(
+              'stripe_js_failed',
+              'SUB_STRIPE_JS_UNAVAILABLE',
+              false,
+              script
+            );
+          }
+          return waitForSubscriptionStripeScript(
+            script,
+            attempt,
+            ()=> parent.appendChild(script)
+          );
+        }catch(error){
+          if(isSafeRuntimeError(error)) throw error;
+          throw stripeJsFailure(
+            'stripe_js_failed',
+            'SUB_STRIPE_JS_UNAVAILABLE',
+            false,
+            null
+          );
+        }
+      })();
+
+      return subscriptionStripeJsPromise;
+    }
+
+    function getSubscriptionStripeInstanceOnce(){
+      if(subscriptionStripeInstancePromise) return subscriptionStripeInstancePromise;
+      if(runtimeState.configState !== 'config_ready'
+        || runtimeState.stripeJsState !== 'stripe_js_ready'
+        || !subscriptionStripeConfig
+        || typeof runtimeWindow?.Stripe !== 'function'){
+        return Promise.reject(safeRuntimeError('SUB_STRIPE_DEPENDENCIES_NOT_READY'));
+      }
+
+      runtimeState.stripeInstanceState = 'stripe_instance_creating';
+      runtimeState.stripeInstancePromiseCreated = true;
+      runtimeState.lastErrorCode = '';
+      runtimeState.retryAvailable = false;
+      subscriptionStripeInstancePromise = Promise.resolve().then(()=>{
+        let instance = null;
+        try{
+          instance = runtimeWindow.Stripe(subscriptionStripeConfig.publishableKey, { locale: 'es' });
+        }catch(_){
+          throw setRuntimeFailure(
+            'instance',
+            'stripe_instance_failed',
+            'SUB_STRIPE_INSTANCE_FAILED',
+            true
+          );
+        }
+        if(!instance || (typeof instance !== 'object' && typeof instance !== 'function')){
+          throw setRuntimeFailure(
+            'instance',
+            'stripe_instance_failed',
+            'SUB_STRIPE_INSTANCE_FAILED',
+            true
+          );
+        }
+        subscriptionStripeInstance = instance;
+        runtimeState.stripeInstanceState = 'stripe_instance_ready';
+        runtimeState.lastErrorCode = '';
+        runtimeState.retryAvailable = false;
+        return subscriptionStripeInstance;
+      });
+      return subscriptionStripeInstancePromise;
+    }
+
+    function ensureSubscriptionStripeReady(){
+      if(subscriptionStripeReadinessPromise) return subscriptionStripeReadinessPromise;
+      runtimeState.readinessPromiseCreated = true;
+      subscriptionStripeReadinessPromise = loadSubscriptionStripePublicConfigOnce()
+        .then(()=> loadSubscriptionStripeJsOnce())
+        .then(()=> getSubscriptionStripeInstanceOnce());
+      return subscriptionStripeReadinessPromise;
+    }
+
+    function retrySubscriptionStripeReadiness(){
+      if(subscriptionStripeInstance || runtimeState.stripeInstanceState === 'stripe_instance_ready'){
+        return false;
+      }
+      if(runtimeState.configState === 'config_loading'
+        || runtimeState.stripeJsState === 'stripe_js_loading'
+        || runtimeState.stripeInstanceState === 'stripe_instance_creating'){
+        return false;
+      }
+
+      if(RETRYABLE_CONFIG_STATES.has(runtimeState.configState)){
+        subscriptionStripeConfigPromise = null;
+        runtimeState.configPromiseCreated = false;
+        runtimeState.configState = 'config_idle';
+      }else if((runtimeState.stripeJsState === 'stripe_js_failed'
+        || runtimeState.stripeJsState === 'stripe_js_timeout')
+        && RETRYABLE_STRIPE_JS_CODES.has(runtimeState.lastErrorCode)
+        && lastFailedScriptOwned){
+        if(stripeJsTimedOut && typeof runtimeWindow?.Stripe === 'function'){
+          runtimeState.lastErrorCode = 'SUB_STRIPE_JS_CONFLICT';
+          runtimeState.retryAvailable = false;
+          return false;
+        }
+        if(!removeOwnedFailedScript()) return false;
+        stripeJsAttempt += 1;
+        subscriptionStripeJsPromise = null;
+        runtimeState.scriptPromiseCreated = false;
+        runtimeState.stripeJsState = 'stripe_js_idle';
+        stripeJsTimedOut = false;
+        lastFailedScriptOwned = false;
+      }else if(runtimeState.stripeInstanceState === 'stripe_instance_failed'){
+        subscriptionStripeInstancePromise = null;
+        runtimeState.stripeInstancePromiseCreated = false;
+        runtimeState.stripeInstanceState = 'stripe_instance_idle';
+      }else{
+        return false;
+      }
+
+      subscriptionStripeReadinessPromise = null;
+      runtimeState.readinessPromiseCreated = false;
+      runtimeState.lastErrorCode = '';
+      runtimeState.retryAvailable = false;
+      return true;
+    }
+
+    function getSubscriptionStripeRuntimeSnapshot(){
+      return Object.freeze({
+        config_state: runtimeState.configState,
+        stripe_js_state: runtimeState.stripeJsState,
+        stripe_instance_state: runtimeState.stripeInstanceState,
+        payment_element_state: runtimeState.paymentElementState,
+        config_promise_created: runtimeState.configPromiseCreated,
+        script_promise_created: runtimeState.scriptPromiseCreated,
+        stripe_instance_promise_created: runtimeState.stripeInstancePromiseCreated,
+        readiness_promise_created: runtimeState.readinessPromiseCreated,
+        script_element_count: stripeScriptElements().length,
+        resolved_livemode: runtimeState.resolvedLivemode,
+        payment_element_enabled: runtimeState.paymentElementEnabled,
+        last_error_code: runtimeState.lastErrorCode,
+        retry_available: runtimeState.retryAvailable
+      });
+    }
+
+    const runtimeApi = {
+      loadSubscriptionStripePublicConfigOnce,
+      loadSubscriptionStripeJsOnce,
+      getSubscriptionStripeInstanceOnce,
+      ensureSubscriptionStripeReady,
+      retrySubscriptionStripeReadiness,
+      getSubscriptionStripeRuntimeSnapshot
+    };
+    if(options.testMode === true){
+      runtimeApi.__test = Object.freeze({
+        stripeJsUrl: STRIPE_JS_URL,
+        stripeScriptId: STRIPE_SCRIPT_ID,
+        stripeJsTimeoutMs: STRIPE_JS_TIMEOUT_MS,
+        acceptConfigPayload(payload){
+          let normalizedConfig = null;
+          try{
+            normalizedConfig = normalizeSubscriptionStripePublicConfig(payload);
+          }catch(error){
+            const code = String(error?.code || '');
+            if(code === 'SUB_STRIPE_CONFIG_INCOMPATIBLE'){
+              throw setRuntimeFailure('config', 'config_mode_mismatch', code, false);
+            }
+            if(code === 'SUB_STRIPE_CONFIG_UNAVAILABLE'){
+              throw setRuntimeFailure('config', 'config_missing', code, true);
+            }
+            throw setRuntimeFailure(
+              'config',
+              'config_invalid',
+              'SUB_STRIPE_CONFIG_INVALID',
+              false
+            );
+          }
+          return commitSubscriptionStripeConfig(normalizedConfig);
+        }
+      });
+    }
+    return Object.freeze(runtimeApi);
+  }
+  // SUBSCRIPTION_STRIPE_RUNTIME_END
+
+  const subscriptionStripeRuntime = createSubscriptionStripeRuntime();
+
   function clean(value){
     return String(value ?? '').trim();
   }

@@ -43674,6 +43674,263 @@ Resultado documental:
 
 ---
 
+## PP-Decisiones 236 - Implementacion frontend de runtime Stripe.js y configuracion publica
+
+### Microfase
+
+`FE/Suscripciones-StripeJs-Loader-AndPublicConfig-Implementation-01`
+
+### Resultado
+
+Se implemento en `assets/js/app.js` la infraestructura interna definida por `PP-Decisiones 235`, respetando el endpoint y envelope cerrados en `PP-Decisiones 233` y `234`.
+
+La implementacion queda dormida: cargar `app.js`, abrir el panel, elegir un plan, mostrar Resumen o entrar a Pago seguro no consume configuracion, no inserta Stripe.js y no crea una instancia Stripe.
+
+No se modificaron HTML, CSS, PHP, CSP, endpoints, configuracion, assets, SQL ni package files.
+
+### Runtime interno
+
+Se agrego la fabrica interna:
+
+`createSubscriptionStripeRuntime(options = {})`
+
+La fabrica encapsula estado, Promises, configuracion normalizada, ownership del script e instancia Stripe dentro del IIFE existente de suscripciones. Su instancia productiva es privada al modulo y no se publica en `window`, DOM ni storage.
+
+Las dependencias productivas se resuelven desde `window`, `document`, `fetch` y timers nativos. El mismo contrato permite inyectar implementaciones simuladas para QA mediante opciones de la fabrica, sin cambiar el comportamiento productivo.
+
+La creacion de la fabrica solo establece estados `idle`; no llama ninguna operacion de readiness.
+
+### Funciones implementadas
+
+- `loadSubscriptionStripePublicConfigOnce()`;
+- `loadSubscriptionStripeJsOnce()`;
+- `getSubscriptionStripeInstanceOnce()`;
+- `ensureSubscriptionStripeReady()`;
+- `retrySubscriptionStripeReadiness()`;
+- `getSubscriptionStripeRuntimeSnapshot()`.
+
+`ensureSubscriptionStripeReady()` conserva el orden obligatorio config -> Stripe.js -> instancia, pero tampoco se invoca automaticamente. Queda reservado para una microfase posterior con una operacion de pago elegible.
+
+### Cliente singleton de configuracion
+
+El cliente prepara exclusivamente:
+
+`GET /api/subscriptions/index.php/config/public/stripe`
+
+Opciones de fetch:
+
+- `method: GET`;
+- `Accept: application/json`;
+- `credentials: same-origin`;
+- `cache: no-store`.
+
+`subscriptionStripeConfigPromise` se asigna antes de resolver la request. Llamadas concurrentes comparten la misma Promise y una configuracion valida permanece solo en memoria durante la pagina.
+
+La implementacion valida:
+
+- status HTTP `200` para exito;
+- media type JSON;
+- top-level exacto `ok`, `data`, `meta`;
+- `ok === true`;
+- contract `subscription_stripe_public_config`;
+- version `SUB-STRIPE-PUBLIC-CONFIG-1`;
+- auth mode `session_scope`;
+- allowlist exacta de `data`;
+- provider `stripe`;
+- publishable key con formato publico test/live, sin espacios y longitud acotada;
+- `livemode` booleano y coherente con el prefijo;
+- `payment_element_enabled` booleano y habilitado.
+
+Se rechazan campos prohibidos, incluso variantes camelCase, kebab-case o nombres que agreguen prefijos/sufijos a los identificadores restringidos aprobados. El payload crudo no se conserva ni se propaga a errores.
+
+La publishable key normalizada vive unicamente dentro de la clausura. No se escribe en `localStorage`, `sessionStorage`, DOM, `data-*`, logs, snapshot ni evidencia. La identidad logica registra solo provider, modo test/live y capacidad Payment Element; no usa key, hash ni fragmento.
+
+### Errores de configuracion
+
+Mapeo implementado:
+
+| Condicion | Estado | Codigo sanitizado | Retry |
+| --- | --- | --- | --- |
+| HTTP 401/403 | `config_unauthorized` | `SUB_STRIPE_CONFIG_UNAUTHORIZED` | no |
+| HTTP 503 o feature deshabilitada | `config_missing` | `SUB_STRIPE_CONFIG_UNAVAILABLE` | explicito |
+| media type, envelope, provider, key, tipos o campos invalidos | `config_invalid` | `SUB_STRIPE_CONFIG_INVALID` | no |
+| incoherencia test/live o segunda configuracion | `config_mode_mismatch` | `SUB_STRIPE_CONFIG_INCOMPATIBLE` / `SUB_STRIPE_CONFIG_CHANGED` | recarga |
+| red o fallo no clasificado | `config_failed` | `SUB_STRIPE_CONFIG_FETCH_FAILED` | explicito |
+
+Los errores frontend solo contienen `name`, `code` y `message` sanitizados. No contienen response body, excepcion original, stack de servidor, key, entorno, ruta local ni mensaje tecnico remoto.
+
+### Loader singleton Stripe.js
+
+URL unica implementada:
+
+`https://js.stripe.com/dahlia/stripe.js`
+
+Contrato:
+
+- id estable `mxmed-subscription-stripe-js-dahlia`;
+- `async=true`;
+- timeout exacto `15000 ms`;
+- Promise unica `subscriptionStripeJsPromise`;
+- precondicion `config_ready`;
+- deteccion de todas las etiquetas con origen Stripe.js;
+- adopcion de una unica etiqueta solo si su URL normalizada es exactamente Dahlia;
+- reutilizacion del mismo ciclo de `load/error` si la etiqueta correcta esta cargando;
+- exito solo con `typeof window.Stripe === 'function'`;
+- bloqueo si hay multiples scripts, mismo id con otra URL, otra version o global no verificable;
+- cero fallback a `/v3`, otra version, CDN, bundle o self-hosting.
+
+Un script insertado por el runtime se registra en memoria mediante ownership privado. Los scripts preexistentes no se consideran propios.
+
+Estados de fallo:
+
+- `stripe_js_failed` para load error, conflicto o global ausente;
+- `stripe_js_timeout` al vencer 15 segundos.
+
+No hay retry automatico ni segunda etiqueta automatica.
+
+### Retry explicito
+
+`retrySubscriptionStripeReadiness()` opera solo despues de un estado retryable y nunca si ya existe instancia o hay una operacion loading/creating.
+
+Reglas implementadas:
+
+- config `missing/failed`: limpia solo la Promise rechazada de config;
+- loader fallido: limpia solo si la etiqueta fallida fue creada por este runtime, conserva URL Dahlia y no toca scripts ajenos;
+- timeout con global tardio: bloquea por conflicto y exige recarga;
+- conflicto de version/script: no permite retry en pagina;
+- instancia fallida: limpia solo su Promise si no existe instancia;
+- configuracion valida no se borra al reintentar loader o constructor.
+
+### Instancia Stripe singleton
+
+`getSubscriptionStripeInstanceOnce()` exige `config_ready`, `stripe_js_ready`, config en memoria y `window.Stripe` valido.
+
+La creacion usa exactamente:
+
+`window.Stripe(publishableKey, { locale: 'es' })`
+
+No usa `stripeAccount`, override de API version, betas ni opciones adicionales.
+
+`subscriptionStripeInstancePromise` se asigna antes del constructor. Dos llamadas concurrentes comparten la Promise; llamadas posteriores reciben la misma instancia. Una llamada prematura se rechaza sin crear ni memoizar una instancia fallida.
+
+Una segunda entrega de configuracion durante la pagina se bloquea de forma conservadora, sin comparar keys, y requiere recarga. Nunca se sustituye una instancia test por live ni viceversa.
+
+### Estados internos
+
+Se implementaron todos los estados aprobados:
+
+- config: `config_idle`, `config_loading`, `config_ready`, `config_missing`, `config_invalid`, `config_mode_mismatch`, `config_unauthorized`, `config_failed`;
+- Stripe.js: `stripe_js_idle`, `stripe_js_loading`, `stripe_js_ready`, `stripe_js_failed`, `stripe_js_timeout`;
+- instancia: `stripe_instance_idle`, `stripe_instance_creating`, `stripe_instance_ready`, `stripe_instance_failed`;
+- placeholder logico: `payment_element_not_requested`.
+
+No se crea ni renderiza un estado visual nuevo.
+
+### Snapshot seguro
+
+`getSubscriptionStripeRuntimeSnapshot()` devuelve un objeto congelado con:
+
+- estados config, script, instancia y placeholder futuro;
+- flags de Promises creadas;
+- conteo de etiquetas Stripe.js;
+- livemode resuelto;
+- capacidad Payment Element;
+- ultimo codigo sanitizado;
+- disponibilidad de retry.
+
+El snapshot no contiene publishable key, objetos Stripe, Promises, URL completa, body, stack, excepciones, ids de proveedor ni secretos. No se inserta en DOM, storage ni Debug automaticamente.
+
+### Integracion dormida y lifecycle
+
+La unica ejecucion durante el bootstrap es construir la clausura en estado idle.
+
+Busqueda estatica y harness confirmaron cero invocaciones automaticas de config, loader, instancia u orquestador fuera del contrato interno.
+
+Por ello:
+
+- cerrar Pago seguro no destruye ni crea Stripe;
+- cambiar plan, modalidad o entidad no recrea ni inicializa Stripe;
+- alternar QA real/simulado no inicializa Stripe;
+- recargar la pagina descarta naturalmente config, Promises e instancia;
+- incompatibilidad de modo permanece bloqueada hasta recarga.
+
+No se implementaron `elements.destroy()`, unmount, listeners de Payment Element ni limpieza de secretos de operacion porque todavia no existen en este runtime.
+
+### CSP
+
+No se modifico CSP. La politica necesaria permanece documentada como readiness en `PP-Decisiones 235` y debera aplicarse en una microfase autorizada antes de cargar Stripe.js en un entorno con CSP activa.
+
+### QA aislada
+
+Node no esta disponible en el entorno; se registra `WARN` no bloqueante conforme al alcance. No se instalaron dependencias.
+
+Se uso JavaScriptCore local en modo aislado. El harness temporal lee el bloque delimitado directamente desde `assets/js/app.js`, construye mocks de fetch/document/window/timers/script y no usa navegador, servidor, endpoint real ni red Stripe.
+
+Resultado:
+
+- `46/46 PASS`;
+- configuracion: concurrencia, test/live, HTTP 401/403/503/500, media type, envelope, provider, key, mismatches, campos prohibidos y feature flag;
+- loader: precondicion config, concurrencia, load/error/timeout, script existente loaded/loading, conflictos, duplicados, global ausente, URL Dahlia y cero `/v3`;
+- instancia: concurrencia, reutilizacion, precondiciones, constructor fallido y config posterior bloqueada;
+- orquestador completo: un fetch simulado, un script y un constructor bajo concurrencia;
+- seguridad: cero storage, cero key en DOM/snapshot/error y cero inicializacion automatica;
+- retry: config y loader solo por accion explicita; conflicto requiere recarga.
+
+La sintaxis completa de `assets/js/app.js` se valido con JavaScriptCore mediante compilacion con `new Function(...)`, sin ejecutar la aplicacion.
+
+### No repeticion
+
+Durante la microfase:
+
+- fixtures: `0`;
+- llamadas HTTP reales a config publica: `0`;
+- requests reales a Stripe.js: `0`;
+- payment routes, checkouts y PaymentIntents: `0`;
+- retrieval de secreto efimero: `0`;
+- Stripe API/CLI: `0`;
+- webhooks y activaciones: `0`;
+- SQL: `0`;
+- inventario de `img/` repetido: `false`.
+
+No se uso ninguna entidad QA.
+
+### Archivos modificados
+
+- `assets/js/app.js`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Fuera de alcance
+
+No se implemento ni ejecuto:
+
+- Payment Element o Express Checkout Element;
+- `stripe.elements()`;
+- solicitud o persistencia de secreto efimero;
+- metodo de pago o confirmacion;
+- integracion con botones, renders o eventos del panel;
+- payment route, checkout, PaymentIntent, webhook o activacion;
+- HTML, CSS, PHP, CSP, configuracion, SQL o assets.
+
+### Evidencia
+
+Evidencia local sanitizada:
+
+`/tmp/mxmed-stripejs-loader-public-config-implementation-01/`
+
+### Siguiente microfase
+
+`UX-FE/Suscripciones-PagoSeguro-VisualBlueprint-AndExistingAssets-01`
+
+Antes de ejecutarla se debe solicitar al diseñador el boceto visual mas reciente y reutilizar los logotipos ya existentes sin repetir su inventario. El primer ajuste visual no montara Payment Element real.
+
+### Estado
+
+Resultado de implementacion:
+
+`PASS`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
