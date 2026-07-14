@@ -43241,6 +43241,296 @@ Resultado documental:
 
 `PASS`
 
+---
+
+## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
+
+### Objetivo del cierre
+
+Se documenta el contrato tecnico previo para permitir, en una microfase posterior, que el panel privado de suscripciones obtenga de forma segura la publishable key de Stripe requerida por Stripe.js y Payment Element.
+
+Esta decision es exclusivamente de readiness contractual. No implementa Stripe.js, no monta Payment Element, no confirma pagos, no solicita `client_secret`, no crea PaymentIntent y no modifica el flujo de pago ya cerrado.
+
+El objetivo inmediato es dejar definido un unico mecanismo autorizado para entregar configuracion publica de Stripe al frontend sin hardcodear llaves en HTML/JS versionado y sin exponer secretos operativos.
+
+### Alcance validado
+
+La inspeccion read-only confirma el estado actual:
+
+- no existe referencia activa a Stripe.js en `index.html` ni en `assets/js/app.js`;
+- no existe uso frontend de `Stripe(...)`;
+- no existe endpoint actual para entregar publishable key de Stripe al panel de suscripciones;
+- no se encontro `STRIPE_PUBLISHABLE_KEY` consumida en codigo del repositorio;
+- `STRIPE_SECRET_KEY` se consume solo en backend por `StripePaymentIntentProviderService`;
+- `STRIPE_WEBHOOK_EXPECTED_LIVEMODE` ya funciona como fuente backend de expectativa de modo Stripe para webhook;
+- no se encontraron valores hardcodeados de publishable key en frontend;
+- no existe carpeta `img/` con assets de medios de pago para esta microfase;
+- no se descargaron ni generaron assets nuevos.
+
+La microfase no ejecuto rutas de pago, checkouts, PaymentIntents, client-secret, confirmacion, webhook, activation, Stripe CLI, SQL ni fixtures.
+
+### Mecanismo seleccionado
+
+Se selecciona un unico mecanismo canonico para entregar la publishable key al frontend:
+
+`GET /api/subscriptions/index.php/config/public/stripe`
+
+Contrato de uso:
+
+- metodo: `GET`;
+- origen: same-origin del panel privado;
+- autenticacion: `session_scope` del panel de suscripciones;
+- respuesta: JSON;
+- writes: `0`;
+- llamadas a Stripe API: `0`;
+- uso de DB: `0`;
+- cache: prohibida mediante headers `no-store`.
+
+Este endpoint debe existir solo como configuracion publica del frontend. No debe crear, consultar ni modificar pagos.
+
+Se descarta entregar la key mediante bootstrap JSON en HTML porque acopla el render inicial del panel con configuracion de pagos, dificulta invalidacion y aumenta el riesgo de duplicar fuente de verdad si el estado del panel cambia dinamicamente.
+
+### Fuente canonica de configuracion
+
+La fuente canonica de la publishable key sera:
+
+`STRIPE_PUBLISHABLE_KEY`
+
+Reglas:
+
+- debe estar presente en el runtime backend para habilitar Payment Element;
+- debe iniciar con prefijo de publishable key de Stripe;
+- no debe aceptar prefijos de secret key ni restricted key;
+- no debe estar hardcodeada en `index.html`, `assets/js/app.js`, CSS ni documentacion operativa;
+- no debe persistirse en tablas;
+- no debe enviarse al navegador desde una variable secundaria distinta;
+- no debe mezclarse con `client_secret`.
+
+La llave publica de Stripe no es un secreto de servidor, pero sigue siendo configuracion operativa y debe venir de runtime/configuracion, no de codigo versionado.
+
+### Coherencia de entorno
+
+Hasta que exista un contrato de entorno Stripe mas amplio, la expectativa de modo se alinea con:
+
+`STRIPE_WEBHOOK_EXPECTED_LIVEMODE`
+
+La implementacion futura debe comparar el modo de `STRIPE_PUBLISHABLE_KEY` contra la expectativa de livemode:
+
+- publishable key test + livemode esperado `false`: valido;
+- publishable key live + livemode esperado `true`: valido;
+- publishable key live + livemode esperado `false`: bloqueado;
+- publishable key test + livemode esperado `true`: bloqueado;
+- publishable key ausente: configuracion publica no disponible;
+- secret key ausente: backend de pago no disponible aunque la publishable key exista.
+
+En local/dev, la expectativa debe permanecer en modo test. En produccion, el modo esperado debe ser explicito; no se debe inferir produccion desde ausencia de variables.
+
+### Contrato de respuesta
+
+Respuesta exitosa esperada:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "provider": "stripe",
+    "publishable_key": "pk_...",
+    "livemode": false,
+    "payment_element_enabled": true
+  },
+  "meta": {
+    "contract": "subscription_stripe_public_config",
+    "version": "SUB-STRIPE-PUBLIC-CONFIG-1",
+    "auth_mode": "session_scope",
+    "generated_at": "ISO-8601"
+  }
+}
+```
+
+Campos prohibidos en la respuesta:
+
+- `STRIPE_SECRET_KEY`;
+- `STRIPE_WEBHOOK_SECRET`;
+- `client_secret`;
+- `provider_payment_id`;
+- `provider_event_id`;
+- metadata completa de pagos;
+- rutas internas del servidor;
+- variables de entorno crudas;
+- payloads crudos de Stripe.
+
+Headers esperados:
+
+- `Content-Type: application/json`;
+- `Cache-Control: no-store, no-cache, must-revalidate, max-age=0`;
+- `Pragma: no-cache`;
+- `Expires: 0`;
+- `X-Content-Type-Options: nosniff`.
+
+Errores esperados:
+
+- `401 unauthorized`: no hay sesion valida;
+- `403 forbidden`: sesion sin autorizacion para el panel privado;
+- `503 stripe_publishable_key_missing`: falta `STRIPE_PUBLISHABLE_KEY`;
+- `500 stripe_publishable_key_invalid`: la key no tiene prefijo publico valido;
+- `500 stripe_livemode_mismatch`: la key no coincide con el modo esperado;
+- `503 stripe_payment_element_disabled`: Payment Element deshabilitado por configuracion.
+
+El copy comercial para errores debe ser generico:
+
+`Por el momento no fue posible habilitar el formulario de pago seguro. Intentalo nuevamente en unos minutos.`
+
+### Estado frontend esperado
+
+La implementacion futura debe introducir estados separados:
+
+- `config_idle`;
+- `config_loading`;
+- `config_ready`;
+- `config_missing`;
+- `config_invalid`;
+- `stripe_js_loading`;
+- `stripe_js_ready`;
+- `stripe_js_failed`;
+- `payment_element_mounting`;
+- `payment_element_ready`;
+- `payment_element_failed`.
+
+Reglas:
+
+- Stripe.js se carga solo despues de `config_ready`;
+- Stripe.js no se carga si la configuracion esta ausente, invalida o bloqueada;
+- Payment Element no se monta sin `client_secret` efimero valido;
+- al cambiar plan, entidad o modalidad, el elemento debe desmontarse y el estado debe reiniciarse;
+- el frontend nunca debe enviar la publishable key al backend como dato de negocio;
+- el frontend nunca debe guardar `client_secret` en storage persistente.
+
+### Relacion con client_secret efimero
+
+Este contrato no reemplaza el contrato de `client_secret` efimero.
+
+El orden futuro esperado es:
+
+1. obtener configuracion publica Stripe mediante `GET /config/public/stripe`;
+2. cargar Stripe.js con la publishable key;
+3. crear o reutilizar la cadena autorizada `payment_route -> checkout -> PaymentIntent`;
+4. solicitar `client_secret` efimero solo para un PaymentIntent local elegible;
+5. montar Payment Element;
+6. confirmar el pago desde navegador con Stripe.js;
+7. esperar webhook real;
+8. activar por el endpoint oficial cuando el pago este procesado.
+
+Esta decision no autoriza confirmacion de pago desde backend, `confirm_mock`, `mxmed_mock` ni activacion directa.
+
+### Stripe.js y CSP
+
+La inspeccion actual no encontro CSP especifica para Stripe ni carga de Stripe.js.
+
+Antes de implementar Payment Element se debe validar contra documentacion oficial vigente de Stripe:
+
+- dominios requeridos para cargar Stripe.js;
+- dominios requeridos por Payment Element;
+- restricciones de `script-src`, `frame-src`, `connect-src`, `img-src` y `style-src`;
+- manejo de errores de carga y bloqueo por CSP.
+
+No se debe agregar CSP permisiva sin validacion especifica.
+
+### Assets de medios de pago
+
+Inventario read-only:
+
+- carpeta `img/`: no existe;
+- assets de logos de medios de pago en `img/`: `0`;
+- assets encontrados de forma incidental no forman un set autorizado para medios de pago.
+
+Por lo tanto, una microfase visual posterior debe hacer intake explicito de marcas/imagenes si se requieren logos de Stripe, tarjetas, OXXO, SPEI, Apple Pay o Google Pay. Esta decision no descarga ni genera assets.
+
+### No repeticion del flujo de pago
+
+La evidencia de esta microfase mantiene en cero:
+
+- `payment_route` nuevas;
+- checkouts nuevos;
+- PaymentIntents nuevos;
+- retrieval de `client_secret`;
+- confirmaciones Stripe;
+- webhooks;
+- activaciones;
+- SQL;
+- fixtures DEV/local.
+
+El cierre E2E UI Stripe sandbox de `doctor/990104`, documentado en `PP-Decisiones 232`, permanece cerrado y no se reabre por esta decision.
+
+### Futuras pruebas requeridas
+
+La implementacion posterior debe cubrir al menos:
+
+- ausencia de `STRIPE_PUBLISHABLE_KEY`;
+- publishable key con prefijo invalido;
+- publishable key test con entorno test;
+- publishable key live bloqueada en entorno test;
+- publishable key test bloqueada en entorno live;
+- sesion no autorizada;
+- `Cache-Control` no-store;
+- no exposicion de secretos;
+- no carga de Stripe.js cuando la configuracion falla;
+- no writes ni llamadas a Stripe API en el endpoint de configuracion publica.
+
+### Fuera de alcance
+
+Esta decision no implementa:
+
+- endpoint nuevo;
+- cambios en `api/subscriptions/index.php`;
+- cambios en `assets/js/app.js`;
+- Stripe.js;
+- Payment Element;
+- confirmacion de pago;
+- webhook;
+- `activate-after-payment`;
+- CSS visual;
+- assets de medios de pago;
+- cambios de DB;
+- migraciones;
+- fixtures;
+- Stripe CLI.
+
+### Evidencia generada
+
+Evidencia local sanitizada:
+
+`/tmp/mxmed-stripe-publishable-key-contract-readiness-01/`
+
+Archivos esperados:
+
+- `baseline.txt`;
+- `current-config-inventory.json`;
+- `public-config-delivery-options.json`;
+- `selected-contract.json`;
+- `environment-coherence-matrix.json`;
+- `frontend-state-map.json`;
+- `stripe-js-csp-readiness.json`;
+- `img-payment-assets-inventory.json`;
+- `no-repetition-audit.json`;
+- `no-secret-audit.txt`;
+- `documentation-audit.txt`;
+- `qa-result.json`;
+- `git-final-state.txt`.
+
+### Proxima microfase autorizada
+
+La siguiente microfase tecnica recomendada es:
+
+`BE-FE/Suscripciones-StripePublishableKey-Contract-Implementation-01`
+
+Esa microfase debe implementar el endpoint de configuracion publica con las reglas de este contrato, sin montar todavia Payment Element ni confirmar pagos, salvo que su propio alcance lo autorice expresamente.
+
+### Estado
+
+Resultado documental:
+
+`PASS`
+
 ## PP-Decisiones 230 - Readiness de reutilizacion del servicio checkout existente desde payment_route
 
 ### Contexto
