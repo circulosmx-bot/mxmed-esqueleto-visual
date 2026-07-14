@@ -43531,6 +43531,221 @@ Resultado documental:
 
 `PASS`
 
+---
+
+## PP-Decisiones 234 - Implementacion contrato publishable key Stripe
+
+### Objetivo
+
+Se documenta la implementacion backend del contrato definido en `PP-Decisiones 233` para entregar al panel privado de suscripciones la configuracion publica minima de Stripe requerida por una futura integracion con Stripe.js.
+
+Esta decision no implementa Stripe.js, no monta Payment Element, no solicita `client_secret`, no confirma pagos, no ejecuta webhook y no ejecuta `activate-after-payment`.
+
+### Endpoint implementado
+
+Endpoint:
+
+`GET /api/subscriptions/index.php/config/public/stripe`
+
+Contrato:
+
+- metodo permitido: `GET`;
+- metodos distintos: `405 method_not_allowed`;
+- origen esperado: same-origin;
+- autenticacion: `session_scope`;
+- writes: `0`;
+- SQL: `0`;
+- llamadas a Stripe API: `0`;
+- Stripe CLI: `0`;
+- operaciones de pago: `0`.
+
+El router `api/subscriptions/index.php` queda como capa delgada: valida metodo, resuelve contexto privado, lee configuracion runtime y delega la validacion al servicio dedicado.
+
+### Servicio
+
+Servicio agregado:
+
+`modules/subscriptions/services/ResolveSubscriptionStripePublicConfigService.php`
+
+Responsabilidad unica:
+
+- recibir la publishable key desde runtime;
+- validar ausencia o string vacio;
+- aceptar unicamente prefijos publicos `pk_test_` o `pk_live_`;
+- rechazar formatos desconocidos;
+- rechazar valores con prefijos de secret key o restricted key al no ser publicos;
+- validar coherencia test/live contra la expectativa de livemode ya usada por el proyecto;
+- devolver un resultado publico normalizado;
+- lanzar errores estructurados y sanitizados.
+
+El servicio es testeable con configuracion sintetica sin modificar variables reales del entorno.
+
+### Fuente canonica y modo
+
+Fuente canonica:
+
+`STRIPE_PUBLISHABLE_KEY`
+
+Modo esperado:
+
+`STRIPE_WEBHOOK_EXPECTED_LIVEMODE`
+
+Se reutiliza el helper existente `subscriptionStripeWebhookExpectedLivemode()` para conservar el criterio estricto ya definido por el proyecto.
+
+Casos validos:
+
+- `pk_test_` con `expected_livemode = false`;
+- `pk_live_` con `expected_livemode = true`.
+
+Casos bloqueados:
+
+- publishable key ausente o vacia;
+- formato distinto de publishable key;
+- valores de tipo secret/restricted key;
+- `pk_test_` con `expected_livemode = true`;
+- `pk_live_` con `expected_livemode = false`;
+- expectativa de livemode invalida o no resoluble.
+
+No se usa `STRIPE_SECRET_KEY` para construir ni validar la respuesta publica.
+
+### Envelope real
+
+Respuesta positiva:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "provider": "stripe",
+    "publishable_key": "pk_...",
+    "livemode": false,
+    "payment_element_enabled": true
+  },
+  "meta": {
+    "contract": "subscription_stripe_public_config",
+    "version": "SUB-STRIPE-PUBLIC-CONFIG-1",
+    "generated_at": "ISO-8601",
+    "auth_mode": "session_scope"
+  }
+}
+```
+
+La respuesta no incluye campos fuera de la allowlist aprobada.
+
+### Errores y HTTP
+
+Errores implementados:
+
+- `401 unauthorized`: no hay sesion valida;
+- `403 forbidden`: contexto sin autorizacion de sesion para el panel;
+- `405 method_not_allowed`: metodo distinto de `GET`;
+- `503 stripe_publishable_key_missing`: publishable key ausente o vacia;
+- `500 stripe_publishable_key_invalid`: formato no publico o invalido;
+- `500 stripe_livemode_mismatch`: mismatch test/live o expectativa de modo invalida.
+
+Los errores de configuracion usan copy generico y no devuelven valores recibidos, nombres internos de variables, stack, rutas, metadata ni payloads crudos.
+
+### Cache y headers
+
+Todas las respuestas del endpoint, incluyendo errores, aplican:
+
+- `Content-Type: application/json`;
+- `Cache-Control: no-store, no-cache, must-revalidate, max-age=0`;
+- `Pragma: no-cache`;
+- `Expires: 0`;
+- `X-Content-Type-Options: nosniff`.
+
+### QA contractual
+
+QA de servicio con valores sinteticos:
+
+- ausente: bloqueado;
+- string vacio: bloqueado;
+- `pk_test_` sintetica + expected false: valido;
+- `pk_live_` sintetica + expected true: valido;
+- `pk_test_` sintetica + expected true: bloqueado;
+- `pk_live_` sintetica + expected false: bloqueado;
+- secret/restricted key sinteticas: bloqueadas;
+- formato desconocido: bloqueado;
+- espacios alrededor: trim controlado y valido cuando el valor interno es publishable key;
+- expected livemode invalido: bloqueado.
+
+QA HTTP aislada:
+
+- GET positivo: `200`;
+- configuracion ausente: `503`;
+- configuracion invalida: `500`;
+- mismatch de modo: `500`;
+- metodo no permitido: `405`;
+- `no-store`: presente;
+- campos prohibidos: `0`.
+
+Las llaves sinteticas existieron solo en memoria de harnesses temporales y no quedaron persistidas en evidencia.
+
+### Ausencia de repeticion de pagos
+
+Durante esta implementacion:
+
+- fixtures ejecutados: `0`;
+- payment_routes creadas: `0`;
+- checkouts creados: `0`;
+- PaymentIntents creados: `0`;
+- client-secret retrieval: `0`;
+- confirmaciones Stripe: `0`;
+- Stripe CLI: `0`;
+- webhooks: `0`;
+- activaciones: `0`;
+- SQL: `0`;
+- inventario `img/` repetido: `false`.
+
+### Archivos modificados
+
+Archivos de codigo:
+
+- `api/subscriptions/index.php`;
+- `modules/subscriptions/services/ResolveSubscriptionStripePublicConfigService.php`.
+
+Archivo documental:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modifica:
+
+- `assets/js/app.js`;
+- CSS;
+- HTML;
+- imagenes;
+- `img/`;
+- SQL/schema/seeds;
+- composer;
+- vendor;
+- webhook;
+- PaymentIntent;
+- client-secret;
+- activation.
+
+### Evidencia
+
+Evidencia local sanitizada:
+
+`/tmp/mxmed-stripe-publishable-key-contract-implementation-01/`
+
+La evidencia no contiene bodies raw, cookies, Authorization, valores completos de publishable key, secret key, restricted key, webhook secret, provider IDs ni `client_secret`.
+
+### Siguiente microfase
+
+Siguiente microfase recomendada:
+
+`FE/Suscripciones-StripeJs-Loader-AndPublicConfig-Readiness-01`
+
+Esa fase debe definir la carga de Stripe.js y su integracion con el endpoint publico. Todavia no debe montar Payment Element ni modificar visualmente el panel salvo que su alcance lo autorice.
+
+### Estado
+
+Resultado de implementacion:
+
+`PASS`
+
 ## PP-Decisiones 230 - Readiness de reutilizacion del servicio checkout existente desde payment_route
 
 ### Contexto

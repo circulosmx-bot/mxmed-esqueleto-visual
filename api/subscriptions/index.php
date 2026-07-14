@@ -24,6 +24,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptio
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/RetrieveSubscriptionPaymentIntentClientSecretService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/ResolveSubscriptionStripePublicConfigService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripePaymentIntentProviderService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookPayloadNormalizer.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/StripeWebhookSignatureVerifier.php';
@@ -63,6 +64,8 @@ use Subscriptions\Services\CurrentSubscriptionReadModelService;
 use Subscriptions\Services\ProcessStripeSubscriptionWebhookService;
 use Subscriptions\Services\RetrieveSubscriptionPaymentIntentClientSecretException;
 use Subscriptions\Services\RetrieveSubscriptionPaymentIntentClientSecretService;
+use Subscriptions\Services\ResolveSubscriptionStripePublicConfigException;
+use Subscriptions\Services\ResolveSubscriptionStripePublicConfigService;
 use Subscriptions\Services\StripePaymentIntentProviderService;
 use Subscriptions\Services\StripeWebhookPayloadNormalizer;
 use Subscriptions\Services\StripeWebhookSignatureVerifier;
@@ -207,6 +210,62 @@ function subscriptionClientSecretRespond(array $response, int $status = 200): vo
             ],
             'data' => null,
             'meta' => (object)subscriptionClientSecretMeta('unknown'),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return;
+    }
+
+    echo $json;
+}
+
+function subscriptionStripePublicConfigMeta(string $authMode = 'session_scope'): array
+{
+    return [
+        'contract' => 'subscription_stripe_public_config',
+        'version' => 'SUB-STRIPE-PUBLIC-CONFIG-1',
+        'generated_at' => gmdate('c'),
+        'auth_mode' => $authMode,
+    ];
+}
+
+function subscriptionStripePublicConfigError(string $code, string $message, string $authMode = 'session_scope'): array
+{
+    return [
+        'ok' => false,
+        'error' => [
+            'code' => $code,
+            'message' => $message,
+        ],
+        'data' => null,
+        'meta' => subscriptionStripePublicConfigMeta($authMode),
+    ];
+}
+
+function subscriptionStripePublicConfigRespond(array $response, int $status = 200): void
+{
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('X-Content-Type-Options: nosniff');
+
+    if (isset($response['meta']) && is_array($response['meta'])) {
+        $response['meta'] = (object)$response['meta'];
+    } elseif (!isset($response['meta']) || !is_object($response['meta'])) {
+        $response['meta'] = (object)[];
+    }
+
+    http_response_code($status);
+    $json = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        http_response_code(500);
+        echo json_encode([
+            'ok' => false,
+            'error' => [
+                'code' => 'stripe_publishable_key_invalid',
+                'message' => 'Por el momento no fue posible habilitar el formulario de pago seguro. Intentalo nuevamente en unos minutos.',
+            ],
+            'data' => null,
+            'meta' => (object)subscriptionStripePublicConfigMeta('session_scope'),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         return;
     }
@@ -2853,6 +2912,69 @@ try {
 
     if (!empty($segments) && $segments[0] === 'context') {
         subscriptionRespond(subscriptionContextError('not_found', 'route not found'), 404);
+        return;
+    }
+
+    if (count($segments) === 3 && $segments[0] === 'config' && $segments[1] === 'public' && $segments[2] === 'stripe') {
+        if ($method !== 'GET') {
+            subscriptionStripePublicConfigRespond(
+                subscriptionStripePublicConfigError('method_not_allowed', 'method not allowed'),
+                405
+            );
+            return;
+        }
+
+        $context = subscriptionResolveActiveEntityContext();
+        if (!(bool)($context['ok'] ?? false)) {
+            $contextResponse = (array)($context['response'] ?? []);
+            $error = is_array($contextResponse['error'] ?? null) ? $contextResponse['error'] : [];
+            $code = (string)($error['code'] ?? 'unauthorized');
+            $message = $code === 'forbidden' ? 'forbidden' : 'authentication required';
+            subscriptionStripePublicConfigRespond(
+                subscriptionStripePublicConfigError($code, $message),
+                (int)($context['status'] ?? 401)
+            );
+            return;
+        }
+
+        $contextResponse = (array)($context['response'] ?? []);
+        $contextMeta = is_array($contextResponse['meta'] ?? null) ? $contextResponse['meta'] : [];
+        $authMode = (string)($contextMeta['source'] ?? 'unknown');
+        if ($authMode !== 'session_scope') {
+            subscriptionStripePublicConfigRespond(
+                subscriptionStripePublicConfigError('forbidden', 'forbidden'),
+                403
+            );
+            return;
+        }
+
+        $service = new ResolveSubscriptionStripePublicConfigService();
+        try {
+            $config = $service->resolve(
+                subscriptionEnvValue('STRIPE_PUBLISHABLE_KEY'),
+                subscriptionStripeWebhookExpectedLivemode()
+            );
+        } catch (ResolveSubscriptionStripePublicConfigException $e) {
+            subscriptionStripePublicConfigRespond(
+                subscriptionStripePublicConfigError($e->errorCode(), $e->publicMessage()),
+                $e->status()
+            );
+            return;
+        }
+
+        subscriptionStripePublicConfigRespond([
+            'ok' => true,
+            'data' => $config,
+            'meta' => subscriptionStripePublicConfigMeta('session_scope'),
+        ], 200);
+        return;
+    }
+
+    if (!empty($segments) && $segments[0] === 'config') {
+        subscriptionStripePublicConfigRespond(
+            subscriptionStripePublicConfigError('not_found', 'route not found'),
+            404
+        );
         return;
     }
 
