@@ -43243,6 +43243,437 @@ Resultado documental:
 
 ---
 
+## PP-Decisiones 235 - Readiness frontend de Stripe.js y configuracion publica
+
+### Microfase
+
+`FE/Suscripciones-StripeJs-Loader-AndPublicConfig-Readiness-01`
+
+### Decision
+
+Se define una unica arquitectura implementable para preparar Stripe.js en el panel privado de suscripciones:
+
+- cliente `loadSubscriptionStripePublicConfigOnce()` para consumir una sola vez `GET /api/subscriptions/index.php/config/public/stripe`;
+- loader dinamico `loadSubscriptionStripeJsOnce()` dentro del modulo de suscripciones de `assets/js/app.js`;
+- URL canonica `https://js.stripe.com/dahlia/stripe.js`;
+- instancia unica `getSubscriptionStripeInstanceOnce()` con locale `es`;
+- orquestador interno `ensureSubscriptionStripeReady()` con una unica Promise de readiness;
+- activacion tardia: despues de que la operacion tenga un PaymentIntent local elegible y justo antes del futuro montaje de Payment Element.
+
+Esta decision no implementa ninguna de esas funciones. No carga Stripe.js, no llama el endpoint publico, no monta Elements, no solicita `client_secret`, no confirma pagos y no modifica el shell de Pago seguro.
+
+La numeracion disponible se verifico en el documento: `PP-Decisiones 233` y `234` ya existen y el maximo publicado es `234`; por ello corresponde `PP-Decisiones 235`. Las decisiones 233 y 234 no se reescriben.
+
+### Antecedentes cerrados y auditoria de no repeticion
+
+Se toman como cerrados, sin reejecutarlos:
+
+- backend Stripe sandbox E2E;
+- `payment_route`, checkout bridge, checkout, PaymentIntent y retrieval efimero de `client_secret`;
+- webhook, `payment_event` y activacion postpago;
+- endpoint y servicio de configuracion publica Stripe de `PP-Decisiones 233` y `234`;
+- validacion `pk_test_` / `pk_live_`, coherencia test/live, `session_scope` y headers `no-store`;
+- inventario previo de assets de pago en `img/`.
+
+En esta microfase se ejecutaron cero fixtures, cero llamadas HTTP al endpoint publico, cero requests a `js.stripe.com`, cero POST de pagos, cero llamadas a Stripe API/CLI, cero webhooks, cero activaciones y cero SQL. No se uso ninguna entidad QA y no se repitio el inventario de `img/`.
+
+### Inventario read-only del frontend actual
+
+Hallazgos verificables:
+
+- `index.html` contiene el panel `#p-suscripcion` desde el render inicial, aunque comienza oculto con `d-none`;
+- `index.html` carga una sola etiqueta de `assets/js/app.js`, despues de `assets/js/subscription-messages.js` y de los scripts core, y antes de los scripts de perfil, mensajes y fotos;
+- `docs/index.html` usa su copia documental `docs/assets/js/app.js`; no es la vista operativa inspeccionada para esta integracion;
+- los archivos `index.bak*.html` son respaldos y no son puntos de integracion autorizados;
+- `assets/js/app.js` es monolitico y su modulo IIFE de suscripciones se inicializa una vez si encuentra `#p-suscripcion`;
+- el panel no se destruye al navegar: las secciones se alternan y partes internas se vuelven a renderizar con `innerHTML` sin recargar la pagina;
+- los listeners principales se delegan en `pane`; los controles internos recreados no agregan un listener global de pago por render;
+- `setSubscriptionSection()`, `renderSubscriptionPaymentsShell()`, `renderPlanCheckoutSummary()` y `securePaymentShellHtml()` re-renderizan el shell y sus vistas;
+- volver del shell Pago seguro al Resumen reemplaza su DOM; un futuro Element debe desmontarse antes de ese reemplazo;
+- cambiar plan o modalidad resetea preview/ejecucion y puede volver a renderizar el resumen;
+- cambiar entidad QA real invalida requests mediante secuencia, resetea el flujo y conserva el documento de pagina;
+- cambiar Plan QA alterna entre simulacion y modo Real; la simulacion no debe inicializar Stripe;
+- Debug QA solo esta disponible en host local por query `subp_debug=1`, `mxmed_subp_debug=1` o `localStorage.mxmed_subp_debug=1`;
+- los fetch del modulo usan `Accept: application/json`, `credentials: 'same-origin'`, validacion `response.ok` y envelope `ok/data`, aunque no existe un helper generico de API para reutilizar;
+- existe carga dinamica de scripts en `assets/js/core/navigation.js` y un loader especifico de Google Maps en `assets/js/perfil/consultorio/multisede.js`;
+- no existe un helper generico de scripts ni un registro global controlado de dependencias;
+- el loader de Google Maps usa `id`, deteccion de etiqueta existente y eventos `load/error`, pero no ofrece Promise singleton global ni timeout reutilizable;
+- no existe referencia frontend activa `window.Stripe`, invocacion `Stripe(...)`, Stripe.js ni loader Stripe;
+- el riesgo de doble inicializacion seria real si cada render u apertura futura inyectara su propio script o construyera su propia instancia; los tres singletons de esta decision lo eliminan.
+
+### Fuentes oficiales revisadas
+
+Verificacion documental realizada el `2026-07-14`, sin solicitar el asset de `js.stripe.com`:
+
+- politica de versiones Stripe.js: <https://docs.stripe.com/sdks/stripejs-versioning>;
+- repositorio oficial `stripe/stripe-js`, que identifica `dahlia` como version nombrada vigente y muestra la URL directa: <https://github.com/stripe/stripe-js/blob/master/README.md>;
+- requisitos CSP oficiales: <https://docs.stripe.com/security/guide#content-security-policy>;
+- señales antifraude: <https://docs.stripe.com/disputes/prevention/advanced-fraud-detection>;
+- Express Checkout Element: <https://docs.stripe.com/elements/express-checkout-element>;
+- migracion desde Payment Request Button: <https://docs.stripe.com/elements/express-checkout-element/migration>.
+
+Stripe recomienda cargar Stripe.js directamente desde su origen, no self-hostearla, mantener una version nombrada actualizada y ampliar su presencia para enriquecer señales antifraude. Esta arquitectura acepta deliberadamente menos señales previas al checkout: MXMed es un panel medico privado, la configuracion requiere sesion y el alcance exige no cargar la dependencia durante preview, seleccion de plan ni simple apertura del panel. Por ello se carga solo al llegar a una operacion de pago real elegible. No se deshabilitan las señales antifraude cuando la libreria si se carga.
+
+### Version y origen canonicos
+
+Decision unica:
+
+| Campo | Valor |
+| --- | --- |
+| Version nombrada | `dahlia` |
+| URL exacta | `https://js.stripe.com/dahlia/stripe.js` |
+| Origen | `js.stripe.com`, directo |
+| Fecha de verificacion | `2026-07-14` |
+| Motivo | version nombrada vigente; evita el canal legacy `/v3`; compatible con carga directa sin pipeline npm |
+| Locale | `es` |
+
+`es` se elige porque el panel y sus copys estan en español; evita que el idioma del formulario varie con el navegador dentro de una misma experiencia. No se pasara `stripeAccount` ni un override de API version.
+
+El backend actual hace requests HTTP directos a Stripe sin fijar header `Stripe-Version`; la integracion futura debe revisar el changelog Dahlia y validar el flujo sandbox autorizado antes de montar Elements. Esta observacion no cambia la URL elegida y no habilita un fallback.
+
+Politica de actualizacion:
+
+- revisar semestralmente el changelog y cuando Stripe anuncie una nueva version nombrada;
+- cambiar la constante de URL solo en una microfase explicita, con QA sandbox, CSP y compatibilidad frontend/backend;
+- nunca actualizar silenciosamente durante un render;
+- nunca hacer fallback a `/v3`, Clover, un CDN alterno, npm o una copia local;
+- nunca self-hostear Stripe.js.
+
+### Mecanismo de carga seleccionado
+
+Se selecciona exclusivamente la opcion B: loader dinamico singleton desde `assets/js/app.js`.
+
+Se descarta el script declarativo global porque cargaria Stripe.js aunque la configuracion falte, durante preview y al abrir vistas no relacionadas con pago. El loader dinamico se adapta al IIFE de suscripciones, al shell re-renderizable y al requisito de esperar una operacion elegible. No bloquea el render y permite representar fallas de configuracion y de script por separado.
+
+Contrato futuro de `loadSubscriptionStripeJsOnce()`:
+
+- constante `SUBSCRIPTION_STRIPE_JS_URL = 'https://js.stripe.com/dahlia/stripe.js'`;
+- id estable `mxmed-subscription-stripe-js-dahlia`;
+- timeout unico de `15000 ms`;
+- variable de modulo `subscriptionStripeJsPromise`, inicialmente `null`;
+- toda llamada concurrente devuelve exactamente la misma Promise;
+- antes de insertar, busca el id estable y todas las etiquetas cuyo `src` pertenezca a `https://js.stripe.com/`;
+- adopta una unica etiqueta preexistente solo si su URL normalizada es exactamente la canonica; si no tiene id y este esta libre, le asigna el id estable;
+- si existe otra version Stripe.js, mas de una etiqueta Stripe.js, un id ocupado con otro `src` o `window.Stripe` sin la etiqueta canonica verificable, falla con diagnostico sanitizado `SUB_STRIPE_JS_CONFLICT` y no inserta nada;
+- al insertar, crea una sola etiqueta con `id`, `src` canonico y `async=true`; no usa `defer` porque la insercion ya ocurre tras el parseo y el readiness se controla por Promise;
+- `onload` solo resuelve si `typeof window.Stripe === 'function'`; en otro caso rechaza `SUB_STRIPE_JS_GLOBAL_MISSING`;
+- `onerror` rechaza `SUB_STRIPE_JS_UNAVAILABLE`;
+- el timeout limpia listeners/timer, marca el intento fallido y rechaza `SUB_STRIPE_JS_TIMEOUT`;
+- una Promise rechazada permanece memoizada; no hay retry automatico;
+- `retrySubscriptionStripeReadiness()` es la unica accion que puede limpiar una Promise rechazada, retirar solo la etiqueta canonica creada por este loader cuando `window.Stripe` siga ausente e iniciar un nuevo intento con token distinto;
+- si `window.Stripe` aparece despues de un timeout o existe ambiguedad de version, se bloquea y se requiere recarga completa;
+- ningun callback obsoleto puede cambiar el estado de un intento posterior;
+- resultado: cero etiquetas duplicadas y una sola señal de readiness.
+
+No se expondra el loader en `window`; sera estado privado del IIFE de suscripciones.
+
+### Contrato del cliente de configuracion publica
+
+Funcion futura unica:
+
+`loadSubscriptionStripePublicConfigOnce()`
+
+Variables privadas:
+
+- `subscriptionStripeConfigPromise`;
+- `subscriptionStripeConfig` solo en memoria;
+- estado inicial `config_idle`.
+
+Request canonico:
+
+```js
+fetch('/api/subscriptions/index.php/config/public/stripe', {
+  method: 'GET',
+  headers: { Accept: 'application/json' },
+  credentials: 'same-origin',
+  cache: 'no-store'
+})
+```
+
+Validacion obligatoria, sin imprimir el payload:
+
+1. aceptar solo respuesta HTTP exitosa para el camino `config_ready`;
+2. mapear `401/403` a `config_unauthorized`, `503` a `config_missing`, el error controlado de incompatibilidad a `config_mode_mismatch`, el contrato invalido a `config_invalid` y red/otros 5xx a `config_failed`;
+3. exigir `Content-Type` compatible con `application/json`, admitiendo parametros como `charset`;
+4. exigir objeto JSON con `ok === true`, `data` objeto y `meta` objeto;
+5. exigir `meta.contract === 'subscription_stripe_public_config'`, `meta.version === 'SUB-STRIPE-PUBLIC-CONFIG-1'` y `meta.auth_mode === 'session_scope'`;
+6. admitir en `data` unicamente `provider`, `publishable_key`, `livemode` y `payment_element_enabled`; campos extra hacen fallar cerrado;
+7. exigir `provider === 'stripe'`;
+8. exigir publishable key sin espacios, longitud acotada y prefijo exacto `pk_test_` o `pk_live_`;
+9. exigir `livemode` booleano y coherencia: `pk_test_` con `false`, `pk_live_` con `true`;
+10. exigir `payment_element_enabled` booleano y `true`; `false` se trata como `config_missing` para UI;
+11. rechazar en cualquier nivel nombres prohibidos como secret/restricted key, webhook secret, `client_secret`, Authorization o ids de proveedor;
+12. devolver un objeto normalizado congelado, nunca el envelope crudo.
+
+La publishable key puede vivir en la clausura durante la pagina. No se guarda en `localStorage`, `sessionStorage`, DOM, atributos `data-*`, logs, diagnosticos, telemetry ni evidencia. Tampoco se mezcla con `client_secret`.
+
+La primera llamada asigna la Promise antes de iniciar `fetch`; asi dos llamadas simultaneas generan un solo GET. La Promise resuelta o rechazada queda memoizada. Solo el retry explicito puede borrar una Promise rechazada y solo si todavia no existe instancia Stripe.
+
+### Orden obligatorio y readiness interno
+
+Cuando exista un PaymentIntent elegible, `ensureSubscriptionStripeReady()` ejecutara exactamente:
+
+1. `config_idle -> config_loading`;
+2. resolver una sola vez el endpoint publico;
+3. validar y normalizar el contrato;
+4. `config_ready`;
+5. `stripe_js_idle -> stripe_js_loading` y cargar Stripe.js una sola vez;
+6. `stripe_js_ready`;
+7. `stripe_instance_idle -> stripe_instance_creating` y crear una sola instancia;
+8. guardar configuracion e instancia solo en memoria;
+9. resolver la Promise privada de readiness;
+10. permitir que una fase posterior solicite `client_secret` y monte Elements.
+
+El orquestador no llama endpoint de `client_secret`, `stripe.elements()`, Payment Element, Express Checkout Element ni `confirmPayment`.
+
+### Instancia Stripe singleton
+
+Funcion futura:
+
+`getSubscriptionStripeInstanceOnce()`
+
+Contrato:
+
+- depende de `config_ready` y `stripe_js_ready`; no admite invocacion fuera de orden;
+- usa exclusivamente la publishable key normalizada de memoria;
+- llama una sola vez `window.Stripe(publishableKey, { locale: 'es' })`;
+- variables privadas `subscriptionStripeInstancePromise` y `subscriptionStripeInstance`;
+- asigna la Promise antes de construir para que llamadas concurrentes compartan el mismo resultado;
+- valida que el resultado sea un objeto utilizable y lo conserva por toda la vida de la pagina;
+- reaperturas, renders, cambios de plan y retorno al Resumen reutilizan la instancia;
+- preview, Plan QA simulado y cards de plan nunca crean instancia;
+- una creacion fallida queda memoizada hasta retry explicito; nunca hay recreacion automatica;
+- si se detecta cambio entre test/live o cualquier cambio de configuracion despues de crear la instancia, se bloquea con `SUB_STRIPE_CONFIG_CHANGED` y se exige recarga completa;
+- nunca se sustituye silenciosamente una instancia test por live o viceversa.
+
+### Mapa de estados frontend
+
+Todos los diagnosticos listados son codigos internos sanitizados. Solo se muestran dentro del `<details class="subp-payment-qa-details">` existente cuando Debug QA esta ON; Debug OFF no muestra codigo, HTTP, stack ni nombre de variable.
+
+| Estado | Entrada | Salida | Retry | Mensaje visible | Diagnostico Debug QA | CTA |
+| --- | --- | --- | --- | --- | --- | --- |
+| `config_idle` | pagina nueva, aun sin operacion elegible | primer readiness | no aplica | ninguno | ninguno | pago bloqueado |
+| `config_loading` | se crea la Promise de config | ready o error normalizado | no mientras carga | `Preparando el formulario de pago seguro...` | `SUB_STRIPE_CONFIG_LOADING` | bloqueado |
+| `config_ready` | HTTP/JSON/envelope/campos validos | carga Stripe.js o recarga | no | ninguno | `SUB_STRIPE_CONFIG_READY` sin key | continuar internamente |
+| `config_missing` | servicio no disponible o feature deshabilitada | retry explicito exitoso | si, accion explicita | `Por el momento el pago en linea no esta disponible. Intentalo nuevamente mas tarde.` | `SUB_STRIPE_CONFIG_UNAVAILABLE` | Reintentar habilitado |
+| `config_invalid` | JSON, envelope o allowlist invalidos | solo recarga tras correccion | no en pagina | copy general | `SUB_STRIPE_CONFIG_INVALID` | bloqueado |
+| `config_mode_mismatch` | key y booleano de modo incompatibles/cambio detectado | recarga completa | no | copy de no disponibilidad | `SUB_STRIPE_CONFIG_INCOMPATIBLE` | bloqueado |
+| `config_unauthorized` | HTTP 401/403 | nueva autenticacion y recarga | no automatico | `Tu sesion ya no permite preparar el pago seguro. Inicia sesion nuevamente.` | `SUB_STRIPE_CONFIG_UNAUTHORIZED` | pago bloqueado; CTA de sesion |
+| `config_failed` | red, aborto, media type u otro fallo no clasificado | retry explicito | si | copy general | `SUB_STRIPE_CONFIG_FETCH_FAILED` | Reintentar habilitado |
+| `stripe_js_idle` | config aun no lista | config ready | no aplica | ninguno | ninguno | bloqueado |
+| `stripe_js_loading` | loader Promise creada | ready, failed o timeout | no mientras carga | `Preparando el formulario de pago seguro...` | `SUB_STRIPE_JS_LOADING` | bloqueado |
+| `stripe_js_ready` | load y `window.Stripe` validos | crear instancia o recarga | no | ninguno | `SUB_STRIPE_JS_READY` | continuar internamente |
+| `stripe_js_failed` | error de red, conflicto, version o global ausente | retry explicito si no hay conflicto; si hay conflicto, recarga | condicionado | copy general | `SUB_STRIPE_JS_UNAVAILABLE`, `SUB_STRIPE_JS_CONFLICT` o `SUB_STRIPE_JS_GLOBAL_MISSING` | Reintentar o recargar |
+| `stripe_js_timeout` | 15 s sin readiness | retry explicito seguro o recarga si hubo carga tardia | si, condicionado | copy general | `SUB_STRIPE_JS_TIMEOUT` | Reintentar habilitado si seguro |
+| `stripe_instance_idle` | dependencias aun no listas | dependencias listas | no aplica | ninguno | ninguno | bloqueado |
+| `stripe_instance_creating` | Promise de instancia creada | ready o failed | no mientras crea | `Preparando el formulario de pago seguro...` | `SUB_STRIPE_INSTANCE_CREATING` | bloqueado |
+| `stripe_instance_ready` | objeto Stripe unico validado | fin de pagina | no | ninguno | `SUB_STRIPE_INSTANCE_READY` | futuro montaje permitido |
+| `stripe_instance_failed` | constructor lanza o resultado invalido | retry explicito si no hubo instancia parcial | si, condicionado | copy general | `SUB_STRIPE_INSTANCE_FAILED` | Reintentar o recargar |
+| `payment_element_not_requested` | estado inicial o desmontaje completo | PI elegible y flujo activo | no aplica | ninguno | ninguno | confirmacion bloqueada |
+| `payment_element_waiting_dependencies` | PI elegible, readiness pendiente | dependencias listas o error | hereda retry | `Preparando el formulario de pago seguro...` | codigo de dependencia | confirmacion bloqueada |
+| `payment_element_mounting` | dependencias y futuro `client_secret` validos | ready o failed | no mientras monta | `Preparando el formulario de pago seguro...` | `SUB_PAYMENT_ELEMENT_MOUNTING` | confirmacion bloqueada |
+| `payment_element_ready` | evento ready del futuro Element | submit, error o unmount | no | ninguno | `SUB_PAYMENT_ELEMENT_READY` | futura confirmacion habilitada |
+| `payment_element_failed` | create/mount/change fatal | unmount y retry explicito con nuevo secreto elegible | si, explicito | copy general | `SUB_PAYMENT_ELEMENT_FAILED` | Reintentar; confirmacion bloqueada |
+| `payment_element_unmounted` | salida/cambio/logout | nuevo flujo elegible | si, nueva operacion | ninguno | `SUB_PAYMENT_ELEMENT_UNMOUNTED` | confirmacion bloqueada |
+
+Copy general:
+
+`No fue posible habilitar el formulario de pago seguro. Revisa tu conexion e intentalo nuevamente.`
+
+### Concurrencia y reintentos
+
+| Escenario | Regla contractual |
+| --- | --- |
+| Dos aperturas rapidas / doble click | el evento puede invocar readiness dos veces, pero comparte config Promise, loader Promise e instance Promise; CTA queda disabled durante loading |
+| Multiples renders | ninguna funcion de render crea config, script o instancia; solo el orquestador del flujo elegible puede hacerlo |
+| Cambio rapido de plan/modalidad | incrementar token del futuro montaje, desmontar Element y descartar callbacks del flujo anterior; conservar los tres singletons de pagina |
+| Cierre y reapertura del shell | desmontar el futuro Element al cerrar; reutilizar config, script e instancia al reabrir |
+| Endpoint lento | una sola request; todas las aperturas esperan la misma Promise; no timeout paralelo ni segundo GET |
+| Stripe.js lento | una sola etiqueta y un timer de 15 s compartido |
+| Error de carga | Promise rechazada memoizada; no loop ni fallback; retry solo por accion del usuario |
+| Script ya presente | adoptar solo la unica etiqueta de URL canonica; cualquier otra version o ambiguedad bloquea |
+| Promise rechazada | llamadas posteriores reciben el mismo rechazo hasta `retrySubscriptionStripeReadiness()` |
+| Cambio de entidad | desmontar futuro Element e invalidar callbacks del flujo; config/script/instancia permanecen porque son configuracion de aplicacion, no de entidad |
+| QA simulado -> QA real | simulacion nunca inicia Stripe; al pasar a Real se espera PI elegible antes de readiness |
+| QA real -> simulado | desmontar futuro Element y bloquear CTA; no destruir los singletons ya cargados |
+| Cambio de test/live en pagina | bloquear, no reemplazar instancia y exigir recarga completa |
+
+No hay retries automaticos. La accion explicita genera como maximo un nuevo GET o una nueva carga de script despues de limpiar de forma segura el intento rechazado. Los estados invalidos, incompatibilidad de modo, conflicto de version o carga tardia requieren recarga/correccion y no se reintentan en la misma pagina.
+
+Invariantes:
+
+- una Promise de config;
+- una Promise de loader;
+- una Promise y una instancia Stripe;
+- cero GET simultaneos duplicados;
+- cero scripts duplicados;
+- cero instancias duplicadas.
+
+### Ciclo de vida y limpieza
+
+| Transicion | Config/key e instancia | Futuro Payment Element / `client_secret` |
+| --- | --- | --- |
+| Cerrar Pago seguro | persisten en memoria de pagina | desmontar antes de reemplazar DOM, retirar listeners y borrar secreto de memoria |
+| Volver al Resumen | persisten | desmontado; callbacks obsoletos ignorados |
+| Cambiar plan | persisten | desmontar y reiniciar a `not_requested` |
+| Cambiar modalidad | persisten | desmontar; nuevo flujo requiere PI/secreto compatibles |
+| Cambiar entidad | persisten por ser config de aplicacion | desmontar, borrar secreto e invalidar tokens de entidad previa |
+| Cerrar sesion | no se persisten; logout debe navegar/recargar y descartar la clausura | desmontar antes de salida; no conservar secreto |
+| Recargar pagina | desaparecen key, Promises e instancia; comienza en idle | desaparece todo el estado efimero |
+
+La publishable key no se borra selectivamente al cerrar el shell porque no es estado de una operacion; aun asi nunca sale de memoria. El futuro `client_secret` si pertenece a la operacion y debe eliminarse al desmontar.
+
+### CSP readiness
+
+La inspeccion de `index.html`, PHP, `.htaccess` y configuracion versionada no encontro header ni meta `Content-Security-Policy`. Esta microfase no agrega CSP.
+
+Directivas futuras, sin wildcard global, sin `unsafe-eval` y sujetas a verificacion final contra la documentacion oficial al implementar:
+
+**A. Stripe.js y Payment Element minimos**
+
+- `script-src`: conservar fuentes propias actuales y añadir `https://js.stripe.com` y `https://*.js.stripe.com`;
+- `frame-src`: `https://js.stripe.com` y `https://*.js.stripe.com`;
+- `connect-src`: `'self'` y `https://api.stripe.com`;
+- si se adopta Trusted Types, permitir dinamicamente solo las URLs Stripe.js canonicas documentadas;
+- no añadir `script-src *`, `frame-src *`, `connect-src *` ni `unsafe-eval`.
+
+**B. Link, solo si se habilita**
+
+- `frame-src`: `https://link.com` y `https://*.link.com`;
+- `connect-src`: `https://link.com` y `https://*.link.com`;
+- `img-src`: `https://*.link.com` segun la guia oficial;
+- no ampliar estas fuentes mientras Link no sea parte del alcance aprobado.
+
+**C. Address Element / Google Maps, solo si se habilita con key propia**
+
+- `script-src` y `connect-src`: `https://maps.googleapis.com`;
+- revisar ademas la politica CSP oficial de Google Maps en esa microfase;
+- el loader Google Maps existente no autoriza por si mismo Address Element.
+
+**D. 3D Secure y metodos con redirect**
+
+- `frame-src`: añadir `https://hooks.stripe.com`;
+- el futuro `return_url` debe ser HTTPS, same-site y allowlisted por la aplicacion;
+- no relajar CSP para redirects con wildcards.
+
+Las fuentes `*.js.stripe.com` y `*.link.com` son wildcards de subdominio expresamente documentados por Stripe; no equivalen a un wildcard global.
+
+### Express Checkout readiness
+
+En fases futuras:
+
+- Apple Pay, Google Pay y Link se representaran con Express Checkout Element;
+- no se usara Payment Request Button, que Stripe clasifica como legacy;
+- la disponibilidad dependera de configuracion Stripe, registro de dominio, entorno test/live, navegador/dispositivo, pais, moneda y operacion;
+- no se forzaran wallets falsas ni botones no elegibles;
+- logos existentes sirven solo como comunicacion visual y no sustituyen botones oficiales;
+- el layout definitivo esperara el boceto mas reciente del diseñador.
+
+No se implementa ni valida ningun metodo real en esta fase.
+
+### Punto futuro dentro de Pago seguro
+
+El trigger no ocurre al abrir Panel, durante preview, al elegir plan ni por Plan QA simulado. Tampoco ocurre al entrar inicialmente al shell si aun no existe PaymentIntent elegible.
+
+Punto exacto futuro:
+
+1. la cadena cerrada deja un PaymentIntent local elegible;
+2. el usuario permanece en `[data-subp-payment-shell][data-step="payment"]`;
+3. antes de pedir el futuro `client_secret` y montar Payment Element, se invoca `ensureSubscriptionStripeReady()`;
+4. no se vuelven a validar ni crear route, checkout o PI desde este readiness.
+
+El bloque actual `securePaymentFormPlaceholderHtml()` reserva `.subp-payment-element-placeholder`. Una fase visual posterior, con boceto aprobado, dividira esa zona en:
+
+- estado de preparacion;
+- contenedor Express Checkout Element;
+- contenedor Payment Element;
+- zona de errores con `role="alert"`;
+- CTA de confirmacion.
+
+La zona lateral de resumen y el stepper no son puntos de montaje. Esta microfase no cambia HTML, JS ni CSS.
+
+### Errores y diagnostico futuro
+
+Al usuario nunca se muestran nombres de variables, key, incompatibilidad test/live, error de carga de script, HTTP crudo, stack, provider ids ni codigos internos.
+
+Debug OFF:
+
+- solo copy general o de configuracion no disponible;
+- nunca `console.log` de config, response o instancia.
+
+Debug QA ON:
+
+- codigo sanitizado en el `<details class="subp-payment-qa-details">` del shell;
+- sin key, URL con query sensible, body HTTP, cookies, Authorization, secreto, `client_secret` ni ids de proveedor.
+
+### Matriz QA futura, no ejecutada
+
+La implementacion debe cubrir:
+
+- GET config unico y concurrencia reutilizada;
+- config 200 valida, 401, 503 y 500 invalida/incompatible;
+- request y response `no-store`;
+- Content-Type y envelope invalidos;
+- campos extra/prohibidos bloqueados;
+- script cargado una sola vez y duplicado impedido;
+- script `error`, timeout y `window.Stripe` ausente;
+- version distinta preexistente bloqueada;
+- instancia singleton bajo concurrencia;
+- reapertura del shell sin nueva instancia;
+- cambio de plan, modalidad y entidad con callbacks obsoletos ignorados;
+- QA simulado sin config/script/instancia;
+- cambio test/live bloqueado con recarga requerida;
+- auditoria de `localStorage`, `sessionStorage`, DOM, data attributes, logs y evidencia;
+- CSP sin wildcard global y Debug OFF/ON;
+- Express Checkout, nunca Payment Request Button;
+- cero pagos, cero `client_secret`, cero Elements y cero llamadas Stripe API.
+
+Estas pruebas son especificacion de la siguiente microfase; no se ejecutan aqui.
+
+### Fuera de alcance
+
+No se implementa:
+
+- codigo frontend, HTML o CSS;
+- request al endpoint publico;
+- request o carga de Stripe.js;
+- `stripe.elements()`;
+- Payment Element o Express Checkout Element;
+- retrieval o persistencia de `client_secret`;
+- metodo de pago o confirmacion;
+- route, checkout, PaymentIntent, webhook o activacion;
+- cambios CSP o configuracion;
+- npm, bundle, Composer, SQL, assets o fixtures.
+
+### Evidencia
+
+Evidencia local sanitizada:
+
+`/tmp/mxmed-stripejs-loader-public-config-readiness-01/`
+
+Contiene baseline, inventario, decisiones, contratos, estados, concurrencia, lifecycle, CSP, Express Checkout, QA futura, auditorias y estado git. No contiene keys completas, secretos, `client_secret`, entorno, bodies HTTP, cookies, Authorization ni provider IDs.
+
+### Siguiente microfase
+
+`FE/Suscripciones-StripeJs-Loader-AndPublicConfig-Implementation-01`
+
+Alcance unico autorizado:
+
+- cliente singleton del endpoint publico;
+- loader singleton de Stripe.js Dahlia;
+- estados definidos;
+- instancia Stripe singleton.
+
+No montara Payment Element, no solicitara `client_secret` y no ejecutara pagos. Despues se solicitara el boceto mas reciente del diseñador antes de la microfase visual de Pago seguro.
+
+### Estado
+
+Resultado documental:
+
+`PASS`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
