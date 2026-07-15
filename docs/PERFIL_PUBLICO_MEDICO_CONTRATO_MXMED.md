@@ -45409,6 +45409,215 @@ Implementacion runtime ejecutada:
 
 ---
 
+## PP-Decisiones 241 - Implementacion de montaje seguro de Stripe Payment Element
+
+### Microfase
+
+`FE-UX/Suscripciones-StripePaymentElement-SecureMount-Implementation-01`
+
+### Resultado
+
+Se implemento una sola capa frontend para montar y destruir Stripe Payment Element sobre el skeleton cerrado en PP239 y bajo el contrato de PP240. La capa reutiliza el runtime singleton de PP236, recupera el `client_secret` de forma efimera, crea un unico objeto `Elements`, crea y monta un unico Payment Element, procesa cuatro eventos con datos reducidos, mantiene el CTA final fisicamente deshabilitado y entrega exclusivamente un snapshot sanitizado.
+
+Resultado:
+
+`PASS`
+
+La implementacion no confirma pagos. Express Checkout Element permanece dormido y no se ejecutaron pagos, endpoints reales, Stripe API/CLI, webhooks, activacion, SQL, fixtures ni entidades QA.
+
+### Fuentes tecnicas oficiales
+
+Contrato verificado el `2026-07-14` contra documentacion oficial de Stripe:
+
+- [Element](https://docs.stripe.com/js/element), para `mount`, `destroy`, `loaderstart`, `ready`, `change` y `loaderror`;
+- [crear un objeto Elements](https://docs.stripe.com/js/elements_object/create), para `clientSecret`, `appearance` y `loader`;
+- [crear Payment Element](https://docs.stripe.com/js/elements_object/create_payment_element), para el contrato de `layout`;
+- [Appearance API](https://docs.stripe.com/elements/appearance-api), para tema y variables soportadas.
+
+Las compuertas locales, el lifecycle, los hooks de rerender, los mensajes, el snapshot y la politica de CTA son decisiones MXMed derivadas de PP240 y del renderer existente.
+
+### Orquestador unico e integracion
+
+`createSubscriptionStripePaymentElementMountLayer()` encapsula el estado y permite inyectar dependencias unicamente para el harness aislado. En producto existe una sola instancia y estos puntos publicos internos:
+
+- `mountSubscriptionStripePaymentElementOnce(operationContext, options)`;
+- `retrySubscriptionStripePaymentElementMount(operationContext, options)`;
+- `destroySubscriptionStripePaymentElement(reason)`;
+- `getSubscriptionStripePaymentElementSnapshot()`.
+
+La unica integracion automatica se encuentra despues de persistir y renderizar una respuesta exitosa de creacion de PaymentIntent. Exige simultaneamente:
+
+- slot `checkoutSummary`;
+- HTTP exactamente `201`;
+- UUID local exactamente en `data.payment_intent.uuid`;
+- respuesta, route, checkout, seleccion y entidad actuales coherentes;
+- Plan QA Real y operacion anual soportada por el backend vigente.
+
+No se usan fallbacks historicos. Una respuesta idempotente distinta de `201`, preview, Resumen, Plan QA Simulado o rerender no inicia el montaje. La integracion no vuelve a crear route, checkout o PaymentIntent y no agrega un click al flujo existente.
+
+### Contexto y elegibilidad fail-closed
+
+El contexto normalizado contiene solo tipo e identificador local de entidad, UUID local del PaymentIntent, estados de checkout/PaymentIntent, senales de suscripcion/activacion, importe, moneda, conteo local de eventos y una `operationContextKey` opaca en memoria. No contiene provider PaymentIntent ID, clave publica ni secreto.
+
+La elegibilidad requiere provider `stripe`, estados `created` y `requires_payment_method`, checkout `pending_payment` no expirado, ausencia de suscripcion y activacion, conteo de eventos `0`, importe positivo, moneda ISO de tres letras, entidad compatible, Plan QA Real, resumen vigente y host exacto. La ruta productiva compara ownership, route, checkout, PaymentIntent, importe, moneda, expiracion, modalidad y clave de contexto antes y despues de cada fase asincrona.
+
+El `201` recien originado en el flujo actual permite inferir localmente cero eventos solo para formar el candidato inicial. La autorizacion definitiva no depende de esa inferencia: el endpoint existente vuelve a validar el estado autoritativo antes de entregar el secreto.
+
+### Recuperacion efimera
+
+El helper privado usa exclusivamente:
+
+`POST /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-intents/{local_uuid}/client-secret`
+
+La peticion es same-origin, con credenciales de sesion, JSON vacio, `cache: no-store` y un `AbortController` por intento. Solo acepta HTTP `200`, Content-Type JSON y el envelope exacto `SUB-PI-CLIENT-SECRET-1` con `session_scope`, source esperado, autorizacion estricta y `data.client_secret` como unico dato util.
+
+El valor vive en una variable lexical de `runMount()`, pasa inmediatamente a `stripe.elements()` y se limpia despues de crear `Elements` y nuevamente en `finally`. No se agrega al estado, controller, DOM, storage, Debug, snapshot, errores o evidencia. MXMed no conserva una referencia adicional fuera del objeto administrado por Stripe.
+
+Errores `401`, `403`, `404`, expiracion, ineligibilidad, contrato invalido y fallo temporal se reducen a codigos frontend cerrados. No se conserva body, mensaje tecnico, stack, UUID o provider ID. No existe retry automatico.
+
+### Elements, Appearance y Payment Element
+
+Hay un solo sitio para cada operacion:
+
+- `stripe.elements({ clientSecret, appearance, loader: 'auto' })`;
+- `elements.create('payment', paymentElementOptions)`;
+- `paymentElement.mount(host)`.
+
+`Elements` no recibe importe, moneda, mode, lista u orden manual de metodos, wallets, datos personales, cuenta conectada, API version o betas. El singleton de PP236 conserva `locale: es` y Stripe decide los metodos elegibles del PaymentIntent.
+
+El objeto Appearance reproduce exactamente PP240: tema `stripe`, colores y tipografia MXMed, base `16px`, spacing `4px`, radio `11px`, foco, icono y placeholder aprobados. No carga fuentes remotas, reglas internas, logos ni fondos de marca.
+
+Payment Element usa exclusivamente layout `accordion`, `defaultCollapsed: false`, `radios: auto` y `spacedAccordionItems: false`. No enumera tarjeta, OXXO, SPEI, wallets o Link.
+
+### Eventos y estados DOM
+
+Cada Payment Element registra una vez `loaderstart`, `ready`, `change` y `loaderror` y retira esos handlers antes de destruir. Los callbacks de instancias obsoletas se descartan por controller, intento, contexto y host exactos.
+
+| Evento | Estado retenido | Efecto externo |
+| --- | --- | --- |
+| `loaderstart` | bandera y loading | host ocupado, placeholder visible, CTA disabled |
+| `ready` | bandera, mount ready e input incomplete | oculta placeholder, libera `aria-busy`, muestra host |
+| `change` | solo complete, empty y codigo/tipo sanitizado | incomplete, complete o error; actualiza readiness |
+| `loaderror` | codigo cerrado | error generico, CTA disabled, destroy y retry manual |
+
+El skeleton refleja `not-requested`, carga de runtime/secreto/Elements, `mounting`, `ready`, `incomplete`, `complete`, `failed`, `expired` y `destroyed`. Solo muta placeholder, live region, `aria-busy`, estado del host, readiness del CTA y accion de retry; nunca inserta campos o datos de Stripe mediante HTML propio.
+
+El placeholder neutral es hermano del nodo administrado por Stripe, por lo que el host de montaje esta vacio antes de `mount()` y MXMed no modifica sus hijos mientras el Element vive. El CSS externo fija ancho completo, altura natural y overflow vertical visible; no selecciona iframes internos ni usa altura fija.
+
+### Readiness y CTA sin confirmacion
+
+`paymentConfirmationReadiness` solo es verdadero con mount listo, input completo, flujo de montaje concluido, contexto vigente, host exacto conectado, ausencia de error y ausencia de retry. Se refleja unicamente en `data-payment-input-ready="true|false"`.
+
+El boton `[data-subp-payment-final-submit]` conserva `disabled` y `aria-disabled="true"` para todos los estados. No tiene handler Stripe, no envia formulario y no existe ninguna llamada de confirmacion en esta microfase.
+
+### Retry explicito
+
+`Reintentar formulario seguro` aparece solo despues de error recuperable de runtime, red/secreto temporal, creacion, mount o `loaderror`. La accion vuelve a validar operacion y host, destruye restos, reutiliza el runtime singleton y crea `Elements` y Payment Element nuevos con una recuperacion nueva del secreto. No reintenta automaticamente ni crea route, checkout o PaymentIntent.
+
+Una operacion expirada, no autorizada, fuera de scope, ineligible o con contrato invalido no ofrece retry sobre el mismo contexto y dirige al usuario de vuelta al resumen mediante copy comercial.
+
+### Teardown, concurrencia y host replacement
+
+`destroySubscriptionStripePaymentElement()` es idempotente. Invalida el intento, aborta el fetch cuando existe, limpia timer, retira listeners, ejecuta `destroy()` una sola vez, libera Payment Element, Elements, Promise, controller, host y contexto, limpia readiness, restaura placeholder, mantiene CTA disabled e incrementa `teardownCount` una vez por arbol activo.
+
+Dos llamadas del mismo contexto y host comparten la misma Promise. Un contexto distinto destruye primero el anterior. Cada continuacion asincrona vuelve a comprobar attempt, contexto, shell, host unico, identidad del nodo e `isConnected`. Si un render reemplaza el host, la respuesta tardia no monta en el nodo nuevo y se requiere una solicitud explicita del flujo vigente.
+
+El teardown esta conectado defensivamente a back/Resumen, cierre, eleccion o rerender de plan, cambio de modalidad, cambio de entidad, cambio de Plan QA, reset de ejecucion, reemplazo/ocultamiento del summary, cambio de seccion, salida del panel y `pagehide`. Esos hooks no llaman endpoints, no alteran preview y no destruyen el singleton Stripe.
+
+### Snapshot y Debug
+
+El snapshot inmutable usa la allowlist cerrada de PP240/esta microfase: estados, presencia/vigencia de contexto, banderas de Promise/Elements/Element/host/eventos, solicitud y no persistencia del secreto, readiness, CTA siempre deshabilitado, retry, codigo sanitizado y contador de teardown.
+
+No devuelve UUID, `operationContextKey`, secreto, clave publica, provider ID, importe, moneda, instancias, Promise, nodo DOM, evento, response, stack o mensaje raw. Tampoco se persiste en DOM o storage.
+
+Debug OFF solo muestra copy comercial. Debug ON queda limitado a estados, booleanos y codigo sanitizado del snapshot. Se retiraron del shell seguro los identificadores tecnicos que no pertenecen a esta allowlist.
+
+### Express Checkout y recursos de marcas
+
+`[data-subp-express-checkout-host]` permanece neutral, no montado y no interactivo. No se crea segundo `Elements`, Express Checkout Element, listener de wallet, lista manual de metodos, logo o asset de marca. Su disponibilidad futura seguira dependiendo de Stripe.
+
+### QA aislada
+
+Harness temporal:
+
+`/tmp/mxmed-stripe-payment-element-secure-mount-implementation-01/`
+
+JavaScriptCore cargo solo la factory entre marcadores e inyecto runtime, fetch, Stripe, Elements, Payment Element, DOM, eventos, AbortController y timers sinteticos. No uso navegador, red, endpoint, Stripe.js, entidad QA o dato de pago real.
+
+Resultado de la matriz obligatoria:
+
+- elegibilidad Q01-Q10: `10/10 PASS`;
+- concurrencia Q11-Q15: `5/5 PASS`;
+- client-secret Q16-Q25: `10/10 PASS`;
+- Elements Q26-Q36: `11/11 PASS`;
+- eventos Q37-Q44: `8/8 PASS`;
+- CTA Q45-Q50: `6/6 PASS`;
+- teardown Q51-Q62: `12/12 PASS`;
+- retry Q63-Q66: `4/4 PASS`;
+- seguridad Q67-Q75: `9/9 PASS`.
+
+Total:
+
+`75/75 PASS`
+
+El parse completo de JavaScriptCore, `git diff --check`, auditoria estructural CSS y auditorias estaticas de puntos unicos tambien pasan. Node ausente permanece como `WARN` no bloqueante porque JavaScriptCore ejecuto parse y harness.
+
+### No repeticion
+
+```json
+{
+  "fixture_calls": 0,
+  "public_config_real_calls": 0,
+  "stripejs_network_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_real_retrieve": 0,
+  "stripe_api_calls": 0,
+  "stripe_cli_calls": 0,
+  "confirm_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "sql_calls": 0,
+  "express_checkout_created": 0,
+  "third_party_brand_assets_used": 0
+}
+```
+
+### Archivos y evidencia
+
+Archivos versionados modificados:
+
+- `assets/js/app.js`;
+- `assets/css/style.css`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+Raiz de evidencia sanitizada:
+
+`/tmp/mxmed-stripe-payment-element-secure-mount-implementation-01/`
+
+No se modificaron backend, endpoints, HTML estatico, CSP, dependencias, imagenes, SVG, SQL, webhook, activacion o assets de marca. PP233 a PP240 conservan contenido byte a byte respecto de la base.
+
+### Fuera de alcance y siguiente microfase
+
+Quedan fuera confirmacion del pago, habilitacion fisica del CTA, manejo del resultado de confirmacion, return URL, Express Checkout Element, webhook y activacion.
+
+Siguiente microfase:
+
+`FE-UX/Suscripciones-StripePaymentConfirmation-Readiness-01`
+
+### Estado
+
+Montaje seguro de Payment Element:
+
+`PASS`
+
+Confirmaciones ejecutadas:
+
+`0`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre

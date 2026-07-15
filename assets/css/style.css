@@ -20609,6 +20609,34 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-stripe-element-host--payment .subp-stripe-placeholder-lines span:nth-child(2){ width:82% }
 .subp-stripe-element-host--payment .subp-stripe-placeholder-lines span:nth-child(3){ width:66% }
 .subp-stripe-element-host--payment .subp-stripe-placeholder-lines span:nth-child(4){ width:48% }
+.subp-stripe-payment-element-frame{ display:grid; gap:12px; min-width:0; width:100% }
+.subp-stripe-payment-element-placeholder[hidden]{ display:none }
+.subp-stripe-payment-element-mount-host{
+  display:block;
+  min-width:0;
+  width:100%;
+  padding:0;
+  border:0;
+  overflow:visible;
+  background:transparent;
+}
+.subp-stripe-payment-element-mount-host[aria-busy="true"]{ opacity:.86 }
+.subp-stripe-payment-element-mount-host[data-state="ready"],
+.subp-stripe-payment-element-mount-host[data-state="incomplete"],
+.subp-stripe-payment-element-mount-host[data-state="complete"]{ opacity:1 }
+.subp-stripe-payment-mount-status{
+  margin:10px 0 0;
+  color:#405773;
+  font-size:.84rem;
+  font-weight:650;
+  line-height:1.38;
+  text-align:center;
+}
+.subp-stripe-payment-mount-status:empty{ display:none }
+.subp-stripe-payment-mount-status[data-state="failed"],
+.subp-stripe-payment-mount-status[data-state="expired"]{ color:#a82d27 }
+.subp-stripe-payment-retry{ display:flex; margin:10px auto 0; justify-content:center }
+.subp-stripe-payment-retry[hidden]{ display:none }
 .subp-secure-payment-methods-status{ margin:0; color:#4f6479; font-size:.8rem; font-weight:650; line-height:1.32 }
 .subp-secure-payment-cadence-note{
   display:flex;

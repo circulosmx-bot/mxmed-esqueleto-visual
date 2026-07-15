@@ -60382,6 +60382,876 @@ function mxResetLogoPreview(){
     }
   }
 
+  // SUBSCRIPTION_STRIPE_PAYMENT_ELEMENT_MOUNT_START
+  function createSubscriptionStripePaymentElementMountLayer(options = {}){
+    const PAYMENT_HOST_SELECTOR = '[data-subp-stripe-payment-element-host]';
+    const SHELL_SELECTOR = '[data-subp-secure-payment-skeleton]';
+    const RECOVERABLE_ERROR_CODES = new Set([
+      'SUBP_PE_HOST_UNAVAILABLE',
+      'SUBP_PE_RUNTIME_UNAVAILABLE',
+      'stripe_client_secret_unavailable',
+      'SUBP_PE_ELEMENTS_CREATE_FAILED',
+      'SUBP_PE_ELEMENT_CREATE_FAILED',
+      'SUBP_PE_MOUNT_FAILED',
+      'SUBP_PE_LOAD_ERROR'
+    ]);
+    const EXPIRATION_ENDPOINT_CODES = new Set([
+      'checkout_intent_expired',
+      'payment_route_expired',
+      'payment_intent_expired'
+    ]);
+    const INELIGIBLE_ENDPOINT_CODES = new Set([
+      'checkout_intent_not_pending_payment',
+      'payment_intent_not_eligible',
+      'payment_intent_not_created',
+      'payment_intent_provider_status_not_eligible',
+      'payment_intent_provider_mismatch'
+    ]);
+    const MOUNT_COPY = Object.freeze({
+      mount_not_requested: '',
+      mount_loading_runtime: 'Cargando el formulario seguro.',
+      mount_retrieving_client_secret: 'Autorizando el formulario seguro.',
+      mount_creating_elements: 'Preparando el formulario seguro.',
+      mount_mounting: 'Mostrando el formulario seguro.',
+      mount_ready: 'Formulario seguro disponible.',
+      mount_failed: 'No pudimos habilitar el formulario seguro.',
+      mount_expired: 'La operación venció. Vuelve al resumen para preparar el pago nuevamente.',
+      mount_destroying: 'Actualizando el formulario seguro.',
+      mount_destroyed: ''
+    });
+    const VISUAL_STATE = Object.freeze({
+      mount_not_requested: 'not-requested',
+      mount_loading_runtime: 'loading-runtime',
+      mount_retrieving_client_secret: 'retrieving-client-secret',
+      mount_creating_elements: 'creating-elements',
+      mount_mounting: 'mounting',
+      mount_ready: 'ready',
+      mount_failed: 'failed',
+      mount_expired: 'expired',
+      mount_destroying: 'destroyed',
+      mount_destroyed: 'destroyed'
+    });
+    const SUBSCRIPTION_STRIPE_PAYMENT_APPEARANCE = Object.freeze({
+      theme: 'stripe',
+      variables: Object.freeze({
+        colorPrimary: '#0758d8',
+        colorBackground: '#ffffff',
+        colorText: '#081b3f',
+        colorDanger: '#a82d27',
+        fontFamily: 'Carlito, IBM Plex Sans, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif',
+        fontSizeBase: '16px',
+        spacingUnit: '4px',
+        borderRadius: '11px',
+        focusOutline: '3px solid rgba(7, 88, 216, 0.34)',
+        focusBoxShadow: '0 0 0 3px rgba(7, 88, 216, 0.18)',
+        iconColor: '#087f97',
+        colorTextPlaceholder: '#607087'
+      })
+    });
+    const PAYMENT_ELEMENT_OPTIONS = Object.freeze({
+      layout: Object.freeze({
+        type: 'accordion',
+        defaultCollapsed: false,
+        radios: 'auto',
+        spacedAccordionItems: false
+      })
+    });
+
+    const rootResolver = typeof options.rootResolver === 'function'
+      ? options.rootResolver
+      : ()=> null;
+    const ensureStripeReady = typeof options.ensureStripeReady === 'function'
+      ? options.ensureStripeReady
+      : ()=> Promise.reject(safeMountError('SUBP_PE_RUNTIME_UNAVAILABLE', true));
+    const retryStripeRuntime = typeof options.retryStripeRuntime === 'function'
+      ? options.retryStripeRuntime
+      : ()=> false;
+    const fetchImpl = typeof options.fetchImpl === 'function' ? options.fetchImpl : null;
+    const isOperationContextCurrent = typeof options.isOperationContextCurrent === 'function'
+      ? options.isOperationContextCurrent
+      : ()=> true;
+    const isSimulationActive = typeof options.isSimulationActive === 'function'
+      ? options.isSimulationActive
+      : ()=> false;
+    const getComputedStyleImpl = typeof options.getComputedStyleImpl === 'function'
+      ? options.getComputedStyleImpl
+      : null;
+    const AbortControllerImpl = typeof options.AbortControllerImpl === 'function'
+      ? options.AbortControllerImpl
+      : null;
+    const setTimeoutImpl = typeof options.setTimeoutImpl === 'function'
+      ? options.setTimeoutImpl
+      : null;
+    const clearTimeoutImpl = typeof options.clearTimeoutImpl === 'function'
+      ? options.clearTimeoutImpl
+      : null;
+
+    const state = {
+      activeOperationContext: null,
+      activeMountPromise: null,
+      activeController: null,
+      activeElements: null,
+      activePaymentElement: null,
+      registeredListeners: [],
+      mountState: 'mount_not_requested',
+      inputState: 'payment_input_not_requested',
+      lastErrorCode: '',
+      teardownCount: 0,
+      retryAvailable: false
+    };
+    let mountAttempt = 0;
+
+    function safeMountError(code, retryable = false){
+      const normalized = /^[A-Za-z0-9_]{3,96}$/.test(String(code || ''))
+        ? String(code)
+        : 'SUBP_PE_UNAVAILABLE';
+      const error = new Error(normalized);
+      error.name = 'SubscriptionStripePaymentElementMountError';
+      error.code = normalized;
+      error.retryable = retryable === true;
+      return error;
+    }
+
+    function isSafeMountError(error){
+      return error?.name === 'SubscriptionStripePaymentElementMountError'
+        && /^[A-Za-z0-9_]{3,96}$/.test(String(error?.code || ''));
+    }
+
+    function cleanMountValue(value){
+      return String(value ?? '').trim();
+    }
+
+    function safeEntityId(value){
+      const normalized = cleanMountValue(value);
+      return normalized && normalized.length <= 64 && /^[A-Za-z0-9._:-]+$/.test(normalized)
+        ? normalized
+        : '';
+    }
+
+    function safeLocalUuid(value){
+      const normalized = cleanMountValue(value).toLowerCase();
+      return /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(normalized)
+        ? normalized
+        : '';
+    }
+
+    function normalizeSubscriptionStripePaymentOperationContext(input){
+      const source = input && typeof input === 'object' ? input : {};
+      const amountCents = Number(source.amountCents);
+      const paymentEventCount = Number(source.paymentEventCount);
+      return Object.freeze({
+        entityType: cleanMountValue(source.entityType).toLowerCase(),
+        entityId: safeEntityId(source.entityId),
+        localPaymentIntentUuid: safeLocalUuid(source.localPaymentIntentUuid),
+        checkoutStatus: cleanMountValue(source.checkoutStatus).toLowerCase(),
+        checkoutExpired: source.checkoutExpired !== false,
+        subscriptionIdPresent: source.subscriptionIdPresent !== false,
+        activatedAtPresent: source.activatedAtPresent !== false,
+        provider: cleanMountValue(source.provider).toLowerCase(),
+        normalizedStatus: cleanMountValue(source.normalizedStatus).toLowerCase(),
+        providerStatus: cleanMountValue(source.providerStatus).toLowerCase(),
+        amountCents: Number.isSafeInteger(amountCents) ? amountCents : 0,
+        currency: cleanMountValue(source.currency).toUpperCase(),
+        paymentEventCount: Number.isSafeInteger(paymentEventCount) ? paymentEventCount : -1,
+        operationContextKey: cleanMountValue(source.operationContextKey)
+      });
+    }
+
+    function isSubscriptionStripePaymentElementMountEligible(context){
+      if(!context || typeof context !== 'object') return false;
+      if(isSimulationActive()) return false;
+      if(context.entityType !== 'doctor' || !context.entityId) return false;
+      if(!context.localPaymentIntentUuid || !context.operationContextKey || context.operationContextKey.length > 1024) return false;
+      if(context.provider !== 'stripe') return false;
+      if(context.normalizedStatus !== 'created') return false;
+      if(context.providerStatus !== 'requires_payment_method') return false;
+      if(context.checkoutStatus !== 'pending_payment') return false;
+      if(context.checkoutExpired) return false;
+      if(context.subscriptionIdPresent || context.activatedAtPresent) return false;
+      if(context.paymentEventCount !== 0) return false;
+      if(!Number.isSafeInteger(context.amountCents) || context.amountCents <= 0) return false;
+      if(!/^[A-Z]{3}$/.test(context.currency)) return false;
+      try{
+        return isOperationContextCurrent(context) === true;
+      }catch(_){
+        return false;
+      }
+    }
+
+    function currentShell(){
+      const root = rootResolver();
+      if(!root || typeof root.querySelector !== 'function') return null;
+      return root.querySelector(SHELL_SELECTOR);
+    }
+
+    function resolveEligibleHost(context, allowActive = false){
+      const shell = currentShell();
+      if(!shell || typeof shell.querySelectorAll !== 'function'){
+        throw safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+      }
+      const hosts = Array.from(shell.querySelectorAll(PAYMENT_HOST_SELECTOR) || []);
+      if(hosts.length !== 1) throw safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+      const host = hosts[0];
+      if(!host || host.isConnected !== true || host.hidden === true){
+        throw safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+      }
+      let width = 0;
+      try{ width = Number(host.getBoundingClientRect?.().width || 0); }catch(_){ width = 0; }
+      if(!(width > 0)) throw safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+      if(getComputedStyleImpl){
+        try{
+          const style = getComputedStyleImpl(host);
+          if(style?.display === 'none' || style?.visibility === 'hidden'){
+            throw safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+          }
+        }catch(error){
+          if(isSafeMountError(error)) throw error;
+          throw safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+        }
+      }
+      const belongsToActive = allowActive
+        && state.activeController?.host === host
+        && state.activeOperationContext?.operationContextKey === context.operationContextKey;
+      let containsStripeInstance = false;
+      try{
+        containsStripeInstance = host.classList?.contains?.('StripeElement') === true
+          || !!host.querySelector?.('iframe');
+      }catch(_){ containsStripeInstance = true; }
+      if(containsStripeInstance && !belongsToActive){
+        throw safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+      }
+      return host;
+    }
+
+    function sameActiveContext(context){
+      return !!state.activeOperationContext
+        && state.activeOperationContext.operationContextKey === context.operationContextKey;
+    }
+
+    function controllerHostIsCurrent(controller){
+      if(!controller || controller.host?.isConnected !== true) return false;
+      const hosts = Array.from(currentShell()?.querySelectorAll?.(PAYMENT_HOST_SELECTOR) || []);
+      return hosts.length === 1 && hosts[0] === controller.host;
+    }
+
+    function attemptIsCurrent(controller){
+      if(!controller || controller.destroyed === true) return false;
+      if(state.activeController !== controller) return false;
+      if(state.activeOperationContext !== controller.context) return false;
+      if(controller.attemptId !== mountAttempt) return false;
+      if(!controllerHostIsCurrent(controller)) return false;
+      try{
+        if(isOperationContextCurrent(controller.context) !== true) return false;
+      }catch(_){ return false; }
+      return true;
+    }
+
+    function safeChangeErrorCode(event){
+      const candidate = cleanMountValue(event?.error?.code || event?.error?.type).toLowerCase();
+      return /^[a-z0-9_]{3,96}$/.test(candidate) ? candidate : 'stripe_payment_input_invalid';
+    }
+
+    function setText(target, value){
+      if(target) target.textContent = String(value || '');
+    }
+
+    function updatePaymentElementUi(){
+      const shell = currentShell();
+      if(!shell) return;
+      const host = shell.querySelector?.(PAYMENT_HOST_SELECTOR) || null;
+      const placeholder = shell.querySelector?.('[data-subp-stripe-payment-element-placeholder]') || null;
+      const status = shell.querySelector?.('[data-subp-stripe-payment-mount-status]') || null;
+      const retry = shell.querySelector?.('[data-subp-stripe-payment-element-retry]') || null;
+      const methodsStatus = shell.querySelector?.('[data-subp-payment-methods-status]') || null;
+      const cta = shell.querySelector?.('[data-subp-payment-final-submit]') || null;
+      const controller = state.activeController;
+      const hostMatches = !!host && (!controller?.host || controller.host === host);
+      const busy = ['mount_loading_runtime', 'mount_retrieving_client_secret', 'mount_creating_elements', 'mount_mounting'].includes(state.mountState);
+      const ready = state.mountState === 'mount_ready';
+      const inputComplete = state.inputState === 'payment_input_complete';
+      const visualState = ready
+        ? (state.inputState === 'payment_input_error' ? 'failed' : (inputComplete ? 'complete' : 'incomplete'))
+        : (VISUAL_STATE[state.mountState] || 'failed');
+      const paymentConfirmationReadiness = ready
+        && inputComplete
+        && !!controller
+        && controller.mountFlowSettled === true
+        && hostMatches
+        && host?.isConnected === true
+        && state.lastErrorCode === ''
+        && state.retryAvailable !== true
+        && attemptIsCurrent(controller);
+
+      if(host && hostMatches){
+        host.dataset.state = inputComplete && ready ? 'complete' : visualState;
+        host.dataset.interactive = controller?.paymentElementMounted === true ? 'true' : 'false';
+        host.setAttribute?.('aria-busy', busy ? 'true' : 'false');
+      }
+      if(placeholder){
+        placeholder.hidden = ready;
+        placeholder.dataset.state = visualState;
+      }
+      if(status){
+        let copy = MOUNT_COPY[state.mountState] || '';
+        if(state.mountState === 'mount_ready' && state.inputState === 'payment_input_incomplete'){
+          copy = 'Completa los datos solicitados en el formulario seguro.';
+        }else if(state.mountState === 'mount_ready' && state.inputState === 'payment_input_complete'){
+          copy = 'Los datos de pago están completos. La confirmación se habilitará en una fase posterior.';
+        }else if(state.mountState === 'mount_ready' && state.inputState === 'payment_input_error'){
+          copy = 'Revisa los datos indicados en el formulario seguro.';
+        }
+        setText(status, copy);
+        status.dataset.state = visualState;
+      }
+      if(methodsStatus && ready){
+        setText(methodsStatus, 'El formulario seguro muestra únicamente las opciones disponibles para esta operación.');
+      }else if(methodsStatus){
+        setText(methodsStatus, 'No hay métodos mostrados hasta que el formulario seguro esté disponible.');
+      }
+      if(retry){
+        retry.hidden = state.retryAvailable !== true;
+        retry.disabled = state.retryAvailable !== true;
+      }
+      if(cta){
+        cta.disabled = true;
+        cta.setAttribute?.('aria-disabled', 'true');
+        cta.dataset.paymentInputReady = paymentConfirmationReadiness ? 'true' : 'false';
+      }
+    }
+
+    function getSubscriptionStripePaymentElementSnapshot(){
+      const controller = state.activeController;
+      const activeContext = state.activeOperationContext;
+      let contextCurrent = false;
+      if(activeContext){
+        try{ contextCurrent = isOperationContextCurrent(activeContext) === true; }catch(_){ contextCurrent = false; }
+      }
+      const hostConnected = controller?.host?.isConnected === true;
+      const readiness = state.mountState === 'mount_ready'
+        && state.inputState === 'payment_input_complete'
+        && controller?.mountFlowSettled === true
+        && attemptIsCurrent(controller)
+        && contextCurrent
+        && hostConnected
+        && !state.lastErrorCode
+        && state.retryAvailable !== true;
+      return Object.freeze({
+        mount_state: state.mountState,
+        input_state: state.inputState,
+        operation_context_present: !!activeContext,
+        operation_context_current: contextCurrent,
+        mount_promise_created: controller?.mountPromiseCreated === true,
+        elements_instance_created: controller?.elementsInstanceCreated === true,
+        payment_element_created: controller?.paymentElementCreated === true,
+        payment_element_mounted: controller?.paymentElementMounted === true,
+        host_connected: hostConnected,
+        loader_started: controller?.loaderStarted === true,
+        ready_received: controller?.readyReceived === true,
+        change_received: controller?.changeReceived === true,
+        input_complete: state.inputState === 'payment_input_complete',
+        loaderror_received: controller?.loaderrorReceived === true,
+        client_secret_requested: controller?.clientSecretRequested === true,
+        client_secret_persisted: false,
+        payment_confirmation_readiness: readiness,
+        cta_enabled: false,
+        retry_available: state.retryAvailable === true,
+        last_error_code: state.lastErrorCode || null,
+        teardown_count: state.teardownCount
+      });
+    }
+
+    function buildSubscriptionStripePaymentElementAppearance(){
+      return SUBSCRIPTION_STRIPE_PAYMENT_APPEARANCE;
+    }
+
+    function buildSubscriptionStripePaymentElementOptions(){
+      return PAYMENT_ELEMENT_OPTIONS;
+    }
+
+    function clientSecretEndpoint(context){
+      return `/api/subscriptions/index.php/entities/${encodeURIComponent(context.entityType)}/${encodeURIComponent(context.entityId)}/payment-intents/${encodeURIComponent(context.localPaymentIntentUuid)}/client-secret`;
+    }
+
+    function responseContentType(response){
+      try{ return cleanMountValue(response?.headers?.get?.('Content-Type')).toLowerCase(); }catch(_){ return ''; }
+    }
+
+    function endpointErrorFor(status, controlledCode){
+      if(status === 401) return safeMountError('stripe_client_secret_unauthorized', false);
+      if(status === 403) return safeMountError('stripe_client_secret_scope_forbidden', false);
+      if(status === 404) return safeMountError('stripe_client_secret_not_found', false);
+      if(EXPIRATION_ENDPOINT_CODES.has(controlledCode)){
+        return safeMountError('stripe_payment_operation_expired', false);
+      }
+      if(INELIGIBLE_ENDPOINT_CODES.has(controlledCode) || status === 409 || status === 422){
+        return safeMountError('stripe_payment_intent_not_eligible', false);
+      }
+      return safeMountError('stripe_client_secret_unavailable', true);
+    }
+
+    async function retrieveSubscriptionStripeClientSecretForMount(context, requestFetch, signal){
+      if(typeof requestFetch !== 'function') throw safeMountError('stripe_client_secret_unavailable', true);
+      let payload = null;
+      let response = null;
+      try{
+        response = await requestFetch(clientSecretEndpoint(context), {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin',
+          cache: 'no-store',
+          body: JSON.stringify({}),
+          signal
+        });
+      }catch(_){
+        throw safeMountError('stripe_client_secret_unavailable', true);
+      }
+
+      const status = Number(response?.status || 0);
+      const contentType = responseContentType(response);
+      if(status !== 200 || response?.ok !== true){
+        if(contentType.indexOf('application/json') !== -1){
+          try{ payload = await response.json(); }catch(_){ payload = null; }
+        }
+        const controlledCode = /^[a-z0-9_]{3,96}$/.test(cleanMountValue(payload?.error?.code))
+          ? cleanMountValue(payload.error.code)
+          : '';
+        payload = null;
+        throw endpointErrorFor(status, controlledCode);
+      }
+      if(contentType.indexOf('application/json') === -1){
+        throw safeMountError('stripe_client_secret_contract_invalid', false);
+      }
+      try{ payload = await response.json(); }catch(_){ payload = null; }
+
+      const validEnvelope = !!payload
+        && payload.ok === true
+        && payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+        && Object.keys(payload.data).length === 1
+        && payload.meta && typeof payload.meta === 'object' && !Array.isArray(payload.meta)
+        && payload.meta.contract === 'subscription_payment_intent_client_secret'
+        && payload.meta.version === 'SUB-PI-CLIENT-SECRET-1'
+        && payload.meta.auth_mode === 'session_scope'
+        && payload.meta.source === 'subscriptions_payment_intent_client_secret'
+        && payload.meta.strict_auth_required === true;
+      if(!validEnvelope){
+        payload = null;
+        throw safeMountError('stripe_client_secret_contract_invalid', false);
+      }
+      const clientSecret = payload.data.client_secret;
+      const validSecret = typeof clientSecret === 'string'
+        && clientSecret === clientSecret.trim()
+        && clientSecret.length >= 16
+        && clientSecret.length <= 1024
+        && /^pi_[A-Za-z0-9]+_secret_[A-Za-z0-9]+$/.test(clientSecret);
+      payload = null;
+      if(!validSecret) throw safeMountError('stripe_client_secret_contract_invalid', false);
+      return clientSecret;
+    }
+
+    function removeRegisteredListeners(paymentElement){
+      state.registeredListeners.forEach((entry)=>{
+        try{ paymentElement?.off?.(entry.eventName, entry.handler); }catch(_){}
+      });
+      state.registeredListeners = [];
+    }
+
+    function destroySubscriptionStripePaymentElement(reason = 'destroyed', internalOptions = {}){
+      const normalizedReason = cleanMountValue(
+        reason && typeof reason === 'object' ? reason.reason : reason
+      ) || 'destroyed';
+      const controller = state.activeController;
+      const hasActiveResources = !!(
+        state.activeOperationContext
+        || state.activeMountPromise
+        || state.activeElements
+        || state.activePaymentElement
+        || (controller && controller.destroyed !== true)
+      );
+      if(!hasActiveResources){
+        updatePaymentElementUi();
+        return getSubscriptionStripePaymentElementSnapshot();
+      }
+
+      mountAttempt += 1;
+      state.mountState = 'mount_destroying';
+      state.inputState = 'payment_input_not_requested';
+      state.retryAvailable = false;
+      updatePaymentElementUi();
+
+      if(controller){
+        controller.destroyed = true;
+        try{ controller.abortController?.abort?.(); }catch(_){}
+        if(controller.expiryTimerId !== null && typeof clearTimeoutImpl === 'function'){
+          try{ clearTimeoutImpl(controller.expiryTimerId); }catch(_){}
+        }
+        controller.expiryTimerId = null;
+      }
+      removeRegisteredListeners(state.activePaymentElement);
+      if(state.activePaymentElement && controller?.paymentElementDestroyed !== true){
+        try{ state.activePaymentElement.destroy?.(); }catch(_){}
+        if(controller) controller.paymentElementDestroyed = true;
+      }
+      const previousHost = controller?.host || null;
+      if(previousHost){
+        try{
+          previousHost.replaceChildren?.();
+          previousHost.dataset.interactive = 'false';
+          previousHost.dataset.state = 'destroyed';
+          previousHost.setAttribute?.('aria-busy', 'false');
+        }catch(_){}
+      }
+      if(controller){
+        controller.host = null;
+        controller.context = null;
+        controller.abortController = null;
+      }
+      state.activePaymentElement = null;
+      state.activeElements = null;
+      state.activeMountPromise = null;
+      state.activeOperationContext = null;
+      state.teardownCount += 1;
+
+      if(internalOptions.preserveFailure === true){
+        state.mountState = internalOptions.expired === true ? 'mount_expired' : 'mount_failed';
+        state.inputState = 'payment_input_error';
+        state.lastErrorCode = cleanMountValue(internalOptions.errorCode) || state.lastErrorCode || 'SUBP_PE_UNAVAILABLE';
+        state.retryAvailable = internalOptions.retryAvailable === true;
+      }else{
+        state.mountState = 'mount_destroyed';
+        state.lastErrorCode = '';
+        state.retryAvailable = false;
+      }
+      if(controller) controller.lastDestroyReason = /^[a-z0-9_]{3,64}$/i.test(normalizedReason) ? normalizedReason : 'destroyed';
+      state.activeController = null;
+      updatePaymentElementUi();
+      return getSubscriptionStripePaymentElementSnapshot();
+    }
+
+    function failActiveMount(error, controller){
+      if(!attemptIsCurrent(controller)) return;
+      const safeError = isSafeMountError(error)
+        ? error
+        : safeMountError('SUBP_PE_UNAVAILABLE', true);
+      state.lastErrorCode = safeError.code;
+      state.retryAvailable = safeError.retryable === true || RECOVERABLE_ERROR_CODES.has(safeError.code);
+      destroySubscriptionStripePaymentElement('mount_failed', {
+        preserveFailure: true,
+        retryAvailable: state.retryAvailable,
+        expired: safeError.code === 'stripe_payment_operation_expired',
+        errorCode: safeError.code
+      });
+    }
+
+    function registerPaymentElementListeners(paymentElement, controller){
+      const add = (eventName, handler)=>{
+        paymentElement.on(eventName, handler);
+        state.registeredListeners.push({ eventName, handler });
+      };
+      add('loaderstart', ()=>{
+        if(!attemptIsCurrent(controller)) return;
+        controller.loaderStarted = true;
+        state.mountState = 'mount_mounting';
+        state.inputState = 'payment_input_loading';
+        state.lastErrorCode = '';
+        state.retryAvailable = false;
+        updatePaymentElementUi();
+      });
+      add('ready', ()=>{
+        if(!attemptIsCurrent(controller)) return;
+        controller.readyReceived = true;
+        state.mountState = 'mount_ready';
+        state.inputState = 'payment_input_incomplete';
+        state.lastErrorCode = '';
+        state.retryAvailable = false;
+        updatePaymentElementUi();
+      });
+      add('change', (event)=>{
+        if(!attemptIsCurrent(controller)) return;
+        controller.changeReceived = true;
+        const hasError = !!event?.error;
+        const complete = event?.complete === true && !hasError;
+        controller.lastChangeComplete = complete;
+        controller.lastChangeEmpty = event?.empty === true;
+        state.inputState = hasError
+          ? 'payment_input_error'
+          : complete
+            ? 'payment_input_complete'
+            : 'payment_input_incomplete';
+        state.lastErrorCode = hasError ? safeChangeErrorCode(event) : '';
+        state.retryAvailable = false;
+        updatePaymentElementUi();
+      });
+      add('loaderror', ()=>{
+        if(!attemptIsCurrent(controller)) return;
+        controller.loaderrorReceived = true;
+        failActiveMount(safeMountError('SUBP_PE_LOAD_ERROR', true), controller);
+      });
+    }
+
+    function assertCurrentMount(controller){
+      if(!attemptIsCurrent(controller)) throw safeMountError('SUBP_PE_CONTEXT_STALE', false);
+      const hosts = Array.from(currentShell()?.querySelectorAll?.(PAYMENT_HOST_SELECTOR) || []);
+      if(hosts.length !== 1 || hosts[0] !== controller.host){
+        throw safeMountError('SUBP_PE_CONTEXT_STALE', false);
+      }
+    }
+
+    async function runMount(controller, mountOptions){
+      let clientSecret = '';
+      try{
+        state.mountState = 'mount_loading_runtime';
+        state.inputState = 'payment_input_loading';
+        updatePaymentElementUi();
+        let stripe = null;
+        try{ stripe = await ensureStripeReady(); }catch(_){ throw safeMountError('SUBP_PE_RUNTIME_UNAVAILABLE', true); }
+        assertCurrentMount(controller);
+        if(!stripe || typeof stripe.elements !== 'function'){
+          throw safeMountError('SUBP_PE_RUNTIME_UNAVAILABLE', true);
+        }
+
+        state.mountState = 'mount_retrieving_client_secret';
+        updatePaymentElementUi();
+        controller.clientSecretRequested = true;
+        clientSecret = await retrieveSubscriptionStripeClientSecretForMount(
+          controller.context,
+          fetchImpl,
+          controller.abortController?.signal
+        );
+        assertCurrentMount(controller);
+
+        state.mountState = 'mount_creating_elements';
+        updatePaymentElementUi();
+        try{
+          state.activeElements = stripe.elements({
+            clientSecret,
+            appearance: buildSubscriptionStripePaymentElementAppearance(),
+            loader: 'auto'
+          });
+        }catch(_){
+          throw safeMountError('SUBP_PE_ELEMENTS_CREATE_FAILED', true);
+        }finally{
+          clientSecret = '';
+        }
+        controller.elementsInstanceCreated = !!state.activeElements;
+        if(!state.activeElements || typeof state.activeElements.create !== 'function'){
+          throw safeMountError('SUBP_PE_ELEMENTS_CREATE_FAILED', true);
+        }
+        assertCurrentMount(controller);
+
+        try{
+          state.activePaymentElement = state.activeElements.create(
+            'payment',
+            buildSubscriptionStripePaymentElementOptions()
+          );
+        }catch(_){
+          throw safeMountError('SUBP_PE_ELEMENT_CREATE_FAILED', true);
+        }
+        controller.paymentElementCreated = !!state.activePaymentElement;
+        if(!state.activePaymentElement
+          || typeof state.activePaymentElement.mount !== 'function'
+          || typeof state.activePaymentElement.on !== 'function'){
+          throw safeMountError('SUBP_PE_ELEMENT_CREATE_FAILED', true);
+        }
+        try{ registerPaymentElementListeners(state.activePaymentElement, controller); }catch(_){
+          throw safeMountError('SUBP_PE_ELEMENT_CREATE_FAILED', true);
+        }
+        assertCurrentMount(controller);
+
+        state.mountState = 'mount_mounting';
+        state.inputState = 'payment_input_loading';
+        controller.host.replaceChildren?.();
+        controller.host.dataset.interactive = 'true';
+        controller.host.dataset.state = 'mounting';
+        controller.host.setAttribute?.('aria-busy', 'true');
+        updatePaymentElementUi();
+        try{ state.activePaymentElement.mount(controller.host); }catch(_){
+          throw safeMountError('SUBP_PE_MOUNT_FAILED', true);
+        }
+        controller.paymentElementMounted = true;
+        assertCurrentMount(controller);
+        controller.mountFlowSettled = true;
+        updatePaymentElementUi();
+        return getSubscriptionStripePaymentElementSnapshot();
+      }catch(error){
+        clientSecret = '';
+        let safeError = isSafeMountError(error) ? error : safeMountError('SUBP_PE_UNAVAILABLE', true);
+        if(attemptIsCurrent(controller)){
+          failActiveMount(safeError, controller);
+        }else if(state.activeController === controller && controller.destroyed !== true){
+          if(!controllerHostIsCurrent(controller)){
+            safeError = safeMountError('SUBP_PE_HOST_UNAVAILABLE', true);
+          }else{
+            safeError = safeMountError('SUBP_PE_CONTEXT_STALE', false);
+          }
+          destroySubscriptionStripePaymentElement('stale_mount', {
+            preserveFailure: true,
+            retryAvailable: safeError.retryable === true,
+            errorCode: safeError.code
+          });
+        }
+        throw safeError;
+      }finally{
+        clientSecret = '';
+      }
+    }
+
+    function mountSubscriptionStripePaymentElementOnce(operationContext, mountOptions = {}){
+      const context = normalizeSubscriptionStripePaymentOperationContext(operationContext);
+      if(!isSubscriptionStripePaymentElementMountEligible(context)){
+        const code = context.checkoutExpired ? 'stripe_payment_operation_expired' : 'SUBP_PE_INELIGIBLE';
+        if(state.activeOperationContext || state.activeMountPromise || state.activeElements || state.activePaymentElement){
+          destroySubscriptionStripePaymentElement(context.checkoutExpired ? 'operation_expired' : 'operation_ineligible');
+        }
+        state.mountState = context.checkoutExpired ? 'mount_expired' : 'mount_failed';
+        state.inputState = 'payment_input_error';
+        state.lastErrorCode = code;
+        state.retryAvailable = false;
+        updatePaymentElementUi();
+        return Promise.reject(safeMountError(code, false));
+      }
+
+      if(sameActiveContext(context) && state.activeMountPromise){
+        let activeHost = null;
+        try{ activeHost = resolveEligibleHost(context, true); }catch(error){
+          destroySubscriptionStripePaymentElement('host_replaced');
+          return Promise.reject(error);
+        }
+        if(activeHost !== state.activeController?.host){
+          destroySubscriptionStripePaymentElement('host_replaced');
+          return Promise.reject(safeMountError('SUBP_PE_CONTEXT_STALE', false));
+        }
+        return state.activeMountPromise;
+      }
+      if(state.activeOperationContext && !sameActiveContext(context)){
+        destroySubscriptionStripePaymentElement('operation_context_changed');
+      }
+
+      let host = null;
+      try{ host = resolveEligibleHost(context, false); }catch(error){
+        state.mountState = 'mount_failed';
+        state.inputState = 'payment_input_error';
+        state.lastErrorCode = 'SUBP_PE_HOST_UNAVAILABLE';
+        state.retryAvailable = true;
+        updatePaymentElementUi();
+        return Promise.reject(error);
+      }
+
+      mountAttempt += 1;
+      const controller = {
+        attemptId: mountAttempt,
+        context,
+        host,
+        abortController: AbortControllerImpl ? new AbortControllerImpl() : null,
+        expiryTimerId: null,
+        destroyed: false,
+        paymentElementDestroyed: false,
+        mountPromiseCreated: true,
+        elementsInstanceCreated: false,
+        paymentElementCreated: false,
+        paymentElementMounted: false,
+        mountFlowSettled: false,
+        loaderStarted: false,
+        readyReceived: false,
+        changeReceived: false,
+        lastChangeComplete: false,
+        lastChangeEmpty: true,
+        loaderrorReceived: false,
+        clientSecretRequested: false,
+        lastDestroyReason: ''
+      };
+      state.activeOperationContext = context;
+      state.activeController = controller;
+      state.activeElements = null;
+      state.activePaymentElement = null;
+      state.registeredListeners = [];
+      state.mountState = 'mount_loading_runtime';
+      state.inputState = 'payment_input_loading';
+      state.lastErrorCode = '';
+      state.retryAvailable = false;
+
+      const expiryDelayMs = Number(mountOptions.expiryDelayMs);
+      if(Number.isFinite(expiryDelayMs) && expiryDelayMs > 0 && typeof setTimeoutImpl === 'function'){
+        controller.expiryTimerId = setTimeoutImpl(()=>{
+          if(!attemptIsCurrent(controller)) return;
+          failActiveMount(safeMountError('stripe_payment_operation_expired', false), controller);
+        }, expiryDelayMs);
+      }
+      state.activeMountPromise = runMount(controller, mountOptions);
+      updatePaymentElementUi();
+      return state.activeMountPromise;
+    }
+
+    function retrySubscriptionStripePaymentElementMount(operationContext, mountOptions = {}){
+      if(state.retryAvailable !== true){
+        return Promise.reject(safeMountError('SUBP_PE_RETRY_UNAVAILABLE', false));
+      }
+      destroySubscriptionStripePaymentElement('explicit_retry');
+      const context = normalizeSubscriptionStripePaymentOperationContext(operationContext);
+      if(!isSubscriptionStripePaymentElementMountEligible(context)){
+        destroySubscriptionStripePaymentElement('retry_ineligible');
+        const code = context.checkoutExpired ? 'stripe_payment_operation_expired' : 'SUBP_PE_INELIGIBLE';
+        state.mountState = context.checkoutExpired ? 'mount_expired' : 'mount_failed';
+        state.inputState = 'payment_input_error';
+        state.lastErrorCode = code;
+        state.retryAvailable = false;
+        updatePaymentElementUi();
+        return Promise.reject(safeMountError(code, false));
+      }
+      try{ retryStripeRuntime(); }catch(_){}
+      return mountSubscriptionStripePaymentElementOnce(context, mountOptions);
+    }
+
+    const api = {
+      mountSubscriptionStripePaymentElementOnce,
+      retrySubscriptionStripePaymentElementMount,
+      destroySubscriptionStripePaymentElement,
+      getSubscriptionStripePaymentElementSnapshot
+    };
+    if(options.testMode === true){
+      api.__test = Object.freeze({
+        normalizeSubscriptionStripePaymentOperationContext,
+        isSubscriptionStripePaymentElementMountEligible,
+        retrieveSubscriptionStripeClientSecretForMount,
+        buildSubscriptionStripePaymentElementAppearance,
+        buildSubscriptionStripePaymentElementOptions
+      });
+    }
+    return Object.freeze(api);
+  }
+  // SUBSCRIPTION_STRIPE_PAYMENT_ELEMENT_MOUNT_END
+
+  const subscriptionStripePaymentElementMountLayer = createSubscriptionStripePaymentElementMountLayer({
+    rootResolver: ()=> els.checkoutSummary,
+    ensureStripeReady: ()=> subscriptionStripeRuntime.ensureSubscriptionStripeReady(),
+    retryStripeRuntime: ()=> subscriptionStripeRuntime.retrySubscriptionStripeReadiness(),
+    fetchImpl: (...args)=> window.fetch(...args),
+    isOperationContextCurrent: (context)=> subscriptionStripePaymentOperationContextIsCurrent(context),
+    isSimulationActive: ()=> isQaPlanSimulationActive(),
+    getComputedStyleImpl: (element)=> window.getComputedStyle(element),
+    AbortControllerImpl: window.AbortController,
+    setTimeoutImpl: (...args)=> window.setTimeout(...args),
+    clearTimeoutImpl: (timerId)=> window.clearTimeout(timerId)
+  });
+
+  function mountSubscriptionStripePaymentElementOnce(operationContext, options = {}){
+    return subscriptionStripePaymentElementMountLayer.mountSubscriptionStripePaymentElementOnce(operationContext, options);
+  }
+
+  function retrySubscriptionStripePaymentElementMount(operationContext, options = {}){
+    return subscriptionStripePaymentElementMountLayer.retrySubscriptionStripePaymentElementMount(operationContext, options);
+  }
+
+  function destroySubscriptionStripePaymentElement(reason){
+    return subscriptionStripePaymentElementMountLayer.destroySubscriptionStripePaymentElement(reason);
+  }
+
+  function getSubscriptionStripePaymentElementSnapshot(){
+    return subscriptionStripePaymentElementMountLayer.getSubscriptionStripePaymentElementSnapshot();
+  }
+
   function labelFromMap(map, value, fallback){
     const key = clean(value).toLowerCase();
     return map[key] || fallback || clean(value) || 'No disponible';
@@ -62287,6 +63157,9 @@ function mxResetLogoPreview(){
   }
 
   function resetPaymentExecutionForSlot(slot){
+    if(slot === 'checkoutSummary'){
+      destroySubscriptionStripePaymentElement('payment_execution_reset');
+    }
     resetPaymentRouteCreate(slot);
     if(slot === 'checkoutSummary'){
       data.paymentServerPreview.checkoutSummary = null;
@@ -62408,6 +63281,220 @@ function mxResetLogoPreview(){
     return value;
   }
 
+  function subscriptionStripePaymentExpiryMs(value){
+    const raw = clean(value);
+    if(!raw) return NaN;
+    const normalized = raw.includes('T')
+      ? raw
+      : (raw.includes(' ') ? `${raw.replace(' ', 'T')}Z` : `${raw}T00:00:00Z`);
+    const timestamp = new Date(normalized).getTime();
+    return Number.isFinite(timestamp) ? timestamp : NaN;
+  }
+
+  function subscriptionStripePaymentOperationContextKey(fields = {}){
+    const entityType = clean(fields.entityType).toLowerCase();
+    const entityId = safeDoctorId(fields.entityId);
+    const checkoutUuid = clean(fields.checkoutUuid).toLowerCase();
+    const paymentIntentUuid = clean(fields.paymentIntentUuid).toLowerCase();
+    const billingPeriod = clean(fields.billingPeriod).toLowerCase();
+    const amountCents = Number(fields.amountCents);
+    const currency = clean(fields.currency).toUpperCase();
+    if(entityType !== 'doctor' || !entityId || !checkoutUuid || !paymentIntentUuid) return '';
+    if(billingPeriod !== 'annual' || !Number.isSafeInteger(amountCents) || amountCents <= 0) return '';
+    if(!/^[A-Z]{3}$/.test(currency)) return '';
+    return [
+      entityType,
+      entityId,
+      checkoutUuid,
+      paymentIntentUuid,
+      billingPeriod,
+      String(amountCents),
+      currency
+    ].join('|');
+  }
+
+  function subscriptionStripePaymentPresence(value){
+    return value !== null && value !== undefined && clean(value) !== '';
+  }
+
+  function buildSubscriptionStripePaymentElementOperationContext(slot, responseData, options = {}){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    if(key !== 'checkoutSummary') return null;
+    const source = responseData && typeof responseData === 'object' ? responseData : null;
+    const intent = source?.payment_intent && typeof source.payment_intent === 'object'
+      ? source.payment_intent
+      : null;
+    const checkout = source?.checkout_intent && typeof source.checkout_intent === 'object'
+      ? source.checkout_intent
+      : null;
+    const bridge = paymentRouteCheckoutBridgeState(key);
+    const routeState = paymentRouteCreateState(key);
+    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
+    const bridgeCheckout = bridge.data && typeof bridge.data === 'object' ? bridge.data : null;
+    if(!intent || !checkout || !route || !bridgeCheckout) return null;
+
+    const entityType = clean(checkout.entity_type || route.entity_type).toLowerCase();
+    const entityId = safeDoctorId(checkout.entity_id || route.entity_id);
+    const localPaymentIntentUuid = clean(intent.uuid);
+    const checkoutUuid = clean(checkout.uuid || intent.checkout_intent_uuid);
+    const billingPeriod = clean(checkout.billing_period || route.billing_period).toLowerCase();
+    const amountCents = Number(intent.amount_cents);
+    const currency = clean(intent.currency).toUpperCase();
+    const expiresAt = clean(intent.expires_at || bridgeCheckout.expires_at || route.expires_at);
+    const expiresAtMs = subscriptionStripePaymentExpiryMs(expiresAt);
+    const freshCreate = options.freshCreate === true;
+    const currentPaymentIntentState = paymentIntentCreateState(key);
+    const originatedInCurrentFlow = freshCreate
+      || (currentPaymentIntentState.state === 'success' && currentPaymentIntentState.data === responseData);
+    const paymentEventValue = source.payment_event_count ?? intent.payment_event_count;
+    const paymentEventNumber = Number(paymentEventValue);
+    const paymentEventCount = Number.isSafeInteger(paymentEventNumber)
+      ? paymentEventNumber
+      : (originatedInCurrentFlow ? 0 : -1);
+    const subscriptionIdPresent = Object.prototype.hasOwnProperty.call(checkout, 'subscription_id')
+      ? subscriptionStripePaymentPresence(checkout.subscription_id)
+      : Object.prototype.hasOwnProperty.call(bridgeCheckout, 'subscription_id')
+        ? subscriptionStripePaymentPresence(bridgeCheckout.subscription_id)
+        : false;
+    const activatedAtPresent = Object.prototype.hasOwnProperty.call(checkout, 'activated_at')
+      ? subscriptionStripePaymentPresence(checkout.activated_at)
+      : Object.prototype.hasOwnProperty.call(bridgeCheckout, 'activated_at')
+        ? subscriptionStripePaymentPresence(bridgeCheckout.activated_at)
+        : false;
+    const operationContextKey = subscriptionStripePaymentOperationContextKey({
+      entityType,
+      entityId,
+      checkoutUuid,
+      paymentIntentUuid: localPaymentIntentUuid,
+      billingPeriod,
+      amountCents,
+      currency
+    });
+    if(!operationContextKey || !Number.isFinite(expiresAtMs)) return null;
+
+    return {
+      entityType,
+      entityId,
+      localPaymentIntentUuid,
+      checkoutStatus: clean(checkout.status || bridgeCheckout.checkout_status).toLowerCase(),
+      checkoutExpired: expiresAtMs <= Date.now(),
+      subscriptionIdPresent,
+      activatedAtPresent,
+      provider: clean(intent.provider).toLowerCase(),
+      normalizedStatus: clean(intent.normalized_status).toLowerCase(),
+      providerStatus: clean(intent.provider_status).toLowerCase(),
+      amountCents,
+      currency,
+      paymentEventCount,
+      operationContextKey
+    };
+  }
+
+  function subscriptionStripePaymentOperationContextIsCurrent(context){
+    if(!context || isQaPlanSimulationActive() || clean(data.qaPlan?.value) !== 'real') return false;
+    if(data.realQaEntityHydrationPending) return false;
+    if(!paymentExecutionStateMatchesCurrentSummary('checkoutSummary', { reset: false })) return false;
+    const routeState = paymentRouteCreateState('checkoutSummary');
+    const bridge = paymentRouteCheckoutBridgeState('checkoutSummary');
+    const paymentIntentState = paymentIntentCreateState('checkoutSummary');
+    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
+    const bridgeCheckout = bridge.data && typeof bridge.data === 'object' ? bridge.data : null;
+    const responseData = paymentIntentState.data && typeof paymentIntentState.data === 'object'
+      ? paymentIntentState.data
+      : null;
+    const intent = responseData?.payment_intent && typeof responseData.payment_intent === 'object'
+      ? responseData.payment_intent
+      : null;
+    const checkout = responseData?.checkout_intent && typeof responseData.checkout_intent === 'object'
+      ? responseData.checkout_intent
+      : null;
+    if(routeState.state !== 'success' || bridge.state !== 'success' || paymentIntentState.state !== 'success') return false;
+    if(!route || !bridgeCheckout || !intent || !checkout) return false;
+    if(!['new_subscription', 'upgrade_subscription'].includes(clean(route.route_type).toLowerCase())) return false;
+    if(clean(route.status).toLowerCase() !== 'checkout_created_no_provider') return false;
+    if(clean(bridgeCheckout.status).toLowerCase() !== 'checkout_created_no_provider') return false;
+    if(clean(bridgeCheckout.checkout_status).toLowerCase() !== 'pending_payment') return false;
+    if(clean(checkout.status).toLowerCase() !== 'pending_payment') return false;
+    if(clean(route.billing_period).toLowerCase() !== 'annual' || clean(checkout.billing_period).toLowerCase() !== 'annual') return false;
+    if(clean(intent.provider).toLowerCase() !== 'stripe') return false;
+    if(clean(intent.normalized_status).toLowerCase() !== 'created') return false;
+    if(clean(intent.provider_status).toLowerCase() !== 'requires_payment_method') return false;
+    if(clean(intent.uuid).toLowerCase() !== clean(context.localPaymentIntentUuid).toLowerCase()) return false;
+    if(clean(intent.checkout_intent_uuid).toLowerCase() !== clean(checkout.uuid).toLowerCase()) return false;
+    if(clean(bridgeCheckout.checkout_intent_uuid).toLowerCase() !== clean(checkout.uuid).toLowerCase()) return false;
+    if(clean(checkout.entity_type).toLowerCase() !== context.entityType) return false;
+    if(safeDoctorId(checkout.entity_id) !== context.entityId) return false;
+    if(!paymentPayloadMatchesCurrentEntity({ entity_type: context.entityType, entity_id: context.entityId })) return false;
+    if(subscriptionStripePaymentPresence(checkout.subscription_id)
+      || subscriptionStripePaymentPresence(checkout.activated_at)
+      || subscriptionStripePaymentPresence(bridgeCheckout.subscription_id)
+      || subscriptionStripePaymentPresence(bridgeCheckout.activated_at)) return false;
+    const livePaymentEventCount = Number(responseData.payment_event_count ?? intent.payment_event_count ?? 0);
+    if(!Number.isSafeInteger(livePaymentEventCount) || livePaymentEventCount !== 0) return false;
+
+    const amountValues = [intent.amount_cents, checkout.amount_cents, bridgeCheckout.amount_cents, route.amount_cents]
+      .map((value)=> Number(value));
+    if(amountValues.some((value)=> !Number.isSafeInteger(value) || value <= 0 || value !== context.amountCents)) return false;
+    const currencies = [intent.currency, checkout.currency, bridgeCheckout.currency, route.currency]
+      .map((value)=> clean(value).toUpperCase());
+    if(currencies.some((value)=> value !== context.currency)) return false;
+    const expiresAtMs = subscriptionStripePaymentExpiryMs(intent.expires_at || bridgeCheckout.expires_at || route.expires_at);
+    if(!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return false;
+    const expectedContextKey = subscriptionStripePaymentOperationContextKey({
+      entityType: context.entityType,
+      entityId: context.entityId,
+      checkoutUuid: checkout.uuid,
+      paymentIntentUuid: intent.uuid,
+      billingPeriod: checkout.billing_period,
+      amountCents: intent.amount_cents,
+      currency: intent.currency
+    });
+    return !!expectedContextKey && expectedContextKey === context.operationContextKey;
+  }
+
+  function subscriptionStripePaymentElementExpiryDelay(responseData){
+    const intent = responseData?.payment_intent && typeof responseData.payment_intent === 'object'
+      ? responseData.payment_intent
+      : null;
+    const bridge = paymentRouteCheckoutBridgeState('checkoutSummary');
+    const route = paymentRouteCreateState('checkoutSummary').data || null;
+    const expiresAtMs = subscriptionStripePaymentExpiryMs(
+      intent?.expires_at || bridge.data?.expires_at || route?.expires_at
+    );
+    if(!Number.isFinite(expiresAtMs)) return 0;
+    return Math.max(0, expiresAtMs - Date.now());
+  }
+
+  function requestSubscriptionStripePaymentElementMountAfterCreate(slot, responseData, httpStatus){
+    const key = slot === 'renewal' ? 'renewal' : 'checkoutSummary';
+    const localPaymentIntentUuid = clean(responseData?.payment_intent?.uuid);
+    if(key !== 'checkoutSummary' || Number(httpStatus) !== 201 || !localPaymentIntentUuid) return false;
+    const context = buildSubscriptionStripePaymentElementOperationContext(key, responseData, { freshCreate: true });
+    if(!context) return false;
+    const expiryDelayMs = subscriptionStripePaymentElementExpiryDelay(responseData);
+    if(!(expiryDelayMs > 0)) return false;
+    mountSubscriptionStripePaymentElementOnce(context, { expiryDelayMs }).catch(()=>{});
+    return true;
+  }
+
+  function retryCurrentSubscriptionStripePaymentElementMount(){
+    const paymentIntent = paymentIntentCreateState('checkoutSummary');
+    if(paymentIntent.state !== 'success' || !paymentIntent.data) return false;
+    const context = buildSubscriptionStripePaymentElementOperationContext(
+      'checkoutSummary',
+      paymentIntent.data,
+      { freshCreate: false }
+    );
+    if(!context) return false;
+    const expiryDelayMs = subscriptionStripePaymentElementExpiryDelay(paymentIntent.data);
+    if(!(expiryDelayMs > 0)){
+      destroySubscriptionStripePaymentElement('operation_expired');
+      return false;
+    }
+    retrySubscriptionStripePaymentElementMount(context, { expiryDelayMs }).catch(()=>{});
+    return true;
+  }
+
   function readPreparedPaymentRouteStore(){
     try{
       const raw = window.sessionStorage?.getItem(PAYMENT_ROUTE_PREPARED_STORAGE_KEY) || '';
@@ -62480,6 +63567,7 @@ function mxResetLogoPreview(){
 
   function resetCheckoutSummaryDom(){
     if(!els.checkoutSummary) return;
+    destroySubscriptionStripePaymentElement('checkout_summary_dom_reset');
     els.checkoutSummary.classList.add('d-none');
     els.checkoutSummary.innerHTML = '';
     delete els.checkoutSummary.dataset.targetPlan;
@@ -63278,11 +64366,14 @@ function mxResetLogoPreview(){
         <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
         <div><span>Captura protegida</span><h4 id="subp-secure-payment-form-title">Formulario de pago seguro</h4></div>
       </div>
-      <div class="subp-stripe-element-host subp-stripe-element-host--payment" data-subp-stripe-payment-element-host data-interactive="false" data-state="${escapeHtml(view.formState)}">
-        <span class="material-symbols-rounded" aria-hidden="true">lock</span>
-        <div class="subp-stripe-placeholder-lines" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-        <p>${escapeHtml(stateCopy)}</p>
-        ${debug}
+      <div class="subp-stripe-payment-element-frame">
+        <div class="subp-stripe-element-host subp-stripe-element-host--payment subp-stripe-payment-element-placeholder" data-subp-stripe-payment-element-placeholder data-state="${escapeHtml(view.formState)}">
+          <span class="material-symbols-rounded" aria-hidden="true">lock</span>
+          <div class="subp-stripe-placeholder-lines" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <p>${escapeHtml(stateCopy)}</p>
+          ${debug}
+        </div>
+        <div class="subp-stripe-payment-element-mount-host" data-subp-stripe-payment-element-host data-interactive="false" data-state="${escapeHtml(view.formState)}" aria-busy="false"></div>
       </div>
     </article>`;
   }
@@ -63311,10 +64402,11 @@ function mxResetLogoPreview(){
     const normalizedStatus = clean(intent.normalized_status || intent.status);
     const providerStatus = clean(intent.provider_status);
     const waitingForMethod = paymentIntent.state === 'success'
-      && (normalizedStatus === 'created' || providerStatus === 'requires_payment_method');
+      && normalizedStatus === 'created'
+      && providerStatus === 'requires_payment_method';
     if(!waitingForMethod) return '';
     return `<div class="subp-secure-payment-final-action">
-      <button class="btn btn-primary subp-payment-primary-action" type="button" data-subp-payment-final-submit="${escapeHtml(slot)}" disabled aria-disabled="true">
+      <button class="btn btn-primary subp-payment-primary-action" type="button" data-subp-payment-final-submit="${escapeHtml(slot)}" data-payment-input-ready="false" disabled aria-disabled="true">
         <span class="material-symbols-rounded" aria-hidden="true">lock</span>Pagar de forma segura
       </button>
       <small>El formulario de pago debe estar disponible antes de continuar.</small>
@@ -63322,15 +64414,19 @@ function mxResetLogoPreview(){
   }
 
   function securePaymentDebugSummaryHtml(slot, view){
-    const routeState = paymentRouteCreateState(slot);
-    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
-    const routeUuid = clean(route?.payment_route_uuid) || 'No disponible';
-    const status = clean(route?.status) || clean(routeState.state) || 'idle';
+    if(!isSubscriptionDebugPanelEnabled()) return '';
+    const snapshot = getSubscriptionStripePaymentElementSnapshot();
     return paymentShellDebugDetailsHtml('Detalles técnicos QA', [
-      { label: 'Ruta de pago', value: technicalIdLabel(routeUuid) },
-      { label: 'Estado ruta', value: status },
-      { label: 'Importe confirmado', value: view.todayAmount }
-    ], routeState.data || data.paymentServerPreview?.[slot]?.data || data.paymentPayloadPreview?.[slot]);
+      { label: 'Mount state', value: snapshot.mount_state },
+      { label: 'Input state', value: snapshot.input_state },
+      { label: 'Contexto vigente', value: snapshot.operation_context_current ? 'true' : 'false' },
+      { label: 'Element montado', value: snapshot.payment_element_mounted ? 'true' : 'false' },
+      { label: 'Ready recibido', value: snapshot.ready_received ? 'true' : 'false' },
+      { label: 'Input completo', value: snapshot.input_complete ? 'true' : 'false' },
+      { label: 'Readiness confirmación', value: snapshot.payment_confirmation_readiness ? 'true' : 'false' },
+      { label: 'Retry disponible', value: snapshot.retry_available ? 'true' : 'false' },
+      { label: 'Código', value: snapshot.last_error_code || 'none' }
+    ]);
   }
 
   function securePaymentSimulationStatusHtml(){
@@ -63418,8 +64514,10 @@ function mxResetLogoPreview(){
         ${securePaymentMethodsPanelHtml(view)}
         ${securePaymentFormPlaceholderHtml(view)}
       </div>
-      <div data-subp-payment-status-message aria-live="polite">
-        ${securePaymentProcessStatusHtml(slot)}
+      <div data-subp-payment-status-message>
+        <div data-subp-payment-process-status>${securePaymentProcessStatusHtml(slot)}</div>
+        <p class="subp-stripe-payment-mount-status" data-subp-stripe-payment-mount-status data-state="not-requested" role="status" aria-live="polite"></p>
+        <button class="btn btn-outline-primary btn-sm subp-stripe-payment-retry" type="button" data-subp-stripe-payment-element-retry hidden disabled>Reintentar formulario seguro</button>
       </div>
       ${securePaymentPricingSummaryHtml(view)}
       <div class="subp-secure-payment-actions">
@@ -63465,6 +64563,7 @@ function mxResetLogoPreview(){
   }
 
   function closeCheckoutSummarySecurePayment(){
+    destroySubscriptionStripePaymentElement('back_to_summary');
     setCheckoutSummarySecurePaymentVisible(false, { dismissed: true });
     if(!renderActiveCheckoutSummary({ loadPreview: false })) return false;
     window.requestAnimationFrame(()=>{
@@ -63592,14 +64691,7 @@ function mxResetLogoPreview(){
               <h4>Tu pago está listo para continuar.</h4>
               <p>Enseguida podrás elegir tu forma de pago de manera segura.</p>
             </div>
-          </article>
-          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
-            { label: 'PaymentIntent local', value: technicalIdLabel(paymentIntentUuid) },
-            { label: 'Provider payment', value: technicalIdLabel(providerPaymentId) },
-            { label: 'Estado local', value: normalizedStatus },
-            { label: 'Estado provider', value: providerStatus },
-            { label: 'Importe confirmado', value: amount }
-          ], responseData)}`;
+          </article>`;
       }
       return `<article class="subp-payment-route-status" data-state="success">
           <div class="subp-payment-route-status-head">
@@ -63671,13 +64763,7 @@ function mxResetLogoPreview(){
             <p>Debemos preparar el pago para que puedas completarlo de forma segura.</p>
             <div class="subp-payment-route-create-action" data-subp-payment-intent-create-action="${escapeHtml(slot)}">${paymentIntentCreateActionHtml(slot)}</div>
           </div>
-          <div data-subp-payment-intent-create-status="${escapeHtml(slot)}">${paymentIntentCreateStatusHtml(slot)}</div>
-          ${paymentShellDebugDetailsHtml('Detalles técnicos QA', [
-            { label: 'Checkout', value: technicalIdLabel(checkoutUuid) },
-            { label: 'Estado checkout', value: checkoutStatus },
-            { label: 'Importe confirmado', value: amount },
-            { label: 'Siguiente acción', value: paymentServerPreviewNextActionLabel(checkout.next_action) }
-          ], checkout)}`;
+          <div data-subp-payment-intent-create-status="${escapeHtml(slot)}">${paymentIntentCreateStatusHtml(slot)}</div>`;
       }
       return `<article class="subp-payment-route-status" data-state="success">
           <div class="subp-payment-route-status-head">
@@ -64355,6 +65441,7 @@ function mxResetLogoPreview(){
     if(!paymentIntent.idempotencyKey){
       paymentIntent.idempotencyKey = `mxmed-ui-payment-intent-${checkoutUuid}`;
     }
+    destroySubscriptionStripePaymentElement('payment_intent_create');
     paymentIntent.state = 'creating';
     paymentIntent.httpStatus = 0;
     paymentIntent.data = null;
@@ -64393,6 +65480,11 @@ function mxResetLogoPreview(){
         paymentIntent.message = '';
         persistPreparedPaymentRouteState(key);
         refreshPaymentRouteCreateUi(key);
+        requestSubscriptionStripePaymentElementMountAfterCreate(
+          key,
+          responseData,
+          response.status
+        );
         return true;
       }
 
@@ -64562,6 +65654,9 @@ function mxResetLogoPreview(){
 
   function setSubscriptionSection(section){
     const next = section === 'billing' ? 'billing' : 'plans';
+    if(next !== data.activeSection){
+      destroySubscriptionStripePaymentElement('subscription_section_changed');
+    }
     data.activeSection = next;
     if(next === 'plans'){
       data.paymentsView = 'overview';
@@ -65622,6 +66717,7 @@ function mxResetLogoPreview(){
   }
 
   function closePlanCheckoutSummary({ render = true } = {}){
+    destroySubscriptionStripePaymentElement('plan_checkout_summary_closed');
     const closingFreeSelection = !hasPaidActiveSubscription(data.currentModel || {});
     data.checkoutSummary.visible = false;
     data.checkoutSummary.targetPlanId = '';
@@ -65638,6 +66734,7 @@ function mxResetLogoPreview(){
   }
 
   function checkoutSummaryRecoverableError(message){
+    destroySubscriptionStripePaymentElement('checkout_summary_error');
     data.checkoutSummary.visible = false;
     data.checkoutSummary.preparing = false;
     data.checkoutSummary.error = clean(message) || 'No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.';
@@ -65725,6 +66822,7 @@ function mxResetLogoPreview(){
 
   function renderPlanCheckoutSummary(plan, flowType, options = {}){
     if(!els.checkoutSummary) return;
+    destroySubscriptionStripePaymentElement('checkout_summary_rerender');
     const targetIdentity = normalizePlanId(plan?.id);
     const targetLabel = clean(plan?.name) || 'Plan seleccionado';
     const isUpgrade = flowType === 'upgrade_now';
@@ -66813,6 +67911,7 @@ function mxResetLogoPreview(){
         }catch(_){
           checkoutSummaryRecoverableError('No pudimos preparar el resumen de tu mejora. Inténtalo nuevamente.');
           els.checkoutSummary.classList.add('d-none');
+          destroySubscriptionStripePaymentElement('checkout_summary_render_failed');
           els.checkoutSummary.innerHTML = '';
           renderCatalog();
         }
@@ -66825,6 +67924,7 @@ function mxResetLogoPreview(){
     }
     if(els.checkoutSummary){
       els.checkoutSummary.classList.add('d-none');
+      destroySubscriptionStripePaymentElement('checkout_summary_hidden');
       els.checkoutSummary.innerHTML = '';
       delete els.checkoutSummary.dataset.targetPlan;
       delete els.checkoutSummary.dataset.paymentRouteType;
@@ -67293,6 +68393,13 @@ function mxResetLogoPreview(){
     data.confirmedRealQaEntityId = '';
     applyReadOnlyError(Number(detail.http_status || 0), clean(detail.message) || 'No se pudo activar la entidad QA real.');
   });
+  window.addEventListener('mxmed:workspace-mode', (event)=>{
+    if(clean(event?.detail?.panelId) === 'p-suscripcion') return;
+    destroySubscriptionStripePaymentElement('subscription_workspace_left');
+  });
+  window.addEventListener('pagehide', ()=>{
+    destroySubscriptionStripePaymentElement('page_hidden');
+  });
 
   // Eventos
   els.sectionTabs.forEach((button)=>{
@@ -67364,6 +68471,13 @@ function mxResetLogoPreview(){
       event.preventDefault();
       event.stopPropagation();
       closeCheckoutSummarySecurePayment();
+      return;
+    }
+    const paymentElementRetry = event.target && event.target.closest('[data-subp-stripe-payment-element-retry]');
+    if(paymentElementRetry){
+      event.preventDefault();
+      event.stopPropagation();
+      retryCurrentSubscriptionStripePaymentElementMount();
       return;
     }
     const paymentRouteCreate = event.target && event.target.closest('[data-subp-payment-route-create]');
@@ -67453,6 +68567,7 @@ function mxResetLogoPreview(){
     button.addEventListener('click', ()=>{
       const mode = clean(button.dataset.subpPricingMode) === 'monthly' ? 'monthly' : 'yearly';
       if(data.billing === mode) return;
+      destroySubscriptionStripePaymentElement('pricing_mode_changed');
       data.billing = mode;
       clearCurrentUpgradeFocus();
       renderCatalog();
@@ -67479,6 +68594,7 @@ function mxResetLogoPreview(){
   });
   els.billingRadios.forEach(r=>{
     r.addEventListener('change', ()=>{
+      destroySubscriptionStripePaymentElement('billing_period_changed');
       data.billing = r.value === 'yearly' ? 'yearly' : 'monthly';
       clearCurrentUpgradeFocus();
       renderCatalog();
