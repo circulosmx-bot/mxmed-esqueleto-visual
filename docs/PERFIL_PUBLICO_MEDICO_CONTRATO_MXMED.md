@@ -52765,3 +52765,785 @@ Avance global: 7/24.
 Pendientes: 17.
 
 ---
+
+## PP-Decisiones 253 - Readiness de la foundation de seguridad AWS para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-Security-Readiness-01`
+
+Contador:
+
+`Microfase 8 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_SECURITY_FOUNDATION_CONTRACT_V1`
+
+Esta decisión cierra el contrato único que deberá implementar
+`MxMedSecurityStack`. Aplica PP245 y PP249–PP252 sin repetir arquitectura,
+foundation o red. No crea llaves, secretos, roles, trails, buckets, recursos
+AWS ni código CDK; tampoco acredita certificación o cumplimiento legal. Es una
+base técnica de seguridad que aún requiere implementación y validación.
+
+### Baseline e inspección read-only
+
+Antes de documentar se confirmó:
+
+- rama base `feature/mxmed-aws-network-implementation`;
+- HEAD completo `02a1916da902c92e849280ba806813e46f658c3d`;
+- upstream `0/0`;
+- working tree limpio;
+- `git diff --check` PASS;
+- `PP-Decisiones 253` libre;
+- rama objetivo local/remota ausente;
+- raíz `/tmp/mxmed-aws-security-readiness-01/` ausente, sin evidencia parcial.
+
+La decisión se prepara en:
+
+`architecture/mxmed-aws-security-readiness`
+
+Se leyeron PP245, PP249, PP250, PP251 y PP252 y, sin modificarlos, se
+inspeccionaron configuración, stages, stacks Security/Network/Compute/Data/
+Storage/Session/Operations, Aspects y las 96 pruebas vigentes. El estado
+implementado es compatible: Security continúa vacío, Network es el único stack
+con recursos y las dependencias actuales apuntan hacia Security sin que
+Security dependa de otro stack.
+
+Único archivo versionado autorizado y modificado:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+### Modelo de amenazas V1
+
+El diseño prioriza estas amenazas y controles:
+
+| Amenaza | Control contractual principal | Evidencia futura |
+| --- | --- | --- |
+| exposición accidental de datos clínicos | clasificación CLINICAL, stores privados, CMK, cero logs/tags/nombres | assertions de cifrado, acceso y redacción |
+| secretos en Git, templates o logs | Secrets Manager, generación/ingesta fuera de template, scanners y allowlist de logs | template/no-secret audit |
+| credenciales AWS de larga duración | OIDC para CI e Identity Center para humanos | trust policy y ausencia de access keys |
+| permisos IAM excesivos | roles separados, boundaries y recursos concretos | análisis de policies y tests negativos |
+| escalamiento de privilegios | trust exacto, PassRole restringido, boundaries y guardrails wildcard | tests negativos de trust/PassRole/boundaries |
+| acceso staging-production | cuentas, keys, secretos, roles y trusts separados | matriz cross-environment negativa |
+| descifrado no autorizado | CMK por finalidad, grants mínimos, contexto y `kms:ViaService` | key policy/grant assertions |
+| buckets o bases públicas | Aspects existentes y policies privadas | assertions de Block Public Access/RDS privado |
+| modificación/eliminación de auditoría | Audit Key, RETAIN, trail validation, boundaries y bucket versionado | removal/policy tests |
+| secretos en variables visibles | referencias Secrets Manager y pre-deploy gate AWSCURRENT | auditoría de task definition/CI |
+| filtración desde ECS | task/execution roles distintos, egress contractual y redacción | tests IAM, SG y logs |
+| abuso del rol de despliegue | OIDC subject exacto, boundary, approval production y CloudTrail | trust/session audit |
+| abuso de rutas Stripe | HTTPS y contrato path-only/no-query heredado | tests Edge/Compute futuros |
+| recursos manuales fuera de CloudFormation | CloudFormation como fuente de verdad, drift y break-glass reconciliado | drift audit futuro |
+
+No se declara cumplimiento de PCI DSS, HIPAA, ISO 27001, SOC 2, regulación
+sanitaria o protección de datos. Una evaluación legal/compliance podrá añadir
+controles, pero no se simula como completada.
+
+### Clasificación de datos
+
+| Categoría | Ejemplos | Almacenamiento/uso | Reglas de exposición |
+| --- | --- | --- | --- |
+| `PUBLIC` | perfil médico expresamente publicado, assets públicos | recursos aprobados; objetos pueden permanecer privados detrás de CloudFront/OAC | no convierte un bucket completo en público |
+| `INTERNAL` | métricas, Flow Logs, configuración no sensible, IDs técnicos no secretos | stores operacionales autorizados con acceso de plataforma | no se publica sin autorización |
+| `SENSITIVE` | correo/teléfono privado, administración, referencias de pago, metadata de cuenta | Secrets Manager, DB/S3 privado u otro store aprobado | acceso por finalidad y auditoría |
+| `CLINICAL` | expediente, antecedentes, diagnóstico, notas, recetas, documentos/estudios | RDS/S3 clínico cifrado y privado | nunca en logs, tags, métricas, nombres u outputs |
+
+Cada stack y recurso taggable declara `DataClassification`; el tag describe el
+máximo tipo permitido, no autoriza copiar ese dato a observabilidad. Security y
+Session son `SENSITIVE`; Data/Storage son `CLINICAL`; Network/Compute/
+Operations producen únicamente metadata `INTERNAL` sanitizada. Recursos Edge
+de contenido publicado podrán ser `PUBLIC` sin eliminar Block Public Access.
+
+### Topología KMS cerrada
+
+Cada ambiente crea exactamente cuatro customer-managed symmetric keys en
+`mx-central-1`; ocho en total entre staging y production:
+
+| Construct conceptual | Alias exacto | Uso autorizado |
+| --- | --- | --- |
+| `MxMedApplicationDataKey` | `alias/mxmed-{environmentCode}-application-data` | RDS, S3 privado/clínico, session store y persistencia de aplicación |
+| `MxMedSecretsKey` | `alias/mxmed-{environmentCode}-secrets` | Secrets Manager y secretos internos/proveedores |
+| `MxMedAuditKey` | `alias/mxmed-{environmentCode}-audit` | CloudTrail, audit bucket y CloudWatch Logs de seguridad |
+| `MxMedBackupKey` | `alias/mxmed-{environmentCode}-backup` | AWS Backup, vaults y copias/restores protegidos |
+
+Configuración común no negociable:
+
+- `KeySpec=SYMMETRIC_DEFAULT`, `KeyUsage=ENCRYPT_DECRYPT`;
+- rotación automática KMS habilitada;
+- `multiRegion=false`;
+- material generado por KMS, nunca importado;
+- alias determinista con `stg` o `prd`;
+- una finalidad por llave, sin llave universal;
+- cero principal público y cero grant cross-account V1;
+- descripción/tags sin datos, cuentas, ARNs o personas;
+- ARN de key no se publica como CloudFormation Output.
+
+Cambiar alias, key spec o construct ID no autoriza sustitución. Toda sustitución
+requiere inventario de ciphertext, re-encryption/restore probado, ventana,
+rollback y aprobación antes del diff productivo.
+
+### Ciclo de vida KMS
+
+| Control | Staging | Production |
+| --- | --- | --- |
+| pending deletion window | 7 días | 30 días |
+| rotation | habilitada | habilitada |
+| multi-region | no | no |
+| removal policy | `RETAIN` | `RETAIN` |
+| datos | sólo sintéticos | datos live |
+
+Staging no es descartable por defecto: destruir una key exige autorización
+expresa y verificación de que sólo existan datos sintéticos recuperables.
+Production prohíbe `DESTROY`, reemplazo silencioso, deshabilitar rotación y
+eliminación automática. `bypassPolicyLockoutSafetyCheck` permanece `false`.
+Backups y snapshots deben seguir descifrables durante toda su retención.
+
+### Key policies y grants
+
+Las policies separan administración y uso:
+
+1. El principal de cuenta se representa con pseudo-parámetros de despliegue,
+   nunca con account ID escrito en Git, y conserva la recuperación segura de
+   administración IAM.
+2. El Deployment Role puede crear/actualizar la infraestructura contratada,
+   pero su boundary niega destrucción de keys/auditoría protegida y no le
+   concede `Decrypt` de datos.
+3. El principal federado `PlatformAdministrator`, exacto y suministrado como
+   input no sensible, administra policy, alias, rotación, tags y lifecycle; no
+   recibe uso cotidiano de datos.
+4. Security Audit obtiene Describe/List/Get policy y sólo `Decrypt` de la
+   Audit Key cuando leer evidencia lo requiere.
+5. Servicios y workloads reciben grants específicos por key y recurso.
+
+Grants de uso mínimos:
+
+| Key | Consumidor | Acciones máximas y condiciones |
+| --- | --- | --- |
+| Application Data | RDS/S3/ElastiCache y roles autorizados | Encrypt/Decrypt/GenerateDataKey/Describe según servicio; `kms:ViaService` y encryption context cuando exista |
+| Secrets | Secrets Manager y roles que recuperan secretos concretos | Decrypt/GenerateDataKey/Describe sólo vía Secrets Manager y secreto del ambiente |
+| Audit | CloudTrail, CloudWatch Logs y Security Audit | Encrypt/GenerateDataKey para servicios; Decrypt de evidencia sólo al auditor autorizado |
+| Backup | AWS Backup y restore role | Encrypt/Decrypt/GenerateDataKey/Describe sólo para vault/recovery points del ambiente |
+
+Quedan prohibidos `Principal="*"`, `kms:*` en workload, descifrado
+cross-environment, grants basados sólo en nombre libre, administración desde
+ECS y account IDs reales. Los roles task nunca reciben ScheduleKeyDeletion,
+DisableKey, PutKeyPolicy, CreateGrant irrestricto o administración de alias.
+
+### Inventario único de secretos
+
+Prefijo obligatorio:
+
+`/mxmed/{environmentName}/`
+
+| Nombre conceptual | Owner | Provisión | Consumidor futuro | Rotación objetivo |
+| --- | --- | --- | --- | --- |
+| `application/session-signing` | SecurityStack | `GENERATED` por AWS | Application Task Role | 90 días, activa+anterior |
+| `providers/stripe/secret-key` | SecurityStack | contenedor `EXTERNAL` sin versión | Application Task Role autorizado | manual por evento/riesgo |
+| `providers/stripe/webhook-secret` | SecurityStack | contenedor `EXTERNAL` sin versión | workload que verifica webhook | manual con solapamiento |
+| `providers/ai/api-key` | SecurityStack | contenedor `EXTERNAL` sin versión | sólo workload IA aprobado | manual 90 días/incidente |
+| credencial maestra RDS | DataStack | `GENERATED` por RDS/Secrets Manager | app/migration según grants | administrada futura 30 días |
+
+SecurityStack no duplica el secreto maestro RDS. No crea secretos para mapas,
+SMS, WhatsApp, SMTP, PayPal, SPEI u otros proveedores sin integración
+contratada. Stripe sandbox/live, IA y session-signing nunca se comparten entre
+ambientes. La publishable key Stripe no se trata como secreto en este contrato.
+
+### Provisión de valores
+
+`session-signing` usa `GenerateSecretString` y entrega material aleatorio de al
+menos 64 caracteres sin valor en template. Su forma futura soportará versión
+activa y anterior; no se habilita rotación automática hasta que el consumidor
+implemente esa transición sin invalidación masiva.
+
+Los tres secretos `EXTERNAL` se crean como contenedores sin `SecretString`,
+`GenerateSecretString` ni versión `AWSCURRENT`. Si el L2 genera un valor por
+default, la implementación usará el L1 acotado `CfnSecret` y assertions que
+demuestren el contenedor vacío. Un runbook separado inserta el valor; el valor
+no pasa por CDK, context, CloudFormation Parameter, outputs, GitHub Actions o
+evidencia.
+
+Compute sólo podrá desplegar una task que referencia un secreto externo después
+de una compuerta pre-deploy que confirme `AWSCURRENT`; synth continúa offline y
+no consulta la cuenta. Quedan prohibidos `SecretValue.unsafePlainText`, `.env`
+productivo, `NoEcho` como store permanente, access keys AWS en GitHub y valores
+de secretos en tags, nombres, logs, metadata o task definition.
+
+### Rotación, transición y recuperación
+
+| Secreto | Procedimiento cerrado | Rollback/recuperación |
+| --- | --- | --- |
+| session-signing | objetivo 90 días; consumidor valida activa y anterior durante ventana acotada | promover anterior si falla; retirar sólo tras expirar sesiones |
+| RDS | rotación administrada cada 30 días después de validar pools/reconnect | versión anterior y rollback de pool probados |
+| Stripe API | manual ante evento/riesgo; clave nueva validada en sandbox y dual-key cuando proveedor lo permita | revocar anterior sólo tras métricas/smoke |
+| Stripe webhook | versión nueva y anterior verificables únicamente durante transición | volver a AWSPREVIOUS; retirar anterior al cerrar ventana |
+| IA | manual cada 90 días o incidente | restaurar versión anterior y revocar comprometida |
+
+Secrets tienen `RemovalPolicy.RETAIN` en ambos ambientes. Una eliminación
+expresamente autorizada usa runbook con recovery window de 7 días staging o 30
+días production; `ForceDeleteWithoutRecovery` está prohibido. El stack nunca
+elimina inmediatamente un secreto productivo.
+
+### Catálogo y ownership de roles IAM
+
+No se crean IAM users. Los roles futuros son:
+
+| Rol | Owner/creación | Trust | Responsabilidad | Boundary |
+| --- | --- | --- | --- | --- |
+| ECS Execution Role | ComputeStack mediante factory de Security | `ecs-tasks.amazonaws.com` | ECR pull, Logs write y secretos exactos de arranque | Workload |
+| Application Task Role | ComputeStack mediante factory | `ecs-tasks.amazonaws.com` | S3/prefix, SES y APIs runtime concretas | Workload |
+| Migration Task Role | DataStack mediante factory | `ecs-tasks.amazonaws.com` | migración temporal y secreto DB | Workload |
+| Jobs Task Role | JobsStack mediante factory | `ecs-tasks.amazonaws.com` | permisos independientes por job | Workload |
+| Deployment Role | SecurityStack | GitHub OIDC exacto del ambiente | CloudFormation/CDK contratado | Deployment |
+| Security Audit Role | SecurityStack | Identity Center/federación exacta | leer CloudTrail/configuración de seguridad; nunca datos app | policy de auditoría |
+| Break-Glass Role | SecurityStack | federación exacta con MFA | emergencia temporal y alertada | boundary de emergencia restrictivo |
+
+SecurityStack expone `workloadRoleFactory` y los boundaries. La factory crea el
+rol dentro del scope consumidor y exige listas explícitas de recursos/acciones;
+no crea identity policies en SecurityStack que referencien stacks downstream.
+Así Data/Storage/Session/Compute/Jobs continúan dependiendo de Security sin
+crear una dependencia inversa.
+
+Los roles Deployment, Audit y Break-Glass se separan por ambiente. Migration y
+Jobs no heredan Application; cada job declara permisos propios. Ningún rol de
+workload puede desplegar infraestructura, administrar IAM/KMS/Secrets o asumir
+el rol de otro ambiente.
+
+### Execution Role versus Application Task Role
+
+| Capacidad | Execution Role | Application Task Role |
+| --- | --- | --- |
+| pull ECR | sí, repositorio exacto | no |
+| escribir Logs | sí, log group de task | sólo métricas/log API expresamente contratada |
+| resolver secretos de task definition | sí, secretos exactos de arranque | no por defecto |
+| S3 runtime | no | bucket/prefix exacto |
+| SES | no | identidad/config set autorizados |
+| expediente/API clínica | no | sólo recursos runtime explícitos |
+| migraciones | no | no |
+| ECR admin, IAM, PassRole, CloudFormation | no | no |
+| ListSecrets/KMS admin/cross-environment | no | no |
+
+Los roles nunca se mezclan. Recuperar un secreto mediante task definition
+pertenece a Execution; una recuperación dinámica excepcional requiere grant
+explícito en Application, secreto concreto y test propio.
+
+### Permission boundaries
+
+`MxMedWorkloadBoundary` tiene nombre físico
+`mxmed-{environmentCode}-workload-boundary`. Es un límite máximo, no concede
+permisos. Sólo permite data-plane de servicios contratados sobre recursos del
+ambiente e impide:
+
+- `iam:*`, `organizations:*`, `account:*`, `cloudformation:*`;
+- `sts:AssumeRole` salvo destino exacto aprobado para un caso documentado;
+- administración KMS, CloudTrail, log retention o Secrets Manager;
+- `iam:PassRole`;
+- secretos fuera de `/mxmed/{environmentName}/`;
+- recursos etiquetados con el ambiente opuesto;
+- regiones no contratadas y acciones no incluidas por la factory.
+
+`MxMedDeploymentBoundary` tiene nombre
+`mxmed-{environmentCode}-deployment-boundary`. Permite sólo servicios usados
+por los stacks MXMed en `mx-central-1`, la excepción email `us-east-1` y APIs
+globales expresamente necesarias. Niega:
+
+- Organizations/account administration;
+- IAM users, login profiles y access keys;
+- deshabilitar/eliminar CloudTrail o bajar retención;
+- deshabilitar/schedule-delete KMS production;
+- eliminar vaults, recovery points o buckets de auditoría protegidos;
+- `iam:PassRole` fuera de roles MXMed exactos del ambiente;
+- recursos del ambiente opuesto.
+
+No se adjuntan `AdministratorAccess`, `PowerUserAccess` ni policies permanentes
+equivalentes. Los permisos identity policy deben además ser least privilege;
+el boundary no sustituye la revisión.
+
+### GitHub Actions OIDC
+
+Cada cuenta de ambiente crea su propio provider:
+
+- URL `https://token.actions.githubusercontent.com`;
+- audience exacta `sts.amazonaws.com`;
+- staging y production con Deployment Role distinto;
+- session duration máxima de 60 minutos;
+- CloudTrail registra `AssumeRoleWithWebIdentity`.
+
+La identidad GitHub no se infiere del remote ni se hardcodea. La implementación
+recibirá un input tipado, requerido y no sensible:
+
+~~~text
+MxMedGitHubIdentityConfig {
+  organization
+  repository
+  stagingBranch
+  productionEnvironment: "production"
+}
+~~~
+
+La validación rechaza vacío, wildcard, `..`, slash inesperado y caracteres
+fuera del formato GitHub. Tests usan valores sintéticos. Trust exacto:
+
+- staging: `repo:{organization}/{repository}:ref:refs/heads/{stagingBranch}`;
+- production:
+  `repo:{organization}/{repository}:environment:production`;
+- `aud=sts.amazonaws.com` mediante `StringEquals`;
+- cero subject global, tag libre o `pull_request`; forks no coinciden.
+
+Production requiere además GitHub Environment `production`, aprobación manual,
+branch protection y restricción de deployment branches. Son controles GitHub
+externos a CDK y deben auditarse antes de deploy. No se almacenan
+`AWS_ACCESS_KEY_ID` o `AWS_SECRET_ACCESS_KEY`.
+
+### Acceso humano
+
+IAM Identity Center es la única vía cotidiana futura, con MFA obligatorio,
+sesiones temporales y permission sets sin nombres personales:
+
+| Perfil | Alcance |
+| --- | --- |
+| `PlatformAdministrator` | administrar infraestructura aprobada; production con aprobación |
+| `SecurityAuditor` | lectura de auditoría/configuración, sin datos de aplicación |
+| `ProductionOperator` | operaciones/runbooks acotados, sin IAM/KMS admin |
+| `ReadOnlySupport` | metadata sanitizada, sin secretos/CLINICAL |
+
+Staging y production usan asignaciones separadas. Los principals exactos de
+Identity Center/federación llegan como inputs no sensibles; una trust policy no
+acepta wildcard de cuenta/rol. Break-glass exige MFA, sesión solicitada de 15
+minutos con hard max de una hora, alerta inmediata, motivo/ticket y revisión
+posterior; no es acceso cotidiano.
+
+Controles root externos a CDK: MFA múltiple, cero access keys, correo controlado,
+recuperación documentada y uso excepcional. La configuración de Identity Center
+en la cuenta management pertenece a su microfase organizacional, no se simula
+en SecurityStack.
+
+### Cifrado en tránsito
+
+- HTTPS obligatorio en CloudFront/ALB; HTTP sólo podrá redirigir cuando Edge lo
+  contrate;
+- TLS 1.0 y 1.1 prohibidos; política exacta TLS 1.2/1.3 se fija en Edge
+  Readiness;
+- RDS exige TLS y verificación de certificado;
+- session store exige in-transit encryption y autenticación/ACL;
+- Stripe, SES y APIs externas sólo por HTTPS;
+- certificados públicos gestionados por ACM;
+- cero private key/certificado privado en Git, imagen, context o secret output.
+
+### Cifrado en reposo
+
+| Recurso futuro | Key obligatoria |
+| --- | --- |
+| RDS y snapshots | Application Data Key |
+| bucket clínico/privado y objetos | Application Data Key |
+| session store | Application Data Key |
+| Secrets Manager | Secrets Key |
+| CloudTrail, audit bucket y logs security | Audit Key |
+| AWS Backup/vault/recovery points | Backup Key |
+| ECR | decisión exacta en Compute/Storage Readiness, nunca unencrypted |
+
+SSE-S3 no satisface CLINICAL production cuando este contrato exige CMK. Se
+prohíben storage/snapshots sin cifrar y copias cross-environment. Flow Logs de
+PP252 siguen siendo `INTERNAL` con cifrado administrado del servicio; cualquier
+log `SENSITIVE` se mueve a un log group de seguridad cifrado con Audit Key.
+CLINICAL nunca se registra.
+
+### Management CloudTrail por ambiente
+
+SecurityStack crea exactamente un management trail por ambiente con:
+
+- multi-region habilitado;
+- global service events incluidos;
+- management events `ReadWriteType=All`;
+- log file validation habilitada;
+- data events ausentes de este trail;
+- bucket dedicado y CloudWatch Logs;
+- Audit Key para ambos destinos;
+- rol mínimo de entrega a su log group;
+- cero CloudTrail Lake V1.
+
+| Ambiente | CloudWatch retention | S3 archive retention |
+| --- | ---: | ---: |
+| staging | 90 días | 365 días |
+| production | 365 días | 2,555 días |
+
+El trail por ambiente es la fuente V1 del workload account. El organization
+trail de PP245 continúa como control futuro de la cuenta
+`security-log-archive`; cuando se contrate deberá evitar duplicar selectors/costo
+y migrarse mediante una decisión explícita, no reemplaza silenciosamente estos
+trails.
+
+### Bucket de auditoría
+
+Excepción de ownership aprobada: SecurityStack posee su audit bucket porque es
+parte del boundary CloudTrail, no guarda datos funcionales y evita
+Security→Storage→Security.
+
+Contrato exacto:
+
+- nombre derivado `mxmed-{environmentCode}-audit-{deploymentAccountToken}` sin
+  valor real versionado;
+- Block Public Access completo;
+- versioning habilitado;
+- `BUCKET_OWNER_ENFORCED`, ACL deshabilitada;
+- `enforceSSL=true`;
+- cifrado con Audit Key;
+- sin website y sin output;
+- bucket policy sólo para CloudTrail con `aws:SourceAccount` token y source
+  trail exacto; auditores acceden por identity policy;
+- `RemovalPolicy.RETAIN` en staging y production;
+- lifecycle no elimina current/noncurrent antes de 365/2,555 días;
+- production no configura transición de storage class hasta policy futura;
+- Object Lock deshabilitado y diferido por su irreversibilidad.
+
+### Separación de data events
+
+El management trail de SecurityStack no recibe S3 data events. Un data event
+trail separado pertenecerá a OperationsStack después de que StorageStack
+exponga el bucket clínico:
+
+- production audita lectura y escritura de objetos clínicos;
+- staging permanece deshabilitado mientras sólo use datos sintéticos;
+- Operations depende de Storage y Security;
+- Security nunca depende de Operations o Storage;
+- el selector usa el bucket/prefix clínico exacto, no todos los buckets;
+- no se habilita CloudTrail Lake.
+
+`enableDataEventTrail` inicia `false` en ambos ambientes durante Security
+Implementation. La microfase Storage/Operations cambia production a `true` en
+el mismo cambio que aporta la referencia clínica y sus tests. Guardrails
+rechazan `true` sin bucket y, después de existir el bucket clinical production,
+rechazan `false`.
+
+### Logging y redacción allowlist
+
+Nunca se registran expedientes, diagnósticos, recetas, documentos, passwords,
+tokens, Stripe keys, webhook secrets, session cookies, Authorization,
+Payment Element client secret, query completa de `stripe-return`, bodies de
+webhook o valores Secrets Manager.
+
+Campos permitidos:
+
+- timestamp UTC y level;
+- event/correlation ID opaco;
+- entity type;
+- entity ID sólo cuando no sea clínico/sensible;
+- estado/código sanitizado de catálogo cerrado;
+- duración;
+- route template/path sin query;
+- resultado técnico.
+
+La implementación usa serializer allowlist; una blocklist aislada no es
+suficiente. Excepciones raw, request URI, query/body/header/cookie y objetos de
+configuración no se pasan al logger. Tests con canarios sintéticos demuestran
+redacción sin persistir secretos reales.
+
+### Separación staging/production
+
+Nunca se comparte entre ambientes:
+
+- KMS key/alias/grant;
+- secreto o versión;
+- IAM role/boundary/trust;
+- audit bucket/trail/log group;
+- DB/session store/backup;
+- Stripe API key/webhook secret;
+- Deployment Role u OIDC subject.
+
+Todo nombre físico controlado contiene `stg` o `prd`. Production no confía en
+roles staging y staging no puede leer recursos production. Policies rechazan
+el tag/prefijo opuesto y nunca usan `arn:aws:*:*:*:*`; tokens CloudFormation de
+partición/región/cuenta se acotan al recurso del ambiente.
+
+### Servicios de detección diferidos
+
+CloudTrail management sí pertenece a la primera implementación Security.
+GuardDuty, Security Hub, Inspector v2/ECR scanning, AWS Config, drift detection
+programada y centralización organizacional son launch prerequisites, pero se
+implementan en una microfase posterior porque requieren decisiones de cuenta,
+delegated admin, región, agregación y costo. No se declaran activos hoy.
+
+### Dependencias entre stacks
+
+SecurityStack no depende de Network, Data, Storage, Session, Compute, Edge,
+Operations, Jobs o Backup. Dirección futura:
+
+~~~text
+Security ──> Data <── Network
+Security ──> Storage
+Security ──> Session <── Network
+Security ──> Compute <── Network/Data/Storage/Session
+Security/Network/Compute ──> Edge
+Security/Compute ──> Jobs
+Security/Data/Storage ──> Backup
+Security + recursos observables ──> Operations
+Storage/Security ──> Operations data-event trail (fase posterior)
+~~~
+
+La flecha significa “destino depende de origen”. Edge agregará dependencia
+directa a Network cuando consuma SG/subnets. Operations recibe referencias y
+no devuelve recursos a los stacks observados.
+
+SecurityStack expondrá propiedades TypeScript, no CloudFormation Exports:
+
+- `applicationDataKey`, `secretsKey`, `auditKey`, `backupKey`;
+- `auditBucket`, `cloudTrailLogGroup`;
+- `workloadBoundary`, `deploymentBoundary`;
+- referencias tipadas a los cuatro secretos propios;
+- `workloadRoleFactory`;
+- Deployment, Security Audit y Break-Glass roles aprobados.
+
+### Extensiones futuras de configuración
+
+No se modifica config en esta readiness. Security Implementation agregará y
+validará:
+
+| Campo | Staging | Production |
+| --- | --- | --- |
+| `securityProfile` | `baseline-v1` | `baseline-v1` |
+| `kmsDeletionWindowDays` | 7 | 30 |
+| `secretRecoveryWindowDays` | 7 | 30 |
+| `cloudTrailLogRetentionDays` | 90 | 365 |
+| `auditArchiveRetentionDays` | 365 | 2555 |
+| `enableManagementTrail` | `true` | `true` |
+| `enableKeyRotation` | `true` | `true` |
+| `enableDataEventTrail` inicial | `false` | `false` hasta existir Storage clinical; luego `true` obligatorio |
+
+El schema rechaza profile desconocido, retención/window distinta, trail o
+rotación deshabilitados y transición inválida de data events. La identidad
+GitHub y principals Identity Center son props tipadas no sensibles separadas,
+porque no son una propiedad intrínseca del ambiente y sus valores empresariales
+aún deben suministrarse; omitirlos bloquea la creación de esos trusts.
+
+### Guardrails CDK futuros
+
+Aspects/validators read-only deben bloquear synth ante:
+
+- key sin rotación, multi-region o production `DESTROY`;
+- alias fuera del patrón o key reemplazada sin contrato;
+- `Principal="*"`, workload con `kms:*` o grant cross-environment;
+- plaintext/unsafe secret, external secret con versión generada, secret output
+  o secreto de otro ambiente;
+- IAM user, login profile, access key, AdministratorAccess o PowerUserAccess;
+- wildcard IAM, PassRole no acotado, trust global o OIDC sin aud/subject exacto;
+- role sin boundary o role mezclando execution/task;
+- audit bucket público, sin SSL/versioning/Audit Key/RETAIN;
+- CloudTrail ausente, deshabilitado, sin global/multi-region/read-write,
+  validation, KMS o destinos;
+- retención CloudWatch/S3 inferior o CloudTrail Lake V1;
+- data event trail dentro de Security o ciclo entre stacks;
+- log/nombre/tag/output con secreto, cuenta real, ARN real o dato clínico;
+- referencia o policy cross-environment.
+
+Los errores usan códigos sanitizados y fallan synth. Ningún Aspect cambia
+policies, removal policy, cifrado o valor silenciosamente.
+
+### Matriz futura de 68 pruebas
+
+| ID | Área | Validación PASS |
+| --- | --- | --- |
+| SEC-001 | config | profile staging `baseline-v1` |
+| SEC-002 | config | profile production `baseline-v1` |
+| SEC-003 | config | KMS window staging 7 |
+| SEC-004 | config | KMS window production 30 |
+| SEC-005 | config | secret recovery staging 7 |
+| SEC-006 | config | secret recovery production 30 |
+| SEC-007 | config | CloudTrail retention 90/365 |
+| SEC-008 | config | archive retention 365/2555 |
+| SEC-009 | config | key rotation obligatoria |
+| SEC-010 | config | profile desconocido rechazado |
+| SEC-011 | KMS | cuatro keys por ambiente |
+| SEC-012 | KMS | cuatro aliases exactos |
+| SEC-013 | KMS | rotación habilitada |
+| SEC-014 | KMS | multi-region false |
+| SEC-015 | KMS | Application Data Key separada |
+| SEC-016 | KMS | Secrets Key separada |
+| SEC-017 | KMS | Audit Key separada |
+| SEC-018 | KMS | Backup Key separada |
+| SEC-019 | KMS | production RETAIN y window 30 |
+| SEC-020 | KMS | cero principal público |
+| SEC-021 | KMS | cero `kms:*` en workloads |
+| SEC-022 | secrets | session-signing generado por AWS |
+| SEC-023 | secrets | contenedor Stripe API vacío |
+| SEC-024 | secrets | contenedor webhook vacío |
+| SEC-025 | secrets | contenedor IA vacío |
+| SEC-026 | secrets | cero valores en template |
+| SEC-027 | secrets | cero outputs |
+| SEC-028 | secrets | recovery windows/RETAIN |
+| SEC-029 | secrets | nombres y keys separados por ambiente |
+| SEC-030 | secrets | secreto RDS no duplicado |
+| SEC-031 | IAM | Execution Role mediante factory |
+| SEC-032 | IAM | Application Task Role separado |
+| SEC-033 | IAM | Migration Role separado |
+| SEC-034 | IAM | Jobs Role separado |
+| SEC-035 | IAM | Deployment Role por ambiente |
+| SEC-036 | IAM | Security Audit Role |
+| SEC-037 | IAM | Break-Glass Role MFA/alerta |
+| SEC-038 | IAM | cero IAM users |
+| SEC-039 | IAM | cero access keys/login profiles |
+| SEC-040 | IAM | cero AdministratorAccess/PowerUserAccess |
+| SEC-041 | IAM | PassRole restringido |
+| SEC-042 | IAM | boundaries aplicadas |
+| SEC-043 | IAM | trusts exactos |
+| SEC-044 | IAM | cero acceso cross-environment |
+| SEC-045 | OIDC | audience `sts.amazonaws.com` |
+| SEC-046 | OIDC | subject staging exacto |
+| SEC-047 | OIDC | roles staging/production distintos |
+| SEC-048 | OIDC | production environment requerido |
+| SEC-049 | OIDC | cero credenciales permanentes |
+| SEC-050 | CloudTrail | un management trail multi-region |
+| SEC-051 | CloudTrail | global events habilitados |
+| SEC-052 | CloudTrail | management read/write |
+| SEC-053 | CloudTrail | validation habilitada |
+| SEC-054 | CloudTrail | audit bucket privado/SSL |
+| SEC-055 | CloudTrail | versioning/owner enforced |
+| SEC-056 | CloudTrail | Audit Key en trail, bucket y Logs |
+| SEC-057 | CloudTrail | staging Logs/S3 90/365 |
+| SEC-058 | CloudTrail | production Logs/S3 365/2555 |
+| SEC-059 | CloudTrail | cero CloudTrail Lake/data events |
+| SEC-060 | CloudTrail | cero account IDs reales |
+| SEC-061 | offline | synth staging/production offline |
+| SEC-062 | offline | cero lookups de cuenta o red |
+| SEC-063 | offline | templates deterministas |
+| SEC-064 | security | cero secrets en templates |
+| SEC-065 | security | cero datos CLINICAL en templates/log config |
+| SEC-066 | security | cero ARNs reales |
+| SEC-067 | security | ningún deploy/bootstrap/diff |
+| SEC-068 | graph | Security sin dependencias y grafo acíclico |
+
+Las pruebas de implementación combinan unit tests, template assertions y
+mutaciones negativas; snapshots completos no son la única evidencia. Tests
+post-deploy, rotación real y restore requieren autorización separada.
+
+### Drivers de costo
+
+La estructura fija por ambiente implica cuatro CMK y sus operaciones, cuatro
+contenedores base Secrets Manager, rotación futura, un management trail,
+CloudWatch Logs y S3 de auditoría. Los drivers variables son requests KMS,
+versiones/rotación de secretos, volumen de management events, ingestión/
+retención de Logs, bytes/transiciones S3 y data events clínicos futuros.
+
+No se estima factura sin precio vigente de `mx-central-1`, eventos, bytes,
+número de secretos/versiones y patrón de acceso. Production no reduce keys,
+validación, trail o retención sólo por costo. Staging conserva la misma
+separación con retención menor. Data events se cobran únicamente cuando exista
+el bucket clinical y su selector exacto.
+
+### Diagrama Mermaid
+
+~~~mermaid
+flowchart TB
+    GH[GitHub Actions OIDC]
+
+    subgraph STG[staging - boundary independiente]
+      OIDCS[OIDC trust stg] --> DEPS[Deployment Role stg]
+      DEPS --> CFNS[CloudFormation/CDK stg]
+      EXES[ECS Execution Role] --> ERS[ECR / Logs / Secrets stg]
+      APPS[Application Task Role] --> SRVS[S3 / SES / servicios permitidos stg]
+      SMS[Secrets Manager stg] --> SKS[Secrets Key stg]
+      DATAS[RDS / S3 / Session stg] --> AKS[Application Data Key stg]
+      CTS[CloudTrail stg] --> AUS[Audit Key stg] --> ABS[Audit Bucket stg]
+      BKS[Backups stg] --> BKSKEY[Backup Key stg]
+    end
+
+    subgraph PRD[production - boundary independiente]
+      OIDCP[OIDC trust production environment] --> DEPP[Deployment Role prd]
+      DEPP --> CFNP[CloudFormation/CDK prd]
+      EXEP[ECS Execution Role] --> ERP[ECR / Logs / Secrets prd]
+      APPP[Application Task Role] --> SRVP[S3 / SES / servicios permitidos prd]
+      SMP[Secrets Manager prd] --> SKP[Secrets Key prd]
+      DATAP[RDS / S3 / Session prd] --> AKP[Application Data Key prd]
+      CTP[CloudTrail prd] --> AUP[Audit Key prd] --> ABP[Audit Bucket prd]
+      BKP[Backups prd] --> BKPKEY[Backup Key prd]
+    end
+
+    GH --> OIDCS
+    GH --> OIDCP
+~~~
+
+El diagrama es conceptual: no contiene cuenta, ARN, valor, dominio, IP o
+persona. No representa conectividad ni confianza entre staging y production.
+
+### Ruta única de implementación
+
+La siguiente microfase deberá:
+
+1. extender config/schema con los ocho campos y transición data-event;
+2. implementar cuatro keys/aliases y policies/grants base;
+3. crear session-signing generado y tres contenedores externos vacíos;
+4. crear boundaries, factory de workload roles y roles de control/OIDC con
+   identity props sintéticos en tests;
+5. crear audit bucket, log group y management trail;
+6. exponer propiedades tipadas y mantener Security sin dependencias;
+7. agregar Aspects/validators y la matriz de tests;
+8. actualizar README, ejecutar QA/synth offline y auditar templates;
+9. limpiar artefactos, documentar y publicar sin deploy.
+
+RDS secret, workload data grants, data-event trail, detection services,
+Identity Center management y valores externos permanecen en sus owners/fases
+expresamente indicados; no se adelantan para completar SecurityStack.
+
+### Evidencia y no repetición
+
+Raíz de evidencia sanitizada:
+
+`/tmp/mxmed-aws-security-readiness-01/`
+
+Contiene 34 artefactos de baseline, mapa PP245–PP252, threat model,
+clasificación, KMS, secretos, IAM, boundaries, OIDC, acceso humano, cifrado,
+CloudTrail, data events, audit bucket, redacción, aislamiento, roadmap,
+dependencias, config futura, guardrails, 68 pruebas, costos, diagrama, QA y
+estado Git. No contiene secretos, account IDs/ARNs reales, credenciales,
+valores Stripe, datos personales o clínicos.
+
+Auditoría exacta:
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "docker_calls": 0,
+  "fixture_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "sql_calls": 0,
+  "secrets_requested": 0,
+  "secrets_persisted": 0
+}
+~~~
+
+### Fuera de alcance, rollback y siguiente microfase
+
+No se ejecutaron AWS CLI/SDK/cuenta, CDK synth/diff/bootstrap/deploy, npm,
+Docker, PHP, navegador, endpoints, Stripe, pagos, fixtures o SQL. No se
+solicitaron credenciales, cuentas, ARNs, access keys, passwords, valores de
+entorno o secretos. No se modificaron `infra/aws/**`, código funcional,
+workflows, Docker, assets, package files o PP233–PP252.
+
+Rollback documental: revertir atómicamente el commit de PP253. Al no existir
+recursos o código, sólo retira esta decisión y no altera AWS ni funcionalidad.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Security-Implementation-01`
+
+Será la Microfase 9 de 24. Podrá implementar únicamente
+`MXMED_AWS_SECURITY_FOUNDATION_CONTRACT_V1`, con synth offline y sin deploy
+salvo autorización separada.
+
+### Cierre del contador
+
+Microfase 8 de 24 concluida.
+Avance global: 8/24.
+Pendientes: 16.
+
+---
