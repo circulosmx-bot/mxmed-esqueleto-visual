@@ -59324,7 +59324,8 @@ function mxResetLogoPreview(){
       cadenceRequestId: 0,
       securePaymentVisible: false,
       securePaymentDismissed: false,
-      securePaymentMessage: ''
+      securePaymentMessage: '',
+      confirmationState: 'confirmation_idle'
     },
     paymentPayloadPreview: {
       checkoutSummary: null,
@@ -60495,6 +60496,7 @@ function mxResetLogoPreview(){
       registeredListeners: [],
       mountState: 'mount_not_requested',
       inputState: 'payment_input_not_requested',
+      inputTouched: false,
       lastErrorCode: '',
       teardownCount: 0,
       retryAvailable: false
@@ -60763,6 +60765,18 @@ function mxResetLogoPreview(){
       });
     }
 
+    function getSubscriptionStripePaymentElementNavigationState(){
+      const controller = state.activeController;
+      return Object.freeze({
+        operation_prepared: !!state.activeOperationContext,
+        active_controller: !!controller && controller.destroyed !== true,
+        element_present: !!state.activePaymentElement,
+        elements_present: !!state.activeElements,
+        input_complete: state.inputState === 'payment_input_complete',
+        input_touched: state.inputTouched === true
+      });
+    }
+
     function buildSubscriptionStripePaymentElementAppearance(){
       return SUBSCRIPTION_STRIPE_PAYMENT_APPEARANCE;
     }
@@ -60881,6 +60895,7 @@ function mxResetLogoPreview(){
       mountAttempt += 1;
       state.mountState = 'mount_destroying';
       state.inputState = 'payment_input_not_requested';
+      state.inputTouched = false;
       state.retryAvailable = false;
       updatePaymentElementUi();
 
@@ -60974,6 +60989,7 @@ function mxResetLogoPreview(){
       add('change', (event)=>{
         if(!attemptIsCurrent(controller)) return;
         controller.changeReceived = true;
+        state.inputTouched = true;
         const hasError = !!event?.error;
         const complete = event?.complete === true && !hasError;
         controller.lastChangeComplete = complete;
@@ -61172,6 +61188,7 @@ function mxResetLogoPreview(){
       state.registeredListeners = [];
       state.mountState = 'mount_loading_runtime';
       state.inputState = 'payment_input_loading';
+      state.inputTouched = false;
       state.lastErrorCode = '';
       state.retryAvailable = false;
 
@@ -61211,7 +61228,8 @@ function mxResetLogoPreview(){
       mountSubscriptionStripePaymentElementOnce,
       retrySubscriptionStripePaymentElementMount,
       destroySubscriptionStripePaymentElement,
-      getSubscriptionStripePaymentElementSnapshot
+      getSubscriptionStripePaymentElementSnapshot,
+      getSubscriptionStripePaymentElementNavigationState
     };
     if(options.testMode === true){
       api.__test = Object.freeze({
@@ -61253,6 +61271,10 @@ function mxResetLogoPreview(){
 
   function getSubscriptionStripePaymentElementSnapshot(){
     return subscriptionStripePaymentElementMountLayer.getSubscriptionStripePaymentElementSnapshot();
+  }
+
+  function getSubscriptionStripePaymentElementNavigationState(){
+    return subscriptionStripePaymentElementMountLayer.getSubscriptionStripePaymentElementNavigationState();
   }
 
   function labelFromMap(map, value, fallback){
@@ -62857,6 +62879,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.securePaymentVisible = false;
     data.checkoutSummary.securePaymentDismissed = false;
     data.checkoutSummary.securePaymentMessage = '';
+    data.checkoutSummary.confirmationState = 'confirmation_idle';
     if(bumpRequest) data.checkoutSummary.cadenceRequestId += 1;
     if(data.paymentServerPreview){
       data.paymentServerPreview.checkoutSummaryAnnual = null;
@@ -63027,6 +63050,7 @@ function mxResetLogoPreview(){
     if(slot === 'renewal') data.paymentPayloadPreview.renewal = payload || null;
     else data.paymentPayloadPreview.checkoutSummary = payload || null;
     if(payload){
+      if(slot !== 'renewal') reconcilePreparedSubscriptionOperationSelection();
       const previousSignature = paymentRouteCreateState(slot).signature;
       const nextSignature = paymentRouteCreateSignature(payload);
       ensurePaymentRouteCreateSignature(slot, payload);
@@ -63520,6 +63544,19 @@ function mxResetLogoPreview(){
     }catch(_){}
   }
 
+  function removePreparedPaymentRouteStoreEntry(signature){
+    const key = clean(signature);
+    if(!key) return;
+    const store = readPreparedPaymentRouteStore();
+    if(!Object.prototype.hasOwnProperty.call(store, key)) return;
+    delete store[key];
+    if(Object.keys(store).length){
+      writePreparedPaymentRouteStore(store);
+    }else{
+      clearPreparedPaymentRouteStore();
+    }
+  }
+
   function preparedPaymentRouteSignatureEntity(signature){
     const parts = clean(signature).split(':').map((part)=> clean(part).toLowerCase()).filter(Boolean);
     const entityTypeIndex = parts.findIndex((part)=> part === 'doctor');
@@ -63612,6 +63649,12 @@ function mxResetLogoPreview(){
     if(options.invalidateRequests === true){
       currentSubscriptionRequestSeq += 1;
     }
+    subscriptionFlowNavigationState.currentStep = 'panel';
+    subscriptionFlowNavigationState.selectionFingerprint = null;
+    subscriptionFlowNavigationState.preparedSelectionFingerprint = null;
+    subscriptionFlowNavigationState.panelReturnAvailable = false;
+    subscriptionFlowNavigationState.previousContextReusable = false;
+    subscriptionFlowNavigationState.previousContextStale = false;
     clearExplicitPlanSelection();
     clearCurrentUpgradeFocus();
     closeSummaryBenefitPopovers(pane);
@@ -63683,6 +63726,11 @@ function mxResetLogoPreview(){
   }
 
   function resetSubscriptionFlowForEntityChange(contextInfo = {}){
+    if(subscriptionFlowNavigationState.preparedSelectionFingerprint){
+      subscriptionFlowNavigationState.selectionChanged = true;
+      removePreparedSubscriptionOperationFromFrontend('payment_entity_changed');
+    }
+    subscriptionFlowNavigationState.currentStep = 'panel';
     const context = {
       entity_type: 'doctor',
       entity_id: safeDoctorId(contextInfo.entity_id || contextInfo.doctor_id),
@@ -63723,6 +63771,7 @@ function mxResetLogoPreview(){
       saved_at: new Date().toISOString()
     };
     writePreparedPaymentRouteStore(store);
+    if(key === 'checkoutSummary') rememberSubscriptionPreparedSelectionFingerprint();
   }
 
   function hydratePreparedPaymentRouteState(slot){
@@ -63750,6 +63799,7 @@ function mxResetLogoPreview(){
     state.checkoutBridge = stored.checkoutBridge && typeof stored.checkoutBridge === 'object'
       ? stored.checkoutBridge
       : paymentRouteCheckoutBridgeInitialState();
+    if(key === 'checkoutSummary') rememberSubscriptionPreparedSelectionFingerprint();
     return true;
   }
 
@@ -63944,16 +63994,236 @@ function mxResetLogoPreview(){
     return 'summary';
   }
 
+  const SUBSCRIPTION_FLOW_STEP_ORDER = Object.freeze({ panel: 1, summary: 2, payment: 3, confirmation: 4 });
+  const SUBSCRIPTION_CONFIRMATION_IN_PROGRESS_STATES = new Set([
+    'confirmation_validating',
+    'confirmation_submitting',
+    'confirmation_redirecting',
+    'confirmation_return_processing',
+    'confirmation_payment_processing',
+    'confirmation_waiting_webhook'
+  ]);
+  const SUBSCRIPTION_CONFIRMATION_LOCKED_STATES = new Set([
+    ...SUBSCRIPTION_CONFIRMATION_IN_PROGRESS_STATES,
+    'processing',
+    'waiting_webhook',
+    'succeeded_observed',
+    'backend_confirmed',
+    'activated'
+  ]);
+  const SUBSCRIPTION_NAVIGATION_LOCKED_COPY = 'Tu pago se está procesando. Espera a que finalice antes de cambiar la operación.';
+  const SUBSCRIPTION_SELECTION_PREVIEW_VERSION = 'mxmed-subscription-payment-summary-v1';
+  const subscriptionFlowNavigationState = {
+    currentStep: 'panel',
+    selectionFingerprint: null,
+    preparedSelectionFingerprint: null,
+    panelReturnAvailable: false,
+    teardownRequested: false,
+    teardownCompleted: false,
+    selectionChanged: false,
+    previousContextReusable: false,
+    previousContextStale: false,
+    lastNavigationTarget: '',
+    lastNavigationErrorCode: '',
+    warningModal: null,
+    warningModalInstance: null,
+    warningTrigger: null,
+    warningProceed: false,
+    warningTarget: ''
+  };
+
+  function normalizeSubscriptionFlowStep(value){
+    const step = clean(value).toLowerCase();
+    return Object.prototype.hasOwnProperty.call(SUBSCRIPTION_FLOW_STEP_ORDER, step) ? step : '';
+  }
+
+  function subscriptionConfirmationState(activeStep = ''){
+    const state = clean(data.checkoutSummary?.confirmationState).toLowerCase() || 'confirmation_idle';
+    return normalizeSubscriptionFlowStep(activeStep) === 'confirmation' && state === 'confirmation_idle'
+      ? 'activated'
+      : state;
+  }
+
+  function subscriptionConfirmationInProgress(activeStep = ''){
+    return SUBSCRIPTION_CONFIRMATION_IN_PROGRESS_STATES.has(subscriptionConfirmationState(activeStep));
+  }
+
+  function subscriptionNavigationLocked(activeStep = ''){
+    return SUBSCRIPTION_CONFIRMATION_LOCKED_STATES.has(subscriptionConfirmationState(activeStep));
+  }
+
+  function currentSubscriptionFlowStep(){
+    const rendered = normalizeSubscriptionFlowStep(
+      els.checkoutSummary?.querySelector?.('[data-subp-payment-shell][data-step]')?.dataset?.step
+    );
+    return rendered || normalizeSubscriptionFlowStep(subscriptionFlowNavigationState.currentStep) || 'panel';
+  }
+
+  function getSubscriptionFlowNavigationSnapshot(){
+    const currentStep = currentSubscriptionFlowStep();
+    const currentOrder = SUBSCRIPTION_FLOW_STEP_ORDER[currentStep];
+    const locked = subscriptionNavigationLocked(currentStep);
+    return Object.freeze({
+      current_step: currentStep,
+      backward_panel_available: !locked && currentOrder > SUBSCRIPTION_FLOW_STEP_ORDER.panel,
+      backward_summary_available: !locked && currentOrder > SUBSCRIPTION_FLOW_STEP_ORDER.summary,
+      navigation_locked: locked,
+      teardown_requested: subscriptionFlowNavigationState.teardownRequested === true,
+      teardown_completed: subscriptionFlowNavigationState.teardownCompleted === true,
+      selection_changed: subscriptionFlowNavigationState.selectionChanged === true,
+      previous_context_reusable: subscriptionFlowNavigationState.previousContextReusable === true,
+      previous_context_stale: subscriptionFlowNavigationState.previousContextStale === true,
+      confirmation_in_progress: subscriptionConfirmationInProgress(currentStep),
+      last_navigation_target: subscriptionFlowNavigationState.lastNavigationTarget || null,
+      last_navigation_error_code: subscriptionFlowNavigationState.lastNavigationErrorCode || null
+    });
+  }
+
+  function publishSubscriptionFlowNavigationSnapshot(){
+    const snapshot = getSubscriptionFlowNavigationSnapshot();
+    try{
+      window.mxmedGetSubscriptionFlowNavigationSnapshot = getSubscriptionFlowNavigationSnapshot;
+      window.dispatchEvent(new CustomEvent('mxmed:subscription-flow-navigation', { detail: snapshot }));
+    }catch(_){}
+    return snapshot;
+  }
+
+  function selectionFingerprintFromCurrentPaymentSummary(){
+    const payload = data.paymentPayloadPreview?.checkoutSummary || null;
+    if(!payload) return null;
+    const preview = latestPaymentServerPreviewData('checkoutSummary') || {};
+    const amountCents = Number(preview.amount_cents ?? payload.amount_cents);
+    const currency = clean(preview.currency || payload.currency).toUpperCase();
+    const entityType = clean(payload.entity_type).toLowerCase();
+    const entityId = safeDoctorId(payload.entity_id);
+    const selectedPlan = clean(payload.target_plan_code || payload.current_plan_code).toLowerCase();
+    const billingPeriod = clean(payload.billing_period).toLowerCase();
+    const routeType = clean(payload.route_type).toLowerCase();
+    const previewVersion = clean(
+      preview.preview_version
+      || preview.contract_version
+      || preview.pricing_contract?.contract_version
+      || payload.pricing_contract?.contract_version
+      || SUBSCRIPTION_SELECTION_PREVIEW_VERSION
+    );
+    if(entityType !== 'doctor' || !entityId || !selectedPlan || !billingPeriod || !routeType) return null;
+    if(!Number.isSafeInteger(amountCents) || amountCents < 0 || !/^[A-Z]{3}$/.test(currency) || !previewVersion) return null;
+    return Object.freeze({
+      scoped_entity: `${entityType}:${entityId}`,
+      selected_plan: selectedPlan,
+      billing_period: billingPeriod,
+      route_type: routeType,
+      amount_cents: amountCents,
+      currency,
+      preview_version: previewVersion
+    });
+  }
+
+  function sameSubscriptionSelectionFingerprint(left, right){
+    if(!left || !right) return false;
+    return left.scoped_entity === right.scoped_entity
+      && left.selected_plan === right.selected_plan
+      && left.billing_period === right.billing_period
+      && left.route_type === right.route_type
+      && left.amount_cents === right.amount_cents
+      && left.currency === right.currency
+      && left.preview_version === right.preview_version;
+  }
+
+  function rememberSubscriptionPreparedSelectionFingerprint(){
+    const fingerprint = selectionFingerprintFromCurrentPaymentSummary();
+    if(!fingerprint) return false;
+    subscriptionFlowNavigationState.selectionFingerprint = fingerprint;
+    subscriptionFlowNavigationState.preparedSelectionFingerprint = fingerprint;
+    subscriptionFlowNavigationState.selectionChanged = false;
+    subscriptionFlowNavigationState.previousContextStale = false;
+    return true;
+  }
+
+  function preparedSubscriptionOperationAnalysis(){
+    const routeState = paymentRouteCreateState('checkoutSummary');
+    const bridge = paymentRouteCheckoutBridgeState('checkoutSummary');
+    const paymentIntentState = paymentIntentCreateState('checkoutSummary');
+    const responseData = paymentIntentState.data && typeof paymentIntentState.data === 'object'
+      ? paymentIntentState.data
+      : null;
+    const route = routeState.data && typeof routeState.data === 'object' ? routeState.data : null;
+    const bridgeCheckout = bridge.data && typeof bridge.data === 'object' ? bridge.data : null;
+    const context = responseData
+      ? buildSubscriptionStripePaymentElementOperationContext('checkoutSummary', responseData, { freshCreate: false })
+      : null;
+    const currentFingerprint = selectionFingerprintFromCurrentPaymentSummary();
+    const preparedFingerprint = subscriptionFlowNavigationState.preparedSelectionFingerprint;
+    const exists = routeState.state === 'success' || bridge.state === 'success' || paymentIntentState.state === 'success';
+    const selectionMatches = sameSubscriptionSelectionFingerprint(currentFingerprint, preparedFingerprint);
+    const routeEligible = routeState.state === 'success'
+      && !!route
+      && ['new_subscription', 'upgrade_subscription'].includes(clean(route.route_type).toLowerCase())
+      && clean(route.status).toLowerCase() === 'checkout_created_no_provider';
+    const checkoutEligible = bridge.state === 'success'
+      && !!bridgeCheckout
+      && clean(bridgeCheckout.status).toLowerCase() === 'checkout_created_no_provider'
+      && clean(bridgeCheckout.checkout_status).toLowerCase() === 'pending_payment';
+    const paymentIntentEligible = paymentIntentState.state === 'success'
+      && !!context
+      && context.checkoutStatus === 'pending_payment'
+      && context.checkoutExpired === false
+      && context.provider === 'stripe'
+      && context.normalizedStatus === 'created'
+      && context.providerStatus === 'requires_payment_method'
+      && context.paymentEventCount === 0
+      && context.subscriptionIdPresent === false
+      && context.activatedAtPresent === false;
+    return Object.freeze({
+      exists,
+      selectionMatches,
+      reusable: exists && selectionMatches && routeEligible && checkoutEligible && paymentIntentEligible
+    });
+  }
+
+  function removePreparedSubscriptionOperationFromFrontend(reason = 'selection_changed'){
+    const preparedSignature = clean(paymentRouteCreateState('checkoutSummary').signature);
+    destroySubscriptionStripePaymentElement(reason);
+    resetPaymentRouteCreate('checkoutSummary');
+    removePreparedPaymentRouteStoreEntry(preparedSignature);
+    try{
+      if(window.mxmedStore?.subscriptionPaymentActivationState){
+        window.mxmedStore.subscriptionPaymentActivationState = {
+          ...window.mxmedStore.subscriptionPaymentActivationState,
+          checkout_intent_uuid: '',
+          payment_intent_uuid: ''
+        };
+      }
+    }catch(_){}
+    subscriptionFlowNavigationState.preparedSelectionFingerprint = null;
+    subscriptionFlowNavigationState.panelReturnAvailable = false;
+    subscriptionFlowNavigationState.previousContextReusable = false;
+    subscriptionFlowNavigationState.previousContextStale = true;
+  }
+
+  function reconcilePreparedSubscriptionOperationSelection(){
+    const prepared = subscriptionFlowNavigationState.preparedSelectionFingerprint;
+    const current = selectionFingerprintFromCurrentPaymentSummary();
+    subscriptionFlowNavigationState.selectionFingerprint = current;
+    if(!prepared || !current) return false;
+    const changed = !sameSubscriptionSelectionFingerprint(prepared, current);
+    subscriptionFlowNavigationState.selectionChanged = changed;
+    if(changed) removePreparedSubscriptionOperationFromFrontend('payment_selection_changed');
+    return changed;
+  }
+
   function checkoutSummaryStepState(activeStep, step){
-    const order = { panel: 1, summary: 2, payment: 3, confirmation: 4 };
-    const activeOrder = order[activeStep] || order.summary;
-    const stepOrder = order[step] || order.summary;
+    const activeOrder = SUBSCRIPTION_FLOW_STEP_ORDER[activeStep] || SUBSCRIPTION_FLOW_STEP_ORDER.summary;
+    const stepOrder = SUBSCRIPTION_FLOW_STEP_ORDER[step] || SUBSCRIPTION_FLOW_STEP_ORDER.summary;
     if(stepOrder < activeOrder) return 'complete';
     if(stepOrder === activeOrder) return 'active';
     return 'pending';
   }
 
   function checkoutSummaryStepperHtml(activeStep){
+    const normalizedActiveStep = normalizeSubscriptionFlowStep(activeStep) || 'summary';
+    subscriptionFlowNavigationState.currentStep = normalizedActiveStep;
+    const locked = subscriptionNavigationLocked(normalizedActiveStep);
     const steps = [
       { key: 'panel', label: 'Panel' },
       { key: 'summary', label: 'Resumen' },
@@ -63962,15 +64232,29 @@ function mxResetLogoPreview(){
     ];
     return `<ol class="subp-payment-stepper" aria-label="Progreso del pago seguro">
       ${steps.map((step, index)=>{
-        const state = checkoutSummaryStepState(activeStep, step.key);
+        const state = checkoutSummaryStepState(normalizedActiveStep, step.key);
         const number = String(index + 1);
-        const iconClass = '';
-        return `<li class="subp-payment-stepper-item" data-state="${escapeHtml(state)}" ${state === 'active' ? 'aria-current="step"' : ''}>
-          <span class="subp-payment-stepper-dot ${iconClass}" aria-hidden="true">${escapeHtml(number)}</span>
-          <span>${escapeHtml(step.label)}</span>
-        </li>`;
+        const previous = state === 'complete';
+        const navigationState = state === 'active'
+          ? 'current'
+          : state === 'pending'
+            ? 'future'
+            : locked
+              ? 'locked'
+              : 'completed-available';
+        const content = previous
+          ? `<button class="subp-payment-stepper-control" type="button" data-subp-step-back="${escapeHtml(step.key)}" aria-label="Volver a ${escapeHtml(step.label)}" ${locked ? 'disabled aria-disabled="true"' : ''}>
+              <span class="subp-payment-stepper-dot" aria-hidden="true">${escapeHtml(number)}</span>
+              <span class="subp-payment-stepper-label">${escapeHtml(step.label)}</span>
+              <span class="subp-payment-stepper-back-icon material-symbols-rounded" aria-hidden="true">${locked ? 'lock' : 'arrow_back'}</span>
+            </button>`
+          : `<span class="subp-payment-stepper-static" ${state === 'pending' ? 'aria-disabled="true"' : ''}>
+              <span class="subp-payment-stepper-dot" aria-hidden="true">${escapeHtml(number)}</span>
+              <span class="subp-payment-stepper-label">${escapeHtml(step.label)}</span>
+            </span>`;
+        return `<li class="subp-payment-stepper-item" data-state="${escapeHtml(state)}" data-navigation-state="${escapeHtml(navigationState)}" ${state === 'active' ? 'aria-current="step"' : ''} ${state === 'pending' ? 'aria-disabled="true"' : ''}>${content}</li>`;
       }).join('')}
-    </ol>`;
+    </ol><span class="visually-hidden" data-subp-stepper-navigation-status role="status" aria-live="polite">${locked ? escapeHtml(SUBSCRIPTION_NAVIGATION_LOCKED_COPY) : ''}</span>`;
   }
 
   function checkoutSummaryPreviewAmountLabel(slot, fallback){
@@ -64342,26 +64626,30 @@ function mxResetLogoPreview(){
   }
 
   function securePaymentMethodsPanelHtml(view){
+    const monthly = view.billingPeriod === 'monthly';
+    const availabilityCopy = monthly
+      ? 'La modalidad mensual requiere una forma de pago compatible con cargos automáticos.'
+      : 'La disponibilidad final dependerá de Stripe y de esta operación.';
     return `<article class="subp-secure-payment-panel" aria-labelledby="subp-secure-payment-methods-title">
       <div class="subp-secure-payment-panel-head">
         <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
         <div><span>Opciones disponibles</span><h4 id="subp-secure-payment-methods-title">Elige cómo pagar</h4></div>
       </div>
       <div class="subp-stripe-element-host subp-stripe-element-host--express" data-subp-express-checkout-host data-interactive="false" data-state="not-mounted">
-        <div class="subp-payment-method-marks" data-subp-payment-method-marks>
+        <div class="subp-payment-method-marks" data-subp-payment-method-marks data-billing-period="${monthly ? 'monthly' : 'annual'}" data-method-count="${monthly ? '1' : '2'}">
           <div class="subp-payment-method-mark" data-payment-mark="cards">
             <span class="subp-payment-method-mark-logo">
               <img src="assets/img/Tarjetas.png" alt="Tarjetas de débito o crédito" width="860" height="210">
             </span>
             <span class="subp-payment-method-mark-copy"><strong>Tarjetas</strong><small>Débito o crédito</small></span>
           </div>
-          <div class="subp-payment-method-mark" data-payment-mark="oxxo">
+          ${monthly ? '' : `<div class="subp-payment-method-mark" data-payment-mark="oxxo">
             <span class="subp-payment-method-mark-logo">
               <img src="assets/img/Oxxo.png" alt="OXXO" width="3840" height="1946">
             </span>
             <span class="subp-payment-method-mark-copy"><strong>OXXO</strong><small>Pago en efectivo</small></span>
-          </div>
-          <p class="subp-payment-method-availability"><span class="material-symbols-rounded" aria-hidden="true">info</span>La disponibilidad final dependerá de Stripe y de esta operación.</p>
+          </div>`}
+          <p class="subp-payment-method-availability"><span class="material-symbols-rounded" aria-hidden="true">info</span>${escapeHtml(availabilityCopy)}</p>
         </div>
         <p class="subp-payment-methods-ready-note" data-subp-payment-methods-ready-note hidden>Stripe muestra las formas de pago disponibles dentro del formulario seguro.</p>
       </div>
@@ -64555,8 +64843,29 @@ function mxResetLogoPreview(){
     return true;
   }
 
+  function remountPreparedSubscriptionStripePaymentElement(){
+    const analysis = preparedSubscriptionOperationAnalysis();
+    const paymentIntent = paymentIntentCreateState('checkoutSummary');
+    if(!analysis.reusable || paymentIntent.state !== 'success' || !paymentIntent.data) return false;
+    const active = getSubscriptionStripePaymentElementNavigationState();
+    if(active.active_controller || active.element_present || active.elements_present) return false;
+    const context = buildSubscriptionStripePaymentElementOperationContext(
+      'checkoutSummary',
+      paymentIntent.data,
+      { freshCreate: false }
+    );
+    const expiryDelayMs = subscriptionStripePaymentElementExpiryDelay(paymentIntent.data);
+    if(!context || !(expiryDelayMs > 0)){
+      removePreparedSubscriptionOperationFromFrontend('prepared_operation_expired');
+      return false;
+    }
+    mountSubscriptionStripePaymentElementOnce(context, { expiryDelayMs }).catch(()=>{});
+    return true;
+  }
+
   function openCheckoutSummarySecurePayment(slot){
     const key = isCheckoutPaymentShellSlot(slot) ? 'checkoutSummary' : clean(slot);
+    if(key === 'checkoutSummary') reconcilePreparedSubscriptionOperationSelection();
     const validation = checkoutSummarySecurePaymentValidation(key);
     const visualSimulation = isQaPlanSimulationActive() && !!data.paymentPayloadPreview?.[key];
     if(!validation.ok && !visualSimulation){
@@ -64576,25 +64885,229 @@ function mxResetLogoPreview(){
       if(shell){
         try{ shell.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }); }catch(_){}
       }
+      if(key === 'checkoutSummary') remountPreparedSubscriptionStripePaymentElement();
     });
     return true;
   }
 
   function closeCheckoutSummarySecurePayment(){
-    destroySubscriptionStripePaymentElement('back_to_summary');
-    setCheckoutSummarySecurePaymentVisible(false, { dismissed: true });
-    if(!renderActiveCheckoutSummary({ loadPreview: false })) return false;
-    window.requestAnimationFrame(()=>{
-      const opener = els.checkoutSummary?.querySelector('[data-subp-open-secure-payment]');
-      if(opener){
-        try{ opener.focus({ preventScroll: true }); }catch(_){ try{ opener.focus(); }catch(__){} }
-      }
-      if(els.checkoutSummary){
-        try{ els.checkoutSummary.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }); }catch(_){}
-      }
+    return navigateSubscriptionFlowBackward('summary', {
+      trigger: document.activeElement,
+      source: 'secure_payment_back_action'
     });
+  }
+
+  function focusSubscriptionFlowStep(step){
+    window.requestAnimationFrame(()=>{
+      const normalized = normalizeSubscriptionFlowStep(step);
+      const target = normalized === 'summary'
+        ? els.checkoutSummary?.querySelector('[data-subp-payment-shell][data-step="summary"] #subp-new-summary-cadence-title, [data-subp-payment-shell][data-step="summary"] h3')
+        : normalized === 'panel'
+          ? pane.querySelector('.mx-panel-subheader-title, [data-subp-pricing-toggle] button')
+          : null;
+      if(!target) return;
+      if(!/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) target.setAttribute('tabindex', '-1');
+      try{ target.focus({ preventScroll: true }); }catch(_){ try{ target.focus(); }catch(__){} }
+      const scrollTarget = normalized === 'summary' ? els.checkoutSummary : target;
+      try{ scrollTarget?.scrollIntoView?.({ behavior: 'smooth', block: 'start', inline: 'nearest' }); }catch(_){}
+    });
+  }
+
+  function ensureSubscriptionBackChangeWarningModal(){
+    if(subscriptionFlowNavigationState.warningModal?.isConnected && subscriptionFlowNavigationState.warningModalInstance){
+      return subscriptionFlowNavigationState.warningModalInstance;
+    }
+    const BsModal = window.bootstrap && window.bootstrap.Modal;
+    if(!BsModal || !pane) return null;
+    const modal = document.createElement('div');
+    modal.className = 'modal fade subp-back-change-warning-modal';
+    modal.id = 'subpBackChangeWarningModal';
+    modal.tabIndex = -1;
+    modal.setAttribute('aria-labelledby', 'subpBackChangeWarningTitle');
+    modal.setAttribute('aria-describedby', 'subpBackChangeWarningDescription');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `<div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="subpBackChangeWarningTitle">¿Quieres volver al resumen?</h2>
+          <button class="btn-close" type="button" data-subp-back-warning-stay aria-label="Permanecer en Pago seguro"></button>
+        </div>
+        <div class="modal-body">
+          <p id="subpBackChangeWarningDescription">La información capturada en el formulario de pago se eliminará.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-primary" type="button" data-subp-back-warning-stay>Permanecer en Pago seguro</button>
+          <button class="btn btn-primary" type="button" data-subp-back-warning-confirm>Volver al Resumen</button>
+        </div>
+      </div>
+    </div>`;
+    pane.appendChild(modal);
+    let instance = null;
+    try{
+      instance = typeof BsModal.getOrCreateInstance === 'function'
+        ? BsModal.getOrCreateInstance(modal, { backdrop: 'static', keyboard: true, focus: true })
+        : new BsModal(modal, { backdrop: 'static', keyboard: true, focus: true });
+    }catch(_){
+      modal.remove();
+      return null;
+    }
+    modal.querySelectorAll('[data-subp-back-warning-stay]').forEach((button)=>{
+      button.addEventListener('click', ()=>{
+        subscriptionFlowNavigationState.warningProceed = false;
+        instance.hide();
+      });
+    });
+    modal.querySelector('[data-subp-back-warning-confirm]')?.addEventListener('click', ()=>{
+      subscriptionFlowNavigationState.warningProceed = true;
+      instance.hide();
+    });
+    modal.addEventListener('shown.bs.modal', ()=>{
+      const stay = modal.querySelector('.modal-footer [data-subp-back-warning-stay]');
+      try{ stay?.focus?.(); }catch(_){}
+    });
+    modal.addEventListener('hidden.bs.modal', ()=>{
+      const trigger = subscriptionFlowNavigationState.warningTrigger;
+      const proceed = subscriptionFlowNavigationState.warningProceed;
+      const target = subscriptionFlowNavigationState.warningTarget || 'summary';
+      subscriptionFlowNavigationState.warningTrigger = null;
+      subscriptionFlowNavigationState.warningProceed = false;
+      subscriptionFlowNavigationState.warningTarget = '';
+      if(proceed){
+        navigateSubscriptionFlowBackward(target, {
+          confirmed: true,
+          trigger,
+          source: 'payment_input_change_confirmed'
+        });
+        return;
+      }
+      try{ trigger?.focus?.({ preventScroll: true }); }catch(_){ try{ trigger?.focus?.(); }catch(__){} }
+    });
+    subscriptionFlowNavigationState.warningModal = modal;
+    subscriptionFlowNavigationState.warningModalInstance = instance;
+    return instance;
+  }
+
+  function showSubscriptionBackChangeWarning(trigger){
+    const modal = ensureSubscriptionBackChangeWarningModal();
+    if(!modal) return false;
+    subscriptionFlowNavigationState.warningTrigger = trigger || document.activeElement;
+    subscriptionFlowNavigationState.warningProceed = false;
+    subscriptionFlowNavigationState.warningTarget = 'summary';
+    try{ modal.show(); }catch(_){ return false; }
     return true;
   }
+
+  function setSubscriptionPaymentConfirmationNavigationState(nextState){
+    const normalized = clean(nextState).toLowerCase();
+    data.checkoutSummary.confirmationState = /^[a-z0-9_]{3,64}$/.test(normalized)
+      ? normalized
+      : 'confirmation_idle';
+    const currentStep = currentSubscriptionFlowStep();
+    const locked = subscriptionNavigationLocked(currentStep);
+    pane.querySelectorAll('[data-subp-step-back]').forEach((button)=>{
+      button.disabled = locked;
+      if(locked) button.setAttribute('aria-disabled', 'true');
+      else button.removeAttribute('aria-disabled');
+      const item = button.closest('.subp-payment-stepper-item');
+      if(item) item.dataset.navigationState = locked ? 'locked' : 'completed-available';
+      const icon = button.querySelector('.subp-payment-stepper-back-icon');
+      if(icon) icon.textContent = locked ? 'lock' : 'arrow_back';
+    });
+    pane.querySelectorAll('[data-subp-stepper-navigation-status]').forEach((status)=>{
+      status.textContent = locked ? SUBSCRIPTION_NAVIGATION_LOCKED_COPY : '';
+    });
+    publishSubscriptionFlowNavigationSnapshot();
+  }
+
+  function navigateSubscriptionFlowBackward(targetStep, options = {}){
+    const target = normalizeSubscriptionFlowStep(targetStep);
+    const current = currentSubscriptionFlowStep();
+    const trigger = options.trigger || document.activeElement;
+    subscriptionFlowNavigationState.lastNavigationTarget = target;
+    subscriptionFlowNavigationState.lastNavigationErrorCode = '';
+    subscriptionFlowNavigationState.teardownRequested = false;
+    subscriptionFlowNavigationState.teardownCompleted = false;
+    subscriptionFlowNavigationState.selectionChanged = false;
+
+    if(!target || SUBSCRIPTION_FLOW_STEP_ORDER[target] >= SUBSCRIPTION_FLOW_STEP_ORDER[current]){
+      subscriptionFlowNavigationState.lastNavigationErrorCode = 'SUBP_NAV_TARGET_NOT_PREVIOUS';
+      publishSubscriptionFlowNavigationSnapshot();
+      return false;
+    }
+    if(subscriptionNavigationLocked(current)){
+      subscriptionFlowNavigationState.lastNavigationErrorCode = 'SUBP_NAV_CONFIRMATION_LOCKED';
+      pane.querySelectorAll('[data-subp-stepper-navigation-status]').forEach((status)=>{
+        status.textContent = SUBSCRIPTION_NAVIGATION_LOCKED_COPY;
+      });
+      publishSubscriptionFlowNavigationSnapshot();
+      return false;
+    }
+
+    const elementNavigation = getSubscriptionStripePaymentElementNavigationState();
+    const preparedAnalysis = preparedSubscriptionOperationAnalysis();
+    if(current === 'payment'
+      && options.confirmed !== true
+      && preparedAnalysis.exists
+      && (elementNavigation.input_complete === true
+        || elementNavigation.input_touched === true)){
+      if(showSubscriptionBackChangeWarning(trigger)){
+        subscriptionFlowNavigationState.lastNavigationErrorCode = 'SUBP_NAV_PAYMENT_INPUT_CONFIRMATION_REQUIRED';
+      }else{
+        subscriptionFlowNavigationState.lastNavigationErrorCode = 'SUBP_NAV_DIALOG_UNAVAILABLE';
+      }
+      publishSubscriptionFlowNavigationSnapshot();
+      return false;
+    }
+
+    if(current === 'payment'){
+      subscriptionFlowNavigationState.teardownRequested = elementNavigation.active_controller
+        || elementNavigation.element_present
+        || elementNavigation.elements_present;
+      destroySubscriptionStripePaymentElement('subscription_step_backward');
+      subscriptionFlowNavigationState.teardownCompleted = true;
+    }
+
+    if(preparedAnalysis.exists){
+      subscriptionFlowNavigationState.selectionChanged = preparedAnalysis.selectionMatches !== true;
+      if(preparedAnalysis.reusable){
+        subscriptionFlowNavigationState.previousContextReusable = true;
+        subscriptionFlowNavigationState.previousContextStale = false;
+        subscriptionFlowNavigationState.panelReturnAvailable = target === 'panel';
+      }else{
+        removePreparedSubscriptionOperationFromFrontend(
+          subscriptionFlowNavigationState.selectionChanged ? 'payment_selection_changed' : 'payment_operation_not_reusable'
+        );
+      }
+    }else{
+      subscriptionFlowNavigationState.previousContextReusable = false;
+      subscriptionFlowNavigationState.previousContextStale = false;
+      subscriptionFlowNavigationState.panelReturnAvailable = false;
+    }
+
+    setCheckoutSummarySecurePaymentVisible(false, { dismissed: true });
+    let rendered = false;
+    if(target === 'summary'){
+      data.checkoutSummary.visible = true;
+      rendered = renderActiveCheckoutSummary({ loadPreview: false });
+    }else if(target === 'panel'){
+      data.checkoutSummary.visible = false;
+      data.checkoutSummary.preparing = false;
+      subscriptionFlowNavigationState.currentStep = 'panel';
+      renderCatalog();
+      rendered = true;
+    }
+    if(!rendered){
+      subscriptionFlowNavigationState.lastNavigationErrorCode = 'SUBP_NAV_TARGET_RENDER_FAILED';
+      publishSubscriptionFlowNavigationSnapshot();
+      return false;
+    }
+    subscriptionFlowNavigationState.currentStep = target;
+    focusSubscriptionFlowStep(target);
+    publishSubscriptionFlowNavigationSnapshot();
+    return true;
+  }
+
+  try{ window.mxmedGetSubscriptionFlowNavigationSnapshot = getSubscriptionFlowNavigationSnapshot; }catch(_){}
 
   function paymentRouteCreateActionHtml(slot){
     const state = paymentRouteCreateState(slot);
@@ -66735,6 +67248,11 @@ function mxResetLogoPreview(){
   }
 
   function closePlanCheckoutSummary({ render = true } = {}){
+    if(subscriptionFlowNavigationState.preparedSelectionFingerprint
+      || activePaymentExecutionState('checkoutSummary')
+      || clean(paymentRouteCreateState('checkoutSummary').signature)){
+      removePreparedSubscriptionOperationFromFrontend('checkout_summary_closed');
+    }
     destroySubscriptionStripePaymentElement('plan_checkout_summary_closed');
     const closingFreeSelection = !hasPaidActiveSubscription(data.currentModel || {});
     data.checkoutSummary.visible = false;
@@ -66761,6 +67279,32 @@ function mxResetLogoPreview(){
     publishPaymentPayloadPreview('checkoutSummary', null);
   }
 
+  function resumePreparedSubscriptionSummaryFromPanel(planId, contextKey){
+    const targetPlanId = normalizePlanId(planId);
+    if(subscriptionFlowNavigationState.panelReturnAvailable !== true) return false;
+    if(targetPlanId !== normalizePlanId(data.checkoutSummary.targetPlanId)) return false;
+    if(clean(contextKey) !== clean(data.checkoutSummary.contextKey)) return false;
+    reconcilePreparedSubscriptionOperationSelection();
+    const analysis = preparedSubscriptionOperationAnalysis();
+    if(!analysis.reusable){
+      if(analysis.exists) removePreparedSubscriptionOperationFromFrontend('prepared_operation_recheck_failed');
+      return false;
+    }
+    data.checkoutSummary.visible = true;
+    data.checkoutSummary.preparing = false;
+    data.checkoutSummary.error = '';
+    data.checkoutSummary.securePaymentVisible = false;
+    data.checkoutSummary.securePaymentDismissed = true;
+    subscriptionFlowNavigationState.panelReturnAvailable = false;
+    subscriptionFlowNavigationState.previousContextReusable = true;
+    subscriptionFlowNavigationState.previousContextStale = false;
+    subscriptionFlowNavigationState.currentStep = 'summary';
+    renderCatalog();
+    focusSubscriptionFlowStep('summary');
+    publishSubscriptionFlowNavigationSnapshot();
+    return true;
+  }
+
   async function openPlanCheckoutSummary(planId){
     if(data.realQaEntityHydrationPending) return;
     const plan = findPlanById(planId);
@@ -66772,6 +67316,11 @@ function mxResetLogoPreview(){
     if(data.checkoutSummary.preparing && normalizePlanId(data.checkoutSummary.targetPlanId) === targetPlanId) return;
     const requestId = Date.now() + Math.random();
     const contextKey = currentPlanSelectionContextKey();
+    if(resumePreparedSubscriptionSummaryFromPanel(targetPlanId, contextKey)) return;
+    if(subscriptionFlowNavigationState.preparedSelectionFingerprint){
+      subscriptionFlowNavigationState.selectionChanged = true;
+      removePreparedSubscriptionOperationFromFrontend('plan_selection_changed');
+    }
     resetPaymentExecutionForSlot('checkoutSummary');
     if(data.paymentServerPreview){
       data.paymentServerPreview.checkoutSummary = null;
@@ -68455,8 +69004,28 @@ function mxResetLogoPreview(){
     if(checkoutAction){
       event.preventDefault();
       if(clean(checkoutAction.dataset.subpCheckoutSummaryAction) === 'back'){
-        closePlanCheckoutSummary();
+        if(currentSubscriptionFlowStep() === 'confirmation'){
+          closePlanCheckoutSummary();
+          subscriptionFlowNavigationState.currentStep = 'panel';
+          focusSubscriptionFlowStep('panel');
+          publishSubscriptionFlowNavigationSnapshot();
+        }else{
+          navigateSubscriptionFlowBackward('panel', {
+            trigger: checkoutAction,
+            source: 'checkout_summary_back_action'
+          });
+        }
       }
+      return;
+    }
+    const stepBack = event.target && event.target.closest('[data-subp-step-back]');
+    if(stepBack){
+      event.preventDefault();
+      event.stopPropagation();
+      navigateSubscriptionFlowBackward(clean(stepBack.dataset.subpStepBack), {
+        trigger: stepBack,
+        source: 'stepper'
+      });
       return;
     }
     const checkoutUpsell = event.target && event.target.closest('[data-subp-checkout-upsell-target]');
@@ -68585,6 +69154,10 @@ function mxResetLogoPreview(){
     button.addEventListener('click', ()=>{
       const mode = clean(button.dataset.subpPricingMode) === 'monthly' ? 'monthly' : 'yearly';
       if(data.billing === mode) return;
+      if(subscriptionFlowNavigationState.preparedSelectionFingerprint){
+        subscriptionFlowNavigationState.selectionChanged = true;
+        removePreparedSubscriptionOperationFromFrontend('billing_period_changed');
+      }
       destroySubscriptionStripePaymentElement('pricing_mode_changed');
       data.billing = mode;
       clearCurrentUpgradeFocus();
@@ -68612,6 +69185,10 @@ function mxResetLogoPreview(){
   });
   els.billingRadios.forEach(r=>{
     r.addEventListener('change', ()=>{
+      if(subscriptionFlowNavigationState.preparedSelectionFingerprint){
+        subscriptionFlowNavigationState.selectionChanged = true;
+        removePreparedSubscriptionOperationFromFrontend('billing_period_changed');
+      }
       destroySubscriptionStripePaymentElement('billing_period_changed');
       data.billing = r.value === 'yearly' ? 'yearly' : 'monthly';
       clearCurrentUpgradeFocus();

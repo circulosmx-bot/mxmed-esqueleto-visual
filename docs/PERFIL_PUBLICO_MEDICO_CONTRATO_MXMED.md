@@ -50380,3 +50380,401 @@ Sera la Microfase 3 de 24.
 Microfase 2 de 24 concluida.
 Avance global: 2/24.
 Pendientes: 22.
+
+---
+
+## PP-Decisiones 248 - Navegación regresiva segura y estrategia de métodos de pago
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`UX-PRODUCT/Suscripciones-StepperBackwardNavigation-AndPaymentMethodStrategy-01`
+
+Contador:
+
+`Microfase 3 de 24`
+
+Resultado:
+
+`PASS - SUBP_STEPPER_BACKWARD_NAVIGATION_AND_PAYMENT_METHOD_STRATEGY_V1`
+
+Esta decisión conserva PP237–PP241 y PP245–PP247. Implementa navegación
+exclusivamente regresiva en el stepper, teardown seguro del Payment Element,
+reutilización o invalidación frontend controlada de una operación preparada y
+la visibilidad anual/mensual de las referencias informativas Tarjetas/OXXO.
+También cierra la estrategia futura de tarjetas, wallets, OXXO y las dos vías
+SPEI sin implementar métodos nuevos ni confirmar pagos.
+
+### Baseline y alcance
+
+El baseline se validó sobre:
+
+- rama `feature/suscripciones-pago-seguro-summary-trust-payment-marks`;
+- commit `24bff4f097da5ebcb6115b332c34f4ccffe6aff4`;
+- upstream `0/0`;
+- working tree limpio;
+- `git diff --check` PASS.
+
+La rama de implementación es:
+
+`feature/suscripciones-stepper-back-navigation-payment-strategy`
+
+No se modificaron backend, endpoints, PHP, SQL, AWS, dependencias, CSP,
+configuración ni assets. No se agregó, movió, renombró, duplicó o redibujó
+ningún logotipo.
+
+### Contrato definitivo del stepper
+
+`checkoutSummaryStepperHtml(activeStep)` conserva el `ol`, los cuatro pasos,
+`data-state` y `aria-current="step"`. Añade un estado de navegación separado:
+
+- `completed-available`: paso anterior, con botón real;
+- `current`: paso activo no interactivo;
+- `future`: paso posterior no interactivo y `aria-disabled="true"`;
+- `locked`: paso anterior deshabilitado durante confirmación/procesamiento.
+
+Los controles regresivos son `button type="button"`, usan exclusivamente
+`data-subp-step-back="panel|summary"`, tienen nombre accesible y reciben Enter y
+Space de manera nativa. Los pasos futuros son texto estructural, no enlaces,
+no simulan destino y no entran al orden de tabulación.
+
+Matriz cerrada:
+
+| Paso actual | Panel | Resumen | Pago seguro | Confirmación |
+| --- | --- | --- | --- | --- |
+| Panel | actual | futuro | futuro | futuro |
+| Resumen | anterior pulsable | actual | futuro | futuro |
+| Pago seguro | anterior pulsable | anterior pulsable | actual | futuro |
+| Confirmación enviada/procesada/activada | bloqueado | bloqueado | bloqueado | actual |
+
+El botón separado `Volver al panel` puede cerrar una confirmación ya activada
+cuando el estado lo permita; no convierte el stepper en editor de una operación
+enviada.
+
+### Punto único de navegación regresiva
+
+Todos los clicks regresivos del stepper y el regreso visible desde Pago seguro
+convergen en:
+
+`navigateSubscriptionFlowBackward(targetStep, options)`
+
+La función:
+
+1. normaliza y valida que el destino sea anterior;
+2. consulta el paso y estado de confirmación actuales;
+3. bloquea sin teardown durante confirmación/procesamiento;
+4. solicita el diálogo sólo si existe operación preparada e input completo o
+   tocado;
+5. destruye Payment Element/Elements cuando el regreso fue aceptado;
+6. invalida readiness, CTA y error del formulario mediante el teardown de
+   PP241;
+7. evalúa reutilización o stale del contexto preparado;
+8. renderiza Panel o Resumen;
+9. restaura foco;
+10. publica únicamente un snapshot sanitizado.
+
+No existe un segundo handler con reglas propias para los botones del stepper.
+El botón inferior `Volver al resumen` llama al mismo punto.
+
+### Bloqueo de confirmación
+
+La navegación regresiva queda bloqueada para:
+
+- `confirmation_validating`;
+- `confirmation_submitting`;
+- `confirmation_redirecting`;
+- `confirmation_return_processing`;
+- `confirmation_payment_processing`;
+- `confirmation_waiting_webhook`.
+
+Los alias de lectura `processing` y `waiting_webhook`, así como
+`succeeded_observed`, `backend_confirmed` y `activated`, tampoco permiten editar
+la operación desde el stepper.
+
+`setSubscriptionPaymentConfirmationNavigationState(nextState)` actualiza los
+botones existentes sin rerenderizar el shell ni destruir Elements. Durante el
+bloqueo los botones tienen `disabled` nativo y `aria-disabled="true"`; la región
+`aria-live="polite"` anuncia exactamente:
+
+`Tu pago se está procesando. Espera a que finalice antes de cambiar la operación.`
+
+Esta microfase no implementa `confirmPayment`, doble submit ni transición real
+de esos estados.
+
+### Teardown al retroceder
+
+Desde Pago seguro se invoca el único
+`destroySubscriptionStripePaymentElement('subscription_step_backward')` de
+PP241. El resultado:
+
+- destruye el Payment Element si existe;
+- libera el objeto Elements y listeners de esa operación;
+- aborta recuperación efímera del secreto si estaba en curso;
+- vacía el host seguro;
+- elimina readiness, deshabilita CTA y limpia error/retry del formulario;
+- conserva intacto el singleton Stripe de PP236;
+- no llama route, checkout, PaymentIntent, client-secret ni backend.
+
+Sin controlador o Element activo el teardown es no-op seguro. Durante estados
+de confirmación bloqueados no se ejecuta teardown.
+
+### Diálogo por información capturada
+
+Se reutiliza el patrón accesible Bootstrap Modal ya presente en el proyecto,
+con `aria-labelledby`, `aria-describedby`, foco inicial, cierre por Escape y
+restauración explícita al control que inició el regreso.
+
+El diálogo no aparece si no hay operación preparada ni si el Element no reportó
+input completo/tocado. Al cancelar se conserva el Element. Al aceptar se vuelve
+al Resumen y sólo entonces se ejecuta teardown.
+
+Copy cerrado:
+
+- título: `¿Quieres volver al resumen?`;
+- descripción: `La información capturada en el formulario de pago se eliminará.`;
+- acción de permanencia: `Permanecer en Pago seguro`;
+- acción de regreso: `Volver al Resumen`.
+
+No se afirma que se cancelará un cargo.
+
+### selectionFingerprint en memoria
+
+La firma lógica `selectionFingerprint` existe sólo dentro del closure de
+Suscripciones y compara:
+
+- entidad scoped;
+- plan elegido;
+- modalidad;
+- `route_type`;
+- importe;
+- moneda;
+- versión del preview/contrato.
+
+No contiene `client_secret`, provider IDs, datos personales ni valores de
+inputs. No se escribe en DOM, storage, URL, Debug o snapshot público. La firma
+persistida de payment route que existía antes de PP248 conserva su contrato
+previo y no es el `selectionFingerprint` nuevo.
+
+### Reutilización e invalidación frontend
+
+El contexto preparado puede conservarse durante la misma sesión únicamente
+cuando:
+
+- el fingerprint y la entidad coinciden;
+- route, checkout y PaymentIntent siguen presentes y elegibles;
+- route/checkout conservan estado previo a proveedor y checkout
+  `pending_payment`;
+- el checkout no expiró;
+- PaymentIntent permanece `created` / `requires_payment_method` con Stripe;
+- `payment_event_count` es cero;
+- no existe suscripción ni activación observada.
+
+Al volver al Panel se puede conservar ese contexto. Si el usuario abre de nuevo
+el mismo plan y la misma selección continúa elegible, regresa al Resumen sin
+crear otra cadena. Al avanzar otra vez a Pago seguro, la capa PP241 remonta el
+Element sobre el PaymentIntent elegible, solicita de nuevo el secreto efímero
+sin persistirlo y conserva el singleton Stripe; no crea otra route, checkout o
+PaymentIntent.
+
+Si cambia plan, modalidad, importe, entidad o versión del preview, o si la
+cadena dejó de ser elegible:
+
+- el contexto anterior se marca stale;
+- se ejecuta teardown;
+- se eliminan del estado frontend route/checkout/PaymentIntent, claves de
+  idempotencia, UUIDs preparados y store frontend previo;
+- no se cancela ni modifica la cadena backend;
+- no se llama SQL;
+- se requerirá preparación nueva al avanzar.
+
+### Snapshot de navegación
+
+`getSubscriptionFlowNavigationSnapshot()` entrega un objeto inmutable con la
+allowlist exacta:
+
+- `current_step`;
+- `backward_panel_available`;
+- `backward_summary_available`;
+- `navigation_locked`;
+- `teardown_requested`;
+- `teardown_completed`;
+- `selection_changed`;
+- `previous_context_reusable`;
+- `previous_context_stale`;
+- `confirmation_in_progress`;
+- `last_navigation_target`;
+- `last_navigation_error_code`.
+
+No expone UUIDs, `operationContextKey`, secreto, provider ID, entidad, plan,
+importe o datos del usuario. El mismo snapshot se emite en el evento interno
+`mxmed:subscription-flow-navigation`.
+
+### Estrategia de métodos de pago
+
+#### Tarjetas
+
+Tarjetas de débito/crédito pertenecen a Stripe Payment Element para contratación
+anual y mensual recurrente. Stripe determinará redes habilitadas; MXMed no
+renderiza botones propios por Visa, Mastercard, American Express u otra red.
+Meses sin intereses requerirá contrato separado y habilitación Stripe.
+
+`assets/img/Tarjetas.png` continúa siendo referencia informativa previa a
+`mount_ready`. En ready se ocultan todas las referencias estáticas y Stripe
+renderiza campos/redes aplicables dentro de su host.
+
+#### Wallets
+
+Apple Pay, Google Pay y Link se reservan para un futuro Stripe Express Checkout
+Element. No se usan botones propios, imágenes locales, Payment Request Button ni
+wallets forzados. La disponibilidad dependerá de dispositivo, navegador, país,
+moneda, cuenta y operación. Express Checkout y Payment Element compartirán el
+contrato futuro de operación/Elements, sin duplicar wallets; el host se ocultará
+si Stripe no ofrece ninguna.
+
+PP248 no monta Express Checkout ni agrega logos.
+
+#### OXXO
+
+OXXO autoservicio futuro será Stripe, únicamente pago único anual elegible en
+MXN. No aplica a mensual recurrente ni renovación automática.
+
+Antes de Payment Element ready:
+
+- anual muestra Tarjetas y OXXO con el copy
+  `La disponibilidad final dependerá de Stripe y de esta operación.`;
+- mensual muestra sólo Tarjetas con el copy
+  `La modalidad mensual requiere una forma de pago compatible con cargos automáticos.`
+
+En ready se ocultan Tarjetas y OXXO informativos; Stripe conserva la autoridad
+para mostrar o no OXXO real. La existencia de `assets/img/Oxxo.png` no prueba
+disponibilidad.
+
+#### SPEI Stripe autoservicio
+
+El SPEI autoservicio futuro utilizará Stripe Bank Transfer para México, en una
+microfase separada. Está previsto para contratación anual, importes altos y
+clientes que prefieran transferencia. Usará cuenta virtual/referencia,
+conciliación Stripe/backend y activación auditada posterior a confirmación.
+
+PP248 no implementa Bank Transfer, instrucciones, cuenta virtual, webhook, UI o
+logo SPEI; no expone la cuenta principal de MXMed.
+
+#### SPEI directo asistido
+
+La futura `Transferencia SPEI asistida` es una vía administrativa independiente
+del checkout autoservicio para venta asistida, convenio, cliente institucional,
+atención administrativa o excepción autorizada.
+
+Flujo mínimo futuro:
+
+1. crear orden administrativa;
+2. asignar referencia única;
+3. mostrar cuenta/CLABE conforme a seguridad;
+4. mantener `pending_bank_verification`;
+5. recibir comprobante sólo como evidencia auxiliar;
+6. verificar el movimiento real en banco;
+7. conciliar monto, referencia, remitente y fecha;
+8. impedir comprobante u operación duplicados;
+9. registrar administrador, fecha y evidencia;
+10. activar mediante servicio idempotente autorizado.
+
+Una imagen o PDF no es prueba suficiente y nunca activa por sí solo. Esta vía no
+se mezcla con Payment Element y todavía no se muestra en Pago seguro.
+
+### Matriz definitiva
+
+| Método | Proveedor | Anual | Mensual recurrente | Autoservicio | Activación |
+| --- | --- | --- | --- | --- | --- |
+| Tarjeta | Stripe Payment Element | Sí | Sí | Sí | Webhook/backend |
+| Apple Pay | Stripe Express Checkout | Según elegibilidad | Según elegibilidad | Sí | Webhook/backend |
+| Google Pay | Stripe Express Checkout | Según elegibilidad | Según elegibilidad | Sí | Webhook/backend |
+| Link | Stripe Express Checkout | Según elegibilidad | Según elegibilidad | Sí | Webhook/backend |
+| OXXO | Stripe | Sí, pago único | No | Sí | Confirmación asíncrona |
+| SPEI Stripe | Stripe Bank Transfer | Futuro | Contrato futuro | Sí | Conciliación Stripe/backend |
+| SPEI directo | Banco MXMed + administración | Sí | No inicialmente | No | Revisión y activación auditada |
+
+Esta matriz es estrategia, no promesa de disponibilidad actual.
+
+### Accesibilidad, foco y responsive
+
+- los botones regresivos conservan foco visible, nombre accesible y semántica
+  nativa;
+- interactividad se comunica con botón, cursor, icono y hover, no sólo color;
+- al volver a Panel el foco se dirige al encabezado/selector de planes;
+- al volver a Resumen el foco se dirige al encabezado o a
+  `¿Cómo prefieres pagar?`;
+- al cancelar el modal el foco vuelve al paso pulsado;
+- un bloqueo no mueve foco y se anuncia por `aria-live`;
+- el orden DOM permanece Panel, Resumen, Pago seguro, Confirmación;
+- el botón no aumenta significativamente la altura del stepper;
+- a 390 px las etiquetas, controles y métodos envuelven sin overflow; las
+  acciones siguen apiladas.
+
+La matriz visual local cubrió 1440, 1024, 768 y 390 px. Las capturas requeridas
+se guardaron en:
+
+`/tmp/mxmed-stepper-back-payment-method-strategy-01/screenshots/`
+
+### QA y evidencia
+
+El harness específico ejecutó `71/71` comprobaciones con estados y dependencias
+mockeados. Cubrió la matriz mínima de 51 casos: semántica/teclado del stepper,
+teardown con y sin Element, input incomplete/complete/touched, cancelación y
+aceptación del diálogo, singleton, CTA/error, reuso, stale por plan/modalidad/
+importe/entidad, bloqueo, copys/visibilidad de métodos y cero red.
+
+El parse completo de `assets/js/app.js`, `git diff --check`, revisión visual,
+responsive, accesibilidad, snapshot y auditorías de secretos pasan. Toda la QA
+usó archivos `file://`, datos sintéticos, JavaScriptCore y Chrome headless con
+red de aplicación ausente. No se usaron entidades QA reales.
+
+Raíz de evidencia:
+
+`/tmp/mxmed-stepper-back-payment-method-strategy-01/`
+
+Auditoría exacta de no repetición:
+
+~~~json
+{
+  "aws_calls": 0,
+  "fixture_real_calls": 0,
+  "public_config_real_calls": 0,
+  "stripejs_network_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_real_retrieve": 0,
+  "confirm_payment_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "sql_calls": 0,
+  "new_brand_assets_added": 0
+}
+~~~
+
+### Archivos versionados y rollback
+
+Únicos archivos modificados:
+
+- `assets/js/app.js`;
+- `assets/css/style.css`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+Rollback: revertir atómicamente el commit de PP248. Esto restaura el stepper no
+navegable y la visibilidad anterior de marcas, sin modificar PP233–PP247,
+backend, Stripe, AWS o assets.
+
+### Siguiente microfase
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Readiness-01`
+
+Será la Microfase 4 de 24.
+
+### Cierre del contador
+
+Microfase 3 de 24 concluida.
+Avance global: 3/24.
+Pendientes: 21.

@@ -6857,6 +6857,32 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-payment-stepper-dot{ display:inline-grid; place-items:center; flex:0 0 36px; width:36px; height:36px; border:1px solid #ccd7e2; border-radius:50%; background:linear-gradient(180deg,#fff 0%,#f4f7fa 100%); color:#53617a; font-size:1rem; font-weight:760; line-height:1; box-shadow:0 3px 8px rgba(25,54,88,.05) }
 .subp-payment-stepper-item[data-state="active"] .subp-payment-stepper-dot{ border-color:var(--subp-summary-blue); background:var(--subp-summary-blue); color:#fff; box-shadow:0 8px 18px rgba(18,86,199,.18) }
 .subp-payment-stepper-item[data-state="complete"] .subp-payment-stepper-dot{ border-color:#ccd7e2; background:#fff; color:#53617a; box-shadow:none }
+.subp-payment-stepper-control,
+.subp-payment-stepper-static{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  color:inherit;
+  font:inherit;
+  line-height:inherit;
+}
+.subp-payment-stepper-control{
+  appearance:none;
+  padding:2px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  cursor:pointer;
+  text-align:left;
+}
+.subp-payment-stepper-control:hover .subp-payment-stepper-label{ text-decoration:underline; text-underline-offset:3px }
+.subp-payment-stepper-control:focus-visible{ outline:3px solid rgba(7,88,216,.38); outline-offset:3px }
+.subp-payment-stepper-control:disabled{ cursor:not-allowed; opacity:.72 }
+.subp-payment-stepper-back-icon{ flex:0 0 auto; font-size:17px; line-height:1 }
+.subp-payment-stepper-item[data-navigation-state="completed-available"] .subp-payment-stepper-dot{ border-color:#7ca7df; background:#f4f8ff; color:#0b55b7 }
+.subp-payment-stepper-item[data-navigation-state="locked"] .subp-payment-stepper-dot{ border-style:dashed }
+.subp-payment-stepper-item[data-navigation-state="future"] .subp-payment-stepper-static{ cursor:default }
 .subp-payment-shell-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px }
 .subp-payment-shell-header h3{ margin:0 0 5px; color:#071943; font-size:1.32rem; font-weight:950; line-height:1.08 }
 .subp-payment-shell-header p{ margin:0; color:#34445b; font-size:.92rem; font-weight:650; line-height:1.35 }
@@ -7439,6 +7465,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-payment-stepper-item:not(:last-child)::after{ display:none }
   .subp-payment-stepper-item[data-state="active"]::before{ left:18%; right:18%; bottom:-10px; height:3px }
   .subp-payment-stepper-dot{ flex-basis:30px; width:30px; height:30px; font-size:.82rem }
+  .subp-payment-stepper-control,
+  .subp-payment-stepper-static{ display:grid; justify-items:center; gap:4px; width:100%; text-align:center }
+  .subp-payment-stepper-back-icon{ position:absolute; top:0; right:calc(50% - 23px); padding:1px; border-radius:50%; background:#fff; font-size:13px }
   .subp-payment-shell-header{ display:grid }
   .subp-payment-safe{ justify-content:flex-start; text-align:left }
   .subp-payment-plan-pair{ grid-template-columns:1fr }
@@ -20605,6 +20634,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-stripe-element-host p{ max-width:430px; margin:0; color:#445a71; font-size:.85rem; font-weight:600; line-height:1.38 }
 .subp-payment-method-marks{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; width:100%; min-width:0 }
 .subp-payment-method-marks[hidden]{ display:none }
+.subp-payment-method-marks[data-method-count="1"]{ grid-template-columns:minmax(0,1fr) }
+.subp-payment-method-marks[data-method-count="1"] .subp-payment-method-mark{ width:100% }
 .subp-payment-method-mark{
   display:grid;
   grid-template-columns:minmax(76px,auto) minmax(0,1fr);
@@ -20736,6 +20767,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-secure-payment-shell[data-subp-secure-payment-skeleton] .subp-payment-primary-action:disabled .subp-payment-primary-copy > span,
 .subp-secure-payment-shell[data-subp-secure-payment-skeleton] .subp-payment-primary-action:disabled .subp-payment-primary-copy small{ color:#405469 }
 .subp-secure-payment-shell :is(button,a,[tabindex]):focus-visible{ outline:3px solid rgba(7,88,216,.34); outline-offset:3px }
+.subp-back-change-warning-modal .modal-content{ overflow:hidden; border:0; border-radius:16px; box-shadow:0 22px 60px rgba(8,27,63,.22) }
+.subp-back-change-warning-modal .modal-header{ border-bottom:1px solid #dfe8f1; background:#f6f9fd }
+.subp-back-change-warning-modal .modal-title{ color:#081b3f; font-weight:850 }
+.subp-back-change-warning-modal .modal-body{ color:#344d68; font-size:.96rem; line-height:1.45 }
+.subp-back-change-warning-modal .modal-body p{ margin:0 }
+.subp-back-change-warning-modal .modal-footer{ gap:10px; border-top:1px solid #e4ebf2 }
+.subp-back-change-warning-modal :is(button,[tabindex]):focus-visible{ outline:3px solid rgba(7,88,216,.38); outline-offset:3px }
 
 @media (max-width: 1100px){
   .subp-secure-payment-operation-summary{ grid-template-columns:repeat(2,minmax(0,1fr)) }
