@@ -60663,6 +60663,8 @@ function mxResetLogoPreview(){
       const status = shell.querySelector?.('[data-subp-stripe-payment-mount-status]') || null;
       const retry = shell.querySelector?.('[data-subp-stripe-payment-element-retry]') || null;
       const methodsStatus = shell.querySelector?.('[data-subp-payment-methods-status]') || null;
+      const methodMarks = shell.querySelector?.('[data-subp-payment-method-marks]') || null;
+      const methodsReadyNote = shell.querySelector?.('[data-subp-payment-methods-ready-note]') || null;
       const cta = shell.querySelector?.('[data-subp-payment-final-submit]') || null;
       const controller = state.activeController;
       const hostMatches = !!host && (!controller?.host || controller.host === host);
@@ -60705,7 +60707,10 @@ function mxResetLogoPreview(){
       }
       if(methodsStatus){
         setText(methodsStatus, 'Stripe mostrará aquí las formas de pago disponibles para esta operación.');
+        methodsStatus.hidden = ready;
       }
+      if(methodMarks) methodMarks.hidden = ready;
+      if(methodsReadyNote) methodsReadyNote.hidden = !ready;
       if(retry){
         retry.hidden = state.retryAvailable !== true;
         retry.disabled = state.retryAvailable !== true;
@@ -64060,19 +64065,26 @@ function mxResetLogoPreview(){
       || checkoutSummaryPreviewAmountLabel(slot, fallback);
   }
 
-  function checkoutSummarySafePaymentNoteHtml(){
-    return `<div class="subp-payment-secure-note">
-      <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
-      <span>El pago se procesa de forma segura con Stripe.</span>
-    </div>`;
+  function subscriptionStripeTrustStripHtml(options = {}){
+    const context = clean(options.context).toLowerCase() === 'summary' ? 'summary' : 'payment';
+    const titleId = context === 'summary'
+      ? 'subp-summary-stripe-trust-title'
+      : 'subp-secure-payment-trust-title';
+    return `<section class="subp-secure-payment-trust subp-stripe-trust-strip" data-subp-payment-security-strip data-subp-stripe-trust-strip="${escapeHtml(context)}" aria-labelledby="${escapeHtml(titleId)}">
+      <span class="subp-secure-payment-trust-icon material-symbols-rounded" aria-hidden="true">verified_user</span>
+      <div>
+        <h4 id="${escapeHtml(titleId)}">Pago seguro</h4>
+        <p>Tus datos se capturarán directamente en el formulario seguro de Stripe.</p>
+      </div>
+      <div class="subp-secure-payment-trust-brand">
+        <img class="subp-secure-payment-stripe-wordmark" src="assets/img/stripe-wordmark-blurple.svg" alt="Stripe" width="360" height="150">
+        <span class="subp-secure-payment-connection"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Conexión segura</span>
+      </div>
+    </section>`;
   }
 
-  function checkoutSummarySecurePaymentBlockHtml(isNewSubscription){
-    if(!isNewSubscription) return checkoutSummarySafePaymentNoteHtml();
-    return `<div class="subp-payment-secure-note subp-payment-secure-note--detailed">
-      <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
-      <span><strong>Pago seguro</strong><small>Tus datos se capturarán directamente en el formulario seguro de Stripe.</small></span>
-    </div>`;
+  function checkoutSummarySecurePaymentBlockHtml(){
+    return subscriptionStripeTrustStripHtml({ context: 'summary' });
   }
 
   function checkoutSummaryPlanFromPayload(slot){
@@ -64299,17 +64311,7 @@ function mxResetLogoPreview(){
   }
 
   function securePaymentTrustMessageHtml(){
-    return `<section class="subp-secure-payment-trust" data-subp-payment-security-strip aria-labelledby="subp-secure-payment-trust-title">
-      <span class="subp-secure-payment-trust-icon material-symbols-rounded" aria-hidden="true">verified_user</span>
-      <div>
-        <h4 id="subp-secure-payment-trust-title">Pago seguro</h4>
-        <p>Tus datos se capturarán directamente en el formulario seguro de Stripe.</p>
-      </div>
-      <div class="subp-secure-payment-trust-brand">
-        <img class="subp-secure-payment-stripe-wordmark" src="assets/img/stripe-wordmark-blurple.svg" alt="Stripe" width="360" height="150">
-        <span class="subp-secure-payment-connection"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Conexión segura</span>
-      </div>
-    </section>`;
+    return subscriptionStripeTrustStripHtml({ context: 'payment' });
   }
 
   function securePaymentCadenceNoticeHtml(view){
@@ -64346,8 +64348,22 @@ function mxResetLogoPreview(){
         <div><span>Opciones disponibles</span><h4 id="subp-secure-payment-methods-title">Elige cómo pagar</h4></div>
       </div>
       <div class="subp-stripe-element-host subp-stripe-element-host--express" data-subp-express-checkout-host data-interactive="false" data-state="not-mounted">
-        <div class="subp-stripe-placeholder-lines" aria-hidden="true"><span></span><span></span><span></span></div>
-        <p>Las opciones compatibles aparecerán aquí automáticamente.</p>
+        <div class="subp-payment-method-marks" data-subp-payment-method-marks>
+          <div class="subp-payment-method-mark" data-payment-mark="cards">
+            <span class="subp-payment-method-mark-logo">
+              <img src="assets/img/Tarjetas.png" alt="Tarjetas de débito o crédito" width="860" height="210">
+            </span>
+            <span class="subp-payment-method-mark-copy"><strong>Tarjetas</strong><small>Débito o crédito</small></span>
+          </div>
+          <div class="subp-payment-method-mark" data-payment-mark="oxxo">
+            <span class="subp-payment-method-mark-logo">
+              <img src="assets/img/Oxxo.png" alt="OXXO" width="3840" height="1946">
+            </span>
+            <span class="subp-payment-method-mark-copy"><strong>OXXO</strong><small>Pago en efectivo</small></span>
+          </div>
+          <p class="subp-payment-method-availability"><span class="material-symbols-rounded" aria-hidden="true">info</span>La disponibilidad final dependerá de Stripe y de esta operación.</p>
+        </div>
+        <p class="subp-payment-methods-ready-note" data-subp-payment-methods-ready-note hidden>Stripe muestra las formas de pago disponibles dentro del formulario seguro.</p>
       </div>
       <p class="subp-secure-payment-methods-status" data-subp-payment-methods-status role="status" aria-live="polite">Stripe mostrará aquí las formas de pago disponibles para esta operación.</p>
       ${securePaymentCadenceNoticeHtml(view)}
@@ -64881,7 +64897,7 @@ function mxResetLogoPreview(){
               <strong>${escapeHtml(amount)}</strong>
             </div>
           </article>
-          ${checkoutSummarySafePaymentNoteHtml()}
+          ${subscriptionStripeTrustStripHtml({ context: 'payment' })}
           <article class="subp-payment-element-placeholder">
             <span class="material-symbols-rounded" aria-hidden="true">credit_card</span>
             <p>Tus opciones de pago aparecerán aquí.</p>

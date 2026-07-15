@@ -20543,6 +20543,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-secure-payment-stripe-wordmark{ display:block; flex:0 0 auto; width:72px; height:auto; max-width:100% }
 .subp-secure-payment-connection{ display:inline-flex; align-items:center; gap:6px; color:#334c69; font-size:.8rem; font-weight:750; white-space:nowrap }
 .subp-secure-payment-connection .material-symbols-rounded{ color:#536a82; font-size:18px; line-height:1 }
+.subp-payment-shell-card > .subp-stripe-trust-strip{ margin:0 }
 .subp-secure-payment-layout{
   display:grid;
   grid-template-columns:minmax(0,48fr) minmax(0,52fr);
@@ -20602,6 +20603,32 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-stripe-element-host[data-state="unavailable"]{ border-color:#e5b9b9; background:#fff9f9 }
 .subp-stripe-element-host[data-state="unavailable"] > .material-symbols-rounded{ background:#fdeaea; color:#a82d27 }
 .subp-stripe-element-host p{ max-width:430px; margin:0; color:#445a71; font-size:.85rem; font-weight:600; line-height:1.38 }
+.subp-payment-method-marks{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; width:100%; min-width:0 }
+.subp-payment-method-marks[hidden]{ display:none }
+.subp-payment-method-mark{
+  display:grid;
+  grid-template-columns:minmax(76px,auto) minmax(0,1fr);
+  align-items:center;
+  gap:11px;
+  min-width:0;
+  padding:13px;
+  border:1px solid #d6e3ef;
+  border-radius:11px;
+  background:#fff;
+  color:var(--subp-secure-ink);
+  text-align:left;
+  box-shadow:0 5px 14px rgba(14,48,84,.045);
+}
+.subp-payment-method-mark-logo{ display:grid; place-items:center; min-width:0; min-height:48px; padding:5px 7px; border-radius:9px; background:#f5f8fc }
+.subp-payment-method-mark-logo img{ display:block; width:auto; height:auto; max-width:112px; max-height:44px; object-fit:contain }
+.subp-payment-method-mark[data-payment-mark="oxxo"] .subp-payment-method-mark-logo img{ max-width:72px }
+.subp-payment-method-mark-copy{ display:grid; gap:4px; min-width:0 }
+.subp-payment-method-mark-copy strong{ color:#102044; font-size:.92rem; font-weight:850; line-height:1.12 }
+.subp-payment-method-mark-copy small{ color:#52677c; font-size:.76rem; font-weight:650; line-height:1.2 }
+.subp-payment-method-availability{ grid-column:1 / -1; display:flex; align-items:flex-start; justify-content:center; gap:7px; max-width:none !important; padding:10px 11px; border-radius:9px; background:#eef5ff; color:#315576 !important; text-align:left }
+.subp-payment-method-availability .material-symbols-rounded{ flex:0 0 auto; color:#0758d8; font-size:18px; line-height:1 }
+.subp-payment-methods-ready-note{ width:100%; max-width:none !important; padding:12px; border-radius:9px; background:#f4f8fd; text-align:center }
+.subp-payment-methods-ready-note[hidden]{ display:none }
 .subp-stripe-placeholder-lines{ display:grid; grid-template-columns:repeat(3,minmax(58px,1fr)); gap:9px; width:min(100%,390px) }
 .subp-stripe-element-host--payment .subp-stripe-placeholder-lines{ grid-template-columns:1fr; width:min(100%,420px) }
 .subp-stripe-placeholder-lines span{ display:block; min-height:32px; border-radius:8px; background:linear-gradient(90deg,#eef3f8 0%,#e5edf5 50%,#eef3f8 100%) }
@@ -20638,6 +20665,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-stripe-payment-retry{ display:flex; margin:10px auto 0; justify-content:center }
 .subp-stripe-payment-retry[hidden]{ display:none }
 .subp-secure-payment-methods-status{ margin:0; color:#4f6479; font-size:.8rem; font-weight:650; line-height:1.32 }
+.subp-secure-payment-methods-status[hidden]{ display:none }
 .subp-secure-payment-cadence-note{
   display:flex;
   align-items:flex-start;
@@ -20733,6 +20761,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-secure-payment-trust{ grid-template-columns:auto minmax(0,1fr); justify-items:start }
   .subp-secure-payment-trust-brand{ grid-column:1 / -1; width:100%; justify-content:center; padding:5px 0 0 }
   .subp-stripe-element-host{ padding:16px 12px }
+  .subp-payment-method-mark{ grid-template-columns:1fr; justify-items:center; gap:8px; padding:11px 8px; text-align:center }
+  .subp-payment-method-mark-logo{ width:100%; min-height:44px }
+  .subp-payment-method-mark-logo img{ max-width:min(100%,104px); max-height:40px }
+  .subp-payment-method-mark[data-payment-mark="oxxo"] .subp-payment-method-mark-logo img{ max-width:66px }
   .subp-stripe-placeholder-lines{ grid-template-columns:1fr }
   .subp-secure-payment-cadence-note{ display:grid }
   .subp-secure-payment-pricing-summary{ grid-template-columns:1fr; gap:10px }

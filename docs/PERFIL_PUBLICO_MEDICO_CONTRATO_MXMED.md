@@ -50127,3 +50127,256 @@ Sera la Microfase 2 de 24.
 Microfase 1 de 24 concluida.
 Avance global: 1/24.
 Pendientes: 23.
+
+---
+
+## PP-Decisiones 247 - Confianza Stripe compartida y marcas visuales provisionales Tarjetas/OXXO
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`UX-FE/Suscripciones-PagoSeguro-SummaryTrust-AndPaymentMarks-VisualIntegration-01`
+
+Contador:
+
+`Microfase 2 de 24`
+
+Resultado:
+
+`PASS - SUBP_SUMMARY_TRUST_AND_PROVISIONAL_PAYMENT_MARKS_V1`
+
+Esta decision integra el mismo wordmark oficial Stripe de PP246 en la franja
+Pago seguro del panel Resumen y agrega dos referencias visuales provisionales,
+Tarjetas y OXXO, en el estado previo al montaje de Payment Element. No cambia
+backend, datos economicos ni el contrato funcional de Stripe.
+
+### Baseline y recursos entregados por diseno
+
+El baseline se valido sobre:
+
+- rama `feature/suscripciones-pago-seguro-visual-polish-stripe-branding`;
+- commit `70aa5591398fd51b1289de2527af3b53624d58cd`;
+- upstream `0/0`;
+- cero cambios tracked;
+- unicamente dos archivos untracked bajo `assets/img`.
+
+Los archivos fueron aportados directamente al working tree del proyecto. Su
+origen declarado para esta decision es `supplied_by_project_designer`.
+
+Registro de Tarjetas:
+
+- ruta: `assets/img/Tarjetas.png`;
+- nombre: `Tarjetas.png`;
+- extension/formato: PNG;
+- dimensiones: 860 x 210 px;
+- canales: RGBA, 8 bits por canal;
+- transparencia: si;
+- SHA-256:
+  `6c66e93453c7a659cca5a356c0e0cdee7c7ed292a1d001df6192b1688d066072`;
+- fecha de incorporacion: `2026-07-15`;
+- origen: `supplied_by_project_designer`.
+
+Registro de OXXO:
+
+- ruta: `assets/img/Oxxo.png`;
+- nombre: `Oxxo.png`;
+- extension/formato: PNG;
+- dimensiones: 3840 x 1946 px;
+- canales: RGBA, 8 bits por canal;
+- transparencia: si;
+- SHA-256:
+  `22217fdafdf1c0700118d551972efb78bf607dcdd766cb6726ceb29eac89289f`;
+- fecha de incorporacion: `2026-07-15`;
+- origen: `supplied_by_project_designer`.
+
+Los archivos conservan nombre, bytes, formato, color, recorte y proporcion. No
+se descargaron sustitutos ni se convirtieron, renombraron o editaron.
+
+### Diferenciacion frente al intake rechazado
+
+No se integro el commit `81f7af4`, no se copio desde su rama y no se uso
+`assets/img/payment-methods/stripe.svg`.
+
+Comparacion relevante:
+
+- nuevo `assets/img/Tarjetas.png`:
+  `6c66e93453c7a659cca5a356c0e0cdee7c7ed292a1d001df6192b1688d066072`;
+- rechazado `assets/img/payment-methods/card-brands.png`:
+  `27ffcb72b187514be595ffb34a9df2bee377cab7db4f3e1986caad1a89f8fc4c`;
+- nuevo `assets/img/Oxxo.png`:
+  `22217fdafdf1c0700118d551972efb78bf607dcdd766cb6726ceb29eac89289f`;
+- rechazado `assets/img/payment-methods/oxxo.png`:
+  `a301b9032eea8945a910d004ced0ab5848774505724da65c37e21b4a277d9daa`.
+
+Rutas y hashes son distintos. Los dos nuevos hashes tambien se compararon
+contra Apple Pay, Google Pay, SPEI y Stripe del intake y no existe coincidencia.
+
+### Helper compartido de confianza Stripe
+
+`assets/js/app.js` define un unico helper interno:
+
+`subscriptionStripeTrustStripHtml(options)`
+
+El helper renderiza el contenido canonico para los contextos `summary` y
+`payment`:
+
+- icono neutral de seguridad;
+- titulo `Pago seguro`;
+- texto `Tus datos se capturarán directamente en el formulario seguro de
+  Stripe.`;
+- wordmark oficial Stripe Blurple de PP246;
+- candado;
+- texto `Conexión segura`.
+
+El panel Resumen y el panel Pago seguro consumen este helper. Ambos conservan
+`data-subp-payment-security-strip` y agregan
+`data-subp-stripe-trust-strip="summary|payment"` para QA. Los IDs de titulo son
+unicos por contexto.
+
+El helper no carga Stripe.js, no llama endpoints, no ejecuta fetch, no contiene
+precios, IDs, datos de entidad, secretos ni acciones de pago. El wordmark sigue
+siendo el unico archivo `assets/img/stripe-wordmark-blurple.svg`; no se duplico
+ni modifico y conserva el SHA-256 documentado en PP246.
+
+### Marcas visuales provisionales en Elige como pagar
+
+Mientras Payment Element no esta montado, el host existente
+`data-subp-express-checkout-host` contiene exactamente dos referencias
+informativas:
+
+- `Tarjetas` / `Débito o crédito`, con alt `Tarjetas de débito o crédito`;
+- `OXXO` / `Pago en efectivo`, con alt `OXXO`.
+
+El bloque muestra de forma visible:
+
+`La disponibilidad final dependerá de Stripe y de esta operación.`
+
+Son elementos `div` informativos. No son botones, enlaces, radios, inputs,
+controles seleccionables ni elementos de tabulacion; no tienen `role="button"`,
+`tabindex`, `aria-pressed` ni estado activo. Sus textos no afirman que un metodo
+estara siempre disponible.
+
+No se agregaron SPEI, Apple Pay, Google Pay, Link, Carnet ni logotipos
+individuales adicionales. Las marcas contenidas dentro del unico PNG Tarjetas
+son parte del recurso expresamente suministrado y autorizado por el diseno del
+proyecto.
+
+### Reemplazo al estado ready y contrato preservado
+
+`updatePaymentElementUi()` aplica el reemplazo visual usando el estado real ya
+existente del montaje:
+
+- antes de `mount_ready`, Tarjetas/OXXO y la nota condicionada son visibles;
+- en `mount_ready`, `data-subp-payment-method-marks` queda oculto;
+- el mensaje previo queda oculto y aparece una nota neutral de reemplazo;
+- el placeholder del Payment Element se oculta mediante el contrato previo;
+- el host `data-subp-stripe-payment-element-host` permanece visible y Stripe
+  conserva la autoridad sobre los metodos reales;
+- si el montaje deja de estar ready, el bloque informativo vuelve al estado
+  visual previo.
+
+No se modificaron elegibilidad, Appearance, loader, client_secret, creacion de
+Elements, mount, eventos, teardown, retry, readiness de confirmacion ni CTA. No
+se agregaron inputs o logos dentro del host seguro.
+
+### Responsive y accesibilidad
+
+La matriz local sin red valido los paneles Resumen y Pago seguro en 1440, 1280,
+1024, 768 y 390 px.
+
+- la franja de confianza es horizontal en escritorio;
+- en tablet y movil el bloque de wordmark/conexion baja sin invadir el texto;
+- el resumen cambia de cuatro columnas a 2x2 y despues a una columna;
+- Tarjetas y OXXO mantienen una fila compacta y proporcionada, con wrap natural;
+- las imagenes usan `width:auto`, `height:auto`, limites maximos y
+  `object-fit:contain`, sin deformacion;
+- a 390 px el contenido efectivo ocupa de x=6 a x=384, sin corte ni overflow;
+- las acciones mantienen ancho util y el stepper no desborda.
+
+El wordmark usa `alt="Stripe"` porque no existe una etiqueta textual Stripe
+adyacente al grafico en su bloque derecho. Los PNG usan los textos alternativos
+aprobados. Los contenedores no comunican seleccion y no dependen solo de color.
+Se conservan `aria-current`, `aria-live`, `aria-busy`, foco visible y orden DOM
+natural.
+
+### QA, capturas y evidencia
+
+Raiz de evidencia:
+
+`/tmp/mxmed-summary-trust-payment-marks-visual-integration-01/`
+
+El harness especifico paso 28/28 casos. El harness aislado del montaje seguro
+de PP241 se reejecuto contra el JavaScript actual y paso 75/75 casos, con cero
+llamadas reales, cero confirmaciones y Express Checkout sin crear. El parse
+completo de JavaScript, `git diff --check`, hashes, estructura DOM, responsive,
+accesibilidad y reemplazo ready pasan.
+
+Capturas sanitizadas:
+
+- `screenshots/summary-annual-1440.png`;
+- `screenshots/summary-monthly-1440.png`;
+- `screenshots/summary-390.png`;
+- `screenshots/secure-payment-annual-1440.png`;
+- `screenshots/secure-payment-monthly-1440.png`;
+- `screenshots/secure-payment-390.png`;
+- `screenshots/payment-element-ready-1440.png`.
+
+Toda la QA uso datos sinteticos, JavaScriptCore y documentos locales `file://`
+en Chrome headless con red de aplicacion deshabilitada. No se uso entidad QA,
+servidor, fixture, config publica real, `js.stripe.com`, payment route,
+checkout, PaymentIntent, client_secret, Elements real, Payment Element real,
+Express Checkout real, confirmacion, webhook, activation, SQL o AWS.
+
+Auditoria exacta de no repeticion:
+
+~~~json
+{
+  "aws_calls": 0,
+  "fixture_real_calls": 0,
+  "public_config_real_calls": 0,
+  "stripejs_network_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_real_retrieve": 0,
+  "confirm_payment_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "sql_calls": 0,
+  "intake_commit_integrated": false,
+  "old_rejected_assets_used": 0
+}
+~~~
+
+### Archivos versionados y fuera de alcance
+
+Unicos archivos versionados modificados o incorporados:
+
+- `assets/js/app.js`;
+- `assets/css/style.css`;
+- `assets/img/Tarjetas.png`;
+- `assets/img/Oxxo.png`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron PHP, endpoints, SQL, AWS, webhook, activation, provider,
+client-secret, package/composer files, otros assets ni PP233-PP246. El wordmark
+Stripe y el boceto externo permanecen sin cambios.
+
+Rollback: revertir atomicamente el commit de esta microfase. Esto retira los dos
+PNG suministrados y restaura el helper/CSS anterior sin modificar contratos de
+backend o Stripe.
+
+### Siguiente microfase
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Readiness-01`
+
+Sera la Microfase 3 de 24.
+
+### Cierre del contador
+
+Microfase 2 de 24 concluida.
+Avance global: 2/24.
+Pendientes: 22.
