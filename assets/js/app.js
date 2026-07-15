@@ -60413,8 +60413,8 @@ function mxResetLogoPreview(){
       mount_retrieving_client_secret: 'Autorizando el formulario seguro.',
       mount_creating_elements: 'Preparando el formulario seguro.',
       mount_mounting: 'Mostrando el formulario seguro.',
-      mount_ready: 'Formulario seguro disponible.',
-      mount_failed: 'No pudimos habilitar el formulario seguro.',
+      mount_ready: 'Completa la información requerida para continuar.',
+      mount_failed: 'No fue posible habilitar el formulario de pago seguro.',
       mount_expired: 'La operación venció. Vuelve al resumen para preparar el pago nuevamente.',
       mount_destroying: 'Actualizando el formulario seguro.',
       mount_destroyed: ''
@@ -60423,7 +60423,7 @@ function mxResetLogoPreview(){
       mount_not_requested: 'not-requested',
       mount_loading_runtime: 'loading-runtime',
       mount_retrieving_client_secret: 'retrieving-client-secret',
-      mount_creating_elements: 'creating-elements',
+      mount_creating_elements: 'mounting',
       mount_mounting: 'mounting',
       mount_ready: 'ready',
       mount_failed: 'failed',
@@ -60693,20 +60693,18 @@ function mxResetLogoPreview(){
       }
       if(status){
         let copy = MOUNT_COPY[state.mountState] || '';
-        if(state.mountState === 'mount_ready' && state.inputState === 'payment_input_incomplete'){
-          copy = 'Completa los datos solicitados en el formulario seguro.';
+        if(state.mountState === 'mount_ready' && !inputComplete && state.inputState !== 'payment_input_error'){
+          copy = 'Completa la información requerida para continuar.';
         }else if(state.mountState === 'mount_ready' && state.inputState === 'payment_input_complete'){
-          copy = 'Los datos de pago están completos. La confirmación se habilitará en una fase posterior.';
+          copy = 'Tu forma de pago está lista.';
         }else if(state.mountState === 'mount_ready' && state.inputState === 'payment_input_error'){
-          copy = 'Revisa los datos indicados en el formulario seguro.';
+          copy = 'No fue posible habilitar el formulario de pago seguro.';
         }
         setText(status, copy);
         status.dataset.state = visualState;
       }
-      if(methodsStatus && ready){
-        setText(methodsStatus, 'El formulario seguro muestra únicamente las opciones disponibles para esta operación.');
-      }else if(methodsStatus){
-        setText(methodsStatus, 'No hay métodos mostrados hasta que el formulario seguro esté disponible.');
+      if(methodsStatus){
+        setText(methodsStatus, 'Stripe mostrará aquí las formas de pago disponibles para esta operación.');
       }
       if(retry){
         retry.hidden = state.retryAvailable !== true;
@@ -64245,7 +64243,7 @@ function mxResetLogoPreview(){
           : 'Cobertura inicial confirmada en el resumen';
     const followupLabel = billingPeriod === 'monthly' ? 'Después' : 'Vigencia';
     const followupValue = billingPeriod === 'monthly'
-      ? (recurringAmount ? `${recurringAmount} al mes` : 'Se confirmará antes del pago')
+      ? (recurringAmount ? `${recurringAmount} mensuales` : 'Se confirmará antes del pago')
       : contextLabel;
     const routeState = paymentRouteCreateState(slot);
     const bridge = paymentRouteCheckoutBridgeState(slot);
@@ -64281,11 +64279,12 @@ function mxResetLogoPreview(){
   }
 
   function securePaymentOperationSummaryHtml(view){
+    const monthly = view.billingPeriod === 'monthly';
     const cells = [
       { icon: view.targetIcon || 'workspace_premium', label: 'Plan', value: view.planLabel, detail: view.operationLabel },
       { icon: 'sync', label: 'Modalidad', value: view.periodLabel, detail: '' },
-      { icon: 'account_balance_wallet', label: 'Pago de hoy', value: view.todayAmount, detail: '' },
-      { icon: view.billingPeriod === 'monthly' ? 'event_repeat' : 'calendar_month', label: view.followupLabel, value: view.followupValue, detail: '' }
+      { icon: 'account_balance_wallet', label: monthly ? 'Anticipo' : 'Total de hoy', value: view.todayAmount, detail: '' },
+      { icon: monthly ? 'event_repeat' : 'calendar_month', label: monthly ? 'Mensualidad posterior' : 'Vigencia anual', value: view.followupValue, detail: '' }
     ];
     return `<section class="subp-secure-payment-operation-summary" data-subp-payment-operation-summary aria-label="Resumen de la operación">
       ${cells.map((cell)=>`<article class="subp-secure-payment-operation-cell">
@@ -64306,7 +64305,10 @@ function mxResetLogoPreview(){
         <h4 id="subp-secure-payment-trust-title">Pago seguro</h4>
         <p>Tus datos se capturarán directamente en el formulario seguro de Stripe.</p>
       </div>
-      <span class="subp-secure-payment-connection"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Conexión segura</span>
+      <div class="subp-secure-payment-trust-brand">
+        <img class="subp-secure-payment-stripe-wordmark" src="assets/img/stripe-wordmark-blurple.svg" alt="Stripe" width="360" height="150">
+        <span class="subp-secure-payment-connection"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Conexión segura</span>
+      </div>
     </section>`;
   }
 
@@ -64333,7 +64335,7 @@ function mxResetLogoPreview(){
       : '';
     return `<aside class="subp-secure-payment-cadence-note" data-period="annual">
       <span class="material-symbols-rounded" aria-hidden="true">event_available</span>
-      <div><h5>Vigencia anual</h5><p>Tu pago cubre la vigencia anual de este plan.</p>${savings}</div>
+      <div><h5>Tu pago cubre la vigencia anual de este plan.</h5>${savings}</div>
     </aside>`;
   }
 
@@ -64341,13 +64343,13 @@ function mxResetLogoPreview(){
     return `<article class="subp-secure-payment-panel" aria-labelledby="subp-secure-payment-methods-title">
       <div class="subp-secure-payment-panel-head">
         <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
-        <div><span>Opciones</span><h4 id="subp-secure-payment-methods-title">Formas de pago disponibles</h4></div>
+        <div><span>Opciones disponibles</span><h4 id="subp-secure-payment-methods-title">Elige cómo pagar</h4></div>
       </div>
       <div class="subp-stripe-element-host subp-stripe-element-host--express" data-subp-express-checkout-host data-interactive="false" data-state="not-mounted">
         <div class="subp-stripe-placeholder-lines" aria-hidden="true"><span></span><span></span><span></span></div>
-        <p>Stripe mostrará únicamente las opciones disponibles para esta operación.</p>
+        <p>Las opciones compatibles aparecerán aquí automáticamente.</p>
       </div>
-      <p class="subp-secure-payment-methods-status" data-subp-payment-methods-status role="status" aria-live="polite">No hay métodos mostrados hasta que el formulario seguro esté disponible.</p>
+      <p class="subp-secure-payment-methods-status" data-subp-payment-methods-status role="status" aria-live="polite">Stripe mostrará aquí las formas de pago disponibles para esta operación.</p>
       ${securePaymentCadenceNoticeHtml(view)}
     </article>`;
   }
@@ -64503,7 +64505,7 @@ function mxResetLogoPreview(){
       <header class="subp-secure-payment-hero">
         <div>
           <h3>Pago seguro para completar tu suscripción</h3>
-          <p>Revisa tu forma de pago y el importe final antes de confirmar.</p>
+          <p>Elige tu forma de pago y revisa el importe final antes de confirmar.</p>
         </div>
         <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
       </header>

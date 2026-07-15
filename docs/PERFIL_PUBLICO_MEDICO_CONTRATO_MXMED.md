@@ -49909,3 +49909,221 @@ parametros, validaciones y pipeline. Todavia no creara recursos AWS.
 Arquitectura productiva AWS unica:
 
 `PASS - MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`
+
+---
+
+## PP-Decisiones 246 - Pulido visual de Pago seguro con wordmark oficial Stripe
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`UX-FE/Suscripciones-PagoSeguro-VisualPolish-WithOfficialStripeBranding-01`
+
+Contador:
+
+`Microfase 1 de 24`
+
+Resultado:
+
+`PASS - SUBP_SECURE_PAYMENT_VISUAL_POLISH_OFFICIAL_STRIPE_WORDMARK_V1`
+
+Esta decision conserva los contratos funcionales de PP240 y PP241. El cambio es
+un pulido visual controlado del skeleton existente; no agrega confirmacion de
+pago, metodos propios ni una segunda integracion de Stripe.
+
+### Referencia visual y criterio de implementacion
+
+Se uso el boceto externo `03_pago_seguro_metodos.png` entregado por diseno como
+guia de estructura, jerarquia, proporciones, distribucion, densidad, separacion
+de bloques y responsive. El archivo no se copio al repositorio. Sus precios,
+plan, modalidad, campos de tarjeta y logotipos de metodos no se trasladaron a
+la implementacion.
+
+Se pulieron:
+
+- el hero azul-turquesa, con el titulo y subtitulo aprobados;
+- el stepper no navegable de cuatro etapas, con Pago seguro activo;
+- el resumen superior anual/mensual;
+- la franja de confianza con mensaje, wordmark y conexion segura;
+- la zona principal en proporcion aproximada 48/52;
+- los hosts neutrales de Express Checkout y Payment Element;
+- el aviso de cadencia anual/mensual;
+- el resumen economico y las acciones inferiores;
+- los estados visuales del montaje seguro.
+
+No se introdujeron alturas fijas para los hosts. La altura del Payment Element
+real continuara determinada por Stripe y no existe CSS dirigido al interior de
+su iframe.
+
+### Wordmark oficial Stripe y procedencia
+
+Se incorporo exactamente un wordmark oficial Stripe, ubicado en el extremo
+derecho de la franja de confianza y antes del candado y el texto `Conexión
+segura`. No es boton, certificacion, patrocinio ni claim de seguridad absoluta.
+
+Registro de procedencia:
+
+- fuente oficial: `https://stripe.com/newsroom/information`;
+- terminos consultados: `https://stripe.com/legal/marks`;
+- kit enlazado por la fuente oficial:
+  `https://assets.stripeassets.com/fzn2n1nzq965/7q0dJGs6fRS1LRmMpChoAF/87def4edfbb7fd5aef4ab9baf904b2db/Stripe_logo_kit.zip`;
+- miembro del kit: `asset-wordmark/Stripe wordmark - Blurple.svg`;
+- fecha de obtencion: `2026-07-14`;
+- ruta local: `assets/img/stripe-wordmark-blurple.svg`;
+- formato: SVG;
+- SHA-256:
+  `4448c4b4f954285d2b2aeb6d92391c85fdc290e008c2679d2c006d6d72ae1ae9`;
+- integridad: comparacion byte a byte con el miembro oficial `PASS`;
+- modificaciones: ninguna; conserva color, proporcion y trazos oficiales.
+
+El uso se limita a la porcion del checkout directamente relacionada con los
+servicios de Stripe y comunica de forma veraz el proveedor del formulario. No
+implica endorsement. Esto sigue los Mark Usage Terms consultados, que permiten
+el uso de la marca en una pagina de checkout relacionada con Stripe, exigen
+respetar las guias y prohiben modificarla o presentar una relacion enganosa.
+
+No se uso `assets/img/payment-methods/stripe.svg`, el commit `81f7af4` ni ningun
+asset rechazado por PP238.
+
+### Metodos delegados y datos dinamicos
+
+El panel izquierdo mantiene `data-subp-express-checkout-host` y muestra
+unicamente contenedores neutrales y el mensaje de que las opciones compatibles
+apareceran automaticamente. El panel derecho mantiene un unico
+`data-subp-stripe-payment-element-host` vacio antes del montaje.
+
+No existen tarjetas seleccionables, radios, inputs de titular/tarjeta/fecha/CVC,
+ni representaciones estaticas de Apple Pay, Google Pay, Link, OXXO, SPEI o
+marcas de tarjeta. Stripe sigue siendo la unica autoridad futura para mostrar
+las formas realmente disponibles para cada operacion.
+
+Plan, modalidad, moneda, total de hoy, anticipo, mensualidad posterior,
+vigencia, ciclo inicial y ahorro continuan procediendo del payload, preview y
+contrato ya existentes. La vista soporta modalidad anual o mensual, nueva
+contratacion o mejora de plan. No se hardcodearon precios ni planes del boceto.
+
+### Estados visuales y contrato funcional preservado
+
+Los mocks locales validaron:
+
+- `not-requested`;
+- `loading-runtime`;
+- `retrieving-client-secret`;
+- `mounting`;
+- `ready`;
+- `incomplete`;
+- `complete`;
+- `failed`;
+- `expired`;
+- `destroyed`.
+
+Ready e incomplete usan `Completa la información requerida para continuar.`;
+complete usa `Tu forma de pago está lista.`; failed usa `No fue posible
+habilitar el formulario de pago seguro.` El retry solo aparece cuando el
+contrato actual lo permite.
+
+La configuracion Appearance de PP240 y PP241 permanece intacta. El CTA futuro
+conserva `data-subp-payment-final-submit`, el copy `Pagar de forma segura`,
+`disabled` nativo y `aria-disabled="true"`. Aunque el estado completo calcula
+readiness interno, esta microfase no habilita el boton ni confirma pagos.
+
+### Responsive y accesibilidad
+
+La matriz local sin red valido 1440, 1280, 1024, 768 y 390 px:
+
+- 1440 y 1280: resumen de cuatro columnas, franja horizontal y zona principal
+  48/52;
+- 1024: resumen 2x2 y zona principal de dos columnas;
+- 768: resumen 2x2, franja adaptable y paneles apilados;
+- 390: todos los bloques apilados, stepper sin desbordamiento, wordmark sin
+  corte, resumen economico apilado y acciones a ancho completo.
+
+Las mediciones no detectaron scroll horizontal. Se conservaron
+`aria-current="step"`, regiones `aria-live`, `aria-busy`, orden DOM natural,
+foco visible y CTA deshabilitado nativamente. El wordmark informativo usa
+`alt="Stripe"`. Ningun placeholder tiene `role="button"`.
+
+Capturas sanitizadas:
+
+- `/tmp/mxmed-pago-seguro-visual-polish-stripe-branding-01/annual-1440.png`;
+- `/tmp/mxmed-pago-seguro-visual-polish-stripe-branding-01/monthly-1440.png`;
+- `/tmp/mxmed-pago-seguro-visual-polish-stripe-branding-01/ready-1440.png`;
+- `/tmp/mxmed-pago-seguro-visual-polish-stripe-branding-01/failed-1440.png`;
+- `/tmp/mxmed-pago-seguro-visual-polish-stripe-branding-01/annual-768.png`;
+- `/tmp/mxmed-pago-seguro-visual-polish-stripe-branding-01/monthly-390.png`.
+
+### QA, evidencia y cero operaciones reales
+
+Raiz de evidencia:
+
+`/tmp/mxmed-pago-seguro-visual-polish-stripe-branding-01/`
+
+El harness especifico de pulido paso 31/31 comprobaciones. El harness aislado
+de montaje seguro existente se reejecuto contra el JavaScript actual y paso
+75/75 casos. El parse completo de `assets/js/app.js`, la auditoria estructural
+CSS, la comparacion del SVG oficial, la revision estatica y
+`git diff --check` pasan.
+
+Toda la QA uso datos sinteticos, un documento local `file://`, JavaScriptCore y
+Chrome headless con red de aplicacion deshabilitada. No se ejecuto fixture,
+config publica real, `js.stripe.com`, entidad QA, servidor, endpoint, route,
+checkout, PaymentIntent, client_secret, Elements real, Payment Element real,
+Express Checkout real, confirmacion, Stripe API/CLI, webhook, activation, SQL o
+AWS.
+
+Auditoria exacta de no repeticion:
+
+~~~json
+{
+  "aws_calls": 0,
+  "fixture_real_calls": 0,
+  "public_config_real_calls": 0,
+  "stripejs_network_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_real_retrieve": 0,
+  "confirm_payment_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "sql_calls": 0,
+  "intake_commit_integrated": false,
+  "rejected_brand_assets_used": 0
+}
+~~~
+
+### Archivos versionados y fuera de alcance
+
+Unicos archivos versionados modificados:
+
+- `assets/js/app.js`;
+- `assets/css/style.css`;
+- `assets/img/stripe-wordmark-blurple.svg`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron PHP, endpoints, SQL, webhook, activation, otros assets de
+marca, package/composer files, configuracion AWS ni PP233-PP245. El boceto no
+se agrego al repositorio.
+
+Permanecen fuera de alcance `confirmPayment()`, pagos reales, nuevas cadenas de
+backend, Stripe sandbox, llamadas reales, Express Checkout real y cualquier
+integracion de assets rechazados.
+
+Rollback: revertir de forma atomica el commit de esta microfase. Esto elimina
+el wordmark local y restaura solo el copy y CSS previos, sin alterar PP233-PP245
+ni el contrato funcional de Payment Element.
+
+### Siguiente microfase
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Readiness-01`
+
+Sera la Microfase 2 de 24.
+
+### Cierre del contador
+
+Microfase 1 de 24 concluida.
+Avance global: 1/24.
+Pendientes: 23.

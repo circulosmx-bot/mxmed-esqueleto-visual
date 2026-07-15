@@ -20451,10 +20451,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   justify-content:space-between;
   gap:20px;
   min-width:0;
-  padding:22px 26px;
+  padding:20px 24px;
   overflow:hidden;
   border-radius:14px;
-  background:linear-gradient(112deg,#0750bd 0%,#076ed0 46%,#08b9cc 100%);
+  background:linear-gradient(112deg,#0750bd 0%,#076ed0 46%,#087f97 100%);
   color:#fff;
   box-shadow:0 12px 28px rgba(7,80,189,.2);
 }
@@ -20539,11 +20539,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-secure-payment-trust > div{ min-width:0 }
 .subp-secure-payment-trust h4{ margin:0 0 2px; color:#0b4ead; font-size:.93rem; font-weight:850; line-height:1.15 }
 .subp-secure-payment-trust p{ margin:0; color:#334c69; font-size:.84rem; font-weight:600; line-height:1.32 }
+.subp-secure-payment-trust-brand{ display:inline-flex; align-items:center; justify-content:flex-end; gap:16px; min-width:0; padding:3px 2px 3px 10px }
+.subp-secure-payment-stripe-wordmark{ display:block; flex:0 0 auto; width:72px; height:auto; max-width:100% }
 .subp-secure-payment-connection{ display:inline-flex; align-items:center; gap:6px; color:#334c69; font-size:.8rem; font-weight:750; white-space:nowrap }
 .subp-secure-payment-connection .material-symbols-rounded{ color:#536a82; font-size:18px; line-height:1 }
 .subp-secure-payment-layout{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:minmax(0,48fr) minmax(0,52fr);
   gap:16px;
   align-items:stretch;
   min-width:0;
@@ -20587,8 +20589,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:var(--subp-secure-ink);
   text-align:center;
 }
-.subp-stripe-element-host--express{ min-height:132px }
-.subp-stripe-element-host--payment{ min-height:224px }
 .subp-stripe-element-host--payment > .material-symbols-rounded{
   display:grid;
   place-items:center;
@@ -20623,7 +20623,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-stripe-payment-element-mount-host[aria-busy="true"]{ opacity:.86 }
 .subp-stripe-payment-element-mount-host[data-state="ready"],
 .subp-stripe-payment-element-mount-host[data-state="incomplete"],
-.subp-stripe-payment-element-mount-host[data-state="complete"]{ opacity:1 }
+.subp-stripe-payment-element-mount-host[data-state="complete"]{ opacity:1; border-radius:11px; background:#fff }
 .subp-stripe-payment-mount-status{
   margin:10px 0 0;
   color:#405773;
@@ -20719,7 +20719,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-secure-payment-layout{ grid-template-columns:1fr }
   .subp-secure-payment-panel{ padding:15px }
   .subp-secure-payment-trust{ grid-template-columns:auto minmax(0,1fr) }
-  .subp-secure-payment-connection{ grid-column:2; justify-self:start }
+  .subp-secure-payment-trust-brand{ grid-column:2; justify-self:start; justify-content:flex-start; padding-left:0 }
   .subp-secure-payment-actions > *{ max-width:none }
 }
 @media (max-width: 520px){
@@ -20730,8 +20730,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-secure-payment-operation-cell{ border-right:0; border-bottom:1px solid #e1e9f1 }
   .subp-secure-payment-operation-cell:nth-child(3){ border-bottom:1px solid #e1e9f1 }
   .subp-secure-payment-operation-cell:last-child{ border-bottom:0 }
-  .subp-secure-payment-trust{ grid-template-columns:1fr; justify-items:start }
-  .subp-secure-payment-connection{ grid-column:1 }
+  .subp-secure-payment-trust{ grid-template-columns:auto minmax(0,1fr); justify-items:start }
+  .subp-secure-payment-trust-brand{ grid-column:1 / -1; width:100%; justify-content:center; padding:5px 0 0 }
   .subp-stripe-element-host{ padding:16px 12px }
   .subp-stripe-placeholder-lines{ grid-template-columns:1fr }
   .subp-secure-payment-cadence-note{ display:grid }
@@ -20742,6 +20742,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-secure-payment-actions > *,
   .subp-secure-payment-actions button,
   .subp-secure-payment-actions .subp-payment-route-create-action{ width:100%; max-width:none }
+}
+@media (max-width: 420px){
+  .subp-secure-payment-shell[data-subp-secure-payment-skeleton] > .subp-payment-stepper{ padding-inline:7px }
+  .subp-secure-payment-shell[data-subp-secure-payment-skeleton] .subp-payment-stepper{ gap:2px }
+  .subp-secure-payment-shell[data-subp-secure-payment-skeleton] .subp-payment-stepper-item{ overflow-wrap:anywhere; font-size:.66rem }
+  .subp-secure-payment-shell[data-subp-secure-payment-skeleton] .subp-payment-stepper-dot{ width:28px; height:28px; flex-basis:28px }
 }
 @media (prefers-reduced-motion: reduce){
   .subp-secure-payment-shell[data-subp-secure-payment-skeleton] *{ scroll-behavior:auto !important; transition:none !important }
