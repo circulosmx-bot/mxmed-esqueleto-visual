@@ -52470,3 +52470,298 @@ Avance global: 6/24.
 Pendientes: 18.
 
 ---
+
+## PP-Decisiones 252 - Implementación offline de red AWS para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-Network-Implementation-01`
+
+Contador:
+
+`Microfase 7 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_NETWORK_IMPLEMENTATION_V1`
+
+Esta decisión materializa en AWS CDK v2 el contrato de readiness
+`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1` de PP251 sobre la foundation de
+PP249/PP250 y la arquitectura general de PP245. El resultado es local,
+versionado y sintetizable sin cuenta ni credenciales AWS. No existe deploy ni
+infraestructura AWS creada por esta microfase.
+
+### Reanudación, baseline y rama
+
+La ejecución se reanudó sobre cambios parciales coherentes, sin descartarlos,
+duplicar la sección documental ni repetir la readiness. Antes de continuar se
+confirmó:
+
+- base `architecture/mxmed-aws-network-readiness`;
+- commit completo `21ae0df70f97282f77b8ff029996bf61f1c1a8de`;
+- upstream base `0/0` y working tree inicial limpio;
+- `git diff --check` PASS;
+- rama derivada exactamente desde la base:
+  `feature/mxmed-aws-network-implementation`;
+- Node `v22.22.0`, npm/npx `10.9.4` y arquitectura `arm64`.
+
+No se ejecutaron merge, rebase, cherry-pick, reset, clean de Git, stash o force
+push.
+
+### Archivos y contrato de configuración
+
+El cambio versionado se limita a `infra/aws/**` y este PP252. Se extendieron:
+
+- `lib/config/environment-config.ts`;
+- `lib/config/environment-schema.ts`;
+- `lib/config/environments.ts`;
+- `lib/stacks/mxmed-network-stack.ts`;
+- `lib/utils/network-guardrails.ts`;
+- `lib/aspects/mandatory-tags-aspect.ts`;
+- las pruebas de config, stages y synth offline;
+- la nueva suite `test/network-stack.test.ts`;
+- `infra/aws/README.md`.
+
+`MxMedEnvironmentConfig` conserva `availabilityZoneCount`, `natStrategy` y
+`logRetentionDays` existentes y agrega exclusivamente:
+
+- `vpcCidr`;
+- `subnetMasks.publicIngress/privateApp/privateEndpoints/isolatedData`;
+- `interfaceEndpointProfile`;
+- `flowLogRetentionDays`.
+
+El número de NAT se deriva de `natStrategy`, no se duplica como configuración.
+La validación exige el CIDR RFC1918 `/16` y valor exacto por ambiente, dos AZ,
+masks `/24`, `/20`, `/24`, `/24`, estrategia NAT `1/2`, profiles
+`s3-only/production-core`, retención `30/90` y V1 sin campos IPv6. También
+rechaza que staging y production compartan CIDR. Los errores no imprimen el
+objeto de configuración ni variables de entorno.
+
+### VPC y subnets sintetizadas
+
+Cada ambiente crea una VPC L2 independiente, IPv4-only, sin lookup, con DNS
+support y hostnames habilitados, dos slots AZ lógicos y ocho subnets:
+
+| Ambiente | VPC | `private-app` A/B | `public-ingress` A/B | `private-endpoints` A/B | `isolated-data` A/B |
+| --- | --- | --- | --- | --- | --- |
+| staging | `10.20.0.0/16` | `10.20.0.0/20`, `10.20.32.0/20` | `10.20.16.0/24`, `10.20.48.0/24` | `10.20.17.0/24`, `10.20.49.0/24` | `10.20.18.0/24`, `10.20.50.0/24` |
+| production | `10.30.0.0/16` | `10.30.0.0/20`, `10.30.32.0/20` | `10.30.16.0/24`, `10.30.48.0/24` | `10.30.17.0/24`, `10.30.49.0/24` | `10.30.18.0/24`, `10.30.50.0/24` |
+
+La `subnetConfiguration` conserva el orden contractual:
+
+1. `public-ingress`, `PUBLIC`, `/24`;
+2. `private-app`, `PRIVATE_WITH_EGRESS`, `/20`;
+3. `private-endpoints`, `PRIVATE_ISOLATED`, `/24`;
+4. `isolated-data`, `PRIVATE_ISOLATED`, `/24`.
+
+El asignador L2 de `Vpc` no expone CIDR exacto por slot AZ. Conforme al escape
+hatch acotado por PP251, se sobrescribe únicamente
+`AWS::EC2::Subnet.CidrBlock`; el L2 sigue siendo propietario de NAT, route
+tables y asociaciones. Tests y validator comprueban los ocho CIDR resultantes.
+Todas las subnets deshabilitan autoasignación de IPv4 pública. No existen IPv6,
+NACL custom, peering, VPN o Transit Gateway.
+
+### NAT, rutas y endpoints
+
+Staging sintetiza una NAT Gateway/EIP en el primer slot público; sus dos
+`private-app` comparten esa NAT y aceptan el costo/riesgo cross-AZ de PP251.
+Production sintetiza dos NAT Gateway/EIP, una por AZ, y cada `private-app` usa
+la NAT de su propio slot.
+
+Cada VPC tiene un Internet Gateway. Las dos `public-ingress` tienen default
+route al IGW y las dos `private-app` al NAT contratado. `private-endpoints` e
+`isolated-data` no tienen default route. No se agregaron tablas o rutas manuales
+redundantes, ruta IPv6 o ruta pública para datos.
+
+Ambos ambientes crean un S3 Gateway Endpoint asociado sólo a las dos route
+tables `private-app`; no existe endpoint DynamoDB ni policy S3 amplia inventada.
+
+Staging no crea interface endpoints. Production sintetiza con constantes
+oficiales de `aws-cdk-lib`:
+
+- ECR API;
+- ECR DKR;
+- CloudWatch Logs;
+- Secrets Manager.
+
+Los cuatro servicios resolvieron offline para `mx-central-1`. Cada endpoint
+usa ambas `private-endpoints`, private DNS y el mismo Endpoint SG; no se
+hardcodearon nombres de servicio ni se consultó disponibilidad mediante cuenta
+AWS. El fallback de servicios externos continúa siendo HTTPS por NAT conforme a
+PP251.
+
+### Security Groups base
+
+`MxMedNetworkStack` expone cinco grupos sin egress implícito, SSH, ingress por
+IP personal ni ingress público:
+
+| Grupo | Ingress | Egress relevante |
+| --- | --- | --- |
+| `AlbIngressSecurityGroup` | ninguno en esta fase | Application TCP 8080 |
+| `ApplicationSecurityGroup` | ALB TCP 8080 | HTTPS IPv4, DNS TCP/UDP 53 dentro de VPC, DB 3306, Session 6379, Endpoint 443 |
+| `DatabaseSecurityGroup` | Application TCP 3306 | ninguno iniciado |
+| `SessionSecurityGroup` | Application TCP 6379 | ninguno iniciado |
+| `EndpointSecurityGroup` | Application TCP 443 | ninguno iniciado |
+
+El puerto ALB→Application no quedó diferido: PP245/PP251 fija TCP 8080 y se
+usa exclusivamente ese valor. Lo que permanece diferido a Edge es el ingress
+CloudFront→ALB mediante el prefix list administrado; no se abrió una regla
+provisional `0.0.0.0/0`.
+
+### VPC Flow Logs
+
+Cada VPC crea exactamente un Flow Log con `trafficType=ALL`, destino CloudWatch
+Logs, agregación de 60 segundos y rol de entrega limitado al log group. Los
+nombres estables son `mxmed-stg-network-flow-logs` y
+`mxmed-prd-network-flow-logs`; usan cifrado administrado por CloudWatch Logs.
+
+El formato incluye los 18 campos contratados: version, interface ID,
+source/destination address y port, protocol, packets, bytes, start/end, action,
+log status, subnet ID, region, AZ ID, flow direction y traffic path. No captura
+URL, path HTTP, query, cookie, header, body, secreto o dato clínico.
+
+Staging retiene eventos 30 días y destruye el log group sólo al retirar el
+stack. Production retiene eventos 90 días y aplica `RemovalPolicy.RETAIN` al
+recurso.
+
+### API tipada entre stacks y stage
+
+La instancia tipada `environment.networkStack` se conserva en
+`MxMedEnvironmentStage`. `MxMedNetworkStack` expone propiedades TypeScript para
+VPC, los cuatro arrays de subnets, los cinco SG y el log group. No crea
+CloudFormation Exports ni Outputs y no expone IP, ruta privada, secreto o
+credencial.
+
+Security, Data, Storage, Session, Compute, Edge, Operations, Jobs, Backup y
+Email permanecen sin recursos. No se implementaron RDS, ElastiCache, ECS, ALB,
+CloudFront, WAF, secretos o workloads.
+
+### Guardrails bloqueantes
+
+El validator de NetworkStack se registra mediante `node.addValidation()` y no
+modifica recursos. Bloquea synth ante drift de VPC CIDR/DNS, conteo o CIDR de
+subnets, autoasignación pública/IPv6, NAT, rutas públicas/app/isolated, cinco SG,
+ingress público, SSH, S3 Gateway Endpoint, profile/cantidad/configuración de
+interface endpoints, Flow Logs ALL/CloudWatch/formato/retención y recursos
+prohibidos de conectividad.
+
+La allowlist de tags sólo se amplió para tipos helper de CloudFormation que no
+admiten tags: routes, reglas SG separadas, asociaciones subnet-route table,
+VPC gateway attachment e IAM policy. Los recursos taggables continúan sujetos
+a los nueve tags obligatorios.
+
+### Pruebas y QA offline
+
+Se conservaron las 39 pruebas de foundation y se agregó la suite contractual
+de red. Resultado final:
+
+- 6 suites PASS;
+- 96/96 tests PASS;
+- cero snapshots completos como dependencia exclusiva.
+
+La cobertura incluye config y rechazo de drift, VPC/DNS/IPv4, dos AZ, ocho
+subnets exactas, NAT/rutas, S3 e interfaces, cinco SG, Flow Logs, API tipada,
+stacks futuros vacíos, recursos prohibidos, guardrails mutados, synth sin
+cuenta, determinismo, ausencia de lookup/assets Docker/secrets.
+
+Desde `infra/aws` pasaron:
+
+- `npm ci`;
+- `npm run typecheck`;
+- `npm run lint`;
+- `npm run format:check`;
+- `npm run test`;
+- `npm run synth:staging`;
+- `npm run synth:production`;
+- `npm run validate`;
+- `npm audit --omit=dev`;
+- `npm audit`.
+
+`npm ci` reconstruyó 405 paquetes desde lockfile y no cambió dependencias.
+Ambos audits reportaron cero vulnerabilidades. Los avisos de deprecación de
+dependencias transitivas del toolchain no corresponden a advisories abiertos.
+
+### Auditoría de templates y determinismo
+
+Los synth se ejecutaron con access key, secret key, session token y profiles
+AWS eliminados del proceso. Se auditaron `cdk.out` antes de limpiarlo:
+
+| Ambiente | Templates | Recursos Network | NAT | Gateway endpoints | Interface endpoints | Otros stacks con recursos |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| staging | 11 | 57 | 1 | 1 S3 | 0 | 0 |
+| production | 11 | 63 | 2 | 1 S3 | 4 | 0 |
+
+En ambos templates Network existen una VPC, ocho subnets, cinco SG y un Flow
+Log. Se confirmaron cero ECS, RDS, ElastiCache, ALB, CloudFront, WAF, secrets,
+CloudFormation Outputs, account IDs reales, ARNs reales, valores secretos, IP
+pública asignada a workload o assets Docker. Los únicos file assets son los 22
+templates que componen el cloud assembly.
+
+Dos synth consecutivos produjeron hashes Network idénticos:
+
+- staging:
+  `9791c637bd47fee17debc09fdf24a13f8d471583419b3189c1e4ad29cd485185`;
+- production:
+  `de16c99194689c881a56cded8f889a33951cfc5dde151de054c403453de9dbbf`.
+
+`cdk.out`, `dist` y `coverage` se eliminan con `npm run clean` antes del commit;
+`node_modules` permanece ignorado y no se versiona.
+
+### Evidencia y no repetición
+
+Raíz de evidencia sanitizada:
+
+`/tmp/mxmed-aws-network-implementation-01/`
+
+Contiene baseline, extensión de config, auditorías VPC/subnets/NAT/rutas,
+endpoints, SG, Flow Logs, output tipado, guardrails, templates, synth,
+determinismo, QA, documentación, no secretos, no repetición y estado Git. No
+contiene credenciales, account IDs/ARNs reales, valores Stripe o datos
+personales/clínicos.
+
+Auditoría exacta:
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_deployed": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "docker_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "sql_calls": 0
+}
+~~~
+
+### Fuera de alcance, rollback y siguiente microfase
+
+No se ejecutaron AWS CLI/SDK contra cuenta, bootstrap, diff, deploy, recursos
+AWS, npm install/update, Docker, PHP, navegador, endpoints, Stripe, pagos o
+SQL. No se modificaron código funcional, assets, Docker, workflows,
+configuración raíz ni dependencias.
+
+Rollback: revertir atómicamente el commit de PP252. Como no existe deploy, el
+rollback retira sólo código local/documentación y no altera estado AWS.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Security-Readiness-01`
+
+Será la Microfase 8 de 24 y definirá el contrato de seguridad antes de crear
+recursos de seguridad o workloads adicionales.
+
+### Cierre del contador
+
+Microfase 7 de 24 concluida.
+Avance global: 7/24.
+Pendientes: 17.
+
+---

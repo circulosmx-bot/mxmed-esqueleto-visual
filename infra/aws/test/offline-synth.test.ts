@@ -38,7 +38,7 @@ describe.each([
   ['staging', STAGING_CONFIG],
   ['production', PRODUCTION_CONFIG],
 ] as const)('%s offline synthesis', (_name, config) => {
-  test('does not require an account or create resources', () => {
+  test('does not require an account and creates resources only in NetworkStack', () => {
     const previousAccount = process.env.CDK_DEFAULT_ACCOUNT;
     const previousAccessKey = process.env.AWS_ACCESS_KEY_ID;
     const previousSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
@@ -49,9 +49,25 @@ describe.each([
     try {
       const templates = renderTemplates(config);
       expect(Object.keys(templates)).toHaveLength(11);
-      for (const template of Object.values(templates)) {
+      for (const [stackName, template] of Object.entries(templates)) {
         const rendered = template as { Resources?: Record<string, unknown> };
-        expect(Object.keys(rendered.Resources ?? {})).toHaveLength(0);
+        const resources = Object.values(rendered.Resources ?? {}) as { Type?: string }[];
+        if (stackName === `mxmed-${config.environmentCode}-network`) {
+          expect(resources.length).toBeGreaterThan(0);
+          expect(resources.some((resource) => resource.Type === 'AWS::EC2::VPC')).toBe(true);
+        } else {
+          expect(resources).toHaveLength(0);
+        }
+        expect(resources.map((resource) => resource.Type)).not.toEqual(
+          expect.arrayContaining([
+            'AWS::ECS::Service',
+            'AWS::RDS::DBInstance',
+            'AWS::ElastiCache::ReplicationGroup',
+            'AWS::ElasticLoadBalancingV2::LoadBalancer',
+            'AWS::CloudFront::Distribution',
+            'AWS::WAFv2::WebACL',
+          ]),
+        );
       }
       expect(JSON.stringify(templates)).not.toMatch(
         /AKIA|ASIA|arn:aws|sk_(?:live|test)|\b\d{12}\b|BEGIN PRIVATE KEY/,

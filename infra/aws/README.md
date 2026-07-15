@@ -2,13 +2,14 @@
 
 ## Propósito y estado
 
-Este proyecto implementa la foundation local de Infrastructure as Code de México Médico. Traduce
-PP-Decisiones 245 (`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`) y PP-Decisiones 249
-(`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`) a AWS CDK v2 con TypeScript.
+Este proyecto implementa la foundation local de Infrastructure as Code y la red V1 de México
+Médico. Traduce PP-Decisiones 245 (`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`),
+PP-Decisiones 249 (`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 251
+(`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`) a AWS CDK v2 con TypeScript.
 
-La foundation todavía no contiene recursos AWS. Los stacks sólo establecen nombres, tags,
-regiones, dependencias y guardrails para las siguientes microfases. Bootstrap y deploy permanecen
-pendientes y están prohibidos en esta etapa.
+`MxMedNetworkStack` contiene recursos CloudFormation de red sintetizables offline. Los demás
+stacks continúan vacíos. Nada está desplegado: bootstrap, diff y deploy permanecen pendientes y
+están prohibidos en esta etapa.
 
 ## Arquitectura contractual
 
@@ -19,9 +20,9 @@ pendientes y están prohibidos en esta etapa.
 - Datos futuros: RDS MySQL; objetos privados en S3; sesiones en ElastiCache.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene diez stacks vacíos: Network, Security, Data, Storage, Session,
-Compute, Edge, Operations, Jobs y Backup. `MxMedEmailStage` contiene únicamente Email y no crea
-referencias CloudFormation cross-region.
+`MxMedEnvironmentStage` contiene diez stacks: Network implementado y Security, Data, Storage,
+Session, Compute, Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
+únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
 ## Prerrequisitos
 
@@ -72,8 +73,10 @@ Los scripts de synth lo proporcionan de forma explícita. La configuración tipa
 `lib/config/`, permite sólo esos dos ambientes y valida antes de crear stages:
 
 - región primaria y región de correo;
-- mínimo dos AZ;
+- CIDR VPC RFC1918 `/16` exacto por ambiente;
+- masks de los cuatro tiers y exactamente dos AZ;
 - perfiles de NAT, compute y base de datos;
+- perfil de interface endpoints y retención de VPC Flow Logs;
 - retenciones y protecciones por ambiente;
 - WAF y logging CloudFront seguro;
 - tags obligatorios;
@@ -83,6 +86,70 @@ Los scripts de synth lo proporcionan de forma explícita. La configuración tipa
 `domainAlias` permanece omitido hasta una decisión empresarial. No hay cuentas, dominios, ARNs,
 IPs o nombres físicos globales versionados. Si `CDK_DEFAULT_ACCOUNT` existe, la app lo transmite
 sin imprimirlo; si no existe, synth continúa offline y sin cuenta explícita.
+
+## Red V1 implementada en templates
+
+Cada ambiente crea su propia VPC IPv4-only en `mx-central-1`, con DNS support y hostnames
+habilitados. Las AZ se resuelven como dos slots lógicos mediante CloudFormation; no se fijan letras
+físicas ni se presupone equivalencia entre cuentas.
+
+| Ambiente   | VPC            | NAT Gateway | Interface endpoints                | Flow Logs    |
+| ---------- | -------------- | ----------- | ---------------------------------- | ------------ |
+| staging    | `10.20.0.0/16` | 1           | ninguno                            | ALL, 30 días |
+| production | `10.30.0.0/16` | 2, uno/AZ   | ECR API/DKR, Logs, Secrets Manager | ALL, 90 días |
+
+Cada VPC contiene exactamente dos subnets por tier:
+
+| Tier                | Tipo CDK              | Máscara | Uso                                     |
+| ------------------- | --------------------- | ------- | --------------------------------------- |
+| `public-ingress`    | `PUBLIC`              | `/24`   | futuro ALB y NAT                        |
+| `private-app`       | `PRIVATE_WITH_EGRESS` | `/20`   | futuras tasks ECS/jobs sin IP pública   |
+| `private-endpoints` | `PRIVATE_ISOLATED`    | `/24`   | ENI de endpoints de interfaz production |
+| `isolated-data`     | `PRIVATE_ISOLATED`    | `/24`   | futuros RDS y ElastiCache               |
+
+CIDR exactos por slot:
+
+| Ambiente   | `private-app` A/B               | `public-ingress` A/B             | `private-endpoints` A/B          | `isolated-data` A/B              |
+| ---------- | ------------------------------- | -------------------------------- | -------------------------------- | -------------------------------- |
+| staging    | `10.20.0.0/20`, `10.20.32.0/20` | `10.20.16.0/24`, `10.20.48.0/24` | `10.20.17.0/24`, `10.20.49.0/24` | `10.20.18.0/24`, `10.20.50.0/24` |
+| production | `10.30.0.0/20`, `10.30.32.0/20` | `10.30.16.0/24`, `10.30.48.0/24` | `10.30.17.0/24`, `10.30.49.0/24` | `10.30.18.0/24`, `10.30.50.0/24` |
+
+El L2 `Vpc` conserva NAT, route tables y asociaciones. Como su asignador no expone CIDR exacto
+por subnet, un escape hatch limitado fija sólo `AWS::EC2::Subnet.CidrBlock`; assertions y el
+validator bloquean cualquier drift. No se crean rutas manuales redundantes.
+
+Rutas y endpoints:
+
+- `public-ingress` usa Internet Gateway;
+- `private-app` usa NAT; staging comparte NAT A y production conserva NAT por AZ;
+- `private-endpoints` e `isolated-data` no tienen default route;
+- S3 Gateway Endpoint existe en ambos ambientes y se asocia sólo a `private-app`;
+- staging no crea interface endpoints;
+- production usa constantes oficiales CDK para ECR API, ECR DKR, CloudWatch Logs y Secrets
+  Manager, con private DNS, las dos `private-endpoints` y un SG dedicado;
+- no existen DynamoDB endpoint, IPv6, custom NACL, peering, VPN o Transit Gateway.
+
+Security Groups base:
+
+- `AlbIngressSecurityGroup`;
+- `ApplicationSecurityGroup`;
+- `DatabaseSecurityGroup`;
+- `SessionSecurityGroup`;
+- `EndpointSecurityGroup`.
+
+Todos parten sin ingress ni egress implícito. Application acepta únicamente ALB en TCP 8080,
+puerto cerrado por PP245/PP251, y puede salir por HTTPS, DNS dentro de la VPC, MySQL 3306, cache
+TLS 6379 y endpoints 443. Database, Session y Endpoint aceptan sólo Application en su puerto. El
+ingress CloudFront→ALB se agregará junto con Edge/ALB; no existe ingress público provisional.
+
+VPC Flow Logs captura `ALL` a CloudWatch Logs con intervalo de 60 segundos y formato de campos de
+red allowlisted. No captura URL, path HTTP, query, cookie, header, body o datos clínicos. El log
+group usa cifrado administrado de CloudWatch, nombre estable, 30 días staging y 90 días
+production; production retiene el recurso al retirar el stack.
+
+Costos relativos: staging paga una NAT y acepta egress cross-AZ desde `private-app` B; production
+paga dos NAT y hasta ocho asociaciones endpoint-AZ para conservar HA/ruta privada. S3 Gateway
+Endpoint reduce tráfico NAT de S3. No se incluyen importes: deberán cotizarse antes de deploy.
 
 ## Synth offline
 
@@ -95,9 +162,10 @@ npm run synth:staging
 npm run synth:production
 ```
 
-Ambos comandos deben funcionar sin credenciales AWS. Las plantillas actuales contienen cero
-recursos productivos; los recursos sintéticos usados para probar Aspects viven sólo en Jest.
-`cdk.out/` es temporal y no se versiona.
+Ambos comandos deben funcionar sin credenciales AWS. Las plantillas actuales contienen recursos
+únicamente en NetworkStack; Email y los otros nueve workload stacks continúan sin recursos. No
+crean ECS, RDS, ElastiCache, ALB, CloudFront, WAF ni secretos. `cdk.out/` es temporal y no se
+versiona.
 
 ## Naming y tags
 
@@ -137,9 +205,13 @@ Los Aspects iniciales son:
 - `ProductionRetentionAspect`;
 - `StripeReturnLoggingSafetyAspect`.
 
+NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
+tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
+interface endpoints y Flow Logs ALL con retención contractual.
+
 Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Data permanecen
-vacíos: los tests usan recursos sintéticos para demostrar el comportamiento futuro, pero esta
-foundation no afirma que CloudFront, WAF, S3 o RDS estén desplegados.
+vacíos: los tests usan recursos sintéticos para demostrar el comportamiento futuro, pero este
+proyecto no afirma que CloudFront, WAF, S3 workload o RDS estén desplegados.
 
 Los secretos futuros procederán de Secrets Manager y roles autorizados. Nunca deben incluirse en
 Git, props de configuración, CDK context, outputs, tags, plantillas, logs o evidencia. Tampoco se
@@ -180,8 +252,8 @@ npm run validate
 ```
 
 Las suites cubren configuración, naming, topología/dependencias, tags, buckets/DB públicas,
-retención production, logging Stripe y síntesis determinista offline. Los snapshots completos no
-son la única fuente de validación.
+retención production, logging Stripe, VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, guardrails
+y síntesis determinista offline. Los snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift
 

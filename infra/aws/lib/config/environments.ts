@@ -1,5 +1,9 @@
 import type { MxMedEnvironmentConfig, MxMedEnvironmentName } from './environment-config';
-import { parseEnvironmentName, validateEnvironmentConfig } from './environment-schema';
+import {
+  parseEnvironmentName,
+  validateEnvironmentConfig,
+  validateEnvironmentNetworkSeparation,
+} from './environment-schema';
 
 export const STAGING_CONFIG = Object.freeze({
   environmentName: 'staging',
@@ -9,8 +13,17 @@ export const STAGING_CONFIG = Object.freeze({
   primaryRegion: 'mx-central-1',
   emailRegion: 'us-east-1',
   accountSource: 'deployment-identity',
+  vpcCidr: '10.20.0.0/16',
+  subnetMasks: {
+    publicIngress: 24,
+    privateApp: 20,
+    privateEndpoints: 24,
+    isolatedData: 24,
+  },
   availabilityZoneCount: 2,
   natStrategy: 'single-az',
+  interfaceEndpointProfile: 's3-only',
+  flowLogRetentionDays: 30,
   computeSizingProfile: 'reduced',
   databaseSizingProfile: 'single-az-reduced',
   logRetentionDays: 30,
@@ -37,8 +50,17 @@ export const PRODUCTION_CONFIG = Object.freeze({
   primaryRegion: 'mx-central-1',
   emailRegion: 'us-east-1',
   accountSource: 'deployment-identity',
+  vpcCidr: '10.30.0.0/16',
+  subnetMasks: {
+    publicIngress: 24,
+    privateApp: 20,
+    privateEndpoints: 24,
+    isolatedData: 24,
+  },
   availabilityZoneCount: 2,
   natStrategy: 'dual-az',
+  interfaceEndpointProfile: 'production-core',
+  flowLogRetentionDays: 90,
   computeSizingProfile: 'production-ha',
   databaseSizingProfile: 'multi-az-production',
   logRetentionDays: 90,
@@ -56,6 +78,10 @@ export const PRODUCTION_CONFIG = Object.freeze({
     Owner: 'platform',
   },
 } satisfies MxMedEnvironmentConfig);
+
+validateEnvironmentConfig(STAGING_CONFIG);
+validateEnvironmentConfig(PRODUCTION_CONFIG);
+validateEnvironmentNetworkSeparation(STAGING_CONFIG, PRODUCTION_CONFIG);
 
 const ENVIRONMENTS: Readonly<Record<MxMedEnvironmentName, MxMedEnvironmentConfig>> = {
   staging: STAGING_CONFIG,

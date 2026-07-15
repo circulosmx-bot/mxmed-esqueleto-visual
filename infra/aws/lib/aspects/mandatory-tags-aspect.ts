@@ -4,8 +4,16 @@ import type { IConstruct } from 'constructs';
 
 import { MXMED_REQUIRED_RESOURCE_TAG_KEYS } from '../config/environment-config';
 
-/** Non-taggable framework resources reviewed as carrying no independent business data. */
-export const MXMED_NON_TAGGABLE_RESOURCE_ALLOWLIST = new Set(['AWS::CDK::Metadata']);
+/** Reviewed helper resources whose CloudFormation types do not support tags. */
+export const MXMED_NON_TAGGABLE_RESOURCE_ALLOWLIST = new Set([
+  'AWS::CDK::Metadata',
+  'AWS::EC2::Route',
+  'AWS::EC2::SecurityGroupEgress',
+  'AWS::EC2::SecurityGroupIngress',
+  'AWS::EC2::SubnetRouteTableAssociation',
+  'AWS::EC2::VPCGatewayAttachment',
+  'AWS::IAM::Policy',
+]);
 
 export class MandatoryTagsAspect implements IAspect {
   public visit(node: IConstruct): void {
