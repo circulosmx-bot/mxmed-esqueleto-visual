@@ -45982,6 +45982,169 @@ La implementacion posterior debera usar mocks y no ejecutara pagos reales salvo 
 
 ---
 
+## PP-Decisiones 243 - Secure ingress de retorno Stripe bloqueado por configuracion productiva no versionada
+
+### Microfase y resultado
+
+Microfase:
+
+`BE-FE/Suscripciones-StripeReturnBridge-SecureIngress-Implementation-01`
+
+Resultado:
+
+`BLOCKED`
+
+Codigo bloqueante exacto:
+
+`production_access_log_control_not_versioned`
+
+PP242 permanece bloqueada. No se implementaron la ruta, pagina minima, bridge JavaScript, rewrite, CSP ni una mitigacion parcial porque el preflight obligatorio no encontro configuracion productiva versionada que permita controlar el access log antes de que la peticion sensible sea registrada.
+
+### Baseline y preflight de infraestructura
+
+La microfase partio de `bda74bf1545b45bc9dcc36deb09b9576b9f3706a`, rama `feature/suscripciones-stripe-payment-confirmation-readiness`, upstream `0/0`, working tree limpio y `git diff --check` PASS. La rama de trabajo es `feature/suscripciones-stripe-return-bridge-secure-ingress`.
+
+Clasificacion unica:
+
+`D. ingress_configuration_not_versioned_or_unknown`
+
+Inventario estatico:
+
+- `.htaccess` raiz: charset y tipos MIME solamente;
+- `.htaccess` bajo APIs: rewrites locales de aplicacion, sin control productivo de access logs;
+- README: ejecucion de desarrollo bajo WAMP y localhost;
+- `WAMP-UTF8-SETUP.md`: configuracion local de charset, no vhost productivo;
+- vhost Apache/`VirtualHost` versionado: ausente;
+- `LogFormat`/`CustomLog` versionado: ausente;
+- configuracion Nginx/location versionada: ausente;
+- Docker/Compose/Kubernetes/Helm/Traefik/Caddy versionados: ausentes;
+- CI/CD o manifiesto de despliegue productivo: ausente;
+- configuracion de proxy/CDN/cache productivo: ausente;
+- politica versionada de access log productivo: ausente.
+
+No se asume que WAMP local sea la infraestructura de produccion. Tampoco se asume que `.htaccess` pueda configurar `CustomLog`: esa directiva pertenece al contexto de servidor/vhost y una solucion limitada a PHP o JavaScript ocurriria despues del riesgo que debe mitigar.
+
+### Control de access logs no implementado
+
+PP242 reservo:
+
+`GET /subscriptions/stripe-return`
+
+El contrato exige que el ingress productivo excluya esa ruta del log combinado general o use para ella un formato path-only. En Apache, el formato seguro futuro deberia basarse en metodo, path y protocolo —por ejemplo `%m %U %H`— y no usar `%r`, `%q`, Referer, cookies o request headers sensibles. En Nginx, la alternativa tendria que ser un `location = /subscriptions/stripe-return` con `access_log off` o formato seguro que no use `$request`, `$request_uri` ni `$args`.
+
+Ninguna de esas opciones se selecciona o implementa porque la infraestructura real no esta identificada. No se agregan simultaneamente configuraciones Apache y Nginx “por si acaso”. Por la misma razon, no puede demostrarse que un proxy/CDN anterior al origin excluya query, Referer y cookies.
+
+El registro sintetico objetivo permanece:
+
+`GET /subscriptions/stripe-return HTTP/1.1`
+
+Nunca debe registrar el query original, request line completa, Referer, cookies, headers Stripe o body. Esta propiedad no pudo validarse contra produccion en esta microfase.
+
+### Ruta dedicada, headers y CSP
+
+No se crea el entrypoint `GET /subscriptions/stripe-return`. Hacerlo sin control previo del access log dejaria intacta la exposicion en la primera peticion HTTP y podria producir una falsa declaracion de seguridad.
+
+El contrato pendiente para exito y error sigue exigiendo:
+
+- metodo unico `GET`; otros metodos con `405` sanitizado;
+- `Cache-Control: no-store`;
+- `Referrer-Policy: no-referrer`;
+- `X-Content-Type-Options: nosniff`;
+- `X-Frame-Options: DENY`;
+- `Content-Type` correcto;
+- CSP minima: `default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`, con `style-src` limitado al recurso same-origin realmente elegido;
+- cero shell general, `app.js`, Stripe.js, analytics, trackers, fuentes, imagenes o scripts de terceros.
+
+No se modifica la CSP general del sistema.
+
+### Allowlist, duplicados y limites pendientes
+
+El futuro ingress aceptara solamente nombres revisados contra PP242 y la documentacion Stripe aplicable:
+
+- `payment_intent`;
+- `payment_intent_client_secret`;
+- `redirect_status`;
+- `redirect_pm_type` unicamente si la microfase implementadora demuestra que forma parte del contrato vigente.
+
+PP242 no exige un query marcador MXMed porque el path dedicado es el marcador fijo. Deben rechazarse parametros desconocidos, repetidos, arrays, claves anidadas, valores obligatorios vacios, excesivos o con controles. Los limites exactos deben cerrarse en la implementacion una vez identificado el runtime de ingress, sin reflejar valores en HTML, DOM, logs, errores, evidencia, cookies, sesion o storage.
+
+No se aceptaran `return_to`, `redirect`, `next`, `url`, `origin`, `callback` ni otro destino proporcionado por cliente. La ruta limpia y el enlace futuro al panel seran constantes y same-origin.
+
+### Bridge temprano y consumer contract no implementados
+
+El bridge dedicado pendiente debe conservar el contrato de PP242:
+
+`runSubscriptionStripeReturnBridge({ locationLike, historyLike, consumeReturn })`
+
+Orden obligatorio:
+
+1. documento minimo;
+2. unico JavaScript same-origin;
+3. lectura y validacion allowlistada;
+4. referencias locales solamente;
+5. `history.replaceState` inmediato hacia `/subscriptions/stripe-return`;
+6. verificacion de query vacia;
+7. consumer temporal una sola vez;
+8. liberacion de referencias al resolver o rechazar.
+
+El consumer no puede ejecutarse si falla el scrub, almacenar datos automaticamente, exponer una funcion global ni llamar Stripe, endpoints o reconciliacion en esta microfase. Los estados visuales futuros se limitan a “Estamos verificando el estado de tu pago.” y el error neutral aprobado por el contrato, con enlace fijo al panel.
+
+No se creo el archivo JavaScript: aun un bridge correcto no evita que el servidor o proxy no versionado registre la solicitud antes de que JavaScript se ejecute.
+
+### Analytics, referrer, cache y service workers
+
+La auditoria estatica no encontro analytics de producto, Tag Manager, pixeles, `sendBeacon`, service worker, Workbox, precache o runtime cache versionados. Sin embargo, al no existir respuesta dedicada ni configuracion productiva de proxy/CDN, no puede probarse que el ingreso real quede fuera de analytics, logging, cache intermedio o reglas externas.
+
+`Referrer-Policy: no-referrer` y `Cache-Control: no-store` deben ser headers de la respuesta dedicada; un meta tag o `history.replaceState` no sustituyen el control del request inicial. No se encontro un service worker versionado que intercepte la ruta, pero esto no convierte en segura una infraestructura de despliegue desconocida.
+
+### Errores sanitizados reservados
+
+Se mantiene la allowlist futura:
+
+- `stripe_return_method_not_allowed`;
+- `stripe_return_parameters_missing`;
+- `stripe_return_parameters_invalid`;
+- `stripe_return_parameters_duplicated`;
+- `stripe_return_scrub_failed`;
+- `stripe_return_consumer_failed`;
+- `stripe_return_ingress_unavailable`.
+
+No se permiten `error_log` con parametros, `var_dump`, `print_r`, request JSON, `location.href`, URI completa, query completa o excepcion raw.
+
+### QA y validador de configuracion
+
+La matriz de 50 casos de ingress, headers, pagina, bridge, logging, cache/workers y seguridad queda `NOT_EXECUTED_BLOCKED_AT_PREFLIGHT`. No se creo harness de ruta o bridge porque no existe una solucion de ingress autorizada que probar.
+
+No se ejecuto `apachectl configtest`, `nginx -t` ni otro validador. Validar una configuracion local o sintetica no demostraria la sintaxis ni el comportamiento efectivo de produccion; no existe un archivo productivo versionado que entregar al validador correspondiente.
+
+### No repeticion y fuera de alcance
+
+Se mantuvieron en cero fixtures, navegador Stripe, configuracion publica, Stripe.js, route, checkout, PaymentIntent, retrieval real de secreto, Elements, Payment Element, `confirmPayment`, `retrievePaymentIntent`, Stripe API/CLI, webhook, activacion y SQL. No se consultaron entidades QA, cadenas historicas, PaymentEvents o suscripciones.
+
+No se modificaron endpoints, servicios Stripe, client-secret, webhook, activacion, `app.js`, CSS general, HTML general, assets, SQL, schema, seeds ni dependencias. El unico archivo versionado modificado es este documento.
+
+Raiz de evidencia sanitizada:
+
+`/tmp/mxmed-stripe-return-bridge-secure-ingress-01/`
+
+### Desbloqueo requerido y siguiente microfase
+
+Antes de repetir esta implementacion se requiere:
+
+`DEVOPS/Suscripciones-ProductionIngress-Configuration-Versioning-01`
+
+Debe identificar la infraestructura real, versionar su configuracion autoritativa de origin y proxy/CDN, definir la politica path-only/no-log para `/subscriptions/stripe-return` y aportar un validador reproducible. No debe implementar confirmacion ni ejecutar pagos.
+
+Cuando esa compuerta cierre PASS, debe reintentarse:
+
+`BE-FE/Suscripciones-StripeReturnBridge-SecureIngress-Implementation-01`
+
+Solo despues de un PASS real del ingress quedara autorizada:
+
+`FE-UX/Suscripciones-StripePaymentConfirmation-Implementation-01`
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
