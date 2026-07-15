@@ -51961,3 +51961,512 @@ subnets, NAT, endpoints, Security Groups o Flow Logs.
 Microfase 5 de 24 concluida.
 Avance global: 5/24.
 Pendientes: 19.
+
+---
+
+## PP-Decisiones 251 - Readiness de red AWS para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-Network-Readiness-01`
+
+Contador:
+
+`Microfase 6 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`
+
+Esta decisión define una única topología de red implementable para los stacks
+vacíos creados por PP250 y conserva la arquitectura AWS de PP245 y el contrato
+de foundation de PP249. No crea VPC, subnet, ruta, NAT Gateway, endpoint,
+Security Group, log group, rol, recurso AWS ni código IaC.
+
+### Reanudación, baseline y alcance
+
+La reanudación se inspeccionó antes de modificar el repositorio:
+
+- rama original `feature/mxmed-aws-iac-foundation-implementation`;
+- HEAD completo `308b60e3468413755f169c22c19f2d7320be9a07`, igual a la base
+  contractual;
+- upstream original `0/0`;
+- working tree limpio;
+- `git diff --check` PASS;
+- cero cambios parciales staged o unstaged en este documento;
+- `PP-Decisiones 251` libre;
+- raíz `/tmp/mxmed-aws-network-readiness-01/` ausente, sin evidencia parcial
+  que recuperar.
+
+La decisión se documenta en:
+
+`architecture/mxmed-aws-network-readiness`
+
+Único archivo versionado autorizado y modificado:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+Los archivos de `infra/aws/` permanecen intactos. En particular,
+`MxMedNetworkStack` continúa sin recursos y las configuraciones de PP250
+continúan fijando dos AZ, NAT `single-az` para staging, NAT `dual-az` para
+production y logs de 30/90 días.
+
+### Decisiones heredadas y aclaración de AZ
+
+Permanecen cerradas:
+
+- región primaria `mx-central-1`;
+- cuentas y VPC separadas para staging y production;
+- IPv4 para V1;
+- ECS Fargate en subnets privadas sin IP pública;
+- ALB y NAT como únicos consumidores de subnets públicas;
+- RDS y ElastiCache sin acceso público;
+- S3 privado, Secrets Manager, ECR y CloudWatch Logs;
+- AWS CDK v2 TypeScript como única IaC futura;
+- Security Groups como control stateful y NACL por defecto;
+- una NAT en staging y dos NAT en production.
+
+La frase de PP245 “tres AZ preparadas” se interpreta desde PP250 como reserva
+regional para expansión, no como asignación V1. Este contrato fija
+**exactamente dos AZ por ambiente**. Una tercera AZ requerirá otra decisión,
+nuevos CIDR, revisión de NAT/costos y QA; no puede aparecer automáticamente por
+un cambio de contexto CDK.
+
+Las AZ se modelan como slots lógicos `az-a` y `az-b`. No se versionan nombres
+como `mx-central-1a` porque las letras pueden mapear a instalaciones físicas
+distintas entre cuentas. CloudFormation resolverá dos AZ disponibles en cada
+cuenta sin lookup de cuenta durante synth; staging y production no presumen
+equivalencia física entre sus slots.
+
+### Topología VPC única
+
+| Ambiente | CIDR VPC | AZ | NAT Gateway | Interface endpoints | Flow Logs |
+| --- | --- | ---: | ---: | --- | --- |
+| staging | `10.20.0.0/16` | 2 | 1 en `az-a` | ninguno en V1 | `ALL`, CloudWatch, 30 días |
+| production | `10.30.0.0/16` | 2 | 2, uno por AZ | ECR API/DKR, Logs y Secrets cuando estén oficialmente disponibles | `ALL`, CloudWatch, 90 días |
+
+Cada VPC tendrá:
+
+- un Internet Gateway asociado únicamente a rutas públicas;
+- `enableDnsSupport=true` y `enableDnsHostnames=true`;
+- AmazonProvidedDNS/Route 53 Resolver de la VPC;
+- ocho subnets, cuatro clases por cada una de dos AZ;
+- una route table dedicada por subnet, ocho en total;
+- autoasignación de IPv4 pública deshabilitada en todas las subnets;
+- cero bloque IPv6, egress-only Internet Gateway o ruta `::/0` en V1;
+- NACL por defecto, sin reglas custom no justificadas.
+
+No se usa la default VPC, no se hace peering entre ambientes, no se configura
+Transit Gateway y no existe conectividad staging-production.
+
+### Plan CIDR exacto
+
+#### Staging - `10.20.0.0/16`
+
+| Slot AZ | Clase | CIDR | Uso V1 |
+| --- | --- | --- | --- |
+| `az-a` | `private-app` | `10.20.0.0/20` | ECS service, jobs y tareas operativas autorizadas |
+| `az-a` | `public-ingress` | `10.20.16.0/24` | ALB y NAT staging |
+| `az-a` | `private-endpoints` | `10.20.17.0/24` | reserva de ENI de endpoints futuros |
+| `az-a` | `isolated-data` | `10.20.18.0/24` | RDS/ElastiCache según su contrato futuro |
+| `az-b` | `private-app` | `10.20.32.0/20` | ECS service, jobs y tareas operativas autorizadas |
+| `az-b` | `public-ingress` | `10.20.48.0/24` | ALB; sin segunda NAT en V1 |
+| `az-b` | `private-endpoints` | `10.20.49.0/24` | reserva de ENI de endpoints futuros |
+| `az-b` | `isolated-data` | `10.20.50.0/24` | RDS/ElastiCache según su contrato futuro |
+
+#### Production - `10.30.0.0/16`
+
+| Slot AZ | Clase | CIDR | Uso V1 |
+| --- | --- | --- | --- |
+| `az-a` | `private-app` | `10.30.0.0/20` | ECS service, jobs y tareas operativas autorizadas |
+| `az-a` | `public-ingress` | `10.30.16.0/24` | ALB y NAT `az-a` |
+| `az-a` | `private-endpoints` | `10.30.17.0/24` | ENI de interface endpoints `az-a` |
+| `az-a` | `isolated-data` | `10.30.18.0/24` | RDS/ElastiCache según su contrato futuro |
+| `az-b` | `private-app` | `10.30.32.0/20` | ECS service, jobs y tareas operativas autorizadas |
+| `az-b` | `public-ingress` | `10.30.48.0/24` | ALB y NAT `az-b` |
+| `az-b` | `private-endpoints` | `10.30.49.0/24` | ENI de interface endpoints `az-b` |
+| `az-b` | `isolated-data` | `10.30.50.0/24` | RDS/ElastiCache según su contrato futuro |
+
+Los huecos de cada bloque de AZ y los bloques `10.20.64.0/18` más
+`10.20.128.0/17` o `10.30.64.0/18` más `10.30.128.0/17` permanecen sin
+asignar. Son reserva, no subnets implícitas. Ningún CIDR puede calcularse
+automáticamente con una estrategia distinta a esta tabla.
+
+Las `/20` de aplicación priorizan capacidad de tareas sin sobredimensionar
+las superficies de ingreso, endpoints o datos. Las cuatro clases permanecen
+separadas incluso en staging para conservar la misma frontera de seguridad.
+
+### Routing e Internet Gateway
+
+| Clase/slot | Staging | Production |
+| --- | --- | --- |
+| `public-ingress az-a` | `0.0.0.0/0 -> IGW`; aloja ALB/NAT | `0.0.0.0/0 -> IGW`; aloja ALB/NAT A |
+| `public-ingress az-b` | `0.0.0.0/0 -> IGW`; aloja ALB | `0.0.0.0/0 -> IGW`; aloja ALB/NAT B |
+| `private-app az-a` | `0.0.0.0/0 -> NAT A` | `0.0.0.0/0 -> NAT A` |
+| `private-app az-b` | `0.0.0.0/0 -> NAT A`, riesgo/costo cross-AZ aceptado | `0.0.0.0/0 -> NAT B` |
+| `private-endpoints az-a/b` | sólo ruta local VPC | sólo ruta local VPC |
+| `isolated-data az-a/b` | sólo ruta local VPC | sólo ruta local VPC |
+
+El S3 Gateway Endpoint agrega la ruta administrada del prefix list de S3 a
+las dos route tables `private-app` de cada ambiente. Por longest-prefix match,
+S3 no cruza NAT. No se asocia a `public-ingress`, `private-endpoints` ni
+`isolated-data` mientras no exista un consumidor contratado en esas clases.
+
+Production conserva afinidad por AZ para egress normal. Staging acepta que la
+subnet de aplicación `az-b` cruce a la NAT de `az-a`; esa reducción de costo
+implica cargo cross-AZ potencial y pérdida de egress público si falla
+`az-a`. La ruta local de VPC, S3 Gateway Endpoint y tráfico interno no dependen
+de NAT.
+
+ALB y NAT son los únicos recursos autorizados en `public-ingress`. Las tareas
+ECS nunca reciben IP pública. `private-endpoints` no tiene default route:
+contiene interfaces privadas del servicio, no clientes con salida. RDS y
+ElastiCache permanecen en `isolated-data`, sin ruta a IGW o NAT.
+
+### NAT, egress y fallback
+
+NAT V1:
+
+- staging: una NAT Gateway y una Elastic IP en `public-ingress az-a`;
+- production: una NAT Gateway y una Elastic IP por AZ pública;
+- únicamente `private-app` tiene default route a NAT;
+- Stripe API, Google APIs, SES `us-east-1`, SSM/ECS Exec break-glass y otros
+  destinos HTTPS previamente autorizados usan NAT cuando no existe endpoint
+  contratado;
+- no se usa NAT instance, proxy de egress ni filtrado FQDN en V1;
+- el egress general permitido es HTTPS/443; cualquier puerto adicional exige
+  contrato, SG, ruta, owner y QA propios.
+
+El fallback no es automático ni se representa como dos rutas default
+simultáneas:
+
+| Evento | Comportamiento | Fallback autorizado | Recuperación |
+| --- | --- | --- | --- |
+| falla NAT staging | ambas `private-app` pierden egress público | reemplazar NAT A; no crear una segunda NAT ad hoc | validar EIP, rutas y salida HTTPS; retirar cambios de emergencia |
+| falla NAT production A | `private-app az-a` pierde egress externo; B conserva el suyo | cambio de emergencia de la ruta A hacia NAT B, con aprobación y registro | reemplazar NAT A, restaurar afinidad A y reconciliar IaC |
+| falla NAT production B | simétrico al caso anterior | ruta temporal B hacia NAT A | reemplazar NAT B y restaurar afinidad B |
+| endpoint no disponible/falla | servicio afectado usa ruta NAT si su API pública regional funciona | activar/confirmar `nat-fallback` sin abrir ingress | restaurar endpoint y private DNS tras health check |
+
+Los cambios de ruta de fallback producen tráfico cross-AZ y reducen HA; son
+una medida temporal. Alarmas de NAT, errores de pull/log/secret y synthetic
+egress deben enlazar el runbook. Todo cambio manual break-glass se documenta y
+reconcilia inmediatamente en CDK; no se acepta drift permanente.
+
+### VPC endpoints
+
+| Endpoint | Staging | Production | Subnets/rutas | Política |
+| --- | --- | --- | --- | --- |
+| S3 Gateway | obligatorio | obligatorio | route tables `private-app` A/B | buckets MXMed del ambiente y bucket regional de capas ECR necesario |
+| ECR API interface | no en V1 | obligatorio si está oficialmente disponible | ENI A/B en `private-endpoints`, private DNS | acciones pull/token mínimas; excepción documentada cuando AWS exige resource `*` |
+| ECR DKR interface | no en V1 | obligatorio si está oficialmente disponible | ENI A/B en `private-endpoints`, private DNS | pull de repositorios ECR autorizados |
+| CloudWatch Logs interface | no en V1 | obligatorio si está oficialmente disponible | ENI A/B en `private-endpoints`, private DNS | create stream/put events sólo en log groups MXMed |
+| Secrets Manager interface | no en V1 | obligatorio si está oficialmente disponible | ENI A/B en `private-endpoints`, private DNS | describe/get sólo de secrets del ambiente |
+
+El Gateway Endpoint S3 no usa Security Group. Su policy no puede bloquear el
+bucket regional administrado por AWS que ECR necesita para descargar capas;
+la implementación resolverá ese recurso desde documentación oficial, sin
+inventar ARN ni ampliar acceso a S3 completo.
+
+Los cuatro interface endpoints son exclusivos de production en V1. Cada uno
+usa dos ENI, una por `private-endpoints` AZ, `privateDnsEnabled=true` y
+`sg-vpce`. ECR API y ECR DKR se tratan como pareja: si cualquiera no figura
+oficialmente disponible en `mx-central-1`, ambos quedan en `nat-fallback` para
+evitar una ruta de pull incompleta. Logs y Secrets Manager pueden decidirse de
+forma independiente.
+
+PP245 registró disponibilidad del conjunto core al 2026-07-14, pero la
+microfase de implementación deberá volver a contrastar el catálogo público
+oficial inmediatamente antes de fijar cada servicio. No ejecutará lookup de
+cuenta para decidir arquitectura. Para cada endpoint dejará evidencia
+`officially-available` o `nat-fallback`; no se sintetizará un nombre supuesto.
+
+Staging omite interface endpoints para evitar su costo fijo y prueba egress
+por NAT. Esto no autoriza compartir endpoints, VPC, DNS o rutas con production.
+
+### Matriz de Security Groups
+
+Todos los grupos parten sin ingress y sin egress implícito; las reglas se
+agregan de forma explícita. Son referencias SG-to-SG salvo prefix list o
+egress HTTPS externo.
+
+| SG | Ingress permitido | Egress permitido | Prohibiciones/nota |
+| --- | --- | --- | --- |
+| `sg-alb` | TCP 443 desde managed prefix list origin-facing de CloudFront | TCP 8080 a `sg-app` | sin 80, SSH, administración ni `0.0.0.0/0` ingress |
+| `sg-app` | TCP 8080 sólo desde `sg-alb` | TCP 3306 a `sg-rds`; TCP 6379 a `sg-cache`; TCP 443 a `sg-vpce`; TCP 443 al prefix list S3; TCP 443 a `0.0.0.0/0` vía NAT para APIs externas | sin ingress lateral entre tasks; la excepción HTTPS externa se audita por ruta/NAT |
+| `sg-jobs` | ninguno | TCP 3306 a `sg-rds`; TCP 6379 a `sg-cache` sólo si el job lo requiere; TCP 443 a `sg-vpce`/S3; HTTPS externo sólo por contrato del job | no recibe tráfico desde ALB ni internet |
+| `sg-vpce` | TCP 443 desde `sg-app` y `sg-jobs` | ninguno iniciado | sólo production V1; respuesta cubierta por statefulness |
+| `sg-rds` | TCP 3306 desde `sg-app` y `sg-jobs` autorizados | ninguno iniciado | nunca CIDR público, nunca desde `sg-alb` |
+| `sg-cache` | TCP 6379/TLS desde `sg-app` y jobs expresamente autorizados | ninguno iniciado | nunca plaintext 6379 desde otra fuente |
+
+La regla TCP 443 externa de `sg-app` es la excepción V1 necesaria para Stripe,
+Google, SES y fallbacks NAT: Security Groups no filtran por FQDN. Su amplitud
+no permite ingress y no justifica otros puertos. Una fase posterior podrá
+introducir proxy/firewall de egress con allowlist de dominios tras medir costo
+y compatibilidad.
+
+No existe bastion, SSH, RDP o ingress administrativo. ECS Exec, si se habilita
+en su microfase, será break-glass mediante IAM temporal, auditoría y salida
+HTTPS; no agrega una regla inbound. La implementación deberá separar reglas en
+constructs legibles y bloquear dependencias circulares SG.
+
+### Flow Logs y DNS
+
+Cada VPC crea exactamente un VPC Flow Log con:
+
+- traffic type `ALL`, no sólo `REJECT`;
+- destino exclusivo CloudWatch Logs en V1;
+- aggregation interval de 60 segundos;
+- log group separado por ambiente;
+- retención exacta de 30 días staging y 90 días production;
+- formato versionado con timestamp, interface ID, source/destination address y
+  port, protocol, packets, bytes, action, log status, VPC/subnet/instance ID,
+  TCP flags, traffic path y flow direction cuando el campo esté soportado;
+- rol de entrega con permisos mínimos sobre el log group del ambiente;
+- métricas/alarma futura sobre `REJECT`, delivery errors y ausencia de logs.
+
+Flow Logs contienen metadatos de red, nunca payload, body HTTP, cookie, token,
+query Stripe, secret o dato clínico. No sustituyen logs WAF/CloudFront/app y no
+habilitan ALB access logs. Production conserva removal policy `RETAIN` aunque
+los eventos expiren a 90 días; staging sólo podrá usar `DESTROY` al eliminar un
+ambiente expresamente aprobado.
+
+DNS support y hostnames permanecen habilitados en ambos ambientes. Los
+interface endpoints production usan private DNS; no se crean private hosted
+zones duplicadas. La resolución externa de APIs autorizadas sale por NAT. No
+se versionan hostnames privados, respuestas DNS o IP reales.
+
+### Guardrails de implementación
+
+La implementación futura deberá fallar build/test/synth si detecta cualquiera
+de estos casos:
+
+- CIDR VPC distinto de `10.20.0.0/16` o `10.30.0.0/16`;
+- subnet omitida, adicional, solapada o con máscara/clase distinta;
+- número de AZ distinto de dos;
+- tercera AZ creada por defaults CDK;
+- NAT distinta de una staging o dos production;
+- ruta production `private-app` hacia NAT de otra AZ en operación normal;
+- ruta `0.0.0.0/0` en `private-endpoints` o `isolated-data`;
+- ruta IGW fuera de `public-ingress`;
+- autoasignación de IP pública o IPv6 habilitado;
+- tarea ECS con public IP, RDS público o cache público;
+- ausencia de DNS support/hostnames;
+- S3 Gateway Endpoint ausente o no asociado a ambas `private-app`;
+- interface endpoint staging no aprobado;
+- endpoint production sin disponibilidad oficial, dos AZ, private DNS,
+  `sg-vpce` o policy revisada;
+- Flow Logs distintos de `ALL`, fuera de CloudWatch o con retención inferior;
+- SG con ingress `0.0.0.0/0`, administración directa, DB/cache desde ALB o
+  egress no contratado;
+- NACL custom, peering, Transit Gateway, VPN o conectividad cross-environment;
+- endpoint policy/IAM wildcard sin excepción documentada;
+- nombre, tag o log con account ID, ARN real, IP/hostname privado, secreto,
+  dato personal o clínico.
+
+La implementación preferirá recursos L2 cuando preserve estos controles. Un
+L1/escape hatch sólo se acepta para materializar un contrato que L2 no exponga
+y tendrá assertion del recurso sintetizado. No se usarán lookups de VPC/AZ ni
+`cdk.context.json` para esta red.
+
+### Costos y control de gasto
+
+Esta decisión no cotiza importes ni consulta Pricing Calculator. Define los
+drivers que deberán cotizarse con precio oficial vigente de `mx-central-1`
+antes de deploy:
+
+| Driver | Staging | Production | Control |
+| --- | --- | --- | --- |
+| NAT Gateway hora | 1 | 2 | no reducir production sin nueva decisión de HA |
+| NAT data processing | egress de ambas AZ; posible cross-AZ desde B | egress externo por NAT local | métricas bytes, top consumers y budget |
+| IPv4 pública | EIP de una NAT y direcciones administradas de ALB | EIP de dos NAT y ALB | inventario; cero IP pública en tasks/datos |
+| S3 Gateway Endpoint | uno, asociado a dos route tables | uno, asociado a dos route tables | evita NAT para S3/ECR layers; policy mínima |
+| Interface endpoints | cero | hasta 4 servicios x 2 AZ | comparar costo fijo/GB contra NAT y valor de ruta privada |
+| Flow Logs/CloudWatch | 30 días | 90 días | formato útil, métricas y retención; no duplicar a S3 en V1 |
+| tráfico cross-AZ | normal para egress B de staging | sólo durante fallback o tráfico propio del servicio | alarma y revisión mensual |
+
+El costo fijo de endpoints production se acepta por resiliencia y reducción de
+egress NAT únicamente cuando el servicio está oficialmente disponible. No se
+agregan KMS, STS, SSM u otros interface endpoints por intuición: cada uno
+requiere volumen, disponibilidad, dos-AZ cost y policy. Si el costo real rompe
+el presupuesto de PP245, se optimiza staging o se usa el fallback NAT
+documentado; no se elimina una NAT production, el aislamiento de datos, Flow
+Logs o controles SG sin una nueva decisión.
+
+### Matriz futura de QA
+
+No se ejecuta ninguna prueba CDK/AWS en esta readiness. La siguiente
+implementación deberá convertir esta matriz en tests y evidencia:
+
+| ID | Fase futura | Validación | PASS esperado |
+| --- | --- | --- | --- |
+| NET-01 | unit | mapping ambiente/CIDR | staging `10.20/16`, production `10.30/16` |
+| NET-02 | unit | cálculo/solapamiento CIDR | ocho subnets exactas por VPC, cero overlap |
+| NET-03 | assertions | AZ y clases | dos AZ; dos subnets por cada clase |
+| NET-04 | assertions | Internet Gateway | uno por VPC; rutas sólo públicas |
+| NET-05 | assertions | NAT | staging 1, production 2 y EIP esperadas |
+| NET-06 | assertions | afinidad de rutas | production A→A/B→B; staging A/B→A |
+| NET-07 | assertions | aislamiento | endpoint/data sin default route |
+| NET-08 | assertions | S3 Gateway Endpoint | ambos ambientes y ambas route tables app |
+| NET-09 | unit/assertions | disponibilidad interface endpoint | ECR pair/Logs/Secrets: endpoint oficial o evidencia `nat-fallback` |
+| NET-10 | assertions | interface endpoints production | dos AZ, private DNS, `sg-vpce`, policy mínima |
+| NET-11 | assertions | staging endpoint cost guard | cero interface endpoints V1 |
+| NET-12 | assertions | DNS/IPv4 | support+hostnames true; cero IPv6/public IP autoassign |
+| NET-13 | assertions | Flow Logs | `ALL`, CloudWatch, 60 s, retención 30/90 y rol mínimo |
+| NET-14 | assertions | SG ingress | CloudFront→ALB→app; cero ingress público abierto |
+| NET-15 | assertions | SG data | app/jobs autorizados→RDS/cache; ninguna otra fuente |
+| NET-16 | assertions | egress | sólo S3/endpoints/DB/cache/HTTPS contractual |
+| NET-17 | assertions | recursos prohibidos | cero peering/TGW/VPN/NACL custom/bastion |
+| NET-18 | post-deploy staging | image pull, Logs, Secrets y S3 | funcionamiento por S3 endpoint/NAT sin IP pública |
+| NET-19 | post-deploy production | image pull, Logs, Secrets y S3 | endpoints privados activos o fallback registrado |
+| NET-20 | post-deploy | egress externo | Stripe/Google/SES por NAT, sin abrir ingress |
+| NET-21 | post-deploy | Flow Logs | eventos ACCEPT y REJECT, entrega/retención correctas |
+| NET-22 | game day | falla NAT production por AZ | ruta temporal, continuidad degradada y restauración sin drift |
+| NET-23 | game day | falla NAT staging | impacto aceptado, reemplazo y runbook medido |
+| NET-24 | FinOps | costo real | NAT/endpoints/IPv4/logs/cross-AZ dentro de budget aprobado |
+
+Las pruebas post-deploy requieren autorización y recursos de una microfase
+posterior. No se simula su resultado ni se marca PASS por anticipado.
+
+### Diagrama Mermaid
+
+~~~mermaid
+flowchart TB
+    Internet((Internet))
+    CF[CloudFront + WAF]
+    Internet --> CF
+
+    subgraph STG[staging VPC 10.20.0.0/16 - mx-central-1]
+      direction TB
+      IGWS[Internet Gateway]
+      S3S[S3 Gateway Endpoint]
+      subgraph STGA[az-a]
+        PUBSA[public-ingress 10.20.16.0/24<br/>ALB + NAT A]
+        APPSA[private-app 10.20.0.0/20]
+        EPSSA[private-endpoints 10.20.17.0/24<br/>reserved]
+        DATSA[isolated-data 10.20.18.0/24]
+      end
+      subgraph STGB[az-b]
+        PUBSB[public-ingress 10.20.48.0/24<br/>ALB]
+        APPSB[private-app 10.20.32.0/20]
+        EPSSB[private-endpoints 10.20.49.0/24<br/>reserved]
+        DATSB[isolated-data 10.20.50.0/24]
+      end
+      PUBSA --> IGWS
+      PUBSB --> IGWS
+      APPSA --> NATSA[NAT A]
+      APPSB --> NATSA
+      NATSA --> IGWS
+      APPSA --> S3S
+      APPSB --> S3S
+      APPSA --> DATSA
+      APPSB --> DATSB
+    end
+
+    subgraph PRD[production VPC 10.30.0.0/16 - mx-central-1]
+      direction TB
+      IGWP[Internet Gateway]
+      S3P[S3 Gateway Endpoint]
+      VEP[Interface endpoints<br/>ECR API + ECR DKR + Logs + Secrets]
+      subgraph PRDA[az-a]
+        PUBPA[public-ingress 10.30.16.0/24<br/>ALB + NAT A]
+        APPPA[private-app 10.30.0.0/20]
+        EPSPA[private-endpoints 10.30.17.0/24]
+        DATPA[isolated-data 10.30.18.0/24]
+      end
+      subgraph PRDB[az-b]
+        PUBPB[public-ingress 10.30.48.0/24<br/>ALB + NAT B]
+        APPPB[private-app 10.30.32.0/20]
+        EPSPB[private-endpoints 10.30.49.0/24]
+        DATPB[isolated-data 10.30.50.0/24]
+      end
+      PUBPA --> IGWP
+      PUBPB --> IGWP
+      APPPA --> NATPA[NAT A]
+      APPPB --> NATPB[NAT B]
+      NATPA --> IGWP
+      NATPB --> IGWP
+      APPPA --> S3P
+      APPPB --> S3P
+      APPPA --> VEP
+      APPPB --> VEP
+      VEP --- EPSPA
+      VEP --- EPSPB
+      APPPA --> DATPA
+      APPPB --> DATPB
+    end
+
+    CF --> PUBSA
+    CF --> PUBSB
+    CF --> PUBPA
+    CF --> PUBPB
+    STG --> FLS[CloudWatch Flow Logs ALL<br/>30 days]
+    PRD --> FLP[CloudWatch Flow Logs ALL<br/>90 days]
+~~~
+
+El diagrama es lógico. Los slots AZ no son nombres físicos, y las flechas de
+app a data representan reglas SG/ruta local, no acceso indiscriminado. Los
+interface endpoints production sólo se materializan bajo la compuerta oficial
+de disponibilidad; de lo contrario su flecha lógica usa NAT.
+
+### Evidencia y auditoría de no ejecución
+
+Raíz de evidencia sanitizada:
+
+`/tmp/mxmed-aws-network-readiness-01/`
+
+Contiene inspección de reanudación, bases contractuales, plan CIDR/subnets,
+routing/NAT, endpoints, Security Groups, Flow Logs/DNS, guardrails, costos,
+fallback, matriz QA, diagrama, auditorías y estado Git. No contiene account
+IDs, ARNs reales, IP/hostnames desplegados, credenciales, valores Stripe, datos
+personales o clínicos.
+
+Auditoría exacta:
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "browser_calls": 0,
+  "application_endpoint_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "sql_calls": 0
+}
+~~~
+
+### Fuera de alcance, rollback y siguiente microfase
+
+No se ejecutaron AWS CLI/SDK/cuenta, CDK synth/diff/bootstrap/deploy, npm
+install, navegador, endpoints, PHP, SQL, Stripe, pagos, fixtures, Docker ni
+recursos AWS. No se modificaron `infra/aws/**`, PHP, JavaScript, CSS, HTML,
+SQL, workflows, assets, package files, configuración AWS o decisiones
+PP245/PP249/PP250.
+
+Rollback documental: revertir atómicamente el commit de PP251. Al no existir
+recursos, el rollback sólo retira esta decisión y no altera AWS ni código
+funcional.
+
+Con este PASS queda autorizada:
+
+`DEVOPS/MXMed-AWS-VPC-Network-Implementation-01`
+
+Será la Microfase 7 de 24. Podrá implementar únicamente el contrato
+`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1` en el stack/constructs/tests de red,
+con validación offline previa y sin deploy salvo autorización separada.
+
+### Cierre del contador
+
+Microfase 6 de 24 concluida.
+Avance global: 6/24.
+Pendientes: 18.
+
+---
