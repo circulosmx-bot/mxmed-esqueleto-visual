@@ -12,7 +12,10 @@ export const MXMED_NON_TAGGABLE_RESOURCE_ALLOWLIST = new Set([
   'AWS::EC2::SecurityGroupIngress',
   'AWS::EC2::SubnetRouteTableAssociation',
   'AWS::EC2::VPCGatewayAttachment',
+  'AWS::IAM::ManagedPolicy',
   'AWS::IAM::Policy',
+  'AWS::KMS::Alias',
+  'AWS::S3::BucketPolicy',
 ]);
 
 export class MandatoryTagsAspect implements IAspect {

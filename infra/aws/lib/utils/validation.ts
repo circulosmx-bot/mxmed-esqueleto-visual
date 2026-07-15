@@ -30,6 +30,8 @@ export function assertMxMedCondition(
 const SENSITIVE_FIELD_PATTERN =
   /secret|password|token|credential|private.?key|access.?key|account.?id|(^|[^a-z])arn([^a-z]|$)/i;
 
+const CONTRACTED_NON_SENSITIVE_FIELDS = new Set(['secretRecoveryWindowDays']);
+
 const CREDENTIAL_VALUE_PATTERNS = [
   /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/,
   /\barn:aws[a-z-]*:/i,
@@ -63,7 +65,7 @@ export function assertNoSensitiveConfiguration(input: unknown): void {
 
     for (const [field, child] of Object.entries(value)) {
       assertMxMedCondition(
-        !SENSITIVE_FIELD_PATTERN.test(field),
+        CONTRACTED_NON_SENSITIVE_FIELDS.has(field) || !SENSITIVE_FIELD_PATTERN.test(field),
         'MXMED_CONFIG_SENSITIVE_FIELD',
         'configuration',
         'sensitive field names are forbidden',

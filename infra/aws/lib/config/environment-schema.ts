@@ -33,6 +33,19 @@ const EXPECTED_FLOW_LOG_RETENTION_DAYS = Object.freeze({
   production: 90,
 } as const);
 
+const EXPECTED_SECURITY_CONFIGURATION = Object.freeze({
+  staging: {
+    kmsDeletionWindowDays: 7,
+    cloudTrailLogRetentionDays: 90,
+    auditArchiveRetentionDays: 365,
+  },
+  production: {
+    kmsDeletionWindowDays: 30,
+    cloudTrailLogRetentionDays: 365,
+    auditArchiveRetentionDays: 2555,
+  },
+} as const);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -237,6 +250,62 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
     'MXMED_CONFIG_INVALID',
     'flowLogRetentionDays',
     'must match the selected environment',
+  );
+  const expectedSecurity = EXPECTED_SECURITY_CONFIGURATION[environmentName];
+  assertMxMedCondition(
+    input.securityProfile === 'baseline-v1',
+    'MXMED_CONFIG_INVALID',
+    'securityProfile',
+    'must be baseline-v1',
+  );
+  assertMxMedCondition(
+    input.kmsDeletionWindowDays === expectedSecurity.kmsDeletionWindowDays,
+    'MXMED_CONFIG_INVALID',
+    'kmsDeletionWindowDays',
+    'must match the selected environment',
+  );
+  assertMxMedCondition(
+    Number.isInteger(input.secretRecoveryWindowDays) &&
+      Number(input.secretRecoveryWindowDays) >= 7 &&
+      Number(input.secretRecoveryWindowDays) <= 30 &&
+      input.secretRecoveryWindowDays === (environmentName === 'staging' ? 7 : 30),
+    'MXMED_CONFIG_INVALID',
+    'secretRecoveryWindowDays',
+    'must match the operational recovery policy',
+  );
+  assertMxMedCondition(
+    input.cloudTrailLogRetentionDays === expectedSecurity.cloudTrailLogRetentionDays,
+    'MXMED_CONFIG_INVALID',
+    'cloudTrailLogRetentionDays',
+    'must match the selected environment',
+  );
+  assertMxMedCondition(
+    Number.isInteger(input.auditArchiveRetentionDays) &&
+      Number(input.auditArchiveRetentionDays) >= expectedSecurity.auditArchiveRetentionDays,
+    'MXMED_CONFIG_INVALID',
+    'auditArchiveRetentionDays',
+    'must meet the selected environment minimum',
+  );
+  for (const field of ['enableManagementTrail', 'enableKeyRotation', 'enableDataEventTrail']) {
+    assertBooleanField(input, field);
+  }
+  assertMxMedCondition(
+    input.enableManagementTrail === true,
+    'MXMED_CONFIG_INVALID',
+    'enableManagementTrail',
+    'must remain enabled',
+  );
+  assertMxMedCondition(
+    input.enableKeyRotation === true,
+    'MXMED_CONFIG_INVALID',
+    'enableKeyRotation',
+    'must remain enabled',
+  );
+  assertMxMedCondition(
+    input.enableDataEventTrail === false,
+    'MXMED_CONFIG_INVALID',
+    'enableDataEventTrail',
+    'must remain false until the clinical Storage contract exists',
   );
   assertMxMedCondition(
     input.computeSizingProfile === 'reduced' || input.computeSizingProfile === 'production-ha',

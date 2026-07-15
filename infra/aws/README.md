@@ -2,14 +2,16 @@
 
 ## Propósito y estado
 
-Este proyecto implementa la foundation local de Infrastructure as Code y la red V1 de México
-Médico. Traduce PP-Decisiones 245 (`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`),
-PP-Decisiones 249 (`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 251
-(`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`) a AWS CDK v2 con TypeScript.
+Este proyecto implementa la foundation local de Infrastructure as Code, la red V1 y la base de
+seguridad de México Médico. Traduce PP-Decisiones 245
+(`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`), PP-Decisiones 249
+(`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`), PP-Decisiones 251
+(`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`) y PP-Decisiones 253
+(`MXMED_AWS_SECURITY_READINESS_CONTRACT_V1`) a AWS CDK v2 con TypeScript.
 
-`MxMedNetworkStack` contiene recursos CloudFormation de red sintetizables offline. Los demás
-stacks continúan vacíos. Nada está desplegado: bootstrap, diff y deploy permanecen pendientes y
-están prohibidos en esta etapa.
+`MxMedNetworkStack` y `MxMedSecurityStack` contienen recursos CloudFormation sintetizables
+offline. Los demás stacks continúan vacíos. Nada está desplegado: bootstrap, diff y deploy
+permanecen pendientes y están prohibidos en esta etapa.
 
 ## Arquitectura contractual
 
@@ -20,7 +22,7 @@ están prohibidos en esta etapa.
 - Datos futuros: RDS MySQL; objetos privados en S3; sesiones en ElastiCache.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene diez stacks: Network implementado y Security, Data, Storage,
+`MxMedEnvironmentStage` contiene diez stacks: Network y Security implementados; Data, Storage,
 Session, Compute, Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
@@ -77,6 +79,10 @@ Los scripts de synth lo proporcionan de forma explícita. La configuración tipa
 - masks de los cuatro tiers y exactamente dos AZ;
 - perfiles de NAT, compute y base de datos;
 - perfil de interface endpoints y retención de VPC Flow Logs;
+- perfil de seguridad, ventanas KMS y recuperación operativa de secretos;
+- retención de CloudTrail y archivo de auditoría;
+- activación obligatoria de rotación KMS y management trail;
+- data events desactivados hasta que Storage implemente objetos clínicos;
 - retenciones y protecciones por ambiente;
 - WAF y logging CloudFront seguro;
 - tags obligatorios;
@@ -151,6 +157,71 @@ Costos relativos: staging paga una NAT y acepta egress cross-AZ desde `private-a
 paga dos NAT y hasta ocho asociaciones endpoint-AZ para conservar HA/ruta privada. S3 Gateway
 Endpoint reduce tráfico NAT de S3. No se incluyen importes: deberán cotizarse antes de deploy.
 
+## Security foundation implementada en templates
+
+Cada ambiente sintetiza cuatro CMK simétricas, single-region y con rotación habilitada:
+`application-data`, `secrets`, `audit` y `backup`. Sus aliases estables siguen
+`alias/mxmed-{stg|prd}-{purpose}`. Las keys conservan `DeletionPolicy` y
+`UpdateReplacePolicy=Retain`; la ventana de borrado KMS es 7 días en staging y 30 días en
+production. Las policies de key mantienen administración para la identidad raíz de la cuenta vía
+pseudoparámetros, y limitan los usos de servicio: Secrets Manager usa `SecretsKey`; CloudTrail,
+CloudWatch Logs y el bucket de auditoría usan `AuditKey`. Los grants de workload se otorgan a
+recursos concretos, no a identidades o ARNs reales versionados.
+
+Secrets Manager contiene cuatro recursos por ambiente:
+
+- `/mxmed/{environment}/application/session-signing` genera 64 caracteres durante creación;
+- `/mxmed/{environment}/providers/stripe/secret-key` es un contenedor vacío;
+- `/mxmed/{environment}/providers/stripe/webhook-secret` es un contenedor vacío;
+- `/mxmed/{environment}/providers/ai/api-key` es un contenedor vacío.
+
+Los tres valores externos se cargan únicamente mediante un runbook futuro: no hay plaintext,
+`SecretString`, generación provisional, outputs ni valores en evidencia. No se crea un secreto de
+RDS porque Data será propietario de sus credenciales y rotación.
+
+IAM crea permissions boundaries separadas para workload y deployment, y cuatro roles ECS con
+trust exclusivo en `ecs-tasks.amazonaws.com`: execution, application, migration y jobs. Sólo el
+execution role recibe lectura de los cuatro secretos anteriores y decrypt en `SecretsKey`; los
+roles de aplicación, migración y jobs esperan grants del stack propietario de cada recurso. La
+factory reutilizable para `SecurityAuditRole` y `BreakGlassRole` exige principal explícito, MFA,
+sesión exacta de una hora, boundary, ambiente y justificación contractual, pero no instancia roles
+humanos mientras AWS IAM Identity Center siga pendiente.
+
+También existe un construct reusable para GitHub OIDC nativo con audience
+`sts.amazonaws.com`, subject exacto por rama o environment, sesión limitada y deployment
+boundary. No se instancia: organización, repositorio, rama y GitHub Environment aún no tienen
+contrato, por lo que las plantillas predeterminadas no contienen provider ni deployment role.
+
+La auditoría crea un bucket privado, cifrado con `AuditKey`, versionado, Bucket Owner Enforced,
+bucket key, SSL obligatorio y retención del recurso. Su lifecycle conserva objetos y versiones no
+actuales 365 días en staging y 2555 días en production. CloudTrail es multi-region, incluye
+eventos globales, valida archivos, registra management events de lectura y escritura, escribe en
+S3 y en `/mxmed/{environment}/security/cloudtrail`, con retención de logs 90 días staging y 365
+días production. Los data events permanecen desactivados hasta que Storage identifique los
+buckets clínicos concretos; no se habilita `All S3 buckets`.
+
+CloudFormation no expone `RecoveryWindowInDays` como propiedad de `AWS::SecretsManager::Secret`.
+Por eso los cuatro secretos usan `DeletionPolicy` y `UpdateReplacePolicy=Retain`; las ventanas de
+recuperación 7/30 días son un control operativo validado en configuración y aplicable sólo por el
+runbook de borrado. Retain evita que eliminar o reemplazar el stack programe una eliminación
+accidental.
+
+### SECRET DELETION RUNBOOK — NO EJECUTADO
+
+1. Confirmar que ningún workload, job, pipeline o rotación usa el secreto.
+2. Desactivar referencias y despliegues consumidores antes de cualquier borrado.
+3. Verificar CloudTrail, alarmas y ausencia de lecturas inesperadas.
+4. Retirar el recurso de IaC conservándolo mediante `Retain`; nunca convertirlo en borrado
+   automático.
+5. Importar o mantener el secreto bajo control operativo si todavía se necesita administrar con
+   IaC.
+6. Programar `DeleteSecret` con ventana de recuperación de 7 días en staging o 30 días en
+   production.
+7. Prohibir `ForceDeleteWithoutRecovery`.
+8. Verificar que `RestoreSecret` es viable durante toda la ventana.
+9. Registrar aprobación, motivo, propietario, fecha y evidencia sin incluir el valor secreto.
+10. No reutilizar el mismo nombre hasta concluir o cancelar la eliminación programada.
+
 ## Synth offline
 
 La foundation no usa AWS SDK, AWS CLI, profiles, context providers, lookups, Docker bundling ni
@@ -163,9 +234,10 @@ npm run synth:production
 ```
 
 Ambos comandos deben funcionar sin credenciales AWS. Las plantillas actuales contienen recursos
-únicamente en NetworkStack; Email y los otros nueve workload stacks continúan sin recursos. No
-crean ECS, RDS, ElastiCache, ALB, CloudFront, WAF ni secretos. `cdk.out/` es temporal y no se
-versiona.
+únicamente en NetworkStack y SecurityStack; Email y los otros ocho workload stacks continúan sin
+recursos. SecurityStack crea cuatro contenedores de secreto pero cero valores versionados. No crea
+ECS services/tasks, RDS, ElastiCache, ALB, CloudFront, WAF, OIDC/deployment role ni roles humanos.
+`cdk.out/` es temporal y no se versiona.
 
 ## Naming y tags
 
@@ -191,9 +263,10 @@ Todo recurso taggable futuro deberá tener:
 - `Backup`;
 - `Owner=platform`.
 
-`MandatoryTagsAspect` falla síntesis ante tags ausentes. La allowlist inicial de recursos no
-taggables contiene únicamente metadata de framework y debe revisarse explícitamente antes de
-ampliarse.
+`MandatoryTagsAspect` falla síntesis ante tags ausentes. La allowlist explícita contiene metadata
+de framework y los tipos cuya representación CloudFormation no acepta los tags contractuales:
+`AWS::IAM::ManagedPolicy`, `AWS::KMS::Alias` y `AWS::S3::BucketPolicy`. Debe revisarse
+explícitamente antes de ampliarse.
 
 ## Seguridad y guardrails
 
@@ -203,19 +276,31 @@ Los Aspects iniciales son:
 - `NoPublicBucketAspect`;
 - `NoPublicDatabaseAspect`;
 - `ProductionRetentionAspect`;
-- `StripeReturnLoggingSafetyAspect`.
+- `StripeReturnLoggingSafetyAspect`;
+- `SecurityFoundationAspect`;
+- `NoPlaintextSecretAspect`;
+- `LeastPrivilegeIamAspect`.
 
 NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
 tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
 interface endpoints y Flow Logs ALL con retención contractual.
 
+SecurityStack registra otro validator bloqueante que comprueba cantidades y contrato de KMS,
+Secrets Manager, boundaries, roles, bucket, log group y management trail. Los Aspects de seguridad
+rechazan plaintext/generación externa, secretos sin KMS/retención/path contractual, IAM
+administrativo o wildcard fuera de la allowlist y drift de cifrado, auditoría o retención. El
+`Deny` de SSL del bucket usa `Principal: *` porque debe negar transporte inseguro a cualquier
+principal; es una excepción técnica de guardrail, no un permiso público, y la bucket policy sólo
+concede escritura/ACL check al service principal de CloudTrail bajo condiciones estrictas.
+
 Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Data permanecen
 vacíos: los tests usan recursos sintéticos para demostrar el comportamiento futuro, pero este
 proyecto no afirma que CloudFront, WAF, S3 workload o RDS estén desplegados.
 
-Los secretos futuros procederán de Secrets Manager y roles autorizados. Nunca deben incluirse en
+Los valores secretos proceden de Secrets Manager y runbooks autorizados. Nunca deben incluirse en
 Git, props de configuración, CDK context, outputs, tags, plantillas, logs o evidencia. Tampoco se
-guardan access keys en GitHub; el CI/CD futuro usará OIDC y credenciales temporales.
+guardan access keys en GitHub; el CI/CD futuro usará el construct OIDC y credenciales temporales
+sólo después de contratar la identidad exacta.
 
 ## Retorno Stripe
 
@@ -251,9 +336,10 @@ npm run test
 npm run validate
 ```
 
-Las suites cubren configuración, naming, topología/dependencias, tags, buckets/DB públicas,
-retención production, logging Stripe, VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, guardrails
-y síntesis determinista offline. Los snapshots completos no son la única fuente de validación.
+Las 200 pruebas (96 heredadas y 104 nuevas de seguridad) cubren configuración, naming,
+topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
+VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, KMS, secretos, IAM, CloudTrail, guardrails y
+síntesis determinista offline. Los snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift
 

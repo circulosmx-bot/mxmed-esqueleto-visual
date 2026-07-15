@@ -53547,3 +53547,253 @@ Avance global: 8/24.
 Pendientes: 16.
 
 ---
+
+## PP-Decisiones 254 - Implementación offline de seguridad AWS para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-Security-Implementation-01`
+
+Contador:
+
+`Microfase 9 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_SECURITY_IMPLEMENTATION_V1`
+
+Esta decisión materializa en AWS CDK v2 el contrato
+`MXMED_AWS_SECURITY_FOUNDATION_CONTRACT_V1` de PP253 sobre la foundation y red
+de PP249–PP252, sin alterar las decisiones arquitectónicas de PP245. El
+resultado es código y documentación local sintetizable offline. Esta microfase
+no ejecuta deploy y no crea, consulta ni modifica recursos de una cuenta AWS.
+
+### Reanudación y alcance versionado
+
+La ejecución se reanudó sobre el estado parcial existente después de fallos de
+transporte. Antes de modificar se conservaron e inspeccionaron rama, HEAD,
+upstream, ahead/behind, working tree, `git diff --check`, documentación y la
+raíz de evidencia. No se descartó, recreó o duplicó trabajo parcial.
+
+La rama de implementación deriva de
+`architecture/mxmed-aws-security-readiness` en el commit completo
+`a443b94f19bfd9f0ff6f6ff218a752d335ddd1b5`. El cambio versionado se limita a
+`infra/aws/**` y este PP254; PP233–PP253 permanecen preservados. No hubo merge,
+rebase, cherry-pick, reset destructivo, stash, force push ni modificación de
+dependencias.
+
+### Configuración de seguridad
+
+`MxMedEnvironmentConfig` y su schema incorporan un contrato tipado de ocho
+campos:
+
+- `securityProfile=baseline-v1`;
+- `kmsDeletionWindowDays`;
+- `secretRecoveryWindowDays`;
+- `cloudTrailLogRetentionDays`;
+- `auditArchiveRetentionDays`;
+- `enableManagementTrail=true`;
+- `enableKeyRotation=true`;
+- `enableDataEventTrail=false`.
+
+Staging usa ventanas KMS/secreto 7/7 días, Logs 90 días y archivo 365 días.
+Production usa 30/30, 365 y 2555 días. La validación bloquea profiles o valores
+distintos, exige management trail y rotación, y mantiene data events apagados
+hasta que Storage sea propietario de buckets clínicos concretos. La allowlist
+de nombres de configuración acepta únicamente el campo no sensible
+`secretRecoveryWindowDays`; los demás nombres o valores con apariencia de
+credencial continúan rechazados y los errores no imprimen configuración.
+
+### KMS, aliases, policies y grants
+
+`MxMedSecurityStack` crea exactamente cuatro keys simétricas
+`ENCRYPT_DECRYPT`, single-region, con rotación habilitada:
+
+1. Application Data Key;
+2. Secrets Key;
+3. Audit Key;
+4. Backup Key.
+
+Sus aliases son `alias/mxmed-{stg|prd}-application-data`, `-secrets`, `-audit`
+y `-backup`. Las cuatro usan la ventana KMS 7/30 contratada,
+`BypassPolicyLockoutSafetyCheck=false`, `DeletionPolicy=Retain` y
+`UpdateReplacePolicy=Retain`.
+
+La policy base conserva administración de la cuenta mediante
+pseudoparámetros CloudFormation, nunca un account ID real. Secrets Key autoriza
+uso de servicio de Secrets Manager restringido por región/cuenta/servicio.
+Audit Key contiene statements separados y condicionados para CloudTrail y
+CloudWatch Logs. Los grants de workload son explícitos; no existe
+`AdministratorAccess`, `PowerUserAccess`, principal público con Allow ni
+`kms:*` concedido a los workload roles.
+
+### Secretos y refinación de recovery
+
+SecurityStack crea exactamente cuatro recursos Secrets Manager por ambiente:
+
+- session-signing generado por AWS con longitud 64 y Secrets Key;
+- contenedor externo vacío para Stripe secret key;
+- contenedor externo vacío para Stripe webhook secret;
+- contenedor externo vacío para AI API key.
+
+Los tres contenedores externos L1 no contienen `SecretString` ni
+`GenerateSecretString`. No se solicitaron o persistieron valores reales,
+placeholders, credenciales, IDs o ARNs. Los cuatro secretos usan Secrets Key y
+políticas de eliminación/reemplazo `Retain`; no generan Outputs. Data conserva
+la propiedad futura del secreto RDS, por lo que Security no lo duplica.
+
+CloudFormation no ofrece `RecoveryWindowInDays` como propiedad de
+`AWS::SecretsManager::Secret`. En consecuencia, 7/30 días no se representan
+falsamente en el template: se validan como política de ambiente y sólo se
+aplican mediante `DeleteSecret` en el runbook operacional documentado. `Retain`
+impide que borrar o reemplazar el recurso IaC programe una eliminación. El
+runbook prohíbe force delete, exige desactivar consumidores, revisar auditoría,
+aprobar, conservar restauración durante la ventana y no reutilizar el nombre.
+No fue ejecutado en esta microfase.
+
+### Permission boundaries, roles y OIDC diferido
+
+Se sintetizan dos managed policies como boundaries independientes:
+
+- Workload Boundary limita acciones runtime, recursos del mismo ambiente y
+  niega administración, IAM, alteración de KMS/secretos/auditoría,
+  cross-environment y recursos no etiquetados;
+- Deployment Boundary limita servicios de infraestructura a la región y
+  ambiente contratados, acota `iam:PassRole` y niega identidades, credenciales,
+  cambios de auditoría, key deletion y acceso cross-environment.
+
+Una factory crea cuatro roles ECS separados con trust exacto en
+`ecs-tasks.amazonaws.com`, boundary y sesión de una hora: Execution,
+Application Task, Migration y Jobs. Sólo Execution recibe lectura de los
+cuatro secretos y decrypt con Secrets Key. Los otros tres quedan sin permisos
+inventados hasta que sus stacks propietarios otorguen grants concretos.
+
+La misma factory define Security Audit y Break-Glass sólo cuando se entreguen
+principal explícito, MFA obligatorio, sesión exacta de una hora, boundary,
+ambiente y justificación contractual. Ningún role humano se instancia porque
+Identity Center no está configurado en esta fase.
+
+`MxMedGitHubOidcDeployment` queda como construct reusable nativo. Valida URL,
+audience `sts.amazonaws.com`, subject exacto por branch en staging o GitHub
+Environment en production, sesión y Deployment Boundary. No se inventaron
+organization, repository, branch ni environment: por defecto no se sintetizan
+OIDC provider o Deployment Role y no se afirma que GitHub OIDC esté activo.
+
+### Auditoría de management events
+
+Cada ambiente sintetiza un bucket de auditoría privado con Block Public Access,
+Bucket Owner Enforced, versioning, SSL obligatorio, Audit Key, bucket key,
+`Retain` y sin auto-delete. Su lifecycle conserva objetos y versiones no
+actuales 365 días en staging y 2555 días en production.
+
+El log group estable `/mxmed/{environment}/security/cloudtrail` usa Audit Key,
+`Retain` y retención 90/365 días. El management trail es multi-region, incluye
+global service events, management read/write, log file validation, S3,
+CloudWatch Logs y Audit Key. No contiene CloudTrail Lake ni data-event
+selectors. Data events S3 clínicos se difieren hasta que Storage exponga el ARN
+exacto del bucket propietario; así se evita capturar todos los buckets o crear
+ciclos entre stacks.
+
+### Guardrails y contrato tipado
+
+SecurityStack registra `SecurityFoundationAspect`,
+`NoPlaintextSecretAspect`, `LeastPrivilegeIamAspect` y un validator bloqueante.
+En conjunto comprueban cantidades, aliases, rotación, single-region, retención,
+cifrado, secrets vacíos/generado, policies/boundaries, trusts, ausencia de IAM
+users/access keys/wildcards peligrosos, bucket privado y management trail
+completo. Los errores fallan synth y no corrigen recursos silenciosamente.
+
+Las propiedades tipadas exponen las cuatro keys, bucket, log group, trail,
+boundaries, cuatro secrets/referencias, cuatro roles y role factory. No hay
+CloudFormation Exports u Outputs, identidad real, dato clínico o valor secreto.
+El stage conserva la dependencia Security→Network ya contratada; el grafo
+sintetizado permanece acíclico.
+
+### Pruebas, synth y auditoría de templates
+
+Se preservaron las 96 pruebas heredadas y se añadieron 104 casos
+`SEC-IMP-001`–`SEC-IMP-104`, para un total de 200. Cubren configuración, KMS,
+aliases, secrets, recovery/refinación, IAM, boundaries, roles, OIDC reusable,
+CloudTrail, guardrails, mutaciones negativas, synth offline, determinismo,
+ausencia de valores/IDs/datos clínicos y grafo acíclico. No dependen únicamente
+de snapshots.
+
+Typecheck, lint, format check, las 200 pruebas, synth staging/production,
+validate y los dos audits npm concluyeron en PASS. Ambos synth funcionaron sin
+credenciales, cuenta, lookup, AWS CLI/SDK, Docker o acceso a recursos AWS. Las
+plantillas staging y production son deterministas.
+
+La auditoría previa a limpiar confirmó por ambiente cuatro KMS keys, cuatro
+aliases, cuatro secretos —uno generado y tres vacíos—, dos boundaries, cuatro
+workload roles, un bucket, un log group y un management trail, además de los
+roles/policies auxiliares mínimos de CloudTrail. Confirmó cero IAM users,
+access keys, plaintext, valores Stripe/AI, account IDs/ARNs reales, data-event
+selectors, OIDC/deployment role predeterminado, RDS, ECS services, ElastiCache o
+AWS Backup. No se contó metadata CDK como recurso funcional. Los outputs
+temporales se eliminaron con `npm run clean` y no se versionaron.
+
+### Evidencia, no repetición y ausencia de deploy
+
+La evidencia sanitizada está en:
+
+`/tmp/mxmed-aws-security-implementation-01/`
+
+Contiene los 35 artefactos contractuales de baseline, configuración, KMS,
+secrets, recovery, ownership RDS, boundaries/roles/OIDC, auditoría, guardrails,
+templates, determinismo, QA, documentación y estado Git. No contiene valores
+secretos, credenciales, account IDs/ARNs reales o datos personales/clínicos.
+
+Auditoría exacta de no repetición:
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_deployed": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "docker_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "sql_calls": 0,
+  "secret_values_requested": 0,
+  "secret_values_persisted": 0,
+  "account_ids_persisted": 0,
+  "github_identity_faked": 0
+}
+~~~
+
+No se ejecutaron AWS CLI, AWS SDK contra cuenta, CDK diff/bootstrap/deploy,
+npm install/update/audit fix, Docker, navegador, endpoints, Stripe, pagos o
+SQL. No se desplegaron recursos ni se configuraron OIDC, Identity Center,
+CloudTrail o secretos reales en AWS. El synth sólo produjo templates locales y
+temporales.
+
+### Rollback y siguiente microfase
+
+Rollback de esta implementación: revertir atómicamente el commit de PP254. Al
+no existir deploy, el rollback sólo retira código y documentación; no elimina
+keys, secretos, auditoría, datos o recursos AWS. Cuando exista un deploy, los
+recursos `Retain` requerirán reconciliación y runbooks específicos y nunca se
+deberá inferir que revertir Git borra datos.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Data-Readiness-01`
+
+Será la Microfase 10 de 24. Deberá definir el contrato de Data sobre la
+foundation ya sintetizable sin adelantar implementación ni deploy.
+
+### Cierre del contador
+
+Microfase 9 de 24 concluida.
+Avance global: 9/24.
+Pendientes: 15.
+
+---

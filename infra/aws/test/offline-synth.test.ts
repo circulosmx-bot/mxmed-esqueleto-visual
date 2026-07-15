@@ -38,7 +38,7 @@ describe.each([
   ['staging', STAGING_CONFIG],
   ['production', PRODUCTION_CONFIG],
 ] as const)('%s offline synthesis', (_name, config) => {
-  test('does not require an account and creates resources only in NetworkStack', () => {
+  test('does not require an account and creates resources only in Network and Security', () => {
     const previousAccount = process.env.CDK_DEFAULT_ACCOUNT;
     const previousAccessKey = process.env.AWS_ACCESS_KEY_ID;
     const previousSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
@@ -55,6 +55,12 @@ describe.each([
         if (stackName === `mxmed-${config.environmentCode}-network`) {
           expect(resources.length).toBeGreaterThan(0);
           expect(resources.some((resource) => resource.Type === 'AWS::EC2::VPC')).toBe(true);
+        } else if (stackName === `mxmed-${config.environmentCode}-security`) {
+          expect(resources.length).toBeGreaterThan(0);
+          expect(resources.filter((resource) => resource.Type === 'AWS::KMS::Key')).toHaveLength(4);
+          expect(resources.some((resource) => resource.Type === 'AWS::CloudTrail::Trail')).toBe(
+            true,
+          );
         } else {
           expect(resources).toHaveLength(0);
         }
