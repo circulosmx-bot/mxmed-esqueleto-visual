@@ -48821,3 +48821,1091 @@ No se ejecuta:
 Resultado documental:
 
 `PASS`
+
+---
+
+## PP-Decisiones 245 - Arquitectura AWS productiva y readiness de ingress Stripe para MXMed
+
+### Microfase, resultado y decision unica
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-ProductionArchitecture-And-StripeIngress-Readiness-01`
+
+Resultado:
+
+`PASS`
+
+Arquitectura seleccionada:
+
+`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`
+
+Region primaria:
+
+`mx-central-1` — Mexico (Central)
+
+Excepcion regional de workload inicial:
+
+`us-east-1` exclusivamente para Amazon SES, porque la lista oficial vigente
+de endpoints de SES no incluye Mexico (Central). El compute, base de datos,
+sesiones, uploads y datos clinicos permanecen en Mexico. El contenido y
+metadata que deban enviarse a SES cruzaran de region; su aceptacion legal y de
+residencia queda como decision empresarial pendiente, sin bloquear el resto de
+la arquitectura. ACM para CloudFront y las APIs de control de servicios
+globales tambien se anclan en us-east-1 cuando AWS lo exige, pero no alojan el
+workload regional de MXMed.
+
+IaC seleccionada:
+
+`AWS CDK v2 con TypeScript`
+
+Esta microfase no crea cuentas, recursos, redes, imagenes, pipelines, secretos
+ni configuracion AWS. Tampoco cambia codigo funcional.
+
+### Aclaracion historica definitiva y reclasificacion
+
+AGSMedico.com y Mexico Medico son sistemas independientes:
+
+- AGSMedico.com ya opera en cPanel;
+- Mexico Medico no esta ni estuvo alojado en ese cPanel;
+- Mexico Medico aun no ha sido lanzado;
+- Mexico Medico no tiene hoy infraestructura productiva;
+- su despliegue futuro se construira en AWS y se versionara con apoyo de Codex;
+- ninguna decision de hosting, red, logging o operacion de AGSMedico se hereda
+  o infiere para MXMed.
+
+Por lo anterior, la clasificacion historica de PP244:
+
+`production_ingress_environment_not_identified`
+
+se corrige prospectivamente a:
+
+`mxmed_production_infrastructure_not_created_yet`
+
+PP242 a PP244 conservan valor como identificacion preventiva del riesgo de
+registrar el query sensible del retorno Stripe. No describen una
+infraestructura productiva existente y no se reescriben. El bloqueo anterior
+queda sustituido por esta arquitectura de referencia; la implementacion y la
+prueba de staging siguen pendientes.
+
+### Auditoria read-only del monolito actual
+
+#### Runtime
+
+| Area | Hallazgo comprobado | Consecuencia de despliegue |
+| --- | --- | --- |
+| PHP local | CLI local 8.5.2 NTS al 2026-07-14 | La imagen objetivo sera PHP 8.5 Apache, fijada por version y digest despues de QA |
+| PHP minimo por codigo | Uso de match, nullsafe y str_contains/str_starts_with | PHP 8.0 es el minimo sintactico; no se autorizara una version anterior |
+| Servidor | .htaccess raiz y rewrites en api/catalog y api/profiles | Se elige Apache con mod_rewrite para maxima compatibilidad inicial |
+| Dependencias | 147 archivos PHP; no existen composer.json, composer.lock ni vendor rastreados | Build reproducible sin Composer hoy; cualquier SDK futuro debe entrar por una microfase propia |
+| Extensiones observadas | PDO/PDO MySQL, mbstring, cURL, GD con WebP/JPEG/PNG, EXIF, fileinfo, ZipArchive, OpenSSL, JSON, session y password | Instalar pdo_mysql, mbstring, curl, gd, exif, fileinfo, zip y opcache; JSON/OpenSSL/session segun la distribucion base |
+| Procesos | No existe worker long-running | Un servicio web y jobs ECS RunTask separados; no supervisor dentro del contenedor |
+| CLI | Importadores SEPOMEX, herramientas de encoding/seed/QA y scripts shell | No ejecutar importadores dentro del servicio web; empaquetar comandos operativos de forma explicita |
+
+Configuracion PHP inicial:
+
+- `expose_php=Off`, `display_errors=Off` y errores sanitizados a stdout;
+- `upload_max_filesize=25M` y `post_max_size=30M`, consistentes con el
+  limite de aplicacion de 25 MiB;
+- `memory_limit=512M` por el procesamiento GD de imagenes de hasta
+  10,000 x 10,000; medir en staging antes de reducir;
+- `max_execution_time=60` para HTTP; importaciones y jobs usan limite propio;
+- OPcache habilitado, sin JIT en el lanzamiento;
+- cookies de sesion Secure, HttpOnly y SameSite=Lax; nombre y dominio por
+  ambiente;
+- `session.save_handler` compartido, nunca filesystem local en produccion.
+
+Estos valores son una base de seguridad y capacidad; la prueba con archivos de
+25 MiB y la medicion de memoria son compuertas de staging.
+
+#### Base de datos
+
+- La conexion canonica usa PDO con DSN MySQL y variables `MXMED_DB_*`.
+- Charset y collation por defecto son `utf8mb4` y
+  `utf8mb4_unicode_ci`.
+- Los schemas usan InnoDB, AUTO_INCREMENT, UNSIGNED y ENUM.
+- Hay transacciones y `SELECT ... FOR UPDATE`.
+- El lock de escritura de suscripciones usa `GET_LOCK` y `RELEASE_LOCK`.
+- Existen `ON DUPLICATE KEY UPDATE` y SQL de importacion especifico de MySQL.
+- Hay columnas/payloads JSON; no se encontro un indice FULLTEXT SQL real.
+- Existe un procedimiento de migracion en
+  `modules/agenda/db/public_booking_p3.sql`; triggers y events no fueron
+  encontrados.
+- No existe un framework unico de migraciones: los cambios son SQL ordenado y
+  algunos repositorios crean tablas defensivamente.
+- La aplicacion mezcla UTC para persistencia tecnica mediante `gmdate` con
+  reglas de agenda en `America/Mexico_City`. La base objetivo guardara UTC y
+  la capa de negocio convertira para presentacion.
+- El motor y version efectivos de la base local, asi como su tamano, quedan
+  `unknown_not_queried`: esta microfase prohibio SQL y no los presenta como
+  hechos.
+
+La version local desconocida no bloquea el diseno, pero obliga a inventario de
+version, dump logico sanitizado, prechecks y rehearsal completo antes de
+produccion.
+
+#### Estado, archivos y persistencia
+
+| Tipo | Estado actual | Clasificacion objetivo |
+| --- | --- | --- |
+| Imagenes/PDF clinicos | api/clinical escribe bajo storage/clinical_uploads, optimiza imagen y genera thumbnail | S3 privado clinico con SSE-KMS; acceso autenticado y URLs prefirmadas breves |
+| Fotografias de perfil | Rutas existentes public/uploads/doctors y uploads/doctors | S3 privado de media publica, expuesto solo por CloudFront/OAC |
+| Assets de aplicacion | assets y public rastreados | Dentro de imagen inmutable y cacheados por CloudFront cuando tengan version |
+| Temporales de upload | tmp_name PHP | Disco efimero /tmp, borrado al terminar la peticion |
+| Importacion SEPOMEX | Descarga ZIP/TXT y puede crear SQLite/MySQL local | Job administrativo aislado; artefacto de importacion en S3 si se conserva |
+| Cache filesystem | No se demostro cache persistente de aplicacion | No introducirla; cache de aplicacion inicia deshabilitada |
+| Sesiones | Cinco session_start y sin save handler propio | ElastiCache compartido |
+| Exportaciones | No se demostro directorio persistente canonico | Cualquier export futuro se genera temporalmente y se publica en S3 privado |
+
+El disco de Fargate no sera persistencia. La migracion correcta es introducir
+un adaptador S3 antes del lanzamiento. EFS solo se autoriza como puente
+temporal si el adaptador no puede aterrizar durante la containerizacion, con
+retiro obligatorio antes del go-live productivo; no forma parte de la
+arquitectura final.
+
+#### Procesos e integraciones
+
+- Stripe ya tiene contratos backend/front cerrados y usa salida HTTPS por
+  cURL; no se revalida aqui.
+- Google Maps/Geocoding usa claves nombradas y salida HTTPS.
+- SEPOMEX tiene proxy/importadores locales.
+- El endpoint idempotente
+  `POST /api/agenda/index.php/public/maintenance/expire` es el unico trabajo
+  de mantenimiento operativo claramente identificado.
+- No se encontro un cron productivo ni una cola/worker implementados.
+- Recordatorios existen como configuracion/contrato, no como envio productivo.
+- SMS/OTP tiene una superficie de verificacion, pero no se demostro proveedor
+  SMS real.
+- No se demostro proveedor SMTP/SES real, WhatsApp real ni integracion de IA
+  productiva.
+- No se demostro backup productivo actual.
+
+El endpoint publico de maintenance no sera invocado por internet en la
+arquitectura final. Una microfase posterior extraera su logica a un comando CLI
+idempotente ejecutado por EventBridge Scheduler y ECS RunTask.
+
+#### Seguridad observada
+
+- La configuracion DB admite variables y tambien archivo local; los archivos
+  de secretos no deben entrar en imagen ni repositorio.
+- Suscripciones exige sesion y session_scope en sus rutas privadas.
+- Las sesiones actuales dependen del handler PHP por defecto.
+- Hay endpoints heredados con CORS amplio; deben pasar una auditoria de
+  allowlist antes del lanzamiento.
+- No existe una politica global comprobada de CSRF, CSP y headers para todas
+  las superficies; se requiere hardening de staging.
+- Hay usos de error_log y REQUEST_URI que deben reemplazarse por eventos JSON
+  allowlistados antes de activar logs productivos.
+- El sistema trata datos personales y clinicos; quedan prohibidos bodies
+  clinicos, documentos, tokens, cookies, Authorization, queries sensibles y
+  datos de tarjeta en logs.
+
+### Requerimientos no funcionales de lanzamiento
+
+No existen cifras empresariales confirmadas. Cada fila siguiente es
+`assumption_pending_business_confirmation`, no un hecho:
+
+| Dimension | Supuesto conservador inicial | Impacto |
+| --- | --- | --- |
+| Concurrencia | 300 sesiones simultaneas, 50 privadas y 250 publicas; crecimiento a 2,000 | Dos tareas productivas y autoscaling; carga obligatoria |
+| Throughput | 20 req/s sostenidas, burst de 100; crecimiento a 150 req/s | ALB/Fargate con target tracking y WAF rate rules inicialmente en count |
+| Perfiles | 25,000 al lanzamiento; 250,000 a 24 meses | CloudFront para lectura publica, indices y pruebas de consulta |
+| Citas | 2,000/dia; crecimiento a 20,000/dia | RDS Multi-AZ y jobs idempotentes |
+| Expedientes | 50,000 iniciales; 500,000 a 24 meses | Cifrado, lifecycle y capacidad DB/S3 |
+| Uploads | 50 GiB/mes; crecimiento a 500 GiB/mes; maximo 25 MiB/archivo | S3 directo/prefirmado futuro, budgets y malware scan posterior |
+| Trafico | 80% publico, 20% privado | Cache solo para assets y contenido publico no personalizado |
+| Bots/SEO | 40% de requests publicas pueden ser crawlers | WAF managed rules, Bot Control solo si el costo se justifica |
+| Disponibilidad | 99.9% mensual | Dos tareas, ALB multi-AZ, RDS Multi-AZ y sesiones con failover |
+| RPO | 15 minutos | Backups RDS/PITR y disciplina de migraciones |
+| RTO | 4 horas | IaC, runbooks, imagen anterior y restore drills |
+| Mantenimiento | Ventana mensual de 2 h de bajo trafico; despliegue web sin downtime planeado | Rolling deploy y ventana separada para DB |
+| Backups | RDS 35 dias productivo, 7 dias staging; snapshots mensuales 12 meses | Costo de backup y revision legal |
+| Logs | App 90 dias, seguridad 365 dias; CloudTrail archivado 7 anos | Costo y politica legal pendientes |
+| Residencia | Datos primarios y backups normales en Mexico | SES es excepcion; DR cross-region requiere aprobacion |
+| Ambientes | Staging permanente y produccion | Cuenta y costo base separados |
+| Presupuesto | Staging USD 250–650/mes; produccion USD 700–1,800/mes | Si el objetivo es menor, renegociar HA/entorno, no ocultar costo |
+| Operacion | Dos responsables entrenados, sin guardia 24/7 inicial | Managed services, runbooks, alarmas y soporte externo para incidentes |
+
+Si negocio reduce presupuesto o disponibilidad, se ajustara capacidad de
+staging antes que eliminar cifrado, backups, separacion de cuentas o controles
+del retorno Stripe.
+
+### Region AWS y disponibilidad
+
+#### Comparacion regional
+
+| Criterio | mx-central-1 | us-east-1 | Decision |
+| --- | --- | --- | --- |
+| AZ | Tres AZ oficiales | Ecosistema de AZ maduro | Mexico satisface despliegue multi-AZ |
+| Latencia Mexico | Menor distancia esperada; medir desde ciudades objetivo | Mayor distancia esperada | Mexico preferida |
+| Residencia | Mantiene contenido primario en Mexico | Contenido primario fuera de Mexico | Mexico preferida |
+| Servicios base | Todos los seleccionados salvo SES; algunas capacidades de seguridad tienen limites | Catalogo mas amplio y mas tipos de instancia | Excepciones explicitas, no migracion total |
+| Precios/capacidad | Pueden ser mayores y con menos clases | Normalmente mayor variedad y precios de referencia mas bajos | Preflight de clases y Pricing Calculator antes de compra |
+| DR | Tres AZ; copia regional suficiente para launch | Candidato futuro de copia cross-region | Cross-region solo con aprobacion legal |
+| Globales | CloudFront, Route 53, WAF y Shield operan globalmente | Igual | Certificado CloudFront en us-east-1 |
+
+Se selecciona `mx-central-1`. La diferencia de precio no prevalece sobre
+latencia y residencia, y no se encontro una limitacion concreta que impida el
+stack principal.
+
+#### Matriz de disponibilidad verificada al 2026-07-14
+
+| Servicio/capacidad | mx-central-1 | us-east-1 | Uso/limitacion |
+| --- | --- | --- | --- |
+| ECS con Fargate | Disponible | Disponible | Compute seleccionado |
+| ECR | Disponible | Disponible | Registro de imagenes |
+| RDS | Disponible | Disponible | MySQL 8.4; clase exacta se valida en preflight |
+| ElastiCache | Disponible | Disponible | Sesiones, protocolo Redis/Valkey |
+| Secrets Manager | Disponible | Disponible | Fuente canonica de secretos |
+| KMS | Disponible | Disponible | Cifrado regional |
+| CloudWatch/Logs | Disponible | Disponible | Logs, metricas y alarmas |
+| SES | No aparece en endpoints regionales | Disponible | Excepcion obligatoria us-east-1 |
+| EventBridge/Scheduler | Disponible | Disponible | Jobs |
+| SQS | Disponible | Disponible | Solo DLQ de Scheduler inicialmente |
+| AWS Backup | Disponible con limites | Disponible | Vault cross-account same-region; no air-gapped cross-region desde Mexico |
+| GuardDuty | Disponible | Disponible | Habilitar; revisar features regionales |
+| Security Hub CSPM | Disponible con controles regionales ausentes | Disponible | Documentar excepciones, no fingir cobertura |
+| AWS Config | Disponible con cobertura/reglas regionales variables | Disponible | Reglas soportadas y custom rules cuando haga falta |
+| NAT Gateway | Disponible como capacidad VPC | Disponible | Dos prod, uno staging |
+| VPC endpoints | Core requeridos disponibles; validar endpoint/AZ en synth preflight | Amplia disponibilidad | S3 gateway; ECR, Logs y Secrets interface |
+| CloudFront/Route 53/WAF/Shield | Global | Global | Edge e ingress |
+
+La disponibilidad de servicio no garantiza cada clase, version o feature. La
+siguiente readiness IaC debe ejecutar una matriz sin cambios que valide
+clases Fargate, clases RDS, nodos ElastiCache, quotas, AZ y endpoints en la
+cuenta elegida antes de cualquier deploy.
+
+#### Registro de fuentes oficiales
+
+Todas fueron consultadas el `2026-07-14`:
+
+| Titulo oficial | Servicio | Decision sustentada |
+| --- | --- | --- |
+| [AWS Services by Region](https://aws.amazon.com/about-aws/global-infrastructure/regional-product-services/) | Infraestructura global | Servicios regionales y naturaleza global de CloudFront/Route 53/WAF |
+| [AWS Global Infrastructure](https://aws.amazon.com/about-aws/global-infrastructure/) | Regions/AZ | Mexico Central y tres AZ |
+| [Amazon ECS endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/ecs-service.html) | ECS/Fargate | Endpoint regional Mexico |
+| [Amazon ECR endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/ecr.html) | ECR | Endpoint regional Mexico |
+| [Amazon RDS endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/rds-service.html) | RDS | Endpoint regional Mexico |
+| [MySQL on Amazon RDS versions](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Concepts.VersionMgmt.html) | RDS MySQL | MySQL 8.4 LTS vigente y soporte |
+| [MySQL feature support on Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Concepts.FeatureSupport.html) | RDS MySQL | Compatibilidad y restricciones |
+| [Amazon ElastiCache endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/elasticache-service.html) | ElastiCache | Endpoint regional Mexico |
+| [Data security in Amazon ElastiCache](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/encryption.html) | ElastiCache | Cifrado Valkey/Redis |
+| [AWS Secrets Manager endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/asm.html) | Secrets Manager | Endpoint regional Mexico |
+| [AWS KMS endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/kms.html) | KMS | Endpoint regional Mexico |
+| [Amazon CloudWatch endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/cw_region.html) | CloudWatch | Region Mexico |
+| [Amazon SES endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/ses.html) | SES | Ausencia Mexico y uso de us-east-1 |
+| [Amazon EventBridge endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/ev.html) | EventBridge | Region Mexico |
+| [Amazon SQS endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/sqs-service.html) | SQS | Region Mexico |
+| [AWS Backup endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/awsbackup.html) | AWS Backup | Region Mexico |
+| [Feature availability by AWS Region](https://docs.aws.amazon.com/aws-backup/latest/devguide/backup-feature-availability.html) | AWS Backup | Limites de vault/copia en Mexico |
+| [Amazon GuardDuty Regions and endpoints](https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_regions.html) | GuardDuty | Cobertura regional y diferencias |
+| [Regional limits for Security Hub CSPM](https://docs.aws.amazon.com/securityhub/latest/userguide/regions-controls.html) | Security Hub | Controles ausentes en Mexico |
+| [Resource Coverage by Region Availability](https://docs.aws.amazon.com/config/latest/developerguide/what-is-resource-config-coverage.html) | AWS Config | Cobertura variable en Mexico |
+| [Use the CloudFront managed prefix list](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/LocationsOfEdgeServers.html) | CloudFront/VPC | Restringir ALB a origins CloudFront |
+| [Configure standard logging v2](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging.html) | CloudFront | Field allowlist |
+| [AWS WAF logging management](https://docs.aws.amazon.com/waf/latest/developerguide/logging-management.html) | WAF | Redaccion de query y sampling separado |
+| [Access logs for Application Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html) | ALB | La URL se conserva; access logs OFF |
+| [Receive Stripe events in your webhook endpoint](https://docs.stripe.com/webhooks) | Stripe | Firma, raw body y 2xx rapido |
+| [Payment status updates](https://docs.stripe.com/payments/payment-intents/verifying-status) | Stripe | Webhook autoritativo, no activacion cliente |
+| [Idempotent requests](https://docs.stripe.com/api/idempotent_requests) | Stripe | Reintentos seguros de POST |
+| [AWS Fargate pricing](https://aws.amazon.com/fargate/pricing/) | Fargate | Drivers vCPU/memoria/tiempo |
+| [Amazon RDS for MySQL pricing](https://aws.amazon.com/rds/mysql/pricing/) | RDS | Drivers y costo Multi-AZ |
+| [Amazon VPC pricing](https://aws.amazon.com/vpc/pricing/) | VPC | NAT, IPv4 y endpoints |
+| [AWS WAF pricing](https://aws.amazon.com/waf/pricing/) | WAF | ACL, reglas y requests |
+| [AWS Organizations multi-account best practices](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_best-practices.html) | Organizations | Separacion y root centralizado |
+| [OIDC federation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html) | IAM | GitHub con credenciales temporales |
+| [Test AWS CDK applications](https://docs.aws.amazon.com/cdk/v2/guide/testing.html) | CDK | Assertions y templates sintetizados |
+
+No se copiaron paginas completas ni se usaron fuentes de terceros para
+decisiones tecnicas vigentes.
+
+### Matriz ponderada de computo
+
+Escala 1–5. Total = suma de puntuacion por peso / 100.
+
+| Opcion | Seguridad 20 | Confiabilidad 15 | Operacion 15 | Compatibilidad 15 | Costos 15 | Escala 10 | Velocidad 10 | Total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| ECS Fargate | 5 | 5 | 4 | 5 | 3 | 5 | 4 | **4.45** |
+| App Runner | 4 | 4 | 5 | 3 | 3 | 5 | 5 | 4.05 |
+| Elastic Beanstalk | 4 | 4 | 3 | 5 | 3 | 4 | 4 | 3.85 |
+| EKS | 5 | 5 | 1 | 5 | 1 | 5 | 1 | 3.40 |
+| Lightsail | 2 | 2 | 4 | 4 | 5 | 2 | 4 | 3.25 |
+| EC2 directo | 3 | 3 | 2 | 5 | 4 | 3 | 2 | 3.20 |
+
+Razones:
+
+- Fargate conserva compatibilidad Apache/PHP, red privada, ALB/WAF, roles,
+  Secrets Manager, jobs CLI y escalamiento sin administrar hosts.
+- App Runner es rapido, pero ofrece menor control del ingress compartido,
+  networking, jobs y politica especializada de logs.
+- Beanstalk preserva PHP, pero agrega plataforma administrada con menor control
+  fino y drift operativo frente al modelo container/IaC seleccionado.
+- EC2 y Lightsail exigen parcheo, HA y recuperacion manual.
+- EKS no tiene una necesidad Kubernetes demostrada y seria la mayor carga
+  operativa.
+
+ECS Fargate gana sin empate y queda aprobado.
+
+### Topologia de cuentas y ambientes
+
+Se selecciona AWS Organizations con cuatro cuentas:
+
+1. `management`: Organizations, facturacion, Identity Center y SCP; sin
+   workloads.
+2. `production`: recursos live de MXMed.
+3. `staging`: datos sinteticos, Stripe sandbox y capacidad reducida.
+4. `security-log-archive`: administrador delegado de seguridad, CloudTrail,
+   Config aggregation, vaults y logs centralizados.
+
+La combinacion security/log archive es una optimizacion inicial. Se separara
+en dos cuentas cuando el equipo o regulacion lo exija.
+
+Controles:
+
+- IAM Identity Center para humanos, MFA resistente a phishing cuando sea
+  posible y sesiones temporales;
+- root de management con MFA multiple, email grupal, sin access keys y uso
+  break-glass de dos personas;
+- root credentials de member accounts removidas/centralizadas cuando la
+  organizacion lo soporte;
+- roles `ReadOnly`, `Operator`, `SecurityAudit`,
+  `InfrastructureDeploy` y `ApplicationDeploy`;
+- SCP que niegue desactivar CloudTrail/Config/GuardDuty, salir de la
+  organizacion, regiones no aprobadas y acceso publico a S3;
+- GitHub OIDC limitado por organizacion, repositorio, branch/environment y
+  audience; nunca access keys permanentes;
+- budgets y alertas por cuenta/ambiente al 50%, 80% y 100% del objetivo, mas
+  deteccion de anomalias;
+- tags obligatorios: application, environment, owner, data-classification,
+  cost-center y managed-by.
+
+Los responsables nominales y correos no se documentan aqui.
+
+### Red seleccionada
+
+Cada cuenta de workload tiene una VPC independiente en `mx-central-1`:
+
+- tres AZ preparadas;
+- subnets publicas solo para ALB y NAT;
+- subnets privadas de aplicacion para ECS sin IP publica;
+- subnets aisladas para RDS y ElastiCache;
+- Internet Gateway solo asociado a rutas publicas;
+- production con NAT Gateway en dos AZ activas; staging con uno;
+- IPv4 inicial. IPv6 se habilitara cuando Stripe, terceros, egress, WAF y
+  observabilidad pasen pruebas dual-stack;
+- DNS privado y resolver VPC;
+- NACL por defecto; Security Groups son el control stateful. NACL custom solo
+  ante requisito probado;
+- Flow Logs a CloudWatch/S3 central con campos de red, no payload, retencion
+  limitada y filtros de reject/accepted necesarios.
+
+Security Groups:
+
+1. ALB: inbound 443 solo desde el managed prefix list origin-facing de
+   CloudFront; sin listener 80, porque el redirect HTTP a HTTPS ocurre en
+   CloudFront.
+2. ECS: inbound puerto 8080 solo desde SG de ALB.
+3. RDS: 3306 solo desde SG de ECS y SG de job de migracion.
+4. ElastiCache: 6379/TLS solo desde SG de ECS/jobs autorizados.
+5. Sin ingress administrativo directo; ECS Exec break-glass auditado.
+
+VPC endpoints:
+
+- gateway endpoint S3;
+- interface endpoints ECR API, ECR DKR, CloudWatch Logs y Secrets Manager;
+- KMS/STS se agregan si el analisis de costo y flujo demuestra uso suficiente;
+- endpoints usan private DNS y policies limitadas a recursos del ambiente.
+
+Egress:
+
+- ECR/S3/Logs/Secrets via endpoints;
+- Stripe API, Google APIs, SES us-east-1 y repositorios permitidos via NAT;
+- produccion usa dos NAT para evitar que la perdida de una AZ corte pagos;
+- staging acepta un NAT y su riesgo de AZ para ahorrar;
+- no se asignan public IPs a tareas;
+- una fase posterior puede agregar egress proxy/domain allowlisting, porque
+  Security Groups no filtran por FQDN.
+
+Los NAT son un driver fijo y por GiB. Una unica NAT productiva se rechazo por
+impactar pagos e integraciones ante una falla de AZ; una NAT por las tres AZ se
+pospone hasta que la carga use la tercera AZ de forma sostenida.
+
+### Ingress productivo
+
+Flujo seleccionado:
+
+`Internet -> Route 53 -> CloudFront -> AWS WAF -> ALB -> ECS Fargate`
+
+Controles:
+
+- Shield Standard inherente a CloudFront/Route 53/ALB;
+- certificado ACM de CloudFront en us-east-1 y certificado regional del ALB
+  en mx-central-1;
+- TLS 1.2 minimo, HTTPS viewer-only y redirect HTTP a HTTPS;
+- ALB internet-facing por compatibilidad inicial, pero su SG acepta solo el
+  prefix list de CloudFront y una listener rule valida un header secreto de
+  origin rotado;
+- no se publica DNS del ALB como entrada de usuario;
+- migrar a CloudFront VPC Origin podra evaluarse en una fase posterior, no es
+  requisito para el launch;
+- static assets versionados: compresion y cache largo;
+- HTML privado/API/sesiones: cache disabled y forward de headers/cookies
+  allowlistados;
+- contenido publico dinamico: cache corto solo despues de demostrar que no
+  mezcla usuario, sesion o datos personales;
+- uploads: maximo 25 MiB inicial, cache disabled y timeout alineado; evolucion
+  a presigned upload S3;
+- WAF managed common/IP reputation rules primero en count, luego block tras
+  medir falsos positivos; rate limits separados para publica, auth, webhook y
+  Stripe return;
+- headers HSTS, nosniff, frame-ancestors/CSP, Referrer-Policy y Permissions-
+  Policy desde aplicacion/CloudFront con prueba de regresion.
+
+No hay acceso publico directo util al origin si falta el origen CloudFront y
+su header. La configuracion exacta se versionara en CDK.
+
+### Contrato dedicado de Stripe return
+
+Path:
+
+`GET /subscriptions/stripe-return`
+
+CloudFront behavior dedicado:
+
+- path exacto;
+- viewer protocol HTTPS only;
+- metodos GET y HEAD; WAF rechaza cualquier otro;
+- cache policy disabled, TTL 0 y no CDN cache;
+- origin request policy que envia al origin solo el query allowlistado que el
+  bridge necesita; cookies y headers no necesarios se eliminan;
+- no service worker, analytics, shell general ni terceros antes del scrub;
+- response headers `Cache-Control: no-store`,
+  `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY` y CSP minima;
+- destino posterior fijo, same-origin y sin `return_to`, redirect o URL
+  controlada por cliente;
+- bridge minimo valida allowlist/duplicados/limites, conserva referencias solo
+  en memoria, ejecuta `history.replaceState` al path limpio y solo entonces
+  permite el consumer.
+
+CloudFront logging:
+
+- standard logging v2 con field allowlist;
+- incluir solo fecha/hora, edge, metodo, host, `cs-uri-stem`, status, bytes,
+  latency, request ID, TLS, country y behavior; excluir client IP mientras no
+  exista una necesidad y politica de privacidad aprobadas;
+- excluir `cs-uri-query`, `cs(Cookie)`, `cs(Referer)`, Authorization y
+  headers sensibles;
+- cookie logging deshabilitado;
+- no habilitar legacy standard logs en paralelo.
+
+WAF:
+
+- redactar QueryString en logging;
+- aplicar data protection por sustitucion para query;
+- deshabilitar sampled requests del web ACL hasta demostrar data protection;
+  si otras rutas requieren sampling, usar una distribucion/web ACL separada o
+  proteccion equivalente, pues redaction de logging no protege sampling por si
+  sola;
+- no exportar query a Security Lake.
+
+ALB:
+
+- access logs deshabilitados en la arquitectura inicial. AWS documenta que el
+  request line conserva la URL recibida y el ALB no ofrece field allowlist;
+- observabilidad cubierta por CloudFront seguro, WAF protegido, metricas ALB y
+  logs de aplicacion sanitizados;
+- no se declararan safe ni se activaran access logs ALB hasta que exista un
+  ingress posterior separado que no reciba el query.
+
+Aplicacion:
+
+- nunca registrar REQUEST_URI, QUERY_STRING, location.href ni valores Stripe;
+- evento permitido: path constante, status, codigo cerrado, correlation ID y
+  duracion;
+- no persistir client secret en sesion, cookies, DOM, storage o evidence;
+- no open redirect y no activacion desde el bridge.
+
+Este contrato resuelve por diseno el riesgo preventivo de PP242–PP244, pero su
+estado de implementacion y QA sigue en cero. Solo un test sintetico en staging,
+con valores opaque, podra declararlo operativo.
+
+### Ingress separado del webhook Stripe
+
+Path existente:
+
+`POST /api/subscriptions/index.php/webhooks/stripe`
+
+Contrato:
+
+- behavior CloudFront no-cache separado del return;
+- HTTPS y POST; WAF bloquea otros metodos sin depender de sesion;
+- forwarding del body crudo y header `Stripe-Signature`;
+- secreto por ambiente en Secrets Manager;
+- verificacion de firma sobre body sin modificar y tolerancia temporal
+  oficial; NTP de la plataforma;
+- body vive solo en memoria para la firma y nunca se registra;
+- no depender unicamente de IP allowlist; cualquier lista de Stripe es defensa
+  adicional y se mantiene automaticamente;
+- rate limit en count/umbral alto, monitoreado para no romper reintentos;
+- timeout corto y respuesta 2xx rapida;
+- reintentos e idempotencia permanecen en el backend existente;
+- log permitido: event ID hasheado/opaco si ya existe, tipo allowlistado,
+  resultado, latencia y correlation ID; nunca payload;
+- alarmas por firmas invalidas, 5xx, latencia y backlog de eventos internos;
+- sin activacion desde infraestructura: el contrato backend vigente decide
+  persistencia y activacion.
+
+No se introduce una cola para el webhook en el lanzamiento porque el backend
+ya posee idempotencia y no se demostro carga asincrona que la necesite. Si la
+respuesta rapida no puede sostenerse bajo carga, una fase posterior adoptara
+persistencia durable y worker con DLQ sin cambiar la verificacion de firma.
+
+### Compute y contenedor
+
+- ECR privado por ambiente/cuenta, tags inmutables y despliegue por digest.
+- Imagen `php:8.5-apache` o equivalente oficial fijada por patch/digest,
+  amd64 inicialmente para minimizar riesgo de extensiones.
+- Apache escucha en 8080, mod_rewrite habilitado y DocumentRoot explicito.
+- Usuario no-root; capacidades Linux minimas; filesystem read-only una vez que
+  uploads/config se migren; volumen efimero solo para /tmp y runtime Apache.
+- Task definition inicial productiva: 1 vCPU, 2 GiB, 20 GiB ephemeral; staging:
+  0.5 vCPU, 1 GiB, ajustable a 2 GiB durante QA GD.
+- Produccion minimo dos tasks distribuidas en al menos dos AZ; staging una
+  task, con ventana de indisponibilidad aceptada.
+- Autoscaling productivo 2–6 tasks por CPU 60%, memoria 70% y ALB
+  request-count, con cooldown probado.
+- Health `/healthz`: proceso/config basico sin datos sensibles; readiness
+  separada puede probar DB/cache con timeouts estrictos.
+- Rolling deploy con minimum healthy 100%, maximum 200%, deployment circuit
+  breaker y rollback automatico a task definition anterior.
+- Graceful SIGTERM, deregistration delay y timeout de peticion alineados.
+- Logs stdout/stderr JSON sanitizados via awslogs/FireLens solo si se justifica.
+- ECS Exec deshabilitado por defecto; break-glass con Identity Center, MFA,
+  session logging seguro y tiempo limitado.
+- Execution role solo pull ECR/logs/secrets de arranque; task role solo S3,
+  Secrets/KMS y APIs AWS necesarias.
+
+Blue/green no se selecciona inicialmente por costo y complejidad. Se adopta
+cuando el volumen o riesgo de release lo justifique.
+
+### Decision de base de datos
+
+Comparacion:
+
+| Opcion | Compatibilidad | HA/operacion | Costo | Decision |
+| --- | --- | --- | --- | --- |
+| RDS MySQL 8.4 | Directa con PDO MySQL, locks, enums, JSON e InnoDB | Managed, Multi-AZ, backups | Medio | **Seleccionada** |
+| RDS MariaDB | Similar, pero introduce divergencia sin beneficio probado | Managed | Medio | Rechazada |
+| Aurora MySQL compatible | Alta escala/failover y replicas | Mayor complejidad | Alto minimo | Pospuesta |
+
+Configuracion:
+
+- RDS MySQL 8.4, minor fijado tras rehearsal y no auto-major-upgrade;
+- staging Single-AZ, clase burstable y 50 GiB gp3;
+- production Multi-AZ con un standby, clase inicial equivalente a
+  db.t4g.medium si la disponibilidad/preflight y pruebas lo permiten, 100 GiB
+  gp3;
+- storage autoscaling con maximo y alarma de crecimiento;
+- KMS regional, TLS obligatorio y credenciales en Secrets Manager;
+- subnets aisladas, no public access y SG solo app/migration job;
+- deletion protection y final snapshot en produccion;
+- automated backups/PITR 35 dias produccion y 7 staging;
+- snapshots antes de migracion destructiva; copia cross-account;
+- Database Insights/Enhanced Monitoring y Performance Schema segun costo;
+- parameter group versionado: utf8mb4, UTC, strict SQL mode y slow query log
+  con umbral, sin parametros/valores sensibles;
+- ventana DB distinta de releases, minor updates primero en staging;
+- migraciones como ECS one-off task con role dedicado, lock de despliegue,
+  backup previo y expand/migrate/contract;
+- rollback de aplicacion solo si el schema es backward-compatible; rollback de
+  datos mediante procedimiento probado, no improvisado.
+
+Antes de aprovisionar: identificar version/tamano local, ejecutar
+`mysqldump` controlado, validar procedure/ENUM/locks/collation en MySQL 8.4,
+correr prechecks y medir restore.
+
+### Sesiones, cache, rate limits y locks
+
+Se selecciona Amazon ElastiCache for Valkey 8.x, compatible con protocolo Redis;
+el minor y tipo de nodo exactos se fijaran en el preflight regional:
+
+- produccion: replication group Multi-AZ con automatic failover, dos nodos
+  iniciales;
+- staging: un nodo sin HA para ahorrar;
+- cifrado in transit y at rest, AUTH token/ACL en Secrets Manager y SG privado;
+- PHP extension phpredis fijada en imagen;
+- TTL idle de sesion 8 h y absoluto de 24 h como
+  `assumption_pending_business_confirmation`;
+- logout elimina server-side key y cookie;
+- pool/conexiones persistentes acotadas por task; timeout y fail-closed para
+  acciones privadas;
+- prefijos separados por ambiente y uso.
+
+Separacion:
+
+- sesiones: ElastiCache, prefijo `session`;
+- cache de aplicacion: deshabilitada inicialmente; ningun dato clinico cacheado
+  sin contrato;
+- rate limits de aplicacion: prefijo `ratelimit`, solo si WAF no cubre el caso;
+- locks de negocio: permanecen en MySQL GET_LOCK/transacciones hasta un
+  rediseño probado; no moverlos implicitamente a cache.
+
+DynamoDB, RDS, cookies cifradas y una sola task fueron rechazados para sesiones:
+agregan modelo nuevo, carga DB, tamaño/riesgo cliente o eliminan HA.
+
+### S3 y ciclo de archivos
+
+Buckets logicos separados por ambiente y clasificacion, siempre con Block
+Public Access:
+
+- `application-static`: assets publicados por pipeline, SSE-S3, versioning y
+  CloudFront OAC;
+- `public-profile-media`: objetos privados aunque sean visibles, SSE-S3,
+  metadatos minimos, OAC y cache controlado;
+- `clinical-private`: documentos e imagenes clinicas, SSE-KMS customer
+  managed key, versioning, acceso app/presigned URL de minutos y audit trail;
+- `operations`: exportaciones/importaciones temporales, SSE-KMS y lifecycle;
+- logs/backups en security-log-archive, nunca en buckets de workload.
+
+Reglas:
+
+- keys opacas, sin nombre de paciente, email, diagnostico ni identificador
+  sensible;
+- Content-Type validado server-side, maximo 25 MiB y checksum;
+- presigned URLs limitadas por expiracion, tamaño y tipo; nunca bucket publico;
+- CloudFront signed URL/cookie solo para una experiencia privada que lo
+  requiera;
+- thumbnails se generan en job/container y se escriben como objetos
+  independientes; Lambda/event pipeline queda para crecimiento;
+- lifecycle de temporales 7 dias; versiones no actuales 90 dias como supuesto;
+- Object Lock no se activa sin requisito legal de inmutabilidad;
+- malware scanning es compuerta futura antes de aceptar tipos adicionales o
+  carga directa masiva;
+- inventario y backup de metadata DB deben permitir reconstruir la relacion
+  objeto/documento.
+
+### Secretos y configuracion
+
+Secrets Manager es fuente canonica separada por staging/production para:
+
+- DB credentials;
+- STRIPE_SECRET_KEY;
+- STRIPE_WEBHOOK_SECRET;
+- STRIPE_PUBLISHABLE_KEY cuando se centralice;
+- credenciales SMTP/API;
+- claves AI si se aprueban;
+- Google/SMS/WhatsApp y terceros.
+
+No se guardan secretos en task definition plaintext, GitHub, CDK context,
+outputs, tags, logs o imagen.
+
+Cada secret tiene KMS, resource policy, task-role allowlist, owner, fecha de
+rotacion y alarma de acceso anomalo. DB rota mediante estrategia compatible
+con pool; APIs externas usan rotacion manual dual-key probada. La aplicacion
+recupera al arranque y cachea en memoria por vida de task; un cambio provoca
+nuevo deployment controlado. La publishable key no es secreta, pero su
+centralizacion evita drift de ambientes.
+
+Break-glass requiere dos personas, rol temporal y registro CloudTrail. Los
+archivos locales de configuracion dejan de ser fuente en staging/produccion y
+se excluyen de build context.
+
+### Correo, jobs y colas
+
+- SES en us-east-1 para correo transaccional, dominio verificado, DKIM/SPF/DMARC,
+  configuration set, suppression list, bounce/complaint events y limites.
+- La transferencia de recipient, subject y body a us-east-1 requiere
+  aprobacion de privacidad; no enviar contenido clinico por correo.
+- EventBridge Scheduler en mx-central-1 invoca ECS RunTask en subnets privadas
+  para `agenda-expire`, con role dedicado, timeout, retry acotado y ventana.
+- La logica de maintenance se extrae del endpoint publico a comando CLI antes
+  de activar el schedule.
+- SQS no es bus general inicial. Se permite una cola DLQ exclusiva de Scheduler
+  porque existe un job real y debe poder revisarse sin repetirlo ciegamente.
+- Recordatorios, emails diferidos, thumbnails asincronos o IA solo obtendran
+  cola/worker cuando exista una carga implementada, SLA e idempotencia.
+- Toda tarea usa operation ID, idempotencia, metricas started/succeeded/failed,
+  alarma y runbook de replay.
+
+### Observabilidad y seguridad operacional
+
+Logs:
+
+- log groups por ambiente y servicio: web, jobs, migrations y security;
+- JSON con timestamp UTC, level, service, environment, route template, status,
+  duration, correlation ID y codigo cerrado;
+- production app 90 dias, staging 30, seguridad 365; archive de CloudTrail 7
+  anos como supuesto pendiente legal;
+- correlation IDs aleatorios, sin UUID de pago/proveedor ni PII;
+- filtros/redaction en aplicacion y pruebas automatizadas de no-secret.
+
+Prohibido registrar:
+
+- client_secret, query Stripe return, tokens, cookies, Authorization;
+- cuerpos Stripe, clinicos o de tarjeta;
+- nombres de pacientes, expedientes, diagnosticos y archivos;
+- secrets, connection strings o excepciones raw.
+
+Metricas/alarmas:
+
+- CloudFront/WAF 4xx/5xx, blocks, rate y cache;
+- ALB target health, 5xx, latency y rejected connections;
+- ECS CPU/memory/tasks/restarts/deploy failures;
+- RDS CPU, connections, storage, replica/failover, deadlocks y latency;
+- ElastiCache memory, evictions, connections, replication/failover;
+- Scheduler failures/DLQ, SES bounces/complaints y S3/KMS access denied;
+- synthetic uptime de rutas publicas y health sin datos reales.
+
+Seguridad:
+
+- organization CloudTrail multi-region, S3 con retencion/inmutabilidad segun
+  politica;
+- AWS Config y aggregator, documentando recursos/managed rules no soportados;
+- GuardDuty y Security Hub delegados a security-log-archive;
+- Inspector/ECR enhanced scanning si la disponibilidad/costo lo permite;
+- WAF/CloudFront logs seguros centralizados;
+- no habilitar ALB access logs;
+- dashboards operativos y runbooks vinculados a alarmas;
+- tracing solo para rutas seleccionadas y sin atributos sensibles.
+
+### Backup y disaster recovery
+
+- RDS automated backup/PITR: 35 dias prod, 7 staging.
+- AWS Backup copia snapshots productivos a un vault cross-account en
+  security-log-archive dentro de mx-central-1.
+- Snapshot mensual con retencion de 12 meses como supuesto.
+- S3 versioning y lifecycle; inventories para detectar objetos sin metadata.
+- Secrets se recrean por runbook: valores no se almacenan en IaC; se restauran
+  desde custodia/rotacion autorizada.
+- IaC y ECR por digest reconstruyen red/compute/configuracion.
+- RTO 4 h y RPO 15 min son objetivos no validados.
+- Restore drill trimestral: nueva DB aislada, checksum/conteos, prueba de
+  aplicacion sanitizada, S3 object restore y tiempo real medido.
+- Un backup no se declara util hasta completar un restore drill.
+
+Cross-region:
+
+- no se activa en lanzamiento;
+- us-east-1 es candidato para copia de emergencia solo tras resolver residencia,
+  transferencia, KMS, costo y los limites de AWS Backup desde Mexico;
+- Multi-AZ no sustituye DR, pero cubre falla de AZ inicial;
+- si negocio exige region perdida con RTO 4 h, la arquitectura debera agregar
+  copia cross-region y runbook DNS antes de go-live.
+
+### CI/CD desde GitHub
+
+Cuatro pipelines separados, aun no implementados:
+
+1. Aplicacion: lint/tests, secret scan, SAST/dependency/image scan, build
+   reproducible amd64, SBOM, push ECR por digest, deploy staging, smoke y
+   approval production.
+2. Infraestructura: CDK format/lint/test/synth, security checks, cdk diff/
+   change set, approval y deploy por cuenta.
+3. Migraciones: compatibilidad, backup/precheck, ECS one-off task, verificacion
+   y contrato de rollback.
+4. Emergencia: rol y ambiente protegidos, dos aprobadores, artefacto previamente
+   firmado, auditoria y postmortem.
+
+GitHub Actions usa OIDC y credenciales temporales. Produccion solo desde tags
+firmados/release y GitHub Environment protegido. No hay llaves AWS permanentes.
+La imagen se promueve por digest de staging a production, no se reconstruye.
+
+Post-deploy valida target health, error rate, Stripe return sintetico sin
+Stripe, webhook health contractual sin enviar evento y current read-only
+autorizado. El circuit breaker revierte compute; DB exige estrategia
+expand/contract.
+
+### Decision IaC
+
+| Opcion | Ventajas | Riesgos/carga | Resultado |
+| --- | --- | --- | --- |
+| CloudFormation YAML | Nativo, sin state externo | Verboso y menor composicion/testing | No seleccionada |
+| AWS CDK TypeScript | AWS-only, constructs, assertions, synth/diff, CloudFormation state | Node/toolchain y upgrades de constructs | **Seleccionada** |
+| Terraform | Ecosistema amplio y buen plan | State backend/locking/provider adicional | No seleccionada |
+
+Se usara solo AWS CDK v2 TypeScript para los recursos de esta arquitectura.
+CloudFormation sera el motor sintetizado, no una segunda fuente editada a mano.
+CDK context no contendra secretos ni IDs reales versionados. Stacks se
+separaran por foundation, network, data, compute/ingress, observability y
+backup con dependencias explicitas. Drift se revisara con CloudFormation/CDK y
+los cambios manuales quedan prohibidos salvo break-glass reconciliado.
+
+### Paridad staging/production
+
+| Capacidad | Staging | Production |
+| --- | --- | --- |
+| Cuenta/VPC | Cuenta y VPC propias | Cuenta y VPC propias |
+| Datos | Sinteticos, sin PHI real | Datos live |
+| Stripe | Sandbox/test | Live |
+| ECS | 1 task, capacidad reducida | 2–6 tasks multi-AZ |
+| RDS | MySQL 8.4 Single-AZ | MySQL 8.4 Multi-AZ |
+| Sesiones | Un nodo cache | Multi-AZ/failover |
+| NAT | Uno | Dos |
+| Ingress | Mismos behaviors y logging seguro, acceso restringido | Dominio real, WAF block gradual |
+| Backups | 7 dias | 35 dias y cross-account |
+| Logs | 30 dias | 90/365 dias |
+| Secrets | Solo staging | Solo production |
+| Releases | Automatico tras tests | Approval y promotion del mismo digest |
+
+Staging puede apagarse fuera de horario solo si el negocio acepta que deja de
+ser permanente; no puede compartir DB, cache, buckets, KMS, Stripe keys o
+secrets con production.
+
+### Modelo de costos
+
+Rangos USD/mes, sin impuestos, consultados como drivers oficiales y no como
+cotizacion. Estado:
+
+`assumption_pending_business_confirmation`
+
+| Modelo | Rango | Supuestos | Drivers principales |
+| --- | ---: | --- | --- |
+| Staging minimo | USD 250–650 | 1 task, RDS Single-AZ pequeno, cache single, 1 NAT, trafico bajo | NAT/endpoints, ALB, RDS y cache son el piso |
+| Produccion inicial | USD 700–1,800 | 2 tasks 1vCPU/2GiB, RDS Multi-AZ, cache HA, 2 NAT, 100 GiB DB, 50 GiB uploads/mes | RDS Multi-AZ, NAT, ElastiCache, ALB y observabilidad |
+| Crecimiento medio | USD 1,800–6,000 | 4–12 tasks segun carga revisada, DB mayor/replica si se prueba, 500 GiB uploads/mes, mayor CDN/WAF/logs | DB, compute, transferencia, WAF/bots, logs y backups |
+
+Costos fijos:
+
+- ALB por ambiente;
+- NAT por hora e interface endpoints;
+- RDS y ElastiCache encendidos;
+- tareas Fargate minimas;
+- WAF ACL/reglas, Secrets Manager, KMS y logs basales.
+
+Variables:
+
+- requests/transfer CloudFront y WAF;
+- Fargate por vCPU/memoria/tiempo;
+- NAT por GiB;
+- S3, backups y logs por GiB;
+- SES por mensajes;
+- RDS storage/IO y data transfer;
+- scans/observabilidad.
+
+Optimizaciones aprobadas:
+
+- schedule de staging y right-sizing tras medicion;
+- S3 gateway endpoint y cache CloudFront de assets;
+- retencion/lifecycle diferenciados;
+- Savings Plans/Reserved RDS solo despues de 60–90 dias de estabilidad;
+- una NAT staging, dos production;
+- Bot Control solo con evidencia;
+- evitar endpoints interface sin flujo suficiente.
+
+No se recorta Multi-AZ productivo, cifrado, backup o logging seguro para cumplir
+un presupuesto no confirmado. La readiness IaC debe producir una estimacion
+en AWS Pricing Calculator con trafico, clases y precios exactos de
+mx-central-1 antes de aprobar recursos.
+
+### Revision Well-Architected resumida
+
+| Pilar | Fortaleza del diseno | Riesgo/accion previa a launch |
+| --- | --- | --- |
+| Excelencia operacional | IaC, ambientes, OIDC, alarms y runbooks | Equipo/responsables y drills pendientes |
+| Seguridad | Cuentas separadas, private subnets, KMS, secrets, WAF y logs seguros | CSRF/CORS/CSP, secret migration y legal SES |
+| Confiabilidad | Multi-AZ compute/DB/sessions, backups y rollback | Restore/load/failover tests pendientes |
+| Rendimiento | Fargate autoscaling, CloudFront y gp3 | Baseline/load profile aun asumidos |
+| Costos | Staging reducido, right-sizing y lifecycle | Region Mexico/NAT/RDS deben cotizarse |
+| Sostenibilidad | Managed services, autoscaling y lifecycle | Apagar staging y reducir logs sin perder controles |
+
+Riesgos launch-blocking futuros: migrar uploads/sesiones/secrets, comprobar
+MySQL 8.4, implementar ingress Stripe seguro, ejecutar restore/failover/load
+tests y resolver residencia de correo. Ninguno requiere cambiar la arquitectura
+seleccionada.
+
+### Diagrama de referencia
+
+~~~mermaid
+flowchart TB
+    GH[GitHub Actions OIDC] --> CDK[AWS CDK TypeScript]
+    GH --> ECRS[ECR staging]
+    GH --> ECRP[ECR production]
+
+    U[Internet] --> R53[Route 53]
+    R53 --> CF[CloudFront global]
+    CF --> WAF[AWS WAF + Shield Standard]
+    WAF --> RET[/subscriptions/stripe-return<br/>behavior no-cache/log allowlist]
+    WAF --> WH[/webhook Stripe<br/>behavior POST no-cache]
+    WAF --> ALBS[ALB staging]
+    WAF --> ALBP[ALB production]
+    RET --> ALBP
+    WH --> ALBP
+
+    subgraph STG[Cuenta staging - mx-central-1]
+      ALBS --> ECSS[ECS Fargate 1 task]
+      ECSS --> RDSS[(RDS MySQL 8.4 Single-AZ)]
+      ECSS --> RDSC[(ElastiCache session single)]
+      ECSS --> S3S[(S3 private synthetic)]
+      ECSS --> SMS[Secrets Manager]
+      EBS[EventBridge Scheduler] --> JOBS[ECS RunTask]
+      JOBS --> RDSS
+    end
+
+    subgraph PRD[Cuenta production - mx-central-1]
+      ALBP --> ECSP[ECS Fargate 2+ tasks]
+      ECSP --> RDSP[(RDS MySQL 8.4 Multi-AZ)]
+      ECSP --> REDP[(ElastiCache sessions Multi-AZ)]
+      ECSP --> S3P[(S3 private media/clinical)]
+      ECSP --> SMP[Secrets Manager + KMS]
+      EBP[EventBridge Scheduler] --> JOBP[ECS RunTask]
+      JOBP --> RDSP
+    end
+
+    ECSP --> SES[Amazon SES us-east-1]
+    ECSS --> SES
+    ECSP --> EXT[Stripe/Google APIs via NAT]
+    ECSS --> EXT
+
+    subgraph SEC[Cuenta security-log-archive]
+      CT[CloudTrail / Config]
+      GD[GuardDuty / Security Hub]
+      LOG[(CloudFront/WAF/app logs sanitizados)]
+      BAK[(AWS Backup vault cross-account)]
+    end
+
+    CF --> LOG
+    WAF --> LOG
+    ECSP --> LOG
+    ECSS --> LOG
+    RDSP --> BAK
+    CDK --> STG
+    CDK --> PRD
+~~~
+
+El diagrama es logico: no contiene cuentas, ARNs, IPs, buckets, hostnames,
+credenciales ni dominio definitivo.
+
+### Roadmap en 19 microfases
+
+1. `ARCH-SEC/MXMed-AWS-Organization-Security-Baseline-Readiness-01`:
+   owners, Organization, cuentas, root/MFA, Identity Center, SCP y budgets.
+2. `ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Readiness-01`: estructura CDK,
+   naming, stages, parameters, tests y pipeline sin deploy.
+3. `DEVOPS/MXMed-AWS-VPC-Network-Implementation-01`: VPC, subnets, endpoints,
+   NAT, SG y Flow Logs.
+4. `DEVOPS/MXMed-PHP-Apache-Container-ECR-Implementation-01`: imagen,
+   extensiones, non-root, scans y ECR.
+5. `DB-DEVOPS/MXMed-RDS-MySQL84-Migration-Readiness-01`: version/tamano,
+   compatibilidad, schema, dump, migrations y rollback.
+6. `BE-DEVOPS/MXMed-S3-Uploads-Migration-Readiness-01`: adaptador, objetos,
+   permissions y migracion.
+7. `BE-DEVOPS/MXMed-ElastiCache-Session-Implementation-01`: handler,
+   TTL, cookies, failover y logout.
+8. `DEVOPS/MXMed-ECS-Fargate-Service-Implementation-01`: task/service,
+   health, scaling y rolling rollback.
+9. `DEVOPS/MXMed-CloudFront-WAF-ALB-Ingress-Implementation-01`: DNS/TLS,
+   origin restriction, behaviors y headers.
+10. `BE-FE-DEVOPS/MXMed-StripeReturn-SecureIngress-Implementation-01`:
+    behavior, bridge temprano, scrub y logs safe.
+11. `BE-DEVOPS/MXMed-StripeWebhook-ProductionIngress-Readiness-01`: POST,
+    firma, timeouts, rate y observabilidad; sin repetir funcionalidad.
+12. `DEVOPS/MXMed-GitHub-OIDC-CICD-Implementation-01`: pipelines separados,
+    promotion y approvals.
+13. `DEVOPS-SEC/MXMed-Observability-SecurityServices-Implementation-01`:
+    metrics, alarms, CloudTrail, Config, GuardDuty y Security Hub.
+14. `DEVOPS/MXMed-Backup-Restore-Implementation-01`: policies, vault,
+    runbook y restore drill.
+15. `DEVOPS-QA/MXMed-Staging-Deployment-01`: datos sinteticos, Stripe sandbox
+    y smoke.
+16. `DB-QA/MXMed-Production-Migration-Rehearsal-01`: timing, checksums,
+    rollback y RTO/RPO medidos.
+17. `SEC-QA/MXMed-AWS-PreLaunch-Security-Review-01`: threat model,
+    CORS/CSRF/CSP, IAM, WAF y secrets.
+18. `DEVOPS-QA/MXMed-Production-Launch-01`: change window, deploy,
+    verificacion y rollback autorizado.
+19. `OPS/MXMed-AWS-PostLaunch-Optimization-01`: right-size, commitments,
+    cache, third AZ, DR y costo.
+
+Cada microfase conserva una frontera de recursos y debe producir plan,
+evidencia, rollback y no-secret audit.
+
+### Decisiones empresariales pendientes
+
+No bloquean esta arquitectura; la recomendacion predeterminada aparece entre
+parentesis:
+
+- presupuesto mensual objetivo (adoptar USD 700–1,800 production y USD
+  250–650 staging hasta cotizacion);
+- fecha de lanzamiento (no fijar hasta dos rehearsals staging);
+- dominio definitivo (usar parametro, nunca hardcode);
+- RTO/RPO aprobados (4 h / 15 min);
+- residencia exclusiva Mexico (datos primarios Mexico; resolver SES y DR);
+- volumen/concurrencia real (instrumentar y load-test con los supuestos);
+- disponibilidad objetivo (99.9%);
+- responsables AWS (dos operadores mas owner de seguridad);
+- staging permanente o temporal (permanente con schedule nocturno);
+- soporte 24/7 (alarms y escalamiento externo mientras no exista guardia).
+
+Si residencia exclusiva prohibe SES us-east-1, correo queda deshabilitado hasta
+seleccionar un proveedor/regionalidad legalmente aceptable; la aplicacion
+principal permanece en mx-central-1.
+
+### Evidencia y no repeticion
+
+Raiz de evidencia sanitizada:
+
+`/tmp/mxmed-aws-production-architecture-stripe-ingress-readiness-01/`
+
+Contiene los 36 artefactos requeridos de baseline, inventarios, matrices,
+decisiones, costos, diagrama, roadmap, auditorias y estado Git. No contiene
+account IDs, ARNs reales, IPs, hostnames privados, credenciales, queries Stripe,
+bodies HTTP ni datos medicos.
+
+Auditoria exacta:
+
+~~~json
+{
+  "aws_account_calls": 0,
+  "aws_cli_calls": 0,
+  "aws_resources_created": 0,
+  "production_http_calls": 0,
+  "staging_http_calls": 0,
+  "fixture_calls": 0,
+  "stripejs_network_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_retrieve": 0,
+  "elements_create": 0,
+  "payment_element_mount": 0,
+  "confirm_payment_calls": 0,
+  "stripe_api_calls": 0,
+  "stripe_cli_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "sql_calls": 0
+}
+~~~
+
+### Alcance, no repeticion y fuera de alcance
+
+Unico archivo versionado modificado:
+
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No se modificaron PHP, JavaScript, CSS, HTML, SQL, Docker, workflows, deploy,
+infra, AWS config, secrets, imagenes, package/composer files ni PP233–PP244.
+
+No se ejecuto PHP de aplicacion, navegador, servidor, endpoint, fixture, SQL,
+AWS CLI/cuenta, Stripe.js, payment route, checkout, PaymentIntent,
+client_secret, Elements, Payment Element, confirmacion, Stripe API/CLI,
+webhook o activacion.
+
+No se creo IaC. Las fuentes oficiales se consultaron por documentacion publica;
+eso no constituye llamada a cuenta AWS ni a un ambiente MXMed.
+
+### Siguiente microfase
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Readiness-01`
+
+Definira estructura concreta CDK, naming, environments, stacks/constructs,
+parametros, validaciones y pipeline. Todavia no creara recursos AWS.
+
+### Estado
+
+Arquitectura productiva AWS unica:
+
+`PASS - MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`
