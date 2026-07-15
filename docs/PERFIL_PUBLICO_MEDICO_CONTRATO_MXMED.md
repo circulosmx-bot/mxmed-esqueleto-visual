@@ -46145,6 +46145,164 @@ Solo despues de un PASS real del ingress quedara autorizada:
 
 ---
 
+## PP-Decisiones 244 - Descubrimiento de ingress productivo sin infraestructura identificable
+
+### Microfase y resultado
+
+Microfase:
+
+`DEVOPS/Suscripciones-ProductionIngress-Configuration-Versioning-01`
+
+Salida seleccionada:
+
+`C. PRODUCTION_INGRESS_ENVIRONMENT_NOT_IDENTIFIED`
+
+Clasificacion unica:
+
+`production_ingress_environment_not_identified`
+
+Resultado:
+
+`BLOCKED`
+
+PP242 permanece bloqueada por el query sensible y PP243 permanece bloqueada por ausencia de control productivo versionado. Esta microfase acota el problema: las fuentes locales e historicas no permiten identificar la primera capa HTTP, el origin productivo ni un proveedor/panel administrado externo.
+
+### Metodologia y limites
+
+El descubrimiento fue exclusivamente local y read-only. Se inspeccionaron archivos rastreados actuales, nombres de archivos presentes en todo el historial Git, asuntos de commits relacionados con despliegue, ramas/tags con nomenclatura operativa, nombres de variables documentadas y el tipo de transporte del remote sin conservar su URL.
+
+No se realizaron conexiones HTTP, DNS, SSH, FTP/SFTP, paneles, escaneo, lectura de llaves o valores de secrets. No se consultaron produccion, staging, entidades QA, cadenas de pago, endpoints o bases de datos.
+
+### Fuentes inspeccionadas
+
+- `README.md` y `README_extra.md`;
+- `WAMP-UTF8-SETUP.md`;
+- documentacion local de desarrollo y documentos de arquitectura AWS;
+- `.htaccess` raiz y `.htaccess` de APIs;
+- arbol completo de archivos rastreados;
+- `.github/workflows`, scripts CI/CD y manifiestos conocidos —ausentes—;
+- Dockerfile, Compose, deploy, infra, vhosts, Nginx, proxy/CDN y orquestadores —ausentes—;
+- front controllers y uso de variables HTTP de aplicacion;
+- nombres de archivos de todas las revisiones Git;
+- commits, ramas y tags relacionados con deploy/produccion/hosting;
+- remote Git, limitado a confirmar transporte HTTPS de codigo.
+
+El historial no aporta una configuracion operativa retirada. La existencia del remote de codigo no identifica el hosting, origin, CDN o responsable de access logs.
+
+### Hallazgos y descarte de pistas insuficientes
+
+`README.md` describe copia manual bajo WAMP y localhost. `WAMP-UTF8-SETUP.md` documenta charset para un entorno local y configuracion global opcional fuera del repositorio. Ninguno declara produccion.
+
+Los documentos AWS describen integracion futura de KMS, IAM y secretos y declaran que la capa tecnica aun no esta integrada. No prueban AWS como hosting actual ni identifican CloudFront, ALB, API Gateway, EC2, Lightsail u origin.
+
+Algunos controladores reconocen variables genericas como `HTTP_HOST`, `REQUEST_URI` o `HTTP_X_FORWARDED_PROTO`. Eso demuestra portabilidad de aplicacion, no la existencia o identidad de un proxy productivo.
+
+No se encontraron:
+
+- vhost Apache, `LogFormat` o `CustomLog`;
+- configuracion Nginx, PHP-FPM o FastCGI;
+- cPanel, Plesk o managed hosting identificados;
+- Cloudflare, CloudFront u otro CDN/proxy identificado;
+- balanceador, WAF u origin identificado;
+- Docker/Compose, Kubernetes/Helm o plataforma PaaS;
+- workflows, FTP/SFTP/rsync/scp/SSH de despliegue;
+- `public_html`, `DocumentRoot` o destino productivo;
+- staging identificado;
+- responsable operativo del access log.
+
+### Cadena productiva y responsabilidad
+
+La cadena requerida permanece sin resolver:
+
+`Internet -> CDN/WAF desconocido -> proxy/balanceador desconocido -> servidor web desconocido -> PHP/aplicacion`
+
+No puede determinarse que capas opcionales existen, cual recibe primero `/subscriptions/stripe-return`, cual registra query, quien administra logs/cache/Referrer-Policy o si el ajuste puede entrar a este repositorio.
+
+La unica propiedad conocida es que `.htaccess` de aplicacion no es evidencia del vhost y no puede configurar `CustomLog`. Por ello no se selecciona Apache, Nginx, container, CDN ni managed hosting y no se crean configuraciones hipoteticas.
+
+### Capacidad de versionado y decision
+
+Decision A, `VERSIONABLE_IN_REPOSITORY`, no aplica: no existe infraestructura probada ni archivo autoritativo que versionar o validar.
+
+Decision B, `MANAGED_INGRESS_EXTERNAL_CONFIGURATION`, tampoco aplica: ningun proveedor, panel o responsable externo esta identificado, por lo que un runbook especifico fingiria conocimiento inexistente.
+
+Se selecciona Decision C. Los cambios se limitan a documentacion y PP242 no puede desbloquearse.
+
+### Contrato final de logging seguro
+
+La peticion sintetica de futura QA usara solamente valores `opaque`:
+
+`GET /subscriptions/stripe-return?payment_intent=opaque&payment_intent_client_secret=opaque`
+
+Cuando se registre, el resultado permitido sera equivalente a:
+
+`GET /subscriptions/stripe-return HTTP/1.1`
+
+Nunca debe contener query, request line original, Referer, Cookie, `payment_intent`, `payment_intent_client_secret` o `redirect_status`. La ruta debe quedar excluida del log general o pasar por un formato path-only en cada capa capaz de registrar HTTP.
+
+Este contrato no se considera implementado ni verificado.
+
+### Configuracion, validacion y runbook
+
+No se creo configuracion Apache, Nginx, Cloudflare, Docker ni de otra tecnologia. No se ejecuto configtest porque no existe un target productivo versionado y seleccionar un parser implicaria inventar la tecnologia.
+
+Tampoco se crea un runbook de managed hosting: faltan proveedor, panel y responsable. Cuando esa informacion exista, la continuacion debera decidir una sola salida A o B y registrar despliegue/rollback sin credenciales, hosts, IPs o identificadores de cuenta.
+
+### QA de staging requerida
+
+Sin ejecutarla en esta microfase, la verificacion futura debe:
+
+1. enviar a staging la peticion sintetica con valores `opaque`;
+2. comprobar el status HTTP esperado por la ruta minima;
+3. revisar el log seguro de cada capa identificada;
+4. demostrar que el query no aparece;
+5. demostrar que el log general excluye la ruta;
+6. demostrar cache bypass/`no-store`;
+7. comprobar `Referrer-Policy: no-referrer`;
+8. comprobar el procedimiento de rollback;
+9. mantener cero Stripe real;
+10. mantener cero datos sensibles.
+
+No se hizo ninguna peticion a staging o produccion.
+
+### Rollback futuro
+
+El rollback no puede concretarse hasta conocer la tecnologia. Su contrato minimo sera retirar unicamente la regla exacta de `/subscriptions/stripe-return`, restaurar la configuracion anterior validada, ejecutar el validador oficial sin reiniciar automaticamente produccion y repetir la prueba de staging. No debe degradar logs generales de otras rutas.
+
+### Informacion faltante
+
+Para continuar esta misma microfase se requieren respuestas no sensibles:
+
+1. ¿Donde esta alojado actualmente Mexico Medico?
+2. ¿El alojamiento se administra con cPanel, Plesk u otro panel?
+3. ¿El dominio utiliza Cloudflare u otro CDN/proxy?
+4. ¿El servidor es compartido, VPS o administrado?
+5. ¿Hay acceso a configuracion Apache/Nginx o solo a `.htaccess`?
+6. ¿Quien puede modificar los access logs o reglas del proxy?
+7. ¿Existe un entorno staging separado?
+
+No deben compartirse contraseñas, llaves, tokens, IPs, hostnames privados ni capturas con credenciales.
+
+### No repeticion y fuera de alcance
+
+Se mantuvieron en cero fixtures, navegador, HTTP a produccion/staging, Stripe.js, route, checkout, PaymentIntent, secreto, Elements, Payment Element, confirmacion, Stripe API/CLI, webhook, activacion, SQL y logins remotos.
+
+No se implementaron ruta stripe-return, bridge, `confirmPayment`, PHP funcional, endpoints, `app.js`, CSS, servicios Stripe, webhook, activation, SQL, assets, dependencias o configuraciones de servidor.
+
+Raiz de evidencia sanitizada:
+
+`/tmp/mxmed-production-ingress-configuration-versioning-01/`
+
+### Continuacion
+
+Estado:
+
+`BLOCKED - production_ingress_environment_not_identified`
+
+Se debe esperar la informacion minima anterior y continuar esta misma microfase sin repetir la inspeccion local ya cerrada. Solo una salida A validada autorizara `BE-FE/Suscripciones-StripeReturnBridge-SecureIngress-Implementation-02`; una salida B exigira primero `QA-DEVOPS/Suscripciones-StripeReturnBridge-StagingIngress-Verification-01` despues de que el administrador aplique el runbook.
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
