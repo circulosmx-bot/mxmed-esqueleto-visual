@@ -50778,3 +50778,766 @@ Será la Microfase 4 de 24.
 Microfase 3 de 24 concluida.
 Avance global: 3/24.
 Pendientes: 21.
+
+---
+
+## PP-Decisiones 249 - Readiness de la foundation IaC AWS CDK para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Readiness-01`
+
+Contador:
+
+`Microfase 4 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`
+
+Esta decisión aterriza PP245 en un contrato único e implementable para la
+foundation de Infrastructure as Code de
+`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`. Conserva PP242–PP248 sin
+reescribirlos y no crea todavía proyecto CDK, dependencias, cuentas, recursos,
+configuración AWS, workflows ni código funcional.
+
+### Baseline y alcance autorizado
+
+El baseline se validó antes de documentar:
+
+- rama `feature/suscripciones-stepper-back-navigation-payment-strategy`;
+- commit completo `a9f66905c3b6d2a0a180e49156d269d2f2d6b25c`;
+- upstream `0/0`;
+- working tree limpio;
+- `git diff --check` PASS;
+- `infra/aws/`, `cdk.json` y `cdk.context.json` ausentes.
+
+La rama de esta decisión es:
+
+`architecture/mxmed-aws-iac-foundation-readiness`
+
+El único archivo versionado modificado es este contrato. Toda la evidencia de
+readiness vive fuera del repositorio bajo `/tmp`.
+
+### Decisiones heredadas de PP245
+
+Permanecen cerradas y no se someten a una segunda selección:
+
+- arquitectura: `MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`;
+- IaC: AWS CDK v2 con TypeScript y CloudFormation como motor sintetizado;
+- región primaria de workload: `mx-central-1`;
+- región de correo: `us-east-1` para SES;
+- cómputo: ECS Fargate;
+- ingress: Route 53, CloudFront, WAF, ALB y ECS;
+- datos: RDS MySQL 8.4;
+- almacenamiento: S3 privado;
+- sesiones: ElastiCache for Valkey;
+- ambientes de workload: staging y production en cuentas separadas;
+- cuenta `management` sin workloads y cuenta
+  `security-log-archive` para controles y archivo centralizados;
+- retorno Stripe y webhook con behaviors separados y logging sanitizado.
+
+PP245 no seleccionó una cuenta de tooling independiente. Por ello esta
+foundation no define ni instancia `MxMedToolingStage`. Si una decisión futura
+crea esa cuenta, su stage deberá contratarse en una microfase separada y no se
+inferirá a partir de `management` o `security-log-archive`.
+
+### Raíz y estructura canónicas
+
+La única raíz autorizada para la implementación futura es:
+
+`infra/aws/`
+
+La estructura contractual completa es:
+
+~~~text
+infra/aws/
+├── bin/
+├── lib/
+│   ├── config/
+│   ├── stages/
+│   ├── stacks/
+│   ├── constructs/
+│   ├── aspects/
+│   └── utils/
+├── test/
+├── cdk.json
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── jest.config.js
+├── .nvmrc
+└── README.md
+~~~
+
+No habrá repositorio IaC separado, otra carpeta `cdk/` o `terraform/`, IaC en
+`assets/`, `api/` o `modules/`, ni stacks dispersos por el repositorio. Esta
+microfase no crea ninguna ruta del árbol anterior.
+
+### Runtime, package manager y dependencias
+
+El toolchain único será:
+
+- AWS CDK v2;
+- TypeScript en modo `strict`;
+- Node.js 22 LTS;
+- npm;
+- `package-lock.json` obligatorio;
+- dependencias locales y CDK invocado mediante `npx`;
+- ninguna instalación global requerida.
+
+La implementación fijará `.nvmrc` a la línea 22 y un `engines.node` acotado a
+Node 22. Resolverá desde los registros oficiales y fijará versiones exactas,
+sin `latest`, `*`, rangos flotantes ni mínimos sin límite, para:
+
+- `aws-cdk-lib`;
+- `constructs` compatible;
+- AWS CDK CLI como `devDependency`;
+- TypeScript;
+- Jest y `ts-jest` o mecanismo expresamente aprobado;
+- ESLint;
+- Prettier y sus integraciones necesarias.
+
+Esta readiness no selecciona números concretos y no consulta registros. Una
+microfase de implementación deberá resolverlos, registrar la fecha y ejecutar
+build, tests y synth antes de aceptarlos.
+
+Dependabot o Renovate podrá proponerse después. Cada actualización irá en un
+PR separado con build, lint, tests, synth, validaciones y diff obligatorios. No
+habrá actualización automática directa a production.
+
+### Aplicación y selección de ambiente
+
+El único entrypoint será:
+
+`infra/aws/bin/mxmed.ts`
+
+Recibirá exactamente un ambiente por invocación mediante el contexto técnico
+`environment=staging|production`. No existirá un alias silencioso, un ambiente
+predeterminado de producción ni un tercer valor `all`.
+
+Sus responsabilidades serán:
+
+1. cargar la configuración tipada;
+2. validar el ambiente solicitado;
+3. resolver account y region desde identidad/variables de despliegue sin
+   imprimirlos;
+4. crear el environment stage y el email stage del mismo ambiente;
+5. aplicar tags globales;
+6. aplicar Aspects y guardrails;
+7. ejecutar validaciones de síntesis;
+8. no crear recursos directamente.
+
+`bin/mxmed.ts` sólo compondrá configuración y stages. No contendrá recursos L1,
+L2, Security Groups, buckets, roles, políticas o lógica de aplicación.
+
+### Topología de stages
+
+Se definen dos clases de stage:
+
+1. `MxMedEnvironmentStage`
+2. `MxMedEmailStage`
+
+Por cada invocación se crean instancias coherentes del mismo ambiente:
+
+| Ambiente | Environment stage | Región | Email stage | Región |
+| --- | --- | --- | --- | --- |
+| staging | `MxMedStaging` | `mx-central-1` | `MxMedStagingEmail` | `us-east-1` |
+| production | `MxMedProduction` | `mx-central-1` | `MxMedProductionEmail` | `us-east-1` |
+
+Cada stage usa la cuenta de workload de su ambiente. No comparte secrets,
+buckets, keys, base, cache o configuración entre staging y production.
+
+`MxMedEmailStage` es un despliegue independiente para evitar referencias
+CloudFormation cross-region. La aplicación recibirá su configuración de correo
+por una referencia desplegada y autorizada; no habrá exports cross-region.
+
+Las cuentas `management` y `security-log-archive` no se modelan como workload
+stages en esta foundation. Sus recursos organizacionales, controles delegados,
+vaults de destino y archivo central corresponden a sus microfases de seguridad.
+Los stacks de workload sólo consumirán referencias explícitas aprobadas, sin
+lookups ni dependencia CloudFormation entre cuentas.
+
+### Stacks de MxMedEnvironmentStage
+
+El stage de ambiente contendrá exactamente estas diez unidades:
+
+1. `MxMedNetworkStack`: VPC, subnets, routing, Security Groups base,
+   endpoints privados y flow logs sanitizados.
+2. `MxMedSecurityStack`: KMS, referencias/placeholders de Secrets Manager,
+   roles base, políticas compartidas y seguridad transversal. Nunca valores
+   secretos.
+3. `MxMedDataStack`: RDS, subnet group, parameter group, backups, monitoring y
+   referencias de credenciales.
+4. `MxMedStorageStack`: buckets S3, versioning, lifecycle, políticas y futura
+   distribución controlada de objetos privados.
+5. `MxMedSessionStack`: sesiones compartidas de PP245, cifrado, networking,
+   TTL y métricas, separadas de RDS.
+6. `MxMedComputeStack`: ECS cluster, Fargate service, task definitions,
+   referencias ECR, autoscaling, health checks y roles task/execution.
+7. `MxMedEdgeStack`: ALB, CloudFront, WAF, referencias ACM/Route 53,
+   behaviors, retorno Stripe y webhook ingress separado.
+8. `MxMedOperationsStack`: log groups, dashboards, alarms, métricas y
+   placeholders SNS/alerting.
+9. `MxMedJobsStack`: EventBridge Scheduler, ECS RunTask y SQS/DLQ sólo para un
+   workload previamente contratado.
+10. `MxMedBackupStack`: AWS Backup, vault/selección en el alcance autorizado,
+    planes y contrato de restauración.
+
+No habrá un stack monolítico. Tampoco se separará un recurso de sus dependencias
+íntimas únicamente para aumentar el número de stacks.
+
+### Stack de correo
+
+`MxMedEmailStack`, dentro de `MxMedEmailStage` y en `us-east-1`, será
+responsable de:
+
+- identidad SES;
+- configuración de envío;
+- DKIM;
+- event destination;
+- observabilidad de rebotes;
+- outputs no sensibles.
+
+No contendrá credenciales SMTP estáticas, destinatarios, correos reales ni un
+dominio definitivo no confirmado. Staging y production conservarán identidad,
+configuración y permisos separados.
+
+### Catálogo de constructs
+
+`infra/aws/lib/constructs/` queda reservado inicialmente para:
+
+- `MxMedVpc`;
+- `MxMedDatabase`;
+- `MxMedPrivateBucket`;
+- `MxMedFargateApplication`;
+- `MxMedCloudFrontIngress`;
+- `MxMedStripeReturnBehavior`;
+- `MxMedStripeWebhookBehavior`;
+- `MxMedLogGroup`;
+- `MxMedAlarmSet`.
+
+Un construct sólo se introducirá si encapsula una política, reduce repetición,
+tiene props estables y pruebas, y no oculta controles críticos. No se creará un
+construct por cada recurso trivial. Se preferirán L2; L1 requerirá documentar
+la carencia concreta del L2 y pruebas del escape hatch o recurso resultante.
+
+### Configuración tipada y esquema
+
+La única configuración de ambientes residirá en:
+
+- `infra/aws/lib/config/environment-config.ts`;
+- `infra/aws/lib/config/environment-schema.ts`.
+
+Ambientes válidos:
+
+- `staging`;
+- `production`.
+
+Contrato no sensible:
+
+| Campo | Tipo/valores | Validación principal |
+| --- | --- | --- |
+| `environmentName` | enum `staging|production` | debe coincidir con la invocación |
+| `primaryRegion` | literal `mx-central-1` | obligatorio en ambos ambientes |
+| `emailRegion` | literal `us-east-1` | sólo para email stage |
+| `accountSource` | enum `deployment-identity|ci-variable` | nunca valor de cuenta en Git |
+| `availabilityZoneCount` | entero acotado | production mínimo 2; máximo regional contratado |
+| `natStrategy` | perfil tipado | staging uno; production dos según PP245 |
+| `computeSizingProfile` | enum/perfil aprobado | no valores libres sin validación |
+| `databaseSizingProfile` | enum/perfil aprobado | incluye paridad y protección |
+| `domainAlias` | alias no definitivo/configurable | no secreto y validado |
+| `logRetentionDays` | entero permitido | acorde a ambiente/clasificación |
+| `backupRetentionDays` | entero permitido | production no menor al contrato |
+| `enableDeletionProtection` | boolean | obligatorio en production |
+| `enableTerminationProtection` | boolean | obligatorio en production |
+| `enableWaf` | boolean | obligatorio en production |
+| `enableCloudFrontLogging` | boolean | sujeto a policy segura de fields |
+| `stripeReturnLoggingPolicy` | literal seguro | nunca query/cookie/referer |
+| `tags` | mapa tipado | todos los tags obligatorios |
+
+Los account IDs se resolverán desde identidad OIDC o variables protegidas de
+CI y nunca se versionarán. El loader no imprimirá account, ARN, secret, private
+hostname o private IP. Tampoco se guardarán access keys, password DB, Stripe
+keys, webhook secret, connection strings o valores clínicos.
+
+La síntesis deberá fallar ante ambiente desconocido, región incompatible,
+valores fuera de rango, tags incompletos, production sin guardrails o logging
+Stripe inseguro.
+
+### Context, lookups y determinismo
+
+`cdk.json` contendrá sólo:
+
+- comando de la app;
+- feature flags;
+- configuración técnica no sensible.
+
+El ambiente solicitado podrá viajar como context técnico por CLI, pero account
+IDs, credenciales, dominios privados y secretos no estarán en `cdk.json`.
+
+La foundation evitará `Vpc.fromLookup`, `HostedZone.fromLookup` y cualquier
+lookup que dependa del estado vivo de una cuenta durante synth. Usará props
+explícitas y referencias importadas controladas.
+
+`cdk.context.json` no existirá inicialmente. Si otra microfase autoriza un
+lookup, deberá revisar y versionar el archivo para synth determinista, con una
+auditoría que demuestre cero secretos.
+
+### Synthesizer y bootstrap
+
+Todos los stacks usarán `DefaultStackSynthesizer` y bootstrap moderno CDK v2
+mediante el stack estándar `CDKToolkit`. No se personalizará qualifier sin una
+necesidad demostrada.
+
+Requieren bootstrap separado:
+
+- cuenta staging / `mx-central-1`;
+- cuenta staging / `us-east-1` para correo;
+- cuenta production / `mx-central-1`;
+- cuenta production / `us-east-1` para correo;
+- cuentas/regiones de tooling sólo si una decisión futura las crea.
+
+El futuro runbook usará placeholders/variables protegidas, por ejemplo:
+
+~~~text
+npx cdk bootstrap aws://${MXMED_AWS_ACCOUNT_ID}/${MXMED_AWS_REGION}
+~~~
+
+El comando no se ejecutó en esta microfase. Cada bootstrap tendrá trusted
+accounts mínimos y políticas de ejecución limitadas al despliegue contratado.
+`AdministratorAccess` no será la política permanente de production y no se
+confiarán cuentas amplias.
+
+### Dependencias entre stacks
+
+Las referencias se pasarán mediante props tipadas dentro de
+`MxMedEnvironmentStage`; no mediante búsqueda por nombre, parámetros manuales,
+exports de larga vida o imports implícitos.
+
+Mapa contractual:
+
+~~~text
+Network ──────> Data ───────────────┐
+   │             │                  │
+   ├──────────> Session ────────────┤
+   │                                v
+   └────────────────────────────> Compute ─────> Edge
+Security ─────> Data/Storage/Session/Compute/Edge
+Storage ─────────────────────────> Compute
+Compute ─────────────────────────> Jobs
+Data/Storage ────────────────────> Backup
+Network/Security/Data/Storage/Session/Compute/Edge/Jobs/Backup
+                                  └────────────> Operations
+~~~
+
+`MxMedOperationsStack` recibe referencias observables y no devuelve recursos a
+los stacks observados. `MxMedEdgeStack` sólo recibe el origin/servicio y
+controles de seguridad; queda prohibida una dependencia Edge → Data.
+
+`addDependency` sólo se usará cuando una referencia CDK no cree el orden
+automático y el motivo quede documentado. Las validaciones bloquearán ciclos.
+
+### Naming
+
+Identificador canónico:
+
+`mxmed`
+
+Abreviaturas de ambiente:
+
+- staging: `stg`;
+- production: `prd`.
+
+Patrón conceptual:
+
+`mxmed-{environment}-{component}`
+
+Reglas:
+
+- construct IDs en PascalCase y estables;
+- nombres físicos sólo cuando exista necesidad operativa o de integración;
+- CloudFormation asignará nombres cuando no se necesite estabilidad;
+- ningún nombre incluirá account ID, PII, datos clínicos o secretos;
+- no se fijarán nombres que conviertan un refactor lógico en reemplazo
+  innecesario;
+- cada servicio respetará sus límites y caracteres;
+- recursos globalmente únicos usarán en implementación un sufijo estable
+  derivado de ambiente/cuenta, sin definir hoy nombres globales reales.
+
+### Tags obligatorios
+
+La capitalización contractual es exacta:
+
+- `Project=mxmed`;
+- `Environment=staging|production`;
+- `ManagedBy=aws-cdk`;
+- `Application=mexico-medico`;
+- `Component={component}`;
+- `DataClassification=public|internal|sensitive|clinical`;
+- `Criticality=low|medium|high`;
+- `Backup=required|not-required`;
+- `Owner=platform`.
+
+Quedan pendientes de decisión empresarial:
+
+- `CostCenter`;
+- `BusinessOwner`;
+- `TechnicalOwner`.
+
+No se usarán nombres personales como sustitutos. Tags/Aspects aplicarán los
+valores globales y cada stack asignará `Component`, clasificación, criticidad y
+backup mediante overrides controlados. `MandatoryTagsAspect` hará fallar synth
+si un recurso taggable crítico no cumple el contrato.
+
+### Guardrails por ambiente
+
+Production exige:
+
+- `terminationProtection=true` en cada stack crítico;
+- deletion protection en RDS;
+- `RETAIN` o `SNAPSHOT` para datos;
+- S3 Block Public Access;
+- cifrado en tránsito y reposo según clasificación;
+- backups y logs con retención;
+- WAF y CloudFront;
+- al menos dos AZ;
+- ningún recurso público salvo ingress contratado;
+- cero credenciales plaintext;
+- cero wildcard IAM no justificado;
+- retorno Stripe sin query logging.
+
+Staging conserva la arquitectura esencial, capacidad reducida, datos
+sintéticos, Stripe sandbox, secretos separados, backups mínimos y acceso no
+irrestricto. Destrucción sólo se permitirá cuando una microfase la apruebe
+expresamente para un ambiente efímero; staging permanente no se presume
+descartable.
+
+La configuración/validación bloqueará como mínimo:
+
+- production con `RemovalPolicy.DESTROY` en datos;
+- production sin termination protection;
+- buckets públicos;
+- Security Group `0.0.0.0/0` hacia DB;
+- secretos en props;
+- wildcard IAM no justificado;
+- retorno Stripe con query, cookie o Referer logging.
+
+### Matriz de removal policies
+
+| Recurso/ambiente | Política contractual |
+| --- | --- |
+| RDS production | deletion protection y `SNAPSHOT` o `RETAIN` |
+| RDS staging | `SNAPSHOT` por defecto; `DESTROY` sólo en efímero autorizado |
+| S3 clínico/privado production | `RETAIN`, versioning, sin `autoDeleteObjects` |
+| S3 staging | `RETAIN` o política expresa por clasificación; nunca auto-delete con datos no sintéticos |
+| Logs staging | `DESTROY` permitido al eliminar el ambiente aprobado |
+| Logs production | `RETAIN` según contrato de compliance |
+| Secrets production | `RETAIN` y ventana de recuperación |
+| Backups | `RETAIN` |
+
+No se aplicará una removal policy global indiscriminada.
+
+### Contrato IaC del retorno Stripe
+
+`MxMedStripeReturnBehavior` encapsulará el contrato de PP242–PP245:
+
+- path exacto `/subscriptions/stripe-return`;
+- GET y HEAD únicamente;
+- HTTPS only;
+- cache disabled, TTL cero y no-cache en todos los niveles;
+- response headers `Cache-Control: no-store` y
+  `Referrer-Policy: no-referrer`, más los headers cerrados por PP245;
+- logging CloudFront v2 con allowlist y sin `cs-uri-query`, cookie o Referer;
+- WAF QueryString redacted y sampled requests protegidos/deshabilitados según
+  el aislamiento contratado;
+- ALB access logging no habilitado mientras reciba el query sensible;
+- application logging path-only y códigos sanitizados;
+- prioridad explícita y sin fallback al behavior general;
+- sin analytics antes del scrub;
+- mismo origen y sin open redirect.
+
+Una validación de síntesis bloqueará behavior sin cache disabled/no-store,
+prioridad explícita o logging seguro. También bloqueará el forwarding del query
+a cualquier configuración de logs; el origin sólo recibirá los parámetros
+allowlistados que necesita el bridge, sin convertirlos en observabilidad.
+
+Esta foundation no implementa el bridge PHP/JavaScript ni declara el ingress
+operativo. La prueba sintética de staging continúa siendo obligatoria.
+
+### Contrato IaC del webhook Stripe
+
+`MxMedStripeWebhookBehavior` encapsulará:
+
+- path existente `/api/subscriptions/index.php/webhooks/stripe`;
+- POST como método funcional permitido y no-cache;
+- ausencia de sesión;
+- forwarding del body crudo y `Stripe-Signature` sólo al origin;
+- WAF/rate limits prudentes compatibles con reintentos legítimos;
+- body ausente de logs y query no necesaria;
+- timeout, health y métricas;
+- origin de aplicación;
+- secret referenciado desde Secrets Manager;
+- ninguna allowlist IP como control único.
+
+No modifica el webhook/backend cerrado ni introduce cola, activation o lógica
+de pagos.
+
+### Outputs y referencias
+
+CloudFormation outputs serán excepcionales, no una API entre stacks.
+
+Permitidos cuando sean operativamente útiles y no sensibles:
+
+- domain de distribution;
+- DNS interno de ALB cuando proceda;
+- nombres de buckets no sensibles;
+- nombres de cluster/service;
+- nombres de log groups;
+- ARN de secret sólo si la política lo permite, nunca su valor;
+- referencia del database secret, nunca credencial.
+
+Prohibidos:
+
+- passwords, tokens, Stripe keys y client secrets;
+- DB endpoints públicos;
+- private IPs;
+- datos personales o clínicos.
+
+Dentro del stage se preferirán props tipadas. Entre región/cuenta se usarán
+referencias/configuración desplegada explícita y no exports CloudFormation
+cross-region.
+
+### Aspects y validaciones
+
+`infra/aws/lib/aspects/` reservará:
+
+- `MandatoryTagsAspect`;
+- `EncryptionRequiredAspect`;
+- `NoPublicDatabaseAspect`;
+- `NoPublicBucketAspect`;
+- `ProductionRetentionAspect`;
+- `StripeReturnLoggingSafetyAspect`;
+- `LeastPrivilegeReviewAspect`.
+
+`Validations.of()` reportará errores conocidos de configuración. Un error de
+seguridad crítico será visible y fallará synth; los Aspects no lo corregirán
+silenciosamente. `LeastPrivilegeReviewAspect` identificará políticas amplias
+para revisión y elevará a error los patrones prohibidos por ambiente.
+
+### Estrategia de pruebas
+
+Se definen tres niveles:
+
+A. Unit tests de configuración:
+
+- ambientes válidos e inválidos;
+- regiones y rangos;
+- guardrails;
+- naming;
+- tags;
+- ausencia de secretos.
+
+B. Template assertions:
+
+- recursos esperados y boundaries;
+- cifrado;
+- IAM/policies;
+- deletion protection y removal policies;
+- no public access;
+- retención de logs;
+- WAF;
+- retorno Stripe sin query logging;
+- webhook sin body logging;
+- ausencia de dependencias Edge → Data.
+
+C. Snapshots selectivos sólo para plantillas pequeñas o contratos estables. No
+se aprobará la foundation únicamente con snapshots completos.
+
+La compuerta futura mínima será:
+
+- `npm run build`;
+- `npm run lint`;
+- `npm run test`;
+- `npm run synth`;
+- `npm run validate`;
+- `npm run format:check`.
+
+No se ejecutó ninguno en esta readiness porque el proyecto no existe todavía.
+
+### Scripts npm contractuales
+
+`package.json` definirá exactamente:
+
+- `build`;
+- `typecheck`;
+- `lint`;
+- `format`;
+- `format:check`;
+- `test`;
+- `test:watch`;
+- `synth:staging`;
+- `synth:production`;
+- `diff:staging`;
+- `diff:production`;
+- `validate`;
+- `clean`.
+
+Los scripts CDK usarán `npx cdk` y el context técnico explícito del ambiente.
+`deploy` no será el default de CI ni se ocultará detrás de `build`, `validate`
+o `synth`.
+
+### Interfaz futura de CI/CD
+
+GitHub Actions consumirá la foundation mediante OIDC y roles temporales. Las
+fases son:
+
+1. checkout;
+2. setup Node 22;
+3. `npm ci`;
+4. lint/typecheck/format check;
+5. tests;
+6. synth;
+7. validaciones de seguridad;
+8. diff/change set;
+9. aprobación;
+10. deploy mediante rol del ambiente;
+11. health checks;
+12. rollback si falla la compuerta.
+
+Serán workflows separados para validación de PR, deploy staging, deploy
+production, bootstrap y rollback de emergencia. Production requerirá ambiente
+protegido y aprobación. No se guardarán access keys en GitHub y no se creará
+ningún workflow en esta microfase.
+
+### Drift, cambios y actualización
+
+CloudFormation es la fuente de verdad del estado desplegado. Quedan prohibidos
+cambios manuales salvo emergencia documentada y reconciliada en IaC.
+
+El contrato operativo incluye:
+
+- drift detection periódica;
+- imports/refactors controlados;
+- construct IDs estables;
+- revisión de reemplazos en diff;
+- change sets y aprobación manual en production;
+- aprobación explícita para cambios destructivos;
+- rollback/runbook por cambio crítico;
+- nunca usar `cdk deploy --require-approval never` como default de production.
+
+Actualizaciones de CDK, constructs, Node o dependencias se harán por PR
+separado, sin mezclar cambios de arquitectura y con synth/diff/tests completos.
+
+### Contenido del README futuro
+
+`infra/aws/README.md` documentará:
+
+- objetivo y arquitectura;
+- prerequisitos y Node requerido;
+- instalación mediante `npm ci`;
+- comandos y ambientes;
+- configuración y resolución de account;
+- bootstrap;
+- synth, diff, deploy y rollback;
+- pruebas y validaciones;
+- seguridad, secrets, naming y tags;
+- troubleshooting;
+- política de no cambios manuales.
+
+No incluirá account IDs, credenciales, dominios privados ni secretos.
+
+### Roadmap de implementación de la foundation
+
+La secuencia única es:
+
+1. foundation files;
+2. config schema;
+3. naming, tags y aspects;
+4. app y stages vacíos;
+5. tests de foundation;
+6. bootstrap runbook;
+7. network construct/stack;
+8. security stack;
+9. data, storage y session;
+10. compute;
+11. edge;
+12. operations, jobs y backups;
+13. email region;
+14. CI/CD;
+15. staging synth;
+16. staging deploy.
+
+Cada etapa que afecte recursos críticos será una microfase independiente. La
+siguiente microfase sólo implementará los archivos de foundation autorizados;
+no adelanta network, datos, compute, edge, bootstrap o deploy.
+
+### Evidencia y auditorías
+
+Raíz de evidencia sanitizada:
+
+`/tmp/mxmed-aws-iac-foundation-readiness-01/`
+
+Contiene baseline, extracto de PP245, decisiones de raíz/runtime/estructura,
+topología, boundaries, configuración, bootstrap, dependencias, naming, tags,
+guardrails, removal policies, contratos Stripe, outputs, Aspects, testing,
+scripts, CI/CD, drift, README, roadmap, auditorías y estado Git.
+
+No contiene account IDs reales, ARNs reales, IPs, hostnames privados,
+credenciales, valores Stripe, passwords, datos personales o clínicos.
+
+Auditoría exacta de no repetición:
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_init_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_synth_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "docker_calls": 0,
+  "fixture_calls": 0,
+  "stripe_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_retrieve": 0,
+  "confirm_payment_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "sql_calls": 0
+}
+~~~
+
+### Fuera de alcance y rollback
+
+No se ejecutaron AWS CLI, CDK CLI, npm, Docker, HTTP, navegador, PHP, SQL,
+fixtures, Stripe, payment route, checkout, PaymentIntent, client-secret,
+confirmación, webhook o activation. No se usaron credenciales AWS ni se
+solicitaron account IDs, ARNs, IPs o hostnames privados.
+
+No se crearon `infra/aws/`, package files, CDK files, Docker, workflows,
+configuración AWS, PHP, JavaScript, CSS, SQL o assets.
+
+Rollback documental: revertir atómicamente el commit de PP249. Esto elimina
+únicamente esta decisión y no modifica PP233–PP248 ni código funcional.
+
+### Siguiente microfase
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Implementation-01`
+
+Será la Microfase 5 de 24 y podrá crear únicamente la foundation CDK que su
+especificación autorice, sin adelantar recursos críticos ni despliegues.
+
+### Cierre del contador
+
+Microfase 4 de 24 concluida.
+Avance global: 4/24.
+Pendientes: 20.
