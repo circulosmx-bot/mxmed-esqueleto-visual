@@ -45618,6 +45618,370 @@ Confirmaciones ejecutadas:
 
 ---
 
+## PP-Decisiones 242 - Readiness de confirmacion Stripe Payment Element y retorno seguro
+
+### Microfase y resultado
+
+Microfase:
+
+`FE-UX/Suscripciones-StripePaymentConfirmation-Readiness-01`
+
+Resultado:
+
+`BLOCKED`
+
+Codigo bloqueante exacto:
+
+`stripe_return_url_sensitive_query_logging_unresolved`
+
+La arquitectura de confirmacion, sus estados y sus limites quedan definidos, pero no se autoriza implementarla todavia. El repositorio no contiene una ruta de retorno que pueda garantizar simultaneamente que la primera peticion HTTP no registre el query sensible agregado por Stripe, que ningun tercero se ejecute antes del saneamiento, que la respuesta use una politica de no almacenamiento y que la operacion local pueda reconstruirse de forma segura despues de una recarga completa.
+
+Esta microfase fue exclusivamente estatica y documental. No ejecuto navegador, servidor, endpoints, Stripe.js, `Elements`, Payment Element, confirmaciones, retrieval, pagos, webhook, activacion, SQL, fixtures ni cadenas historicas.
+
+### Fuentes contractuales y tecnicas
+
+Se aplican sin reabrir sus procesos:
+
+- PP233 y PP234: configuracion publica de Stripe;
+- PP235 y PP236: loader y singleton de Stripe.js;
+- PP237 a PP239: blueprint y skeleton de Pago seguro;
+- PP240 y PP241: contrato, montaje, readiness y teardown del Payment Element.
+
+Contrato contrastado el `2026-07-14` con documentacion oficial de Stripe:
+
+- [aceptar un pago con Payment Element](https://docs.stripe.com/payments/accept-a-payment?api-integration=paymentintents&payment-ui=elements), para `stripe.confirmPayment`, `elements`, `return_url`, `redirect: 'if_required'` y parametros del retorno;
+- [comprobar el estado de un PaymentIntent](https://docs.stripe.com/payments/payment-intents/verifying-status), para la lectura preliminar mediante `stripe.retrievePaymentIntent(clientSecret)` y el uso autoritativo de webhooks;
+- [ciclo de vida de PaymentIntent](https://docs.stripe.com/payments/paymentintents/lifecycle), para los estados visuales de retorno;
+- [Payment Intents API](https://docs.stripe.com/payments/payment-intents), para la regla de no registrar ni exponer el `client_secret`.
+
+### Inspeccion estatica del estado actual
+
+El panel es una SPA estatica en `index.html`; sus secciones se muestran con `showPanel(id)` y la suscripcion vive en `#p-suscripcion`. En cada carga, `assets/js/core/navigation.js` fuerza primero `p-resumen`, sin interpretar un retorno Stripe. Antes de `assets/js/app.js` ya se cargan recursos de terceros, incluidos jQuery, Bootstrap, fuentes y otros recursos CDN.
+
+El documento raiz incluye metas de cache, pero no una `Referrer-Policy` global. `.htaccess` solo configura charset: no define una ruta de retorno, formato de access log sin query, `no-store` a nivel de respuesta para ese ingreso, proteccion frente a caches intermedios ni una compuerta que retrase analytics/reporting. No se encontro analytics de producto activo, pero tampoco existe un gate temprano que garantice que ningun script o diagnostico lea la URL antes del modulo de suscripciones.
+
+PP241 conserva `[data-subp-payment-final-submit]` como `type=button`, siempre disabled y sin handler de confirmacion. La instancia Stripe singleton se obtiene por PP236; `Elements`, Payment Element, controller y contexto activo permanecen privados en la factory de PP241. La implementacion futura debe ampliar esa misma capa privada con una capacidad estrecha de confirmacion y no exponer objetos Stripe, `Elements`, Promise, secretos o identificadores en globals, DOM, storage, Debug o snapshots.
+
+El read-model existente:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/payment-activation-state`
+
+acepta `checkout_intent_uuid`, `payment_intent_uuid` y `audience`. Requiere correlacion local para resolver de forma inequivoca el checkout y PaymentIntent; no descubre la operacion desde el ID de proveedor. El read-model:
+
+`GET /api/subscriptions/index.php/entities/{entity_type}/{entity_id}/current`
+
+confirma el estado actual de la suscripcion, pero no sustituye la inspeccion preliminar del PaymentIntent retornado. El estado preparado en `sessionStorage` no es una correlacion de retorno autorizada: depende del contexto vigente, puede faltar tras reload y contiene datos de una cadena local que no deben inferirse ni copiarse a la URL.
+
+### Contrato unico de confirmacion
+
+La unica invocacion futura permitida es:
+
+```js
+stripe.confirmPayment({
+  elements,
+  confirmParams: {
+    return_url
+  },
+  redirect: 'if_required'
+})
+```
+
+Reglas cerradas:
+
+- reutilizar el singleton Stripe de PP236 y el unico `Elements` activo de PP241;
+- no volver a recuperar `client_secret` para confirmar;
+- no pasar `clientSecret` por separado;
+- no proporcionar `payment_method`, campos de tarjeta, importe, moneda, provider PaymentIntent ID o lista de metodos;
+- no usar `confirmCardPayment` ni endpoint backend de confirmacion;
+- no confirmar desde listeners del Payment Element;
+- no activar desde el frontend.
+
+`Elements` ya esta ligado al secreto efimero y el Payment Element conserva los datos dentro de su superficie segura. `redirect: 'if_required'` evita abandonar la pagina para metodos que pueden resolver sin redirect, manteniendo `return_url` para los que si lo necesitan.
+
+### Orquestador, formulario y doble submit
+
+Debe existir una sola funcion confirmadora equivalente a:
+
+`confirmSubscriptionStripePaymentOnce({ operationContext })`
+
+Sera la unica funcion que invoque `stripe.confirmPayment()`. Normalizara el contexto, obtendra internamente el controller activo, reevaluara readiness y elegibilidad, construira la URL, creara una `confirmPromise` por `operationContextKey`, cambiara el estado a confirming, deshabilitara el CTA antes de iniciar la Promise, clasificara el resultado inmediato y administrara la liberacion tras errores recuperables.
+
+La superficie de pago debe ser un `form` con nombre accesible y un unico listener `submit`, o convertir el contenedor actual en ese form. El handler usara `preventDefault`; click y Enter entraran por el mismo camino. Dos llamadas concurrentes con el mismo contexto compartiran la misma Promise y la segunda no llamara Stripe. No habra confirmacion por render, mount, retorno, polling, apertura de Confirmacion ni retry automatico.
+
+Texto normal del CTA:
+
+`Pagar de forma segura`
+
+Texto durante el envio:
+
+`Procesando pago...`
+
+El CTA mantendra altura estable, spinner con texto accesible y disabled nativo. No incluira precio; el resumen economico seguira usando el preview backend vigente.
+
+### Compuerta de readiness del CTA
+
+El CTA solo podra habilitarse cuando todas estas condiciones sean verdaderas en la misma evaluacion:
+
+- `mount_state = mount_ready`;
+- `payment_input_state = payment_input_complete`;
+- `paymentConfirmationReadiness = true` de PP241;
+- `operationContextKey` vigente, host unico conectado y controller activo;
+- checkout vigente y elegible segun el estado frontend disponible;
+- PaymentIntent local `created / requires_payment_method`;
+- conteo local de `payment_event = 0`;
+- ausencia de `confirmPromise` activa y error bloqueante;
+- Plan QA Real;
+- sesion, entidad, plan, modalidad, importe y moneda compatibles con el contexto montado.
+
+Permanecera disabled si el formulario esta incompleto, el mount carga/falla/fue destruido, la operacion expiro, el contexto es stale, hay confirmacion o redirect en curso, el pago esta processing, el retorno no se reconcilio, la activacion esta pendiente o Plan QA es Simulado.
+
+Un nuevo intento se permite solo tras un error inmediato recuperable, cuando el mismo PaymentIntent siga en `requires_payment_method`, el mismo checkout siga vigente, el Element reconstruido vuelva a estar complete, la Promise anterior haya terminado y el contexto siga vigente. No se crea otro PaymentIntent automaticamente.
+
+### Estados de confirmacion
+
+| Estado | Entrada y salida | Mensaje / stepper / aria | CTA y retry | Teardown y llamadas permitidas |
+| --- | --- | --- | --- | --- |
+| `confirmation_idle` | Sin submit; sale a validating cuando toda la compuerta pasa. | Instruccion normal; paso 3; live region inactiva. | CTA segun readiness; sin retry especial. | Teardown PP241 permitido; sin llamada. |
+| `confirmation_validating` | Submit aceptado; sale a submitting o fallo/stale/expired. | Validacion silenciosa o “Estamos procesando tu pago de forma segura.”; paso 3; polite. | Disabled; sin retry. | Teardown bloqueado durante la evaluacion atomica; sin backend. |
+| `confirmation_submitting` | Promise creada antes de llamar Stripe; sale a redirecting, observed succeeded, processing o fallo. | “Estamos procesando tu pago de forma segura.”; paso 3; `aria-busy=true`, polite. | Disabled y spinner; sin retry. | No destruir Elements hasta resolver/redirigir; unica llamada `confirmPayment`. |
+| `confirmation_redirecting` | Stripe requiere redirect; termina al abandonar la pagina. | “Te estamos llevando al sitio necesario para completar el pago.”; paso 4; polite. | Disabled permanente en esa pagina; sin retry. | No teardown voluntario; sin llamada backend. |
+| `confirmation_return_processing` | Bridge detecta marcador, allowlist y sanea; sale segun status preliminar o error. | “Estamos revisando el resultado de tu pago.”; paso 4; polite. | Disabled; sin retry de confirmacion. | Teardown/reconstruccion controlados; una lectura preliminar Stripe y luego backend. |
+| `confirmation_payment_processing` | Estado preliminar `processing` o accion aun pendiente; sale a waiting webhook, backend confirmed o timeout. | “Tu pago está en proceso.”; paso 4; polite sin repetir en cada poll. | Disabled; no retry. | Teardown permitido al salir; solo polling backend limitado. |
+| `confirmation_payment_observed_succeeded` | Stripe devuelve `succeeded`; sale a waiting webhook/backend confirmed. | “Pago recibido. Estamos confirmando la activación de tu plan.”; paso 4; polite. | Disabled; no retry. | Teardown permitido; iniciar reconciliacion backend. |
+| `confirmation_waiting_webhook` | Stripe observado pero read-model aun no confirma evento/activacion; sale a backend confirmed o timeout. | Estado de pago observado y activacion pendiente; paso 4; polite solo ante cambio. | Disabled; no retry. | Teardown permitido; polling backend limitado. |
+| `confirmation_backend_confirmed` | Backend confirma evento y, separadamente, activacion; estado estable. | “Tu plan ya está activo.” solo si current/read-model confirma activacion; paso 4; polite y foco al titulo. | CTA de pago oculto; sin retry. | Cancelar polling y destruir Element; lecturas finales solamente. |
+| `confirmation_failed_recoverable` | Error inmediato sanitizado y PI aun elegible; sale a idle tras reconstruccion completa. | “No fue posible completar el pago. Revisa la información e inténtalo nuevamente.”; paso 3; `role=alert`. | Restaurable solo tras nueva readiness; retry manual. | Teardown anterior requerido; sin llamada hasta nuevo submit. |
+| `confirmation_failed_terminal` | Cancelado, requires_capture, requires_confirmation, contrato o sistema terminal. | Copy de sistema; paso 4 salvo error inmediato antes de abandonar paso 3; alert. | Disabled; sin retry automatico. | Teardown permitido; backend solo para estado ya observado. |
+| `confirmation_context_stale` | Cambia contexto antes de confirmar o una continuacion vuelve obsoleta; sale al Resumen. | “La información del pago cambió. Vuelve al resumen para continuar.”; paso 3; alert. | Disabled; sin retry sobre el contexto. | Teardown inmediato; sin llamada. |
+| `confirmation_operation_expired` | Checkout/PI expiro o dejo de ser elegible; sale al Resumen. | “Esta operación ya no está disponible. Vuelve al resumen para preparar una nueva.”; paso 3; alert. | Disabled; sin retry sobre el PI. | Teardown inmediato; solo futura preparacion explicita fuera de este orquestador. |
+
+### Politica de redirect y decision de return URL
+
+La unica ruta canonica reservada como prerequisito es:
+
+`/subscriptions/stripe-return`
+
+La futura URL absoluta se construira exactamente como:
+
+```js
+new URL('/subscriptions/stripe-return', window.location.origin).href
+```
+
+Produccion exigira HTTPS y mismo origen. La URL generada por MXMed no llevara query propio, ni siquiera `stripe_return=1`; la propia ruta fija sera el marcador no sensible del modulo. No incluira secreto, publishable key, ID de proveedor, UUID local, `operationContextKey`, entidad, plan, modalidad, importe o moneda. No aceptara destino configurable ni open redirect.
+
+Esta URL no esta autorizada para `confirmPayment` en el estado actual: el path no existe y no tiene politica de ingreso segura. Tampoco se autoriza usar `index.html?stripe_return=1`; aunque `history.replaceState` limpiara despues la barra, el query ya habria llegado a la primera solicitud HTTP y los scripts de terceros del documento podrian iniciarse antes de `assets/js/app.js`.
+
+### Parametros Stripe y return bridge
+
+Stripe puede agregar al retorno:
+
+- `payment_intent`;
+- `payment_intent_client_secret`;
+- `redirect_status`;
+- cualquier parametro que MXMed hubiera persistido en `return_url` —ninguno bajo este contrato—.
+
+El handler unico futuro sera equivalente a:
+
+`handleSubscriptionStripePaymentReturnOnce()`
+
+Orden obligatorio en el documento minimo de ingreso, antes de analytics, error reporting, diagnostico y recursos de terceros:
+
+1. reconocer exclusivamente el path canonico;
+2. analizar el query con una allowlist exacta;
+3. exigir `payment_intent_client_secret` y validar forma/longitud sin registrar valor;
+4. conservar el secreto solo en una variable lexical local;
+5. no confiar en `payment_intent` como correlacion local y no renderizarlo;
+6. ejecutar `history.replaceState` hacia `/subscriptions/stripe-return` sin query ni fragment;
+7. comprobar que `location.search === ''` y que no queda fragment sensible;
+8. si falla el saneamiento, detener runtime, analytics y navegacion con `stripe_return_url_scrub_failed`;
+9. inicializar el singleton Stripe si hace falta;
+10. hacer la unica inspeccion preliminar autorizada;
+11. conservar solo un status normalizado y liberar referencias locales en `finally`;
+12. reconstruir el panel de suscripciones, abrir paso 4 y reconciliar con backend.
+
+Los parametros nunca se copiaran a analytics, console, Debug, DOM, storage, errores, reportes, evidencias, encabezados propios, snapshots o referrer. Parametros desconocidos causan `stripe_return_parameters_invalid` y se eliminan igualmente; no se transportan al panel.
+
+### Access logs, cache, analytics y bloqueo
+
+`history.replaceState` no puede borrar el query de la solicitud HTTP inicial. Antes de produccion, el ingreso `/subscriptions/stripe-return` debe demostrar en configuracion desplegable:
+
+- access log sin query string para esa ubicacion y para todos sus proxies/CDN intermedios;
+- `Cache-Control: no-store, private, max-age=0`, `Pragma: no-cache` y ausencia de cache intermedio;
+- `Referrer-Policy: no-referrer` como header de respuesta, antes de cualquier subrecurso;
+- documento first-party minimo cuyo bridge inline/temprano sea el primer codigo ejecutable;
+- cero analytics, trackers, error reporting o captura de URL antes de confirmar el scrub;
+- error reporting posterior limitado a fase y codigo sanitizado, nunca `location.href` completo;
+- politica HTTPS, same-origin y sin open redirect.
+
+El repositorio actual no ofrece ni prueba esas garantias; por ello el cierre obligatorio es `BLOCKED` con `stripe_return_url_sensitive_query_logging_unresolved`. Un meta tag de cache en `index.html` no resuelve access logs, cabeceras HTTP ni proxies, y el saneamiento tardio en `assets/js/app.js` no resuelve la solicitud inicial.
+
+### Mecanismo preliminar unico
+
+Se elige la opcion A:
+
+`stripe.retrievePaymentIntent(clientSecret)`
+
+Se ejecutara exactamente una vez dentro del closure temprano de retorno, despues del scrub verificado. El secreto no saldra de esa funcion, no se persistira y se liberara en `finally`; la respuesta Stripe no se persistira y solo se conservara el `status` normalizado. No habra polling contra Stripe.
+
+Se descarta como mecanismo preliminar el read-model backend actual porque requiere UUID locales de checkout/PI que el retorno no puede incluir y no resuelve por provider ID. El prerequisito de ingreso seguro debera preservar o reconstruir una correlacion session-scoped, opaca y no sensible para que los read-models existentes puedan consultarse, sin exponer esos UUID en la URL ni buscar cadenas historicas.
+
+### Mapa de resultado inmediato y retorno
+
+| Resultado/estado | Tratamiento unico |
+| --- | --- |
+| `confirmPayment` resuelve `succeeded` | `confirmation_payment_observed_succeeded`, paso 4, “Pago recibido”; iniciar reconciliacion, sin activar. |
+| `confirmPayment` resuelve `processing` | `confirmation_payment_processing`, paso 4, sin segundo submit ni nuevo PI. |
+| `confirmPayment` resuelve `requires_capture` | Estado no soportado y terminal; no afirmar pago ni habilitar CTA. |
+| Error inmediato recuperable | Clasificar sin objeto raw, permanecer en paso 3 y reconstruir Element solo si el mismo PI sigue elegible. |
+| Error inmediato terminal/contractual | Bloquear CTA, teardown y volver al Resumen o soporte segun copy. |
+| Redirect iniciado | `confirmation_redirecting`, paso 4 antes de abandonar; no ejecutar reconciliacion en la pagina saliente. |
+| Retorno `succeeded` | Pago observado, no suscripcion activa; esperar evento/webhook y activacion backend. |
+| Retorno `processing` | Mostrar proceso, bloquear CTA y reconciliar backend con limite. |
+| Retorno `requires_payment_method` | Pago no completado; teardown anterior y vuelta a paso 3; mismo PI solo si el backend/contexto aun lo consideran vigente. |
+| Retorno `requires_action` | Estado pendiente; no reconfirmar automaticamente; volver al formulario solo tras una decision explicita de elegibilidad. |
+| Retorno `canceled` | Terminal para la operacion; sin retry automatico; volver al Resumen. |
+| Retorno `requires_confirmation` | Inesperado con `confirmation_method=automatic`; error contractual y cero reconfirmacion. |
+| Retorno `requires_capture` | Fuera del flujo actual; bloquear y diagnosticar con codigo sanitizado. |
+
+`redirect_status` es una senal auxiliar y nunca sustituye el status devuelto por la inspeccion preliminar ni la confirmacion backend.
+
+### Webhook autoritativo y reconciliacion backend
+
+El frontend nunca crea `payment_event`, marca checkout pagado, llama automaticamente `activate-after-payment`, activa suscripciones ni asume que cerrar la pestaña invalida el pago. `succeeded` observado solo permite mostrar “Pago recibido”. “Tu plan ya está activo” se muestra exclusivamente cuando el backend lo confirme.
+
+Con una correlacion local segura disponible despues del prerequisito, el polling unico sera:
+
+1. consulta inmediata a `GET .../payment-activation-state` con el checkout/PI local correlacionado en memoria;
+2. hasta nueve consultas adicionales, separadas por 3 segundos;
+3. maximo total: 10 intentos y 30 segundos desde el inicio;
+4. una sola consulta a `GET .../current` cuando activation-state indique evento procesado/activacion posible, y una consulta final al concluir;
+5. un solo loop por `operationContextKey`, compartido si dos renders solicitan estado;
+6. `AbortController` y timer cancelados al salir del modulo, cambiar entidad, llegar a estado final o destruir la vista;
+7. cero polling Stripe y cero confirmacion durante la reconciliacion.
+
+Al agotar el limite:
+
+`Tu pago fue recibido y continúa en proceso. Puedes volver más tarde para revisar el estado de tu plan.`
+
+No se ofrece confirmar de nuevo. El webhook y los servicios backend cerrados siguen siendo la fuente autoritativa para evento, estado de pago y activacion.
+
+### Stepper y pantalla Confirmacion
+
+Paso 3, `Pago seguro`, permanece activo durante validacion, submitting y error inmediato recuperable. Paso 4, `Confirmacion`, se activa cuando hay `succeeded`, `processing`, inicio de redirect, retorno Stripe, evento backend observado o activacion confirmada.
+
+Confirmacion mostrara un icono neutral, titulo dependiente del estado, resumen backend vigente de plan/modalidad/importe, estado de pago, estado separado de activacion, siguiente accion y boton `Volver al panel`. No mostrara logos locales, datos de pago, provider IDs, UUID, secret, status tecnico ni cuerpos Stripe.
+
+Mapa de copy:
+
+- confirmando: `Estamos procesando tu pago de forma segura.`;
+- redirect: `Te estamos llevando al sitio necesario para completar el pago.`;
+- pago observado: `Pago recibido.` y `Estamos confirmando la activación de tu plan.`;
+- processing: `Tu pago está en proceso.` y `Algunos métodos necesitan más tiempo para confirmar el resultado.`;
+- activacion confirmada por backend: `Tu plan ya está activo.`;
+- recuperable: `No fue posible completar el pago. Revisa la información e inténtalo nuevamente.`;
+- sistema: `Por el momento no fue posible procesar el pago. Inténtalo nuevamente más tarde.`.
+
+No se usara “Pagar y activar”, “Activo” prematuro, codigo Stripe, status tecnico, UUID o secreto.
+
+### Errores sanitizados
+
+Allowlist de codigos:
+
+- `stripe_confirmation_not_ready`;
+- `stripe_confirmation_already_in_progress`;
+- `stripe_confirmation_context_stale`;
+- `stripe_confirmation_operation_expired`;
+- `stripe_confirmation_return_url_invalid`;
+- `stripe_confirmation_immediate_error`;
+- `stripe_confirmation_validation_error`;
+- `stripe_confirmation_card_error`;
+- `stripe_confirmation_network_error`;
+- `stripe_confirmation_api_error`;
+- `stripe_confirmation_unknown_error`;
+- `stripe_return_parameters_missing`;
+- `stripe_return_parameters_invalid`;
+- `stripe_return_status_unexpected`;
+- `stripe_return_url_scrub_failed`;
+- `stripe_return_logging_not_safe`;
+- `stripe_backend_reconciliation_timeout`;
+- `stripe_return_url_sensitive_query_logging_unresolved`.
+
+Cuando Stripe entregue `error.type`, la capa lo mapeara a esa allowlist y descartara el objeto. Debug OFF muestra solo copy comercial; Debug ON puede mostrar fase, tipo normalizado y codigo sanitizado, nunca mensaje/stack/objeto/raw URL.
+
+### Lifecycle
+
+Antes del submit, cambio de plan, modalidad, entidad, vuelta al Resumen o salida del modulo ejecutan teardown PP241 y cancelan la posibilidad de confirmar. Durante `confirmation_submitting` se bloquean cambios destructivos; no se destruye Elements hasta que la Promise resuelva o el navegador redirija. Solo se reutilizara un patron de confirmacion de salida si ya existe en la arquitectura; no se agregaran mensajes personalizados de `beforeunload`.
+
+Tras redirect, la pagina original puede desaparecer. El ingreso seguro reconstruira estado sin depender de la Promise anterior. `pagehide`, salida del modulo, estado final y cambio de contexto cancelan timers/AbortController y liberan referencias. Ningun evento tardio puede mutar un contexto nuevo.
+
+### Seguridad y snapshot futuro
+
+Produccion requiere HTTPS. Se prohíben secreto en URL generada por MXMed, logs o storage; provider ID en DOM; datos de tarjeta fuera del iframe; bodies Stripe, HAR o capturas con datos; analytics antes del scrub; confirmacion live sobre HTTP; return URL cross-origin; open redirect y activacion cliente.
+
+La funcion futura:
+
+`getSubscriptionStripePaymentConfirmationSnapshot()`
+
+usara exclusivamente:
+
+- `confirmation_state`;
+- `confirmation_promise_created`;
+- `submit_listener_registered`;
+- `double_submit_blocked`;
+- `operation_context_current`;
+- `return_flow_detected`;
+- `return_url_scrubbed`;
+- `preliminary_status_checked`;
+- `preliminary_payment_status`;
+- `backend_reconciliation_started`;
+- `backend_reconciliation_complete`;
+- `backend_payment_confirmed`;
+- `subscription_activation_confirmed`;
+- `retry_available`;
+- `last_error_code`;
+- `redirect_expected`;
+- `redirect_started`;
+- `cta_disabled`;
+- `stepper_step`.
+
+No incluira secreto, provider PaymentIntent ID, UUID local, URL completa, query, objetos Stripe/PaymentIntent/error, `Elements`, Promise, nodo DOM ni datos de pago.
+
+### Accesibilidad
+
+El form tendra nombre accesible, submit disabled nativo y `aria-busy=true` durante submitting. El estado usara `role=status` y `aria-live=polite`; errores bloqueantes usaran `role=alert`. Tras error inmediato el foco ira al mensaje; tras resultado sin redirect, al encabezado de Confirmacion; al volver de redirect, al encabezado principal.
+
+El spinner tendra texto accesible. Polling anunciara solo transiciones, no cada intento. Mientras 3DS este bajo control de Stripe, MXMed no movera el foco.
+
+### QA futura no ejecutada
+
+Queda documentada una matriz de 60 casos: readiness 1-9; contrato `confirmPayment` 10-20; retorno y saneamiento 21-35; reconciliacion 36-43; seguridad 44-52; accesibilidad/UX 53-60. Incluye doble click, Enter+click, Promise compartida, llamada exacta, redirect, errores sanitizados, todos los status, acceso sin query registrado, analytics posterior al scrub, limites de polling, cero polling Stripe, snapshot allowlistado, HTTPS/same-origin, foco, stepper y activacion mostrada solo por backend.
+
+Esta matriz no se ejecuto porque la microfase prohibe servidor, navegador, endpoints, Stripe y pagos. Su detalle estructurado queda en `future-qa-matrix.json` de la evidencia local.
+
+### Fuera de alcance y no repeticion
+
+No se implementaron ni modificaron frontend, CSS, HTML, PHP, rutas, servidor, logs, CSP, endpoints, PaymentIntent, webhook, activacion, SQL, dependencias o assets. No se inspeccionaron entidades QA ni cadenas historicas y no se repitio ningun proceso cerrado por PP233 a PP241.
+
+Raiz de evidencia sanitizada:
+
+`/tmp/mxmed-stripe-payment-confirmation-readiness-01/`
+
+### Prerequisito y siguientes microfases
+
+Microfase previa obligatoria:
+
+`BE-FE/Suscripciones-StripeReturnBridge-SecureIngress-Implementation-01`
+
+Debe implementar y demostrar el ingreso `/subscriptions/stripe-return`, la politica de access logs/proxies, headers de no-store y no-referrer, orden del bridge antes de terceros y una correlacion session-scoped segura para los read-models existentes. No debe ejecutar pagos ni ampliar por si sola el contrato de confirmacion.
+
+Solo despues de que ese prerequisito cierre PASS podra ejecutarse:
+
+`FE-UX/Suscripciones-StripePaymentConfirmation-Implementation-01`
+
+La implementacion posterior debera usar mocks y no ejecutara pagos reales salvo autorizacion expresa de otra microfase.
+
+---
+
 ## PP-Decisiones 233 - Readiness de contrato publishable key Stripe
 
 ### Objetivo del cierre
