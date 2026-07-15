@@ -1,0 +1,42 @@
+{
+  "name": "@mxmed/aws-infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline AWS CDK foundation for Mexico Medico.",
+  "engines": {
+    "node": ">=22.22.0 <23"
+  },
+  "packageManager": "npm@10.9.4",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "lint": "eslint \"bin/**/*.ts\" \"lib/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "synth:staging": "npx --no-install cdk synth --context environment=staging --output cdk.out/staging",
+    "synth:production": "npx --no-install cdk synth --context environment=production --output cdk.out/production",
+    "diff:staging": "npx --no-install cdk diff --context environment=staging",
+    "diff:production": "npx --no-install cdk diff --context environment=production",
+    "validate": "npm run typecheck && npm run lint && npm run format:check && npm run test",
+    "clean": "node -e \"const fs=require('node:fs'); for (const path of ['dist','cdk.out','coverage']) fs.rmSync(path,{recursive:true,force:true});\""
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.260.0",
+    "constructs": "10.6.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/jest": "30.0.0",
+    "@types/node": "22.20.1",
+    "aws-cdk": "2.1131.0",
+    "eslint": "10.7.0",
+    "jest": "30.4.2",
+    "prettier": "3.9.5",
+    "ts-jest": "29.4.11",
+    "ts-node": "10.9.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.64.0"
+  }
+}

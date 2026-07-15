@@ -1,0 +1,10 @@
+node_modules/
+cdk.out/
+dist/
+coverage/
+*.log
+*.tmp
+*.swp
+.env
+.env.*
+cdk.context.json

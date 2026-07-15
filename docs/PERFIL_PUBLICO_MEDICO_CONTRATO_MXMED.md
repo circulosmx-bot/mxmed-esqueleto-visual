@@ -51541,3 +51541,423 @@ especificación autorice, sin adelantar recursos críticos ni despliegues.
 Microfase 4 de 24 concluida.
 Avance global: 4/24.
 Pendientes: 20.
+
+---
+
+## PP-Decisiones 250 - Implementación offline de la foundation AWS CDK para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-IaC-Foundation-Implementation-01`
+
+Contador:
+
+`Microfase 5 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_CDK_FOUNDATION_IMPLEMENTATION_V1`
+
+Esta decisión implementa localmente el contrato
+`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1` de PP249 para la arquitectura
+`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1` de PP245. La foundation
+queda versionada y sintetizable offline, pero sus stacks continúan vacíos: no
+crea cuentas, redes, buckets, bases, compute, ingress, correo ni otro recurso
+AWS.
+
+### Baseline y toolchain
+
+El baseline se validó antes de crear la rama:
+
+- rama `architecture/mxmed-aws-iac-foundation-readiness`;
+- commit completo `5eab97b7187b7dfe754a1c02e55aab0b54967592`;
+- upstream `0/0`;
+- working tree limpio;
+- `git diff --check` PASS.
+
+La implementación se realizó en:
+
+`feature/mxmed-aws-iac-foundation-implementation`
+
+El preflight se ejecutó en una zsh limpia y confirmó:
+
+- nvm `0.40.5`;
+- Node `v22.22.0`;
+- npm `10.9.4`;
+- npx `10.9.4`;
+- `process.arch=arm64` nativo.
+
+No se instaló CDK, TypeScript ni ts-node globalmente.
+
+### Raíz y estructura implementadas
+
+La única raíz IaC creada es:
+
+`infra/aws/`
+
+Contiene exactamente la foundation contratada:
+
+~~~text
+infra/aws/
+├── bin/mxmed.ts
+├── lib/
+│   ├── config/
+│   │   ├── environment-config.ts
+│   │   ├── environment-schema.ts
+│   │   └── environments.ts
+│   ├── stages/
+│   │   ├── mxmed-environment-stage.ts
+│   │   └── mxmed-email-stage.ts
+│   ├── stacks/
+│   │   ├── base-mxmed-stack.ts
+│   │   ├── mxmed-network-stack.ts
+│   │   ├── mxmed-security-stack.ts
+│   │   ├── mxmed-data-stack.ts
+│   │   ├── mxmed-storage-stack.ts
+│   │   ├── mxmed-session-stack.ts
+│   │   ├── mxmed-compute-stack.ts
+│   │   ├── mxmed-edge-stack.ts
+│   │   ├── mxmed-operations-stack.ts
+│   │   ├── mxmed-jobs-stack.ts
+│   │   ├── mxmed-backup-stack.ts
+│   │   └── mxmed-email-stack.ts
+│   ├── constructs/index.ts
+│   ├── aspects/
+│   │   ├── mandatory-tags-aspect.ts
+│   │   ├── no-public-bucket-aspect.ts
+│   │   ├── no-public-database-aspect.ts
+│   │   ├── production-retention-aspect.ts
+│   │   └── stripe-return-logging-safety-aspect.ts
+│   └── utils/
+│       ├── naming.ts
+│       └── validation.ts
+├── test/
+│   ├── environment-config.test.ts
+│   ├── naming.test.ts
+│   ├── stages.test.ts
+│   ├── aspects.test.ts
+│   └── offline-synth.test.ts
+├── .gitignore
+├── .nvmrc
+├── .npmrc
+├── cdk.json
+├── eslint.config.js
+├── jest.config.js
+├── package.json
+├── package-lock.json
+├── prettier.config.js
+├── README.md
+└── tsconfig.json
+~~~
+
+No se ejecutó `cdk init` y no existen hello stacks, ejemplos, Terraform,
+CloudFormation paralelo, Dockerfile, workflows, `cdk.context.json`, archivos de
+ambiente o credenciales.
+
+### Dependencias y reproducibilidad
+
+Dependencias productivas exactas:
+
+- `aws-cdk-lib@2.260.0`;
+- `constructs@10.6.0`.
+
+DevDependencies exactas:
+
+- `aws-cdk@2.1131.0`;
+- `typescript@6.0.3`;
+- `ts-node@10.9.2`;
+- `@types/node@22.20.1`;
+- `jest@30.4.2`;
+- `ts-jest@29.4.11`;
+- `@types/jest@30.0.0`;
+- `eslint@10.7.0`;
+- `@eslint/js@10.0.1`;
+- `typescript-eslint@8.64.0`;
+- `prettier@3.9.5`.
+
+TypeScript 7.0.2 no se usó porque los peers vigentes de ts-jest y
+typescript-eslint requieren una versión menor. TypeScript 6.0.3 es la versión
+estable más alta compatible resuelta durante esta implementación.
+
+Todos los valores top-level son exactos: `package.json` no contiene `^`, `~`,
+`latest` o `*`. `package-lock.json` usa lockfile v3 y `npm ci` reconstruyó 405
+paquetes de forma reproducible. No se usaron `--force`, `--legacy-peer-deps` o
+un registry privado.
+
+`npm audit --omit=dev` y `npm audit` reportaron cero vulnerabilidades. npm
+mostró avisos de deprecación para `inflight` y versiones transitivas de `glob`
+dentro del toolchain de desarrollo; no existe advisory high/critical y no se
+ejecutó `npm audit fix --force`.
+
+### Configuración local del proyecto
+
+`.nvmrc` fija `22.22.0`. `.npmrc` exige engine, dependencias exactas y lockfile,
+sin token o cambio de registry. `package.json` declara:
+
+- `private=true`;
+- `engines.node=>=22.22.0 <23`;
+- `packageManager=npm@10.9.4`;
+- CDK y ts-node locales mediante `npx --no-install`.
+
+TypeScript usa ES2022, CommonJS, `moduleResolution=Node`, `strict`,
+`noImplicitAny`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+`forceConsistentCasingInFileNames`, `esModuleInterop`, `skipLibCheck`,
+`sourceMap=false` y `declaration=false`.
+
+TypeScript 6 requiere declarar `ignoreDeprecations=6.0` para conservar el modo
+`moduleResolution=Node` exigido. CDK 2.260.0 modela `bootstrapQualifier` de
+`DefaultStackSynthesizer` de forma incompatible con
+`exactOptionalPropertyTypes`; esa frontera se aisló con un único cast
+`unknown`, documentado, sin `any` y sin relajar strict.
+
+`cdk.json` configura el app con:
+
+`npx --no-install ts-node --prefer-ts-exts bin/mxmed.ts`
+
+El output es `cdk.out`, analytics y version reporting están deshabilitados, y
+no se fijaron feature flags innecesarios para stacks vacíos. El reporte del CLI
+enumera flags disponibles no configurados de forma informativa; con las
+versiones exactas fijadas, dos síntesis consecutivas produjeron templates
+idénticos.
+
+### Configuración tipada y validación
+
+Se implementaron tipos explícitos para ambiente, código, account source, NAT,
+perfiles compute/DB, política Stripe return, tags y configuración completa.
+Las configuraciones versionadas son:
+
+| Campo | Staging | Production |
+| --- | --- | --- |
+| Código | `stg` | `prd` |
+| Región primaria | `mx-central-1` | `mx-central-1` |
+| Región email | `us-east-1` | `us-east-1` |
+| AZ | 2 | 2 |
+| NAT | `single-az` | `dual-az` |
+| Compute | `reduced` | `production-ha` |
+| DB | `single-az-reduced` | `multi-az-production` |
+| Logs | 30 días | 90 días |
+| Backups | 7 días | 35 días |
+| Termination protection | no | sí |
+| Deletion protection | no | sí |
+| WAF/logging seguro | sí | sí |
+| Stripe return logging | `path-only-no-query` | `path-only-no-query` |
+
+`domainAlias` permanece omitido. No se versionaron account IDs, dominios,
+ARNs, IPs o nombres globalmente únicos.
+
+La validación ocurre antes de crear stages y rechaza ambientes/regiones no
+contratados, menos de dos AZ, retenciones inválidas, production sin guardrails,
+tags incompletos, política Stripe insegura, nombres de campos sensibles y
+valores con apariencia de credencial. Los errores contienen únicamente código,
+campo no sensible y regla; nunca imprimen el objeto.
+
+### App, stages y stacks
+
+`bin/mxmed.ts` crea un `App` sin analytics, exige context
+`environment=staging|production`, valida configuración y crea exactamente el
+environment stage y email stage correspondientes. Sólo consume
+`CDK_DEFAULT_ACCOUNT` cuando existe; synth offline funciona sin account y no
+imprime el valor.
+
+`MxMedEnvironmentStage` crea los diez stacks primarios vacíos y establece:
+
+- Data → Network, Security;
+- Storage → Security;
+- Session → Network, Security;
+- Compute → Network, Security, Data, Storage, Session;
+- Edge → Compute, Security;
+- Jobs → Compute, Security;
+- Backup → Data, Storage, Security;
+- Operations → todos los stacks observables.
+
+La prueba de grafo confirmó cero ciclos y no existe dependencia Edge → Data.
+
+`MxMedEmailStage` opera en `us-east-1`, crea únicamente `MxMedEmailStack` y no
+recibe secrets ni referencias cross-region.
+
+Los once stacks extienden `BaseMxMedStack`. La base construye el nombre,
+establece termination protection, usa `DefaultStackSynthesizer`, agrega
+descripción y aplica tags comunes/por componente. Ningún stack crea recursos,
+`CfnParameter`, output o placeholder sensible.
+
+### Naming y tags
+
+La utilidad canónica genera:
+
+`mxmed-{environmentCode}-{component}`
+
+Normaliza mayúsculas, espacios, guiones y underscores; rechaza ambiente,
+caracteres, component o longitud inválidos. No incorpora cuenta, región,
+usuario, datos personales o secretos.
+
+Cada stack fija metadata `DataClassification`, `Criticality` y `Backup`. El
+manifest sintetizado contiene los nueve tags obligatorios con su capitalización
+contractual. No se usaron nombres personales.
+
+### Aspects y guardrails
+
+Se implementaron cinco Aspects con `Annotations.addError()`:
+
+1. `MandatoryTagsAspect`: inspecciona `TagManager`, exige los nueve tags y
+   mantiene una allowlist inicial sólo para metadata CDK no taggable.
+2. `NoPublicBucketAspect`: exige los cuatro controles de Block Public Access y
+   rechaza ACL pública.
+3. `NoPublicDatabaseAspect`: exige `publiclyAccessible=false` en RDS.
+4. `ProductionRetentionAspect`: exige deletion protection más SNAPSHOT/RETAIN
+   para RDS y RETAIN para buckets/secrets production.
+5. `StripeReturnLoggingSafetyAspect`: valida el contrato de logging antes de
+   que Edge cree CloudFront/WAF.
+
+Los Aspects no corrigen recursos silenciosamente. Los buckets y DB usados para
+probarlos son sintéticos y existen sólo dentro del harness; no forman parte de
+la app o de los templates de environment.
+
+### Política Stripe return
+
+La única política implementada es:
+
+`path-only-no-query`
+
+Sus controles tipados exigen query, Referer, Cookie y request line completa
+excluidos, cache disabled y redacción WAF obligatoria. La suite acepta el
+contrato completo y rechaza cualquier variante insegura. No se creó
+CloudFront, WAF, ALB, bridge, webhook o código de pago.
+
+### Pruebas y QA local
+
+Se ejecutaron cinco suites con `39/39` pruebas PASS:
+
+- configuración: 9;
+- naming: 6;
+- stages/topología: 9;
+- Aspects/guardrails: 10;
+- synth offline/determinismo: 5.
+
+La QA final pasó:
+
+- `npm ci`;
+- `npm run build`;
+- `npm run typecheck`;
+- `npm run lint`;
+- `npm run format:check`;
+- `npm run test`;
+- `npm run synth:staging`;
+- `npm run synth:production`;
+- `npm run validate`;
+- `npm audit --omit=dev`;
+- `npm audit`.
+
+ESLint conserva `no-explicit-any`, no-floating-promises, no-unused-vars,
+consistent-type-imports y no-console. Prettier sólo operó dentro de
+`infra/aws/`.
+
+### Synth offline y auditoría de templates
+
+Los dos synth se ejecutaron con access key, secret key, session token, profile
+y account eliminados del proceso. No se ejecutaron AWS CLI/SDK, lookups,
+context providers, Docker o llamadas de cuenta.
+
+Resultado:
+
+- 11 stacks staging;
+- 11 stacks production;
+- 22 templates;
+- 22/22 templates con cero `Resources`;
+- cero outputs;
+- cero parámetros sensibles;
+- cero account IDs reales;
+- cero ARNs reales;
+- cero dominios definitivos;
+- cero missing context;
+- cero Docker/application assets;
+- dos síntesis consecutivas equivalentes por ambiente.
+
+Cada template contiene únicamente el parámetro técnico `BootstrapVersion` y
+un descriptor de publicación del propio archivo template, ambos generados por
+`DefaultStackSynthesizer`. Sus referencias usan pseudo-parámetros
+CloudFormation, no cuentas/ARN reales, y no provocaron bootstrap ni red AWS.
+
+`cdk.out/`, `dist/` y `coverage/` están ignorados y se eliminan mediante
+`npm run clean` antes del commit.
+
+### Scripts y README
+
+`package.json` implementa build, typecheck, lint, format, format:check, test,
+test:watch, synth:staging, synth:production, diff:staging, diff:production,
+validate y clean. No existe deploy/bootstrap automático ni
+`--require-approval never`.
+
+`infra/aws/README.md` documenta propósito, PP245/PP249, arquitectura,
+prerrequisitos, instalación, comandos, ambientes, configuración, synth
+offline, bootstrap/diff/deploy futuros, rollback, pruebas, naming, tags,
+secrets, Stripe return, drift/no cambios manuales y troubleshooting. Advierte
+que la foundation no tiene recursos y que bootstrap/deploy siguen prohibidos.
+
+### Evidencia, no secretos y no repetición
+
+Raíz de evidencia sanitizada:
+
+`/tmp/mxmed-aws-iac-foundation-implementation-01/`
+
+Contiene los 26 artefactos requeridos de baseline, toolchain, dependencias,
+estructura, matrices, synth, templates, scripts, audits, documentación, QA y
+estado Git. No contiene credenciales, account IDs reales, ARNs reales,
+dominios, IPs, datos personales, datos clínicos o valores Stripe.
+
+Auditoría exacta:
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "cdk_diff_calls": 0,
+  "docker_calls": 0,
+  "fixture_calls": 0,
+  "stripe_calls": 0,
+  "payment_route_create": 0,
+  "checkout_create": 0,
+  "payment_intent_create": 0,
+  "client_secret_retrieve": 0,
+  "confirm_payment_calls": 0,
+  "webhook_calls": 0,
+  "activation_calls": 0,
+  "sql_calls": 0
+}
+~~~
+
+### Archivos versionados y fuera de alcance
+
+Únicos alcances versionados modificados:
+
+- `infra/aws/**` con los 42 archivos de foundation y lockfile;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md` con PP250.
+
+No se modificaron PHP, JavaScript funcional, CSS, SQL, Docker, workflows,
+Stripe, assets, backend o package files raíz. No se creó recurso AWS ni se
+ejecutó bootstrap, diff, deploy, navegador, endpoint, pago, webhook, activation
+o SQL.
+
+Rollback: revertir atómicamente el commit de PP250/foundation. Como no existen
+recursos desplegados, el rollback sólo retira archivos locales/versionados y
+no altera estado AWS o funcional de México Médico.
+
+### Siguiente microfase
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Network-Readiness-01`
+
+Será la Microfase 6 de 24. Deberá definir el contrato de red antes de crear VPC,
+subnets, NAT, endpoints, Security Groups o Flow Logs.
+
+### Cierre del contador
+
+Microfase 5 de 24 concluida.
+Avance global: 5/24.
+Pendientes: 19.

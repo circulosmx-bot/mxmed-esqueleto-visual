@@ -1,0 +1,7 @@
+{
+  "app": "npx --no-install ts-node --prefer-ts-exts bin/mxmed.ts",
+  "output": "cdk.out",
+  "analyticsReporting": false,
+  "versionReporting": false,
+  "context": {}
+}
