@@ -53797,3 +53797,528 @@ Avance global: 9/24.
 Pendientes: 15.
 
 ---
+
+## PP-Decisiones 255 - Contrato de foundation de datos AWS para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-Data-Readiness-01`
+
+Contador:
+
+`Microfase 10 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_DATA_FOUNDATION_CONTRACT_V1`
+
+Esta decisión cierra el único contrato que podrá implementar
+`MxMedDataStack`. Conserva PP245 y PP249–PP254, no crea una segunda selección
+de motor y corrige el intento documental bloqueado: el servicio sigue siendo
+Amazon RDS y el engine sigue siendo MySQL 8.4. MariaDB, Aurora MySQL,
+PostgreSQL, RDS Custom, otro major y una versión flotante quedan rechazados.
+
+Esta microfase fue exclusivamente documental y estática. No ejecutó SQL, PHP,
+Docker, endpoints, conexiones de base, dumps, migraciones, backups, restores,
+AWS CLI/SDK, CDK synth/diff/bootstrap/deploy ni creó recursos AWS.
+
+### Reanudación, baseline y preservación
+
+La rama existente `architecture/mxmed-aws-data-readiness` se reanudó sin
+reset, clean, stash, merge, rebase, cherry-pick o descarte. Deriva directamente
+de `feature/mxmed-aws-security-implementation` en el commit completo
+`60d443e7e00f03cfc9a7ddaf4da03d32bd690fda`. Antes de editar se comprobó:
+
+- HEAD base y rama objetivo correctos;
+- cero commits de diferencia contra la base;
+- ausencia de upstream;
+- working tree limpio y `git diff --check` PASS;
+- `PP-Decisiones 255` libre;
+- ausencia de cambios parciales en el contrato;
+- 38 artefactos del bloqueo previo preservados sin modificación en
+  `/tmp/mxmed-aws-data-readiness-01/`.
+
+El único archivo versionado autorizado y modificado por esta readiness es
+`docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`. La evidencia del reintento se
+separa en `/tmp/mxmed-aws-data-readiness-01-retry-01/`.
+
+### Motor y versión cerrados
+
+| Propiedad | Valor contractual |
+| --- | --- |
+| servicio | Amazon RDS |
+| engine | MySQL |
+| engine version | `8.4.9` |
+| major | `8.4` |
+| parameter group family | `mysql8.4` |
+| database name | `mxmed` |
+| master username | `mxmed_admin` |
+| puerto | TCP `3306` |
+| storage engine funcional | InnoDB |
+
+`root`, `admin`, `latest`, selección automática de minor y MyISAM funcional no
+son valores válidos. El package y lockfile locales fijan `aws-cdk-lib=2.260.0`;
+el artefacto de esa versión presente en la caché local expone exactamente
+`MysqlEngineVersion.VER_8_4_9`. La implementación deberá usar esa constante,
+no `of()` ni un string flotante.
+
+La existencia de la constante CDK no demuestra que la combinación exacta de
+versión y clase esté disponible en una cuenta y AZ de `mx-central-1`. Ese
+preflight regional será obligatorio inmediatamente antes del primer deploy
+real y no se ejecutó aquí. Una ausencia bloqueará el deploy; no autoriza cambiar
+motor, minor o clase silenciosamente.
+
+Las minor updates serán manuales, con snapshot previo, rehearsal en staging y
+aprobación antes de production. `autoMinorVersionUpgrade=false` y
+`allowMajorVersionUpgrade=false`; un cambio de major requiere otra decisión.
+
+### Auditoría estática de SQL, schema y repositorios
+
+Se inspeccionaron 45 archivos SQL activos y las consultas/DDL embebidas en PHP,
+sin ejecutar código ni abrir una conexión. Los hallazgos compatibles son:
+
+- cero sintaxis exclusiva de MariaDB, dependencia de
+  `mysql_native_password`, zero dates, MyISAM en los schemas activos,
+  `lower_case_table_names` sobrescrito, `sql_mode` relajado, CTE, window
+  function, FULLTEXT, prefix index, trigger o event;
+- diez columnas JSON y uso de `JSON_EXTRACT`/`JSON_UNQUOTE`, compatibles;
+- seis generated columns almacenadas, nueve definiciones ENUM, cero SET y uso
+  de UNSIGNED, constraints, `FOR UPDATE`, named locks e idempotencia;
+- un procedure transitorio de migración que se invoca y elimina en el mismo
+  archivo; no queda como objeto runtime;
+- cuatro `GROUP BY`: dos agrupan únicamente `consultorio_id`; los dos de
+  catálogo seleccionan exactamente sus expresiones agrupadas. No se detectó
+  proyección no determinista;
+- cero identificadores DDL no citados que colisionen con las nuevas palabras
+  reservadas revisadas y cero conflictos de mayúsculas/minúsculas entre tablas;
+- todas las tablas declaradas por los schemas SQL activos tienen primary key;
+  cuatro DDL legacy omiten `ENGINE`, por lo que el gate de migración deberá
+  hacer InnoDB explícito en vez de depender del default.
+
+Tres seeds contienen 26 usos de `VALUES(col)` en `ON DUPLICATE KEY UPDATE`.
+MySQL 8.4 aún los acepta, pero la forma está deprecada: una microfase SQL deberá
+reemplazarlos por aliases de fila antes de que una versión futura los retire.
+No se relaja el motor o `sql_mode` para conservarlos.
+
+La inspección separó artefactos históricos de schemas activos. El dump
+`db_backups/sepomex_20251115_114415.sql` declara una tabla legacy SEPOMEX
+MyISAM, sin primary key, y un importador local puede cargar ese dump. No es una
+migración autorizada ni una tabla del futuro DataStack. Queda prohibido
+restaurarlo crudo en RDS: si el catálogo se incorpora, una microfase SQL deberá
+transformarlo a una tabla InnoDB con primary key y validar cero tablas
+funcionales no-InnoDB antes del cutover. Los dumps históricos tampoco son una
+fuente de collation o schema productivo.
+
+Estas deudas tienen ruta cerrada y no requieren cambiar el engine contratado.
+El rehearsal MySQL 8.4.9 futuro bloqueará el release ante error sintáctico,
+schema sin primary key, tabla no-InnoDB, truncamiento, default inválido,
+conflicto de case o warning que comprometa exactitud.
+
+### Cliente PHP, TLS y autenticación
+
+El código central usa PDO con DSN `mysql`, `charset=utf8mb4`, excepciones y
+fetch asociativo. PP245 fijó la imagen objetivo en PHP 8.5 Apache con
+`pdo_mysql`; el build deberá usar mysqlnd y demostrar soporte para el plugin
+esperado `caching_sha2_password`. Esta combinación dispone del modelo de
+cliente necesario para negociar TLS y validar una CA, sin depender de
+`mysql_native_password`.
+
+La auditoría también confirmó que la factory actual todavía no pasa opciones
+SSL, CA, timeout o persistencia. La implementación de aplicación/compute deberá
+agregar, mediante configuración segura, el equivalente a:
+
+- CA bundle público de RDS actualizado, nunca certificado o key privados en
+  Git;
+- `PDO::MYSQL_ATTR_SSL_CA` y verificación del certificado/hostname habilitada;
+- connect timeout explícito;
+- `PDO::ATTR_PERSISTENT=false` hasta validar el comportamiento en failover;
+- error sanitizado, sin DSN, host, usuario, query, parámetros o secreto;
+- recreación acotada de la conexión tras error de transporte, con backoff y
+  jitter.
+
+El server exigirá `require_secure_transport=ON` y sólo TLS 1.2 o 1.3. La QA de
+staging deberá probar handshake, CA válida, rechazo de CA/hostname inválidos,
+`caching_sha2_password`, timeout y reconexión post-failover. Si el runtime
+construido no demuestra cualquiera de esas capacidades, el deploy queda
+bloqueado; no se habilitará `mysql_native_password` como fallback.
+
+Los scripts SEPOMEX y herramientas que construyen conexiones propias no se
+ejecutarán dentro del web service productivo. Antes de cualquier uso operacional
+deberán consumir la misma factory TLS o ser retirados de la imagen/ruta.
+
+### Charset, collation y SQL mode
+
+La única collation elegida es `utf8mb4_unicode_ci`. Aparece 65 veces y es la
+única presente en los 45 SQL activos; también es el default de la factory PDO.
+Se conserva temporalmente porque generated columns e índices únicos dependen
+de comparaciones existentes. Cambiar ahora a `utf8mb4_0900_ai_ci` podría
+alterar igualdad, orden y unicidad. El cambio sólo podrá proponerse tras una
+auditoría de duplicados y comparación con rollback propio.
+
+El parameter group fijará `collation_server=utf8mb4_unicode_ci` para que la
+creación inicial de `mxmed` y los DDL que heredan el default no deriven a otra
+collation. Los schemas deberán mantener explícitamente
+`utf8mb4`/`utf8mb4_unicode_ci`, y la QA verificará que no haya drift. Los tres
+usos `utf8mb4_0900_ai_ci` observados viven sólo en un dump histórico y no
+cambian esta decisión.
+
+MySQL strict mode se conserva; no se versiona una lista arbitraria de modes ni
+se desactiva `ONLY_FULL_GROUP_BY`, `NO_ZERO_DATE`, división por cero o checks de
+truncamiento para ocultar fallos. El rehearsal cubrirá inserts incompletos,
+defaults, timestamps, fechas, división, truncamiento y GROUP BY antes de migrar.
+
+### Topología por ambiente
+
+| Propiedad | Staging | Production |
+| --- | --- | --- |
+| recurso | RDS MySQL DB instance | RDS MySQL Multi-AZ DB instance |
+| perfil | `cost-controlled-v1` | `balanced-production-v1` |
+| AZ | Single-AZ | primary y standby síncrona en dos AZ |
+| lectura standby | no aplica | prohibida; no es read replica |
+| replicas | cero | cero |
+| RDS Proxy | no | no |
+| cluster/Aurora | no | no |
+| datos | sintéticos o sanitizados | live |
+
+La aplicación usará exclusivamente el endpoint DNS estable de RDS. No se
+persistirá IP ni endpoint físico de una instancia. Production no usará Multi-AZ
+DB Cluster: el contrato es una DB instance con standby no legible.
+
+### Capacidad y storage iniciales
+
+| Propiedad | Staging | Production |
+| --- | --- | --- |
+| instance class | `db.t4g.medium` | `db.m6g.large` |
+| allocated storage | 40 GiB | 100 GiB |
+| max allocated storage | 200 GiB | 1000 GiB |
+| storage | gp3 | gp3 |
+| baseline IOPS | 3000 | 3000 |
+| throughput | 125 MiB/s | 125 MiB/s |
+
+Storage autoscaling queda habilitado con máximo explícito y alarmas antes de
+alcanzarlo. No se sustituirá una clase regionalmente no disponible. Tampoco se
+fijan `max_connections`, `innodb_buffer_pool_size`,
+`innodb_redo_log_capacity`, `tmp_table_size` o `max_heap_table_size` antes de
+observar métricas; permanecen administrados por MySQL/RDS.
+
+### Red y acceso
+
+DataStack recibirá la VPC, las dos `isolated-data` subnets y el
+`DatabaseSecurityGroup` ya creados por NetworkStack. El DB subnet group abarcará
+ambos slots de AZ, será IPv4, privado, sin default route y con
+`publiclyAccessible=false`.
+
+El único inbound TCP 3306 será desde `ApplicationSecurityGroup` y desde el SG
+autorizado para la migration task. El permiso actual Application→Database se
+reutiliza; DataStack no crea otro DB SG. Se prohíben `0.0.0.0/0`, public-ingress,
+IP pública, acceso de laptop, SSH permanente, Internet Gateway para data e IP
+allowlist personal. El job de migración vivirá en `private-app`, no en la
+subnet aislada del motor.
+
+### Cifrado, secreto maestro y usuarios
+
+`storageEncrypted=true` con `ApplicationDataKey` de SecurityStack cubre data,
+standby, snapshots y automated backups. Production conserva cifrado al retener
+o copiar recovery points; no se permite la key administrada por defecto como
+sustituto silencioso.
+
+RDS generará y administrará la contraseña de `mxmed_admin`; su master user
+secret será propiedad única de DataStack y estará cifrado con `SecretsKey`.
+SecurityStack no lo duplicará. Quedan prohibidos `Credentials.fromPassword`,
+`SecretValue.unsafePlainText`, password en TypeScript, Git, context,
+CfnParameter, output, log o evidencia. La aplicación nunca usa el master.
+
+Usuarios funcionales futuros:
+
+| Usuario | Uso y privilegio máximo |
+| --- | --- |
+| `mxmed_app` | SELECT/INSERT/UPDATE/DELETE del schema; sin administración, CREATE USER, GRANT o DROP DATABASE |
+| `mxmed_migration` | DDL del schema sólo durante ECS one-off bajo MigrationTaskRole |
+| `mxmed_readonly` | diferido; lectura sólo para soporte expresamente autorizado |
+| `mxmed_admin` | bootstrap, recuperación y administración excepcional |
+
+Cada credencial funcional tendrá un secreto propio cifrado por SecretsKey y
+grants por consumidor. Esta readiness no crea usuarios ni ejecuta SQL.
+
+### Parameter group MySQL 8.4
+
+Se implementará un parameter group explícito de familia `mysql8.4`:
+
+| Parámetro | Valor |
+| --- | --- |
+| `require_secure_transport` | `ON` |
+| `character_set_server` | `utf8mb4` |
+| `collation_server` | `utf8mb4_unicode_ci` |
+| `time_zone` | `UTC` |
+| `slow_query_log` | `1` |
+| `long_query_time` | `1` |
+| `log_output` | `FILE` |
+| `general_log` | `0` |
+| `event_scheduler` | `OFF` |
+| `binlog_format` | `ROW` |
+| `lower_case_table_names` | `0` |
+
+La implementación deberá respetar si RDS clasifica un parámetro como estático
+y nunca simular `applyImmediately`. Un cambio que requiera reboot sigue la
+ventana y el runbook de staging primero.
+
+### Logging, Insights y alarmas
+
+Sólo `error` y `slowquery` se exportan a CloudWatch. `general` y `audit` quedan
+apagados. El slow query log se clasifica `SENSITIVE`: acceso IAM mínimo,
+retención contractual, sin parámetros en logs de aplicación, sin datos
+clínicos en eventos y sin envío de SQL a terceros.
+
+Database Insights usa modo Standard. Enhanced Monitoring usa un role mínimo y
+un intervalo de 60 segundos en staging y 15 segundos en production. DataStack
+expone recursos tipados; OperationsStack será dueño de dashboards y alarmas de
+CPUUtilization, FreeableMemory, FreeStorageSpace, DatabaseConnections,
+ReadLatency, WriteLatency, ReadIOPS, WriteIOPS, DiskQueueDepth, SwapUsage y
+Deadlocks. Los thresholds se fijarán con baseline, salvo gates de storage y
+disponibilidad que deben existir antes del lanzamiento.
+
+### Backups, PITR, eliminación y ventanas
+
+| Control | Staging | Production |
+| --- | --- | --- |
+| retention | 7 días | 35 días |
+| automated backups/PITR | sí | sí |
+| copy tags to snapshot | sí | sí |
+| deletion protection | no | sí |
+| removal | `SNAPSHOT` | `RETAIN` |
+| update/replace | snapshot seguro | `RETAIN` |
+| final snapshot | obligatorio | obligatorio |
+| automated backup retention al retirar | según runbook | obligatorio |
+| backup window UTC | `00:00-00:30` | `00:30-01:00` |
+| maintenance UTC | domingo `01:30-02:30` | domingo `02:30-03:30` |
+
+Se prohíben retention cero, `DESTROY` production, skip final snapshot y usar un
+snapshot manual como sustituto de PITR. Las ventanas no se solapan.
+`applyImmediately=false`; snapshot y staging preceden a minor upgrade. Major
+upgrade usa otra microfase y rollback por restore, no downgrade in-place.
+
+### Migraciones futuras
+
+Cada release ejecutará una ECS one-off task explícita con imagen fijada por
+digest, MigrationTaskRole, `private-app`, acceso al DatabaseSecurityGroup y
+secreto de `mxmed_migration`. Tendrá tabla de control, checksum/version,
+exclusive lock, idempotencia, timeout, logs sanitizados y aprobación para DDL
+destructivo. El pipeline separará expand, migrate y contract.
+
+Antes del cutover se exige snapshot, rehearsal MySQL 8.4.9 con dataset
+sanitizado, verificación InnoDB/primary keys/collation/case y plan de rollback.
+No se restauran dumps crudos ni se ejecutan migraciones durante synth, deploy
+CDK, startup de cada web task, desde laptop o mediante endpoint HTTP.
+
+### Presupuesto de conexiones y failover
+
+Cada ECS task tendrá máximo 20 conexiones. Al calcular el máximo de tasks se
+reservará 25% de la capacidad efectiva para operación, migraciones y failover.
+La aplicación usará connect/read/write timeouts explícitos, cierre correcto,
+backoff con jitter y retries limitados sólo cuando la operación lo permita.
+
+Durante failover se resuelve de nuevo el endpoint DNS, se descartan conexiones
+rotas y se evita reintentar writes no idempotentes de forma que puedan
+duplicarse. No se cachea IP. El simulacro de failover y la recuperación dentro
+del RTO son gates de lanzamiento. RDS Proxy y read replicas quedan diferidos;
+no se crean como mitigación anticipada.
+
+### Recuperación
+
+| Ambiente | RPO | RTO |
+| --- | --- | --- |
+| staging | máximo 24 horas | objetivo 4 horas |
+| production | objetivo 5 minutos | objetivo 60 minutos |
+
+Multi-AZ, automated backups, PITR, snapshots, runbook y restore drills son
+controles complementarios. Un backup no se considera validado hasta restaurar
+y verificar una copia aislada. La política cross-region y sus keys/vaults se
+cierra después en BackupStack Readiness; no se finge en DataStack.
+
+### Extensión futura de configuración
+
+La implementación añadirá juntos y validará por ambiente estos 21 campos:
+
+`databaseEngine`, `databaseEngineVersion`,
+`databaseParameterGroupFamily`, `databaseInstanceClass`, `databaseMultiAz`,
+`databaseAllocatedStorageGiB`, `databaseMaxAllocatedStorageGiB`,
+`databaseStorageType`, `databaseIops`, `databaseStorageThroughput`,
+`databaseBackupRetentionDays`, `databaseDeletionProtection`,
+`databaseInsightsMode`, `databaseEnhancedMonitoringIntervalSeconds`,
+`databasePreferredBackupWindow`, `databasePreferredMaintenanceWindow`,
+`databaseCloudWatchLogsExports`, `databaseName`, `databaseMasterUsername`,
+`databaseCharacterSet` y `databaseCollation`.
+
+No se modificó config en esta readiness. Los perfiles legacy
+`single-az-reduced`/`multi-az-production` deberán migrarse atómicamente a los
+perfiles cerrados aquí, sin mantener dos fuentes de sizing.
+
+### Contrato de DataStack y dependencias
+
+DataStack recibirá referencias TypeScript, nunca lookups o Exports:
+
+- de Network: VPC, `isolatedDataSubnets` y `databaseSecurityGroup`;
+- de Security: `applicationDataKey`, `secretsKey` y `migrationTaskRole`.
+
+Expondrá `databaseInstance`, `databaseEndpoint`, `databasePort`,
+`masterUserSecret`, `parameterGroup`, `subnetGroup`, `monitoringRole` y
+`databaseName`. No expondrá password, connection string completa, IP, account
+ID o ARN real. Compute, Backup y Operations consumen Data; Data continúa
+dependiendo sólo de Network y Security, por lo que el grafo permanece acíclico.
+
+### Guardrails bloqueantes futuros
+
+La implementación fallará synth ante cualquiera de estos casos:
+
+1. engine distinto de MySQL;
+2. major distinto de 8.4;
+3. minor flotante o distinta de 8.4.9 sin decisión;
+4. family distinta de `mysql8.4`;
+5. production Single-AZ;
+6. DB públicamente accesible;
+7. subnets fuera de `isolated-data`;
+8. DB SG público o duplicado;
+9. storage sin cifrado;
+10. KMS distinta de ApplicationDataKey;
+11. password plaintext;
+12. master secret duplicado;
+13. backup retention cero;
+14. production con menos de 35 días;
+15. production sin deletion protection;
+16. production con `DESTROY`;
+17. gp2;
+18. general log habilitado;
+19. `require_secure_transport` deshabilitado;
+20. dependencia de `mysql_native_password`;
+21. auto minor upgrade;
+22. Aurora o Multi-AZ DB Cluster;
+23. RDS Proxy;
+24. read replica accidental;
+25. output secreto, connection string o IP.
+
+Los Aspects existentes `NoPublicDatabaseAspect` y
+`ProductionRetentionAspect` se conservan y se complementan con validators de
+Data; no corrigen drift silenciosamente.
+
+### Matriz futura de QA
+
+Se definen 80 pruebas `DATA-QA-001`–`DATA-QA-080`:
+
+| IDs | Cantidad | Cobertura |
+| --- | ---: | --- |
+| 001–005 | 5 | config, perfiles, engine, 8.4.9 y family |
+| 006–010 | 5 | parameter group, charset, collation y strict mode |
+| 011–015 | 5 | PHP/mysqlnd, TLS, CA, caching_sha2 y timeouts |
+| 016–020 | 5 | Single/Multi-AZ, endpoint, subnets y SG |
+| 021–025 | 5 | ApplicationDataKey, SecretsKey, master secret y no plaintext |
+| 026–030 | 5 | users model, clases, gp3, IOPS, throughput/autoscaling |
+| 031–035 | 5 | automated backups, PITR, snapshots y restore drill |
+| 036–040 | 5 | deletion protection, Retain/Snapshot, ventanas y upgrades |
+| 041–045 | 5 | error/slowquery, redacción, Insights Standard y sensibilidad |
+| 046–050 | 5 | Enhanced Monitoring, role y métricas/alarmas Operations |
+| 051–055 | 5 | migration task, lock, idempotencia, checksum y rollback |
+| 056–060 | 5 | connection budget, reserva, DNS, retries y failover |
+| 061–065 | 5 | ausencia de Proxy, replicas, Aurora, cluster y acceso público |
+| 066–070 | 5 | mutaciones negativas de guardrails y Aspects |
+| 071–075 | 5 | synth offline futuro, determinismo y grafo acíclico |
+| 076–080 | 5 | cero secretos/account IDs/deploy y preservación contractual |
+
+Cada ID será un test individual con assertion positiva o negativa; los casos
+TLS, auth, migration y restore que requieran RDS real se ejecutarán sólo en la
+fase autorizada de staging, no durante esta readiness.
+
+### Costos relativos
+
+Los drivers principales son horas DB por clase, standby Multi-AZ production,
+gp3 provisionado, crecimiento autoscaling, IOPS/throughput fuera de baseline,
+backups que excedan almacenamiento incluido, snapshots retenidos, Database
+Insights, Enhanced Monitoring y volumen/retención de error/slowquery logs.
+Staging reduce costo con Single-AZ y `db.t4g.medium`; production paga
+`db.m6g.large` y standby por disponibilidad. NAT no es necesario para el DB
+aislado; migration tasks en private-app usan la red contratada. No se publican
+importes sin cotización regional previa.
+
+### Diagrama contractual
+
+```mermaid
+flowchart LR
+  APP[Application tasks\nprivate-app\nmax 20 connections/task]
+  MIG[Migration one-off task\nprivate-app\nMigrationTaskRole]
+  SG[DatabaseSecurityGroup\nTCP 3306]
+  SUB[DB subnet group\ntwo isolated-data subnets]
+  RDS[(RDS MySQL 8.4.9\nmxmed\nSingle-AZ stg / Multi-AZ prd)]
+  DATAKEY[ApplicationDataKey]
+  SECKEY[SecretsKey]
+  SECRET[DataStack master secret\nRDS-managed]
+  LOGS[CloudWatch\nerror + slowquery]
+  OPS[OperationsStack\nmetrics and alarms]
+  BACKUP[Automated backups / PITR\n7d stg / 35d prd]
+
+  APP -->|TLS + caching_sha2_password| SG
+  MIG -->|TLS + mxmed_migration| SG
+  SG --> SUB --> RDS
+  DATAKEY -->|encrypts| RDS
+  SECKEY -->|encrypts| SECRET
+  SECRET -. bootstrap only .-> RDS
+  RDS --> LOGS --> OPS
+  RDS --> BACKUP
+```
+
+El diagrama contiene sólo nombres conceptuales; no incluye cuenta, ARN, host,
+IP, password, dato personal o dato clínico.
+
+### Evidencia y no repetición
+
+La evidencia sanitizada del PASS se conserva fuera de Git en:
+
+`/tmp/mxmed-aws-data-readiness-01-retry-01/`
+
+No sustituye ni modifica la evidencia del bloqueo anterior. La auditoría exacta
+de no repetición es:
+
+~~~json
+{
+  "engine_substitution_attempts": 0,
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "database_connections": 0,
+  "sql_read_calls": 0,
+  "sql_write_calls": 0,
+  "migration_calls": 0,
+  "backup_calls": 0,
+  "restore_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0
+}
+~~~
+
+### Rollback y siguiente microfase
+
+Rollback de esta readiness: revertir atómicamente el commit de PP255. Como no
+existe implementación ni deploy de Data, el rollback sólo retira esta decisión
+y no borra base, snapshot, backup, secreto o recurso AWS.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Data-Implementation-01`
+
+Será la Microfase 11 de 24. Implementará el contrato cerrado aquí sin ejecutar
+un deploy real ni adelantar las microfases de Compute, Backup u Operations.
+
+### Cierre del contador
+
+Microfase 10 de 24 concluida.
+Avance global: 10/24.
+Pendientes: 14.
+
+---
