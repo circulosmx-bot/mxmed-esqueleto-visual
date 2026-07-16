@@ -78,7 +78,7 @@ describe.each([
     expect(email.emailStack.stackName).toBe(`mxmed-${config.environmentCode}-email`);
   });
 
-  test('contains resources only in typed NetworkStack, SecurityStack and DataStack instances', () => {
+  test('contains resources only in the typed foundation stack instances', () => {
     const { environment, email } = createStages(config);
     const stacks = [
       ...environment.node.children.filter((child): child is Stack => Stack.isStack(child)),
@@ -108,6 +108,12 @@ describe.each([
         expect(environment.dataStack.parameterGroup).toBeDefined();
         expect(environment.dataStack.subnetGroup).toBeDefined();
         expect(environment.dataStack.monitoringRole).toBeDefined();
+      } else if (stack === environment.storageStack) {
+        expect(Object.keys(resources)).toHaveLength(8);
+        expect(environment.storageStack.publicMediaBucket).toBeDefined();
+        expect(environment.storageStack.privateDocumentsBucket).toBeDefined();
+        expect(environment.storageStack.clinicalRecordsBucket).toBeDefined();
+        expect(environment.storageStack.uploadQuarantineBucket).toBeDefined();
       } else {
         expect(Object.keys(resources)).toHaveLength(0);
       }
@@ -139,10 +145,10 @@ describe('workload dependencies', () => {
       ].sort(),
     );
     expect(directDependencyNames(environment.edgeStack)).toEqual(
-      ['mxmed-prd-compute', 'mxmed-prd-security'].sort(),
+      ['mxmed-prd-compute', 'mxmed-prd-security', 'mxmed-prd-storage'].sort(),
     );
     expect(directDependencyNames(environment.jobsStack)).toEqual(
-      ['mxmed-prd-compute', 'mxmed-prd-security'].sort(),
+      ['mxmed-prd-compute', 'mxmed-prd-security', 'mxmed-prd-storage'].sort(),
     );
     expect(directDependencyNames(environment.backupStack)).toEqual(
       ['mxmed-prd-data', 'mxmed-prd-storage', 'mxmed-prd-security'].sort(),

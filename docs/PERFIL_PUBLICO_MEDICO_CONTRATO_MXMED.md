@@ -54970,3 +54970,199 @@ Avance global: 12/24.
 Pendientes: 12.
 
 ---
+
+## PP-Decisiones 258 - MXMED_AWS_STORAGE_FOUNDATION_IMPLEMENTATION_V1
+
+### Microfase, alcance y resultado técnico
+
+Microfase: `ARCH-DEVOPS/MXMed-AWS-Storage-Implementation-01`.
+
+Contador: `Microfase 13 de 24`.
+
+Contrato implementado: PP257
+`MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`.
+
+Resultado técnico: `PASS - MXMED_AWS_STORAGE_FOUNDATION_IMPLEMENTATION_V1`.
+
+Se implementó `MxMedStorageStack` en AWS CDK v2/TypeScript sin desplegar
+recursos. PP245–PP257 permanecen vigentes y no se reescribieron. La microfase
+no implementó application endpoints, cargas/descargas, malware scanning,
+CloudFront, Jobs, Backup, Operations ni acceso a una cuenta AWS.
+
+### Baseline y configuración cerrada
+
+La rama `feature/mxmed-aws-storage-implementation` parte de
+`architecture/mxmed-aws-storage-readiness` en `f62401f`. Se preservaron
+versiones de Node/npm y dependencias cerradas; `npm ci` no cambió
+`package.json` ni `package-lock.json`.
+
+`MxMedEnvironmentConfig`, los dos objetos de ambiente y el schema incorporan
+y validan en conjunto 25 propiedades Storage. Los valores comunes son profile
+`storage-foundation-v1`, versioning, Bucket Key y EventBridge habilitados,
+cifrado `application-data-kms`, TTL upload/download `600/300`, máximos
+public/derived/private/clinical `20/10/100/100` MiB, export temporal siete
+días y Object Lock, replication y data events deshabilitados.
+
+| Contrato | staging | production |
+| --- | ---: | ---: |
+| PublicMedia noncurrent | 30 días | 90 días |
+| PrivateDocuments noncurrent | 30 días | sin expiry automático |
+| ClinicalRecords noncurrent | 30 días sintético | sin expiry automático |
+| Private/Clinical transition | ninguna | Intelligent-Tiering, día 30 |
+| Quarantine pending/failed/infected/clean | 7/14/30/1 días | 7/14/30/1 días |
+
+Las allowlists MIME son `image/jpeg`, `image/png` e `image/webp` para public,
+y las mismas más `application/pdf` para private y clinical. El validator
+rechaza drift de cada propiedad mediante códigos `MXMED_CONFIG_INVALID` sin
+incluir valores secretos.
+
+### Inventario, cifrado y acceso
+
+Cada ambiente sintetiza exactamente cuatro buckets L2 con nombres generados:
+
+| Propiedad TypeScript | Identificador CDK | Clasificación |
+| --- | --- | --- |
+| `publicMediaBucket` | `PublicMediaBucket` | public |
+| `privateDocumentsBucket` | `PrivateDocumentsBucket` | sensitive |
+| `clinicalRecordsBucket` | `ClinicalRecordsBucket` | clinical |
+| `uploadQuarantineBucket` | `UploadQuarantineBucket` | sensitive |
+
+Los cuatro son privados, bloquean las cuatro variantes de acceso público,
+usan `BucketOwnerEnforced` sin ACL, exigen SSL, cifran SSE-KMS con la
+`ApplicationDataKey` recibida desde Security, habilitan S3 Bucket Keys y
+versioning, y aplican `Retain` tanto en delete como en replacement. No fijan
+`bucketName`, no emiten `CfnOutput`/Export y no contienen website, CORS,
+Object Lock, replication o server access logging.
+
+### Lifecycle y EventBridge
+
+Todos los buckets abortan multipart incompleto al día uno. PublicMedia aplica
+la retención noncurrent del ambiente. PrivateDocuments expira únicamente
+`temporary-exports/` a siete días, además de noncurrent staging o transición
+production. ClinicalRecords sólo expira noncurrent sintético en staging; en
+production conserva current y noncurrent sin expiry y transiciona current a
+Intelligent-Tiering al día 30. No existe transición Glacier/Deep Archive.
+
+Quarantine implementa cuatro reglas filtradas por tag `scan-status`:
+`pending=7`, `failed=14`, `infected=30` y `clean=1` días. Su recurso L1 recibe
+la notificación nativa `EventBridgeEnabled=true`; los otros buckets no la
+reciben. No se crean custom resources, Lambda, SQS, EventBridge Rule, task
+Fargate ni scanner. Storage publica el evento S3 futuro, pero no procesa ni
+promueve objetos.
+
+### Contratos puros y properties tipadas
+
+Los helpers puros construyen sólo estas keys opacas a partir de UUID
+canónico:
+
+- `uploads/{uploadUuid}/source`;
+- `assets/{assetUuid}/{variant}.{extension}`;
+- `objects/{objectUuid}`;
+- `records/{objectUuid}`;
+- `temporary-exports/{exportUuid}`.
+
+Las variantes/extensiones public están allowlisted. Los validators puros
+comprueban keys, metadata, tags, `scan-status`, clasificación, MIME, tamaño y
+TTL; rechazan traversal, control characters, filename y semántica de paciente,
+médico, diagnóstico u otros identificadores. No llaman AWS ni generan URLs.
+
+Además de los cuatro `IBucket`, Storage expone por TypeScript
+`bucketInventory`, `classificationMap`, `lifecycleContract`, los TTL y las
+allowlists MIME. No expone contenido, URL, secreto, nombre físico, account ID,
+ARN real o output CloudFormation.
+
+### Dependencias y guardrails
+
+La única dependencia directa del stack propietario es `Storage → Security`.
+Los consumidores declarados quedan `Compute/Jobs/Edge/Operations/Backup →
+Storage`; Storage no depende de ellos ni de Network/Data y el grafo continúa
+acíclico.
+
+`StorageFoundationAspect` y el validator del stack fallan sin autocorregir
+ante inventario distinto de cuatro, bucket desconocido/público, ACL/ownership
+inseguro, versioning apagado, cifrado/CMK/Bucket Key incorrectos, SSL ausente,
+nombre físico, output, website, CORS, Object Lock, replication, server logging,
+removal policy destructiva, lifecycle sin abort multipart, Quarantine sin
+EventBridge o Clinical production con expiration/archive. También se bloquean
+recursos ajenos como CloudFront, CloudTrail data events, Lambda, SQS,
+EventBridge Rule y ECS scanner dentro de Storage.
+
+### Controles diferidos
+
+CloudFront/OAC, presigned upload/download, CORS oficial, scanner portable,
+promoción de objetos y grants de workload no se implementaron. Los data events
+se difieren a Operations con buckets concretos. Object Lock permanece diferido
+hasta cerrar contrato legal irreversible. Backup/replication y restore tests
+pertenecen a Backup/DR; versioning no se afirma como backup independiente.
+Por tanto no existen backups S3 reales ni se afirma que haya buckets u objetos
+en AWS.
+
+### QA y auditoría de templates offline
+
+Se conservaron las 293 pruebas heredadas y se agregaron 126 pruebas Storage,
+para 419 PASS. Cubren los 115 casos mínimos individuales y casos adicionales
+de outputs tipados y mutaciones negativas. TypeScript, ESLint, Prettier, Jest,
+`validate`, synth staging/production y ambos modos de `npm audit` pasan con
+dependencias sin cambio y cero vulnerabilidades.
+
+Los templates deterministas de ambos ambientes contienen exactamente cuatro
+`AWS::S3::Bucket` y cuatro policies SSL en StorageStack. La auditoría confirma
+cuatro versionados, SSE-KMS, Bucket Keys, Public Access Blocks,
+BucketOwnerEnforced, `Retain/Retain` y el lifecycle contratado; Clinical
+production no tiene expiration. Object Lock, replication, CORS, website,
+logging, CloudFront, SQS, Lambda, scanner, data trail, valores secretos,
+account IDs y ARNs reales están ausentes. Synth fue local/offline y creó cero
+recursos AWS.
+
+### Documentación, evidencia y no repetición
+
+`infra/aws/README.md` documenta el estado implementado y distingue templates
+de recursos desplegados. La evidencia sanitizada se conserva fuera de Git en:
+
+`/tmp/mxmed-aws-storage-implementation-01/`.
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_deployed": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "upload_calls": 0,
+  "download_calls": 0,
+  "presigned_urls_created": 0,
+  "malware_scan_calls": 0,
+  "object_copies": 0,
+  "object_deletes": 0,
+  "clinical_files_read": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0
+}
+~~~
+
+### Rollback y siguiente microfase
+
+Rollback: revertir atómicamente el commit de PP258. Como no hubo deploy,
+upload, copy, delete o scan, sólo retira templates, tests y documentación; no
+borra bucket, key, versión, objeto o backup en AWS.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Session-Readiness-01`
+
+Será la Microfase 14 de 24 y deberá cerrar el contrato de sesiones sin
+adelantar Compute, Edge, Jobs, Operations o Backup.
+
+### Cierre del contador
+
+Microfase 13 de 24 concluida.
+Avance global: 13/24.
+Pendientes: 11.
+
+---

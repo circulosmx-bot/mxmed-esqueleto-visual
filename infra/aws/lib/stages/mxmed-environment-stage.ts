@@ -52,13 +52,16 @@ export class MxMedEnvironmentStage extends Stage {
       secretsKey: this.securityStack.secretsKey,
       migrationTaskRole: this.securityStack.migrationTaskRole,
     });
-    this.storageStack = new MxMedStorageStack(this, 'Storage', stackProps);
+    this.storageStack = new MxMedStorageStack(this, 'Storage', {
+      ...stackProps,
+      applicationDataKey: this.securityStack.applicationDataKey,
+    });
     this.sessionStack = new MxMedSessionStack(this, 'Session', stackProps);
     this.computeStack = new MxMedComputeStack(this, 'Compute', stackProps);
     this.edgeStack = new MxMedEdgeStack(this, 'Edge', stackProps);
+    this.operationsStack = new MxMedOperationsStack(this, 'Operations', stackProps);
     this.jobsStack = new MxMedJobsStack(this, 'Jobs', stackProps);
     this.backupStack = new MxMedBackupStack(this, 'Backup', stackProps);
-    this.operationsStack = new MxMedOperationsStack(this, 'Operations', stackProps);
 
     this.dataStack.addDependency(this.networkStack);
     this.dataStack.addDependency(this.securityStack);
@@ -72,8 +75,10 @@ export class MxMedEnvironmentStage extends Stage {
     this.computeStack.addDependency(this.sessionStack);
     this.edgeStack.addDependency(this.computeStack);
     this.edgeStack.addDependency(this.securityStack);
+    this.edgeStack.addDependency(this.storageStack);
     this.jobsStack.addDependency(this.computeStack);
     this.jobsStack.addDependency(this.securityStack);
+    this.jobsStack.addDependency(this.storageStack);
     this.backupStack.addDependency(this.dataStack);
     this.backupStack.addDependency(this.storageStack);
     this.backupStack.addDependency(this.securityStack);

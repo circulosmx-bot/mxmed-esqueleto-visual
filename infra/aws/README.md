@@ -2,17 +2,18 @@
 
 ## Propósito y estado
 
-Este proyecto implementa la foundation local de Infrastructure as Code, la red V1, la base de
-seguridad y la foundation de datos de México Médico. Traduce PP-Decisiones 245
+Este proyecto implementa la foundation local de Infrastructure as Code, la red V1 y las
+foundations de seguridad, datos y almacenamiento de México Médico. Traduce PP-Decisiones 245
 (`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`), PP-Decisiones 249
 (`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`), PP-Decisiones 251
 (`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`) y PP-Decisiones 253
 (`MXMED_AWS_SECURITY_READINESS_CONTRACT_V1`), además de PP-Decisiones 255
-(`MXMED_AWS_DATA_READINESS_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_DATA_READINESS_CONTRACT_V1`) y PP-Decisiones 257
+(`MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
 
-`MxMedNetworkStack`, `MxMedSecurityStack` y `MxMedDataStack` contienen recursos CloudFormation
-sintetizables offline. Los demás stacks continúan vacíos. Nada está desplegado: bootstrap, diff y
-deploy permanecen pendientes y están prohibidos en esta etapa.
+`MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack` y `MxMedStorageStack` contienen
+recursos CloudFormation sintetizables offline. Los demás stacks continúan vacíos. Nada está
+desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos en esta etapa.
 
 ## Arquitectura contractual
 
@@ -20,10 +21,10 @@ deploy permanecen pendientes y están prohibidos en esta etapa.
 - Correo de cada ambiente: stage separado en `us-east-1` para SES.
 - Compute futuro: ECS Fargate.
 - Ingress futuro: Route 53, CloudFront, WAF, ALB y ECS.
-- Datos: template RDS MySQL 8.4.9; objetos privados en S3 y sesiones en ElastiCache futuros.
+- Datos: template RDS MySQL 8.4.9 y cuatro buckets S3 privados; sesiones en ElastiCache futuras.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene diez stacks: Network, Security y Data implementados; Storage,
+`MxMedEnvironmentStage` contiene diez stacks: Network, Security, Data y Storage implementados;
 Session, Compute, Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
@@ -78,12 +79,13 @@ Los scripts de synth lo proporcionan de forma explícita. La configuración tipa
 - región primaria y región de correo;
 - CIDR VPC RFC1918 `/16` exacto por ambiente;
 - masks de los cuatro tiers y exactamente dos AZ;
-- perfiles de NAT y compute, y los 21 campos cerrados de base de datos;
+- perfiles de NAT y compute, los 21 campos cerrados de base de datos y los 25 campos cerrados de
+  Storage;
 - perfil de interface endpoints y retención de VPC Flow Logs;
 - perfil de seguridad, ventanas KMS y recuperación operativa de secretos;
 - retención de CloudTrail y archivo de auditoría;
 - activación obligatoria de rotación KMS y management trail;
-- data events desactivados hasta que Storage implemente objetos clínicos;
+- data events de Storage desactivados hasta que Operations implemente selectors por bucket;
 - retenciones y protecciones por ambiente;
 - WAF y logging CloudFront seguro;
 - tags obligatorios;
@@ -257,6 +259,48 @@ pendientes y no se ejecutan en synth. RDS Proxy, read replicas, Aurora y Multi-A
 diferidos. Los templates y tests no afirman que la instancia, contraseña, backups o failover
 existan realmente; esta fase creó cero recursos AWS.
 
+## Storage foundation implementada en templates
+
+Cada ambiente sintetiza exactamente cuatro `AWS::S3::Bucket`, sin nombres físicos ni outputs:
+
+| Identificador            | Clasificación | Uso contractual                               |
+| ------------------------ | ------------- | --------------------------------------------- |
+| `PublicMediaBucket`      | `public`      | media pública ya aprobada y sus derivados     |
+| `PrivateDocumentsBucket` | `sensitive`   | documentos administrativos y exports privados |
+| `ClinicalRecordsBucket`  | `clinical`    | objetos de expediente y anexos clínicos       |
+| `UploadQuarantineBucket` | `sensitive`   | entrada temporal pendiente de análisis        |
+
+`public` describe el contenido, no el acceso. Los cuatro buckets bloquean todo acceso público,
+usan `BucketOwnerEnforced` sin ACL, requieren TLS, cifran con `ApplicationDataKey` mediante
+SSE-KMS y S3 Bucket Keys, habilitan versionado y conservan tanto el recurso eliminado como su
+reemplazo con `Retain`. No tienen website, CORS, replication, Object Lock ni server access
+logging.
+
+Todos abortan multipart incompleto al día uno. PublicMedia expira versiones no actuales a 30 días
+en staging y 90 en production. PrivateDocuments y ClinicalRecords expiran versiones sintéticas a
+30 días sólo en staging; production no expira objetos ni versiones y transiciona current objects
+a Intelligent-Tiering al día 30. `temporary-exports/` expira a siete días. Quarantine expira por
+tag `scan-status`: `pending=7`, `failed=14`, `infected=30` y `clean=1` días. No se usa Glacier ni
+Deep Archive.
+
+Sólo Quarantine habilita la configuración nativa de notificación EventBridge. El scanner, rule,
+SQS/DLQ y Fargate corresponden a Jobs y todavía no existen; esta foundation no analiza, copia,
+promueve, lee o elimina objetos. CloudFront/OAC y las presigned URLs de upload/download tampoco
+están implementadas. Los límites contractuales que deberán aplicar sus futuros consumidores son
+600 segundos para upload, 300 para download, 20 MiB para media pública de entrada, 10 MiB para
+derivados y 100 MiB para private/clinical.
+
+Los helpers puros construyen únicamente keys opacas con UUID para Quarantine, public media,
+private, clinical y exports. Los validators rechazan metadata/tags fuera de allowlist, valores con
+semántica personal, MIME no permitido, tamaños fuera de techo y TTL fuera del límite. Ningún
+helper genera URL o llama AWS.
+
+Storage depende directamente sólo de Security para `ApplicationDataKey`. Compute, Jobs, Edge,
+Operations y Backup declaran consumo de Storage sin invertir la dependencia. Los data events se
+difieren a Operations; Object Lock requiere contrato legal propio y replication/backup quedan
+diferidos a Backup/DR. Versioning no se presenta como backup independiente y no existen backups
+S3 reales en esta etapa.
+
 ## Synth offline
 
 La foundation no usa AWS SDK, AWS CLI, profiles, context providers, lookups, Docker bundling ni
@@ -269,9 +313,10 @@ npm run synth:production
 ```
 
 Ambos comandos deben funcionar sin credenciales AWS. Las plantillas actuales contienen recursos
-únicamente en NetworkStack, SecurityStack y DataStack; Email y los otros siete workload stacks
-continúan sin recursos. SecurityStack crea cuatro contenedores de secreto pero cero valores
-versionados; DataStack crea el contrato RDS sin valor secreto. No crea ECS services/tasks,
+únicamente en NetworkStack, SecurityStack, DataStack y StorageStack; Email y los otros seis
+workload stacks continúan sin recursos. SecurityStack crea cuatro contenedores de secreto pero
+cero valores versionados; DataStack crea el contrato RDS sin valor secreto; StorageStack crea sólo
+cuatro buckets y cuatro políticas SSL. No crea ECS services/tasks, scanner, SQS, EventBridge Rule,
 ElastiCache, ALB, CloudFront, WAF, OIDC/deployment role ni roles humanos. `cdk.out/` es temporal y
 no se versiona.
 
@@ -317,6 +362,7 @@ Los Aspects iniciales son:
 - `NoPlaintextSecretAspect`;
 - `LeastPrivilegeIamAspect`;
 - `DataFoundationAspect`.
+- `StorageFoundationAspect`.
 
 NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
 tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
@@ -335,9 +381,14 @@ parameter group, role de Enhanced Monitoring, cifrado, credencial administrada, 
 retención, Multi-AZ, logs y ausencia de cluster, Proxy, replica, secreto duplicado u output
 sensible.
 
-Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Storage permanecen
-vacíos: los tests usan recursos sintéticos para demostrar guardrails, pero este proyecto no afirma
-que CloudFront, WAF, S3 workload o RDS estén desplegados.
+StorageStack registra su Aspect y validator bloqueantes para comprobar inventario de cuatro
+buckets, acceso privado, ownership, versioning, SSE-KMS con `ApplicationDataKey`, Bucket Keys,
+TLS, retención, lifecycle, EventBridge de Quarantine y ausencia de nombre físico, output, CORS,
+website, Object Lock, replication, server logging, CloudFront, scanner, SQS o data trail.
+
+Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Jobs permanecen
+vacíos: los tests usan mutaciones sintéticas para demostrar guardrails, pero este proyecto no
+afirma que CloudFront, WAF, scanner, S3 workload o RDS estén desplegados.
 
 Los valores secretos proceden de Secrets Manager y runbooks autorizados. Nunca deben incluirse en
 Git, props de configuración, CDK context, outputs, tags, plantillas, logs o evidencia. Tampoco se
@@ -378,10 +429,11 @@ npm run test
 npm run validate
 ```
 
-Las 293 pruebas (200 heredadas y 93 nuevas de datos) cubren configuración, naming,
+Las 419 pruebas (293 heredadas y 126 nuevas de Storage) cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
 VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, KMS, secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
-parameter/subnet groups, Enhanced Monitoring, guardrails y síntesis determinista offline. Los
+parameter/subnet groups, Enhanced Monitoring, inventario/lifecycle/cifrado de Storage, helpers de
+keys, metadata/tags, MIME/tamaños/TTL, guardrails negativos y síntesis determinista offline. Los
 snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift

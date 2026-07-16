@@ -97,6 +97,69 @@ const EXPECTED_DATABASE_CONFIGURATION = Object.freeze({
   },
 } as const);
 
+const STORAGE_MIME_TYPES = Object.freeze({
+  public: ['image/jpeg', 'image/png', 'image/webp'],
+  private: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+  clinical: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+} as const);
+
+const EXPECTED_STORAGE_CONFIGURATION = Object.freeze({
+  staging: {
+    storageProfile: 'storage-foundation-v1',
+    storageVersioningEnabled: true,
+    storageEncryptionProfile: 'application-data-kms',
+    storageBucketKeyEnabled: true,
+    publicMediaNoncurrentRetentionDays: 30,
+    privateDocumentsNoncurrentRetentionDays: 30,
+    clinicalNoncurrentRetentionDays: 30,
+    quarantinePendingRetentionDays: 7,
+    quarantineFailedRetentionDays: 14,
+    quarantineInfectedRetentionDays: 30,
+    quarantineCleanRetentionDays: 1,
+    temporaryExportRetentionDays: 7,
+    privateStorageTransitionDays: null,
+    clinicalStorageTransitionDays: null,
+    uploadUrlTtlSeconds: 600,
+    downloadUrlTtlSeconds: 300,
+    publicMediaMaxUploadMiB: 20,
+    publicMediaMaxDerivedMiB: 10,
+    privateMaxUploadMiB: 100,
+    clinicalMaxUploadMiB: 100,
+    enableQuarantineEventBridge: true,
+    enableObjectLock: false,
+    enableCrossRegionReplication: false,
+    enableStorageDataEvents: false,
+    storageAllowedMimeTypes: STORAGE_MIME_TYPES,
+  },
+  production: {
+    storageProfile: 'storage-foundation-v1',
+    storageVersioningEnabled: true,
+    storageEncryptionProfile: 'application-data-kms',
+    storageBucketKeyEnabled: true,
+    publicMediaNoncurrentRetentionDays: 90,
+    privateDocumentsNoncurrentRetentionDays: null,
+    clinicalNoncurrentRetentionDays: null,
+    quarantinePendingRetentionDays: 7,
+    quarantineFailedRetentionDays: 14,
+    quarantineInfectedRetentionDays: 30,
+    quarantineCleanRetentionDays: 1,
+    temporaryExportRetentionDays: 7,
+    privateStorageTransitionDays: 30,
+    clinicalStorageTransitionDays: 30,
+    uploadUrlTtlSeconds: 600,
+    downloadUrlTtlSeconds: 300,
+    publicMediaMaxUploadMiB: 20,
+    publicMediaMaxDerivedMiB: 10,
+    privateMaxUploadMiB: 100,
+    clinicalMaxUploadMiB: 100,
+    enableQuarantineEventBridge: true,
+    enableObjectLock: false,
+    enableCrossRegionReplication: false,
+    enableStorageDataEvents: false,
+    storageAllowedMimeTypes: STORAGE_MIME_TYPES,
+  },
+} as const);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -238,6 +301,26 @@ function validateDatabaseConfiguration(
     'databaseDeletionProtection',
     'must remain aligned with the environment deletion baseline',
   );
+}
+
+function matchesContractValue(actual: unknown, expected: unknown): boolean {
+  if (typeof expected !== 'object' || expected === null) return actual === expected;
+  return JSON.stringify(actual) === JSON.stringify(expected);
+}
+
+function validateStorageConfiguration(
+  config: Record<string, unknown>,
+  environmentName: MxMedEnvironmentName,
+): void {
+  const expected = EXPECTED_STORAGE_CONFIGURATION[environmentName];
+  for (const [field, expectedValue] of Object.entries(expected)) {
+    assertMxMedCondition(
+      matchesContractValue(config[field], expectedValue),
+      'MXMED_CONFIG_INVALID',
+      field,
+      'must match the PP257 storage contract for the selected environment',
+    );
+  }
 }
 
 export function validateEnvironmentConfig(input: unknown): asserts input is MxMedEnvironmentConfig {
@@ -465,6 +548,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
     'WAF and safe CloudFront logging are required',
   );
   validateDatabaseConfiguration(input, environmentName);
+  validateStorageConfiguration(input, environmentName);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',
     'MXMED_CONFIG_INVALID',

@@ -38,7 +38,7 @@ describe.each([
   ['staging', STAGING_CONFIG],
   ['production', PRODUCTION_CONFIG],
 ] as const)('%s offline synthesis', (_name, config) => {
-  test('does not require an account and creates resources only in Network, Security and Data', () => {
+  test('does not require an account and creates only contracted foundation resources', () => {
     const previousAccount = process.env.CDK_DEFAULT_ACCOUNT;
     const previousAccessKey = process.env.AWS_ACCESS_KEY_ID;
     const previousSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
@@ -66,6 +66,13 @@ describe.each([
           expect(
             resources.filter((resource) => resource.Type === 'AWS::RDS::DBInstance'),
           ).toHaveLength(1);
+        } else if (stackName === `mxmed-${config.environmentCode}-storage`) {
+          expect(resources.filter((resource) => resource.Type === 'AWS::S3::Bucket')).toHaveLength(
+            4,
+          );
+          expect(
+            resources.filter((resource) => resource.Type === 'AWS::S3::BucketPolicy'),
+          ).toHaveLength(4);
         } else {
           expect(resources).toHaveLength(0);
         }

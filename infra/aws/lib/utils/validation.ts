@@ -28,7 +28,7 @@ export function assertMxMedCondition(
 }
 
 const SENSITIVE_FIELD_PATTERN =
-  /secret|password|token|credential|private.?key|access.?key|account.?id|(^|[^a-z])arn([^a-z]|$)/i;
+  /secret|password|token|credential|private.?key|access.?key|account.?id|bucket.?name|patient|doctor|filename|curp|diagnosis|(^|[^a-z])arn([^a-z]|$)/i;
 
 const CONTRACTED_NON_SENSITIVE_FIELDS = new Set(['secretRecoveryWindowDays']);
 

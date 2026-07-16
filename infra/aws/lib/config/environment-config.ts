@@ -11,6 +11,9 @@ export type MxMedDatabaseCloudWatchLogExport = 'error' | 'slowquery';
 export type MxMedDatabaseEngineLifecycleSupport = 'open-source-rds-extended-support-disabled';
 export type MxMedStripeReturnLoggingPolicy = 'path-only-no-query';
 export type MxMedSecurityProfile = 'baseline-v1';
+export type MxMedStorageProfile = 'storage-foundation-v1';
+export type MxMedStorageEncryptionProfile = 'application-data-kms';
+export type MxMedStorageMimeType = 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp';
 export type MxMedDataClassification = 'public' | 'internal' | 'sensitive' | 'clinical';
 export type MxMedCriticality = 'low' | 'medium' | 'high';
 export type MxMedBackupRequirement = 'required' | 'not-required';
@@ -34,6 +37,12 @@ export interface MxMedSubnetMasks {
   readonly privateApp: number;
   readonly privateEndpoints: number;
   readonly isolatedData: number;
+}
+
+export interface MxMedStorageAllowedMimeTypes {
+  readonly public: readonly MxMedStorageMimeType[];
+  readonly private: readonly MxMedStorageMimeType[];
+  readonly clinical: readonly MxMedStorageMimeType[];
 }
 
 export interface MxMedEnvironmentConfig {
@@ -81,6 +90,31 @@ export interface MxMedEnvironmentConfig {
   readonly databaseCharacterSet: 'utf8mb4';
   readonly databaseCollation: 'utf8mb4_unicode_ci';
   readonly databaseEngineLifecycleSupport: MxMedDatabaseEngineLifecycleSupport;
+  readonly storageProfile: MxMedStorageProfile;
+  readonly storageVersioningEnabled: boolean;
+  readonly storageEncryptionProfile: MxMedStorageEncryptionProfile;
+  readonly storageBucketKeyEnabled: boolean;
+  readonly publicMediaNoncurrentRetentionDays: number;
+  readonly privateDocumentsNoncurrentRetentionDays: number | null;
+  readonly clinicalNoncurrentRetentionDays: number | null;
+  readonly quarantinePendingRetentionDays: number;
+  readonly quarantineFailedRetentionDays: number;
+  readonly quarantineInfectedRetentionDays: number;
+  readonly quarantineCleanRetentionDays: number;
+  readonly temporaryExportRetentionDays: number;
+  readonly privateStorageTransitionDays: number | null;
+  readonly clinicalStorageTransitionDays: number | null;
+  readonly uploadUrlTtlSeconds: number;
+  readonly downloadUrlTtlSeconds: number;
+  readonly publicMediaMaxUploadMiB: number;
+  readonly publicMediaMaxDerivedMiB: number;
+  readonly privateMaxUploadMiB: number;
+  readonly clinicalMaxUploadMiB: number;
+  readonly enableQuarantineEventBridge: boolean;
+  readonly enableObjectLock: boolean;
+  readonly enableCrossRegionReplication: boolean;
+  readonly enableStorageDataEvents: boolean;
+  readonly storageAllowedMimeTypes: MxMedStorageAllowedMimeTypes;
   readonly domainAlias?: string;
   readonly logRetentionDays: number;
   readonly backupRetentionDays: number;
