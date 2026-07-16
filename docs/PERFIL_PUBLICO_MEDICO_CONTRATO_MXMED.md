@@ -55807,3 +55807,292 @@ Avance global: 14/24.
 Pendientes: 10.
 
 ---
+
+## PP-Decisiones 261 - MXMED_AWS_SESSION_FOUNDATION_IMPLEMENTATION_V1
+
+### Microfase y resultado
+
+Microfase: `ARCH-DEVOPS/MXMed-AWS-Session-Implementation-01`.
+
+Resultado: `PASS - MXMED_AWS_SESSION_FOUNDATION_IMPLEMENTATION_V1`.
+
+Se implementó offline en AWS CDK el contrato
+`MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1` de PP260. SessionStack deja de ser
+un placeholder y sintetiza un replication group Amazon ElastiCache for Valkey
+8.2 dedicado a sesiones. No se creó cache, secreto o sesión en AWS y no se
+modificó runtime PHP, Docker, SQL, Stripe o pagos.
+
+### Refinación TLS para creación
+
+PP260 exige funcionalmente TLS-only y describía
+`TransitEncryptionMode=required`. La referencia local de CloudFormation aclara
+que `preferred → required` es el flujo de migración sin downtime para clusters
+existentes que todavía admiten plaintext. Para un replication group Valkey
+nuevo, CloudFormation exige `TransitEncryptionEnabled=true`; no requiere
+recorrer el estado de migración.
+
+PP261 refina sólo la representación de creación:
+
+- `TransitEncryptionEnabled=true` continúa obligatorio;
+- `TransitEncryptionMode` se omite en el template inicial;
+- `preferred` está prohibido por config, tests y guardrail;
+- el cluster nace para clientes TLS y el runtime futuro no tendrá fallback
+  plaintext;
+- no existe Custom Resource para cambiar el modo.
+
+Esto no degrada el contrato TLS-only: evita modelar como creación una transición
+propia de clusters preexistentes.
+
+### Compatibilidad del default user
+
+La referencia CloudFormation local de `AWS::ElastiCache::UserGroup` todavía
+indica que debe incluirse un user llamado `default`, mientras la documentación
+moderna de Valkey ya no lo requiere. Se implementó la intersección segura de
+ambos contratos:
+
+- application user `mxmed_session_app`, activo y con ACL mínima;
+- compatibility user `default`, con `off ~* -@all`;
+- ambos usan autenticación password mediante la misma dynamic reference;
+- el user group incluye exactamente esos dos users.
+
+El default user no tiene comandos, keys, grants, output o uso runtime. Compartir
+la referencia no le concede acceso porque `off` lo deshabilita y `-@all`
+elimina todas las categorías. No existe default sin password, activo, lector o
+con `+@all`.
+
+### Configuración cerrada
+
+`MxMedEnvironmentConfig` incorpora los 25 campos Session de PP260. Ambos
+ambientes fijan profile `session-foundation-v1`, engine `valkey`, versión
+`8.2`, family `valkey8`, cluster mode false, un shard, cifrado en reposo y
+tránsito true, mode conceptual `create-time-tls-only`, TTL 1800, lifetime
+43200, máximo 32 KiB, snapshots 0, auto minor false, auth profile
+`valkey-rbac-password-v1`, locking habilitado con timeout 10 segundos/espera
+100000 microsegundos y log delivery false.
+
+Staging usa `cache.t4g.micro`, cero réplicas, sin Multi-AZ/failover, ventana
+`sun:03:30-sun:04:30` y prefix `~mxmed:stg:session:*`. Production usa
+`cache.t4g.medium`, una réplica, Multi-AZ/failover, ventana
+`sun:04:30-sun:05:30` y prefix `~mxmed:prd:session:*`.
+
+El schema compara cada campo con el ambiente seleccionado y emite sólo código,
+campo y regla sanitizados. Rechaza engine/version/family/node/topología,
+cifrado/mode, TTL/lifetime/payload, snapshots/maintenance/auth/prefix,
+locking/logs fuera de contrato; la validación global continúa bloqueando
+campos sensibles, account IDs y valores con apariencia de credencial sin
+imprimir la configuración completa.
+
+### Props, red y subnet group
+
+`MxMedSessionStackProps` recibe únicamente config, VPC, las dos
+`isolatedDataSubnets`, `SessionSecurityGroup`, `ApplicationDataKey` y
+`SecretsKey`. No recibe roles ECS, password, `SecretValue` externo, endpoint,
+IP o payload.
+
+El stack crea un `AWS::ElastiCache::SubnetGroup` con exactamente los dos IDs de
+subnet `isolated-data` importados desde Network. El constructor rechaza una
+lista vacía, cantidad distinta de dos, duplicados o paths no aislados; el Aspect
+rechaza tokens de `public-ingress`, `private-app` o `private-endpoints`. No hay
+lookup, NAT dependency, IP pública o nombre físico de subnet group.
+
+El replication group usa exclusivamente el ID de `SessionSecurityGroup`, cuyo
+contrato Network conserva TCP 6379 desde `ApplicationSecurityGroup` y bloquea
+ingress público/SSH.
+
+### Parameter group
+
+Se crea un `AWS::ElastiCache::ParameterGroup` family `valkey8` con exactamente:
+
+```text
+maxmemory-policy=volatile-ttl
+timeout=300
+notify-keyspace-events=""
+activerehashing=yes
+tcp-keepalive=60
+```
+
+La API local admite el string vacío y el template lo conserva. No se configuran
+`cluster-enabled`, appendonly, save, command/slow log, modules,
+`rename-command`, maxmemory manual o parámetros search/vector. Cluster mode se
+controla únicamente en el replication group.
+
+### Secreto y dynamic reference
+
+SessionStack crea un secreto por ambiente bajo
+`/mxmed/{environmentName}/application/session-store-auth`, cifrado con
+`SecretsKey`. Secrets Manager genera JSON con username `mxmed_session_app` y un
+campo password de 64 caracteres, excluyendo coma, comilla doble, slash, arroba
+y espacio, y exige cada tipo incluido. CDK/CloudFormation representa el último
+control como `IncludeSpace=false`, equivalente funcional a
+`excludeSpace=true` del contrato.
+
+El secreto usa `Retain/Retain`, sin réplica, Lambda de rotación, parameter u
+output. Ambos users consumen exclusivamente una referencia dinámica
+versionless con forma `resolve:secretsmanager:...:SecretString:password`; el
+template nunca contiene el valor. No se usó `unsafePlainText`, generación
+TypeScript, placeholder o password literal.
+
+### RBAC y ACL
+
+El application user tiene ID `mxmed-{environmentCode}-session-app`, username
+`mxmed_session_app`, engine `valkey` y access string exacto:
+
+```text
+on ~mxmed:{environmentCode}:session:* +get +set +setex +del +unlink +exists +expire +pexpire +ttl +pttl +touch +ping
+```
+
+El default disabled user tiene ID
+`mxmed-{environmentCode}-default-disabled` y access string exacto
+`off ~* -@all`. El `AWS::ElastiCache::UserGroup` usa ID
+`mxmed-{environmentCode}-session-users`, contiene ambos IDs y depende
+explícitamente de los users; el replication group depende del user group.
+
+No se añadieron `SETNX`, `EVAL` o `EVALSHA`: PP260 no demostró que el futuro
+handler `phpredis` los requiera. Tampoco existen `+@all`, categorías read/write,
+`KEYS`, `SCAN`, flush, CONFIG, ACL, DEBUG, SHUTDOWN, MIGRATE, MODULE, pub/sub o
+script. Si la implementación runtime demuestra un comando adicional, requerirá
+otra decisión; no se amplía por intuición.
+
+### Replication groups y cifrado
+
+Ambos ambientes crean un solo `AWS::ElastiCache::ReplicationGroup`, engine
+Valkey 8.2, cluster mode `disabled`, sin `NumNodeGroups` o
+`ReplicasPerNodeGroup`, puerto 6379, IPv4, subnet/parameter group explícitos,
+un SG, `ApplicationDataKey`, cifrado en reposo y tránsito, user group, snapshot
+retention 0 y auto minor false.
+
+| Propiedad | Staging | Production |
+|---|---:|---:|
+| `CacheNodeType` | `cache.t4g.micro` | `cache.t4g.medium` |
+| `NumCacheClusters` | 1 | 2 |
+| `MultiAZEnabled` | false | true |
+| `AutomaticFailoverEnabled` | false | true |
+
+No se especifican AZ de nodos, reader/configuration/node endpoint, AuthToken,
+Global Datastore, data tiering, log delivery, snapshot window o restore source.
+El primary endpoint se expone sólo como propiedad TypeScript mediante
+`attrPrimaryEndPointAddress`/`Port`; no hay CloudFormation Export/Output.
+
+### Lifecycle y propiedades tipadas
+
+ReplicationGroup, SubnetGroup, ParameterGroup, UserGroup y Users usan
+`Delete/Delete`: son recursos de sesión efímeros y una pérdida obliga a
+reautenticación, no pierde información empresarial. El secreto usa
+`Retain/Retain` y sólo puede darse de baja mediante runbook seguro. Production
+conserva termination protection del stack. No se configura final snapshot.
+
+`MxMedSessionStack` expone tipos concretos para replication group, primary
+address/port, subnet/parameter/user group, application/default users, auth
+secret, prefix, TTL idle, lifetime absoluto, máximo de payload y contrato de
+locking. No expone password, secret value, session ID, IP, cookie o AUTH.
+
+### Helpers puros
+
+`session-contract.ts` define `SessionEnvironmentCode`, contratos de key,
+payload, cookie, locking, expiración y ACL, más helpers para construir prefix y
+key y validar ID opaco, payload/keys, cookie, ACL, expiración y lock.
+
+Las keys siguen `mxmed:{environmentCode}:session:{opaqueSessionId}`. Se
+rechazan IDs cortos, semánticos, con email/slash/traversal/espacio/control. El
+payload admite sólo las 12 keys de PP260 y falla sanitizadamente sobre 32 KiB,
+sin truncamiento. Se rechazan nombres clínicos, Stripe, PaymentIntent,
+password/token/provider secret, archivo/documento/estudio/receta o API payload.
+Los helpers no generan ID ni escriben/conectan a Valkey.
+
+La cookie pura fija `__Host-mxmed_session`, Secure, HttpOnly, SameSite Lax,
+Path `/`, Domain null, strict mode, only cookies, trans SID off, gc 1800 y lazy
+write. El lock fija timeout/máximo de espera 10 segundos, intervalo 100000
+microsegundos y retries acotados. La expiración exige TTL 1800 y límite absoluto
+43200 sin extensión.
+
+### Stage, dependencias y guardrails
+
+El orden lógico permanece Network, Security, Data, Storage, Session, Compute,
+Edge, Operations, Jobs y Backup. Stage inyecta referencias tipadas de Network y
+Security. Las dependencias directas de Session son sólo Network y Security;
+Compute y Operations dependen de Session. Session no depende de Data, Storage,
+Compute, Edge, Operations, Jobs o Backup y el grafo sigue acíclico.
+
+`SessionFoundationAspect` inspecciona replication/subnet/parameter groups,
+users, user group, secret, serverless cache y outputs. Bloquea engine/version,
+cluster/nodos/HA, red, KMS/TLS o mode `preferred`, snapshots/logs/global/data
+tiering, AuthToken, removal policies, secret no dinámico/KMS/Retain, default
+activo, ACL drift, wildcard global, serverless y outputs. El validator final
+exige el inventario exacto y no autocorrige recursos inseguros.
+
+El guardrail Network existente conserva el rechazo de cualquier ingress
+público sobre Session SG.
+
+### QA y auditoría offline de templates
+
+Se conservaron las 419 pruebas anteriores y se agregaron 135 pruebas Session:
+554 PASS. Cubren los 135 casos enumerados de config, subnet/parameter, secreto,
+RBAC, replication groups, helpers, guardrails y synth offline. TypeScript,
+ESLint, Prettier, validate, ambos synth y los dos modos de npm audit pasan sin
+cambio de dependencias y con cero vulnerabilidades.
+
+Los templates deterministas de staging y production contienen cada uno un
+replication group, subnet group, parameter group, secret, dos users y un user
+group. Staging fija un nodo micro sin HA; production dos medium con HA/failover.
+Ambos contienen Valkey 8.2, cluster disabled, KMS, TLS enabled con mode ausente,
+dynamic reference, default off, ACL mínima y snapshot 0. No contienen plaintext,
+`+@all`, AuthToken, logs, global datastore, cuenta/ARN/endpoint real o recurso
+desplegado. Los synth fueron locales/offline y no acreditan existencia en AWS.
+
+### Límites, evidencia y no repetición
+
+No se modificó PHP, `php.ini`, Docker, SQL/migrations, JavaScript funcional,
+CSS, assets, Stripe, workflows o `package.json` raíz. `phpredis`, configuración
+del handler, inyección ECS, migración filesystem, login/logout y prueba real de
+failover continúan pendientes.
+
+La evidencia sanitizada queda fuera de Git en:
+
+`/tmp/mxmed-aws-session-implementation-01/`.
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_deployed": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "valkey_connections": 0,
+  "redis_connections": 0,
+  "session_ids_read": 0,
+  "cookies_read": 0,
+  "login_calls": 0,
+  "logout_calls": 0,
+  "php_runtime_changes": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0,
+  "secret_values_persisted": 0
+}
+```
+
+### Rollback y siguiente microfase
+
+Rollback: revertir atómicamente el commit de PP261. Como no hubo deploy o
+runtime, sólo retira templates, tests y documentación. No borrar manualmente
+secret/cache ni asumir que revertir código revierte recursos futuros.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Compute-Readiness-01`
+
+Será la Microfase 16 de 24 y deberá definir Compute sin reabrir Session,
+Network, Security, Data o Storage.
+
+### Cierre del contador
+
+Microfase 15 de 24 concluida.
+Avance global: 15/24.
+Pendientes: 9.
+
+---

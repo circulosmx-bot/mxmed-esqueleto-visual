@@ -19,3 +19,33 @@ export { MxMedSecurityRoleFactory } from './security-role-factory';
 export type { MxMedHumanRoleProps, MxMedWorkloadRoleKind } from './security-role-factory';
 export { SecuritySecretContainer } from './security-secret-container';
 export type { SecuritySecretContainerProps } from './security-secret-container';
+export {
+  SESSION_ACL_COMMANDS,
+  SESSION_COOKIE_CONTRACT,
+  SESSION_LOCK_CONTRACT,
+  SESSION_PAYLOAD_CONTRACT,
+  SESSION_PAYLOAD_KEYS,
+  SessionContractError,
+  buildSessionAclContract,
+  buildSessionApplicationAccessString,
+  buildSessionKey,
+  buildSessionPrefix,
+  validateOpaqueSessionId,
+  validateSessionAcl,
+  validateSessionCookieContract,
+  validateSessionExpiration,
+  validateSessionLockContract,
+  validateSessionPayloadKeys,
+  validateSessionPayloadSize,
+} from './session-contract';
+export type {
+  SessionAclCommand,
+  SessionAclContract,
+  SessionCookieContract,
+  SessionEnvironmentCode,
+  SessionExpirationContract,
+  SessionKeyContract,
+  SessionLockContract,
+  SessionPayloadContract,
+  SessionPayloadKey,
+} from './session-contract';

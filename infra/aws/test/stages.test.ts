@@ -114,6 +114,15 @@ describe.each([
         expect(environment.storageStack.privateDocumentsBucket).toBeDefined();
         expect(environment.storageStack.clinicalRecordsBucket).toBeDefined();
         expect(environment.storageStack.uploadQuarantineBucket).toBeDefined();
+      } else if (stack === environment.sessionStack) {
+        expect(Object.keys(resources)).toHaveLength(7);
+        expect(environment.sessionStack.replicationGroup).toBeDefined();
+        expect(environment.sessionStack.subnetGroup).toBeDefined();
+        expect(environment.sessionStack.parameterGroup).toBeDefined();
+        expect(environment.sessionStack.applicationUser).toBeDefined();
+        expect(environment.sessionStack.defaultDisabledUser).toBeDefined();
+        expect(environment.sessionStack.userGroup).toBeDefined();
+        expect(environment.sessionStack.authSecret).toBeDefined();
       } else {
         expect(Object.keys(resources)).toHaveLength(0);
       }

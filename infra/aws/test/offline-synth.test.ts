@@ -73,13 +73,23 @@ describe.each([
           expect(
             resources.filter((resource) => resource.Type === 'AWS::S3::BucketPolicy'),
           ).toHaveLength(4);
+        } else if (stackName === `mxmed-${config.environmentCode}-session`) {
+          expect(resources).toHaveLength(7);
+          expect(
+            resources.filter((resource) => resource.Type === 'AWS::ElastiCache::ReplicationGroup'),
+          ).toHaveLength(1);
+          expect(
+            resources.filter((resource) => resource.Type === 'AWS::ElastiCache::User'),
+          ).toHaveLength(2);
+          expect(
+            resources.filter((resource) => resource.Type === 'AWS::SecretsManager::Secret'),
+          ).toHaveLength(1);
         } else {
           expect(resources).toHaveLength(0);
         }
         expect(resources.map((resource) => resource.Type)).not.toEqual(
           expect.arrayContaining([
             'AWS::ECS::Service',
-            'AWS::ElastiCache::ReplicationGroup',
             'AWS::ElasticLoadBalancingV2::LoadBalancer',
             'AWS::CloudFront::Distribution',
             'AWS::WAFv2::WebACL',

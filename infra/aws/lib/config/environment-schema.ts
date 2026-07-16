@@ -160,6 +160,63 @@ const EXPECTED_STORAGE_CONFIGURATION = Object.freeze({
   },
 } as const);
 
+const EXPECTED_SESSION_CONFIGURATION = Object.freeze({
+  staging: {
+    sessionProfile: 'session-foundation-v1',
+    sessionEngine: 'valkey',
+    sessionEngineVersion: '8.2',
+    sessionNodeType: 'cache.t4g.micro',
+    sessionClusterModeEnabled: false,
+    sessionShardCount: 1,
+    sessionReplicaCount: 0,
+    sessionMultiAzEnabled: false,
+    sessionAutomaticFailoverEnabled: false,
+    sessionAtRestEncryptionEnabled: true,
+    sessionTransitEncryptionEnabled: true,
+    sessionTransitEncryptionMode: 'create-time-tls-only',
+    sessionIdleTtlSeconds: 1800,
+    sessionAbsoluteLifetimeSeconds: 43200,
+    sessionMaxPayloadKiB: 32,
+    sessionSnapshotRetentionDays: 0,
+    sessionAutoMinorVersionUpgrade: false,
+    sessionPreferredMaintenanceWindow: 'sun:03:30-sun:04:30',
+    sessionParameterGroupFamily: 'valkey8',
+    sessionAuthProfile: 'valkey-rbac-password-v1',
+    sessionAclKeyPattern: '~mxmed:stg:session:*',
+    sessionLockEnabled: true,
+    sessionLockTimeoutSeconds: 10,
+    sessionLockWaitMicroseconds: 100000,
+    sessionLogDeliveryEnabled: false,
+  },
+  production: {
+    sessionProfile: 'session-foundation-v1',
+    sessionEngine: 'valkey',
+    sessionEngineVersion: '8.2',
+    sessionNodeType: 'cache.t4g.medium',
+    sessionClusterModeEnabled: false,
+    sessionShardCount: 1,
+    sessionReplicaCount: 1,
+    sessionMultiAzEnabled: true,
+    sessionAutomaticFailoverEnabled: true,
+    sessionAtRestEncryptionEnabled: true,
+    sessionTransitEncryptionEnabled: true,
+    sessionTransitEncryptionMode: 'create-time-tls-only',
+    sessionIdleTtlSeconds: 1800,
+    sessionAbsoluteLifetimeSeconds: 43200,
+    sessionMaxPayloadKiB: 32,
+    sessionSnapshotRetentionDays: 0,
+    sessionAutoMinorVersionUpgrade: false,
+    sessionPreferredMaintenanceWindow: 'sun:04:30-sun:05:30',
+    sessionParameterGroupFamily: 'valkey8',
+    sessionAuthProfile: 'valkey-rbac-password-v1',
+    sessionAclKeyPattern: '~mxmed:prd:session:*',
+    sessionLockEnabled: true,
+    sessionLockTimeoutSeconds: 10,
+    sessionLockWaitMicroseconds: 100000,
+    sessionLogDeliveryEnabled: false,
+  },
+} as const);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -319,6 +376,21 @@ function validateStorageConfiguration(
       'MXMED_CONFIG_INVALID',
       field,
       'must match the PP257 storage contract for the selected environment',
+    );
+  }
+}
+
+function validateSessionConfiguration(
+  config: Record<string, unknown>,
+  environmentName: MxMedEnvironmentName,
+): void {
+  const expected = EXPECTED_SESSION_CONFIGURATION[environmentName];
+  for (const [field, expectedValue] of Object.entries(expected)) {
+    assertMxMedCondition(
+      config[field] === expectedValue,
+      'MXMED_CONFIG_INVALID',
+      field,
+      'must match the PP260 session contract for the selected environment',
     );
   }
 }
@@ -549,6 +621,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
   );
   validateDatabaseConfiguration(input, environmentName);
   validateStorageConfiguration(input, environmentName);
+  validateSessionConfiguration(input, environmentName);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',
     'MXMED_CONFIG_INVALID',

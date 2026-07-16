@@ -208,7 +208,7 @@ describe.each([
     expect(stage.networkStack.sessionSecurityGroup).toBeDefined();
     expect(stage.networkStack.endpointSecurityGroup).toBeDefined();
     expect(stage.networkStack.flowLogGroup).toBeDefined();
-    expect(Object.keys(outputs)).toHaveLength(3);
+    expect(Object.keys(outputs)).toHaveLength(4);
     expect(Object.keys(outputs).every((key) => key.startsWith('ExportsOutput'))).toBe(true);
     expect(JSON.stringify(outputs)).not.toMatch(/password|secret|account/i);
   });
@@ -476,7 +476,7 @@ describe.each([
         'AWS::SecretsManager::Secret',
       ]),
     );
-    expect(Object.keys(outputs)).toHaveLength(3);
+    expect(Object.keys(outputs)).toHaveLength(4);
     expect(Object.keys(outputs).every((key) => key.startsWith('ExportsOutput'))).toBe(true);
     expect(JSON.stringify(outputs)).not.toMatch(/password|secret|account/i);
     expect(JSON.stringify(resources)).not.toMatch(

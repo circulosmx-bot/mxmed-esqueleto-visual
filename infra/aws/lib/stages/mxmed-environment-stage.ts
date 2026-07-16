@@ -56,7 +56,14 @@ export class MxMedEnvironmentStage extends Stage {
       ...stackProps,
       applicationDataKey: this.securityStack.applicationDataKey,
     });
-    this.sessionStack = new MxMedSessionStack(this, 'Session', stackProps);
+    this.sessionStack = new MxMedSessionStack(this, 'Session', {
+      ...stackProps,
+      vpc: this.networkStack.vpc,
+      isolatedDataSubnets: this.networkStack.isolatedDataSubnets,
+      sessionSecurityGroup: this.networkStack.sessionSecurityGroup,
+      applicationDataKey: this.securityStack.applicationDataKey,
+      secretsKey: this.securityStack.secretsKey,
+    });
     this.computeStack = new MxMedComputeStack(this, 'Compute', stackProps);
     this.edgeStack = new MxMedEdgeStack(this, 'Edge', stackProps);
     this.operationsStack = new MxMedOperationsStack(this, 'Operations', stackProps);

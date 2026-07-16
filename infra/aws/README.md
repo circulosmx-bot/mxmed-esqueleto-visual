@@ -3,16 +3,18 @@
 ## Propósito y estado
 
 Este proyecto implementa la foundation local de Infrastructure as Code, la red V1 y las
-foundations de seguridad, datos y almacenamiento de México Médico. Traduce PP-Decisiones 245
+foundations de seguridad, datos, almacenamiento y sesiones de México Médico. Traduce PP-Decisiones 245
 (`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`), PP-Decisiones 249
 (`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`), PP-Decisiones 251
 (`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`) y PP-Decisiones 253
 (`MXMED_AWS_SECURITY_READINESS_CONTRACT_V1`), además de PP-Decisiones 255
 (`MXMED_AWS_DATA_READINESS_CONTRACT_V1`) y PP-Decisiones 257
-(`MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 260
+(`MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
 
-`MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack` y `MxMedStorageStack` contienen
-recursos CloudFormation sintetizables offline. Los demás stacks continúan vacíos. Nada está
+`MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack`, `MxMedStorageStack` y
+`MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. Los demás stacks
+continúan vacíos. Nada está
 desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos en esta etapa.
 
 ## Arquitectura contractual
@@ -21,11 +23,11 @@ desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos e
 - Correo de cada ambiente: stage separado en `us-east-1` para SES.
 - Compute futuro: ECS Fargate.
 - Ingress futuro: Route 53, CloudFront, WAF, ALB y ECS.
-- Datos: template RDS MySQL 8.4.9 y cuatro buckets S3 privados; sesiones en ElastiCache futuras.
+- Datos: template RDS MySQL 8.4.9, cuatro buckets S3 privados y sesiones en ElastiCache Valkey 8.2.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene diez stacks: Network, Security, Data y Storage implementados;
-Session, Compute, Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
+`MxMedEnvironmentStage` contiene diez stacks: Network, Security, Data, Storage y Session
+implementados; Compute, Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
 ## Prerrequisitos
@@ -79,8 +81,8 @@ Los scripts de synth lo proporcionan de forma explícita. La configuración tipa
 - región primaria y región de correo;
 - CIDR VPC RFC1918 `/16` exacto por ambiente;
 - masks de los cuatro tiers y exactamente dos AZ;
-- perfiles de NAT y compute, los 21 campos cerrados de base de datos y los 25 campos cerrados de
-  Storage;
+- perfiles de NAT y compute, los 21 campos cerrados de base de datos, los 25 campos cerrados de
+  Storage y los 25 campos cerrados de Session;
 - perfil de interface endpoints y retención de VPC Flow Logs;
 - perfil de seguridad, ventanas KMS y recuperación operativa de secretos;
 - retención de CloudTrail y archivo de auditoría;
@@ -301,6 +303,63 @@ difieren a Operations; Object Lock requiere contrato legal propio y replication/
 diferidos a Backup/DR. Versioning no se presenta como backup independiente y no existen backups
 S3 reales en esta etapa.
 
+## Session foundation implementada en templates
+
+Cada ambiente sintetiza un replication group node-based dedicado a sesiones con Amazon
+ElastiCache for Valkey `8.2`, cluster mode disabled y un shard lógico. Staging usa un
+`cache.t4g.micro`, un primary, cero réplicas, sin Multi-AZ ni failover. Production usa dos
+`cache.t4g.medium`, primary y réplica en las dos subnets `isolated-data`, con Multi-AZ y automatic
+failover. La aplicación futura consumirá sólo el primary endpoint; no se fijan IP, endpoint de
+nodo o configuration endpoint.
+
+Session reutiliza exactamente la VPC, las dos subnets aisladas y `SessionSecurityGroup` de
+Network, cuyo único ingress es TCP 6379 desde `ApplicationSecurityGroup`. El replication group es
+IPv4, cifra en reposo con `ApplicationDataKey` y habilita tránsito cifrado desde su creación. La
+propiedad CloudFormation `TransitEncryptionMode` se omite intencionalmente: `preferred` es el paso
+de migración para clusters preexistentes con plaintext, mientras que un cluster Valkey nuevo con
+`TransitEncryptionEnabled=true` nace TLS-only. El runtime futuro deberá validar certificado y
+hostname y nunca tendrá fallback plaintext.
+
+El parameter group `valkey8` fija `volatile-ttl`, timeout 300, active rehashing, keepalive 60 y
+notificaciones de keyspace vacías. No configura `cluster-enabled`, appendonly, save, slow/command
+log, modules o search/vector. Snapshots, snapshot window, Global Datastore, data tiering, log
+delivery y auto minor upgrade permanecen apagados. Las ventanas UTC son
+`sun:03:30-sun:04:30` para staging y `sun:04:30-sun:05:30` para production.
+
+Session crea un secreto separado en
+`/mxmed/{environmentName}/application/session-store-auth`, cifrado con `SecretsKey` y conservado
+con `Retain`. Secrets Manager genera el campo `password` de 64 caracteres; CDK representa la
+exclusión de espacio como `IncludeSpace=false`, equivalente al contrato conceptual
+`excludeSpace=true`. El template sólo contiene una dynamic reference versionless al campo y no
+contiene password, parámetro u output sensible.
+
+Por compatibilidad con la referencia CloudFormation, el user group incluye dos users Valkey con
+la misma referencia dinámica:
+
+- `mxmed_session_app`, activo y restringido a `~mxmed:{stg|prd}:session:*` con sólo `GET`, `SET`,
+  `SETEX`, `DEL`, `UNLINK`, `EXISTS`, `EXPIRE`, `PEXPIRE`, `TTL`, `PTTL`, `TOUCH` y `PING`;
+- `default`, deshabilitado mediante `off ~* -@all`, sin comandos, keys o uso runtime.
+
+Compartir la referencia de password no concede acceso al default user porque su access string lo
+mantiene apagado y elimina todas las categorías. No existen `+@all`, `KEYS`, `SCAN`, flush,
+administración, script o `EVAL/EVALSHA`; la readiness no demostró que locking requiera esos
+comandos y la ACL no se amplió por intuición.
+
+Los helpers puros formalizan prefix/key opacos, allowlist de 12 keys mínimas de payload, máximo de
+32 KiB sin truncamiento, cookie `__Host-mxmed_session`, TTL idle de 1800 segundos, lifetime
+absoluto de 43200 segundos y locking acotado a 10 segundos con espera de 100000 microsegundos.
+No generan session IDs ni conectan a Valkey.
+
+Los recursos efímeros de cache, subnet/parameter/user groups y users usan `Delete` al retirar o
+reemplazar; perder el cache obliga a reautenticarse y no elimina información empresarial. El auth
+secret usa `Retain` y requiere runbook seguro. Production conserva además termination protection
+del stack. Session depende sólo de Network y Security; Compute y Operations dependen de Session,
+sin ciclo ni integración runtime adelantada.
+
+PHP, `php.ini`, Docker y ECS no cambiaron. `phpredis`, inyección del secreto y migración desde el
+handler filesystem siguen pendientes; no hubo login, conexión, failover real ni recurso AWS
+desplegado.
+
 ## Synth offline
 
 La foundation no usa AWS SDK, AWS CLI, profiles, context providers, lookups, Docker bundling ni
@@ -313,11 +372,12 @@ npm run synth:production
 ```
 
 Ambos comandos deben funcionar sin credenciales AWS. Las plantillas actuales contienen recursos
-únicamente en NetworkStack, SecurityStack, DataStack y StorageStack; Email y los otros seis
-workload stacks continúan sin recursos. SecurityStack crea cuatro contenedores de secreto pero
-cero valores versionados; DataStack crea el contrato RDS sin valor secreto; StorageStack crea sólo
-cuatro buckets y cuatro políticas SSL. No crea ECS services/tasks, scanner, SQS, EventBridge Rule,
-ElastiCache, ALB, CloudFront, WAF, OIDC/deployment role ni roles humanos. `cdk.out/` es temporal y
+únicamente en NetworkStack, SecurityStack, DataStack, StorageStack y SessionStack; Email y los
+otros cinco workload stacks continúan sin recursos. SecurityStack crea cuatro contenedores de
+secreto pero cero valores versionados; DataStack crea el contrato RDS sin valor secreto;
+StorageStack crea sólo cuatro buckets y cuatro políticas SSL; SessionStack crea la topología
+Valkey y un secreto generado sin revelar su valor. No crea ECS services/tasks, scanner, SQS,
+EventBridge Rule, ALB, CloudFront, WAF, OIDC/deployment role ni roles humanos. `cdk.out/` es temporal y
 no se versiona.
 
 ## Naming y tags
@@ -361,8 +421,9 @@ Los Aspects iniciales son:
 - `SecurityFoundationAspect`;
 - `NoPlaintextSecretAspect`;
 - `LeastPrivilegeIamAspect`;
-- `DataFoundationAspect`.
+- `DataFoundationAspect`;
 - `StorageFoundationAspect`.
+- `SessionFoundationAspect`.
 
 NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
 tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
@@ -385,6 +446,11 @@ StorageStack registra su Aspect y validator bloqueantes para comprobar inventari
 buckets, acceso privado, ownership, versioning, SSE-KMS con `ApplicationDataKey`, Bucket Keys,
 TLS, retención, lifecycle, EventBridge de Quarantine y ausencia de nombre físico, output, CORS,
 website, Object Lock, replication, server logging, CloudFront, scanner, SQS o data trail.
+
+SessionStack registra su Aspect y validator bloqueantes para comprobar inventario, Valkey 8.2,
+topología por ambiente, subnet/SG, KMS, TLS desde creación sin mode `preferred`, RBAC dinámico,
+default user apagado, ACL mínima, parameter group, ausencia de snapshots/logs/Global Datastore,
+removal policy y cero outputs sensibles.
 
 Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Jobs permanecen
 vacíos: los tests usan mutaciones sintéticas para demostrar guardrails, pero este proyecto no
@@ -429,11 +495,12 @@ npm run test
 npm run validate
 ```
 
-Las 419 pruebas (293 heredadas y 126 nuevas de Storage) cubren configuración, naming,
+Las 554 pruebas (419 heredadas y 135 nuevas de Session) cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
 VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, KMS, secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
 parameter/subnet groups, Enhanced Monitoring, inventario/lifecycle/cifrado de Storage, helpers de
-keys, metadata/tags, MIME/tamaños/TTL, guardrails negativos y síntesis determinista offline. Los
+keys, metadata/tags, MIME/tamaños/TTL, Valkey/RBAC/TLS, contratos de sesión, guardrails negativos
+y síntesis determinista offline. Los
 snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift
