@@ -2,8 +2,15 @@ export type MxMedEnvironmentName = 'staging' | 'production';
 export type MxMedEnvironmentCode = 'stg' | 'prd';
 export type MxMedAccountSource = 'deployment-identity' | 'ci-variable';
 export type MxMedNatStrategy = 'single-az' | 'dual-az';
-export type MxMedInterfaceEndpointProfile = 's3-only' | 'production-core';
+export type MxMedInterfaceEndpointProfile = 's3-only' | 'production-core' | 'measured';
 export type MxMedComputeSizingProfile = 'reduced' | 'production-ha';
+export type MxMedDeploymentProfile = 'launch-lean-v1' | 'production-standard-v1' | 'scale-ready-v1';
+export type MxMedStagingOperatingMode = 'release-window-v1';
+export type MxMedDatabaseAvailabilityProfile = 'single-az' | 'multi-az';
+export type MxMedSessionAvailabilityProfile = 'single-node' | 'primary-replica';
+export type MxMedComputeAvailabilityProfile = 'single-task' | 'ha-minimum';
+export type MxMedCostTier =
+  'fixed-critical' | 'usage-based' | 'storage-based' | 'deferred-optional';
 export type MxMedDatabaseEngine = 'mysql';
 export type MxMedDatabaseStorageType = 'gp3';
 export type MxMedDatabaseInsightsMode = 'standard';
@@ -28,6 +35,10 @@ export interface MxMedGlobalTags {
   readonly ManagedBy: 'aws-cdk';
   readonly Application: 'mexico-medico';
   readonly Owner: 'platform';
+  readonly DeploymentProfile: MxMedDeploymentProfile;
+  readonly CostReview: string;
+  readonly Ephemeral: 'true' | 'false';
+  readonly SchedulePolicy: MxMedStagingOperatingMode | 'always-on';
 }
 
 export interface MxMedStackTagMetadata {
@@ -60,7 +71,10 @@ export interface MxMedEnvironmentConfig {
   readonly vpcCidr: string;
   readonly subnetMasks: MxMedSubnetMasks;
   readonly availabilityZoneCount: number;
+  readonly deploymentProfile: MxMedDeploymentProfile;
+  readonly stagingOperatingMode: MxMedStagingOperatingMode | null;
   readonly natStrategy: MxMedNatStrategy;
+  readonly natGatewayCount: 1 | 2;
   readonly interfaceEndpointProfile: MxMedInterfaceEndpointProfile;
   readonly flowLogRetentionDays: number;
   readonly securityProfile: MxMedSecurityProfile;
@@ -72,6 +86,16 @@ export interface MxMedEnvironmentConfig {
   readonly enableKeyRotation: boolean;
   readonly enableDataEventTrail: boolean;
   readonly computeSizingProfile: MxMedComputeSizingProfile;
+  readonly computeAvailabilityProfile: MxMedComputeAvailabilityProfile;
+  readonly computeDesiredCount: 1 | 2;
+  readonly computeMinCapacity: 1 | 2;
+  readonly computeMaxCapacity: 1 | 2 | 6;
+  readonly computeTaskCpuUnits: 512 | 1024;
+  readonly computeTaskMemoryMiB: 1024 | 2048;
+  readonly computeArchitecture: 'X86_64';
+  readonly computeUseSpot: false;
+  readonly computeAssignPublicIp: false;
+  readonly databaseAvailabilityProfile: MxMedDatabaseAvailabilityProfile;
   readonly databaseEngine: MxMedDatabaseEngine;
   readonly databaseEngineVersion: '8.4.9';
   readonly databaseParameterGroupFamily: 'mysql8.4';
@@ -94,6 +118,8 @@ export interface MxMedEnvironmentConfig {
   readonly databaseCharacterSet: 'utf8mb4';
   readonly databaseCollation: 'utf8mb4_unicode_ci';
   readonly databaseEngineLifecycleSupport: MxMedDatabaseEngineLifecycleSupport;
+  readonly databaseProxyEnabled: false;
+  readonly databaseReadReplicaCount: 0;
   readonly storageProfile: MxMedStorageProfile;
   readonly storageVersioningEnabled: boolean;
   readonly storageEncryptionProfile: MxMedStorageEncryptionProfile;
@@ -120,6 +146,7 @@ export interface MxMedEnvironmentConfig {
   readonly enableStorageDataEvents: boolean;
   readonly storageAllowedMimeTypes: MxMedStorageAllowedMimeTypes;
   readonly sessionProfile: MxMedSessionProfile;
+  readonly sessionAvailabilityProfile: MxMedSessionAvailabilityProfile;
   readonly sessionEngine: MxMedSessionEngine;
   readonly sessionEngineVersion: '8.2';
   readonly sessionNodeType: 'cache.t4g.micro' | 'cache.t4g.medium';
@@ -144,6 +171,22 @@ export interface MxMedEnvironmentConfig {
   readonly sessionLockTimeoutSeconds: number;
   readonly sessionLockWaitMicroseconds: number;
   readonly sessionLogDeliveryEnabled: boolean;
+  readonly approvedMonthlyBudgetUsd: number | null;
+  readonly planningFxMxnPerUsd: number | null;
+  readonly planningFxAsOf: string | null;
+  readonly anomalyAlertThresholdUsd: number | null;
+  readonly maxInfrastructureCostToRevenuePercent: number | null;
+  readonly budgetOwner: string | null;
+  readonly alertRecipientsConfigured: boolean;
+  readonly costReadinessReviewApproved: boolean;
+  readonly costEstimateAsOf: string;
+  readonly costEstimateVersion: string;
+  readonly enableCostBudgets: false;
+  readonly enableCostAnomalyDetection: false;
+  readonly enableStagingSchedule: false;
+  readonly stagingReleaseWindowHours: number | null;
+  readonly costAlertThresholdPercentages: readonly [50, 75, 90, 100, 120];
+  readonly profilePromotionPolicyVersion: string;
   readonly domainAlias?: string;
   readonly logRetentionDays: number;
   readonly backupRetentionDays: number;
@@ -165,6 +208,10 @@ export const MXMED_REQUIRED_GLOBAL_TAG_KEYS = [
   'ManagedBy',
   'Application',
   'Owner',
+  'DeploymentProfile',
+  'CostReview',
+  'Ephemeral',
+  'SchedulePolicy',
 ] as const;
 
 export const MXMED_REQUIRED_RESOURCE_TAG_KEYS = [
@@ -173,4 +220,5 @@ export const MXMED_REQUIRED_RESOURCE_TAG_KEYS = [
   'DataClassification',
   'Criticality',
   'Backup',
+  'CostTier',
 ] as const;

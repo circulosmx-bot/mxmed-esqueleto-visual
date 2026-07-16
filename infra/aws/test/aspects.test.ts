@@ -28,6 +28,11 @@ function addRequiredTags(bucket: CfnBucket): void {
     Criticality: 'high',
     Backup: 'required',
     Owner: 'platform',
+    DeploymentProfile: 'launch-lean-v1',
+    CostReview: '2026-07-16',
+    Ephemeral: 'false',
+    SchedulePolicy: 'always-on',
+    CostTier: 'storage-based',
   };
   for (const [key, value] of Object.entries(tags)) {
     bucket.tags.setTag(key, value);

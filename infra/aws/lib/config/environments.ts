@@ -4,8 +4,13 @@ import {
   validateEnvironmentConfig,
   validateEnvironmentNetworkSeparation,
 } from './environment-schema';
+import {
+  MXMED_COST_AWARE_LAUNCH_PROFILES_CONTRACT,
+  MXMED_COST_ESTIMATE_AS_OF,
+  resolveLaunchProfile,
+} from './launch-profiles';
 
-export const STAGING_CONFIG = Object.freeze({
+const STAGING_BASE_CONFIG = Object.freeze({
   environmentName: 'staging',
   environmentCode: 'stg',
   projectName: 'mxmed',
@@ -123,9 +128,9 @@ export const STAGING_CONFIG = Object.freeze({
     Application: 'mexico-medico',
     Owner: 'platform',
   },
-} satisfies MxMedEnvironmentConfig);
+});
 
-export const PRODUCTION_CONFIG = Object.freeze({
+const PRODUCTION_BASE_CONFIG = Object.freeze({
   environmentName: 'production',
   environmentCode: 'prd',
   projectName: 'mxmed',
@@ -243,20 +248,60 @@ export const PRODUCTION_CONFIG = Object.freeze({
     Application: 'mexico-medico',
     Owner: 'platform',
   },
-} satisfies MxMedEnvironmentConfig);
+});
 
-validateEnvironmentConfig(STAGING_CONFIG);
-validateEnvironmentConfig(PRODUCTION_CONFIG);
+function createEnvironmentConfig(
+  environmentName: MxMedEnvironmentName,
+  deploymentProfileValue: unknown,
+): MxMedEnvironmentConfig {
+  const resolved = resolveLaunchProfile(environmentName, deploymentProfileValue);
+  const base = environmentName === 'staging' ? STAGING_BASE_CONFIG : PRODUCTION_BASE_CONFIG;
+  const config = {
+    ...base,
+    ...resolved.capacity,
+    deploymentProfile: resolved.deploymentProfile,
+    stagingOperatingMode: resolved.stagingOperatingMode,
+    approvedMonthlyBudgetUsd: null,
+    planningFxMxnPerUsd: null,
+    planningFxAsOf: null,
+    anomalyAlertThresholdUsd: null,
+    maxInfrastructureCostToRevenuePercent: null,
+    budgetOwner: null,
+    alertRecipientsConfigured: false,
+    costReadinessReviewApproved: false,
+    costEstimateAsOf: MXMED_COST_ESTIMATE_AS_OF,
+    costEstimateVersion: MXMED_COST_AWARE_LAUNCH_PROFILES_CONTRACT,
+    enableCostBudgets: false,
+    enableCostAnomalyDetection: false,
+    enableStagingSchedule: false,
+    stagingReleaseWindowHours: null,
+    costAlertThresholdPercentages: [50, 75, 90, 100, 120],
+    profilePromotionPolicyVersion: MXMED_COST_AWARE_LAUNCH_PROFILES_CONTRACT,
+    tags: {
+      Project: 'mxmed',
+      Environment: environmentName,
+      ManagedBy: 'aws-cdk',
+      Application: 'mexico-medico',
+      Owner: 'platform',
+      DeploymentProfile: resolved.deploymentProfile,
+      CostReview: MXMED_COST_ESTIMATE_AS_OF,
+      Ephemeral: environmentName === 'staging' ? 'true' : 'false',
+      SchedulePolicy: environmentName === 'staging' ? 'release-window-v1' : 'always-on',
+    },
+  } as const;
+  validateEnvironmentConfig(config);
+  return Object.freeze(config);
+}
+
+export const STAGING_CONFIG = createEnvironmentConfig('staging', 'launch-lean-v1');
+export const PRODUCTION_CONFIG = createEnvironmentConfig('production', 'launch-lean-v1');
+
 validateEnvironmentNetworkSeparation(STAGING_CONFIG, PRODUCTION_CONFIG);
 
-const ENVIRONMENTS: Readonly<Record<MxMedEnvironmentName, MxMedEnvironmentConfig>> = {
-  staging: STAGING_CONFIG,
-  production: PRODUCTION_CONFIG,
-};
-
-export function getEnvironmentConfig(value: unknown): MxMedEnvironmentConfig {
+export function getEnvironmentConfig(
+  value: unknown,
+  deploymentProfileValue: unknown,
+): MxMedEnvironmentConfig {
   const environmentName = parseEnvironmentName(value);
-  const config = ENVIRONMENTS[environmentName];
-  validateEnvironmentConfig(config);
-  return config;
+  return createEnvironmentConfig(environmentName, deploymentProfileValue);
 }

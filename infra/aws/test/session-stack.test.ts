@@ -1,5 +1,7 @@
-import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
+import { getEnvironmentConfig, STAGING_CONFIG } from '../lib/config/environments';
 import { firstResource, properties, renderSession, resourcesOfType } from './session-test-helpers';
+
+const PRODUCTION_CONFIG = getEnvironmentConfig('production', 'scale-ready-v1');
 
 const staging = renderSession(STAGING_CONFIG);
 const production = renderSession(PRODUCTION_CONFIG);

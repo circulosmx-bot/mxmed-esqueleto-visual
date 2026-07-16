@@ -23,7 +23,6 @@ import type { Construct } from 'constructs';
 
 import { BaseMxMedStack } from './base-mxmed-stack';
 import type { MxMedContractStackProps } from './base-mxmed-stack';
-import { mxmedNatGatewayCount } from '../config/environment-config';
 import type { MxMedEnvironmentName } from '../config/environment-config';
 import { registerMxMedNetworkGuardrails } from '../utils/network-guardrails';
 import { mxmedName } from '../utils/naming';
@@ -143,7 +142,7 @@ export class MxMedNetworkStack extends BaseMxMedStack {
       ipAddresses: IpAddresses.cidr(config.vpcCidr),
       ipProtocol: IpProtocol.IPV4_ONLY,
       maxAzs: config.availabilityZoneCount,
-      natGateways: mxmedNatGatewayCount(config.natStrategy),
+      natGateways: config.natGatewayCount,
       enableDnsSupport: true,
       enableDnsHostnames: true,
       subnetConfiguration: [

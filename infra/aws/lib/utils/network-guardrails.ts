@@ -13,7 +13,6 @@ import {
 import { CfnLogGroup } from 'aws-cdk-lib/aws-logs';
 import type { IConstruct } from 'constructs';
 
-import { mxmedNatGatewayCount } from '../config/environment-config';
 import type { MxMedEnvironmentConfig, MxMedEnvironmentName } from '../config/environment-config';
 
 const EXPECTED_SUBNET_CIDRS: Readonly<
@@ -173,7 +172,7 @@ function validateSecurityGroups(
 function validateEndpoints(
   errors: string[],
   endpoints: CfnVPCEndpoint[],
-  environmentName: MxMedEnvironmentName,
+  interfaceEndpointProfile: MxMedEnvironmentConfig['interfaceEndpointProfile'],
 ): void {
   const gatewayEndpoints = endpoints.filter((endpoint) => endpoint.vpcEndpointType === 'Gateway');
   const interfaceEndpoints = endpoints.filter(
@@ -191,14 +190,14 @@ function validateEndpoints(
     'MXMED_NETWORK_S3_GATEWAY_ENDPOINT_INVALID',
   );
 
-  const expectedInterfaceCount = environmentName === 'production' ? 4 : 0;
+  const expectedInterfaceCount = interfaceEndpointProfile === 'production-core' ? 4 : 0;
   pushIf(
     errors,
     interfaceEndpoints.length !== expectedInterfaceCount,
     'MXMED_NETWORK_INTERFACE_ENDPOINT_COUNT_INVALID',
   );
 
-  if (environmentName === 'production') {
+  if (interfaceEndpointProfile === 'production-core') {
     const requiredPaths = [
       'ecrapiendpoint',
       'ecrdockerendpoint',
@@ -296,11 +295,7 @@ function validateMxMedNetwork(scope: IConstruct, config: MxMedEnvironmentConfig)
     vpcs.length !== 1 || !vpcConfigurationValid,
     'MXMED_NETWORK_VPC_CONFIGURATION_INVALID',
   );
-  pushIf(
-    errors,
-    natGateways.length !== mxmedNatGatewayCount(config.natStrategy),
-    'MXMED_NETWORK_NAT_COUNT_INVALID',
-  );
+  pushIf(errors, natGateways.length !== config.natGatewayCount, 'MXMED_NETWORK_NAT_COUNT_INVALID');
   pushIf(
     errors,
     resources.some(
@@ -314,7 +309,7 @@ function validateMxMedNetwork(scope: IConstruct, config: MxMedEnvironmentConfig)
   validateSubnetContract(errors, subnets, config.environmentName);
   validateRoutes(errors, routes);
   validateSecurityGroups(errors, securityGroups, ingressRules);
-  validateEndpoints(errors, endpoints, config.environmentName);
+  validateEndpoints(errors, endpoints, config.interfaceEndpointProfile);
   validateFlowLogs(errors, flowLogs, logGroups, config.flowLogRetentionDays);
 
   return [...new Set(errors)].sort();

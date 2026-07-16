@@ -4,6 +4,11 @@ import type {
   MxMedEnvironmentName,
 } from './environment-config';
 import { MXMED_REQUIRED_GLOBAL_TAG_KEYS } from './environment-config';
+import {
+  MXMED_COST_AWARE_LAUNCH_PROFILES_CONTRACT,
+  MXMED_COST_ESTIMATE_AS_OF,
+  resolveLaunchProfile,
+} from './launch-profiles';
 import { assertMxMedCondition, assertNoSensitiveConfiguration } from '../utils/validation';
 
 const ENVIRONMENT_CODES: Readonly<Record<MxMedEnvironmentName, MxMedEnvironmentCode>> = {
@@ -22,11 +27,6 @@ const EXPECTED_SUBNET_MASKS = Object.freeze({
   privateEndpoints: 24,
   isolatedData: 24,
 });
-
-const EXPECTED_ENDPOINT_PROFILES = Object.freeze({
-  staging: 's3-only',
-  production: 'production-core',
-} as const);
 
 const EXPECTED_FLOW_LOG_RETENTION_DAYS = Object.freeze({
   staging: 30,
@@ -296,7 +296,11 @@ function assertBooleanField(config: Record<string, unknown>, field: string): voi
   );
 }
 
-function validateTags(value: unknown, environmentName: MxMedEnvironmentName): void {
+function validateTags(
+  value: unknown,
+  environmentName: MxMedEnvironmentName,
+  deploymentProfile: unknown,
+): void {
   assertMxMedCondition(isRecord(value), 'MXMED_CONFIG_INVALID', 'tags', 'must be a tag map');
 
   for (const key of MXMED_REQUIRED_GLOBAL_TAG_KEYS) {
@@ -313,7 +317,11 @@ function validateTags(value: unknown, environmentName: MxMedEnvironmentName): vo
       value.Environment === environmentName &&
       value.ManagedBy === 'aws-cdk' &&
       value.Application === 'mexico-medico' &&
-      value.Owner === 'platform',
+      value.Owner === 'platform' &&
+      value.DeploymentProfile === deploymentProfile &&
+      value.CostReview === MXMED_COST_ESTIMATE_AS_OF &&
+      value.Ephemeral === (environmentName === 'staging' ? 'true' : 'false') &&
+      value.SchedulePolicy === (environmentName === 'staging' ? 'release-window-v1' : 'always-on'),
     'MXMED_CONFIG_INVALID',
     'tags',
     'mandatory tag values must match the MXMed contract',
@@ -324,7 +332,17 @@ function validateDatabaseConfiguration(
   config: Record<string, unknown>,
   environmentName: MxMedEnvironmentName,
 ): void {
-  const expected = EXPECTED_DATABASE_CONFIGURATION[environmentName];
+  const capacity = resolveLaunchProfile(environmentName, config.deploymentProfile).capacity;
+  const expected = {
+    ...EXPECTED_DATABASE_CONFIGURATION[environmentName],
+    databaseAvailabilityProfile: capacity.databaseAvailabilityProfile,
+    databaseInstanceClass: capacity.databaseInstanceClass,
+    databaseMultiAz: capacity.databaseMultiAz,
+    databaseAllocatedStorageGiB: capacity.databaseAllocatedStorageGiB,
+    databaseMaxAllocatedStorageGiB: capacity.databaseMaxAllocatedStorageGiB,
+    databaseProxyEnabled: capacity.databaseProxyEnabled,
+    databaseReadReplicaCount: capacity.databaseReadReplicaCount,
+  };
   for (const [field, expectedValue] of Object.entries(expected)) {
     const actualValue = config[field];
     const matches = Array.isArray(expectedValue)
@@ -378,13 +396,27 @@ function validateStorageConfiguration(
       'must match the PP257 storage contract for the selected environment',
     );
   }
+  assertMxMedCondition(
+    config.enableCrossRegionReplication === false,
+    'MXMED_CONFIG_INVALID',
+    'enableCrossRegionReplication',
+    'must remain deferred until Backup/DR Readiness',
+  );
 }
 
 function validateSessionConfiguration(
   config: Record<string, unknown>,
   environmentName: MxMedEnvironmentName,
 ): void {
-  const expected = EXPECTED_SESSION_CONFIGURATION[environmentName];
+  const capacity = resolveLaunchProfile(environmentName, config.deploymentProfile).capacity;
+  const expected = {
+    ...EXPECTED_SESSION_CONFIGURATION[environmentName],
+    sessionAvailabilityProfile: capacity.sessionAvailabilityProfile,
+    sessionNodeType: capacity.sessionNodeType,
+    sessionReplicaCount: capacity.sessionReplicaCount,
+    sessionMultiAzEnabled: capacity.sessionMultiAzEnabled,
+    sessionAutomaticFailoverEnabled: capacity.sessionAutomaticFailoverEnabled,
+  };
   for (const [field, expectedValue] of Object.entries(expected)) {
     assertMxMedCondition(
       config[field] === expectedValue,
@@ -393,6 +425,77 @@ function validateSessionConfiguration(
       'must match the PP260 session contract for the selected environment',
     );
   }
+}
+
+function validateCostAwareConfiguration(
+  config: Record<string, unknown>,
+  environmentName: MxMedEnvironmentName,
+): void {
+  const resolved = resolveLaunchProfile(environmentName, config.deploymentProfile);
+  assertMxMedCondition(
+    config.stagingOperatingMode === resolved.stagingOperatingMode,
+    'MXMED_CONFIG_INVALID',
+    'stagingOperatingMode',
+    'must match release-window-v1 for staging and be null for production',
+  );
+  for (const field of [
+    'approvedMonthlyBudgetUsd',
+    'planningFxMxnPerUsd',
+    'anomalyAlertThresholdUsd',
+    'maxInfrastructureCostToRevenuePercent',
+  ]) {
+    const value = config[field];
+    assertMxMedCondition(
+      value === null || (typeof value === 'number' && Number.isFinite(value) && value > 0),
+      'MXMED_CONFIG_INVALID',
+      field,
+      'must be null before business approval or a positive approved value',
+    );
+  }
+  assertMxMedCondition(
+    config.planningFxAsOf === null ||
+      (typeof config.planningFxAsOf === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(config.planningFxAsOf)),
+    'MXMED_CONFIG_INVALID',
+    'planningFxAsOf',
+    'must be null or an ISO planning date',
+  );
+  assertMxMedCondition(
+    config.budgetOwner === null ||
+      (typeof config.budgetOwner === 'string' && config.budgetOwner.trim().length > 0),
+    'MXMED_CONFIG_INVALID',
+    'budgetOwner',
+    'must be null or a non-empty approved owner',
+  );
+  for (const field of ['alertRecipientsConfigured', 'costReadinessReviewApproved']) {
+    assertBooleanField(config, field);
+  }
+  assertMxMedCondition(
+    config.costEstimateAsOf === MXMED_COST_ESTIMATE_AS_OF &&
+      config.costEstimateVersion === MXMED_COST_AWARE_LAUNCH_PROFILES_CONTRACT &&
+      config.profilePromotionPolicyVersion === MXMED_COST_AWARE_LAUNCH_PROFILES_CONTRACT,
+    'MXMED_CONFIG_INVALID',
+    'costEstimateVersion',
+    'must identify the PP263 estimate and promotion policy',
+  );
+  assertMxMedCondition(
+    config.enableCostBudgets === false && config.enableCostAnomalyDetection === false,
+    'MXMED_CONFIG_INVALID',
+    'costControls',
+    'AWS billing resources remain deferred to their own implementation',
+  );
+  assertMxMedCondition(
+    config.enableStagingSchedule === false && config.stagingReleaseWindowHours === null,
+    'MXMED_CONFIG_INVALID',
+    'stagingSchedule',
+    'scheduler remains deferred and release window hours have no invented default',
+  );
+  assertMxMedCondition(
+    JSON.stringify(config.costAlertThresholdPercentages) === JSON.stringify([50, 75, 90, 100, 120]),
+    'MXMED_CONFIG_INVALID',
+    'costAlertThresholdPercentages',
+    'must preserve the PP263 budget thresholds',
+  );
 }
 
 export function validateEnvironmentConfig(input: unknown): asserts input is MxMedEnvironmentConfig {
@@ -479,17 +582,24 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
     'natStrategy',
     'must be an approved strategy',
   );
+  const resolvedLaunchProfile = resolveLaunchProfile(environmentName, input.deploymentProfile);
   assertMxMedCondition(
-    input.natStrategy === (environmentName === 'staging' ? 'single-az' : 'dual-az'),
+    input.natStrategy === resolvedLaunchProfile.capacity.natStrategy,
     'MXMED_CONFIG_INVALID',
     'natStrategy',
-    'must match the selected environment',
+    'must match the selected environment and deployment profile',
   );
   assertMxMedCondition(
-    input.interfaceEndpointProfile === EXPECTED_ENDPOINT_PROFILES[environmentName],
+    input.natGatewayCount === resolvedLaunchProfile.capacity.natGatewayCount,
+    'MXMED_CONFIG_INVALID',
+    'natGatewayCount',
+    'must match the selected deployment profile',
+  );
+  assertMxMedCondition(
+    input.interfaceEndpointProfile === resolvedLaunchProfile.capacity.interfaceEndpointProfile,
     'MXMED_CONFIG_INVALID',
     'interfaceEndpointProfile',
-    'must match the selected environment',
+    'must match the selected environment and deployment profile',
   );
   assertMxMedCondition(
     input.flowLogRetentionDays === EXPECTED_FLOW_LOG_RETENTION_DAYS[environmentName],
@@ -559,6 +669,25 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
     'computeSizingProfile',
     'must be an approved profile',
   );
+  for (const field of [
+    'computeSizingProfile',
+    'computeAvailabilityProfile',
+    'computeDesiredCount',
+    'computeMinCapacity',
+    'computeMaxCapacity',
+    'computeTaskCpuUnits',
+    'computeTaskMemoryMiB',
+    'computeArchitecture',
+    'computeUseSpot',
+    'computeAssignPublicIp',
+  ] as const) {
+    assertMxMedCondition(
+      input[field] === resolvedLaunchProfile.capacity[field],
+      'MXMED_CONFIG_INVALID',
+      field,
+      'must match the selected deployment profile',
+    );
+  }
   if (input.domainAlias !== undefined) {
     assertMxMedCondition(
       typeof input.domainAlias === 'string' &&
@@ -622,6 +751,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
   validateDatabaseConfiguration(input, environmentName);
   validateStorageConfiguration(input, environmentName);
   validateSessionConfiguration(input, environmentName);
+  validateCostAwareConfiguration(input, environmentName);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',
     'MXMED_CONFIG_INVALID',
@@ -629,7 +759,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
     'must be path-only-no-query',
   );
 
-  validateTags(input.tags, environmentName);
+  validateTags(input.tags, environmentName, input.deploymentProfile);
 }
 
 export function validateEnvironmentNetworkSeparation(

@@ -4,8 +4,10 @@ import { CfnServerlessCache } from 'aws-cdk-lib/aws-elasticache';
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 
 import type { MxMedEnvironmentConfig } from '../lib/config/environment-config';
-import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
+import { getEnvironmentConfig, STAGING_CONFIG } from '../lib/config/environments';
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
+
+const PRODUCTION_CONFIG = getEnvironmentConfig('production', 'production-standard-v1');
 
 function stage(config: MxMedEnvironmentConfig, id: string): MxMedEnvironmentStage {
   return new MxMedEnvironmentStage(new App({ analyticsReporting: false }), id, { config });

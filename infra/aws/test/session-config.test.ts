@@ -1,5 +1,7 @@
 import { validateEnvironmentConfig } from '../lib/config/environment-schema';
-import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
+import { getEnvironmentConfig, STAGING_CONFIG } from '../lib/config/environments';
+
+const PRODUCTION_CONFIG = getEnvironmentConfig('production', 'scale-ready-v1');
 
 type ConfigField = keyof typeof STAGING_CONFIG;
 

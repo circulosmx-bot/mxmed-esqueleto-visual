@@ -6,8 +6,10 @@ import { CfnFlowLog, CfnVPC } from 'aws-cdk-lib/aws-ec2';
 import { Template } from 'aws-cdk-lib/assertions';
 
 import type { MxMedEnvironmentConfig } from '../lib/config/environment-config';
-import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
+import { getEnvironmentConfig, STAGING_CONFIG } from '../lib/config/environments';
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
+
+const PRODUCTION_CONFIG = getEnvironmentConfig('production', 'production-standard-v1');
 
 interface RenderedResource {
   readonly Type: string;
@@ -215,7 +217,7 @@ describe.each([
 
   test('creates the contracted NAT count and one Internet Gateway', () => {
     const { resources } = renderNetwork(config);
-    const expectedNatCount = config.environmentName === 'staging' ? 1 : 2;
+    const expectedNatCount = config.natGatewayCount;
     expect(resourcesOfType(resources, 'AWS::EC2::NatGateway')).toHaveLength(expectedNatCount);
     expect(resourcesOfType(resources, 'AWS::EC2::EIP')).toHaveLength(expectedNatCount);
     expect(resourcesOfType(resources, 'AWS::EC2::InternetGateway')).toHaveLength(1);
@@ -232,7 +234,7 @@ describe.each([
     expect(appRoutes.every(([, route]) => props(route).NatGatewayId !== undefined)).toBe(true);
 
     const natRefs = appRoutes.map(([, route]) => logicalIdFromRef(props(route).NatGatewayId));
-    if (config.environmentName === 'staging') {
+    if (config.natGatewayCount === 1) {
       expect(new Set(natRefs).size).toBe(1);
     } else {
       expect(new Set(natRefs).size).toBe(2);
@@ -277,7 +279,7 @@ describe.each([
     const interfaces = resourcesOfType(resources, 'AWS::EC2::VPCEndpoint').filter(
       ([, endpoint]) => props(endpoint).VpcEndpointType === 'Interface',
     );
-    expect(interfaces).toHaveLength(config.environmentName === 'production' ? 4 : 0);
+    expect(interfaces).toHaveLength(config.interfaceEndpointProfile === 'production-core' ? 4 : 0);
   });
 
   test('uses private DNS, endpoint subnets and Endpoint SG for every production interface', () => {
@@ -285,7 +287,7 @@ describe.each([
     const interfaces = resourcesOfType(resources, 'AWS::EC2::VPCEndpoint').filter(
       ([, endpoint]) => props(endpoint).VpcEndpointType === 'Interface',
     );
-    if (config.environmentName === 'staging') {
+    if (config.interfaceEndpointProfile !== 'production-core') {
       expect(interfaces).toEqual([]);
       return;
     }

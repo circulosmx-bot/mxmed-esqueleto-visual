@@ -1,3 +1,4 @@
+import type { MxMedEnvironmentConfig } from '../lib/config/environment-config';
 import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
 import {
   findByLogicalId,
@@ -8,18 +9,18 @@ import {
   resourcesOfType,
 } from './security-test-helpers';
 
-function bucket(config: typeof STAGING_CONFIG | typeof PRODUCTION_CONFIG) {
+function bucket(config: MxMedEnvironmentConfig) {
   return first(resourcesOfType(renderSecurity(config).resources, 'AWS::S3::Bucket'), 'bucket')[1];
 }
 
-function logGroup(config: typeof STAGING_CONFIG | typeof PRODUCTION_CONFIG) {
+function logGroup(config: MxMedEnvironmentConfig) {
   return first(
     resourcesOfType(renderSecurity(config).resources, 'AWS::Logs::LogGroup'),
     'log-group',
   )[1];
 }
 
-function trail(config: typeof STAGING_CONFIG | typeof PRODUCTION_CONFIG) {
+function trail(config: MxMedEnvironmentConfig) {
   return first(
     resourcesOfType(renderSecurity(config).resources, 'AWS::CloudTrail::Trail'),
     'trail',

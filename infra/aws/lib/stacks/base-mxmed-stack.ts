@@ -3,6 +3,7 @@ import type { StackProps } from 'aws-cdk-lib';
 import type { Construct } from 'constructs';
 
 import type { MxMedEnvironmentConfig, MxMedStackTagMetadata } from '../config/environment-config';
+import { mxmedCostTierForComponent } from '../config/launch-profiles';
 import { mxmedName } from '../utils/naming';
 
 export interface BaseMxMedStackProps {
@@ -34,9 +35,14 @@ export abstract class BaseMxMedStack extends Stack {
     Tags.of(this).add('ManagedBy', props.config.tags.ManagedBy);
     Tags.of(this).add('Application', props.config.tags.Application);
     Tags.of(this).add('Owner', props.config.tags.Owner);
+    Tags.of(this).add('DeploymentProfile', props.config.tags.DeploymentProfile);
+    Tags.of(this).add('CostReview', props.config.tags.CostReview);
+    Tags.of(this).add('Ephemeral', props.config.tags.Ephemeral);
+    Tags.of(this).add('SchedulePolicy', props.config.tags.SchedulePolicy);
     Tags.of(this).add('Component', props.component);
     Tags.of(this).add('DataClassification', props.metadata.dataClassification);
     Tags.of(this).add('Criticality', props.metadata.criticality);
     Tags.of(this).add('Backup', props.metadata.backup);
+    Tags.of(this).add('CostTier', mxmedCostTierForComponent(props.component));
   }
 }

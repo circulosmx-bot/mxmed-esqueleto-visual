@@ -21,6 +21,10 @@ function applyGlobalTags(scope: IConstruct, config: MxMedEnvironmentConfig): voi
   Tags.of(scope).add('ManagedBy', config.tags.ManagedBy);
   Tags.of(scope).add('Application', config.tags.Application);
   Tags.of(scope).add('Owner', config.tags.Owner);
+  Tags.of(scope).add('DeploymentProfile', config.tags.DeploymentProfile);
+  Tags.of(scope).add('CostReview', config.tags.CostReview);
+  Tags.of(scope).add('Ephemeral', config.tags.Ephemeral);
+  Tags.of(scope).add('SchedulePolicy', config.tags.SchedulePolicy);
 }
 
 function applyFoundationAspects(
@@ -48,7 +52,10 @@ function applyFoundationAspects(
 
 export function createMxMedApp(): App {
   const app = new App({ analyticsReporting: false });
-  const config = getEnvironmentConfig(app.node.tryGetContext('environment'));
+  const config = getEnvironmentConfig(
+    app.node.tryGetContext('environment'),
+    app.node.tryGetContext('deploymentProfile'),
+  );
   const accountValue = process.env.CDK_DEFAULT_ACCOUNT?.trim();
   const stageAccount =
     accountValue === undefined || accountValue.length === 0 ? undefined : accountValue;

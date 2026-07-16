@@ -57042,3 +57042,199 @@ El contador principal permanece en 16/24.
 La Microfase 17 de 24 continúa pendiente.
 
 ---
+
+## PP-Decisiones 264 - MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_IMPLEMENTATION_V1
+
+### Microfase auxiliar, base y resultado
+
+Microfase auxiliar:
+
+`ARCH-DEVOPS/MXMed-AWS-Cost-Aware-Launch-Profiles-Implementation-01`
+
+Contrato implementado:
+
+`MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`
+
+Resultado:
+
+`PASS - MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_IMPLEMENTATION_V1`
+
+Base Git verificada:
+
+- rama `architecture/mxmed-aws-cost-aware-launch-profiles-readiness`;
+- commit `ce91463c3de89c54b52a586b01f5e573e0cb7f86` (`ce91463`);
+- upstream sincronizado `0/0` y working tree limpio;
+- tests base: 33 suites, 554/554 PASS en 30.972 s.
+
+Implementación:
+
+- rama `feature/mxmed-aws-cost-aware-launch-profiles-implementation`;
+- Node.js `22.22.0`, npm `10.9.4` y lockfile reproducido con `npm ci`;
+- no se incrementa el contador principal y no se inicia Compute Implementation.
+
+### Alcance y matriz contractual aplicada
+
+| Decisión PP263 | Perfil/ambiente | Stack | Estado anterior | Implementación | Evidencia automatizada |
+|---|---|---|---|---|---|
+| selectores explícitos ortogonales | todos | app/config | sólo `environment` | `environment` + `deploymentProfile`; sin inferencia ni fallback | perfil ausente/desconocido falla antes del stage |
+| release window | staging/lean | todos | capacidad staging fija | `release-window-v1`, 1 NAT, Compute `1/1/1`, RDS SA 40/200, Session micro sin réplica | resolución, config y cuatro templates offline |
+| Network lean | production/lean | Network | 2 NAT + 4 endpoints | 1 NAT, S3 Gateway y 0 endpoints pagados | conteo semántico de template |
+| Compute lean | production/lean | Compute | sólo nombre de sizing | desired/min/max `1/1/2`, 512 CPU, 1024 MiB, X86_64, sin Spot/IP pública | handoff tipado; template Compute vacío |
+| Data lean | production/lean | Data | m6g.large Multi-AZ 100/1000 | t4g.medium Single-AZ 40/200; 35 días, PITR, KMS y deletion protection preservados | assertions de `AWS::RDS::DBInstance` |
+| Session lean | production/lean | Session | medium primary+replica | micro, un nodo, sin HA/failover/snapshot; TLS/KMS/ACL preservados | assertions de replication group/RBAC |
+| Storage y Security lean | production/lean | Storage/Security | foundation completa | sin reducción; cross-region sigue diferido | templates invariantes y guardrails |
+| Network standard | production/standard | Network | 2 NAT + endpoints activos | 2 NAT; endpoints siguen `s3-only` hasta disponibilidad, ledger y break-even | 2 NAT y 0 endpoints de interfaz |
+| Compute standard | production/standard | Compute | stack vacío | config `2/2/6`, 1024 CPU, 2048 MiB; ningún recurso | handoff tipado y cero recursos |
+| Data standard | production/standard | Data | baseline PP256 | m6g.large Multi-AZ 100/1000 preservado por perfil | assertions de template |
+| Session standard | production/standard | Session | medium HA | micro primary+replica, Multi-AZ/failover | assertions de template y validación negativa |
+| scale-ready baseline | production/scale-ready | Network/Data/Session/Compute | no existía selector | 2 NAT, endpoints `measured` baseline 0, Compute `2/2/6`, RDS HA, 2 Session medium | synth offline específico |
+| capacidades avanzadas | todos | config/ledger | notas documentales | flags/capabilities independientes: Proxy, replica de lectura, cross-region, data events, workers y scanner siguen diferidos | estado `deferred` y gates versionados |
+| controles no negociables | todos | todos | foundations PP251-PP261 | inventario explícito; TLS, KMS, IAM, CloudTrail, S3/RDS/Valkey guardrails conservados | 596 tests y templates inspeccionados |
+| cost ledger | todos | config | sólo documento | drivers de cantidad y naturaleza `fixed-idle`, `usage-based`, `storage-based`; sin tarifas hardcodeadas | esquema/filas probados por perfil |
+| Interface Endpoint break-even | standard/scale | Network/config | endpoints productivos por ambiente | fórmulas y gate de disponibilidad/ledger/ahorro o resiliencia; activación inicial prohibida | test de fórmula y 0 endpoints iniciales |
+| primer deploy y Cost Readiness Review | production | config/gates | sin representación ejecutable | inputs empresariales `null`, controles AWS apagados y `allowed=false` hasta aprobación completa | test del resultado bloqueado y validaciones negativas |
+| tags de costo | todos | todos | nueve tags base | agrega `DeploymentProfile`, `CostReview`, `Ephemeral`, `SchedulePolicy` y `CostTier` | MandatoryTagsAspect y tags de templates |
+| promoción/rollback | standard/scale | gates | sólo documento | umbrales Business/Compute/RDS/Valkey/Network y gates scale-ready representados; promoción automática prohibida | assertions de thresholds y capabilities |
+| frontera Compute | todos | Compute | stack vacío | acepta y expone config tipada únicamente | 4 synth con cero recursos Compute/ECS/ECR/ALB/autoscaling |
+
+La compatibilidad implementada es cerrada: staging sólo admite
+`launch-lean-v1` con `release-window-v1`; production admite
+`launch-lean-v1`, `production-standard-v1` y `scale-ready-v1`. El nombre
+`scale-ready-v1` no activa capacidades avanzadas.
+
+### Fuente central, perfiles, ledger y gates
+
+`infra/aws/lib/config/launch-profiles.ts` es la fuente única para:
+
+- nombres y capacidades de los tres perfiles;
+- overlay contractual de staging release window;
+- compatibilidad ambiente/perfil y errores fail-closed;
+- inventario de controles no negociables;
+- capacidades habilitadas y diferidas;
+- ledger sin precios monetarios persistidos;
+- gate pre-Go-Live y Cost Readiness Review;
+- fórmulas de break-even de endpoints;
+- señales de promoción launch→standard y gates scale-ready.
+
+Los inputs empresariales permanecen deliberadamente sin valor:
+`approvedMonthlyBudgetUsd`, `planningFxMxnPerUsd`, `planningFxAsOf`,
+`anomalyAlertThresholdUsd`, `maxInfrastructureCostToRevenuePercent`,
+`budgetOwner` y destinatarios. No se inventaron presupuesto, FX, owner o
+contactos. `enableCostBudgets`, `enableCostAnomalyDetection` y
+`enableStagingSchedule` permanecen `false`; esta auxiliar no crea recursos de
+billing ni scheduler.
+
+### Impacto por stack
+
+- Network consume `natGatewayCount` e `interfaceEndpointProfile` resueltos por
+  perfil; el S3 Gateway Endpoint, cuatro tiers, dos AZ, Flow Logs y SG se
+  conservan.
+- Security no reduce recursos ni políticas; sólo hereda los tags de costo.
+- Data ya consumía capacidad tipada y ahora recibe clase, topología y storage
+  del perfil, manteniendo MySQL 8.4.9, TLS, KMS, backups, PITR, secreto
+  administrado y deletion protection production.
+- Storage conserva sus cuatro buckets privados, KMS, versioning y lifecycle;
+  replication cross-region permanece diferida.
+- Session consume nodo, réplica, Multi-AZ y failover del perfil; sus Aspects
+  ahora validan el perfil en vez de inferir HA sólo por ambiente.
+- Compute expone un handoff tipado de desired/min/max, CPU, memoria,
+  arquitectura, Spot e IP pública. `MxMedComputeStack` no crea ningún construct
+  ni recurso CloudFormation.
+
+Security y Storage producen el mismo template entre perfiles production una
+vez ignorado el valor del tag `DeploymentProfile`. Network cambia lean→standard
+por la segunda NAT; Data cambia por la capacidad RDS; Session cambia topología
+y/o tamaño. Standard y scale-ready mantienen cero endpoints de interfaz hasta
+su gate.
+
+### Archivos versionados
+
+Código/configuración:
+
+- `infra/aws/lib/config/launch-profiles.ts`;
+- `infra/aws/lib/config/environment-config.ts`;
+- `infra/aws/lib/config/environment-schema.ts`;
+- `infra/aws/lib/config/environments.ts`;
+- `infra/aws/bin/mxmed.ts`;
+- `infra/aws/lib/stacks/base-mxmed-stack.ts`;
+- `infra/aws/lib/stacks/mxmed-network-stack.ts`;
+- `infra/aws/lib/stacks/mxmed-compute-stack.ts`;
+- `infra/aws/lib/utils/network-guardrails.ts`;
+- `infra/aws/lib/aspects/session-foundation-aspect.ts`;
+- `infra/aws/package.json`.
+
+Pruebas:
+
+- nuevo `infra/aws/test/cost-aware-launch-profiles.test.ts`;
+- `aspects.test.ts`, `environment-config.test.ts`, `network-stack.test.ts`;
+- `data-config.test.ts`, `data-stack.test.ts`;
+- `session-config.test.ts`, `session-stack.test.ts`,
+  `session-guardrails.test.ts`;
+- `security-cloudtrail.test.ts` y `security-secrets.test.ts` sólo ajustan el
+  tipo compartido de configuración tras hacer explícito el resolver.
+
+Documentación:
+
+- `infra/aws/README.md`;
+- `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+No cambian aplicación clínica, UI, dependencias, lockfile ni contratos de
+producto.
+
+### Validación y synth offline
+
+Resultados finales locales:
+
+| Comando | Resultado | Evidencia |
+|---|---|---|
+| `npm run format` / `npm run format:check` | PASS | archivos IaC formateados; check sin drift |
+| `npm run lint` | PASS | 0 errores |
+| `npm run typecheck` | PASS | 0 errores |
+| `npm test -- --runInBand` | PASS | 34 suites, 596/596 tests, 0 fallos, 81.259 s |
+| `npm run synth:staging` | PASS | staging/lean, 11 templates, 40 archivos, 5.57 s |
+| `npm run synth:production` | PASS | production/lean, 11 templates, 40 archivos, 4.59 s |
+| `npm run synth:production:standard` | PASS | production/standard, 11 templates, 40 archivos, 4.58 s |
+| `npm run synth:production:scale-ready` | PASS | production/scale-ready, 11 templates, 40 archivos, 4.74 s |
+
+Los synth se ejecutaron sin `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+`AWS_SESSION_TOKEN`, profiles o `CDK_DEFAULT_ACCOUNT`. El único warning fue el
+aviso informativo de CDK sobre 81 feature flags no configurados. No se creó ni
+actualizó `cdk.context.json`.
+
+Inspección de los cuatro assemblies:
+
+- 0 recursos en cada template Compute;
+- 0 ECS Cluster/Service/TaskDefinition, ECR Repository, ALB/TargetGroup o
+  autoscaling;
+- 0 Interface Endpoints iniciales; S3 Gateway Endpoint preservado;
+- 4 CMK y 5 buckets totales por ambiente (4 app + 1 auditoría);
+- RDS cifrado/no público, backups 7/35 y deletion protection production;
+- Session TLS/KMS y topología por perfil;
+- 0 propiedades `MasterUserPassword` o `SecretString` literales;
+- tags `DeploymentProfile` correctos por assembly.
+
+`cdk.out/` es temporal e ignorado. No se ejecutaron diff, bootstrap, deploy,
+AWS CLI/SDK, consultas de cuenta, Docker, PHP, SQL ni migraciones.
+
+### Cierre y no repetición
+
+La implementación de `MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1` queda
+cerrada con PASS. `launch-lean-v1` está listo para ser consumido por Compute
+Implementation, pero no existe todavía ECS, task definition, service, ECR,
+autoscaling, ALB ni workload desplegado.
+
+Contador antes: `16/24`.
+
+Contador después: `16/24`.
+
+Recursos AWS creados: `0`.
+
+Deploy ejecutado: `no`.
+
+Microfase 17 iniciada: `no`.
+
+Siguiente paso, sin ejecutarlo aquí: regenerar la instrucción de
+`ARCH-DEVOPS/MXMed-AWS-Compute-Implementation-01` y ejecutar la Microfase 17/24
+utilizando `launch-lean-v1`.
+
+---

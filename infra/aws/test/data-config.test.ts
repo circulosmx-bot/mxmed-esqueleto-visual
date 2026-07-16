@@ -1,4 +1,6 @@
-import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
+import { getEnvironmentConfig, STAGING_CONFIG } from '../lib/config/environments';
+
+const PRODUCTION_CONFIG = getEnvironmentConfig('production', 'production-standard-v1');
 
 describe('data configuration contract', () => {
   test('DATA-IMP-001 selects MySQL', () => {

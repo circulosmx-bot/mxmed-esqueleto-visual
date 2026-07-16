@@ -1,6 +1,8 @@
-import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
+import { getEnvironmentConfig, STAGING_CONFIG } from '../lib/config/environments';
 import type { MxMedEnvironmentConfig } from '../lib/config/environment-config';
 import { firstResource, properties, renderData, resourcesOfType } from './data-test-helpers';
+
+const PRODUCTION_CONFIG = getEnvironmentConfig('production', 'production-standard-v1');
 
 function instance(config: MxMedEnvironmentConfig) {
   const resource = firstResource(renderData(config).resources, 'AWS::RDS::DBInstance');

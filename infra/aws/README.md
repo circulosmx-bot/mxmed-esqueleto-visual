@@ -10,7 +10,8 @@ foundations de seguridad, datos, almacenamiento y sesiones de México Médico. T
 (`MXMED_AWS_SECURITY_READINESS_CONTRACT_V1`), además de PP-Decisiones 255
 (`MXMED_AWS_DATA_READINESS_CONTRACT_V1`) y PP-Decisiones 257
 (`MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 260
-(`MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1`), además de PP-Decisiones 263
+(`MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
 
 `MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack`, `MxMedStorageStack` y
 `MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. Los demás stacks
@@ -49,34 +50,40 @@ lockfile. No se admiten `--force`, `--legacy-peer-deps` ni versiones flotantes.
 
 ## Comandos
 
-| Comando                    | Propósito                                             |
-| -------------------------- | ----------------------------------------------------- |
-| `npm run build`            | Compila TypeScript a `dist/`.                         |
-| `npm run typecheck`        | Ejecuta el compilador sin emitir archivos.            |
-| `npm run lint`             | Valida TypeScript con ESLint local.                   |
-| `npm run format`           | Formatea exclusivamente archivos bajo `infra/aws/`.   |
-| `npm run format:check`     | Comprueba formato sin modificar.                      |
-| `npm run test`             | Ejecuta unit tests y assertions finas.                |
-| `npm run test:watch`       | Ejecuta Jest en modo local interactivo.               |
-| `npm run synth:staging`    | Sintetiza staging offline en `cdk.out/staging`.       |
-| `npm run synth:production` | Sintetiza production offline en `cdk.out/production`. |
-| `npm run diff:staging`     | Contrato futuro de diff; no ejecutar todavía.         |
-| `npm run diff:production`  | Contrato futuro de diff; no ejecutar todavía.         |
-| `npm run validate`         | Ejecuta typecheck, lint, formato y tests.             |
-| `npm run clean`            | Elimina únicamente outputs locales generados.         |
+| Comando                                | Propósito                                           |
+| -------------------------------------- | --------------------------------------------------- |
+| `npm run build`                        | Compila TypeScript a `dist/`.                       |
+| `npm run typecheck`                    | Ejecuta el compilador sin emitir archivos.          |
+| `npm run lint`                         | Valida TypeScript con ESLint local.                 |
+| `npm run format`                       | Formatea exclusivamente archivos bajo `infra/aws/`. |
+| `npm run format:check`                 | Comprueba formato sin modificar.                    |
+| `npm run test`                         | Ejecuta unit tests y assertions finas.              |
+| `npm run test:watch`                   | Ejecuta Jest en modo local interactivo.             |
+| `npm run synth:staging`                | Sintetiza staging offline en `cdk.out/staging`.     |
+| `npm run synth:production`             | Sintetiza production lean offline.                  |
+| `npm run synth:production:standard`    | Sintetiza production standard offline.              |
+| `npm run synth:production:scale-ready` | Sintetiza production scale-ready offline.           |
+| `npm run diff:staging`                 | Contrato futuro de diff; no ejecutar todavía.       |
+| `npm run diff:production`              | Contrato futuro de diff; no ejecutar todavía.       |
+| `npm run validate`                     | Ejecuta typecheck, lint, formato y tests.           |
+| `npm run clean`                        | Elimina únicamente outputs locales generados.       |
 
 No existe script de deploy o bootstrap automático.
 
 ## Ambientes y configuración
 
-El entrypoint `bin/mxmed.ts` exige un único context:
+El entrypoint `bin/mxmed.ts` exige dos contextos explícitos e independientes:
 
 ```text
 environment=staging|production
+deploymentProfile=launch-lean-v1|production-standard-v1|scale-ready-v1
 ```
 
-Los scripts de synth lo proporcionan de forma explícita. La configuración tipada vive en
-`lib/config/`, permite sólo esos dos ambientes y valida antes de crear stages:
+Los scripts de synth proporcionan ambos selectores. No hay fallback por rama, cuenta, hostname,
+fecha o consumo. Staging permite únicamente `launch-lean-v1` y agrega
+`stagingOperatingMode=release-window-v1`; production admite los tres perfiles. Una combinación
+desconocida o incompleta falla antes de crear stages. La configuración tipada vive en
+`lib/config/` y valida:
 
 - región primaria y región de correo;
 - CIDR VPC RFC1918 `/16` exacto por ambiente;
@@ -94,6 +101,36 @@ Los scripts de synth lo proporcionan de forma explícita. La configuración tipa
 - política Stripe return `path-only-no-query`;
 - ausencia de campos sensibles y valores con apariencia de credencial.
 
+### Perfiles de lanzamiento y selección
+
+`lib/config/launch-profiles.ts` es el único punto de definición de capacidad, ledger y gates. Los
+stacks reciben el `MxMedEnvironmentConfig` ya resuelto; no duplican valores por ambiente.
+
+| Combinación                           | Network                                                 | Compute contratado, aún sin recursos     | RDS                                                             | Session                          |
+| ------------------------------------- | ------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------- | -------------------------------- |
+| staging / `launch-lean-v1`            | 1 NAT, S3 Gateway, 0 endpoints de interfaz              | desired/min/max `1/1/1`, 0.5 vCPU, 1 GiB | t4g.medium, Single-AZ, 40/200 GiB, 7 días                       | 1 micro, sin réplica/HA/snapshot |
+| production / `launch-lean-v1`         | 1 NAT, S3 Gateway, 0 endpoints de interfaz              | `1/1/2`, 0.5 vCPU, 1 GiB                 | t4g.medium, Single-AZ, 40/200 GiB, 35 días, deletion protection | 1 micro, sin réplica/HA/snapshot |
+| production / `production-standard-v1` | 2 NAT, S3 Gateway; endpoints siguen apagados hasta gate | `2/2/6`, 1 vCPU, 2 GiB                   | m6g.large, Multi-AZ, 100/1000 GiB, 35 días                      | 2 micro, Multi-AZ/failover       |
+| production / `scale-ready-v1`         | 2 NAT, endpoints `measured` con baseline 0              | `2/2/6`, 1 vCPU, 2 GiB                   | m6g.large, Multi-AZ, 100/1000 GiB, 35 días                      | 2 medium, Multi-AZ/failover      |
+
+`launch-lean-v1` es el default explícito de los scripts de staging y production, no un fallback
+implícito. Reduce capacidad, pero no TLS, KMS, Secrets Manager, IAM mínimo, CloudTrail, backups,
+PITR, deletion protection production, final snapshots, Block Public Access, versioning ni
+retención. Tampoco equivale a una producción publicada o a un SLA de alta disponibilidad.
+
+El ledger versionado describe drivers `fixed-idle`, `usage-based` y `storage-based`, cantidades y
+capacidades diferidas; no guarda tarifas que envejezcan ni finge una cotización actual. Antes del
+primer deploy permanecen obligatorios y sin defaults ficticios el presupuesto aprobado, FX de
+planificación con fecha, umbral de anomalía, límite costo/ingreso, owner, destinatarios y la
+aprobación de Cost Readiness Review. `evaluatePreGoLiveCostGate` devuelve `allowed=false` mientras
+falte cualquiera.
+
+Promover a standard o habilitar endpoints requiere métricas, ledger actualizado, revisión de
+break-even/resiliencia, PR, tests, synth, diff y aprobación. `scale-ready-v1` no habilita por su
+nombre RDS Proxy, read replicas, cross-region, workers, scanner ni endpoints: cada capacidad
+mantiene su gate independiente. Para agregar un perfil futuro se amplían los tipos, la definición
+central, la matriz de compatibilidad y sus tests; no se añaden condicionales duplicados en stacks.
+
 `domainAlias` permanece omitido hasta una decisión empresarial. No hay cuentas, dominios, ARNs,
 IPs o nombres físicos globales versionados. Si `CDK_DEFAULT_ACCOUNT` existe, la app lo transmite
 sin imprimirlo; si no existe, synth continúa offline y sin cuenta explícita.
@@ -104,10 +141,12 @@ Cada ambiente crea su propia VPC IPv4-only en `mx-central-1`, con DNS support y 
 habilitados. Las AZ se resuelven como dos slots lógicos mediante CloudFormation; no se fijan letras
 físicas ni se presupone equivalencia entre cuentas.
 
-| Ambiente   | VPC            | NAT Gateway | Interface endpoints                | Flow Logs    |
-| ---------- | -------------- | ----------- | ---------------------------------- | ------------ |
-| staging    | `10.20.0.0/16` | 1           | ninguno                            | ALL, 30 días |
-| production | `10.30.0.0/16` | 2, uno/AZ   | ECR API/DKR, Logs, Secrets Manager | ALL, 90 días |
+| Ambiente/perfil          | VPC            | NAT Gateway | Interface endpoints      | Flow Logs    |
+| ------------------------ | -------------- | ----------- | ------------------------ | ------------ |
+| staging / lean           | `10.20.0.0/16` | 1           | ninguno                  | ALL, 30 días |
+| production / lean        | `10.30.0.0/16` | 1           | ninguno                  | ALL, 90 días |
+| production / standard    | `10.30.0.0/16` | 2, uno/AZ   | ninguno inicialmente     | ALL, 90 días |
+| production / scale-ready | `10.30.0.0/16` | 2, uno/AZ   | baseline medido: ninguno | ALL, 90 días |
 
 Cada VPC contiene exactamente dos subnets por tier:
 
@@ -132,12 +171,11 @@ validator bloquean cualquier drift. No se crean rutas manuales redundantes.
 Rutas y endpoints:
 
 - `public-ingress` usa Internet Gateway;
-- `private-app` usa NAT; staging comparte NAT A y production conserva NAT por AZ;
+- `private-app` usa NAT; los perfiles con una NAT comparten NAT A y los de dos conservan una por AZ;
 - `private-endpoints` e `isolated-data` no tienen default route;
 - S3 Gateway Endpoint existe en ambos ambientes y se asocia sólo a `private-app`;
-- staging no crea interface endpoints;
-- production usa constantes oficiales CDK para ECR API, ECR DKR, CloudWatch Logs y Secrets
-  Manager, con private DNS, las dos `private-endpoints` y un SG dedicado;
+- ningún perfil inicial crea endpoints de interfaz; `production-core` conserva soporte para ECR
+  API/DKR, CloudWatch Logs y Secrets Manager sólo después de disponibilidad, ledger y break-even;
 - no existen DynamoDB endpoint, IPv6, custom NACL, peering, VPN o Transit Gateway.
 
 Security Groups base:
@@ -158,9 +196,10 @@ red allowlisted. No captura URL, path HTTP, query, cookie, header, body o datos 
 group usa cifrado administrado de CloudWatch, nombre estable, 30 días staging y 90 días
 production; production retiene el recurso al retirar el stack.
 
-Costos relativos: staging paga una NAT y acepta egress cross-AZ desde `private-app` B; production
-paga dos NAT y hasta ocho asociaciones endpoint-AZ para conservar HA/ruta privada. S3 Gateway
-Endpoint reduce tráfico NAT de S3. No se incluyen importes: deberán cotizarse antes de deploy.
+Costos relativos: staging y production lean usan una NAT y aceptan egress cross-AZ desde
+`private-app` B; standard y scale-ready usan dos. Los endpoints candidatos representan ocho
+asociaciones endpoint-AZ, pero permanecen diferidos hasta sus gates. S3 Gateway Endpoint reduce
+tráfico NAT de S3. No se incluyen importes: se recotizan antes de deploy y promoción.
 
 ## Security foundation implementada en templates
 
@@ -238,10 +277,11 @@ No hay `MasterUserPassword`, `AWS::SecretsManager::Secret` adicional ni output d
 referencia tipada al secreto administrado por RDS queda en DataStack y todavía no se concede a la
 aplicación ni a MigrationTaskRole.
 
-| Ambiente   | Clase           | Topología | Storage inicial / máximo | Backup  | Monitoring | Removal           |
-| ---------- | --------------- | --------- | ------------------------ | ------- | ---------- | ----------------- |
-| staging    | `db.t4g.medium` | Single-AZ | 40 / 200 GiB             | 7 días  | 60 s       | Snapshot/Snapshot |
-| production | `db.m6g.large`  | Multi-AZ  | 100 / 1000 GiB           | 35 días | 15 s       | Retain/Retain     |
+| Ambiente/perfil                     | Clase           | Topología | Storage inicial / máximo | Backup  | Monitoring | Removal           |
+| ----------------------------------- | --------------- | --------- | ------------------------ | ------- | ---------- | ----------------- |
+| staging / lean                      | `db.t4g.medium` | Single-AZ | 40 / 200 GiB             | 7 días  | 60 s       | Snapshot/Snapshot |
+| production / lean                   | `db.t4g.medium` | Single-AZ | 40 / 200 GiB             | 35 días | 15 s       | Retain/Retain     |
+| production / standard o scale-ready | `db.m6g.large`  | Multi-AZ  | 100 / 1000 GiB           | 35 días | 15 s       | Retain/Retain     |
 
 Ambos ambientes usan gp3 con 3000 IOPS y 125 MiB/s, cifrado por `ApplicationDataKey`, IPv4,
 acceso no público, exactamente un `DatabaseSecurityGroup` y un DB subnet group con las dos
@@ -306,11 +346,12 @@ S3 reales en esta etapa.
 ## Session foundation implementada en templates
 
 Cada ambiente sintetiza un replication group node-based dedicado a sesiones con Amazon
-ElastiCache for Valkey `8.2`, cluster mode disabled y un shard lógico. Staging usa un
-`cache.t4g.micro`, un primary, cero réplicas, sin Multi-AZ ni failover. Production usa dos
-`cache.t4g.medium`, primary y réplica en las dos subnets `isolated-data`, con Multi-AZ y automatic
-failover. La aplicación futura consumirá sólo el primary endpoint; no se fijan IP, endpoint de
-nodo o configuration endpoint.
+ElastiCache for Valkey `8.2`, cluster mode disabled y un shard lógico. Staging y production lean
+usan un `cache.t4g.micro`, un primary, cero réplicas, sin Multi-AZ ni failover. Production standard
+usa primary y réplica `micro`; scale-ready conserva la misma topología con nodos `medium`. Los
+perfiles HA distribuyen nodos en las dos subnets `isolated-data` y habilitan automatic failover. La
+aplicación futura consumirá sólo el primary endpoint; no se fijan IP, endpoint de nodo o
+configuration endpoint.
 
 Session reutiliza exactamente la VPC, las dos subnets aisladas y `SessionSecurityGroup` de
 Network, cuyo único ingress es TCP 6379 desde `ApplicationSecurityGroup`. El replication group es
@@ -369,9 +410,11 @@ assets remotos. No existen `Vpc.fromLookup`, `HostedZone.fromLookup`, `AwsCustom
 ```sh
 npm run synth:staging
 npm run synth:production
+npm run synth:production:standard
+npm run synth:production:scale-ready
 ```
 
-Ambos comandos deben funcionar sin credenciales AWS. Las plantillas actuales contienen recursos
+Los cuatro comandos deben funcionar sin credenciales AWS y no despliegan nada. Las plantillas actuales contienen recursos
 únicamente en NetworkStack, SecurityStack, DataStack, StorageStack y SessionStack; Email y los
 otros cinco workload stacks continúan sin recursos. SecurityStack crea cuatro contenedores de
 secreto pero cero valores versionados; DataStack crea el contrato RDS sin valor secreto;
@@ -403,6 +446,11 @@ Todo recurso taggable futuro deberá tener:
 - `Criticality`;
 - `Backup`;
 - `Owner=platform`.
+- `DeploymentProfile`;
+- `CostReview` con fecha ISO no personal;
+- `Ephemeral`;
+- `SchedulePolicy`;
+- `CostTier`.
 
 `MandatoryTagsAspect` falla síntesis ante tags ausentes. La allowlist explícita contiene metadata
 de framework y los tipos cuya representación CloudFormation no acepta los tags contractuales:
@@ -495,9 +543,10 @@ npm run test
 npm run validate
 ```
 
-Las 554 pruebas (419 heredadas y 135 nuevas de Session) cubren configuración, naming,
+Las 596 pruebas cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
-VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, KMS, secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
+VPC/subnets/NAT/rutas, endpoints, perfiles launch/standard/scale, ledger/gates, SG, Flow Logs, KMS,
+secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
 parameter/subnet groups, Enhanced Monitoring, inventario/lifecycle/cifrado de Storage, helpers de
 keys, metadata/tags, MIME/tamaños/TTL, Valkey/RBAC/TLS, contratos de sesión, guardrails negativos
 y síntesis determinista offline. Los
@@ -518,7 +567,7 @@ se debe borrar `cdk.out/` para ocultar una diferencia; se regenera desde el comm
 - Node incorrecto: ejecutar `nvm use` y confirmar `node --version`.
 - Dependencias divergentes: eliminar sólo `node_modules/` local y ejecutar `npm ci`; no regenerar
   el lockfile sin una actualización autorizada.
-- Context ausente: usar uno de los scripts `synth:*`; la app no elige production por defecto.
+- Context ausente: usar uno de los scripts `synth:*`; la app no infiere ambiente ni perfil.
 - Solicitud de credenciales o lookup: detenerse; la foundation debe sintetizar offline.
 - Error de Aspect: corregir configuración o recurso. No silenciar la anotación.
 - Diff, bootstrap o deploy requerido: detenerse y solicitar la microfase correspondiente.

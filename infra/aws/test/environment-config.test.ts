@@ -14,18 +14,18 @@ describe('environment configuration', () => {
     expect(() => {
       validateEnvironmentConfig(STAGING_CONFIG);
     }).not.toThrow();
-    expect(getEnvironmentConfig('staging')).toBe(STAGING_CONFIG);
+    expect(getEnvironmentConfig('staging', 'launch-lean-v1')).toEqual(STAGING_CONFIG);
   });
 
   test('accepts the explicit production configuration', () => {
     expect(() => {
       validateEnvironmentConfig(PRODUCTION_CONFIG);
     }).not.toThrow();
-    expect(getEnvironmentConfig('production')).toBe(PRODUCTION_CONFIG);
+    expect(getEnvironmentConfig('production', 'launch-lean-v1')).toEqual(PRODUCTION_CONFIG);
   });
 
   test('rejects an unknown environment', () => {
-    expect(() => getEnvironmentConfig('preview')).toThrow(
+    expect(() => getEnvironmentConfig('preview', 'launch-lean-v1')).toThrow(
       'MXMED_ENVIRONMENT_INVALID:environment:context must be staging or production',
     );
   });
@@ -104,10 +104,10 @@ describe('environment configuration', () => {
         isolatedData: 24,
       },
       availabilityZoneCount: 2,
-      interfaceEndpointProfile: 'production-core',
+      interfaceEndpointProfile: 's3-only',
       flowLogRetentionDays: 90,
     });
-    expect(mxmedNatGatewayCount(PRODUCTION_CONFIG.natStrategy)).toBe(2);
+    expect(mxmedNatGatewayCount(PRODUCTION_CONFIG.natStrategy)).toBe(1);
   });
 
   test.each(['8.8.0.0/16', '10.20.0.0/24', '10.20.0.0/invalid'])(
@@ -154,7 +154,7 @@ describe('environment configuration', () => {
       validateEnvironmentConfig({ ...STAGING_CONFIG, natStrategy: 'dual-az' });
     }).toThrow('MXMED_CONFIG_INVALID:natStrategy');
     expect(() => {
-      validateEnvironmentConfig({ ...PRODUCTION_CONFIG, natStrategy: 'single-az' });
+      validateEnvironmentConfig({ ...PRODUCTION_CONFIG, natStrategy: 'dual-az' });
     }).toThrow('MXMED_CONFIG_INVALID:natStrategy');
   });
 
@@ -166,7 +166,10 @@ describe('environment configuration', () => {
       });
     }).toThrow('MXMED_CONFIG_INVALID:interfaceEndpointProfile');
     expect(() => {
-      validateEnvironmentConfig({ ...PRODUCTION_CONFIG, interfaceEndpointProfile: 's3-only' });
+      validateEnvironmentConfig({
+        ...PRODUCTION_CONFIG,
+        interfaceEndpointProfile: 'production-core',
+      });
     }).toThrow('MXMED_CONFIG_INVALID:interfaceEndpointProfile');
     expect(() => {
       validateEnvironmentConfig({ ...STAGING_CONFIG, interfaceEndpointProfile: 'unknown' });

@@ -1,3 +1,4 @@
+import type { MxMedEnvironmentConfig } from '../lib/config/environment-config';
 import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
 import {
   findByLogicalId,
@@ -6,11 +7,11 @@ import {
   resourcesOfType,
 } from './security-test-helpers';
 
-function secretsFor(config: typeof STAGING_CONFIG | typeof PRODUCTION_CONFIG) {
+function secretsFor(config: MxMedEnvironmentConfig) {
   return resourcesOfType(renderSecurity(config).resources, 'AWS::SecretsManager::Secret');
 }
 
-function externalSecrets(config: typeof STAGING_CONFIG | typeof PRODUCTION_CONFIG) {
+function externalSecrets(config: MxMedEnvironmentConfig) {
   return secretsFor(config).filter(([, secret]) =>
     String(properties(secret).Name).includes('/providers/'),
   );

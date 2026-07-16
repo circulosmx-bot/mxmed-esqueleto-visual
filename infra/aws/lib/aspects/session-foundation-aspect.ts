@@ -45,7 +45,7 @@ export class SessionFoundationAspect implements IAspect {
   }
 
   private validateReplicationGroup(node: CfnReplicationGroup): void {
-    const expectedNodes = this.config.environmentName === 'production' ? 2 : 1;
+    const expectedNodes = this.config.sessionReplicaCount + 1;
     if (node.engine !== 'valkey') Annotations.of(node).addError('MXMED_SESSION_ENGINE_INVALID');
     if (node.engineVersion !== '8.2') {
       Annotations.of(node).addError('MXMED_SESSION_ENGINE_VERSION_INVALID');
@@ -56,15 +56,12 @@ export class SessionFoundationAspect implements IAspect {
     if (node.numCacheClusters !== expectedNodes || node.replicasPerNodeGroup !== undefined) {
       Annotations.of(node).addError('MXMED_SESSION_NODE_COUNT_INVALID');
     }
-    if (
-      node.cacheNodeType !==
-      (this.config.environmentName === 'production' ? 'cache.t4g.medium' : 'cache.t4g.micro')
-    ) {
+    if (node.cacheNodeType !== this.config.sessionNodeType) {
       Annotations.of(node).addError('MXMED_SESSION_NODE_TYPE_INVALID');
     }
     if (
-      node.multiAzEnabled !== (this.config.environmentName === 'production') ||
-      node.automaticFailoverEnabled !== (this.config.environmentName === 'production')
+      node.multiAzEnabled !== this.config.sessionMultiAzEnabled ||
+      node.automaticFailoverEnabled !== this.config.sessionAutomaticFailoverEnabled
     ) {
       Annotations.of(node).addError('MXMED_SESSION_AVAILABILITY_INVALID');
     }
