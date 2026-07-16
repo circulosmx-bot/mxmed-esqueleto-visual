@@ -55305,3 +55305,505 @@ Avance global: 13/24.
 Pendientes: 11.
 
 ---
+
+## PP-Decisiones 260 - MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1
+
+### Microfase y resultado
+
+Microfase: `ARCH-DEVOPS/MXMed-AWS-Session-Readiness-01`.
+
+Resultado: `PASS - MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1`.
+
+Esta decisión cierra el contrato V1 del almacenamiento compartido de sesiones
+PHP para tareas ECS. No crea recursos AWS, no cambia la aplicación y no
+implementa aún `MxMedSessionStack`. El replication group será exclusivo para
+sesiones; no funcionará como cache empresarial, fuente de verdad o almacén de
+datos clínicos.
+
+### Compuerta contractual PP245-PP259
+
+Se auditó la secuencia completa sin reescribirla. PP245 ya seleccionaba
+ElastiCache compatible con Redis/Valkey, cifrado, ACL, `phpredis`, un nodo de
+staging y dos nodos productivos; dejó la versión menor a preflight y marcó sus
+TTL de 8/24 horas como supuesto pendiente de confirmación. PP249-PP250 fijaron
+la foundation y el grafo de stacks; PP251-PP252 entregaron dos subnets
+`isolated-data` y `SessionSecurityGroup`; PP253-PP254 entregaron
+`ApplicationDataKey` y `SecretsKey`; PP255-PP258 no convirtieron sesiones en
+datos persistentes o backups; PP246-PP248 y PP259 son decisiones visuales/de
+pago sin contrato de sesión.
+
+Por tanto, no existe contradicción: PP260 cierra el servicio como Amazon
+ElastiCache for Valkey 8.2 node-based y reemplaza únicamente el supuesto de TTL
+pendiente por 30 minutos de inactividad y 12 horas absolutas. No altera los
+contratos cerrados de Network, Security, Data o Storage.
+
+### Auditoría read-only de la superficie PHP actual
+
+El repositorio tiene cinco puntos explícitos de `session_start()` en Agenda,
+Profiles y Subscriptions. No contiene `session.save_handler`,
+`session.save_path`, handler custom, Predis, extensión Redis/Valkey declarada,
+configuración `php.ini` versionada ni dependencias Composer para sesiones; por
+ausencia de override, el estado actual depende del handler de archivos por
+defecto de PHP y no es compartido entre tasks.
+
+Sólo se encontró una regeneración explícita, dentro de un fixture local de
+Subscriptions. No hay logout central, `session_destroy()`, política común de
+cookie ni configuración común de locking. La aplicación lee aliases de
+usuario, médico, entidad, rol, permisos y scopes. Agenda guarda además un
+`flash` con mensaje/detalle operativo; ese objeto no pertenece al payload
+permitido y deberá salir de la sesión o reducirse a un código opaco antes de la
+migración. No se halló un expediente, receta, archivo, resultado clínico,
+PaymentIntent secret, token Stripe o secreto de proveedor imprescindible en
+sesión. Tampoco se halló una dependencia de `Domain` incompatible con
+`__Host-`.
+
+La auditoría no leyó cookies, IDs ni valores reales de sesión y no ejecutó PHP,
+login, logout, endpoint, Redis/Valkey o SQL. La ausencia actual del cliente no
+es incompatibilidad: la implementación deberá incorporar una versión
+`phpredis` para PHP 8 cuya compatibilidad con TLS, Valkey 8.2 y locking quede
+demostrada antes de producir un template desplegable.
+
+### Servicio, engine y modalidad
+
+El único perfil permitido es Amazon ElastiCache for Valkey 8.2, con:
+
+- servicio: Amazon ElastiCache;
+- engine: Valkey;
+- versión fija: `8.2`;
+- deployment: node-based replication group;
+- cluster mode: disabled;
+- shards: uno;
+- replication group dedicado a sesiones;
+- serverless, Global Datastore y Memcached: deshabilitados/prohibidos;
+- Redis OSS: no seleccionado para esta implementación nueva.
+
+La selección ofrece protocolo compatible con el handler PHP, TTL, TLS,
+replicación/failover, aislamiento VPC y capacidad/costo explícitos. No se usará
+la sesión como cache funcional general.
+
+### Topología por ambiente
+
+| Propiedad | Staging | Production |
+|---|---|---|
+| Replication groups | 1 | 1 |
+| Cluster mode / shards | disabled / 1 | disabled / 1 |
+| Primary / replicas | 1 / 0 | 1 / 1 |
+| Node type | `cache.t4g.micro` | `cache.t4g.medium` |
+| AZ | 1 efectiva | 2 |
+| Multi-AZ | false | true |
+| Automatic failover | false | true |
+| Datos | sólo prueba | sesiones productivas |
+| Snapshots | 0 | 0 |
+
+Production coloca primary y replica en subnets `isolated-data` distintas y la
+aplicación usa exclusivamente el primary endpoint. No se permite tráfico de
+lectura al reader endpoint ni conexión a endpoints de nodo. Staging no ofrece
+alta disponibilidad: una caída elimina sus sesiones y obliga a reautenticar;
+la prueba de failover se hará después en un entorno temporal con réplica.
+
+Staging y production nunca compartirán replication group, subnet group, SG,
+contexto KMS, user group, usuario, password, secreto, prefix o endpoint. Una
+credencial de staging no será válida en production.
+
+Antes del primer despliegue se verificará oficialmente que Valkey 8.2 y
+`cache.t4g.micro`/`cache.t4g.medium` estén disponibles en `mx-central-1`. Si no
+lo están, Session Implementation cerrará `BLOCKED`; no elegirá silenciosamente
+otra versión, serverless, Redis OSS o una clase x86 y abrirá una decisión de
+sizing específica.
+
+### Capacidad y clasificación de datos
+
+El objetivo es `<=16 KiB` serializados por sesión y el máximo absoluto es
+`32 KiB`. Un payload mayor falla con error sanitizado: no se escribe ni se
+trunca.
+
+El payload se limita a:
+
+- identificador opaco de usuario, tipo de entidad e identificador interno
+  mínimo;
+- rol y permisos resumidos/versionados;
+- indicador de autenticación y estado CSRF mínimo;
+- `created_at`, `last_seen_at`, `absolute_expires_at` y versión de sesión;
+- flags mínimos de seguridad.
+
+Quedan prohibidos expedientes, recetas, diagnósticos, archivos, resultados
+clínicos, payloads API, listas extensas, objetos completos de base de datos,
+datos empresariales, PaymentIntent client secret, tokens Stripe, passwords y
+secretos de proveedor. El `flash` actual con texto/detalle y cualquier fixture
+local rico deberán eliminarse o reducirse al contrato mínimo antes del cambio
+de handler. Valkey no será fuente de verdad empresarial.
+
+### TTL, expiración absoluta y keys
+
+- idle TTL: 1,800 segundos, sliding sólo por actividad válida;
+- absolute lifetime: 43,200 segundos, nunca extendido por actividad;
+- toda sesión exige `created_at` y `absolute_expires_at`;
+- una sesión vencida absolutamente se rechaza aunque aún exista la key;
+- logout elimina la key inmediatamente;
+- cambios de password/privilegios invalidan mediante versión y regeneración;
+- TTL infinito o key de sesión sin expiración: prohibidos.
+
+Prefix conceptual: `mxmed:{environmentCode}:session:`. La key completa será
+`mxmed:{environmentCode}:session:{opaqueSessionId}`, con ID aleatorio
+criptográfico. No incluirá user/doctor ID, email, IP, nombre, tenant legible ni
+datos clínicos. La key completa y el session ID nunca se registran; sólo puede
+registrarse un correlation hash truncado cuando sea imprescindible. La
+aplicación ordinaria no usa `KEYS` o `SCAN`.
+
+### Cookie y ciclo de vida de la identidad de sesión
+
+La cookie contractual es `__Host-mxmed_session` con `Secure=true`,
+`HttpOnly=true`, `SameSite=Lax`, `Path=/` y sin `Domain`. Sólo se aceptan
+cookies; IDs en URL y `trans_sid` están prohibidos. Los retornos Stripe no
+relajan la cookie principal ni justifican `SameSite=None`.
+
+La configuración futura de PHP debe fijar:
+
+```ini
+session.use_strict_mode=1
+session.use_only_cookies=1
+session.use_trans_sid=0
+session.cookie_secure=1
+session.cookie_httponly=1
+session.cookie_samesite=Lax
+session.gc_maxlifetime=1800
+session.lazy_write=1
+```
+
+Se usa `session_regenerate_id(true)` o equivalente seguro después de login,
+MFA, elevación de privilegios, impersonación, cambio de password, cambio de
+entidad activa que implique privilegios y recuperación de cuenta. No se
+regenera en cada request. La transición crea primero el nuevo ID, invalida el
+anterior y evita reutilizar el payload anterior sin control de carrera.
+
+Logout ejecutará en orden: borrar key, limpiar `$_SESSION`, invalidar cookie,
+no redirigir con session ID y responder `no-store`.
+
+### Handler PHP, TLS y locking
+
+La implementación futura usará extensión `phpredis` compatible con PHP 8,
+`session.save_handler=redis`, primary endpoint, TLS con validación de
+certificado/hostname, usuario ACL, secreto inyectado, TTL de 1,800 segundos,
+prefix ambiental, connect/read timeout explícitos y session locking. Esta
+readiness no instala extensión ni modifica Dockerfile, `php.ini`, task
+definition o secrets injection.
+
+El lock queda habilitado, con TTL de 10 segundos, espera de 100,000
+microsegundos y máximo total de espera de 10 segundos/retries acotados. Se
+libera al cerrar la sesión y se emplea `read_and_close` en requests de sólo
+lectura cuando sea viable. Si no se adquiere, se devuelve error controlado, no
+se sobrescribe estado ni se continúa con estado inconsistente y el log no
+incluye el session ID.
+
+La ACL base no presupone la implementación interna del lock. La versión
+seleccionada de `phpredis` deberá demostrar mediante un test de comandos si usa
+`SET ... NX PX`, `SETNX` u otra operación. `SETNX` es el único candidato
+adicional esperado y sólo se autorizará si el test lo prueba; no exige ampliar
+categorías. Si requiere scripting o comandos administrativos incompatibles,
+la implementación cerrará `php_session_client_contract_incompatible` sin
+deshabilitar el lock.
+
+### Red y Security Group
+
+`MxMedSessionStack` reutiliza la VPC, exactamente las dos subnets
+`isolated-data` IPv4 y `SessionSecurityGroup` de NetworkStack. Crea su propio
+ElastiCache subnet group distribuido en dos AZ. No usa `public-ingress`,
+`private-app`, `private-endpoints`, default VPC, IP pública, NAT o Internet
+Gateway; la cache no necesita egress a Internet.
+
+El inbound permitido es TCP 6379 exclusivamente desde
+`ApplicationSecurityGroup`. Jobs sólo podrá agregarse cuando exista necesidad
+real. No se crea otro SG y se rechazan `0.0.0.0/0`, `::/0`, laptop, SSH, ALB,
+CloudFront o Internet. El outbound del SG de sesión permanece en el mínimo ya
+contratado, sin salida pública general.
+
+### Cifrado, autenticación y secreto
+
+El replication group exige `AtRestEncryptionEnabled=true` con
+`ApplicationDataKey`, y `TransitEncryptionEnabled=true` con mode `required`,
+TLS 1.2 mínimo, puerto 6379, validación de certificado y hostname. No se crea
+otra KMS key, no se acepta AWS managed key, plaintext, mode `preferred`,
+`verify_peer=false`, IP fija o túnel permanente.
+
+Cada ambiente crea ElastiCache user group y application user conceptual
+`mxmed_session_app`; el default user queda deshabilitado o sin permisos útiles.
+La password es generada y vive exclusivamente en Secrets Manager, cifrada con
+`SecretsKey`, bajo `/mxmed/{environmentName}/application/session-store-auth`.
+SessionStack posee el contenedor/secreto y la integración; SecurityStack sólo
+provee `SecretsKey`. Es distinto de session-signing, RDS, Stripe e IAM, nunca
+se versiona, imprime, exporta o registra.
+
+La rotación objetivo es cada 90 días e inmediata ante incidente, coordinada
+con dos usuarios o passwords durante la transición: publicar nueva
+credencial, actualizar tasks, verificar conexiones, retirar la anterior y
+auditar. No se automatiza sin soporte conjunto del cliente/deployment. El
+secreto usa `RemovalPolicy.RETAIN`, sin force delete, con recuperación
+operativa de 7 días en staging y 30 días en production.
+
+### ACL de aplicación
+
+El patrón es `~mxmed:{environmentCode}:session:*`. La allowlist mínima es
+`GET`, `SET`, `SETEX`, `DEL`, `UNLINK`, `EXISTS`, `EXPIRE`, `PEXPIRE`, `TTL`,
+`PTTL`, `TOUCH` y `PING`. Sólo se incorpora un comando adicional demostrado
+por el handler/lock en test y limitado al mismo patrón.
+
+Se niegan `KEYS`, `SCAN` de runtime, `FLUSHALL`, `FLUSHDB`, `CONFIG`, `ACL`,
+`COMMAND` administrativo, `DEBUG`, `SHUTDOWN`, `MIGRATE`, `MODULE`,
+`SCRIPT FLUSH`, `EVAL`/`EVALSHA` sin prueba inequívoca, pub/sub y administración
+de cluster. `+@all` está prohibido.
+
+### Parameter group, persistencia y mantenimiento
+
+El parameter group contractual es de familia Valkey 8.2, con:
+
+- `maxmemory-policy=volatile-ttl`;
+- `timeout=300`;
+- `notify-keyspace-events` vacío;
+- `cluster-enabled=no` cuando el servicio permita representarlo;
+- `activerehashing=yes`;
+- `tcp-keepalive=60`.
+
+No habilita appendonly, snapshots, keyspace notifications, modules, eviction
+policy distinta ni command renaming ad hoc. El guardrail exige TTL para toda
+sesión.
+
+Sesiones son efímeras: `snapshotRetentionLimit=0`, sin snapshot window, AWS
+Backup, export, restore contract, Global Datastore o replicación cross-region.
+La réplica/Multi-AZ mejora disponibilidad pero no convierte la sesión en
+backup. Una pérdida total invalida sesiones y no pierde datos empresariales.
+
+`autoMinorVersionUpgrade=false`. La ventana UTC de staging es
+`sun:03:30-sun:04:30`; la de production, `sun:04:30-sun:05:30`, sin solaparse
+con backup/mantenimiento RDS u operación crítica. Un upgrade revisa release
+notes y compatibilidad `phpredis`, prueba staging, login/logout/locking y
+failover, requiere aprobación productiva y valida rollback soportado. Un major
+upgrade exige otra microfase; nunca se usa `latest` o una versión flotante.
+
+### Failover y comportamiento de caída
+
+Production usa primary endpoint, DNS, Multi-AZ y automatic failover. El
+cliente no persiste IP: aplica connect/read timeout, re-resuelve DNS,
+reconstruye conexión y reintenta de forma limitada. Nunca crea silenciosamente
+una sesión vacía ni cae a filesystem local. Objetivo interno: RTO de sesión de
+5 minutos y RPO best effort mediante réplica, sin prometer continuidad
+absoluta. Pérdida completa implica reautenticación. Se programará una prueba de
+failover antes del lanzamiento.
+
+- rutas autenticadas: fail closed, sin degradar a anónimo en operación
+  sensible ni continuar con permisos cacheados; error temporal sanitizado;
+- rutas públicas: continúan sin sesión sólo cuando sea seguro;
+- login: no completa autenticación ni emite cookie si no persiste la sesión;
+- logout: invalida cookie local aun si cache falla y registra revocación
+  pendiente cuando exista un mecanismo seguro;
+- fallback a cookie completa, filesystem o dual-write: prohibido.
+
+### Observabilidad y costos
+
+No se exportan slow log ni engine log en V1: argumentos `SET` podrían contener
+payload serializado. Tampoco se registran session IDs, keys/payloads, cookies,
+AUTH token o comandos con argumentos.
+
+OperationsStack observará `CPUUtilization`, `EngineCPUUtilization`,
+`FreeableMemory`, `CurrConnections`, `NewConnections`, `Evictions`,
+`Reclaimed`, `CacheHits`, `CacheMisses`, `NetworkBytesIn`, `NetworkBytesOut`,
+`ReplicationLag`, `CPUCreditBalance`, `CPUCreditUsage`, `SwapUsage`,
+`DatabaseMemoryUsagePercentage` cuando exista,
+`SuccessfulReadRequestLatency` y `SuccessfulWriteRequestLatency`. Sus alarmas
+futuras cubren evictions > 0, memoria/CPU/créditos/conexiones, replication lag,
+failover, reemplazo de nodo y fallos de autenticación mediante métricas
+disponibles.
+
+Los drivers de staging son un `cache.t4g.micro`, un nodo, métricas, Secrets
+Manager y operaciones KMS. Production añade dos `cache.t4g.medium` continuos
+(primary/replica), Multi-AZ y transferencia entre AZ cuando aplique; esos dos
+nodos son el driver principal. No se inventa factura exacta ni se elimina TLS,
+cifrado, réplica, failover o autenticación sólo por costo.
+
+### Extensión futura de configuración y outputs tipados
+
+`MxMedEnvironmentConfig` incorporará, sin hacerlo en esta readiness, estos 25
+campos: `sessionProfile`, `sessionEngine`, `sessionEngineVersion`,
+`sessionNodeType`, `sessionClusterModeEnabled`, `sessionShardCount`,
+`sessionReplicaCount`, `sessionMultiAzEnabled`,
+`sessionAutomaticFailoverEnabled`, `sessionAtRestEncryptionEnabled`,
+`sessionTransitEncryptionEnabled`, `sessionTransitEncryptionMode`,
+`sessionIdleTtlSeconds`, `sessionAbsoluteLifetimeSeconds`,
+`sessionMaxPayloadKiB`, `sessionSnapshotRetentionDays`,
+`sessionAutoMinorVersionUpgrade`, `sessionPreferredMaintenanceWindow`,
+`sessionParameterGroupFamily`, `sessionAuthProfile`, `sessionAclKeyPattern`,
+`sessionLockEnabled`, `sessionLockTimeoutSeconds`,
+`sessionLockWaitMicroseconds` y `sessionLogDeliveryEnabled`.
+
+En ambos ambientes: profile `session-foundation-v1`, engine `valkey`, version
+`8.2`, cluster mode false, 1 shard, cifrado at-rest/transit true, transit mode
+required, idle 1800, absolute 43200, max payload 32 KiB, snapshots 0, auto
+minor false y logs false. Staging usa micro/0 replicas/Multi-AZ y failover
+false; production medium/1 réplica/Multi-AZ y failover true.
+
+SessionStack recibirá de Network VPC, `isolatedDataSubnets` y
+`SessionSecurityGroup`; de Security, `ApplicationDataKey` y `SecretsKey`.
+Expondrá por TypeScript `replicationGroup`, `primaryEndpointAddress`,
+`primaryEndpointPort`, `subnetGroup`, `parameterGroup`, `userGroup`,
+`applicationUser`, `authSecret`, `sessionPrefix`, `sessionIdleTtlSeconds` y
+`sessionAbsoluteLifetimeSeconds`.
+
+No usará CloudFormation Exports ni expondrá password, auth token, secret value,
+endpoint público, IP o session IDs. Session depende sólo de Network y Security;
+no depende de Data, Storage, Compute, Edge, Operations, Jobs o Backup. Los
+consumidores futuros son `Compute → Session` y `Operations → Session`; el
+grafo debe permanecer acíclico.
+
+### Migración desde filesystem
+
+La implementación seguirá esta secuencia: auditar configuración PHP,
+incorporar `phpredis` a la imagen ECS, añadir CA/TLS, inyectar endpoint/usuario/
+password por secrets, fijar flags seguros, desplegar staging, validar
+login/logout, requests concurrentes, expiración y regeneración, validar
+failover temporal y finalmente desplegar production.
+
+No se migran sesiones existentes: al corte, usuarios vuelven a autenticarse.
+No habrá dual-write, lectura antigua, importación de archivos ni fallback al
+filesystem. El despliegue debe coordinar expiración/invalidez del estado local
+y una comunicación operativa de re-login.
+
+### Guardrails futuros
+
+Aspects, validators y tests deberán fallar, sin autocorregir, ante engine,
+versión, modalidad, node type, shard/réplica, Multi-AZ/failover, subnet/SG,
+cifrado/TLS/KMS, user/secret/ACL, TTL/lifetime/payload, snapshots/log delivery,
+maintenance o outputs distintos del contrato. También rechazarán endpoint o
+SG público, NAT dependency, credenciales cruzadas, `+@all`, comandos
+administrativos, TLS opcional, secret plaintext/output, sesión sin TTL,
+production sin réplica, cualquier backup/log sensible, lookup/account ID y
+dependencia circular.
+
+El validator de aplicación rechazará payload clínico/empresarial/secreto,
+payload >32 KiB, key identificable, absolute expiry ausente/vencida, lock no
+adquirido y creación de sesión local en error. Ningún guardrail puede degradar
+silenciosamente seguridad o disponibilidad para hacer pasar el synth.
+
+### Matriz futura de QA
+
+La implementación deberá cubrir al menos estos 103 casos individuales:
+
+1. contrato previo auditado; 2. engine no contradictorio; 3. Valkey
+seleccionado; 4. `session_start`; 5. cookie name; 6. Secure; 7. HttpOnly;
+8. SameSite; 9. strict mode; 10. only cookies; 11. trans SID off;
+12. regenerate login; 13. logout; 14. datos sensibles ausentes;
+15. filesystem identificado; 16. profile staging; 17. profile production;
+18. engine; 19. version; 20. node staging; 21. node production;
+22. cluster mode; 23. shards; 24. replicas; 25. Multi-AZ; 26. failover;
+27. encryption; 28. TLS required; 29. TTL; 30. absolute lifetime;
+31. payload size; 32. snapshot retention; 33. auto minor; 34. maintenance;
+35. logging disabled; 36. un replication group; 37. un shard;
+38. primary staging; 39. primary+replica production; 40. dos AZ production;
+41. isolated subnets; 42. Session SG; 43. sin public endpoint;
+44. sin NAT dependency; 45. ApplicationDataKey; 46. SecretsKey;
+47. secret generado; 48. secret separado; 49. user group;
+50. default user restringido; 51. application user; 52. prefix exacto;
+53. sin `+@all`; 54. sin `KEYS`; 55. sin `FLUSHALL`; 56. sin `CONFIG`;
+57. sin ACL admin; 58. sin secret output; 59. sin plaintext;
+60. `volatile-ttl`; 61. timeout 300; 62. keepalive 60;
+63. keyspace notifications off; 64. appendonly off; 65. snapshots off;
+66. idle expiration; 67. absolute expiration; 68. regeneration;
+69. logout deletion; 70. 16 KiB target; 71. 32 KiB max;
+72. clinical payload rejected; 73. Stripe secret rejected;
+74. key pattern opaque; 75. no IDs in keys; 76. lock enabled;
+77. lock timeout; 78. lock wait; 79. bounded retries; 80. failure safe;
+81. primary endpoint; 82. no node endpoint; 83. DNS reconnect;
+84. no filesystem fallback; 85. auth routes fail closed;
+86. public routes safe fallback; 87. public SG rejected;
+88. TLS off rejected; 89. encryption off rejected;
+90. production no replica rejected; 91. production no failover rejected;
+92. snapshot enabled rejected; 93. slow log enabled rejected;
+94. `+@all` rejected; 95. infinite TTL rejected; 96. synth staging;
+97. synth production; 98. sin lookups; 99. sin account IDs;
+100. sin secretos; 101. determinismo; 102. sin deploy; 103. sin ciclos.
+
+Los casos de locking capturan además los comandos reales del handler: sólo
+entonces puede agregarse un comando a la ACL mínima. Los synth futuros serán
+locales/offline y no acreditarán que exista un cache desplegado.
+
+### Diagrama contractual
+
+```mermaid
+flowchart LR
+  Browser[Browser] -->|cookie __Host-mxmed_session| ECS[ECS PHP]
+  ECS -->|phpredis TLS 1.2+ / ACL / primary DNS| SessionSG[SessionSecurityGroup]
+  SessionSG -->|TCP 6379 sólo desde App SG| Valkey[SessionStack Valkey 8.2]
+
+  subgraph STG[Staging / isolated-data]
+    StgPrimary[1 primary t4g.micro\n0 replicas / no HA]
+  end
+
+  subgraph PRD[Production / 2 AZ isolated-data]
+    ProdPrimary[Primary t4g.medium]
+    ProdReplica[Replica t4g.medium]
+    ProdPrimary -->|replication / automatic failover| ProdReplica
+  end
+
+  Valkey --> StgPrimary
+  Valkey -->|primary endpoint| ProdPrimary
+  Network[NetworkStack\nVPC + isolated subnets + SG] --> Valkey
+  Security[SecurityStack\nApplicationDataKey + SecretsKey] --> Valkey
+  Valkey --> Metrics[CloudWatch metrics\nOperationsStack futuro]
+
+  TTL[Idle 1800s / absolute 43200s\nno backup / no filesystem fallback] -.-> Valkey
+```
+
+### Evidencia, límites y no repetición
+
+Sólo se modificó este documento. No se cambió `infra/aws`, PHP, `php.ini`,
+Docker, SQL, JavaScript, CSS, assets, Stripe o workflows. No se ejecutó AWS
+CLI/SDK, CDK, npm install/update, Docker, servidor PHP, navegador, login/logout,
+endpoint, conexión/comando Valkey/Redis, SQL o pago.
+
+La evidencia sanitizada queda fuera de Git en:
+
+`/tmp/mxmed-aws-session-readiness-01/`.
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "valkey_connections": 0,
+  "redis_connections": 0,
+  "session_ids_read": 0,
+  "cookies_read": 0,
+  "login_calls": 0,
+  "logout_calls": 0,
+  "php_runtime_changes": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0
+}
+```
+
+### Rollback y continuidad
+
+Rollback: revertir atómicamente el commit de PP260. Como no hubo cambio de
+runtime ni deploy, esto sólo retira el contrato/evidencia documental; no borra
+cache, key, secreto, sesión, cookie o dato en AWS.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Session-Implementation-01`
+
+Será la Microfase 15 de 24 y deberá implementar el contrato offline sin
+adelantar Compute, Edge, Jobs, Operations o Backup.
+
+### Cierre del contador
+
+Microfase 14 de 24 concluida.
+Avance global: 14/24.
+Pendientes: 10.
+
+---
