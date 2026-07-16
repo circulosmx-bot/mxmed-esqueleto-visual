@@ -56096,3 +56096,458 @@ Avance global: 15/24.
 Pendientes: 9.
 
 ---
+
+## PP-Decisiones 262 - MXMED_AWS_COMPUTE_FOUNDATION_CONTRACT_V1
+
+### Microfase, reanudación y corrección contractual
+
+Esta decisión cierra la Microfase 16 de 24:
+
+`ARCH-DEVOPS/MXMed-AWS-Compute-Readiness-01`
+
+El primer intento terminó correctamente en `BLOCKED` con el código
+`preexisting_compute_contract_conflict`: proponía PHP 8.4.23, Nginx/PHP-FPM,
+ARM64 y dos contenedores, pero PP245 y PP255 ya habían fijado PHP 8.5 con
+Apache/mod_rewrite y PP245 había elegido `amd64` inicialmente. La evidencia de
+ese cierre se conserva intacta en
+`/tmp/mxmed-aws-compute-readiness-01/`.
+
+Esta reanudación no reemplaza ni reescribe PP245 o PP255. Corrige el contrato
+de Compute para preservar exactamente:
+
+- ECS Fargate sobre Linux;
+- arquitectura `amd64` / ECS `X86_64`;
+- PHP 8.5;
+- Apache HTTP Server 2.4 con mod_php y mod_rewrite;
+- un único contenedor esencial `app` por task.
+
+Quedan explícitamente fuera Nginx, PHP-FPM como runtime principal, ARM64,
+Graviton, Alpine, supervisor, systemd y un sidecar web. Esta decisión es
+readiness documental: no crea imagen, ECR, cluster, task, servicio, secreto,
+endpoint ni recurso AWS y no ejecuta el código.
+
+### Contratos heredados preservados
+
+La lectura PP245–PP261 confirmó un único grafo compatible:
+
+| Fuente | Contrato heredado aplicado en Compute |
+|---|---|
+| PP245 | ECS Fargate, PHP 8.5 Apache, mod_rewrite, `amd64`, puerto 8080, imagen por digest, sizing y autoscaling inicial |
+| PP249–PP250 | CDK v2, `MxMedComputeStack`, configuración por ambiente, naming/tags y synth offline sin lookups |
+| PP251–PP252 | VPC, `private-app`, IPv4, sin IP pública, Application SG, NAT/endpoints y DNS contratados |
+| PP253–PP254 | `EcsExecutionRole`, `ApplicationTaskRole`, `MigrationTaskRole`, KMS y separación de duties |
+| PP255–PP256 | RDS MySQL 8.4.9, endpoint tipado, master secret sólo para migración y TLS obligatorio |
+| PP257–PP258 | cuatro buckets, uploads por quarantine, lecturas autorizadas y presigned URLs |
+| PP259 | assets de pago; no añade runtime ni permisos de Compute |
+| PP260–PP261 | Valkey 8.2 TLS/RBAC, primary endpoint, secret de aplicación, prefix, TTL y locking |
+
+No hay una decisión posterior que sustituya PHP 8.5 Apache o `amd64`. Compute
+dependerá de Network, Security, Data, Storage y Session, nunca al revés.
+
+### Auditoría delta de runtime y Apache
+
+Se reutilizó la auditoría read-only del intento anterior y sólo se revisó el
+delta exigido. El repositorio contiene 149 archivos PHP, tres `.htaccess`, cero
+`composer.json`, cero `composer.lock`, cero `vendor/` y cero artefactos nativos
+versionados con extensión de binario/librería. No se ejecutó PHP, Apache,
+Composer, Docker, SQL ni endpoint.
+
+Los front controllers activos viven bajo `api/catalog`, `api/profiles`,
+`api/agenda`, `api/clinical`, `api/patients` y `api/subscriptions`; también hay
+rutas PHP bajo `profiles`. `public/` sólo contiene una página aislada y uploads
+heredados, por lo que no puede ser por sí solo el DocumentRoot sin romper las
+rutas actuales. No existe `index.php` raíz; la entrada pública raíz actual es
+`index.html`.
+
+Matriz exacta de directivas:
+
+| Directiva | Archivo | Módulo | Compatibilidad contenedor | Riesgo y decisión |
+|---|---|---|---|---|
+| `AddDefaultCharset UTF-8` | `.htaccess` | core | compatible | conservar UTF-8; validar respuesta real |
+| `AddType ...` para HTML/CSS/JS | `.htaccess` | `mod_mime` | compatible | habilitar `mime`; no aceptar tipos definidos por usuarios |
+| `php_value default_charset UTF-8` | `.htaccess` | mod_php | compatible con PHP Apache | conservar; `AllowOverride` debe aceptar la directiva y el build la valida |
+| `RewriteEngine On` | `api/catalog/.htaccess`, `api/profiles/.htaccess` | `mod_rewrite` | compatible | habilitar explícitamente `rewrite` |
+| `RewriteRule ^cp/...` con `L,QSA` | `api/catalog/.htaccess` | `mod_rewrite` | compatible | preserva `/api/catalog/cp`; query no se registra completa |
+| `RewriteCond REQUEST_FILENAME !-f/!-d` | `api/profiles/.htaccess` | `mod_rewrite` | compatible | evita capturar archivos/directorios reales |
+| fallback `RewriteRule ^ index.php [QSA,L]` | `api/profiles/.htaccess` | `mod_rewrite` | compatible | preserva front controller y query semantics; logs sólo guardan path |
+
+No se encontraron `Redirect`, `Header`, `Expires`, `Options`,
+`DirectoryIndex`, variables Apache, CGI, proxy, WebDAV, `mod_headers` o
+`mod_expires` en `.htaccess`. No se traducen reglas a Nginx ni se modifica
+ningún archivo. Los módulos funcionales mínimos son core, `mod_mime`,
+`mod_rewrite`, `mod_dir`, autorización/logging estándar y mod_php; cualquier
+módulo adicional exige evidencia y tests.
+
+### DocumentRoot, routing y protección
+
+El DocumentRoot contractual es:
+
+`/var/www/html`
+
+La ruta coincide con la imagen oficial Apache de PHP y alojará un payload de
+runtime allowlisted, no un checkout completo. El build copiará únicamente la
+aplicación y assets necesarios para conservar `index.html`, `api/`, `modules/`,
+`profiles/`, assets públicos y las tres `.htaccess`. Excluirá `.git`, docs
+internas, tests/QA, SQL, backups, dumps, logs, temporales, uploads persistentes,
+config samples, `.env`, secretos, caches, `node_modules` y herramientas de
+desarrollo.
+
+Apache fijará `AllowOverride FileInfo Options` sólo bajo `/var/www/html`, la
+combinación mínima que debe validarse contra rewrite/mime y `php_value` actuales;
+fuera de esa ruta será `AllowOverride None`. La implementación fallará si una
+categoría más amplia resulta necesaria sin revisión explícita.
+
+La configuración de vhost negará acceso directo a dotfiles, composer files,
+`*.sql`, backups/dumps/logs, temporales, rutas de configuración, archivos
+clínicos y uploads heredados. `Options -Indexes` será global al DocumentRoot;
+no habrá directory listing, seguimiento inseguro de symlinks ni ejecución de
+archivos subidos. Los PHP de configuración necesarios para bootstrap podrán
+existir en el payload, pero nunca serán una ruta HTTP permitida y sólo leerán
+valores inyectados.
+
+PP245 ya contrató el puerto 8080. Apache escuchará exclusivamente en
+`0.0.0.0:8080` dentro de la task; el ALB futuro apuntará a ese puerto. No se
+expone 80, 443, 9000, SSH o debug. El puerto no privilegiado permite preparar
+la imagen para ejecutar Apache como `www-data` sin privilegios permanentes.
+
+### Runtime e imagen única
+
+La base contractual futura es:
+
+`php:8.5-apache-bookworm`
+
+No se fija un patch inventado. Compute Implementation resolverá el manifest
+`linux/amd64`, seleccionará un digest SHA-256 real y hará que el digest defina
+el patch exacto. Quedan prohibidos `latest`, Alpine, Bullseye, ARM, imagen
+comunitaria no aprobada y despliegue sólo por tag.
+
+Una sola imagen multi-stage por release será utilizada por el servicio web,
+la migration task mediante command override y jobs futuros compatibles. La
+capa runtime incluirá PHP 8.5, Apache 2.4, mod_php, mod_rewrite, extensiones
+aprobadas, aplicación, configuración Apache/PHP, health/readiness, CA bundle y,
+si en el futuro existe lockfile, vendor de producción. No incluirá Composer,
+compiladores, caches ni secretos en la capa final.
+
+La imagen registrará las etiquetas OCI `revision`, `source`, `created`,
+`version` y `title=mxmed-application`; generará SBOM e inventario de paquetes.
+Base y aplicación se identificarán por digest, y ningún secreto podrá aparecer
+en un layer, incluso si se elimina en uno posterior.
+
+### Extensiones PHP 8.5 exactas
+
+La lista cerrada para el build es:
+
+| Extensión | Evidencia/necesidad | Build/librería y gate amd64 |
+|---|---|---|
+| `pdo_mysql` | 62 archivos con PDO/MySQL; PP255 | `docker-php-ext-install`, mysqlnd; probar TLS/caching_sha2_password |
+| `opcache` | performance/hardening contratado por PP245 | extensión oficial; JIT deshabilitado inicialmente |
+| `redis`/phpredis | handler Valkey de PP260–PP261 | versión mantenida y fijada, compilada para PHP 8.5/amd64; sin fallback filesystem |
+| `mbstring` | 16 archivos | `libonig-dev`, compilar y retirar headers de build |
+| `intl` | `Normalizer` en tres archivos | `libicu-dev`, compilar y fijar runtime ICU |
+| `curl` | seis archivos/integraciones HTTPS | libcurl/CA bundle; TLS verification obligatoria |
+| `openssl` | TLS y criptografía base | módulo/biblioteca oficial habilitados; sin configuración insegura |
+| `fileinfo` | validación MIME defensiva exigida para uploads | extensión core habilitada; no confiar en extensión del nombre |
+| `json` | 48 archivos | core PHP 8.5 habilitado |
+| `gd` | procesamiento clínico de imágenes | JPEG/PNG/WebP; librerías dev sólo en builder; medir memoria |
+| `exif` | `api/clinical/index.php` | extensión oficial; sin librería externa permanente |
+| `zip` | importador SEPOMEX | `libzip-dev`; el importador no corre dentro del servicio web |
+
+No se incluyen Imagick, bcmath, sodium o soap porque no hay consumidor
+demostrado. No se incluye `mysqli` para el servicio: el runtime canónico usa
+PDO; la herramienta heredada que usa mysqli no forma parte de la ruta web ni
+de la migration task autorizada. El build linux/amd64 y sus tests deben fallar
+si cualquier extensión no soporta PHP 8.5, queda abandonada o introduce una
+imagen incompatible. Esta readiness no instala ni compila paquetes.
+
+No existe Composer hoy: no hay manifest, lock, plugins, scripts, autoload ni
+vendor que auditar. El build actual no ejecutará Composer. Si una microfase
+funcional incorpora dependencias, deberá agregar manifest y lock revisados;
+entonces el builder usará Composer oficial por digest y `install --no-dev
+--prefer-dist --no-interaction --no-progress --classmap-authoritative`. Un
+manifest sin lock o scripts/plugins no auditados bloqueará el build.
+
+### ECR, identidad y vulnerabilidades
+
+`MxMedComputeStack` será propietario de un `ApplicationRepository` privado por
+ambiente, cifrado con `ApplicationDataKey`, tags inmutables, scan on push,
+`Retain` y `emptyOnDelete=false`. No tendrá policy pública, acceso cross-account,
+pull-through cache ni replication inicial.
+
+Staging conservará 20 imágenes etiquetadas y expirará untagged a los siete
+días. Production conservará 50 y expirará untagged a los 14 días. Una regla no
+podrá borrar un digest aún referenciado por task definitions.
+
+Sólo se aceptan tags `git-{fullCommitSha}` y `release-{version}`. Las task
+definitions usarán `repositoryUri@sha256:{64 hex}`. El flujo será build
+linux/amd64 una vez, tests, SBOM, scan, push, resolución del digest, staging y
+promoción del mismo digest a production; no habrá rebuild productivo.
+
+Antes de production se exigen cero CRITICAL sin excepción aprobada y cero HIGH
+sin excepción temporal con justificación, compensación, responsable,
+vencimiento, ticket y plan de actualización. No se ejecutó scanning ahora.
+
+### Cluster, task y contenedor
+
+Habrá un ECS Cluster por ambiente: Fargate Linux/X86_64, Container Insights
+habilitado, ECS Exec deshabilitado, sin EC2 capacity provider, ECS Anywhere,
+Service Connect, Cloud Map o Fargate Spot para web.
+
+La `FargateTaskDefinition` usará `awsvpc`, runtime LINUX/X86_64, platform
+1.4.0 y 20 GiB efímeros, sin EFS, GPU, privileged, Docker socket, host paths,
+host network o PID/IPC host.
+
+| Ambiente | Task CPU | Task memoria | App CPU | Reservation | Limit |
+|---|---:|---:|---:|---:|---:|
+| staging | 512 | 1024 MiB | 512 | 768 MiB | 1024 MiB |
+| production | 1024 | 2048 MiB | 1024 | 1536 MiB | 2048 MiB |
+
+Existe exactamente un contenedor esencial `app`, con la imagen aprobada por
+digest, Apache/PHP/assets/health/readiness y port mapping 8080/TCP. Usa
+`readonlyRootFilesystem=true`, `privileged=false`, `initProcessEnabled=true`,
+sin interactive/pseudoTerminal. Drop `ALL` es obligatorio y se verifica en el
+build; no se agregará capability sin decisión explícita.
+
+Apache se preconfigurará en la imagen para trabajar como `www-data` sobre
+8080. Sólo `/tmp`, `/var/run/apache2`, `/var/lock/apache2` y una ruta adicional
+estrictamente demostrada podrán ser volúmenes efímeros escribibles. Código,
+configuración, assets y DocumentRoot general permanecen read-only. No hay EFS,
+sesiones, uploads, documentos, exports, backups, cache compartida o logs
+persistentes en el filesystem.
+
+Los uploads locales y las cinco llamadas actuales a `session_start()` son gaps
+de aplicación ya encaminados por PP257/PP258 y PP260/PP261: antes del deploy
+real deben usar S3 y Valkey. No autorizan escritura global ni fallback local.
+Compute Implementation deberá demostrar que Apache inicia con estas rutas; si
+no puede, cerrará `apache_readonly_root_contract_incompatible`.
+
+### Hardening PHP y Apache
+
+PHP fija UTC, `display_errors=Off`, `log_errors=On`, `expose_php=Off`,
+`memory_limit=256M`, `max_execution_time=60`, OPcache on/JIT off y assertions
+de production deshabilitadas. Los límites de upload se alinean con PP257 y se
+validan junto con memoria GD antes del lanzamiento.
+
+Apache fija `ServerTokens Prod`, `ServerSignature Off`, `TraceEnable Off`,
+`Options -Indexes`, sin proxy abierto, CGI, WebDAV, status/server-info público
+ni directory listing. Request body se limita por ruta. Access/error de Apache
+y error PHP van a stdout/stderr con formato sanitizado; nunca incluyen query
+completa, Referer, cookies, Authorization, bodies, secretos o datos clínicos.
+
+### Health, readiness y servicio
+
+El repositorio aún no contiene `/healthz` o `/readyz`; una microfase funcional
+debe implementarlas antes del deploy, sin hacerlo en esta readiness.
+
+`/healthz` es liveness mínima: no consulta MySQL, Valkey, S3, Stripe o IA y no
+revela versión. El container health ejecuta HTTP local a 8080 cada 15 segundos,
+timeout 5, tres retries y start period 60.
+
+`/readyz` valida bootstrap y realiza sólo lecturas acotadas a MySQL y Valkey,
+cada una con timeout máximo de dos segundos. No escribe, no llama Stripe/IA/S3
+ni revela detalles. Edge usará `/readyz` para el target group.
+
+`ApplicationService` usa private-app, Application SG, IPv4, sin public IP,
+platform 1.4.0, ECS Exec off, rolling ECS, circuit breaker con rollback,
+minimum healthy 100%, maximum 200%, grace 120, managed tags y tags propagados
+desde SERVICE.
+
+| Ambiente | Desired | Min | Max |
+|---|---:|---:|---:|
+| staging | 1 | 1 | 2 |
+| production | 2 | 2 | 6 |
+
+Target tracking fija CPU 60%, memoria 70%, scale-out 60 segundos y scale-in
+300. No hay scheduled scaling, Fargate Spot, DB/Valkey scaling o custom metric.
+Request count queda diferido hasta que Edge sea propietario del target group.
+
+### Red y Edge
+
+Compute recibe VPC, las dos `private-app` subnets y
+`ApplicationSecurityGroup`. No asigna IP pública. Inbound 8080 sólo podrá venir
+de `AlbIngressSecurityGroup` cuando Edge exista; 8080 nunca se abre a internet.
+Outbound contractual: MySQL 3306 a Database SG, Valkey TLS 6379 a Session SG,
+HTTPS 443 mediante endpoints/NAT, DNS VPC y S3 Gateway Endpoint. No hay SSH,
+debug, PHP-FPM o acceso de laptop.
+
+Compute no crea ALB, listener, target group, CloudFront, WAF o DNS. Expone
+cluster, service, task definition, `app`, nombre/puerto, Application SG,
+`/healthz` y `/readyz`; Edge depende de Compute y conecta el ALB futuro a
+8080/`readyz`. Compute nunca depende de Edge.
+
+### Configuración, secretos e IAM
+
+La allowlist no secreta futura contiene APP_ENV, APP_DEBUG=false,
+APP_TIMEZONE=UTC, APP_RELEASE, AWS_REGION, host/port/name DB, host/port/prefix y
+TTL Session, nombres tokenizados de buckets, TTL upload/download,
+LOG_FORMAT=json, STRIPE_MODE y publishable key pública. No se imprime el
+environment y nunca se ponen passwords, tokens, AUTH, session signing, Stripe
+secret/webhook o AI key como variables normales.
+
+Sólo `app` recibe campos concretos de session signing, session-store
+username/password, Stripe secret/webhook, AI key y credencial del usuario DB de
+aplicación. Nunca recibe RDS master, AWS access keys, credenciales de deploy o
+root. ExecutionRole obtiene ECR/logs y secrets/KMS exactos de arranque, sin
+ListSecrets; ApplicationTaskRole no administra Secrets Manager.
+
+Compute Implementation tiene como prerrequisito un secret separado
+`/mxmed/{environmentName}/application/database-user`, cifrado con SecretsKey,
+Retain, sin output/host/endpoint, con username `mxmed_app` y password generado.
+MigrationTaskRole usa temporalmente master y app secret para crear/actualizar
+`mxmed_app` con grants mínimos. El servicio nunca usa el master secret.
+
+ApplicationTaskRole recibe sólo S3 mínimo: quarantine/prefix para el flujo
+prefirmado, GetObject autorizado y presigned GET en private/clinical, y
+derivados public cuando exista procesamiento. Se prohíben `s3:*`, bucket admin,
+DeleteObjectVersion cotidiano, wildcard IAM, IAM/PassRole/CloudFormation y
+administración KMS.
+
+Valkey inyecta primary endpoint, 6379, application username/password field,
+TLS/CA, prefix, TTL y locking. No inyecta default user, node endpoint, IP o
+secret completo. Sin Valkey, login y rutas autenticadas fallan cerradas; no hay
+fallback filesystem.
+
+### Logs, migración, despliegue y fallos
+
+El log group de aplicación es `/mxmed/{environmentName}/compute/app`, retención
+30 días staging y 90 production. El de migración es separado. El JSON admite
+sólo timestamp, level, request_id opaco, method, path sin query, status,
+duration_ms y sanitized_code. Excluye query, cookies, Authorization, session ID,
+body, SQL, secretos, Stripe/webhook y datos clínicos.
+
+`MigrationTaskDefinition` usa la misma imagen/digest, sólo PHP CLI mediante
+command override —no Apache—, MigrationTaskRole, private-app, sin public IP,
+master/app secrets, log separado y timeout operativo 30 minutos. No hay un
+migrator idempotente canónico hoy; una microfase funcional deberá crearlo. No
+se ejecutan migraciones en startup, cada task, synth, endpoint o laptop.
+
+Orden de primer despliegue: bootstrap futuro; foundation Network/Security/Data/
+Storage/Session; ECR; build amd64; SBOM/scan; push/digest; app DB secret; task
+definitions; migration/bootstrap; servicio staging; health/readiness; Edge;
+E2E; promoción del mismo digest; production con aprobación. No inicia servicio
+sin digest, `mxmed_app`, secretos AWSCURRENT, Valkey y migraciones cerradas.
+
+MySQL caído hace fallar readyz y retira target sin retry infinito. Valkey caído
+hace fail closed de autenticación y readyz. S3 falla sólo operaciones de
+archivo controladamente; Stripe no activa pagos y no tumba health; IA degrada
+su función sin volverla dependencia de healthz.
+
+### Extensión futura de configuración y outputs
+
+La implementación añadirá 33 campos cerrados: `computeProfile`,
+`computeArchitecture=X86_64`, `computePlatformVersion=1.4.0`,
+`computePhpMajorVersion=8.5`, base tag/digest, application digest,
+`computeApacheEnabled=true`, `computeModRewriteEnabled=true`, DocumentRoot,
+port, task CPU/memory/ephemeral, desired/min/max, reservation/limit, health/
+readiness/grace, scaling targets/cooldowns, log retention, ECS Exec false,
+read-only root true, scan true, immutable true y retenciones ECR. Esta readiness
+no modifica config.
+
+`MxMedComputeStack` recibirá referencias tipadas de Network, Security, Data,
+Storage y Session. Expondrá repository, cluster, application/migration task
+definitions, service, app container name/port, health/readiness paths,
+Application SG, app/migration log groups y scaling target, sin CloudFormation
+Exports ni valores sensibles.
+
+El grafo directo es Compute → Network/Security/Data/Storage/Session. Compute no
+depende de Edge/Operations/Jobs/Backup; Edge y Operations dependen de Compute.
+Jobs podrá reutilizar imagen/repository sin invertir el grafo. No hay ciclo.
+
+### Guardrails y matriz futura de pruebas
+
+Un Aspect fail-closed deberá bloquear PHP distinto de 8.5, Nginx/PHP-FPM como
+runtime principal, ARM, Alpine, imagen sin digest/latest, ECR mutable/scan off,
+launch no Fargate, X86_64 ausente, public IP/subnet, ECS Exec, privileged/root
+no autorizado, root writable, capability extra, Apache/mod_rewrite ausentes,
+puerto distinto de 8080, master secret en app, plaintext/wildcard IAM/`s3:*`,
+production debajo de dos, rollback/health ausentes, logs inseguros, persistencia
+filesystem/EFS, migration en startup y Docker socket. No autocorrige recursos.
+
+La implementación deberá conservar los 554 tests existentes y añadir al menos
+120 para contratos previos/runtime, PHP/Apache/rewrite/DocumentRoot/amd64,
+extensiones/Composer, ECR/digest, cluster/task/contenedor, puerto/hardening/root
+read-only, health/readiness, service/autoscaling/red, secrets/app DB/Valkey/S3/
+IAM/logs, migration, guardrails, synth offline, determinismo, cero secretos/
+cuentas/deploy y grafo acíclico.
+
+### Costos y diagrama
+
+Staging paga una task 0.5 vCPU/1 GiB más ECR, logs, scan y transferencia.
+Production mantiene mínimo dos tasks 1 vCPU/2 GiB y puede escalar a seis, más
+ECR, logs, transferencia y NAT/endpoints. No se inventa factura ni se retiran
+segunda task, scanning, rollback, health o cifrado por costo.
+
+```mermaid
+flowchart LR
+  ECR[ECR privado<br/>digest linux/amd64] --> TD[Fargate Task Definition<br/>LINUX / X86_64 / 1.4.0]
+  TD --> APP[app esencial<br/>Apache 2.4 :8080<br/>mod_rewrite + PHP 8.5]
+  EDGE[EdgeStack futuro<br/>ALB / WAF / CloudFront] -->|8080 /readyz| APP
+  APP --> DB[(RDS MySQL)]
+  APP --> VK[(Valkey TLS)]
+  APP --> S3[(S3)]
+  APP --> EXT[Stripe / IA<br/>HTTPS]
+  SM[Secrets Manager] --> ER[ExecutionRole] --> APP
+  AR[ApplicationTaskRole] -->|S3 mínimo| S3
+  IMG[misma imagen/digest] --> MIG[Migration Task<br/>PHP CLI]
+  MS[master + app DB secrets] --> MIG --> DB
+  APP --> LOG[CloudWatch Logs]
+  subgraph STG[staging / private-app / sin IP pública]
+    SVC1[1 task<br/>autoscaling 1-2]
+  end
+  subgraph PRD[production / private-app / sin IP pública]
+    SVC2[mínimo 2 tasks<br/>autoscaling 2-6]
+  end
+  SVC1 --> TD
+  SVC2 --> TD
+```
+
+### Evidencia, no repetición y siguiente microfase
+
+La evidencia nueva se guarda separada en
+`/tmp/mxmed-aws-compute-readiness-01-retry-01/`; los 53 artefactos BLOCKED
+anteriores no se sobrescriben. Sólo este documento cambia. No se modifican IaC,
+PHP, `.htaccess`, Composer, Docker, Apache, SQL, JavaScript, CSS, assets,
+workflows, Stripe o pagos.
+
+```json
+{
+  "runtime_substitution_attempts": 0,
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "docker_build_calls": 0,
+  "docker_pull_calls": 0,
+  "docker_push_calls": 0,
+  "composer_install_calls": 0,
+  "npm_install_calls": 0,
+  "php_runtime_calls": 0,
+  "database_connections": 0,
+  "valkey_connections": 0,
+  "upload_calls": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0,
+  "clinical_data_read": 0
+}
+```
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Compute-Implementation-01`
+
+Será la Microfase 17 de 24. PP262 no acredita compatibilidad ejecutada, imagen
+construida, digest real, recursos AWS, health runtime, migraciones o deploy;
+esas compuertas permanecen para implementación y staging.
+
+### Cierre del contador
+
+Microfase 16 de 24 concluida.
+Avance global: 16/24.
+Pendientes: 8.
+
+---
