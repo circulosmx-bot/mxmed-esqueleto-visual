@@ -54539,3 +54539,434 @@ Avance global: 11/24.
 Pendientes: 13.
 
 ---
+
+## PP-Decisiones 257 - MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1
+
+### Microfase, contador y resultado
+
+Microfase: `ARCH-DEVOPS/MXMed-AWS-Storage-Readiness-01`.
+
+Contador: `Microfase 12 de 24`.
+
+Resultado: `PASS - MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`.
+
+Esta decisión cierra el contrato único que podrá implementar
+`MxMedStorageStack`. Conserva PP245 y PP249–PP256 sin rediseñar foundation,
+red, seguridad o datos. Refina el inventario preliminar de PP245: Storage V1
+tendrá exactamente cuatro buckets generales por ambiente y todos usarán
+`ApplicationDataKey`; no continúan como alternativas el bucket `operations`,
+el cifrado SSE-S3 de media ni buckets separados de thumbnails, exports, logs o
+malware.
+
+La microfase fue sólo documental y estática. No modificó `infra/aws`, PHP,
+JavaScript, SQL, assets o configuración y no ejecutó AWS CLI/SDK, CDK
+synth/diff/bootstrap/deploy, npm install/update, Docker, PHP, navegador,
+endpoints, uploads, downloads, malware scan, copias/eliminaciones de objetos,
+conexiones de base, SQL, Stripe o pagos. No creó recursos AWS.
+
+### Baseline y preservación
+
+La rama `architecture/mxmed-aws-storage-readiness` se creó directamente desde
+`feature/mxmed-aws-data-implementation` en
+`452166bde4650b45a25b0a3a7e32a4981bcaaf56`. Antes de editar se verificó:
+
+- base y HEAD contractual correctos, upstream base `0/0`;
+- working tree limpio y `git diff --check` PASS;
+- Node `v22.22.0` y npm/npx `10.9.4`;
+- rama objetivo local/remota y evidencia parcial ausentes;
+- `PP-Decisiones 257` y este identificador libres.
+
+No se usaron merge, rebase, cherry-pick, reset, clean, stash o force. El único
+archivo versionado autorizado y modificado es este contrato.
+
+### Auditoría funcional read-only
+
+Sólo se inspeccionaron código, markup y nombres versionados; no se abrieron ni
+copiaron archivos personales o clínicos reales.
+
+| Superficie | Estado actual | Sustitución futura |
+| --- | --- | --- |
+| documentos, estudios, recetas, consentimientos e imágenes clínicas | multipart guarda directo en `storage/clinical_uploads/{year}/{month}` | Quarantine y promoción a ClinicalRecords |
+| imágenes clínicas | `finfo`/`getimagesize`, resize, re-encode JPEG/PNG/WebP y variante `-thumb` | scan previo, derivado seguro y prefix en el bucket destino, no bucket adicional |
+| PDF clínico | MIME y move al filesystem; sin validación estructural, active content o malware | estructura/magic bytes/malware y promoción sólo `clean` |
+| nombres/rutas | UUID clínico, pero filename original en payload DB; branding/media legacy usa `doctors/{id}` | filename sólo en MySQL y keys totalmente opacas |
+| tamaños | backend clínico actual: 25 MiB | public 20 MiB; private/clinical/export 100 MiB |
+| foto/logo público | controles de perfil deshabilitados; sin persistencia pública canónica | PublicMedia tras scan y derivación; distribución CloudFront OAC |
+| galería/consultorio/paciente | controles `image/*`; galería en `localStorage`, otros slots UI | clasificación backend; public o clinical según propósito |
+| identidad | anexos QR/multipart se guardan como clínicos | ClinicalRecords si integran expediente/consentimiento |
+| comprobantes/contratos/exports | comprobantes futuros; sin store privado canónico | PrivateDocuments y `temporary-exports/` |
+| descarga/preview | viewers consumen paths locales en payload; export HTML cliente | CloudFront public o GET prefirmado private/clinical; ninguna URL persistida |
+| eliminación | sólo retiro de galería local; no purge clínico de objetos | delete marker y purge versionado separado |
+
+La implementación posterior deberá retirar upload directo al destino,
+`image/*` amplio, rutas servibles `/storage`, paths con doctor ID, ausencia de
+quarantine/scan/checksum/cifrado/versionado/lifecycle y URLs locales. Storage
+no migra contenido ni cambia endpoints PHP por sí solo; el cutover corresponde
+a microfases de aplicación/Compute/Jobs.
+
+No se encontró obligación V1 de DICOM, objetos imprescindibles mayores de 100
+MiB, S3 público directo, Object Lock inmediato, keys personales o retención
+clínica incompatible. DICOM y archivos masivos quedan diferidos.
+
+### Inventario y clasificación únicos
+
+Cada ambiente tendrá exactamente cuatro buckets con nombre CloudFormation:
+
+| Identificador | Clase | Contenido |
+| --- | --- | --- |
+| `PublicMediaBucket` | `PUBLIC` | foto profesional, logos publicados, imágenes optimizadas y assets aprobados |
+| `PrivateDocumentsBucket` | `SENSITIVE` | documentos administrativos, comprobantes, contratos y exports privados no clínicos |
+| `ClinicalRecordsBucket` | `CLINICAL` | documentos, estudios, recetas adjuntas, imágenes y anexos de expediente |
+| `UploadQuarantineBucket` | `SENSITIVE` | toda carga nueva pending, rechazados y evidencia temporal de incidentes |
+
+`PUBLIC` no significa bucket público. Quarantine nunca es definitivo o
+servible. Thumbnails, exports temporales, infectados y logs usan variantes,
+prefixes/tags o servicios propietarios; no crean un quinto bucket Storage.
+
+No se fija `bucketName` ni se incluye account ID, usuario, doctor, paciente,
+especialidad, ciudad, diagnóstico, correo, teléfono o dominio. Storage expone
+`IBucket` y tokens `bucketName`/`bucketArn` sólo por TypeScript, nunca mediante
+`CfnOutput` o Export.
+
+### Cifrado, ownership, acceso y versionado
+
+Los cuatro buckets tendrán:
+
+- SSE-KMS con `ApplicationDataKey`, S3 Bucket Key y grants mínimos;
+- `enforceSSL=true` y rechazo de cifrado incompatible cuando corresponda;
+- `ObjectOwnership=BUCKET_OWNER_ENFORCED`, ACL deshabilitada;
+- `BlockPublicAccess.BLOCK_ALL`, sin website, anonymous/public read/write o
+  `Principal="*"`;
+- versioning habilitado.
+
+Storage no crea otra key ni usa SSE-S3, AWS managed key, SSE-C, claves por
+objeto/usuario o KMS hardcodeada. PublicMedia sólo será legible por futura OAC
+y roles operativos expresos; CloudFront no se crea aquí. MFA Delete, Object
+Lock y legal hold automático permanecen deshabilitados.
+
+### Object keys, metadata y tags
+
+| Uso | Key opaca |
+| --- | --- |
+| quarantine | `uploads/{uploadUuid}/source` |
+| public | `assets/{assetUuid}/{variant}.{extension}` |
+| private | `objects/{objectUuid}` |
+| clinical | `records/{objectUuid}` |
+| export temporal | `temporary-exports/{exportUuid}` |
+
+No contienen paciente, médico, slug, CURP, correo, teléfono, diagnóstico,
+expediente, nacimiento, filename, especialidad, ciudad o ID de negocio. MySQL
+relaciona negocio, bucket lógico, object UUID y version ID. No se sobreescribe
+destino in-place; cada cambio usa object UUID nuevo o versión controlada.
+
+Metadata allowlist: `upload-id`, `checksum-sha256`,
+`normalized-content-type`, `schema-version`, `source-type` técnico. Tags:
+`classification`, `scan-status`, `retention-class`, `processing-status`.
+`scan-status` sólo admite `pending`, `clean`, `infected`, `failed`.
+
+Se prohíben en key/metadata/tag/log/URL los identificadores de paciente,
+médico o entidad identificable, nombre, diagnóstico, notas, correo, teléfono,
+filename original, dato clínico o secreto. El filename original sólo puede
+guardarse en MySQL protegido. La promoción elimina metadata libre del cliente.
+
+### MIME y tamaños V1
+
+| Clase | Permitidos | Máximo |
+| --- | --- | ---: |
+| entrada public | `image/jpeg`, `image/png`, `image/webp` | 20 MiB |
+| derivado public | `image/jpeg`, `image/png` o `image/webp` normalizado | 10 MiB |
+| private | `application/pdf`, `image/jpeg`, `image/png`, `image/webp` | 100 MiB |
+| clinical | `application/pdf`, `image/jpeg`, `image/png`, `image/webp` | 100 MiB |
+| export temporal | allowlist private | 100 MiB |
+
+Media pública se publica sólo re-encoded, sin EXIF, con formato, dimensiones y
+key normalizados; dimensiones se cierran en Image Processing Readiness. SVG,
+HTML, JavaScript, GIF animado y ejecutables se rechazan.
+
+Private/clinical difieren DICOM, ZIP/RAR, Office, audio, video, cifrados,
+password-protected PDF y active content. Se validan extensión, MIME declarado,
+magic bytes, estructura, malware y active content; navegador,
+`Content-Type`/`Content-Length` o extensión nunca bastan. No hay multipart para
+end users V1; todo multipart interno se aborta al día uno.
+
+### Upload y CORS
+
+Flujo cerrado:
+
+1. usuario autenticado solicita upload;
+2. backend autoriza actor, clasificación y destino lógico;
+3. crea upload UUID y registro `pending`;
+4. firma PUT/POST de key exacta sólo en Quarantine durante 600 segundos;
+5. fija MIME, tamaño, checksum SHA-256 y clasificación, sin overwrite, ACL,
+   encryption de cliente o metadata libre;
+6. navegador carga directo a Quarantine y S3 emite evento;
+7. objeto permanece inaccesible hasta scan/procesamiento;
+8. sólo `clean` se promueve; DB cambia a `ready` después de promoción.
+
+No se firma upload a los tres buckets definitivos ni desde el navegador.
+Storage inicial sintetizará sin CORS y los uploads directos quedarán
+deshabilitados hasta que Edge/Compute aporten origins oficiales. CORS futuro:
+PUT o POST, HEAD sólo si hace falta, origin exacto, headers revisados,
+`maxAge` limitado y sin credentials innecesarias. Wildcards y dominios
+ficticios quedan prohibidos.
+
+### Escaneo portable y eventos
+
+V1 no depende de GuardDuty Malware Protection for S3 ni afirma disponibilidad
+en `mx-central-1`. No se consultó cuenta o servicio regional; una evaluación
+futura no sustituirá el gate portable:
+
+`Quarantine → EventBridge → JobsStack → SQS → Fargate scanner → clean/infected/failed`.
+
+Quarantine habilita EventBridge notifications. Storage sólo publica eventos
+S3; Jobs posee rule, queue, DLQ, worker y resultado. El scanner futuro usa
+imagen versionada, ClamAV/motor aprobado, firmas actualizadas, `private-app`,
+`ScannerTaskRole`, CPU/memoria/timeout/retries limitados y logs sanitizados,
+sin acceso público o indiscriminado a MySQL.
+
+PDF: detectar cifrado, JavaScript, embeds y active content no aprobado;
+normalizar sólo con herramienta segura. Imagen pública: re-encode, eliminar
+EXIF y crear derivado. No promover si status no es clean, tipo real difiere,
+checksum cambia sin explicación o processing falla.
+
+### Promoción, descarga y distribución
+
+| Status | Acción |
+| --- | --- |
+| `clean` | copiar idempotentemente a destino con object UUID, checksum, KMS, clasificación y allowlists; marcar DB ready; expirar fuente |
+| `infected` | bloquear/tag/alertar, nunca copiar, expirar en 30 días |
+| `failed` | bloquear, retries/DLQ, expirar 14 días tras cierre de incidente |
+| `pending`/unscanned | nunca servir; expirar huérfano en 7 días |
+| fuente clean promovida | expirar un día después |
+
+PublicMedia se entrega sólo mediante futura CloudFront OAC, keys inmutables,
+cache pública y sin URL S3 o query sensible. Private/Clinical requieren
+autorización backend inmediatamente anterior, GET prefirmado de key/version
+exactas por máximo 300 segundos, attachment cuando aplique y
+`Cache-Control: private,no-store`. No se lista bucket, sirve Quarantine, usa
+cache compartido/CloudFront público o persiste una URL.
+
+La URL prefirmada no se loguea con query, envía a analytics o Referer ni se
+trata como permiso duradero.
+
+### Lifecycle y eliminación
+
+Todos abortan multipart incompleto al día uno, eliminan expired delete markers
+sólo cuando sea seguro y no usan Glacier V1.
+
+| Bucket/prefix | Staging | Production |
+| --- | --- | --- |
+| Public current | sin expiry | sin expiry |
+| Public noncurrent | 30 días | 90 días |
+| Private current | sin expiry | sin expiry; Intelligent-Tiering al día 30 |
+| Private noncurrent | 30 días | sin expiry automático |
+| Clinical current | sólo sintético, sin expiry general | sin expiry; Intelligent-Tiering al día 30 |
+| Clinical noncurrent | 30 días sintético | sin expiry automático |
+| Quarantine pending/failed/infected/clean | 7/14/30/1 días | 7/14/30/1 días |
+| `temporary-exports/` | 7 días | 7 días |
+
+Private/Clinical no usan archive tiers. Clinical production no tiene borrado
+automático sin política legal propia. Public usa delete marker y purge
+lifecycle de noncurrent; private/clinical usan delete marker funcional y un
+purge separado con autorización, motivo, auditoría, validación de retención,
+enumeración explícita de versiones, evidencia e idempotencia. Application no
+recibe `DeleteObjectVersion`; no se crea endpoint de purge.
+
+### Object Lock, replication y backup
+
+`enableObjectLock=false`: faltan periodos legales, autoridad de liberación,
+modo governance/compliance, runbook y análisis irreversible/costos. Sólo una
+microfase propia, antes de crear el bucket productivo, podrá cambiarlo.
+
+V1 no crea SRR, CRR, región secundaria o replication role. Versioning no es
+backup independiente. BackupStack futuro decide AWS Backup S3, vault,
+cross-region, retención y restore tests consumiendo Storage. ClinicalRecords
+production no está listo para lanzamiento hasta cerrar Backup/DR Readiness.
+
+### Data events y server access logging
+
+OperationsStack futuro usará advanced event selectors:
+
+| Ambiente/bucket | Eventos |
+| --- | --- |
+| production Clinical/Private/Quarantine | Read y Write |
+| production Public | Write y Delete; excluir lecturas CloudFront |
+| staging Quarantine y Clinical sintético | Write y Delete |
+
+Operations depende de Storage; Storage no crea trail. CloudTrail audita
+operaciones, no contenido. S3 Server Access Logging queda apagado por
+duplicación, nuevos objetos/metadatos de log, complejidad de retención y
+ausencia de bucket contratado. CloudFront logging corresponde a
+Edge/Operations.
+
+### IAM mínimo
+
+| Principal | Contrato máximo |
+| --- | --- |
+| application task | presign/put al prefix exacto de Quarantine y GET private/clinical autorizado; metadata mínima |
+| scanner task | get/tag/delete controlado Quarantine, put destinos concretos, KMS mínimo y resultado técnico |
+| CloudFront OAC | GetObject sólo PublicMedia |
+| backup role | acceso futuro sólo desde BackupStack |
+| operations role | auditoría sin lectura de contenido clínico |
+
+Application no lista bucket completo, borra versiones, lee Quarantine
+arbitrariamente o escribe destinos. Scanner no accede ampliamente a buckets.
+Se prohíben `s3:*`, `Resource="*"`, DeleteBucket, PutBucketPolicy,
+PutEncryptionConfiguration y bucket admin de workloads.
+
+### Config, outputs y dependencias futuras
+
+La implementación añadirá y validará juntos estos 23 campos:
+
+`storageProfile`, `storageVersioningEnabled`, `storageEncryptionProfile`,
+`storageBucketKeyEnabled`, `publicMediaNoncurrentRetentionDays`,
+`privateDocumentsNoncurrentRetentionDays`, `clinicalNoncurrentRetentionDays`,
+`quarantinePendingRetentionDays`, `quarantineFailedRetentionDays`,
+`quarantineInfectedRetentionDays`, `temporaryExportRetentionDays`,
+`privateStorageTransitionDays`, `clinicalStorageTransitionDays`,
+`uploadUrlTtlSeconds`, `downloadUrlTtlSeconds`, `publicMediaMaxUploadMiB`,
+`privateMaxUploadMiB`, `clinicalMaxUploadMiB`,
+`enableQuarantineEventBridge`, `enableObjectLock`,
+`enableCrossRegionReplication`, `enableStorageDataEvents`,
+`storageAllowedMimeTypes`.
+
+Valores: profile `storage-foundation-v1`, versioning/bucket key/EventBridge
+`true`; encryption `application-data-kms`; TTL `600/300`; máximos `20/100/100`;
+Object Lock/replication/Storage data events `false`. Readiness no cambia config.
+
+Storage recibe config y `ApplicationDataKey`, y workload roles sólo ante grant
+concreto. Expone los cuatro `IBucket`, inventario/classification/lifecycle
+tipados y key helpers/contract types; nunca contenido, URL, dato clínico,
+filename, valor KMS, account ID, lookup, Output o Export.
+
+Dependencia directa única: `Storage → Security`. Storage no depende de
+Network, Data, Compute, Jobs, Edge, Operations o Backup. Consumidores futuros:
+`Compute/Jobs/Edge/Operations/Backup → Storage`. No se invierte la flecha ni se
+crean ciclos.
+
+### Guardrails bloqueantes
+
+Aspect/validator emitirá error sin autocorregir ante:
+
+1. inventario distinto de cuatro buckets;
+2. public access, ACL u ownership incorrecto;
+3. versioning off;
+4. cifrado no SSE-KMS, KMS incorrecta o bucket key off;
+5. SSL off, nombre físico/output, website o principal wildcard;
+6. Object Lock/replication accidental;
+7. Quarantine sin EventBridge;
+8. clinical production con expiry/archive no contratado;
+9. CORS wildcard o lifecycle sin abort multipart;
+10. PublicMedia directo a Internet;
+11. application `s3:*`, `Resource="*"` o `DeleteObjectVersion`;
+12. key/metadata/tag sensible;
+13. server access logging, data trail o CloudFront creado en Storage;
+14. SQS/Fargate o dependencia Jobs creada desde Storage.
+
+### Matriz futura de QA
+
+Se definen 90 casos individuales `STORAGE-QA-001`–`STORAGE-QA-090`:
+
+| IDs | Casos | Cobertura |
+| --- | ---: | --- |
+| 001–012 | 12 | config stg/prd, versioning, KMS, bucket key, TTL, tamaños, EventBridge, lock/replication y MIME |
+| 013–020 | 8 | cuatro buckets, cero extras/nombres físicos y clasificación |
+| 021–030 | 10 | block public, ownership, ACL, SSL, KMS/key y ausencia website/policy/wildcard |
+| 031–044 | 14 | versioning/lifecycle, multipart, retenciones/transiciones, Quarantine/export y cero Glacier/Lock |
+| 045–049 | 5 | evento Quarantine; cero evento extra obligatorio, SQS, Fargate o dependencia Jobs |
+| 050–055 | 6 | IAM application/scanner/OAC, cero admin y KMS mínimo |
+| 056–062 | 7 | keys opacas, cero paciente/doctor/filename, allowlists/status |
+| 063–070 | 8 | quarantine-only, TTL/checksum/size, GET/no-store, CloudFront futuro y cero URL persistida |
+| 071–082 | 12 | guardrails negativos public/version/KMS/key/website/lock/replication/expiry/CORS/IAM/metadata |
+| 083–090 | 8 | synth offline futuro stg/prd, cero lookup/account/secret/deploy, determinismo y ciclos |
+
+Cada ID será test individual. Esta readiness no ejecutó synth.
+
+### Costos
+
+Drivers: volumen por clase, versiones, requests, SSE-KMS/Bucket Keys,
+CloudTrail data events, Intelligent-Tiering, transferencia CloudFront,
+Quarantine y futuros Fargate/SQS/EventBridge, backup/replication. Dominan
+objetos clínicos, versiones, transferencia y procesamiento. Bucket Keys y el
+S3 Gateway Endpoint pueden reducir KMS/NAT, sin eliminar costos S3. No se
+inventa factura ni se degrada cifrado, versionado, Quarantine o auditoría.
+
+### Diagrama contractual
+
+```mermaid
+flowchart LR
+  subgraph STG[Staging]
+    SU[Usuario autenticado] --> SB[Backend autorización]
+    SB -->|upload 600 s| SQ[Quarantine\nversioning + lifecycle]
+  end
+  subgraph PRD[Production]
+    PU[Usuario autenticado] --> PB[Backend autorización]
+    PB -->|upload 600 s| PQ[Quarantine\nversioning + lifecycle]
+  end
+  SQ --> EV[EventBridge]
+  PQ --> EV
+  EV --> JOBS[JobsStack futuro] --> Q[SQS + DLQ] --> SCAN[Fargate scanner\npending/clean/infected/failed]
+  SCAN -->|clean| PUB[PublicMedia]
+  SCAN -->|clean| PRIV[PrivateDocuments]
+  SCAN -->|clean| CLIN[ClinicalRecords]
+  PUB -->|OAC futuro| CF[CloudFront] --> NET[Internet]
+  PRIV -->|GET 300 s autorizado| AU[Usuario autorizado]
+  CLIN -->|GET 300 s autorizado| AU
+  KMS[ApplicationDataKey] -->|SSE-KMS + Bucket Keys| SQ
+  KMS -->|SSE-KMS + Bucket Keys| PQ
+  KMS -->|SSE-KMS + Bucket Keys| PUB
+  KMS -->|SSE-KMS + Bucket Keys| PRIV
+  KMS -->|SSE-KMS + Bucket Keys| CLIN
+  PRIV -. data events futuros .-> OPS[OperationsStack]
+  CLIN -. data events futuros .-> OPS
+  SQ -. data events futuros .-> OPS
+  PQ -. data events futuros .-> OPS
+```
+
+Sólo usa nombres conceptuales; no incluye bucket físico, cuenta, ARN, paciente,
+dominio o URL.
+
+### Evidencia y no repetición
+
+Evidencia sanitizada fuera de Git:
+`/tmp/mxmed-aws-storage-readiness-01/`.
+
+~~~json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "upload_calls": 0,
+  "download_calls": 0,
+  "malware_scan_calls": 0,
+  "object_copies": 0,
+  "object_deletes": 0,
+  "database_connections": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "clinical_files_read": 0,
+  "secret_values_requested": 0
+}
+~~~
+
+### Rollback, siguiente microfase y contador
+
+Rollback: revertir atómicamente el commit de PP257. Sin implementación,
+deploy, upload, copy o delete, sólo retira esta decisión documental.
+
+Con este PASS queda autorizada
+`ARCH-DEVOPS/MXMed-AWS-Storage-Implementation-01`, Microfase 13 de 24, sin
+adelantar Compute, Jobs, Edge, Backup u Operations.
+
+Microfase 12 de 24 concluida.
+Avance global: 12/24.
+Pendientes: 12.
+
+---
