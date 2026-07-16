@@ -17,6 +17,7 @@
     "test:watch": "jest --watch",
     "synth:staging": "npx --no-install cdk synth --context environment=staging --context deploymentProfile=launch-lean-v1 --output cdk.out/staging",
     "synth:production": "npx --no-install cdk synth --context environment=production --context deploymentProfile=launch-lean-v1 --output cdk.out/production",
+    "synth:production:launch-lean": "npm run synth:production",
     "synth:production:standard": "npx --no-install cdk synth --context environment=production --context deploymentProfile=production-standard-v1 --output cdk.out/production-standard",
     "synth:production:scale-ready": "npx --no-install cdk synth --context environment=production --context deploymentProfile=scale-ready-v1 --output cdk.out/production-scale-ready",
     "diff:staging": "npx --no-install cdk diff --context environment=staging",

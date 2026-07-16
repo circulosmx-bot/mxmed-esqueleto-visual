@@ -61,6 +61,7 @@ lockfile. No se admiten `--force`, `--legacy-peer-deps` ni versiones flotantes.
 | `npm run test:watch`                   | Ejecuta Jest en modo local interactivo.             |
 | `npm run synth:staging`                | Sintetiza staging offline en `cdk.out/staging`.     |
 | `npm run synth:production`             | Sintetiza production lean offline.                  |
+| `npm run synth:production:launch-lean` | Alias explícito para production lean.               |
 | `npm run synth:production:standard`    | Sintetiza production standard offline.              |
 | `npm run synth:production:scale-ready` | Sintetiza production scale-ready offline.           |
 | `npm run diff:staging`                 | Contrato futuro de diff; no ejecutar todavía.       |
@@ -410,6 +411,7 @@ assets remotos. No existen `Vpc.fromLookup`, `HostedZone.fromLookup`, `AwsCustom
 ```sh
 npm run synth:staging
 npm run synth:production
+npm run synth:production:launch-lean
 npm run synth:production:standard
 npm run synth:production:scale-ready
 ```
