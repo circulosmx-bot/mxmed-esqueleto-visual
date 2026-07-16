@@ -195,7 +195,7 @@ describe.each([
     expect(JSON.stringify(resources)).not.toMatch(/DestinationIpv6CidrBlock|Ipv6CidrBlock/);
   });
 
-  test('exposes the typed network contract without CloudFormation Outputs', () => {
+  test('exposes the typed network contract with only automatic cross-stack outputs', () => {
     const { stage, outputs } = renderNetwork(config);
     expect(stage.networkStack.vpc).toBeDefined();
     expect(stage.networkStack.publicIngressSubnets).toHaveLength(2);
@@ -208,7 +208,9 @@ describe.each([
     expect(stage.networkStack.sessionSecurityGroup).toBeDefined();
     expect(stage.networkStack.endpointSecurityGroup).toBeDefined();
     expect(stage.networkStack.flowLogGroup).toBeDefined();
-    expect(outputs).toEqual({});
+    expect(Object.keys(outputs)).toHaveLength(3);
+    expect(Object.keys(outputs).every((key) => key.startsWith('ExportsOutput'))).toBe(true);
+    expect(JSON.stringify(outputs)).not.toMatch(/password|secret|account/i);
   });
 
   test('creates the contracted NAT count and one Internet Gateway', () => {
@@ -474,7 +476,9 @@ describe.each([
         'AWS::SecretsManager::Secret',
       ]),
     );
-    expect(outputs).toEqual({});
+    expect(Object.keys(outputs)).toHaveLength(3);
+    expect(Object.keys(outputs).every((key) => key.startsWith('ExportsOutput'))).toBe(true);
+    expect(JSON.stringify(outputs)).not.toMatch(/password|secret|account/i);
     expect(JSON.stringify(resources)).not.toMatch(
       /AKIA|ASIA|arn:aws:[^$]|sk_(?:live|test)|\b\d{12}\b|BEGIN PRIVATE KEY/,
     );

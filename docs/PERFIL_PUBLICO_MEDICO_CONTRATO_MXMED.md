@@ -54322,3 +54322,220 @@ Avance global: 10/24.
 Pendientes: 14.
 
 ---
+
+## PP-Decisiones 256 - Implementación de la foundation de datos AWS para MXMed
+
+### Microfase, contador y resultado
+
+Microfase:
+
+`ARCH-DEVOPS/MXMed-AWS-Data-Implementation-01`
+
+Contador:
+
+`Microfase 11 de 24`
+
+Resultado:
+
+`PASS - MXMED_AWS_DATA_FOUNDATION_IMPLEMENTATION_V1`
+
+Esta decisión implementa PP255 sin cambiar MySQL, minor, collation, topología,
+retención o límites de la microfase. Conserva PP245–PP255 y no adelanta
+Compute, Storage, Session, Backup u Operations. Se modificaron únicamente
+`infra/aws/**` y este contrato; no se desplegó ningún recurso AWS.
+
+### Baseline y alcance versionado
+
+La rama `feature/mxmed-aws-data-implementation` deriva directamente de
+`architecture/mxmed-aws-data-readiness` en `770f399`. El baseline estaba
+limpio y sincronizado `0/0`. `package.json` y `package-lock.json` conservaron
+sus hashes; `npm ci` instaló sólo el árbol local fijado por el lockfile.
+
+La configuración tipada sustituyó la fuente legacy de sizing por los 21
+campos cerrados en PP255 y añadió únicamente la refinación
+`databaseEngineLifecycleSupport`. El schema valida por ambiente cada valor,
+incluidos engine, `8.4.9`, family `mysql8.4`, clase, Multi-AZ, gp3, capacidad,
+backups, deletion protection, Insights, monitoring, ventanas, logs,
+`mxmed`, `mxmed_admin`, `utf8mb4` y `utf8mb4_unicode_ci`. Lifecycle support se
+fija en:
+
+`open-source-rds-extended-support-disabled`
+
+### Contrato tipado de DataStack
+
+`MxMedDataStackProps` recibe referencias TypeScript de Network y Security:
+
+- VPC y exactamente dos `isolatedDataSubnets`;
+- `DatabaseSecurityGroup`;
+- `ApplicationDataKey` y `SecretsKey`;
+- `MigrationTaskRole`, sin grant prematuro.
+
+DataStack expone de forma tipada `databaseInstance`, `databaseEndpoint`,
+`databasePort`, `masterUserSecret`, `parameterGroup`, `subnetGroup`,
+`monitoringRole` y `databaseName`. No crea un `CfnOutput`, connection string,
+IP, password, account ID o ARN físico. Las referencias CloudFormation
+automáticas entre stacks contienen sólo tokens legítimos de subnets, SG y KMS.
+
+Se usa intencionalmente `rds.CfnDBInstance`. El L2 no se usó porque PP255 exige
+representar y auditar juntos `ManageMasterUserPassword=true`,
+`MasterUserSecret.KmsKeyId` y `EngineLifecycleSupport`. No se utilizó override
+de propiedad: CDK `2.260.0` ofrece las tres propiedades tipadas.
+
+### Subnet group y parameter group
+
+Cada ambiente crea un único `AWS::RDS::DBSubnetGroup` con las dos referencias
+`isolated-data`, una por slot de AZ. No incluye `public-ingress`, `private-app`
+o `private-endpoints`.
+
+Cada ambiente crea un único `AWS::RDS::DBParameterGroup` de family
+`mysql8.4`, con exactamente:
+
+| Parámetro | Valor |
+| --- | --- |
+| `require_secure_transport` | `ON` |
+| `character_set_server` | `utf8mb4` |
+| `collation_server` | `utf8mb4_unicode_ci` |
+| `time_zone` | `UTC` |
+| `slow_query_log` | `1` |
+| `long_query_time` | `1` |
+| `log_output` | `FILE` |
+| `general_log` | `0` |
+| `event_scheduler` | `OFF` |
+| `binlog_format` | `ROW` |
+| `lower_case_table_names` | `0` |
+
+No se versionan capacity parameters, option group, query cache,
+`mysql_native_password` o general log.
+
+### Enhanced Monitoring
+
+Cada DataStack crea un solo role. Su trust contiene exclusivamente el service
+principal `monitoring.rds.amazonaws.com`; no tiene permissions boundary,
+inline policies o grants ajenos. Su única managed policy es la oficial:
+
+`service-role/AmazonRDSEnhancedMonitoringRole`
+
+El intervalo es 60 segundos en staging y 15 segundos en production.
+
+### Instancia RDS y credencial administrada
+
+Cada ambiente sintetiza una sola DB instance RDS MySQL `8.4.9`, family
+`mysql8.4`, database `mxmed`, master username `mxmed_admin`, port `3306`, IPv4
+y acceso no público. No fija DB identifier, hostname, IP, AZ física, snapshot
+source, replica source o cluster identifier.
+
+`ManageMasterUserPassword=true` delega la generación y rotación inicial de la
+credencial a RDS. `MasterUserPassword` está ausente. El storage y Performance
+Insights usan `ApplicationDataKey`; `MasterUserSecret.KmsKeyId` usa
+`SecretsKey`. `Secret.fromSecretCompleteArn` importa sólo la referencia tipada
+desde `attrMasterUserSecretSecretArn`: no crea un segundo secreto, no solicita
+su valor y no concede acceso a application o migration roles.
+
+| Propiedad | staging | production |
+| --- | --- | --- |
+| clase | `db.t4g.medium` | `db.m6g.large` |
+| Multi-AZ | no | sí |
+| storage inicial/máximo | 40/200 GiB | 100/1000 GiB |
+| storage | gp3, 3000 IOPS, 125 MiB/s | gp3, 3000 IOPS, 125 MiB/s |
+| backup retention | 7 días | 35 días |
+| deletion protection | no | sí |
+| backup window | `00:00-00:30` | `00:30-01:00` |
+| maintenance window | `sun:01:30-sun:02:30` | `sun:02:30-sun:03:30` |
+| removal/update-replace | Snapshot/Snapshot | Retain/Retain |
+
+Ambos habilitan storage encryption, copy tags to snapshot, conservan automated
+backups al retirar y usan `applyImmediately=false`. Auto minor y major upgrade
+están deshabilitados. Sólo `error` y `slowquery` se exportan a CloudWatch;
+`general` y `audit` están ausentes. Database Insights es Standard, con
+Performance Insights habilitado, cifrado y retención de siete días.
+
+### Guardrails y dependencias
+
+`DataFoundationAspect` inspecciona DB instance, parameter group y subnet group,
+y rechaza drift de engine/minor/lifecycle, red pública/no IPv4, cifrado/KMS,
+password plaintext, secreto sin KMS, retención, Multi-AZ, gp3, logs, IAM DB
+auth, upgrades, replica y removal policy. Rechaza también cluster, Aurora,
+RDS Proxy, secreto duplicado, TLS deshabilitado y configuración MySQL legacy.
+
+El validator complementario exige exactamente una instancia, un subnet group,
+un parameter group y un monitoring role; prohíbe DBCluster, DBProxy, secreto
+adicional y output explícito. Los guardrails existentes siguen comprobando SG
+sin ingress público, database no pública, tags y retención production. No
+corrigen recursos silenciosamente.
+
+Data mantiene dependencias directas sólo de Network y Security. Compute,
+Backup y Operations conservan sus dependencias sobre Data; el grafo de diez
+stacks continúa acíclico.
+
+### QA, auditoría de templates y synth offline
+
+Se conservaron los 200 tests anteriores y se añadieron 93 casos individuales
+`DATA-IMP-001`–`DATA-IMP-093`: total 293 PASS. Cubren config, subnets,
+parameters, DB instance, removal, seguridad, monitoring, mutaciones negativas,
+synth offline, determinismo y ciclos.
+
+Los synths offline de staging y production confirmaron por DataStack:
+
+- 1 DB instance, 1 subnet group, 1 parameter group y 1 monitoring role;
+- 0 DBCluster, DBProxy, read replica y secreto adicional;
+- master password administrado, KMS tokenizadas y ningún valor secreto;
+- topología, capacidad, backups, Insights, logs y removal exactos;
+- 0 account IDs/ARNs reales, passwords, datos personales o datos clínicos.
+
+Typecheck, lint, format check, tests, ambos synths, validate y ambas variantes
+de `npm audit` concluyeron en PASS. La evidencia sanitizada queda fuera de Git
+en `/tmp/mxmed-aws-data-implementation-01/`.
+
+### No repetición
+
+~~~json
+{
+  "engine_substitution_attempts": 0,
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_deployed": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "docker_calls": 0,
+  "database_connections": 0,
+  "sql_read_calls": 0,
+  "sql_write_calls": 0,
+  "migration_calls": 0,
+  "backup_calls": 0,
+  "restore_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0,
+  "secret_values_persisted": 0
+}
+~~~
+
+No se ejecutaron AWS CLI/SDK contra cuenta, CDK diff/bootstrap/deploy, npm
+install/update/audit fix, Docker, PHP, navegador, endpoints, MySQL, SQL,
+migraciones, backup, restore, Stripe o pagos. Los synths generaron únicamente
+templates locales temporales; no crearon una DB, password, snapshot o backup.
+
+### Rollback y siguiente microfase
+
+Rollback de esta implementación: revertir atómicamente el commit de PP256. Al
+no existir deploy, el rollback sólo retira templates y documentación; no borra
+base, secreto, snapshot, backup o recurso AWS.
+
+Con este PASS queda autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Compute-Readiness-01`
+
+Será la Microfase 12 de 24. Deberá cerrar el contrato de compute sin desplegar
+recursos ni adelantar Backup u Operations.
+
+### Cierre del contador
+
+Microfase 11 de 24 concluida.
+Avance global: 11/24.
+Pendientes: 13.
+
+---

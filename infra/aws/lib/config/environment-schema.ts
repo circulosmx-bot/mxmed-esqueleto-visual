@@ -46,6 +46,57 @@ const EXPECTED_SECURITY_CONFIGURATION = Object.freeze({
   },
 } as const);
 
+const EXPECTED_DATABASE_CONFIGURATION = Object.freeze({
+  staging: {
+    databaseEngine: 'mysql',
+    databaseEngineVersion: '8.4.9',
+    databaseParameterGroupFamily: 'mysql8.4',
+    databaseInstanceClass: 'db.t4g.medium',
+    databaseMultiAz: false,
+    databaseAllocatedStorageGiB: 40,
+    databaseMaxAllocatedStorageGiB: 200,
+    databaseStorageType: 'gp3',
+    databaseIops: 3000,
+    databaseStorageThroughput: 125,
+    databaseBackupRetentionDays: 7,
+    databaseDeletionProtection: false,
+    databaseInsightsMode: 'standard',
+    databaseEnhancedMonitoringIntervalSeconds: 60,
+    databasePreferredBackupWindow: '00:00-00:30',
+    databasePreferredMaintenanceWindow: 'sun:01:30-sun:02:30',
+    databaseCloudWatchLogsExports: ['error', 'slowquery'],
+    databaseName: 'mxmed',
+    databaseMasterUsername: 'mxmed_admin',
+    databaseCharacterSet: 'utf8mb4',
+    databaseCollation: 'utf8mb4_unicode_ci',
+    databaseEngineLifecycleSupport: 'open-source-rds-extended-support-disabled',
+  },
+  production: {
+    databaseEngine: 'mysql',
+    databaseEngineVersion: '8.4.9',
+    databaseParameterGroupFamily: 'mysql8.4',
+    databaseInstanceClass: 'db.m6g.large',
+    databaseMultiAz: true,
+    databaseAllocatedStorageGiB: 100,
+    databaseMaxAllocatedStorageGiB: 1000,
+    databaseStorageType: 'gp3',
+    databaseIops: 3000,
+    databaseStorageThroughput: 125,
+    databaseBackupRetentionDays: 35,
+    databaseDeletionProtection: true,
+    databaseInsightsMode: 'standard',
+    databaseEnhancedMonitoringIntervalSeconds: 15,
+    databasePreferredBackupWindow: '00:30-01:00',
+    databasePreferredMaintenanceWindow: 'sun:02:30-sun:03:30',
+    databaseCloudWatchLogsExports: ['error', 'slowquery'],
+    databaseName: 'mxmed',
+    databaseMasterUsername: 'mxmed_admin',
+    databaseCharacterSet: 'utf8mb4',
+    databaseCollation: 'utf8mb4_unicode_ci',
+    databaseEngineLifecycleSupport: 'open-source-rds-extended-support-disabled',
+  },
+} as const);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -146,6 +197,46 @@ function validateTags(value: unknown, environmentName: MxMedEnvironmentName): vo
     'MXMED_CONFIG_INVALID',
     'tags',
     'mandatory tag values must match the MXMed contract',
+  );
+}
+
+function validateDatabaseConfiguration(
+  config: Record<string, unknown>,
+  environmentName: MxMedEnvironmentName,
+): void {
+  const expected = EXPECTED_DATABASE_CONFIGURATION[environmentName];
+  for (const [field, expectedValue] of Object.entries(expected)) {
+    const actualValue = config[field];
+    const matches = Array.isArray(expectedValue)
+      ? Array.isArray(actualValue) &&
+        actualValue.length === expectedValue.length &&
+        actualValue.every((entry, index) => entry === expectedValue[index])
+      : actualValue === expectedValue;
+    assertMxMedCondition(
+      matches,
+      'MXMED_CONFIG_INVALID',
+      field,
+      'must match the PP255 data contract for the selected environment',
+    );
+  }
+
+  assertMxMedCondition(
+    config.databaseMasterUsername !== 'root' && config.databaseMasterUsername !== 'admin',
+    'MXMED_CONFIG_INVALID',
+    'databaseMasterUsername',
+    'root and admin are forbidden master usernames',
+  );
+  assertMxMedCondition(
+    config.databaseBackupRetentionDays === config.backupRetentionDays,
+    'MXMED_CONFIG_INVALID',
+    'databaseBackupRetentionDays',
+    'must remain aligned with the environment backup baseline',
+  );
+  assertMxMedCondition(
+    config.databaseDeletionProtection === config.enableDeletionProtection,
+    'MXMED_CONFIG_INVALID',
+    'databaseDeletionProtection',
+    'must remain aligned with the environment deletion baseline',
   );
 }
 
@@ -313,14 +404,6 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
     'computeSizingProfile',
     'must be an approved profile',
   );
-  assertMxMedCondition(
-    input.databaseSizingProfile === 'single-az-reduced' ||
-      input.databaseSizingProfile === 'multi-az-production',
-    'MXMED_CONFIG_INVALID',
-    'databaseSizingProfile',
-    'must be an approved profile',
-  );
-
   if (input.domainAlias !== undefined) {
     assertMxMedCondition(
       typeof input.domainAlias === 'string' &&
@@ -381,6 +464,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
     'environmentGuardrails',
     'WAF and safe CloudFront logging are required',
   );
+  validateDatabaseConfiguration(input, environmentName);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',
     'MXMED_CONFIG_INVALID',

@@ -200,7 +200,9 @@ function validateSecurityFoundation(scope: IConstruct, config: MxMedEnvironmentC
   validateSecrets(errors, scope, config);
   validateAudit(errors, scope, config);
   validateRoles(errors, scope);
-  const outputs = scope.node.findAll().filter((node) => node instanceof CfnOutput);
+  const outputs = scope.node
+    .findAll()
+    .filter((node) => node instanceof CfnOutput && !node.node.path.includes('/Exports/'));
   pushIf(errors, outputs.length > 0, 'MXMED_SECURITY_OUTPUT_FORBIDDEN');
   pushIf(
     errors,

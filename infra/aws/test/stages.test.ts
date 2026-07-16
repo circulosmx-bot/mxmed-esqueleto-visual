@@ -78,7 +78,7 @@ describe.each([
     expect(email.emailStack.stackName).toBe(`mxmed-${config.environmentCode}-email`);
   });
 
-  test('contains resources only in typed NetworkStack and SecurityStack instances', () => {
+  test('contains resources only in typed NetworkStack, SecurityStack and DataStack instances', () => {
     const { environment, email } = createStages(config);
     const stacks = [
       ...environment.node.children.filter((child): child is Stack => Stack.isStack(child)),
@@ -102,6 +102,12 @@ describe.each([
         expect(environment.securityStack.auditKey).toBeDefined();
         expect(environment.securityStack.backupKey).toBeDefined();
         expect(environment.securityStack.managementTrail).toBeDefined();
+      } else if (stack === environment.dataStack) {
+        expect(Object.keys(resources)).toHaveLength(4);
+        expect(environment.dataStack.databaseInstance).toBeDefined();
+        expect(environment.dataStack.parameterGroup).toBeDefined();
+        expect(environment.dataStack.subnetGroup).toBeDefined();
+        expect(environment.dataStack.monitoringRole).toBeDefined();
       } else {
         expect(Object.keys(resources)).toHaveLength(0);
       }

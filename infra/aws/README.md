@@ -2,16 +2,17 @@
 
 ## Propósito y estado
 
-Este proyecto implementa la foundation local de Infrastructure as Code, la red V1 y la base de
-seguridad de México Médico. Traduce PP-Decisiones 245
+Este proyecto implementa la foundation local de Infrastructure as Code, la red V1, la base de
+seguridad y la foundation de datos de México Médico. Traduce PP-Decisiones 245
 (`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`), PP-Decisiones 249
 (`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`), PP-Decisiones 251
 (`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`) y PP-Decisiones 253
-(`MXMED_AWS_SECURITY_READINESS_CONTRACT_V1`) a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_SECURITY_READINESS_CONTRACT_V1`), además de PP-Decisiones 255
+(`MXMED_AWS_DATA_READINESS_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
 
-`MxMedNetworkStack` y `MxMedSecurityStack` contienen recursos CloudFormation sintetizables
-offline. Los demás stacks continúan vacíos. Nada está desplegado: bootstrap, diff y deploy
-permanecen pendientes y están prohibidos en esta etapa.
+`MxMedNetworkStack`, `MxMedSecurityStack` y `MxMedDataStack` contienen recursos CloudFormation
+sintetizables offline. Los demás stacks continúan vacíos. Nada está desplegado: bootstrap, diff y
+deploy permanecen pendientes y están prohibidos en esta etapa.
 
 ## Arquitectura contractual
 
@@ -19,10 +20,10 @@ permanecen pendientes y están prohibidos en esta etapa.
 - Correo de cada ambiente: stage separado en `us-east-1` para SES.
 - Compute futuro: ECS Fargate.
 - Ingress futuro: Route 53, CloudFront, WAF, ALB y ECS.
-- Datos futuros: RDS MySQL; objetos privados en S3; sesiones en ElastiCache.
+- Datos: template RDS MySQL 8.4.9; objetos privados en S3 y sesiones en ElastiCache futuros.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene diez stacks: Network y Security implementados; Data, Storage,
+`MxMedEnvironmentStage` contiene diez stacks: Network, Security y Data implementados; Storage,
 Session, Compute, Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
@@ -77,7 +78,7 @@ Los scripts de synth lo proporcionan de forma explícita. La configuración tipa
 - región primaria y región de correo;
 - CIDR VPC RFC1918 `/16` exacto por ambiente;
 - masks de los cuatro tiers y exactamente dos AZ;
-- perfiles de NAT, compute y base de datos;
+- perfiles de NAT y compute, y los 21 campos cerrados de base de datos;
 - perfil de interface endpoints y retención de VPC Flow Logs;
 - perfil de seguridad, ventanas KMS y recuperación operativa de secretos;
 - retención de CloudTrail y archivo de auditoría;
@@ -176,8 +177,9 @@ Secrets Manager contiene cuatro recursos por ambiente:
 - `/mxmed/{environment}/providers/ai/api-key` es un contenedor vacío.
 
 Los tres valores externos se cargan únicamente mediante un runbook futuro: no hay plaintext,
-`SecretString`, generación provisional, outputs ni valores en evidencia. No se crea un secreto de
-RDS porque Data será propietario de sus credenciales y rotación.
+`SecretString`, generación provisional, outputs de valores ni valores en evidencia. Data solicita
+a RDS administrar su master password y referencia el secreto resultante; Security no crea un
+secreto RDS adicional.
 
 IAM crea permissions boundaries separadas para workload y deployment, y cuatro roles ECS con
 trust exclusivo en `ecs-tasks.amazonaws.com`: execution, application, migration y jobs. Sólo el
@@ -222,6 +224,39 @@ accidental.
 9. Registrar aprobación, motivo, propietario, fecha y evidencia sin incluir el valor secreto.
 10. No reutilizar el mismo nombre hasta concluir o cancelar la eliminación programada.
 
+## Data foundation implementada en templates
+
+Cada ambiente sintetiza exactamente una `AWS::RDS::DBInstance` MySQL `8.4.9`. Se usa
+intencionalmente el L1 `CfnDBInstance`, porque el contrato requiere
+`ManageMasterUserPassword=true`, `MasterUserSecret.KmsKeyId` y
+`EngineLifecycleSupport=open-source-rds-extended-support-disabled` de forma explícita y auditable.
+No hay `MasterUserPassword`, `AWS::SecretsManager::Secret` adicional ni output del secreto. La
+referencia tipada al secreto administrado por RDS queda en DataStack y todavía no se concede a la
+aplicación ni a MigrationTaskRole.
+
+| Ambiente   | Clase           | Topología | Storage inicial / máximo | Backup  | Monitoring | Removal           |
+| ---------- | --------------- | --------- | ------------------------ | ------- | ---------- | ----------------- |
+| staging    | `db.t4g.medium` | Single-AZ | 40 / 200 GiB             | 7 días  | 60 s       | Snapshot/Snapshot |
+| production | `db.m6g.large`  | Multi-AZ  | 100 / 1000 GiB           | 35 días | 15 s       | Retain/Retain     |
+
+Ambos ambientes usan gp3 con 3000 IOPS y 125 MiB/s, cifrado por `ApplicationDataKey`, IPv4,
+acceso no público, exactamente un `DatabaseSecurityGroup` y un DB subnet group con las dos
+`isolated-data`. Production activa deletion protection. Los backups automatizados se conservan al
+retirar la instancia, las tags se copian a snapshot y `applyImmediately`, auto minor upgrade y
+major upgrade permanecen deshabilitados.
+
+El parameter group explícito `mysql8.4` exige TLS mediante `require_secure_transport=ON`, usa
+`utf8mb4`/`utf8mb4_unicode_ci`, UTC, binlog ROW, general log apagado y slow query log a archivo con
+umbral de un segundo. Sólo `error` y `slowquery` se exportan a CloudWatch. Database Insights opera
+en modo Standard con Performance Insights cifrado y retención de siete días. Enhanced Monitoring
+usa un role exclusivo que confía sólo en `monitoring.rds.amazonaws.com` y contiene únicamente la
+policy oficial `service-role/AmazonRDSEnhancedMonitoringRole`.
+
+Las migraciones, los usuarios funcionales (`mxmed_app`, `mxmed_migration`) y sus grants continúan
+pendientes y no se ejecutan en synth. RDS Proxy, read replicas, Aurora y Multi-AZ DB Cluster quedan
+diferidos. Los templates y tests no afirman que la instancia, contraseña, backups o failover
+existan realmente; esta fase creó cero recursos AWS.
+
 ## Synth offline
 
 La foundation no usa AWS SDK, AWS CLI, profiles, context providers, lookups, Docker bundling ni
@@ -234,10 +269,11 @@ npm run synth:production
 ```
 
 Ambos comandos deben funcionar sin credenciales AWS. Las plantillas actuales contienen recursos
-únicamente en NetworkStack y SecurityStack; Email y los otros ocho workload stacks continúan sin
-recursos. SecurityStack crea cuatro contenedores de secreto pero cero valores versionados. No crea
-ECS services/tasks, RDS, ElastiCache, ALB, CloudFront, WAF, OIDC/deployment role ni roles humanos.
-`cdk.out/` es temporal y no se versiona.
+únicamente en NetworkStack, SecurityStack y DataStack; Email y los otros siete workload stacks
+continúan sin recursos. SecurityStack crea cuatro contenedores de secreto pero cero valores
+versionados; DataStack crea el contrato RDS sin valor secreto. No crea ECS services/tasks,
+ElastiCache, ALB, CloudFront, WAF, OIDC/deployment role ni roles humanos. `cdk.out/` es temporal y
+no se versiona.
 
 ## Naming y tags
 
@@ -279,7 +315,8 @@ Los Aspects iniciales son:
 - `StripeReturnLoggingSafetyAspect`;
 - `SecurityFoundationAspect`;
 - `NoPlaintextSecretAspect`;
-- `LeastPrivilegeIamAspect`.
+- `LeastPrivilegeIamAspect`;
+- `DataFoundationAspect`.
 
 NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
 tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
@@ -293,9 +330,14 @@ administrativo o wildcard fuera de la allowlist y drift de cifrado, auditoría o
 principal; es una excepción técnica de guardrail, no un permiso público, y la bucket policy sólo
 concede escritura/ACL check al service principal de CloudTrail bajo condiciones estrictas.
 
-Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Data permanecen
-vacíos: los tests usan recursos sintéticos para demostrar el comportamiento futuro, pero este
-proyecto no afirma que CloudFront, WAF, S3 workload o RDS estén desplegados.
+DataStack registra su Aspect y validator bloqueantes para comprobar instancia, subnet group,
+parameter group, role de Enhanced Monitoring, cifrado, credencial administrada, backups,
+retención, Multi-AZ, logs y ausencia de cluster, Proxy, replica, secreto duplicado u output
+sensible.
+
+Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Storage permanecen
+vacíos: los tests usan recursos sintéticos para demostrar guardrails, pero este proyecto no afirma
+que CloudFront, WAF, S3 workload o RDS estén desplegados.
 
 Los valores secretos proceden de Secrets Manager y runbooks autorizados. Nunca deben incluirse en
 Git, props de configuración, CDK context, outputs, tags, plantillas, logs o evidencia. Tampoco se
@@ -336,10 +378,11 @@ npm run test
 npm run validate
 ```
 
-Las 200 pruebas (96 heredadas y 104 nuevas de seguridad) cubren configuración, naming,
+Las 293 pruebas (200 heredadas y 93 nuevas de datos) cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
-VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, KMS, secretos, IAM, CloudTrail, guardrails y
-síntesis determinista offline. Los snapshots completos no son la única fuente de validación.
+VPC/subnets/NAT/rutas, endpoints, SG, Flow Logs, KMS, secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
+parameter/subnet groups, Enhanced Monitoring, guardrails y síntesis determinista offline. Los
+snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift
 

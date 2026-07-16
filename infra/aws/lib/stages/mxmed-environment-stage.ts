@@ -43,7 +43,15 @@ export class MxMedEnvironmentStage extends Stage {
     const stackProps = { config: props.config };
     this.networkStack = new MxMedNetworkStack(this, 'Network', stackProps);
     this.securityStack = new MxMedSecurityStack(this, 'Security', stackProps);
-    this.dataStack = new MxMedDataStack(this, 'Data', stackProps);
+    this.dataStack = new MxMedDataStack(this, 'Data', {
+      ...stackProps,
+      vpc: this.networkStack.vpc,
+      isolatedDataSubnets: this.networkStack.isolatedDataSubnets,
+      databaseSecurityGroup: this.networkStack.databaseSecurityGroup,
+      applicationDataKey: this.securityStack.applicationDataKey,
+      secretsKey: this.securityStack.secretsKey,
+      migrationTaskRole: this.securityStack.migrationTaskRole,
+    });
     this.storageStack = new MxMedStorageStack(this, 'Storage', stackProps);
     this.sessionStack = new MxMedSessionStack(this, 'Session', stackProps);
     this.computeStack = new MxMedComputeStack(this, 'Compute', stackProps);

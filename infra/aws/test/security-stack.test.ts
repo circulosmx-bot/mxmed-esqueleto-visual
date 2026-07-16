@@ -90,8 +90,11 @@ describe('security KMS foundation', () => {
   });
 
   test('SEC-IMP-024 publishes no KMS or security outputs', () => {
-    expect(renderSecurity(STAGING_CONFIG).outputs).toEqual({});
-    expect(renderSecurity(PRODUCTION_CONFIG).outputs).toEqual({});
+    for (const config of [STAGING_CONFIG, PRODUCTION_CONFIG]) {
+      const outputs = renderSecurity(config).outputs;
+      expect(Object.keys(outputs).every((key) => key.startsWith('ExportsOutput'))).toBe(true);
+      expect(JSON.stringify(outputs)).not.toMatch(/SecretString|MasterUserSecret|password/i);
+    }
   });
 
   test('SEC-IMP-025 contains no literal account identifier', () => {

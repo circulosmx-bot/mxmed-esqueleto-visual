@@ -38,7 +38,7 @@ describe.each([
   ['staging', STAGING_CONFIG],
   ['production', PRODUCTION_CONFIG],
 ] as const)('%s offline synthesis', (_name, config) => {
-  test('does not require an account and creates resources only in Network and Security', () => {
+  test('does not require an account and creates resources only in Network, Security and Data', () => {
     const previousAccount = process.env.CDK_DEFAULT_ACCOUNT;
     const previousAccessKey = process.env.AWS_ACCESS_KEY_ID;
     const previousSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
@@ -61,13 +61,17 @@ describe.each([
           expect(resources.some((resource) => resource.Type === 'AWS::CloudTrail::Trail')).toBe(
             true,
           );
+        } else if (stackName === `mxmed-${config.environmentCode}-data`) {
+          expect(resources).toHaveLength(4);
+          expect(
+            resources.filter((resource) => resource.Type === 'AWS::RDS::DBInstance'),
+          ).toHaveLength(1);
         } else {
           expect(resources).toHaveLength(0);
         }
         expect(resources.map((resource) => resource.Type)).not.toEqual(
           expect.arrayContaining([
             'AWS::ECS::Service',
-            'AWS::RDS::DBInstance',
             'AWS::ElastiCache::ReplicationGroup',
             'AWS::ElasticLoadBalancingV2::LoadBalancer',
             'AWS::CloudFront::Distribution',

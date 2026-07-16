@@ -126,8 +126,11 @@ describe('security secret contract', () => {
   });
 
   test('SEC-IMP-037 exposes no secret output', () => {
-    expect(renderSecurity(STAGING_CONFIG).outputs).toEqual({});
-    expect(renderSecurity(PRODUCTION_CONFIG).outputs).toEqual({});
+    for (const config of [STAGING_CONFIG, PRODUCTION_CONFIG]) {
+      const outputs = renderSecurity(config).outputs;
+      expect(Object.keys(outputs).every((key) => key.startsWith('ExportsOutput'))).toBe(true);
+      expect(JSON.stringify(outputs)).not.toMatch(/SecretString|MasterUserSecret|password/i);
+    }
   });
 
   test('SEC-IMP-038 does not duplicate the future RDS master secret', () => {
