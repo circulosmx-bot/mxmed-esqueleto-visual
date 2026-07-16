@@ -20652,6 +20652,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .subp-payment-method-mark-logo{ display:grid; place-items:center; min-width:0; min-height:48px; padding:5px 7px; border-radius:9px; background:#f5f8fc }
 .subp-payment-method-mark-logo img{ display:block; width:auto; height:auto; max-width:112px; max-height:44px; object-fit:contain }
+.subp-payment-method-mark-logo--cards{ padding:2px 5px }
+.subp-payment-card-logos{ display:grid; grid-template-columns:repeat(3,minmax(0,48px)); align-items:center; justify-content:center; gap:5px; width:100%; min-width:0 }
+.subp-payment-card-logos img{ width:100%; height:auto; max-width:48px; max-height:48px; aspect-ratio:1 / 1; object-fit:contain }
 .subp-payment-method-mark[data-payment-mark="oxxo"] .subp-payment-method-mark-logo img{ max-width:72px }
 .subp-payment-method-mark-copy{ display:grid; gap:4px; min-width:0 }
 .subp-payment-method-mark-copy strong{ color:#102044; font-size:.92rem; font-weight:850; line-height:1.12 }
@@ -20802,6 +20805,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   .subp-payment-method-mark{ grid-template-columns:1fr; justify-items:center; gap:8px; padding:11px 8px; text-align:center }
   .subp-payment-method-mark-logo{ width:100%; min-height:44px }
   .subp-payment-method-mark-logo img{ max-width:min(100%,104px); max-height:40px }
+  .subp-payment-card-logos{ grid-template-columns:repeat(3,minmax(0,44px)); gap:4px }
+  .subp-payment-card-logos img{ width:100%; max-width:44px; max-height:44px }
   .subp-payment-method-mark[data-payment-mark="oxxo"] .subp-payment-method-mark-logo img{ max-width:66px }
   .subp-stripe-placeholder-lines{ grid-template-columns:1fr }
   .subp-secure-payment-cadence-note{ display:grid }

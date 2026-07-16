@@ -55166,3 +55166,142 @@ Avance global: 13/24.
 Pendientes: 11.
 
 ---
+
+## PP-Decisiones 259 - SUSCRIPCIONES_PAYMENT_LOGOS_ASSET_REORGANIZATION_V1
+
+### Microfase auxiliar y resultado
+
+Microfase auxiliar:
+`FE/Suscripciones-PaymentLogos-AssetReorganization-01`.
+
+Resultado: `PASS - SUSCRIPCIONES_PAYMENT_LOGOS_ASSET_REORGANIZATION_V1`.
+
+Esta decisión resuelve el único bloqueo local posterior al commit Storage
+`3e11946d020f20dafa29352664be98585306394e`: tres assets anteriores aparecían
+eliminados y ocho SVG recibidos estaban sin seguimiento. Los cambios se
+aislaron en `fix/suscripciones-payment-logos-assets-reorganization`, cuyo
+ancestro directo sigue siendo el commit Storage. No se reabrió PP258 ni se
+mezclaron assets en su commit.
+
+La microfase auxiliar no incrementa el contador por sí misma. Al dejar el
+working tree limpio permite confirmar el cierre ya documentado de la
+Microfase 13 de 24.
+
+### Auditoría y procedencia
+
+Los ocho SVG recibidos como `amex.svg`, `apple-pay.svg`, `g-pay.svg`,
+`mastercard.svg`, `oxxo.svg`, `spei.svg`, `strripe.svg` y `visa.svg` se
+auditaron antes de normalizar. Todos eran XML/SVG válidos, tenían `viewBox`,
+pesaban entre 2466 y 4978 bytes y correspondían visualmente con el nombre de
+marca. No contenían script, `foreignObject`, event handlers, links, imágenes,
+imports CSS, data URI o contenido oculto sospechoso. Su presencia no acredita
+procedencia oficial, licencia, disponibilidad comercial o autorización de
+marca.
+
+Para reducir superficie pasiva, en los siete SVG recibidos conservados se
+retiraron el DTD externo y namespaces no usados, y se normalizaron finales de
+línea CRLF a LF; los paths y la representación visual no cambiaron. La
+declaración estándar del namespace SVG se conserva y no carga contenido
+remoto.
+
+El typo `strripe.svg` se retiró después de registrar su SHA-256:
+`f7dcbb0f760b009022a30eade3912087f69fc555ec604f8b228e2a44609538c7`.
+Ese recurso de procedencia no documentada no se convirtió en fuente canónica.
+
+### Inventario y normalización
+
+El inventario final único es:
+
+```text
+assets/img/logos-pagos/
+├── amex.svg
+├── apple-pay.svg
+├── google-pay.svg
+├── mastercard.svg
+├── oxxo.svg
+├── spei.svg
+├── stripe.svg
+└── visa.svg
+```
+
+`g-pay.svg` se normalizó a `google-pay.svg`; no quedan ambos nombres.
+`strripe.svg` se sustituyó por `stripe.svg`, pero no mediante sus bytes. La
+fuente exclusiva de `stripe.svg` fue el wordmark ya versionado en
+`assets/img/stripe-wordmark-blurple.svg` dentro de `3e11946`. Ambos bytes
+comparan idénticos y conservan SHA-256
+`4448c4b4f954285d2b2aeb6d92391c85fdc290e008c2679d2c006d6d72ae1ae9`.
+
+Una vez migradas las referencias activas, permanecen eliminados:
+
+- `assets/img/Oxxo.png`;
+- `assets/img/Tarjetas.png`;
+- `assets/img/stripe-wordmark-blurple.svg`.
+
+El contenido oficial Stripe no se perdió: cambió de ubicación con identidad
+byte a byte.
+
+### Uso visual actual
+
+El markup de suscripciones en `assets/js/app.js` conserva el mismo panel,
+condiciones de visibilidad y carácter informativo:
+
+- el trust strip usa `logos-pagos/stripe.svg`, conserva `alt="Stripe"` y no
+  convierte el wordmark en control;
+- el bloque anteriormente respaldado por `Tarjetas.png` muestra tres imágenes
+  independientes, no interactivas: Visa, Mastercard y American Express;
+- OXXO anual usa `logos-pagos/oxxo.svg`, conserva `alt="OXXO"` y la misma
+  condición real de elegibilidad;
+- las marcas previas se ocultan cuando Stripe Payment Element toma control,
+  como ya exigía el flujo existente.
+
+Las imágenes declaran dimensiones y usan `object-fit: contain`. El grupo de
+tres tarjetas usa grid, separación uniforme, límites de tamaño y ajuste móvil
+sin links, `tabindex`, `role=button` o handlers. Sólo se agregó CSS acotado al
+nuevo grupo; no se rediseñó el panel.
+
+La UI no afirma que cada marca esté garantizada en toda operación. Stripe
+continúa siendo la autoridad que muestra los métodos realmente disponibles.
+
+### Activos futuros no renderizados
+
+`apple-pay.svg`, `google-pay.svg` y `spei.svg` quedan versionados únicamente
+como referencias futuras. `app.js` y CSS no los referencian ni los presentan
+como botones. Apple Pay y Google Pay requieren controles administrados por
+Stripe/Express Checkout; SPEI requiere un flujo contratado. La presencia del
+archivo no activa el método.
+
+### Límites y QA
+
+No se modificó `infra/aws`, PHP, SQL, backend, Stripe provider, checkout,
+PaymentIntent, webhook, workflows o packages. No se ejecutó AWS, CDK, npm
+install, upload, pago, POST, fixture o SQL. Las 419 pruebas y evidencia de
+Storage no se repitieron y permanecen válidas.
+
+QA confirma ocho SVG finales, XML válido y `viewBox`; cero script,
+`foreignObject`, handlers, contenido remoto o imports; `node --check` PASS;
+`git diff --check` PASS; cinco rutas activas exactas; tres activos futuros no
+renderizados; cero referencias activas antiguas; Stripe byte-identical;
+`3e11946` ancestro; `infra/aws` sin cambios; upstream `0/0` y working tree
+limpio.
+
+Evidencia sanitizada fuera de Git:
+
+`/tmp/mxmed-payment-logos-assets-reorganization-01/`.
+
+### Rollback y continuidad
+
+Rollback: revertir atómicamente el commit de PP259. Esto restaura las rutas
+visuales anteriores sin cambiar Storage, backend, proveedor, operación de pago
+o datos.
+
+Se confirma el cierre de la Microfase 13 de 24 y continúa autorizada:
+
+`ARCH-DEVOPS/MXMed-AWS-Session-Readiness-01`
+
+Será la Microfase 14 de 24.
+
+Microfase 13 de 24 concluida.
+Avance global: 13/24.
+Pendientes: 11.
+
+---

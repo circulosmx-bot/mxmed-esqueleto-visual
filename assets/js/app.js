@@ -64361,7 +64361,7 @@ function mxResetLogoPreview(){
         <p>Tus datos se capturarán directamente en el formulario seguro de Stripe.</p>
       </div>
       <div class="subp-secure-payment-trust-brand">
-        <img class="subp-secure-payment-stripe-wordmark" src="assets/img/stripe-wordmark-blurple.svg" alt="Stripe" width="360" height="150">
+        <img class="subp-secure-payment-stripe-wordmark" src="assets/img/logos-pagos/stripe.svg" alt="Stripe" width="360" height="150">
         <span class="subp-secure-payment-connection"><span class="material-symbols-rounded" aria-hidden="true">lock</span>Conexión segura</span>
       </div>
     </section>`;
@@ -64638,14 +64638,18 @@ function mxResetLogoPreview(){
       <div class="subp-stripe-element-host subp-stripe-element-host--express" data-subp-express-checkout-host data-interactive="false" data-state="not-mounted">
         <div class="subp-payment-method-marks" data-subp-payment-method-marks data-billing-period="${monthly ? 'monthly' : 'annual'}" data-method-count="${monthly ? '1' : '2'}">
           <div class="subp-payment-method-mark" data-payment-mark="cards">
-            <span class="subp-payment-method-mark-logo">
-              <img src="assets/img/Tarjetas.png" alt="Tarjetas de débito o crédito" width="860" height="210">
+            <span class="subp-payment-method-mark-logo subp-payment-method-mark-logo--cards">
+              <span class="subp-payment-card-logos">
+                <img src="assets/img/logos-pagos/visa.svg" alt="Visa" width="744" height="744">
+                <img src="assets/img/logos-pagos/mastercard.svg" alt="Mastercard" width="744" height="744">
+                <img src="assets/img/logos-pagos/amex.svg" alt="American Express" width="744" height="744">
+              </span>
             </span>
             <span class="subp-payment-method-mark-copy"><strong>Tarjetas</strong><small>Débito o crédito</small></span>
           </div>
           ${monthly ? '' : `<div class="subp-payment-method-mark" data-payment-mark="oxxo">
             <span class="subp-payment-method-mark-logo">
-              <img src="assets/img/Oxxo.png" alt="OXXO" width="3840" height="1946">
+              <img src="assets/img/logos-pagos/oxxo.svg" alt="OXXO" width="744" height="744">
             </span>
             <span class="subp-payment-method-mark-copy"><strong>OXXO</strong><small>Pago en efectivo</small></span>
           </div>`}
