@@ -56551,3 +56551,494 @@ Avance global: 16/24.
 Pendientes: 8.
 
 ---
+
+## PP-Decisiones 263 - MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1
+
+### Microfase auxiliar, resultado y alcance
+
+Microfase auxiliar:
+
+`ARCH-DEVOPS/MXMed-AWS-Cost-Aware-Launch-Profiles-Readiness-01`
+
+Resultado:
+
+`PASS - MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`
+
+Esta microfase no incrementa el contador principal. Cierra un contrato económico
+y técnico para lanzar MXMed con capacidad contenida, controles de seguridad
+completos y una ruta versionada hacia alta disponibilidad. Es una readiness
+documental: no modifica IaC, configuración, aplicación ni recursos AWS.
+
+Baseline verificado antes del cambio:
+
+- rama `architecture/mxmed-aws-compute-readiness`;
+- HEAD `88d7d12880dfa82cb1cef00464badc3faed27e3a` (`88d7d12`);
+- upstream `0/0`, working tree limpio y `git diff --check` PASS;
+- PP262 presente, PP263 libre y Compute Implementation aún no implementada.
+
+La decisión se documenta en
+`architecture/mxmed-aws-cost-aware-launch-profiles-readiness`. Se inspeccionaron
+read-only `infra/aws/lib/config/**`, `stages/**`, `stacks/**`, `aspects/**`,
+`test/**` e `infra/aws/README.md`. El único archivo versionado modificado es
+este documento.
+
+### Herencia PP245-PP262 y frontera de no repetición
+
+| Contrato heredado | Aplicación en esta decisión |
+|---|---|
+| PP245 | conserva ECS Fargate, región `mx-central-1`, arquitectura general y separación de stores |
+| PP249-PP250 | conserva CDK v2, configuración tipada, stages, naming y grafo de stacks |
+| PP251-PP252 | conserva VPC, dos AZ, cuatro tiers, red privada, S3 Gateway Endpoint y capacidad NAT/endpoints representable |
+| PP253-PP254 | conserva KMS, Secrets Manager, IAM mínimo, CloudTrail, clasificación y prohibición de secretos/datos clínicos en logs |
+| PP255-PP256 | conserva MySQL 8.4.9, TLS, cifrado, backups, PITR y protecciones; sólo parametriza capacidad/topología futura |
+| PP257-PP258 | conserva cuatro buckets, Block Public Access, versioning, SSE-KMS, ownership y lifecycle |
+| PP260-PP261 | conserva Valkey 8.2, TLS, KMS, RBAC/ACL, prefix y locking; sólo parametriza tamaño/topología futura |
+| PP262 | conserva PHP 8.5, Apache/mod_rewrite, X86_64, digest, health, rollback y límites de tareas; refina el default productivo inicial |
+
+No se rediseñan foundation, Network, Security, Data, Storage, Session ni
+Compute Readiness. Tampoco se ejecutaron AWS CLI/SDK, CDK, Docker, Composer,
+npm install, PHP, SQL, migraciones, Stripe o pagos.
+
+### Selectores ortogonales y versionados
+
+`environment` y `deploymentProfile` son dimensiones independientes:
+
+- `environment=staging|production`;
+- `deploymentProfile=launch-lean-v1|production-standard-v1|scale-ready-v1`;
+- staging agrega `stagingOperatingMode=release-window-v1`.
+
+La selección será explícita, tipada, revisada y versionada. No se infiere de
+rama, account ID, hostname, usuarios, fecha ni consumo. El nombre de un perfil
+no activa todas sus capacidades: cada extensión avanzada conserva su flag o
+decisión y sus gates.
+
+### Inventario actual y clasificación de costo
+
+| Stack/componente | Capacidad implementada o contratada | Tipo de costo | Reducible/diferible | Control que no se reduce |
+|---|---|---|---|---|
+| Network | VPC IPv4, dos AZ, ocho subnets, 5 SG, S3 Gateway Endpoint; NAT 1 staging/2 production; 4 endpoints x 2 AZ production; Flow Logs | NAT, IPv4 y endpoints `FIXED-IDLE`; procesamiento NAT/endpoint, transferencia y Logs `USAGE-BASED`; logs `STORAGE-BASED` | segundo NAT y endpoints de interfaz | VPC/tareas privadas, datos aislados, S3 endpoint y Flow Logs sanitizados |
+| Security | 4 CMK, 4 secretos base, 2 boundaries, 4 roles, audit bucket, trail y log group | keys/secrets `FIXED-IDLE`; KMS/Secrets requests, CloudTrail/Logs/S3 `USAGE/STORAGE-BASED` | data events amplios y observabilidad avanzada | KMS, Secrets Manager, least privilege, trail, validation, versioning y retención |
+| Data | RDS MySQL; staging t4g.medium Single-AZ 40 GiB; production m6g.large Multi-AZ 100 GiB | instancia `FIXED-IDLE`; gp3/backups/logs `STORAGE-BASED`; I/O/transferencia `USAGE-BASED` | Multi-AZ/clase/storage alto, Proxy y replicas | TLS, KMS, secret gestionado, backups, PITR, snapshots y deletion protection production |
+| Storage | 4 buckets privados, versionados, SSE-KMS, lifecycle; más audit bucket en Security | sin cargo fijo por bucket; objetos/versiones `STORAGE-BASED`; requests/KMS/transferencia `USAGE-BASED` | replication cross-region y data events amplios | Block Public Access, ownership, SSL, KMS, versioning y lifecycle |
+| Session | Valkey; staging micro sin réplica; production medium primary+replica | nodos `FIXED-IDLE`; transferencia cross-AZ `USAGE-BASED`; snapshots `STORAGE-BASED` | réplica y tamaño medium en launch; crecimiento posterior | TLS, at-rest KMS, RBAC/ACL, secret y red privada |
+| Compute futuro PP262 | Fargate, ECR, logs, desired/min/max por ambiente | tareas mínimas `FIXED-IDLE`; scale-out `USAGE-BASED`; ECR/logs `STORAGE-BASED` | segunda task permanente, workers/scanner permanentes | digest, scan, private IP, hardening, health, autoscaling y rollback |
+| Edge futuro | ALB, WAF y CloudFront todavía vacíos | ALB/IPv4 `FIXED-IDLE`; LCU, WAF, requests y transferencia `USAGE-BASED` | sólo hasta la microfase Edge, no después de ingreso público | WAF, TLS, health y rollback cuando Edge sea desplegado |
+| Operations/Jobs/Backup/Email | stacks vacíos | USD 0 mientras no contengan recursos | recursos avanzados hasta workload/contrato propio | budgets/alertas se vuelven gate antes de deploy; backups esenciales no son opcionales |
+
+`DEFERRED-OPTIONAL` significa capacidad conservada en IaC y no activada todavía;
+nunca se usa para clasificar cifrado, auditoría o backups esenciales.
+
+### Fuentes, fecha y reglas de estimación
+
+Consulta UTC: `2026-07-16T14:37:37Z`. Región: `mx-central-1`. Moneda: USD.
+Convención mensual: 730 horas. Se consultaron exclusivamente fuentes AWS:
+
+- [AWS Pricing Calculator](https://calculator.aws/);
+- páginas oficiales de [VPC](https://aws.amazon.com/vpc/pricing/),
+  [PrivateLink](https://aws.amazon.com/privatelink/pricing/),
+  [Fargate](https://aws.amazon.com/fargate/pricing/),
+  [RDS MySQL](https://aws.amazon.com/rds/mysql/pricing/),
+  [ElastiCache](https://aws.amazon.com/elasticache/pricing/),
+  [S3](https://aws.amazon.com/s3/pricing/),
+  [KMS](https://aws.amazon.com/kms/pricing/),
+  [Secrets Manager](https://aws.amazon.com/secrets-manager/pricing/),
+  [CloudWatch](https://aws.amazon.com/cloudwatch/pricing/),
+  [CloudTrail](https://aws.amazon.com/cloudtrail/pricing/),
+  [ECR](https://aws.amazon.com/ecr/pricing/) y
+  [Elastic Load Balancing](https://aws.amazon.com/elasticloadbalancing/pricing/);
+- archivos públicos regionales AWS Price List Bulk en
+  `https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/{service}/current/mx-central-1/index.json`,
+  leídos por HTTPS sin cuenta, credenciales, AWS CLI ni SDK;
+- documentación oficial de [AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html),
+  [Cost Anomaly Detection](https://docs.aws.amazon.com/cost-management/latest/userguide/manage-ad.html),
+  [cost allocation tags](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activating-tags.html)
+  y [stop temporal de RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_StopInstance.html).
+
+Snapshot de tarifas regionales verificables:
+
+| Unidad `mx-central-1` | Tarifa USD | Publicación del archivo AWS |
+|---|---:|---|
+| NAT Gateway-hora / procesamiento NAT-GB | 0.04725 / 0.04725 | 2026-07-13 |
+| IPv4 pública-hora | 0.005 | 2026-07-13 |
+| Interface endpoint-AZ-hora / GB, primer PB | 0.0105 / 0.01 | 2026-07-13 |
+| Fargate Linux X86 vCPU-h / GiB-h | 0.042504 / 0.00466725 | 2026-07-07 |
+| RDS MySQL `db.t4g.medium` Single-AZ-h | 0.068 | 2026-07-16 |
+| RDS MySQL `db.m6g.large` Multi-AZ-h | 0.334 | 2026-07-16 |
+| RDS gp3 Single-AZ / Multi-AZ GiB-mes | 0.121 / 0.242 | 2026-07-16 |
+| RDS backup excedente GiB-mes | 0.10 | 2026-07-16 |
+| Valkey `cache.t4g.micro` / `medium` node-h | 0.01344 / 0.0546 | 2026-07-15 |
+| KMS key-version-mes / 10,000 requests simétricas | 1.00 / 0.03 | 2025-08-28 |
+| Secrets Manager secret-mes / 10,000 API calls | 0.40 / 0.05 | 2025-08-28 |
+| S3 Standard primer 50 TiB GiB-mes / 1,000 PUT / 10,000 GET | 0.02415 / 0.00525 / 0.0042 | 2026-07-14 |
+| CloudWatch Logs ingestado / almacenado GiB-mes | 0.50 / 0.03 | 2026-07-16 |
+| ECR GiB-mes | 0.10 | 2025-11-21 |
+| ALB-h / LCU-h | 0.023625 / 0.0084 | 2026-06-19 |
+| CloudWatch alarma estándar-mes | 0.10 | 2026-07-16 |
+| CloudTrail data event | 0.000001 | 2026-05-21 |
+
+Toda tarifa se revalida en Calculator y Price List antes del primer deploy y
+en cada promoción. Si una unidad regional no puede verificarse, el ledger
+registra fórmula, unidad, cantidad, fuente e incertidumbre
+`regional_rate_pending`, sin cifra sustitutiva.
+
+Las cifras siguientes excluyen impuestos/IVA, soporte AWS, FX, descuentos,
+créditos, Savings Plans, tráfico, requests, LCU, WAF, transferencia no medida,
+logs y almacenamiento real no provisionado. Una conversión opcional usa sólo
+`planningFxMxnPerUsd`, con tasa y fecha aprobadas, y nunca se presenta como tipo
+de cambio bancario garantizado.
+
+### Staging `release-window-v1`
+
+Staging sólo usa datos sintéticos, no comparte recursos con production y no
+permanece encendido por conveniencia. Se despliega antes de una liberación y un
+runbook futuro seguro lo detiene/elimina al terminar QA.
+
+Capacidad durante la ventana:
+
+- Network: un NAT, S3 Gateway Endpoint y cero Interface Endpoints de pago;
+- Compute: una task, 0.5 vCPU, 1 GiB, desired/min/max `1/1/1` durante QA;
+- RDS: Single-AZ, `db.t4g.medium`, 40 GiB gp3, 7 días, PITR y cifrado;
+- Session: un `cache.t4g.micro`, cero replicas y cero snapshots.
+
+Fuera de la ventana no quedan task, NAT ni Valkey activos. RDS exige elegir en
+runbook entre stop temporal o snapshot/recreate: un RDS detenido sigue cobrando
+storage/backups y AWS lo reinicia después de siete días si no se arranca antes.
+Keys, secretos, snapshots, buckets, objetos y logs `RETAIN` se inventarían y
+conciliarían explícitamente para evitar residuos; no se automatiza todavía el
+scheduler/destroy runbook.
+
+Con las tarifas anteriores, el core conocido —sin ALB/LCU/WAF ni variables— es:
+
+| Escenario staging | Estimación USD |
+|---|---:|
+| un día activo de 24 h | 4.2133 + variables |
+| semana de release | `stagingReleaseWindowHours * 0.1755545 + variables` |
+| encendido accidental 30 días/730 h | 128.1548 + variables |
+| residual mensual mínimo si RDS storage + 4 keys + 7 secrets permanecen | 11.64 + snapshots/S3/logs/ECR reales |
+
+`stagingReleaseWindowHours` es input, no default inventado. Budget independiente
+y alerta de gasto fuera de ventana son gates antes de implementar este modo.
+
+### Production `launch-lean-v1`
+
+Es el perfil inicial para soft launch, cohorte controlada y primeros
+profesionales. Requiere aceptación empresarial explícita de mantenimiento y de
+no ofrecer todavía un SLA contractual de alta disponibilidad.
+
+| Área | Contrato launch-lean |
+|---|---|
+| Network | VPC, 2 AZ y 4 tiers preservados; 1 NAT; S3 Gateway Endpoint; 0 Interface Endpoints; IPv4; tasks privadas; datos aislados |
+| Compute | desired/min/max `1/1/2`; 0.5 vCPU/1 GiB; Fargate X86_64 sin Spot ni IP pública; CPU/memory autoscaling |
+| RDS | MySQL 8.4.9; Single-AZ; `db.t4g.medium`; gp3 40/200 GiB; 35 días, PITR, deletion protection, KMS y secret; sin Proxy/replica |
+| Session | Valkey 8.2; `cache.t4g.micro`; 1 nodo, 0 replicas, sin Multi-AZ/failover/snapshots; TLS/KMS/ACL |
+| Storage | 4 buckets, versioning, SSE-KMS y lifecycle; sin replication cross-region |
+| Security | contrato PP253-PP254 completo, sin excepciones por costo |
+
+Riesgo aceptado y visible:
+
+- una caída de la única task causa indisponibilidad breve hasta reemplazo;
+- una caída de Valkey invalida sesiones y exige reautenticación;
+- RDS Single-AZ puede implicar una indisponibilidad mayor que Multi-AZ;
+- el perfil no se comercializa como alta disponibilidad completa.
+
+No se reduce redundancia durante un incidente activo.
+
+### Production `production-standard-v1`
+
+| Área | Contrato standard |
+|---|---|
+| Network | 2 NAT, uno por AZ; S3 Gateway Endpoint; `production-core` sólo tras disponibilidad regional, ledger y break-even |
+| Endpoints candidatos | ECR API, ECR DKR, CloudWatch Logs y Secrets Manager, cada uno en 2 AZ |
+| Compute | desired/min/max `2/2/6`; 1 vCPU/2 GiB; autoscaling, rolling y circuit breaker |
+| RDS | Multi-AZ; `db.m6g.large`; gp3 100/1000 GiB; 35 días, PITR y deletion protection |
+| Session | primary + replica en 2 AZ, Multi-AZ/failover, inicialmente `cache.t4g.micro` |
+| Storage/Security | completos y sin reducción |
+
+PP260 fijó `cache.t4g.medium` productivo. PP263 conserva su topología HA pero
+refina el tamaño standard inicial a `cache.t4g.micro`; `medium` pasa a
+`scale-ready-v1`. Antes de implementarlo debe probarse:
+
+`requiredSessionBytes = peakConcurrentSessions * (payloadP95Bytes + measuredValkeyOverheadBytes) * safetyFactor`
+
+y cumplirse `requiredSessionBytes <= 70% * measuredUsableMicroBytes`, además de
+CPU, conexiones, latencia y evictions aceptables en staging. Si no se cumple,
+se conserva `medium`; no se decide por intuición. TLS, KMS, ACL, Multi-AZ y
+failover nunca cambian por sizing.
+
+### `scale-ready-v1`
+
+Es capacidad habilitable por métricas, no el primer despliegue ni un switch que
+encienda todo:
+
+- Compute: mínimo 2, máximo inicial 6, revisión de task size y Savings Plan sólo
+  después de consumo estable;
+- Network: 2 NAT, endpoints medidos, reducción cross-AZ sin aprovisionarlos por
+  anticipación;
+- RDS: Multi-AZ, scaling vertical; Proxy por churn, read replica por carga de
+  lectura, storage/IOPS por métricas;
+- Session: primary+replica, `cache.t4g.medium` o mayor por memoria, evictions,
+  CPU, conexiones y latencia;
+- Storage/Backup: cross-region sólo después de Backup/DR Readiness y data
+  events selectivos;
+- Jobs, colas, scanner y workers sólo ante workloads reales.
+
+Cada capacidad mantiene decisión/flag independiente y aprobación de costo.
+
+### Controles no negociables
+
+Permanecen activos incluso en launch-lean: VPC privada; tasks sin IP pública;
+RDS/Valkey no públicos; S3 Block Public Access; TLS; KMS; Secrets Manager; IAM
+least privilege; CloudTrail y log file validation; versioning S3; RDS backups,
+PITR, deletion protection y final snapshots; ECR inmutable, scan on push e
+imagen por digest; cero secretos en Git; cero datos clínicos en logs; WAF al
+desplegar Edge; health, rollback, budgets y alertas de costo.
+
+### Capacidades diferibles
+
+En launch-lean quedan representables pero apagados: segunda task permanente,
+segundo NAT, Interface Endpoints, RDS Multi-AZ/m6g.large, réplica Valkey,
+Valkey medium, RDS Proxy, read replicas, cross-region backup/S3 replication,
+data events amplios, workers permanentes, scanner Fargate continuo y servicios
+avanzados no necesarios para el soft launch. `Diferible` nunca significa
+eliminado.
+
+### Cost ledger y comparaciones
+
+Cada fila del ledger contiene `stack`, `service`, `resource`, `profile`,
+`environment`, `region`, `quantity`, `unit`, `hours`, `rateUsd`,
+`fixedMonthlyUsd`, `estimatedVariableUsd`, `estimatedStorageUsd`,
+`estimatedTransferUsd`, `formula`, `officialSource`, `queriedAtUtc`,
+`uncertainty`, `taxesIncluded=false` y `fxIncluded=false`.
+
+Filas billables mínimas de cada producción:
+
+| Recurso | launch-lean | production-standard | scale-ready baseline | Naturaleza |
+|---|---:|---:|---:|---|
+| NAT Gateway / IPv4 NAT | 1 / 1 | 2 / 2 | 2 / 2 | fijo + GB/transferencia |
+| Interface endpoint ENI-AZ | 0 | 0 inicial; 8 condicionales | medido; 0 baseline | fijo + GB |
+| Fargate task mínima | 1 x 0.5/1 | 2 x 1/2 | 2 x 1/2 | fijo mínimo + scale-out |
+| RDS instance / gp3 | t4g.medium SA / 40 GiB | m6g.large MA / 100 GiB | m6g.large MA / 100 GiB | fijo + storage/I/O |
+| Valkey nodes | 1 micro | 2 micro | 2 medium | fijo + cross-AZ |
+| KMS keys | 4 | 4 | 4 | fijo + requests |
+| Secrets | 7 incluyendo RDS master, Session auth y app DB futura | 7 | 7 | fijo + requests |
+| S3 app/audit buckets | 4 + 1 audit | 4 + 1 audit | 4 + 1 audit | storage/requests/transferencia reales |
+| CloudWatch/CloudTrail | Flow, audit, app/migration futuros | iguales con retención production | ampliación selectiva | ingest/storage/events/alarms |
+| ECR | 1 repo futuro | 1 repo futuro | 1 repo futuro | GiB-mes/transferencia |
+| ALB/WAF/CloudFront | fila futura Edge, fuera del subtotal core | igual | igual | fijo ALB/IPv4 + uso |
+
+Subtotales mensuales conocidos de capacidad mínima:
+
+| Comparación production | Fijo conocido USD/mes | Qué falta |
+|---|---:|---|
+| A. launch-lean | 128.1548 | NAT GB, S3/ECR/logs, requests, transferencia y Edge |
+| B. production-standard sin endpoints | 446.4116 | mismas variables |
+| B. incremento `production-core` si pasa gate | +61.3200 | endpoint GB; reduce NAT/cross-AZ medido |
+| C. scale-ready baseline, 2 Valkey medium, endpoints apagados | 506.5052 | capacidades individuales y variables medidas |
+
+Un Edge futuro agrega como mínimo ALB `17.2463` y dos IPv4 públicas `7.30`
+USD/mes, antes de LCU, WAF, CloudFront y transferencia. Se mantiene separado
+porque Edge aún no está implementado. Una task adicional cuesta
+`18.9211`/mes en launch size o `37.8421`/mes en standard size si permanece 730
+horas. Los subtotales no son presupuesto ni factura y no mezclan staging.
+
+### Break-even de Interface Endpoints
+
+S3 Gateway Endpoint permanece siempre y no tiene la tarifa horaria de un
+Interface Endpoint. Para cada endpoint candidato:
+
+`fixedEndpoint = azCount * endpointHourlyRate * 730`
+
+`netSavingPerGb = natProcessingRate + avoidedCrossAzRate - endpointDataRate`
+
+`breakEvenGb = fixedEndpoint / netSavingPerGb`
+
+Con 2 AZ, tarifa fija `0.0105`, NAT `0.04725`, endpoint `0.01` y suponiendo
+cero ahorro cross-AZ, cada servicio cuesta `15.33` USD/mes y alcanza break-even
+en `411.5436` GB/mes elegibles. Los cuatro cuestan `61.32` y requieren
+`1,646.1745` GB/mes agregados sólo si la distribución de tráfico permite sumar
+el cálculo. El ahorro cross-AZ comprobado reduce el umbral; disponibilidad,
+DNS, resiliencia y tráfico por servicio se validan por separado.
+
+Decisión inicial:
+
+- launch-lean: `interfaceEndpointProfile=s3-only`;
+- standard: sigue `s3-only` mientras no exista medición; cambia a
+  `production-core` únicamente por PR y gate;
+- scale-ready: `interfaceEndpointProfile=measured`.
+
+Si no existe ahorro o requisito de resiliencia documentado, el tráfico sigue
+por NAT. La existencia de un servicio no justifica su endpoint.
+
+### Presupuesto empresarial y compuerta de primer deploy
+
+Inputs obligatorios, sin defaults monetarios ficticios:
+
+- `approvedMonthlyBudgetUsd`;
+- `planningFxMxnPerUsd`, con fecha de planificación;
+- `anomalyAlertThresholdUsd`;
+- `maxInfrastructureCostToRevenuePercent`;
+- `budgetOwner`;
+- `alertRecipients`, fuera del contrato público.
+
+El primer deploy queda bloqueado hasta registrar presupuesto aprobado,
+responsable, fecha, perfil seleccionado y estimación vigente. IVA/impuestos,
+soporte, FX, descuentos y tráfico se muestran por separado.
+
+### AWS Budgets y Cost Anomaly Detection futuros
+
+Esta readiness no crea controles AWS. La implementación posterior define:
+
+- budget mensual desde `approvedMonthlyBudgetUsd`: 50% actual, 75% actual, 90%
+  forecast, 100% actual y 120% actual crítico;
+- budgets de RDS, ECS/Fargate, VPC/NAT/PrivateLink, ElastiCache,
+  CloudWatch y S3/CloudFront;
+- budget staging separado y alerta por gasto fuera de release window;
+- cero auto-stop de RDS, backups, seguridad o production; acciones automáticas
+  sólo para recursos no críticos tras microfase específica.
+
+Cost Anomaly Detection agrega monitor global por cuenta, servicios principales,
+tag `Environment` y tag `Project`; alertas diarias y alerta inmediata cuando el
+impacto supere `anomalyAlertThresholdUsd`. No versiona emails, teléfonos ni SNS
+ARN real y no sustituye Budgets. Se acepta el retraso inherente de billing y no
+se interpreta una alerta como corte preventivo garantizado.
+
+### Tags y cost allocation
+
+Se preservan `Project`, `Environment`, `ManagedBy`, `Application`, `Component`,
+`DataClassification`, `Criticality`, `Backup` y `Owner`. Se agregan
+contractualmente:
+
+- `DeploymentProfile=launch-lean-v1|production-standard-v1|scale-ready-v1`;
+- `CostTier=fixed-critical|usage-based|storage-based|deferred-optional`;
+- `CostReview=<fecha ISO no personal>`;
+- `Ephemeral=true|false`;
+- `SchedulePolicy=release-window-v1|always-on`.
+
+Staging usa `Ephemeral=true` y `SchedulePolicy=release-window-v1`; production
+usa `Ephemeral=false`. Las keys se activan como cost allocation tags en Billing
+antes de depender de reportes, sin nombres personales.
+
+### Gates launch-lean a production-standard
+
+Se promueve por cualquiera de estas señales con revisión integral, presupuesto
+y evidencia de al menos siete días salvo incidente crítico:
+
+- Business: SLA comprometido, onboarding público no controlado, interrupción ya
+  no aceptable, presupuesto standard aprobado y costo/ingreso dentro del límite;
+- Compute: CPU p95 >60% o memoria p95 >70% por siete días, segunda task activa
+  parte significativa, saturación de requests/workers Apache;
+- RDS: CPU p95 >60%, conexiones >70% del presupuesto, free memory <20%, storage
+  >70% o recuperación Single-AZ ya no aceptable;
+- Valkey: cualquier eviction, memoria >70%, CPU sostenida, pérdida comercial de
+  sesiones o necesidad de failover;
+- Network: resiliencia/volumen justifica segundo NAT o endpoint llega a
+  break-even.
+
+Una métrica puntual no promueve automáticamente.
+
+### Gates de capacidades scale-ready
+
+- Compute: maxCapacity sostenido, p95 fuera de objetivo, latencia atribuible a
+  tasks o workloads asíncronos;
+- RDS Proxy: churn, reconnection storms, conexiones cercanas al presupuesto y
+  pooling insuficiente demostrado;
+- read replica: saturación de lectura/reportes pesados demostrada;
+- Valkey: evictions, memoria, CPU, conexiones o latencia;
+- endpoints: ahorro mensual o resiliencia documentados;
+- cross-region: RPO/RTO, presupuesto, simulacro y región secundaria aprobados.
+
+No se activa capacidad por el nombre `scale-ready`.
+
+### Cambio de perfil y rollback
+
+Todo cambio sigue: métricas; estimación; comparación actual/destino; impacto;
+PR; tests; synth; diff; aprobación; deploy; validación; revisión de factura.
+No se cambia desde consola, variable no versionada, account ID ni script sin
+aprobación. Rollback vuelve al perfil anterior sólo si es técnicamente seguro;
+no se reduce redundancia durante un incidente.
+
+### Configuración futura
+
+Una microfase de implementación agregará, sin hacerlo aquí:
+
+`deploymentProfile`, `stagingOperatingMode`, `approvedMonthlyBudgetUsd`,
+`planningFxMxnPerUsd`, `anomalyAlertThresholdUsd`,
+`maxInfrastructureCostToRevenuePercent`, `costEstimateAsOf`,
+`costEstimateVersion`, `natGatewayCount`, `interfaceEndpointProfile`,
+`databaseAvailabilityProfile`, `sessionAvailabilityProfile`,
+`computeAvailabilityProfile`, `enableCostBudgets`,
+`enableCostAnomalyDetection`, `enableStagingSchedule`,
+`stagingReleaseWindowHours`, `costAlertThresholdPercentages` y
+`profilePromotionPolicyVersion`.
+
+No se guardan montos ficticios ni destinatarios reales.
+
+### Impacto futuro por stack
+
+- Network: NAT count y endpoints por perfil; S3 Gateway Endpoint invariable;
+- Data: launch Single-AZ, standard Multi-AZ, clase/storage por perfil, sin tocar
+  KMS/backups/PITR/protection;
+- Session: launch single node, standard primary+replica micro y scale medium,
+  sin tocar TLS/KMS/RBAC;
+- Compute: desired/min/max y task size por perfil, launch una task, standard dos,
+  sin tocar digest/security/autoscaling;
+- Operations: budgets, anomaly detection, dashboards y alerts;
+- Staging: release-window con conciliación segura de residuos.
+
+Los perfiles cambian capacidad, no object keys, schema MySQL, session prefix,
+secret names, bucket ownership, URL pública, cuentas ni identidad de la
+aplicación. Pueden exigir mantenimiento controlado; no se afirma zero downtime
+sin validación real.
+
+### Roadmap y ausencia de implementación
+
+Siguiente auxiliar:
+
+`ARCH-DEVOPS/MXMed-AWS-Cost-Aware-Launch-Profiles-Implementation-01`
+
+Refactorizará IaC y tests sin incrementar el contador. Sólo después se
+regenerará `ARCH-DEVOPS/MXMed-AWS-Compute-Implementation-01` como Microfase 17
+de 24, con `launch-lean-v1` como default explícito y sin activar standard por
+anticipación.
+
+PP263 no crea budgets, scheduler, recursos AWS, endpoints, tasks, bases,
+caches, buckets, llaves ni secretos; tampoco ejecuta synth/diff/deploy.
+
+### Evidencia y no repetición
+
+La evidencia se guarda en
+`/tmp/mxmed-aws-cost-aware-launch-profiles-readiness-01/` con baseline, mapas
+PP245-PP262, inventarios, fuentes, ledger/schema, perfiles, riesgos, controles,
+break-even, budgets/anomaly/tags, gates, runbook, impactos, roadmap y QA.
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "docker_calls": 0,
+  "composer_calls": 0,
+  "npm_install_calls": 0,
+  "php_calls": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0,
+  "clinical_data_read": 0,
+  "business_budget_invented": 0,
+  "regional_prices_invented": 0
+}
+```
+
+### Cierre del contador
+
+Microfase auxiliar Cost-Aware Launch Profiles Readiness concluida.
+El contador principal permanece en 16/24.
+La Microfase 17 de 24 continúa pendiente.
+
+---
