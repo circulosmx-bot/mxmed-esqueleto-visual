@@ -54527,10 +54527,10 @@ base, secreto, snapshot, backup o recurso AWS.
 
 Con este PASS queda autorizada:
 
-`ARCH-DEVOPS/MXMed-AWS-Compute-Readiness-01`
+`ARCH-DEVOPS/MXMed-AWS-Storage-Readiness-01`
 
-Será la Microfase 12 de 24. Deberá cerrar el contrato de compute sin desplegar
-recursos ni adelantar Backup u Operations.
+Será la Microfase 12 de 24. Deberá cerrar el contrato de storage sin desplegar
+recursos ni adelantar Session, Compute, Backup u Operations.
 
 ### Cierre del contador
 
