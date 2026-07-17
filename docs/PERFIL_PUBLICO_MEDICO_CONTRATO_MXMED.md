@@ -57486,3 +57486,499 @@ Siguiente microfase, no iniciada aquí:
 `ARCH-DEVOPS/MXMed-AWS-Edge-Readiness-01`
 
 ---
+
+## PP-Decisiones 266 - MXMED_AWS_EDGE_FOUNDATION_CONTRACT_V1
+
+### Microfase, resultado y frontera
+
+Microfase 18 de 24:
+
+`ARCH-DEVOPS/MXMed-AWS-Edge-Readiness-01`
+
+Contrato documental:
+
+`MXMED_AWS_EDGE_FOUNDATION_CONTRACT_V1`
+
+Resultado:
+
+`PASS - MXMED_AWS_EDGE_FOUNDATION_CONTRACT_V1`
+
+Esta decisión cierra la readiness de Edge, no implementa Edge y no autoriza un
+deploy. La auditoría partió de `feature/mxmed-aws-compute-implementation` en
+`7be89572230be4445a580ea973604201b0bbd8a6`, con upstream `0/0`, working tree
+limpio y `git diff --check` sin hallazgos. La rama documental es
+`architecture/mxmed-aws-edge-readiness`.
+
+Se conservan sin reabrir PP235, PP242–PP245, PP251–PP252, PP257–PP258 y
+PP262–PP265. PP265 mantiene `/readyz` en `503 readiness_not_integrated`, los
+scripts generales mantienen Compute `disabled-v1` y el inventario actual de
+ALB, listener, target group, CloudFront, WAF y Route 53 continúa en cero.
+
+### Fuentes contractuales heredadas y decisiones refinadas
+
+| Fuente | Decisión consumida | Aplicación en Edge V1 |
+|---|---|---|
+| PP235 | Stripe.js Dahlia, fuentes CSP de Stripe y prohibición de wildcard global/`unsafe-eval` | Payment Element conserva exclusivamente la allowlist heredada; no se añaden Maps JS ni IA al navegador |
+| PP242–PP244 | `/subscriptions/stripe-return`, scrub inmediato y riesgo de query en la primera petición | no-cache/no-store/no-referrer/noindex y cero request logs en todas las capas |
+| PP245 | arquitectura CloudFront→WAF→ALB→ECS, dos certificados y origin restringido | se concreta como `cloudfront-restricted-public-alb-v1` y se separa Global/Regional Edge |
+| PP246–PP248 | shell Payment Element, marcas y navegación de pago | assets de pago permanecen same-origin; Edge no crea métodos, redirects ni logos alternos |
+| PP249–PP250 | foundation CDK offline, stages, stacks vacíos y validación sin cuenta | Global/Regional Edge serán extensiones tipadas, sin lookup, account ID, deploy ni output sensible |
+| PP251–PP252 | dos subnets `public-ingress`, `AlbIngressSecurityGroup`, `ApplicationSecurityGroup`, IPv4 | ALB en dos AZ; ingress 443 sólo desde prefix list administrado de CloudFront; app 8080 sólo desde ALB |
+| PP253–PP254 | KMS, secretos vacíos, IAM mínimo y guardrails | Edge consume referencias; no crea ni expone valores de secretos y WAF no sustituye autorización de aplicación |
+| PP257–PP258 | `PublicMediaBucket` privado, OAC futuro, buckets Private/Clinical/Quarantine separados | sólo PublicMedia puede ser origin; ningún bucket privado, clínico, quarantine o audit entra a CloudFront público |
+| PP259 | assets visuales de métodos de pago | quedan bajo la regla static sólo después de nombres inmutables; no prueban disponibilidad de un método |
+| PP260–PP261 | sesión Valkey privada, TLS y fail-closed | private/auth reenvía sesión al origin y nunca usa shared cache o signed cookies CloudFront |
+| PP262 | contrato Compute | fija servicio futuro, puerto 8080, health/readiness y grafo sin dependencia Compute→Edge |
+| PP263–PP264 | perfiles Cost-Aware y ledger | Free es objetivo launch-lean y el fijo conocido ALB+IPv4 se conserva separado |
+| PP265 | Compute implementado profile-aware | Edge requiere `service-enabled-v1`; target group usa exclusivamente `/readyz` |
+
+PP245 describía logging CloudFront allowlisted como posibilidad. Este contrato
+lo restringe para launch-lean a `metrics-only-no-request-logs-v1`: standard,
+real-time, WAF request/sampling y ALB access logs quedan apagados. El cambio es
+del perfil inicial de privacidad, no una reescritura histórica.
+
+### Auditoría de rutas real y clasificación cerrada
+
+La auditoría leyó los entrypoints PHP/HTML, rewrites, controladores, clientes
+JavaScript y el runtime Apache. Los fragmentos de URL, por ejemplo
+`/index.html#p-suscripcion`, no son rutas HTTP. Los respaldos `index.bak*.html`,
+importadores, proxies locales y herramientas DEV no son superficie productiva
+autorizada y el futuro build/ingress debe denegarlos.
+
+| Clase | Patrones reales auditados | Métodos y origin futuro | Cookies / Authorization / query | Caché, WAF, rate, logging e indexación |
+|---|---|---|---|---|
+| A. Static immutable | `/assets/*`; los recursos auxiliares `/modules/_partials/mxmed-ui.css` y `/modules/clinical/ui/_shared/*.js` existen pero quedan en default dynamic | GET/HEAD/OPTIONS; ALB | no cookies ni Authorization; query no permitido salvo allowlist probada | `/assets/*` sólo puede usar 3600/86400/31536000 cuando todos los nombres sean hash/versionados; hoy no lo están y algunos usan `?v=`, por lo que sigue TTL 0 hasta cerrar `edge_static_asset_versioning_not_closed`; WAF general excluye el path cacheable; request logs off; assets no se indexan como páginas |
+| B. Public media legacy | `/public/uploads/doctors/*` y `/uploads/doctors/*` | GET/HEAD; hoy ALB | no requiere cookie, Authorization o query | no hay prueba de keys inmutables ni de migración a S3: TTL 0. El behavior OAC futuro usa el path contractual `/media/*` sólo después de publicar keys opacas e inmutables; WAF rate general lo excluye; logs off; no indexación independiente |
+| C. Public dynamic profile/catalog | `/profiles/doctor.php`; `/api/profiles/index.php/public/doctor/{doctorId}` y rewrite `/api/profiles/public/doctor/{doctorId}`; `/api/catalog/index.php/cp/{cp}` y `/api/catalog/cp/{cp}` | GET/HEAD para página; GET para APIs; ALB | query completa se reenvía; el entrypoint profiles inicia sesión, por lo que no se presume independencia de cookies; Authorization no es requisito probado | TTL 0, compression; managed WAF; rate general 1200/5 min/IP; logs de aplicación sólo con template/código sanitizado; perfiles publicados pueden indexarse con canonical, APIs no |
+| C. Public dynamic agenda | `/public-agenda.html`, `/public-book.html`, `/public-cancel.html`; `/api/agenda/index.php/public/availability`; `/api/agenda/index.php/public/otp/{request,verify}`; `/api/agenda/index.php/public/appointments/{reserve,confirm,cancel,request,verify}` | GET/HEAD para páginas; GET availability; POST restantes; ALB | query/cookies requeridas se reenvían; sin requisito de Authorization | TTL 0/no-store en acciones; WAF managed; OTP entra a rate sensible 100/5 min/IP y resto a rate general; logs sanitizados; booking/cancel y APIs `noindex` |
+| D. Authenticated UI/API | `/index.html`; `/api/agenda/ui/*`; `/api/profiles/private/doctor/*`; `/api/patients/index.php/*`; `/api/agenda/index.php/*` excepto `public/*`; `/api/subscriptions/index.php/context/current`; `/api/verify-password.php`; `/api/verify-sms.php`; `/geocode-proxy.php` | GET/HEAD UI; GET/POST/PUT/PATCH/DELETE según handlers; ALB | cookies de sesión y headers de identidad auditados; Authorization se reenvía cuando exista; query all | caching disabled/TTL 0, `private,no-store`, sin stale/error cache; WAF managed; password/SMS usan rate sensible; logs sanitizados; `noindex,nofollow` |
+| E. Clinical | `/api/clinical/index.php/*`; `/api/clinical-documents.php?action={save,list,get}`; `/api/evolution-note-generate.php`; `/api/hospital-stays.php?action={current,start,close}`; `/modules/clinical/ui/*`; `/public/note-capture.html` y `/api/clinical/index.php/note-capture-tokens/*`; agenda privada | GET/POST/PATCH y métodos reales de cada handler; ALB | cookies y Authorization/header clínico se reenvían; query y body sólo al origin | TTL 0, `private,no-store`, no shared/stale/error cache; enlaces seguros bajo rate sensible, demás managed/general; jamás body/query/tokens en logs; `noindex,nofollow,noarchive` |
+| F. Payment config/operaciones | `/api/subscriptions/index.php/config/public/stripe`; `/entities/{type}/{id}/payment-routes[/preview]`; `/payment-routes/{uuid}/checkout`; `/subscriptions`; `/checkout-intents`; `/payment-intents/{uuid}/client-secret`; `/checkout-intents/{uuid}/payment-intents/{uuid}/{confirm-mock,activate-after-payment}`; `/payment-activation-state` | GET y POST conforme a los handlers; ALB | sesión obligatoria donde la aplicación la exige; cookies y headers necesarios; query all | TTL 0, `private,no-store`; WAF managed; client-secret bajo rate sensible; logs sanitizados sin claves, IDs de proveedor o body; `noindex` |
+| F. Stripe return | `/subscriptions/stripe-return` es contractual en PP242, pero todavía no existe como entrypoint versionado | GET/HEAD; ALB por default dynamic | query all; cookies sólo si el bridge funcional lo demuestra; sin Authorization | TTL 0, `no-store`, `no-referrer`, `noindex,nofollow,noarchive`; request logs CloudFront/WAF/ALB off y Apache path-only; JS `replaceState` inmediato. `public-traffic-enabled-v1` queda cerrado hasta implementar y probar el bridge |
+| F. Stripe webhook | el único path real es `/api/subscriptions/index.php/webhooks/stripe`; `/webhooks/stripe` no existe y no se crea como alterno | POST; ALB por default dynamic | raw body, `Stripe-Signature` y `Content-Type`; sin cookies, Authorization ni query requeridos | TTL 0/no-store; firma Stripe autoriza; managed WAF sin CAPTCHA/Challenge y exclusión de ambas rate rules; sin body/request logs; `noindex` |
+| G. Health | `/healthz`, `/readyz` mediante aliases Apache | GET/HEAD; ALB; target group sólo `/readyz` | sin cookies, Authorization o query | TTL 0/no-store, sin indexación ni detalles; `/healthz` 200 de proceso, `/readyz` 503 actual y tráfico público bloqueado hasta 200 real |
+
+No se encontraron handlers productivos explícitos para `/login`, recovery,
+reset o reclamación de perfil; no se inventan. El scope sensible inicial se
+limita a `/api/verify-password.php`, `/api/verify-sms.php`, los dos endpoints
+OTP públicos, `/api/clinical/index.php/note-capture-tokens/*` y el endpoint
+`*/payment-intents/*/client-secret`. La implementación deberá representar esos
+paths exactos y mantener fuera al webhook.
+
+`/sepomex-local.php` y `/sepomex-proxy.php` son utilidades legacy de consulta,
+no superficie pública aprobada; `/sepomex-import.php` es una herramienta de
+importación y debe denegarse siempre. El handler existente
+`/api/agenda/index.php/public/maintenance/expire` también es mantenimiento y no
+se autoriza desde Internet. Configs, `.git`, backups, `storage`, `tmp`, `tools`,
+documentación y archivos SQL/dump/env tampoco son rutas. Su exclusión del
+artefacto/Apache es una gate de imagen antes de tráfico, no un behavior
+CloudFront adicional.
+
+### Modos de activación Edge
+
+Tipo futuro:
+
+`MxMedEdgeActivationMode`
+
+| Modo | Inventario permitido | Dependencias y compuertas |
+|---|---|---|
+| `disabled-v1` | cero ALB, CloudFront, WAF, Route 53 y certificados; valor explícito de todos los scripts generales | no depende de Compute funcional |
+| `media-cdn-ready-v1` | distribución HTTPS, PublicMedia S3 REST origin, OAC SigV4, behavior `/media/*` y WAF del perfil; sin ALB, app origin o DNS cutover | Storage/PublicMedia listo; puede coexistir con Compute disabled; distribución sin tráfico público hasta keys inmutables |
+| `application-origin-ready-v1` | ALB, SG, target group, listener 443, certificado regional, distribución sin DNS público, app origin, public media origin y WAF | Compute `service-enabled-v1`, ApplicationService y `/healthz`; `/readyz` puede seguir fail-closed |
+| `public-traffic-enabled-v1` | distribution enabled, aliases, viewer certificate, Route 53 aliases y todo lo anterior | capability explícita, `/readyz=200`, migraciones, presupuesto, dominio, pricing plan, WAF, rollback y aprobación manual |
+
+Ningún usuario, alta, pago, plan comercial, rama, métrica o request puede
+cambiar el modo.
+
+### Perfiles CloudFront y control de costo
+
+Tipo futuro:
+
+`MxMedCloudFrontPricingProfile`
+
+| Perfil | Contrato de capacidad | Selección |
+|---|---|---|
+| `flat-rate-free-v1` | objetivo USD 0/mes; 1 millón requests, 100 GB, máximo 5 cache behaviors, máximo 5 reglas WAF, sin overages, una distribución, un apex domain y cuenta de pago elegible | objetivo launch-lean; no se infiere ni tiene default ficticio |
+| `flat-rate-pro-v1` | USD 15/mes; 10 millones requests, 50 TB, máximo 10 behaviors y 25 reglas WAF | objetivo production-standard y scale-ready mientras alcance |
+| `pay-as-you-go-approved-v1` | sólo tras microfase, presupuesto y aprobación separados | nunca fallback automático |
+
+La elegibilidad y suscripción del plan se comprueban operacionalmente antes
+del cutover DNS y se guardan en evidencia privada de despliegue. Si la cuenta
+no es elegible, tráfico público cierra con
+`cloudfront_flat_rate_plan_account_ineligible`.
+
+Free promueve a Pro sólo con aprobación de presupuesto y una de estas señales:
+requests o transferencia al 80%, logging incluido requerido, más de cinco
+behaviors o más de cinco reglas. Business y pay-as-you-go nunca son
+automáticos; no se fuerza Business para obtener VPC Origin.
+
+### Origin, stacks y límites regionales
+
+Modo de origin inicial:
+
+`cloudfront-restricted-public-alb-v1`
+
+Conserva las subnets `public-ingress`, funciona con Free/Pro y protege el ALB
+con prefix list más header/Host. VPC Origin, ALB privado, NLB, API Gateway y
+Global Accelerator quedan fuera de V1.
+
+| Stack futuro | Región | Propiedad |
+|---|---|---|
+| Regional Edge | `mx-central-1` | ALB, SG, target group, listener, certificado regional e integración ECS |
+| Global Edge | `us-east-1` | viewer ACM, CloudFront, WAF `CLOUDFRONT`, OAC y aliases Route 53 opcionales |
+
+No se permiten CloudFormation Exports cross-region. El handoff usa parámetros
+explícitos o artefacto de despliegue sanitizado. Los parámetros
+`EdgeOriginVerificationHeaderName` y `EdgeOriginVerificationHeaderValue` son
+`String`, `NoEcho`, sin default; el value exige al menos 32 caracteres. Ningún
+nombre/valor aparece en outputs, metadata, tags, logs o evidencia.
+
+### ALB, SG, verificación de origin y TLS
+
+ALB contractual:
+
+- internet-facing, IPv4 y exactamente dos subnets `public-ingress`;
+- deletion protection `false` en staging y `true` en production cuando el modo
+  sea `public-traffic-enabled-v1`;
+- HTTP/2, idle timeout 60 s, `dropInvalidHeaderFields=true` y desync
+  `strictest` cuando sea compatible;
+- listener HTTPS 443; ningún listener 80;
+- WAF sólo en CloudFront; access logs ALB deshabilitados porque el request line
+  del retorno Stripe no admite redacción selectiva segura.
+
+`AlbIngressSecurityGroup` recibe TCP 443 exclusivamente desde la AWS-managed
+prefix list origin-facing de CloudFront, nunca `0.0.0.0/0`, `::/0`, IP personal,
+oficina, VPN, SSH o debug. Su egress es TCP 8080 a
+`ApplicationSecurityGroup`; éste recibe 8080 sólo desde el SG del ALB. 9000 y
+health directo público permanecen cerrados.
+
+CloudFront añade el header de verificación al origin. El listener sólo forward
+cuando coinciden header y Host aprobado; su default responde 403 con cuerpo
+exacto `Access denied`. La rotación admite temporalmente valor anterior/nuevo,
+actualiza CloudFront, verifica y retira el anterior sin imprimir ninguno.
+
+TLS:
+
+- viewer→CloudFront: redirect HTTP→HTTPS, ACM `us-east-1`, SNI y mínimo
+  `TLSv1.2_2021`; sin dedicated-IP SSL;
+- CloudFront→ALB: HTTPS only, TLS >=1.2, ACM regional `mx-central-1`, hostname
+  de origin aprobado y sin fallback HTTP;
+- ALB→ECS: HTTP 8080 protegido por SG; TLS interno es decisión posterior;
+- certificados autofirmados o privados en Git están prohibidos.
+
+### Target group y readiness
+
+Target type `ip`, HTTP, puerto 8080 y ApplicationService. Health check:
+`/readyz`, matcher 200, intervalo 30 s, timeout 5 s, healthy threshold 2,
+unhealthy threshold 3. Deregistration delay 30 s; stickiness y slow start
+deshabilitados. `/healthz` no es health del ALB. El 503 actual permite
+sintetizar `application-origin-ready-v1`, pero impide desplegar
+`public-traffic-enabled-v1`.
+
+### Origins y cache behaviors V1
+
+Sólo hay dos origins futuros:
+
+1. Application ALB por HTTPS, con header de verificación, 3 connection
+   attempts, timeout de conexión 10 s y read timeout 60 s; sin Origin Shield ni
+   failover inicial.
+2. `PublicMediaBucket` privado por S3 REST + OAC SigV4; no website endpoint,
+   public policy ni acceso distinto de `GetObject` por la distribución.
+
+PrivateDocuments, ClinicalRecords, UploadQuarantine y audit nunca son origins.
+
+| Behavior | Path | Métodos | Forward | TTL y estado |
+|---|---|---|---|---|
+| default dynamic | todo lo no más específico | GET/HEAD/OPTIONS/PUT/PATCH/POST/DELETE | query all, cookies requeridas, Authorization, `Stripe-Signature`, `Content-Type`, `Origin` y headers mínimos | 0/0/0, caching disabled, compression; HTML público V1 también TTL 0 |
+| static assets | `/assets/*` real auditado | GET/HEAD/OPTIONS | sin cookies/Auth/query; un futuro query sólo con allowlist probada | 3600/86400/31536000, compression, pero no se activa para tráfico hasta filenames inmutables/hash; los `?v=` actuales no prueban inmutabilidad |
+| public media | `/media/*` contractual futuro | GET/HEAD/OPTIONS | sin cookies/Auth/query | 86400/31536000/31536000, compression y keys inmutables; no cubre los uploads legacy |
+
+Son exactamente tres behaviors dentro del máximo Free. No se cachean perfiles
+HTML, búsquedas, panel, agenda, clinical, recetas, login/recuperación futuros,
+suscripciones, APIs, return o webhook. Tampoco se usa error caching para
+private/clinical.
+
+### Stripe return y webhook
+
+Return `/subscriptions/stripe-return`: GET/HEAD, default dynamic, query all,
+cookie sólo si el bridge lo demuestra, `Cache-Control: no-store`,
+`Referrer-Policy: no-referrer` y
+`X-Robots-Tag: noindex, nofollow, noarchive`. Service worker y analytics no
+interceptan/procesan la URL; CloudFront standard/real-time, WAF
+request/sampling y ALB access logs quedan apagados; Apache conserva método y
+path sin query; el bridge ejecuta `history.replaceState` antes de terceros.
+Como el entrypoint no existe todavía, ésta es una compuerta de cutover, no una
+afirmación de implementación.
+
+Webhook real único `/api/subscriptions/index.php/webhooks/stripe`: POST, body
+crudo y `Stripe-Signature`/`Content-Type` al origin, sin cookies, Authorization
+o query; TTL 0/no-store. La firma sigue siendo la autorización. No CAPTCHA,
+Challenge, rate agresivo, body logging ni endpoint alterno. Permanece bajo la
+WAF, pero fuera de ambas rate rules; una excepción a managed rules requiere
+falso positivo reproducible, path y label exactos.
+
+### Private/clinical, headers y Maps
+
+Todas las rutas private/clinical usan TTL 0, `Cache-Control: private,no-store`,
+sin shared cache, stale-if-error, error cache, indexación o signed cookies/URLs
+CloudFront para sesiones. Los documentos se autorizan en aplicación y usan GET
+prefirmado breve con el TTL de PP257; nunca pasan por CloudFront público.
+
+Response headers comunes futuros:
+
+- HSTS `max-age=31536000; includeSubDomains`, sin preload inicial;
+- `X-Content-Type-Options: nosniff`;
+- `X-Frame-Options: SAMEORIGIN`;
+- `Referrer-Policy: strict-origin-when-cross-origin`;
+- Permissions-Policy mínima;
+- COOP `same-origin` y CORP `same-site` para media propia sólo tras prueba de
+  compatibilidad.
+
+La CSP de Payment Element no se reinventa: conserva sources propias y las
+fuentes mínimas PP235 para `js.stripe.com`/subdominio documentado en
+`script-src` y `frame-src`, `api.stripe.com` en `connect-src`, sin wildcard
+global ni `unsafe-eval`. Link y `hooks.stripe.com` sólo se agregan si su función
+PP235 se habilita y prueba. Maps JS, iframes, API keys y dominios de IA no se
+añaden. El return conserva además la CSP mínima dedicada de PP242 y
+`no-referrer`; ninguna policy puede romper Stripe sin regresión.
+
+La aplicación actual referencia CDN JS/CSS, fuentes, iframes y tiles de
+terceros fuera de la allowlist Edge seleccionada. No se amplía CSP por ese
+hallazgo ni se afirma compatibilidad: self-hosting, retiro o una revisión CSP
+funcional separada es gate previa al tráfico público.
+
+`mapsEdgeMode=external-link-only-v1`: sólo enlaces HTTPS a Google Maps, `tel:`
+y `wa.me`, con `rel="noopener noreferrer"`, usando exclusivamente ubicación
+pública de consultorio. No Maps JavaScript/Dynamic/Places/Routes/Street View,
+iframe, key frontend ni datos clínicos/paciente. La auditoría encontró el
+legacy privado `geocode-proxy.php` y código interactivo Leaflet/Nominatim;
+quedan clasificados TTL 0 pero no autorizados por este modo para el cutover
+público. Deben retirarse o aislarse mediante una microfase funcional, sin
+ampliar CSP desde Edge.
+
+### WAF, SEO y privacidad de logs
+
+Perfil Free con exactamente cinco reglas:
+
+1. `AWSManagedRulesAmazonIpReputationList`;
+2. `AWSManagedRulesCommonRuleSet`;
+3. `AWSManagedRulesSQLiRuleSet`;
+4. rate sensible 100 requests/5 min/IP sobre los paths auditados de
+   password/SMS, OTP, secure-link y client-secret; excluye webhook;
+5. rate dinámico general 1200 requests/5 min/IP; excluye `/assets/*`,
+   `/media/*` y webhook.
+
+Todas tienen métricas CloudWatch; `sampledRequestsEnabled=false` y request
+logging=false. Bot/Fraud/ATP de pago, CAPTCHA, Challenge, partner rules, geo
+block general y body logging quedan fuera. No se deshabilita un grupo completo
+sin falso positivo reproducible.
+
+SEO permite perfiles públicos, canonical, Googlebot y Bingbot verificados y
+previews legítimos. La auditoría no encontró `robots.txt` ni sitemap en la
+raíz; ambos son una gate de implementación y no se declaran existentes. Panel,
+clinical, return y secure links son noindex. Scraping agresivo, scanners y
+brute force se controlan por reputación/rate; no se fijan rangos manuales
+permanentes en Git.
+
+Perfil inicial:
+
+`edgeLoggingProfile=metrics-only-no-request-logs-v1`
+
+Standard/real-time CloudFront, WAF requests/sampling, ALB access logs, cookies
+y query están apagados. Permanecen métricas agregadas CloudFront/WAF/ALB,
+target health, logs de aplicación sanitizados y futuras alarmas Operations.
+Nunca se registran query, cookies, Authorization, Stripe-Signature, session
+IDs, secure-link tokens, nombres, diagnósticos, bodies o archivos.
+
+### DNS, IPv6 y costos
+
+Inputs futuros obligatorios, sin valores inventados:
+
+`edgeApexDomainName`, `edgeWwwDomainName`, `edgeOriginDomainName`,
+`edgeHostedZoneMode`, `edgeHostedZoneId` cuando aplique,
+`edgeCanonicalHost`, `edgeDnsCutoverTtlSeconds`.
+
+`edgeHostedZoneMode` es explícito: `external-dns-v1` o
+`route53-managed-v1`. Se soportan apex y www con un canonical único, TTL de
+cutover 300, alias sin CNAME en apex y sin wildcard inicial. La asociación de
+hosted zone a un plan requiere runbook y no se presume.
+
+VPC, ALB y ECS continúan IPv4. Viewer IPv6 CloudFront inicia deshabilitado;
+AAAA sólo se habilita después de probar WAF, logs y DNS.
+
+Launch-lean apunta a CloudFront Free, WAF y DNS/TLS con USD 0 incremental sólo
+si plan/cuenta/zone resultan elegibles. El ledger PP263 aporta aproximadamente
+USD 24.55/mes por ALB y dos IPv4 antes de LCU; LCU es variable. Pro agrega USD
+15/mes sólo al activarse. No se inventa un costo CloudFront ni se contratan
+Business, Shield Advanced, Global Accelerator, Anycast static IP, Origin
+Shield, VPC Origin, Lambda@Edge o real-time logs.
+
+### Cutover y rollback
+
+`public-traffic-enabled-v1` exige las 20 compuertas, todas PASS:
+
+1. dominio aprobado; 2. hosted zone verificada; 3. certificados `ISSUED`;
+4. Compute service-enabled; 5. digest aprobado; 6. migraciones concluidas;
+7. `mxmed_app` disponible; 8. `/healthz=200`; 9. `/readyz=200`; 10. target
+healthy; 11. CloudFront deployed; 12. pricing plan verificado; 13. WAF
+asociado; 14. ALB directo=403; 15. CloudFront=200; 16. return sin logging
+sensible; 17. webhook probado; 18. rollback preparado; 19. presupuesto
+aprobado; 20. aprobación manual. Si una falla, no hay cutover DNS.
+
+Rollback conserva DNS anterior y prepara TTL 300, revierte aliases,
+deshabilita distribución si corresponde, no borra ALB inmediatamente, revisa
+antes de cancelar pricing, conserva certificados/Compute/evidencia, valida
+sesiones/enlaces y nunca revierte DB por un fallo Edge.
+
+### Configuración, propiedades y dependencias futuras
+
+Extensiones futuras, no agregadas ahora:
+
+`edgeActivationMode`, `edgePricingProfile`, `edgeOriginMode`,
+`edgeLoggingProfile`, `edgeCacheProfile`, `edgeWafProfile`, `edgeMapsMode`,
+`edgeDnsMode`, `edgeApexDomainName`, `edgeWwwDomainName`,
+`edgeOriginDomainName`, `edgeCanonicalHost`, `edgeDnsCutoverTtlSeconds`,
+`edgeViewerCertificateRegion`, `edgeOriginCertificateRegion`,
+`edgeViewerMinimumTlsVersion`, `edgeOriginProtocolPolicy`,
+`edgeAlbInternetFacing`, `edgeAlbDeletionProtection`,
+`edgeAlbIdleTimeoutSeconds`, `edgeTargetHealthPath`,
+`edgeTargetDeregistrationDelaySeconds`, `edgePublicHtmlCacheEnabled`,
+`edgeStaticAssetDefaultTtlSeconds`, `edgePublicMediaDefaultTtlSeconds`,
+`edgeWafSensitiveRateLimit`, `edgeWafGeneralRateLimit`,
+`edgeRequestLoggingEnabled`, `edgeIpv6Enabled` y
+`edgeFlatRatePlanVerificationRequired`.
+
+Regional Edge expondrá referencias tipadas a load balancer, listener, target
+group, certificado regional, SG y `originDomainToken`. Global Edge expondrá
+distribution, web ACL, viewer certificate, PublicMedia OAC, distribution
+domain name, records opcionales y contrato de verificación del plan. Nunca
+expone header/value, account ID, cookie, token o secreto.
+
+Regional depende de Network y Compute. Global depende contractualmente de
+Storage y parámetros sanitizados de Regional. Compute/Storage nunca dependen
+de Edge; Operations podrá consumir métricas. Sin exports cross-region ni
+ciclos.
+
+### Guardrails y matriz de 131 pruebas futuras
+
+`EdgeFoundationAspect` debe fallar, sin autocorregir, ante modo desconocido,
+recursos en disabled, ALB en media-only, DNS en origin-ready, tráfico sin
+service/readiness; ingress público/80, falta de prefix list/403/header,
+logging ALB o `/healthz` como target; HTTP/TLS débil, origin HTTP, dynamic TTL
+positivo, cookies/query en static/media, origins privados/clínicos,
+OAI/logging/IPv6/behaviors excedidos; más de cinco WAF Free, sampling/logs,
+webhook bajo rate agresivo o Bot Control; return/webhook cacheado o sin
+forwarding requerido; pricing desconocido o servicios costosos no aprobados.
+
+Matriz contractual exacta:
+
+| IDs | Pruebas |
+|---|---|
+| 1–6 | PP235; PP242–245; PP251–252; PP257–258; PP262–265; route classification |
+| 7–13 | disabled; media-only; origin-ready; traffic-enabled; invalid mode; compute dependency; readiness dependency |
+| 14–20 | Free; Pro; account eligibility gate; Free behavior count; Free WAF count; no Business automatic; no paygo automatic |
+| 21–37 | internet-facing; public-ingress; two AZ; HTTPS 443; no HTTP 80; CloudFront prefix list; no public CIDR; header rule; host rule; default 403; target IP; app port; readyz; matcher 200; no stickiness; no access logs; deletion protection |
+| 38–56 | distribution; ALB origin; S3 origin; OAC; HTTPS redirect; TLS; origin HTTPS; dynamic TTL 0; asset cache; media cache; compression; no HTML cache; no clinical/private/quarantine origin; no Origin Shield; no Lambda@Edge; no logs; no IPv6 |
+| 57–69 | return path; GET; no cache; query all; no-referrer; noindex; no logs; webhook POST; body forward; signature forward; no cookies webhook; no CAPTCHA; no aggressive rate |
+| 70–82 | IP reputation; common; SQLi; sensitive rate; general rate; exactly five; static/media/webhook exclusions; sampled false; logs false; Bot Control absent; CAPTCHA absent |
+| 83–90 | HSTS; nosniff; frame policy; referrer; permissions; CSP PP235; no unsafe-eval; no Maps scripts |
+| 91–95 | only public media; private bucket; bucket owner enforced; GetObject distribution only; immutable path |
+| 96–103 | no hardcoded domain; viewer cert us-east-1; origin cert mx-central-1; apex alias; www alias; canonical host; TTL 300; no wildcard |
+| 104–108 | external link only; no API key; no iframe; no Dynamic Maps; noopener/noreferrer |
+| 109–114 | metrics only; no query; no cookies; no Authorization; no Stripe signature; no secure-link token |
+| 115–121 | public ALB CIDR rejected; dynamic cache rejected; OAI rejected; clinical origin rejected; logs rejected; WAF six rules rejected; Business auto rejected |
+| 122–131 | synth disabled/media/origin/traffic; no lookups; no account IDs; no secrets; determinism; no deploy; no cycles |
+
+### Diagrama contractual
+
+```mermaid
+flowchart TB
+  MODE[disabled → media-cdn-ready → application-origin-ready → public-traffic-enabled]
+  COST[Free launch-lean] -->|80% / capacidad / presupuesto| PRO[Pro aprobado]
+  INTERNET[Internet] --> CF
+
+  subgraph GLOBAL[Global Edge · us-east-1]
+    CERTV[ACM viewer]
+    CF[CloudFront · HTTPS · IPv6 off]
+    WAF[WAF · exactamente 5 reglas]
+    OAC[OAC SigV4]
+    CERTV --> CF --> WAF
+  end
+
+  CF -->|/media/* immutable cache| OAC --> PUB[(PublicMediaBucket privado)]
+  CF -->|/assets/* sólo tras hash| ALB
+  CF -->|dynamic TTL 0 · return/webhook no-store| ALB
+
+  subgraph REGIONAL[Regional Edge · mx-central-1]
+    PL[AWS CloudFront managed prefix list] --> SG[ALB SG · 443]
+    HDR[header + Host contractuales] --> LISTENER[listener 443]
+    SG --> ALB[public ALB restringido]
+    ALB --> LISTENER
+    LISTENER -->|match| TG[target group · /readyz]
+    LISTENER -->|default| DENY[403 Access denied]
+    TG --> APP[ECS ApplicationService · 8080]
+  end
+
+  PRIVATE[Private / clinical] -. fuera de CloudFront público .-> APP
+  MODE -. controla inventario .-> CF
+  MODE -. controla inventario .-> ALB
+  COST -. limita behaviors/WAF .-> CF
+```
+
+El diagrama no contiene dominio, account IDs, header, cookies, pacientes o
+secretos.
+
+### Evidencia, no repetición y cierre
+
+Evidencia sanitizada:
+
+`/tmp/mxmed-aws-edge-readiness-01/`
+
+No se consultó una cuenta, pricing API, DNS, certificados, Stripe, HTTP, SQL o
+datos clínicos. No se ejecutaron synth, diff, bootstrap, deploy, npm install,
+Docker, Composer o PHP. Único archivo versionado modificado:
+`docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`.
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "npm_install_calls": 0,
+  "docker_calls": 0,
+  "composer_calls": 0,
+  "php_calls": 0,
+  "http_calls": 0,
+  "dns_changes": 0,
+  "certificates_requested": 0,
+  "cloudfront_distributions_created": 0,
+  "waf_rules_created": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "sql_calls": 0,
+  "secret_values_requested": 0,
+  "sensitive_urls_logged": 0,
+  "business_domain_invented": 0
+}
+```
+
+Readiness Edge queda cerrada. El tráfico público continúa prohibido hasta
+resolver operacionalmente todas las gates, incluido `/readyz=200`, el bridge
+return probado, assets/media inmutables, plan elegible, dominio/certificados y
+aprobación manual.
+
+Microfase 18 de 24 concluida. Avance global 18/24; quedan 6 pendientes.
+
+Siguiente microfase, no iniciada aquí:
+
+`ARCH-DEVOPS/MXMed-AWS-Edge-Implementation-01`
+
+Será la Microfase 19 de 24 y deberá implementar el contrato sin desplegar ni
+habilitar tráfico salvo autorización operativa separada.
+
+---
