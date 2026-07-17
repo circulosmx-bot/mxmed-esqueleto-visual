@@ -3,6 +3,7 @@ import { App, AspectPriority, Aspects, Tags } from 'aws-cdk-lib';
 import type { IConstruct } from 'constructs';
 
 import { MandatoryTagsAspect } from '../lib/aspects/mandatory-tags-aspect';
+import { EdgeFoundationAspect } from '../lib/aspects/edge-foundation-aspect';
 import { NoPublicBucketAspect } from '../lib/aspects/no-public-bucket-aspect';
 import { NoPublicDatabaseAspect } from '../lib/aspects/no-public-database-aspect';
 import { ProductionRetentionAspect } from '../lib/aspects/production-retention-aspect';
@@ -15,6 +16,8 @@ import { parseComputeActivationMode } from '../lib/config/compute-config';
 import { getEnvironmentConfig } from '../lib/config/environments';
 import { MxMedEmailStage } from '../lib/stages/mxmed-email-stage';
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
+import { MxMedGlobalEdgeStage } from '../lib/stages/mxmed-global-edge-stage';
+import { edgeCreatesGlobal } from '../lib/config/edge-config';
 
 function applyGlobalTags(scope: IConstruct, config: MxMedEnvironmentConfig): void {
   Tags.of(scope).add('Project', config.tags.Project);
@@ -31,6 +34,7 @@ function applyGlobalTags(scope: IConstruct, config: MxMedEnvironmentConfig): voi
 function applyFoundationAspects(
   environmentStage: MxMedEnvironmentStage,
   emailStage: MxMedEmailStage,
+  globalEdgeStage: MxMedGlobalEdgeStage | undefined,
   config: MxMedEnvironmentConfig,
 ): void {
   for (const stage of [environmentStage, emailStage]) {
@@ -49,6 +53,14 @@ function applyFoundationAspects(
     }),
     { priority: AspectPriority.READONLY },
   );
+  Aspects.of(environmentStage).add(new EdgeFoundationAspect(), {
+    priority: AspectPriority.READONLY,
+  });
+  if (globalEdgeStage !== undefined) {
+    Aspects.of(globalEdgeStage).add(new EdgeFoundationAspect(), {
+      priority: AspectPriority.READONLY,
+    });
+  }
 }
 
 export function createMxMedApp(): App {
@@ -61,6 +73,18 @@ export function createMxMedApp(): App {
     app.node.tryGetContext('deploymentProfile'),
     computeActivationMode,
     app.node.tryGetContext('runtimeCapabilityProfile'),
+    {
+      edgeActivationMode: app.node.tryGetContext('edgeActivationMode'),
+      edgePricingProfile: app.node.tryGetContext('edgePricingProfile'),
+      edgeOriginMode: app.node.tryGetContext('edgeOriginMode'),
+      edgeLoggingProfile: app.node.tryGetContext('edgeLoggingProfile'),
+      edgeCacheProfile: app.node.tryGetContext('edgeCacheProfile'),
+      edgeWafProfile: app.node.tryGetContext('edgeWafProfile'),
+      edgeMapsMode: app.node.tryGetContext('edgeMapsMode'),
+      edgeDnsMode: app.node.tryGetContext('edgeDnsMode'),
+      edgeCutoverState: app.node.tryGetContext('edgeCutoverState'),
+      staticAssetCacheState: app.node.tryGetContext('staticAssetCacheState'),
+    },
   );
   const accountValue = process.env.CDK_DEFAULT_ACCOUNT?.trim();
   const stageAccount =
@@ -73,10 +97,14 @@ export function createMxMedApp(): App {
 
   const environmentStage = new MxMedEnvironmentStage(app, environmentStageId, stageProps);
   const emailStage = new MxMedEmailStage(app, emailStageId, stageProps);
+  const globalEdgeStage = edgeCreatesGlobal(config)
+    ? new MxMedGlobalEdgeStage(app, `${environmentStageId}GlobalEdge`, stageProps)
+    : undefined;
 
   applyGlobalTags(environmentStage, config);
   applyGlobalTags(emailStage, config);
-  applyFoundationAspects(environmentStage, emailStage, config);
+  if (globalEdgeStage !== undefined) applyGlobalTags(globalEdgeStage, config);
+  applyFoundationAspects(environmentStage, emailStage, globalEdgeStage, config);
 
   return app;
 }

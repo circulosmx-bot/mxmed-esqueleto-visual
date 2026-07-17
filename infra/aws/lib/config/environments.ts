@@ -18,6 +18,8 @@ import {
   MXMED_COST_ESTIMATE_AS_OF,
   resolveLaunchProfile,
 } from './launch-profiles';
+import type { MxMedEdgeContextValues } from './edge-config';
+import { MXMED_REAL_EDGE_RUNTIME_GATES, resolveEdgeContext } from './edge-config';
 
 const STAGING_BASE_CONFIG = Object.freeze({
   environmentName: 'staging',
@@ -264,6 +266,7 @@ function createEnvironmentConfig(
   deploymentProfileValue: unknown,
   computeActivationModeValue: unknown = 'disabled-v1' satisfies MxMedComputeActivationMode,
   runtimeCapabilityProfileValue?: unknown,
+  edgeContextValues: MxMedEdgeContextValues = {},
 ): MxMedEnvironmentConfig {
   const resolved = resolveLaunchProfile(environmentName, deploymentProfileValue);
   const computeControls = resolveComputeControls(
@@ -272,6 +275,7 @@ function createEnvironmentConfig(
   );
   const ecrRetention = computeEcrRetention(environmentName, resolved.deploymentProfile);
   const base = environmentName === 'staging' ? STAGING_BASE_CONFIG : PRODUCTION_BASE_CONFIG;
+  const edge = resolveEdgeContext(edgeContextValues);
   const config = {
     ...base,
     ...resolved.capacity,
@@ -300,6 +304,15 @@ function createEnvironmentConfig(
     computeEcrUntaggedRetentionDays: ecrRetention.untaggedDays,
     computeEcrMaxImageCount: ecrRetention.maxImages,
     computeMigrationCommandMode: MXMED_COMPUTE_RUNTIME_CONTRACT.migrationCommandMode,
+    ...edge,
+    ...MXMED_REAL_EDGE_RUNTIME_GATES,
+    cloudFrontPricingPlanVerification: {
+      expectedProfile: edge.edgePricingProfile,
+      accountEligibilityVerified: false,
+      planAttached: false,
+      verifiedAt: null,
+      verificationEvidenceReference: null,
+    },
     approvedMonthlyBudgetUsd: null,
     planningFxMxnPerUsd: null,
     planningFxAsOf: null,
@@ -342,6 +355,7 @@ export function getEnvironmentConfig(
   deploymentProfileValue: unknown,
   computeActivationModeValue: unknown = 'disabled-v1',
   runtimeCapabilityProfileValue?: unknown,
+  edgeContextValues: MxMedEdgeContextValues = {},
 ): MxMedEnvironmentConfig {
   const environmentName = parseEnvironmentName(value);
   return createEnvironmentConfig(
@@ -349,5 +363,6 @@ export function getEnvironmentConfig(
     deploymentProfileValue,
     computeActivationModeValue,
     runtimeCapabilityProfileValue,
+    edgeContextValues,
   );
 }

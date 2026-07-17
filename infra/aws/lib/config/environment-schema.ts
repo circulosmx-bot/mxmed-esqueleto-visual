@@ -14,6 +14,7 @@ import {
   MXMED_COST_ESTIMATE_AS_OF,
   resolveLaunchProfile,
 } from './launch-profiles';
+import { validateEdgeFoundationConfig } from './edge-config';
 import { assertMxMedCondition, assertNoSensitiveConfiguration } from '../utils/validation';
 
 const ENVIRONMENT_CODES: Readonly<Record<MxMedEnvironmentName, MxMedEnvironmentCode>> = {
@@ -823,6 +824,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
   validateSessionConfiguration(input, environmentName);
   validateComputeConfiguration(input, environmentName);
   validateCostAwareConfiguration(input, environmentName);
+  validateEdgeFoundationConfig(input as unknown as MxMedEnvironmentConfig);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',
     'MXMED_CONFIG_INVALID',

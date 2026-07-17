@@ -57982,3 +57982,149 @@ Será la Microfase 19 de 24 y deberá implementar el contrato sin desplegar ni
 habilitar tráfico salvo autorización operativa separada.
 
 ---
+
+## PP-Decisiones 267 - MXMED_AWS_EDGE_FOUNDATION_IMPLEMENTATION_V1
+
+### Estado y alcance
+
+Microfase 19 de 24.
+
+Esta decisión implementa offline el contrato cerrado en PP-Decisiones 266. La
+implementación vive en `infra/aws/**`, sintetiza recursos CloudFormation sin
+consultar una cuenta y no autoriza bootstrap, diff, deploy, DNS, certificados ni
+tráfico. El inventario continúa seleccionado sólo por contextos explícitos; no se
+deriva del ambiente, branch, dominio, account ID, usuarios, suscripciones o pagos.
+
+### Modos y gates
+
+Los tipos canónicos implementados son:
+
+- activación: `disabled-v1`, `media-cdn-ready-v1`,
+  `application-origin-ready-v1`, `public-traffic-enabled-v1`;
+- pricing: `flat-rate-free-v1`, `flat-rate-pro-v1`,
+  `pay-as-you-go-approved-v1`;
+- origin `cloudfront-restricted-public-alb-v1`;
+- logging `metrics-only-no-request-logs-v1`;
+- cache `dynamic-zero-media-immutable-v1`;
+- WAF `free-five-rule-v1`;
+- Maps `external-link-only-v1`;
+- DNS `none-v1`, `external-dns-v1`, `route53-managed-v1`;
+- cutover `blocked-known-gaps-v1`, `verified-for-cutover-v1`;
+- assets `disabled-until-fingerprinted-v1`, `immutable-fingerprinted-v1`.
+
+Los perfiles reales conservan `blocked-known-gaps-v1` y assets no
+fingerprinted. `/readyz` sigue sin integración y responde 503; Stripe return
+`/subscriptions/stripe-return` sigue ausente; el webhook real confirmado sigue
+siendo `/api/subscriptions/index.php/webhooks/stripe`; dominio, certificados,
+pricing plan, presupuesto y DNS siguen sin aprobación operativa. Por ello
+`public-traffic-enabled-v1` falla con
+`MXMED_PUBLIC_TRAFFIC_BLOCKED_BY_RUNTIME_GATES`. Sólo una fixture que cierra
+explícitamente los gates valida el camino de template Route 53; no existe script
+público.
+
+### Stacks y attachment sin ciclo
+
+`MxMedRegionalEdgeFoundationStack` se sintetiza en `mx-central-1` únicamente para
+origin/public. Es owner del ALB, listener, target group y regla de SG. Se construye
+antes de Compute y entrega opcionalmente `applicationTargetGroup` a
+`MxMedComputeStack`; Compute adjunta `ApplicationService` durante su propia
+construcción. La dependencia es Compute → Regional Edge. Regional Edge nunca
+referencia Compute, conserva ownership de ALB/target y no usa custom resources.
+
+`MxMedGlobalEdgeStack` se sintetiza en un stage separado `us-east-1` para
+media/origin/public. Recibe dominios, bucket y secretos de origin únicamente como
+`CfnParameter`. No hay `crossRegionReferences`, lookups, SDK, custom resources ni
+exports cross-region. El handoff contractual `MxMedEdgeHandoffContract` conserva:
+
+- Regional → Global: DNS del ALB/origin, ARN contractual del certificado y datos
+  no sensibles de PublicMedia;
+- Global → Regional/owners: distribution ID y ARN;
+- ambos lados reciben header name/value como parámetros independientes `NoEcho`;
+- ningún secreto se emite como output.
+
+La secuencia futura es Regional → outputs no sensibles → Global → distribution
+ARN → actualización parametrizada de Security/Storage → verificación OAC →
+asociación manual del pricing plan → DNS aún sin cambios.
+
+### Origin regional
+
+El ALB L2 es internet-facing porque CloudFront requiere llegar al origin, pero su
+SG no acepta CIDR público. Una única `AWS::EC2::SecurityGroupIngress`
+independiente permite TCP 443 desde `CloudFrontOriginFacingPrefixListId`, validado
+por `^pl-[0-9a-fA-F]+$`. El listener HTTPS 443 usa certificado regional por ARN
+parametrizado, TLS 1.2 moderno y default fijo `403 Access denied`. Sólo una regla
+con Host aprobado y header secreto coincide y reenvía.
+
+El target group es IP/HTTP/8080, usa `/readyz`, matcher 200, intervalo/timeout
+30/5, thresholds 2/3, deregistration 30, sin stickiness ni slow start. No existen
+listener 80, access logs, WAF regional, NLB, VPC Origin, Global Accelerator,
+Shield Advanced o IPv6.
+
+### Edge global, OAC y grants
+
+CloudFront usa HTTPS redirect, IPv6 false, cero request logs y WAF CLOUDFRONT. El
+modo media queda enabled con certificado default y sin aliases; origin queda
+enabled=false con origin ALB HTTPS/TLS1.2 y PublicMedia secundario. PublicMedia usa
+S3 REST + OAC `sigv4/always`; no existe OAI ni origin privado, clínico,
+quarantine/audit.
+
+Storage agrega a la bucket policy existente de PublicMedia solamente
+`s3:GetObject` sobre `media/*` para `cloudfront.amazonaws.com`, condicionado por
+`AWS:SourceArn=PublicMediaCloudFrontDistributionArn`. Security agrega a
+`ApplicationDataKey` solamente `kms:Decrypt`, `kms:Encrypt` y
+`kms:GenerateDataKey*` con la misma condición. No hay segunda bucket policy,
+`Principal=*`, `s3:ListBucket`, escritura S3, `kms:*` ni nueva key.
+
+Las cache policies son: default dinámico 0/0/0 con todos los métodos y request
+policy all-viewer-except-Host; `/assets/*` 0/0/0 mientras falta fingerprint;
+`/media/*` 86400/31536000/31536000 con GET/HEAD/OPTIONS, sin query, cookies o
+Authorization. Hay como máximo tres behaviors. Response headers agrega HSTS,
+nosniff, SAMEORIGIN, referrer policy, Permissions-Policy mínima y COOP; no
+sobrescribe la CSP de PP235, no agrega `unsafe-eval`, Maps JS o allowlists nuevas.
+
+### WAF, Stripe, privacidad y costo
+
+El WebACL tiene exactamente cinco reglas con métricas, sampled requests false y
+sin logging: IP reputation, Common, SQLi, sensitive 100/300/IP y general
+1200/300/IP. El set sensible único de PP266 se versiona sin incluir el webhook. La
+regla general excluye `/assets/*`, `/media/*` y el webhook real exacto. No existen
+Bot Control, ATP, Fraud Control, CAPTCHA o Challenge.
+
+El perfil de logging es metrics-only: cero logs CloudFront, WAF y ALB. No se
+registra query, cookies, Authorization, Stripe-Signature, secure-link token,
+session ID, body o dato de paciente. Maps permanece external-link-only; Edge no
+introduce `maps.googleapis.com`, `maps.gstatic.com`, API, iframe, Places o Routes.
+
+`MxMedCloudFrontPricingPlanVerification` registra perfil esperado, elegibilidad,
+asociación, fecha y referencia de evidencia, sin account ID, email o billing data.
+La configuración real conserva elegibilidad/asociación false. CloudFormation no
+finge un recurso pricing plan. El runbook futuro exige crear sin tráfico, abrir
+CloudFront Billing, cambiar manualmente al Free/Pro aprobado, verificar estado,
+guardar evidencia y sólo entonces cerrar el gate. Pro no se activa
+automáticamente; Business no forma parte del contrato.
+
+### Validación y cierre
+
+`EdgeFoundationAspect` y assertions de template comprueban activación, ALB
+default-deny, prefix list, `/readyz`, OAC, cache, WAF, privacidad, inventario,
+outputs y ausencia de ciclos. Se preservaron las 787 pruebas anteriores y se
+agregaron 148 controles Edge, para 935 pruebas. Los cuatro synths generales
+mantienen `edgeActivationMode=disabled-v1`; los cuatro synths Edge cubren media,
+origin lean/standard y staging, todos offline. No existe script deploy,
+bootstrap, pricing API, actualización DNS ni public traffic.
+
+Esta implementación no emite certificados, no elige dominio, no crea hosted
+zone, no cambia PHP/SQL/Stripe, no llama AWS y no despliega recursos. El estado
+operativo continúa:
+
+`public_traffic_status=BLOCKED_BY_RUNTIME_GATES`
+
+Microfase 19 de 24 concluida. Avance global 19/24; quedan 5 pendientes.
+
+Siguiente microfase, no iniciada aquí:
+
+`ARCH-DEVOPS/MXMed-AWS-Operations-Readiness-01`
+
+Será la Microfase 20 de 24.
+
+---

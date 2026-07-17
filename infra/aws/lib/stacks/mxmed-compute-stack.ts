@@ -33,6 +33,7 @@ import type { IKey } from 'aws-cdk-lib/aws-kms';
 import { CfnLogGroup, LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import type { IBucket } from 'aws-cdk-lib/aws-s3';
 import type { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
+import type { IApplicationTargetGroup } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import type { Construct } from 'constructs';
 
 import { ComputeFoundationAspect } from '../aspects/compute-foundation-aspect';
@@ -94,6 +95,7 @@ export interface MxMedComputeStackProps extends MxMedContractStackProps {
   readonly sessionLockEnabled: boolean;
   readonly sessionLockTimeoutSeconds: number;
   readonly sessionLockWaitMicroseconds: number;
+  readonly applicationTargetGroup?: IApplicationTargetGroup;
 }
 
 /** Profile-aware ECS/Fargate boundary with explicit cost-safe activation modes. */
@@ -289,6 +291,9 @@ export class MxMedComputeStack extends BaseMxMedStack {
         enableECSManagedTags: true,
         propagateTags: PropagatedTagSource.SERVICE,
       });
+      if (props.applicationTargetGroup !== undefined) {
+        this.service.attachToApplicationTargetGroup(props.applicationTargetGroup);
+      }
       this.scalingTarget = this.service.autoScaleTaskCount({
         minCapacity: config.computeMinCapacity,
         maxCapacity: config.computeMaxCapacity,

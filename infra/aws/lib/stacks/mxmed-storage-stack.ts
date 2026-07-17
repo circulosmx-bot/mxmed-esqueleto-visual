@@ -1,4 +1,5 @@
-import { AspectPriority, Aspects, Duration, RemovalPolicy, Tags } from 'aws-cdk-lib';
+import { AspectPriority, Aspects, CfnParameter, Duration, RemovalPolicy, Tags } from 'aws-cdk-lib';
+import { Effect, PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import type { IKey } from 'aws-cdk-lib/aws-kms';
 import {
   BlockPublicAccess,
@@ -22,6 +23,7 @@ import {
   type StorageLifecycleContract,
 } from '../constructs/storage-contract';
 import { registerMxMedStorageValidation } from '../utils/storage-validation';
+import { edgeUsesPublicMedia, MXMED_PUBLIC_MEDIA_OBJECT_PREFIX } from '../config/edge-config';
 
 export interface MxMedStorageStackProps extends MxMedContractStackProps {
   readonly applicationDataKey: IKey;
@@ -109,6 +111,25 @@ export class MxMedStorageStack extends BaseMxMedStack {
       backup: 'required',
       component: 'storage-public-media',
     });
+    if (edgeUsesPublicMedia(config)) {
+      const distributionArn = new CfnParameter(this, 'PublicMediaCloudFrontDistributionArn', {
+        type: 'String',
+        allowedPattern: '^arn:[^:]+:cloudfront::[0-9]{12}:distribution/[A-Z0-9]+$',
+        description: 'CloudFront distribution ARN captured through the approved edge handoff.',
+      });
+      publicMedia.addToResourcePolicy(
+        new PolicyStatement({
+          sid: 'AllowCloudFrontReadOnlyPublicMedia',
+          effect: Effect.ALLOW,
+          principals: [new ServicePrincipal('cloudfront.amazonaws.com')],
+          actions: ['s3:GetObject'],
+          resources: [publicMedia.arnForObjects(MXMED_PUBLIC_MEDIA_OBJECT_PREFIX)],
+          conditions: {
+            StringEquals: { 'AWS:SourceArn': distributionArn.valueAsString },
+          },
+        }),
+      );
+    }
 
     const privateLifecycleRules: LifecycleRule[] = [
       abortMultipartRule(),

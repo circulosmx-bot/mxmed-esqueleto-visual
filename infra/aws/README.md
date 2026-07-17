@@ -3,7 +3,7 @@
 ## Propósito y estado
 
 Este proyecto implementa la foundation local de Infrastructure as Code, la red V1 y las
-foundations de seguridad, datos, almacenamiento y sesiones de México Médico. Traduce PP-Decisiones 245
+foundations de seguridad, datos, almacenamiento, sesiones, Compute y Edge de México Médico. Traduce PP-Decisiones 245
 (`MXMED_AWS_ECS_FARGATE_REFERENCE_ARCHITECTURE_V1`), PP-Decisiones 249
 (`MXMED_AWS_CDK_FOUNDATION_CONTRACT_V1`), PP-Decisiones 251
 (`MXMED_AWS_NETWORK_READINESS_CONTRACT_V1`) y PP-Decisiones 253
@@ -12,12 +12,15 @@ foundations de seguridad, datos, almacenamiento y sesiones de México Médico. T
 (`MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 260
 (`MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1`), además de PP-Decisiones 263
 (`MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`) y PP-Decisiones 265
-(`MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1`), PP-Decisiones 266
+(`MXMED_AWS_EDGE_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 267
+(`MXMED_AWS_EDGE_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
 
 `MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack`, `MxMedStorageStack` y
 `MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. `MxMedComputeStack`
-implementa ECR, ECS tasks y el servicio Fargate de forma condicional; los scripts generales lo
-mantienen deshabilitado. Edge, Operations, Jobs, Backup y Email continúan vacíos. Nada está
+implementa ECR, ECS tasks y el servicio Fargate de forma condicional. Edge implementa offline
+CloudFront/OAC/WAF y, cuando corresponde, ALB/target group/listener; los scripts generales lo
+mantienen deshabilitado. Operations, Jobs, Backup y Email continúan vacíos. Nada está
 desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos en esta etapa.
 
 ## Arquitectura contractual
@@ -25,12 +28,14 @@ desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos e
 - Workloads `staging` y `production`: región `mx-central-1`.
 - Correo de cada ambiente: stage separado en `us-east-1` para SES.
 - Compute implementado offline: ECS Fargate Linux X86_64, activado sólo por contexto explícito.
-- Ingress futuro: Route 53, CloudFront, WAF, ALB y ECS.
+- Edge offline: CloudFront/OAC/WAF global en `us-east-1` y ALB restringido regional en
+  `mx-central-1`; no existe cutover real.
 - Datos: template RDS MySQL 8.4.9, cuatro buckets S3 privados y sesiones en ElastiCache Valkey 8.2.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene diez stacks: Network, Security, Data, Storage, Session y Compute
-implementados; Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
+`MxMedEnvironmentStage` contiene los diez stacks heredados y agrega condicionalmente
+`MxMedRegionalEdgeFoundationStack`; `MxMedGlobalEdgeStage` existe sólo en modos Edge no disabled.
+El stack Edge heredado, Operations, Jobs y Backup permanecen contractuales/vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
 ## Prerrequisitos
@@ -52,30 +57,34 @@ lockfile. No se admiten `--force`, `--legacy-peer-deps` ni versiones flotantes.
 
 ## Comandos
 
-| Comando                                                 | Propósito                                           |
-| ------------------------------------------------------- | --------------------------------------------------- |
-| `npm run build`                                         | Compila TypeScript a `dist/`.                       |
-| `npm run typecheck`                                     | Ejecuta el compilador sin emitir archivos.          |
-| `npm run lint`                                          | Valida TypeScript con ESLint local.                 |
-| `npm run format`                                        | Formatea exclusivamente archivos bajo `infra/aws/`. |
-| `npm run format:check`                                  | Comprueba formato sin modificar.                    |
-| `npm run test`                                          | Ejecuta unit tests y assertions finas.              |
-| `npm run test:watch`                                    | Ejecuta Jest en modo local interactivo.             |
-| `npm run synth:staging`                                 | Sintetiza staging offline en `cdk.out/staging`.     |
-| `npm run synth:production`                              | Sintetiza production lean offline.                  |
-| `npm run synth:production:launch-lean`                  | Alias explícito para production lean.               |
-| `npm run synth:production:standard`                     | Sintetiza production standard offline.              |
-| `npm run synth:production:scale-ready`                  | Sintetiza production scale-ready offline.           |
-| `npm run synth:production:launch-lean:compute-registry` | Sintetiza ECR registry-first.                       |
-| `npm run synth:production:launch-lean:compute-tasks`    | Sintetiza ECR, cluster y tasks sin servicio.        |
-| `npm run synth:production:launch-lean:compute-service`  | Sintetiza el servicio lean directory-core.          |
-| `npm run synth:production:standard:compute-service`     | Sintetiza el servicio standard directory-core.      |
-| `npm run synth:production:scale-ready:compute-service`  | Sintetiza el servicio scale-ready directory-core.   |
-| `npm run synth:staging:release-window:compute-service`  | Sintetiza el servicio staging release-window.       |
-| `npm run diff:staging`                                  | Contrato futuro de diff; no ejecutar todavía.       |
-| `npm run diff:production`                               | Contrato futuro de diff; no ejecutar todavía.       |
-| `npm run validate`                                      | Ejecuta typecheck, lint, formato y tests.           |
-| `npm run clean`                                         | Elimina únicamente outputs locales generados.       |
+| Comando                                                 | Propósito                                            |
+| ------------------------------------------------------- | ---------------------------------------------------- |
+| `npm run build`                                         | Compila TypeScript a `dist/`.                        |
+| `npm run typecheck`                                     | Ejecuta el compilador sin emitir archivos.           |
+| `npm run lint`                                          | Valida TypeScript con ESLint local.                  |
+| `npm run format`                                        | Formatea exclusivamente archivos bajo `infra/aws/`.  |
+| `npm run format:check`                                  | Comprueba formato sin modificar.                     |
+| `npm run test`                                          | Ejecuta unit tests y assertions finas.               |
+| `npm run test:watch`                                    | Ejecuta Jest en modo local interactivo.              |
+| `npm run synth:staging`                                 | Sintetiza staging offline en `cdk.out/staging`.      |
+| `npm run synth:production`                              | Sintetiza production lean offline.                   |
+| `npm run synth:production:launch-lean`                  | Alias explícito para production lean.                |
+| `npm run synth:production:standard`                     | Sintetiza production standard offline.               |
+| `npm run synth:production:scale-ready`                  | Sintetiza production scale-ready offline.            |
+| `npm run synth:production:launch-lean:compute-registry` | Sintetiza ECR registry-first.                        |
+| `npm run synth:production:launch-lean:compute-tasks`    | Sintetiza ECR, cluster y tasks sin servicio.         |
+| `npm run synth:production:launch-lean:compute-service`  | Sintetiza el servicio lean directory-core.           |
+| `npm run synth:production:standard:compute-service`     | Sintetiza el servicio standard directory-core.       |
+| `npm run synth:production:scale-ready:compute-service`  | Sintetiza el servicio scale-ready directory-core.    |
+| `npm run synth:staging:release-window:compute-service`  | Sintetiza el servicio staging release-window.        |
+| `npm run synth:production:launch-lean:edge-media`       | Sintetiza sólo el Edge global de media.              |
+| `npm run synth:production:launch-lean:edge-origin`      | Sintetiza Edge regional/global lean sin tráfico.     |
+| `npm run synth:production:standard:edge-origin`         | Sintetiza Edge regional/global standard sin tráfico. |
+| `npm run synth:staging:release-window:edge-origin`      | Sintetiza Edge staging sin tráfico.                  |
+| `npm run diff:staging`                                  | Contrato futuro de diff; no ejecutar todavía.        |
+| `npm run diff:production`                               | Contrato futuro de diff; no ejecutar todavía.        |
+| `npm run validate`                                      | Ejecuta typecheck, lint, formato y tests.            |
+| `npm run clean`                                         | Elimina únicamente outputs locales generados.        |
 
 No existe script de deploy o bootstrap automático.
 
@@ -88,6 +97,11 @@ environment=staging|production
 deploymentProfile=launch-lean-v1|production-standard-v1|scale-ready-v1
 computeActivationMode=disabled-v1|registry-only-v1|tasks-ready-v1|service-enabled-v1
 runtimeCapabilityProfile=directory-core-v1|paid-profile-v1|clinical-v1|professional-ai-v1
+edgeActivationMode=disabled-v1|media-cdn-ready-v1|application-origin-ready-v1|public-traffic-enabled-v1
+edgePricingProfile=flat-rate-free-v1|flat-rate-pro-v1|pay-as-you-go-approved-v1
+edgeDnsMode=none-v1|external-dns-v1|route53-managed-v1
+edgeCutoverState=blocked-known-gaps-v1|verified-for-cutover-v1
+staticAssetCacheState=disabled-until-fingerprinted-v1|immutable-fingerprinted-v1
 ```
 
 Los scripts de synth proporcionan los selectores aplicables. Los cuatro scripts generales fijan
@@ -172,12 +186,60 @@ no puede habilitar service antes de integrar y ejecutar un migrator idempotente.
 
 El primer despliegue futuro autorizado debe respetar este orden: disabled → registry-only → push
 externo por tag inmutable → obtención del digest → tasks-ready → MigrationTask → verificación de
-`mxmed_app` y secretos `AWSCURRENT` → service-enabled → healthz → Edge → readyz → tráfico. Edge,
-ALB, listener, target group, CloudFront, WAF y Route 53 siguen ausentes.
+`mxmed_app` y secretos `AWSCURRENT` → service-enabled → healthz → Edge → readyz → tráfico. Los
+recursos Edge existen sólo en templates opt-in; Route 53 y tráfico siguen ausentes de los perfiles
+reales.
 
 `domainAlias` permanece omitido hasta una decisión empresarial. No hay cuentas, dominios, ARNs,
 IPs o nombres físicos globales versionados. Si `CDK_DEFAULT_ACCOUNT` existe, la app lo transmite
 sin imprimirlo; si no existe, synth continúa offline y sin cuenta explícita.
+
+## Edge foundation implementada offline
+
+Los cuatro modos son explícitos y ortogonales al ambiente: `disabled-v1` crea cero recursos Edge;
+`media-cdn-ready-v1` crea sólo el stack global; `application-origin-ready-v1` crea los stacks
+regional y global con la distribución deshabilitada; `public-traffic-enabled-v1` está implementado
+para una fixture verificada, pero la configuración real lo rechaza por runtime gates abiertos. No
+existe script de tráfico público.
+
+`MxMedRegionalEdgeFoundationStack` pertenece a `mx-central-1`. Reutiliza
+`AlbIngressSecurityGroup`, agrega un único ingress independiente TCP 443 desde el parámetro
+`CloudFrontOriginFacingPrefixListId`, y crea ALB IPv4, listener HTTPS, default 403 y target group IP
+HTTP 8080 con health check `/readyz`. Host y header secreto deben coincidir para hacer forward. El
+nombre/valor del header son parámetros `NoEcho`, sin default ni output. Compute recibe el target
+group opcional y adjunta su propio service; por eso la dependencia es Compute → Regional Edge y no
+hay ciclo.
+
+`MxMedGlobalEdgeStack` pertenece a `us-east-1` y sólo consume parámetros: no usa exports ni
+lookups cross-region. Crea CloudFront IPv4-only, OAC S3 REST SigV4, policies de cache/request/
+headers y WAF CLOUDFRONT de exactamente cinco reglas: reputación IP, Common, SQLi, rate sensible
+100/300 e IP general 1200/300. Sampled requests y logs de CloudFront, WAF y ALB están deshabilitados.
+El webhook real `/api/subscriptions/index.php/webhooks/stripe` queda fuera de los rate limits; no
+se crea `/webhooks/stripe` ni la ruta todavía ausente `/subscriptions/stripe-return`.
+
+El default dinámico y `/assets/*` conservan TTL cero mientras no exista fingerprint completo.
+`/media/*` usa 86400/31536000/31536000, sin cookies, query ni Authorization. Sólo
+`PublicMediaBucket` recibe `s3:GetObject` para el prefix `media/*`; su policy existente y
+`ApplicationDataKey` limitan el principal CloudFront mediante el parámetro exacto
+`PublicMediaCloudFrontDistributionArn`. PrivateDocuments, ClinicalRecords, Quarantine y Audit no
+son origins públicos.
+
+El handoff futuro, todavía no ejecutado, es: desplegar Regional; capturar outputs no sensibles;
+desplegar Global con parámetros; capturar distribution ARN; actualizar los parámetros de
+Security/Storage; verificar OAC; asociar manualmente el plan CloudFront aprobado; mantener DNS sin
+cambios. Free/Pro/pay-as-you-go son perfiles tipados, no recursos CloudFormation. La elegibilidad y
+la asociación del plan deben verificarse manualmente en Billing; no se asumen por Free Tier.
+
+Los diez gates reales permanecen: `/readyz` no integrado (503), Stripe return ausente, webhook
+confirmado, assets sin fingerprint completo, dominio/certificados sin aprobar o emitir, pricing
+sin verificar, presupuesto sin aprobar y DNS sin cutover. En consecuencia:
+
+```text
+public_traffic_status=BLOCKED_BY_RUNTIME_GATES
+```
+
+No se emitieron certificados, no se creó DNS, no se llamó una cuenta AWS y no se desplegó ningún
+recurso.
 
 ## Red V1 implementada en templates
 
@@ -558,9 +620,9 @@ ECR KMS/inmutable/scan/lifecycle, digest requerido, Linux X86_64/Fargate, CPU y 
 allowlist exacta de secretos, contenedor no root/read-only, service privado 1.4.0, desired/min/max,
 autoscaling 60/70 y ausencia de recursos Edge.
 
-Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Jobs permanecen
-vacíos: los tests usan mutaciones sintéticas para demostrar guardrails, pero este proyecto no
-afirma que CloudFront, WAF, scanner, S3 workload o RDS estén desplegados.
+Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Jobs y el stack Edge
+heredado permanecen vacíos; los recursos Edge nuevos sólo existen en templates opt-in y este
+proyecto no afirma que CloudFront, WAF, ALB, scanner, S3 workload o RDS estén desplegados.
 
 Los valores secretos proceden de Secrets Manager y runbooks autorizados. Nunca deben incluirse en
 Git, props de configuración, CDK context, outputs, tags, plantillas, logs o evidencia. Tampoco se
@@ -575,8 +637,8 @@ La única política inicial es `path-only-no-query`. Representa contractualmente
 - cache deshabilitada;
 - redacción WAF de query obligatoria.
 
-El Aspect rechaza variantes sintéticas inseguras. Todavía no crea CloudFront, WAF, ALB ni el
-bridge `/subscriptions/stripe-return`; tampoco implementa webhook o pagos.
+El Aspect rechaza variantes sintéticas inseguras. Edge modela CloudFront/WAF/ALB offline, pero no
+crea el bridge `/subscriptions/stripe-return`; tampoco modifica webhook, PHP o pagos.
 
 ## Bootstrap, diff y deploy futuros
 
@@ -601,14 +663,15 @@ npm run test
 npm run validate
 ```
 
-Las 787 pruebas (596 preservadas y 191 nuevas) cubren configuración, naming,
+Las 935 pruebas (787 preservadas y 148 nuevas para Edge) cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
 VPC/subnets/NAT/rutas, endpoints, perfiles launch/standard/scale, ledger/gates, SG, Flow Logs, KMS,
 secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
 parameter/subnet groups, Enhanced Monitoring, inventario/lifecycle/cifrado de Storage, helpers de
 keys, metadata/tags, MIME/tamaños/TTL, Valkey/RBAC/TLS, contratos de sesión, guardrails negativos
 y síntesis determinista offline, además de activation modes, capability profiles, digest, ECR,
-tasks, servicio, autoscaling, runtime scaffold y guardrails Compute. Los
+tasks, servicio, autoscaling, runtime scaffold, guardrails Compute y los contratos Edge de
+activación, ALB, attachment, OAC, bucket/KMS policies, cache, WAF, Stripe, DNS fixture y privacidad. Los
 snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift

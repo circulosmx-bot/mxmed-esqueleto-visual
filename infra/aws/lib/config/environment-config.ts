@@ -33,6 +33,30 @@ export type MxMedStorageMimeType = 'application/pdf' | 'image/jpeg' | 'image/png
 export type MxMedDataClassification = 'public' | 'internal' | 'sensitive' | 'clinical';
 export type MxMedCriticality = 'low' | 'medium' | 'high';
 export type MxMedBackupRequirement = 'required' | 'not-required';
+export type MxMedEdgeActivationMode =
+  | 'disabled-v1'
+  | 'media-cdn-ready-v1'
+  | 'application-origin-ready-v1'
+  | 'public-traffic-enabled-v1';
+export type MxMedCloudFrontPricingProfile =
+  'flat-rate-free-v1' | 'flat-rate-pro-v1' | 'pay-as-you-go-approved-v1';
+export type MxMedEdgeOriginMode = 'cloudfront-restricted-public-alb-v1';
+export type MxMedEdgeLoggingProfile = 'metrics-only-no-request-logs-v1';
+export type MxMedEdgeCacheProfile = 'dynamic-zero-media-immutable-v1';
+export type MxMedEdgeWafProfile = 'free-five-rule-v1';
+export type MxMedEdgeMapsMode = 'external-link-only-v1';
+export type MxMedEdgeDnsMode = 'none-v1' | 'external-dns-v1' | 'route53-managed-v1';
+export type MxMedEdgeCutoverState = 'blocked-known-gaps-v1' | 'verified-for-cutover-v1';
+export type MxMedStaticAssetCacheState =
+  'disabled-until-fingerprinted-v1' | 'immutable-fingerprinted-v1';
+
+export interface MxMedCloudFrontPricingPlanVerification {
+  readonly expectedProfile: MxMedCloudFrontPricingProfile;
+  readonly accountEligibilityVerified: boolean;
+  readonly planAttached: boolean;
+  readonly verifiedAt: string | null;
+  readonly verificationEvidenceReference: string | null;
+}
 
 export interface MxMedGlobalTags {
   readonly Project: 'mxmed';
@@ -223,6 +247,27 @@ export interface MxMedEnvironmentConfig {
   readonly enableWaf: boolean;
   readonly enableCloudFrontLogging: boolean;
   readonly stripeReturnLoggingPolicy: MxMedStripeReturnLoggingPolicy;
+  readonly edgeActivationMode: MxMedEdgeActivationMode;
+  readonly edgePricingProfile: MxMedCloudFrontPricingProfile;
+  readonly edgeOriginMode: MxMedEdgeOriginMode;
+  readonly edgeLoggingProfile: MxMedEdgeLoggingProfile;
+  readonly edgeCacheProfile: MxMedEdgeCacheProfile;
+  readonly edgeWafProfile: MxMedEdgeWafProfile;
+  readonly edgeMapsMode: MxMedEdgeMapsMode;
+  readonly edgeDnsMode: MxMedEdgeDnsMode;
+  readonly edgeCutoverState: MxMedEdgeCutoverState;
+  readonly staticAssetCacheState: MxMedStaticAssetCacheState;
+  readonly readinessEndpointIntegrated: boolean;
+  readonly stripeReturnRouteImplemented: boolean;
+  readonly stripeWebhookRouteConfirmed: boolean;
+  readonly assetFingerprintingReady: boolean;
+  readonly edgeDomainApproved: boolean;
+  readonly viewerCertificateIssued: boolean;
+  readonly originCertificateIssued: boolean;
+  readonly cloudFrontPricingPlanVerified: boolean;
+  readonly budgetApproved: boolean;
+  readonly dnsCutoverApproved: boolean;
+  readonly cloudFrontPricingPlanVerification: MxMedCloudFrontPricingPlanVerification;
   readonly tags: MxMedGlobalTags;
 }
 

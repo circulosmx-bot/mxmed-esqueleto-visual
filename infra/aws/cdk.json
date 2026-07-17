@@ -3,5 +3,16 @@
   "output": "cdk.out",
   "analyticsReporting": false,
   "versionReporting": false,
-  "context": {}
+  "context": {
+    "edgeActivationMode": "disabled-v1",
+    "edgePricingProfile": "flat-rate-free-v1",
+    "edgeOriginMode": "cloudfront-restricted-public-alb-v1",
+    "edgeLoggingProfile": "metrics-only-no-request-logs-v1",
+    "edgeCacheProfile": "dynamic-zero-media-immutable-v1",
+    "edgeWafProfile": "free-five-rule-v1",
+    "edgeMapsMode": "external-link-only-v1",
+    "edgeDnsMode": "none-v1",
+    "edgeCutoverState": "blocked-known-gaps-v1",
+    "staticAssetCacheState": "disabled-until-fingerprinted-v1"
+  }
 }

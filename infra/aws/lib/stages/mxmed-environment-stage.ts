@@ -5,6 +5,7 @@ import type { Construct } from 'constructs';
 
 import type { MxMedEnvironmentConfig } from '../config/environment-config';
 import { computeCreatesRegistry, computeCreatesTasks } from '../config/compute-config';
+import { edgeCreatesRegional } from '../config/edge-config';
 import { validateEnvironmentConfig } from '../config/environment-schema';
 import { MxMedBackupStack } from '../stacks/mxmed-backup-stack';
 import { MxMedComputeStack } from '../stacks/mxmed-compute-stack';
@@ -16,6 +17,7 @@ import { MxMedOperationsStack } from '../stacks/mxmed-operations-stack';
 import { MxMedSecurityStack } from '../stacks/mxmed-security-stack';
 import { MxMedSessionStack } from '../stacks/mxmed-session-stack';
 import { MxMedStorageStack } from '../stacks/mxmed-storage-stack';
+import { MxMedRegionalEdgeFoundationStack } from '../stacks/mxmed-regional-edge-foundation-stack';
 
 export interface MxMedEnvironmentStageProps {
   readonly config: MxMedEnvironmentConfig;
@@ -29,6 +31,7 @@ export class MxMedEnvironmentStage extends Stage {
   public readonly storageStack: MxMedStorageStack;
   public readonly sessionStack: MxMedSessionStack;
   public readonly computeStack: MxMedComputeStack;
+  public readonly regionalEdgeStack: MxMedRegionalEdgeFoundationStack | undefined;
   public readonly edgeStack: MxMedEdgeStack;
   public readonly jobsStack: MxMedJobsStack;
   public readonly backupStack: MxMedBackupStack;
@@ -66,6 +69,15 @@ export class MxMedEnvironmentStage extends Stage {
       applicationDataKey: this.securityStack.applicationDataKey,
       secretsKey: this.securityStack.secretsKey,
     });
+    this.regionalEdgeStack = edgeCreatesRegional(props.config)
+      ? new MxMedRegionalEdgeFoundationStack(this, 'RegionalEdgeFoundation', {
+          ...stackProps,
+          vpc: this.networkStack.vpc,
+          publicIngressSubnets: this.networkStack.publicIngressSubnets,
+          albIngressSecurityGroup: this.networkStack.albIngressSecurityGroup,
+          applicationSecurityGroup: this.networkStack.applicationSecurityGroup,
+        })
+      : undefined;
     const computeStackProps = {
       ...stackProps,
       vpc: this.networkStack.vpc,
@@ -101,13 +113,20 @@ export class MxMedEnvironmentStage extends Stage {
       sessionLockTimeoutSeconds: props.config.sessionLockTimeoutSeconds,
       sessionLockWaitMicroseconds: props.config.sessionLockWaitMicroseconds,
     };
+    const edgeAwareComputeStackProps =
+      this.regionalEdgeStack === undefined
+        ? computeStackProps
+        : {
+            ...computeStackProps,
+            applicationTargetGroup: this.regionalEdgeStack.applicationTargetGroup,
+          };
     this.computeStack = new MxMedComputeStack(
       this,
       'Compute',
       this.dataStack.applicationUserSecret === undefined
-        ? computeStackProps
+        ? edgeAwareComputeStackProps
         : {
-            ...computeStackProps,
+            ...edgeAwareComputeStackProps,
             applicationUserSecret: this.dataStack.applicationUserSecret,
           },
     );
@@ -129,6 +148,10 @@ export class MxMedEnvironmentStage extends Stage {
       this.computeStack.addDependency(this.dataStack);
       this.computeStack.addDependency(this.storageStack);
       this.computeStack.addDependency(this.sessionStack);
+    }
+    if (this.regionalEdgeStack !== undefined) {
+      this.regionalEdgeStack.addDependency(this.networkStack);
+      this.computeStack.addDependency(this.regionalEdgeStack);
     }
     this.edgeStack.addDependency(this.computeStack);
     this.edgeStack.addDependency(this.securityStack);

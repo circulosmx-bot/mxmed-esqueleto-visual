@@ -1,4 +1,12 @@
-import { ArnFormat, AspectPriority, Aspects, Duration, RemovalPolicy, Tags } from 'aws-cdk-lib';
+import {
+  ArnFormat,
+  AspectPriority,
+  Aspects,
+  CfnParameter,
+  Duration,
+  RemovalPolicy,
+  Tags,
+} from 'aws-cdk-lib';
 import { ReadWriteType, Trail } from 'aws-cdk-lib/aws-cloudtrail';
 import { Effect, ManagedPolicy, PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import type { Role } from 'aws-cdk-lib/aws-iam';
@@ -25,6 +33,7 @@ import {
   mxmedSecuritySecretName,
 } from '../utils/security-naming';
 import { registerMxMedSecurityValidation } from '../utils/security-validation';
+import { edgeUsesPublicMedia } from '../config/edge-config';
 
 function cloudTrailRetention(days: number): RetentionDays {
   return days === 90 ? RetentionDays.THREE_MONTHS : RetentionDays.ONE_YEAR;
@@ -66,6 +75,25 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       'MXMed application data encryption key.',
       config,
     );
+    if (edgeUsesPublicMedia(config)) {
+      const distributionArn = new CfnParameter(this, 'PublicMediaCloudFrontDistributionArn', {
+        type: 'String',
+        allowedPattern: '^arn:[^:]+:cloudfront::[0-9]{12}:distribution/[A-Z0-9]+$',
+        description: 'CloudFront distribution ARN captured through the approved edge handoff.',
+      });
+      this.applicationDataKey.addToResourcePolicy(
+        new PolicyStatement({
+          sid: 'AllowCloudFrontPublicMediaDataKeyUse',
+          effect: Effect.ALLOW,
+          principals: [new ServicePrincipal('cloudfront.amazonaws.com')],
+          actions: ['kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey*'],
+          resources: ['*'],
+          conditions: {
+            StringEquals: { 'AWS:SourceArn': distributionArn.valueAsString },
+          },
+        }),
+      );
+    }
     this.secretsKey = this.createKey(
       'SecretsKey',
       mxmedSecurityKeyAlias(config.environmentCode, 'secrets'),
