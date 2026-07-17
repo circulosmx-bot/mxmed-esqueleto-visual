@@ -57,12 +57,12 @@ describe.each([
   ['staging', STAGING_CONFIG],
   ['production', PRODUCTION_CONFIG],
 ] as const)('%s stage topology', (_name, config) => {
-  test('creates nine workload stacks and a separate email stack while Operations is disabled', () => {
+  test('creates eight workload stacks and a separate email stack while Operations and Backup are disabled', () => {
     const { environment, email } = createStages(config);
     const workloadStacks = environment.node.children.filter((child) => Stack.isStack(child));
     const emailStacks = email.node.children.filter((child) => Stack.isStack(child));
 
-    expect(workloadStacks).toHaveLength(9);
+    expect(workloadStacks).toHaveLength(8);
     expect(emailStacks).toEqual([email.emailStack]);
     expect(workloadStacks).not.toContain(email.emailStack);
   });
@@ -153,9 +153,7 @@ describe('workload dependencies', () => {
     expect(directDependencyNames(environment.jobsStack)).toEqual(
       ['mxmed-prd-compute', 'mxmed-prd-security', 'mxmed-prd-storage'].sort(),
     );
-    expect(directDependencyNames(environment.backupStack)).toEqual(
-      ['mxmed-prd-data', 'mxmed-prd-storage', 'mxmed-prd-security'].sort(),
-    );
+    expect(environment.backupStack).toBeUndefined();
     expect(() => {
       expectNoDependencyCycle(stacks);
     }).not.toThrow();

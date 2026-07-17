@@ -22,6 +22,8 @@ import type { MxMedEdgeContextValues } from './edge-config';
 import { MXMED_REAL_EDGE_RUNTIME_GATES, resolveEdgeContext } from './edge-config';
 import type { MxMedOperationsContextValues } from './operations-profiles';
 import { resolveOperationsContext } from './operations-profiles';
+import type { MxMedBackupDrContextValues } from './backup-dr-profiles';
+import { resolveBackupDrContext } from './backup-dr-profiles';
 
 const STAGING_BASE_CONFIG = Object.freeze({
   environmentName: 'staging',
@@ -270,6 +272,7 @@ function createEnvironmentConfig(
   runtimeCapabilityProfileValue?: unknown,
   edgeContextValues: MxMedEdgeContextValues = {},
   operationsContextValues: MxMedOperationsContextValues = {},
+  backupDrContextValues: MxMedBackupDrContextValues = {},
 ): MxMedEnvironmentConfig {
   const resolved = resolveLaunchProfile(environmentName, deploymentProfileValue);
   const computeControls = resolveComputeControls(
@@ -284,6 +287,9 @@ function createEnvironmentConfig(
     resolved.deploymentProfile,
     operationsContextValues,
   );
+  const backupDr = resolveBackupDrContext(backupDrContextValues);
+  const backupActive = backupDr.backupDrActivationMode !== 'disabled-v1';
+  const databaseBackupRetentionDays = backupActive ? 35 : base.databaseBackupRetentionDays;
   const config = {
     ...base,
     ...resolved.capacity,
@@ -315,6 +321,9 @@ function createEnvironmentConfig(
     ...edge,
     ...MXMED_REAL_EDGE_RUNTIME_GATES,
     ...operations,
+    ...backupDr,
+    databaseBackupRetentionDays,
+    backupRetentionDays: databaseBackupRetentionDays,
     cloudFrontPricingPlanVerification: {
       expectedProfile: edge.edgePricingProfile,
       accountEligibilityVerified: false,
@@ -367,6 +376,7 @@ export function getEnvironmentConfig(
   runtimeCapabilityProfileValue?: unknown,
   edgeContextValues: MxMedEdgeContextValues = {},
   operationsContextValues: MxMedOperationsContextValues = {},
+  backupDrContextValues: MxMedBackupDrContextValues = {},
 ): MxMedEnvironmentConfig {
   const environmentName = parseEnvironmentName(value);
   return createEnvironmentConfig(
@@ -376,5 +386,6 @@ export function getEnvironmentConfig(
     runtimeCapabilityProfileValue,
     edgeContextValues,
     operationsContextValues,
+    backupDrContextValues,
   );
 }

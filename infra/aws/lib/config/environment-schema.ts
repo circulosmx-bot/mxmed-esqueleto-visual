@@ -16,6 +16,7 @@ import {
 } from './launch-profiles';
 import { validateEdgeFoundationConfig } from './edge-config';
 import { validateOperationsConfig } from './operations-profiles';
+import { backupDrCreatesRegional, validateBackupDrConfig } from './backup-dr-profiles';
 import { assertMxMedCondition, assertNoSensitiveConfiguration } from '../utils/validation';
 
 const ENVIRONMENT_CODES: Readonly<Record<MxMedEnvironmentName, MxMedEnvironmentCode>> = {
@@ -351,6 +352,11 @@ function validateDatabaseConfiguration(
     databaseMaxAllocatedStorageGiB: capacity.databaseMaxAllocatedStorageGiB,
     databaseProxyEnabled: capacity.databaseProxyEnabled,
     databaseReadReplicaCount: capacity.databaseReadReplicaCount,
+    databaseBackupRetentionDays: backupDrCreatesRegional(
+      config as unknown as MxMedEnvironmentConfig,
+    )
+      ? 35
+      : EXPECTED_DATABASE_CONFIGURATION[environmentName].databaseBackupRetentionDays,
   };
   for (const [field, expectedValue] of Object.entries(expected)) {
     const actualValue = config[field];
@@ -829,6 +835,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
   validateCostAwareConfiguration(input, environmentName);
   validateEdgeFoundationConfig(input as unknown as MxMedEnvironmentConfig);
   validateOperationsConfig(input as unknown as MxMedEnvironmentConfig);
+  validateBackupDrConfig(input as unknown as MxMedEnvironmentConfig);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',
     'MXMED_CONFIG_INVALID',

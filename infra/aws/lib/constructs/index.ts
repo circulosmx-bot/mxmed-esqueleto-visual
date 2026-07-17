@@ -76,3 +76,25 @@ export type {
 } from './operations-contract';
 export { MXMED_OPERATIONS_RUNBOOK_CATALOG, operationsRunbook } from './operations-runbook-catalog';
 export type { MxMedOperationsRunbook } from './operations-runbook-catalog';
+export {
+  MXMED_BACKUP_RPO_RTO_CONTRACT,
+  MXMED_ECR_RECOVERY_CONTRACT,
+  MXMED_SECRET_RECOVERY_CONTRACTS,
+  MXMED_VALKEY_RECOVERY_CONTRACT,
+  transitionBackupReadiness,
+} from './backup-dr-contract';
+export type { MxMedDrReadyEvidence, MxMedSecretRecoveryContract } from './backup-dr-contract';
+export {
+  MXMED_BACKUP_SCHEDULES,
+  buildCriticalS3BackupRules,
+  buildRdsBackupRules,
+} from './backup-plan-catalog';
+export { MXMED_BACKUP_RUNBOOK_CATALOG, backupRunbook } from './backup-runbook-catalog';
+export type { MxMedBackupRunbook, MxMedBackupRunbookSeverity } from './backup-runbook-catalog';
+export { MXMED_BACKUP_COST_CONTRACT } from './backup-cost-contract';
+export type { MxMedBackupCostInputs, MxMedBackupCostLedgerEntry } from './backup-cost-contract';
+export {
+  MXMED_RESTORE_SENTINEL_CONTRACT,
+  MXMED_RESTORE_VALIDATION_PROFILE,
+} from './backup-restore-validation-contract';
+export type { RestoreResidualCostAudit } from './backup-restore-validation-contract';

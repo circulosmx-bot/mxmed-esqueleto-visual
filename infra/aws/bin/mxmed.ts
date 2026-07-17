@@ -8,6 +8,7 @@ import { NoPublicBucketAspect } from '../lib/aspects/no-public-bucket-aspect';
 import { NoPublicDatabaseAspect } from '../lib/aspects/no-public-database-aspect';
 import { ProductionRetentionAspect } from '../lib/aspects/production-retention-aspect';
 import { OperationsFoundationAspect } from '../lib/aspects/operations-foundation-aspect';
+import { BackupDrFoundationAspect } from '../lib/aspects/backup-dr-foundation-aspect';
 import {
   MXMED_SAFE_STRIPE_RETURN_LOGGING_CONTROLS,
   StripeReturnLoggingSafetyAspect,
@@ -64,6 +65,9 @@ function applyFoundationAspects(
   Aspects.of(environmentStage).add(new OperationsFoundationAspect(config), {
     priority: AspectPriority.READONLY,
   });
+  Aspects.of(environmentStage).add(new BackupDrFoundationAspect(config), {
+    priority: AspectPriority.READONLY,
+  });
   if (globalEdgeStage !== undefined) {
     Aspects.of(globalEdgeStage).add(new EdgeFoundationAspect(), {
       priority: AspectPriority.READONLY,
@@ -112,6 +116,24 @@ export function createMxMedApp(): App {
       costAllocationTagState: app.node.tryGetContext('costAllocationTagState'),
       costAnomalyMonitorOwnershipMode: app.node.tryGetContext('costAnomalyMonitorOwnershipMode'),
       costTagAnomalyMonitorMode: app.node.tryGetContext('costTagAnomalyMonitorMode'),
+    },
+    {
+      backupDrActivationMode: app.node.tryGetContext('backupDrActivationMode'),
+      backupVaultLockMode: app.node.tryGetContext('backupVaultLockMode'),
+      drRegionState: app.node.tryGetContext('drRegionState'),
+      drRegion: app.node.tryGetContext('drRegion'),
+      backupDataResidencyState: app.node.tryGetContext('backupDataResidencyState'),
+      crossAccountBackupMode: app.node.tryGetContext('crossAccountBackupMode'),
+      restoreTestingMode: app.node.tryGetContext('restoreTestingMode'),
+      backupSelectionMode: app.node.tryGetContext('backupSelectionMode'),
+      backupValidationState: app.node.tryGetContext('backupValidationState'),
+      backupComplianceChangeableForDays: app.node.tryGetContext(
+        'backupComplianceChangeableForDays',
+      ),
+      backupApplicationValidationIntegrated: app.node.tryGetContext(
+        'backupApplicationValidationIntegrated',
+      ),
+      backupSentinelsIntegrated: app.node.tryGetContext('backupSentinelsIntegrated'),
     },
   );
   const accountValue = process.env.CDK_DEFAULT_ACCOUNT?.trim();

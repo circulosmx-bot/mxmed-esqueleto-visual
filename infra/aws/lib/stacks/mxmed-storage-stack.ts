@@ -24,6 +24,7 @@ import {
 } from '../constructs/storage-contract';
 import { registerMxMedStorageValidation } from '../utils/storage-validation';
 import { edgeUsesPublicMedia, MXMED_PUBLIC_MEDIA_OBJECT_PREFIX } from '../config/edge-config';
+import { backupDrCreatesRegional } from '../config/backup-dr-profiles';
 
 export interface MxMedStorageStackProps extends MxMedContractStackProps {
   readonly applicationDataKey: IKey;
@@ -163,6 +164,12 @@ export class MxMedStorageStack extends BaseMxMedStack {
       ...commonBucketProps,
       lifecycleRules: privateLifecycleRules,
     });
+    if (backupDrCreatesRegional(config)) {
+      const privateDocumentsResource = privateDocuments.node.defaultChild as CfnBucket;
+      privateDocumentsResource.notificationConfiguration = {
+        eventBridgeConfiguration: { eventBridgeEnabled: true },
+      };
+    }
     applyBucketTags(privateDocuments, {
       classification: 'sensitive',
       criticality: 'high',
@@ -194,6 +201,12 @@ export class MxMedStorageStack extends BaseMxMedStack {
       ...commonBucketProps,
       lifecycleRules: clinicalLifecycleRules,
     });
+    if (backupDrCreatesRegional(config)) {
+      const clinicalRecordsResource = clinicalRecords.node.defaultChild as CfnBucket;
+      clinicalRecordsResource.notificationConfiguration = {
+        eventBridgeConfiguration: { eventBridgeEnabled: true },
+      };
+    }
     applyBucketTags(clinicalRecords, {
       classification: 'clinical',
       criticality: 'high',

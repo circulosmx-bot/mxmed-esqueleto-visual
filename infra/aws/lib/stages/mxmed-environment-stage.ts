@@ -7,14 +7,21 @@ import type { MxMedEnvironmentConfig } from '../config/environment-config';
 import { computeCreatesRegistry, computeCreatesTasks } from '../config/compute-config';
 import { edgeCreatesRegional } from '../config/edge-config';
 import { operationsCreatesObservability } from '../config/operations-profiles';
+import {
+  backupDrCreatesCrossRegion,
+  backupDrCreatesRegional,
+  backupDrCreatesRestoreValidation,
+} from '../config/backup-dr-profiles';
 import { validateEnvironmentConfig } from '../config/environment-schema';
-import { MxMedBackupStack } from '../stacks/mxmed-backup-stack';
 import { MxMedComputeStack } from '../stacks/mxmed-compute-stack';
 import { MxMedDataStack } from '../stacks/mxmed-data-stack';
+import { MxMedDrCopyStack } from '../stacks/mxmed-dr-copy-stack';
 import { MxMedEdgeStack } from '../stacks/mxmed-edge-stack';
 import { MxMedJobsStack } from '../stacks/mxmed-jobs-stack';
 import { MxMedNetworkStack } from '../stacks/mxmed-network-stack';
 import { MxMedRegionalOperationsStack } from '../stacks/mxmed-regional-operations-stack';
+import { MxMedRegionalBackupStack } from '../stacks/mxmed-regional-backup-stack';
+import { MxMedRestoreValidationStack } from '../stacks/mxmed-restore-validation-stack';
 import { MxMedSecurityStack } from '../stacks/mxmed-security-stack';
 import { MxMedSessionStack } from '../stacks/mxmed-session-stack';
 import { MxMedStorageStack } from '../stacks/mxmed-storage-stack';
@@ -35,7 +42,10 @@ export class MxMedEnvironmentStage extends Stage {
   public readonly regionalEdgeStack: MxMedRegionalEdgeFoundationStack | undefined;
   public readonly edgeStack: MxMedEdgeStack;
   public readonly jobsStack: MxMedJobsStack;
-  public readonly backupStack: MxMedBackupStack;
+  public readonly backupStack: MxMedRegionalBackupStack | undefined;
+  public readonly regionalBackupStack: MxMedRegionalBackupStack | undefined;
+  public readonly drCopyStack: MxMedDrCopyStack | undefined;
+  public readonly restoreValidationStack: MxMedRestoreValidationStack | undefined;
   public readonly operationsStack: MxMedRegionalOperationsStack | undefined;
   public readonly regionalOperationsStack: MxMedRegionalOperationsStack | undefined;
 
@@ -163,7 +173,44 @@ export class MxMedEnvironmentStage extends Stage {
       : undefined;
     this.regionalOperationsStack = this.operationsStack;
     this.jobsStack = new MxMedJobsStack(this, 'Jobs', stackProps);
-    this.backupStack = new MxMedBackupStack(this, 'Backup', stackProps);
+    if (backupDrCreatesRegional(props.config) && this.operationsStack === undefined) {
+      throw new Error('backup_monitoring_topics_not_available');
+    }
+    this.regionalBackupStack =
+      this.operationsStack === undefined || !backupDrCreatesRegional(props.config)
+        ? undefined
+        : new MxMedRegionalBackupStack(this, 'RegionalBackup', {
+            ...stackProps,
+            databaseInstance: this.dataStack.databaseInstance,
+            clinicalRecordsBucket: this.storageStack.clinicalRecordsBucket,
+            privateDocumentsBucket: this.storageStack.privateDocumentsBucket,
+            applicationDataKey: this.securityStack.applicationDataKey,
+            backupKey: this.securityStack.backupKey,
+            regionalCriticalTopic: this.operationsStack.regionalCriticalTopic,
+            regionalWarningTopic: this.operationsStack.regionalWarningTopic,
+          });
+    this.backupStack = this.regionalBackupStack;
+    this.drCopyStack = backupDrCreatesCrossRegion(props.config)
+      ? new MxMedDrCopyStack(this, 'DrCopy', {
+          ...stackProps,
+          drRegion: this.requireDrRegion(props.config),
+        })
+      : undefined;
+    this.restoreValidationStack = backupDrCreatesRestoreValidation(props.config)
+      ? new MxMedRestoreValidationStack(this, 'RestoreValidation', {
+          ...stackProps,
+          vpc: this.networkStack.vpc,
+          isolatedDataSubnets: this.networkStack.isolatedDataSubnets,
+          databaseInstanceArn: this.dataStack.databaseInstance.attrDbInstanceArn,
+          databaseSubnetGroupName: this.dataStack.subnetGroup.ref,
+          clinicalRecordsBucket: this.storageStack.clinicalRecordsBucket,
+          privateDocumentsBucket: this.storageStack.privateDocumentsBucket,
+          regionalRecoveryVaultArn:
+            this.requireRegionalBackupStack().regionalRecoveryVault.attrBackupVaultArn,
+          backupKey: this.securityStack.backupKey,
+          applicationDataKey: this.securityStack.applicationDataKey,
+        })
+      : undefined;
 
     this.dataStack.addDependency(this.networkStack);
     this.dataStack.addDependency(this.securityStack);
@@ -189,9 +236,20 @@ export class MxMedEnvironmentStage extends Stage {
     this.jobsStack.addDependency(this.computeStack);
     this.jobsStack.addDependency(this.securityStack);
     this.jobsStack.addDependency(this.storageStack);
-    this.backupStack.addDependency(this.dataStack);
-    this.backupStack.addDependency(this.storageStack);
-    this.backupStack.addDependency(this.securityStack);
+    if (this.regionalBackupStack !== undefined) {
+      this.regionalBackupStack.addDependency(this.dataStack);
+      this.regionalBackupStack.addDependency(this.storageStack);
+      this.regionalBackupStack.addDependency(this.securityStack);
+      this.regionalBackupStack.addDependency(this.requireOperationsStack());
+    }
+    if (this.restoreValidationStack !== undefined) {
+      this.restoreValidationStack.addDependency(this.networkStack);
+      this.restoreValidationStack.addDependency(this.dataStack);
+      this.restoreValidationStack.addDependency(this.storageStack);
+      this.restoreValidationStack.addDependency(this.securityStack);
+      this.restoreValidationStack.addDependency(this.requireRegionalBackupStack());
+      this.restoreValidationStack.addDependency(this.requireOperationsStack());
+    }
 
     if (this.operationsStack !== undefined) {
       for (const observableStack of [
@@ -206,5 +264,24 @@ export class MxMedEnvironmentStage extends Stage {
         this.operationsStack.addDependency(this.regionalEdgeStack);
       }
     }
+  }
+
+  private requireDrRegion(config: MxMedEnvironmentConfig): string {
+    if (config.drRegion === undefined) throw new Error('dr_region_not_selected_or_verified');
+    return config.drRegion;
+  }
+
+  private requireRegionalBackupStack(): MxMedRegionalBackupStack {
+    if (this.regionalBackupStack === undefined) {
+      throw new Error('MXMED_REGIONAL_BACKUP_STACK_REQUIRED');
+    }
+    return this.regionalBackupStack;
+  }
+
+  private requireOperationsStack(): MxMedRegionalOperationsStack {
+    if (this.operationsStack === undefined) {
+      throw new Error('backup_monitoring_topics_not_available');
+    }
+    return this.operationsStack;
   }
 }

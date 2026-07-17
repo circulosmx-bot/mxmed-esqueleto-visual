@@ -48,7 +48,7 @@ describe.each([
 
     try {
       const templates = renderTemplates(config);
-      expect(Object.keys(templates)).toHaveLength(10);
+      expect(Object.keys(templates)).toHaveLength(9);
       for (const [stackName, template] of Object.entries(templates)) {
         const rendered = template as { Resources?: Record<string, unknown> };
         const resources = Object.values(rendered.Resources ?? {}) as { Type?: string }[];

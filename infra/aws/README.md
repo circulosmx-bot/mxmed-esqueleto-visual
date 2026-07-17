@@ -16,15 +16,18 @@ foundations de seguridad, datos, almacenamiento, sesiones, Compute y Edge de Mé
 (`MXMED_AWS_EDGE_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 267
 (`MXMED_AWS_EDGE_FOUNDATION_IMPLEMENTATION_V1`), PP-Decisiones 268
 (`MXMED_AWS_OPERATIONS_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 269
-(`MXMED_AWS_OPERATIONS_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_OPERATIONS_FOUNDATION_IMPLEMENTATION_V1`), PP-Decisiones 270
+(`MXMED_AWS_BACKUP_DR_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 271
+(`MXMED_AWS_BACKUP_DR_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
 
 `MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack`, `MxMedStorageStack` y
 `MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. `MxMedComputeStack`
 implementa ECR, ECS tasks y el servicio Fargate de forma condicional. Edge implementa offline
 CloudFront/OAC/WAF y, cuando corresponde, ALB/target group/listener; los scripts generales lo
 mantienen deshabilitado. Operations implementa offline controles de costo, alarmas, dashboards y
-topics condicionales; Jobs, Backup y Email continúan vacíos. Nada está
-desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos en esta etapa.
+topics condicionales. Backup/DR implementa templates offline condicionales; Jobs y Email continúan
+vacíos. Nada está desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos
+en esta etapa.
 
 ## Arquitectura contractual
 
@@ -38,11 +41,12 @@ desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos e
 - Datos: template RDS MySQL 8.4.9, cuatro buckets S3 privados y sesiones en ElastiCache Valkey 8.2.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene nueve stacks base y agrega condicionalmente
-`MxMedRegionalEdgeFoundationStack` y `MxMedRegionalOperationsStack`;
+`MxMedEnvironmentStage` contiene ocho stacks base y agrega condicionalmente
+`MxMedRegionalEdgeFoundationStack`, `MxMedRegionalOperationsStack`,
+`MxMedRegionalBackupStack`, `MxMedDrCopyStack` y `MxMedRestoreValidationStack`;
 `MxMedGlobalEdgeStage` existe sólo en modos Edge no disabled y
 `MxMedGlobalOperationsStage` compone Cost Management con los stacks globales aplicables.
-El stack Edge heredado, Jobs y Backup permanecen contractuales/vacíos. `MxMedEmailStage` contiene
+El stack Edge heredado y Jobs permanecen contractuales/vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
 ## Prerrequisitos
@@ -93,6 +97,10 @@ lockfile. No se admiten `--force`, `--legacy-peer-deps` ni versiones flotantes.
 | `npm run synth:production:standard:operations`          | Sintetiza el catálogo Operations standard.           |
 | `npm run synth:production:scale-ready:operations`       | Sintetiza Operations sobre perfil scale-ready.       |
 | `npm run synth:staging:release-window:operations`       | Sintetiza Operations lean para la ventana staging.   |
+| `npm run synth:production:launch-lean:backup-regional`  | Sintetiza Backup regional lean offline.              |
+| `npm run synth:production:standard:backup-regional`     | Sintetiza Backup regional standard offline.          |
+| `npm run synth:production:scale-ready:backup-regional`  | Sintetiza Backup regional scale-ready offline.       |
+| `npm run synth:staging:release-window:backup-regional`  | Sintetiza Backup regional staging offline.           |
 | `npm run diff:staging`                                  | Contrato futuro de diff; no ejecutar todavía.        |
 | `npm run diff:production`                               | Contrato futuro de diff; no ejecutar todavía.        |
 | `npm run validate`                                      | Ejecuta typecheck, lint, formato y tests.            |
@@ -122,6 +130,14 @@ clinicalLogSanitizationState=blocked-legacy-agenda-logs-v1|source-sanitization-v
 costAllocationTagState=inactive-v1|active-and-verified-v1
 costAnomalyMonitorOwnershipMode=create-service-monitor-v1|import-existing-service-monitor-v1
 costTagAnomalyMonitorMode=disabled-until-tags-active-v1|enabled-v1
+backupDrActivationMode=disabled-v1|regional-recovery-ready-v1|cross-region-copy-ready-v1|restore-validation-ready-v1
+backupVaultLockMode=unlocked-v1|governance-v1|compliance-approved-v1
+drRegionState=not-selected-v1|selected-and-verified-v1
+crossAccountBackupMode=disabled-v1|organization-vault-approved-v1
+restoreTestingMode=disabled-v1|manual-quarterly-v1|scheduled-monthly-v1
+backupDataResidencyState=pending-review-v1|approved-v1
+backupValidationState=not-tested-v1|restore-job-completed-v1|application-validation-passed-v1
+backupSelectionMode=explicit-resource-arns-v1|verified-tags-v1
 ```
 
 Los scripts de synth proporcionan los selectores aplicables. Los cuatro scripts generales fijan
@@ -260,6 +276,47 @@ public_traffic_status=BLOCKED_BY_RUNTIME_GATES
 
 No se emitieron certificados, no se creó DNS, no se llamó una cuenta AWS y no se desplegó ningún
 recurso.
+
+## Backup/DR foundation implementada offline
+
+`MXMED_AWS_BACKUP_DR_FOUNDATION_IMPLEMENTATION_V1` materializa PP270 sin consultar una cuenta ni
+iniciar jobs. La estrategia cerrada es `backup-and-restore-v1`. Los synth generales conservan
+`backupDrActivationMode=disabled-v1` y crean cero stacks o recursos Backup/DR; los cuatro scripts
+regionales usan activación explícita y reutilizan los topics cifrados de Operations.
+
+En regional mode, DataStack conserva ownership del PITR nativo RDS a 35 días y AWS Backup añade
+únicamente snapshots periódicos: diario a las 03:00 UTC, 35 días, y mensual/365 días en standard o
+scale-ready. AWS Backup continuous para RDS permanece prohibido. ClinicalRecords y
+PrivateDocuments conservan versioning, KMS, Block Public Access y RETAIN; al activar Backup se
+habilita EventBridge y un único plan S3 usa continuous/35 días más reglas periódicas del perfil en
+el mismo `RegionalRecoveryVault`. PublicMedia se excluye en launch, Quarantine siempre se excluye y
+Audit conserva ownership en Security.
+
+El vault regional reutiliza la `BackupKey` de Security, usa Vault Lock `governance-v1` con
+retención mínima 1 y máxima 365, sin `ChangeableForDays`. Compliance no está activa. El
+`BackupServiceRole` y el `RestoreValidationRole` están separados, confían sólo en
+`backup.amazonaws.com`, no usan `AdministratorAccess`/`AWSBackupFullAccess`, no leen secretos y no
+borran fuentes. Los fallos de backup/copy/restore se enrutan de forma sanitizada al topic crítico
+regional; EventBridge sigue siendo best-effort.
+
+No hay región DR real seleccionada ni script cross-region productivo. La fixture exige región
+explícita, residencia aprobada y parámetros sin default; crea key/vault destino y añade copy
+actions sólo a reglas periódicas, sin Exports cross-region y con cross-account deshabilitado.
+Valkey se recupera vacío con reautenticación; ECR se reconstruye desde el commit publicado y
+digest verificado; los secretos se rotan o reemiten, nunca se respaldan como valores.
+
+`manual-quarterly-v1` refina el contrato: crea aislamiento, roles, parámetros de presupuesto y
+cleanup, pero ningún schedule automático. `scheduled-monthly-v1` existe sólo como fixture cerrada
+por residencia, presupuesto, cleanup, sentinels y workflow de validación; usa SG sin ingress ni
+egress, DB temporal no pública y bucket temporal privado/KMS/RETAIN. Un restore `COMPLETED` no
+equivale a validación. La máquina de estados exige restore, schema/checksum/sentinels, cleanup,
+runbook, owners, costos, monitoreo y evidencia antes de `dr-ready-v1`.
+
+El catálogo contiene 22 runbooks y objetivos RPO/RTO internos no medidos; no son SLA ni evidencia
+de restore. El contrato de costo conserva quantities/rates desconocidos como `null`, no consulta
+precios y excluye air-gapped vault, Audit Manager, report plans, indexing y cross-account en
+launch. Automatic failover/failback permanecen `false`. Recovery points reales, restore probado,
+región DR, cumplimiento legal y `DR_READY` no se afirman. Recursos AWS desplegados: cero.
 
 ## Operations foundation implementada offline
 
@@ -611,11 +668,16 @@ npm run synth:production:launch-lean:operations
 npm run synth:production:standard:operations
 npm run synth:production:scale-ready:operations
 npm run synth:staging:release-window:operations
+npm run synth:production:launch-lean:backup-regional
+npm run synth:production:standard:backup-regional
+npm run synth:production:scale-ready:backup-regional
+npm run synth:staging:release-window:backup-regional
 ```
 
 Todos los comandos deben funcionar sin credenciales AWS y no despliegan nada. Los generales
-mantienen Compute, Edge y Operations deshabilitados; los explícitos prueban registry/tasks/service
-y los cinco perfiles Operations. SecurityStack crea cuatro contenedores de
+mantienen Compute, Edge, Operations y Backup/DR deshabilitados; los explícitos prueban
+registry/tasks/service, los cinco perfiles Operations y los cuatro perfiles regionales Backup.
+SecurityStack crea cuatro contenedores de
 secreto pero cero valores versionados; DataStack crea el contrato RDS sin valor secreto;
 StorageStack crea sólo cuatro buckets y cuatro políticas SSL; SessionStack crea la topología
 Valkey y un secreto generado sin revelar su valor. Compute no crea scanner, SQS,
@@ -674,6 +736,7 @@ Los Aspects iniciales son:
 - `SessionFoundationAspect`;
 - `ComputeFoundationAspect`.
 - `OperationsFoundationAspect`.
+- `BackupDrFoundationAspect`.
 
 NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
 tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
@@ -750,7 +813,7 @@ npm run test
 npm run validate
 ```
 
-Las 1196 pruebas (935 preservadas y 261 nuevas para Operations) cubren configuración, naming,
+Las 1501 pruebas (1196 preservadas y 305 nuevas para Backup/DR) cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
 VPC/subnets/NAT/rutas, endpoints, perfiles launch/standard/scale, ledger/gates, SG, Flow Logs, KMS,
 secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
@@ -761,7 +824,10 @@ tasks, servicio, autoscaling, runtime scaffold, guardrails Compute y los contrat
 activación, ALB, attachment, OAC, bucket/KMS policies, cache, WAF, Stripe, DNS fixture y privacidad,
 además de modos Operations, budgets, Cost Anomaly Detection, SNS/KMS, alarmas profile-aware,
 dashboards, métricas de aplicación, log privacy, runbooks, SLO/error budget, residual audit,
-guardrails y synth determinista. Los
+guardrails y synth determinista. Los contratos Backup/DR añaden coverage de activation modes,
+PITR RDS y planes periódicos, S3 continuous/periodic, Vault Lock governance, selecciones
+explícitas, IAM/KMS, monitoring, handoff cross-region, restore aislado, sentinels/cleanup, 22
+runbooks, RPO/RTO, readiness, costo, privacidad, guardrails y determinismo offline. Los
 snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift

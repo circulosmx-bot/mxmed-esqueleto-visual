@@ -33,6 +33,29 @@ export type MxMedStorageMimeType = 'application/pdf' | 'image/jpeg' | 'image/png
 export type MxMedDataClassification = 'public' | 'internal' | 'sensitive' | 'clinical';
 export type MxMedCriticality = 'low' | 'medium' | 'high';
 export type MxMedBackupRequirement = 'required' | 'not-required';
+export type MxMedBackupDrActivationMode =
+  | 'disabled-v1'
+  | 'regional-recovery-ready-v1'
+  | 'cross-region-copy-ready-v1'
+  | 'restore-validation-ready-v1';
+export type MxMedDisasterRecoveryStrategy = 'backup-and-restore-v1';
+export type MxMedBackupVaultLockMode = 'unlocked-v1' | 'governance-v1' | 'compliance-approved-v1';
+export type MxMedDrRegionState = 'not-selected-v1' | 'selected-and-verified-v1';
+export type MxMedCrossAccountBackupMode = 'disabled-v1' | 'organization-vault-approved-v1';
+export type MxMedRestoreTestingMode =
+  'disabled-v1' | 'manual-quarterly-v1' | 'scheduled-monthly-v1';
+export type MxMedBackupDataResidencyState = 'pending-review-v1' | 'approved-v1';
+export type MxMedBackupValidationState =
+  'not-tested-v1' | 'restore-job-completed-v1' | 'application-validation-passed-v1';
+export type MxMedBackupSelectionMode = 'explicit-resource-arns-v1' | 'verified-tags-v1';
+export type MxMedValkeyRecoveryMode = 'empty-rebuild-v1';
+export type MxMedBackupReadinessState =
+  | 'not-protected-v1'
+  | 'backup-configured-v1'
+  | 'recovery-point-available-v1'
+  | 'restore-job-completed-v1'
+  | 'application-validated-v1'
+  | 'dr-ready-v1';
 export type MxMedEdgeActivationMode =
   | 'disabled-v1'
   | 'media-cdn-ready-v1'
@@ -260,6 +283,38 @@ export interface MxMedEnvironmentConfig {
   readonly domainAlias?: string;
   readonly logRetentionDays: number;
   readonly backupRetentionDays: number;
+  readonly backupDrActivationMode: MxMedBackupDrActivationMode;
+  readonly disasterRecoveryStrategy: MxMedDisasterRecoveryStrategy;
+  readonly backupVaultLockMode: MxMedBackupVaultLockMode;
+  readonly drRegionState: MxMedDrRegionState;
+  readonly drRegion?: string;
+  readonly backupDataResidencyState: MxMedBackupDataResidencyState;
+  readonly crossAccountBackupMode: MxMedCrossAccountBackupMode;
+  readonly restoreTestingMode: MxMedRestoreTestingMode;
+  readonly backupSelectionMode: MxMedBackupSelectionMode;
+  readonly backupValidationState: MxMedBackupValidationState;
+  readonly valkeyRecoveryMode: MxMedValkeyRecoveryMode;
+  readonly backupReadinessState: MxMedBackupReadinessState;
+  readonly backupRdsPeriodicRetentionDays: 35;
+  readonly backupRdsMonthlyRetentionDays: 365;
+  readonly backupS3ContinuousRetentionDays: 35;
+  readonly backupS3PeriodicRetentionDays: 35;
+  readonly backupCrossRegionRetentionDays: 35;
+  readonly backupStartWindowMinutes: 60;
+  readonly backupCompletionWindowMinutes: 360;
+  readonly backupVaultMinRetentionDays: 1;
+  readonly backupVaultMaxRetentionDays: 365;
+  readonly backupComplianceChangeableForDays?: number;
+  readonly backupRestoreTestMaxRuntimeHours: number;
+  readonly backupRestoreTestCleanupDeadlineHours: number;
+  readonly backupAutomaticFailoverEnabled: false;
+  readonly backupAutomaticFailbackEnabled: false;
+  readonly backupPublicMediaProtectionEnabled: false;
+  readonly backupQuarantineProtectionEnabled: false;
+  readonly backupAuditBucketProtectionEnabled: false;
+  readonly backupMonitoringEnabled: boolean;
+  readonly backupApplicationValidationIntegrated: boolean;
+  readonly backupSentinelsIntegrated: boolean;
   readonly enableDeletionProtection: boolean;
   readonly enableTerminationProtection: boolean;
   readonly enableWaf: boolean;

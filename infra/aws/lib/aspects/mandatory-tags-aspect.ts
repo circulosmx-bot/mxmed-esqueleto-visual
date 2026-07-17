@@ -16,6 +16,8 @@ export const MXMED_NON_TAGGABLE_RESOURCE_ALLOWLIST = new Set([
   'AWS::IAM::Policy',
   'AWS::KMS::Alias',
   'AWS::S3::BucketPolicy',
+  'AWS::Backup::BackupSelection',
+  'AWS::Backup::RestoreTestingSelection',
 ]);
 
 export class MandatoryTagsAspect implements IAspect {

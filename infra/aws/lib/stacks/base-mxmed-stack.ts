@@ -11,6 +11,7 @@ export interface BaseMxMedStackProps {
   readonly component: string;
   readonly metadata: MxMedStackTagMetadata;
   readonly description: string;
+  readonly regionOverride?: string;
 }
 
 export type MxMedContractStackProps = Pick<BaseMxMedStackProps, 'config'>;
@@ -27,6 +28,7 @@ export abstract class BaseMxMedStack extends Stack {
       description: props.description,
       terminationProtection: props.config.enableTerminationProtection,
       synthesizer,
+      ...(props.regionOverride === undefined ? {} : { env: { region: props.regionOverride } }),
     };
     super(scope, id, stackProps);
 

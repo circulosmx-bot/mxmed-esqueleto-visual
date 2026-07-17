@@ -59297,3 +59297,190 @@ Siguiente microfase, no iniciada aquí:
 Será la Microfase 23 de 24.
 
 ---
+
+## PP-Decisiones 271 - MXMED_AWS_BACKUP_DR_FOUNDATION_IMPLEMENTATION_V1
+
+### Estado, alcance y baseline implementado
+
+Microfase 23 de 24.
+
+Resultado: `PASS - MXMED_AWS_BACKUP_DR_FOUNDATION_IMPLEMENTATION_V1`.
+
+Esta decisión implementa PP270 como Infrastructure as Code profile-aware y
+sintetizable offline. No consulta una cuenta AWS, no inicia jobs, no crea
+snapshots o recovery points y no despliega recursos. La estrategia continúa
+siendo `backup-and-restore-v1`; automatic failover/failback permanecen `false`.
+La existencia de templates no acredita restore probado, RPO/RTO medido,
+cumplimiento legal ni estado `DR_READY`.
+
+La línea base versionada fue la rama
+`architecture/mxmed-aws-backup-dr-readiness`, commit completo
+`12d8854fd81b2233e0685eb64e4f2dae827c6006`, descendiente del cierre Operations
+`30836dbb5ec188658cb01d685a7138808370e075`, con upstream `0/0`, árbol limpio,
+Node `v22.22.0`, npm/npx `10.9.4`, PP270 disponible y 1,196 pruebas aprobadas.
+La implementación vive en `feature/mxmed-aws-backup-dr-implementation` y
+preserva PP253–PP270 sin reescribirlos.
+
+### Modos, configuración real y topología
+
+Los modos cerrados son `disabled-v1`, `regional-recovery-ready-v1`,
+`cross-region-copy-ready-v1` y `restore-validation-ready-v1`. La configuración
+real y todos los scripts generales usan `disabled-v1`: no crean RegionalBackup,
+DrCopy, RestoreValidation, vault, plan, selection o EventBridge adicional. No se
+infiere activación desde ambiente, rama, cuenta, clientes, pagos o datos.
+
+`regional-recovery-ready-v1` exige Data, Storage, Security y los topics critical
+y warning de Regional Operations. Crea `MxMedRegionalBackupStack` en
+`mx-central-1`. `cross-region-copy-ready-v1` añade `MxMedDrCopyStack` únicamente
+con región fixture explícita, estado selected-and-verified y residencia
+approved. `restore-validation-ready-v1` añade el stack aislado de restore. No se
+usa `crossRegionReferences`, lookup, Custom Resource ni Export cross-region.
+
+Campos tipados implementados: activation, estrategia, Vault Lock, estado/región
+DR opcional, residencia, cross-account, restore testing, selection, validation,
+Valkey recovery, readiness, retenciones RDS/S3/copy, ventanas, min/max Vault
+Lock, ChangeableForDays fixture, límites de restore y todos los gates booleanos.
+Los valores reales siguen: governance, DR no seleccionada, residencia pending,
+cross-account disabled, restore disabled, validation not-tested, selection por
+ARN explícito, Valkey empty rebuild, monitoreo sólo al activar y cero
+automatización de failover/failback.
+
+### Protección regional RDS, S3 y Vault
+
+DataStack conserva ownership del PITR RDS. Un perfil Backup activo requiere
+MySQL 8.4.9, cifrado, ARN tipado, retención nativa 35 días y deletion protection
+production. AWS Backup no usa continuous para RDS. `RdsRegionalPeriodicBackupPlan`
+crea daily 03:00 UTC, start 60, completion 360 y retención 35; standard/scale
+añaden primer domingo y retención 365. `RdsCriticalSelection` contiene sólo el
+ARN exacto de la instancia y el role dedicado.
+
+ClinicalRecords y PrivateDocuments conservan versioning, SSE-KMS, Block Public
+Access, bucket-owner-enforced, TLS y RETAIN. EventBridge se habilita sólo cuando
+Backup regional está activo. `CriticalS3BackupPlan` protege ambos buckets con
+una sola regla continuous de 35 días; standard/scale añaden daily 35 y monthly
+365 en el mismo vault. Las selections usan los dos ARNs exactos. PublicMedia se
+excluye en launch; Quarantine se excluye siempre; Audit permanece bajo ownership
+de Security. No se seleccionan wildcards o tags amplios.
+
+`RegionalRecoveryVault` reutiliza la `BackupKey` customer-managed ya propiedad
+de SecurityStack, por lo que el contrato Security conserva exactamente cuatro
+keys. Key y vault se retienen; el vault usa governance Lock MinRetentionDays=1,
+MaxRetentionDays=365 y omite ChangeableForDays. No se crea default vault,
+public/application access policy, compliance real, air-gapped vault, Audit
+Manager, report plan o indexing.
+
+### IAM, KMS, monitoring y recuperación no respaldada
+
+`BackupServiceRole` confía sólo en `backup.amazonaws.com` y separa lectura de
+metadata, snapshots RDS, versiones de los buckets críticos, vault regional y
+uso exacto de ApplicationDataKey/BackupKey. Los únicos wildcards son metadata
+List/Describe/Get que no admite scope útil. No usa AdministratorAccess,
+AWSBackupFullAccess, Secrets Manager read, borrado de DB/bucket/objetos, cambio
+de key o roles de aplicación/migración.
+
+`RestoreValidationRole` existe sólo en restore-validation, confía en AWS Backup
+y limita restores a DB temporal, subnet group, vault, keys y bucket temporal.
+No modifica DB productiva, DNS, Edge, secretos o fuentes. Backup y Restore son
+duties separados.
+
+EventBridge enruta Backup Job `FAILED|ABORTED|EXPIRED|PARTIAL`, Copy Job
+`FAILED` y Restore Job `FAILED|ABORTED` de forma condicional al
+RegionalCriticalTopic existente. No crea subscriber, destinatario personal ni
+log de payload; EventBridge sigue siendo best-effort.
+
+Valkey no recibe backup: se reconstruye vacío, pierde sesiones/locks y exige
+reauthentication. ECR se reconstruye desde el último commit publicado, con
+Dockerfile versionado, scan, tag inmutable y digest. Los secretos contractuales
+se rotan o reemiten; no se respalda, imprime o persiste ningún valor.
+
+### Handoff cross-region y restore testing
+
+No existe región DR real seleccionada ni script productivo cross-region. La
+fixture crea DestinationBackupKey rotada/retenida y DrCopyVault governance en
+una región explícita sintética. El vault source se recibe mediante parameter sin
+default. RegionalBackup recibe el destination vault ARN mediante otro parameter
+sin default; las copy actions sólo se agregan a reglas RDS/S3 periódicas, nunca
+a S3 continuous. RDS daily/monthly y S3 periodic son el handoff; no se afirma
+PITR cross-region. Cross-account permanece disabled.
+
+`manual-quarterly-v1` queda refinado: crea stack aislado, RestoreRole, SG,
+bucket temporal y parámetros explícitos, pero ningún RestoreTestingPlan o
+schedule. `scheduled-monthly-v1` es sólo una fixture offline y exige residencia,
+sentinels y workflow de aplicación integrados. Crea plan mensual UTC y
+selections separadas RDS/S3 con ARNs exactos, DB temporal no pública/cifrada,
+data subnet group, SG sin inbound/egress y bucket temporal privado, versionado,
+KMS y RETAIN.
+
+Los parameters sin default son monthly budget, maximum runtime, allowlist de
+instance class, owner opaco y cleanup deadline. No hay Lambda validator ni
+eliminación automática. `COMPLETED` alcanza sólo restore-job-completed. La
+validación de schema/checksum/sentinels, cleanup residual y aprobación de
+evidencia son gates separados.
+
+### Runbooks, RPO/RTO, readiness y costo
+
+El catálogo implementa exactamente 22 runbooks PP270, con los 14 campos `id`,
+`severity`, `authorization`, `trigger`, `recoveryPointSelection`, `safeChecks`,
+`prohibitedActions`, `restoreTarget`, `validation`, `cutover`, `rollback`,
+`cleanup`, `evidence` y `closureCriteria`. No contiene comandos destructivos,
+secretos o contenido clínico.
+
+Los objetivos puros permanecen internos y no medidos: RDS launch RPO operacional
+5 minutos/snapshot 24 horas y RTO 4 horas; RDS standard copy 24 horas y RTO 2;
+S3 launch continuous 15 minutos/RTO 8 horas; S3 standard regional 15 minutos,
+copy 24 horas/RTO 4; sesiones sin backup/RTO 30 minutos; infraestructura desde
+último commit/RTO 8 horas. No son SLA.
+
+La máquina monotónica es not-protected → backup-configured →
+recovery-point-available → restore-job-completed → application-validated →
+dr-ready. No permite saltos. DR_READY requiere restore, application validation,
+cleanup, runbook, owners, costo, evidencia, monitoring y región aprobada cuando
+aplique. Synth nunca lo produce automáticamente.
+
+El contrato de costo tipa protected/storage/change quantities, retenciones,
+frecuencia, temporary RDS hours, restore/copy/destination GiB, key count y riesgo
+residual. Ledger conserva rate, monthly estimate y pricing evidence en `null`,
+con uncertainty explícita, taxes/fx false. No consulta Pricing/Cost Explorer y
+no afirma costo cero.
+
+### Guardrails, QA, evidencia y cierre
+
+`BackupDrFoundationAspect` inspecciona RDS, buckets críticos, vaults, plans,
+selections, restore plans/selections, keys, IAM, EventBridge, parameters,
+privacidad y servicios costosos. Rechaza resources en disabled, RDS continuous,
+retención/cifrado/versioning/EventBridge inseguros, continuous duplicado o vault
+distinto, PublicMedia/Quarantine/Audit/wildcards, vault no cifrado/retained o
+governance con ChangeableForDays, roles administrativos/destructivos, restore
+público/sin gates, IDs de cuenta, secretos y contenido clínico. Falla de forma
+visible y no autocorrige.
+
+Se preservaron las 1,196 pruebas anteriores y se añadieron 305 pruebas finas en
+16 suites, para 1,501 PASS. Cubren configuration, activation/topology, RDS, S3,
+Vault Lock, IAM/KMS, cross-region, restore, monitoring, privacidad, 22 runbooks,
+RPO/RTO, readiness, costos, guardrails y synth determinista. Typecheck, lint,
+format check, tests, cuatro synth generales, cuatro synth regionales ejecutados
+dos veces, validate y ambos npm audit finalizaron PASS. Los templates disabled,
+regional launch/standard/scale/staging, cross-region y restore fueron auditados
+sin account lookup ni red.
+
+La evidencia sanitizada está fuera de Git en
+`/tmp/mxmed-aws-backup-dr-implementation-01/`. Registra baseline, inventario,
+plans/selections, IAM/KMS, Vault Lock, monitoring, fixtures, costo, privacidad,
+QA, determinismo y no repetición. No contiene account IDs reales, ARNs reales,
+secret values, clinical data, recovery point IDs u object content.
+
+No repetición verificada: AWS CLI/SDK/account/Backup/RDS/S3/KMS/Pricing/Cost
+Explorer, HTTP, Docker, Composer, PHP, SQL, Stripe y payment calls = 0; backup,
+copy y restore jobs = 0; snapshots/recovery points/resources deployed = 0;
+`cdk diff/bootstrap/deploy` = 0; secret values y clinical objects = 0; automatic
+failover/failback = 0; región DR real seleccionada = 0.
+
+Microfase 23 de 24 concluida. Avance global 23/24; queda 1 pendiente.
+
+Siguiente microfase, no iniciada aquí:
+
+`ARCH-DEVOPS/MXMed-AWS-Deployment-Readiness-01`
+
+Será la Microfase 24 de 24.
+
+---
