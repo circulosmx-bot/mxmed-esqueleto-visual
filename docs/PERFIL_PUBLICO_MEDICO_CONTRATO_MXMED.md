@@ -58128,3 +58128,452 @@ Siguiente microfase, no iniciada aquí:
 Será la Microfase 20 de 24.
 
 ---
+
+## PP-Decisiones 268 - MXMED_AWS_OPERATIONS_FOUNDATION_CONTRACT_V1
+
+### Estado, alcance y fuentes contractuales
+
+Microfase 20 de 24.
+
+Esta decisión cierra exclusivamente la readiness documental de Operations. No
+crea recursos, no consulta una cuenta AWS y no cambia configuración, runtime,
+infraestructura ni tráfico. La futura implementación deberá ser offline,
+determinista, condicional por recurso y gobernada por inputs explícitos. El
+estado desplegado continúa siendo `0`; toda referencia a recursos o métricas en
+esta decisión describe el template futuro, no infraestructura existente.
+
+Las fuentes tipadas leídas y preservadas son PP245 y PP251–PP267: arquitectura
+AWS y regiones (PP245), red (PP251–PP252), seguridad y auditoría (PP253–PP254),
+datos (PP255–PP256), storage (PP257–PP258), sesión/Valkey (PP260–PP261),
+Compute (PP262), costo y promoción (PP263), Compute implementado (PP264–PP265),
+Edge (PP266–PP267). No se reinterpreta ownership ni se repiten implementaciones.
+
+### Auditoría de observabilidad actual
+
+| Superficie | Fuente y región | Namespace, métrica o log | Dimensiones permitidas | Activación actual | Sensibilidad y retención | Costo y destino futuro |
+|---|---|---|---|---|---|---|
+| VPC Flow Logs | `MxMedNetworkStack`, `mx-central-1` | CloudWatch Logs, tráfico `ALL`, agregación 60 s | metadatos técnicos de red | configurada en template | sin payload; 30 días staging, 90 producción | ingestión/almacenamiento por volumen; diagnóstico de red, sin dashboard dedicado |
+| CloudTrail | `MxMedSecurityStack`, multi-region | management events, validación y log group de auditoría | identidad/recurso AWS de auditoría | configurada en template | audit KMS; 90/365 días en Logs y archivo S3 365/2555 | preservar; Operations no duplica, reduce ni consulta datos personales |
+| RDS MySQL | `MxMedDataStack`, `mx-central-1` | `AWS/RDS`: CPU, memoria, storage, conexiones, latencias, cola; error/slow-query logs | `DBInstanceIdentifier` técnico | condicional al stack Data | slow query es sensible; PI 7 días y Enhanced Monitoring 60 s staging/15 s producción ya contratados | métricas nativas y logs por volumen; alarmas/dash regional y runbooks RDS |
+| Valkey | `MxMedSessionStack`, `mx-central-1` | `AWS/ElastiCache`: CPU, memory %, connections, evictions, lag y credits | cluster/node técnico | condicional a Session | logs deshabilitados; snapshots 0 | métricas nativas; alarmas/dash regional y runbooks Valkey |
+| ECS/Fargate | `MxMedComputeStack`, `mx-central-1` | `AWS/ECS`: running/desired, CPU, memory; Container Insights estándar ya configurado | `ClusterName`, `ServiceName` | sólo en perfiles que crean cluster/service | sin datos personales; no Enhanced Container Insights | métricas nativas/Container Insights; volumen sujeto al inventario; alarmas/dash regional |
+| Aplicación y migración | `MxMedComputeStack`, `mx-central-1` | `/mxmed/{environment}/compute/app` y `/migration` | sólo campos sanitizados | condicional a tasks-ready | audit KMS; 30 días staging, 90 producción | ingestión/almacenamiento; consultas sólo en runbook, sin widget de logs |
+| Apache/PHP | runtime Compute | access log JSON a stdout y error log a stderr | método, path sin query, protocolo, status, bytes y duración | imagen runtime preparada | access format excluye query; PHP exige saneamiento en origen | fluye a app log; no segunda copia ni export automático |
+| ALB | Regional Edge, `mx-central-1` | `AWS/ApplicationELB`: hosts, requests, target 5xx, latency y errores | `LoadBalancer`, `TargetGroup` técnicos | sólo application-origin/public; request logs ausentes | metrics-only, sin query/body/header | alarmas/dash regional condicionales y runbooks ALB |
+| CloudFront | Global Edge, `us-east-1` | `AWS/CloudFront`: requests, bytes, total/5xx error rates | `DistributionId`, `Region=Global` | sólo cuando exista distribución | request logs ausentes | métricas nativas, sin additional metrics pagadas; alarmas/dash global |
+| WAF | Global Edge, `us-east-1` | `AWS/WAFV2`: Allowed/Blocked por WebACL/rule | WebACL/rule/region técnicos | WebACL de cinco reglas cuando Edge exista | sampled requests false y logging ausente | métricas nativas; alarmas/dash global, sin IPs |
+| S3 | `MxMedStorageStack`, regional | métricas nativas de bucket/storage cuando estén disponibles sin métrica paga adicional | bucket técnico, storage type | condicional a Storage | clasificación public/private/clinical/quarantine; contenido nunca se observa | sólo visibilidad regional necesaria; S3 request metrics prohibidas en launch-lean |
+| Stripe/suscripciones | `api/subscriptions/index.php` y servicio de PaymentIntent | códigos de fallo sanitizados; futuras métricas `MXMed/Application` | Environment, Component, Result, RuntimeCapabilityProfile | sólo paid-profile futuro | nunca body, Stripe-Signature, client_secret o provider ID completo | alarmas funcionales pagadas; no se crean en directory-core |
+| Agenda/clínico | servicios y repositorios PHP | futuras métricas de notificación, upload y secure-link | las cuatro dimensiones permitidas | sólo clinical futuro y tras gate de privacidad | se localizaron logs actuales con OTP, doctor/patient/appointment IDs y mensajes de excepción; no están aprobados para observabilidad | implementación bloqueada hasta sanear origen y probarlo; ningún dato sensible será dimensión ni evidencia |
+| Operations | `MxMedOperationsStack` | placeholder vacío | ninguna | cero recursos en todos los scripts actuales | no hay logs propios | hoy no existen dashboards, alarmas, topics, Budgets, CAD ni remediación |
+
+`/healthz` permanece dependency-free y devuelve 200. `/readyz` permanece
+fail-closed con 503 y `readiness_not_integrated`; por ello no es señal de
+readiness productiva. El role de aplicación ya limita `cloudwatch:PutMetricData`
+al namespace `MXMed/Application`, pero todavía no se emiten esas métricas.
+
+El perfil `source-sanitized-only-v1` no puede activarse sobre logs de agenda
+hasta retirar OTP, identificadores clínicos, metadatos libres y mensajes de
+excepción. La implementación deberá aportar pruebas estáticas y de runtime con
+fixtures sintéticas. Esta decisión no corrige PHP ni considera el hallazgo
+cerrado por mera redacción.
+
+### Modos de activación y notificación
+
+`MxMedOperationsActivationMode` admite exactamente:
+
+| Modo | Inventario futuro |
+|---|---|
+| `disabled-v1` | cero recursos Operations; modo obligatorio de los scripts generales existentes |
+| `cost-controls-ready-v1` | Cost Management, Budgets, Cost Anomaly Detection, topic de costo y validación de tags; sin dashboards, alarmas de servicio, custom metrics o shutdown |
+| `launch-lean-observability-ready-v1` | cost controls, dashboards mínimos, máximo 11 alarmas esenciales condicionales, topics, runbooks y retención explícita; sin advanced observability |
+| `production-observability-ready-v1` | catálogo ampliado, redundancia, lag/latencias, métricas funcionales críticas, protección selectiva de logs e incident response completo; no implica scale-ready |
+
+`MxMedOperationsNotificationMode` admite exactamente:
+
+| Modo | Contrato futuro |
+|---|---|
+| `none-v1` | no SNS y ninguna acción de alarma |
+| `topics-only-v1` | `OperationalCriticalTopic`, `OperationalWarningTopic`, `CostAlertsTopic` y `GlobalEdgeAlertsTopic`, sin suscriptores personales |
+| `external-subscribers-confirmed-v1` | exige suscripciones confirmadas, owner aprobado, canal de escalamiento, prueba de recepción y evidencia privada |
+
+Correos, teléfonos, Slack/Teams URLs, PagerDuty keys y endpoints webhook no se
+versionan. Incident response real no se activa sin el modo confirmado.
+
+### Arquitectura futura y dependencias
+
+| Stack | Ownership | Responsabilidad |
+|---|---|---|
+| `MxMedRegionalOperationsStack` | `mx-central-1` | ECS/Fargate, ALB, RDS, Valkey, S3 regional, custom metrics, dashboard regional, alarmas y topics warning/critical |
+| `MxMedGlobalOperationsStack` | `us-east-1` | CloudFront, WAF, dashboard/alarmas Global Edge y `GlobalEdgeAlertsTopic` |
+| `MxMedCostManagementStack` | account-scoped; puede sintetizar en `us-east-1` | Budgets, Cost Anomaly Detection, `CostAlertsTopic`, tags y cost gates |
+
+Regional Operations puede depender de Network, Security, Data, Storage,
+Session, Compute y Regional Edge. Global Operations recibe sólo parámetros u
+outputs contractuales de Global Edge. Cost Management es independiente de los
+stacks de aplicación y usa tags/parámetros. Ningún stack funcional depende de
+Operations; la única dirección válida es Operations → recurso observado. Se
+prohíben exports cross-region, account ID literal, lookups, SDK y custom resources
+para consultar costos.
+
+### Gates y controles de costo
+
+Antes del primer despliegue Operations son obligatorios, sin defaults monetarios:
+`approvedMonthlyBudgetUsd`, `stagingMonthlyBudgetUsd`,
+`anomalyAlertThresholdUsd`, `maxInfrastructureCostToRevenuePercent`,
+`budgetOwnerReference`, `costReviewCadence`, `costEstimateVersion` y
+`costEstimateAsOf`. La identidad real del owner permanece privada. Sin
+`approvedMonthlyBudgetUsd`, `cost-controls-ready-v1` falla y Compute/Edge público
+continúa bloqueado.
+
+El budget mensual de producción tendrá 50% ACTUAL informational, 75% ACTUAL
+warning, 90% FORECASTED warning, 100% ACTUAL critical y 120% ACTUAL critical
+escalation. Staging tiene budget separado y detecta gasto fuera de release-window.
+La visibilidad por servicio cubre RDS, ECS/Fargate, VPC/NAT/PrivateLink,
+ElastiCache, CloudWatch y S3/CloudFront, sin multiplicar budgets innecesarios en
+launch-lean. No existen automatic budget actions ni se detienen automáticamente
+RDS, backups, SecurityStack, producción, CloudTrail, KMS o S3 clínico.
+
+Durante los primeros 30 días se revisa Billing diariamente; después, semanalmente,
+y siempre al cambiar deployment profile. Se compara el costo real con el ledger
+PP263. El forecast puede carecer de historial, Cost Anomaly Detection puede tardar
+en detectar, y ninguna de las dos señales es garantía ni alerta en tiempo real;
+50/75/100/120 ACTUAL son la defensa inicial.
+
+Cost Anomaly Detection futuro tendrá monitor por servicios AWS, monitor por tags
+`Project`/`Environment` cuando sea soportado, subscription diaria, threshold
+absoluto `anomalyAlertThresholdUsd` y `CostAlertsTopic`, sin email directo ni
+remediación. Su runbook revisa servicio, región, tag, recurso, despliegues recientes
+y staging abandonado, incluidos NAT, RDS, Valkey y tareas activas.
+
+### Catálogo de alarmas
+
+Launch-lean crea como máximo estas 11 alarmas, sólo si existe el recurso:
+
+| # | Alarma | Condición | Ventana |
+|---|---|---|---|
+| 1 | ECS running task deficit | `RunningTaskCount < desiredCount`, sólo service-enabled | 5 min |
+| 2 | ECS high CPU | `CPUUtilization >= 75%` | 15 min |
+| 3 | ECS high memory | `MemoryUtilization >= 80%` | 15 min |
+| 4 | ALB unhealthy target | `UnHealthyHostCount >= 1`, sólo application-origin/public | 2 de 3 periodos de 1 min |
+| 5 | ALB target 5xx rate | tasa `>=2%` y `RequestCount >=20` | 5 min |
+| 6 | RDS high CPU | `CPUUtilization >=75%` | 15 min |
+| 7 | RDS low free storage | `FreeStorageSpace <=20%` de allocated storage, derivado de config | 15 min |
+| 8 | RDS connection budget | conexiones `>=70%` de `ceil(computeMaxCapacity * 20 / 0.75)` | 15 min; max=2 da budget ≈54/umbral ≈38, nunca hardcodeado |
+| 9 | Valkey evictions | `Evictions >0` | 5 min |
+| 10 | Valkey memory pressure | `DatabaseMemoryUsagePercentage >=75%` o fallback documentado `FreeableMemory`, no ambos sin necesidad | ventana estándar |
+| 11 | CloudFront 5xx rate | `5xxErrorRate >=1%` y `Requests >=100`, en `us-east-1` | 5 min |
+
+`production-observability-ready-v1` añade solamente: RDS FreeableMemory ≤20%,
+ReadLatency, WriteLatency, DiskQueueDepth y storage 70/85%; Valkey CPU node-aware,
+CurrConnections, ReplicationLag >1 s y créditos bajos sólo para nodos burstable;
+ALB p95 >2 s durante 15 min, reject/connection errors disponibles y 5xx critical
+más estricto; CloudFront TotalErrorRate >5%, 5xx y origin latency sólo si no agrega
+costo; WAF spikes sensitive-rate/general-rate e IP reputation como warning.
+
+Quedan fuera sin aprobación: métricas adicionales pagadas CloudFront, Application
+Signals, X-Ray, Synthetics, RUM, Contributor Insights, high-resolution ECS,
+Enhanced Container Insights y S3 request metrics globales. Scale no agrega alarmas
+por el mero nombre del perfil.
+
+### Métricas funcionales y operaciones de pago
+
+El único namespace custom es `MXMed/Application`. Sus dimensiones permitidas son
+`Environment`, `Component`, `Result` y `RuntimeCapabilityProfile`. Se prohíben
+user/doctor/profile/patient IDs, email, payment intent, session ID, ruta completa,
+filename y token.
+
+| Capability | Métricas futuras |
+|---|---|
+| directory-core | `ReadinessFailureCount`, sólo cuando readiness real exista |
+| paid-profile | `StripeWebhookFailureCount`, `SubscriptionActivationMismatchCount` |
+| clinical | `NotificationDeliveryFailureCount`, `ClinicalUploadFailureCount`, `SecureLinkAbuseCount` |
+| professional-ai | `AiProviderFailureCount`, `AiBudgetGateRejectionCount`, sólo con necesidad demostrada y nunca por usuario/sesión |
+
+Paid-profile define alarmas de webhook real sanitizado, activation mismatch,
+spike de fallo de client secret por código sanitizado y webhook secret ausente.
+Nunca observa body, `Stripe-Signature`, `client_secret`, provider ID completo ni
+valor del secreto; no hace retries infinitos. No se crea en directory-core ni se
+repiten pruebas de pago.
+
+### Dashboards, logs y privacidad
+
+`MxMedRegionalOperationsDashboard` tiene máximo ocho widgets: desired/running
+ECS; CPU/memory ECS; healthy/unhealthy ALB; requests/5xx/latency ALB; CPU/conexiones
+RDS; free storage/memory RDS; memory/evictions/connections Valkey; alarm summary.
+No contiene logs, query, emails, usuarios, pagos, expedientes ni un dashboard por
+servicio.
+
+`MxMedGlobalEdgeDashboard`, en `us-east-1`, tiene máximo cinco widgets: requests/
+bytes CloudFront; error rates CloudFront; WAF allowed/blocked; métricas rate-rule;
+Global Edge alarm summary. No habilita métricas pagadas, IPs ni sampled requests.
+
+App/migration conserva 30 días staging y 90 producción. Audit conserva Security
+Stack sin reducción. No hay retención infinita, copia duplicada ni cambio de
+CloudTrail desde Operations. V1 usa CloudWatch Logs Standard; no IA, Delivery,
+export, Firehose, OpenSearch o subscriptions externas.
+
+Los perfiles futuros son `source-sanitized-only-v1` para directory-core
+launch-lean y `targeted-data-protection-v1` para clinical/production-standard en
+app/migration. El segundo evalúa selectivamente credenciales AWS, tarjetas,
+secretos Stripe, secure-link tokens y PII/PHI relevante. No existe policy
+account-wide lean ni `logs:Unmask` en roles de aplicación.
+
+La redacción en origen excluye query completa, Cookie, Authorization,
+Stripe-Signature, client_secret, payment ID completo, session ID, secure-link
+token, password, API key, expedientes, diagnósticos, recetas, request body,
+contenido de archivo y environment dump. Consultas manuales de runbook usan sólo
+`sanitized_code`, `request_id`, `level`, `component`, `timestamp` y `status`, sin
+buscar ni agrupar datos personales.
+
+### Severidades e incident response
+
+| Severidad | Casos guía | Objetivo interno |
+|---|---|---|
+| SEV1 critical | exposición de datos, inconsistencia clínica, activación incorrecta, pérdida de acceso, caída pública total >15 min, pérdida de recuperación crítica | acknowledgment 15 min; triage 30 min |
+| SEV2 high | degradación sostenida, RDS/session outage, 5xx persistente, pagos no reconciliados, notificación crítica detenida | acknowledgment 30 min; plan 60 min |
+| SEV3 warning | capacidad 70–80%, anomalía de costo, error no crítico, staging abandonado o drift | mismo día hábil |
+| SEV4 informational | cambio, despliegue, recuperación o umbral preventivo | registro y revisión ordinaria |
+
+Son objetivos internos, nunca SLA contractual con clientes.
+
+Cada runbook incluye trigger, severidad, first checks, diagnóstico seguro,
+acciones prohibidas, escalamiento, rollback, evidencia y cierre:
+
+| Runbook | Trigger / SEV | First checks y diagnóstico seguro | Prohibido | Escalamiento y rollback | Evidencia y cierre |
+|---|---|---|---|---|---|
+| `public-site-unavailable` | disponibilidad/5xx sostenido; SEV1/2 | separar CF/ALB/ECS/readyz y correlacionar change ID | bypass WAF o publicar origen | owner + Security; revertir último cutover aprobado | gráficos, change y recuperación SLO estable |
+| `ecs-task-deficit` | running < desired 5 min; SEV2 | eventos ECS, stopped reason sanitizado, CPU/memory y readyz | restart loop o exponer secretos | Compute owner; rollback de task definition | task/event refs; desired=running estable |
+| `alb-unhealthy-targets` | unhealthy ≥1; SEV2 | target state, SG, listener, `/readyz` conocido | cambiar matcher a 503/abrir CIDR | Edge+Compute; retirar release defectuoso | target health y change; healthy tras gate real |
+| `cloudfront-error-spike` | 5xx y volumen gate; SEV2 | separar viewer/origin, behaviors y ALB | activar logs sensibles/paid metrics | Global Edge; revertir behavior/distribution change | métricas y config diff; tasa normalizada |
+| `waf-rate-spike` | spike de reglas; SEV2/3 | regla/métrica agregada, cambio reciente, false positive | sampled requests, log IPs o desactivar WAF global | Security+Edge; rollback de regla aprobada | métricas agregadas; protección y tráfico normales |
+| `rds-high-cpu` | CPU ≥75% 15 min; SEV2/3 | CPU, conexiones, latencias, cola y release | query con PHI, resize automático | Data owner; rollback release/query seguro | métricas y change; CPU sostenida normal |
+| `rds-low-storage` | free ≤20%; SEV2 | free/allocated, growth y logs | borrar datos/backups o auto-resize | Data+Security; cambio de capacidad aprobado | tendencia y aprobación; margen restaurado |
+| `rds-connections` | ≥70% presupuesto; SEV2 | connections, task count, churn y failures | matar sesiones masivamente | Data+Compute; rollback pool/release | cálculo derivado; uso bajo gate estable |
+| `valkey-evictions` | cualquier eviction; SEV2 | memory, CPU, connections y node events | flush, delete keys o resize automático | Session owner; rollback de release/capacidad aprobado | métricas; cero evictions y sesiones verificadas |
+| `valkey-unavailable` | connectivity/failures; SEV2 | node status, SG, DNS técnico y app errors sanitizados | failover/destrucción manual improvisada | Session+Compute; rollback release/config | eventos y change; sesiones estables |
+| `stripe-webhook-failure` | fallos sanitizados; SEV2 | código, timestamp, capability y provider status agregado | body/signature/secret/retry infinito | Payments+Security; rollback release/config | códigos sanitizados y reconciliación cerrada |
+| `subscription-activation-mismatch` | pago/activación inconsistente; SEV1 | fuente autoritativa y estado contractual sin IDs completos | activar/desactivar a ciegas | Payments+Product+Security; procedimiento compensatorio aprobado | caso privado y audit trail; reconciliación confirmada |
+| `notification-delivery-failure` | delivery crítico fallido; SEV2 | component/result/provider status sanitizado | registrar destinatario/contenido | Clinical owner; canal alterno aprobado | conteos y referencia privada; backlog procesado |
+| `clinical-upload-failure` | upload crítico fallido; SEV1/2 | status técnico, KMS/S3 y scanner, sin filename/body | abrir bucket o copiar contenido | Clinical+Security; rollback de release/policy | IDs técnicos privados; integridad y acceso validados |
+| `secure-link-abuse` | abuso agregado; SEV1/2 | rate/status/component sin token/IP | log token, bajar controles o bloquear global sin análisis | Security+Clinical; revocación/acceso compensatorio aprobado | métricas agregadas e incidente; abuso contenido |
+| `cost-budget-exceeded` | 50/75/100/120; SEV3/2 | budget, servicio, región, tags y deployment profile | shutdown producción/borrar backups | FinOps+owner; revertir capacidad/cambio aprobado | snapshot Billing privado; tendencia controlada |
+| `cost-anomaly-detected` | anomalía diaria; SEV3 | historial, servicio/región/tag/recurso, NAT/RDS/Valkey/tasks | asumir tiempo real o remediar automático | FinOps+stack owner; rollback change causante | anomalía y revisión; causa/aceptación documentada |
+| `staging-left-running` | costo fuera de ventana; SEV3 | ventana, environment tag y residual audit | detener recurso no identificado o producción | staging owner; teardown/runbook aprobado | `staging-residual-cost-audit`; inventario residual aceptado |
+| `secret/configuration-missing` | gate crítico ausente; SEV2 | nombre del gate, source y rollout, nunca valor | imprimir/crear secreto improvisado | Security+owner; rollback release/config | código sanitizado; gate restaurado y probado |
+| `rollback-after-edge-cutover` | Edge cutover degradado; SEV1/2 | CF/WAF/ALB/readyz, DNS/cert evidence privada | abrir ALB, bajar WAF o inventar DNS | Incident commander+Edge; ejecutar rollback aprobado | timeline/change; ruta anterior estable |
+
+### Staging, costo residual y no auto-remediation
+
+Antes de la ventana se exige budget staging aprobado, stack profile correcto,
+secrets mínimos, datos sintéticos, owner, inicio/fin UTC y rollback. Durante la
+ventana: cero datos clínicos reales, monitoreo mínimo, alertas activas y change
+log. Después se verifica Fargate desired=0 o stack retirado, NAT=0, Valkey=0,
+ALB=0, CloudFront staging disabled/retirado, RDS detenido o snapshot/recreate
+según runbook, retención de logs, secrets/KMS y recursos RETAIN inventariados.
+La evidencia se llama `staging-residual-cost-audit`; no se implementa scheduler.
+
+Los controles futuros detectan NAT, task Fargate, Valkey, ALB, interface endpoint,
+RDS y snapshot/storage residual. No detienen producción. Staging sólo podrá
+apagarse automáticamente en otra microfase tras demostrar ambiente inequívoco,
+ausencia de ejecución crítica, backup, idempotencia y rollback.
+
+Se prohíben Lambda remediation, SSM Automation, restart automático manual,
+automatic budget actions, promoción automática, production shutdown, RDS resize,
+NAT removal y respuesta automática de rotación de secret. Sólo permanece el
+autoscaling ECS ya contratado. Toda futura remediación necesita aprobación,
+idempotencia, scope, rollback y safety test; por contrato
+`operationsAutomaticRemediationEnabled=false`.
+
+### SLO, error budget y promoción
+
+| Perfil | Availability mensual | Error rate dinámico | p95 dinámico | Readiness success |
+|---|---|---|---|---|
+| launch-lean | 99.5% | <1% | ≤2 s | ≥99% |
+| production-standard | 99.9% | <0.5% | ≤1.5 s | objetivo integrado |
+
+Son objetivos internos, no SLA, certificación ni garantía. El error budget es
+mensual: si se consume 50% antes de mitad de mes se congelan cambios no esenciales;
+al 100% se prioriza confiabilidad y no se activan capacidades hasta cerrar causa.
+
+Launch-lean → standard requiere al menos siete días de evidencia o un incidente
+crítico y preserva PP263: Compute CPU p95 >60%, memoria p95 >70%, segunda task
+frecuente o cola/latencia sostenida; RDS CPU p95 >60%, conexiones >70%, free
+memory <20%, storage >70% o Single-AZ comercialmente inaceptable; Valkey cualquier
+eviction, memory >70%, CPU sostenida, pérdida de sesiones o failover necesario;
+Network segundo NAT con resiliencia aprobada o endpoint con break-even; Business
+SLA contratado, onboarding público, budget standard, ingresos o impacto no
+aceptable. Nunca se promueve automáticamente.
+
+Standard → scale activa capacidades individualmente sólo ante maxCapacity
+sostenida, saturación, connection churn, lecturas reales, Valkey memory/evictions,
+endpoint break-even, RPO/RTO, región secundaria y presupuesto. RDS Proxy, read
+replica, cross-region, workers o endpoints requieren evidencia separada.
+
+### Runtime gates y extensiones futuras
+
+`/readyz=503`, Stripe return ausente, public traffic bloqueado, pricing no
+verificado y dominios/certificados no configurados permanecen sin cambio.
+Operations no marca saludable al sistema ni crea ruido permanente por esos gaps;
+las alarmas se sintetizan condicionalmente por activation mode y recurso.
+
+Extensiones futuras, sin modificar config en esta microfase:
+
+`operationsActivationMode`, `operationsNotificationMode`,
+`operationsLogProtectionProfile`, `operationsIncidentPolicyVersion`,
+`operationsRunbookVersion`, `operationsDashboardProfile`,
+`operationsAlarmProfile`, `approvedMonthlyBudgetUsd`,
+`stagingMonthlyBudgetUsd`, `anomalyAlertThresholdUsd`, `costReviewCadence`,
+`operationsEcsCpuWarningPercent`, `operationsEcsMemoryWarningPercent`,
+`operationsRdsCpuWarningPercent`, `operationsRdsFreeStoragePercent`,
+`operationsRdsConnectionBudgetPercent`, `operationsValkeyMemoryWarningPercent`,
+`operationsAlbTarget5xxRatePercent`, `operationsCloudFront5xxRatePercent`,
+`operationsInternalAvailabilityTarget`, `operationsDynamicP95TargetMs`,
+`operationsStagingResidualAuditEnabled`, `operationsAutomaticRemediationEnabled`.
+
+El último valor es obligatoriamente `false`.
+
+Outputs futuros:
+
+- Regional: `regionalDashboard`, `regionalCriticalTopic`,
+  `regionalWarningTopic`, `regionalAlarms`, `alarmCatalog`, `runbookCatalog`,
+  `operationsProfile`.
+- Global: `globalDashboard`, `globalEdgeAlertsTopic`, `globalAlarms`.
+- Cost: `productionBudget`, `stagingBudget`, `anomalyMonitors`,
+  `anomalySubscription`, `costAlertsTopic`, `costControlState`.
+
+No se exponen subscribers, emails, teléfonos, account IDs, costos privados o
+secrets, y no se usan cross-region Exports.
+
+### Guardrails y matriz futura de pruebas
+
+`OperationsFoundationAspect` deberá fallar, sin autocorrección, ante: recursos
+Operations en disabled; budget con default; email/teléfono hardcodeado; budget
+action; production auto-shutdown; alarma sin runbook/severity o sin action cuando
+notifications está enabled; high-resolution metric; dimensión personal; dashboard
+duplicado; retención infinita; request body/Cookie/Authorization; `logs:Unmask` en
+app; alarma CloudFront fuera de `us-east-1`; alarma de recurso ausente; WAF sampled
+requests; S3 request metrics lean; X-Ray/Synthetics/RUM/Application Signals no
+autorizados; auto-promotion; remediation true; staging sin residual audit.
+
+La implementación futura debe cubrir estas 139 pruebas conceptuales:
+
+| IDs | Casos |
+|---|---|
+| 1–8 | disabled; cost-only; launch-lean; production; invalid mode; notifications none/topics-only/subscribers-confirmed |
+| 9–23 | budget requerido/sin default; thresholds 50 actual, 75 actual, 90 forecast, 100 actual, 120 actual; staging budget; sin action; anomaly service/tag/threshold; sin email; cost topic; first-month review |
+| 24–34 | ECS CPU/memory/deficit; ALB unhealthy/5xx; RDS CPU/storage/connections; Valkey eviction/memory; recurso ausente sin alarma |
+| 35–40 | CloudFront us-east-1/5xx; WAF allowed/blocked; global topic; sin paid metrics lean |
+| 41–48 | conteos launch/standard; scale sin extras; staging reducido; directory sin pagos; paid alarms; clinical uploads; IA acotada |
+| 49–54 | dashboards regional/global; máximo widgets; sin dimensiones personales, duplicados o log clínico |
+| 55–67 | retención 30/90/audit; dos privacy profiles; sin policy account-wide/unmask/query/Cookie/Authorization/Stripe signature/client_secret/body clínico |
+| 68–76 | SEV1–4; acknowledgment; no SLA; runbook, cierre y prohibiciones obligatorios |
+| 77–94 | outage, ECS, ALB, CloudFront, WAF, tres RDS, Valkey, Stripe, activation, notification, upload, secure-link, costo, residual staging, config y Edge rollback |
+| 95–104 | release-window, synthetic data, after checklist, Fargate/NAT/Valkey/ALB cero, RDS runbook, residual audit y no auto-delete |
+| 105–111 | availability y p95 launch/standard; error budget 50/100; sin SLA público |
+| 112–118 | gates Compute/RDS/Valkey/business, siete días, sin promoción automática y scale individual |
+| 119–128 | rechazo de email, budget action, high-resolution, dimensión personal, retención infinita, región CF incorrecta, alarma sin runbook, remediación, Synthetics y X-Ray |
+| 129–139 | synth disabled/cost/launch/standard/global; sin lookups/account IDs/secrets; determinismo; sin deploy ni ciclos |
+
+### Costo operativo y diagrama
+
+Los drivers son alarmas, dashboards, custom metrics, ingestión/almacenamiento de
+logs, data-protection scanning, SNS deliveries, Budgets, Cost Anomaly Detection y
+métricas detalladas opcionales. Launch-lean evita alta resolución, cardinalidad,
+Application Signals, X-Ray, Synthetics, RUM, Enhanced Container Insights,
+CloudFront paid metrics, S3 request metrics, plataforma externa y dashboards
+redundantes. No se afirma costo cero; el ledger Operations se poblará en la
+implementación.
+
+```mermaid
+flowchart TB
+  ACT[disabled → cost-controls-ready → launch-lean-observability-ready → production-observability-ready]
+  NOTIFY[none → topics-only → external-subscribers-confirmed]
+  NOAUTO[automatic remediation = false]
+  PRIVATE[sin suscriptores personales en IaC]
+  WINDOW[staging release-window + residual audit]
+  GATE[7 días/incidente → gate manual launch→standard]
+  RUNBOOKS[20 runbooks]
+
+  subgraph REGIONAL[mx-central-1 · Regional Operations]
+    RR[ECS · ALB · RDS · Valkey · S3] --> RM[CloudWatch Metrics]
+    RM --> RD[Regional Dashboard]
+    RM --> RA[Regional Alarms]
+    RA --> RT[Critical/Warning SNS Topics]
+  end
+
+  subgraph GLOBAL[us-east-1 · Global Operations]
+    GE[CloudFront · WAF] --> GM[CloudWatch Metrics]
+    GM --> GD[Global Dashboard]
+    GM --> GA[Global Alarms]
+    GA --> GT[Global Edge Topic]
+  end
+
+  subgraph COST[Account-scoped Cost Management]
+    AC[Account costs] --> B[AWS Budgets]
+    AC --> CAD[Cost Anomaly Detection]
+    B --> CT[Cost Alerts Topic]
+    CAD --> CT
+  end
+
+  ACT -. controla inventario .-> REGIONAL
+  ACT -. controla inventario .-> GLOBAL
+  ACT -. controla inventario .-> COST
+  NOTIFY -. controla topics/actions .-> RA
+  NOTIFY -. controla topics/actions .-> GA
+  PRIVATE -. aplica .-> NOTIFY
+  NOAUTO -. aplica .-> REGIONAL
+  NOAUTO -. aplica .-> COST
+  WINDOW -. controla staging .-> REGIONAL
+  GATE -. promoción manual .-> ACT
+  RUNBOOKS -. acción humana segura .-> RA
+  RUNBOOKS -. acción humana segura .-> GA
+  RUNBOOKS -. acción humana segura .-> CT
+```
+
+### Evidencia, no repetición y cierre
+
+Evidencia sanitizada: `/tmp/mxmed-aws-operations-readiness-01/`.
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "cost_explorer_calls": 0,
+  "pricing_api_calls": 0,
+  "aws_resources_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "http_calls": 0,
+  "npm_install_calls": 0,
+  "docker_calls": 0,
+  "composer_calls": 0,
+  "php_calls": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "alarm_notifications_sent": 0,
+  "budgets_created": 0,
+  "anomaly_monitors_created": 0,
+  "automatic_remediations": 0,
+  "secret_values_requested": 0,
+  "personal_notification_targets_persisted": 0
+}
+```
+
+La readiness de Operations queda cerrada como contrato, no como despliegue. Los
+gaps de privacidad de logs, `/readyz`, Stripe return, tráfico, pricing, dominios y
+certificados permanecen bloqueantes hasta su microfase responsable.
+
+Microfase 20 de 24 concluida. Avance global 20/24; quedan 4 pendientes.
+
+Siguiente microfase, no iniciada aquí:
+
+`ARCH-DEVOPS/MXMed-AWS-Operations-Implementation-01`
+
+Será la Microfase 21 de 24.
+
+---
