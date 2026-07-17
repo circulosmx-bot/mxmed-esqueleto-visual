@@ -58744,3 +58744,556 @@ Siguiente microfase, no iniciada aquí:
 Será la Microfase 22 de 24.
 
 ---
+
+## PP-Decisiones 270 - MXMED_AWS_BACKUP_DR_FOUNDATION_CONTRACT_V1
+
+### Estado, alcance y baseline
+
+Microfase 22 de 24.
+
+Resultado: `PASS - MXMED_AWS_BACKUP_DR_FOUNDATION_CONTRACT_V1`.
+
+Esta decisión cierra el contrato implementable de Backup/DR sin crear IaC,
+recovery points, snapshots, restores, copias, recursos AWS ni una región
+secundaria. La estrategia inicial es `backup-and-restore-v1`; no acredita un
+deploy, una restauración probada, un RTO medido, cumplimiento legal ni estado
+`DR_READY`.
+
+La inspección read-only partió de
+`feature/mxmed-aws-operations-implementation`, commit completo
+`30836dbb5ec188658cb01d685a7138808370e075`, upstream `0/0`, árbol limpio y
+`git diff --check` PASS. Se confirmaron Node `v22.22.0`, npm/npx `10.9.4`,
+PP253–PP269, 1,196 pruebas previamente aprobadas en PP269, Operations
+profile-aware, tráfico público bloqueado, observabilidad clínica bloqueada y
+cero recursos desplegados. La rama documental es
+`architecture/mxmed-aws-backup-dr-readiness` y el único archivo versionado
+modificado es este documento.
+
+Se preservan sin reescritura Security PP253–PP254, Data PP255–PP256, Storage
+PP257–PP258, Session PP260–PP261, Compute/Cost-Aware PP262–PP265, Edge
+PP266–PP267 y Operations PP268–PP269. `MxMedBackupStack` continúa vacío: su
+existencia y dependencias no equivalen a protección configurada.
+
+### Auditoría de protección actual
+
+La siguiente tabla describe templates/configuración versionada, no recursos en
+una cuenta. El inventario desplegado sigue siendo cero.
+
+| Superficie | Protección verificable actual | Límite o gap verificable |
+|---|---|---|
+| RDS staging | MySQL `8.4.9`, backups automáticos 7 días, `deleteAutomatedBackups=false`, SSE-KMS con ApplicationDataKey, no público, Single-AZ launch-lean, ventana backup `00:00-00:30`, mantenimiento `sun:01:30-sun:02:30`, máximo 200 GiB y snapshot al remover/reemplazar | 7 días es sólo baseline de staging y no satisface una selección regional activa de 35 días; sin recovery point probado ni outputs de DataStack |
+| RDS production launch-lean | MySQL `8.4.9`, backups automáticos/PITR 35 días, deletion protection, SSE-KMS, `RETAIN` al remover/reemplazar, no público, Single-AZ, ventana backup `00:30-01:00`, mantenimiento `sun:02:30-sun:03:30`, máximo 200 GiB | Multi-AZ sólo aparece en `production-standard-v1`; no existe plan periódico AWS Backup, restore test ni cross-region |
+| RDS production standard | Conserva engine, KMS, 35 días y deletion protection; Multi-AZ, `db.m6g.large`, 100–1000 GiB | Es perfil futuro sujeto a promoción; no es estado desplegado |
+| PublicMediaBucket | Versioning, SSE-KMS ApplicationDataKey, Bucket Key, Block Public Access, owner-enforced, TLS, `RETAIN`, `autoDeleteObjects=false`, expiración de versiones no actuales 30/90 días y multipart incompleto 1 día | Sin Object Lock, EventBridge, AWS Backup ni replicación; derivados son parcialmente recreables |
+| PrivateDocumentsBucket | Versioning, SSE-KMS, Bucket Key, bloqueo público, owner-enforced, TLS, `RETAIN`, sin auto-delete; exportaciones temporales 7 días y transición production a Intelligent-Tiering 30 días | Sin Object Lock ni EventBridge; irremplazable/contractual; aún sin AWS Backup |
+| ClinicalRecordsBucket | Versioning, SSE-KMS, Bucket Key, bloqueo público, owner-enforced, TLS, `RETAIN`, sin auto-delete; transición production a Intelligent-Tiering 30 días | Sin Object Lock ni EventBridge; irremplazable/crítico; aún sin AWS Backup |
+| UploadQuarantineBucket | Mismos controles base, lifecycle por estado 1/7/14/30 días y EventBridge habilitado para el flujo de cuarentena | Efímero, `Backup=not-required`; no debe entrar a un plan ni conservar malware rechazado |
+| Valkey | Valkey `8.2`, TLS/KMS, RBAC, cero snapshots; launch-lean un nodo sin réplica/HA, standard primary+replica con Multi-AZ/failover | `snapshotRetentionLimit=0`, `DESTROY`; sesiones/locks/tokens se pierden y se reconstruye vacío |
+| Compute/ECR | Compute es stateless; cuando el activation mode crea registry, ECR es KMS, scan-on-push, tags inmutables, `RETAIN`, no empty-on-delete y la task exige `sha256:<64 hex>` | El modo real general es disabled; no hay registry desplegado, réplica ECR cross-region ni filesystem persistente respaldable |
+| Security | Cuatro CMK regionales separadas, incluida BackupKey; rotación, `multiRegion=false`, `RETAIN`, ventanas 7 días staging/30 production; secretos `RETAIN`; CloudTrail multi-región con file validation; AuditBucket versionado, KMS, privado, `RETAIN`, lifecycle 365/2555 días | El material KMS y los valores secretos no son exportables; AuditBucket no tiene Object Lock ni AWS Backup y sigue bajo ownership de Security |
+| Operations | Implementa topics regionales Critical/Warning, global y Cost, catálogos de alarmas/runbooks y runtime gates cuando el modo los crea | El modo real default no crea Operations; no hay reglas Backup EventBridge. `/readyz`, tráfico público y observabilidad clínica siguen bloqueados |
+| BackupStack | Base stack y dependencias Backup → Data/Storage/Security | Cero vaults, planes, selections, roles, rules, restore tests o recursos Backup |
+
+DataStack no expone CloudFormation Outputs de endpoint, secret o recovery point.
+Storage tampoco publica nombres de buckets. El PITR nativo es propiedad exclusiva
+de DataStack. El AuditBucket y su retención son propiedad exclusiva de
+SecurityStack. Backup/DR no debe alterar ninguno de esos ownerships.
+
+### Estrategia, activation modes y estado tipado
+
+`MxMedDisasterRecoveryStrategy = backup-and-restore-v1` por costo, ausencia de
+lanzamiento, tráfico bloqueado, demanda inicial baja, infraestructura
+reproducible y región DR aún no aprobada. V1 excluye active-active, warm standby,
+pilot light permanente, base replicada entre regiones, aplicación encendida en
+DR, Route 53 failover automático, Global Database, Valkey cross-region y writes
+multi-región. No se afirma alta disponibilidad regional cruzada.
+
+| `MxMedBackupDrActivationMode` | Inventario autorizado |
+|---|---|
+| `disabled-v1` | Cero recursos nuevos Backup/DR. Preserva backups automáticos RDS, versioning/retención S3, KMS RETAIN e inmutabilidad ECR existentes. Es el valor real y el de scripts generales. |
+| `regional-recovery-ready-v1` | Regional Backup en `mx-central-1`, BackupKey existente, RegionalRecoveryVault, governance lock, snapshots RDS periódicos, protección Clinical/Private, roles, monitoreo y runbooks. Sin región secundaria, cross-account, restore testing programado o failover. |
+| `cross-region-copy-ready-v1` | DestinationBackupKey, DrCopyVault y copy actions sólo con región DR explícita/verificada, residencia, disponibilidad de servicios/clases, costo y retención aprobados. |
+| `restore-validation-ready-v1` | Restore testing/selections, restore role, red aislada, recursos temporales, validación, cleanup y residual audit. No implica failover, RTO garantizado o certificación. |
+
+Tipos cerrados:
+
+- `MxMedBackupVaultLockMode`: `unlocked-v1`, `governance-v1`,
+  `compliance-approved-v1`;
+- `MxMedDrRegionState`: `not-selected-v1`, `selected-and-verified-v1`;
+- `MxMedCrossAccountBackupMode`: `disabled-v1`,
+  `organization-vault-approved-v1`;
+- `MxMedRestoreTestingMode`: `disabled-v1`, `manual-quarterly-v1`,
+  `scheduled-monthly-v1`;
+- `MxMedBackupDataResidencyState`: `pending-review-v1`, `approved-v1`;
+- `MxMedBackupValidationState`: `not-tested-v1`,
+  `restore-job-completed-v1`, `application-validation-passed-v1`;
+- `MxMedBackupSelectionMode`: `explicit-resource-arns-v1`,
+  `verified-tags-v1`.
+
+Valores reales: activation `disabled-v1`; vault regional futuro
+`governance-v1`; DR `not-selected-v1`; cross-account `disabled-v1`; restore
+testing `disabled-v1`; residencia `pending-review-v1`; validación
+`not-tested-v1`; selección `explicit-resource-arns-v1`; automatic failover y
+failback `false`.
+
+No se elige `us-east-1`, `us-east-2`, `sa-east-1` ni otra región por default.
+CloudFront en `us-east-1` no autoriza residencia clínica allí. Antes de elegir
+`drRegion` deben verificarse AWS Backup, RDS MySQL 8.4/clases, Fargate, S3, KMS,
+ECR, Valkey, CloudWatch, residencia, contrato, transferencia, latencia, costo y
+soporte. Cross-region sin todo ello falla con
+`dr_region_not_selected_or_verified`.
+
+### Clases de datos y objetivos internos
+
+| Clase | Fuente | Naturaleza y recuperación |
+|---|---|---|
+| A. Transactional database | RDS: perfiles, usuarios, agenda, suscripciones, pagos locales, contratos, expediente estructurado, índices/metadata | Irremplazable/crítica; PITR nativo y snapshots periódicos |
+| B. Clinical objects | ClinicalRecordsBucket | Irremplazable/crítica; versioning y futuro S3 continuous |
+| C. Private documents | PrivateDocumentsBucket | Irremplazable/contractual; versioning y futuro S3 continuous |
+| D. Public media | PublicMediaBucket | Parcialmente recreable; versioning/lifecycle, sin AWS Backup launch |
+| E. Quarantine | UploadQuarantineBucket | Efímera; sin backup |
+| F. Audit data | CloudTrail, evidencia y reportes | Irremplazable/seguridad; ownership Security |
+| G. Sessions | Valkey, sesiones y locks | Efímera; pérdida total aceptada, empty rebuild |
+| H. Software/infra | Git, CDK, Dockerfile, ECR | Reconstruible desde commit publicado y artefacto verificado |
+| I. Secrets/KMS | Secrets Manager y CMK | Rotación/retención; nunca exportación de valores/material |
+
+Son objetivos internos aún no medidos, no SLA:
+
+| Superficie/perfil | RPO | RTO objetivo |
+|---|---|---|
+| RDS launch-lean | operacional ≤5 min por PITR nativo; snapshot regional ≤24 h | ≤4 h |
+| RDS standard | operacional ≤5 min; copy cross-region ≤24 h | ≤2 h cuando DR esté validada |
+| Clinical/Private S3 launch | recuperación por versión; continuous ≤15 min | ≤8 h |
+| Clinical/Private S3 standard | continuous regional ≤15 min; copy periódico ≤24 h | ≤4 h |
+| Public media | ≤24 h o reconstrucción | ≤24 h |
+| Audit | flujo del servicio fuente | ≤24 h |
+| Sessions | sin backup; pérdida de todas las sesiones | ≤30 min después de infraestructura |
+| Infraestructura | último commit/tag publicado | ≤8 h |
+| Secrets | no se asume restore del valor; reemisión/rotación | ≤4 h |
+
+### RDS: PITR, plan periódico y restauración
+
+DataStack conserva ownership de automated backups/PITR. Para production se
+mantienen 35 días, `deleteAutomatedBackups=false`, deletion protection, KMS y
+`RETAIN`; nunca retention 0. AWS Backup continuous para RDS está prohibido para
+evitar doble ownership. AWS Backup sólo agregará recovery points periódicos
+independientes.
+
+| Plan futuro | Cadencia/ventanas | Retención/copia |
+|---|---|---|
+| `RdsRegionalPeriodicPlan` launch | diario 03:00 UTC; start 60 min; completion 360 min | 35 días en RegionalRecoveryVault; sin cold ni copy |
+| Standard daily | diario, mismas ventanas | 35 días |
+| Standard monthly | primer domingo del mes | 365 días, sólo con retención aprobada |
+| Cross-region daily/monthly | sólo tras aprobar DR | 35/365 días en DrCopyVault |
+
+Una selección regional activa debe rechazar un RDS con retención nativa menor a
+35 días. El baseline staging de 7 días puede existir únicamente en
+`disabled-v1`; debe elevarse o excluirse antes de activar esa protección, sin
+reducir production. No hay snapshots indefinidos ni nombres personales.
+
+Todo restore crea una DB nueva; jamás overwrite/in-place, borrado previo,
+endpoint prematuro, subnet pública, conexión productiva durante validación o
+reutilización del master secret sin rotar. Flujo: declarar incidente; congelar
+writes si es posible; fijar recovery point; restaurar DB nueva en data subnets y
+SG aislado; verificar engine/version/parameter group, schema, sentinel sintético
+e integridad; rotar application DB secret; actualizar Compute mediante cambio
+controlado; validar `/readyz`; habilitar tráfico manualmente; conservar origen
+para investigación; eliminar sólo con aprobación. No se ejecuta SQL aquí.
+
+### S3: capas, selección y exclusiones
+
+Versioning, SSE-KMS, Block Public Access, bucket-owner-enforced, TLS, `RETAIN`,
+`autoDeleteObjects=false` y lifecycle permanecen en los buckets críticos. AWS
+Backup S3 deberá verificar versioning, EventBridge y permisos para versiones,
+tags/ACL aplicables. EventBridge no se activa para Clinical/Private en esta
+microfase. Si cualquiera carece de versioning, falla con
+`critical_s3_bucket_versioning_not_enabled`.
+
+Launch-lean crea exactamente una protección continuous de 35 días por bucket
+para ClinicalRecords y PrivateDocuments en RegionalRecoveryVault, sin cold.
+Standard conserva continuous y añade snapshot diario de 35 días para futura
+copy action; el mensual 365 sólo existe con aprobación. Versioning, continuous,
+periodic y cross-region son capas distintas.
+
+PublicMedia no usa AWS Backup launch; conserva versioning/lifecycle y reconstruye
+derivados. Un snapshot semanal standard exige volumen comercial, reconstrucción
+fuera de RTO y costo aprobado. Quarantine nunca se respalda: el flujo funcional
+debe validar, escanear, promover y registrar destino antes del lifecycle. El
+AuditBucket no se incluye por default ni cambia su retención; una protección
+adicional requiere decisión propia de duplicación, costo, acceso y cumplimiento.
+
+Selección inicial `explicit-resource-arns-v1` con referencias tipadas
+`databaseInstanceArn`, `clinicalRecordsBucketArn` y
+`privateDocumentsBucketArn`. Quedan prohibidos `arn:aws:*`, todos los recursos,
+wildcard S3, Environment-only y `Backup=true` sin verificación. Tags de auditoría:
+`BackupScope=transactional-critical|clinical-critical|private-critical`,
+`BackupPolicyVersion` y `RecoveryTier`. `verified-tags-v1` queda diferido.
+
+### Valkey, cómputo, secretos y KMS
+
+`valkeyRecoveryMode=empty-rebuild-v1`: no snapshots ni restore de sesiones,
+locks o tokens. Recuperación: recrear cluster vacío, invalidar cookies/sesiones,
+exigir login, recrear locks naturalmente, comprobar prefijos y monitorear
+evictions. No se promete continuidad de sesión.
+
+Compute es stateless; no se respalda task filesystem, `/tmp`, Apache runtime,
+contenedores o logs locales. ECR se reconstruye desde commit firmado y
+Dockerfile versionado: build, scan, publish, verificación de digest y deploy.
+Cross-region ECR replication está fuera de launch-lean.
+
+Secret values nunca se exportan a S3, vault, Git, evidencia o logs. Se recrean
+contenedores desde IaC, generan/rotan contraseñas, reconfiguran Stripe/IA desde
+fuente autorizada e invalidan valores comprometidos. Sólo se registra nombre
+contractual, versión esperada, owner opaco, estado de rotación y fecha.
+
+El material CMK no se respalda ni exporta. Las keys conservan `RETAIN`, rotación,
+deletion window, policy mínima y separación regional. Cross-region crea
+DestinationBackupKey en destino; nunca usa la key de `mx-central-1` fuera de su
+región. Riesgo de eliminación es SEV1: detener, escalar y asumir que ciphertext
+puede ser irrecuperable; Vault Lock no reemplaza KMS protection.
+
+### Vaults, keys, Vault Lock y cross-account
+
+`RegionalRecoveryVault` vive en `mx-central-1`, cifrado con la BackupKey
+customer-managed ya propiedad de SecurityStack. RegionalBackup recibe esa
+referencia tipada y no duplica/reemplaza la key. Vault y key usan nombres/alias
+deterministas no sensibles, rotación, `RETAIN`/UpdateReplace `RETAIN`, tags de
+costo, policy mínima, sin default vault, public policy o cross-account. BackupKey
+sólo permite AWS Backup service/BackupRole, RestoreRole y administración
+contractual; nunca Application, Migration, Jobs, público, CloudFront o Stripe,
+ni `kms:*` en workloads.
+
+Vault Lock inicial `governance-v1`: MinRetentionDays 1,
+MaxRetentionDays 365 y sin ChangeableForDays. `compliance-approved-v1` exige
+política/periodo legal, restore exitoso, runbook, costos, KMS, seguridad,
+aprobación manual y ChangeableForDays explícito. No se activa por conveniencia;
+tras la ventana no se presume reversible. Backup retention no es records
+retention y no fija obligaciones clínicas.
+
+`DrCopyVault` sólo existe en cross-region/restore-validation con `drRegion`
+explícita, DestinationBackupKey, governance lock, `RETAIN`, policy/tags mínimos,
+copy desde RegionalRecoveryVault y monitoreo. Nunca región default, wildcard,
+public access o cross-account inicial.
+
+Cross-account real queda `disabled-v1`. `organization-vault-approved-v1`
+requiere Organizations, cuenta dedicada, trusted access, policies source/vault/
+KMS, ownership, restore-back, presupuesto y prueba; no se inventan organization,
+OU, account ID o ARN.
+
+### IAM separado
+
+`BackupRole` sólo describe recursos protegidos, crea backups/snapshots, lee las
+versiones S3 necesarias, escribe en vault, copia cuando esté habilitado y usa
+BackupKey. No restaura, modifica aplicación, lee secretos, borra DB/buckets ni
+administra KMS.
+
+`RestoreRole` sólo restaura recursos nuevos, usa destination key, crea recursos
+temporales de validación y describe jobs. No modifica production, DNS o fuente;
+no lee secretos productivos, despliega Edge ni usa roles de aplicación.
+`AdministratorAccess`, `AWSBackupFullAccess` en workloads y wildcard general sin
+justificación están prohibidos. Backup y Restore son duties distintos.
+
+### Restore testing, aislamiento y validación
+
+El valor real es `disabled-v1`. `manual-quarterly-v1` launch prueba RDS y un
+sentinel S3 trimestral con aprobación, ventana de costo y cleanup auditado.
+`scheduled-monthly-v1` standard prueba RDS mensual y S3 trimestral, en aislamiento,
+con EventBridge, validación y eliminación controlada.
+
+Un job `COMPLETED` sólo alcanza `restore-job-completed-v1`. La secuencia completa
+es: job completed; infraestructura validada; aplicación validada; residuos
+eliminados; evidencia aprobada.
+
+RDS se restaura con identifier nuevo, data subnets privadas, SG aislado,
+`publiclyAccessible=false`, deletion protection false sólo temporal, clase mínima
+compatible, sin ApplicationService, DNS o secretos productivos. Se validan
+engine/version, cifrado, schema version, migration ledger, número de tablas,
+constraints, sentinel sintético y conectividad controlada; nunca filas, nombres,
+correos, expedientes, diagnósticos o password hashes. Después se elimina y se
+auditan snapshots, SG/ENI y costo residuales.
+
+S3 prefiere item-level restore del sentinel a bucket temporal KMS/privado sin
+CloudFront/app. Valida key contractual, size, checksum, metadata permitida,
+cifrado y version sin loguear contenido clínico. Un bucket completo requiere
+ventana, aprobación, presupuesto, aislamiento y cleanup probado.
+
+Sentinels futuros, no creados aquí: tabla `backup_restore_sentinel` con sólo
+identifier opaco, expected value y `updated_at`; objeto
+`dr-sentinel/health.json` no sensible con checksum conocido. Requieren microfase
+funcional separada.
+
+La red de validación usa isolated private subnets, sin Internet/NAT innecesario,
+public IP, Edge, CloudFront, Stripe, IA o notificaciones externas; SG sin inbound
+de aplicación y acceso sólo del validator. No reutiliza Production
+ApplicationSecurityGroup.
+
+Camino futuro, no implementado: EventBridge Restore Job State Change → validator
+autorizado → `PutRestoreValidationResult` → Operations topic. Requiere código
+mínimo, logs sin datos, timeout, IAM mínimo, idempotencia, costo, cleanup y
+pruebas. Nunca marca SUCCESSFUL sólo por `COMPLETED`.
+
+### Monitoreo y catálogo de runbooks
+
+Futuros eventos: Backup Job `FAILED|ABORTED|EXPIRED|PARTIAL`; Copy Job `FAILED`;
+Restore Job `FAILED|ABORTED`; restore validation failed; recovery point expirado
+inesperadamente; cambios a vault/Vault Lock; residuos de restore. Fallos
+regionales van a RegionalCriticalTopic, retrasos a RegionalWarningTopic y costo
+residual a CostAlertsTopic, sin subscriber personal. EventBridge es best-effort
+y se complementa con revisión periódica de jobs.
+
+Cada runbook debe materializar los 13 campos obligatorios `trigger`, `severity`,
+`authorization`, `sourceRecoveryPoint`, `safeChecks`, `prohibitedActions`,
+`restoreTarget`, `validation`, `cutover`, `rollback`, `cleanup`, `evidence` y
+`closureCriteria`. Ninguno incluye secretos, datos clínicos o comandos
+destructivos. Catálogo cerrado:
+
+| # | Runbook | Trigger/severity/autorización | Recovery point, target y safe validation | Prohibido/cutover/rollback | Cleanup, evidencia y cierre |
+|---|---|---|---|---|---|
+| 1 | `rds-point-in-time-restore` | corrupción/pérdida, SEV1, Incident Commander+Data | PITR fijado; DB nueva aislada; engine/schema/sentinel | no in-place; cutover manual tras readyz; volver endpoint anterior | eliminar sólo aprobado; timeline/job/validación; integridad estable |
+| 2 | `rds-snapshot-restore` | snapshot requerido, SEV1/2, Data+Security | recovery point periódico; DB nueva; KMS/schema/sentinel | no overwrite/secret origen; cutover controlado; conservar fuente | residual RDS/ENI/SG; evidence aprobada; tráfico estable |
+| 3 | `s3-object-version-recovery` | borrado/version incorrecta, SEV2, Storage owner | versión explícita; objeto/destino privado; checksum/metadata | no bucket completo/publicar; promoción manual; volver versión previa | temporal/versiones; IDs sanitizados; objeto validado |
+| 4 | `s3-backup-restore` | versión insuficiente/pérdida, SEV1/2, Storage+Security | recovery point; bucket nuevo KMS; sentinel | no source overwrite/CloudFront; cutover por prefix aprobado; revertir ruta | bucket temporal/costo; job+checksum; integridad confirmada |
+| 5 | `accidental-clinical-object-deletion` | objeto clínico borrado, SEV1, Clinical+Storage | version/recovery point; destino aislado; checksum sin contenido | no log clínico ni restore masivo; promoción aprobada; revertir versión | temporales; ticket sanitizado; expediente lógico reconciliado |
+| 6 | `database-logical-corruption` | corrupción lógica, SEV1, Data+Incident | PITR anterior; DB nueva; schema/sentinel/integridad | no writes/SQL improvisado; cutover manual; origen preservado | recursos de prueba; timeline; causa y consistencia cerradas |
+| 7 | `database-total-loss` | DB no recuperable, SEV1, Incident+Data+Security | mejor PITR/snapshot; DB nueva; KMS/schema | no borrar evidencia; endpoint/secret rotado; volver recovery point alterno | fuente/residuos según aprobación; job/timeline; servicio validado |
+| 8 | `source-region-unavailable` | región caída, SEV1, dirección+Incident | copy aprobado; stack/buckets/DB nuevos en DR; sentinels | no región improvisada/auto DNS; cutover manual; failback plan | residuos source/DR controlados; decisiones; DR íntegro/monitoreado |
+| 9 | `backup-job-failed` | job FAILED/ABORTED/PARTIAL, SEV2, Backup owner | último point sano; validar selección/vault/key | no borrar point ni ocultar fallo; sin cutover; reintento controlado | jobs fallidos/residuos; event/job sanitizado; siguiente job exitoso |
+| 10 | `copy-job-failed` | copy FAILED, SEV2, Backup+DR owner | point regional; validar región/key/vault | no cambiar destino/retención ad hoc; sin cutover; conservar regional | copies parciales; event/job; copy válido o riesgo aceptado |
+| 11 | `restore-job-failed` | restore FAILED/ABORTED, SEV2, Restore owner | point fijado; target nuevo; revisar IAM/KMS/config | no tocar production; sin cutover; nuevo target/recovery point | target/ENI/SG; job; restore completado o escalado |
+| 12 | `restore-validation-failed` | restore completo no valida, SEV1/2, Restore+app owner | target aislado; schema/sentinel/checksum | no marcar successful/conectar app; sin cutover; point alterno | target/costo; resultados sanitizados; app validation aprobada |
+| 13 | `recovery-point-expired` | point desaparece/expira, SEV2, Backup owner | inventario esperado vs visible; target no aplica | no extender legal ad hoc; sin cutover; plan/retención aprobados | referencias inválidas; audit; cobertura recuperada/riesgo aceptado |
+| 14 | `backup-vault-access-denied` | deny inesperado, SEV2, Security+Backup | point/vault/key contractuales; policy safe-check | no wildcard/Admin; sin cutover; revertir policy mínima | grants temporales; policy diff; job autorizado con least privilege |
+| 15 | `backup-key-deletion-risk` | disable/schedule delete, SEV1, Security | recovery points cifrados; revisar key state sin material | no exportar/recrear material; bloquear cambios; cancelar cambio autorizado | grants temporales; CloudTrail/ticket; key activa y riesgo cerrado |
+| 16 | `secret-reissuance-after-disaster` | secreto perdido/comprometido, SEV1/2, Security+owner | nombre contractual; contenedor nuevo; verificar rotación | no exportar/loguear/usar backup; cutover por versión; revocar anterior | versiones temporales; metadata sin valor; consumidor estable |
+| 17 | `valkey-empty-recovery` | pérdida cache, SEV2, Session owner | sin recovery point; cluster vacío; TLS/RBAC/prefix | no snapshot/tokens previos; exigir login; rollback recrear cluster | clusters previos; métricas; sesiones nuevas sanas |
+| 18 | `ecr-image-rebuild` | imagen ausente, SEV2, Compute+Release | commit firmado; ECR destino; scan/digest | no tag mutable/binario desconocido; deploy digest; volver digest previo | imágenes temporales según lifecycle; commit/scan/digest; service estable |
+| 19 | `cross-region-cutover` | source inutilizable, SEV1, dirección+Incident | copy/stack DR validados; DB/buckets nuevos; sentinels/readyz | no auto failover/recharge; DNS manual; volver a source si seguro | recursos no usados; timeline; integridad/tráfico monitoreados |
+| 20 | `failback-to-primary-region` | source recuperada, SEV1/2, dirección+Incident | point posterior aprobado; primary nuevo; reconciliación | no invertir DNS antes de validar; cutover manual; regresar DR | DR sólo tras retención aprobada; timeline; primary estable sin split writes |
+| 21 | `restore-test-residual-cost` | recursos después de deadline, SEV3, FinOps+Restore | test/job; inventario RDS/S3/ENI/SG/snapshot; verificar ownership | no borrar production/recovery point; sin cutover; pausar schedule | residuos autorizados; ledger/alarm; costo residual cerrado |
+| 22 | `suspected-backup-compromise` | acceso/manipulación sospechosa, SEV1, Security+Incident | points/vault/key; CloudTrail e integridad | no borrar/alterar evidencia; cutover sólo a point confiable; aislar credenciales | accesos temporales; cadena de evidencia; point confiable y causa cerrada |
+
+Pérdida regional usa secuencia manual: declarar SEV1; detener cambios; descartar
+falla parcial; fijar recovery point; aprobar región DR; desplegar Network,
+Security, Data y Storage desde Git; restaurar RDS nueva y buckets nuevos; crear
+grants KMS destino; reemitir secretos; reconstruir/publicar ECR; iniciar Valkey
+vacío; desplegar Compute; migrar sólo si corresponde; validar sentinels e
+integridad; integrar `/readyz`; desplegar Edge; reconciliar Stripe/eventos;
+cutover DNS manual; monitorear; preservar evidencia; planear failback. Nunca
+failover automático.
+
+### Stripe, costos, retención y tráfico público
+
+Stripe sigue siendo fuente autoritativa externa. El backup local protege estado
+local de checkout, PaymentIntent, events, suscripción y contratos. Tras restore:
+no reconfirmar/repetir cargos ni autoactivar; reconciliar IDs sanitizados por
+runbook, preservar idempotencia y detectar eventos faltantes. Stripe no se
+respalda en S3 y `client_secret` nunca se persiste.
+
+Drivers: backup storage, snapshots RDS, S3 warm/continuous, restores/tests y
+recursos temporales, transferencia/destino cross-region, keys, EventBridge,
+CloudWatch, copies fallidas, points expirados y snapshots residuales. Launch
+excluye cross-region/cross-account, air-gapped vault, compliance, Audit Manager,
+report plans, indexing/search, cold sin evidencia, test mensual, PublicMedia y
+Quarantine. No se afirma costo cero ni se consultan precios.
+
+Inputs futuros sin defaults monetarios: `restoreTestMonthlyBudgetUsd`,
+`restoreTestMaximumRuntimeHours`, `restoreTestApprovedInstanceClass`,
+`restoreTestOwnerReference`, `restoreTestCleanupDeadlineHours`. Un schedule exige
+budget, owner, cleanup, residual alarm, ventana, sintéticos y aprobación.
+
+El ledger futuro registra expected protected GiB, monthly change rate, RDS
+snapshot storage, S3/continuous storage, frecuencia, RDS temporary hours,
+restore GB, cross-region transfer, destination storage, KMS keys,
+EventBridge/CloudWatch y residual risk. Rates quedan `null` hasta evidencia
+regional vigente; no se reutilizan precios de otra región.
+
+Se separan retención productiva, versiones, backups, evidencia, legal hold y
+Vault Lock. Ni 35 ni 365 días prueban obligación médica; Vault Lock no acredita
+normativa y backup no sustituye expediente. Legal hold no se activa.
+
+Antes de primer tráfico público: regional recovery desplegado; PITR verificado;
+job y recovery point exitosos; S3 crítico protegido cuando clinical esté activo;
+BackupKey/policy/monitoring válidos; restore manual exitoso; runbook y costo
+aprobados. Cross-region puede diferirse para piloto launch con aceptación formal
+de riesgo; producción comercial clínica exige gate cross-region o aceptación
+formal.
+
+### Readiness, configuración, stacks y dependencias futuras
+
+Estados, estrictamente monotónicos por evidencia:
+
+`NOT_PROTECTED` → `BACKUP_CONFIGURED` → `RECOVERY_POINT_AVAILABLE` →
+`RESTORE_JOB_COMPLETED` → `APPLICATION_VALIDATED` → `DR_READY`.
+
+Template/plan sólo alcanza BACKUP_CONFIGURED; job exitoso crea recovery point;
+restore crea recurso; schema/sentinel/integridad permiten APPLICATION_VALIDATED;
+DR_READY además exige cleanup, runbook, personas/proceso, costo y evidencia.
+Synth o deploy no bastan.
+
+Campos futuros, no agregados ahora: `backupDrActivationMode`,
+`disasterRecoveryStrategy`, `backupVaultLockMode`, `drRegionState`, `drRegion`,
+`backupDataResidencyState`, `crossAccountBackupMode`, `restoreTestingMode`,
+`backupSelectionMode`, `backupValidationState`,
+`backupRdsPeriodicRetentionDays`, `backupRdsMonthlyRetentionDays`,
+`backupS3ContinuousRetentionDays`, `backupS3PeriodicRetentionDays`,
+`backupCrossRegionRetentionDays`, `backupStartWindowMinutes`,
+`backupCompletionWindowMinutes`, `backupRestoreTestBudgetUsd`,
+`backupRestoreTestMaxRuntimeHours`, `backupComplianceChangeableForDays`,
+`backupVaultMinRetentionDays`, `backupVaultMaxRetentionDays`,
+`backupAutomaticFailoverEnabled=false` y
+`backupAutomaticFailbackEnabled=false`.
+
+Arquitectura futura:
+
+- `MxMedRegionalBackupStack`, `mx-central-1`: consume BackupKey de Security,
+  crea RegionalRecoveryVault, planes, selections, BackupRole, event rules y
+  protection/runbook profile; propiedades públicas `backupKey`,
+  `regionalRecoveryVault`, `rdsBackupPlan`, `s3BackupPlan`, `backupSelections`,
+  `backupRole`, `eventRules`, `protectionProfile`;
+- `MxMedDrCopyStack`, región DR explícita: DestinationBackupKey, DrCopyVault,
+  policies y copy contract; propiedades `destinationBackupKey`, `drCopyVault`,
+  `drRegion`, `copyProfile`;
+- `MxMedRestoreValidationStack`, source o DR por fixture: restore testing,
+  selections, isolated SG, RestoreRole, validación y cleanup; propiedades
+  `restoreTestingPlan`, `restoreSelections`, `restoreRole`, `validationProfile`,
+  `cleanupProfile`.
+
+No usan crossRegionReferences, Exports cross-region, lookups ni Custom Resources
+para consultar backups. No publican secret values, account IDs literales,
+identificadores clínicos, recovery point IDs, object keys reales o endpoints DB.
+
+RegionalBackup recibe referencias de Security/Data/Storage y Operations topics.
+DrCopy recibe parámetros contractuales y no depende de Data/Storage.
+RestoreValidation puede depender de Network/Security/RegionalBackup/Operations.
+La dirección es Backup/DR → recursos protegidos. Data, Storage y Compute nunca
+dependen de Backup; Edge sólo usa gate operacional externo, no ciclo
+CloudFormation.
+
+### Guardrails y matriz futura de QA
+
+`BackupDrFoundationAspect` fallará sin autocorregir ante: recursos Backup en
+disabled; cross-region sin región/residencia; restore testing sin budget;
+automatic failover/failback; RDS protegido con retention <35, automated backups
+off, AWS Backup continuous, in-place, deletion protection production off o
+snapshot indefinido; critical S3 sin versioning/encryption, fuera de selección,
+continuous duplicado, Quarantine/wildcard/public access; default/unencrypted/
+DESTROY vault, compliance sin aprobación/ChangeableForDays, wildcard policy o
+app access; `kms:*` workload, material output, key regional reutilizada o key
+DESTROY; Admin, restore que modifica production, backup que lee secrets o
+wildcard; restore en public subnet/IP/production SG/Edge/secrets, success sólo
+por COMPLETED, sin cleanup/residual audit; SQL/object content/datos clínicos,
+`client_secret`, cookies/session IDs en logs/evidencia; air-gap, Audit Manager,
+report plans, indexing, cross-account/media/quarantine accidentales.
+
+La implementación debe cubrir estas 165 pruebas conceptuales:
+
+| IDs | Casos cerrados |
+|---|---|
+| 1–6 | PP253–269, audit RDS, S3, Session, Security y Operations |
+| 7–13 | disabled, regional, cross-region, restore-validation, modo inválido, failover/failback false |
+| 14–18 | backup-and-restore; ausencia de active-active, warm standby, pilot light y auto DNS |
+| 19–30 | PITR 35/automated; no continuous RDS; daily/35/monthly/365/no cold; ARN explícito; DB nueva/no in-place/aislada |
+| 31–44 | versioning Clinical/Private; EventBridge; continuous único 35; periodic; no media/quarantine/wildcard; KMS source/destino; sentinel |
+| 45–54 | vault/key/RETAIN/governance min/max; no compliance sin gate, default o public policy |
+| 55–64 | no default DR; región/residencia/key/vault; daily RDS/S3 copies; copy S3 no afirma PITR; no cross-account/Edge inference |
+| 65–72 | BackupRole/RestoreRole separados, no Admin/secrets/production/app vault, KMS mínimo |
+| 73–81 | clases transactional/clinical/private/media/quarantine/session/infra/secrets/KMS |
+| 82–88 | RPO/RTO RDS/S3/session y objetivos no SLA |
+| 89–100 | real disabled; quarterly/monthly fixtures; RDS/S3 aislados; no public/secrets/app; completed≠validated; app validation/cleanup/residual |
+| 101–108 | sin rows, contenido clínico, nombres, emails, diagnóstico, client_secret, session ID o recovery IDs output |
+| 109–125 | PITR/snapshot/version/S3 restore; corruption/loss/region/jobs/KMS/secrets/Valkey/ECR/cutover/failback/compromise |
+| 126–133 | eventos backup/copy/restore/expiry/vault, topic regional, sin personal, EventBridge best-effort |
+| 134–145 | drivers de costo y exclusión air-gap/Audit Manager/report/index/media/quarantine |
+| 146–155 | rechazos continuous RDS, bucket sin versioning, compliance, DR sin región, public/no-cleanup restore, auto failover, Admin/wildcard/app vault |
+| 156–165 | synth futuro disabled/regional/cross-region/validation; sin lookup/account IDs/secrets; determinismo; sin deploy ni ciclos |
+
+### Diagrama contractual
+
+```mermaid
+flowchart TB
+  GATE[Public traffic gate\nrestore manual + cost/runbook approvals]
+  NOAUTO[Automatic failover/failback = false]
+  GOV[Vault Lock governance\ncompliance deferred]
+
+  subgraph PRIMARY[mx-central-1]
+    RDS[RDS native PITR\nDataStack owner] --> RP[RDS periodic snapshot]
+    CL[ClinicalRecords\nS3 versioning] --> SC[S3 continuous]
+    PR[PrivateDocuments\nS3 versioning] --> SP[S3 continuous]
+    RP --> RV[RegionalRecoveryVault]
+    SC --> RV
+    SP --> RV
+    BK[BackupKey\nSecurity owner] --> RV
+    GOV --> RV
+  end
+
+  subgraph OPTIONAL[Optional · only explicit verified DR region]
+    RV -. periodic copy .-> DV[DrCopyVault]
+    DK[DestinationBackupKey] --> DV
+  end
+
+  RV --> REC[Isolated restore]
+  DV -. when approved .-> REC
+  REC --> VAL[Schema/sentinel/checksum validation]
+  VAL --> CLEAN[Cleanup + residual audit]
+  CLEAN --> EVID[Sanitized evidence]
+  EVID --> TOPICS[Operations Critical/Warning/Cost topics]
+
+  VK[Valkey empty rebuild] -. recovery .-> VAL
+  ECR[ECR rebuild from signed commit/digest] -. recovery .-> VAL
+  SEC[Secrets reissue/rotation\nno export] -. recovery .-> VAL
+  NOAUTO -. manual cutover only .-> GATE
+  EVID --> GATE
+```
+
+### Evidencia, no repetición y cierre
+
+La evidencia sanitizada queda fuera de Git en
+`/tmp/mxmed-aws-backup-dr-readiness-01/`. No contiene account IDs, ARNs reales,
+secret values, recovery IDs, filas, object content ni datos clínicos.
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_backup_calls": 0,
+  "rds_api_calls": 0,
+  "s3_api_calls": 0,
+  "kms_api_calls": 0,
+  "pricing_api_calls": 0,
+  "cost_explorer_calls": 0,
+  "aws_resources_created": 0,
+  "backup_jobs_started": 0,
+  "copy_jobs_started": 0,
+  "restore_jobs_started": 0,
+  "snapshots_created": 0,
+  "cdk_synth_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "http_calls": 0,
+  "npm_install_calls": 0,
+  "docker_calls": 0,
+  "composer_calls": 0,
+  "php_calls": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0,
+  "clinical_data_read": 0,
+  "clinical_objects_restored": 0,
+  "automatic_failovers": 0,
+  "automatic_failbacks": 0
+}
+```
+
+La foundation Backup/DR queda definida, no implementada ni desplegada.
+Microfase 22 de 24 concluida. Avance global 22/24; quedan 2 pendientes.
+
+Siguiente microfase, no iniciada aquí:
+
+`ARCH-DEVOPS/MXMed-AWS-Backup-DR-Implementation-01`
+
+Será la Microfase 23 de 24.
+
+---
