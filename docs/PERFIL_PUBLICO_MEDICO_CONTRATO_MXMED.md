@@ -59484,3 +59484,627 @@ Siguiente microfase, no iniciada aquí:
 Será la Microfase 24 de 24.
 
 ---
+
+## PP-Decisiones 272 - MXMED_AWS_DEPLOYMENT_READINESS_CONTRACT_V1
+
+Fecha contractual: 2026-07-17. Microfase: 24 de 24.
+
+Resultado: `PASS - MXMED_AWS_DEPLOYMENT_READINESS_CONTRACT_V1`.
+
+El PASS cierra exclusivamente el ciclo de arquitectura, implementación y QA
+offline. No autoriza `bootstrap`, despliegue, carga de datos, restore, dominio,
+certificados, DNS ni tráfico. La foundation offline queda como candidata de
+release; la decisión AWS y el tráfico público continúan en `NO-GO`. PP245–PP271
+permanecen sin cambios y siguen siendo la especificación e implementación de
+cada dominio.
+
+### Estado canónico de cierre
+
+Los tipos cerrados por este contrato son:
+
+- `MxMedOfflineFoundationState = incomplete-v1 | offline-release-candidate-v1`;
+- `MxMedAwsDeploymentDecision = no-go-known-gates-v1 | approved-for-stage-zero-v1 | approved-for-controlled-foundation-deploy-v1 | approved-for-initial-data-load-v1 | approved-for-public-cutover-v1`;
+- `MxMedPublicTrafficDecision = no-go-runtime-and-operational-gates-v1 | staging-default-domain-only-v1 | production-origin-validation-v1 | approved-for-dns-cutover-v1`;
+- `MxMedInitialDataLoadState = not-inventoried-v1 | inventory-approved-v1 | migration-method-approved-v1 | loaded-not-validated-v1 | integrity-validated-v1`;
+- `MxMedActualCostMeasurementState = not-started-v1 | predeployment-baseline-captured-v1 | tags-active-v1 | initial-load-observation-running-v1 | initial-load-cost-report-approved-v1 | first-full-month-reconciled-v1`;
+- `MxMedReleaseApprovalState = unapproved-v1 | stage-approved-v1 | cutover-approved-v1`.
+
+Estado real al cerrar PP272:
+
+| Dimensión | Estado |
+|---|---|
+| Offline foundation | `offline-release-candidate-v1` |
+| Decisión de despliegue AWS | `no-go-known-gates-v1` |
+| Tráfico público | `no-go-runtime-and-operational-gates-v1` |
+| Carga inicial | `not-inventoried-v1` |
+| Medición de costo real | `not-started-v1` |
+| Aprobación de release | `unapproved-v1` |
+
+No se usa un booleano ambiguo `deploymentReady=true`.
+
+### Fuentes auditadas y frontera con PP263
+
+| Ruta | Versión/alcance | Estado | Relación con PP263 y la medición real |
+|---|---|---|---|
+| `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md` | PP245, PP249–PP258, PP260–PP271 | fuente contractual canónica | PP263 contiene supuestos, tarifas y perfiles Cost-Aware; PP272 no los convierte en costo real y exige compararlos con siete días completos posteriores a la carga inicial |
+| `infra/aws/README.md` | contratos e implementación AWS hasta `MXMED_AWS_BACKUP_DR_FOUNDATION_IMPLEMENTATION_V1` | guía operativa offline vigente | documenta scripts, selectores, gates y ausencia de deploy; complementa, pero no sustituye, PP263 ni el futuro reporte real |
+
+Se auditaron además `infra/aws/package.json`, `package-lock.json`, `bin/**`,
+`lib/config/**`, `lib/stages/**`, `lib/stacks/**`, `lib/constructs/**`,
+`lib/aspects/**`, `runtime/app/**` y `test/**`. Los otros Markdown que mencionan
+AWS describen seguridad, identidad, endpoints o planes generales; no son planes
+duplicados de escalamiento, costo o Deployment Readiness. El artefacto futuro
+`MXMED_AWS_INITIAL_REAL_DATASET_COST_ANALYSIS_V1` sustituirá estimaciones por
+mediciones, sin reescribir PP263.
+
+### Inventario final de stacks y componentes
+
+Ninguna fila de este inventario representa un stack desplegado. `stg|prd`
+significa que la misma clase puede sintetizarse para staging o producción.
+
+| Grupo y nombre lógico | Clase CDK | Región / ambiente | Activación y orden | Recursos principales | Costo fijo conocido / variable | Parámetros, secretos y outputs |
+|---|---|---|---|---|---|---|
+| FOUNDATION `MxMed{Env}/Network` | `MxMedNetworkStack` | `mx-central-1`; stg/prd | siempre en Environment; primero | VPC, subnets públicas/privadas/endpoints/aisladas, rutas, NAT según perfil, S3 gateway endpoint, SG y Flow Logs | VPC/SG sin fijo; NAT/IP/endpoints/logs según perfil y uso | sin secretos/outputs; configuración tipada |
+| FOUNDATION `MxMed{Env}/Security` | `MxMedSecurityStack` | `mx-central-1`; stg/prd | siempre; antes de Data/Storage/Session/Compute | cuatro KMS keys, secrets contractuales, roles/boundaries, trail, audit archive | KMS/Secrets fijos; requests, Logs, CloudTrail y S3 variables | `PublicMediaCloudFrontDistributionArn` sólo con media Edge; secretos sin valores; sin outputs sensibles |
+| STATEFUL `MxMed{Env}/Data` | `MxMedDataStack` | `mx-central-1`; stg/prd | después de Network+Security | RDS MySQL 8.4, subnet/parameter groups, monitoring role, master y app-user secret | instancia/almacenamiento/monitoring fijos o provisionados; I/O, logs y backup variables | secretos master y `mxmed_app`; endpoint sólo referencia tipada; sin output/export |
+| STATEFUL `MxMed{Env}/Storage` | `MxMedStorageStack` | `mx-central-1`; stg/prd | después de Security | PublicMedia, PrivateDocuments, ClinicalRecords y UploadQuarantine S3 | sin fijo por bucket; storage, requests, KMS y transferencia variables | `PublicMediaCloudFrontDistributionArn` condicional; sin secreto/output/export |
+| STATEFUL `MxMed{Env}/Session` | `MxMedSessionStack` | `mx-central-1`; stg/prd | después de Network+Security | Valkey replication group, subnet/parameter/user groups y auth secret | nodo(s) provisionados fijos; transferencia/requests variables | Valkey auth secret; endpoint sólo referencia tipada; sin output/export |
+| COMPUTE registry `MxMed{Env}/Compute` | `MxMedComputeStack` | `mx-central-1`; stg/prd | `registry-only-v1` o superior; después de Security | ECR privado, scan on push, tags inmutables, lifecycle | storage ECR variable; sin task/service fijo en este modo | sin digest requerido en registry-only; repository URI sólo referencia tipada |
+| COMPUTE tasks `MxMed{Env}/Compute` | `MxMedComputeStack` | `mx-central-1`; stg/prd | `tasks-ready-v1` o superior; después de Network/Data/Storage/Session/RegionalEdge si existe | task definitions app/migración, log groups, roles y secretos referenciados | logs/storage variables; sin servicio permanente en tasks-ready | `ApplicationImageDigest`; secretos runtime por referencia; sin valor en output |
+| COMPUTE service `MxMed{Env}/Compute` | `MxMedComputeStack` | `mx-central-1`; stg/prd | sólo `service-enabled-v1`; antes de Operations/Edge/Jobs | ECS cluster/service Fargate, autoscaling, circuit breaker y target attachment opcional | tareas mínimas fijas; scale-out, logs y transferencia variables | mismo digest/secret contract; cluster/service sólo referencias tipadas |
+| EDGE regional `MxMed{Env}/RegionalEdgeFoundation` | `MxMedRegionalEdgeFoundationStack` | `mx-central-1`; stg/prd | `application-origin-ready-v1` o superior; después de Network y antes de Compute | ALB, target group, listener HTTPS y reglas origin-header | ALB/LCU/public IPv4 fijos/variables | cinco parámetros regionales; outputs DNS ALB, target group ARN, certificate ARN y origin domain, todos no secretos salvo header `NoEcho` |
+| EDGE global `MxMed{Env}GlobalEdge/GlobalEdge` | `MxMedGlobalEdgeStack` | `us-east-1`; stg/prd | `media-cdn-ready-v1` o superior; handoff explícito, sin exports cross-region | CloudFront, OAC, WAF y DNS opcional | plan/requests/transferencia/WAF variables; costo fijo sólo si el plan aprobado lo tiene | parámetros media/origin/cert/domain/zone y header `NoEcho`; outputs distribution ID/ARN/domain y WebACL ARN |
+| EDGE legado `MxMed{Env}/Edge` | `MxMedEdgeStack` | `mx-central-1`; stg/prd | stack contractual siempre vacío; después de Compute/Security/Storage | cero recursos | cero mientras siga vacío | sin parámetros/secretos/outputs |
+| OPERATIONS cost `MxMed{Env}GlobalOperations/CostManagement` | `MxMedCostManagementStack` | `us-east-1`; stg/prd | `cost-controls-ready-v1` o superior; antes de Global Operations | dos Budgets, Cost Anomaly Detection, SNS y KMS | KMS/SNS/monitoring y notificaciones; gasto alertado, no creado por Budget | parámetros de costo sin defaults; outputs IDs/ARNs técnicos y estado; sin endpoints personales |
+| OPERATIONS regional `MxMed{Env}/RegionalOperations` | `MxMedRegionalOperationsStack` | `mx-central-1`; stg/prd | `launch-lean-observability-ready-v1` o superior; después de stacks observados | topics critical/warning, dashboards, alarms y métricas | alarmas/custom metrics/logs/dashboards según uso | sin valores secretos; referencias tipadas; topics sin subscribers versionados |
+| OPERATIONS global `MxMed{Env}GlobalOperations/GlobalOperations` | `MxMedGlobalOperationsStack` | `us-east-1`; stg/prd | sólo `production-observability-ready-v1`; después de Cost+GlobalEdge | GlobalEdgeAlertsTopic, dashboard y alarms CloudFront/WAF | alarmas/métricas/SNS variables | referencias tipadas; sin endpoints personales ni secreto |
+| BACKUP regional `MxMed{Env}/RegionalBackup` | `MxMedRegionalBackupStack` | `mx-central-1`; stg/prd | `regional-recovery-ready-v1` o superior; después de Data/Storage/Security/RegionalOperations | vault, plans/selections RDS/S3, role y failure EventBridge | storage/requests/restore/copy variables; key ya pertenece a Security | `DrDestinationBackupVaultArn` sólo cross-region; sin secreto/output |
+| BACKUP DR copy `MxMed{Env}/DrCopy` | `MxMedDrCopyStack` | región DR explícita futura; stg/prd | sólo `cross-region-copy-ready-v1` o superior; región hoy no seleccionada | destination KMS key y vault DR | key y almacenamiento/copia variables | `SourceRegionalBackupVaultArn`; sin secreto/output |
+| BACKUP restore `MxMed{Env}/RestoreValidation` | `MxMedRestoreValidationStack` | `mx-central-1` o fixture DR; stg/prd | sólo `restore-validation-ready-v1`; después de Network/Data/Storage/Security/RegionalBackup/Operations | role/SG/bucket temporal y plan/selections sólo en scheduled | RDS temporal, S3, backup requests y cleanup; todo medido como uso controlado | cinco parámetros de restore sin defaults; sin secreto/output |
+| EMAIL `MxMed{Env}Email/Email` | `MxMedEmailStack` | `us-east-1`; stg/prd | siempre como contrato vacío | cero recursos SES | cero mientras siga vacío | sin parámetros/secretos/outputs |
+| JOBS `MxMed{Env}/Jobs` | `MxMedJobsStack` | `mx-central-1`; stg/prd | contrato vacío después de Compute/Security/Storage | cero Scheduler/ECS RunTask/SQS | cero mientras siga vacío | sin parámetros/secretos/outputs |
+
+Políticas, rollback y gates por grupo:
+
+| Grupo | `RemovalPolicy` / `UpdateReplacePolicy` | Rollback seguro | Readiness gate | Traffic gate | Owner operativo |
+|---|---|---|---|---|---|
+| Network | Flow Logs: production `RETAIN`, staging `DESTROY`; recursos de red siguen CloudFormation | detener etapa; no borrar VPC con dependencias | región, AZ, cuotas, rutas, endpoints y costo aprobados | no habilita tráfico por sí solo | Deployment Operator + Security Approver |
+| Security | keys, secretos, trail/archive críticos `RETAIN`; reemplazo retenido donde aplica | conservar audit y keys; revisar change set IAM/KMS | policies sin wildcard peligroso, secret contracts y CloudTrail validados | ningún secreto/output público | Security Approver |
+| Data | RDS production `RETAIN`, staging `SNAPSHOT`; replacement policy equivalente; secretos `RETAIN` | nunca restore in-place; crear DB nueva y validar | inventario/método/carga, `mxmed_app`, backup y rollback | master secret nunca usado por app | Data owner opaco + Security Approver |
+| Storage | buckets `RETAIN`; no auto-delete; replacements retenidos | conservar versiones/objetos; cambiar destino sólo tras reconciliar | clasificación, checksum, lifecycle y backup | PublicMedia sigue privado hasta Edge aprobado | Data owner opaco + Security Approver |
+| Session | secret `RETAIN`; recursos siguen política contractual, sin snapshot | reconstrucción vacía y reautenticación | TLS/RBAC, conectividad y pérdida de sesión aceptada | no habilita tráfico | Platform operator |
+| Compute | ECR y log groups `RETAIN` con replacement retenido; service mutable por task definition | task definition anterior+circuit breaker; DB no cambia | digest, scan, app user, health/readiness y logs | `readyz=200` obligatorio | Release Approver + Platform operator |
+| Edge | recursos regional/global por CloudFormation; claves/orígenes secretos no se borran como rollback automático | revertir DNS, conservar ALB/certs temporalmente | certificados, prefix list, OAC, WAF y origin 403 | DNS sólo con `approved-for-dns-cutover-v1` | Release + Security Approver |
+| Operations | topics/KMS críticos `RETAIN` y replacement retenido | HOLD; restaurar configuración previa, nunca apagar producción automáticamente | subscribers, recepción de prueba, alarms/dashboards/budgets | alerta de prueba obligatoria antes de cutover | Operations + Cost Approver |
+| Backup | vaults/keys/bucket temporal `RETAIN` con replacement retenido | nunca eliminar recovery points ni reducir Lock | recovery point, restore nuevo, sentinels, cleanup y runbook | restore validado antes del tráfico | Backup operator + Security Approver |
+| Email/Jobs/Edge legado | sin recursos | detener y conservar vacío | contrato específico futuro | no aplicable hoy | Release Approver |
+
+### Matriz de activación y compatibilidad
+
+| Dominio | Estado 0 | Estado 1 | Estado 2 | Estado 3 |
+|---|---|---|---|---|
+| Compute | `disabled-v1` | `registry-only-v1` | `tasks-ready-v1` | `service-enabled-v1` |
+| Edge | `disabled-v1` | `media-cdn-ready-v1` | `application-origin-ready-v1` | `public-traffic-enabled-v1` |
+| Operations | `disabled-v1` | `cost-controls-ready-v1` | `launch-lean-observability-ready-v1` | `production-observability-ready-v1` |
+| Backup/DR | `disabled-v1` | `regional-recovery-ready-v1` | `cross-region-copy-ready-v1` | `restore-validation-ready-v1` |
+
+Combinaciones permitidas:
+
+- todo deshabilitado para synth general;
+- Cost Management sin Compute/Edge/Data en Stage 2;
+- registry-only sin tasks/service/Edge;
+- tasks-ready con foundation stateful, sin servicio ni tráfico;
+- pretráfico inicial: `launch-lean-v1`, Compute `service-enabled-v1`, runtime
+  `directory-core-v1`, Edge `disabled-v1` o
+  `application-origin-ready-v1` sin DNS, Operations
+  `launch-lean-observability-ready-v1`, Backup
+  `regional-recovery-ready-v1` y tráfico `NO-GO`;
+- staging release-window con datos sintéticos, default domain y sin DNS
+  productivo;
+- cross-region sólo con región DR seleccionada/verificada, residencia y costo
+  aprobados;
+- restore-validation sólo con regional backup y Operations activos.
+
+Combinaciones prohibidas:
+
+- Edge de aplicación con Compute inferior a `service-enabled-v1`;
+- `public-traffic-enabled-v1` con un runtime gate abierto, DNS/certificado no
+  aprobado, Operations/Backup ausentes o release sin aprobación;
+- Backup regional sin topics de Operations;
+- cross-region con `drRegionState=not-selected-v1`;
+- restore validation sin recovery point, presupuesto, owner y cleanup;
+- tareas sin digest, secreto `AWSCURRENT` o usuario DB de aplicación;
+- activación inferida de alta, pago, usuario, plan comercial o nombre de perfil.
+
+### Gates abiertos y decisión actual
+
+| Dominio | Gates abiertos verificables |
+|---|---|
+| Account/Billing | cuenta y payer, facturación/moneda/impuestos/créditos/Free Tier/Support, root MFA, contactos, roles, región, SCP, Cost Explorer, tags, budgets, owner y subscribers no validados |
+| Bootstrap | `mx-central-1` y `us-east-1` sin bootstrap; template, qualifier, trust, policies, bucket/ECR, costo, roles y change set no aprobados |
+| Compute | imagen productiva/digest no publicados; migrator fail-closed; `mxmed_app` y secretos reales ausentes; readiness no integrada |
+| Runtime | `/readyz` devuelve 503; stripe-return ausente; fingerprinting, Maps/CSP, logs legacy y application metrics pendientes |
+| Edge | dominio/zone/certificados/header/prefix list/pricing no aprobados; WAF/DNS no desplegados; cutover no autorizado |
+| Operations | topics/subscribers/budgets/alarms/dashboards no desplegados ni probados |
+| Backup/DR | vault/recovery point/restore/sentinels/application validation ausentes; región DR no seleccionada; `DR_READY=false` |
+| Data | fuente no inventariada; método/freeze/ventana/checksums/reconciliación/capacidad real no aprobados |
+| Cost | baseline de cuenta, tags activos, costo de carga, primera semana y análisis inicial real no existen |
+| Legal/Privacy | retención, legal hold, eliminación, portabilidad, consentimientos y contratos pendientes |
+
+Decisión agregada: `deploymentDecision=NO-GO`. No se puede promover por
+silencio, antigüedad del commit ni éxito de synth.
+
+### Stage 0: preflight de cuenta, roles, regiones y cuotas
+
+El checklist manual obligatorio comprende cuenta/payer, datos de facturación,
+moneda, impuestos, créditos, Free Tier real, Support plan, root MFA, contactos
+alternos, security/billing contacts, CloudTrail, regiones habilitadas, SCP,
+Identity Center o rol administrativo, deploy role, read-only audit role,
+break-glass, ausencia de access keys personales permanentes, budgets, anomaly
+detection, Cost Explorer y cost-allocation tags. No se versionan valores
+privados. Stage 1 queda bloqueado sin aprobación manual de Stage 0.
+
+Separación de funciones:
+
+| Rol opaco | Puede | Debe revisar / no puede |
+|---|---|---|
+| Deployment Operator | bootstrap, change sets aprobados, ejecución y eventos | no root; no aprueba su propio cambio |
+| Security Approver | emitir revisión de IAM/KMS/SG/buckets/secrets/CloudTrail | no introducir valores secretos |
+| Cost Approver | presupuesto, perfil, recursos fijos, NAT/RDS/Valkey/ALB/backup/logs | detiene gasto no aprobado |
+| Release Approver | aprobar cada stage y cutover | no omite gates ni período T+7D |
+| Read-only Auditor | recursos, tags, costo, drift y evidencia | no muta cuenta |
+
+Regiones contractuales: `primaryRegionalRegion=mx-central-1`,
+`globalEdgeRegion=us-east-1`, `sesRegion=us-east-1` y `drRegion=NO
+SELECCIONADA`. Antes de uso se validarán servicio, clase, cuota, AZ, endpoints,
+KMS, RDS MySQL 8.4, Fargate, ElastiCache, Backup, CloudFront, WAF, ACM, SES y
+Cost Management en la cuenta, sin lookup durante PP272.
+
+El inventario futuro de cuotas clasifica cada entrada como `suficiente`,
+`aumento-solicitado` o `bloqueante` para VPC, EIP, NAT, SG, Fargate, ECS, ALB,
+target groups, RDS/storage, ElastiCache, KMS, Secrets Manager, S3, CloudFront,
+WAF, ACM, vaults/plans, SNS, CloudWatch y SES. PP272 no pide aumentos.
+
+Se requieren dos bootstraps futuros, uno por `mx-central-1` y otro por
+`us-east-1`. Antes de cada uno se revisan account/region, template, qualifier,
+trust, execution policies, bucket/ECR, KMS opcional, costo y change set. Quedan
+prohibidos trust wildcard, policy administrativa sin aprobación, qualifier
+improvisado y account ID en documentación pública. Sólo outputs no sensibles
+se incorporan al manifest.
+
+### Catálogo final de parámetros
+
+Todos tienen estado actual `pending-private-input-v1`, evidencia futura y owner
+opaco. Ningún valor real se versiona.
+
+| Stack/categoría | Parámetro | Tipo / sensibilidad | Default / validación | Fuente, etapa y rotación |
+|---|---|---|---|---|
+| Account/Bootstrap futuro | `AccountReference` | string opaco; no secreto | sin default; formato interno | autoridad de cuenta; Stage 0; no rota |
+| Account/Bootstrap futuro | `PrimaryRegion`, `GlobalRegion`, `SesRegion` | enum; no secreto | valores contractuales, verificados en cuenta | Platform; Stage 0/1; revisar por release |
+| Account/Bootstrap futuro | `BootstrapQualifier` | string opaco; no secreto | sin default; patrón CDK aprobado | Security; Stage 1; change-controlled |
+| Account/Bootstrap futuro | `DeployRoleReference` | string opaco; sensible operacional | sin account ID en Git | IAM authority; Stage 0/1; revisar por release |
+| CostManagement | `ApprovedMonthlyBudgetUsd` | Number; privado financiero | sin default; mínimo 1 | Cost Approver; Stage 2; por presupuesto |
+| CostManagement | `StagingMonthlyBudgetUsd` | Number; privado financiero | sin default; mínimo 1 | Cost Approver; Stage 2; por presupuesto |
+| CostManagement | `AnomalyAlertThresholdUsd` | Number; privado financiero | sin default; mínimo 1 | Cost Approver; Stage 2; por presupuesto |
+| CostManagement | `MaxInfrastructureCostToRevenuePercent` | Number; privado financiero | sin default; 0–1000 | Cost Approver; Stage 2; por modelo |
+| CostManagement | `BudgetOwnerReference` | String opaco; no PII | sin default; patrón interno 3–128 | Cost authority; Stage 2; al cambiar owner |
+| CostManagement | `CostReviewCadence` | String | daily-first-30-days o weekly-after-first-month | Cost Approver; Stage 2; por período |
+| CostManagement | `CostAllocationTagsVerified` | String boolean | sin default; `true|false`; rule exige true | Read-only Auditor; Stage 2; revalidación |
+| CostManagement | `ExternalSubscribersVerified` | String boolean | sin default; rule condicional | Operations; Stage 2/11; revalidación |
+| CostManagement | `ExistingServiceAnomalyMonitorArn` | ARN técnico | sin default; patrón ARN; sólo import mode | Cost Approver; Stage 2; por reemplazo |
+| Compute | `ApplicationImageDigest` | String; no secreto | sin default; `sha256:` + 64 hex minúsculas | Release; Stage 6+; por imagen |
+| Security/Storage | `PublicMediaCloudFrontDistributionArn` | ARN técnico | sin default; patrón distribution ARN; condicional | Edge handoff; Stage 12; por distribución |
+| RegionalEdge | `EdgeOriginDomainName` | DNS técnico | sin default; FQDN minúsculo | Edge authority; Stage 12; por origin |
+| RegionalEdge | `EdgeOriginCertificateArn` | ARN técnico | sin default; ACM `mx-central-1` | Security; Stage 12; por certificado |
+| RegionalEdge | `CloudFrontOriginFacingPrefixListId` | ID técnico | sin default; patrón `pl-` | Auditor; Stage 12; por verificación AWS |
+| RegionalEdge | `EdgeOriginVerificationHeaderName` | String secreto; `NoEcho` | sin default; patrón header | Security; Stage 12; rota con valor |
+| RegionalEdge | `EdgeOriginVerificationHeaderValue` | String secreto; `NoEcho` | sin default; 32–256 chars permitidos | Security; Stage 12; rotación controlada |
+| GlobalEdge | `RegionalOriginDomainName` | DNS técnico | sin default; FQDN minúsculo | Edge handoff; Stage 12 |
+| GlobalEdge | `PublicMediaBucketName` | nombre técnico | sin default; patrón bucket | Storage handoff; Stage 12 |
+| GlobalEdge | `PublicMediaBucketRegionalDomainName` | DNS técnico | sin default; REST domain AWS | Storage handoff; Stage 12 |
+| GlobalEdge | `EdgeOriginVerificationHeaderName` | secreto; `NoEcho` | mismo contrato regional | Security; Stage 12; rota coordinado |
+| GlobalEdge | `EdgeOriginVerificationHeaderValue` | secreto; `NoEcho` | mismo contrato regional | Security; Stage 12; rota coordinado |
+| GlobalEdge | `EdgeViewerCertificateArn` | ARN técnico | sin default; ACM `us-east-1` | Security; Stage 12/13 |
+| GlobalEdge | `EdgeApexDomainName` | DNS técnico | sin default; FQDN | Domain authority; Stage 13 |
+| GlobalEdge | `EdgeWwwDomainName` | DNS técnico | sin default; `www.` FQDN | Domain authority; Stage 13 |
+| GlobalEdge | `EdgeHostedZoneId` | ID técnico | sin default; patrón Route 53; sólo managed DNS | Domain authority; Stage 13 |
+| RegionalBackup | `DrDestinationBackupVaultArn` | ARN técnico futuro | sin default; sólo cross-region | Backup authority; post-piloto |
+| DrCopy | `SourceRegionalBackupVaultArn` | ARN técnico futuro | sin default; patrón vault ARN | Backup authority; post-piloto |
+| RestoreValidation | `RestoreTestMonthlyBudgetUsd` | Number financiero | sin default; mínimo 1 | Cost Approver; Stage 10; por ciclo |
+| RestoreValidation | `RestoreTestMaximumRuntimeHours` | Number | sin default; 1–168 | Backup operator; Stage 10 |
+| RestoreValidation | `RestoreTestApprovedInstanceClass` | enum | `db.t4g.medium|db.m6g.large`; sin default | Cost+Backup; Stage 10 |
+| RestoreValidation | `RestoreTestOwnerReference` | string opaco | sin default; patrón 3–64 | Backup authority; Stage 10 |
+| RestoreValidation | `RestoreTestCleanupDeadlineHours` | Number | sin default; 1–168 | Backup operator; Stage 10 |
+
+### Inventario de contratos secretos
+
+| Contrato | Capability / ambiente | Etapa requerida y autoridad | `AWSCURRENT` / rotación | Estado actual |
+|---|---|---|---|---|
+| RDS master secret | shared foundation; prd/stg | Stage 4; Data/Security | sí; rotación administrada aprobada | no configurado en cuenta |
+| DB application user `mxmed_app` | directory-core+; prd/stg | Stage 6/7; Data/Security | sí; rotar credencial y grants | no creado |
+| Session signing key | directory-core+; prd/stg | Stage 6/7; Security | sí; rotación con invalidación controlada | contrato offline |
+| Valkey credential | shared session; prd/stg | Stage 4/7; Security | sí; rotación compatible con RBAC | no creado en cuenta |
+| Stripe secret key | paid-profile; prd y sandbox separados | Stage 10/11/13; Payment authority | sí; rotación Stripe + Secrets Manager | no configurado |
+| Stripe webhook secret | paid-profile; prd y sandbox separados | Stage 10/11/13; Payment authority | sí; overlap de endpoints controlado | no configurado |
+| AI API key | professional-ai futuro | etapa posterior aprobada; Provider authority | sí; rotación de proveedor | diferido |
+| SES/notification configuration | clinical/operations futuro | Stage 2/10+; Operations | referencias privadas; rotar endpoints/credenciales | subscribers no confirmados |
+| Origin verification header | Edge; prd/stg | Stage 12; Security | `NoEcho`; nombre/valor rotan coordinados | no generado |
+| External provider credentials | capability específica futura | sólo stage aprobado; Provider authority | `AWSCURRENT`; runbook por proveedor | no inventariadas |
+
+El inventario sólo registra contratos, capability, environment, stage, fuente,
+owner opaco y rotación. Prohíbe valor, ARN real, password, `client_secret`,
+access key y webhook secret.
+
+### Release manifest y change control
+
+`MXMED_AWS_DEPLOYMENT_MANIFEST_V1` reservará:
+
+```text
+repository, branch, commitSha, signedTagReference, nodeVersion, npmVersion,
+lockfileSha256, awsCdkLibVersion, cdkCliVersion, templateHashes,
+runtimeDockerfileHash, imageDigest, environment, deploymentProfile,
+computeActivationMode, edgeActivationMode, operationsActivationMode,
+backupDrActivationMode, runtimeCapabilityProfile, parameterInventoryVersion,
+secretContractVersion, ppDecisionRange, qaEvidenceReference,
+approverRoleReferences, changeSetReferences, timestampUtc, rollbackVersion
+```
+
+No incluirá account ID, secretos, datos clínicos ni URLs privadas. El tag
+firmado no se crea en PP272.
+
+Cada stage futuro exige, en orden: (1) branch limpia, (2) commit publicado, (3)
+tests, (4) synth, (5) hash de template, (6) `cdk diff` controlado, (7) change
+set, (8) revisión IAM/security, (9) revisión de costo, (10) aprobación manual,
+(11) ejecución, (12) espera a complete, (13) smoke tests, (14) cost check, (15)
+evidencia y (16) `GO|STOP`. Se prohíben hotswap, `--no-rollback`, deploy directo
+sin revisión, secretos en shell history, stages simultáneos, force deploy y
+rollback destructivo de datos.
+
+`MxMedDeploymentStageApproval` contiene `stageId`, `plannedAt`, `approvedAt`,
+`deploymentProfile`, `manifestReference`, `changeSetReference`,
+`estimatedIncrementalCostUsd`, `observedIncrementalCostUsd|null`,
+`securityReview`, `costReview`, `rollbackReady`, `ownerRole`,
+`decision=GO|HOLD|ROLLBACK|NO-GO`, `blockers` y `evidenceReference`; nunca una
+identidad personal.
+
+### Despliegue gradual fuera del contador 24/24
+
+| Stage | Contenido y gate de salida |
+|---|---|
+| 0 Account and Cost Guardrails | cuenta, roles, tags, Cost Explorer, budgets, anomaly detection, owner, regiones y cuotas; costo de aplicación 0; sin app stack |
+| 1 CDK Bootstrap | bootstrap revisado en `mx-central-1` y `us-east-1`; sin app |
+| 2 Cost Controls Only | Operations `cost-controls-ready-v1`, topics-only y budgets parametrizados; sin Compute/Edge/Data |
+| 3 Foundation | Network, Security y Storage base; evaluar costo diario |
+| 4 Stateful Core | Data, Session, regional Backup, RDS PITR, buckets críticos y Valkey; inicia costo fijo principal |
+| 5 Compute Registry | ECR `registry-only-v1`; sin tasks/service |
+| 6 Image and Tasks Ready | build/push externo a CDK, scan, digest, `tasks-ready-v1`; migrator continúa fail-closed |
+| 7 Service Without Public Edge | `service-enabled-v1`, directory-core, Operations launch-lean y Backup regional; sin DNS/tráfico |
+| 8 Initial Real Data Load | inventario, backup fuente, carga, validación y reconciliación; sin tráfico |
+| 9 Mandatory Cost Observation Pause | T+24H, T+72H y siete días completos; reporte real obligatorio y aprobación |
+| 10 Runtime and Restore Validation | readyz, migrator, `mxmed_app`, restore manual, sentinels, logs y alerts |
+| 11 Staging Release Window | datos sintéticos, default CloudFront domain, E2E, rollback y cleanup; sin dominio productivo |
+| 12 Production Origin Ready | ALB, CloudFront sin DNS, WAF, certificados y target health; sin cutover |
+| 13 Public Cutover | sólo con GO final y `approved-for-dns-cutover-v1` |
+
+Ningún stage se ejecuta en PP272.
+
+### Condiciones STOP
+
+Se detiene inmediatamente ante recurso o región inesperados; acceso público o
+SG `0.0.0.0/0` inesperados; secreto en output/log; Budget sin alarma; burn rate
+incompatible; NAT/ALB/RDS/Valkey adicional; IAM ampliado; KMS wildcard;
+CloudFormation rollback; replacement RDS/bucket no planeado; dato clínico en
+log; readyz 503 cuando se esperaba 200; target unhealthy; backup/restore
+fallido; checksum o Stripe reconciliation inconsistente; hash distinto; drift o
+pérdida de rollback. No se continúa para observar si se autocorrige.
+
+### Carga inicial y validación sin datos personales
+
+Antes de seleccionar método se inventarían source engine/version,
+charset/collations/SQL modes/timezone, tamaño DB/índices, tablas/filas agregadas,
+tablas mayores, FKs, triggers, routines, events, views, blobs, directorios,
+objetos/bytes, downtime, freeze, red, cifrado y restricciones legales. Se
+prohíben filas, nombres, correos, expedientes, diagnósticos, passwords y tokens.
+Estado: `not-inventoried-v1`.
+
+`MxMedInitialDataMigrationMethod = not-selected-v1 |
+encrypted-logical-dump-v1 | controlled-direct-copy-v1 |
+aws-dms-approved-v1`. No se selecciona en PP272. La selección depende de
+tamaño, downtime, fuente, red, cifrado, consistencia, costo, compatibilidad y
+rollback. Logical dump exige backup consistente, cifrado, transporte, checksum
+y eliminación; direct copy exige canal privado, cuenta read-only, resume y
+checksum; DMS exige costo, networking, instance/endpoints, CDC, cleanup y
+seguridad aprobados.
+
+Los modelos de freeze son `cold-initial-load`, `load-plus-delta` y
+`continuous-replication` sólo con DMS. No se permiten escrituras dobles sin
+contrato de reconciliación.
+
+Validación DB: schema/migration ledger; counts de tablas/views/triggers/FKs,
+filas e índices; checksums seguros; charset/collation; UTC; counts agregados de
+suscripciones/pagos/clínica; huérfanos/duplicados; integridad; usuario de app y
+least privilege; smoke sintético read/write y rollback point. Validación S3:
+objetos/bytes origen-destino, checksums exitosos/fallidos, cifrado,
+clasificación, metadata allowlist, quarantine/promotion, Block Public Access,
+versioning, lifecycle y cobertura backup. Clinical nunca entra a PublicMedia.
+
+### Gates pretráfico
+
+Compute exige digest/scan/task definition, usuario no root, filesystem
+read-only, secretos, conectividad DB/Valkey, healthz/readyz, logs saneados,
+migración, `mxmed_app`, steady state, circuit breaker y task definition de
+rollback.
+
+Los 18 gates runtime son:
+
+1. `/readyz` devuelve 200.
+2. Readiness tiene timeout MySQL.
+3. Readiness tiene timeout Valkey.
+4. Su respuesta es sanitizada.
+5. El migration command está implementado.
+6. `mxmed_app` existe.
+7. La app no usa RDS master secret.
+8. `/subscriptions/stripe-return` existe.
+9. `/api/subscriptions/index.php/webhooks/stripe` se preserva.
+10. La URL Stripe está saneada.
+11. Assets tienen fingerprint o TTL 0.
+12. Maps opera en modo aprobado.
+13. CSP funciona con Payment Element.
+14. Logs de agenda están saneados.
+15. Application metrics están integradas o diferidas explícitamente.
+16. Secretos requeridos tienen `AWSCURRENT`.
+17. Debugging está deshabilitado.
+18. No existe environment dump.
+
+Mientras uno siga abierto, tráfico=`NO-GO`.
+
+Backup/restore previo exige automated backup y recovery point RDS, plan
+regional, protección S3 crítica cuando aplique, BackupKey/vault/monitoring,
+restore manual a recurso nuevo, schema/sentinel, cleanup y runbook aprobados.
+Un piloto launch-lean puede aceptar formalmente no tener región DR, pero nunca
+declara `DR_READY` sólo por un backup exitoso.
+
+Staging usa release-window, datos sintéticos, mismos templates/modes, digest,
+migraciones, readyz, Stripe sandbox, default domain, WAF, alarms, backup,
+rollback y cleanup. Al cerrar debe auditar desired=0 o retiro, NAT/Valkey/ALB=0,
+RDS según runbook, recursos retenidos y costo residual. Nunca recibe clínica
+real.
+
+Edge exige apex/www/origin y zone mode aprobados, viewer cert `us-east-1`,
+origin cert `mx-central-1`, ambos `ISSUED`, prefix list, header secreto, acceso
+directo ALB=403, CloudFront→ALB/OAC válidos, cinco reglas WAF, request logs
+sensibles deshabilitados, pricing verificado, TTL DNS 300 y rollback DNS. DNS no
+se crea antes del GO.
+
+Stripe exige separación production/sandbox, secretos productivos, webhook
+canónico `/api/subscriptions/index.php/webhooks/stripe`, return canónico
+`/subscriptions/stripe-return`, firma, idempotencia, no log de body,
+`Stripe-Signature` o `client_secret`, headers no-store/no-referrer/noindex,
+reconciliación, no doble cargo y rollback. Se prohíbe crear `/webhooks/stripe`.
+
+Operations exige CostAlertsTopic, RegionalCriticalTopic,
+RegionalWarningTopic, GlobalEdgeAlertsTopic, subscribers externos confirmados,
+recepción de prueba, budgets, anomaly detection, dashboards, alarms, runbooks,
+owner y on-call; ningún endpoint personal en Git. No hay cutover sin alerta de
+prueba recibida.
+
+### Rollback por dominio
+
+| Dominio | Contrato de rollback |
+|---|---|
+| Foundation | detener siguiente stage; revertir change set si es seguro; preservar RETAIN/audit |
+| Data | no restore in-place; conservar fuente; restaurar DB nueva; cambiar endpoint sólo tras validar |
+| Compute | volver a task definition previa; circuit breaker; no cambiar DB automáticamente |
+| Edge | revertir DNS; deshabilitar distribution si aplica; conservar ALB/certs temporalmente |
+| Initial load | fuente sigue autoritativa; descartar destino fallido; repetir desde recovery point; no mezclar writes |
+| Backup | no eliminar recovery points ni reducir Lock; preservar evidencia |
+| Cost | `HOLD`; apagar sólo recursos aprobados; nunca producción automáticamente |
+
+### Contrato de costo con base real
+
+Antes de Stage 0 se crea `MXMED_AWS_PREDEPLOYMENT_COST_BASELINE_V1` con
+month-to-date, costo diario previo, recursos, créditos, descuentos, impuestos y
+FX separados, servicios/regiones y uso ajeno. Nada preexistente se atribuye a
+MXMed sin evidencia.
+
+Se activan/verifican `Project`, `Environment`, `DeploymentProfile`, `CostScope`,
+`CostTier`, `CostReview`, `ComputeActivationMode`, `EdgeActivationMode`,
+`OperationsProfile`, `BackupDrActivationMode` y `RuntimeCapabilityProfile`.
+Medición queda bloqueada hasta que aparezcan, estén activos, filtren en Cost
+Explorer, cubran recursos y documenten excepciones.
+
+Calendario: T-1 baseline; T0 por stage; T+24H primera lectura no definitiva;
+T+72H burn rate y one-time; T+7D después de carga real completa, siete días
+completos y decisión GO/HOLD; T+14D tendencia; primer mes completo
+reconciliación con factura, impuestos, FX, créditos y forecast. No se abren
+nuevas microfases de desarrollo antes de aprobar T+7D.
+
+`MXMED_AWS_INITIAL_REAL_DATASET_COST_ANALYSIS_V1` se elabora sólo con carga
+completa, servicio estable, tags activos, Cost Explorer, siete días completos,
+sin carga masiva y temporales identificados. Contendrá:
+
+- inventario real agregado de perfiles, tablas/filas/tamaños/objetos/GiB,
+  imagen/logs/recovery points;
+- costo fijo de NAT/IP/Fargate base/RDS/Valkey/KMS/Secrets/ALB/CloudFront;
+- costo variable de processing/transferencia/I/O/S3/logs/alarms/backup/KMS/
+  CloudFront/WAF/SES/restore;
+- one-time de bootstrap/carga/transferencia/restore/storage temporal/residuos;
+- run rate diario/mensual, bajo-base-alto, incertidumbre, capability,
+  compartido y marginal;
+- comparación PP263 vs actual en USD/porcentaje/causa/acción;
+- USD bruto/neto, impuestos, MXN con FX efectivo y créditos separados;
+- decisión `GO|HOLD|OPTIMIZE|ROLLBACK|PROMOTE PROFILE`.
+
+Atribución: Shared Foundation cubre Network/Security/Data/Session/Operations/
+Backup; Directory Core cubre directorio/media/sesión; Paid Profile cubre Stripe
+y consumo incremental; Clinical cubre agenda/expediente/archivos/notificaciones/
+backup/observabilidad; Professional AI separa proveedor externo de AWS. El
+primer usuario no absorbe todo el costo fijo.
+
+```text
+observedRecurringCostUsd = totalObserved - oneTime - credits - refunds
+averageDailyRecurringUsd = observedRecurringCostUsd / completeObservedDays
+normalizedMonthlyRecurringUsd = averageDailyRecurringUsd * 30.4375
+grossMonthlyRunRateUsd = normalizedMonthlyRecurringUsd + monthlyChargesNotObserved
+varianceUsd = actualRunRateUsd - forecastRunRateUsd
+variancePercent = varianceUsd / forecastRunRateUsd * 100
+```
+
+Impuestos, FX, descuentos, one-time e incertidumbre nunca se ocultan. `HOLD` si
+tags/días/separación/datos son insuficientes, temporales siguen activos, la
+diferencia >20% no se explica, se supera presupuesto, hay fijo no aprobado,
+anomalía o Cost Explorer sin datos. `NO-GO` si faltan Budget/alarms/owner, el
+burn rate excede presupuesto, hay NAT/RDS/Valkey/ALB duplicado, staging
+abandonado, región o recurso público inesperados.
+
+### Matriz final GO/NO-GO
+
+| Dominio | Estado | Gate/evidencia actual | Owner y vigencia | Bloqueador / siguiente acción |
+|---|---|---|---|---|
+| Account | NO-GO | sólo contrato offline | Deployment Operator; hasta Stage 0 | cuenta no validada / ejecutar preflight aprobado |
+| Identity | NO-GO | roles son esquema | Security Approver; Stage 0 | MFA/roles/break-glass no probados |
+| Billing | NO-GO | PP263 es estimación | Cost Approver; Stage 0 | payer/budgets/credits no validados |
+| Quotas | HOLD | inventario schema | Auditor; antes de cada stage | cuotas no consultadas |
+| Bootstrap | NO-GO | plan de dos regiones | Security Approver; Stage 1 | ninguno ejecutado/revisado |
+| Network | CONDITIONAL GO | IaC+synth offline | Security; expira ante diff | región/cuotas/costo reales pendientes |
+| Security | CONDITIONAL GO | IaC/aspects+synth | Security; expira ante diff | policies/identidad/cuenta reales pendientes |
+| Data | NO-GO | IaC offline | Data owner; Stage 4/8 | fuente, usuario, carga y restore pendientes |
+| Storage | CONDITIONAL GO | IaC offline | Security/Data; expira ante diff | objetos/clasificación real no validados |
+| Session | CONDITIONAL GO | IaC offline | Platform; Stage 4/7 | conectividad/costo/reauth no probados |
+| Compute | NO-GO | runtime fixture+synth | Release; Stage 6/7 | digest, secrets, steady state ausentes |
+| Runtime | NO-GO | readyz conocido=503 | Release; antes Stage 11 | 18 gates abiertos |
+| Stripe | NO-GO | rutas/contrato auditados | Payment authority; Stage 10/11 | return/secrets/reconciliation pendientes |
+| Edge | NO-GO | IaC offline | Security+Release; Stage 12/13 | dominio/certs/header/pricing/DNS pendientes |
+| Operations | NO-GO | IaC offline | Operations; Stage 2/7 | topics/subscribers/alarms no activos |
+| Backup | NO-GO | IaC offline | Backup operator; Stage 4 | sin vault/recovery point real |
+| Restore | NO-GO | fixture offline | Backup operator; Stage 10 | ningún restore validado |
+| Initial data | NO-GO | `not-inventoried-v1` | Data owner; Stage 8 | método/freeze/reconciliación pendientes |
+| Cost | NO-GO | `not-started-v1` | Cost Approver; T+7D | baseline/tags/medición/reporte ausentes |
+| Legal/privacy | HOLD | pendientes enumerados | Legal/Security; antes datos | retención/consentimientos/contratos |
+| Rollback | HOLD | runbooks contractuales | Release; por stage | no ensayado en cuenta/staging |
+| Incident response | NO-GO | topics/runbooks offline | Operations; antes cutover | alerta/on-call no probados |
+
+Estado global: `NO-GO`, porque cuenta, runtime, datos, costos y operación real no
+han sido validados.
+
+### Seguridad, privacidad, retención y legal
+
+Antes de datos reales se verifican clasificación, least privilege, cifrado,
+KMS, secrets, access review, logs saneados, ausencia de body/query/Cookie/
+Authorization/`client_secret` y clínica en evidencia, backup, retención,
+eliminación e incident process. Datos reales nunca pasan a staging ni
+producción se usa para experimentos.
+
+Permanecen pendientes política clínica, versiones S3, backup retention, legal
+hold, eliminación, exportación/portabilidad, evidencia, consentimientos y
+contratos. Ni 35 ni 365 días prueban obligación legal; Vault Lock no equivale
+a compliance y AWS no certifica por sí solo a MXMed.
+
+### Matriz final de 210 controles
+
+Cada identificador es un control independiente; `PASS-OFFLINE` significa que
+su contrato o verificación local quedó cerrado, no que el gate real esté en GO.
+
+| Grupo | Controles enumerados |
+|---|---|
+| Baseline 1–10 | 1 rama base verificada; 2 commit base exacto; 3 ancestro Operations presente; 4 upstream inicial 0/0; 5 tree inicial limpio; 6 Node 22.22.0; 7 npm/npx 10.9.4; 8 lockfile auditado; 9 PP271 presente; 10 cero deploy |
+| Stack inventory 11–20 | 11 Network; 12 Security; 13 Data; 14 Storage; 15 Session; 16 Compute registry; 17 Compute tasks; 18 Compute service; 19 Regional Edge; 20 Global Edge |
+| Stack inventory 21–30 | 21 Cost Management; 22 Regional Operations; 23 Global Operations; 24 Regional Backup; 25 DR Copy; 26 Restore Validation; 27 Email/Jobs/legacy vacíos; 28 regiones; 29 dependencias; 30 costos/rollback/gates/owners |
+| Account 31–40 | 31 root MFA gate; 32 alternate contacts; 33 security contact; 34 billing contact; 35 admin/deploy role; 36 read-only audit role; 37 break-glass; 38 no personal permanent keys; 39 payer/billing; 40 currency/tax/credits |
+| Account 41–50 | 41 Free Tier; 42 Support; 43 regions; 44 SCP; 45 Cost Explorer; 46 cost tags; 47 budgets; 48 quotas; 49 evidence private; 50 Stage 0 approval |
+| Bootstrap 51–60 | 51 primary bootstrap; 52 global bootstrap; 53 template review; 54 qualifier; 55 trust; 56 execution policies; 57 bucket; 58 ECR; 59 KMS/cost; 60 change set/rollback |
+| Parameters/secrets 61–70 | 61 inventory complete; 62 sensitive defaults absent; 63 NoEcho headers; 64 allowed patterns; 65 opaque owners; 66 rotation; 67 no secret values; 68 image digest; 69 origin header; 70 budgets no default |
+| Parameters/secrets 71–80 | 71 app DB user; 72 master separation; 73 Valkey credential; 74 Stripe key; 75 Stripe webhook; 76 AI deferred; 77 subscribers private; 78 AWSCURRENT gate; 79 no real ARN persistence; 80 evidence reference |
+| Deployment order 81–90 | 81 one stage at a time; 82 clean branch; 83 published commit; 84 tests; 85 synth; 86 template hash; 87 controlled diff; 88 change set; 89 security review; 90 cost review |
+| Deployment order 91–100 | 91 manual approval; 92 wait complete; 93 smoke tests; 94 cost check; 95 evidence; 96 STOP; 97 no hotswap; 98 no force; 99 no no-rollback; 100 no destructive data rollback |
+| Data load 101–110 | 101 source engine/version; 102 charset/collation; 103 size/counts; 104 objects/bytes; 105 downtime/freeze; 106 legal constraints; 107 method gate; 108 source backup; 109 encryption; 110 transport |
+| Data load 111–120 | 111 checksum; 112 table counts; 113 aggregate rows; 114 indexes/FKs; 115 DB destination validation; 116 S3 destination validation; 117 no PII evidence; 118 source authority; 119 rollback point; 120 no dual write |
+| Runtime 121–130 | 121 digest; 122 scan; 123 non-root; 124 read-only rootfs; 125 task definition; 126 mxmed_app; 127 master not used; 128 migration command; 129 DB connectivity; 130 Valkey connectivity |
+| Runtime 131–140 | 131 healthz; 132 readyz 200; 133 timeouts; 134 sanitized response; 135 logs sanitized; 136 Stripe return; 137 webhook canonical; 138 CSP/Maps; 139 fingerprint/TTL0; 140 no debug/env dump |
+| Backup/restore 141–150 | 141 RDS PITR; 142 regional vault; 143 BackupKey; 144 plans/selections; 145 recovery point; 146 failure monitoring; 147 restore new resource; 148 schema/sentinel; 149 cleanup; 150 runbook |
+| Backup/restore 151–160 | 151 DR_READY not inferred; 152 Valkey rebuild; 153 ECR rebuild; 154 secrets reissue; 155 no auto failover; 156 source region gate; 157 residency gate; 158 cross-region cost; 159 recovery evidence; 160 application validation |
+| Edge/operations 161–170 | 161 origin cert; 162 viewer cert; 163 prefix list; 164 secret header; 165 direct ALB 403; 166 CloudFront→ALB; 167 OAC; 168 five WAF rules; 169 pricing plan; 170 DNS rollback |
+| Edge/operations 171–180 | 171 Cost topic; 172 critical topic; 173 warning topic; 174 global Edge topic; 175 subscribers; 176 alert reception; 177 budgets; 178 anomaly detection; 179 dashboards/alarms; 180 owner/on-call |
+| Cost 181–190 | 181 prebaseline; 182 tags present; 183 tags active; 184 Cost Explorer filter; 185 T+24H; 186 T+72H; 187 seven full days; 188 T+14D; 189 full month; 190 one-time separation |
+| Cost 191–200 | 191 recurring normalization; 192 PP263 comparison; 193 variance; 194 tax separated; 195 FX separated; 196 credits separated; 197 uncertainty; 198 capability allocation; 199 HOLD gates; 200 NO-GO gates |
+| Closure 201–210 | 201 PP272 only; 202 no secrets; 203 no clinical data; 204 1,501 tests preserved; 205 eight synths; 206 template determinism; 207 npm audits; 208 commit/push; 209 deployment/tráfico NO-GO; 210 no Microphase 25 |
+
+### Flujo de control
+
+```mermaid
+flowchart TD
+  O[Offline foundation\noffline-release-candidate-v1] --> S0[Stage 0 Account / Cost]
+  S0 -->|GO manual| S1[Stage 1 Bootstrap]
+  S1 -->|GO manual| S2[Stage 2 Cost Controls]
+  S2 -->|GO manual| S3[Stage 3 Foundation]
+  S3 -->|GO manual| S4[Stage 4 Stateful]
+  S4 -->|GO manual| S5[Stage 5 Registry]
+  S5 -->|GO manual| S6[Stage 6 Tasks]
+  S6 -->|GO manual| S7[Stage 7 Service / No Edge]
+  S7 -->|GO manual| S8[Stage 8 Initial Data Load]
+  S8 --> S9[Stage 9 Mandatory Cost Pause\n24h / 72h / 7 full days]
+  S9 --> R[MXMED_AWS_INITIAL_REAL_DATASET_COST_ANALYSIS_V1]
+  R -->|GO manual| S10[Stage 10 Runtime / Restore]
+  S10 -->|GO manual| S11[Stage 11 Staging]
+  S11 -->|GO manual| S12[Stage 12 Origin Ready]
+  S12 -->|GO final| S13[Stage 13 Public Cutover]
+  S0 & S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12 & S13 -->|HOLD / ROLLBACK| X[STOP and evidence]
+  N[Current public traffic: NO-GO] -. blocks .-> S13
+  A[No automatic deployment\nNo automatic failover] -. applies .-> O
+  C[Controlled deployment outside 24/24\nNo Microphase 25] -. governs .-> S0
+```
+
+### No repetición y cierre
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_created": 0,
+  "aws_resources_deployed": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_diff_calls": 0,
+  "cdk_deploy_calls": 0,
+  "cloudformation_change_sets_created": 0,
+  "backup_jobs_started": 0,
+  "restore_jobs_started": 0,
+  "snapshots_created": 0,
+  "dns_changes": 0,
+  "certificates_requested": 0,
+  "cost_explorer_calls": 0,
+  "pricing_api_calls": 0,
+  "budgets_deployed": 0,
+  "docker_build_calls": 0,
+  "docker_push_calls": 0,
+  "composer_calls": 0,
+  "php_calls": 0,
+  "sql_calls": 0,
+  "database_loads": 0,
+  "clinical_data_read": 0,
+  "clinical_objects_loaded": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0,
+  "secret_values_persisted": 0,
+  "public_traffic_enabled": 0,
+  "dr_region_selected": 0,
+  "automatic_failovers": 0,
+  "automatic_failbacks": 0
+}
+```
+
+Microfase 24 de 24 concluida. Avance global 24/24; pendientes del contador: 0.
+El ciclo offline queda concluido. El despliegue real AWS no inició, el tráfico
+público permanece en NO-GO y el análisis final con base real espera la etapa
+operativa controlada.
+
+No existe Microfase 25. El siguiente trabajo, fuera del contador y no ejecutado
+por PP272, es
+`DEPLOY-OPS/MXMed-AWS-Controlled-Launch-Stage-0-Account-Cost-Guardrails-01`,
+estado `NO INICIADO`. Después de la carga inicial real se detiene la progresión,
+se esperan siete días completos, se elabora
+`MXMED_AWS_INITIAL_REAL_DATASET_COST_ANALYSIS_V1` y se solicita aprobación antes
+de cualquier trabajo adicional.
+
+---
