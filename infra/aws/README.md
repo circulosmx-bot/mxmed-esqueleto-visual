@@ -14,13 +14,16 @@ foundations de seguridad, datos, almacenamiento, sesiones, Compute y Edge de Mé
 (`MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`) y PP-Decisiones 265
 (`MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1`), PP-Decisiones 266
 (`MXMED_AWS_EDGE_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 267
-(`MXMED_AWS_EDGE_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_EDGE_FOUNDATION_IMPLEMENTATION_V1`), PP-Decisiones 268
+(`MXMED_AWS_OPERATIONS_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 269
+(`MXMED_AWS_OPERATIONS_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
 
 `MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack`, `MxMedStorageStack` y
 `MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. `MxMedComputeStack`
 implementa ECR, ECS tasks y el servicio Fargate de forma condicional. Edge implementa offline
 CloudFront/OAC/WAF y, cuando corresponde, ALB/target group/listener; los scripts generales lo
-mantienen deshabilitado. Operations, Jobs, Backup y Email continúan vacíos. Nada está
+mantienen deshabilitado. Operations implementa offline controles de costo, alarmas, dashboards y
+topics condicionales; Jobs, Backup y Email continúan vacíos. Nada está
 desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos en esta etapa.
 
 ## Arquitectura contractual
@@ -30,12 +33,16 @@ desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos e
 - Compute implementado offline: ECS Fargate Linux X86_64, activado sólo por contexto explícito.
 - Edge offline: CloudFront/OAC/WAF global en `us-east-1` y ALB restringido regional en
   `mx-central-1`; no existe cutover real.
+- Operations offline: Cost Management en `us-east-1`, observabilidad regional en `mx-central-1`
+  y observabilidad Global Edge en `us-east-1`, sólo mediante modos explícitos.
 - Datos: template RDS MySQL 8.4.9, cuatro buckets S3 privados y sesiones en ElastiCache Valkey 8.2.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene los diez stacks heredados y agrega condicionalmente
-`MxMedRegionalEdgeFoundationStack`; `MxMedGlobalEdgeStage` existe sólo en modos Edge no disabled.
-El stack Edge heredado, Operations, Jobs y Backup permanecen contractuales/vacíos. `MxMedEmailStage` contiene
+`MxMedEnvironmentStage` contiene nueve stacks base y agrega condicionalmente
+`MxMedRegionalEdgeFoundationStack` y `MxMedRegionalOperationsStack`;
+`MxMedGlobalEdgeStage` existe sólo en modos Edge no disabled y
+`MxMedGlobalOperationsStage` compone Cost Management con los stacks globales aplicables.
+El stack Edge heredado, Jobs y Backup permanecen contractuales/vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
 ## Prerrequisitos
@@ -81,6 +88,11 @@ lockfile. No se admiten `--force`, `--legacy-peer-deps` ni versiones flotantes.
 | `npm run synth:production:launch-lean:edge-origin`      | Sintetiza Edge regional/global lean sin tráfico.     |
 | `npm run synth:production:standard:edge-origin`         | Sintetiza Edge regional/global standard sin tráfico. |
 | `npm run synth:staging:release-window:edge-origin`      | Sintetiza Edge staging sin tráfico.                  |
+| `npm run synth:production:operations:cost-controls`     | Sintetiza sólo controles de costo Operations.        |
+| `npm run synth:production:launch-lean:operations`       | Sintetiza Operations lean con gates reales.          |
+| `npm run synth:production:standard:operations`          | Sintetiza el catálogo Operations standard.           |
+| `npm run synth:production:scale-ready:operations`       | Sintetiza Operations sobre perfil scale-ready.       |
+| `npm run synth:staging:release-window:operations`       | Sintetiza Operations lean para la ventana staging.   |
 | `npm run diff:staging`                                  | Contrato futuro de diff; no ejecutar todavía.        |
 | `npm run diff:production`                               | Contrato futuro de diff; no ejecutar todavía.        |
 | `npm run validate`                                      | Ejecuta typecheck, lint, formato y tests.            |
@@ -102,6 +114,14 @@ edgePricingProfile=flat-rate-free-v1|flat-rate-pro-v1|pay-as-you-go-approved-v1
 edgeDnsMode=none-v1|external-dns-v1|route53-managed-v1
 edgeCutoverState=blocked-known-gaps-v1|verified-for-cutover-v1
 staticAssetCacheState=disabled-until-fingerprinted-v1|immutable-fingerprinted-v1
+operationsActivationMode=disabled-v1|cost-controls-ready-v1|launch-lean-observability-ready-v1|production-observability-ready-v1
+operationsNotificationMode=none-v1|topics-only-v1|external-subscribers-confirmed-v1
+operationsLogProtectionProfile=source-sanitized-only-v1|targeted-data-protection-v1
+operationsRuntimeGateState=blocked-known-runtime-gaps-v1|operational-readiness-integrated-v1
+clinicalLogSanitizationState=blocked-legacy-agenda-logs-v1|source-sanitization-verified-v1
+costAllocationTagState=inactive-v1|active-and-verified-v1
+costAnomalyMonitorOwnershipMode=create-service-monitor-v1|import-existing-service-monitor-v1
+costTagAnomalyMonitorMode=disabled-until-tags-active-v1|enabled-v1
 ```
 
 Los scripts de synth proporcionan los selectores aplicables. Los cuatro scripts generales fijan
@@ -240,6 +260,65 @@ public_traffic_status=BLOCKED_BY_RUNTIME_GATES
 
 No se emitieron certificados, no se creó DNS, no se llamó una cuenta AWS y no se desplegó ningún
 recurso.
+
+## Operations foundation implementada offline
+
+`MXMED_AWS_OPERATIONS_FOUNDATION_IMPLEMENTATION_V1` implementa PP268 sin consultar AWS y sin
+desplegar recursos. `operationsActivationMode` controla cuatro inventarios cerrados:
+
+- `disabled-v1`: cero stacks o recursos Operations; es el valor de todos los synth generales;
+- `cost-controls-ready-v1`: sólo `MxMedCostManagementStack` en `us-east-1`;
+- `launch-lean-observability-ready-v1`: Cost Management, Operations regional y, cuando Global
+  Edge existe, Operations global;
+- `production-observability-ready-v1`: el mismo topology con catálogo standard ampliado.
+
+`none-v1` es el único notification mode válido en disabled. Los modos `topics-only-v1` y
+`external-subscribers-confirmed-v1` crean los mismos topics cifrados, pero nunca crean email, SMS,
+webhook ni otra subscription personal. El segundo añade un parameter/rule de verificación y deja
+la administración del subscriber en un runbook externo con evidencia privada.
+
+Cost Management usa una KMS key global retenida, `CostAlertsTopic`, dos budgets mensuales
+parametrizados por separado para `CostScope=mxmed-production` y `CostScope=mxmed-staging`, y cinco
+notificaciones SNS: 50% actual, 75% actual, 90% forecast, 100% actual y 120% actual. Los importes,
+threshold absoluto de anomalía, owner opaco, cadencia y gates de verificación son parameters sin
+defaults monetarios. No existen Budget Actions. Cost Anomaly Detection puede crear el monitor
+DIMENSIONAL de servicio o importar su ARN por parameter; la subscription es `IMMEDIATE`, usa
+`ThresholdExpression` absoluto y SNS. El monitor CUSTOM por `CostScope` sólo existe en la fixture
+`active-and-verified-v1`/`enabled-v1`.
+
+Regional Operations reutiliza `AuditKey` para `RegionalCriticalTopic` y `RegionalWarningTopic`,
+sin nueva key ni subscribers, y crea un dashboard de máximo ocho widgets. Launch-lean tiene un
+catálogo conceptual máximo de once alarmas ECS, RDS, Valkey, ALB y CloudFront; las alarmas ALB se
+omiten mientras `operationsRuntimeGateState=blocked-known-runtime-gaps-v1`. Global Operations
+reutiliza la key de costo, crea `GlobalEdgeAlertsTopic` y un dashboard de máximo cinco widgets en
+`us-east-1`; las alarmas CloudFront se omiten mientras el tráfico público y runtime sigan
+bloqueados. Standard agrega memoria/latencias/cola/storage RDS, CPU/conexiones/lag Valkey, p95 ALB,
+error total CloudFront y spikes WAF. No habilita high resolution, CloudFront additional metrics,
+X-Ray, Synthetics, RUM, Application Signals ni remediación automática.
+
+`MXMed/Application` queda sólo como contrato para ocho métricas agregadas y las dimensiones
+`Environment`, `Component`, `Result` y `RuntimeCapabilityProfile`. La emisión real continúa en
+`false`, por lo que no existen alarmas funcionales. El gate de agenda conserva
+`blocked-legacy-agenda-logs-v1`: observabilidad production para `clinical-v1` o
+`professional-ai-v1` falla hasta verificar saneamiento en origen. El perfil real
+`source-sanitized-only-v1` no agrega data protection policy; la fixture
+`targeted-data-protection-v1` sólo cubre app/migration después del gate clínico y nunca concede
+`logs:Unmask`. Las retenciones continúan en 30 días staging y 90 producción, sin reducir auditoría.
+
+El catálogo tipado contiene exactamente 20 runbooks con severidad, trigger, checks, diagnósticos
+seguros, prohibiciones, escalamiento, rollback, evidencia y cierre. Los SLO son internos: 99.5% y
+p95 2 s en launch, 99.9% y p95 1.5 s en standard; el error budget congela cambios no esenciales al
+50% temprano y prioriza confiabilidad al 100%. La promoción exige evidencia de siete días o
+override crítico, budget y pull request manual. Staging conserva release-window y un residual cost
+audit explícito para Fargate, NAT, Valkey, ALB, endpoints, RDS/snapshots y recursos retenidos; no
+crea scheduler ni auto-shutdown.
+
+`OperationsFoundationAspect` rechaza budgets inseguros, anomaly subscriptions inválidas, topics o
+keys no contractuales, alarmas sin metadata/runbook o de alta resolución, dimensiones personales,
+widgets de logs, retenciones incorrectas, servicios costosos no aprobados, IDs de cuenta literales
+y remediación. Toda esta implementación describe templates offline: budgets, topics, alarmas,
+dashboards y monitores desplegados permanecen en cero; tampoco se afirma readiness 200, tráfico
+público, subscribers activos o costos reales consultados.
 
 ## Red V1 implementada en templates
 
@@ -527,10 +606,16 @@ npm run synth:production:launch-lean:compute-service
 npm run synth:production:standard:compute-service
 npm run synth:production:scale-ready:compute-service
 npm run synth:staging:release-window:compute-service
+npm run synth:production:operations:cost-controls
+npm run synth:production:launch-lean:operations
+npm run synth:production:standard:operations
+npm run synth:production:scale-ready:operations
+npm run synth:staging:release-window:operations
 ```
 
-Los diez comandos deben funcionar sin credenciales AWS y no despliegan nada. Los cuatro generales
-mantienen el template Compute vacío; los seis explícitos prueban registry/tasks/service. SecurityStack crea cuatro contenedores de
+Todos los comandos deben funcionar sin credenciales AWS y no despliegan nada. Los generales
+mantienen Compute, Edge y Operations deshabilitados; los explícitos prueban registry/tasks/service
+y los cinco perfiles Operations. SecurityStack crea cuatro contenedores de
 secreto pero cero valores versionados; DataStack crea el contrato RDS sin valor secreto;
 StorageStack crea sólo cuatro buckets y cuatro políticas SSL; SessionStack crea la topología
 Valkey y un secreto generado sin revelar su valor. Compute no crea scanner, SQS,
@@ -565,6 +650,7 @@ Todo recurso taggable futuro deberá tener:
 - `Ephemeral`;
 - `SchedulePolicy`;
 - `CostTier`.
+- `CostScope=mxmed-staging|mxmed-production`.
 
 `MandatoryTagsAspect` falla síntesis ante tags ausentes. La allowlist explícita contiene metadata
 de framework y los tipos cuya representación CloudFormation no acepta los tags contractuales:
@@ -587,6 +673,7 @@ Los Aspects iniciales son:
 - `StorageFoundationAspect`;
 - `SessionFoundationAspect`;
 - `ComputeFoundationAspect`.
+- `OperationsFoundationAspect`.
 
 NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
 tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
@@ -663,7 +750,7 @@ npm run test
 npm run validate
 ```
 
-Las 935 pruebas (787 preservadas y 148 nuevas para Edge) cubren configuración, naming,
+Las 1196 pruebas (935 preservadas y 261 nuevas para Operations) cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
 VPC/subnets/NAT/rutas, endpoints, perfiles launch/standard/scale, ledger/gates, SG, Flow Logs, KMS,
 secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
@@ -671,7 +758,10 @@ parameter/subnet groups, Enhanced Monitoring, inventario/lifecycle/cifrado de St
 keys, metadata/tags, MIME/tamaños/TTL, Valkey/RBAC/TLS, contratos de sesión, guardrails negativos
 y síntesis determinista offline, además de activation modes, capability profiles, digest, ECR,
 tasks, servicio, autoscaling, runtime scaffold, guardrails Compute y los contratos Edge de
-activación, ALB, attachment, OAC, bucket/KMS policies, cache, WAF, Stripe, DNS fixture y privacidad. Los
+activación, ALB, attachment, OAC, bucket/KMS policies, cache, WAF, Stripe, DNS fixture y privacidad,
+además de modos Operations, budgets, Cost Anomaly Detection, SNS/KMS, alarmas profile-aware,
+dashboards, métricas de aplicación, log privacy, runbooks, SLO/error budget, residual audit,
+guardrails y synth determinista. Los
 snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift

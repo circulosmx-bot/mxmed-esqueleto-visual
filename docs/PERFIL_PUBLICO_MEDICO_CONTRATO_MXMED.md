@@ -58577,3 +58577,170 @@ Siguiente microfase, no iniciada aquí:
 Será la Microfase 21 de 24.
 
 ---
+
+## PP-Decisiones 269 - MXMED_AWS_OPERATIONS_FOUNDATION_IMPLEMENTATION_V1
+
+### Estado y alcance
+
+Microfase 21 de 24.
+
+Esta decisión implementa PP268 como AWS CDK v2 TypeScript sintetizable offline. No consulta AWS,
+Cost Explorer, Pricing ni secretos; no crea subscribers personales, no ejecuta bootstrap/diff/deploy
+y no cambia `/readyz`, tráfico público, agenda, PHP o pagos. El estado desplegado permanece en cero.
+
+Los modos tipados son:
+
+- `disabled-v1`: cero recursos Operations;
+- `cost-controls-ready-v1`: sólo Cost Management account-scoped en `us-east-1`;
+- `launch-lean-observability-ready-v1`: Cost Management, Operations regional y Operations global
+  únicamente cuando Global Edge existe;
+- `production-observability-ready-v1`: inventario anterior con catálogo standard ampliado.
+
+`none-v1` sólo es válido con disabled. `topics-only-v1` y
+`external-subscribers-confirmed-v1` crean topics y alarm actions sin subscriptions IaC; el segundo
+exige `ExternalSubscribersVerified` mediante parameter/rule. Ningún email, teléfono, webhook o
+endpoint externo se versiona.
+
+### CostScope, budgets y anomalías
+
+Los recursos taggables conservan los tags existentes y agregan `CostScope=mxmed-staging` o
+`CostScope=mxmed-production`. `MxMedCostManagementStack` crea una KMS key global rotada y retenida,
+su alias, `CostAlertsTopic`, dos budgets y Cost Anomaly Detection. Requiere parameters sin default
+para budget production, budget staging, threshold absoluto de anomalía y porcentaje costo/ingreso,
+además de owner opaco, cadencia y gates de verificación. No persiste montos reales.
+
+Los dos budgets son mensuales, USD y filtrados por su `CostScope`. Cada uno publica sólo a SNS en
+50% ACTUAL, 75% ACTUAL, 90% FORECASTED, 100% ACTUAL y 120% ACTUAL. Tax permanece excluido, support
+incluido y Budget Actions ausente.
+
+El ownership de anomaly monitor es explícito: `create-service-monitor-v1` crea un monitor
+DIMENSIONAL/SERVICE; `import-existing-service-monitor-v1` exige
+`ExistingServiceAnomalyMonitorArn`. La subscription es `IMMEDIATE`, usa SNS y construye un
+`ThresholdExpression` determinista sobre `ANOMALY_TOTAL_IMPACT_ABSOLUTE >=
+AnomalyAlertThresholdUsd`; no usa el `Threshold` deprecado. El monitor CUSTOM de `CostScope` sólo
+se sintetiza con tags `active-and-verified-v1` y modo `enabled-v1`.
+
+La key policy concede uso mínimo a SNS, Budgets, Cost Anomaly Detection y CloudWatch mediante
+service principals, `aws:SourceAccount`, `aws:SourceArn` cuando aplica y `kms:ViaService`. No
+incluye administración KMS wildcard ni account ID literal. Cost, regional critical/warning y
+Global Edge topics están cifrados y retenidos; todos tienen cero subscribers.
+
+### Stacks, alarmas y dashboards
+
+`MxMedRegionalOperationsStack` vive en `mx-central-1`, reutiliza `AuditKey` y recibe referencias
+tipadas de Data, Session, Compute y Regional Edge sin secretos ni IDs personales. El catálogo
+launch-lean tiene máximo once conceptos: déficit/CPU/memoria ECS; unhealthy/5xx ALB; CPU/storage/
+conexiones RDS; evictions/memoria Valkey; 5xx CloudFront. El déficit usa
+`MAX([desired-running,0])`; storage se deriva de GiB; conexiones se derivan de
+`ceil(maxCapacity*20/0.75)` y 70%; los IDs Valkey son contractuales
+`mxmed-{environment}-session-001` y, si existe réplica, `-002`.
+
+El catálogo standard añade FreeableMemory, read/write latency, disk queue y dos gates de storage
+RDS; CPU, conexiones y replication lag Valkey; p95 ALB; total error CloudFront y dos spikes WAF.
+Los mappings de memoria RDS y warning de conexiones Valkey son cerrados y no consultan AWS.
+
+Cada alarma incluye severity, runbook, código sanitizado, ambiente, Operations profile y resumen
+de threshold. SEV1/SEV2 publican al topic critical, SEV3 al warning, SEV4 no tiene acción. No se
+crean OK actions, insufficient-data actions, high-resolution metrics, Lambda/SSM/EC2 remediation
+ni alarmas de recursos ausentes.
+
+Los gates reales permanecen:
+
+- `/readyz=503` y `operationsRuntimeGateState=blocked-known-runtime-gaps-v1` omiten ALB;
+- tráfico público bloqueado omite CloudFront;
+- `applicationMetricEmissionIntegrated=false` omite alarmas funcionales;
+- `clinicalLogSanitizationState=blocked-legacy-agenda-logs-v1` impide observabilidad production
+  clinical/professional-ai.
+
+La fixture futura integrada demuestra ALB math con request gate 20 y CloudFront math en
+`us-east-1` con request gate 100, sin declarar esos gates cerrados en el estado real.
+
+`MxMedRegionalOperationsDashboard` usa como máximo ocho widgets y omite recursos ausentes.
+`MxMedGlobalEdgeDashboard` usa como máximo cinco widgets en `us-east-1`. Ninguno contiene Logs
+Insights, datos personales, query, request IDs, IPs o sampled requests. No se habilitan métricas
+CloudFront adicionales de pago.
+
+### Métricas, logs, runbooks y política operativa
+
+El helper puro `MXMed/Application` permite exactamente las dimensiones `Environment`,
+`Component`, `Result` y `RuntimeCapabilityProfile`, y define ocho métricas de directory, paid,
+clinical y professional-ai. Rechaza dimensiones user/doctor/profile/patient/email/payment/session,
+route, filename, token y URL. Al no existir emisión integrada, no crea alarmas actuales.
+
+App/migration conserva retención 30 días staging y 90 producción, KMS y RETAIN; auditoría no se
+reduce. `source-sanitized-only-v1` no agrega policy. La fixture
+`targeted-data-protection-v1` sólo aplica selectivamente a app/migration con production clinical o
+professional y saneamiento verificado. Nunca concede `logs:Unmask`. Alarm metadata y dashboards
+rechazan body, query completa, Cookie, Authorization, Stripe-Signature y client_secret.
+
+El catálogo contiene exactamente 20 runbooks: public site, ECS, ALB, CloudFront, WAF, tres RDS,
+dos Valkey, Stripe webhook, subscription mismatch, notification, clinical upload, secure link,
+budget, anomaly, staging residual, secret/config y Edge rollback. Cada uno tiene severidad,
+trigger, first checks, diagnóstico seguro, acciones prohibidas, escalamiento, rollback, evidencia
+y cierre, sin SQL inline, secretos, contactos personales ni comandos destructivos.
+
+SEV1–SEV4 son objetivos internos, no SLA. Launch conserva availability 99.5% y p95 2 s; standard
+99.9% y p95 1.5 s. Al 50% temprano del error budget se congelan cambios no esenciales y al 100% se
+prioriza confiabilidad. Launch→standard exige siete días de evidencia o override crítico, budget
+aprobado y pull request manual; `automaticPromotion=false`.
+
+Staging exige checklist antes/después y un `StagingResidualCostAudit` para Fargate, NAT, Valkey,
+ALB, endpoints, RDS/snapshot y recursos retenidos. No hay scheduler, auto-shutdown ni remediation.
+`operationsAutomaticRemediationEnabled=false` es inmutable en la configuración real.
+
+### Guardrails, QA y cierre
+
+`OperationsFoundationAspect` falla ante recursos Operations en disabled, parámetros monetarios con
+default, Budget Actions, anomaly subscriptions inválidas, topics no cifrados/subscriptions,
+políticas personales o wildcard, keys administrativas, alarmas sin metadata o de alta resolución,
+dimensiones personales, CloudFront fuera de `us-east-1`, application alarms sin emisión, widgets
+de logs, retención incorrecta, X-Ray, Synthetics, RUM, OpenSearch, CloudFront additional metrics,
+Lambda/SSM remediation, account ID literal y configuración sensible.
+
+Se preservaron las 935 pruebas previas y se agregaron 261 pruebas Operations; 1196 pasan. TypeScript,
+ESLint, Prettier, los synth generales y los cinco synth Operations pasan offline. Los templates se
+auditan dos veces para determinismo; npm audit production y completo reportan cero vulnerabilidades.
+No cambiaron dependencias.
+
+Estado verificable de no repetición:
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "cost_explorer_calls": 0,
+  "pricing_api_calls": 0,
+  "aws_resources_deployed": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "http_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "docker_calls": 0,
+  "composer_calls": 0,
+  "php_calls": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "alarm_notifications_sent": 0,
+  "budgets_deployed": 0,
+  "anomaly_monitors_deployed": 0,
+  "automatic_remediations": 0,
+  "secret_values_requested": 0,
+  "secret_values_persisted": 0,
+  "personal_notification_targets_persisted": 0,
+  "clinical_data_read": 0
+}
+```
+
+Microfase 21 de 24 concluida. Avance global 21/24; quedan 3 pendientes.
+
+Siguiente microfase, no iniciada aquí:
+
+`ARCH-DEVOPS/MXMed-AWS-Backup-DR-Readiness-01`
+
+Será la Microfase 22 de 24.
+
+---

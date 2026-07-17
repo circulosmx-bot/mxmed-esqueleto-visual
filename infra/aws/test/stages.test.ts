@@ -57,12 +57,12 @@ describe.each([
   ['staging', STAGING_CONFIG],
   ['production', PRODUCTION_CONFIG],
 ] as const)('%s stage topology', (_name, config) => {
-  test('creates ten workload stacks and a separate email stack', () => {
+  test('creates nine workload stacks and a separate email stack while Operations is disabled', () => {
     const { environment, email } = createStages(config);
     const workloadStacks = environment.node.children.filter((child) => Stack.isStack(child));
     const emailStacks = email.node.children.filter((child) => Stack.isStack(child));
 
-    expect(workloadStacks).toHaveLength(10);
+    expect(workloadStacks).toHaveLength(9);
     expect(emailStacks).toEqual([email.emailStack]);
     expect(workloadStacks).not.toContain(email.emailStack);
   });
@@ -76,9 +76,7 @@ describe.each([
   test('uses stable conceptual stack names', () => {
     const { environment, email } = createStages(config);
     expect(environment.networkStack.stackName).toBe(`mxmed-${config.environmentCode}-network`);
-    expect(environment.operationsStack.stackName).toBe(
-      `mxmed-${config.environmentCode}-operations`,
-    );
+    expect(environment.operationsStack).toBeUndefined();
     expect(email.emailStack.stackName).toBe(`mxmed-${config.environmentCode}-email`);
   });
 

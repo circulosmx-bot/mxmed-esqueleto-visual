@@ -30,7 +30,14 @@ import { Repository, RepositoryEncryption, TagMutability, TagStatus } from 'aws-
 import { CfnPolicy, Effect, PolicyDocument, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 import type { IRole } from 'aws-cdk-lib/aws-iam';
 import type { IKey } from 'aws-cdk-lib/aws-kms';
-import { CfnLogGroup, LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import {
+  CfnLogGroup,
+  CustomDataIdentifier,
+  DataIdentifier,
+  DataProtectionPolicy,
+  LogGroup,
+  RetentionDays,
+} from 'aws-cdk-lib/aws-logs';
 import type { IBucket } from 'aws-cdk-lib/aws-s3';
 import type { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { IApplicationTargetGroup } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
@@ -221,12 +228,14 @@ export class MxMedComputeStack extends BaseMxMedStack {
       `/mxmed/${config.environmentName}/compute/app`,
       props.auditKey,
       config.computeLogRetentionDays,
+      config.operationsLogProtectionProfile,
     );
     this.migrationLogGroup = this.createLogGroup(
       'MigrationLogGroup',
       `/mxmed/${config.environmentName}/compute/migration`,
       props.auditKey,
       config.computeLogRetentionDays,
+      config.operationsLogProtectionProfile,
     );
     this.createExecutionPolicy(props, applicationUserSecret, runtimeCapabilityProfile);
     this.createApplicationPolicy(props, runtimeCapabilityProfile);
@@ -343,12 +352,32 @@ export class MxMedComputeStack extends BaseMxMedStack {
     name: string,
     auditKey: IKey,
     retentionDays: 30 | 90,
+    protectionProfile: MxMedComputeStackProps['config']['operationsLogProtectionProfile'],
   ): LogGroup {
+    const dataProtectionPolicy =
+      protectionProfile === 'targeted-data-protection-v1'
+        ? new DataProtectionPolicy({
+            name: `${id}-targeted-v1`,
+            description: 'Selective MXMed workload log redaction; no account-wide policy.',
+            identifiers: [
+              DataIdentifier.AWSSECRETKEY,
+              DataIdentifier.CREDITCARDNUMBER,
+              DataIdentifier.EMAILADDRESS,
+              DataIdentifier.PHONENUMBER_US,
+              new CustomDataIdentifier('MxMedStripeSecret', 'sk_(live|test)_[A-Za-z0-9]{16,}'),
+              new CustomDataIdentifier(
+                'MxMedSecureLinkToken',
+                'secure[-_]?link[-_]?token[=:][A-Za-z0-9._~-]{16,}',
+              ),
+            ],
+          })
+        : undefined;
     const logGroup = new LogGroup(this, id, {
       logGroupName: name,
       encryptionKey: auditKey,
       retention: retentionDays === 30 ? RetentionDays.ONE_MONTH : RetentionDays.THREE_MONTHS,
       removalPolicy: RemovalPolicy.RETAIN,
+      ...(dataProtectionPolicy === undefined ? {} : { dataProtectionPolicy }),
     });
     const resource = logGroup.node.defaultChild;
     if (!(resource instanceof CfnLogGroup)) {

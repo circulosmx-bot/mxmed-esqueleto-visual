@@ -39,6 +39,7 @@ export abstract class BaseMxMedStack extends Stack {
     Tags.of(this).add('CostReview', props.config.tags.CostReview);
     Tags.of(this).add('Ephemeral', props.config.tags.Ephemeral);
     Tags.of(this).add('SchedulePolicy', props.config.tags.SchedulePolicy);
+    Tags.of(this).add('CostScope', props.config.tags.CostScope);
     Tags.of(this).add('Component', props.component);
     Tags.of(this).add('DataClassification', props.metadata.dataClassification);
     Tags.of(this).add('Criticality', props.metadata.criticality);

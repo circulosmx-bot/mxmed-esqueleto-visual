@@ -52,7 +52,7 @@ describe('security offline synthesis', () => {
     delete process.env.CDK_DEFAULT_ACCOUNT;
     try {
       const templates = renderEnvironment(STAGING_CONFIG);
-      expect(Object.keys(templates)).toHaveLength(10);
+      expect(Object.keys(templates)).toHaveLength(9);
       expect(
         resourcesOfType(renderSecurity(STAGING_CONFIG).resources, 'AWS::KMS::Key'),
       ).toHaveLength(4);
@@ -67,7 +67,7 @@ describe('security offline synthesis', () => {
     delete process.env.CDK_DEFAULT_ACCOUNT;
     try {
       const templates = renderEnvironment(PRODUCTION_CONFIG);
-      expect(Object.keys(templates)).toHaveLength(10);
+      expect(Object.keys(templates)).toHaveLength(9);
       expect(
         resourcesOfType(renderSecurity(PRODUCTION_CONFIG).resources, 'AWS::KMS::Key'),
       ).toHaveLength(4);

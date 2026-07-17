@@ -6,6 +6,7 @@ import type { Construct } from 'constructs';
 import type { MxMedEnvironmentConfig } from '../config/environment-config';
 import { computeCreatesRegistry, computeCreatesTasks } from '../config/compute-config';
 import { edgeCreatesRegional } from '../config/edge-config';
+import { operationsCreatesObservability } from '../config/operations-profiles';
 import { validateEnvironmentConfig } from '../config/environment-schema';
 import { MxMedBackupStack } from '../stacks/mxmed-backup-stack';
 import { MxMedComputeStack } from '../stacks/mxmed-compute-stack';
@@ -13,7 +14,7 @@ import { MxMedDataStack } from '../stacks/mxmed-data-stack';
 import { MxMedEdgeStack } from '../stacks/mxmed-edge-stack';
 import { MxMedJobsStack } from '../stacks/mxmed-jobs-stack';
 import { MxMedNetworkStack } from '../stacks/mxmed-network-stack';
-import { MxMedOperationsStack } from '../stacks/mxmed-operations-stack';
+import { MxMedRegionalOperationsStack } from '../stacks/mxmed-regional-operations-stack';
 import { MxMedSecurityStack } from '../stacks/mxmed-security-stack';
 import { MxMedSessionStack } from '../stacks/mxmed-session-stack';
 import { MxMedStorageStack } from '../stacks/mxmed-storage-stack';
@@ -35,7 +36,8 @@ export class MxMedEnvironmentStage extends Stage {
   public readonly edgeStack: MxMedEdgeStack;
   public readonly jobsStack: MxMedJobsStack;
   public readonly backupStack: MxMedBackupStack;
-  public readonly operationsStack: MxMedOperationsStack;
+  public readonly operationsStack: MxMedRegionalOperationsStack | undefined;
+  public readonly regionalOperationsStack: MxMedRegionalOperationsStack | undefined;
 
   public constructor(scope: Construct, id: string, props: MxMedEnvironmentStageProps) {
     validateEnvironmentConfig(props.config);
@@ -131,7 +133,35 @@ export class MxMedEnvironmentStage extends Stage {
           },
     );
     this.edgeStack = new MxMedEdgeStack(this, 'Edge', stackProps);
-    this.operationsStack = new MxMedOperationsStack(this, 'Operations', stackProps);
+    const regionalOperationsProps = {
+      ...stackProps,
+      auditKey: this.securityStack.auditKey,
+      databaseInstance: this.dataStack.databaseInstance,
+      allocatedStorageGiB: props.config.databaseAllocatedStorageGiB,
+      databaseInstanceClass: props.config.databaseInstanceClass,
+      replicationGroup: this.sessionStack.replicationGroup,
+      primaryCacheClusterId: this.sessionStack.primaryCacheClusterId,
+      sessionNodeType: props.config.sessionNodeType,
+      deploymentProfile: props.config.deploymentProfile,
+      computeMaxCapacity: props.config.computeMaxCapacity,
+      runtimeCapabilityProfile: props.config.runtimeCapabilityProfile,
+      edgeActivationMode: props.config.edgeActivationMode,
+      ...(this.sessionStack.replicaCacheClusterId === undefined
+        ? {}
+        : { replicaCacheClusterId: this.sessionStack.replicaCacheClusterId }),
+      ...(this.computeStack.cluster === undefined ? {} : { cluster: this.computeStack.cluster }),
+      ...(this.computeStack.service === undefined ? {} : { service: this.computeStack.service }),
+      ...(this.regionalEdgeStack === undefined
+        ? {}
+        : {
+            loadBalancer: this.regionalEdgeStack.applicationLoadBalancer,
+            targetGroup: this.regionalEdgeStack.applicationTargetGroup,
+          }),
+    };
+    this.operationsStack = operationsCreatesObservability(props.config)
+      ? new MxMedRegionalOperationsStack(this, 'RegionalOperations', regionalOperationsProps)
+      : undefined;
+    this.regionalOperationsStack = this.operationsStack;
     this.jobsStack = new MxMedJobsStack(this, 'Jobs', stackProps);
     this.backupStack = new MxMedBackupStack(this, 'Backup', stackProps);
 
@@ -163,18 +193,18 @@ export class MxMedEnvironmentStage extends Stage {
     this.backupStack.addDependency(this.storageStack);
     this.backupStack.addDependency(this.securityStack);
 
-    for (const observableStack of [
-      this.networkStack,
-      this.securityStack,
-      this.dataStack,
-      this.storageStack,
-      this.sessionStack,
-      this.computeStack,
-      this.edgeStack,
-      this.jobsStack,
-      this.backupStack,
-    ]) {
-      this.operationsStack.addDependency(observableStack);
+    if (this.operationsStack !== undefined) {
+      for (const observableStack of [
+        this.securityStack,
+        this.dataStack,
+        this.sessionStack,
+        this.computeStack,
+      ]) {
+        this.operationsStack.addDependency(observableStack);
+      }
+      if (this.regionalEdgeStack !== undefined) {
+        this.operationsStack.addDependency(this.regionalEdgeStack);
+      }
     }
   }
 }

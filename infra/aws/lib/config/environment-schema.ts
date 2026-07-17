@@ -15,6 +15,7 @@ import {
   resolveLaunchProfile,
 } from './launch-profiles';
 import { validateEdgeFoundationConfig } from './edge-config';
+import { validateOperationsConfig } from './operations-profiles';
 import { assertMxMedCondition, assertNoSensitiveConfiguration } from '../utils/validation';
 
 const ENVIRONMENT_CODES: Readonly<Record<MxMedEnvironmentName, MxMedEnvironmentCode>> = {
@@ -327,7 +328,9 @@ function validateTags(
       value.DeploymentProfile === deploymentProfile &&
       value.CostReview === MXMED_COST_ESTIMATE_AS_OF &&
       value.Ephemeral === (environmentName === 'staging' ? 'true' : 'false') &&
-      value.SchedulePolicy === (environmentName === 'staging' ? 'release-window-v1' : 'always-on'),
+      value.SchedulePolicy ===
+        (environmentName === 'staging' ? 'release-window-v1' : 'always-on') &&
+      value.CostScope === (environmentName === 'staging' ? 'mxmed-staging' : 'mxmed-production'),
     'MXMED_CONFIG_INVALID',
     'tags',
     'mandatory tag values must match the MXMed contract',
@@ -825,6 +828,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
   validateComputeConfiguration(input, environmentName);
   validateCostAwareConfiguration(input, environmentName);
   validateEdgeFoundationConfig(input as unknown as MxMedEnvironmentConfig);
+  validateOperationsConfig(input as unknown as MxMedEnvironmentConfig);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',
     'MXMED_CONFIG_INVALID',

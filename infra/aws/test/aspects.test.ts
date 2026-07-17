@@ -33,6 +33,7 @@ function addRequiredTags(bucket: CfnBucket): void {
     Ephemeral: 'false',
     SchedulePolicy: 'always-on',
     CostTier: 'storage-based',
+    CostScope: 'mxmed-production',
   };
   for (const [key, value] of Object.entries(tags)) {
     bucket.tags.setTag(key, value);

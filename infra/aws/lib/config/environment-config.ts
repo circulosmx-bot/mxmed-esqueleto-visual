@@ -49,6 +49,23 @@ export type MxMedEdgeDnsMode = 'none-v1' | 'external-dns-v1' | 'route53-managed-
 export type MxMedEdgeCutoverState = 'blocked-known-gaps-v1' | 'verified-for-cutover-v1';
 export type MxMedStaticAssetCacheState =
   'disabled-until-fingerprinted-v1' | 'immutable-fingerprinted-v1';
+export type MxMedOperationsActivationMode =
+  | 'disabled-v1'
+  | 'cost-controls-ready-v1'
+  | 'launch-lean-observability-ready-v1'
+  | 'production-observability-ready-v1';
+export type MxMedOperationsNotificationMode =
+  'none-v1' | 'topics-only-v1' | 'external-subscribers-confirmed-v1';
+export type MxMedOperationsLogProtectionProfile =
+  'source-sanitized-only-v1' | 'targeted-data-protection-v1';
+export type MxMedOperationsRuntimeGateState =
+  'blocked-known-runtime-gaps-v1' | 'operational-readiness-integrated-v1';
+export type MxMedClinicalLogSanitizationState =
+  'blocked-legacy-agenda-logs-v1' | 'source-sanitization-verified-v1';
+export type MxMedCostAllocationTagState = 'inactive-v1' | 'active-and-verified-v1';
+export type MxMedCostAnomalyMonitorOwnershipMode =
+  'create-service-monitor-v1' | 'import-existing-service-monitor-v1';
+export type MxMedCostTagAnomalyMonitorMode = 'disabled-until-tags-active-v1' | 'enabled-v1';
 
 export interface MxMedCloudFrontPricingPlanVerification {
   readonly expectedProfile: MxMedCloudFrontPricingProfile;
@@ -68,6 +85,7 @@ export interface MxMedGlobalTags {
   readonly CostReview: string;
   readonly Ephemeral: 'true' | 'false';
   readonly SchedulePolicy: MxMedStagingOperatingMode | 'always-on';
+  readonly CostScope: 'mxmed-staging' | 'mxmed-production';
 }
 
 export interface MxMedStackTagMetadata {
@@ -268,6 +286,33 @@ export interface MxMedEnvironmentConfig {
   readonly budgetApproved: boolean;
   readonly dnsCutoverApproved: boolean;
   readonly cloudFrontPricingPlanVerification: MxMedCloudFrontPricingPlanVerification;
+  readonly operationsActivationMode: MxMedOperationsActivationMode;
+  readonly operationsNotificationMode: MxMedOperationsNotificationMode;
+  readonly operationsLogProtectionProfile: MxMedOperationsLogProtectionProfile;
+  readonly operationsRuntimeGateState: MxMedOperationsRuntimeGateState;
+  readonly clinicalLogSanitizationState: MxMedClinicalLogSanitizationState;
+  readonly operationsIncidentPolicyVersion: 'mxmed-incident-policy-v1';
+  readonly operationsRunbookVersion: 'mxmed-operations-runbooks-v1';
+  readonly operationsDashboardProfile: 'minimal-profile-aware-v1';
+  readonly operationsAlarmProfile: 'profile-aware-v1';
+  readonly operationsAutomaticRemediationEnabled: false;
+  readonly operationsEcsCpuWarningPercent: 75;
+  readonly operationsEcsMemoryWarningPercent: 80;
+  readonly operationsRdsCpuWarningPercent: 75;
+  readonly operationsRdsFreeStoragePercent: 20;
+  readonly operationsRdsConnectionBudgetPercent: 70;
+  readonly operationsValkeyMemoryWarningPercent: 75;
+  readonly operationsAlbTarget5xxRatePercent: 2;
+  readonly operationsCloudFront5xxRatePercent: 1;
+  readonly operationsInternalAvailabilityTarget: 99.5 | 99.9;
+  readonly operationsDynamicP95TargetMs: 1500 | 2000;
+  readonly operationsStagingResidualAuditEnabled: boolean;
+  readonly operationsCostScopeTagKey: 'CostScope';
+  readonly operationsCostScopeTagValue: 'mxmed-staging' | 'mxmed-production';
+  readonly operationsCostAllocationTagState: MxMedCostAllocationTagState;
+  readonly costAnomalyMonitorOwnershipMode: MxMedCostAnomalyMonitorOwnershipMode;
+  readonly operationsCostTagAnomalyMonitorMode: MxMedCostTagAnomalyMonitorMode;
+  readonly applicationMetricEmissionIntegrated: false;
   readonly tags: MxMedGlobalTags;
 }
 
@@ -285,6 +330,7 @@ export const MXMED_REQUIRED_GLOBAL_TAG_KEYS = [
   'CostReview',
   'Ephemeral',
   'SchedulePolicy',
+  'CostScope',
 ] as const;
 
 export const MXMED_REQUIRED_RESOURCE_TAG_KEYS = [

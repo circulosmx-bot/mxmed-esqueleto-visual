@@ -57,6 +57,9 @@ export class MxMedSessionStack extends BaseMxMedStack {
   public readonly sessionAbsoluteLifetimeSeconds: number;
   public readonly sessionMaxPayloadKiB: number;
   public readonly sessionLockContract: SessionLockContract;
+  public readonly replicationGroupId: string;
+  public readonly primaryCacheClusterId: string;
+  public readonly replicaCacheClusterId?: string;
 
   public constructor(scope: Construct, id: string, props: MxMedSessionStackProps) {
     super(scope, id, {
@@ -77,6 +80,11 @@ export class MxMedSessionStack extends BaseMxMedStack {
     this.sessionAbsoluteLifetimeSeconds = config.sessionAbsoluteLifetimeSeconds;
     this.sessionMaxPayloadKiB = config.sessionMaxPayloadKiB;
     this.sessionLockContract = SESSION_LOCK_CONTRACT;
+    this.replicationGroupId = mxmedName(config.environmentCode, 'session');
+    this.primaryCacheClusterId = `${this.replicationGroupId}-001`;
+    if (config.sessionReplicaCount === 1) {
+      this.replicaCacheClusterId = `${this.replicationGroupId}-002`;
+    }
 
     this.subnetGroup = new CfnSubnetGroup(this, 'SessionSubnetGroup', {
       description: 'MXMed session cache subnet group with exactly two isolated-data subnets.',
@@ -142,6 +150,7 @@ export class MxMedSessionStack extends BaseMxMedStack {
     this.userGroup.addDependency(this.applicationUser);
 
     this.replicationGroup = new CfnReplicationGroup(this, 'SessionReplicationGroup', {
+      replicationGroupId: this.replicationGroupId,
       replicationGroupDescription: 'MXMed dedicated encrypted shared-session cache.',
       engine: config.sessionEngine,
       engineVersion: config.sessionEngineVersion,

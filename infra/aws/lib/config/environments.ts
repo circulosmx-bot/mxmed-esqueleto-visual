@@ -20,6 +20,8 @@ import {
 } from './launch-profiles';
 import type { MxMedEdgeContextValues } from './edge-config';
 import { MXMED_REAL_EDGE_RUNTIME_GATES, resolveEdgeContext } from './edge-config';
+import type { MxMedOperationsContextValues } from './operations-profiles';
+import { resolveOperationsContext } from './operations-profiles';
 
 const STAGING_BASE_CONFIG = Object.freeze({
   environmentName: 'staging',
@@ -267,6 +269,7 @@ function createEnvironmentConfig(
   computeActivationModeValue: unknown = 'disabled-v1' satisfies MxMedComputeActivationMode,
   runtimeCapabilityProfileValue?: unknown,
   edgeContextValues: MxMedEdgeContextValues = {},
+  operationsContextValues: MxMedOperationsContextValues = {},
 ): MxMedEnvironmentConfig {
   const resolved = resolveLaunchProfile(environmentName, deploymentProfileValue);
   const computeControls = resolveComputeControls(
@@ -276,6 +279,11 @@ function createEnvironmentConfig(
   const ecrRetention = computeEcrRetention(environmentName, resolved.deploymentProfile);
   const base = environmentName === 'staging' ? STAGING_BASE_CONFIG : PRODUCTION_BASE_CONFIG;
   const edge = resolveEdgeContext(edgeContextValues);
+  const operations = resolveOperationsContext(
+    environmentName,
+    resolved.deploymentProfile,
+    operationsContextValues,
+  );
   const config = {
     ...base,
     ...resolved.capacity,
@@ -306,6 +314,7 @@ function createEnvironmentConfig(
     computeMigrationCommandMode: MXMED_COMPUTE_RUNTIME_CONTRACT.migrationCommandMode,
     ...edge,
     ...MXMED_REAL_EDGE_RUNTIME_GATES,
+    ...operations,
     cloudFrontPricingPlanVerification: {
       expectedProfile: edge.edgePricingProfile,
       accountEligibilityVerified: false,
@@ -339,6 +348,7 @@ function createEnvironmentConfig(
       CostReview: MXMED_COST_ESTIMATE_AS_OF,
       Ephemeral: environmentName === 'staging' ? 'true' : 'false',
       SchedulePolicy: environmentName === 'staging' ? 'release-window-v1' : 'always-on',
+      CostScope: environmentName === 'staging' ? 'mxmed-staging' : 'mxmed-production',
     },
   } as const;
   validateEnvironmentConfig(config);
@@ -356,6 +366,7 @@ export function getEnvironmentConfig(
   computeActivationModeValue: unknown = 'disabled-v1',
   runtimeCapabilityProfileValue?: unknown,
   edgeContextValues: MxMedEdgeContextValues = {},
+  operationsContextValues: MxMedOperationsContextValues = {},
 ): MxMedEnvironmentConfig {
   const environmentName = parseEnvironmentName(value);
   return createEnvironmentConfig(
@@ -364,5 +375,6 @@ export function getEnvironmentConfig(
     computeActivationModeValue,
     runtimeCapabilityProfileValue,
     edgeContextValues,
+    operationsContextValues,
   );
 }

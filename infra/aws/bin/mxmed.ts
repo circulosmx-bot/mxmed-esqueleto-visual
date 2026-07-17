@@ -7,6 +7,7 @@ import { EdgeFoundationAspect } from '../lib/aspects/edge-foundation-aspect';
 import { NoPublicBucketAspect } from '../lib/aspects/no-public-bucket-aspect';
 import { NoPublicDatabaseAspect } from '../lib/aspects/no-public-database-aspect';
 import { ProductionRetentionAspect } from '../lib/aspects/production-retention-aspect';
+import { OperationsFoundationAspect } from '../lib/aspects/operations-foundation-aspect';
 import {
   MXMED_SAFE_STRIPE_RETURN_LOGGING_CONTROLS,
   StripeReturnLoggingSafetyAspect,
@@ -18,6 +19,8 @@ import { MxMedEmailStage } from '../lib/stages/mxmed-email-stage';
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
 import { MxMedGlobalEdgeStage } from '../lib/stages/mxmed-global-edge-stage';
 import { edgeCreatesGlobal } from '../lib/config/edge-config';
+import { operationsCreatesCost } from '../lib/config/operations-profiles';
+import { MxMedGlobalOperationsStage } from '../lib/stages/mxmed-global-operations-stage';
 
 function applyGlobalTags(scope: IConstruct, config: MxMedEnvironmentConfig): void {
   Tags.of(scope).add('Project', config.tags.Project);
@@ -29,12 +32,14 @@ function applyGlobalTags(scope: IConstruct, config: MxMedEnvironmentConfig): voi
   Tags.of(scope).add('CostReview', config.tags.CostReview);
   Tags.of(scope).add('Ephemeral', config.tags.Ephemeral);
   Tags.of(scope).add('SchedulePolicy', config.tags.SchedulePolicy);
+  Tags.of(scope).add('CostScope', config.tags.CostScope);
 }
 
 function applyFoundationAspects(
   environmentStage: MxMedEnvironmentStage,
   emailStage: MxMedEmailStage,
   globalEdgeStage: MxMedGlobalEdgeStage | undefined,
+  globalOperationsStage: MxMedGlobalOperationsStage | undefined,
   config: MxMedEnvironmentConfig,
 ): void {
   for (const stage of [environmentStage, emailStage]) {
@@ -56,8 +61,21 @@ function applyFoundationAspects(
   Aspects.of(environmentStage).add(new EdgeFoundationAspect(), {
     priority: AspectPriority.READONLY,
   });
+  Aspects.of(environmentStage).add(new OperationsFoundationAspect(config), {
+    priority: AspectPriority.READONLY,
+  });
   if (globalEdgeStage !== undefined) {
     Aspects.of(globalEdgeStage).add(new EdgeFoundationAspect(), {
+      priority: AspectPriority.READONLY,
+    });
+  }
+  if (globalOperationsStage?.globalEdgeStack !== undefined) {
+    Aspects.of(globalOperationsStage).add(new EdgeFoundationAspect(), {
+      priority: AspectPriority.READONLY,
+    });
+  }
+  if (globalOperationsStage !== undefined) {
+    Aspects.of(globalOperationsStage).add(new OperationsFoundationAspect(config), {
       priority: AspectPriority.READONLY,
     });
   }
@@ -85,6 +103,16 @@ export function createMxMedApp(): App {
       edgeCutoverState: app.node.tryGetContext('edgeCutoverState'),
       staticAssetCacheState: app.node.tryGetContext('staticAssetCacheState'),
     },
+    {
+      operationsActivationMode: app.node.tryGetContext('operationsActivationMode'),
+      operationsNotificationMode: app.node.tryGetContext('operationsNotificationMode'),
+      operationsLogProtectionProfile: app.node.tryGetContext('operationsLogProtectionProfile'),
+      operationsRuntimeGateState: app.node.tryGetContext('operationsRuntimeGateState'),
+      clinicalLogSanitizationState: app.node.tryGetContext('clinicalLogSanitizationState'),
+      costAllocationTagState: app.node.tryGetContext('costAllocationTagState'),
+      costAnomalyMonitorOwnershipMode: app.node.tryGetContext('costAnomalyMonitorOwnershipMode'),
+      costTagAnomalyMonitorMode: app.node.tryGetContext('costTagAnomalyMonitorMode'),
+    },
   );
   const accountValue = process.env.CDK_DEFAULT_ACCOUNT?.trim();
   const stageAccount =
@@ -97,14 +125,25 @@ export function createMxMedApp(): App {
 
   const environmentStage = new MxMedEnvironmentStage(app, environmentStageId, stageProps);
   const emailStage = new MxMedEmailStage(app, emailStageId, stageProps);
-  const globalEdgeStage = edgeCreatesGlobal(config)
-    ? new MxMedGlobalEdgeStage(app, `${environmentStageId}GlobalEdge`, stageProps)
+  const globalOperationsStage = operationsCreatesCost(config)
+    ? new MxMedGlobalOperationsStage(app, `${environmentStageId}GlobalOperations`, stageProps)
     : undefined;
+  const globalEdgeStage =
+    globalOperationsStage === undefined && edgeCreatesGlobal(config)
+      ? new MxMedGlobalEdgeStage(app, `${environmentStageId}GlobalEdge`, stageProps)
+      : undefined;
 
   applyGlobalTags(environmentStage, config);
   applyGlobalTags(emailStage, config);
   if (globalEdgeStage !== undefined) applyGlobalTags(globalEdgeStage, config);
-  applyFoundationAspects(environmentStage, emailStage, globalEdgeStage, config);
+  if (globalOperationsStage !== undefined) applyGlobalTags(globalOperationsStage, config);
+  applyFoundationAspects(
+    environmentStage,
+    emailStage,
+    globalEdgeStage,
+    globalOperationsStage,
+    config,
+  );
 
   return app;
 }
