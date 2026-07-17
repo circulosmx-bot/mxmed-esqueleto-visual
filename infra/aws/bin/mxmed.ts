@@ -11,6 +11,7 @@ import {
   StripeReturnLoggingSafetyAspect,
 } from '../lib/aspects/stripe-return-logging-safety-aspect';
 import type { MxMedEnvironmentConfig } from '../lib/config/environment-config';
+import { parseComputeActivationMode } from '../lib/config/compute-config';
 import { getEnvironmentConfig } from '../lib/config/environments';
 import { MxMedEmailStage } from '../lib/stages/mxmed-email-stage';
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
@@ -52,9 +53,14 @@ function applyFoundationAspects(
 
 export function createMxMedApp(): App {
   const app = new App({ analyticsReporting: false });
+  const computeActivationMode = parseComputeActivationMode(
+    app.node.tryGetContext('computeActivationMode'),
+  );
   const config = getEnvironmentConfig(
     app.node.tryGetContext('environment'),
     app.node.tryGetContext('deploymentProfile'),
+    computeActivationMode,
+    app.node.tryGetContext('runtimeCapabilityProfile'),
   );
   const accountValue = process.env.CDK_DEFAULT_ACCOUNT?.trim();
   const stageAccount =

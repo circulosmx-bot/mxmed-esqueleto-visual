@@ -149,16 +149,6 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       'jobs',
       'MXMed jobs task role; each future job receives explicit owner grants.',
     );
-    for (const secret of [
-      this.sessionSigningSecret,
-      this.stripeSecretKeyReference,
-      this.stripeWebhookSecretReference,
-      this.aiApiKeyReference,
-    ]) {
-      secret.grantRead(this.ecsExecutionRole);
-    }
-    this.secretsKey.grantDecrypt(this.ecsExecutionRole);
-
     this.auditBucket = new Bucket(this, 'AuditBucket', {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       objectOwnership: ObjectOwnership.BUCKET_OWNER_ENFORCED,

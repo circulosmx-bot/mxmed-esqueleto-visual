@@ -28,7 +28,9 @@ function validateStorageFoundation(scope: IConstruct): string[] {
     (resource): resource is CfnBucket => resource instanceof CfnBucket,
   );
   const bucketIds = buckets.map((bucket) => bucket.node.scope?.node.id ?? 'unknown');
-  const outputs = scope.node.findAll().filter((node) => node instanceof CfnOutput);
+  const outputs = scope.node
+    .findAll()
+    .filter((node) => node instanceof CfnOutput && !node.node.path.includes('/Exports/'));
 
   if (buckets.length !== 4) errors.push('MXMED_STORAGE_BUCKET_COUNT_INVALID');
   if (

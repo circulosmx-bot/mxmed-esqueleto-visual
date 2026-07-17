@@ -2,7 +2,11 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 
 import type { MxMedEnvironmentConfig } from '../lib/config/environment-config';
-import { PRODUCTION_CONFIG, STAGING_CONFIG } from '../lib/config/environments';
+import {
+  getEnvironmentConfig,
+  PRODUCTION_CONFIG,
+  STAGING_CONFIG,
+} from '../lib/config/environments';
 import { MxMedEmailStage } from '../lib/stages/mxmed-email-stage';
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
 
@@ -144,15 +148,7 @@ describe('workload dependencies', () => {
     expect(directDependencyNames(environment.sessionStack)).toEqual(
       ['mxmed-prd-network', 'mxmed-prd-security'].sort(),
     );
-    expect(directDependencyNames(environment.computeStack)).toEqual(
-      [
-        'mxmed-prd-network',
-        'mxmed-prd-security',
-        'mxmed-prd-data',
-        'mxmed-prd-storage',
-        'mxmed-prd-session',
-      ].sort(),
-    );
+    expect(directDependencyNames(environment.computeStack)).toEqual([]);
     expect(directDependencyNames(environment.edgeStack)).toEqual(
       ['mxmed-prd-compute', 'mxmed-prd-security', 'mxmed-prd-storage'].sort(),
     );
@@ -161,6 +157,37 @@ describe('workload dependencies', () => {
     );
     expect(directDependencyNames(environment.backupStack)).toEqual(
       ['mxmed-prd-data', 'mxmed-prd-storage', 'mxmed-prd-security'].sort(),
+    );
+    expect(() => {
+      expectNoDependencyCycle(stacks);
+    }).not.toThrow();
+  });
+
+  test('adds only Security as a registry-only dependency', () => {
+    const config = getEnvironmentConfig('production', 'launch-lean-v1', 'registry-only-v1');
+    const { environment } = createStages(config);
+    expect(directDependencyNames(environment.computeStack)).toEqual(['mxmed-prd-security']);
+  });
+
+  test('adds all contracted task dependencies without cycles', () => {
+    const config = getEnvironmentConfig(
+      'production',
+      'launch-lean-v1',
+      'tasks-ready-v1',
+      'directory-core-v1',
+    );
+    const { environment } = createStages(config);
+    const stacks = environment.node.children.filter((child): child is Stack =>
+      Stack.isStack(child),
+    );
+    expect(directDependencyNames(environment.computeStack)).toEqual(
+      [
+        'mxmed-prd-network',
+        'mxmed-prd-security',
+        'mxmed-prd-data',
+        'mxmed-prd-storage',
+        'mxmed-prd-session',
+      ].sort(),
     );
     expect(() => {
       expectNoDependencyCycle(stacks);

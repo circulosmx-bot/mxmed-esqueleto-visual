@@ -1,4 +1,13 @@
-import type { MxMedEnvironmentConfig, MxMedEnvironmentName } from './environment-config';
+import type {
+  MxMedComputeActivationMode,
+  MxMedEnvironmentConfig,
+  MxMedEnvironmentName,
+} from './environment-config';
+import {
+  computeEcrRetention,
+  MXMED_COMPUTE_RUNTIME_CONTRACT,
+  resolveComputeControls,
+} from './compute-config';
 import {
   parseEnvironmentName,
   validateEnvironmentConfig,
@@ -253,14 +262,44 @@ const PRODUCTION_BASE_CONFIG = Object.freeze({
 function createEnvironmentConfig(
   environmentName: MxMedEnvironmentName,
   deploymentProfileValue: unknown,
+  computeActivationModeValue: unknown = 'disabled-v1' satisfies MxMedComputeActivationMode,
+  runtimeCapabilityProfileValue?: unknown,
 ): MxMedEnvironmentConfig {
   const resolved = resolveLaunchProfile(environmentName, deploymentProfileValue);
+  const computeControls = resolveComputeControls(
+    computeActivationModeValue,
+    runtimeCapabilityProfileValue,
+  );
+  const ecrRetention = computeEcrRetention(environmentName, resolved.deploymentProfile);
   const base = environmentName === 'staging' ? STAGING_BASE_CONFIG : PRODUCTION_BASE_CONFIG;
   const config = {
     ...base,
     ...resolved.capacity,
     deploymentProfile: resolved.deploymentProfile,
     stagingOperatingMode: resolved.stagingOperatingMode,
+    computeActivationMode: computeControls.activationMode,
+    runtimeCapabilityProfile: computeControls.runtimeCapabilityProfile,
+    computePlatformVersion: MXMED_COMPUTE_RUNTIME_CONTRACT.platformVersion,
+    computePhpMajorVersion: MXMED_COMPUTE_RUNTIME_CONTRACT.phpMajorVersion,
+    computeApacheEnabled: MXMED_COMPUTE_RUNTIME_CONTRACT.apacheEnabled,
+    computeModRewriteEnabled: MXMED_COMPUTE_RUNTIME_CONTRACT.modRewriteEnabled,
+    computeDocumentRoot: MXMED_COMPUTE_RUNTIME_CONTRACT.documentRoot,
+    computeContainerPort: MXMED_COMPUTE_RUNTIME_CONTRACT.containerPort,
+    computeEphemeralStorageGiB: MXMED_COMPUTE_RUNTIME_CONTRACT.ephemeralStorageGiB,
+    computeHealthPath: MXMED_COMPUTE_RUNTIME_CONTRACT.healthPath,
+    computeReadinessPath: MXMED_COMPUTE_RUNTIME_CONTRACT.readinessPath,
+    computeCpuTargetPercent: MXMED_COMPUTE_RUNTIME_CONTRACT.cpuTargetPercent,
+    computeMemoryTargetPercent: MXMED_COMPUTE_RUNTIME_CONTRACT.memoryTargetPercent,
+    computeScaleOutCooldownSeconds: MXMED_COMPUTE_RUNTIME_CONTRACT.scaleOutCooldownSeconds,
+    computeScaleInCooldownSeconds: MXMED_COMPUTE_RUNTIME_CONTRACT.scaleInCooldownSeconds,
+    computeLogRetentionDays: environmentName === 'staging' ? 30 : 90,
+    computeEcsExecEnabled: MXMED_COMPUTE_RUNTIME_CONTRACT.ecsExecEnabled,
+    computeReadonlyRootFilesystem: MXMED_COMPUTE_RUNTIME_CONTRACT.readonlyRootFilesystem,
+    computeImageScanOnPush: MXMED_COMPUTE_RUNTIME_CONTRACT.imageScanOnPush,
+    computeImageTagImmutable: MXMED_COMPUTE_RUNTIME_CONTRACT.imageTagImmutable,
+    computeEcrUntaggedRetentionDays: ecrRetention.untaggedDays,
+    computeEcrMaxImageCount: ecrRetention.maxImages,
+    computeMigrationCommandMode: MXMED_COMPUTE_RUNTIME_CONTRACT.migrationCommandMode,
     approvedMonthlyBudgetUsd: null,
     planningFxMxnPerUsd: null,
     planningFxAsOf: null,
@@ -301,7 +340,14 @@ validateEnvironmentNetworkSeparation(STAGING_CONFIG, PRODUCTION_CONFIG);
 export function getEnvironmentConfig(
   value: unknown,
   deploymentProfileValue: unknown,
+  computeActivationModeValue: unknown = 'disabled-v1',
+  runtimeCapabilityProfileValue?: unknown,
 ): MxMedEnvironmentConfig {
   const environmentName = parseEnvironmentName(value);
-  return createEnvironmentConfig(environmentName, deploymentProfileValue);
+  return createEnvironmentConfig(
+    environmentName,
+    deploymentProfileValue,
+    computeActivationModeValue,
+    runtimeCapabilityProfileValue,
+  );
 }

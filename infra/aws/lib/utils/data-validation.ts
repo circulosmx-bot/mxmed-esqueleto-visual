@@ -12,6 +12,7 @@ import { CfnSecret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { IConstruct } from 'constructs';
 
 import type { MxMedEnvironmentConfig } from '../config/environment-config';
+import { computeCreatesTasks } from '../config/compute-config';
 
 function children<T extends CfnResource>(
   scope: IConstruct,
@@ -31,13 +32,18 @@ function validateDataFoundation(scope: IConstruct, config: MxMedEnvironmentConfi
   const secrets = children(scope, CfnSecret);
   const clusters = children(scope, CfnDBCluster);
   const proxies = children(scope, CfnDBProxy);
-  const outputs = scope.node.findAll().filter((node) => node instanceof CfnOutput);
+  const outputs = scope.node
+    .findAll()
+    .filter((node) => node instanceof CfnOutput && !node.node.path.includes('/Exports/'));
+  const expectedSecretCount = computeCreatesTasks(config.computeActivationMode) ? 1 : 0;
 
   if (instances.length !== 1) errors.push('MXMED_DATA_DB_INSTANCE_COUNT_INVALID');
   if (parameterGroups.length !== 1) errors.push('MXMED_DATA_PARAMETER_GROUP_COUNT_INVALID');
   if (subnetGroups.length !== 1) errors.push('MXMED_DATA_SUBNET_GROUP_COUNT_INVALID');
   if (roles.length !== 1) errors.push('MXMED_DATA_MONITORING_ROLE_COUNT_INVALID');
-  if (secrets.length !== 0) errors.push('MXMED_DATA_DUPLICATE_SECRET_FORBIDDEN');
+  if (secrets.length !== expectedSecretCount) {
+    errors.push('MXMED_DATA_APPLICATION_SECRET_COUNT_INVALID');
+  }
   if (clusters.length !== 0) errors.push('MXMED_DATA_CLUSTER_FORBIDDEN');
   if (proxies.length !== 0) errors.push('MXMED_DATA_PROXY_FORBIDDEN');
   if (outputs.length !== 0) errors.push('MXMED_DATA_OUTPUT_FORBIDDEN');

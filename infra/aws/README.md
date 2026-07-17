@@ -11,24 +11,26 @@ foundations de seguridad, datos, almacenamiento y sesiones de México Médico. T
 (`MXMED_AWS_DATA_READINESS_CONTRACT_V1`) y PP-Decisiones 257
 (`MXMED_AWS_STORAGE_FOUNDATION_CONTRACT_V1`) y PP-Decisiones 260
 (`MXMED_AWS_SESSION_FOUNDATION_CONTRACT_V1`), además de PP-Decisiones 263
-(`MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`), a AWS CDK v2 con TypeScript.
+(`MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`) y PP-Decisiones 265
+(`MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
 
 `MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack`, `MxMedStorageStack` y
-`MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. Los demás stacks
-continúan vacíos. Nada está
+`MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. `MxMedComputeStack`
+implementa ECR, ECS tasks y el servicio Fargate de forma condicional; los scripts generales lo
+mantienen deshabilitado. Edge, Operations, Jobs, Backup y Email continúan vacíos. Nada está
 desplegado: bootstrap, diff y deploy permanecen pendientes y están prohibidos en esta etapa.
 
 ## Arquitectura contractual
 
 - Workloads `staging` y `production`: región `mx-central-1`.
 - Correo de cada ambiente: stage separado en `us-east-1` para SES.
-- Compute futuro: ECS Fargate.
+- Compute implementado offline: ECS Fargate Linux X86_64, activado sólo por contexto explícito.
 - Ingress futuro: Route 53, CloudFront, WAF, ALB y ECS.
 - Datos: template RDS MySQL 8.4.9, cuatro buckets S3 privados y sesiones en ElastiCache Valkey 8.2.
 - CloudFormation, sintetizado por CDK, será la fuente de verdad.
 
-`MxMedEnvironmentStage` contiene diez stacks: Network, Security, Data, Storage y Session
-implementados; Compute, Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
+`MxMedEnvironmentStage` contiene diez stacks: Network, Security, Data, Storage, Session y Compute
+implementados; Edge, Operations, Jobs y Backup todavía vacíos. `MxMedEmailStage` contiene
 únicamente Email, continúa vacío y no crea referencias CloudFormation cross-region.
 
 ## Prerrequisitos
@@ -50,37 +52,46 @@ lockfile. No se admiten `--force`, `--legacy-peer-deps` ni versiones flotantes.
 
 ## Comandos
 
-| Comando                                | Propósito                                           |
-| -------------------------------------- | --------------------------------------------------- |
-| `npm run build`                        | Compila TypeScript a `dist/`.                       |
-| `npm run typecheck`                    | Ejecuta el compilador sin emitir archivos.          |
-| `npm run lint`                         | Valida TypeScript con ESLint local.                 |
-| `npm run format`                       | Formatea exclusivamente archivos bajo `infra/aws/`. |
-| `npm run format:check`                 | Comprueba formato sin modificar.                    |
-| `npm run test`                         | Ejecuta unit tests y assertions finas.              |
-| `npm run test:watch`                   | Ejecuta Jest en modo local interactivo.             |
-| `npm run synth:staging`                | Sintetiza staging offline en `cdk.out/staging`.     |
-| `npm run synth:production`             | Sintetiza production lean offline.                  |
-| `npm run synth:production:launch-lean` | Alias explícito para production lean.               |
-| `npm run synth:production:standard`    | Sintetiza production standard offline.              |
-| `npm run synth:production:scale-ready` | Sintetiza production scale-ready offline.           |
-| `npm run diff:staging`                 | Contrato futuro de diff; no ejecutar todavía.       |
-| `npm run diff:production`              | Contrato futuro de diff; no ejecutar todavía.       |
-| `npm run validate`                     | Ejecuta typecheck, lint, formato y tests.           |
-| `npm run clean`                        | Elimina únicamente outputs locales generados.       |
+| Comando                                                 | Propósito                                           |
+| ------------------------------------------------------- | --------------------------------------------------- |
+| `npm run build`                                         | Compila TypeScript a `dist/`.                       |
+| `npm run typecheck`                                     | Ejecuta el compilador sin emitir archivos.          |
+| `npm run lint`                                          | Valida TypeScript con ESLint local.                 |
+| `npm run format`                                        | Formatea exclusivamente archivos bajo `infra/aws/`. |
+| `npm run format:check`                                  | Comprueba formato sin modificar.                    |
+| `npm run test`                                          | Ejecuta unit tests y assertions finas.              |
+| `npm run test:watch`                                    | Ejecuta Jest en modo local interactivo.             |
+| `npm run synth:staging`                                 | Sintetiza staging offline en `cdk.out/staging`.     |
+| `npm run synth:production`                              | Sintetiza production lean offline.                  |
+| `npm run synth:production:launch-lean`                  | Alias explícito para production lean.               |
+| `npm run synth:production:standard`                     | Sintetiza production standard offline.              |
+| `npm run synth:production:scale-ready`                  | Sintetiza production scale-ready offline.           |
+| `npm run synth:production:launch-lean:compute-registry` | Sintetiza ECR registry-first.                       |
+| `npm run synth:production:launch-lean:compute-tasks`    | Sintetiza ECR, cluster y tasks sin servicio.        |
+| `npm run synth:production:launch-lean:compute-service`  | Sintetiza el servicio lean directory-core.          |
+| `npm run synth:production:standard:compute-service`     | Sintetiza el servicio standard directory-core.      |
+| `npm run synth:production:scale-ready:compute-service`  | Sintetiza el servicio scale-ready directory-core.   |
+| `npm run synth:staging:release-window:compute-service`  | Sintetiza el servicio staging release-window.       |
+| `npm run diff:staging`                                  | Contrato futuro de diff; no ejecutar todavía.       |
+| `npm run diff:production`                               | Contrato futuro de diff; no ejecutar todavía.       |
+| `npm run validate`                                      | Ejecuta typecheck, lint, formato y tests.           |
+| `npm run clean`                                         | Elimina únicamente outputs locales generados.       |
 
 No existe script de deploy o bootstrap automático.
 
 ## Ambientes y configuración
 
-El entrypoint `bin/mxmed.ts` exige dos contextos explícitos e independientes:
+El entrypoint `bin/mxmed.ts` exige contextos explícitos e independientes:
 
 ```text
 environment=staging|production
 deploymentProfile=launch-lean-v1|production-standard-v1|scale-ready-v1
+computeActivationMode=disabled-v1|registry-only-v1|tasks-ready-v1|service-enabled-v1
+runtimeCapabilityProfile=directory-core-v1|paid-profile-v1|clinical-v1|professional-ai-v1
 ```
 
-Los scripts de synth proporcionan ambos selectores. No hay fallback por rama, cuenta, hostname,
+Los scripts de synth proporcionan los selectores aplicables. Los cuatro scripts generales fijan
+`disabled-v1`; registry ignora capacidad y tasks/service exigen una capacidad explícita. No hay fallback por rama, cuenta, hostname,
 fecha o consumo. Staging permite únicamente `launch-lean-v1` y agrega
 `stagingOperatingMode=release-window-v1`; production admite los tres perfiles. Una combinación
 desconocida o incompleta falla antes de crear stages. La configuración tipada vive en
@@ -107,7 +118,7 @@ desconocida o incompleta falla antes de crear stages. La configuración tipada v
 `lib/config/launch-profiles.ts` es el único punto de definición de capacidad, ledger y gates. Los
 stacks reciben el `MxMedEnvironmentConfig` ya resuelto; no duplican valores por ambiente.
 
-| Combinación                           | Network                                                 | Compute contratado, aún sin recursos     | RDS                                                             | Session                          |
+| Combinación                           | Network                                                 | Compute contratado                       | RDS                                                             | Session                          |
 | ------------------------------------- | ------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------- | -------------------------------- |
 | staging / `launch-lean-v1`            | 1 NAT, S3 Gateway, 0 endpoints de interfaz              | desired/min/max `1/1/1`, 0.5 vCPU, 1 GiB | t4g.medium, Single-AZ, 40/200 GiB, 7 días                       | 1 micro, sin réplica/HA/snapshot |
 | production / `launch-lean-v1`         | 1 NAT, S3 Gateway, 0 endpoints de interfaz              | `1/1/2`, 0.5 vCPU, 1 GiB                 | t4g.medium, Single-AZ, 40/200 GiB, 35 días, deletion protection | 1 micro, sin réplica/HA/snapshot |
@@ -131,6 +142,38 @@ break-even/resiliencia, PR, tests, synth, diff y aprobación. `scale-ready-v1` n
 nombre RDS Proxy, read replicas, cross-region, workers, scanner ni endpoints: cada capacidad
 mantiene su gate independiente. Para agregar un perfil futuro se amplían los tipos, la definición
 central, la matriz de compatibilidad y sus tests; no se añaden condicionales duplicados en stacks.
+
+## Compute foundation implementada en templates
+
+`MxMedComputeStack` implementa cuatro modos ortogonales al deployment profile:
+
+| Modo                 | Inventario Compute                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `disabled-v1`        | stack contractual con cero recursos, usado por todos los scripts generales                                                                       |
+| `registry-only-v1`   | un repositorio ECR KMS, inmutable, scan-on-push y retenido                                                                                       |
+| `tasks-ready-v1`     | ECR, cluster, dos log groups, `ApplicationTaskDefinition`, `MigrationTaskDefinition`, secreto DB de aplicación y parámetro de digest obligatorio |
+| `service-enabled-v1` | lo anterior más un Fargate service privado y autoscaling CPU/memoria                                                                             |
+
+Las capacidades runtime son `directory-core-v1`, `paid-profile-v1`, `clinical-v1` y
+`professional-ai-v1`. Stripe sólo se inyecta desde paid; los buckets privados y clínicos sólo
+desde clinical; `AI_API_KEY` sólo desde professional-ai. Ninguna capacidad se deriva de un usuario,
+plan comercial, rama, dominio o account ID.
+
+El contenedor app usa PHP 8.5 con Apache 2.4/mod_php/mod_rewrite sobre Bookworm X86_64, puerto 8080,
+root filesystem read-only, usuario `www-data`, capabilities `ALL` eliminadas y volúmenes efímeros
+únicamente para `/tmp`, `/var/run/apache2` y `/var/lock/apache2`. La imagen se forma exclusivamente
+como URI ECR + `@` + `ApplicationImageDigest`; el parámetro no tiene default y no existen assets o
+builds durante synth.
+
+`/healthz` devuelve 200 sin dependencias. `/readyz` devuelve 503 con
+`readiness_not_integrated` hasta una microfase posterior. MigrationTask usa la misma imagen y queda
+fail-closed con `migration command is not configured`; no se ejecutó SQL y un despliegue operativo
+no puede habilitar service antes de integrar y ejecutar un migrator idempotente.
+
+El primer despliegue futuro autorizado debe respetar este orden: disabled → registry-only → push
+externo por tag inmutable → obtención del digest → tasks-ready → MigrationTask → verificación de
+`mxmed_app` y secretos `AWSCURRENT` → service-enabled → healthz → Edge → readyz → tráfico. Edge,
+ALB, listener, target group, CloudFront, WAF y Route 53 siguen ausentes.
 
 `domainAlias` permanece omitido hasta una decisión empresarial. No hay cuentas, dominios, ARNs,
 IPs o nombres físicos globales versionados. Si `CDK_DEFAULT_ACCOUNT` existe, la app lo transmite
@@ -226,8 +269,9 @@ a RDS administrar su master password y referencia el secreto resultante; Securit
 secreto RDS adicional.
 
 IAM crea permissions boundaries separadas para workload y deployment, y cuatro roles ECS con
-trust exclusivo en `ecs-tasks.amazonaws.com`: execution, application, migration y jobs. Sólo el
-execution role recibe lectura de los cuatro secretos anteriores y decrypt en `SecretsKey`; los
+trust exclusivo en `ecs-tasks.amazonaws.com`: execution, application, migration y jobs. Security
+no concede startup secrets de forma anticipada; Compute adjunta al execution role únicamente los
+secretos requeridos por el activation mode y capability, junto con decrypt en `SecretsKey`. Los
 roles de aplicación, migración y jobs esperan grants del stack propietario de cada recurso. La
 factory reutilizable para `SecurityAuditRole` y `BreakGlassRole` exige principal explícito, MFA,
 sesión exacta de una hora, boundary, ambiente y justificación contractual, pero no instancia roles
@@ -274,9 +318,10 @@ Cada ambiente sintetiza exactamente una `AWS::RDS::DBInstance` MySQL `8.4.9`. Se
 intencionalmente el L1 `CfnDBInstance`, porque el contrato requiere
 `ManageMasterUserPassword=true`, `MasterUserSecret.KmsKeyId` y
 `EngineLifecycleSupport=open-source-rds-extended-support-disabled` de forma explícita y auditable.
-No hay `MasterUserPassword`, `AWS::SecretsManager::Secret` adicional ni output del secreto. La
-referencia tipada al secreto administrado por RDS queda en DataStack y todavía no se concede a la
-aplicación ni a MigrationTaskRole.
+No hay `MasterUserPassword` ni output del secreto master. En `disabled-v1` y `registry-only-v1`
+Data no agrega secretos. En `tasks-ready-v1` y `service-enabled-v1` crea exclusivamente
+`/mxmed/{environment}/application/database-user`, cifrado con `SecretsKey`, generado con usuario
+`mxmed_app`, password de 64 caracteres y retención; su existencia no crea el usuario SQL.
 
 | Ambiente/perfil                     | Clase           | Topología | Storage inicial / máximo | Backup  | Monitoring | Removal           |
 | ----------------------------------- | --------------- | --------- | ------------------------ | ------- | ---------- | ----------------- |
@@ -398,9 +443,9 @@ secret usa `Retain` y requiere runbook seguro. Production conserva además termi
 del stack. Session depende sólo de Network y Security; Compute y Operations dependen de Session,
 sin ciclo ni integración runtime adelantada.
 
-PHP, `php.ini`, Docker y ECS no cambiaron. `phpredis`, inyección del secreto y migración desde el
-handler filesystem siguen pendientes; no hubo login, conexión, failover real ni recurso AWS
-desplegado.
+El scaffold PHP/Apache y las definiciones ECS están implementados sin ejecutar sus runtimes.
+La integración funcional de phpredis, readiness y migración del handler filesystem sigue
+pendiente; no hubo login, conexión, failover real ni recurso AWS desplegado.
 
 ## Synth offline
 
@@ -414,14 +459,19 @@ npm run synth:production
 npm run synth:production:launch-lean
 npm run synth:production:standard
 npm run synth:production:scale-ready
+npm run synth:production:launch-lean:compute-registry
+npm run synth:production:launch-lean:compute-tasks
+npm run synth:production:launch-lean:compute-service
+npm run synth:production:standard:compute-service
+npm run synth:production:scale-ready:compute-service
+npm run synth:staging:release-window:compute-service
 ```
 
-Los cuatro comandos deben funcionar sin credenciales AWS y no despliegan nada. Las plantillas actuales contienen recursos
-únicamente en NetworkStack, SecurityStack, DataStack, StorageStack y SessionStack; Email y los
-otros cinco workload stacks continúan sin recursos. SecurityStack crea cuatro contenedores de
+Los diez comandos deben funcionar sin credenciales AWS y no despliegan nada. Los cuatro generales
+mantienen el template Compute vacío; los seis explícitos prueban registry/tasks/service. SecurityStack crea cuatro contenedores de
 secreto pero cero valores versionados; DataStack crea el contrato RDS sin valor secreto;
 StorageStack crea sólo cuatro buckets y cuatro políticas SSL; SessionStack crea la topología
-Valkey y un secreto generado sin revelar su valor. No crea ECS services/tasks, scanner, SQS,
+Valkey y un secreto generado sin revelar su valor. Compute no crea scanner, SQS,
 EventBridge Rule, ALB, CloudFront, WAF, OIDC/deployment role ni roles humanos. `cdk.out/` es temporal y
 no se versiona.
 
@@ -472,8 +522,9 @@ Los Aspects iniciales son:
 - `NoPlaintextSecretAspect`;
 - `LeastPrivilegeIamAspect`;
 - `DataFoundationAspect`;
-- `StorageFoundationAspect`.
-- `SessionFoundationAspect`.
+- `StorageFoundationAspect`;
+- `SessionFoundationAspect`;
+- `ComputeFoundationAspect`.
 
 NetworkStack registra además un validator bloqueante que comprueba CIDR/DNS, dos AZ, subnet
 tiers, NAT, rutas, ausencia de IPv6/NACL/peering/VPN/TGW, SG sin ingress público/SSH, S3 e
@@ -501,6 +552,11 @@ SessionStack registra su Aspect y validator bloqueantes para comprobar inventari
 topología por ambiente, subnet/SG, KMS, TLS desde creación sin mode `preferred`, RBAC dinámico,
 default user apagado, ACL mínima, parameter group, ausencia de snapshots/logs/Global Datastore,
 removal policy y cero outputs sensibles.
+
+ComputeStack registra `ComputeFoundationAspect`, que comprueba inventario por activation mode,
+ECR KMS/inmutable/scan/lifecycle, digest requerido, Linux X86_64/Fargate, CPU y memoria de perfil,
+allowlist exacta de secretos, contenedor no root/read-only, service privado 1.4.0, desired/min/max,
+autoscaling 60/70 y ausencia de recursos Edge.
 
 Emiten errores visibles; no corrigen recursos inseguros silenciosamente. Edge y Jobs permanecen
 vacíos: los tests usan mutaciones sintéticas para demostrar guardrails, pero este proyecto no
@@ -545,13 +601,14 @@ npm run test
 npm run validate
 ```
 
-Las 596 pruebas cubren configuración, naming,
+Las 787 pruebas (596 preservadas y 191 nuevas) cubren configuración, naming,
 topología/dependencias, tags, buckets/DB públicas, retención production, logging Stripe,
 VPC/subnets/NAT/rutas, endpoints, perfiles launch/standard/scale, ledger/gates, SG, Flow Logs, KMS,
 secretos, IAM, CloudTrail, RDS MySQL 8.4.9,
 parameter/subnet groups, Enhanced Monitoring, inventario/lifecycle/cifrado de Storage, helpers de
 keys, metadata/tags, MIME/tamaños/TTL, Valkey/RBAC/TLS, contratos de sesión, guardrails negativos
-y síntesis determinista offline. Los
+y síntesis determinista offline, además de activation modes, capability profiles, digest, ECR,
+tasks, servicio, autoscaling, runtime scaffold y guardrails Compute. Los
 snapshots completos no son la única fuente de validación.
 
 ## Cambios, rollback y drift

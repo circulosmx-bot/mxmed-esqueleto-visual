@@ -31,7 +31,9 @@ function validateSessionFoundation(scope: IConstruct, config: MxMedEnvironmentCo
   const sessionSecrets = resources(scope, CfnSecret).filter((secret) =>
     secret.node.path.includes('SessionAuthSecret'),
   );
-  const outputs = scope.node.findAll().filter((node) => node instanceof CfnOutput);
+  const outputs = scope.node
+    .findAll()
+    .filter((node) => node instanceof CfnOutput && !node.node.path.includes('/Exports/'));
 
   if (replicationGroups.length !== 1) errors.push('MXMED_SESSION_REPLICATION_GROUP_COUNT_INVALID');
   if (subnetGroups.length !== 1) errors.push('MXMED_SESSION_SUBNET_GROUP_COUNT_INVALID');

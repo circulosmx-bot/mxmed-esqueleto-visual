@@ -1,4 +1,4 @@
-import { AspectPriority, Aspects, RemovalPolicy } from 'aws-cdk-lib';
+import { AspectPriority, Aspects, RemovalPolicy, Tags } from 'aws-cdk-lib';
 import type { ISecurityGroup, ISubnet, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import type { IRole } from 'aws-cdk-lib/aws-iam';
@@ -9,13 +9,14 @@ import {
   CfnDBSubnetGroup,
   MysqlEngineVersion,
 } from 'aws-cdk-lib/aws-rds';
-import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
+import { CfnSecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { Construct } from 'constructs';
 
 import { BaseMxMedStack } from './base-mxmed-stack';
 import type { MxMedContractStackProps } from './base-mxmed-stack';
 import { DataFoundationAspect } from '../aspects/data-foundation-aspect';
+import { computeCreatesTasks } from '../config/compute-config';
 import { LeastPrivilegeIamAspect } from '../aspects/least-privilege-iam-aspect';
 import { registerMxMedDataValidation } from '../utils/data-validation';
 
@@ -51,6 +52,7 @@ export class MxMedDataStack extends BaseMxMedStack {
   public readonly databaseEndpoint: string;
   public readonly databasePort: string;
   public readonly masterUserSecret: ISecret;
+  public readonly applicationUserSecret?: ISecret;
   public readonly parameterGroup: CfnDBParameterGroup;
   public readonly subnetGroup: CfnDBSubnetGroup;
   public readonly monitoringRole: Role;
@@ -142,6 +144,32 @@ export class MxMedDataStack extends BaseMxMedStack {
       'MasterUserSecretReference',
       this.databaseInstance.attrMasterUserSecretSecretArn,
     );
+
+    if (computeCreatesTasks(config.computeActivationMode)) {
+      const applicationUserSecret = new Secret(this, 'ApplicationUserSecret', {
+        secretName: `/mxmed/${config.environmentName}/application/database-user`,
+        description: 'MXMed generated application database credential; SQL user creation is gated.',
+        encryptionKey: props.secretsKey,
+        generateSecretString: {
+          secretStringTemplate: JSON.stringify({ username: 'mxmed_app' }),
+          generateStringKey: 'password',
+          passwordLength: 64,
+          excludeCharacters: '"\'`\\/@',
+          includeSpace: false,
+          requireEachIncludedType: true,
+        },
+        removalPolicy: RemovalPolicy.RETAIN,
+      });
+      const secretResource = applicationUserSecret.node.defaultChild;
+      if (!(secretResource instanceof CfnSecret)) {
+        throw new Error('MXMED_APPLICATION_DB_SECRET_RESOURCE_INVALID');
+      }
+      secretResource.applyRemovalPolicy(RemovalPolicy.RETAIN, {
+        applyToUpdateReplacePolicy: true,
+      });
+      Tags.of(applicationUserSecret).add('DataClassification', 'sensitive', { priority: 200 });
+      this.applicationUserSecret = applicationUserSecret as unknown as ISecret;
+    }
 
     // Data owns no grants yet. These typed references reserve the PP255 integration boundary.
     void props.vpc;

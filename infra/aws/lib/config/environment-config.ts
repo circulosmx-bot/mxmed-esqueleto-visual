@@ -9,6 +9,11 @@ export type MxMedStagingOperatingMode = 'release-window-v1';
 export type MxMedDatabaseAvailabilityProfile = 'single-az' | 'multi-az';
 export type MxMedSessionAvailabilityProfile = 'single-node' | 'primary-replica';
 export type MxMedComputeAvailabilityProfile = 'single-task' | 'ha-minimum';
+export type MxMedComputeActivationMode =
+  'disabled-v1' | 'registry-only-v1' | 'tasks-ready-v1' | 'service-enabled-v1';
+export type MxMedRuntimeCapabilityProfile =
+  'directory-core-v1' | 'paid-profile-v1' | 'clinical-v1' | 'professional-ai-v1';
+export type MxMedMigrationCommandMode = 'fail-closed-v1';
 export type MxMedCostTier =
   'fixed-critical' | 'usage-based' | 'storage-based' | 'deferred-optional';
 export type MxMedDatabaseEngine = 'mysql';
@@ -95,6 +100,29 @@ export interface MxMedEnvironmentConfig {
   readonly computeArchitecture: 'X86_64';
   readonly computeUseSpot: false;
   readonly computeAssignPublicIp: false;
+  readonly computeActivationMode: MxMedComputeActivationMode;
+  readonly runtimeCapabilityProfile: MxMedRuntimeCapabilityProfile | null;
+  readonly computePlatformVersion: '1.4.0';
+  readonly computePhpMajorVersion: '8.5';
+  readonly computeApacheEnabled: true;
+  readonly computeModRewriteEnabled: true;
+  readonly computeDocumentRoot: '/var/www/html';
+  readonly computeContainerPort: 8080;
+  readonly computeEphemeralStorageGiB: 20;
+  readonly computeHealthPath: '/healthz';
+  readonly computeReadinessPath: '/readyz';
+  readonly computeCpuTargetPercent: 60;
+  readonly computeMemoryTargetPercent: 70;
+  readonly computeScaleOutCooldownSeconds: 60;
+  readonly computeScaleInCooldownSeconds: 300;
+  readonly computeLogRetentionDays: 30 | 90;
+  readonly computeEcsExecEnabled: false;
+  readonly computeReadonlyRootFilesystem: true;
+  readonly computeImageScanOnPush: true;
+  readonly computeImageTagImmutable: true;
+  readonly computeEcrUntaggedRetentionDays: 7 | 14;
+  readonly computeEcrMaxImageCount: 20 | 50;
+  readonly computeMigrationCommandMode: MxMedMigrationCommandMode;
   readonly databaseAvailabilityProfile: MxMedDatabaseAvailabilityProfile;
   readonly databaseEngine: MxMedDatabaseEngine;
   readonly databaseEngineVersion: '8.4.9';

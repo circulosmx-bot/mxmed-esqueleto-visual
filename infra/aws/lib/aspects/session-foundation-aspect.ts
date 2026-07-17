@@ -39,7 +39,7 @@ export class SessionFoundationAspect implements IAspect {
     else if (node instanceof CfnUserGroup) this.validateUserGroup(node);
     else if (node instanceof CfnSecret && node.node.path.includes('SessionAuthSecret')) {
       this.validateSecret(node);
-    } else if (node instanceof CfnOutput) {
+    } else if (node instanceof CfnOutput && !node.node.path.includes('/Exports/')) {
       Annotations.of(node).addError('MXMED_SESSION_OUTPUT_FORBIDDEN');
     }
   }

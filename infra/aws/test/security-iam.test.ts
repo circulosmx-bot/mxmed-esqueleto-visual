@@ -201,17 +201,9 @@ describe('workload and deferred human roles', () => {
     expect(JSON.stringify(template)).toContain('aws:MultiFactorAuthPresent');
   });
 
-  test('SEC-IMP-054 lets execution read only the four approved secrets', () => {
-    const { resources } = renderSecurity(STAGING_CONFIG);
-    const [, policy] = findByLogicalId(resources, 'EcsExecutionRoleDefaultPolicy');
-    const statements = policyStatements(policy).filter((statement) =>
-      JSON.stringify(statement.Action).includes('secretsmanager:GetSecretValue'),
-    );
-    expect(statements).toHaveLength(4);
-    expect(JSON.stringify(statements)).toMatch(/SessionSigningSecret/);
-    expect(JSON.stringify(statements)).toMatch(/StripeSecretKeyContainer/);
-    expect(JSON.stringify(statements)).toMatch(/StripeWebhookSecretContainer/);
-    expect(JSON.stringify(statements)).toMatch(/AiApiKeyContainer/);
+  test('SEC-IMP-054 gives disabled Compute no premature startup-secret policy', () => {
+    const template = JSON.stringify(renderSecurity(STAGING_CONFIG).template);
+    expect(template).not.toMatch(/EcsExecutionRoleDefaultPolicy/);
   });
 
   test('SEC-IMP-055 gives application no premature broad policy', () => {

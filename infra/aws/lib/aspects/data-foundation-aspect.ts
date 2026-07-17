@@ -11,6 +11,7 @@ import { CfnSecret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { IConstruct } from 'constructs';
 
 import type { MxMedEnvironmentConfig } from '../config/environment-config';
+import { computeCreatesTasks } from '../config/compute-config';
 
 const EXPECTED_PARAMETERS = Object.freeze({
   require_secure_transport: 'ON',
@@ -57,7 +58,14 @@ export class DataFoundationAspect implements IAspect {
       return;
     }
     if (node instanceof CfnSecret) {
-      Annotations.of(node).addError('MXMED_DATA_DUPLICATE_MASTER_SECRET_FORBIDDEN');
+      if (
+        computeCreatesTasks(this.config.computeActivationMode) &&
+        node.node.path.includes('/ApplicationUserSecret/Resource')
+      ) {
+        this.validateApplicationUserSecret(node);
+      } else {
+        Annotations.of(node).addError('MXMED_DATA_DUPLICATE_MASTER_SECRET_FORBIDDEN');
+      }
       return;
     }
     if (node instanceof CfnDBParameterGroup) {
@@ -88,6 +96,28 @@ export class DataFoundationAspect implements IAspect {
       return;
     }
     if (node instanceof CfnDBInstance) this.validateInstance(node);
+  }
+
+  private validateApplicationUserSecret(secret: CfnSecret): void {
+    const generator = Stack.of(secret).resolve(secret.generateSecretString) as unknown;
+    const expectedGenerator = {
+      ExcludeCharacters: '"\'`\\/@',
+      GenerateStringKey: 'password',
+      IncludeSpace: false,
+      PasswordLength: 64,
+      RequireEachIncludedType: true,
+      SecretStringTemplate: '{"username":"mxmed_app"}',
+    };
+    if (
+      secret.name !== `/mxmed/${this.config.environmentName}/application/database-user` ||
+      secret.kmsKeyId === undefined ||
+      secret.secretString !== undefined ||
+      JSON.stringify(generator) !== JSON.stringify(expectedGenerator) ||
+      secret.cfnOptions.deletionPolicy !== CfnDeletionPolicy.RETAIN ||
+      secret.cfnOptions.updateReplacePolicy !== CfnDeletionPolicy.RETAIN
+    ) {
+      Annotations.of(secret).addError('MXMED_DATA_APPLICATION_SECRET_INVALID');
+    }
   }
 
   private validateInstance(instance: CfnDBInstance): void {

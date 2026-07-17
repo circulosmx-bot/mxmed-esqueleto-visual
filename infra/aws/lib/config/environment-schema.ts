@@ -5,6 +5,11 @@ import type {
 } from './environment-config';
 import { MXMED_REQUIRED_GLOBAL_TAG_KEYS } from './environment-config';
 import {
+  computeEcrRetention,
+  MXMED_COMPUTE_RUNTIME_CONTRACT,
+  resolveComputeControls,
+} from './compute-config';
+import {
   MXMED_COST_AWARE_LAUNCH_PROFILES_CONTRACT,
   MXMED_COST_ESTIMATE_AS_OF,
   resolveLaunchProfile,
@@ -383,6 +388,71 @@ function matchesContractValue(actual: unknown, expected: unknown): boolean {
   return JSON.stringify(actual) === JSON.stringify(expected);
 }
 
+function validateComputeConfiguration(
+  config: Record<string, unknown>,
+  environmentName: MxMedEnvironmentName,
+): void {
+  const controls = resolveComputeControls(
+    config.computeActivationMode,
+    config.runtimeCapabilityProfile,
+  );
+  assertMxMedCondition(
+    config.computeActivationMode === controls.activationMode &&
+      config.runtimeCapabilityProfile === controls.runtimeCapabilityProfile,
+    'MXMED_CONFIG_INVALID',
+    'computeControls',
+    'must match the explicit activation mode and capability profile',
+  );
+  const runtimeFields = {
+    computeArchitecture: MXMED_COMPUTE_RUNTIME_CONTRACT.architecture,
+    computePlatformVersion: MXMED_COMPUTE_RUNTIME_CONTRACT.platformVersion,
+    computePhpMajorVersion: MXMED_COMPUTE_RUNTIME_CONTRACT.phpMajorVersion,
+    computeApacheEnabled: MXMED_COMPUTE_RUNTIME_CONTRACT.apacheEnabled,
+    computeModRewriteEnabled: MXMED_COMPUTE_RUNTIME_CONTRACT.modRewriteEnabled,
+    computeDocumentRoot: MXMED_COMPUTE_RUNTIME_CONTRACT.documentRoot,
+    computeContainerPort: MXMED_COMPUTE_RUNTIME_CONTRACT.containerPort,
+    computeEphemeralStorageGiB: MXMED_COMPUTE_RUNTIME_CONTRACT.ephemeralStorageGiB,
+    computeHealthPath: MXMED_COMPUTE_RUNTIME_CONTRACT.healthPath,
+    computeReadinessPath: MXMED_COMPUTE_RUNTIME_CONTRACT.readinessPath,
+    computeCpuTargetPercent: MXMED_COMPUTE_RUNTIME_CONTRACT.cpuTargetPercent,
+    computeMemoryTargetPercent: MXMED_COMPUTE_RUNTIME_CONTRACT.memoryTargetPercent,
+    computeScaleOutCooldownSeconds: MXMED_COMPUTE_RUNTIME_CONTRACT.scaleOutCooldownSeconds,
+    computeScaleInCooldownSeconds: MXMED_COMPUTE_RUNTIME_CONTRACT.scaleInCooldownSeconds,
+    computeLogRetentionDays: environmentName === 'staging' ? 30 : 90,
+    computeEcsExecEnabled: MXMED_COMPUTE_RUNTIME_CONTRACT.ecsExecEnabled,
+    computeReadonlyRootFilesystem: MXMED_COMPUTE_RUNTIME_CONTRACT.readonlyRootFilesystem,
+    computeImageScanOnPush: MXMED_COMPUTE_RUNTIME_CONTRACT.imageScanOnPush,
+    computeImageTagImmutable: MXMED_COMPUTE_RUNTIME_CONTRACT.imageTagImmutable,
+    computeMigrationCommandMode: MXMED_COMPUTE_RUNTIME_CONTRACT.migrationCommandMode,
+  } as const;
+  for (const [field, expected] of Object.entries(runtimeFields)) {
+    assertMxMedCondition(
+      config[field] === expected,
+      'MXMED_CONFIG_INVALID',
+      field,
+      'must match MXMED_AWS_COMPUTE_FOUNDATION_CONTRACT_V1',
+    );
+  }
+  const deploymentProfile = config.deploymentProfile;
+  assertMxMedCondition(
+    typeof deploymentProfile === 'string',
+    'MXMED_CONFIG_INVALID',
+    'deploymentProfile',
+    'must be resolved before Compute retention',
+  );
+  const retention = computeEcrRetention(
+    environmentName,
+    deploymentProfile as MxMedEnvironmentConfig['deploymentProfile'],
+  );
+  assertMxMedCondition(
+    config.computeEcrUntaggedRetentionDays === retention.untaggedDays &&
+      config.computeEcrMaxImageCount === retention.maxImages,
+    'MXMED_CONFIG_INVALID',
+    'computeEcrRetention',
+    'must match the selected deployment profile',
+  );
+}
+
 function validateStorageConfiguration(
   config: Record<string, unknown>,
   environmentName: MxMedEnvironmentName,
@@ -751,6 +821,7 @@ export function validateEnvironmentConfig(input: unknown): asserts input is MxMe
   validateDatabaseConfiguration(input, environmentName);
   validateStorageConfiguration(input, environmentName);
   validateSessionConfiguration(input, environmentName);
+  validateComputeConfiguration(input, environmentName);
   validateCostAwareConfiguration(input, environmentName);
   assertMxMedCondition(
     input.stripeReturnLoggingPolicy === 'path-only-no-query',

@@ -57238,3 +57238,251 @@ Siguiente paso, sin ejecutarlo aquí: regenerar la instrucción de
 utilizando `launch-lean-v1`.
 
 ---
+
+## PP-Decisiones 265 - MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1
+
+### Microfase, base y alcance
+
+Microfase 17 de 24:
+
+`ARCH-DEVOPS/MXMed-AWS-Compute-Implementation-01`
+
+Contrato implementado localmente:
+
+`MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1`
+
+Contratos consumidos sin reabrirlos:
+
+- PP262 `MXMED_AWS_COMPUTE_FOUNDATION_CONTRACT_V1`;
+- PP263 `MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1`;
+- PP264 `MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_IMPLEMENTATION_V1`.
+
+Base Git verificada antes de editar:
+
+- rama `feature/mxmed-aws-cost-aware-launch-profiles-implementation`;
+- commit `7c29e31a6b0825c01b4b1891e05231a2cef6099f`;
+- ancestro `335efc8c44ffb62ad789720ba4525c9958be10c5` presente;
+- upstream `0/0`, working tree limpio y `git diff --check` PASS;
+- Node.js `22.22.0`, npm/npx `10.9.4`;
+- 34 suites y 596/596 tests base PASS;
+- cuatro synth Cost-Aware base PASS.
+
+Implementación realizada en
+`feature/mxmed-aws-compute-implementation`. No se ejecutaron AWS CLI/SDK,
+Docker, PHP, Apache, Composer, SQL, migraciones, diff, bootstrap o deploy.
+
+### Controles ortogonales y selección explícita
+
+Los tres controles son independientes:
+
+1. `deploymentProfile` resuelve capacidad desde el catálogo único PP263;
+2. `computeActivationMode` controla qué inventario Compute se sintetiza;
+3. `runtimeCapabilityProfile` controla secretos, variables e IAM funcional.
+
+No existe promoción automática por usuario, registro, pago, plan, rama,
+dominio, cuenta o métricas. El entrypoint exige activation mode explícito. Los
+scripts generales fijan `disabled-v1`; registry no necesita capability;
+tasks/service la exigen. Production nunca infiere un modo costoso.
+
+| Activation mode | ECR | Cluster | Task definitions | Compute logs | Digest | DB app secret | Service | Scaling |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `disabled-v1` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `registry-only-v1` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `tasks-ready-v1` | 1 | 1 | 2 | 2 | 1 requerido | 1 | 0 | 0 |
+| `service-enabled-v1` | 1 | 1 | 2 | 2 | 1 requerido | 1 | 1 | 2 policies |
+
+Los scripts generales conservan Compute deshabilitado. Los seis scripts
+adicionales sintetizan registry, tasks y service para lean, standard,
+scale-ready y staging release-window sin acceder a AWS.
+
+### Capacidad Cost-Aware consumida
+
+Compute no duplica CPU, memoria, desired/min/max ni disponibilidad. Consume
+`resolveLaunchProfile`:
+
+| Ambiente/perfil | CPU | Memoria MiB | desired/min/max | ECR untagged | ECR máximo |
+|---|---:|---:|---:|---:|---:|
+| staging launch-lean release-window | 512 | 1024 | 1/1/1 | 7 días | 20 |
+| production launch-lean | 512 | 1024 | 1/1/2 | 7 días | 20 |
+| production standard | 1024 | 2048 | 2/2/6 | 14 días | 50 |
+| production scale-ready | 1024 | 2048 | 2/2/6 | 14 días | 50 |
+
+Los recursos Compute reciben `DeploymentProfile`, `CostTier`, `CostReview`,
+`Ephemeral`, `SchedulePolicy`, `ComputeActivationMode` y
+`RuntimeCapabilityProfile`. Un service production se marca
+`fixed-critical`, `required`, `false` y `always-on-approved`; staging conserva
+`release-window-v1`.
+
+### Registry, digest, cluster y logs
+
+`ApplicationRepository` es privado, KMS con `ApplicationDataKey`, tags
+inmutables, scan-on-push, `Retain`, `emptyOnDelete=false` y lifecycle por
+perfil. No existe `latest`, acceso público, replication, cross-account o
+pull-through cache. Pull se limita al execution role contratado.
+
+`ApplicationImageDigest` sólo existe en tasks/service. Es `String`, no tiene
+default ni `NoEcho`, y exige `^sha256:[0-9a-f]{64}$`. Ambas task definitions
+usan la misma URI ECR unida mediante `@` al parámetro. No existen
+`DockerImageAsset`, `ContainerImage.fromAsset` ni build durante synth.
+
+`ApplicationCluster` habilita Container Insights y sólo Fargate. No añade EC2,
+Spot, Service Connect, Cloud Map, default namespace, ECS Anywhere o ECS Exec.
+Los log groups `/mxmed/{environment}/compute/app` y `migration` usan
+`AuditKey`, 30/90 días y `Retain/Retain`, sin subscriptions, filters o destinos.
+
+### Data secret y separación del master
+
+Data crea condicionalmente
+`/mxmed/{environment}/application/database-user` sólo en tasks/service. Secrets
+Manager genera `username=mxmed_app` y password de 64 caracteres sin espacio ni
+caracteres incompatibles, cifra con `SecretsKey` y aplica `Retain/Retain`.
+No contiene host, port, endpoint o database name; no se expone por output y no
+crea el usuario SQL.
+
+El contenedor app recibe exclusivamente el secreto DB de aplicación. El
+master administrado por RDS aparece únicamente en `MigrationTaskDefinition`.
+No se modificaron DB instance, master secret o parameter group.
+
+### Runtime capabilities, secretos e IAM
+
+| Capability | Secretos adicionales | S3 adicional | IA |
+|---|---|---|---|
+| `directory-core-v1` | ninguno | PublicMedia + Quarantine mínimos | no |
+| `paid-profile-v1` | Stripe key + webhook | igual a directory | no |
+| `clinical-v1` | Stripe key + webhook | prefixes `authorized/*` de PrivateDocuments y ClinicalRecords | no |
+| `professional-ai-v1` | Stripe + `AI_API_KEY` | igual a clinical | sí, vía aplicación |
+
+Todos los perfiles app reciben sólo session signing, Valkey user/password y
+DB app user/password. No se inyectan access keys, deployment credentials,
+default Valkey user o RDS master. Las policies prohíben `s3:*` y no conceden
+administración de buckets, lifecycle, encryption, versiones o inventario
+global. `cloudwatch:PutMetricData` queda condicionado a `MxMed/Application`.
+
+### ApplicationTask, MigrationTask y service
+
+Ambas tasks son Fargate Linux X86_64/awsvpc y reutilizan roles existentes. La
+app usa una sola imagen y un solo contenedor `app`, root filesystem read-only,
+usuario `www-data`, `privileged/interactive/pseudoTerminal=false`, init process
+y drop `ALL`. Expone sólo 8080 y monta volúmenes efímeros en `/tmp`,
+`/var/run/apache2` y `/var/lock/apache2`.
+
+El health check ejecuta curl local a `/healthz` cada 15 segundos, timeout 5,
+3 retries y start period 60. `/healthz` devuelve JSON mínimo 200 sin DB,
+Valkey, S3, Stripe, IA o sesión. `/readyz` devuelve 503 y
+`readiness_not_integrated`, sin detalles; Edge no puede habilitar tráfico.
+
+MigrationTask usa la misma imagen/digest, no expone puerto ni provider/AI/S3
+secrets y conserva master+app DB credentials. Como no existe migrator
+idempotente contratado, su command imprime
+`migration command is not configured` y sale 78. No contiene ni ejecuta SQL.
+
+`ApplicationService` sólo existe en `service-enabled-v1`: desired por perfil,
+dos subnets `private-app`, `ApplicationSecurityGroup`, public IP false,
+platform 1.4.0, ECS Exec false, circuit breaker con rollback, 100/200, managed
+tags y propagate SERVICE. No configura health grace sin load balancer. El
+autoscaling usa min/max de perfil, CPU 60 y memoria 70, scale-out 60 y scale-in
+300. No existe ALB, listener, target group, CloudFront, WAF, Route 53,
+scheduled scaling o request-count scaling.
+
+### Runtime scaffold
+
+`infra/aws/runtime/app/` contiene Dockerfile multi-stage, dockerignore,
+configuración Apache/PHP, healthz, readyz y README. Los build args
+`PHP_BASE_IMAGE` y `COMPOSER_BASE_IMAGE` no tienen default y se validan por
+digest; el build valida PHP 8.5, Apache 2.4 y Bookworm. Se habilita mod_rewrite,
+se usa DocumentRoot `/var/www/html`, port 8080, PHP sessions estrictas y
+phpredis como handler. Los logs Apache excluyen query, Cookie, Authorization y
+Referer. El build context excluye Git, docs, tests, dumps, env/secrets,
+uploads/documents, dependencies, caches y CDK outputs.
+
+El scaffold fue auditado estáticamente. No se ejecutaron Docker, PHP o Apache.
+
+### Dependencias, guardrails y primer despliegue futuro
+
+Disabled no agrega dependencia funcional de Network/Data/Storage/Session;
+registry depende de Security para KMS; tasks/service dependen de Network,
+Security, Data, Storage y Session sin ciclos. Las propiedades públicas de
+`MxMedComputeStack` son referencias tipadas opcionales; no se definieron
+outputs CloudFormation públicos ni se exponen secretos, digest real, IPs,
+account IDs o sesiones.
+
+`ComputeFoundationAspect` valida inventario por modo, ECR, digest, cluster,
+logs, tasks, arquitectura, perfil, contenedor, allowlist de secretos, service,
+autoscaling y ausencia de Edge. Mutaciones sintéticas prueban rechazo de ARM,
+ECR mutable, tag de imagen, AI en directory, master en app, public IP, service
+en registry y desired fuera de contrato. Los validators de Data/Storage/Session
+distinguen outputs explícitos prohibidos de exports internos generados por CDK
+para referencias tipadas.
+
+El orden obligatorio de un futuro primer despliegue es:
+
+1. `disabled-v1`;
+2. `registry-only-v1` y despliegue ECR autorizado;
+3. build/scan/push externo por tag inmutable;
+4. obtener digest;
+5. `tasks-ready-v1` con digest;
+6. ejecutar MigrationTask y verificar `mxmed_app`/secretos;
+7. `service-enabled-v1` y healthz;
+8. integrar Edge;
+9. integrar/validar readyz;
+10. habilitar tráfico.
+
+Esta microfase sólo implementa y sintetiza; no autoriza ninguno de esos pasos
+operativos.
+
+### Pruebas, synth y evidencia
+
+La suite preserva los 596 tests anteriores y añade 191 coberturas (189 de
+Compute y 2 de dependencias condicionales) para un total de 787. Cubre los
+cuatro modos, tres perfiles production más staging,
+cuatro capacidades, Data secret, ECR, tasks, IAM, secrets, service,
+autoscaling, scaffold, scripts offline y mutaciones fail-closed.
+
+Los diez synth contractuales se ejecutan sin cuenta, credenciales, lookups,
+Docker o acceso AWS. Los templates confirman inventarios por modo, perfiles y
+capacidades; cero ALB/CloudFront/WAF, cero account IDs reales, cero secret
+values y cero recursos desplegados. La evidencia local completa se conserva
+en `/tmp/mxmed-aws-compute-implementation-profile-aware-01/`.
+
+```json
+{
+  "aws_cli_calls": 0,
+  "aws_account_calls": 0,
+  "aws_sdk_calls": 0,
+  "aws_resources_deployed": 0,
+  "cdk_diff_calls": 0,
+  "cdk_bootstrap_calls": 0,
+  "cdk_deploy_calls": 0,
+  "docker_build_calls": 0,
+  "docker_pull_calls": 0,
+  "docker_push_calls": 0,
+  "composer_install_calls": 0,
+  "composer_update_calls": 0,
+  "npm_install_calls": 0,
+  "dependency_changes": 0,
+  "php_runtime_calls": 0,
+  "apache_runtime_calls": 0,
+  "database_connections": 0,
+  "valkey_connections": 0,
+  "migration_calls": 0,
+  "sql_calls": 0,
+  "stripe_calls": 0,
+  "payment_calls": 0,
+  "secret_values_requested": 0,
+  "secret_values_persisted": 0,
+  "clinical_data_read": 0,
+  "automatic_user_triggered_infrastructure_changes": 0
+}
+```
+
+### Cierre y siguiente microfase
+
+Resultado contractual: `PASS - MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1`.
+
+Microfase 17 de 24 concluida. Avance global 17/24; quedan 7 pendientes.
+
+Siguiente microfase, no iniciada aquí:
+
+`ARCH-DEVOPS/MXMed-AWS-Edge-Readiness-01`
+
+---
