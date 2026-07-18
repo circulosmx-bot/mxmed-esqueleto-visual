@@ -60212,3 +60212,58 @@ auditoría transversal permanecen `documented_required_future` o requieren
 auditoría especializada.
 
 ---
+
+## PP-Decisiones 276 - MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_AUDIT_V1
+
+Fecha contractual: 2026-07-17.
+
+Resultado: `PASS - MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_AUDIT_V1`.
+
+Actividad 1 de 22. Auditoría estática y read-only documentada en:
+
+`docs/MXMED_AUDITORIA_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`
+
+La auditoría separa plan comercial, ownership/entity scope, rol funcional de
+usuario y permisos de operador interno; además conserva lifecycle, capability,
+quota, riesgo de acción e infraestructura como modelos distintos. Contrasta la
+intención del director para Free unclaimed/claimed, Basic, Standard, Optimum y
+Professional con 14/14 fuentes base, ocho fuentes adicionales, 41/41 claves de
+capability, nueve roles funcionales, seis estados base de ownership y los 11
+roles internos preliminares de PP275.
+
+No existe hoy una fuente canónica única. Se observaron matrices duplicadas,
+campos legacy, fixtures y dos falsos positivos del inventario; ownership del
+perfil público continúa desconectado, la API pública de Agenda no localiza un
+gate de plan equivalente y el lifecycle no define todavía grace/downgrade por
+capability. Las diferencias quedan registradas sin modificar reglas, APIs,
+datos, UI, Stripe, roles, permisos, cuotas o estados.
+
+Se reafirma:
+
+- ningún plan comercial concede un rol interno;
+- ningún rol interno depende del plan;
+- `operator`/`assistant` pertenecen al dominio Agenda, no a la plataforma;
+- `platform_director` y `break_glass_superadmin` siguen siendo requisitos
+  futuros gobernados;
+- los perfiles AWS PP263–PP264 no son planes comerciales;
+- un pago no activa infraestructura automáticamente.
+
+Para la Actividad 2 se recomienda una fuente híbrida: policy estable y
+versionada con enforcement backend, artefacto JSON generado para frontend y
+documentación, y datos versionados/auditados para catálogo, precios y
+suscripción. Quedan 18 decisiones de dirección, 11 bloqueantes, entre ellas
+códigos, matriz clínica, galería/cuotas, grace, downgrade, locks y frontera
+Agenda/Expediente. No se presume aprobación.
+
+Código funcional modificado: 0. El registro maestro, inventario global y
+contrato de operadores permanecen intactos. AWS 24/24 y Stripe continúan
+protegidos; deployment y tráfico público permanecen en `NO-GO`.
+
+La siguiente actividad, no iniciada y sujeta a aprobación explícita de las
+decisiones bloqueantes, es:
+
+`PRODUCT-IMPLEMENTATION/MXMed-Plans-Capabilities-Ownership-Lifecycle-Implementation-01`
+
+Actividad 2 de 22.
+
+---
