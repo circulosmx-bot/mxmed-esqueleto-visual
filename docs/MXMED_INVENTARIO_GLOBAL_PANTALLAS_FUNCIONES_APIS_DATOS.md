@@ -1,7 +1,7 @@
 # Inventario Global de Pantallas, Funciones, APIs y Datos — México Médico
 
 **Contrato:** `MXMED_SYSTEM_WIDE_PRODUCT_INVENTORY_V1`
-**Versión:** `1.0.0`
+**Versión:** `1.1.0`
 **Fecha:** 2026-07-17
 **Método:** auditoría estática completa en cobertura
 **Runtime:** no ejecutado
@@ -12,6 +12,7 @@ Este documento materializa `MXMED_SYSTEM_WIDE_PRODUCT_INVENTORY_V1` y es la fuen
 
 - [Registro maestro de deuda](./MXMED_REGISTRO_MAESTRO_DE_DEUDA_PRODUCTO.md)
 - [Contrato maestro y PP-Decisiones](./PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md)
+- [Requisitos del plano de control de operadores](./MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md)
 
 ## 2. Propósito
 
@@ -654,54 +655,85 @@ El detalle deuda→INV→evidencia→grupo está en `debt-to-inventory-crosswalk
 
 Preguntas rectoras: ¿qué fuente de plan es canónica?, ¿dónde se obliga auth/ownership por entidad?, ¿qué eventos tienen consumidor/delivery?, ¿qué rutas clinical requieren capa canónica?, ¿qué documentos históricos siguen operativos?
 
-## 29. Propuesta de grupos
+## 29. Grupos oficiales del ciclo
 
 | ID | Nombre | Tamaño | Actividades probables | Dependencias |
 |---|---|---|---|---|
-| PG-01 | Planes, capabilities, ownership y ciclo de acceso | muy grande | 2 | ninguna |
-| PG-02 | Identidad, reclamo, sesiones y seguridad | muy grande | 2 | PG-01 |
+| PG-01 | Planes, capabilities, ownership, ciclo de acceso y separación de permisos internos | muy grande | 2 | ninguna |
+| PG-02 | Identidad, reclamo, sesiones, seguridad y lifecycle de operadores internos | muy grande | 2 | PG-01 |
 | PG-03 | Agenda y contactos de pacientes | muy grande | 2 | PG-02 |
 | PG-04 | Expediente, recetas, consentimiento y archivos | muy grande | 3 | PG-02, PG-03, PG-08 |
-| PG-05 | Buzón, eventos, preferencias y delivery | grande | 2 | PG-02, PG-08 |
-| PG-06 | Suscripciones, pago, activación y bloqueo | grande | 2 | PG-01, PG-02 |
+| PG-05 | Buzón, eventos, preferencias, delivery y colas internas | grande | 2 | PG-02, PG-08 |
+| PG-06 | Suscripciones, pago, activación, bloqueo y operación controlada | grande | 2 | PG-01, PG-02 |
 | PG-07 | Perfil público, reseñas, media, Maps y SEO | grande | 2 | PG-01, PG-02 |
-| PG-08 | APIs, datos, permisos, logs y privacidad | muy grande | 3 | PG-02 |
-| PG-09 | Visual, responsive, accesibilidad y ayuda | muy grande | 2 | PG-01, PG-02, PG-03, PG-04 |
-| PG-10 | Administración, soporte y moderación | mediano | 1 | PG-02, PG-08 |
+| PG-08 | APIs, datos, RBAC/scopes, permisos, logs, auditoría y privacidad | muy grande | 3 | PG-02 |
+| PG-09 | Visual, responsive, accesibilidad, ayuda y UX de consola | muy grande | 2 | PG-01, PG-02, PG-03, PG-04 |
+| PG-10 | Consola operativa, administración, soporte, moderación y gobierno de plataforma | mediano | 1 | PG-02, PG-08 |
 | PG-11 | IA, voz y degradación de proveedor | mediano | 1 | PG-01, PG-08 |
 
-Cambios respecto de G1–G8: G3 se divide en Agenda/Pacientes y Clínico; G8 se divide en UX, Administración e IA. G7 se mantiene transversal y se adelanta después de identidad. No se fusionan grupos.
+Cambios respecto de G1–G8: G3 se divide en Agenda/Pacientes y Clínico; G8 se divide en UX, Administración e IA. G7 se mantiene transversal y se adelanta después de identidad. No se fusionan grupos. El amendment del plano de control agrega a PG-01 separación plan/rol/ownership/operator permissions, jerarquía y riesgo; a PG-02 invitación/MFA/login/sesiones/suspensión/revocación; a PG-05 colas/tareas/aprobaciones; a PG-06 operación y override R3; a PG-08 RBAC/scopes/caso/masking/audit/access reviews; a PG-09 UX accesible de consola; y a PG-10 los 12 módulos, personal, soporte, reclamos, moderación, privacidad, acciones críticas y dirección.
 
-## 30. Propuesta de contador
+## 30. Contador oficial
 
-Propuesta no oficial: **22 actividades especializadas distribuidas en 11 grupos**.
+Contador principal aprobado: **0/22 actividades completadas**, distribuidas en 11 grupos.
 
-El contador es una estimación de planeación, sujeto a aprobación del director y a redimensionamiento dentro de cada auditoría. No pertenece a AWS y no crea Microfase 25.
+Este amendment auxiliar no incrementa el contador, no pertenece a AWS y no crea Microfase 25. La Actividad 1 de 22 permanece no iniciada y queda desbloqueada sólo tras el PASS documental de `MXMED_OPERATOR_CONTROL_PLANE_REQUIREMENTS_V1`.
 
 ## 31. Orden recomendado
 
 | Orden | Grupo | Nombre |
 |---|---|---|
-| 1 | PG-01 | Planes, capabilities, ownership y ciclo de acceso |
-| 2 | PG-02 | Identidad, reclamo, sesiones y seguridad |
-| 3 | PG-08 | APIs, datos, permisos, logs y privacidad |
+| 1 | PG-01 | Planes, capabilities, ownership, ciclo de acceso y separación de permisos internos |
+| 2 | PG-02 | Identidad, reclamo, sesiones, seguridad y lifecycle de operadores internos |
+| 3 | PG-08 | APIs, datos, RBAC/scopes, permisos, logs, auditoría y privacidad |
 | 4 | PG-03 | Agenda y contactos de pacientes |
 | 5 | PG-04 | Expediente, recetas, consentimiento y archivos |
-| 6 | PG-06 | Suscripciones, pago, activación y bloqueo |
-| 7 | PG-05 | Buzón, eventos, preferencias y delivery |
+| 6 | PG-06 | Suscripciones, pago, activación, bloqueo y operación controlada |
+| 7 | PG-05 | Buzón, eventos, preferencias, delivery y colas internas |
 | 8 | PG-07 | Perfil público, reseñas, media, Maps y SEO |
-| 9 | PG-09 | Visual, responsive, accesibilidad y ayuda |
-| 10 | PG-10 | Administración, soporte y moderación |
+| 9 | PG-09 | Visual, responsive, accesibilidad, ayuda y UX de consola |
+| 10 | PG-10 | Consola operativa, administración, soporte, moderación y gobierno de plataforma |
 | 11 | PG-11 | IA, voz y degradación de proveedor |
 
 El orden coloca planes/capabilities/ownership primero por dependencia transversal; identidad después; y autorización/datos antes de clínica, notificaciones y UX.
 
 ## 32. Criterios para la siguiente auditoría
 
-La siguiente auditoría debe ser read-only, tomar PG-01, reconciliar todas las fuentes de planes/capabilities/ownership, comparar frontend/backend/data y producir una matriz de divergencias sin decidir beneficios por intuición. Debe preservar Stripe y AWS, y no implementar.
+La siguiente auditoría es `PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01`, Actividad 1 de 22. Debe ser read-only, tomar PG-01, reconciliar planes/capabilities/ownership y separar cuatro modelos: commercial entitlements, user functional roles, ownership/entity scope e internal operator permissions. Comparará frontend/backend/data sin decidir beneficios por intuición, impedirá inferir privilegios internos desde un plan, distinguirá dirección de break-glass y preservará Stripe/AWS. Esta actividad no fue iniciada por el amendment.
 
-## 33. Historial
+## 33. OPERATOR CONTROL PLANE REQUIREMENT AMENDMENT
+
+**Contrato:** `MXMED_OPERATOR_CONTROL_PLANE_REQUIREMENTS_V1`
+**Fecha:** 2026-07-17
+**Requerimiento:** la dirección necesita un plano interno gobernado para administrar personal, soporte, reclamos, moderación, facturación operativa, privacidad, auditoría, incidentes y recuperación.
+**Impacto:** transversal en PG-01/02/05/06/08/09/10; contador `0/22` sin cambio.
+
+### implemented_inventory_totals
+
+Los totales de secciones 7–24 permanecen iguales: 953 entradas, 143 superficies, 166 APIs y 47 entidades versionadas. El amendment no cuenta módulos futuros como pantallas, endpoints o tablas implementados.
+
+Evidencia actual relacionada:
+
+- `operator` y `assistant` son roles funcionales de Agenda en el plano customer/professional;
+- `administrator` y `moderator` son candidatos o referencias que requieren auditoría;
+- `use_for_platform_admin` es un propósito de contacto, no un rol;
+- los roles AWS de break-glass/audit pertenecen a infraestructura, no al producto;
+- `p-ag-operadores`, ocho rutas `/operators`, siete rutas `medical-groups` y seis entidades relacionadas son parciales y específicas de dominio;
+- no se confirmó consola integral, login interno, MFA administrativo, API administrativa transversal, case management de soporte, doble aprobación, sesiones asistidas, colas internas ni auditoría administrativa inmutable.
+
+### required_future_control_plane_surfaces
+
+Se agregan como requisitos futuros, no como inventario implementado, 12 módulos: Operations home; Users and accounts; Profile claims and ownership; Subscriptions and billing; Support cases; Content moderation; Notification operations; Internal staff; Privacy and security; Audit; Technical operations; y Platform configuration.
+
+Roles preliminares requeridos: `platform_director`, `break_glass_superadmin`, `platform_admin`, `operations_manager`, `support_advisor`, `profile_claim_reviewer`, `billing_subscription_operator`, `content_moderator`, `privacy_security_officer`, `technical_operations_viewer` y `audit_read_only`. Sus nombres no son definitivos.
+
+Deudas relacionadas: `ADM-001` a `ADM-008`, `AUTH-004`, `CAP-008`, `DATA-002`, `DOC-006`, `NOT-001` a `NOT-005`, `PRIV-001/002`, `REV-002`, `SUB-002` y `UX-005`. Estado: `documented_required_future`; implementación integral confirmada: no.
+
+Documento canónico: [Requisitos del plano de control de operadores](./MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md).
+
+## 34. Historial
 
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0.0 | 2026-07-17 | Inventario estático inicial, crosswalk 92/92 y propuesta no oficial de 11 grupos/22 actividades |
+| 1.1.0 | 2026-07-17 | Amendment del plano de control; ciclo oficial 0/22, PG-10 renombrado y requisitos futuros separados de totales implementados |

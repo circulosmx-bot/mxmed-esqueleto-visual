@@ -60174,3 +60174,41 @@ read-only. AWS 24/24 y Stripe permanecen protegidos; deployment/tráfico siguen
 en `NO-GO` y no existe Microfase 25.
 
 ---
+
+## PP-Decisiones 275 - MXMED_OPERATOR_CONTROL_PLANE_REQUIREMENTS_V1
+
+Fecha contractual: 2026-07-17.
+
+Resultado: `PASS - MXMED_OPERATOR_CONTROL_PLANE_REQUIREMENTS_V1`.
+
+Se incorpora como documento canónico:
+
+`docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`
+
+Por requerimiento de dirección, México Médico deberá separar tres planos:
+customer/professional, internal operator y governance/emergency. Un plan
+comercial no concede un rol interno; un rol interno no depende del plan ni
+convierte al médico en administrador.
+
+El contrato define 11 roles preliminares, autoridad gobernada de
+`platform_director`, protección del último director y
+`break_glass_superadmin` excepcional. Prohíbe bypasses globales, autoelevación
+y suplantación silenciosa. La consola futura se divide en 12 módulos y usa
+lifecycle de operadores, case management, sesión asistida, riesgo R0–R3,
+doble aprobación, separación de funciones, enmascaramiento, auditoría y colas
+internas.
+
+El amendment afecta PG-01/02/05/06/08/09/10 y renombra PG-10 como
+`Consola operativa, administración, soporte, moderación y gobierno de
+plataforma`. El contador principal permanece `0/22`; la Actividad 1 queda
+desbloqueada tras este PASS, pero no fue iniciada. Código funcional modificado:
+0.
+
+La evidencia actual de operadores de Agenda, rutas de grupos médicos, banderas
+`platform_admin` de contacto y roles AWS no constituye una implementación
+integral del plano interno. Login interno, MFA administrativo, APIs/tablas de
+plataforma, break-glass de producto, sesiones asistidas, doble aprobación y
+auditoría transversal permanecen `documented_required_future` o requieren
+auditoría especializada.
+
+---

@@ -1,7 +1,7 @@
 # Registro Maestro de Deuda de Producto — México Médico
 
 **Contrato:** `MXMED_PRODUCT_DEBT_REGISTRY_V1`
-**Versión:** `1.0.0`
+**Versión:** `1.1.0`
 **Fecha de incorporación:** 2026-07-17
 **Última revisión:** 2026-07-17
 **Estado:** canónico, versionado y mantenible
@@ -18,6 +18,7 @@ Referencias rectoras:
 - [Plan Maestro](./PLAN_MAESTRO_MXMED.md)
 - [Reglas UI](./ui/REGLAS_UI_MXMED.md)
 - [Glosario UI](./ui/GLOSARIO_UI_MXMED.md)
+- [Requisitos del plano de control de operadores](./MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md)
 
 ## 2. Propósito
 
@@ -47,7 +48,8 @@ No incluye implementación ni auditorías funcionales detalladas. No ejecuta apl
 - Datos reales/costo real: no iniciados.
 - Agenda: v1 funcional consolidada, con deuda explícita de convergencia/hardening.
 - Stripe backend: PaymentIntent, webhook, activación y flujo E2E DEV/local cerrados como referencia.
-- Registro de deuda: 92 entradas en versión 1.
+- Registro de deuda: 99 entradas en versión 1.1.
+- Ciclo principal de producto: `0/22`; Actividad 1 no iniciada y desbloqueada tras PASS del amendment del plano de control.
 - Microfase 25: no existe.
 
 ## 5. Reglas de gobernanza
@@ -60,10 +62,10 @@ No incluye implementación ni auditorías funcionales detalladas. No ejecuta apl
 6. Una decisión `CLOSED_REFERENCE_ONLY` sólo se reabre con evidencia nueva y una decisión explícita.
 7. Cerrar deuda exige implementación o decisión, QA proporcional, evidencia y referencia de commit/PP.
 8. No se registran nombres, correos, teléfonos, account IDs, secretos, payloads ni datos clínicos.
-9. El Markdown y `master-debt-registry.json` deben reflejar las mismas entradas.
-10. Los grupos de auditoría son preliminares hasta cerrar el inventario global.
+9. El Markdown es la fuente canónica; cada amendment produce delta y reconciliación JSON propios sin reescribir snapshots históricos de `/tmp`.
+10. Los grupos PG-01 a PG-11 y su orden son oficiales desde el inventario global y su amendment del plano de control.
 11. Ninguna actividad de auditoría cambia código por implicación.
-12. No existe contador nuevo hasta que el inventario global permita dimensionarlo.
+12. El contador principal aprobado es `0/22`; una actividad auxiliar no lo incrementa.
 
 ## 6. Taxonomía de IDs
 
@@ -142,21 +144,21 @@ Prioridades:
 
 | Métrica | Total |
 |---|---:|
-| Entradas | 92 |
+| Entradas | 99 |
 | CLOSED_REFERENCE_ONLY | 4 |
-| CONFIRMED_DEBT | 6 |
-| DECISION_PENDING | 27 |
+| CONFIRMED_DEBT | 12 |
+| DECISION_PENDING | 28 |
 | DEFERRED_REFACTOR | 6 |
-| PARTIAL_IMPLEMENTATION | 9 |
-| REQUIRES_AUDIT | 27 |
+| PARTIAL_IMPLEMENTATION | 10 |
+| REQUIRES_AUDIT | 26 |
 | RUNTIME_GATE | 13 |
-| P0 | 36 |
-| P1 | 39 |
+| P0 | 40 |
+| P1 | 42 |
 | P2 | 12 |
 | P3 | 5 |
 | estado DEFERRED | 6 |
 | estado GATED | 13 |
-| estado OPEN | 69 |
+| estado OPEN | 76 |
 | estado PROTECTED | 4 |
 
 Lectura ejecutiva:
@@ -164,7 +166,7 @@ Lectura ejecutiva:
 - Los P0 se concentran en identidad, autorización, clínica, privacidad, pagos y runtime.
 - `REQUIRES_AUDIT` preserva veracidad donde el repositorio sólo permite afirmar presencia o ausencia de evidencia.
 - Los cierres Stripe/AWS evitan re-trabajo.
-- La primera acción correcta no es G1: es el inventario global read-only.
+- El inventario global PP274 está cerrado; la siguiente actividad es PG-01 read-only, Actividad 1 de 22, aún no iniciada.
 
 ## 10. Registro maestro
 
@@ -231,8 +233,14 @@ Lectura ejecutiva:
 | `DATA-002` | Scope, ownership, plan, rol y autorización por flujo | `REQUIRES_AUDIT` | `P0` | `OPEN` | `G7` |
 | `DATA-003` | Idempotencia, errores, retención y downgrade | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G7` |
 | `DATA-004` | Zona horaria, concurrencia, offline y borradores | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G7` |
-| `ADM-001` | Backoffice de soporte, moderación y disputas | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G8` |
+| `ADM-001` | Backoffice de soporte, moderación y disputas | `PARTIAL_IMPLEMENTATION` | `P1` | `OPEN` | `PG-10` |
 | `ADM-002` | Roles internos y break-glass | `DECISION_PENDING` | `P0` | `OPEN` | `G8` |
+| `ADM-003` | Lifecycle de operadores internos y access reviews | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-02` |
+| `ADM-004` | Case management y sesiones asistidas de soporte | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-10` |
+| `ADM-005` | Doble aprobación y separación de funciones | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-08` |
+| `ADM-006` | Auditoría administrativa, masking y acceso extraordinario | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-08` |
+| `ADM-007` | Colas y notificaciones internas de operadores | `CONFIRMED_DEBT` | `P1` | `OPEN` | `PG-05` |
+| `ADM-008` | UX y accesibilidad de la consola operativa | `DECISION_PENDING` | `P1` | `OPEN` | `PG-09` |
 | `AI-001` | IA Profesional: plan, cuota y presupuesto | `DECISION_PENDING` | `P1` | `OPEN` | `G8` |
 | `AI-002` | IA como borrador con confirmación explícita | `DECISION_PENDING` | `P0` | `OPEN` | `G8` |
 | `PRIV-001` | Privacidad, retención, eliminación y analítica | `DECISION_PENDING` | `P0` | `OPEN` | `G7` |
@@ -242,6 +250,7 @@ Lectura ejecutiva:
 | `DOC-003` | Gobernanza del registro de deuda | `DECISION_PENDING` | `P1` | `OPEN` | `G8` |
 | `DOC-004` | Ciclo AWS 24/24 cerrado | `CLOSED_REFERENCE_ONLY` | `P3` | `PROTECTED` | `G7` |
 | `DOC-005` | No existe Microfase 25 | `CLOSED_REFERENCE_ONLY` | `P3` | `PROTECTED` | `G8` |
+| `DOC-006` | Runbooks internos del plano de control | `CONFIRMED_DEBT` | `P1` | `OPEN` | `PG-10` |
 | `RUNTIME-001` | Readiness responde 503 | `RUNTIME_GATE` | `P0` | `GATED` | `G7` |
 | `RUNTIME-002` | Retorno Stripe productivo ausente | `RUNTIME_GATE` | `P0` | `GATED` | `G5` |
 | `RUNTIME-003` | Fingerprinting de assets incompleto | `RUNTIME_GATE` | `P1` | `GATED` | `G8` |
@@ -2006,24 +2015,24 @@ Lectura ejecutiva:
 - **ID:** `ADM-001`
 - **Título:** Backoffice de soporte, moderación y disputas
 - **Dominio:** `administracion`
-- **Clasificación:** `REQUIRES_AUDIT`
+- **Clasificación:** `PARTIAL_IMPLEMENTATION`
 - **Prioridad:** `P1`
 - **Estado:** `OPEN`
-- **Descripción actual:** No se certifica backoffice integral para soporte, reseñas, claims, revocación, transferencia, plantillas y evidencia.
-- **Evidencia:** `Solicitud PRODUCT-DOC/MXMed-System-Wide-Product-Debt-Registry-01`; `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md: PP01 fuera de MVP backoffice completo`
-- **Archivos o decisiones relacionadas:** ninguna adicional
+- **Descripción actual:** Existen una superficie de operadores de Agenda, ocho rutas `/operators`, rutas de revisión de grupos y datos acotados; no forman un plano interno integral para soporte, claims, facturación, moderación, privacidad y gobierno.
+- **Evidencia:** `docs/MXMED_INVENTARIO_GLOBAL_PANTALLAS_FUNCIONES_APIS_DATOS.md`; `index.html: p-ag-operadores`; `modules/agenda/routes.php`; `PRODUCT-DOC/MXMed-Operator-Control-Plane-And-Platform-Roles-Requirement-Amendment-01`
+- **Archivos o decisiones relacionadas:** `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`
 - **Efecto visible para el usuario:** El efecto exacto debe confirmarse en la auditoría del flujo y no se infiere por presencia de UI.
 - **Riesgo de negocio:** Priorización, alcance o expectativa de producto inconsistentes.
 - **Riesgo de datos o seguridad:** Riesgo de acciones administrativas sin separación, evidencia o apelación.
 - **Planes afectados:** `all`
 - **Roles afectados:** `product-user`, `platform-operator`
 - **Capacidades relacionadas:** `support`, `moderation`, `dispute`
-- **Dependencias:** inventario global y decisión del owner
-- **Decisión pendiente:** none-recorded
-- **Auditoría requerida:** Inventariar pantallas, roles, writes, logs, dual control y casos borde.
-- **Grupo recomendado:** `G8`
+- **Dependencias:** PG-01, PG-02 y PG-08
+- **Decisión pendiente:** Aprobar módulos, ownership operativo, límites y secuencia de implementación.
+- **Auditoría requerida:** PG-10 debe reconciliar superficies existentes con los 12 módulos futuros sin convertir Agenda en consola de plataforma.
+- **Grupo recomendado:** `PG-10`
 - **Acción recomendada:** Inventariar evidencia, cerrar decisión y crear trabajo separado si corresponde.
-- **Criterio de aceptación:** La evidencia, decisión, estados y QA quedan documentados sin duplicar fuentes de verdad.
+- **Criterio de aceptación:** Cada módulo interno tiene owner, roles, reads/writes, datos restringidos, controles, caso, auditoría y estados UX; no quedan shells presentados como implementación integral.
 - **No repetición:** No implementar ni reabrir decisiones cerradas desde este registro.
 - **Owner funcional:** `platform-operations-owner`
 - **Fecha de incorporación:** `2026-07-17`
@@ -2037,9 +2046,9 @@ Lectura ejecutiva:
 - **Clasificación:** `DECISION_PENDING`
 - **Prioridad:** `P0`
 - **Estado:** `OPEN`
-- **Descripción actual:** Falta decisión transversal para roles internos, soporte, superadmin, auditor y acceso de emergencia.
-- **Evidencia:** `Solicitud PRODUCT-DOC/MXMed-System-Wide-Product-Debt-Registry-01`; `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md: PP272 roles AWS sólo infraestructura`
-- **Archivos o decisiones relacionadas:** ninguna adicional
+- **Descripción actual:** Falta cerrar el catálogo canónico de roles internos, autoridad de dirección, protección del último director, prohibición de autoelevación y break-glass de producto. Los roles AWS son sólo infraestructura y `operator`/`assistant` pertenecen a Agenda.
+- **Evidencia:** `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`; `infra/aws/lib/constructs/security-role-factory.ts`; `modules/agenda/controllers/OperatorsController.php`
+- **Archivos o decisiones relacionadas:** `docs/MXMED_INVENTARIO_GLOBAL_PANTALLAS_FUNCIONES_APIS_DATOS.md`
 - **Efecto visible para el usuario:** El efecto exacto debe confirmarse en la auditoría del flujo y no se infiere por presencia de UI.
 - **Riesgo de negocio:** Priorización, alcance o expectativa de producto inconsistentes.
 - **Riesgo de datos o seguridad:** Riesgo de privilegio excesivo o acceso de emergencia no trazable.
@@ -2047,13 +2056,181 @@ Lectura ejecutiva:
 - **Roles afectados:** `product-user`, `platform-operator`
 - **Capacidades relacionadas:** `internal-rbac`, `break-glass`
 - **Dependencias:** inventario global y decisión del owner
-- **Decisión pendiente:** Aprobar least privilege, step-up, tiempo limitado, aprobación y auditoría.
-- **Auditoría requerida:** evidence-scope-review
-- **Grupo recomendado:** `G8`
+- **Decisión pendiente:** Aprobar nombres definitivos, jerarquía, permisos, scopes, mínimo de directores, step-up, duración, aprobación y revisión posterior.
+- **Auditoría requerida:** PG-01 y PG-10 deben reconciliar aliases, impedir plan-derived admin role y separar `platform_director` de `break_glass_superadmin`.
+- **Grupo recomendado:** `PG-01/PG-10`
 - **Acción recomendada:** Inventariar evidencia, cerrar decisión y crear trabajo separado si corresponde.
-- **Criterio de aceptación:** La evidencia, decisión, estados y QA quedan documentados sin duplicar fuentes de verdad.
+- **Criterio de aceptación:** Ningún plan concede rol interno; no existe bypass global; último director, autoelevación y emergencia tienen controles verificables.
 - **No repetición:** No implementar ni reabrir decisiones cerradas desde este registro.
 - **Owner funcional:** `security-governance-owner`
+- **Fecha de incorporación:** `2026-07-17`
+- **Última revisión:** `2026-07-17`
+
+#### ADM-003 — Lifecycle de operadores internos y access reviews
+
+- **ID:** `ADM-003`
+- **Título:** Lifecycle de operadores internos y access reviews
+- **Dominio:** `administracion-identidad`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** No se localizó un lifecycle interno transversal con invitación privada, verificación, MFA obligatorio, activación, access review, suspensión, revocación de sesiones y archivo preservando historial.
+- **Evidencia:** `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`; auditoría estática del amendment; `AUTH-004` cubre el requisito MFA sin implementación confirmada
+- **Archivos o decisiones relacionadas:** `modules/agenda/controllers/OperatorsController.php` como evidencia parcial de un flujo profesional distinto
+- **Efecto visible para el usuario:** Operación interna inconsistente o con acceso vigente más allá de la necesidad.
+- **Riesgo de negocio:** Altas, bajas y responsabilidades no gobernadas.
+- **Riesgo de datos o seguridad:** Acceso huérfano, sesión no revocada, factor ausente o privilegio temporal permanente.
+- **Planes afectados:** `none-internal-role-independent`
+- **Roles afectados:** `all-proposed-platform-roles`
+- **Capacidades relacionadas:** `operator-invitation`, `mfa`, `access-review`, `suspension`, `revocation`
+- **Dependencias:** PG-01 y PG-02
+- **Decisión pendiente:** Definir mínimo de identidad, política MFA, periodicidad de revisión, inactividad y retención de historial.
+- **Auditoría requerida:** Inventariar identidad/sesiones existentes y demostrar que no hay registro libre ni autoelevación.
+- **Grupo recomendado:** `PG-02`
+- **Acción recomendada:** Cerrar contrato de lifecycle antes de diseñar login interno.
+- **Criterio de aceptación:** Cada estado/transición tiene autoridad, precondiciones, expiración, revocación, notificación y auditoría.
+- **No repetición:** No reutilizar el flujo de contraseña temporal de Agenda como autenticación interna.
+- **Owner funcional:** `identity-security-owner`
+- **Fecha de incorporación:** `2026-07-17`
+- **Última revisión:** `2026-07-17`
+
+#### ADM-004 — Case management y sesiones asistidas de soporte
+
+- **ID:** `ADM-004`
+- **Título:** Case management y sesiones asistidas de soporte
+- **Dominio:** `administracion-soporte`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** No se localizaron case management operativo transversal ni `support_assisted_session` gobernada; los casos clínicos no deben reutilizarse por inferencia para soporte.
+- **Evidencia:** `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`; auditoría estática del amendment
+- **Archivos o decisiones relacionadas:** `modules/clinical/db/schema_v2.sql` sólo como frontera de no reutilización
+- **Efecto visible para el usuario:** Asistencia sin contexto, motivo, alcance, consentimiento o trazabilidad uniformes.
+- **Riesgo de negocio:** Escalamientos y resoluciones sin owner ni evidencia.
+- **Riesgo de datos o seguridad:** Suplantación silenciosa o acceso excesivo a cuenta y clínica.
+- **Planes afectados:** `all-customers-without-entitlement-effect`
+- **Roles afectados:** `support_advisor`, `operations_manager`, `privacy_security_officer`
+- **Capacidades relacionadas:** `platform-cases`, `assisted-session`, `escalation`
+- **Dependencias:** PG-02 y PG-08
+- **Decisión pendiente:** Definir estados, SLA, consentimiento, duración, scopes y separación del acceso clínico extraordinario.
+- **Auditoría requerida:** Mapear flujos actuales de soporte y probar que ninguna sesión equivale a impersonation silenciosa.
+- **Grupo recomendado:** `PG-10`
+- **Acción recomendada:** Cerrar modelo de caso antes de habilitar acciones asistidas.
+- **Criterio de aceptación:** Toda acción sensible referencia caso/motivo; la sesión expira, muestra banner, enmascara datos y puede revocarse.
+- **No repetición:** No confundir `clinical_cases` con `platform_cases`.
+- **Owner funcional:** `support-operations-owner`
+- **Fecha de incorporación:** `2026-07-17`
+- **Última revisión:** `2026-07-17`
+
+#### ADM-005 — Doble aprobación y separación de funciones
+
+- **ID:** `ADM-005`
+- **Título:** Doble aprobación y separación de funciones
+- **Dominio:** `administracion-gobierno`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** No se localizó un contrato transversal implementado de initiator/approver, expiración de aprobaciones, riesgo R0–R3 y separación de funciones para acciones administrativas.
+- **Evidencia:** `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`; auditoría estática del amendment
+- **Archivos o decisiones relacionadas:** `DATA-002`, `CAP-008`
+- **Efecto visible para el usuario:** Acciones críticas podrían depender de una sola identidad sin revisión independiente.
+- **Riesgo de negocio:** Fraude, error irreversible o indisponibilidad organizacional.
+- **Riesgo de datos o seguridad:** Autoaprobación, elevación propia, exportación o override fuera de propósito.
+- **Planes afectados:** `none-internal-role-independent`
+- **Roles afectados:** `platform_director`, `platform_admin`, `privacy_security_officer`, `billing_subscription_operator`
+- **Capacidades relacionadas:** `dual-approval`, `risk-tiering`, `separation-of-duties`
+- **Dependencias:** PG-01, PG-06 y PG-08
+- **Decisión pendiente:** Determinar qué R3 siempre exige dos personas y qué contingencia evita perder recuperación.
+- **Auditoría requerida:** Clasificar acciones administrativas y verificar frontend/backend equivalentes por caso negativo.
+- **Grupo recomendado:** `PG-08`
+- **Acción recomendada:** Aprobar matriz de riesgo y conflicto de funciones antes de endpoints mutables.
+- **Criterio de aceptación:** Iniciador y aprobador son distintos; la aprobación es específica, vigente, auditada y no reutilizable.
+- **No repetición:** No implementar un permiso global ni excepción silenciosa.
+- **Owner funcional:** `security-governance-owner`
+- **Fecha de incorporación:** `2026-07-17`
+- **Última revisión:** `2026-07-17`
+
+#### ADM-006 — Auditoría administrativa, masking y acceso extraordinario
+
+- **ID:** `ADM-006`
+- **Título:** Auditoría administrativa, masking y acceso extraordinario
+- **Dominio:** `administracion-privacidad`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** Existe auditoría acotada de Agenda, pero no se localizó un evento administrativo transversal inmutable con scope/caso/aprobación, masking de campo ni gobierno del acceso clínico extraordinario.
+- **Evidencia:** `modules/agenda/db/operators_phase1.sql`; `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`
+- **Archivos o decisiones relacionadas:** `PRIV-001`, `PRIV-002`, `CLN-005`, `CLN-006`
+- **Efecto visible para el usuario:** Accesos o cambios podrían no tener explicación verificable y proporcional.
+- **Riesgo de negocio:** Incumplimiento, investigación incompleta o pérdida de confianza.
+- **Riesgo de datos o seguridad:** Exposición de identidad, pagos, secretos o información clínica; log manipulable.
+- **Planes afectados:** `all-without-entitlement-effect`
+- **Roles afectados:** `all-proposed-platform-roles`
+- **Capacidades relacionadas:** `administrative-audit`, `field-masking`, `extraordinary-clinical-access`
+- **Dependencias:** PG-02 y PG-08
+- **Decisión pendiente:** Definir retention classes, pseudonimización, masking, acceso extraordinario y autoridad de exportación.
+- **Auditoría requerida:** Trazar campos sensibles, eventos y stores; probar que actor no edita su rastro.
+- **Grupo recomendado:** `PG-08`
+- **Acción recomendada:** Cerrar el contrato de audit/masking antes de ampliar visibilidad de datos.
+- **Criterio de aceptación:** Cada acción sensible registra los campos mínimos y excluye contraseñas, tokens, secretos, tarjetas y contenido clínico completo.
+- **No repetición:** No generalizar `agenda_operator_audit_events` a auditoría de plataforma.
+- **Owner funcional:** `privacy-security-owner`
+- **Fecha de incorporación:** `2026-07-17`
+- **Última revisión:** `2026-07-17`
+
+#### ADM-007 — Colas y notificaciones internas de operadores
+
+- **ID:** `ADM-007`
+- **Título:** Colas y notificaciones internas de operadores
+- **Dominio:** `administracion-operaciones`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P1`
+- **Estado:** `OPEN`
+- **Descripción actual:** El buzón de usuario y los eventos actuales no implementan una cola interna de tareas, asignaciones, aprobaciones, incidentes y alertas con SLA y escalamiento.
+- **Evidencia:** `docs/MXMED_INVENTARIO_GLOBAL_PANTALLAS_FUNCIONES_APIS_DATOS.md`; `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`
+- **Archivos o decisiones relacionadas:** `NOT-001` a `NOT-005`
+- **Efecto visible para el usuario:** Casos y excepciones podrían carecer de responsable o seguimiento oportuno.
+- **Riesgo de negocio:** Incumplimiento de SLA y trabajo operativo perdido.
+- **Riesgo de datos o seguridad:** Datos sensibles expuestos en tarjetas o alertas sin scope.
+- **Planes afectados:** `none-internal-role-independent`
+- **Roles afectados:** `operations_manager`, `support_advisor`, `profile_claim_reviewer`, `content_moderator`, `privacy_security_officer`
+- **Capacidades relacionadas:** `operator-queue`, `approval-task`, `internal-alert`
+- **Dependencias:** PG-02, PG-05 y PG-08
+- **Decisión pendiente:** Definir prioridad, SLA, expiración, escalamiento, delivery y retención.
+- **Auditoría requerida:** Separar buzón de usuario y plano interno; mapear productores/consumidores sin afirmar persistencia.
+- **Grupo recomendado:** `PG-05`
+- **Acción recomendada:** Cerrar catálogo de tareas y estados antes de diseñar dashboard.
+- **Criterio de aceptación:** Cada tarea tiene owner, prioridad, estado, deep link al caso, expiración, historial y tarjeta sin datos clínicos.
+- **No repetición:** No reutilizar notificaciones del usuario como autorización operativa.
+- **Owner funcional:** `operations-notification-owner`
+- **Fecha de incorporación:** `2026-07-17`
+- **Última revisión:** `2026-07-17`
+
+#### ADM-008 — UX y accesibilidad de la consola operativa
+
+- **ID:** `ADM-008`
+- **Título:** UX y accesibilidad de la consola operativa
+- **Dominio:** `administracion-ux`
+- **Clasificación:** `DECISION_PENDING`
+- **Prioridad:** `P1`
+- **Estado:** `OPEN`
+- **Descripción actual:** Faltan decisiones de arquitectura UX para navegación por rol, tablas, filtros seguros, estados, acciones críticas, masking, read-only, banners privilegiados, accesibilidad y alcance móvil.
+- **Evidencia:** `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`; `UX-003` a `UX-005`
+- **Archivos o decisiones relacionadas:** ninguna adicional
+- **Efecto visible para el usuario:** Operación propensa a error, ambigua o inaccesible.
+- **Riesgo de negocio:** Acciones equivocadas, baja productividad y exclusión de operadores.
+- **Riesgo de datos o seguridad:** Confusión de scope, exposición por filtros persistidos o acción crítica poco distinguible.
+- **Planes afectados:** `none-internal-role-independent`
+- **Roles afectados:** `all-proposed-platform-roles`
+- **Capacidades relacionadas:** `operator-console-ux`, `privileged-banners`, `accessible-operations`
+- **Dependencias:** PG-01, PG-02 y PG-08
+- **Decisión pendiente:** Aprobar arquitectura, densidad, responsive, desktop-first y política móvil.
+- **Auditoría requerida:** Mapear estados y restricciones por módulo antes de diseño final.
+- **Grupo recomendado:** `PG-09`
+- **Acción recomendada:** Diseñar sólo después de cerrar roles, scopes y riesgos.
+- **Criterio de aceptación:** Los 12 módulos cubren estados, teclado, lector, foco, contraste, permisos insuficientes y confirmaciones reforzadas.
+- **No repetición:** No crear bocetos ni presentar shells actuales como consola final.
+- **Owner funcional:** `product-design-accessibility-owner`
 - **Fecha de incorporación:** `2026-07-17`
 - **Última revisión:** `2026-07-17`
 
@@ -2312,6 +2489,34 @@ Lectura ejecutiva:
 - **Criterio de aceptación:** La evidencia, decisión, estados y QA quedan documentados sin duplicar fuentes de verdad.
 - **No repetición:** No crear ni inferir Microfase 25.
 - **Owner funcional:** `product-operations-owner`
+- **Fecha de incorporación:** `2026-07-17`
+- **Última revisión:** `2026-07-17`
+
+#### DOC-006 — Runbooks internos del plano de control
+
+- **ID:** `DOC-006`
+- **Título:** Runbooks internos del plano de control
+- **Dominio:** `documentacion-operaciones`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P1`
+- **Estado:** `OPEN`
+- **Descripción actual:** No se localizaron runbooks canónicos para altas/bajas de personal, pérdida de MFA, access review, suspensión, break-glass, sesión asistida, doble aprobación, incidentes y recuperación del último director.
+- **Evidencia:** `docs/MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md`; auditoría estática del amendment
+- **Archivos o decisiones relacionadas:** `ADM-002` a `ADM-006`
+- **Efecto visible para el usuario:** Respuesta operativa inconsistente durante soporte o incidentes.
+- **Riesgo de negocio:** Dependencia de conocimiento informal y recuperación tardía.
+- **Riesgo de datos o seguridad:** Acciones privilegiadas sin secuencia, evidencia, reversión o revisión uniforme.
+- **Planes afectados:** `none-internal-role-independent`
+- **Roles afectados:** `platform_director`, `platform_admin`, `operations_manager`, `privacy_security_officer`
+- **Capacidades relacionadas:** `operator-runbooks`, `break-glass-runbook`, `access-review-runbook`
+- **Dependencias:** PG-01, PG-02, PG-08 y PG-10
+- **Decisión pendiente:** Definir owner, periodicidad de prueba, escalamiento, contingencias y evidencia por runbook.
+- **Auditoría requerida:** Inventariar procedimientos existentes y proteger las decisiones AWS/Stripe sin mezclarlas con operación de producto.
+- **Grupo recomendado:** `PG-10`
+- **Acción recomendada:** Redactar runbooks después de cerrar roles, riesgos, sesiones y datos.
+- **Criterio de aceptación:** Cada evento operativo crítico tiene precondiciones, responsables, pasos, rollback/recovery, evidencia y revisión.
+- **No repetición:** No ejecutar despliegues, proveedores ni sesiones privilegiadas para documentar.
+- **Owner funcional:** `platform-operations-owner`
 - **Fecha de incorporación:** `2026-07-17`
 - **Última revisión:** `2026-07-17`
 
@@ -2900,7 +3105,16 @@ Lectura ejecutiva:
 | Interconexiones y autorización | DATA-001 a DATA-004 |
 | Concurrencia, doble clic, retry, offline y borradores | AGD-005, DATA-003, DATA-004 |
 | Funciones bloqueadas y upsell | CAP-003, CAP-007, SUB-003 |
-| Administración y break-glass | ADM-001, ADM-002 |
+| Plano de control, módulos, personal, roles internos, dirección y break-glass | ADM-001, ADM-002 |
+| Lifecycle, MFA, access reviews, suspensión, baja y revocación | AUTH-004, ADM-003 |
+| Case management, sesiones asistidas y acceso clínico extraordinario | ADM-004, ADM-006, PRIV-001, CLN-005 |
+| Scopes, equivalencia frontend/backend y autorización administrativa | CAP-008, DATA-002, ADM-005 |
+| Doble aprobación y separación de funciones | ADM-005 |
+| Auditoría administrativa y enmascaramiento | ADM-006, PRIV-001, PRIV-002 |
+| Colas y notificaciones internas | ADM-007, NOT-001 a NOT-005 |
+| Moderación y operación de pagos gobernada | REV-002, SUB-002, ADM-001, ADM-005 |
+| UX y accesibilidad de consola | UX-003 a UX-005, ADM-008 |
+| Runbooks operativos internos | DOC-006 |
 | IA, voz, cuotas, confirmación y privacidad | AI-001, AI-002 |
 | Privacidad, retención, eliminación y analítica | PRIV-001, PRIV-002, CLN-005 |
 | Documentación, superseded, WARN y duplicados | DOC-001 a DOC-003, TECH-001 a TECH-003 |
@@ -2925,34 +3139,21 @@ El cierre de un gate requiere su etapa operativa o funcional autorizada, no una 
 | CLN-002/004/005 → RX-001/002 | Consentimiento, permisos y retención antes del flujo documental completo |
 | NOT-003 → NOT-002/004/005 | Catálogo de eventos antes de estados, preferencias y delivery |
 | SUB-002/003 → CAP-005/006 | Ciclo comercial y efectos por capacidad deben cerrarse juntos |
-| DATA-001 → G1–G8 | El inventario global precede auditorías detalladas |
+| DATA-001 → PG-01–PG-11 | PP274 satisface el inventario global y habilita auditorías detalladas sin afirmar conexiones runtime |
+| ADM-002/003 → ADM-001/004–008 | Roles y lifecycle preceden módulos, sesiones, aprobaciones, audit, colas y UX |
+| ADM-004/005/006 → PG-10 | Caso, riesgo, aprobación, masking y auditoría preceden mutaciones de consola |
 | RUNTIME-001/005/006/009 → RUNTIME-013 | Readiness, logs, métricas y secretos antes de deploy/tráfico |
 | RUNTIME-010/011/012 → RUNTIME-013 | Edge, recuperación y costo antes de cutover |
 
-## 15. Mapa preliminar de auditorías
+## 15. Mapa oficial de auditorías
 
-Decisión: **AUDITORÍA COMPLETA EN COBERTURA, EJECUTADA POR GRUPOS.**
+Decisión: **AUDITORÍA COMPLETA EN COBERTURA, EJECUTADA EN 22 ACTIVIDADES DE 11 GRUPOS.**
 
-Primera auditoría obligatoria:
+PP274 cerró el inventario global read-only. El contador permanece `0/22`. La Actividad 1, no iniciada y desbloqueada tras el PASS del amendment, es:
 
-`PRODUCT-AUDIT/MXMed-System-Wide-Screen-Function-Api-Data-Inventory-01`
+`PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01`
 
-Objetivo: inventariar pantallas, funciones, rutas, endpoints, servicios, repositorios, tablas, eventos, notificaciones, roles, planes, feature flags, estados visuales y documentación relacionada.
-
-Grupos preliminares:
-
-| Grupo | Alcance |
-|---|---|
-| G1 | Planes, capacidades, ownership, grace y downgrade |
-| G2 | Reclamo, registro, login, recuperación y seguridad |
-| G3 | Agenda, pacientes, expediente, recetas y consentimiento |
-| G4 | Buzón, triggers, preferencias y correo |
-| G5 | Suscripciones, ciclo comercial y funciones bloqueadas |
-| G6 | Perfil público, reseñas, media, Maps y SEO |
-| G7 | Datos, APIs, permisos, logs y privacidad |
-| G8 | Visual, responsive, accesibilidad, ayuda, admin e IA |
-
-El inventario global puede dividir, fusionar, reordenar o proponer contador. G1 no inicia antes de su cierre.
+PG-01 deberá auditar por separado commercial entitlements, roles funcionales, ownership/entity scope e internal operator permissions. El orden oficial se conserva en el inventario global: `PG-01, PG-02, PG-08, PG-03, PG-04, PG-06, PG-05, PG-07, PG-09, PG-10, PG-11`.
 
 ## 16. Criterios de priorización
 
@@ -2989,7 +3190,7 @@ Cerrar una entrada no elimina el ID ni su historial.
 5. Asignar prioridad y estado.
 6. Completar los 25 campos.
 7. Definir owner opaco, grupo y aceptación.
-8. Actualizar Markdown y JSON espejo en el mismo cambio.
+8. Actualizar Markdown y generar delta/reconciliación JSON del amendment sin reescribir snapshots históricos.
 9. Ejecutar auditorías de IDs, campos, cobertura, privacidad y links.
 10. Publicar con historial de cambios.
 
@@ -3009,3 +3210,4 @@ Cerrar una entrada no elimina el ID ni su historial.
 | Versión | Fecha | Cambio | Autoridad |
 |---|---|---|---|
 | 1.0.0 | 2026-07-17 | Alta del registro canónico con 92 entradas y plan de auditoría por grupos | `PRODUCT-DOC/MXMed-System-Wide-Product-Debt-Registry-01` |
+| 1.1.0 | 2026-07-17 | Amendment del plano de control: 7 altas, ADM-001/002 ampliadas, 99 entradas y contador principal 0/22 | `PRODUCT-DOC/MXMed-Operator-Control-Plane-And-Platform-Roles-Requirement-Amendment-01` |
