@@ -5,11 +5,15 @@
 - Contrato: `MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1`.
 - Actividad: `PRODUCT-AUDIT/MXMed-Historical-Functional-Documents-Reconciliation-01`.
 - Tipo: actividad auxiliar; no incrementa el contador principal.
-- Versión: `1.1.0`.
+- Versión: `1.2.0`.
 - Fecha contractual: 2026-07-18.
 - Estado: `PASS_STATIC_RECONCILIATION`.
 - Fuentes: 8 PDF, 29 páginas, `historical_noncanonical`.
-- Contador: Actividad 1 de 22 concluida; Actividad 2 bloqueada.
+- Contador: `1/22`; Actividad 2 `UNBLOCKED_READY_NOT_STARTED` por PP278.
+
+Estado vigente: PP278 formaliza 30 decisiones `director_approved`. Las
+secciones de requisitos pendientes conservan el snapshot histórico de PP277 y
+son superseded para PG-01 por el cierre directoral al final de este documento.
 
 ## 2. Propósito
 
@@ -639,3 +643,50 @@ el contador y no se inició la Actividad 2.
 |---|---|---|
 | 1.0.0 | 2026-07-18 | Incorporación byte-identical de ocho fuentes; 29/29 páginas, 95 requisitos, 22 triggers, 11 DEC revisadas y borrador de 20 decisiones |
 | 1.1.0 | 2026-07-18 | Refuerzo contractual a 41 secciones, schema mínimo de evidencia, separación de riesgos, roles, pagos, grace y estados DEC |
+| 1.2.0 | 2026-07-18 | PP278 formaliza 30 decisiones y deja Activity 2 ready/not started sin alterar fuentes históricas |
+
+## DIRECTOR DECISION APPROVAL CLOSURE
+
+**Contrato:** `MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1`
+
+La dirección aprobó 30 decisiones atómicas derivadas de DEC-001–DEC-011. El
+[contrato de aprobación](./MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md)
+prevalece para PG-01 sobre los estados `pending_approval` registrados en esta
+reconciliación. Las fuentes PDF y sus 95 requisitos conservan procedencia,
+clasificación y estado `historical_noncanonical`; no se reescribe la historia
+ni se declara implementación.
+
+### Conflictos PG-01 resueltos por dirección
+
+- cinco códigos canónicos y `HYBRID_VERSIONED_POLICY_V1`;
+- matriz Free/Basic/Standard/Optimum/Professional para médicos individuales;
+- claim/alta, ownership y publicación como autoridades separadas;
+- cuotas, galería 1+21, Agenda ilimitada y cuotas IA provisionales;
+- lifecycle comercial y estados efectivos;
+- grace de 15 días, prórrogas 7/15 y downgrade `archived_read_only`;
+- frontera appointment/contact/clinical record sin Expediente automático;
+- denial reasons backend y catálogo de doce roles como requisitos.
+
+Los requisitos inseguros continúan rechazados: superadmin universal, supervisor
+IA all-fields, creación automática de Expediente, modificación de Receta emitida
+y operación ordinaria directa de DB.
+
+### Parámetros deliberadamente diferidos
+
+Precios finales Call Center; proveedores de voz, WhatsApp e IA; costos IA;
+dimensiones finales de imagen; retención no clínica exacta; interacción
+medicamentosa; perfiles institucionales; créditos adicionales; pagos manuales,
+SPEI y CFDI; consola; Call Center; agentes IA; y push.
+
+Estos diferidos no bloquean el núcleo PG-01 porque permanecen disabled,
+documented/future y fail-closed.
+
+### Activity 2 assessment
+
+- decisiones aprobadas: 30/30;
+- decisiones originales sin resolver: 0;
+- implementación iniciada: no;
+- contador: `1/22`;
+- estado: `UNBLOCKED_READY_NOT_STARTED`.
+
+Este cierre no autoriza iniciar la Actividad 2 sin una instrucción separada.

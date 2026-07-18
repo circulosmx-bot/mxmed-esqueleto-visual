@@ -6,11 +6,16 @@
 - Actividad: `PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01`.
 - Grupo: `PG-01`.
 - Contador: Actividad 1 de 22.
-- Versión: `1.0.0`.
+- Versión: `1.1.0`.
 - Fecha contractual: 2026-07-17.
-- Estado: `PASS_STATIC_AUDIT`; no equivale a validación runtime ni a aprobación comercial.
+- Estado: `PASS_STATIC_AUDIT`; PP278 formaliza aprobación comercial documental
+  posterior, sin validación runtime ni implementación.
 - Rama de trabajo: `audit/mxmed-plans-capabilities-ownership-lifecycle`.
 - Base: `39441f530b028b7f47b34493fbebb5b5cc49ce14`.
+
+Estado vigente del gate: 30/30 decisiones `director_approved`; Actividad 2
+`UNBLOCKED_READY_NOT_STARTED`. Los apartados de decisiones pendientes
+conservan el snapshot de PP276/PP277 y son superseded por el amendment final.
 
 ## 2. Propósito
 
@@ -739,6 +744,7 @@ cambios versionados son este documento y PP276.
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0.0 | 2026-07-17 | Auditoría estática completa; 14 fuentes, 41 capabilities, ownership, roles, lifecycle, equivalencia, recomendación hybrid y alcance de Actividad 2 |
+| 1.1.0 | 2026-07-18 | PP278 formaliza 30 decisiones y cambia el gate a ready/not started sin alterar hallazgos |
 
 ## HISTORICAL FUNCTIONAL SOURCES RECONCILIATION AMENDMENT
 
@@ -813,3 +819,50 @@ PG-04. Facturación a pacientes no es suscripción MXMed.
 Actividad 1 de 22 permanece concluida. Esta actividad auxiliar no incrementa el
 contador. Actividad 2 continúa bloqueada hasta aprobar el paquete revisado. AWS
 24/24 y Stripe permanecen protegidos; deployment no iniciado y tráfico `NO-GO`.
+
+## DIRECTOR DECISION APPROVAL AMENDMENT
+
+**Contrato:** `MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1`
+
+Este amendment preserva todos los hallazgos estáticos de PG-01 y formaliza la
+decisión posterior. No convierte la auditoría en implementación.
+
+| DEC original | Resultado final |
+|---|---|
+| DEC-001 | DEC-001 `director_approved` |
+| DEC-002 | DEC-002 `director_approved` |
+| DEC-003 | DEC-003A–DEC-003F `director_approved` |
+| DEC-004 | DEC-004A–DEC-004C `director_approved` |
+| DEC-005 | DEC-005A–DEC-005E `director_approved` |
+| DEC-006 | DEC-006A–DEC-006B `director_approved` |
+| DEC-007 | DEC-007A–DEC-007B `director_approved` |
+| DEC-008 | DEC-008A–DEC-008B `director_approved` |
+| DEC-009 | DEC-009A–DEC-009B `director_approved` |
+| DEC-010 | DEC-010A `director_approved` |
+| DEC-011 | DEC-011A–DEC-011E `director_approved` |
+
+Cobertura: 11/11 decisiones originales y 30/30 atómicas. Pendientes dentro del
+gate original: 0. Implementadas por esta actividad: 0.
+
+### Estado contractual final
+
+- policy: `HYBRID_VERSIONED_POLICY_V1`;
+- códigos: free/basic/standard/optimum/professional;
+- perfiles iniciales: médicos individuales;
+- instituciones: diferidas;
+- grace: past_due 1–3, grace 4–15, restricted desde 16;
+- downgrade: Free + `archived_read_only`;
+- Agenda/contacto/Expediente: separados;
+- backend: autoridad de capabilities y denials;
+- roles: doce requisitos, cero implementados;
+- Call Center e IA productiva: fuera de implementación de Actividad 2.
+
+### Gate de Actividad 2
+
+El assessment documental concluye PASS: el núcleo PG-01 puede prepararse sin
+inventar proveedores, precios finales o parámetros especializados. Estado:
+`UNBLOCKED_READY_NOT_STARTED`. La Actividad 2 no se inició y requiere
+autorización separada. Contador principal: `1/22`.
+
+Documento rector:
+[Aprobación directoral](./MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md).

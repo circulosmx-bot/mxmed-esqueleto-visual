@@ -1,7 +1,7 @@
 # Inventario Global de Pantallas, Funciones, APIs y Datos — México Médico
 
 **Contrato:** `MXMED_SYSTEM_WIDE_PRODUCT_INVENTORY_V1`
-**Versión:** `1.2.0`
+**Versión:** `1.3.0`
 **Fecha:** 2026-07-18
 **Método:** auditoría estática completa en cobertura
 **Runtime:** no ejecutado
@@ -13,6 +13,10 @@ Este documento materializa `MXMED_SYSTEM_WIDE_PRODUCT_INVENTORY_V1` y es la fuen
 - [Registro maestro de deuda](./MXMED_REGISTRO_MAESTRO_DE_DEUDA_PRODUCTO.md)
 - [Contrato maestro y PP-Decisiones](./PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md)
 - [Requisitos del plano de control de operadores](./MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md)
+- [Aprobación directoral](./MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md)
+
+Estado vigente: PP278 aprueba 30 requisitos atómicos y deja Activity 2
+`UNBLOCKED_READY_NOT_STARTED`; los totales implementados no cambian.
 
 ## 2. Propósito
 
@@ -788,3 +792,35 @@ Documento rector: [Reconciliación histórica funcional](./MXMED_RECONCILIACION_
 | 1.0.0 | 2026-07-17 | Inventario estático inicial, crosswalk 92/92 y propuesta no oficial de 11 grupos/22 actividades |
 | 1.1.0 | 2026-07-17 | Amendment del plano de control; ciclo oficial 0/22, PG-10 renombrado y requisitos futuros separados de totales implementados |
 | 1.2.0 | 2026-07-18 | Reconciliación histórica; requisitos futuros/rechazados separados, totales implementados sin cambio y contador 1/22 |
+| 1.3.0 | 2026-07-18 | PP278 registra approved requirements sin inflar pantallas, endpoints, tablas, roles o eventos |
+
+## 36. DIRECTOR DECISION APPROVAL AMENDMENT
+
+**Contrato:** `MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1`
+
+Las 30 decisiones aprobadas se registran como `approved_requirement` e
+`implementation_ready_contract`; no como inventario implementado.
+
+Totales preservados:
+
+- entradas: 953;
+- superficies: 143;
+- endpoints/API: 166;
+- tablas/entidades: 47;
+- pantallas implementadas: 31.
+
+| Requisito aprobado | Clasificación de inventario | Implementado |
+|---|---|---:|
+| policy, códigos, matriz, estados, cuotas, denials y add-ons | `implementation_ready_contract` | no |
+| Call Center, telefonía y WhatsApp operativo | `required_future_surface` | no |
+| IA Agenda/fallback/imágenes/redacción | `deferred_specialized_implementation` | no |
+| claim/ownership/publicación completos | `approved_requirement` | no |
+| doce roles, sessions, lifecycle y platform cases | `required_future_surface` | no |
+| retención por clase e interacción medicamentosa | `deferred_specialized_implementation` | no |
+
+No se agregan pantallas, endpoints, tablas, roles, eventos, add-ons, cases,
+proveedores o agentes a los totales actuales. Actividad 2 queda
+`UNBLOCKED_READY_NOT_STARTED`, contador `1/22`.
+
+Documento rector:
+[Aprobación directoral](./MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md).

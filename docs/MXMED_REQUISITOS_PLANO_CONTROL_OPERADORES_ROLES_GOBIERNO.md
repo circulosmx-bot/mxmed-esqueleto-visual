@@ -1,9 +1,9 @@
 # Requisitos del plano de control de operadores, roles y gobierno — México Médico
 
 **Contrato:** `MXMED_OPERATOR_CONTROL_PLANE_REQUIREMENTS_V1`
-**Versión:** `1.1.0`
+**Versión:** `1.2.0`
 **Fecha contractual:** 2026-07-18
-**Estado documental:** `documented_required_future`
+**Estado documental:** `director_approved_required_future`
 **Autoridad:** requerimiento de dirección de plataforma
 **Implementación confirmada por este contrato:** ninguna
 **Código funcional modificado:** 0
@@ -17,6 +17,11 @@ Referencias:
 - [Registro maestro de deuda](./MXMED_REGISTRO_MAESTRO_DE_DEUDA_PRODUCTO.md)
 - [Inventario global](./MXMED_INVENTARIO_GLOBAL_PANTALLAS_FUNCIONES_APIS_DATOS.md)
 - [Contrato maestro y PP-Decisiones](./PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md)
+- [Aprobación directoral](./MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md)
+
+Estado vigente: doce roles y controles `director_approved`, implementados 0;
+Activity 2 `UNBLOCKED_READY_NOT_STARTED`. Los apartados preliminares se
+conservan como historia y el amendment final establece el contrato aprobado.
 
 ## 2. Propósito
 
@@ -439,3 +444,67 @@ se reabre. Su webhook real permanece
 |---|---|---|---|
 | 1.0.0 | 2026-07-17 | Contrato documental inicial del plano interno, roles y gobierno; contador 0/22 sin cambio | `PRODUCT-DOC/MXMed-Operator-Control-Plane-And-Platform-Roles-Requirement-Amendment-01` |
 | 1.1.0 | 2026-07-18 | Crosswalk histórico, superadmin superseded, roles candidatos, publication moderation, dry-run y pagos manuales R1–R3; contador 1/22 | `PRODUCT-AUDIT/MXMed-Historical-Functional-Documents-Reconciliation-01` |
+| 1.2.0 | 2026-07-18 | PP278 aprueba doce roles y gobierno como requisitos futuros; implementación 0 y Activity 2 ready/not started | `PRODUCT-DOC/MXMed-Plans-Capabilities-Ownership-Lifecycle-Director-Decision-Approval-01` |
+
+## 31. DIRECTOR DECISION APPROVAL AMENDMENT
+
+**Contrato:** `MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1`
+
+### Catálogo aprobado de requisitos de rol
+
+1. `platform_director`;
+2. `break_glass_superadmin`;
+3. `platform_admin`;
+4. `operations_manager`;
+5. `support_advisor`;
+6. `profile_claim_reviewer`;
+7. `billing_subscription_operator`;
+8. `content_moderator`;
+9. `privacy_security_officer`;
+10. `technical_operations_viewer`;
+11. `audit_read_only`;
+12. `call_center_agenda_operator`.
+
+Son requisitos `director_approved`; roles implementados: 0. El rol Call Center
+opera sólo citas de perfiles médicos elegibles con add-on activo y autorización;
+no tiene clínica, pagos, ownership, moderación o administración interna.
+
+### Riesgo y aprobaciones
+
+- R0: lectura.
+- R1: acción reversible.
+- R2: caso, motivo, evidencia, before/after, audit y notificación.
+- R3: MFA, reauth, doble aprobación, separación de funciones, trazabilidad,
+  reversión posible y revisión posterior.
+
+### Sesiones
+
+`support_assisted_session` es temporal, case-bound, scopiada, expira, conserva
+identidad, es lectura por defecto, muestra banner y audita. No existe
+suplantación silenciosa. `extraordinary_clinical_access` es R3, mínimo,
+temporal, con doble aprobación y sin actos médicos.
+
+### Lifecycle de operadores
+
+`invited → pending_verification → pending_mfa → active →
+temporarily_suspended → access_review_required → revoked → archived`.
+Revisión general cada seis meses y crítica cada tres. Baja revoca sesiones de
+inmediato; permisos temporales expiran; último director protegido.
+
+### Platform cases
+
+Tipos iniciales: account_access, profile_claim, profile_dispute, billing,
+moderation, privacy, security, technical, clinical_access_request,
+operator_access, incident y call_center_escalation. Estados: draft, open,
+assigned, in_progress, waiting_for_user, waiting_for_internal_approval,
+waiting_for_external_authority, resolved, closed, cancelled y reopened. Toda
+acción R2/R3 se vincula a caso y el cierre exige resolución documentada.
+
+### Intervención y límites
+
+Moderación/intervención exige scope, caso, motivo, evidencia, referencia,
+before/after, auditoría, aviso y apelación. R3 exige doble aprobación. Pagos
+manuales, SPEI, CFDI, consola integral, Call Center y workflows de operadores
+permanecen no implementados y fuera del núcleo de Actividad 2.
+
+Actividad 2: `UNBLOCKED_READY_NOT_STARTED`; contador `1/22`.

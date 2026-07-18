@@ -1,7 +1,7 @@
 # Registro Maestro de Deuda de Producto — México Médico
 
 **Contrato:** `MXMED_PRODUCT_DEBT_REGISTRY_V1`
-**Versión:** `1.2.0`
+**Versión:** `1.3.0`
 **Fecha de incorporación:** 2026-07-17
 **Última revisión:** 2026-07-18
 **Estado:** canónico, versionado y mantenible
@@ -48,8 +48,8 @@ No incluye implementación ni auditorías funcionales detalladas. No ejecuta apl
 - Datos reales/costo real: no iniciados.
 - Agenda: v1 funcional consolidada, con deuda explícita de convergencia/hardening.
 - Stripe backend: PaymentIntent, webhook, activación y flujo E2E DEV/local cerrados como referencia.
-- Registro de deuda: 105 entradas en versión 1.2.
-- Ciclo principal de producto: `1/22`; Actividad 1 concluida y Actividad 2 bloqueada hasta aprobación directoral.
+- Registro de deuda: 106 entradas en versión 1.3.
+- Ciclo principal de producto: `1/22`; Actividad 1 concluida y Actividad 2 `UNBLOCKED_READY_NOT_STARTED`.
 - Microfase 25: no existe.
 
 ## 5. Reglas de gobernanza
@@ -144,21 +144,21 @@ Prioridades:
 
 | Métrica | Total |
 |---|---:|
-| Entradas | 105 |
+| Entradas | 106 |
 | CLOSED_REFERENCE_ONLY | 4 |
-| CONFIRMED_DEBT | 14 |
-| DECISION_PENDING | 32 |
+| CONFIRMED_DEBT | 40 |
+| DECISION_PENDING | 12 |
 | DEFERRED_REFACTOR | 6 |
 | PARTIAL_IMPLEMENTATION | 10 |
-| REQUIRES_AUDIT | 26 |
+| REQUIRES_AUDIT | 21 |
 | RUNTIME_GATE | 13 |
 | P0 | 44 |
-| P1 | 44 |
+| P1 | 45 |
 | P2 | 12 |
 | P3 | 5 |
 | estado DEFERRED | 6 |
 | estado GATED | 13 |
-| estado OPEN | 82 |
+| estado OPEN | 83 |
 | estado PROTECTED | 4 |
 
 Lectura ejecutiva:
@@ -166,29 +166,30 @@ Lectura ejecutiva:
 - Los P0 se concentran en identidad, autorización, clínica, privacidad, pagos y runtime.
 - `REQUIRES_AUDIT` preserva veracidad donde el repositorio sólo permite afirmar presencia o ausencia de evidencia.
 - Los cierres Stripe/AWS evitan re-trabajo.
-- El inventario global PP274 está cerrado; la siguiente actividad es PG-01 read-only, Actividad 1 de 22, aún no iniciada.
+- PP278 resuelve el gate directoral de PG-01; Actividad 2 queda lista, no iniciada, y requiere autorización separada.
 
 ## 10. Registro maestro
 
 | ID | Título | Clasificación | Prioridad | Estado | Grupo |
 |---|---|---|---|---|---|
-| `CAP-001` | Matriz canónica única de planes y capacidades | `DECISION_PENDING` | `P1` | `OPEN` | `G1` |
-| `CAP-002` | Cuotas y límites por plan | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G1` |
-| `CAP-003` | Estados homogéneos de capacidades | `DECISION_PENDING` | `P1` | `OPEN` | `G1` |
-| `CAP-004` | Ownership separado del plan gratuito | `DECISION_PENDING` | `P1` | `OPEN` | `G1` |
-| `CAP-005` | Máquina de estados comercial completa | `DECISION_PENDING` | `P1` | `OPEN` | `G1` |
-| `CAP-006` | Downgrade, reactivación y conservación de datos | `DECISION_PENDING` | `P0` | `OPEN` | `G1` |
-| `CAP-007` | Patrón visual único de bloqueo y upsell | `REQUIRES_AUDIT` | `P2` | `OPEN` | `G1` |
-| `CAP-008` | Enforcement equivalente frontend y backend | `REQUIRES_AUDIT` | `P0` | `OPEN` | `G1` |
-| `CAP-009` | Contrato gratuito no administrado vs administrado | `DECISION_PENDING` | `P1` | `OPEN` | `G1` |
+| `CAP-001` | Matriz canónica única de planes y capacidades | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G1` |
+| `CAP-002` | Cuotas y límites por plan | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G1` |
+| `CAP-003` | Estados homogéneos de capacidades | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G1` |
+| `CAP-004` | Ownership separado del plan gratuito | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G1` |
+| `CAP-005` | Máquina de estados comercial completa | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G1` |
+| `CAP-006` | Downgrade, reactivación y conservación de datos | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G1` |
+| `CAP-007` | Patrón visual único de bloqueo y upsell | `CONFIRMED_DEBT` | `P2` | `OPEN` | `G1` |
+| `CAP-008` | Enforcement equivalente frontend y backend | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G1` |
+| `CAP-009` | Contrato gratuito no administrado vs administrado | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G1` |
 | `CAP-010` | Perfiles AWS Cost-Aware y profile-aware protegidos | `CLOSED_REFERENCE_ONLY` | `P3` | `PROTECTED` | `G7` |
+| `CAP-011` | Framework de add-ons y Call Center | `CONFIRMED_DEBT` | `P1` | `OPEN` | `PG-01` |
 | `OWN-001` | Flujo real de reclamo de perfil | `PARTIAL_IMPLEMENTATION` | `P1` | `OPEN` | `G2` |
-| `OWN-002` | Estados y revisión manual del reclamo | `DECISION_PENDING` | `P1` | `OPEN` | `G2` |
-| `OWN-003` | Disputa, duplicado, revocación y transferencia | `DECISION_PENDING` | `P0` | `OPEN` | `G2` |
+| `OWN-002` | Estados y revisión manual del reclamo | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G2` |
+| `OWN-003` | Disputa, duplicado, revocación y transferencia | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G2` |
 | `AUTH-001` | Login productivo del médico | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G2` |
 | `AUTH-002` | Recuperación de cuenta y tokens de un solo uso | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G2` |
 | `AUTH-003` | Ciclo de sesión y cambios sensibles | `REQUIRES_AUDIT` | `P0` | `OPEN` | `G2` |
-| `AUTH-004` | MFA por riesgo y cuentas operativas | `DECISION_PENDING` | `P0` | `OPEN` | `G2` |
+| `AUTH-004` | MFA por riesgo y cuentas operativas | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G2` |
 | `UX-001` | Inventario global de pantallas y funciones | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G8` |
 | `UX-002` | Consistencia de navegación y jerarquía visual | `REQUIRES_AUDIT` | `P2` | `OPEN` | `G8` |
 | `UX-003` | Cobertura de estados vacío, carga, error y éxito | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G8` |
@@ -197,22 +198,22 @@ Lectura ejecutiva:
 | `UX-006` | Lenguaje, copy y errores accionables | `REQUIRES_AUDIT` | `P2` | `OPEN` | `G8` |
 | `UX-007` | Ayuda contextual y centro de ayuda | `REQUIRES_AUDIT` | `P2` | `OPEN` | `G8` |
 | `PUB-001` | CTA de reclamo y sugerencia de corrección | `PARTIAL_IMPLEMENTATION` | `P1` | `OPEN` | `G6` |
-| `PUB-002` | Teléfono y WhatsApp por plan/ownership | `DECISION_PENDING` | `P1` | `OPEN` | `G6` |
+| `PUB-002` | Teléfono y WhatsApp por plan/ownership | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G6` |
 | `PUB-003` | Maps sólo como enlace externo | `PARTIAL_IMPLEMENTATION` | `P2` | `OPEN` | `G6` |
 | `PUB-004` | Rutas SEO y canonical productivo | `PARTIAL_IMPLEMENTATION` | `P1` | `OPEN` | `G6` |
-| `PUB-005` | Galería, imagen y límites públicos | `REQUIRES_AUDIT` | `P2` | `OPEN` | `G6` |
+| `PUB-005` | Galería, imagen y límites públicos | `CONFIRMED_DEBT` | `P2` | `OPEN` | `G6` |
 | `REV-001` | Persistencia de comentarios y reseñas | `PARTIAL_IMPLEMENTATION` | `P1` | `OPEN` | `G6` |
-| `REV-002` | Moderación, respuesta, denuncia y spam | `DECISION_PENDING` | `P1` | `OPEN` | `G6` |
+| `REV-002` | Moderación, respuesta, denuncia y spam | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G6` |
 | `REV-003` | Privacidad y reputación en reseñas | `DECISION_PENDING` | `P0` | `OPEN` | `G6` |
 | `AGD-001` | Convergencia shell Agenda y frontend legacy | `DEFERRED_REFACTOR` | `P2` | `DEFERRED` | `G3` |
 | `AGD-002` | Retiro progresivo de localStorage legacy en bloqueos | `DEFERRED_REFACTOR` | `P2` | `DEFERRED` | `G3` |
-| `AGD-003` | Agenda sin expediente: frontera de datos permitidos | `DECISION_PENDING` | `P0` | `OPEN` | `G3` |
-| `AGD-004` | Creación controlada de expediente desde Agenda | `DECISION_PENDING` | `P0` | `OPEN` | `G3` |
+| `AGD-003` | Agenda sin expediente: frontera de datos permitidos | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G3` |
+| `AGD-004` | Creación controlada de expediente desde Agenda | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G3` |
 | `AGD-005` | Concurrencia, reintentos y estados borde de Agenda | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G3` |
 | `AGD-006` | Política de riesgo por inasistencia y cancelación | `DECISION_PENDING` | `P0` | `OPEN` | `PG-03` |
 | `PAT-001` | Detección y conciliación de contactos duplicados | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G3` |
 | `PAT-002` | Identidad canónica y contratos divergentes | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G3` |
-| `PAT-003` | Separación contacto de paciente y expediente clínico | `DECISION_PENDING` | `P0` | `OPEN` | `G3` |
+| `PAT-003` | Separación contacto de paciente y expediente clínico | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G3` |
 | `CLN-001` | Persistencia clínica heterogénea | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G3` |
 | `CLN-002` | Consentimiento informado clínico | `PARTIAL_IMPLEMENTATION` | `P0` | `OPEN` | `G3` |
 | `CLN-003` | Adjuntos clínicos del expediente | `PARTIAL_IMPLEMENTATION` | `P0` | `OPEN` | `G3` |
@@ -228,16 +229,16 @@ Lectura ejecutiva:
 | `NOT-004` | Preferencias obligatorias y configurables | `DECISION_PENDING` | `P1` | `OPEN` | `G4` |
 | `NOT-005` | Entregas, reintentos, fallos y auditoría | `DECISION_PENDING` | `P1` | `OPEN` | `G4` |
 | `SUB-001` | Arquitectura Stripe backend cerrada | `CLOSED_REFERENCE_ONLY` | `P3` | `PROTECTED` | `G5` |
-| `SUB-002` | Ciclo comercial completo posterior al pago | `DECISION_PENDING` | `P1` | `OPEN` | `G5` |
-| `SUB-003` | Mensajes y datos al bloquear capacidades | `DECISION_PENDING` | `P1` | `OPEN` | `G5` |
+| `SUB-002` | Ciclo comercial completo posterior al pago | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G5` |
+| `SUB-003` | Mensajes y datos al bloquear capacidades | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G5` |
 | `SUB-004` | Duplicación parcial payment_route→checkout | `DEFERRED_REFACTOR` | `P3` | `DEFERRED` | `G5` |
 | `SUB-005` | Conciliación y override de pagos manuales | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-06` |
 | `DATA-001` | Inventario pantalla→API→dato→evento | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G7` |
-| `DATA-002` | Scope, ownership, plan, rol y autorización por flujo | `REQUIRES_AUDIT` | `P0` | `OPEN` | `G7` |
+| `DATA-002` | Scope, ownership, plan, rol y autorización por flujo | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G7` |
 | `DATA-003` | Idempotencia, errores, retención y downgrade | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G7` |
 | `DATA-004` | Zona horaria, concurrencia, offline y borradores | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G7` |
 | `ADM-001` | Backoffice de soporte, moderación y disputas | `PARTIAL_IMPLEMENTATION` | `P1` | `OPEN` | `PG-10` |
-| `ADM-002` | Roles internos y break-glass | `DECISION_PENDING` | `P0` | `OPEN` | `G8` |
+| `ADM-002` | Roles internos y break-glass | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G8` |
 | `ADM-003` | Lifecycle de operadores internos y access reviews | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-02` |
 | `ADM-004` | Case management y sesiones asistidas de soporte | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-10` |
 | `ADM-005` | Doble aprobación y separación de funciones | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-08` |
@@ -246,9 +247,9 @@ Lectura ejecutiva:
 | `ADM-008` | UX y accesibilidad de la consola operativa | `DECISION_PENDING` | `P1` | `OPEN` | `PG-09` |
 | `ADM-009` | Máquina de publicación y moderación | `CONFIRMED_DEBT` | `P1` | `OPEN` | `PG-07` |
 | `ADM-010` | Scopes de mercadotecnia y citas globales | `DECISION_PENDING` | `P1` | `OPEN` | `PG-10` |
-| `AI-001` | IA Profesional: plan, cuota y presupuesto | `DECISION_PENDING` | `P1` | `OPEN` | `G8` |
-| `AI-002` | IA como borrador con confirmación explícita | `DECISION_PENDING` | `P0` | `OPEN` | `G8` |
-| `AI-003` | Descomposición de capabilities y seguridad IA | `DECISION_PENDING` | `P0` | `OPEN` | `PG-11` |
+| `AI-001` | IA Profesional: plan, cuota y presupuesto | `CONFIRMED_DEBT` | `P1` | `OPEN` | `G8` |
+| `AI-002` | IA como borrador con confirmación explícita | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G8` |
+| `AI-003` | Descomposición de capabilities y seguridad IA | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-11` |
 | `PRIV-001` | Privacidad, retención, eliminación y analítica | `DECISION_PENDING` | `P0` | `OPEN` | `G7` |
 | `PRIV-002` | Minimización de logs, métricas y evidencia | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G7` |
 | `DOC-001` | Índice canónico de documentos y contratos vigentes | `REQUIRES_AUDIT` | `P2` | `OPEN` | `G8` |
@@ -561,6 +562,34 @@ Lectura ejecutiva:
 - **Owner funcional:** `platform-architecture-owner`
 - **Fecha de incorporación:** `2026-07-17`
 - **Última revisión:** `2026-07-17`
+
+#### CAP-011 — Framework de add-ons y Call Center
+
+- **ID:** `CAP-011`
+- **Título:** Framework de add-ons y Call Center
+- **Dominio:** `planes-complementos-call-center`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P1`
+- **Estado:** `OPEN`
+- **Descripción actual:** PP278 aprueba el contrato de add-ons y Call Center, pero no existe implementación confirmada de catálogo, elegibilidad, estados, configuración, operación o fair use.
+- **Evidencia:** `DEC-003C..003F`; `MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1`.
+- **Archivos o decisiones relacionadas:** `CAP-001/002/003/008`, `SUB-002/003`, `ADM-001/002/004`, `DEC-003C..003F`.
+- **Efecto visible para el usuario:** El complemento no debe aparecer como contratable u operativo antes de implementación y QA separados.
+- **Riesgo de negocio:** Precio tentativo tratado como definitivo, renovación/prorrateo incorrectos o promesa de servicio inexistente.
+- **Riesgo de datos o seguridad:** Operación de citas fuera de scope, WhatsApp/voz sin proveedor o acceso clínico accidental.
+- **Planes afectados:** `standard`, `optimum`, `professional`.
+- **Roles afectados:** `profile_owner`, `call_center_agenda_operator`.
+- **Capacidades relacionadas:** `addon-framework`, `call-center-complementary`, `call-center-integral`, `call_center_ai_fallback`.
+- **Dependencias:** Activity 2 para contrato; PG-02/05/06/08/10/11 para implementación especializada.
+- **Decisión aprobada:** Add-on por perfil, una Agenda, dos modalidades, precio tentativo, renovación anual, prorrateo, anticipo mensual y fair use.
+- **Auditoría requerida:** Policy, elegibilidad, lifecycle, denials, precio versionado, autorización, casos y no acceso clínico.
+- **Grupo recomendado:** `PG-01`.
+- **Acción recomendada:** Modelar contrato disabled/fail-closed en Activity 2; construir servicio sólo en actividad posterior.
+- **Criterio de aceptación:** Catálogo versionado y tests de elegibilidad sin telefonía, WhatsApp, operador o IA productivos.
+- **No repetición:** No construir Call Center ni publicar precios definitivos desde esta actividad documental.
+- **Owner funcional:** `commercial-addon-owner`
+- **Fecha de incorporación:** `2026-07-18`
+- **Última revisión:** `2026-07-18`
 
 ### OWN — Propiedad y reclamo
 
@@ -3397,10 +3426,62 @@ Ampliaciones sin duplicar tema:
 - **Fecha de incorporación:** `2026-07-18`
 - **Última revisión:** `2026-07-18`
 
-## 21. Historial de cambios
+## 21. Director Decision Approval Amendment
+
+**Contrato:** `MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1`
+
+PP278 resuelve el bloqueo de decisión para el núcleo PG-01. Resolver el gate
+directoral no resuelve la deuda: las entradas permanecen `OPEN` hasta
+implementación, QA y evidencia. Los detalles anteriores conservan el snapshot
+preaprobación; esta tabla establece la clasificación y gate efectivos.
+
+### Delta
+
+- total anterior: 105;
+- altas: 1 (`CAP-011`);
+- total final: 106;
+- reclassifications: 25;
+- IDs eliminados: 0;
+- IDs renumerados: 0;
+- duplicados: 0;
+- estado de implementación: 83 `OPEN`, 13 `GATED`, 6 `DEFERRED`, 4 `PROTECTED`.
+
+### Deudas reclasificadas por decisión aprobada
+
+| IDs | Clasificación efectiva | Gate de decisión | Gate de implementación |
+|---|---|---|---|
+| CAP-001..009 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | núcleo Activity 2 |
+| OWN-002/003 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | gates Activity 2; workflow PG-02 |
+| AUTH-004 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | PG-02/08 |
+| PUB-002/005 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | contrato Activity 2; delivery/proceso posterior |
+| REV-002 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | PG-07/10 |
+| AGD-003/004, PAT-003 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | frontera Activity 2; clínica PG-04 |
+| SUB-002/003 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | Activity 2 |
+| DATA-002 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | Activity 2/PG-08 |
+| ADM-002 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | PG-02/08/10 |
+| AI-001/002/003 | `CONFIRMED_DEBT` | `RESOLVED_BY_PP278` | cuotas/contrato Activity 2; IA PG-11 |
+
+### Entradas ampliadas sin cierre
+
+`OWN-001`, `AUTH-001/002`, `PUB-001`, `PAT-001`, `CLN-005/007`,
+`NOT-003..005`, `SUB-005`, `ADM-001/003..010` y `PRIV-001` reciben como
+dependencia el contrato aprobado, pero conservan su clasificación efectiva
+cuando la decisión no elimina el déficit de implementación/auditoría.
+
+### Parámetros diferidos
+
+Proveedores, costos reales IA, precios finales Call Center, retención no clínica
+exacta, interacción medicamentosa, instituciones, créditos, pagos manuales,
+SPEI, CFDI, consola, Call Center, agentes IA y push no se marcan resueltos. No
+bloquean el núcleo Activity 2 y permanecen gated por su PG o actividad futura.
+
+Actividad 2: `UNBLOCKED_READY_NOT_STARTED`; contador: `1/22`.
+
+## 22. Historial de cambios
 
 | Versión | Fecha | Cambio | Autoridad |
 |---|---|---|---|
 | 1.0.0 | 2026-07-17 | Alta del registro canónico con 92 entradas y plan de auditoría por grupos | `PRODUCT-DOC/MXMed-System-Wide-Product-Debt-Registry-01` |
 | 1.1.0 | 2026-07-17 | Amendment del plano de control: 7 altas, ADM-001/002 ampliadas, 99 entradas y contador principal 0/22 | `PRODUCT-DOC/MXMed-Operator-Control-Plane-And-Platform-Roles-Requirement-Amendment-01` |
 | 1.2.0 | 2026-07-18 | Reconciliación histórica: 6 altas, 20 ampliaciones, 105 entradas y contador principal 1/22 | `PRODUCT-AUDIT/MXMed-Historical-Functional-Documents-Reconciliation-01` |
+| 1.3.0 | 2026-07-18 | PP278: 30 decisiones aprobadas, 25 reclasificaciones, alta CAP-011, 106 entradas y Activity 2 ready/not started | `PRODUCT-DOC/MXMed-Plans-Capabilities-Ownership-Lifecycle-Director-Decision-Approval-01` |

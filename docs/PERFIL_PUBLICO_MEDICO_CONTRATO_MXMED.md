@@ -60323,3 +60323,77 @@ AWS 24/24 y Stripe permanecen protegidos; deployment no iniciado y tráfico
 público `NO-GO`.
 
 ---
+
+## PP-Decisiones 278 - MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1
+
+Fecha contractual: 2026-07-18.
+
+Resultado: `PASS - MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_DIRECTOR_DECISION_APPROVAL_V1`.
+
+Actividad auxiliar documental que formaliza la aprobación del director sobre
+planes, capacidades, ownership, lifecycle y gobierno. Documento canónico:
+
+`docs/MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`
+
+Quedan `director_approved` exactamente 30 decisiones:
+
+- DEC-001, DEC-002;
+- DEC-003A, DEC-003B, DEC-003C, DEC-003D, DEC-003E, DEC-003F;
+- DEC-004A, DEC-004B, DEC-004C;
+- DEC-005A, DEC-005B, DEC-005C, DEC-005D, DEC-005E;
+- DEC-006A, DEC-006B;
+- DEC-007A, DEC-007B;
+- DEC-008A, DEC-008B;
+- DEC-009A, DEC-009B;
+- DEC-010A;
+- DEC-011A, DEC-011B, DEC-011C, DEC-011D, DEC-011E.
+
+Cada decisión conserva `implementationAuthorized=false`: esta aprobación
+autoriza preparar una actividad posterior, no implementar dentro de PP278.
+
+Se aprueban códigos `free`, `basic`, `standard`, `optimum`, `professional` y
+`HYBRID_VERSIONED_POLICY_V1`; matriz inicial para perfiles médicos; framework
+de add-ons; Call Center Complementario/Integral futuro; cuotas; claim,
+ownership y publicación separados; lifecycle comercial y estados efectivos;
+grace de quince días; prórrogas ordinarias/excepcionales de 7/15 días;
+downgrade con `archived_read_only`; frontera Agenda/contacto/Expediente;
+denials backend; y doce roles como requisitos de gobierno.
+
+Precios Call Center tentativos pre-lanzamiento:
+
+- Complementario: 1,999 MXN anuales;
+- Integral: 2,999 MXN anuales.
+
+No son precios definitivos ni oferta activa. Las cuotas IA de imágenes
+3/10/20/30 y redacción 15/30/60/100 también son provisionales. No se selecciona
+proveedor de voz, WhatsApp o IA.
+
+Parámetros diferidos: precios finales, proveedores, costos IA, dimensiones
+finales de imagen, retención no clínica exacta, interacción medicamentosa,
+perfiles institucionales, créditos adicionales, pagos manuales/SPEI/CFDI,
+consola, Call Center, agentes IA y push. Permanecen disabled/fail-closed y no
+bloquean el modelado del núcleo PG-01.
+
+La futura Actividad 2 puede implementar policy, códigos, matriz, catálogo y
+fuentes de capabilities, estados, gates, read-model, denials, downgrade,
+grace, cuotas, contratos add-on, tests y adapters. No puede construir Call
+Center, telefonía, WhatsApp, IA productiva, clínica nueva, consola, workflows
+de operadores, pagos manuales, sistema completo de notificaciones, migraciones
+destructivas ni deploy AWS.
+
+Assessment:
+
+- decisiones originales bloqueantes: 11;
+- decisiones atómicas aprobadas: 30/30;
+- bloqueadores originales no resueltos: 0;
+- parámetros diferidos que bloquean Activity 2: 0;
+- implementación iniciada: no;
+- Activity 2: `UNBLOCKED_READY_NOT_STARTED`;
+- contador principal: `1/22`;
+- código funcional modificado: 0.
+
+AWS 24/24 permanece cerrado offline. No se autoriza deploy, no se crean recursos
+y el tráfico público continúa `NO-GO`. Stripe, PaymentIntent, webhook y
+activación no se modifican.
+
+---
