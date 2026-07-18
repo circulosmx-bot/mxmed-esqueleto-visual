@@ -60267,3 +60267,59 @@ decisiones bloqueantes, es:
 Actividad 2 de 22.
 
 ---
+
+## PP-Decisiones 277 - MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1
+
+Fecha contractual: 2026-07-18.
+
+Resultado: `PASS - MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1`.
+
+Se incorporan ocho fuentes PDF, 29 páginas, como `historical_noncanonical` en:
+
+`docs/fuentes-historicas/mxmed-2025/`
+
+Documento canónico de reconciliación:
+
+`docs/MXMED_RECONCILIACION_DOCUMENTACION_HISTORICA_FUNCIONAL.md`
+
+Hashes preservados, en orden `HIST-SRC-001..008`:
+
+- `f7103b8cd19c456068f1cbf8f7255e398e60adc619fa08e742ef8a97e04a0551`;
+- `3e3e350b7627f07b7dd1232b3ccf78b46e4a98221845900adf353b181e797362`;
+- `080e8638693680aa9c971530c32798bcfea516f5a0f5485c2c0b27bb9eab2c98`;
+- `5b50cdb779ec3c5999bf6584276a9e6b8e6b9ce137ff9a88e7e1c27dcd256961`;
+- `82aac06efc6d0a07feb145dda199400fe9c71bcdd164fe3e269d8ad668f37445`;
+- `f28d149e1e2605be894c362215448a29143886be7f5e436d6a41dcc0d62eed0a`;
+- `a5f04d0c90038e78390cada536c4da1d7e204496422ffa31afa8001db90cebfc`;
+- `e39871eae471d1a4268d138814e3ea395189af41ddf08566a85c1521a0b471d3`.
+
+Las copias son byte-identical. Su preservación no demuestra vigencia,
+implementación, aprobación, cumplimiento legal o runtime. Precedencia:
+requisito explícito actual del director; PP/contrato aprobado; implementación
+actual; auditoría actual; fuente histórica; fixture/proyección. Ningún conflicto
+se resuelve silenciosamente.
+
+La reconciliación cubre 95 requisitos y los 22 triggers históricos. Se separan
+Agenda/contacto/Expediente, claim request/ownership/publicación, roles
+funcionales/internos, notificaciones/canales, backoffice, pago manual e IA. Una
+cita puede crear o vincular contacto operativo, no Expediente automático. Los
+actos clínicos no delegables y la integridad de Recetas pasan a auditoría
+especializada. Facturación a pacientes no es suscripción MXMed.
+
+Quedan expresamente abiertos: grace D+8 frente a 15 días; email obligatorio
+frente a configurable; generación de imágenes Standard+; marketing/citas
+globales; responsable sanitario; pagos manuales y provider IA. Se rechazan
+lista negra literal, autoenrollment de padecimientos, IA all-fields y acceso
+universal cotidiano. El superadmin histórico queda `superseded`.
+
+DEC-001 a DEC-011 continúan pendientes. Se recomienda un borrador de 20
+decisiones atómicas para que dirección pueda aprobar, modificar, rechazar o
+diferir cada tema; este número no es oficial y ninguna DEC se aprueba aquí.
+
+Código funcional modificado: 0. El registro de deuda queda en 105 entradas; el
+inventario implementado no se infla. El contador principal permanece `1/22` y
+la Actividad 2 sigue bloqueada hasta aprobación explícita del paquete revisado.
+AWS 24/24 y Stripe permanecen protegidos; deployment no iniciado y tráfico
+público `NO-GO`.
+
+---

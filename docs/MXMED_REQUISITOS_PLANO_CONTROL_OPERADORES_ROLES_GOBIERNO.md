@@ -1,8 +1,8 @@
 # Requisitos del plano de control de operadores, roles y gobierno — México Médico
 
 **Contrato:** `MXMED_OPERATOR_CONTROL_PLANE_REQUIREMENTS_V1`
-**Versión:** `1.0.0`
-**Fecha contractual:** 2026-07-17
+**Versión:** `1.1.0`
+**Fecha contractual:** 2026-07-18
 **Estado documental:** `documented_required_future`
 **Autoridad:** requerimiento de dirección de plataforma
 **Implementación confirmada por este contrato:** ninguna
@@ -38,12 +38,12 @@ Incluye requisitos documentales para:
 
 No implementa dashboard, login interno, MFA, APIs, tablas, permisos, casos, colas, sesiones privilegiadas, auditoría de plataforma ni runbooks ejecutables. Tampoco declara que los nombres preliminares sean definitivos.
 
-## 4. Relación con el ciclo 0/22
+## 4. Relación con el ciclo 1/22
 
-- Contador principal: `0/22`.
+- Contador principal: `1/22`.
 - Actividad 1: `PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01`.
-- Estado de la Actividad 1 durante este amendment: `no iniciada`.
-- Efecto de un PASS de este amendment: Actividad 1 desbloqueada, sin iniciarla.
+- Estado de la Actividad 1: `concluida` en PP276.
+- Estado de la Actividad 2: `bloqueada` hasta aprobación directoral.
 - Ciclo AWS offline: `24/24 concluido`; despliegue real no iniciado y tráfico `NO-GO`.
 
 Este amendment no incrementa el contador, no agrega actividades y no crea una Microfase 25.
@@ -355,7 +355,7 @@ Este contrato queda aceptado cuando:
 - masking, auditoría, notificaciones, UX, API y entidades futuras quedan contractuales sin afirmar implementación;
 - las 16 preguntas tienen grupo;
 - el registro de deuda, inventario global y PP275 son consistentes;
-- el contador sigue `0/22` y la Actividad 1 no fue iniciada;
+- el contador sigue `1/22` y la Actividad 2 permanece bloqueada;
 - código, schemas, tests e infraestructura modificados son 0.
 
 ## 28. No repetición
@@ -367,8 +367,69 @@ Este contrato queda aceptado cuando:
 - No inventar endpoints, tablas, cuentas, secretos, personas ni datos clínicos.
 - No iniciar PG-01 desde este amendment.
 
-## 29. Historial de cambios
+## 29. HISTORICAL FUNCTIONAL SOURCES RECONCILIATION AMENDMENT
+
+**Contrato:** `MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1`
+**Autoridad de las fuentes:** `historical_noncanonical`
+**Resultado:** crosswalk y requisitos futuros; cero roles creados o declarados definitivos.
+
+### Crosswalk de roles históricos
+
+| Rol histórico | Equivalencia propuesta | Clasificación/límite |
+|---|---|---|
+| Administrador Principal / Súper Administrador | `platform_director` + `platform_admin` scopiado + `break_glass_superadmin` | acceso universal cotidiano `superseded` |
+| Operador Administrativo Económico | `billing_subscription_operator` | conciliación; pago manual/override R3 |
+| Operador de Asistencia Técnica | `support_advisor` + `technical_operations_viewer` | recuperación y observabilidad separadas |
+| Operador de Verificación/Clasificación | `profile_claim_reviewer` + `content_moderator` | claim, publicación y grupos separados |
+| Operador de Mercadotecnia/Difusión | role o permission set pendiente | `requires_specialized_audit`; sin clínica |
+| Operador de Citas Global | servicio scopiado/temporal pendiente | no reutilizar operador Agenda por inferencia |
+| Administrador/Titular de perfil | ownership + rol funcional por entidad | nunca rol interno de plataforma |
+| Operador de Perfil/Asistente | `agenda_operator` scopiado | Agenda only; no soporte global |
+| Responsable Sanitario | rol institucional pendiente | no se convierte automáticamente en owner/director |
+
+No se crean roles. Mercadotecnia y citas globales requieren decidir si son roles
+separados, permisos, scopes temporales o variantes gobernadas. El plan comercial
+no concede ninguna equivalencia.
+
+### Conflictos y elementos superseded
+
+- “acceso universal” se sustituye por permisos explícitos, caso, MFA, riesgo,
+  doble aprobación y break-glass temporal;
+- dos cuentas históricas no fijan el mínimo actual de directores;
+- 2FA de perfiles reclamados refina AUTH-004, pero no sustituye MFA interno;
+- passkeys opcionales quedan futuras;
+- responsable sanitario, representante y owner son autoridades diferentes;
+- publicación/moderación no reutiliza estados de claim o suscripción.
+
+### Dry-run y agentes
+
+`dryRun:true` permanece requisito futuro para agentes y acciones sensibles. Debe
+devolver acción, scope, targets, efectos y denials sin ejecutar. IA interna usa
+tools allowlist, datos mínimos, caso, aprobación humana, audit y kill switch. El
+modelo “todos los campos” queda rechazado.
+
+### Publication moderation
+
+Máquina candidata independiente: `draft`, `pending_review`, `approved`,
+`published`, `changes_pending_review`, `suspended`. La cola requiere owner, SLA,
+escalamiento, before/after, aprobar/rechazar/pedir ajustes y auditoría. Claim
+reviewer y content moderator no obtienen privilegios de pago o clínica.
+
+### Payments manual review
+
+| Acción | Riesgo | Control mínimo |
+|---|---|---|
+| reenviar enlace | R1 | canal permitido, audit e idempotencia |
+| aplicar prórroga | R2 | caso, motivo, duración aprobada; no altera alta/ranking |
+| registrar/acreditar pago manual | R3 | referencia, comprobante, conciliación y doble aprobación |
+| override de pago | R3 | excepción específica, reauth, audit y revisión posterior |
+
+No se implementan SPEI, acreditación, CFDI o cambio de plan. Stripe protegido no
+se reabre. Documento fuente: [reconciliación histórica](./MXMED_RECONCILIACION_DOCUMENTACION_HISTORICA_FUNCIONAL.md).
+
+## 30. Historial de cambios
 
 | Versión | Fecha | Cambio | Autoridad |
 |---|---|---|---|
 | 1.0.0 | 2026-07-17 | Contrato documental inicial del plano interno, roles y gobierno; contador 0/22 sin cambio | `PRODUCT-DOC/MXMed-Operator-Control-Plane-And-Platform-Roles-Requirement-Amendment-01` |
+| 1.1.0 | 2026-07-18 | Crosswalk histórico, superadmin superseded, roles candidatos, publication moderation, dry-run y pagos manuales R1–R3; contador 1/22 | `PRODUCT-AUDIT/MXMed-Historical-Functional-Documents-Reconciliation-01` |

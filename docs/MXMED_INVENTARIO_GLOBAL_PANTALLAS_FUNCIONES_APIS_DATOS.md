@@ -1,8 +1,8 @@
 # Inventario Global de Pantallas, Funciones, APIs y Datos — México Médico
 
 **Contrato:** `MXMED_SYSTEM_WIDE_PRODUCT_INVENTORY_V1`
-**Versión:** `1.1.0`
-**Fecha:** 2026-07-17
+**Versión:** `1.2.0`
+**Fecha:** 2026-07-18
 **Método:** auditoría estática completa en cobertura
 **Runtime:** no ejecutado
 
@@ -675,9 +675,9 @@ Cambios respecto de G1–G8: G3 se divide en Agenda/Pacientes y Clínico; G8 se 
 
 ## 30. Contador oficial
 
-Contador principal aprobado: **0/22 actividades completadas**, distribuidas en 11 grupos.
+Contador principal aprobado: **1/22 actividades completadas**, distribuidas en 11 grupos.
 
-Este amendment auxiliar no incrementa el contador, no pertenece a AWS y no crea Microfase 25. La Actividad 1 de 22 permanece no iniciada y queda desbloqueada sólo tras el PASS documental de `MXMED_OPERATOR_CONTROL_PLANE_REQUIREMENTS_V1`.
+La Actividad 1 de 22 concluyó en PP276. Esta reconciliación histórica auxiliar no incrementa el contador, no pertenece a AWS y no crea Microfase 25. La Actividad 2 permanece bloqueada hasta aprobar el paquete directoral revisado.
 
 ## 31. Orden recomendado
 
@@ -697,9 +697,9 @@ Este amendment auxiliar no incrementa el contador, no pertenece a AWS y no crea 
 
 El orden coloca planes/capabilities/ownership primero por dependencia transversal; identidad después; y autorización/datos antes de clínica, notificaciones y UX.
 
-## 32. Criterios para la siguiente auditoría
+## 32. Estado de la siguiente actividad
 
-La siguiente auditoría es `PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01`, Actividad 1 de 22. Debe ser read-only, tomar PG-01, reconciliar planes/capabilities/ownership y separar cuatro modelos: commercial entitlements, user functional roles, ownership/entity scope e internal operator permissions. Comparará frontend/backend/data sin decidir beneficios por intuición, impedirá inferir privilegios internos desde un plan, distinguirá dirección de break-glass y preservará Stripe/AWS. Esta actividad no fue iniciada por el amendment.
+`PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01` concluyó como Actividad 1 de 22. La siguiente actividad principal es `PRODUCT-IMPLEMENTATION/MXMed-Plans-Capabilities-Ownership-Lifecycle-Implementation-01`, Actividad 2 de 22, pero permanece bloqueada. Antes de iniciarla, dirección debe aprobar el paquete revisado derivado de la reconciliación histórica. Stripe/AWS continúan protegidos.
 
 ## 33. OPERATOR CONTROL PLANE REQUIREMENT AMENDMENT
 
@@ -731,9 +731,60 @@ Deudas relacionadas: `ADM-001` a `ADM-008`, `AUTH-004`, `CAP-008`, `DATA-002`, `
 
 Documento canónico: [Requisitos del plano de control de operadores](./MXMED_REQUISITOS_PLANO_CONTROL_OPERADORES_ROLES_GOBIERNO.md).
 
-## 34. Historial
+## 34. HISTORICAL FUNCTIONAL SOURCES RECONCILIATION AMENDMENT
+
+**Contrato:** `MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1`
+**Fecha:** 2026-07-18
+**Contador:** `1/22`; Actividad 2 bloqueada.
+
+Ocho PDF y 95 requisitos se registran como `historical_noncanonical`. No se
+agregan a las superficies implementadas. Permanecen exactamente iguales:
+
+- entradas inventariadas: 953;
+- superficies: 143;
+- APIs: 166;
+- entidades: 47;
+- pantallas implementadas: 31.
+
+### implemented_inventory
+
+No fue alterado. La reconciliación no confirma endpoints, tablas, eventos,
+roles, pantallas, providers IA, canales o flujos runtime por su mención en PDF.
+Los 22 triggers son requisitos históricos para PG-05, no eventos actuales
+adicionales. Los roles históricos son candidatos de crosswalk, no roles
+implementados.
+
+### historical_documented_requirements
+
+- Agenda puede crear/vincular contacto operativo; no expediente automático.
+- Claim requiere request, ownership y publicación como máquinas separadas.
+- No delegabilidad, integridad de Recetas y reimpresión auditada pasan a PG-04.
+- Los 22 triggers, preferencias y conflicto de email pasan a PG-05.
+- Grace D+8 frente a 15 días pasa como conflicto a PG-06.
+- Publicación/moderación y backoffice pasan a PG-07/PG-10.
+- Seis capabilities IA separadas pasan a PG-11/PG-04/PG-08.
+
+### required_future_surfaces
+
+Se documentan como futuras, sin incrementar totales: claim review documental,
+publication moderation queue, manual payment reconciliation, marketing/global
+booking scopes, notification delivery operations, attendance risk review y
+governed AI tools/dry-run.
+
+### rejected_or_superseded_requirements
+
+- acceso universal cotidiano del superadmin: `superseded`;
+- IA con todos los campos: `reject_for_safety`;
+- lista negra literal por inasistencia: `reject_for_safety`;
+- autoenrollment de padecimientos: `reject_for_safety`;
+- lista gris publicada: `requires_specialized_audit`, no inventario.
+
+Documento rector: [Reconciliación histórica funcional](./MXMED_RECONCILIACION_DOCUMENTACION_HISTORICA_FUNCIONAL.md).
+
+## 35. Historial
 
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0.0 | 2026-07-17 | Inventario estático inicial, crosswalk 92/92 y propuesta no oficial de 11 grupos/22 actividades |
 | 1.1.0 | 2026-07-17 | Amendment del plano de control; ciclo oficial 0/22, PG-10 renombrado y requisitos futuros separados de totales implementados |
+| 1.2.0 | 2026-07-18 | Reconciliación histórica; requisitos futuros/rechazados separados, totales implementados sin cambio y contador 1/22 |

@@ -739,3 +739,74 @@ cambios versionados son este documento y PP276.
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0.0 | 2026-07-17 | Auditoría estática completa; 14 fuentes, 41 capabilities, ownership, roles, lifecycle, equivalencia, recomendación hybrid y alcance de Actividad 2 |
+
+## HISTORICAL FUNCTIONAL SOURCES RECONCILIATION AMENDMENT
+
+**Contrato:** `MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1`
+**Fecha:** 2026-07-18
+**Fuentes:** ocho PDF, 29 páginas, todas `historical_noncanonical`.
+**Documento:** [reconciliación histórica funcional](./MXMED_RECONCILIACION_DOCUMENTACION_HISTORICA_FUNCIONAL.md).
+
+Este amendment no reescribe los hallazgos PG-01 ni convierte historia en
+autoridad. Agrega 95 requisitos clasificados y revisa DEC-001 a DEC-011 sin
+aprobarlos. La recomendación `HYBRID_VERSIONED_POLICY_V1` continúa siendo
+candidata; deberá incorporar sólo decisiones directorales aprobadas.
+
+### Impacto y DEC modificadas
+
+- DEC-001/002 quedan confirmadas o refinadas, pendientes de aprobación;
+- DEC-003/004/011 requieren dividir temas independientes;
+- DEC-005 incorpora capabilities IA, canales y límites adicionales;
+- DEC-006/007 registran conflicto de grace D+8 frente a 15 días;
+- DEC-008 confirma preservación/freeze y no borrado por impago;
+- DEC-009/010 refinan lock, ficha/contacto y frontera Agenda/Expediente;
+- 11/11 siguen bloqueando la Actividad 2.
+
+El paquete recomienda 20 decisiones atómicas en vez del borrador de 11, pero el
+número oficial no cambia hasta aprobación explícita.
+
+### Grace conflict
+
+La opción histórica usa D+8, recordatorios cada 15 días y downgrade a Free. El
+borrador actual usa `past_due` hasta día 3, grace hasta día 15 y `restricted`
+desde día 16. No se elige opción. Deben decidirse duración, capabilities,
+notificaciones, comportamiento de datos, soporte y reactivación.
+
+### IA decomposition
+
+La etiqueta IA se divide en `AI-CONTENT-WRITING`, `AI-IMAGE-GENERATION`,
+`AI-MEDICATION-INTERACTION`, `AI-PROFESSIONAL-AGENT`,
+`AI-INTERNAL-OPERATIONS` y `AI-INTERNAL-SUPERVISOR`. Chat/voz Professional
+refina la intención actual; imágenes Standard+, redacción y plan requieren
+decisión; interacción medicamentosa requiere PG-04/PG-11; el supervisor
+all-fields se rechaza por seguridad.
+
+### Claim refinement
+
+Claim request (`draft/submitted/pending_review/needs_info/approved/rejected/cancelled`),
+ownership (`unclaimed/claim_pending/claimed/disputed/suspended/transferred/revoked`)
+y publication/moderation (`draft/pending_review/approved/published/changes_pending_review/suspended`)
+son máquinas independientes. Sólo un perfil sin owner es reclamable. Free es la
+condición histórica inicial; ownership verificado permite contratar después.
+
+### RBAC refinement
+
+El superadmin universal histórico queda `superseded`. Los roles actuales
+preliminares, scopes, risk R0–R3, `platform_director`, break-glass y doble
+aprobación conservan precedencia. Mercadotecnia/citas globales requieren
+auditoría especializada. Ningún plan concede rol interno.
+
+### Agenda/Expediente refinement
+
+Una cita puede crear o vincular un contacto operativo. No crea automáticamente
+Expediente. El paso clínico requiere capability, acción explícita, profesional
+autorizado y consentimiento aplicable. Diagnóstico, notas clínicas, emisión/firma
+de Recetas y consentimientos son no delegables; la reimpresión exacta puede ser
+delegable con auditoría/notificación. Una Receta corregida genera nueva versión
+y preserva la emitida. Facturación a pacientes no es suscripción MXMed.
+
+### Estado del ciclo
+
+Actividad 1 de 22 permanece concluida. Esta actividad auxiliar no incrementa el
+contador. Actividad 2 continúa bloqueada hasta aprobar el paquete revisado. AWS
+24/24 y Stripe permanecen protegidos; deployment no iniciado y tráfico `NO-GO`.

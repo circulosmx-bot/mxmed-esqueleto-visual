@@ -1,9 +1,9 @@
 # Registro Maestro de Deuda de Producto — México Médico
 
 **Contrato:** `MXMED_PRODUCT_DEBT_REGISTRY_V1`
-**Versión:** `1.1.0`
+**Versión:** `1.2.0`
 **Fecha de incorporación:** 2026-07-17
-**Última revisión:** 2026-07-17
+**Última revisión:** 2026-07-18
 **Estado:** canónico, versionado y mantenible
 **Owner documental:** `product-operations-owner`
 
@@ -48,8 +48,8 @@ No incluye implementación ni auditorías funcionales detalladas. No ejecuta apl
 - Datos reales/costo real: no iniciados.
 - Agenda: v1 funcional consolidada, con deuda explícita de convergencia/hardening.
 - Stripe backend: PaymentIntent, webhook, activación y flujo E2E DEV/local cerrados como referencia.
-- Registro de deuda: 99 entradas en versión 1.1.
-- Ciclo principal de producto: `0/22`; Actividad 1 no iniciada y desbloqueada tras PASS del amendment del plano de control.
+- Registro de deuda: 105 entradas en versión 1.2.
+- Ciclo principal de producto: `1/22`; Actividad 1 concluida y Actividad 2 bloqueada hasta aprobación directoral.
 - Microfase 25: no existe.
 
 ## 5. Reglas de gobernanza
@@ -65,7 +65,7 @@ No incluye implementación ni auditorías funcionales detalladas. No ejecuta apl
 9. El Markdown es la fuente canónica; cada amendment produce delta y reconciliación JSON propios sin reescribir snapshots históricos de `/tmp`.
 10. Los grupos PG-01 a PG-11 y su orden son oficiales desde el inventario global y su amendment del plano de control.
 11. Ninguna actividad de auditoría cambia código por implicación.
-12. El contador principal aprobado es `0/22`; una actividad auxiliar no lo incrementa.
+12. El contador principal aprobado es `1/22`; una actividad auxiliar no lo incrementa.
 
 ## 6. Taxonomía de IDs
 
@@ -144,21 +144,21 @@ Prioridades:
 
 | Métrica | Total |
 |---|---:|
-| Entradas | 99 |
+| Entradas | 105 |
 | CLOSED_REFERENCE_ONLY | 4 |
-| CONFIRMED_DEBT | 12 |
-| DECISION_PENDING | 28 |
+| CONFIRMED_DEBT | 14 |
+| DECISION_PENDING | 32 |
 | DEFERRED_REFACTOR | 6 |
 | PARTIAL_IMPLEMENTATION | 10 |
 | REQUIRES_AUDIT | 26 |
 | RUNTIME_GATE | 13 |
-| P0 | 40 |
-| P1 | 42 |
+| P0 | 44 |
+| P1 | 44 |
 | P2 | 12 |
 | P3 | 5 |
 | estado DEFERRED | 6 |
 | estado GATED | 13 |
-| estado OPEN | 76 |
+| estado OPEN | 82 |
 | estado PROTECTED | 4 |
 
 Lectura ejecutiva:
@@ -209,6 +209,7 @@ Lectura ejecutiva:
 | `AGD-003` | Agenda sin expediente: frontera de datos permitidos | `DECISION_PENDING` | `P0` | `OPEN` | `G3` |
 | `AGD-004` | Creación controlada de expediente desde Agenda | `DECISION_PENDING` | `P0` | `OPEN` | `G3` |
 | `AGD-005` | Concurrencia, reintentos y estados borde de Agenda | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G3` |
+| `AGD-006` | Política de riesgo por inasistencia y cancelación | `DECISION_PENDING` | `P0` | `OPEN` | `PG-03` |
 | `PAT-001` | Detección y conciliación de contactos duplicados | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G3` |
 | `PAT-002` | Identidad canónica y contratos divergentes | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G3` |
 | `PAT-003` | Separación contacto de paciente y expediente clínico | `DECISION_PENDING` | `P0` | `OPEN` | `G3` |
@@ -218,6 +219,7 @@ Lectura ejecutiva:
 | `CLN-004` | Permisos de colaboradores por entidad clínica | `REQUIRES_AUDIT` | `P0` | `OPEN` | `G7` |
 | `CLN-005` | Portabilidad, exportación, eliminación y retención clínica | `DECISION_PENDING` | `P0` | `OPEN` | `G7` |
 | `CLN-006` | Datos clínicos fuera de notificaciones y logs | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G7` |
+| `CLN-007` | No delegabilidad e integridad documental clínica | `DECISION_PENDING` | `P0` | `OPEN` | `PG-04` |
 | `RX-001` | Recetas: persistencia y flujo canónico incompletos | `PARTIAL_IMPLEMENTATION` | `P0` | `OPEN` | `G3` |
 | `RX-002` | PDF, descarga y regeneración de recetas | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G3` |
 | `NOT-001` | Buzón interno transaccional | `PARTIAL_IMPLEMENTATION` | `P1` | `OPEN` | `G4` |
@@ -229,6 +231,7 @@ Lectura ejecutiva:
 | `SUB-002` | Ciclo comercial completo posterior al pago | `DECISION_PENDING` | `P1` | `OPEN` | `G5` |
 | `SUB-003` | Mensajes y datos al bloquear capacidades | `DECISION_PENDING` | `P1` | `OPEN` | `G5` |
 | `SUB-004` | Duplicación parcial payment_route→checkout | `DEFERRED_REFACTOR` | `P3` | `DEFERRED` | `G5` |
+| `SUB-005` | Conciliación y override de pagos manuales | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-06` |
 | `DATA-001` | Inventario pantalla→API→dato→evento | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G7` |
 | `DATA-002` | Scope, ownership, plan, rol y autorización por flujo | `REQUIRES_AUDIT` | `P0` | `OPEN` | `G7` |
 | `DATA-003` | Idempotencia, errores, retención y downgrade | `REQUIRES_AUDIT` | `P1` | `OPEN` | `G7` |
@@ -241,8 +244,11 @@ Lectura ejecutiva:
 | `ADM-006` | Auditoría administrativa, masking y acceso extraordinario | `CONFIRMED_DEBT` | `P0` | `OPEN` | `PG-08` |
 | `ADM-007` | Colas y notificaciones internas de operadores | `CONFIRMED_DEBT` | `P1` | `OPEN` | `PG-05` |
 | `ADM-008` | UX y accesibilidad de la consola operativa | `DECISION_PENDING` | `P1` | `OPEN` | `PG-09` |
+| `ADM-009` | Máquina de publicación y moderación | `CONFIRMED_DEBT` | `P1` | `OPEN` | `PG-07` |
+| `ADM-010` | Scopes de mercadotecnia y citas globales | `DECISION_PENDING` | `P1` | `OPEN` | `PG-10` |
 | `AI-001` | IA Profesional: plan, cuota y presupuesto | `DECISION_PENDING` | `P1` | `OPEN` | `G8` |
 | `AI-002` | IA como borrador con confirmación explícita | `DECISION_PENDING` | `P0` | `OPEN` | `G8` |
+| `AI-003` | Descomposición de capabilities y seguridad IA | `DECISION_PENDING` | `P0` | `OPEN` | `PG-11` |
 | `PRIV-001` | Privacidad, retención, eliminación y analítica | `DECISION_PENDING` | `P0` | `OPEN` | `G7` |
 | `PRIV-002` | Minimización de logs, métricas y evidencia | `CONFIRMED_DEBT` | `P0` | `OPEN` | `G7` |
 | `DOC-001` | Índice canónico de documentos y contratos vigentes | `REQUIRES_AUDIT` | `P2` | `OPEN` | `G8` |
@@ -3149,11 +3155,11 @@ El cierre de un gate requiere su etapa operativa o funcional autorizada, no una 
 
 Decisión: **AUDITORÍA COMPLETA EN COBERTURA, EJECUTADA EN 22 ACTIVIDADES DE 11 GRUPOS.**
 
-PP274 cerró el inventario global read-only. El contador permanece `0/22`. La Actividad 1, no iniciada y desbloqueada tras el PASS del amendment, es:
+PP274 cerró el inventario global read-only. PP276 concluyó la Actividad 1; el contador permanece `1/22`. La Actividad 2 está bloqueada hasta aprobación explícita del paquete directoral revisado:
 
-`PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01`
+`PRODUCT-IMPLEMENTATION/MXMed-Plans-Capabilities-Ownership-Lifecycle-Implementation-01`
 
-PG-01 deberá auditar por separado commercial entitlements, roles funcionales, ownership/entity scope e internal operator permissions. El orden oficial se conserva en el inventario global: `PG-01, PG-02, PG-08, PG-03, PG-04, PG-06, PG-05, PG-07, PG-09, PG-10, PG-11`.
+El paquete histórico refina DEC-001 a DEC-011 sin aprobarlas. El orden oficial se conserva en el inventario global: `PG-01, PG-02, PG-08, PG-03, PG-04, PG-06, PG-05, PG-07, PG-09, PG-10, PG-11`.
 
 ## 16. Criterios de priorización
 
@@ -3205,9 +3211,196 @@ Cerrar una entrada no elimina el ID ni su historial.
 7. Actualizar conteos, dependencias, cobertura y JSON.
 8. Nunca borrar ni reutilizar el ID.
 
-## 20. Historial de cambios
+## 20. Historical Functional Sources Reconciliation Amendment
+
+**Contrato:** `MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1`
+**Fuente:** [reconciliación histórica](./MXMED_RECONCILIACION_DOCUMENTACION_HISTORICA_FUNCIONAL.md) y ocho PDF `historical_noncanonical`.
+**Resultado:** seis altas confirmadas, 20 deudas ampliadas, cero IDs eliminados o reutilizados; contador `1/22` sin incremento.
+
+Ampliaciones sin duplicar tema:
+
+| IDs | Refinamiento incorporado |
+|---|---|
+| `CAP-004/005/006` | claim/ownership/publicación separados; conflicto grace D+8 vs 15; freeze/preservación |
+| `OWN-001..003` | documentación, revisión humana, instituciones, origen y desvinculación |
+| `AGD-003/004`, `PAT-003` | cita puede crear contacto; expediente sólo por acción clínica explícita |
+| `NOT-003..005` | 22 triggers históricos, conflicto email y clases no desactivables/configurables |
+| `AI-001/002` | chat/voz Professional, human-in-loop, dry-run, provider y presupuesto |
+| `DOC-001..003` | fuentes históricas no canónicas, precedencia, cita y promoción gobernada |
+| `ADM-001/002/007` | backoffice, superadmin superseded, roles candidatos, cola y before/after |
+
+#### AGD-006 — Política de riesgo por inasistencia y cancelación
+
+- **ID:** `AGD-006`
+- **Título:** Política de riesgo por inasistencia y cancelación
+- **Dominio:** `agenda-riesgo-asistencia`
+- **Clasificación:** `DECISION_PENDING`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** Las fuentes históricas proponen lista negra y gris; no se adopta bloqueo o etiqueta estigmatizante.
+- **Evidencia:** `HIST-INT-005/006`, `HIST-NOT-008`; HIST-SRC-001/002.
+- **Archivos o decisiones relacionadas:** `AGD-003`, `NOT-003`, paquete `RDD-019`.
+- **Efecto visible para el usuario:** Bloqueo de reserva o señal privada todavía no aprobados.
+- **Riesgo de negocio:** Rechazo incorrecto de citas y trato inconsistente.
+- **Riesgo de datos o seguridad:** Perfilamiento, estigmatización y falta de corrección.
+- **Planes afectados:** `all-without-plan-derived-effect`
+- **Roles afectados:** `doctor`, `agenda_operator`, `patient_contact`
+- **Capacidades relacionadas:** `attendance-risk`, `booking-policy`
+- **Dependencias:** PG-03 y PG-08.
+- **Decisión pendiente:** Criterios, vigencia, revisión, excepción y derecho de corrección.
+- **Auditoría requerida:** Casos de no-show/cancelación, scopes y efectos negativos.
+- **Grupo recomendado:** `PG-03`
+- **Acción recomendada:** Usar candidato `attendance_risk_flag`; no publicar listas.
+- **Criterio de aceptación:** Señal temporal, explicable, corregible, auditada y sin bloqueo automático no aprobado.
+- **No repetición:** No reintroducir lista negra/gris mediante alias.
+- **Owner funcional:** `agenda-policy-owner`
+- **Fecha de incorporación:** `2026-07-18`
+- **Última revisión:** `2026-07-18`
+
+#### CLN-007 — No delegabilidad e integridad documental clínica
+
+- **ID:** `CLN-007`
+- **Título:** No delegabilidad e integridad documental clínica
+- **Dominio:** `clinica-autorizacion-documentos`
+- **Clasificación:** `DECISION_PENDING`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** Diagnóstico, notas, emisión/firma de Recetas y consentimientos requieren política no delegable; correcciones deben preservar el documento emitido.
+- **Evidencia:** `HIST-CLN-002..004`, `HIST-RBAC-004..006`; HIST-SRC-001/004/008.
+- **Archivos o decisiones relacionadas:** `CLN-002/004`, `RX-001/002`, `DEC-003/011`, `RDD-013/020`.
+- **Efecto visible para el usuario:** Autoría, corrección y reimpresión pueden ser ambiguas.
+- **Riesgo de negocio:** Documento clínico sin profesional responsable o historia íntegra.
+- **Riesgo de datos o seguridad:** Acceso o mutación clínica fuera de scope/consentimiento.
+- **Planes afectados:** `clinical-capability-plans-pending`
+- **Roles afectados:** `doctor`, `delegated_operator`
+- **Capacidades relacionadas:** `clinical-write`, `prescription-issue`, `document-reprint`
+- **Dependencias:** PG-02, PG-03, PG-04 y PG-08.
+- **Decisión pendiente:** Matriz no delegable, excepciones, firma, versión, folio y notificación.
+- **Auditoría requerida:** Endpoints, repositories, documento emitido y pruebas negativas por rol/scope.
+- **Grupo recomendado:** `PG-04`
+- **Acción recomendada:** Prohibir edición in-place; permitir sólo copia exacta auditada cuando se apruebe.
+- **Criterio de aceptación:** Emisión profesional, versión inmutable, corrección nueva y reimpresión trazable.
+- **No repetición:** No tratar una autorización administrativa como consentimiento clínico.
+- **Owner funcional:** `clinical-safety-owner`
+- **Fecha de incorporación:** `2026-07-18`
+- **Última revisión:** `2026-07-18`
+
+#### SUB-005 — Conciliación y override de pagos manuales
+
+- **ID:** `SUB-005`
+- **Título:** Conciliación y override de pagos manuales
+- **Dominio:** `suscripciones-operacion-pagos`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** No existe contrato transversal gobernado para SPEI/transferencia, conciliación, prórroga u override manual.
+- **Evidencia:** `HIST-PAY-003..006`; HIST-SRC-007; PP275 clasifica override como R3.
+- **Archivos o decisiones relacionadas:** `SUB-001/002`, `ADM-005/006`, `RDD-016`.
+- **Efecto visible para el usuario:** Pago, vigencia o plan podrían depender de una excepción opaca.
+- **Riesgo de negocio:** Fraude, doble acreditación, ranking o revenue incorrectos.
+- **Riesgo de datos o seguridad:** Comprobante expuesto, autoaprobación o bypass de Stripe.
+- **Planes afectados:** `paid`
+- **Roles afectados:** `billing_subscription_operator`, `platform_director`
+- **Capacidades relacionadas:** `manual-payment-reconciliation`, `extension`, `payment-override`
+- **Dependencias:** PG-02, PG-06 y PG-08.
+- **Decisión pendiente:** Autoridad, idempotencia, doble aprobación, retención de comprobante y notificación.
+- **Auditoría requerida:** Flujos actuales y casos negativos sin reabrir Stripe.
+- **Grupo recomendado:** `PG-06`
+- **Acción recomendada:** Manual payment R3; reenvío R1; prórroga R2; override R3.
+- **Criterio de aceptación:** Caso, referencia, conciliación, actor, motivo, approval y audit correlacionados.
+- **No repetición:** No crear backend paralelo ni alterar PaymentIntent/webhook protegido.
+- **Owner funcional:** `billing-governance-owner`
+- **Fecha de incorporación:** `2026-07-18`
+- **Última revisión:** `2026-07-18`
+
+#### ADM-009 — Máquina de publicación y moderación
+
+- **ID:** `ADM-009`
+- **Título:** Máquina de publicación y moderación
+- **Dominio:** `publicacion-moderacion`
+- **Clasificación:** `CONFIRMED_DEBT`
+- **Prioridad:** `P1`
+- **Estado:** `OPEN`
+- **Descripción actual:** Claim, ownership, suscripción y publicación se describen con estados superpuestos; falta una máquina independiente.
+- **Evidencia:** `HIST-PUB-001`, `HIST-NOT-036`, `HIST-CLM-006`; HIST-SRC-003/006/007.
+- **Archivos o decisiones relacionadas:** `OWN-002`, `REV-002`, `ADM-007`, `RDD-008`.
+- **Efecto visible para el usuario:** Cambios pueden aparecer, ocultarse o esperar revisión sin estado claro.
+- **Riesgo de negocio:** Publicación prematura o cola sin responsable/SLA.
+- **Riesgo de datos o seguridad:** Contenido o identidad no verificados expuestos.
+- **Planes afectados:** `all-without-plan-derived-moderation`
+- **Roles afectados:** `profile_claim_reviewer`, `content_moderator`, `profile_owner`
+- **Capacidades relacionadas:** `publication-review`, `moderation`, `before-after`
+- **Dependencias:** PG-02, PG-05, PG-07, PG-08 y PG-10.
+- **Decisión pendiente:** Estados, transiciones, SLA, cambios sensibles, scope y rollback.
+- **Auditoría requerida:** UI/API/data/events/notificaciones y separación de otras máquinas.
+- **Grupo recomendado:** `PG-07`
+- **Acción recomendada:** Propuesta `draft→pending_review→approved→published`, con changes/suspension gobernados.
+- **Criterio de aceptación:** Autoridad única, cola, actor, reason, before/after, audit y denials.
+- **No repetición:** No usar status de suscripción u ownership como publicación.
+- **Owner funcional:** `publication-governance-owner`
+- **Fecha de incorporación:** `2026-07-18`
+- **Última revisión:** `2026-07-18`
+
+#### ADM-010 — Scopes de mercadotecnia y citas globales
+
+- **ID:** `ADM-010`
+- **Título:** Scopes de mercadotecnia y citas globales
+- **Dominio:** `operadores-internos-scope`
+- **Clasificación:** `DECISION_PENDING`
+- **Prioridad:** `P1`
+- **Estado:** `OPEN`
+- **Descripción actual:** Los roles históricos de mercadotecnia/difusión y citas globales tienen facultades amplias sin equivalencia actual aprobada.
+- **Evidencia:** `HIST-RBAC-002/012/014`; HIST-SRC-004/007.
+- **Archivos o decisiones relacionadas:** `ADM-002/003/004`, `DATA-002`, `RDD-015`.
+- **Efecto visible para el usuario:** Contenido o citas podrían mutarse por personal no scopiado.
+- **Riesgo de negocio:** Operación transversal sin owner, temporalidad o segregación.
+- **Riesgo de datos o seguridad:** Acceso excesivo a perfiles, agendas o datos de contacto.
+- **Planes afectados:** `none-internal-role-independent`
+- **Roles afectados:** `role_or_permission_pending`
+- **Capacidades relacionadas:** `marketing-content`, `global-booking-service`
+- **Dependencias:** PG-02, PG-08 y PG-10.
+- **Decisión pendiente:** Rol separado, permission set, scope temporal o variante de rol actual.
+- **Auditoría requerida:** Casos de uso, entidades, consentimientos, horarios y actions R0–R3.
+- **Grupo recomendado:** `PG-10`
+- **Acción recomendada:** No crear roles; presentar alternativas al director.
+- **Criterio de aceptación:** Permiso mínimo, caso/scope, vigencia, no clínica, audit y revocación.
+- **No repetición:** No reutilizar operador Agenda como operador global/plataforma.
+- **Owner funcional:** `operator-governance-owner`
+- **Fecha de incorporación:** `2026-07-18`
+- **Última revisión:** `2026-07-18`
+
+#### AI-003 — Descomposición de capabilities y seguridad IA
+
+- **ID:** `AI-003`
+- **Título:** Descomposición de capabilities y seguridad IA
+- **Dominio:** `inteligencia-artificial-gobernanza`
+- **Clasificación:** `DECISION_PENDING`
+- **Prioridad:** `P0`
+- **Estado:** `OPEN`
+- **Descripción actual:** Las fuentes mezclan redacción, imágenes, interacción medicamentosa, agente Professional, operación interna y supervisor all-fields.
+- **Evidencia:** `HIST-AI-001..011`; HIST-SRC-005/007/008.
+- **Archivos o decisiones relacionadas:** `AI-001/002`, `CLN-007`, `RDD-018`.
+- **Efecto visible para el usuario:** Un label IA podría prometer capacidades, datos o planes distintos.
+- **Riesgo de negocio:** Costo, provider, moderación o responsabilidad sin contrato.
+- **Riesgo de datos o seguridad:** Acción autónoma, clínica no supervisada o acceso universal.
+- **Planes afectados:** `standard/professional historical; current pending`
+- **Roles afectados:** `doctor`, `product_user`, `future_internal_operator`
+- **Capacidades relacionadas:** `AI-CONTENT-WRITING`, `AI-IMAGE-GENERATION`, `AI-MEDICATION-INTERACTION`, `AI-PROFESSIONAL-AGENT`, `AI-INTERNAL-OPERATIONS`, `AI-INTERNAL-SUPERVISOR`
+- **Dependencias:** PG-01, PG-04, PG-08 y PG-11.
+- **Decisión pendiente:** Plan, riesgo, datos, costo, cuotas, human-in-loop, audit y provider por capability.
+- **Auditoría requerida:** Herramientas, prompts/data boundary, fallos, provider y casos negativos.
+- **Grupo recomendado:** `PG-11`
+- **Acción recomendada:** Rechazar supervisor all-fields; separar seis capabilities y aprobar una por una.
+- **Criterio de aceptación:** Cada capability tiene autoridad, scope, presupuesto, review, logging saneado y kill switch.
+- **No repetición:** No afirmar readiness ni seleccionar proveedor por documento histórico.
+- **Owner funcional:** `ai-governance-owner`
+- **Fecha de incorporación:** `2026-07-18`
+- **Última revisión:** `2026-07-18`
+
+## 21. Historial de cambios
 
 | Versión | Fecha | Cambio | Autoridad |
 |---|---|---|---|
 | 1.0.0 | 2026-07-17 | Alta del registro canónico con 92 entradas y plan de auditoría por grupos | `PRODUCT-DOC/MXMed-System-Wide-Product-Debt-Registry-01` |
 | 1.1.0 | 2026-07-17 | Amendment del plano de control: 7 altas, ADM-001/002 ampliadas, 99 entradas y contador principal 0/22 | `PRODUCT-DOC/MXMed-Operator-Control-Plane-And-Platform-Roles-Requirement-Amendment-01` |
+| 1.2.0 | 2026-07-18 | Reconciliación histórica: 6 altas, 20 ampliaciones, 105 entradas y contador principal 1/22 | `PRODUCT-AUDIT/MXMed-Historical-Functional-Documents-Reconciliation-01` |
