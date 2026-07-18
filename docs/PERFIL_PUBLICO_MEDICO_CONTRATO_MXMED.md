@@ -60108,3 +60108,41 @@ se esperan siete días completos, se elabora
 de cualquier trabajo adicional.
 
 ---
+
+## PP-Decisiones 273 - MXMED_PRODUCT_DEBT_REGISTRY_V1
+
+Fecha contractual: 2026-07-17.
+
+Resultado: `PASS - MXMED_PRODUCT_DEBT_REGISTRY_V1`.
+
+Se declara como documento canónico de deuda de producto:
+
+`docs/MXMED_REGISTRO_MAESTRO_DE_DEUDA_PRODUCTO.md`
+
+Su propósito es mantener IDs estables, evidencia, clasificación, prioridad,
+dependencias, owner funcional opaco y criterios de cierre para la deuda conocida
+de producto, UX, datos, privacidad, documentación y runtime. El registro no
+sustituye contratos de dominio ni convierte coincidencias textuales en deuda
+confirmada; la incertidumbre se conserva como `REQUIRES_AUDIT`.
+
+La gobernanza exige actualizar el Markdown y su espejo de evidencia JSON,
+proteger `CLOSED_REFERENCE_ONLY`, no reutilizar IDs y cerrar entradas sólo con
+decisión/implementación, QA y evidencia verificable.
+
+La auditoría será completa en cobertura y ejecutada por grupos. Primero se
+ejecutará, en actividad separada y read-only:
+
+`PRODUCT-AUDIT/MXMed-System-Wide-Screen-Function-Api-Data-Inventory-01`
+
+Después podrá proponer G1 Planes/capacidades/ownership; G2
+Reclamo/identidad/seguridad; G3 Agenda/pacientes/clínico/recetas; G4
+Buzón/preferencias; G5 Suscripciones; G6 Perfil público/reseñas; G7
+Datos/permisos/privacidad; y G8 UX/admin/IA. No se fija todavía un contador y no
+se inicia G1 antes de cerrar el inventario global.
+
+El ciclo AWS 24/24 permanece cerrado. El despliegue real sigue no iniciado, el
+tráfico público permanece en `NO-GO`, la región DR sigue no seleccionada y no
+existe Microfase 25. PP273 no reabre Stripe, PaymentIntent, webhook, activación,
+Cost-Aware, Compute, Edge, Operations o Backup/DR.
+
+---
