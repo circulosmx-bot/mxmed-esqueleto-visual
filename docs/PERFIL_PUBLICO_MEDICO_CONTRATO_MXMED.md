@@ -60146,3 +60146,31 @@ existe Microfase 25. PP273 no reabre Stripe, PaymentIntent, webhook, activación
 Cost-Aware, Compute, Edge, Operations o Backup/DR.
 
 ---
+
+## PP-Decisiones 274 - MXMED_SYSTEM_WIDE_PRODUCT_INVENTORY_V1
+
+Fecha contractual: 2026-07-17.
+
+Resultado: `PASS - MXMED_SYSTEM_WIDE_PRODUCT_INVENTORY_V1`.
+
+Se declara como inventario transversal canónico:
+
+`docs/MXMED_INVENTARIO_GLOBAL_PANTALLAS_FUNCIONES_APIS_DATOS.md`
+
+El método fue estático y completo en cobertura: inventarió superficies,
+navegación, funciones, APIs, capas backend, schemas versionados, roles,
+capabilities, eventos, notificaciones, integraciones, documentación, tests y
+flujos sin ejecutar aplicación, datos ni proveedores. Las conexiones runtime,
+auth efectivo y side effects permanecen expresamente fuera de conclusión.
+
+Este inventario deriva de PP273 y cruza 92/92 deudas sin modificar el registro
+maestro ni código funcional. Mantiene la estrategia de auditoría completa por
+grupos y propone, sujeto a aprobación del director, 11 grupos y un estimado no
+oficial de 22 actividades. No crea un contador definitivo.
+
+La siguiente actividad recomendada, no iniciada, es
+`PRODUCT-AUDIT/MXMed-Plans-Capabilities-Ownership-Lifecycle-Audit-01` (PG-01),
+read-only. AWS 24/24 y Stripe permanecen protegidos; deployment/tráfico siguen
+en `NO-GO` y no existe Microfase 25.
+
+---
