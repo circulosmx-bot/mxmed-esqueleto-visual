@@ -5,7 +5,7 @@
 - Contrato: `MXMED_HISTORICAL_FUNCTIONAL_DOCUMENTS_RECONCILIATION_V1`.
 - Actividad: `PRODUCT-AUDIT/MXMed-Historical-Functional-Documents-Reconciliation-01`.
 - Tipo: actividad auxiliar; no incrementa el contador principal.
-- Versión: `1.0.0`.
+- Versión: `1.1.0`.
 - Fecha contractual: 2026-07-18.
 - Estado: `PASS_STATIC_RECONCILIATION`.
 - Fuentes: 8 PDF, 29 páginas, `historical_noncanonical`.
@@ -79,6 +79,17 @@ detalle útil ni lo eleva sobre decisiones posteriores.
 5. Se cruzó con PP273–PP276, deuda, inventario, operadores y PG-01.
 6. Las propuestas seguras se documentaron sin implementar ni aprobar.
 
+La evidencia distingue seis planos que no son intercambiables:
+
+| Plano | Significado en esta auditoría |
+|---|---|
+| comportamiento implementado actual | conducta localizada en código o inventario; no convierte una decisión pendiente en aprobada |
+| contrato actual | autoridad documental vigente, aunque su implementación requiera validación adicional |
+| requisito histórico | contexto `historical_noncanonical`; nunca autoriza implementación |
+| recomendación de auditoría | propuesta segura y revisable, sin autoridad ejecutiva |
+| decisión pendiente | elección reservada al director; bloquea cualquier adopción correspondiente |
+| alcance futuro | candidato para PG-01–PG-11, sin pantalla, endpoint, tabla, rol o capability implementada |
+
 Clasificaciones permitidas: `adopt_current`, `confirm_current`,
 `refine_current`, `conflict_requires_director`, `defer_future_scope`,
 `reject_for_safety`, `superseded`, `requires_specialized_audit` e
@@ -115,21 +126,26 @@ Se registraron 95 requisitos únicos:
 | Datos | `HIST-DATA-001` | 1 | auditoría saneada |
 | Publicación | `HIST-PUB-001` | 1 | máquina de moderación |
 
-Distribución: 1 `adopt_current`, 15 `confirm_current`, 27 `refine_current`,
-10 `conflict_requires_director`, 7 `defer_future_scope`, 4
+Distribución: 1 `adopt_current`, 15 `confirm_current`, 28 `refine_current`,
+9 `conflict_requires_director`, 7 `defer_future_scope`, 4
 `reject_for_safety`, 1 `superseded`, 28 `requires_specialized_audit` y 2
 `historical_reference_only`. El registro JSON completo permanece en la
 evidencia de la actividad; ninguna entrada quedó sin clasificar.
 
-## 10. Lógica transversal
+## 10. Agenda, paciente y expediente
 
 Propuesta reconciliada:
 
+- `appointment`, `patient contact` y `clinical record` son conceptos distintos;
 - una cita puede crear o vincular sólo un contacto/ficha operativa mínima;
 - una cita no crea automáticamente un expediente clínico;
+- el vínculo debe reutilizar la autoridad existente y evitar contactos duplicados;
+- reprogramar o cancelar preserva el evento original y su historial;
+- notas operativas de Agenda nunca se mezclan con notas clínicas;
 - Expediente exige capability clínica, acción explícita, profesional autorizado
   y consentimiento aplicable;
 - Agenda puede enlazar al contexto clínico sólo tras autorización y scope;
+- Agenda Standard no equivale a Expediente;
 - diagnóstico, notas clínicas, emisión/firma de Recetas y consentimientos
   clínicos son no delegables hasta una decisión especializada;
 - la reimpresión exacta de un documento emitido puede delegarse con actor,
@@ -142,7 +158,36 @@ La fuente histórica que afirma apertura automática de ficha se refina a
 contacto operativo. El bridge clínico condicional localizado por PG-01 sigue
 requiriendo gate y verificación runtime; no se activó ni modificó.
 
-## 11. Reclamo
+El requisito histórico de conversión posterior a Expediente queda
+`refine_current`, no aprobación: sólo puede existir tras una acción explícita,
+capability clínica, profesional autorizado, consentimiento aplicable y
+auditoría. Si esos controles no pueden garantizarse, la alternativa segura es
+`reject_for_safety`; nunca se permite creación automática por una cita.
+
+## 11. Recetas y documentos clínicos
+
+La fuente se reconcilia con una regla de integridad: una Receta emitida no se
+edita en sitio. Cualquier corrección crea un nuevo documento, versión o folio y
+preserva el anterior. La reimpresión sólo puede ser copia exacta, con actor,
+motivo, autorización, auditoría y notificación; no concede facultad de emitir,
+firmar, diagnosticar ni modificar contenido clínico.
+
+El QR histórico no se adopta ni se declara implementado. Queda diferido a la
+auditoría especializada PG-04, junto con verificación, firma, interacción
+medicamentosa, consentimiento, minimización de datos y comportamiento ante
+fallas. Las vistas autorizadas pueden referenciar una misma fuente canónica sin
+duplicarla, pero conservan permisos distintos. Toda reimpresión se identifica
+como copia. Editar una Receta ya emitida permanece `reject_for_safety`.
+
+## 12. Facturación a pacientes
+
+La facturación a pacientes pertenece al plano profesional y no equivale a la
+suscripción comercial MXMed. Sus permisos, datos fiscales, documentos,
+retención y relación con Expediente requieren PG-04/PG-06/PG-08. Una eventual
+delegación administrativa no concede acceso clínico general ni capacidades de
+cobranza de plataforma. No se afirma CFDI, endpoint, proveedor o flujo actual.
+
+## 13. Reclamo
 
 Elegibilidad propuesta: un perfil sin owner puede reclamarse; Free es la
 condición histórica de entrada, no una prohibición perpetua de contratar.
@@ -162,7 +207,23 @@ bloqueado hasta aprobación. Tras el reclamo el plan continúa Free salvo
 contratación independiente. Instituciones, representación legal, responsable
 sanitario, origen y desvinculación requieren auditoría especializada.
 
-## 12. RBAC
+## 14. Ownership
+
+Ownership, rol funcional, plan comercial, representación institucional y
+responsabilidad sanitaria son autoridades distintas. Un claim aprobado puede
+producir `claimed`, pero no activa por sí mismo un plan pagado, una publicación
+ni un rol interno. Transferencia, disputa, suspensión y revocación exigen
+evidencia, actor, motivo, revisión y auditoría en PG-02.
+
+## 15. Publicación y moderación
+
+La publicación usa una máquina separada: `draft`, `pending_review`, `approved`,
+`published`, `changes_pending_review`, `suspended`. Claim reviewer, content
+moderator y owner no son equivalentes. La revisión debe registrar cola, owner,
+SLA, before/after, decisión, motivo y escalamiento sin otorgar privilegios de
+pago o clínica. Ningún estado histórico demuestra esta máquina implementada.
+
+## 16. RBAC
 
 | Rol histórico | Equivalencia candidata | Resultado |
 |---|---|---|
@@ -180,7 +241,22 @@ sanitario, origen y desvinculación requieren auditoría especializada.
 obligatorio de operadores internos por riesgo. Passkeys quedan futuras. Ningún
 plan concede un rol interno y ningún rol interno depende de plan.
 
-## 13. Triggers y notificaciones
+## 17. Roles históricos y roles actuales
+
+Cada rol histórico se trató como candidato, no como equivalencia automática:
+
+| Rol histórico | Equivalencia | Permiso/scope candidato | Merge | Split | Futuro | Rechazo/superseded |
+|---|---|---|---|---|---|---|
+| Súper Administrador | ninguna directa | dirección + admin scopiado + break-glass | no | sí | controles privilegiados | acceso universal `superseded` |
+| Operador Económico | `billing_subscription_operator` candidato | caso y scope de suscripción | no | R1/R2/R3 | sí | acreditación unilateral rechazada |
+| Asistencia Técnica | support + technical viewer candidatos | caso, lectura mínima y sesión temporal | posible | recuperación/observabilidad | sí | acceso clínico general rechazado |
+| Verificación/Clasificación | claim reviewer + content moderator | entidad, cola y propósito | no | sí | sí | autoridad universal rechazada |
+| Mercadotecnia/Difusión | sin equivalente confirmado | permission set y campañas consentidas | pendiente | posible | sí | comunicación universal rechazada |
+| Citas Globales | sin equivalente confirmado | servicio temporal por entidad | pendiente | posible | sí | acceso global por nombre rechazado |
+| Titular/Asistente | ownership y Agenda scopiada | entidad profesional | no | sí | no definido | nunca operador interno por inferencia |
+| Responsable Sanitario | gobierno institucional pendiente | institución y vigencia | no | representación/ownership | sí | ownership automático rechazado |
+
+## 18. Triggers
 
 Los 22 triggers históricos quedaron cubiertos 22/22:
 
@@ -209,38 +285,80 @@ Los 22 triggers históricos quedaron cubiertos 22/22:
 | 21 | RSVP | futuro, configurable |
 | 22 | patrocinio por vencer | futuro, configurable |
 
+El registro verificable conserva por trigger: número, nombre, dominio,
+productor histórico, destinatarios, frecuencia histórica, canales históricos,
+datos potencialmente sensibles, consentimiento, estado actual, confirmación de
+implementación, clasificación, grupo de auditoría y decisión pendiente. En esta
+auditoría se confirmaron **0/22 triggers implementados end-to-end**; que exista
+un evento o referencia actual no demuestra productor, delivery, preferencias,
+deduplicación ni auditoría completos.
+
+## 19. Notificaciones
+
+Evento, entrega y preferencia son autoridades distintas. Cada delivery futuro
+debe registrar productor, destinatario, clase, canal, timestamp, estado,
+dedupe/idempotencia y metadata saneada; no debe copiar contenido clínico o
+personal sensible a logs. Canales, plantillas, proveedores, SLA y frecuencias
+permanecen sujetos a PG-05 y, cuando corresponda, a decisión directoral.
+
+## 20. Preferencias de canal
+
 Separación de canales:
 
 - buzón interno y tarea de operador son superficies diferentes;
 - email es el canal inicial acordado, sujeto a delivery y preferencias;
 - WhatsApp y push son futuros y requieren opt-in/app/proveedor/costo;
 - seguridad, pagos, activación, vencimiento, grace, acceso y legal no pueden
-  desactivarse;
-- reseñas, perfil incompleto, promoción, eventos y contenido son configurables.
+  desactivarse; incidentes críticos también pertenecen a esta clase candidata;
+- reseñas, perfil incompleto, recordatorios no críticos, promoción, eventos,
+  contenido y resúmenes son configurables.
 
 La frase “correo siempre se envía” contradice “correo desactivable”; queda
 `conflict_requires_director`. Frecuencias y desfase de una hora no se aprueban.
 
-## 14. Backoffice
+## 21. Backoffice
 
 Se adopta como invariante que la operación ordinaria no interviene DB
 directamente. Edición in-context, guardar/borrador/publicar, historial,
 reversión, before/after, cola, SLA y escalamiento se refinan bajo caso, scope,
-riesgo, approval y auditoría.
+riesgo, approval y auditoría. Las herramientas gráficas quedan como requisito
+futuro; no se declara consola implementada.
 
 | Acción | Riesgo propuesto | Condición |
 |---|---|---|
 | reenviar enlace de pago | R1 | canal consentido, idempotencia y audit |
+| revisar comprobante | R1/R2 | lectura mínima; escalar discrepancia, sin acreditar |
 | aplicar prórroga | R2 | caso, motivo, duración aprobada; no cambia alta/ranking |
-| registrar/acreditar pago manual | R3 | referencia, comprobante, conciliación y doble aprobación |
-| override de estado de pago | R3 | excepción explícita, nunca bypass silencioso |
-| cambiar plan manualmente | especializado/R3 | no reabrir ni puentear Stripe |
+| cambiar plan manualmente | R2/R3 | según efecto; nunca puentear Stripe o el lifecycle |
+| registrar pago manual | R3 | referencia, comprobante e idempotencia; aún no activa |
+| acreditar y activar | R3 | conciliación y doble aprobación obligatoria |
+| override de estado de pago | R3 | excepción explícita, reauth y revisión posterior |
 | emitir/corregir CFDI | especializado | contrato fiscal separado |
 
 No se implementan SPEI, pagos manuales, CFDI ni un selector administrativo.
 `dryRun:true` queda como requisito futuro para agentes y acciones sensibles.
 
-## 15. IA
+El flujo Stripe actual queda protegido. La ruta real de webhook es
+`/api/subscriptions/index.php/webhooks/stripe`; esta auditoría no inventa ni
+autoriza `/webhooks/stripe`, no reabre el backend de suscripciones y no permite
+que una acción manual suplante un evento Stripe validado.
+
+## 22. Pagos manuales
+
+Registrar, revisar, acreditar, activar y hacer override son acciones separadas.
+Un registro manual no equivale a conciliación y la conciliación no equivale a
+activación. R3 requiere caso, referencia, comprobante, idempotencia, actor,
+motivo, before/after, doble aprobación, auditoría, notificación y mecanismo de
+reversión. No se implementó ninguno de estos flujos.
+
+## 23. SPEI
+
+SPEI aparece sólo como candidato histórico. Banco, cuenta, referencia, webhook,
+conciliador, ventanas, devoluciones, CFDI, privacidad y manejo de fallas no están
+aprobados ni demostrados. Debe resolverse en PG-06 y decisiones directorales sin
+reutilizar por inferencia el webhook Stripe ni crear una acreditación directa.
+
+## 24. IA
 
 | Capability separada | Fuente histórica | Resultado reconciliado |
 |---|---|---|
@@ -251,13 +369,19 @@ No se implementan SPEI, pagos manuales, CFDI ni un selector administrativo.
 | `AI-INTERNAL-OPERATIONS` | backoffice futuro | defer; allowlist, dry-run, caso y aprobación |
 | `AI-INTERNAL-SUPERVISOR` | todos los campos | `reject_for_safety` |
 
-Toda capability requiere plan o autoridad, riesgo, datos mínimos, presupuesto,
-human-in-the-loop, logging saneado, auditoría, degradación y dependencia de
-proveedor. No se seleccionó proveedor ni se afirmó que los agentes estén listos
-por la frase histórica. El modelo supervisor se sustituye por scope mínimo,
-herramientas permitidas, dry-run, aprobación humana y prohibiciones explícitas.
+Toda capability se descompone por planes candidatos, roles, scopes, datos,
+costo, herramientas, aprobación humana, logging, límites, proveedor,
+comportamiento ante falla, riesgos y auditoría futura. No se seleccionó
+proveedor ni se afirmó que los agentes estén listos por la frase histórica. El
+modelo supervisor se sustituye por scope mínimo, herramientas permitidas,
+dry-run, aprobación humana y prohibiciones explícitas.
 
-## 16. Máquinas de estado
+No se conserva la regla universal “IA = Professional”. El agente público de
+chat/voz para Agenda puede seguir como candidato Professional; redacción,
+imágenes, interacción medicamentosa y operación interna mantienen autoridades,
+planes y auditorías independientes.
+
+## 25. Máquinas de estado
 
 Se registran 11 máquinas independientes; esto no obliga a crear 11 tablas:
 
@@ -277,7 +401,7 @@ Sus autoridades, precondiciones, transiciones, expiración, auditoría y grupos
 especializados deben cerrarse por separado. No se fusionan claim, ownership,
 publicación, suscripción o capability en un `status` genérico.
 
-## 17. Requisitos confirmados
+## 26. Requisitos confirmados
 
 Quince requisitos confirman dirección actual, entre ellos: plan Free después de
 claim; acceso bloqueado hasta revisión; contacto separado de clínica; no
@@ -289,9 +413,9 @@ se clasifica `adopt_current` como invariante documental.
 Confirmar no equivale a afirmar implementación. Cada requisito conserva su
 grupo, deuda y prueba futura.
 
-## 18. Requisitos refinados
+## 27. Requisitos refinados
 
-Los 27 refinamientos principales son:
+Los 28 refinamientos principales son:
 
 - “ficha automática” pasa a contacto operativo mínimo;
 - expediente requiere acción explícita/capability/rol/consentimiento;
@@ -306,26 +430,31 @@ Los 27 refinamientos principales son:
 - agente Professional conserva plan hipotético pero agrega cuota, provider,
   handoff y revisión humana.
 
-## 19. Conflictos
+## 28. Conflictos
 
-Diez requisitos quedan `conflict_requires_director`:
+Nueve requisitos quedan `conflict_requires_director`:
 
-1. ficha automática histórica frente a expediente explícito;
-2. canales por plan frente a consentimiento/criticidad;
-3. grace D+8 frente a 15 días;
-4. recordatorios postgrace sin frecuencia aprobada;
-5. rol condicionado por plan frente a separación de modelos;
-6. generación de imágenes Standard+ frente a plan actual no decidido;
-7. email siempre enviado frente a email desactivable;
-8. prórroga discrecional frente a lifecycle gobernado;
-9. reiteración histórica de image generation sin autoridad adicional;
-10. frecuencia/comportamiento de grace dependiente de la opción elegida.
+1. canales por plan frente a consentimiento/criticidad;
+2. grace D+8 frente a 15 días;
+3. recordatorios postgrace sin frecuencia aprobada;
+4. rol condicionado por plan frente a separación de modelos;
+5. generación de imágenes Standard+ frente a plan actual no decidido;
+6. email siempre enviado frente a email desactivable;
+7. prórroga discrecional frente a lifecycle gobernado;
+8. reiteración histórica de image generation sin autoridad adicional;
+9. frecuencia/comportamiento de grace dependiente de la opción elegida.
 
 El conflicto de grace compara experiencia, recuperación, costo, riesgo,
 continuidad clínica, complejidad, avisos, datos y soporte. No se elige ocho ni
-quince días. DEC-007 queda `revised_pending_director_approval`.
+quince días. La clasificación es `conflict_requires_director` y DEC-007 queda
+exactamente `conflict_pending_approval`; no existe decisión automática.
 
-## 20. Requisitos rechazados por seguridad
+El downgrade queda sólo como candidato: preservar datos, congelar writes
+premium, no borrar por impago, conservar acceso seguro y exportación necesaria,
+mostrar funciones bloqueadas y permitir reactivación. Duración, retención,
+soporte, notificaciones y reactivación continúan pendientes de aprobación.
+
+## 29. Requisitos rechazados por seguridad
 
 Cuatro requisitos se rechazan literalmente:
 
@@ -338,7 +467,7 @@ La alternativa es `attendance_risk_flag` con criterios, vigencia, revisión,
 corrección, excepción y audit; y para padecimientos:
 `detección → sugerencia → revisión → confirmación → publicación`.
 
-## 21. Requisitos superseded
+## 30. Requisitos superseded
 
 El superadministrador de acceso universal cotidiano queda `superseded`. Se
 sustituye por `platform_director`, permisos explícitos/scopiados,
@@ -346,7 +475,7 @@ sustituye por `platform_director`, permisos explícitos/scopiados,
 revisión posterior. La existencia histórica de dos cuentas no fija el número
 actual de directores ni autoriza un bypass.
 
-## 22. Requisitos futuros
+## 31. Requisitos futuros
 
 Siete requisitos se difieren: passkeys, recursos hospitalarios, RSVP,
 patrocinios, insumos, IA operativa y navegación avanzada. Veintiocho requieren
@@ -356,16 +485,16 @@ provider IA, pagos manuales/CFDI y señales de riesgo.
 
 Ninguno cuenta como pantalla, API, tabla, rol o capability implementada.
 
-## 23. Impacto DEC-001–DEC-011
+## 32. Impacto DEC-001–DEC-011
 
 | DEC | Estado revisado | Impacto histórico |
 |---|---|---|
 | DEC-001 | `confirmed_pending_approval` | confirma cinco tiers/códigos; aliases no canónicos |
 | DEC-002 | `refined_pending_approval` | clínica exige acción, scope y consentimiento |
 | DEC-003 | `split_into_multiple_decisions` | Recetas e IA son elecciones independientes |
-| DEC-004 | `split_into_multiple_decisions` | galería no debe mezclar claim/ownership/publicación |
-| DEC-005 | `refined_pending_approval` | nuevas capabilities requieren unidades/costo/enforcement |
-| DEC-006 | `conflict_pending_approval` | lifecycle y duración D+8 vs 15 |
+| DEC-004 | `refined_pending_approval` | galería no debe mezclar claim/ownership/publicación |
+| DEC-005 | `split_into_multiple_decisions` | capabilities requieren decisiones atómicas, unidades/costo/enforcement |
+| DEC-006 | `refined_pending_approval` | separar namespaces/lifecycle; duración se eleva en DEC-007 |
 | DEC-007 | `conflict_pending_approval` | grace cambia capabilities y avisos |
 | DEC-008 | `confirmed_pending_approval` | preservar/freeze; no borrar por impago |
 | DEC-009 | `refined_pending_approval` | locks y frontera ficha/contacto/Expediente |
@@ -375,7 +504,7 @@ Ninguno cuenta como pantalla, API, tabla, rol o capability implementada.
 Las 11/11 continúan bloqueando la Actividad 2. Ninguna fue aprobada,
 implementada, renumerada oficialmente o retirada.
 
-## 24. Paquete revisado
+## 33. Paquete revisado
 
 Se recomienda aumentar el borrador de 11 a 20 decisiones atómicas. El número
 oficial permanece 11 hasta aprobación del director.
@@ -407,7 +536,15 @@ Cada decisión permite `aprobar`, `modificar`, `rechazar` o `diferir`. El delta
 de nueve evita que una respuesta apruebe accidentalmente temas con autoridades,
 riesgos o grupos distintos.
 
-## 25. Impacto sobre deuda
+Cada entrada de evidencia conserva `decisionId`, `priorDraft`,
+`historicalImpact`, `currentEvidence`, `conflicts`, `options`, `recommendation`,
+`risks`, `implementationBlockers`, `proposedStatus` y
+`directorApprovalRequired`. La recomendación de conteo registra 11 decisiones
+previas, 20 recomendadas, decisiones separadas, decisiones fusionadas,
+rationale y blockers de la Actividad 2. Es una recomendación; el conteo oficial
+no cambia sin aprobación.
+
+## 34. Impacto sobre deuda
 
 El registro pasa de 99 a 105 entradas, sin borrar ni reutilizar IDs.
 
@@ -424,10 +561,10 @@ Se amplían `CAP-004/005/006`, `OWN-001..003`, `AGD-003/004`, `PAT-003`,
 `NOT-003..005`, `AI-001/002`, `DOC-001..003`, `ADM-001/002/007`. No se
 duplica Stripe, la frontera Agenda/Expediente, channel preferences ni claim.
 
-## 26. Impacto sobre inventario
+## 35. Impacto sobre inventario
 
 Los totales implementados permanecen sin cambio: 953 entradas, 143 superficies,
-166 APIs, 47 entidades y 31 pantallas. Los PDF aportan únicamente:
+166 endpoints/API, 47 tablas/entidades y 31 pantallas. Los PDF aportan únicamente:
 
 - 95 requisitos históricos documentados;
 - superficies futuras requeridas;
@@ -437,7 +574,16 @@ Los totales implementados permanecen sin cambio: 953 entradas, 143 superficies,
 No se suman endpoints, tablas, eventos, roles, pantallas o capabilities por
 estar mencionados históricamente.
 
-## 27. Impacto sobre PG-01–PG-11
+## 36. Impacto sobre operadores
+
+El documento del plano de control recibe un crosswalk explícito por rol con
+equivalencia, permisos/scopes candidatos, posibilidad de merge, necesidad de
+split, condición futura y elementos rechazados o superseded. No se crean roles
+ni se confirman accesos actuales. Pagos, sesión asistida, publicación,
+moderación, soporte y break-glass conservan caso, riesgo, expiración, separación
+de funciones, doble aprobación cuando aplica y auditoría.
+
+## 37. Impacto sobre PG-01–PG-11
 
 | Grupo | Impacto |
 |---|---|
@@ -456,7 +602,7 @@ estar mencionados históricamente.
 AWS 24/24 permanece cerrado offline y no se reabre. Deployment sigue no
 iniciado y tráfico público `NO-GO`.
 
-## 28. Decisiones requeridas
+## 38. Decisiones pendientes
 
 El director debe revisar el paquete completo y responder por cada RDD. Son
 especialmente bloqueantes: códigos/entitlements; tres máquinas de claim;
@@ -469,7 +615,7 @@ impago, no crear expediente automáticamente, no delegar actos clínicos, no
 acreditar pagos manuales, no activar canales/proveedores futuros, no publicar
 grupos automáticamente y no conceder acceso universal.
 
-## 29. Criterios de aprobación
+## 39. Criterios de aprobación
 
 - Cada decisión se aprueba, modifica, rechaza o difiere explícitamente.
 - La autoridad y el contrato canónico afectados quedan identificados.
@@ -479,7 +625,7 @@ grupos automáticamente y no conceder acceso universal.
 - Requisitos rechazados no reaparecen mediante aliases.
 - La Actividad 2 recibe un paquete versionado aprobado antes de iniciar.
 
-## 30. No repetición
+## 40. No repetición
 
 Esta actividad realizó cero llamadas AWS/CDK/HTTP/Stripe/pagos/email/maps/IA,
 cero ejecución PHP/SQL/npm/app/browser, cero OCR, cero acceso a bases, secretos,
@@ -487,8 +633,9 @@ datos personales concretos o datos clínicos concretos, y cero cambios de códig
 schema o tests. Los PDF no se editaron. No se reabrió AWS 24/24, no se incrementó
 el contador y no se inició la Actividad 2.
 
-## 31. Historial
+## 41. Historial
 
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0.0 | 2026-07-18 | Incorporación byte-identical de ocho fuentes; 29/29 páginas, 95 requisitos, 22 triggers, 11 DEC revisadas y borrador de 20 decisiones |
+| 1.1.0 | 2026-07-18 | Refuerzo contractual a 41 secciones, schema mínimo de evidencia, separación de riesgos, roles, pagos, grace y estados DEC |

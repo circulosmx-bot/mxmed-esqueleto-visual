@@ -742,8 +742,8 @@ agregan a las superficies implementadas. Permanecen exactamente iguales:
 
 - entradas inventariadas: 953;
 - superficies: 143;
-- APIs: 166;
-- entidades: 47;
+- endpoints/API inventariados: 166;
+- tablas/entidades inventariadas: 47;
 - pantallas implementadas: 31.
 
 ### implemented_inventory
@@ -751,8 +751,8 @@ agregan a las superficies implementadas. Permanecen exactamente iguales:
 No fue alterado. La reconciliación no confirma endpoints, tablas, eventos,
 roles, pantallas, providers IA, canales o flujos runtime por su mención en PDF.
 Los 22 triggers son requisitos históricos para PG-05, no eventos actuales
-adicionales. Los roles históricos son candidatos de crosswalk, no roles
-implementados.
+adicionales; esta auditoría confirma 0/22 implementaciones end-to-end. Los
+roles históricos son candidatos de crosswalk, no roles implementados.
 
 ### historical_documented_requirements
 

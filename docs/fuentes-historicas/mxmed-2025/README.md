@@ -13,6 +13,12 @@ cumplimiento legal ni comportamiento runtime. Tampoco prevalece sobre una
 instrucción actual del director, un PP/contrato aprobado o una implementación
 actual validada.
 
+La integridad se preserva copiando cada PDF byte a byte, fijando su SHA-256 y
+número de páginas en `manifest.json`, y comparando intake contra repositorio.
+Cualquier modificación del PDF —incluidos metadata, reexportación, compresión o
+un solo byte— cambia su hash e invalida esta evidencia de integridad; debe
+detenerse la reconciliación y repetirse la validación del intake.
+
 La precedencia aplicable es:
 
 1. requisito actual y explícito del director;

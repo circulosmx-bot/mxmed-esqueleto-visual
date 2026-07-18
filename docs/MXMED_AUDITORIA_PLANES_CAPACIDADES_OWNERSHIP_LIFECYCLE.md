@@ -754,10 +754,12 @@ candidata; deberá incorporar sólo decisiones directorales aprobadas.
 
 ### Impacto y DEC modificadas
 
-- DEC-001/002 quedan confirmadas o refinadas, pendientes de aprobación;
-- DEC-003/004/011 requieren dividir temas independientes;
-- DEC-005 incorpora capabilities IA, canales y límites adicionales;
-- DEC-006/007 registran conflicto de grace D+8 frente a 15 días;
+- DEC-001 queda confirmada y DEC-002 refinada, pendientes de aprobación;
+- DEC-003 y DEC-011 requieren dividir temas independientes;
+- DEC-004 se refina separando galería de claim/ownership/publicación;
+- DEC-005 se divide por capabilities, canales, unidades, cuotas y costo;
+- DEC-006 se refina por múltiples máquinas; no absorbe el conflicto temporal;
+- DEC-007 registra exclusivamente el conflicto de grace D+8 frente a 15 días;
 - DEC-008 confirma preservación/freeze y no borrado por impago;
 - DEC-009/010 refinan lock, ficha/contacto y frontera Agenda/Expediente;
 - 11/11 siguen bloqueando la Actividad 2.
@@ -803,7 +805,8 @@ Expediente. El paso clínico requiere capability, acción explícita, profesiona
 autorizado y consentimiento aplicable. Diagnóstico, notas clínicas, emisión/firma
 de Recetas y consentimientos son no delegables; la reimpresión exacta puede ser
 delegable con auditoría/notificación. Una Receta corregida genera nueva versión
-y preserva la emitida. Facturación a pacientes no es suscripción MXMed.
+y preserva la emitida. El QR permanece pendiente de auditoría especializada
+PG-04. Facturación a pacientes no es suscripción MXMed.
 
 ### Estado del ciclo
 

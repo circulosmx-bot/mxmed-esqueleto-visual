@@ -375,17 +375,17 @@ Este contrato queda aceptado cuando:
 
 ### Crosswalk de roles históricos
 
-| Rol histórico | Equivalencia propuesta | Clasificación/límite |
-|---|---|---|
-| Administrador Principal / Súper Administrador | `platform_director` + `platform_admin` scopiado + `break_glass_superadmin` | acceso universal cotidiano `superseded` |
-| Operador Administrativo Económico | `billing_subscription_operator` | conciliación; pago manual/override R3 |
-| Operador de Asistencia Técnica | `support_advisor` + `technical_operations_viewer` | recuperación y observabilidad separadas |
-| Operador de Verificación/Clasificación | `profile_claim_reviewer` + `content_moderator` | claim, publicación y grupos separados |
-| Operador de Mercadotecnia/Difusión | role o permission set pendiente | `requires_specialized_audit`; sin clínica |
-| Operador de Citas Global | servicio scopiado/temporal pendiente | no reutilizar operador Agenda por inferencia |
-| Administrador/Titular de perfil | ownership + rol funcional por entidad | nunca rol interno de plataforma |
-| Operador de Perfil/Asistente | `agenda_operator` scopiado | Agenda only; no soporte global |
-| Responsable Sanitario | rol institucional pendiente | no se convierte automáticamente en owner/director |
+| Rol histórico | Equivalencia actual/candidata | Permiso y scope candidato | Merge candidato | Split candidato | Rol futuro | Rechazo o superseded |
+|---|---|---|---|---|---|---|
+| Administrador Principal / Súper Administrador | ninguna directa; `platform_director` + `platform_admin` scopiado + `break_glass_superadmin` | dirección, administración explícita o emergencia temporal | no | dirección/admin/break-glass | controles privilegiados | acceso universal cotidiano `superseded` |
+| Operador Administrativo Económico | `billing_subscription_operator` candidato | caso y entidad de suscripción; acciones R1/R2/R3 separadas | no | revisión/conciliación/activación/override | sí | acreditación unilateral rechazada |
+| Operador de Asistencia Técnica | `support_advisor` + `technical_operations_viewer` candidatos | caso, lectura mínima, sesión temporal y observabilidad | posible tras PG-10 | recuperación/soporte/observabilidad | sí | acceso clínico general rechazado |
+| Operador de Verificación/Clasificación | `profile_claim_reviewer` + `content_moderator` candidatos | entidad, cola, evidencia y propósito | no | claim/publicación/grupos | sí | autoridad universal rechazada |
+| Operador de Mercadotecnia/Difusión | sin equivalente confirmado | permission set, campaña y audiencia consentida | pendiente | contenido/campaña/delivery | sí | email/WhatsApp universal rechazado |
+| Operador de Citas Global | sin equivalente confirmado | servicio temporal, organización y Agenda | pendiente | operación/coordinación/soporte | sí | acceso global por nombre rechazado |
+| Administrador/Titular de perfil | ownership + rol funcional por entidad | perfil propio o representado | no | ownership/rol/plan | no definido | nunca rol interno por inferencia |
+| Operador de Perfil/Asistente | `agenda_operator` scopiado candidato | entidad profesional y Agenda | posible por organización | Agenda/facturación/clínica | sí | soporte global y clínica general rechazados |
+| Responsable Sanitario | gobierno institucional pendiente | institución, vigencia y atribución legal validada | no | representación/ownership/rol | sí | owner/director automático rechazado |
 
 No se crean roles. Mercadotecnia y citas globales requieren decidir si son roles
 separados, permisos, scopes temporales o variantes gobernadas. El plan comercial
@@ -420,12 +420,18 @@ reviewer y content moderator no obtienen privilegios de pago o clínica.
 | Acción | Riesgo | Control mínimo |
 |---|---|---|
 | reenviar enlace | R1 | canal permitido, audit e idempotencia |
+| revisar comprobante | R1/R2 | lectura mínima; discrepancias escalan sin acreditar |
 | aplicar prórroga | R2 | caso, motivo, duración aprobada; no altera alta/ranking |
-| registrar/acreditar pago manual | R3 | referencia, comprobante, conciliación y doble aprobación |
+| cambiar plan | R2/R3 | riesgo según efecto; jamás puentear Stripe/lifecycle |
+| registrar pago manual | R3 | referencia, comprobante e idempotencia; no activa |
+| acreditar y activar | R3 | conciliación y doble aprobación obligatoria |
 | override de pago | R3 | excepción específica, reauth, audit y revisión posterior |
 
 No se implementan SPEI, acreditación, CFDI o cambio de plan. Stripe protegido no
-se reabre. Documento fuente: [reconciliación histórica](./MXMED_RECONCILIACION_DOCUMENTACION_HISTORICA_FUNCIONAL.md).
+se reabre. Su webhook real permanece
+`/api/subscriptions/index.php/webhooks/stripe`; no se inventa ni autoriza
+`/webhooks/stripe`. Documento fuente:
+[reconciliación histórica](./MXMED_RECONCILIACION_DOCUMENTACION_HISTORICA_FUNCIONAL.md).
 
 ## 30. Historial de cambios
 
