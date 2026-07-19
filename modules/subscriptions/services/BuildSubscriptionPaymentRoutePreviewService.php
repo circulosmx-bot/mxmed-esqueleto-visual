@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 namespace Subscriptions\Services;
 
+require_once __DIR__ . '/../policy/MxmedPlanCapabilityPolicy.php';
+
 use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
+use Subscriptions\Policy\MxmedPlanCapabilityPolicy;
 use Throwable;
 
 final class BuildSubscriptionPaymentRoutePreviewException extends RuntimeException
@@ -42,27 +45,6 @@ final class BuildSubscriptionPaymentRoutePreviewService
     private const BILLING_PERIOD_MONTHLY = 'monthly';
     private const FREE_MONTHLY_ADVANCE_CONTRACT_VERSION = 'free_monthly_advance_v1';
     private const MONTHLY_INITIAL_CYCLES = 3;
-
-    private const PLAN_RANKS = [
-        'basic' => 1,
-        'standard' => 2,
-        'optimum' => 3,
-        'professional' => 4,
-    ];
-
-    private const PLAN_ALIASES = [
-        'basic' => 'basic',
-        'basico' => 'basic',
-        'básico' => 'basic',
-        'standard' => 'standard',
-        'estandar' => 'standard',
-        'estándar' => 'standard',
-        'optimum' => 'optimum',
-        'optimo' => 'optimum',
-        'óptimo' => 'optimum',
-        'professional' => 'professional',
-        'profesional' => 'professional',
-    ];
 
     private CurrentSubscriptionReadModelService $readModelService;
     private SubscriptionPlanPriceResolverService $priceResolver;
@@ -200,7 +182,10 @@ final class BuildSubscriptionPaymentRoutePreviewService
 
         $currentPlanCode = $this->currentPlanCode($currentModel);
         $targetPlanCode = $this->requireTargetPlan($payload);
-        if (self::PLAN_RANKS[$targetPlanCode] <= self::PLAN_RANKS[$currentPlanCode]) {
+        if (
+            (MxmedPlanCapabilityPolicy::planRank($targetPlanCode) ?? 0)
+            <= (MxmedPlanCapabilityPolicy::planRank($currentPlanCode) ?? 0)
+        ) {
             throw new BuildSubscriptionPaymentRoutePreviewException(
                 409,
                 'invalid_upgrade',
@@ -425,8 +410,8 @@ final class BuildSubscriptionPaymentRoutePreviewService
             return null;
         }
 
-        $normalized = self::PLAN_ALIASES[$raw] ?? null;
-        if ($normalized === null || !array_key_exists($normalized, self::PLAN_RANKS)) {
+        $normalized = MxmedPlanCapabilityPolicy::normalizePlanCode($raw);
+        if ($normalized === null || (MxmedPlanCapabilityPolicy::planRank($normalized) ?? 0) <= 0) {
             throw new BuildSubscriptionPaymentRoutePreviewException(
                 422,
                 'invalid_target_plan',

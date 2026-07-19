@@ -3,41 +3,13 @@ declare(strict_types=1);
 
 namespace Profiles\Services;
 
+require_once __DIR__ . '/../../subscriptions/policy/MxmedPlanCapabilityPolicy.php';
+
+use Subscriptions\Policy\MxmedPlanCapabilityPolicy;
+
 final class PublicProfilePlanCapabilities
 {
     private const DEFAULT_PLAN = 'free';
-
-    private const PLAN_ALIASES = [
-        'free' => 'free',
-        'gratuito' => 'free',
-        'basic' => 'basic',
-        'basico' => 'basic',
-        'básico' => 'basic',
-        'standard' => 'standard',
-        'estandar' => 'standard',
-        'estándar' => 'standard',
-        'optimum' => 'optimum',
-        'optimo' => 'optimum',
-        'óptimo' => 'optimum',
-        'professional' => 'professional',
-        'profesional' => 'professional',
-    ];
-
-    private const PLAN_LABELS = [
-        'free' => 'Gratuito',
-        'basic' => 'Básico',
-        'standard' => 'Estándar',
-        'optimum' => 'Óptimo',
-        'professional' => 'Profesional',
-    ];
-
-    private const PLAN_TIERS = [
-        'free' => 0,
-        'basic' => 1,
-        'standard' => 2,
-        'optimum' => 3,
-        'professional' => 4,
-    ];
 
     public static function build($planCode, array $context = []): array
     {
@@ -65,9 +37,9 @@ final class PublicProfilePlanCapabilities
             'plan' => [
                 'plan_code' => $code,
                 'code' => $code,
-                'plan_label' => self::PLAN_LABELS[$code],
-                'label' => self::PLAN_LABELS[$code],
-                'tier' => self::PLAN_TIERS[$code],
+                'plan_label' => self::planLabel($code),
+                'label' => self::planLabel($code),
+                'tier' => MxmedPlanCapabilityPolicy::planRank($code),
                 'is_paid' => $code !== 'free',
                 'is_active' => true,
                 'expires_at' => null,
@@ -171,7 +143,7 @@ final class PublicProfilePlanCapabilities
                 'has_reviews' => $showReviews,
                 'has_promotions' => $showPromotions,
                 'has_video_consultation' => false,
-                'has_ai_agent' => $code === 'professional',
+                'has_ai_agent' => false,
                 'has_ai_profile_writer' => false,
                 'has_ai_prescription_safety' => false,
                 'has_commercial_profile_data' => $commercialSourceReady,
@@ -191,92 +163,37 @@ final class PublicProfilePlanCapabilities
 
     public static function normalizePlanCode($planCode): string
     {
-        $raw = trim((string)($planCode ?? ''));
-        if ($raw === '') {
-            return self::DEFAULT_PLAN;
-        }
-
-        $key = mb_strtolower($raw, 'UTF-8');
-        $folded = strtr($key, [
-            'á' => 'a',
-            'é' => 'e',
-            'í' => 'i',
-            'ó' => 'o',
-            'ú' => 'u',
-            'ä' => 'a',
-            'ë' => 'e',
-            'ï' => 'i',
-            'ö' => 'o',
-            'ü' => 'u',
-        ]);
-
-        if (isset(self::PLAN_ALIASES[$key])) {
-            return self::PLAN_ALIASES[$key];
-        }
-        if (isset(self::PLAN_ALIASES[$folded])) {
-            return self::PLAN_ALIASES[$folded];
-        }
-        return self::DEFAULT_PLAN;
+        return MxmedPlanCapabilityPolicy::normalizePlanCode($planCode, true) ?? self::DEFAULT_PLAN;
     }
 
     public static function planMeetsMinimum($planCode, $minimumPlanCode): bool
     {
         $code = self::normalizePlanCode($planCode);
         $minimum = self::normalizePlanCode($minimumPlanCode);
-        return self::PLAN_TIERS[$code] >= self::PLAN_TIERS[$minimum];
+        return MxmedPlanCapabilityPolicy::planMeetsMinimum($code, $minimum);
     }
 
     private static function capabilitiesFor(string $planCode): array
     {
-        $base = [
-            'show_photo' => false,
-            'show_logo' => false,
-            'show_professional_review' => false,
-            'show_contact_buttons' => false,
-            'show_phone' => false,
-            'show_whatsapp' => false,
-            'show_internal_inbox' => false,
-            'show_clickable_map' => false,
-            'show_gps_directions' => false,
-            'show_public_agenda' => false,
-            'show_promotional_packages' => false,
-            'show_reviews' => true,
-            'allow_review_replies' => false,
-            'show_claim_profile' => true,
-            'show_gallery' => false,
-            'show_insurances' => false,
-            'show_consultation_details' => false,
-        ];
-
-        if ($planCode === 'free') {
-            return $base;
+        $included = MxmedPlanCapabilityPolicy::planCapabilities($planCode);
+        $registry = MxmedPlanCapabilityPolicy::capabilityRegistry();
+        $legacy = [];
+        foreach (MxmedPlanCapabilityPolicy::legacyCapabilityCrosswalk() as $legacyCode => $canonicalCode) {
+            $definition = $registry[$canonicalCode] ?? [];
+            $legacy[$legacyCode] = in_array($canonicalCode, $included, true)
+                && (bool)($definition['operational'] ?? false);
         }
+        return $legacy;
+    }
 
-        $basic = array_merge($base, [
-            'show_photo' => true,
-            'show_logo' => true,
-            'show_professional_review' => true,
-            'show_contact_buttons' => true,
-            'show_phone' => true,
-            'show_whatsapp' => true,
-            'show_internal_inbox' => true,
-            'show_clickable_map' => true,
-            'show_gps_directions' => true,
-            'show_claim_profile' => false,
-        ]);
-
-        if ($planCode === 'basic') {
-            return $basic;
+    private static function planLabel(string $planCode): string
+    {
+        foreach (MxmedPlanCapabilityPolicy::planCatalog() as $plan) {
+            if (($plan['code'] ?? null) === $planCode) {
+                return (string)$plan['label'];
+            }
         }
-
-        return array_merge($basic, [
-            'show_public_agenda' => true,
-            'show_promotional_packages' => true,
-            'allow_review_replies' => true,
-            'show_gallery' => true,
-            'show_insurances' => true,
-            'show_consultation_details' => true,
-        ]);
+        return $planCode;
     }
 
     private static function restrictionReason(bool $capabilityIncluded, bool $sourceReady): ?string

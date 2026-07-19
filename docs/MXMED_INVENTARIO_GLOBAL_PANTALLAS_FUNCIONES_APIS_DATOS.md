@@ -824,3 +824,28 @@ proveedores o agentes a los totales actuales. Actividad 2 queda
 
 Documento rector:
 [Aprobación directoral](./MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md).
+
+## 37. Delta implementado por PG-01 / Actividad 2
+
+Contrato: `MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_IMPLEMENTATION_V1`.
+
+| Tipo | Superficie/artefacto | Estado real | Notas |
+|---|---|---|---|
+| policy | `modules/subscriptions/policy/MxmedPlanCapabilityPolicy.php` | `implemented_core` | cinco planes, 28 capabilities canónicas, crosswalk 41, cuotas, add-ons, estados y denials |
+| backend | adapter approval/ownership | `implemented_core` | esquema legacy compatible y fail-closed |
+| backend | lifecycle/resolver/read-model builder | `implemented_core` | clock inyectable, once gates, archive/downgrade y compatibilidad |
+| API | `GET /api/subscriptions/index.php/entities/{type}/{id}/current` | `extended_existing` | policy, gates, catálogo, estados, cuotas, denials, archive y futuras disabled |
+| API | `DELETE /api/subscriptions/index.php/entities/{type}/{id}/scheduled-plan` | `implemented_core` | cancela sólo cambio futuro programado; requiere write context |
+| UI | panel `#p-suscripcion` | `extended_existing` | encabezado, comparación, locks, grace, scheduled change, archive y funciones futuras |
+| UI adapter | `assets/js/subscription-policy-ui.js` | `implemented_core` | transforma exclusivamente el read-model; 19 mensajes de denial |
+| persistencia | migración `2026_07_18_add_plan_capability_policy_v1_fields.sql` | `versioned_not_executed` | aditiva, nullable, sin datos reales |
+| QA | dos suites PHP + test frontend | `implemented_core` | 251 aserciones PHP; parser/semántica JS; snapshots sin datos reales |
+
+No se agrega pantalla nueva: se amplía el panel existente. El endpoint current
+se cuenta como extendido, no duplicado. Se agrega un endpoint de cancelación
+acotado. Las tablas reales no cambian durante esta actividad porque la migración
+no se ejecuta. Call Center, IA, consola y notificaciones no se inventarían como
+superficies implementadas.
+
+Estado backend↔frontend: `BACKEND_AND_FRONTEND_COMPLETED`. Siguiente grupo:
+PG-02, sin iniciarlo desde esta actividad.

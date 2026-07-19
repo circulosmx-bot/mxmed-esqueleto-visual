@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../_lib/db.php';
+require_once __DIR__ . '/../../modules/subscriptions/policy/MxmedPlanCapabilityPolicy.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/CurrentSubscriptionRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/ProfileSubscriptionRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php';
@@ -20,6 +21,10 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscription
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentRouteService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPendingPaymentAcceptanceService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/ProfileApprovalOwnershipAdapter.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/MxmedCommercialLifecycleService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/MxmedPlanCapabilityResolverService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/MxmedPlanCapabilityReadModelBuilder.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
@@ -1096,7 +1101,15 @@ function subscriptionCreateStripePaymentIntentFixture(): array
     $paymentIntentRepository = new SubscriptionPaymentIntentRepository($pdo);
     $checkoutService = new CreateSubscriptionCheckoutIntentService(
         $pdo,
-        new SubscriptionEntityResolverService($pdo),
+        new SubscriptionEntityResolverService($pdo, [
+            'authenticated' => true,
+            'actor_user_id' => $userId,
+            'actor_role' => 'doctor',
+            'doctor_scope_matches' => true,
+            'actor_scope_allowed' => true,
+            'is_dev_fixture' => true,
+            'fixture_claimed' => true,
+        ]),
         new CurrentSubscriptionRepository($pdo),
         new SubscriptionWriteIdempotencyService(new SubscriptionWriteIdempotencyRepository($pdo)),
         new SubscriptionEntityWriteLockService($pdo),
@@ -1415,12 +1428,6 @@ function subscriptionCreateUpgradeDoctorSessionFixture(): array
         'standard' => 'optimum',
         'optimum' => 'professional',
     ];
-    $planRanks = [
-        'basic' => 1,
-        'standard' => 2,
-        'optimum' => 3,
-        'professional' => 4,
-    ];
     if (!subscriptionDoctorFixtureExists($doctorId)) {
         return subscriptionDevSessionFixtureError('fixture_doctor_not_found', 'upgrade doctor fixture not found');
     }
@@ -1456,7 +1463,10 @@ function subscriptionCreateUpgradeDoctorSessionFixture(): array
             'upgrade doctor active subscription is not annual'
         );
     }
-    if (($planRanks[$targetPlanCode] ?? 0) <= ($planRanks[$planCode] ?? 0)) {
+    if (
+        (\Subscriptions\Policy\MxmedPlanCapabilityPolicy::planRank($targetPlanCode) ?? 0)
+        <= (\Subscriptions\Policy\MxmedPlanCapabilityPolicy::planRank($planCode) ?? 0)
+    ) {
         return subscriptionDevSessionFixtureError(
             'fixture_upgrade_target_not_higher',
             'upgrade doctor target plan is not higher than current plan'
@@ -2211,6 +2221,29 @@ function subscriptionResolvePrivateContext(string $entityType, string $entityId)
         'actor_doctor_id' => $scopeDoctorId,
         'actor_entity_type' => $scopeEntityType,
         'actor_entity_id' => $scopeEntityId,
+        'actor_role' => $actorRole !== '' ? $actorRole : 'doctor',
+    ];
+}
+
+function subscriptionPolicyActorContext(array $context, string $entityType, string $entityId): array
+{
+    $actorUserId = trim((string)($context['actor_user_id'] ?? ''));
+    $actorDoctorId = trim((string)($context['doctor_id'] ?? ($context['actor_doctor_id'] ?? '')));
+    $actorEntityType = strtolower(trim((string)($context['actor_entity_type'] ?? '')));
+    $actorEntityId = trim((string)($context['actor_entity_id'] ?? ''));
+    $scopeMatches = $entityType === 'doctor' && (
+        ($actorDoctorId !== '' && hash_equals($entityId, $actorDoctorId))
+        || ($actorEntityType === 'doctor' && $actorEntityId !== '' && hash_equals($entityId, $actorEntityId))
+    );
+
+    return [
+        'authenticated' => $actorUserId !== '',
+        'actor_user_id' => $actorUserId !== '' ? $actorUserId : null,
+        'actor_role' => strtolower(trim((string)($context['actor_role'] ?? 'doctor'))),
+        'doctor_scope_matches' => $scopeMatches,
+        'actor_scope_allowed' => $scopeMatches,
+        'is_dev_fixture' => subscriptionSessionValue(['subscriptions_dev_session_fixture']) === '1',
+        'fixture_claimed' => subscriptionSessionValue(['subscriptions_dev_session_fixture']) === '1',
     ];
 }
 
@@ -3180,7 +3213,10 @@ try {
             new SubscriptionPaymentRouteRepository($pdo),
             new SubscriptionCheckoutIntentRepository($pdo),
             $currentRepository,
-            new SubscriptionEntityResolverService($pdo),
+            new SubscriptionEntityResolverService(
+                $pdo,
+                subscriptionPolicyActorContext($context, $entityType, $entityId)
+            ),
             new CreateSubscriptionPendingPaymentAcceptanceService(new SubscriptionContractAcceptanceRepository($pdo)),
             new SubscriptionWriteIdempotencyService(new SubscriptionWriteIdempotencyRepository($pdo)),
             new SubscriptionEntityWriteLockService($pdo)
@@ -3590,7 +3626,10 @@ try {
         );
         $checkoutService = new CreateSubscriptionCheckoutIntentService(
             $pdo,
-            new SubscriptionEntityResolverService($pdo),
+            new SubscriptionEntityResolverService(
+                $pdo,
+                subscriptionPolicyActorContext($context, $entityType, $entityId)
+            ),
             $currentSubscriptionRepository,
             $idempotencyService,
             new SubscriptionEntityWriteLockService($pdo),
@@ -4262,6 +4301,57 @@ try {
     }
 
     if (
+        count($segments) === 4
+        && $segments[0] === 'entities'
+        && $segments[3] === 'scheduled-plan'
+    ) {
+        if ($method !== 'DELETE') {
+            subscriptionRespond(subscriptionWriteError('method_not_allowed', 'method not allowed'), 405);
+            return;
+        }
+        $entityType = strtolower(trim((string)$segments[1]));
+        $entityId = trim((string)$segments[2]);
+        if (!subscriptionValidEntityType($entityType) || !subscriptionValidEntityId($entityId)) {
+            subscriptionRespond(subscriptionWriteError('invalid_request', 'invalid entity'), 422);
+            return;
+        }
+        $context = subscriptionResolveWriteContext($entityType, $entityId);
+        if (!(bool)($context['ok'] ?? false)) {
+            subscriptionRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+        $authMode = (string)($context['auth_mode'] ?? 'session_scope');
+        try {
+            $cancelled = (new CurrentSubscriptionRepository(mxmed_pdo()))
+                ->cancelScheduledPlanChange($entityType, $entityId);
+        } catch (RuntimeException $e) {
+            subscriptionRespond(
+                subscriptionWriteError('scheduled_change_unavailable', 'scheduled plan change is unavailable', $authMode),
+                409
+            );
+            return;
+        }
+        if (!$cancelled) {
+            subscriptionRespond(
+                subscriptionWriteError('scheduled_change_not_found', 'scheduled plan change was not found', $authMode),
+                404
+            );
+            return;
+        }
+        subscriptionRespond([
+            'ok' => true,
+            'data' => [
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'scheduled_change_status' => 'cancelled',
+                'data_preserved' => true,
+            ],
+            'meta' => subscriptionWriteMeta($authMode),
+        ], 200);
+        return;
+    }
+
+    if (
         count($segments) !== 4
         || $segments[0] !== 'entities'
         || $segments[3] !== 'current'
@@ -4289,9 +4379,17 @@ try {
     }
     $authMode = (string)($context['auth_mode'] ?? 'unknown');
 
-    $repository = new CurrentSubscriptionRepository(mxmed_pdo());
+    $pdo = mxmed_pdo();
+    $repository = new CurrentSubscriptionRepository($pdo);
     $service = new CurrentSubscriptionReadModelService($repository);
-    $readModel = $service->resolveForEntity($entityType, $entityId);
+    $actorContext = subscriptionPolicyActorContext($context, $entityType, $entityId);
+    $profileContext = (new SubscriptionEntityResolverService($pdo, $actorContext))
+        ->resolveForReadModel($entityType, $entityId);
+    $readModel = $service->resolveForEntity(
+        $entityType,
+        $entityId,
+        $profileContext + $actorContext
+    );
 
     subscriptionRespond([
         'ok' => true,

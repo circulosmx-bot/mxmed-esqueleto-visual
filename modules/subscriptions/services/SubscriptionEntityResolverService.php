@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Subscriptions\Services;
 
+require_once __DIR__ . '/ProfileApprovalOwnershipAdapter.php';
+
 use PDO;
 use PDOException;
 use RuntimeException;
@@ -18,10 +20,37 @@ final class SubscriptionEntityResolverService
     private const ERROR_ENTITY_VALIDATION_UNAVAILABLE = 'entity_validation_unavailable';
 
     private PDO $pdo;
+    private array $actorContext;
+    private ProfileApprovalOwnershipAdapter $approvalOwnershipAdapter;
 
-    public function __construct(PDO $pdo)
-    {
+    public function __construct(
+        PDO $pdo,
+        array $actorContext = [],
+        ?ProfileApprovalOwnershipAdapter $approvalOwnershipAdapter = null
+    ) {
         $this->pdo = $pdo;
+        $this->actorContext = $actorContext;
+        $this->approvalOwnershipAdapter = $approvalOwnershipAdapter ?? new ProfileApprovalOwnershipAdapter();
+    }
+
+    public function resolveForReadModel(string $entityType, string $entityId): array
+    {
+        try {
+            $resolved = $this->resolveForCheckout($entityType, $entityId);
+        } catch (RuntimeException $e) {
+            $resolved = $this->snapshot(
+                strtolower(trim($entityType)),
+                trim($entityId),
+                false,
+                false,
+                null,
+                self::SOURCE_PROFILES_DOCTORS,
+                'profile_validation_unavailable',
+                self::ERROR_ENTITY_VALIDATION_UNAVAILABLE
+            );
+        }
+        $resolved['profile_type'] = strtolower(trim($entityType));
+        return $resolved;
     }
 
     public function resolveForCheckout(string $entityType, string $entityId): array
@@ -56,12 +85,22 @@ final class SubscriptionEntityResolverService
         }
 
         try {
+            $available = $this->availableProfileColumns();
+            $optionalColumns = [];
+            foreach (['approval_status', 'approval_source', 'owner_user_id', 'ownership_status', 'ownership_source'] as $column) {
+                if (in_array($column, $available, true)) {
+                    $optionalColumns[] = $column;
+                }
+            }
+            $optionalSelect = $optionalColumns !== []
+                ? ",\n                    " . implode(",\n                    ", $optionalColumns)
+                : '';
             $stmt = $this->pdo->prepare(
                 'SELECT
                     doctor_id,
                     display_name,
                     profile_status,
-                    is_public_candidate
+                    is_public_candidate' . $optionalSelect . '
                  FROM profiles_doctors
                  WHERE doctor_id = :doctor_id
                  LIMIT 1'
@@ -85,17 +124,23 @@ final class SubscriptionEntityResolverService
             );
         }
 
+        $policy = $this->approvalOwnershipAdapter->adapt(
+            $row + ['profile_type' => self::ENTITY_TYPE_DOCTOR],
+            $this->actorContext
+        );
+
         return $this->snapshot(
             self::ENTITY_TYPE_DOCTOR,
             (string)($row['doctor_id'] ?? $normalizedId),
             true,
-            true,
+            (bool)$policy['purchase_allowed'],
             $this->nullableText($row['display_name'] ?? null),
             self::SOURCE_PROFILES_DOCTORS,
-            null,
-            null,
+            $policy['denial_reason'],
+            $policy['denial_reason'],
             $this->nullableText($row['profile_status'] ?? null),
-            ((int)($row['is_public_candidate'] ?? 0) === 1)
+            ((int)($row['is_public_candidate'] ?? 0) === 1),
+            $policy
         );
     }
 
@@ -118,7 +163,8 @@ final class SubscriptionEntityResolverService
         ?string $reason,
         ?string $error,
         ?string $profileStatus = null,
-        ?bool $isPublicCandidate = null
+        ?bool $isPublicCandidate = null,
+        array $policy = []
     ): array {
         return [
             'entity_type' => $entityType,
@@ -131,7 +177,33 @@ final class SubscriptionEntityResolverService
             'error' => $error,
             'profile_status' => $profileStatus,
             'is_public_candidate' => $isPublicCandidate,
+            'profile_type' => $policy['profile_type'] ?? ($entityType === self::ENTITY_TYPE_DOCTOR ? 'doctor' : null),
+            'approval_state' => $policy['approval_state'] ?? null,
+            'approval_source' => $policy['approval_source'] ?? null,
+            'ownership_state' => $policy['ownership_state'] ?? null,
+            'ownership_source' => $policy['ownership_source'] ?? null,
+            'admin_allowed' => (bool)($policy['admin_allowed'] ?? false),
+            'purchase_allowed' => (bool)($policy['purchase_allowed'] ?? false),
+            'denial_reason' => $policy['denial_reason'] ?? $reason,
         ];
+    }
+
+    private function availableProfileColumns(): array
+    {
+        try {
+            $stmt = $this->pdo->query('SHOW COLUMNS FROM profiles_doctors');
+            $rows = $stmt !== false ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (PDOException $e) {
+            return [];
+        }
+        $columns = [];
+        foreach ($rows as $row) {
+            $field = trim((string)($row['Field'] ?? ''));
+            if ($field !== '') {
+                $columns[] = $field;
+            }
+        }
+        return $columns;
     }
 
     private function nullableText($value): ?string

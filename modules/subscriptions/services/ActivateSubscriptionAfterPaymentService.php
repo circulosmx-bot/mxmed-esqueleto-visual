@@ -3,12 +3,15 @@ declare(strict_types=1);
 
 namespace Subscriptions\Services;
 
+require_once __DIR__ . '/../policy/MxmedPlanCapabilityPolicy.php';
+
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use PDO;
 use RuntimeException;
+use Subscriptions\Policy\MxmedPlanCapabilityPolicy;
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\ProfileSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
@@ -56,13 +59,6 @@ final class ActivateSubscriptionAfterPaymentService
     private const SOURCE_UPGRADE_ACTIVATION = 'mxmed_payment_intent_upgrade_activation_v1';
     private const INTENT_TYPE_UPGRADE = 'upgrade';
     private const PRICING_STRATEGY_PRORATED_DIFFERENCE = 'prorated_difference';
-    private const PLAN_RANKS = [
-        'basic' => 1,
-        'standard' => 2,
-        'optimum' => 3,
-        'professional' => 4,
-    ];
-
     private PDO $pdo;
     private SubscriptionWriteIdempotencyService $idempotencyService;
     private SubscriptionEntityWriteLockService $lockService;
@@ -1022,26 +1018,12 @@ final class ActivateSubscriptionAfterPaymentService
     private function canonicalPlanCode($value): string
     {
         $planCode = strtolower($this->nullableText($value) ?? '');
-        $map = [
-            'basico' => 'basic',
-            'básico' => 'basic',
-            'basic' => 'basic',
-            'estandar' => 'standard',
-            'estándar' => 'standard',
-            'standard' => 'standard',
-            'optimo' => 'optimum',
-            'óptimo' => 'optimum',
-            'optimum' => 'optimum',
-            'profesional' => 'professional',
-            'professional' => 'professional',
-        ];
-
-        return $map[$planCode] ?? $planCode;
+        return MxmedPlanCapabilityPolicy::normalizePlanCode($planCode) ?? $planCode;
     }
 
     private function planRank(string $planCode): int
     {
-        return self::PLAN_RANKS[$planCode] ?? 0;
+        return MxmedPlanCapabilityPolicy::planRank($planCode) ?? 0;
     }
 
     private function positiveAmount($value): int

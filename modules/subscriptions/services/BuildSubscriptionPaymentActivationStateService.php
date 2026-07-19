@@ -6,6 +6,7 @@ namespace Subscriptions\Services;
 use DateTimeImmutable;
 use DateTimeZone;
 use Profiles\Services\PublicProfilePlanCapabilities;
+use Subscriptions\Policy\MxmedPlanCapabilityPolicy;
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
@@ -14,6 +15,7 @@ use Subscriptions\Repositories\SubscriptionPaymentIntentRepository;
 use Throwable;
 
 require_once __DIR__ . '/../../profiles/services/PublicProfilePlanCapabilities.php';
+require_once __DIR__ . '/../policy/MxmedPlanCapabilityPolicy.php';
 
 final class BuildSubscriptionPaymentActivationStateService
 {
@@ -33,13 +35,6 @@ final class BuildSubscriptionPaymentActivationStateService
     private const SOURCE_UPGRADE_ACTIVATION = 'mxmed_payment_intent_upgrade_activation_v1';
     private const MONTHLY_MARKUP_FACTOR = 1.25;
     private const MONTHLY_MARKUP_PERCENT = 25;
-    private const PLAN_RANKS = [
-        'basic' => 1,
-        'standard' => 2,
-        'optimum' => 3,
-        'professional' => 4,
-    ];
-
     private SubscriptionCheckoutIntentRepository $checkoutIntentRepository;
     private SubscriptionPaymentIntentRepository $paymentIntentRepository;
     private SubscriptionPaymentEventRepository $paymentEventRepository;
@@ -861,26 +856,12 @@ final class BuildSubscriptionPaymentActivationStateService
     private function canonicalPlanCode($value): string
     {
         $planCode = strtolower($this->cleanText($value, 64) ?? '');
-        $map = [
-            'basico' => 'basic',
-            'básico' => 'basic',
-            'basic' => 'basic',
-            'estandar' => 'standard',
-            'estándar' => 'standard',
-            'standard' => 'standard',
-            'optimo' => 'optimum',
-            'óptimo' => 'optimum',
-            'optimum' => 'optimum',
-            'profesional' => 'professional',
-            'professional' => 'professional',
-        ];
-
-        return $map[$planCode] ?? $planCode;
+        return MxmedPlanCapabilityPolicy::normalizePlanCode($planCode) ?? $planCode;
     }
 
     private function planRank(string $planCode): int
     {
-        return self::PLAN_RANKS[$planCode] ?? 0;
+        return MxmedPlanCapabilityPolicy::planRank($planCode) ?? 0;
     }
 
     private function positiveAmount($value): int

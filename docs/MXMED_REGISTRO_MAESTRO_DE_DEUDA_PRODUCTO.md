@@ -3485,3 +3485,32 @@ Actividad 2: `UNBLOCKED_READY_NOT_STARTED`; contador: `1/22`.
 | 1.1.0 | 2026-07-17 | Amendment del plano de control: 7 altas, ADM-001/002 ampliadas, 99 entradas y contador principal 0/22 | `PRODUCT-DOC/MXMed-Operator-Control-Plane-And-Platform-Roles-Requirement-Amendment-01` |
 | 1.2.0 | 2026-07-18 | Reconciliación histórica: 6 altas, 20 ampliaciones, 105 entradas y contador principal 1/22 | `PRODUCT-AUDIT/MXMed-Historical-Functional-Documents-Reconciliation-01` |
 | 1.3.0 | 2026-07-18 | PP278: 30 decisiones aprobadas, 25 reclasificaciones, alta CAP-011, 106 entradas y Activity 2 ready/not started | `PRODUCT-DOC/MXMed-Plans-Capabilities-Ownership-Lifecycle-Director-Decision-Approval-01` |
+
+## 23. Delta de implementación PG-01 — Actividad 2
+
+Autoridad:
+`MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_IMPLEMENTATION_V1`.
+
+Este delta no elimina, renumera ni cierra deudas especializadas. Registra sólo
+la parte realmente implementada:
+
+| IDs | Delta comprobado | Estado residual |
+|---|---|---|
+| CAP-001 | policy única, cinco planes, aliases y matriz canónica | núcleo resuelto; evolución comercial sigue versionada |
+| CAP-002 | cuotas de galería, Agenda, IA y Call Center modeladas | metering/proveedores/compresión siguen abiertos |
+| CAP-003, CAP-008 | resolver backend, sources, estados y denials; frontend sin autoridad | enforcement de módulos especializados continúa por PG |
+| CAP-005 | lifecycle comercial y grace determinista | notificaciones operativas y cobro continúan abiertos |
+| CAP-006 | downgrade programado y `archived_read_only` | retención/export/purga siguen diferidos |
+| CAP-007, CAP-009 | locks, mensajes y paridad backend↔UI | nuevas superficies futuras deberán reutilizar el read-model |
+| OWN-002/003 | gates y adapter legacy de ownership | claim, transferencia, disputa y revocación completos continúan PG-02/08 |
+| SUB-002/003 | estado comercial, cancelación programada y compatibilidad | operación avanzada, cobranza y notificaciones continúan PG-05/06 |
+| DATA-002 | read-model canónico y campos legacy derivados | eliminación final de compatibilidad queda para una migración futura |
+
+Sin cierre: `OWN-001`, `AUTH-001/002/004`, `PUB-001/005`, `PAT-001/003`,
+`CLN-005/007`, `NOT-003..005`, `SUB-005`, `ADM-001..010`, `PRIV-001` y
+`AI-001..003`. Call Center, IA productiva, operadores, consola, notificaciones,
+proveedores y retención especializada permanecen como deuda real.
+
+La migración nueva está versionada pero no aplicada; por tanto no se declara
+deuda operativa de datos resuelta. Contador principal pasa a `2/22` únicamente
+con el PASS y publicación de PP279.

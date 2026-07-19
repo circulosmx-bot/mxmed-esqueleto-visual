@@ -370,3 +370,34 @@ endpoints, proveedores, precios definitivos ni recursos.
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0.0 | 2026-07-18 | Formalización de 30 decisiones atómicas `director_approved`, parámetros diferidos y assessment `UNBLOCKED_READY_NOT_STARTED` |
+
+## 32. Estado de implementación del núcleo PG-01 — Actividad 2
+
+Contrato de implementación:
+`MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_IMPLEMENTATION_V1`.
+
+| Decisión | Estado de implementación | Evidencia técnica | Límite preservado |
+|---|---|---|---|
+| DEC-001/002 | `implemented_core` | `MxmedPlanCapabilityPolicy.php`; policy `MXMED_PLAN_CAPABILITY_POLICY_V1`; aliases y jerarquía derivados al read-model | cinco planes; `free_default` sólo fallback técnico |
+| DEC-003A | `implemented_core` | matriz acumulativa Free–Professional y adapter del perfil público | sólo perfil médico individual |
+| DEC-003B–003E | `modeled_disabled` | capacidades IA y dos add-ons Call Center con `operational=false`, `purchasable=false` | sin proveedor, checkout, PaymentIntent ni activación |
+| DEC-003F | `implemented_core` | framework de add-ons, elegibilidad, estados y exclusión mutua | operación especializada diferida |
+| DEC-004A/004B | `implemented_core` | adapter legacy y gates fail-closed de approval/ownership en read-model y checkout | workflow documental completo continúa PG-02 |
+| DEC-004C | `deferred_specialized_implementation` | estados de suspensión y denials modelados | consola, cases y apelación continúan PG-07/08/10 |
+| DEC-005A–005E | `implemented_core` | cuotas canónicas en policy/read-model y pruebas de límites | proveedores, metering productivo y compresión no se implementan |
+| DEC-006A/006B | `implemented_core` | lifecycle comercial, resolver ordenado y nueve estados efectivos | Stripe conserva payment route, checkout, webhook y activación existentes |
+| DEC-007A | `implemented_core` | clock inyectable; D1–D3 `past_due`, D4–D15 `grace`, D16 `restricted` | retry no reinicia ventana; no hay borrado |
+| DEC-007B | `implemented_core` | validación ordinaria 7 días/excepcional 15 días y persistencia aditiva | consola de autorización diferida |
+| DEC-008A/008B | `implemented_core` | `archived_read_only`, downgrade programado, cancelación y add-ons incompatibles | no reembolso ni purga automática |
+| DEC-009A/009B | `unchanged_protected` | gates de rol/scope/autorización permanecen separados del plan | no se modifican Agenda ni clínica |
+| DEC-010A | `implemented_core` | denial backend, mapper visual y estados diferenciados | frontend no infiere permisos |
+| DEC-011A–011E | `deferred_specialized_implementation` | delta de requisitos de consola registrado en evidencia | roles, cases, sesiones y consola continúan PG-08/10 |
+
+La migración `2026_07_18_add_plan_capability_policy_v1_fields.sql` es aditiva,
+nullable, no fue ejecutada y ofrece rollback lógico no destructivo. La UI consume
+`plan_catalog`, `plan_aliases`, precios publicables, capability states y denials
+del endpoint existente de suscripciones; no mantiene otra matriz comercial.
+
+QA dirigido: 166 aserciones de policy/resolver/lifecycle/Stripe adapters, 85 aserciones de
+contrato/read-model y validación semántica de UI. Evidencia:
+`/tmp/mxmed-plans-capabilities-ownership-lifecycle-implementation-01/`.

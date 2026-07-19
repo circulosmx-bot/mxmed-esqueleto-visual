@@ -352,6 +352,18 @@
   namespace.mapActivationError = mapActivationError;
   namespace.errorMessageFor = mapActivationError;
   namespace.mxmedSubscriptionErrorMapper = mapActivationError;
+  namespace.mapPolicyDenial = function(code){
+    if(window.MXMedPlanCapabilityUI && typeof window.MXMedPlanCapabilityUI.mapDenial === 'function'){
+      return window.MXMedPlanCapabilityUI.mapDenial(code);
+    }
+    return {
+      code: normalizeCode(code) || 'unknown',
+      state: 'suspended_policy',
+      tone: 'danger',
+      message: FALLBACK_MESSAGE,
+      action: 'contact_support'
+    };
+  };
 
   window.MXMedSubscriptions = namespace;
 })(window);

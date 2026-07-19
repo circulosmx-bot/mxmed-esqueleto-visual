@@ -3,9 +3,13 @@ declare(strict_types=1);
 
 namespace Subscriptions\Services;
 
+require_once __DIR__ . '/../policy/MxmedPlanCapabilityPolicy.php';
+require_once __DIR__ . '/MxmedPlanCapabilityReadModelBuilder.php';
+
 use DateTimeImmutable;
 use DateTimeInterface;
 use InvalidArgumentException;
+use Subscriptions\Policy\MxmedPlanCapabilityPolicy;
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 
 final class CurrentSubscriptionReadModelService
@@ -16,14 +20,20 @@ final class CurrentSubscriptionReadModelService
 
     private CurrentSubscriptionRepository $repository;
     private ?DateTimeImmutable $now;
+    private MxmedPlanCapabilityReadModelBuilder $policyReadModelBuilder;
 
-    public function __construct(CurrentSubscriptionRepository $repository, ?DateTimeImmutable $now = null)
-    {
+    public function __construct(
+        CurrentSubscriptionRepository $repository,
+        ?DateTimeImmutable $now = null,
+        ?MxmedPlanCapabilityReadModelBuilder $policyReadModelBuilder = null
+    ) {
         $this->repository = $repository;
         $this->now = $now;
+        $this->policyReadModelBuilder = $policyReadModelBuilder
+            ?? new MxmedPlanCapabilityReadModelBuilder(null, $now);
     }
 
-    public function resolveForEntity(string $entityType, string $entityId): array
+    public function resolveForEntity(string $entityType, string $entityId, array $profileContext = []): array
     {
         $entityType = trim($entityType);
         $entityId = trim($entityId);
@@ -32,14 +42,21 @@ final class CurrentSubscriptionReadModelService
         }
 
         $subscription = $this->repository->findCurrentCandidateForEntity($entityType, $entityId);
+        $profileContext['published_prices'] = $profileContext['published_prices']
+            ?? $this->repository->findPublishedPlanPrices();
         if ($subscription === null) {
-            return $this->buildFreeDefault($entityType, $entityId, false);
+            return $this->buildFreeDefault($entityType, $entityId, false, $profileContext);
         }
 
-        return $this->buildFromSubscription($entityType, $entityId, $subscription);
+        return $this->buildFromSubscription($entityType, $entityId, $subscription, $profileContext);
     }
 
-    private function buildFromSubscription(string $entityType, string $entityId, array $subscription): array
+    private function buildFromSubscription(
+        string $entityType,
+        string $entityId,
+        array $subscription,
+        array $profileContext
+    ): array
     {
         $status = $this->normalizeStatus($subscription['status'] ?? null);
         $contractedPlanCode = $this->normalizePlanCode(
@@ -53,17 +70,26 @@ final class CurrentSubscriptionReadModelService
         $graceStartsAt = $this->parseDateTime($subscription['grace_starts_at'] ?? null);
         $graceEndsAt = $this->parseDateTime($subscription['grace_ends_at'] ?? null);
         $now = $this->now();
+        $commercialLifecycle = (new MxmedCommercialLifecycleService($now))->resolve($subscription);
+        $commercialState = (string)($commercialLifecycle['state'] ?? $status);
 
         $isExpired = ($expiresAt !== null && $expiresAt < $now);
-        $isInGrace = $this->isInGraceWindow($status, $now, $expiresAt, $graceStartsAt, $graceEndsAt);
+        $isInGrace = in_array($commercialState, ['past_due', 'grace'], true)
+            || $this->isInGraceWindow($status, $now, $expiresAt, $graceStartsAt, $graceEndsAt);
         $isActive = (
-            $status === 'active'
+            $commercialState === 'active'
             && ($startsAt === null || $startsAt <= $now)
             && ($expiresAt === null || $expiresAt >= $now)
         );
 
         if ($isExpired && !$isInGrace) {
-            return $this->buildExpiredFreeFallback($entityType, $entityId, $subscription, $contractedPlanCode);
+            return $this->buildExpiredFreeFallback(
+                $entityType,
+                $entityId,
+                $subscription,
+                $contractedPlanCode,
+                $profileContext
+            );
         }
 
         $effectivePlanCode = $contractedPlanCode ?? $planCode ?? $storedEffectivePlanCode ?? self::FREE_PLAN_CODE;
@@ -95,14 +121,15 @@ final class CurrentSubscriptionReadModelService
             'days_until_expiration' => $this->daysUntil($expiresAt, $now),
             'source' => 'profile_subscriptions.current_candidate',
             'version' => self::VERSION,
-        ]);
+        ], $subscription, $profileContext);
     }
 
     private function buildExpiredFreeFallback(
         string $entityType,
         string $entityId,
         array $subscription,
-        ?string $contractedPlanCode
+        ?string $contractedPlanCode,
+        array $profileContext
     ): array {
         $freePlan = $this->repository->findFallbackFreePlan();
         $expiresAt = $this->parseDateTime($subscription['expires_at'] ?? null);
@@ -130,10 +157,15 @@ final class CurrentSubscriptionReadModelService
             'days_until_expiration' => null,
             'source' => 'profile_subscriptions.expired_free_fallback',
             'version' => self::VERSION,
-        ]);
+        ], $subscription, $profileContext);
     }
 
-    private function buildFreeDefault(string $entityType, string $entityId, bool $isFallback): array
+    private function buildFreeDefault(
+        string $entityType,
+        string $entityId,
+        bool $isFallback,
+        array $profileContext
+    ): array
     {
         $freePlan = $this->repository->findFallbackFreePlan();
 
@@ -160,12 +192,12 @@ final class CurrentSubscriptionReadModelService
             'days_until_expiration' => null,
             'source' => $freePlan !== null ? 'subscription_plans.default_free' : 'code.default_free',
             'version' => self::VERSION,
-        ]);
+        ], [], $profileContext);
     }
 
-    private function buildModel(array $data): array
+    private function buildModel(array $data, array $subscription, array $profileContext): array
     {
-        return [
+        $legacyModel = [
             'entity_type' => $data['entity_type'],
             'entity_id' => $data['entity_id'],
             'contracted_plan_code' => $data['contracted_plan_code'],
@@ -189,6 +221,8 @@ final class CurrentSubscriptionReadModelService
             'source' => $data['source'],
             'version' => $data['version'],
         ];
+
+        return $this->policyReadModelBuilder->build($legacyModel, $subscription, $profileContext);
     }
 
     private function isInGraceWindow(
@@ -272,23 +306,7 @@ final class CurrentSubscriptionReadModelService
 
     private function normalizePlanCode($planCode): ?string
     {
-        $code = strtolower(trim((string)($planCode ?? '')));
-        if ($code === '') {
-            return null;
-        }
-
-        $aliases = [
-            'gratuito' => 'free',
-            'basico' => 'basic',
-            'básico' => 'basic',
-            'estandar' => 'standard',
-            'estándar' => 'standard',
-            'optimo' => 'optimum',
-            'óptimo' => 'optimum',
-            'profesional' => 'professional',
-        ];
-
-        return $aliases[$code] ?? $code;
+        return MxmedPlanCapabilityPolicy::normalizePlanCode($planCode, true);
     }
 
     private function parseDateTime($value): ?DateTimeImmutable

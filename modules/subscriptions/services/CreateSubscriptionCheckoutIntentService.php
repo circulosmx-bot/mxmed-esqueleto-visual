@@ -3,11 +3,14 @@ declare(strict_types=1);
 
 namespace Subscriptions\Services;
 
+require_once __DIR__ . '/../policy/MxmedPlanCapabilityPolicy.php';
+
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use PDO;
 use RuntimeException;
+use Subscriptions\Policy\MxmedPlanCapabilityPolicy;
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionCheckoutIntentRepository;
 use Throwable;
@@ -46,13 +49,6 @@ final class CreateSubscriptionCheckoutIntentService
     private const INTENT_TYPE_UPGRADE = 'upgrade';
     private const PRICING_STRATEGY_PRORATED_DIFFERENCE = 'prorated_difference';
     private const LOGICAL_UPGRADE_OPERATION = 'subscriptions.checkout_intent.upgrade';
-    private const PLAN_RANKS = [
-        'basic' => 1,
-        'standard' => 2,
-        'optimum' => 3,
-        'professional' => 4,
-    ];
-
     private PDO $pdo;
     private SubscriptionEntityResolverService $entityResolver;
     private CurrentSubscriptionRepository $currentSubscriptionRepository;
@@ -500,27 +496,13 @@ final class CreateSubscriptionCheckoutIntentService
 
     private function canonicalPlanCode(string $planCode): string
     {
-        $planCode = strtolower(trim($planCode));
-        $map = [
-            'basico' => 'basic',
-            'básico' => 'basic',
-            'basic' => 'basic',
-            'estandar' => 'standard',
-            'estándar' => 'standard',
-            'standard' => 'standard',
-            'optimo' => 'optimum',
-            'óptimo' => 'optimum',
-            'optimum' => 'optimum',
-            'profesional' => 'professional',
-            'professional' => 'professional',
-        ];
-
-        return $map[$planCode] ?? $planCode;
+        return MxmedPlanCapabilityPolicy::normalizePlanCode($planCode)
+            ?? strtolower(trim($planCode));
     }
 
     private function planRank(string $planCode): int
     {
-        return self::PLAN_RANKS[$this->canonicalPlanCode($planCode)] ?? 0;
+        return MxmedPlanCapabilityPolicy::planRank($this->canonicalPlanCode($planCode)) ?? 0;
     }
 
     private function requiredText($value, string $code, string $message, int $maxLength): string

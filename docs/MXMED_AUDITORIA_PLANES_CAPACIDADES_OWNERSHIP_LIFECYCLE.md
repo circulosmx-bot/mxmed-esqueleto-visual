@@ -866,3 +866,42 @@ autorización separada. Contador principal: `1/22`.
 
 Documento rector:
 [Aprobación directoral](./MXMED_APROBACION_DECISIONES_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md).
+
+## 39. Cierre técnico de Actividad 2 — 2026-07-18
+
+La Actividad 2 implementa el núcleo PG-01 aprobado mediante una policy única,
+serializable y versionada: `MXMED_PLAN_CAPABILITY_POLICY_V1`. El inventario de
+14 fuentes base, ocho adicionales y 41 códigos legacy se reconcilia mediante
+adapters; la existencia previa de archivos no se utilizó como evidencia de
+cierre.
+
+Resultados verificables:
+
+- cinco planes canónicos y aliases de entrada, sin sexto plan;
+- 41 capabilities legacy preservadas por crosswalk y 28 códigos canónicos;
+- resolver backend con orden determinista de once gates y denials sanitizados;
+- approval/ownership fail-closed para administración y compra, conservando
+  publicación histórica gratuita;
+- lifecycle de doce estados, grace D1/D3/D4/D15/D16, prórrogas validadas y
+  downgrade programado;
+- `archived_read_only` conserva galería, Agenda y clínica sin ejecutar purga;
+- add-ons Call Center e IA futura modelados, no operativos y no comprables;
+- read-model extendido en la ruta existente y cancelación de cambio programado
+  por `DELETE .../scheduled-plan`;
+- frontend alimentado por `plan_catalog`; aliases, ranks, precios y matriz de
+  capacidades locales eliminados;
+- Stripe protegido: el cambio se limita a consumir la policy canónica para
+  normalización/rank sin alterar provider, firma, webhook, idempotencia o
+  activación;
+- migración aditiva versionada y no ejecutada.
+
+QA disponible: `PlanCapabilityPolicyTest.php` PASS (166),
+`SubscriptionReadModelContractTest.php` PASS (85), lint PHP, parser JavaScript,
+`git diff --check`, matriz backend↔frontend y snapshots semánticos. El runner no
+incluye Node; el test Node queda versionado y su contrato equivalente se valida
+con el motor JavaScript local y las aserciones PHP de paridad.
+
+Estado de paridad: `BACKEND_AND_FRONTEND_COMPLETED`. Capacidades futuras,
+workflows completos de ownership, consola operativa, proveedores IA/Call Center,
+metering productivo y retención especializada continúan explícitamente
+diferidos; no se contabilizan como implementados.

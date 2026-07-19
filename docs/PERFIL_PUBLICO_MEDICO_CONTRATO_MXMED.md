@@ -60397,3 +60397,92 @@ y el tráfico público continúa `NO-GO`. Stripe, PaymentIntent, webhook y
 activación no se modifican.
 
 ---
+
+## PP279 — MXMED_PLANS_CAPABILITIES_OWNERSHIP_LIFECYCLE_IMPLEMENTATION_V1
+
+**Actividad:** 2 de 22
+
+**Grupo:** PG-01 — Planes, capacidades, ownership y lifecycle
+
+**Fecha:** 2026-07-18
+
+**Estado:** `PASS_IMPLEMENTED_CORE`
+
+**Policy:** `MXMED_PLAN_CAPABILITY_POLICY_V1`
+
+### Implementación
+
+La fuente canónica vive en
+`modules/subscriptions/policy/MxmedPlanCapabilityPolicy.php`. Define exactamente
+free/basic/standard/optimum/professional, aliases compatibles, jerarquía,
+capabilities, sources, cuotas, add-ons, estados comerciales/efectivos, denials y
+flags futuros. `free_default` sólo se admite como fallback técnico explícito.
+
+El backend incorpora adapters de approval/ownership, lifecycle con clock
+inyectable, resolver de once gates y builder del read-model. El endpoint current
+existente expone policy, approval, ownership, current/contracted/scheduled plan,
+grace, add-ons, eligibility, capability states/sources, cuotas, denials, archivos
+preservados y futuras capacidades no operativas. Se agrega cancelación acotada
+de cambio programado en `DELETE .../scheduled-plan`.
+
+El panel de suscripciones consume `plan_catalog`, `plan_aliases`, ranks,
+capabilities y precios publicables del backend. Muestra estados distintos para
+approval, ownership, pending payment/activation, past due, grace, restricted,
+downgrade, `archived_read_only`, suspensión, cuota, no aplicabilidad y función
+futura. El checkout queda visual y funcionalmente bloqueado si
+`purchase_allowed` no es `true`.
+
+### Persistencia y compatibilidad
+
+La migración
+`modules/profiles/db/2026_07_18_add_plan_capability_policy_v1_fields.sql` es
+aditiva, nullable y reversible de forma lógica; no fue ejecutada. Los campos
+legacy del read-model se conservan marcados deprecated y derivados de la policy.
+`PublicProfilePlanCapabilities` mantiene 41 códigos legacy mediante crosswalk.
+
+### Stripe protegido
+
+Payment route, checkout, PaymentIntent, provider, webhook real
+`/api/subscriptions/index.php/webhooks/stripe`, firma, eventos, idempotencia y
+activate-after-payment mantienen su arquitectura. Sólo comparten normalización y
+ranking canónicos; no se crean add-on payments, rutas falsas ni activaciones.
+
+### Capacidades futuras
+
+Call Center, Agente IA de Agenda, IA de contenido/imágenes, interacción
+medicamentosa y notificaciones sin implementación aprobada quedan
+`documented_disabled`, `marketable=false`, `purchasable=false` y
+`operational=false`. Los precios de Call Center siguen tentativos y no aparecen
+en checkout.
+
+### QA y evidencia
+
+- `PlanCapabilityPolicyTest.php`: PASS, 166 aserciones;
+- `SubscriptionReadModelContractTest.php`: PASS, 85 aserciones;
+- test frontend versionado y contrato equivalente validado con parser/semántica
+  JavaScript local;
+- lint PHP, diff checks, inventario de scope, revisión de datos sensibles,
+  paridad backend↔frontend y snapshots semánticos;
+- evidencia:
+  `/tmp/mxmed-plans-capabilities-ownership-lifecycle-implementation-01/`;
+- estado de paridad: `BACKEND_AND_FRONTEND_COMPLETED`;
+- migraciones ejecutadas: 0;
+- despliegues/AWS/recursos externos: 0.
+
+### Archivos y alcance
+
+El allowlist final contiene 27 archivos: policy, seis servicios/adapters,
+repositorio/router existentes, cuatro adaptaciones Stripe sin cambio conductual,
+adapter de perfil público, migración, tres assets/UI, dos tests PHP, un test JS y
+cinco documentos PG-01. El detalle machine-readable está en
+`final-file-scope-audit.json`.
+
+### Contador y siguiente paso
+
+- Actividad 2 concluida;
+- avance global: `2/22`;
+- pendientes principales: `20`;
+- siguiente actividad autorizable: PG-02 — identidad, aprobación y ownership;
+- PG-02 no se inicia en PP279.
+
+---

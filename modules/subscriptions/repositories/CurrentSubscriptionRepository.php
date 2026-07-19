@@ -56,6 +56,31 @@ final class CurrentSubscriptionRepository
         return $this->findPlanByCodeAndPeriod('free', 'lifetime');
     }
 
+    public function findPublishedPlanPrices(): array
+    {
+        try {
+            $stmt = $this->pdo->query(
+                'SELECT
+                    plan_code,
+                    billing_period,
+                    amount_cents,
+                    currency,
+                    price_version
+                 FROM subscription_plan_prices
+                 WHERE is_active = 1
+                   AND deleted_at IS NULL
+                   AND valid_from <= UTC_TIMESTAMP()
+                   AND (valid_until IS NULL OR valid_until >= UTC_TIMESTAMP())
+                 ORDER BY plan_code ASC, billing_period ASC, valid_from DESC'
+            );
+            $rows = $stmt !== false ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (PDOException $e) {
+            return [];
+        }
+
+        return is_array($rows) ? $rows : [];
+    }
+
     public function activeSubscriptionExists(string $entityType, string $entityId): bool
     {
         return $this->findActiveByEntity($entityType, $entityId) !== null;
@@ -127,6 +152,10 @@ final class CurrentSubscriptionRepository
         }
 
         try {
+            $optionalColumns = $this->availableOptionalSubscriptionColumns();
+            $optionalSelect = $optionalColumns !== []
+                ? ",\n                    " . implode(",\n                    ", $optionalColumns)
+                : '';
             $stmt = $this->pdo->prepare(
                 'SELECT
                     subscription_id,
@@ -155,7 +184,7 @@ final class CurrentSubscriptionRepository
                     renewed_to_subscription_id,
                     source,
                     created_at,
-                    updated_at
+                    updated_at' . $optionalSelect . '
                  FROM profile_subscriptions
                  WHERE entity_type = :entity_type
                    AND entity_id = :entity_id
@@ -184,5 +213,67 @@ final class CurrentSubscriptionRepository
         }
 
         return is_array($row) ? $row : null;
+    }
+
+    public function cancelScheduledPlanChange(string $entityType, string $entityId): bool
+    {
+        $available = $this->availableOptionalSubscriptionColumns();
+        foreach (['scheduled_plan_code', 'scheduled_effective_at', 'scheduled_change_status'] as $required) {
+            if (!in_array($required, $available, true)) {
+                throw new RuntimeException('scheduled_change_storage_unavailable');
+            }
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE profile_subscriptions
+                 SET scheduled_change_status = \'cancelled\',
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE entity_type = :entity_type
+                   AND entity_id = :entity_id
+                   AND deleted_at IS NULL
+                   AND scheduled_plan_code IS NOT NULL
+                   AND scheduled_effective_at > UTC_TIMESTAMP()
+                   AND scheduled_change_status = \'scheduled\'
+                 ORDER BY created_at DESC
+                 LIMIT 1'
+            );
+            $stmt->execute(['entity_type' => trim($entityType), 'entity_id' => trim($entityId)]);
+            return $stmt->rowCount() === 1;
+        } catch (PDOException $e) {
+            throw new RuntimeException('scheduled_change_cancel_unavailable', 0, $e);
+        }
+    }
+
+    private function availableOptionalSubscriptionColumns(): array
+    {
+        $allowlist = [
+            'policy_version',
+            'original_expires_at',
+            'grace_extension_type',
+            'grace_extension_days',
+            'grace_extension_status',
+            'grace_extension_approved_at',
+            'restricted_at',
+            'scheduled_plan_code',
+            'scheduled_effective_at',
+            'scheduled_change_status',
+            'active_addons_json',
+            'archival_state',
+        ];
+        try {
+            $stmt = $this->pdo->query('SHOW COLUMNS FROM profile_subscriptions');
+            $rows = $stmt !== false ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (PDOException $e) {
+            return [];
+        }
+        $available = [];
+        foreach ($rows as $row) {
+            $field = (string)($row['Field'] ?? '');
+            if (in_array($field, $allowlist, true)) {
+                $available[] = $field;
+            }
+        }
+        return $available;
     }
 }

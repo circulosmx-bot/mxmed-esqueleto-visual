@@ -59210,6 +59210,16 @@ function mxResetLogoPreview(){
     els.planSelection.insertAdjacentElement('afterend', checkoutSummary);
     els.checkoutSummary = checkoutSummary;
   }
+  const policyStatus = document.createElement('section');
+  policyStatus.className = 'alert alert-secondary d-none';
+  policyStatus.dataset.subpPolicyStatus = '';
+  policyStatus.setAttribute('role', 'status');
+  if(els.currentAlert){
+    els.currentAlert.insertAdjacentElement('afterend', policyStatus);
+  }else{
+    pane.insertAdjacentElement('afterbegin', policyStatus);
+  }
+  els.policyStatus = policyStatus;
 
   const SUBSCRIPTION_ACTION_NOTICE = 'Elige un plan disponible para preparar el siguiente paso. La contratación en línea se activará en la siguiente fase.';
   const SUBSCRIPTION_ACTIVE_NOTICE = 'Activa más funciones mejorando tu plan.';
@@ -59218,41 +59228,6 @@ function mxResetLogoPreview(){
   const SUBSCRIPTION_SELECTION_READY_NOTICE = 'Tu selección quedó lista para el siguiente paso. Aún no se inicia contratación ni checkout.';
   const SUBSCRIPTION_CHECKOUT_PENDING_NOTICE = 'La contratación en línea se activará en la siguiente fase.';
   const SUBSCRIPTION_UPGRADE_PRECHECK_NOTICE = 'Revisa la mejora dentro de la card del plan seleccionado.';
-  const UI_PLAN_TO_BACKEND_PLAN = Object.freeze({
-    free: 'free',
-    gratis: 'free',
-    gratuito: 'free',
-    free_default: 'free',
-    basico: 'basic',
-    'básico': 'basic',
-    basic: 'basic',
-    estandar: 'standard',
-    'estándar': 'standard',
-    standard: 'standard',
-    optimo: 'optimum',
-    'óptimo': 'optimum',
-    optimum: 'optimum',
-    pro: 'professional',
-    profesional: 'professional',
-    professional: 'professional'
-  });
-  const SUBSCRIPTION_PLAN_RANK = Object.freeze({
-    free: 0,
-    basic: 1,
-    standard: 2,
-    optimum: 3,
-    professional: 4
-  });
-  const SUBSCRIPTION_PLAN_PRICE_MATRIX = Object.freeze({
-    source: 'ui_reference_pending_operator_matrix',
-    billingPeriod: 'annual',
-    plans: Object.freeze({
-      basic: Object.freeze({ yearly: 6990 }),
-      standard: Object.freeze({ yearly: 9990 }),
-      optimum: Object.freeze({ yearly: 12990 }),
-      professional: Object.freeze({ yearly: 21990 })
-    })
-  });
   const STATUS_LABELS = {
     free_default: 'Plan base permanente',
     active: 'Activo',
@@ -59292,12 +59267,7 @@ function mxResetLogoPreview(){
       alert: SUBSCRIPTION_ACTION_NOTICE,
       features: ['Consulta tu plan actual, vigencia y beneficios disponibles']
     },
-    plans: [
-      { id:'basico', name:'Básico', tagline:'Incluye 1 de las 5 funciones', features:['Perfil en línea'] },
-      { id:'estandar', name:'Estándar', tagline:'Incluye 2 de las 5 funciones', features:['Perfil en línea','Agenda'] },
-      { id:'optimo', name:'Óptimo', tagline:'Incluye 4 de las 5 funciones', features:['Perfil en línea','Agenda','Expediente','Recetas'] },
-      { id:'pro', name:'Profesional', tagline:'Suite completa para tu consulta, incluye todas las funciones.', features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] }
-    ],
+    plans: [],
     activeSection: 'plans',
     paymentsView: 'overview',
     checkoutSummary: {
@@ -60309,6 +60279,13 @@ function mxResetLogoPreview(){
     const id = safeDoctorId(entityId);
     if(type !== 'doctor' || !id) return '';
     return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/subscriptions`;
+  }
+
+  function buildScheduledPlanEndpoint(entityType, entityId){
+    const type = clean(entityType).toLowerCase();
+    const id = safeDoctorId(entityId);
+    if(type !== 'doctor' || !id) return '';
+    return `/api/subscriptions/index.php/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}/scheduled-plan`;
   }
 
   function buildSubscriptionCheckoutIntentEndpoint(entityType, entityId){
@@ -61391,6 +61368,10 @@ function mxResetLogoPreview(){
     return status === 'active' && (effectivePlan !== 'free' || !!contractedPlan || model?.is_paid_plan === true);
   }
 
+  function purchaseAllowedByPolicy(){
+    return !!data.currentModel?.policy_version && data.currentModel?.purchase_allowed === true;
+  }
+
   function normalizeSubscriptionQaPlanState(raw = {}){
     const value = clean(raw.value || raw.plan || raw.plan_code || raw.planCode || '').toLowerCase();
     const normalized = value === 'sin_plan' || value === 'no_plan' || value === 'none' || value === 'null' ? 'free' : value;
@@ -61897,7 +61878,7 @@ function mxResetLogoPreview(){
     const context = data.contextInfo || {};
     const endpoint = buildSubscriptionWriteEndpoint(context.entity_type, context.entity_id || context.doctor_id);
     const activePaid = hasPaidActiveSubscription(model);
-    const disabled = data.devWrite.state === 'sending' || activePaid || !endpoint;
+    const disabled = data.devWrite.state === 'sending' || activePaid || !endpoint || !purchaseAllowedByPolicy();
     const entityType = clean(context.entity_type) || 'No disponible';
     const entityId = clean(context.entity_id || context.doctor_id) || 'No disponible';
     const doctorId = clean(context.doctor_id) || 'No disponible';
@@ -61979,8 +61960,12 @@ function mxResetLogoPreview(){
     data.currentModel = model || {};
     data.currentMeta = meta || {};
     data.contextInfo = contextInfo || {};
-    const planLabel = clean(model?.plan_label) || 'No disponible';
-    const status = clean(model?.status);
+    const policyUi = window.MXMedPlanCapabilityUI;
+    data.plans = policyUi && typeof policyUi.plansFromReadModel === 'function'
+      ? policyUi.plansFromReadModel(data.currentModel)
+      : [];
+    const planLabel = clean(model?.current_plan?.label || model?.plan_label) || 'No disponible';
+    const status = clean(model?.commercial_state || model?.status);
     const statusLabel = labelFromMap(STATUS_LABELS, status, status || 'Estado no disponible');
     const effectivePlan = clean(model?.effective_plan_code);
     const contractedPlan = clean(model?.contracted_plan_code);
@@ -62015,7 +62000,7 @@ function mxResetLogoPreview(){
         ? `Según el estado actual de suscripción: ${planLabel}. El encabezado puede reflejar configuración comercial anterior.`
         : `Según el estado actual de suscripción: ${planLabel}.`,
       alert: hasActivePaidPlan
-        ? currentPlanIdentity === 'pro'
+        ? currentPlanIdentity === 'professional'
           ? SUBSCRIPTION_MAX_PLAN_NOTICE
           : SUBSCRIPTION_ACTIVE_NOTICE
         : SUBSCRIPTION_ACTION_NOTICE,
@@ -62363,22 +62348,13 @@ function mxResetLogoPreview(){
   }
 
   function canonicalBackendPlanCode(value){
-    const id = clean(value)
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-    return UI_PLAN_TO_BACKEND_PLAN[id] || id;
+    const policyUi = window.MXMedPlanCapabilityUI;
+    if(!policyUi || typeof policyUi.normalizePlanCode !== 'function') return '';
+    return policyUi.normalizePlanCode(value, data.currentModel || {}) || '';
   }
 
   function normalizePlanId(value){
-    const canonical = canonicalBackendPlanCode(value);
-    const uiByBackend = {
-      basic: 'basico',
-      standard: 'estandar',
-      optimum: 'optimo',
-      professional: 'pro'
-    };
-    return uiByBackend[canonical] || clean(value).toLowerCase();
+    return canonicalBackendPlanCode(value);
   }
 
   function backendPlanCodeFromUiPlan(planId){
@@ -62387,22 +62363,31 @@ function mxResetLogoPreview(){
 
   function planRank(planId){
     const canonical = canonicalBackendPlanCode(planId);
-    return Object.prototype.hasOwnProperty.call(SUBSCRIPTION_PLAN_RANK, canonical)
-      ? SUBSCRIPTION_PLAN_RANK[canonical]
-      : null;
+    const plan = data.plans.find((item)=> item.code === canonical)
+      || (Array.isArray(data.currentModel?.plan_catalog)
+        ? data.currentModel.plan_catalog.find((item)=> item?.code === canonical)
+        : null);
+    const rank = Number(plan?.rank);
+    return Number.isInteger(rank) ? rank : null;
   }
 
   function findPlanById(planId){
     const id = normalizePlanId(planId);
-    return data.plans.find((plan)=> normalizePlanId(plan.id) === id) || null;
+    const visible = data.plans.find((plan)=> normalizePlanId(plan.id) === id);
+    if(visible) return visible;
+    const policyUi = window.MXMedPlanCapabilityUI;
+    const allPlans = policyUi && typeof policyUi.plansFromReadModel === 'function'
+      ? policyUi.plansFromReadModel(data.currentModel || {}, { includeFree: true })
+      : [];
+    return allPlans.find((plan)=> plan.id === id) || null;
   }
 
   function planIconPanelHtml(planId, options = {}){
     const icons = {
-      basico: 'person',
-      estandar: 'calendar_month',
-      optimo: 'clinical_notes',
-      pro: 'psychology'
+      basic: 'person',
+      standard: 'calendar_month',
+      optimum: 'clinical_notes',
+      professional: 'psychology'
     };
     const id = normalizePlanId(planId);
     const icon = icons[id] || 'workspace_premium';
@@ -62416,7 +62401,7 @@ function mxResetLogoPreview(){
   }
 
   function recommendedPlanId(){
-    return data.plans.some((plan)=> plan.id === 'estandar') ? 'estandar' : (data.plans[0]?.id || '');
+    return data.plans.some((plan)=> plan.id === 'standard') ? 'standard' : (data.plans[0]?.id || '');
   }
 
   function currentPlanSelectionContextKey(){
@@ -62507,38 +62492,32 @@ function mxResetLogoPreview(){
   }
 
   function monthlyEquivalent(plan){
-    const yearly = Number(planCommercialPrice(plan).yearly || 0);
-    return yearly > 0 ? Math.round(yearly / 12) : 0;
+    return Number(planCommercialPrice(plan).monthly || 0);
   }
 
   function planCommercialPrice(plan){
-    const canonical = canonicalBackendPlanCode(plan?.id);
-    return SUBSCRIPTION_PLAN_PRICE_MATRIX.plans[canonical] || { yearly: 0 };
+    const annual = plan?.prices?.annual || null;
+    const monthly = plan?.prices?.monthly || null;
+    return {
+      yearly: Number.isInteger(Number(annual?.amount_cents)) ? Number(annual.amount_cents) / 100 : 0,
+      monthly: Number.isInteger(Number(monthly?.amount_cents)) ? Number(monthly.amount_cents) / 100 : 0,
+      annualCents: Number.isInteger(Number(annual?.amount_cents)) ? Number(annual.amount_cents) : null,
+      monthlyCents: Number.isInteger(Number(monthly?.amount_cents)) ? Number(monthly.amount_cents) : null,
+      annual,
+      monthly
+    };
   }
 
   function planAnnualPrice(plan){
     return Number(planCommercialPrice(plan).yearly || 0);
   }
 
-  function roundUpToPriceEndingIn90Cents(valueCents){
-    const cents = Math.ceil(Number(valueCents || 0));
-    if(!Number.isFinite(cents) || cents <= 0) return 0;
-    return Math.max(9000, Math.ceil((cents - 9000) / 10000) * 10000 + 9000);
-  }
-
-  function derivedMonthlyUnitCentsFromAnnualCents(annualCents){
-    const annual = Math.round(Number(annualCents || 0));
-    if(!Number.isFinite(annual) || annual <= 0) return null;
-    return roundUpToPriceEndingIn90Cents((annual * 125) / 1200);
-  }
-
   function planAnnualPriceCents(plan){
-    return amountPesosToCents(planAnnualPrice(plan));
+    return planCommercialPrice(plan).annualCents;
   }
 
   function planMonthlyPaymentCents(plan){
-    const annualCents = planAnnualPriceCents(plan);
-    return annualCents !== null ? derivedMonthlyUnitCentsFromAnnualCents(annualCents) : null;
+    return planCommercialPrice(plan).monthlyCents;
   }
 
   function planMonthlyPaymentPrice(plan){
@@ -62549,8 +62528,9 @@ function mxResetLogoPreview(){
   function planMonthlyAdvanceContract(plan){
     const unitAmountCents = planMonthlyPaymentCents(plan);
     const annualAmountCents = planAnnualPriceCents(plan);
-    if(unitAmountCents === null || annualAmountCents === null) return null;
+    if(unitAmountCents === null) return null;
     const monthlyAnnualizedAmountCents = unitAmountCents * 12;
+    const price = planCommercialPrice(plan).monthly || {};
     return {
       contract_version: 'free_monthly_advance_v1',
       plan_code: backendPlanCodeFromUiPlan(plan?.id) || canonicalBackendPlanCode(plan?.id) || null,
@@ -62562,18 +62542,19 @@ function mxResetLogoPreview(){
       regular_recurring_amount_cents: unitAmountCents,
       annual_amount_cents: annualAmountCents,
       monthly_annualized_amount_cents: monthlyAnnualizedAmountCents,
-      annual_savings_amount_cents: Math.max(0, monthlyAnnualizedAmountCents - annualAmountCents),
+      annual_savings_amount_cents: annualAmountCents === null ? 0 : Math.max(0, monthlyAnnualizedAmountCents - annualAmountCents),
       is_prorated: false,
       payment_execution_enabled: false,
       payment_execution_block_reason: 'stripe_billing_not_ready',
-      price_source: 'frontend_fallback_derived_from_annual_commercial_rounding',
-      price_version: 'monthly-commercial-v1'
+      price_source: 'subscription_plan_prices_backend',
+      price_version: clean(price.price_version)
     };
   }
 
   function planAnnualContract(plan){
     const annualAmountCents = planAnnualPriceCents(plan);
     if(annualAmountCents === null) return null;
+    const price = planCommercialPrice(plan).annual || {};
     return {
       contract_version: 'free_monthly_advance_v1',
       plan_code: backendPlanCodeFromUiPlan(plan?.id) || canonicalBackendPlanCode(plan?.id) || null,
@@ -62589,8 +62570,8 @@ function mxResetLogoPreview(){
       is_prorated: false,
       payment_execution_enabled: true,
       payment_execution_block_reason: null,
-      price_source: 'frontend_annual_catalog',
-      price_version: 'mxmed-ui-catalog-v1'
+      price_source: 'subscription_plan_prices_backend',
+      price_version: clean(price.price_version)
     };
   }
 
@@ -62700,27 +62681,6 @@ function mxResetLogoPreview(){
     return `${fmtMoney(Math.ceil(yearly / 365))} al día pagando anual`;
   }
 
-  function amountPesosToCents(value){
-    const amount = Number(value || 0);
-    if(!Number.isFinite(amount) || amount <= 0) return null;
-    return Math.round(amount * 100);
-  }
-
-  function proratedAdjustmentCents(currentPriceCents, targetPriceCents, remainingDays, periodDays){
-    if(currentPriceCents === null || currentPriceCents === undefined || targetPriceCents === null || targetPriceCents === undefined){
-      return null;
-    }
-    const current = Number(currentPriceCents);
-    const target = Number(targetPriceCents);
-    const remaining = Number(remainingDays);
-    const period = Number(periodDays);
-    if(!Number.isFinite(current) || !Number.isFinite(target) || !Number.isFinite(remaining) || !Number.isFinite(period) || period <= 0){
-      return null;
-    }
-    const difference = Math.max(0, target - current);
-    return Math.max(0, Math.round(difference * Math.max(0, remaining) / period));
-  }
-
   function currentEntityContextForPaymentPayload(warnings){
     const context = data.contextInfo || {};
     const entityType = clean(context.entity_type).toLowerCase();
@@ -62755,10 +62715,9 @@ function mxResetLogoPreview(){
   function priceCentsForPlanAndPeriod(plan, billingPeriod){
     if(!plan) return null;
     if(clean(billingPeriod) === 'monthly'){
-      const contract = planMonthlyAdvanceContract(plan);
-      return contract ? contract.initial_amount_cents : null;
+      return planMonthlyPaymentCents(plan);
     }
-    return amountPesosToCents(planAnnualPrice(plan));
+    return planAnnualPriceCents(plan);
   }
 
   function renewalDurationDaysForPayload(billingPeriod, warnings){
@@ -62816,21 +62775,14 @@ function mxResetLogoPreview(){
     const warnings = basePaymentPayloadWarnings();
     const context = currentEntityContextForPaymentPayload(warnings);
     const currentPlanCode = currentBackendPlanCodeForPaymentPayload(warnings);
-    const currentPlan = currentPlanForUpgradeComparison();
     const targetPlanCode = backendPlanCodeFromUiPlan(plan?.id) || null;
     const billingPeriod = billingPeriodForPlanCheckoutPayload('upgrade_now', warnings);
-    const estimate = proratedUpgradeEstimate(plan);
-    const currentPriceCents = amountPesosToCents(planAnnualPrice(currentPlan));
-    const targetPriceCents = amountPesosToCents(planAnnualPrice(plan));
-    const remainingDays = estimate?.remainingDays ?? Number(data.currentModel?.days_until_expiration);
+    const remainingDays = Number(data.currentModel?.days_until_expiration);
     const modelDurationDays = Number(data.currentModel?.duration_days || 0);
-    const periodDays = estimate?.periodDays || (Number.isFinite(modelDurationDays) && modelDurationDays > 0 ? Math.round(modelDurationDays) : null);
-    const adjustmentAmountCents = proratedAdjustmentCents(currentPriceCents, targetPriceCents, remainingDays, periodDays);
+    const periodDays = Number.isFinite(modelDurationDays) && modelDurationDays > 0 ? Math.round(modelDurationDays) : null;
 
     if(!targetPlanCode) warnings.push('missing_target_plan_code');
-    if(currentPriceCents === null) warnings.push('missing_current_price_cents');
-    if(targetPriceCents === null) warnings.push('missing_target_price_cents');
-    if(adjustmentAmountCents === null) warnings.push('missing_adjustment_amount_cents');
+    warnings.push('amount_resolved_by_backend');
     if(!Number.isFinite(Number(remainingDays))) warnings.push('missing_remaining_days');
     if(!periodDays) warnings.push('missing_period_days');
 
@@ -62843,10 +62795,6 @@ function mxResetLogoPreview(){
       billing_period: billingPeriod,
       remaining_days: Number.isFinite(Number(remainingDays)) ? Math.max(0, Math.round(Number(remainingDays))) : null,
       period_days: periodDays || null,
-      current_price_cents: currentPriceCents,
-      target_price_cents: targetPriceCents,
-      amount_cents: adjustmentAmountCents,
-      adjustment_amount_cents: adjustmentAmountCents,
       currency: 'MXN',
       auto_renew_requested: false,
       source: 'subscription_upgrade_summary'
@@ -66635,33 +66583,12 @@ function mxResetLogoPreview(){
     };
   }
 
-  const SUBSCRIPTION_SUMMARY_FEATURE_CHIPS = Object.freeze([
-    Object.freeze({
-      key: 'perfil',
-      label: 'Perfil en línea',
-      plans: Object.freeze(['basico', 'estandar', 'optimo', 'pro'])
-    }),
-    Object.freeze({
-      key: 'agenda',
-      label: 'Agenda en línea',
-      plans: Object.freeze(['estandar', 'optimo', 'pro'])
-    }),
-    Object.freeze({
-      key: 'expediente',
-      label: 'Expediente clínico',
-      plans: Object.freeze(['optimo', 'pro'])
-    }),
-    Object.freeze({
-      key: 'recetas',
-      label: 'Recetas digitales',
-      plans: Object.freeze(['optimo', 'pro'])
-    }),
-    Object.freeze({
-      key: 'asistente-ia',
-      label: 'Asistente IA',
-      plans: Object.freeze(['pro'])
-    })
-  ]);
+  function subscriptionSummaryFeatureChips(){
+    const policyUi = window.MXMedPlanCapabilityUI;
+    return policyUi && typeof policyUi.summaryFeatureChips === 'function'
+      ? policyUi.summaryFeatureChips(data.currentModel || {})
+      : [];
+  }
 
   function checkoutSummaryFeatureAvailabilityText(feature){
     const names = summaryBenefitAvailabilityPlanItems(feature?.plans).map((plan)=> plan.label);
@@ -66750,16 +66677,18 @@ function mxResetLogoPreview(){
 
   function checkoutSummaryTargetBenefitsGridHtml(plan){
     const targetPlanId = normalizePlanId(plan?.id);
-    const items = SUBSCRIPTION_SUMMARY_FEATURE_CHIPS.map((feature)=>{
+    const items = subscriptionSummaryFeatureChips().map((feature)=>{
       const meta = subscriptionBenefitVisualMeta(feature.label);
-      const included = feature.plans.includes(targetPlanId);
+      const included = feature.operational !== false && feature.plans.includes(targetPlanId);
       return {
         ...feature,
         ...meta,
         included,
         popover: included
           ? 'Esta función está incluida en el plan seleccionado.'
-          : checkoutSummaryFeatureAvailabilityHtml(feature)
+          : feature.operational === false
+            ? 'Función futura documentada; todavía no está operativa ni disponible para compra.'
+            : checkoutSummaryFeatureAvailabilityHtml(feature)
       };
     });
     return `<div class="subp-new-summary-benefit-grid">
@@ -66798,10 +66727,10 @@ function mxResetLogoPreview(){
     const currentPlanId = normalizePlanId(currentPlan?.id);
     const targetPlanId = normalizePlanId(targetPlan?.id);
     const targetLabel = clean(targetPlan?.name) || 'tu nuevo plan';
-    const items = SUBSCRIPTION_SUMMARY_FEATURE_CHIPS.map((feature)=>{
+    const items = subscriptionSummaryFeatureChips().map((feature)=>{
       const meta = subscriptionBenefitVisualMeta(feature.label);
-      const currentIncluded = feature.plans.includes(currentPlanId);
-      const targetIncluded = feature.plans.includes(targetPlanId);
+      const currentIncluded = feature.operational !== false && feature.plans.includes(currentPlanId);
+      const targetIncluded = feature.operational !== false && feature.plans.includes(targetPlanId);
       const state = targetIncluded
         ? (currentIncluded ? 'included' : 'activates')
         : 'not_included';
@@ -66809,7 +66738,9 @@ function mxResetLogoPreview(){
         ? 'Esta función ya forma parte de tu plan actual.'
         : state === 'activates'
           ? `Esta función se activará cuando completes la mejora al Plan ${targetLabel}.`
-          : paidUpgradeFeatureAvailabilityHtml(feature, targetPlan);
+          : feature.operational === false
+            ? 'Función futura documentada; todavía no está operativa ni disponible para compra.'
+            : paidUpgradeFeatureAvailabilityHtml(feature, targetPlan);
       return {
         ...feature,
         ...meta,
@@ -66973,10 +66904,7 @@ function mxResetLogoPreview(){
   function paidUpgradeSummaryAmountCents(payloadPreview, preview, estimate){
     const candidates = [
       preview?.amount_cents,
-      preview?.adjustment_amount_cents,
-      payloadPreview?.amount_cents,
-      payloadPreview?.adjustment_amount_cents,
-      estimate ? amountPesosToCents(estimate.amount) : null
+      preview?.adjustment_amount_cents
     ];
     for(const candidate of candidates){
       if(candidate === null || candidate === undefined || clean(candidate) === '') continue;
@@ -67311,6 +67239,10 @@ function mxResetLogoPreview(){
 
   async function openPlanCheckoutSummary(planId){
     if(data.realQaEntityHydrationPending) return;
+    if(!purchaseAllowedByPolicy()){
+      renderPolicyStatus();
+      return;
+    }
     const plan = findPlanById(planId);
     if(!plan) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
@@ -67849,23 +67781,26 @@ function mxResetLogoPreview(){
   }
 
   function proratedUpgradeEstimate(plan){
-    const currentPlan = currentPlanForUpgradeComparison();
-    const currentYearly = Number(planCommercialPrice(currentPlan).yearly || 0);
-    const targetYearly = Number(planCommercialPrice(plan).yearly || 0);
-    const startsAt = parseSubscriptionDate(data.currentModel?.starts_at);
-    const expiresAt = parseSubscriptionDate(data.currentModel?.expires_at);
-    const remainingDays = upgradeRemainingDaysFromModel(expiresAt);
-    const periodDays = upgradePeriodDaysFromModel(startsAt, expiresAt);
-    if(!currentYearly || !targetYearly || remainingDays === null || !periodDays) return null;
-
-    const annualDifference = Math.max(0, targetYearly - currentYearly);
-    const amount = Math.max(0, Math.round(annualDifference * remainingDays / periodDays));
-    if(!annualDifference || !remainingDays) return null;
+    const previewState = data.paymentServerPreview?.checkoutSummary;
+    const preview = previewState?.data || previewState?.payload?.data || previewState;
+    const requestedTarget = canonicalBackendPlanCode(plan?.id);
+    const previewTarget = canonicalBackendPlanCode(preview?.target_plan_code || preview?.plan_code);
+    const amountCents = Number(preview?.adjustment_amount_cents ?? preview?.amount_cents);
+    const remainingDays = readModelNonNegativeInteger(preview?.remaining_days);
+    const periodDays = readModelPositiveInteger(preview?.period_days || preview?.total_period_days);
+    if(clean(previewState?.state) !== 'success' || !requestedTarget || previewTarget !== requestedTarget){
+      return null;
+    }
+    if(!Number.isFinite(amountCents) || amountCents <= 0 || remainingDays === null || periodDays === null){
+      return null;
+    }
 
     return {
-      amount,
+      amount: amountCents / 100,
+      amountCents: Math.round(amountCents),
       remainingDays,
-      periodDays
+      periodDays,
+      source: 'subscription_payment_route_preview_backend'
     };
   }
 
@@ -68505,6 +68440,31 @@ function mxResetLogoPreview(){
       renderUpgradeCheckoutFlow();
       return;
     }
+    if(!purchaseAllowedByPolicy()){
+      els.planSelection.classList.remove('d-none');
+      if(els.selectedPlanTitle) els.selectedPlanTitle.textContent = 'Acciones comerciales no disponibles';
+      if(els.selectedPlanSummary){
+        els.selectedPlanSummary.textContent = 'La aprobación y la titularidad del perfil deben quedar verificadas por el backend antes de seleccionar o contratar un plan.';
+      }
+      if(els.planContinue){
+        els.planContinue.textContent = 'Plan bloqueado por política';
+        els.planContinue.disabled = true;
+        els.planContinue.classList.add('disabled');
+      }
+      if(els.selectedPlanMessage){
+        const presentation = window.MXMedPlanCapabilityUI?.statusPresentation?.(data.currentModel || {});
+        const denial = presentation?.denials?.find((item)=> [
+          'profile_not_approved',
+          'ownership_required',
+          'ownership_disputed',
+          'ownership_suspended'
+        ].includes(item.code));
+        els.selectedPlanMessage.textContent = denial?.message || 'Consulta el estado de aprobación y titularidad mostrado arriba.';
+        els.selectedPlanMessage.classList.remove('d-none');
+      }
+      renderUpgradeCheckoutFlow();
+      return;
+    }
     const selected = ensureSelectedPlan(activePaid);
     const summaryError = clean(data.checkoutSummary.error);
     if(summaryError){
@@ -68597,6 +68557,119 @@ function mxResetLogoPreview(){
     renderUpgradeCheckoutFlow();
   }
 
+  async function cancelScheduledPlanChange(button){
+    const context = data.contextInfo || {};
+    const endpoint = buildScheduledPlanEndpoint(context.entity_type, context.entity_id || context.doctor_id);
+    if(!endpoint || !button) return;
+    button.disabled = true;
+    button.textContent = 'Cancelando cambio...';
+    try{
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const payload = await response.json().catch(()=> null);
+      if(!response.ok || payload?.ok !== true){
+        const denial = window.MXMedSubscriptions?.mapPolicyDenial?.(payload?.error?.code);
+        throw new Error(clean(denial?.message || payload?.error?.message || 'No se pudo cancelar el cambio programado.'));
+      }
+      await loadCurrentSubscription();
+    }catch(error){
+      button.disabled = false;
+      button.textContent = 'Cancelar cambio programado';
+      if(els.policyStatus){
+        const message = clean(error?.message) || 'No se pudo cancelar el cambio programado.';
+        els.policyStatus.insertAdjacentHTML('beforeend', `<p class="mb-0 mt-2 text-danger" data-subp-policy-error>${escapeHtml(message)}</p>`);
+      }
+    }
+  }
+
+  function renderPolicyStatus(){
+    if(!els.policyStatus) return;
+    const policyUi = window.MXMedPlanCapabilityUI;
+    if(!policyUi || typeof policyUi.statusPresentation !== 'function' || !data.currentModel?.policy_version){
+      els.policyStatus.className = 'alert alert-danger';
+      els.policyStatus.dataset.policyState = 'policy_unavailable';
+      els.policyStatus.textContent = 'La política de planes no está disponible. Las acciones comerciales permanecen bloqueadas.';
+      return;
+    }
+    const presentation = policyUi.statusPresentation(data.currentModel);
+    const tone = ['success', 'info', 'warning', 'danger', 'secondary'].includes(presentation.tone)
+      ? presentation.tone
+      : 'secondary';
+    const scheduledAddOnImpact = presentation.scheduledAddOnImpacts.length
+      ? `<div class="small mt-1" data-subp-scheduled-addon-impacts><strong>Complementos afectados:</strong> ${presentation.scheduledAddOnImpacts.map((item)=> escapeHtml(item.label || item.code || 'complemento')).join(', ')}. No se renovarán y sus datos se preservan.</div>`
+      : '';
+    const scheduled = presentation.scheduledPlan
+      ? `<div class="mt-2" data-subp-scheduled-change><strong>Cambio programado:</strong> ${escapeHtml(presentation.scheduledPlan.label || presentation.scheduledPlan.code || '')}${presentation.scheduledEffectiveAt ? ` · ${escapeHtml(formatDate(presentation.scheduledEffectiveAt))}` : ''}${presentation.cancelScheduledChangeAllowed ? ' <button type="button" class="btn btn-sm btn-outline-secondary ms-2" data-subp-cancel-scheduled>Cancelar cambio programado</button>' : ''}${scheduledAddOnImpact}</div>`
+      : '';
+    const graceEnd = clean(presentation.grace?.ends_at);
+    const grace = ['past_due', 'grace'].includes(presentation.state)
+      ? `<div class="mt-2" data-subp-grace-notice><strong>Fecha límite de regularización:</strong> ${graceEnd ? `<time datetime="${escapeHtml(graceEnd)}">${escapeHtml(formatDate(graceEnd))}</time>` : 'pendiente de confirmación'} <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-subp-policy-regularize>Regularizar pago</button></div>`
+      : '';
+    const archived = presentation.archivedModules.length
+      ? `<div class="mt-2" data-subp-archived-read-only><strong>Datos preservados en sólo lectura:</strong> ${presentation.archivedModules.map((item)=> `${escapeHtml(item.module || 'módulo')} (reactiva ${escapeHtml(item.required_plan_to_reactivate || 'el plan requerido')} para editar)`).join(', ')}. La escritura está bloqueada y los datos no se eliminarán en esta actividad.</div>`
+      : '';
+    const future = presentation.futureCapabilities.length
+      ? `<div class="mt-2" data-subp-future-capabilities><strong>Funciones futuras:</strong> ${presentation.futureCapabilities.length} documentadas, no operativas y sin CTA de compra.</div>`
+      : '';
+    const addOns = presentation.addOnEligibility.length
+      ? `<div class="mt-2" data-subp-addon-eligibility><strong>Complementos Call Center:</strong> ${presentation.addOnEligibility.map((item)=> `${escapeHtml(item.label || item.code || 'complemento')} (${item.eligible === true ? 'elegible contractualmente' : 'no elegible'}; no comprable y no operativo)`).join(', ')}.</div>`
+      : '';
+    const capabilityStateLabels = {
+      locked_upsell: 'requieren otro plan',
+      pending_activation: 'pendientes de activación',
+      read_only: 'en sólo lectura',
+      suspended_policy: 'suspendidas por política',
+      not_applicable: 'no aplicables',
+      blocked_dependency: 'bloqueadas por dependencia',
+      grace_limited: 'limitadas por gracia'
+    };
+    const capabilityStates = Object.keys(capabilityStateLabels).map((state)=>{
+      const count = presentation.capabilityStates.filter((item)=> item.state === state).length;
+      return count > 0
+        ? `<span class="badge text-bg-light me-1" data-capability-state="${escapeHtml(state)}">${count} ${escapeHtml(capabilityStateLabels[state])}</span>`
+        : '';
+    }).filter(Boolean).join('');
+    const capabilityStateSummary = capabilityStates
+      ? `<div class="mt-2" data-subp-capability-state-summary>${capabilityStates}</div>`
+      : '';
+    const denialMessages = presentation.denials.length
+      ? `<ul class="small mt-2 mb-0" data-subp-policy-denials>${presentation.denials.map((item)=> `<li data-denial-reason="${escapeHtml(item.code)}">${escapeHtml(item.message)}</li>`).join('')}</ul>`
+      : '';
+    const primaryDenial = presentation.denials.find((item)=> [
+      'profile_not_approved',
+      'ownership_required',
+      'ownership_disputed',
+      'ownership_suspended',
+      'actor_scope_not_allowed',
+      'subscription_pending_payment',
+      'subscription_in_grace',
+      'capability_read_only'
+    ].includes(item.code));
+    const gateMessage = presentation.purchaseAllowed
+      ? 'Perfil aprobado y titularidad verificada para acciones comerciales.'
+      : (primaryDenial?.message || 'Las acciones comerciales están bloqueadas por la política backend.');
+    els.policyStatus.className = `alert alert-${tone}`;
+    els.policyStatus.dataset.policyState = presentation.state;
+    els.policyStatus.dataset.approvalState = presentation.approvalState;
+    els.policyStatus.dataset.ownershipState = presentation.ownershipState;
+    els.policyStatus.dataset.purchaseAllowed = presentation.purchaseAllowed ? 'true' : 'false';
+    els.policyStatus.innerHTML = `<div><strong>${escapeHtml(presentation.title)}</strong> — ${escapeHtml(presentation.message)}</div>
+      <div class="small mt-1" data-subp-policy-gates>Aprobación: ${escapeHtml(presentation.approvalState)} · Titularidad: ${escapeHtml(presentation.ownershipState)}. ${escapeHtml(gateMessage)}</div>
+      ${grace}${scheduled}${archived}${future}${addOns}${capabilityStateSummary}${denialMessages}`;
+    els.policyStatus.classList.remove('d-none');
+    const cancelButton = els.policyStatus.querySelector('[data-subp-cancel-scheduled]');
+    if(cancelButton){
+      cancelButton.addEventListener('click', ()=> cancelScheduledPlanChange(cancelButton));
+    }
+    const regularizeButton = els.policyStatus.querySelector('[data-subp-policy-regularize]');
+    if(regularizeButton){
+      regularizeButton.addEventListener('click', ()=> setSubscriptionSection('billing'));
+    }
+  }
+
   function renderCurrent(){
     const freeQaMode = isQaFreePlanMode();
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
@@ -68664,6 +68737,7 @@ function mxResetLogoPreview(){
         els.currentAlert.classList.add('d-none');
       }
     }
+    renderPolicyStatus();
     renderSubscriptionPaymentsShell();
   }
 
@@ -68704,6 +68778,7 @@ function mxResetLogoPreview(){
       return;
     }
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
+    const policyPurchaseAllowed = purchaseAllowedByPolicy();
     const freeQaMode = isQaFreePlanMode();
     const summary = validCheckoutSummary(activePaid);
     const selected = ensureSelectedPlan(activePaid);
@@ -68725,7 +68800,7 @@ function mxResetLogoPreview(){
       const isFocused = focusMode && normalizePlanId(p.id) === focusedPlanId;
       const isMuted = focusMode && !isFocused;
       const isPreparingSummary = data.checkoutSummary.preparing && normalizePlanId(data.checkoutSummary.targetPlanId) === normalizePlanId(p.id);
-      const cardSelectable = flowType === 'new_subscription' || flowType === 'upgrade_now';
+      const cardSelectable = policyPurchaseAllowed && (flowType === 'new_subscription' || flowType === 'upgrade_now');
       const hasCurrentUpgradePrompt = isCurrent && upgradePlansFor(p).length > 0;
       const hasCurrentConditionsControl = activePaid && isCurrent && !freeQaMode;
       const badge = isSelected
@@ -68810,6 +68885,7 @@ function mxResetLogoPreview(){
       </div>`;
     }).join('');
     const selectPlan = (planId)=>{
+      if(!policyPurchaseAllowed) return;
       const plan = findPlanById(planId);
       if(!plan) return;
       const flowType = planFlowType(plan, activePaid);
