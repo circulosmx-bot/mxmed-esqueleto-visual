@@ -1976,6 +1976,24 @@ Siguientes pasos recomendados:
 
 ## 🔜 SIGUIENTE POR RESOLVER
 
+## Segundo intento del programa de refinamiento (rama de actividad)
+
+- Estado candidato: **1/22 AUDIT_READY_FOR_INTEGRATION**.
+- Pendientes: **21**.
+- Actividad 1/22: auditoría V2 de planes, capacidades, ownership y lifecycle.
+- Clasificación: **UI-0**; auditoría sin implementación.
+- Known-good protegido: `recovery/mxmed-pre-22-known-good` @ `e4f7d515cba4ae47fcdbd44cd55ce610466b982a`; 8091 sin cambios.
+- Evidencia del primer intento: archivada y no reactivada; Activity 2 no iniciada.
+- Decisiones: pendientes de revisión del director en bloques pequeños.
+- Dashboard de operadores: no implementado; requisitos candidatos clasificados UI-3.
+- Este estado sólo es candidato en `audit/mxmed-plans-capabilities-ownership-lifecycle-v2`; la rama base del programa permanece `0/22 NOT_STARTED` hasta integración explícita.
+
+### PP-281 — Auditoría V2 de planes, capacidades, ownership y lifecycle
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-19 | Registrar Activity 1/22 del segundo intento como auditoría candidata | Se requiere conocer el baseline real antes de decidir política o implementación | UI-0; inventario Backend ↔ Schema ↔ API/read-model ↔ UI; sin código, SQL, Stripe, AWS ni dashboard; known-good protegido; historia no reactivada; 21 actividades pendientes y Activity 2 no iniciada | `docs/MXMED_AUDITORIA_V2_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`; evidencia `/tmp/mxmed-activity01-plans-capabilities-ownership-lifecycle-v2/` | `AUDIT_READY_FOR_INTEGRATION`; decisiones del director pendientes |
+
 ### Pendientes reales detectados (fase actual P16)
 - Consolidar cierre funcional del flujo “Integrar a caso clínico” en todos los contextos embebidos (historial base, expandido y casos clínicos).
 - Validar y documentar paridad total de apertura de detalle por tipo de card dentro de “Casos clínicos” (sin excepciones por tipo).
