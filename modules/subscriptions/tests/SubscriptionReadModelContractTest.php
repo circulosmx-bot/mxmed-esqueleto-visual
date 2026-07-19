@@ -117,15 +117,15 @@ $check(
     'frontend catalog policy gate is outside its function scope'
 );
 $check(strpos($app, 'data-subp-archived-read-only') !== false, 'archived read-only UI missing');
-$check(strpos($app, 'required_plan_to_reactivate') !== false, 'archived reactivation explanation missing');
+$check(strpos($app, 'data-subp-payments-lifecycle="archived_read_only"') !== false, 'archived lifecycle is missing from Mi plan y pagos');
 $check(
     strpos($app, 'data-subp-grace-notice') !== false && strpos($app, 'data-subp-policy-regularize') !== false,
     'grace deadline or payment action is missing from frontend'
 );
-$check(strpos($app, 'data-subp-scheduled-addon-impacts') !== false, 'scheduled add-on impact UI missing');
-$check(strpos($policyUi, 'quotaFeatureLabels') !== false, 'frontend quota presentation missing');
-$check(strpos($app, 'data-subp-addon-eligibility') !== false, 'frontend add-on eligibility summary missing');
-$check(strpos($app, 'data-subp-policy-denials') !== false, 'canonical denial messages are not rendered');
+$check(strpos($app, 'data-subp-payments-lifecycle="scheduled_downgrade"') !== false, 'scheduled plan change is missing from Mi plan y pagos');
+$check(strpos($policyUi, 'commercialPlanPresentation') !== false, 'commercial presentation adapter missing');
+$check(strpos($policyUi, ').concat(quotaFeatureLabels(plan))') === false, 'quota inventory leaked into commercial cards');
+$check(strpos($app, 'data-subp-addon-eligibility') === false && strpos($app, 'data-subp-policy-denials') === false, 'technical policy inventory remains printed');
 $check(strpos($api, "'scheduled-plan'") !== false, 'scheduled change cancel endpoint missing');
 $check(strpos($api, '$planRanks = [') === false, 'local API plan rank matrix remains');
 $check(stripos($migration, 'TRUNCATE ') === false, 'destructive truncate in migration');

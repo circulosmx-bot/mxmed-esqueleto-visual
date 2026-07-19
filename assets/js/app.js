@@ -61366,7 +61366,8 @@ function mxResetLogoPreview(){
     const contractedPlan = clean(model?.contracted_plan_code).toLowerCase();
     if(status === 'free_default') return false;
     if(effectivePlan === 'free' && !contractedPlan) return false;
-    return status === 'active' && (effectivePlan !== 'free' || !!contractedPlan || model?.is_paid_plan === true);
+    return ['active', 'past_due', 'grace', 'restricted'].includes(status)
+      && (effectivePlan !== 'free' || !!contractedPlan || model?.is_paid_plan === true);
   }
 
   function purchaseAllowedByPolicy(){
@@ -61449,6 +61450,55 @@ function mxResetLogoPreview(){
     };
   }
 
+  function qaReviewScenario(){
+    const policyUi = window.MXMedPlanCapabilityUI;
+    if(!policyUi || typeof policyUi.qaReviewFixtureEnabled !== 'function' || !policyUi.qaReviewFixtureEnabled(window.location)){
+      return '';
+    }
+    const scenario = clean(new URLSearchParams(window.location.search || '').get('mxmed_subscription_state')).toLowerCase();
+    return ['grace', 'archived_read_only', 'scheduled_downgrade', 'unauthorized'].includes(scenario)
+      ? scenario
+      : '';
+  }
+
+  function applyQaReviewScenario(model){
+    if(!model || model.qa_review_fixture !== true) return model;
+    const scenario = qaReviewScenario();
+    if(scenario === 'grace'){
+      return {
+        ...model,
+        commercial_state: 'grace',
+        status: 'grace',
+        grace_status: 'grace',
+        grace: { starts_at: '2026-07-21 00:00:00', ends_at: '2026-08-02 00:00:00' },
+        denial_reasons: ['subscription_in_grace'],
+        purchase_allowed: false,
+        qa_review_state: scenario
+      };
+    }
+    if(scenario === 'archived_read_only'){
+      return {
+        ...model,
+        commercial_state: 'restricted',
+        status: 'restricted',
+        archived_module_summaries: [{ module: 'Información conservada del plan anterior', required_plan_to_reactivate: 'optimum' }],
+        denial_reasons: ['capability_read_only'],
+        qa_review_state: scenario
+      };
+    }
+    if(scenario === 'scheduled_downgrade'){
+      return {
+        ...model,
+        scheduled_plan: { code: 'basic', label: 'Básico' },
+        scheduled_effective_at: model.expires_at || '2027-07-06 00:00:00',
+        cancel_scheduled_change_allowed: true,
+        scheduled_addon_impacts: [],
+        qa_review_state: scenario
+      };
+    }
+    return model;
+  }
+
   function buildQaSubscriptionModel(realModel = {}){
     const qaPlan = normalizeSubscriptionQaPlanState(data.qaPlan || {});
     if(qaPlan.value === 'real') return realModel || {};
@@ -61463,7 +61513,7 @@ function mxResetLogoPreview(){
     };
     const validity = buildQaPlanValidity(realModel || {});
     if(qaPlan.value === 'free'){
-      return {
+      return applyQaReviewScenario({
         ...base,
         commercial_state: 'free',
         status: 'free_default',
@@ -61483,13 +61533,13 @@ function mxResetLogoPreview(){
         source: 'qa_plan_simulation',
         qa_plan_simulated: true,
         qa_plan_mode: qaPlan.value
-      };
+      });
     }
 
     const plan = findPlanById(qaPlan.planCode);
     const planLabel = clean(plan?.name) || qaPlan.label;
     const billingPeriod = clean(realModel?.billing_period).toLowerCase() === 'monthly' ? 'monthly' : 'annual';
-    return {
+    return applyQaReviewScenario({
       ...base,
       commercial_state: 'active',
       status: 'active',
@@ -61509,7 +61559,7 @@ function mxResetLogoPreview(){
       source: 'qa_plan_simulation',
       qa_plan_simulated: true,
       qa_plan_mode: qaPlan.value
-    };
+    });
   }
 
   function applyEffectiveSubscriptionModel(){
@@ -62854,7 +62904,7 @@ function mxResetLogoPreview(){
     if(period !== 'annual' && period !== 'monthly') return false;
     const payload = checkoutSummaryCadencePayload(period);
     if(!payload) return false;
-    if(isQaPlanSimulationActive()) return true;
+    if(isQaPlanSimulationActive() && !qaReviewPreviewActive()) return true;
     const state = checkoutSummaryCadencePreviewState(period);
     return state?.state === 'success';
   }
@@ -62923,7 +62973,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.cadenceErrors = { annual: '', monthly: '' };
     publishPaymentPayloadPreview('checkoutSummary', null);
 
-    if(isQaPlanSimulationActive()){
+    if(isQaPlanSimulationActive() && !qaReviewPreviewActive()){
       data.checkoutSummary.cadencePreviews = {
         annual: { state: 'simulation' },
         monthly: { state: 'simulation' }
@@ -63748,7 +63798,9 @@ function mxResetLogoPreview(){
   }
 
   function latestPaymentServerPreviewData(slot){
-    const preview = data.paymentServerPreview?.[slot];
+    const preview = slot === 'checkoutSummary' && qaReviewPreviewActive()
+      ? data.checkoutSummary?.qaPreview || data.paymentServerPreview?.[slot]
+      : data.paymentServerPreview?.[slot];
     return preview?.state === 'success' && preview.data ? preview.data : null;
   }
 
@@ -65461,6 +65513,22 @@ function mxResetLogoPreview(){
     return pane.querySelector(`[data-subp-server-preview="${slot}"]`);
   }
 
+  function qaReviewPreviewAdapter(){
+    const adapter = window.MXMedSubscriptionPreviewQAAdapter;
+    return adapter && typeof adapter.enabled === 'function' && typeof adapter.preview === 'function'
+      ? adapter
+      : null;
+  }
+
+  function qaReviewPreviewActive(){
+    const adapter = qaReviewPreviewAdapter();
+    return !!adapter && adapter.enabled(window.location, data.currentModel || {});
+  }
+
+  function unbackedQaPlanSimulation(){
+    return isQaPlanSimulationActive() && !qaReviewPreviewActive();
+  }
+
   function paymentServerPreviewRouteLabel(routeType){
     const route = clean(routeType);
     if(route === 'upgrade_subscription') return 'Mejora de plan';
@@ -65479,13 +65547,14 @@ function mxResetLogoPreview(){
   }
 
   function paymentServerPreviewHtml(slot){
-    const isSimulation = isQaPlanSimulationActive();
-    const chip = isSimulation ? 'QA local' : 'Cálculo seguro';
+    const isSimulation = unbackedQaPlanSimulation();
+    const isQaReview = qaReviewPreviewActive();
+    const chip = isSimulation ? 'QA local' : (isQaReview ? 'Preview QA backend' : 'Cálculo seguro');
     const body = isSimulation
       ? `<p class="subp-server-preview-note">Simulación QA local — sin consulta backend.</p>
          <p class="subp-server-preview-muted">El cálculo backend sólo se consulta en modo Real.</p>`
-      : `<p class="subp-server-preview-note">Estamos confirmando el importe seguro antes de habilitar el pago.</p>`;
-    return `<article class="subp-server-preview" data-subp-server-preview="${escapeHtml(slot)}" data-state="${isSimulation ? 'simulation' : 'idle'}">
+      : `<p class="subp-server-preview-note">${isQaReview ? 'Validando una respuesta determinista del contrato backend en modo QA.' : 'Estamos confirmando el importe seguro antes de habilitar el pago.'}</p>`;
+    return `<article class="subp-server-preview" data-subp-server-preview="${escapeHtml(slot)}" data-state="${isSimulation ? 'simulation' : 'idle'}" data-preview-authority="${isQaReview ? 'qa_backend_contract_fixture' : 'backend'}">
         <div class="subp-server-preview-head">
           <div>
             <div class="subp-payments-kicker">Importe seguro</div>
@@ -65560,6 +65629,42 @@ function mxResetLogoPreview(){
         message: 'No fue posible preparar la vista previa server-side.'
       });
       return false;
+    }
+
+    const qaAdapter = qaReviewPreviewAdapter();
+    if(qaAdapter && qaAdapter.enabled(window.location, data.currentModel || {})){
+      const requestId = Date.now() + Math.random();
+      if(!data.paymentServerPreview) data.paymentServerPreview = {};
+      data.paymentServerPreview[slot] = { state: 'loading', requestId, source: 'qa_backend_contract_fixture' };
+      renderPaymentServerPreviewState(slot, data.paymentServerPreview[slot]);
+      const result = await qaAdapter.preview(buildPaymentServerPreviewPayload(payload), {
+        location: window.location,
+        readModel: data.currentModel || {}
+      });
+      if(data.paymentServerPreview?.[slot]?.requestId !== requestId) return false;
+      if(!result || result.ok !== true || !result.data){
+        data.paymentServerPreview[slot] = {
+          state: 'error',
+          requestId,
+          source: 'qa_backend_contract_fixture',
+          httpStatus: Number(result?.httpStatus || 0),
+          errorCode: clean(result?.errorCode) || 'qa_preview_error',
+          message: clean(result?.message) || 'No pudimos calcular el ajuste en este momento.'
+        };
+        if(slot === 'checkoutSummary') data.checkoutSummary.qaPreview = data.paymentServerPreview[slot];
+        renderPaymentServerPreviewState(slot, data.paymentServerPreview[slot]);
+        return false;
+      }
+      data.paymentServerPreview[slot] = {
+        state: 'success',
+        requestId,
+        source: 'qa_backend_contract_fixture',
+        httpStatus: Number(result.httpStatus || 200),
+        data: result.data
+      };
+      if(slot === 'checkoutSummary') data.checkoutSummary.qaPreview = data.paymentServerPreview[slot];
+      renderPaymentServerPreviewState(slot, data.paymentServerPreview[slot]);
+      return true;
     }
 
     if(isQaPlanSimulationActive()){
@@ -66319,6 +66424,40 @@ function mxResetLogoPreview(){
     loadPaymentServerPreview('renewal', payloadPreview);
   }
 
+  function subscriptionPaymentsLifecycleHtml(){
+    const policyUi = window.MXMedPlanCapabilityUI;
+    if(!policyUi || typeof policyUi.statusPresentation !== 'function') return '';
+    const presentation = policyUi.statusPresentation(data.currentModel || {});
+    const cards = [];
+    if(['past_due', 'grace'].includes(presentation.state)){
+      const graceEnd = clean(presentation.grace?.ends_at);
+      cards.push(`<article class="subp-payments-card" data-subp-payments-lifecycle="grace">
+        <div class="subp-payments-kicker">Estado de pago</div>
+        <h4>Periodo de regularización</h4>
+        <p>${graceEnd ? `Regulariza antes del ${escapeHtml(formatDate(graceEnd))}.` : 'La fecha límite será confirmada por el backend.'}</p>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-subp-policy-regularize>Regularizar pago</button>
+      </article>`);
+    }
+    if(presentation.archivedModules.length){
+      cards.push(`<article class="subp-payments-card" data-subp-payments-lifecycle="archived_read_only">
+        <div class="subp-payments-kicker">Datos conservados</div>
+        <h4>Disponible en sólo lectura</h4>
+        <p>Tu información permanece disponible. Reactiva el plan correspondiente para volver a editar.</p>
+      </article>`);
+    }
+    if(presentation.scheduledPlan){
+      const scheduledName = clean(presentation.scheduledPlan.label || presentation.scheduledPlan.code) || 'Plan programado';
+      const effectiveAt = clean(presentation.scheduledEffectiveAt);
+      cards.push(`<article class="subp-payments-card" data-subp-payments-lifecycle="scheduled_downgrade">
+        <div class="subp-payments-kicker">Próxima renovación</div>
+        <h4>Cambio programado a ${escapeHtml(scheduledName)}</h4>
+        <p>${effectiveAt ? `Aplicará el ${escapeHtml(formatDate(effectiveAt))}.` : 'La fecha será confirmada por el backend.'}</p>
+        ${presentation.cancelScheduledChangeAllowed ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-subp-cancel-scheduled>Cancelar cambio programado</button>' : ''}
+      </article>`);
+    }
+    return cards.join('');
+  }
+
   function renderSubscriptionPaymentsShell(){
     if(!els.paymentsContent) return;
     const activePaid = hasPaidActiveSubscription(data.currentModel || {});
@@ -66402,7 +66541,8 @@ function mxResetLogoPreview(){
       return;
     }
 
-    els.paymentsContent.innerHTML = `<article class="subp-payments-card subp-payments-card--plan" data-current-plan="${escapeHtml(planIdentity)}" data-subp-payments-card="plan">
+    const lifecycleHtml = subscriptionPaymentsLifecycleHtml();
+    els.paymentsContent.innerHTML = `<article class="subp-payments-card subp-payments-card--plan" data-current-plan="${escapeHtml(planThemeToken(planIdentity))}" data-subp-payments-card="plan">
         <div class="subp-payments-card-head">
           <div>
             <div class="subp-payments-kicker">Plan actual</div>
@@ -66420,13 +66560,14 @@ function mxResetLogoPreview(){
           ${subscriptionPaymentsBenefitsHtml(benefits)}
         </div>
       </article>
+      ${lifecycleHtml}
       <article class="subp-payments-card" data-subp-payments-card="renewal">
         <div class="subp-payments-card-head">
           <div>
           <div class="subp-payments-kicker">Renovación automática</div>
             <h4>Desactivada</h4>
           </div>
-          <span class="subp-payments-status-chip">Pendiente</span>
+          <span class="subp-payments-status-chip">Desactivada</span>
         </div>
         <label class="subp-payments-switch">
           <input type="checkbox" disabled>
@@ -66470,6 +66611,14 @@ function mxResetLogoPreview(){
           <button class="btn btn-outline-primary btn-sm" type="button" data-subp-payments-action="conditions">Ver condiciones del plan</button>
         </div>
       </article>`;
+    const cancelScheduled = els.paymentsContent.querySelector('[data-subp-cancel-scheduled]');
+    if(cancelScheduled){
+      cancelScheduled.addEventListener('click', ()=> cancelScheduledPlanChange(cancelScheduled));
+    }
+    const regularize = els.paymentsContent.querySelector('[data-subp-policy-regularize]');
+    if(regularize){
+      regularize.addEventListener('click', ()=> setSubscriptionSection('billing'));
+    }
   }
 
   function checkoutSummaryPeriodLabel(flowType){
@@ -66534,13 +66683,7 @@ function mxResetLogoPreview(){
   }
 
   function checkoutSummaryPlanIconSymbol(planId){
-    const icons = {
-      basico: 'person',
-      estandar: 'calendar_month',
-      optimo: 'clinical_notes',
-      pro: 'psychology'
-    };
-    return icons[normalizePlanId(planId)] || 'workspace_premium';
+    return clean(findPlanById(planId)?.iconKey) || 'workspace_premium';
   }
 
   function subscriptionBenefitVisualKey(feature){
@@ -66896,7 +67039,9 @@ function mxResetLogoPreview(){
   }
 
   function paidUpgradeSummaryPreviewStatus(){
-    const state = data.paymentServerPreview?.checkoutSummary;
+    const state = qaReviewPreviewActive()
+      ? data.checkoutSummary?.qaPreview || data.paymentServerPreview?.checkoutSummary
+      : data.paymentServerPreview?.checkoutSummary;
     return clean(state?.state) || 'idle';
   }
 
@@ -66929,7 +67074,9 @@ function mxResetLogoPreview(){
   }
 
   function paidUpgradeSummaryFinancialCardHtml(plan, payloadPreview){
-    const previewState = data.paymentServerPreview?.checkoutSummary || null;
+    const previewState = qaReviewPreviewActive()
+      ? data.checkoutSummary?.qaPreview || data.paymentServerPreview?.checkoutSummary || null
+      : data.paymentServerPreview?.checkoutSummary || null;
     const preview = latestPaymentServerPreviewData('checkoutSummary');
     const status = paidUpgradeSummaryPreviewStatus();
     const estimate = proratedUpgradeEstimate(plan);
@@ -66939,7 +67086,7 @@ function mxResetLogoPreview(){
     const daysCopy = remainingDays !== null
       ? `Por los ${remainingDays} días que aún restan de tu vigencia, tu ajuste estimado sería:`
       : 'Por los días que aún restan de tu vigencia, tu ajuste estimado sería:';
-    const isLoading = !isQaPlanSimulationActive() && (status === 'loading' || status === 'idle');
+    const isLoading = !unbackedQaPlanSimulation() && (status === 'loading' || status === 'idle');
     const isError = status === 'error';
     const errorMessage = clean(previewState?.message) || 'No pudimos calcular el ajuste de tu mejora. Inténtalo nuevamente.';
 
@@ -66964,20 +67111,32 @@ function mxResetLogoPreview(){
       </article>`;
     }
 
+    const targetPrice = formatSubscriptionCents(preview?.target_price_cents, preview?.currency) || 'Confirmado por backend';
+    const expiry = clean(preview?.current_expires_at || data.currentModel?.expires_at);
+    const expiryLabel = expiry ? formatDate(expiry) : (data.current.until || 'No aplica');
+    const qaReview = qaReviewPreviewActive();
     const actionHtml = isQaPlanSimulationActive()
       ? `<button class="btn btn-outline-secondary btn-sm subp-payment-primary-action" type="button" disabled>
           <span class="subp-payment-primary-copy">
             <span>Continuar al método de pago</span>
-            <small>Simulación QA local — sin consulta backend.</small>
+            <small>${qaReview ? 'Preview QA del contrato backend · sin writes ni pagos.' : 'Simulación QA local — sin consulta backend.'}</small>
           </span>
         </button>`
       : checkoutSummaryOpenSecurePaymentActionHtml('checkoutSummary');
 
-    return `<article class="subp-paid-upgrade-finance" data-state="${isQaPlanSimulationActive() ? 'simulation' : 'ready'}">
+    return `<article class="subp-paid-upgrade-finance" data-state="${qaReview ? 'qa-review-ready' : (isQaPlanSimulationActive() ? 'simulation' : 'ready')}">
       <div class="subp-paid-upgrade-finance-copy">
         <span class="subp-payments-kicker">Tu ajuste de hoy</span>
         <p>${escapeHtml(daysCopy)}</p>
         <h4>de tan solo <span data-subp-shell-amount="checkoutSummary" data-fallback="${escapeHtml(amountLabel)}">${escapeHtml(amountLabel)}</span></h4>
+        <dl class="subp-payments-dl subp-paid-upgrade-calculation" data-subp-upgrade-calculation>
+          <dt>Precio del plan destino</dt><dd>${escapeHtml(targetPrice)}</dd>
+          <dt>Vigencia actual</dt><dd>${escapeHtml(expiryLabel)}</dd>
+          <dt>Días restantes</dt><dd>${remainingDays !== null ? escapeHtml(String(remainingDays)) : 'Confirmados por backend'}</dd>
+          <dt>Diferencia proporcional</dt><dd>${escapeHtml(amountLabel)}</dd>
+          <dt>Estado</dt><dd>Cálculo confirmado</dd>
+          <dt>Siguiente paso</dt><dd>Revisar forma de pago segura</dd>
+        </dl>
       </div>
       <div class="subp-payment-route-create-action" data-subp-payment-route-create-action="checkoutSummary">${actionHtml}</div>
     </article>`;
@@ -66990,7 +67149,13 @@ function mxResetLogoPreview(){
     const currentPlan = currentPlanForUpgradeComparison();
     const currentLabel = checkoutSummaryCurrentPlanLabel();
     const payloadPreview = buildCheckoutPaymentPayloadPreview(plan, 'upgrade_now');
+    const preservedQaPreview = qaReviewPreviewActive()
+      ? data.checkoutSummary?.qaPreview || data.paymentServerPreview?.checkoutSummary || null
+      : null;
     publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
+    if(preservedQaPreview && data.paymentServerPreview){
+      data.paymentServerPreview.checkoutSummary = preservedQaPreview;
+    }
 
     els.checkoutSummary.dataset.targetPlan = targetIdentity;
     els.checkoutSummary.dataset.paymentRouteType = clean(payloadPreview?.route_type || 'upgrade_subscription');
@@ -67021,7 +67186,9 @@ function mxResetLogoPreview(){
       <div data-subp-payment-route-create-status="checkoutSummary">${paymentRouteCreateStatusHtml('checkoutSummary')}</div>
       ${paymentPayloadPreviewHtml(payloadPreview)}
     </section>`;
-    const existingPreview = data.paymentServerPreview?.checkoutSummary || null;
+    const existingPreview = qaReviewPreviewActive()
+      ? data.checkoutSummary?.qaPreview || data.paymentServerPreview?.checkoutSummary || null
+      : data.paymentServerPreview?.checkoutSummary || null;
     if(existingPreview?.state){
       renderPaymentServerPreviewState('checkoutSummary', existingPreview);
     }
@@ -67035,7 +67202,7 @@ function mxResetLogoPreview(){
     const selected = clean(data.checkoutSummary.selectedBillingPeriod);
     if(!selected){
       const simulation = isQaPlanSimulationActive()
-        ? '<p class="subp-new-summary-action-note subp-new-summary-action-note--simulation">Simulación QA local — sin consulta backend.</p>'
+        ? `<p class="subp-new-summary-action-note subp-new-summary-action-note--simulation">${qaReviewPreviewActive() ? 'Preview QA del contrato backend · sin writes ni pagos.' : 'Simulación QA local — sin consulta backend.'}</p>`
         : '';
       return `<div class="subp-new-summary-action-stack">
         <p class="subp-new-summary-action-hint">Elige cómo prefieres pagar para continuar.</p>
@@ -67048,7 +67215,7 @@ function mxResetLogoPreview(){
           <span class="material-symbols-rounded" aria-hidden="true">preview</span>
           <span class="subp-payment-primary-copy">
             <span>Revisar Pago seguro</span>
-            <small>Vista local sin consultas ni pagos.</small>
+            <small>${qaReviewPreviewActive() ? 'Importes validados con fixture del contrato backend; no se crearán pagos.' : 'Vista local sin consultas ni pagos.'}</small>
           </span>
         </button>
       </div>`;
@@ -67268,6 +67435,7 @@ function mxResetLogoPreview(){
     data.checkoutSummary.requestId = requestId;
     data.checkoutSummary.error = '';
     data.checkoutSummary.contextKey = contextKey;
+    data.checkoutSummary.qaPreview = null;
     resetCheckoutSummaryCadenceState({ bumpRequest: false });
     data.selectedPlanId = plan.id;
     data.selectedPlanContextKey = contextKey;
@@ -67288,13 +67456,15 @@ function mxResetLogoPreview(){
         }
         publishPaymentPayloadPreview('checkoutSummary', payloadPreview);
 
-        if(isQaPlanSimulationActive()){
+        if(isQaPlanSimulationActive() && !qaReviewPreviewActive()){
           if(!data.paymentServerPreview) data.paymentServerPreview = {};
           data.paymentServerPreview.checkoutSummary = { state: 'simulation' };
         }else{
           const previewOk = await loadPaymentServerPreview('checkoutSummary', payloadPreview);
           if(data.checkoutSummary.requestId !== requestId) return;
-          if(!previewOk) throw new Error('preview_failed');
+          if(!previewOk){
+            data.checkoutSummary.error = 'No pudimos calcular el ajuste. Reintenta antes de continuar.';
+          }
         }
       }
 
@@ -68557,6 +68727,13 @@ function mxResetLogoPreview(){
   }
 
   async function cancelScheduledPlanChange(button){
+    if(isQaPlanSimulationActive()){
+      if(button){
+        button.disabled = true;
+        button.textContent = 'Simulación QA · sin cambios';
+      }
+      return false;
+    }
     const context = data.contextInfo || {};
     const endpoint = buildScheduledPlanEndpoint(context.entity_type, context.entity_id || context.doctor_id);
     if(!endpoint || !button) return;
@@ -68833,7 +69010,7 @@ function mxResetLogoPreview(){
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       const focusClasses = `${isFocused ? ' subp-plan--focus-selected' : ''}${isMuted ? ' subp-plan--focus-muted' : ''}`;
-      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}${focusClasses}" data-plan="${escapeHtml(p.themeToken || planThemeToken(p.id))}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${focusMode || cardSelectable || hasCurrentUpgradePrompt ? '0' : '-1'}" role="button" aria-label="${escapeHtml(p.accessibilityLabel || p.name)}" aria-pressed="${isFocused || isSelected ? 'true' : 'false'}" aria-current="${isFocused ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt || hasCurrentConditionsControl || focusMode ? 'false' : 'true'}">
+      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}${focusClasses}" data-plan="${escapeHtml(p.themeToken || planThemeToken(p.id))}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${focusMode || cardSelectable || hasCurrentUpgradePrompt ? '0' : '-1'}" role="button" aria-label="${escapeHtml(isCurrent ? `Tu plan actual. ${p.accessibilityLabel || p.name}` : (p.accessibilityLabel || p.name))}" aria-pressed="${isFocused || isSelected ? 'true' : 'false'}" aria-current="${isCurrent ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt || hasCurrentConditionsControl || focusMode ? 'false' : 'true'}">
         ${floatingBadgeHtml}
         <div class="subp-plan-title${activePaid && flowType === 'current' ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-copy"><span class="subp-plan-title-line"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span></span>${planTaglineHtml}</span>${planTitleBadgeHtml}</div>
         ${planIconPanelHtml(p, { current: activePaid && flowType === 'current' })}
