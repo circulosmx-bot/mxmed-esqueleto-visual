@@ -984,7 +984,17 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
 | Dominio Order (Diagnóstico) | Pendiente | Entidad formal para órdenes de estudio con estados y QR | 00INDICE MAESTRO DE FUNCIONES.pdf | Definir contrato antes de implementar laboratorios |
 | Facturación Plataforma | Pendiente | Motor de planes, upgrade/downgrade, reclamo de perfil | 00INDICE MAESTRO DE FUNCIONES.pdf | Diseñar capa comercial posterior a Etapa 1 |
 
-## E. Registro de decisiones (Decision Log)
+## E. Gobierno obligatorio de cambios UI/UX
+
+Toda actividad futura debe aplicar:
+
+- [Protocolo de control de cambios UI/UX y entrega segura](./MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md)
+- [Plantilla de actividad segura Backend ↔ API ↔ UI](./MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md)
+- [Registro de contratos visuales](./MXMED_REGISTRO_CONTRATOS_VISUALES.md)
+
+La decisión `PP-280` separa autoridad funcional y representación visual, protege 8091 como última UI aprobada y hace obligatoria la clasificación `UI-0` a `UI-3`.
+
+## F. Registro de decisiones (Decision Log)
 
 Formato obligatorio por entrada:
 - Fecha (`YYYY-MM-DD`)
@@ -996,6 +1006,7 @@ Formato obligatorio por entrada:
 
 | Fecha | Decisión | Motivo | Impacto | Referencias | Estado |
 |---|---|---|---|---|---|
+| 2026-07-19 | **PP-280**: control seguro de cambios UI/UX y entrega | Una actividad funcional proyectó datos técnicos en la presentación sin decisión visual explícita y requirió recuperación forense | Establece UI-0 a UI-3, protección de 8091, orden secuencial, contratos visuales, matriz Backend ↔ API ↔ UI, gate de frontend diferido, emergency stop y dashboard siempre UI-3; el primer intento queda archivado en 2/22 y el segundo permanece `0/22 NOT_STARTED` | `docs/MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md`; `docs/MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md`; `docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md` | vigente |
 | 2026-02-25 | **Ejemplo**: `appointment_id` canónico proviene de Agenda | Eliminar divergencias Agenda/Clinical | Correlación estable appointment↔encounter en UI/API | `docs/clinical/DECISION_APPOINTMENT_ID_CANONICO_AGENDA_V1.md` | vigente |
 | 2026-02-25 | RBAC será un módulo transversal independiente del dominio clínico y de agenda | Evitar contaminación de contratos clínicos con lógica de permisos organizacionales | Permite evolución multi-actor sin alterar Clinical core | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
 | 2026-02-25 | Modelo organizacional (Hospital, Lab, Aseguradora, Pharma) será dominio separado del dominio clínico | Separación clara entre actor organizacional y acto clínico | Facilita expansión futura sin romper núcleo médico | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
@@ -1018,7 +1029,7 @@ Formato obligatorio por entrada:
 | 2026-05-24 | Agenda puede abrir contexto de paciente/expediente, pero no inicia consulta automáticamente | Mantener frontera entre operación administrativa y acto clínico | Evita arranque automático de consulta y preserva control clínico explícito | `docs/AGENDA_COMO_PUERTA_DE_ENTRADA_CLINICA_MXMED.md`; `docs/PLAN_MAESTRO_MXMED.md` | vigente |
 | _pendiente_ | _agregar nuevas decisiones aquí_ |  |  |  |  |
 
-## F. Mapa de interconexiones (flows principales)
+## G. Mapa de interconexiones (flows principales)
 
 ### Flow 1: patient creation -> agenda
 1. Agenda recibe creación de cita.
@@ -1048,7 +1059,7 @@ Refs:
 - `docs/clinical/TIMELINE_V1_CONTRACT.md`
 - `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md`
 
-## G. Backlog por etapas (1a/2a/3a/4a)
+## H. Backlog por etapas (1a/2a/3a/4a)
 
 ### 1a) Consolidación perfil médico (prioridad absoluta)
 - `[contract]` cerrar convergencia `patient_id` canónico en flujos clinical legacy.
@@ -1144,7 +1155,7 @@ Refs:
 - `[ops]` controles de cumplimiento/auditoría.
 - Nota: no bloquear Etapa 1 por funcionalidad comercial/organizacional futura.
 
-## H. Índice de fuentes externas
+## I. Índice de fuentes externas
 
 | Fuente | Tipo | Fecha | Estado | Decisiones derivadas | Próxima acción |
 |---|---|---|---|---|---|
@@ -1178,7 +1189,7 @@ Refs:
 | `docs/db/MODELO_CANONICO_AGENDA.md` | doc interno | Modelo canónico de Agenda y significado de flags | pendiente | Por definir | Mantener alineado con enforcement futuro |
 | `modules/agenda/README.md` | doc interno | Contrato operativo Agenda y estado real de flags (append-only) | pendiente | Por definir | Corregir naming red/black y mantener documentación sincronizada |
 
-## I. Cómo trabajar este plan
+## J. Cómo trabajar este plan
 
 Regla operativa obligatoria por iteración:
 1. Revisar fuente nueva (doc interno/PDF/ticket).
