@@ -39,6 +39,99 @@
     failed: Object.freeze({ tone: 'danger', title: 'Contratación no completada', message: 'La contratación falló de forma controlada y no activó funciones.' })
   });
 
+  // Candidate A presentation metadata only. Prices, ranks and entitlements are
+  // intentionally absent: those remain in the backend read-model plan catalog.
+  var COMMERCIAL_PLAN_PRESENTATION = Object.freeze({
+    free: Object.freeze({
+      planCode: 'free',
+      displayName: 'Gratuito',
+      themeToken: 'free',
+      iconKey: 'person',
+      shortDescription: 'Perfil en Modo Gratuito',
+      featuredBenefits: Object.freeze(['Perfil en línea']),
+      badge: '',
+      accessibilityLabel: 'Plan Gratuito'
+    }),
+    basic: Object.freeze({
+      planCode: 'basic',
+      displayName: 'Básico',
+      themeToken: 'basico',
+      iconKey: 'person',
+      shortDescription: 'Incluye 1 de las 5 funciones',
+      featuredBenefits: Object.freeze(['Perfil en línea']),
+      badge: '',
+      accessibilityLabel: 'Plan Básico'
+    }),
+    standard: Object.freeze({
+      planCode: 'standard',
+      displayName: 'Estándar',
+      themeToken: 'estandar',
+      iconKey: 'calendar_month',
+      shortDescription: 'Incluye 2 de las 5 funciones',
+      featuredBenefits: Object.freeze(['Perfil en línea', 'Agenda']),
+      badge: '',
+      accessibilityLabel: 'Plan Estándar'
+    }),
+    optimum: Object.freeze({
+      planCode: 'optimum',
+      displayName: 'Óptimo',
+      themeToken: 'optimo',
+      iconKey: 'clinical_notes',
+      shortDescription: 'Incluye 4 de las 5 funciones',
+      featuredBenefits: Object.freeze(['Perfil en línea', 'Agenda', 'Expediente', 'Recetas']),
+      badge: '',
+      accessibilityLabel: 'Plan Óptimo'
+    }),
+    professional: Object.freeze({
+      planCode: 'professional',
+      displayName: 'Profesional',
+      themeToken: 'pro',
+      iconKey: 'psychology',
+      shortDescription: 'Incluye las funciones operativas disponibles del plan profesional.',
+      featuredBenefits: Object.freeze(['Perfil en línea', 'Agenda', 'Expediente', 'Recetas']),
+      badge: '',
+      accessibilityLabel: 'Plan Profesional'
+    })
+  });
+
+  var QA_REVIEW_PLAN_CATALOG = Object.freeze([
+    Object.freeze({ code: 'free', label: 'Gratuito', rank: 0, capabilities: Object.freeze([
+      Object.freeze({ code: 'profile_publication', label: 'Perfil en directorio', operational: true })
+    ]), prices: Object.freeze([]) }),
+    Object.freeze({ code: 'basic', label: 'Básico', rank: 1, capabilities: Object.freeze([
+      Object.freeze({ code: 'profile_publication', label: 'Perfil en directorio', operational: true })
+    ]), prices: Object.freeze([
+      Object.freeze({ billing_period: 'annual', amount_cents: 699000, currency: 'MXN', price_version: 'qa-visual-v1' }),
+      Object.freeze({ billing_period: 'monthly', amount_cents: 79000, currency: 'MXN', price_version: 'qa-visual-v1' })
+    ]) }),
+    Object.freeze({ code: 'standard', label: 'Estándar', rank: 2, capabilities: Object.freeze([
+      Object.freeze({ code: 'profile_publication', label: 'Perfil en directorio', operational: true }),
+      Object.freeze({ code: 'agenda', label: 'Agenda en línea', operational: true })
+    ]), prices: Object.freeze([
+      Object.freeze({ billing_period: 'annual', amount_cents: 999000, currency: 'MXN', price_version: 'qa-visual-v1' }),
+      Object.freeze({ billing_period: 'monthly', amount_cents: 109000, currency: 'MXN', price_version: 'qa-visual-v1' })
+    ]) }),
+    Object.freeze({ code: 'optimum', label: 'Óptimo', rank: 3, capabilities: Object.freeze([
+      Object.freeze({ code: 'profile_publication', label: 'Perfil en directorio', operational: true }),
+      Object.freeze({ code: 'agenda', label: 'Agenda en línea', operational: true }),
+      Object.freeze({ code: 'clinical_record', label: 'Expediente clínico', operational: true }),
+      Object.freeze({ code: 'prescriptions', label: 'Recetas digitales', operational: true })
+    ]), prices: Object.freeze([
+      Object.freeze({ billing_period: 'annual', amount_cents: 1299000, currency: 'MXN', price_version: 'qa-visual-v1' }),
+      Object.freeze({ billing_period: 'monthly', amount_cents: 139000, currency: 'MXN', price_version: 'qa-visual-v1' })
+    ]) }),
+    Object.freeze({ code: 'professional', label: 'Profesional', rank: 4, capabilities: Object.freeze([
+      Object.freeze({ code: 'profile_publication', label: 'Perfil en directorio', operational: true }),
+      Object.freeze({ code: 'agenda', label: 'Agenda en línea', operational: true }),
+      Object.freeze({ code: 'clinical_record', label: 'Expediente clínico', operational: true }),
+      Object.freeze({ code: 'prescriptions', label: 'Recetas digitales', operational: true }),
+      Object.freeze({ code: 'ai_agenda_agent', label: 'Agente de Agenda con IA', operational: false })
+    ]), prices: Object.freeze([
+      Object.freeze({ billing_period: 'annual', amount_cents: 2199000, currency: 'MXN', price_version: 'qa-visual-v1' }),
+      Object.freeze({ billing_period: 'monthly', amount_cents: 239000, currency: 'MXN', price_version: 'qa-visual-v1' })
+    ]) })
+  ]);
+
   function text(value){
     return String(value == null ? '' : value).trim();
   }
@@ -59,6 +152,64 @@
       : {};
     var canonical = text(aliases[raw] || raw);
     return planCatalog(readModel).some(function(plan){ return plan.code === canonical; }) ? canonical : null;
+  }
+
+  function commercialPlanPresentation(value, readModel){
+    var code = normalizePlanCode(value, readModel);
+    return code && COMMERCIAL_PLAN_PRESENTATION[code]
+      ? COMMERCIAL_PLAN_PRESENTATION[code]
+      : null;
+  }
+
+  function themeTokenForPlan(value, readModel){
+    var presentation = commercialPlanPresentation(value, readModel);
+    return presentation ? presentation.themeToken : '';
+  }
+
+  function qaReviewFixtureEnabled(locationLike){
+    var location = locationLike && typeof locationLike === 'object' ? locationLike : {};
+    var hostname = text(location.hostname).toLowerCase();
+    var protocol = text(location.protocol).toLowerCase();
+    var search = text(location.search);
+    var localHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    var explicitReview = /(?:^|[?&])mxmed_subscription_review=1(?:&|$)/.test(search);
+    return localHost && protocol === 'http:' && explicitReview;
+  }
+
+  function qaReviewReadModel(locationLike){
+    if(!qaReviewFixtureEnabled(locationLike)) return null;
+    return {
+      policy_version: 'MXMED_PLAN_CAPABILITY_POLICY_V1',
+      plan_aliases: {
+        free: 'free', gratis: 'free', gratuito: 'free', free_default: 'free',
+        basic: 'basic', basico: 'basic', 'básico': 'basic',
+        standard: 'standard', estandar: 'standard', 'estándar': 'standard',
+        optimum: 'optimum', optimo: 'optimum', 'óptimo': 'optimum',
+        professional: 'professional', profesional: 'professional', pro: 'professional'
+      },
+      plan_catalog: QA_REVIEW_PLAN_CATALOG.map(function(plan){
+        return {
+          code: plan.code,
+          label: plan.label,
+          rank: plan.rank,
+          capabilities: plan.capabilities.map(function(capability){ return Object.assign({}, capability); }),
+          prices: plan.prices.map(function(price){ return Object.assign({ source: 'subscription_plan_prices_backend' }, price); })
+        };
+      }),
+      profile_approval_state: 'approved',
+      ownership_state: 'claimed',
+      purchase_allowed: true,
+      admin_allowed: true,
+      commercial_state: 'free',
+      status: 'free_default',
+      capabilities: {},
+      denial_reasons: [],
+      archived_module_summaries: [],
+      future_capabilities: [{ code: 'ai_agenda_agent', operational: false }],
+      addon_eligibility: {},
+      qa_review_fixture: true,
+      qa_review_fixture_version: 'MXMED_SUBSCRIPTIONS_VISUAL_QA_FIXTURE_V1'
+    };
   }
 
   function pricesByPeriod(plan){
@@ -105,26 +256,24 @@
       .filter(function(plan){ return includeFree || plan.code !== 'free'; })
       .sort(function(a, b){ return Number(a.rank) - Number(b.rank); })
       .map(function(plan){
-        var capabilities = Array.isArray(plan.capabilities) ? plan.capabilities : [];
-        var operational = capabilities.filter(function(capability){ return capability && capability.operational === true; });
-        var future = capabilities.filter(function(capability){ return capability && capability.operational !== true; });
+        var presentation = commercialPlanPresentation(plan.code, readModel);
+        if(!presentation) return null;
         return {
           id: plan.code,
           code: plan.code,
-          name: text(plan.label || plan.code),
+          name: presentation.displayName || text(plan.label || plan.code),
           rank: Number(plan.rank),
-          tagline: operational.length + ' capacidades operativas' + (future.length ? ' · ' + future.length + ' futuras deshabilitadas' : ''),
-          features: capabilities.map(function(capability){
-            var label = text(capability.label || capability.code);
-            return capability.operational === true ? label : label + ' (próximamente; no operativa)';
-          }).concat(quotaFeatureLabels(plan)),
-          capabilityCodes: capabilities.map(function(capability){ return text(capability.code); }).filter(Boolean),
-          futureCapabilityCodes: future.map(function(capability){ return text(capability.code); }).filter(Boolean),
-          quotas: plan.quotas && typeof plan.quotas === 'object' ? plan.quotas : {},
+          tagline: presentation.shortDescription,
+          features: Array.prototype.slice.call(presentation.featuredBenefits),
+          themeToken: presentation.themeToken,
+          iconKey: presentation.iconKey,
+          badge: presentation.badge,
+          accessibilityLabel: presentation.accessibilityLabel,
           prices: pricesByPeriod(plan),
           priceAuthority: 'subscription_plan_prices_backend'
         };
-      });
+      })
+      .filter(Boolean);
   }
 
   function mapDenial(code){
@@ -212,13 +361,17 @@
   }
 
   window.MXMedPlanCapabilityUI = Object.freeze({
+    commercialPlanPresentation: commercialPlanPresentation,
     denialCodes: Object.freeze(Object.keys(DENIALS)),
     mapDenial: mapDenial,
     normalizePlanCode: normalizePlanCode,
     plansFromReadModel: plansFromReadModel,
     pricesByPeriod: pricesByPeriod,
+    qaReviewFixtureEnabled: qaReviewFixtureEnabled,
+    qaReviewReadModel: qaReviewReadModel,
     quotaFeatureLabels: quotaFeatureLabels,
     statusPresentation: statusPresentation,
-    summaryFeatureChips: summaryFeatureChips
+    summaryFeatureChips: summaryFeatureChips,
+    themeTokenForPlan: themeTokenForPlan
   });
 })(typeof window !== 'undefined' ? window : this);

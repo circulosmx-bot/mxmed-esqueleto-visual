@@ -2511,6 +2511,7 @@ console.info('app.js loaded :: 20251123a');
   const params = new URLSearchParams(window.location?.search || '');
   const hasExplicitRole = params.has('mxmed_role') || params.has('operator_slot') || params.get('mxmed_rbac_dev') === '1';
   if(!isLocalDev) return;
+  if(params.get('mxmed_subscription_review') === '1') return;
 
   const STORAGE_KEY = 'mxmed.dev.rbac.role';
   const PLAN_QA_STORAGE_KEY = 'mxmed.qa.plan';
@@ -61452,11 +61453,19 @@ function mxResetLogoPreview(){
     const qaPlan = normalizeSubscriptionQaPlanState(data.qaPlan || {});
     if(qaPlan.value === 'real') return realModel || {};
 
-    const base = realModel && typeof realModel === 'object' ? { ...realModel } : {};
+    const policyUi = window.MXMedPlanCapabilityUI;
+    const qaReviewFixture = policyUi && typeof policyUi.qaReviewReadModel === 'function'
+      ? policyUi.qaReviewReadModel(window.location)
+      : null;
+    const base = {
+      ...(realModel && typeof realModel === 'object' ? realModel : {}),
+      ...(qaReviewFixture && typeof qaReviewFixture === 'object' ? qaReviewFixture : {})
+    };
     const validity = buildQaPlanValidity(realModel || {});
     if(qaPlan.value === 'free'){
       return {
         ...base,
+        commercial_state: 'free',
         status: 'free_default',
         effective_plan_code: '',
         contracted_plan_code: '',
@@ -61482,6 +61491,7 @@ function mxResetLogoPreview(){
     const billingPeriod = clean(realModel?.billing_period).toLowerCase() === 'monthly' ? 'monthly' : 'annual';
     return {
       ...base,
+      commercial_state: 'active',
       status: 'active',
       effective_plan_code: qaPlan.planCode,
       contracted_plan_code: qaPlan.planCode,
@@ -61934,26 +61944,11 @@ function mxResetLogoPreview(){
     }
     const contracted = clean(model?.contracted_plan_code);
     const effective = clean(model?.effective_plan_code);
-    const grace = clean(model?.grace_status) || 'No aplica';
-    const version = clean(model?.version || meta?.version);
-    const source = clean(model?.source);
-    const contextEntityType = clean(contextInfo?.entity_type);
-    const contextEntityId = clean(contextInfo?.entity_id || contextInfo?.doctor_id);
-    const contextSource = clean(contextInfo?.source);
     const currentPlan = findPlanById(effective || contracted || model?.plan_label || model?.plan_name);
     const commercialFeatures = Array.isArray(currentPlan?.features) && currentPlan.features.length
       ? currentPlan.features
       : ['Beneficios vigentes de tu suscripción'];
-    const debugFeatures = isSubscriptionDebugPanelEnabled() ? [
-      `Plan efectivo: ${effective || 'No disponible'}`,
-      `Plan contratado: ${contracted || 'Plan contratado no vigente'}`,
-      grace !== 'No aplica' ? `Gracia: ${grace}` : '',
-      contextEntityType && contextEntityId ? `Contexto: ${contextEntityType} #${contextEntityId}` : '',
-      contextSource ? `Fuente contexto: ${contextSource}` : '',
-      source ? `Fuente: ${source}` : '',
-      version ? `Versión: ${version}` : ''
-    ] : [];
-    return [...commercialFeatures, ...debugFeatures].filter(Boolean);
+    return commercialFeatures.map(clean).filter(Boolean);
   }
 
   function applyReadModelToView(model, meta, contextInfo, options = {}){
@@ -62361,6 +62356,12 @@ function mxResetLogoPreview(){
     return canonicalBackendPlanCode(planId);
   }
 
+  function planThemeToken(planId){
+    const policyUi = window.MXMedPlanCapabilityUI;
+    if(!policyUi || typeof policyUi.themeTokenForPlan !== 'function') return '';
+    return policyUi.themeTokenForPlan(planId, data.currentModel || {}) || '';
+  }
+
   function planRank(planId){
     const canonical = canonicalBackendPlanCode(planId);
     const plan = data.plans.find((item)=> item.code === canonical)
@@ -62382,19 +62383,14 @@ function mxResetLogoPreview(){
     return allPlans.find((plan)=> plan.id === id) || null;
   }
 
-  function planIconPanelHtml(planId, options = {}){
-    const icons = {
-      basic: 'person',
-      standard: 'calendar_month',
-      optimum: 'clinical_notes',
-      professional: 'psychology'
-    };
-    const id = normalizePlanId(planId);
-    const icon = icons[id] || 'workspace_premium';
+  function planIconPanelHtml(planRef, options = {}){
+    const plan = planRef && typeof planRef === 'object' ? planRef : findPlanById(planRef);
+    const themeToken = clean(plan?.themeToken) || planThemeToken(plan?.id || planRef);
+    const icon = clean(plan?.iconKey) || 'workspace_premium';
     const checkHtml = options.current === true
       ? '<img class="subp-plan-current-check" src="public/uploads/doctors/1/check.png.webp" alt="" aria-hidden="true" loading="lazy">'
       : '';
-    return `<div class="subp-plan-icon-panel subp-plan-icon-panel--${escapeHtml(id)}" aria-hidden="true">
+    return `<div class="subp-plan-icon-panel subp-plan-icon-panel--${escapeHtml(themeToken)}" aria-hidden="true">
       ${checkHtml}
       <span class="material-symbols-rounded subp-plan-icon">${escapeHtml(icon)}</span>
     </div>`;
@@ -66065,6 +66061,9 @@ function mxResetLogoPreview(){
     const currentPlanIdentity = (isFreeQa || !hasCurrentPaidPlan)
       ? 'free'
       : normalizePlanId(resolvedPlanCode);
+    const currentPlanTheme = currentPlanIdentity === 'free'
+      ? 'free'
+      : planThemeToken(currentPlanIdentity);
 
     if(labelEl){
       labelEl.textContent = currentPlanIdentity === 'free' ? 'Plan' : 'Tu plan actual';
@@ -66076,7 +66075,7 @@ function mxResetLogoPreview(){
         || clean(model?.contracted_plan_code)
         || clean(model?.plan_code);
       planNameEl.dataset.subscriptionPlanLabel = resolvedPlanLabel;
-      planNameEl.dataset.currentPlan = currentPlanIdentity;
+      planNameEl.dataset.currentPlan = currentPlanTheme;
     }
 
     if(renewalEl){
@@ -66085,7 +66084,7 @@ function mxResetLogoPreview(){
     }
 
     if(container){
-      container.dataset.currentPlan = currentPlanIdentity;
+      container.dataset.currentPlan = currentPlanTheme;
       container.classList.toggle('is-free-plan', currentPlanIdentity === 'free');
     }
 
@@ -68598,45 +68597,12 @@ function mxResetLogoPreview(){
     const tone = ['success', 'info', 'warning', 'danger', 'secondary'].includes(presentation.tone)
       ? presentation.tone
       : 'secondary';
-    const scheduledAddOnImpact = presentation.scheduledAddOnImpacts.length
-      ? `<div class="small mt-1" data-subp-scheduled-addon-impacts><strong>Complementos afectados:</strong> ${presentation.scheduledAddOnImpacts.map((item)=> escapeHtml(item.label || item.code || 'complemento')).join(', ')}. No se renovarán y sus datos se preservan.</div>`
-      : '';
-    const scheduled = presentation.scheduledPlan
-      ? `<div class="mt-2" data-subp-scheduled-change><strong>Cambio programado:</strong> ${escapeHtml(presentation.scheduledPlan.label || presentation.scheduledPlan.code || '')}${presentation.scheduledEffectiveAt ? ` · ${escapeHtml(formatDate(presentation.scheduledEffectiveAt))}` : ''}${presentation.cancelScheduledChangeAllowed ? ' <button type="button" class="btn btn-sm btn-outline-secondary ms-2" data-subp-cancel-scheduled>Cancelar cambio programado</button>' : ''}${scheduledAddOnImpact}</div>`
-      : '';
     const graceEnd = clean(presentation.grace?.ends_at);
     const grace = ['past_due', 'grace'].includes(presentation.state)
       ? `<div class="mt-2" data-subp-grace-notice><strong>Fecha límite de regularización:</strong> ${graceEnd ? `<time datetime="${escapeHtml(graceEnd)}">${escapeHtml(formatDate(graceEnd))}</time>` : 'pendiente de confirmación'} <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-subp-policy-regularize>Regularizar pago</button></div>`
       : '';
     const archived = presentation.archivedModules.length
-      ? `<div class="mt-2" data-subp-archived-read-only><strong>Datos preservados en sólo lectura:</strong> ${presentation.archivedModules.map((item)=> `${escapeHtml(item.module || 'módulo')} (reactiva ${escapeHtml(item.required_plan_to_reactivate || 'el plan requerido')} para editar)`).join(', ')}. La escritura está bloqueada y los datos no se eliminarán en esta actividad.</div>`
-      : '';
-    const future = presentation.futureCapabilities.length
-      ? `<div class="mt-2" data-subp-future-capabilities><strong>Funciones futuras:</strong> ${presentation.futureCapabilities.length} documentadas, no operativas y sin CTA de compra.</div>`
-      : '';
-    const addOns = presentation.addOnEligibility.length
-      ? `<div class="mt-2" data-subp-addon-eligibility><strong>Complementos Call Center:</strong> ${presentation.addOnEligibility.map((item)=> `${escapeHtml(item.label || item.code || 'complemento')} (${item.eligible === true ? 'elegible contractualmente' : 'no elegible'}; no comprable y no operativo)`).join(', ')}.</div>`
-      : '';
-    const capabilityStateLabels = {
-      locked_upsell: 'requieren otro plan',
-      pending_activation: 'pendientes de activación',
-      read_only: 'en sólo lectura',
-      suspended_policy: 'suspendidas por política',
-      not_applicable: 'no aplicables',
-      blocked_dependency: 'bloqueadas por dependencia',
-      grace_limited: 'limitadas por gracia'
-    };
-    const capabilityStates = Object.keys(capabilityStateLabels).map((state)=>{
-      const count = presentation.capabilityStates.filter((item)=> item.state === state).length;
-      return count > 0
-        ? `<span class="badge text-bg-light me-1" data-capability-state="${escapeHtml(state)}">${count} ${escapeHtml(capabilityStateLabels[state])}</span>`
-        : '';
-    }).filter(Boolean).join('');
-    const capabilityStateSummary = capabilityStates
-      ? `<div class="mt-2" data-subp-capability-state-summary>${capabilityStates}</div>`
-      : '';
-    const denialMessages = presentation.denials.length
-      ? `<ul class="small mt-2 mb-0" data-subp-policy-denials>${presentation.denials.map((item)=> `<li data-denial-reason="${escapeHtml(item.code)}">${escapeHtml(item.message)}</li>`).join('')}</ul>`
+      ? '<div class="mt-2" data-subp-archived-read-only><strong>Datos conservados en sólo lectura.</strong> Reactiva el plan correspondiente para volver a editar.</div>'
       : '';
     const primaryDenial = presentation.denials.find((item)=> [
       'profile_not_approved',
@@ -68648,22 +68614,17 @@ function mxResetLogoPreview(){
       'subscription_in_grace',
       'capability_read_only'
     ].includes(item.code));
-    const gateMessage = presentation.purchaseAllowed
-      ? 'Perfil aprobado y titularidad verificada para acciones comerciales.'
-      : (primaryDenial?.message || 'Las acciones comerciales están bloqueadas por la política backend.');
+    const blockedMessage = presentation.purchaseAllowed
+      ? ''
+      : (primaryDenial?.message || 'Las acciones comerciales no están disponibles con el estado actual.');
+    const visible = ['past_due', 'grace', 'restricted', 'expired'].includes(presentation.state)
+      || presentation.archivedModules.length > 0
+      || !presentation.purchaseAllowed;
     els.policyStatus.className = `alert alert-${tone}`;
     els.policyStatus.dataset.policyState = presentation.state;
-    els.policyStatus.dataset.approvalState = presentation.approvalState;
-    els.policyStatus.dataset.ownershipState = presentation.ownershipState;
     els.policyStatus.dataset.purchaseAllowed = presentation.purchaseAllowed ? 'true' : 'false';
-    els.policyStatus.innerHTML = `<div><strong>${escapeHtml(presentation.title)}</strong> — ${escapeHtml(presentation.message)}</div>
-      <div class="small mt-1" data-subp-policy-gates>Aprobación: ${escapeHtml(presentation.approvalState)} · Titularidad: ${escapeHtml(presentation.ownershipState)}. ${escapeHtml(gateMessage)}</div>
-      ${grace}${scheduled}${archived}${future}${addOns}${capabilityStateSummary}${denialMessages}`;
-    els.policyStatus.classList.remove('d-none');
-    const cancelButton = els.policyStatus.querySelector('[data-subp-cancel-scheduled]');
-    if(cancelButton){
-      cancelButton.addEventListener('click', ()=> cancelScheduledPlanChange(cancelButton));
-    }
+    els.policyStatus.innerHTML = `<div><strong>${escapeHtml(presentation.title)}</strong> — ${escapeHtml(blockedMessage || presentation.message)}</div>${grace}${archived}`;
+    els.policyStatus.classList.toggle('d-none', !visible);
     const regularizeButton = els.policyStatus.querySelector('[data-subp-policy-regularize]');
     if(regularizeButton){
       regularizeButton.addEventListener('click', ()=> setSubscriptionSection('billing'));
@@ -68677,7 +68638,8 @@ function mxResetLogoPreview(){
     const currentPlanIdentity = freePlanMode
       ? 'free'
       : normalizePlanId(data.current.id || data.currentModel?.effective_plan_code || data.currentModel?.contracted_plan_code || data.current.name);
-    pane.dataset.currentPlan = currentPlanIdentity;
+    const currentPlanTheme = currentPlanIdentity === 'free' ? 'free' : planThemeToken(currentPlanIdentity);
+    pane.dataset.currentPlan = currentPlanTheme;
     pane.classList.toggle('subp-qa-free', freeQaMode);
     pane.classList.toggle('subp-free-plan', freePlanMode);
     const planContext = pane.querySelector('.subp-plan-context');
@@ -68686,7 +68648,7 @@ function mxResetLogoPreview(){
     }
     if(els.planName){
       els.planName.textContent = data.current.name;
-      els.planName.setAttribute('data-plan', currentPlanIdentity);
+      els.planName.setAttribute('data-plan', currentPlanTheme);
     }
     if(els.status) els.status.textContent = data.current.status;
     if(els.since) els.since.textContent = data.current.since;
@@ -68871,10 +68833,10 @@ function mxResetLogoPreview(){
       const stateValue = planStateValue(flowType, isSelected);
       const stateClasses = planStateClass(flowType, isSelected);
       const focusClasses = `${isFocused ? ' subp-plan--focus-selected' : ''}${isMuted ? ' subp-plan--focus-muted' : ''}`;
-      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}${focusClasses}" data-plan="${escapeHtml(p.id)}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${focusMode || cardSelectable || hasCurrentUpgradePrompt ? '0' : '-1'}" role="button" aria-pressed="${isFocused || isSelected ? 'true' : 'false'}" aria-current="${isFocused ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt || hasCurrentConditionsControl || focusMode ? 'false' : 'true'}">
+      return `<div class="subp-plan ${isCurrent?'current':''} ${isSelected?'shadow-lg':''} ${stateClasses}${focusClasses}" data-plan="${escapeHtml(p.themeToken || planThemeToken(p.id))}" data-backend-plan-code="${escapeHtml(backendPlanCode)}" data-subp-plan-card="${escapeHtml(p.id)}" data-subp-flow-type="${escapeHtml(flowType)}" data-subp-plan-state="${escapeHtml(stateValue)}" data-selected="${isSelected ? 'true' : 'false'}" data-available="${cardSelectable ? 'true' : 'false'}" tabindex="${focusMode || cardSelectable || hasCurrentUpgradePrompt ? '0' : '-1'}" role="button" aria-label="${escapeHtml(p.accessibilityLabel || p.name)}" aria-pressed="${isFocused || isSelected ? 'true' : 'false'}" aria-current="${isFocused ? 'true' : 'false'}" aria-disabled="${cardSelectable || hasCurrentUpgradePrompt || hasCurrentConditionsControl || focusMode ? 'false' : 'true'}">
         ${floatingBadgeHtml}
         <div class="subp-plan-title${activePaid && flowType === 'current' ? ' subp-plan-title--current' : ''}"><span class="subp-plan-title-copy"><span class="subp-plan-title-line"><span class="subp-plan-title-text">${escapeHtml(p.name)}</span></span>${planTaglineHtml}</span>${planTitleBadgeHtml}</div>
-        ${planIconPanelHtml(p.id, { current: activePaid && flowType === 'current' })}
+        ${planIconPanelHtml(p, { current: activePaid && flowType === 'current' })}
         ${pricingHtml}
         ${stateCardHtml}
         ${upgradeCardAdjustment}
