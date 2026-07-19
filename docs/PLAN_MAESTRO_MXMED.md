@@ -1978,13 +1978,14 @@ Siguientes pasos recomendados:
 
 ## Segundo intento del programa de refinamiento (rama de actividad)
 
-- Estado candidato: **1/22 AUDIT_READY_FOR_INTEGRATION**.
+- Estado candidato: **1/22; Actividad 1 CONCLUIDA — PENDIENTE DE INTEGRACIÓN FAST-FORWARD**.
 - Pendientes: **21**.
-- Actividad 1/22: auditoría V2 de planes, capacidades, ownership y lifecycle.
-- Clasificación: **UI-0**; auditoría sin implementación.
+- Actividad 1/22: auditoría V2 y aprobación directoral A1–A5 de catálogo, precios provisionales, modalidad mensual y autoridad comercial.
+- Actividad 2: **NO INICIADA**.
+- Clasificación: **UI-0**; cierre documental sin implementación.
 - Known-good protegido: `recovery/mxmed-pre-22-known-good` @ `e4f7d515cba4ae47fcdbd44cd55ce610466b982a`; 8091 sin cambios.
-- Evidencia del primer intento: archivada y no reactivada; Activity 2 no iniciada.
-- Decisiones: pendientes de revisión del director en bloques pequeños.
+- Primer intento histórico: **PAUSED_AND_ARCHIVED**, `2/22`; no modificado ni reactivado.
+- Decisiones: A1–A5 aprobadas; capacidades, ownership y lifecycle permanecen pendientes en bloques separados.
 - Dashboard de operadores: no implementado; requisitos candidatos clasificados UI-3.
 - Este estado sólo es candidato en `audit/mxmed-plans-capabilities-ownership-lifecycle-v2`; la rama base del programa permanece `0/22 NOT_STARTED` hasta integración explícita.
 
@@ -1993,6 +1994,12 @@ Siguientes pasos recomendados:
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
 |---|---|---|---|---|---|
 | 2026-07-19 | Registrar Activity 1/22 del segundo intento como auditoría candidata | Se requiere conocer el baseline real antes de decidir política o implementación | UI-0; inventario Backend ↔ Schema ↔ API/read-model ↔ UI; sin código, SQL, Stripe, AWS ni dashboard; known-good protegido; historia no reactivada; 21 actividades pendientes y Activity 2 no iniciada | `docs/MXMED_AUDITORIA_V2_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`; evidencia `/tmp/mxmed-activity01-plans-capabilities-ownership-lifecycle-v2/` | `AUDIT_READY_FOR_INTEGRATION`; decisiones del director pendientes |
+
+### PP-282 — Aprobación V2 de catálogo, precios provisionales, modalidad mensual y autoridad comercial
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-19 | Aprobar A1–A5 para el desarrollo posterior: catálogo `free`/`basic`/`standard`/`optimum`/`professional`; `free` como estado sin quinta card; precios anuales provisionales de $6,990/$9,990/$12,990/$21,990 MXN; mensualidad `anual ÷ 12 × 1.25` con redondeo vigente y primer pago de tres mensualidades; backend/catálogo persistido como autoridad, API/read-model como transporte y frontend como presentación | Cerrar contractualmente el bloque catálogo/precios/modalidades de la Actividad 1 sin confundir decisión con implementación | Precios sujetos a revisión formal pre-lanzamiento; recurrencia y cobros Stripe diferidos; UI-0 actual; gates futuros UI-1 con diff visual cero, UI-2 para comportamiento y UI-3 para precios/copy/composición; Actividad 1 candidata concluida y pendiente de fast-forward; Actividad 2 no iniciada | `docs/MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md`; `docs/MXMED_AUDITORIA_V2_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`; evidencia `/tmp/mxmed-activity01-decisions-a1-a5-integration-v2/` | `DIRECTOR_APPROVED_CONTRACT_ONLY`; no autoriza implementación |
 
 ### Pendientes reales detectados (fase actual P16)
 - Consolidar cierre funcional del flujo “Integrar a caso clínico” en todos los contextos embebidos (historial base, expandido y casos clínicos).

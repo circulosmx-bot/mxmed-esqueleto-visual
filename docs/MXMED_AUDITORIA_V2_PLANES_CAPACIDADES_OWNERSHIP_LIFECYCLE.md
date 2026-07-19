@@ -1,6 +1,6 @@
 # Auditoría V2 de planes, capacidades, ownership y lifecycle
 
-Estado candidato: `1/22 AUDIT_READY_FOR_INTEGRATION`. Clasificación: `UI-0 — NO_UI_IMPACT`. Esta auditoría no aprueba reglas comerciales ni modifica producto.
+Estado candidato del segundo intento: `Actividad 1/22 CONCLUIDA — PENDIENTE DE INTEGRACIÓN FAST-FORWARD`; avance `1/22`, 21 pendientes y Actividad 2 `NO INICIADA`. Clasificación: `UI-0 — NO_UI_IMPACT`. La auditoría documenta hallazgos; la aprobación directoral posterior A1–A5 se formaliza en [Decisiones V2 de catálogo, precios, modalidades y autoridad](./MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md). Ninguno de los dos documentos modifica producto.
 
 ## 1. Propósito
 
@@ -34,7 +34,7 @@ Se revisaron estáticamente código, SQL versionado, contratos, pruebas, rutas, 
 | `optimum` | Óptimo | 40 / 3 | annual, 365 días | $12,990 MXN | derivado | visible; precio DEV, no aprobado |
 | `professional` | Profesional | 50 / 4 | annual, 365 días | $21,990 MXN | derivado | visible; precio DEV, no aprobado |
 
-Los aliases inglés/español convergen en esos cinco códigos. Los cuatro pagos aparecen como cards y el gratuito opera como default/fallback. El seed marca planes activos, pero no demuestra aprobación comercial ni despliegue de la migración. La matriz de precio está duplicada en JavaScript y SQL DEV. El backend impide contratación gratuita y bloquea recurrencia mensual (`monthly_recurring_not_ready`/`stripe_billing_not_ready`). Por ello, “visible” no equivale a “comprable en producción”.
+Los aliases inglés/español convergen en esos cinco códigos. Los cuatro pagos aparecen como cards y el gratuito opera como default/fallback. Como **hallazgo del baseline**, el seed marca planes activos, pero no demuestra despliegue de la migración, y la matriz de precio está duplicada en JavaScript y SQL DEV. Como **decisión posterior**, los cinco códigos y nombres quedan aprobados, `free` conserva su papel sin quinta card y los cuatro importes quedan aprobados provisionalmente para desarrollo, sujetos a revisión pre-lanzamiento. El backend impide contratación gratuita y bloquea recurrencia mensual (`monthly_recurring_not_ready`/`stripe_billing_not_ready`). Por ello, aprobación contractual y “visible” no equivalen a “comprable en producción”.
 
 ## 6. Capacidades
 
@@ -65,7 +65,7 @@ La cadena estática es UI → resumen/preview → payment route → checkout →
 | Requisito | Paridad | Autoridad/gap |
 |---|---|---|
 | catálogo/códigos | parcial | SQL, PHP y JS coinciden en códigos; despliegue no comprobado |
-| precios | `duplicated_authority` | SQL DEV y matriz JS; sin precio comercial aprobado |
+| precios | `duplicated_authority` | SQL DEV y matriz JS; precio provisional aprobado contractualmente, aún sin autoridad única implementada |
 | plan actual/vigencia | completa en read-model | fallback free y suscripción vigente llegan a UI |
 | anual/mensual | parcial | anual respaldado; mensual visual/preview, cobro recurrente bloqueado |
 | upgrade/prorrateo | parcial | preview y checkout técnico; operación externa no reejecutada |
@@ -82,11 +82,11 @@ Precios y aliases/rank viven tanto en frontend como backend. Las capacidades vis
 
 ## 13. Gaps
 
-Faltan autoridad comercial de precio/modalidad, entitlement transversal probado, lifecycle de downgrade/future-plan, ownership/claim real, approval auditable, cancelación/recuperación integral, renovación recurrente productiva y operación autorizada. Tampoco es verificable que todas las migraciones versionadas estén aplicadas en cada ambiente.
+La autoridad comercial de catálogo, precio y modalidad ya está resuelta **contractualmente** por A1–A5: backend/catálogo persistido será autoridad, con API/read-model como transporte y frontend como presentación. Sigue pendiente implementar esa autoridad única y retirar duplicidades. También faltan entitlement transversal probado, lifecycle de downgrade/future-plan, ownership/claim real, approval auditable, cancelación/recuperación integral, renovación recurrente productiva y operación autorizada. Tampoco es verificable que todas las migraciones versionadas estén aplicadas en cada ambiente.
 
 ## 14. Riesgos
 
-- R3: exponer cobro con precio DEV o modalidad no aprobada.
+- R3: exponer cobro o presentar como final un precio que sólo está aprobado provisionalmente para desarrollo.
 - R3: habilitar ownership/transferencia sin verificación, caso y auditoría.
 - R2: prometer capacidades en cards sin enforcement equivalente.
 - R2: autoridades duplicadas de precio/capacidad.
@@ -99,7 +99,9 @@ El primer intento documentó auditoría, reconciliación, decisiones y una imple
 
 ## 16. Agenda de decisiones
 
-El director debe resolver en bloques: (A) catálogo/precio/modalidades; (B) capacidad y autoridad de entitlement; (C) approval/ownership/claim; (D) lifecycle y estados persistidos; (E) downgrade/retención; (F) si existirán add-ons; (G) actores/operadores y auditoría; (H) traducción UI bajo contrato visual. Ninguna opción queda aprobada aquí. Orden sugerido: A→B→C→D/E→G→H; F sólo si existe caso comercial.
+La auditoría formuló los bloques: (A) catálogo/precio/modalidades; (B) capacidad y autoridad de entitlement; (C) approval/ownership/claim; (D) lifecycle y estados persistidos; (E) downgrade/retención; (F) si existirán add-ons; (G) actores/operadores y auditoría; (H) traducción UI bajo contrato visual.
+
+El bloque A queda **resuelto contractualmente** por la aprobación directoral A1–A5: catálogo estable, `free` sin quinta card, precios provisionales con revisión pre-lanzamiento, mensualidad `anual ÷ 12 × 1.25` con redondeo vigente y primer pago de tres mensualidades, recurrencia Stripe diferida, y backend/catálogo persistido como autoridad. Esto es una decisión, no evidencia de implementación. Permanecen pendientes B, C, D, E, F, G y H; orden sugerido B→C→D/E→G→H, con F sólo si existe caso comercial.
 
 ## 17. Impacto UI futuro
 
@@ -115,4 +117,4 @@ Auditoría estática y documental: no prueba despliegue de SQL, configuración p
 
 ## 20. Recomendación para Actividad 2
 
-No iniciar ni reintroducir Activity 2. Primero, el director debe revisar esta auditoría y decidir únicamente el bloque A (catálogo, fuente de precio y modalidades); después se debe emitir un contrato acotado para la siguiente actividad. La integración a la rama de programa debe ser explícita y separada.
+No iniciar ni reintroducir Activity 2. La revisión directoral del bloque A ya se formalizó en [Decisiones V2 de catálogo, precios, modalidades y autoridad](./MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md), por lo que la Actividad 1 queda candidata concluida, pendiente de verificación e integración fast-forward explícita y separada a la rama de programa. El siguiente contrato deberá abordar un bloque pendiente acotado —comenzando por capacidades y autoridad de entitlement— sin asumir implementación de A1–A5.
