@@ -72,3 +72,20 @@ Queda prohibido imprimir el registro técnico completo en las cards, listar capa
 ## 4. Control de actualización
 
 Una modificación sólo se registra como aprobada cuando existe evidencia del nivel UI correspondiente. Los prototipos permanecen identificados como tales y nunca reemplazan el contrato aprobado antes de la frase directoral de aprobación.
+
+## 5. Capítulo transversal móvil final
+
+| Campo | Contrato vigente |
+|---|---|
+| `surfaceId` | `MOBILE_RESPONSIVE_FINALIZATION` |
+| Estado | `MOBILE_RESPONSIVE_FINALIZATION_PENDING` |
+| Clasificación actual | `UI-0 — NO_UI_IMPACT` |
+| Clasificación de ejecución | `UI-3 — UI_VISUAL_CHANGE_REQUIRES_APPROVAL` |
+| Alcance | Navegación, menús, shell, panel privado, perfil, Suscripciones, Agenda, Pacientes, Expediente, Recetas, formularios, tablas, cards, modales, fecha/hora, archivos, teclado, scroll, orientación, safe areas, touch accessibility y estados vacío/error/loading |
+| Viewports iniciales | Teléfonos 320/360/375/390/412/430; tablets/transición 768/820/1024 |
+| Navegadores | Safari iOS, Chrome Android y desktop emulado; físicos cuando estén disponibles |
+| Smoke intermedio | `INTERIM_MOBILE_SMOKE_ONLY`; no equivale a `FINAL_MOBILE_APPROVED` |
+| Gate final | Inventario, auditoría, priorización, wireframes/prototipo reversible, 8140+, comparación 8091, pruebas táctiles, teclado/focus/accesibilidad, revisión y aprobación del director, checkpoint y rollback |
+| Prohibido sin revisión | Layout, navegación, cards, tipografía, copy, formularios, breakpoints o cambios silenciosos en 8091 |
+
+Este registro formaliza un gate transversal y no una especificación visual nueva. La definición completa vive en [MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md](./MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md). La frase de aprobación requerida es: **“Apruebo visualmente la adaptación móvil final.”**

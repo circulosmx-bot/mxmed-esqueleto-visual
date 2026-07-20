@@ -1996,6 +1996,13 @@ Siguientes pasos recomendados:
 - Alcance: **UI-1**, `VISUAL_DIFF_REQUIRED_TO_BE_ZERO`, con `STOP_UI_SCOPE_ESCALATION_REQUIRED`; se mantiene 8091 en el known-good protegido y 8140 como puerto de revisión.
 - La Actividad 3 permanece **NO INICIADA**; quedan **20 actividades pendientes** en el candidato.
 
+### Gate transversal móvil
+
+- Estado: `MOBILE_RESPONSIVE_FINALIZATION_PENDING`.
+- La formalización actual es `UI-0 — NO_UI_IMPACT`; la ejecución futura será `UI-3 — UI_VISUAL_CHANGE_REQUIRES_APPROVAL`.
+- Los smoke tests móviles de cada actividad son `INTERIM_MOBILE_SMOKE_ONLY` y no constituyen `FINAL_MOBILE_APPROVED`.
+- El capítulo no crea automáticamente una Actividad 23 ni incrementa el contador `2/22`; debe asignarse dentro o inmediatamente antes del cierre funcional final.
+
 ### PP-281 — Auditoría V2 de planes, capacidades, ownership y lifecycle
 
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
@@ -2019,6 +2026,12 @@ Siguientes pasos recomendados:
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
 |---|---|---|---|---|---|
 | 2026-07-19 | Ejecutar la Actividad 2 candidata con backend como única autoridad y frontend como binding no autoritativo | Convertir B1–B7 en un contrato mínimo verificable sin alterar la presentación aprobada | UI-1; catálogo deliberadamente mínimo de 7 capacidades existentes; decisiones fail-closed con códigos internos estables; read-model/API aditivos y compatibles; frontend enlaza sólo `available`/estado público; cards, copy, orden, clases y shell congelados; matrices técnicas, dependencias, lifecycle, conteos, funciones futuras y razón interna no se exponen; no Stripe, checkout, pagos, activación, SQL, migraciones, AWS ni escrituras | `docs/MXMED_IMPLEMENTACION_V2_AUTORIDAD_CAPACIDADES_EXISTENTES.md`; evidencia `/tmp/mxmed-activity02-existing-capabilities-backend-authority-v2/`; candidato `feature/mxmed-existing-capabilities-backend-authority-v2` | `READY_FOR_DIRECTOR_REVIEW`; visual diff estático 0; Actividad 3 no iniciada |
+
+### PP-285 — Capítulo transversal final de adaptación móvil y responsive
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-19 | Registrar el capítulo final obligatorio de adaptación móvil para cierre funcional y lanzamiento | Los smoke tests intermedios previenen regresiones, pero no sustituyen una decisión visual integral sobre navegación y adaptación móvil | UI-0 documental ahora; UI-3 en la ejecución futura; `MOBILE_RESPONSIVE_FINALIZATION_PENDING`; viewports de 320 a 1024 px, Safari iOS, Chrome Android, desktop emulado y físicos disponibles; navegación, shell, módulos, formularios, tablas, modales, teclado, scroll, orientación, safe areas, touch y estados; no ralentiza el desarrollo y no crea automáticamente Actividad 23 | `docs/MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md`; `docs/MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md`; `docs/MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md`; `docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md` | `MOBILE_RESPONSIVE_FINALIZATION_PENDING`; Actividad 2 concluida `2/22`; Actividad 3 no iniciada; gate obligatorio antes de lanzamiento |
 
 ### Pendientes reales detectados (fase actual P16)
 - Consolidar cierre funcional del flujo “Integrar a caso clínico” en todos los contextos embebidos (historial base, expandido y casos clínicos).

@@ -130,3 +130,19 @@ Sin “Apruebo visualmente esta versión”, no integrar, promover ni sustituir 
   - `STOP_UI_SCOPE_ESCALATION_REQUIRED`
 
 - Aprobación o siguiente gate:
+
+## 9. Registro móvil transversal
+
+Toda actividad con frontend debe completar estos campos, incluso cuando el impacto móvil sea sólo de smoke intermedio:
+
+| Campo | Valor obligatorio |
+|---|---|
+| `mobileSmokeRequired` | `true` / `false` y razón |
+| `mobileSmokeResult` | `INTERIM_MOBILE_SMOKE_ONLY`, `NOT_APPLICABLE` o bloqueo explícito; nunca aprobación final |
+| `newMobileDebt` | ID de deuda o `NONE` |
+| `affectedSurfaces` | Lista de `surfaceId` o `NONE` |
+| `finalizationChapterDependency` | `MOBILE_RESPONSIVE_FINALIZATION_PENDING`, `NONE` o dependencia explícita |
+| `regressionDetected` | `true` / `false`, evidencia y severidad |
+| `UI escalation required` | `true` / `false`; `true` exige `STOP_UI_SCOPE_ESCALATION_REQUIRED` y reclasificación UI-3 |
+
+El smoke mínimo cubre overflow horizontal, controles críticos, navegación, cortes de texto, formularios, modales, touch targets y viewport representativo. El cierre móvil final sólo puede ocurrir mediante el capítulo transversal y aprobación visual expresa del director.

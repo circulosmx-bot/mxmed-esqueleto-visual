@@ -137,3 +137,15 @@ No se genera una consola automáticamente desde tablas o endpoints. Su implement
 ## 13. Registro de superficies
 
 Los contratos visuales aprobados y pendientes viven en [MXMED_REGISTRO_CONTRATOS_VISUALES.md](./MXMED_REGISTRO_CONTRATOS_VISUALES.md). Cada actividad actualiza sólo las superficies que toque.
+
+## 14. Gate transversal de adaptación móvil final
+
+El capítulo [MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md](./MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md) es un gate transversal obligatorio antes del cierre funcional final o del lanzamiento.
+
+- Estado actual: `MOBILE_RESPONSIVE_FINALIZATION_PENDING`.
+- La formalización documental es `UI-0 — NO_UI_IMPACT`; la ejecución visual futura es `UI-3 — UI_VISUAL_CHANGE_REQUIRES_APPROVAL`.
+- Los smoke tests móviles de cada actividad son `INTERIM_MOBILE_SMOKE_ONLY`; nunca equivalen a `FINAL_MOBILE_APPROVED`.
+- El capítulo no crea automáticamente una Actividad 23 ni incrementa el contador; se asigna dentro o inmediatamente antes de las actividades finales de QA.
+- La ejecución final exige inventario de superficies, viewports, orientación, teclado virtual, scroll, safe areas, accesibilidad táctil, prototipo reversible, puerto separado, comparación con 8091, aprobación visual expresa y rollback probado.
+
+No se permite anticipar el capítulo para justificar cambios visibles en layout, navegación, cards, tipografía, copy, formularios, breakpoints o 8091. Una diferencia visual anticipada activa `STOP_UI_SCOPE_ESCALATION_REQUIRED`.
