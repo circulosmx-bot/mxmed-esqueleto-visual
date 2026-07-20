@@ -1978,16 +1978,16 @@ Siguientes pasos recomendados:
 
 ## Segundo intento del programa de refinamiento (rama de actividad)
 
-- Estado candidato: **1/22; Actividad 1 CONCLUIDA — PENDIENTE DE INTEGRACIÓN FAST-FORWARD**.
+- Estado: **1/22; Actividad 1 CONCLUIDA**.
 - Pendientes: **21**.
 - Actividad 1/22: auditoría V2 y aprobación directoral A1–A5 de catálogo, precios provisionales, modalidad mensual y autoridad comercial.
 - Actividad 2: **NO INICIADA**.
 - Clasificación: **UI-0**; cierre documental sin implementación.
 - Known-good protegido: `recovery/mxmed-pre-22-known-good` @ `e4f7d515cba4ae47fcdbd44cd55ce610466b982a`; 8091 sin cambios.
 - Primer intento histórico: **PAUSED_AND_ARCHIVED**, `2/22`; no modificado ni reactivado.
-- Decisiones: A1–A5 aprobadas; capacidades, ownership y lifecycle permanecen pendientes en bloques separados.
+- Decisiones: A1–A5 y B1–B7 aprobadas contractualmente; ownership y lifecycle permanecen pendientes en bloques separados.
 - Dashboard de operadores: no implementado; requisitos candidatos clasificados UI-3.
-- Este estado sólo es candidato en `audit/mxmed-plans-capabilities-ownership-lifecycle-v2`; la rama base del programa permanece `0/22 NOT_STARTED` hasta integración explícita.
+- La formalización B1–B7 existe sólo en `docs/mxmed-capabilities-permissions-director-approval-v2` hasta su integración explícita; no inicia la Actividad 2 ni modifica la rama de programa.
 
 ### PP-281 — Auditoría V2 de planes, capacidades, ownership y lifecycle
 
@@ -2000,6 +2000,12 @@ Siguientes pasos recomendados:
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
 |---|---|---|---|---|---|
 | 2026-07-19 | Aprobar A1–A5 para el desarrollo posterior: catálogo `free`/`basic`/`standard`/`optimum`/`professional`; `free` como estado sin quinta card; precios anuales provisionales de $6,990/$9,990/$12,990/$21,990 MXN; mensualidad `anual ÷ 12 × 1.25` con redondeo vigente y primer pago de tres mensualidades; backend/catálogo persistido como autoridad, API/read-model como transporte y frontend como presentación | Cerrar contractualmente el bloque catálogo/precios/modalidades de la Actividad 1 sin confundir decisión con implementación | Precios sujetos a revisión formal pre-lanzamiento; recurrencia y cobros Stripe diferidos; UI-0 actual; gates futuros UI-1 con diff visual cero, UI-2 para comportamiento y UI-3 para precios/copy/composición; Actividad 1 candidata concluida y pendiente de fast-forward; Actividad 2 no iniciada | `docs/MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md`; `docs/MXMED_AUDITORIA_V2_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`; evidencia `/tmp/mxmed-activity01-decisions-a1-a5-integration-v2/` | `DIRECTOR_APPROVED_CONTRACT_ONLY`; no autoriza implementación |
+
+### PP-283 — Aprobación V2 de capacidades, autoridad backend y preservación visual
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-19 | Aprobar B1–B7: backend como única autoridad de capacidades/permisos; API/read-model como transporte; frontend como reflejo; separación entre registro técnico y presentación comercial; trazabilidad sin cambio automático de UI; progresión funcional objetivo; denegación fail-closed; funciones futuras efectivas sólo en estado `operational`; e implementación incremental | Proteger las fichas aprobadas mientras se prepara una autoridad backend mínima y comprobable para capacidades existentes | Cards, beneficios, copy y orden congelados en `recovery/mxmed-pre-22-known-good@e4f7d515cba4ae47fcdbd44cd55ce610466b982a`; anti-patrón de exponer matrices técnicas prohibido; UI-0 actual; futura Actividad 2 inicialmente UI-1 con `VISUAL_DIFF_REQUIRED_TO_BE_ZERO`; `STOP_UI_SCOPE_ESCALATION_REQUIRED` ante cambios visuales; 8091 protegido; Actividad 1 concluida `1/22`; Actividad 2 no iniciada | `docs/MXMED_DECISIONES_V2_CAPACIDADES_AUTORIDAD_PERMISOS.md`; `docs/MXMED_AUDITORIA_V2_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`; `docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md`; evidencia `/tmp/mxmed-decisions-b1-b7-v2/` | `DIRECTOR_APPROVED_CONTRACT_ONLY`; no autoriza implementación ni cambios UI |
 
 ### Pendientes reales detectados (fase actual P16)
 - Consolidar cierre funcional del flujo “Integrar a caso clínico” en todos los contextos embebidos (historial base, expandido y casos clínicos).

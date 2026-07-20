@@ -46,6 +46,14 @@ Este registro crece por superficie; no obliga a redocumentar el sistema completo
 
 Este contrato registra el estado existente; no introduce una especificación visual nueva.
 
+### 2.1 Freeze directoral de fichas de planes
+
+La referencia visual obligatoria permanece en `recovery/mxmed-pre-22-known-good` @ `e4f7d515cba4ae47fcdbd44cd55ce610466b982a`. Beneficios, servicios, copy, orden, cantidad, jerarquía, colores, iconos, densidad, cuatro cards, CTAs, subheader, selector anual/mensual, cálculo proporcional, “Mi plan y pagos”, shell de Pago seguro y responsive quedan preservados exactamente como en ese known-good.
+
+Cualquier cambio futuro de esos elementos se clasifica `UI-3 — UI_VISUAL_CHANGE_REQUIRES_APPROVAL`. Esta regla directoral específica y posterior endurece a UI-3 cualquier umbral previo aplicable a las fichas sin cambiar su especificación visual existente. Los cambios backend no implican ni autorizan cambios visuales. Un data binding UI-1 sólo será admisible con `VISUAL_DIFF_REQUIRED_TO_BE_ZERO` contra el commit de referencia; de lo contrario aplica `STOP_UI_SCOPE_ESCALATION_REQUIRED`.
+
+Queda prohibido imprimir el registro técnico completo en las cards, listar capabilities internas, cuotas técnicas, estados internos, dependencias o reason codes; agregar “próximamente; no operativa” o funciones futuras indiscriminadamente; mostrar conteos de capacidades; saturar el subheader; o convertir la matriz backend en copy comercial. La imagen del incidente aportada como referencia negativa no se versiona: este registro conserva únicamente la definición semántica del anti-patrón.
+
 ## 3. Superficies pendientes
 
 | `surfaceId` | Superficie | Estado | Condición para completar |

@@ -1,6 +1,6 @@
 # Auditoría V2 de planes, capacidades, ownership y lifecycle
 
-Estado candidato del segundo intento: `Actividad 1/22 CONCLUIDA — PENDIENTE DE INTEGRACIÓN FAST-FORWARD`; avance `1/22`, 21 pendientes y Actividad 2 `NO INICIADA`. Clasificación: `UI-0 — NO_UI_IMPACT`. La auditoría documenta hallazgos; la aprobación directoral posterior A1–A5 se formaliza en [Decisiones V2 de catálogo, precios, modalidades y autoridad](./MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md). Ninguno de los dos documentos modifica producto.
+Estado del segundo intento: `Actividad 1/22 CONCLUIDA`; avance `1/22`, 21 pendientes y Actividad 2 `NO INICIADA`. Clasificación: `UI-0 — NO_UI_IMPACT`. La auditoría documenta hallazgos; las decisiones directorales posteriores se formalizan en [A1–A5: catálogo, precios, modalidades y autoridad](./MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md) y [B1–B7: capacidades, autoridad y permisos](./MXMED_DECISIONES_V2_CAPACIDADES_AUTORIDAD_PERMISOS.md). Ningún documento implementa cambios de producto.
 
 ## 1. Propósito
 
@@ -42,6 +42,8 @@ Existen dos taxonomías no equivalentes. La UI resume `Perfil`, `Agenda`, `Exped
 
 No hay un entitlement authority transversal que conecte de extremo a extremo las cinco promesas visuales con todos los módulos. Perfil público es parcial; expediente, recetas e IA son presentación de plan sin enforcement localizado. La policy del primer intento no pertenece al baseline y no se reactiva.
 
+Como **decisión posterior**, B1–B7 establece backend como única autoridad de capacidades y permisos, API/read-model como transporte y frontend como reflejo. Las fichas comerciales quedan congeladas en el known-good y separadas del registro técnico. La progresión funcional aprobada es un objetivo backend, no una reescritura de cards ni evidencia de implementación.
+
 ## 7. Approval
 
 El perfil admite estados `draft`, `pending_review`, `active`, `hidden`, `suspended` y `removed`; esto demuestra un estado de publicación, no un workflow completo de aprobación con actor, transición, caso y auditoría. Contact points incluyen verificación, pero no constituyen aprobación comercial. No se localizó una consola operativa de aprobación en el alcance auditado.
@@ -78,17 +80,17 @@ La cadena estática es UI → resumen/preview → payment route → checkout →
 
 ## 12. Duplicidades
 
-Precios y aliases/rank viven tanto en frontend como backend. Las capacidades visuales de cards y las capacidades del perfil público son matrices distintas. Etiquetas/status/periodos aparecen en PHP y JavaScript. Esto eleva riesgo de divergencia; esta auditoría no elige una fuente futura.
+Precios y aliases/rank viven tanto en frontend como backend. Las capacidades visuales de cards y las capacidades del perfil público son matrices distintas. Etiquetas/status/periodos aparecen en PHP y JavaScript. Esto eleva riesgo de divergencia. A1–A5 y B1–B7 ya eligen contractualmente backend/catálogo persistido como autoridad; retirar las duplicidades sigue pendiente de implementación controlada y no autoriza convertir la matriz técnica en copy comercial.
 
 ## 13. Gaps
 
-La autoridad comercial de catálogo, precio y modalidad ya está resuelta **contractualmente** por A1–A5: backend/catálogo persistido será autoridad, con API/read-model como transporte y frontend como presentación. Sigue pendiente implementar esa autoridad única y retirar duplicidades. También faltan entitlement transversal probado, lifecycle de downgrade/future-plan, ownership/claim real, approval auditable, cancelación/recuperación integral, renovación recurrente productiva y operación autorizada. Tampoco es verificable que todas las migraciones versionadas estén aplicadas en cada ambiente.
+La autoridad comercial de catálogo, precio y modalidad está resuelta **contractualmente** por A1–A5. La autoridad de capacidades, permisos, denegación segura y separación técnica/comercial está resuelta **contractualmente** por B1–B7. Sigue pendiente implementar y probar la autoridad backend transversal, retirar duplicidades con visual diff cero y materializar enforcement incremental. También faltan lifecycle de downgrade/future-plan, ownership/claim real, approval auditable, cancelación/recuperación integral, renovación recurrente productiva y operación autorizada. Tampoco es verificable que todas las migraciones versionadas estén aplicadas en cada ambiente.
 
 ## 14. Riesgos
 
 - R3: exponer cobro o presentar como final un precio que sólo está aprobado provisionalmente para desarrollo.
 - R3: habilitar ownership/transferencia sin verificación, caso y auditoría.
-- R2: prometer capacidades en cards sin enforcement equivalente.
+- R2: confundir un beneficio comercial visible con un permiso efectivo o alterar la card para exponer una brecha técnica.
 - R2: autoridades duplicadas de precio/capacidad.
 - R2: confundir shell/preview certificado con disponibilidad productiva.
 - R1: copy de downgrade/renovación sin transición canónica completa.
@@ -101,11 +103,13 @@ El primer intento documentó auditoría, reconciliación, decisiones y una imple
 
 La auditoría formuló los bloques: (A) catálogo/precio/modalidades; (B) capacidad y autoridad de entitlement; (C) approval/ownership/claim; (D) lifecycle y estados persistidos; (E) downgrade/retención; (F) si existirán add-ons; (G) actores/operadores y auditoría; (H) traducción UI bajo contrato visual.
 
-El bloque A queda **resuelto contractualmente** por la aprobación directoral A1–A5: catálogo estable, `free` sin quinta card, precios provisionales con revisión pre-lanzamiento, mensualidad `anual ÷ 12 × 1.25` con redondeo vigente y primer pago de tres mensualidades, recurrencia Stripe diferida, y backend/catálogo persistido como autoridad. Esto es una decisión, no evidencia de implementación. Permanecen pendientes B, C, D, E, F, G y H; orden sugerido B→C→D/E→G→H, con F sólo si existe caso comercial.
+El bloque A queda **resuelto contractualmente** por la aprobación directoral A1–A5: catálogo estable, `free` sin quinta card, precios provisionales con revisión pre-lanzamiento, mensualidad `anual ÷ 12 × 1.25` con redondeo vigente y primer pago de tres mensualidades, recurrencia Stripe diferida, y backend/catálogo persistido como autoridad.
+
+El bloque B queda **resuelto contractualmente** por B1–B7: backend como única autoridad de capacidades/permisos, separación entre registro técnico y fichas comerciales, trazabilidad sin alteración automática de UI, progresión funcional objetivo, fail-closed, estados de funciones futuras e implementación incremental con visual diff cero. Esto es una decisión, no evidencia de implementación. Permanecen pendientes C, D, E, F, G y H; orden sugerido C→D/E→G→H, con F sólo si existe caso comercial.
 
 ## 17. Impacto UI futuro
 
-Esta actividad es UI-0. Ajustes de copy/estado local podrían ser UI-1; reconciliar cards, comparador o downgrade sería UI-2 con prototipo; ownership, approval y dashboard operador son UI-3. El contrato `SUBSCRIPTIONS_PLANS_AND_BILLING` protege cuatro cards, identidad, selector, precio/ahorro/equivalente, CTA contextual, plan actual, upgrades, inferiores al renovar, calculadora, “Mi plan y pagos”, shell seguro y responsive. Cualquier propuesta histórica que lo rompa se clasifica `INCOMPATIBLE_WITH_APPROVED_VISUAL_SURFACE_CONTRACT`.
+Esta actividad es UI-0. Un cambio backend invisible será UI-0 y un data binding visualmente idéntico podrá ser UI-1 sólo con `VISUAL_DIFF_REQUIRED_TO_BE_ZERO`; un cambio de comportamiento visible será UI-2. Todo cambio de beneficios, copy, orden, cantidad, jerarquía, colores, iconos, densidad, cards, CTA, subheader, selector, cálculo, “Mi plan y pagos”, shell seguro o responsive será UI-3 y requerirá aprobación directoral. El contrato `SUBSCRIPTIONS_PLANS_AND_BILLING` queda congelado en `recovery/mxmed-pre-22-known-good@e4f7d515...`. Si la implementación técnica exige alterar esa superficie aplica `STOP_UI_SCOPE_ESCALATION_REQUIRED`.
 
 ## 18. Dashboard
 
@@ -117,4 +121,4 @@ Auditoría estática y documental: no prueba despliegue de SQL, configuración p
 
 ## 20. Recomendación para Actividad 2
 
-No iniciar ni reintroducir Activity 2. La revisión directoral del bloque A ya se formalizó en [Decisiones V2 de catálogo, precios, modalidades y autoridad](./MXMED_DECISIONES_V2_CATALOGO_PRECIOS_MODALIDADES.md), por lo que la Actividad 1 queda candidata concluida, pendiente de verificación e integración fast-forward explícita y separada a la rama de programa. El siguiente contrato deberá abordar un bloque pendiente acotado —comenzando por capacidades y autoridad de entitlement— sin asumir implementación de A1–A5.
+No iniciar ni reintroducir Activity 2. Su alcance preliminar queda limitado a `PRODUCT-IMPLEMENTATION/MXMed-Existing-Capabilities-Backend-Authority-V2-01`, inicialmente `UI-1 — UI_DATA_BINDING_ONLY`, para modelar capacidades existentes, aplicar autoridad backend, retirar decisiones frontend duplicadas y conservar exactamente el render known-good. Exige `VISUAL_DIFF_REQUIRED_TO_BE_ZERO`, pruebas plan por plan y `STOP_UI_SCOPE_ESCALATION_REQUIRED` ante cualquier necesidad de cambiar UI. La integración documental actual debe verificarse y ejecutarse de forma explícita y separada.
