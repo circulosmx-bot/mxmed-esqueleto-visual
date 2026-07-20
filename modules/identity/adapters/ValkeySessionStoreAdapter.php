@@ -15,7 +15,7 @@ final class ValkeySessionStoreAdapter implements SessionStorePort
 {
     public function __construct(private ValkeySessionClientPort $client, private string $prefix)
     {
-        if (preg_match('/^mxmed:(stg|prd):session:$/', $this->prefix) !== 1) throw new \InvalidArgumentException('invalid_session_prefix');
+        if (preg_match('/^mxmed:(stg|prd):session:$/', $this->prefix) !== 1 && preg_match('/^mxmed:gate4d:preview:session:$/', $this->prefix) !== 1) throw new \InvalidArgumentException('invalid_session_prefix');
     }
     private function key(SessionTokenDigest $digest): string { return $this->prefix . (string)$digest; }
     private function indexKey(string $accountId): string { return $this->prefix . 'account-index:' . hash('sha256', $accountId); }

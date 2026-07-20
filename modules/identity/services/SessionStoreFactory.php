@@ -22,6 +22,9 @@ final class SessionStoreFactory
         }
         if ($environment === 'test' && $driver === 'in_memory') return new InMemorySessionStoreAdapter();
         if ($environment === 'local' && $driver === 'in_memory' && ($config['explicit_dev_flag'] ?? false) === true) return new InMemorySessionStoreAdapter();
+        if ($environment === 'local' && $driver === 'valkey' && $client instanceof ValkeySessionClientPort && ($config['explicit_preview_flag'] ?? false) === true) {
+            return new ValkeySessionStoreAdapter($client, (string)($config['prefix'] ?? ''));
+        }
         if ($driver === 'rejecting') return new RejectingSessionStoreAdapter();
         throw new SessionStoreUnavailableException();
     }

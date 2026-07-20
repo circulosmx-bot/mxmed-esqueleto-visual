@@ -89,3 +89,16 @@ Una modificación sólo se registra como aprobada cuando existe evidencia del ni
 | Prohibido sin revisión | Layout, navegación, cards, tipografía, copy, formularios, breakpoints o cambios silenciosos en 8091 |
 
 Este registro formaliza un gate transversal y no una especificación visual nueva. La definición completa vive en [MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md](./MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md). La frase de aprobación requerida es: **“Apruebo visualmente la adaptación móvil final.”**
+### ACCESS — UI-3 aprobada integrada en HTTP
+
+| Campo | Contrato vigente |
+|---|---|
+| surfaceId | ACCESS |
+| Referencia visual | checkpoint/mxmed-identity-access-ui3-approved-v2 |
+| Rutas | /acceso, /crear-cuenta, /verificar-correo, /recuperar-acceso, /restablecer-acceso |
+| Estado | APPROVED_IDENTITY_UI_HTTP_INTEGRATION_GATE_4D_V2_READY_FOR_DIRECTOR_REVIEW |
+| Preservación | Copy, layout, tokens, estados iniciales, DOM visible, estilos, geometría y píxel iguales al prototipo aprobado |
+| Cambios técnicos permitidos | Form action/method, CSRF invisible, cabeceras, IDs/ARIA dinámicos y JS de estados no sensibles |
+| Seguridad | Same-origin, CSRF, POST para escrituras, cookie __Host-mxmed_session, no-store, nosniff, CSP, sin CORS wildcard |
+| Evidencia | /tmp/mxmed-activity04-gate4d-http-ui-integration-v2/ |
+| Prohibido | Alterar copy/layout, exponer tokens/IDs/planes/capacidades, conectar AWS/8091, añadir claim/MFA/passwordless/social |
