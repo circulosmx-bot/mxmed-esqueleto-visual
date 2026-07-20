@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Prototipo UI-3 · Identidad y acceso</title>
+  <link rel="stylesheet" href="prototype.css">
+</head>
+<body data-flow="index">
+  <div class="prototype-shell">
+    <header class="prototype-header">
+      <a class="prototype-brand" href="index.html" aria-label="México Médico · inicio del prototipo">
+        <img src="../../../assets/mexico-medico.svg" alt="México Médico">
+      </a>
+      <span class="prototype-badge">Prototipo UI-3</span>
+    </header>
+    <main class="prototype-main">
+      <section class="prototype-index" aria-labelledby="prototype-title">
+        <div class="prototype-index__notice">PROTOTIPO DE REVISIÓN — NO FORMA PARTE DEL PRODUCTO</div>
+        <div class="auth-card">
+          <p class="auth-card__eyebrow">Identidad y acceso · V2</p>
+          <h1 id="prototype-title">Superficies para revisión</h1>
+          <p class="prototype-index__intro">Explora la primera propuesta visual de los flujos de acceso. El copy y los estados son provisionales.</p>
+          <nav class="flow-grid" aria-label="Superficies del prototipo">
+            <a class="flow-link" href="login.html"><strong>Iniciar sesión</strong><span>Default, carga y error de credenciales.</span></a>
+            <a class="flow-link" href="create-account.html"><strong>Crear cuenta</strong><span>Validación y confirmación genérica.</span></a>
+            <a class="flow-link" href="verify-email.html"><strong>Verificar correo</strong><span>Pendiente, éxito y enlace expirado.</span></a>
+            <a class="flow-link" href="recover-access.html"><strong>Recuperar acceso</strong><span>Solicitud de instrucciones genérica.</span></a>
+            <a class="flow-link" href="reset-password.html"><strong>Nueva contraseña</strong><span>Validación, éxito y enlace expirado.</span></a>
+          </nav>
+          <p class="prototype-index__footer">Sin backend, API, base de datos, sesiones, cookies ni persistencia. Gate 4D funcional no reanudado.</p>
+        </div>
+      </section>
+    </main>
+    <footer class="prototype-footer">México Médico · propuesta visual pendiente de aprobación</footer>
+  </div>
+</body>
+</html>
