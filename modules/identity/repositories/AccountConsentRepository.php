@@ -40,6 +40,16 @@ final class AccountConsentRepository
         }
     }
 
+    public function hasRequiredForAccount(string $accountId): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(DISTINCT document_type) FROM auth_account_consents
+             WHERE account_id = :account_id AND document_type IN ('terms','privacy_notice')"
+        );
+        $stmt->execute([':account_id' => $accountId]);
+        return (int)$stmt->fetchColumn() === 2;
+    }
+
     /** @param array<string, scalar|null> $metadata */
     private function assertSafeMetadata(array $metadata): void
     {
