@@ -2033,6 +2033,19 @@ Siguientes pasos recomendados:
 |---|---|---|---|---|---|
 | 2026-07-19 | Registrar el capítulo final obligatorio de adaptación móvil para cierre funcional y lanzamiento | Los smoke tests intermedios previenen regresiones, pero no sustituyen una decisión visual integral sobre navegación y adaptación móvil | UI-0 documental ahora; UI-3 en la ejecución futura; `MOBILE_RESPONSIVE_FINALIZATION_PENDING`; viewports de 320 a 1024 px, Safari iOS, Chrome Android, desktop emulado y físicos disponibles; navegación, shell, módulos, formularios, tablas, modales, teclado, scroll, orientación, safe areas, touch y estados; no ralentiza el desarrollo y no crea automáticamente Actividad 23 | `docs/MXMED_CAPITULO_FINAL_ADAPTACION_MOVIL_RESPONSIVE.md`; `docs/MXMED_PROTOCOLO_CONTROL_CAMBIOS_UI_UX_Y_ENTREGA_SEGURA.md`; `docs/MXMED_PLANTILLA_ACTIVIDAD_SEGURA_BACKEND_API_UI.md`; `docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md` | `MOBILE_RESPONSIVE_FINALIZATION_PENDING`; Actividad 2 concluida `2/22`; Actividad 3 no iniciada; gate obligatorio antes de lanzamiento |
 
+### Estado candidato de auditoría (Actividad 3/22)
+
+- La rama `audit/mxmed-claim-registration-login-recovery-sessions-security-v2` registra una auditoría read-only candidata para revisión del director: **Actividad 3/22, UI-0, código/UI/SQL/datos escritos 0, 8091 intacto**.
+- El avance oficial permanece **2/22** hasta integración explícita; la Actividad 4 continúa **NO INICIADA** y no hay implementación autorizada.
+- Las decisiones C1–C8 sobre identidad, reclamación, alta, recuperación, sesiones, límites, dispositivos y soporte asistido quedan pendientes.
+- El capítulo final móvil sigue `MOBILE_RESPONSIVE_FINALIZATION_PENDING`; su ejecución futura exige `UI-3` y no se altera por esta auditoría.
+
+### PP-286 — Auditoría V2 de identidad, reclamación, acceso, recuperación y sesiones
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-19 | Registrar la Actividad 3/22 como auditoría técnica y funcional read-only de identidad, acceso, reclamación, registro, login/logout, recuperación, sesiones, autorización y seguridad | No existe todavía un circuito productivo completo de cuenta/claim/auth; se requiere separar identidad, rol, propiedad, entidad profesional, suscripción y capacidades antes de implementar | `UI-0`; sin PHP/JS/CSS/HTML/SQL/migraciones/seeds/config/AWS/Stripe/datos; `http://127.0.0.1:8091/` intacto; decisiones C1–C8 pendientes; ninguna implementación autorizada; Actividad 4 no iniciada | `docs/MXMED_AUDITORIA_V2_IDENTIDAD_ACCESO_RECLAMACION_RECUPERACION_Y_SESIONES.md`; `/tmp/mxmed-activity03-identity-access-security-audit-v2/`; rama `audit/mxmed-claim-registration-login-recovery-sessions-security-v2` | `IDENTITY_ACCESS_SESSION_SECURITY_AUDIT_V2_READY_FOR_DIRECTOR_REVIEW`; candidata a cierre, pendiente de revisión/integración; gate móvil `MOBILE_RESPONSIVE_FINALIZATION_PENDING` |
+
 ### Pendientes reales detectados (fase actual P16)
 - Consolidar cierre funcional del flujo “Integrar a caso clínico” en todos los contextos embebidos (historial base, expandido y casos clínicos).
 - Validar y documentar paridad total de apertura de detalle por tipo de card dentro de “Casos clínicos” (sin excepciones por tipo).
