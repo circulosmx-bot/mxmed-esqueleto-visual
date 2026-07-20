@@ -2101,6 +2101,12 @@ Siguientes pasos recomendados:
 |---|---|---|---|---|---|
 | 2026-07-20 | Ejecutar la integración funcional HTTP de identidad sobre la UI-3 aprobada, con preview HTTPS aislado y composición fail-closed | Cerrar el circuito aprobado de registro, verificación, login, sesión actual, recuperación, reset y logout sin alterar copy, layout ni la UI oficial 8091 | Actividad 4/22; candidato 8140 HTTPS, backend 8141, Valkey local 6384 y base sintética mxmed_gate4d_preview_; cookie __Host-mxmed_session; CSRF, same-origin, JSON, no-store, nosniff, CSP; registro pendiente y anti-enumeración; claim/MFA/passwordless/social/AWS/Stripe excluidos; comparación visual DOM/texto/estilo/geometría/píxel con diferencia cero; smoke móvil intermedio; 8091 intacto; prototipo UI-3 inmutable | docs/MXMED_IMPLEMENTACION_V2_IDENTIDAD_GATE_4D_INTEGRACION_HTTP_UI.md; /tmp/mxmed-activity04-gate4d-http-ui-integration-v2/; rama feature/mxmed-identity-auth-session-foundation-v2 | APPROVED_IDENTITY_UI_HTTP_INTEGRATION_GATE_4D_V2_READY_FOR_DIRECTOR_REVIEW; quinto commit autorizado; 8140 permanece activo |
 
+### PP-294 — Auditoría de APIs, datos, permisos, scopes, privacidad y retención V2
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-20 | Ejecutar auditoría estática y read-only transversal de APIs, datos, autorización, scopes, ownership, privacidad, retención, logs, auditoría y riesgo R0–R3 | La Actividad 4 cerró identidad y sesiones en una candidata local, pero la autoridad transversal entre dominios todavía requiere evidencia separada | Actividad 5/22; 12 entrypoints HTTP PHP, 50 declaraciones route/method explícitas y familias dinámicas; account/membership/entity/profile/role/scope/capability; tres planos; datos públicos, identidad, contacto, Agenda, pacientes, clínicos, pagos, suscripciones, logs y auditoría; sin código, UI, SQL real, AWS, Stripe, writes, secretos o datos reales; Actividad 6 permanece bloqueada | docs/MXMED_AUDITORIA_APIS_DATOS_PERMISOS_SCOPES_PRIVACIDAD_RETENCION.md; /tmp/mxmed-activity05-apis-data-permissions-audit-v2/; rama audit/mxmed-apis-data-permissions-scopes-privacy-retention-v2 | PASS_STATIC_AUDIT_READY_FOR_DIRECTOR_REVIEW; Actividad 5 no concluida oficialmente; contador 4/22; 18 pendientes |
+
 ### PP-293 — Aprobación visual y funcional y cierre de la Actividad 4 V2
 
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
