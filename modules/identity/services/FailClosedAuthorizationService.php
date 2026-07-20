@@ -7,10 +7,11 @@ use Identity\Contracts\AuthenticatedAccessContext;
 use Identity\Contracts\AuthorizationDecision;
 use Identity\Contracts\MembershipRole;
 use Identity\Contracts\ReasonCode;
+use Identity\Contracts\SessionCapabilityAuthorityPort;
 
 final class FailClosedAuthorizationService
 {
-    public function __construct(private object $memberships, private object $capabilityAuthority) {}
+    public function __construct(private object $memberships, private SessionCapabilityAuthorityPort $capabilityAuthority) {}
 
     public function authorize(AuthenticatedAccessContext $context, string $targetType, string $targetId, string $capabilityId, array $capabilityContext = [], string $authMode = 'strict'): AuthorizationDecision
     {

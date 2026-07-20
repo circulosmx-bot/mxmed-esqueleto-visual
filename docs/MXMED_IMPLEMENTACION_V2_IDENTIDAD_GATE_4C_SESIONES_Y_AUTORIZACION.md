@@ -58,3 +58,22 @@ red, secretos, IAM ni arquitectura.
   diferidos.
 
 Evidencia no versionada: `/tmp/mxmed-activity04-gate4c-session-authorization-v2/`.
+
+## Corrección de autoridad de capacidades
+
+La revisión posterior detectó que `SessionCapabilityAuthorityPort` existía,
+pero no tenía adaptador productivo: la autorización recibía `object` y las
+pruebas usaban sólo un fake. El cuarto commit autorizado añade
+`Identity\\Adapters\\ExistingCapabilityAuthorityAdapter`, implementa el puerto
+tipado y delega sin transformación a la autoridad real
+`ExistingCapabilityAuthorityService` de Subscriptions.
+
+No se duplican catálogo, planes, estados ni reason codes. La autoridad real se
+prueba con `standard/agenda_appointments`, `basic/agenda_appointments`,
+`optimum/patients`, contexto ausente, suscripción inactiva y capacidad
+desconocida. Las excepciones del puerto continúan denegando con
+`capability_denied`; membresía ausente, perfil distinto y `transitional_open`
+no pueden ser compensados por un plan.
+
+La corrección permanece UI-0: endpoints, UI, sesiones nuevas y cookies HTTP
+siguen en cero; Gate 4D no iniciado.

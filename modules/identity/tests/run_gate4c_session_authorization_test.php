@@ -4,14 +4,18 @@ declare(strict_types=1);
 foreach (glob(__DIR__ . '/../contracts/*.php') as $file) require_once $file;
 foreach (glob(__DIR__ . '/../adapters/*.php') as $file) require_once $file;
 foreach (glob(__DIR__ . '/../services/*.php') as $file) require_once $file;
+require_once __DIR__ . '/../../subscriptions/contracts/ExistingCapabilityDecision.php';
+require_once __DIR__ . '/../../subscriptions/services/ExistingCapabilityAuthorityService.php';
 
 use Identity\Adapters\InMemorySessionStoreAdapter;
+use Identity\Adapters\ExistingCapabilityAuthorityAdapter;
 use Identity\Adapters\RejectingSessionStoreAdapter;
 use Identity\Contracts\AccountStatus;
 use Identity\Contracts\AuthenticationPrincipalCandidate;
 use Identity\Contracts\Clock;
 use Identity\Contracts\ReasonCode;
 use Identity\Contracts\SessionAccountStatePort;
+use Identity\Contracts\SessionCapabilityAuthorityPort;
 use Identity\Contracts\SessionPolicy;
 use Identity\Services\FailClosedAuthorizationService;
 use Identity\Services\SessionService;
@@ -34,10 +38,14 @@ final class Gate4CTestCapability
     public function available(): bool { return $this->allowed; }
     public function toArray(): array { return ['capability_id' => 'agenda_appointments', 'available' => $this->allowed, 'source' => 'test']; }
 }
-final class Gate4CTestCapabilityAuthority
+final class Gate4CTestCapabilityAuthority implements SessionCapabilityAuthorityPort
 {
     public function __construct(private bool $available = true) {}
     public function resolve(string $capabilityId, array $context): object { return new Gate4CTestCapability($this->available); }
+}
+final class Gate4CTestThrowingCapabilityAuthority implements SessionCapabilityAuthorityPort
+{
+    public function resolve(string $capabilityId, array $context): object { throw new RuntimeException('capability_service_unavailable'); }
 }
 final class Gate4CTestMemberships
 {
@@ -88,11 +96,21 @@ $clock->advance('+43200 seconds');
 gate4cAssert($service->validate((string)$sessions[1]->token())->reasonCode() === ReasonCode::SESSION_ABSOLUTE_EXPIRED || $service->validate((string)$sessions[1]->token())->reasonCode() === ReasonCode::SESSION_IDLE_EXPIRED, 'absolute expiration is enforced');
 
 $memberships = new Gate4CTestMemberships([['membership_id' => 'membership_gate4c_01', 'profile_doctor_id' => 'doctor_gate4c_01', 'entity_group_id' => null, 'role_code' => 'owner', 'scope_code' => 'profile', 'status' => 'active']]);
-$authorization = new FailClosedAuthorizationService($memberships, new Gate4CTestCapabilityAuthority());
+$realCapabilityAuthority = new ExistingCapabilityAuthorityAdapter(new Subscriptions\Services\ExistingCapabilityAuthorityService());
+$authorization = new FailClosedAuthorizationService($memberships, $realCapabilityAuthority);
 $access = $valid->context();
 gate4cAssert($access !== null && $authorization->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'agenda_appointments', ['plan_code' => 'standard', 'is_active' => true])->allowed(), 'membership and capability allow access');
+gate4cAssert(!$authorization->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'agenda_appointments', ['plan_code' => 'basic', 'is_active' => true])->allowed(), 'basic plan denies agenda');
+gate4cAssert($authorization->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'patients', ['plan_code' => 'optimum', 'is_active' => true])->allowed(), 'optimum plan allows patients');
+gate4cAssert(!$authorization->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'patients', [])->allowed(), 'missing plan denies capability');
+gate4cAssert(!$authorization->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'patients', ['plan_code' => 'optimum', 'subscription_status' => 'inactive'])->allowed(), 'inactive subscription denies capability');
+gate4cAssert(!$authorization->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'unknown_capability', ['plan_code' => 'professional', 'is_active' => true])->allowed(), 'unknown capability denies');
 gate4cAssert(!$authorization->authorize($access, 'profile_doctor', 'doctor_other', 'agenda_appointments', ['plan_code' => 'standard', 'is_active' => true])->allowed(), 'different profile denied');
 gate4cAssert(!$authorization->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'agenda_appointments', ['plan_code' => 'standard', 'is_active' => true], 'transitional_open')->allowed(), 'transitional_open never grants access');
+$noMembership = new FailClosedAuthorizationService(new Gate4CTestMemberships([]), $realCapabilityAuthority);
+gate4cAssert(!$noMembership->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'patients', ['plan_code' => 'optimum', 'is_active' => true])->allowed(), 'plan cannot compensate missing membership');
+$throwing = new FailClosedAuthorizationService($memberships, new Gate4CTestThrowingCapabilityAuthority());
+gate4cAssert($throwing->authorize($access, 'profile_doctor', 'doctor_gate4c_01', 'agenda_appointments', ['plan_code' => 'standard', 'is_active' => true])->reasonCode() === ReasonCode::CAPABILITY_DENIED, 'capability exception denies fail closed');
 
 $rejecting = new SessionService(new RejectingSessionStoreAdapter(), new SessionTokenCodec('gate4c-test-pepper-never-production'), $clock, new SessionPolicy(), $state);
 gate4cAssert($rejecting->create($candidate)->reasonCode() === ReasonCode::SESSION_STORE_UNAVAILABLE, 'store outage fails closed');
