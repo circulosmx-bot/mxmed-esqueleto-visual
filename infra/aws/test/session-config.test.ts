@@ -139,8 +139,8 @@ const CASES: readonly ConfigCase[] = [
     id: '016',
     description: 'idle TTL',
     field: 'sessionIdleTtlSeconds',
-    staging: 1800,
-    production: 1800,
+    staging: 3600,
+    production: 3600,
     invalid: 0,
   },
   {

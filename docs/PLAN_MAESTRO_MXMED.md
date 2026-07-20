@@ -2083,3 +2083,9 @@ Siguientes pasos recomendados:
 - Riesgo de regresión en handlers por cambios de markup en cards embebidas.
 - Riesgo de desalineación entre fuente de verdad de casos y estado visual si no se refrescan listas tras conflictos/activación.
 - Riesgo de reintroducir ruido UX al mezclar ajustes visuales con cambios funcionales en el mismo ciclo.
+
+### PP-290 — Gate 4C V2: sesiones server-side y autorización fail-closed
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-20 | Ejecutar Gate 4C con sesiones server-side Valkey, token opaco HMAC-SHA256, fail-closed, rotación, revocación y autorización account → membership → profile → capability | C5/C7 requieren separar autenticación de autorización, limitar cinco dispositivos y revocar por `credential_version` | Actividad 4/22, UI-0; idle 3,600 s, absolute 43,200 s, touch 300 s; reconciliación histórica 1,800 → 3,600 bajo `C5_APPROVED_BY_DIRECTOR`; AWS/CDK modificado sólo en configuración/tests de TTL; password recovery 30 min preservado; endpoints/UI `0`; AWS deploys y recursos modificados `0`; Gate 4D no iniciado; Actividad 4 no integrada; capítulo móvil UI-3 pendiente | `docs/MXMED_IMPLEMENTACION_V2_IDENTIDAD_GATE_4C_SESIONES_Y_AUTORIZACION.md`; `docs/PERFIL_PUBLICO_MEDICO_CONTRATO_MXMED.md`; `/tmp/mxmed-activity04-gate4c-session-authorization-v2/`; rama `feature/mxmed-identity-auth-session-foundation-v2` | `SERVER_SIDE_SESSION_AUTHORIZATION_GATE_4C_READY_FOR_DIRECTOR_REVIEW`; tercer commit candidato a revisión; avance oficial `3/22`; Gate 4D `NO INICIADO` |

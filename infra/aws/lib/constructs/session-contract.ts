@@ -22,7 +22,7 @@ export interface SessionCookieContract {
   readonly useStrictMode: true;
   readonly useOnlyCookies: true;
   readonly useTransSid: false;
-  readonly gcMaxLifetime: 1800;
+  readonly gcMaxLifetime: 3600;
   readonly lazyWrite: true;
 }
 
@@ -35,7 +35,7 @@ export interface SessionLockContract {
 }
 
 export interface SessionExpirationContract {
-  readonly idleTtlSeconds: 1800;
+  readonly idleTtlSeconds: 3600;
   readonly absoluteLifetimeSeconds: 43200;
   readonly createdAtEpochSeconds: number;
   readonly lastSeenAtEpochSeconds: number;
@@ -133,7 +133,7 @@ export const SESSION_COOKIE_CONTRACT: SessionCookieContract = Object.freeze({
   useStrictMode: true,
   useOnlyCookies: true,
   useTransSid: false,
-  gcMaxLifetime: 1800,
+  gcMaxLifetime: 3600,
   lazyWrite: true,
 });
 
@@ -258,7 +258,7 @@ export function validateSessionExpiration(
   const lastSeenAt = input.lastSeenAtEpochSeconds;
   const absoluteExpiresAt = input.absoluteExpiresAtEpochSeconds;
   if (
-    input.idleTtlSeconds !== 1800 ||
+    input.idleTtlSeconds !== 3600 ||
     input.absoluteLifetimeSeconds !== 43200 ||
     !Number.isInteger(createdAt) ||
     !Number.isInteger(lastSeenAt) ||
@@ -268,7 +268,7 @@ export function validateSessionExpiration(
     Number(absoluteExpiresAt) !== Number(createdAt) + 43200 ||
     Number(lastSeenAt) > Number(absoluteExpiresAt)
   ) {
-    fail('expiration', 'must enforce idle 1800 and absolute 43200 without extension');
+    fail('expiration', 'must enforce idle 3600 and absolute 43200 without extension');
   }
 }
 

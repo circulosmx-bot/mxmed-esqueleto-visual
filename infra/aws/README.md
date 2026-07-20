@@ -631,7 +631,7 @@ administración, script o `EVAL/EVALSHA`; la readiness no demostró que locking 
 comandos y la ACL no se amplió por intuición.
 
 Los helpers puros formalizan prefix/key opacos, allowlist de 12 keys mínimas de payload, máximo de
-32 KiB sin truncamiento, cookie `__Host-mxmed_session`, TTL idle de 1800 segundos, lifetime
+32 KiB sin truncamiento, cookie `__Host-mxmed_session`, TTL idle de 3600 segundos, lifetime
 absoluto de 43200 segundos y locking acotado a 10 segundos con espera de 100000 microsegundos.
 No generan session IDs ni conectan a Valkey.
 

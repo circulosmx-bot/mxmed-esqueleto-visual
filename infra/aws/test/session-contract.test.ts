@@ -95,7 +95,7 @@ describe('session pure contracts', () => {
   test('SESSION-IMP-113 accepts idle and absolute expiration', () => {
     expect(() => {
       validateSessionExpiration({
-        idleTtlSeconds: 1800,
+        idleTtlSeconds: 3600,
         absoluteLifetimeSeconds: 43200,
         createdAtEpochSeconds: 1000,
         lastSeenAtEpochSeconds: 2000,

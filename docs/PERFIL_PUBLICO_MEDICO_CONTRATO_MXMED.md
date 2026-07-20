@@ -55332,10 +55332,12 @@ la foundation y el grafo de stacks; PP251-PP252 entregaron dos subnets
 datos persistentes o backups; PP246-PP248 y PP259 son decisiones visuales/de
 pago sin contrato de sesión.
 
-Por tanto, no existe contradicción: PP260 cierra el servicio como Amazon
-ElastiCache for Valkey 8.2 node-based y reemplaza únicamente el supuesto de TTL
-pendiente por 30 minutos de inactividad y 12 horas absolutas. No altera los
-contratos cerrados de Network, Security, Data o Storage.
+Por tanto, PP260/PP261 conservaron el servicio como Amazon ElastiCache for
+Valkey 8.2 node-based. Su valor histórico de 1,800 segundos de inactividad fue
+sustituido exclusivamente por la decisión posterior C5
+(`C5_APPROVED_BY_DIRECTOR`): el valor operativo vigente es 3,600 segundos,
+manteniendo 43,200 segundos absolutos. No altera los contratos cerrados de
+Network, Security, Data o Storage.
 
 ### Auditoría read-only de la superficie PHP actual
 
@@ -55435,7 +55437,7 @@ de handler. Valkey no será fuente de verdad empresarial.
 
 ### TTL, expiración absoluta y keys
 
-- idle TTL: 1,800 segundos, sliding sólo por actividad válida;
+- idle TTL vigente: 3,600 segundos, sliding sólo por actividad válida;
 - absolute lifetime: 43,200 segundos, nunca extendido por actividad;
 - toda sesión exige `created_at` y `absolute_expires_at`;
 - una sesión vencida absolutamente se rechaza aunque aún exista la key;
@@ -55466,7 +55468,7 @@ session.use_trans_sid=0
 session.cookie_secure=1
 session.cookie_httponly=1
 session.cookie_samesite=Lax
-session.gc_maxlifetime=1800
+session.gc_maxlifetime=3600
 session.lazy_write=1
 ```
 
@@ -55483,7 +55485,7 @@ no redirigir con session ID y responder `no-store`.
 
 La implementación futura usará extensión `phpredis` compatible con PHP 8,
 `session.save_handler=redis`, primary endpoint, TLS con validación de
-certificado/hostname, usuario ACL, secreto inyectado, TTL de 1,800 segundos,
+certificado/hostname, usuario ACL, secreto inyectado, TTL de 3,600 segundos,
 prefix ambiental, connect/read timeout explícitos y session locking. Esta
 readiness no instala extensión ni modifica Dockerfile, `php.ini`, task
 definition o secrets injection.
@@ -55636,7 +55638,7 @@ campos: `sessionProfile`, `sessionEngine`, `sessionEngineVersion`,
 
 En ambos ambientes: profile `session-foundation-v1`, engine `valkey`, version
 `8.2`, cluster mode false, 1 shard, cifrado at-rest/transit true, transit mode
-required, idle 1800, absolute 43200, max payload 32 KiB, snapshots 0, auto
+required, idle 3600 (C5; 1800 histórico), absolute 43200, max payload 32 KiB, snapshots 0, auto
 minor false y logs false. Staging usa micro/0 replicas/Multi-AZ y failover
 false; production medium/1 réplica/Multi-AZ y failover true.
 
@@ -55748,7 +55750,7 @@ flowchart LR
   Security[SecurityStack\nApplicationDataKey + SecretsKey] --> Valkey
   Valkey --> Metrics[CloudWatch metrics\nOperationsStack futuro]
 
-  TTL[Idle 1800s / absolute 43200s\nno backup / no filesystem fallback] -.-> Valkey
+  TTL[Idle 3600s / absolute 43200s\nno backup / no filesystem fallback] -.-> Valkey
 ```
 
 ### Evidencia, límites y no repetición
@@ -55865,7 +55867,7 @@ con `+@all`.
 `MxMedEnvironmentConfig` incorpora los 25 campos Session de PP260. Ambos
 ambientes fijan profile `session-foundation-v1`, engine `valkey`, versión
 `8.2`, family `valkey8`, cluster mode false, un shard, cifrado en reposo y
-tránsito true, mode conceptual `create-time-tls-only`, TTL 1800, lifetime
+tránsito true, mode conceptual `create-time-tls-only`, TTL 3600 (C5; 1800 histórico), lifetime
 43200, máximo 32 KiB, snapshots 0, auto minor false, auth profile
 `valkey-rbac-password-v1`, locking habilitado con timeout 10 segundos/espera
 100000 microsegundos y log delivery false.
@@ -56000,9 +56002,9 @@ password/token/provider secret, archivo/documento/estudio/receta o API payload.
 Los helpers no generan ID ni escriben/conectan a Valkey.
 
 La cookie pura fija `__Host-mxmed_session`, Secure, HttpOnly, SameSite Lax,
-Path `/`, Domain null, strict mode, only cookies, trans SID off, gc 1800 y lazy
+Path `/`, Domain null, strict mode, only cookies, trans SID off, gc 3600 y lazy
 write. El lock fija timeout/máximo de espera 10 segundos, intervalo 100000
-microsegundos y retries acotados. La expiración exige TTL 1800 y límite absoluto
+microsegundos y retries acotados. La expiración exige TTL 3600 y límite absoluto
 43200 sin extensión.
 
 ### Stage, dependencias y guardrails
