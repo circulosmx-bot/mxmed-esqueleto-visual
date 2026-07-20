@@ -6,21 +6,39 @@ namespace Subscriptions\Services;
 use DateTimeImmutable;
 use DateTimeInterface;
 use InvalidArgumentException;
+use Subscriptions\Contracts\ExistingCapabilityDecision;
 use Subscriptions\Repositories\CurrentSubscriptionRepository;
+
+require_once __DIR__ . '/../contracts/ExistingCapabilityDecision.php';
+require_once __DIR__ . '/ExistingCapabilityAuthorityService.php';
 
 final class CurrentSubscriptionReadModelService
 {
     private const VERSION = 'current-subscription-readmodel-v1';
     private const FREE_PLAN_CODE = 'free';
     private const FREE_BILLING_PERIOD = 'lifetime';
+    private const EXISTING_CAPABILITY_IDS = [
+        'profile_directory_basic',
+        'public_contact',
+        'gallery',
+        'agenda_appointments',
+        'patients',
+        'clinical_record',
+        'prescriptions',
+    ];
 
     private CurrentSubscriptionRepository $repository;
+    private ExistingCapabilityAuthorityService $capabilityAuthority;
     private ?DateTimeImmutable $now;
 
-    public function __construct(CurrentSubscriptionRepository $repository, ?DateTimeImmutable $now = null)
-    {
+    public function __construct(
+        CurrentSubscriptionRepository $repository,
+        ?DateTimeImmutable $now = null,
+        ?ExistingCapabilityAuthorityService $capabilityAuthority = null
+    ) {
         $this->repository = $repository;
         $this->now = $now;
+        $this->capabilityAuthority = $capabilityAuthority ?? new ExistingCapabilityAuthorityService();
     }
 
     public function resolveForEntity(string $entityType, string $entityId): array
@@ -95,6 +113,7 @@ final class CurrentSubscriptionReadModelService
             'days_until_expiration' => $this->daysUntil($expiresAt, $now),
             'source' => 'profile_subscriptions.current_candidate',
             'version' => self::VERSION,
+            'feature_access' => $this->featureAccess($effectivePlanCode, $status, $isActive || $isInGrace, false),
         ]);
     }
 
@@ -130,6 +149,7 @@ final class CurrentSubscriptionReadModelService
             'days_until_expiration' => null,
             'source' => 'profile_subscriptions.expired_free_fallback',
             'version' => self::VERSION,
+            'feature_access' => $this->featureAccess(self::FREE_PLAN_CODE, 'free_default', true, true),
         ]);
     }
 
@@ -160,6 +180,7 @@ final class CurrentSubscriptionReadModelService
             'days_until_expiration' => null,
             'source' => $freePlan !== null ? 'subscription_plans.default_free' : 'code.default_free',
             'version' => self::VERSION,
+            'feature_access' => $this->featureAccess(self::FREE_PLAN_CODE, 'free_default', true, $isFallback),
         ]);
     }
 
@@ -188,7 +209,32 @@ final class CurrentSubscriptionReadModelService
             'days_until_expiration' => $data['days_until_expiration'],
             'source' => $data['source'],
             'version' => $data['version'],
+            'feature_access' => $data['feature_access'],
         ];
+    }
+
+    /**
+     * Keep internal reason codes inside the authority service only. The
+     * additive read-model exposes stable decisions without technical details
+     * or commercial copy, so old clients can continue consuming current data.
+     */
+    private function featureAccess(string $planCode, string $status, bool $isActive, bool $isFreeFallback): array
+    {
+        $context = [
+            'plan_code' => $planCode,
+            'subscription_status' => $status,
+            'is_active' => $isActive,
+            'is_free_fallback' => $isFreeFallback,
+        ];
+        $decisions = $this->capabilityAuthority->resolveMany(self::EXISTING_CAPABILITY_IDS, $context);
+        $public = [];
+        foreach ($decisions as $capabilityId => $decision) {
+            if (!$decision instanceof ExistingCapabilityDecision) {
+                continue;
+            }
+            $public[$capabilityId] = $decision->publicArray();
+        }
+        return $public;
     }
 
     private function isInGraceWindow(

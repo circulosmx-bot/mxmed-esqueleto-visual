@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../_lib/db.php';
+require_once __DIR__ . '/../../modules/subscriptions/contracts/ExistingCapabilityDecision.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/CurrentSubscriptionRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/ProfileSubscriptionRepository.php';
 require_once __DIR__ . '/../../modules/subscriptions/repositories/SubscriptionCheckoutIntentRepository.php';
@@ -21,6 +22,7 @@ require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscription
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPaymentIntentService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionPendingPaymentAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CurrentSubscriptionReadModelService.php';
+require_once __DIR__ . '/../../modules/subscriptions/services/ExistingCapabilityAuthorityService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/CreateSubscriptionWithAcceptanceService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/ProcessStripeSubscriptionWebhookService.php';
 require_once __DIR__ . '/../../modules/subscriptions/services/RetrieveSubscriptionPaymentIntentClientSecretService.php';
