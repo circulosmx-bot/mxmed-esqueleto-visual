@@ -59253,6 +59253,12 @@ function mxResetLogoPreview(){
       professional: Object.freeze({ yearly: 21990 })
     })
   });
+  const SUBSCRIPTION_VISIBLE_FEATURE_CAPABILITIES = Object.freeze({
+    'perfil en linea': 'profile_directory_basic',
+    agenda: 'agenda_appointments',
+    expediente: 'clinical_record',
+    recetas: 'prescriptions'
+  });
   const STATUS_LABELS = {
     free_default: 'Plan base permanente',
     active: 'Activo',
@@ -59345,6 +59351,7 @@ function mxResetLogoPreview(){
     history: [],
     currentModel: null,
     currentMeta: null,
+    currentFeatureAccess: Object.freeze({}),
     contextInfo: null,
     realCurrentModel: null,
     realCurrentMeta: null,
@@ -61963,6 +61970,15 @@ function mxResetLogoPreview(){
     const commercialFeatures = Array.isArray(currentPlan?.features) && currentPlan.features.length
       ? currentPlan.features
       : ['Beneficios vigentes de tu suscripción'];
+    const qaSimulation = model?.qa_plan_simulated === true;
+    const featureAccess = normalizeFeatureAccess(model?.feature_access);
+    const activeStatus = ['active', 'expiring_soon', 'grace_period'].includes(clean(model?.status).toLowerCase());
+    const backendBoundFeatures = !qaSimulation && activeStatus && Object.keys(featureAccess).length > 0
+      ? commercialFeatures.filter((feature)=>{
+          const capabilityId = SUBSCRIPTION_VISIBLE_FEATURE_CAPABILITIES[normalizeBenefitKey(feature)];
+          return !capabilityId || featureAccess[capabilityId]?.available !== false;
+        })
+      : commercialFeatures;
     const debugFeatures = isSubscriptionDebugPanelEnabled() ? [
       `Plan efectivo: ${effective || 'No disponible'}`,
       `Plan contratado: ${contracted || 'Plan contratado no vigente'}`,
@@ -61972,12 +61988,27 @@ function mxResetLogoPreview(){
       source ? `Fuente: ${source}` : '',
       version ? `Versión: ${version}` : ''
     ] : [];
-    return [...commercialFeatures, ...debugFeatures].filter(Boolean);
+    return [...backendBoundFeatures, ...debugFeatures].filter(Boolean);
+  }
+
+  function normalizeFeatureAccess(raw){
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const normalized = {};
+    Object.entries(raw).forEach(([capabilityId, decision])=>{
+      if(!decision || typeof decision !== 'object' || typeof decision.available !== 'boolean') return;
+      normalized[capabilityId] = {
+        available: decision.available,
+        plan_code: clean(decision.plan_code),
+        operational_state: clean(decision.operational_state)
+      };
+    });
+    return normalized;
   }
 
   function applyReadModelToView(model, meta, contextInfo, options = {}){
     data.currentModel = model || {};
     data.currentMeta = meta || {};
+    data.currentFeatureAccess = normalizeFeatureAccess(model?.feature_access);
     data.contextInfo = contextInfo || {};
     const planLabel = clean(model?.plan_label) || 'No disponible';
     const status = clean(model?.status);
@@ -62070,6 +62101,7 @@ function mxResetLogoPreview(){
     data.realCurrentModel = null;
     data.realCurrentMeta = null;
     data.realContextInfo = null;
+    data.currentFeatureAccess = Object.freeze({});
     let message = 'No se pudo cargar la suscripción. Intenta más tarde.';
     if(httpStatus === 401){
       message = 'Sesión no válida o no iniciada para consultar la suscripción.';
