@@ -2,7 +2,7 @@
 
 ## Estado
 
-APPROVED_IDENTITY_UI_HTTP_INTEGRATION_GATE_4D_V2_READY_FOR_DIRECTOR_REVIEW
+APPROVED_BY_DIRECTOR
 
 Actividad 4/22. Este cierre conecta, en un preview local explícito y aislado,
 los servicios aprobados en Gates 4A–4C con la UI-3 aprobada. El prototipo
@@ -79,3 +79,23 @@ detiene antes del reporte final; 8140 permanece activo.
 No se implementaron reclamación, MFA, passwordless, social login, soporte
 asistido, panel de dispositivos, Stripe, AWS, correo real, nuevas capacidades
 ni cambios visuales fuera de la UI-3 aprobada.
+
+## Cierre documental de Actividad 4
+
+“Apruebo visual y funcionalmente la candidata Gate 4D en 8140 como base para
+integrar y cerrar la Actividad 4.”
+
+La aprobación confirma Gate 4D visual y funcional, visual diff 0, cookie
+segura, CSRF, anti-enumeración, guards fail-closed, base y store aislados,
+reclamación deshabilitada, AWS writes 0, DB oficial writes 0 y rollback
+probado. La candidata 8140 permanece activa hasta la integración y el cutover
+controlado; no se crea checkpoint ni se integra automáticamente a program.
+
+Gate 4A, Gate 4B, Gate 4C, la corrección de autoridad de capacidades y Gate 4D
+quedan concluidos y aprobados. La Actividad 4 queda
+READY_FOR_FAST_FORWARD_INTEGRATION. El contador oficial permanece 3/22 hasta
+la integración; después de integrar será 4/22, con 18 pendientes. La
+Actividad 5 no ha iniciado.
+
+El capítulo móvil final permanece pendiente: el resultado es
+INTERIM_MOBILE_SMOKE_ONLY y finalMobileApproved=false.

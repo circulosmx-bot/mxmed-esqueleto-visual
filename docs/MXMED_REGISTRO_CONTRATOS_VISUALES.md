@@ -96,9 +96,19 @@ Este registro formaliza un gate transversal y no una especificación visual nuev
 | surfaceId | ACCESS |
 | Referencia visual | checkpoint/mxmed-identity-access-ui3-approved-v2 |
 | Rutas | /acceso, /crear-cuenta, /verificar-correo, /recuperar-acceso, /restablecer-acceso |
-| Estado | APPROVED_IDENTITY_UI_HTTP_INTEGRATION_GATE_4D_V2_READY_FOR_DIRECTOR_REVIEW |
+| Estado | APPROVED_BY_DIRECTOR |
 | Preservación | Copy, layout, tokens, estados iniciales, DOM visible, estilos, geometría y píxel iguales al prototipo aprobado |
 | Cambios técnicos permitidos | Form action/method, CSRF invisible, cabeceras, IDs/ARIA dinámicos y JS de estados no sensibles |
 | Seguridad | Same-origin, CSRF, POST para escrituras, cookie __Host-mxmed_session, no-store, nosniff, CSP, sin CORS wildcard |
 | Evidencia | /tmp/mxmed-activity04-gate4d-http-ui-integration-v2/ |
 | Prohibido | Alterar copy/layout, exponer tokens/IDs/planes/capacidades, conectar AWS/8091, añadir claim/MFA/passwordless/social |
+
+### Cierre de aprobación visual y funcional
+
+“Apruebo visual y funcionalmente la candidata Gate 4D en 8140 como base para
+integrar y cerrar la Actividad 4.”
+
+La candidata conserva visual diff 0, HTTPS local, cookie segura, CSRF,
+anti-enumeración, guards fail-closed, aislamiento de base/store y rollback
+probado. El smoke móvil es INTERIM_MOBILE_SMOKE_ONLY y la aprobación móvil final
+permanece pendiente.
