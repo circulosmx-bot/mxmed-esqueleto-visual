@@ -1989,6 +1989,13 @@ Siguientes pasos recomendados:
 - Dashboard de operadores: no implementado; requisitos candidatos clasificados UI-3.
 - La formalización B1–B7 existe sólo en `docs/mxmed-capabilities-permissions-director-approval-v2` hasta su integración explícita; no inicia la Actividad 2 ni modifica la rama de programa.
 
+### Estado de candidato de implementación (Actividad 2/22)
+
+- La rama candidata `feature/mxmed-existing-capabilities-backend-authority-v2` registra **2/22; Actividad 2 candidata READY_FOR_DIRECTOR_REVIEW**.
+- Este registro es una entrega aislada para revisión: no cambia el contador oficial del programa (`1/22`), no hace fast-forward, no abre PR y no integra en la rama de programa.
+- Alcance: **UI-1**, `VISUAL_DIFF_REQUIRED_TO_BE_ZERO`, con `STOP_UI_SCOPE_ESCALATION_REQUIRED`; se mantiene 8091 en el known-good protegido y 8140 como puerto de revisión.
+- La Actividad 3 permanece **NO INICIADA**; quedan **20 actividades pendientes** en el candidato.
+
 ### PP-281 — Auditoría V2 de planes, capacidades, ownership y lifecycle
 
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
@@ -2006,6 +2013,12 @@ Siguientes pasos recomendados:
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
 |---|---|---|---|---|---|
 | 2026-07-19 | Aprobar B1–B7: backend como única autoridad de capacidades/permisos; API/read-model como transporte; frontend como reflejo; separación entre registro técnico y presentación comercial; trazabilidad sin cambio automático de UI; progresión funcional objetivo; denegación fail-closed; funciones futuras efectivas sólo en estado `operational`; e implementación incremental | Proteger las fichas aprobadas mientras se prepara una autoridad backend mínima y comprobable para capacidades existentes | Cards, beneficios, copy y orden congelados en `recovery/mxmed-pre-22-known-good@e4f7d515cba4ae47fcdbd44cd55ce610466b982a`; anti-patrón de exponer matrices técnicas prohibido; UI-0 actual; futura Actividad 2 inicialmente UI-1 con `VISUAL_DIFF_REQUIRED_TO_BE_ZERO`; `STOP_UI_SCOPE_ESCALATION_REQUIRED` ante cambios visuales; 8091 protegido; Actividad 1 concluida `1/22`; Actividad 2 no iniciada | `docs/MXMED_DECISIONES_V2_CAPACIDADES_AUTORIDAD_PERMISOS.md`; `docs/MXMED_AUDITORIA_V2_PLANES_CAPACIDADES_OWNERSHIP_LIFECYCLE.md`; `docs/MXMED_REGISTRO_CONTRATOS_VISUALES.md`; evidencia `/tmp/mxmed-decisions-b1-b7-v2/` | `DIRECTOR_APPROVED_CONTRACT_ONLY`; no autoriza implementación ni cambios UI |
+
+### PP-284 — Implementación V2 de autoridad backend para capacidades existentes
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-19 | Ejecutar la Actividad 2 candidata con backend como única autoridad y frontend como binding no autoritativo | Convertir B1–B7 en un contrato mínimo verificable sin alterar la presentación aprobada | UI-1; catálogo deliberadamente mínimo de 7 capacidades existentes; decisiones fail-closed con códigos internos estables; read-model/API aditivos y compatibles; frontend enlaza sólo `available`/estado público; cards, copy, orden, clases y shell congelados; matrices técnicas, dependencias, lifecycle, conteos, funciones futuras y razón interna no se exponen; no Stripe, checkout, pagos, activación, SQL, migraciones, AWS ni escrituras | `docs/MXMED_IMPLEMENTACION_V2_AUTORIDAD_CAPACIDADES_EXISTENTES.md`; evidencia `/tmp/mxmed-activity02-existing-capabilities-backend-authority-v2/`; candidato `feature/mxmed-existing-capabilities-backend-authority-v2` | `READY_FOR_DIRECTOR_REVIEW`; visual diff estático 0; Actividad 3 no iniciada |
 
 ### Pendientes reales detectados (fase actual P16)
 - Consolidar cierre funcional del flujo “Integrar a caso clínico” en todos los contextos embebidos (historial base, expandido y casos clínicos).
