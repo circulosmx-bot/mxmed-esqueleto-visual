@@ -2,7 +2,7 @@
 
 Contrato: `MXMED_IDENTITY_ACCESS_SESSION_SECURITY_AUDIT_V2`  
 Actividad: `3/22` — `PRODUCT-AUDIT/MXMed-Claim-Registration-Login-Recovery-Sessions-Security-Audit-01`  
-Estado: **`IDENTITY_ACCESS_SESSION_SECURITY_AUDIT_V2_READY_FOR_DIRECTOR_REVIEW`**  
+Estado: **`IDENTITY_ACCESS_SESSION_DIRECTOR_DECISIONS_READY_FOR_INTEGRATION`**
 Clasificación: **UI-0 — NO_UI_IMPACT**  
 Tipo: reconocimiento técnico y funcional read-only; no es una implementación.
 
@@ -16,7 +16,7 @@ No se modificaron PHP, JavaScript, CSS, HTML, SQL, migraciones, seeds, configura
 
 El repositorio tiene entidades de perfil profesional, contactos, operadores y una especificación de sesión AWS, pero no presenta un circuito productivo completo de cuenta, autenticación, registro, recuperación, reclamación o logout. Los endpoints de verificación de contraseña y SMS son stubs de pruebas: aceptan cualquier valor no vacío, admiten entrada por GET y publican CORS comodín. Las rutas privadas de perfil están protegidas por una compuerta transicional que puede tomar identificadores de cabeceras, no por un resolvedor de identidad/propiedad verificable. La CTA pública de reclamación está visible pero deshabilitada, y el backend fuerza el estado no reclamado.
 
-Por tanto, identidad, acceso, recuperación, sesiones y reclamación no son seguros para habilitar como producto. La especificación `infra/aws/lib/constructs/session-contract.ts` es un contrato de infraestructura valioso (cookie `__Host-`, TTL y payload mínimo), pero la auditoría no encontró el puente runtime que lo conecte con autenticación, revocación y autorización PHP. Se requiere decisión directorial C1–C8 antes de la única implementación propuesta para la Actividad 4.
+Por tanto, identidad, acceso, recuperación, sesiones y reclamación no son seguros para habilitar como producto. La especificación `infra/aws/lib/constructs/session-contract.ts` es un contrato de infraestructura valioso (cookie `__Host-`, TTL y payload mínimo), pero la auditoría no encontró el puente runtime que lo conecte con autenticación, revocación y autorización PHP. Las decisiones directorales C1–C8 quedan aprobadas como contrato para integración futura; no autorizan implementación productiva en este commit.
 
 ## 3. Mapa real de niveles (no confundirlos)
 
@@ -35,7 +35,7 @@ Por tanto, identidad, acceso, recuperación, sesiones y reclamación no son segu
 
 ### Modelos de estado
 
-Los estados siguientes son **PROPOSED / DECISION_REQUIRED**, no contratos aprobados: cuenta `pending → active → blocked/disabled/deleted`; verificación `unverified → pending → verified/expired/rejected`; reclamación `draft → pending_verification → pending_review → approved/rejected/expired/cancelled/revoked`; recuperación `requested → issued → consumed/expired/invalidated`; sesión `active → idle_expired/absolute_expired/logged_out/revoked/superseded`.
+El inventario histórico conserva los estados observados y propuestos; las reglas aprobadas para implementarlos se encuentran en la sección 6A. Ningún estado se considera implementado por esta decisión documental.
 
 ## 4. Superficies funcionales y UI visible
 
@@ -77,7 +77,7 @@ Recomendación común: mantener stubs y CTA deshabilitados fuera de cualquier re
 
 ## 6. Decisiones para dirección (C1–C8)
 
-Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técnicas y no aprobación.
+Las ocho decisiones están **`APPROVED_BY_DIRECTOR`** como contrato documental. La aprobación no equivale a implementación ni habilita la Actividad 4.
 
 ### C1 — Modelo de identidad y cuenta ↔ perfil
 
@@ -86,7 +86,7 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: A, con relación explícita account↔professional entity↔profile, roles y versionado de permisos; C sólo durante migración fail-closed y con fecha de retiro.
 - Impacto UX/operativo: alta inicial y selección de perfil en multi-profesional; soporte puede revisar membresías.
 - Riesgo/costo: alto; riesgo de datos huérfanos si se migra sin reconciliación. Dependencias: C2, C5, C8. Si se difiere, no habilitar rutas privadas.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ### C2 — Política de reclamación y propiedad
 
@@ -95,7 +95,7 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: B con revisión manual y opción C para excepciones; estados propuestos explícitos y anti-enumeración uniforme.
 - Impacto UX/operativo: espera de verificación/revisión y cola de soporte; requiere mensajes no enumerables.
 - Riesgo/costo: alto; riesgo de apropiación si se habilita sin evidencia. Dependencias: C1, C3, C8. Si se difiere, mantener CTA disabled.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ### C3 — Alta, verificación y activación
 
@@ -104,7 +104,7 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: B, con normalización, idempotencia, mensajes anti-enumeración y bloqueo fail-closed.
 - Impacto UX/operativo: paso adicional y reenvío limitado; soporte para cuentas pendientes.
 - Riesgo/costo: medio-alto; dependencia C1/C4/C6. Si se difiere, no registrar usuarios reales.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ### C4 — Contraseñas y recuperación
 
@@ -113,7 +113,7 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: B inicialmente: Argon2id, token de recuperación de un uso almacenado como hash, TTL, anti-enumeración, revocación de sesiones al cambiar contraseña.
 - Impacto UX/operativo: enrolamiento y fallback de segundo factor; soporte para recuperación segura.
 - Riesgo/costo: alto; dependencia C1, C5, C6. Si se difiere, conservar stubs sólo en pruebas aisladas.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ### C5 — Duración, rotación y revocación de sesiones
 
@@ -122,7 +122,7 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: B, usando el contrato existente, `__Host-mxmed_session`, rotación tras login/privilege change, revocación server-side y payload mínimo.
 - Impacto UX/operativo: re-login por expiración y panel de sesiones; observabilidad de storage.
 - Riesgo/costo: alto; dependencia C1/C7. Si se difiere, no autenticar rutas privadas.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ### C6 — Intentos, bloqueos y rate limiting
 
@@ -131,7 +131,7 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: B con reason codes internos, umbrales revisables, no enumeración y alertas sin datos sensibles.
 - Impacto UX/operativo: mensajes de espera y soporte de desbloqueo; métricas de abuso.
 - Riesgo/costo: medio-alto; dependencia C3/C4. Si se difiere, mantener endpoints fuera de producción.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ### C7 — Sesiones simultáneas y dispositivos
 
@@ -140,7 +140,7 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: B, con identificador opaco, última actividad no sensible, revocación individual/global y rotación de `session_version`.
 - Impacto UX/operativo: nueva pantalla de sesiones y soporte para pérdida de dispositivo.
 - Riesgo/costo: medio; dependencia C5. Si se difiere, revocar todas las sesiones ante eventos críticos.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ### C8 — Soporte asistido, impersonación y auditoría
 
@@ -149,13 +149,28 @@ Todas permanecen **`PENDING_DIRECTOR_DECISION`**. Las recomendaciones son técni
 - Recomendación técnica: B sin conocer contraseñas, con aprobación, duración corta, banner inequívoco, acciones auditadas y revocación inmediata.
 - Impacto UX/operativo: flujo de aprobación y trazabilidad para soporte; mayor carga operativa inicial.
 - Riesgo/costo: alto; dependencia C1/C5. Si se difiere, soporte no debe acceder a datos privados.
-- Estado: `PENDING_DIRECTOR_DECISION`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
-## 7. Alcance propuesto para Actividad 4 (no iniciada)
+## 6A. Registro oficial de decisiones aprobadas
+
+Las siguientes claves son los códigos oficiales aprobados por dirección. Su estado es `APPROVED_BY_DIRECTOR`; describen el contrato de diseño y no una capacidad existente.
+
+| Código | Política aprobada | Parámetros y reglas obligatorias | Estado |
+|---|---|---|---|
+| `ACCOUNT_ENTITY_PROFILE_MEMBERSHIP_MODEL` | Cuenta humana → membresía/autorización → entidad profesional u organización → perfil público | Una cuenta puede administrar varios perfiles; un perfil puede tener varias cuentas; cada membresía tiene rol, alcance y estado; autenticación no implica propiedad; suscripción/capacidades permanecen separadas | `APPROVED_BY_DIRECTOR` |
+| `VERIFIED_START_PLUS_MANUAL_REVIEW` | Reclamación con inicio verificado y revisión manual | Cuenta verificada antes de reclamar; evidencia de propiedad/representación; aprobación/rechazo auditables; separación creación/aprobación; asistente no autoaprueba; CTA permanece deshabilitada; respuestas anti-enumeración | `APPROVED_BY_DIRECTOR` |
+| `VERIFICATION_AND_CONSENT_BEFORE_ACTIVATION` | Verificación y consentimiento antes de activar | Estado inicial `pending_verification`; correo verificado; contraseña válida; términos/privacidad con versión y fecha; acceso privado bloqueado antes de `active`; pantalla limitada para pendientes | `APPROVED_BY_DIRECTOR` |
+| `SECURE_PASSWORD_EMAIL_RECOVERY_AND_PRIVILEGED_MFA` | Contraseña segura, recuperación por email y MFA privilegiado | Argon2id; token aleatorio almacenado hasheado, un uso y caducidad; anti-enumeración; revocar sesiones al cambiar contraseña; sin SMS hasta proveedor real; MFA obligatorio para administradores/operadores; MFA profesional inicialmente opcional; passwordless fuera del alcance inicial | `APPROVED_BY_DIRECTOR` |
+| `AWS_SERVER_SIDE_FAIL_CLOSED_SESSIONS` | Sesiones server-side AWS Redis/Valkey fail-closed | Sin fallback silencioso; regeneración al autenticar o elevar privilegios; cookie Secure/HttpOnly/SameSite; inactividad 60 minutos; duración absoluta 12 horas; sin remember-me inicial; DEV local explícito y aislado; sesiones administrativas/asistidas más cortas | `APPROVED_BY_DIRECTOR` |
+| `MULTI_DIMENSION_RATE_LIMIT_WITH_PROGRESSIVE_BACKOFF` | Límites multidimensionales con backoff | Login: 5 fallos/15 minutos; recuperación: 3 solicitudes/hora; reclamación: 3 intentos diarios por cuenta y perfil; límites por cuenta/identificador, IP, dispositivo y operación; sin bloqueo permanente automático | `APPROVED_BY_DIRECTOR` |
+| `FIVE_REVOCABLE_DEVICE_SESSIONS` | Cinco sesiones revocables por dispositivo | Máximo cinco activas; creación, último uso, dispositivo aproximado, IP redactada, estado y revocación; revocación individual; password/recovery y cambios críticos revocan anteriores; prohibidas cuentas compartidas de operadores | `APPROVED_BY_DIRECTOR` |
+| `SCOPED_AUDITED_SUPPORT_ASSISTED_SESSION` | Sesión asistida de soporte acotada y auditada | Sin impersonación libre; `support_assisted_session` vinculada a `platform_case`; operador, motivo, alcance y vencimiento obligatorios; indicador visible; auditoría inmutable; niveles R0–R3; sin acceso clínico por defecto; autorización adicional para excepción; autocierre; no autoaprobación de claim | `APPROVED_BY_DIRECTOR` |
+
+## 7. Alcance aprobado para Actividad 4 (implementación no iniciada)
 
 Identificador sugerido: `ACTIVITY-4-OF-22/PRODUCT-IMPLEMENTATION/MXMed-Identity-Auth-Session-Foundation-V2`.
 
-Una sola implementación acotada, condicionada a la aprobación C1–C8:
+Una sola actividad de implementación, condicionada a cerrar los cuatro gates internos en orden. La Actividad 4 sigue `NO INICIADA`.
 
 - **Contratos y backend:** cuenta/ownership/membership, estados, endpoints de registro, login, logout, recuperación, verificación, sesiones y claim; resolver único fail-closed que separe autenticación, rol, propiedad y capacidad de plan.
 - **Archivos previstos:** nuevos módulos de cuenta/auth/session/claim, repositorios y controladores, adaptador PHP al contrato AWS, configuración de entorno documentada y migraciones mínimas versionadas. No tocar los stubs hasta que el contrato y las pruebas estén listos; no modificar el contenido visual aprobado sin gate.
@@ -165,14 +180,25 @@ Una sola implementación acotada, condicionada a la aprobación C1–C8:
 - **UI impact:** UI-0 si sólo se entregan contratos/adaptadores; UI-1 si se conectan formularios existentes sin cambio visual; UI-2/3 requieren aprobación separada. `mobile smoke` sólo interim si se toca frontend; el cierre final móvil continúa `MOBILE_RESPONSIVE_FINALIZATION_PENDING`.
 - **Riesgos/rollback:** migración reversible y bandera de activación fail-closed; apagar rutas nuevas, revocar sesiones de prueba y revertir el commit de actividad sin borrar evidencia. No activar claim, recovery o login en 8091 sin QA.
 - **Criterios PASS:** baseline preservado; no secrets/PII; contratos C1–C8 trazables; auth≠authorization; sesiones rotan y revocan; anti-enumeración y límites comprobados; endpoints sólo en fixtures; 8091 intacto; diff visual cero si UI-1.
-- **Exclusiones:** no pagos/Stripe, AWS productivo, correo/SMS reales, pacientes/Expediente/Recetas, cambios de perfiles/suscripciones, rediseño, impersonación operativa ni inicio de la Actividad 4 en este commit.
+- **Exclusiones:** no pagos/Stripe, correo transaccional productivo, SMS real, panel visible de dispositivos, passwordless, MFA para profesionales, reclamación operativa completa/aprobación manual, impersonación o soporte asistido operativo, rediseño/copy no aprobado, acceso clínico, migración masiva de usuarios reales, lanzamiento productivo ni cambios AWS fuera del runtime de sesiones aprobado.
+
+### Gates internos obligatorios
+
+Cada gate debe cerrar con `PASS` antes de continuar; no se integra parcialmente a `program` sin revisión.
+
+- **Gate 4A — Modelo y migraciones:** cuentas, membresías, entidad, perfil, ownership, estados, migraciones reversibles y contratos backend; sin UI.
+- **Gate 4B — Autenticación y recuperación:** registro, activación, hashing, login/logout, recuperación, tokens, rate limiting, pruebas de seguridad y adaptadores de correo simulados/controlados, nunca producción.
+- **Gate 4C — Sesiones y autorización:** adaptador runtime AWS Redis/Valkey, cookies, rotación, revocación, expiración, eliminación de `transitional_open`, autorización fail-closed y relación con la autoridad de capacidades de Actividad 2.
+- **Gate 4D — Integración controlada frontend:** conectar superficies existentes sin rediseño, objetivo de visual diff cero, mínimo UI-2 por cambio de comportamiento, puerto separado `8140+`, revisión directoral, `INTERIM_MOBILE_SMOKE_ONLY` y rollback comprobado.
+
+Clasificación del alcance: UI-0 para contratos/backend sin UI; UI-2 mínimo si Gate 4D cambia comportamiento; UI-3 si aparece rediseño, copy o composición visual. El capítulo móvil final sigue pendiente como UI-3.
 
 ## 8. Evidencia y gobernanza
 
-La evidencia no versionada se encuentra en `/tmp/mxmed-activity03-identity-access-security-audit-v2/` y contiene el baseline, mapas por dominio, decisiones C1–C8, alcance de Actividad 4, controles de no escritura, ausencia de datos sensibles, QA y estado final de Git. Los JSON son estructurales y no contienen secretos, contraseñas, hashes, tokens, IDs de sesión, cookies, credenciales, correos personales completos ni datos clínicos/pacientes.
+La evidencia histórica no versionada se encuentra en `/tmp/mxmed-activity03-identity-access-security-audit-v2/`. La evidencia de este cierre se encuentra en `/tmp/mxmed-activity03-identity-access-security-decisions-v2/`; contiene decisiones aprobadas, gates, exclusiones, alcance documental, no-cambio UI, no-datos sensibles, QA y Git. Los JSON son estructurales y no contienen secretos, contraseñas, hashes, tokens, IDs de sesión, cookies, credenciales, correos personales completos ni datos clínicos/pacientes.
 
-El registro correspondiente se añadió al Plan Maestro; la numeración es única allí. La rama se publicará sin force push y sin PR/integración. La Actividad 3 queda candidata a cierre para revisión del director; el contador oficial no cambia hasta integración explícita.
+El registro de auditoría y el cierre de decisiones se añadirán al Plan Maestro con numeración única. La Actividad 3 queda lista para integración fast-forward; el contador oficial no cambia hasta integración explícita.
 
 ## 9. Gate de cierre
 
-`PASS` únicamente con `IDENTITY_ACCESS_SESSION_SECURITY_AUDIT_V2_READY_FOR_DIRECTOR_REVIEW`. Si se detecta `baseline mismatch`, escritura, evidencia sensible, alcance documental excedido, implementación de Actividad 4, colisión de numeración, modificación de UI oficial o cambio de 8091, el estado es `BLOCKED=AUDIT_SCOPE_ESCALATION_REQUIRED` (o el bloqueo específico aplicable). Siguiente paso: esperar decisiones del director; no integrar y no iniciar Actividad 4.
+`PASS` únicamente con `IDENTITY_ACCESS_SESSION_DIRECTOR_DECISIONS_READY_FOR_INTEGRATION`. Si se detecta `baseline mismatch`, historia de auditoría alterada, alcance documental excedido, implementación de Actividad 4, colisión de numeración, modificación de UI oficial, evidencia sensible o cambio de 8091, el estado es `BLOCKED` (o el bloqueo específico aplicable). Siguiente paso: esperar integración fast-forward; no iniciar Actividad 4.
