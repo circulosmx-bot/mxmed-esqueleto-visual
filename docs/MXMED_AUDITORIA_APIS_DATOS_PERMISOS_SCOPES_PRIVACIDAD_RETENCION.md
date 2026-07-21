@@ -2,7 +2,7 @@
 
 ## Estado
 
-PASS_STATIC_AUDIT_READY_FOR_DIRECTOR_REVIEW
+ACTIVITY_5_AUDIT_DECISIONS_READY_FOR_FAST_FORWARD_INTEGRATION
 
 Contrato: MXMED_APIS_DATA_PERMISSIONS_SCOPES_PRIVACY_RETENTION_AUDIT_V1  
 Grupo: PG-08  
@@ -13,7 +13,9 @@ audit/mxmed-apis-data-permissions-scopes-privacy-retention-v2, derivada de
 bbbab40f3c423bb73e0afa362cd51eea0b504e17. No se modificó código, UI,
 configuración, SQL, migraciones, AWS, Stripe, 8091 ni datos reales. El
 contador oficial permanece 4/22; la Actividad 5 queda READY_FOR_DIRECTOR_REVIEW
-y la Actividad 6 permanece bloqueada.
+la Actividad 5 queda lista para integración fast-forward; la integración aún no
+se ejecutó. La Actividad 6 tiene sus gates directorales resueltos, pero no ha
+iniciado.
 
 ## Baseline y método
 
@@ -77,8 +79,18 @@ Las decisiones que requieren al director son:
 5. aprobar el modelo de audit trail unificado y sus controles de integridad;
 6. decidir el diseño futuro de support_assisted_session y break-glass.
 
-Estas decisiones no se aprueban en esta actividad. Actividad 6 sigue bloqueada
-hasta revisión y autorización directoral.
+La revisión directoral aprobó estas decisiones como DEC-012A a DEC-012F. La
+aprobación habilita el cierre documental y la integración fast-forward prevista;
+no autoriza cambios funcionales en esta rama ni inicia la Actividad 6.
+
+## Cierre directorial DEC-012A–DEC-012F
+
+Todas las decisiones quedaron en estado `APPROVED_BY_DIRECTOR` y se detallan
+en [MXMED_DECISIONES_V2_APIS_DATOS_PERMISOS_PRIVACIDAD_RETENCION.md](MXMED_DECISIONES_V2_APIS_DATOS_PERMISOS_PRIVACIDAD_RETENCION.md).
+
+La transición de contador es prevista, no realizada: `4/22` antes de
+integración y `5/22` después de una integración fast-forward posterior. La
+Actividad 6 queda `GATES_RESOLVED_NOT_STARTED` y no iniciada.
 
 ## No repetición
 

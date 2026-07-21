@@ -2107,6 +2107,12 @@ Siguientes pasos recomendados:
 |---|---|---|---|---|---|
 | 2026-07-20 | Ejecutar auditoría estática y read-only transversal de APIs, datos, autorización, scopes, ownership, privacidad, retención, logs, auditoría y riesgo R0–R3 | La Actividad 4 cerró identidad y sesiones en una candidata local, pero la autoridad transversal entre dominios todavía requiere evidencia separada | Actividad 5/22; 12 entrypoints HTTP PHP, 50 declaraciones route/method explícitas y familias dinámicas; account/membership/entity/profile/role/scope/capability; tres planos; datos públicos, identidad, contacto, Agenda, pacientes, clínicos, pagos, suscripciones, logs y auditoría; sin código, UI, SQL real, AWS, Stripe, writes, secretos o datos reales; Actividad 6 permanece bloqueada | docs/MXMED_AUDITORIA_APIS_DATOS_PERMISOS_SCOPES_PRIVACIDAD_RETENCION.md; /tmp/mxmed-activity05-apis-data-permissions-audit-v2/; rama audit/mxmed-apis-data-permissions-scopes-privacy-retention-v2 | PASS_STATIC_AUDIT_READY_FOR_DIRECTOR_REVIEW; Actividad 5 no concluida oficialmente; contador 4/22; 18 pendientes |
 
+### PP-295 — Aprobación directoral de decisiones de APIs, datos, permisos, privacidad y retención V2
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-20 | Aprobar DEC-012A a DEC-012F para cerrar documentalmente la Actividad 5 y dejarla lista para integración fast-forward | La auditoría transversal requiere una frontera backend fail-closed, fuente canónica por dominio, retención y disposición controladas, audit trail unificado y mecanismos de soporte/break-glass separados | Actividad 5/22, UI-0; seis decisiones aprobadas; AWS deploy 0; SQL real 0; datos reales 0; cambios funcionales 0; antes de integración 4/22 y 18 pendientes; después de integración prevista 5/22 y 17 pendientes; Actividad 6 `GATES_RESOLVED_NOT_STARTED`, no iniciada | docs/MXMED_DECISIONES_V2_APIS_DATOS_PERMISOS_PRIVACIDAD_RETENCION.md; docs/MXMED_AUDITORIA_APIS_DATOS_PERMISOS_SCOPES_PRIVACIDAD_RETENCION.md; /tmp/mxmed-activity05-director-decisions-closure-v2/; rama audit/mxmed-apis-data-permissions-scopes-privacy-retention-v2 | `APPROVED_BY_DIRECTOR`; `ACTIVITY_5_AUDIT_DECISIONS_READY_FOR_FAST_FORWARD_INTEGRATION`; integración aún no realizada |
+
 ### PP-293 — Aprobación visual y funcional y cierre de la Actividad 4 V2
 
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
