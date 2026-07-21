@@ -17,7 +17,7 @@ La prueba `modules/agenda/tests/Gate8ACanonicalContractsTest.php` verifica invar
 - Rama: `feature/mxmed-pg03-agenda-foundations-v2`.
 - Worktree: `/Users/circulodigital/Documents/GitHub/mxmed-esqueleto-visual-activity08-v2`.
 - HEAD inicial: `ee625b0b57c0caa623c4b156cfa2734a6881cf85`.
-- Programa: `6fac128e77472d4fafab7088a82c3a4df15c5761`.
+- Programa: `ee625b0b57c0caa623c4b156cfa2734a6881cf85`.
 - Checkpoint base: `checkpoint/mxmed-product-refinement-v2-activity07`.
 - Actividad 7: `INTEGRATED_AND_CHECKPOINTED`.
 - Contador oficial: `7/22`.
