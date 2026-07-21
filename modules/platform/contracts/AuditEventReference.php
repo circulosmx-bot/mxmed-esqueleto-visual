@@ -29,9 +29,9 @@ final readonly class AuditEventReference
         $this->result = AuditWriteResult::assertValid($result);
         $clean = [];
         foreach ($metadata as $key => $value) {
-            if (!is_string($key) || preg_match('/(password|cookie|secret|token|payload|clinical|client_secret)/i', $key) === 1) throw new \InvalidArgumentException('sensitive_audit_metadata_key');
+            if (!is_string($key) || (preg_match('/(password|cookie|secret|token|payload|clinical|client_secret|authorization)/i', $key) === 1 && strtolower($key) !== 'authorization_plane')) throw new \InvalidArgumentException('sensitive_audit_metadata_key');
             if (!is_scalar($value) && $value !== null) throw new \InvalidArgumentException('non_scalar_audit_metadata');
-            $clean[(new SafeIdentifier($key))->value()] = $value;
+            $clean[strtolower($key) === 'authorization_plane' ? 'authorization_plane' : (new SafeIdentifier($key))->value()] = $value;
         }
         ksort($clean, SORT_STRING);
         $this->metadata = $clean;
