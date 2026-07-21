@@ -151,3 +151,20 @@ Se crea un quinto commit aditivo con el mensaje exacto `feat(agenda): implementa
 - Actividad 9: `BLOCKED`.
 - Contador oficial: `7/22`.
 - Readiness: `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+## Endurecimiento contractual y retorno seguro
+
+Fecha: 2026-07-21.
+
+El diagnóstico QA identificó que las colecciones de entrada debían ordenarse de forma canónica, que los identificadores y fuentes requerían una política segura, que `full_day` debía ser no ambiguo y que el read model debía minimizar sus colecciones a recursos activos y aplicables. La corrección preserva el orden de cálculo, el aislamiento por consultorio y la semántica de intervalos.
+
+- Orden canónico aplicado a versiones, overrides, feriados y colisiones.
+- Identificadores `version_id`, ids y sources restringidos a la política segura de 128 caracteres.
+- `full_day=true` sólo acepta ventana nula; `full_day=false` exige ventana válida.
+- Read model minimizado a overrides, feriados y colisiones activos y aplicables.
+- `applied_override_ids` deduplicado, ordenado y estable.
+- Punto seguro pre-corrección: `6345b42a8a0170e293347a6f60ce959d39e2be94`.
+- Bundle: `/tmp/mxmed-activity08-gate8c-contract-hardening-preflight-v2/activity08-before-gate8c-hardening.bundle`.
+- Corrección en commit independiente y reversible.
+- Rollback: `git revert --no-edit <gate8c_hardening_commit>`.
+- Gate 8D permanece bloqueado hasta la postvalidación.

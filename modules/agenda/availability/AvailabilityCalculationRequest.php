@@ -27,6 +27,24 @@ final class AvailabilityCalculationRequest
         foreach ($overrides as $value) if (!$value instanceof AvailabilityOverride) throw new CanonicalAvailabilityException('invalid_override', 'overrides are typed');
         foreach ($holidays as $value) if (!$value instanceof HolidayClosure) throw new CanonicalAvailabilityException('invalid_override', 'holidays are typed');
         foreach ($collisions as $value) if (!$value instanceof CollisionWindow) throw new CanonicalAvailabilityException('invalid_collision', 'collisions are typed');
+        usort($versions, static fn(CanonicalScheduleVersion $a, CanonicalScheduleVersion $b): int => [
+            $a->profileId(), $a->consultorioId(), $a->effectiveFrom(), $a->effectiveUntil() ?? '', $a->version(), $a->versionId()
+        ] <=> [
+            $b->profileId(), $b->consultorioId(), $b->effectiveFrom(), $b->effectiveUntil() ?? '', $b->version(), $b->versionId()
+        ]);
+        usort($overrides, static fn(AvailabilityOverride $a, AvailabilityOverride $b): int => [
+            $a->profileId(), $a->consultorioId(), $a->date(), $a->type() === 'close' ? 0 : 1,
+            $a->fullDay() ? 1 : 0, $a->window()?->start() ?? '', $a->window()?->end() ?? '', $a->id(), $a->source(), $a->active() ? 1 : 0
+        ] <=> [
+            $b->profileId(), $b->consultorioId(), $b->date(), $b->type() === 'close' ? 0 : 1,
+            $b->fullDay() ? 1 : 0, $b->window()?->start() ?? '', $b->window()?->end() ?? '', $b->id(), $b->source(), $b->active() ? 1 : 0
+        ]);
+        usort($holidays, static fn(HolidayClosure $a, HolidayClosure $b): int => [$a->date(), $a->name(), $a->active() ? 1 : 0] <=> [$b->date(), $b->name(), $b->active() ? 1 : 0]);
+        usort($collisions, static fn(CollisionWindow $a, CollisionWindow $b): int => [
+            $a->profileId(), $a->consultorioId(), $a->date(), $a->start(), $a->end(), $a->id(), $a->source(), $a->active() ? 1 : 0
+        ] <=> [
+            $b->profileId(), $b->consultorioId(), $b->date(), $b->start(), $b->end(), $b->id(), $b->source(), $b->active() ? 1 : 0
+        ]);
         $this->versions = array_values($versions);
         $this->overrides = array_values($overrides);
         $this->holidays = array_values($holidays);

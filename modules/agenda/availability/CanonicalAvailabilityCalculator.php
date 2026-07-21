@@ -23,12 +23,15 @@ final class CanonicalAvailabilityCalculator
             if ($window->weekday() === $weekday) $windows[] = [$window->startMinute(), $window->endMinute()];
         }
         $appliedHoliday = null;
+        $matchingHolidays = [];
         foreach ($request->holidays() as $holiday) {
             if ($holiday->active() && $holiday->date() === $request->targetDate()) {
-                $windows = [];
-                $appliedHoliday = $holiday->name();
-                break;
+                $matchingHolidays[] = $holiday;
             }
+        }
+        if ($matchingHolidays !== []) {
+            $windows = [];
+            $appliedHoliday = $matchingHolidays[0]->name();
         }
 
         $appliedOverrideIds = [];
@@ -90,10 +93,14 @@ final class CanonicalAvailabilityCalculator
             $schedule->durationMinutes(),
             $schedule->gapMinutes(),
             array_map(static fn(AvailabilityOverride $value): array => $value->toArray(), $matchingOverrides),
-            array_values(array_map(static fn(HolidayClosure $value): array => $value->toArray(), $request->holidays())),
-            array_values(array_map(static fn(CollisionWindow $value): array => $value->toArray(), $request->collisions())),
+            array_values(array_map(static fn(HolidayClosure $value): array => $value->toArray(), $matchingHolidays)),
+            array_values(array_map(static fn(CollisionWindow $value): array => $value->toArray(), array_values(array_filter(
+                $request->collisions(), static fn(CollisionWindow $value): bool => $value->active() && $value->profileId() === $request->profileId() && $value->consultorioId() === $request->consultorioId() && $value->date() === $request->targetDate()
+            )))),
             $schedule->effectiveFrom()
         );
+        $appliedOverrideIds = array_values(array_unique($appliedOverrideIds));
+        sort($appliedOverrideIds, SORT_STRING);
         return new CanonicalAvailabilityResult($contract, $schedule, $request->targetDate(), $finalWindows, $slots, $appliedOverrideIds, $appliedHoliday, count($matchingCollisions));
     }
 

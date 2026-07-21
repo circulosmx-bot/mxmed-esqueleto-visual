@@ -19,7 +19,10 @@ final class CanonicalScheduleVersion
         private readonly int $gapMinutes,
         array $windows
     ) {
-        if (trim($versionId) === '' || trim($profileId) === '' || trim($consultorioId) === '') {
+        if (!self::safeIdentifier($versionId)) {
+            throw new CanonicalAvailabilityException('canonical_schedule_missing', 'schedule identity is required');
+        }
+        if (trim($profileId) === '' || trim($consultorioId) === '') {
             throw new CanonicalAvailabilityException('canonical_schedule_missing', 'schedule identity is required');
         }
         if ($version < 1) {
@@ -98,5 +101,10 @@ final class CanonicalScheduleVersion
         if (!$parsed || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $parsed->format('Y-m-d') !== $value) {
             throw new CanonicalAvailabilityException($reason, 'date must be YYYY-MM-DD');
         }
+    }
+
+    private static function safeIdentifier(string $value): bool
+    {
+        return preg_match('/\A[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\z/D', $value) === 1;
     }
 }

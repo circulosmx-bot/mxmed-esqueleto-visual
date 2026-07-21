@@ -115,6 +115,35 @@ $consultorioB = gate8cVersion('consultorio-b', 'America/New_York', 30, 0, [new W
 $bResult = $calculator->calculate(gate8cRequest([$valid, $consultorioB], [], [], [], 'consultorio-b'));
 gate8cAssert($bResult->consultorioId() === 'consultorio-b' && $bResult->timezone() === 'America/New_York' && $bResult->windows() === [['start' => '13:00', 'end' => '14:00']], 'consultorios remain isolated without fallback');
 
+gate8cThrows(fn() => new CanonicalScheduleVersion('unsafe/id', 1, 'doctor-gate8c', 'consultorio-a', 'UTC', '2026-07-01', null, 30, 0, []), 'canonical_schedule_missing', 'unsafe version id closes');
+gate8cThrows(fn() => new AvailabilityOverride('unsafe/id', 'doctor-gate8c', 'consultorio-a', '2026-07-21', 'open', ['start' => '09:00', 'end' => '10:00'], false, 'backend-fixture'), 'invalid_override', 'unsafe override id closes');
+gate8cThrows(fn() => new AvailabilityOverride('safe-id', 'doctor-gate8c', 'consultorio-a', '2026-07-21', 'open', ['start' => '09:00', 'end' => '10:00'], false, 'unsafe/source'), 'invalid_override', 'unsafe override source closes');
+gate8cThrows(fn() => new CollisionWindow('unsafe/id', 'doctor-gate8c', 'consultorio-a', '2026-07-21', '09:00', '10:00', 'fixture'), 'invalid_collision', 'unsafe collision id closes');
+gate8cThrows(fn() => new CollisionWindow('safe-collision', 'doctor-gate8c', 'consultorio-a', '2026-07-21', '09:00', '10:00', 'unsafe/source'), 'invalid_collision', 'unsafe collision source closes');
+gate8cThrows(fn() => new AvailabilityOverride('ambiguous-open', 'doctor-gate8c', 'consultorio-a', '2026-07-21', 'open', ['start' => '09:00', 'end' => '10:00'], true, 'fixture'), 'invalid_override', 'full-day window combination closes');
+gate8cThrows(fn() => new AvailabilityOverride('ambiguous-close', 'doctor-gate8c', 'consultorio-a', '2026-07-21', 'close', null, false, 'fixture'), 'invalid_override', 'partial null-window combination closes');
+gate8cAssert((new AvailabilityOverride('full-day-valid', 'doctor-gate8c', 'consultorio-a', '2026-07-21', 'open', null, true, 'fixture'))->fullDay(), 'full-day null-window combination remains valid');
+
+$inactiveHoliday = new HolidayClosure('2026-07-21', 'inactive-holiday', false);
+$otherDateHoliday = new HolidayClosure('2026-07-22', 'other-date-holiday');
+$semanticOverrides = [$close, $open];
+$semanticCollisions = [$collision, $overlapA, $overlapB];
+$permutationOne = $calculator->calculate(gate8cRequest([$valid, $consultorioB], $semanticOverrides, [$holiday, $inactiveHoliday, $otherDateHoliday], $semanticCollisions));
+$permutationTwo = $calculator->calculate(gate8cRequest([$consultorioB, $valid], array_reverse($semanticOverrides), [$otherDateHoliday, $inactiveHoliday, $holiday], array_reverse($semanticCollisions)));
+gate8cAssert($permutationOne->toArray() === $permutationTwo->toArray(), 'all collection permutations are byte-equivalent');
+gate8cAssert($permutationOne->contract()->toArray() === $permutationTwo->contract()->toArray(), 'permuted contracts are equivalent');
+gate8cAssert($permutationOne->appliedOverrideIds() === ['close-part', 'open-holiday'], 'applied override ids are ordered');
+$duplicateOverrideResult = $calculator->calculate(gate8cRequest([$valid], [$open, $open]));
+gate8cAssert($duplicateOverrideResult->appliedOverrideIds() === ['open-holiday'], 'duplicate override id is not duplicated');
+gate8cAssert((new AvailabilityCalculationRequest('doctor-gate8c', 'consultorio-a', '2026-07-21', [$consultorioB, $valid], array_reverse($semanticOverrides), [$otherDateHoliday, $holiday], array_reverse($semanticCollisions)))->versions()[0] === $valid, 'request versions are canonicalized');
+
+$foreignAndInactive = $calculator->calculate(gate8cRequest([$valid], [$open, $inactive, $otherProfile, $otherConsultorio], [$holiday, $inactiveHoliday, $otherDateHoliday], [$collision, $otherCollisionProfile, $otherCollisionConsultorio]));
+$minimal = $foreignAndInactive->contract()->toArray();
+gate8cAssert(count($minimal['overrides']) === 1 && $minimal['overrides'][0]['id'] === 'open-holiday', 'read model exposes only applicable active override');
+gate8cAssert(count($minimal['holidays']) === 1 && $minimal['holidays'][0]['name'] === 'synthetic-holiday', 'read model exposes only applicable active holiday');
+gate8cAssert(count($minimal['collisions']) === 1 && $minimal['collisions'][0]['id'] === 'collision-1', 'read model exposes only applicable active collision');
+gate8cAssert(!str_contains(serialize($minimal), 'other-profile') && !str_contains(serialize($minimal), 'other-consultorio'), 'foreign resources are not exposed');
+
 $serializedOne = serialize($collisionResult->toArray());
 $serializedTwo = serialize($calculator->calculate(gate8cRequest([$valid], [$close, $reopen], [], [$collision]))->toArray());
 gate8cAssert($serializedOne === $serializedTwo, 'same input is byte-equivalent');

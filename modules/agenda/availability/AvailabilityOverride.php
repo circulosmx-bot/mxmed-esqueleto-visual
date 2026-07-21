@@ -18,13 +18,16 @@ final class AvailabilityOverride
         private readonly string $source,
         private readonly bool $active = true
     ) {
-        if (trim($id) === '' || trim($profileId) === '' || trim($consultorioId) === '' || trim($source) === '') {
+        if (!self::safeIdentifier($id) || !self::safeIdentifier($source) || trim($profileId) === '' || trim($consultorioId) === '') {
             throw new CanonicalAvailabilityException('invalid_override', 'override identity and source are required');
         }
         if (!in_array($type, ['open', 'close'], true)) {
             throw new CanonicalAvailabilityException('invalid_override', 'override type is invalid');
         }
         self::validateDate($date);
+        if ($fullDay && $window !== null) {
+            throw new CanonicalAvailabilityException('invalid_override', 'full-day override cannot have a window');
+        }
         if ($window !== null) $this->window = AvailabilityTimeWindow::fromArray($window);
         else $this->window = null;
         if (!$fullDay && $this->window === null) {
@@ -62,5 +65,10 @@ final class AvailabilityOverride
         if (!$parsed || $parsed->format('Y-m-d') !== $value) {
             throw new CanonicalAvailabilityException('invalid_override', 'override date is invalid');
         }
+    }
+
+    private static function safeIdentifier(string $value): bool
+    {
+        return preg_match('/\A[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\z/D', $value) === 1;
     }
 }

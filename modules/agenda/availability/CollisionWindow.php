@@ -17,7 +17,7 @@ final class CollisionWindow
         private readonly string $source,
         private readonly bool $active = true
     ) {
-        if (trim($id) === '' || trim($profileId) === '' || trim($consultorioId) === '' || trim($source) === '') {
+        if (!self::safeIdentifier($id) || !self::safeIdentifier($source) || trim($profileId) === '' || trim($consultorioId) === '') {
             throw new CanonicalAvailabilityException('invalid_collision', 'collision identity and source are required');
         }
         $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d', $date, new \DateTimeZone('UTC'));
@@ -41,5 +41,10 @@ final class CollisionWindow
     public function toArray(): array
     {
         return ['id' => $this->id, 'profile_id' => $this->profileId, 'consultorio_id' => $this->consultorioId, 'date' => $this->date, 'window' => $this->window->toArray(), 'source' => $this->source, 'active' => $this->active];
+    }
+
+    private static function safeIdentifier(string $value): bool
+    {
+        return preg_match('/\A[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\z/D', $value) === 1;
     }
 }
