@@ -4,6 +4,8 @@
 
 `PASS_ACTIVITY_7_PG03_AUDIT_READY_FOR_DIRECTOR_DECISIONS`
 
+## Resumen ejecutivo
+
 La Actividad 7/22 queda completa como auditoría UI-0 y lista para decisiones del director. No se implementaron correcciones, no se ejecutó SQL, no se escribieron datos, no se solicitaron OTP reales, no se crearon citas, no se fusionaron pacientes y no se levantó un runtime candidato.
 
 Hallazgos confirmados: la ruta Agenda admite autoridad de rol desde cliente en compatibilidad; los controladores aplican scopes de doctor pero no prueban una cuenta/membership canónica en todas las rutas; horarios, overrides, feriados y colisiones son fuentes separadas; la transición de citas es código de aplicación con estados no registrados como máquina; el flujo público conserva PII y crea tablas durante runtime; el modelo de pacientes contiene contactos y enlaces por doctor, pero no tiene deduplicación ni merge; la gestión de schema durante runtime permanece un blocker. Las decisiones DEC-013A–L son propuestas, no aprobaciones.
