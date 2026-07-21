@@ -1,6 +1,8 @@
 # DECISIONES PROPUESTAS V2 — PG-03 Agenda, disponibilidad, citas, contactos y duplicados
 
-Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; no aprueba ninguna.
+Estado global: `APPROVED_BY_DIRECTOR`.
+
+DEC-013A–L fueron aprobadas individualmente por el director el 2026-07-21 como contrato funcional y arquitectónico. La aprobación no equivale a implementación, no autoriza cambios de runtime por sí misma y queda condicionada a gates, QA, rollback y postvalidación.
 
 ## DEC-013A — Autoridad server-side de actores de Agenda
 
@@ -12,7 +14,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: identidad Gate 4C, AuthorizationBoundary y reautenticación para acciones privilegiadas.
 - UI classification: UI-0.
 - Criterio de aceptación: matriz de rutas con fuente única server-side, pruebas de mismatch y 401/403 cerrados.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013B — Fuente canónica de horarios y disponibilidad
 
@@ -24,7 +26,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013I, contrato de consultorio y política de timezone.
 - UI classification: UI-0.
 - Criterio de aceptación: una definición de ventana, slot, override, holiday y collision con pruebas de cambio de consultorio.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013C — Máquina de estados de citas
 
@@ -36,7 +38,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013A, DEC-013D y bridge clínico.
 - UI classification: UI-0.
 - Criterio de aceptación: tabla de transición exhaustiva, 409 para inválidas, idempotencia explícita y contrato Clinical.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013D — Idempotencia, concurrencia y doble reserva
 
@@ -48,7 +50,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013B, DEC-013C y DEC-013I.
 - UI classification: UI-0.
 - Criterio de aceptación: dos reservas concurrentes dejan una sola cita y el replay devuelve el mismo resultado sin duplicar eventos.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013E — Contrato de Agenda pública y OTP
 
@@ -60,7 +62,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013A, DEC-013B, DEC-013F y DEC-013I.
 - UI classification: UI-0.
 - Criterio de aceptación: pruebas de expiración, replay, brute force, alias doctor, mensajes uniformes y payload minimizado.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013F — Modelo y privacidad de contactos de pacientes
 
@@ -72,7 +74,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013E, DEC-013K y PG-08.
 - UI classification: UI-0.
 - Criterio de aceptación: catálogo de campos, scopes de lectura/escritura, masking y retención verificables.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013G — Identidad canónica y detección de duplicados
 
@@ -84,7 +86,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013F, DEC-013H y Clinical references.
 - UI classification: UI-0.
 - Criterio de aceptación: exact/probable/no-match, explicación minimizada, sin auto-merge y fixtures sintéticos.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013H — Fusión reversible y auditable de pacientes
 
@@ -96,7 +98,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013A, DEC-013G, DEC-013J y PG-08.
 - UI classification: UI-0 hasta aprobación; futura UI-3 si se diseña flujo.
 - Criterio de aceptación: plan de referencias completo (citas, encounters, casos, documentos, consents), dry-run, apply/undo y auditoría.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013I — Migraciones fuera de runtime
 
@@ -108,7 +110,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: todas las decisiones de datos y rollout.
 - UI classification: UI-0.
 - Criterio de aceptación: cero DDL en rutas de negocio, conteo <=21 contractual y migraciones ensayadas en entorno aislado.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013J — Auditoría mínima y atribución de actores
 
@@ -120,7 +122,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013A, PG-08 Gate 6D y retención.
 - UI classification: UI-0.
 - Criterio de aceptación: eventos mínimos para mutaciones, lecturas sensibles, OTP abuse, merge y disposición; sin payload sensible.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013K — Retención y disposición de citas y contactos
 
@@ -132,7 +134,7 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013F, DEC-013H, DEC-013J y PG-08.
 - UI classification: UI-0.
 - Criterio de aceptación: matriz source/projection/copy, plazos aprobados, hold, dry-run y audit trail.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
 
 ## DEC-013L — Compatibilidad, rollout y secuencia
 
@@ -144,4 +146,21 @@ Estado global: `PENDING_DIRECTOR_APPROVAL`. Este documento propone decisiones; n
 - Dependencia: DEC-013A–K.
 - UI classification: UI-0; futuras fases UI-2/UI-3 con aprobación.
 - Criterio de aceptación: plan de fases, owner, rollback, métricas, contract tests y aprobación directoral por gate.
-- Estado: `PENDING_DIRECTOR_APPROVAL`.
+- Estado: `APPROVED_BY_DIRECTOR`.
+
+## Aprobación del director
+
+- Fecha: 2026-07-21.
+- Alcance: DEC-013A–L.
+- Estado: `APPROVED_BY_DIRECTOR`.
+- Clasificación: UI-0.
+- La aprobación es funcional y arquitectónica.
+- La implementación todavía no fue ejecutada.
+- Actividad 8 continúa bloqueada hasta la integración formal de Actividad 7 y la apertura explícita de su siguiente gate.
+- CURP no queda aprobada como requisito obligatorio.
+- No se aprobaron plazos concretos de retención o disposición.
+- No se autoriza auto-merge.
+- La fusión visible futura será UI-3 y requerirá prototipo y aprobación.
+- No se autoriza DDL en runtime.
+- Los mecanismos temporales de compatibilidad deberán tener condición de retiro.
+- Cita de Agenda y encuentro clínico continúan siendo entidades distintas.
