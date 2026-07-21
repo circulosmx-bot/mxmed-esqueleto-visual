@@ -61,6 +61,37 @@ gate6cAssert($authority->resolveRead('clinical', 'record')->allowed(), 'one cano
 gate6cAssert($authority->resolveWrite('clinical', 'record')->source()?->classification() === SourceClassification::CANONICAL_WRITE, 'write classification stable');
 gate6cAssert($authority->snapshot()[0]['domain'] === 'clinical', 'snapshot is sanitized and stable');
 gate6cAssert(!array_key_exists('sql', $authority->snapshot()[0]), 'snapshot excludes SQL and rows');
+
+$nonCanonicalClassifications = [
+    SourceClassification::CANONICAL_READ,
+    SourceClassification::DERIVED_PROJECTION,
+    SourceClassification::MIGRATION_SOURCE,
+    SourceClassification::LEGACY_READ_ONLY,
+    SourceClassification::DRAFT_NOT_AUTHORITATIVE,
+    SourceClassification::FIXTURE_TEST_ONLY,
+];
+foreach ($nonCanonicalClassifications as $classification) {
+    $entity = 'noncanonical-' . $classification;
+    $record = new CanonicalSourceRecord('audit', $entity, $classification, null, 'audit_reader', 'source-' . $entity, 'none', false, false);
+    gate6cAssert(!$record->canAuthorizeWrites(), $classification . ' cannot authorize writes');
+
+    $nonCanonicalAuthority = new CanonicalSourceAuthority([$record]);
+    $resolution = $nonCanonicalAuthority->resolveWrite('audit', $entity);
+    gate6cAssert(!$resolution->allowed(), $classification . ' write resolution denies');
+    gate6cAssert($resolution->reasonCode() === CanonicalSourceReason::SOURCE_UNRESOLVED, $classification . ' write resolution is unresolved');
+
+    $writerExceptionMessage = null;
+    try {
+        new CanonicalSourceRecord('audit', $entity . '-writer', $classification, 'writer_authority', 'audit_reader', 'source-' . $entity . '-writer', 'none', false, false);
+    } catch (InvalidArgumentException $exception) {
+        $writerExceptionMessage = $exception->getMessage();
+    }
+    gate6cAssert($writerExceptionMessage === 'noncanonical_writer_forbidden', $classification . ' rejects writer authority contractually');
+
+    $snapshot = $nonCanonicalAuthority->snapshot()[0];
+    gate6cAssert($snapshot['writer_authority'] === null && !array_key_exists('can_authorize_writes', $snapshot), $classification . ' snapshot does not grant authority');
+}
+
 $duplicate = $authority->register(gate6cWrite());
 gate6cAssert(!$duplicate->allowed() && $duplicate->reasonCode() === CanonicalSourceReason::SOURCE_CONFLICT, 'second canonical write denied');
 $emptyAuthority = new CanonicalSourceAuthority();
