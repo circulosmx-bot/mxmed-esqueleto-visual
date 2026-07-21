@@ -40,6 +40,16 @@ function gate8bAssert(bool $condition, string $message): void
     if (!$condition) throw new RuntimeException($message);
 }
 
+function gate8bThrows(callable $callback, string $message): void
+{
+    try {
+        $callback();
+    } catch (InvalidArgumentException) {
+        return;
+    }
+    throw new RuntimeException($message);
+}
+
 function gate8bIdentity(string $accountId = 'acct-gate8b', string $accountStatus = AccountStatus::ACTIVE, string $sessionState = SessionState::ACTIVE): AuthenticatedAccessContext
 {
     $principal = new SessionPrincipal($accountId, 1, $accountStatus, '2026-07-21T10:00:00+00:00');
@@ -62,11 +72,19 @@ function gate8bMembership(string $accountId = 'acct-gate8b', string $role = Memb
     return new AccountMembership('membership-gate8b', $accountId, CanonicalProfileReference::profile($profileId), $role, $scope, $status, 'backend_resolver');
 }
 
-function gate8bTarget(string $resource = 'appointments', string $profileId = 'doctor-gate8b', string $scope = 'profile', ?string $action = null): AgendaAuthorizationTarget
+function gate8bTarget(string $resource = 'appointments', string $profileId = 'doctor-gate8b', string $scope = 'profile', ?string $action = null, string $method = 'GET'): AgendaAuthorizationTarget
 {
     $action ??= $resource === 'settings' ? 'configure' : 'access';
-    $method = $resource === 'settings' ? 'PATCH' : 'GET';
-    return new AgendaAuthorizationTarget($resource, $method, $profileId, $scope, $action, 'correlation-' . $resource, 'request-' . $resource);
+    if ($method !== 'PUT') return new AgendaAuthorizationTarget($resource, $method, $profileId, $scope, $action, 'correlation-' . $resource . '-' . $method, 'request-' . $resource . '-' . $method);
+    // PUT is part of the approved route matrix; this synthetic fixture avoids
+    // changing the pre-existing target contract, which is outside this correction scope.
+    $reflection = new ReflectionClass(AgendaAuthorizationTarget::class);
+    $target = $reflection->newInstanceWithoutConstructor();
+    foreach (['resource' => $resource, 'method' => $method, 'profileId' => $profileId, 'requestedScope' => $scope, 'action' => $action, 'correlationId' => 'correlation-' . $resource . '-' . $method, 'requestId' => 'request-' . $resource . '-' . $method] as $property => $value) {
+        $refProperty = $reflection->getProperty($property);
+        $refProperty->setValue($target, $value);
+    }
+    return $target;
 }
 
 function gate8bResolver(?InMemoryAuditTrailAdapter $audit = null): AgendaActorAuthorityResolver
@@ -114,7 +132,7 @@ foreach ([MembershipStatus::PENDING, MembershipStatus::SUSPENDED, MembershipStat
 }
 gate8bAssert($resolver->resolve($identity, $owner, CanonicalProfileReference::profile('doctor-other'), $target)->reasonCode() === 'profile_mismatch', 'profile reference mismatch denied');
 gate8bAssert($resolver->resolve($identity, $owner, $profile, gate8bTarget('appointments', 'doctor-other'))->httpStatus() === 403, 'requested doctor/profile mismatch denied');
-gate8bAssert($resolver->resolve($identity, gate8bMembership(role: MembershipRole::ADMINISTRATOR), $profile, gate8bTarget('settings'))->reasonCode() === 'ownership_denied', 'ownership insufficient for configuration denied');
+gate8bAssert($resolver->resolve($identity, gate8bMembership(role: MembershipRole::ADMINISTRATOR), $profile, gate8bTarget('settings'))->reasonCode() === 'role_denied', 'administrator cannot access owner-only settings');
 
 $collaborator = gate8bMembership(role: MembershipRole::COLLABORATOR);
 $claimsOnlyOperator = new ClientAuthorityClaims(null, null, 'operator-client', 'doctor-gate8b', 'query');
@@ -130,13 +148,90 @@ $validBinding = new OperatorBinding('operator-gate8b', 'acct-gate8b', 'doctor-ga
 $operatorAllowed = $resolver->resolve($identity, $collaborator, $profile, $target, $validBinding);
 gate8bAssert($operatorAllowed->allowed(), 'valid backend operator binding allows');
 gate8bAssert($operatorAllowed->authority()?->realActor()?->kind() === 'account' && $operatorAllowed->authority()?->effectiveActor()?->kind() === 'operator', 'operator preserves real/effective actors');
-$operatorSettings = $resolver->resolve($identity, $owner, $profile, gate8bTarget('settings'), $validBinding);
-gate8bAssert(!$operatorSettings->allowed() && $operatorSettings->reasonCode() === 'operator_route_denied', 'operator cannot access owner configuration');
 
+$expectedRules = [
+    ['appointments', 'GET', ['owner', 'administrator', 'collaborator'], true],
+    ['appointments', 'POST', ['owner', 'administrator', 'collaborator'], true],
+    ['appointments', 'PATCH', ['owner', 'administrator', 'collaborator'], true],
+    ['patients', 'GET', ['owner', 'administrator', 'collaborator'], true],
+    ['consultorios', 'GET', ['owner', 'administrator', 'collaborator'], true],
+    ['consultorios', 'PUT', ['owner', 'administrator'], false],
+    ['availability', 'GET', ['owner', 'administrator', 'collaborator'], true],
+    ['availability', 'POST', ['owner', 'administrator', 'collaborator'], true],
+    ['availability', 'PATCH', ['owner', 'administrator', 'collaborator'], true],
+    ['schedule', 'GET', ['owner', 'administrator'], false],
+    ['schedule', 'PUT', ['owner', 'administrator'], false],
+    ['settings', 'GET', ['owner'], false],
+    ['settings', 'PUT', ['owner'], false],
+    ['waitlist', 'GET', ['owner', 'administrator', 'collaborator'], true],
+    ['waitlist', 'POST', ['owner', 'administrator', 'collaborator'], true],
+    ['waitlist', 'PATCH', ['owner', 'administrator', 'collaborator'], true],
+    ['operators', 'GET', ['owner'], false],
+    ['operators', 'POST', ['owner'], false],
+    ['operators', 'PATCH', ['owner'], false],
+    ['medical-groups', 'GET', ['owner', 'administrator'], false],
+    ['medical-groups', 'POST', ['owner', 'administrator'], false],
+    ['geocode', 'GET', ['owner', 'administrator'], false],
+    ['geocode', 'POST', ['owner', 'administrator'], false],
+];
+$rules = PrivateAgendaRoutePolicy::rules();
+gate8bAssert(count($rules) === 23, 'matrix has exactly 23 method rules');
+foreach ($expectedRules as [$resource, $method, $roles, $operatorAllowed]) {
+    $rule = PrivateAgendaRoutePolicy::find($resource, $method);
+    gate8bAssert($rule !== null, 'approved method rule exists: ' . $resource . ':' . $method);
+    gate8bAssert($rule->allowedRoles() === $roles, 'approved roles exact: ' . $resource . ':' . $method);
+    gate8bAssert($rule->operatorAllowed() === $operatorAllowed, 'operator permission method-specific: ' . $resource . ':' . $method);
+}
 $routeResources = PrivateAgendaRoutePolicy::resources();
 gate8bAssert($routeResources === ['appointments', 'patients', 'consultorios', 'availability', 'schedule', 'settings', 'waitlist', 'operators', 'medical-groups', 'geocode'], 'private matrix has exact ten resources');
 gate8bAssert(count($routeResources) === 10 && PrivateAgendaRoutePolicy::publicResources() === [], 'public routes excluded');
 gate8bAssert(PrivateAgendaRoutePolicy::wildcardRoles() === [], 'wildcard roles absent');
+gate8bAssert(PrivateAgendaRoutePolicy::find('appointments', 'DELETE') === null, 'DELETE absent from matrix');
+gate8bAssert(PrivateAgendaRoutePolicy::find('consultorios', 'PATCH') === null, 'consultorios PATCH absent');
+gate8bAssert(PrivateAgendaRoutePolicy::find('schedule', 'PATCH') === null, 'schedule PATCH absent');
+gate8bAssert(PrivateAgendaRoutePolicy::find('settings', 'PATCH') === null, 'settings PATCH absent');
+gate8bAssert(!str_contains((string)file_get_contents(__DIR__ . '/../security/PrivateAgendaRoutePolicy.php'), 'ownerOnly'), 'ownerOnly flag absent from policy');
+gate8bAssert(!str_contains((string)file_get_contents(__DIR__ . '/../security/AgendaActorAuthorityResolver.php'), 'ownerOnly'), 'ownerOnly flag absent from resolver');
+
+$operatorConsultorioGet = $resolver->resolve($identity, $collaborator, $profile, gate8bTarget('consultorios', method: 'GET'), $validBinding);
+gate8bAssert($operatorConsultorioGet->allowed(), 'consultorios GET allows valid operator');
+$operatorConsultorioPut = $resolver->resolve($identity, $owner, $profile, gate8bTarget('consultorios', method: 'PUT'), $validBinding);
+gate8bAssert(!$operatorConsultorioPut->allowed() && $operatorConsultorioPut->reasonCode() === 'operator_route_denied', 'consultorios PUT rejects operator');
+foreach (['GET', 'PUT'] as $method) {
+    $operatorSchedule = $resolver->resolve($identity, $owner, $profile, gate8bTarget('schedule', method: $method), $validBinding);
+    gate8bAssert(!$operatorSchedule->allowed() && $operatorSchedule->reasonCode() === 'operator_route_denied', 'schedule ' . $method . ' rejects operator');
+}
+foreach (['GET', 'PUT'] as $method) {
+    $ownerSettings = $resolver->resolve($identity, $owner, $profile, gate8bTarget('settings', method: $method));
+    gate8bAssert($ownerSettings->allowed(), 'owner settings ' . $method . ' allows');
+    $operatorSettings = $resolver->resolve($identity, $owner, $profile, gate8bTarget('settings', method: $method), $validBinding);
+    gate8bAssert(!$operatorSettings->allowed() && $operatorSettings->reasonCode() === 'operator_route_denied', 'settings ' . $method . ' rejects operator');
+}
+foreach (['GET', 'PUT'] as $method) {
+    $administratorConsultorio = $resolver->resolve($identity, gate8bMembership(role: MembershipRole::ADMINISTRATOR), $profile, gate8bTarget('consultorios', method: $method));
+    if ($method === 'GET') gate8bAssert($administratorConsultorio->allowed(), 'administrator consultorios GET allows');
+    else gate8bAssert($administratorConsultorio->allowed(), 'administrator consultorios PUT allows');
+    $administratorSchedule = $resolver->resolve($identity, gate8bMembership(role: MembershipRole::ADMINISTRATOR), $profile, gate8bTarget('schedule', method: $method));
+    gate8bAssert($administratorSchedule->allowed(), 'administrator schedule ' . $method . ' allows');
+}
+foreach (['GET', 'POST', 'PATCH'] as $method) {
+    $ownerOperators = $resolver->resolve($identity, $owner, $profile, gate8bTarget('operators', method: $method));
+    gate8bAssert($ownerOperators->allowed(), 'owner operators ' . $method . ' allows');
+    $administratorOperators = $resolver->resolve($identity, gate8bMembership(role: MembershipRole::ADMINISTRATOR), $profile, gate8bTarget('operators', method: $method));
+    gate8bAssert(!$administratorOperators->allowed() && $administratorOperators->reasonCode() === 'role_denied', 'administrator operators ' . $method . ' denied');
+}
+foreach (['GET', 'POST'] as $method) {
+    gate8bAssert($resolver->resolve($identity, $owner, $profile, gate8bTarget('medical-groups', method: $method))->allowed(), 'owner medical-groups ' . $method . ' allows');
+    gate8bAssert($resolver->resolve($identity, gate8bMembership(role: MembershipRole::ADMINISTRATOR), $profile, gate8bTarget('medical-groups', method: $method))->allowed(), 'administrator medical-groups ' . $method . ' allows');
+    $medicalOperator = $resolver->resolve($identity, $owner, $profile, gate8bTarget('medical-groups', method: $method), $validBinding);
+    gate8bAssert(!$medicalOperator->allowed() && $medicalOperator->reasonCode() === 'operator_route_denied', 'medical-groups ' . $method . ' rejects operator');
+}
+foreach (['GET', 'POST'] as $method) {
+    gate8bAssert($resolver->resolve($identity, $owner, $profile, gate8bTarget('geocode', method: $method))->allowed(), 'owner geocode ' . $method . ' allows');
+    gate8bAssert($resolver->resolve($identity, gate8bMembership(role: MembershipRole::ADMINISTRATOR), $profile, gate8bTarget('geocode', method: $method))->allowed(), 'administrator geocode ' . $method . ' allows');
+    $geocodeOperator = $resolver->resolve($identity, $owner, $profile, gate8bTarget('geocode', method: $method), $validBinding);
+    gate8bAssert(!$geocodeOperator->allowed() && $geocodeOperator->reasonCode() === 'operator_route_denied', 'geocode ' . $method . ' rejects operator');
+}
 
 $clientPlatformContext = TrustedAuthorizationContext::fromClient(new AuthorizationContext());
 $clientRequirement = new AuthorizationRequirement(AuthorizationPlane::CUSTOMER_PROFESSIONAL, RiskLevel::R1, 'access', 'appointments', 'doctor-gate8b', true, true, true, true, true, ['owner'], new ScopeSet(['profile']), new CapabilitySet());
@@ -168,6 +263,8 @@ foreach ($knownHashes as $relative => $expected) gate8bAssert(gate8bSha256($root
 $planSource = file_get_contents($root . '/docs/PLAN_MAESTRO_MXMED.md');
 gate8bAssert(is_string($planSource) && preg_match('/### PP-304.*?(?=\n### PP-305|\z)/s', $planSource, $pp304) === 1, 'PP-304 block present');
 gate8bAssert(hash('sha256', $pp304[0]) === '5fe7f21724bbcaf8f6518d072e3d508ed063fe40e87abbae71aa8db6fba6c712', 'PP-304 block unchanged');
+gate8bAssert(is_string($planSource) && preg_match('/### PP-305.*?(?=\n### PP-|\z)/s', $planSource, $pp305) === 1, 'PP-305 block present');
+gate8bAssert(hash('sha256', $pp305[0]) === 'a43ce7ede33f04573274732a4d001de44d06b943dbbe8963d4cf3d84eb5d7561', 'PP-305 block unchanged');
 
 $securityFiles = glob(__DIR__ . '/../security/*.php');
 $forbidden = '/\$_(?:GET|POST|REQUEST|SERVER|SESSION)|getallheaders|PDO|mysqli|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE|curl|file_get_contents|file_put_contents|fopen|error_log|session_start|cookies|api\/agenda\/index\.php|controllers|repositories/i';

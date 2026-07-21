@@ -5,65 +5,87 @@ namespace Agenda\Security;
 
 use Platform\Contracts\RiskLevel;
 
-final readonly class PrivateAgendaRouteRule
+/** One private-resource permission for one concrete HTTP method. */
+final readonly class PrivateAgendaMethodRule
 {
-    /** @param list<string> $methods @param list<string> $allowedRoles */
+    /** @param list<string> $allowedRoles */
     public function __construct(
         private string $resource,
-        private array $methods,
+        private string $method,
         private array $allowedRoles,
         private bool $ownershipRequired,
         private bool $operatorAllowed,
-        private bool $ownerOnly,
         private string $risk,
         private string $action,
         private string $scope,
         private bool $failClosed = true
     ) {
-        if ($this->resource === '' || $this->methods === [] || $this->allowedRoles === [] || $this->scope === '') throw new \InvalidArgumentException('route_rule_incomplete');
-        if (array_intersect($this->allowedRoles, ['*', 'all', 'admin.everything', 'support.all']) !== []) throw new \InvalidArgumentException('route_rule_wildcard_forbidden');
+        if ($this->resource === '' || $this->method === '' || $this->allowedRoles === [] || $this->scope === '') {
+            throw new \InvalidArgumentException('route_method_rule_incomplete');
+        }
+        if (!in_array($this->method, ['GET', 'POST', 'PUT', 'PATCH'], true)) {
+            throw new \InvalidArgumentException('route_method_unsupported');
+        }
+        if (array_intersect($this->allowedRoles, ['*', 'all', 'admin.everything', 'support.all']) !== []) {
+            throw new \InvalidArgumentException('route_method_rule_wildcard_forbidden');
+        }
         RiskLevel::assertValid($this->risk);
     }
 
     public function resource(): string { return $this->resource; }
-    /** @return list<string> */
-    public function methods(): array { return $this->methods; }
+    public function method(): string { return $this->method; }
     /** @return list<string> */
     public function allowedRoles(): array { return $this->allowedRoles; }
     public function ownershipRequired(): bool { return $this->ownershipRequired; }
     public function operatorAllowed(): bool { return $this->operatorAllowed; }
-    public function ownerOnly(): bool { return $this->ownerOnly; }
     public function risk(): string { return $this->risk; }
     public function action(): string { return $this->action; }
     public function scope(): string { return $this->scope; }
     public function failClosed(): bool { return $this->failClosed; }
-    public function allowsMethod(string $method): bool { return in_array(strtoupper($method), $this->methods, true); }
 }
 
 final class PrivateAgendaRoutePolicy
 {
-    /** @return list<PrivateAgendaRouteRule> */
+    /** @return list<PrivateAgendaMethodRule> */
     public static function rules(): array
     {
         $standard = ['owner', 'administrator', 'collaborator'];
+        $ownerAdministrator = ['owner', 'administrator'];
         return [
-            new PrivateAgendaRouteRule('appointments', ['GET', 'POST', 'PATCH', 'DELETE'], $standard, true, true, false, RiskLevel::R1, 'access', 'profile'),
-            new PrivateAgendaRouteRule('patients', ['GET', 'POST', 'PATCH'], $standard, true, true, false, RiskLevel::R1, 'access', 'profile'),
-            new PrivateAgendaRouteRule('consultorios', ['GET', 'POST', 'PATCH', 'DELETE'], ['owner', 'administrator'], true, false, true, RiskLevel::R1, 'access', 'profile'),
-            new PrivateAgendaRouteRule('availability', ['GET', 'POST', 'PATCH'], $standard, true, true, false, RiskLevel::R1, 'access', 'profile'),
-            new PrivateAgendaRouteRule('schedule', ['GET', 'POST', 'PATCH'], $standard, true, true, false, RiskLevel::R1, 'access', 'profile'),
-            new PrivateAgendaRouteRule('settings', ['GET', 'PATCH'], ['owner'], true, false, true, RiskLevel::R2, 'configure', 'profile'),
-            new PrivateAgendaRouteRule('waitlist', ['GET', 'POST', 'PATCH'], $standard, true, true, false, RiskLevel::R1, 'access', 'profile'),
-            new PrivateAgendaRouteRule('operators', ['GET', 'POST', 'PATCH'], ['owner', 'administrator'], true, false, true, RiskLevel::R2, 'access', 'profile'),
-            new PrivateAgendaRouteRule('medical-groups', ['GET', 'POST', 'PATCH'], ['owner', 'administrator'], true, false, true, RiskLevel::R1, 'access', 'profile'),
-            new PrivateAgendaRouteRule('geocode', ['GET'], $standard, true, true, false, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('appointments', 'GET', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('appointments', 'POST', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('appointments', 'PATCH', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('patients', 'GET', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('consultorios', 'GET', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('consultorios', 'PUT', $ownerAdministrator, true, false, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('availability', 'GET', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('availability', 'POST', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('availability', 'PATCH', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('schedule', 'GET', $ownerAdministrator, true, false, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('schedule', 'PUT', $ownerAdministrator, true, false, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('settings', 'GET', ['owner'], true, false, RiskLevel::R2, 'configure', 'profile'),
+            new PrivateAgendaMethodRule('settings', 'PUT', ['owner'], true, false, RiskLevel::R2, 'configure', 'profile'),
+            new PrivateAgendaMethodRule('waitlist', 'GET', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('waitlist', 'POST', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('waitlist', 'PATCH', $standard, true, true, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('operators', 'GET', ['owner'], true, false, RiskLevel::R2, 'access', 'profile'),
+            new PrivateAgendaMethodRule('operators', 'POST', ['owner'], true, false, RiskLevel::R2, 'access', 'profile'),
+            new PrivateAgendaMethodRule('operators', 'PATCH', ['owner'], true, false, RiskLevel::R2, 'access', 'profile'),
+            new PrivateAgendaMethodRule('medical-groups', 'GET', $ownerAdministrator, true, false, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('medical-groups', 'POST', $ownerAdministrator, true, false, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('geocode', 'GET', $ownerAdministrator, true, false, RiskLevel::R1, 'access', 'profile'),
+            new PrivateAgendaMethodRule('geocode', 'POST', $ownerAdministrator, true, false, RiskLevel::R1, 'access', 'profile'),
         ];
     }
 
     /** @return list<string> */
     public static function resources(): array
     {
-        return array_map(static fn(PrivateAgendaRouteRule $rule): string => $rule->resource(), self::rules());
+        $resources = [];
+        foreach (self::rules() as $rule) {
+            if (!in_array($rule->resource(), $resources, true)) $resources[] = $rule->resource();
+        }
+        return $resources;
     }
 
     /** @return list<string> */
@@ -72,9 +94,12 @@ final class PrivateAgendaRoutePolicy
     /** @return list<string> */
     public static function wildcardRoles(): array { return []; }
 
-    public static function find(string $resource): ?PrivateAgendaRouteRule
+    public static function find(string $resource, string $method): ?PrivateAgendaMethodRule
     {
-        foreach (self::rules() as $rule) if ($rule->resource() === $resource) return $rule;
+        $method = strtoupper(trim($method));
+        foreach (self::rules() as $rule) {
+            if ($rule->resource() === $resource && $rule->method() === $method) return $rule;
+        }
         return null;
     }
 }

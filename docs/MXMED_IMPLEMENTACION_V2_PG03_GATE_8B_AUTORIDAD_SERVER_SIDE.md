@@ -82,9 +82,9 @@ pendientes, suspendidas o revocadas fallan cerrado con 403.
 `owner` puede actuar sobre el perfil coincidente. `administrator` conserva su
 rol de membership y queda sujeto al scope server-side. `collaborator` no se
 convierte automáticamente en doctor u operador; necesita un binding backend
-válido para los recursos que permiten operador. Settings, consultorios,
-operators y medical-groups mantienen configuración reservada al propietario o
-al rol explícitamente permitido.
+válido para los recursos que permiten operador. Settings y operators son
+owner-only por su lista exacta de roles; consultorios, schedule, medical-groups
+y geocode usan la lista explícita de cada método.
 
 ## Binding de operador
 
@@ -109,21 +109,35 @@ ninguna decisión server-side.
 
 ## Matriz de rutas privadas
 
-La política determinista cubre exactamente diez recursos privados y ninguna
-ruta pública:
+La política determinista se resuelve por recurso y método HTTP. Cubre
+exactamente diez recursos privados, 23 reglas método/recurso y ninguna ruta
+pública:
 
-| Recurso | Métodos | Roles derivados | Operador | Ownership | Riesgo |
+| Recurso | Método | Roles membership permitidos | Operador con binding |
 |---|---|---|---:|---:|---|
-| `appointments` | GET/POST/PATCH/DELETE | owner, administrator, collaborator | sí | sí | R1 |
-| `patients` | GET/POST/PATCH | owner, administrator, collaborator | sí | sí | R1 |
-| `consultorios` | GET/POST/PATCH/DELETE | owner, administrator | no | sí | R1 |
-| `availability` | GET/POST/PATCH | owner, administrator, collaborator | sí | sí | R1 |
-| `schedule` | GET/POST/PATCH | owner, administrator, collaborator | sí | sí | R1 |
-| `settings` | GET/PATCH | owner | no | sí | R2 |
-| `waitlist` | GET/POST/PATCH | owner, administrator, collaborator | sí | sí | R1 |
-| `operators` | GET/POST/PATCH | owner, administrator | no | sí | R2 |
-| `medical-groups` | GET/POST/PATCH | owner, administrator | no | sí | R1 |
-| `geocode` | GET | owner, administrator, collaborator | sí | sí | R1 |
+| `appointments` | GET | owner, administrator, collaborator | sí |
+| `appointments` | POST | owner, administrator, collaborator | sí |
+| `appointments` | PATCH | owner, administrator, collaborator | sí |
+| `patients` | GET | owner, administrator, collaborator | sí |
+| `consultorios` | GET | owner, administrator, collaborator | sí |
+| `consultorios` | PUT | owner, administrator | no |
+| `availability` | GET | owner, administrator, collaborator | sí |
+| `availability` | POST | owner, administrator, collaborator | sí |
+| `availability` | PATCH | owner, administrator, collaborator | sí |
+| `schedule` | GET | owner, administrator | no |
+| `schedule` | PUT | owner, administrator | no |
+| `settings` | GET | owner | no |
+| `settings` | PUT | owner | no |
+| `waitlist` | GET | owner, administrator, collaborator | sí |
+| `waitlist` | POST | owner, administrator, collaborator | sí |
+| `waitlist` | PATCH | owner, administrator, collaborator | sí |
+| `operators` | GET | owner | no |
+| `operators` | POST | owner | no |
+| `operators` | PATCH | owner | no |
+| `medical-groups` | GET | owner, administrator | no |
+| `medical-groups` | POST | owner, administrator | no |
+| `geocode` | GET | owner, administrator | no |
+| `geocode` | POST | owner, administrator | no |
 
 No se agregan capacidades comerciales, seeds ni rutas públicas. No existen
 roles wildcard (`*`, `all`, `admin.everything`, `support.all`).
@@ -189,9 +203,34 @@ por el Gate.
 
 ## Rollback
 
-El rollback es la eliminación del commit de Gate 8B en la rama candidata o la
-reversión del único commit nuevo. No requiere migración, SQL, cambio de runtime,
-despliegue AWS ni modificación del router.
+El rollback principal de esta corrección es:
+
+```sh
+git revert --no-edit <nuevo_commit_de_correccion>
+```
+
+No requiere migración, SQL, cambio de runtime, despliegue AWS ni modificación
+del router.
+
+## Aprobación del director y retorno seguro
+
+- Fecha: `2026-07-21`.
+- Matriz corregida aprobada por el director.
+- `SAFE_RETURN_PROGRAM`: `ee625b0b57c0caa623c4b156cfa2734a6881cf85`.
+- `SAFE_RETURN_GATE8A`: `9bb7d8f8ec448edd8a0d77dabd44834b9d1f98af`.
+- `SAFE_RETURN_GATE8B_PRE_CORRECTION`: `1000e5860702212f5303f5095bf0ec901276bae6`.
+- La corrección se entrega en commit independiente, sin amend, rebase ni squash.
+- Rollback principal mediante `git revert`.
+- Bundle temporal preflight preservado en
+  `/tmp/mxmed-activity08-gate8b-route-policy-correction-preflight-v2/`.
+- Retorno alterno de inspección:
+
+```sh
+git switch -c recovery/activity08-gate8b-policy \
+  1000e5860702212f5303f5095bf0ec901276bae6
+```
+
+Gate 8C no puede iniciar hasta postvalidar esta corrección.
 
 ## Evidencia
 

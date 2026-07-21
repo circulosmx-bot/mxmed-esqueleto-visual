@@ -64,8 +64,8 @@ final class AgendaActorAuthorityResolver
             return AgendaAuthorityResolution::deny(403, 'profile_mismatch', $emptyDiagnostic);
         }
 
-        $rule = PrivateAgendaRoutePolicy::find($target->resource());
-        if ($rule === null || !$rule->allowsMethod($target->method()) || !$rule->failClosed()) {
+        $rule = PrivateAgendaRoutePolicy::find($target->resource(), $target->method());
+        if ($rule === null || !$rule->failClosed()) {
             return AgendaAuthorityResolution::deny(403, 'private_route_denied', $emptyDiagnostic);
         }
         if ($target->action() !== $rule->action()) return AgendaAuthorityResolution::deny(403, 'action_denied', $emptyDiagnostic);
@@ -75,9 +75,6 @@ final class AgendaActorAuthorityResolver
 
         $role = $membership->role();
         $diagnostic = $claims->diagnostic($claims->mismatchAgainst($role, $principal->accountId(), $requestedProfile->targetId(), $operatorBinding));
-        if ($rule->ownerOnly() && $role !== MembershipRole::OWNER) {
-            return AgendaAuthorityResolution::deny(403, 'ownership_denied', $diagnostic);
-        }
         if (!in_array($role, $rule->allowedRoles(), true)) return AgendaAuthorityResolution::deny(403, 'role_denied', $diagnostic);
         if ($operatorBinding !== null) {
             if (!$rule->operatorAllowed()) return AgendaAuthorityResolution::deny(403, 'operator_route_denied', $diagnostic);
