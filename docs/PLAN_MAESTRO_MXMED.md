@@ -2113,6 +2113,12 @@ Siguientes pasos recomendados:
 |---|---|---|---|---|---|
 | 2026-07-20 | Aprobar DEC-012A a DEC-012F para cerrar documentalmente la Actividad 5 y dejarla lista para integración fast-forward | La auditoría transversal requiere una frontera backend fail-closed, fuente canónica por dominio, retención y disposición controladas, audit trail unificado y mecanismos de soporte/break-glass separados | Actividad 5/22, UI-0; seis decisiones aprobadas; AWS deploy 0; SQL real 0; datos reales 0; cambios funcionales 0; antes de integración 4/22 y 18 pendientes; después de integración prevista 5/22 y 17 pendientes; Actividad 6 `GATES_RESOLVED_NOT_STARTED`, no iniciada | docs/MXMED_DECISIONES_V2_APIS_DATOS_PERMISOS_PRIVACIDAD_RETENCION.md; docs/MXMED_AUDITORIA_APIS_DATOS_PERMISOS_SCOPES_PRIVACIDAD_RETENCION.md; /tmp/mxmed-activity05-director-decisions-closure-v2/; rama audit/mxmed-apis-data-permissions-scopes-privacy-retention-v2 | `APPROVED_BY_DIRECTOR`; `ACTIVITY_5_AUDIT_DECISIONS_READY_FOR_FAST_FORWARD_INTEGRATION`; integración aún no realizada |
 
+### PP-296 — Contratos transversales PG-08 Gate 6A V2
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-20 | Implementar contratos puros transversales para traducir DEC-012A–DEC-012F y preparar los Gates 6B–6F sin conectar comportamiento productivo | La Actividad 6 requiere una base única para autorización, riesgo, contexto, fuentes canónicas, retención, disposición, auditoría futura y acceso excepcional | Gate 6A/Actividad 6, UI-0; `modules/platform/contracts`, namespace `Platform\\Contracts`; planos customer/professional, internal operator, governance/emergency y public/system; R0–R3; contexto y decisiones deny-by-default; reason codes; canonical source; retención/disposición; audit trail diferido; soporte/break-glass deshabilitados; código aditivo; runtime wiring 0; UI 0; SQL/migraciones 0; AWS 0; datos reales 0; contador 5/22; Actividad 6 no concluida | docs/MXMED_IMPLEMENTACION_V2_PG08_GATE_6A_CONTRATOS_TRANSVERSALES.md; `/tmp/mxmed-activity06-gate6a-contracts-foundation-v2/`; rama `feature/mxmed-apis-data-permissions-privacy-foundations-v2` | `PASS_GATE_6A_CROSS_CUTTING_CONTRACTS_READY_FOR_REVIEW`; Gate 6A `CLOSED_INTERNAL_READY_FOR_GATE_6B_REVIEW`; Gate 6B bloqueado/no iniciado |
+
 ### PP-293 — Aprobación visual y funcional y cierre de la Actividad 4 V2
 
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
