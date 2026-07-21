@@ -397,56 +397,21 @@ function mxClearHorarioInputs(inputs){
   }
   window._mx_createConsultorio = createConsultorio;
 
-  // Eliminar consultorio con confirmaci?n (demo: acepta c?digo 123456 o pass 'codex')
+  // La acción se conserva para una futura reactivación con reautenticación segura.
+  const CONSULTORIO_SECONDARY_DELETE_STATE = 'temporarily_disabled_pending_secure_reauthentication';
+  const CONSULTORIO_SECONDARY_DELETE_CAPABILITY = 'consultorio_secondary_delete';
   function openDeleteModal(n){
     const modalEl = document.getElementById('modalConsulDel'); if(!modalEl) return;
     modalEl.setAttribute('data-target-n', String(n));
-    // reset inputs
-    const code = document.getElementById('del-code'); const pass = document.getElementById('del-pass'); const err = document.getElementById('del-error');
-    if(code) code.value=''; if(pass) pass.value=''; if(err) err.style.display='none';
-    const rCode = document.getElementById('del-auth-code'); const rPass = document.getElementById('del-auth-pass');
-    const divCode = document.getElementById('del-input-code'); const divPass = document.getElementById('del-input-pass');
-    function sync(){ if(rPass.checked){ divPass.style.display='block'; divCode.style.display='none'; } else { divPass.style.display='none'; divCode.style.display='block'; } }
-    rCode?.addEventListener('change', sync); rPass?.addEventListener('change', sync); sync();
+    const message = document.getElementById('del-disabled-message');
+    if(message){ message.hidden = false; message.dataset.capability = CONSULTORIO_SECONDARY_DELETE_CAPABILITY; message.dataset.state = CONSULTORIO_SECONDARY_DELETE_STATE; }
     if(window.bootstrap){ new bootstrap.Modal(modalEl).show(); }
   }
-  document.getElementById('modalConsulDelYes')?.addEventListener('click', async ()=>{
+  document.getElementById('modalConsulDelYes')?.addEventListener('click', ()=>{
     const modalEl = document.getElementById('modalConsulDel'); if(!modalEl) return;
     const n = parseInt(modalEl.getAttribute('data-target-n')||'0',10); if(!n || n===1) return;
-    const usePass = document.getElementById('del-auth-pass')?.checked;
-    const pass = document.getElementById('del-pass')?.value||'';
-    const code = document.getElementById('del-code')?.value||'';
-    const err = document.getElementById('del-error');
-    async function verify(){
-      try{
-        if(usePass){
-          const r = await fetch('./api/verify-password.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pass })});
-          if(!r.ok) return false; const j = await r.json(); return !!j.ok;
-        }else{
-          const r = await fetch('./api/verify-sms.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code })});
-          if(!r.ok) return false; const j = await r.json(); return !!j.ok;
-        }
-      }catch(_){
-        // Modo pruebas: si hay valor no vac?o, aceptar.
-        return usePass ? (pass.trim()!=='') : (code.trim()!=='');
-      }
-    }
-    const ok = await verify();
-    if(!ok){ if(err){ err.style.display='block'; } return; }
-    // cerrar modal
-    if(window.bootstrap){ bootstrap.Modal.getInstance(modalEl)?.hide(); }
-    // eliminar pane y tab
-    const pane = document.getElementById('sede'+n);
-    const btn = document.querySelector(`#p-consultorio [data-bs-target="#sede${n}"]`);
-    const li = btn?.closest('li');
-    pane?.remove(); li?.remove();
-    // reactivar principal
-    const btn1 = document.querySelector('#p-consultorio [data-bs-target="#sede1"]');
-    const pane1 = document.getElementById('sede1');
-    if(btn1 && pane1){ btn1.classList.add('active'); pane1.classList.add('show','active'); if(window.bootstrap){ new bootstrap.Tab(btn1).show(); } }
-    // re-habilitar bot?n agregar si estaba bloqueado
-    const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.remove('disabled'); addBtn.removeAttribute('aria-disabled'); addBtn.title=''; }
-    syncAddTabVisibility();
+    const message = document.getElementById('del-disabled-message');
+    if(message){ message.hidden = false; message.dataset.capability = CONSULTORIO_SECONDARY_DELETE_CAPABILITY; message.dataset.state = CONSULTORIO_SECONDARY_DELETE_STATE; }
   });
   function nextConsultorioIndex(){
     const ids = getConsultorioSlots();

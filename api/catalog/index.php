@@ -46,84 +46,11 @@ function catalog_resolve_segments(): array
     }));
 }
 
-function catalog_ensure_table(PDO $pdo): void
+function catalog_table_is_missing(PDOException $exception): bool
 {
-    $sql = "CREATE TABLE IF NOT EXISTS catalog_cp_colonias (
-        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        cp VARCHAR(5) NOT NULL,
-        colonia VARCHAR(190) NOT NULL,
-        municipio VARCHAR(190) NOT NULL,
-        estado VARCHAR(190) NOT NULL,
-        is_active TINYINT(1) NOT NULL DEFAULT 1,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        UNIQUE KEY uq_catalog_cp_colonia (cp, colonia),
-        KEY idx_catalog_cp (cp),
-        KEY idx_catalog_cp_active (cp, is_active)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-    $pdo->exec($sql);
-}
-
-function catalog_bootstrap_if_empty(PDO $pdo): void
-{
-    $count = (int)$pdo->query('SELECT COUNT(*) FROM catalog_cp_colonias')->fetchColumn();
-    if ($count > 0) {
-        return;
-    }
-
-    $seedRows = [];
-    $fallbackPath = dirname(__DIR__, 2) . '/assets/data/sepomex-fallback.json';
-    if (is_file($fallbackPath)) {
-        $decoded = json_decode((string)file_get_contents($fallbackPath), true);
-        if (is_array($decoded)) {
-            foreach ($decoded as $cp => $row) {
-                $cpVal = preg_replace('/\D/', '', (string)$cp);
-                if (strlen((string)$cpVal) !== 5 || !is_array($row)) {
-                    continue;
-                }
-                $estado = trim((string)($row['estado'] ?? ''));
-                $municipio = trim((string)($row['municipio'] ?? ''));
-                $colonias = $row['settlement'] ?? $row['colonias'] ?? [];
-                if (!is_array($colonias)) {
-                    continue;
-                }
-                foreach ($colonias as $coloniaRaw) {
-                    $colonia = trim((string)$coloniaRaw);
-                    if ($colonia === '') {
-                        continue;
-                    }
-                    $seedRows[] = [
-                        'cp' => $cpVal,
-                        'colonia' => $colonia,
-                        'municipio' => $municipio,
-                        'estado' => $estado,
-                    ];
-                }
-            }
-        }
-    }
-
-    if (empty($seedRows)) {
-        return;
-    }
-
-    $stmt = $pdo->prepare(
-        'INSERT INTO catalog_cp_colonias (cp, colonia, municipio, estado, is_active)
-         VALUES (:cp, :colonia, :municipio, :estado, 1)
-         ON DUPLICATE KEY UPDATE
-            municipio = VALUES(municipio),
-            estado = VALUES(estado),
-            is_active = 1'
-    );
-    foreach ($seedRows as $seed) {
-        $stmt->execute([
-            ':cp' => $seed['cp'],
-            ':colonia' => $seed['colonia'],
-            ':municipio' => $seed['municipio'],
-            ':estado' => $seed['estado'],
-        ]);
-    }
+    $sqlState = (string)($exception->errorInfo[0] ?? $exception->getCode());
+    $driverCode = (int)($exception->errorInfo[1] ?? 0);
+    return $sqlState === '42S02' || $driverCode === 1146;
 }
 
 $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
@@ -158,8 +85,6 @@ if (strlen((string)$cp) !== 5) {
 
 try {
     $pdo = mxmed_pdo();
-    catalog_ensure_table($pdo);
-    catalog_bootstrap_if_empty($pdo);
 
     $stmt = $pdo->prepare(
         'SELECT cp, colonia, municipio, estado
@@ -199,10 +124,23 @@ try {
         'municipio' => trim((string)($rows[0]['municipio'] ?? '')),
         'colonias' => $colonias,
     ]);
+} catch (PDOException $e) {
+    if (catalog_table_is_missing($e)) {
+        catalog_json_response([
+            'ok' => false,
+            'error' => 'catalog_not_initialized',
+            'message' => 'catalog is not initialized',
+        ], 503);
+    }
+    catalog_json_response([
+        'ok' => false,
+        'error' => 'internal_error',
+        'message' => 'internal error',
+    ], 500);
 } catch (Throwable $e) {
     catalog_json_response([
         'ok' => false,
-        'error' => 'db_error',
-        'message' => 'database error',
+        'error' => 'internal_error',
+        'message' => 'internal error',
     ], 500);
 }

@@ -1,0 +1,93 @@
+{
+  "schema_version": "1",
+  "generated_from_baseline": "dc93f2a54859ba9bdb5bb4d56ea74930bf17e794",
+  "authoritative_gate": "6F",
+  "status": "NO_GO_LEGACY_BLOCKERS_PRESENT",
+  "risk": "R3",
+  "owning_domain": "platform_governance",
+  "remediation_state": "contained_with_deferred_domain_migrations",
+  "deployment_effect": "NO_GO_LEGACY_BLOCKERS_PRESENT",
+  "evidence": {
+    "caller_audit": "Gate6FLegacyContainmentIntegrationTest.php",
+    "catalog_read_purity": "api/catalog/index.php",
+    "prepared_sql_not_executed": true,
+    "runtime_schema_baseline": 21
+  },
+  "notes": "Gate 6F contains confirmed legacy surfaces without declaring runtime product readiness.",
+  "surfaces": [
+    {
+      "surface": "api/verify-password.php",
+      "status": "retired_fail_closed",
+      "risk": "R2",
+      "owning_domain": "identity",
+      "remediation_state": "retired_fail_closed",
+      "deployment_effect": "contained",
+      "evidence": "HTTP 410 deterministic retirement contract",
+      "notes": "No caller remains executable after UI containment."
+    },
+    {
+      "surface": "api/verify-sms.php",
+      "status": "retired_fail_closed",
+      "risk": "R2",
+      "owning_domain": "identity",
+      "remediation_state": "retired_fail_closed",
+      "deployment_effect": "contained",
+      "evidence": "HTTP 410 deterministic retirement contract",
+      "notes": "No caller remains executable after UI containment."
+    },
+    {
+      "surface": "api/catalog/index.php",
+      "status": "remediated_read_purity",
+      "risk": "R1",
+      "owning_domain": "catalog",
+      "remediation_state": "read_only_runtime",
+      "deployment_effect": "contained",
+      "evidence": "GET performs SELECT only; missing table returns 503",
+      "notes": "DDL and seed are prepared outside the request."
+    },
+    {
+      "surface": "profiles_transitional_open_family",
+      "status": "contained_deployment_blocker",
+      "risk": "R3",
+      "owning_domain": "profiles",
+      "remediation_state": "deferred_domain_migration",
+      "deployment_effect": "NO_GO_LEGACY_BLOCKERS_PRESENT",
+      "evidence": "api/profiles/index.php and profile controllers",
+      "notes": "transitional_open remains a deployment blocker."
+    },
+    {
+      "surface": "agenda_client_authoritative_role_family",
+      "status": "contained_deployment_blocker",
+      "risk": "R3",
+      "owning_domain": "agenda",
+      "remediation_state": "deferred_domain_migration",
+      "deployment_effect": "NO_GO_LEGACY_BLOCKERS_PRESENT",
+      "evidence": "api/agenda/index.php role sources",
+      "notes": "Header, body, query, fallback and session sources require a dedicated Agenda phase."
+    },
+    {
+      "surface": "runtime_schema_php_family",
+      "status": "contained_deployment_blocker",
+      "risk": "R3",
+      "owning_domain": "platform_migrations",
+      "remediation_state": "deferred_schema_migration",
+      "deployment_effect": "NO_GO_LEGACY_BLOCKERS_PRESENT",
+      "evidence": "21 PHP files with DDL or ensureTable/ensureSchema",
+      "notes": "The 21-file baseline is not refactored or expanded in Gate 6F."
+    },
+    {
+      "surface": "consultorio_secondary_delete_legacy_verification",
+      "status": "contained_deployment_blocker",
+      "risk": "R3",
+      "owning_domain": "profiles_consultorios",
+      "remediation_state": "temporarily_disabled_pending_secure_reauthentication",
+      "deployment_effect": "NO_GO_WHILE_SECURE_REAUTHENTICATION_IS_ABSENT",
+      "evidence": "UI-2 director addendum and multisede flow trace",
+      "notes": "Capability is retained, not permanently removed; reactivation is required.",
+      "permanent_removal": false,
+      "reactivation_required": true,
+      "reactivation_contract": "modules/platform/config/consultorio-secondary-delete-reactivation-v1.json"
+    }
+  ]
+}
+

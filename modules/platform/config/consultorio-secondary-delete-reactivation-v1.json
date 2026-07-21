@@ -1,0 +1,43 @@
+{
+  "schema_version": "1",
+  "capability_id": "consultorio_secondary_delete",
+  "current_state": "temporarily_disabled_pending_secure_reauthentication",
+  "permanent_removal": false,
+  "reactivation_required": true,
+  "ui_action_preserved": true,
+  "temporary_reason": "legacy_verification_is_simulated_and_fail_open",
+  "owner_domains": [
+    "identity",
+    "profiles_consultorios"
+  ],
+  "reactivation_gate": "director_approved_future_microphase",
+  "required_controls": [
+    "backend_authenticated_active_session",
+    "server_resolved_actor",
+    "consultorio_ownership_authorization",
+    "recent_secure_reauthentication",
+    "csrf_validation",
+    "origin_validation",
+    "rate_limit",
+    "attempt_lockout",
+    "server_side_destructive_action_enforcement",
+    "audit_accepted",
+    "explicit_confirmation",
+    "idempotent_or_replay_safe_deletion"
+  ],
+  "forbidden_shortcuts": [
+    "client_authoritative_identity",
+    "query_activation",
+    "header_activation",
+    "cookie_activation",
+    "local_storage_activation",
+    "non_empty_password_acceptance",
+    "non_empty_code_acceptance",
+    "network_error_fallback",
+    "wildcard_cors",
+    "frontend_only_authorization"
+  ],
+  "reactivation_status": "pending",
+  "implementation_present": false
+}
+
