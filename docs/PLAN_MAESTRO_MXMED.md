@@ -2119,6 +2119,12 @@ Siguientes pasos recomendados:
 |---|---|---|---|---|---|
 | 2026-07-20 | Implementar contratos puros transversales para traducir DEC-012A–DEC-012F y preparar los Gates 6B–6F sin conectar comportamiento productivo | La Actividad 6 requiere una base única para autorización, riesgo, contexto, fuentes canónicas, retención, disposición, auditoría futura y acceso excepcional | Gate 6A/Actividad 6, UI-0; `modules/platform/contracts`, namespace `Platform\\Contracts`; planos customer/professional, internal operator, governance/emergency y public/system; R0–R3; contexto y decisiones deny-by-default; reason codes; canonical source; retención/disposición; audit trail diferido; soporte/break-glass deshabilitados; código aditivo; runtime wiring 0; UI 0; SQL/migraciones 0; AWS 0; datos reales 0; contador 5/22; Actividad 6 no concluida | docs/MXMED_IMPLEMENTACION_V2_PG08_GATE_6A_CONTRATOS_TRANSVERSALES.md; `/tmp/mxmed-activity06-gate6a-contracts-foundation-v2/`; rama `feature/mxmed-apis-data-permissions-privacy-foundations-v2` | `PASS_GATE_6A_CROSS_CUTTING_CONTRACTS_READY_FOR_REVIEW`; Gate 6A `CLOSED_INTERNAL_READY_FOR_GATE_6B_REVIEW`; Gate 6B bloqueado/no iniciado |
 
+### PP-297 — Frontera central de autorización PG-08 Gate 6B V2
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-20 | Implementar `AuthorizationBoundary` puro, determinista y fail-closed sobre los contratos de Gate 6A, aplicando DEC-012A y DEC-012E | Los Gates posteriores requieren una única evaluación backend de contexto confiable, membership, ownership, role, scope, capability, acción, recurso, riesgo y obligación de auditoría | Gate 6B/Actividad 6, UI-0; orden de denegación estable; `TrustedAuthorizationContext`; roles/scopes/capabilities independientes; rutas public/system explícitas; R2/R3 fail-closed; adaptadores de audit sólo de prueba; runtime wiring 0; endpoints 0; UI 0; SQL/migraciones 0; AWS 0; datos reales 0; contador 5/22 | docs/MXMED_IMPLEMENTACION_V2_PG08_GATE_6B_FRONTERA_AUTORIZACION.md; `/tmp/mxmed-activity06-gate6b-authorization-boundary-v2/`; rama `feature/mxmed-apis-data-permissions-privacy-foundations-v2` | `PASS_GATE_6B_AUTHORIZATION_BOUNDARY_READY_FOR_REVIEW`; Gate 6B cerrado internamente; Gate 6C no iniciado |
+
 ### PP-293 — Aprobación visual y funcional y cierre de la Actividad 4 V2
 
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
