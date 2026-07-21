@@ -2125,6 +2125,12 @@ Siguientes pasos recomendados:
 |---|---|---|---|---|---|
 | 2026-07-20 | Implementar `AuthorizationBoundary` puro, determinista y fail-closed sobre los contratos de Gate 6A, aplicando DEC-012A y DEC-012E | Los Gates posteriores requieren una única evaluación backend de contexto confiable, membership, ownership, role, scope, capability, acción, recurso, riesgo y obligación de auditoría | Gate 6B/Actividad 6, UI-0; orden de denegación estable; `TrustedAuthorizationContext`; roles/scopes/capabilities independientes; rutas public/system explícitas; R2/R3 fail-closed; adaptadores de audit sólo de prueba; runtime wiring 0; endpoints 0; UI 0; SQL/migraciones 0; AWS 0; datos reales 0; contador 5/22 | docs/MXMED_IMPLEMENTACION_V2_PG08_GATE_6B_FRONTERA_AUTORIZACION.md; `/tmp/mxmed-activity06-gate6b-authorization-boundary-v2/`; rama `feature/mxmed-apis-data-permissions-privacy-foundations-v2` | `PASS_GATE_6B_AUTHORIZATION_BOUNDARY_READY_FOR_REVIEW`; Gate 6B cerrado internamente; Gate 6C no iniciado |
 
+### PP-298 — Fuente canónica, retención y disposición segura PG-08 Gate 6C V2
+
+| Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
+|---|---|---|---|---|---|
+| 2026-07-20 | Implementar autoridad canónica, registro de retención y planificador de disposición segura para traducir DEC-012B, DEC-012C y DEC-012D sin ejecución | Los dominios requieren una sola autoridad de escritura, políticas unresolved explícitas, legal hold y disposición R3 simulada antes de cualquier conexión runtime | Gate 6C/Actividad 6, UI-0; `CanonicalSourceAuthority`; `RetentionPolicyRegistry`; `DispositionRequest`; `DispositionPlanner`; una canonical_write; unresolved fail-closed; lecturas sin side effects; legal hold; clínico independiente de suscripción; delete/anonymize/export_mass R3; simulación exclusivamente; ejecución real 0; persistencia 0; endpoint/runtime wiring 0; UI 0; SQL/migraciones 0; AWS 0; datos reales 0; contador 5/22 | docs/MXMED_IMPLEMENTACION_V2_PG08_GATE_6C_FUENTE_CANONICA_RETENCION_DISPOSICION.md; `/tmp/mxmed-activity06-gate6c-canonical-retention-disposition-v2/`; rama `feature/mxmed-apis-data-permissions-privacy-foundations-v2` | `PASS_GATE_6C_CANONICAL_SOURCE_RETENTION_DISPOSITION_READY_FOR_REVIEW`; Gate 6C cerrado internamente; Gate 6D no iniciado |
+
 ### PP-293 — Aprobación visual y funcional y cierre de la Actividad 4 V2
 
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
