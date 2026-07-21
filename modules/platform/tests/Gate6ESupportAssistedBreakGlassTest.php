@@ -184,6 +184,65 @@ foreach ($sourceFiles as $file) {
     $source = file_get_contents($file);
     gate6eAssert(is_string($source) && !preg_match('/\b(session_start|setcookie|PDO|curl_exec|file_put_contents|error_log)\s*\(/i', $source), 'no runtime/session/persistence API in ' . basename($file));
 }
+
+/**
+ * Gate 6E is policy-only: the production delta must not mint, sign, or
+ * transport credentials. Keep this inventory explicit so the coverage test
+ * reads every production file introduced by the gate rather than relying on
+ * the presence of a comment or a generic token word.
+ *
+ * @var array<string,string> $gate6eTokenPrimitivePatterns
+ */
+$gate6eTokenPrimitivePatterns = [
+    'access_token' => '/\baccess[_-]?token\b/i',
+    'refresh_token' => '/\brefresh[_-]?token\b/i',
+    'jwt' => '/\bjwt\b/i',
+    'bearer' => '/\bbearer\b/i',
+    'issue_token' => '/\bissue[_-]?token\b/i',
+    'create_token' => '/\bcreate[_-]?token\b/i',
+    'generate_token' => '/\bgenerate[_-]?token\b/i',
+    'credential_random_bytes' => '/\brandom_bytes\s*\(/i',
+    'credential_openssl' => '/\bopenssl(?:_[a-z0-9]+)?\s*\(/i',
+    'token_issuance' => '/\btoken\s+issuance\b/i',
+    'token_library_or_factory' => '/\b(?:token[_-]?(?:factory|issuer|service)|jwt[_-]?factory|oauth2?|lcobucci|firebase[_-]?jwt|paragonie)\b/i',
+];
+
+$gate6eProductionFiles = [
+    __DIR__ . '/../contracts/PrivilegedAccessRequest.php',
+    __DIR__ . '/../contracts/PrivilegedAccessDecision.php',
+    __DIR__ . '/../contracts/PrivilegedAccessApprovalEvidence.php',
+    __DIR__ . '/../services/PrivilegedAccessActivationGate.php',
+    __DIR__ . '/../services/SupportAssistedAccessEvaluator.php',
+    __DIR__ . '/../services/BreakGlassAccessEvaluator.php',
+    __DIR__ . '/../services/PrivilegedAccessAuditEventFactory.php',
+    __DIR__ . '/../services/PrivilegedAccessPolicySupport.php',
+    __DIR__ . '/../services/SupportAccessLifecyclePlanner.php',
+];
+
+gate6eAssert(count($gate6eProductionFiles) === 9, 'no token issuance or credential primitive: explicit Gate 6E production inventory');
+foreach ($gate6eProductionFiles as $file) {
+    $source = file_get_contents($file);
+    gate6eAssert(is_string($source), 'no token issuance or credential primitive: readable production file ' . basename($file));
+    foreach ($gate6eTokenPrimitivePatterns as $primitive => $pattern) {
+        gate6eAssert(preg_match($pattern, $source) !== 1, 'no token issuance or credential primitive [' . $primitive . '] in ' . basename($file));
+    }
+}
+
+// Preserve the explicit session/cookie coverage while extending it beyond
+// function calls to the PHP session and cookie globals themselves.
+$gate6eSessionCookiePatterns = [
+    'session_start' => '/\bsession_start\s*\(/i',
+    'session_id' => '/\bsession_id\s*\(/i',
+    'session_global' => '/\$_SESSION\b/i',
+    'setcookie' => '/\bsetcookie\s*\(/i',
+    'cookie_global' => '/\$_COOKIE\b/i',
+];
+foreach ($gate6eProductionFiles as $file) {
+    $source = file_get_contents($file);
+    foreach ($gate6eSessionCookiePatterns as $primitive => $pattern) {
+        gate6eAssert(preg_match($pattern, (string) $source) !== 1, 'session/cookie primitive absent in Gate 6E production: ' . $primitive . ' (' . basename($file) . ')');
+    }
+}
 gate6eAssert(!str_contains((string) file_get_contents(__DIR__ . '/../db/migrations/2026_07_20_01_create_platform_audit_events.sql'), 'Gate6E'), 'Gate 6D migration not modified by Gate 6E');
 
 echo "Gate6ESupportAssistedBreakGlassTest PASS\n";
