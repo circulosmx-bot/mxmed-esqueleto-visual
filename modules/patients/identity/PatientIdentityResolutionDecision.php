@@ -19,6 +19,9 @@ final readonly class PatientIdentityResolutionDecision
 
     private function __construct(string $status, string $reasonCode, ?CanonicalPatientId $resolvedPatientId, string $matchTier, ?PatientDuplicateReview $duplicateReview, PatientIdentityCandidateSet $candidateSet, PatientIdentityResolutionRequest $request)
     {
+        $status = PatientIdentityPolicy::resultState($status);
+        $reasonCode = PatientIdentityPolicy::decisionReason($reasonCode);
+        PatientIdentityPolicy::assertStatusReasonCoherence($status, $reasonCode);
         $modes = ['already_canonical' => 'already_canonical', 'mapped_from_legacy' => 'mapped_from_legacy', 'create_minimal_required' => 'created_minimal_patient', 'review_required' => 'unresolved', 'ambiguous' => 'unresolved', 'not_found' => 'unresolved', 'invalid_candidate_set' => 'unresolved'];
         if (!isset($modes[$status])) throw new PatientIdentityDomainException('invalid_resolution_request');
         if (in_array($status, ['already_canonical', 'mapped_from_legacy'], true) !== ($resolvedPatientId !== null)) throw new PatientIdentityDomainException('invalid_resolution_request');

@@ -20,6 +20,16 @@ final readonly class PatientIdentityPolicy
     private const RESULTS = ['already_canonical', 'mapped_from_legacy', 'create_minimal_required', 'review_required', 'ambiguous', 'not_found', 'invalid_candidate_set'];
     private const MODES = ['already_canonical', 'mapped_from_legacy', 'created_minimal_patient', 'unresolved'];
     private const TIERS = ['contact_birthdate_exact', 'contact_name_exact', 'name_birthdate_sex_exact', 'name_birthdate_exact', 'contact_only', 'name_only', 'no_match'];
+    private const DECISION_REASONS = ['already_canonical', 'canonical_patient_not_found', 'candidate_not_eligible', 'unique_strong_identity_match', 'multiple_strong_candidates', 'identity_evidence_conflict', 'weak_identity_evidence', 'no_identity_candidate', 'invalid_candidate_set'];
+    private const STATUS_REASONS = [
+        'already_canonical' => ['already_canonical'],
+        'mapped_from_legacy' => ['unique_strong_identity_match'],
+        'create_minimal_required' => ['no_identity_candidate'],
+        'review_required' => ['candidate_not_eligible', 'identity_evidence_conflict', 'weak_identity_evidence'],
+        'ambiguous' => ['multiple_strong_candidates'],
+        'not_found' => ['canonical_patient_not_found'],
+        'invalid_candidate_set' => ['invalid_candidate_set'],
+    ];
 
     public function contractId(): string { return self::CONTRACT_ID; }
     public function version(): int { return self::VERSION; }
@@ -50,6 +60,59 @@ final readonly class PatientIdentityPolicy
     public static function identifier(string $value, string $reason): string
     {
         if (preg_match('/\A[A-Za-z][A-Za-z0-9_.:-]{0,127}\z/D', $value) !== 1 || preg_match('/\d{8,}/', $value) === 1) {
+            throw new PatientIdentityDomainException($reason);
+        }
+        return $value;
+    }
+
+    public static function operationId(string $value): string
+    {
+        return self::namespacedMetadata($value, ['operation', 'op'], 'invalid_operation_id');
+    }
+
+    public static function correlationId(string $value): string
+    {
+        return self::namespacedMetadata($value, ['correlation', 'corr', 'request', 'req'], 'invalid_correlation_id');
+    }
+
+    public static function actorReference(string $value): string
+    {
+        return self::namespacedMetadata($value, ['account', 'acct', 'operator', 'doctor', 'system', 'support', 'user', 'profile'], 'invalid_actor');
+    }
+
+    public static function resultState(string $value): string
+    {
+        if (!in_array($value, self::RESULTS, true)) throw new PatientIdentityDomainException('invalid_identity_outcome');
+        return $value;
+    }
+
+    public static function decisionReason(string $value): string
+    {
+        if (!in_array($value, self::DECISION_REASONS, true)) throw new PatientIdentityDomainException('invalid_decision_reason');
+        return $value;
+    }
+
+    public static function assertStatusReasonCoherence(string $status, string $reason): void
+    {
+        $status = self::resultState($status);
+        $reason = self::decisionReason($reason);
+        if (!in_array($reason, self::STATUS_REASONS[$status], true)) throw new PatientIdentityDomainException('identity_status_reason_mismatch');
+    }
+
+    private static function namespacedMetadata(string $value, array $namespaces, string $reason): string
+    {
+        $namespacePattern = implode('|', array_map(static fn(string $namespace): string => preg_quote($namespace, '/'), $namespaces));
+        $matches = [];
+        if (
+            $value === ''
+            || strlen($value) > 128
+            || str_contains($value, '@')
+            || str_contains($value, '+')
+            || preg_match('/\d{4}-\d{2}-\d{2}/', $value) === 1
+            || preg_match('/\d{8,}/', $value) === 1
+            || preg_match('/\A(?:' . $namespacePattern . ')[_:-]([A-Za-z0-9_.:-]+)\z/D', $value, $matches) !== 1
+            || preg_match('/\d/', $matches[1] ?? '') !== 1
+        ) {
             throw new PatientIdentityDomainException($reason);
         }
         return $value;

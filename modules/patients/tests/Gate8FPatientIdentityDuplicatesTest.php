@@ -6,12 +6,14 @@ foreach (glob(__DIR__ . '/../identity/*.php') as $file) require_once $file;
 use Patients\Identity\CanonicalPatientId;
 use Patients\Identity\LegacyPatientReference;
 use Patients\Identity\PatientDuplicateReview;
+use Patients\Identity\PatientIdentityAuditEvent;
 use Patients\Identity\PatientIdentityCandidate;
 use Patients\Identity\PatientIdentityCandidateSet;
 use Patients\Identity\PatientIdentityDomainException;
 use Patients\Identity\PatientIdentityEvidence;
 use Patients\Identity\PatientIdentityMutationPlan;
 use Patients\Identity\PatientIdentityPolicy;
+use Patients\Identity\PatientIdentityResolutionDecision;
 use Patients\Identity\PatientIdentityResolutionRequest;
 use Patients\Identity\PatientIdentityResolver;
 use Patients\Identity\PatientMergePolicy;
@@ -31,6 +33,19 @@ function gate8fThrows(callable $callback, string $reason, string $message): void
     throw new RuntimeException($message);
 }
 
+function gate8fRejectsMetadata(callable $callback, string $reason, string $message, int &$caseCount): void
+{
+    $created = null;
+    try { $created = $callback(); }
+    catch (PatientIdentityDomainException $error) {
+        if ($error->reason() !== $reason) throw new RuntimeException($message . ' (' . $error->reason() . ')');
+        gate8fAssert($created === null, $message . ' (partial object)');
+        $caseCount++;
+        return;
+    }
+    throw new RuntimeException($message . ' (accepted or redacted)');
+}
+
 function gate8fRef(string $label): string { return hash('sha256', 'gate8f:' . $label); }
 
 function gate8fEvidence(string $name, ?string $birth = null, ?string $sex = null, ?string $phone = null, ?string $email = null): PatientIdentityEvidence
@@ -48,7 +63,7 @@ function gate8fLegacyRequest(PatientIdentityEvidence $evidence, string $operatio
     return new PatientIdentityResolutionRequest($operation, 'correlation-gate8f', $source, 'legacy_patient_key_hash', null, new LegacyPatientReference(gate8fRef('legacy-key')), $evidence, 'account-gate8f', 'operator-gate8f', '2026-07-21T11:00:00-06:00');
 }
 
-function gate8fCanonicalRequest(string $patientId, string $operation = 'canonical-operation'): PatientIdentityResolutionRequest
+function gate8fCanonicalRequest(string $patientId, string $operation = 'operation-canonical-01'): PatientIdentityResolutionRequest
 {
     return new PatientIdentityResolutionRequest($operation, 'correlation-gate8f', 'private_authenticated', 'canonical_patient_id', new CanonicalPatientId($patientId), null, null, 'account-gate8f', 'operator-gate8f', '2026-07-21T11:00:00-06:00');
 }
@@ -61,6 +76,15 @@ gate8fAssert($policy->resolutionSources() === ['public_verified', 'private_authe
 gate8fAssert($policy->resultStates() === ['already_canonical', 'mapped_from_legacy', 'create_minimal_required', 'review_required', 'ambiguous', 'not_found', 'invalid_candidate_set'], 'results exact');
 gate8fAssert(!$policy->automaticMergeAllowed() && !$policy->manualMergeImplemented() && !$policy->probabilisticMatchingImplemented(), 'unsafe automation disabled');
 gate8fAssert(!$policy->rawLegacyKeyAccepted() && !$policy->rawContactAccepted() && !$policy->rawPatientNameAccepted() && !$policy->clinicalEncounter(), 'privacy and care boundary');
+gate8fAssert(PatientIdentityPolicy::identifier('Legacy.identifier:01', 'invalid_resolution_request') === 'Legacy.identifier:01', 'generic identifier behavior preserved');
+foreach (['operation-gate8f', 'operation-legacy-priority-01', 'op:8f'] as $value) gate8fAssert(PatientIdentityPolicy::operationId($value) === $value, 'operation namespace accepted');
+foreach (['correlation-gate8f', 'corr-8f', 'request:2026a', 'req_identity_01'] as $value) gate8fAssert(PatientIdentityPolicy::correlationId($value) === $value, 'correlation namespace accepted');
+foreach (['account-gate8f', 'acct-8f', 'operator-gate8f', 'doctor-990099', 'system-gate8f', 'support-8f', 'user-8f', 'profile-8f'] as $value) gate8fAssert(PatientIdentityPolicy::actorReference($value) === $value, 'actor namespace accepted');
+foreach ($policy->resultStates() as $value) gate8fAssert(PatientIdentityPolicy::resultState($value) === $value, 'result state accepted');
+$validReasons = ['already_canonical', 'canonical_patient_not_found', 'candidate_not_eligible', 'unique_strong_identity_match', 'multiple_strong_candidates', 'identity_evidence_conflict', 'weak_identity_evidence', 'no_identity_candidate', 'invalid_candidate_set'];
+foreach ($validReasons as $value) gate8fAssert(PatientIdentityPolicy::decisionReason($value) === $value, 'decision reason accepted');
+$coherentPairs = ['already_canonical' => ['already_canonical'], 'mapped_from_legacy' => ['unique_strong_identity_match'], 'create_minimal_required' => ['no_identity_candidate'], 'review_required' => ['candidate_not_eligible', 'identity_evidence_conflict', 'weak_identity_evidence'], 'ambiguous' => ['multiple_strong_candidates'], 'not_found' => ['canonical_patient_not_found'], 'invalid_candidate_set' => ['invalid_candidate_set']];
+foreach ($coherentPairs as $status => $reasons) foreach ($reasons as $reason) PatientIdentityPolicy::assertStatusReasonCoherence($status, $reason);
 
 $canonical = new CanonicalPatientId('p_Ana.01:test');
 gate8fAssert($canonical->value() === 'p_Ana.01:test', 'canonical value preserved');
@@ -92,49 +116,101 @@ gate8fAssert($setOrdered->digest() === $setPermuted->digest(), 'candidate set pe
 gate8fThrows(fn() => new PatientIdentityCandidateSet([$tier1, $tier1]), 'duplicate_candidate_id', 'duplicate candidate rejected');
 gate8fThrows(fn() => gate8fCandidate('p_invalid_version', $input, true, 0), 'invalid_identity_candidate', 'candidate version rejected');
 
+$metadataInjectionCases = 0;
+$requestMetadataInjections = [
+    'AnaPerez',
+    'ana_perez',
+    'female',
+    '1990-01-20',
+    'ana@example.mx',
+    '+5214491234567',
+    'operation-AnaPerez',
+    'operation-ana_perez',
+    'operation-female',
+    'operation-1990-01-20',
+    'operation-5214491234567',
+    'account-AnaPerez',
+    'account-female',
+    'doctor-1990-01-20',
+    'doctor-5214491234567',
+    'operation-bad value1',
+    "operation-bad\n1",
+    'operation',
+    'operation-',
+    'operation-' . str_repeat('a', 119) . '1',
+];
+foreach ($requestMetadataInjections as $injection) {
+    gate8fRejectsMetadata(fn() => new PatientIdentityResolutionRequest($injection, 'correlation-gate8f', 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, 'account-gate8f', 'operator-gate8f', '2026-07-21T11:00:00-06:00'), 'invalid_operation_id', 'operation metadata injection rejected', $metadataInjectionCases);
+    gate8fRejectsMetadata(fn() => new PatientIdentityResolutionRequest('operation-metadata-test-01', $injection, 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, 'account-gate8f', 'operator-gate8f', '2026-07-21T11:00:00-06:00'), 'invalid_correlation_id', 'correlation metadata injection rejected', $metadataInjectionCases);
+    gate8fRejectsMetadata(fn() => new PatientIdentityResolutionRequest('operation-metadata-test-01', 'correlation-gate8f', 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, $injection, 'operator-gate8f', '2026-07-21T11:00:00-06:00'), 'invalid_actor', 'real actor metadata injection rejected', $metadataInjectionCases);
+    gate8fRejectsMetadata(fn() => new PatientIdentityResolutionRequest('operation-metadata-test-01', 'correlation-gate8f', 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, 'account-gate8f', $injection, '2026-07-21T11:00:00-06:00'), 'invalid_actor', 'effective actor metadata injection rejected', $metadataInjectionCases);
+}
+
+$metadataAuditRequest = gate8fLegacyRequest($input, 'operation-metadata-audit-01');
+$metadataEmptySet = new PatientIdentityCandidateSet([]);
+foreach (['AnaPerez', 'ana_perez', 'female', '1990-01-20', 'ana@example.mx', '+5214491234567', 'unknown_outcome'] as $injection) {
+    gate8fRejectsMetadata(fn() => new PatientIdentityAuditEvent('patient_identity_create_minimal_required', $metadataAuditRequest, $metadataEmptySet, null, [], $injection, 'no_match', false, true), 'invalid_identity_outcome', 'audit outcome injection rejected', $metadataInjectionCases);
+}
+foreach (['AnaPerez', 'ana_perez', 'female', '1990-01-20', 'ana@example.mx', '+5214491234567', 'unknown_reason'] as $injection) {
+    gate8fRejectsMetadata(fn() => PatientIdentityResolutionDecision::create('create_minimal_required', $injection, null, 'no_match', null, $metadataEmptySet, $metadataAuditRequest), 'invalid_decision_reason', 'decision reason injection rejected', $metadataInjectionCases);
+}
+$statusReasonMismatches = [
+    ['already_canonical', 'unique_strong_identity_match'],
+    ['mapped_from_legacy', 'already_canonical'],
+    ['create_minimal_required', 'weak_identity_evidence'],
+    ['review_required', 'no_identity_candidate'],
+    ['ambiguous', 'identity_evidence_conflict'],
+    ['not_found', 'multiple_strong_candidates'],
+    ['invalid_candidate_set', 'canonical_patient_not_found'],
+];
+foreach ($statusReasonMismatches as [$status, $reason]) {
+    gate8fRejectsMetadata(fn() => PatientIdentityResolutionDecision::create($status, $reason, null, 'no_match', null, $metadataEmptySet, $metadataAuditRequest), 'identity_status_reason_mismatch', 'status reason mismatch rejected', $metadataInjectionCases);
+}
+gate8fAssert($metadataInjectionCases === (count($requestMetadataInjections) * 4) + 21, 'metadata injection count exact');
+
 $resolver = new PatientIdentityResolver();
 $existingDecision = $resolver->resolve(gate8fCanonicalRequest('p_tier1'), $setOrdered);
 gate8fAssert($existingDecision->status() === 'already_canonical' && $existingDecision->resolvedPatientId()?->value() === 'p_tier1' && !$existingDecision->mutationAllowed(), 'canonical existing resolves');
-$missingDecision = $resolver->resolve(gate8fCanonicalRequest('p_missing', 'canonical-missing'), $setOrdered);
+$missingDecision = $resolver->resolve(gate8fCanonicalRequest('p_missing', 'operation-canonical-missing-01'), $setOrdered);
 gate8fAssert($missingDecision->status() === 'not_found' && $missingDecision->resolvedPatientId() === null && !$missingDecision->createMinimalRequired(), 'canonical missing does not create');
 $ineligible = gate8fCandidate('p_ineligible', gate8fEvidence('ineligible-name'), false);
-$ineligibleDecision = $resolver->resolve(gate8fCanonicalRequest('p_ineligible', 'canonical-ineligible'), new PatientIdentityCandidateSet([$ineligible]));
+$ineligibleDecision = $resolver->resolve(gate8fCanonicalRequest('p_ineligible', 'operation-canonical-ineligible-01'), new PatientIdentityCandidateSet([$ineligible]));
 gate8fAssert($ineligibleDecision->status() === 'review_required' && $ineligibleDecision->duplicateReview()?->reasonCode() === 'candidate_not_eligible', 'canonical ineligible reviews');
 
-$priorityDecision = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-priority'), $setPermuted);
+$priorityDecision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-priority-01'), $setPermuted);
 gate8fAssert($priorityDecision->status() === 'mapped_from_legacy' && $priorityDecision->matchTier() === 'contact_birthdate_exact' && $priorityDecision->resolvedPatientId()?->value() === 'p_tier1', 'highest strong tier wins');
-$tier2Decision = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-tier2'), new PatientIdentityCandidateSet([$tier2]));
+$tier2Decision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-tier2-01'), new PatientIdentityCandidateSet([$tier2]));
 gate8fAssert($tier2Decision->status() === 'mapped_from_legacy' && $tier2Decision->matchTier() === 'contact_name_exact', 'contact name strong maps');
-$tier3Decision = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-tier3'), new PatientIdentityCandidateSet([$tier3]));
+$tier3Decision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-tier3-01'), new PatientIdentityCandidateSet([$tier3]));
 gate8fAssert($tier3Decision->status() === 'mapped_from_legacy' && $tier3Decision->matchTier() === 'name_birthdate_sex_exact', 'name birth sex strong maps');
-$permutationDecision = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-order'), new PatientIdentityCandidateSet([$tier2, $tier1]));
-$permutationDecisionReverse = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-order'), new PatientIdentityCandidateSet([$tier1, $tier2]));
+$permutationDecision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-order-01'), new PatientIdentityCandidateSet([$tier2, $tier1]));
+$permutationDecisionReverse = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-order-01'), new PatientIdentityCandidateSet([$tier1, $tier2]));
 gate8fAssert($permutationDecision->decisionDigest() === $permutationDecisionReverse->decisionDigest(), 'decision independent of candidate input order');
 
 $weakNameBirth = gate8fCandidate('p_weak_name_birth', gate8fEvidence('ana-name', 'ana-birth'));
 $weakContact = gate8fCandidate('p_weak_contact', gate8fEvidence('other-name', null, null, 'ana-phone'));
 $weakName = gate8fCandidate('p_weak_name', gate8fEvidence('ana-name'));
 foreach ([[$weakNameBirth, 'name_birthdate_exact'], [$weakContact, 'contact_only'], [$weakName, 'name_only']] as [$candidate, $tier]) {
-    $decision = $resolver->resolve(gate8fLegacyRequest($input, 'weak-' . $tier), new PatientIdentityCandidateSet([$candidate]));
+    $decision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-weak-' . $tier . '-01'), new PatientIdentityCandidateSet([$candidate]));
     gate8fAssert($decision->status() === 'review_required' && $decision->matchTier() === $tier && $decision->resolvedPatientId() === null && !$decision->createMinimalRequired() && $decision->duplicateReview()?->requiresHumanReview(), 'weak tier reviews');
 }
 
 $ambiguousA = gate8fCandidate('p_ambiguous_a', gate8fEvidence('first-name', 'ana-birth', null, 'ana-phone'));
 $ambiguousB = gate8fCandidate('p_ambiguous_b', gate8fEvidence('second-name', 'ana-birth', null, 'ana-phone'));
-$ambiguous = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-ambiguous'), new PatientIdentityCandidateSet([$ambiguousB, $ambiguousA]));
+$ambiguous = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-ambiguous-01'), new PatientIdentityCandidateSet([$ambiguousB, $ambiguousA]));
 gate8fAssert($ambiguous->status() === 'ambiguous' && $ambiguous->resolvedPatientId() === null && $ambiguous->duplicateReview()?->candidatePatientIds() === ['p_ambiguous_a', 'p_ambiguous_b'] && !$ambiguous->mergeAllowed(), 'multiple strong candidates ambiguous');
 
 $contactConflict = gate8fCandidate('p_contact_conflict', gate8fEvidence('other-name', 'different-birth', null, 'ana-phone'));
-$contactConflictDecision = $resolver->resolve(gate8fLegacyRequest($input, 'contact-conflict'), new PatientIdentityCandidateSet([$contactConflict]));
+$contactConflictDecision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-contact-conflict-01'), new PatientIdentityCandidateSet([$contactConflict]));
 gate8fAssert($contactConflictDecision->status() === 'review_required' && $contactConflictDecision->reasonCode() === 'identity_evidence_conflict', 'contact birth conflict reviews');
 $nameConflict = gate8fCandidate('p_name_conflict', gate8fEvidence('ana-name', 'different-birth'));
-$nameConflictDecision = $resolver->resolve(gate8fLegacyRequest($input, 'name-conflict'), new PatientIdentityCandidateSet([$nameConflict]));
+$nameConflictDecision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-name-conflict-01'), new PatientIdentityCandidateSet([$nameConflict]));
 gate8fAssert($nameConflictDecision->status() === 'review_required', 'name birth conflict reviews');
 $strongIneligible = gate8fCandidate('p_strong_ineligible', gate8fEvidence('other-name', 'ana-birth', null, 'ana-phone'), false);
-$strongIneligibleDecision = $resolver->resolve(gate8fLegacyRequest($input, 'strong-ineligible'), new PatientIdentityCandidateSet([$strongIneligible]));
+$strongIneligibleDecision = $resolver->resolve(gate8fLegacyRequest($input, 'operation-strong-ineligible-01'), new PatientIdentityCandidateSet([$strongIneligible]));
 gate8fAssert($strongIneligibleDecision->status() === 'review_required', 'strong ineligible reviews');
 
-$noMatch = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-no-match'), new PatientIdentityCandidateSet([]));
+$noMatch = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-no-match-01'), new PatientIdentityCandidateSet([]));
 gate8fAssert($noMatch->status() === 'create_minimal_required' && $noMatch->eventualResolutionMode() === 'created_minimal_patient' && $noMatch->resolvedPatientId() === null && $noMatch->createMinimalRequired() && !$noMatch->mutationAllowed() && !$noMatch->mergeAllowed(), 'no candidate creates plan only');
 
 $merge = new PatientMergePolicy();
@@ -145,16 +221,18 @@ gate8fThrows(fn() => $merge->requestSurvivorSelection(), 'patient_merge_disabled
 gate8fThrows(fn() => $merge->requestCareRecordReassignment(), 'patient_merge_disabled', 'care record reassignment rejected');
 
 $audit = $priorityDecision->auditEvent();
-$auditAgain = $resolver->resolve(gate8fLegacyRequest($input, 'legacy-priority'), $setOrdered)->auditEvent();
+$auditAgain = $resolver->resolve(gate8fLegacyRequest($input, 'operation-legacy-priority-01'), $setOrdered)->auditEvent();
 gate8fAssert($audit->eventId() === $auditAgain->eventId() && $audit->outcomeCode() === 'mapped_from_legacy', 'audit deterministic');
 gate8fAssert($audit->toArray()['actor_real_id'] === 'account-gate8f' && $audit->toArray()['actor_effective_id'] === 'operator-gate8f' && $audit->toArray()['merge_allowed'] === false, 'audit authority and merge boundary');
 $privateOutputs = json_encode([$priorityDecision->toArray(), $ambiguous->toArray(), $noMatch->toArray(), $audit->toArray(), (new PatientIdentityMutationPlan())->toArray()], JSON_THROW_ON_ERROR);
 foreach (['Ana Pérez', '1990-01-20', '+5214491234567', 'ana@example.mx', 'ana perez|1990-01-20|female'] as $forbidden) gate8fAssert(!str_contains($privateOutputs, $forbidden), 'raw pii absent from outputs');
+$acceptedMetadataOutputs = json_encode([$priorityDecision->toArray(), $audit->toArray(), gate8fLegacyRequest($input)->toArray()], JSON_THROW_ON_ERROR);
+foreach (['AnaPerez', 'ana_perez', 'Ana Pérez', '1990-01-20', '+5214491234567', 'ana@example.mx', 'ana perez|1990-01-20|female'] as $forbidden) gate8fAssert(!str_contains($acceptedMetadataOutputs, $forbidden), 'metadata pii absent from accepted objects');
 
-gate8fThrows(fn() => new PatientIdentityResolutionRequest('op', 'correlation', 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, '', 'operator', '2026-07-21T11:00:00-06:00'), 'invalid_actor', 'real actor required');
-gate8fThrows(fn() => new PatientIdentityResolutionRequest('op', 'correlation', 'client_role', 'legacy_patient_key_hash', null, $legacy, $input, 'account', 'operator', '2026-07-21T11:00:00-06:00'), 'invalid_resolution_source', 'source allow list');
-gate8fThrows(fn() => new PatientIdentityResolutionRequest('ana@example.mx', 'correlation', 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, 'account', 'operator', '2026-07-21T11:00:00-06:00'), 'invalid_resolution_request', 'pii audit metadata rejected');
-gate8fAssert(gate8fLegacyRequest($input, 'public-source', 'public_verified')->resolutionSource() === 'public_verified', 'public verified source accepted without identity implication');
+gate8fThrows(fn() => new PatientIdentityResolutionRequest('operation-actor-required-01', 'correlation-gate8f', 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, '', 'operator-gate8f', '2026-07-21T11:00:00-06:00'), 'invalid_actor', 'real actor required');
+gate8fThrows(fn() => new PatientIdentityResolutionRequest('operation-source-01', 'correlation-gate8f', 'client_role', 'legacy_patient_key_hash', null, $legacy, $input, 'account-gate8f', 'operator-gate8f', '2026-07-21T11:00:00-06:00'), 'invalid_resolution_source', 'source allow list');
+gate8fThrows(fn() => new PatientIdentityResolutionRequest('ana@example.mx', 'correlation-gate8f', 'legacy_bridge', 'legacy_patient_key_hash', null, $legacy, $input, 'account-gate8f', 'operator-gate8f', '2026-07-21T11:00:00-06:00'), 'invalid_operation_id', 'pii audit metadata rejected');
+gate8fAssert(gate8fLegacyRequest($input, 'operation-public-source-01', 'public_verified')->resolutionSource() === 'public_verified', 'public verified source accepted without identity implication');
 gate8fAssert($policy->persistenceDeferred() === 'IDENTITY_PERSISTENCE_MIGRATION_RETENTION_ROLLOUT_DEFERRED_TO_GATE_8G', 'gate8g deferred');
 gate8fAssert(\Patients\Identity\patientIdentityResolutionIsClinicalEncounter() === false, 'identity resolution is not care encounter');
 
@@ -187,4 +265,5 @@ $domainSource = '';
 foreach (glob(__DIR__ . '/../identity/*.php') as $file) $domainSource .= file_get_contents($file);
 foreach (['PDO', 'SELECT ', 'INSERT ', 'UPDATE ', 'DELETE ', 'FOR UPDATE', 'beginTransaction', 'commit(', 'rollBack', '$_GET', '$_POST', '$_SESSION', 'getenv(', 'header(', 'getallheaders', 'curl_', 'fopen(', 'file_put_contents', 'error_log', 'PatientsRepository', 'CreatePatientController', 'Clinical', 'clinical_documents', 'DevOtpSender', 'AppointmentWriteController', 'createPatient', 'mergePatient', 'random_bytes', 'uniqid(', 'date(', 'password_hash', 'Ana Pérez', '+5214491234567', 'ana@example.mx'] as $forbidden) gate8fAssert(!str_contains($domainSource, $forbidden), 'domain purity: ' . $forbidden);
 
+echo 'METADATA_INJECTION_CASES=' . $metadataInjectionCases . '/' . $metadataInjectionCases . "\n";
 echo "Gate8FPatientIdentityDuplicatesTest PASS\n";

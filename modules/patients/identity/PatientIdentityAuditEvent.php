@@ -30,8 +30,8 @@ final readonly class PatientIdentityAuditEvent
         if (!in_array($eventType, self::TYPES, true)) throw new PatientIdentityDomainException('unauthorized_identity_mutation');
         PatientIdentityPolicy::tierRank($matchTier);
         $this->eventType = $eventType;
-        $this->operationId = PatientIdentityPolicy::identifier($request->operationId(), 'invalid_resolution_request');
-        $this->correlationId = PatientIdentityPolicy::identifier($request->correlationId(), 'invalid_resolution_request');
+        $this->operationId = PatientIdentityPolicy::operationId($request->operationId());
+        $this->correlationId = PatientIdentityPolicy::correlationId($request->correlationId());
         $this->source = $request->resolutionSource();
         $this->inputType = $request->inputType();
         $this->requestFingerprint = $request->fingerprint();
@@ -45,10 +45,10 @@ final readonly class PatientIdentityAuditEvent
         }
         ksort($digests, SORT_STRING);
         $this->candidatePatientIdDigests = array_values($digests);
-        $this->outcomeCode = PatientIdentityPolicy::identifier($outcomeCode, 'invalid_resolution_request');
+        $this->outcomeCode = PatientIdentityPolicy::resultState($outcomeCode);
         $this->matchTier = $matchTier;
-        $this->actorRealId = PatientIdentityPolicy::identifier($request->actorRealId(), 'invalid_actor');
-        $this->actorEffectiveId = PatientIdentityPolicy::identifier($request->actorEffectiveId(), 'invalid_actor');
+        $this->actorRealId = PatientIdentityPolicy::actorReference($request->actorRealId());
+        $this->actorEffectiveId = PatientIdentityPolicy::actorReference($request->actorEffectiveId());
         $this->policyVersion = $request->policyVersion();
         $this->occurredAt = $request->occurredAt();
         $this->humanReviewRequired = $humanReviewRequired;

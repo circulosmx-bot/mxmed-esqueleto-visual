@@ -25,10 +25,10 @@ final readonly class PatientIdentityResolutionRequest
         if (!PatientIdentityPolicy::isInputType($inputType)) throw new PatientIdentityDomainException('invalid_resolution_request');
         if ($inputType === 'canonical_patient_id' && ($canonicalPatientId === null || $legacyReference !== null || $evidence !== null)) throw new PatientIdentityDomainException('invalid_resolution_request');
         if ($inputType === 'legacy_patient_key_hash' && ($canonicalPatientId !== null || $legacyReference === null || $evidence === null)) throw new PatientIdentityDomainException('invalid_resolution_request');
-        $this->operationId = PatientIdentityPolicy::identifier($operationId, 'invalid_resolution_request');
-        $this->correlationId = PatientIdentityPolicy::identifier($correlationId, 'invalid_resolution_request');
-        $this->actorRealId = PatientIdentityPolicy::identifier($actorRealId, 'invalid_actor');
-        $this->actorEffectiveId = PatientIdentityPolicy::identifier($actorEffectiveId, 'invalid_actor');
+        $this->operationId = PatientIdentityPolicy::operationId($operationId);
+        $this->correlationId = PatientIdentityPolicy::correlationId($correlationId);
+        $this->actorRealId = PatientIdentityPolicy::actorReference($actorRealId);
+        $this->actorEffectiveId = PatientIdentityPolicy::actorReference($actorEffectiveId);
         $this->occurredAt = PatientIdentityPolicy::timestamp($occurredAt)->format('Y-m-d\TH:i:s.uP');
         $this->resolutionSource = $resolutionSource;
         $this->inputType = $inputType;
