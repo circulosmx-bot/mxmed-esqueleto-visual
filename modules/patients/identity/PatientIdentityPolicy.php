@@ -102,17 +102,7 @@ final readonly class PatientIdentityPolicy
     private static function namespacedMetadata(string $value, array $namespaces, string $reason): string
     {
         $namespacePattern = implode('|', array_map(static fn(string $namespace): string => preg_quote($namespace, '/'), $namespaces));
-        $matches = [];
-        if (
-            $value === ''
-            || strlen($value) > 128
-            || str_contains($value, '@')
-            || str_contains($value, '+')
-            || preg_match('/\d{4}-\d{2}-\d{2}/', $value) === 1
-            || preg_match('/\d{8,}/', $value) === 1
-            || preg_match('/\A(?:' . $namespacePattern . ')[_:-]([A-Za-z0-9_.:-]+)\z/D', $value, $matches) !== 1
-            || preg_match('/\d/', $matches[1] ?? '') !== 1
-        ) {
+        if (preg_match('/\A(?:' . $namespacePattern . ')[_:-][a-f0-9]{64}\z/D', $value) !== 1) {
             throw new PatientIdentityDomainException($reason);
         }
         return $value;
