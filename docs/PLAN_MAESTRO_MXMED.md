@@ -2470,3 +2470,17 @@ Hallazgos: 13 BLOCKER, 11 HIGH, 4 MEDIUM, 1 LOW y 1 INFORMATIONAL. Quedan 18 dec
 Entregables: `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md` y `docs/MXMED_PLAN_V2_PG03_RUNTIME_CUTOVER_GATES.md`. Evidencia temporal: `/tmp/mxmed-activity09-runtime-cutover-readiness-audit-v2-r2/`, con diez JSON y cuatro TXT. CUT-01 a CUT-05 son una propuesta no aprobada y no constituyen autorización ni inicio de Actividad 10.
 
 Impacto: cero SQL ejecutado; cero conexiones DB; cero migraciones; cero escrituras de datos; cero OTP reales; cero citas reales; cero pacientes reales; cero merges; cero backfill; rollout R0 disabled; cero runtime wiring; cero cambios de comportamiento de rutas; cero UI; cero AWS. Actividad 9 queda auditada pero no integrada. Actividad 10 permanece bloqueada. Contador oficial 8/22; pendientes 14; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+### PP-312 — Actividad 10: alcance y decisiones de readiness CUT-01 PG-03
+
+Fecha: 2026-07-22. Identificador aprobado: `ARCH/MXMed-PG03-CUT01-Scope-Decisions-Readiness-01`. Dirección aprobó el alcance documental/read-only de la Actividad 10, clasificación UI-0, sin autorizar la implementación de CUT-01 ni decisiones técnicas.
+
+Baseline y parent: `1e3057f2a12afed9da7e6ce95cd20ae81d645c1f`; checkpoint vinculante de Actividad 9: `checkpoint/mxmed-product-refinement-v2-activity09`, desreferenciado al mismo commit. El objetivo fue convertir CUT-01 en un contrato técnico propuesto antes de cualquier código, wiring, migración o rollout.
+
+Se proponen DEC-014A–I para horario, scope/backfill, `__all__`, proveedor OTP, rate limiting, observabilidad, métricas R1–R4, rollback y frontera Agenda→Clinical. Las nueve permanecen `PENDING_DIRECTOR_APPROVAL`; cero decisiones fueron aprobadas.
+
+Entregables: `docs/MXMED_ARQUITECTURA_V2_PG03_CUT01_SCOPE_DECISIONS_READINESS.md` y `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md`. Incluyen autoridad server-side propuesta para Agenda/Patients, registro cerrado de once flags default false no implementados, estrategia futura de retiro de DDL durante requests, inventario candidato de implementación y CUT01-A–D propuestos/no aprobados.
+
+Se auditaron 72 fuentes y verificaron 103 referencias únicas `ruta:línea`. Evidencia temporal: `/tmp/mxmed-activity10-cut01-scope-decisions-readiness-v2/`, con ocho JSON y cuatro TXT.
+
+Impacto: cero código/runtime, configuración, rutas, PHP, SQL, DB, conexiones, migraciones, datos, OTP, citas, pacientes, merges y backfill; R0 disabled; R1–R4 inactivos; cero UI, Clinical y AWS. Actividad 10 no integrada; Actividad 11 bloqueada; contador 9/22; pendientes 13; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`.
