@@ -36,9 +36,9 @@ final readonly class PublicAuditEvent
         if ($policyVersion !== PublicAgendaPolicy::VERSION || $attemptsUsed < 0 || $attemptsUsed > PublicAgendaPolicy::OTP_MAX_ATTEMPTS) throw new PublicAgendaDomainException('invalid_challenge_state');
         $intent = PublicAgendaPolicy::identifier($intentId, 'invalid_challenge_state');
         $challenge = PublicAgendaPolicy::identifier($challengeId, 'invalid_challenge_state');
-        $operation = PublicAgendaPolicy::identifier($operationId, 'invalid_challenge_state');
-        $correlation = PublicAgendaPolicy::identifier($correlationId, 'invalid_challenge_state');
-        $outcome = PublicAgendaPolicy::identifier($outcomeCode, 'invalid_challenge_state');
+        $operation = PublicAgendaPolicy::auditMetadataToken($operationId, 'invalid_audit_metadata');
+        $correlation = PublicAgendaPolicy::auditMetadataToken($correlationId, 'invalid_audit_metadata');
+        $outcome = PublicAgendaPolicy::publicProjectionToken($outcomeCode, 'invalid_audit_outcome');
         $when = PublicAgendaPolicy::timestamp($occurredAt, 'invalid_challenge_state');
         $this->eventType = $eventType;
         $this->intentIdDigest = PublicAgendaPolicy::digest(['intent_id' => $intent]);

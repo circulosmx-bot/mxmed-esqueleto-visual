@@ -95,6 +95,32 @@ final readonly class PublicAgendaPolicy
         return $normalized;
     }
 
+    public static function publicProjectionToken(string $value, string $code = 'invalid_public_projection_token'): string
+    {
+        $normalized = trim($value);
+        if ($normalized !== $value
+            || $normalized === ''
+            || strlen($normalized) > 64
+            || preg_match('/\A[a-z][a-z0-9_]{0,63}\z/D', $normalized) !== 1
+            || preg_match('/\d{6,}/', $normalized) === 1) {
+            throw new PublicAgendaDomainException($code);
+        }
+        return $normalized;
+    }
+
+    public static function auditMetadataToken(string $value, string $code = 'invalid_audit_metadata'): string
+    {
+        $normalized = trim($value);
+        if ($normalized !== $value
+            || $normalized === ''
+            || strlen($normalized) > 128
+            || preg_match('/\A[A-Za-z][A-Za-z0-9_.:-]{0,127}\z/D', $normalized) !== 1
+            || preg_match('/\d{6,}/', $normalized) === 1) {
+            throw new PublicAgendaDomainException($code);
+        }
+        return $normalized;
+    }
+
     public static function timestamp(string $value, string $code = 'invalid_booking_intent'): \DateTimeImmutable
     {
         if (preg_match('/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})\z/D', $value) !== 1) {

@@ -36,6 +36,18 @@ function gate8eThrows(callable $callback, string $reason, string $message): void
     throw new RuntimeException($message);
 }
 
+function gate8eRejectsWithoutOutput(callable $callback, string $reason, string $message): void
+{
+    $output = null;
+    try { $output = $callback(); }
+    catch (PublicAgendaDomainException $error) {
+        gate8eAssert($output === null, $message . ' created output');
+        if ($error->reason() === $reason) return;
+        throw new RuntimeException($message . ' (' . $error->reason() . ')');
+    }
+    throw new RuntimeException($message . ' returned output');
+}
+
 function gate8eSlot(string $profile = 'profile-public', string $consultorio = 'consultorio-public', string $start = '2026-07-21T09:00:00-06:00', string $end = '2026-07-21T09:30:00-06:00'): AppointmentSlotIdentity
 {
     return new AppointmentSlotIdentity($profile, $consultorio, 'America/Mexico_City', $start, $end);
@@ -151,8 +163,39 @@ gate8eThrows(fn() => PublicBookingHandoff::create($intentOther, 'capability', 'a
 $projection = new PublicContactPrivacyProjection();
 $before = $projection->beforeConfirmation($intent, $challenge, 480, 'verify_otp', 'generic_pending');
 $after = $projection->afterConfirmation('appointment-public', 'confirmed', 'done', 'generic_confirmed');
+$genericError = $projection->genericError('invalid_code');
+gate8eAssert($before === ['intent_id' => 'intent-public', 'challenge_id' => 'challenge-public', 'masked_destination' => 'p***@example.mx', 'expires_in' => 480, 'next_action' => 'verify_otp', 'result_code' => 'generic_pending'], 'canonical before projection stable');
+gate8eAssert($after === ['appointment_id' => 'appointment-public', 'status' => 'confirmed', 'next_action' => 'done', 'result_code' => 'generic_confirmed'], 'canonical after projection stable');
+gate8eAssert($genericError === ['result_code' => 'invalid_code', 'next_action' => 'retry'], 'canonical generic error stable');
+foreach (['verify_otp', 'done', 'retry', 'generic_pending', 'generic_confirmed', 'confirmed', 'invalid_code', 'locked', 'expired', 'verified'] as $token) {
+    gate8eAssert(PublicAgendaPolicy::publicProjectionToken($token) === $token, 'valid public token preserved');
+}
+foreach (['operation-public', 'correlation-public', 'invalid_code', 'public_otp_verified', 'op:verify', 'correlation.v1'] as $token) {
+    gate8eAssert(PublicAgendaPolicy::auditMetadataToken($token) === $token, 'valid audit token preserved');
+}
+gate8eAssert(PublicAgendaPolicy::identifier('opaque value', 'invalid_booking_intent') === 'opaque value', 'generic identifier unchanged');
+
+$projectionInjectionCases = [
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, 'paciente.real@example.mx', 'generic_pending'), 'email in next action'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, '+5214491234567', 'generic_pending'), 'phone in next action'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, '654321', 'generic_pending'), 'otp in next action'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, 'code_654321', 'generic_pending'), 'embedded otp in next action'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, 'verify_otp', 'paciente.real@example.mx'), 'email in result code'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, 'verify_otp', '+5214491234567'), 'phone in result code'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, 'verify_otp', '654321'), 'otp in result code'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, 'verify_otp', 'code_654321'), 'embedded otp in result code'],
+    [fn() => $projection->afterConfirmation('appointment-public', 'paciente.real@example.mx', 'done', 'generic_confirmed'), 'email in status'],
+    [fn() => $projection->afterConfirmation('appointment-public', '+5214491234567', 'done', 'generic_confirmed'), 'phone in status'],
+    [fn() => $projection->afterConfirmation('appointment-public', '654321', 'done', 'generic_confirmed'), 'otp in status'],
+    [fn() => $projection->genericError('paciente.real@example.mx'), 'email in generic error'],
+    [fn() => $projection->genericError('+5214491234567'), 'phone in generic error'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, 'invalid token', 'generic_pending'), 'space in token'],
+    [fn() => $projection->beforeConfirmation($intent, $challenge, 480, '1invalid', 'generic_pending'), 'numeric token prefix'],
+];
+foreach ($projectionInjectionCases as [$callback, $message]) gate8eRejectsWithoutOutput($callback, 'invalid_public_projection_token', $message);
+
 $publicSerialized = json_encode([$before, $after, $wrong->toArray(), $verified->toArray()], JSON_THROW_ON_ERROR);
-foreach (['paciente.real@example.mx', '+5214491234567', '654321', $challenge->credentialHash(), $reference] as $forbidden) gate8eAssert(!str_contains($publicSerialized, $forbidden), 'sensitive fixture absent from public surfaces');
+foreach (['paciente.real@example.mx', '+5214491234567', '654321', 'code_654321', 'otp-654321', $challenge->credentialHash(), $reference] as $forbidden) gate8eAssert(!str_contains($publicSerialized, $forbidden), 'sensitive fixture absent from public surfaces');
 $internalSerialized = json_encode([$verified->event()?->toArray(), $verified->handoff()?->toArray(), $capabilityHandoff->toArray()], JSON_THROW_ON_ERROR);
 foreach (['paciente.real@example.mx', '+5214491234567', '654321', $challenge->credentialHash()] as $forbidden) gate8eAssert(!str_contains($internalSerialized, $forbidden), 'sensitive fixture absent from domain outputs');
 gate8eAssert(array_keys($before) === ['intent_id', 'challenge_id', 'masked_destination', 'expires_in', 'next_action', 'result_code'], 'before projection allow list');
@@ -160,6 +203,18 @@ gate8eAssert(array_keys($after) === ['appointment_id', 'status', 'next_action', 
 
 gate8eAssert(PublicAuditEvent::types() === ['public_otp_challenge_issued', 'public_otp_attempt_rejected', 'public_otp_verified', 'public_otp_locked', 'public_otp_expired', 'public_otp_consumed', 'public_booking_handoff_requested', 'public_booking_cancellation_requested'], 'audit allow list');
 gate8eAssert($verified->event()?->eventId() === $verified->event()?->eventId() && !str_contains(json_encode($verified->event()?->toArray(), JSON_THROW_ON_ERROR), '654321'), 'audit deterministic and minimized');
+$canonicalEvent = new PublicAuditEvent('public_otp_attempt_rejected', 'intent-public', 'challenge-public', 'operation-public', 'correlation-public', 'invalid_code', 'email', 1, '2026-07-21T09:02:00-06:00', 1, false);
+$canonicalEventArray = ['event_id' => 'b2ae37248ada8113e61ebe6ab25699277ea897833f36694fad8d38e79b04eb01', 'event_type' => 'public_otp_attempt_rejected', 'intent_id_digest' => '44646e493c5dd9c7e7617e1b30cfd2448b148a1fde6de5a25702b521fb68f3fc', 'challenge_id_digest' => 'e90e74188763e6739cb6dfc57396719eb9075e9012a6947e77ae50bfb8127269', 'operation_id' => 'operation-public', 'correlation_id' => 'correlation-public', 'outcome_code' => 'invalid_code', 'channel' => 'email', 'policy_version' => 1, 'occurred_at' => '2026-07-21T09:02:00.000000-06:00', 'attempts_used' => 1, 'terminal' => false];
+gate8eAssert($canonicalEvent->eventId() === 'b2ae37248ada8113e61ebe6ab25699277ea897833f36694fad8d38e79b04eb01', 'canonical event id stable');
+gate8eAssert($canonicalEvent->toArray() === $canonicalEventArray, 'canonical event serialization stable');
+
+$auditFactory = fn(string $operation, string $correlation, string $outcome): PublicAuditEvent => new PublicAuditEvent('public_otp_attempt_rejected', 'intent-public', 'challenge-public', $operation, $correlation, $outcome, 'email', 1, '2026-07-21T09:02:00-06:00', 1, false);
+$auditInjectionValues = ['paciente.real@example.mx', '+5214491234567', '654321', 'otp-654321'];
+foreach ($auditInjectionValues as $injected) {
+    gate8eRejectsWithoutOutput(fn() => $auditFactory($injected, 'correlation-public', 'invalid_code'), 'invalid_audit_metadata', 'injection in operation id');
+    gate8eRejectsWithoutOutput(fn() => $auditFactory('operation-public', $injected, 'invalid_code'), 'invalid_audit_metadata', 'injection in correlation id');
+    gate8eRejectsWithoutOutput(fn() => $auditFactory('operation-public', 'correlation-public', $injected), 'invalid_audit_outcome', 'injection in outcome code');
+}
 
 $handoffMap = [
     'pending' => 'create_pending_otp_appointment',
