@@ -2245,3 +2245,90 @@ PASS_ACTIVITY_8_GATE_8D_APPOINTMENT_LIFECYCLE_IDEMPOTENCY_IMPLEMENTED;
 ACTIVITY_8_IN_PROGRESS;
 GATE_8E_NOT_STARTED;
 ACTIVITY_9_BLOCKED.
+
+### PP-308 — Gate 8E: Agenda pública, OTP y privacidad de contacto
+
+Identificador:
+`pg03-public-agenda-otp-privacy`; versión de contrato `1`.
+
+Resultado:
+`PASS_ACTIVITY_8_GATE_8E_PUBLIC_AGENDA_OTP_CONTACT_PRIVACY_IMPLEMENTED`.
+
+Baseline:
+Gate 8A, Gate 8B, Gate 8C y Gate 8D postvalidados; Gate 8E implementado
+pendiente de postvalidación; Gate 8F no iniciado; Actividad 8 en progreso;
+Actividad 9 bloqueada; contador 7/22; readiness
+`NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+Clasificación y alcance:
+UI-0. Se define una autoridad canónica, versionada, determinista y fail-closed
+para intención de reserva pública, desafío OTP, verificación, replay,
+privacidad, cancelación, auditoría y handoff declarativo. El flujo público no es
+autoritativo y exige handoff server-authoritative. No conecta runtime, rutas,
+controladores legacy, repositorios, servicios, persistencia, SQL, migraciones,
+configuración ni servidor.
+
+Política OTP:
+canales exactos `sms` y `email`; seis dígitos; TTL 600 segundos; máximo cinco
+intentos; un desafío activo por intención; raw OTP nunca persistido, respondido,
+registrado ni emitido en eventos; debug OTP canónico deshabilitado; decisión de
+rate-limit server-authoritative obligatoria y ausencia fail-closed.
+
+Estados:
+`pending`, `verified`, `expired`, `locked`, `consumed`. El replay verificado es
+idempotente, devuelve el mismo grant digest, no añade intentos/eventos/handoffs y
+los estados terminales no vuelven a pending.
+
+Binding y privacidad:
+la intención liga intent, profile, consultorio, slot Gate 8D, canal, referencia
+opaca de contacto y versión mediante SHA-256 determinista. El contacto sólo
+conserva un keyed digest de 64 hex y una máscara de proyección; no conserva ni
+expone teléfono, email, paciente, domicilio o datos clínicos. La proyección usa
+allow-list cerrada y errores genéricos.
+
+Grant, capability y auditoría:
+el grant de verificación y la capacidad de cancelación son minimizados,
+deterministas, ligados a intención/binding y de un solo uso. Los eventos son
+append-only, minimizados y sin OTP, credenciales, PII, tokens, cookies, headers o
+payload libre.
+
+Handoff Gate 8D:
+se declaran `create_pending_otp_appointment`, `confirm_verified_appointment`,
+`cancel_expired_appointment`, `cancel_locked_appointment` y
+`cancel_by_public_capability`, con lifecycle version 1, razón allow-list,
+`server_authoritative_required=true`, resolución de actor por Gate 8B y mutación
+delegada a Gate 8D. No se acepta actor, estado, razón o autoridad del cliente.
+
+Plan transaccional:
+16 pasos declarativos desde `begin_transaction` hasta `commit`, con locks de
+intención, rate-limit, desafío e idempotencia; verificación de binding/estado/
+expiración/intentos/credencial; grant y auditoría en la misma transacción;
+delegación Gate 8D; cualquier error requiere rollback. No ejecuta operaciones,
+no permite escritura directa de cita ni SQL directo.
+
+Idempotencia y rate-limit:
+la misma operación aceptada se reproduce sin mutaciones; una clave incompatible
+produce conflicto 409. La decisión de rate-limit debe venir tipada del adaptador
+futuro y nunca se sustituye por una inferencia local.
+
+Separaciones:
+`PATIENT_IDENTITY_RESOLUTION_DEFERRED_TO_GATE_8F`; no se crea paciente ni se
+hace merge. `agendaAppointmentIsClinicalEncounter() === false`; no se crea
+encounter, expediente, nota, diagnóstico, receta o documento clínico.
+
+Legado contenido:
+las 16 superficies públicas existentes permanecen
+`LEGACY_CONTAINED_PENDING_ADAPTER_AND_ROLLOUT`; no se refactorizan ni conectan.
+El resultado declara cero runtime, rutas, SQL, OTP real, citas reales y datos
+reales modificados.
+
+Safe return, pruebas y estado:
+el retorno seguro es el HEAD Gate 8D postvalidado
+`4d44d14abe743bba0424c1a7856b231c4a9a3dc1`; rollback por `git revert --no-edit
+<gate8e_commit>` en worktree detached. La prueba Gate 8E, las regresiones
+acumulativas, lint, pureza estática, mutaciones negativas y simulación futura
+PP-309 deben pasar antes de postvalidar.
+
+Gate 8E queda `IMPLEMENTED_READY_FOR_POSTVALIDATION`; Gate 8F sigue `NOT_STARTED`;
+Actividad 8 sigue `IN_PROGRESS`; Actividad 9 sigue `BLOCKED`. No iniciar Gate 8F,
+no integrar y no crear checkpoint.
