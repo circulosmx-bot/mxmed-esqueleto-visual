@@ -1,24 +1,32 @@
-# MXMed V2 · PG-03 · Decisiones propuestas para CUT-01
+# MXMed V2 · PG-03 · Decisiones ratificadas para CUT-01
 
 ## Límite de autoridad
 
-Este registro formula nueve decisiones técnicas para la Actividad 10 UI-0; la aprobación recibida cubre el análisis de alcance, pero no autoriza implementación ni resuelve las decisiones (`/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/activity10-approved-contract.txt:1`, `/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/director-approval.txt:1`).
+Este registro incorpora la ratificación directorial de las nueve recomendaciones técnicas postvalidadas de la Actividad 10 UI-0. El estado exclusivo de DEC-014A–I es `APPROVED_WITH_DEFERRED_PARAMETERS`; no autoriza implementación, subgates ni rollout (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/activity10-director-decisions-approval.txt:1`, `/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:1`).
 
-Todas las recomendaciones permanecen `PENDING_DIRECTOR_APPROVAL`. No se implementan adapters, flags, wiring, SQL, migraciones, backfill, OTP, cambios Clinical, UI, rutas ni rollout (`/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/activity10-approved-contract.txt:24`).
+Declaración directorial formal:
+
+> Apruebo DEC-014A, DEC-014B, DEC-014C, DEC-014D, DEC-014E, DEC-014F, DEC-014G, DEC-014H y DEC-014I conforme a las recomendaciones postvalidadas, manteniendo pendientes los valores numéricos, proveedores, umbrales y parámetros que requieren aprobación posterior.
+
+La implementación de los 42 archivos candidatos, CUT01-A–D, adapters, flags, composition roots, wiring, rutas, SQL, migraciones, backfill, OTP real, Clinical, UI, AWS y R1–R4 continúa no autorizada (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
+
+## Parámetros diferidos
+
+Permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`: 1) duración y gap; 2) catálogo/selección de timezone; 3) precedencia global/sede; 4) reglas y volumen sin consultorio; 5) owner/ventana de backfill; 6) proveedor OTP; 7) canal OTP por caso; 8) SLA, jurisdicción y residencia; 9) intentos máximos; 10) ventanas de rate limiting; 11) bloqueo y expiración; 12) sink de observabilidad; 13) retención; 14) responsables/on-call; 15) SLO; 16) p95/p99; 17) porcentajes/error budgets; 18) ventanas de observación; 19) RTO/RPO; 20) snapshot; 21) reconciliación; 22) esquema del evento Clinical; 23) retries; 24) DLQ; 25) retención de eventos; 26) compensaciones entre dominios (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:6`).
 
 ## Tabla resumen
 
 | Decisión | D original | Recomendación técnica | Blocker | Gate futuro | Aprobador requerido | Estado |
 |---|---|---|---|---|---|---|
-| DEC-014A | D-02 | schedule versionado por profile+consultorio y precedencia explícita | F-006 | CUT01-B | Producto Agenda + Arquitectura | PENDING_DIRECTOR_APPROVAL |
-| DEC-014B | D-03 | scope concreto; partición de legacy ambiguo antes de backfill | F-005,F-022 | CUT01-B | Arquitectura + Datos | PENDING_DIRECTOR_APPROVAL |
-| DEC-014C | D-04 | `__all__` sólo agregado; resolver o rechazar antes de write | F-026 | CUT01-B | Producto Agenda | PENDING_DIRECTOR_APPROVAL |
-| DEC-014D | D-07 | port neutral SMS/email, sandbox y kill switch | F-011,F-012 | CUT01-C | Seguridad + Operaciones | PENDING_DIRECTOR_APPROVAL |
-| DEC-014E | D-08 | límites opacos y respuestas homogéneas; cifras sin resolver | F-012,F-027 | CUT01-C | Seguridad | PENDING_DIRECTOR_APPROVAL |
-| DEC-014F | D-09 | métricas sin PII y auditoría con política de fallo por riesgo | F-003,F-019,F-028 | CUT01-D | SRE + Seguridad | PENDING_DIRECTOR_APPROVAL |
-| DEC-014G | D-10 | medir baseline antes de umbrales y aprobar cada etapa | F-023,F-024,F-028 | CUT01-D | Dirección técnica | PENDING_DIRECTOR_APPROVAL |
-| DEC-014H | D-13 | flags false, kill switch y rollback por etapa | F-023,F-029 | CUT01-D | SRE + DBA | PENDING_DIRECTOR_APPROVAL |
-| DEC-014I | D-17 | outbox como objetivo; bridge actual contenido hasta aprobación | F-030 | CUT01-D | Clinical + Arquitectura | PENDING_DIRECTOR_APPROVAL |
+| DEC-014A | D-02 | schedule versionado por profile+consultorio y precedencia explícita | F-006 | CUT01-B | Producto Agenda + Arquitectura | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014B | D-03 | scope concreto; partición de legacy ambiguo antes de backfill | F-005,F-022 | CUT01-B | Arquitectura + Datos | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014C | D-04 | `__all__` sólo agregado; resolver o rechazar antes de write | F-026 | CUT01-B | Producto Agenda | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014D | D-07 | port neutral SMS/email, sandbox y kill switch | F-011,F-012 | CUT01-C | Seguridad + Operaciones | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014E | D-08 | límites opacos y respuestas homogéneas; cifras sin resolver | F-012,F-027 | CUT01-C | Seguridad | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014F | D-09 | métricas sin PII y auditoría con política de fallo por riesgo | F-003,F-019,F-028 | CUT01-D | SRE + Seguridad | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014G | D-10 | medir baseline antes de umbrales y aprobar cada etapa | F-023,F-024,F-028 | CUT01-D | Dirección técnica | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014H | D-13 | flags false, kill switch y rollback por etapa | F-023,F-029 | CUT01-D | SRE + DBA | APPROVED_WITH_DEFERRED_PARAMETERS |
+| DEC-014I | D-17 | outbox como objetivo; bridge actual contenido hasta aprobación | F-030 | CUT01-D | Clinical + Arquitectura | APPROVED_WITH_DEFERRED_PARAMETERS |
 
 Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:175`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:179`).
 
@@ -35,7 +43,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** habilita el contrato del adapter de lectura, no su wiring.
 - **Gate futuro:** CUT01-B.
 - **Responsable de aprobación:** Producto Agenda + Arquitectura.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014B — `consultorio_scope` y frontera de backfill
 
@@ -50,7 +59,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** define preflight y puerto de clasificación; prohíbe writes, migraciones y backfill en Actividad 10.
 - **Gate futuro:** CUT01-B para contrato; ejecución sólo en gate de datos posterior aprobado.
 - **Responsable de aprobación:** Arquitectura + Datos.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014C — Retiro seguro de `__all__`
 
@@ -65,7 +75,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** contrato de sentinel adapter y casos negativos; cero cambio actual a `__all__` o UI.
 - **Gate futuro:** CUT01-B.
 - **Responsable de aprobación:** Producto Agenda.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014D — Canal y proveedor OTP
 
@@ -80,7 +91,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** definir port y adapter rejecting; cero envío real.
 - **Gate futuro:** CUT01-C.
 - **Responsable de aprobación:** Seguridad + Operaciones.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014E — Reintentos, rate limiting y anti-enumeración
 
@@ -95,7 +107,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** contrato y pruebas deterministas; sin activar rate limits runtime.
 - **Gate futuro:** CUT01-C.
 - **Responsable de aprobación:** Seguridad.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014F — Observabilidad, audit sink y política de fallo
 
@@ -110,7 +123,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** ports/harness únicamente.
 - **Gate futuro:** CUT01-D.
 - **Responsable de aprobación:** SRE + Seguridad.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014G — Métricas y umbrales R1–R4
 
@@ -125,7 +139,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** catálogo de métricas y contratos, no activación.
 - **Gate futuro:** CUT01-D y aprobación nuevamente antes de cada R.
 - **Responsable de aprobación:** Dirección técnica.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014H — Kill switch, rollback y runbook
 
@@ -140,7 +155,8 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** contrato de kill switch y runbook; no rollback SQL en esta actividad.
 - **Gate futuro:** CUT01-D.
 - **Responsable de aprobación:** SRE + DBA.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## DEC-014I — Frontera Agenda → Clinical
 
@@ -155,10 +171,11 @@ Los mapeos D, blockers y owners proceden del registro auditado de Actividad 9 (`
 - **Impacto CUT-01:** harness y contrato; Clinical queda excluido de cambios.
 - **Gate futuro:** CUT01-D.
 - **Responsable de aprobación:** Clinical + Arquitectura.
-- **Estado:** `PENDING_DIRECTOR_APPROVAL`.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** recomendación ratificada; parámetros listados en “Información no resuelta” permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no autoriza implementación ni subgate.
 
 ## Estado del registro
 
-Decisiones propuestas: 9. Decisiones aprobadas: 0. El siguiente paso permitido es revisión directorial; Actividad 11 y la implementación de CUT-01 siguen bloqueadas (`/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/director-approval.txt:6`).
+Decisiones propuestas: 9. Decisiones aprobadas con parámetros diferidos: 9. Decisiones pendientes de aprobación arquitectónica: 0. Parámetros diferidos: presentes. Subgates aprobados: 0. Implementación CUT-01 autorizada: no. Actividad 11: bloqueada (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
 
-Hash normalizado de PP-312: `d10ba72afe2cdabcd0464e563b9293c679e77c289569ae60c9f330968af3d1ed`.
+Hash normalizado de PP-312: `b647add5d595ea4dbd8f680ef8ec038f06b582e67781b2c5d44044f763dce6ed`.

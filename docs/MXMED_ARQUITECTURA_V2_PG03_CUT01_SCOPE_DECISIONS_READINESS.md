@@ -2,9 +2,9 @@
 
 ## 1. Resumen ejecutivo
 
-Resultado documental: `PASS_ACTIVITY_10_CUT01_SCOPE_DECISIONS_READINESS_COMPLETE`. La Actividad 10 convierte CUT-01 en una propuesta implementable, pero no autoriza código, wiring, datos, SQL ni rollout (`/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/activity10-approved-contract.txt:1`, `/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/director-approval.txt:6`).
+Resultado documental: `PASS_ACTIVITY_10_CUT01_DIRECTOR_DECISIONS_RATIFICATION_COMPLETE`. Las nueve decisiones fueron ratificadas con estado `APPROVED_WITH_DEFERRED_PARAMETERS`; esta ratificación no autoriza código, wiring, datos, SQL ni rollout (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/activity10-director-decisions-approval.txt:1`, `/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
 
-Se proponen nueve decisiones, once flags y cuatro subgates; todos permanecen no aprobados. El cutover continúa `NO_GO_BLOCKERS_PRESENT` por los 13 blockers de Actividad 9 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:7`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:175`).
+Las recomendaciones arquitectónicas DEC-014A–I están ratificadas; los once flags siguen candidatos, default false, ausentes del runtime y no aprobados, y CUT01-A–D requieren autorización separada. Los 13 blockers continúan abiertos y el cutover permanece `NO_GO_BLOCKERS_PRESENT` (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:7`, `/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
 
 ## 2. Contrato aprobado de Actividad 10
 
@@ -29,27 +29,27 @@ Las fuentes cubren ambos routers, autoridad/sesión, disponibilidad, OTP, persis
 
 | Blocker | Brecha | Respuesta propuesta | Subgate | Estado |
 |---|---|---|---|---|
-| F-001 | autoridad Agenda híbrida | composition root + resolver 8B | CUT01-A | PENDING_DIRECTOR_APPROVAL |
-| F-002 | claims cliente usados como autoridad | separar input/diagnóstico de autoridad | CUT01-A | PENDING_DIRECTOR_APPROVAL |
-| F-004 | Patients sin frontera server-side | composition root Patients + Gate 6B | CUT01-A | PENDING_DIRECTOR_APPROVAL |
-| F-006 | fuentes schedule divergentes | adapter lectura + precedencia decidida | CUT01-B | PENDING_DIRECTOR_APPROVAL |
-| F-008 | lifecycle legacy divergente | adapter shadow lifecycle | CUT01-B | PENDING_DIRECTOR_APPROVAL |
-| F-009 | idempotencia durable ausente | port/store futuro, sin writes ahora | CUT01-D | PENDING_DIRECTOR_APPROVAL |
-| F-010 | claims de slot insuficientes | contrato transaccional futuro | CUT01-D | PENDING_DIRECTOR_APPROVAL |
-| F-012 | OTP raw/debug | provider port + privacidad + rate limit | CUT01-C | PENDING_DIRECTOR_APPROVAL |
-| F-013 | contacto/token claro | referencias opacas + no secrets URL/log | CUT01-C | PENDING_DIRECTOR_APPROVAL |
-| F-014 | identidad paciente no conectada | adapter shadow 8F | CUT01-A | PENDING_DIRECTOR_APPROVAL |
-| F-017 | persistencia 8G sin adapter | adapter propuesto, siempre off | CUT01-D | PENDING_DIRECTOR_APPROVAL |
-| F-018 | DDL durante request | migraciones externas y fail-closed | CUT01-C | PENDING_DIRECTOR_APPROVAL |
-| F-023 | flags/kill switch ausentes | registro cerrado default false | CUT01-D | PENDING_DIRECTOR_APPROVAL |
+| F-001 | autoridad Agenda híbrida | composition root + resolver 8B | CUT01-A | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-002 | claims cliente usados como autoridad | separar input/diagnóstico de autoridad | CUT01-A | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-004 | Patients sin frontera server-side | composition root Patients + Gate 6B | CUT01-A | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-006 | fuentes schedule divergentes | adapter lectura + precedencia decidida | CUT01-B | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-008 | lifecycle legacy divergente | adapter shadow lifecycle | CUT01-B | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-009 | idempotencia durable ausente | port/store futuro, sin writes ahora | CUT01-D | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-010 | claims de slot insuficientes | contrato transaccional futuro | CUT01-D | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-012 | OTP raw/debug | provider port + privacidad + rate limit | CUT01-C | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-013 | contacto/token claro | referencias opacas + no secrets URL/log | CUT01-C | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-014 | identidad paciente no conectada | adapter shadow 8F | CUT01-A | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-017 | persistencia 8G sin adapter | adapter propuesto, siempre off | CUT01-D | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-018 | DDL durante request | migraciones externas y fail-closed | CUT01-C | DECISION_RATIFIED_BLOCKER_OPEN |
+| F-023 | flags/kill switch ausentes | registro cerrado default false | CUT01-D | DECISION_RATIFIED_BLOCKER_OPEN |
 
 La enumeración y severidad provienen de la matriz F-001–F-030 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:82`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:175`).
 
 ## 6. Decisiones D originales
 
-CUT-01 depende de D-02, D-03, D-04, D-07, D-08, D-09, D-10, D-13 y D-17; Actividad 9 registró propósito, owner y momento, pero no aprobó ninguna (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:177`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:200`).
+CUT-01 depende de D-02, D-03, D-04, D-07, D-08, D-09, D-10, D-13 y D-17. Esas direcciones quedaron ratificadas mediante DEC-014A–I, conservando diferidos los parámetros operativos (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/activity10-director-decisions-approval.txt:5`, `/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:6`).
 
-El documento hermano propone DEC-014A–I y mantiene cada estado `PENDING_DIRECTOR_APPROVAL` (`docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:1`).
+El documento hermano registra cada decisión como `APPROVED_WITH_DEFERRED_PARAMETERS`; la implementación y los subgates continúan no autorizados (`docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:1`).
 
 ## 7. Autoridad Agenda
 
@@ -93,27 +93,27 @@ Las rutas y métodos corresponden al switch auditado (`api/patients/index.php:77
 
 El runtime busca cinco nombres de tabla, mientras el dominio canónico selecciona una versión por profile/consultorio y aplica holiday, close/open overrides, colisiones, duración y gap (`modules/agenda/repositories/ScheduleRepository.php:13`, `modules/agenda/availability/CanonicalAvailabilityCalculator.php:15`, `modules/agenda/availability/CanonicalAvailabilityCalculator.php:27`, `modules/agenda/availability/CanonicalAvailabilityCalculator.php:74`).
 
-Propuesta: adapter read-only que normaliza fuentes legacy en versiones canónicas y compara por scope/timezone/slot. La precedencia, valores y comportamiento incompleto dependen de DEC-014A; no se inventan números ni se activa autoridad canónica (`modules/agenda/controllers/AgendaSettingsController.php:88`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:34`).
+Propuesta ratificada con parámetros diferidos: adapter read-only que normaliza fuentes legacy en versiones canónicas y compara por scope/timezone/slot. La precedencia y valores siguen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; no se inventan números ni se activa autoridad canónica (`modules/agenda/controllers/AgendaSettingsController.php:88`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:34`).
 
 ## 10. Consultorio scope
 
-Todo resultado autoritativo debe tener profile y consultorio concretos; registros sin sede se particionan como `unscoped` o `ambiguous`, sin asignación automática. Volumen, owner y reglas de backfill siguen sin resolver y requieren una actividad DB separada (`modules/agenda/availability/AvailabilityCalculationRequest.php:23`, `modules/patients/identity/persistence/PatientIdentityBackfillPlan.php:18`).
+La decisión ratificada con parámetros diferidos exige profile y consultorio concretos; registros sin sede se particionan como `unscoped` o `ambiguous`, sin asignación automática. Volumen, owner y reglas de backfill siguen `UNRESOLVED_PENDING_PARAMETER_APPROVAL` y requieren una actividad DB separada (`modules/agenda/availability/AvailabilityCalculationRequest.php:23`, `modules/patients/identity/persistence/PatientIdentityBackfillPlan.php:18`).
 
 ## 11. Sentinel `__all__`
 
-Waitlist define `__all__` para scope agregado y ya prohíbe usarlo como consultorio de asignación (`modules/agenda/controllers/WaitlistController.php:21`, `modules/agenda/controllers/WaitlistController.php:233`). La propuesta conserva consultas agregadas, pero obliga a resolver un consultorio real antes de claim/cita/write o rechaza fail-closed; no se cambia runtime ni UI en esta actividad.
+Waitlist define `__all__` para scope agregado y ya prohíbe usarlo como consultorio de asignación (`modules/agenda/controllers/WaitlistController.php:21`, `modules/agenda/controllers/WaitlistController.php:233`). La decisión ratificada con parámetros diferidos conserva consultas agregadas, pero obliga a resolver un consultorio real antes de claim/cita/write o rechaza fail-closed; no se cambia runtime ni UI en esta actividad.
 
 ## 12. OTP y privacidad
 
 El sender dev registra OTP raw y destinatario, el flow persiste contacto claro y el controller posee caminos de debug; esto sustenta F-012/F-013 (`modules/agenda/services/OtpSender.php:18`, `modules/agenda/controllers/PublicAppointmentsController.php:139`, `modules/agenda/controllers/PublicOtpController.php:123`).
 
-Se propone provider port neutral SMS/email, sandbox aislado, secreto sólo en frontera de entrega, challenge/referencias opacas, rate-limit HMAC, respuestas homogéneas, replay deny, rotación, health y kill switch. Proveedor, límites y ventanas continúan pendientes (`modules/agenda/contracts/PublicOtpContract.php:17`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:98`).
+La decisión ratificada con parámetros diferidos adopta provider port neutral SMS/email, sandbox aislado, secreto sólo en frontera de entrega, challenge/referencias opacas, rate-limit HMAC, respuestas homogéneas, replay deny, rotación, health y kill switch. Proveedor, canal, límites y ventanas siguen `UNRESOLVED_PENDING_PARAMETER_APPROVAL` (`modules/agenda/contracts/PublicOtpContract.php:17`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:98`).
 
 ## 13. Observabilidad
 
 Métricas propuestas sin PII: allow/deny reason, authority mismatch, schedule/slot diff, lifecycle diff, OTP outcome, identity outcome, audit failure, rollback, latency buckets, checkpoint lag y reconciliation delta; Gate 8G ya declara un subconjunto sin activarlo (`modules/patients/identity/persistence/PatientIdentityRolloutPolicy.php:10`).
 
-Cada señal requiere correlation ID opaco, owner/on-call, dashboard, alerta, health/readiness y retención aprobada. Emisión de métrica puede fallar abierta con alerta; auditoría de autoridad/write debe fallar cerrada; shadow read queda sujeto a matriz de riesgo (`modules/platform/contracts/AuditTrailPort.php:7`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:122`).
+La decisión ratificada con parámetros diferidos exige correlation ID opaco, owner/on-call, dashboard, alerta, health/readiness y retención aprobada. Emisión de métrica puede fallar abierta con alerta; auditoría de autoridad/write debe fallar cerrada; sink, retención y owners siguen `UNRESOLVED_PENDING_PARAMETER_APPROVAL` (`modules/platform/contracts/AuditTrailPort.php:7`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:122`).
 
 ## 14. Métricas R0–R4
 
@@ -125,37 +125,37 @@ Cada señal requiere correlation ID opaco, owner/on-call, dashboard, alerta, hea
 | R3 | equality/diff, stale read, fallback, reconcile | datos ensayados | delta fuera de umbral |
 | R4 | writes, conflicts, idempotency, rollback, data reconcile | autorización expresa | corrupción, doble reserva o privacy incident |
 
-Las etapas declarativas son R0 disabled, R1 shadow, R2 audit_only, R3 read_compare y R4 enabled (`modules/patients/identity/persistence/PatientIdentityRolloutPolicy.php:8`). Todos los percentiles, porcentajes y duraciones quedan `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`.
+Las etapas declarativas son R0 disabled, R1 shadow, R2 audit_only, R3 read_compare y R4 enabled (`modules/patients/identity/persistence/PatientIdentityRolloutPolicy.php:8`). La decisión fue ratificada con parámetros diferidos; percentiles, porcentajes, error budgets y ventanas quedan `UNRESOLVED_PENDING_PARAMETER_APPROVAL`.
 
 ## 15. Rollback
 
 Todos los flags son server-side default false. R1/R2 regresan a R0; R3 retorna lectura legacy; R4 detiene writes canónicos, preserva snapshot/checkpoint y exige reconciliación/runbook antes de reintento. Revert Git no sustituye rollback de datos y se prohíben reset/force-push (`docs/MXMED_PLAN_V2_PG03_RUNTIME_CUTOVER_GATES.md:124`).
 
-Actividad 10 no ejecuta rollback SQL ni define RTO/RPO; esos datos requieren fuente y aprobación (`/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/safe-return-points.txt:1`).
+La decisión de rollback fue ratificada con parámetros diferidos. Actividad 10 no ejecuta rollback SQL; RTO/RPO, snapshot y reconciliación quedan `UNRESOLVED_PENDING_PARAMETER_APPROVAL` (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:6`).
 
 ## 16. Clinical boundary
 
 El contrato canónico separa cita de encounter. Hoy Agenda hace commit y después invoca un bridge opcional; el bridge consulta por `appointment_id`, realiza POST si falta y el repositorio captura/loguea errores (`modules/agenda/contracts/AppointmentLifecycleContract.php:40`, `modules/agenda/repositories/AppointmentWriteRepository.php:90`, `modules/agenda/services/ClinicalEncounterBridge.php:44`, `modules/agenda/repositories/AppointmentWriteRepository.php:868`).
 
-Opciones: bridge actual contenido; transactional outbox; saga; transacción distribuida. Se recomienda outbox sujeto a aprobación, con evento propiedad de Agenda, `appointment_id` idempotente, orden por agregado, retries/DLQ y observabilidad. Saga sólo con compensaciones aprobadas; transacción distribuida no se recomienda sin soporte real. CUT-01 excluye cambios Clinical (`docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md:1`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:145`).
+La decisión ratificada con parámetros diferidos recomienda outbox sujeto a autorización de implementación, con evento propiedad de Agenda, `appointment_id` idempotente, orden por agregado, retries/DLQ y observabilidad. Esquema, retries, DLQ, retención y compensaciones quedan `UNRESOLVED_PENDING_PARAMETER_APPROVAL`; CUT-01 excluye cambios Clinical (`docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md:1`, `docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:145`).
 
 ## 17. Feature flags candidatos
 
-Los once nombres forman un registro cerrado propuesto. Ninguno existe, está aprobado o se implementa; todos tienen default exacto `false` (`docs/MXMED_PLAN_V2_PG03_RUNTIME_CUTOVER_GATES.md:25`).
+Los once nombres forman un registro cerrado candidato. Todos continúan `default=false`, `implemented=false`, `approved=false` y `runtime absent`; ratificar una decisión no aprueba ni crea su flag (`docs/MXMED_PLAN_V2_PG03_RUNTIME_CUTOVER_GATES.md:25`, `/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
 
 | Flag | Propósito / owner | Default | Scope / R0–R4 | Dependencias / datos | Métricas / failure mode | Kill switch / rollback | Rutas elegibles / exclusiones | Decisión |
 |---|---|---|---|---|---|---|---|---|
-| `canonical_actor_authority` | autoridad; Identity+Agenda | false | profile+consultorio; shadow R1, enforce sólo R4 | sesión/membership; IDs opacos | mismatch/deny; unknown deny | off→legacy | 41 Agenda+8 Patients; no públicas | DEC-014F/H pendiente |
-| `canonical_schedule_read` | horario; Agenda | false | profile+consultorio; compare R1–R3 | schedules | schedule diff; fallback | off→legacy read | schedule/settings; no writes | DEC-014A pendiente |
-| `canonical_availability_compare` | slots; Agenda+SRE | false | scope+date; compare R1–R3 | schedule/override/holiday/collision | slot diff; fail-open shadow | off→sin compare | availability pública/privada; no respuesta canonical | DEC-014A/G pendiente |
-| `canonical_appointment_lifecycle` | lifecycle; Agenda | false | scope; shadow R1–R3 | citas/eventos/idempotencia | transition/conflict; deny unknown | off→legacy | writes cita; no Clinical | DEC-014H/I pendiente |
-| `canonical_public_agenda` | flow público; Security+Agenda | false | profile+consultorio; R1 shadow/R4 | challenge/contact opacos | OTP/replay/privacy; fail-closed secret | off→legacy/disable | 9 públicas; excluye maintenance dev | DEC-014D/E pendiente |
-| `canonical_patient_identity` | resolución; Patients | false | profile+consultorio; R1–R3 compare | digests/candidatos | outcome/ambiguity; review | off→legacy resolver | 8 Patients; merge excluido | DEC-014B/F pendiente |
-| `patient_identity_persistence` | persistencia; Patients+DBA | false | scope; R0–R2 off, R3 compare, R4 | cuatro tablas 8G | tx/audit/idempotency; fail-closed write | stop writes→legacy read | adapter interno; no migración automática | DEC-014H pendiente |
-| `legacy_write_disable` | contención; Arquitectura | false | segmento; sólo R4 | rutas write | attempts/deny; unknown deny | false tras reconcile | writes aprobados; no big-bang | DEC-014G/H pendiente |
-| `shadow_audit` | auditoría; SRE+Security | false | scope; R1–R4 | audit sink | append/failure; policy por riesgo | off→no shadow | evaluación canonical; sin PII | DEC-014F pendiente |
-| `read_compare` | dual read; SRE | false | scope; sólo R3 | legacy+canonical reads | equality/latency; respuesta legacy | off→legacy only | reads aprobados; no writes | DEC-014G/H pendiente |
-| `backfill` | batch; Data+DBA | false | dataset/scope; rehearsal y producción separados | snapshot/checkpoint | lag/error/reconcile; abort | stop/preserve checkpoint/restore | job externo; nunca request | DEC-014B/H pendiente |
+| `canonical_actor_authority` | autoridad; Identity+Agenda | false | profile+consultorio; shadow R1, enforce sólo R4 | sesión/membership; IDs opacos | mismatch/deny; unknown deny | off→legacy | 41 Agenda+8 Patients; no públicas | DEC-014F/H RATIFIED · FLAG NOT AUTHORIZED |
+| `canonical_schedule_read` | horario; Agenda | false | profile+consultorio; compare R1–R3 | schedules | schedule diff; fallback | off→legacy read | schedule/settings; no writes | DEC-014A RATIFIED · FLAG NOT AUTHORIZED |
+| `canonical_availability_compare` | slots; Agenda+SRE | false | scope+date; compare R1–R3 | schedule/override/holiday/collision | slot diff; fail-open shadow | off→sin compare | availability pública/privada; no respuesta canonical | DEC-014A/G RATIFIED · FLAG NOT AUTHORIZED |
+| `canonical_appointment_lifecycle` | lifecycle; Agenda | false | scope; shadow R1–R3 | citas/eventos/idempotencia | transition/conflict; deny unknown | off→legacy | writes cita; no Clinical | DEC-014H/I RATIFIED · FLAG NOT AUTHORIZED |
+| `canonical_public_agenda` | flow público; Security+Agenda | false | profile+consultorio; R1 shadow/R4 | challenge/contact opacos | OTP/replay/privacy; fail-closed secret | off→legacy/disable | 9 públicas; excluye maintenance dev | DEC-014D/E RATIFIED · FLAG NOT AUTHORIZED |
+| `canonical_patient_identity` | resolución; Patients | false | profile+consultorio; R1–R3 compare | digests/candidatos | outcome/ambiguity; review | off→legacy resolver | 8 Patients; merge excluido | DEC-014B/F RATIFIED · FLAG NOT AUTHORIZED |
+| `patient_identity_persistence` | persistencia; Patients+DBA | false | scope; R0–R2 off, R3 compare, R4 | cuatro tablas 8G | tx/audit/idempotency; fail-closed write | stop writes→legacy read | adapter interno; no migración automática | DEC-014H RATIFIED · FLAG NOT AUTHORIZED |
+| `legacy_write_disable` | contención; Arquitectura | false | segmento; sólo R4 | rutas write | attempts/deny; unknown deny | false tras reconcile | writes aprobados; no big-bang | DEC-014G/H RATIFIED · FLAG NOT AUTHORIZED |
+| `shadow_audit` | auditoría; SRE+Security | false | scope; R1–R4 | audit sink | append/failure; policy por riesgo | off→no shadow | evaluación canonical; sin PII | DEC-014F RATIFIED · FLAG NOT AUTHORIZED |
+| `read_compare` | dual read; SRE | false | scope; sólo R3 | legacy+canonical reads | equality/latency; respuesta legacy | off→legacy only | reads aprobados; no writes | DEC-014G/H RATIFIED · FLAG NOT AUTHORIZED |
+| `backfill` | batch; Data+DBA | false | dataset/scope; rehearsal y producción separados | snapshot/checkpoint | lag/error/reconcile; abort | stop/preserve checkpoint/restore | job externo; nunca request | DEC-014B/H RATIFIED · FLAG NOT AUTHORIZED |
 
 ## 18. Retiro futuro de DDL durante requests
 
@@ -171,9 +171,11 @@ Los once nombres forman un registro cerrado propuesto. Ninguno existe, está apr
 
 Las llamadas y sentencias existen en métodos alcanzables (`modules/agenda/repositories/AgendaSettingsRepository.php:16`, `modules/agenda/repositories/ConsultoriosRepository.php:262`, `modules/agenda/repositories/MedicalGroupsRepository.php:205`, `modules/agenda/repositories/MedicalGroupMembershipsRepository.php:155`, `modules/agenda/repositories/MedicalGroupReviewLogRepository.php:83`, `modules/agenda/controllers/PublicAppointmentsController.php:1038`, `modules/agenda/controllers/PublicAppointmentsController.php:1705`). Las rutas se documentaron en el switch activo (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:62`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:65`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:74`).
 
+La ratificación no autoriza retirar DDL, crear migraciones ni ejecutar SQL; los siete componentes conservan su plan funcional sin implementación (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
+
 ## 19. Inventario propuesto de implementación
 
-La inspección produce una propuesta de 42 archivos versionados: 26 nuevos, 16 modificados y, dentro de los nuevos, 10 pruebas y 4 documentos. Es un alcance candidato, no autorización.
+La inspección produce una propuesta de 42 archivos versionados: 26 nuevos, 16 modificados y, dentro de los nuevos, 10 pruebas y 4 documentos. El inventario continúa candidato y no autorizado pese a la ratificación (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
 
 | Archivo propuesto | Acción | Motivo / componente | Decisión / flag | Riesgo | UI | Dependencia | Rollback |
 |---|---|---|---|---|---|---|---|
@@ -229,54 +231,56 @@ Exclusiones del inventario: SQL/migraciones productivas, cambios `assets/js`, Cl
 ### CUT01-A — Authority composition roots
 
 - **Objetivo:** roots Agenda/Patients con sesión, membership, ownership, Gate 6B y flags false.
-- **Prerrequisitos/decisiones:** DEC-014F/H y threat model aprobados.
+- **Prerrequisitos/decisiones:** DEC-014F/H ratificadas; parámetros de owner/failure policy por fijar; autorización separada de CUT01-A.
 - **Archivos propuestos:** ambos composition roots, routers y dos pruebas A.
 - **Inclusiones/exclusiones:** authority shadow; sin cambios de respuesta, ruta o UI.
 - **Pruebas/PASS:** matriz 49 rutas, deny mismatch, flags false y cero side effects.
 - **Rollback/bloqueo:** apagar flag+revert; bloquea B si autoridad no es fail-closed.
 
-La brecha corresponde a F-001/F-002/F-004 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:84`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:87`). Estado: `PENDING_DIRECTOR_APPROVAL`.
+La brecha corresponde a F-001/F-002/F-004 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:84`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:87`). Estado: `PENDING_SEPARATE_AUTHORIZATION`; approved=false.
 
 ### CUT01-B — Schedule, scope and sentinel adapters
 
 - **Objetivo:** adapter schedule read, consultorio scope y `__all__`, sin activar precedencia nueva.
-- **Prerrequisitos/decisiones:** DEC-014A–C aprobadas y A PASS.
+- **Prerrequisitos/decisiones:** DEC-014A–C ratificadas; precedencia/timezone/scope por fijar; autorización separada de CUT01-B y CUT01-A PASS.
 - **Archivos propuestos:** adapters schedule/availability, controllers y prueba B.
 - **Inclusiones/exclusiones:** compare read-only; no writes ni retiro UI/localStorage.
 - **Pruebas/PASS:** paridad por scope/timezone, incomplete fail-closed, sentinel nunca write.
 - **Rollback/bloqueo:** flags off+legacy read; bloquea C ante scope ambiguo.
 
-La brecha corresponde a F-006/F-026 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:89`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:109`). Estado: `PENDING_DIRECTOR_APPROVAL`.
+La brecha corresponde a F-006/F-026 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:89`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:109`). Estado: `PENDING_SEPARATE_AUTHORIZATION`; approved=false.
 
 ### CUT01-C — OTP, DDL containment and privacy boundaries
 
 - **Objetivo:** provider port, rate-limit contract y retiro planificado de DDL on-request con cero OTP real.
-- **Prerrequisitos/decisiones:** DEC-014D/E/H, Security y migraciones externas aprobadas.
+- **Prerrequisitos/decisiones:** DEC-014D/E/H ratificadas; proveedor/límites/ventanas por fijar; autorización separada de CUT01-C, migraciones externas autorizadas y CUT01-A/B PASS.
 - **Archivos propuestos:** OTP ports/controllers/sender, seis componentes DDL y tres pruebas C.
 - **Inclusiones/exclusiones:** rejecting/sandbox harness; no provider real, DB ni UI.
 - **Pruebas/PASS:** no raw OTP/PII, respuestas homogéneas, request sin DDL, flags false.
 - **Rollback/bloqueo:** public kill switch+revert; bloquea D si schema/error contract no es seguro.
 
-La brecha corresponde a F-012/F-013/F-018 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:95`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:101`). Estado: `PENDING_DIRECTOR_APPROVAL`.
+La brecha corresponde a F-012/F-013/F-018 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:95`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:101`). Estado: `PENDING_SEPARATE_AUTHORIZATION`; approved=false.
 
 ### CUT01-D — Observability and Clinical boundary harness
 
 - **Objetivo:** métricas, audit sink, kill switches y harness Clinical; outbox/saga sólo si se aprueba.
-- **Prerrequisitos/decisiones:** DEC-014F–I, A–C PASS y owners/on-call.
+- **Prerrequisitos/decisiones:** DEC-014F–I ratificadas; sink/SLO/RTO-RPO/Clinical parameters por fijar; autorización separada de CUT01-D y CUT01-A–C PASS.
 - **Archivos propuestos:** observability/flags ports, persistence/lifecycle adapters y cuatro pruebas D.
 - **Inclusiones/exclusiones:** harness R0; no Clinical runtime, writes, migration o rollout.
 - **Pruebas/PASS:** failure policy, once flags false, rollback contract, idempotency/orden simulados.
 - **Rollback/bloqueo:** todo off+revert; Actividad 11 bloqueada hasta PASS y aprobación separada.
 
-La brecha corresponde a F-009/F-010/F-017/F-023/F-030 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:92`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:100`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:113`). Estado: `PENDING_DIRECTOR_APPROVAL`.
+La brecha corresponde a F-009/F-010/F-017/F-023/F-030 (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:92`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:100`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:113`). Estado: `PENDING_SEPARATE_AUTHORIZATION`; approved=false.
 
 ## 21. Riesgos
 
 Riesgos principales: elevación por claims cliente, scope cruzado, divergencia schedule, doble reserva, OTP/PII, DDL en request, auditoría incompleta, rollback sin reconciliación y pérdida de evento Clinical. Todos aparecen en la matriz auditada y ninguno se cierra documentalmente (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:84`, `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:113`).
 
-## 22. Decisiones pendientes
+## 22. Parámetros y autorizaciones pendientes
 
-DEC-014A–I requieren aprobación de sus owners. No se fijan valores numéricos de horario, rate limit, percentiles, porcentajes, ventanas, retención, RTO/RPO ni volumen (`docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:15`).
+Decisiones arquitectónicas aprobadas con parámetros diferidos: 9. Parámetros cerrados sin evidencia: 0. Subgates autorizados: 0. Implementación CUT-01 autorizada: no (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:1`).
+
+Permanecen `UNRESOLVED_PENDING_PARAMETER_APPROVAL`: duración/gap; timezone; precedencia global/sede; reglas/volumen sin consultorio; owner/ventana de backfill; proveedor/canal/SLA/jurisdicción/residencia OTP; intentos/ventanas/bloqueo/expiración; sink/retención/owners/on-call/SLO; p95/p99/porcentajes/error budgets/ventanas; RTO/RPO/snapshot/reconciliación; esquema Clinical/retries/DLQ/retención/compensaciones (`docs/MXMED_DECISIONES_PROPUESTAS_V2_PG03_CUT01.md:15`).
 
 ## 23. Safe return
 
@@ -289,8 +293,10 @@ Conexiones DB, migraciones, SQL, datos, OTP, citas, pacientes, merges, backfill,
 ## 25. Estado final
 
 - Actividad 9: `CLOSED_AND_INTEGRATED`; el paquete de integración registra el commit en programa (`/tmp/mxmed-activity09-integration-v2-r2/qa-result.json:1`).
-- Actividad 10: `SCOPE_REVIEW_COMPLETE_READY_FOR_DIRECTOR_DECISIONS_NOT_INTEGRATED`.
-- Actividad 11: `BLOCKED`; implementación CUT-01 no autorizada (`/tmp/mxmed-activity10-cut01-scope-decisions-readiness-preflight-v2/director-approval.txt:6`).
-- Contador: `9/22`; pendientes: `13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness `NO_GO_LEGACY_BLOCKERS_PRESENT` (`docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md:202`).
+- Actividad 10: `DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_QA_NOT_INTEGRATED`.
+- Actividad 11: `BLOCKED`; implementación CUT-01 no autorizada (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/approval-boundaries.txt:15`).
+- Contador: `9/22`; pendientes: `13`.
+- CUT01-A–D: `PENDING_SEPARATE_AUTHORIZATION`.
+- Cutover: `NO_GO_BLOCKERS_PRESENT`; readiness: `NO_GO_LEGACY_BLOCKERS_PRESENT`; rollout: `R0 disabled` (`/tmp/mxmed-activity10-cut01-director-decisions-approval-preflight-v2/activity10-postvalidation-baseline.txt:1`).
 
-Hash normalizado de PP-312: `d10ba72afe2cdabcd0464e563b9293c679e77c289569ae60c9f330968af3d1ed`.
+Hash normalizado de PP-312: `b647add5d595ea4dbd8f680ef8ec038f06b582e67781b2c5d44044f763dce6ed`.

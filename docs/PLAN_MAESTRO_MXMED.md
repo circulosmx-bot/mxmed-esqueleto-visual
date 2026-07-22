@@ -2484,3 +2484,11 @@ Entregables: `docs/MXMED_ARQUITECTURA_V2_PG03_CUT01_SCOPE_DECISIONS_READINESS.md
 Se auditaron 72 fuentes y verificaron 103 referencias únicas `ruta:línea`. Evidencia temporal: `/tmp/mxmed-activity10-cut01-scope-decisions-readiness-v2/`, con ocho JSON y cuatro TXT.
 
 Impacto: cero código/runtime, configuración, rutas, PHP, SQL, DB, conexiones, migraciones, datos, OTP, citas, pacientes, merges y backfill; R0 disabled; R1–R4 inactivos; cero UI, Clinical y AWS. Actividad 10 no integrada; Actividad 11 bloqueada; contador 9/22; pendientes 13; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+Ratificación directorial: fecha 2026-07-22; identificador `ARCH/MXMed-PG03-CUT01-Director-Decisions-Approval-01`.
+
+Apruebo DEC-014A, DEC-014B, DEC-014C, DEC-014D, DEC-014E, DEC-014F, DEC-014G, DEC-014H y DEC-014I conforme a las recomendaciones postvalidadas, manteniendo pendientes los valores numéricos, proveedores, umbrales y parámetros que requieren aprobación posterior.
+
+DEC-014A–I quedan `APPROVED_WITH_DEFERRED_PARAMETERS`: decisiones aprobadas 9; decisiones arquitectónicas pendientes 0; parámetros diferidos presentes. Feature flags implementados 0 y autorizados 0; subgates aprobados 0; implementación autorizada false; el inventario de 42 archivos continúa candidato; CUT01-A–D requieren autorización separada.
+
+Actividad 10 no integrada; Actividad 11 bloqueada; contador 9/22; pendientes 13; R0 disabled; R1–R4 inactivos. Cero DB, SQL, migraciones, datos, OTP, citas, pacientes, merges y backfill; cero runtime, rutas, UI, Clinical y AWS. Cutover `NO_GO_BLOCKERS_PRESENT`; readiness `NO_GO_LEGACY_BLOCKERS_PRESENT`.
