@@ -2456,3 +2456,17 @@ Pruebas y evidencia: agregar Gate8GPatientIdentityPersistenceMigrationTest.php p
 Control Git y retorno seguro: la implementación futura tendrá 17 archivos en alcance (16 nuevos y 1 modificado): 8 SQL, 7 PHP —incluido un test— y 2 documentos —incluido este Plan Maestro—. Un commit atómico requerirá árbol limpio, upstream 0/0, pruebas en verde, inventario exacto y evidencia temporal válida. El retorno seguro consiste en revertir ese único commit; los rollback SQL se declaran en orden 04, 03, 02, 01 y sólo podrían ejecutarse mediante una operación de base de datos autorizada fuera de este gate.
 
 Estado esperado al cerrar la revisión de alcance: Gate 8F permanece POSTVALIDATED; Gate 8G queda SCOPE_REVIEW_COMPLETE_READY_FOR_IMPLEMENTATION; Actividad 8 continúa IN_PROGRESS; Actividad 9 continúa BLOCKED; el contador permanece 7/22, con 15 pendientes y readiness NO_GO_LEGACY_BLOCKERS_PRESENT. La revisión termina con cero cambios versionados, cero commits, cero SQL ejecutado, cero conexiones de base de datos, cero datos tocados y cero runtime activado.
+
+### PP-311 — Actividad 9: auditoría de preparación de cutover runtime PG-03
+
+Fecha: 2026-07-22. Identificador aprobado: `AUDIT/MXMed-PG03-Runtime-Cutover-Readiness-01`. La actividad cuenta con aprobación directorial explícita y clasificación UI-0.
+
+Baseline: `4072dff286bcf0de05e845f4eb9cf354c059b028`; checkpoint de Actividad 8: `checkpoint/mxmed-product-refinement-v2-activity08`, resuelto al mismo commit. El objetivo fue confrontar los contratos canónicos postvalidados en Gates 8A–8G con el runtime legacy de Agenda y Patients antes de cualquier wiring, migración, backfill, cutover o rollout. La auditoría fue estrictamente read-only respecto de runtime y datos.
+
+Fuentes auditadas: contratos, dominio puro, pruebas y documentos de Gates 8A–8G; routers `api/agenda/index.php` y `api/patients/index.php`; UI Agenda; controllers, services, repositories, configuración y schemas declarativos de Agenda y Patients; shell `index.html`, JavaScript alcanzado y mapas/documentación legacy. Se verificaron 58 rutas: 49 privadas y 9 públicas.
+
+Hallazgos: 13 BLOCKER, 11 HIGH, 4 MEDIUM, 1 LOW y 1 INFORMATIONAL. Quedan 18 decisiones directoriales pendientes. La clasificación de cutover es `NO_GO_BLOCKERS_PRESENT`; el readiness general del programa permanece `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+Entregables: `docs/MXMED_AUDITORIA_V2_PG03_RUNTIME_CUTOVER_READINESS.md` y `docs/MXMED_PLAN_V2_PG03_RUNTIME_CUTOVER_GATES.md`. Evidencia temporal: `/tmp/mxmed-activity09-runtime-cutover-readiness-audit-v2/`, con diez JSON y cuatro TXT. CUT-01 a CUT-05 son una propuesta no aprobada y no constituyen autorización ni inicio de Actividad 10.
+
+Impacto: cero SQL ejecutado; cero conexiones DB; cero migraciones; cero escrituras de datos; cero OTP reales; cero citas reales; cero pacientes reales; cero merges; cero backfill; rollout R0 disabled; cero runtime wiring; cero cambios de comportamiento de rutas; cero UI; cero AWS. Actividad 9 queda auditada pero no integrada. Actividad 10 permanece bloqueada. Contador oficial 8/22; pendientes 14; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`.
