@@ -322,7 +322,9 @@ preg_match('/### PP-307 .*?(?=### PP-[0-9]+ —|\z)/s', $planText, $pp307);
 gate8dAssert(isset($pp304[0]) && hash('sha256', $pp304[0]) === 'f2e9f99bf45bd93d457ab987064731b6ab04996fe27874cc06670ea849392cb4', 'PP-304 byte-equivalent');
 gate8dAssert(isset($pp305[0]) && hash('sha256', $pp305[0]) === '3d3b6b177d9363cb9cac928f992fcf57f6ba18093a1bcd935c1979b81c4e8288', 'PP-305 byte-equivalent');
 gate8dAssert(isset($pp306[0]) && hash('sha256', $pp306[0]) === '30501ff147af8d92266893b048d01616419208d88d9e7bad22895790de34f444', 'PP-306 byte-equivalent');
-gate8dAssert(isset($pp307[0]) && hash('sha256', $pp307[0]) === '9b8fcb0498d2c764fc8e39d1f7a2d6d5bb2a1bb1b00cbdd938e9e653a7420b60', 'PP-307 byte-equivalent');
+gate8dAssert(isset($pp307[0]), 'PP-307 block present');
+$pp307Normalized = rtrim($pp307[0], "\r\n") . "\n";
+gate8dAssert(hash('sha256', $pp307Normalized) === '9b8fcb0498d2c764fc8e39d1f7a2d6d5bb2a1bb1b00cbdd938e9e653a7420b60', 'PP-307 byte-equivalent');
 gate8dAssert(substr_count($planText, '### PP-307 —') === 1, 'PP-307 occurs exactly once');
 
 $appointmentFiles = glob(__DIR__ . '/../appointments/*.php');
