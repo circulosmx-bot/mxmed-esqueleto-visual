@@ -2430,3 +2430,29 @@ Estado final:
 Gate 8F `IMPLEMENTED_READY_FOR_POSTVALIDATION`; Gate 8G `NOT_STARTED`; Actividad
 8 `IN_PROGRESS`; Actividad 9 `BLOCKED`; contador 7/22; readiness
 `NO_GO_LEGACY_BLOCKERS_PRESENT`. No iniciar Gate 8G.
+
+### PP-310 — Gate 8G: persistencia aditiva de identidad y rollout deshabilitado
+
+Objetivo: incorporar, en una implementación futura y separada de esta revisión, contratos declarativos de persistencia para la resolución de identidad de pacientes definida y postvalidada en Gate 8F. El alcance es de backend/base de datos; no agrega UI y conserva intactos los módulos Clinical y la persistencia existente.
+
+Baseline obligatorio: partir del HEAD postvalidado de Gate 8F y conservar la cadena verificada de Gate 8E y Gate 8F. Antes de implementar se debe volver a comprobar limpieza, upstream 0/0, ausencia de REVERT_HEAD y disponibilidad del bundle de retorno seguro.
+
+Alcance de base de datos: agregar cuatro tablas nuevas, sin ALTER de tablas existentes y sin modificar ready_schema.sql: patient_identity_resolutions, patient_identity_audit_events, patient_identity_legacy_links y patient_identity_backfill_checkpoints. Las migraciones serán ocho archivos declarativos (cuatro create/rollback), InnoDB, utf8mb4, utf8mb4_unicode_ci, sin seed y sin ejecución automática. No habrá claves foráneas hacia patients_patients; la integridad se verificará mediante índices, restricciones y el adaptador futuro.
+
+Auditoría: usar una tabla específica de identidad, append-only, con secuencia por stream, event_id único y cadena previous_hash/event_hash. La tabla platform_audit_events aporta el patrón, pero no se reutiliza porque su envelope protegido no admite el conjunto cerrado de metadatos y resultados de Gate 8F sin cambiar contratos existentes. Se prohíben UPDATE y DELETE mediante triggers y sólo se almacenan referencias opacas o digests, nunca contacto, atributos de identidad o payload clínico en claro.
+
+Idempotencia y concurrencia: request_fingerprint será la clave durable; operation_reference será único; la referencia legacy tendrá un lock digest generado, nullable y único. El adaptador futuro deberá bloquear en el orden resolution_fingerprint, legacy_reference, candidate_set, audit_stream, volver a comparar candidate_set_digest, reproducir resultados completados y escribir resolución y auditoría en la misma transacción. Los estados de transacción serán processing, completed y failed. Cualquier fallo abortará y hará rollback; no se habilita merge automático.
+
+Contratos PHP: agregar exactamente PatientIdentityPersistencePolicy, PatientIdentityPersistenceManifest, PatientIdentityRetentionPolicy, PatientIdentityBackfillPlan, PatientIdentityRolloutPolicy y PatientIdentityPersistencePort en modules/patients/identity/persistence/. Son contratos declarativos; este gate no agrega PDO, SQL embebido, adaptador concreto, wiring de runtime ni activación funcional.
+
+Retención: los eventos de auditoría y vínculos legacy son durables sin purge. La duración de resoluciones/idempotencia y checkpoints queda como UNRESOLVED_PENDING_POLICY_APPROVAL. No se inventará TTL numérico y purge, archive y delete automáticos permanecerán deshabilitados hasta una aprobación posterior.
+
+Backfill: declarar un plan determinista, reanudable, idempotente y limitado por lotes con las etapas preflight, external_snapshot_backup, shadow_scan, batched_read, trusted_adapter_digest, candidate_resolution, no_match_partition, review_queue_partition, idempotency_check, append_audit, persist_checkpoint, reconciliation, emit_metrics y abort_or_rollback. Gate 8G no ejecuta backfill, no borra datos, no hace merge, no modifica Clinical y no conserva PII en checkpoints.
+
+Rollout: declarar R0=disabled, R1=shadow, R2=audit_only, R3=read_compare y R4=enabled. Gate 8G sólo deja R0 disabled como estado inicial; no activa R1-R4. Cada transición requiere aprobación, métricas y postvalidación separadas.
+
+Pruebas y evidencia: agregar Gate8GPatientIdentityPersistenceMigrationTest.php para validar estáticamente convenciones SQL, pares up/down, privacidad, append-only, idempotencia, locks, retención no inventada, backfill declarativo, rollout deshabilitado y ausencia de dependencias de base de datos en el test. Documentar implementación, rollback y retorno seguro en docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_IDENTIDAD.md. No declarar PASS si falta un archivo, si se ejecutó SQL, si existe wiring de runtime, si se activa rollout o si aparece una ruta de merge.
+
+Control Git y retorno seguro: la implementación futura tendrá 17 archivos en alcance (16 nuevos y 1 modificado): 8 SQL, 7 PHP —incluido un test— y 2 documentos —incluido este Plan Maestro—. Un commit atómico requerirá árbol limpio, upstream 0/0, pruebas en verde, inventario exacto y evidencia temporal válida. El retorno seguro consiste en revertir ese único commit; los rollback SQL se declaran en orden 04, 03, 02, 01 y sólo podrían ejecutarse mediante una operación de base de datos autorizada fuera de este gate.
+
+Estado esperado al cerrar la revisión de alcance: Gate 8F permanece POSTVALIDATED; Gate 8G queda SCOPE_REVIEW_COMPLETE_READY_FOR_IMPLEMENTATION; Actividad 8 continúa IN_PROGRESS; Actividad 9 continúa BLOCKED; el contador permanece 7/22, con 15 pendientes y readiness NO_GO_LEGACY_BLOCKERS_PRESENT. La revisión termina con cero cambios versionados, cero commits, cero SQL ejecutado, cero conexiones de base de datos, cero datos tocados y cero runtime activado.
