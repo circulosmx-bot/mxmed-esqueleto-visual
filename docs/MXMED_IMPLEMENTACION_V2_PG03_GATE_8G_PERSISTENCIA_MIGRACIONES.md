@@ -10,7 +10,7 @@ Clasificación: UI-0. Gate 8G agrega únicamente contratos PHP puros, SQL declar
 
 La implementación parte del HEAD Gate 8F postvalidado `b807f58585966936ed62c29c59025734d7295b0f`, sobre la cadena protegida `b807f585 → f4b8f068 → 64c698aa → 3877e260`. El preflight Gate 8G pasó su manifiesto completo y el scope review original concluyó `PASS_ACTIVITY_8_GATE_8G_SCOPE_REVIEW_READY_FOR_IMPLEMENTATION`.
 
-La primera implementación fue detenida correctamente por `BLOCKED_ACTIVITY_8_GATE_8G_PERSISTENCE_MIGRATION_IMPLEMENTATION`. `CORR-001` fijó la ruta canónica de este documento como `docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_MIGRACIONES.md` y descartó `docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_IDENTIDAD.md`. `CORR-002` completó el inventario del Manifest y los contratos de preservación del runtime, rollout y ejecución.
+La primera implementación fue detenida correctamente por `BLOCKED_ACTIVITY_8_GATE_8G_PERSISTENCE_MIGRATION_IMPLEMENTATION`. `CORR-001` fijó la ruta canónica de este documento como `docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_MIGRACIONES.md` y descartó `docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_IDENTIDAD.md`. `CORR-002` completó el inventario del Manifest y los contratos de preservación del runtime, rollout y ejecución. La corrección documental posterior `PASS_ACTIVITY_8_GATE_8G_PP310_DOCUMENT_PATH_CORRECTED` alinea la única referencia de ruta dentro de PP-310 con la ruta canónica, sin modificar SQL, contratos PHP, Manifest ni Gate 8F.
 
 La precedencia contractual aplicada fue: scope review correction, scope review original, preflight Gate 8G y contratos versionados Gates 8A–8F.
 
@@ -55,7 +55,7 @@ Las migraciones no almacenan nombre, nacimiento, teléfono, email, domicilio, ra
 
 SQL ejecutado: 0. Conexiones DB: 0. Migraciones aplicadas: 0. Datos reales escritos: 0. Pacientes creados: 0. Links reales creados: 0. Merges: 0. Contactos modificados: 0. Clinical: 0. Runtime: 0. Rutas: 0. AWS: 0.
 
-Gate 8F y sus 14 archivos permanecen intactos. PP-309 permanece byte-semánticamente estable: 4869 bytes normalizados y SHA-256 `2939e9301d8117a2e4d1cd470758b07407d07c794861be0735f68a45ac94fa70`. PP-310 está presente una vez y su SHA-256 normalizado es `5f7de1da73097783c1495feb13f07516ccfa150811b967d080c4f31960697b60`.
+Gate 8F y sus 14 archivos permanecen intactos. PP-309 permanece byte-semánticamente estable: 4869 bytes normalizados y SHA-256 `2939e9301d8117a2e4d1cd470758b07407d07c794861be0735f68a45ac94fa70`. PP-310 está presente una vez, contiene la ruta canónica exactamente una vez, no contiene la ruta descartada y su SHA-256 normalizado vigente es `c3c0339ad05b127b08288f3a026f2122f9af130061369db2c1a4c0c8d4a17459`. El hash anterior `5f7de1da73097783c1495feb13f07516ccfa150811b967d080c4f31960697b60` permanece únicamente como referencia histórica de la implementación inicial.
 
 ## Pruebas, simulación y retorno seguro
 

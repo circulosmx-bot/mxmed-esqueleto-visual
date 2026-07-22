@@ -204,8 +204,10 @@ foreach (['PP-304', 'PP-305', 'PP-306', 'PP-307', 'PP-308', 'PP-309', 'PP-310'] 
 $pp309 = gate8gNormalizedPlanBlock($plan, 309);
 $pp310 = gate8gNormalizedPlanBlock($plan, 310);
 gate8gAssert(strlen($pp309) === 4869 && hash('sha256', $pp309) === '2939e9301d8117a2e4d1cd470758b07407d07c794861be0735f68a45ac94fa70', 'PP-309 stable');
+gate8gAssert(substr_count($pp310, 'docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_MIGRACIONES.md') === 1, 'PP-310 canonical document path exact once');
+gate8gAssert(substr_count($pp310, 'docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_IDENTIDAD.md') === 0, 'PP-310 deprecated document path absent');
 $pp310Hash = hash('sha256', $pp310);
-gate8gAssert($pp310Hash === '5f7de1da73097783c1495feb13f07516ccfa150811b967d080c4f31960697b60', 'PP-310 stable');
+gate8gAssert($pp310Hash === 'c3c0339ad05b127b08288f3a026f2122f9af130061369db2c1a4c0c8d4a17459', 'PP-310 stable');
 gate8gAssert(str_contains(gate8gRead($root . '/docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_MIGRACIONES.md'), $pp310Hash), 'PP-310 hash documented');
 
 echo "GATE8G_TABLES=4/4\n";
