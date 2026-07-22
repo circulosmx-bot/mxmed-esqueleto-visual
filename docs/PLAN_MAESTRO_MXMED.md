@@ -2184,3 +2184,64 @@ Siguientes pasos recomendados:
 | Fecha | Decisión | Motivo | Alcance | Evidencia | Estado |
 |---|---|---|---|---|---|
 | 2026-07-21 | Implementar una fuente canónica, versionada, inmutable y específica por perfil/consultorio para horario y una proyección determinista de disponibilidad calculada desde ventanas base, feriados, overrides y colisiones | Eliminar divergencias conceptuales entre horario editable y disponibilidad calculada antes de reconciliar las tablas legacy o conectar rutas | UI-0; canonical schedule source; version selector; profile y consultorio obligatorios; timezone IANA; duration y gap canónicos; intervalos semiabiertos; overrides open/close; holiday closure; collisions last; slots deterministas; cambio de consultorio aislado; ScheduleAvailabilityContract como read model; editableAuthority false; safe return points preservados; router legacy sin cambios; runtime wiring 0; route behavior changes 0; SQL ejecutado 0; datos reales 0; OTP real 0; citas reales 0; merges reales 0; AWS writes 0; 8091 intacto; Gate 8D no iniciado; Actividad 8 en progreso; Actividad 9 bloqueada; contador 7/22; readiness NO_GO_LEGACY_BLOCKERS_PRESENT | `docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8C_HORARIO_DISPONIBILIDAD_CANONICOS.md`; `modules/agenda/availability/`; `modules/agenda/tests/Gate8CCanonicalScheduleAvailabilityTest.php`; `/tmp/mxmed-activity08-gate8c-canonical-schedule-availability-v2/` | `PASS_ACTIVITY_8_GATE_8C_CANONICAL_SCHEDULE_AVAILABILITY_IMPLEMENTED`; `ACTIVITY_8_IN_PROGRESS`; `GATE_8D_NOT_STARTED`; `ACTIVITY_9_BLOCKED` |
+### PP-307 — Ciclo de citas, idempotencia y concurrencia PG-03 Gate 8D
+
+Fecha:
+2026-07-21
+
+Decisión:
+Implementar una autoridad de dominio pura, versionada y fail-closed para el ciclo de vida de citas, optimistic aggregate version, idempotency replay/conflict, identidad canónica de slot, detección determinista de superposición, claims activos, eventos append-only y el plan transaccional requerido para impedir doble reserva.
+
+Motivo:
+Formalizar estados, transiciones e invariantes antes de conectar el router legacy, persistencia, locks, unique constraints o migraciones.
+
+Alcance:
+
+- UI-0;
+- siete estados canónicos;
+- matriz exacta Gate 8A;
+- lifecycle version 1;
+- estados terminales canceled/no_show;
+- cinco estados ocupantes;
+- optimistic aggregate version;
+- command tipado;
+- idempotency key;
+- fingerprint SHA-256;
+- replay seguro;
+- idempotency conflict 409;
+- record minimizado;
+- slot RFC3339;
+- timezone IANA;
+- intervalo semiabierto;
+- active slot claim;
+- overlap conflict;
+- slots adyacentes permitidos;
+- simulación pura de doble reserva;
+- mutation plan de 12 pasos;
+- locks e índice unique requeridos, no ejecutados;
+- evento append-only;
+- actor real y efectivo;
+- Agenda separada de Clinical;
+- safe return points preservados;
+- router legacy sin cambios;
+- runtime wiring 0;
+- route behavior changes 0;
+- SQL ejecutado 0;
+- datos reales 0;
+- OTP real 0;
+- citas reales 0;
+- merges reales 0;
+- AWS writes 0;
+- 8091 intacto;
+- Gate 8E no iniciado;
+- Actividad 8 en progreso;
+- Actividad 9 bloqueada;
+- contador 7/22;
+- readiness NO_GO_LEGACY_BLOCKERS_PRESENT.
+
+Estado:
+
+PASS_ACTIVITY_8_GATE_8D_APPOINTMENT_LIFECYCLE_IDEMPOTENCY_IMPLEMENTED;
+ACTIVITY_8_IN_PROGRESS;
+GATE_8E_NOT_STARTED;
+ACTIVITY_9_BLOCKED.
