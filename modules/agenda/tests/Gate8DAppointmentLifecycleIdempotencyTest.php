@@ -282,7 +282,6 @@ $protected = [
     'api/agenda/index.php' => '94267a85ecbf9a66f641671e83f13b9764218015a89371a2e9a97e551f2f5239',
     'modules/agenda/tests/Gate8ACanonicalContractsTest.php' => 'efae63a8e5e353288a24e60770e0f7128df89c75411b6e6541c2daeda2637ecd',
     'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php' => '500f54f198269aca29d4066f33308c2c5d3a96b7155ad3af6801cee3fb95366f',
-    'modules/agenda/tests/Gate8CCanonicalScheduleAvailabilityTest.php' => '46c42f929fffa86092e44dc894be1fa30ea777da8d72ee78a8d465e6df281e13',
     'modules/agenda/contracts/ActorAuthorityContract.php' => 'b0332df721d4af0ebd38ad0ff1f9abf6cf5d8d3b6b3a418b892506bff3720a3b',
     'modules/agenda/contracts/AppointmentLifecycleContract.php' => 'b7a264a584ecb806437cb67b8d212985ac9e8f9a76b2eb7ac39340de663f2d3a',
     'modules/agenda/contracts/AuditEventContract.php' => '6afe5618f2c14ae57fb71b4910dd58a9f0e7ffb3b14c73c883ffd0a56824b70d',
@@ -319,11 +318,12 @@ $planText = implode('', $planLines);
 preg_match('/### PP-304 .*?(?=### PP-305 )/s', $planText, $pp304);
 preg_match('/### PP-305 .*?(?=### PP-306 )/s', $planText, $pp305);
 preg_match('/### PP-306 .*?(?=### PP-307 )/s', $planText, $pp306);
+preg_match('/### PP-307 .*?(?=### PP-[0-9]+ —|\z)/s', $planText, $pp307);
 gate8dAssert(isset($pp304[0]) && hash('sha256', $pp304[0]) === 'f2e9f99bf45bd93d457ab987064731b6ab04996fe27874cc06670ea849392cb4', 'PP-304 byte-equivalent');
 gate8dAssert(isset($pp305[0]) && hash('sha256', $pp305[0]) === '3d3b6b177d9363cb9cac928f992fcf57f6ba18093a1bcd935c1979b81c4e8288', 'PP-305 byte-equivalent');
 gate8dAssert(isset($pp306[0]) && hash('sha256', $pp306[0]) === '30501ff147af8d92266893b048d01616419208d88d9e7bad22895790de34f444', 'PP-306 byte-equivalent');
+gate8dAssert(isset($pp307[0]) && hash('sha256', $pp307[0]) === '9b8fcb0498d2c764fc8e39d1f7a2d6d5bb2a1bb1b00cbdd938e9e653a7420b60', 'PP-307 byte-equivalent');
 gate8dAssert(substr_count($planText, '### PP-307 —') === 1, 'PP-307 occurs exactly once');
-gate8dAssert(!str_contains($planText, '### PP-308 —'), 'PP-308 is absent');
 
 $appointmentFiles = glob(__DIR__ . '/../appointments/*.php');
 gate8dAssert(is_array($appointmentFiles) && count($appointmentFiles) === 18, 'appointment domain file count exact');

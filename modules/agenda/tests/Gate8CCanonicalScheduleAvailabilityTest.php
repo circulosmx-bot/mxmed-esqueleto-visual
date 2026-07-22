@@ -168,9 +168,11 @@ $plan = file_get_contents($root . '/docs/PLAN_MAESTRO_MXMED.md');
 gate8cAssert(is_string($plan), 'plan is readable');
 preg_match('/### PP-304 .*?(?=### PP-305 )/s', $plan, $pp304Match);
 preg_match('/### PP-305 .*?(?=### PP-306 )/s', $plan, $pp305Match);
+preg_match('/### PP-306 .*?(?=### PP-[0-9]+ —|\z)/s', $plan, $pp306Match);
 gate8cAssert(isset($pp304Match[0]) && hash('sha256', $pp304Match[0]) === 'f2e9f99bf45bd93d457ab987064731b6ab04996fe27874cc06670ea849392cb4', 'PP-304 remains byte-equivalent');
 gate8cAssert(isset($pp305Match[0]) && hash('sha256', $pp305Match[0]) === '3d3b6b177d9363cb9cac928f992fcf57f6ba18093a1bcd935c1979b81c4e8288', 'PP-305 remains byte-equivalent');
-gate8cAssert(substr_count($plan, '### PP-306 —') === 1 && !str_contains($plan, '### PP-307 —'), 'PP-306 is unique and PP-307 absent');
+gate8cAssert(isset($pp306Match[0]) && hash('sha256', $pp306Match[0]) === '30501ff147af8d92266893b048d01616419208d88d9e7bad22895790de34f444', 'PP-306 remains byte-equivalent');
+gate8cAssert(substr_count($plan, '### PP-306 —') === 1, 'PP-306 occurs exactly once');
 gate8cAssert(is_file($root . '/modules/agenda/controllers/ScheduleController.php') && is_file($root . '/modules/agenda/repositories/ScheduleRepository.php'), 'legacy surfaces remain present');
 
 echo "Gate8CCanonicalScheduleAvailabilityTest PASS\n";
