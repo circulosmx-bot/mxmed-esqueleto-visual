@@ -65,6 +65,18 @@ La simulación futura agrega temporalmente `PP-311 — Simulación temporal post
 
 El safe return Git consiste en `git revert --no-commit <gate8g_commit>` dentro de un worktree detached y debe reconstruir exactamente el árbol `b807f58585966936ed62c29c59025734d7295b0f^{tree}` sin crear commit. Los rollback SQL sólo son artefactos declarativos y no se ejecutan durante el retorno Git.
 
+## Corrección posterior de coherencia documental PP-310
+
+El diagnóstico concluyó `PASS_GATE8G_PP310_DOCUMENT_PATH_CONTRADICTION_DIAGNOSTIC_COMPLETE`; el preflight concluyó `PASS_GATE8G_PP310_DOCUMENT_PATH_CORRECTION_PREFLIGHT_READY`; y la corrección concluyó `PASS_ACTIVITY_8_GATE_8G_PP310_DOCUMENT_PATH_CORRECTED`. La causa fue que PP-310 provenía del scope review anterior a `CORR-001`.
+
+La ruta canónica es `docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_MIGRACIONES.md` y la ruta descartada histórica es `docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8G_PERSISTENCIA_IDENTIDAD.md`. Dentro de PP-310 se realizó exactamente una sustitución: la ruta canónica aparece exactamente una vez y la ruta descartada aparece cero veces.
+
+PP-309 no fue modificada y conserva SHA-256 `2939e9301d8117a2e4d1cd470758b07407d07c794861be0735f68a45ac94fa70`. El hash anterior de PP-310 fue `5f7de1da73097783c1495feb13f07516ccfa150811b967d080c4f31960697b60`; el hash vigente es `c3c0339ad05b127b08288f3a026f2122f9af130061369db2c1a4c0c8d4a17459`.
+
+El commit correctivo real es `a19e47b23ea99e736bb2e44991e88cf2cf2b2012`, con mensaje `fix(docs): corrige ruta documental PP-310 gate 8G`. El mensaje es semánticamente equivalente al solicitado y la historia no fue reescrita.
+
+Los ocho SQL, los seis contratos PHP, el Manifest y Gate 8F permanecen intactos. La evidencia inicial y la evidencia correctiva previa se preservan como históricas; la nueva evidencia de cierre se entrega separada en `/tmp/mxmed-activity08-gate8g-pp310-correction-closure-v2/`. El cierre realizó cero conexiones DB, migraciones, SQL, escrituras de datos, cambios de runtime, rutas, Clinical o AWS.
+
 ## Estado final
 
 - Gate 8F: `POSTVALIDATED_COMPLETE_WITH_OPAQUE_METADATA_REFERENCES_AND_MERGE_DISABLED`.
