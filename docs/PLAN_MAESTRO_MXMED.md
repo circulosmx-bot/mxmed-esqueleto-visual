@@ -2332,3 +2332,101 @@ PP-309 deben pasar antes de postvalidar.
 Gate 8E queda `IMPLEMENTED_READY_FOR_POSTVALIDATION`; Gate 8F sigue `NOT_STARTED`;
 Actividad 8 sigue `IN_PROGRESS`; Actividad 9 sigue `BLOCKED`. No iniciar Gate 8F,
 no integrar y no crear checkpoint.
+
+### PP-309 — Gate 8F: identidad canónica, duplicados y merge deshabilitado
+
+Identificador y resultado:
+`pg03-patient-identity-duplicates`, versión `1`;
+`PASS_ACTIVITY_8_GATE_8F_PATIENT_IDENTITY_DUPLICATES_IMPLEMENTED`.
+
+Baseline y preflight:
+HEAD Gate 8E postvalidado `3877e26078aec32e2a9e4b0c58d7872b8033a27b`;
+`PASS_ACTIVITY_8_GATE_8F_PREFLIGHT_READY`. Gate 8A, Gate 8B, Gate 8C, Gate
+8D y Gate 8E permanecen postvalidados. Clasificación UI-0.
+
+Autoridad y fuentes:
+la única identidad canónica es `patients_patients.patient_id`, propiedad de
+`modules/patients`. Los inputs exactos son `canonical_patient_id` y
+`legacy_patient_key_hash`. La clave legacy cruda está prohibida; el hash debe
+llegar como SHA-256 opaco de 64 hex generado por un adaptador confiable.
+
+Evidencia opaca:
+name, birthdate, phone y email se reciben sólo como referencias de 64 hex; sex
+usa allow-list cerrada. No se reciben nombre, fecha, contacto, domicilio,
+expediente, payload libre ni información clínica crudos.
+
+Niveles exactos:
+los matches fuertes, en precedencia, son `contact_birthdate_exact`,
+`contact_name_exact` y `name_birthdate_sex_exact`. Los indicios débiles son
+`name_birthdate_exact`, `contact_only` y `name_only`; nunca autorizan mapeo
+automático. `no_match` no aporta coincidencia.
+
+Contradicciones y ambigüedad:
+contacto o nombre coincidente con birthdate distinta, candidato fuerte no
+elegible, evidencia fuerte compartida, IDs repetidos, versiones inválidas o
+evidencia mal formada fallan cerrado. Dos fuertes del mejor nivel producen
+`ambiguous`; nunca se elige el primer candidato ni se suman scores.
+
+Algoritmo:
+input canónico existente/elegible produce `already_canonical`; no elegible
+produce `review_required`; ausente produce `not_found`. Input legacy con match
+fuerte único produce `mapped_from_legacy`; indicio débil o contradicción produce
+`review_required`; múltiples fuertes producen `ambiguous`; sin señal produce
+`create_minimal_required`.
+
+Creación y duplicate review:
+`create_minimal_required` sólo declara el modo eventual
+`created_minimal_patient`; no crea paciente. `PatientDuplicateReview` contiene
+ID determinista, razón cerrada, IDs canónicos ordenados/digests, tier y
+fingerprint, sin PII ni evidencia cruda.
+
+Merge deshabilitado:
+automatic merge, manual merge, survivor selection, source deletion, clinical
+record reassignment, contact/consent consolidation y merge endpoint permanecen
+false. Cualquier solicitud falla con `patient_merge_disabled` y razón
+`MERGE_DISABLED_PENDING_SEPARATE_APPROVAL_AND_IMPLEMENTATION`.
+
+Auditoría:
+eventos readonly, deterministas y append-only contienen operación, correlación,
+source, input type, fingerprints/digests, outcome, tier, actores Gate 8B,
+timestamp, flags de review/create y `merge_allowed=false`; nunca legacy raw,
+contacto, nombre, fecha, sex, payload, notas o datos clínicos.
+
+Fronteras:
+Gate 8B resuelve actor real y efectivo. Gate 8E verifica contacto/flujo público,
+pero `public_verified` no implica paciente existente y una referencia de
+contacto no se convierte por sí sola en identidad. Persistencia, migración,
+retention, backfill y rollout quedan
+`IDENTITY_PERSISTENCE_MIGRATION_RETENTION_ROLLOUT_DEFERRED_TO_GATE_8G`.
+`patientIdentityResolutionIsClinicalEncounter() === false`; no se crean
+encounters ni se mueven o reasignan documentos, expedientes, casos, recetas o
+notas.
+
+Plan transaccional:
+14 pasos declarativos desde `begin_transaction` hasta `commit`, con lock de
+fingerprint e idempotencia, verificación Gate 8B, carga/validación de candidatos,
+evaluación exacta, detección de conflictos, merge deshabilitado, selección de
+existente o plan mínimo, delegación futura a Patients, auditoría e idempotencia.
+Los errores requieren rollback. No ejecuta operaciones ni permite creación,
+actualización, links, mutación clínica o SQL directos.
+
+Privacidad, determinismo y pureza:
+todos los timestamps e IDs son explícitos o derivados por SHA-256 canónico; no
+hay reloj, aleatoriedad, red, filesystem, sesión, entorno o estado global. Las
+13 superficies legacy inventariadas permanecen contenidas y sin cambios.
+
+Impacto productivo:
+runtime 0, rutas 0, SQL 0, pacientes reales 0, links reales 0, merges 0,
+contactos reales 0, documentos clínicos 0 y AWS 0.
+
+Safe return, pruebas, evidencia y Git:
+retorno seguro `3877e26078aec32e2a9e4b0c58d7872b8033a27b`; rollback futuro por
+`git revert --no-edit <gate8f_commit>` en worktree detached. Gate 8F, regresiones
+acumulativas, lint, pureza, negativos y PP-310 futura deben pasar. La evidencia
+se entrega separada. El commit es aditivo y reversible; no se integra ni crea
+checkpoint.
+
+Estado final:
+Gate 8F `IMPLEMENTED_READY_FOR_POSTVALIDATION`; Gate 8G `NOT_STARTED`; Actividad
+8 `IN_PROGRESS`; Actividad 9 `BLOCKED`; contador 7/22; readiness
+`NO_GO_LEGACY_BLOCKERS_PRESENT`. No iniciar Gate 8G.
