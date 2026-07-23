@@ -16,8 +16,10 @@ require_once __DIR__ . '/../../modules/agenda/controllers/OperatorsController.ph
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.php';
 require_once __DIR__ . '/../../modules/agenda/repositories/OperatorsRepository.php';
+require_once __DIR__ . '/../../modules/agenda/composition/AgendaAuthorityCompositionRoot.php';
 require_once __DIR__ . '/../_lib/db.php';
 
+use Agenda\Composition\AgendaAuthorityCompositionRoot;
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
 use Agenda\Controllers\GoogleGeocodeController;
@@ -35,6 +37,13 @@ use Agenda\Controllers\OperatorsController;
 use Agenda\Controllers\PublicAppointmentsController;
 use Agenda\Controllers\PublicOtpController;
 use Agenda\Repositories\OperatorsRepository;
+
+$cut01aAgendaConfig = require __DIR__ . '/../../modules/agenda/config/agenda.php';
+$cut01aCanonicalActorAuthorityEnabled = AgendaAuthorityCompositionRoot::canonicalActorAuthorityEnabled($cut01aAgendaConfig);
+if ($cut01aCanonicalActorAuthorityEnabled === true) {
+    // R0 preparation only: activation and canonical request processing remain unauthorized.
+    $cut01aAgendaAuthorityRootClass = AgendaAuthorityCompositionRoot::class;
+}
 
 header('Content-Type: application/json');
 if (session_status() === PHP_SESSION_NONE) {

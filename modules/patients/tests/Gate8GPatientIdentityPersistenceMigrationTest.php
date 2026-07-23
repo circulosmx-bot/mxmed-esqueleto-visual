@@ -190,7 +190,7 @@ foreach (['PDO', 'mysqli', 'file_get_contents', 'file_put_contents', '$_GET', '$
 $protectedPaths = [
     'modules/patients/db/ready_schema.sql', 'modules/patients/repositories/PatientsRepository.php',
     'modules/patients/identity/CanonicalPatientId.php', 'modules/patients/identity/LegacyPatientReference.php', 'modules/patients/identity/PatientDuplicateReview.php', 'modules/patients/identity/PatientIdentityAuditEvent.php', 'modules/patients/identity/PatientIdentityCandidate.php', 'modules/patients/identity/PatientIdentityCandidateSet.php', 'modules/patients/identity/PatientIdentityDomainException.php', 'modules/patients/identity/PatientIdentityEvidence.php', 'modules/patients/identity/PatientIdentityMutationPlan.php', 'modules/patients/identity/PatientIdentityPolicy.php', 'modules/patients/identity/PatientIdentityResolutionDecision.php', 'modules/patients/identity/PatientIdentityResolutionRequest.php', 'modules/patients/identity/PatientIdentityResolver.php', 'modules/patients/identity/PatientMergePolicy.php',
-    'modules/agenda/tests/Gate8ACanonicalContractsTest.php', 'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php', 'modules/agenda/tests/Gate8CCanonicalScheduleAvailabilityTest.php', 'modules/agenda/tests/Gate8DAppointmentLifecycleIdempotencyTest.php', 'modules/agenda/tests/Gate8EPublicAgendaOtpPrivacyTest.php', 'modules/patients/tests/Gate8FPatientIdentityDuplicatesTest.php',
+    'modules/agenda/tests/Gate8ACanonicalContractsTest.php', 'modules/agenda/tests/Gate8EPublicAgendaOtpPrivacyTest.php', 'modules/patients/tests/Gate8FPatientIdentityDuplicatesTest.php',
     'docs/clinical', 'modules/clinical',
 ];
 $command = 'git -C ' . escapeshellarg($root) . ' diff --name-only b807f58585966936ed62c29c59025734d7295b0f -- ' . implode(' ', array_map('escapeshellarg', $protectedPaths));
@@ -198,6 +198,16 @@ $protectedDiff = [];
 $protectedExit = 1;
 exec($command, $protectedDiff, $protectedExit);
 gate8gAssert($protectedExit === 0 && $protectedDiff === [], 'protected parent surfaces byte equivalent');
+
+$authorizedCorrectedGateHashes = [
+    'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php' => '2b8b301cbb64b60d77d2795bb2857fc0b676fb05d936188d49dce4f592a4bda8',
+    'modules/agenda/tests/Gate8CCanonicalScheduleAvailabilityTest.php' => '6e511ab01f9cd657f086fcb904b88940cde3ee81342333ab8c29dd8047a5044a',
+    'modules/agenda/tests/Gate8DAppointmentLifecycleIdempotencyTest.php' => 'ae024a823c7654f55c7aa43ebdb736918244662890746163e8102224f8fc0279',
+];
+foreach ($authorizedCorrectedGateHashes as $path => $expectedHash) {
+    $actualHash = hash_file('sha256', $root . '/' . $path);
+    gate8gAssert(is_string($actualHash) && $actualHash === $expectedHash, 'authorized corrected gate hash exact: ' . $path);
+}
 
 $plan = gate8gRead($root . '/docs/PLAN_MAESTRO_MXMED.md');
 foreach (['PP-304', 'PP-305', 'PP-306', 'PP-307', 'PP-308', 'PP-309', 'PP-310'] as $number) gate8gAssert(substr_count($plan, '### ' . $number . ' —') === 1, $number . ' exact once');

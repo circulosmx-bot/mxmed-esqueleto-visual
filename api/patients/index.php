@@ -11,7 +11,9 @@ require_once __DIR__ . '/../../modules/patients/controllers/UpsertEditablePatien
 require_once __DIR__ . '/../../modules/patients/controllers/CreatePatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientAddressController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientProfileController.php';
+require_once __DIR__ . '/../../modules/patients/composition/PatientsAuthorityCompositionRoot.php';
 
+use Patients\Composition\PatientsAuthorityCompositionRoot;
 use Patients\Controllers\GetPatientController;
 use Patients\Controllers\GetDoctorPatientsController;
 use Patients\Controllers\SearchDoctorPatientsController;
@@ -21,6 +23,13 @@ use Patients\Controllers\CreatePatientController;
 use Patients\Controllers\UpsertPatientAddressController;
 use Patients\Controllers\UpsertPatientProfileController;
 use Agenda\Helpers as DbHelpers;
+
+$cut01aAgendaConfig = require __DIR__ . '/../../modules/agenda/config/agenda.php';
+$cut01aCanonicalActorAuthorityEnabled = PatientsAuthorityCompositionRoot::canonicalActorAuthorityEnabled($cut01aAgendaConfig);
+if ($cut01aCanonicalActorAuthorityEnabled === true) {
+    // R0 preparation only: activation and canonical request processing remain unauthorized.
+    $cut01aPatientsAuthorityRootClass = PatientsAuthorityCompositionRoot::class;
+}
 
 header('Content-Type: application/json');
 

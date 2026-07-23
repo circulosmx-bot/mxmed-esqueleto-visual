@@ -151,9 +151,9 @@ gate8cAssert($collisionResult->contract() instanceof ScheduleAvailabilityContrac
 gate8cAssert($collisionResult->toArray()['mode'] === 'calculated_read_model' && $collisionResult->toArray()['profile_id'] === 'doctor-gate8c' && $collisionResult->toArray()['consultorio_id'] === 'consultorio-a', 'read model metadata is canonical');
 
 $protected = [
-    'api/agenda/index.php' => '94267a85ecbf9a66f641671e83f13b9764218015a89371a2e9a97e551f2f5239',
+    'api/agenda/index.php' => '7b8eecc5b8eb1ee677394702a70b5e9c126898f1b0e4840f3110b5b1f3a884bd',
     'modules/agenda/tests/Gate8ACanonicalContractsTest.php' => 'efae63a8e5e353288a24e60770e0f7128df89c75411b6e6541c2daeda2637ecd',
-    'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php' => '500f54f198269aca29d4066f33308c2c5d3a96b7155ad3af6801cee3fb95366f',
+    'modules/agenda/tests/Gate8BServerAuthoritativeActorsTest.php' => '2b8b301cbb64b60d77d2795bb2857fc0b676fb05d936188d49dce4f592a4bda8',
     'docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8A_CONTRATOS_CANONICOS.md' => 'c02b8192f06fe867b9139a209aaec8caa442becb53dca43b6403c83e5c40a078',
     'docs/MXMED_IMPLEMENTACION_V2_PG03_GATE_8B_AUTORIDAD_SERVER_SIDE.md' => '608c2ec7d5167940322354e3e33590fe4813308537f22c11315a991de4820d1a',
     'modules/agenda/security/AgendaActorAuthorityResolver.php' => '2b47a8d25d328c7f594ee40d7f86392f4b6ac87c4fb600349dfa5a9fac5df5a8',

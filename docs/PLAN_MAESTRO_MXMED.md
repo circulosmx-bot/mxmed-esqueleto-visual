@@ -2492,3 +2492,21 @@ Apruebo DEC-014A, DEC-014B, DEC-014C, DEC-014D, DEC-014E, DEC-014F, DEC-014G, DE
 DEC-014A–I quedan `APPROVED_WITH_DEFERRED_PARAMETERS`: decisiones aprobadas 9; decisiones arquitectónicas pendientes 0; parámetros diferidos presentes. Feature flags implementados 0 y autorizados 0; subgates aprobados 0; implementación autorizada false; el inventario de 42 archivos continúa candidato; CUT01-A–D requieren autorización separada.
 
 Actividad 10 no integrada; Actividad 11 bloqueada; contador 9/22; pendientes 13; R0 disabled; R1–R4 inactivos. Cero DB, SQL, migraciones, datos, OTP, citas, pacientes, merges y backfill; cero runtime, rutas, UI, Clinical y AWS. Cutover `NO_GO_BLOCKERS_PRESENT`; readiness `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+### PP-313 — Actividad 11: CUT01-A Authority Composition Roots
+
+Fecha: 2026-07-22. Identificador: `BE-ARCH/MXMed-PG03-CUT01-A-Authority-Composition-Roots-01`. Baseline `9f3a3187192ddd4f9307841807f207365b2cd529`; checkpoint Activity 10 `checkpoint/mxmed-product-refinement-v2-activity10`, desreferenciado al baseline; rama sucesora `feature/mxmed-pg03-cut01-a-authority-composition-roots-v2-r2`; reconstrucción R2; commit: SELF — commit atómico corregido de la Actividad 11. La rama rechazada `feature/mxmed-pg03-cut01-a-authority-composition-roots-v2` y su commit `bb8f39c1aaf781359815b53bb5e595de97dd857a` permanecen `REJECTED_POSTVALIDATION_NOT_INTEGRATED`. Clasificación UI-0.
+
+CUT01-A reconstruye, sin activar, un alcance exacto de trece archivos: `RECONSTRUCTION=R2`, `CORRECTED_SCOPE=13_FILES`, `NEW_FILES=5`, `MODIFIED_FILES=8`. Se agregan `AgendaAuthorityCompositionRoot` y `PatientsAuthorityCompositionRoot`, se preparan de forma dormida los routers Agenda y Patients y se usa `modules/agenda/config/agenda.php` como única fuente server-side de `canonical_actor_authority`.
+
+Gate8B hash exact: `2b8b301cbb64b60d77d2795bb2857fc0b676fb05d936188d49dce4f592a4bda8`; Gate8C hash exact: `6e511ab01f9cd657f086fcb904b88940cde3ee81342333ab8c29dd8047a5044a`; Gate8D hash exact: `ae024a823c7654f55c7aa43ebdb736918244662890746163e8102224f8fc0279`. Gate 8B actualiza exclusivamente una expectativa hash; Gate 8C exclusivamente dos; Gate 8D exclusivamente dos. Gate 8G conserva el resto de sus superficies históricas contra `b807f58585966936ed62c29c59025734d7295b0f` y valida 8B/8C/8D mediante SHA-256 exactos. No se elimina, omite, reduce ni relaja ninguna aserción semántica.
+
+Contrato del flag: implemented true; default false; activated false; approved_for_activation false; request override false; client override false; environment override false; R0 disabled. Sólo el booleano literal true es elegible; ausencia y valores inválidos fallan cerrado. El default false conserva el path legacy y procesa cero requests de autoridad canónica o shadow.
+
+Se cubren ocho rutas Patients, cuatro read y cuatro write; se preservan 41/41 rutas privadas Agenda, 9/9 públicas Agenda, 8/8 privadas Patients y 49/49 privadas totales. Cambios de rutas, comportamiento, controllers, dispatch, HTTP, payload, UI, Clinical y AWS: cero.
+
+Validación corregida: dos pruebas CUT01-A nuevas y doce regresiones heredadas ejecutadas directamente sobre la rama sucesora, `ACTIVITY11_TESTS=14/14`; Gates 8A–8G, Gate 6B, Gate 6F, Identity y Subscriptions permanecen PASS. `PHP_LINT=11/11` para todos los PHP nuevos o modificados.
+
+F-001, F-002 y F-004 quedan `IMPLEMENTATION_PARTIAL_FLAG_OFF_BLOCKER_OPEN`. Los otros diez blockers —F-006, F-008, F-009, F-010, F-012, F-013, F-014, F-017, F-018 y F-023— permanecen `DECISION_RATIFIED_BLOCKER_OPEN`; blockers 13/13 abiertos; cutover `NO_GO_BLOCKERS_PRESENT`; readiness `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+Impacto: cero conexiones DB, SQL, migraciones, DDL, datos, OTP, backfill, citas, pacientes y merges. No se activa Gate 8F/8G en runtime. Evidencia corregida: `/tmp/mxmed-activity11-cut01a-authority-composition-roots-v2-r2/`, con manifiesto SHA-256 estándar. Safe return al parent/checkpoint mediante `git revert --no-commit <CORRECTED_ACTIVITY11_COMMIT>` en worktree detached; rollback sin commit y tree idéntico al baseline. Actividad 11 queda corregida con flag off, lista para postvalidación y no integrada; Actividad 12 permanece bloqueada. No se integra al programa ni se crea checkpoint.
