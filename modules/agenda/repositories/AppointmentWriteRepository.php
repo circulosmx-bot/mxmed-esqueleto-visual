@@ -1,6 +1,7 @@
 <?php
 namespace Agenda\Repositories;
 
+use Agenda\Adapters\CanonicalAppointmentLifecycleAdapter;
 use Agenda\Repositories\PatientFlagsWriteRepository;
 use Agenda\Repositories\PatientIncidentsWriteRepository;
 use Agenda\Services\ClinicalEncounterBridge;
@@ -14,6 +15,7 @@ use Throwable;
 require_once __DIR__ . '/../repositories/PatientFlagsWriteRepository.php';
 require_once __DIR__ . '/../repositories/PatientIncidentsWriteRepository.php';
 require_once __DIR__ . '/../services/ClinicalEncounterBridge.php';
+require_once __DIR__ . '/../adapters/CanonicalAppointmentLifecycleAdapter.php';
 
 class AppointmentWriteRepository
 {
@@ -32,6 +34,10 @@ class AppointmentWriteRepository
     {
         $this->pdo = $pdo;
         $config = $this->loadConfig();
+        $canonicalAppointmentLifecycleAdapterClass =
+            CanonicalAppointmentLifecycleAdapter::canonicalAppointmentLifecycleEnabled($config)
+                ? CanonicalAppointmentLifecycleAdapter::class
+                : null;
         $this->appointmentsTable = $this->sanitizeIdentifier($config['appointments_table'] ?? '');
         $this->eventsTable = $this->sanitizeIdentifier($config['appointment_events_table'] ?? '');
         $this->appointmentPk = $this->sanitizeIdentifier($config['appointment_pk'] ?? 'appointment_id');

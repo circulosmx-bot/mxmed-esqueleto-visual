@@ -5,6 +5,13 @@ return [
         'canonical_schedule_read' => false,
         'canonical_availability_compare' => false,
         'canonical_public_agenda' => false,
+        'canonical_appointment_lifecycle' => false,
+        'canonical_patient_identity' => false,
+        'patient_identity_persistence' => false,
+        'legacy_write_disable' => false,
+        'shadow_audit' => false,
+        'read_compare' => false,
+        'backfill' => false,
     ],
     'overrides_table' => 'agenda_availability_overrides', // String table name when overrides are ready, otherwise null
     'appointments_table' => 'agenda_appointments',
