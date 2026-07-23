@@ -1,6 +1,7 @@
 <?php
 namespace Agenda\Controllers;
 
+use Agenda\Adapters\CanonicalAvailabilityCompareAdapter;
 use Agenda\Repositories\AvailabilityRepository;
 use Agenda\Repositories\OverrideRepository;
 use Agenda\Repositories\AppointmentCollisionsRepository;
@@ -16,6 +17,7 @@ use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/AvailabilityRepository.php';
+require_once __DIR__ . '/../adapters/CanonicalAvailabilityCompareAdapter.php';
 require_once __DIR__ . '/../repositories/OverrideRepository.php';
 require_once __DIR__ . '/../repositories/AppointmentCollisionsRepository.php';
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
@@ -71,6 +73,9 @@ class AvailabilityController
         try {
             $config = require __DIR__ . '/../config/agenda.php';
             $this->config = is_array($config) ? $config : [];
+            $canonicalAvailabilityCompareAdapterClass = CanonicalAvailabilityCompareAdapter::canonicalAvailabilityCompareEnabled($this->config)
+                ? CanonicalAvailabilityCompareAdapter::class
+                : null;
         } catch (\Throwable $e) {
             $this->overridesConfigured = false;
             $this->overridesEnabled = false;

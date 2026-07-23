@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Agenda\Controllers;
 
+use Agenda\Adapters\CanonicalScheduleReadAdapter;
 use Agenda\Helpers as DbHelpers;
 use Agenda\Repositories\WaitlistRepository;
 use Agenda\Repositories\AppointmentWriteRepository;
@@ -12,6 +13,7 @@ use PDOException;
 use RuntimeException;
 use Throwable;
 
+require_once __DIR__ . '/../adapters/CanonicalScheduleReadAdapter.php';
 require_once __DIR__ . '/../repositories/WaitlistRepository.php';
 require_once __DIR__ . '/../repositories/AppointmentWriteRepository.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
@@ -30,6 +32,10 @@ class WaitlistController
 
     public function __construct()
     {
+        $config = require __DIR__ . '/../config/agenda.php';
+        $canonicalScheduleReadAdapterClass = CanonicalScheduleReadAdapter::canonicalScheduleReadEnabled($config)
+            ? CanonicalScheduleReadAdapter::class
+            : null;
         $this->qaNotReady = DbHelpers\isQaModeNotReady();
         if ($this->qaNotReady) {
             return;

@@ -1,8 +1,10 @@
 <?php
 namespace Agenda\Controllers;
 
+use Agenda\Adapters\CanonicalScheduleReadAdapter;
 use Agenda\Repositories\AgendaSettingsRepository;
 
+require_once __DIR__ . '/../adapters/CanonicalScheduleReadAdapter.php';
 require_once __DIR__ . '/../repositories/AgendaSettingsRepository.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
@@ -17,6 +19,10 @@ class AgendaSettingsController
 
     public function __construct()
     {
+        $config = require __DIR__ . '/../config/agenda.php';
+        $canonicalScheduleReadAdapterClass = CanonicalScheduleReadAdapter::canonicalScheduleReadEnabled($config)
+            ? CanonicalScheduleReadAdapter::class
+            : null;
         try {
             $pdo = mxmed_pdo();
             $this->repository = new AgendaSettingsRepository($pdo);

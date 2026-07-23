@@ -58,6 +58,20 @@ class ScheduleRepository
         return $result;
     }
 
+    public function canonicalReadSnapshot(string $doctorId, string $consultorioId): array
+    {
+        if (trim($doctorId) === '' || trim($consultorioId) === '' || trim($consultorioId) === '__all__') {
+            throw new RuntimeException('availability base schedule not ready');
+        }
+        $rows = $this->listByDoctorConsultorio($doctorId, $consultorioId);
+        return [
+            'source_table' => (string)$this->table,
+            'legacy_doctor_id' => $doctorId,
+            'consultorio_id' => $consultorioId,
+            'rows' => $rows,
+        ];
+    }
+
     public function listByDoctor(string $doctorId): array
     {
         $this->ensureTable();
