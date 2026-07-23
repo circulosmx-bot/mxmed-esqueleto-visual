@@ -2492,3 +2492,19 @@ Apruebo DEC-014A, DEC-014B, DEC-014C, DEC-014D, DEC-014E, DEC-014F, DEC-014G, DE
 DEC-014A–I quedan `APPROVED_WITH_DEFERRED_PARAMETERS`: decisiones aprobadas 9; decisiones arquitectónicas pendientes 0; parámetros diferidos presentes. Feature flags implementados 0 y autorizados 0; subgates aprobados 0; implementación autorizada false; el inventario de 42 archivos continúa candidato; CUT01-A–D requieren autorización separada.
 
 Actividad 10 no integrada; Actividad 11 bloqueada; contador 9/22; pendientes 13; R0 disabled; R1–R4 inactivos. Cero DB, SQL, migraciones, datos, OTP, citas, pacientes, merges y backfill; cero runtime, rutas, UI, Clinical y AWS. Cutover `NO_GO_BLOCKERS_PRESENT`; readiness `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+### PP-313 — Actividad 11: CUT01-A Authority Composition Roots
+
+Fecha: 2026-07-22. Identificador: `BE-ARCH/MXMed-PG03-CUT01-A-Authority-Composition-Roots-01`. Baseline `9f3a3187192ddd4f9307841807f207365b2cd529`; checkpoint Activity 10 `checkpoint/mxmed-product-refinement-v2-activity10`, desreferenciado al baseline; rama `feature/mxmed-pg03-cut01-a-authority-composition-roots-v2`; commit: SELF — commit atómico de la Actividad 11. Clasificación UI-0.
+
+CUT01-A implementa, sin activar, un alcance revisado exacto de nueve archivos: cinco nuevos y cuatro modificados. Se agregan `AgendaAuthorityCompositionRoot` y `PatientsAuthorityCompositionRoot`, se preparan de forma dormida los routers Agenda y Patients y se usa `modules/agenda/config/agenda.php` como única fuente server-side de `canonical_actor_authority`.
+
+Contrato del flag: implemented true; default false; activated false; approved_for_activation false; request override false; client override false; R0 disabled. Sólo el booleano literal true es elegible; ausencia, strings y valores inválidos fallan cerrado. El default false conserva el path legacy y procesa cero requests de autoridad canónica o shadow.
+
+Se cubren ocho rutas Patients, cuatro read y cuatro write; se preservan 41/41 rutas privadas Agenda, 9/9 públicas Agenda, 8/8 privadas Patients y 49/49 privadas totales. Cambios de rutas, comportamiento, controllers, dispatch, HTTP, payload, UI, Clinical y AWS: cero.
+
+Validación: dos pruebas CUT01-A nuevas y doce regresiones heredadas, 14/14; Gates 8A–8G, Gate 6B, Gate 6F, Identity y Subscriptions permanecen PASS. PHP lint pasa para todos los PHP nuevos/modificados.
+
+F-001, F-002 y F-004 quedan `IMPLEMENTATION_PARTIAL_FLAG_OFF_BLOCKER_OPEN`. Los otros diez blockers —F-006, F-008, F-009, F-010, F-012, F-013, F-014, F-017, F-018 y F-023— permanecen `DECISION_RATIFIED_BLOCKER_OPEN`; blockers 13/13 abiertos; cutover `NO_GO_BLOCKERS_PRESENT`; readiness `NO_GO_LEGACY_BLOCKERS_PRESENT`.
+
+Impacto: cero conexiones DB, SQL, migraciones, DDL, datos, OTP, backfill, citas, pacientes y merges. No se activa Gate 8F/8G en runtime. Safe return al parent/checkpoint mediante `git revert --no-commit <ACTIVITY11_COMMIT>` en worktree detached; rollback sin commit y tree idéntico al baseline. Actividad 11 queda implementada con flag off, lista para postvalidación y no integrada; Actividad 12 permanece bloqueada. No se integra al programa ni se crea checkpoint.

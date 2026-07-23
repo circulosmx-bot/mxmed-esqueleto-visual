@@ -1,5 +1,8 @@
 <?php
 return [
+    'feature_flags' => [
+        'canonical_actor_authority' => false,
+    ],
     'overrides_table' => 'agenda_availability_overrides', // String table name when overrides are ready, otherwise null
     'appointments_table' => 'agenda_appointments',
     'appointment_events_table' => 'agenda_appointment_events',
