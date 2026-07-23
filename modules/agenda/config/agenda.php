@@ -4,6 +4,7 @@ return [
         'canonical_actor_authority' => false,
         'canonical_schedule_read' => false,
         'canonical_availability_compare' => false,
+        'canonical_public_agenda' => false,
     ],
     'overrides_table' => 'agenda_availability_overrides', // String table name when overrides are ready, otherwise null
     'appointments_table' => 'agenda_appointments',

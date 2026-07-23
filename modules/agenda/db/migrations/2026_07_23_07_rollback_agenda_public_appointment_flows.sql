@@ -1,0 +1,2 @@
+-- Declarative CUT01-C rollback. This file is not executed by Activity 13.
+-- NON-DESTRUCTIVE: stop public flow, reconcile appointments and restore through an authorized plan.

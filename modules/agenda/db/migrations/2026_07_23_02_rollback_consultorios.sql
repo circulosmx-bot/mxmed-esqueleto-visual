@@ -1,0 +1,3 @@
+-- Declarative CUT01-C rollback. This file is not executed by Activity 13.
+-- NON-DESTRUCTIVE ONLY: preserve consultorios and restore from an authorized pre-migration snapshot.
+-- Manual restoration must reconcile group, geocode, index and image-capacity changes.

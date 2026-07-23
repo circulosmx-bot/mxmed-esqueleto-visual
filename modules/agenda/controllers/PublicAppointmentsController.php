@@ -1,6 +1,7 @@
 <?php
 namespace Agenda\Controllers;
 
+use Agenda\Adapters\CanonicalPublicAgendaAdapter;
 use Agenda\Helpers\DoctorIdentity as DoctorIdentity;
 use Agenda\Repositories\ConsultoriosRepository;
 use Agenda\Repositories\PublicOtpRepository;
@@ -13,6 +14,7 @@ use PDO;
 use PDOException;
 use RuntimeException;
 
+require_once __DIR__ . '/../adapters/CanonicalPublicAgendaAdapter.php';
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
 require_once __DIR__ . '/../repositories/PublicOtpRepository.php';
 require_once __DIR__ . '/../services/OtpSender.php';
@@ -36,6 +38,10 @@ class PublicAppointmentsController
 
     public function __construct(?OtpSender $otpSender = null)
     {
+        $config = require __DIR__ . '/../config/agenda.php';
+        $canonicalPublicAgendaAdapterClass = CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled($config)
+            ? CanonicalPublicAgendaAdapter::class
+            : null;
         try {
             $this->pdo = mxmed_pdo();
         } catch (RuntimeException $e) {
@@ -81,7 +87,7 @@ class PublicAppointmentsController
         try {
             $this->ensureOtpTable();
         } catch (\Throwable $e) {
-            return $this->error('db_error', 'database error');
+            return $this->error('schema_not_ready', 'service temporarily unavailable');
         }
 
         try {
@@ -182,10 +188,6 @@ class PublicAppointmentsController
             'verification_required' => true,
             'consultorio_id_used' => $consultorioId,
         ];
-        if ($this->isQaDebugEnabled()) {
-            $meta['otp_debug'] = $otp;
-        }
-
         return $this->success([
             'request_id' => $requestId,
             'expires_at' => $expiresAt->format('Y-m-d H:i:s'),
@@ -213,7 +215,7 @@ class PublicAppointmentsController
         try {
             $this->ensureOtpTable();
         } catch (\Throwable $e) {
-            return $this->error('db_error', 'database error');
+            return $this->error('schema_not_ready', 'service temporarily unavailable');
         }
 
         $row = $this->findOtpRequest($requestId);
@@ -296,7 +298,7 @@ class PublicAppointmentsController
             $this->ensureFlowTable();
             $this->expirePendingReservations();
         } catch (\Throwable $e) {
-            return $this->error('db_error', 'database error', ['route' => 'public_reserve']);
+            return $this->error('schema_not_ready', 'service temporarily unavailable', ['route' => 'public_reserve']);
         }
 
         $validated = $this->validateReservePayload($payload);
@@ -406,7 +408,7 @@ class PublicAppointmentsController
             $this->ensureFlowTable();
             $this->expirePendingReservations();
         } catch (\Throwable $e) {
-            return $this->error('db_error', 'database error', ['route' => 'public_confirm']);
+            return $this->error('schema_not_ready', 'service temporarily unavailable', ['route' => 'public_confirm']);
         }
 
         $flow = $this->findFlowByAppointmentId($appointmentId);
@@ -532,7 +534,7 @@ public function cancel(array $payload = []): array
         try {
             $this->ensureFlowTable();
         } catch (\Throwable $e) {
-            return $this->error('db_error', 'database error', ['route' => 'public_cancel']);
+            return $this->error('schema_not_ready', 'service temporarily unavailable', ['route' => 'public_cancel']);
         }
 
         [$appointmentsTable, $appointmentPk] = $this->getAppointmentsTableAndPk();
@@ -631,7 +633,7 @@ public function cancel(array $payload = []): array
         try {
             $this->ensureFlowTable();
         } catch (\Throwable $e) {
-            return $this->error('db_error', 'database error', ['route' => 'public_expire']);
+            return $this->error('schema_not_ready', 'service temporarily unavailable', ['route' => 'public_expire']);
         }
 
         [$appointmentsTable, $appointmentPk] = $this->getAppointmentsTableAndPk();
@@ -1037,34 +1039,9 @@ public function cancel(array $payload = []): array
 
     private function ensureFlowTable(): void
     {
-        if (!$this->pdo) {
-            throw new RuntimeException('database error');
+        if (!$this->ensureSchemaTableReady(self::FLOW_TABLE)) {
+            throw new RuntimeException('schema_not_ready');
         }
-
-        $sql = 'CREATE TABLE IF NOT EXISTS ' . self::FLOW_TABLE . ' (
-            flow_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            appointment_id VARCHAR(64) NOT NULL,
-            doctor_id VARCHAR(64) NOT NULL,
-            consultorio_id VARCHAR(64) NOT NULL,
-            start_at DATETIME NOT NULL,
-            end_at DATETIME NOT NULL,
-            status VARCHAR(32) NOT NULL DEFAULT "pending_otp",
-            otp_id BIGINT UNSIGNED DEFAULT NULL,
-            otp_channel VARCHAR(16) DEFAULT NULL,
-            otp_external_id VARCHAR(64) DEFAULT NULL,
-            otp_verified_at DATETIME DEFAULT NULL,
-            expires_at DATETIME NOT NULL,
-            cancel_token VARCHAR(64) NOT NULL,
-            payload_json JSON DEFAULT NULL,
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (flow_id),
-            UNIQUE KEY uniq_public_flow_appointment (appointment_id),
-            KEY idx_public_flow_status_expires (status, expires_at),
-            KEY idx_public_flow_slot (doctor_id, consultorio_id, start_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
-
-        $this->pdo->exec($sql);
     }
 
     private function expirePendingReservations(): void
@@ -1704,34 +1681,21 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
 
     private function ensureOtpTable(): void
     {
-        if (!$this->pdo) {
-            throw new RuntimeException('database error');
+        if (!$this->ensureSchemaTableReady(self::OTP_TABLE)) {
+            throw new RuntimeException('schema_not_ready');
         }
+    }
 
-        $sql = 'CREATE TABLE IF NOT EXISTS ' . self::OTP_TABLE . ' (
-            id VARCHAR(36) NOT NULL,
-            doctor_id VARCHAR(64) NOT NULL,
-            consultorio_id INT NOT NULL,
-            start_at DATETIME NOT NULL,
-            end_at DATETIME NOT NULL,
-            patient_name VARCHAR(191) NOT NULL,
-            patient_phone VARCHAR(32) DEFAULT NULL,
-            patient_email VARCHAR(191) DEFAULT NULL,
-            otp_hash VARCHAR(255) NOT NULL,
-            otp_last4 CHAR(4) DEFAULT NULL,
-            status ENUM("pending_verification","verified","expired","failed") NOT NULL DEFAULT "pending_verification",
-            attempts INT NOT NULL DEFAULT 0,
-            expires_at DATETIME NOT NULL,
-            created_at DATETIME NOT NULL,
-            verified_at DATETIME DEFAULT NULL,
-            meta_json JSON DEFAULT NULL,
-            PRIMARY KEY (id),
-            KEY idx_public_otp_slot (doctor_id, consultorio_id, start_at),
-            KEY idx_public_otp_expires (expires_at),
-            KEY idx_public_otp_email (patient_email)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
-
-        $this->pdo->exec($sql);
+    private function ensureSchemaTableReady(string $table): bool
+    {
+        if (!$this->pdo) {
+            return false;
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table'
+        );
+        $stmt->execute(['table' => $table]);
+        return (int)$stmt->fetchColumn() > 0;
     }
 
     private function resolveCanonicalDoctorId(string $doctorId): string

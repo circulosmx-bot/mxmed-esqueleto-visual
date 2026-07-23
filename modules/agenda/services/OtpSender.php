@@ -10,36 +10,12 @@ class DevOtpSender implements OtpSender
 {
     public function send(string $channel, string $to, string $otp, array $context = []): bool
     {
-        $maskedTo = $this->maskRecipient($to);
-        $requestId = (string)($context['request_id'] ?? '');
-        $doctorId = (string)($context['doctor_id'] ?? '');
-        $consultorioId = (string)($context['consultorio_id'] ?? '');
-
+        // Legacy development compatibility only; this is not a real OTP provider.
         error_log(sprintf(
-            '[agenda-public-otp] channel=%s to=%s otp=%s request_id=%s doctor_id=%s consultorio_id=%s',
-            $channel,
-            $maskedTo,
-            $otp,
-            $requestId,
-            $doctorId,
-            $consultorioId
+            '[agenda-public-otp] channel=%s delivery_mode=dev_compatibility secret_logged=false',
+            in_array($channel, ['sms', 'email'], true) ? $channel : 'unsupported'
         ));
 
         return true;
-    }
-
-    private function maskRecipient(string $value): string
-    {
-        $raw = trim($value);
-        if ($raw === '') {
-            return '';
-        }
-
-        $length = strlen($raw);
-        if ($length <= 4) {
-            return str_repeat('*', $length);
-        }
-
-        return str_repeat('*', $length - 4) . substr($raw, -4);
     }
 }

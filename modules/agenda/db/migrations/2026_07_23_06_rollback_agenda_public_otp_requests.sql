@@ -1,0 +1,2 @@
+-- Declarative CUT01-C rollback. This file is not executed by Activity 13.
+-- NON-DESTRUCTIVE: preserve OTP evidence; stop traffic and use authorized retention/reconciliation.

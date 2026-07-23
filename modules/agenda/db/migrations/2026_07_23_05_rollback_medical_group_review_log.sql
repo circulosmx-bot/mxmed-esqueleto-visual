@@ -1,0 +1,2 @@
+-- Declarative CUT01-C rollback. This file is not executed by Activity 13.
+-- NON-DESTRUCTIVE: preserve the audit trail and reconcile through an authorized restoration plan.

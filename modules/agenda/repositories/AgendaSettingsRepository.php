@@ -16,10 +16,7 @@ class AgendaSettingsRepository
     private function ensureTable(): void
     {
         if (!$this->tableExists('agenda_settings')) {
-            $this->createTableIfMissing();
-        }
-        if (!$this->tableExists('agenda_settings')) {
-            throw new RuntimeException('agenda settings table not ready');
+            throw new RuntimeException('schema_not_ready');
         }
     }
 
@@ -30,24 +27,6 @@ class AgendaSettingsRepository
         );
         $stmt->execute(['table' => $name]);
         return (int)$stmt->fetchColumn() > 0;
-    }
-
-    private function createTableIfMissing(): void
-    {
-        $sql = "CREATE TABLE IF NOT EXISTS agenda_settings (
-            doctor_id VARCHAR(64) NOT NULL,
-            consultorio_id VARCHAR(64) NOT NULL,
-            appointment_duration_min INT NOT NULL DEFAULT 30,
-            gap_between_appointments_min INT NOT NULL DEFAULT 0,
-            channels_json JSON DEFAULT NULL,
-            cancellation_policy_hours INT DEFAULT NULL,
-            reminder_template TEXT DEFAULT NULL,
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (doctor_id, consultorio_id),
-            KEY idx_agenda_settings_doctor (doctor_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-        $this->pdo->exec($sql);
     }
 
     public function getByDoctorConsultorio(string $doctorId, string $consultorioId): ?array
@@ -94,4 +73,3 @@ class AgendaSettingsRepository
         ]);
     }
 }
-

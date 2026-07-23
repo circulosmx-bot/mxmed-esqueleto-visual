@@ -1,6 +1,7 @@
 <?php
 namespace Agenda\Controllers;
 
+use Agenda\Adapters\CanonicalPublicAgendaAdapter;
 use Agenda\Helpers\DoctorIdentity as DoctorIdentity;
 use Agenda\Repositories\PublicOtpRepository;
 use DateTimeImmutable;
@@ -8,6 +9,7 @@ use DateTimeZone;
 use PDOException;
 use RuntimeException;
 
+require_once __DIR__ . '/../adapters/CanonicalPublicAgendaAdapter.php';
 require_once __DIR__ . '/../repositories/PublicOtpRepository.php';
 require_once __DIR__ . '/../helpers/doctor_identity.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
@@ -24,6 +26,10 @@ class PublicOtpController
 
     public function __construct()
     {
+        $config = require __DIR__ . '/../config/agenda.php';
+        $canonicalPublicAgendaAdapterClass = CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled($config)
+            ? CanonicalPublicAgendaAdapter::class
+            : null;
         try {
             $pdo = mxmed_pdo();
             $this->pdo = $pdo;
@@ -119,10 +125,6 @@ class PublicOtpController
             'route' => 'public_otp_request',
             'doctor_id' => $doctorIdCanonical,
         ];
-
-        if ($this->isQaModeEnabled()) {
-            $meta['debug_code'] = $code;
-        }
 
         return $this->success([
             'otp_id' => $otpId,
@@ -287,17 +289,6 @@ class PublicOtpController
         $timezone = new DateTimeZone(self::TIMEZONE);
         $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value, $timezone);
         return $dt ?: null;
-    }
-
-    private function isQaModeEnabled(): bool
-    {
-        $env = getenv('MXMED_QA_MODE');
-        if (is_string($env) && trim($env) === '1') {
-            return true;
-        }
-
-        $header = trim((string)($_SERVER['HTTP_X_MXMED_QA_MODE'] ?? ''));
-        return $header === '1';
     }
 
     private function success(array $data, array $meta = [], string $message = ''): array
