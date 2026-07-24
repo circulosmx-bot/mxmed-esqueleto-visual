@@ -2622,3 +2622,25 @@ Impacto real: `RUNTIME_WIRING=0`; `SHADOW_TRAFFIC_PROCESSED=0`; `AUDIT_EVENTS_WR
 Validación: pruebas nuevas 3/3, regresiones 22/22, total 25/25; lint nuevo 7/7, baseline 11/11, total 18/18; inspección estática sin APIs prohibidas o imports runtime; PP-310–PP-318 byte-equivalent y PP-319 único. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent.
 
 Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 16 está cerrada e integrada. `ACTIVITY17=CUT02A_R0_HARNESS_IMPLEMENTED_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 17 queda implementada, lista para postvalidación y no integrada. Actividad 18 permanece bloqueada. Contador oficial `16/22`; pendientes `6`. Checkpoint 17 no creado.
+
+### PP-320 — Actividad 18: CUT-02B Baseline Collection Plan and Sanitized Evidence Readiness
+
+Fecha: 2026-07-23. Actividad: 18. Identificador: `ARCH/MXMed-PG03-CUT02-B-Baseline-Sanitized-Evidence-Readiness-01`. Parent: `2964d2f1a1c51cd94b3c3eb7df1caa0abc792904`. Checkpoint 17: `checkpoint/mxmed-product-refinement-v2-activity17`, objeto anotado `484350569709330499c7cf9acdc4a9d0aeff315a`, desreferenciado al parent. Rama: `architecture/mxmed-pg03-cut02b-baseline-sanitized-evidence-v2`. Commit: SELF. Clasificación: UI-0.
+
+CUT-02B completa un alcance exclusivamente documental de `2 nuevos + 1 modificado = 3`: crea `docs/MXMED_ARQUITECTURA_V2_PG03_CUT02_B_BASELINE_COLLECTION_PLAN.md` y `docs/MXMED_EVIDENCIA_V2_PG03_CUT02_B_SANITIZED_BASELINE_SCHEMA.md`; modifica únicamente este Plan Maestro. No existe archivo cuarto. Los cuatro archivos y tres pruebas del harness CUT-02A permanecen protegidos y byte-equivalent, `HARNESS_PROTECTED=7/7`.
+
+El plan cubre las cinco superficies elegibles CUT-02A y documenta exactamente doce tipos permitidos de evidencia sintética y veinte categorías prohibidas. Define catálogo cerrado de fixtures sintéticos, ocho categorías de escenario por superficie, comparación legacy/canonical, invariancia, normalización determinista, digests SHA-256, referencias opacas `test:`, representatividad, sesgo, integridad, privacidad, criterios de aceptación/rechazo y safe return R0.
+
+El schema conceptual `mxmed.cut02b.sanitized_baseline_evidence` permanece exclusivamente `schema_version=proposed-v1`. Su allowlist cerrada contiene dieciocho campos; no admite strings libres, payload/headers/IDs raw, texto clínico, timestamps automáticos o UUIDs aleatorios. Un paquete futuro conceptual separaría catálogo, resultados sanitizados, validación de privacidad, integridad, cobertura, sesgo/exclusiones, decisiones de revisión y evidencia de retorno seguro; esta actividad no crea esos artefactos.
+
+La secuencia futura es `synthetic_fixture_catalog → offline_harness_execution_plan → sanitized_result_package → privacy_static_validation → representativeness_and_bias_review → evidence_integrity_review → technical_director_review → future_sampling_parameter_proposal`. La última etapa sólo permitiría proponer; no aprueba parámetros ni ejecución.
+
+Fixtures sintéticos no equivalen a tráfico productivo y no permiten inferir percentiles, calcular SLO, aprobar error budgets o sampling, ni declarar production readiness. `sampling=0`; sampling key/scope/exclusions, ventanas, p95, p99, SLO, error budgets, thresholds, sink, retención, owners, on-call, plataformas, rutas, timeouts, RTO y RPO continúan diferidos bajo sus marcadores vigentes.
+
+Los once feature flags permanecen en booleano literal false, `FEATURE_FLAGS_FALSE=11/11`, `RUNTIME_TRUE_FLAGS=0`, y R0 continúa disabled. `BASELINE_COLLECTION_PLAN_AUTHORIZED=true`; `BASELINE_COLLECTION_EXECUTION_AUTHORIZED=false`; `SANITIZED_EVIDENCE_REVIEW_AUTHORIZED=false`; `CUT02_IMPLEMENTATION_AUTHORIZED=false`; R1 y R2 no autorizados.
+
+Impacto real: `REAL_TRAFFIC=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0`; `DDL_EXECUTED=0`; `PERSISTENCE_WRITES=0`; `BACKFILL_EXECUTED=0`; `REAL_OTP_SENT=0`; `CLINICAL_REQUESTS_EXECUTED=0`; `METRICS_EMITTED=0`; `AUDIT_EVENTS_WRITTEN=0`. No se ejecutaron requests, baseline, harness, datos reales, DB, SQL, persistencia, OTP, Clinical, métricas o auditoría.
+
+Validación: pruebas 25/25; lint del harness 7/7; harness protegido 7/7; superficies 5/5; evidencia permitida 12/12; evidencia prohibida 20/20; PP-310–PP-319 byte-equivalent y PP-320 único. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent.
+
+Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 17 está cerrada e integrada. `ACTIVITY18=CUT02_B_BASELINE_PLAN_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 18 queda documentada, lista para postvalidación y no integrada. Actividad 19 permanece bloqueada. Contador oficial `17/22`; pendientes `5`. Checkpoint 18 no creado.
