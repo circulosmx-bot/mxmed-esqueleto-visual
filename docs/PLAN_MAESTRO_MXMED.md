@@ -2644,3 +2644,21 @@ Impacto real: `REAL_TRAFFIC=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0
 Validación: pruebas 25/25; lint del harness 7/7; harness protegido 7/7; superficies 5/5; evidencia permitida 12/12; evidencia prohibida 20/20; PP-310–PP-319 byte-equivalent y PP-320 único. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent.
 
 Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 17 está cerrada e integrada. `ACTIVITY18=CUT02_B_BASELINE_PLAN_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 18 queda documentada, lista para postvalidación y no integrada. Actividad 19 permanece bloqueada. Contador oficial `17/22`; pendientes `5`. Checkpoint 18 no creado.
+
+### PP-321 — Actividad 19: CUT-02C Synthetic Baseline Execution and Sanitized Evidence Package
+
+Fecha: 2026-07-23. Actividad: 19. Identificador: `QA-ARCH/MXMed-PG03-CUT02-C-Synthetic-Baseline-Evidence-Package-01`. Parent: `d765b3270b8085f1f6bec1f321932d82b7dd0f77`. Checkpoint 18: `checkpoint/mxmed-product-refinement-v2-activity18`, objeto anotado `77cf0686933c8c876bb6644e4d74fb5ef79f7886`, desreferenciado al parent. Rama: `feature/mxmed-pg03-cut02c-synthetic-baseline-package-v2`. Commit: SELF. Clasificación: UI-0.
+
+CUT-02C completa un alcance exacto de `7 nuevos + 1 modificado = 8`: crea el catálogo sintético, tres pruebas, el documento de resultados agregados, la revisión de privacidad/integridad y el documento de implementación; modifica únicamente este Plan Maestro. No existe archivo noveno. Los cuatro archivos del harness CUT-02A, sus tres pruebas previas y los dos documentos CUT-02B permanecen protegidos y byte-equivalent, `PROTECTED_SURFACES=9/9`.
+
+El catálogo puro y estable cubre una matriz exacta de cinco superficies por ocho categorías, `MATRIX=5x8`, con 40 fixtures sintéticos, IDs únicos y referencias opacas `test:`. Cada fixture se ejecuta exactamente dos veces dentro de la prueba principal: `TOTAL_OFFLINE_EXECUTIONS=80/80`; las serializaciones sanitizadas coinciden `DETERMINISTIC_RESULTS=40/40`. El resultado agregado es 25 PASS, 10 FAIL cerrados y 5 REJECTED controlados.
+
+La evidencia implementa el schema allowlisted de 18 campos `proposed-v1`; no conserva fixture, payload, headers, side effects, stacks, PII o identificadores reales. La inspección recursiva de veinte categorías prohibidas pasa, `PRIVACY_VALIDATION=PASS`, y la integridad pasa sin duplicados, faltantes o extras, `INTEGRITY_VALIDATION=PASS`. Digests agregados: `CATALOG_SHA256=5d7934acbdcbb3dd45dfaa2442de467a4e40beb9828103c84acb55220e5d9a96`; `RESULTS_SHA256=b7c5f323cf38e02d970e33673bb0f943c16c23363466ea02e9f50a0f59c861f7`.
+
+Los hard stops sintéticos producen safe return `R0` / `disabled`; mantienen legacy y no transfieren autoridad de respuesta o write canónico. `SAMPLING=0`; los once flags continúan en booleano literal false, `FEATURE_FLAGS_FALSE=11/11`, `RUNTIME_TRUE_FLAGS=0`. Sampling key/scope/exclusions, ventanas, p95, p99, SLO, budgets, thresholds, sink, retención, owners, on-call, plataformas, rutas, timeouts, residencia, jurisdicción, key management, schema/retención de auditoría, RTO y RPO permanecen diferidos.
+
+Impacto real: `REAL_TRAFFIC=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0`; `DDL_EXECUTED=0`; `PERSISTENCE_WRITES=0`; `BACKFILL_EXECUTED=0`; `REAL_OTP_SENT=0`; `CLINICAL_REQUESTS_EXECUTED=0`; `NETWORK_CALLS=0`; `METRICS_EMITTED=0`; `AUDIT_EVENTS_WRITTEN=0`. No se selecciona sink, no se modifica runtime y no se procesa request o dato real.
+
+Validación: pruebas nuevas 3/3, regresiones 25/25, total 28/28; lint nuevo 4/4, baseline protegido 7/7, total 11/11. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent y sin reset, rebase, amend o force push.
+
+Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 18 está cerrada e integrada. `ACTIVITY19=CUT02_C_SYNTHETIC_BASELINE_PACKAGE_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 19 queda lista para postvalidación y no integrada. Actividad 20 permanece bloqueada. Contador oficial `18/22`; pendientes `4`. Checkpoint 19 no creado.
