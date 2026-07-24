@@ -2680,3 +2680,21 @@ Los once flags continúan en booleano literal false, `FEATURE_FLAGS_FALSE=11/11`
 Validación: nuevos documentos 3/3; decisiones propuestas 8/8, ratificadas 0/8 y efectivas 0/8; parámetros no resueltos 7/7; regresiones 28/28; lint 11/11. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent y sin reset, rebase, amend o force push.
 
 Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 19 está cerrada e integrada. `ACTIVITY20=CUT02_D_TECHNICAL_REVIEW_AND_PARAMETER_PROPOSAL_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 20 queda lista para postvalidación y no integrada. Actividad 21 permanece bloqueada. Contador oficial `19/22`; pendientes `3`. Checkpoint 20 no creado.
+
+### PP-323 — Actividad 21: CUT-02E Director Decision Ratification and R0 Governance Gate
+
+Fecha: 2026-07-23. Actividad: 21. Identificador: `GOV-ARCH/MXMed-PG03-CUT02-E-Director-Ratification-R0-Governance-Gate-01`. Parent: `be68cb7f8c3fee2f3c9e21ecd3cb9e72bcf9a396`. Checkpoint 20: `checkpoint/mxmed-product-refinement-v2-activity20`, objeto anotado `9d2b7bc71e746d5ed59ff61d622dac1b9ec6b56d`, desreferenciado al parent. Rama: `governance/mxmed-pg03-cut02e-director-ratification-r0-gate-v2`. Commit: SELF. Clasificación: UI-0.
+
+CUT-02E completa un alcance exclusivamente documental de `2 nuevos + 2 modificados = 4`: crea la ratificación directorial y el gate de condiciones R0→R1; transforma DEC-020A–H y añade este PP-323. No existe archivo quinto. Las dieciocho superficies CUT-02A/B/C/D permanecen protegidas y byte-equivalent, `PROTECTED_SURFACES=18/18`.
+
+Las ocho decisiones quedan `RATIFIED_GOVERNANCE_ONLY`, ratificadas 8/8 y efectivas como gobierno 8/8. Su efecto runtime permanece 0/8 y su impacto runtime es none. La ratificación acepta evidencia sintética sólo offline, prohíbe inferencia productiva, conserva cinco superficies y orden de revisión sin activación, mantiene la estructura futura de sampling sin valores, exige prerequisitos operativos, reutiliza quince hard stops, formaliza criterios futuros y prohíbe R1 hasta autorización separada.
+
+El gate aprueba exclusivamente la policy R0 de gobierno. R0 runtime, tráfico real, baseline real y entrada R1 no están aprobados. Safe return conserva `TARGET_STAGE=R0`, `TARGET_MODE=disabled`, legacy activo, respuesta/write canónico prohibido y rollback SQL no requerido.
+
+`SAMPLING=0`; sampling y ventana no aprobados. Los siete parámetros permanecen sin resolver; sink no seleccionado/configurado, dashboard y alertas no implementados, owners/on-call y retención no aprobados, privacidad para tráfico real no aprobada y baseline real no autorizado.
+
+Los once flags continúan en booleano literal false, `FEATURE_FLAGS_FALSE=11/11`, `RUNTIME_TRUE_FLAGS=0`. Impacto real: `REAL_TRAFFIC=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0`; `DDL_EXECUTED=0`; `PERSISTENCE_WRITES=0`; `BACKFILL_EXECUTED=0`; `REAL_OTP_SENT=0`; `CLINICAL_REQUESTS_EXECUTED=0`; `NETWORK_CALLS=0`; `METRICS_EMITTED=0`; `AUDIT_EVENTS_WRITTEN=0`.
+
+Validación: documentos nuevos 2/2 y modificados 2/2; IDs 8/8; ratificadas 8/8; gobierno efectivo 8/8; runtime efectivo 0/8; parámetros sin resolver 7/7; regresiones 28/28; lint 11/11. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent y sin reset, rebase, amend o force push.
+
+Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 20 está cerrada e integrada. `ACTIVITY21=CUT02_E_DIRECTOR_RATIFICATION_AND_R0_GOVERNANCE_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 21 queda lista para postvalidación y no integrada. Actividad 22 permanece bloqueada. Contador oficial `20/22`; pendientes `2`. Checkpoint 21 no creado.
