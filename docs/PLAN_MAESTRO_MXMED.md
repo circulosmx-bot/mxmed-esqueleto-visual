@@ -2602,3 +2602,23 @@ Impacto real: `RUNTIME_WIRING=0`; `SHADOW_TRAFFIC_PROCESSED=0`; `AUDIT_EVENTS_WR
 Validación: decisiones 8/8 con estado `APPROVED_WITH_DEFERRED_PARAMETERS`, estados propuestos 0/8, PP-310–PP-317 byte-equivalent, PP-318 único, arquitectura protegida intacta, flags 11/11 false, pruebas 22/22, lint 11/11, fuentes y superficies protegidas sin mismatches y safe return por revert sin commit en worktree detached temporal con tree idéntico al parent.
 
 Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 15 está cerrada e integrada. `ACTIVITY16=CUT02_DIRECTOR_DECISIONS_RATIFIED_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 16 queda ratificada, lista para postvalidación y no integrada. Actividad 17 permanece bloqueada. Contador oficial `15/22`; pendientes `7`. Checkpoint 16 no creado.
+
+### PP-319 — Actividad 17: CUT-02A R0 Shadow Harness and Safe-Return Readiness
+
+Fecha: 2026-07-23. Actividad: 17. Identificador: `BE-ARCH/MXMed-PG03-CUT02-A-R0-Shadow-Harness-Safe-Return-01`. Parent: `11c42909c3b077c3171932242fb1de08fbcafa21`. Checkpoint 16: `checkpoint/mxmed-product-refinement-v2-activity16`, objeto anotado `78a7747ca9b5128685ad060bee05a1b39f75a6cf`, desreferenciado al parent. Rama: `feature/mxmed-pg03-cut02a-r0-shadow-harness-v2`. Commit: SELF. Clasificación: UI-0.
+
+CUT-02A implementa un harness R0 exclusivamente offline, puro y determinista, sin wiring runtime. El alcance exacto es `8 nuevos + 1 modificado = 9`: cuatro clases `final` bajo `modules/platform/shadow`, tres pruebas, un documento de implementación y este Plan Maestro. No existe archivo décimo y ningún otro archivo existente cambia.
+
+El harness acepta fixtures cerrados de las cinco superficies elegibles: `canonical_actor_authority`, `canonical_schedule_read`, `canonical_availability_compare`, `canonical_appointment_lifecycle` y `canonical_patient_identity`. Rechaza las demás como `UNKNOWN_OPERATION`. Normaliza headers sin excluir diferencias, canonicaliza payloads preservando arrays y tipos, calcula digests SHA-256 y prueba invariancia estricta de status, headers y payload; los outcomes diagnóstico pueden diferir sin transferir autoridad de respuesta.
+
+El catálogo cerrado contiene quince hard stops: privacidad/datos sensibles, cambio legacy genérico, status, headers, payload, write canónico, conexión DB, SQL/DDL, OTP real, request Clinical, fuga de scope, authority audit no disponible, operación desconocida, side effect inesperado y budget breach declarativo sin cifra. La denylist inspecciona keys a cualquier profundidad y el resultado sólo conserva códigos, referencias opacas de prueba y digests sanitizados.
+
+Cada hard stop produce un plan inmutable de safe return desde R0 disabled hacia R0 disabled: impide nuevas evaluaciones y respuestas/writes canónicos, mantiene legacy, preserva evidencia sanitizada y no requiere rollback SQL ni acciones DB, Clinical u OTP. El plan no ejecuta flags o mutaciones.
+
+Los once feature flags permanecen en booleano literal false y efectivamente deshabilitados. `SAMPLING=0`; baseline collection y observation window no están autorizados; CUT-02, R1 y R2 no están autorizados. Parámetros numéricos, thresholds, percentiles, budgets, sink, plataformas, retención, owners, on-call, timeouts, residencia, jurisdicción, key management, RTO y RPO continúan diferidos.
+
+Impacto real: `RUNTIME_WIRING=0`; `SHADOW_TRAFFIC_PROCESSED=0`; `AUDIT_EVENTS_WRITTEN=0`; `METRICS_EMITTED=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0`; `DDL_EXECUTED=0`; `PERSISTENCE_WRITES=0`; `BACKFILL_EXECUTED=0`; `REAL_OTP_SENT=0`; `CLINICAL_REQUESTS_EXECUTED=0`. No existen requests, datos reales, DB, persistencia, backfill, OTP, Clinical, métricas ni auditoría real.
+
+Validación: pruebas nuevas 3/3, regresiones 22/22, total 25/25; lint nuevo 7/7, baseline 11/11, total 18/18; inspección estática sin APIs prohibidas o imports runtime; PP-310–PP-318 byte-equivalent y PP-319 único. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent.
+
+Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 16 está cerrada e integrada. `ACTIVITY17=CUT02A_R0_HARNESS_IMPLEMENTED_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 17 queda implementada, lista para postvalidación y no integrada. Actividad 18 permanece bloqueada. Contador oficial `16/22`; pendientes `6`. Checkpoint 17 no creado.
