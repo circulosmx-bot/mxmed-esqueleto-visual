@@ -2662,3 +2662,21 @@ Impacto real: `REAL_TRAFFIC=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0
 Validación: pruebas nuevas 3/3, regresiones 25/25, total 28/28; lint nuevo 4/4, baseline protegido 7/7, total 11/11. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent y sin reset, rebase, amend o force push.
 
 Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 18 está cerrada e integrada. `ACTIVITY19=CUT02_C_SYNTHETIC_BASELINE_PACKAGE_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 19 queda lista para postvalidación y no integrada. Actividad 20 permanece bloqueada. Contador oficial `18/22`; pendientes `4`. Checkpoint 19 no creado.
+
+### PP-322 — Actividad 20: CUT-02D Synthetic Evidence Technical Review and Sampling Proposal Readiness
+
+Fecha: 2026-07-23. Actividad: 20. Identificador: `ARCH-QA/MXMed-PG03-CUT02-D-Synthetic-Evidence-Technical-Review-Sampling-Proposal-01`. Parent: `d63bb02544cd00807ca931456991e692f3115f6f`. Checkpoint 19: `checkpoint/mxmed-product-refinement-v2-activity19`, objeto anotado `f88f5396a6bedf50c26b17c9c843165cb25e9afb`, desreferenciado al parent. Rama: `architecture/mxmed-pg03-cut02d-technical-review-sampling-proposal-v2`. Commit: SELF. Clasificación: UI-0.
+
+CUT-02D completa un alcance exclusivamente documental de `3 nuevos + 1 modificado = 4`: crea la revisión técnica de evidencia sintética, la propuesta de sampling/observación y las decisiones DEC-020A–H; modifica únicamente este Plan Maestro. No existe archivo quinto. Las dieciséis superficies CUT-02A/B/C permanecen protegidas y byte-equivalent, `PROTECTED_SURFACES=16/16`.
+
+La revisión acepta CUT-02C sólo como evidencia sintética offline: `SYNTHETIC_PACKAGE_ACCEPTED_AS_OFFLINE_EVIDENCE=true`; no prueba representatividad productiva, `PRODUCTION_REPRESENTATIVENESS_PROVEN=false`, y requiere baseline real antes de cualquier aprobación numérica, `REAL_BASELINE_REQUIRED_BEFORE_NUMERIC_APPROVAL=true`. La recomendación es `GO_FOR_PARAMETER_PROPOSAL_ONLY`; readiness R1 permanece `NO_GO_PARAMETERS_AND_OPERATIONAL_CONTROLS_PENDING`.
+
+Las cinco superficies conservan el orden candidato autoridad, agenda, disponibilidad, lifecycle e identidad. Se redactan exactamente ocho decisiones `PROPOSED_PENDING_DIRECTOR_APPROVAL`; ratificadas 0/8 y efectivas 0/8. Los siete parámetros sampling rate, observation window, minimum volume, p95, p99, error budget y latency budget continúan bajo marcadores no resueltos. `SAMPLING=0`; sampling y ventana no están aprobados.
+
+Sink no seleccionado/configurado, dashboard y alertas no implementados, owners y on-call no aprobados, retención y privacidad para tráfico real no aprobadas, y baseline real no autorizado. Se reutilizan los quince hard stops sin thresholds numéricos y el safe return conserva R0 disabled, legacy y prohibición de respuesta/write canónico.
+
+Los once flags continúan en booleano literal false, `FEATURE_FLAGS_FALSE=11/11`, `RUNTIME_TRUE_FLAGS=0`. Impacto real: `REAL_TRAFFIC=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0`; `DDL_EXECUTED=0`; `PERSISTENCE_WRITES=0`; `BACKFILL_EXECUTED=0`; `REAL_OTP_SENT=0`; `CLINICAL_REQUESTS_EXECUTED=0`; `NETWORK_CALLS=0`; `METRICS_EMITTED=0`; `AUDIT_EVENTS_WRITTEN=0`.
+
+Validación: nuevos documentos 3/3; decisiones propuestas 8/8, ratificadas 0/8 y efectivas 0/8; parámetros no resueltos 7/7; regresiones 28/28; lint 11/11. Safe return Git por revert sin commit en worktree detached temporal, con tree idéntico al parent y sin reset, rebase, amend o force push.
+
+Los trece blockers permanecen abiertos: `BLOCKERS_OPEN=13/13`; cutover `NO_GO_BLOCKERS_PRESENT`; readiness general `NO_GO_LEGACY_BLOCKERS_PRESENT`. Actividad 19 está cerrada e integrada. `ACTIVITY20=CUT02_D_TECHNICAL_REVIEW_AND_PARAMETER_PROPOSAL_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; Actividad 20 queda lista para postvalidación y no integrada. Actividad 21 permanece bloqueada. Contador oficial `19/22`; pendientes `3`. Checkpoint 20 no creado.
