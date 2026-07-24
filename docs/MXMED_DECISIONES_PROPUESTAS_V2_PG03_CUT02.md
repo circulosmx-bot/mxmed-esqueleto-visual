@@ -2,7 +2,29 @@
 
 ## Límite de autoridad
 
-Este registro contiene ocho decisiones técnicas propuestas para revisión directorial. Ninguna está aprobada y ninguna autoriza implementación, wiring, tráfico, R1 o R2. Rollout efectivo: R0 disabled.
+Este registro contiene ocho decisiones técnicas propuestas para revisión directorial. Las ocho recomendaciones quedan ratificadas con parámetros diferidos y ninguna autoriza implementación, wiring, tráfico, R1 o R2. Rollout efectivo: R0 disabled.
+
+## Ratificación directorial
+
+Fecha: 2026-07-23
+
+Actividad: 16/22
+
+Identificador: ARCH/MXMed-PG03-CUT02-Director-Decisions-Approval-01
+
+> Apruebo DEC-015A, DEC-015B, DEC-015C, DEC-015D, DEC-015E, DEC-015F, DEC-015G y DEC-015H conforme a las recomendaciones postvalidadas de la Actividad 15, manteniendo pendientes los valores numéricos, proveedores, sink, sampling, ventanas de observación, p95, p99, SLO, error budgets, retención, owners, on-call, plataformas, rutas de alerta, timeouts, residencia, jurisdicción, key management, RTO, RPO y demás parámetros que requieren aprobación posterior.
+
+`DECISIONS_APPROVED_WITH_DEFERRED_PARAMETERS=8`
+
+`DECISIONS_PENDING_DIRECTOR_APPROVAL=0`
+
+`PARAMETERS_APPROVED=false`
+
+`CUT02_IMPLEMENTATION_AUTHORIZED=false`
+
+`R1_ACTIVATION_AUTHORIZED=false`
+
+`R2_ACTIVATION_AUTHORIZED=false`
 
 ## DEC-015A — Superficies y secuencia de shadow
 
@@ -17,8 +39,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** propuesta de orden; todos los flags permanecen false y no hay activación.
 - **Gate futuro:** autorización de implementación CUT-02 y aprobación separada de R1.
 - **Responsable de aprobación:** Dirección técnica, Seguridad, SRE, Agenda y Patients.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## DEC-015B — Invariancia legacy y contrato de evaluación
 
@@ -33,8 +55,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** define el contrato futuro de R1/R2; hoy `CANONICAL_RESPONSES=0` y `CANONICAL_WRITES=0`.
 - **Gate futuro:** harness de invariancia y hard stops bajo autorización separada.
 - **Responsable de aprobación:** Arquitectura y owners de Agenda/Patients.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## DEC-015C — Auditoría sanitizada y privacidad
 
@@ -49,8 +71,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** define el envelope propuesto; `AUDIT_EVENTS_WRITTEN=0`.
 - **Gate futuro:** privacy/threat review y aprobación del schema antes de R2.
 - **Responsable de aprobación:** Seguridad, Privacidad y clinical boundary reviewer.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## DEC-015D — Sink, health/readiness y failure policy
 
@@ -65,8 +87,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** `AUDIT_SINK_SELECTED=false` y `AUDIT_SINK_CONFIGURED=false`.
 - **Gate futuro:** decisión de proveedor/arquitectura y readiness postvalidado antes de R1/R2.
 - **Responsable de aprobación:** SRE, Seguridad y Dirección técnica.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## DEC-015E — Catálogo de métricas y dimensiones
 
@@ -81,8 +103,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** `METRICS_EMITTED=0`, `DASHBOARD_IMPLEMENTED=false`, `ALERTING_IMPLEMENTED=false`.
 - **Gate futuro:** diseño observable versionado y aprobación directorial de cifras.
 - **Responsable de aprobación:** SRE, Seguridad y owners de superficies.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## DEC-015F — Baseline, sampling, ventanas y budgets
 
@@ -97,8 +119,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** `sampling=0`, `SAMPLING_APPROVED=false`, `THRESHOLDS_APPROVED=false`.
 - **Gate futuro:** aprobación progresiva versionada antes de implementación y activación.
 - **Responsable de aprobación:** Dirección técnica con revisión SRE/Seguridad.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## DEC-015G — Owners, on-call, retención y runbooks
 
@@ -113,8 +135,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** `OWNER_APPROVED=false`, `ON_CALL_APPROVED=false`, `SHADOW_RETENTION_APPROVED=false`.
 - **Gate futuro:** aceptación operativa y runbook drill antes de R1.
 - **Responsable de aprobación:** Dirección, SRE, Seguridad y owners de dominio.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## DEC-015H — Hard stops, kill switches y safe return
 
@@ -129,8 +151,8 @@ Este registro contiene ocho decisiones técnicas propuestas para revisión direc
 - **Impacto CUT-02:** safe return documental; cero ejecución.
 - **Gate futuro:** hard-stop harness y drill aprobado antes de cualquier activación.
 - **Responsable de aprobación:** SRE, Seguridad, Arquitectura y Dirección técnica.
-- **Estado:** `PROPOSED_PENDING_DIRECTOR_APPROVAL`.
-- **Límite de la propuesta:** no autoriza implementación, wiring, R1 o R2.
+- **Estado:** `APPROVED_WITH_DEFERRED_PARAMETERS`.
+- **Límite de la aprobación:** la recomendación técnica queda ratificada; toda la información indicada en “Información no resuelta” continúa `UNRESOLVED_PENDING_PARAMETER_APPROVAL` o `UNRESOLVED_PENDING_BASELINE_AND_DIRECTOR_APPROVAL`, según corresponda. Esta aprobación no autoriza implementación, runtime wiring, tráfico shadow, métricas, auditoría, feature flags, sink, R1 o R2.
 
 ## Parámetros diferidos obligatorios
 
@@ -140,4 +162,16 @@ Percentiles, porcentajes y duración permanecen `UNRESOLVED_PENDING_BASELINE_AND
 
 ## Estado del registro
 
-Decisiones propuestas: 8. Decisiones aprobadas: 0. Implementación autorizada: false. R1 autorizado: false. R2 autorizado: false. `BLOCKERS_OPEN=13/13`, `CUTOVER_READINESS=NO_GO_BLOCKERS_PRESENT`, `READINESS=NO_GO_LEGACY_BLOCKERS_PRESENT`.
+Decisiones propuestas: 8.
+Decisiones aprobadas con parámetros diferidos: 8.
+Decisiones pendientes de aprobación directorial: 0.
+Parámetros diferidos: presentes.
+Implementación CUT-02 autorizada: false.
+R1 autorizado: false.
+R2 autorizado: false.
+
+`BLOCKERS_OPEN=13/13`
+
+`CUTOVER_READINESS=NO_GO_BLOCKERS_PRESENT`
+
+`READINESS=NO_GO_LEGACY_BLOCKERS_PRESENT`
