@@ -38,7 +38,17 @@ COPY --from=composer-source /usr/bin/composer /tmp/build-tools/composer
 COPY --from=extension-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=extension-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl libicu72 libonig5 libzip4 \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        libfreetype6 \
+        libicu72 \
+        libjpeg62-turbo \
+        libonig5 \
+        libpng16-16 \
+        libwebp7 \
+        libzip4 \
+    && php --ri gd >/dev/null \
+    && php -r 'exit(function_exists("imagecreatetruecolor") ? 0 : 1);' \
     && a2enmod rewrite mime \
     && rm -rf /var/lib/apt/lists/* /tmp/build-tools \
     && install -d -o www-data -g www-data \
