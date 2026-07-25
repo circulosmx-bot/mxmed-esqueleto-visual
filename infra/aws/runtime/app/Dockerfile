@@ -27,7 +27,8 @@ RUN case "${PHP_BASE_IMAGE}" in *@sha256:[0-9a-f][0-9a-f]*) ;; *) exit 64 ;; esa
         libwebp-dev \
         libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql opcache mbstring intl gd exif zip \
+    && php --ri 'Zend OPcache' >/dev/null \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring intl gd exif zip \
     && pecl install "redis-${PHPREDIS_VERSION}" \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/* /tmp/pear
