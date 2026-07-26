@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { App, Stack } from 'aws-cdk-lib';
-import { Annotations as AssertionAnnotations, Match } from 'aws-cdk-lib/assertions';
+import { Annotations as AssertionAnnotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { CfnRepository } from 'aws-cdk-lib/aws-ecr';
 import { CfnService, CfnTaskDefinition } from 'aws-cdk-lib/aws-ecs';
 import type { IConstruct } from 'constructs';
@@ -13,6 +13,7 @@ import {
   capabilityIncludesPaid,
   computeCreatesRegistry,
   computeCreatesService,
+  registryFoundationIsEnabled,
   computeCreatesTasks,
   computeEcrRetention,
   MXMED_COMPUTE_ACTIVATION_MODES,
@@ -188,7 +189,13 @@ describe('MXMED_AWS_COMPUTE_FOUNDATION_IMPLEMENTATION_V1 controls', () => {
     });
   });
 
-  test('maps registry creation monotonically across activation modes', () => {
+  test('maps Registry foundation activation monotonically with backward compatibility', () => {
+    expect(MXMED_COMPUTE_ACTIVATION_MODES.map(registryFoundationIsEnabled)).toEqual([
+      false,
+      true,
+      true,
+      true,
+    ]);
     expect(MXMED_COMPUTE_ACTIVATION_MODES.map(computeCreatesRegistry)).toEqual([
       false,
       true,
@@ -261,8 +268,13 @@ describe.each(ACTIVATION_CASES)(
       expect(fixture.stage.computeStack.runtimeCapabilityProfile).toBe(capability ?? null);
     });
 
-    test('creates the exact ECR inventory for the mode', () => {
-      expect(resourcesOfType(fixture.compute, 'AWS::ECR::Repository')).toHaveLength(repositories);
+    test('keeps ECR out of Compute and creates the dedicated Registry inventory for the mode', () => {
+      expect(resourcesOfType(fixture.compute, 'AWS::ECR::Repository')).toHaveLength(0);
+      expect(fixture.stage.registryStack === undefined).toBe(repositories === 0);
+      if (fixture.stage.registryStack !== undefined) {
+        const registry = Template.fromStack(fixture.stage.registryStack).toJSON();
+        expect(resourcesOfType(registry, 'AWS::ECR::Repository')).toHaveLength(repositories);
+      }
     });
 
     test('creates the exact ECS cluster inventory for the mode', () => {
@@ -312,7 +324,10 @@ describe.each(PROFILE_CASES)(
     const appTask = taskByContainerName(fixture.compute, 'app');
     const service = requireOne(fixture.compute, 'AWS::ECS::Service');
     const target = requireOne(fixture.compute, 'AWS::ApplicationAutoScaling::ScalableTarget');
-    const repository = requireOne(fixture.compute, 'AWS::ECR::Repository');
+    const registryStack = fixture.stage.registryStack;
+    if (registryStack === undefined) throw new Error('missing-registry-stack');
+    const registry = Template.fromStack(registryStack).toJSON();
+    const repository = requireOne(registry, 'AWS::ECR::Repository');
 
     test('uses the catalog CPU exactly', () => {
       expect(resourceProperties(appTask).Cpu).toBe(String(cpu));
@@ -350,14 +365,14 @@ describe.each(PROFILE_CASES)(
       expect(resourceProperties(service).PlatformVersion).toBe('1.4.0');
     });
 
-    test('uses the cost-aware Compute tag contract', () => {
+    test('uses the dedicated Registry tag contract', () => {
       const rendered = JSON.stringify(resourceProperties(repository).Tags);
+      expect(rendered).toContain('"Key":"Component","Value":"registry"');
       expect(rendered).toContain('service-enabled-v1');
       expect(rendered).toContain('directory-core-v1');
       expect(rendered).toContain('required');
-      expect(rendered).toContain(
-        environment === 'staging' ? 'release-window-v1' : 'always-on-approved',
-      );
+      expect(rendered).toContain(environment === 'staging' ? 'release-window-v1' : 'always-on');
+      expect(rendered).not.toContain('always-on-approved');
     });
 
     test('contains no edge resource in the Compute template', () => {
@@ -643,11 +658,12 @@ describe('ComputeFoundationAspect fail-closed mutations', () => {
     expectComputeSynthRejected(stage, 'MXMED_COMPUTE_TASK_RUNTIME_INVALID');
   });
 
-  test('rejects a mutable ECR repository', () => {
+  test('rejects any ECR repository placed back inside Compute', () => {
     const stage = createMutableServiceStage();
-    const repository = findConstruct(stage, CfnRepository, 'ApplicationRepository/Resource');
-    repository.imageTagMutability = 'MUTABLE';
-    expectComputeSynthRejected(stage, 'MXMED_COMPUTE_ECR_CONTRACT_INVALID');
+    new CfnRepository(stage.computeStack, 'ForbiddenSyntheticRepository', {
+      repositoryName: 'synthetic-forbidden',
+    });
+    expectComputeSynthRejected(stage, 'MXMED_COMPUTE_REPOSITORY_FORBIDDEN');
   });
 
   test('rejects an image tag in place of a digest', () => {
@@ -852,13 +868,18 @@ describe.each(SCRIPT_CASES)('offline script %s', (scriptName, requiredFragment) 
   });
 });
 
-test('all Compute templates are account-agnostic, lookup-free and credential-free', () => {
+test('all Compute and Registry templates are account-agnostic, lookup-free and credential-free', () => {
   for (const [mode, capability] of ACTIVATION_CASES) {
     const fixture = renderCompute('production', 'launch-lean-v1', mode, capability);
-    expect(fixture.serialized).not.toMatch(/\b\d{12}\b/);
-    expect(fixture.serialized).not.toMatch(/AKIA|ASIA|sk_(?:live|test)|BEGIN PRIVATE KEY/);
-    expect(fixture.serialized).not.toContain('VpcLookup');
-    expect(fixture.serialized).not.toContain('DockerImageAsset');
+    const registry =
+      fixture.stage.registryStack === undefined
+        ? ''
+        : JSON.stringify(Template.fromStack(fixture.stage.registryStack).toJSON());
+    const serialized = `${fixture.serialized}${registry}`;
+    expect(serialized).not.toMatch(/\b\d{12}\b/);
+    expect(serialized).not.toMatch(/AKIA|ASIA|sk_(?:live|test)|BEGIN PRIVATE KEY/);
+    expect(serialized).not.toContain('VpcLookup');
+    expect(serialized).not.toContain('DockerImageAsset');
   }
 });
 

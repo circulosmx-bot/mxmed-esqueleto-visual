@@ -849,3 +849,23 @@ se debe borrar `cdk.out/` para ocultar una diferencia; se regenera desde el comm
 - Solicitud de credenciales o lookup: detenerse; la foundation debe sintetizar offline.
 - Error de Aspect: corregir configuración o recurso. No silenciar la anotación.
 - Diff, bootstrap o deploy requerido: detenerse y solicitar la microfase correspondiente.
+
+## Dedicated Registry foundation
+
+`registry-only-v1` now creates an independently deployable `mxmed-<env>-registry` stack
+instead of placing ECR in Compute or requiring the complete Security foundation.
+
+The Registry stack owns exactly:
+
+- one customer-managed KMS key and alias;
+- one immutable ECR repository with scan-on-push;
+- lifecycle limits derived from the existing launch profile;
+- retained KMS and ECR resources with `emptyOnDelete=false`;
+- repository URI, repository ARN and registry-key ARN outputs.
+
+Compute contains no ECR repository. Task-bearing modes receive the Registry repository as
+an explicit dependency, while `registry-only-v1` leaves Compute empty and does not introduce
+a Registry-to-Security dependency.
+
+This source change does not bootstrap, deploy, authenticate Docker, push an image or enable
+public traffic. Those actions remain separately gated.

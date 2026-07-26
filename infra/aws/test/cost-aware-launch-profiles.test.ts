@@ -235,6 +235,23 @@ describe('MXMED_AWS_COST_AWARE_LAUNCH_PROFILES_CONTRACT_V1', () => {
       ]),
     );
   });
+
+  test('assigns dedicated Registry KMS and ECR drivers without changing Security key quantity', () => {
+    const ledger = resolveLaunchProfile('production', 'launch-lean-v1').costLedger;
+    const registry = ledger.filter((row) => row.stack === 'Registry');
+    const securityKms = ledger.find((row) => row.stack === 'Security' && row.service === 'AWS KMS');
+
+    expect(registry.map((row) => row.service).sort()).toEqual(['AWS KMS', 'Amazon ECR']);
+    expect(registry.find((row) => row.service === 'AWS KMS')).toMatchObject({
+      quantity: 1,
+      capacityState: 'future-microphase',
+    });
+    expect(registry.find((row) => row.service === 'Amazon ECR')).toMatchObject({
+      quantity: 1,
+      capacityState: 'future-microphase',
+    });
+    expect(securityKms).toMatchObject({ quantity: 4, capacityState: 'configured' });
+  });
 });
 
 describe.each(COMBINATIONS)('%s / %s', (environment, profile) => {

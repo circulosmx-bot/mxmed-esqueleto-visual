@@ -19,6 +19,7 @@ import { MxMedDrCopyStack } from '../stacks/mxmed-dr-copy-stack';
 import { MxMedEdgeStack } from '../stacks/mxmed-edge-stack';
 import { MxMedJobsStack } from '../stacks/mxmed-jobs-stack';
 import { MxMedNetworkStack } from '../stacks/mxmed-network-stack';
+import { MxMedRegistryStack } from '../stacks/mxmed-registry-stack';
 import { MxMedRegionalOperationsStack } from '../stacks/mxmed-regional-operations-stack';
 import { MxMedRegionalBackupStack } from '../stacks/mxmed-regional-backup-stack';
 import { MxMedRestoreValidationStack } from '../stacks/mxmed-restore-validation-stack';
@@ -38,6 +39,7 @@ export class MxMedEnvironmentStage extends Stage {
   public readonly dataStack: MxMedDataStack;
   public readonly storageStack: MxMedStorageStack;
   public readonly sessionStack: MxMedSessionStack;
+  public readonly registryStack: MxMedRegistryStack | undefined;
   public readonly computeStack: MxMedComputeStack;
   public readonly regionalEdgeStack: MxMedRegionalEdgeFoundationStack | undefined;
   public readonly edgeStack: MxMedEdgeStack;
@@ -81,6 +83,9 @@ export class MxMedEnvironmentStage extends Stage {
       applicationDataKey: this.securityStack.applicationDataKey,
       secretsKey: this.securityStack.secretsKey,
     });
+    this.registryStack = computeCreatesRegistry(props.config.computeActivationMode)
+      ? new MxMedRegistryStack(this, 'Registry', stackProps)
+      : undefined;
     this.regionalEdgeStack = edgeCreatesRegional(props.config)
       ? new MxMedRegionalEdgeFoundationStack(this, 'RegionalEdgeFoundation', {
           ...stackProps,
@@ -124,6 +129,9 @@ export class MxMedEnvironmentStage extends Stage {
       sessionLockEnabled: props.config.sessionLockEnabled,
       sessionLockTimeoutSeconds: props.config.sessionLockTimeoutSeconds,
       sessionLockWaitMicroseconds: props.config.sessionLockWaitMicroseconds,
+      ...(this.registryStack === undefined
+        ? {}
+        : { applicationRepository: this.registryStack.applicationRepository }),
     };
     const edgeAwareComputeStackProps =
       this.regionalEdgeStack === undefined
@@ -217,10 +225,12 @@ export class MxMedEnvironmentStage extends Stage {
     this.storageStack.addDependency(this.securityStack);
     this.sessionStack.addDependency(this.networkStack);
     this.sessionStack.addDependency(this.securityStack);
-    if (computeCreatesRegistry(props.config.computeActivationMode)) {
-      this.computeStack.addDependency(this.securityStack);
-    }
     if (computeCreatesTasks(props.config.computeActivationMode)) {
+      if (this.registryStack === undefined) {
+        throw new Error('MXMED_REGISTRY_STACK_REQUIRED_FOR_COMPUTE_TASKS');
+      }
+      this.computeStack.addDependency(this.registryStack);
+      this.computeStack.addDependency(this.securityStack);
       this.computeStack.addDependency(this.networkStack);
       this.computeStack.addDependency(this.dataStack);
       this.computeStack.addDependency(this.storageStack);

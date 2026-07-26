@@ -8,7 +8,6 @@ import { CfnLogGroup } from 'aws-cdk-lib/aws-logs';
 import type { IConstruct } from 'constructs';
 
 import {
-  computeCreatesRegistry,
   computeCreatesService,
   computeCreatesTasks,
   capabilityIncludesAi,
@@ -53,28 +52,7 @@ export class ComputeFoundationAspect implements IAspect {
       return;
     }
     if (node instanceof CfnRepository) {
-      if (!computeCreatesRegistry(mode)) {
-        Annotations.of(node).addError('MXMED_COMPUTE_REPOSITORY_MODE_INVALID');
-      }
-      const rendered = Stack.of(node).resolve({
-        encryption: node.encryptionConfiguration,
-        scan: node.imageScanningConfiguration,
-        mutability: node.imageTagMutability,
-        emptyOnDelete: node.emptyOnDelete,
-      }) as Record<string, unknown>;
-      const lifecycle = text(node.lifecyclePolicy, node).replaceAll('\\', '');
-      if (
-        rendered.mutability !== 'IMMUTABLE' ||
-        text(rendered.scan, node).includes('false') ||
-        !text(rendered.encryption, node).includes('KMS') ||
-        rendered.emptyOnDelete === true ||
-        !lifecycle.includes(
-          `"countNumber":${String(this.config.computeEcrUntaggedRetentionDays)}`,
-        ) ||
-        !lifecycle.includes(`"countNumber":${String(this.config.computeEcrMaxImageCount)}`)
-      ) {
-        Annotations.of(node).addError('MXMED_COMPUTE_ECR_CONTRACT_INVALID');
-      }
+      Annotations.of(node).addError('MXMED_COMPUTE_REPOSITORY_FORBIDDEN');
       return;
     }
     if (node instanceof CfnParameter && node.node.path.includes('ApplicationImageDigest')) {
@@ -183,11 +161,10 @@ export class ComputeFoundationAspect implements IAspect {
       (candidate) =>
         candidate instanceof CfnParameter && candidate.node.path.includes('ApplicationImageDigest'),
     ).length;
-    const expectedRegistry = computeCreatesRegistry(this.config.computeActivationMode) ? 1 : 0;
     const expectedTasks = computeCreatesTasks(this.config.computeActivationMode) ? 1 : 0;
     const expectedService = computeCreatesService(this.config.computeActivationMode) ? 1 : 0;
     if (
-      count(CfnRepository) !== expectedRegistry ||
+      count(CfnRepository) !== 0 ||
       count(CfnCluster) !== expectedTasks ||
       count(CfnTaskDefinition) !== expectedTasks * 2 ||
       count(CfnLogGroup) !== expectedTasks * 2 ||

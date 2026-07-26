@@ -84,8 +84,13 @@ export function resolveComputeControls(
   });
 }
 
-export function computeCreatesRegistry(mode: MxMedComputeActivationMode): boolean {
+export function registryFoundationIsEnabled(mode: MxMedComputeActivationMode): boolean {
   return mode !== 'disabled-v1';
+}
+
+/** Backward-compatible activation helper; Registry now owns the repository. */
+export function computeCreatesRegistry(mode: MxMedComputeActivationMode): boolean {
+  return registryFoundationIsEnabled(mode);
 }
 
 export function computeCreatesTasks(mode: MxMedComputeActivationMode): boolean {

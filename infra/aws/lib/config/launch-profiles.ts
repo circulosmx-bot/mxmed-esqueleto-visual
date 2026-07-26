@@ -73,7 +73,8 @@ export interface MxMedProfileCapability {
 }
 
 export interface MxMedCostLedgerDriver {
-  readonly stack: 'Network' | 'Security' | 'Data' | 'Storage' | 'Session' | 'Compute' | 'Edge';
+  readonly stack:
+    'Network' | 'Security' | 'Data' | 'Storage' | 'Session' | 'Registry' | 'Compute' | 'Edge';
   readonly service: string;
   readonly resource: string;
   readonly profile: MxMedDeploymentProfile;
@@ -575,6 +576,20 @@ function buildCostLedger(
       reviewRequired: true,
     }),
     driver({
+      stack: 'Registry',
+      service: 'AWS KMS',
+      resource: 'Dedicated container registry encryption key and requests',
+      quantity: 1,
+      unit: 'key-version',
+      hours: null,
+      quantityDriver: 'registryKmsKeys=1;requests=measured',
+      formula: 'keys * currentMonthlyKeyRate + measuredRequests',
+      officialSource: 'https://aws.amazon.com/kms/pricing/',
+      costNature: ['fixed-idle', 'usage-based'],
+      capacityState: 'future-microphase',
+      reviewRequired: true,
+    }),
+    driver({
       stack: 'Security',
       service: 'AWS Secrets Manager',
       resource: 'Foundation and managed secrets plus requests',
@@ -617,7 +632,7 @@ function buildCostLedger(
       reviewRequired: true,
     }),
     driver({
-      stack: 'Compute',
+      stack: 'Registry',
       service: 'Amazon ECR',
       resource: 'Future immutable image repository',
       quantity: 1,
@@ -677,6 +692,7 @@ export function mxmedCostTierForComponent(
   component: string,
 ): 'fixed-critical' | 'usage-based' | 'storage-based' | 'deferred-optional' {
   if (component === 'storage') return 'storage-based';
+  if (component === 'registry') return 'deferred-optional';
   if (['network', 'security', 'data', 'session'].includes(component)) return 'fixed-critical';
   return 'deferred-optional';
 }

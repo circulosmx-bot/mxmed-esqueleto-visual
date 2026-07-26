@@ -26,7 +26,7 @@ import {
   Secret as EcsSecret,
 } from 'aws-cdk-lib/aws-ecs';
 import type { ContainerDefinition, ScalableTaskCount } from 'aws-cdk-lib/aws-ecs';
-import { Repository, RepositoryEncryption, TagMutability, TagStatus } from 'aws-cdk-lib/aws-ecr';
+import type { IRepository } from 'aws-cdk-lib/aws-ecr';
 import { CfnPolicy, Effect, PolicyDocument, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 import type { IRole } from 'aws-cdk-lib/aws-iam';
 import type { IKey } from 'aws-cdk-lib/aws-kms';
@@ -48,7 +48,6 @@ import {
   capabilityIncludesAi,
   capabilityIncludesClinical,
   capabilityIncludesPaid,
-  computeCreatesRegistry,
   computeCreatesService,
   computeCreatesTasks,
 } from '../config/compute-config';
@@ -72,6 +71,7 @@ export interface MxMedComputeStackProps extends MxMedContractStackProps {
   readonly vpc: Vpc;
   readonly privateAppSubnets: readonly ISubnet[];
   readonly applicationSecurityGroup: ISecurityGroup;
+  readonly applicationRepository?: IRepository;
   readonly applicationDataKey: IKey;
   readonly auditKey: IKey;
   readonly secretsKey: IKey;
@@ -122,7 +122,7 @@ export class MxMedComputeStack extends BaseMxMedStack {
       | 'computeAssignPublicIp'
     >
   >;
-  public readonly applicationRepository?: Repository;
+  public readonly applicationRepository: IRepository | undefined;
   public readonly cluster?: Cluster;
   public readonly applicationTaskDefinition?: FargateTaskDefinition;
   public readonly migrationTaskDefinition?: FargateTaskDefinition;
@@ -192,17 +192,13 @@ export class MxMedComputeStack extends BaseMxMedStack {
       computeTagOptions,
     );
 
-    if (!computeCreatesRegistry(this.activationMode)) {
-      this.registerGuardrails(config);
-      return;
-    }
-
-    this.applicationRepository = this.createRepository(props);
+    this.applicationRepository = props.applicationRepository;
     if (!computeCreatesTasks(this.activationMode)) {
       this.registerGuardrails(config);
       return;
     }
 
+    const applicationRepository = this.requireApplicationRepository();
     const runtimeCapabilityProfile = this.requireRuntimeCapability();
     const applicationUserSecret = this.requireApplicationUserSecret(props);
     this.applicationImageDigestParameter = new CfnParameter(this, 'ApplicationImageDigest', {
@@ -212,7 +208,7 @@ export class MxMedComputeStack extends BaseMxMedStack {
     });
     const image = ContainerImage.fromRegistry(
       Fn.join('', [
-        this.applicationRepository.repositoryUri,
+        applicationRepository.repositoryUri,
         '@',
         this.applicationImageDigestParameter.valueAsString,
       ]),
@@ -322,29 +318,11 @@ export class MxMedComputeStack extends BaseMxMedStack {
     this.registerGuardrails(config);
   }
 
-  private createRepository(props: MxMedComputeStackProps): Repository {
-    const { config } = props;
-    return new Repository(this, 'ApplicationRepository', {
-      repositoryName: mxmedName(config.environmentCode, 'application'),
-      encryption: RepositoryEncryption.KMS,
-      encryptionKey: props.applicationDataKey,
-      imageScanOnPush: config.computeImageScanOnPush,
-      imageTagMutability: TagMutability.IMMUTABLE,
-      emptyOnDelete: false,
-      removalPolicy: RemovalPolicy.RETAIN,
-      lifecycleRules: [
-        {
-          description: 'Expire untagged images after the profile-specific review window.',
-          tagStatus: TagStatus.UNTAGGED,
-          maxImageAge: Duration.days(config.computeEcrUntaggedRetentionDays),
-        },
-        {
-          description: 'Retain only the profile-specific maximum image count.',
-          tagStatus: TagStatus.ANY,
-          maxImageCount: config.computeEcrMaxImageCount,
-        },
-      ],
-    });
+  private requireApplicationRepository(): IRepository {
+    if (this.applicationRepository === undefined) {
+      throw new Error('MXMED_COMPUTE_APPLICATION_REPOSITORY_REQUIRED');
+    }
+    return this.applicationRepository;
   }
 
   private createLogGroup(

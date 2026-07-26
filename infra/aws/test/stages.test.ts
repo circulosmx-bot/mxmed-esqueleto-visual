@@ -159,10 +159,17 @@ describe('workload dependencies', () => {
     }).not.toThrow();
   });
 
-  test('adds only Security as a registry-only dependency', () => {
+  test('creates an independent Registry boundary in registry-only mode', () => {
     const config = getEnvironmentConfig('production', 'launch-lean-v1', 'registry-only-v1');
     const { environment } = createStages(config);
-    expect(directDependencyNames(environment.computeStack)).toEqual(['mxmed-prd-security']);
+    const registry = environment.registryStack;
+    if (registry === undefined) throw new Error('missing-registry-stack');
+    const workloadStacks = environment.node.children.filter((child) => Stack.isStack(child));
+
+    expect(workloadStacks).toHaveLength(9);
+    expect(registry.stackName).toBe('mxmed-prd-registry');
+    expect(directDependencyNames(registry)).toEqual([]);
+    expect(directDependencyNames(environment.computeStack)).toEqual([]);
   });
 
   test('adds all contracted task dependencies without cycles', () => {
@@ -180,6 +187,7 @@ describe('workload dependencies', () => {
       [
         'mxmed-prd-network',
         'mxmed-prd-security',
+        'mxmed-prd-registry',
         'mxmed-prd-data',
         'mxmed-prd-storage',
         'mxmed-prd-session',
