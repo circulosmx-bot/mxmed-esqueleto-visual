@@ -21,8 +21,9 @@ foundations de seguridad, datos, almacenamiento, sesiones, Compute y Edge de Mé
 (`MXMED_AWS_BACKUP_DR_FOUNDATION_IMPLEMENTATION_V1`), a AWS CDK v2 con TypeScript.
 
 `MxMedNetworkStack`, `MxMedSecurityStack`, `MxMedDataStack`, `MxMedStorageStack` y
-`MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. `MxMedComputeStack`
-implementa ECR, ECS tasks y el servicio Fargate de forma condicional. Edge implementa offline
+`MxMedSessionStack` contienen recursos CloudFormation sintetizables offline. `MxMedRegistryStack`
+implementa ECR y su KMS dedicado; `MxMedComputeStack` implementa ECS tasks y el servicio Fargate
+de forma condicional. Edge implementa offline
 CloudFront/OAC/WAF y, cuando corresponde, ALB/target group/listener; los scripts generales lo
 mantienen deshabilitado. Operations implementa offline controles de costo, alarmas, dashboards y
 topics condicionales. Backup/DR implementa templates offline condicionales; Jobs y Email continúan
@@ -200,8 +201,8 @@ central, la matriz de compatibilidad y sus tests; no se añaden condicionales du
 | Modo                 | Inventario Compute                                                                                                                               |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `disabled-v1`        | stack contractual con cero recursos, usado por todos los scripts generales                                                                       |
-| `registry-only-v1`   | un repositorio ECR KMS, inmutable, scan-on-push y retenido                                                                                       |
-| `tasks-ready-v1`     | ECR, cluster, dos log groups, `ApplicationTaskDefinition`, `MigrationTaskDefinition`, secreto DB de aplicación y parámetro de digest obligatorio |
+| `registry-only-v1`   | sin recursos; Registry separado posee ECR KMS, inmutable, scan-on-push y retenido                                                                |
+| `tasks-ready-v1`     | ECS, cluster, dos log groups, `ApplicationTaskDefinition`, `MigrationTaskDefinition`, secreto DB de aplicación y parámetro de digest obligatorio |
 | `service-enabled-v1` | lo anterior más un Fargate service privado y autoscaling CPU/memoria                                                                             |
 
 Las capacidades runtime son `directory-core-v1`, `paid-profile-v1`, `clinical-v1` y
