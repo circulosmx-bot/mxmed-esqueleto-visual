@@ -1,0 +1,9 @@
+<?php
+declare(strict_types=1);
+namespace Platform\Services;
+use Platform\Contracts\CanonicalAuditEnvelope;
+final class AuditV1PhysicalMapper
+{
+    private const RISK=['INFO'=>'R0','WARN'=>'R1','HIGH'=>'R2','CRITICAL'=>'R3'];
+    public function map(CanonicalAuditEnvelope $envelope,string $streamKey,?string $ipHmacKeyVersion): array { $e=$envelope->toArray();if($e['ip_hmac']!==null&&($ipHmacKeyVersion===null||$ipHmacKeyVersion===''))throw new \InvalidArgumentException('ip_hmac_key_version_required');$internal=['event_id'=>$e['event_id'],'actor_role'=>$e['actor_role'],'actor_scope'=>$e['actor_scope'],'session_id'=>$e['session_id'],'source_module'=>$e['source_module'],'source_route'=>$e['source_route'],'retention_class'=>$e['retention_class'],'ip_hmac'=>$e['ip_hmac'],'ip_hmac_key_version'=>$ipHmacKeyVersion,'user_agent_summary'=>$e['user_agent_summary']];$metadata=['_audit_v1'=>$internal,'producer_metadata'=>$e['metadata_json']];return ['stream_key'=>$streamKey,'sequence_number'=>$e['sequence_number'],'event_id'=>hash('sha256',$e['event_id']),'schema_version'=>$e['event_version'],'occurred_at_utc'=>$e['occurred_at'],'action'=>$e['event_type'],'risk_level'=>self::RISK[$e['severity']],'outcome'=>$e['result'],'reason_code'=>$e['reason_code'],'real_actor_reference'=>$e['actor_type'].':'.$e['actor_identity_id'],'effective_actor_reference'=>$e['effective_entity_type']===null?null:$e['effective_entity_type'].':'.$e['effective_entity_id'],'affected_subject_reference'=>$e['target_type'].':'.$e['target_id'],'correlation_id'=>$e['correlation_id'],'request_id'=>$e['request_id'],'case_reference'=>null,'resource_type'=>$e['target_type'],'resource_reference'=>$e['target_id'],'metadata_json'=>json_encode($metadata,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'previous_hash'=>$e['previous_hash'],'event_hash'=>$e['event_hash'],'created_at_utc'=>$e['created_at']]; }
+}

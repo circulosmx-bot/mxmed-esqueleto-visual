@@ -1,0 +1,5 @@
+<?php
+declare(strict_types=1);
+namespace Platform\Services;
+use Platform\Contracts\AuditUserAgentSummarizer;
+final class CoarseAuditUserAgentSummarizer implements AuditUserAgentSummarizer { public function summarizeTrustedUserAgent(string $ua): string { $u=strtolower($ua); $device=str_contains($u,'bot')?'BOT':(str_contains($u,'ipad')||str_contains($u,'tablet')?'TABLET':(str_contains($u,'mobile')||str_contains($u,'iphone')||str_contains($u,'android')?'MOBILE':($u===''?'UNKNOWN':'DESKTOP'))); $browser=str_contains($u,'firefox')?'FIREFOX':((str_contains($u,'chrome')||str_contains($u,'chromium')||str_contains($u,'edg/'))?'CHROMIUM':(str_contains($u,'safari')?'SAFARI':($u===''?'UNKNOWN':'OTHER'))); $os=str_contains($u,'iphone')||str_contains($u,'ipad')?'IOS':(str_contains($u,'android')?'ANDROID':(str_contains($u,'windows')?'WINDOWS':(str_contains($u,'mac os')||str_contains($u,'macintosh')?'MACOS':(str_contains($u,'linux')?'LINUX':($u===''?'UNKNOWN':'OTHER'))))); return "$device|$browser|$os"; } }

@@ -1,0 +1,9 @@
+<?php
+declare(strict_types=1);
+namespace Platform\Contracts;
+final class CanonicalAuditEventType
+{
+    private const VALUES = ['AUTH_REGISTRATION_REQUESTED', 'AUTH_EMAIL_VERIFICATION_SENT', 'AUTH_EMAIL_VERIFIED', 'AUTH_LOGIN_SUCCEEDED', 'AUTH_LOGIN_FAILED', 'AUTH_PASSWORD_RECOVERY_REQUESTED', 'AUTH_PASSWORD_RESET_SUCCEEDED', 'AUTH_PASSWORD_CHANGED', 'AUTH_SESSION_CREATED', 'AUTH_SESSION_ROTATED', 'AUTH_SESSION_REVOKED', 'AUTH_LOGOUT', 'AUTH_LOGOUT_ALL', 'PROFILE_CLAIM_REQUESTED', 'PROFILE_CLAIM_APPROVED', 'PROFILE_CLAIM_REJECTED', 'PROFILE_OWNERSHIP_ASSIGNED', 'PROFILE_OWNERSHIP_TRANSFERRED', 'INVITATION_CREATED', 'INVITATION_ACCEPTED', 'INVITATION_REVOKED', 'ROLE_ASSIGNED', 'ROLE_REVOKED', 'STEP_UP_CHALLENGE_SUCCEEDED', 'STEP_UP_CHALLENGE_FAILED', 'BREAK_GLASS_STARTED', 'BREAK_GLASS_ENDED', 'SENSITIVE_ADMIN_ACTION'];
+    /** @return list<string> */ public static function all(): array { return self::VALUES; }
+    public static function assertKnown(string $value): string { if (!in_array($value, self::VALUES, true)) throw new \InvalidArgumentException('unknown_audit_event_type'); return $value; }
+}
