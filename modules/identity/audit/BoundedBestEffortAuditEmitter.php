@@ -5,6 +5,7 @@ namespace Identity\Audit;
 
 use Identity\Audit\Contracts\AuditProducerFailureSignalPort;
 use Identity\Audit\Contracts\CanonicalAuditAppendPort;
+use Platform\Contracts\AuditEventScopePolicy;
 use Platform\Contracts\CanonicalAuditEventInput;
 use Platform\Contracts\TrustedActorContext;
 use Platform\Contracts\TrustedAuditContext;
@@ -17,7 +18,7 @@ final class BoundedBestEffortAuditEmitter
         private CanonicalAuditAppendPort $writer,
         private AuditWriterContextBridge $bridge,
         private AuditProducerFailureSignalPort $failureSignal,
-        private Mp01eEventScopePolicy $scope,
+        private AuditEventScopePolicy $scope,
     ) {}
 
     public function emit(CanonicalAuditEventInput $input, TrustedRequestContext $request, TrustedActorContext $actor): AuditProducerEmissionResult

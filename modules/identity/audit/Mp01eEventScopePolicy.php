@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 namespace Identity\Audit;
 
+use Platform\Contracts\AuditEventScopePolicy;
 use Platform\Contracts\TrustedRequestContext;
 
-final class Mp01eEventScopePolicy
+final class Mp01eEventScopePolicy implements AuditEventScopePolicy
 {
     private const MAP = [
         'AUTH_REGISTRATION_REQUESTED'=>['AUTH_REGISTRATION','AUTH'],
