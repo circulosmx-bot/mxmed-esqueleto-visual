@@ -2732,3 +2732,26 @@ La prueba física real de `CanonicalIdentityAuditProducer::loginSucceeded` pasa 
 Los cuatro negativos materiales pasan: mutación directa no autorizada bloqueada, stale CAS bloqueado, transición de secuencia inválida bloqueada y rollback posterior al insert sin persistencia parcial. `NEGATIVE_PROOFS=PASS`; `FALSE_PASS_COUNT=0`.
 
 Validación final: PHP lint PASS; MP01D PASS; MP01C PASS; A1-P1 PASS; MP01H PASS; mapping DATETIME(6) PASS; MP01B aislado y ligado a bytes actuales PASS. Durante esta promoción no se reejecutan productor, negativos, migraciones, rutinas, privilegios ni mutaciones de base de datos.
+
+### PP-326 — Guía definitiva de ejecución para product completion post-PP325
+
+Fecha: 2026-08-23. Rama: `program/mxmed-product-completion-v1`. Clasificación: documentación únicamente. La autoridad detallada y persistente del roadmap post-PP325 queda en `docs/product-completion/MXMED_PRODUCT_COMPLETION_EXECUTION_GUIDE_POST_PP325.md`; este Plan Maestro la referencia sin duplicarla.
+
+```text
+POST_PP325_DEFINITIVE_PRODUCT_COMPLETION_GUIDE=ACTIVE_AUTHORITY
+C0=CLOSED
+C1=CLOSED
+NEXT_PHASE=C2_PRODUCTIVE_IDENTITY_COMPOSITION
+C2=NOT_STARTED
+C2_IMPLEMENTATION_AUTHORIZED=false
+INITIAL_LAUNCH_SCOPE=MEDICAL_ONLY
+PLATFORM_BACKOFFICE_REQUIRED_BEFORE_MEDICAL_LAUNCH=true
+COMMERCIAL_PROFILES=POST_INITIAL_MEDICAL_LAUNCH
+MONTH_VIEW_LAUNCH_SCOPE=OUT
+AUDIT_INFRASTRUCTURE=CLOSED
+AUDIT_REOPEN_REQUIRES_MATERIAL_REGRESSION=true
+```
+
+La secuencia operativa distingue `OPTION_C_CORE` de `OPTION_C_PRODUCT_CLOSEOUT`: el core C2→C7 y C9 aplicable precede al provider C8 separadamente autorizado; después siguen C10, C11 y C12 antes del closeout y de public medical discovery/profile/booking. El store de sesión productivo se ratifica por su comportamiento server-authoritative y fail-closed; Valkey permanece candidato técnico actual hasta adjudicación C3. Los pases de boundary AI y call center no implican implementación de esos productos mientras sus autorizaciones sigan false.
+
+No se implementa C2, no cambia código de producto, no se activa DB, store, sesión, provider, email/SMS, backoffice, AI, call center, Agenda, pagos, STAGING, AWS ni producción. MP01B/MP01C, A1-G1 y la infraestructura de auditoría permanecen cerrados.
