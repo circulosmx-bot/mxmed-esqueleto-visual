@@ -104,7 +104,7 @@ p1i1Static(array_filter($candidate, static fn(string $path): bool => str_starts_
     || str_contains($path, '/routes/')) === [], 'no_productive_entrypoint_wiring');
 
 $protectedCritical = [
-    'modules/platform/repositories/PdoCanonicalAuditTransactionAdapter.php' => 'b398e6b903251d8fe3c8c0361d2ed74e357571359a46e70aa882aee5a94e8a3d',
+    'modules/platform/repositories/PdoCanonicalAuditTransactionAdapter.php' => '0d5911c81170a18e62f0bf2b9484fe36259545be210fba57da59ee7eafe42403',
     'modules/platform/db/migrations/AuditMp01BMigrationManifest.php' => '099502f764c15d25b9a623801c8dd1b9e1608acd6c6b51be4a44bd9b7f2a70fd',
     'modules/platform/audit/read/contracts/AuditReadRepositoryPort.php' => '13b6029e14840812f3c5abc58603516a44ca68b3a9c10318bb08fd423e4ba11d',
     'api/_lib/db.php' => '3b32a6e245a4d8cc756031fde7a05ba47a1af516efca5914fc82d61be4526964',

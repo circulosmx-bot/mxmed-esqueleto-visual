@@ -123,6 +123,13 @@ h01Static($tests, $apiTokens === 0, 'productive_entrypoint_wiring_zero');
 $d11 = file_get_contents($root . '/modules/platform/db/migrations/2026_08_13_01_align_platform_audit_stream_heads_d11.sql');
 h01Static($tests, str_contains($d11, 'updated_at') && str_contains($d11, 'hash_version'), 'd11_authority_present');
 h01Static($tests, !is_file($root . '/modules/platform/db/migrations/.d11-executed'), 'd11_execution_marker_absent');
+$writerAdapter = file_get_contents($root . '/modules/platform/repositories/PdoCanonicalAuditTransactionAdapter.php');
+h01Static($tests, str_contains($writerAdapter, 'CALL `mxmed`.`audit_mp01c_lock_stream_head_v1`'), 'writer_controlled_lock_call');
+h01Static($tests, str_contains($writerAdapter, 'CALL `mxmed`.`audit_mp01c_advance_stream_head_cas_v1`'), 'writer_controlled_cas_call');
+h01Static($tests, preg_match('/UPDATE\s+`?platform_audit_stream_heads/i', $writerAdapter) === 0, 'writer_direct_head_update_absent');
+h01Static($tests, preg_match('/SELECT[^;]+platform_audit_stream_heads[^;]+FOR UPDATE/is', $writerAdapter) === 0, 'writer_direct_head_for_update_absent');
+h01Static($tests, substr_count($writerAdapter, 'self::drainCallResults($s)') === 2 && str_contains($writerAdapter, 'nextRowset()') && str_contains($writerAdapter, 'closeCursor()'), 'both_pdo_call_results_consumed');
+h01Static($tests, !str_contains($writerAdapter, 'DIRECT_HEAD_UPDATE_FALLBACK') && !str_contains($writerAdapter, 'DIRECT_HEAD_FOR_UPDATE_FALLBACK'), 'writer_direct_fallbacks_absent');
 
 $candidateText = '';
 foreach ($candidatePaths as $path) $candidateText .= file_get_contents($root . '/' . $path);

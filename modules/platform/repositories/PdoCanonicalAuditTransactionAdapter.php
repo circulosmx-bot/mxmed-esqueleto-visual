@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Platform\Repositories;
 use PDO;
 use PDOException;
+use PDOStatement;
 use RuntimeException;
 final class PdoCanonicalAuditTransactionAdapter implements CanonicalAuditTransactionPort
 {
@@ -18,9 +19,14 @@ final class PdoCanonicalAuditTransactionAdapter implements CanonicalAuditTransac
     }
     public function lockHead(string $streamKey): array
     {
-        $sql='SELECT last_sequence_number,last_event_hash,hash_version,updated_at FROM platform_audit_stream_heads WHERE stream_key=:stream_key FOR UPDATE';
-        $s=$this->pdo->prepare($sql);$s->execute(['stream_key'=>$streamKey]);$row=$s->fetch(PDO::FETCH_ASSOC);
-        if(!is_array($row)||$s->fetch(PDO::FETCH_ASSOC)!==false) throw new RuntimeException('unexpected_audit_head_row_count');
+        $sql='CALL `mxmed`.`audit_mp01c_lock_stream_head_v1`(:stream_key)';
+        $s=$this->pdo->prepare($sql);
+        try{
+            $s->execute(['stream_key'=>$streamKey]);
+            $row=$s->fetch(PDO::FETCH_ASSOC);$second=$s->fetch(PDO::FETCH_ASSOC);
+            self::drainCallResults($s);
+        }catch(\Throwable $e){try{$s->closeCursor();}catch(\Throwable){}throw $e;}
+        if(!is_array($row)||$second!==false) throw new RuntimeException('unexpected_audit_head_row_count');
         return ['last_sequence_number'=>(int)$row['last_sequence_number'],'last_event_hash'=>(string)$row['last_event_hash'],'hash_version'=>$row['hash_version']===null?null:(string)$row['hash_version'],'updated_at'=>self::canonicalTime($row['updated_at']??null)];
     }
     public function assertLegacyHeadMatchesLatest(string $streamKey,int $sequenceNumber,string $eventHash): void
@@ -44,11 +50,21 @@ final class PdoCanonicalAuditTransactionAdapter implements CanonicalAuditTransac
         if($expectedHashVersion===null&&$expectedSequence<=0) throw new RuntimeException('invalid_legacy_bridge_transition');
         if($expectedHashVersion!==null&&$expectedHashVersion!==$newHashVersion) throw new RuntimeException('forbidden_head_version_change');
         if($expectedUpdatedAt!==null&&!self::isCanonicalTime($expectedUpdatedAt)) throw new RuntimeException('invalid_expected_head_time');
-        $sql='UPDATE platform_audit_stream_heads SET last_sequence_number=:new_sequence,last_event_hash=:new_hash,hash_version=:new_hash_version,updated_at=STR_TO_DATE(:new_updated_at,\'%Y-%m-%dT%H:%i:%s.%fZ\') WHERE stream_key=:stream_key AND last_sequence_number=:expected_sequence AND last_event_hash=:expected_hash AND hash_version <=> :expected_hash_version AND updated_at <=> STR_TO_DATE(:expected_updated_at,\'%Y-%m-%dT%H:%i:%s.%fZ\')';
-        $s=$this->pdo->prepare($sql);$s->execute(['new_sequence'=>$newSequence,'new_hash'=>$newHash,'new_hash_version'=>$newHashVersion,'new_updated_at'=>$newUpdatedAt,'stream_key'=>$streamKey,'expected_sequence'=>$expectedSequence,'expected_hash'=>$expectedHash,'expected_hash_version'=>$expectedHashVersion,'expected_updated_at'=>$expectedUpdatedAt]);return $s->rowCount();
+        $sql='CALL `mxmed`.`audit_mp01c_advance_stream_head_cas_v1`(:stream_key,:expected_sequence,:expected_hash,:expected_hash_version,:expected_updated_at,:new_sequence,:new_hash,:new_hash_version,:new_updated_at)';
+        $s=$this->pdo->prepare($sql);
+        try{
+            $s->execute(['stream_key'=>$streamKey,'expected_sequence'=>$expectedSequence,'expected_hash'=>$expectedHash,'expected_hash_version'=>$expectedHashVersion,'expected_updated_at'=>$expectedUpdatedAt,'new_sequence'=>$newSequence,'new_hash'=>$newHash,'new_hash_version'=>$newHashVersion,'new_updated_at'=>$newUpdatedAt]);
+            self::drainCallResults($s);
+        }catch(PDOException $e){
+            try{$s->closeCursor();}catch(\Throwable){}
+            if((string)$e->getCode()==='45000') throw new RuntimeException('head_update_failed',0,$e);
+            throw $e;
+        }
+        return 1;
     }
     public function commit(): void { if(!$this->pdo->commit()) throw new RuntimeException('audit_commit_failed'); }
     public function rollBack(): void { if($this->pdo->inTransaction()) $this->pdo->rollBack(); }
+    private static function drainCallResults(PDOStatement $statement): void { do{while($statement->fetch(PDO::FETCH_ASSOC)!==false){}}while($statement->nextRowset());$statement->closeCursor(); }
     private static function isCanonicalTime(string $value): bool { return preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/',$value)===1; }
     private static function canonicalTime(mixed $value): ?string { if($value===null) return null;$text=(string)$value;if(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}$/',$text)!==1) throw new RuntimeException('invalid_stored_head_time');return str_replace(' ','T',$text).'Z'; }
 }

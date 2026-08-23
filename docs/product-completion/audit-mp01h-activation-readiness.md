@@ -91,8 +91,10 @@ explicit policy.
 Least privilege remains separated:
 
 - migration: certified DDL/trigger/metadata scope with physical grant precheck;
-- writer: history INSERT/SELECT and stream-head SELECT/INSERT/UPDATE, with no
-  history UPDATE or DELETE;
+- writer: history INSERT/SELECT, stream-head INSERT/SELECT, and EXECUTE only on
+  `audit_mp01c_lock_stream_head_v1` and
+  `audit_mp01c_advance_stream_head_cas_v1`, with no direct stream-head UPDATE or
+  `FOR UPDATE`, DELETE, or LOCK TABLES;
 - reader: bounded SELECT only, with no write privilege.
 
 ## Staging evidence required

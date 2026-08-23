@@ -219,7 +219,7 @@ final class AuditMp01HReadiness
     {
         return [
             ['principal' => 'MIGRATION', 'least_privilege' => 'DDL/TRIGGER/METADATA privileges certified by MP01B; exact SHOW GRANTS precheck required'],
-            ['principal' => 'WRITER', 'least_privilege' => 'history INSERT/SELECT plus stream-head SELECT/INSERT/UPDATE; no history UPDATE/DELETE'],
+            ['principal' => 'WRITER', 'least_privilege' => 'history INSERT/SELECT plus stream-head INSERT/SELECT plus EXECUTE on audit_mp01c_lock_stream_head_v1 and audit_mp01c_advance_stream_head_cas_v1; no direct head UPDATE/FOR UPDATE, DELETE, or LOCK TABLES'],
             ['principal' => 'READ', 'least_privilege' => 'bounded SELECT only on required audit/read subject authorities; no INSERT/UPDATE/DELETE'],
         ];
     }

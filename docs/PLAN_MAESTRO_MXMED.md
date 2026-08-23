@@ -2716,3 +2716,19 @@ Impacto real: `REAL_TRAFFIC=0`; `DATABASE_CONNECTIONS_OPENED=0`; `SQL_EXECUTED=0
 La rama queda lista para postvalidación y no integrada. La integración controlada y el cierre oficial siguen pendientes. Los checkpoints de Actividad 22 y final permanecen ausentes y reservados para esa fase posterior.
 
 `ACTIVITY22=FINAL_PROGRAM_CLOSURE_DOCUMENTED_READY_FOR_POSTVALIDATION_NOT_INTEGRATED`; `OFFICIAL_COUNTER=21/22`; `PENDING_ACTIVITIES=1`; `CHECKPOINT_ACTIVITY22_CREATED=false`; `CHECKPOINT_FINAL_CREATED=false`.
+
+### PP-325 — A1-G1 real audit implementation and infrastructure closeout
+
+Fecha: 2026-08-23. Rama: `program/mxmed-product-completion-v1`. Alcance promovido: las once rutas aceptadas de implementación A1-G1 más este checkpoint del Plan Maestro. Clasificación: UI-0. No se activa producción, AWS, STAGING ni una nueva fase de hardening.
+
+MP01B/MP01C y A1-G1 quedan cerrados: `MP01B_MP01C_CHAPTER_CLOSED=true`; `A1_G1_CHAPTER_CLOSED=true`; `AUDIT_INFRASTRUCTURE_CHAPTER_COMPLETE=true`; `RETURN_TO_PRODUCT_ROADMAP_READY=true`.
+
+La arquitectura final local usa el principal DEFINER `'mxmed_audit_head_definer_local'@'127.0.0.1'`, dos rutinas R2 instaladas y un contrato de mínimo privilegio `17/17_REQUIRED_WITH_0_EXTRAS`. El Writer conserva `SELECT`/`INSERT` sobre eventos y heads, más `EXECUTE` sobre lock/CAS; no recibe `UPDATE` directo sobre stream heads, `GRANT ALL`, `SUPER` ni `GRANT OPTION`.
+
+El adapter físico usa exclusivamente `audit_mp01c_lock_stream_head_v1` y `audit_mp01c_advance_stream_head_cas_v1` para lock/CAS. La proyección temporal conserva el instante UTC y microsegundos canónicos, convirtiendo sólo la representación física `RFC3339_UTC_TO_MYSQL_DATETIME_6` para `occurred_at_utc` y `created_at_utc`; no cambia la serialización ni el hash canónico.
+
+La prueba física real de `CanonicalIdentityAuditProducer::loginSucceeded` pasa con un evento y un head persistentes, secuencia 1, request/correlation UUID v4, contexto de actor y mapping AUTH válidos, hash y enlace previo válidos, y consistencia transaccional completa. `REAL_PRODUCER_PROOF=PASS`; `PARTIAL_WRITE_COUNT=0`.
+
+Los cuatro negativos materiales pasan: mutación directa no autorizada bloqueada, stale CAS bloqueado, transición de secuencia inválida bloqueada y rollback posterior al insert sin persistencia parcial. `NEGATIVE_PROOFS=PASS`; `FALSE_PASS_COUNT=0`.
+
+Validación final: PHP lint PASS; MP01D PASS; MP01C PASS; A1-P1 PASS; MP01H PASS; mapping DATETIME(6) PASS; MP01B aislado y ligado a bytes actuales PASS. Durante esta promoción no se reejecutan productor, negativos, migraciones, rutinas, privilegios ni mutaciones de base de datos.
