@@ -18,6 +18,7 @@ import { parseComputeActivationMode } from '../lib/config/compute-config';
 import { getEnvironmentConfig } from '../lib/config/environments';
 import { MxMedEmailStage } from '../lib/stages/mxmed-email-stage';
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
+import { MxMedC3EphemeralStage } from '../lib/stages/mxmed-c3-ephemeral-stage';
 import { MxMedGlobalEdgeStage } from '../lib/stages/mxmed-global-edge-stage';
 import { edgeCreatesGlobal } from '../lib/config/edge-config';
 import { operationsCreatesCost } from '../lib/config/operations-profiles';
@@ -144,6 +145,20 @@ export function createMxMedApp(): App {
   const emailStageId =
     config.environmentName === 'staging' ? 'MxMedStagingEmail' : 'MxMedProductionEmail';
   const stageProps = stageAccount === undefined ? { config } : { config, account: stageAccount };
+
+  if (app.node.tryGetContext('activity') === 'c3-ephemeral') {
+    const c3Stage = new MxMedC3EphemeralStage(app, 'MxMedStagingC3Ephemeral', stageProps);
+    applyGlobalTags(c3Stage, config);
+    Tags.of(c3Stage).add('Phase', 'C3');
+    Tags.of(c3Stage).add('Ephemeral', 'true');
+    Aspects.of(c3Stage).add(new MandatoryTagsAspect(), { priority: AspectPriority.READONLY });
+    Aspects.of(c3Stage).add(new NoPublicBucketAspect(), { priority: AspectPriority.READONLY });
+    Aspects.of(c3Stage).add(new NoPublicDatabaseAspect(), { priority: AspectPriority.READONLY });
+    Aspects.of(c3Stage).add(new ProductionRetentionAspect(config.environmentName), {
+      priority: AspectPriority.READONLY,
+    });
+    return app;
+  }
 
   const environmentStage = new MxMedEnvironmentStage(app, environmentStageId, stageProps);
   const emailStage = new MxMedEmailStage(app, emailStageId, stageProps);
