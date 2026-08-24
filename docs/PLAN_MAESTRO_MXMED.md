@@ -2755,3 +2755,27 @@ AUDIT_REOPEN_REQUIRES_MATERIAL_REGRESSION=true
 La secuencia operativa distingue `OPTION_C_CORE` de `OPTION_C_PRODUCT_CLOSEOUT`: el core C2→C7 y C9 aplicable precede al provider C8 separadamente autorizado; después siguen C10, C11 y C12 antes del closeout y de public medical discovery/profile/booking. El store de sesión productivo se ratifica por su comportamiento server-authoritative y fail-closed; Valkey permanece candidato técnico actual hasta adjudicación C3. Los pases de boundary AI y call center no implican implementación de esos productos mientras sus autorizaciones sigan false.
 
 No se implementa C2, no cambia código de producto, no se activa DB, store, sesión, provider, email/SMS, backoffice, AI, call center, Agenda, pagos, STAGING, AWS ni producción. MP01B/MP01C, A1-G1 y la infraestructura de auditoría permanecen cerrados.
+
+### PP-327 — C2 Productive Identity composition closeout
+
+Fecha: 2026-08-23. Rama: `program/mxmed-product-completion-v1`. La composición productiva C2 aprobada por el Director queda promovida y cerrada. La autoridad detallada y persistente continúa en `docs/product-completion/MXMED_PRODUCT_COMPLETION_EXECUTION_GUIDE_POST_PP325.md`; este checkpoint registra únicamente el resultado físico y la siguiente frontera.
+
+```text
+C2_PRODUCTIVE_IDENTITY_COMPOSITION=CLOSED
+DIRECTOR_C2_LOCAL_REVIEW=PASS
+PRODUCTIVE_COMPOSITION_PRESENT=true
+PRODUCTIVE_PREVIEW_REACHABLE=false
+C2_NEGATIVE_CONTRACT_PASS=true
+C2_PATH_COUNT=5
+DATABASE_WRITE_COUNT=0
+SESSION_STORE_ACTIVATION_COUNT=0
+PROVIDER_EXTERNAL_CALL_COUNT=0
+FRONTEND_CODE_CHANGE_COUNT=0
+CONSUMER_CUTOVER_COUNT=0
+NEXT_PHASE=C3_SESSION_COOKIE_AND_STORE
+C3_IMPLEMENTATION_AUTHORIZED=false
+```
+
+La selección de composición en el entrypoint Identity ahora distingue de forma determinista el preview local/desarrollo explícito de staging/producción. La frontera productiva valida su configuración, nunca invoca preview y conserva proveedor y store como capacidades rechazantes hasta las autorizaciones C8 y C3. No se ejecutaron conexiones ni mutaciones de base de datos, no se activaron Valkey, sesiones o proveedor y no se realizó trabajo de frontend o cutover de consumidores.
+
+Se conserva para C8 `REGISTRATION_NOTIFICATION_FAILURE_SEMANTICS_REVIEW_REQUIRED=true`: la semántica actual puede confirmar una cuenta pendiente antes de intentar la notificación e invalidar el token si falla la entrega. No bloquea C2 y debe reconciliarse con el diseño de retry/recovery/provider antes del cierre de Identity.

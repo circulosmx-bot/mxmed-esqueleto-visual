@@ -6,6 +6,8 @@ require_once __DIR__ . '/../../modules/identity/http/IdentityHttpComposition.php
 use Identity\Contracts\ReasonCode;
 use Identity\Contracts\OneTimeTokenPurpose;
 use Identity\Http\IdentityHttpComposition;
+use Identity\Http\IdentityHttpCompositionSelector;
+use Identity\Http\ProductiveIdentityHttpConfiguration;
 use Identity\Services\OneTimeTokenCodec;
 
 IdentityHttpComposition::registerAutoloader();
@@ -48,9 +50,9 @@ function identityHttpBody(): array
     return $decoded;
 }
 
-function identityHttpSameOrigin(bool $write): void
+function identityHttpSameOrigin(IdentityHttpComposition $composition, bool $write): void
 {
-    $allowed = rtrim((string)(getenv('MXMED_PREVIEW_ORIGIN') ?: 'https://127.0.0.1:8140'), '/');
+    $allowed = $composition->allowedOrigin();
     $origin = rtrim((string)($_SERVER['HTTP_ORIGIN'] ?? ''), '/');
     $referer = (string)($_SERVER['HTTP_REFERER'] ?? '');
     if ($origin !== '' && $origin !== $allowed) identityHttpJson(['ok' => false, 'error' => 'INVALID_REQUEST'], 403);
@@ -60,7 +62,7 @@ function identityHttpSameOrigin(bool $write): void
 function identityHttpWriteGuard(IdentityHttpComposition $composition, array $body): array
 {
     if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') identityHttpJson(['ok' => false, 'error' => 'INVALID_REQUEST'], 405);
-    identityHttpSameOrigin(true);
+    identityHttpSameOrigin($composition, true);
     $csrf = trim((string)($body['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')));
     if (!$composition->csrf()->valid($csrf)) identityHttpJson(['ok' => false, 'error' => 'INVALID_REQUEST'], 403);
     return $body;
@@ -68,12 +70,21 @@ function identityHttpWriteGuard(IdentityHttpComposition $composition, array $bod
 
 try {
     $operation = identityHttpOperation();
-    $composition = IdentityHttpComposition::preview();
-    $clockDimensions = ['ip' => 'preview-client', 'device' => hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? 'preview'))];
+    $selector = IdentityHttpCompositionSelector::fromProcessEnvironment();
+    $composition = $selector->select(
+        static fn(): IdentityHttpComposition => IdentityHttpComposition::preview(),
+        static fn(string $environment): IdentityHttpComposition => IdentityHttpComposition::productive(
+            ProductiveIdentityHttpConfiguration::fromProcessEnvironment($environment)
+        )
+    );
+    if (!$composition instanceof IdentityHttpComposition) throw new \RuntimeException('identity_composition_unavailable');
+    $clientIp = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    $userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $clockDimensions = ['ip' => $clientIp === '' ? null : $clientIp, 'device' => $userAgent === '' ? null : hash('sha256', $userAgent)];
 
     if ($operation === 'current-session') {
         if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'GET') identityHttpJson(['ok' => false, 'error' => 'INVALID_REQUEST'], 405);
-        identityHttpSameOrigin(false);
+        identityHttpSameOrigin($composition, false);
         $rawCookie = (string)($_COOKIE['__Host-mxmed_session'] ?? '');
         $decision = $composition->sessions()->validate($rawCookie !== '' ? $rawCookie : null);
         if (!$decision->allowed() || $decision->context() === null) identityHttpJson(['authenticated' => false]);
@@ -114,7 +125,7 @@ try {
         case 'login':
             $decision = $composition->authentication()->authenticate((string)($body['email'] ?? ''), (string)($body['password'] ?? ''), $clockDimensions);
             if (!$decision->isAllowed() || $decision->candidate() === null) identityHttpJson(['ok' => false, 'error' => 'INVALID_CREDENTIALS'], 401);
-            $session = $composition->sessions()->create($decision->candidate(), ['device_label' => 'Gate 4D preview', 'user_agent' => (string)($_SERVER['HTTP_USER_AGENT'] ?? 'preview'), 'ip' => 'preview-client']);
+            $session = $composition->sessions()->create($decision->candidate(), ['device_label' => 'MXMED Identity', 'user_agent' => $userAgent, 'ip' => $clientIp]);
             if (!$session->allowed() || $session->cookie() === null) identityHttpJson(['ok' => false, 'error' => 'TEMPORARILY_UNAVAILABLE'], 503);
             identityHttpSetCookie($session->cookie());
             identityHttpJson(['ok' => true, 'authenticated' => true]);
