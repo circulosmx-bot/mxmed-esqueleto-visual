@@ -19,6 +19,8 @@ export interface SessionCookieContract {
   readonly sameSite: SessionSameSite;
   readonly path: '/';
   readonly domain: null;
+  readonly maxAge: null;
+  readonly expires: null;
   readonly useStrictMode: true;
   readonly useOnlyCookies: true;
   readonly useTransSid: false;
@@ -49,18 +51,21 @@ export interface SessionAclContract {
 }
 
 export type SessionPayloadKey =
-  | 'subject_id'
-  | 'entity_type'
-  | 'entity_id'
-  | 'role'
-  | 'permission_version'
-  | 'authenticated'
-  | 'csrf_state'
+  | 'serialization_version'
+  | 'session_id'
+  | 'token_digest'
+  | 'account_id'
+  | 'credential_version'
+  | 'account_status'
+  | 'authenticated_at'
   | 'created_at'
   | 'last_seen_at'
+  | 'expires_at'
   | 'absolute_expires_at'
-  | 'session_version'
-  | 'security_flags';
+  | 'state'
+  | 'device_label'
+  | 'user_agent_hash'
+  | 'ip_dimension_hash';
 
 export type SessionAclCommand =
   | 'get'
@@ -74,7 +79,11 @@ export type SessionAclCommand =
   | 'ttl'
   | 'pttl'
   | 'touch'
-  | 'ping';
+  | 'ping'
+  | 'watch'
+  | 'unwatch'
+  | 'multi'
+  | 'exec';
 
 export class SessionContractError extends Error {
   public constructor(
@@ -88,18 +97,21 @@ export class SessionContractError extends Error {
 }
 
 export const SESSION_PAYLOAD_KEYS = Object.freeze([
-  'subject_id',
-  'entity_type',
-  'entity_id',
-  'role',
-  'permission_version',
-  'authenticated',
-  'csrf_state',
+  'serialization_version',
+  'session_id',
+  'token_digest',
+  'account_id',
+  'credential_version',
+  'account_status',
+  'authenticated_at',
   'created_at',
   'last_seen_at',
+  'expires_at',
   'absolute_expires_at',
-  'session_version',
-  'security_flags',
+  'state',
+  'device_label',
+  'user_agent_hash',
+  'ip_dimension_hash',
 ] as const satisfies readonly SessionPayloadKey[]);
 
 export const SESSION_ACL_COMMANDS = Object.freeze([
@@ -115,6 +127,10 @@ export const SESSION_ACL_COMMANDS = Object.freeze([
   'pttl',
   'touch',
   'ping',
+  'watch',
+  'unwatch',
+  'multi',
+  'exec',
 ] as const satisfies readonly SessionAclCommand[]);
 
 export const SESSION_PAYLOAD_CONTRACT: SessionPayloadContract = Object.freeze({
@@ -130,6 +146,8 @@ export const SESSION_COOKIE_CONTRACT: SessionCookieContract = Object.freeze({
   sameSite: 'Lax',
   path: '/',
   domain: null,
+  maxAge: null,
+  expires: null,
   useStrictMode: true,
   useOnlyCookies: true,
   useTransSid: false,
@@ -148,7 +166,7 @@ export const SESSION_LOCK_CONTRACT: SessionLockContract = Object.freeze({
 const OPAQUE_SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 const IDENTIFYING_ID_PATTERN = /^(?:user|doctor|medic|patient|email|name|tenant)[_-]/i;
 const FORBIDDEN_PAYLOAD_KEY_PATTERN =
-  /diagnosis|clinical|prescription|patient_record|medical_history|stripe|payment_intent|client_secret|password|token|provider_secret|file_contents|document|study|recipe|api_payload/i;
+  /diagnosis|clinical|prescription|patient_record|medical_history|stripe|payment_intent|client_secret|password|raw_token|csrf_token|provider_secret|file_contents|document|study|recipe|api_payload/i;
 const PAYLOAD_KEY_SET = new Set<string>(SESSION_PAYLOAD_KEYS);
 
 function fail(field: string, rule: string): never {
@@ -246,7 +264,7 @@ export function validateSessionAcl(input: unknown): asserts input is SessionAclC
     input.allowedCommands.length !== SESSION_ACL_COMMANDS.length ||
     input.allowedCommands.some((command, index) => command !== SESSION_ACL_COMMANDS[index])
   ) {
-    fail('allowedCommands', 'must match the PP260 minimum allowlist exactly');
+    fail('allowedCommands', 'must match the C3 minimum allowlist exactly');
   }
 }
 

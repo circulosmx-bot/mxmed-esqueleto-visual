@@ -7,8 +7,15 @@ use Identity\Adapters\ExistingCapabilityAuthorityAdapter;
 use Identity\Adapters\PdoSessionAccountStateAdapter;
 use Identity\Adapters\PreviewIdentityNotificationAdapter;
 use Identity\Adapters\PreviewValkeyClient;
+use Identity\Adapters\ProductiveValkeyClient;
 use Identity\Adapters\RejectingIdentityNotificationAdapter;
 use Identity\Adapters\RejectingSessionStoreAdapter;
+use Identity\Audit\AuditProducerFailureSignal;
+use Identity\Audit\BoundedBestEffortAuditEmitter;
+use Identity\Audit\CanonicalAuditWriterAdapter;
+use Identity\Audit\CanonicalSessionAuditProducer;
+use Identity\Audit\Mp01eEventScopePolicy;
+use Identity\Audit\Contracts\AuditProducerFailureSignalPort;
 use Identity\Contracts\IdentityNotificationPort;
 use Identity\Contracts\RateLimitKeyHasher;
 use Identity\Contracts\SessionPolicy;
@@ -29,6 +36,29 @@ use Identity\Services\SessionService;
 use Identity\Services\SessionStoreFactory;
 use Identity\Services\SessionTokenCodec;
 use PDO;
+use Platform\Repositories\PdoCanonicalAuditTransactionAdapter;
+use Platform\Services\ActorContextFactory;
+use Platform\Services\AuditV1PhysicalMapper;
+use Platform\Services\AuditWriterContextBridge;
+use Platform\Services\CanonicalAuditMetadataSanitizer;
+use Platform\Services\CanonicalAuditPolicyRegistry;
+use Platform\Services\CanonicalAuditSealer;
+use Platform\Services\CanonicalAuditSerializer;
+use Platform\Services\CanonicalAuditWriter;
+use Platform\Services\CanonicalSourceRoutePolicy;
+use Platform\Services\CoarseAuditUserAgentSummarizer;
+use Platform\Services\CorrelatableOperationCatalog;
+use Platform\Services\EnvironmentAuditSecretProvider;
+use Platform\Services\HmacSha256AuditIpHasher;
+use Platform\Services\RandomAuditUuidProvider;
+use Platform\Services\RandomCorrelationIdProvider;
+use Platform\Services\RandomRequestIdProvider;
+use Platform\Services\RequestContextFactory;
+use Platform\Services\SourceModuleCatalog;
+use Platform\Services\SystemAuditUtcClock;
+use Platform\Services\TrustedAuditContextValidator;
+use Platform\Services\UuidV4ContextIdPolicy;
+use Platform\Services\UuidV4Generator;
 use Subscriptions\Services\ExistingCapabilityAuthorityService;
 
 final class IdentityHttpComposition
@@ -47,7 +77,10 @@ final class IdentityHttpComposition
         private OneTimeTokenRepository $tokens,
         private FailClosedAuthorizationService $authorization,
         private string $environment,
-        private string $allowedOrigin
+        private string $allowedOrigin,
+        private ?CanonicalSessionAuditProducer $sessionAudit = null,
+        private ?RequestContextFactory $auditRequests = null,
+        private ?ActorContextFactory $auditActors = null
     ) {}
 
     public static function preview(): self
@@ -68,7 +101,8 @@ final class IdentityHttpComposition
 
         $allowedOrigin = rtrim((string)(getenv('MXMED_PREVIEW_ORIGIN') ?: 'https://127.0.0.1:8140'), '/');
         $valkey = new PreviewValkeyClient('127.0.0.1', (int)(getenv('MXMED_SESSION_STORE_PORT') ?: 6384));
-        $store = SessionStoreFactory::create('local', ['driver' => 'valkey', 'prefix' => 'mxmed:gate4d:preview:session:', 'explicit_preview_flag' => true], $valkey);
+        $clock = new SystemClock();
+        $store = SessionStoreFactory::create('local', ['driver' => 'valkey', 'prefix' => 'mxmed:gate4d:preview:session:', 'explicit_preview_flag' => true], $valkey, $clock);
 
         return self::build(
             $pdo,
@@ -76,7 +110,8 @@ final class IdentityHttpComposition
             new PreviewIdentityNotificationAdapter((string)(getenv('MXMED_PREVIEW_NOTIFICATION_FILE') ?: '/tmp/mxmed-activity04-gate4d-http-integration-v2/notifications.json')),
             $store,
             $environment,
-            $allowedOrigin
+            $allowedOrigin,
+            $clock
         );
     }
 
@@ -98,13 +133,35 @@ final class IdentityHttpComposition
             ]
         );
 
+        $clock = new SystemClock();
+        $store = new RejectingSessionStoreAdapter();
+        if ($configuration->sessionConfigured()) {
+            $client = new ProductiveValkeyClient(
+                $configuration->sessionHost(),
+                $configuration->sessionPort(),
+                $configuration->sessionUsername(),
+                $configuration->sessionPassword()
+            );
+            $store = SessionStoreFactory::create(
+                $configuration->environment(),
+                $configuration->sessionStoreConfig(),
+                $client,
+                $clock
+            );
+        }
+
+        [$sessionAudit, $auditRequests, $auditActors] = self::buildSessionAudit($pdo);
         return self::build(
             $pdo,
             $configuration->pepper(),
             new RejectingIdentityNotificationAdapter(),
-            new RejectingSessionStoreAdapter(),
+            $store,
             $configuration->environment(),
-            $configuration->allowedOrigin()
+            $configuration->allowedOrigin(),
+            $clock,
+            $sessionAudit,
+            $auditRequests,
+            $auditActors
         );
     }
 
@@ -114,9 +171,13 @@ final class IdentityHttpComposition
         IdentityNotificationPort $notifications,
         SessionStorePort $store,
         string $environment,
-        string $allowedOrigin
+        string $allowedOrigin,
+        ?\Identity\Contracts\Clock $clock = null,
+        ?CanonicalSessionAuditProducer $sessionAudit = null,
+        ?RequestContextFactory $auditRequests = null,
+        ?ActorContextFactory $auditActors = null
     ): self {
-        $clock = new SystemClock();
+        $clock ??= new SystemClock();
         $accounts = new IdentityAccountRepository($pdo);
         $credentials = new AccountCredentialRepository($pdo);
         $consents = new AccountConsentRepository($pdo);
@@ -130,7 +191,7 @@ final class IdentityHttpComposition
         $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials));
         $capabilityAuthority = new ExistingCapabilityAuthorityAdapter(new ExistingCapabilityAuthorityService());
         $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority);
-        return new self($pdo, new CsrfTokenService($pepper), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin);
+        return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $sessionAudit, $auditRequests, $auditActors);
     }
 
     public function pdo(): PDO { return $this->pdo; }
@@ -147,6 +208,54 @@ final class IdentityHttpComposition
     public function authorization(): FailClosedAuthorizationService { return $this->authorization; }
     public function environment(): string { return $this->environment; }
     public function allowedOrigin(): string { return $this->allowedOrigin; }
+    public function sessionAudit(): ?CanonicalSessionAuditProducer { return $this->sessionAudit; }
+    public function auditRequests(): ?RequestContextFactory { return $this->auditRequests; }
+    public function auditActors(): ?ActorContextFactory { return $this->auditActors; }
+
+    /** @return array{CanonicalSessionAuditProducer,RequestContextFactory,ActorContextFactory} */
+    private static function buildSessionAudit(PDO $pdo): array
+    {
+        $writer = new CanonicalAuditWriter(
+            CanonicalAuditPolicyRegistry::canonical(),
+            new CanonicalAuditMetadataSanitizer(),
+            new TrustedAuditContextValidator(),
+            new RandomAuditUuidProvider(),
+            new SystemAuditUtcClock(),
+            new HmacSha256AuditIpHasher(new EnvironmentAuditSecretProvider()),
+            new CoarseAuditUserAgentSummarizer(),
+            new PdoCanonicalAuditTransactionAdapter($pdo),
+            new CanonicalAuditSealer(new CanonicalAuditSerializer()),
+            new AuditV1PhysicalMapper()
+        );
+        $failureSignal = new class implements AuditProducerFailureSignalPort {
+            public function signal(AuditProducerFailureSignal $signal): void
+            {
+                error_log(json_encode($signal->safePayload(), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            }
+        };
+        $producer = new CanonicalSessionAuditProducer(new BoundedBestEffortAuditEmitter(
+            new CanonicalAuditWriterAdapter($writer),
+            new AuditWriterContextBridge(),
+            $failureSignal,
+            new Mp01eEventScopePolicy()
+        ));
+        $uuid = new UuidV4Generator();
+        $requests = new RequestContextFactory(
+            new RandomRequestIdProvider($uuid),
+            new RandomCorrelationIdProvider($uuid),
+            new UuidV4ContextIdPolicy(),
+            new CorrelatableOperationCatalog(),
+            new SourceModuleCatalog(),
+            new CanonicalSourceRoutePolicy([
+                '/api/identity/index.php/login',
+                '/api/identity/index.php/logout',
+                '/api/identity/index.php/session-rotate',
+                '/api/identity/index.php/session-revoke',
+                '/api/identity/index.php/password-reset',
+            ], [], [], [])
+        );
+        return [$producer, $requests, new ActorContextFactory()];
+    }
 
     public static function registerAutoloader(): void
     {
@@ -155,7 +264,7 @@ final class IdentityHttpComposition
         $registered = true;
         $root = dirname(__DIR__, 2);
         spl_autoload_register(static function (string $class) use ($root): void {
-            $prefixes = ['Identity\\' => $root . '/identity/', 'Subscriptions\\' => $root . '/subscriptions/'];
+            $prefixes = ['Identity\\' => $root . '/identity/', 'Subscriptions\\' => $root . '/subscriptions/', 'Platform\\' => $root . '/platform/'];
             foreach ($prefixes as $prefix => $base) {
                 if (!str_starts_with($class, $prefix)) continue;
                 $relative = str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';

@@ -547,6 +547,30 @@ describe('task, service and data security contracts', () => {
     expect(appImage).not.toContain(':latest');
   });
 
+  test('injects the exact C3 session authority without secret values', () => {
+    const environment = Object.fromEntries(
+      entriesByName(app.Environment).map((entry) => [String(entry.Name), entry.Value]),
+    );
+    expect(environment).toMatchObject({
+      APP_ENV: 'production',
+      SESSION_PORT: '6379',
+      SESSION_IDLE_TTL: '3600',
+      SESSION_ABSOLUTE_LIFETIME: '43200',
+      SESSION_TOUCH_INTERVAL: '300',
+      SESSION_MAX_ACTIVE: '5',
+      SESSION_TLS_REQUIRED: 'true',
+      SESSION_LOCK_ENABLED: 'true',
+      SESSION_LOCK_TIMEOUT_SECONDS: '10',
+      SESSION_LOCK_WAIT_MICROSECONDS: '100000',
+    });
+    expect(JSON.stringify(environment.MXMED_IDENTITY_ORIGIN)).toContain('IdentityAllowedOrigin');
+    expect(names(app.Secrets)).toEqual(expect.arrayContaining([
+      'SESSION_SIGNING_KEY',
+      'SESSION_STORE_USERNAME',
+      'SESSION_STORE_PASSWORD',
+    ]));
+  });
+
   test('keeps migration fail-closed without SQL', () => {
     expect(migration.Command).toEqual([
       '/bin/sh',
@@ -773,7 +797,7 @@ const RUNTIME_EXPECTATIONS = [
   ['php/zz-mxmed-production.ini', 'session.save_handler = redis'],
   ['health/healthz.php', 'http_response_code(200)'],
   ['health/readyz.php', 'http_response_code(503)'],
-  ['health/readyz.php', 'readiness_not_integrated'],
+  ['health/readyz.php', 'SESSION_TLS_REQUIRED'],
   ['README.md', 'not built, pulled, pushed, scanned, or deployed'],
 ] as const;
 
@@ -838,10 +862,13 @@ describe('runtime scaffold denylist', () => {
     expect(healthz).not.toMatch(/mysql|valkey|redis|stripe|session|s3|ai_/i);
   });
 
-  test('keeps readyz fail-closed and sanitized', () => {
+  test('keeps readyz bounded, read-only, fail-closed and sanitized', () => {
     expect(readyz).toContain('http_response_code(503)');
-    expect(readyz).not.toContain('http_response_code(200)');
-    expect(readyz).not.toMatch(/host|port|exception|trace|password/i);
+    expect(readyz).toContain('http_response_code(200)');
+    expect(readyz).toContain('->ping()');
+    expect(readyz).not.toMatch(/->(?:set|del|unlink|expire|pexpire|multi|exec)\s*\(/i);
+    expect(readyz).not.toMatch(/getMessage|getTrace|var_dump|print_r/i);
+    expect(readyz).toContain("['status'=>'unavailable','code'=>'dependency_unavailable']");
   });
 });
 

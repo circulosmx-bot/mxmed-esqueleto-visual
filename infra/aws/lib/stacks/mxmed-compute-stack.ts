@@ -136,6 +136,7 @@ export class MxMedComputeStack extends BaseMxMedStack {
   public readonly migrationLogGroup?: LogGroup;
   public readonly scalingTarget?: ScalableTaskCount;
   public readonly applicationImageDigestParameter?: CfnParameter;
+  public readonly identityAllowedOriginParameter?: CfnParameter;
   public readonly activationMode: MxMedComputeStackProps['config']['computeActivationMode'];
   public readonly runtimeCapabilityProfile: MxMedRuntimeCapabilityProfile | null;
   public readonly migrationCommandMode: MxMedComputeStackProps['config']['computeMigrationCommandMode'];
@@ -205,6 +206,11 @@ export class MxMedComputeStack extends BaseMxMedStack {
       type: 'String',
       allowedPattern: IMAGE_DIGEST_PATTERN,
       description: 'Immutable MXMed application image digest in sha256:<64 lowercase hex> form.',
+    });
+    this.identityAllowedOriginParameter = new CfnParameter(this, 'IdentityAllowedOrigin', {
+      type: 'String',
+      allowedPattern: '^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?$',
+      description: 'Canonical trusted HTTPS origin for the productive Identity boundary.',
     });
     const image = ContainerImage.fromRegistry(
       Fn.join('', [
@@ -618,13 +624,17 @@ export class MxMedComputeStack extends BaseMxMedStack {
       DB_PORT: props.databasePort,
       DB_NAME: props.databaseName,
       SESSION_HOST: props.sessionEndpoint,
-      SESSION_PORT: props.sessionPort,
+      SESSION_PORT: '6379',
       SESSION_PREFIX: props.sessionPrefix,
       SESSION_IDLE_TTL: String(props.sessionIdleTtlSeconds),
       SESSION_ABSOLUTE_LIFETIME: String(props.sessionAbsoluteLifetimeSeconds),
+      SESSION_TOUCH_INTERVAL: '300',
+      SESSION_MAX_ACTIVE: '5',
+      SESSION_TLS_REQUIRED: 'true',
       SESSION_LOCK_ENABLED: String(props.sessionLockEnabled),
       SESSION_LOCK_TIMEOUT_SECONDS: String(props.sessionLockTimeoutSeconds),
       SESSION_LOCK_WAIT_MICROSECONDS: String(props.sessionLockWaitMicroseconds),
+      MXMED_IDENTITY_ORIGIN: this.identityAllowedOriginParameter?.valueAsString ?? '',
       PUBLIC_MEDIA_BUCKET: props.publicMediaBucket.bucketName,
       UPLOAD_QUARANTINE_BUCKET: props.uploadQuarantineBucket.bucketName,
       UPLOAD_URL_TTL: String(props.uploadUrlTtlSeconds),

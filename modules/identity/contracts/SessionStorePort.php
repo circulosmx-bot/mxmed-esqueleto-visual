@@ -17,3 +17,10 @@ interface SessionStorePort
     public function compareAndUpdate(SessionTokenDigest $digest, callable $updater): ?SessionRecord;
     public function healthCheck(): SessionStoreHealthDecision;
 }
+
+/** Productive store result needed to disclose an atomic oldest-session supersede. */
+interface AtomicSessionStorePort extends SessionStorePort
+{
+    public function createAuthoritatively(SessionRecord $record, int $maximumActiveSessions): ?SessionRecord;
+    public function revokeOwnedAuthoritatively(SessionTokenDigest $actorDigest, SessionId $targetSessionId, string $reason, \DateTimeImmutable $at): ?SessionRecord;
+}

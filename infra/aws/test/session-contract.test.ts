@@ -39,17 +39,27 @@ describe('session pure contracts', () => {
   test('SESSION-IMP-103 accepts an allowlisted minimal payload', () => {
     expect(() => {
       validateSessionPayloadKeys({
-        subject_id: 'opaque-subject',
-        entity_type: 'doctor',
-        authenticated: true,
-        created_at: 1,
-        absolute_expires_at: 43201,
+        serialization_version: 1,
+        session_id: OPAQUE_ID,
+        token_digest: 'a'.repeat(64),
+        account_id: 'account-opaque',
+        credential_version: 1,
+        account_status: 'active',
+        authenticated_at: '2026-08-24T00:00:00+00:00',
+        created_at: '2026-08-24T00:00:00+00:00',
+        last_seen_at: '2026-08-24T00:00:00+00:00',
+        expires_at: '2026-08-24T01:00:00+00:00',
+        absolute_expires_at: '2026-08-24T12:00:00+00:00',
+        state: 'active',
+        device_label: 'Browser',
+        user_agent_hash: '',
+        ip_dimension_hash: '',
       });
     }).not.toThrow();
   });
   test('SESSION-IMP-104 rejects a payload larger than 32 KiB', () => {
     expect(() => {
-      validateSessionPayloadSize({ csrf_state: 'x'.repeat(33 * 1024) });
+      validateSessionPayloadSize({ device_label: 'x'.repeat(33 * 1024) });
     }).toThrow('MXMED_SESSION_CONTRACT_INVALID:payload');
   });
   test('SESSION-IMP-105 rejects a clinical key', () => {
@@ -81,6 +91,9 @@ describe('session pure contracts', () => {
     expect(() => {
       validateSessionCookieContract({ ...SESSION_COOKIE_CONTRACT, sameSite: 'None' });
     }).toThrow('MXMED_SESSION_CONTRACT_INVALID:cookie');
+  });
+  test('C3 cookie is a browser-session cookie', () => {
+    expect(SESSION_COOKIE_CONTRACT).toMatchObject({ maxAge: null, expires: null });
   });
   test('SESSION-IMP-111 accepts the bounded lock contract', () => {
     expect(() => {

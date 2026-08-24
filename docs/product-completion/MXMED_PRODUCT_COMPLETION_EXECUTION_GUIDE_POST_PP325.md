@@ -5,13 +5,13 @@
 ```text
 DOCUMENT=MXMED_PRODUCT_COMPLETION_EXECUTION_GUIDE_POST_PP325
 DOCUMENT_MODE=PERSISTENT_EXECUTION_CHECKLIST
-CURRENT_CHECKPOINT=POST_PP326_C2_COMPLETE
-CURRENT_PHASE=C2_COMPLETE_AWAITING_C3_AUTHORIZATION
+CURRENT_CHECKPOINT=POST_PP328_C3_TECHNICAL_PASS
+CURRENT_PHASE=C3_PHYSICAL_VALIDATION_PENDING
 
 C0=CLOSED
 C1=CLOSED
 C2=CLOSED
-C3=NOT_STARTED
+C3=TECHNICAL_PASS
 C4=NOT_STARTED
 C5=NOT_STARTED
 C6=NOT_STARTED
@@ -22,7 +22,8 @@ C10=NOT_STARTED
 C11=NOT_STARTED
 C12=NOT_STARTED
 
-NEXT_IMPLEMENTATION_PHASE=C3_SESSION_COOKIE_AND_STORE
+NEXT_IMPLEMENTATION_PHASE=C3_ISOLATED_PHYSICAL_VALKEY_VALIDATION
+NEXT_REQUIRED_ACTION=C3_ISOLATED_PHYSICAL_VALKEY_VALIDATION
 C3_IMPLEMENTATION_AUTHORIZED=false
 
 AUDIT_INFRASTRUCTURE=CLOSED
@@ -110,7 +111,7 @@ C8 remains separately authorized and must pass before `OPTION_C_PRODUCT_CLOSEOUT
 | Item | Scope | Phase | Status | Close condition |
 |---|---|---:|---|---|
 | A-01 | Productive physician registration and contact verification | C2/C7/C8 | NOT_STARTED | Email and phone verification real; no pre-verification login |
-| A-02 | Customer session/cookie/store | C3 | NOT_STARTED | Server-authoritative approved production store adapter, fail-closed behavior, ratified TTL/cookie, rotation and revocation proven |
+| A-02 | Customer session/cookie/store | C3 | TECHNICAL_PASS | Server-authoritative approved production store adapter, fail-closed behavior, ratified TTL/cookie, rotation and revocation proven |
 | A-03 | Professional data and accreditation | C4/C7/C11 | NOT_STARTED | Human review, states/router, evidence and traceability complete |
 | A-04 | Claim/new-profile/ownership/transfer | C4/C11 | NOT_STARTED | Immutable origin, anti-duplicate, owner invariant and approvals proven |
 | A-05 | Profiles authority cutover | C6 | NOT_STARTED | No productive header/open authority; exact membership/scope negatives pass |
@@ -559,10 +560,10 @@ Current registration semantics may commit a pending account before the notificat
 
 ### C3 — Session, cookie and store
 
-- `STATUS=NOT_STARTED`
+- `STATUS=TECHNICAL_PASS`
 - `OBJECTIVE=` Activate canonical customer session and prepare stricter platform session policy.
 - `USER_VISIBLE_OUTCOME=` Real login/logout/expiry/revocation/session security.
-- `BACKEND_SCOPE=` Approved production session-store adapter, account-state refresh, rotation, CSRF, lock/disable and session APIs; Valkey remains the current candidate pending C3 adjudication.
+- `BACKEND_SCOPE=` Productive Valkey session-store source candidate, account-state refresh, rotation, CSRF, lock/disable and session APIs; isolated physical real-store validation remains pending.
 - `FRONTEND_SCOPE=` Current-session bootstrap, expiration/revocation and session management if scoped.
 - `DATA_MODEL_SCOPE=` No DB session store recommended; exact need adjudicated before change.
 - `DEPENDENCIES=` C2, authorized production session-store/config infrastructure and security authority.
@@ -574,6 +575,43 @@ Current registration semantics may commit a pending account before the notificat
 - `PROVIDER_REQUIRED=false`
 - `EVIDENCE_REQUIRED=` Approved production-store tests, technology adjudication, cookie inspection and outage/replay/expiry evidence.
 - `ROADMAP_GATE_UNLOCKED=C4_C5_C6_AUTHENTICATED_CONTEXT`
+
+Source technical-pass evidence:
+
+```text
+DIRECTOR_C3_LOCAL_REVIEW=PASS
+C3_SOURCE_IMPLEMENTATION_READY=true
+PRODUCTIVE_VALKEY_CLIENT_PRESENT=true
+TLS_SOURCE_CONTRACT_PASS=true
+ACL_SOURCE_CONTRACT_PASS=true
+ATOMIC_SESSION_STORE_SOURCE_PASS=true
+STRICT_SESSION_SERIALIZATION_PASS=true
+SERVER_CLOCK_TTL_PASS=true
+MAX_FIVE_SESSIONS_PASS=true
+SIXTH_SESSION_POLICY=REVOKE_OLDEST_SESSION
+SESSION_LIST_BACKEND_PASS=true
+SESSION_REVOKE_BACKEND_PASS=true
+COOKIE_CONTRACT_PASS=true
+CSRF_CONTRACT_PASS=true
+SESSION_HTTP_STATE_CONTRACT_PASS=true
+SESSION_AUDIT_WIRING_PASS=true
+AWS_SOURCE_CONTRACT_PASS=true
+C3_NEGATIVE_CONTRACT_PASS=true
+
+PHYSICAL_VALKEY_TEST_DEFINED=true
+PHYSICAL_VALKEY_TEST_EXECUTED=false
+REAL_STORE_TLS_PROOF=false
+REAL_STORE_ACL_PROOF=false
+REAL_STORE_ATOMICITY_PROOF=false
+REAL_STORE_MAX_FIVE_CONCURRENCY_PROOF=false
+REAL_STORE_OUTAGE_PROOF=false
+
+C3_PHASE_CLOSED=false
+C4_IMPLEMENTATION_AUTHORIZED=false
+NEXT_REQUIRED_ACTION=C3_ISOLATED_PHYSICAL_VALKEY_VALIDATION
+```
+
+Real-store tests, cookie inspection, outage/replay/expiry evidence and the remaining physical proofs above are still required before `C3=CLOSED`.
 
 ### C4 — Ownership, claim and invitation foundation
 
@@ -779,7 +817,7 @@ No backend-only closeout is allowed. AI and call-center boundary passes prove on
 
 | Order | Macro phase | Current status | Entry gate | Exit gate |
 |---:|---|---|---|---|
-| 1 | Option C core: C2→C3→C4→C5→C6→C7→applicable C9 | C1 closed; C2 next | This guide reviewed and C2 separately authorized | `IDENTITY_CORE_TECHNICAL_PASS` candidate; not product closeout |
+| 1 | Option C core: C2→C3→C4→C5→C6→C7→applicable C9 | C2 closed; C3 TECHNICAL_PASS; physical validation pending | Separate authorization for isolated C3 physical Valkey validation | `IDENTITY_CORE_TECHNICAL_PASS` candidate; not product closeout |
 | 2 | C8 Productive email/OTP provider | NOT_STARTED | Separate provider authorization after applicable core readiness | Real email/SMS purpose isolation and delivery E2E |
 | 3 | C10 Identity E2E and Director UX acceptance | NOT_STARTED | Core plus C8 passes | E2E, responsive and Director UX accepted |
 | 4 | C11 Platform Operations Backoffice MVP | NOT_STARTED | Identity core complete; separate C11 authorization | Six roles and 16 workflows pass before medical launch |
@@ -1414,6 +1452,11 @@ C0_DISCOVERY=CLOSED
 C1_DIRECTOR_FUNCTIONAL_AND_UX_RATIFICATION=CLOSED
 C2_PRODUCTIVE_IDENTITY_COMPOSITION=CLOSED
 C2_IMPLEMENTATION_AUTHORIZED=false
+C3=TECHNICAL_PASS
+C3_PHASE_CLOSED=false
+C3_IMPLEMENTATION_AUTHORIZED=false
+C4=NOT_STARTED
+C4_IMPLEMENTATION_AUTHORIZED=false
 C11_IS_SEPARATELY_AUTHORIZED=true
 C11_IMPLEMENTATION_AUTHORIZED=false
 AUDIT_INFRASTRUCTURE=CLOSED
@@ -1425,5 +1468,5 @@ AI_PRODUCT_IMPLEMENTATION_AUTHORIZED=false
 CALLCENTER_IMPLEMENTATION_AUTHORIZED=false
 PLATFORM_BACKOFFICE_IMPLEMENTATION_AUTHORIZED=false
 GIT_PROMOTION_AUTHORIZED=false
-NEXT_REQUIRED_ACTION=C3_DIRECTOR_PLANNING_AND_AUTHORIZATION
+NEXT_REQUIRED_ACTION=C3_ISOLATED_PHYSICAL_VALKEY_VALIDATION
 ```

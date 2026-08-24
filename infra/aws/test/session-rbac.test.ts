@@ -91,6 +91,9 @@ describe('session Valkey RBAC', () => {
   test('SESSION-IMP-065 allows PING', () => {
     expect(appAccess).toContain('+ping');
   });
+  test('C3 allows only the exact optimistic transaction primitives', () => {
+    for (const command of ['+watch', '+unwatch', '+multi', '+exec']) expect(appAccess).toContain(command);
+  });
   test('SESSION-IMP-066 grants no command category', () => {
     expect(appAccess).not.toContain('+@all');
     expect(appAccess).not.toContain('+@read');

@@ -2779,3 +2779,23 @@ C3_IMPLEMENTATION_AUTHORIZED=false
 La selección de composición en el entrypoint Identity ahora distingue de forma determinista el preview local/desarrollo explícito de staging/producción. La frontera productiva valida su configuración, nunca invoca preview y conserva proveedor y store como capacidades rechazantes hasta las autorizaciones C8 y C3. No se ejecutaron conexiones ni mutaciones de base de datos, no se activaron Valkey, sesiones o proveedor y no se realizó trabajo de frontend o cutover de consumidores.
 
 Se conserva para C8 `REGISTRATION_NOTIFICATION_FAILURE_SEMANTICS_REVIEW_REQUIRED=true`: la semántica actual puede confirmar una cuenta pendiente antes de intentar la notificación e invalidar el token si falla la entrega. No bloquea C2 y debe reconciliarse con el diseño de retry/recovery/provider antes del cierre de Identity.
+
+### PP-328 — C3 Session, Cookie and Store source technical pass
+
+Fecha: 2026-08-24. Rama: `program/mxmed-product-completion-v1`. El candidato local C3 aprobado por el Director queda promovido como pase técnico de fuente; no constituye cierre de C3. La autoridad detallada y persistente continúa en `docs/product-completion/MXMED_PRODUCT_COMPLETION_EXECUTION_GUIDE_POST_PP325.md`.
+
+```text
+C3_SOURCE_IMPLEMENTATION=TECHNICAL_PASS
+DIRECTOR_C3_LOCAL_REVIEW=PASS
+C3_CHANGED_PATH_COUNT=21
+C3_PRODUCTIVE_SESSION_TESTS=47/47
+AWS_TESTS=234/234
+AUDIT_UNIT_TESTS=34/34
+AUDIT_NEGATIVES=27/27
+PHYSICAL_VALKEY_TEST_EXECUTED=false
+C3_PHASE_CLOSED=false
+NEXT_REQUIRED_ACTION=ISOLATED_NONPRODUCTION_VALKEY_PHYSICAL_VALIDATION
+C4_IMPLEMENTATION_AUTHORIZED=false
+```
+
+El cliente Valkey productivo, el store atómico, la serialización estricta, los contratos de cookie/CSRF/estado HTTP, la auditoría canónica y la infraestructura AWS pasan revisión y pruebas locales/offline. Siguen pendientes las pruebas contra un store real, la inspección de cookie y la evidencia de outage, replay y expiración antes de `C3=CLOSED`. Durante esta promoción no se ejecutan la prueba física, conexiones o mutaciones Valkey, despliegues AWS, cambios de base de datos, frontend, cutover de consumidores ni trabajo C4.

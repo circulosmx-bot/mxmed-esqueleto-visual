@@ -11,10 +11,23 @@ final class SessionState
     public const SUPERSEDED = 'superseded';
     public const IDLE_EXPIRED = 'idle_expired';
     public const ABSOLUTE_EXPIRED = 'absolute_expired';
+    public const CREDENTIAL_CHANGED = 'credential_changed';
+    public const ACCOUNT_LOCKED = 'account_locked';
+    public const ACCOUNT_DISABLED = 'account_disabled';
 
     public static function all(): array
     {
-        return [self::ACTIVE, self::LOGGED_OUT, self::REVOKED, self::SUPERSEDED, self::IDLE_EXPIRED, self::ABSOLUTE_EXPIRED];
+        return [
+            self::ACTIVE,
+            self::LOGGED_OUT,
+            self::REVOKED,
+            self::SUPERSEDED,
+            self::IDLE_EXPIRED,
+            self::ABSOLUTE_EXPIRED,
+            self::CREDENTIAL_CHANGED,
+            self::ACCOUNT_LOCKED,
+            self::ACCOUNT_DISABLED,
+        ];
     }
 
     public static function assertValid(string $state): string
