@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 const repositoryRoot = join(__dirname, '../../..');
 const helper = join(repositoryRoot, 'scripts/aws/c3-runtime-contract.sh');
+const deployController = join(repositoryRoot, 'scripts/aws/c3-ephemeral-deploy.sh');
 const hash = 'a'.repeat(64);
 const otherHash = 'b'.repeat(64);
 const sourceHead = '1'.repeat(40);
@@ -300,7 +301,7 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
   });
 
   test('uses manifest source provenance without a fixed repository HEAD', () => {
-    const deploy = readFileSync(join(repositoryRoot, 'scripts/aws/c3-ephemeral-deploy.sh'), 'utf8');
+    const deploy = readFileSync(deployController, 'utf8');
     const stack = readFileSync(
       join(repositoryRoot, 'infra/aws/lib/stacks/mxmed-c3-runner-stack.ts'),
       'utf8',
@@ -310,5 +311,83 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     expect(deploy).toContain('--build-arg "SOURCE_REVISION=$(jq -r .source_head "$manifest")"');
     expect(stack).toContain("new CfnParameter(this, 'SourceRevision'");
     expect(`${deploy}\n${stack}`).not.toContain('878237984810f1dddae48be2c73ed75cfbe34384');
+  });
+
+  test('prepares change sets in two reachable phases without the original digest cycle', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    const preDigest =
+      /PRE_DIGEST_STACKS='([^']+)'/.exec(deploy)?.[1]?.split(' ').filter(Boolean) ?? [];
+    const runner = /RUNNER_STACKS='([^']+)'/.exec(deploy)?.[1]?.split(' ').filter(Boolean) ?? [];
+    const preparation =
+      / {2}--prepare-change-sets\)([\s\S]*?)\n {2}--execute-stack\)/.exec(deploy)?.[1] ?? '';
+
+    expect(preDigest).toEqual([
+      'mxmed-stg-c3-janitor',
+      'mxmed-stg-network',
+      'mxmed-stg-security',
+      'mxmed-stg-session',
+      'mxmed-stg-registry',
+    ]);
+    expect(runner).toEqual(['mxmed-stg-c3-runner']);
+    expect(preDigest).not.toContain('mxmed-stg-c3-runner');
+    expect(preparation).toContain('pre-digest)');
+    expect(preparation).toContain('require_future_write_authority POST_FIRST_RUNTIME_MUTATION');
+    expect(preparation).toContain('PRE_DIGEST_CHANGE_SET_GATE_12_NOT_PENDING');
+    expect(preparation).toContain('prepare_stacks="$PRE_DIGEST_STACKS"');
+    expect(preparation).toContain('runner)');
+    expect(preparation).toContain('require_future_write_authority PRE_RUNNER');
+    expect(preparation).toContain('prepare_stacks="$RUNNER_STACKS"');
+    expect(preparation).toContain('for name in $prepare_stacks');
+    expect(preparation).not.toContain('for name in $STACKS');
+
+    const originalMonolithicOrder = [...preDigest, ...runner];
+    const hasDigestDependencyCycle = (
+      order: string[],
+      registryIsPhysical: boolean,
+      runnerRequiresPhysicalDigest: boolean,
+    ): boolean =>
+      order.includes('mxmed-stg-registry') &&
+      order.includes('mxmed-stg-c3-runner') &&
+      runnerRequiresPhysicalDigest &&
+      !registryIsPhysical;
+    expect(hasDigestDependencyCycle(originalMonolithicOrder, false, true)).toBe(true);
+
+    const reconciledRuntimeSequence = [
+      ...preDigest,
+      'execute:mxmed-stg-c3-janitor',
+      'execute:mxmed-stg-network',
+      'execute:mxmed-stg-security',
+      'execute:mxmed-stg-session',
+      'execute:mxmed-stg-registry',
+      'seal:physical-ecr-digest',
+      ...runner,
+      'execute:mxmed-stg-c3-runner',
+    ];
+    expect(reconciledRuntimeSequence.indexOf('execute:mxmed-stg-registry')).toBeLessThan(
+      reconciledRuntimeSequence.indexOf('seal:physical-ecr-digest'),
+    );
+    expect(reconciledRuntimeSequence.indexOf('seal:physical-ecr-digest')).toBeLessThan(
+      reconciledRuntimeSequence.indexOf('mxmed-stg-c3-runner'),
+    );
+  });
+
+  test('phase selection fails closed before AWS and change-set failures start exact teardown', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    const noPhase = spawnSync(
+      deployController,
+      ['--prepare-change-sets', '--no-execute', '--manifest', '/nonexistent'],
+      { cwd: repositoryRoot, encoding: 'utf8', env: { PATH: process.env.PATH ?? '/usr/bin:/bin' } },
+    );
+    expect(noPhase.status).not.toBe(0);
+    expect(noPhase.stderr).toContain('CHANGE_SET_PREPARATION_PHASE_REQUIRED');
+    expect(noPhase.stderr).not.toMatch(/Unable to locate credentials|aws: command not found/i);
+
+    expect(deploy).toContain('CHANGE_SET_CREATE_FAILED');
+    expect(deploy).toContain('CHANGE_SET_CREATE_WAIT_FAILED');
+    expect(deploy).toContain('CHANGE_SET_RESOURCE_COUNT_MISMATCH');
+    expect(deploy).toContain('CHANGE_SET_TEMPLATE_SEMANTIC_HASH_MISMATCH');
+    expect(deploy).toContain('|| start_partial_teardown "$name"');
+    expect(deploy).toContain('c3-ephemeral-teardown.sh" --execute-stack-deletes');
+    expect(deploy).toContain('.phase="ABORTING"');
   });
 });

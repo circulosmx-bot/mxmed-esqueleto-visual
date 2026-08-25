@@ -4,7 +4,9 @@ set -eu
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
 EXPECTED_COST_CAP='5'
-STACKS='mxmed-stg-c3-janitor mxmed-stg-network mxmed-stg-security mxmed-stg-session mxmed-stg-registry mxmed-stg-c3-runner'
+PRE_DIGEST_STACKS='mxmed-stg-c3-janitor mxmed-stg-network mxmed-stg-security mxmed-stg-session mxmed-stg-registry'
+RUNNER_STACKS='mxmed-stg-c3-runner'
+STACKS="$PRE_DIGEST_STACKS $RUNNER_STACKS"
 AWS_WRITE_AUTHORITY='DIRECTOR_AUTHORIZES_SINGLE_USE_C3_AWS_WRITES'
 PERMISSION_BOUNDARY_ARN='arn:aws:iam::875691018466:policy/MXMed-C3-Staging-PermissionBoundary'
 ASSEMBLY='infra/aws/cdk.out/staging-c3-ephemeral/assembly-MxMedStagingC3Ephemeral'
@@ -34,6 +36,7 @@ image_source_revision=''
 mode=''
 no_execute=false
 stack=''
+change_set_phase=''
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -49,10 +52,14 @@ while [ "$#" -gt 0 ]; do
     --build-inputs) shift; build_inputs="${1:-}" ;;
     --image-source-revision) shift; image_source_revision="${1:-}" ;;
     --stack) shift; stack="${1:-}" ;;
+    --phase) shift; change_set_phase="${1:-}" ;;
     *) fail "UNKNOWN_ARGUMENT:$1" ;;
   esac
   shift
 done
+
+[ -z "$change_set_phase" ] || [ "$mode" = '--prepare-change-sets' ] \
+  || fail 'CHANGE_SET_PREPARATION_PHASE_MODE_MISMATCH'
 
 validate_manifest() {
   need jq
@@ -128,11 +135,14 @@ create_direct_change_set() {
   else
     key="$(jq -r --arg stack "$name" '.templates[] | select(.stack_name == $stack) | .object_key' "$manifest")"
     checksum="$(jq -r --arg stack "$name" '.template_transport_objects[] | select(.stack_name == $stack) | .checksum_sha256' "$state")"
-    [ "$checksum" != 'null' ] && [ -n "$checksum" ] || fail "UNSEALED_TEMPLATE_UPLOAD_REJECTED:$name"
+    [ "$checksum" != 'null' ] && [ -n "$checksum" ] \
+      || start_partial_teardown "$name" "UNSEALED_TEMPLATE_UPLOAD_REJECTED:$name"
     actual_checksum="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api head-object \
       --bucket "$TEMPLATE_BUCKET" --key "$key" --checksum-mode ENABLED \
-      --query 'ChecksumSHA256' --output text)"
-    [ "$actual_checksum" = "$checksum" ] || fail "S3_TEMPLATE_CHECKSUM_MISMATCH:$name"
+      --query 'ChecksumSHA256' --output text)" \
+      || start_partial_teardown "$name" "S3_TEMPLATE_CHECKSUM_READ_FAILED:$name"
+    [ "$actual_checksum" = "$checksum" ] \
+      || start_partial_teardown "$name" "S3_TEMPLATE_CHECKSUM_MISMATCH:$name"
     set -- "$@" --template-url "https://$TEMPLATE_BUCKET.s3.$EXPECTED_REGION.amazonaws.com/$key"
   fi
   case "$name" in
@@ -147,7 +157,10 @@ create_direct_change_set() {
       ;;
     mxmed-stg-c3-runner)
       digest="$(jq -r .physical_ecr_image_digest "$state")"
-      case "$digest" in sha256:[0-9a-f][0-9a-f]*) ;; *) fail 'IMAGE_DIGEST_NOT_SEALED' ;; esac
+      case "$digest" in
+        sha256:[0-9a-f][0-9a-f]*) ;;
+        *) start_partial_teardown "$name" 'IMAGE_DIGEST_NOT_SEALED' ;;
+      esac
       set -- "$@" --parameters \
         "ParameterKey=RunId,ParameterValue=$(jq -r .run_id "$manifest")" \
         "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .hard_cap_at_utc "$state")" \
@@ -161,9 +174,11 @@ create_direct_change_set() {
         "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .hard_cap_at_utc "$state")"
       ;;
   esac
-  AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws "$@" >/dev/null
+  AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws "$@" >/dev/null \
+    || start_partial_teardown "$name" "CHANGE_SET_CREATE_FAILED:$name"
   AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation wait change-set-create-complete \
-    --stack-name "$name" --change-set-name "$change_set"
+    --stack-name "$name" --change-set-name "$change_set" \
+    || start_partial_teardown "$name" "CHANGE_SET_CREATE_WAIT_FAILED:$name"
 }
 
 cfn_execution_role_for_stack() {
@@ -184,7 +199,7 @@ cfn_execution_role_for_stack() {
 }
 
 start_partial_teardown() {
-  failed_stack="$1" now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  failed_stack="$1" failure_reason="${2:-STACK_DEPLOYMENT_FAILED}" now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   c3_atomic_state_update "$manifest" "$state" \
     '.deployment_failure_at_utc=$now | .deployment_failure_stack=$stack | .phase="ABORTING"' \
     --arg stack "$failed_stack" --arg now "$now"
@@ -193,7 +208,7 @@ start_partial_teardown() {
   AWS_PROFILE="$MXMED_C3_TEARDOWN_PROFILE" \
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --execute-stack-deletes --manifest "$manifest" --state "$state" \
     || fail "PARTIAL_DEPLOYMENT_TEARDOWN_REQUIRES_ATTENTION:$failed_stack"
-  fail "STACK_DEPLOYMENT_FAILED_AND_TEARDOWN_STARTED:$failed_stack"
+  fail "STACK_DEPLOYMENT_FAILED_AND_TEARDOWN_STARTED:$failed_stack:$failure_reason"
 }
 
 case "$mode" in
@@ -354,25 +369,40 @@ case "$mode" in
     ;;
   --prepare-change-sets)
     [ "$no_execute" = true ] || fail 'NO_EXECUTE_FLAG_REQUIRED'
-    require_future_write_authority POST_FIRST_RUNTIME_MUTATION
+    case "$change_set_phase" in
+      pre-digest)
+        require_future_write_authority POST_FIRST_RUNTIME_MUTATION
+        [ "$(c3_gate_state "$state" ECR_DIGEST_SEALED_BEFORE_RUNNER)" = "$C3_PENDING_RUNTIME" ] \
+          || fail 'PRE_DIGEST_CHANGE_SET_GATE_12_NOT_PENDING'
+        prepare_stacks="$PRE_DIGEST_STACKS"
+        ;;
+      runner)
+        require_future_write_authority PRE_RUNNER
+        prepare_stacks="$RUNNER_STACKS"
+        ;;
+      *) fail 'CHANGE_SET_PREPARATION_PHASE_REQUIRED' ;;
+    esac
     need aws
     [ -d "$ASSEMBLY" ] || fail 'C3_ASSEMBLY_MISSING'
     verify_sealed_templates
-    for name in $STACKS; do
+    for name in $prepare_stacks; do
       file="$ASSEMBLY/$(template_file_for_stack "$name")"
       transport="$(jq -r --arg stack "$name" '.templates[] | select(.stack_name == $stack) | .transport' "$manifest")"
       create_direct_change_set "$name" "$file" "$transport"
       expected="$(jq '.Resources | length' "$file")"
       actual="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-change-set \
         --stack-name "$name" --change-set-name "$(jq -r .run_id "$manifest")-review" \
-        --query 'length(Changes)' --output text)"
-      [ "$actual" = "$expected" ] || fail "CHANGE_SET_RESOURCE_COUNT_MISMATCH:$name"
+        --query 'length(Changes)' --output text)" \
+        || start_partial_teardown "$name" "CHANGE_SET_DESCRIBE_FAILED:$name"
+      [ "$actual" = "$expected" ] \
+        || start_partial_teardown "$name" "CHANGE_SET_RESOURCE_COUNT_MISMATCH:$name"
       expected_semantic_sha="$(jq -S -c . "$file" | shasum -a 256 | awk '{print $1}')"
       actual_semantic_sha="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation get-template \
         --stack-name "$name" --change-set-name "$(jq -r .run_id "$manifest")-review" --output json \
-        | jq -S -c .TemplateBody | shasum -a 256 | awk '{print $1}')"
+        | jq -S -c .TemplateBody | shasum -a 256 | awk '{print $1}')" \
+        || start_partial_teardown "$name" "CHANGE_SET_TEMPLATE_READ_FAILED:$name"
       [ "$actual_semantic_sha" = "$expected_semantic_sha" ] \
-        || fail "CHANGE_SET_TEMPLATE_SEMANTIC_HASH_MISMATCH:$name"
+        || start_partial_teardown "$name" "CHANGE_SET_TEMPLATE_SEMANTIC_HASH_MISMATCH:$name"
       c3_atomic_state_update "$manifest" "$state" \
         '.change_set_template_semantic_sha256[$stack]=$sha' \
         --arg stack "$name" --arg sha "$actual_semantic_sha"
