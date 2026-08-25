@@ -3,6 +3,58 @@ export const MXMED_C3_ACCOUNT = '875691018466' as const;
 export const MXMED_C3_REGION = 'mx-central-1' as const;
 export const MXMED_C3_STACK_PREFIX = 'mxmed-stg-' as const;
 export const MXMED_C3_COST_CAP_USD = 5 as const;
+export const MXMED_C3_TEMPLATE_BODY_MAX_BYTES = 51_200 as const;
+export const MXMED_C3_TEMPLATE_BUCKET_NAME =
+  'mxmed-stg-c3-cf-templates-875691018466-mx-central-1' as const;
+export const MXMED_C3_AUDIT_BUCKET_NAME = 'mxmed-stg-audit-875691018466-mx-central-1' as const;
+export const MXMED_C3_DEPLOYMENT_MODE = 'DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES' as const;
+
+export type MxMedC3TemplateTransport = 'TEMPLATE_BODY' | 'C3_TEMPLATE_S3_URL';
+
+export interface MxMedC3TemplateTransportCandidate {
+  readonly account: string;
+  readonly region: string;
+  readonly bucketName: string;
+  readonly publicAccessBlocked: boolean;
+  readonly sealed: boolean;
+  readonly expectedSha256: string;
+  readonly actualSha256: string;
+  readonly templateBytes: number;
+  readonly transport: MxMedC3TemplateTransport;
+  readonly templateText: string;
+}
+
+export function c3TemplateTransportForBytes(bytes: number): MxMedC3TemplateTransport {
+  if (!Number.isInteger(bytes) || bytes <= 0) {
+    throw new Error('MXMED_C3_TEMPLATE_BYTES_INVALID');
+  }
+  return bytes > MXMED_C3_TEMPLATE_BODY_MAX_BYTES ? 'C3_TEMPLATE_S3_URL' : 'TEMPLATE_BODY';
+}
+
+export function validateC3TemplateTransportCandidate(
+  candidate: MxMedC3TemplateTransportCandidate,
+): void {
+  if (candidate.account !== MXMED_C3_ACCOUNT) throw new Error('MXMED_C3_ACCOUNT_MISMATCH');
+  if (candidate.region !== MXMED_C3_REGION) throw new Error('MXMED_C3_REGION_MISMATCH');
+  if (candidate.bucketName !== MXMED_C3_TEMPLATE_BUCKET_NAME) {
+    throw new Error('MXMED_C3_TEMPLATE_BUCKET_MISMATCH');
+  }
+  if (!candidate.publicAccessBlocked) throw new Error('MXMED_C3_TEMPLATE_BUCKET_PUBLIC');
+  if (!candidate.sealed) throw new Error('MXMED_C3_TEMPLATE_UNSEALED');
+  if (candidate.expectedSha256 !== candidate.actualSha256) {
+    throw new Error('MXMED_C3_TEMPLATE_HASH_MISMATCH');
+  }
+  if (
+    /production|mxmed-prd-/i.test(candidate.templateText) ||
+    /hnb659fds|\/cdk-bootstrap\/|CDKToolkit/.test(candidate.templateText) ||
+    /["']BootstrapVersion["']|["']CheckBootstrapVersion["']/.test(candidate.templateText)
+  ) {
+    throw new Error('MXMED_C3_TEMPLATE_FORBIDDEN_AUTHORITY');
+  }
+  if (candidate.transport !== c3TemplateTransportForBytes(candidate.templateBytes)) {
+    throw new Error('MXMED_C3_TEMPLATE_TRANSPORT_MISMATCH');
+  }
+}
 
 export const MXMED_C3_RUNNER_CONTRACT = Object.freeze({
   cpuUnits: 256,
@@ -125,6 +177,7 @@ export const MXMED_C3_RETAINED_LOGICAL_RESOURCES = Object.freeze([
     stackName: 'mxmed-stg-security',
     logicalId: 'AuditBucketB01E0AE8',
     type: 'AWS::S3::Bucket',
+    physicalName: MXMED_C3_AUDIT_BUCKET_NAME,
   },
   {
     stackName: 'mxmed-stg-security',
@@ -234,7 +287,8 @@ export const MXMED_C3_DEPLOY_ACTIONS = Object.freeze([
   'scheduler:CreateSchedule',
   'states:CreateStateMachine',
   'states:TagResource',
-  'budgets:CreateBudget',
+  'budgets:ViewBudget',
+  'budgets:ModifyBudget',
 ] as const);
 
 export const MXMED_C3_TEST_CONTROLLER_ACTIONS = Object.freeze([
@@ -290,7 +344,8 @@ export const MXMED_C3_TEARDOWN_ACTIONS = Object.freeze([
   'kms:ScheduleKeyDeletion',
   'scheduler:DeleteSchedule',
   'states:DeleteStateMachine',
-  'budgets:DeleteBudget',
+  'budgets:ViewBudget',
+  'budgets:ModifyBudget',
 ] as const);
 
 export const MXMED_C3_UNSCOPABLE_ACTIONS = Object.freeze([
@@ -298,7 +353,7 @@ export const MXMED_C3_UNSCOPABLE_ACTIONS = Object.freeze([
   'kms:CreateKey',
   'ecr:GetAuthorizationToken',
   's3:CreateBucket',
-  'budgets:CreateBudget',
+  'budgets:ModifyBudget',
 ] as const);
 
 export const MXMED_C3_EXPECTED_RESOURCE_TYPE_COUNTS = Object.freeze({

@@ -1,5 +1,5 @@
-import { CfnParameter, Stage, Tags } from 'aws-cdk-lib';
-import type { StageProps } from 'aws-cdk-lib';
+import { CfnParameter, DefaultStackSynthesizer, Stage, Tags } from 'aws-cdk-lib';
+import type { StackProps, StageProps } from 'aws-cdk-lib';
 import type { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { Construct } from 'constructs';
 
@@ -14,6 +14,7 @@ import { MxMedRegistryStack } from '../stacks/mxmed-registry-stack';
 import { MxMedSecurityStack } from '../stacks/mxmed-security-stack';
 import { MxMedSessionStack } from '../stacks/mxmed-session-stack';
 import type { BaseMxMedStack } from '../stacks/base-mxmed-stack';
+import { mxmedC3AuditBucketName } from '../utils/naming';
 
 export interface MxMedC3EphemeralStageProps {
   readonly config: MxMedEnvironmentConfig;
@@ -33,6 +34,12 @@ function applyEphemeralRunTags(stack: BaseMxMedStack): void {
   Tags.of(stack).add('Ephemeral', 'true', { priority: 500 });
   Tags.of(stack).add('RunId', runId.valueAsString, { priority: 500 });
   Tags.of(stack).add('ExpiresAt', expiresAt.valueAsString, { priority: 500 });
+}
+
+function directCloudFormationSynthesizer(): NonNullable<StackProps['synthesizer']> {
+  return new DefaultStackSynthesizer({
+    generateBootstrapVersionRule: false,
+  }) as unknown as NonNullable<StackProps['synthesizer']>;
 }
 
 /** Dedicated C3 graph: Network, Security, Session, Registry, Runner and Janitor only. */
@@ -62,18 +69,24 @@ export class MxMedC3EphemeralStage extends Stage {
     };
     super(scope, id, { env });
 
-    const stackProps = { config: props.config };
-    this.networkStack = new MxMedNetworkStack(this, 'Network', stackProps);
-    this.securityStack = new MxMedSecurityStack(this, 'Security', stackProps);
+    const stackProps = () => ({
+      config: props.config,
+      synthesizer: directCloudFormationSynthesizer(),
+    });
+    this.networkStack = new MxMedNetworkStack(this, 'Network', stackProps());
+    this.securityStack = new MxMedSecurityStack(this, 'Security', {
+      ...stackProps(),
+      c3AuditBucketName: mxmedC3AuditBucketName(MXMED_C3_ACCOUNT, MXMED_C3_REGION),
+    });
     this.sessionStack = new MxMedSessionStack(this, 'Session', {
-      ...stackProps,
+      ...stackProps(),
       vpc: this.networkStack.vpc,
       isolatedDataSubnets: this.networkStack.isolatedDataSubnets,
       sessionSecurityGroup: this.networkStack.sessionSecurityGroup,
       applicationDataKey: this.securityStack.applicationDataKey,
       secretsKey: this.securityStack.secretsKey,
     });
-    this.registryStack = new MxMedRegistryStack(this, 'Registry', stackProps);
+    this.registryStack = new MxMedRegistryStack(this, 'Registry', stackProps());
     for (const foundation of [
       this.networkStack,
       this.securityStack,
@@ -83,7 +96,7 @@ export class MxMedC3EphemeralStage extends Stage {
       applyEphemeralRunTags(foundation);
     }
     this.runnerStack = new MxMedC3RunnerStack(this, 'C3Runner', {
-      ...stackProps,
+      ...stackProps(),
       privateAppSubnets: this.networkStack.privateAppSubnets,
       applicationSecurityGroup: this.networkStack.applicationSecurityGroup,
       sessionEndpoint: this.sessionStack.primaryEndpointAddress,
@@ -92,7 +105,7 @@ export class MxMedC3EphemeralStage extends Stage {
       auditKey: this.securityStack.auditKey,
       applicationRepository: this.registryStack.applicationRepository,
     });
-    this.janitorStack = new MxMedC3JanitorStack(this, 'C3Janitor', stackProps);
+    this.janitorStack = new MxMedC3JanitorStack(this, 'C3Janitor', stackProps());
 
     this.sessionStack.addDependency(this.networkStack);
     this.sessionStack.addDependency(this.securityStack);

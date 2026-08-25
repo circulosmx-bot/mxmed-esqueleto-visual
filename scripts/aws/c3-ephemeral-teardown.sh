@@ -6,6 +6,8 @@ EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
 AWS_WRITE_AUTHORITY='DIRECTOR_AUTHORIZES_SINGLE_USE_C3_AWS_WRITES'
 DELETE_STACKS='mxmed-stg-c3-runner mxmed-stg-session mxmed-stg-registry mxmed-stg-security mxmed-stg-network'
+TEMPLATE_BUCKET='mxmed-stg-c3-cf-templates-875691018466-mx-central-1'
+AUDIT_BUCKET='mxmed-stg-audit-875691018466-mx-central-1'
 RETAINED='mxmed-stg-security|ApplicationDataKeyC957928E|AWS::KMS::Key
 mxmed-stg-security|SecretsKey317DCF94|AWS::KMS::Key
 mxmed-stg-security|AuditKeyB2DBB069|AWS::KMS::Key
@@ -41,6 +43,8 @@ validate_authority() {
   [ -f "$manifest" ] || fail 'RUN_MANIFEST_MISSING'
   jq -e --arg account "$EXPECTED_ACCOUNT" --arg region "$EXPECTED_REGION" \
     '.schema == "mxmed.c3.ephemeral.run-manifest.v1" and (.expected_head | test("^[a-f0-9]{40}$")) and .account == $account and .region == $region
+     and .deployment_mode == "DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES"
+     and .template_transport.bucket_name == "mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
      and ([.stack_names[] | select(startswith("mxmed-stg-") | not)] | length == 0)
      and (.retained_resource_expectations.count == 13)
      and ((tostring | test("production|mxmed-prd-|<[^>]+>|UNRESOLVED"; "i")) | not)' "$manifest" >/dev/null \
@@ -55,6 +59,25 @@ validate_authority() {
   git merge-base --is-ancestor "$BASELINE_PRODUCT_HEAD" "$current_head" || fail 'BASELINE_PRODUCT_HEAD_NOT_ANCESTOR'
 }
 
+cleanup_template_transport() {
+  [ "$(jq -r '.template_transport.bucket_name' "$manifest")" = "$TEMPLATE_BUCKET" ] \
+    || fail 'TEMPLATE_BUCKET_OUT_OF_SCOPE'
+  if ! aws s3api head-bucket --bucket "$TEMPLATE_BUCKET" >/dev/null 2>&1; then
+    return 0
+  fi
+  jq -r '.template_transport.objects[].key' "$manifest" | while IFS= read -r key; do
+    case "$key" in
+      "$(jq -r .run_id "$manifest")"/mxmed-stg-*/[0-9a-f]*.template.json) ;;
+      *) fail 'TEMPLATE_OBJECT_KEY_OUT_OF_SCOPE' ;;
+    esac
+    aws s3api delete-object --bucket "$TEMPLATE_BUCKET" --key "$key" >/dev/null
+  done
+  remaining="$(aws s3api list-objects-v2 --bucket "$TEMPLATE_BUCKET" --query 'KeyCount' --output text)"
+  [ "$remaining" = '0' ] || fail 'TEMPLATE_BUCKET_OBJECTS_REMAIN'
+  aws s3api delete-bucket-policy --bucket "$TEMPLATE_BUCKET"
+  aws s3api delete-bucket --bucket "$TEMPLATE_BUCKET"
+}
+
 capture_retained_physical_ids() {
   [ "$(jq '.retained_resource_expectations.physical_resources | length' "$manifest")" = '0' ] || return 0
   captures='[]'
@@ -67,6 +90,9 @@ capture_retained_physical_ids() {
     if [ -z "$physical_id" ] || [ "$physical_id" = 'None' ]; then
       [ "$(jq -r '.deployment_failure_at_utc // empty' "$manifest")" != '' ] && continue
       fail "RETAINED_PHYSICAL_ID_MISSING:$logical_id"
+    fi
+    if [ "$logical_id" = 'AuditBucketB01E0AE8' ] && [ "$physical_id" != "$AUDIT_BUCKET" ]; then
+      fail 'AUDIT_BUCKET_PHYSICAL_NAME_MISMATCH'
     fi
     captures="$(printf '%s' "$captures" | jq --arg stack "$stack" --arg logical "$logical_id" --arg type "$resource_type" --arg physical "$physical_id" '. + [{stack_name:$stack,logical_id:$logical,type:$type,physical_id:$physical}]')"
   done <<EOF
@@ -128,6 +154,7 @@ case "$mode" in
         aws cloudformation wait stack-delete-complete --stack-name "$stack"
       fi
     done
+    cleanup_template_transport
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --cleanup-retained --manifest "$manifest"
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --orphan-inventory --manifest "$manifest"
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --residual-cost-inventory --manifest "$manifest"
@@ -164,6 +191,7 @@ EOF
     validate_authority
     [ "$(jq '.orphan_inventory | length' "$manifest")" = "$(jq '.retained_resource_expectations.physical_resources | length' "$manifest")" ] || fail 'ORPHAN_INVENTORY_MISSING'
     active="$(jq '[.orphan_inventory[] | select(.state == "ACTIVE" or (.type == "AWS::KMS::Key" and .state != "PendingDeletion" and .state != "ABSENT") or (.type == "AWS::SecretsManager::Secret" and .state == "None"))] | length' "$manifest")"
+    if aws s3api head-bucket --bucket "$TEMPLATE_BUCKET" >/dev/null 2>&1; then active=$((active + 1)); fi
     tmp="${manifest}.tmp.$$"; jq --argjson active "$active" '.residual_billable_resource_count=$active' "$manifest" >"$tmp"; chmod 0600 "$tmp"; mv "$tmp" "$manifest"
     ;;
   --final-read-only-verification)

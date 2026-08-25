@@ -1,0 +1,49 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RunAndControlOneC3Task",
+      "Effect": "Allow",
+      "Action": ["ecs:DescribeTasks", "ecs:RunTask", "ecs:StopTask"],
+      "Resource": [
+        "arn:aws:ecs:mx-central-1:875691018466:cluster/mxmed-stg-c3-runner",
+        "arn:aws:ecs:mx-central-1:875691018466:task-definition/mxmed-stg-c3-runner:*",
+        "arn:aws:ecs:mx-central-1:875691018466:task/mxmed-stg-c3-runner/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOnlySanitizedC3RunnerLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogStreams",
+        "logs:FilterLogEvents",
+        "logs:GetLogEvents",
+        "logs:GetQueryResults",
+        "logs:StartQuery"
+      ],
+      "Resource": "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-runner:*"
+    },
+    {
+      "Sid": "PassOnlyExactC3RunnerRoles",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ecs-tasks.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "ExplicitlyDenyControlPlaneAndSecrets",
+      "Effect": "Deny",
+      "Action": ["cloudformation:*", "iam:Create*", "iam:Put*", "secretsmanager:GetSecretValue"],
+      "Resource": "*"
+    }
+  ]
+}

@@ -57,3 +57,19 @@ export function mxmedName(environmentCode: string, component: string, maximumLen
 
   return name;
 }
+
+export function mxmedC3AuditBucketName(account: string, region: string): string {
+  assertMxMedCondition(
+    /^[0-9]{12}$/.test(account),
+    'MXMED_NAMING_INVALID',
+    'account',
+    'must be a 12-digit AWS account identifier',
+  );
+  assertMxMedCondition(
+    /^[a-z]{2}-[a-z]+-[0-9]+$/.test(region),
+    'MXMED_NAMING_INVALID',
+    'region',
+    'must be a lowercase AWS region identifier',
+  );
+  return `${mxmedName('stg', 'audit')}-${account}-${region}`;
+}

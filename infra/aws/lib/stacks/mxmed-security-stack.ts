@@ -178,6 +178,7 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       'MXMed jobs task role; each future job receives explicit owner grants.',
     );
     this.auditBucket = new Bucket(this, 'AuditBucket', {
+      ...(props.c3AuditBucketName === undefined ? {} : { bucketName: props.c3AuditBucketName }),
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       objectOwnership: ObjectOwnership.BUCKET_OWNER_ENFORCED,
       versioned: true,

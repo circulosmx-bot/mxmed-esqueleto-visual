@@ -60,6 +60,31 @@ describe('C3 ephemeral runner graph', () => {
     expect(all.filter((resource) => resource.Type === 'AWS::ECS::Service')).toHaveLength(0);
   });
 
+  test('emits bootstrap-independent deployment templates only for the C3 graph', () => {
+    for (const stack of fixture.node.children.filter((child): child is Stack =>
+      Stack.isStack(child),
+    )) {
+      const template = Template.fromStack(stack).toJSON() as {
+        readonly Parameters?: Readonly<Record<string, unknown>>;
+        readonly Rules?: Readonly<Record<string, unknown>>;
+      };
+      expect(template.Parameters?.BootstrapVersion).toBeUndefined();
+      expect(template.Rules?.CheckBootstrapVersion).toBeUndefined();
+      expect(JSON.stringify(template)).not.toMatch(/hnb659fds|\/cdk-bootstrap\/|CDKToolkit/);
+    }
+  });
+
+  test('gives only the C3 staging audit bucket its deterministic physical name', () => {
+    const security = Template.fromStack(fixture.securityStack).toJSON() as {
+      readonly Resources: Readonly<Record<string, Resource>>;
+    };
+    const buckets = Object.values(security.Resources).filter(
+      (resource) => resource.Type === 'AWS::S3::Bucket',
+    );
+    expect(buckets).toHaveLength(1);
+    expect(buckets[0]?.Properties?.BucketName).toBe('mxmed-stg-audit-875691018466-mx-central-1');
+  });
+
   test('uses one digest-pinned one-shot Fargate task at 0.25 vCPU and 512 MiB', () => {
     expect(runner).toHaveLength(7);
     expect(runnerOfType('AWS::ECS::Cluster')).toHaveLength(1);

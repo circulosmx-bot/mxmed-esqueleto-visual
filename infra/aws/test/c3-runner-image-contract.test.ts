@@ -58,6 +58,7 @@ describe('C3 control scripts fail closed offline', () => {
 
   test('all AWS-capable modes reject the current activity before invoking AWS', () => {
     const cases = [
+      ['scripts/aws/c3-ephemeral-deploy.sh', '--prepare-template-transport'],
       ['scripts/aws/c3-ephemeral-deploy.sh', '--execute-stack'],
       ['scripts/aws/c3-ephemeral-test.sh', '--run-once'],
       ['scripts/aws/c3-ephemeral-teardown.sh', '--execute-stack-deletes'],
@@ -99,5 +100,19 @@ describe('C3 control scripts fail closed offline', () => {
     expect(
       deploy.match(/"[A-Z][A-Z0-9_]+"/g)?.filter((value) => value.includes('_')).length,
     ).toBeGreaterThanOrEqual(10);
+  });
+
+  test('uses only direct CloudFormation transport and rejects bootstrap or unsealed templates', () => {
+    const deploy = read('scripts/aws/c3-ephemeral-deploy.sh');
+    expect(deploy).toContain('cloudformation create-change-set');
+    expect(deploy).toContain('cloudformation execute-change-set');
+    expect(deploy).not.toMatch(/\bcdk\s+(?:deploy|bootstrap)\b/);
+    expect(deploy).toContain("TEMPLATE_BODY_MAX_BYTES='51200'");
+    expect(deploy).toContain('OVERSIZE_TEMPLATE_BODY_REJECTED');
+    expect(deploy).toContain('UNSEALED_TEMPLATE_UPLOAD_REJECTED');
+    expect(deploy).toContain('TEMPLATE_HASH_MISMATCH');
+    expect(deploy).toContain('TEMPLATE_BOOTSTRAP_REFERENCE_REJECTED');
+    expect(deploy).toContain('TEMPLATE_BUCKET_PUBLIC_ACCESS_BLOCK_INVALID');
+    expect(deploy).toContain('mxmed-stg-c3-cf-templates-875691018466-mx-central-1');
   });
 });

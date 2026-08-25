@@ -112,5 +112,8 @@ describe('C3 janitor and control contract', () => {
     expect(MXMED_C3_CONTROL_ROLE_CONTRACTS.testController.actions).not.toEqual(
       expect.arrayContaining(['cloudformation:CreateStack', 'cloudformation:DeleteStack']),
     );
+    expect(contracts).toContain('budgets:ViewBudget');
+    expect(contracts).toContain('budgets:ModifyBudget');
+    expect(contracts).not.toMatch(/budgets:(?:DescribeBudgets|CreateBudget|DeleteBudget)/);
   });
 });

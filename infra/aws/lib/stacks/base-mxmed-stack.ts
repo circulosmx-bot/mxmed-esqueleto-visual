@@ -12,17 +12,20 @@ export interface BaseMxMedStackProps {
   readonly metadata: MxMedStackTagMetadata;
   readonly description: string;
   readonly regionOverride?: string;
+  readonly synthesizer?: StackProps['synthesizer'];
 }
 
-export type MxMedContractStackProps = Pick<BaseMxMedStackProps, 'config'>;
+export type MxMedContractStackProps = Pick<BaseMxMedStackProps, 'config' | 'synthesizer'> & {
+  readonly c3AuditBucketName?: string;
+};
 
 /** Common stack contract. Foundation stacks intentionally contain no AWS resources. */
 export abstract class BaseMxMedStack extends Stack {
   protected constructor(scope: Construct, id: string, props: BaseMxMedStackProps) {
     // CDK 2.260.0 models bootstrapQualifier incompatibly with exactOptionalPropertyTypes.
-    const synthesizer = new DefaultStackSynthesizer() as unknown as NonNullable<
-      StackProps['synthesizer']
-    >;
+    const synthesizer =
+      props.synthesizer ??
+      (new DefaultStackSynthesizer() as unknown as NonNullable<StackProps['synthesizer']>);
     const stackProps: StackProps = {
       stackName: mxmedName(props.config.environmentCode, props.component),
       description: props.description,

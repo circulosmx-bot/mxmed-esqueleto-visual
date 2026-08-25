@@ -1,0 +1,126 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DeleteOnlyC3Stacks",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:DeleteStack",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:DescribeStacks",
+        "cloudformation:ListStackResources"
+      ],
+      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-*/*"
+    },
+    {
+      "Sid": "StopAndDeleteC3Compute",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:DeleteCluster",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeTasks",
+        "ecs:StopTask"
+      ],
+      "Resource": [
+        "arn:aws:ecs:mx-central-1:875691018466:cluster/mxmed-stg-c3-runner",
+        "arn:aws:ecs:mx-central-1:875691018466:task-definition/mxmed-stg-c3-runner:*",
+        "arn:aws:ecs:mx-central-1:875691018466:task/mxmed-stg-c3-runner/*"
+      ]
+    },
+    {
+      "Sid": "DeleteExactC3Registry",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchDeleteImage",
+        "ecr:DeleteRepository",
+        "ecr:DescribeImages",
+        "ecr:ListImages"
+      ],
+      "Resource": "arn:aws:ecr:mx-central-1:875691018466:repository/mxmed-stg-application"
+    },
+    {
+      "Sid": "DeleteExactTemplateTransport",
+      "Effect": "Allow",
+      "Action": [
+        "s3:DeleteBucket",
+        "s3:DeleteBucketPolicy",
+        "s3:GetBucketLocation",
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
+    },
+    {
+      "Sid": "DeleteExactTemplateObjects",
+      "Effect": "Allow",
+      "Action": "s3:DeleteObject",
+      "Resource": "arn:aws:s3:::mxmed-stg-c3-cf-templates-875691018466-mx-central-1/c3-*/*/*.template.json"
+    },
+    {
+      "Sid": "CleanupDeterministicAuditBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:AbortMultipartUpload",
+        "s3:DeleteBucket",
+        "s3:DeleteBucketPolicy",
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion",
+        "s3:GetBucketLocation",
+        "s3:GetBucketVersioning",
+        "s3:ListBucket",
+        "s3:ListBucketMultipartUploads",
+        "s3:ListBucketVersions",
+        "s3:ListMultipartUploadParts"
+      ],
+      "Resource": [
+        "arn:aws:s3:::mxmed-stg-audit-875691018466-mx-central-1",
+        "arn:aws:s3:::mxmed-stg-audit-875691018466-mx-central-1/*"
+      ]
+    },
+    {
+      "Sid": "CleanupExactStagingRetainedResources",
+      "Effect": "Allow",
+      "Action": [
+        "cloudtrail:DeleteTrail",
+        "cloudtrail:DescribeTrails",
+        "cloudtrail:GetTrailStatus",
+        "cloudtrail:StopLogging",
+        "kms:DescribeKey",
+        "kms:DisableKey",
+        "kms:ListAliases",
+        "kms:ListResourceTags",
+        "kms:ScheduleKeyDeletion",
+        "logs:DeleteLogGroup",
+        "logs:DescribeLogGroups",
+        "scheduler:DeleteSchedule",
+        "secretsmanager:DeleteSecret",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecrets",
+        "states:DeleteStateMachine"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1"
+        }
+      }
+    },
+    {
+      "Sid": "DeleteOnlyC3Budget",
+      "Effect": "Allow",
+      "Action": ["budgets:ModifyBudget", "budgets:ViewBudget"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ExplicitlyDenyCreationAndSecretsRead",
+      "Effect": "Deny",
+      "Action": [
+        "cloudformation:CreateStack",
+        "cloudformation:UpdateStack",
+        "iam:Create*",
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
