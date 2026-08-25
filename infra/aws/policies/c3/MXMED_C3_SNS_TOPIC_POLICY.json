@@ -5,7 +5,7 @@
       "Sid": "DenyInsecureTransport",
       "Effect": "Deny",
       "Principal": "*",
-      "Action": "sns:*",
+      "Action": "sns:Publish",
       "Resource": "arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications",
       "Condition": {
         "Bool": {

@@ -28,6 +28,66 @@ interface SynthesizedTemplate {
   readonly [key: string]: unknown;
 }
 
+interface SnsTopicPolicyStatement {
+  readonly Sid: string;
+  readonly Effect: 'Allow' | 'Deny';
+  readonly Principal: '*' | Readonly<{ Service: string }>;
+  readonly Action: string;
+  readonly Resource: string;
+  readonly Condition: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
+interface SnsTopicPolicy {
+  readonly Version: string;
+  readonly Statement: readonly SnsTopicPolicyStatement[];
+}
+
+const SNS_TOPIC_POLICY_ACTION_ALLOWLIST = new Set([
+  'sns:AddPermission',
+  'sns:DeleteTopic',
+  'sns:GetDataProtectionPolicy',
+  'sns:GetTopicAttributes',
+  'sns:ListSubscriptionsByTopic',
+  'sns:ListTagsForResource',
+  'sns:Publish',
+  'sns:PutDataProtectionPolicy',
+  'sns:RemovePermission',
+  'sns:SetTopicAttributes',
+  'sns:Subscribe',
+]);
+
+interface SnsPublishRequest {
+  readonly principalService: string;
+  readonly sourceAccount: string;
+  readonly sourceArn: string;
+  readonly secureTransport: boolean;
+}
+
+function evaluateC3SnsPublish(
+  policy: SnsTopicPolicy,
+  request: SnsPublishRequest,
+): 'allowed' | 'explicitDeny' | 'implicitDeny' {
+  const matching = policy.Statement.filter((statement) => {
+    if (statement.Action !== 'sns:Publish') return false;
+    const principalMatches =
+      statement.Principal === '*' || statement.Principal.Service === request.principalService;
+    if (!principalMatches) return false;
+    const secureTransport = statement.Condition.Bool?.['aws:SecureTransport'];
+    if (secureTransport !== undefined && secureTransport !== String(request.secureTransport)) {
+      return false;
+    }
+    const sourceAccount = statement.Condition.StringEquals?.['aws:SourceAccount'];
+    if (sourceAccount !== undefined && sourceAccount !== request.sourceAccount) return false;
+    const sourceArn = statement.Condition.ArnLike?.['aws:SourceArn'];
+    if (sourceArn !== undefined && !request.sourceArn.startsWith(sourceArn.replace(/\*$/, ''))) {
+      return false;
+    }
+    return true;
+  });
+  if (matching.some((statement) => statement.Effect === 'Deny')) return 'explicitDeny';
+  return matching.some((statement) => statement.Effect === 'Allow') ? 'allowed' : 'implicitDeny';
+}
+
 function allStrings(value: unknown): readonly string[] {
   if (typeof value === 'string') return [value];
   if (Array.isArray(value)) return value.flatMap(allStrings);
@@ -184,5 +244,72 @@ describe('C3 direct CloudFormation transport contract', () => {
     expect(sns).toContain('mxmed-stg-c3-notifications');
     expect(sns).toContain('budgets.amazonaws.com');
     expect(sns).toContain('aws:SourceAccount');
+  });
+
+  test('uses only the AWS-documented Publish action in the exact C3 SNS topic policy', () => {
+    const policy = readJson(
+      'infra/aws/policies/c3/MXMED_C3_SNS_TOPIC_POLICY.json',
+    ) as SnsTopicPolicy;
+    expect(policy.Statement).toHaveLength(2);
+    expect(
+      policy.Statement.every((statement) =>
+        SNS_TOPIC_POLICY_ACTION_ALLOWLIST.has(statement.Action),
+      ),
+    ).toBe(true);
+    expect(policy.Statement.map((statement) => statement.Action)).toEqual([
+      'sns:Publish',
+      'sns:Publish',
+    ]);
+    expect(policy.Statement.some((statement) => statement.Action.includes('*'))).toBe(false);
+    expect(policy.Statement).toEqual([
+      {
+        Sid: 'DenyInsecureTransport',
+        Effect: 'Deny',
+        Principal: '*',
+        Action: 'sns:Publish',
+        Resource: 'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications',
+        Condition: { Bool: { 'aws:SecureTransport': 'false' } },
+      },
+      {
+        Sid: 'AllowOnlyAccountBudgetsPublisher',
+        Effect: 'Allow',
+        Principal: { Service: 'budgets.amazonaws.com' },
+        Action: 'sns:Publish',
+        Resource: 'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications',
+        Condition: {
+          StringEquals: { 'aws:SourceAccount': '875691018466' },
+          ArnLike: { 'aws:SourceArn': 'arn:aws:budgets::875691018466:*' },
+        },
+      },
+    ]);
+  });
+
+  test('allows only secure same-account Budgets publication', () => {
+    const policy = readJson(
+      'infra/aws/policies/c3/MXMED_C3_SNS_TOPIC_POLICY.json',
+    ) as SnsTopicPolicy;
+    const valid: SnsPublishRequest = {
+      principalService: 'budgets.amazonaws.com',
+      sourceAccount: '875691018466',
+      sourceArn: 'arn:aws:budgets::875691018466:budget/mxmed-stg-c3-runtime',
+      secureTransport: true,
+    };
+    expect(evaluateC3SnsPublish(policy, valid)).toBe('allowed');
+    expect(evaluateC3SnsPublish(policy, { ...valid, secureTransport: false })).toBe('explicitDeny');
+    expect(
+      evaluateC3SnsPublish(policy, { ...valid, principalService: 'events.amazonaws.com' }),
+    ).toBe('implicitDeny');
+    expect(evaluateC3SnsPublish(policy, { ...valid, sourceAccount: '111122223333' })).toBe(
+      'implicitDeny',
+    );
+    expect(
+      evaluateC3SnsPublish(policy, {
+        ...valid,
+        sourceArn: 'arn:aws:budgets::111122223333:budget/unrelated',
+      }),
+    ).toBe('implicitDeny');
+    expect(
+      evaluateC3SnsPublish(policy, { ...valid, principalService: 'public.example.invalid' }),
+    ).toBe('implicitDeny');
   });
 });
