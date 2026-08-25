@@ -7,9 +7,14 @@ import {
   RemovalPolicy,
   Tags,
 } from 'aws-cdk-lib';
-import { ReadWriteType, Trail } from 'aws-cdk-lib/aws-cloudtrail';
-import { Effect, ManagedPolicy, PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import type { Role } from 'aws-cdk-lib/aws-iam';
+import { CfnTrail, ReadWriteType, Trail } from 'aws-cdk-lib/aws-cloudtrail';
+import {
+  Effect,
+  ManagedPolicy,
+  PolicyStatement,
+  Role,
+  ServicePrincipal,
+} from 'aws-cdk-lib/aws-iam';
 import { CfnKey, Key, KeySpec, KeyUsage } from 'aws-cdk-lib/aws-kms';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { BlockPublicAccess, Bucket, BucketEncryption, ObjectOwnership } from 'aws-cdk-lib/aws-s3';
@@ -205,18 +210,51 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
     Tags.of(this.cloudTrailLogGroup).add('DataClassification', 'internal', { priority: 200 });
+    const isC3Ephemeral = this.node.root.node.tryGetContext('activity') === 'c3-ephemeral';
+    const cloudTrailLogsRole = isC3Ephemeral
+      ? new Role(this, 'CloudTrailLogsRole', {
+          roleName: mxmedName(config.environmentCode, 'cloudtrail-logs-role', 64),
+          assumedBy: new ServicePrincipal('cloudtrail.amazonaws.com').withConditions({
+            StringEquals: { 'aws:SourceAccount': this.account },
+            ArnLike: {
+              'aws:SourceArn': this.formatArn({
+                service: 'cloudtrail',
+                resource: 'trail',
+                resourceName: managementTrailName,
+              }),
+            },
+          }),
+          permissionsBoundary: this.workloadBoundary,
+          description: 'MXMed C3 CloudTrail delivery to the exact staging security log group.',
+        })
+      : undefined;
+    cloudTrailLogsRole?.addToPolicy(
+      new PolicyStatement({
+        actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+        resources: [this.cloudTrailLogGroup.logGroupArn],
+      }),
+    );
     this.managementTrail = new Trail(this, 'ManagementTrail', {
       trailName: managementTrailName,
       // CDK 2.260.0 models Bucket/IBucket incompatibly with exactOptionalPropertyTypes.
       bucket: this.auditBucket as unknown as IBucket,
       encryptionKey: this.auditKey,
-      cloudWatchLogGroup: this.cloudTrailLogGroup,
-      sendToCloudWatchLogs: true,
+      ...(isC3Ephemeral ? {} : { cloudWatchLogGroup: this.cloudTrailLogGroup }),
+      sendToCloudWatchLogs: !isC3Ephemeral,
       isMultiRegionTrail: true,
       includeGlobalServiceEvents: true,
       enableFileValidation: true,
       managementEvents: ReadWriteType.ALL,
     });
+    if (cloudTrailLogsRole !== undefined) {
+      const cfnTrail = this.managementTrail.node.defaultChild;
+      if (!(cfnTrail instanceof CfnTrail)) {
+        throw new Error('MXMED_C3_CLOUDTRAIL_ESCAPE_HATCH_INVALID');
+      }
+      cfnTrail.cloudWatchLogsLogGroupArn = this.cloudTrailLogGroup.logGroupArn;
+      cfnTrail.cloudWatchLogsRoleArn = cloudTrailLogsRole.roleArn;
+      cfnTrail.node.addDependency(cloudTrailLogsRole);
+    }
     Tags.of(this.managementTrail).add('DataClassification', 'internal', { priority: 200 });
 
     Aspects.of(this).add(new SecurityFoundationAspect(config), {

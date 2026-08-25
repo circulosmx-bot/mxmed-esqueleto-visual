@@ -2,10 +2,75 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "DirectCloudFormationChangeSetsOnly",
+      "Sid": "CreateNetworkChangeSetWithExactRole",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-network/*",
+      "Condition": {
+        "StringEquals": {
+          "cloudformation:RoleArn": "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network"
+        }
+      }
+    },
+    {
+      "Sid": "CreateSecurityChangeSetWithExactRole",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-security/*",
+      "Condition": {
+        "StringEquals": {
+          "cloudformation:RoleArn": "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security"
+        }
+      }
+    },
+    {
+      "Sid": "CreateSessionChangeSetWithExactRole",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-session/*",
+      "Condition": {
+        "StringEquals": {
+          "cloudformation:RoleArn": "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session"
+        }
+      }
+    },
+    {
+      "Sid": "CreateRegistryChangeSetWithExactRole",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-registry/*",
+      "Condition": {
+        "StringEquals": {
+          "cloudformation:RoleArn": "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry"
+        }
+      }
+    },
+    {
+      "Sid": "CreateRunnerChangeSetWithExactRole",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-c3-runner/*",
+      "Condition": {
+        "StringEquals": {
+          "cloudformation:RoleArn": "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner"
+        }
+      }
+    },
+    {
+      "Sid": "CreateJanitorChangeSetWithExactRole",
+      "Effect": "Allow",
+      "Action": "cloudformation:CreateChangeSet",
+      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-c3-janitor/*",
+      "Condition": {
+        "StringEquals": {
+          "cloudformation:RoleArn": "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"
+        }
+      }
+    },
+    {
+      "Sid": "OrchestrateOnlyExactC3Stacks",
       "Effect": "Allow",
       "Action": [
-        "cloudformation:CreateChangeSet",
         "cloudformation:DeleteChangeSet",
         "cloudformation:DescribeChangeSet",
         "cloudformation:DescribeStackEvents",
@@ -16,24 +81,45 @@
         "cloudformation:GetTemplateSummary",
         "cloudformation:ListStackResources"
       ],
-      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-*/*"
+      "Resource": [
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-network/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-security/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-session/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-registry/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-c3-runner/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-c3-janitor/*"
+      ]
+    },
+    {
+      "Sid": "PassOnlyExactCfnExecutionRoles",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"
+      ],
+      "Condition": { "StringEquals": { "iam:PassedToService": "cloudformation.amazonaws.com" } }
     },
     {
       "Sid": "CreateAndSecureExactTemporaryTemplateBucket",
       "Effect": "Allow",
       "Action": [
         "s3:CreateBucket",
-        "s3:GetBucketEncryption",
         "s3:GetBucketLocation",
         "s3:GetBucketPolicy",
         "s3:GetBucketPublicAccessBlock",
         "s3:GetBucketTagging",
         "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
         "s3:ListBucket",
-        "s3:PutBucketEncryption",
         "s3:PutBucketPolicy",
         "s3:PutBucketPublicAccessBlock",
-        "s3:PutBucketTagging"
+        "s3:PutBucketTagging",
+        "s3:PutEncryptionConfiguration"
       ],
       "Resource": "arn:aws:s3:::mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
     },
@@ -59,125 +145,8 @@
       "Sid": "AuthenticateEcr",
       "Effect": "Allow",
       "Action": "ecr:GetAuthorizationToken",
-      "Resource": "*"
-    },
-    {
-      "Sid": "CreateExactStagingIamResources",
-      "Effect": "Allow",
-      "Action": [
-        "iam:AttachRolePolicy",
-        "iam:CreatePolicy",
-        "iam:CreatePolicyVersion",
-        "iam:CreateRole",
-        "iam:PutRolePolicy",
-        "iam:TagPolicy",
-        "iam:TagRole",
-        "iam:UpdateAssumeRolePolicy"
-      ],
-      "Resource": [
-        "arn:aws:iam::875691018466:role/mxmed-stg-*",
-        "arn:aws:iam::875691018466:policy/mxmed-stg-*"
-      ]
-    },
-    {
-      "Sid": "PassOnlyC3StackRolesToApprovedServices",
-      "Effect": "Allow",
-      "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::875691018466:role/mxmed-stg-*",
-      "Condition": {
-        "StringEquals": {
-          "iam:PassedToService": [
-            "ecs-tasks.amazonaws.com",
-            "scheduler.amazonaws.com",
-            "states.amazonaws.com"
-          ]
-        }
-      }
-    },
-    {
-      "Sid": "CreateC3RegionalResources",
-      "Effect": "Allow",
-      "Action": [
-        "cloudtrail:AddTags",
-        "cloudtrail:CreateTrail",
-        "cloudtrail:StartLogging",
-        "cloudtrail:UpdateTrail",
-        "ec2:AllocateAddress",
-        "ec2:AssociateRouteTable",
-        "ec2:AttachInternetGateway",
-        "ec2:AuthorizeSecurityGroupEgress",
-        "ec2:AuthorizeSecurityGroupIngress",
-        "ec2:CreateFlowLogs",
-        "ec2:CreateInternetGateway",
-        "ec2:CreateNatGateway",
-        "ec2:CreateRoute",
-        "ec2:CreateRouteTable",
-        "ec2:CreateSecurityGroup",
-        "ec2:CreateSubnet",
-        "ec2:CreateTags",
-        "ec2:CreateVpc",
-        "ec2:CreateVpcEndpoint",
-        "ec2:ModifySubnetAttribute",
-        "ec2:ModifyVpcAttribute",
-        "ecr:CreateRepository",
-        "ecr:PutImageScanningConfiguration",
-        "ecr:PutImageTagMutability",
-        "ecr:PutLifecyclePolicy",
-        "ecr:TagResource",
-        "ecs:CreateCluster",
-        "ecs:PutClusterCapacityProviders",
-        "ecs:RegisterTaskDefinition",
-        "ecs:TagResource",
-        "elasticache:AddTagsToResource",
-        "elasticache:CreateCacheParameterGroup",
-        "elasticache:CreateCacheSubnetGroup",
-        "elasticache:CreateReplicationGroup",
-        "elasticache:CreateUser",
-        "elasticache:CreateUserGroup",
-        "elasticache:ModifyCacheParameterGroup",
-        "elasticache:ModifyUserGroup",
-        "kms:CreateAlias",
-        "kms:CreateKey",
-        "kms:EnableKeyRotation",
-        "kms:PutKeyPolicy",
-        "kms:TagResource",
-        "logs:AssociateKmsKey",
-        "logs:CreateLogGroup",
-        "logs:PutRetentionPolicy",
-        "logs:TagResource",
-        "scheduler:CreateSchedule",
-        "secretsmanager:CreateSecret",
-        "secretsmanager:DescribeSecret",
-        "secretsmanager:TagResource",
-        "states:CreateStateMachine",
-        "states:TagResource"
-      ],
       "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "aws:RequestedRegion": "mx-central-1"
-        }
-      }
-    },
-    {
-      "Sid": "ManageOnlyC3Budget",
-      "Effect": "Allow",
-      "Action": ["budgets:ModifyBudget", "budgets:ViewBudget"],
-      "Resource": "*"
-    },
-    {
-      "Sid": "CreateDeterministicAuditBucket",
-      "Effect": "Allow",
-      "Action": [
-        "s3:CreateBucket",
-        "s3:PutBucketEncryption",
-        "s3:PutBucketPolicy",
-        "s3:PutBucketPublicAccessBlock",
-        "s3:PutBucketTagging",
-        "s3:PutBucketVersioning",
-        "s3:PutLifecycleConfiguration"
-      ],
-      "Resource": "arn:aws:s3:::mxmed-stg-audit-875691018466-mx-central-1"
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     }
   ]
 }

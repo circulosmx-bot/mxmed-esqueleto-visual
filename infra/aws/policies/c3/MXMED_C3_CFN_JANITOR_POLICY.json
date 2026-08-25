@@ -1,0 +1,93 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageExactJanitorStateMachine",
+      "Effect": "Allow",
+      "Action": [
+        "states:CreateStateMachine",
+        "states:DeleteStateMachine",
+        "states:DescribeStateMachine",
+        "states:TagResource"
+      ],
+      "Resource": "arn:aws:states:mx-central-1:875691018466:stateMachine:mxmed-stg-c3-janitor",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Sid": "ManageExactJanitorSchedules",
+      "Effect": "Allow",
+      "Action": ["scheduler:CreateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule"],
+      "Resource": [
+        "arn:aws:scheduler:mx-central-1:875691018466:schedule/default/mxmed-stg-c3-failsafe",
+        "arn:aws:scheduler:mx-central-1:875691018466:schedule/default/mxmed-stg-c3-janitor-hard-cap"
+      ],
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Sid": "ManageExactJanitorLogGroup",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:PutRetentionPolicy",
+        "logs:TagResource"
+      ],
+      "Resource": "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-janitor:*"
+    },
+    {
+      "Sid": "ManageOnlyC3Budget",
+      "Effect": "Allow",
+      "Action": ["budgets:ModifyBudget", "budgets:ViewBudget"],
+      "Resource": "arn:aws:budgets::875691018466:budget/mxmed-stg-c3-*"
+    },
+    {
+      "Sid": "CreateExactJanitorRolesWithControlBoundary",
+      "Effect": "Allow",
+      "Action": "iam:CreateRole",
+      "Resource": [
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-state-machine",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-scheduler"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::875691018466:policy/MXMed-C3-Staging-PermissionBoundary",
+          "aws:RequestTag/Project": "mxmed",
+          "aws:RequestTag/Environment": "staging",
+          "aws:RequestTag/Phase": "C3"
+        }
+      }
+    },
+    {
+      "Sid": "ManageExactJanitorRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:UpdateAssumeRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-state-machine",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-scheduler"
+      ]
+    },
+    {
+      "Sid": "PassExactJanitorStateMachineRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-state-machine",
+      "Condition": { "StringEquals": { "iam:PassedToService": "states.amazonaws.com" } }
+    },
+    {
+      "Sid": "PassExactJanitorSchedulerRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-scheduler",
+      "Condition": { "StringEquals": { "iam:PassedToService": "scheduler.amazonaws.com" } }
+    }
+  ]
+}

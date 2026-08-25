@@ -203,92 +203,38 @@ export const MXMED_C3_RETAINED_LOGICAL_RESOURCES = Object.freeze([
 
 export const MXMED_C3_DEPLOY_ACTIONS = Object.freeze([
   'cloudformation:CreateChangeSet',
-  'cloudformation:DescribeChangeSet',
-  'cloudformation:ExecuteChangeSet',
   'cloudformation:DeleteChangeSet',
-  'cloudformation:DescribeStacks',
+  'cloudformation:DescribeChangeSet',
   'cloudformation:DescribeStackEvents',
   'cloudformation:DescribeStackResources',
+  'cloudformation:DescribeStacks',
+  'cloudformation:ExecuteChangeSet',
   'cloudformation:GetTemplate',
   'cloudformation:GetTemplateSummary',
   'cloudformation:ListStackResources',
-  'ec2:CreateVpc',
-  'ec2:ModifyVpcAttribute',
-  'ec2:CreateInternetGateway',
-  'ec2:AttachInternetGateway',
-  'ec2:AllocateAddress',
-  'ec2:CreateNatGateway',
-  'ec2:CreateSubnet',
-  'ec2:ModifySubnetAttribute',
-  'ec2:CreateRouteTable',
-  'ec2:AssociateRouteTable',
-  'ec2:CreateRoute',
-  'ec2:CreateSecurityGroup',
-  'ec2:AuthorizeSecurityGroupIngress',
-  'ec2:AuthorizeSecurityGroupEgress',
-  'ec2:CreateVpcEndpoint',
-  'ec2:CreateFlowLogs',
-  'ec2:CreateTags',
-  'elasticache:CreateCacheParameterGroup',
-  'elasticache:ModifyCacheParameterGroup',
-  'elasticache:CreateCacheSubnetGroup',
-  'elasticache:CreateUser',
-  'elasticache:CreateUserGroup',
-  'elasticache:ModifyUserGroup',
-  'elasticache:CreateReplicationGroup',
-  'elasticache:AddTagsToResource',
-  'kms:CreateKey',
-  'kms:CreateAlias',
-  'kms:EnableKeyRotation',
-  'kms:PutKeyPolicy',
-  'kms:TagResource',
-  'secretsmanager:CreateSecret',
-  'secretsmanager:DescribeSecret',
-  'secretsmanager:TagResource',
-  'iam:CreateRole',
-  'iam:TagRole',
-  'iam:UpdateAssumeRolePolicy',
-  'iam:PutRolePolicy',
-  'iam:CreatePolicy',
-  'iam:CreatePolicyVersion',
-  'iam:TagPolicy',
-  'iam:AttachRolePolicy',
   'iam:PassRole',
-  'logs:CreateLogGroup',
-  'logs:PutRetentionPolicy',
-  'logs:AssociateKmsKey',
-  'logs:TagResource',
   's3:CreateBucket',
-  's3:PutBucketEncryption',
+  's3:DeleteObject',
+  's3:GetBucketLocation',
+  's3:GetBucketPolicy',
+  's3:GetBucketPublicAccessBlock',
+  's3:GetBucketTagging',
+  's3:GetBucketVersioning',
+  's3:GetEncryptionConfiguration',
+  's3:GetObject',
+  's3:GetObjectAttributes',
+  's3:ListBucket',
   's3:PutBucketPolicy',
   's3:PutBucketPublicAccessBlock',
   's3:PutBucketTagging',
-  's3:PutBucketVersioning',
-  's3:PutLifecycleConfiguration',
-  'cloudtrail:CreateTrail',
-  'cloudtrail:StartLogging',
-  'cloudtrail:UpdateTrail',
-  'cloudtrail:AddTags',
-  'ecr:CreateRepository',
-  'ecr:PutImageScanningConfiguration',
-  'ecr:PutImageTagMutability',
-  'ecr:PutLifecyclePolicy',
-  'ecr:TagResource',
-  'ecr:GetAuthorizationToken',
+  's3:PutEncryptionConfiguration',
+  's3:PutObject',
   'ecr:BatchCheckLayerAvailability',
-  'ecr:InitiateLayerUpload',
-  'ecr:UploadLayerPart',
   'ecr:CompleteLayerUpload',
+  'ecr:GetAuthorizationToken',
+  'ecr:InitiateLayerUpload',
   'ecr:PutImage',
-  'ecs:CreateCluster',
-  'ecs:PutClusterCapacityProviders',
-  'ecs:RegisterTaskDefinition',
-  'ecs:TagResource',
-  'scheduler:CreateSchedule',
-  'states:CreateStateMachine',
-  'states:TagResource',
-  'budgets:ViewBudget',
-  'budgets:ModifyBudget',
+  'ecr:UploadLayerPart',
 ] as const);
 
 export const MXMED_C3_TEST_CONTROLLER_ACTIONS = Object.freeze([
@@ -349,11 +295,8 @@ export const MXMED_C3_TEARDOWN_ACTIONS = Object.freeze([
 ] as const);
 
 export const MXMED_C3_UNSCOPABLE_ACTIONS = Object.freeze([
-  'ec2:Describe*',
-  'kms:CreateKey',
   'ecr:GetAuthorizationToken',
   's3:CreateBucket',
-  'budgets:ModifyBudget',
 ] as const);
 
 export const MXMED_C3_EXPECTED_RESOURCE_TYPE_COUNTS = Object.freeze({
@@ -404,11 +347,45 @@ export function expectedC3ResourceCount(): number {
 export const MXMED_C3_PERMISSION_BOUNDARY_ARN =
   'arn:aws:iam::875691018466:policy/MXMed-C3-Staging-PermissionBoundary' as const;
 
+export const MXMED_C3_CONTROL_BOUNDARY_ARNS = Object.freeze({
+  runtime: MXMED_C3_PERMISSION_BOUNDARY_ARN,
+  deploy: 'arn:aws:iam::875691018466:policy/MXMed-C3-Staging-Deploy-Boundary',
+  testController: 'arn:aws:iam::875691018466:policy/MXMed-C3-Staging-TestController-Boundary',
+  teardown: 'arn:aws:iam::875691018466:policy/MXMed-C3-Staging-Teardown-Boundary',
+} as const);
+
+export const MXMED_C3_CFN_EXECUTION_ROLE_NAMES = Object.freeze({
+  network: 'MXMed-C3-CFN-Network',
+  security: 'MXMed-C3-CFN-Security',
+  session: 'MXMed-C3-CFN-Session',
+  registry: 'MXMed-C3-CFN-Registry',
+  runner: 'MXMed-C3-CFN-Runner',
+  janitor: 'MXMed-C3-CFN-Janitor',
+} as const);
+
+export const MXMED_C3_CFN_EXECUTION_ROLE_ARNS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(MXMED_C3_CFN_EXECUTION_ROLE_NAMES).map(([stack, roleName]) => [
+      stack,
+      `arn:aws:iam::${MXMED_C3_ACCOUNT}:role/${roleName}`,
+    ]),
+  ) as Readonly<Record<keyof typeof MXMED_C3_CFN_EXECUTION_ROLE_NAMES, string>>,
+);
+
+export const MXMED_C3_CFN_EXECUTION_BOUNDARY_ARNS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(MXMED_C3_CFN_EXECUTION_ROLE_NAMES).map(([stack, roleName]) => [
+      stack,
+      `arn:aws:iam::${MXMED_C3_ACCOUNT}:policy/${roleName}-Boundary`,
+    ]),
+  ) as Readonly<Record<keyof typeof MXMED_C3_CFN_EXECUTION_ROLE_NAMES, string>>,
+);
+
 /** Source authority for the three pre-existing human/control roles; this creates no IAM resource. */
 export const MXMED_C3_CONTROL_ROLE_CONTRACTS = Object.freeze({
   deploy: {
     roleName: 'MXMed-C3-Staging-Deploy',
-    permissionBoundaryArn: MXMED_C3_PERMISSION_BOUNDARY_ARN,
+    permissionBoundaryArn: MXMED_C3_CONTROL_BOUNDARY_ARNS.deploy,
     actions: MXMED_C3_DEPLOY_ACTIONS,
     exactResourcePatterns: [
       'arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-*/*',
@@ -423,7 +400,7 @@ export const MXMED_C3_CONTROL_ROLE_CONTRACTS = Object.freeze({
   },
   testController: {
     roleName: 'MXMed-C3-Staging-TestController',
-    permissionBoundaryArn: MXMED_C3_PERMISSION_BOUNDARY_ARN,
+    permissionBoundaryArn: MXMED_C3_CONTROL_BOUNDARY_ARNS.testController,
     actions: MXMED_C3_TEST_CONTROLLER_ACTIONS,
     exactResourcePatterns: [
       'arn:aws:ecs:mx-central-1:875691018466:cluster/mxmed-stg-c3-runner',
@@ -443,7 +420,7 @@ export const MXMED_C3_CONTROL_ROLE_CONTRACTS = Object.freeze({
   },
   teardown: {
     roleName: 'MXMed-C3-Staging-Teardown',
-    permissionBoundaryArn: MXMED_C3_PERMISSION_BOUNDARY_ARN,
+    permissionBoundaryArn: MXMED_C3_CONTROL_BOUNDARY_ARNS.teardown,
     actions: MXMED_C3_TEARDOWN_ACTIONS,
     exactResourcePatterns: [
       'arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-*/*',

@@ -1,0 +1,68 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageOnlyExactSessionCacheResources",
+      "Effect": "Allow",
+      "Action": [
+        "elasticache:AddTagsToResource",
+        "elasticache:CreateCacheParameterGroup",
+        "elasticache:CreateCacheSubnetGroup",
+        "elasticache:CreateReplicationGroup",
+        "elasticache:CreateUser",
+        "elasticache:CreateUserGroup",
+        "elasticache:DeleteCacheParameterGroup",
+        "elasticache:DeleteCacheSubnetGroup",
+        "elasticache:DeleteReplicationGroup",
+        "elasticache:DeleteUser",
+        "elasticache:DeleteUserGroup",
+        "elasticache:Describe*",
+        "elasticache:ModifyCacheParameterGroup",
+        "elasticache:ModifyReplicationGroup",
+        "elasticache:ModifyUser",
+        "elasticache:ModifyUserGroup",
+        "elasticache:RemoveTagsFromResource"
+      ],
+      "Resource": [
+        "arn:aws:elasticache:mx-central-1:875691018466:replicationgroup:mxmed-stg-session",
+        "arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-session-app",
+        "arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-default-disabled",
+        "arn:aws:elasticache:mx-central-1:875691018466:usergroup:mxmed-stg-session-users",
+        "arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-stg-session-*",
+        "arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-*"
+      ],
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Sid": "ManageExactSessionSecret",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:TagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-store-auth-*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Sid": "UseOnlyStagingSecretsKeyThroughSecretsManager",
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt", "kms:DescribeKey", "kms:GenerateDataKey"],
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "kms:ViaService": "secretsmanager.mx-central-1.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOnlyExactRegionNetworkMetadata",
+      "Effect": "Allow",
+      "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeSubnets", "ec2:DescribeVpcs"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    }
+  ]
+}

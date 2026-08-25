@@ -103,7 +103,9 @@ describe('C3 janitor and control contract', () => {
       'teardown',
     ]);
     const contracts = JSON.stringify(MXMED_C3_CONTROL_ROLE_CONTRACTS);
-    expect(contracts).toContain('MXMed-C3-Staging-PermissionBoundary');
+    expect(contracts).toContain('MXMed-C3-Staging-Deploy-Boundary');
+    expect(contracts).toContain('MXMed-C3-Staging-TestController-Boundary');
+    expect(contracts).toContain('MXMed-C3-Staging-Teardown-Boundary');
     expect(contracts).toContain('mxmed-prd-');
     expect(contracts).not.toMatch(/AdministratorAccess|PowerUserAccess/);
     expect(MXMED_C3_CONTROL_ROLE_CONTRACTS.testController.actions).not.toContain(

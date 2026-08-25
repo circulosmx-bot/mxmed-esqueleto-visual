@@ -1,0 +1,64 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateOnlyTaggedRegistryKey",
+      "Effect": "Allow",
+      "Action": "kms:CreateKey",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:RequestTag/Project": "mxmed",
+          "aws:RequestTag/Environment": "staging",
+          "aws:RequestTag/Phase": "C3"
+        }
+      }
+    },
+    {
+      "Sid": "ManageOnlyTaggedRegistryKey",
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:EnableKeyRotation",
+        "kms:GetKeyPolicy",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource"
+      ],
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "aws:ResourceTag/Phase": "C3"
+        }
+      }
+    },
+    {
+      "Sid": "ManageExactRegistryAlias",
+      "Effect": "Allow",
+      "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/registry",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Sid": "ManageExactApplicationRepository",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:DescribeRepositories",
+        "ecr:GetLifecyclePolicy",
+        "ecr:PutImageScanningConfiguration",
+        "ecr:PutImageTagMutability",
+        "ecr:PutLifecyclePolicy",
+        "ecr:TagResource",
+        "ecr:UntagResource"
+      ],
+      "Resource": "arn:aws:ecr:mx-central-1:875691018466:repository/mxmed-stg-application",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    }
+  ]
+}

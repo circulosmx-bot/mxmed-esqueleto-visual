@@ -19,6 +19,7 @@ import {
 } from 'aws-cdk-lib/aws-ec2';
 import type { ISubnet, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
 
 import { BaseMxMedStack } from './base-mxmed-stack';
@@ -26,6 +27,7 @@ import type { MxMedContractStackProps } from './base-mxmed-stack';
 import type { MxMedEnvironmentName } from '../config/environment-config';
 import { registerMxMedNetworkGuardrails } from '../utils/network-guardrails';
 import { mxmedName } from '../utils/naming';
+import { MXMED_C3_CFN_EXECUTION_BOUNDARY_ARNS } from '../constructs/c3-runner-contract';
 
 const APPLICATION_PORT = 8080;
 
@@ -242,10 +244,38 @@ export class MxMedNetworkStack extends BaseMxMedStack {
       removalPolicy:
         config.environmentName === 'production' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
     });
+    const isC3Ephemeral = this.node.root.node.tryGetContext('activity') === 'c3-ephemeral';
+    const flowLogsRole = isC3Ephemeral
+      ? new Role(this, 'VpcFlowLogsRole', {
+          roleName: mxmedName(config.environmentCode, 'vpc-flow-logs-role', 64),
+          assumedBy: new ServicePrincipal('vpc-flow-logs.amazonaws.com').withConditions({
+            StringEquals: { 'aws:SourceAccount': this.account },
+            ArnLike: {
+              'aws:SourceArn': this.formatArn({
+                service: 'ec2',
+                resource: 'vpc-flow-log',
+                resourceName: '*',
+              }),
+            },
+          }),
+          permissionsBoundary: ManagedPolicy.fromManagedPolicyArn(
+            this,
+            'C3NetworkExecutionBoundary',
+            MXMED_C3_CFN_EXECUTION_BOUNDARY_ARNS.network,
+          ),
+          description: 'MXMed C3 VPC Flow Logs delivery to the exact staging network log group.',
+        })
+      : undefined;
+    flowLogsRole?.addToPolicy(
+      new PolicyStatement({
+        actions: ['logs:CreateLogStream', 'logs:DescribeLogStreams', 'logs:PutLogEvents'],
+        resources: [this.flowLogGroup.logGroupArn],
+      }),
+    );
     new FlowLog(this, 'VpcFlowLog', {
       flowLogName: mxmedName(config.environmentCode, 'vpc-flow-log'),
       resourceType: FlowLogResourceType.fromVpc(this.vpc as unknown as IVpc),
-      destination: FlowLogDestination.toCloudWatchLogs(this.flowLogGroup),
+      destination: FlowLogDestination.toCloudWatchLogs(this.flowLogGroup, flowLogsRole),
       trafficType: FlowLogTrafficType.ALL,
       maxAggregationInterval: FlowLogMaxAggregationInterval.ONE_MINUTE,
       logFormat: [...FLOW_LOG_FORMAT],

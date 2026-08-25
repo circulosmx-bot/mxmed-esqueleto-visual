@@ -1,0 +1,16 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "cloudformation.amazonaws.com" },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": { "aws:SourceAccount": "875691018466" },
+        "ArnLike": {
+          "aws:SourceArn": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-registry/*"
+        }
+      }
+    }
+  ]
+}

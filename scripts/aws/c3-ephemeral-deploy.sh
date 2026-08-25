@@ -13,6 +13,7 @@ TEMPLATE_BODY_MAX_BYTES='51200'
 TEMPLATE_BUCKET='mxmed-stg-c3-cf-templates-875691018466-mx-central-1'
 TEMPLATE_BUCKET_POLICY='infra/aws/policies/c3/MXMED_C3_TEMPLATE_BUCKET_POLICY.json'
 DEPLOYMENT_MODE='DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES'
+CFN_ROLE_PREFIX='arn:aws:iam::875691018466:role/MXMed-C3-CFN-'
 
 fail() { printf '%s\n' "C3_DEPLOY_FAIL_CLOSED:$1" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "COMMAND_MISSING:$1"; }
@@ -71,6 +72,14 @@ validate_manifest() {
      and .template_transport.bucket_name == "mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
      and .template_transport.public_access_blocked == true
      and .template_transport.default_encryption == "AES256"
+     and .cfn_execution_role_arns == {
+       "mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network",
+       "mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security",
+       "mxmed-stg-session":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session",
+       "mxmed-stg-registry":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry",
+       "mxmed-stg-c3-runner":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner",
+       "mxmed-stg-c3-janitor":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"
+     }
      and .template_transport.versioning == false
      and ([.templates[] | select(.transport == "C3_TEMPLATE_S3_URL") | select(.object_key != ($root.run_id + "/" + .stack_name + "/" + .sha256 + ".template.json"))] | length) == 0
      and ((tostring | test("production|mxmed-prd-|<[^>]+>|UNRESOLVED"; "i")) | not)' \
@@ -142,9 +151,11 @@ create_direct_change_set() {
   name="$1"
   file="$2"
   transport="$3"
+  role_arn="$(cfn_execution_role_for_stack "$name")"
   change_set="$(jq -r .run_id "$manifest")-review"
   set -- cloudformation create-change-set \
     --stack-name "$name" --change-set-name "$change_set" --change-set-type CREATE \
+    --role-arn "$role_arn" \
     --capabilities CAPABILITY_NAMED_IAM \
     --description "MXMed C3 sealed direct-CloudFormation change set"
   if [ "$transport" = 'TEMPLATE_BODY' ]; then
@@ -187,6 +198,23 @@ create_direct_change_set() {
   AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws "$@" >/dev/null
   AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation wait change-set-create-complete \
     --stack-name "$name" --change-set-name "$change_set"
+}
+
+cfn_execution_role_for_stack() {
+  case "$1" in
+    mxmed-stg-network) suffix='Network' ;;
+    mxmed-stg-security) suffix='Security' ;;
+    mxmed-stg-session) suffix='Session' ;;
+    mxmed-stg-registry) suffix='Registry' ;;
+    mxmed-stg-c3-runner) suffix='Runner' ;;
+    mxmed-stg-c3-janitor) suffix='Janitor' ;;
+    *) fail "CFN_EXECUTION_ROLE_STACK_UNMAPPED:$1" ;;
+  esac
+  role_arn="${CFN_ROLE_PREFIX}${suffix}"
+  case "$role_arn" in
+    arn:aws:iam::875691018466:role/MXMed-C3-CFN-*) printf '%s\n' "$role_arn" ;;
+    *) fail "CFN_EXECUTION_ROLE_INVALID:$1" ;;
+  esac
 }
 
 start_partial_teardown() {
@@ -252,7 +280,7 @@ case "$mode" in
       --arg boundary "$PERMISSION_BOUNDARY_ARN" \
       --argjson templates "$templates" --arg deployment_mode "$DEPLOYMENT_MODE" \
       --arg template_bucket "$TEMPLATE_BUCKET" \
-      '{schema:"mxmed.c3.ephemeral.run-manifest.v1",run_id:$run,expected_head:$head,account:$account,region:$region,deployment_mode:$deployment_mode,director_authorization_reference:$auth,activity_cost_cap_usd:5,start_window_utc:$start,failsafe_at_utc:$failsafe,expires_at_utc:$expires,budget_notification_topic_arn:$topic,c3_permission_boundary_arn:$boundary,template_sha256:$template,templates:$templates,template_transport:{bucket_name:$template_bucket,region:$region,public_access_blocked:true,default_encryption:"AES256",versioning:false,lifecycle:"EPHEMERAL_C3_ONLY",objects:[]},source_sha256:$source,script_sha256:$script,image_digest:null,approved_role_arns:{deploy:null,test_controller:null,teardown:null},stack_names:$stacks,expected_resource_counts:{total:107,data:0,storage:0,application_service:0},retained_resource_expectations:{count:13,physical_resources:[]},gates:["SOURCE_HEAD_MATCH","WORKTREE_CLEAN","DIRECTOR_AWS_WRITE_AUTHORIZATION_PRESENT","PRODUCTION_DENY_PROVEN","CHANGE_SET_EXACT_SCOPE_PASS","ESTIMATED_COST_WITHIN_USD_5_CAP","MANUAL_TEARDOWN_READY","AUTO_TEARDOWN_FAILSAFE_READY","RETAINED_RESOURCE_CLEANUP_READY","NONPRODUCTION_TARGET_PROVEN"]|map({name:.,pass:false}),first_resource_create_at_utc:null,test_terminal_at_utc:null,teardown_started_at_utc:null}' \
+      '{schema:"mxmed.c3.ephemeral.run-manifest.v1",run_id:$run,expected_head:$head,account:$account,region:$region,deployment_mode:$deployment_mode,director_authorization_reference:$auth,activity_cost_cap_usd:5,start_window_utc:$start,failsafe_at_utc:$failsafe,expires_at_utc:$expires,budget_notification_topic_arn:$topic,c3_permission_boundary_arn:$boundary,template_sha256:$template,templates:$templates,template_transport:{bucket_name:$template_bucket,region:$region,public_access_blocked:true,default_encryption:"AES256",versioning:false,lifecycle:"EPHEMERAL_C3_ONLY",objects:[]},source_sha256:$source,script_sha256:$script,image_digest:null,approved_role_arns:{deploy:null,test_controller:null,teardown:null},cfn_execution_role_arns:{"mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network","mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security","mxmed-stg-session":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session","mxmed-stg-registry":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry","mxmed-stg-c3-runner":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner","mxmed-stg-c3-janitor":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"},stack_names:$stacks,expected_resource_counts:{total:107,data:0,storage:0,application_service:0},retained_resource_expectations:{count:13,physical_resources:[]},gates:["SOURCE_HEAD_MATCH","WORKTREE_CLEAN","DIRECTOR_AWS_WRITE_AUTHORIZATION_PRESENT","PRODUCTION_DENY_PROVEN","CHANGE_SET_EXACT_SCOPE_PASS","ESTIMATED_COST_WITHIN_USD_5_CAP","MANUAL_TEARDOWN_READY","AUTO_TEARDOWN_FAILSAFE_READY","RETAINED_RESOURCE_CLEANUP_READY","NONPRODUCTION_TARGET_PROVEN"]|map({name:.,pass:false}),first_resource_create_at_utc:null,test_terminal_at_utc:null,teardown_started_at_utc:null}' \
       >"$output"
     chmod 0600 "$output"
     printf '%s\n' "RUN_MANIFEST_PREPARED=$output"

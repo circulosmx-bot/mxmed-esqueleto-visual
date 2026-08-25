@@ -2,7 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "DeleteOnlyC3Stacks",
+      "Sid": "DeleteOnlyExactC3Stacks",
       "Effect": "Allow",
       "Action": [
         "cloudformation:DeleteStack",
@@ -11,10 +11,17 @@
         "cloudformation:DescribeStacks",
         "cloudformation:ListStackResources"
       ],
-      "Resource": "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-*/*"
+      "Resource": [
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-network/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-security/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-session/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-registry/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-c3-runner/*",
+        "arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-c3-janitor/*"
+      ]
     },
     {
-      "Sid": "StopAndDeleteC3Compute",
+      "Sid": "StopAndDeleteExactRunnerCompute",
       "Effect": "Allow",
       "Action": [
         "ecs:DeleteCluster",
@@ -43,21 +50,22 @@
       "Sid": "DeleteExactTemplateTransport",
       "Effect": "Allow",
       "Action": [
+        "s3:AbortMultipartUpload",
         "s3:DeleteBucket",
         "s3:DeleteBucketPolicy",
+        "s3:DeleteObject",
         "s3:GetBucketLocation",
-        "s3:ListBucket"
+        "s3:ListBucket",
+        "s3:ListBucketMultipartUploads",
+        "s3:ListMultipartUploadParts"
       ],
-      "Resource": "arn:aws:s3:::mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
+      "Resource": [
+        "arn:aws:s3:::mxmed-stg-c3-cf-templates-875691018466-mx-central-1",
+        "arn:aws:s3:::mxmed-stg-c3-cf-templates-875691018466-mx-central-1/c3-*/*/*.template.json"
+      ]
     },
     {
-      "Sid": "DeleteExactTemplateObjects",
-      "Effect": "Allow",
-      "Action": "s3:DeleteObject",
-      "Resource": "arn:aws:s3:::mxmed-stg-c3-cf-templates-875691018466-mx-central-1/c3-*/*/*.template.json"
-    },
-    {
-      "Sid": "CleanupDeterministicAuditBucket",
+      "Sid": "CleanupExactAuditBucket",
       "Effect": "Allow",
       "Action": [
         "s3:AbortMultipartUpload",
@@ -78,38 +86,66 @@
       ]
     },
     {
-      "Sid": "CleanupExactStagingRetainedResources",
+      "Sid": "CleanupExactRetainedSecrets",
       "Effect": "Allow",
-      "Action": [
-        "cloudtrail:DeleteTrail",
-        "cloudtrail:DescribeTrails",
-        "cloudtrail:GetTrailStatus",
-        "cloudtrail:StopLogging",
-        "kms:DescribeKey",
-        "kms:DisableKey",
-        "kms:ListAliases",
-        "kms:ListResourceTags",
-        "kms:ScheduleKeyDeletion",
-        "logs:DeleteLogGroup",
-        "logs:DescribeLogGroups",
-        "scheduler:DeleteSchedule",
-        "secretsmanager:DeleteSecret",
-        "secretsmanager:DescribeSecret",
-        "secretsmanager:ListSecrets",
-        "states:DeleteStateMachine"
-      ],
-      "Resource": "*",
+      "Action": ["secretsmanager:DeleteSecret", "secretsmanager:DescribeSecret"],
+      "Resource": [
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-signing-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-store-auth-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/secret-key-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/webhook-secret-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/ai/api-key-*"
+      ]
+    },
+    {
+      "Sid": "CleanupOnlyTaggedStagingKeys",
+      "Effect": "Allow",
+      "Action": ["kms:DescribeKey", "kms:DisableKey", "kms:ScheduleKeyDeletion"],
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": "mx-central-1"
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging"
         }
       }
+    },
+    {
+      "Sid": "CleanupExactRetainedLogsAndAutomation",
+      "Effect": "Allow",
+      "Action": ["logs:DeleteLogGroup", "scheduler:DeleteSchedule", "states:DeleteStateMachine"],
+      "Resource": [
+        "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/security/cloudtrail:*",
+        "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-runner:*",
+        "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-janitor:*",
+        "arn:aws:scheduler:mx-central-1:875691018466:schedule/default/mxmed-stg-c3-failsafe",
+        "arn:aws:scheduler:mx-central-1:875691018466:schedule/default/mxmed-stg-c3-janitor-hard-cap",
+        "arn:aws:states:mx-central-1:875691018466:stateMachine:mxmed-stg-c3-janitor"
+      ]
+    },
+    {
+      "Sid": "CleanupExactManagementTrail",
+      "Effect": "Allow",
+      "Action": ["cloudtrail:DeleteTrail", "cloudtrail:GetTrailStatus", "cloudtrail:StopLogging"],
+      "Resource": "arn:aws:cloudtrail:mx-central-1:875691018466:trail/mxmed-stg-management-trail"
+    },
+    {
+      "Sid": "ReadRegionalCleanupInventory",
+      "Effect": "Allow",
+      "Action": [
+        "cloudtrail:DescribeTrails",
+        "kms:ListAliases",
+        "kms:ListResourceTags",
+        "logs:DescribeLogGroups",
+        "secretsmanager:ListSecrets"
+      ],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
     {
       "Sid": "DeleteOnlyC3Budget",
       "Effect": "Allow",
       "Action": ["budgets:ModifyBudget", "budgets:ViewBudget"],
-      "Resource": "*"
+      "Resource": "arn:aws:budgets::875691018466:budget/mxmed-stg-c3-*"
     },
     {
       "Sid": "ExplicitlyDenyCreationAndSecretsRead",

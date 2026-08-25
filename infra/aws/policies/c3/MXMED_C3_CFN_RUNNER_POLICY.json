@@ -1,0 +1,81 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageExactRunnerEcsResources",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:CreateCluster",
+        "ecs:DeleteCluster",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeClusters",
+        "ecs:DescribeTaskDefinition",
+        "ecs:PutClusterCapacityProviders",
+        "ecs:RegisterTaskDefinition",
+        "ecs:TagResource"
+      ],
+      "Resource": [
+        "arn:aws:ecs:mx-central-1:875691018466:cluster/mxmed-stg-c3-runner",
+        "arn:aws:ecs:mx-central-1:875691018466:task-definition/mxmed-stg-c3-runner:*"
+      ],
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Sid": "ManageExactRunnerLogGroup",
+      "Effect": "Allow",
+      "Action": [
+        "logs:AssociateKmsKey",
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:PutRetentionPolicy",
+        "logs:TagResource"
+      ],
+      "Resource": "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-runner:*"
+    },
+    {
+      "Sid": "CreateExactRunnerRolesWithControlBoundary",
+      "Effect": "Allow",
+      "Action": "iam:CreateRole",
+      "Resource": [
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-task",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-execution"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::875691018466:policy/MXMed-C3-Staging-PermissionBoundary",
+          "aws:RequestTag/Project": "mxmed",
+          "aws:RequestTag/Environment": "staging",
+          "aws:RequestTag/Phase": "C3"
+        }
+      }
+    },
+    {
+      "Sid": "ManageExactRunnerRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:UpdateAssumeRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-task",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-execution"
+      ]
+    },
+    {
+      "Sid": "PassOnlyRunnerRolesToEcs",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-task",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-execution"
+      ],
+      "Condition": { "StringEquals": { "iam:PassedToService": "ecs-tasks.amazonaws.com" } }
+    }
+  ]
+}
