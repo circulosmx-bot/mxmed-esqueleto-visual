@@ -11,6 +11,8 @@ const otherHash = 'b'.repeat(64);
 const sourceHead = '1'.repeat(40);
 const runUuid = '123e4567-e89b-42d3-a456-426614174000';
 const runId = `c3-${runUuid}`;
+const budgetNotificationTopicArn =
+  'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications';
 
 const gates = [
   'SOURCE_HEAD_MATCH',
@@ -46,8 +48,7 @@ function manifestFixture(): Record<string, unknown> {
     deployment_mode: 'DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES',
     director_authorization_reference: 'DIRECTOR-SEAL-C3',
     activity_cost_cap_usd: 5,
-    budget_notification_topic_arn:
-      'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications',
+    budget_notification_topic_arn: budgetNotificationTopicArn,
     c3_permission_boundary_arn:
       'arn:aws:iam::875691018466:policy/MXMed-C3-Staging-PermissionBoundary',
     runtime_clock_contract: {
@@ -174,6 +175,112 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     stale.gate_definitions = gates.slice(0, 10);
     writeManifest(stale);
     expectRejected('validate-manifest', manifestPath);
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['null', null],
+    ['empty', ''],
+    ['wildcard', 'arn:aws:sns:mx-central-1:875691018466:*'],
+    ['wrong region', 'arn:aws:sns:us-east-1:875691018466:mxmed-stg-c3-notifications'],
+    ['wrong account', 'arn:aws:sns:mx-central-1:000000000000:mxmed-stg-c3-notifications'],
+    ['wrong topic', 'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-other-notifications'],
+    ['production-like', 'arn:aws:sns:mx-central-1:875691018466:mxmed-prd-c3-notifications'],
+  ])('rejects %s budget notification topic authority at pre-seal', (_label, topicArn) => {
+    const manifest = manifestFixture();
+    if (topicArn === undefined) {
+      delete manifest.budget_notification_topic_arn;
+    } else {
+      manifest.budget_notification_topic_arn = topicArn;
+    }
+    writeManifest(manifest);
+    expectRejected('validate-manifest', manifestPath);
+  });
+
+  test('accepts only the exact staging budget topic and seals Gate 8', () => {
+    const manifest = manifestFixture();
+    manifest.budget_notification_topic_arn = budgetNotificationTopicArn;
+    writeManifest(manifest);
+    expectAccepted('validate-manifest', manifestPath);
+    expectAccepted('init-state', manifestPath, statePath);
+    const state = JSON.parse(readFileSync(statePath, 'utf8')) as {
+      gate_states: { name: string; state: string }[];
+    };
+    expect(
+      state.gate_states.find(({ name }) => name === 'AUTO_TEARDOWN_FAILSAFE_CONTRACT_READY')?.state,
+    ).toBe('PASS');
+  });
+
+  test('rejects the original field omission before runtime-state initialization', () => {
+    const manifest = manifestFixture();
+    delete manifest.budget_notification_topic_arn;
+    writeManifest(manifest);
+    expectRejected('validate-manifest', manifestPath);
+    expectRejected('init-state', manifestPath, statePath);
+    expect(() => readFileSync(statePath, 'utf8')).toThrow();
+  });
+
+  test.each([
+    ['missing', '', /UNSAFE_OR_EMPTY_MANIFEST_VALUE/],
+    ['wildcard', 'arn:aws:sns:mx-central-1:875691018466:*', /UNSAFE_OR_EMPTY_MANIFEST_VALUE/],
+    [
+      'wrong region',
+      'arn:aws:sns:us-east-1:875691018466:mxmed-stg-c3-notifications',
+      /BUDGET_NOTIFICATION_TOPIC_ARN_INVALID/,
+    ],
+    [
+      'wrong account',
+      'arn:aws:sns:mx-central-1:000000000000:mxmed-stg-c3-notifications',
+      /BUDGET_NOTIFICATION_TOPIC_ARN_INVALID/,
+    ],
+    [
+      'wrong topic',
+      'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-other-notifications',
+      /BUDGET_NOTIFICATION_TOPIC_ARN_INVALID/,
+    ],
+    [
+      'production-like',
+      'arn:aws:sns:mx-central-1:875691018466:mxmed-prd-c3-notifications',
+      /BUDGET_NOTIFICATION_TOPIC_ARN_INVALID/,
+    ],
+  ])('generator rejects %s topic before creating a manifest', (_label, topicArn, error) => {
+    const outputPath = join(directory, 'generated.json');
+    const result = spawnSync(
+      deployController,
+      [
+        '--prepare-run-manifest',
+        '--output',
+        outputPath,
+        '--run-uuid',
+        runUuid,
+        '--run-id',
+        runId,
+        '--authorization-reference',
+        'DIRECTOR-SEAL-C3',
+        '--budget-topic-arn',
+        topicArn,
+        '--build-inputs',
+        '/nonexistent',
+      ],
+      { cwd: repositoryRoot, encoding: 'utf8' },
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(error);
+    expect(() => readFileSync(outputPath, 'utf8')).toThrow();
+  });
+
+  test('Janitor uses only the exact sealed manifest topic without runtime fallback', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    const contract = readFileSync(helper, 'utf8');
+    expect(contract).toContain(`C3_BUDGET_NOTIFICATION_TOPIC_ARN='${budgetNotificationTopicArn}'`);
+    expect(contract).toContain('.budget_notification_topic_arn == $budget_topic');
+    expect(deploy).toContain(
+      `EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN='${budgetNotificationTopicArn}'`,
+    );
+    expect(deploy).toContain(
+      'ParameterKey=BudgetNotificationTopicArn,ParameterValue=$(jq -r .budget_notification_topic_arn "$manifest")',
+    );
+    expect(deploy).not.toMatch(/budget_notification_topic_arn\s*\/\//);
   });
 
   test('accepts pending runtime fields before first write but rejects them afterward', () => {

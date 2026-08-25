@@ -8,6 +8,7 @@ C3_MANIFEST_SCHEMA='mxmed.c3.ephemeral.sealed-run-manifest.v2'
 C3_STATE_SCHEMA='mxmed.c3.ephemeral.runtime-state.v1'
 C3_ACCOUNT='875691018466'
 C3_REGION='mx-central-1'
+C3_BUDGET_NOTIFICATION_TOPIC_ARN='arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications'
 C3_OBJECT_KEY_SUFFIX='.template.json'
 
 c3_contract_fail() {
@@ -43,6 +44,7 @@ c3_validate_manifest() {
   gates="$(c3_gate_definitions_json)"
   jq -e --arg schema "$C3_MANIFEST_SCHEMA" --arg account "$C3_ACCOUNT" \
     --arg region "$C3_REGION" --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
+    --arg budget_topic "$C3_BUDGET_NOTIFICATION_TOPIC_ARN" \
     --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" '
       . as $root
       | .schema == $schema
@@ -51,6 +53,7 @@ c3_validate_manifest() {
       and (.source_head | test("^[0-9a-f]{40}$"))
       and .account == $account and .region == $region
       and .activity_cost_cap_usd == 5
+      and .budget_notification_topic_arn == $budget_topic
       and .deployment_mode == "DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES"
       and .runtime_clock_contract == {
         origin:"FIRST_SUCCESSFUL_RUNTIME_AWS_MUTATION",

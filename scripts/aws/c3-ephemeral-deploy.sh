@@ -4,6 +4,7 @@ set -eu
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
 EXPECTED_COST_CAP='5'
+EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN='arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications'
 PRE_DIGEST_STACKS='mxmed-stg-c3-janitor mxmed-stg-network mxmed-stg-security mxmed-stg-session mxmed-stg-registry'
 RUNNER_STACKS='mxmed-stg-c3-runner'
 STACKS="$PRE_DIGEST_STACKS $RUNNER_STACKS"
@@ -221,6 +222,8 @@ case "$mode" in
     for value in "$authorization_reference" "$run_uuid" "$run_id" "$budget_topic_arn"; do
       safe_value "$value" || fail 'UNSAFE_OR_EMPTY_MANIFEST_VALUE'
     done
+    [ "$budget_topic_arn" = "$EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN" ] \
+      || fail 'BUDGET_NOTIFICATION_TOPIC_ARN_INVALID'
     case "$budget_topic_arn" in arn:aws:sns:mx-central-1:875691018466:*) ;; *) fail 'BUDGET_TOPIC_OUT_OF_SCOPE';; esac
     [ -f "$build_inputs" ] || fail 'IMAGE_BUILD_INPUTS_MISSING'
     jq -e . "$build_inputs" >/dev/null || fail 'IMAGE_BUILD_INPUTS_JSON_INVALID'
