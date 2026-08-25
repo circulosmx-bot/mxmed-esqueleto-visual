@@ -10,7 +10,7 @@ import type { Construct } from 'constructs';
 
 import { BaseMxMedStack } from './base-mxmed-stack';
 import type { MxMedContractStackProps } from './base-mxmed-stack';
-import { MXMED_C3_EXPECTED_HEAD, MXMED_C3_RUNNER_CONTRACT } from '../constructs/c3-runner-contract';
+import { MXMED_C3_RUNNER_CONTRACT } from '../constructs/c3-runner-contract';
 
 export interface MxMedC3RunnerStackProps extends MxMedContractStackProps {
   readonly privateAppSubnets: readonly ISubnet[];
@@ -50,6 +50,11 @@ export class MxMedC3RunnerStack extends BaseMxMedStack {
       type: 'String',
       allowedPattern: '^sha256:[a-f0-9]{64}$',
       description: 'ECR-resolved immutable image digest; tags and latest are rejected.',
+    });
+    const sourceRevision = new CfnParameter(this, 'SourceRevision', {
+      type: 'String',
+      allowedPattern: '^[a-f0-9]{40}$',
+      description: 'Immutable source HEAD from the Director-approved sealed run manifest.',
     });
     const permissionBoundaryArn = new CfnParameter(this, 'C3PermissionBoundaryArn', {
       type: 'String',
@@ -181,7 +186,7 @@ export class MxMedC3RunnerStack extends BaseMxMedStack {
             { name: 'SESSION_PORT', value: String(MXMED_C3_RUNNER_CONTRACT.port) },
             { name: 'SESSION_PREFIX', value: MXMED_C3_RUNNER_CONTRACT.sessionPrefix },
             { name: 'SESSION_AUTH_SECRET_ARN', value: props.sessionAuthSecret.secretArn },
-            { name: 'EXPECTED_SOURCE_HEAD', value: MXMED_C3_EXPECTED_HEAD },
+            { name: 'EXPECTED_SOURCE_HEAD', value: sourceRevision.valueAsString },
             {
               name: 'C3_TASK_TIMEOUT_SECONDS',
               value: String(MXMED_C3_RUNNER_CONTRACT.taskTimeoutSeconds),

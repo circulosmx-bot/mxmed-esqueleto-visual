@@ -1,7 +1,6 @@
 #!/bin/sh
 set -eu
 
-BASELINE_PRODUCT_HEAD='1f507b61846b96caa34d390ee3a59779f65e4331'
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
 EXPECTED_COST_CAP='5'
@@ -14,35 +13,41 @@ TEMPLATE_BUCKET='mxmed-stg-c3-cf-templates-875691018466-mx-central-1'
 TEMPLATE_BUCKET_POLICY='infra/aws/policies/c3/MXMED_C3_TEMPLATE_BUCKET_POLICY.json'
 DEPLOYMENT_MODE='DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES'
 CFN_ROLE_PREFIX='arn:aws:iam::875691018466:role/MXMed-C3-CFN-'
+CONTRACT_HELPER='scripts/aws/c3-runtime-contract.sh'
+
+[ -f "$CONTRACT_HELPER" ] || { printf '%s\n' 'C3_DEPLOY_FAIL_CLOSED:RUNTIME_CONTRACT_HELPER_MISSING' >&2; exit 1; }
+. "$CONTRACT_HELPER"
 
 fail() { printf '%s\n' "C3_DEPLOY_FAIL_CLOSED:$1" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "COMMAND_MISSING:$1"; }
 safe_value() { case "$1" in ''|*[!A-Za-z0-9_./:@+=,-]*) return 1;; esac; }
 
 manifest=''
+state=''
 output=''
+run_uuid=''
 run_id=''
 authorization_reference=''
-start_window=''
-failsafe_at=''
-expires_at=''
 budget_topic_arn=''
+build_inputs=''
+image_source_revision=''
 mode=''
 no_execute=false
 stack=''
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --prepare-run-manifest|--review-assembly|--prepare-template-transport|--prepare-change-sets|--execute-stack|--mark-first-resource-create-at|--resolve-and-seal-image-digest) mode="$1" ;;
+    --prepare-run-manifest|--review-assembly|--initialize-runtime-state|--prepare-template-transport|--prepare-change-sets|--execute-stack|--build-push-and-seal-image|--resolve-and-seal-image-digest) mode="$1" ;;
     --no-execute) no_execute=true ;;
     --manifest) shift; manifest="${1:-}" ;;
+    --state) shift; state="${1:-}" ;;
     --output) shift; output="${1:-}" ;;
+    --run-uuid) shift; run_uuid="${1:-}" ;;
     --run-id) shift; run_id="${1:-}" ;;
     --authorization-reference) shift; authorization_reference="${1:-}" ;;
-    --start-window) shift; start_window="${1:-}" ;;
-    --failsafe-at) shift; failsafe_at="${1:-}" ;;
-    --expires-at) shift; expires_at="${1:-}" ;;
     --budget-topic-arn) shift; budget_topic_arn="${1:-}" ;;
+    --build-inputs) shift; build_inputs="${1:-}" ;;
+    --image-source-revision) shift; image_source_revision="${1:-}" ;;
     --stack) shift; stack="${1:-}" ;;
     *) fail "UNKNOWN_ARGUMENT:$1" ;;
   esac
@@ -51,57 +56,10 @@ done
 
 validate_manifest() {
   need jq
-  [ -f "$manifest" ] || fail 'RUN_MANIFEST_MISSING'
-  jq -e --arg account "$EXPECTED_ACCOUNT" --arg region "$EXPECTED_REGION" \
-    '. as $root
-     | .schema == "mxmed.c3.ephemeral.run-manifest.v1"
-     and (.expected_head | test("^[a-f0-9]{40}$")) and .account == $account and .region == $region
-     and .deployment_mode == "DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES"
-     and .activity_cost_cap_usd == 5
-     and (.run_id | test("^c3-[a-z0-9][a-z0-9-]{5,62}$"))
-     and (.director_authorization_reference | length > 0)
-     and (.start_window_utc | test("Z$"))
-     and (.failsafe_at_utc | test("Z$"))
-     and (.expires_at_utc | test("Z$"))
-     and (.image_digest == null or (.image_digest | test("^sha256:[a-f0-9]{64}$")))
-     and ([.gates[]] | length == 10)
-     and ([.gates[].name] | length == 10 and unique | length == 10)
-     and ([.stack_names[] | select(startswith("mxmed-stg-") | not)] | length == 0)
-     and (.templates | length) == 6
-     and ([.templates[] | select((.sha256 | test("^[a-f0-9]{64}$") | not) or (.bytes <= 0) or (.transport != "TEMPLATE_BODY" and .transport != "C3_TEMPLATE_S3_URL"))] | length) == 0
-     and .template_transport.bucket_name == "mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
-     and .template_transport.public_access_blocked == true
-     and .template_transport.default_encryption == "AES256"
-     and .cfn_execution_role_arns == {
-       "mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network",
-       "mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security",
-       "mxmed-stg-session":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session",
-       "mxmed-stg-registry":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry",
-       "mxmed-stg-c3-runner":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner",
-       "mxmed-stg-c3-janitor":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"
-     }
-     and .template_transport.versioning == false
-     and ([.templates[] | select(.transport == "C3_TEMPLATE_S3_URL") | select(.object_key != ($root.run_id + "/" + .stack_name + "/" + .sha256 + ".template.json"))] | length) == 0
-     and ((tostring | test("production|mxmed-prd-|<[^>]+>|UNRESOLVED"; "i")) | not)' \
-    "$manifest" >/dev/null || fail 'RUN_MANIFEST_CONTRACT_REJECTED'
+  c3_validate_manifest "$manifest" || fail 'RUN_MANIFEST_CONTRACT_REJECTED'
 }
 
-set_gate() {
-  gate="$1" value="$2" tmp="${manifest}.tmp.$$"
-  jq --arg gate "$gate" --argjson value "$value" \
-    '(.gates[] | select(.name == $gate) | .pass)=$value' "$manifest" >"$tmp"
-  chmod 0600 "$tmp"
-  mv "$tmp" "$manifest"
-}
-
-require_gates() {
-  excluded_gate="${1:-}"
-  jq -e --arg excluded "$excluded_gate" \
-    '([.gates[] | select(.name != $excluded and .pass != true)] | length) == 0' "$manifest" >/dev/null \
-    || fail 'REQUIRED_STOP_GATE_FALSE'
-}
-
-require_future_write_authority() {
+validate_fresh_authorization() {
   auth_file="${MXMED_C3_AWS_WRITE_AUTHORIZATION_FILE:-}"
   [ -n "$auth_file" ] && [ -f "$auth_file" ] || fail 'DIRECTOR_AWS_WRITE_AUTHORIZATION_MISSING'
   validate_manifest
@@ -109,13 +67,20 @@ require_future_write_authority() {
     '.authorization == $authority and .run_id == $run and .single_use == true' \
     "$auth_file" >/dev/null || fail 'DIRECTOR_AWS_WRITE_AUTHORIZATION_INVALID'
   current_head="$(git rev-parse HEAD)"
-  [ "$current_head" = "$(jq -r .expected_head "$manifest")" ] || fail 'SOURCE_HEAD_MISMATCH'
-  git merge-base --is-ancestor "$BASELINE_PRODUCT_HEAD" "$current_head" || fail 'BASELINE_PRODUCT_HEAD_NOT_ANCESTOR'
+  [ "$current_head" = "$(jq -r .source_head "$manifest")" ] || fail 'SOURCE_HEAD_MISMATCH'
   [ -z "$(git status --porcelain)" ] || fail 'WORKTREE_NOT_CLEAN'
   [ "${AWS_ACCOUNT_ID:-}" = "$EXPECTED_ACCOUNT" ] || fail 'AWS_ACCOUNT_MISMATCH'
   [ "${AWS_REGION:-}" = "$EXPECTED_REGION" ] || fail 'AWS_REGION_MISMATCH'
   [ "${MXMED_C3_DEPLOY_PROFILE:-}" = 'mxmed-c3-stg-deploy' ] || fail 'EXACT_DEPLOY_PROFILE_REQUIRED'
-  set_gate 'DIRECTOR_AWS_WRITE_AUTHORIZATION_PRESENT' true
+  [ "${MXMED_C3_TEST_CONTROLLER_PROFILE:-}" = 'mxmed-c3-stg-test-controller' ] || fail 'EXACT_TEST_CONTROLLER_PROFILE_REQUIRED'
+  [ "${MXMED_C3_TEARDOWN_PROFILE:-}" = 'mxmed-c3-stg-teardown' ] || fail 'EXACT_TEARDOWN_PROFILE_REQUIRED'
+}
+
+require_future_write_authority() {
+  phase="$1"
+  validate_fresh_authorization
+  [ -n "$state" ] || fail 'RUNTIME_STATE_PATH_MISSING'
+  c3_validate_phase "$phase" "$manifest" "$state" || fail "RUNTIME_STATE_PHASE_REJECTED:$phase"
 }
 
 template_file_for_stack() {
@@ -162,7 +127,7 @@ create_direct_change_set() {
     set -- "$@" --template-body "file://$file"
   else
     key="$(jq -r --arg stack "$name" '.templates[] | select(.stack_name == $stack) | .object_key' "$manifest")"
-    checksum="$(jq -r --arg stack "$name" '.templates[] | select(.stack_name == $stack) | .s3_checksum_sha256' "$manifest")"
+    checksum="$(jq -r --arg stack "$name" '.template_transport_objects[] | select(.stack_name == $stack) | .checksum_sha256' "$state")"
     [ "$checksum" != 'null' ] && [ -n "$checksum" ] || fail "UNSEALED_TEMPLATE_UPLOAD_REJECTED:$name"
     actual_checksum="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api head-object \
       --bucket "$TEMPLATE_BUCKET" --key "$key" --checksum-mode ENABLED \
@@ -174,25 +139,26 @@ create_direct_change_set() {
     mxmed-stg-c3-janitor)
       set -- "$@" --parameters \
         "ParameterKey=RunId,ParameterValue=$(jq -r .run_id "$manifest")" \
-        "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .expires_at_utc "$manifest")" \
-        "ParameterKey=FailSafeScheduleExpression,ParameterValue=at($(jq -r .failsafe_at_utc "$manifest" | sed 's/Z$//'))" \
-        "ParameterKey=JanitorDeleteScheduleExpression,ParameterValue=at($(jq -r .expires_at_utc "$manifest" | sed 's/Z$//'))" \
+        "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .hard_cap_at_utc "$state")" \
+        "ParameterKey=FailSafeScheduleExpression,ParameterValue=at($(jq -r .failsafe_at_utc "$state" | sed 's/Z$//'))" \
+        "ParameterKey=JanitorDeleteScheduleExpression,ParameterValue=at($(jq -r .hard_cap_at_utc "$state" | sed 's/Z$//'))" \
         "ParameterKey=BudgetNotificationTopicArn,ParameterValue=$(jq -r .budget_notification_topic_arn "$manifest")" \
         "ParameterKey=C3PermissionBoundaryArn,ParameterValue=$PERMISSION_BOUNDARY_ARN"
       ;;
     mxmed-stg-c3-runner)
-      digest="$(jq -r '.image_digest // empty' "$manifest")"
-      [ -n "$digest" ] || fail 'IMAGE_DIGEST_NOT_SEALED'
+      digest="$(jq -r .physical_ecr_image_digest "$state")"
+      case "$digest" in sha256:[0-9a-f][0-9a-f]*) ;; *) fail 'IMAGE_DIGEST_NOT_SEALED' ;; esac
       set -- "$@" --parameters \
         "ParameterKey=RunId,ParameterValue=$(jq -r .run_id "$manifest")" \
-        "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .expires_at_utc "$manifest")" \
+        "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .hard_cap_at_utc "$state")" \
         "ParameterKey=RunnerImageDigest,ParameterValue=$digest" \
+        "ParameterKey=SourceRevision,ParameterValue=$(jq -r .source_head "$manifest")" \
         "ParameterKey=C3PermissionBoundaryArn,ParameterValue=$PERMISSION_BOUNDARY_ARN"
       ;;
     *)
       set -- "$@" --parameters \
         "ParameterKey=RunId,ParameterValue=$(jq -r .run_id "$manifest")" \
-        "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .expires_at_utc "$manifest")"
+        "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .hard_cap_at_utc "$state")"
       ;;
   esac
   AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws "$@" >/dev/null
@@ -218,15 +184,14 @@ cfn_execution_role_for_stack() {
 }
 
 start_partial_teardown() {
-  failed_stack="$1" now="$(date -u +%Y-%m-%dT%H:%M:%SZ)" tmp="${manifest}.tmp.$$"
-  jq --arg stack "$failed_stack" --arg now "$now" \
-    '.deployment_failure_at_utc=$now | .deployment_failure_stack=$stack' "$manifest" >"$tmp"
-  chmod 0600 "$tmp"
-  mv "$tmp" "$manifest"
+  failed_stack="$1" now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  c3_atomic_state_update "$manifest" "$state" \
+    '.deployment_failure_at_utc=$now | .deployment_failure_stack=$stack | .phase="ABORTING"' \
+    --arg stack "$failed_stack" --arg now "$now"
   [ "${MXMED_C3_TEARDOWN_PROFILE:-}" = 'mxmed-c3-stg-teardown' ] \
     || fail 'EXACT_TEARDOWN_PROFILE_REQUIRED'
   AWS_PROFILE="$MXMED_C3_TEARDOWN_PROFILE" \
-    "$(dirname "$0")/c3-ephemeral-teardown.sh" --execute-stack-deletes --manifest "$manifest" \
+    "$(dirname "$0")/c3-ephemeral-teardown.sh" --execute-stack-deletes --manifest "$manifest" --state "$state" \
     || fail "PARTIAL_DEPLOYMENT_TEARDOWN_REQUIRES_ATTENTION:$failed_stack"
   fail "STACK_DEPLOYMENT_FAILED_AND_TEARDOWN_STARTED:$failed_stack"
 }
@@ -235,18 +200,18 @@ case "$mode" in
   --prepare-run-manifest)
     need jq
     [ -n "$output" ] || fail 'OUTPUT_PATH_MISSING'
-    case "$run_id" in c3-[a-z0-9][a-z0-9-][a-z0-9-][a-z0-9-][a-z0-9-][a-z0-9-]*) ;; *) fail 'RUN_ID_INVALID';; esac
-    for value in "$authorization_reference" "$start_window" "$failsafe_at" "$expires_at" "$budget_topic_arn"; do
+    printf '%s' "$run_uuid" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' \
+      || fail 'RUN_UUID_INVALID'
+    [ "$run_id" = "c3-$run_uuid" ] || fail 'RUN_ID_NOT_PREFIXED_UUIDV4'
+    for value in "$authorization_reference" "$run_uuid" "$run_id" "$budget_topic_arn"; do
       safe_value "$value" || fail 'UNSAFE_OR_EMPTY_MANIFEST_VALUE'
     done
-    start_epoch="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$start_window" +%s 2>/dev/null)" || fail 'START_WINDOW_INVALID'
-    failsafe_epoch="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$failsafe_at" +%s 2>/dev/null)" || fail 'FAILSAFE_TIMESTAMP_INVALID'
-    expires_epoch="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$expires_at" +%s 2>/dev/null)" || fail 'EXPIRY_TIMESTAMP_INVALID'
-    [ $((failsafe_epoch - start_epoch)) -le 79200 ] && [ "$failsafe_epoch" -gt "$start_epoch" ] || fail 'FAILSAFE_EXCEEDS_22_HOURS'
-    [ $((expires_epoch - start_epoch)) -le 86400 ] && [ "$expires_epoch" -gt "$failsafe_epoch" ] || fail 'EXPIRY_EXCEEDS_24_HOURS'
     case "$budget_topic_arn" in arn:aws:sns:mx-central-1:875691018466:*) ;; *) fail 'BUDGET_TOPIC_OUT_OF_SCOPE';; esac
+    [ -f "$build_inputs" ] || fail 'IMAGE_BUILD_INPUTS_MISSING'
+    jq -e . "$build_inputs" >/dev/null || fail 'IMAGE_BUILD_INPUTS_JSON_INVALID'
     [ -f "$ASSEMBLY/manifest.json" ] || fail 'C3_ASSEMBLY_MISSING'
     templates='[]'
+    expected_graph='{}'
     for name in $STACKS; do
       template_file="$(template_file_for_stack "$name")"
       template_path="$ASSEMBLY/$template_file"
@@ -255,7 +220,7 @@ case "$mode" in
       sha="$(shasum -a 256 "$template_path" | awk '{print $1}')"
       if [ "$bytes" -gt "$TEMPLATE_BODY_MAX_BYTES" ]; then
         transport='C3_TEMPLATE_S3_URL'
-        object_key="$run_id/$name/$sha.template.json"
+        object_key="$run_id/$name/$sha$C3_OBJECT_KEY_SUFFIX"
       else
         transport='TEMPLATE_BODY'
         object_key=''
@@ -263,31 +228,63 @@ case "$mode" in
       templates="$(printf '%s' "$templates" | jq \
         --arg stack "$name" --arg file "$template_file" --arg sha "$sha" \
         --arg transport "$transport" --arg object "$object_key" --argjson bytes "$bytes" \
-        '. + [{stack_name:$stack,template_file:$file,bytes:$bytes,sha256:$sha,transport:$transport,object_key:(if $object == "" then null else $object end),s3_checksum_sha256:null,change_set_template_semantic_sha256:null}]')"
+        '. + [{stack_name:$stack,template_file:$file,bytes:$bytes,sha256:$sha,transport:$transport,object_key:(if $object == "" then null else $object end)}]')"
+      resource_count="$(jq '.Resources | length' "$template_path")"
+      expected_graph="$(printf '%s' "$expected_graph" | jq --arg stack "$name" --argjson count "$resource_count" '.[$stack]=$count')"
     done
     template_sha="$(printf '%s' "$templates" | jq -r '.[].sha256' | sort | shasum -a 256 | awk '{print $1}')"
     source_sha="$(git ls-files -s infra/aws scripts/aws | shasum -a 256 | awk '{print $1}')"
-    script_sha="$(shasum -a 256 scripts/aws/c3-ephemeral-*.sh | sort | shasum -a 256 | awk '{print $1}')"
+    script_sha="$(shasum -a 256 scripts/aws/c3-*.sh | sort | shasum -a 256 | awk '{print $1}')"
+    policy_hashes='{}'
+    for policy in infra/aws/policies/c3/*.json; do
+      [ -f "$policy" ] || fail 'C3_POLICY_SET_MISSING'
+      policy_hash="$(shasum -a 256 "$policy" | awk '{print $1}')"
+      policy_hashes="$(printf '%s' "$policy_hashes" | jq --arg path "$policy" --arg sha "$policy_hash" '.[$path]=$sha')"
+    done
     for digest in "$template_sha" "$source_sha" "$script_sha"; do case "$digest" in [0-9a-f][0-9a-f]*) ;; *) fail 'LOCAL_DIGEST_MISSING';; esac; done
     current_head="$(git rev-parse HEAD)"
-    git merge-base --is-ancestor "$BASELINE_PRODUCT_HEAD" "$current_head" || fail 'BASELINE_PRODUCT_HEAD_NOT_ANCESTOR'
+    image_inputs="$(jq -c . "$build_inputs")"
+    [ "$(printf '%s' "$image_inputs" | jq -r .source_revision)" = "$current_head" ] || fail 'IMAGE_SOURCE_REVISION_HEAD_MISMATCH'
+    gates="$(c3_gate_definitions_json)"
     jq -n \
-      --arg run "$run_id" --arg head "$current_head" --arg account "$EXPECTED_ACCOUNT" \
+      --arg run_uuid "$run_uuid" --arg run "$run_id" --arg head "$current_head" --arg account "$EXPECTED_ACCOUNT" \
       --arg region "$EXPECTED_REGION" --arg auth "$authorization_reference" \
-      --arg start "$start_window" --arg failsafe "$failsafe_at" --arg expires "$expires_at" \
       --arg topic "$budget_topic_arn" --arg template "$template_sha" --arg source "$source_sha" \
       --arg script "$script_sha" --argjson stacks "$(printf '%s\n' $STACKS | jq -R . | jq -s .)" \
       --arg boundary "$PERMISSION_BOUNDARY_ARN" \
       --argjson templates "$templates" --arg deployment_mode "$DEPLOYMENT_MODE" \
-      --arg template_bucket "$TEMPLATE_BUCKET" \
-      '{schema:"mxmed.c3.ephemeral.run-manifest.v1",run_id:$run,expected_head:$head,account:$account,region:$region,deployment_mode:$deployment_mode,director_authorization_reference:$auth,activity_cost_cap_usd:5,start_window_utc:$start,failsafe_at_utc:$failsafe,expires_at_utc:$expires,budget_notification_topic_arn:$topic,c3_permission_boundary_arn:$boundary,template_sha256:$template,templates:$templates,template_transport:{bucket_name:$template_bucket,region:$region,public_access_blocked:true,default_encryption:"AES256",versioning:false,lifecycle:"EPHEMERAL_C3_ONLY",objects:[]},source_sha256:$source,script_sha256:$script,image_digest:null,approved_role_arns:{deploy:null,test_controller:null,teardown:null},cfn_execution_role_arns:{"mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network","mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security","mxmed-stg-session":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session","mxmed-stg-registry":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry","mxmed-stg-c3-runner":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner","mxmed-stg-c3-janitor":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"},stack_names:$stacks,expected_resource_counts:{total:107,data:0,storage:0,application_service:0},retained_resource_expectations:{count:13,physical_resources:[]},gates:["SOURCE_HEAD_MATCH","WORKTREE_CLEAN","DIRECTOR_AWS_WRITE_AUTHORIZATION_PRESENT","PRODUCTION_DENY_PROVEN","CHANGE_SET_EXACT_SCOPE_PASS","ESTIMATED_COST_WITHIN_USD_5_CAP","MANUAL_TEARDOWN_READY","AUTO_TEARDOWN_FAILSAFE_READY","RETAINED_RESOURCE_CLEANUP_READY","NONPRODUCTION_TARGET_PROVEN"]|map({name:.,pass:false}),first_resource_create_at_utc:null,test_terminal_at_utc:null,teardown_started_at_utc:null}' \
+      --arg template_bucket "$TEMPLATE_BUCKET" --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
+      --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" --argjson image_inputs "$image_inputs" \
+      --argjson policy_hashes "$policy_hashes" --argjson expected_graph "$expected_graph" \
+      '{
+        schema:"mxmed.c3.ephemeral.sealed-run-manifest.v2",
+        run_uuid:$run_uuid,run_id:$run,source_head:$head,account:$account,region:$region,
+        deployment_mode:$deployment_mode,director_authorization_reference:$auth,
+        activity_cost_cap_usd:5,budget_notification_topic_arn:$topic,
+        c3_permission_boundary_arn:$boundary,
+        runtime_clock_contract:{origin:"FIRST_SUCCESSFUL_RUNTIME_AWS_MUTATION",failsafe_offset_hours:22,hard_cap_offset_hours:24,teardown_start_max_delay_seconds:300},
+        pending_runtime_fields:{first_runtime_mutation_at_utc:$pending,failsafe_at_utc:$pending,hard_cap_at_utc:$pending,physical_ecr_image_digest:$pending},
+        object_key_contract:{canonical_format:("RUN_ID/STACK_NAME/TEMPLATE_SHA256"+$suffix),suffix:$suffix,binds_run_id:true,binds_stack_name:true,binds_template_sha256:true,path_traversal_safe:true},
+        gate_definitions:$gates,
+        phase_requirements:{pre_first_write:{required_pass_count:11,gate_12_state:"PENDING_RUNTIME"},pre_runner:{required_pass_count:12,gate_12_state:"PASS"}},
+        template_sha256:$template,templates:$templates,
+        template_transport:{bucket_name:$template_bucket,region:$region,public_access_blocked:true,default_encryption:"AES256",versioning:false,ephemeral:true,delete_after_c3:true},
+        source_sha256:$source,script_sha256:$script,policy_sha256:$policy_hashes,
+        image_build_inputs:$image_inputs,expected_resource_graph:$expected_graph,
+        approved_role_profiles:{deploy:"mxmed-c3-stg-deploy",test_controller:"mxmed-c3-stg-test-controller",teardown:"mxmed-c3-stg-teardown"},
+        cfn_execution_role_arns:{"mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network","mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security","mxmed-stg-session":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session","mxmed-stg-registry":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry","mxmed-stg-c3-runner":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner","mxmed-stg-c3-janitor":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"},
+        stack_names:$stacks,
+        expected_resource_counts:{total:107,data:0,storage:0,application_service:0,public_runner_ip:0},
+        retained_resource_expectations:{count:13,physical_resources:[]}
+      }' \
       >"$output"
     chmod 0600 "$output"
+    c3_validate_phase PRE_RUNTIME_SEAL "$output" || fail 'PRE_RUNTIME_SEAL_VALIDATION_FAILED'
     printf '%s\n' "RUN_MANIFEST_PREPARED=$output"
     ;;
   --review-assembly)
     validate_manifest
-    [ "$(git rev-parse HEAD)" = "$(jq -r .expected_head "$manifest")" ] || fail 'SOURCE_HEAD_MISMATCH'
+    [ "$(git rev-parse HEAD)" = "$(jq -r .source_head "$manifest")" ] || fail 'SOURCE_HEAD_MISMATCH'
     [ -z "$(git status --porcelain)" ] || fail 'WORKTREE_NOT_CLEAN'
     [ -f "$ASSEMBLY/manifest.json" ] || fail 'C3_ASSEMBLY_MISSING'
     verify_sealed_templates
@@ -299,12 +296,16 @@ case "$mode" in
       and ([.. | objects | .Type? | select(. == "AWS::ECS::TaskDefinition")] | length) == 1
       and ([.. | objects | .Type? | select(. == "AWS::Scheduler::Schedule")] | length) == 2' >/dev/null \
       || fail 'C3_ASSEMBLY_SCOPE_INVALID'
-    for gate in SOURCE_HEAD_MATCH WORKTREE_CLEAN PRODUCTION_DENY_PROVEN ESTIMATED_COST_WITHIN_USD_5_CAP MANUAL_TEARDOWN_READY AUTO_TEARDOWN_FAILSAFE_READY RETAINED_RESOURCE_CLEANUP_READY NONPRODUCTION_TARGET_PROVEN; do set_gate "$gate" true; done
     printf '%s\n' 'C3_ASSEMBLY_REVIEW=PASS'
     ;;
+  --initialize-runtime-state)
+    validate_fresh_authorization
+    [ -n "$state" ] || fail 'RUNTIME_STATE_PATH_MISSING'
+    c3_initialize_state "$manifest" "$state" || fail 'RUNTIME_STATE_INITIALIZATION_FAILED'
+    printf '%s\n' "C3_RUNTIME_STATE_INITIALIZED=$state"
+    ;;
   --prepare-template-transport)
-    require_future_write_authority
-    require_gates 'CHANGE_SET_EXACT_SCOPE_PASS'
+    require_future_write_authority PRE_FIRST_WRITE
     need aws
     need openssl
     verify_sealed_templates
@@ -312,6 +313,11 @@ case "$mode" in
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api create-bucket \
       --bucket "$TEMPLATE_BUCKET" --region "$EXPECTED_REGION" \
       --create-bucket-configuration "LocationConstraint=$EXPECTED_REGION" >/dev/null
+    if ! c3_record_first_runtime_mutation "$manifest" "$state" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"; then
+      AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api delete-bucket --bucket "$TEMPLATE_BUCKET" \
+        || fail 'FIRST_RUNTIME_MUTATION_CLOCK_AND_EMPTY_BUCKET_ROLLBACK_FAILED'
+      fail 'FIRST_RUNTIME_MUTATION_CLOCK_SEAL_FAILED_EMPTY_BUCKET_ROLLED_BACK'
+    fi
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api put-public-access-block \
       --bucket "$TEMPLATE_BUCKET" \
       --public-access-block-configuration 'BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'
@@ -320,7 +326,7 @@ case "$mode" in
       --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"},"BucketKeyEnabled":false}]}'
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api put-bucket-tagging \
       --bucket "$TEMPLATE_BUCKET" \
-      --tagging "TagSet=[{Key=Project,Value=mxmed},{Key=Environment,Value=staging},{Key=Phase,Value=C3},{Key=Ephemeral,Value=true},{Key=RunId,Value=$(jq -r .run_id "$manifest")},{Key=ExpiresAt,Value=$(jq -r .expires_at_utc "$manifest")}]"
+      --tagging "TagSet=[{Key=Project,Value=mxmed},{Key=Environment,Value=staging},{Key=Phase,Value=C3},{Key=Ephemeral,Value=true},{Key=RunId,Value=$(jq -r .run_id "$manifest")},{Key=ExpiresAt,Value=$(jq -r .hard_cap_at_utc "$state")}]"
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api put-bucket-policy \
       --bucket "$TEMPLATE_BUCKET" --policy "file://$TEMPLATE_BUCKET_POLICY"
     block_state="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws s3api get-public-access-block --bucket "$TEMPLATE_BUCKET" --output json)"
@@ -340,19 +346,15 @@ case "$mode" in
         --content-type application/json --output json)"
       [ "$(printf '%s' "$response" | jq -r .ChecksumSHA256)" = "$checksum" ] \
         || fail "TEMPLATE_UPLOAD_CHECKSUM_MISMATCH:$name"
-      tmp="${manifest}.tmp.$$"
-      jq --arg stack "$name" --arg checksum "$checksum" --arg key "$key" \
-        '(.templates[] | select(.stack_name == $stack) | .s3_checksum_sha256)=$checksum | .template_transport.objects += [{stack_name:$stack,key:$key,checksum_sha256:$checksum}]' \
-        "$manifest" >"$tmp"
-      chmod 0600 "$tmp"
-      mv "$tmp" "$manifest"
+      c3_atomic_state_update "$manifest" "$state" \
+        '.template_transport_objects += [{stack_name:$stack,key:$key,checksum_sha256:$checksum}]' \
+        --arg stack "$name" --arg checksum "$checksum" --arg key "$key"
     done
     printf '%s\n' 'C3_TEMPLATE_TRANSPORT_PREPARED=PASS'
     ;;
   --prepare-change-sets)
     [ "$no_execute" = true ] || fail 'NO_EXECUTE_FLAG_REQUIRED'
-    require_future_write_authority
-    require_gates 'CHANGE_SET_EXACT_SCOPE_PASS'
+    require_future_write_authority POST_FIRST_RUNTIME_MUTATION
     need aws
     [ -d "$ASSEMBLY" ] || fail 'C3_ASSEMBLY_MISSING'
     verify_sealed_templates
@@ -371,23 +373,37 @@ case "$mode" in
         | jq -S -c .TemplateBody | shasum -a 256 | awk '{print $1}')"
       [ "$actual_semantic_sha" = "$expected_semantic_sha" ] \
         || fail "CHANGE_SET_TEMPLATE_SEMANTIC_HASH_MISMATCH:$name"
-      tmp="${manifest}.tmp.$$"
-      jq --arg stack "$name" --arg sha "$actual_semantic_sha" \
-        '(.templates[] | select(.stack_name == $stack) | .change_set_template_semantic_sha256)=$sha' \
-        "$manifest" >"$tmp"
-      chmod 0600 "$tmp"
-      mv "$tmp" "$manifest"
+      c3_atomic_state_update "$manifest" "$state" \
+        '.change_set_template_semantic_sha256[$stack]=$sha' \
+        --arg stack "$name" --arg sha "$actual_semantic_sha"
     done
-    set_gate 'CHANGE_SET_EXACT_SCOPE_PASS' true
     ;;
   --execute-stack)
-    require_future_write_authority
-    require_gates
     case " $STACKS " in *" $stack "*) ;; *) fail 'STACK_OUT_OF_SCOPE';; esac
+    if [ "$stack" = 'mxmed-stg-c3-runner' ]; then
+      require_future_write_authority PRE_RUNNER
+    else
+      require_future_write_authority POST_FIRST_RUNTIME_MUTATION
+    fi
+    if [ "$stack" != 'mxmed-stg-c3-janitor' ]; then
+      [ "$(jq -r .failsafe_active "$state")" = 'true' ] || fail 'FAILSAFE_NOT_ACTIVE_FORWARD_PROGRESS_REJECTED'
+    fi
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation execute-change-set --stack-name "$stack" --change-set-name "$(jq -r .run_id "$manifest")-review" \
       || start_partial_teardown "$stack"
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation wait stack-create-complete --stack-name "$stack" \
       || start_partial_teardown "$stack"
+    stack_id="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].StackId' --output text)"
+    c3_atomic_state_update "$manifest" "$state" \
+      '.created_resource_ids += [{type:"cloudformation-stack",stack_name:$stack,id:$id}]' \
+      --arg stack "$stack" --arg id "$stack_id"
+    if [ "$stack" = 'mxmed-stg-c3-janitor' ]; then
+      janitor_resources="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-stack-resources --stack-name "$stack" --output json)"
+      printf '%s' "$janitor_resources" | jq -e '
+        ([.StackResources[] | select(.ResourceType=="AWS::Scheduler::Schedule" and .ResourceStatus=="CREATE_COMPLETE")] | length) == 2
+        and ([.StackResources[] | select(.ResourceType=="AWS::StepFunctions::StateMachine" and .ResourceStatus=="CREATE_COMPLETE")] | length) == 1
+      ' >/dev/null || start_partial_teardown "$stack"
+      c3_atomic_state_update "$manifest" "$state" '.failsafe_active=true'
+    fi
     if [ "$stack" = 'mxmed-stg-c3-runner' ]; then
       outputs="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].Outputs' --output json)"
       runner="$(printf '%s' "$outputs" | jq '
@@ -395,25 +411,52 @@ case "$mode" in
         {cluster_arn:value("RunnerClusterArn"),cluster_name:value("RunnerClusterName"),task_definition_arn:value("RunnerTaskDefinitionArn"),log_group_name:value("RunnerLogGroupName"),application_security_group_id:value("ApplicationSecurityGroupId"),private_subnet_ids:(value("PrivateAppSubnetIds")|split(","))}
       ')"
       printf '%s' "$runner" | jq -e '.private_subnet_ids|length==2' >/dev/null || fail 'RUNNER_OUTPUT_CONTRACT_INVALID'
-      tmp="${manifest}.tmp.$$"; jq --argjson runner "$runner" '.runner=$runner' "$manifest" >"$tmp"; chmod 0600 "$tmp"; mv "$tmp" "$manifest"
+      c3_atomic_state_update "$manifest" "$state" '.runner=$runner' --argjson runner "$runner"
     fi
     ;;
-  --mark-first-resource-create-at)
-    require_future_write_authority
-    timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    tmp="${manifest}.tmp.$$"
-    jq --arg timestamp "$timestamp" 'if .first_resource_create_at_utc == null then .first_resource_create_at_utc=$timestamp else error("FIRST_RESOURCE_TIMESTAMP_ALREADY_SEALED") end' "$manifest" >"$tmp"
-    chmod 0600 "$tmp"
-    mv "$tmp" "$manifest"
+  --build-push-and-seal-image)
+    require_future_write_authority POST_FIRST_RUNTIME_MUTATION
+    need aws
+    need docker
+    [ "$(jq -r .failsafe_active "$state")" = 'true' ] || fail 'FAILSAFE_NOT_ACTIVE_IMAGE_PUSH_REJECTED'
+    image_source_revision="$(jq -r .source_head "$manifest")"
+    [ "$(shasum -a 256 infra/aws/c3-runner/Dockerfile | awk '{print $1}')" = "$(jq -r .image_build_inputs.dockerfile_sha256 "$manifest")" ] \
+      || fail 'DOCKERFILE_SHA256_MISMATCH'
+    [ "$(shasum -a 256 infra/aws/c3-runner/entrypoint.sh | awk '{print $1}')" = "$(jq -r .image_build_inputs.entrypoint_sha256 "$manifest")" ] \
+      || fail 'ENTRYPOINT_SHA256_MISMATCH'
+    repository_uri="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-stacks \
+      --stack-name mxmed-stg-registry \
+      --query 'Stacks[0].Outputs[?OutputKey==`ApplicationRepositoryUri`].OutputValue | [0]' \
+      --output text)"
+    [ "$repository_uri" = '875691018466.dkr.ecr.mx-central-1.amazonaws.com/mxmed-stg-application' ] \
+      || fail 'PHYSICAL_ECR_REPOSITORY_URI_MISMATCH'
+    image_tag="$repository_uri:$(jq -r .run_id "$manifest")"
+    AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws ecr get-login-password --region "$EXPECTED_REGION" \
+      | docker login --username AWS --password-stdin "${repository_uri%%/*}" >/dev/null
+    docker build \
+      --file infra/aws/c3-runner/Dockerfile \
+      --build-arg "PHP_BASE_IMAGE=$(jq -r .image_build_inputs.php_base_image_reference "$manifest")" \
+      --build-arg "PHPREDIS_VERSION=$(jq -r .image_build_inputs.phpredis_version "$manifest")" \
+      --build-arg "AWS_CLI_ZIP_SHA256=$(jq -r .image_build_inputs.aws_cli_archive_sha256 "$manifest")" \
+      --build-arg "SOURCE_REVISION=$(jq -r .source_head "$manifest")" \
+      --tag "$image_tag" .
+    built_source_revision="$(docker image inspect "$image_tag" \
+      --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')"
+    [ "$built_source_revision" = "$image_source_revision" ] || fail 'BUILT_IMAGE_SOURCE_REVISION_MISMATCH'
+    docker push "$image_tag"
+    digest="$(AWS_PROFILE="$MXMED_C3_TEARDOWN_PROFILE" aws ecr describe-images \
+      --repository-name mxmed-stg-application --image-ids imageTag="$(jq -r .run_id "$manifest")" \
+      --query 'imageDetails[0].imageDigest' --output text)"
+    c3_seal_ecr_digest "$manifest" "$state" "$digest" "$image_source_revision" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      || fail 'ECR_DIGEST_GATE_SEAL_FAILED'
     ;;
   --resolve-and-seal-image-digest)
-    require_future_write_authority
-    digest="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws ecr describe-images --repository-name mxmed-stg-application --image-ids imageTag="$(jq -r .run_id "$manifest")" --query 'imageDetails[0].imageDigest' --output text)"
+    require_future_write_authority POST_FIRST_RUNTIME_MUTATION
+    [ -n "$image_source_revision" ] || fail 'IMAGE_SOURCE_REVISION_MISSING'
+    digest="$(AWS_PROFILE="$MXMED_C3_TEARDOWN_PROFILE" aws ecr describe-images --repository-name mxmed-stg-application --image-ids imageTag="$(jq -r .run_id "$manifest")" --query 'imageDetails[0].imageDigest' --output text)"
     case "$digest" in sha256:[0-9a-f][0-9a-f]*) ;; *) fail 'IMAGE_DIGEST_INVALID';; esac
-    tmp="${manifest}.tmp.$$"
-    jq --arg digest "$digest" 'if .image_digest == null then .image_digest=$digest else error("IMAGE_DIGEST_ALREADY_SEALED") end' "$manifest" >"$tmp"
-    chmod 0600 "$tmp"
-    mv "$tmp" "$manifest"
+    c3_seal_ecr_digest "$manifest" "$state" "$digest" "$image_source_revision" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      || fail 'ECR_DIGEST_GATE_SEAL_FAILED'
     ;;
   *) fail 'MODE_REQUIRED' ;;
 esac

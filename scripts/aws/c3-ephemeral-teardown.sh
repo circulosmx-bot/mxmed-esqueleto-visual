@@ -1,7 +1,6 @@
 #!/bin/sh
 set -eu
 
-BASELINE_PRODUCT_HEAD='1f507b61846b96caa34d390ee3a59779f65e4331'
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
 AWS_WRITE_AUTHORITY='DIRECTOR_AUTHORIZES_SINGLE_USE_C3_AWS_WRITES'
@@ -21,16 +20,22 @@ mxmed-stg-security|CloudTrailLogGroup343A29D6|AWS::Logs::LogGroup
 mxmed-stg-session|SessionAuthSecretA6611D29|AWS::SecretsManager::Secret
 mxmed-stg-registry|RegistryKeyDD63DA09|AWS::KMS::Key
 mxmed-stg-registry|ApplicationRepository13E54097|AWS::ECR::Repository'
+CONTRACT_HELPER='scripts/aws/c3-runtime-contract.sh'
+
+[ -f "$CONTRACT_HELPER" ] || { printf '%s\n' 'C3_TEARDOWN_FAIL_CLOSED:RUNTIME_CONTRACT_HELPER_MISSING' >&2; exit 1; }
+. "$CONTRACT_HELPER"
 
 fail() { printf '%s\n' "C3_TEARDOWN_FAIL_CLOSED:$1" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "COMMAND_MISSING:$1"; }
 mode=''
 manifest=''
+state=''
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --execute-stack-deletes|--cleanup-retained|--orphan-inventory|--residual-cost-inventory|--delete-janitor-stack|--final-read-only-verification) mode="$1" ;;
     --manifest) shift; manifest="${1:-}" ;;
+    --state) shift; state="${1:-}" ;;
     *) fail "UNKNOWN_ARGUMENT:$1" ;;
   esac
   shift
@@ -40,23 +45,17 @@ validate_authority() {
   need jq
   auth_file="${MXMED_C3_AWS_WRITE_AUTHORIZATION_FILE:-}"
   [ -n "$auth_file" ] && [ -f "$auth_file" ] || fail 'DIRECTOR_AWS_WRITE_AUTHORIZATION_MISSING'
-  [ -f "$manifest" ] || fail 'RUN_MANIFEST_MISSING'
-  jq -e --arg account "$EXPECTED_ACCOUNT" --arg region "$EXPECTED_REGION" \
-    '.schema == "mxmed.c3.ephemeral.run-manifest.v1" and (.expected_head | test("^[a-f0-9]{40}$")) and .account == $account and .region == $region
-     and .deployment_mode == "DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES"
-     and .template_transport.bucket_name == "mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
-     and ([.stack_names[] | select(startswith("mxmed-stg-") | not)] | length == 0)
-     and (.retained_resource_expectations.count == 13)
-     and ((tostring | test("production|mxmed-prd-|<[^>]+>|UNRESOLVED"; "i")) | not)' "$manifest" >/dev/null \
-    || fail 'RUN_MANIFEST_CONTRACT_REJECTED'
+  [ -n "$state" ] || fail 'RUNTIME_STATE_PATH_MISSING'
+  c3_validate_phase PRE_TEARDOWN "$manifest" "$state" || fail 'RUN_MANIFEST_OR_STATE_CONTRACT_REJECTED'
   jq -e --arg authority "$AWS_WRITE_AUTHORITY" --arg run "$(jq -r .run_id "$manifest")" \
     '.authorization == $authority and .run_id == $run and .single_use == true' "$auth_file" >/dev/null \
     || fail 'DIRECTOR_AWS_WRITE_AUTHORIZATION_INVALID'
   [ "${AWS_ACCOUNT_ID:-}" = "$EXPECTED_ACCOUNT" ] || fail 'AWS_ACCOUNT_MISMATCH'
   [ "${AWS_REGION:-}" = "$EXPECTED_REGION" ] || fail 'AWS_REGION_MISMATCH'
   current_head="$(git rev-parse HEAD)"
-  [ "$current_head" = "$(jq -r .expected_head "$manifest")" ] || fail 'SOURCE_HEAD_MISMATCH'
-  git merge-base --is-ancestor "$BASELINE_PRODUCT_HEAD" "$current_head" || fail 'BASELINE_PRODUCT_HEAD_NOT_ANCESTOR'
+  [ "$current_head" = "$(jq -r .source_head "$manifest")" ] || fail 'SOURCE_HEAD_MISMATCH'
+  [ "${MXMED_C3_TEARDOWN_PROFILE:-}" = 'mxmed-c3-stg-teardown' ] || fail 'EXACT_TEARDOWN_PROFILE_REQUIRED'
+  export AWS_PROFILE="$MXMED_C3_TEARDOWN_PROFILE"
 }
 
 cleanup_template_transport() {
@@ -65,7 +64,7 @@ cleanup_template_transport() {
   if ! aws s3api head-bucket --bucket "$TEMPLATE_BUCKET" >/dev/null 2>&1; then
     return 0
   fi
-  jq -r '.template_transport.objects[].key' "$manifest" | while IFS= read -r key; do
+  jq -r '.template_transport_objects[].key' "$state" | while IFS= read -r key; do
     case "$key" in
       "$(jq -r .run_id "$manifest")"/mxmed-stg-*/[0-9a-f]*.template.json) ;;
       *) fail 'TEMPLATE_OBJECT_KEY_OUT_OF_SCOPE' ;;
@@ -79,16 +78,16 @@ cleanup_template_transport() {
 }
 
 capture_retained_physical_ids() {
-  [ "$(jq '.retained_resource_expectations.physical_resources | length' "$manifest")" = '0' ] || return 0
+  [ "$(jq '.retained_physical_resource_ids | length' "$state")" = '0' ] || return 0
   captures='[]'
   while IFS='|' read -r stack logical_id resource_type; do
     [ -n "$stack" ] || continue
     if ! physical_id="$(aws cloudformation describe-stack-resource --stack-name "$stack" --logical-resource-id "$logical_id" --query 'StackResourceDetail.PhysicalResourceId' --output text 2>/dev/null)"; then
-      [ "$(jq -r '.deployment_failure_at_utc // empty' "$manifest")" != '' ] && continue
+      [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] && continue
       fail "RETAINED_PHYSICAL_ID_MISSING:$logical_id"
     fi
     if [ -z "$physical_id" ] || [ "$physical_id" = 'None' ]; then
-      [ "$(jq -r '.deployment_failure_at_utc // empty' "$manifest")" != '' ] && continue
+      [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] && continue
       fail "RETAINED_PHYSICAL_ID_MISSING:$logical_id"
     fi
     if [ "$logical_id" = 'AuditBucketB01E0AE8' ] && [ "$physical_id" != "$AUDIT_BUCKET" ]; then
@@ -99,12 +98,9 @@ capture_retained_physical_ids() {
 $RETAINED
 EOF
   capture_count="$(printf '%s' "$captures" | jq length)"
-  [ "$capture_count" = '13' ] || [ "$(jq -r '.deployment_failure_at_utc // empty' "$manifest")" != '' ] \
+  [ "$capture_count" = '13' ] || [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] \
     || fail 'RETAINED_CAPTURE_COUNT_INVALID'
-  tmp="${manifest}.tmp.$$"
-  jq --argjson captures "$captures" '.retained_resource_expectations.physical_resources=$captures' "$manifest" >"$tmp"
-  chmod 0600 "$tmp"
-  mv "$tmp" "$manifest"
+  c3_atomic_state_update "$manifest" "$state" '.retained_physical_resource_ids=$captures' --argjson captures "$captures"
 }
 
 empty_exact_versioned_bucket() {
@@ -142,12 +138,15 @@ case "$mode" in
     validate_authority
     capture_retained_physical_ids
     now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    terminal="$(jq -r '.test_terminal_at_utc // empty' "$manifest")"
+    terminal="$(jq -r --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
+      'if .test_terminal_at_utc == $pending then empty else .test_terminal_at_utc // empty end' "$state")"
     if [ -n "$terminal" ]; then
       delay=$(( $(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$now" +%s) - $(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$terminal" +%s) ))
       [ "$delay" -le 300 ] || fail 'TEARDOWN_START_EXCEEDED_300_SECONDS'
     fi
-    tmp="${manifest}.tmp.$$"; jq --arg now "$now" '.teardown_started_at_utc=$now' "$manifest" >"$tmp"; chmod 0600 "$tmp"; mv "$tmp" "$manifest"
+    c3_atomic_state_update "$manifest" "$state" \
+      'if .teardown_started_at_utc == $pending then .teardown_started_at_utc=$now else . end' \
+      --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" --arg now "$now"
     for stack in $DELETE_STACKS; do
       if aws cloudformation describe-stacks --stack-name "$stack" >/dev/null 2>&1; then
         aws cloudformation delete-stack --stack-name "$stack"
@@ -155,48 +154,48 @@ case "$mode" in
       fi
     done
     cleanup_template_transport
-    "$(dirname "$0")/c3-ephemeral-teardown.sh" --cleanup-retained --manifest "$manifest"
-    "$(dirname "$0")/c3-ephemeral-teardown.sh" --orphan-inventory --manifest "$manifest"
-    "$(dirname "$0")/c3-ephemeral-teardown.sh" --residual-cost-inventory --manifest "$manifest"
-    "$(dirname "$0")/c3-ephemeral-teardown.sh" --final-read-only-verification --manifest "$manifest"
-    "$(dirname "$0")/c3-ephemeral-teardown.sh" --delete-janitor-stack --manifest "$manifest"
+    "$(dirname "$0")/c3-ephemeral-teardown.sh" --cleanup-retained --manifest "$manifest" --state "$state"
+    "$(dirname "$0")/c3-ephemeral-teardown.sh" --orphan-inventory --manifest "$manifest" --state "$state"
+    "$(dirname "$0")/c3-ephemeral-teardown.sh" --residual-cost-inventory --manifest "$manifest" --state "$state"
+    "$(dirname "$0")/c3-ephemeral-teardown.sh" --final-read-only-verification --manifest "$manifest" --state "$state"
+    "$(dirname "$0")/c3-ephemeral-teardown.sh" --delete-janitor-stack --manifest "$manifest" --state "$state"
     ;;
   --cleanup-retained)
     validate_authority
-    physical_count="$(jq '.retained_resource_expectations.physical_resources | length' "$manifest")"
-    [ "$physical_count" = '13' ] || [ "$(jq -r '.deployment_failure_at_utc // empty' "$manifest")" != '' ] \
+    physical_count="$(jq '.retained_physical_resource_ids | length' "$state")"
+    [ "$physical_count" = '13' ] || [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] \
       || fail 'RETAINED_PHYSICAL_IDS_NOT_SEALED'
-    jq -r '.retained_resource_expectations.physical_resources[] | [.type,.physical_id] | @tsv' "$manifest" \
+    jq -r '.retained_physical_resource_ids[] | [.type,.physical_id] | @tsv' "$state" \
       | while IFS="$(printf '\t')" read -r resource_type physical_id; do cleanup_one "$resource_type" "$physical_id"; done
     ;;
   --orphan-inventory)
     validate_authority
     inventory='[]'
     while IFS="$(printf '\t')" read -r resource_type physical_id; do
-      state='ABSENT_OR_DELETION_REQUESTED'
+      resource_state='ABSENT_OR_DELETION_REQUESTED'
       case "$resource_type" in
-        'AWS::KMS::Key') state="$(aws kms describe-key --key-id "$physical_id" --query 'KeyMetadata.KeyState' --output text 2>/dev/null || printf ABSENT)" ;;
-        'AWS::SecretsManager::Secret') state="$(aws secretsmanager describe-secret --secret-id "$physical_id" --query 'DeletedDate' --output text 2>/dev/null || printf ABSENT)" ;;
-        'AWS::S3::Bucket') aws s3api head-bucket --bucket "$physical_id" >/dev/null 2>&1 && state=ACTIVE || true ;;
-        'AWS::ECR::Repository') aws ecr describe-repositories --repository-names "$physical_id" >/dev/null 2>&1 && state=ACTIVE || true ;;
-        'AWS::Logs::LogGroup') count="$(aws logs describe-log-groups --log-group-name-prefix "$physical_id" --query 'length(logGroups[?logGroupName==`'"$physical_id"'`])' --output text)"; [ "$count" = '0' ] || state=ACTIVE ;;
+        'AWS::KMS::Key') resource_state="$(aws kms describe-key --key-id "$physical_id" --query 'KeyMetadata.KeyState' --output text 2>/dev/null || printf ABSENT)" ;;
+        'AWS::SecretsManager::Secret') resource_state="$(aws secretsmanager describe-secret --secret-id "$physical_id" --query 'DeletedDate' --output text 2>/dev/null || printf ABSENT)" ;;
+        'AWS::S3::Bucket') aws s3api head-bucket --bucket "$physical_id" >/dev/null 2>&1 && resource_state=ACTIVE || true ;;
+        'AWS::ECR::Repository') aws ecr describe-repositories --repository-names "$physical_id" >/dev/null 2>&1 && resource_state=ACTIVE || true ;;
+        'AWS::Logs::LogGroup') count="$(aws logs describe-log-groups --log-group-name-prefix "$physical_id" --query 'length(logGroups[?logGroupName==`'"$physical_id"'`])' --output text)"; [ "$count" = '0' ] || resource_state=ACTIVE ;;
       esac
-      inventory="$(printf '%s' "$inventory" | jq --arg type "$resource_type" --arg id "$physical_id" --arg state "$state" '. + [{type:$type,physical_id:$id,state:$state}]')"
+      inventory="$(printf '%s' "$inventory" | jq --arg type "$resource_type" --arg id "$physical_id" --arg state "$resource_state" '. + [{type:$type,physical_id:$id,state:$state}]')"
     done <<EOF
-$(jq -r '.retained_resource_expectations.physical_resources[] | [.type,.physical_id] | @tsv' "$manifest")
+$(jq -r '.retained_physical_resource_ids[] | [.type,.physical_id] | @tsv' "$state")
 EOF
-    tmp="${manifest}.tmp.$$"; jq --argjson inventory "$inventory" '.orphan_inventory=$inventory' "$manifest" >"$tmp"; chmod 0600 "$tmp"; mv "$tmp" "$manifest"
+    c3_atomic_state_update "$manifest" "$state" '.orphan_inventory=$inventory' --argjson inventory "$inventory"
     ;;
   --residual-cost-inventory)
     validate_authority
-    [ "$(jq '.orphan_inventory | length' "$manifest")" = "$(jq '.retained_resource_expectations.physical_resources | length' "$manifest")" ] || fail 'ORPHAN_INVENTORY_MISSING'
-    active="$(jq '[.orphan_inventory[] | select(.state == "ACTIVE" or (.type == "AWS::KMS::Key" and .state != "PendingDeletion" and .state != "ABSENT") or (.type == "AWS::SecretsManager::Secret" and .state == "None"))] | length' "$manifest")"
+    [ "$(jq '.orphan_inventory | length' "$state")" = "$(jq '.retained_physical_resource_ids | length' "$state")" ] || fail 'ORPHAN_INVENTORY_MISSING'
+    active="$(jq '[.orphan_inventory[] | select(.state == "ACTIVE" or (.type == "AWS::KMS::Key" and .state != "PendingDeletion" and .state != "ABSENT") or (.type == "AWS::SecretsManager::Secret" and .state == "None"))] | length' "$state")"
     if aws s3api head-bucket --bucket "$TEMPLATE_BUCKET" >/dev/null 2>&1; then active=$((active + 1)); fi
-    tmp="${manifest}.tmp.$$"; jq --argjson active "$active" '.residual_billable_resource_count=$active' "$manifest" >"$tmp"; chmod 0600 "$tmp"; mv "$tmp" "$manifest"
+    c3_atomic_state_update "$manifest" "$state" '.residual_billable_resource_count=$active' --argjson active "$active"
     ;;
   --final-read-only-verification)
     validate_authority
-    [ "$(jq -r '.residual_billable_resource_count // -1' "$manifest")" = '0' ] || fail 'RESIDUAL_BILLABLE_RESOURCES_REMAIN'
+    [ "$(jq -r '.residual_billable_resource_count // -1' "$state")" = '0' ] || fail 'RESIDUAL_BILLABLE_RESOURCES_REMAIN'
     printf '%s\n' 'C3_RESIDUAL_BILLABLE_RESOURCE_COUNT=0'
     ;;
   --delete-janitor-stack)
@@ -205,6 +204,10 @@ EOF
       aws cloudformation delete-stack --stack-name mxmed-stg-c3-janitor
       aws cloudformation wait stack-delete-complete --stack-name mxmed-stg-c3-janitor
     fi
+    now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    c3_atomic_state_update "$manifest" "$state" \
+      'if .teardown_completed_at_utc == $pending then .teardown_completed_at_utc=$now else . end' \
+      --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" --arg now "$now"
     ;;
   *) fail 'MODE_REQUIRED' ;;
 esac

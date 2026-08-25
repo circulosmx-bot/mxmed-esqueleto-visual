@@ -43,6 +43,7 @@ describe('C3 immutable runner image', () => {
 
 describe('C3 control scripts fail closed offline', () => {
   const scripts = [
+    'scripts/aws/c3-runtime-contract.sh',
     'scripts/aws/c3-ephemeral-deploy.sh',
     'scripts/aws/c3-ephemeral-test.sh',
     'scripts/aws/c3-ephemeral-teardown.sh',
@@ -58,17 +59,21 @@ describe('C3 control scripts fail closed offline', () => {
 
   test('all AWS-capable modes reject the current activity before invoking AWS', () => {
     const cases = [
-      ['scripts/aws/c3-ephemeral-deploy.sh', '--prepare-template-transport'],
-      ['scripts/aws/c3-ephemeral-deploy.sh', '--execute-stack'],
-      ['scripts/aws/c3-ephemeral-test.sh', '--run-once'],
-      ['scripts/aws/c3-ephemeral-teardown.sh', '--execute-stack-deletes'],
+      ['scripts/aws/c3-ephemeral-deploy.sh', ['--prepare-template-transport']],
+      ['scripts/aws/c3-ephemeral-deploy.sh', ['--execute-stack', '--stack', 'mxmed-stg-network']],
+      ['scripts/aws/c3-ephemeral-test.sh', ['--run-once']],
+      ['scripts/aws/c3-ephemeral-teardown.sh', ['--execute-stack-deletes']],
     ] as const;
-    for (const [script, mode] of cases) {
-      const result = spawnSync(join(repositoryRoot, script), [mode, '--manifest', '/nonexistent'], {
-        cwd: repositoryRoot,
-        encoding: 'utf8',
-        env: { PATH: process.env.PATH ?? '/usr/bin:/bin' },
-      });
+    for (const [script, modeArguments] of cases) {
+      const result = spawnSync(
+        join(repositoryRoot, script),
+        [...modeArguments, '--manifest', '/nonexistent'],
+        {
+          cwd: repositoryRoot,
+          encoding: 'utf8',
+          env: { PATH: process.env.PATH ?? '/usr/bin:/bin' },
+        },
+      );
       expect(result.status).not.toBe(0);
       expect(result.stderr).toMatch(/DIRECTOR_AWS_WRITE_AUTHORIZATION_MISSING/);
       expect(result.stderr).not.toMatch(/Unable to locate credentials|aws: command not found/i);
@@ -90,16 +95,17 @@ describe('C3 control scripts fail closed offline', () => {
     );
   });
 
-  test('rejects placeholders, production, wrong account/region/HEAD and represents all ten gates', () => {
+  test('rejects placeholders, production and wrong account/region with twelve phased gates', () => {
     const deploy = read('scripts/aws/c3-ephemeral-deploy.sh');
-    expect(deploy).toContain('UNRESOLVED');
-    expect(deploy).toContain('production|mxmed-prd-');
+    const contract = read('scripts/aws/c3-runtime-contract.sh');
+    expect(contract).toContain('PENDING_RUNTIME_RESOLUTION');
+    expect(contract).toContain('mxmed-prd-');
     expect(deploy).toContain("EXPECTED_ACCOUNT='875691018466'");
     expect(deploy).toContain("EXPECTED_REGION='mx-central-1'");
-    expect(deploy).toContain("BASELINE_PRODUCT_HEAD='1f507b61846b96caa34d390ee3a59779f65e4331'");
-    expect(
-      deploy.match(/"[A-Z][A-Z0-9_]+"/g)?.filter((value) => value.includes('_')).length,
-    ).toBeGreaterThanOrEqual(10);
+    expect(contract).toContain('{ordinal:12,name:"ECR_DIGEST_SEALED_BEFORE_RUNNER"}');
+    expect(contract).toContain('[ "$pass_1_to_11" = \'11\' ]');
+    expect(contract).toContain('[ "$gate_12" = "$C3_PENDING_RUNTIME" ]');
+    expect(deploy).not.toContain('BASELINE_PRODUCT_HEAD=');
   });
 
   test('uses only direct CloudFormation transport and rejects bootstrap or unsealed templates', () => {
@@ -114,5 +120,6 @@ describe('C3 control scripts fail closed offline', () => {
     expect(deploy).toContain('TEMPLATE_BOOTSTRAP_REFERENCE_REJECTED');
     expect(deploy).toContain('TEMPLATE_BUCKET_PUBLIC_ACCESS_BLOCK_INVALID');
     expect(deploy).toContain('mxmed-stg-c3-cf-templates-875691018466-mx-central-1');
+    expect(deploy).toContain('$run_id/$name/$sha$C3_OBJECT_KEY_SUFFIX');
   });
 });

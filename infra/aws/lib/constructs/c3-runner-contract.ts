@@ -1,4 +1,3 @@
-export const MXMED_C3_EXPECTED_HEAD = '1f507b61846b96caa34d390ee3a59779f65e4331' as const;
 export const MXMED_C3_ACCOUNT = '875691018466' as const;
 export const MXMED_C3_REGION = 'mx-central-1' as const;
 export const MXMED_C3_STACK_PREFIX = 'mxmed-stg-' as const;
@@ -6,8 +5,11 @@ export const MXMED_C3_COST_CAP_USD = 5 as const;
 export const MXMED_C3_TEMPLATE_BODY_MAX_BYTES = 51_200 as const;
 export const MXMED_C3_TEMPLATE_BUCKET_NAME =
   'mxmed-stg-c3-cf-templates-875691018466-mx-central-1' as const;
+export const MXMED_C3_TEMPLATE_OBJECT_KEY_SUFFIX = '.template.json' as const;
 export const MXMED_C3_AUDIT_BUCKET_NAME = 'mxmed-stg-audit-875691018466-mx-central-1' as const;
 export const MXMED_C3_DEPLOYMENT_MODE = 'DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES' as const;
+export const MXMED_C3_RUNTIME_CLOCK_ORIGIN = 'FIRST_SUCCESSFUL_RUNTIME_AWS_MUTATION' as const;
+export const MXMED_C3_PENDING_RUNTIME_RESOLUTION = 'PENDING_RUNTIME_RESOLUTION' as const;
 
 export type MxMedC3TemplateTransport = 'TEMPLATE_BODY' | 'C3_TEMPLATE_S3_URL';
 
@@ -100,36 +102,44 @@ export const MXMED_C3_DELETE_ORDER = Object.freeze([
 export const MXMED_C3_STOP_GATES = Object.freeze([
   'SOURCE_HEAD_MATCH',
   'WORKTREE_CLEAN',
-  'DIRECTOR_AWS_WRITE_AUTHORIZATION_PRESENT',
+  'FRESH_DIRECTOR_RUNTIME_AUTHORIZATION_PRESENT',
   'PRODUCTION_DENY_PROVEN',
-  'CHANGE_SET_EXACT_SCOPE_PASS',
+  'SEALED_TEMPLATE_AND_RESOURCE_SCOPE_PASS',
   'ESTIMATED_COST_WITHIN_USD_5_CAP',
   'MANUAL_TEARDOWN_READY',
-  'AUTO_TEARDOWN_FAILSAFE_READY',
+  'AUTO_TEARDOWN_FAILSAFE_CONTRACT_READY',
   'RETAINED_RESOURCE_CLEANUP_READY',
   'NONPRODUCTION_TARGET_PROVEN',
+  'ROLE_CHAIN_EXACT_PASS',
+  'ECR_DIGEST_SEALED_BEFORE_RUNNER',
 ] as const);
 
 export const MXMED_C3_RUN_MANIFEST_REQUIRED_FIELDS = Object.freeze([
   'schema',
+  'run_uuid',
   'run_id',
-  'expected_head',
+  'source_head',
   'account',
   'region',
   'director_authorization_reference',
   'activity_cost_cap_usd',
-  'start_window_utc',
-  'failsafe_at_utc',
-  'expires_at_utc',
+  'runtime_clock_contract',
+  'pending_runtime_fields',
+  'object_key_contract',
+  'gate_definitions',
+  'phase_requirements',
   'template_sha256',
+  'templates',
   'source_sha256',
   'script_sha256',
-  'image_digest',
-  'approved_role_arns',
+  'policy_sha256',
+  'image_build_inputs',
+  'expected_resource_graph',
+  'approved_role_profiles',
+  'cfn_execution_role_arns',
   'stack_names',
   'expected_resource_counts',
   'retained_resource_expectations',
-  'gates',
 ] as const);
 
 export const MXMED_C3_RETAINED_LOGICAL_RESOURCES = Object.freeze([

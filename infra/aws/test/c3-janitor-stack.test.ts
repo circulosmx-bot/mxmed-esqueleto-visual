@@ -82,16 +82,19 @@ describe('C3 janitor and control contract', () => {
     expect(budget).toContain('BudgetNotificationTopicArn');
   });
 
-  test('represents all ten machine stop gates in the source contract', () => {
-    expect(MXMED_C3_STOP_GATES).toHaveLength(10);
-    expect(new Set(MXMED_C3_STOP_GATES).size).toBe(10);
+  test('represents all twelve phased machine stop gates in the source contract', () => {
+    expect(MXMED_C3_STOP_GATES).toHaveLength(12);
+    expect(new Set(MXMED_C3_STOP_GATES).size).toBe(12);
     expect(MXMED_C3_STOP_GATES).toEqual(
       expect.arrayContaining([
-        'DIRECTOR_AWS_WRITE_AUTHORIZATION_PRESENT',
+        'SOURCE_HEAD_MATCH',
+        'FRESH_DIRECTOR_RUNTIME_AUTHORIZATION_PRESENT',
         'PRODUCTION_DENY_PROVEN',
         'MANUAL_TEARDOWN_READY',
-        'AUTO_TEARDOWN_FAILSAFE_READY',
+        'AUTO_TEARDOWN_FAILSAFE_CONTRACT_READY',
         'NONPRODUCTION_TARGET_PROVEN',
+        'ROLE_CHAIN_EXACT_PASS',
+        'ECR_DIGEST_SEALED_BEFORE_RUNNER',
       ]),
     );
   });
