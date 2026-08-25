@@ -5,6 +5,45 @@ import { spawnSync } from 'node:child_process';
 const repositoryRoot = join(__dirname, '../../..');
 const read = (path: string): string => readFileSync(join(repositoryRoot, path), 'utf8');
 
+interface PreFromArgInventory {
+  name: string;
+  usedInFrom: boolean;
+  usedAfterFrom: boolean;
+  redeclaredInsideStage: boolean;
+}
+
+const inventoryPreFromArgs = (dockerfile: string): PreFromArgInventory[] => {
+  const lines = dockerfile.split('\n');
+  const firstFromIndex = lines.findIndex((line) => /^\s*FROM\s+/i.test(line));
+  if (firstFromIndex < 0) {
+    throw new Error('Dockerfile must contain a FROM instruction');
+  }
+
+  const fromLine = lines[firstFromIndex] ?? '';
+  const stageLines = lines.slice(firstFromIndex + 1);
+  const stageSource = stageLines.join('\n');
+
+  return lines
+    .slice(0, firstFromIndex)
+    .map((line) => /^\s*ARG\s+([A-Za-z_][A-Za-z0-9_]*)/.exec(line)?.[1])
+    .filter((name): name is string => name !== undefined)
+    .map((name) => {
+      const reference = new RegExp(`\\$\\{?${name}\\}?`);
+      const redeclaration = new RegExp(`^\\s*ARG\\s+${name}(?:\\s*=.*)?\\s*$`, 'i');
+      return {
+        name,
+        usedInFrom: reference.test(fromLine),
+        usedAfterFrom: reference.test(stageSource),
+        redeclaredInsideStage: stageLines.some((line) => redeclaration.test(line)),
+      };
+    });
+};
+
+const outOfStageScopeArgs = (dockerfile: string): string[] =>
+  inventoryPreFromArgs(dockerfile)
+    .filter((arg) => arg.usedAfterFrom && !arg.redeclaredInsideStage)
+    .map((arg) => arg.name);
+
 describe('C3 immutable runner image', () => {
   const dockerfile = read('infra/aws/c3-runner/Dockerfile');
   const entrypoint = read('infra/aws/c3-runner/entrypoint.sh');
@@ -18,6 +57,25 @@ describe('C3 immutable runner image', () => {
     expect(dockerfile).toContain('sha256sum --check --strict');
     expect(dockerfile).toContain('org.opencontainers.image.revision');
     expect(dockerfile).toContain('SOURCE_REVISION');
+  });
+
+  test('keeps every post-FROM global build argument in stage scope', () => {
+    expect(inventoryPreFromArgs(dockerfile)).toEqual([
+      {
+        name: 'PHP_BASE_IMAGE',
+        usedInFrom: true,
+        usedAfterFrom: true,
+        redeclaredInsideStage: true,
+      },
+    ]);
+    expect(outOfStageScopeArgs(dockerfile)).toEqual([]);
+
+    const invalidActualDockerfile = dockerfile.replace(
+      /(?<=FROM \$\{PHP_BASE_IMAGE\}\n\n)ARG PHP_BASE_IMAGE\n/,
+      '',
+    );
+    expect(invalidActualDockerfile).not.toBe(dockerfile);
+    expect(outOfStageScopeArgs(invalidActualDockerfile)).toEqual(['PHP_BASE_IMAGE']);
   });
 
   test('copies only the C3 identity test surface and runs as a read-only non-root task', () => {
