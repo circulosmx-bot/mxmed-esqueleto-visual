@@ -35,6 +35,17 @@
       "Resource": "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-janitor:*"
     },
     {
+      "Sid": "ListRegionalLogGroupsForJanitorResolution",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1"
+        }
+      }
+    },
+    {
       "Sid": "ManageOnlyC3Budget",
       "Effect": "Allow",
       "Action": ["budgets:ModifyBudget", "budgets:ViewBudget"],

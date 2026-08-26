@@ -178,6 +178,45 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     }
   });
 
+  test('grants only regional log-group listing for Janitor CloudFormation resolution', () => {
+    const janitor = readDocument(authority.janitor.policy);
+    const describeLogGroups = janitor.Statement.filter((statement) =>
+      actions(statement).includes('logs:DescribeLogGroups'),
+    );
+
+    expect(describeLogGroups).toEqual([
+      {
+        Sid: 'ListRegionalLogGroupsForJanitorResolution',
+        Effect: 'Allow',
+        Action: 'logs:DescribeLogGroups',
+        Resource: '*',
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+
+    // The same document is the source for the Janitor identity policy and boundary.
+    const effectiveAllows = (action: string, resource: string): boolean =>
+      documentAllows(janitor, action, resource) && documentAllows(janitor, action, resource);
+    expect(effectiveAllows('logs:DescribeLogGroups', '*')).toBe(true);
+    expect(effectiveAllows('logs:GetLogEvents', '*')).toBe(false);
+    expect(effectiveAllows('logs:FilterLogEvents', '*')).toBe(false);
+    expect(effectiveAllows('logs:StartQuery', '*')).toBe(false);
+    expect(effectiveAllows('logs:GetLogRecord', '*')).toBe(false);
+    expect(effectiveAllows('logs:DescribeLogStreams', '*')).toBe(false);
+    expect(janitor.Statement.flatMap(actions)).not.toContain('logs:*');
+
+    const network = readDocument(authority.network.policy);
+    expect(network.Statement.flatMap(actions)).toContain('logs:DescribeLogGroups');
+    expect(network.Statement.flatMap(actions)).not.toContain('logs:*');
+
+    for (const key of ['security', 'session', 'registry', 'runner'] as const) {
+      const item = authority[key];
+      expect(readDocument(item.policy).Statement.flatMap(actions)).not.toContain(
+        'logs:DescribeLogGroups',
+      );
+    }
+  });
+
   test('maps every synthesized resource to one policy with its service action family', () => {
     let covered = 0;
     for (const item of Object.values(authority)) {
