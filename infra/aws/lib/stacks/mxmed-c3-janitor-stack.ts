@@ -436,7 +436,6 @@ export class MxMedC3JanitorStack extends BaseMxMedStack {
         retryPolicy: { maximumEventAgeInSeconds: 300, maximumRetryAttempts: 1 },
       },
     });
-    failSafeSchedule.addPropertyOverride('ActionAfterCompletion', 'DELETE');
     failSafeSchedule.addDependency(schedulerPolicy);
     const janitorDeleteSchedule = new CfnSchedule(this, 'JanitorDeleteSchedule', {
       name: 'mxmed-stg-c3-janitor-hard-cap',
@@ -450,7 +449,6 @@ export class MxMedC3JanitorStack extends BaseMxMedStack {
         retryPolicy: { maximumEventAgeInSeconds: 300, maximumRetryAttempts: 1 },
       },
     });
-    janitorDeleteSchedule.addPropertyOverride('ActionAfterCompletion', 'DELETE');
     janitorDeleteSchedule.addDependency(schedulerPolicy);
   }
 

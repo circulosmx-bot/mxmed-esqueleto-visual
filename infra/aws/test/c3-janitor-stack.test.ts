@@ -14,7 +14,7 @@ interface Resource {
   readonly Properties?: Readonly<Record<string, unknown>>;
 }
 
-function rendered(): readonly Resource[] {
+function rendered(): Readonly<Record<string, Resource>> {
   const stage = new MxMedC3EphemeralStage(
     new App({ analyticsReporting: false }),
     'JanitorFixture',
@@ -26,11 +26,12 @@ function rendered(): readonly Resource[] {
   const template = Template.fromStack(stage.janitorStack).toJSON() as {
     Resources?: Record<string, Resource>;
   };
-  return Object.values(template.Resources ?? {});
+  return template.Resources ?? {};
 }
 
 describe('C3 janitor and control contract', () => {
-  const resources = rendered();
+  const resourcesByLogicalId = rendered();
+  const resources = Object.values(resourcesByLogicalId);
   const ofType = (type: string) => resources.filter((resource) => resource.Type === type);
 
   test('uses the reviewed eight-resource Scheduler plus Step Functions design', () => {
@@ -42,12 +43,47 @@ describe('C3 janitor and control contract', () => {
   });
 
   test('encodes a one-time +22h failsafe and independent +24h janitor deletion', () => {
-    const schedules = JSON.stringify(ofType('AWS::Scheduler::Schedule'));
-    expect(schedules).toContain('FailSafeScheduleExpression');
-    expect(schedules).toContain('JanitorDeleteScheduleExpression');
-    expect(schedules).toContain('ActionAfterCompletion');
-    expect(schedules).toContain('DELETE');
-    expect(schedules).toContain('cloudformation:deleteStack');
+    const failSafeSchedule = resourcesByLogicalId.FailSafeSchedule;
+    const janitorDeleteSchedule = resourcesByLogicalId.JanitorDeleteSchedule;
+    if (failSafeSchedule === undefined || janitorDeleteSchedule === undefined) {
+      throw new Error('Expected both C3 Janitor schedules to be synthesized');
+    }
+    const supportedScheduleProperties = new Set([
+      'Description',
+      'EndDate',
+      'FlexibleTimeWindow',
+      'GroupName',
+      'KmsKeyArn',
+      'Name',
+      'ScheduleExpression',
+      'ScheduleExpressionTimezone',
+      'StartDate',
+      'State',
+      'Target',
+    ]);
+
+    expect(failSafeSchedule).toMatchObject({
+      Type: 'AWS::Scheduler::Schedule',
+      Properties: {
+        ScheduleExpression: { Ref: 'FailSafeScheduleExpression' },
+        Target: { Arn: { 'Fn::GetAtt': ['JanitorStateMachine', 'Arn'] } },
+      },
+    });
+    expect(janitorDeleteSchedule).toMatchObject({
+      Type: 'AWS::Scheduler::Schedule',
+      Properties: {
+        ScheduleExpression: { Ref: 'JanitorDeleteScheduleExpression' },
+        Target: { Arn: 'arn:aws:scheduler:::aws-sdk:cloudformation:deleteStack' },
+      },
+    });
+    for (const schedule of [failSafeSchedule, janitorDeleteSchedule]) {
+      expect(schedule.Properties).not.toHaveProperty('ActionAfterCompletion');
+      expect(
+        Object.keys(schedule.Properties ?? {}).filter(
+          (property) => !supportedScheduleProperties.has(property),
+        ),
+      ).toEqual([]);
+    }
   });
 
   test('captures and cleans exactly all 13 reviewed retained logical resources', () => {
