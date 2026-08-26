@@ -3,6 +3,7 @@ set -eu
 
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
+BUDGETS_API_REGION='us-east-1'
 AWS_WRITE_AUTHORITY='DIRECTOR_AUTHORIZES_SINGLE_USE_C3_AWS_WRITES'
 DELETE_STACKS='mxmed-stg-c3-runner mxmed-stg-session mxmed-stg-registry mxmed-stg-security mxmed-stg-network'
 TEMPLATE_BUCKET='mxmed-stg-c3-cf-templates-875691018466-mx-central-1'
@@ -33,7 +34,7 @@ state=''
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --execute-stack-deletes|--cleanup-retained|--orphan-inventory|--residual-cost-inventory|--delete-janitor-stack|--final-read-only-verification) mode="$1" ;;
+    --execute-stack-deletes|--delete-direct-budget|--cleanup-retained|--orphan-inventory|--residual-cost-inventory|--delete-janitor-stack|--final-read-only-verification) mode="$1" ;;
     --manifest) shift; manifest="${1:-}" ;;
     --state) shift; state="${1:-}" ;;
     *) fail "UNKNOWN_ARGUMENT:$1" ;;
@@ -75,6 +76,41 @@ cleanup_template_transport() {
   [ "$remaining" = '0' ] || fail 'TEMPLATE_BUCKET_OBJECTS_REMAIN'
   aws s3api delete-bucket-policy --bucket "$TEMPLATE_BUCKET"
   aws s3api delete-bucket --bucket "$TEMPLATE_BUCKET"
+}
+
+cleanup_exact_direct_budget() {
+  budget_name="$(jq -r .direct_budget_authority.budget_name "$manifest")"
+  [ "$(jq -r .direct_budget_authority.api_region "$manifest")" = "$BUDGETS_API_REGION" ] \
+    || fail 'DIRECT_BUDGET_API_REGION_MISMATCH'
+  [ "$budget_name" = "mxmed-stg-c3-$(jq -r .run_id "$manifest")" ] \
+    || fail 'DIRECT_BUDGET_NAME_NOT_EXACT_RUN_BOUND'
+  if aws budgets describe-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
+    --budget-name "$budget_name" >/dev/null 2>&1; then
+    now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    if [ "$(jq -r .direct_budget_created "$state")" = false ]; then
+      c3_atomic_state_update "$manifest" "$state" '
+        .direct_budget_created=true|.direct_budget_created_at_utc=$now
+        |.created_resource_ids += [{type:"direct-budget",id:.direct_budget_name}]
+      ' --arg now "$now"
+    fi
+    c3_atomic_state_update "$manifest" "$state" \
+      'if .direct_budget_deletion_started_at_utc == $pending then .direct_budget_deletion_started_at_utc=$now else . end' \
+      --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" --arg now "$now"
+    aws budgets delete-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
+      --budget-name "$budget_name" >/dev/null || fail 'DIRECT_BUDGET_EXACT_DELETE_FAILED'
+    deleted="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    c3_record_direct_budget_deleted "$manifest" "$state" "$now" "$deleted"
+  fi
+  if absence="$(aws budgets describe-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
+    --budget-name "$budget_name" 2>&1)"; then
+    fail 'DIRECT_BUDGET_EXACT_ABSENCE_NOT_PROVEN'
+  else
+    case "$absence" in
+      *NotFoundException*|*not\ found*|*could\ not\ be\ found*) ;;
+      *) fail 'DIRECT_BUDGET_ABSENCE_READBACK_FAILED' ;;
+    esac
+  fi
+  c3_atomic_state_update "$manifest" "$state" '.direct_budget_residual_count=0'
 }
 
 capture_retained_physical_ids() {
@@ -147,6 +183,7 @@ case "$mode" in
     c3_atomic_state_update "$manifest" "$state" \
       'if .teardown_started_at_utc == $pending then .teardown_started_at_utc=$now else . end' \
       --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" --arg now "$now"
+    cleanup_exact_direct_budget
     for stack in $DELETE_STACKS; do
       if aws cloudformation describe-stacks --stack-name "$stack" >/dev/null 2>&1; then
         aws cloudformation delete-stack --stack-name "$stack"
@@ -159,6 +196,10 @@ case "$mode" in
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --residual-cost-inventory --manifest "$manifest" --state "$state"
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --final-read-only-verification --manifest "$manifest" --state "$state"
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --delete-janitor-stack --manifest "$manifest" --state "$state"
+    ;;
+  --delete-direct-budget)
+    validate_authority
+    cleanup_exact_direct_budget
     ;;
   --cleanup-retained)
     validate_authority
@@ -191,11 +232,24 @@ EOF
     [ "$(jq '.orphan_inventory | length' "$state")" = "$(jq '.retained_physical_resource_ids | length' "$state")" ] || fail 'ORPHAN_INVENTORY_MISSING'
     active="$(jq '[.orphan_inventory[] | select(.state == "ACTIVE" or (.type == "AWS::KMS::Key" and .state != "PendingDeletion" and .state != "ABSENT") or (.type == "AWS::SecretsManager::Secret" and .state == "None"))] | length' "$state")"
     if aws s3api head-bucket --bucket "$TEMPLATE_BUCKET" >/dev/null 2>&1; then active=$((active + 1)); fi
-    c3_atomic_state_update "$manifest" "$state" '.residual_billable_resource_count=$active' --argjson active "$active"
+    budget_name="$(jq -r .direct_budget_authority.budget_name "$manifest")"
+    if budget_probe="$(aws budgets describe-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" 2>&1)"; then
+      direct_budget_residual=1
+      active=$((active + 1))
+    else
+      case "$budget_probe" in
+        *NotFoundException*|*not\ found*|*could\ not\ be\ found*) direct_budget_residual=0 ;;
+        *) fail 'DIRECT_BUDGET_RESIDUAL_READBACK_FAILED' ;;
+      esac
+    fi
+    c3_atomic_state_update "$manifest" "$state" \
+      '.residual_billable_resource_count=$active|.direct_budget_residual_count=$direct' \
+      --argjson active "$active" --argjson direct "$direct_budget_residual"
     ;;
   --final-read-only-verification)
     validate_authority
     [ "$(jq -r '.residual_billable_resource_count // -1' "$state")" = '0' ] || fail 'RESIDUAL_BILLABLE_RESOURCES_REMAIN'
+    [ "$(jq -r '.direct_budget_residual_count // -1' "$state")" = '0' ] || fail 'DIRECT_BUDGET_RESIDUAL_REMAINS'
     printf '%s\n' 'C3_RESIDUAL_BILLABLE_RESOURCE_COUNT=0'
     ;;
   --delete-janitor-stack)

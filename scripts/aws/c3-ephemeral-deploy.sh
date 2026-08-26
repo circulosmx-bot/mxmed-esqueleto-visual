@@ -3,6 +3,7 @@ set -eu
 
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
+BUDGETS_API_REGION='us-east-1'
 EXPECTED_COST_CAP='5'
 EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN='arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications'
 PRE_DIGEST_STACKS='mxmed-stg-c3-janitor mxmed-stg-network mxmed-stg-security mxmed-stg-session mxmed-stg-registry'
@@ -41,7 +42,7 @@ change_set_phase=''
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --prepare-run-manifest|--review-assembly|--initialize-runtime-state|--prepare-template-transport|--prepare-change-sets|--execute-stack|--build-push-and-seal-image|--resolve-and-seal-image-digest) mode="$1" ;;
+    --prepare-run-manifest|--review-assembly|--initialize-runtime-state|--prepare-template-transport|--prepare-change-sets|--execute-stack|--create-direct-budget|--build-push-and-seal-image|--resolve-and-seal-image-digest) mode="$1" ;;
     --no-execute) no_execute=true ;;
     --manifest) shift; manifest="${1:-}" ;;
     --state) shift; state="${1:-}" ;;
@@ -111,6 +112,8 @@ verify_sealed_templates() {
       || grep -Eiq 'hnb659fds|/cdk-bootstrap/|CDKToolkit' "$file"; then
       fail "TEMPLATE_BOOTSTRAP_REFERENCE_REJECTED:$name"
     fi
+    jq -e '[.Resources[]? | select(.Type == "AWS::Budgets::Budget")] | length == 0' "$file" >/dev/null \
+      || fail "KNOWN_UNSUPPORTED_CFN_RESOURCE_TYPE_PRESENT:$name"
     transport="$(jq -r --arg stack "$name" '.templates[] | select(.stack_name == $stack) | .transport' "$manifest")"
     if [ "$actual_bytes" -gt "$TEMPLATE_BODY_MAX_BYTES" ]; then
       [ "$transport" = 'C3_TEMPLATE_S3_URL' ] || fail "OVERSIZE_TEMPLATE_BODY_REJECTED:$name"
@@ -153,7 +156,6 @@ create_direct_change_set() {
         "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .hard_cap_at_utc "$state")" \
         "ParameterKey=FailSafeScheduleExpression,ParameterValue=at($(jq -r .failsafe_at_utc "$state" | sed 's/Z$//'))" \
         "ParameterKey=JanitorDeleteScheduleExpression,ParameterValue=at($(jq -r .hard_cap_at_utc "$state" | sed 's/Z$//'))" \
-        "ParameterKey=BudgetNotificationTopicArn,ParameterValue=$(jq -r .budget_notification_topic_arn "$manifest")" \
         "ParameterKey=C3PermissionBoundaryArn,ParameterValue=$PERMISSION_BOUNDARY_ARN"
       ;;
     mxmed-stg-c3-runner)
@@ -264,6 +266,14 @@ case "$mode" in
     image_inputs="$(jq -c . "$build_inputs")"
     [ "$(printf '%s' "$image_inputs" | jq -r .source_revision)" = "$current_head" ] || fail 'IMAGE_SOURCE_REVISION_HEAD_MISMATCH'
     gates="$(c3_gate_definitions_json)"
+    direct_budget="$(jq -cn --arg account "$EXPECTED_ACCOUNT" --arg region "$BUDGETS_API_REGION" \
+      --arg name "mxmed-stg-c3-$run_id" --arg topic "$budget_topic_arn" '
+      {api_region:$region,account_id:$account,budget_name_format:"mxmed-stg-c3-${RUN_ID}",budget_name:$name,
+       runtime_object_count:1,cleanup_contract:"EXACT_RUN_ID_BOUND_DESCRIBE_DELETE_ABSENCE",
+       budget:{BudgetName:$name,BudgetType:"COST",TimeUnit:"MONTHLY",BudgetLimit:{Amount:"5",Unit:"USD"},CostFilters:{TagKeyValue:["user:Phase$C3"]}},
+       notifications_with_subscribers:([1,3,5]|map({Notification:{ComparisonOperator:"GREATER_THAN",NotificationType:"ACTUAL",Threshold:.,ThresholdType:"ABSOLUTE_VALUE"},Subscribers:[{SubscriptionType:"SNS",Address:$topic}]}))}')"
+    direct_budget_sha="$(printf '%s\n' "$direct_budget" | jq -cS '{budget,notifications_with_subscribers}' | shasum -a 256 | awk '{print $1}')"
+    direct_budget="$(printf '%s' "$direct_budget" | jq --arg sha "$direct_budget_sha" '.+{payload_sha256:$sha}')"
     jq -n \
       --arg run_uuid "$run_uuid" --arg run "$run_id" --arg head "$current_head" --arg account "$EXPECTED_ACCOUNT" \
       --arg region "$EXPECTED_REGION" --arg auth "$authorization_reference" \
@@ -273,12 +283,13 @@ case "$mode" in
       --argjson templates "$templates" --arg deployment_mode "$DEPLOYMENT_MODE" \
       --arg template_bucket "$TEMPLATE_BUCKET" --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
       --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" --argjson image_inputs "$image_inputs" \
-      --argjson policy_hashes "$policy_hashes" --argjson expected_graph "$expected_graph" \
+      --argjson policy_hashes "$policy_hashes" --argjson expected_graph "$expected_graph" --argjson direct_budget "$direct_budget" \
       '{
-        schema:"mxmed.c3.ephemeral.sealed-run-manifest.v2",
+        schema:"mxmed.c3.ephemeral.sealed-run-manifest.v3",
         run_uuid:$run_uuid,run_id:$run,source_head:$head,account:$account,region:$region,
         deployment_mode:$deployment_mode,director_authorization_reference:$auth,
         activity_cost_cap_usd:5,budget_notification_topic_arn:$topic,
+        direct_budget_authority:$direct_budget,
         c3_permission_boundary_arn:$boundary,
         runtime_clock_contract:{origin:"FIRST_SUCCESSFUL_RUNTIME_AWS_MUTATION",failsafe_offset_hours:22,hard_cap_offset_hours:24,teardown_start_max_delay_seconds:300},
         pending_runtime_fields:{first_runtime_mutation_at_utc:$pending,failsafe_at_utc:$pending,hard_cap_at_utc:$pending,physical_ecr_image_digest:$pending},
@@ -292,7 +303,7 @@ case "$mode" in
         approved_role_profiles:{deploy:"mxmed-c3-stg-deploy",test_controller:"mxmed-c3-stg-test-controller",teardown:"mxmed-c3-stg-teardown"},
         cfn_execution_role_arns:{"mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network","mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security","mxmed-stg-session":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session","mxmed-stg-registry":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry","mxmed-stg-c3-runner":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner","mxmed-stg-c3-janitor":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"},
         stack_names:$stacks,
-        expected_resource_counts:{total:107,data:0,storage:0,application_service:0,public_runner_ip:0},
+        expected_resource_counts:{cloudformation:106,direct_runtime:1,total_authorized:107,data:0,storage:0,application_service:0,public_runner_ip:0},
         retained_resource_expectations:{count:13,physical_resources:[]}
       }' \
       >"$output"
@@ -307,7 +318,7 @@ case "$mode" in
     [ -f "$ASSEMBLY/manifest.json" ] || fail 'C3_ASSEMBLY_MISSING'
     verify_sealed_templates
     actual_count="$(jq -s '[.[].Resources // {} | length] | add' "$ASSEMBLY"/*.template.json)"
-    [ "$actual_count" = '107' ] || fail 'CANDIDATE_RESOURCE_COUNT_MISMATCH'
+    [ "$actual_count" = '106' ] || fail 'CANDIDATE_RESOURCE_COUNT_MISMATCH'
     template_text="$(jq -s -c '.' "$ASSEMBLY"/*.template.json)"
     printf '%s' "$template_text" | jq -e '
       ([.. | objects | .Type? | select(. == "AWS::RDS::DBInstance" or . == "AWS::ECS::Service")] | length) == 0
@@ -446,6 +457,47 @@ case "$mode" in
       printf '%s' "$runner" | jq -e '.private_subnet_ids|length==2' >/dev/null || fail 'RUNNER_OUTPUT_CONTRACT_INVALID'
       c3_atomic_state_update "$manifest" "$state" '.runner=$runner' --argjson runner "$runner"
     fi
+    ;;
+  --create-direct-budget)
+    require_future_write_authority POST_FIRST_RUNTIME_MUTATION
+    need aws
+    [ "$(jq -r .failsafe_active "$state")" = true ] || fail 'FAILSAFE_NOT_ACTIVE_DIRECT_BUDGET_REJECTED'
+    [ "$(jq -r .direct_budget_created "$state")" = false ] || fail 'DIRECT_BUDGET_ALREADY_CREATED'
+    budget_name="$(jq -r .direct_budget_authority.budget_name "$manifest")"
+    [ "$budget_name" = "mxmed-stg-c3-$(jq -r .run_id "$manifest")" ] || fail 'DIRECT_BUDGET_NAME_NOT_EXACT_RUN_BOUND'
+    budget_json="$(jq -c .direct_budget_authority.budget "$manifest")"
+    notifications_json="$(jq -c .direct_budget_authority.notifications_with_subscribers "$manifest")"
+    AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets create-budget --region "$BUDGETS_API_REGION" \
+      --account-id "$EXPECTED_ACCOUNT" --budget "$budget_json" \
+      --notifications-with-subscribers "$notifications_json" \
+      || start_partial_teardown direct-budget 'DIRECT_BUDGET_CREATE_FAILED'
+    c3_record_direct_budget_created "$manifest" "$state" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      || start_partial_teardown direct-budget 'DIRECT_BUDGET_CREATE_STATE_SEAL_FAILED'
+    actual_budget="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-budget --region "$BUDGETS_API_REGION" \
+      --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" --query Budget --output json)" \
+      || start_partial_teardown direct-budget 'DIRECT_BUDGET_READBACK_FAILED'
+    printf '%s' "$actual_budget" | jq -e --argjson expected "$budget_json" '
+      .BudgetName == $expected.BudgetName and .BudgetType == $expected.BudgetType and .TimeUnit == $expected.TimeUnit
+      and .BudgetLimit.Unit == $expected.BudgetLimit.Unit and (.BudgetLimit.Amount|tonumber) == ($expected.BudgetLimit.Amount|tonumber)
+      and .CostFilters == $expected.CostFilters' >/dev/null \
+      || start_partial_teardown direct-budget 'DIRECT_BUDGET_READBACK_SEMANTIC_MISMATCH'
+    actual_notifications="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-notifications-for-budget \
+      --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" --query Notifications --output json)" \
+      || start_partial_teardown direct-budget 'DIRECT_BUDGET_NOTIFICATION_READBACK_FAILED'
+    printf '%s' "$actual_notifications" | jq -e --argjson expected "$(printf '%s' "$notifications_json" | jq '[.[].Notification]')" \
+      'sort_by(.Threshold) == ($expected|sort_by(.Threshold))' >/dev/null \
+      || start_partial_teardown direct-budget 'DIRECT_BUDGET_NOTIFICATION_READBACK_MISMATCH'
+    printf '%s' "$notifications_json" | jq -c '.[].Notification' | while IFS= read -r notification; do
+      subscribers="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-subscribers-for-notification \
+        --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" \
+        --notification "$notification" --query Subscribers --output json)" \
+        || start_partial_teardown direct-budget 'DIRECT_BUDGET_SUBSCRIBER_READBACK_FAILED'
+      printf '%s' "$subscribers" | jq -e --arg topic "$EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN" \
+        '. == [{SubscriptionType:"SNS",Address:$topic}]' >/dev/null \
+        || start_partial_teardown direct-budget 'DIRECT_BUDGET_SUBSCRIBER_READBACK_MISMATCH'
+    done
+    c3_record_direct_budget_readback "$manifest" "$state" \
+      || start_partial_teardown direct-budget 'DIRECT_BUDGET_READBACK_STATE_SEAL_FAILED'
     ;;
   --build-push-and-seal-image)
     require_future_write_authority POST_FIRST_RUNTIME_MUTATION

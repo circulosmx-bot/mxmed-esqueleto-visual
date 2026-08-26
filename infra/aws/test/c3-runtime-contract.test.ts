@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,6 +14,17 @@ const runUuid = '123e4567-e89b-42d3-a456-426614174000';
 const runId = `c3-${runUuid}`;
 const budgetNotificationTopicArn =
   'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications';
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
 
 const gates = [
   'SOURCE_HEAD_MATCH',
@@ -38,8 +50,27 @@ function manifestFixture(): Record<string, unknown> {
     'mxmed-stg-registry',
     'mxmed-stg-c3-runner',
   ];
+  const budget = {
+    BudgetName: `mxmed-stg-c3-${runId}`,
+    BudgetType: 'COST',
+    TimeUnit: 'MONTHLY',
+    BudgetLimit: { Amount: '5', Unit: 'USD' },
+    CostFilters: { TagKeyValue: ['user:Phase$C3'] },
+  };
+  const notifications_with_subscribers = [1, 3, 5].map((Threshold) => ({
+    Notification: {
+      ComparisonOperator: 'GREATER_THAN',
+      NotificationType: 'ACTUAL',
+      Threshold,
+      ThresholdType: 'ABSOLUTE_VALUE',
+    },
+    Subscribers: [{ SubscriptionType: 'SNS', Address: budgetNotificationTopicArn }],
+  }));
+  const payload_sha256 = createHash('sha256')
+    .update(`${canonical({ budget, notifications_with_subscribers })}\n`)
+    .digest('hex');
   return {
-    schema: 'mxmed.c3.ephemeral.sealed-run-manifest.v2',
+    schema: 'mxmed.c3.ephemeral.sealed-run-manifest.v3',
     run_uuid: runUuid,
     run_id: runId,
     source_head: sourceHead,
@@ -49,6 +80,17 @@ function manifestFixture(): Record<string, unknown> {
     director_authorization_reference: 'DIRECTOR-SEAL-C3',
     activity_cost_cap_usd: 5,
     budget_notification_topic_arn: budgetNotificationTopicArn,
+    direct_budget_authority: {
+      api_region: 'us-east-1',
+      account_id: '875691018466',
+      budget_name_format: 'mxmed-stg-c3-${RUN_ID}',
+      budget_name: `mxmed-stg-c3-${runId}`,
+      payload_sha256,
+      runtime_object_count: 1,
+      cleanup_contract: 'EXACT_RUN_ID_BOUND_DESCRIBE_DELETE_ABSENCE',
+      budget,
+      notifications_with_subscribers,
+    },
     c3_permission_boundary_arn:
       'arn:aws:iam::875691018466:policy/MXMed-C3-Staging-PermissionBoundary',
     runtime_clock_contract: {
@@ -121,14 +163,16 @@ function manifestFixture(): Record<string, unknown> {
     },
     stack_names: stacks,
     expected_resource_counts: {
-      total: 107,
+      cloudformation: 106,
+      direct_runtime: 1,
+      total_authorized: 107,
       data: 0,
       storage: 0,
       application_service: 0,
       public_runner_ip: 0,
     },
     expected_resource_graph: {
-      'mxmed-stg-c3-janitor': 9,
+      'mxmed-stg-c3-janitor': 8,
       'mxmed-stg-network': 20,
       'mxmed-stg-security': 30,
       'mxmed-stg-session': 20,
@@ -269,7 +313,7 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     expect(() => readFileSync(outputPath, 'utf8')).toThrow();
   });
 
-  test('Janitor uses only the exact sealed manifest topic without runtime fallback', () => {
+  test('direct Budget uses only the exact sealed topic without Janitor parameter fallback', () => {
     const deploy = readFileSync(deployController, 'utf8');
     const contract = readFileSync(helper, 'utf8');
     expect(contract).toContain(`C3_BUDGET_NOTIFICATION_TOPIC_ARN='${budgetNotificationTopicArn}'`);
@@ -277,9 +321,8 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     expect(deploy).toContain(
       `EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN='${budgetNotificationTopicArn}'`,
     );
-    expect(deploy).toContain(
-      'ParameterKey=BudgetNotificationTopicArn,ParameterValue=$(jq -r .budget_notification_topic_arn "$manifest")',
-    );
+    expect(deploy).toContain('--notifications-with-subscribers "$notifications_json"');
+    expect(deploy).not.toContain('ParameterKey=BudgetNotificationTopicArn');
     expect(deploy).not.toMatch(/budget_notification_topic_arn\s*\/\//);
   });
 
@@ -299,6 +342,51 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     expect(state.hard_cap_at_utc).toBe('2026-08-26T12:00:00Z');
     expectAccepted('validate-phase', 'POST_FIRST_RUNTIME_MUTATION', manifestPath, statePath);
     expectRejected('record-first-mutation', manifestPath, statePath, '2026-08-25T12:00:01Z');
+  });
+
+  test('records the exact direct Budget lifecycle monotonically in the sidecar', () => {
+    expectAccepted('init-state', manifestPath, statePath);
+    expectAccepted('record-budget-created', manifestPath, statePath, '2026-08-25T12:01:00Z');
+    expectAccepted('record-budget-readback', manifestPath, statePath);
+    expectRejected('record-budget-created', manifestPath, statePath, '2026-08-25T12:02:00Z');
+    expectAccepted(
+      'record-budget-deleted',
+      manifestPath,
+      statePath,
+      '2026-08-25T13:00:00Z',
+      '2026-08-25T13:00:01Z',
+    );
+    const state = JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, unknown>;
+    expect(state).toMatchObject({
+      direct_budget_name: `mxmed-stg-c3-${runId}`,
+      direct_budget_created: true,
+      direct_budget_readback_pass: true,
+      direct_budget_residual_count: 0,
+    });
+    expectRejected(
+      'record-budget-deleted',
+      manifestPath,
+      statePath,
+      '2026-08-25T13:00:00Z',
+      '2026-08-25T13:00:02Z',
+    );
+  });
+
+  test('binds exact-run Budget semantics and dual-region controller paths', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    const teardown = readFileSync(
+      join(repositoryRoot, 'scripts/aws/c3-ephemeral-teardown.sh'),
+      'utf8',
+    );
+    for (const source of [deploy, teardown]) {
+      expect(source).toContain("BUDGETS_API_REGION='us-east-1'");
+      expect(source).toContain('mxmed-stg-c3-$(jq -r .run_id "$manifest")');
+    }
+    expect(deploy).toContain('aws budgets create-budget --region "$BUDGETS_API_REGION"');
+    expect(deploy).toContain('aws budgets describe-budget --region "$BUDGETS_API_REGION"');
+    expect(teardown).toContain('aws budgets delete-budget --region "$BUDGETS_API_REGION"');
+    expect(teardown).not.toMatch(/list-budgets/);
+    expect(deploy).not.toMatch(/ResourceTags|aws-portal:/);
   });
 
   test('moves Gate 12 pending to PASS only for a digest and matching manifest revision', () => {

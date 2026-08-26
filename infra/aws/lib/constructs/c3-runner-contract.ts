@@ -1,5 +1,6 @@
 export const MXMED_C3_ACCOUNT = '875691018466' as const;
 export const MXMED_C3_REGION = 'mx-central-1' as const;
+export const MXMED_C3_BUDGETS_API_REGION = 'us-east-1' as const;
 export const MXMED_C3_STACK_PREFIX = 'mxmed-stg-' as const;
 export const MXMED_C3_COST_CAP_USD = 5 as const;
 export const MXMED_C3_TEMPLATE_BODY_MAX_BYTES = 51_200 as const;
@@ -10,6 +11,10 @@ export const MXMED_C3_AUDIT_BUCKET_NAME = 'mxmed-stg-audit-875691018466-mx-centr
 export const MXMED_C3_DEPLOYMENT_MODE = 'DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES' as const;
 export const MXMED_C3_RUNTIME_CLOCK_ORIGIN = 'FIRST_SUCCESSFUL_RUNTIME_AWS_MUTATION' as const;
 export const MXMED_C3_PENDING_RUNTIME_RESOLUTION = 'PENDING_RUNTIME_RESOLUTION' as const;
+export const MXMED_C3_DIRECT_BUDGET_NAME_FORMAT = 'mxmed-stg-c3-${RUN_ID}' as const;
+export const MXMED_C3_DIRECT_BUDGET_RUNTIME_OBJECT_COUNT = 1 as const;
+export const MXMED_C3_BUDGET_ALERT_IS_REALTIME_FAILSAFE = false as const;
+export const MXMED_C3_JANITOR_IS_REALTIME_FAILSAFE = true as const;
 
 export type MxMedC3TemplateTransport = 'TEMPLATE_BODY' | 'C3_TEMPLATE_S3_URL';
 
@@ -140,6 +145,7 @@ export const MXMED_C3_RUN_MANIFEST_REQUIRED_FIELDS = Object.freeze([
   'stack_names',
   'expected_resource_counts',
   'retained_resource_expectations',
+  'direct_budget_authority',
 ] as const);
 
 export const MXMED_C3_RETAINED_LOGICAL_RESOURCES = Object.freeze([
@@ -218,6 +224,19 @@ export const MXMED_C3_DIRECT_BUDGET_PROGRAMMATIC_ACTIONS = Object.freeze([
 
 export const MXMED_C3_DIRECT_BUDGET_RESOURCE_PATTERN =
   'arn:aws:budgets::875691018466:budget/mxmed-stg-c3-*' as const;
+
+export const MXMED_C3_DIRECT_BUDGET_SEMANTICS = Object.freeze({
+  budgetType: 'COST',
+  timeUnit: 'MONTHLY',
+  budgetLimit: { amount: '5', unit: 'USD' },
+  costFilters: { TagKeyValue: ['user:Phase$C3'] },
+  thresholds: [1, 3, 5],
+  thresholdType: 'ABSOLUTE_VALUE',
+  notificationType: 'ACTUAL',
+  comparisonOperator: 'GREATER_THAN',
+  notificationTopicArn: 'arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications',
+  usesResourceTags: false,
+});
 
 export const MXMED_C3_DIRECT_BUDGET_LEGACY_AWS_PORTAL_ACTIONS = Object.freeze([] as const);
 
@@ -321,7 +340,6 @@ export const MXMED_C3_UNSCOPABLE_ACTIONS = Object.freeze([
 ] as const);
 
 export const MXMED_C3_EXPECTED_RESOURCE_TYPE_COUNTS = Object.freeze({
-  'AWS::Budgets::Budget': 1,
   'AWS::CloudTrail::Trail': 1,
   'AWS::EC2::EIP': 1,
   'AWS::EC2::FlowLog': 1,
@@ -363,6 +381,10 @@ export function expectedC3ResourceCount(): number {
     (total, count) => total + count,
     0,
   );
+}
+
+export function totalAuthorizedC3RuntimeObjectCount(): number {
+  return expectedC3ResourceCount() + MXMED_C3_DIRECT_BUDGET_RUNTIME_OBJECT_COUNT;
 }
 
 export const MXMED_C3_PERMISSION_BOUNDARY_ARN =

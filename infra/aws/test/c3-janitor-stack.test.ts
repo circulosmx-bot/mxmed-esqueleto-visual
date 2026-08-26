@@ -33,11 +33,11 @@ describe('C3 janitor and control contract', () => {
   const resources = rendered();
   const ofType = (type: string) => resources.filter((resource) => resource.Type === type);
 
-  test('uses the reviewed nine-resource Scheduler plus Step Functions design', () => {
-    expect(resources).toHaveLength(9);
+  test('uses the reviewed eight-resource Scheduler plus Step Functions design', () => {
+    expect(resources).toHaveLength(8);
     expect(ofType('AWS::Scheduler::Schedule')).toHaveLength(2);
     expect(ofType('AWS::StepFunctions::StateMachine')).toHaveLength(1);
-    expect(ofType('AWS::Budgets::Budget')).toHaveLength(1);
+    expect(ofType('AWS::Budgets::Budget')).toHaveLength(0);
     expect(ofType('AWS::Lambda::Function')).toHaveLength(0);
   });
 
@@ -73,13 +73,9 @@ describe('C3 janitor and control contract', () => {
     expect(iam).not.toMatch(/AdministratorAccess|PowerUserAccess/);
   });
 
-  test('encodes the USD 5 cap with advisory USD 1, 3 and 5 alerts', () => {
-    const budget = JSON.stringify(ofType('AWS::Budgets::Budget'));
-    expect(budget).toContain('"Amount":5');
-    expect(budget).toContain('"Threshold":1');
-    expect(budget).toContain('"Threshold":3');
-    expect(budget).toContain('"Threshold":5');
-    expect(budget).toContain('BudgetNotificationTopicArn');
+  test('keeps the known region-incompatible Budget type outside CloudFormation', () => {
+    expect(JSON.stringify(resources)).not.toContain('AWS::Budgets::Budget');
+    expect(JSON.stringify(resources)).not.toContain('BudgetNotificationTopicArn');
   });
 
   test('represents all twelve phased machine stop gates in the source contract', () => {

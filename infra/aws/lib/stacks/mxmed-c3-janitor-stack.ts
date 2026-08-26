@@ -1,5 +1,4 @@
 import { CfnParameter, Fn, RemovalPolicy, Tags } from 'aws-cdk-lib';
-import { CfnBudget } from 'aws-cdk-lib/aws-budgets';
 import { CfnPolicy, CfnRole } from 'aws-cdk-lib/aws-iam';
 import { CfnLogGroup } from 'aws-cdk-lib/aws-logs';
 import { CfnSchedule } from 'aws-cdk-lib/aws-scheduler';
@@ -9,7 +8,6 @@ import type { Construct } from 'constructs';
 import { BaseMxMedStack } from './base-mxmed-stack';
 import type { MxMedContractStackProps } from './base-mxmed-stack';
 import {
-  MXMED_C3_COST_CAP_USD,
   MXMED_C3_DELETE_ORDER,
   MXMED_C3_RETAINED_LOGICAL_RESOURCES,
 } from '../constructs/c3-runner-contract';
@@ -254,7 +252,7 @@ export class MxMedC3JanitorStack extends BaseMxMedStack {
     super(scope, id, {
       ...props,
       component: 'c3-janitor',
-      description: 'MXMed C3 one-time teardown scheduler, state machine and USD 5 budget.',
+      description: 'MXMed C3 one-time teardown scheduler and state machine.',
       metadata: { dataClassification: 'internal', criticality: 'high', backup: 'not-required' },
     });
 
@@ -270,10 +268,6 @@ export class MxMedC3JanitorStack extends BaseMxMedStack {
     const deleteJanitorExpression = this.parameter(
       'JanitorDeleteScheduleExpression',
       '^at\\(20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\)$',
-    );
-    const budgetTopicArn = this.parameter(
-      'BudgetNotificationTopicArn',
-      '^arn:[^:]+:sns:[^:]+:[0-9]{12}:[A-Za-z0-9_-]+$',
     );
     const permissionBoundaryArn = this.parameter(
       'C3PermissionBoundaryArn',
@@ -458,26 +452,6 @@ export class MxMedC3JanitorStack extends BaseMxMedStack {
     });
     janitorDeleteSchedule.addPropertyOverride('ActionAfterCompletion', 'DELETE');
     janitorDeleteSchedule.addDependency(schedulerPolicy);
-
-    const subscribers = [{ subscriptionType: 'SNS', address: budgetTopicArn.valueAsString }];
-    new CfnBudget(this, 'C3CostBudget', {
-      budget: {
-        budgetName: Fn.sub('mxmed-stg-c3-${RunId}', { RunId: runId.valueAsString }),
-        budgetType: 'COST',
-        timeUnit: 'MONTHLY',
-        budgetLimit: { amount: MXMED_C3_COST_CAP_USD, unit: 'USD' },
-        costFilters: { TagKeyValue: ['user:Phase$C3'] },
-      },
-      notificationsWithSubscribers: [1, 3, 5].map((threshold) => ({
-        notification: {
-          comparisonOperator: 'GREATER_THAN',
-          notificationType: 'ACTUAL',
-          threshold,
-          thresholdType: 'ABSOLUTE_VALUE',
-        },
-        subscribers,
-      })),
-    });
   }
 
   private parameter(id: string, allowedPattern: string): CfnParameter {

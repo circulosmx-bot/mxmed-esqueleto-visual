@@ -4,10 +4,11 @@ set -eu
 C3_PENDING_RUNTIME_RESOLUTION='PENDING_RUNTIME_RESOLUTION'
 C3_PENDING_RUNTIME='PENDING_RUNTIME'
 C3_PASS='PASS'
-C3_MANIFEST_SCHEMA='mxmed.c3.ephemeral.sealed-run-manifest.v2'
-C3_STATE_SCHEMA='mxmed.c3.ephemeral.runtime-state.v1'
+C3_MANIFEST_SCHEMA='mxmed.c3.ephemeral.sealed-run-manifest.v3'
+C3_STATE_SCHEMA='mxmed.c3.ephemeral.runtime-state.v2'
 C3_ACCOUNT='875691018466'
 C3_REGION='mx-central-1'
+C3_BUDGETS_API_REGION='us-east-1'
 C3_BUDGET_NOTIFICATION_TOPIC_ARN='arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications'
 C3_OBJECT_KEY_SUFFIX='.template.json'
 
@@ -37,13 +38,13 @@ c3_gate_definitions_json() {
 }
 
 c3_validate_manifest() {
-  local manifest gates
+  local manifest gates payload_sha
   manifest="$1"
   [ -f "$manifest" ] || c3_contract_fail 'SEALED_MANIFEST_MISSING'
   [ "$(c3_file_mode "$manifest")" = '600' ] || c3_contract_fail 'SEALED_MANIFEST_MODE_INVALID'
   gates="$(c3_gate_definitions_json)"
   jq -e --arg schema "$C3_MANIFEST_SCHEMA" --arg account "$C3_ACCOUNT" \
-    --arg region "$C3_REGION" --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
+    --arg region "$C3_REGION" --arg budgets_region "$C3_BUDGETS_API_REGION" --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
     --arg budget_topic "$C3_BUDGET_NOTIFICATION_TOPIC_ARN" \
     --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" '
       . as $root
@@ -54,6 +55,24 @@ c3_validate_manifest() {
       and .account == $account and .region == $region
       and .activity_cost_cap_usd == 5
       and .budget_notification_topic_arn == $budget_topic
+      and .direct_budget_authority.api_region == $budgets_region
+      and .direct_budget_authority.account_id == $account
+      and .direct_budget_authority.budget_name_format == "mxmed-stg-c3-${RUN_ID}"
+      and .direct_budget_authority.budget_name == ("mxmed-stg-c3-" + $root.run_id)
+      and .direct_budget_authority.runtime_object_count == 1
+      and .direct_budget_authority.cleanup_contract == "EXACT_RUN_ID_BOUND_DESCRIBE_DELETE_ABSENCE"
+      and .direct_budget_authority.budget == {
+        BudgetName:("mxmed-stg-c3-" + $root.run_id),BudgetType:"COST",TimeUnit:"MONTHLY",
+        BudgetLimit:{Amount:"5",Unit:"USD"},CostFilters:{TagKeyValue:["user:Phase$C3"]}
+      }
+      and (.direct_budget_authority.budget | has("ResourceTags") | not)
+      and (.direct_budget_authority.notifications_with_subscribers | length) == 3
+      and ([.direct_budget_authority.notifications_with_subscribers[].Notification.Threshold] | sort) == [1,3,5]
+      and ([.direct_budget_authority.notifications_with_subscribers[] | select(
+        .Notification.ThresholdType != "ABSOLUTE_VALUE" or .Notification.NotificationType != "ACTUAL"
+        or .Notification.ComparisonOperator != "GREATER_THAN"
+        or .Subscribers != [{SubscriptionType:"SNS",Address:$budget_topic}]
+      )] | length) == 0
       and .deployment_mode == "DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES"
       and .runtime_clock_contract == {
         origin:"FIRST_SUCCESSFUL_RUNTIME_AWS_MUTATION",
@@ -102,7 +121,7 @@ c3_validate_manifest() {
         "mxmed-stg-c3-janitor","mxmed-stg-c3-runner","mxmed-stg-network",
         "mxmed-stg-registry","mxmed-stg-security","mxmed-stg-session"
       ] | sort)
-      and ([.expected_resource_graph[]] | add) == 107
+      and ([.expected_resource_graph[]] | add) == 106
       and .cfn_execution_role_arns == {
         "mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network",
         "mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security",
@@ -116,7 +135,7 @@ c3_validate_manifest() {
         test_controller:"mxmed-c3-stg-test-controller",
         teardown:"mxmed-c3-stg-teardown"
       }
-      and .expected_resource_counts == {total:107,data:0,storage:0,application_service:0,public_runner_ip:0}
+      and .expected_resource_counts == {cloudformation:106,direct_runtime:1,total_authorized:107,data:0,storage:0,application_service:0,public_runner_ip:0}
       and .retained_resource_expectations.count == 13
       and .template_transport.bucket_name == "mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
       and .template_transport.public_access_blocked == true
@@ -134,6 +153,9 @@ c3_validate_manifest() {
       and ((tostring | test("mxmed-prd-|/mxmed/production|:latest"; "i")) | not)
       and ((tostring | test("<[^>]+>")) | not)
     ' "$manifest" >/dev/null || c3_contract_fail 'SEALED_MANIFEST_CONTRACT_REJECTED'
+  payload_sha="$(jq -cS '.direct_budget_authority | {budget,notifications_with_subscribers}' "$manifest" | shasum -a 256 | awk '{print $1}')"
+  [ "$payload_sha" = "$(jq -r .direct_budget_authority.payload_sha256 "$manifest")" ] \
+    || c3_contract_fail 'DIRECT_BUDGET_PAYLOAD_HASH_MISMATCH'
 }
 
 c3_validate_state_base() {
@@ -165,6 +187,15 @@ c3_validate_state_base() {
       and (.teardown_started_at_utc == $pending or (.teardown_started_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.teardown_completed_at_utc == $pending or (.teardown_completed_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.failsafe_active | type == "boolean")
+      and .direct_budget_name == $sealed_manifest.direct_budget_authority.budget_name
+      and (.direct_budget_created | type == "boolean")
+      and (.direct_budget_created_at_utc == $pending or (.direct_budget_created_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
+      and (.direct_budget_readback_pass | type == "boolean")
+      and (.direct_budget_deletion_started_at_utc == $pending or (.direct_budget_deletion_started_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
+      and (.direct_budget_deleted_at_utc == $pending or (.direct_budget_deleted_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
+      and (.direct_budget_residual_count == $pending or .direct_budget_residual_count == 0 or .direct_budget_residual_count == 1)
+      and (if .direct_budget_readback_pass then .direct_budget_created else true end)
+      and (if .direct_budget_deleted_at_utc != $pending then .direct_budget_created and .direct_budget_deletion_started_at_utc != $pending else true end)
       and (.runner | type == "object")
       and (.residual_billable_resource_count == $pending or ((.residual_billable_resource_count | type) == "number" and .residual_billable_resource_count >= 0))
       and (.created_resource_ids | type == "array")
@@ -272,7 +303,7 @@ c3_initialize_state() {
     --arg run_uuid "$(jq -r .run_uuid "$manifest")" --arg run_id "$(jq -r .run_id "$manifest")" \
     --arg source_head "$(jq -r .source_head "$manifest")" \
     --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" --arg pending_gate "$C3_PENDING_RUNTIME" \
-    --argjson gates "$gates" '
+    --arg budget_name "$(jq -r .direct_budget_authority.budget_name "$manifest")" --argjson gates "$gates" '
       {
         schema:$schema,run_manifest_sha256:$sha,run_uuid:$run_uuid,run_id:$run_id,source_head:$source_head,
         phase:"PRE_FIRST_WRITE",
@@ -283,6 +314,9 @@ c3_initialize_state() {
         test_started_at_utc:$pending,test_terminal_at_utc:$pending,
         teardown_started_at_utc:$pending,teardown_completed_at_utc:$pending,
         failsafe_active:false,created_resource_ids:[],retained_physical_resource_ids:[],
+        direct_budget_name:$budget_name,direct_budget_created:false,direct_budget_created_at_utc:$pending,
+        direct_budget_readback_pass:false,direct_budget_deletion_started_at_utc:$pending,
+        direct_budget_deleted_at_utc:$pending,direct_budget_residual_count:$pending,
         template_transport_objects:[],change_set_template_semantic_sha256:{},runner:{},
         orphan_inventory:[],residual_billable_resource_count:$pending
       }
@@ -315,6 +349,37 @@ c3_record_first_runtime_mutation() {
   c3_validate_phase POST_FIRST_RUNTIME_MUTATION "$manifest" "$state"
 }
 
+c3_record_direct_budget_created() {
+  local manifest state timestamp
+  manifest="$1"; state="$2"; timestamp="$3"
+  [ "$(jq -r .direct_budget_created "$state")" = false ] || c3_contract_fail 'DIRECT_BUDGET_CREATE_REWRITE_REJECTED'
+  c3_atomic_state_update "$manifest" "$state" '
+    .direct_budget_created=true|.direct_budget_created_at_utc=$timestamp
+    |.created_resource_ids += [{type:"direct-budget",id:.direct_budget_name}]
+  ' --arg timestamp "$timestamp"
+}
+
+c3_record_direct_budget_readback() {
+  local manifest state
+  manifest="$1"; state="$2"
+  [ "$(jq -r .direct_budget_created "$state")" = true ] || c3_contract_fail 'DIRECT_BUDGET_READBACK_BEFORE_CREATE_REJECTED'
+  [ "$(jq -r .direct_budget_readback_pass "$state")" = false ] || c3_contract_fail 'DIRECT_BUDGET_READBACK_REWRITE_REJECTED'
+  c3_atomic_state_update "$manifest" "$state" '.direct_budget_readback_pass=true'
+}
+
+c3_record_direct_budget_deleted() {
+  local manifest state started deleted current_started
+  manifest="$1"; state="$2"; started="$3"; deleted="$4"
+  [ "$(jq -r .direct_budget_created "$state")" = true ] || c3_contract_fail 'DIRECT_BUDGET_DELETE_BEFORE_CREATE_REJECTED'
+  [ "$(jq -r .direct_budget_deleted_at_utc "$state")" = "$C3_PENDING_RUNTIME_RESOLUTION" ] || c3_contract_fail 'DIRECT_BUDGET_DELETE_REWRITE_REJECTED'
+  current_started="$(jq -r .direct_budget_deletion_started_at_utc "$state")"
+  [ "$current_started" = "$C3_PENDING_RUNTIME_RESOLUTION" ] || [ "$current_started" = "$started" ] \
+    || c3_contract_fail 'DIRECT_BUDGET_DELETE_START_REWRITE_REJECTED'
+  c3_atomic_state_update "$manifest" "$state" '
+    .direct_budget_deletion_started_at_utc=$started|.direct_budget_deleted_at_utc=$deleted|.direct_budget_residual_count=0
+  ' --arg started "$started" --arg deleted "$deleted"
+}
+
 c3_seal_ecr_digest() {
   local manifest state digest source_revision timestamp
   manifest="$1"; state="$2"; digest="$3"; source_revision="$4"; timestamp="$5"
@@ -337,6 +402,9 @@ if [ "${0##*/}" = 'c3-runtime-contract.sh' ]; then
     init-state) c3_initialize_state "$1" "$2";;
     validate-phase) c3_validate_phase "$1" "$2" "${3:-}";;
     record-first-mutation) c3_record_first_runtime_mutation "$1" "$2" "$3";;
+    record-budget-created) c3_record_direct_budget_created "$1" "$2" "$3";;
+    record-budget-readback) c3_record_direct_budget_readback "$1" "$2";;
+    record-budget-deleted) c3_record_direct_budget_deleted "$1" "$2" "$3" "$4";;
     seal-digest) c3_seal_ecr_digest "$1" "$2" "$3" "$4" "$5";;
     *) c3_contract_fail 'COMMAND_REQUIRED';;
   esac

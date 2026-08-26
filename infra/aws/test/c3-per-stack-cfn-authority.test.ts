@@ -192,7 +192,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         covered += 1;
       }
     }
-    expect(covered).toBe(107);
+    expect(covered).toBe(106);
     expect(covered).toBe(expectedC3ResourceCount());
   });
 
