@@ -10,6 +10,9 @@ import {
   MXMED_C3_CFN_EXECUTION_ROLE_NAMES,
   MXMED_C3_CONTROL_BOUNDARY_ARNS,
   MXMED_C3_CONTROL_ROLE_CONTRACTS,
+  MXMED_C3_DIRECT_BUDGET_LEGACY_AWS_PORTAL_ACTIONS,
+  MXMED_C3_DIRECT_BUDGET_PROGRAMMATIC_ACTIONS,
+  MXMED_C3_DIRECT_BUDGET_RESOURCE_PATTERN,
   expectedC3ResourceCount,
 } from '../lib/constructs/c3-runner-contract';
 import { getEnvironmentConfig } from '../lib/config/environments';
@@ -86,6 +89,21 @@ const resources = (statement: PolicyStatement): readonly string[] => {
 };
 const compactSize = (name: string): number =>
   readFileSync(policyPath(name), 'utf8').replace(/\s/g, '').length;
+
+const wildcardMatches = (pattern: string, value: string): boolean => {
+  const expression = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp(`^${expression}$`).test(value);
+};
+
+const documentAllows = (document: PolicyDocument, action: string, resource: string): boolean => {
+  const matching = document.Statement.filter(
+    (statement) =>
+      actions(statement).some((candidate) => wildcardMatches(candidate, action)) &&
+      resources(statement).some((candidate) => wildcardMatches(candidate, resource)),
+  );
+  if (matching.some((statement) => statement.Effect === 'Deny')) return false;
+  return matching.some((statement) => statement.Effect === 'Allow');
+};
 
 const fixture = new MxMedC3EphemeralStage(
   new App({ analyticsReporting: false, context: { activity: 'c3-ephemeral' } }),
@@ -282,6 +300,50 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(activeActions).not.toContain('s3:PutBucketEncryption');
     expect(activeActions).toContain('s3:GetEncryptionConfiguration');
     expect(activeActions).toContain('s3:PutEncryptionConfiguration');
+  });
+
+  test('grants only the exact Fine Grained programmatic C3 Budget authority', () => {
+    const deploy = readDocument('MXMED_C3_STAGING_DEPLOY_ROLE_POLICY.json');
+    const directBudget = deploy.Statement.filter(
+      (statement) => statement.Sid === 'ManageOnlyC3DirectBudget',
+    );
+    expect(directBudget).toEqual([
+      {
+        Sid: 'ManageOnlyC3DirectBudget',
+        Effect: 'Allow',
+        Action: [...MXMED_C3_DIRECT_BUDGET_PROGRAMMATIC_ACTIONS],
+        Resource: MXMED_C3_DIRECT_BUDGET_RESOURCE_PATTERN,
+      },
+    ]);
+
+    // The same sealed document generates both the Deploy inline policy and its boundary.
+    const effectiveAllows = (action: string, resource: string): boolean =>
+      documentAllows(deploy, action, resource) && documentAllows(deploy, action, resource);
+    const exactBudget = 'arn:aws:budgets::875691018466:budget/mxmed-stg-c3-example';
+    for (const action of MXMED_C3_DIRECT_BUDGET_PROGRAMMATIC_ACTIONS) {
+      expect(effectiveAllows(action, exactBudget)).toBe(true);
+      expect(effectiveAllows(action, 'arn:aws:budgets::875691018466:budget/other-budget')).toBe(
+        false,
+      );
+      expect(
+        effectiveAllows(action, 'arn:aws:budgets::000000000000:budget/mxmed-stg-c3-example'),
+      ).toBe(false);
+      expect(
+        effectiveAllows(action, 'arn:aws:budgets::875691018466:budget/mxmed-prd-c3-example'),
+      ).toBe(false);
+    }
+    expect(effectiveAllows('budgets:TagResource', exactBudget)).toBe(false);
+
+    expect(MXMED_C3_DIRECT_BUDGET_LEGACY_AWS_PORTAL_ACTIONS).toEqual([]);
+    expect(JSON.stringify(directBudget)).not.toMatch(
+      /aws-portal:ModifyBilling|aws-portal:ViewBilling|budgets:\*|budgets:(?:Tag|Untag)Resource/,
+    );
+    expect(MXMED_C3_CONTROL_ROLE_CONTRACTS.deploy.actions).toEqual(
+      expect.arrayContaining([...MXMED_C3_DIRECT_BUDGET_PROGRAMMATIC_ACTIONS]),
+    );
+    expect(MXMED_C3_CONTROL_ROLE_CONTRACTS.deploy.exactResourcePatterns).toContain(
+      MXMED_C3_DIRECT_BUDGET_RESOURCE_PATTERN,
+    );
   });
 
   test('future deploy flow carries the exact six-role map and always supplies --role-arn', () => {

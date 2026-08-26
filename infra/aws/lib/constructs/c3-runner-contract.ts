@@ -211,6 +211,16 @@ export const MXMED_C3_RETAINED_LOGICAL_RESOURCES = Object.freeze([
   },
 ] as const);
 
+export const MXMED_C3_DIRECT_BUDGET_PROGRAMMATIC_ACTIONS = Object.freeze([
+  'budgets:ModifyBudget',
+  'budgets:ViewBudget',
+] as const);
+
+export const MXMED_C3_DIRECT_BUDGET_RESOURCE_PATTERN =
+  'arn:aws:budgets::875691018466:budget/mxmed-stg-c3-*' as const;
+
+export const MXMED_C3_DIRECT_BUDGET_LEGACY_AWS_PORTAL_ACTIONS = Object.freeze([] as const);
+
 export const MXMED_C3_DEPLOY_ACTIONS = Object.freeze([
   'cloudformation:CreateChangeSet',
   'cloudformation:DeleteChangeSet',
@@ -245,6 +255,7 @@ export const MXMED_C3_DEPLOY_ACTIONS = Object.freeze([
   'ecr:InitiateLayerUpload',
   'ecr:PutImage',
   'ecr:UploadLayerPart',
+  ...MXMED_C3_DIRECT_BUDGET_PROGRAMMATIC_ACTIONS,
 ] as const);
 
 export const MXMED_C3_TEST_CONTROLLER_ACTIONS = Object.freeze([
@@ -404,6 +415,7 @@ export const MXMED_C3_CONTROL_ROLE_CONTRACTS = Object.freeze({
       'arn:aws:ecr:mx-central-1:875691018466:repository/mxmed-stg-application',
       'arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/*',
       'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/*',
+      MXMED_C3_DIRECT_BUDGET_RESOURCE_PATTERN,
     ],
     explicitDenyPatterns: ['arn:aws:*:*:875691018466:*mxmed-prd-*', '*/mxmed/production/*'],
     unscopableActions: MXMED_C3_UNSCOPABLE_ACTIONS,
