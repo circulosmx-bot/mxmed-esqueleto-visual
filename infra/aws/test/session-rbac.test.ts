@@ -18,6 +18,26 @@ function authenticationText(resource: ReturnType<typeof userByName>): string {
   return JSON.stringify(properties(resource).AuthenticationMode);
 }
 
+function authenticationMode(
+  resource: ReturnType<typeof userByName>,
+): Readonly<Record<string, unknown>> {
+  const value = properties(resource).AuthenticationMode;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('invalid-session-authentication-mode');
+  }
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function expectCloudFormationPasswordAuthenticationMode(
+  resource: ReturnType<typeof userByName>,
+): void {
+  const value = authenticationMode(resource);
+  expect(value.Type).toBe('password');
+  expect(value.Passwords).toHaveLength(1);
+  expect(value).not.toHaveProperty('type');
+  expect(value).not.toHaveProperty('passwords');
+}
+
 describe('session Valkey RBAC', () => {
   test('SESSION-IMP-049 creates the application user', () => {
     expect(properties(stagingApplication)).toMatchObject({
@@ -53,6 +73,12 @@ describe('session Valkey RBAC', () => {
     expect(properties(stagingDefault).AuthenticationMode).toEqual(
       properties(stagingApplication).AuthenticationMode,
     );
+  });
+  test('C3 synthesizes exact CloudFormation AuthenticationMode casing for the application user', () => {
+    expectCloudFormationPasswordAuthenticationMode(stagingApplication);
+  });
+  test('C3 synthesizes exact CloudFormation AuthenticationMode casing for the disabled default user', () => {
+    expectCloudFormationPasswordAuthenticationMode(stagingDefault);
   });
   test('SESSION-IMP-056 turns the default user off', () => {
     expect(properties(stagingDefault).AccessString).toBe('off ~* -@all');
@@ -92,7 +118,8 @@ describe('session Valkey RBAC', () => {
     expect(appAccess).toContain('+ping');
   });
   test('C3 allows only the exact optimistic transaction primitives', () => {
-    for (const command of ['+watch', '+unwatch', '+multi', '+exec']) expect(appAccess).toContain(command);
+    for (const command of ['+watch', '+unwatch', '+multi', '+exec'])
+      expect(appAccess).toContain(command);
   });
   test('SESSION-IMP-066 grants no command category', () => {
     expect(appAccess).not.toContain('+@all');

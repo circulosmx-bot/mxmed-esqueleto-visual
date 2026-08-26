@@ -113,9 +113,9 @@ export class MxMedSessionStack extends BaseMxMedStack {
     Tags.of(this.authSecret).add('DataClassification', 'sensitive', { priority: 200 });
 
     const passwordReference = this.authSecret.secretValueFromJson('password').toString();
-    const authenticationMode: CfnUser.AuthenticationModeProperty = {
-      type: 'password',
-      passwords: [passwordReference],
+    const authenticationMode = {
+      Type: 'password',
+      Passwords: [passwordReference],
     };
     this.applicationUser = new CfnUser(this, 'SessionApplicationUser', {
       userId: mxmedName(config.environmentCode, 'session-app'),
