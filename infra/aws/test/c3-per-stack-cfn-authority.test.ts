@@ -401,3 +401,76 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(script).not.toMatch(/cdk (bootstrap|deploy)/);
   });
 });
+
+describe('C3 ViewOnly narrow IAM read authority', () => {
+  const viewOnly = readDocument('MXMED_C3_VIEWONLY_NARROW_READ_POLICY.json');
+  const requiredActions = [
+    'iam:GetPolicy',
+    'iam:GetPolicyVersion',
+    'iam:GetRole',
+    'iam:GetRolePolicy',
+  ];
+  const establishedListActions = ['iam:ListAttachedRolePolicies', 'iam:ListRolePolicies'];
+  const controllerRoleArns = Object.values(MXMED_C3_CONTROL_ROLE_CONTRACTS).map(
+    ({ roleName }) => `arn:aws:iam::875691018466:role/${roleName}`,
+  );
+  const cfnRoleArns = Object.values(MXMED_C3_CFN_EXECUTION_ROLE_ARNS);
+  const cfnBoundaryArns = Object.values(MXMED_C3_CFN_EXECUTION_BOUNDARY_ARNS);
+
+  test('preserves exactly the four required IAM reads and introduces no IAM action', () => {
+    const iamActions = [
+      ...new Set(viewOnly.Statement.flatMap(actions).filter((a) => a.startsWith('iam:'))),
+    ].sort();
+    expect(iamActions.filter((action) => requiredActions.includes(action))).toEqual(
+      requiredActions,
+    );
+    expect(iamActions.filter((action) => action.startsWith('iam:List'))).toEqual(
+      establishedListActions,
+    );
+    expect(iamActions).toEqual([...requiredActions, ...establishedListActions].sort());
+    expect(iamActions).not.toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^iam:(?:Create|Put|Update|Delete|Attach|Detach)/),
+        'iam:PassRole',
+      ]),
+    );
+  });
+
+  test('binds GetRole and GetRolePolicy to all current exact C3 roles', () => {
+    const requiredRoleArns = [...cfnRoleArns, ...controllerRoleArns];
+    expect(requiredRoleArns).toHaveLength(9);
+    for (const action of ['iam:GetRole', 'iam:GetRolePolicy']) {
+      for (const arn of requiredRoleArns) expect(documentAllows(viewOnly, action, arn)).toBe(true);
+      expect(
+        viewOnly.Statement.filter((statement) => actions(statement).includes(action)).flatMap(
+          resources,
+        ),
+      ).not.toContain('*');
+    }
+  });
+
+  test('binds GetPolicy and GetPolicyVersion to all six exact CFN boundaries', () => {
+    expect(cfnBoundaryArns).toHaveLength(6);
+    for (const action of ['iam:GetPolicy', 'iam:GetPolicyVersion']) {
+      for (const arn of cfnBoundaryArns) expect(documentAllows(viewOnly, action, arn)).toBe(true);
+      expect(
+        viewOnly.Statement.filter((statement) => actions(statement).includes(action)).flatMap(
+          resources,
+        ),
+      ).not.toContain('*');
+    }
+  });
+
+  test('retains controller reads without wildcard or production authority', () => {
+    for (const arn of controllerRoleArns) {
+      expect(documentAllows(viewOnly, 'iam:GetRole', arn)).toBe(true);
+      expect(documentAllows(viewOnly, 'iam:GetRolePolicy', arn)).toBe(true);
+    }
+    const serialized = JSON.stringify(viewOnly);
+    expect(serialized).not.toMatch(
+      /arn:aws:iam::\*|arn:aws:iam::875691018466:(?:role|policy)\/[^"']*\*/,
+    );
+    expect(serialized).not.toMatch(/mxmed-prd|production/i);
+    expect(serialized).toContain('arn:aws:iam::875691018466:');
+  });
+});

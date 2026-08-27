@@ -1,0 +1,111 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "C3ExactRoleMetadata",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": [
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-Deploy",
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-TestController",
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-Teardown",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-state-machine",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-janitor-scheduler",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-task",
+        "arn:aws:iam::875691018466:role/mxmed-stg-c3-runner-execution",
+        "arn:aws:iam::875691018466:role/mxmed-stg-ecs-execution-role",
+        "arn:aws:iam::875691018466:role/mxmed-stg-application-role",
+        "arn:aws:iam::875691018466:role/mxmed-stg-migration-role",
+        "arn:aws:iam::875691018466:role/mxmed-stg-jobs-role",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"
+      ]
+    },
+    {
+      "Sid": "C3ExactControlRolePolicyMetadata",
+      "Effect": "Allow",
+      "Action": ["iam:GetRolePolicy", "iam:ListAttachedRolePolicies", "iam:ListRolePolicies"],
+      "Resource": [
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-Deploy",
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-TestController",
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-Teardown",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner",
+        "arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"
+      ]
+    },
+    {
+      "Sid": "C3ExactManagedPolicyMetadata",
+      "Effect": "Allow",
+      "Action": ["iam:GetPolicy", "iam:GetPolicyVersion"],
+      "Resource": [
+        "arn:aws:iam::875691018466:policy/MXMed-C3-Staging-PermissionBoundary",
+        "arn:aws:iam::875691018466:policy/mxmed-stg-workload-boundary",
+        "arn:aws:iam::875691018466:policy/mxmed-stg-deployment-boundary",
+        "arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Network-Boundary",
+        "arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Security-Boundary",
+        "arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Session-Boundary",
+        "arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Registry-Boundary",
+        "arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Runner-Boundary",
+        "arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Janitor-Boundary"
+      ]
+    },
+    {
+      "Sid": "C3ExactSecretContainerMetadata",
+      "Effect": "Allow",
+      "Action": "secretsmanager:DescribeSecret",
+      "Resource": [
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-signing-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/secret-key-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/webhook-secret-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/ai/api-key-*",
+        "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-store-auth-*"
+      ]
+    },
+    {
+      "Sid": "C3ExactScheduleMetadata",
+      "Effect": "Allow",
+      "Action": "scheduler:GetSchedule",
+      "Resource": [
+        "arn:aws:scheduler:mx-central-1:875691018466:schedule/default/mxmed-stg-c3-failsafe",
+        "arn:aws:scheduler:mx-central-1:875691018466:schedule/default/mxmed-stg-c3-janitor-hard-cap"
+      ]
+    },
+    {
+      "Sid": "C3ExactStateMachineMetadata",
+      "Effect": "Allow",
+      "Action": "states:DescribeStateMachine",
+      "Resource": "arn:aws:states:mx-central-1:875691018466:stateMachine:mxmed-stg-c3-janitor"
+    },
+    {
+      "Sid": "C3RegionalServiceQuotaMetadata",
+      "Effect": "Allow",
+      "Action": "servicequotas:ListServiceQuotas",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1"
+        }
+      }
+    },
+    {
+      "Sid": "C3CostAllocationTagMetadata",
+      "Effect": "Allow",
+      "Action": "ce:ListCostAllocationTags",
+      "Resource": "*"
+    },
+    {
+      "Sid": "C3BudgetListMetadata",
+      "Effect": "Allow",
+      "Action": "budgets:DescribeBudgets",
+      "Resource": "*"
+    }
+  ]
+}
