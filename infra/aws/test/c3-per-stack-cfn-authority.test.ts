@@ -177,7 +177,7 @@ const networkCreateTimeTaggingByResourceType = {
   },
   'AWS::EC2::FlowLog': {
     createAction: 'CreateFlowLogs',
-    resource: 'arn:aws:ec2:mx-central-1:875691018466:flow-log/*',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:vpc-flow-log/*',
     count: 1,
   },
   'AWS::EC2::InternetGateway': {
@@ -316,6 +316,14 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       throw new Error('NETWORK_CREATE_TIME_TAGGING_AUTHORITY_MISSING');
     }
     const createTimeTagStatement = createTimeTags[0];
+    const serializedNetwork = JSON.stringify(network);
+    const oldFlowLogScope = 'arn:aws:ec2:mx-central-1:875691018466:flow-log/*';
+    const vpcFlowLogScope = 'arn:aws:ec2:mx-central-1:875691018466:vpc-flow-log/*';
+    expect(serializedNetwork).not.toContain(oldFlowLogScope);
+    expect(serializedNetwork).toContain(vpcFlowLogScope);
+    expect(resources(create)).toContain(vpcFlowLogScope);
+    expect(resources(mutate)).toContain(vpcFlowLogScope);
+    expect(resources(createTimeTagStatement)).toContain(vpcFlowLogScope);
     expect(actions(createTimeTagStatement)).toEqual(['ec2:CreateTags']);
     expect(actions(mutate)).toContain('ec2:CreateTags');
     expect(mutate.Condition).toEqual({
@@ -371,6 +379,25 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       documentAllowsWithContext(network, 'ec2:CreateTags', resource, context) &&
       documentAllowsWithContext(network, 'ec2:CreateTags', resource, context);
 
+    for (const expected of Object.values(mapping)) {
+      const exactResource = expected.resource.replace('*', `${expected.createAction}-example`);
+      expect(
+        effectiveAllows(exactResource, {
+          ...allowedContext,
+          'ec2:CreateAction': expected.createAction,
+        }),
+      ).toBe(true);
+    }
+    const flowLogContext = { ...allowedContext, 'ec2:CreateAction': 'CreateFlowLogs' };
+    expect(
+      effectiveAllows(
+        'arn:aws:ec2:mx-central-1:875691018466:vpc-flow-log/fl-example',
+        flowLogContext,
+      ),
+    ).toBe(true);
+    expect(
+      effectiveAllows('arn:aws:ec2:mx-central-1:875691018466:flow-log/fl-example', flowLogContext),
+    ).toBe(false);
     expect(effectiveAllows(internetGateway, allowedContext)).toBe(true);
     for (const [key, value] of [
       ['aws:RequestTag/Project', 'other'],

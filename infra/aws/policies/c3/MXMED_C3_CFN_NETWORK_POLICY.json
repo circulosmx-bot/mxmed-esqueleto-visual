@@ -24,7 +24,7 @@
       ],
       "Resource": [
         "arn:aws:ec2:mx-central-1:875691018466:elastic-ip/*",
-        "arn:aws:ec2:mx-central-1:875691018466:flow-log/*",
+        "arn:aws:ec2:mx-central-1:875691018466:vpc-flow-log/*",
         "arn:aws:ec2:mx-central-1:875691018466:internet-gateway/*",
         "arn:aws:ec2:mx-central-1:875691018466:natgateway/*",
         "arn:aws:ec2:mx-central-1:875691018466:route-table/*",
@@ -71,7 +71,7 @@
       ],
       "Resource": [
         "arn:aws:ec2:mx-central-1:875691018466:elastic-ip/*",
-        "arn:aws:ec2:mx-central-1:875691018466:flow-log/*",
+        "arn:aws:ec2:mx-central-1:875691018466:vpc-flow-log/*",
         "arn:aws:ec2:mx-central-1:875691018466:internet-gateway/*",
         "arn:aws:ec2:mx-central-1:875691018466:natgateway/*",
         "arn:aws:ec2:mx-central-1:875691018466:route-table/*",
@@ -95,7 +95,7 @@
       "Action": "ec2:CreateTags",
       "Resource": [
         "arn:aws:ec2:mx-central-1:875691018466:elastic-ip/*",
-        "arn:aws:ec2:mx-central-1:875691018466:flow-log/*",
+        "arn:aws:ec2:mx-central-1:875691018466:vpc-flow-log/*",
         "arn:aws:ec2:mx-central-1:875691018466:internet-gateway/*",
         "arn:aws:ec2:mx-central-1:875691018466:natgateway/*",
         "arn:aws:ec2:mx-central-1:875691018466:route-table/*",
