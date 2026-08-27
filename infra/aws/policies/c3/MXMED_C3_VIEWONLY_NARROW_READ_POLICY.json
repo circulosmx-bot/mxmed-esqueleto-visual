@@ -104,8 +104,18 @@
     {
       "Sid": "C3BudgetListMetadata",
       "Effect": "Allow",
-      "Action": "budgets:DescribeBudgets",
+      "Action": "budgets:ViewBudget",
       "Resource": "*"
+    },
+    {
+      "Sid": "C3AssumeExactControlRoles",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": [
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-Deploy",
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-TestController",
+        "arn:aws:iam::875691018466:role/MXMed-C3-Staging-Teardown"
+      ]
     }
   ]
 }

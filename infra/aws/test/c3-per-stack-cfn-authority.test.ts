@@ -416,6 +416,21 @@ describe('C3 ViewOnly narrow IAM read authority', () => {
   );
   const cfnRoleArns = Object.values(MXMED_C3_CFN_EXECUTION_ROLE_ARNS);
   const cfnBoundaryArns = Object.values(MXMED_C3_CFN_EXECUTION_BOUNDARY_ARNS);
+  const physicalBaselineActions = [
+    'budgets:ViewBudget',
+    'ce:ListCostAllocationTags',
+    'iam:GetPolicy',
+    'iam:GetPolicyVersion',
+    'iam:GetRole',
+    'iam:GetRolePolicy',
+    'iam:ListAttachedRolePolicies',
+    'iam:ListRolePolicies',
+    'scheduler:GetSchedule',
+    'secretsmanager:DescribeSecret',
+    'servicequotas:ListServiceQuotas',
+    'states:DescribeStateMachine',
+    'sts:AssumeRole',
+  ];
 
   test('preserves exactly the four required IAM reads and introduces no IAM action', () => {
     const iamActions = [
@@ -472,5 +487,68 @@ describe('C3 ViewOnly narrow IAM read authority', () => {
     );
     expect(serialized).not.toMatch(/mxmed-prd|production/i);
     expect(serialized).toContain('arn:aws:iam::875691018466:');
+  });
+
+  test('matches the legitimate physical action baseline and preserves Budget read authority', () => {
+    const actionSet = [...new Set(viewOnly.Statement.flatMap(actions))].sort();
+    expect(actionSet).toEqual(physicalBaselineActions);
+    expect(actionSet).toContain('budgets:ViewBudget');
+    expect(actionSet).not.toContain('budgets:DescribeBudgets');
+  });
+
+  test('preserves the exact three-target controller role chain', () => {
+    const assumeRoleStatements = viewOnly.Statement.filter((statement) =>
+      actions(statement).includes('sts:AssumeRole'),
+    );
+    expect(assumeRoleStatements).toEqual([
+      {
+        Sid: 'C3AssumeExactControlRoles',
+        Effect: 'Allow',
+        Action: 'sts:AssumeRole',
+        Resource: controllerRoleArns,
+      },
+    ]);
+    const assumeRoleStatement = assumeRoleStatements[0];
+    if (assumeRoleStatement === undefined)
+      throw new Error('missing controller role-chain statement');
+    expect(resources(assumeRoleStatement)).toHaveLength(3);
+    expect(resources(assumeRoleStatement)).not.toContain('*');
+    expect(JSON.stringify(assumeRoleStatements)).not.toMatch(/mxmed-prd|production/i);
+  });
+
+  test('retains the complete physical metadata baseline plus only the exact CFN resources', () => {
+    const exactStatements = new Map(
+      viewOnly.Statement.map((statement) => [statement.Sid, statement] as const),
+    );
+    expect(exactStatements.get('C3BudgetListMetadata')).toEqual({
+      Sid: 'C3BudgetListMetadata',
+      Effect: 'Allow',
+      Action: 'budgets:ViewBudget',
+      Resource: '*',
+    });
+    const roleMetadata = exactStatements.get('C3ExactRoleMetadata');
+    const rolePolicyMetadata = exactStatements.get('C3ExactControlRolePolicyMetadata');
+    const managedPolicyMetadata = exactStatements.get('C3ExactManagedPolicyMetadata');
+    if (roleMetadata === undefined || rolePolicyMetadata === undefined) {
+      throw new Error('missing exact C3 role metadata statement');
+    }
+    if (managedPolicyMetadata === undefined) {
+      throw new Error('missing exact C3 managed-policy metadata statement');
+    }
+    expect(resources(roleMetadata)).toEqual(
+      expect.arrayContaining([...controllerRoleArns, ...cfnRoleArns]),
+    );
+    expect(resources(rolePolicyMetadata)).toEqual(
+      expect.arrayContaining([...controllerRoleArns, ...cfnRoleArns]),
+    );
+    expect(resources(managedPolicyMetadata)).toEqual(expect.arrayContaining(cfnBoundaryArns));
+
+    const mutationActions = viewOnly.Statement.flatMap(actions).filter((action) =>
+      /^(?:iam:(?:Create|Put|Update|Delete|Attach|Detach|Pass)|sts:(?!AssumeRole$))/.test(action),
+    );
+    expect(mutationActions).toEqual([]);
+    expect(JSON.stringify(viewOnly)).not.toMatch(
+      /arn:aws:iam::\*|arn:aws:iam::875691018466:(?:role|policy)\/[^"']*\*/,
+    );
   });
 });
