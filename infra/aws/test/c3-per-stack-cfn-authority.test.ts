@@ -45,6 +45,8 @@ interface SynthesizedTemplate {
   readonly Resources?: Readonly<Record<string, CfnResource>>;
 }
 
+type RequestContext = Readonly<Record<string, string | undefined>>;
+
 const authority = {
   network: {
     stackName: 'mxmed-stg-network',
@@ -105,6 +107,37 @@ const documentAllows = (document: PolicyDocument, action: string, resource: stri
   return matching.some((statement) => statement.Effect === 'Allow');
 };
 
+const conditionMatches = (
+  condition: PolicyStatement['Condition'],
+  context: RequestContext,
+): boolean => {
+  if (condition === undefined) return true;
+  const stringEquals = condition.StringEquals;
+  if (stringEquals === undefined) return false;
+  return Object.entries(stringEquals).every(([key, expected]) => {
+    const actual = context[key];
+    return typeof expected === 'string'
+      ? actual === expected
+      : Array.isArray(expected) && expected.includes(actual);
+  });
+};
+
+const documentAllowsWithContext = (
+  document: PolicyDocument,
+  action: string,
+  resource: string,
+  context: RequestContext,
+): boolean => {
+  const matching = document.Statement.filter(
+    (statement) =>
+      actions(statement).some((candidate) => wildcardMatches(candidate, action)) &&
+      resources(statement).some((candidate) => wildcardMatches(candidate, resource)) &&
+      conditionMatches(statement.Condition, context),
+  );
+  if (matching.some((statement) => statement.Effect === 'Deny')) return false;
+  return matching.some((statement) => statement.Effect === 'Allow');
+};
+
 const fixture = new MxMedC3EphemeralStage(
   new App({ analyticsReporting: false, context: { activity: 'c3-ephemeral' } }),
   'PerStackCfnAuthorityFixture',
@@ -135,6 +168,54 @@ const serviceForResourceType: Readonly<Record<string, string>> = {
   SecretsManager: 'secretsmanager',
   StepFunctions: 'states',
 };
+
+const networkCreateTimeTaggingByResourceType = {
+  'AWS::EC2::EIP': {
+    createAction: 'AllocateAddress',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:elastic-ip/*',
+    count: 1,
+  },
+  'AWS::EC2::FlowLog': {
+    createAction: 'CreateFlowLogs',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:flow-log/*',
+    count: 1,
+  },
+  'AWS::EC2::InternetGateway': {
+    createAction: 'CreateInternetGateway',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:internet-gateway/*',
+    count: 1,
+  },
+  'AWS::EC2::NatGateway': {
+    createAction: 'CreateNatGateway',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:natgateway/*',
+    count: 1,
+  },
+  'AWS::EC2::RouteTable': {
+    createAction: 'CreateRouteTable',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:route-table/*',
+    count: 8,
+  },
+  'AWS::EC2::SecurityGroup': {
+    createAction: 'CreateSecurityGroup',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:security-group/*',
+    count: 5,
+  },
+  'AWS::EC2::Subnet': {
+    createAction: 'CreateSubnet',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:subnet/*',
+    count: 8,
+  },
+  'AWS::EC2::VPC': {
+    createAction: 'CreateVpc',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:vpc/*',
+    count: 1,
+  },
+  'AWS::EC2::VPCEndpoint': {
+    createAction: 'CreateVpcEndpoint',
+    resource: 'arn:aws:ec2:mx-central-1:875691018466:vpc-endpoint/*',
+    count: 1,
+  },
+} as const;
 
 describe('C3 per-stack CloudFormation execution authority', () => {
   test('defines exactly six deterministic role and boundary identities', () => {
@@ -215,6 +296,105 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         'logs:DescribeLogGroups',
       );
     }
+  });
+
+  test('allows create-time tags only for the current tagged Network EC2 create surface', () => {
+    const network = readDocument(authority.network.policy);
+    const create = network.Statement.find(
+      (statement) => statement.Sid === 'CreateOnlyTaggedC3NetworkResources',
+    );
+    const mutate = network.Statement.find(
+      (statement) => statement.Sid === 'MutateOnlyTaggedC3NetworkResources',
+    );
+    const createTimeTags = network.Statement.filter(
+      (statement) => statement.Sid === 'TagOnlyC3NetworkResourcesOnCreate',
+    );
+    expect(create).toBeDefined();
+    expect(mutate).toBeDefined();
+    expect(createTimeTags).toHaveLength(1);
+    if (create === undefined || mutate === undefined || createTimeTags[0] === undefined) {
+      throw new Error('NETWORK_CREATE_TIME_TAGGING_AUTHORITY_MISSING');
+    }
+    const createTimeTagStatement = createTimeTags[0];
+    expect(actions(createTimeTagStatement)).toEqual(['ec2:CreateTags']);
+    expect(actions(mutate)).toContain('ec2:CreateTags');
+    expect(mutate.Condition).toEqual({
+      StringEquals: {
+        'aws:RequestedRegion': 'mx-central-1',
+        'aws:ResourceTag/Project': 'mxmed',
+        'aws:ResourceTag/Environment': 'staging',
+        'aws:ResourceTag/Phase': 'C3',
+      },
+    });
+
+    const mapping = networkCreateTimeTaggingByResourceType;
+    const taggedEc2Resources = Object.values(stacks['mxmed-stg-network']?.Resources ?? {}).filter(
+      (resource) =>
+        resource.Type.startsWith('AWS::EC2::') && Array.isArray(resource.Properties?.Tags),
+    );
+    const typeCounts = taggedEc2Resources.reduce<Record<string, number>>((counts, resource) => {
+      counts[resource.Type] = (counts[resource.Type] ?? 0) + 1;
+      return counts;
+    }, {});
+    expect(taggedEc2Resources).toHaveLength(27);
+    expect(Object.keys(typeCounts).sort()).toEqual(Object.keys(mapping).sort());
+    for (const [resourceType, expected] of Object.entries(mapping)) {
+      expect(typeCounts[resourceType]).toBe(expected.count);
+      expect(actions(create)).toContain(`ec2:${expected.createAction}`);
+    }
+
+    const statement = createTimeTagStatement;
+    const createActions = Object.values(mapping).map(({ createAction }) => createAction);
+    const createResources = Object.values(mapping).map(({ resource }) => resource);
+    expect(resources(statement)).toEqual(createResources);
+    expect(statement.Resource).not.toBe('*');
+    expect(statement.Condition).toEqual({
+      StringEquals: {
+        'aws:RequestedRegion': 'mx-central-1',
+        'aws:RequestTag/Project': 'mxmed',
+        'aws:RequestTag/Environment': 'staging',
+        'aws:RequestTag/Phase': 'C3',
+        'ec2:CreateAction': createActions,
+      },
+    });
+    expect(JSON.stringify(statement.Condition)).not.toContain('aws:ResourceTag');
+
+    const allowedContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:RequestTag/Project': 'mxmed',
+      'aws:RequestTag/Environment': 'staging',
+      'aws:RequestTag/Phase': 'C3',
+      'ec2:CreateAction': 'CreateInternetGateway',
+    };
+    const internetGateway = 'arn:aws:ec2:mx-central-1:875691018466:internet-gateway/igw-example';
+    const effectiveAllows = (resource: string, context: RequestContext): boolean =>
+      documentAllowsWithContext(network, 'ec2:CreateTags', resource, context) &&
+      documentAllowsWithContext(network, 'ec2:CreateTags', resource, context);
+
+    expect(effectiveAllows(internetGateway, allowedContext)).toBe(true);
+    for (const [key, value] of [
+      ['aws:RequestTag/Project', 'other'],
+      ['aws:RequestTag/Environment', 'production'],
+      ['aws:RequestTag/Phase', 'C4'],
+      ['aws:RequestedRegion', 'us-east-1'],
+    ] as const) {
+      expect(effectiveAllows(internetGateway, { ...allowedContext, [key]: value })).toBe(false);
+    }
+    const missingCreateAction = { ...allowedContext };
+    delete missingCreateAction['ec2:CreateAction'];
+    expect(effectiveAllows(internetGateway, missingCreateAction)).toBe(false);
+    expect(
+      effectiveAllows(internetGateway, {
+        ...allowedContext,
+        'ec2:CreateAction': 'RunInstances',
+      }),
+    ).toBe(false);
+    expect(
+      effectiveAllows(
+        'arn:aws:ec2:mx-central-1:875691018466:network-interface/eni-example',
+        allowedContext,
+      ),
+    ).toBe(false);
   });
 
   test('maps every synthesized resource to one policy with its service action family', () => {

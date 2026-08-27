@@ -90,6 +90,41 @@
       }
     },
     {
+      "Sid": "TagOnlyC3NetworkResourcesOnCreate",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": [
+        "arn:aws:ec2:mx-central-1:875691018466:elastic-ip/*",
+        "arn:aws:ec2:mx-central-1:875691018466:flow-log/*",
+        "arn:aws:ec2:mx-central-1:875691018466:internet-gateway/*",
+        "arn:aws:ec2:mx-central-1:875691018466:natgateway/*",
+        "arn:aws:ec2:mx-central-1:875691018466:route-table/*",
+        "arn:aws:ec2:mx-central-1:875691018466:security-group/*",
+        "arn:aws:ec2:mx-central-1:875691018466:subnet/*",
+        "arn:aws:ec2:mx-central-1:875691018466:vpc/*",
+        "arn:aws:ec2:mx-central-1:875691018466:vpc-endpoint/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:RequestTag/Project": "mxmed",
+          "aws:RequestTag/Environment": "staging",
+          "aws:RequestTag/Phase": "C3",
+          "ec2:CreateAction": [
+            "AllocateAddress",
+            "CreateFlowLogs",
+            "CreateInternetGateway",
+            "CreateNatGateway",
+            "CreateRouteTable",
+            "CreateSecurityGroup",
+            "CreateSubnet",
+            "CreateVpc",
+            "CreateVpcEndpoint"
+          ]
+        }
+      }
+    },
+    {
       "Sid": "ManageExactNetworkLogGroup",
       "Effect": "Allow",
       "Action": [
