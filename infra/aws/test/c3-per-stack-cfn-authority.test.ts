@@ -424,6 +424,191 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     ).toBe(false);
   });
 
+  test('partitions Network create authority between new resources and tagged dependencies', () => {
+    const network = readDocument(authority.network.policy);
+    const parentCondition = {
+      StringEquals: {
+        'aws:RequestedRegion': 'mx-central-1',
+        'aws:ResourceTag/Project': 'mxmed',
+        'aws:ResourceTag/Environment': 'staging',
+        'aws:ResourceTag/Phase': 'C3',
+      },
+    };
+    const parentStatements = network.Statement.filter((statement) =>
+      [
+        'CreateUsingOnlyTaggedC3VpcParent',
+        'CreateNatGatewayUsingOnlyTaggedC3Dependencies',
+        'CreateVpcEndpointUsingOnlyTaggedC3RouteTable',
+      ].includes(statement.Sid ?? ''),
+    );
+    expect(parentStatements).toEqual([
+      {
+        Sid: 'CreateUsingOnlyTaggedC3VpcParent',
+        Effect: 'Allow',
+        Action: [
+          'ec2:CreateFlowLogs',
+          'ec2:CreateNatGateway',
+          'ec2:CreateRouteTable',
+          'ec2:CreateSecurityGroup',
+          'ec2:CreateSubnet',
+          'ec2:CreateVpcEndpoint',
+        ],
+        Resource: 'arn:aws:ec2:mx-central-1:875691018466:vpc/*',
+        Condition: parentCondition,
+      },
+      {
+        Sid: 'CreateNatGatewayUsingOnlyTaggedC3Dependencies',
+        Effect: 'Allow',
+        Action: 'ec2:CreateNatGateway',
+        Resource: [
+          'arn:aws:ec2:mx-central-1:875691018466:elastic-ip/*',
+          'arn:aws:ec2:mx-central-1:875691018466:subnet/*',
+        ],
+        Condition: parentCondition,
+      },
+      {
+        Sid: 'CreateVpcEndpointUsingOnlyTaggedC3RouteTable',
+        Effect: 'Allow',
+        Action: 'ec2:CreateVpcEndpoint',
+        Resource: 'arn:aws:ec2:mx-central-1:875691018466:route-table/*',
+        Condition: parentCondition,
+      },
+    ]);
+    expect(parentStatements.flatMap(actions)).not.toContain('ec2:AllocateAddress');
+    expect(parentStatements.flatMap(resources)).not.toContain('*');
+    expect(JSON.stringify(parentStatements)).not.toContain('aws:RequestTag');
+
+    const requestTagContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:RequestTag/Project': 'mxmed',
+      'aws:RequestTag/Environment': 'staging',
+      'aws:RequestTag/Phase': 'C3',
+    };
+    const resourceTagContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'aws:ResourceTag/Phase': 'C3',
+    };
+    const requiredTuples = [
+      ['ec2:AllocateAddress', 'elastic-ip', 'new'],
+      ['ec2:CreateFlowLogs', 'vpc-flow-log', 'new'],
+      ['ec2:CreateFlowLogs', 'vpc', 'parent'],
+      ['ec2:CreateInternetGateway', 'internet-gateway', 'new'],
+      ['ec2:CreateNatGateway', 'natgateway', 'new'],
+      ['ec2:CreateNatGateway', 'elastic-ip', 'parent'],
+      ['ec2:CreateNatGateway', 'subnet', 'parent'],
+      ['ec2:CreateNatGateway', 'vpc', 'parent'],
+      ['ec2:CreateRouteTable', 'route-table', 'new'],
+      ['ec2:CreateRouteTable', 'vpc', 'parent'],
+      ['ec2:CreateSecurityGroup', 'security-group', 'new'],
+      ['ec2:CreateSecurityGroup', 'vpc', 'parent'],
+      ['ec2:CreateSubnet', 'subnet', 'new'],
+      ['ec2:CreateSubnet', 'vpc', 'parent'],
+      ['ec2:CreateVpc', 'vpc', 'new'],
+      ['ec2:CreateVpcEndpoint', 'vpc-endpoint', 'new'],
+      ['ec2:CreateVpcEndpoint', 'vpc', 'parent'],
+      ['ec2:CreateVpcEndpoint', 'route-table', 'parent'],
+    ] as const;
+    const parentStatementSids = new Set(parentStatements.map(({ Sid }) => Sid));
+    const preRepairNetwork: PolicyDocument = {
+      ...network,
+      Statement: network.Statement.filter(({ Sid }) => !parentStatementSids.has(Sid)),
+    };
+    const exactResource = (family: string): string =>
+      `arn:aws:ec2:mx-central-1:875691018466:${family}/example`;
+    const identityAllows = (action: string, family: string, context: RequestContext): boolean =>
+      documentAllowsWithContext(network, action, exactResource(family), context);
+    const boundaryAllows = identityAllows;
+    const effectiveAllows = (action: string, family: string, context: RequestContext): boolean =>
+      identityAllows(action, family, context) && boundaryAllows(action, family, context);
+
+    expect(requiredTuples).toHaveLength(18);
+    for (const [action, family, kind] of requiredTuples) {
+      const context = kind === 'new' ? requestTagContext : resourceTagContext;
+      expect(identityAllows(action, family, context)).toBe(true);
+      expect(boundaryAllows(action, family, context)).toBe(true);
+      expect(effectiveAllows(action, family, context)).toBe(true);
+    }
+
+    const parentTuples = requiredTuples.filter(([, , kind]) => kind === 'parent');
+    expect(parentTuples).toHaveLength(9);
+    for (const [action, family] of parentTuples) {
+      expect(
+        documentAllowsWithContext(
+          preRepairNetwork,
+          action,
+          exactResource(family),
+          resourceTagContext,
+        ),
+      ).toBe(false);
+      for (const [key, value] of [
+        ['aws:ResourceTag/Project', 'other'],
+        ['aws:ResourceTag/Environment', 'production'],
+        ['aws:ResourceTag/Phase', 'C4'],
+        ['aws:RequestedRegion', 'us-east-1'],
+      ] as const) {
+        expect(effectiveAllows(action, family, { ...resourceTagContext, [key]: value })).toBe(
+          false,
+        );
+      }
+      expect(effectiveAllows(action, family, {})).toBe(false);
+    }
+
+    expect(
+      documentAllowsWithContext(
+        preRepairNetwork,
+        'ec2:CreateSubnet',
+        exactResource('vpc'),
+        resourceTagContext,
+      ),
+    ).toBe(false);
+    expect(effectiveAllows('ec2:CreateSubnet', 'vpc', resourceTagContext)).toBe(true);
+
+    const forbiddenCrossProduct = [
+      ['ec2:CreateFlowLogs', 'route-table'],
+      ['ec2:CreateSubnet', 'elastic-ip'],
+      ['ec2:CreateRouteTable', 'subnet'],
+      ['ec2:CreateSecurityGroup', 'route-table'],
+      ['ec2:CreateNatGateway', 'route-table'],
+      ['ec2:CreateVpcEndpoint', 'elastic-ip'],
+      ['ec2:CreateVpcEndpoint', 'subnet'],
+      ['ec2:CreateVpcEndpoint', 'security-group'],
+    ] as const;
+    expect(
+      forbiddenCrossProduct.filter(([action, family]) =>
+        effectiveAllows(action, family, resourceTagContext),
+      ),
+    ).toEqual([]);
+
+    const uniqueActions = [...new Set(network.Statement.flatMap(actions))];
+    expect(uniqueActions).toHaveLength(47);
+    expect(
+      parentStatements.flatMap(actions).every((action) => uniqueActions.includes(action)),
+    ).toBe(true);
+
+    const networkTemplate = stacks['mxmed-stg-network'];
+    const resourcesByType = Object.values(networkTemplate?.Resources ?? {}).reduce<
+      Record<string, CfnResource[]>
+    >((grouped, resource) => {
+      (grouped[resource.Type] ??= []).push(resource);
+      return grouped;
+    }, {});
+    expect(resourcesByType['AWS::EC2::FlowLog']).toHaveLength(1);
+    expect(resourcesByType['AWS::EC2::NatGateway']).toHaveLength(1);
+    expect(resourcesByType['AWS::EC2::RouteTable']).toHaveLength(8);
+    expect(resourcesByType['AWS::EC2::SecurityGroup']).toHaveLength(5);
+    expect(resourcesByType['AWS::EC2::Subnet']).toHaveLength(8);
+    expect(resourcesByType['AWS::EC2::VPCEndpoint']).toHaveLength(1);
+    const endpoint = resourcesByType['AWS::EC2::VPCEndpoint']?.[0];
+    expect(endpoint?.Properties?.VpcEndpointType).toBe('Gateway');
+    expect(endpoint?.Properties?.RouteTableIds).toHaveLength(2);
+    expect(endpoint?.Properties?.SubnetIds).toBeUndefined();
+    expect(endpoint?.Properties?.SecurityGroupIds).toBeUndefined();
+    const parentDependencyInstanceCount = 1 + 3 + 8 + 5 + 8 + 3;
+    expect(parentDependencyInstanceCount).toBe(28);
+  });
+
   test('maps every synthesized resource to one policy with its service action family', () => {
     let covered = 0;
     for (const item of Object.values(authority)) {

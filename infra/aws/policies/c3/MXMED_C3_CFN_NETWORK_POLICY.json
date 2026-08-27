@@ -43,6 +43,58 @@
       }
     },
     {
+      "Sid": "CreateUsingOnlyTaggedC3VpcParent",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateFlowLogs",
+        "ec2:CreateNatGateway",
+        "ec2:CreateRouteTable",
+        "ec2:CreateSecurityGroup",
+        "ec2:CreateSubnet",
+        "ec2:CreateVpcEndpoint"
+      ],
+      "Resource": "arn:aws:ec2:mx-central-1:875691018466:vpc/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "aws:ResourceTag/Phase": "C3"
+        }
+      }
+    },
+    {
+      "Sid": "CreateNatGatewayUsingOnlyTaggedC3Dependencies",
+      "Effect": "Allow",
+      "Action": "ec2:CreateNatGateway",
+      "Resource": [
+        "arn:aws:ec2:mx-central-1:875691018466:elastic-ip/*",
+        "arn:aws:ec2:mx-central-1:875691018466:subnet/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "aws:ResourceTag/Phase": "C3"
+        }
+      }
+    },
+    {
+      "Sid": "CreateVpcEndpointUsingOnlyTaggedC3RouteTable",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVpcEndpoint",
+      "Resource": "arn:aws:ec2:mx-central-1:875691018466:route-table/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "aws:ResourceTag/Phase": "C3"
+        }
+      }
+    },
+    {
       "Sid": "MutateOnlyTaggedC3NetworkResources",
       "Effect": "Allow",
       "Action": [
