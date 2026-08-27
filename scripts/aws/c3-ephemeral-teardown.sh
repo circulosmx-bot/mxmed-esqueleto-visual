@@ -4,6 +4,9 @@ set -eu
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
 BUDGETS_API_REGION='us-east-1'
+BUDGET_TEARDOWN_VISIBILITY_GUARD_MAX_SECONDS=120
+BUDGET_FINAL_NOT_FOUND_CONFIRMATION_COUNT=2
+BUDGET_FINAL_NOT_FOUND_CONFIRMATION_MIN_SEPARATION_SECONDS=5
 AWS_WRITE_AUTHORITY='DIRECTOR_AUTHORIZES_SINGLE_USE_C3_AWS_WRITES'
 DELETE_STACKS='mxmed-stg-c3-runner mxmed-stg-session mxmed-stg-registry mxmed-stg-security mxmed-stg-network'
 TEMPLATE_BUCKET='mxmed-stg-c3-cf-templates-875691018466-mx-central-1'
@@ -84,33 +87,82 @@ cleanup_exact_direct_budget() {
     || fail 'DIRECT_BUDGET_API_REGION_MISMATCH'
   [ "$budget_name" = "mxmed-stg-c3-$(jq -r .run_id "$manifest")" ] \
     || fail 'DIRECT_BUDGET_NAME_NOT_EXACT_RUN_BOUND'
-  if aws budgets describe-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
-    --budget-name "$budget_name" >/dev/null 2>&1; then
-    now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    if [ "$(jq -r .direct_budget_created "$state")" = false ]; then
+  budget_create_acknowledged="$(jq -r .direct_budget_created "$state")"
+  if [ "$budget_create_acknowledged" = false ]; then
+    if budget_probe="$(aws budgets describe-budget --region "$BUDGETS_API_REGION" \
+      --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" 2>&1)"; then
+      discovered="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
       c3_atomic_state_update "$manifest" "$state" '
         .direct_budget_created=true|.direct_budget_created_at_utc=$now
         |.created_resource_ids += [{type:"direct-budget",id:.direct_budget_name}]
-      ' --arg now "$now"
+      ' --arg now "$discovered"
+      budget_create_acknowledged=true
+    else
+      case "$budget_probe" in
+        *NotFoundException*|*not\ found*|*could\ not\ be\ found*)
+          c3_atomic_state_update "$manifest" "$state" '.direct_budget_residual_count=0'
+          return 0
+          ;;
+        *) fail 'DIRECT_BUDGET_PRE_CREATE_ABSENCE_READBACK_FAILED' ;;
+      esac
     fi
-    c3_atomic_state_update "$manifest" "$state" \
-      'if .direct_budget_deletion_started_at_utc == $pending then .direct_budget_deletion_started_at_utc=$now else . end' \
-      --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" --arg now "$now"
-    aws budgets delete-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
-      --budget-name "$budget_name" >/dev/null || fail 'DIRECT_BUDGET_EXACT_DELETE_FAILED'
-    deleted="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    c3_record_direct_budget_deleted "$manifest" "$state" "$now" "$deleted"
   fi
-  if absence="$(aws budgets describe-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
-    --budget-name "$budget_name" 2>&1)"; then
-    fail 'DIRECT_BUDGET_EXACT_ABSENCE_NOT_PROVEN'
-  else
-    case "$absence" in
+  [ "$budget_create_acknowledged" = true ] || fail 'DIRECT_BUDGET_CREATE_ACKNOWLEDGEMENT_INVALID'
+
+  guard_started_epoch="$(date -u +%s)"
+  not_found_count=0
+  first_not_found_epoch=0
+  while :; do
+    guard_now_epoch="$(date -u +%s)"
+    guard_elapsed=$((guard_now_epoch - guard_started_epoch))
+    [ "$guard_elapsed" -le "$BUDGET_TEARDOWN_VISIBILITY_GUARD_MAX_SECONDS" ] \
+      || fail 'BLOCKED_MXMED_C3_RUNTIME_TEARDOWN_INCOMPLETE:DIRECT_BUDGET_TEARDOWN_VISIBILITY_GUARD_EXPIRED'
+    if budget_probe="$(aws budgets describe-budget --region "$BUDGETS_API_REGION" \
+      --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" 2>&1)"; then
+      not_found_count=0
+      first_not_found_epoch=0
+      deletion_started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      if [ "$(jq -r .direct_budget_deletion_started_at_utc "$state")" = "$C3_PENDING_RUNTIME_RESOLUTION" ]; then
+        c3_atomic_state_update "$manifest" "$state" \
+          '.direct_budget_deletion_started_at_utc=$now' --arg now "$deletion_started"
+      fi
+      aws budgets delete-budget --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
+        --budget-name "$budget_name" >/dev/null || fail 'DIRECT_BUDGET_EXACT_DELETE_FAILED'
+      if [ "$(jq -r .direct_budget_deleted_at_utc "$state")" = "$C3_PENDING_RUNTIME_RESOLUTION" ]; then
+        deleted="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        c3_record_direct_budget_deleted "$manifest" "$state" \
+          "$(jq -r .direct_budget_deletion_started_at_utc "$state")" "$deleted"
+      fi
+      guard_now_epoch="$(date -u +%s)"
+      guard_remaining=$((BUDGET_TEARDOWN_VISIBILITY_GUARD_MAX_SECONDS - guard_now_epoch + guard_started_epoch))
+      [ "$guard_remaining" -gt 0 ] \
+        || fail 'BLOCKED_MXMED_C3_RUNTIME_TEARDOWN_INCOMPLETE:DIRECT_BUDGET_TEARDOWN_VISIBILITY_GUARD_EXPIRED'
+      sleep 1
+      continue
+    fi
+    case "$budget_probe" in
       *NotFoundException*|*not\ found*|*could\ not\ be\ found*) ;;
-      *) fail 'DIRECT_BUDGET_ABSENCE_READBACK_FAILED' ;;
+      *) fail 'DIRECT_BUDGET_TEARDOWN_VISIBILITY_READBACK_FAILED' ;;
     esac
-  fi
-  c3_atomic_state_update "$manifest" "$state" '.direct_budget_residual_count=0'
+    guard_now_epoch="$(date -u +%s)"
+    if [ "$not_found_count" -eq 0 ]; then
+      not_found_count=1
+      first_not_found_epoch="$guard_now_epoch"
+    elif [ $((guard_now_epoch - first_not_found_epoch)) -ge "$BUDGET_FINAL_NOT_FOUND_CONFIRMATION_MIN_SEPARATION_SECONDS" ]; then
+      not_found_count=$((not_found_count + 1))
+      [ "$not_found_count" -ge "$BUDGET_FINAL_NOT_FOUND_CONFIRMATION_COUNT" ] \
+        || fail 'DIRECT_BUDGET_NOTFOUND_CONFIRMATION_COUNT_INVALID'
+      c3_atomic_state_update "$manifest" "$state" '.direct_budget_residual_count=0'
+      return 0
+    fi
+    guard_elapsed=$((guard_now_epoch - guard_started_epoch))
+    guard_remaining=$((BUDGET_TEARDOWN_VISIBILITY_GUARD_MAX_SECONDS - guard_elapsed))
+    [ "$guard_remaining" -gt 0 ] \
+      || fail 'BLOCKED_MXMED_C3_RUNTIME_TEARDOWN_INCOMPLETE:DIRECT_BUDGET_TEARDOWN_VISIBILITY_GUARD_EXPIRED'
+    guard_sleep="$BUDGET_FINAL_NOT_FOUND_CONFIRMATION_MIN_SEPARATION_SECONDS"
+    if [ "$guard_sleep" -gt "$guard_remaining" ]; then guard_sleep="$guard_remaining"; fi
+    sleep "$guard_sleep"
+  done
 }
 
 capture_retained_physical_ids() {
@@ -168,6 +220,10 @@ cleanup_one() {
     *) fail "UNAPPROVED_RETAINED_RESOURCE_TYPE:$resource_type" ;;
   esac
 }
+
+if [ "${MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY:-}" = '1' ]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 case "$mode" in
   --execute-stack-deletes)

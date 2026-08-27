@@ -191,6 +191,57 @@ c3_validate_state_base() {
       and (.direct_budget_created | type == "boolean")
       and (.direct_budget_created_at_utc == $pending or (.direct_budget_created_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.direct_budget_readback_pass | type == "boolean")
+      and (
+        if has("direct_budget_visibility_attempt_count") then
+          (.direct_budget_visibility_attempt_count | type == "number")
+          and .direct_budget_visibility_attempt_count >= 0
+          and (.direct_budget_visibility_first_attempt_at_utc == $pending or (.direct_budget_visibility_first_attempt_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
+          and (.direct_budget_visibility_last_attempt_at_utc == $pending or (.direct_budget_visibility_last_attempt_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
+          and (.direct_budget_visibility_stage as $stage
+            | ["NOT_STARTED","BUDGET","NOTIFICATIONS","SUBSCRIBERS","STABILIZED","TIMEOUT"]
+            | index($stage) != null)
+          and (.direct_budget_visibility_stabilized | type == "boolean")
+          and (.direct_budget_visibility_timeout | type == "boolean")
+          and (.direct_budget_visibility_last_sanitized_result as $result | [
+            "NOT_ATTEMPTED","BUDGET_NOT_FOUND","BUDGET_MATCH","NOTIFICATIONS_NOT_FOUND",
+            "NOTIFICATIONS_INCOMPLETE","NOTIFICATIONS_MATCH","SUBSCRIBERS_NOT_FOUND",
+            "SUBSCRIBERS_INCOMPLETE","BUDGET_UNEXPECTED_ERROR","BUDGET_SEMANTIC_MISMATCH",
+            "NOTIFICATIONS_UNEXPECTED_ERROR","NOTIFICATIONS_SEMANTIC_MISMATCH",
+            "SUBSCRIBERS_UNEXPECTED_ERROR","SUBSCRIBERS_SEMANTIC_MISMATCH","PASS","TIMEOUT"
+          ] | index($result) != null)
+          and (.direct_budget_visibility_stabilized and .direct_budget_visibility_timeout | not)
+          and (
+            if .direct_budget_visibility_attempt_count == 0 then
+              .direct_budget_visibility_first_attempt_at_utc == $pending
+              and .direct_budget_visibility_last_attempt_at_utc == $pending
+              and .direct_budget_visibility_stage == "NOT_STARTED"
+              and .direct_budget_visibility_last_sanitized_result == "NOT_ATTEMPTED"
+              and (.direct_budget_visibility_stabilized | not)
+              and (.direct_budget_visibility_timeout | not)
+            else
+              .direct_budget_created
+              and .direct_budget_visibility_first_attempt_at_utc != $pending
+              and .direct_budget_visibility_last_attempt_at_utc != $pending
+              and ((.direct_budget_visibility_first_attempt_at_utc | fromdateiso8601) <= (.direct_budget_visibility_last_attempt_at_utc | fromdateiso8601))
+            end
+          )
+          and (if .direct_budget_visibility_stabilized then
+            .direct_budget_readback_pass
+            and (.direct_budget_visibility_timeout | not)
+            and .direct_budget_visibility_stage == "STABILIZED"
+            and .direct_budget_visibility_last_sanitized_result == "PASS"
+          else true end)
+          and (if .direct_budget_visibility_timeout then
+            (.direct_budget_readback_pass | not)
+            and (.direct_budget_visibility_stabilized | not)
+            and .direct_budget_visibility_stage == "TIMEOUT"
+            and .direct_budget_visibility_last_sanitized_result == "TIMEOUT"
+          else true end)
+          and (if .direct_budget_readback_pass then .direct_budget_visibility_stabilized else true end)
+        else
+          .teardown_completed_at_utc != $pending
+        end
+      )
       and (.direct_budget_deletion_started_at_utc == $pending or (.direct_budget_deletion_started_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.direct_budget_deleted_at_utc == $pending or (.direct_budget_deleted_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.direct_budget_residual_count == $pending or .direct_budget_residual_count == 0 or .direct_budget_residual_count == 1)
@@ -317,6 +368,13 @@ c3_initialize_state() {
         direct_budget_name:$budget_name,direct_budget_created:false,direct_budget_created_at_utc:$pending,
         direct_budget_readback_pass:false,direct_budget_deletion_started_at_utc:$pending,
         direct_budget_deleted_at_utc:$pending,direct_budget_residual_count:$pending,
+        direct_budget_visibility_attempt_count:0,
+        direct_budget_visibility_first_attempt_at_utc:$pending,
+        direct_budget_visibility_last_attempt_at_utc:$pending,
+        direct_budget_visibility_stage:"NOT_STARTED",
+        direct_budget_visibility_stabilized:false,
+        direct_budget_visibility_timeout:false,
+        direct_budget_visibility_last_sanitized_result:"NOT_ATTEMPTED",
         template_transport_objects:[],change_set_template_semantic_sha256:{},runner:{},
         orphan_inventory:[],residual_billable_resource_count:$pending
       }
@@ -360,11 +418,78 @@ c3_record_direct_budget_created() {
 }
 
 c3_record_direct_budget_readback() {
+  c3_record_direct_budget_visibility_stabilized "$1" "$2"
+}
+
+c3_record_direct_budget_visibility_attempt() {
+  local manifest state timestamp stage result previous last_epoch timestamp_epoch
+  manifest="$1"; state="$2"; timestamp="$3"; stage="$4"; result="$5"
+  [ "$(jq -r .direct_budget_created "$state")" = true ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_BEFORE_CREATE_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_stabilized "$state")" = false ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_AFTER_STABILIZED_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_timeout "$state")" = false ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_AFTER_TIMEOUT_REJECTED'
+  case "$stage:$result" in
+    BUDGET:BUDGET_NOT_FOUND|BUDGET:BUDGET_MATCH|BUDGET:BUDGET_UNEXPECTED_ERROR|BUDGET:BUDGET_SEMANTIC_MISMATCH|NOTIFICATIONS:NOTIFICATIONS_NOT_FOUND|NOTIFICATIONS:NOTIFICATIONS_INCOMPLETE|NOTIFICATIONS:NOTIFICATIONS_MATCH|NOTIFICATIONS:NOTIFICATIONS_UNEXPECTED_ERROR|NOTIFICATIONS:NOTIFICATIONS_SEMANTIC_MISMATCH|SUBSCRIBERS:SUBSCRIBERS_NOT_FOUND|SUBSCRIBERS:SUBSCRIBERS_INCOMPLETE|SUBSCRIBERS:SUBSCRIBERS_UNEXPECTED_ERROR|SUBSCRIBERS:SUBSCRIBERS_SEMANTIC_MISMATCH|SUBSCRIBERS:PASS) ;;
+    *) c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_STAGE_RESULT_INVALID'; return 1;;
+  esac
+  timestamp_epoch="$(c3_epoch "$timestamp")" || { c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_TIMESTAMP_INVALID'; return 1; }
+  previous="$(jq -r .direct_budget_visibility_last_attempt_at_utc "$state")"
+  if [ "$previous" != "$C3_PENDING_RUNTIME_RESOLUTION" ]; then
+    last_epoch="$(c3_epoch "$previous")" || { c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_LAST_TIMESTAMP_INVALID'; return 1; }
+    [ "$timestamp_epoch" -ge "$last_epoch" ] \
+      || { c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_TIMESTAMP_NOT_MONOTONIC'; return 1; }
+  fi
+  c3_atomic_state_update "$manifest" "$state" '
+    .direct_budget_visibility_attempt_count += 1
+    |if .direct_budget_visibility_first_attempt_at_utc == $pending
+      then .direct_budget_visibility_first_attempt_at_utc=$timestamp else . end
+    |.direct_budget_visibility_last_attempt_at_utc=$timestamp
+    |.direct_budget_visibility_stage=$stage
+    |.direct_budget_visibility_last_sanitized_result=$result
+  ' --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" --arg timestamp "$timestamp" \
+    --arg stage "$stage" --arg result "$result"
+}
+
+c3_record_direct_budget_visibility_stabilized() {
   local manifest state
   manifest="$1"; state="$2"
-  [ "$(jq -r .direct_budget_created "$state")" = true ] || c3_contract_fail 'DIRECT_BUDGET_READBACK_BEFORE_CREATE_REJECTED'
-  [ "$(jq -r .direct_budget_readback_pass "$state")" = false ] || c3_contract_fail 'DIRECT_BUDGET_READBACK_REWRITE_REJECTED'
-  c3_atomic_state_update "$manifest" "$state" '.direct_budget_readback_pass=true'
+  [ "$(jq -r .direct_budget_created "$state")" = true ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_STABILIZED_BEFORE_CREATE_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_attempt_count "$state")" -gt 0 ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_STABILIZED_WITHOUT_ATTEMPT_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_stabilized "$state")" = false ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_STABILIZED_REWRITE_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_timeout "$state")" = false ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_STABILIZED_AFTER_TIMEOUT_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_stage "$state")" = 'SUBSCRIBERS' ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_STABILIZED_BEFORE_SUBSCRIBERS_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_last_sanitized_result "$state")" = 'PASS' ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_STABILIZED_WITHOUT_PASS_REJECTED'
+  c3_atomic_state_update "$manifest" "$state" '
+    .direct_budget_visibility_stabilized=true
+    |.direct_budget_visibility_stage="STABILIZED"
+    |.direct_budget_readback_pass=true
+  '
+}
+
+c3_record_direct_budget_visibility_timeout() {
+  local manifest state
+  manifest="$1"; state="$2"
+  [ "$(jq -r .direct_budget_created "$state")" = true ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_TIMEOUT_BEFORE_CREATE_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_attempt_count "$state")" -gt 0 ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_TIMEOUT_WITHOUT_ATTEMPT_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_stabilized "$state")" = false ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_TIMEOUT_AFTER_STABILIZED_REJECTED'
+  [ "$(jq -r .direct_budget_visibility_timeout "$state")" = false ] \
+    || c3_contract_fail 'DIRECT_BUDGET_VISIBILITY_TIMEOUT_REWRITE_REJECTED'
+  c3_atomic_state_update "$manifest" "$state" '
+    .direct_budget_visibility_timeout=true
+    |.direct_budget_visibility_stage="TIMEOUT"
+    |.direct_budget_visibility_last_sanitized_result="TIMEOUT"
+  '
 }
 
 c3_record_direct_budget_deleted() {
@@ -376,7 +501,7 @@ c3_record_direct_budget_deleted() {
   [ "$current_started" = "$C3_PENDING_RUNTIME_RESOLUTION" ] || [ "$current_started" = "$started" ] \
     || c3_contract_fail 'DIRECT_BUDGET_DELETE_START_REWRITE_REJECTED'
   c3_atomic_state_update "$manifest" "$state" '
-    .direct_budget_deletion_started_at_utc=$started|.direct_budget_deleted_at_utc=$deleted|.direct_budget_residual_count=0
+    .direct_budget_deletion_started_at_utc=$started|.direct_budget_deleted_at_utc=$deleted
   ' --arg started "$started" --arg deleted "$deleted"
 }
 
@@ -404,6 +529,9 @@ if [ "${0##*/}" = 'c3-runtime-contract.sh' ]; then
     record-first-mutation) c3_record_first_runtime_mutation "$1" "$2" "$3";;
     record-budget-created) c3_record_direct_budget_created "$1" "$2" "$3";;
     record-budget-readback) c3_record_direct_budget_readback "$1" "$2";;
+    record-budget-visibility-attempt) c3_record_direct_budget_visibility_attempt "$1" "$2" "$3" "$4" "$5";;
+    record-budget-visibility-stabilized) c3_record_direct_budget_visibility_stabilized "$1" "$2";;
+    record-budget-visibility-timeout) c3_record_direct_budget_visibility_timeout "$1" "$2";;
     record-budget-deleted) c3_record_direct_budget_deleted "$1" "$2" "$3" "$4";;
     seal-digest) c3_seal_ecr_digest "$1" "$2" "$3" "$4" "$5";;
     *) c3_contract_fail 'COMMAND_REQUIRED';;

@@ -4,6 +4,8 @@ set -eu
 EXPECTED_ACCOUNT='875691018466'
 EXPECTED_REGION='mx-central-1'
 BUDGETS_API_REGION='us-east-1'
+BUDGET_VISIBILITY_DELAYS='1 2 4 8 10 10 10'
+BUDGET_VISIBILITY_MAX_SECONDS=60
 EXPECTED_COST_CAP='5'
 EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN='arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications'
 PRE_DIGEST_STACKS='mxmed-stg-c3-janitor mxmed-stg-network mxmed-stg-security mxmed-stg-session mxmed-stg-registry'
@@ -25,6 +27,160 @@ CONTRACT_HELPER='scripts/aws/c3-runtime-contract.sh'
 fail() { printf '%s\n' "C3_DEPLOY_FAIL_CLOSED:$1" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "COMMAND_MISSING:$1"; }
 safe_value() { case "$1" in ''|*[!A-Za-z0-9_./:@+=,-]*) return 1;; esac; }
+
+budget_error_is_not_found() {
+  case "$1" in *NotFoundException*|*not\ found*|*could\ not\ be\ found*) return 0;; *) return 1;; esac
+}
+
+normalize_budget_notifications() {
+  jq -ce '[.[] | {
+    ComparisonOperator,
+    NotificationType,
+    Threshold:(.Threshold|tonumber as $threshold
+      | if $threshold == ($threshold|floor) then ($threshold|floor) else $threshold end),
+    ThresholdType
+  }] | sort_by(.Threshold,.NotificationType,.ComparisonOperator,.ThresholdType)'
+}
+
+normalize_budget_subscribers() {
+  jq -ce '[.[] | {SubscriptionType,Address}] | sort_by(.SubscriptionType,.Address)'
+}
+
+probe_direct_budget_visibility() {
+  visibility_stage='BUDGET'
+  visibility_result='BUDGET_UNEXPECTED_ERROR'
+  if actual_budget="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-budget --region "$BUDGETS_API_REGION" \
+    --account-id "$EXPECTED_ACCOUNT" \
+    --budget-name "$budget_name" --query Budget --output json 2>&1)"; then
+    if ! printf '%s' "$actual_budget" | jq -e --argjson expected "$budget_json" '
+      .BudgetName == $expected.BudgetName and .BudgetType == $expected.BudgetType and .TimeUnit == $expected.TimeUnit
+      and .BudgetLimit.Unit == $expected.BudgetLimit.Unit and (.BudgetLimit.Amount|tonumber) == ($expected.BudgetLimit.Amount|tonumber)
+      and .CostFilters == $expected.CostFilters' >/dev/null; then
+      visibility_result='BUDGET_SEMANTIC_MISMATCH'
+      return 20
+    fi
+  else
+    if budget_error_is_not_found "$actual_budget"; then
+      visibility_result='BUDGET_NOT_FOUND'
+      return 10
+    fi
+    return 20
+  fi
+
+  visibility_stage='NOTIFICATIONS'
+  visibility_result='NOTIFICATIONS_UNEXPECTED_ERROR'
+  if actual_notifications_raw="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-notifications-for-budget \
+    --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" \
+    --budget-name "$budget_name" --query Notifications --output json 2>&1)"; then
+    if ! actual_notifications="$(printf '%s' "$actual_notifications_raw" | normalize_budget_notifications)"; then
+      visibility_result='NOTIFICATIONS_SEMANTIC_MISMATCH'
+      return 20
+    fi
+  else
+    if budget_error_is_not_found "$actual_notifications_raw"; then
+      visibility_result='NOTIFICATIONS_NOT_FOUND'
+      return 10
+    fi
+    return 20
+  fi
+  if [ "$actual_notifications" != "$expected_notifications" ]; then
+    missing_notifications="$(jq -cn --argjson actual "$actual_notifications" \
+      --argjson expected "$expected_notifications" '$expected - $actual | length')"
+    unexpected_notifications="$(jq -cn --argjson actual "$actual_notifications" \
+      --argjson expected "$expected_notifications" '$actual - $expected | length')"
+    if [ "$missing_notifications" -gt 0 ] && [ "$unexpected_notifications" -eq 0 ]; then
+      visibility_result='NOTIFICATIONS_INCOMPLETE'
+      return 10
+    fi
+    visibility_result='NOTIFICATIONS_SEMANTIC_MISMATCH'
+    return 20
+  fi
+
+  visibility_stage='SUBSCRIBERS'
+  notification_count="$(printf '%s' "$expected_notifications" | jq length)"
+  notification_index=0
+  while [ "$notification_index" -lt "$notification_count" ]; do
+    notification="$(printf '%s' "$expected_notifications" | jq -c ".[$notification_index]")"
+    visibility_result='SUBSCRIBERS_UNEXPECTED_ERROR'
+    if actual_subscribers_raw="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-subscribers-for-notification \
+      --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" \
+      --notification "$notification" --query Subscribers --output json 2>&1)"; then
+      if ! actual_subscribers="$(printf '%s' "$actual_subscribers_raw" | normalize_budget_subscribers)"; then
+        visibility_result='SUBSCRIBERS_SEMANTIC_MISMATCH'
+        return 20
+      fi
+    else
+      if budget_error_is_not_found "$actual_subscribers_raw"; then
+        visibility_result='SUBSCRIBERS_NOT_FOUND'
+        return 10
+      fi
+      return 20
+    fi
+    if [ "$actual_subscribers" != "$expected_subscribers" ]; then
+      missing_subscribers="$(jq -cn --argjson actual "$actual_subscribers" \
+        --argjson expected "$expected_subscribers" '$expected - $actual | length')"
+      unexpected_subscribers="$(jq -cn --argjson actual "$actual_subscribers" \
+        --argjson expected "$expected_subscribers" '$actual - $expected | length')"
+      if [ "$missing_subscribers" -gt 0 ] && [ "$unexpected_subscribers" -eq 0 ]; then
+        visibility_result='SUBSCRIBERS_INCOMPLETE'
+        return 10
+      fi
+      visibility_result='SUBSCRIBERS_SEMANTIC_MISMATCH'
+      return 20
+    fi
+    notification_index=$((notification_index + 1))
+  done
+  visibility_result='PASS'
+  return 0
+}
+
+wait_for_direct_budget_visibility() {
+  expected_notifications="$(printf '%s' "$notifications_json" \
+    | jq -c '[.[].Notification]' | normalize_budget_notifications)" \
+    || fail 'DIRECT_BUDGET_EXPECTED_NOTIFICATION_NORMALIZATION_FAILED'
+  expected_subscribers="$(jq -cn --arg topic "$EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN" \
+    '[{SubscriptionType:"SNS",Address:$topic}]')"
+  visibility_started_epoch="$(date -u +%s)"
+  for visibility_delay in $BUDGET_VISIBILITY_DELAYS final; do
+    if probe_direct_budget_visibility; then
+      visibility_status=0
+    else
+      visibility_status=$?
+    fi
+    visibility_now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    c3_record_direct_budget_visibility_attempt "$manifest" "$state" "$visibility_now" \
+      "$visibility_stage" "$visibility_result" || return 2
+    visibility_now_epoch="$(date -u +%s)"
+    visibility_elapsed=$((visibility_now_epoch - visibility_started_epoch))
+    if [ "$visibility_elapsed" -gt "$BUDGET_VISIBILITY_MAX_SECONDS" ]; then
+      c3_record_direct_budget_visibility_timeout "$manifest" "$state" || return 2
+      return 1
+    fi
+    if [ "$visibility_status" -eq 0 ]; then
+      c3_record_direct_budget_visibility_stabilized "$manifest" "$state" || return 2
+      return 0
+    fi
+    [ "$visibility_status" -eq 10 ] || return 2
+    if [ "$visibility_delay" = final ]; then
+      c3_record_direct_budget_visibility_timeout "$manifest" "$state" || return 2
+      return 1
+    fi
+    visibility_remaining=$((BUDGET_VISIBILITY_MAX_SECONDS - visibility_elapsed))
+    [ "$visibility_remaining" -gt 0 ] || {
+      c3_record_direct_budget_visibility_timeout "$manifest" "$state" || return 2
+      return 1
+    }
+    if [ "$visibility_delay" -gt "$visibility_remaining" ]; then
+      visibility_delay="$visibility_remaining"
+    fi
+    sleep "$visibility_delay"
+  done
+  return 2
+}
+
+if [ "${MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY:-}" = '1' ]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 manifest=''
 state=''
@@ -473,31 +629,15 @@ case "$mode" in
       || start_partial_teardown direct-budget 'DIRECT_BUDGET_CREATE_FAILED'
     c3_record_direct_budget_created "$manifest" "$state" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       || start_partial_teardown direct-budget 'DIRECT_BUDGET_CREATE_STATE_SEAL_FAILED'
-    actual_budget="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-budget --region "$BUDGETS_API_REGION" \
-      --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" --query Budget --output json)" \
-      || start_partial_teardown direct-budget 'DIRECT_BUDGET_READBACK_FAILED'
-    printf '%s' "$actual_budget" | jq -e --argjson expected "$budget_json" '
-      .BudgetName == $expected.BudgetName and .BudgetType == $expected.BudgetType and .TimeUnit == $expected.TimeUnit
-      and .BudgetLimit.Unit == $expected.BudgetLimit.Unit and (.BudgetLimit.Amount|tonumber) == ($expected.BudgetLimit.Amount|tonumber)
-      and .CostFilters == $expected.CostFilters' >/dev/null \
-      || start_partial_teardown direct-budget 'DIRECT_BUDGET_READBACK_SEMANTIC_MISMATCH'
-    actual_notifications="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-notifications-for-budget \
-      --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" --query Notifications --output json)" \
-      || start_partial_teardown direct-budget 'DIRECT_BUDGET_NOTIFICATION_READBACK_FAILED'
-    printf '%s' "$actual_notifications" | jq -e --argjson expected "$(printf '%s' "$notifications_json" | jq '[.[].Notification]')" \
-      'sort_by(.Threshold) == ($expected|sort_by(.Threshold))' >/dev/null \
-      || start_partial_teardown direct-budget 'DIRECT_BUDGET_NOTIFICATION_READBACK_MISMATCH'
-    printf '%s' "$notifications_json" | jq -c '.[].Notification' | while IFS= read -r notification; do
-      subscribers="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws budgets describe-subscribers-for-notification \
-        --region "$BUDGETS_API_REGION" --account-id "$EXPECTED_ACCOUNT" --budget-name "$budget_name" \
-        --notification "$notification" --query Subscribers --output json)" \
-        || start_partial_teardown direct-budget 'DIRECT_BUDGET_SUBSCRIBER_READBACK_FAILED'
-      printf '%s' "$subscribers" | jq -e --arg topic "$EXPECTED_BUDGET_NOTIFICATION_TOPIC_ARN" \
-        '. == [{SubscriptionType:"SNS",Address:$topic}]' >/dev/null \
-        || start_partial_teardown direct-budget 'DIRECT_BUDGET_SUBSCRIBER_READBACK_MISMATCH'
-    done
-    c3_record_direct_budget_readback "$manifest" "$state" \
-      || start_partial_teardown direct-budget 'DIRECT_BUDGET_READBACK_STATE_SEAL_FAILED'
+    if wait_for_direct_budget_visibility; then
+      :
+    else
+      visibility_wait_status=$?
+      if [ "$visibility_wait_status" -eq 1 ]; then
+        start_partial_teardown direct-budget 'DIRECT_BUDGET_VISIBILITY_TIMEOUT'
+      fi
+      start_partial_teardown direct-budget "DIRECT_BUDGET_VISIBILITY_FAIL_CLOSED:$visibility_result"
+    fi
     ;;
   --build-push-and-seal-image)
     require_future_write_authority POST_FIRST_RUNTIME_MUTATION

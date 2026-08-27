@@ -7,6 +7,7 @@ import { join } from 'node:path';
 const repositoryRoot = join(__dirname, '../../..');
 const helper = join(repositoryRoot, 'scripts/aws/c3-runtime-contract.sh');
 const deployController = join(repositoryRoot, 'scripts/aws/c3-ephemeral-deploy.sh');
+const teardownController = join(repositoryRoot, 'scripts/aws/c3-ephemeral-teardown.sh');
 const hash = 'a'.repeat(64);
 const otherHash = 'b'.repeat(64);
 const sourceHead = '1'.repeat(40);
@@ -202,6 +203,169 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     expect(run(...args).status).not.toBe(0);
   };
 
+  const installBudgetAwsStub = (
+    scenario: string,
+  ): {
+    PATH: string;
+    AWS_LOG: string;
+    DESCRIBE_COUNT: string;
+    NOTIFICATION_COUNT: string;
+    CLOCK_FILE: string;
+    SLEEP_LOG: string;
+    SCENARIO: string;
+  } => {
+    const awsLog = join(directory, 'aws.log');
+    const describeCount = join(directory, 'describe.count');
+    const notificationCount = join(directory, 'notification.count');
+    const clock = join(directory, 'clock');
+    const sleepLog = join(directory, 'sleep.log');
+    writeFileSync(clock, '1787702400\n');
+    writeFileSync(
+      join(directory, 'aws'),
+      `#!/bin/sh
+set -eu
+printf '%s\\n' "$*" >> "$AWS_LOG"
+next_count() {
+  file="$1"
+  if [ -f "$file" ]; then count="$(sed -n '1p' "$file")"; else count=0; fi
+  count=$((count + 1))
+  printf '%s\\n' "$count" > "$file"
+  printf '%s\\n' "$count"
+}
+not_found() { printf '%s\\n' 'NotFoundException: exact budget not found' >&2; exit 254; }
+budget='{"BudgetName":"mxmed-stg-c3-${runId}","BudgetType":"COST","TimeUnit":"MONTHLY","BudgetLimit":{"Amount":"5.0","Unit":"USD"},"CostFilters":{"TagKeyValue":["user:Phase$C3"]}}'
+notifications='[{"Threshold":"5.0","ThresholdType":"ABSOLUTE_VALUE","NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","NotificationState":"OK"},{"Threshold":1.0,"ThresholdType":"ABSOLUTE_VALUE","NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","NotificationState":"ALARM"},{"Threshold":"3","ThresholdType":"ABSOLUTE_VALUE","NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","NotificationState":"OK"}]'
+case "$2" in
+  describe-budget)
+    count="$(next_count "$DESCRIBE_COUNT")"
+    case "$SCENARIO" in
+      budget-notfound-once) [ "$count" -eq 1 ] && not_found ;;
+      guard-notfound) not_found ;;
+      guard-late) [ "$count" -ne 2 ] && not_found ;;
+      guard-expire) [ $((count % 2)) -eq 1 ] && not_found ;;
+    esac
+    printf '%s\\n' "$budget"
+    ;;
+  describe-notifications-for-budget)
+    count="$(next_count "$NOTIFICATION_COUNT")"
+    if [ "$SCENARIO" = incomplete-notifications-once ] && [ "$count" -eq 1 ]; then
+      printf '%s\\n' '[{"Threshold":1,"ThresholdType":"ABSOLUTE_VALUE","NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","NotificationState":"OK"}]'
+    else
+      printf '%s\\n' "$notifications"
+    fi
+    ;;
+  describe-subscribers-for-notification)
+    if [ "$SCENARIO" = missing-subscriber ]; then printf '%s\\n' '[]';
+    else printf '%s\\n' '[{"Address":"${budgetNotificationTopicArn}","SubscriptionType":"SNS"}]'; fi
+    ;;
+  delete-budget) ;;
+  create-budget) ;;
+  *) printf '%s\\n' "unexpected aws operation: $*" >&2; exit 64 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'aws'), 0o700);
+    writeFileSync(
+      join(directory, 'sleep'),
+      `#!/bin/sh
+set -eu
+printf '%s\\n' "$1" >> "$SLEEP_LOG"
+if [ -n "\${CLOCK_FILE:-}" ]; then
+  current="$(sed -n '1p' "$CLOCK_FILE")"
+  printf '%s\\n' $((current + $1)) > "$CLOCK_FILE"
+fi
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'sleep'), 0o700);
+    writeFileSync(
+      join(directory, 'date'),
+      `#!/bin/sh
+set -eu
+if [ -z "\${CLOCK_FILE:-}" ]; then exec /bin/date "$@"; fi
+current="$(sed -n '1p' "$CLOCK_FILE")"
+case "$*" in
+  *+%s*) printf '%s\\n' "$current" ;;
+  *+%Y-%m-%dT%H:%M:%SZ*) /bin/date -u -r "$current" '+%Y-%m-%dT%H:%M:%SZ' ;;
+  *) /bin/date "$@" ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'date'), 0o700);
+    return {
+      PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+      AWS_LOG: awsLog,
+      DESCRIBE_COUNT: describeCount,
+      NOTIFICATION_COUNT: notificationCount,
+      CLOCK_FILE: clock,
+      SLEEP_LOG: sleepLog,
+      SCENARIO: scenario,
+    };
+  };
+
+  const initializeCreatedBudgetState = (): void => {
+    expectAccepted('init-state', manifestPath, statePath);
+    expectAccepted('record-budget-created', manifestPath, statePath, '2026-08-25T12:01:00Z');
+  };
+
+  const runDeployVisibilityWaiter = (scenario: string) => {
+    initializeCreatedBudgetState();
+    const stub = installBudgetAwsStub(scenario);
+    return spawnSync(
+      'sh',
+      [
+        '-c',
+        `set -eu
+MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY=1 . "$1"
+manifest="$2"
+state="$3"
+MXMED_C3_DEPLOY_PROFILE=mxmed-c3-stg-deploy
+budget_name="$(jq -r .direct_budget_authority.budget_name "$manifest")"
+budget_json="$(jq -c .direct_budget_authority.budget "$manifest")"
+notifications_json="$(jq -c .direct_budget_authority.notifications_with_subscribers "$manifest")"
+wait_for_direct_budget_visibility`,
+        'sh',
+        deployController,
+        manifestPath,
+        statePath,
+      ],
+      { cwd: repositoryRoot, encoding: 'utf8', env: { ...process.env, ...stub, CLOCK_FILE: '' } },
+    );
+  };
+
+  const runTeardownBudgetGuard = (scenario: string) => {
+    initializeCreatedBudgetState();
+    const stub = installBudgetAwsStub(scenario);
+    return {
+      result: spawnSync(
+        'sh',
+        [
+          '-c',
+          `set -eu
+set --
+MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY=1 . "$TEARDOWN_CONTROLLER"
+manifest="$MANIFEST_PATH"
+state="$STATE_PATH"
+cleanup_exact_direct_budget`,
+        ],
+        {
+          cwd: repositoryRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            ...stub,
+            MANIFEST_PATH: manifestPath,
+            STATE_PATH: statePath,
+            TEARDOWN_CONTROLLER: teardownController,
+          },
+        },
+      ),
+      stub,
+    };
+  };
+
   beforeEach(() => {
     directory = mkdtempSync(join(tmpdir(), 'mxmed-c3-runtime-contract-'));
     manifestPath = join(directory, 'manifest.json');
@@ -347,7 +511,15 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
   test('records the exact direct Budget lifecycle monotonically in the sidecar', () => {
     expectAccepted('init-state', manifestPath, statePath);
     expectAccepted('record-budget-created', manifestPath, statePath, '2026-08-25T12:01:00Z');
-    expectAccepted('record-budget-readback', manifestPath, statePath);
+    expectAccepted(
+      'record-budget-visibility-attempt',
+      manifestPath,
+      statePath,
+      '2026-08-25T12:01:01Z',
+      'SUBSCRIBERS',
+      'PASS',
+    );
+    expectAccepted('record-budget-visibility-stabilized', manifestPath, statePath);
     expectRejected('record-budget-created', manifestPath, statePath, '2026-08-25T12:02:00Z');
     expectAccepted(
       'record-budget-deleted',
@@ -361,7 +533,14 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
       direct_budget_name: `mxmed-stg-c3-${runId}`,
       direct_budget_created: true,
       direct_budget_readback_pass: true,
-      direct_budget_residual_count: 0,
+      direct_budget_visibility_attempt_count: 1,
+      direct_budget_visibility_first_attempt_at_utc: '2026-08-25T12:01:01Z',
+      direct_budget_visibility_last_attempt_at_utc: '2026-08-25T12:01:01Z',
+      direct_budget_visibility_stage: 'STABILIZED',
+      direct_budget_visibility_stabilized: true,
+      direct_budget_visibility_timeout: false,
+      direct_budget_visibility_last_sanitized_result: 'PASS',
+      direct_budget_residual_count: 'PENDING_RUNTIME_RESOLUTION',
     });
     expectRejected(
       'record-budget-deleted',
@@ -564,6 +743,218 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     expect(reconciledRuntimeSequence.indexOf('seal:physical-ecr-digest')).toBeLessThan(
       reconciledRuntimeSequence.indexOf('mxmed-stg-c3-runner'),
     );
+  });
+
+  test('ignores response-only NotificationState during canonical comparison', () => {
+    const result = runDeployVisibilityWaiter('success');
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+  });
+
+  test('accepts notification order differences after deterministic sorting', () => {
+    const result = runDeployVisibilityWaiter('success');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_stabilized: true,
+    });
+  });
+
+  test('compares numerically equivalent notification thresholds canonically', () => {
+    const result = runDeployVisibilityWaiter('success');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_last_sanitized_result: 'PASS',
+    });
+  });
+
+  test('retries an incomplete normalized notification set inside the waiter', () => {
+    const result = runDeployVisibilityWaiter('incomplete-notifications-once');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_attempt_count: 2,
+      direct_budget_visibility_stabilized: true,
+    });
+    expect(readFileSync(join(directory, 'sleep.log'), 'utf8').trim()).toBe('1');
+  });
+
+  test('retries NotFound only after the successful CreateBudget state is sealed', () => {
+    const result = runDeployVisibilityWaiter('budget-notfound-once');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_attempt_count: 2,
+      direct_budget_visibility_stabilized: true,
+    });
+  });
+
+  test('rejects a visibility attempt before successful CreateBudget', () => {
+    expectAccepted('init-state', manifestPath, statePath);
+    expectRejected(
+      'record-budget-visibility-attempt',
+      manifestPath,
+      statePath,
+      '2026-08-25T12:01:00Z',
+      'BUDGET',
+      'BUDGET_NOT_FOUND',
+    );
+  });
+
+  test('reaches PASS only with complete notifications and exact subscribers', () => {
+    const result = runDeployVisibilityWaiter('success');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_readback_pass: true,
+      direct_budget_visibility_stage: 'STABILIZED',
+      direct_budget_visibility_stabilized: true,
+      direct_budget_visibility_timeout: false,
+    });
+  });
+
+  test('keeps a missing subscriber retryable through the final attempt', () => {
+    const result = runDeployVisibilityWaiter('missing-subscriber');
+    expect(result.status).toBe(1);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_attempt_count: 8,
+      direct_budget_visibility_stabilized: false,
+    });
+  });
+
+  test('fails closed and seals timeout after the bounded waiter expires', () => {
+    const result = runDeployVisibilityWaiter('missing-subscriber');
+    expect(result.status).toBe(1);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_stage: 'TIMEOUT',
+      direct_budget_visibility_timeout: true,
+      direct_budget_visibility_last_sanitized_result: 'TIMEOUT',
+    });
+    expect(readFileSync(join(directory, 'sleep.log'), 'utf8').trim().split('\n')).toEqual([
+      '1',
+      '2',
+      '4',
+      '8',
+      '10',
+      '10',
+      '10',
+    ]);
+  });
+
+  test('never performs a second CreateBudget during visibility timeout', () => {
+    runDeployVisibilityWaiter('missing-subscriber');
+    const calls = readFileSync(join(directory, 'aws.log'), 'utf8');
+    expect(calls).not.toContain('create-budget');
+  });
+
+  test('retains exact account and run-bound Budget identity in every read', () => {
+    runDeployVisibilityWaiter('success');
+    const calls = readFileSync(join(directory, 'aws.log'), 'utf8').trim().split('\n');
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(call).toContain('--account-id 875691018466');
+      expect(call).toContain(`--budget-name mxmed-stg-c3-${runId}`);
+    }
+  });
+
+  test('increments runtime-state visibility attempt count monotonically', () => {
+    initializeCreatedBudgetState();
+    expectAccepted(
+      'record-budget-visibility-attempt',
+      manifestPath,
+      statePath,
+      '2026-08-25T12:01:01Z',
+      'BUDGET',
+      'BUDGET_NOT_FOUND',
+    );
+    expectAccepted(
+      'record-budget-visibility-attempt',
+      manifestPath,
+      statePath,
+      '2026-08-25T12:01:02Z',
+      'NOTIFICATIONS',
+      'NOTIFICATIONS_INCOMPLETE',
+    );
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_attempt_count: 2,
+    });
+  });
+
+  test('enforces monotonic first and last visibility timestamps', () => {
+    initializeCreatedBudgetState();
+    expectAccepted(
+      'record-budget-visibility-attempt',
+      manifestPath,
+      statePath,
+      '2026-08-25T12:01:02Z',
+      'BUDGET',
+      'BUDGET_NOT_FOUND',
+    );
+    expectRejected(
+      'record-budget-visibility-attempt',
+      manifestPath,
+      statePath,
+      '2026-08-25T12:01:01Z',
+      'BUDGET',
+      'BUDGET_NOT_FOUND',
+    );
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_visibility_first_attempt_at_utc: '2026-08-25T12:01:02Z',
+      direct_budget_visibility_last_attempt_at_utc: '2026-08-25T12:01:02Z',
+    });
+  });
+
+  test('teardown does not accept the first NotFound after acknowledged CreateBudget', () => {
+    const { result, stub } = runTeardownBudgetGuard('guard-notfound');
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    expect(readFileSync(stub.DESCRIBE_COUNT, 'utf8').trim()).toBe('2');
+  });
+
+  test('teardown deletes a late-visible exact Budget and restarts absence confirmation', () => {
+    const { result, stub } = runTeardownBudgetGuard('guard-late');
+    expect(result.status).toBe(0);
+    const calls = readFileSync(stub.AWS_LOG, 'utf8');
+    expect(calls.match(/budgets delete-budget/g)).toHaveLength(1);
+    expect(readFileSync(stub.DESCRIBE_COUNT, 'utf8').trim()).toBe('4');
+  });
+
+  test('teardown touches no Budget outside the exact sealed identity', () => {
+    const { result, stub } = runTeardownBudgetGuard('guard-late');
+    expect(result.status).toBe(0);
+    const calls = readFileSync(stub.AWS_LOG, 'utf8').trim().split('\n');
+    for (const call of calls) {
+      expect(call).toContain('--account-id 875691018466');
+      expect(call).toContain(`--budget-name mxmed-stg-c3-${runId}`);
+    }
+  });
+
+  test('requires two final NotFound observations separated by at least five seconds', () => {
+    const { result, stub } = runTeardownBudgetGuard('guard-notfound');
+    expect(result.status).toBe(0);
+    expect(readFileSync(stub.SLEEP_LOG, 'utf8').trim()).toBe('5');
+    expect(Number(readFileSync(stub.CLOCK_FILE, 'utf8').trim())).toBe(1787702405);
+    expect(JSON.parse(readFileSync(statePath, 'utf8'))).toMatchObject({
+      direct_budget_residual_count: 0,
+    });
+  });
+
+  test('fails with teardown-incomplete semantics when the 120-second guard expires', () => {
+    const { result } = runTeardownBudgetGuard('guard-expire');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('DIRECT_BUDGET_TEARDOWN_VISIBILITY_GUARD_EXPIRED');
+    const state = JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, unknown>;
+    expect(state.direct_budget_residual_count).toBe('PENDING_RUNTIME_RESOLUTION');
+  });
+
+  test('introduces no broad Budget listing in deploy or teardown', () => {
+    const source = `${readFileSync(deployController, 'utf8')}\n${readFileSync(
+      teardownController,
+      'utf8',
+    )}`;
+    expect(source).not.toMatch(/budgets (describe-budgets|list-budgets)/);
+  });
+
+  test('keeps one CreateBudget path and no same-RUN_ID runtime retry path', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    expect(deploy.match(/aws budgets create-budget/g)).toHaveLength(1);
+    expect(deploy).toContain("BUDGET_VISIBILITY_DELAYS='1 2 4 8 10 10 10'");
+    expect(deploy).toContain('BUDGET_VISIBILITY_MAX_SECONDS=60');
+    expect(deploy).not.toMatch(/retry.*create-budget|create-budget.*retry/i);
   });
 
   test('phase selection fails closed before AWS and change-set failures start exact teardown', () => {
