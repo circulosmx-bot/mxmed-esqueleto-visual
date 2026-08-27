@@ -60,6 +60,8 @@ const SUBNET_CIDRS: Readonly<Record<MxMedEnvironmentName, MxMedSubnetCidrs>> = O
   },
 });
 
+const MX_CENTRAL_AVAILABILITY_ZONES = Object.freeze(['mx-central-1a', 'mx-central-1b']);
+
 const FLOW_LOG_FORMAT = [
   LogFormat.VERSION,
   LogFormat.INTERFACE_ID,
@@ -143,7 +145,7 @@ export class MxMedNetworkStack extends BaseMxMedStack {
     this.vpc = new Vpc(this, 'Vpc', {
       ipAddresses: IpAddresses.cidr(config.vpcCidr),
       ipProtocol: IpProtocol.IPV4_ONLY,
-      maxAzs: config.availabilityZoneCount,
+      availabilityZones: [...MX_CENTRAL_AVAILABILITY_ZONES],
       natGateways: config.natGatewayCount,
       enableDnsSupport: true,
       enableDnsHostnames: true,

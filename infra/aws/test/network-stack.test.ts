@@ -10,6 +10,7 @@ import { getEnvironmentConfig, STAGING_CONFIG } from '../lib/config/environments
 import { MxMedEnvironmentStage } from '../lib/stages/mxmed-environment-stage';
 
 const PRODUCTION_CONFIG = getEnvironmentConfig('production', 'production-standard-v1');
+const EXPECTED_AVAILABILITY_ZONES = Object.freeze(['mx-central-1a', 'mx-central-1b']);
 
 interface RenderedResource {
   readonly Type: string;
@@ -175,10 +176,17 @@ describe.each([
         [...expectedCidrs].sort(),
       );
       expect(groupSubnets.map((subnet) => props(subnet).MapPublicIpOnLaunch)).not.toContain(true);
-      const azSlots = groupSubnets.map((subnet) => JSON.stringify(props(subnet).AvailabilityZone));
-      expect(azSlots.some((az) => az.includes('[0,'))).toBe(true);
-      expect(azSlots.some((az) => az.includes('[1,'))).toBe(true);
+      expect(groupSubnets.map((subnet) => props(subnet).AvailabilityZone).sort()).toEqual(
+        [...EXPECTED_AVAILABILITY_ZONES].sort(),
+      );
     }
+
+    const availabilityZones = subnets.map((subnet) => props(subnet).AvailabilityZone);
+    expect(availabilityZones).toHaveLength(8);
+    expect(availabilityZones.every((zone) => typeof zone === 'string')).toBe(true);
+    expect(availabilityZones.filter((zone) => zone === 'mx-central-1a')).toHaveLength(4);
+    expect(availabilityZones.filter((zone) => zone === 'mx-central-1b')).toHaveLength(4);
+    expect(JSON.stringify(subnets)).not.toMatch(/dummy1[ab]/);
   });
 
   test('does not create custom NACL, IPv6, peering, VPN or transit resources', () => {
