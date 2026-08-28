@@ -36,6 +36,28 @@
       }
     },
     {
+      "Effect": "Allow",
+      "Action": ["kms:GenerateDataKey", "kms:Decrypt"],
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "aws:ResourceTag/Phase": "C3",
+          "kms:ViaService": "secretsmanager.mx-central-1.amazonaws.com"
+        },
+        "ArnLike": {
+          "kms:EncryptionContext:SecretARN": [
+            "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-signing-*",
+            "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/secret-key-*",
+            "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/webhook-secret-*",
+            "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/ai/api-key-*"
+          ]
+        }
+      }
+    },
+    {
       "Sid": "ManageExactSecurityAliases",
       "Effect": "Allow",
       "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
@@ -64,7 +86,6 @@
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
     {
-      "Sid": "ManageExactAuditBucket",
       "Effect": "Allow",
       "Action": [
         "s3:CreateBucket",
@@ -133,7 +154,6 @@
       }
     },
     {
-      "Sid": "ManageExactSecurityRoles",
       "Effect": "Allow",
       "Action": [
         "iam:DeleteRole",
@@ -163,6 +183,7 @@
         "iam:DeletePolicyVersion",
         "iam:GetPolicy",
         "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
         "iam:SetDefaultPolicyVersion",
         "iam:TagPolicy",
         "iam:UntagPolicy"

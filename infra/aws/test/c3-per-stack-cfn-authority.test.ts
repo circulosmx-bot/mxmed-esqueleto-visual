@@ -112,13 +112,19 @@ const conditionMatches = (
   context: RequestContext,
 ): boolean => {
   if (condition === undefined) return true;
-  const stringEquals = condition.StringEquals;
-  if (stringEquals === undefined) return false;
-  return Object.entries(stringEquals).every(([key, expected]) => {
-    const actual = context[key];
-    return typeof expected === 'string'
-      ? actual === expected
-      : Array.isArray(expected) && expected.includes(actual);
+  return Object.entries(condition).every(([operator, entries]) => {
+    if (operator !== 'StringEquals' && operator !== 'ArnLike') return false;
+    return Object.entries(entries).every(([key, expected]) => {
+      const actual = context[key];
+      if (actual === undefined) return false;
+      const candidates = typeof expected === 'string' ? [expected] : expected;
+      if (!Array.isArray(candidates) || !candidates.every((item) => typeof item === 'string')) {
+        return false;
+      }
+      return operator === 'StringEquals'
+        ? candidates.includes(actual)
+        : candidates.some((candidate) => wildcardMatches(candidate, actual));
+    });
   });
 };
 
@@ -296,6 +302,199 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         'logs:DescribeLogGroups',
       );
     }
+  });
+
+  test('authorizes only the four Security secret families to use the tagged C3 KMS key', () => {
+    const security = readDocument(authority.security.policy);
+    const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/example';
+    const secretFamilies = [
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-signing-*',
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/secret-key-*',
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/webhook-secret-*',
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/ai/api-key-*',
+    ] as const;
+    const cryptoActions = ['kms:GenerateDataKey', 'kms:Decrypt'] as const;
+    const cryptoStatements = security.Statement.filter((statement) =>
+      cryptoActions.every((action) => actions(statement).includes(action)),
+    );
+    expect(cryptoStatements).toEqual([
+      {
+        Effect: 'Allow',
+        Action: cryptoActions,
+        Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
+        Condition: {
+          StringEquals: {
+            'aws:RequestedRegion': 'mx-central-1',
+            'aws:ResourceTag/Project': 'mxmed',
+            'aws:ResourceTag/Environment': 'staging',
+            'aws:ResourceTag/Phase': 'C3',
+            'kms:ViaService': 'secretsmanager.mx-central-1.amazonaws.com',
+          },
+          ArnLike: { 'kms:EncryptionContext:SecretARN': secretFamilies },
+        },
+      },
+    ]);
+
+    const cryptoStatement = cryptoStatements[0];
+    if (cryptoStatement === undefined) throw new Error('SECURITY_KMS_CRYPTO_AUTHORITY_MISSING');
+    const preRepairSecurity: PolicyDocument = {
+      ...security,
+      Statement: security.Statement.filter((statement) => statement !== cryptoStatement),
+    };
+    const targetKey = stacks['mxmed-stg-security']?.Resources?.SecretsKey317DCF94;
+    expect(targetKey?.Type).toBe('AWS::KMS::Key');
+    const keyPolicy = targetKey?.Properties?.KeyPolicy as PolicyDocument | undefined;
+    expect(keyPolicy).toBeDefined();
+    const serializedKeyPolicy = JSON.stringify(keyPolicy);
+    expect(serializedKeyPolicy).toContain('secretsmanager.amazonaws.com');
+    expect(serializedKeyPolicy).toContain('kms:GenerateDataKey*');
+    expect(serializedKeyPolicy).toContain('kms:Decrypt');
+    expect(serializedKeyPolicy).toContain('kms:ViaService');
+    const keyPolicyAllows = cryptoActions.every((action) =>
+      keyPolicy?.Statement.some(
+        (statement) =>
+          statement.Effect === 'Allow' &&
+          actions(statement).some((candidate) => wildcardMatches(candidate, action)) &&
+          JSON.stringify(statement.Principal).includes('secretsmanager.amazonaws.com') &&
+          JSON.stringify(statement.Condition).includes('kms:ViaService'),
+      ),
+    );
+    expect(keyPolicyAllows).toBe(true);
+
+    const positiveTuples = secretFamilies.flatMap((family) =>
+      cryptoActions.map((action) => [family.replace('*', 'AbCdEf'), action] as const),
+    );
+    expect(positiveTuples).toHaveLength(8);
+    const contextFor = (secretArn: string): RequestContext => ({
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'aws:ResourceTag/Phase': 'C3',
+      'kms:ViaService': 'secretsmanager.mx-central-1.amazonaws.com',
+      'kms:EncryptionContext:SecretARN': secretArn,
+    });
+    const identityAllows = (action: string, resource: string, context: RequestContext): boolean =>
+      documentAllowsWithContext(security, action, resource, context);
+    const boundaryAllows = identityAllows;
+    const effectiveAllows = (action: string, resource: string, context: RequestContext): boolean =>
+      identityAllows(action, resource, context) &&
+      boundaryAllows(action, resource, context) &&
+      keyPolicyAllows;
+
+    expect(
+      positiveTuples.filter(([secretArn, action]) =>
+        identityAllows(action, keyArn, contextFor(secretArn)),
+      ),
+    ).toHaveLength(8);
+    expect(
+      positiveTuples.filter(([secretArn, action]) =>
+        boundaryAllows(action, keyArn, contextFor(secretArn)),
+      ),
+    ).toHaveLength(8);
+    expect(
+      positiveTuples.filter(([secretArn, action]) =>
+        effectiveAllows(action, keyArn, contextFor(secretArn)),
+      ),
+    ).toHaveLength(8);
+
+    const webhookArn = secretFamilies[2].replace('*', 'AbCdEf');
+    const webhookContext = contextFor(webhookArn);
+    expect(
+      documentAllowsWithContext(preRepairSecurity, 'kms:GenerateDataKey', keyArn, webhookContext),
+    ).toBe(false);
+    expect(
+      documentAllowsWithContext(preRepairSecurity, 'kms:Decrypt', keyArn, webhookContext),
+    ).toBe(false);
+    expect(effectiveAllows('kms:GenerateDataKey', keyArn, webhookContext)).toBe(true);
+    expect(effectiveAllows('kms:Decrypt', keyArn, webhookContext)).toBe(true);
+    const createSecretAllows = documentAllowsWithContext(
+      security,
+      'secretsmanager:CreateSecret',
+      webhookArn,
+      {
+        'aws:RequestedRegion': 'mx-central-1',
+      },
+    );
+    expect(createSecretAllows).toBe(true);
+    expect(
+      createSecretAllows &&
+        effectiveAllows('kms:GenerateDataKey', keyArn, webhookContext) &&
+        effectiveAllows('kms:Decrypt', keyArn, webhookContext),
+    ).toBe(true);
+
+    const negativeContexts: readonly RequestContext[] = [
+      { ...webhookContext, 'aws:RequestedRegion': 'us-east-1' },
+      { ...webhookContext, 'aws:ResourceTag/Project': 'other' },
+      { ...webhookContext, 'aws:ResourceTag/Environment': 'production' },
+      { ...webhookContext, 'aws:ResourceTag/Phase': 'C4' },
+      {
+        'aws:RequestedRegion': 'mx-central-1',
+        'kms:ViaService': 'secretsmanager.mx-central-1.amazonaws.com',
+        'kms:EncryptionContext:SecretARN': webhookArn,
+      },
+      { ...webhookContext, 'kms:ViaService': undefined },
+      {
+        ...webhookContext,
+        'kms:EncryptionContext:SecretARN':
+          'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/unrelated/secret-AbCdEf',
+      },
+      {
+        ...webhookContext,
+        'kms:EncryptionContext:SecretARN': webhookArn.replace('875691018466', '111122223333'),
+      },
+      {
+        ...webhookContext,
+        'kms:EncryptionContext:SecretARN':
+          'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/new/secret-AbCdEf',
+      },
+    ];
+    for (const context of negativeContexts) {
+      for (const action of cryptoActions) {
+        expect(effectiveAllows(action, keyArn, context)).toBe(false);
+      }
+    }
+    expect(effectiveAllows('kms:ScheduleKeyDeletion', keyArn, webhookContext)).toBe(false);
+    expect(effectiveAllows('kms:CreateGrant', keyArn, webhookContext)).toBe(false);
+    expect(resources(cryptoStatement)).not.toContain('*');
+    expect(new Set(security.Statement.flatMap(actions)).size).toBe(61);
+    expect(security.Statement.flatMap(actions)).not.toContain('kms:*');
+  });
+
+  test('lists versions only for the two exact Security managed policies', () => {
+    const security = readDocument(authority.security.policy);
+    const exactPolicyArns = [
+      'arn:aws:iam::875691018466:policy/mxmed-stg-workload-boundary',
+      'arn:aws:iam::875691018466:policy/mxmed-stg-deployment-boundary',
+    ] as const;
+    const lifecycleStatements = security.Statement.filter((statement) =>
+      actions(statement).includes('iam:ListPolicyVersions'),
+    );
+    expect(lifecycleStatements).toHaveLength(1);
+    const lifecycleStatement = lifecycleStatements[0];
+    if (lifecycleStatement === undefined) {
+      throw new Error('SECURITY_MANAGED_POLICY_LIFECYCLE_AUTHORITY_MISSING');
+    }
+    expect(lifecycleStatement.Sid).toBe('ManageExactSecurityBoundaries');
+    expect(resources(lifecycleStatement)).toEqual(exactPolicyArns);
+    expect(actions(lifecycleStatement)).toContain('iam:DeletePolicy');
+    expect(actions(lifecycleStatement)).toContain('iam:DeletePolicyVersion');
+    expect(resources(lifecycleStatement)).not.toContain('*');
+
+    const identityAllows = (resource: string): boolean =>
+      documentAllows(security, 'iam:ListPolicyVersions', resource);
+    const boundaryAllows = identityAllows;
+    const effectiveAllows = (resource: string): boolean =>
+      identityAllows(resource) && boundaryAllows(resource);
+    expect(exactPolicyArns.filter(identityAllows)).toHaveLength(2);
+    expect(exactPolicyArns.filter(boundaryAllows)).toHaveLength(2);
+    expect(exactPolicyArns.filter(effectiveAllows)).toHaveLength(2);
+
+    const unrelatedPolicyArns = [
+      'arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Network-Boundary',
+      'arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Security-Boundary',
+      'arn:aws:iam::875691018466:policy/MXMed-C3-CFN-Session-Boundary',
+    ];
+    expect(unrelatedPolicyArns.some(effectiveAllows)).toBe(false);
   });
 
   test('allows create-time tags only for the current tagged Network EC2 create surface', () => {
