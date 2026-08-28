@@ -2,7 +2,6 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "CreateOnlyTaggedSecurityKeys",
       "Effect": "Allow",
       "Action": "kms:CreateKey",
       "Resource": "*",
@@ -16,10 +15,10 @@
       }
     },
     {
-      "Sid": "ManageOnlyTaggedSecurityKeys",
       "Effect": "Allow",
       "Action": [
         "kms:CreateAlias",
+        "kms:DeleteAlias",
         "kms:DescribeKey",
         "kms:EnableKeyRotation",
         "kms:GetKeyPolicy",
@@ -72,7 +71,7 @@
     },
     {
       "Effect": "Allow",
-      "Action": "kms:ListAliases",
+      "Action": ["kms:ListAliases", "secretsmanager:GetRandomPassword"],
       "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },

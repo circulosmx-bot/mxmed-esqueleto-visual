@@ -304,7 +304,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     }
   });
 
-  test('authorizes only synthesized Security KMS aliases, their tagged keys, and regional listing', () => {
+  test('authorizes only synthesized Security KMS alias create/delete relationships', () => {
     const security = readDocument(authority.security.policy);
     const securityResources = stacks['mxmed-stg-security']?.Resources ?? {};
     const aliasRelationships = Object.entries(securityResources)
@@ -363,12 +363,15 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       (statement) => statement.Sid === 'ManageExactSecurityAliases',
     );
     const taggedKeyStatement = security.Statement.find(
-      (statement) => statement.Sid === 'ManageOnlyTaggedSecurityKeys',
+      (statement) =>
+        resources(statement).includes('arn:aws:kms:mx-central-1:875691018466:key/*') &&
+        actions(statement).includes('kms:CreateAlias') &&
+        actions(statement).includes('kms:DescribeKey'),
     );
     expect(aliasStatement).toBeDefined();
     expect(taggedKeyStatement).toBeDefined();
     if (aliasStatement === undefined || taggedKeyStatement === undefined) {
-      throw new Error('SECURITY_KMS_CREATEALIAS_AUTHORITY_MISSING');
+      throw new Error('SECURITY_KMS_ALIAS_LIFECYCLE_AUTHORITY_MISSING');
     }
     expect(actions(aliasStatement)).toEqual([
       'kms:CreateAlias',
@@ -378,7 +381,15 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect([...resources(aliasStatement)].sort()).toEqual(
       aliasRelationships.map(({ aliasArn }) => aliasArn).sort(),
     );
-    expect(actions(taggedKeyStatement)).toContain('kms:CreateAlias');
+    expect(actions(taggedKeyStatement)).toEqual([
+      'kms:CreateAlias',
+      'kms:DeleteAlias',
+      'kms:DescribeKey',
+      'kms:EnableKeyRotation',
+      'kms:GetKeyPolicy',
+      'kms:PutKeyPolicy',
+      'kms:TagResource',
+    ]);
     expect(resources(taggedKeyStatement)).toEqual(['arn:aws:kms:mx-central-1:875691018466:key/*']);
     expect(taggedKeyStatement.Condition).toEqual({
       StringEquals: {
@@ -400,27 +411,53 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       [aliasArn, aliasContext] as const,
       [targetKeyArn, keyContext] as const,
     ]);
-    const identityAllows = (resource: string, context: RequestContext): boolean =>
-      documentAllowsWithContext(security, 'kms:CreateAlias', resource, context);
+    const identityAllows = (
+      action: 'kms:CreateAlias' | 'kms:DeleteAlias',
+      resource: string,
+      context: RequestContext,
+    ): boolean => documentAllowsWithContext(security, action, resource, context);
     const boundaryAllows = identityAllows;
-    const effectiveAllows = (resource: string, context: RequestContext): boolean =>
-      identityAllows(resource, context) && boundaryAllows(resource, context);
+    const effectiveAllows = (
+      action: 'kms:CreateAlias' | 'kms:DeleteAlias',
+      resource: string,
+      context: RequestContext,
+    ): boolean =>
+      identityAllows(action, resource, context) && boundaryAllows(action, resource, context);
     expect(requiredTuples).toHaveLength(8);
-    expect(
-      requiredTuples.filter(([resource, context]) => identityAllows(resource, context)),
-    ).toHaveLength(8);
-    expect(
-      requiredTuples.filter(([resource, context]) => boundaryAllows(resource, context)),
-    ).toHaveLength(8);
-    expect(
-      requiredTuples.filter(([resource, context]) => effectiveAllows(resource, context)),
-    ).toHaveLength(8);
-    expect(
-      effectiveAllows(
-        'arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-application-data',
-        aliasContext,
+    for (const action of ['kms:CreateAlias', 'kms:DeleteAlias'] as const) {
+      expect(
+        requiredTuples.filter(([resource, context]) => identityAllows(action, resource, context)),
+      ).toHaveLength(8);
+      expect(
+        requiredTuples.filter(([resource, context]) => boundaryAllows(action, resource, context)),
+      ).toHaveLength(8);
+      expect(
+        requiredTuples.filter(([resource, context]) => effectiveAllows(action, resource, context)),
+      ).toHaveLength(8);
+    }
+    for (const { aliasArn } of aliasRelationships) {
+      expect(effectiveAllows('kms:DeleteAlias', aliasArn, aliasContext)).toBe(true);
+    }
+
+    const preRepairSecurity: PolicyDocument = {
+      ...security,
+      Statement: security.Statement.map((statement) =>
+        statement === taggedKeyStatement
+          ? {
+              ...statement,
+              Action: actions(statement).filter((action) => action !== 'kms:DeleteAlias'),
+            }
+          : statement,
       ),
-    ).toBe(true);
+    };
+    expect(
+      documentAllowsWithContext(
+        preRepairSecurity,
+        'kms:DeleteAlias',
+        aliasRelationships[0]?.targetKeyArn ?? '',
+        keyContext,
+      ),
+    ).toBe(false);
 
     const unrelatedAliases = [
       'arn:aws:kms:mx-central-1:875691018466:alias/unrelated',
@@ -428,47 +465,116 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       'arn:aws:kms:mx-central-1:875691018466:alias/mxmed-staging-unrelated',
       'arn:aws:kms:mx-central-1:111122223333:alias/mxmed-stg-application-data',
     ];
-    expect(unrelatedAliases.some((aliasArn) => effectiveAllows(aliasArn, aliasContext))).toBe(
-      false,
-    );
+    for (const action of ['kms:CreateAlias', 'kms:DeleteAlias'] as const) {
+      expect(
+        unrelatedAliases.some((aliasArn) => effectiveAllows(action, aliasArn, aliasContext)),
+      ).toBe(false);
+    }
     expect(
-      effectiveAllows('arn:aws:kms:us-east-1:875691018466:alias/mxmed-stg-application-data', {
-        'aws:RequestedRegion': 'us-east-1',
-      }),
+      effectiveAllows(
+        'kms:DeleteAlias',
+        'arn:aws:kms:us-east-1:875691018466:alias/mxmed-stg-application-data',
+        { 'aws:RequestedRegion': 'us-east-1' },
+      ),
     ).toBe(false);
+    const invalidKeyContexts: readonly RequestContext[] = [
+      aliasContext,
+      { ...keyContext, 'aws:ResourceTag/Project': 'other' },
+      { ...keyContext, 'aws:ResourceTag/Environment': 'production' },
+      { ...keyContext, 'aws:ResourceTag/Phase': 'C4' },
+    ];
+    for (const context of invalidKeyContexts) {
+      expect(
+        effectiveAllows('kms:DeleteAlias', aliasRelationships[0]?.targetKeyArn ?? '', context),
+      ).toBe(false);
+    }
     expect(
-      effectiveAllows(aliasRelationships[0]?.targetKeyArn ?? '', {
-        ...keyContext,
-        'aws:ResourceTag/Phase': 'C4',
-      }),
+      effectiveAllows(
+        'kms:DeleteAlias',
+        'arn:aws:kms:mx-central-1:111122223333:key/unrelated',
+        keyContext,
+      ),
     ).toBe(false);
+    for (const action of ['kms:ScheduleKeyDeletion', 'kms:CancelKeyDeletion', 'kms:DisableKey']) {
+      expect(
+        documentAllowsWithContext(
+          security,
+          action,
+          aliasRelationships[0]?.targetKeyArn ?? '',
+          keyContext,
+        ),
+      ).toBe(false);
+    }
+    for (const [action, resource, context] of [
+      ['kms:PutKeyPolicy', aliasRelationships[0]?.targetKeyArn ?? '', keyContext],
+      ['kms:UpdateAlias', aliasRelationships[0]?.aliasArn ?? '', aliasContext],
+    ] as const) {
+      expect(documentAllowsWithContext(security, action, resource, context)).toBe(
+        documentAllowsWithContext(preRepairSecurity, action, resource, context),
+      );
+    }
+  });
 
-    const listStatements = security.Statement.filter((statement) =>
+  test('authorizes only regional resource-less Security reads for random passwords and aliases', () => {
+    const security = readDocument(authority.security.policy);
+    const expectedRegion = { 'aws:RequestedRegion': 'mx-central-1' };
+    const wrongRegion = { 'aws:RequestedRegion': 'us-east-1' };
+    const sharedStatements = security.Statement.filter((statement) =>
       actions(statement).includes('kms:ListAliases'),
     );
-    expect(listStatements).toEqual([
+    expect(sharedStatements).toEqual([
       {
         Effect: 'Allow',
-        Action: 'kms:ListAliases',
+        Action: ['kms:ListAliases', 'secretsmanager:GetRandomPassword'],
         Resource: '*',
         Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
       },
     ]);
-    const listOnly: PolicyDocument = { Version: security.Version, Statement: listStatements };
-    expect(documentAllowsWithContext(listOnly, 'kms:ListAliases', '*', aliasContext)).toBe(true);
+    const sharedReads: PolicyDocument = {
+      Version: security.Version,
+      Statement: sharedStatements,
+    };
+    const sharedStatement = sharedStatements[0];
+    if (sharedStatement === undefined) {
+      throw new Error('SECURITY_RESOURCELESS_READ_AUTHORITY_MISSING');
+    }
+    const identityAllows = (action: string, context: RequestContext): boolean =>
+      documentAllowsWithContext(sharedReads, action, '*', context);
+    const boundaryAllows = identityAllows;
+    const effectiveAllows = (action: string, context: RequestContext): boolean =>
+      identityAllows(action, context) && boundaryAllows(action, context);
+    for (const action of ['kms:ListAliases', 'secretsmanager:GetRandomPassword']) {
+      expect(identityAllows(action, expectedRegion)).toBe(true);
+      expect(boundaryAllows(action, expectedRegion)).toBe(true);
+      expect(effectiveAllows(action, expectedRegion)).toBe(true);
+      expect(effectiveAllows(action, wrongRegion)).toBe(false);
+    }
+
+    const preRepairReads: PolicyDocument = {
+      Version: security.Version,
+      Statement: [{ ...sharedStatement, Action: 'kms:ListAliases' }],
+    };
     expect(
-      documentAllowsWithContext(listOnly, 'kms:ListAliases', '*', {
-        'aws:RequestedRegion': 'us-east-1',
-      }),
+      documentAllowsWithContext(
+        preRepairReads,
+        'secretsmanager:GetRandomPassword',
+        '*',
+        expectedRegion,
+      ),
     ).toBe(false);
     for (const action of [
+      'secretsmanager:GetSecretValue',
+      'secretsmanager:PutSecretValue',
+      'secretsmanager:UpdateSecret',
+      'secretsmanager:DeleteSecret',
+      'secretsmanager:RotateSecret',
       'kms:CreateAlias',
       'kms:DeleteAlias',
       'kms:ScheduleKeyDeletion',
       'kms:Decrypt',
       'kms:GenerateDataKey',
     ]) {
-      expect(documentAllowsWithContext(listOnly, action, '*', aliasContext)).toBe(false);
+      expect(effectiveAllows(action, expectedRegion)).toBe(false);
     }
   });
 
@@ -624,7 +730,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(effectiveAllows('kms:ScheduleKeyDeletion', keyArn, webhookContext)).toBe(false);
     expect(effectiveAllows('kms:CreateGrant', keyArn, webhookContext)).toBe(false);
     expect(resources(cryptoStatement)).not.toContain('*');
-    expect(new Set(security.Statement.flatMap(actions)).size).toBe(62);
+    expect(new Set(security.Statement.flatMap(actions)).size).toBe(63);
     expect(security.Statement.flatMap(actions)).not.toContain('kms:*');
   });
 
