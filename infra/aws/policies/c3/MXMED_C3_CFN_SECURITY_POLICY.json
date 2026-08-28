@@ -19,6 +19,7 @@
       "Sid": "ManageOnlyTaggedSecurityKeys",
       "Effect": "Allow",
       "Action": [
+        "kms:CreateAlias",
         "kms:DescribeKey",
         "kms:EnableKeyRotation",
         "kms:GetKeyPolicy",
@@ -62,11 +63,17 @@
       "Effect": "Allow",
       "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
       "Resource": [
-        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/application-data",
-        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/secrets",
-        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/audit",
-        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/backup"
+        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-application-data",
+        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-secrets",
+        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-audit",
+        "arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-backup"
       ],
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "kms:ListAliases",
+      "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
     {
@@ -134,7 +141,6 @@
       "Resource": "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/security/cloudtrail:*"
     },
     {
-      "Sid": "CreateExactSecurityRolesWithWorkloadBoundary",
       "Effect": "Allow",
       "Action": "iam:CreateRole",
       "Resource": [
@@ -194,7 +200,6 @@
       ]
     },
     {
-      "Sid": "AttachOnlyExactSecurityBoundaries",
       "Effect": "Allow",
       "Action": ["iam:AttachRolePolicy", "iam:DetachRolePolicy"],
       "Resource": [
@@ -214,7 +219,6 @@
       }
     },
     {
-      "Sid": "PassExactCloudTrailDeliveryRole",
       "Effect": "Allow",
       "Action": "iam:PassRole",
       "Resource": "arn:aws:iam::875691018466:role/mxmed-stg-cloudtrail-logs-role",
