@@ -119,6 +119,7 @@
         "cloudtrail:CreateTrail",
         "cloudtrail:DeleteTrail",
         "cloudtrail:GetTrailStatus",
+        "cloudtrail:PutEventSelectors",
         "cloudtrail:StartLogging",
         "cloudtrail:StopLogging",
         "cloudtrail:UpdateTrail"

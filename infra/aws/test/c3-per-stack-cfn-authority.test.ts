@@ -376,6 +376,23 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(JSON.stringify(security)).not.toMatch(/mxmed-prd|production/i);
   });
 
+  test('authorizes CloudTrail event selectors only for the exact management trail', () => {
+    const security = readDocument(authority.security.policy);
+    const managementTrail =
+      'arn:aws:cloudtrail:mx-central-1:875691018466:trail/mxmed-stg-management-trail';
+    const unrelatedTrail =
+      'arn:aws:cloudtrail:mx-central-1:875691018466:trail/mxmed-stg-unrelated-trail';
+    const cloudTrailActions = security.Statement.flatMap(actions).filter((action) =>
+      action.startsWith('cloudtrail:'),
+    );
+
+    // This document is the shared source for the Security identity policy and boundary.
+    expect(documentAllows(security, 'cloudtrail:PutEventSelectors', managementTrail)).toBe(true);
+    expect(documentAllows(security, 'cloudtrail:PutEventSelectors', unrelatedTrail)).toBe(false);
+    expect(cloudTrailActions).toContain('cloudtrail:PutEventSelectors');
+    expect(cloudTrailActions).not.toContain('cloudtrail:*');
+  });
+
   test('authorizes only synthesized Security KMS alias create/delete relationships', () => {
     const security = readDocument(authority.security.policy);
     const securityResources = stacks['mxmed-stg-security']?.Resources ?? {};
@@ -807,7 +824,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(effectiveAllows('kms:ScheduleKeyDeletion', keyArn, webhookContext)).toBe(false);
     expect(effectiveAllows('kms:CreateGrant', keyArn, webhookContext)).toBe(false);
     expect(resources(cryptoStatement)).not.toContain('*');
-    expect(new Set(security.Statement.flatMap(actions)).size).toBe(67);
+    expect(new Set(security.Statement.flatMap(actions)).size).toBe(68);
     expect(security.Statement.flatMap(actions)).not.toContain('kms:*');
   });
 
