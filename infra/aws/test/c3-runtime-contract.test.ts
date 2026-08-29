@@ -611,6 +611,137 @@ build_orphan_inventory`,
     );
   };
 
+  const installPlaceholderAwsStub = (
+    scenario: string,
+    stackName: string,
+  ): { PATH: string; AWS_LOG: string; SCENARIO: string; STACK_NAME: string } => {
+    const awsLog = join(directory, 'placeholder-aws.log');
+    writeFileSync(awsLog, '');
+    writeFileSync(
+      join(directory, 'aws'),
+      `#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$AWS_LOG"
+stack_id="arn:aws:cloudformation:mx-central-1:875691018466:stack/$STACK_NAME/test-stack-id"
+change_set="${runId}-review"
+case "$1:$2" in
+  cloudformation:describe-stacks)
+    status=REVIEW_IN_PROGRESS
+    [ "$SCENARIO" = created-without-run-id ] && status=CREATE_COMPLETE
+    printf '{"Stacks":[{"StackId":"%s","StackStatus":"%s","Parameters":[]}]}\n' "$stack_id" "$status"
+    ;;
+  cloudformation:describe-change-set)
+    reported_name="$change_set"
+    reported_run="${runId}"
+    [ "$SCENARIO" = wrong-change-set ] && reported_name="c3-wrong-review"
+    [ "$SCENARIO" = wrong-run ] && reported_run="c3-223e4567-e89b-42d3-a456-426614174000"
+    printf '{"StackName":"%s","StackId":"%s","ChangeSetName":"%s","ChangeSetType":"CREATE","Status":"CREATE_COMPLETE","ExecutionStatus":"AVAILABLE","RoleARN":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session","Parameters":[{"ParameterKey":"RunId","ParameterValue":"%s"}]}\n' "$STACK_NAME" "$stack_id" "$reported_name" "$reported_run"
+    ;;
+  cloudformation:list-change-sets)
+    reported_name="$change_set"
+    [ "$SCENARIO" = wrong-active-set ] && reported_name="c3-wrong-review"
+    printf '{"Summaries":[{"ChangeSetName":"%s","Status":"CREATE_COMPLETE","ExecutionStatus":"AVAILABLE"}]}\n' "$reported_name"
+    ;;
+  cloudformation:delete-change-set|cloudformation:delete-stack) ;;
+  cloudformation:wait)
+    [ "$3" = stack-delete-complete ]
+    ;;
+  *) printf '%s\n' "unexpected placeholder stub call: $*" >&2; exit 64 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'aws'), 0o700);
+    return {
+      PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+      AWS_LOG: awsLog,
+      SCENARIO: scenario,
+      STACK_NAME: stackName,
+    };
+  };
+
+  const runPlaceholderCleanup = (scenario: string, stackName = 'mxmed-stg-session') => {
+    const stub = installPlaceholderAwsStub(scenario, stackName);
+    return {
+      result: spawnSync(
+        'sh',
+        [
+          '-c',
+          `set -eu
+MXMED_C3_SOURCE_TEARDOWN_HELPERS_ONLY=1 . "$TEARDOWN_CONTROLLER"
+manifest="$MANIFEST_PATH"
+cleanup_one_unexecuted_review_placeholder "$STACK_NAME"`,
+        ],
+        {
+          cwd: repositoryRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            ...stub,
+            TEARDOWN_CONTROLLER: teardownController,
+            MANIFEST_PATH: manifestPath,
+            MXMED_C3_DEPLOY_PROFILE: 'mxmed-c3-stg-deploy',
+          },
+        },
+      ),
+      stub,
+    };
+  };
+
+  const installCapturedBucketAwsStub = (
+    scenario: string,
+  ): { PATH: string; AWS_LOG: string; SCENARIO: string } => {
+    const awsLog = join(directory, 'captured-bucket-aws.log');
+    writeFileSync(awsLog, '');
+    writeFileSync(
+      join(directory, 'aws'),
+      `#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$AWS_LOG"
+case "$1:$2" in
+  s3api:head-bucket)
+    case "$SCENARIO" in
+      absent) printf '%s\n' 'An error occurred (404) when calling the HeadBucket operation: Not Found' >&2; exit 254 ;;
+      unexpected) printf '%s\n' 'An error occurred (403) when calling the HeadBucket operation: Forbidden' >&2; exit 254 ;;
+      present) ;;
+    esac
+    ;;
+  s3api:list-object-versions|s3api:list-multipart-uploads) printf '%s\n' '{}' ;;
+  s3api:delete-bucket) ;;
+  *) printf '%s\n' "unexpected captured bucket stub call: $*" >&2; exit 64 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'aws'), 0o700);
+    return {
+      PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+      AWS_LOG: awsLog,
+      SCENARIO: scenario,
+    };
+  };
+
+  const runCapturedBucketCleanup = (scenario: string) => {
+    const stub = installCapturedBucketAwsStub(scenario);
+    return {
+      result: spawnSync(
+        'sh',
+        [
+          '-c',
+          `set -eu
+MXMED_C3_SOURCE_TEARDOWN_HELPERS_ONLY=1 . "$TEARDOWN_CONTROLLER"
+cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
+        ],
+        {
+          cwd: repositoryRoot,
+          encoding: 'utf8',
+          env: { ...process.env, ...stub, TEARDOWN_CONTROLLER: teardownController },
+        },
+      ),
+      stub,
+    };
+  };
+
   beforeEach(() => {
     directory = mkdtempSync(join(tmpdir(), 'mxmed-c3-runtime-contract-'));
     manifestPath = join(directory, 'manifest.json');
@@ -775,6 +906,67 @@ build_orphan_inventory`,
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('RETAINED_STACK_RUN_ID_MISMATCH');
     expect(readRuntimeCollections().retained_physical_resource_ids).toEqual([]);
+  });
+
+  test('fails closed when a real created retained stack has no RunId', () => {
+    const result = runRetainedCapture([], {}, '');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('RETAINED_STACK_RUN_ID_MISMATCH');
+    expect(readRuntimeCollections().retained_physical_resource_ids).toEqual([]);
+  });
+
+  test('cleans only an exact unexecuted run REVIEW_IN_PROGRESS placeholder', () => {
+    const { result, stub } = runPlaceholderCleanup('exact');
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    const calls = readFileSync(stub.AWS_LOG, 'utf8');
+    expect(calls).toContain(
+      `cloudformation delete-change-set --stack-name arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-session/test-stack-id --change-set-name ${runId}-review`,
+    );
+    expect(calls).toContain(
+      'cloudformation delete-stack --stack-name arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-session/test-stack-id',
+    );
+    expect(calls).toContain('cloudformation wait stack-delete-complete');
+  });
+
+  test.each([
+    ['wrong run lineage', 'wrong-run'],
+    ['wrong exact change set', 'wrong-change-set'],
+    ['wrong active change-set set', 'wrong-active-set'],
+  ])('rejects a REVIEW_IN_PROGRESS placeholder with %s', (_label, scenario) => {
+    const { result, stub } = runPlaceholderCleanup(scenario);
+    expect(result.status).not.toBe(0);
+    expect(readFileSync(stub.AWS_LOG, 'utf8')).not.toContain('cloudformation delete-stack');
+  });
+
+  test('rejects a placeholder stack outside the sealed manifest set', () => {
+    const { result, stub } = runPlaceholderCleanup('exact', 'mxmed-stg-unrelated');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('REVIEW_PLACEHOLDER_STACK_OUT_OF_SCOPE');
+    expect(readFileSync(stub.AWS_LOG, 'utf8')).toBe('');
+  });
+
+  test('accepts an exact captured audit bucket already absent as clean', () => {
+    const { result, stub } = runCapturedBucketCleanup('absent');
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    const calls = readFileSync(stub.AWS_LOG, 'utf8');
+    expect(calls).toContain('s3api head-bucket');
+    expect(calls).not.toContain('s3api delete-bucket');
+  });
+
+  test('preserves exact cleanup for a captured audit bucket that is present', () => {
+    const { result, stub } = runCapturedBucketCleanup('present');
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    const calls = readFileSync(stub.AWS_LOG, 'utf8');
+    expect(calls).toContain('s3api list-object-versions');
+    expect(calls).toContain('s3api list-multipart-uploads');
+    expect(calls).toContain('s3api delete-bucket');
+  });
+
+  test('fails closed on an unexpected captured audit bucket readback error', () => {
+    const { result, stub } = runCapturedBucketCleanup('unexpected');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('CAPTURED_S3_BUCKET_READBACK_FAILED');
+    expect(readFileSync(stub.AWS_LOG, 'utf8')).not.toContain('s3api delete-bucket');
   });
 
   test('keeps a clean zero when partial rollback created no retained physical resource', () => {

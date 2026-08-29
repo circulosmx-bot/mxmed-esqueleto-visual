@@ -162,6 +162,79 @@ cleanup_exact_direct_budget() {
   done
 }
 
+cleanup_one_unexecuted_review_placeholder() {
+  stack="$1"
+  case " $(jq -r '.stack_names[]' "$manifest" | tr '\n' ' ') " in
+    *" $stack "*) ;;
+    *) fail "REVIEW_PLACEHOLDER_STACK_OUT_OF_SCOPE:$stack" ;;
+  esac
+
+  if ! stack_probe="$(aws cloudformation describe-stacks --stack-name "$stack" --output json 2>&1)"; then
+    case "$stack_probe" in
+      *ValidationError*does\ not\ exist*|*ValidationException*does\ not\ exist*) return 0 ;;
+      *) fail "REVIEW_PLACEHOLDER_STACK_READBACK_FAILED:$stack" ;;
+    esac
+  fi
+  stack_status="$(printf '%s' "$stack_probe" | jq -r '.Stacks[0].StackStatus // empty')"
+  [ "$stack_status" = 'REVIEW_IN_PROGRESS' ] || return 0
+
+  stack_id="$(printf '%s' "$stack_probe" | jq -r '.Stacks[0].StackId // empty')"
+  case "$stack_id" in
+    "arn:aws:cloudformation:$EXPECTED_REGION:$EXPECTED_ACCOUNT:stack/$stack/"*) ;;
+    *) fail "REVIEW_PLACEHOLDER_STACK_ID_OUT_OF_SCOPE:$stack" ;;
+  esac
+  stack_run_id="$(printf '%s' "$stack_probe" | jq -r \
+    '.Stacks[0].Parameters[]? | select(.ParameterKey == "RunId") | .ParameterValue' | head -1)"
+  [ -z "$stack_run_id" ] || fail "REVIEW_PLACEHOLDER_RUN_ID_UNEXPECTED:$stack"
+
+  run_id="$(jq -r .run_id "$manifest")"
+  change_set_name="$run_id-review"
+  expected_role="$(jq -r --arg stack "$stack" '.cfn_execution_role_arns[$stack] // empty' "$manifest")"
+  [ -n "$expected_role" ] || fail "REVIEW_PLACEHOLDER_ROLE_AUTHORITY_MISSING:$stack"
+  [ "${MXMED_C3_DEPLOY_PROFILE:-}" = 'mxmed-c3-stg-deploy' ] \
+    || fail 'EXACT_DEPLOY_PROFILE_REQUIRED_FOR_REVIEW_PLACEHOLDER'
+  change_set="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-change-set --stack-name "$stack_id" \
+    --change-set-name "$change_set_name" --output json 2>/dev/null)" \
+    || fail "REVIEW_PLACEHOLDER_EXACT_CHANGE_SET_MISSING:$stack"
+  printf '%s' "$change_set" | jq -e \
+    --arg stack "$stack" --arg stack_id "$stack_id" --arg name "$change_set_name" \
+    --arg run "$run_id" --arg role "$expected_role" '
+      (.StackName == $stack or .StackName == $stack_id)
+      and .StackId == $stack_id
+      and .ChangeSetName == $name
+      and .ChangeSetType == "CREATE"
+      and .Status == "CREATE_COMPLETE"
+      and .ExecutionStatus == "AVAILABLE"
+      and .RoleARN == $role
+      and any(.Parameters[]?; .ParameterKey == "RunId" and .ParameterValue == $run)
+    ' >/dev/null || fail "REVIEW_PLACEHOLDER_CHANGE_SET_LINEAGE_MISMATCH:$stack"
+
+  active_change_sets="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation list-change-sets \
+    --stack-name "$stack_id" --output json)" \
+    || fail "REVIEW_PLACEHOLDER_CHANGE_SET_LIST_FAILED:$stack"
+  printf '%s' "$active_change_sets" | jq -e --arg name "$change_set_name" '
+    [.Summaries[]?
+      | select(.Status == "CREATE_COMPLETE" and .ExecutionStatus == "AVAILABLE")
+      | .ChangeSetName] == [$name]
+  ' >/dev/null || fail "REVIEW_PLACEHOLDER_ACTIVE_CHANGE_SET_SET_MISMATCH:$stack"
+
+  AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation delete-change-set \
+    --stack-name "$stack_id" --change-set-name "$change_set_name" \
+    || fail "REVIEW_PLACEHOLDER_CHANGE_SET_DELETE_FAILED:$stack"
+  aws cloudformation delete-stack --stack-name "$stack_id" \
+    || fail "REVIEW_PLACEHOLDER_STACK_DELETE_FAILED:$stack"
+  aws cloudformation wait stack-delete-complete --stack-name "$stack_id" \
+    || fail "REVIEW_PLACEHOLDER_STACK_DELETE_WAIT_FAILED:$stack"
+}
+
+cleanup_unexecuted_review_placeholders() {
+  while IFS= read -r stack; do
+    cleanup_one_unexecuted_review_placeholder "$stack"
+  done <<EOF
+$(jq -r '.stack_names[]' "$manifest")
+EOF
+}
+
 capture_retained_physical_ids() {
   [ "$(jq '.retained_physical_resource_ids | length' "$state")" = '0' ] || return 0
   captures='[]'
@@ -247,7 +320,22 @@ empty_exact_versioned_bucket() {
         key="$(printf '%s' "$upload" | jq -r .Key)"
         upload_id="$(printf '%s' "$upload" | jq -r .UploadId)"
         aws s3api abort-multipart-upload --bucket "$bucket" --key "$key" --upload-id "$upload_id"
-      done
+  done
+}
+
+cleanup_exact_captured_bucket() {
+  bucket="$1"
+  [ "$bucket" = "$AUDIT_BUCKET" ] || fail "CAPTURED_S3_BUCKET_OUT_OF_SCOPE:$bucket"
+  if bucket_probe="$(aws s3api head-bucket --bucket "$bucket" 2>&1)"; then
+    empty_exact_versioned_bucket "$bucket"
+    aws s3api delete-bucket --bucket "$bucket" \
+      || fail "CAPTURED_S3_BUCKET_DELETE_FAILED:$bucket"
+    return 0
+  fi
+  case "$bucket_probe" in
+    *NoSuchBucket*|*\(404\)*|*404*Not\ Found*) return 0 ;;
+    *) fail "CAPTURED_S3_BUCKET_READBACK_FAILED:$bucket" ;;
+  esac
 }
 
 cleanup_one() {
@@ -257,7 +345,7 @@ cleanup_one() {
     'AWS::SecretsManager::Secret') aws secretsmanager delete-secret --secret-id "$physical_id" --recovery-window-in-days 7 >/dev/null ;;
     'AWS::Logs::LogGroup') aws logs delete-log-group --log-group-name "$physical_id" ;;
     'AWS::ECR::Repository') aws ecr delete-repository --repository-name "$physical_id" --force >/dev/null ;;
-    'AWS::S3::Bucket') empty_exact_versioned_bucket "$physical_id"; aws s3api delete-bucket --bucket "$physical_id" ;;
+    'AWS::S3::Bucket') cleanup_exact_captured_bucket "$physical_id" ;;
     *) fail "UNAPPROVED_RETAINED_RESOURCE_TYPE:$resource_type" ;;
   esac
 }
@@ -296,6 +384,7 @@ fi
 case "$mode" in
   --execute-stack-deletes)
     validate_authority
+    cleanup_unexecuted_review_placeholders
     capture_retained_physical_ids
     now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     terminal="$(jq -r --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \

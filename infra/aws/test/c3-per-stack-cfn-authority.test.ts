@@ -296,12 +296,84 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(network.Statement.flatMap(actions)).toContain('logs:DescribeLogGroups');
     expect(network.Statement.flatMap(actions)).not.toContain('logs:*');
 
-    for (const key of ['security', 'session', 'registry', 'runner'] as const) {
+    for (const key of ['session', 'registry', 'runner'] as const) {
       const item = authority[key];
       expect(readDocument(item.policy).Statement.flatMap(actions)).not.toContain(
         'logs:DescribeLogGroups',
       );
     }
+  });
+
+  test('grants only the four physically denied Security handler actions at exact scope', () => {
+    const security = readDocument(authority.security.policy);
+    const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/example';
+    const keyContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'aws:ResourceTag/Phase': 'C3',
+    };
+    const keyReadbackActions = ['kms:GetKeyRotationStatus', 'kms:ListResourceTags'] as const;
+    for (const action of keyReadbackActions) {
+      expect(documentAllowsWithContext(security, action, keyArn, keyContext)).toBe(true);
+      expect(
+        documentAllowsWithContext(security, action, keyArn.replace('mx-central-1', 'us-east-1'), {
+          ...keyContext,
+          'aws:RequestedRegion': 'us-east-1',
+        }),
+      ).toBe(false);
+      expect(
+        documentAllowsWithContext(
+          security,
+          action,
+          keyArn.replace('875691018466', '111122223333'),
+          keyContext,
+        ),
+      ).toBe(false);
+      expect(
+        documentAllowsWithContext(security, action, keyArn, {
+          ...keyContext,
+          'aws:ResourceTag/Project': 'unrelated',
+        }),
+      ).toBe(false);
+    }
+
+    const logReadbackStatements = security.Statement.filter((statement) =>
+      actions(statement).includes('logs:DescribeLogGroups'),
+    );
+    expect(logReadbackStatements).toEqual([
+      {
+        Effect: 'Allow',
+        Action: 'logs:DescribeLogGroups',
+        Resource: '*',
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+    expect(
+      documentAllowsWithContext(security, 'logs:DescribeLogGroups', '*', {
+        'aws:RequestedRegion': 'mx-central-1',
+      }),
+    ).toBe(true);
+    expect(
+      documentAllowsWithContext(security, 'logs:DescribeLogGroups', '*', {
+        'aws:RequestedRegion': 'us-east-1',
+      }),
+    ).toBe(false);
+    expect(logReadbackStatements.flatMap(actions)).toEqual(['logs:DescribeLogGroups']);
+
+    const auditBucket = 'arn:aws:s3:::mxmed-stg-audit-875691018466-mx-central-1';
+    expect(documentAllows(security, 's3:PutBucketOwnershipControls', auditBucket)).toBe(true);
+    expect(
+      documentAllows(
+        security,
+        's3:PutBucketOwnershipControls',
+        'arn:aws:s3:::mxmed-stg-unrelated-875691018466-mx-central-1',
+      ),
+    ).toBe(false);
+    expect(security.Statement.flatMap(actions)).not.toContain('s3:GetBucketOwnershipControls');
+    expect(security.Statement.flatMap(actions)).not.toContain('kms:*');
+    expect(security.Statement.flatMap(actions)).not.toContain('logs:*');
+    expect(JSON.stringify(security)).not.toMatch(/mxmed-prd|production/i);
   });
 
   test('authorizes only synthesized Security KMS alias create/delete relationships', () => {
@@ -360,7 +432,10 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     ]);
 
     const aliasStatement = security.Statement.find(
-      (statement) => statement.Sid === 'ManageExactSecurityAliases',
+      (statement) =>
+        resources(statement).includes(
+          'arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-application-data',
+        ) && actions(statement).includes('kms:UpdateAlias'),
     );
     const taggedKeyStatement = security.Statement.find(
       (statement) =>
@@ -386,7 +461,9 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       'kms:DeleteAlias',
       'kms:DescribeKey',
       'kms:EnableKeyRotation',
+      'kms:GetKeyRotationStatus',
       'kms:GetKeyPolicy',
+      'kms:ListResourceTags',
       'kms:PutKeyPolicy',
       'kms:TagResource',
     ]);
@@ -730,7 +807,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(effectiveAllows('kms:ScheduleKeyDeletion', keyArn, webhookContext)).toBe(false);
     expect(effectiveAllows('kms:CreateGrant', keyArn, webhookContext)).toBe(false);
     expect(resources(cryptoStatement)).not.toContain('*');
-    expect(new Set(security.Statement.flatMap(actions)).size).toBe(63);
+    expect(new Set(security.Statement.flatMap(actions)).size).toBe(67);
     expect(security.Statement.flatMap(actions)).not.toContain('kms:*');
   });
 
@@ -748,7 +825,6 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     if (lifecycleStatement === undefined) {
       throw new Error('SECURITY_MANAGED_POLICY_LIFECYCLE_AUTHORITY_MISSING');
     }
-    expect(lifecycleStatement.Sid).toBe('ManageExactSecurityBoundaries');
     expect(resources(lifecycleStatement)).toEqual(exactPolicyArns);
     expect(actions(lifecycleStatement)).toContain('iam:DeletePolicy');
     expect(actions(lifecycleStatement)).toContain('iam:DeletePolicyVersion');

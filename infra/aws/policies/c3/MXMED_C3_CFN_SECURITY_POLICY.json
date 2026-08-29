@@ -21,7 +21,9 @@
         "kms:DeleteAlias",
         "kms:DescribeKey",
         "kms:EnableKeyRotation",
+        "kms:GetKeyRotationStatus",
         "kms:GetKeyPolicy",
+        "kms:ListResourceTags",
         "kms:PutKeyPolicy",
         "kms:TagResource"
       ],
@@ -58,7 +60,6 @@
       }
     },
     {
-      "Sid": "ManageExactSecurityAliases",
       "Effect": "Allow",
       "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
       "Resource": [
@@ -76,7 +77,6 @@
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
     {
-      "Sid": "ManageExactSecuritySecrets",
       "Effect": "Allow",
       "Action": [
         "secretsmanager:CreateSecret",
@@ -103,19 +103,16 @@
         "s3:GetBucketVersioning",
         "s3:GetEncryptionConfiguration",
         "s3:PutBucketPolicy",
+        "s3:PutBucketOwnershipControls",
         "s3:PutBucketPublicAccessBlock",
         "s3:PutBucketTagging",
         "s3:PutBucketVersioning",
         "s3:PutEncryptionConfiguration",
         "s3:PutLifecycleConfiguration"
       ],
-      "Resource": [
-        "arn:aws:s3:::mxmed-stg-audit-875691018466-mx-central-1",
-        "arn:aws:s3:::mxmed-stg-audit-875691018466-mx-central-1/*"
-      ]
+      "Resource": "arn:aws:s3:::mxmed-stg-audit-875691018466-mx-central-1"
     },
     {
-      "Sid": "ManageExactManagementTrail",
       "Effect": "Allow",
       "Action": [
         "cloudtrail:AddTags",
@@ -129,7 +126,16 @@
       "Resource": "arn:aws:cloudtrail:mx-central-1:875691018466:trail/mxmed-stg-management-trail"
     },
     {
-      "Sid": "ManageExactSecurityLogGroup",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1"
+        }
+      }
+    },
+    {
       "Effect": "Allow",
       "Action": [
         "logs:AssociateKmsKey",
@@ -179,7 +185,6 @@
       ]
     },
     {
-      "Sid": "ManageExactSecurityBoundaries",
       "Effect": "Allow",
       "Action": [
         "iam:CreatePolicy",
