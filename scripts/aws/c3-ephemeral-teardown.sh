@@ -11,19 +11,6 @@ AWS_WRITE_AUTHORITY='DIRECTOR_AUTHORIZES_SINGLE_USE_C3_AWS_WRITES'
 DELETE_STACKS='mxmed-stg-c3-runner mxmed-stg-session mxmed-stg-registry mxmed-stg-security mxmed-stg-network'
 TEMPLATE_BUCKET='mxmed-stg-c3-cf-templates-875691018466-mx-central-1'
 AUDIT_BUCKET='mxmed-stg-audit-875691018466-mx-central-1'
-RETAINED='mxmed-stg-security|ApplicationDataKeyC957928E|AWS::KMS::Key
-mxmed-stg-security|SecretsKey317DCF94|AWS::KMS::Key
-mxmed-stg-security|AuditKeyB2DBB069|AWS::KMS::Key
-mxmed-stg-security|BackupKey60B97760|AWS::KMS::Key
-mxmed-stg-security|SessionSigningSecret925D6419|AWS::SecretsManager::Secret
-mxmed-stg-security|StripeSecretKeyContainerB8EBA645|AWS::SecretsManager::Secret
-mxmed-stg-security|StripeWebhookSecretContainer9B02DE63|AWS::SecretsManager::Secret
-mxmed-stg-security|AiApiKeyContainerC19542A6|AWS::SecretsManager::Secret
-mxmed-stg-security|AuditBucketB01E0AE8|AWS::S3::Bucket
-mxmed-stg-security|CloudTrailLogGroup343A29D6|AWS::Logs::LogGroup
-mxmed-stg-session|SessionAuthSecretA6611D29|AWS::SecretsManager::Secret
-mxmed-stg-registry|RegistryKeyDD63DA09|AWS::KMS::Key
-mxmed-stg-registry|ApplicationRepository13E54097|AWS::ECR::Repository'
 CONTRACT_HELPER='scripts/aws/c3-runtime-contract.sh'
 
 [ -f "$CONTRACT_HELPER" ] || { printf '%s\n' 'C3_TEARDOWN_FAIL_CLOSED:RUNTIME_CONTRACT_HELPER_MISSING' >&2; exit 1; }
@@ -75,10 +62,20 @@ cleanup_template_transport() {
     esac
     aws s3api delete-object --bucket "$TEMPLATE_BUCKET" --key "$key" >/dev/null
   done
-  remaining="$(aws s3api list-objects-v2 --bucket "$TEMPLATE_BUCKET" --query 'KeyCount' --output text)"
-  [ "$remaining" = '0' ] || fail 'TEMPLATE_BUCKET_OBJECTS_REMAIN'
+  listing="$(aws s3api list-objects-v2 --bucket "$TEMPLATE_BUCKET" --output json)" \
+    || fail 'TEMPLATE_BUCKET_OBJECT_LIST_FAILED'
+  printf '%s' "$listing" | template_bucket_listing_is_empty \
+    || fail 'TEMPLATE_BUCKET_OBJECTS_REMAIN_OR_LISTING_AMBIGUOUS'
   aws s3api delete-bucket-policy --bucket "$TEMPLATE_BUCKET"
   aws s3api delete-bucket --bucket "$TEMPLATE_BUCKET"
+}
+
+template_bucket_listing_is_empty() {
+  jq -e '
+    type == "object"
+    and ((.Contents // []) | type == "array" and length == 0)
+    and ((.IsTruncated // false) == false)
+  ' >/dev/null 2>&1
 }
 
 cleanup_exact_direct_budget() {
@@ -168,11 +165,54 @@ cleanup_exact_direct_budget() {
 capture_retained_physical_ids() {
   [ "$(jq '.retained_physical_resource_ids | length' "$state")" = '0' ] || return 0
   captures='[]'
-  while IFS='|' read -r stack logical_id resource_type; do
-    [ -n "$stack" ] || continue
-    if ! physical_id="$(aws cloudformation describe-stack-resource --stack-name "$stack" --logical-resource-id "$logical_id" --query 'StackResourceDetail.PhysicalResourceId' --output text 2>/dev/null)"; then
-      [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] && continue
-      fail "RETAINED_PHYSICAL_ID_MISSING:$logical_id"
+  stack_contexts='{}'
+  expected_count="$(jq '.retained_resource_expectations.count' "$manifest")"
+  sealed_expectations="$(jq -c '.retained_resource_expectations.physical_resources' "$manifest")"
+  [ "$sealed_expectations" = "$(c3_retained_resource_expectations_json)" ] \
+    || fail 'SEALED_RETAINED_RESOURCE_SET_MISMATCH'
+  while IFS= read -r expectation; do
+    stack="$(printf '%s' "$expectation" | jq -r .stack_name)"
+    logical_id="$(printf '%s' "$expectation" | jq -r .logical_id)"
+    resource_type="$(printf '%s' "$expectation" | jq -r .type)"
+    [ -n "$stack" ] && [ -n "$logical_id" ] && [ -n "$resource_type" ] \
+      || fail 'SEALED_RETAINED_RESOURCE_ENTRY_INVALID'
+    stack_context="$(printf '%s' "$stack_contexts" | jq -c --arg stack "$stack" '.[$stack] // empty')"
+    if [ -z "$stack_context" ]; then
+      if ! stack_response="$(aws cloudformation describe-stacks --stack-name "$stack" --output json 2>/dev/null)"; then
+        [ "$stack" != "$(jq -r '.deployment_failure_stack // empty' "$state")" ] \
+          || fail "FAILED_RETAINED_STACK_READBACK_FAILED:$stack"
+        [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] && continue
+        fail "RETAINED_STACK_READBACK_FAILED:$stack"
+      fi
+      stack_id="$(printf '%s' "$stack_response" | jq -r '.Stacks[0].StackId // empty')"
+      stack_run_id="$(printf '%s' "$stack_response" | jq -r \
+        '.Stacks[0].Parameters[]? | select(.ParameterKey == "RunId") | .ParameterValue' | head -1)"
+      [ "$stack_run_id" = "$(jq -r .run_id "$manifest")" ] || fail "RETAINED_STACK_RUN_ID_MISMATCH:$stack"
+      case "$stack_id" in
+        "arn:aws:cloudformation:$EXPECTED_REGION:$EXPECTED_ACCOUNT:stack/$stack/"*) ;;
+        *) fail "RETAINED_STACK_ID_OUT_OF_SCOPE:$stack" ;;
+      esac
+      stack_events="$(aws cloudformation describe-stack-events --stack-name "$stack_id" --output json 2>/dev/null)" \
+        || fail "RETAINED_STACK_EVENT_READBACK_FAILED:$stack"
+      printf '%s' "$stack_events" | jq -e '.StackEvents | type == "array"' >/dev/null \
+        || fail "RETAINED_STACK_EVENTS_INVALID:$stack"
+      stack_contexts="$(printf '%s' "$stack_contexts" | jq -c --arg stack "$stack" --arg id "$stack_id" \
+        --argjson events "$stack_events" '.[$stack]={stack_id:$id,events:$events}')"
+      stack_context="$(printf '%s' "$stack_contexts" | jq -c --arg stack "$stack" '.[$stack]')"
+    fi
+    stack_id="$(printf '%s' "$stack_context" | jq -r .stack_id)"
+    physical_id="$(aws cloudformation describe-stack-resource --stack-name "$stack_id" \
+      --logical-resource-id "$logical_id" --query 'StackResourceDetail.PhysicalResourceId' --output text 2>/dev/null || true)"
+    if [ -z "$physical_id" ] || [ "$physical_id" = 'None' ]; then
+      physical_id="$(printf '%s' "$stack_context" | jq -r --arg logical "$logical_id" --arg type "$resource_type" '
+        [.events.StackEvents[]?
+          | select(.LogicalResourceId == $logical and .ResourceType == $type)
+          | select(.PhysicalResourceId != null and .PhysicalResourceId != "")
+          | select(.ResourceStatus == "DELETE_SKIPPED" or .ResourceStatus == "CREATE_COMPLETE" or .ResourceStatus == "CREATE_FAILED")
+        ]
+        | sort_by(if .ResourceStatus == "DELETE_SKIPPED" then 0 elif .ResourceStatus == "CREATE_COMPLETE" then 1 else 2 end)
+        | .[0].PhysicalResourceId // empty
+      ')"
     fi
     if [ -z "$physical_id" ] || [ "$physical_id" = 'None' ]; then
       [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] && continue
@@ -183,10 +223,11 @@ capture_retained_physical_ids() {
     fi
     captures="$(printf '%s' "$captures" | jq --arg stack "$stack" --arg logical "$logical_id" --arg type "$resource_type" --arg physical "$physical_id" '. + [{stack_name:$stack,logical_id:$logical,type:$type,physical_id:$physical}]')"
   done <<EOF
-$RETAINED
+$(printf '%s' "$sealed_expectations" | jq -c '.[]')
 EOF
+  captures="$(printf '%s' "$captures" | jq -c 'unique_by(.stack_name,.logical_id,.type,.physical_id)')"
   capture_count="$(printf '%s' "$captures" | jq length)"
-  [ "$capture_count" = '13' ] || [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] \
+  [ "$capture_count" = "$expected_count" ] || [ "$(jq -r '.deployment_failure_at_utc // empty' "$state")" != '' ] \
     || fail 'RETAINED_CAPTURE_COUNT_INVALID'
   c3_atomic_state_update "$manifest" "$state" '.retained_physical_resource_ids=$captures' --argjson captures "$captures"
 }
@@ -221,7 +262,34 @@ cleanup_one() {
   esac
 }
 
-if [ "${MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY:-}" = '1' ]; then
+build_orphan_inventory() {
+  retained_count="$(jq '.retained_physical_resource_ids | length' "$state")"
+  inventory='[]'
+  if [ "$retained_count" -gt 0 ]; then
+    while IFS= read -r retained_resource; do
+      resource_type="$(printf '%s' "$retained_resource" | jq -r '.type // empty')"
+      physical_id="$(printf '%s' "$retained_resource" | jq -r '.physical_id // empty')"
+      [ -n "$resource_type" ] && [ -n "$physical_id" ] \
+        || fail 'RETAINED_RESOURCE_PLACEHOLDER_REJECTED'
+      resource_state='ABSENT_OR_DELETION_REQUESTED'
+      case "$resource_type" in
+        'AWS::KMS::Key') resource_state="$(aws kms describe-key --key-id "$physical_id" --query 'KeyMetadata.KeyState' --output text 2>/dev/null || printf ABSENT)" ;;
+        'AWS::SecretsManager::Secret') resource_state="$(aws secretsmanager describe-secret --secret-id "$physical_id" --query 'DeletedDate' --output text 2>/dev/null || printf ABSENT)" ;;
+        'AWS::S3::Bucket') aws s3api head-bucket --bucket "$physical_id" >/dev/null 2>&1 && resource_state=ACTIVE || true ;;
+        'AWS::ECR::Repository') aws ecr describe-repositories --repository-names "$physical_id" >/dev/null 2>&1 && resource_state=ACTIVE || true ;;
+        'AWS::Logs::LogGroup') count="$(aws logs describe-log-groups --log-group-name-prefix "$physical_id" --query 'length(logGroups[?logGroupName==`'"$physical_id"'`])' --output text)"; [ "$count" = '0' ] || resource_state=ACTIVE ;;
+        *) fail "UNAPPROVED_RETAINED_RESOURCE_TYPE:$resource_type" ;;
+      esac
+      inventory="$(printf '%s' "$inventory" | jq --arg type "$resource_type" --arg id "$physical_id" --arg state "$resource_state" '. + [{type:$type,physical_id:$id,state:$state}]')"
+    done <<EOF
+$(jq -c '.retained_physical_resource_ids[]' "$state")
+EOF
+  fi
+  c3_atomic_state_update "$manifest" "$state" '.orphan_inventory=$inventory' --argjson inventory "$inventory"
+}
+
+if [ "${MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY:-}" = '1' ] \
+  || [ "${MXMED_C3_SOURCE_TEARDOWN_HELPERS_ONLY:-}" = '1' ]; then
   return 0 2>/dev/null || exit 0
 fi
 
@@ -267,21 +335,7 @@ case "$mode" in
     ;;
   --orphan-inventory)
     validate_authority
-    inventory='[]'
-    while IFS="$(printf '\t')" read -r resource_type physical_id; do
-      resource_state='ABSENT_OR_DELETION_REQUESTED'
-      case "$resource_type" in
-        'AWS::KMS::Key') resource_state="$(aws kms describe-key --key-id "$physical_id" --query 'KeyMetadata.KeyState' --output text 2>/dev/null || printf ABSENT)" ;;
-        'AWS::SecretsManager::Secret') resource_state="$(aws secretsmanager describe-secret --secret-id "$physical_id" --query 'DeletedDate' --output text 2>/dev/null || printf ABSENT)" ;;
-        'AWS::S3::Bucket') aws s3api head-bucket --bucket "$physical_id" >/dev/null 2>&1 && resource_state=ACTIVE || true ;;
-        'AWS::ECR::Repository') aws ecr describe-repositories --repository-names "$physical_id" >/dev/null 2>&1 && resource_state=ACTIVE || true ;;
-        'AWS::Logs::LogGroup') count="$(aws logs describe-log-groups --log-group-name-prefix "$physical_id" --query 'length(logGroups[?logGroupName==`'"$physical_id"'`])' --output text)"; [ "$count" = '0' ] || resource_state=ACTIVE ;;
-      esac
-      inventory="$(printf '%s' "$inventory" | jq --arg type "$resource_type" --arg id "$physical_id" --arg state "$resource_state" '. + [{type:$type,physical_id:$id,state:$state}]')"
-    done <<EOF
-$(jq -r '.retained_physical_resource_ids[] | [.type,.physical_id] | @tsv' "$state")
-EOF
-    c3_atomic_state_update "$manifest" "$state" '.orphan_inventory=$inventory' --argjson inventory "$inventory"
+    build_orphan_inventory
     ;;
   --residual-cost-inventory)
     validate_authority

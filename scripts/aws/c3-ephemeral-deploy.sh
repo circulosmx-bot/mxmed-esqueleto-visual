@@ -178,6 +178,34 @@ wait_for_direct_budget_visibility() {
   return 2
 }
 
+verify_fixed_security_secret_names_absent() {
+  expected_names="$(c3_security_fixed_secret_names_json)"
+  sealed_names="$(jq -c '.security_fixed_secret_name_precheck.names' "$manifest")" \
+    || fail 'SECURITY_FIXED_SECRET_PRECHECK_CONTRACT_INVALID'
+  [ "$sealed_names" = "$expected_names" ] || fail 'SECURITY_FIXED_SECRET_PRECHECK_SCOPE_MISMATCH'
+  [ "$(printf '%s' "$sealed_names" | jq length)" = '4' ] \
+    || fail 'SECURITY_FIXED_SECRET_PRECHECK_COUNT_INVALID'
+  printf '%s' "$sealed_names" | jq -r '.[]' | while IFS= read -r secret_name; do
+    [ -n "$secret_name" ] || fail 'SECURITY_FIXED_SECRET_PRECHECK_NAME_INVALID'
+    if secret_state="$(AWS_PROFILE="$MXMED_C3_TEARDOWN_PROFILE" aws secretsmanager describe-secret \
+      --region "$EXPECTED_REGION" --secret-id "$secret_name" --output json 2>&1)"; then
+      lifecycle="$(printf '%s' "$secret_state" | jq -r \
+        'if .DeletedDate == null then "ACTIVE" elif (.DeletedDate | type) == "string" then "SCHEDULED_FOR_DELETION" else "AMBIGUOUS" end' \
+        2>/dev/null || printf AMBIGUOUS)"
+      case "$lifecycle" in
+        ACTIVE) fail "SECURITY_FIXED_SECRET_ACTIVE:$secret_name" ;;
+        SCHEDULED_FOR_DELETION) fail "SECURITY_FIXED_SECRET_SCHEDULED_FOR_DELETION:$secret_name" ;;
+        *) fail "SECURITY_FIXED_SECRET_LIFECYCLE_AMBIGUOUS:$secret_name" ;;
+      esac
+    else
+      case "$secret_state" in
+        *ResourceNotFoundException*) ;;
+        *) fail "SECURITY_FIXED_SECRET_DESCRIBE_FAILED:$secret_name" ;;
+      esac
+    fi
+  done
+}
+
 if [ "${MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY:-}" = '1' ]; then
   return 0 2>/dev/null || exit 0
 fi
@@ -246,6 +274,9 @@ require_future_write_authority() {
   validate_fresh_authorization
   [ -n "$state" ] || fail 'RUNTIME_STATE_PATH_MISSING'
   c3_validate_phase "$phase" "$manifest" "$state" || fail "RUNTIME_STATE_PHASE_REJECTED:$phase"
+  if [ "$phase" = 'PRE_FIRST_WRITE' ]; then
+    verify_fixed_security_secret_names_absent
+  fi
 }
 
 template_file_for_stack() {
@@ -422,6 +453,8 @@ case "$mode" in
     image_inputs="$(jq -c . "$build_inputs")"
     [ "$(printf '%s' "$image_inputs" | jq -r .source_revision)" = "$current_head" ] || fail 'IMAGE_SOURCE_REVISION_HEAD_MISMATCH'
     gates="$(c3_gate_definitions_json)"
+    fixed_security_names="$(c3_security_fixed_secret_names_json)"
+    retained_expectations="$(c3_retained_resource_expectations_json)"
     direct_budget="$(jq -cn --arg account "$EXPECTED_ACCOUNT" --arg region "$BUDGETS_API_REGION" \
       --arg name "mxmed-stg-c3-$run_id" --arg topic "$budget_topic_arn" '
       {api_region:$region,account_id:$account,budget_name_format:"mxmed-stg-c3-${RUN_ID}",budget_name:$name,
@@ -438,7 +471,8 @@ case "$mode" in
       --arg boundary "$PERMISSION_BOUNDARY_ARN" \
       --argjson templates "$templates" --arg deployment_mode "$DEPLOYMENT_MODE" \
       --arg template_bucket "$TEMPLATE_BUCKET" --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
-      --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" --argjson image_inputs "$image_inputs" \
+      --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" --argjson fixed_security_names "$fixed_security_names" \
+      --argjson retained_expectations "$retained_expectations" --argjson image_inputs "$image_inputs" \
       --argjson policy_hashes "$policy_hashes" --argjson expected_graph "$expected_graph" --argjson direct_budget "$direct_budget" \
       '{
         schema:"mxmed.c3.ephemeral.sealed-run-manifest.v3",
@@ -451,6 +485,7 @@ case "$mode" in
         pending_runtime_fields:{first_runtime_mutation_at_utc:$pending,failsafe_at_utc:$pending,hard_cap_at_utc:$pending,physical_ecr_image_digest:$pending},
         object_key_contract:{canonical_format:("RUN_ID/STACK_NAME/TEMPLATE_SHA256"+$suffix),suffix:$suffix,binds_run_id:true,binds_stack_name:true,binds_template_sha256:true,path_traversal_safe:true},
         gate_definitions:$gates,
+        security_fixed_secret_name_precheck:{required:true,integrated_gate:"SEALED_TEMPLATE_AND_RESOURCE_SCOPE_PASS",names:$fixed_security_names,required_state:"ABSENT",active_blocks_run:true,scheduled_for_deletion_blocks_run:true,ambiguous_error_blocks_run:true},
         phase_requirements:{pre_first_write:{required_pass_count:11,gate_12_state:"PENDING_RUNTIME"},pre_runner:{required_pass_count:12,gate_12_state:"PASS"}},
         template_sha256:$template,templates:$templates,
         template_transport:{bucket_name:$template_bucket,region:$region,public_access_blocked:true,default_encryption:"AES256",versioning:false,ephemeral:true,delete_after_c3:true},
@@ -460,7 +495,7 @@ case "$mode" in
         cfn_execution_role_arns:{"mxmed-stg-network":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Network","mxmed-stg-security":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Security","mxmed-stg-session":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Session","mxmed-stg-registry":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Registry","mxmed-stg-c3-runner":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Runner","mxmed-stg-c3-janitor":"arn:aws:iam::875691018466:role/MXMed-C3-CFN-Janitor"},
         stack_names:$stacks,
         expected_resource_counts:{cloudformation:106,direct_runtime:1,total_authorized:107,data:0,storage:0,application_service:0,public_runner_ip:0},
-        retained_resource_expectations:{count:13,physical_resources:[]}
+        retained_resource_expectations:{count:13,physical_resources:$retained_expectations}
       }' \
       >"$output"
     chmod 0600 "$output"

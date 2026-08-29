@@ -37,16 +37,46 @@ c3_gate_definitions_json() {
   ]'
 }
 
+c3_security_fixed_secret_names_json() {
+  jq -cn '[
+    "/mxmed/staging/application/session-signing",
+    "/mxmed/staging/providers/stripe/secret-key",
+    "/mxmed/staging/providers/stripe/webhook-secret",
+    "/mxmed/staging/providers/ai/api-key"
+  ]'
+}
+
+c3_retained_resource_expectations_json() {
+  jq -cn '[
+    {stack_name:"mxmed-stg-security",logical_id:"ApplicationDataKeyC957928E",type:"AWS::KMS::Key"},
+    {stack_name:"mxmed-stg-security",logical_id:"SecretsKey317DCF94",type:"AWS::KMS::Key"},
+    {stack_name:"mxmed-stg-security",logical_id:"AuditKeyB2DBB069",type:"AWS::KMS::Key"},
+    {stack_name:"mxmed-stg-security",logical_id:"BackupKey60B97760",type:"AWS::KMS::Key"},
+    {stack_name:"mxmed-stg-security",logical_id:"SessionSigningSecret925D6419",type:"AWS::SecretsManager::Secret"},
+    {stack_name:"mxmed-stg-security",logical_id:"StripeSecretKeyContainerB8EBA645",type:"AWS::SecretsManager::Secret"},
+    {stack_name:"mxmed-stg-security",logical_id:"StripeWebhookSecretContainer9B02DE63",type:"AWS::SecretsManager::Secret"},
+    {stack_name:"mxmed-stg-security",logical_id:"AiApiKeyContainerC19542A6",type:"AWS::SecretsManager::Secret"},
+    {stack_name:"mxmed-stg-security",logical_id:"AuditBucketB01E0AE8",type:"AWS::S3::Bucket"},
+    {stack_name:"mxmed-stg-security",logical_id:"CloudTrailLogGroup343A29D6",type:"AWS::Logs::LogGroup"},
+    {stack_name:"mxmed-stg-session",logical_id:"SessionAuthSecretA6611D29",type:"AWS::SecretsManager::Secret"},
+    {stack_name:"mxmed-stg-registry",logical_id:"RegistryKeyDD63DA09",type:"AWS::KMS::Key"},
+    {stack_name:"mxmed-stg-registry",logical_id:"ApplicationRepository13E54097",type:"AWS::ECR::Repository"}
+  ]'
+}
+
 c3_validate_manifest() {
-  local manifest gates payload_sha
+  local manifest gates fixed_security_names retained_expectations payload_sha
   manifest="$1"
   [ -f "$manifest" ] || c3_contract_fail 'SEALED_MANIFEST_MISSING'
   [ "$(c3_file_mode "$manifest")" = '600' ] || c3_contract_fail 'SEALED_MANIFEST_MODE_INVALID'
   gates="$(c3_gate_definitions_json)"
+  fixed_security_names="$(c3_security_fixed_secret_names_json)"
+  retained_expectations="$(c3_retained_resource_expectations_json)"
   jq -e --arg schema "$C3_MANIFEST_SCHEMA" --arg account "$C3_ACCOUNT" \
     --arg region "$C3_REGION" --arg budgets_region "$C3_BUDGETS_API_REGION" --arg pending "$C3_PENDING_RUNTIME_RESOLUTION" \
     --arg budget_topic "$C3_BUDGET_NOTIFICATION_TOPIC_ARN" \
-    --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" '
+    --arg suffix "$C3_OBJECT_KEY_SUFFIX" --argjson gates "$gates" \
+    --argjson fixed_security_names "$fixed_security_names" --argjson retained_expectations "$retained_expectations" '
       . as $root
       | .schema == $schema
       and (.run_uuid | test("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"))
@@ -96,6 +126,15 @@ c3_validate_manifest() {
       }
       and .gate_definitions == $gates
       and (.gate_definitions | length) == 12
+      and .security_fixed_secret_name_precheck == {
+        required:true,
+        integrated_gate:"SEALED_TEMPLATE_AND_RESOURCE_SCOPE_PASS",
+        names:$fixed_security_names,
+        required_state:"ABSENT",
+        active_blocks_run:true,
+        scheduled_for_deletion_blocks_run:true,
+        ambiguous_error_blocks_run:true
+      }
       and .phase_requirements.pre_first_write == {required_pass_count:11,gate_12_state:"PENDING_RUNTIME"}
       and .phase_requirements.pre_runner == {required_pass_count:12,gate_12_state:"PASS"}
       and (.templates | length) == 6
@@ -136,7 +175,7 @@ c3_validate_manifest() {
         teardown:"mxmed-c3-stg-teardown"
       }
       and .expected_resource_counts == {cloudformation:106,direct_runtime:1,total_authorized:107,data:0,storage:0,application_service:0,public_runner_ip:0}
-      and .retained_resource_expectations.count == 13
+      and .retained_resource_expectations == {count:13,physical_resources:$retained_expectations}
       and .template_transport.bucket_name == "mxmed-stg-c3-cf-templates-875691018466-mx-central-1"
       and .template_transport.public_access_blocked == true
       and .template_transport.default_encryption == "AES256"

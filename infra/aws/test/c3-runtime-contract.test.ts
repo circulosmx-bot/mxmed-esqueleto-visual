@@ -42,6 +42,29 @@ const gates = [
   'ECR_DIGEST_SEALED_BEFORE_RUNNER',
 ].map((name, index) => ({ ordinal: index + 1, name }));
 
+const fixedSecuritySecretNames = [
+  '/mxmed/staging/application/session-signing',
+  '/mxmed/staging/providers/stripe/secret-key',
+  '/mxmed/staging/providers/stripe/webhook-secret',
+  '/mxmed/staging/providers/ai/api-key',
+];
+
+const retainedExpectations = [
+  ['mxmed-stg-security', 'ApplicationDataKeyC957928E', 'AWS::KMS::Key'],
+  ['mxmed-stg-security', 'SecretsKey317DCF94', 'AWS::KMS::Key'],
+  ['mxmed-stg-security', 'AuditKeyB2DBB069', 'AWS::KMS::Key'],
+  ['mxmed-stg-security', 'BackupKey60B97760', 'AWS::KMS::Key'],
+  ['mxmed-stg-security', 'SessionSigningSecret925D6419', 'AWS::SecretsManager::Secret'],
+  ['mxmed-stg-security', 'StripeSecretKeyContainerB8EBA645', 'AWS::SecretsManager::Secret'],
+  ['mxmed-stg-security', 'StripeWebhookSecretContainer9B02DE63', 'AWS::SecretsManager::Secret'],
+  ['mxmed-stg-security', 'AiApiKeyContainerC19542A6', 'AWS::SecretsManager::Secret'],
+  ['mxmed-stg-security', 'AuditBucketB01E0AE8', 'AWS::S3::Bucket'],
+  ['mxmed-stg-security', 'CloudTrailLogGroup343A29D6', 'AWS::Logs::LogGroup'],
+  ['mxmed-stg-session', 'SessionAuthSecretA6611D29', 'AWS::SecretsManager::Secret'],
+  ['mxmed-stg-registry', 'RegistryKeyDD63DA09', 'AWS::KMS::Key'],
+  ['mxmed-stg-registry', 'ApplicationRepository13E54097', 'AWS::ECR::Repository'],
+].map(([stack_name, logical_id, type]) => ({ stack_name, logical_id, type }));
+
 function manifestFixture(): Record<string, unknown> {
   const stacks = [
     'mxmed-stg-c3-janitor',
@@ -115,6 +138,15 @@ function manifestFixture(): Record<string, unknown> {
       path_traversal_safe: true,
     },
     gate_definitions: gates,
+    security_fixed_secret_name_precheck: {
+      required: true,
+      integrated_gate: 'SEALED_TEMPLATE_AND_RESOURCE_SCOPE_PASS',
+      names: fixedSecuritySecretNames,
+      required_state: 'ABSENT',
+      active_blocks_run: true,
+      scheduled_for_deletion_blocks_run: true,
+      ambiguous_error_blocks_run: true,
+    },
     phase_requirements: {
       pre_first_write: { required_pass_count: 11, gate_12_state: 'PENDING_RUNTIME' },
       pre_runner: { required_pass_count: 12, gate_12_state: 'PASS' },
@@ -180,7 +212,7 @@ function manifestFixture(): Record<string, unknown> {
       'mxmed-stg-registry': 10,
       'mxmed-stg-c3-runner': 18,
     },
-    retained_resource_expectations: { count: 13, physical_resources: [] },
+    retained_resource_expectations: { count: 13, physical_resources: retainedExpectations },
   };
 }
 
@@ -193,6 +225,14 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, { mode: 0o600 });
     chmodSync(manifestPath, 0o600);
   };
+  const readRuntimeCollections = (): {
+    retained_physical_resource_ids: unknown[];
+    orphan_inventory: unknown[];
+  } =>
+    JSON.parse(readFileSync(statePath, 'utf8')) as {
+      retained_physical_resource_ids: unknown[];
+      orphan_inventory: unknown[];
+    };
   const run = (...args: string[]) =>
     spawnSync(helper, args, { cwd: repositoryRoot, encoding: 'utf8' });
   const expectAccepted = (...args: string[]): void => {
@@ -366,6 +406,211 @@ cleanup_exact_direct_budget`,
     };
   };
 
+  const installFixedSecretAwsStub = (_scenario: string): { PATH: string; AWS_LOG: string } => {
+    const awsLog = join(directory, 'secret-guard-aws.log');
+    writeFileSync(
+      join(directory, 'aws'),
+      `#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$AWS_LOG"
+secret_id=''
+previous=''
+for argument in "$@"; do
+  if [ "$previous" = '--secret-id' ]; then secret_id="$argument"; fi
+  previous="$argument"
+done
+not_found() { printf '%s\n' 'ResourceNotFoundException: exact secret not found' >&2; exit 254; }
+case "$SCENARIO:$secret_id" in
+  all-absent:*|unrelated-present:*) not_found ;;
+  active:/mxmed/staging/application/session-signing)
+    printf '%s\n' '{"ARN":"arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-signing-new123","DeletedDate":null}' ;;
+  scheduled:/mxmed/staging/providers/stripe/secret-key)
+    printf '%s\n' '{"ARN":"arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/secret-key-old123","DeletedDate":"2026-08-28T17:10:33Z"}' ;;
+  historical-suffix:/mxmed/staging/providers/stripe/webhook-secret)
+    printf '%s\n' '{"ARN":"arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/webhook-secret-historical999","DeletedDate":"2026-08-28T17:10:34Z"}' ;;
+  unexpected-error:/mxmed/staging/providers/ai/api-key)
+    printf '%s\n' 'AccessDeniedException: ambiguous read failure' >&2; exit 254 ;;
+  *) not_found ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'aws'), 0o700);
+    return {
+      PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+      AWS_LOG: awsLog,
+    };
+  };
+
+  const runFixedSecretGuard = (scenario: string) => {
+    const stub = installFixedSecretAwsStub(scenario);
+    return {
+      result: spawnSync(
+        'sh',
+        [
+          '-c',
+          `set -eu
+MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY=1 . "$DEPLOY_CONTROLLER"
+manifest="$MANIFEST_PATH"
+MXMED_C3_TEARDOWN_PROFILE=mxmed-c3-stg-teardown
+verify_fixed_security_secret_names_absent`,
+        ],
+        {
+          cwd: repositoryRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            ...stub,
+            DEPLOY_CONTROLLER: deployController,
+            MANIFEST_PATH: manifestPath,
+            SCENARIO: scenario,
+          },
+        },
+      ),
+      stub,
+    };
+  };
+
+  const runTemplateBucketListingCheck = (listing: string) =>
+    spawnSync(
+      'sh',
+      [
+        '-c',
+        `set -eu
+MXMED_C3_SOURCE_TEARDOWN_HELPERS_ONLY=1 . "$TEARDOWN_CONTROLLER"
+template_bucket_listing_is_empty`,
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        input: listing,
+        env: { ...process.env, TEARDOWN_CONTROLLER: teardownController },
+      },
+    );
+
+  const installRetainedAwsStub = (): { PATH: string; AWS_LOG: string } => {
+    const awsLog = join(directory, 'retained-aws.log');
+    writeFileSync(
+      join(directory, 'aws'),
+      `#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$AWS_LOG"
+argument_value() {
+  sought="$1"; shift
+  previous=''
+  for argument in "$@"; do
+    if [ "$previous" = "$sought" ]; then printf '%s\n' "$argument"; return 0; fi
+    previous="$argument"
+  done
+  return 1
+}
+case "$1:$2" in
+  cloudformation:describe-stacks)
+    stack="$(argument_value --stack-name "$@")"
+    [ "$stack" = 'mxmed-stg-security' ] || exit 254
+    printf '{"Stacks":[{"StackId":"arn:aws:cloudformation:mx-central-1:875691018466:stack/mxmed-stg-security/test-stack-id","Parameters":[{"ParameterKey":"RunId","ParameterValue":"%s"}]}]}\n' "$STACK_RUN_ID"
+    ;;
+  cloudformation:describe-stack-events)
+    jq -c . "$EVENTS_FILE"
+    ;;
+  cloudformation:describe-stack-resource)
+    logical="$(argument_value --logical-resource-id "$@")"
+    physical="$(jq -r --arg logical "$logical" '.[$logical] // empty' "$RESOURCE_FILE")"
+    [ -n "$physical" ] || exit 254
+    printf '%s\n' "$physical"
+    ;;
+  kms:describe-key) printf '%s\n' 'PendingDeletion' ;;
+  *) printf '%s\n' "unexpected retained stub call: $*" >&2; exit 64 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'aws'), 0o700);
+    return { PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`, AWS_LOG: awsLog };
+  };
+
+  const prepareFailedRuntimeState = (): void => {
+    expectAccepted('init-state', manifestPath, statePath);
+    const state = JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, unknown>;
+    state.deployment_failure_at_utc = '2026-08-29T03:28:08Z';
+    state.deployment_failure_stack = 'mxmed-stg-security';
+    state.phase = 'ABORTING';
+    writeFileSync(statePath, `${JSON.stringify(state)}\n`, { mode: 0o600 });
+    chmodSync(statePath, 0o600);
+  };
+
+  const runRetainedCapture = (
+    events: Record<string, unknown>[],
+    resources: Record<string, string> = {},
+    stackRunId = runId,
+  ) => {
+    prepareFailedRuntimeState();
+    const eventsFile = join(directory, 'events.json');
+    const resourceFile = join(directory, 'resources.json');
+    writeFileSync(eventsFile, `${JSON.stringify({ StackEvents: events })}\n`);
+    writeFileSync(resourceFile, `${JSON.stringify(resources)}\n`);
+    const stub = installRetainedAwsStub();
+    return spawnSync(
+      'sh',
+      [
+        '-c',
+        `set -eu
+MXMED_C3_SOURCE_TEARDOWN_HELPERS_ONLY=1 . "$TEARDOWN_CONTROLLER"
+manifest="$MANIFEST_PATH"
+state="$STATE_PATH"
+capture_retained_physical_ids`,
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          ...stub,
+          TEARDOWN_CONTROLLER: teardownController,
+          MANIFEST_PATH: manifestPath,
+          STATE_PATH: statePath,
+          EVENTS_FILE: eventsFile,
+          RESOURCE_FILE: resourceFile,
+          STACK_RUN_ID: stackRunId,
+        },
+      },
+    );
+  };
+
+  const runOrphanInventory = (resources: unknown[]) => {
+    expectAccepted('init-state', manifestPath, statePath);
+    const state = JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, unknown>;
+    state.retained_physical_resource_ids = resources;
+    writeFileSync(statePath, `${JSON.stringify(state)}\n`, { mode: 0o600 });
+    chmodSync(statePath, 0o600);
+    const stub = installRetainedAwsStub();
+    return spawnSync(
+      'sh',
+      [
+        '-c',
+        `set -eu
+MXMED_C3_SOURCE_TEARDOWN_HELPERS_ONLY=1 . "$TEARDOWN_CONTROLLER"
+manifest="$MANIFEST_PATH"
+state="$STATE_PATH"
+build_orphan_inventory`,
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          ...stub,
+          TEARDOWN_CONTROLLER: teardownController,
+          MANIFEST_PATH: manifestPath,
+          STATE_PATH: statePath,
+          EVENTS_FILE: join(directory, 'unused-events.json'),
+          RESOURCE_FILE: join(directory, 'unused-resources.json'),
+          STACK_RUN_ID: runId,
+        },
+      },
+    );
+  };
+
   beforeEach(() => {
     directory = mkdtempSync(join(tmpdir(), 'mxmed-c3-runtime-contract-'));
     manifestPath = join(directory, 'manifest.json');
@@ -384,6 +629,230 @@ cleanup_exact_direct_budget`,
     writeManifest(stale);
     expectRejected('validate-manifest', manifestPath);
   });
+
+  test('seals the exact four-name Security precheck into existing Gate 5', () => {
+    expectAccepted('validate-manifest', manifestPath);
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+      gate_definitions: unknown[];
+      security_fixed_secret_name_precheck: Record<string, unknown>;
+    };
+    expect(manifest.gate_definitions).toHaveLength(12);
+    expect(manifest.security_fixed_secret_name_precheck).toEqual({
+      required: true,
+      integrated_gate: 'SEALED_TEMPLATE_AND_RESOURCE_SCOPE_PASS',
+      names: fixedSecuritySecretNames,
+      required_state: 'ABSENT',
+      active_blocks_run: true,
+      scheduled_for_deletion_blocks_run: true,
+      ambiguous_error_blocks_run: true,
+    });
+  });
+
+  test('allows progress when all four exact fixed Security secret names are absent', () => {
+    const { result, stub } = runFixedSecretGuard('all-absent');
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    const calls = readFileSync(stub.AWS_LOG, 'utf8').trim().split('\n');
+    expect(calls).toHaveLength(4);
+    for (const name of fixedSecuritySecretNames) {
+      expect(calls.some((call) => call.includes(`--secret-id ${name}`))).toBe(true);
+    }
+  });
+
+  test('blocks before first write when one exact fixed Security secret is active', () => {
+    const { result } = runFixedSecretGuard('active');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('SECURITY_FIXED_SECRET_ACTIVE');
+  });
+
+  test('blocks before first write when one exact fixed Security secret is scheduled for deletion', () => {
+    const { result } = runFixedSecretGuard('scheduled');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('SECURITY_FIXED_SECRET_SCHEDULED_FOR_DELETION');
+  });
+
+  test('fails closed when an exact fixed Security secret DescribeSecret call is ambiguous', () => {
+    const { result } = runFixedSecretGuard('unexpected-error');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('SECURITY_FIXED_SECRET_DESCRIBE_FAILED');
+  });
+
+  test('ignores unrelated secrets by querying only the sealed four-name contract', () => {
+    const { result, stub } = runFixedSecretGuard('unrelated-present');
+    expect(result.status).toBe(0);
+    const calls = readFileSync(stub.AWS_LOG, 'utf8');
+    expect(calls).not.toContain('/mxmed/staging/unrelated');
+    expect(calls.trim().split('\n')).toHaveLength(4);
+  });
+
+  test('detects a historical ARN suffix through the exact fixed secret name', () => {
+    const { result } = runFixedSecretGuard('historical-suffix');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('SECURITY_FIXED_SECRET_SCHEDULED_FOR_DELETION');
+  });
+
+  test('captures a retained DELETE_SKIPPED physical ID from partial rollback events', () => {
+    const result = runRetainedCapture([
+      {
+        LogicalResourceId: 'ApplicationDataKeyC957928E',
+        ResourceType: 'AWS::KMS::Key',
+        ResourceStatus: 'DELETE_SKIPPED',
+        PhysicalResourceId: 'key-from-delete-skipped',
+      },
+    ]);
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    expect(readRuntimeCollections().retained_physical_resource_ids).toEqual([
+      {
+        stack_name: 'mxmed-stg-security',
+        logical_id: 'ApplicationDataKeyC957928E',
+        type: 'AWS::KMS::Key',
+        physical_id: 'key-from-delete-skipped',
+      },
+    ]);
+  });
+
+  test('captures multiple partial-rollback retained resources exactly once', () => {
+    const result = runRetainedCapture([
+      {
+        LogicalResourceId: 'ApplicationDataKeyC957928E',
+        ResourceType: 'AWS::KMS::Key',
+        ResourceStatus: 'DELETE_SKIPPED',
+        PhysicalResourceId: 'key-one',
+      },
+      {
+        LogicalResourceId: 'SessionSigningSecret925D6419',
+        ResourceType: 'AWS::SecretsManager::Secret',
+        ResourceStatus: 'DELETE_SKIPPED',
+        PhysicalResourceId: 'secret-one',
+      },
+      {
+        LogicalResourceId: 'ApplicationDataKeyC957928E',
+        ResourceType: 'AWS::KMS::Key',
+        ResourceStatus: 'CREATE_COMPLETE',
+        PhysicalResourceId: 'key-one',
+      },
+    ]);
+    expect(result.status).toBe(0);
+    const captured = readRuntimeCollections().retained_physical_resource_ids as Record<
+      string,
+      unknown
+    >[];
+    expect(captured).toHaveLength(2);
+    expect(captured.map(({ physical_id }) => physical_id).sort()).toEqual([
+      'key-one',
+      'secret-one',
+    ]);
+  });
+
+  test('does not fabricate a downstream-cancelled resource without a physical ID', () => {
+    const result = runRetainedCapture([
+      {
+        LogicalResourceId: 'ApplicationDataKeyC957928E',
+        ResourceType: 'AWS::KMS::Key',
+        ResourceStatus: 'CREATE_FAILED',
+        PhysicalResourceId: '',
+        ResourceStatusReason: 'Resource creation cancelled',
+      },
+    ]);
+    expect(result.status).toBe(0);
+    expect(readRuntimeCollections().retained_physical_resource_ids).toEqual([]);
+  });
+
+  test('rejects event resources outside the sealed retained expectation set', () => {
+    const result = runRetainedCapture([
+      {
+        LogicalResourceId: 'UnsealedRetainedResource',
+        ResourceType: 'AWS::KMS::Key',
+        ResourceStatus: 'DELETE_SKIPPED',
+        PhysicalResourceId: 'must-not-be-captured',
+      },
+    ]);
+    expect(result.status).toBe(0);
+    expect(readRuntimeCollections().retained_physical_resource_ids).toEqual([]);
+  });
+
+  test('fails closed when the retained stack RunId differs from the sealed run', () => {
+    const result = runRetainedCapture([], {}, 'c3-223e4567-e89b-42d3-a456-426614174000');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('RETAINED_STACK_RUN_ID_MISMATCH');
+    expect(readRuntimeCollections().retained_physical_resource_ids).toEqual([]);
+  });
+
+  test('keeps a clean zero when partial rollback created no retained physical resource', () => {
+    const result = runRetainedCapture([]);
+    expect(result.status).toBe(0);
+    expect(readRuntimeCollections().retained_physical_resource_ids).toEqual([]);
+  });
+
+  test('deduplicates a retained physical ID observed by event and resource readback', () => {
+    const result = runRetainedCapture(
+      [
+        {
+          LogicalResourceId: 'ApplicationDataKeyC957928E',
+          ResourceType: 'AWS::KMS::Key',
+          ResourceStatus: 'DELETE_SKIPPED',
+          PhysicalResourceId: 'same-key',
+        },
+      ],
+      { ApplicationDataKeyC957928E: 'same-key' },
+    );
+    expect(result.status).toBe(0);
+    expect(readRuntimeCollections().retained_physical_resource_ids).toHaveLength(1);
+  });
+
+  test.each([
+    ['empty object without Contents or KeyCount', '{}'],
+    ['explicit empty Contents', '{"Contents":[]}'],
+    ['legacy KeyCount zero without Contents', '{"KeyCount":0}'],
+  ])('accepts a safely empty ListObjectsV2 response: %s', (_label, listing) => {
+    expect(runTemplateBucketListingCheck(listing).status).toBe(0);
+  });
+
+  test('rejects nonempty ListObjectsV2 Contents', () => {
+    expect(
+      runTemplateBucketListingCheck('{"Contents":[{"Key":"exact.template.json"}]}').status,
+    ).not.toBe(0);
+  });
+
+  test('rejects a truncated ListObjectsV2 response instead of declaring it empty', () => {
+    expect(runTemplateBucketListingCheck('{"Contents":[],"IsTruncated":true}').status).not.toBe(0);
+  });
+
+  test('fails closed on malformed ListObjectsV2 JSON', () => {
+    expect(runTemplateBucketListingCheck('{malformed').status).not.toBe(0);
+  });
+
+  test('performs zero orphan iterations for an empty retained-resource list', () => {
+    const result = runOrphanInventory([]);
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    expect(readRuntimeCollections().orphan_inventory).toEqual([]);
+  });
+
+  test('performs one orphan iteration for one valid retained resource', () => {
+    const result = runOrphanInventory([{ type: 'AWS::KMS::Key', physical_id: 'key-one' }]);
+    expect(result.status).toBe(0);
+    expect(readRuntimeCollections().orphan_inventory).toEqual([
+      { type: 'AWS::KMS::Key', physical_id: 'key-one', state: 'PendingDeletion' },
+    ]);
+  });
+
+  test('performs an exact orphan iteration for each valid retained resource', () => {
+    const result = runOrphanInventory([
+      { type: 'AWS::KMS::Key', physical_id: 'key-one' },
+      { type: 'AWS::KMS::Key', physical_id: 'key-two' },
+    ]);
+    expect(result.status).toBe(0);
+    expect(readRuntimeCollections().orphan_inventory).toHaveLength(2);
+  });
+
+  test.each([[[null]], [[{ type: '', physical_id: '' }]]])(
+    'rejects a blank/null retained placeholder instead of converting it to an orphan',
+    (resources) => {
+      const result = runOrphanInventory(resources);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain('RETAINED_RESOURCE_PLACEHOLDER_REJECTED');
+      expect(readRuntimeCollections().orphan_inventory).toEqual([]);
+    },
+  );
 
   test.each([
     ['missing', undefined],
