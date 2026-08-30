@@ -29,7 +29,6 @@ const SESSION_PARAMETERS = Object.freeze({
   'maxmemory-policy': 'volatile-ttl',
   timeout: '300',
   'notify-keyspace-events': '',
-  activerehashing: 'yes',
   'tcp-keepalive': '60',
 });
 

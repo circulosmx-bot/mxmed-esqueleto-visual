@@ -47,6 +47,7 @@ const fixedSecuritySecretNames = [
   '/mxmed/staging/providers/stripe/secret-key',
   '/mxmed/staging/providers/stripe/webhook-secret',
   '/mxmed/staging/providers/ai/api-key',
+  '/mxmed/staging/application/session-store-auth',
 ];
 
 const retainedExpectations = [
@@ -761,7 +762,7 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
     expectRejected('validate-manifest', manifestPath);
   });
 
-  test('seals the exact four-name Security precheck into existing Gate 5', () => {
+  test('seals the exact five-name fixed-secret precheck into existing Gate 5', () => {
     expectAccepted('validate-manifest', manifestPath);
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
       gate_definitions: unknown[];
@@ -779,11 +780,11 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
     });
   });
 
-  test('allows progress when all four exact fixed Security secret names are absent', () => {
+  test('allows progress when all five exact fixed secret names are absent', () => {
     const { result, stub } = runFixedSecretGuard('all-absent');
     expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
     const calls = readFileSync(stub.AWS_LOG, 'utf8').trim().split('\n');
-    expect(calls).toHaveLength(4);
+    expect(calls).toHaveLength(5);
     for (const name of fixedSecuritySecretNames) {
       expect(calls.some((call) => call.includes(`--secret-id ${name}`))).toBe(true);
     }
@@ -807,12 +808,12 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
     expect(result.stderr).toContain('SECURITY_FIXED_SECRET_DESCRIBE_FAILED');
   });
 
-  test('ignores unrelated secrets by querying only the sealed four-name contract', () => {
+  test('ignores unrelated secrets by querying only the sealed five-name contract', () => {
     const { result, stub } = runFixedSecretGuard('unrelated-present');
     expect(result.status).toBe(0);
     const calls = readFileSync(stub.AWS_LOG, 'utf8');
     expect(calls).not.toContain('/mxmed/staging/unrelated');
-    expect(calls.trim().split('\n')).toHaveLength(4);
+    expect(calls.trim().split('\n')).toHaveLength(5);
   });
 
   test('detects a historical ARN suffix through the exact fixed secret name', () => {

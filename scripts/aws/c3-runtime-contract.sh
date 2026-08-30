@@ -42,7 +42,8 @@ c3_security_fixed_secret_names_json() {
     "/mxmed/staging/application/session-signing",
     "/mxmed/staging/providers/stripe/secret-key",
     "/mxmed/staging/providers/stripe/webhook-secret",
-    "/mxmed/staging/providers/ai/api-key"
+    "/mxmed/staging/providers/ai/api-key",
+    "/mxmed/staging/application/session-store-auth"
   ]'
 }
 

@@ -35,8 +35,13 @@ describe('session subnet and parameter groups', () => {
   test('SESSION-IMP-032 disables keyspace notifications', () => {
     expect(parameters['notify-keyspace-events']).toBe('');
   });
-  test('SESSION-IMP-033 enables active rehashing', () => {
-    expect(parameters.activerehashing).toBe('yes');
+  test('SESSION-IMP-033 omits the unsupported active rehashing parameter without replacement', () => {
+    expect(parameters).not.toHaveProperty('activerehashing');
+    expect(
+      Object.keys(parameters).filter(
+        (name) => name.toLowerCase().replaceAll('-', '').replaceAll('_', '') === 'activerehashing',
+      ),
+    ).toHaveLength(0);
   });
   test('SESSION-IMP-034 uses keepalive 60', () => {
     expect(parameters['tcp-keepalive']).toBe('60');
@@ -57,5 +62,13 @@ describe('session subnet and parameter groups', () => {
         /slowlog|commandlog|module|search|vector/,
       );
     }
+  });
+  test('SESSION-IMP-038 preserves the exact supported parameter set', () => {
+    expect(parameters).toEqual({
+      'maxmemory-policy': 'volatile-ttl',
+      timeout: '300',
+      'notify-keyspace-events': '',
+      'tcp-keepalive': '60',
+    });
   });
 });

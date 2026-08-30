@@ -115,7 +115,6 @@ export class SessionFoundationAspect implements IAspect {
       'maxmemory-policy': 'volatile-ttl',
       timeout: '300',
       'notify-keyspace-events': '',
-      activerehashing: 'yes',
       'tcp-keepalive': '60',
     };
     if (

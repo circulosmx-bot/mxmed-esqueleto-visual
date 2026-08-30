@@ -183,7 +183,7 @@ verify_fixed_security_secret_names_absent() {
   sealed_names="$(jq -c '.security_fixed_secret_name_precheck.names' "$manifest")" \
     || fail 'SECURITY_FIXED_SECRET_PRECHECK_CONTRACT_INVALID'
   [ "$sealed_names" = "$expected_names" ] || fail 'SECURITY_FIXED_SECRET_PRECHECK_SCOPE_MISMATCH'
-  [ "$(printf '%s' "$sealed_names" | jq length)" = '4' ] \
+  [ "$(printf '%s' "$sealed_names" | jq length)" = '5' ] \
     || fail 'SECURITY_FIXED_SECRET_PRECHECK_COUNT_INVALID'
   printf '%s' "$sealed_names" | jq -r '.[]' | while IFS= read -r secret_name; do
     [ -n "$secret_name" ] || fail 'SECURITY_FIXED_SECRET_PRECHECK_NAME_INVALID'

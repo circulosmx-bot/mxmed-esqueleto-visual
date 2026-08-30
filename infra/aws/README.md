@@ -606,8 +606,8 @@ de migración para clusters preexistentes con plaintext, mientras que un cluster
 `TransitEncryptionEnabled=true` nace TLS-only. El runtime futuro deberá validar certificado y
 hostname y nunca tendrá fallback plaintext.
 
-El parameter group `valkey8` fija `volatile-ttl`, timeout 300, active rehashing, keepalive 60 y
-notificaciones de keyspace vacías. No configura `cluster-enabled`, appendonly, save, slow/command
+El parameter group `valkey8` fija `volatile-ttl`, timeout 300, keepalive 60 y notificaciones de
+keyspace vacías. No configura active rehashing, `cluster-enabled`, appendonly, save, slow/command
 log, modules o search/vector. Snapshots, snapshot window, Global Datastore, data tiering, log
 delivery y auto minor upgrade permanecen apagados. Las ventanas UTC son
 `sun:03:30-sun:04:30` para staging y `sun:04:30-sun:05:30` para production.
