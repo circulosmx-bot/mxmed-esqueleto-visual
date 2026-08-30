@@ -28,7 +28,7 @@
         "arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-session-app",
         "arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-default-disabled",
         "arn:aws:elasticache:mx-central-1:875691018466:usergroup:mxmed-stg-session-users",
-        "arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-stg-session-*",
+        "arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-cache-*",
         "arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-*"
       ],
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
@@ -42,6 +42,13 @@
         "secretsmanager:TagResource"
       ],
       "Resource": "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-store-auth-*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
+      "Sid": "GenerateOnlyRegionalSessionSecretRandomPassword",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetRandomPassword",
+      "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
     {

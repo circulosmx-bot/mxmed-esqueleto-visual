@@ -304,6 +304,95 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     }
   });
 
+  test('authorizes only the physically observed Session secret and parameter-group operations', () => {
+    const session = readDocument(authority.session.policy);
+    const expectedRegion = { 'aws:RequestedRegion': 'mx-central-1' };
+    const wrongRegion = { 'aws:RequestedRegion': 'us-east-1' };
+    const randomPasswordStatements = session.Statement.filter((statement) =>
+      actions(statement).includes('secretsmanager:GetRandomPassword'),
+    );
+
+    expect(randomPasswordStatements).toEqual([
+      {
+        Sid: 'GenerateOnlyRegionalSessionSecretRandomPassword',
+        Effect: 'Allow',
+        Action: 'secretsmanager:GetRandomPassword',
+        Resource: '*',
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+    expect(
+      documentAllowsWithContext(session, 'secretsmanager:GetRandomPassword', '*', expectedRegion),
+    ).toBe(true);
+    expect(
+      documentAllowsWithContext(session, 'secretsmanager:GetRandomPassword', '*', wrongRegion),
+    ).toBe(false);
+    for (const action of [
+      'secretsmanager:GetSecretValue',
+      'secretsmanager:BatchGetSecretValue',
+      'secretsmanager:PutSecretValue',
+      'secretsmanager:UpdateSecret',
+      'secretsmanager:RotateSecret',
+    ]) {
+      expect(documentAllowsWithContext(session, action, '*', expectedRegion)).toBe(false);
+    }
+
+    const sessionResources = stacks['mxmed-stg-session']?.Resources ?? {};
+    const parameterGroup = sessionResources.SessionParameterGroup;
+    expect(parameterGroup?.Type).toBe('AWS::ElastiCache::ParameterGroup');
+    expect(parameterGroup?.Properties).not.toHaveProperty('CacheParameterGroupName');
+
+    const parameterGroupFamily =
+      'arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-cache-*';
+    const parameterGroupStatement = session.Statement.find(
+      (statement) =>
+        resources(statement).includes(parameterGroupFamily) &&
+        actions(statement).includes('elasticache:CreateCacheParameterGroup') &&
+        actions(statement).includes('elasticache:DeleteCacheParameterGroup'),
+    );
+    expect(parameterGroupStatement).toBeDefined();
+    if (parameterGroupStatement === undefined) {
+      throw new Error('SESSION_PARAMETER_GROUP_AUTHORITY_MISSING');
+    }
+    expect(parameterGroupStatement.Condition).toEqual({
+      StringEquals: { 'aws:RequestedRegion': 'mx-central-1' },
+    });
+    expect(resources(parameterGroupStatement)).not.toContain(
+      'arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-stg-session-*',
+    );
+
+    const observedParameterGroup =
+      'arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-cache-vpxtnq32lbbb';
+    const anotherGeneratedParameterGroup =
+      'arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-cache-example123456';
+    const unrelatedParameterGroups = [
+      'arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-stg-session-unrelated',
+      'arn:aws:elasticache:mx-central-1:875691018466:parametergroup:unrelated',
+      'arn:aws:elasticache:mx-central-1:111122223333:parametergroup:mxmed-cache-example123456',
+    ];
+    for (const action of [
+      'elasticache:CreateCacheParameterGroup',
+      'elasticache:DeleteCacheParameterGroup',
+    ]) {
+      expect(
+        documentAllowsWithContext(session, action, observedParameterGroup, expectedRegion),
+      ).toBe(true);
+      expect(
+        documentAllowsWithContext(session, action, anotherGeneratedParameterGroup, expectedRegion),
+      ).toBe(true);
+      expect(documentAllowsWithContext(session, action, observedParameterGroup, wrongRegion)).toBe(
+        false,
+      );
+      for (const unrelated of unrelatedParameterGroups) {
+        expect(documentAllowsWithContext(session, action, unrelated, expectedRegion)).toBe(false);
+      }
+    }
+
+    expect(session.Statement.flatMap(actions)).not.toContain('elasticache:*');
+    expect(session.Statement.flatMap(actions)).not.toContain('iam:*');
+    expect(session.Statement.flatMap(actions)).not.toContain('iam:CreateServiceLinkedRole');
+  });
+
   test('grants only the four physically denied Security handler actions at exact scope', () => {
     const security = readDocument(authority.security.policy);
     const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/example';
