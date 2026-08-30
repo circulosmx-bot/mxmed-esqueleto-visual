@@ -327,6 +327,69 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(
       documentAllowsWithContext(session, 'secretsmanager:GetRandomPassword', '*', wrongRegion),
     ).toBe(false);
+
+    const sessionSecretFamily =
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-store-auth-*';
+    const sessionSecret =
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-store-auth-ABC123';
+    const getSecretValueStatements = session.Statement.filter((statement) =>
+      actions(statement).includes('secretsmanager:GetSecretValue'),
+    );
+    expect(getSecretValueStatements).toEqual([
+      {
+        Sid: 'ManageExactSessionSecret',
+        Effect: 'Allow',
+        Action: [
+          'secretsmanager:CreateSecret',
+          'secretsmanager:DescribeSecret',
+          'secretsmanager:GetSecretValue',
+          'secretsmanager:TagResource',
+        ],
+        Resource: sessionSecretFamily,
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'secretsmanager:GetSecretValue',
+        sessionSecret,
+        expectedRegion,
+      ),
+    ).toBe(true);
+    for (const deniedSecret of [
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-signing-ABC123',
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/secret-key-ABC123',
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/stripe/webhook-secret-ABC123',
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/providers/ai/api-key-ABC123',
+      'arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/unrelated-ABC123',
+      'arn:aws:secretsmanager:mx-central-1:111122223333:secret:/mxmed/staging/application/session-store-auth-ABC123',
+    ]) {
+      expect(
+        documentAllowsWithContext(
+          session,
+          'secretsmanager:GetSecretValue',
+          deniedSecret,
+          expectedRegion,
+        ),
+      ).toBe(false);
+    }
+    expect(
+      documentAllowsWithContext(
+        session,
+        'secretsmanager:GetSecretValue',
+        sessionSecret,
+        wrongRegion,
+      ),
+    ).toBe(false);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'secretsmanager:BatchGetSecretValue',
+        sessionSecret,
+        expectedRegion,
+      ),
+    ).toBe(false);
     for (const action of [
       'secretsmanager:GetSecretValue',
       'secretsmanager:BatchGetSecretValue',

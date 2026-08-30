@@ -39,6 +39,7 @@
       "Action": [
         "secretsmanager:CreateSecret",
         "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue",
         "secretsmanager:TagResource"
       ],
       "Resource": "arn:aws:secretsmanager:mx-central-1:875691018466:secret:/mxmed/staging/application/session-store-auth-*",
