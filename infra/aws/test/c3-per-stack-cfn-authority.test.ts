@@ -388,6 +388,78 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       }
     }
 
+    const observedSubnetGroup =
+      'arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-sessionsubnetgroup-9qbxbdiylspl';
+    const tagReadbackStatements = session.Statement.filter((statement) =>
+      actions(statement).includes('elasticache:ListTagsForResource'),
+    );
+    expect(tagReadbackStatements).toEqual([
+      {
+        Sid: 'ReadTagsOnlySessionParameterAndSubnetGroups',
+        Effect: 'Allow',
+        Action: 'elasticache:ListTagsForResource',
+        Resource: [
+          parameterGroupFamily,
+          'arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-*',
+        ],
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        anotherGeneratedParameterGroup,
+        expectedRegion,
+      ),
+    ).toBe(true);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        observedSubnetGroup,
+        expectedRegion,
+      ),
+    ).toBe(true);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        'arn:aws:elasticache:mx-central-1:875691018466:parametergroup:unrelated',
+        expectedRegion,
+      ),
+    ).toBe(false);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        'arn:aws:elasticache:mx-central-1:111122223333:parametergroup:mxmed-cache-example123456',
+        expectedRegion,
+      ),
+    ).toBe(false);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        anotherGeneratedParameterGroup,
+        wrongRegion,
+      ),
+    ).toBe(false);
+    for (const unrelatedResource of [
+      'arn:aws:elasticache:mx-central-1:875691018466:replicationgroup:mxmed-stg-session',
+      'arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-session-app',
+      'arn:aws:elasticache:mx-central-1:875691018466:usergroup:mxmed-stg-session-users',
+    ]) {
+      expect(
+        documentAllowsWithContext(
+          session,
+          'elasticache:ListTagsForResource',
+          unrelatedResource,
+          expectedRegion,
+        ),
+      ).toBe(false);
+    }
+
     expect(session.Statement.flatMap(actions)).not.toContain('elasticache:*');
     expect(session.Statement.flatMap(actions)).not.toContain('iam:*');
     expect(session.Statement.flatMap(actions)).not.toContain('iam:CreateServiceLinkedRole');

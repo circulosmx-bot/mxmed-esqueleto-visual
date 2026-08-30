@@ -45,6 +45,16 @@
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
     {
+      "Sid": "ReadTagsOnlySessionParameterAndSubnetGroups",
+      "Effect": "Allow",
+      "Action": "elasticache:ListTagsForResource",
+      "Resource": [
+        "arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-cache-*",
+        "arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-*"
+      ],
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
       "Sid": "GenerateOnlyRegionalSessionSecretRandomPassword",
       "Effect": "Allow",
       "Action": "secretsmanager:GetRandomPassword",
