@@ -51,7 +51,9 @@
       "Action": "elasticache:ListTagsForResource",
       "Resource": [
         "arn:aws:elasticache:mx-central-1:875691018466:parametergroup:mxmed-cache-*",
-        "arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-*"
+        "arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-*",
+        "arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-session-app",
+        "arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-default-disabled"
       ],
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
