@@ -457,6 +457,8 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       'arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-session-app';
     const sessionDefaultDisabledUser =
       'arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-default-disabled';
+    const sessionUserGroup =
+      'arn:aws:elasticache:mx-central-1:875691018466:usergroup:mxmed-stg-session-users';
     const tagReadbackStatements = session.Statement.filter((statement) =>
       actions(statement).includes('elasticache:ListTagsForResource'),
     );
@@ -470,6 +472,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
           'arn:aws:elasticache:mx-central-1:875691018466:subnetgroup:mxmed-stg-session-*',
           sessionApplicationUser,
           sessionDefaultDisabledUser,
+          sessionUserGroup,
         ],
         Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
       },
@@ -500,9 +503,18 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         ),
       ).toBe(true);
     }
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        sessionUserGroup,
+        expectedRegion,
+      ),
+    ).toBe(true);
     expect(tagReadbackStatements.flatMap(resources)).not.toContain(
       'arn:aws:elasticache:mx-central-1:875691018466:user:*',
     );
+    expect(tagReadbackStatements.flatMap(resources)).not.toContain('*');
     expect(
       documentAllowsWithContext(
         session,
@@ -543,10 +555,26 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         wrongRegion,
       ),
     ).toBe(false);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        sessionUserGroup,
+        wrongRegion,
+      ),
+    ).toBe(false);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'elasticache:ListTagsForResource',
+        'arn:aws:elasticache:mx-central-1:111122223333:usergroup:mxmed-stg-session-users',
+        expectedRegion,
+      ),
+    ).toBe(false);
     for (const unrelatedResource of [
       'arn:aws:elasticache:mx-central-1:875691018466:replicationgroup:mxmed-stg-session',
       'arn:aws:elasticache:mx-central-1:875691018466:user:mxmed-stg-unrelated',
-      'arn:aws:elasticache:mx-central-1:875691018466:usergroup:mxmed-stg-session-users',
+      'arn:aws:elasticache:mx-central-1:875691018466:usergroup:mxmed-stg-unrelated',
     ]) {
       expect(
         documentAllowsWithContext(
