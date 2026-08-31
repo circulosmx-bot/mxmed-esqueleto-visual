@@ -37,6 +37,27 @@
       }
     },
     {
+      "Sid": "CreateGrantOnlyForStagingRegistryKeyAWSResource",
+      "Effect": "Allow",
+      "Action": "kms:CreateGrant",
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "aws:ResourceTag/Phase": "C3",
+          "aws:ResourceTag/Component": "registry"
+        },
+        "ForAllValues:StringEquals": {
+          "kms:ResourceAliases": "alias/mxmed-stg-registry"
+        },
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        }
+      }
+    },
+    {
       "Sid": "ManageExactRegistryAlias",
       "Effect": "Allow",
       "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],

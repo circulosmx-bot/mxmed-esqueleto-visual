@@ -117,19 +117,21 @@ const conditionMatches = (
       operator !== 'StringEquals' &&
       operator !== 'ArnLike' &&
       operator !== 'ForAnyValue:StringEquals' &&
+      operator !== 'ForAllValues:StringEquals' &&
       operator !== 'Bool'
     ) {
       return false;
     }
     return Object.entries(entries).every(([key, expected]) => {
       const actual = context[key];
-      if (actual === undefined) return false;
+      if (actual === undefined) return operator === 'ForAllValues:StringEquals';
       const candidates = typeof expected === 'string' ? [expected] : expected;
       if (!Array.isArray(candidates) || !candidates.every((item) => typeof item === 'string')) {
         return false;
       }
       return operator === 'StringEquals' ||
         operator === 'ForAnyValue:StringEquals' ||
+        operator === 'ForAllValues:StringEquals' ||
         operator === 'Bool'
         ? candidates.includes(actual)
         : candidates.some((candidate) => wildcardMatches(candidate, actual));
@@ -311,6 +313,87 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         'logs:DescribeLogGroups',
       );
     }
+  });
+
+  test('grants only AWS-resource CreateGrant for the exact tagged Registry key selector', () => {
+    const registry = readDocument(authority.registry.policy);
+    const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/fresh-ephemeral-registry-key';
+    const exactContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'aws:ResourceTag/Phase': 'C3',
+      'aws:ResourceTag/Component': 'registry',
+      'kms:GrantIsForAWSResource': 'true',
+    };
+    const createGrantStatements = registry.Statement.filter((statement) =>
+      actions(statement).includes('kms:CreateGrant'),
+    );
+
+    expect(createGrantStatements).toEqual([
+      {
+        Sid: 'CreateGrantOnlyForStagingRegistryKeyAWSResource',
+        Effect: 'Allow',
+        Action: 'kms:CreateGrant',
+        Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
+        Condition: {
+          StringEquals: {
+            'aws:RequestedRegion': 'mx-central-1',
+            'aws:ResourceTag/Project': 'mxmed',
+            'aws:ResourceTag/Environment': 'staging',
+            'aws:ResourceTag/Phase': 'C3',
+            'aws:ResourceTag/Component': 'registry',
+          },
+          'ForAllValues:StringEquals': {
+            'kms:ResourceAliases': 'alias/mxmed-stg-registry',
+          },
+          Bool: {
+            'kms:GrantIsForAWSResource': 'true',
+          },
+        },
+      },
+    ]);
+    expect(documentAllowsWithContext(registry, 'kms:CreateGrant', keyArn, exactContext)).toBe(true);
+    expect(
+      documentAllowsWithContext(registry, 'kms:CreateGrant', keyArn, {
+        ...exactContext,
+        'kms:ResourceAliases': 'alias/mxmed-stg-registry',
+      }),
+    ).toBe(true);
+
+    const deniedContexts: readonly RequestContext[] = [
+      { ...exactContext, 'kms:GrantIsForAWSResource': 'false' },
+      { ...exactContext, 'kms:GrantIsForAWSResource': undefined },
+      { ...exactContext, 'kms:ResourceAliases': 'alias/mxmed-stg-application-data' },
+      { ...exactContext, 'aws:RequestedRegion': 'us-east-1' },
+      { ...exactContext, 'aws:ResourceTag/Project': 'unrelated' },
+      { ...exactContext, 'aws:ResourceTag/Environment': 'production' },
+      { ...exactContext, 'aws:ResourceTag/Phase': 'C4' },
+      { ...exactContext, 'aws:ResourceTag/Component': 'security' },
+    ];
+    for (const context of deniedContexts) {
+      expect(documentAllowsWithContext(registry, 'kms:CreateGrant', keyArn, context)).toBe(false);
+    }
+    expect(
+      documentAllowsWithContext(
+        registry,
+        'kms:CreateGrant',
+        keyArn.replace('875691018466', '111122223333'),
+        exactContext,
+      ),
+    ).toBe(false);
+    for (const action of [
+      'kms:ListGrants',
+      'kms:RevokeGrant',
+      'kms:RetireGrant',
+      'kms:GenerateDataKey',
+      'kms:Decrypt',
+      'kms:Encrypt',
+      'kms:ReEncryptFrom',
+    ]) {
+      expect(documentAllowsWithContext(registry, action, keyArn, exactContext)).toBe(false);
+    }
+    expect(registry.Statement.flatMap(actions)).not.toContain('kms:*');
   });
 
   test('authorizes only the physically observed Session secret and parameter-group operations', () => {
