@@ -110,7 +110,7 @@ const STAGING_BASE_CONFIG = Object.freeze({
   sessionNodeType: 'cache.t4g.micro',
   sessionClusterModeEnabled: false,
   sessionShardCount: 1,
-  sessionReplicaCount: 0,
+  sessionReplicaCount: 1,
   sessionMultiAzEnabled: false,
   sessionAutomaticFailoverEnabled: false,
   sessionAtRestEncryptionEnabled: true,

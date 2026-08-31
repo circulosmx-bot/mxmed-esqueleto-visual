@@ -33,8 +33,18 @@ describe('session replication groups', () => {
   test('SESSION-IMP-078 uses the production node class', () => {
     expect(prd.CacheNodeType).toBe('cache.t4g.medium');
   });
-  test('SESSION-IMP-079 creates one staging node', () => {
-    expect(stg.NumCacheClusters).toBe(1);
+  test('SESSION-IMP-079 creates a staging primary and replica with the primary endpoint contract', () => {
+    expect(stg.NumCacheClusters).toBe(2);
+    expect(stg.ClusterMode).toBe('disabled');
+    expect(stg).not.toHaveProperty('NumNodeGroups');
+    expect(stg).not.toHaveProperty('ReplicasPerNodeGroup');
+    const primaryEndpointAddress = staging.stage.sessionStack.resolve(
+      staging.stage.sessionStack.primaryEndpointAddress,
+    ) as unknown;
+    expect(primaryEndpointAddress).toEqual({
+      'Fn::GetAtt': ['SessionReplicationGroup', 'PrimaryEndPoint.Address'],
+    });
+    expect(JSON.stringify(primaryEndpointAddress)).not.toContain('ConfigurationEndPoint.Address');
   });
   test('SESSION-IMP-080 creates two production nodes', () => {
     expect(prd.NumCacheClusters).toBe(2);

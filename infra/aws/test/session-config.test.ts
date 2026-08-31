@@ -91,7 +91,7 @@ const CASES: readonly ConfigCase[] = [
     id: '010',
     description: 'environment replicas',
     field: 'sessionReplicaCount',
-    staging: 0,
+    staging: 1,
     production: 1,
     invalid: 2,
   },

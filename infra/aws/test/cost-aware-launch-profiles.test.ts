@@ -398,7 +398,7 @@ test('production profile capacity matrix matches PP263', () => {
     databaseMultiAz: false,
     databaseAllocatedStorageGiB: 40,
     sessionNodeType: 'cache.t4g.micro',
-    sessionReplicaCount: 0,
+    sessionReplicaCount: 1,
   });
   expect(lean).toMatchObject({
     natGatewayCount: 1,

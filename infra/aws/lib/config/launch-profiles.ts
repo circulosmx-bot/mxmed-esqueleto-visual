@@ -222,6 +222,7 @@ const SCALE_READY_CAPACITY: MxMedLaunchCapacity = Object.freeze({
 const STAGING_RELEASE_WINDOW_CAPACITY: MxMedLaunchCapacity = Object.freeze({
   ...PRODUCTION_LAUNCH_LEAN_CAPACITY,
   computeMaxCapacity: 1,
+  sessionReplicaCount: 1,
 });
 
 const PROFILE_DEFINITIONS: Readonly<Record<MxMedDeploymentProfile, MxMedLaunchProfileDefinition>> =
