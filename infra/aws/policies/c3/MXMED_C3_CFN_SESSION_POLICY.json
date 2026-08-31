@@ -79,6 +79,22 @@
       }
     },
     {
+      "Sid": "DescribeOnlyStagingApplicationDataKey",
+      "Effect": "Allow",
+      "Action": "kms:DescribeKey",
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging"
+        },
+        "ForAnyValue:StringEquals": {
+          "kms:ResourceAliases": "alias/mxmed-stg-application-data"
+        }
+      }
+    },
+    {
       "Sid": "ReadOnlyExactRegionNetworkMetadata",
       "Effect": "Allow",
       "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeSubnets", "ec2:DescribeVpcs"],

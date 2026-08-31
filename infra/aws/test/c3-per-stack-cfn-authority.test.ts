@@ -113,7 +113,13 @@ const conditionMatches = (
 ): boolean => {
   if (condition === undefined) return true;
   return Object.entries(condition).every(([operator, entries]) => {
-    if (operator !== 'StringEquals' && operator !== 'ArnLike') return false;
+    if (
+      operator !== 'StringEquals' &&
+      operator !== 'ArnLike' &&
+      operator !== 'ForAnyValue:StringEquals'
+    ) {
+      return false;
+    }
     return Object.entries(entries).every(([key, expected]) => {
       const actual = context[key];
       if (actual === undefined) return false;
@@ -121,7 +127,7 @@ const conditionMatches = (
       if (!Array.isArray(candidates) || !candidates.every((item) => typeof item === 'string')) {
         return false;
       }
-      return operator === 'StringEquals'
+      return operator === 'StringEquals' || operator === 'ForAnyValue:StringEquals'
         ? candidates.includes(actual)
         : candidates.some((candidate) => wildcardMatches(candidate, actual));
     });
@@ -399,6 +405,86 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     ]) {
       expect(documentAllowsWithContext(session, action, '*', expectedRegion)).toBe(false);
     }
+
+    const applicationDataKey =
+      'arn:aws:kms:mx-central-1:875691018466:key/fresh-ephemeral-application-data-key';
+    const applicationDataKeyContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'kms:ResourceAliases': 'alias/mxmed-stg-application-data',
+    };
+    const applicationDataKeyStatements = session.Statement.filter(
+      (statement) => statement.Sid === 'DescribeOnlyStagingApplicationDataKey',
+    );
+    expect(applicationDataKeyStatements).toEqual([
+      {
+        Sid: 'DescribeOnlyStagingApplicationDataKey',
+        Effect: 'Allow',
+        Action: 'kms:DescribeKey',
+        Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
+        Condition: {
+          StringEquals: {
+            'aws:RequestedRegion': 'mx-central-1',
+            'aws:ResourceTag/Project': 'mxmed',
+            'aws:ResourceTag/Environment': 'staging',
+          },
+          'ForAnyValue:StringEquals': {
+            'kms:ResourceAliases': 'alias/mxmed-stg-application-data',
+          },
+        },
+      },
+    ]);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'kms:DescribeKey',
+        applicationDataKey,
+        applicationDataKeyContext,
+      ),
+    ).toBe(true);
+    expect(
+      documentAllowsWithContext(
+        session,
+        'kms:DescribeKey',
+        applicationDataKey.replace('875691018466', '111122223333'),
+        applicationDataKeyContext,
+      ),
+    ).toBe(false);
+    const deniedApplicationDataKeyContexts: readonly RequestContext[] = [
+      { ...applicationDataKeyContext, 'aws:RequestedRegion': 'us-east-1' },
+      { ...applicationDataKeyContext, 'aws:ResourceTag/Project': 'unrelated' },
+      { ...applicationDataKeyContext, 'aws:ResourceTag/Environment': 'production' },
+      { ...applicationDataKeyContext, 'kms:ResourceAliases': 'alias/mxmed-stg-secrets' },
+    ];
+    for (const context of deniedApplicationDataKeyContexts) {
+      expect(
+        documentAllowsWithContext(session, 'kms:DescribeKey', applicationDataKey, context),
+      ).toBe(false);
+    }
+    for (const action of ['kms:CreateGrant', 'kms:GenerateDataKey', 'kms:Decrypt']) {
+      expect(
+        documentAllowsWithContext(session, action, applicationDataKey, applicationDataKeyContext),
+      ).toBe(false);
+    }
+
+    const secretsManagerKmsContext: RequestContext = {
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'kms:ViaService': 'secretsmanager.mx-central-1.amazonaws.com',
+    };
+    for (const action of ['kms:Decrypt', 'kms:DescribeKey', 'kms:GenerateDataKey']) {
+      expect(
+        documentAllowsWithContext(session, action, applicationDataKey, secretsManagerKmsContext),
+      ).toBe(true);
+      expect(
+        documentAllowsWithContext(session, action, applicationDataKey, {
+          ...secretsManagerKmsContext,
+          'kms:ViaService': undefined,
+        }),
+      ).toBe(false);
+    }
+    expect(session.Statement.flatMap(actions)).not.toContain('kms:*');
 
     const sessionResources = stacks['mxmed-stg-session']?.Resources ?? {};
     const parameterGroup = sessionResources.SessionParameterGroup;
