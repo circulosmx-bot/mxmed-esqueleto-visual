@@ -15,7 +15,6 @@ import { MXMED_C3_RUNNER_CONTRACT } from '../constructs/c3-runner-contract';
 export interface MxMedC3RunnerStackProps extends MxMedContractStackProps {
   readonly privateAppSubnets: readonly ISubnet[];
   readonly applicationSecurityGroup: ISecurityGroup;
-  readonly sessionEndpoint: string;
   readonly sessionAuthSecret: ISecret;
   readonly secretsKey: IKey;
   readonly auditKey: IKey;
@@ -27,6 +26,7 @@ export class MxMedC3RunnerStack extends BaseMxMedStack {
   public readonly cluster: CfnCluster;
   public readonly taskDefinition: CfnTaskDefinition;
   public readonly runnerImageDigest: CfnParameter;
+  public readonly sessionEndpoint: CfnParameter;
 
   public constructor(scope: Construct, id: string, props: MxMedC3RunnerStackProps) {
     super(scope, id, {
@@ -50,6 +50,12 @@ export class MxMedC3RunnerStack extends BaseMxMedStack {
       type: 'String',
       allowedPattern: '^sha256:[a-f0-9]{64}$',
       description: 'ECR-resolved immutable image digest; tags and latest are rejected.',
+    });
+    this.sessionEndpoint = new CfnParameter(this, 'SessionEndpoint', {
+      type: 'String',
+      allowedPattern: '^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$',
+      description:
+        'Physically resolved primary endpoint for the available C3 session replication group.',
     });
     const sourceRevision = new CfnParameter(this, 'SourceRevision', {
       type: 'String',
@@ -182,7 +188,7 @@ export class MxMedC3RunnerStack extends BaseMxMedStack {
           entryPoint: ['/opt/mxmed/entrypoint.sh'],
           environment: [
             { name: 'APP_ENV', value: 'staging' },
-            { name: 'SESSION_HOST', value: props.sessionEndpoint },
+            { name: 'SESSION_HOST', value: this.sessionEndpoint.valueAsString },
             { name: 'SESSION_PORT', value: String(MXMED_C3_RUNNER_CONTRACT.port) },
             { name: 'SESSION_PREFIX', value: MXMED_C3_RUNNER_CONTRACT.sessionPrefix },
             { name: 'SESSION_AUTH_SECRET_ARN', value: props.sessionAuthSecret.secretArn },

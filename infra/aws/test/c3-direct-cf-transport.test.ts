@@ -233,6 +233,26 @@ describe('C3 direct CloudFormation transport contract', () => {
     }
   });
 
+  test('grants Deploy only the exact regional Session endpoint-resolution read', () => {
+    const deploy = readJson('infra/aws/policies/c3/MXMED_C3_STAGING_DEPLOY_ROLE_POLICY.json') as {
+      readonly Statement: readonly Record<string, unknown>[];
+    };
+    const statements = deploy.Statement.filter(
+      (statement) => statement.Action === 'elasticache:DescribeReplicationGroups',
+    );
+    expect(statements).toEqual([
+      {
+        Sid: 'DescribeExactStagingSessionReplicationGroupForEndpointResolution',
+        Effect: 'Allow',
+        Action: 'elasticache:DescribeReplicationGroups',
+        Resource:
+          'arn:aws:elasticache:mx-central-1:875691018466:replicationgroup:mxmed-stg-session',
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+    expect(JSON.stringify(statements)).not.toContain('"Resource":"*"');
+  });
+
   test('template bucket and SNS policies deny public transport and bind exact C3 resources', () => {
     const bucket = JSON.stringify(
       readJson('infra/aws/policies/c3/MXMED_C3_TEMPLATE_BUCKET_POLICY.json'),

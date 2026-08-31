@@ -99,7 +99,6 @@ export class MxMedC3EphemeralStage extends Stage {
       ...stackProps(),
       privateAppSubnets: this.networkStack.privateAppSubnets,
       applicationSecurityGroup: this.networkStack.applicationSecurityGroup,
-      sessionEndpoint: this.sessionStack.primaryEndpointAddress,
       sessionAuthSecret: this.sessionStack.authSecret as unknown as ISecret,
       secretsKey: this.securityStack.secretsKey,
       auditKey: this.securityStack.auditKey,

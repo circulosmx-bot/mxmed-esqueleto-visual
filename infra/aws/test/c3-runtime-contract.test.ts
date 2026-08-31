@@ -236,6 +236,17 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
     };
   const run = (...args: string[]) =>
     spawnSync(helper, args, { cwd: repositoryRoot, encoding: 'utf8' });
+  const runEndpointParser = (payload: unknown) =>
+    spawnSync(
+      'sh',
+      [
+        '-c',
+        'set -eu; MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY=1 . "$1"; session_primary_endpoint_values',
+        'sh',
+        deployController,
+      ],
+      { cwd: repositoryRoot, encoding: 'utf8', input: JSON.stringify(payload) },
+    );
   const expectAccepted = (...args: string[]): void => {
     const result = run(...args);
     expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
@@ -1250,6 +1261,14 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
       '2026-08-25T13:00:00Z',
     );
     expectAccepted(
+      'seal-session-endpoint',
+      manifestPath,
+      statePath,
+      'mxmed-stg-session.example.cache.amazonaws.com',
+      '6379',
+      '2026-08-25T12:30:00Z',
+    );
+    expectAccepted(
       'seal-digest',
       manifestPath,
       statePath,
@@ -1266,6 +1285,90 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
       sourceHead,
       '2026-08-25T13:00:01Z',
     );
+  });
+
+  test('resolves only one available replication group and one primary endpoint on port 6379', () => {
+    const result = runEndpointParser({
+      ReplicationGroups: [
+        {
+          ReplicationGroupId: 'mxmed-stg-session',
+          Status: 'available',
+          NodeGroups: [
+            {
+              PrimaryEndpoint: {
+                Address: 'mxmed-stg-session.example.cache.amazonaws.com',
+                Port: 6379,
+              },
+              ReaderEndpoint: { Address: 'reader.example.cache.amazonaws.com', Port: 6379 },
+            },
+          ],
+          ConfigurationEndpoint: { Address: 'configuration.example.cache.amazonaws.com' },
+        },
+      ],
+    });
+    expect({ status: result.status, stdout: result.stdout }).toEqual({
+      status: 0,
+      stdout: 'mxmed-stg-session.example.cache.amazonaws.com\t6379\n',
+    });
+  });
+
+  test.each([
+    ['zero groups', { ReplicationGroups: [] }],
+    [
+      'multiple groups',
+      {
+        ReplicationGroups: [
+          { ReplicationGroupId: 'mxmed-stg-session', Status: 'available', NodeGroups: [] },
+          { ReplicationGroupId: 'mxmed-stg-session', Status: 'available', NodeGroups: [] },
+        ],
+      },
+    ],
+    [
+      'missing endpoint',
+      {
+        ReplicationGroups: [
+          {
+            ReplicationGroupId: 'mxmed-stg-session',
+            Status: 'available',
+            NodeGroups: [{}],
+          },
+        ],
+      },
+    ],
+    [
+      'zero node groups',
+      {
+        ReplicationGroups: [
+          { ReplicationGroupId: 'mxmed-stg-session', Status: 'available', NodeGroups: [] },
+        ],
+      },
+    ],
+    [
+      'multiple node groups',
+      {
+        ReplicationGroups: [
+          {
+            ReplicationGroupId: 'mxmed-stg-session',
+            Status: 'available',
+            NodeGroups: [{ PrimaryEndpoint: { Address: 'one.example.com', Port: 6379 } }, {}],
+          },
+        ],
+      },
+    ],
+    [
+      'wrong port',
+      {
+        ReplicationGroups: [
+          {
+            ReplicationGroupId: 'mxmed-stg-session',
+            Status: 'available',
+            NodeGroups: [{ PrimaryEndpoint: { Address: 'one.example.com', Port: 6380 } }],
+          },
+        ],
+      },
+    ],
+  ])('fails closed for endpoint response: %s', (_label, payload) => {
+    expect(runEndpointParser(payload).status).not.toBe(0);
   });
 
   test.each([
@@ -1349,6 +1452,18 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
     expect(`${deploy}\n${stack}`).not.toContain('878237984810f1dddae48be2c73ed75cfbe34384');
   });
 
+  test('resolves the Session endpoint once after Session creation and passes it to Runner', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    expect(deploy.match(/aws elasticache describe-replication-groups/g)).toHaveLength(1);
+    expect(deploy).toContain('--replication-group-id "$SESSION_REPLICATION_GROUP_ID"');
+    expect(deploy).toContain('--region "$EXPECTED_REGION"');
+    expect(deploy).toContain('--no-paginate --output json');
+    expect(deploy).toContain('if [ "$stack" = \'mxmed-stg-session\' ]; then');
+    expect(deploy).toContain('resolve_and_seal_session_primary_endpoint');
+    expect(deploy).toContain('ParameterKey=SessionEndpoint,ParameterValue=$(jq -r');
+    expect(deploy).not.toMatch(/ReaderEndpoint|ConfigurationEndpoint|MemberClusters/);
+  });
+
   test('prepares change sets in two reachable phases without the original digest cycle', () => {
     const deploy = readFileSync(deployController, 'utf8');
     const preDigest =
@@ -1394,11 +1509,18 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
       'execute:mxmed-stg-network',
       'execute:mxmed-stg-security',
       'execute:mxmed-stg-session',
+      'resolve:session-primary-endpoint',
       'execute:mxmed-stg-registry',
       'seal:physical-ecr-digest',
       ...runner,
       'execute:mxmed-stg-c3-runner',
     ];
+    expect(reconciledRuntimeSequence.indexOf('execute:mxmed-stg-session')).toBeLessThan(
+      reconciledRuntimeSequence.indexOf('resolve:session-primary-endpoint'),
+    );
+    expect(reconciledRuntimeSequence.indexOf('resolve:session-primary-endpoint')).toBeLessThan(
+      reconciledRuntimeSequence.indexOf('execute:mxmed-stg-registry'),
+    );
     expect(reconciledRuntimeSequence.indexOf('execute:mxmed-stg-registry')).toBeLessThan(
       reconciledRuntimeSequence.indexOf('seal:physical-ecr-digest'),
     );

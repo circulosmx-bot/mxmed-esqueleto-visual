@@ -108,6 +108,33 @@ describe('C3 ephemeral runner graph', () => {
     expect(serialized).toContain('900');
   });
 
+  test('transports the physically resolved Session endpoint through a Runner parameter only', () => {
+    const sessionTemplate = Template.fromStack(fixture.sessionStack).toJSON() as {
+      readonly Resources: Readonly<Record<string, Resource>>;
+    };
+    const runnerTemplate = Template.fromStack(fixture.runnerStack).toJSON() as {
+      readonly Parameters?: Readonly<Record<string, unknown>>;
+    };
+    const sessionSerialized = JSON.stringify(sessionTemplate);
+    const runnerSerialized = JSON.stringify(runnerTemplate);
+    const replicationGroups = Object.values(sessionTemplate.Resources).filter(
+      (resource) => resource.Type === 'AWS::ElastiCache::ReplicationGroup',
+    );
+
+    expect(replicationGroups).toHaveLength(1);
+    expect(replicationGroups[0]?.Properties).toMatchObject({
+      AutomaticFailoverEnabled: false,
+      NumCacheClusters: 2,
+    });
+    expect(replicationGroups[0]?.Properties).not.toHaveProperty('NumNodeGroups');
+    expect(sessionSerialized).not.toContain('PrimaryEndPoint.Address');
+    expect(runnerTemplate.Parameters).toHaveProperty('SessionEndpoint');
+    expect(runnerSerialized).toContain('"Name":"SESSION_HOST","Value":{"Ref":"SessionEndpoint"}');
+    expect(runnerSerialized).not.toMatch(
+      /PrimaryEndPoint\.Address|ReaderEndpoint|ConfigurationEndpoint/,
+    );
+  });
+
   test('limits the task role to the exact staging session secret and its KMS context', () => {
     const policies = JSON.stringify(runnerOfType('AWS::IAM::Policy'));
     const session = JSON.stringify(Template.fromStack(fixture.sessionStack).toJSON());

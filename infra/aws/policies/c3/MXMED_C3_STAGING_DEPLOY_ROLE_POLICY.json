@@ -105,6 +105,13 @@
       "Condition": { "StringEquals": { "iam:PassedToService": "cloudformation.amazonaws.com" } }
     },
     {
+      "Sid": "DescribeExactStagingSessionReplicationGroupForEndpointResolution",
+      "Effect": "Allow",
+      "Action": "elasticache:DescribeReplicationGroups",
+      "Resource": "arn:aws:elasticache:mx-central-1:875691018466:replicationgroup:mxmed-stg-session",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
+    },
+    {
       "Sid": "CreateAndSecureExactTemporaryTemplateBucket",
       "Effect": "Allow",
       "Action": [

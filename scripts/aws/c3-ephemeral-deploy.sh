@@ -20,6 +20,8 @@ TEMPLATE_BUCKET_POLICY='infra/aws/policies/c3/MXMED_C3_TEMPLATE_BUCKET_POLICY.js
 DEPLOYMENT_MODE='DIRECT_CLOUDFORMATION_FROM_SEALED_TEMPLATES'
 CFN_ROLE_PREFIX='arn:aws:iam::875691018466:role/MXMed-C3-CFN-'
 CONTRACT_HELPER='scripts/aws/c3-runtime-contract.sh'
+SESSION_REPLICATION_GROUP_ID='mxmed-stg-session'
+SESSION_PRIMARY_ENDPOINT_PORT='6379'
 
 [ -f "$CONTRACT_HELPER" ] || { printf '%s\n' 'C3_DEPLOY_FAIL_CLOSED:RUNTIME_CONTRACT_HELPER_MISSING' >&2; exit 1; }
 . "$CONTRACT_HELPER"
@@ -44,6 +46,25 @@ normalize_budget_notifications() {
 
 normalize_budget_subscribers() {
   jq -ce '[.[] | {SubscriptionType,Address}] | sort_by(.SubscriptionType,.Address)'
+}
+
+session_primary_endpoint_values() {
+  jq -er --arg group_id "$SESSION_REPLICATION_GROUP_ID" --arg port "$SESSION_PRIMARY_ENDPOINT_PORT" '
+    if ((.ReplicationGroups | type) == "array" and (.ReplicationGroups | length) == 1) then
+      .ReplicationGroups[0] as $group
+      | if ($group.ReplicationGroupId == $group_id
+          and $group.Status == "available"
+          and (($group.NodeGroups | type) == "array")
+          and ($group.NodeGroups | length) == 1
+          and (($group.NodeGroups[0].PrimaryEndpoint.Address | type) == "string")
+          and ($group.NodeGroups[0].PrimaryEndpoint.Address | test("^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$"))
+          and (($group.NodeGroups[0].PrimaryEndpoint.Port | tostring) == $port))
+        then [$group.NodeGroups[0].PrimaryEndpoint.Address, ($group.NodeGroups[0].PrimaryEndpoint.Port | tostring)] | @tsv
+        else error("SESSION_PHYSICAL_PRIMARY_ENDPOINT_API_RESOLUTION_FAILED")
+        end
+    else error("SESSION_PHYSICAL_PRIMARY_ENDPOINT_API_RESOLUTION_FAILED")
+    end
+  '
 }
 
 probe_direct_budget_visibility() {
@@ -355,6 +376,7 @@ create_direct_change_set() {
         "ParameterKey=RunId,ParameterValue=$(jq -r .run_id "$manifest")" \
         "ParameterKey=ExpiresAtUtc,ParameterValue=$(jq -r .hard_cap_at_utc "$state")" \
         "ParameterKey=RunnerImageDigest,ParameterValue=$digest" \
+        "ParameterKey=SessionEndpoint,ParameterValue=$(jq -r .session_primary_endpoint_address "$state")" \
         "ParameterKey=SourceRevision,ParameterValue=$(jq -r .source_head "$manifest")" \
         "ParameterKey=C3PermissionBoundaryArn,ParameterValue=$PERMISSION_BOUNDARY_ARN"
       ;;
@@ -399,6 +421,21 @@ start_partial_teardown() {
     "$(dirname "$0")/c3-ephemeral-teardown.sh" --execute-stack-deletes --manifest "$manifest" --state "$state" \
     || fail "PARTIAL_DEPLOYMENT_TEARDOWN_REQUIRES_ATTENTION:$failed_stack"
   fail "STACK_DEPLOYMENT_FAILED_AND_TEARDOWN_STARTED:$failed_stack:$failure_reason"
+}
+
+resolve_and_seal_session_primary_endpoint() {
+  endpoint_response="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws elasticache describe-replication-groups \
+    --region "$EXPECTED_REGION" \
+    --replication-group-id "$SESSION_REPLICATION_GROUP_ID" \
+    --no-paginate --output json)" \
+    || start_partial_teardown mxmed-stg-session 'SESSION_PHYSICAL_PRIMARY_ENDPOINT_API_RESOLUTION_FAILED'
+  endpoint_values="$(printf '%s' "$endpoint_response" | session_primary_endpoint_values)" \
+    || start_partial_teardown mxmed-stg-session 'SESSION_PHYSICAL_PRIMARY_ENDPOINT_API_RESOLUTION_FAILED'
+  session_primary_endpoint_address="$(printf '%s' "$endpoint_values" | cut -f 1)"
+  session_primary_endpoint_port="$(printf '%s' "$endpoint_values" | cut -f 2)"
+  c3_seal_session_primary_endpoint "$manifest" "$state" \
+    "$session_primary_endpoint_address" "$session_primary_endpoint_port" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    || start_partial_teardown mxmed-stg-session 'SESSION_PHYSICAL_PRIMARY_ENDPOINT_API_RESOLUTION_FAILED'
 }
 
 case "$mode" in
@@ -631,6 +668,9 @@ case "$mode" in
     c3_atomic_state_update "$manifest" "$state" \
       '.created_resource_ids += [{type:"cloudformation-stack",stack_name:$stack,id:$id}]' \
       --arg stack "$stack" --arg id "$stack_id"
+    if [ "$stack" = 'mxmed-stg-session' ]; then
+      resolve_and_seal_session_primary_endpoint
+    fi
     if [ "$stack" = 'mxmed-stg-c3-janitor' ]; then
       janitor_resources="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-stack-resources --stack-name "$stack" --output json)"
       printf '%s' "$janitor_resources" | jq -e '

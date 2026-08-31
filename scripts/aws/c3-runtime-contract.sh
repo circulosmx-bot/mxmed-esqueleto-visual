@@ -11,6 +11,7 @@ C3_REGION='mx-central-1'
 C3_BUDGETS_API_REGION='us-east-1'
 C3_BUDGET_NOTIFICATION_TOPIC_ARN='arn:aws:sns:mx-central-1:875691018466:mxmed-stg-c3-notifications'
 C3_OBJECT_KEY_SUFFIX='.template.json'
+C3_SESSION_PRIMARY_ENDPOINT_PORT='6379'
 
 c3_contract_fail() {
   printf '%s\n' "C3_RUNTIME_CONTRACT_FAIL_CLOSED:$1" >&2
@@ -222,6 +223,15 @@ c3_validate_state_base() {
       and (.physical_ecr_image_digest == $pending or (.physical_ecr_image_digest | test("^sha256:[0-9a-f]{64}$")))
       and (.ecr_digest_sealed_at_utc == $pending or (.ecr_digest_sealed_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.image_source_revision == $pending or (.image_source_revision | test("^[0-9a-f]{40}$")))
+      and (
+        (.session_primary_endpoint_address == $pending
+          and .session_primary_endpoint_port == $pending
+          and .session_primary_endpoint_resolved_at_utc == $pending)
+        or
+        ((.session_primary_endpoint_address | test("^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$"))
+          and .session_primary_endpoint_port == "6379"
+          and (.session_primary_endpoint_resolved_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
+      )
       and (.test_started_at_utc == $pending or (.test_started_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.test_terminal_at_utc == $pending or (.test_terminal_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
       and (.teardown_started_at_utc == $pending or (.teardown_started_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")))
@@ -338,6 +348,9 @@ c3_validate_phase() {
       jq -e --arg p "$C3_PENDING_RUNTIME_RESOLUTION" '
         .first_runtime_mutation_at_utc == $p and .failsafe_at_utc == $p
         and .hard_cap_at_utc == $p and .physical_ecr_image_digest == $p
+        and .session_primary_endpoint_address == $p
+        and .session_primary_endpoint_port == $p
+        and .session_primary_endpoint_resolved_at_utc == $p
       ' "$state" >/dev/null || c3_contract_fail 'PRE_FIRST_WRITE_RUNTIME_FIELD_NOT_PENDING'
       ;;
     POST_FIRST_RUNTIME_MUTATION)
@@ -351,6 +364,11 @@ c3_validate_phase() {
       jq -e --arg head "$(jq -r .source_head "$manifest")" '
         (.physical_ecr_image_digest | test("^sha256:[0-9a-f]{64}$")) and .image_source_revision == $head
       ' "$state" >/dev/null || c3_contract_fail 'IMAGE_PROVENANCE_NOT_SEALED'
+      jq -e '
+        (.session_primary_endpoint_address | test("^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$"))
+        and .session_primary_endpoint_port == "6379"
+        and (.session_primary_endpoint_resolved_at_utc | test("^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"))
+      ' "$state" >/dev/null || c3_contract_fail 'SESSION_PHYSICAL_PRIMARY_ENDPOINT_NOT_SEALED'
       ;;
     PRE_TEARDOWN)
       [ "$pass_1_to_11" = '11' ] || c3_contract_fail 'PRE_TEARDOWN_GATE_1_TO_11_NOT_PASS'
@@ -402,6 +420,8 @@ c3_initialize_state() {
         gate_transitions:($gates|map({gate:.name,from:null,to:(if .ordinal==12 then $pending_gate else "PASS" end),at_utc:null})),
         first_runtime_mutation_at_utc:$pending,failsafe_at_utc:$pending,hard_cap_at_utc:$pending,
         physical_ecr_image_digest:$pending,ecr_digest_sealed_at_utc:$pending,image_source_revision:$pending,
+        session_primary_endpoint_address:$pending,session_primary_endpoint_port:$pending,
+        session_primary_endpoint_resolved_at_utc:$pending,
         test_started_at_utc:$pending,test_terminal_at_utc:$pending,
         teardown_started_at_utc:$pending,teardown_completed_at_utc:$pending,
         failsafe_active:false,created_resource_ids:[],retained_physical_resource_ids:[],
@@ -560,6 +580,23 @@ c3_seal_ecr_digest() {
   c3_validate_phase PRE_RUNNER "$manifest" "$state"
 }
 
+c3_seal_session_primary_endpoint() {
+  local manifest state address port timestamp
+  manifest="$1"; state="$2"; address="$3"; port="$4"; timestamp="$5"
+  printf '%s' "$address" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$' \
+    || c3_contract_fail 'SESSION_PRIMARY_ENDPOINT_ADDRESS_INVALID'
+  [ "$port" = "$C3_SESSION_PRIMARY_ENDPOINT_PORT" ] \
+    || c3_contract_fail 'SESSION_PRIMARY_ENDPOINT_PORT_INVALID'
+  c3_epoch "$timestamp" >/dev/null || c3_contract_fail 'SESSION_PRIMARY_ENDPOINT_TIMESTAMP_INVALID'
+  [ "$(jq -r .session_primary_endpoint_address "$state")" = "$C3_PENDING_RUNTIME_RESOLUTION" ] \
+    || c3_contract_fail 'SESSION_PRIMARY_ENDPOINT_REWRITE_REJECTED'
+  c3_atomic_state_update "$manifest" "$state" '
+    .session_primary_endpoint_address=$address
+    |.session_primary_endpoint_port=$port
+    |.session_primary_endpoint_resolved_at_utc=$timestamp
+  ' --arg address "$address" --arg port "$port" --arg timestamp "$timestamp"
+}
+
 if [ "${0##*/}" = 'c3-runtime-contract.sh' ]; then
   command="${1:-}"; shift || true
   case "$command" in
@@ -573,6 +610,7 @@ if [ "${0##*/}" = 'c3-runtime-contract.sh' ]; then
     record-budget-visibility-stabilized) c3_record_direct_budget_visibility_stabilized "$1" "$2";;
     record-budget-visibility-timeout) c3_record_direct_budget_visibility_timeout "$1" "$2";;
     record-budget-deleted) c3_record_direct_budget_deleted "$1" "$2" "$3" "$4";;
+    seal-session-endpoint) c3_seal_session_primary_endpoint "$1" "$2" "$3" "$4" "$5";;
     seal-digest) c3_seal_ecr_digest "$1" "$2" "$3" "$4" "$5";;
     *) c3_contract_fail 'COMMAND_REQUIRED';;
   esac
