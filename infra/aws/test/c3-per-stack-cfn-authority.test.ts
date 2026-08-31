@@ -116,7 +116,8 @@ const conditionMatches = (
     if (
       operator !== 'StringEquals' &&
       operator !== 'ArnLike' &&
-      operator !== 'ForAnyValue:StringEquals'
+      operator !== 'ForAnyValue:StringEquals' &&
+      operator !== 'Bool'
     ) {
       return false;
     }
@@ -127,7 +128,9 @@ const conditionMatches = (
       if (!Array.isArray(candidates) || !candidates.every((item) => typeof item === 'string')) {
         return false;
       }
-      return operator === 'StringEquals' || operator === 'ForAnyValue:StringEquals'
+      return operator === 'StringEquals' ||
+        operator === 'ForAnyValue:StringEquals' ||
+        operator === 'Bool'
         ? candidates.includes(actual)
         : candidates.some((candidate) => wildcardMatches(candidate, actual));
     });
@@ -462,11 +465,82 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         documentAllowsWithContext(session, 'kms:DescribeKey', applicationDataKey, context),
       ).toBe(false);
     }
-    for (const action of ['kms:CreateGrant', 'kms:GenerateDataKey', 'kms:Decrypt']) {
+    for (const action of ['kms:GenerateDataKey', 'kms:Decrypt']) {
       expect(
         documentAllowsWithContext(session, action, applicationDataKey, applicationDataKeyContext),
       ).toBe(false);
     }
+
+    const createGrantStatements = session.Statement.filter(
+      (statement) => statement.Sid === 'CreateGrantOnlyForStagingApplicationDataKeyAWSResource',
+    );
+    expect(createGrantStatements).toEqual([
+      {
+        Sid: 'CreateGrantOnlyForStagingApplicationDataKeyAWSResource',
+        Effect: 'Allow',
+        Action: 'kms:CreateGrant',
+        Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
+        Condition: {
+          StringEquals: {
+            'aws:RequestedRegion': 'mx-central-1',
+            'aws:ResourceTag/Project': 'mxmed',
+            'aws:ResourceTag/Environment': 'staging',
+          },
+          'ForAnyValue:StringEquals': {
+            'kms:ResourceAliases': 'alias/mxmed-stg-application-data',
+          },
+          Bool: {
+            'kms:GrantIsForAWSResource': 'true',
+          },
+        },
+      },
+    ]);
+    const createGrantStatement = createGrantStatements[0];
+    if (createGrantStatement === undefined) {
+      throw new Error('SESSION_APPLICATION_DATA_KEY_CREATE_GRANT_AUTHORITY_MISSING');
+    }
+    const createGrantContext: RequestContext = {
+      ...applicationDataKeyContext,
+      'kms:GrantIsForAWSResource': 'true',
+    };
+    expect(
+      documentAllowsWithContext(session, 'kms:CreateGrant', applicationDataKey, createGrantContext),
+    ).toBe(true);
+    const deniedCreateGrantContexts: readonly RequestContext[] = [
+      { ...createGrantContext, 'kms:GrantIsForAWSResource': 'false' },
+      { ...createGrantContext, 'kms:GrantIsForAWSResource': undefined },
+      { ...createGrantContext, 'kms:ResourceAliases': 'alias/mxmed-stg-secrets' },
+      { ...createGrantContext, 'aws:ResourceTag/Project': 'unrelated' },
+      { ...createGrantContext, 'aws:ResourceTag/Environment': 'production' },
+      { ...createGrantContext, 'aws:RequestedRegion': 'us-east-1' },
+    ];
+    for (const context of deniedCreateGrantContexts) {
+      expect(
+        documentAllowsWithContext(session, 'kms:CreateGrant', applicationDataKey, context),
+      ).toBe(false);
+    }
+    expect(
+      documentAllowsWithContext(
+        session,
+        'kms:CreateGrant',
+        applicationDataKey.replace('875691018466', '111122223333'),
+        createGrantContext,
+      ),
+    ).toBe(false);
+    for (const action of [
+      'kms:ListGrants',
+      'kms:RevokeGrant',
+      'kms:GenerateDataKey',
+      'kms:Decrypt',
+    ]) {
+      expect(
+        documentAllowsWithContext(session, action, applicationDataKey, createGrantContext),
+      ).toBe(false);
+    }
+    expect(actions(createGrantStatement)).toEqual(['kms:CreateGrant']);
+    expect(createGrantStatement.Condition?.Bool).toEqual({
+      'kms:GrantIsForAWSResource': 'true',
+    });
 
     const secretsManagerKmsContext: RequestContext = {
       'aws:ResourceTag/Project': 'mxmed',
