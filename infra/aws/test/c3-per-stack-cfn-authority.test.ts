@@ -401,8 +401,10 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     const expectedRegion = { 'aws:RequestedRegion': 'mx-central-1' };
     const exactAliasArn = 'arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-registry';
     const oldAliasArn = 'arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/registry';
-    const aliasStatements = registry.Statement.filter((statement) =>
-      actions(statement).includes('kms:CreateAlias'),
+    const aliasStatements = registry.Statement.filter(
+      (statement) =>
+        actions(statement).includes('kms:CreateAlias') &&
+        resources(statement).includes(exactAliasArn),
     );
 
     expect(aliasStatements).toEqual([
@@ -432,6 +434,84 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       ).toBe(false);
     }
     expect(registry.Statement.flatMap(actions)).not.toContain('kms:*');
+  });
+
+  test('authorizes Registry CreateAlias on only the exact tagged target-key selector', () => {
+    const registry = readDocument(authority.registry.policy);
+    const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/fresh-ephemeral-registry-key';
+    const exactContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'aws:ResourceTag/Phase': 'C3',
+      'aws:ResourceTag/Component': 'registry',
+    };
+    const createAliasKeyStatements = registry.Statement.filter(
+      (statement) =>
+        actions(statement).includes('kms:CreateAlias') &&
+        resources(statement).includes('arn:aws:kms:mx-central-1:875691018466:key/*'),
+    );
+
+    expect(createAliasKeyStatements).toEqual([
+      {
+        Sid: 'CreateExactRegistryAliasOnTaggedRegistryKey',
+        Effect: 'Allow',
+        Action: 'kms:CreateAlias',
+        Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
+        Condition: {
+          StringEquals: {
+            'aws:RequestedRegion': 'mx-central-1',
+            'aws:ResourceTag/Project': 'mxmed',
+            'aws:ResourceTag/Environment': 'staging',
+            'aws:ResourceTag/Phase': 'C3',
+            'aws:ResourceTag/Component': 'registry',
+          },
+        },
+      },
+    ]);
+    const keyStatement = createAliasKeyStatements[0];
+    expect(keyStatement).toBeDefined();
+    if (keyStatement === undefined) throw new Error('REGISTRY_CREATEALIAS_KEY_AUTHORITY_MISSING');
+
+    expect(documentAllowsWithContext(registry, 'kms:CreateAlias', keyArn, exactContext)).toBe(true);
+    for (const context of [
+      { ...exactContext, 'aws:ResourceTag/Component': 'security' },
+      { ...exactContext, 'aws:ResourceTag/Project': 'unrelated' },
+      { ...exactContext, 'aws:ResourceTag/Environment': 'production' },
+      { ...exactContext, 'aws:ResourceTag/Phase': 'C4' },
+      { ...exactContext, 'aws:RequestedRegion': 'us-east-1' },
+    ]) {
+      expect(documentAllowsWithContext(registry, 'kms:CreateAlias', keyArn, context)).toBe(false);
+    }
+    expect(JSON.stringify(keyStatement.Condition)).not.toContain('kms:ResourceAliases');
+    expect(actions(keyStatement)).toEqual(['kms:CreateAlias']);
+    expect(resources(keyStatement)).toEqual(['arn:aws:kms:mx-central-1:875691018466:key/*']);
+    expect(resources(keyStatement)).not.toContain('*');
+    expect(actions(keyStatement)).not.toContain('kms:*');
+
+    const createGrantStatement = registry.Statement.find(
+      (statement) => statement.Sid === 'CreateGrantOnlyForStagingRegistryKeyAWSResource',
+    );
+    expect(createGrantStatement).toEqual({
+      Sid: 'CreateGrantOnlyForStagingRegistryKeyAWSResource',
+      Effect: 'Allow',
+      Action: 'kms:CreateGrant',
+      Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
+      Condition: {
+        StringEquals: {
+          'aws:RequestedRegion': 'mx-central-1',
+          'aws:ResourceTag/Project': 'mxmed',
+          'aws:ResourceTag/Environment': 'staging',
+          'aws:ResourceTag/Phase': 'C3',
+          'aws:ResourceTag/Component': 'registry',
+        },
+        'ForAllValues:StringEquals': {
+          'kms:ResourceAliases': 'alias/mxmed-stg-registry',
+        },
+        Bool: { 'kms:GrantIsForAWSResource': 'true' },
+      },
+    });
+    expect(new Set(registry.Statement.flatMap(actions))).toContain('kms:CreateAlias');
   });
 
   test('authorizes only the physically observed Session secret and parameter-group operations', () => {

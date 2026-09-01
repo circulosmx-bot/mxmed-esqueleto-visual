@@ -58,6 +58,21 @@
       }
     },
     {
+      "Sid": "CreateExactRegistryAliasOnTaggedRegistryKey",
+      "Effect": "Allow",
+      "Action": "kms:CreateAlias",
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging",
+          "aws:ResourceTag/Phase": "C3",
+          "aws:ResourceTag/Component": "registry"
+        }
+      }
+    },
+    {
       "Sid": "ManageExactRegistryAlias",
       "Effect": "Allow",
       "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
