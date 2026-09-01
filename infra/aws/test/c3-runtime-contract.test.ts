@@ -247,6 +247,100 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
       ],
       { cwd: repositoryRoot, encoding: 'utf8', input: JSON.stringify(payload) },
     );
+  const installStackCreateWaitAwsStub = (
+    scenario: string,
+  ): { PATH: string; AWS_LOG: string; COUNT_FILE: string; SCENARIO: string } => {
+    const awsLog = join(directory, 'stack-create-wait-aws.log');
+    const countFile = join(directory, 'stack-create-wait-count');
+    writeFileSync(awsLog, '');
+    writeFileSync(
+      join(directory, 'aws'),
+      `#!/bin/sh
+set -eu
+printf '%s|%s\n' "$$" "$*" >> "$AWS_LOG"
+[ "$1:$2" = 'cloudformation:describe-stacks' ] || {
+  printf '%s\n' "unexpected stack waiter call: $*" >&2
+  exit 64
+}
+if [ -f "$COUNT_FILE" ]; then count="$(sed -n '1p' "$COUNT_FILE")"; else count=0; fi
+count=$((count + 1))
+printf '%s\n' "$count" > "$COUNT_FILE"
+case "$SCENARIO:$count" in
+  success:1) printf '%s\n' 'CREATE_IN_PROGRESS' ;;
+  success:*) printf '%s\n' 'CREATE_COMPLETE' ;;
+  terminal:*) printf '%s\n' 'ROLLBACK_IN_PROGRESS' ;;
+  expired-once:1)
+    printf '%s\n' 'An error occurred (ExpiredToken): request credential expired' >&2
+    exit 254
+    ;;
+  expired-once:*) printf '%s\n' 'CREATE_COMPLETE' ;;
+  expired-repeat:*)
+    printf '%s\n' 'An error occurred (ExpiredToken): request credential expired' >&2
+    exit 254
+    ;;
+  *) printf '%s\n' 'UPDATE_COMPLETE' ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'aws'), 0o700);
+    writeFileSync(
+      join(directory, 'sleep'),
+      `#!/bin/sh
+set -eu
+printf '%s\n' "$1" >> "$SLEEP_LOG"
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(join(directory, 'sleep'), 0o700);
+    return {
+      PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+      AWS_LOG: awsLog,
+      COUNT_FILE: countFile,
+      SCENARIO: scenario,
+    };
+  };
+  const runStackCreateWaiter = (scenario: string, hardCapAt = '2099-01-01T00:00:00Z') => {
+    writeFileSync(statePath, `${JSON.stringify({ hard_cap_at_utc: hardCapAt })}\n`, {
+      mode: 0o600,
+    });
+    const sleepLog = join(directory, 'stack-create-wait-sleep.log');
+    const stub = installStackCreateWaitAwsStub(scenario);
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      ...stub,
+      DEPLOY_CONTROLLER: deployController,
+      STATE_PATH: statePath,
+      SLEEP_LOG: sleepLog,
+    };
+    delete env.AWS_ACCESS_KEY_ID;
+    delete env.AWS_SECRET_ACCESS_KEY;
+    delete env.AWS_SESSION_TOKEN;
+    return {
+      result: spawnSync(
+        'sh',
+        [
+          '-c',
+          `set -eu
+set --
+MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY=1 . "$DEPLOY_CONTROLLER"
+state="$STATE_PATH"
+MXMED_C3_DEPLOY_PROFILE=mxmed-c3-stg-deploy
+STACK_CREATE_POLL_INTERVAL_SECONDS=1
+if wait_for_stack_create_complete_refreshable mxmed-stg-session; then
+  printf '%s\n' 'WAIT_RESULT=PASS'
+else
+  result=$?
+  printf '%s\n' "WAIT_RESULT=$stack_create_wait_failure_reason" >&2
+  exit "$result"
+fi`,
+        ],
+        { cwd: repositoryRoot, encoding: 'utf8', env },
+      ),
+      stub,
+      sleepLog,
+    };
+  };
   const expectAccepted = (...args: string[]): void => {
     const result = run(...args);
     expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
@@ -1310,6 +1404,93 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
       status: 0,
       stdout: 'mxmed-stg-session.example.cache.amazonaws.com\t6379\n',
     });
+  });
+
+  test('waits with fresh exact-stack describe processes and never replays creation', () => {
+    const { result, stub, sleepLog } = runStackCreateWaiter('success');
+    expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toEqual({
+      status: 0,
+      stdout: 'WAIT_RESULT=PASS\n',
+      stderr: '',
+    });
+    const calls = readFileSync(stub.AWS_LOG, 'utf8').trim().split('\n');
+    expect(calls).toHaveLength(2);
+    expect(new Set(calls.map((call) => call.split('|')[0])).size).toBe(2);
+    for (const call of calls) {
+      expect(call).toContain(
+        'cloudformation describe-stacks --stack-name mxmed-stg-session --query Stacks[0].StackStatus --output text',
+      );
+      expect(call).not.toMatch(/execute-change-set|create-stack|create-change-set/);
+    }
+    expect(readFileSync(sleepLog, 'utf8')).toBe('1\n');
+
+    const deploy = readFileSync(deployController, 'utf8');
+    expect(deploy.match(/aws cloudformation execute-change-set/g)).toHaveLength(1);
+    expect(deploy).not.toContain('aws cloudformation wait stack-create-complete');
+  });
+
+  test('fails closed on a CloudFormation rollback state', () => {
+    const { result, stub } = runStackCreateWaiter('terminal');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('WAIT_RESULT=STACK_CREATE_TERMINAL_STATE:ROLLBACK_IN_PROGRESS');
+    expect(readFileSync(stub.AWS_LOG, 'utf8').trim().split('\n')).toHaveLength(1);
+  });
+
+  test('recovers from one ExpiredToken using one fresh read and no resource retry', () => {
+    const { result, stub } = runStackCreateWaiter('expired-once');
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain(
+      'C3_DEPLOY_CREDENTIAL_REFRESH_DURING_CLOUDFORMATION_WAIT:mxmed-stg-session:1',
+    );
+    const calls = readFileSync(stub.AWS_LOG, 'utf8').trim().split('\n');
+    expect(calls).toHaveLength(2);
+    expect(new Set(calls.map((call) => call.split('|')[0])).size).toBe(2);
+    expect(calls.join('\n')).not.toMatch(/execute-change-set|create-stack|create-change-set/);
+    expect(`${result.stdout}${result.stderr}${calls.join('\n')}`).not.toMatch(
+      /AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_SESSION_TOKEN/,
+    );
+  });
+
+  test('blocks after the bounded consecutive credential-refresh failure threshold', () => {
+    const { result, stub } = runStackCreateWaiter('expired-repeat');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      'WAIT_RESULT=C3_DEPLOY_CREDENTIAL_REFRESH_FAILED_DURING_CLOUDFORMATION_WAIT',
+    );
+    expect(readFileSync(stub.AWS_LOG, 'utf8').trim().split('\n')).toHaveLength(2);
+  });
+
+  test('keeps the runtime hard cap authoritative over stack polling', () => {
+    const { result, stub } = runStackCreateWaiter('success', '2000-01-01T00:00:00Z');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('WAIT_RESULT=STACK_CREATE_WAIT_HARD_CAP_REACHED');
+    expect(readFileSync(stub.AWS_LOG, 'utf8')).toBe('');
+  });
+
+  test('seals the Session endpoint only after CREATE_COMPLETE and before Registry', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    const executeCase = deploy.slice(
+      deploy.indexOf('  --execute-stack)'),
+      deploy.indexOf('  --create-direct-budget)'),
+    );
+    expect(executeCase.indexOf('wait_for_stack_create_complete_refreshable "$stack"')).toBeLessThan(
+      executeCase.indexOf('resolve_and_seal_session_primary_endpoint'),
+    );
+    expect(executeCase).toContain('if [ "$stack" = \'mxmed-stg-session\' ]; then');
+    expect(executeCase).not.toContain('mxmed-stg-registry');
+
+    const sequence = [
+      'wait:mxmed-stg-session=CREATE_COMPLETE',
+      'resolve:session-primary-endpoint',
+      'seal:session-primary-endpoint',
+      'execute:mxmed-stg-registry',
+    ];
+    expect(sequence.indexOf('wait:mxmed-stg-session=CREATE_COMPLETE')).toBeLessThan(
+      sequence.indexOf('resolve:session-primary-endpoint'),
+    );
+    expect(sequence.indexOf('seal:session-primary-endpoint')).toBeLessThan(
+      sequence.indexOf('execute:mxmed-stg-registry'),
+    );
   });
 
   test.each([

@@ -22,6 +22,8 @@ CFN_ROLE_PREFIX='arn:aws:iam::875691018466:role/MXMed-C3-CFN-'
 CONTRACT_HELPER='scripts/aws/c3-runtime-contract.sh'
 SESSION_REPLICATION_GROUP_ID='mxmed-stg-session'
 SESSION_PRIMARY_ENDPOINT_PORT='6379'
+STACK_CREATE_POLL_INTERVAL_SECONDS='20'
+STACK_CREATE_CREDENTIAL_REFRESH_FAILURE_LIMIT='2'
 
 [ -f "$CONTRACT_HELPER" ] || { printf '%s\n' 'C3_DEPLOY_FAIL_CLOSED:RUNTIME_CONTRACT_HELPER_MISSING' >&2; exit 1; }
 . "$CONTRACT_HELPER"
@@ -224,6 +226,62 @@ verify_fixed_security_secret_names_absent() {
         *) fail "SECURITY_FIXED_SECRET_DESCRIBE_FAILED:$secret_name" ;;
       esac
     fi
+  done
+}
+
+cloudformation_error_is_expired_token() {
+  case "$1" in
+    *ExpiredToken*|*ExpiredTokenException*|*security\ token\ included\ in\ the\ request\ is\ expired*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+wait_for_stack_create_complete_refreshable() {
+  wait_stack="$1"
+  case " $STACKS " in *" $wait_stack "*) ;; *) fail 'STACK_CREATE_WAIT_STACK_OUT_OF_SCOPE' ;; esac
+  hard_cap_at="$(jq -r .hard_cap_at_utc "$state")"
+  hard_cap_epoch="$(c3_epoch "$hard_cap_at")" \
+    || fail 'STACK_CREATE_WAIT_HARD_CAP_INVALID'
+  refresh_failures=0
+  stack_create_wait_failure_reason=''
+  while :; do
+    now_epoch="$(date -u +%s)" || fail 'STACK_CREATE_WAIT_CLOCK_FAILED'
+    remaining_seconds=$((hard_cap_epoch - now_epoch))
+    if [ "$remaining_seconds" -le 0 ]; then
+      stack_create_wait_failure_reason='STACK_CREATE_WAIT_HARD_CAP_REACHED'
+      return 1
+    fi
+    if stack_status="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-stacks \
+      --stack-name "$wait_stack" --query 'Stacks[0].StackStatus' --output text 2>&1)"; then
+      refresh_failures=0
+      case "$stack_status" in
+        CREATE_COMPLETE) return 0 ;;
+        CREATE_IN_PROGRESS) ;;
+        CREATE_FAILED|ROLLBACK_IN_PROGRESS|ROLLBACK_FAILED|ROLLBACK_COMPLETE|DELETE_IN_PROGRESS|DELETE_FAILED|DELETE_COMPLETE|UPDATE_ROLLBACK_IN_PROGRESS|UPDATE_ROLLBACK_FAILED|UPDATE_ROLLBACK_COMPLETE|IMPORT_ROLLBACK_IN_PROGRESS|IMPORT_ROLLBACK_FAILED|IMPORT_ROLLBACK_COMPLETE)
+          stack_create_wait_failure_reason="STACK_CREATE_TERMINAL_STATE:$stack_status"
+          return 1
+          ;;
+        *)
+          stack_create_wait_failure_reason="STACK_CREATE_STATUS_REJECTED:$stack_status"
+          return 1
+          ;;
+      esac
+    else
+      if cloudformation_error_is_expired_token "$stack_status"; then
+        refresh_failures=$((refresh_failures + 1))
+        printf '%s\n' "C3_DEPLOY_CREDENTIAL_REFRESH_DURING_CLOUDFORMATION_WAIT:$wait_stack:$refresh_failures" >&2
+        if [ "$refresh_failures" -ge "$STACK_CREATE_CREDENTIAL_REFRESH_FAILURE_LIMIT" ]; then
+          stack_create_wait_failure_reason='C3_DEPLOY_CREDENTIAL_REFRESH_FAILED_DURING_CLOUDFORMATION_WAIT'
+          return 1
+        fi
+        continue
+      fi
+      stack_create_wait_failure_reason='STACK_CREATE_DESCRIBE_FAILED'
+      return 1
+    fi
+    sleep_seconds="$STACK_CREATE_POLL_INTERVAL_SECONDS"
+    if [ "$sleep_seconds" -gt "$remaining_seconds" ]; then sleep_seconds="$remaining_seconds"; fi
+    sleep "$sleep_seconds"
   done
 }
 
@@ -662,8 +720,11 @@ case "$mode" in
     fi
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation execute-change-set --stack-name "$stack" --change-set-name "$(jq -r .run_id "$manifest")-review" \
       || start_partial_teardown "$stack"
-    AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation wait stack-create-complete --stack-name "$stack" \
-      || start_partial_teardown "$stack"
+    if wait_for_stack_create_complete_refreshable "$stack"; then
+      :
+    else
+      start_partial_teardown "$stack" "$stack_create_wait_failure_reason"
+    fi
     stack_id="$(AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].StackId' --output text)"
     c3_atomic_state_update "$manifest" "$state" \
       '.created_resource_ids += [{type:"cloudformation-stack",stack_name:$stack,id:$id}]' \
