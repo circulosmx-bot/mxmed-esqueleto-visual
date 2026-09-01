@@ -61,7 +61,7 @@
       "Sid": "ManageExactRegistryAlias",
       "Effect": "Allow",
       "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
-      "Resource": "arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/registry",
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-registry",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "mx-central-1" } }
     },
     {

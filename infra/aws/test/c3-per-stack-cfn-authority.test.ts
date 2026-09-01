@@ -396,6 +396,44 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(registry.Statement.flatMap(actions)).not.toContain('kms:*');
   });
 
+  test('authorizes Registry alias lifecycle only for the synthesized physical alias', () => {
+    const registry = readDocument(authority.registry.policy);
+    const expectedRegion = { 'aws:RequestedRegion': 'mx-central-1' };
+    const exactAliasArn = 'arn:aws:kms:mx-central-1:875691018466:alias/mxmed-stg-registry';
+    const oldAliasArn = 'arn:aws:kms:mx-central-1:875691018466:alias/mxmed/staging/registry';
+    const aliasStatements = registry.Statement.filter((statement) =>
+      actions(statement).includes('kms:CreateAlias'),
+    );
+
+    expect(aliasStatements).toEqual([
+      {
+        Sid: 'ManageExactRegistryAlias',
+        Effect: 'Allow',
+        Action: ['kms:CreateAlias', 'kms:DeleteAlias', 'kms:UpdateAlias'],
+        Resource: exactAliasArn,
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+    for (const action of ['kms:CreateAlias', 'kms:DeleteAlias', 'kms:UpdateAlias']) {
+      expect(documentAllowsWithContext(registry, action, exactAliasArn, expectedRegion)).toBe(true);
+      expect(documentAllowsWithContext(registry, action, oldAliasArn, expectedRegion)).toBe(false);
+      expect(
+        documentAllowsWithContext(
+          registry,
+          action,
+          'arn:aws:kms:mx-central-1:875691018466:alias/unrelated',
+          expectedRegion,
+        ),
+      ).toBe(false);
+      expect(
+        documentAllowsWithContext(registry, action, exactAliasArn, {
+          'aws:RequestedRegion': 'us-east-1',
+        }),
+      ).toBe(false);
+    }
+    expect(registry.Statement.flatMap(actions)).not.toContain('kms:*');
+  });
+
   test('authorizes only the physically observed Session secret and parameter-group operations', () => {
     const session = readDocument(authority.session.policy);
     const expectedRegion = { 'aws:RequestedRegion': 'mx-central-1' };
