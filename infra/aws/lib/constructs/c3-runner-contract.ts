@@ -270,6 +270,7 @@ export const MXMED_C3_DEPLOY_ACTIONS = Object.freeze([
   's3:PutEncryptionConfiguration',
   's3:PutObject',
   'ecr:BatchCheckLayerAvailability',
+  'ecr:BatchGetImage',
   'ecr:CompleteLayerUpload',
   'ecr:GetAuthorizationToken',
   'ecr:InitiateLayerUpload',

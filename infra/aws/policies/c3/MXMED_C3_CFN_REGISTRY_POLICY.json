@@ -60,7 +60,7 @@
     {
       "Sid": "CreateExactRegistryAliasOnTaggedRegistryKey",
       "Effect": "Allow",
-      "Action": "kms:CreateAlias",
+      "Action": ["kms:CreateAlias", "kms:DeleteAlias"],
       "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
       "Condition": {
         "StringEquals": {

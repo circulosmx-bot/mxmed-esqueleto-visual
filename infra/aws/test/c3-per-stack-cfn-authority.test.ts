@@ -436,7 +436,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     expect(registry.Statement.flatMap(actions)).not.toContain('kms:*');
   });
 
-  test('authorizes Registry CreateAlias on only the exact tagged target-key selector', () => {
+  test('authorizes Registry alias create and delete on only the exact tagged target-key selector', () => {
     const registry = readDocument(authority.registry.policy);
     const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/fresh-ephemeral-registry-key';
     const exactContext: RequestContext = {
@@ -456,7 +456,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       {
         Sid: 'CreateExactRegistryAliasOnTaggedRegistryKey',
         Effect: 'Allow',
-        Action: 'kms:CreateAlias',
+        Action: ['kms:CreateAlias', 'kms:DeleteAlias'],
         Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
         Condition: {
           StringEquals: {
@@ -474,6 +474,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     if (keyStatement === undefined) throw new Error('REGISTRY_CREATEALIAS_KEY_AUTHORITY_MISSING');
 
     expect(documentAllowsWithContext(registry, 'kms:CreateAlias', keyArn, exactContext)).toBe(true);
+    expect(documentAllowsWithContext(registry, 'kms:DeleteAlias', keyArn, exactContext)).toBe(true);
     for (const context of [
       { ...exactContext, 'aws:ResourceTag/Component': 'security' },
       { ...exactContext, 'aws:ResourceTag/Project': 'unrelated' },
@@ -482,9 +483,11 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       { ...exactContext, 'aws:RequestedRegion': 'us-east-1' },
     ]) {
       expect(documentAllowsWithContext(registry, 'kms:CreateAlias', keyArn, context)).toBe(false);
+      expect(documentAllowsWithContext(registry, 'kms:DeleteAlias', keyArn, context)).toBe(false);
     }
     expect(JSON.stringify(keyStatement.Condition)).not.toContain('kms:ResourceAliases');
-    expect(actions(keyStatement)).toEqual(['kms:CreateAlias']);
+    expect(actions(keyStatement)).toEqual(['kms:CreateAlias', 'kms:DeleteAlias']);
+    expect(actions(keyStatement)).not.toContain('kms:UpdateAlias');
     expect(resources(keyStatement)).toEqual(['arn:aws:kms:mx-central-1:875691018466:key/*']);
     expect(resources(keyStatement)).not.toContain('*');
     expect(actions(keyStatement)).not.toContain('kms:*');
@@ -512,6 +515,63 @@ describe('C3 per-stack CloudFormation execution authority', () => {
       },
     });
     expect(new Set(registry.Statement.flatMap(actions))).toContain('kms:CreateAlias');
+    expect(new Set(registry.Statement.flatMap(actions))).toContain('kms:DeleteAlias');
+  });
+
+  test('grants Deploy only the documented private-ECR push family on the exact repository', () => {
+    const deploy = readDocument('MXMED_C3_STAGING_DEPLOY_ROLE_POLICY.json');
+    const repository = 'arn:aws:ecr:mx-central-1:875691018466:repository/mxmed-stg-application';
+    const unrelatedRepository = 'arn:aws:ecr:mx-central-1:875691018466:repository/unrelated';
+    const pushActions = [
+      'ecr:BatchCheckLayerAvailability',
+      'ecr:BatchGetImage',
+      'ecr:CompleteLayerUpload',
+      'ecr:InitiateLayerUpload',
+      'ecr:PutImage',
+      'ecr:UploadLayerPart',
+    ];
+    const pushStatement = deploy.Statement.find(
+      (statement) => statement.Sid === 'PushOnlyC3ApplicationRepository',
+    );
+
+    expect(pushStatement).toEqual({
+      Sid: 'PushOnlyC3ApplicationRepository',
+      Effect: 'Allow',
+      Action: pushActions,
+      Resource: repository,
+    });
+    for (const action of pushActions) {
+      expect(documentAllows(deploy, action, repository)).toBe(true);
+      expect(documentAllows(deploy, action, unrelatedRepository)).toBe(false);
+    }
+    expect(
+      documentAllowsWithContext(deploy, 'ecr:GetAuthorizationToken', '*', {
+        'aws:RequestedRegion': 'mx-central-1',
+      }),
+    ).toBe(true);
+    expect(
+      deploy.Statement.filter((statement) =>
+        actions(statement).includes('ecr:GetAuthorizationToken'),
+      ),
+    ).toEqual([
+      {
+        Sid: 'AuthenticateEcr',
+        Effect: 'Allow',
+        Action: 'ecr:GetAuthorizationToken',
+        Resource: '*',
+        Condition: { StringEquals: { 'aws:RequestedRegion': 'mx-central-1' } },
+      },
+    ]);
+    expect(deploy.Statement.flatMap(actions)).not.toContain('ecr:*');
+    for (const action of [
+      'ecr:DeleteRepository',
+      'ecr:DescribeImages',
+      'ecr:GetDownloadUrlForLayer',
+      'ecr:ListImages',
+      'ecr:TagResource',
+    ]) {
+      expect(documentAllows(deploy, action, repository)).toBe(false);
+    }
   });
 
   test('authorizes only the physically observed Session secret and parameter-group operations', () => {
