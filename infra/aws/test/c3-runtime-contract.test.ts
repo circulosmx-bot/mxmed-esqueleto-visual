@@ -247,6 +247,20 @@ describe('C3 phase-aware immutable manifest and runtime state contract', () => {
       ],
       { cwd: repositoryRoot, encoding: 'utf8', input: JSON.stringify(payload) },
     );
+  const runEcrReferenceBuilder = (registry: string, repository: string, candidateRunId: string) =>
+    spawnSync(
+      'sh',
+      [
+        '-c',
+        'set -eu; MXMED_C3_SOURCE_BUDGET_HELPERS_ONLY=1 . "$1"; canonical_ecr_image_reference "$2" "$3" "$4"',
+        'sh',
+        deployController,
+        registry,
+        repository,
+        candidateRunId,
+      ],
+      { cwd: repositoryRoot, encoding: 'utf8' },
+    );
   const installStackCreateWaitAwsStub = (
     scenario: string,
   ): { PATH: string; AWS_LOG: string; COUNT_FILE: string; SCENARIO: string } => {
@@ -1404,6 +1418,67 @@ cleanup_one AWS::S3::Bucket mxmed-stg-audit-875691018466-mx-central-1`,
       status: 0,
       stdout: 'mxmed-stg-session.example.cache.amazonaws.com\t6379\n',
     });
+  });
+
+  test('constructs only the exact run-bound ECR image reference', () => {
+    const consumedRunId = 'c3-a732efc5-d5db-4282-ba29-c29889c13e48';
+    const result = runEcrReferenceBuilder(
+      '875691018466.dkr.ecr.mx-central-1.amazonaws.com',
+      'mxmed-stg-application',
+      consumedRunId,
+    );
+    expect({ status: result.status, stderr: result.stderr, stdout: result.stdout }).toEqual({
+      status: 0,
+      stderr: '',
+      stdout:
+        '875691018466.dkr.ecr.mx-central-1.amazonaws.com/mxmed-stg-application:c3-a732efc5-d5db-4282-ba29-c29889c13e48\n',
+    });
+  });
+
+  test.each([
+    [
+      'wrong registry',
+      '875691018466.dkr.ecr.us-east-1.amazonaws.com',
+      'mxmed-stg-application',
+      runId,
+    ],
+    [
+      'wrong repository',
+      '875691018466.dkr.ecr.mx-central-1.amazonaws.com',
+      'mxmed-stg-runner',
+      runId,
+    ],
+    [
+      'physically observed missing-colon form',
+      '875691018466.dkr.ecr.mx-central-1.amazonaws.com',
+      `mxmed-stg-application${runId.slice(2)}`,
+      'latest',
+    ],
+    [
+      'implicit latest',
+      '875691018466.dkr.ecr.mx-central-1.amazonaws.com',
+      'mxmed-stg-application',
+      'latest',
+    ],
+  ])('rejects %s before Docker is invoked', (_name, registry, repository, candidateRunId) => {
+    const result = runEcrReferenceBuilder(registry, repository, candidateRunId);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe('');
+  });
+
+  test('asserts the canonical ECR target before login, build, push, and digest sealing', () => {
+    const deploy = readFileSync(deployController, 'utf8');
+    const imageCase = deploy.slice(
+      deploy.indexOf('  --build-push-and-seal-image)'),
+      deploy.indexOf('  --resolve-and-seal-image-digest)'),
+    );
+    const assertion = imageCase.indexOf('ECR_TARGET_REFERENCE_MISMATCH');
+    expect(assertion).toBeGreaterThan(-1);
+    for (const operation of ['docker login', 'docker build', 'docker push', 'c3_seal_ecr_digest']) {
+      expect(imageCase.indexOf(operation)).toBeGreaterThan(assertion);
+    }
+    expect(imageCase).toContain('image_tag="$(canonical_ecr_image_reference');
+    expect(imageCase).toContain('"${repository_uri}:${run_id}"');
   });
 
   test('waits with fresh exact-stack describe processes and never replays creation', () => {

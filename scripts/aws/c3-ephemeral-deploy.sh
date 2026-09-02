@@ -32,6 +32,21 @@ fail() { printf '%s\n' "C3_DEPLOY_FAIL_CLOSED:$1" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "COMMAND_MISSING:$1"; }
 safe_value() { case "$1" in ''|*[!A-Za-z0-9_./:@+=,-]*) return 1;; esac; }
 
+canonical_ecr_image_reference() {
+  c3_ecr_registry="$1"
+  c3_ecr_repository="$2"
+  c3_ecr_run_id="$3"
+  [ "$c3_ecr_registry" = "${EXPECTED_ACCOUNT}.dkr.ecr.${EXPECTED_REGION}.amazonaws.com" ] || return 1
+  [ "$c3_ecr_repository" = 'mxmed-stg-application' ] || return 1
+  printf '%s' "$c3_ecr_run_id" \
+    | grep -Eq '^c3-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' \
+    || return 1
+  c3_ecr_target="${c3_ecr_registry}/${c3_ecr_repository}:${c3_ecr_run_id}"
+  [ "$c3_ecr_target" = "${EXPECTED_ACCOUNT}.dkr.ecr.${EXPECTED_REGION}.amazonaws.com/mxmed-stg-application:${c3_ecr_run_id}" ] \
+    || return 1
+  printf '%s\n' "$c3_ecr_target"
+}
+
 budget_error_is_not_found() {
   case "$1" in *NotFoundException*|*not\ found*|*could\ not\ be\ found*) return 0;; *) return 1;; esac
 }
@@ -789,11 +804,17 @@ case "$mode" in
       --stack-name mxmed-stg-registry \
       --query 'Stacks[0].Outputs[?OutputKey==`ApplicationRepositoryUri`].OutputValue | [0]' \
       --output text)"
-    [ "$repository_uri" = '875691018466.dkr.ecr.mx-central-1.amazonaws.com/mxmed-stg-application' ] \
+    repository_expected="${EXPECTED_ACCOUNT}.dkr.ecr.${EXPECTED_REGION}.amazonaws.com/mxmed-stg-application"
+    [ "$repository_uri" = "$repository_expected" ] \
       || fail 'PHYSICAL_ECR_REPOSITORY_URI_MISMATCH'
-    image_tag="$repository_uri:$(jq -r .run_id "$manifest")"
+    ecr_registry="${repository_uri%%/*}"
+    ecr_repository="${repository_uri#*/}"
+    run_id="$(jq -r .run_id "$manifest")"
+    image_tag="$(canonical_ecr_image_reference "$ecr_registry" "$ecr_repository" "$run_id")" \
+      || fail 'ECR_TARGET_REFERENCE_INVALID'
+    [ "$image_tag" = "${repository_uri}:${run_id}" ] || fail 'ECR_TARGET_REFERENCE_MISMATCH'
     AWS_PROFILE="$MXMED_C3_DEPLOY_PROFILE" aws ecr get-login-password --region "$EXPECTED_REGION" \
-      | docker login --username AWS --password-stdin "${repository_uri%%/*}" >/dev/null
+      | docker login --username AWS --password-stdin "$ecr_registry" >/dev/null
     docker build \
       --file infra/aws/c3-runner/Dockerfile \
       --build-arg "PHP_BASE_IMAGE=$(jq -r .image_build_inputs.php_base_image_reference "$manifest")" \
