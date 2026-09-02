@@ -49,6 +49,13 @@
       }
     },
     {
+      "Sid": "CreateOnlyEcsServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::875691018466:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS*",
+      "Condition": { "StringEquals": { "iam:AWSServiceName": "ecs.amazonaws.com" } }
+    },
+    {
       "Sid": "CreateExactRunnerRolesWithControlBoundary",
       "Effect": "Allow",
       "Action": "iam:CreateRole",

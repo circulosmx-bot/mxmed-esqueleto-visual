@@ -373,6 +373,71 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     }
   });
 
+  test('allows Runner CloudFormation to create only the ECS service-linked role', () => {
+    const runner = readDocument(authority.runner.policy);
+    const ecsServiceLinkedRoleArn =
+      'arn:aws:iam::875691018466:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS';
+    const exactContext: RequestContext = { 'iam:AWSServiceName': 'ecs.amazonaws.com' };
+    const statements = runner.Statement.filter((statement) =>
+      actions(statement).includes('iam:CreateServiceLinkedRole'),
+    );
+    const createStatement = statements[0];
+
+    expect(createStatement).toBeDefined();
+    if (createStatement === undefined) {
+      throw new Error('RUNNER_ECS_SERVICE_LINKED_ROLE_AUTHORITY_MISSING');
+    }
+
+    expect(statements).toEqual([
+      {
+        Sid: 'CreateOnlyEcsServiceLinkedRole',
+        Effect: 'Allow',
+        Action: 'iam:CreateServiceLinkedRole',
+        Resource:
+          'arn:aws:iam::875691018466:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS*',
+        Condition: { StringEquals: { 'iam:AWSServiceName': 'ecs.amazonaws.com' } },
+      },
+    ]);
+    expect(
+      documentAllowsWithContext(
+        runner,
+        'iam:CreateServiceLinkedRole',
+        ecsServiceLinkedRoleArn,
+        exactContext,
+      ),
+    ).toBe(true);
+    expect(
+      documentAllowsWithContext(runner, 'iam:CreateServiceLinkedRole', ecsServiceLinkedRoleArn, {
+        'iam:AWSServiceName': 'elasticache.amazonaws.com',
+      }),
+    ).toBe(false);
+    expect(
+      documentAllowsWithContext(
+        runner,
+        'iam:CreateServiceLinkedRole',
+        'arn:aws:iam::875691018466:role/aws-service-role/elasticache.amazonaws.com/AWSServiceRoleForElastiCache',
+        exactContext,
+      ),
+    ).toBe(false);
+    expect(
+      documentAllowsWithContext(
+        runner,
+        'iam:CreateServiceLinkedRole',
+        'arn:aws:iam::875691018466:role/unrelated',
+        exactContext,
+      ),
+    ).toBe(false);
+    expect(actions(createStatement)).not.toContain('iam:CreateRole');
+    expect(actions(createStatement)).not.toContain('iam:PassRole');
+    expect(actions(createStatement)).not.toContain('iam:AttachRolePolicy');
+    expect(actions(createStatement)).not.toContain('iam:PutRolePolicy');
+
+    const auditKeyStatement = runner.Statement.find(
+      (statement) => statement.Sid === 'DescribeOnlyStagingAuditKey',
+    );
+    expect(auditKeyStatement?.Action).toBe('kms:DescribeKey');
+  });
+
   test('allows regional CloudWatch Logs to use AuditKey only for the C3 Runner log group', () => {
     const security = stacks['mxmed-stg-security'];
     const auditKey = security?.Resources?.AuditKeyB2DBB069;
