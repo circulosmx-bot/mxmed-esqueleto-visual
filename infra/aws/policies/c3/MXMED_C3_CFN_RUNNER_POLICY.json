@@ -33,6 +33,22 @@
       "Resource": "arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-runner:*"
     },
     {
+      "Sid": "DescribeOnlyStagingAuditKey",
+      "Effect": "Allow",
+      "Action": "kms:DescribeKey",
+      "Resource": "arn:aws:kms:mx-central-1:875691018466:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "mx-central-1",
+          "aws:ResourceTag/Project": "mxmed",
+          "aws:ResourceTag/Environment": "staging"
+        },
+        "ForAnyValue:StringEquals": {
+          "kms:ResourceAliases": "alias/mxmed-stg-audit"
+        }
+      }
+    },
+    {
       "Sid": "CreateExactRunnerRolesWithControlBoundary",
       "Effect": "Allow",
       "Action": "iam:CreateRole",

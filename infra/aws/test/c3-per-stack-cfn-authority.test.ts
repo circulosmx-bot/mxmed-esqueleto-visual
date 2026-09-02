@@ -315,6 +315,136 @@ describe('C3 per-stack CloudFormation execution authority', () => {
     }
   });
 
+  test('allows Runner CloudFormation to describe only the staging AuditKey selector', () => {
+    const runner = readDocument(authority.runner.policy);
+    const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/fresh-ephemeral-audit-key';
+    const exactContext: RequestContext = {
+      'aws:RequestedRegion': 'mx-central-1',
+      'aws:ResourceTag/Project': 'mxmed',
+      'aws:ResourceTag/Environment': 'staging',
+      'kms:ResourceAliases': 'alias/mxmed-stg-audit',
+    };
+    const describeStatements = runner.Statement.filter(
+      (statement) => statement.Sid === 'DescribeOnlyStagingAuditKey',
+    );
+
+    expect(describeStatements).toEqual([
+      {
+        Sid: 'DescribeOnlyStagingAuditKey',
+        Effect: 'Allow',
+        Action: 'kms:DescribeKey',
+        Resource: 'arn:aws:kms:mx-central-1:875691018466:key/*',
+        Condition: {
+          StringEquals: {
+            'aws:RequestedRegion': 'mx-central-1',
+            'aws:ResourceTag/Project': 'mxmed',
+            'aws:ResourceTag/Environment': 'staging',
+          },
+          'ForAnyValue:StringEquals': {
+            'kms:ResourceAliases': 'alias/mxmed-stg-audit',
+          },
+        },
+      },
+    ]);
+    expect(documentAllowsWithContext(runner, 'kms:DescribeKey', keyArn, exactContext)).toBe(true);
+    expect(
+      documentAllowsWithContext(
+        runner,
+        'kms:DescribeKey',
+        keyArn.replace('875691018466', '111122223333'),
+        exactContext,
+      ),
+    ).toBe(false);
+    for (const context of [
+      { ...exactContext, 'aws:RequestedRegion': 'us-east-1' },
+      { ...exactContext, 'aws:ResourceTag/Project': 'unrelated' },
+      { ...exactContext, 'aws:ResourceTag/Environment': 'production' },
+      { ...exactContext, 'kms:ResourceAliases': 'alias/mxmed-stg-application-data' },
+    ]) {
+      expect(documentAllowsWithContext(runner, 'kms:DescribeKey', keyArn, context)).toBe(false);
+    }
+    for (const action of [
+      'kms:Encrypt',
+      'kms:Decrypt',
+      'kms:GenerateDataKey',
+      'kms:ReEncryptFrom',
+    ]) {
+      expect(documentAllowsWithContext(runner, action, keyArn, exactContext)).toBe(false);
+    }
+  });
+
+  test('allows regional CloudWatch Logs to use AuditKey only for the C3 Runner log group', () => {
+    const security = stacks['mxmed-stg-security'];
+    const auditKey = security?.Resources?.AuditKeyB2DBB069;
+    expect(auditKey?.Type).toBe('AWS::KMS::Key');
+    const keyPolicy = auditKey?.Properties?.KeyPolicy as PolicyDocument | undefined;
+    const runnerStatement = keyPolicy?.Statement.find(
+      (statement) => statement.Sid === 'AllowC3RunnerCloudWatchLogsEncryption',
+    );
+    const runnerLogGroupArn =
+      'arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-runner';
+
+    expect(runnerStatement).toMatchObject({
+      Sid: 'AllowC3RunnerCloudWatchLogsEncryption',
+      Effect: 'Allow',
+      Action: [
+        'kms:Encrypt',
+        'kms:Decrypt',
+        'kms:ReEncrypt*',
+        'kms:GenerateDataKey*',
+        'kms:DescribeKey',
+      ],
+      Resource: '*',
+    });
+    const runnerStatementJson = JSON.stringify(runnerStatement);
+    expect(runnerStatementJson).toContain('logs.mx-central-1.');
+    expect(runnerStatementJson).toContain('AWS::URLSuffix');
+    expect(runnerStatementJson).toContain(
+      ':logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-runner',
+    );
+    expect(keyPolicy?.Statement.some((statement) => statement.Principal?.AWS !== undefined)).toBe(
+      true,
+    );
+    expect(
+      keyPolicy?.Statement.some(
+        (statement) => statement.Sid === 'AllowCloudWatchLogsAuditEncryption',
+      ),
+    ).toBe(true);
+
+    const allows = (principal: string, action: string, logGroupArn: string): boolean =>
+      keyPolicy?.Statement.some((statement) => {
+        const statementJson = JSON.stringify(statement);
+        return (
+          statement.Effect === 'Allow' &&
+          principal === 'logs.mx-central-1.amazonaws.com' &&
+          statementJson.includes('logs.mx-central-1.') &&
+          statementJson.includes('AWS::URLSuffix') &&
+          actions(statement).some((candidate) => wildcardMatches(candidate, action)) &&
+          logGroupArn === runnerLogGroupArn &&
+          statementJson.includes(
+            ':logs:mx-central-1:875691018466:log-group:/mxmed/staging/c3-runner',
+          )
+        );
+      }) ?? false;
+    for (const action of [
+      'kms:Encrypt',
+      'kms:Decrypt',
+      'kms:ReEncryptFrom',
+      'kms:GenerateDataKey',
+      'kms:DescribeKey',
+    ]) {
+      expect(allows('logs.mx-central-1.amazonaws.com', action, runnerLogGroupArn)).toBe(true);
+    }
+    expect(
+      allows(
+        'logs.mx-central-1.amazonaws.com',
+        'kms:Encrypt',
+        'arn:aws:logs:mx-central-1:875691018466:log-group:/mxmed/staging/unrelated',
+      ),
+    ).toBe(false);
+    expect(allows('logs.us-east-1.amazonaws.com', 'kms:Encrypt', runnerLogGroupArn)).toBe(false);
+  });
+
   test('grants only AWS-resource CreateGrant for the exact tagged Registry key selector', () => {
     const registry = readDocument(authority.registry.policy);
     const keyArn = 'arn:aws:kms:mx-central-1:875691018466:key/fresh-ephemeral-registry-key';

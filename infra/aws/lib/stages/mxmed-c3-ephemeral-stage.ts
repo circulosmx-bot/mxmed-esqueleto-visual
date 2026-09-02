@@ -77,6 +77,7 @@ export class MxMedC3EphemeralStage extends Stage {
     this.securityStack = new MxMedSecurityStack(this, 'Security', {
       ...stackProps(),
       c3AuditBucketName: mxmedC3AuditBucketName(MXMED_C3_ACCOUNT, MXMED_C3_REGION),
+      c3RunnerLogGroupKmsAccess: true,
     });
     this.sessionStack = new MxMedSessionStack(this, 'Session', {
       ...stackProps(),

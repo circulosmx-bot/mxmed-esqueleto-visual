@@ -29,6 +29,7 @@ import { LeastPrivilegeIamAspect } from '../aspects/least-privilege-iam-aspect';
 import { NoPlaintextSecretAspect } from '../aspects/no-plaintext-secret-aspect';
 import { SecurityFoundationAspect } from '../aspects/security-foundation-aspect';
 import { MxMedSecurityRoleFactory, SecuritySecretContainer } from '../constructs';
+import { MXMED_C3_RUNNER_CONTRACT } from '../constructs/c3-runner-contract';
 import type { MxMedEnvironmentConfig } from '../config/environment-config';
 import { mxmedName } from '../utils/naming';
 import {
@@ -42,6 +43,10 @@ import { edgeUsesPublicMedia } from '../config/edge-config';
 
 function cloudTrailRetention(days: number): RetentionDays {
   return days === 90 ? RetentionDays.THREE_MONTHS : RetentionDays.ONE_YEAR;
+}
+
+export interface MxMedSecurityStackProps extends MxMedContractStackProps {
+  readonly c3RunnerLogGroupKmsAccess?: boolean;
 }
 
 /** KMS, Secrets Manager, IAM boundaries/roles and management-audit foundation. */
@@ -65,7 +70,7 @@ export class MxMedSecurityStack extends BaseMxMedStack {
   public readonly jobsTaskRole: Role;
   public readonly workloadRoleFactory: MxMedSecurityRoleFactory;
 
-  public constructor(scope: Construct, id: string, props: MxMedContractStackProps) {
+  public constructor(scope: Construct, id: string, props: MxMedSecurityStackProps) {
     super(scope, id, {
       ...props,
       component: 'security',
@@ -120,6 +125,9 @@ export class MxMedSecurityStack extends BaseMxMedStack {
     this.addSecretsManagerKeyPolicy(config);
     const managementTrailName = mxmedName(config.environmentCode, 'management-trail');
     this.addAuditKeyPolicies(config, managementTrailName);
+    if (props.c3RunnerLogGroupKmsAccess === true) {
+      this.addC3RunnerLogGroupAuditKeyPolicy(config);
+    }
 
     this.sessionSigningSecret = new Secret(this, 'SessionSigningSecret', {
       secretName: mxmedSecuritySecretName(config.environmentName, 'application/session-signing'),
@@ -351,6 +359,32 @@ export class MxMedSecurityStack extends BaseMxMedStack {
         resources: ['*'],
         conditions: {
           ArnEquals: { 'kms:EncryptionContext:aws:logs:arn': logGroupArn },
+        },
+      }),
+    );
+  }
+
+  private addC3RunnerLogGroupAuditKeyPolicy(config: MxMedEnvironmentConfig): void {
+    const runnerLogGroupArn = this.formatArn({
+      service: 'logs',
+      resource: 'log-group',
+      resourceName: MXMED_C3_RUNNER_CONTRACT.logGroupName,
+      arnFormat: ArnFormat.COLON_RESOURCE_NAME,
+    });
+    this.auditKey.addToResourcePolicy(
+      new PolicyStatement({
+        sid: 'AllowC3RunnerCloudWatchLogsEncryption',
+        principals: [new ServicePrincipal(`logs.${config.primaryRegion}.${this.urlSuffix}`)],
+        actions: [
+          'kms:Encrypt',
+          'kms:Decrypt',
+          'kms:ReEncrypt*',
+          'kms:GenerateDataKey*',
+          'kms:DescribeKey',
+        ],
+        resources: ['*'],
+        conditions: {
+          ArnEquals: { 'kms:EncryptionContext:aws:logs:arn': runnerLogGroupArn },
         },
       }),
     );
