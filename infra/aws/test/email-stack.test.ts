@@ -4,6 +4,7 @@ import { Template } from 'aws-cdk-lib/assertions';
 import {
   MXMED_EMAIL_FROM_ADDRESS,
   MXMED_EMAIL_FROM_NAME,
+  MXMED_EMAIL_HOSTED_ZONE_ID,
   MXMED_EMAIL_PROVIDER,
   MXMED_SES_DOMAIN_IDENTITY,
   MXMED_SES_REGION,
@@ -35,11 +36,28 @@ describe('EOTP transactional SES domain identity', () => {
     });
   });
 
-  test('contains no BYODKIM private key, custom MAIL FROM, SMTP secret, or DNS mutation', () => {
+  test('manages exactly three Easy DKIM CNAMEs in the existing public hosted zone', () => {
+    template.resourceCountIs('AWS::Route53::HostedZone', 0);
+    template.resourceCountIs('AWS::Route53::RecordSet', 3);
+
+    for (const tokenNumber of ['1', '2', '3'] as const) {
+      template.hasResourceProperties('AWS::Route53::RecordSet', {
+        HostedZoneId: MXMED_EMAIL_HOSTED_ZONE_ID,
+        Name: { 'Fn::GetAtt': ['TransactionalDomainIdentity', `DkimDNSTokenName${tokenNumber}`] },
+        Type: 'CNAME',
+        ResourceRecords: [
+          { 'Fn::GetAtt': ['TransactionalDomainIdentity', `DkimDNSTokenValue${tokenNumber}`] },
+        ],
+        TTL: '300',
+      });
+    }
+  });
+
+  test('contains no BYODKIM private key, custom MAIL FROM, SMTP secret, or unrelated DNS record', () => {
     expect(serialized).not.toMatch(
       /DomainSigningPrivateKey|DomainSigningSelector|MailFromAttributes/,
     );
-    expect(serialized).not.toMatch(/AWS::SecretsManager::Secret|AWS::Route53::RecordSet/);
+    expect(serialized).not.toMatch(/AWS::SecretsManager::Secret/);
   });
 
   test('locks the accepted application integration constants', () => {

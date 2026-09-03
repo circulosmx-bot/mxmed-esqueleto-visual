@@ -126,10 +126,15 @@ describe.each([
         expect(environment.sessionStack.userGroup).toBeDefined();
         expect(environment.sessionStack.authSecret).toBeDefined();
       } else if (stack === email.emailStack) {
-        expect(Object.keys(resources)).toHaveLength(1);
+        expect(Object.keys(resources)).toHaveLength(4);
         expect(Object.values(resources)).toEqual(
           expect.arrayContaining([expect.objectContaining({ Type: 'AWS::SES::EmailIdentity' })]),
         );
+        expect(
+          Object.values(resources).filter(
+            (resource) => (resource as { Type?: string }).Type === 'AWS::Route53::RecordSet',
+          ),
+        ).toHaveLength(3);
       } else {
         expect(Object.keys(resources)).toHaveLength(0);
       }

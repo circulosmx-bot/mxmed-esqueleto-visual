@@ -15,6 +15,7 @@ export const MXMED_NON_TAGGABLE_RESOURCE_ALLOWLIST = new Set([
   'AWS::IAM::ManagedPolicy',
   'AWS::IAM::Policy',
   'AWS::KMS::Alias',
+  'AWS::Route53::RecordSet',
   'AWS::S3::BucketPolicy',
   'AWS::Backup::BackupSelection',
   'AWS::Backup::RestoreTestingSelection',

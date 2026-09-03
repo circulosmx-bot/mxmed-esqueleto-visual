@@ -85,8 +85,13 @@ describe.each([
             resources.filter((resource) => resource.Type === 'AWS::SecretsManager::Secret'),
           ).toHaveLength(1);
         } else if (stackName === `mxmed-${config.environmentCode}-email`) {
-          expect(resources).toHaveLength(1);
-          expect(resources[0]?.Type).toBe('AWS::SES::EmailIdentity');
+          expect(resources).toHaveLength(4);
+          expect(
+            resources.filter((resource) => resource.Type === 'AWS::SES::EmailIdentity'),
+          ).toHaveLength(1);
+          expect(
+            resources.filter((resource) => resource.Type === 'AWS::Route53::RecordSet'),
+          ).toHaveLength(3);
         } else {
           expect(resources).toHaveLength(0);
         }
