@@ -564,11 +564,13 @@ describe('task, service and data security contracts', () => {
       SESSION_LOCK_WAIT_MICROSECONDS: '100000',
     });
     expect(JSON.stringify(environment.MXMED_IDENTITY_ORIGIN)).toContain('IdentityAllowedOrigin');
-    expect(names(app.Secrets)).toEqual(expect.arrayContaining([
-      'SESSION_SIGNING_KEY',
-      'SESSION_STORE_USERNAME',
-      'SESSION_STORE_PASSWORD',
-    ]));
+    expect(names(app.Secrets)).toEqual(
+      expect.arrayContaining([
+        'SESSION_SIGNING_KEY',
+        'SESSION_STORE_USERNAME',
+        'SESSION_STORE_PASSWORD',
+      ]),
+    );
   });
 
   test('keeps migration fail-closed without SQL', () => {
@@ -784,6 +786,14 @@ const RUNTIME_EXPECTATIONS = [
   ['Dockerfile', 'VERSION_CODENAME=bookworm'],
   ['Dockerfile', 'Apache/2\\.4'],
   ['Dockerfile', 'docker-php-ext-install'],
+  ['Dockerfile', 'application/composer.json application/composer.lock'],
+  ['Dockerfile', 'composer install'],
+  ['Dockerfile', '--no-dev'],
+  ['Dockerfile', '--prefer-dist'],
+  ['Dockerfile', '--no-interaction'],
+  ['Dockerfile', '--no-progress'],
+  ['Dockerfile', '--optimize-autoloader'],
+  ['Dockerfile', 'vendor/autoload.php'],
   ['Dockerfile', 'a2enmod rewrite'],
   ['Dockerfile', 'USER www-data'],
   ['Dockerfile', 'EXPOSE 8080'],
@@ -837,6 +847,11 @@ describe('runtime scaffold denylist', () => {
 
   test('has no secret material', () => {
     expect(dockerfile).not.toMatch(/AKIA|ASIA|sk_(?:live|test)|BEGIN PRIVATE KEY/);
+  });
+
+  test('installs only locked Composer dependencies', () => {
+    expect(dockerfile).toContain('composer install');
+    expect(dockerfile).not.toContain('composer update');
   });
 
   test('excludes every high-risk build-context family', () => {

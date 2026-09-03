@@ -34,7 +34,7 @@ RUN case "${PHP_BASE_IMAGE}" in *@sha256:[0-9a-f][0-9a-f]*) ;; *) exit 64 ;; esa
     && rm -rf /var/lib/apt/lists/* /tmp/pear
 
 FROM ${PHP_BASE_IMAGE} AS runtime
-COPY --from=composer-source /usr/bin/composer /tmp/build-tools/composer
+COPY --from=composer-source /usr/bin/composer /usr/local/bin/composer
 COPY --from=extension-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=extension-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 RUN apt-get update \
@@ -50,13 +50,25 @@ RUN apt-get update \
     && php --ri gd >/dev/null \
     && php -r 'exit(function_exists("imagecreatetruecolor") ? 0 : 1);' \
     && a2enmod rewrite mime \
-    && rm -rf /var/lib/apt/lists/* /tmp/build-tools \
+    && rm -rf /var/lib/apt/lists/* \
     && install -d -o www-data -g www-data \
         /tmp \
         /var/run/apache2 \
         /var/lock/apache2 \
         /var/www/html \
         /var/www/health
+
+COPY --chown=www-data:www-data application/composer.json application/composer.lock /var/www/html/
+RUN cd /var/www/html \
+    && COMPOSER_HOME=/tmp/mxmed-composer composer install \
+        --no-dev \
+        --prefer-dist \
+        --no-interaction \
+        --no-progress \
+        --optimize-autoloader \
+    && test -f /var/www/html/vendor/autoload.php \
+    && rm -rf /tmp/mxmed-composer \
+    && rm -f /usr/local/bin/composer
 
 COPY apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 COPY apache/ports.conf /etc/apache2/ports.conf

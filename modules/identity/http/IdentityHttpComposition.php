@@ -8,12 +8,16 @@ use Identity\Adapters\PdoSessionAccountStateAdapter;
 use Identity\Adapters\PreviewIdentityNotificationAdapter;
 use Identity\Adapters\PreviewValkeyClient;
 use Identity\Adapters\ProductiveValkeyClient;
-use Identity\Adapters\RejectingIdentityNotificationAdapter;
 use Identity\Adapters\RejectingSessionStoreAdapter;
+use Identity\Adapters\SesIdentityNotificationAdapter;
 use Identity\Audit\AuditProducerFailureSignal;
 use Identity\Audit\BoundedBestEffortAuditEmitter;
 use Identity\Audit\CanonicalAuditWriterAdapter;
+use Identity\Audit\CanonicalIdentityAuditProducer;
 use Identity\Audit\CanonicalSessionAuditProducer;
+use Identity\Audit\EnvironmentAuthIdentifierAuditSecretProvider;
+use Identity\Audit\HmacSha256AuthIdentifierAuditHasher;
+use Identity\Audit\IdentityAuditReasonResolver;
 use Identity\Audit\Mp01eEventScopePolicy;
 use Identity\Audit\Contracts\AuditProducerFailureSignalPort;
 use Identity\Contracts\IdentityNotificationPort;
@@ -78,6 +82,7 @@ final class IdentityHttpComposition
         private FailClosedAuthorizationService $authorization,
         private string $environment,
         private string $allowedOrigin,
+        private ?CanonicalIdentityAuditProducer $identityAudit = null,
         private ?CanonicalSessionAuditProducer $sessionAudit = null,
         private ?RequestContextFactory $auditRequests = null,
         private ?ActorContextFactory $auditActors = null
@@ -150,15 +155,32 @@ final class IdentityHttpComposition
             );
         }
 
-        [$sessionAudit, $auditRequests, $auditActors] = self::buildSessionAudit($pdo);
+        if (!class_exists(\Aws\SesV2\SesV2Client::class)) {
+            throw new \RuntimeException('identity_productive_configuration_unavailable');
+        }
+        $sesClient = new \Aws\SesV2\SesV2Client([
+            'version' => 'latest',
+            'region' => $configuration->sesRegion(),
+        ]);
+        $notifications = new SesIdentityNotificationAdapter(
+            $sesClient,
+            $configuration->sesRegion(),
+            $configuration->emailFromAddress(),
+            $configuration->emailFromName(),
+            $configuration->allowedOrigin(),
+            $configuration->emailReplyTo()
+        );
+
+        [$identityAudit, $sessionAudit, $auditRequests, $auditActors] = self::buildAudit($pdo);
         return self::build(
             $pdo,
             $configuration->pepper(),
-            new RejectingIdentityNotificationAdapter(),
+            $notifications,
             $store,
             $configuration->environment(),
             $configuration->allowedOrigin(),
             $clock,
+            $identityAudit,
             $sessionAudit,
             $auditRequests,
             $auditActors
@@ -173,6 +195,7 @@ final class IdentityHttpComposition
         string $environment,
         string $allowedOrigin,
         ?\Identity\Contracts\Clock $clock = null,
+        ?CanonicalIdentityAuditProducer $identityAudit = null,
         ?CanonicalSessionAuditProducer $sessionAudit = null,
         ?RequestContextFactory $auditRequests = null,
         ?ActorContextFactory $auditActors = null
@@ -191,7 +214,7 @@ final class IdentityHttpComposition
         $sessions = new SessionService($store, new SessionTokenCodec($pepper), $clock, new SessionPolicy(), new PdoSessionAccountStateAdapter($accounts, $credentials));
         $capabilityAuthority = new ExistingCapabilityAuthorityAdapter(new ExistingCapabilityAuthorityService());
         $authorization = new FailClosedAuthorizationService($memberships, $capabilityAuthority);
-        return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $sessionAudit, $auditRequests, $auditActors);
+        return new self($pdo, new CsrfTokenService($pepper, 900, $clock, $allowedOrigin), $registration, $verification, $authentication, $recovery, $sessions, $accounts, $credentials, $memberships, $tokens, $authorization, $environment, $allowedOrigin, $identityAudit, $sessionAudit, $auditRequests, $auditActors);
     }
 
     public function pdo(): PDO { return $this->pdo; }
@@ -208,12 +231,13 @@ final class IdentityHttpComposition
     public function authorization(): FailClosedAuthorizationService { return $this->authorization; }
     public function environment(): string { return $this->environment; }
     public function allowedOrigin(): string { return $this->allowedOrigin; }
+    public function identityAudit(): ?CanonicalIdentityAuditProducer { return $this->identityAudit; }
     public function sessionAudit(): ?CanonicalSessionAuditProducer { return $this->sessionAudit; }
     public function auditRequests(): ?RequestContextFactory { return $this->auditRequests; }
     public function auditActors(): ?ActorContextFactory { return $this->auditActors; }
 
-    /** @return array{CanonicalSessionAuditProducer,RequestContextFactory,ActorContextFactory} */
-    private static function buildSessionAudit(PDO $pdo): array
+    /** @return array{CanonicalIdentityAuditProducer,CanonicalSessionAuditProducer,RequestContextFactory,ActorContextFactory} */
+    private static function buildAudit(PDO $pdo): array
     {
         $writer = new CanonicalAuditWriter(
             CanonicalAuditPolicyRegistry::canonical(),
@@ -233,12 +257,18 @@ final class IdentityHttpComposition
                 error_log(json_encode($signal->safePayload(), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
             }
         };
-        $producer = new CanonicalSessionAuditProducer(new BoundedBestEffortAuditEmitter(
+        $emitter = new BoundedBestEffortAuditEmitter(
             new CanonicalAuditWriterAdapter($writer),
             new AuditWriterContextBridge(),
             $failureSignal,
             new Mp01eEventScopePolicy()
-        ));
+        );
+        $identityProducer = new CanonicalIdentityAuditProducer(
+            $emitter,
+            new HmacSha256AuthIdentifierAuditHasher(new EnvironmentAuthIdentifierAuditSecretProvider()),
+            new IdentityAuditReasonResolver()
+        );
+        $sessionProducer = new CanonicalSessionAuditProducer($emitter);
         $uuid = new UuidV4Generator();
         $requests = new RequestContextFactory(
             new RandomRequestIdProvider($uuid),
@@ -252,9 +282,11 @@ final class IdentityHttpComposition
                 '/api/identity/index.php/session-rotate',
                 '/api/identity/index.php/session-revoke',
                 '/api/identity/index.php/password-reset',
+                '/api/identity/index.php/registration-request',
+                '/api/identity/index.php/email-verification',
             ], [], [], [])
         );
-        return [$producer, $requests, new ActorContextFactory()];
+        return [$identityProducer, $sessionProducer, $requests, new ActorContextFactory()];
     }
 
     public static function registerAutoloader(): void

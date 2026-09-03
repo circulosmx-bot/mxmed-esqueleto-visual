@@ -14,6 +14,11 @@ final class ProductiveIdentityHttpConfiguration
         private string $databasePassword,
         private string $pepper,
         private string $allowedOrigin,
+        private string $emailProvider,
+        private string $sesRegion,
+        private string $emailFromAddress,
+        private string $emailFromName,
+        private ?string $emailReplyTo,
         private ?array $session
     ) {}
 
@@ -24,6 +29,9 @@ final class ProductiveIdentityHttpConfiguration
             'SESSION_HOST','SESSION_PORT','SESSION_PREFIX','SESSION_IDLE_TTL','SESSION_ABSOLUTE_LIFETIME','SESSION_TOUCH_INTERVAL',
             'SESSION_MAX_ACTIVE','SESSION_TLS_REQUIRED','SESSION_LOCK_ENABLED','SESSION_LOCK_TIMEOUT_SECONDS','SESSION_LOCK_WAIT_MICROSECONDS',
             'SESSION_STORE_USERNAME','SESSION_STORE_PASSWORD',
+            'MXMED_EMAIL_PROVIDER','MXMED_SES_REGION','MXMED_EMAIL_FROM_ADDRESS','MXMED_EMAIL_FROM_NAME','MXMED_EMAIL_REPLY_TO',
+            'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN','AWS_PROFILE','AWS_SHARED_CREDENTIALS_FILE',
+            'SMTP_USERNAME','SMTP_PASSWORD','MXMED_SMTP_USERNAME','MXMED_SMTP_PASSWORD','SES_SMTP_USERNAME','SES_SMTP_PASSWORD',
         ];
         $values = [];
         foreach ($names as $name) { $value = getenv($name); $values[$name] = $value === false ? '' : (string)$value; }
@@ -49,16 +57,31 @@ final class ProductiveIdentityHttpConfiguration
         $password = self::first($values, 'DB_PASSWORD', 'MXMED_DB_PASS');
         $pepper = self::first($values, 'SESSION_SIGNING_KEY', 'MXMED_IDENTITY_PEPPER');
         $origin = self::normalizeHttpsOrigin((string)($values['MXMED_IDENTITY_ORIGIN'] ?? ''));
+        $emailProvider = strtolower(trim((string)($values['MXMED_EMAIL_PROVIDER'] ?? '')));
+        $sesRegion = trim((string)($values['MXMED_SES_REGION'] ?? ''));
+        $emailFromAddress = strtolower(trim((string)($values['MXMED_EMAIL_FROM_ADDRESS'] ?? '')));
+        $emailFromName = trim((string)($values['MXMED_EMAIL_FROM_NAME'] ?? ''));
+        $emailReplyToValue = trim((string)($values['MXMED_EMAIL_REPLY_TO'] ?? ''));
+        $emailReplyTo = $emailReplyToValue === '' ? null : $emailReplyToValue;
         if (
             preg_match('/^[A-Za-z0-9.:-]+$/D', $host) !== 1
             || !ctype_digit($port) || (int)$port < 1 || (int)$port > 65535
             || preg_match('/^[A-Za-z0-9_]+$/D', $database) !== 1 || str_starts_with($database, 'mxmed_gate4d_preview_')
             || $user === '' || $password === '' || strlen($pepper) < 32
+            || $emailProvider !== 'ses' || $sesRegion !== 'us-east-1'
+            || $emailFromAddress !== 'no-reply@mexicomedico.com'
+            || self::emailDomain($emailFromAddress) !== 'mexicomedico.com'
+            || $emailFromName !== 'México Médico'
+            || ($emailReplyTo !== null && filter_var($emailReplyTo, FILTER_VALIDATE_EMAIL) === false)
+            || self::forbiddenCredentialConfigurationPresent($values)
         ) throw new \RuntimeException('identity_productive_configuration_unavailable');
 
         $session = null;
         if ((string)($values['SESSION_HOST'] ?? '') !== '') $session = self::sessionValues($environment, $values);
-        return new self($environment, $host, (int)$port, $database, $user, $password, $pepper, $origin, $session);
+        return new self(
+            $environment, $host, (int)$port, $database, $user, $password, $pepper, $origin,
+            $emailProvider, $sesRegion, $emailFromAddress, $emailFromName, $emailReplyTo, $session
+        );
     }
 
     public function environment(): string { return $this->environment; }
@@ -69,6 +92,11 @@ final class ProductiveIdentityHttpConfiguration
     public function databasePassword(): string { return $this->databasePassword; }
     public function pepper(): string { return $this->pepper; }
     public function allowedOrigin(): string { return $this->allowedOrigin; }
+    public function emailProvider(): string { return $this->emailProvider; }
+    public function sesRegion(): string { return $this->sesRegion; }
+    public function emailFromAddress(): string { return $this->emailFromAddress; }
+    public function emailFromName(): string { return $this->emailFromName; }
+    public function emailReplyTo(): ?string { return $this->emailReplyTo; }
     public function sessionConfigured(): bool { return $this->session !== null; }
     public function sessionHost(): string { return (string)$this->requiredSession('host'); }
     public function sessionPort(): int { return (int)$this->requiredSession('port'); }
@@ -132,5 +160,23 @@ final class ProductiveIdentityHttpConfiguration
         $parts = parse_url($origin);
         if (!is_array($parts) || strtolower((string)($parts['scheme'] ?? '')) !== 'https' || trim((string)($parts['host'] ?? '')) === '' || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment']) || (isset($parts['path']) && $parts['path'] !== '')) throw new \RuntimeException('identity_productive_configuration_unavailable');
         return $origin;
+    }
+
+    private static function emailDomain(string $address): string
+    {
+        $separator = strrpos($address, '@');
+        return $separator === false ? '' : substr($address, $separator + 1);
+    }
+
+    /** @param array<string,string> $values */
+    private static function forbiddenCredentialConfigurationPresent(array $values): bool
+    {
+        foreach ([
+            'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN','AWS_PROFILE','AWS_SHARED_CREDENTIALS_FILE',
+            'SMTP_USERNAME','SMTP_PASSWORD','MXMED_SMTP_USERNAME','MXMED_SMTP_PASSWORD','SES_SMTP_USERNAME','SES_SMTP_PASSWORD',
+        ] as $name) {
+            if (trim((string)($values[$name] ?? '')) !== '') return true;
+        }
+        return false;
     }
 }

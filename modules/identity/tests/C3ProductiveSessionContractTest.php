@@ -165,7 +165,9 @@ $client->available=false;$check('store_outage_grants_no_authority',$service->cre
 
 $validConfig=[
  'APP_ENV'=>'production','DB_HOST'=>'db.internal','DB_PORT'=>'3306','DB_NAME'=>'mxmed_productive','DB_USERNAME'=>'identity','DB_PASSWORD'=>'fixture-db',
- 'SESSION_SIGNING_KEY'=>str_repeat('p',32),'MXMED_IDENTITY_ORIGIN'=>'https://mxmed.example.test','SESSION_HOST'=>'valkey.internal','SESSION_PORT'=>'6379',
+ 'SESSION_SIGNING_KEY'=>str_repeat('p',32),'MXMED_IDENTITY_ORIGIN'=>'https://mxmed.example.test',
+ 'MXMED_EMAIL_PROVIDER'=>'ses','MXMED_SES_REGION'=>'us-east-1','MXMED_EMAIL_FROM_ADDRESS'=>'no-reply@mexicomedico.com','MXMED_EMAIL_FROM_NAME'=>'México Médico',
+ 'SESSION_HOST'=>'valkey.internal','SESSION_PORT'=>'6379',
  'SESSION_PREFIX'=>'mxmed:prd:session:','SESSION_IDLE_TTL'=>'3600','SESSION_ABSOLUTE_LIFETIME'=>'43200','SESSION_TOUCH_INTERVAL'=>'300','SESSION_MAX_ACTIVE'=>'5',
  'SESSION_TLS_REQUIRED'=>'true','SESSION_LOCK_ENABLED'=>'true','SESSION_LOCK_TIMEOUT_SECONDS'=>'10','SESSION_LOCK_WAIT_MICROSECONDS'=>'100000','SESSION_STORE_USERNAME'=>'mxmed_session_app','SESSION_STORE_PASSWORD'=>'fixture-store',
 ];

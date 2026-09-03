@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+$composerAutoload = __DIR__ . '/../../vendor/autoload.php';
+if (is_file($composerAutoload)) require_once $composerAutoload;
 require_once __DIR__ . '/../../modules/identity/http/IdentityHttpComposition.php';
 
 use Identity\Contracts\OneTimeTokenPurpose;
@@ -11,6 +13,8 @@ use Identity\Http\IdentityHttpComposition;
 use Identity\Http\IdentityHttpCompositionSelector;
 use Identity\Http\ProductiveIdentityHttpConfiguration;
 use Identity\Services\OneTimeTokenCodec;
+use Identity\Audit\TrustedIdentityId;
+use Identity\Audit\VerifiedAccountId;
 
 IdentityHttpComposition::registerAutoloader();
 
@@ -135,6 +139,26 @@ function identityHttpAuditLogoutAll(IdentityHttpComposition $composition, string
     } catch(\Throwable) { error_log('MXMED_SESSION_AUDIT_CONTEXT_FAILED'); }
 }
 
+function identityHttpAuditVerificationSent(IdentityHttpComposition $composition, string $accountId): void
+{
+    $producer=$composition->identityAudit();$requests=$composition->auditRequests();
+    if($producer===null||$requests===null)return;
+    try {
+        $request=$requests->newHttp([],[],[],'AUTH_EMAIL_VERIFICATION',null,'AUTH','POST','/api/identity/index.php/registration-request',null,null);
+        $producer->emailVerificationSent($request,TrustedIdentityId::fromAuthoritativeOutcome($accountId),true,'USER_REQUEST');
+    } catch(\Throwable) { error_log('MXMED_IDENTITY_AUDIT_CONTEXT_FAILED'); }
+}
+
+function identityHttpAuditEmailVerified(IdentityHttpComposition $composition, string $accountId): void
+{
+    $producer=$composition->identityAudit();$requests=$composition->auditRequests();
+    if($producer===null||$requests===null)return;
+    try {
+        $request=$requests->newHttp([],[],[],'AUTH_EMAIL_VERIFICATION',null,'AUTH','POST','/api/identity/index.php/email-verification',null,null);
+        $producer->emailVerified($request,VerifiedAccountId::fromValidatedTokenResolution($accountId),'USER_REQUEST');
+    } catch(\Throwable) { error_log('MXMED_IDENTITY_AUDIT_CONTEXT_FAILED'); }
+}
+
 try {
     $operation = identityHttpOperation();
     $appEnvironment = (string)(getenv('APP_ENV') ?: '');
@@ -196,11 +220,16 @@ try {
             if (!is_string($body['password'] ?? null) || $body['password'] === '' || (($body['password_confirmation'] ?? $body['password']) !== $body['password'])) identityHttpJson(['ok'=>false,'error'=>'INVALID_REQUEST'], 422);
             $decision = $composition->registration()->register(['email'=>$email,'password'=>$body['password'] ?? null,'terms_version'=>trim((string)($body['terms_version'] ?? 'v2')),'privacy_notice_version'=>trim((string)($body['privacy_notice_version'] ?? 'v2')),'terms_accepted'=>($body['terms_accepted'] ?? false) === true,'privacy_notice_accepted'=>($body['privacy_notice_accepted'] ?? false) === true], $clockDimensions);
             if (in_array($decision->reasonCode(), [ReasonCode::STORAGE_UNAVAILABLE,ReasonCode::NOTIFICATION_UNAVAILABLE], true)) identityHttpJson(['ok'=>false,'error'=>'TEMPORARILY_UNAVAILABLE'], 503);
+            if ($decision->accepted() && $decision->accountId() !== null && $decision->reasonCode() === ReasonCode::ALLOWED) identityHttpAuditVerificationSent($composition,$decision->accountId());
             identityHttpJson(['ok'=>true,'status'=>'pending_verification']);
 
         case 'email-verification':
-            $decision = $composition->verification()->verify(trim((string)($body['token'] ?? '')), $clockDimensions);
+            $rawToken = trim((string)($body['token'] ?? ''));
+            $tokenRow = null;
+            try { $tokenRow = $composition->tokens()->findByHashAndPurpose(OneTimeTokenCodec::hash($rawToken), OneTimeTokenPurpose::EMAIL_VERIFICATION); } catch (\Throwable) {}
+            $decision = $composition->verification()->verify($rawToken, $clockDimensions);
             if (!$decision->verified()) identityHttpJson(['ok'=>false,'error'=>'VERIFICATION_UNAVAILABLE'], 400);
+            if (is_array($tokenRow)) identityHttpAuditEmailVerified($composition,(string)$tokenRow['account_id']);
             identityHttpJson(['ok'=>true,'status'=>'verified']);
 
         case 'login':

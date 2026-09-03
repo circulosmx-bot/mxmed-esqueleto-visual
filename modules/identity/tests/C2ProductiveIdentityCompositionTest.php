@@ -73,6 +73,10 @@ $validProductiveValues = [
     'MXMED_DB_PASS' => 'fixture-password-never-used',
     'MXMED_IDENTITY_PEPPER' => str_repeat('p', 32),
     'MXMED_IDENTITY_ORIGIN' => 'https://mxmed.example.test',
+    'MXMED_EMAIL_PROVIDER' => 'ses',
+    'MXMED_SES_REGION' => 'us-east-1',
+    'MXMED_EMAIL_FROM_ADDRESS' => 'no-reply@mexicomedico.com',
+    'MXMED_EMAIL_FROM_NAME' => 'México Médico',
 ];
 $configuration = ProductiveIdentityHttpConfiguration::fromValues('production', $validProductiveValues);
 $check('productive_configuration_is_deterministic',
@@ -128,8 +132,9 @@ $check('productive_factory_has_no_preview_dependency',
     && !str_contains($productiveSource, 'PreviewValkeyClient')
     && !str_contains($productiveSource, 'InMemorySessionStoreAdapter')
 );
-$check('productive_factory_uses_rejecting_later_phase_boundaries',
-    str_contains($productiveSource, 'RejectingIdentityNotificationAdapter')
+$check('productive_factory_uses_ses_and_fail_closed_session_boundaries',
+    str_contains($productiveSource, 'SesIdentityNotificationAdapter')
+    && !str_contains($productiveSource, 'RejectingIdentityNotificationAdapter')
     && str_contains($productiveSource, 'RejectingSessionStoreAdapter')
 );
 
