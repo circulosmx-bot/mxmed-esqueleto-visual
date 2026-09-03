@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/profiles/repositories/PublicProfileRepository.php';
 require_once __DIR__ . '/../../modules/profiles/controllers/PublicProfileController.php';
+require_once __DIR__ . '/../../modules/profiles/repositories/PublicDiscoveryRepository.php';
+require_once __DIR__ . '/../../modules/profiles/controllers/PublicDiscoveryController.php';
 require_once __DIR__ . '/../../modules/profiles/repositories/PrivateProfileRepository.php';
 require_once __DIR__ . '/../../modules/profiles/controllers/PrivateProfileController.php';
 require_once __DIR__ . '/../../modules/profiles/repositories/DoctorContactPointsRepository.php';
@@ -11,6 +13,8 @@ require_once __DIR__ . '/../../modules/profiles/controllers/DoctorContactPointsC
 
 use Profiles\Repositories\PublicProfileRepository;
 use Profiles\Controllers\PublicProfileController;
+use Profiles\Repositories\PublicDiscoveryRepository;
+use Profiles\Controllers\PublicDiscoveryController;
 use Profiles\Repositories\PrivateProfileRepository;
 use Profiles\Controllers\PrivateProfileController;
 use Profiles\Repositories\DoctorContactPointsRepository;
@@ -207,6 +211,27 @@ function profileContactPointsPrivateMeta(string $authMode = 'transitional_open')
 try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = profileRelativeSegments();
+
+    if (count($segments) === 2 && $segments[0] === 'public' && $segments[1] === 'doctors') {
+        if ($method !== 'GET') {
+            profileRespond([
+                'ok' => false,
+                'error' => 'method_not_allowed',
+                'message' => 'method not allowed',
+                'data' => null,
+                'meta' => [
+                    'contract' => 'public_medico_discovery',
+                    'version' => 'PDB-02',
+                    'generated_at' => gmdate('c'),
+                ],
+            ], 405);
+            return;
+        }
+        $controller = new PublicDiscoveryController(new PublicDiscoveryRepository(mxmed_pdo()));
+        $response = $controller->index($_GET);
+        profileRespond($response, (($response['ok'] ?? false) ? 200 : 400));
+        return;
+    }
 
     if (count($segments) === 3 && $segments[0] === 'public' && $segments[1] === 'doctor') {
         if ($method !== 'GET') {

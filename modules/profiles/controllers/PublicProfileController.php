@@ -4,10 +4,12 @@ declare(strict_types=1);
 namespace Profiles\Controllers;
 
 use Profiles\Repositories\PublicProfileRepository;
+use Profiles\Services\PublicProfileEligibility;
 use Profiles\Services\PublicProfilePlanCapabilities;
 use function Agenda\Helpers\ConsultorioMap\buildConsultorioPublicMapPayload;
 
 require_once __DIR__ . '/../repositories/PublicProfileRepository.php';
+require_once __DIR__ . '/../services/PublicProfileEligibility.php';
 require_once __DIR__ . '/../services/PublicProfilePlanCapabilities.php';
 require_once __DIR__ . '/../../agenda/helpers/consultorio_map.php';
 
@@ -74,7 +76,12 @@ final class PublicProfileController
         $geoContext = $this->buildGeoContext($consultorios);
 
         $schedule = $this->buildSchedule($scheduleRows);
-        $hasMinimumPublicData = $this->hasMinimumPublicData($identity, $professional, $specialties, $consultorios);
+        $hasMinimumPublicData = PublicProfileEligibility::hasMinimumPublicData(
+            $identity,
+            $professional,
+            $specialties,
+            $consultorios
+        );
         $sourceStatus = $this->normalizeProfileStatus($profileSource['profile_status'] ?? null);
         $isPublicCandidate = (bool)($profileSource['is_public_candidate'] ?? false);
         $isPublic = $hasMinimumPublicData && $isPublicCandidate && $sourceStatus === 'active';
@@ -1712,52 +1719,6 @@ final class PublicProfileController
             ];
         }
         return $clean;
-    }
-
-    private function hasMinimumPublicData(array $identity, array $professional, array $specialties, array $consultorios): bool
-    {
-        if ($this->firstNonEmpty($identity['display_name'] ?? null) === null) {
-            return false;
-        }
-        if ($this->firstNonEmpty($professional['professional_license'] ?? null) === null) {
-            return false;
-        }
-        if (!$this->hasPrimarySpecialty($professional, $specialties)) {
-            return false;
-        }
-        return $this->hasPublicConsultorio($consultorios);
-    }
-
-    private function hasPrimarySpecialty(array $professional, array $specialties): bool
-    {
-        if ($this->firstNonEmpty($professional['specialty_primary'] ?? null) !== null) {
-            return true;
-        }
-        foreach ($specialties as $specialty) {
-            if (!is_array($specialty)) {
-                continue;
-            }
-            if ($this->firstNonEmpty($specialty['name_es'] ?? null) !== null) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private function hasPublicConsultorio(array $consultorios): bool
-    {
-        foreach ($consultorios as $consultorio) {
-            if (!is_array($consultorio)) {
-                continue;
-            }
-            $id = $this->firstNonEmpty($consultorio['consultorio_id'] ?? null);
-            $isPublic = (bool)($consultorio['is_public'] ?? false);
-            $isActive = (bool)($consultorio['is_active'] ?? false);
-            if ($id !== null && $isPublic && $isActive) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private function normalizeProfileStatus($value): string
