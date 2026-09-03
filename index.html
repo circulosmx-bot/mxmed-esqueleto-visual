@@ -847,7 +847,7 @@
                         <div class="mx-dg-card-title">Foto y logotipo profesional</div>
                         <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
                       </div>
-                      <div class="mx-dg-card-note">Imagen pública y logotipo profesional. Disponible en fase posterior; estos archivos aún no se guardan en el perfil público.</div>
+                      <div class="mx-dg-card-note">El logotipo profesional se optimiza y guarda como medio público. La fotografía de perfil estará disponible en una fase posterior.</div>
                     </div>
                     <div class="mf-upload-grid">
 
@@ -883,7 +883,7 @@
 
 
 
-                      <div class="mf-upload square" data-type="logo" aria-disabled="true" data-profile-media-disabled="true">
+                      <div class="mf-upload square" data-type="logo" data-profile-logo-upload>
 
                         <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
 
@@ -901,17 +901,22 @@
 
                         <div class="mf-actions">
 
-                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose" disabled>Subir desde tu equipo</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
 
                           <button type="button" class="btn btn-outline-secondary btn-sm mf-qr" disabled>Tomar con cámara</button>
 
                         </div>
 
-                        <input type="file" accept="image/*" class="d-none mf-input" disabled>
+                        <input id="mx-dg-logo" type="file" accept="image/jpeg,image/png,image/webp" class="d-none mf-input">
 
-                        <div class="mf-prev"><img alt="preview logo"></div>
+                        <div id="mx-dg-logo-prev" class="mf-prev" hidden>
+                          <button type="button" class="foto-x" id="mx-dg-logo-del" title="Eliminar logotipo" aria-label="Eliminar logotipo">&times;</button>
+                          <img id="mx-dg-logo-img" alt="Logotipo profesional">
+                        </div>
 
                       </div>
+
+                      <p id="mx-dg-logo-feedback" class="small text-muted mb-0" role="status" aria-live="polite"></p>
 
                     </div>
                   </div>
@@ -1892,7 +1897,7 @@
 
                           </div>
 
-                          <input id="cons-logo" type="file" accept="image/*" class="d-none mf-input">
+                          <input id="cons-logo" type="file" accept="image/jpeg,image/png,image/webp" class="d-none mf-input">
 
                         </div>
 

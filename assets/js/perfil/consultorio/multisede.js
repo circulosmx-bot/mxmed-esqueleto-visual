@@ -3307,7 +3307,77 @@ function mxClearHorarioInputs(inputs){
 
     input.addEventListener('change', ()=>{ const f = input.files?.[0]; if(f) handle(f); });
 
-    function handle(file){
+    const consultorioIndex = ()=>{
+      const idxMatch = /cons-logo(\d+)$/.exec(String(inputId || ''));
+      return idxMatch ? Math.max(1, Number(idxMatch[1] || 1)) : 1;
+    };
+    const uploadConsultorioLogo = async (file)=>{
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      if(!allowed.includes(String(file?.type || '').toLowerCase())){
+        throw new Error('Solo se permiten imágenes JPEG, PNG o WebP.');
+      }
+      if(Number(file?.size || 0) <= 0 || Number(file.size) > 2097152){
+        throw new Error('El logotipo debe pesar como máximo 2 MB.');
+      }
+      const doctorId = resolveActiveDoctorId();
+      if(!doctorId) throw new Error('No fue posible identificar al médico activo.');
+      const form = new FormData();
+      form.append('logo', file, String(file.name || 'logo'));
+      const endpoint = `/api/profiles/index.php/private/doctor/${encodeURIComponent(doctorId)}/consultorio/${encodeURIComponent(String(consultorioIndex()))}/logo`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+        body: form
+      });
+      const json = await response.json().catch(()=> null);
+      const publicUrl = String(json?.data?.media?.public_url || '').trim();
+      if(!response.ok || json?.ok !== true || !publicUrl){
+        throw new Error(String(json?.message || 'No fue posible guardar el logotipo.'));
+      }
+      return publicUrl;
+    };
+    const deleteConsultorioLogo = async ()=>{
+      const doctorId = resolveActiveDoctorId();
+      if(!doctorId) throw new Error('No fue posible identificar al médico activo.');
+      const endpoint = `/api/profiles/index.php/private/doctor/${encodeURIComponent(doctorId)}/consultorio/${encodeURIComponent(String(consultorioIndex()))}/logo`;
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || json?.ok !== true){
+        throw new Error(String(json?.message || 'No fue posible quitar el logotipo.'));
+      }
+    };
+
+    async function handle(file){
+      if(inputId.startsWith('cons-logo')){
+        try{
+          input.disabled = true;
+          const publicUrl = await uploadConsultorioLogo(file);
+          img.src = publicUrl;
+          input.setAttribute('data-upload-src', publicUrl);
+          prev.removeAttribute('hidden');
+          prev.style.display = previewTarget ? 'flex' : 'block';
+          const slot = box.closest('.logo-slot');
+          slot?.classList.add('show-preview', 'has-logo');
+          slot?.querySelector('.logo-slot-drop')?.setAttribute('hidden', 'hidden');
+          box.classList.add('has-logo');
+          mxSetLogoSource('manual');
+          mxToggleLogoManualMsg(true);
+          mxToggleLogoSyncMsg(false);
+          persistGroupLogoUrl(publicUrl);
+          box.dispatchEvent(new Event('change', { bubbles:true }));
+        }catch(error){
+          window.alert(String(error?.message || 'No fue posible guardar el logotipo.'));
+        }finally{
+          input.disabled = false;
+          input.value = '';
+        }
+        return;
+      }
       if(!file.type.startsWith('image/')) return;
       const r = new FileReader();
       r.onload = ev => {
@@ -3320,21 +3390,6 @@ function mxClearHorarioInputs(inputs){
           slot.classList.add('has-logo');
         }
         if(box.dataset.type === 'logo'){ box.classList.add('has-logo'); }
-        if(inputId.startsWith('cons-logo')){
-          try{ input.setAttribute('data-upload-src', String(ev.target.result || '')); }catch(_){ }
-          const drop = slot?.querySelector('.logo-slot-drop');
-          if(drop){ drop.setAttribute('hidden','hidden'); }
-          mxSetLogoSource('manual');
-          mxToggleLogoManualMsg(true);
-          mxToggleLogoSyncMsg(false);
-          try{
-            if(typeof window.mxPersistGroupLogoUrl === 'function'){
-              window.mxPersistGroupLogoUrl(img.src);
-            }else{
-              persistGroupLogoUrl(img.src);
-            }
-          }catch(_){ }
-        }
         if(inputId.startsWith('cons-foto')){ toggleFotoPrincipalMsg(true); }
         if(inputId.startsWith('cons-foto')){
           try{ input.setAttribute('data-upload-src', String(ev.target.result || '')); }catch(_){ }
@@ -3379,7 +3434,16 @@ function mxClearHorarioInputs(inputs){
         if(mxGetLogoSource() !== 'manual') return;
         ev.preventDefault();
         ev.stopPropagation();
-        const clearLogo = ()=>{
+        const clearLogo = async ()=>{
+          try{
+            delBtn.disabled = true;
+            await deleteConsultorioLogo();
+          }catch(error){
+            window.alert(String(error?.message || 'No fue posible quitar el logotipo.'));
+            return;
+          }finally{
+            delBtn.disabled = false;
+          }
           if(inputId === 'cons-logo' && typeof window.mxResetLogoPreview === 'function'){
             window.mxResetLogoPreview();
           }else{
@@ -3431,7 +3495,7 @@ function mxClearHorarioInputs(inputs){
   }
 
   window.mxSetupUploadBox = setupUploadBox;
-  $$('.mf-upload').forEach(setupUploadBox);
+  $$('#p-consultorio .mf-upload').forEach(setupUploadBox);
   const logoDrop = document.querySelector('#cons-logo-slot .logo-slot-drop');
   if(logoDrop){
     window._mx_logoDropTemplate = logoDrop.outerHTML;

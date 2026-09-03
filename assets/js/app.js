@@ -1165,7 +1165,13 @@ console.info('app.js loaded :: 20251123a');
     contactCreateForm: document.getElementById('mx-dg-contact-create-form'),
     contactCreateType: document.getElementById('mx-dg-contact-create-type'),
     contactCreateValue: document.getElementById('mx-dg-contact-create-value'),
-    contactCreateBtn: document.getElementById('mx-dg-contact-create-btn')
+    contactCreateBtn: document.getElementById('mx-dg-contact-create-btn'),
+    logoBox: document.querySelector('#mx-dg-media-card [data-profile-logo-upload]'),
+    logoInput: document.getElementById('mx-dg-logo'),
+    logoPreview: document.getElementById('mx-dg-logo-prev'),
+    logoImage: document.getElementById('mx-dg-logo-img'),
+    logoDelete: document.getElementById('mx-dg-logo-del'),
+    logoFeedback: document.getElementById('mx-dg-logo-feedback')
   };
 
   const legacyCredentialEls = {
@@ -1209,13 +1215,18 @@ console.info('app.js loaded :: 20251123a');
       }
       control.setAttribute('data-profile-contract', 'read-only');
     });
-    document.querySelectorAll('#mx-dg-media-card .mf-upload').forEach((box)=>{
+    document.querySelectorAll('#mx-dg-media-card [data-profile-media-disabled="true"]').forEach((box)=>{
       box.setAttribute('aria-disabled', 'true');
       box.setAttribute('data-profile-contract', 'phase-later');
+      box.querySelectorAll('button, input[type="file"]').forEach((control)=>{
+        control.disabled = true;
+      });
     });
-    document.querySelectorAll('#mx-dg-media-card button, #mx-dg-media-card input[type="file"]').forEach((control)=>{
-      control.disabled = true;
-    });
+    if(els.logoBox){
+      els.logoBox.removeAttribute('aria-disabled');
+      els.logoBox.setAttribute('data-profile-contract', 'public-logo-media-01');
+    }
+    if(els.logoInput) els.logoInput.disabled = false;
   }
 
   // Catálogo transicional de referencia UX (no canónico backend).
@@ -1269,7 +1280,8 @@ console.info('app.js loaded :: 20251123a');
     legacyNameTouched: false,
     hydratingIdentity: false,
     dirty: false,
-    autoPublicSpecialty: null
+    autoPublicSpecialty: null,
+    logoSaving: false
   };
   const PUBLIC_CONTACT_TYPES = new Set(['phone', 'whatsapp', 'email']);
   const PUBLIC_PLAN_OPTIONS = [
@@ -1975,6 +1987,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.bioShort) els.bioShort.value = bioShort || '';
     if(els.profileStatus) els.profileStatus.value = normalizeText(data.profile_status, 64) || 'hidden';
     if(els.publicCandidate) els.publicCandidate.value = data.is_public_candidate ? 'Sí' : 'No';
+    renderPhysicianLogo(normalizeText(data.logo_url, 2048));
 
     const legacyCedProf = document.getElementById('ced-prof');
     if(legacyCedProf && professionalLicense){
@@ -2024,6 +2037,125 @@ console.info('app.js loaded :: 20251123a');
     const safeDoctorId = sanitizeDoctorId(state.doctorId) || DEFAULT_DOCTOR_ID;
     els.profileLink.href = '/profiles/doctor.php?doctor_id=' + encodeURIComponent(safeDoctorId);
   }
+
+  function setLogoFeedback(message, tone = 'muted'){
+    if(!els.logoFeedback) return;
+    els.logoFeedback.textContent = String(message || '');
+    els.logoFeedback.className = `small mb-0 text-${tone}`;
+  }
+
+  function renderPhysicianLogo(url){
+    const safeUrl = String(url || '').trim();
+    if(!els.logoImage || !els.logoPreview) return;
+    if(!safeUrl){
+      els.logoImage.removeAttribute('src');
+      els.logoPreview.hidden = true;
+      return;
+    }
+    els.logoImage.src = safeUrl;
+    els.logoImage.alt = 'Logotipo profesional';
+    els.logoPreview.hidden = false;
+    els.logoPreview.style.display = 'block';
+  }
+
+  function setLogoBusy(busy){
+    state.logoSaving = !!busy;
+    if(els.logoInput) els.logoInput.disabled = state.logoSaving;
+    if(els.logoDelete) els.logoDelete.disabled = state.logoSaving;
+    els.logoBox?.querySelectorAll('.mf-choose').forEach((button)=>{ button.disabled = state.logoSaving; });
+  }
+
+  async function uploadPhysicianLogo(file){
+    if(!file || state.logoSaving) return;
+    const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    if(!allowed.has(String(file.type || '').toLowerCase())){
+      setLogoFeedback('Selecciona un archivo JPEG, PNG o WebP válido.', 'danger');
+      return;
+    }
+    if(Number(file.size || 0) > 2097152){
+      setLogoFeedback('El logotipo no debe superar 2 MiB.', 'danger');
+      return;
+    }
+    const body = new FormData();
+    body.append('logo', file, file.name || 'logo');
+    setLogoBusy(true);
+    setLogoFeedback('Optimizando y guardando logotipo...', 'muted');
+    try{
+      const response = await fetch(`${buildPrivateEndpoint(state.doctorId)}/logo`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        body
+      });
+      const json = await response.json().catch(()=> null);
+      const publicUrl = String(json?.data?.media?.public_url || '').trim();
+      if(!response.ok || json?.ok !== true || !publicUrl){
+        throw new Error(String(json?.message || 'logo_upload_failed'));
+      }
+      renderPhysicianLogo(publicUrl);
+      if(els.logoInput) els.logoInput.value = '';
+      setLogoFeedback('Logotipo optimizado y guardado.', 'success');
+    }catch(_){
+      if(els.logoInput) els.logoInput.value = '';
+      setLogoFeedback('No fue posible guardar el logotipo. Verifica formato, dimensiones y tamaño.', 'danger');
+    }finally{
+      setLogoBusy(false);
+    }
+  }
+
+  async function removePhysicianLogo(){
+    if(state.logoSaving) return;
+    setLogoBusy(true);
+    setLogoFeedback('Eliminando logotipo...', 'muted');
+    try{
+      const response = await fetch(`${buildPrivateEndpoint(state.doctorId)}/logo`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || json?.ok !== true){
+        throw new Error('logo_remove_failed');
+      }
+      renderPhysicianLogo('');
+      setLogoFeedback('Logotipo eliminado.', 'success');
+    }catch(_){
+      setLogoFeedback('No fue posible eliminar el logotipo.', 'danger');
+    }finally{
+      setLogoBusy(false);
+    }
+  }
+
+  if(els.logoBox && els.logoInput){
+    els.logoBox.querySelector('.mf-choose')?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      event.stopPropagation();
+      if(!state.logoSaving) els.logoInput.click();
+    });
+    els.logoBox.addEventListener('click', (event)=>{
+      if(event.target.closest('button, input')) return;
+      if(!state.logoSaving) els.logoInput.click();
+    });
+    ['dragenter', 'dragover'].forEach((eventName)=>{
+      els.logoBox.addEventListener(eventName, (event)=>{
+        event.preventDefault();
+        els.logoBox.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach((eventName)=>{
+      els.logoBox.addEventListener(eventName, (event)=>{
+        event.preventDefault();
+        els.logoBox.classList.remove('dragover');
+      });
+    });
+    els.logoBox.addEventListener('drop', (event)=> uploadPhysicianLogo(event.dataTransfer?.files?.[0]));
+    els.logoInput.addEventListener('change', ()=> uploadPhysicianLogo(els.logoInput.files?.[0]));
+  }
+  els.logoDelete?.addEventListener('click', (event)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    removePhysicianLogo();
+  });
 
   function buildPatchPayload(){
     const genderLabel = normalizeText(els.genderLabel?.value, 64);

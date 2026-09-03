@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../modules/profiles/repositories/PrivateProfileRepos
 require_once __DIR__ . '/../../modules/profiles/controllers/PrivateProfileController.php';
 require_once __DIR__ . '/../../modules/profiles/repositories/DoctorContactPointsRepository.php';
 require_once __DIR__ . '/../../modules/profiles/controllers/DoctorContactPointsController.php';
+require_once __DIR__ . '/../../modules/media/bootstrap.php';
 
 use Profiles\Repositories\PublicProfileRepository;
 use Profiles\Controllers\PublicProfileController;
@@ -211,6 +212,88 @@ function profileContactPointsPrivateMeta(string $authMode = 'transitional_open')
 try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = profileRelativeSegments();
+
+    if (count($segments) === 6
+        && $segments[0] === 'private'
+        && $segments[1] === 'doctor'
+        && $segments[3] === 'consultorio'
+        && $segments[5] === 'logo') {
+        $doctorId = trim((string)$segments[2]);
+        $consultorioId = trim((string)$segments[4]);
+        if (profileInvalidDoctorId($doctorId) || profileInvalidDoctorId($consultorioId)) {
+            profileRespond(['ok' => false, 'error' => 'invalid_media_owner', 'message' => 'media owner invalid', 'data' => null, 'meta' => profilePrivateMeta()], 400);
+            return;
+        }
+        if (!in_array($method, ['POST', 'DELETE'], true)) {
+            profileRespond(['ok' => false, 'error' => 'method_not_allowed', 'message' => 'method not allowed', 'data' => null, 'meta' => profilePrivateMeta()], 405);
+            return;
+        }
+        $context = profileResolvePrivateContext($doctorId);
+        if (!(bool)($context['ok'] ?? false)) {
+            profileRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+        try {
+            $service = mxmed_public_logo_media_service(mxmed_pdo());
+            if ($method === 'POST') {
+                $upload = $_FILES['logo'] ?? null;
+                if (!is_array($upload) || !is_uploaded_file((string)($upload['tmp_name'] ?? ''))) {
+                    throw new RuntimeException('logo_upload_temporary_file_invalid');
+                }
+                $asset = $service->replaceConsultorioLogo($doctorId, $consultorioId, $upload);
+                profileRespond(['ok' => true, 'error' => null, 'message' => 'consultorio logo updated', 'data' => ['media' => $asset], 'meta' => profilePrivateMeta((string)$context['auth_mode'])], 200);
+            } else {
+                $removed = $service->removeConsultorioLogo($doctorId, $consultorioId);
+                profileRespond(['ok' => true, 'error' => null, 'message' => 'consultorio logo removed', 'data' => $removed, 'meta' => profilePrivateMeta((string)$context['auth_mode'])], 200);
+            }
+        } catch (RuntimeException $e) {
+            $safe = $e->getMessage();
+            $status = str_starts_with($safe, 'logo_') ? 422 : (str_ends_with($safe, '_not_found') ? 404 : 500);
+            profileRespond(['ok' => false, 'error' => $status === 422 ? 'media_validation_error' : 'profile_media_unavailable', 'message' => $safe, 'data' => null, 'meta' => profilePrivateMeta((string)$context['auth_mode'])], $status);
+        }
+        return;
+    }
+
+    if (count($segments) === 4
+        && $segments[0] === 'private'
+        && $segments[1] === 'doctor'
+        && $segments[3] === 'logo') {
+        $doctorId = trim((string)$segments[2]);
+        if (profileInvalidDoctorId($doctorId)) {
+            profileRespond(['ok' => false, 'error' => 'invalid_doctor_id', 'message' => 'doctor_id invalid', 'data' => null, 'meta' => profilePrivateMeta()], 400);
+            return;
+        }
+        if (!in_array($method, ['POST', 'DELETE'], true)) {
+            profileRespond(['ok' => false, 'error' => 'method_not_allowed', 'message' => 'method not allowed', 'data' => null, 'meta' => profilePrivateMeta()], 405);
+            return;
+        }
+        $context = profileResolvePrivateContext($doctorId);
+        if (!(bool)($context['ok'] ?? false)) {
+            profileRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+
+        try {
+            $pdo = mxmed_pdo();
+            $service = mxmed_public_logo_media_service($pdo);
+            if ($method === 'POST') {
+                $upload = $_FILES['logo'] ?? null;
+                if (!is_array($upload) || !is_uploaded_file((string)($upload['tmp_name'] ?? ''))) {
+                    throw new RuntimeException('logo_upload_temporary_file_invalid');
+                }
+                $asset = $service->replacePhysicianLogo($doctorId, $upload);
+                profileRespond(['ok' => true, 'error' => null, 'message' => 'physician logo updated', 'data' => ['media' => $asset], 'meta' => profilePrivateMeta((string)$context['auth_mode'])], 200);
+            } else {
+                $removed = $service->removePhysicianLogo($doctorId);
+                profileRespond(['ok' => true, 'error' => null, 'message' => 'physician logo removed', 'data' => $removed, 'meta' => profilePrivateMeta((string)$context['auth_mode'])], 200);
+            }
+        } catch (RuntimeException $e) {
+            $safe = $e->getMessage();
+            $status = str_starts_with($safe, 'logo_') ? 422 : (str_ends_with($safe, '_not_found') ? 404 : 500);
+            profileRespond(['ok' => false, 'error' => $status === 422 ? 'media_validation_error' : 'profile_media_unavailable', 'message' => $safe, 'data' => null, 'meta' => profilePrivateMeta((string)$context['auth_mode'])], $status);
+        }
+        return;
+    }
 
     if (count($segments) === 2 && $segments[0] === 'public' && $segments[1] === 'doctors') {
         if ($method !== 'GET') {
