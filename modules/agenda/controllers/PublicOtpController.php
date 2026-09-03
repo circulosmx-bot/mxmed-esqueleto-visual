@@ -1,7 +1,8 @@
 <?php
 namespace Agenda\Controllers;
 
-use Agenda\Adapters\CanonicalPublicAgendaAdapter;
+use Agenda\Composition\PublicAgendaOtpComposition;
+use Agenda\Contracts\OtpProviderPort;
 use Agenda\Helpers\DoctorIdentity as DoctorIdentity;
 use Agenda\Repositories\PublicOtpRepository;
 use DateTimeImmutable;
@@ -9,7 +10,8 @@ use DateTimeZone;
 use PDOException;
 use RuntimeException;
 
-require_once __DIR__ . '/../adapters/CanonicalPublicAgendaAdapter.php';
+require_once __DIR__ . '/../composition/PublicAgendaOtpComposition.php';
+require_once __DIR__ . '/../contracts/OtpProviderPort.php';
 require_once __DIR__ . '/../repositories/PublicOtpRepository.php';
 require_once __DIR__ . '/../helpers/doctor_identity.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
@@ -19,25 +21,34 @@ class PublicOtpController
     private const TIMEZONE = 'America/Mexico_City';
     private const EXPIRES_IN_SECONDS = 600;
     private const MAX_ATTEMPTS = 5;
+    private const REQUEST_RATE_LIMIT_SECONDS = 60;
 
     private ?PublicOtpRepository $repository = null;
     private ?string $dbError = null;
     private ?\PDO $pdo = null;
+    private ?OtpProviderPort $deliveryProvider = null;
+    private $clock;
 
-    public function __construct()
+    public function __construct(?\PDO $pdo = null, ?OtpProviderPort $deliveryProvider = null, ?callable $clock = null)
     {
-        $config = require __DIR__ . '/../config/agenda.php';
-        $canonicalPublicAgendaAdapterClass = CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled($config)
-            ? CanonicalPublicAgendaAdapter::class
-            : null;
+        $this->clock = $clock;
         try {
-            $pdo = mxmed_pdo();
+            $pdo ??= mxmed_pdo();
             $this->pdo = $pdo;
             $this->repository = new PublicOtpRepository($pdo);
         } catch (RuntimeException $e) {
             $this->dbError = 'database error';
         } catch (\Throwable $e) {
             $this->dbError = 'database error';
+        }
+        if ($deliveryProvider !== null) {
+            $this->deliveryProvider = $deliveryProvider;
+        } else {
+            try {
+                $this->deliveryProvider = PublicAgendaOtpComposition::productive();
+            } catch (\Throwable) {
+                $this->deliveryProvider = null;
+            }
         }
     }
 
@@ -47,26 +58,10 @@ class PublicOtpController
             return $this->error('db_error', 'database error', ['route' => 'public_otp_request']);
         }
 
-        $doctorIdRaw = trim((string)($body['doctor_id'] ?? ''));
-        $contactType = strtolower(trim((string)($body['contact_type'] ?? '')));
-        $contactValue = trim((string)($body['contact_value'] ?? ''));
+        $appointmentId = trim((string)($body['appointment_id'] ?? ''));
 
         $errors = [];
-        if ($doctorIdRaw === '') {
-            $errors['doctor_id'] = 'required';
-        }
-
-        if (!in_array($contactType, ['sms', 'email'], true)) {
-            $errors['contact_type'] = 'must_be_sms_or_email';
-        }
-
-        if ($contactValue === '') {
-            $errors['contact_value'] = 'required';
-        } elseif ($contactType === 'email' && !$this->isValidEmail($contactValue)) {
-            $errors['contact_value'] = 'invalid_email';
-        } elseif ($contactType === 'sms' && !$this->isValidSms($contactValue)) {
-            $errors['contact_value'] = 'invalid_sms';
-        }
+        if ($appointmentId === '' || strlen($appointmentId) > 64) $errors['appointment_id'] = 'required';
 
         if (!empty($errors)) {
             return $this->error('invalid_params', 'invalid payload', [
@@ -74,18 +69,56 @@ class PublicOtpController
                 'fields' => $errors,
             ]);
         }
+        if ($this->deliveryProvider === null || !$this->deliveryProvider->configured()) {
+            return $this->error('otp_delivery_unavailable', 'No fue posible enviar el código.', [
+                'route' => 'public_otp_request',
+            ]);
+        }
+
+        try {
+            $booking = $this->repository->findBookingState($appointmentId);
+        } catch (\Throwable) {
+            return $this->error('otp_delivery_unavailable', 'No fue posible enviar el código.', [
+                'route' => 'public_otp_request',
+            ]);
+        }
+        if (!is_array($booking) || (string)($booking['status'] ?? '') !== 'pending_otp') {
+            return $this->error('booking_not_eligible', 'La reserva no está disponible para verificación.', [
+                'route' => 'public_otp_request',
+            ]);
+        }
+        $bookingExpiry = $this->parseDateTime((string)($booking['expires_at'] ?? ''));
+        if ($bookingExpiry === null || $bookingExpiry < $this->now()) {
+            return $this->error('booking_not_eligible', 'La reserva no está disponible para verificación.', [
+                'route' => 'public_otp_request',
+            ]);
+        }
+        $recipient = $this->resolveBookingEmail($booking);
+        if ($recipient === null) {
+            return $this->error('booking_email_unavailable', 'No existe un correo válido para esta reserva.', [
+                'route' => 'public_otp_request',
+            ]);
+        }
+        $lastRequestAt = $this->parseDateTime((string)($booking['otp_created_at'] ?? ''));
+        if ($lastRequestAt !== null && $lastRequestAt > $this->now()->modify('-' . self::REQUEST_RATE_LIMIT_SECONDS . ' seconds')) {
+            return $this->error('rate_limited', 'Espera antes de solicitar otro código.', [
+                'route' => 'public_otp_request',
+                'retry_after' => self::REQUEST_RATE_LIMIT_SECONDS,
+            ]);
+        }
+
+        $doctorIdRaw = trim((string)($booking['doctor_id'] ?? ''));
         $doctorIdCanonical = $doctorIdRaw;
         if ($this->pdo) {
             try {
                 $doctorIdCanonical = DoctorIdentity\resolveCanonicalDoctorId($this->pdo, $doctorIdRaw);
-            } catch (\Throwable $e) {
+            } catch (\Throwable) {
                 $doctorIdCanonical = $doctorIdRaw;
             }
         }
         if ($doctorIdCanonical === '') {
-            return $this->error('invalid_params', 'invalid payload', [
+            return $this->error('booking_not_eligible', 'La reserva no está disponible para verificación.', [
                 'route' => 'public_otp_request',
-                'fields' => ['doctor_id' => 'required'],
             ]);
         }
 
@@ -97,21 +130,32 @@ class PublicOtpController
 
         $now = $this->now();
         $expiresAt = $now->modify('+10 minutes');
+        $previousOtpId = isset($booking['otp_id']) ? (int)$booking['otp_id'] : null;
 
         try {
             $otpId = $this->repository->createOtp(
                 $doctorIdCanonical,
-                $contactType,
-                $contactValue,
+                'email',
+                $recipient,
                 $codeHash,
-                $expiresAt->format('Y-m-d H:i:s')
+                $expiresAt->format('Y-m-d H:i:s'),
+                $now->format('Y-m-d H:i:s')
             );
+            if (!$this->repository->bindOtpToPendingBooking(
+                $appointmentId,
+                (int)$otpId,
+                $previousOtpId,
+                $now->format('Y-m-d H:i:s')
+            )) {
+                $this->repository->discardFailedDelivery($appointmentId, (int)$otpId);
+                return $this->error('booking_not_eligible', 'La reserva no está disponible para verificación.', [
+                    'route' => 'public_otp_request',
+                ]);
+            }
         } catch (RuntimeException $e) {
             if ($e->getMessage() === 'doctor_id_legacy_alias_required') {
-                return $this->error('invalid_params', 'doctor_id has no legacy alias mapping for otp storage', [
+                return $this->error('booking_not_eligible', 'La reserva no está disponible para verificación.', [
                     'route' => 'public_otp_request',
-                    'fields' => ['doctor_id' => 'legacy_alias_required'],
-                    'doctor_id' => $doctorIdCanonical,
                 ]);
             }
             return $this->error('db_error', 'database error', ['route' => 'public_otp_request']);
@@ -121,14 +165,34 @@ class PublicOtpController
             return $this->error('db_error', 'database error', ['route' => 'public_otp_request']);
         }
 
+        try {
+            $delivery = $this->deliveryProvider->deliver('email', $recipient, $code, [
+                'purpose' => 'public_appointment_confirmation',
+            ]);
+        } catch (\Throwable) {
+            $delivery = null;
+        }
+        unset($code);
+        if ($delivery === null || !$delivery->accepted()) {
+            try {
+                $this->repository->discardFailedDelivery($appointmentId, (int)$otpId, $previousOtpId);
+            } catch (\Throwable) {
+                // The challenge remains unverified and the booking remains pending.
+            }
+            return $this->error('otp_delivery_unavailable', 'No fue posible enviar el código.', [
+                'route' => 'public_otp_request',
+            ]);
+        }
+
         $meta = [
             'route' => 'public_otp_request',
-            'doctor_id' => $doctorIdCanonical,
         ];
 
         return $this->success([
             'otp_id' => $otpId,
             'expires_in' => self::EXPIRES_IN_SECONDS,
+            'delivery_channel' => 'email',
+            'destination_hint' => $this->maskEmail($recipient),
         ], $meta);
     }
 
@@ -252,22 +316,23 @@ class PublicOtpController
         return $value !== '' && ctype_digit($value);
     }
 
-    private function isValidEmail(string $value): bool
+    private function resolveBookingEmail(array $booking): ?string
     {
-        if (strpos($value, '@') === false) {
-            return false;
-        }
-        return filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
+        $payload = json_decode((string)($booking['payload_json'] ?? ''), true);
+        if (!is_array($payload)) return null;
+        $bookerIsPatient = ($payload['booker_is_patient'] ?? null) === true;
+        $email = $bookerIsPatient
+            ? (string)($payload['patient']['email'] ?? '')
+            : (string)($payload['booker']['email'] ?? '');
+        $email = strtolower(trim($email));
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : null;
     }
 
-    private function isValidSms(string $value): bool
+    private function maskEmail(string $email): string
     {
-        if (!preg_match('/^[0-9+\-\s]+$/', $value)) {
-            return false;
-        }
-
-        $digits = preg_replace('/\D+/', '', $value);
-        return is_string($digits) && strlen($digits) >= 8 && strlen($digits) <= 20;
+        [$local, $domain] = array_pad(explode('@', $email, 2), 2, '');
+        $first = function_exists('mb_substr') ? mb_substr($local, 0, 1, 'UTF-8') : substr($local, 0, 1);
+        return $first . '***@' . $domain;
     }
 
     private function generateCode(): string
@@ -277,6 +342,10 @@ class PublicOtpController
 
     private function now(): DateTimeImmutable
     {
+        if (is_callable($this->clock)) {
+            $value = ($this->clock)();
+            if ($value instanceof DateTimeImmutable) return $value;
+        }
         return new DateTimeImmutable('now', new DateTimeZone(self::TIMEZONE));
     }
 

@@ -2,6 +2,7 @@
 namespace Agenda\Controllers;
 
 use Agenda\Adapters\CanonicalPublicAgendaAdapter;
+use Agenda\Contracts\OtpProviderPort;
 use Agenda\Helpers\DoctorIdentity as DoctorIdentity;
 use Agenda\Repositories\ConsultoriosRepository;
 use Agenda\Repositories\PublicOtpRepository;
@@ -35,15 +36,17 @@ class PublicAppointmentsController
     private ?PDO $pdo = null;
     private ?string $dbError = null;
     private OtpSender $otpSender;
+    private ?OtpProviderPort $publicOtpProvider = null;
+    private $clock;
 
-    public function __construct(?OtpSender $otpSender = null)
+    public function __construct(?OtpSender $otpSender = null, ?PDO $pdo = null, ?OtpProviderPort $publicOtpProvider = null, ?callable $clock = null)
     {
         $config = require __DIR__ . '/../config/agenda.php';
         $canonicalPublicAgendaAdapterClass = CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled($config)
             ? CanonicalPublicAgendaAdapter::class
             : null;
         try {
-            $this->pdo = mxmed_pdo();
+            $this->pdo = $pdo ?? mxmed_pdo();
         } catch (RuntimeException $e) {
             $this->dbError = 'database error';
         } catch (\Throwable $e) {
@@ -51,6 +54,8 @@ class PublicAppointmentsController
         }
 
         $this->otpSender = $otpSender ?: new DevOtpSender();
+        $this->publicOtpProvider = $publicOtpProvider;
+        $this->clock = $clock;
     }
 
     public function request(array $payload = []): array
@@ -448,7 +453,14 @@ class PublicAppointmentsController
             ]);
         }
 
-        $otpController = new PublicOtpController();
+        if ((int)($flow['otp_id'] ?? 0) !== (int)$otpId) {
+            return $this->error('otp_mismatch', 'otp does not match appointment', [
+                'route' => 'public_confirm',
+                'appointment_id' => $appointmentId,
+            ]);
+        }
+
+        $otpController = new PublicOtpController($this->pdo, $this->publicOtpProvider);
         $otpVerify = $otpController->verify([
             'otp_id' => (string)$otpId,
             'code' => $code,
@@ -1691,6 +1703,11 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
         if (!$this->pdo) {
             return false;
         }
+        if ((string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = :table");
+            $stmt->execute(['table' => $table]);
+            return (int)$stmt->fetchColumn() > 0;
+        }
         $stmt = $this->pdo->prepare(
             'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table'
         );
@@ -1957,6 +1974,10 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
 
     private function now(): DateTimeImmutable
     {
+        if (is_callable($this->clock)) {
+            $value = ($this->clock)();
+            if ($value instanceof DateTimeImmutable) return $value;
+        }
         return new DateTimeImmutable('now', new DateTimeZone(self::TIMEZONE));
     }
 

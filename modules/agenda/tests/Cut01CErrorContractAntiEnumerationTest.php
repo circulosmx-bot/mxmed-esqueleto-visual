@@ -38,12 +38,13 @@ foreach ($forbiddenKeys as $key) {
     cut01cErrorAssert(!array_key_exists($key, $first['meta']) && !array_key_exists($key, $first), 'forbidden public key absent: ' . $key);
 }
 
-foreach (['PublicOtpController.php', 'PublicAppointmentsController.php'] as $file) {
-    $source = file_get_contents($root . '/modules/agenda/controllers/' . $file);
-    cut01cErrorAssert(str_contains($source, 'CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled'), 'adapter flag dormant: ' . $file);
-    cut01cErrorAssert(!str_contains($source, 'new CanonicalPublicAgendaAdapter'), 'adapter not instantiated: ' . $file);
-    cut01cErrorAssert(!str_contains($source, '->homogeneousError(') && !str_contains($source, '->readiness('), 'adapter not executed: ' . $file);
-}
+$appointmentsSource = file_get_contents($root . '/modules/agenda/controllers/PublicAppointmentsController.php');
+cut01cErrorAssert(str_contains($appointmentsSource, 'CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled'), 'alternate adapter flag remains dormant');
+cut01cErrorAssert(!str_contains($appointmentsSource, 'new CanonicalPublicAgendaAdapter'), 'alternate adapter not instantiated');
+cut01cErrorAssert(!str_contains($appointmentsSource, '->homogeneousError(') && !str_contains($appointmentsSource, '->readiness('), 'alternate adapter not executed');
+$primaryOtpSource = file_get_contents($root . '/modules/agenda/controllers/PublicOtpController.php');
+cut01cErrorAssert(str_contains($primaryOtpSource, 'PublicAgendaOtpComposition'), 'primary OTP delivery uses productive composition');
+cut01cErrorAssert(!str_contains($primaryOtpSource, 'DevOtpSender'), 'primary OTP delivery has no development fallback');
 cut01cErrorAssert(hash_file('sha256', $root . '/api/agenda/index.php') === '7b8eecc5b8eb1ee677394702a70b5e9c126898f1b0e4840f3110b5b1f3a884bd', 'Agenda routes unchanged');
 cut01cErrorAssert(hash_file('sha256', $root . '/api/patients/index.php') === '4283afd8b138cd1abadcb7ff4024b6e501504f4de3b07a6cc7ecff300d130337', 'Patients routes unchanged');
 

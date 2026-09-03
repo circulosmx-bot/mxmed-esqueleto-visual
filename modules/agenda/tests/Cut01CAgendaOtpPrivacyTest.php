@@ -123,15 +123,18 @@ $sender = file_get_contents($root . '/modules/agenda/services/OtpSender.php');
 cut01cOtpAssert(str_contains($sender, 'delivery_mode=dev_compatibility') && str_contains($sender, 'secret_logged=false'), 'dev sender logs non-sensitive state only');
 cut01cOtpAssert(!str_contains($sender, 'maskRecipient') && !str_contains($sender, 'request_id=%s') && !str_contains($sender, 'doctor_id=%s'), 'dev sender excludes recipient and identifiers');
 
-foreach (['PublicOtpController.php', 'PublicAppointmentsController.php'] as $file) {
-    $source = file_get_contents($root . '/modules/agenda/controllers/' . $file);
-    cut01cOtpAssert(str_contains($source, 'CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled'), 'controller evaluates flag');
-    cut01cOtpAssert(str_contains($source, 'CanonicalPublicAgendaAdapter::class'), 'controller retains class reference');
-    cut01cOtpAssert(!str_contains($source, 'new CanonicalPublicAgendaAdapter'), 'controller does not instantiate adapter');
-    cut01cOtpAssert(!str_contains($source, '->readiness(') && !str_contains($source, '->homogeneousError('), 'controller does not execute adapter');
-}
+$appointmentsSource = file_get_contents($root . '/modules/agenda/controllers/PublicAppointmentsController.php');
+cut01cOtpAssert(str_contains($appointmentsSource, 'CanonicalPublicAgendaAdapter::canonicalPublicAgendaEnabled'), 'alternate controller evaluates dormant flag');
+cut01cOtpAssert(str_contains($appointmentsSource, 'CanonicalPublicAgendaAdapter::class'), 'alternate controller retains class reference');
+cut01cOtpAssert(!str_contains($appointmentsSource, 'new CanonicalPublicAgendaAdapter'), 'alternate controller does not instantiate adapter');
+cut01cOtpAssert(!str_contains($appointmentsSource, '->readiness(') && !str_contains($appointmentsSource, '->homogeneousError('), 'alternate controller does not execute adapter');
+$primaryOtpSource = file_get_contents($root . '/modules/agenda/controllers/PublicOtpController.php');
+cut01cOtpAssert(str_contains($primaryOtpSource, 'OtpProviderPort') && str_contains($primaryOtpSource, 'PublicAgendaOtpComposition'), 'primary OTP path uses productive provider port');
+cut01cOtpAssert(!str_contains($primaryOtpSource, 'DevOtpSender'), 'primary OTP path has no development fallback');
 $adapterSource = file_get_contents($root . '/modules/agenda/adapters/CanonicalPublicAgendaAdapter.php');
 cut01cOtpAssert(!str_contains($adapterSource, 'PublicOtpRepository'), 'canonical adapter has no legacy repository dependency');
-cut01cOtpAssert(hash_file('sha256', $root . '/modules/agenda/repositories/PublicOtpRepository.php') === 'f1e18f70ffb41a349efba420ba02ed12c879b5a9679119e6382ce8f13746e1cb', 'legacy OTP repository unchanged');
+$repositorySource = file_get_contents($root . '/modules/agenda/repositories/PublicOtpRepository.php');
+cut01cOtpAssert(is_string($repositorySource) && !preg_match('/SELECT\s+\*/i', $repositorySource), 'OTP repository uses explicit projections');
+cut01cOtpAssert(!str_contains($repositorySource, 'debug_code') && !str_contains($repositorySource, 'otp_last4'), 'OTP repository persists no plaintext-derived fallback');
 
 echo "Cut01CAgendaOtpPrivacyTest PASS\n";

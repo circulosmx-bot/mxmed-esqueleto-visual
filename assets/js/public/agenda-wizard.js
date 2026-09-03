@@ -366,13 +366,6 @@
     return payload;
   }
 
-  function getOtpContactValue() {
-    if (!isBookerPatient()) {
-      return String(elements.bookerPhone.value || '').trim();
-    }
-    return String(elements.patientPhone.value || '').trim();
-  }
-
   async function reserveAndRequestOtp() {
     if (!state.slot) {
       showAlert('Primero elige un horario.', 'warning');
@@ -413,9 +406,7 @@
       }
 
       var otpRequest = await postJson('/api/agenda/index.php/public/otp/request', {
-        doctor_id: doctorId,
-        contact_type: 'sms',
-        contact_value: getOtpContactValue()
+        appointment_id: state.appointmentId
       });
 
       if (!otpRequest.ok) {
@@ -428,12 +419,15 @@
       }
 
       elements.otpSummaryAppointment.textContent = state.appointmentId;
-      showAlert('OTP enviado. Ingresa el codigo para confirmar.', 'success');
+      var destinationHint = otpRequest.payload.data && otpRequest.payload.data.destination_hint
+        ? ' (' + otpRequest.payload.data.destination_hint + ')'
+        : '';
+      showAlert('Enviamos un código de 6 dígitos a tu correo' + destinationHint + '. Captúralo para confirmar la cita.', 'success');
     } catch (err) {
       showAlert(err && err.message ? err.message : 'Error de red', 'error');
     } finally {
       elements.sendOtpBtn.disabled = false;
-      elements.sendOtpBtn.textContent = 'Reservar y enviar OTP';
+      elements.sendOtpBtn.textContent = 'Reservar y enviar código';
     }
   }
 
