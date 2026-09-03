@@ -40,6 +40,7 @@ import {
 } from '../utils/security-naming';
 import { registerMxMedSecurityValidation } from '../utils/security-validation';
 import { edgeUsesPublicMedia } from '../config/edge-config';
+import { MXMED_SES_DOMAIN_IDENTITY, MXMED_SES_REGION } from '../config/email-config';
 
 function cloudTrailRetention(days: number): RetentionDays {
   return days === 90 ? RetentionDays.THREE_MONTHS : RetentionDays.ONE_YEAR;
@@ -79,6 +80,7 @@ export class MxMedSecurityStack extends BaseMxMedStack {
     });
 
     const { config } = props;
+    const isC3Ephemeral = props.c3AuditBucketName !== undefined;
     this.applicationDataKey = this.createKey(
       'ApplicationDataKey',
       mxmedSecurityKeyAlias(config.environmentCode, 'application-data'),
@@ -159,7 +161,7 @@ export class MxMedSecurityStack extends BaseMxMedStack {
     this.stripeWebhookSecretReference = stripeWebhook.secret;
     this.aiApiKeyReference = aiApiKey.secret;
 
-    this.workloadBoundary = this.createWorkloadBoundary(config);
+    this.workloadBoundary = this.createWorkloadBoundary(config, isC3Ephemeral);
     this.deploymentBoundary = this.createDeploymentBoundary(config);
     this.workloadRoleFactory = new MxMedSecurityRoleFactory(
       config.environmentName,
@@ -176,8 +178,23 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       this,
       'ApplicationTaskRole',
       'application',
-      'MXMed application task role; resource-owner grants are intentionally deferred.',
+      'MXMed application task role with exact transactional email authority.',
     );
+    const sesIdentityArn = this.formatArn({
+      service: 'ses',
+      region: MXMED_SES_REGION,
+      resource: 'identity',
+      resourceName: MXMED_SES_DOMAIN_IDENTITY,
+    });
+    if (!isC3Ephemeral) {
+      this.applicationTaskRole.addToPolicy(
+        new PolicyStatement({
+          sid: 'AllowTransactionalEmailSending',
+          actions: ['ses:SendEmail'],
+          resources: [sesIdentityArn],
+        }),
+      );
+    }
     this.migrationTaskRole = this.workloadRoleFactory.createWorkloadRole(
       this,
       'MigrationTaskRole',
@@ -218,7 +235,6 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
     Tags.of(this.cloudTrailLogGroup).add('DataClassification', 'internal', { priority: 200 });
-    const isC3Ephemeral = this.node.root.node.tryGetContext('activity') === 'c3-ephemeral';
     const cloudTrailLogsRole = isC3Ephemeral
       ? new Role(this, 'CloudTrailLogsRole', {
           roleName: mxmedName(config.environmentCode, 'cloudtrail-logs-role', 64),
@@ -390,7 +406,10 @@ export class MxMedSecurityStack extends BaseMxMedStack {
     );
   }
 
-  private createWorkloadBoundary(config: MxMedEnvironmentConfig): ManagedPolicy {
+  private createWorkloadBoundary(
+    config: MxMedEnvironmentConfig,
+    isC3Ephemeral: boolean,
+  ): ManagedPolicy {
     const environmentSecretArn = this.formatArn({
       service: 'secretsmanager',
       resource: 'secret',
@@ -421,13 +440,12 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       account: '',
       resource: `mxmed-${config.environmentCode}-*`,
     });
-    const identityArn = this.formatArn({
+    const sesIdentityArn = this.formatArn({
       service: 'ses',
-      region: config.emailRegion,
+      region: MXMED_SES_REGION,
       resource: 'identity',
-      resourceName: '*',
+      resourceName: MXMED_SES_DOMAIN_IDENTITY,
     });
-
     return new ManagedPolicy(this, 'WorkloadBoundary', {
       managedPolicyName: mxmedBoundaryName(config.environmentCode, 'workload'),
       description: 'Maximum data-plane permissions for MXMed workload roles.',
@@ -472,8 +490,17 @@ export class MxMedSecurityStack extends BaseMxMedStack {
         }),
         new PolicyStatement({
           sid: 'AllowContractedEmailSending',
-          actions: ['ses:SendEmail', 'ses:SendRawEmail'],
-          resources: [identityArn],
+          actions: isC3Ephemeral ? ['ses:SendEmail', 'ses:SendRawEmail'] : ['ses:SendEmail'],
+          resources: isC3Ephemeral
+            ? [
+                this.formatArn({
+                  service: 'ses',
+                  region: config.emailRegion,
+                  resource: 'identity',
+                  resourceName: '*',
+                }),
+              ]
+            : [sesIdentityArn],
         }),
         new PolicyStatement({
           sid: 'AllowNamespacedMetrics',

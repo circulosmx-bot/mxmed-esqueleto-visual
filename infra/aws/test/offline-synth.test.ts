@@ -84,6 +84,9 @@ describe.each([
           expect(
             resources.filter((resource) => resource.Type === 'AWS::SecretsManager::Secret'),
           ).toHaveLength(1);
+        } else if (stackName === `mxmed-${config.environmentCode}-email`) {
+          expect(resources).toHaveLength(1);
+          expect(resources[0]?.Type).toBe('AWS::SES::EmailIdentity');
         } else {
           expect(resources).toHaveLength(0);
         }

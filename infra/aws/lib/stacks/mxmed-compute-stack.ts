@@ -43,6 +43,13 @@ import type { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { IApplicationTargetGroup } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import type { Construct } from 'constructs';
 
+import {
+  MXMED_EMAIL_FROM_ADDRESS,
+  MXMED_EMAIL_FROM_NAME,
+  MXMED_EMAIL_PROVIDER,
+  MXMED_SES_REGION,
+} from '../config/email-config';
+
 import { ComputeFoundationAspect } from '../aspects/compute-foundation-aspect';
 import {
   capabilityIncludesAi,
@@ -635,6 +642,10 @@ export class MxMedComputeStack extends BaseMxMedStack {
       SESSION_LOCK_TIMEOUT_SECONDS: String(props.sessionLockTimeoutSeconds),
       SESSION_LOCK_WAIT_MICROSECONDS: String(props.sessionLockWaitMicroseconds),
       MXMED_IDENTITY_ORIGIN: this.identityAllowedOriginParameter?.valueAsString ?? '',
+      MXMED_EMAIL_PROVIDER,
+      MXMED_SES_REGION,
+      MXMED_EMAIL_FROM_ADDRESS,
+      MXMED_EMAIL_FROM_NAME,
       PUBLIC_MEDIA_BUCKET: props.publicMediaBucket.bucketName,
       UPLOAD_QUARANTINE_BUCKET: props.uploadQuarantineBucket.bucketName,
       UPLOAD_URL_TTL: String(props.uploadUrlTtlSeconds),

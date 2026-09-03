@@ -553,6 +553,10 @@ describe('task, service and data security contracts', () => {
     );
     expect(environment).toMatchObject({
       APP_ENV: 'production',
+      MXMED_EMAIL_PROVIDER: 'ses',
+      MXMED_SES_REGION: 'us-east-1',
+      MXMED_EMAIL_FROM_ADDRESS: 'no-reply@mexicomedico.com',
+      MXMED_EMAIL_FROM_NAME: 'México Médico',
       SESSION_PORT: '6379',
       SESSION_IDLE_TTL: '3600',
       SESSION_ABSOLUTE_LIFETIME: '43200',
@@ -564,6 +568,16 @@ describe('task, service and data security contracts', () => {
       SESSION_LOCK_WAIT_MICROSECONDS: '100000',
     });
     expect(JSON.stringify(environment.MXMED_IDENTITY_ORIGIN)).toContain('IdentityAllowedOrigin');
+    expect(environment).not.toHaveProperty('MXMED_EMAIL_REPLY_TO');
+    expect(Object.keys(environment)).not.toEqual(
+      expect.arrayContaining([
+        'AWS_ACCESS_KEY_ID',
+        'AWS_SECRET_ACCESS_KEY',
+        'AWS_SESSION_TOKEN',
+        'SMTP_USERNAME',
+        'SMTP_PASSWORD',
+      ]),
+    );
     expect(names(app.Secrets)).toEqual(
       expect.arrayContaining([
         'SESSION_SIGNING_KEY',

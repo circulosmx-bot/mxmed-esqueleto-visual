@@ -79,6 +79,21 @@ function expectOidcValidationFailure(
 }
 
 describe('permission boundaries', () => {
+  test('EOTP-03 grants only SendEmail on the exact SES domain identity', () => {
+    const statement = policyStatements(boundary('WorkloadBoundary')).find(
+      (candidate) => candidate.Sid === 'AllowContractedEmailSending',
+    );
+    expect(statement).toMatchObject({
+      Effect: 'Allow',
+      Action: 'ses:SendEmail',
+    });
+    expect(JSON.stringify(statement?.Resource)).toContain('AWS::AccountId');
+    expect(JSON.stringify(statement?.Resource)).toContain(':ses:us-east-1:');
+    expect(JSON.stringify(statement?.Resource)).toContain('identity/mexicomedico.com');
+    expect(JSON.stringify(statement)).not.toContain('ses:SendRawEmail');
+    expect(JSON.stringify(statement)).not.toMatch(/ses:(Create|Get|Delete)EmailIdentity/);
+  });
+
   test('SEC-IMP-039 creates the workload boundary', () => {
     expect(properties(boundary('WorkloadBoundary')).ManagedPolicyName).toBe(
       'mxmed-stg-workload-boundary',
@@ -206,9 +221,21 @@ describe('workload and deferred human roles', () => {
     expect(template).not.toMatch(/EcsExecutionRoleDefaultPolicy/);
   });
 
-  test('SEC-IMP-055 gives application no premature broad policy', () => {
-    const template = JSON.stringify(renderSecurity(STAGING_CONFIG).template);
-    expect(template).not.toMatch(/ApplicationTaskRoleDefaultPolicy/);
+  test('SEC-IMP-055 gives application only the exact transactional email policy', () => {
+    const policies = resourcesOfType(renderSecurity(STAGING_CONFIG).resources, 'AWS::IAM::Policy');
+    const applicationPolicy = policies.find(([id]) =>
+      id.startsWith('ApplicationTaskRoleDefaultPolicy'),
+    );
+    expect(applicationPolicy).toBeDefined();
+    if (applicationPolicy === undefined) throw new Error('application policy missing');
+    const statements = policyStatements(applicationPolicy[1]);
+    expect(statements).toHaveLength(1);
+    expect(statements[0]).toMatchObject({
+      Sid: 'AllowTransactionalEmailSending',
+      Action: 'ses:SendEmail',
+    });
+    expect(JSON.stringify(statements[0]?.Resource)).toContain('identity/mexicomedico.com');
+    expect(JSON.stringify(statements)).not.toContain('ses:SendRawEmail');
   });
 
   test('SEC-IMP-056 gives migration no premature database permission', () => {

@@ -125,6 +125,11 @@ describe.each([
         expect(environment.sessionStack.defaultDisabledUser).toBeDefined();
         expect(environment.sessionStack.userGroup).toBeDefined();
         expect(environment.sessionStack.authSecret).toBeDefined();
+      } else if (stack === email.emailStack) {
+        expect(Object.keys(resources)).toHaveLength(1);
+        expect(Object.values(resources)).toEqual(
+          expect.arrayContaining([expect.objectContaining({ Type: 'AWS::SES::EmailIdentity' })]),
+        );
       } else {
         expect(Object.keys(resources)).toHaveLength(0);
       }
