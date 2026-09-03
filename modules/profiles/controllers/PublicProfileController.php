@@ -185,7 +185,7 @@ final class PublicProfileController
                 'gender_label' => $this->firstNonEmpty($identity['gender_label'] ?? null),
                 'photo_url' => $this->firstNonEmpty($identity['photo_url'] ?? null),
                 'avatar_url' => $this->firstNonEmpty($identity['avatar_url'] ?? null),
-                'logo_url' => $this->firstNonEmpty($identity['logo_url'] ?? null),
+                'logo_url' => $this->sanitizePublicLogoUrl($identity['logo_url'] ?? null),
             ],
             'professional' => [
                 'professional_license' => $this->firstNonEmpty($professional['professional_license'] ?? null),
@@ -263,6 +263,7 @@ final class PublicProfileController
             if ($title === null) {
                 $title = 'Consultorio principal';
             }
+            $brandName = $this->firstNonEmpty($row['grupo_nombre'] ?? null) ?? $title;
 
             $windows = $scheduleByConsultorio[$consultorioId] ?? [];
             $summary = $this->buildScheduleSummary($windows);
@@ -270,6 +271,8 @@ final class PublicProfileController
             $mapped[] = [
                 'consultorio_id' => $consultorioId,
                 'public_name' => $title,
+                'brand_name' => $brandName,
+                'brand_logo_url' => $this->sanitizePublicLogoUrl($row['logo_url'] ?? null),
                 'address' => $this->buildPublicConsultorioAddress($row, $mapPayload),
                 'city' => $this->firstNonEmpty($row['municipio'] ?? null),
                 'state' => $this->firstNonEmpty($row['estado'] ?? null),
@@ -1746,6 +1749,29 @@ final class PublicProfileController
     {
         $v = trim((string)($value ?? ''));
         return $v === '' ? null : $v;
+    }
+
+    private function sanitizePublicLogoUrl($value): ?string
+    {
+        $logoUrl = $this->firstNonEmpty($value);
+        if ($logoUrl === null) {
+            return null;
+        }
+
+        if (preg_match('#^data:image/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\r\n]+$#i', $logoUrl) === 1) {
+            return $logoUrl;
+        }
+
+        if (str_starts_with($logoUrl, '/') && !str_starts_with($logoUrl, '//')) {
+            return $logoUrl;
+        }
+
+        $scheme = strtolower((string)(parse_url($logoUrl, PHP_URL_SCHEME) ?? ''));
+        if (in_array($scheme, ['http', 'https'], true) && filter_var($logoUrl, FILTER_VALIDATE_URL) !== false) {
+            return $logoUrl;
+        }
+
+        return null;
     }
 
     private function error(string $code, string $message): array

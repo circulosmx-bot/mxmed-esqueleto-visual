@@ -427,12 +427,12 @@ body {
   display: grid;
   grid-template-columns: minmax(175px, 210px) minmax(0, 1fr);
   gap: 1.25rem;
-  align-items: center;
+  align-items: start;
   background: #fff;
   border: 1px solid transparent;
   border-radius: 9px;
   box-shadow: var(--mxpp-shadow);
-  padding: 0.78rem 1rem;
+  padding: 0.88rem 1rem;
 }
 
 .mxpp-card {
@@ -504,6 +504,30 @@ body {
   color: #fff;
   font-weight: 700;
   text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.mxpp-consultorio-brand {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.mxpp-consultorio-brand__logo {
+  width: auto;
+  max-width: 108px;
+  height: 34px;
+  object-fit: contain;
+  object-position: left center;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0.16rem 0.28rem;
+}
+
+.mxpp-consultorio-brand__logo[hidden] {
+  display: none;
 }
 
 .mxpp-consultorio-address {
@@ -858,6 +882,22 @@ body {
   font-weight: 500;
   line-height: 1.35;
   color: #0f7a9b;
+}
+
+.mxpp-physician-logo {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  margin-top: 0.42rem;
+}
+
+.mxpp-physician-logo img {
+  display: block;
+  width: auto;
+  max-width: min(190px, 46%);
+  max-height: 58px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .mxpp-map,
@@ -1506,6 +1546,14 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .mxpp-avatar-wrap {
+    justify-content: flex-start;
+  }
+
+  .mxpp-avatar {
+    max-width: 180px;
+  }
+
   .mxpp-consultorio-body {
     grid-template-columns: 1fr;
   }
@@ -1620,6 +1668,24 @@ body {
   .mxpp-title-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .mxpp-consultorio-bar {
+    align-items: stretch;
+  }
+
+  .mxpp-consultorio-brand,
+  .mxpp-consultorio-tabs {
+    flex-basis: 100%;
+  }
+
+  .mxpp-consultorio-tabs {
+    justify-content: flex-start;
+  }
+
+  .mxpp-consultorio-brand__logo {
+    max-width: 92px;
+    height: 30px;
   }
 
   .mxpp-agenda-compact__header {

@@ -492,6 +492,8 @@ foreach ($consultorios as $index => $consultorio) {
     $consultorioPanels[] = [
         'id' => toText($consultorio['consultorio_id'] ?? null) ?? (string)($index + 1),
         'name' => toText($consultorio['public_name'] ?? null) ?? 'Consultorio principal',
+        'brand_name' => toText($consultorio['brand_name'] ?? null),
+        'brand_logo_url' => toText($consultorio['brand_logo_url'] ?? null),
         'address' => toText($consultorio['address'] ?? null),
         'map_url' => toText($consultorio['map_embed_url'] ?? null),
         'map_can_open_gps' => toBool($consultorio['map_can_open_gps'] ?? false),
@@ -503,6 +505,8 @@ if ($consultorioPanels === []) {
     $consultorioPanels[] = [
         'id' => 'principal',
         'name' => 'Consultorio principal',
+        'brand_name' => null,
+        'brand_logo_url' => null,
         'address' => null,
         'map_url' => null,
         'map_can_open_gps' => false,
@@ -516,8 +520,18 @@ $primaryAddress = $primaryConsultorio['address'];
 $primaryMapUrl = $primaryConsultorio['map_url'];
 $scheduleSummary = $primaryConsultorio['schedule_summary'];
 $showConsultorioSwitcher = count($consultorioPanels) > 1;
+$primaryBrandLogoUrl = toText($primaryConsultorio['brand_logo_url'] ?? null);
+$primaryBrandName = $primaryBrandLogoUrl !== null
+    ? (toText($primaryConsultorio['brand_name'] ?? null) ?? $primaryName)
+    : 'Consultorio';
 
 $photoUrl = toText($identity['photo_url'] ?? null);
+$physicianLogoUrl = toBool($publicVisibility['show_logo'] ?? false)
+    ? toText($identity['logo_url'] ?? null)
+    : null;
+$physicianLogoAlt = $displayName !== null
+    ? 'Logotipo de ' . $displayName
+    : 'Logotipo del médico';
 $primarySpecialty = null;
 if (!empty($specialties) && is_array($specialties[0])) {
     $primarySpecialty = toText($specialties[0]['name_es'] ?? null);
@@ -801,6 +815,11 @@ if (isLocalDevRequest()) {
             <?php endif; ?>
 
           <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
+          <?php if ($physicianLogoUrl !== null): ?>
+            <div class="mxpp-physician-logo">
+              <img src="<?= h($physicianLogoUrl) ?>" alt="<?= h($physicianLogoAlt) ?>" loading="lazy" decoding="async" />
+            </div>
+          <?php endif; ?>
           <?php if ($canRenderContactActions): ?>
             <div class="mxpp-profile-cta">
               <?php if ($contactPhoneHref !== null): ?>
@@ -821,7 +840,16 @@ if (isLocalDevRequest()) {
 
       <section class="mxpp-card mxpp-consultorio-block" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
         <div class="mxpp-consultorio-bar">
-          <h2 class="mxpp-consultorio-name"><?= h($showConsultorioSwitcher ? 'Consultorios' : $primaryName) ?></h2>
+          <div class="mxpp-consultorio-brand" data-mxpp-consultorio-brand>
+            <img
+              class="mxpp-consultorio-brand__logo"
+              data-mxpp-consultorio-brand-logo
+              <?php if ($primaryBrandLogoUrl !== null): ?>src="<?= h($primaryBrandLogoUrl) ?>" alt="<?= h('Logotipo de ' . $primaryBrandName) ?>"<?php else: ?>hidden<?php endif; ?>
+              loading="lazy"
+              decoding="async"
+            />
+            <h2 class="mxpp-consultorio-name" data-mxpp-consultorio-brand-name><?= h($primaryBrandName) ?></h2>
+          </div>
           <?php if ($showConsultorioSwitcher): ?>
             <div class="mxpp-consultorio-tabs" role="tablist" aria-label="Consultorios disponibles">
               <?php foreach ($consultorioPanels as $index => $consultorio): ?>
@@ -853,6 +881,8 @@ if (isLocalDevRequest()) {
             $consultorioAddress = toText($consultorio['address'] ?? null);
             $consultorioMapUrl = toText($consultorio['map_url'] ?? null);
             $consultorioSchedule = toText($consultorio['schedule_summary'] ?? null);
+            $consultorioBrandName = toText($consultorio['brand_name'] ?? null) ?? $consultorioName;
+            $consultorioBrandLogoUrl = toText($consultorio['brand_logo_url'] ?? null);
           ?>
           <div
             class="mxpp-consultorio-panel"
@@ -860,6 +890,8 @@ if (isLocalDevRequest()) {
             role="tabpanel"
             <?= $showConsultorioSwitcher ? 'aria-labelledby="' . h($tabId) . '"' : '' ?>
             data-mxpp-consultorio-panel
+            data-mxpp-consultorio-brand-name="<?= h($consultorioBrandName) ?>"
+            data-mxpp-consultorio-brand-logo="<?= h($consultorioBrandLogoUrl ?? '') ?>"
             <?= $isActiveConsultorio ? '' : 'hidden' ?>
           >
             <div class="mxpp-consultorio-body">
@@ -1220,6 +1252,28 @@ if (isLocalDevRequest()) {
           return;
         }
 
+        var brandName = switcher.querySelector('[data-mxpp-consultorio-brand-name]');
+        var brandLogo = switcher.querySelector('[data-mxpp-consultorio-brand-logo]');
+
+        function syncBranding(panel) {
+          if (!panel || !brandName || !brandLogo) {
+            return;
+          }
+          var logoUrl = panel.getAttribute('data-mxpp-consultorio-brand-logo') || '';
+          var name = panel.getAttribute('data-mxpp-consultorio-brand-name') || 'Consultorio';
+          if (logoUrl) {
+            brandName.textContent = name;
+            brandLogo.src = logoUrl;
+            brandLogo.alt = 'Logotipo de ' + name;
+            brandLogo.hidden = false;
+            return;
+          }
+          brandName.textContent = 'Consultorio';
+          brandLogo.hidden = true;
+          brandLogo.removeAttribute('src');
+          brandLogo.removeAttribute('alt');
+        }
+
         function activateTab(tab) {
           var panelId = tab.getAttribute('aria-controls') || '';
           tabs.forEach(function (item) {
@@ -1231,6 +1285,9 @@ if (isLocalDevRequest()) {
           panels.forEach(function (panel) {
             panel.hidden = panel.id !== panelId;
           });
+          syncBranding(panels.find(function (panel) {
+            return panel.id === panelId;
+          }));
         }
 
         tabs.forEach(function (tab, index) {

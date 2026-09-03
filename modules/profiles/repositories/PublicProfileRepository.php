@@ -158,8 +158,10 @@ final class PublicProfileRepository
 
         $allowlist = [
             'consultorio_id',
+            'group_id',
             'titulo',
             'grupo_nombre',
+            'logo_url',
             'calle',
             'num_ext',
             'num_int',
