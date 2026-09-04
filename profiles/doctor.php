@@ -571,6 +571,8 @@ $showClaimProfile = (
     || toBool($claim['show_claim_button'] ?? false)
     || toBool($claim['claim_allowed'] ?? false)
 );
+$showSuggestCorrection = toBool($publicVisibility['show_suggest_correction'] ?? false);
+$showAboutAction = toBool($publicVisibility['show_about_action'] ?? false);
 $showFee = toBool($publicVisibility['show_consultation_fee'] ?? false);
 $showInsurances = toBool($publicVisibility['show_accepted_insurances'] ?? false);
 
@@ -824,33 +826,41 @@ if (isLocalDevRequest()) {
               <?php endif; ?>
             </div>
 
-            <div class="mxpp-about-target" id="sobre-mi">
-              <?php if ($bioShort !== null): ?>
+            <div class="mxpp-about-target"<?= $showAboutAction ? ' id="sobre-mi"' : '' ?>>
+              <?php if ($showSuggestCorrection): ?>
+                <a class="mxpp-action-link mxpp-action-link--summary" href="#" aria-disabled="true">Sugerir corrección</a>
+              <?php elseif ($bioShort !== null): ?>
                 <p class="mxpp-bio"><?= h($bioShort) ?></p>
               <?php else: ?>
                 <p class="mxpp-bio mxpp-bio--pending">Descripción profesional en actualización.</p>
               <?php endif; ?>
             </div>
 
-            <div class="mxpp-hero-brand-actions <?= $physicianLogoUrl !== null ? 'mxpp-hero-brand-actions--with-logo' : 'mxpp-hero-brand-actions--without-logo' ?>">
+            <?php if ($physicianLogoUrl !== null || $showAboutAction || $showAgendaSlot): ?>
+              <div class="mxpp-hero-brand-actions <?= $physicianLogoUrl !== null ? 'mxpp-hero-brand-actions--with-logo' : 'mxpp-hero-brand-actions--without-logo' ?>">
               <?php if ($physicianLogoUrl !== null): ?>
                 <div class="mxpp-physician-logo">
                   <img src="<?= h($physicianLogoUrl) ?>" alt="<?= h($physicianLogoAlt) ?>" loading="lazy" decoding="async" />
                 </div>
               <?php endif; ?>
-              <nav class="mxpp-hero-actions" aria-label="Navegación del perfil">
-                <a class="mxpp-hero-action" href="#sobre-mi">
-                  <span class="mxpp-hero-action__icon mxpp-hero-action__icon--about" aria-hidden="true"></span>
-                  <span>Sobre mí</span>
-                </a>
+              <?php if ($showAboutAction || $showAgendaSlot): ?>
+                <nav class="mxpp-hero-actions" aria-label="Navegación del perfil">
+                <?php if ($showAboutAction): ?>
+                  <a class="mxpp-hero-action" href="#sobre-mi">
+                    <span class="mxpp-hero-action__icon mxpp-hero-action__icon--about" aria-hidden="true"></span>
+                    <span>Sobre mí</span>
+                  </a>
+                <?php endif; ?>
                 <?php if ($showAgendaSlot): ?>
                   <a class="mxpp-hero-action" href="#proximas-citas">
                     <span class="mxpp-hero-action__icon mxpp-hero-action__icon--consult" aria-hidden="true"></span>
                     <span>Consulta</span>
                   </a>
                 <?php endif; ?>
-              </nav>
-            </div>
+                </nav>
+              <?php endif; ?>
+              </div>
+            <?php endif; ?>
           </article>
 
         </div>
@@ -959,6 +969,11 @@ if (isLocalDevRequest()) {
                       </a>
                     <?php endif; ?>
                   </div>
+                <?php endif; ?>
+                <?php if ($consultorioMapUrl !== null && $showClickableMap): ?>
+                  <a class="mxpp-map-link" href="<?= h($consultorioMapUrl) ?>" target="_blank" rel="noopener">Ver en Google Maps</a>
+                <?php endif; ?>
+                <?php if ($canRenderConsultorioContact): ?>
                   <div class="mxpp-consultorio-contact-actions">
                     <?php if ($consultorioPhoneHref !== null): ?>
                       <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($consultorioPhoneHref) ?>">
@@ -974,11 +989,8 @@ if (isLocalDevRequest()) {
                     <?php endif; ?>
                   </div>
                 <?php endif; ?>
-                <?php if ($consultorioMapUrl !== null && $showClickableMap): ?>
-                  <a class="mxpp-map-link" href="<?= h($consultorioMapUrl) ?>" target="_blank" rel="noopener">Ver en Google Maps</a>
-                <?php endif; ?>
               </div>
-              <div class="mxpp-consultorio-map-col">
+              <div class="mxpp-consultorio-map-col <?= $showConsultorioSwitcher ? 'mxpp-consultorio-map-col--with-title' : '' ?>">
                 <?php if ($consultorioMapUrl !== null): ?>
                   <div class="mxpp-map">
                     <iframe src="<?= h($consultorioMapUrl) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación de <?= h($consultorioName) ?>"></iframe>
@@ -994,12 +1006,11 @@ if (isLocalDevRequest()) {
         <?php endforeach; ?>
       </section>
 
-      <div class="mxpp-actions-row">
-        <a class="mxpp-action-link" href="#" aria-disabled="true">Sugerir corrección</a>
-        <?php if ($showClaimProfile): ?>
+      <?php if ($showClaimProfile): ?>
+        <div class="mxpp-actions-row">
           <a class="mxpp-action-claim" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
-        <?php endif; ?>
-      </div>
+        </div>
+      <?php endif; ?>
 
       <?php if ($showAgendaSlot): ?>
         <section

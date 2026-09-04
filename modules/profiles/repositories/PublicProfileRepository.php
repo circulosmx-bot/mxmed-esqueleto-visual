@@ -34,6 +34,7 @@ final class PublicProfileRepository
         $hasAppointments = $this->doctorHasAppointments($doctorId);
         $canonicalProfile = $this->fetchCanonicalProfileRow($doctorId);
         $publicContactPoints = $this->fetchPublicContactPointRows($doctorId);
+        $ownershipSource = $this->resolveOwnershipSource($doctorId);
 
         return [
             'exists' => (!empty($consultorios) || !empty($scheduleRows) || $hasAppointments || $canonicalProfile !== null),
@@ -43,10 +44,46 @@ final class PublicProfileRepository
             'has_appointments' => $hasAppointments,
             'profile_source' => $this->resolveProfileSource($canonicalProfile),
             'plan_source' => $this->resolvePlanSource($canonicalProfile),
+            'ownership_source' => $ownershipSource,
             'identity' => $this->resolveIdentity($canonicalProfile),
             'professional' => $this->resolveProfessional($canonicalProfile),
             'specialties' => $this->resolveSpecialties($canonicalProfile),
         ];
+    }
+
+    private function resolveOwnershipSource(string $doctorId): array
+    {
+        $unavailable = [
+            'source_ready' => false,
+            'is_administered' => true,
+        ];
+        try {
+            if (!$this->tableExists('auth_account_memberships')) {
+                return $unavailable;
+            }
+            $columns = $this->tableColumns('auth_account_memberships');
+            foreach (['profile_doctor_id', 'role_code', 'scope_code', 'status'] as $required) {
+                if (!in_array($required, $columns, true)) {
+                    return $unavailable;
+                }
+            }
+
+            $stmt = $this->pdo->prepare(
+                "SELECT COUNT(*)
+                 FROM `auth_account_memberships`
+                 WHERE `profile_doctor_id` = :doctor_id
+                   AND `status` = 'active'
+                   AND `role_code` IN ('owner', 'administrator', 'collaborator')
+                   AND `scope_code` IN ('profile', 'profile_doctor')"
+            );
+            $stmt->execute(['doctor_id' => $doctorId]);
+            return [
+                'source_ready' => true,
+                'is_administered' => ((int)$stmt->fetchColumn()) > 0,
+            ];
+        } catch (PDOException $e) {
+            return $unavailable;
+        }
     }
 
     public function findPublicCanonicalRoute(string $entityType, string $entityId): ?array

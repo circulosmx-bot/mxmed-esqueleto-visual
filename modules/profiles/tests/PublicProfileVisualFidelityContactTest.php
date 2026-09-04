@@ -67,7 +67,7 @@ pdb04eAssert(str_contains($pageSource, '$showPaidProfileCheck') && str_contains(
 pdb04eAssert(str_contains($pageSource, "toBool(\$plan['is_paid'] ?? false)") && str_contains($pageSource, "toBool(\$plan['is_active'] ?? false)"), 'inline check uses actual paid and active plan authority');
 pdb04eAssert(!str_contains($pageSource, '>Verificado<'), 'distant verified pill is removed');
 pdb04eAssert(str_contains($cssSource, 'grid-template-columns: minmax(260px, 1.35fr) minmax(310px, 1.6fr);'), 'logo and actions have deliberate desktop distribution');
-pdb04eAssert(str_contains($cssSource, 'max-width: min(320px, 100%);') && str_contains($cssSource, 'max-height: 125px;'), 'personal logo has increased bounded prominence');
+pdb04eAssert(str_contains($cssSource, 'max-width: min(256px, 100%);') && str_contains($cssSource, 'max-height: 100px;') && str_contains($cssSource, 'justify-content: center;'), 'personal logo preserves centered alignment with its requested 20 percent reduction');
 pdb04eAssert(str_contains($cssSource, 'width: 64px;') && str_contains($cssSource, 'font-size: 1.35rem;'), 'profile actions have enlarged icons, labels, and hit areas');
 pdb04eAssert(str_contains($cssSource, 'max-width: 220px;') && str_contains($cssSource, 'height: 66px;'), 'consultorio group logo has increased bounded prominence');
 pdb04eAssert(str_contains($controllerSource, "'phone_public' => \$showPhone ? \$publicContact['phone'] : null"), 'phone DTO projection is explicit and capability-gated');
@@ -77,5 +77,7 @@ pdb04eAssert(str_contains($pageSource, '$consultorioWhatsappHref = whatsappHref(
 pdb04eAssert(str_contains($pageSource, 'panel.hidden = panel.id !== panelId;'), 'switching replaces the complete contact/action/map panel without stale targets');
 pdb04eAssert(str_contains($pageSource, '<iframe src="<?= h($consultorioMapUrl) ?>"'), 'map remains synchronized per consultorio');
 pdb04eAssert(str_contains($cssSource, 'grid-template-columns: minmax(210px, 32%) minmax(0, 68%);'), 'desktop map remains in the right column');
+pdb04eAssert(str_contains($pageSource, 'mxpp-consultorio-map-col--with-title') && str_contains($cssSource, 'padding-top: 0.82rem;'), 'desktop map clears the turquoise bar and aligns with the consultorio title');
+pdb04eAssert(str_contains($cssSource, 'height: 100%;') && strpos($pageSource, 'class="mxpp-map-link"') < strpos($pageSource, 'class="mxpp-consultorio-contact-actions"'), 'map fills through the action-button baseline and buttons remain the final contact element');
 
 echo "PublicProfileVisualFidelityContactTest PASS\n";

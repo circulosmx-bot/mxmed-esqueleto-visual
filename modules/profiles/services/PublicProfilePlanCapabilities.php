@@ -46,6 +46,8 @@ final class PublicProfilePlanCapabilities
 
         $hasPublicProfile = (bool)($context['has_public_profile'] ?? false);
         $isClaimed = (bool)($context['is_claimed'] ?? false);
+        $profileIsAdministered = (bool)($context['profile_is_administered'] ?? true);
+        $ownershipSourceReady = (bool)($context['ownership_source_ready'] ?? false);
         $publicContactReady = (bool)($context['public_contact_source_ready'] ?? false);
         $claimSourceReady = (bool)($context['claim_source_ready'] ?? false);
         $commercialSourceReady = (bool)($context['commercial_source_ready'] ?? false);
@@ -60,6 +62,8 @@ final class PublicProfilePlanCapabilities
         $showInsurances = $capabilities['show_insurances'] && $commercialSourceReady;
         $showConsultationDetails = $capabilities['show_consultation_details'] && $commercialSourceReady;
         $showClaimProfile = $capabilities['show_claim_profile'] && !$isClaimed && $claimSourceReady;
+        $showSuggestCorrection = $code === 'free' && !$profileIsAdministered && $ownershipSourceReady;
+        $showAboutAction = $code !== 'free';
 
         return [
             'plan' => [
@@ -102,6 +106,8 @@ final class PublicProfilePlanCapabilities
                 'show_promotions' => $showPromotions,
                 'show_promotional_packages' => $showPromotions,
                 'show_claim_button' => $showClaimProfile,
+                'show_suggest_correction' => $showSuggestCorrection,
+                'show_about_action' => $showAboutAction,
                 'show_video_consultation' => false,
                 'show_ai_claims' => false,
                 'show_consultation_fee' => $showConsultationDetails,

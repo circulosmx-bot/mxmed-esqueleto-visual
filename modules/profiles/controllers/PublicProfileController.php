@@ -44,6 +44,7 @@ final class PublicProfileController
         $specialties = (array)($snapshot['specialties'] ?? []);
         $profileSource = (array)($snapshot['profile_source'] ?? []);
         $planSource = (array)($snapshot['plan_source'] ?? []);
+        $ownershipSource = (array)($snapshot['ownership_source'] ?? []);
         if ($effectivePlanCode === null) {
             $effectivePlanCode = PublicProfilePlanCapabilities::normalizePlanCode($planSource['plan_code'] ?? null);
         }
@@ -57,6 +58,10 @@ final class PublicProfileController
             $publicContactPoints,
             $effectivePlanCode
         );
+        $membershipAuthorityReady = (bool)($ownershipSource['source_ready'] ?? false);
+        $profileIsAdministered = $membershipAuthorityReady
+            ? (bool)($ownershipSource['is_administered'] ?? true)
+            : false;
         $hasPublicConsultorioContact = $this->hasPublicConsultorioContact($consultorioRows);
         $consultorioContactContract = PublicProfilePlanCapabilities::build($effectivePlanCode, [
             'public_contact_source_ready' => $hasPublicConsultorioContact,
@@ -67,6 +72,8 @@ final class PublicProfileController
             'plan_source' => $planSourceName,
             'has_public_profile' => false,
             'is_claimed' => false,
+            'profile_is_administered' => $profileIsAdministered,
+            'ownership_source_ready' => true,
             'public_contact_source_ready' => (bool)($publicContact['has_public_contact'] ?? false),
             'claim_source_ready' => false,
             'commercial_source_ready' => false,
@@ -177,8 +184,6 @@ final class PublicProfileController
                 'canonical_url' => null,
                 'profile_type' => 'doctor',
                 'status' => $profileStatus,
-                'ownership_status' => null,
-                'is_claimed' => false,
                 'is_public' => $isPublic,
                 'created_origin' => ((bool)($profileSource['has_canonical_row'] ?? false) ? 'profiles_doctors' : null),
                 'last_public_update_at' => $this->firstNonEmpty($profileSource['last_public_update_at'] ?? null),
