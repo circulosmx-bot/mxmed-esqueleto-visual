@@ -59,14 +59,14 @@ pdb04dAssert(str_contains($pageSource, 'brandName.textContent = name;'), 'active
 pdb04dAssert(str_contains($pageSource, 'mxpp-consultorio-tab__name') && str_contains($pageSource, '$consultorio[\'name\']'), 'tabs retain persisted consultorio labels');
 pdb04dAssert(str_contains($pageSource, 'syncBranding(panels.find(function (panel)'), 'tab switch synchronizes active branding');
 pdb04dAssert(str_contains($pageSource, 'panel.hidden = panel.id !== panelId;'), 'tab switch atomically swaps active contact and map panel');
-pdb04dAssert(str_contains($cssSource, 'min-height: 76px;') && str_contains($cssSource, '.mxpp-consultorio-tab__eyebrow'), 'taller branded bar and light card controls are styled');
+pdb04dAssert(str_contains($cssSource, 'min-height: 88px;') && str_contains($cssSource, '.mxpp-consultorio-tab__eyebrow'), 'taller branded bar and light card controls are styled');
 
 // Contact actions use only the controller-gated DTO values and safe local normalizers.
 pdb04dAssert(str_contains($controllerSource, "\$base['source'] = 'doctor_contact_points';"), 'contact authority remains doctor_contact_points');
-pdb04dAssert(str_contains($pageSource, 'href="<?= h($contactPhoneHref) ?>"') && str_contains($pageSource, '<span>Llamar</span>'), 'conditional click-to-call action uses sanitized href');
-pdb04dAssert(str_contains($pageSource, 'href="<?= h($contactWhatsappHref) ?>"') && str_contains($pageSource, '<span>WhatsApp</span>'), 'conditional WhatsApp action uses sanitized href');
-pdb04dAssert(str_contains($pageSource, '<?php if ($contactPhoneHref !== null): ?>'), 'call button is absent without a safe phone href');
-pdb04dAssert(str_contains($pageSource, '<?php if ($contactWhatsappHref !== null): ?>'), 'WhatsApp button is absent without a safe WhatsApp href');
+pdb04dAssert(str_contains($pageSource, 'href="<?= h($consultorioPhoneHref) ?>"') && str_contains($pageSource, '<span>Llamar</span>'), 'conditional click-to-call action uses sanitized href');
+pdb04dAssert(str_contains($pageSource, 'href="<?= h($consultorioWhatsappHref) ?>"') && str_contains($pageSource, '<span>WhatsApp</span>'), 'conditional WhatsApp action uses sanitized href');
+pdb04dAssert(str_contains($pageSource, '<?php if ($consultorioPhoneHref !== null): ?>'), 'call button is absent without a safe phone href');
+pdb04dAssert(str_contains($pageSource, '<?php if ($consultorioWhatsappHref !== null): ?>'), 'WhatsApp button is absent without a safe WhatsApp href');
 pdb04dAssert(str_contains($pageSource, "return 'https://wa.me/' . \$digits;") && !str_contains($pageSource, 'api.whatsapp.com/send?phone='), 'no arbitrary WhatsApp destination is introduced');
 
 // Map and regression boundaries.

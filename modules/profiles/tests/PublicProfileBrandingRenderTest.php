@@ -52,10 +52,10 @@ pdb04bAssert(str_contains($pageSource, '<?php if ($specialtyLicense !== null): ?
 pdb04bAssert(substr_count($pageSource, '<strong>Cédula profesional:</strong>') === 1, 'professional license label is not duplicated');
 pdb04bAssert(substr_count($pageSource, '<strong>Cédula especialidad:</strong>') === 1, 'specialty license label is not duplicated');
 pdb04bAssert(!str_contains($pageSource, 'mxpp-licenses-inline') && !str_contains($pageSource, 'mxpp-license-divider'), 'standalone license row is absent');
-pdb04bAssert(str_contains($pageSource, 'mxpp-badge <?= $isPublic'), 'verified badge is preserved');
+pdb04bAssert(str_contains($pageSource, 'mxpp-paid-profile-check') && !str_contains($pageSource, '>Verificado<'), 'paid profile check replaces the distant verified pill');
 
 pdb04bAssert(str_contains($cssSource, '.mxpp-physician-logo img'), 'physician logo has bounded layout styling');
-pdb04bAssert(str_contains($cssSource, 'max-width: min(280px, 62%);') && str_contains($cssSource, 'max-height: 92px;'), 'physician logo uses enlarged responsive bounds');
+pdb04bAssert(str_contains($cssSource, 'max-width: min(320px, 100%);') && str_contains($cssSource, 'max-height: 125px;'), 'physician logo uses enlarged responsive bounds');
 pdb04bAssert(str_contains($cssSource, '.mxpp-consultorio-brand__logo[hidden]'), 'missing consultorio logo is removed from layout');
 pdb04bAssert(str_contains($cssSource, '@media (max-width: 640px)'), 'responsive profile breakpoint remains present');
 pdb04bAssert(str_contains($cssSource, 'flex-wrap: wrap;') && str_contains($cssSource, 'overflow-wrap: anywhere;'), 'long text wraps without horizontal overflow');

@@ -495,6 +495,8 @@ foreach ($consultorios as $index => $consultorio) {
         'brand_name' => toText($consultorio['brand_name'] ?? null),
         'brand_logo_url' => toText($consultorio['brand_logo_url'] ?? null),
         'address' => toText($consultorio['address'] ?? null),
+        'phone_public' => toText($consultorio['phone_public'] ?? null),
+        'whatsapp_public' => toText($consultorio['whatsapp_public'] ?? null),
         'map_url' => toText($consultorio['map_embed_url'] ?? null),
         'map_can_open_gps' => toBool($consultorio['map_can_open_gps'] ?? false),
         'schedule_summary' => scheduleSummaryText($consultorio['schedule_summary'] ?? null),
@@ -508,6 +510,8 @@ if ($consultorioPanels === []) {
         'brand_name' => null,
         'brand_logo_url' => null,
         'address' => null,
+        'phone_public' => null,
+        'whatsapp_public' => null,
         'map_url' => null,
         'map_can_open_gps' => false,
         'schedule_summary' => null,
@@ -602,6 +606,18 @@ $planLabel = toText($plan['plan_label'] ?? null);
 $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
 $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
 $effectivePlanCode = \Profiles\Services\PublicProfilePlanCapabilities::normalizePlanCode($plan['plan_code'] ?? ($plan['code'] ?? null));
+$showPaidProfileCheck = (
+    $isPublic
+    && toBool($plan['is_paid'] ?? false)
+    && toBool($plan['is_active'] ?? false)
+);
+$paidProfileNameLead = null;
+$paidProfileNameTail = $displayName;
+if ($showPaidProfileCheck && $displayName !== null) {
+    $displayNameParts = preg_split('/\s+/u', $displayName) ?: [];
+    $paidProfileNameTail = array_pop($displayNameParts) ?: $displayName;
+    $paidProfileNameLead = $displayNameParts !== [] ? implode(' ', $displayNameParts) : null;
+}
 $showAgendaSlot = ($showPublicAgenda && $agendaEndpoint !== null);
 $institutionalImageUrl = null;
 $showInstitutionalImageSlot = (
@@ -765,12 +781,20 @@ if (isLocalDevRequest()) {
           <article class="mxpp-card mxpp-card--identity">
             <div class="mxpp-title-row">
               <div class="mxpp-title-primary-line">
-                <h1 class="mxpp-profile-title <?= $displayName === null ? 'mxpp-profile-title--pending' : '' ?>"><?= h($displayName ?? 'Perfil médico en validación') ?></h1>
+                <h1 class="mxpp-profile-title <?= $displayName === null ? 'mxpp-profile-title--pending' : '' ?>">
+                  <?php if ($showPaidProfileCheck): ?>
+                    <?php if ($paidProfileNameLead !== null): ?><?= h($paidProfileNameLead) ?> <?php endif; ?><span class="mxpp-profile-name-tail"><?= h($paidProfileNameTail ?? '') ?> <span class="mxpp-paid-profile-check" role="img" aria-label="Perfil con plan activo" title="Perfil con plan activo">✓</span></span>
+                  <?php else: ?>
+                    <?= h($displayName ?? 'Perfil médico en validación') ?>
+                  <?php endif; ?>
+                </h1>
                 <?php if ($professionalLicense !== null): ?>
                   <span class="mxpp-license-inline mxpp-license-inline--professional"><strong>Cédula profesional:</strong> <?= h($professionalLicense) ?></span>
                 <?php endif; ?>
               </div>
-              <span class="mxpp-badge <?= $isPublic ? '' : 'mxpp-badge--soft' ?>"><?= $isPublic ? 'Verificado' : 'En validación' ?></span>
+              <?php if (!$isPublic): ?>
+                <span class="mxpp-badge mxpp-badge--soft">En validación</span>
+              <?php endif; ?>
             </div>
 
             <?php if ($showLimitedNotice): ?>
@@ -808,7 +832,7 @@ if (isLocalDevRequest()) {
               <?php endif; ?>
             </div>
 
-            <div class="mxpp-hero-brand-actions">
+            <div class="mxpp-hero-brand-actions <?= $physicianLogoUrl !== null ? 'mxpp-hero-brand-actions--with-logo' : 'mxpp-hero-brand-actions--without-logo' ?>">
               <?php if ($physicianLogoUrl !== null): ?>
                 <div class="mxpp-physician-logo">
                   <img src="<?= h($physicianLogoUrl) ?>" alt="<?= h($physicianLogoAlt) ?>" loading="lazy" decoding="async" />
@@ -834,7 +858,7 @@ if (isLocalDevRequest()) {
 
       <section class="mxpp-card mxpp-consultorio-block" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
         <div class="mxpp-consultorio-bar">
-          <div class="mxpp-consultorio-brand" data-mxpp-consultorio-brand>
+          <div class="mxpp-consultorio-brand <?= $primaryBrandLogoUrl !== null ? 'mxpp-consultorio-brand--with-logo' : '' ?>" data-mxpp-consultorio-brand>
             <img
               class="mxpp-consultorio-brand__logo"
               data-mxpp-consultorio-brand-logo
@@ -877,6 +901,15 @@ if (isLocalDevRequest()) {
             $isActiveConsultorio = $index === 0;
             $consultorioName = toText($consultorio['name'] ?? null) ?? 'Consultorio principal';
             $consultorioAddress = toText($consultorio['address'] ?? null);
+            $consultorioPhone = toText($consultorio['phone_public'] ?? null) ?? $contactPhone;
+            $consultorioWhatsapp = toText($consultorio['whatsapp_public'] ?? null) ?? $contactWhatsapp;
+            $consultorioPhoneHref = telHref($consultorioPhone);
+            $consultorioWhatsappHref = whatsappHref($consultorioWhatsapp);
+            $canRenderConsultorioContact = (
+                $consultorioPhoneHref !== null
+                || $consultorioWhatsappHref !== null
+                || $contactEmailHref !== null
+            );
             $consultorioMapUrl = toText($consultorio['map_url'] ?? null);
             $consultorioSchedule = toText($consultorio['schedule_summary'] ?? null);
             $consultorioBrandName = toText($consultorio['brand_name'] ?? null) ?? $consultorioName;
@@ -905,18 +938,18 @@ if (isLocalDevRequest()) {
                 <?php if ($consultorioSchedule !== null): ?>
                   <p class="mxpp-consultorio-schedule"><?= h($consultorioSchedule) ?></p>
                 <?php endif; ?>
-                <?php if ($canRenderContactActions): ?>
+                <?php if ($canRenderConsultorioContact): ?>
                   <div class="mxpp-consultorio-contact" aria-label="Contacto público">
-                    <?php if ($contactPhoneHref !== null): ?>
-                      <a class="mxpp-contact-line mxpp-contact-line--phone" href="<?= h($contactPhoneHref) ?>">
+                    <?php if ($consultorioPhoneHref !== null): ?>
+                      <a class="mxpp-contact-line mxpp-contact-line--phone" href="<?= h($consultorioPhoneHref) ?>">
                         <span class="mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true"></span>
-                        <span><strong>Teléfono:</strong> <?= h($contactPhone ?? '') ?></span>
+                        <span><strong>Tel. Consultorio:</strong> <?= h($consultorioPhone ?? '') ?></span>
                       </a>
                     <?php endif; ?>
-                    <?php if ($contactWhatsappHref !== null): ?>
-                      <a class="mxpp-contact-line mxpp-contact-line--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">
+                    <?php if ($consultorioWhatsappHref !== null): ?>
+                      <a class="mxpp-contact-line mxpp-contact-line--whatsapp" href="<?= h($consultorioWhatsappHref) ?>" target="_blank" rel="noopener">
                         <span class="mxpp-contact-line__icon mxpp-contact-line__icon--whatsapp" aria-hidden="true"></span>
-                        <span><strong>WhatsApp:</strong> <?= h($contactWhatsapp ?? '') ?></span>
+                        <span><strong>WhatsApp:</strong> <?= h($consultorioWhatsapp ?? '') ?></span>
                       </a>
                     <?php endif; ?>
                     <?php if ($contactEmailHref !== null): ?>
@@ -927,14 +960,14 @@ if (isLocalDevRequest()) {
                     <?php endif; ?>
                   </div>
                   <div class="mxpp-consultorio-contact-actions">
-                    <?php if ($contactPhoneHref !== null): ?>
-                      <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($contactPhoneHref) ?>">
+                    <?php if ($consultorioPhoneHref !== null): ?>
+                      <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($consultorioPhoneHref) ?>">
                         <span class="mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true"></span>
                         <span>Llamar</span>
                       </a>
                     <?php endif; ?>
-                    <?php if ($contactWhatsappHref !== null): ?>
-                      <a class="mxpp-contact-cta mxpp-contact-cta--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">
+                    <?php if ($consultorioWhatsappHref !== null): ?>
+                      <a class="mxpp-contact-cta mxpp-contact-cta--whatsapp" href="<?= h($consultorioWhatsappHref) ?>" target="_blank" rel="noopener">
                         <span class="mxpp-contact-line__icon mxpp-contact-line__icon--whatsapp" aria-hidden="true"></span>
                         <span>WhatsApp</span>
                       </a>
@@ -1289,6 +1322,7 @@ if (isLocalDevRequest()) {
 
         var brandName = switcher.querySelector('[data-mxpp-consultorio-brand-name]');
         var brandLogo = switcher.querySelector('[data-mxpp-consultorio-brand-logo]');
+        var brand = switcher.querySelector('[data-mxpp-consultorio-brand]');
 
         function syncBranding(panel) {
           if (!panel || !brandName || !brandLogo) {
@@ -1296,6 +1330,9 @@ if (isLocalDevRequest()) {
           }
           var logoUrl = panel.getAttribute('data-mxpp-consultorio-brand-logo') || '';
           var name = panel.getAttribute('data-mxpp-consultorio-brand-name') || 'Consultorio';
+          if (brand) {
+            brand.classList.toggle('mxpp-consultorio-brand--with-logo', Boolean(logoUrl));
+          }
           if (logoUrl) {
             brandName.textContent = name;
             brandLogo.src = logoUrl;

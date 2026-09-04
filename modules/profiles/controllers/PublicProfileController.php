@@ -51,11 +51,17 @@ final class PublicProfileController
             ? 'dev_override'
             : ($planSource['source'] ?? 'default_free');
         $scheduleRows = is_array($snapshot['schedule_rows'] ?? null) ? $snapshot['schedule_rows'] : [];
+        $consultorioRows = is_array($snapshot['consultorios'] ?? null) ? $snapshot['consultorios'] : [];
         $publicContactPoints = is_array($snapshot['public_contact_points'] ?? null) ? $snapshot['public_contact_points'] : [];
         $publicContact = $this->buildPublicContactPayload(
             $publicContactPoints,
             $effectivePlanCode
         );
+        $hasPublicConsultorioContact = $this->hasPublicConsultorioContact($consultorioRows);
+        $consultorioContactContract = PublicProfilePlanCapabilities::build($effectivePlanCode, [
+            'public_contact_source_ready' => $hasPublicConsultorioContact,
+        ]);
+        $consultorioPublicVisibility = (array)$consultorioContactContract['public_visibility'];
 
         $planContext = [
             'plan_source' => $planSourceName,
@@ -69,9 +75,9 @@ final class PublicProfileController
         $publicVisibility = (array)$planContract['public_visibility'];
 
         $consultorios = $this->mapConsultorios(
-            is_array($snapshot['consultorios'] ?? null) ? $snapshot['consultorios'] : [],
+            $consultorioRows,
             $scheduleRows,
-            $publicVisibility
+            $consultorioPublicVisibility
         );
         $geoContext = $this->buildGeoContext($consultorios);
 
@@ -267,6 +273,9 @@ final class PublicProfileController
 
             $windows = $scheduleByConsultorio[$consultorioId] ?? [];
             $summary = $this->buildScheduleSummary($windows);
+            $publicContact = $this->extractPublicConsultorioContact($row);
+            $showPhone = (bool)($publicVisibility['show_phone'] ?? false);
+            $showWhatsapp = (bool)($publicVisibility['show_whatsapp'] ?? false);
 
             $mapped[] = [
                 'consultorio_id' => $consultorioId,
@@ -278,8 +287,8 @@ final class PublicProfileController
                 'state' => $this->firstNonEmpty($row['estado'] ?? null),
                 'municipality' => $this->firstNonEmpty($row['municipio'] ?? null),
                 'postal_code' => $this->firstNonEmpty($row['cp'] ?? null),
-                'phone_public' => null,
-                'whatsapp_public' => null,
+                'phone_public' => $showPhone ? $publicContact['phone'] : null,
+                'whatsapp_public' => $showWhatsapp ? $publicContact['whatsapp'] : null,
                 'lat' => $hasConfirmedCoords ? ($mapPayload['lat'] ?? null) : null,
                 'lng' => $hasConfirmedCoords ? ($mapPayload['lng'] ?? null) : null,
                 'map_embed_url' => $this->firstNonEmpty($mapPayload['public_map_iframe_url'] ?? null),
@@ -292,6 +301,66 @@ final class PublicProfileController
             ];
         }
         return $mapped;
+    }
+
+    private function hasPublicConsultorioContact(array $rows): bool
+    {
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $contact = $this->extractPublicConsultorioContact($row);
+            if ($contact['phone'] !== null || $contact['whatsapp'] !== null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Consultorio phone fields are administrator-managed public sede data.
+     * Project only the first regular phone and WhatsApp; urgency and raw JSON
+     * remain outside the public DTO.
+     *
+     * @return array{phone:?string,whatsapp:?string}
+     */
+    private function extractPublicConsultorioContact(array $row): array
+    {
+        $phone = null;
+        $rawPhones = $row['telefonos_json'] ?? null;
+        if (is_string($rawPhones) && trim($rawPhones) !== '') {
+            $decoded = json_decode($rawPhones, true);
+            $rawPhones = is_array($decoded) ? $decoded : [];
+        }
+        if (is_array($rawPhones)) {
+            foreach ($rawPhones as $candidate) {
+                $phone = $this->sanitizePublicConsultorioPhone($candidate);
+                if ($phone !== null) {
+                    break;
+                }
+            }
+        }
+
+        return [
+            'phone' => $phone,
+            'whatsapp' => $this->sanitizePublicConsultorioPhone($row['whatsapp'] ?? null),
+        ];
+    }
+
+    private function sanitizePublicConsultorioPhone($value): ?string
+    {
+        if (!is_string($value) && !is_numeric($value)) {
+            return null;
+        }
+        $display = trim((string)$value);
+        if ($display === '') {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', $display);
+        if (!is_string($digits) || strlen($digits) < 7 || strlen($digits) > 16) {
+            return null;
+        }
+        return $display;
     }
 
     private function buildPublicNavigationTaxonomy(): array
