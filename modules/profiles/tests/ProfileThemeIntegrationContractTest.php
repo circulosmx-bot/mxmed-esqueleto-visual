@@ -38,8 +38,13 @@ theme01aIntegrationAssert(substr_count($admin, 'mx-theme-admin__swatches') === 1
 theme01aIntegrationAssert(str_contains($adminJs, 'catalog.length !== 20'), 'admin requires exact catalog size');
 theme01aIntegrationAssert(!str_contains($admin, 'type="color"'), 'no free color picker exists');
 theme01aIntegrationAssert(str_contains($adminJs, "profile_theme_key: state.themeSelectedKey"), 'admin persists key only');
-theme01aIntegrationAssert(str_contains($css, 'var(--profile-accent)') && str_contains($css, 'var(--profile-accent-soft)'), 'public profile consumes controlled variables');
+theme01aIntegrationAssert(str_contains($css, 'var(--profile-accent)') && str_contains($css, 'var(--profile-accent-strong)') && str_contains($css, 'var(--profile-on-accent-strong)'), 'public profile consumes controlled semantic variables');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-bar') && str_contains($css, '.mxpp-agenda-compact__header') && str_contains($css, '.mxpp-gallery-bar'), 'candidate component hooks exist');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active') && str_contains($css, 'background: var(--profile-accent-strong);'), 'active consultorio consumes the strong surface token');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($css, 'color: var(--profile-on-accent-strong);'), 'active consultorio foreground consumes the strong foreground token');
+theme01aIntegrationAssert(!preg_match('/\\.mxpp-consultorio-tab\\s*\\{[^}]*var\\(--profile-accent-strong\\)/s', $css), 'inactive consultorio does not consume strong fill');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-review-strip') && str_contains($css, '.mxpp-review-strip__header') && str_contains($css, '.mxpp-review-strip__body'), 'reviews surface and nested foreground hooks exist');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-rating-stars') && substr_count($css, 'var(--profile-on-accent-strong)') >= 7, 'review stars and nested strong foreground use the semantic token');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-contact-cta--whatsapp') && str_contains($css, 'background: #29ac63;'), 'WhatsApp semantic green remains fixed');
 
 echo "ProfileThemeIntegrationContractTest PASS\n";

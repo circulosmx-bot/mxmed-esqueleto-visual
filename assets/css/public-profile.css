@@ -13,6 +13,8 @@
   --profile-accent-hover: #0a99a6;
   --profile-accent-border: rgba(16, 173, 186, 0.42);
   --profile-accent-contrast: #000000;
+  --profile-accent-strong: #0a99a6;
+  --profile-on-accent-strong: #ffffff;
 }
 
 * {
@@ -601,15 +603,15 @@ body {
 }
 
 .mxpp-consultorio-tab--active {
-  background: var(--profile-accent-contrast);
-  color: var(--profile-accent);
+  background: var(--profile-accent-strong);
+  color: var(--profile-on-accent-strong);
   border-color: transparent;
   box-shadow: 0 5px 12px rgba(7, 89, 101, 0.2);
 }
 
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow,
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__chevron {
-  color: var(--profile-accent);
+  color: var(--profile-on-accent-strong);
 }
 
 .mxpp-consultorio-tab__eyebrow {
@@ -1106,14 +1108,14 @@ body {
   min-height: 32px;
   margin: 0;
   border-radius: 7px;
-  background: var(--profile-accent);
-  color: var(--profile-accent-contrast);
+  background: var(--profile-accent-strong);
+  color: var(--profile-on-accent-strong);
   padding: 0.26rem 0.56rem;
   line-height: 1;
 }
 
 .mxpp-rating-stars {
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-accent-strong);
   font-size: 1.04rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1121,7 +1123,7 @@ body {
 }
 
 .mxpp-rating-count {
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-accent-strong);
   font-size: 0.86rem;
   font-weight: 700;
   white-space: nowrap;
@@ -1729,18 +1731,18 @@ body {
 }
 
 .mxpp-review-strip {
-  border: 1px solid var(--profile-accent-border);
+  border: 1px solid var(--profile-accent-strong);
   border-radius: 9px;
-  background: var(--profile-accent-soft);
+  background: var(--profile-accent-strong);
   padding: 0.62rem 0.75rem;
-  color: #2f5a69;
+  color: var(--profile-on-accent-strong);
   font-size: 0.88rem;
 }
 
 .mxpp-review-strip__header {
   margin: 0;
   font-weight: 700;
-  color: var(--profile-accent-hover);
+  color: var(--profile-on-accent-strong);
 }
 
 /* Reserved controlled gallery header hook; inert until the public gallery exists. */
@@ -1752,7 +1754,7 @@ body {
 
 .mxpp-review-strip__body {
   margin: 0.4rem 0 0;
-  color: #365462;
+  color: var(--profile-on-accent-strong);
   line-height: 1.45;
 }
 
@@ -1761,7 +1763,7 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
-  color: #0d5f82;
+  color: var(--profile-on-accent-strong);
   font-weight: 700;
 }
 

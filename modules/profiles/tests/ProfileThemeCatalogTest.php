@@ -38,7 +38,7 @@ theme01aAssert(ProfileThemeCatalog::keys() === array_keys($expected), 'catalog k
 foreach ($catalog as $theme) {
     $key = $theme['key'];
     theme01aAssert($theme['accent'] === $expected[$key], 'accent matches contract for ' . $key);
-    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast'] as $field) {
+    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast', 'accent_strong', 'on_accent_strong', 'strong_foreground'] as $field) {
         theme01aAssert(trim((string)($theme[$field] ?? '')) !== '', $key . ' has ' . $field);
     }
     $l1 = theme01aLuminance($theme['accent']);
@@ -52,5 +52,24 @@ theme01aAssert(ProfileThemeCatalog::resolve('not-approved')['key'] === 'mxmed_te
 theme01aAssert(ProfileThemeCatalog::resolve(null)['accent'] === '#10ADBA', 'null resolves historical native turquoise');
 theme01aAssert(ProfileThemeCatalog::resolve('not-approved')['accent'] === '#10ADBA', 'invalid key resolves historical native turquoise');
 theme01aAssert(ProfileThemeCatalog::resolve('mxmed_teal')['accent_hover'] === '#0A99A6', 'native hover preserves historical secondary gradient stop');
+
+$whiteStrongKeys = [];
+$darkStrongKeys = [];
+foreach ($catalog as $theme) {
+    if ($theme['strong_foreground'] === 'WHITE') {
+        $whiteStrongKeys[] = $theme['key'];
+        theme01aAssert($theme['on_accent_strong'] === '#FFFFFF', $theme['key'] . ' strong foreground is white');
+    } else {
+        $darkStrongKeys[] = $theme['key'];
+        theme01aAssert($theme['on_accent_strong'] === '#000000', $theme['key'] . ' light strong surface uses dark foreground');
+    }
+    $strongLuminance = theme01aLuminance($theme['accent_strong']);
+    $strongForegroundLuminance = theme01aLuminance($theme['on_accent_strong']);
+    $strongRatio = (max($strongLuminance, $strongForegroundLuminance) + 0.05) / (min($strongLuminance, $strongForegroundLuminance) + 0.05);
+    $minimumStrongRatio = $theme['key'] === 'mxmed_teal' ? 3.0 : 4.5;
+    theme01aAssert($strongRatio >= $minimumStrongRatio, $theme['key'] . ' strong surface foreground remains readable');
+}
+theme01aAssert(count($whiteStrongKeys) === 15, '15 medium/dark/intense themes use white strong foreground');
+theme01aAssert($darkStrongKeys === ['soft_lavender', 'dusty_pink', 'warm_ivory', 'clinical_light_sky', 'ice_blue'], 'only the five reviewed light themes use dark strong foreground');
 
 echo "ProfileThemeCatalogTest PASS\n";

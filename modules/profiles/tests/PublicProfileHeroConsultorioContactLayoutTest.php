@@ -63,7 +63,7 @@ pdb04dAssert(str_contains($pageSource, 'syncBranding(panels.find(function (panel
 pdb04dAssert(str_contains($pageSource, 'panel.hidden = panel.id !== panelId;'), 'tab switch atomically swaps active contact and map panel');
 pdb04dAssert(str_contains($cssSource, 'height: 50px;') && str_contains($cssSource, 'min-height: 50px;') && str_contains($cssSource, 'min-height: 42px;'), 'compact branded bar and proportionally reduced cards are styled');
 pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'font-size: 0.86rem;'), 'consultorio eyebrow label is enlarged by approximately 30 percent');
-pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'background: var(--profile-accent-contrast);'), 'selected consultorio card uses the controlled inverted high-contrast theme state');
+pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'background: var(--profile-accent-strong);'), 'selected consultorio card uses the controlled strong theme surface');
 
 // Contact actions use only the controller-gated DTO values and safe local normalizers.
 pdb04dAssert(str_contains($controllerSource, "\$base['source'] = 'doctor_contact_points';"), 'contact authority remains doctor_contact_points');

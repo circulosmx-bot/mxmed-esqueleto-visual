@@ -5,6 +5,8 @@
   --profile-accent-hover: #0a99a6;
   --profile-accent-border: rgba(16, 173, 186, 0.42);
   --profile-accent-contrast: #000000;
+  --profile-accent-strong: #0a99a6;
+  --profile-on-accent-strong: #ffffff;
   margin-top: 1rem;
   border-top: 1px solid #e3ebef;
   padding-top: 1rem;
@@ -88,8 +90,8 @@
   margin-left: auto;
   border: 1px solid var(--profile-accent-border);
   border-radius: 7px;
-  background: var(--profile-accent);
-  color: var(--profile-accent-contrast);
+  background: var(--profile-accent-strong);
+  color: var(--profile-on-accent-strong);
   font-weight: 700;
   padding: 0.32rem 0.58rem;
 }

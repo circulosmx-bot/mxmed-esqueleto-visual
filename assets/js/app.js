@@ -1504,7 +1504,9 @@ console.info('app.js loaded :: 20251123a');
       '--profile-accent-soft-2': theme.accent_soft_2,
       '--profile-accent-hover': theme.accent_hover,
       '--profile-accent-border': theme.accent_border,
-      '--profile-accent-contrast': theme.accent_contrast
+      '--profile-accent-contrast': theme.accent_contrast,
+      '--profile-accent-strong': theme.accent_strong,
+      '--profile-on-accent-strong': theme.on_accent_strong
     };
     Object.entries(vars).forEach(([name, value])=> els.themeAdmin.style.setProperty(name, String(value || '')));
   }

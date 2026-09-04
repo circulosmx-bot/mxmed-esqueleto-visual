@@ -7,6 +7,14 @@ final class ProfileThemeCatalog
 {
     public const DEFAULT_KEY = 'mxmed_teal';
 
+    private const LIGHT_STRONG_SURFACE_KEYS = [
+        'soft_lavender',
+        'dusty_pink',
+        'warm_ivory',
+        'clinical_light_sky',
+        'ice_blue',
+    ];
+
     private const THEMES = [
         'mxmed_teal' => ['México Médico turquesa', '#10ADBA', '#0A99A6'],
         'medical_blue' => ['Azul médico', '#1E88E5'],
@@ -53,6 +61,13 @@ final class ProfileThemeCatalog
         [$label, $accent] = $definition;
         [$red, $green, $blue] = self::rgb($accent);
         $contrast = self::contrastColor($red, $green, $blue);
+        $accentHover = $definition[2] ?? self::shade($red, $green, $blue, 0.82);
+        $onAccentStrong = in_array($resolvedKey, self::LIGHT_STRONG_SURFACE_KEYS, true)
+            ? '#000000'
+            : '#FFFFFF';
+        $accentStrong = ($onAccentStrong === '#FFFFFF' && $resolvedKey !== self::DEFAULT_KEY)
+            ? self::ensureWhiteContrast($accentHover)
+            : $accentHover;
 
         return [
             'key' => $resolvedKey,
@@ -60,9 +75,12 @@ final class ProfileThemeCatalog
             'accent' => $accent,
             'accent_soft' => sprintf('rgba(%d, %d, %d, 0.14)', $red, $green, $blue),
             'accent_soft_2' => sprintf('rgba(%d, %d, %d, 0.24)', $red, $green, $blue),
-            'accent_hover' => $definition[2] ?? self::shade($red, $green, $blue, 0.82),
+            'accent_hover' => $accentHover,
             'accent_border' => sprintf('rgba(%d, %d, %d, 0.42)', $red, $green, $blue),
             'accent_contrast' => $contrast,
+            'accent_strong' => $accentStrong,
+            'on_accent_strong' => $onAccentStrong,
+            'strong_foreground' => $onAccentStrong === '#FFFFFF' ? 'WHITE' : 'DARK',
         ];
     }
 
@@ -80,6 +98,8 @@ final class ProfileThemeCatalog
             '--profile-accent-hover' => $theme['accent_hover'] ?? '',
             '--profile-accent-border' => $theme['accent_border'] ?? '',
             '--profile-accent-contrast' => $theme['accent_contrast'] ?? '',
+            '--profile-accent-strong' => $theme['accent_strong'] ?? '',
+            '--profile-on-accent-strong' => $theme['on_accent_strong'] ?? '',
         ];
         $out = [];
         foreach ($pairs as $name => $value) {
@@ -103,6 +123,17 @@ final class ProfileThemeCatalog
         $luminance = self::relativeLuminance($red, $green, $blue);
         $whiteRatio = 1.05 / ($luminance + 0.05);
         return $whiteRatio >= 4.5 ? '#FFFFFF' : '#000000';
+    }
+
+    private static function ensureWhiteContrast(string $hex): string
+    {
+        [$red, $green, $blue] = self::rgb($hex);
+        while ((1.05 / (self::relativeLuminance($red, $green, $blue) + 0.05)) < 4.5) {
+            $red = (int)round($red * 0.94);
+            $green = (int)round($green * 0.94);
+            $blue = (int)round($blue * 0.94);
+        }
+        return sprintf('#%02X%02X%02X', $red, $green, $blue);
     }
 
     private static function relativeLuminance(int $red, int $green, int $blue): float
