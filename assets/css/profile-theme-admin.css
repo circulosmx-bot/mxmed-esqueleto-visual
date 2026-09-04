@@ -1,0 +1,99 @@
+.mx-theme-admin {
+  --profile-accent: #00bfa6;
+  --profile-accent-soft: rgba(0, 191, 166, 0.14);
+  --profile-accent-soft-2: rgba(0, 191, 166, 0.24);
+  --profile-accent-hover: #009d88;
+  --profile-accent-border: rgba(0, 191, 166, 0.42);
+  --profile-accent-contrast: #000000;
+  margin-top: 1rem;
+  border-top: 1px solid #e3ebef;
+  padding-top: 1rem;
+}
+
+.mx-theme-admin__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mx-theme-admin__swatches {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(38px, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.mx-theme-admin__swatch {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 38px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  box-shadow: 0 0 0 1px rgba(7, 27, 43, 0.18);
+  cursor: pointer;
+}
+
+.mx-theme-admin__swatch[aria-checked="true"] {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px #123d59;
+}
+
+.mx-theme-admin__swatch:focus-visible {
+  outline: 3px solid #1a73e8;
+  outline-offset: 3px;
+}
+
+.mx-theme-admin__swatch[aria-checked="true"]::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--swatch-contrast);
+  font-weight: 900;
+}
+
+.mx-theme-admin__preview {
+  margin: 0.9rem 0 0.45rem;
+  overflow: hidden;
+  border: 1px solid var(--profile-accent-border);
+  border-radius: 10px;
+  background: var(--profile-accent-soft);
+}
+
+.mx-theme-admin__preview-bar {
+  background: linear-gradient(90deg, var(--profile-accent), var(--profile-accent-hover));
+  color: var(--profile-accent-contrast);
+  font-weight: 800;
+  padding: 0.5rem 0.7rem;
+}
+
+.mx-theme-admin__preview-content {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem;
+}
+
+.mx-theme-admin__preview-content span {
+  width: 22%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--profile-accent-soft-2);
+}
+
+.mx-theme-admin__preview-content button {
+  margin-left: auto;
+  border: 1px solid var(--profile-accent-border);
+  border-radius: 7px;
+  background: var(--profile-accent);
+  color: var(--profile-accent-contrast);
+  font-weight: 700;
+  padding: 0.32rem 0.58rem;
+}
+
+@media (max-width: 700px) {
+  .mx-theme-admin__swatches { grid-template-columns: repeat(5, minmax(38px, 1fr)); }
+}

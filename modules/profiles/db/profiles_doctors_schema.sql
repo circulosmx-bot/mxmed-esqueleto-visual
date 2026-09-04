@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `profiles_doctors` (
   `photo_url` TEXT DEFAULT NULL,
   `avatar_url` TEXT DEFAULT NULL,
   `logo_url` TEXT DEFAULT NULL,
+  `profile_theme_key` VARCHAR(64) DEFAULT NULL,
   `profile_status` VARCHAR(32) NOT NULL DEFAULT 'hidden',
   `is_public_candidate` TINYINT(1) NOT NULL DEFAULT 0,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -1171,7 +1171,12 @@ console.info('app.js loaded :: 20251123a');
     logoPreview: document.getElementById('mx-dg-logo-prev'),
     logoImage: document.getElementById('mx-dg-logo-img'),
     logoDelete: document.getElementById('mx-dg-logo-del'),
-    logoFeedback: document.getElementById('mx-dg-logo-feedback')
+    logoFeedback: document.getElementById('mx-dg-logo-feedback'),
+    themeAdmin: document.getElementById('mx-profile-theme-admin'),
+    themeSwatches: document.getElementById('mx-profile-theme-swatches'),
+    themePreview: document.getElementById('mx-profile-theme-preview'),
+    themeReset: document.getElementById('mx-profile-theme-reset'),
+    themeFeedback: document.getElementById('mx-profile-theme-feedback')
   };
 
   const legacyCredentialEls = {
@@ -1281,7 +1286,10 @@ console.info('app.js loaded :: 20251123a');
     hydratingIdentity: false,
     dirty: false,
     autoPublicSpecialty: null,
-    logoSaving: false
+    logoSaving: false,
+    themeStoredKey: null,
+    themeSelectedKey: null,
+    themeCatalog: []
   };
   const PUBLIC_CONTACT_TYPES = new Set(['phone', 'whatsapp', 'email']);
   const PUBLIC_PLAN_OPTIONS = [
@@ -1482,6 +1490,75 @@ console.info('app.js loaded :: 20251123a');
 
   function buildPrivateEndpoint(doctorId){
     return '/api/profiles/private/doctor/' + encodeURIComponent(doctorId);
+  }
+
+  function approvedTheme(key){
+    return state.themeCatalog.find((theme)=> theme && theme.key === key) || null;
+  }
+
+  function applyThemePreview(theme){
+    if(!els.themeAdmin || !theme) return;
+    const vars = {
+      '--profile-accent': theme.accent,
+      '--profile-accent-soft': theme.accent_soft,
+      '--profile-accent-soft-2': theme.accent_soft_2,
+      '--profile-accent-hover': theme.accent_hover,
+      '--profile-accent-border': theme.accent_border,
+      '--profile-accent-contrast': theme.accent_contrast
+    };
+    Object.entries(vars).forEach(([name, value])=> els.themeAdmin.style.setProperty(name, String(value || '')));
+  }
+
+  function selectTheme(key, options = {}){
+    const theme = approvedTheme(key) || approvedTheme('mxmed_teal') || state.themeCatalog[0];
+    if(!theme) return;
+    state.themeSelectedKey = options.reset ? null : theme.key;
+    els.themeSwatches?.querySelectorAll('[role="radio"]').forEach((button)=>{
+      button.setAttribute('aria-checked', button.dataset.themeKey === theme.key ? 'true' : 'false');
+      button.tabIndex = button.dataset.themeKey === theme.key ? 0 : -1;
+    });
+    applyThemePreview(theme);
+    if(els.themeFeedback){
+      els.themeFeedback.textContent = options.reset
+        ? 'Se usará el tema predeterminado de México Médico al guardar.'
+        : `${theme.label}: vista previa sin guardar.`;
+    }
+    updateProfileLink();
+    if(options.markDirty) markIdentityDirty();
+  }
+
+  function applyThemeContract(contract){
+    const data = contract && typeof contract === 'object' ? contract : {};
+    const catalog = Array.isArray(data.catalog) ? data.catalog.filter((theme)=> theme && theme.key && theme.accent) : [];
+    if(catalog.length !== 20 || !els.themeAdmin || !els.themeSwatches) return;
+    state.themeCatalog = catalog;
+    state.themeStoredKey = approvedTheme(data.stored_key)?.key || null;
+    state.themeSelectedKey = state.themeStoredKey;
+    els.themeSwatches.innerHTML = '';
+    catalog.forEach((theme)=>{
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'mx-theme-admin__swatch';
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-label', theme.label);
+      button.title = theme.label;
+      button.dataset.themeKey = theme.key;
+      button.style.setProperty('--swatch-color', theme.accent);
+      button.style.setProperty('--swatch-contrast', theme.accent_contrast);
+      button.addEventListener('click', ()=> selectTheme(theme.key, { markDirty: true }));
+      button.addEventListener('keydown', (event)=>{
+        if(!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault();
+        const index = catalog.findIndex((item)=> item.key === theme.key);
+        const delta = (event.key === 'ArrowLeft' || event.key === 'ArrowUp') ? -1 : 1;
+        const next = catalog[(index + delta + catalog.length) % catalog.length];
+        selectTheme(next.key, { markDirty: true });
+        els.themeSwatches.querySelector(`[data-theme-key="${next.key}"]`)?.focus();
+      });
+      els.themeSwatches.appendChild(button);
+    });
+    els.themeAdmin.hidden = false;
+    selectTheme(state.themeStoredKey || data.default_key || 'mxmed_teal');
   }
 
   function buildContactPointsEndpoint(doctorId, contactPointId = ''){
@@ -2035,7 +2112,10 @@ console.info('app.js loaded :: 20251123a');
   function updateProfileLink(){
     if(!els.profileLink) return;
     const safeDoctorId = sanitizeDoctorId(state.doctorId) || DEFAULT_DOCTOR_ID;
-    els.profileLink.href = '/profiles/doctor.php?doctor_id=' + encodeURIComponent(safeDoctorId);
+    const params = new URLSearchParams({ doctor_id: safeDoctorId });
+    const previewTheme = approvedTheme(state.themeSelectedKey || 'mxmed_teal');
+    if(previewTheme) params.set('mxmed_theme_preview', previewTheme.key);
+    els.profileLink.href = '/profiles/doctor.php?' + params.toString();
   }
 
   function setLogoFeedback(message, tone = 'muted'){
@@ -2165,7 +2245,8 @@ console.info('app.js loaded :: 20251123a');
       prefix: normalizeText(els.prefix?.value, 32),
       gender: mapGenderValue(genderLabel),
       gender_label: genderLabel,
-      bio_short: normalizeText(els.bioShort?.value, 1500)
+      bio_short: normalizeText(els.bioShort?.value, 1500),
+      profile_theme_key: state.themeSelectedKey
     };
   }
 
@@ -2263,6 +2344,7 @@ console.info('app.js loaded :: 20251123a');
         throw new Error('No fue posible cargar la identidad pública.');
       }
       applyIdentity(json.data.identity_public);
+      applyThemeContract(json.data.profile_theme);
       state.loaded = true;
       loadContactPublicOptIn();
       setFeedback('Identidad pública cargada.', 'muted');
@@ -2301,6 +2383,7 @@ console.info('app.js loaded :: 20251123a');
         throw new Error('No fue posible guardar la identidad pública.');
       }
       applyIdentity(json.data.identity_public);
+      applyThemeContract(json.data.profile_theme);
       setFeedback('Cambios guardados. El perfil público ya puede reflejar esta información.', 'success');
       setLegacyFeedback('Datos verificados sin cambios.', 'muted');
     }catch(_){
@@ -2317,6 +2400,7 @@ console.info('app.js loaded :: 20251123a');
     createPrivateContactPoint();
   });
   els.saveBtn.addEventListener('click', savePrivateIdentity);
+  els.themeReset?.addEventListener('click', ()=> selectTheme('mxmed_teal', { reset: true, markDirty: true }));
   els.saveLegacyBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
     setLegacyFeedback('Dato verificado: solicita cambio para revisión.', 'muted');

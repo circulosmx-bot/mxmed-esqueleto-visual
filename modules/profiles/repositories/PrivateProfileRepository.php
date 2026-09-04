@@ -27,6 +27,7 @@ final class PrivateProfileRepository
         'photo_url',
         'avatar_url',
         'logo_url',
+        'profile_theme_key',
         'profile_status',
         'is_public_candidate',
         'updated_at',
@@ -38,6 +39,7 @@ final class PrivateProfileRepository
         'gender' => 'gender',
         'gender_label' => 'gender_label',
         'bio_short' => 'bio_short',
+        'profile_theme_key' => 'profile_theme_key',
     ];
 
     public function __construct(PDO $pdo)
@@ -194,6 +196,7 @@ final class PrivateProfileRepository
             'photo_url' => $this->toNullableText($row['photo_url'] ?? null),
             'avatar_url' => $this->toNullableText($row['avatar_url'] ?? null),
             'logo_url' => $this->toNullableText($row['logo_url'] ?? null),
+            'profile_theme_key' => $this->toNullableText($row['profile_theme_key'] ?? null),
             'profile_status' => $this->toNullableText($row['profile_status'] ?? null) ?? 'hidden',
             'is_public_candidate' => ((int)($row['is_public_candidate'] ?? 0) === 1),
             'updated_at' => $this->toNullableText($row['updated_at'] ?? null),

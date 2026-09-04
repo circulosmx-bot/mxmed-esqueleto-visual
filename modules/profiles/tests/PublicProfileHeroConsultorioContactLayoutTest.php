@@ -48,18 +48,22 @@ pdb04dAssert(str_contains($pageSource, 'mxpp-license-inline--specialty'), 'speci
 pdb04dAssert(!str_contains($pageSource, 'mxpp-licenses-inline') && !str_contains($pageSource, 'mxpp-license-divider'), 'standalone license row remains absent');
 pdb04dAssert(str_contains($pageSource, 'class="mxpp-rating-pill"'), 'compact review bar remains in use');
 pdb04dAssert(str_contains($pageSource, 'href="#sobre-mi"') && str_contains($pageSource, '<span>Sobre mí</span>'), 'about action targets a stable real profile anchor');
-pdb04dAssert(str_contains($pageSource, '<?php if ($showAgendaSlot): ?>') && str_contains($pageSource, 'href="#proximas-citas"'), 'consultation action is plan-safe and targets the existing agenda');
-pdb04dAssert(!preg_match('/href="#proximas-citas"[^>]*data-mxpp-booking-trigger/', $pageSource), 'consultation action does not invoke booking');
+pdb04dAssert(str_contains($pageSource, '<?php if ($showConsultaAction): ?>') && str_contains($pageSource, 'href="<?= h($consultaTarget) ?>"'), 'consultation action uses its plan-safe target');
+pdb04dAssert(str_contains($pageSource, '$consultaTarget = $showAgendaSlot ? \'#proximas-citas\' : \'#consultorios\';'), 'consultation target selects Agenda or consultorio without booking');
+pdb04dAssert(!preg_match('/href="<\?= h\(\$consultaTarget\) \?>"[^>]*data-mxpp-booking-trigger/', $pageSource), 'consultation action does not invoke booking');
 pdb04dAssert(str_contains($pageSource, '<?php if ($physicianLogoUrl !== null): ?>') && str_contains($pageSource, 'mxpp-physician-logo'), 'conditional personal logo remains preserved');
 
 // Consultorio branding and inline switching.
 pdb04dAssert(str_contains($pageSource, 'data-mxpp-consultorio-brand-logo') && str_contains($pageSource, 'Logotipo de '), 'consultorio logo and alt authority remain present');
 pdb04dAssert(str_contains($pageSource, '$primaryBrandName = toText($primaryConsultorio[\'brand_name\'] ?? null) ?? $primaryName;'), 'initial no-logo fallback uses persisted brand or consultorio name');
 pdb04dAssert(str_contains($pageSource, 'brandName.textContent = name;'), 'active no-logo fallback uses persisted active name');
+pdb04dAssert(str_contains($pageSource, 'brandName.hidden = true;') && str_contains($pageSource, 'brandName.hidden = false;'), 'active branding shows either logo or fallback name, never both');
 pdb04dAssert(str_contains($pageSource, 'mxpp-consultorio-tab__name') && str_contains($pageSource, '$consultorio[\'name\']'), 'tabs retain persisted consultorio labels');
 pdb04dAssert(str_contains($pageSource, 'syncBranding(panels.find(function (panel)'), 'tab switch synchronizes active branding');
 pdb04dAssert(str_contains($pageSource, 'panel.hidden = panel.id !== panelId;'), 'tab switch atomically swaps active contact and map panel');
-pdb04dAssert(str_contains($cssSource, 'min-height: 88px;') && str_contains($cssSource, '.mxpp-consultorio-tab__eyebrow'), 'taller branded bar and light card controls are styled');
+pdb04dAssert(str_contains($cssSource, 'height: 50px;') && str_contains($cssSource, 'min-height: 50px;') && str_contains($cssSource, 'min-height: 42px;'), 'compact branded bar and proportionally reduced cards are styled');
+pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'font-size: 0.86rem;'), 'consultorio eyebrow label is enlarged by approximately 30 percent');
+pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'background: var(--profile-accent-contrast);'), 'selected consultorio card uses the controlled inverted high-contrast theme state');
 
 // Contact actions use only the controller-gated DTO values and safe local normalizers.
 pdb04dAssert(str_contains($controllerSource, "\$base['source'] = 'doctor_contact_points';"), 'contact authority remains doctor_contact_points');
@@ -72,6 +76,7 @@ pdb04dAssert(str_contains($pageSource, "return 'https://wa.me/' . \$digits;") &&
 // Map and regression boundaries.
 pdb04dAssert(str_contains($pageSource, '<iframe src="<?= h($consultorioMapUrl) ?>"'), 'map remains tied to each active consultorio panel');
 pdb04dAssert(str_contains($pageSource, '<a class="mxpp-map-link" href="<?= h($consultorioMapUrl) ?>"'), 'allowed Google Maps action is a real safe-authority link');
+pdb04dAssert(str_contains($pageSource, '<section id="consultorios"'), 'basic consultation anchor has a real consultorio target');
 pdb04dAssert(str_contains($pageSource, 'id="proximas-citas"') && str_contains($pageSource, 'data-mxpp-agenda-compact'), 'existing agenda block receives only a navigation anchor');
 pdb04dAssert(str_contains($cssSource, 'overflow-x: auto;') && str_contains($cssSource, '@media (max-width: 640px)'), 'mobile selector remains usable without page overflow');
 

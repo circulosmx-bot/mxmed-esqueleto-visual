@@ -6,11 +6,13 @@ namespace Profiles\Controllers;
 use Profiles\Repositories\PublicProfileRepository;
 use Profiles\Services\PublicProfileEligibility;
 use Profiles\Services\PublicProfilePlanCapabilities;
+use Profiles\Services\ProfileThemeCatalog;
 use function Agenda\Helpers\ConsultorioMap\buildConsultorioPublicMapPayload;
 
 require_once __DIR__ . '/../repositories/PublicProfileRepository.php';
 require_once __DIR__ . '/../services/PublicProfileEligibility.php';
 require_once __DIR__ . '/../services/PublicProfilePlanCapabilities.php';
+require_once __DIR__ . '/../services/ProfileThemeCatalog.php';
 require_once __DIR__ . '/../../agenda/helpers/consultorio_map.php';
 
 final class PublicProfileController
@@ -239,6 +241,11 @@ final class PublicProfileController
                 'pharma_partners' => [],
             ],
             'feature_flags' => $featureFlags,
+            'profile_theme' => [
+                'stored_key' => ProfileThemeCatalog::normalize($snapshot['profile_theme_key'] ?? null),
+                'effective_key' => ProfileThemeCatalog::normalize($snapshot['profile_theme_key'] ?? null) ?? ProfileThemeCatalog::DEFAULT_KEY,
+                'public_rollout_enabled' => in_array(strtolower(trim((string)getenv('MXMED_PROFILE_THEME_PUBLIC_ENABLED'))), ['1', 'true', 'yes', 'on'], true),
+            ],
         ];
 
         return [

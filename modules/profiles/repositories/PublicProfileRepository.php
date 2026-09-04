@@ -48,6 +48,7 @@ final class PublicProfileRepository
             'identity' => $this->resolveIdentity($canonicalProfile),
             'professional' => $this->resolveProfessional($canonicalProfile),
             'specialties' => $this->resolveSpecialties($canonicalProfile),
+            'profile_theme_key' => $this->toNullableText($canonicalProfile['profile_theme_key'] ?? null),
         ];
     }
 
@@ -439,6 +440,7 @@ final class PublicProfileRepository
             'photo_url',
             'avatar_url',
             'logo_url',
+            'profile_theme_key',
             'plan_code',
             'profile_plan',
             'plan_name',

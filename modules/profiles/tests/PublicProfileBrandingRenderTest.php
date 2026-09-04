@@ -38,6 +38,8 @@ pdb04bAssert(!str_contains($pageSource, 'mxpp-physician-logo--placeholder'), 'ph
 pdb04bAssert(!str_contains($pageSource, 'Consultas recientes de este perfil no disponibles por ahora.'), 'obsolete recent-consultations notice is absent');
 pdb04bAssert(str_contains($pageSource, "'Logotipo de ' . \$displayName"), 'physician logo receives descriptive alt text');
 pdb04bAssert(str_contains($pageSource, 'brandName.textContent = name;'), 'consultorio fallback uses the active persisted name');
+pdb04bAssert(str_contains($pageSource, 'brandName.hidden = true;') && str_contains($pageSource, 'brandName.hidden = false;'), 'consultorio name hides beside a logo and returns only as the no-logo fallback');
+pdb04bAssert(str_contains($pageSource, "data-mxpp-consultorio-brand-name <?= \$primaryBrandLogoUrl !== null ? 'hidden' : '' ?>"), 'initial medical-group logo suppresses adjacent descriptive text');
 pdb04bAssert(str_contains($pageSource, "brandLogo.alt = 'Logotipo de ' + name;"), 'consultorio logo alt text follows active brand');
 pdb04bAssert(str_contains($pageSource, 'syncBranding(panels.find(function (panel)'), 'tab activation synchronizes consultorio branding');
 pdb04bAssert(str_contains($pageSource, "brandLogo.removeAttribute('src');"), 'missing active logo collapses without stale image');
@@ -57,6 +59,7 @@ pdb04bAssert(str_contains($pageSource, 'mxpp-paid-profile-check') && !str_contai
 pdb04bAssert(str_contains($cssSource, '.mxpp-physician-logo img'), 'physician logo has bounded layout styling');
 pdb04bAssert(str_contains($cssSource, 'max-width: min(256px, 100%);') && str_contains($cssSource, 'max-height: 100px;'), 'physician logo uses the requested reduced responsive bounds');
 pdb04bAssert(str_contains($cssSource, '.mxpp-consultorio-brand__logo[hidden]'), 'missing consultorio logo is removed from layout');
+pdb04bAssert(str_contains($cssSource, '.mxpp-consultorio-name[hidden]'), 'descriptive text beside an available medical-group logo is removed from layout');
 pdb04bAssert(str_contains($cssSource, '@media (max-width: 640px)'), 'responsive profile breakpoint remains present');
 pdb04bAssert(str_contains($cssSource, 'flex-wrap: wrap;') && str_contains($cssSource, 'overflow-wrap: anywhere;'), 'long text wraps without horizontal overflow');
 pdb04bAssert(str_contains($cssSource, 'min-height: 32px;') && str_contains($cssSource, 'font-size: 1.04rem;') && str_contains($cssSource, 'font-size: 0.86rem;'), 'rating pill dimensions are reduced by approximately 20 percent');

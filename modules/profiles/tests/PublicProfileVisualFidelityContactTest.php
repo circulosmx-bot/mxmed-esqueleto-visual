@@ -69,7 +69,7 @@ pdb04eAssert(!str_contains($pageSource, '>Verificado<'), 'distant verified pill 
 pdb04eAssert(str_contains($cssSource, 'grid-template-columns: minmax(260px, 1.35fr) minmax(310px, 1.6fr);'), 'logo and actions have deliberate desktop distribution');
 pdb04eAssert(str_contains($cssSource, 'max-width: min(256px, 100%);') && str_contains($cssSource, 'max-height: 100px;') && str_contains($cssSource, 'justify-content: center;'), 'personal logo preserves centered alignment with its requested 20 percent reduction');
 pdb04eAssert(str_contains($cssSource, 'width: 64px;') && str_contains($cssSource, 'font-size: 1.35rem;'), 'profile actions have enlarged icons, labels, and hit areas');
-pdb04eAssert(str_contains($cssSource, 'max-width: 220px;') && str_contains($cssSource, 'height: 66px;'), 'consultorio group logo has increased bounded prominence');
+pdb04eAssert(str_contains($cssSource, 'max-width: 220px;') && str_contains($cssSource, 'height: 42px;'), 'consultorio group logo remains width-prominent within the compact bar height');
 pdb04eAssert(str_contains($controllerSource, "'phone_public' => \$showPhone ? \$publicContact['phone'] : null"), 'phone DTO projection is explicit and capability-gated');
 pdb04eAssert(str_contains($controllerSource, "'whatsapp_public' => \$showWhatsapp ? \$publicContact['whatsapp'] : null"), 'WhatsApp DTO projection is explicit and capability-gated');
 pdb04eAssert(str_contains($pageSource, '$consultorioPhoneHref = telHref($consultorioPhone);'), 'active consultorio call target is normalized per panel');

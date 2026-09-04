@@ -67,7 +67,7 @@ pdb04eCorrectionAssert(str_contains($pageSource, 'class="mxpp-action-link mxpp-a
 pdb04eCorrectionAssert(str_contains($pageSource, '<?php if ($showSuggestCorrection): ?>'), 'correction action has its derived visibility guard');
 pdb04eCorrectionAssert(str_contains($pageSource, '<?php elseif ($bioShort !== null): ?>'), 'professional summary is replaced only for the correction state');
 pdb04eCorrectionAssert(str_contains($pageSource, '<?php if ($showAboutAction): ?>'), 'Sobre mí has an explicit paid-plan visibility guard');
-pdb04eCorrectionAssert(str_contains($pageSource, '<?php if ($physicianLogoUrl !== null || $showAboutAction || $showAgendaSlot): ?>'), 'empty hero action row collapses when no feature is visible');
+pdb04eCorrectionAssert(str_contains($pageSource, '<?php if ($physicianLogoUrl !== null || $showAboutAction || $showConsultaAction): ?>'), 'empty hero action row collapses when no feature is visible');
 pdb04eCorrectionAssert(substr_count($pageSource, '>Sugerir corrección<') === 1, 'correction action is not duplicated');
 $oldActionsStart = strpos($pageSource, '<div class="mxpp-actions-row">');
 $oldActionsEnd = $oldActionsStart === false ? false : strpos($pageSource, '</div>', $oldActionsStart);

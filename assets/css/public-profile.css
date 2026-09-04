@@ -7,6 +7,12 @@
   --mxpp-teal-dark: #0b7689;
   --mxpp-border: #e0edf2;
   --mxpp-shadow: none;
+  --profile-accent: #00bfa6;
+  --profile-accent-soft: rgba(0, 191, 166, 0.14);
+  --profile-accent-soft-2: rgba(0, 191, 166, 0.24);
+  --profile-accent-hover: #009d88;
+  --profile-accent-border: rgba(0, 191, 166, 0.42);
+  --profile-accent-contrast: #000000;
 }
 
 * {
@@ -523,7 +529,7 @@ body {
 .mxpp-consultorio-brand__logo {
   width: auto;
   max-width: 220px;
-  height: 66px;
+  height: 42px;
   object-fit: contain;
   object-position: left center;
   border-radius: 4px;
@@ -535,10 +541,8 @@ body {
   display: none;
 }
 
-.mxpp-consultorio-brand--with-logo .mxpp-consultorio-name {
-  max-width: 100px;
-  font-size: 0.78rem;
-  line-height: 1.12;
+.mxpp-consultorio-name[hidden] {
+  display: none;
 }
 
 .mxpp-consultorio-address {
@@ -555,14 +559,15 @@ body {
 
 .mxpp-consultorio-bar {
   width: 100%;
-  background: linear-gradient(90deg, #10adba 0%, #0a99a6 100%);
+  background: linear-gradient(90deg, var(--profile-accent) 0%, var(--profile-accent-hover) 100%);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.82rem;
-  min-height: 88px;
-  padding: 0.66rem 0.78rem;
+  height: 50px;
+  min-height: 50px;
+  padding: 0.25rem 0.78rem;
 }
 
 .mxpp-consultorio-tabs {
@@ -583,29 +588,34 @@ body {
   align-items: center;
   column-gap: 0.58rem;
   min-width: 142px;
-  min-height: 58px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  min-height: 42px;
+  border: 1px solid var(--profile-accent-border);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.9);
   color: #174b63;
   cursor: pointer;
   font: inherit;
   line-height: 1.08;
-  padding: 0.42rem 0.58rem 0.4rem 0.68rem;
+  padding: 0.2rem 0.58rem 0.18rem 0.68rem;
   text-align: left;
 }
 
 .mxpp-consultorio-tab--active {
-  background: #fff;
-  color: #0d6275;
-  border-color: #fff;
+  background: var(--profile-accent-contrast);
+  color: var(--profile-accent);
+  border-color: transparent;
   box-shadow: 0 5px 12px rgba(7, 89, 101, 0.2);
+}
+
+.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow,
+.mxpp-consultorio-tab--active .mxpp-consultorio-tab__chevron {
+  color: var(--profile-accent);
 }
 
 .mxpp-consultorio-tab__eyebrow {
   grid-area: eyebrow;
   color: #3d6979;
-  font-size: 0.66rem;
+  font-size: 0.86rem;
   font-weight: 600;
 }
 
@@ -621,7 +631,7 @@ body {
 
 .mxpp-consultorio-tab__chevron {
   grid-area: chevron;
-  color: #0ca7b1;
+  color: var(--profile-accent-hover);
   font-size: 1.8rem;
   font-weight: 500;
   line-height: 1;
@@ -1096,14 +1106,14 @@ body {
   min-height: 32px;
   margin: 0;
   border-radius: 7px;
-  background: #54b8c1;
-  color: #fff;
+  background: var(--profile-accent);
+  color: var(--profile-accent-contrast);
   padding: 0.26rem 0.56rem;
   line-height: 1;
 }
 
 .mxpp-rating-stars {
-  color: #fff;
+  color: var(--profile-accent-contrast);
   font-size: 1.04rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1111,14 +1121,14 @@ body {
 }
 
 .mxpp-rating-count {
-  color: #fff;
+  color: var(--profile-accent-contrast);
   font-size: 0.86rem;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .mxpp-rating-write-link {
-  color: #4ab0ba;
+  color: var(--profile-accent-hover);
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
@@ -1309,14 +1319,14 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  background: linear-gradient(90deg, #10adba 0%, #0a99a6 100%);
+  background: linear-gradient(90deg, var(--profile-accent) 0%, var(--profile-accent-hover) 100%);
   padding: 0.43rem 0.72rem;
-  color: #fff;
+  color: var(--profile-accent-contrast);
 }
 
 .mxpp-agenda-compact__header h2 {
   margin: 0 0 0.12rem;
-  color: #fff;
+  color: var(--profile-accent-contrast);
   font-size: 0.96rem;
   line-height: 1.1;
 }
@@ -1336,14 +1346,14 @@ body {
 
 .mxpp-agenda-compact__open {
   flex: 0 0 auto;
-  color: #fff;
+  color: var(--profile-accent-contrast);
   font-size: 0.88rem;
   font-weight: 800;
   text-decoration: none;
 }
 
 .mxpp-agenda-compact__header p {
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--profile-accent-contrast);
   font-size: 0.8rem;
   line-height: 1.25;
 }
@@ -1493,7 +1503,7 @@ body {
 
 .mxpp-agenda-compact__open:hover,
 .mxpp-agenda-compact__open:focus {
-  color: #fff;
+  color: var(--profile-accent-contrast);
   text-decoration: underline;
 }
 
@@ -1719,9 +1729,9 @@ body {
 }
 
 .mxpp-review-strip {
-  border: 1px solid transparent;
+  border: 1px solid var(--profile-accent-border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--profile-accent-soft);
   padding: 0.62rem 0.75rem;
   color: #2f5a69;
   font-size: 0.88rem;
@@ -1730,7 +1740,14 @@ body {
 .mxpp-review-strip__header {
   margin: 0;
   font-weight: 700;
-  color: #127e9c;
+  color: var(--profile-accent-hover);
+}
+
+/* Reserved controlled gallery header hook; inert until the public gallery exists. */
+.mxpp-gallery-bar {
+  background: linear-gradient(90deg, var(--profile-accent), var(--profile-accent-hover));
+  color: var(--profile-accent-contrast);
+  border-color: var(--profile-accent-border);
 }
 
 .mxpp-review-strip__body {
@@ -2024,6 +2041,7 @@ body {
 
   .mxpp-consultorio-bar {
     align-items: stretch;
+    height: auto;
   }
 
   .mxpp-consultorio-brand,

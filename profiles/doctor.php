@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePlanCapabilities.php';
+require_once __DIR__ . '/../modules/profiles/services/ProfileThemeCatalog.php';
 
 function h($value): string
 {
@@ -428,6 +429,23 @@ $plan = safeArray($data['plan'] ?? []);
 $geoContext = safeArray($data['geo_context'] ?? []);
 $publicNavigationTaxonomy = safeArray($data['public_navigation_taxonomy'] ?? []);
 $publicBreadcrumbs = safeArray($data['public_breadcrumbs'] ?? []);
+$profileTheme = safeArray($data['profile_theme'] ?? []);
+
+$themeKey = \Profiles\Services\ProfileThemeCatalog::DEFAULT_KEY;
+$themePreviewKey = null;
+$themePublicRolloutEnabled = toBool($profileTheme['public_rollout_enabled'] ?? false);
+if (isLocalDevRequest() || $themePublicRolloutEnabled) {
+    $themeKey = \Profiles\Services\ProfileThemeCatalog::normalize(toText($profileTheme['effective_key'] ?? null))
+        ?? \Profiles\Services\ProfileThemeCatalog::DEFAULT_KEY;
+}
+if (isLocalDevRequest()) {
+    $themePreviewKey = \Profiles\Services\ProfileThemeCatalog::normalize(toText($_GET['mxmed_theme_preview'] ?? null));
+    if ($themePreviewKey !== null) {
+        $themeKey = $themePreviewKey;
+    }
+}
+$resolvedProfileTheme = \Profiles\Services\ProfileThemeCatalog::resolve($themeKey);
+$profileThemeStyle = \Profiles\Services\ProfileThemeCatalog::cssVariables($resolvedProfileTheme);
 
 $displayName = toText($identity['display_name'] ?? null);
 $profileStatus = toText($profile['status'] ?? null) ?? 'hidden';
@@ -573,6 +591,7 @@ $showClaimProfile = (
 );
 $showSuggestCorrection = toBool($publicVisibility['show_suggest_correction'] ?? false);
 $showAboutAction = toBool($publicVisibility['show_about_action'] ?? false);
+$showConsultaAction = toBool($publicVisibility['show_consulta_action'] ?? false);
 $showFee = toBool($publicVisibility['show_consultation_fee'] ?? false);
 $showInsurances = toBool($publicVisibility['show_accepted_insurances'] ?? false);
 
@@ -621,6 +640,7 @@ if ($showPaidProfileCheck && $displayName !== null) {
     $paidProfileNameLead = $displayNameParts !== [] ? implode(' ', $displayNameParts) : null;
 }
 $showAgendaSlot = ($showPublicAgenda && $agendaEndpoint !== null);
+$consultaTarget = $showAgendaSlot ? '#proximas-citas' : '#consultorios';
 $institutionalImageUrl = null;
 $showInstitutionalImageSlot = (
     !$showAgendaSlot
@@ -655,7 +675,7 @@ if (isLocalDevRequest()) {
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
   <?php endif; ?>
 </head>
-<body>
+<body data-profile-theme="<?= h($resolvedProfileTheme['key']) ?>" data-profile-theme-preview="<?= $themePreviewKey !== null ? 'true' : 'false' ?>" style="<?= h($profileThemeStyle) ?>">
   <header class="mxpp-platform-header" aria-label="México Médico">
     <div class="mxpp-platform-header__brand">
       <div class="mxpp-wrap mxpp-platform-header__inner">
@@ -836,14 +856,14 @@ if (isLocalDevRequest()) {
               <?php endif; ?>
             </div>
 
-            <?php if ($physicianLogoUrl !== null || $showAboutAction || $showAgendaSlot): ?>
+            <?php if ($physicianLogoUrl !== null || $showAboutAction || $showConsultaAction): ?>
               <div class="mxpp-hero-brand-actions <?= $physicianLogoUrl !== null ? 'mxpp-hero-brand-actions--with-logo' : 'mxpp-hero-brand-actions--without-logo' ?>">
               <?php if ($physicianLogoUrl !== null): ?>
                 <div class="mxpp-physician-logo">
                   <img src="<?= h($physicianLogoUrl) ?>" alt="<?= h($physicianLogoAlt) ?>" loading="lazy" decoding="async" />
                 </div>
               <?php endif; ?>
-              <?php if ($showAboutAction || $showAgendaSlot): ?>
+              <?php if ($showAboutAction || $showConsultaAction): ?>
                 <nav class="mxpp-hero-actions" aria-label="Navegación del perfil">
                 <?php if ($showAboutAction): ?>
                   <a class="mxpp-hero-action" href="#sobre-mi">
@@ -851,8 +871,8 @@ if (isLocalDevRequest()) {
                     <span>Sobre mí</span>
                   </a>
                 <?php endif; ?>
-                <?php if ($showAgendaSlot): ?>
-                  <a class="mxpp-hero-action" href="#proximas-citas">
+                <?php if ($showConsultaAction): ?>
+                  <a class="mxpp-hero-action" href="<?= h($consultaTarget) ?>">
                     <span class="mxpp-hero-action__icon mxpp-hero-action__icon--consult" aria-hidden="true"></span>
                     <span>Consulta</span>
                   </a>
@@ -866,7 +886,7 @@ if (isLocalDevRequest()) {
         </div>
       </section>
 
-      <section class="mxpp-card mxpp-consultorio-block" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
+      <section id="consultorios" class="mxpp-card mxpp-consultorio-block" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
         <div class="mxpp-consultorio-bar">
           <div class="mxpp-consultorio-brand <?= $primaryBrandLogoUrl !== null ? 'mxpp-consultorio-brand--with-logo' : '' ?>" data-mxpp-consultorio-brand>
             <img
@@ -876,7 +896,7 @@ if (isLocalDevRequest()) {
               loading="lazy"
               decoding="async"
             />
-            <h2 class="mxpp-consultorio-name" data-mxpp-consultorio-brand-name><?= h($primaryBrandName) ?></h2>
+            <h2 class="mxpp-consultorio-name" data-mxpp-consultorio-brand-name <?= $primaryBrandLogoUrl !== null ? 'hidden' : '' ?>><?= h($primaryBrandName) ?></h2>
           </div>
           <?php if ($showConsultorioSwitcher): ?>
             <div class="mxpp-consultorio-tabs" role="tablist" aria-label="Consultorios disponibles">
@@ -1346,12 +1366,14 @@ if (isLocalDevRequest()) {
           }
           if (logoUrl) {
             brandName.textContent = name;
+            brandName.hidden = true;
             brandLogo.src = logoUrl;
             brandLogo.alt = 'Logotipo de ' + name;
             brandLogo.hidden = false;
             return;
           }
           brandName.textContent = name;
+          brandName.hidden = false;
           brandLogo.hidden = true;
           brandLogo.removeAttribute('src');
           brandLogo.removeAttribute('alt');

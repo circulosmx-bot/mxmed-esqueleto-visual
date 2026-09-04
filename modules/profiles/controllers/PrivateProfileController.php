@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace Profiles\Controllers;
 
 use Profiles\Repositories\PrivateProfileRepository;
+use Profiles\Services\ProfileThemeCatalog;
 
 require_once __DIR__ . '/../repositories/PrivateProfileRepository.php';
+require_once __DIR__ . '/../services/ProfileThemeCatalog.php';
 
 final class PrivateProfileController
 {
@@ -17,6 +19,7 @@ final class PrivateProfileController
         'gender',
         'gender_label',
         'bio_short',
+        'profile_theme_key',
     ];
 
     private const BLOCKED_FIELDS = [
@@ -115,6 +118,19 @@ final class PrivateProfileController
                 continue;
             }
 
+            if ($field === 'profile_theme_key') {
+                if ($value === null || trim((string)$value) === '') {
+                    $editable[$field] = null;
+                    continue;
+                }
+                $clean = ProfileThemeCatalog::normalize((string)$value);
+                if ($clean === null) {
+                    $unknown[] = 'profile_theme_key:invalid_catalog_key';
+                    continue;
+                }
+                $editable[$field] = $clean;
+                continue;
+            }
             $clean = $this->sanitizeText($value, $this->fieldMaxLength($field));
             $editable[$field] = $clean;
         }
@@ -222,6 +238,12 @@ final class PrivateProfileController
                     'logo_url' => $this->nullableText($row['logo_url'] ?? null),
                     'profile_status' => $this->nullableText($row['profile_status'] ?? null) ?? 'hidden',
                     'is_public_candidate' => (bool)($row['is_public_candidate'] ?? false),
+                ],
+                'profile_theme' => [
+                    'stored_key' => ProfileThemeCatalog::normalize($row['profile_theme_key'] ?? null),
+                    'effective_key' => ProfileThemeCatalog::normalize($row['profile_theme_key'] ?? null) ?? ProfileThemeCatalog::DEFAULT_KEY,
+                    'default_key' => ProfileThemeCatalog::DEFAULT_KEY,
+                    'catalog' => ProfileThemeCatalog::all(),
                 ],
             ],
             'meta' => array_merge([

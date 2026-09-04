@@ -64,6 +64,7 @@ final class PublicProfilePlanCapabilities
         $showClaimProfile = $capabilities['show_claim_profile'] && !$isClaimed && $claimSourceReady;
         $showSuggestCorrection = $code === 'free' && !$profileIsAdministered && $ownershipSourceReady;
         $showAboutAction = $code !== 'free';
+        $showConsultaAction = $code !== 'free';
 
         return [
             'plan' => [
@@ -108,6 +109,7 @@ final class PublicProfilePlanCapabilities
                 'show_claim_button' => $showClaimProfile,
                 'show_suggest_correction' => $showSuggestCorrection,
                 'show_about_action' => $showAboutAction,
+                'show_consulta_action' => $showConsultaAction,
                 'show_video_consultation' => false,
                 'show_ai_claims' => false,
                 'show_consultation_fee' => $showConsultationDetails,

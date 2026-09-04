@@ -138,6 +138,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
 <link rel="stylesheet" href="assets/css/style.css?v=qa-visual-20260510-day-simple-b" />
+<link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=theme-01a" />
 
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 
@@ -1224,6 +1225,22 @@
                         <div class="text-muted small mt-1 mxpi-field-note">Controlado por publicación y revisión.</div>
                       </div>
                     </div>
+
+                    <section class="mx-theme-admin" id="mx-profile-theme-admin" hidden aria-labelledby="mx-profile-theme-title">
+                      <div class="mx-theme-admin__head">
+                        <div>
+                          <div class="fw-semibold" id="mx-profile-theme-title">Color del perfil</div>
+                          <div class="text-muted small">Elige uno de los 20 temas aprobados. Se guarda una clave controlada, no un color libre.</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" id="mx-profile-theme-reset" type="button">Restablecer</button>
+                      </div>
+                      <div class="mx-theme-admin__swatches" id="mx-profile-theme-swatches" role="radiogroup" aria-label="Tema de color del perfil"></div>
+                      <div class="mx-theme-admin__preview" id="mx-profile-theme-preview" aria-label="Vista previa del tema">
+                        <div class="mx-theme-admin__preview-bar">Consultorios</div>
+                        <div class="mx-theme-admin__preview-content"><span></span><span></span><button type="button" tabindex="-1">Ficha activa</button></div>
+                      </div>
+                      <div class="small text-muted" id="mx-profile-theme-feedback" aria-live="polite"></div>
+                    </section>
 
                     <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
                       <button class="btn btn-primary btn-sm" id="mxpi-save-btn" type="button">Guardar cambios del perfil público</button>
