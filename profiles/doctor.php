@@ -521,9 +521,7 @@ $primaryMapUrl = $primaryConsultorio['map_url'];
 $scheduleSummary = $primaryConsultorio['schedule_summary'];
 $showConsultorioSwitcher = count($consultorioPanels) > 1;
 $primaryBrandLogoUrl = toText($primaryConsultorio['brand_logo_url'] ?? null);
-$primaryBrandName = $primaryBrandLogoUrl !== null
-    ? (toText($primaryConsultorio['brand_name'] ?? null) ?? $primaryName)
-    : 'Consultorio';
+$primaryBrandName = toText($primaryConsultorio['brand_name'] ?? null) ?? $primaryName;
 
 $photoUrl = toText($identity['photo_url'] ?? null);
 $physicianLogoUrl = toBool($publicVisibility['show_logo'] ?? false)
@@ -802,30 +800,33 @@ if (isLocalDevRequest()) {
               <?php endif; ?>
             </div>
 
-            <?php if ($bioShort !== null): ?>
-              <p class="mxpp-bio"><?= h($bioShort) ?></p>
-            <?php else: ?>
-              <p class="mxpp-bio mxpp-bio--pending">Descripción profesional en actualización.</p>
-            <?php endif; ?>
+            <div class="mxpp-about-target" id="sobre-mi">
+              <?php if ($bioShort !== null): ?>
+                <p class="mxpp-bio"><?= h($bioShort) ?></p>
+              <?php else: ?>
+                <p class="mxpp-bio mxpp-bio--pending">Descripción profesional en actualización.</p>
+              <?php endif; ?>
+            </div>
 
-          <?php if ($physicianLogoUrl !== null): ?>
-            <div class="mxpp-physician-logo">
-              <img src="<?= h($physicianLogoUrl) ?>" alt="<?= h($physicianLogoAlt) ?>" loading="lazy" decoding="async" />
+            <div class="mxpp-hero-brand-actions">
+              <?php if ($physicianLogoUrl !== null): ?>
+                <div class="mxpp-physician-logo">
+                  <img src="<?= h($physicianLogoUrl) ?>" alt="<?= h($physicianLogoAlt) ?>" loading="lazy" decoding="async" />
+                </div>
+              <?php endif; ?>
+              <nav class="mxpp-hero-actions" aria-label="Navegación del perfil">
+                <a class="mxpp-hero-action" href="#sobre-mi">
+                  <span class="mxpp-hero-action__icon mxpp-hero-action__icon--about" aria-hidden="true"></span>
+                  <span>Sobre mí</span>
+                </a>
+                <?php if ($showAgendaSlot): ?>
+                  <a class="mxpp-hero-action" href="#proximas-citas">
+                    <span class="mxpp-hero-action__icon mxpp-hero-action__icon--consult" aria-hidden="true"></span>
+                    <span>Consulta</span>
+                  </a>
+                <?php endif; ?>
+              </nav>
             </div>
-          <?php endif; ?>
-          <?php if ($canRenderContactActions): ?>
-            <div class="mxpp-profile-cta">
-              <?php if ($contactPhoneHref !== null): ?>
-                <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($contactPhoneHref) ?>">Llamar</a>
-              <?php endif; ?>
-              <?php if ($contactWhatsappHref !== null): ?>
-                <a class="mxpp-contact-cta mxpp-contact-cta--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">WhatsApp</a>
-              <?php endif; ?>
-              <?php if ($contactEmailHref !== null): ?>
-                <a class="mxpp-contact-cta mxpp-contact-cta--email" href="<?= h($contactEmailHref) ?>">Email</a>
-              <?php endif; ?>
-            </div>
-          <?php endif; ?>
           </article>
 
         </div>
@@ -860,7 +861,11 @@ if (isLocalDevRequest()) {
                   aria-controls="<?= h($panelId) ?>"
                   tabindex="<?= $isActiveConsultorio ? '0' : '-1' ?>"
                   data-mxpp-consultorio-tab
-                ><?= h($consultorio['name']) ?></button>
+                >
+                  <span class="mxpp-consultorio-tab__eyebrow">consultorio</span>
+                  <span class="mxpp-consultorio-tab__name"><?= h($consultorio['name']) ?></span>
+                  <span class="mxpp-consultorio-tab__chevron" aria-hidden="true">›</span>
+                </button>
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
@@ -900,8 +905,44 @@ if (isLocalDevRequest()) {
                 <?php if ($consultorioSchedule !== null): ?>
                   <p class="mxpp-consultorio-schedule"><?= h($consultorioSchedule) ?></p>
                 <?php endif; ?>
+                <?php if ($canRenderContactActions): ?>
+                  <div class="mxpp-consultorio-contact" aria-label="Contacto público">
+                    <?php if ($contactPhoneHref !== null): ?>
+                      <a class="mxpp-contact-line mxpp-contact-line--phone" href="<?= h($contactPhoneHref) ?>">
+                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true"></span>
+                        <span><strong>Teléfono:</strong> <?= h($contactPhone ?? '') ?></span>
+                      </a>
+                    <?php endif; ?>
+                    <?php if ($contactWhatsappHref !== null): ?>
+                      <a class="mxpp-contact-line mxpp-contact-line--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">
+                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--whatsapp" aria-hidden="true"></span>
+                        <span><strong>WhatsApp:</strong> <?= h($contactWhatsapp ?? '') ?></span>
+                      </a>
+                    <?php endif; ?>
+                    <?php if ($contactEmailHref !== null): ?>
+                      <a class="mxpp-contact-line mxpp-contact-line--email" href="<?= h($contactEmailHref) ?>">
+                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--email" aria-hidden="true"></span>
+                        <span><?= h($contactEmail ?? '') ?></span>
+                      </a>
+                    <?php endif; ?>
+                  </div>
+                  <div class="mxpp-consultorio-contact-actions">
+                    <?php if ($contactPhoneHref !== null): ?>
+                      <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($contactPhoneHref) ?>">
+                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true"></span>
+                        <span>Llamar</span>
+                      </a>
+                    <?php endif; ?>
+                    <?php if ($contactWhatsappHref !== null): ?>
+                      <a class="mxpp-contact-cta mxpp-contact-cta--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">
+                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--whatsapp" aria-hidden="true"></span>
+                        <span>WhatsApp</span>
+                      </a>
+                    <?php endif; ?>
+                  </div>
+                <?php endif; ?>
                 <?php if ($consultorioMapUrl !== null && $showClickableMap): ?>
-                  <p class="mxpp-map-link">Ver en Google Maps</p>
+                  <a class="mxpp-map-link" href="<?= h($consultorioMapUrl) ?>" target="_blank" rel="noopener">Ver en Google Maps</a>
                 <?php endif; ?>
               </div>
               <div class="mxpp-consultorio-map-col">
@@ -929,6 +970,7 @@ if (isLocalDevRequest()) {
 
       <?php if ($showAgendaSlot): ?>
         <section
+          id="proximas-citas"
           class="mxpp-card mxpp-card--section mxpp-agenda-compact"
           data-mxpp-agenda-compact
           data-doctor-id="<?= h($doctorId) ?>"
@@ -1261,7 +1303,7 @@ if (isLocalDevRequest()) {
             brandLogo.hidden = false;
             return;
           }
-          brandName.textContent = 'Consultorio';
+          brandName.textContent = name;
           brandLogo.hidden = true;
           brandLogo.removeAttribute('src');
           brandLogo.removeAttribute('alt');

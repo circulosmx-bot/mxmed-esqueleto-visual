@@ -37,7 +37,7 @@ pdb04bAssert(str_contains($pageSource, '<?php if ($physicianLogoUrl !== null): ?
 pdb04bAssert(!str_contains($pageSource, 'mxpp-physician-logo--placeholder'), 'physician logo has no empty placeholder');
 pdb04bAssert(!str_contains($pageSource, 'Consultas recientes de este perfil no disponibles por ahora.'), 'obsolete recent-consultations notice is absent');
 pdb04bAssert(str_contains($pageSource, "'Logotipo de ' . \$displayName"), 'physician logo receives descriptive alt text');
-pdb04bAssert(str_contains($pageSource, "brandName.textContent = 'Consultorio';"), 'consultorio fallback text is exact');
+pdb04bAssert(str_contains($pageSource, 'brandName.textContent = name;'), 'consultorio fallback uses the active persisted name');
 pdb04bAssert(str_contains($pageSource, "brandLogo.alt = 'Logotipo de ' + name;"), 'consultorio logo alt text follows active brand');
 pdb04bAssert(str_contains($pageSource, 'syncBranding(panels.find(function (panel)'), 'tab activation synchronizes consultorio branding');
 pdb04bAssert(str_contains($pageSource, "brandLogo.removeAttribute('src');"), 'missing active logo collapses without stale image');
