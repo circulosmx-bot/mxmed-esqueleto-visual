@@ -23,7 +23,7 @@ function theme01aLuminance(string $hex): float
 }
 
 $expected = [
-    'mxmed_teal' => '#00BFA6', 'medical_blue' => '#1E88E5', 'navy_medical' => '#0D1B3D',
+    'mxmed_teal' => '#10ADBA', 'medical_blue' => '#1E88E5', 'navy_medical' => '#0D1B3D',
     'soft_lavender' => '#B7A6E6', 'emerald_green' => '#009E73', 'clinical_pink' => '#E91E63',
     'dusty_pink' => '#F4B6C2', 'soft_coral' => '#FF6F61', 'terracotta' => '#C25A3C',
     'soft_gold' => '#C9A227', 'warm_ivory' => '#F2E8D5', 'plum' => '#6A1B9A',
@@ -49,5 +49,8 @@ foreach ($catalog as $theme) {
 theme01aAssert(ProfileThemeCatalog::normalize('not-approved') === null, 'invalid key rejected');
 theme01aAssert(ProfileThemeCatalog::resolve(null)['key'] === 'mxmed_teal', 'null falls back safely');
 theme01aAssert(ProfileThemeCatalog::resolve('not-approved')['key'] === 'mxmed_teal', 'invalid key falls back safely');
+theme01aAssert(ProfileThemeCatalog::resolve(null)['accent'] === '#10ADBA', 'null resolves historical native turquoise');
+theme01aAssert(ProfileThemeCatalog::resolve('not-approved')['accent'] === '#10ADBA', 'invalid key resolves historical native turquoise');
+theme01aAssert(ProfileThemeCatalog::resolve('mxmed_teal')['accent_hover'] === '#0A99A6', 'native hover preserves historical secondary gradient stop');
 
 echo "ProfileThemeCatalogTest PASS\n";

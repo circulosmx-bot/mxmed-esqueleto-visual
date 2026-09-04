@@ -7,11 +7,11 @@
   --mxpp-teal-dark: #0b7689;
   --mxpp-border: #e0edf2;
   --mxpp-shadow: none;
-  --profile-accent: #00bfa6;
-  --profile-accent-soft: rgba(0, 191, 166, 0.14);
-  --profile-accent-soft-2: rgba(0, 191, 166, 0.24);
-  --profile-accent-hover: #009d88;
-  --profile-accent-border: rgba(0, 191, 166, 0.42);
+  --profile-accent: #10adba;
+  --profile-accent-soft: rgba(16, 173, 186, 0.14);
+  --profile-accent-soft-2: rgba(16, 173, 186, 0.24);
+  --profile-accent-hover: #0a99a6;
+  --profile-accent-border: rgba(16, 173, 186, 0.42);
   --profile-accent-contrast: #000000;
 }
 

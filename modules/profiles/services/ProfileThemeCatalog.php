@@ -8,7 +8,7 @@ final class ProfileThemeCatalog
     public const DEFAULT_KEY = 'mxmed_teal';
 
     private const THEMES = [
-        'mxmed_teal' => ['México Médico turquesa', '#00BFA6'],
+        'mxmed_teal' => ['México Médico turquesa', '#10ADBA', '#0A99A6'],
         'medical_blue' => ['Azul médico', '#1E88E5'],
         'navy_medical' => ['Azul marino médico', '#0D1B3D'],
         'soft_lavender' => ['Lavanda suave', '#B7A6E6'],
@@ -49,7 +49,8 @@ final class ProfileThemeCatalog
     public static function resolve(?string $key): array
     {
         $resolvedKey = self::normalize($key) ?? self::DEFAULT_KEY;
-        [$label, $accent] = self::THEMES[$resolvedKey];
+        $definition = self::THEMES[$resolvedKey];
+        [$label, $accent] = $definition;
         [$red, $green, $blue] = self::rgb($accent);
         $contrast = self::contrastColor($red, $green, $blue);
 
@@ -59,7 +60,7 @@ final class ProfileThemeCatalog
             'accent' => $accent,
             'accent_soft' => sprintf('rgba(%d, %d, %d, 0.14)', $red, $green, $blue),
             'accent_soft_2' => sprintf('rgba(%d, %d, %d, 0.24)', $red, $green, $blue),
-            'accent_hover' => self::shade($red, $green, $blue, 0.82),
+            'accent_hover' => $definition[2] ?? self::shade($red, $green, $blue, 0.82),
             'accent_border' => sprintf('rgba(%d, %d, %d, 0.42)', $red, $green, $blue),
             'accent_contrast' => $contrast,
         ];
