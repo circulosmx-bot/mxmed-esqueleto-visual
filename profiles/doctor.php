@@ -766,7 +766,12 @@ if (isLocalDevRequest()) {
         <div class="mxpp-right-panel">
           <article class="mxpp-card mxpp-card--identity">
             <div class="mxpp-title-row">
-              <h1 class="mxpp-profile-title <?= $displayName === null ? 'mxpp-profile-title--pending' : '' ?>"><?= h($displayName ?? 'Perfil médico en validación') ?></h1>
+              <div class="mxpp-title-primary-line">
+                <h1 class="mxpp-profile-title <?= $displayName === null ? 'mxpp-profile-title--pending' : '' ?>"><?= h($displayName ?? 'Perfil médico en validación') ?></h1>
+                <?php if ($professionalLicense !== null): ?>
+                  <span class="mxpp-license-inline mxpp-license-inline--professional"><strong>Cédula profesional:</strong> <?= h($professionalLicense) ?></span>
+                <?php endif; ?>
+              </div>
               <span class="mxpp-badge <?= $isPublic ? '' : 'mxpp-badge--soft' ?>"><?= $isPublic ? 'Verificado' : 'En validación' ?></span>
             </div>
 
@@ -786,27 +791,16 @@ if (isLocalDevRequest()) {
               <p class="mxpp-opinions mxpp-opinions--muted">Opiniones públicas no disponibles por ahora.</p>
             <?php endif; ?>
 
-            <?php if ($primarySpecialty !== null): ?>
-              <p class="mxpp-specialty"><?= h($primarySpecialty) ?></p>
-            <?php else: ?>
-              <p class="mxpp-specialty mxpp-specialty--pending">Especialidad en validación</p>
-            <?php endif; ?>
-
-            <?php if ($professionalLicense !== null || $specialtyLicense !== null): ?>
-              <p class="mxpp-licenses-inline">
-                <?php if ($professionalLicense !== null): ?>
-                  <span><strong>Cédula profesional:</strong> <?= h($professionalLicense) ?></span>
-                <?php endif; ?>
-                <?php if ($professionalLicense !== null && $specialtyLicense !== null): ?>
-                  <span class="mxpp-license-divider">/</span>
-                <?php endif; ?>
-                <?php if ($specialtyLicense !== null): ?>
-                  <span><strong>Cédula especialidad:</strong> <?= h($specialtyLicense) ?></span>
-                <?php endif; ?>
-              </p>
-            <?php else: ?>
-              <p class="mxpp-muted">Cédulas públicas en proceso de validación.</p>
-            <?php endif; ?>
+            <div class="mxpp-specialty-line">
+              <?php if ($primarySpecialty !== null): ?>
+                <p class="mxpp-specialty"><?= h($primarySpecialty) ?></p>
+              <?php else: ?>
+                <p class="mxpp-specialty mxpp-specialty--pending">Especialidad en validación</p>
+              <?php endif; ?>
+              <?php if ($specialtyLicense !== null): ?>
+                <span class="mxpp-license-inline mxpp-license-inline--specialty"><strong>Cédula especialidad:</strong> <?= h($specialtyLicense) ?></span>
+              <?php endif; ?>
+            </div>
 
             <?php if ($bioShort !== null): ?>
               <p class="mxpp-bio"><?= h($bioShort) ?></p>
@@ -814,7 +808,6 @@ if (isLocalDevRequest()) {
               <p class="mxpp-bio mxpp-bio--pending">Descripción profesional en actualización.</p>
             <?php endif; ?>
 
-          <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
           <?php if ($physicianLogoUrl !== null): ?>
             <div class="mxpp-physician-logo">
               <img src="<?= h($physicianLogoUrl) ?>" alt="<?= h($physicianLogoAlt) ?>" loading="lazy" decoding="async" />
