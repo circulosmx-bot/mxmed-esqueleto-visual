@@ -72,12 +72,12 @@ final class PublicProfilePanelContent
         $fee = $showFee ? self::text($commercial['consultation_fee'] ?? null) : null;
         $insurers = ($visibility['show_accepted_insurances'] ?? false) === true
             ? self::insurers($commercial['accepted_insurances'] ?? []) : [];
-        $hours = self::group('Horarios', $schedules, 'event_available', 'left');
+        $hours = self::group('Horarios', $schedules, 'alarm', 'left', 'outlined');
         $hours['schedule_actions'] = $scheduleActions;
         $insurance = self::group('Aseguradoras aceptadas', array_column($insurers, 'name'), 'health_and_safety', 'right');
         $insurance['logos'] = array_column($insurers, 'logo_url');
         $consultation = [
-            self::group('Atención a', self::items($professional['target_audience'] ?? []), 'groups', 'left'),
+            self::group('Atención a', self::items($professional['target_audience'] ?? []), 'group', 'left', 'outlined'),
             $hours,
             self::group('Costo de la consulta', $fee !== null ? [$fee] : [], 'payments', 'left'),
             self::group('Medios de pago', $showFee ? self::items($commercial['payment_methods'] ?? []) : [], 'payments', 'left'),
@@ -105,9 +105,9 @@ final class PublicProfilePanelContent
         return $views;
     }
 
-    private static function group(string $title, array $items, string $icon, string $column): array
+    private static function group(string $title, array $items, string $icon, string $column, string $iconStyle = 'rounded'): array
     {
-        return ['title' => $title, 'items' => $items, 'icon' => $icon, 'column' => $column, 'empty_message' => 'Información aún no publicada.'];
+        return ['title' => $title, 'items' => $items, 'icon' => $icon, 'icon_style' => $iconStyle, 'column' => $column, 'empty_message' => 'Información aún no publicada.'];
     }
 
     private static function scheduleText($value): ?string

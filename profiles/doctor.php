@@ -673,6 +673,7 @@ if (isLocalDevRequest()) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600;700;900&family=Baloo+2:wght@400;500&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=badge,call,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,school,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=alarm,group" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
   <?php if ($renderJsonLd): ?>
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -1056,7 +1057,7 @@ if (isLocalDevRequest()) {
                   <div class="mxpp-content-panel__column" data-mxpp-content-column="<?= h($column) ?>">
                     <?php foreach ($groups as $group): ?>
                       <section class="mxpp-content-panel__group">
-                        <span class="material-symbols-rounded mxpp-content-panel__icon" aria-hidden="true"><?= h($group['icon']) ?></span>
+                        <span class="material-symbols-<?= ($group['icon_style'] ?? 'rounded') === 'outlined' ? 'outlined' : 'rounded' ?> mxpp-content-panel__icon" aria-hidden="true"><?= h($group['icon']) ?></span>
                         <div class="mxpp-content-panel__copy">
                           <h3><?= h($group['title']) ?></h3>
                           <?php if ($group['items'] === []): ?>
