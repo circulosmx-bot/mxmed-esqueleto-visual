@@ -670,6 +670,7 @@ if (isLocalDevRequest()) {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600;700;900&family=Baloo+2:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=event,person_text" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
   <?php if ($renderJsonLd): ?>
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -867,13 +868,13 @@ if (isLocalDevRequest()) {
                 <nav class="mxpp-hero-actions" aria-label="Navegación del perfil">
                 <?php if ($showAboutAction): ?>
                   <a class="mxpp-hero-action" href="#sobre-mi">
-                    <span class="mxpp-hero-action__icon mxpp-hero-action__icon--about" aria-hidden="true"></span>
+                    <span class="material-symbols-outlined mxpp-hero-action__icon" aria-hidden="true">person_text</span>
                     <span>Sobre mí</span>
                   </a>
                 <?php endif; ?>
                 <?php if ($showConsultaAction): ?>
                   <a class="mxpp-hero-action" href="<?= h($consultaTarget) ?>">
-                    <span class="mxpp-hero-action__icon mxpp-hero-action__icon--consult" aria-hidden="true"></span>
+                    <span class="material-symbols-outlined mxpp-hero-action__icon" aria-hidden="true">event</span>
                     <span>Consulta</span>
                   </a>
                 <?php endif; ?>

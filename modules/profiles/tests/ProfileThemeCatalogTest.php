@@ -23,10 +23,10 @@ function theme01aLuminance(string $hex): float
 }
 
 $expected = [
-    'mxmed_teal' => '#10ADBA', 'medical_blue' => '#1E88E5', 'navy_medical' => '#0D1B3D',
+    'mxmed_teal' => '#10ADBA', 'medical_blue' => '#1E88E5', 'navy_medical' => '#1569C7',
     'soft_lavender' => '#B7A6E6', 'emerald_green' => '#009E73', 'clinical_pink' => '#E91E63',
     'dusty_pink' => '#F4B6C2', 'soft_coral' => '#FF6F61', 'terracotta' => '#C25A3C',
-    'soft_gold' => '#C9A227', 'warm_ivory' => '#F2E8D5', 'plum' => '#6A1B9A',
+    'soft_gold' => '#E0BB58', 'warm_ivory' => '#F2E8D5', 'plum' => '#6A1B9A',
     'clinical_sky' => '#5DADE2', 'steel_blue' => '#5C7C9D', 'petroleum_blue' => '#2C7A7B',
     'cobalt_blue' => '#2F5FB3', 'clinical_light_sky' => '#7EC2FF', 'royal_blue' => '#1A4DFF',
     'deep_ocean_blue' => '#0A3D62', 'ice_blue' => '#CFE2F3',
@@ -55,17 +55,26 @@ theme01aAssert(ProfileThemeCatalog::resolve('not-approved')['key'] === 'mxmed_te
 theme01aAssert(ProfileThemeCatalog::resolve(null)['accent'] === '#10ADBA', 'null resolves historical native turquoise');
 theme01aAssert(ProfileThemeCatalog::resolve('not-approved')['accent'] === '#10ADBA', 'invalid key resolves historical native turquoise');
 theme01aAssert(ProfileThemeCatalog::resolve('mxmed_teal')['accent_hover'] === '#0A99A6', 'native hover preserves historical secondary gradient stop');
+theme01aAssert(ProfileThemeCatalog::resolve('soft_gold')['label'] === 'Dorado Metálico', 'soft gold selector label uses the approved metallic name');
+theme01aAssert(ProfileThemeCatalog::resolve('navy_medical')['label'] === 'Azul Profundo', 'persisted navy key exposes the approved deep-blue label');
+$deepBlue = ProfileThemeCatalog::resolve('navy_medical');
+theme01aAssert($deepBlue['accent_soft'] === 'rgba(21, 105, 199, 0.14)', 'deep-blue soft token derives from the new base');
+theme01aAssert($deepBlue['accent_soft_2'] === 'rgba(21, 105, 199, 0.24)', 'deep-blue second soft token derives from the new base');
+theme01aAssert($deepBlue['accent_hover'] === '#1156A3', 'deep-blue hover token derives from the new base');
+theme01aAssert($deepBlue['accent_border'] === 'rgba(21, 105, 199, 0.42)', 'deep-blue border token derives from the new base');
+theme01aAssert($deepBlue['accent_strong'] === '#1156A3', 'deep-blue strong surface derives from the new base');
 
 $whiteStrongKeys = [];
-$lightSurfaceKeys = [];
+$directorDarkForegroundKeys = [];
 foreach ($catalog as $theme) {
     if ($theme['strong_foreground'] === 'WHITE') {
         $whiteStrongKeys[] = $theme['key'];
         theme01aAssert($theme['on_accent_strong'] === '#FFFFFF', $theme['key'] . ' strong foreground is white');
+        theme01aAssert($theme['on_theme_surface'] === '#FFFFFF', $theme['key'] . ' section-surface foreground is white');
     } else {
-        $lightSurfaceKeys[] = $theme['key'];
-        theme01aAssert($theme['on_accent_strong'] === '#113D59', $theme['key'] . ' light strong surface uses the Director foreground');
-        theme01aAssert($theme['on_theme_surface'] === '#113D59', $theme['key'] . ' light section surface uses the Director foreground');
+        $directorDarkForegroundKeys[] = $theme['key'];
+        theme01aAssert($theme['on_accent_strong'] === '#113D59', $theme['key'] . ' uses the Director dark foreground on strong surfaces');
+        theme01aAssert($theme['on_theme_surface'] === '#113D59', $theme['key'] . ' uses the Director dark foreground on section surfaces');
     }
     $strongLuminance = theme01aLuminance($theme['accent_strong']);
     $strongForegroundLuminance = theme01aLuminance($theme['on_accent_strong']);
@@ -74,7 +83,7 @@ foreach ($catalog as $theme) {
     theme01aAssert($strongRatio >= $minimumStrongRatio, $theme['key'] . ' strong surface foreground remains readable');
     theme01aAssert($theme['consultorio_card_active_border'] !== $theme['accent_strong'], $theme['key'] . ' active consultorio frame is visibly distinct from its fill');
 }
-theme01aAssert(count($whiteStrongKeys) === 14, '14 medium/dark/intense themes retain white strong foreground');
-theme01aAssert($lightSurfaceKeys === ['soft_lavender', 'dusty_pink', 'soft_gold', 'warm_ivory', 'clinical_light_sky', 'ice_blue'], 'the six reviewed light themes use the exact Director foreground');
+theme01aAssert(count($whiteStrongKeys) === 18, 'exactly 18 themes use the Director white foreground');
+theme01aAssert($directorDarkForegroundKeys === ['warm_ivory', 'ice_blue'], 'only the two Director exceptions use #113D59');
 
 echo "ProfileThemeCatalogTest PASS\n";

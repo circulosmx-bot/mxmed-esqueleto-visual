@@ -7,26 +7,22 @@ final class ProfileThemeCatalog
 {
     public const DEFAULT_KEY = 'mxmed_teal';
 
-    private const LIGHT_THEME_SURFACE_KEYS = [
-        'soft_lavender',
-        'dusty_pink',
-        'soft_gold',
+    private const DIRECTOR_DARK_FOREGROUND_EXCEPTION_KEYS = [
         'warm_ivory',
-        'clinical_light_sky',
         'ice_blue',
     ];
 
     private const THEMES = [
         'mxmed_teal' => ['México Médico turquesa', '#10ADBA', '#0A99A6'],
         'medical_blue' => ['Azul médico', '#1E88E5'],
-        'navy_medical' => ['Azul marino médico', '#0D1B3D'],
+        'navy_medical' => ['Azul Profundo', '#1569C7'],
         'soft_lavender' => ['Lavanda suave', '#B7A6E6'],
         'emerald_green' => ['Verde esmeralda', '#009E73'],
         'clinical_pink' => ['Rosa clínico', '#E91E63'],
         'dusty_pink' => ['Rosa empolvado', '#F4B6C2'],
         'soft_coral' => ['Coral suave', '#FF6F61'],
         'terracotta' => ['Terracota', '#C25A3C'],
-        'soft_gold' => ['Dorado suave', '#C9A227'],
+        'soft_gold' => ['Dorado Metálico', '#E0BB58'],
         'warm_ivory' => ['Marfil cálido', '#F2E8D5'],
         'plum' => ['Ciruela', '#6A1B9A'],
         'clinical_sky' => ['Cielo clínico', '#5DADE2'],
@@ -63,11 +59,9 @@ final class ProfileThemeCatalog
         [$red, $green, $blue] = self::rgb($accent);
         $contrast = self::contrastColor($red, $green, $blue);
         $accentHover = $definition[2] ?? self::shade($red, $green, $blue, 0.82);
-        $isLightThemeSurface = in_array($resolvedKey, self::LIGHT_THEME_SURFACE_KEYS, true);
-        $onThemeSurface = $isLightThemeSurface ? '#113D59' : $contrast;
-        $onAccentStrong = $isLightThemeSurface
-            ? '#113D59'
-            : '#FFFFFF';
+        $usesDirectorDarkForeground = in_array($resolvedKey, self::DIRECTOR_DARK_FOREGROUND_EXCEPTION_KEYS, true);
+        $onThemeSurface = $usesDirectorDarkForeground ? '#113D59' : '#FFFFFF';
+        $onAccentStrong = $onThemeSurface;
         $accentStrong = ($onAccentStrong === '#FFFFFF' && $resolvedKey !== self::DEFAULT_KEY)
             ? self::ensureWhiteContrast($accentHover)
             : $accentHover;

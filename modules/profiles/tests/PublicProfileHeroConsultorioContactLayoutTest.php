@@ -49,6 +49,9 @@ pdb04dAssert(!str_contains($pageSource, 'mxpp-licenses-inline') && !str_contains
 pdb04dAssert(str_contains($pageSource, 'class="mxpp-rating-pill"'), 'compact review bar remains in use');
 pdb04dAssert(str_contains($pageSource, 'href="#sobre-mi"') && str_contains($pageSource, '<span>Sobre mí</span>'), 'about action targets a stable real profile anchor');
 pdb04dAssert(str_contains($pageSource, '<?php if ($showConsultaAction): ?>') && str_contains($pageSource, 'href="<?= h($consultaTarget) ?>"'), 'consultation action uses its plan-safe target');
+pdb04dAssert(str_contains($pageSource, 'icon_names=event,person_text') && str_contains($pageSource, '>person_text</span>') && str_contains($pageSource, '>event</span>'), 'hero actions use the requested Material Symbols glyphs');
+pdb04dAssert(!str_contains($cssSource, 'mxpp-hero-action__icon--about::') && !str_contains($cssSource, 'mxpp-hero-action__icon--consult::'), 'legacy CSS-drawn hero icons are absent');
+pdb04dAssert(str_contains($cssSource, '"wght" 400') && str_contains($cssSource, '"opsz" 48') && str_contains($cssSource, 'text-transform: none;'), 'Material Symbols retain the requested outlined variation and ligature names');
 pdb04dAssert(str_contains($pageSource, '$consultaTarget = $showAgendaSlot ? \'#proximas-citas\' : \'#consultorios\';'), 'consultation target selects Agenda or consultorio without booking');
 pdb04dAssert(!preg_match('/href="<\?= h\(\$consultaTarget\) \?>"[^>]*data-mxpp-booking-trigger/', $pageSource), 'consultation action does not invoke booking');
 pdb04dAssert(str_contains($pageSource, '<?php if ($physicianLogoUrl !== null): ?>') && str_contains($pageSource, 'mxpp-physician-logo'), 'conditional personal logo remains preserved');
