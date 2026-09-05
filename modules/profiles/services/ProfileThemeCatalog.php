@@ -62,6 +62,8 @@ final class ProfileThemeCatalog
         $usesDirectorDarkForeground = in_array($resolvedKey, self::DIRECTOR_DARK_FOREGROUND_EXCEPTION_KEYS, true);
         $onThemeSurface = $usesDirectorDarkForeground ? '#113D59' : '#FFFFFF';
         $onAccentStrong = $onThemeSurface;
+        $consultorioCardForeground = $onThemeSurface;
+        $consultorioFgSelected = $usesDirectorDarkForeground ? $onThemeSurface : $accent;
         $accentStrong = ($onAccentStrong === '#FFFFFF' && $resolvedKey !== self::DEFAULT_KEY)
             ? self::ensureWhiteContrast($accentHover)
             : $accentHover;
@@ -81,8 +83,11 @@ final class ProfileThemeCatalog
             'on_accent_strong' => $onAccentStrong,
             'strong_foreground' => $onAccentStrong === '#FFFFFF' ? 'WHITE' : 'DARK',
             'consultorio_card_active_border' => $consultorioCardActiveBorder,
-            'consultorio_fg_selected' => $accent,
-            'consultorio_fg_unselected' => sprintf('rgba(%d, %d, %d, 0.50)', $red, $green, $blue),
+            'consultorio_card_foreground' => $consultorioCardForeground,
+            'consultorio_fg_selected' => $consultorioFgSelected,
+            'consultorio_fg_unselected' => $usesDirectorDarkForeground
+                ? '#113D59'
+                : sprintf('rgba(%d, %d, %d, 0.50)', $red, $green, $blue),
         ];
     }
 
@@ -104,6 +109,7 @@ final class ProfileThemeCatalog
             '--profile-accent-strong' => $theme['accent_strong'] ?? '',
             '--profile-on-accent-strong' => $theme['on_accent_strong'] ?? '',
             '--profile-consultorio-card-active-border' => $theme['consultorio_card_active_border'] ?? '',
+            '--profile-consultorio-card-foreground' => $theme['consultorio_card_foreground'] ?? '',
             '--profile-consultorio-fg-selected' => $theme['consultorio_fg_selected'] ?? '',
             '--profile-consultorio-fg-unselected' => $theme['consultorio_fg_unselected'] ?? '',
         ];

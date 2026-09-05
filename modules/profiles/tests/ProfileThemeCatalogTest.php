@@ -38,12 +38,21 @@ theme01aAssert(ProfileThemeCatalog::keys() === array_keys($expected), 'catalog k
 foreach ($catalog as $theme) {
     $key = $theme['key'];
     theme01aAssert($theme['accent'] === $expected[$key], 'accent matches contract for ' . $key);
-    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast', 'on_theme_surface', 'accent_strong', 'on_accent_strong', 'strong_foreground', 'consultorio_card_active_border', 'consultorio_fg_selected', 'consultorio_fg_unselected'] as $field) {
+    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast', 'on_theme_surface', 'accent_strong', 'on_accent_strong', 'strong_foreground', 'consultorio_card_active_border', 'consultorio_card_foreground', 'consultorio_fg_selected', 'consultorio_fg_unselected'] as $field) {
         theme01aAssert(trim((string)($theme[$field] ?? '')) !== '', $key . ' has ' . $field);
     }
     [$expectedRed, $expectedGreen, $expectedBlue] = array_map('hexdec', [substr($expected[$key], 1, 2), substr($expected[$key], 3, 2), substr($expected[$key], 5, 2)]);
-    theme01aAssert($theme['consultorio_fg_selected'] === $expected[$key], $key . ' selected consultorio foreground uses accent at 100 percent');
-    theme01aAssert($theme['consultorio_fg_unselected'] === sprintf('rgba(%d, %d, %d, 0.50)', $expectedRed, $expectedGreen, $expectedBlue), $key . ' unselected consultorio foreground uses accent at 50 percent');
+    if (in_array($key, ['warm_ivory', 'ice_blue'], true)) {
+        theme01aAssert($theme['consultorio_fg_selected'] === '#113D59', $key . ' selected consultorio foreground uses the Director dark foreground override');
+        theme01aAssert($theme['consultorio_fg_selected'] === $theme['consultorio_card_foreground'], $key . ' selected and unselected consultorio foreground are unified for the light theme exception');
+    } else {
+        theme01aAssert($theme['consultorio_fg_selected'] === $expected[$key], $key . ' selected consultorio foreground uses accent at 100 percent');
+    }
+    if (in_array($key, ['warm_ivory', 'ice_blue'], true)) {
+        theme01aAssert($theme['consultorio_fg_unselected'] === '#113D59', $key . ' unselected consultorio foreground remains the Director dark foreground for light themes');
+    } else {
+        theme01aAssert($theme['consultorio_fg_unselected'] === sprintf('rgba(%d, %d, %d, 0.50)', $expectedRed, $expectedGreen, $expectedBlue), $key . ' unselected consultorio foreground uses accent at 50 percent');
+    }
     $l1 = theme01aLuminance($theme['accent']);
     $l2 = theme01aLuminance($theme['accent_contrast']);
     $ratio = (max($l1, $l2) + 0.05) / (min($l1, $l2) + 0.05);
@@ -83,6 +92,19 @@ foreach ($catalog as $theme) {
     theme01aAssert($strongRatio >= $minimumStrongRatio, $theme['key'] . ' strong surface foreground remains readable');
     theme01aAssert($theme['consultorio_card_active_border'] !== $theme['accent_strong'], $theme['key'] . ' active consultorio frame is visibly distinct from its fill');
 }
+
+$exceptionCount = 0;
+foreach ($catalog as $theme) {
+    if ($theme['consultorio_card_foreground'] === '#113D59') {
+        $exceptionCount++;
+        theme01aAssert(in_array($theme['key'], ['warm_ivory', 'ice_blue'], true), 'exception foreground token only applies to exception themes');
+        theme01aAssert($theme['on_theme_surface'] === '#113D59', $theme['key'] . ' exception token aligns with director dark theme surface');
+    } else {
+        theme01aAssert($theme['consultorio_card_foreground'] === '#FFFFFF', $theme['key'] . ' consultorio card foreground remains white');
+        theme01aAssert($theme['on_theme_surface'] === '#FFFFFF', $theme['key'] . ' non-exception theme surface foreground remains white');
+    }
+}
+theme01aAssert($exceptionCount === 2, 'consultorio-card dark foreground exception count is exactly 2');
 theme01aAssert(count($whiteStrongKeys) === 18, 'exactly 18 themes use the Director white foreground');
 theme01aAssert($directorDarkForegroundKeys === ['warm_ivory', 'ice_blue'], 'only the two Director exceptions use #113D59');
 
