@@ -50,6 +50,8 @@ pdb04dAssert(str_contains($pageSource, 'class="mxpp-rating-pill"'), 'compact rev
 pdb04dAssert(str_contains($pageSource, 'href="#sobre-mi"') && str_contains($pageSource, '<span>Sobre mí</span>'), 'about action targets a stable real profile anchor');
 pdb04dAssert(str_contains($pageSource, '<?php if ($showConsultaAction): ?>') && str_contains($pageSource, 'href="<?= h($consultaTarget) ?>"'), 'consultation action uses its plan-safe target');
 pdb04dAssert(str_contains($pageSource, 'icon_names=event,person_text') && str_contains($pageSource, '>person_text</span>') && str_contains($pageSource, '>event</span>'), 'hero actions use the requested Material Symbols glyphs');
+pdb04dAssert(str_contains($cssSource, '.mxpp-hero-action {') && str_contains($cssSource, 'color: #113d59;'), 'hero action labels are fixed to #113D59');
+pdb04dAssert(str_contains($cssSource, '.mxpp-hero-action__icon {') && str_contains($cssSource, 'height: 70px;') && str_contains($cssSource, 'width: auto;') && str_contains($cssSource, 'color: #0b9fa9;') && str_contains($cssSource, 'font-size: 70px;'), 'hero action icon sizing is fixed-height 70 and color is #0B9FA9');
 pdb04dAssert(!str_contains($cssSource, 'mxpp-hero-action__icon--about::') && !str_contains($cssSource, 'mxpp-hero-action__icon--consult::'), 'legacy CSS-drawn hero icons are absent');
 pdb04dAssert(str_contains($cssSource, '"wght" 400') && str_contains($cssSource, '"opsz" 48') && str_contains($cssSource, 'text-transform: none;'), 'Material Symbols retain the requested outlined variation and ligature names');
 pdb04dAssert(str_contains($pageSource, '$consultaTarget = $showAgendaSlot ? \'#proximas-citas\' : \'#consultorios\';'), 'consultation target selects Agenda or consultorio without booking');
