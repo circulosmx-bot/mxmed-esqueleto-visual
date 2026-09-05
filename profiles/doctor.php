@@ -672,7 +672,7 @@ if (isLocalDevRequest()) {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600;700;900&family=Baloo+2:wght@400;500&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=call,event,person_text" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=badge,call,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,school,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
   <?php if ($renderJsonLd): ?>
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -1048,16 +1048,30 @@ if (isLocalDevRequest()) {
             <?php if ($view['groups'] === []): ?>
               <p class="mxpp-content-panel__empty"><?= h($view['empty_message']) ?></p>
             <?php else: ?>
+              <?php if ($view['intro'] !== null): ?>
+                <p class="mxpp-content-panel__intro"><?= h($view['intro']) ?></p>
+              <?php endif; ?>
               <div class="mxpp-content-panel__groups">
-                <?php foreach ($view['groups'] as $group): ?>
-                  <section class="mxpp-content-panel__group">
-                    <h3><?= h($group['title']) ?></h3>
-                    <ul>
-                      <?php foreach ($group['items'] as $item): ?>
-                        <li><?= h($item) ?></li>
-                      <?php endforeach; ?>
-                    </ul>
-                  </section>
+                <?php foreach ($view['columns'] as $column => $groups): ?>
+                  <div class="mxpp-content-panel__column" data-mxpp-content-column="<?= h($column) ?>">
+                    <?php foreach ($groups as $group): ?>
+                      <section class="mxpp-content-panel__group">
+                        <span class="material-symbols-rounded mxpp-content-panel__icon" aria-hidden="true"><?= h($group['icon']) ?></span>
+                        <div class="mxpp-content-panel__copy">
+                          <h3><?= h($group['title']) ?></h3>
+                          <?php if ($group['items'] === []): ?>
+                            <p class="mxpp-content-panel__section-empty"><?= h($group['empty_message']) ?></p>
+                          <?php else: ?>
+                            <ul>
+                              <?php foreach ($group['items'] as $itemIndex => $item): ?>
+                                <li><?php if (isset($group['links'][$itemIndex])): ?><a href="<?= h($group['links'][$itemIndex]) ?>"><?= h($item) ?></a><?php else: ?><?= h($item) ?><?php endif; ?></li>
+                              <?php endforeach; ?>
+                            </ul>
+                          <?php endif; ?>
+                        </div>
+                      </section>
+                    <?php endforeach; ?>
+                  </div>
                 <?php endforeach; ?>
               </div>
             <?php endif; ?>
