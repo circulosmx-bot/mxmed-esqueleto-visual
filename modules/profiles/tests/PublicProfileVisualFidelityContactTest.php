@@ -26,6 +26,7 @@ $starRow = [
     'grupo_nombre' => 'Hospitales Star Médica',
     'telefonos_json' => '["(449) 123 4567", "bad"]',
     'whatsapp' => '+52 449 765 4321',
+    'urgencias_json' => '["449 098 7654"]',
     'logo_url' => 'https://cdn.example.test/star.webp',
     'calle' => 'Avenida Pública',
     'num_ext' => '103',
@@ -34,7 +35,7 @@ $starRow = [
     'estado' => 'Aguascalientes',
 ];
 $contact = $extractContact->invoke($controller, $starRow);
-pdb04eAssert($contact === ['phone' => '(449) 123 4567', 'whatsapp' => '+52 449 765 4321'], 'consultorio phone and WhatsApp are bounded and preserve readable formatting');
+pdb04eAssert($contact === ['phone' => '(449) 123 4567', 'emergency_phone' => '449 098 7654', 'whatsapp' => '+52 449 765 4321'], 'consultorio phone and WhatsApp are bounded and preserve readable formatting');
 
 $paidVisibility = ['show_phone' => true, 'show_whatsapp' => true, 'show_map_gps' => false];
 $paidPanels = $mapConsultorios->invoke($controller, [$starRow], [], $paidVisibility);
@@ -50,12 +51,22 @@ $unsafe = $extractContact->invoke($controller, [
     'telefonos_json' => '["javascript:alert(1)", "123"]',
     'whatsapp' => 'https://evil.example/path',
 ]);
-pdb04eAssert($unsafe === ['phone' => null, 'whatsapp' => null], 'unsafe arbitrary contact values are rejected');
+pdb04eAssert($unsafe === ['phone' => null, 'emergency_phone' => null, 'whatsapp' => null], 'unsafe arbitrary contact values are rejected');
 
 foreach (['basic', 'standard', 'optimum', 'professional'] as $paidPlan) {
     $contract = PublicProfilePlanCapabilities::build($paidPlan, ['has_public_profile' => true]);
     pdb04eAssert(($contract['plan']['is_paid'] ?? false) === true && ($contract['plan']['is_active'] ?? false) === true, $paidPlan . ' is an active paid plan');
 }
+pdb04eAssert($paidPanels[0]['emergency_phone_public'] === '449 098 7654', 'emergency number is projected independently of WhatsApp');
+pdb04eAssert($freePanels[0]['emergency_phone_public'] === null, 'emergency phone respects phone visibility');
+$otherRow = array_replace($starRow, ['consultorio_id' => '3', 'telefonos_json' => '["449 555 1234"]', 'urgencias_json' => null]);
+$panels = $mapConsultorios->invoke($controller, [$starRow, $otherRow], [], $paidVisibility);
+pdb04eAssert($panels[1]['phone_public'] === '449 555 1234' && $panels[1]['emergency_phone_public'] === null, 'each office keeps its phone and absent emergency never borrows another number');
+foreach (['', 'bad json', '["123"]', '[]'] as $emptyEmergency) {
+    $result = $extractContact->invoke($controller, array_replace($starRow, ['urgencias_json' => $emptyEmergency]));
+    pdb04eAssert($result['emergency_phone'] === null, 'missing or invalid emergency number is omitted');
+}
+
 $freeContract = PublicProfilePlanCapabilities::build('free', ['has_public_profile' => true]);
 pdb04eAssert(($freeContract['plan']['is_paid'] ?? true) === false, 'free plan is not paid');
 
@@ -68,7 +79,7 @@ pdb04eAssert(str_contains($pageSource, "toBool(\$plan['is_paid'] ?? false)") && 
 pdb04eAssert(!str_contains($pageSource, '>Verificado<'), 'distant verified pill is removed');
 pdb04eAssert(str_contains($cssSource, 'grid-template-columns: minmax(260px, 1.35fr) minmax(310px, 1.6fr);'), 'logo and actions have deliberate desktop distribution');
 pdb04eAssert(str_contains($cssSource, 'max-width: min(256px, 100%);') && str_contains($cssSource, 'max-height: 100px;') && str_contains($cssSource, 'justify-content: center;'), 'personal logo preserves centered alignment with its requested 20 percent reduction');
-pdb04eAssert(str_contains($cssSource, 'width: 64px;') && str_contains($cssSource, 'font-size: 1.35rem;'), 'profile actions have enlarged icons, labels, and hit areas');
+pdb04eAssert(str_contains($cssSource, 'height: 70px;') && str_contains($cssSource, 'font-size: 1.35rem;'), 'profile actions have enlarged icons, labels, and hit areas');
 pdb04eAssert(str_contains($cssSource, 'max-width: 220px;') && str_contains($cssSource, 'height: 42px;'), 'consultorio group logo remains width-prominent within the compact bar height');
 pdb04eAssert(str_contains($controllerSource, "'phone_public' => \$showPhone ? \$publicContact['phone'] : null"), 'phone DTO projection is explicit and capability-gated');
 pdb04eAssert(str_contains($controllerSource, "'whatsapp_public' => \$showWhatsapp ? \$publicContact['whatsapp'] : null"), 'WhatsApp DTO projection is explicit and capability-gated');
@@ -78,6 +89,6 @@ pdb04eAssert(str_contains($pageSource, 'panel.hidden = panel.id !== panelId;'), 
 pdb04eAssert(str_contains($pageSource, '<iframe src="<?= h($consultorioMapUrl) ?>"'), 'map remains synchronized per consultorio');
 pdb04eAssert(str_contains($cssSource, 'grid-template-columns: minmax(210px, 32%) minmax(0, 68%);'), 'desktop map remains in the right column');
 pdb04eAssert(str_contains($pageSource, 'mxpp-consultorio-map-col--with-title') && str_contains($cssSource, 'padding-top: 0.82rem;'), 'desktop map clears the turquoise bar and aligns with the consultorio title');
-pdb04eAssert(str_contains($cssSource, 'height: 100%;') && strpos($pageSource, 'class="mxpp-map-link"') < strpos($pageSource, 'class="mxpp-consultorio-contact-actions"'), 'map fills through the action-button baseline and buttons remain the final contact element');
+pdb04eAssert(str_contains($cssSource, 'height: 100%;') && !str_contains($pageSource, 'class="mxpp-map-link"'), 'map fills through the action-button baseline and buttons remain the final contact element');
 
 echo "PublicProfileVisualFidelityContactTest PASS\n";

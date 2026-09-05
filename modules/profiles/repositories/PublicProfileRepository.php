@@ -208,6 +208,7 @@ final class PublicProfileRepository
             'municipio',
             'estado',
             'telefonos_json',
+            'urgencias_json',
             'whatsapp',
             'lat',
             'lng',

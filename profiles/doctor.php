@@ -514,6 +514,7 @@ foreach ($consultorios as $index => $consultorio) {
         'brand_logo_url' => toText($consultorio['brand_logo_url'] ?? null),
         'address' => toText($consultorio['address'] ?? null),
         'phone_public' => toText($consultorio['phone_public'] ?? null),
+        'emergency_phone_public' => toText($consultorio['emergency_phone_public'] ?? null),
         'whatsapp_public' => toText($consultorio['whatsapp_public'] ?? null),
         'map_url' => toText($consultorio['map_embed_url'] ?? null),
         'map_can_open_gps' => toBool($consultorio['map_can_open_gps'] ?? false),
@@ -529,6 +530,7 @@ if ($consultorioPanels === []) {
         'brand_logo_url' => null,
         'address' => null,
         'phone_public' => null,
+        'emergency_phone_public' => null,
         'whatsapp_public' => null,
         'map_url' => null,
         'map_can_open_gps' => false,
@@ -578,11 +580,10 @@ $showPublicAgenda = (
     || toBool($agendaPublic['enabled'] ?? false)
     || toBool($featureFlags['has_public_agenda'] ?? false)
 );
-$showClickableMap = (
+$showClickableMap = toBool($plan['is_paid'] ?? false) && toBool($plan['is_active'] ?? false) && (
     toBool($publicVisibility['show_clickable_map'] ?? false)
     || toBool($publicVisibility['show_map_gps'] ?? false)
     || toBool($publicVisibility['show_gps_directions'] ?? false)
-    || toBool($primaryConsultorio['map_can_open_gps'] ?? false)
 );
 $showClaimProfile = (
     toBool($publicVisibility['show_claim_button'] ?? false)
@@ -670,7 +671,7 @@ if (isLocalDevRequest()) {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600;700;900&family=Baloo+2:wght@400;500&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=event,person_text" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=call,event,person_text" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
   <?php if ($renderJsonLd): ?>
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -868,13 +869,13 @@ if (isLocalDevRequest()) {
                 <nav class="mxpp-hero-actions" aria-label="Navegación del perfil">
                 <?php if ($showAboutAction): ?>
                   <a class="mxpp-hero-action" href="#sobre-mi">
-                    <span class="material-symbols-outlined mxpp-hero-action__icon" aria-hidden="true">person_text</span>
+                    <span class="material-symbols-rounded mxpp-hero-action__icon mxpp-hero-action__icon--about" aria-hidden="true">person_text</span>
                     <span>Sobre mí</span>
                   </a>
                 <?php endif; ?>
                 <?php if ($showConsultaAction): ?>
                   <a class="mxpp-hero-action" href="<?= h($consultaTarget) ?>">
-                    <span class="material-symbols-outlined mxpp-hero-action__icon" aria-hidden="true">event</span>
+                    <span class="material-symbols-rounded mxpp-hero-action__icon" aria-hidden="true">event</span>
                     <span>Consulta</span>
                   </a>
                 <?php endif; ?>
@@ -932,16 +933,28 @@ if (isLocalDevRequest()) {
             $isActiveConsultorio = $index === 0;
             $consultorioName = toText($consultorio['name'] ?? null) ?? 'Consultorio principal';
             $consultorioAddress = toText($consultorio['address'] ?? null);
-            $consultorioPhone = toText($consultorio['phone_public'] ?? null) ?? $contactPhone;
+            $consultorioPhone = toText($consultorio['phone_public'] ?? null);
+            $consultorioEmergencyPhone = toText($consultorio['emergency_phone_public'] ?? null);
+            $consultorioEmergencyPhoneHref = telHref($consultorioEmergencyPhone);
             $consultorioWhatsapp = toText($consultorio['whatsapp_public'] ?? null) ?? $contactWhatsapp;
             $consultorioPhoneHref = telHref($consultorioPhone);
             $consultorioWhatsappHref = whatsappHref($consultorioWhatsapp);
             $canRenderConsultorioContact = (
                 $consultorioPhoneHref !== null
+                || $consultorioEmergencyPhoneHref !== null
                 || $consultorioWhatsappHref !== null
                 || $contactEmailHref !== null
             );
             $consultorioMapUrl = toText($consultorio['map_url'] ?? null);
+            $consultorioDirectionsUrl = null;
+            if ($showClickableMap && $consultorioMapUrl !== null) {
+                $mapQuery = [];
+                parse_str((string)(parse_url($consultorioMapUrl, PHP_URL_QUERY) ?? ''), $mapQuery);
+                $destination = toText($mapQuery['q'] ?? null) ?? $consultorioAddress;
+                if ($destination !== null) {
+                    $consultorioDirectionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' . rawurlencode($destination);
+                }
+            }
             $consultorioSchedule = toText($consultorio['schedule_summary'] ?? null);
             $consultorioBrandName = toText($consultorio['brand_name'] ?? null) ?? $consultorioName;
             $consultorioBrandLogoUrl = toText($consultorio['brand_logo_url'] ?? null);
@@ -973,14 +986,14 @@ if (isLocalDevRequest()) {
                   <div class="mxpp-consultorio-contact" aria-label="Contacto público">
                     <?php if ($consultorioPhoneHref !== null): ?>
                       <a class="mxpp-contact-line mxpp-contact-line--phone" href="<?= h($consultorioPhoneHref) ?>">
-                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true"></span>
+                        <span class="material-symbols-rounded mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true">call</span>
                         <span><strong>Tel. Consultorio:</strong> <?= h($consultorioPhone ?? '') ?></span>
                       </a>
                     <?php endif; ?>
-                    <?php if ($consultorioWhatsappHref !== null): ?>
-                      <a class="mxpp-contact-line mxpp-contact-line--whatsapp" href="<?= h($consultorioWhatsappHref) ?>" target="_blank" rel="noopener">
-                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--whatsapp" aria-hidden="true"></span>
-                        <span><strong>WhatsApp:</strong> <?= h($consultorioWhatsapp ?? '') ?></span>
+                    <?php if ($consultorioEmergencyPhoneHref !== null): ?>
+                      <a class="mxpp-contact-line mxpp-contact-line--emergency" href="<?= h($consultorioEmergencyPhoneHref) ?>">
+                        <span class="material-symbols-rounded mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true">call</span>
+                        <span><strong>Urgencias:</strong> <?= h($consultorioEmergencyPhone ?? '') ?></span>
                       </a>
                     <?php endif; ?>
                     <?php if ($contactEmailHref !== null): ?>
@@ -991,14 +1004,11 @@ if (isLocalDevRequest()) {
                     <?php endif; ?>
                   </div>
                 <?php endif; ?>
-                <?php if ($consultorioMapUrl !== null && $showClickableMap): ?>
-                  <a class="mxpp-map-link" href="<?= h($consultorioMapUrl) ?>" target="_blank" rel="noopener">Ver en Google Maps</a>
-                <?php endif; ?>
                 <?php if ($canRenderConsultorioContact): ?>
                   <div class="mxpp-consultorio-contact-actions">
                     <?php if ($consultorioPhoneHref !== null): ?>
                       <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($consultorioPhoneHref) ?>">
-                        <span class="mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true"></span>
+                        <span class="material-symbols-rounded mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true">call</span>
                         <span>Llamar</span>
                       </a>
                     <?php endif; ?>
@@ -1014,7 +1024,10 @@ if (isLocalDevRequest()) {
               <div class="mxpp-consultorio-map-col <?= $showConsultorioSwitcher ? 'mxpp-consultorio-map-col--with-title' : '' ?>">
                 <?php if ($consultorioMapUrl !== null): ?>
                   <div class="mxpp-map">
-                    <iframe src="<?= h($consultorioMapUrl) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación de <?= h($consultorioName) ?>"></iframe>
+                    <iframe src="<?= h($consultorioMapUrl) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación de <?= h($consultorioName) ?>" tabindex="-1" inert></iframe>
+                    <?php if ($consultorioDirectionsUrl !== null): ?>
+                      <a class="mxpp-map-directions" href="<?= h($consultorioDirectionsUrl) ?>" target="_blank" rel="noopener" aria-label="Cómo llegar a <?= h($consultorioName) ?>" title="Cómo llegar a <?= h($consultorioName) ?>"></a>
+                    <?php endif; ?>
                   </div>
                 <?php else: ?>
                   <div class="mxpp-map mxpp-map--placeholder">

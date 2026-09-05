@@ -679,14 +679,6 @@ body {
   color: #2f5f71;
 }
 
-.mxpp-map-link {
-  display: inline-flex;
-  margin: 0.72rem 0 0;
-  color: #0b6f8a;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 0.16em;
-}
 
 .mxpp-consultorio-map-col {
   display: flex;
@@ -786,9 +778,9 @@ body {
   justify-content: center;
   gap: 0.4rem;
   border-radius: 9px;
-  color: #113d59;
+  color: #40a8b0;
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
   text-transform: uppercase;
 }
@@ -796,7 +788,7 @@ body {
 .mxpp-hero-action:hover,
 .mxpp-hero-action:focus-visible {
   background: #e8f7f8;
-  color: #113d59;
+  color: #40a8b0;
   outline: 2px solid #65c4cb;
   outline-offset: 2px;
 }
@@ -807,7 +799,7 @@ body {
   height: 70px;
   align-items: center;
   justify-content: center;
-  color: #0b9fa9;
+  color: #505052;
   font-size: 70px;
   font-variation-settings:
     "FILL" 0,
@@ -816,6 +808,12 @@ body {
     "opsz" 48;
   line-height: 1;
   text-transform: none;
+}
+
+/* Proportional size after two successive 8% reductions. */
+.mxpp-hero-action__icon--about {
+  transform: scale(1.410667);
+  transform-origin: center;
 }
 
 .mxpp-consultorio-contact {
@@ -837,8 +835,16 @@ body {
   text-decoration: none;
 }
 
-.mxpp-contact-line--whatsapp {
+.mxpp-contact-line--phone .mxpp-contact-line__icon {
   color: #14864d;
+}
+
+.mxpp-contact-line--emergency .mxpp-contact-line__icon {
+  color: #d32f2f;
+}
+
+.mxpp-contact-cta--phone .mxpp-contact-line__icon {
+  color: #fff;
 }
 
 .mxpp-contact-line--email {
@@ -859,15 +865,15 @@ body {
   color: currentColor;
 }
 
-.mxpp-contact-line__icon--phone::before {
-  content: "";
-  position: absolute;
-  inset: 2px 4px;
-  border: 3px solid currentColor;
-  border-top-color: transparent;
-  border-right-color: transparent;
-  border-radius: 4px 4px 8px 4px;
-  transform: rotate(-36deg);
+.mxpp-contact-line__icon--phone {
+  font-size: 19px;
+  line-height: 1;
+  text-transform: none;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 200,
+    "opsz" 48;
 }
 
 .mxpp-contact-line__icon--whatsapp {
@@ -1204,6 +1210,7 @@ body {
 }
 
 .mxpp-map {
+  position: relative;
   width: 100%;
   flex: 1 1 auto;
   min-height: 158px;
@@ -1212,11 +1219,24 @@ body {
 }
 
 .mxpp-map iframe {
+  pointer-events: none;
   display: block;
   width: 100%;
   height: 100%;
   min-height: 158px;
   border: 0;
+}
+
+.mxpp-map-directions {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.mxpp-map-directions:focus-visible {
+  outline: 3px solid #40a8b0;
+  outline-offset: -3px;
 }
 
 .mxpp-map--placeholder {

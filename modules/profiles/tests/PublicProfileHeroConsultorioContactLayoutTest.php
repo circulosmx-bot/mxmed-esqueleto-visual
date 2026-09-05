@@ -49,11 +49,11 @@ pdb04dAssert(!str_contains($pageSource, 'mxpp-licenses-inline') && !str_contains
 pdb04dAssert(str_contains($pageSource, 'class="mxpp-rating-pill"'), 'compact review bar remains in use');
 pdb04dAssert(str_contains($pageSource, 'href="#sobre-mi"') && str_contains($pageSource, '<span>Sobre mí</span>'), 'about action targets a stable real profile anchor');
 pdb04dAssert(str_contains($pageSource, '<?php if ($showConsultaAction): ?>') && str_contains($pageSource, 'href="<?= h($consultaTarget) ?>"'), 'consultation action uses its plan-safe target');
-pdb04dAssert(str_contains($pageSource, 'icon_names=event,person_text') && str_contains($pageSource, '>person_text</span>') && str_contains($pageSource, '>event</span>'), 'hero actions use the requested Material Symbols glyphs');
-pdb04dAssert(str_contains($cssSource, '.mxpp-hero-action {') && str_contains($cssSource, 'color: #113d59;'), 'hero action labels are fixed to #113D59');
-pdb04dAssert(str_contains($cssSource, '.mxpp-hero-action__icon {') && str_contains($cssSource, 'height: 70px;') && str_contains($cssSource, 'width: auto;') && str_contains($cssSource, 'color: #0b9fa9;') && str_contains($cssSource, 'font-size: 70px;'), 'hero action icon sizing is fixed-height 70 and color is #0B9FA9');
+pdb04dAssert(str_contains($pageSource, 'icon_names=call,event,person_text') && str_contains($pageSource, '>person_text</span>') && str_contains($pageSource, '>event</span>'), 'hero actions use the requested Material Symbols glyphs');
+pdb04dAssert(str_contains($cssSource, '.mxpp-hero-action {') && str_contains($cssSource, 'color: #40a8b0;'), 'hero action labels use #40a8b0');
+pdb04dAssert(str_contains($cssSource, '.mxpp-hero-action__icon {') && str_contains($cssSource, 'height: 70px;') && str_contains($cssSource, 'width: auto;') && str_contains($cssSource, 'color: #505052;') && str_contains($cssSource, 'font-size: 70px;'), 'hero action icon sizing is fixed-height 70 and color is #505052');
 pdb04dAssert(!str_contains($cssSource, 'mxpp-hero-action__icon--about::') && !str_contains($cssSource, 'mxpp-hero-action__icon--consult::'), 'legacy CSS-drawn hero icons are absent');
-pdb04dAssert(str_contains($cssSource, '"wght" 400') && str_contains($cssSource, '"opsz" 48') && str_contains($cssSource, 'text-transform: none;'), 'Material Symbols retain the requested outlined variation and ligature names');
+pdb04dAssert(str_contains($cssSource, '"wght" 400') && str_contains($cssSource, '"opsz" 48') && str_contains($cssSource, 'text-transform: none;'), 'Material Symbols retain the requested variation settings and ligature names');
 pdb04dAssert(str_contains($pageSource, '$consultaTarget = $showAgendaSlot ? \'#proximas-citas\' : \'#consultorios\';'), 'consultation target selects Agenda or consultorio without booking');
 pdb04dAssert(!preg_match('/href="<\?= h\(\$consultaTarget\) \?>"[^>]*data-mxpp-booking-trigger/', $pageSource), 'consultation action does not invoke booking');
 pdb04dAssert(str_contains($pageSource, '<?php if ($physicianLogoUrl !== null): ?>') && str_contains($pageSource, 'mxpp-physician-logo'), 'conditional personal logo remains preserved');
@@ -84,7 +84,7 @@ pdb04dAssert(str_contains($pageSource, "return 'https://wa.me/' . \$digits;") &&
 
 // Map and regression boundaries.
 pdb04dAssert(str_contains($pageSource, '<iframe src="<?= h($consultorioMapUrl) ?>"'), 'map remains tied to each active consultorio panel');
-pdb04dAssert(str_contains($pageSource, '<a class="mxpp-map-link" href="<?= h($consultorioMapUrl) ?>"'), 'allowed Google Maps action is a real safe-authority link');
+pdb04dAssert(str_contains($pageSource, '<a class="mxpp-map-directions" href="<?= h($consultorioDirectionsUrl) ?>"'), 'allowed Google Maps action is a real safe-authority link');
 pdb04dAssert(str_contains($pageSource, '<section id="consultorios"'), 'basic consultation anchor has a real consultorio target');
 pdb04dAssert(str_contains($pageSource, 'id="proximas-citas"') && str_contains($pageSource, 'data-mxpp-agenda-compact'), 'existing agenda block receives only a navigation anchor');
 pdb04dAssert(str_contains($cssSource, 'overflow-x: auto;') && str_contains($cssSource, '@media (max-width: 640px)'), 'mobile selector remains usable without page overflow');

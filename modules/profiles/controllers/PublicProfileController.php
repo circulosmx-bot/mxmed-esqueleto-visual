@@ -88,6 +88,10 @@ final class PublicProfileController
             $scheduleRows,
             $consultorioPublicVisibility
         );
+        if (!(bool)($planContract['plan']['is_paid'] ?? false)) {
+            // Repository order defines the primary office used throughout the public profile.
+            $consultorios = array_slice($consultorios, 0, 1);
+        }
         $geoContext = $this->buildGeoContext($consultorios);
 
         $schedule = $this->buildSchedule($scheduleRows);
@@ -300,6 +304,7 @@ final class PublicProfileController
                 'municipality' => $this->firstNonEmpty($row['municipio'] ?? null),
                 'postal_code' => $this->firstNonEmpty($row['cp'] ?? null),
                 'phone_public' => $showPhone ? $publicContact['phone'] : null,
+                'emergency_phone_public' => $showPhone ? $publicContact['emergency_phone'] : null,
                 'whatsapp_public' => $showWhatsapp ? $publicContact['whatsapp'] : null,
                 'lat' => $hasConfirmedCoords ? ($mapPayload['lat'] ?? null) : null,
                 'lng' => $hasConfirmedCoords ? ($mapPayload['lng'] ?? null) : null,
@@ -322,7 +327,7 @@ final class PublicProfileController
                 continue;
             }
             $contact = $this->extractPublicConsultorioContact($row);
-            if ($contact['phone'] !== null || $contact['whatsapp'] !== null) {
+            if ($contact['phone'] !== null || $contact['emergency_phone'] !== null || $contact['whatsapp'] !== null) {
                 return true;
             }
         }
@@ -331,10 +336,10 @@ final class PublicProfileController
 
     /**
      * Consultorio phone fields are administrator-managed public sede data.
-     * Project only the first regular phone and WhatsApp; urgency and raw JSON
-     * remain outside the public DTO.
+     * Project the first regular phone, emergency phone, and WhatsApp.
+     * Raw JSON remains outside the public DTO.
      *
-     * @return array{phone:?string,whatsapp:?string}
+     * @return array{phone:?string,emergency_phone:?string,whatsapp:?string}
      */
     private function extractPublicConsultorioContact(array $row): array
     {
@@ -353,8 +358,23 @@ final class PublicProfileController
             }
         }
 
+        $emergencyPhone = null;
+        $rawEmergencyPhones = $row['urgencias_json'] ?? null;
+        if (is_string($rawEmergencyPhones)) {
+            $rawEmergencyPhones = json_decode($rawEmergencyPhones, true);
+        }
+        if (is_array($rawEmergencyPhones)) {
+            foreach ($rawEmergencyPhones as $candidate) {
+                $emergencyPhone = $this->sanitizePublicConsultorioPhone($candidate);
+                if ($emergencyPhone !== null) {
+                    break;
+                }
+            }
+        }
+
         return [
             'phone' => $phone,
+            'emergency_phone' => $emergencyPhone,
             'whatsapp' => $this->sanitizePublicConsultorioPhone($row['whatsapp'] ?? null),
         ];
     }
