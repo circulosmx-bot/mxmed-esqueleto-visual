@@ -68,6 +68,7 @@ final class ProfileThemeCatalog
         $accentStrong = ($onAccentStrong === '#FFFFFF' && $resolvedKey !== self::DEFAULT_KEY)
             ? self::ensureWhiteContrast($accentHover)
             : $accentHover;
+        $consultorioCardActiveBorder = self::strongFrameColor($accentStrong);
 
         return [
             'key' => $resolvedKey,
@@ -81,6 +82,7 @@ final class ProfileThemeCatalog
             'accent_strong' => $accentStrong,
             'on_accent_strong' => $onAccentStrong,
             'strong_foreground' => $onAccentStrong === '#FFFFFF' ? 'WHITE' : 'DARK',
+            'consultorio_card_active_border' => $consultorioCardActiveBorder,
         ];
     }
 
@@ -100,6 +102,7 @@ final class ProfileThemeCatalog
             '--profile-accent-contrast' => $theme['accent_contrast'] ?? '',
             '--profile-accent-strong' => $theme['accent_strong'] ?? '',
             '--profile-on-accent-strong' => $theme['on_accent_strong'] ?? '',
+            '--profile-consultorio-card-active-border' => $theme['consultorio_card_active_border'] ?? '',
         ];
         $out = [];
         foreach ($pairs as $name => $value) {
@@ -134,6 +137,18 @@ final class ProfileThemeCatalog
             $blue = (int)round($blue * 0.94);
         }
         return sprintf('#%02X%02X%02X', $red, $green, $blue);
+    }
+
+    private static function strongFrameColor(string $hex): string
+    {
+        [$red, $green, $blue] = self::rgb($hex);
+        if (self::relativeLuminance($red, $green, $blue) < 0.18) {
+            $red = (int)round($red + (255 - $red) * 0.28);
+            $green = (int)round($green + (255 - $green) * 0.28);
+            $blue = (int)round($blue + (255 - $blue) * 0.28);
+            return sprintf('#%02X%02X%02X', $red, $green, $blue);
+        }
+        return self::shade($red, $green, $blue, 0.68);
     }
 
     private static function relativeLuminance(int $red, int $green, int $blue): float

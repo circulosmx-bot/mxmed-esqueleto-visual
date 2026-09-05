@@ -7,6 +7,7 @@
   --profile-accent-contrast: #000000;
   --profile-accent-strong: #0a99a6;
   --profile-on-accent-strong: #ffffff;
+  --profile-consultorio-card-active-border: #076871;
   margin-top: 1rem;
   border-top: 1px solid #e3ebef;
   padding-top: 1rem;
@@ -88,12 +89,13 @@
 
 .mx-theme-admin__preview-content button {
   margin-left: auto;
-  border: 1px solid var(--profile-accent-border);
+  border: 1px solid var(--profile-consultorio-card-active-border);
   border-radius: 7px;
   background: var(--profile-accent-strong);
   color: var(--profile-on-accent-strong);
   font-weight: 700;
   padding: 0.32rem 0.58rem;
+  box-shadow: inset 0 0 0 1px var(--profile-consultorio-card-active-border);
 }
 
 @media (max-width: 700px) {

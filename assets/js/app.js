@@ -1506,7 +1506,8 @@ console.info('app.js loaded :: 20251123a');
       '--profile-accent-border': theme.accent_border,
       '--profile-accent-contrast': theme.accent_contrast,
       '--profile-accent-strong': theme.accent_strong,
-      '--profile-on-accent-strong': theme.on_accent_strong
+      '--profile-on-accent-strong': theme.on_accent_strong,
+      '--profile-consultorio-card-active-border': theme.consultorio_card_active_border
     };
     Object.entries(vars).forEach(([name, value])=> els.themeAdmin.style.setProperty(name, String(value || '')));
   }
