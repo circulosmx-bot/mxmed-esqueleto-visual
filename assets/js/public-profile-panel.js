@@ -4,14 +4,11 @@
   document.querySelectorAll('[data-mxpp-content-panel]').forEach((panel) => {
     const views = new Map(Array.from(panel.querySelectorAll('[data-mxpp-profile-view]'), (view) => [view.dataset.mxppProfileView, view]));
     const triggers = Array.from(document.querySelectorAll('[data-mxpp-profile-view-trigger]')).filter((button) => button.getAttribute('aria-controls') === panel.id);
-    const locationHeading = panel.querySelectorAll('[data-mxpp-location-heading]');
-    const title = panel.querySelector('[data-mxpp-content-title]');
-    const returnButton = panel.querySelector('[data-mxpp-profile-view-trigger="location"]');
     const locationLabel = panel.getAttribute('aria-label');
     let activeView = 'location';
     let previousTrigger = null;
 
-    if (!views.has('location') || !title || !returnButton) return;
+    if (!views.has('location')) return;
 
     function syncOfficeActions() {
       const selected = panel.querySelector('[data-mxpp-consultorio-panel]:not([hidden])');
@@ -21,6 +18,12 @@
       const closure = panel.querySelector('.mxpp-content-panel__closure');
       if (closure) closure.hidden = !closure.querySelector('[data-mxpp-office-actions]:not([hidden]) a, [data-mxpp-agenda-jump]');
     }
+    // Keep the inactive consultation's intrinsic size current as offices change.
+    const officeObserver = new MutationObserver(syncOfficeActions);
+    panel.querySelectorAll('[data-mxpp-consultorio-panel]').forEach((office) => {
+      officeObserver.observe(office, { attributes: true, attributeFilter: ['hidden'] });
+    });
+    syncOfficeActions();
 
     panel.querySelectorAll('[data-mxpp-agenda-jump]').forEach((link) => {
       link.addEventListener('click', (event) => {
@@ -36,26 +39,22 @@
 
     function setView(next, trigger) {
       if (!views.has(next) || next === activeView) return;
-      // Keep the surrounding sections stable when the replacement is shorter.
-      if (activeView === 'location') {
-        panel.style.minHeight = `${panel.getBoundingClientRect().height}px`;
-      }
       syncOfficeActions();
       const isLocation = next === 'location';
       if (!isLocation) previousTrigger = trigger;
-      views.forEach((view, key) => { view.hidden = key !== next; });
-      locationHeading.forEach((element) => { element.hidden = !isLocation; });
-      title.textContent = isLocation ? '' : views.get(next).dataset.mxppViewTitle;
-      title.hidden = isLocation;
-      returnButton.hidden = isLocation;
-      panel.setAttribute('aria-label', isLocation ? locationLabel : title.textContent);
+      views.forEach((view, key) => {
+        const inactive = key !== next;
+        view.hidden = inactive;
+        view.inert = inactive;
+        view.setAttribute('aria-hidden', String(inactive));
+      });
+      panel.setAttribute('aria-label', isLocation ? locationLabel : views.get(next).dataset.mxppViewTitle);
       triggers.forEach((button) => {
-        if (button !== returnButton) button.setAttribute('aria-pressed', String(button.dataset.mxppProfileViewTrigger === next));
+        if (button.dataset.mxppProfileViewTrigger !== 'location') button.setAttribute('aria-pressed', String(button.dataset.mxppProfileViewTrigger === next));
       });
       activeView = next;
       panel.dataset.profileView = next;
       if (isLocation) {
-        panel.style.removeProperty('min-height');
         // The return button is now hidden; leave keyboard focus on a visible control.
         previousTrigger?.focus({ preventScroll: true });
       }

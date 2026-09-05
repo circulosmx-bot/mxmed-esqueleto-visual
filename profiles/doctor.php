@@ -894,6 +894,7 @@ if (isLocalDevRequest()) {
       </section>
 
       <section id="consultorios" class="mxpp-card mxpp-consultorio-block mxpp-content-panel" data-mxpp-content-panel data-profile-view="location" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
+        <div class="mxpp-content-panel__view" data-mxpp-profile-view="location">
         <div class="mxpp-consultorio-bar">
           <div class="mxpp-consultorio-brand <?= $primaryBrandLogoUrl !== null ? 'mxpp-consultorio-brand--with-logo' : '' ?>" data-mxpp-consultorio-brand data-mxpp-location-heading>
             <img
@@ -930,10 +931,7 @@ if (isLocalDevRequest()) {
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
-          <h2 class="mxpp-content-panel__title" id="mxpp-content-panel-title" data-mxpp-content-title hidden></h2>
-          <button class="mxpp-content-panel__return" type="button" data-mxpp-profile-view-trigger="location" aria-controls="consultorios" hidden>VER DOMICILIO</button>
         </div>
-        <div data-mxpp-profile-view="location">
         <?php foreach ($consultorioPanels as $index => $consultorio): ?>
           <?php
             $tabId = 'mxpp-consultorio-tab-' . ($index + 1);
@@ -1048,7 +1046,12 @@ if (isLocalDevRequest()) {
         <?php endforeach; ?>
         </div>
         <?php foreach ($profilePanelViews as $viewKey => $view): ?>
-          <div class="mxpp-content-panel__body" data-mxpp-profile-view="<?= h($viewKey) ?>" data-mxpp-view-title="<?= h($view['title']) ?>" aria-labelledby="mxpp-content-panel-title" role="region" hidden>
+          <div class="mxpp-content-panel__view" data-mxpp-profile-view="<?= h($viewKey) ?>" data-mxpp-view-title="<?= h($view['title']) ?>" aria-labelledby="mxpp-content-panel-title-<?= h($viewKey) ?>" role="region" hidden inert aria-hidden="true">
+            <div class="mxpp-consultorio-bar">
+              <h2 class="mxpp-content-panel__title" id="mxpp-content-panel-title-<?= h($viewKey) ?>" data-mxpp-content-title><?= h($view['title']) ?></h2>
+              <button class="mxpp-content-panel__return" type="button" data-mxpp-profile-view-trigger="location" aria-controls="consultorios">VER DOMICILIO</button>
+            </div>
+            <div class="mxpp-content-panel__body">
             <?php if ($view['groups'] === []): ?>
               <p class="mxpp-content-panel__empty"><?= h($view['empty_message']) ?></p>
             <?php else: ?>
@@ -1096,6 +1099,7 @@ if (isLocalDevRequest()) {
                 <?php endforeach; ?>
               </div>
             <?php endif; ?>
+            </div>
           </div>
         <?php endforeach; ?>
       </section>

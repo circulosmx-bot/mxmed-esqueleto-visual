@@ -2155,13 +2155,7 @@ button.mxpp-hero-action:focus-visible {
   display: none !important;
 }
 
-/* Alternate views size to their content instead of retaining the map's height.
-   This visual override leaves the shared state controller and location intact. */
-.mxpp-content-panel:not([data-profile-view="location"]) {
-  min-height: 0 !important;
-}
-
-.mxpp-content-panel:not([data-profile-view="location"]) .mxpp-consultorio-bar {
+.mxpp-content-panel__view:not([data-mxpp-profile-view="location"]) .mxpp-consultorio-bar {
   height: auto;
   min-height: 44px;
   flex-wrap: wrap;
@@ -2338,3 +2332,35 @@ button.mxpp-hero-action:focus-visible {
 }
 .mxpp-content-panel__closure a:focus-visible,
 .mxpp-content-panel__schedule-link:focus-visible { outline: 2px solid #40a8b0; outline-offset: 3px; }
+
+/* Each complete view contributes to the same intrinsic grid track: max, not sum.
+   Only these view shells override hidden; hidden chips/offices retain display:none. */
+.mxpp-content-panel { display: grid; }
+.mxpp-content-panel > .mxpp-content-panel__view {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mxpp-content-panel > .mxpp-content-panel__view[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+.mxpp-content-panel__view > .mxpp-consultorio-bar { flex-shrink: 0; height: auto; }
+.mxpp-content-panel__view > .mxpp-content-panel__body { flex: 1 0 auto; }
+.mxpp-content-panel__view[data-mxpp-profile-view="consultation"] > .mxpp-content-panel__body {
+  display: flex;
+  flex-direction: column;
+}
+.mxpp-content-panel__view[data-mxpp-profile-view="consultation"] .mxpp-content-panel__groups { flex: 1 0 auto; }
+.mxpp-content-panel__view > .mxpp-consultorio-panel:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+.mxpp-content-panel__view .mxpp-consultorio-body { flex: 1 0 auto; }
+.mxpp-content-panel__view .mxpp-map iframe { position: absolute; inset: 0; }
+@media (max-width: 920px) {
+  .mxpp-content-panel__view .mxpp-consultorio-body { grid-template-rows: auto 1fr; }
+}
