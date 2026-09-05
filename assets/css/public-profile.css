@@ -2,6 +2,9 @@
   --mxpp-bg: #ffffff;
   --mxpp-surface: #ffffff;
   --mxpp-ink: #0f3952;
+  --mxpp-profile-ink: #123d59;
+  --mxpp-selected-surface: var(--mxpp-profile-ink);
+  --mxpp-on-selected-surface: #ffffff;
   --mxpp-muted: #56707c;
   --mxpp-teal: #0ca7b1;
   --mxpp-teal-dark: #0b7689;
@@ -604,8 +607,8 @@ body {
 }
 
 .mxpp-consultorio-tab--active {
-  background: var(--profile-accent-strong);
-  color: var(--profile-on-accent-strong);
+  background: var(--mxpp-selected-surface);
+  color: var(--mxpp-on-selected-surface);
   border-color: transparent;
   outline: none;
   box-shadow: 0 5px 12px rgba(7, 89, 101, 0.2);
@@ -614,7 +617,7 @@ body {
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow,
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__name,
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__chevron {
-  color: var(--profile-on-accent-strong);
+  color: var(--mxpp-on-selected-surface);
 }
 
 .mxpp-consultorio-tab__eyebrow {
@@ -1066,7 +1069,7 @@ body {
   line-height: 1.06;
   letter-spacing: 0;
   font-weight: 500;
-  color: #123d59;
+  color: var(--mxpp-profile-ink);
 }
 
 .mxpp-profile-title--pending {

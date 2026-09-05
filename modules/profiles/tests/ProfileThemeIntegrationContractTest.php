@@ -40,14 +40,16 @@ theme01aIntegrationAssert(!str_contains($admin, 'type="color"'), 'no free color 
 theme01aIntegrationAssert(str_contains($adminJs, "profile_theme_key: state.themeSelectedKey"), 'admin persists key only');
 theme01aIntegrationAssert(str_contains($css, 'var(--profile-accent)') && str_contains($css, 'var(--profile-accent-strong)') && str_contains($css, 'var(--profile-on-accent-strong)'), 'public profile consumes controlled semantic variables');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-bar') && str_contains($css, '.mxpp-agenda-compact__header') && str_contains($css, '.mxpp-gallery-bar'), 'candidate component hooks exist');
-theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active') && str_contains($css, 'background: var(--profile-accent-strong);'), 'active consultorio consumes the strong surface token');
-theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($css, 'color: var(--profile-on-accent-strong);'), 'active consultorio foreground consumes the strong foreground token');
+theme01aIntegrationAssert(str_contains($css, '--mxpp-profile-ink: #123d59;') && str_contains($css, '--mxpp-selected-surface: var(--mxpp-profile-ink);'), 'selected surface recovers the physician-title institutional blue');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active') && str_contains($css, 'background: var(--mxpp-selected-surface);'), 'active consultorio consumes the fixed institutional selected surface');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($css, 'color: var(--mxpp-on-selected-surface);'), 'active consultorio foreground consumes the fixed white selected foreground');
+theme01aIntegrationAssert(!preg_match('/\.mxpp-consultorio-tab--active\s*\{[^}]*background:\s*var\(--profile-accent-strong\)/s', $css), 'active consultorio background is independent from the profile strong theme token');
 theme01aIntegrationAssert(str_contains($css, 'border-color: transparent;') && str_contains($css, 'outline: none;'), 'active consultorio removes its visible border and outline without changing card geometry');
 theme01aIntegrationAssert(!str_contains($css, 'inset 0 0 0 1px var(--profile-consultorio-card-active-border)'), 'active consultorio has no inset ring shadow');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__name'), 'active consultorio name explicitly follows the card foreground');
 theme01aIntegrationAssert(!preg_match('/\\.mxpp-consultorio-tab\\s*\\{[^}]*var\\(--profile-accent-strong\\)/s', $css), 'inactive consultorio does not consume strong fill');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-review-strip') && str_contains($css, '.mxpp-review-strip__header') && str_contains($css, '.mxpp-review-strip__body'), 'reviews surface and nested foreground hooks exist');
-theme01aIntegrationAssert(str_contains($css, '.mxpp-rating-stars') && substr_count($css, 'var(--profile-on-accent-strong)') >= 7, 'review stars and nested strong foreground use the semantic token');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-rating-stars') && substr_count($css, 'var(--profile-on-accent-strong)') >= 6, 'review stars and nested strong foreground use the semantic token');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-contact-cta--whatsapp') && str_contains($css, 'background: #29ac63;'), 'WhatsApp semantic green remains fixed');
 
 echo "ProfileThemeIntegrationContractTest PASS\n";
