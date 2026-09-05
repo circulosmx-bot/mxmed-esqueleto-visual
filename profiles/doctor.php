@@ -1064,13 +1064,30 @@ if (isLocalDevRequest()) {
                           <?php else: ?>
                             <ul>
                               <?php foreach ($group['items'] as $itemIndex => $item): ?>
-                                <li><?php if (isset($group['links'][$itemIndex])): ?><a href="<?= h($group['links'][$itemIndex]) ?>"><?= h($item) ?></a><?php else: ?><?= h($item) ?><?php endif; ?></li>
+                                <li><?php if (isset($group['logos'][$itemIndex])): ?><img class="mxpp-content-panel__insurer-logo" src="<?= h($group['logos'][$itemIndex]) ?>" alt="" loading="lazy" /><?php endif; ?><?= h($item) ?><?php if (isset($group['schedule_actions'][$itemIndex])): ?> <a class="mxpp-content-panel__schedule-link" href="<?= h($group['schedule_actions'][$itemIndex]) ?>" data-mxpp-agenda-jump aria-label="Ver horarios de <?= h($item) ?>">Ver horarios</a><?php endif; ?></li>
                               <?php endforeach; ?>
                             </ul>
                           <?php endif; ?>
                         </div>
                       </section>
                     <?php endforeach; ?>
+                    <?php if ($viewKey === 'consultation' && $column === 'right'): ?>
+                      <div class="mxpp-content-panel__closure" aria-label="Contactar y reservar">
+                        <?php foreach ($view['contacts'] as $contactIndex => $panelContact): ?>
+                          <div class="mxpp-content-panel__office-actions" data-mxpp-office-actions="<?= h($panelContact['panel_id']) ?>" <?= $contactIndex > 0 ? 'hidden' : '' ?>>
+                            <?php if ($panelContact['phone'] !== null): ?>
+                              <a href="<?= h($panelContact['phone']) ?>">¿Tienes dudas?</a>
+                            <?php endif; ?>
+                            <?php if ($panelContact['whatsapp'] !== null): ?>
+                              <a href="<?= h($panelContact['whatsapp']) ?>" target="_blank" rel="noopener">Enviar WhatsApp</a>
+                            <?php endif; ?>
+                          </div>
+                        <?php endforeach; ?>
+                        <?php if ($view['agenda']): ?>
+                          <a class="mxpp-content-panel__reserve" href="#proximas-citas" data-mxpp-agenda-jump>Reserva tu cita ahora</a>
+                        <?php endif; ?>
+                      </div>
+                    <?php endif; ?>
                   </div>
                 <?php endforeach; ?>
               </div>

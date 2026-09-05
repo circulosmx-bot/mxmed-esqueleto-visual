@@ -39,47 +39,51 @@ final class PublicProfilePanelContent
         }
 
         $schedules = [];
-        $phones = [];
-        $phoneLinks = [];
-        foreach ((array)($data['consultorios'] ?? []) as $office) {
+        $scheduleActions = [];
+        $contacts = [];
+        $modalities = [];
+        $agenda = ($visibility['show_public_agenda'] ?? false) === true
+            && self::text($data['agenda_public']['availability_endpoint'] ?? null) !== null;
+        foreach (array_values((array)($data['consultorios'] ?? [])) as $index => $office) {
             if (!is_array($office)) continue;
-            $name = self::text($office['public_name'] ?? null);
-            $summary = self::text($office['schedule_summary'] ?? null);
-            if ($summary === null) {
-                $items = self::items($office['schedule_summary'] ?? []);
-                $summary = $items !== [] ? implode(' · ', $items) : null;
+            $name = self::text($office['public_name'] ?? null) ?? 'Consultorio';
+            $summary = self::scheduleText($office['schedule_summary'] ?? null);
+            if ($summary !== null) {
+                $scheduleActions[count($schedules)] = $agenda ? '#proximas-citas' : null;
+                $schedules[] = $agenda ? $name : $name . ': ' . $summary;
             }
-            if ($summary !== null) $schedules[] = ($name !== null ? $name . ': ' : '') . $summary;
-            // These fields are already visibility-gated by the public office DTO.
-            foreach (['phone_public' => 'Tel. consultorio', 'emergency_phone_public' => 'Urgencias'] as $key => $label) {
-                $phone = self::text($office[$key] ?? null);
-                $href = self::phoneHref($phone);
-                if ($href !== null) {
-                    $phoneLinks[count($phones)] = $href;
-                    $phones[] = ($name !== null ? $name . ' · ' : '') . $label . ': ' . $phone;
-                }
+            // Office destinations have already passed the public-contact visibility gate.
+            $phone = self::phoneHref(self::text($office['phone_public'] ?? null));
+            $whatsapp = self::phoneHref(self::text($office['whatsapp_public'] ?? null));
+            $contacts[] = [
+                'panel_id' => 'mxpp-consultorio-panel-' . ($index + 1),
+                'phone' => $phone,
+                'whatsapp' => $whatsapp !== null ? 'https://wa.me/' . preg_replace('/\D/', '', $whatsapp) : null,
+            ];
+            foreach (self::items($office['modalities'] ?? []) as $mode) {
+                $label = ['in_person' => 'Consulta presencial', 'presencial' => 'Consulta presencial',
+                    'online' => 'Consulta en línea', 'video' => 'Consulta en línea',
+                    'Consulta presencial' => 'Consulta presencial', 'Consulta en línea' => 'Consulta en línea'][$mode] ?? null;
+                if ($label !== null) $modalities[] = $label;
             }
         }
-        $consultation = [
-            // No public patient-audience field exists yet; never infer it from specialty.
-            self::group('Atención a', [], 'groups', 'left'),
-            self::group('Horarios', $schedules, 'event_available', 'left'),
-            self::group('Servicios de consulta', self::items($professional['services'] ?? []), 'stethoscope', 'right'),
-        ];
         $commercial = (array)($data['commercial_visibility'] ?? []);
-        if (($visibility['show_consultation_fee'] ?? false) === true) {
-            $consultation[] = self::group('Medios de pago', self::items($commercial['payment_methods'] ?? []), 'payments', 'left');
-            $fee = self::text($commercial['consultation_fee'] ?? null);
-            if ($fee !== null) $consultation[] = self::group('Costo de consulta', [$fee], 'payments', 'left');
-        }
-        if (($visibility['show_accepted_insurances'] ?? false) === true) {
-            array_splice($consultation, 2, 0, [self::group('Aseguradoras aceptadas', self::items($commercial['accepted_insurances'] ?? []), 'health_and_safety', 'right')]);
-        }
-        if ($phones !== []) {
-            $contacts = self::group('Teléfonos y urgencias', $phones, 'call', 'right');
-            $contacts['links'] = $phoneLinks;
-            $consultation[] = $contacts;
-        }
+        $showFee = ($visibility['show_consultation_fee'] ?? false) === true;
+        $fee = $showFee ? self::text($commercial['consultation_fee'] ?? null) : null;
+        $insurers = ($visibility['show_accepted_insurances'] ?? false) === true
+            ? self::insurers($commercial['accepted_insurances'] ?? []) : [];
+        $hours = self::group('Horarios', $schedules, 'event_available', 'left');
+        $hours['schedule_actions'] = $scheduleActions;
+        $insurance = self::group('Aseguradoras aceptadas', array_column($insurers, 'name'), 'health_and_safety', 'right');
+        $insurance['logos'] = array_column($insurers, 'logo_url');
+        $consultation = [
+            self::group('Atención a', self::items($professional['target_audience'] ?? []), 'groups', 'left'),
+            $hours,
+            self::group('Costo de la consulta', $fee !== null ? [$fee] : [], 'payments', 'left'),
+            self::group('Medios de pago', $showFee ? self::items($commercial['payment_methods'] ?? []) : [], 'payments', 'left'),
+            $insurance,
+            self::group('Modalidad de consulta', array_values(array_unique($modalities)), 'stethoscope', 'right'),
+        ];
 
         $views = [];
         foreach ([
@@ -88,11 +92,15 @@ final class PublicProfilePanelContent
         ] as $key => [$capability, $title, $groups, $intro, $emptyMessage]) {
             if (($visibility[$capability] ?? false) !== true) continue;
             $hasContent = $intro !== null || array_filter($groups, static fn(array $group): bool => $group['items'] !== []) !== [];
-            // Section-level placeholders only accompany real published information.
-            $groups = $hasContent ? $groups : [];
+            // CONSULTA retains its product sections even before their data is published.
+            $groups = $hasContent || $key === 'consultation' ? $groups : [];
             $columns = ['left' => [], 'right' => []];
             foreach ($groups as $group) $columns[$group['column']][] = $group;
             $views[$key] = ['title' => $title, 'intro' => $intro, 'groups' => $groups, 'columns' => $columns, 'empty_message' => $emptyMessage];
+        }
+        if (isset($views['consultation'])) {
+            $views['consultation']['contacts'] = $contacts;
+            $views['consultation']['agenda'] = $agenda;
         }
         return $views;
     }
@@ -100,6 +108,40 @@ final class PublicProfilePanelContent
     private static function group(string $title, array $items, string $icon, string $column): array
     {
         return ['title' => $title, 'items' => $items, 'icon' => $icon, 'column' => $column, 'empty_message' => 'Información aún no publicada.'];
+    }
+
+    private static function scheduleText($value): ?string
+    {
+        if (!is_array($value)) return self::text($value);
+        $lines = self::items($value);
+        $days = [1 => 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        foreach ($value as $row) {
+            if (!is_array($row) || !isset($days[$row['weekday'] ?? 0])) continue;
+            foreach ((array)($row['windows'] ?? []) as $slot) {
+                if (!is_array($slot)) continue;
+                $start = self::text($slot['start_time'] ?? null);
+                $end = self::text($slot['end_time'] ?? null);
+                if ($start !== null && $end !== null) $lines[] = $days[$row['weekday']] . ' ' . $start . '–' . $end;
+            }
+        }
+        return $lines !== [] ? implode(' · ', $lines) : null;
+    }
+
+    /** Public insurer contract: name/name_es/title plus optional safe logo_url. */
+    private static function insurers($value): array
+    {
+        if (!is_array($value)) return [];
+        $result = [];
+        foreach ($value as $item) {
+            $names = self::items([$item]);
+            if ($names === []) continue;
+            $url = is_array($item) ? self::text($item['logo_url'] ?? null) : null;
+            $safe = $url !== null && !preg_match('/[\\\\\s]/', $url)
+                && ((str_starts_with($url, '/') && !str_starts_with($url, '//'))
+                    || (filter_var($url, FILTER_VALIDATE_URL) && parse_url($url, PHP_URL_SCHEME) === 'https'));
+            $result[] = ['name' => $names[0], 'logo_url' => $safe ? $url : null];
+        }
+        return $result;
     }
 
     private static function phoneHref(?string $value): ?string

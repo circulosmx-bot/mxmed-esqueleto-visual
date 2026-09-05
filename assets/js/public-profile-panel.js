@@ -13,12 +13,34 @@
 
     if (!views.has('location') || !title || !returnButton) return;
 
+    function syncOfficeActions() {
+      const selected = panel.querySelector('[data-mxpp-consultorio-panel]:not([hidden])');
+      panel.querySelectorAll('[data-mxpp-office-actions]').forEach((actions) => {
+        actions.hidden = actions.dataset.mxppOfficeActions !== selected?.id || !actions.querySelector('a');
+      });
+      const closure = panel.querySelector('.mxpp-content-panel__closure');
+      if (closure) closure.hidden = !closure.querySelector('[data-mxpp-office-actions]:not([hidden]) a, [data-mxpp-agenda-jump]');
+    }
+
+    panel.querySelectorAll('[data-mxpp-agenda-jump]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const agenda = document.getElementById('proximas-citas');
+        if (!agenda) return;
+        event.preventDefault();
+        // The existing agenda controls its own office availability. Preserve its state.
+        agenda.setAttribute('tabindex', '-1');
+        agenda.focus({ preventScroll: true });
+        agenda.scrollIntoView({ block: 'start', behavior: 'auto' });
+      });
+    });
+
     function setView(next, trigger) {
       if (!views.has(next) || next === activeView) return;
       // Keep the surrounding sections stable when the replacement is shorter.
       if (activeView === 'location') {
         panel.style.minHeight = `${panel.getBoundingClientRect().height}px`;
       }
+      syncOfficeActions();
       const isLocation = next === 'location';
       if (!isLocation) previousTrigger = trigger;
       views.forEach((view, key) => { view.hidden = key !== next; });

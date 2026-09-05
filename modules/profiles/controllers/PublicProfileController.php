@@ -215,6 +215,8 @@ final class PublicProfileController
                 'professional_associations' => [],
                 'languages' => [],
                 'years_experience' => null,
+                // Public audience publishing is not available in the canonical source yet.
+                'target_audience' => [],
                 'services' => [],
                 'conditions_treated' => [],
             ],
