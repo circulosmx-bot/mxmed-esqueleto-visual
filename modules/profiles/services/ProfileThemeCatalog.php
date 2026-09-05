@@ -83,6 +83,8 @@ final class ProfileThemeCatalog
             'on_accent_strong' => $onAccentStrong,
             'strong_foreground' => $onAccentStrong === '#FFFFFF' ? 'WHITE' : 'DARK',
             'consultorio_card_active_border' => $consultorioCardActiveBorder,
+            'consultorio_fg_selected' => $accent,
+            'consultorio_fg_unselected' => sprintf('rgba(%d, %d, %d, 0.50)', $red, $green, $blue),
         ];
     }
 
@@ -103,6 +105,8 @@ final class ProfileThemeCatalog
             '--profile-accent-strong' => $theme['accent_strong'] ?? '',
             '--profile-on-accent-strong' => $theme['on_accent_strong'] ?? '',
             '--profile-consultorio-card-active-border' => $theme['consultorio_card_active_border'] ?? '',
+            '--profile-consultorio-fg-selected' => $theme['consultorio_fg_selected'] ?? '',
+            '--profile-consultorio-fg-unselected' => $theme['consultorio_fg_unselected'] ?? '',
         ];
         $out = [];
         foreach ($pairs as $name => $value) {

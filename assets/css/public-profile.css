@@ -3,8 +3,6 @@
   --mxpp-surface: #ffffff;
   --mxpp-ink: #0f3952;
   --mxpp-profile-ink: #123d59;
-  --mxpp-selected-surface: var(--mxpp-profile-ink);
-  --mxpp-on-selected-surface: #ffffff;
   --mxpp-muted: #56707c;
   --mxpp-teal: #0ca7b1;
   --mxpp-teal-dark: #0b7689;
@@ -19,6 +17,8 @@
   --profile-accent-strong: #0a99a6;
   --profile-on-accent-strong: #ffffff;
   --profile-consultorio-card-active-border: #076871;
+  --profile-consultorio-fg-selected: #10adba;
+  --profile-consultorio-fg-unselected: rgba(16, 173, 186, 0.5);
 }
 
 * {
@@ -595,10 +595,10 @@ body {
   column-gap: 0.58rem;
   min-width: 142px;
   min-height: 42px;
-  border: 1px solid var(--profile-accent-border);
+  border: 1px solid var(--mxpp-border);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #174b63;
+  background: var(--mxpp-surface);
+  color: var(--profile-consultorio-fg-unselected);
   cursor: pointer;
   font: inherit;
   line-height: 1.08;
@@ -607,22 +607,22 @@ body {
 }
 
 .mxpp-consultorio-tab--active {
-  background: var(--mxpp-selected-surface);
-  color: var(--mxpp-on-selected-surface);
-  border-color: transparent;
+  background: var(--mxpp-surface);
+  color: var(--profile-consultorio-fg-selected);
+  border-color: var(--mxpp-border);
   outline: none;
-  box-shadow: 0 5px 12px rgba(7, 89, 101, 0.2);
+  box-shadow: none;
 }
 
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow,
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__name,
 .mxpp-consultorio-tab--active .mxpp-consultorio-tab__chevron {
-  color: var(--mxpp-on-selected-surface);
+  color: var(--profile-consultorio-fg-selected);
 }
 
 .mxpp-consultorio-tab__eyebrow {
   grid-area: eyebrow;
-  color: #3d6979;
+  color: var(--profile-consultorio-fg-unselected);
   font-size: 0.86rem;
   font-weight: 600;
 }
@@ -635,11 +635,12 @@ body {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--profile-consultorio-fg-unselected);
 }
 
 .mxpp-consultorio-tab__chevron {
   grid-area: chevron;
-  color: var(--profile-accent-hover);
+  color: var(--profile-consultorio-fg-unselected);
   font-size: 1.8rem;
   font-weight: 500;
   line-height: 1;

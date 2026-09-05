@@ -38,9 +38,12 @@ theme01aAssert(ProfileThemeCatalog::keys() === array_keys($expected), 'catalog k
 foreach ($catalog as $theme) {
     $key = $theme['key'];
     theme01aAssert($theme['accent'] === $expected[$key], 'accent matches contract for ' . $key);
-    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast', 'accent_strong', 'on_accent_strong', 'strong_foreground', 'consultorio_card_active_border'] as $field) {
+    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast', 'accent_strong', 'on_accent_strong', 'strong_foreground', 'consultorio_card_active_border', 'consultorio_fg_selected', 'consultorio_fg_unselected'] as $field) {
         theme01aAssert(trim((string)($theme[$field] ?? '')) !== '', $key . ' has ' . $field);
     }
+    [$expectedRed, $expectedGreen, $expectedBlue] = array_map('hexdec', [substr($expected[$key], 1, 2), substr($expected[$key], 3, 2), substr($expected[$key], 5, 2)]);
+    theme01aAssert($theme['consultorio_fg_selected'] === $expected[$key], $key . ' selected consultorio foreground uses accent at 100 percent');
+    theme01aAssert($theme['consultorio_fg_unselected'] === sprintf('rgba(%d, %d, %d, 0.50)', $expectedRed, $expectedGreen, $expectedBlue), $key . ' unselected consultorio foreground uses accent at 50 percent');
     $l1 = theme01aLuminance($theme['accent']);
     $l2 = theme01aLuminance($theme['accent_contrast']);
     $ratio = (max($l1, $l2) + 0.05) / (min($l1, $l2) + 0.05);
