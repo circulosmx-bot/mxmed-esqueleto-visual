@@ -770,6 +770,7 @@ body {
 }
 
 .mxpp-hero-action {
+  --mxpp-action-label-color: var(--profile-accent);
   display: flex;
   min-width: 0;
   min-height: 112px;
@@ -778,7 +779,7 @@ body {
   justify-content: center;
   gap: 0.4rem;
   border-radius: 9px;
-  color: #40a8b0;
+  color: var(--mxpp-action-label-color);
   font-size: 1.35rem;
   font-weight: 700;
   text-decoration: none;
@@ -788,9 +789,13 @@ body {
 .mxpp-hero-action:hover,
 .mxpp-hero-action:focus-visible {
   background: #e8f7f8;
-  color: #40a8b0;
+  color: var(--mxpp-action-label-color);
   outline: 2px solid #65c4cb;
   outline-offset: 2px;
+}
+
+body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"]) .mxpp-hero-action {
+  --mxpp-action-label-color: #113D59;
 }
 
 .mxpp-hero-action__icon {
