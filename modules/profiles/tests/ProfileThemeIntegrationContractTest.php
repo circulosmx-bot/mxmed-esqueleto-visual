@@ -42,7 +42,8 @@ theme01aIntegrationAssert(str_contains($css, 'var(--profile-accent)') && str_con
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-bar') && str_contains($css, '.mxpp-agenda-compact__header') && str_contains($css, '.mxpp-gallery-bar'), 'candidate component hooks exist');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active') && str_contains($css, 'background: var(--profile-accent-strong);'), 'active consultorio consumes the strong surface token');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($css, 'color: var(--profile-on-accent-strong);'), 'active consultorio foreground consumes the strong foreground token');
-theme01aIntegrationAssert(str_contains($css, 'border-color: var(--profile-consultorio-card-active-border);') && str_contains($css, 'inset 0 0 0 1px var(--profile-consultorio-card-active-border)'), 'active consultorio restores a same-hue frame and inner edge');
+theme01aIntegrationAssert(str_contains($css, 'border-color: transparent;') && str_contains($css, 'outline: none;'), 'active consultorio removes its visible border and outline without changing card geometry');
+theme01aIntegrationAssert(!str_contains($css, 'inset 0 0 0 1px var(--profile-consultorio-card-active-border)'), 'active consultorio has no inset ring shadow');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__name'), 'active consultorio name explicitly follows the card foreground');
 theme01aIntegrationAssert(!preg_match('/\\.mxpp-consultorio-tab\\s*\\{[^}]*var\\(--profile-accent-strong\\)/s', $css), 'inactive consultorio does not consume strong fill');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-review-strip') && str_contains($css, '.mxpp-review-strip__header') && str_contains($css, '.mxpp-review-strip__body'), 'reviews surface and nested foreground hooks exist');
