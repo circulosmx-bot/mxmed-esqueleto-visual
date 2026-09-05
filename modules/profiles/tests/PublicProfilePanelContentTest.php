@@ -78,6 +78,7 @@ panelAssert($groups['Atención a']['icon'] === 'group' && $groups['Atención a']
 panelAssert($groups['Modalidad de consulta']['items'] === ['Consulta presencial', 'Consulta en línea'], 'only recognized published modalities appear');
 panelAssert($groups['Horarios']['items'] === ['Sede A'] && isset($groups['Horarios']['schedule_actions'][0]), 'structured public schedule produces an agenda reference');
 panelAssert($groups['Horarios']['icon'] === 'alarm' && $groups['Horarios']['icon_style'] === 'outlined', 'schedules use the requested outlined alarm icon');
+panelAssert($groups['Medios de pago']['icon'] === 'credit_card' && $groups['Medios de pago']['icon_style'] === 'outlined', 'payment methods use the requested outlined credit card icon');
 panelAssert($groups['Aseguradoras aceptadas']['logos'] === ['/assets/insurers/published.svg', null, 'https://example.com/logo.png', null], 'logo contract rejects unsafe destinations and retains insurer names');
 panelAssert($ready['contacts'][0]['whatsapp'] === 'https://wa.me/524491234567' && $ready['agenda'], 'public WhatsApp and gated reservation destination');
 $public['public_visibility']['show_public_agenda'] = false;

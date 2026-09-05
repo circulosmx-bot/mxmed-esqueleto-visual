@@ -80,7 +80,7 @@ final class PublicProfilePanelContent
             self::group('Atención a', self::items($professional['target_audience'] ?? []), 'group', 'left', 'outlined'),
             $hours,
             self::group('Costo de la consulta', $fee !== null ? [$fee] : [], 'payments', 'left'),
-            self::group('Medios de pago', $showFee ? self::items($commercial['payment_methods'] ?? []) : [], 'payments', 'left'),
+            self::group('Medios de pago', $showFee ? self::items($commercial['payment_methods'] ?? []) : [], 'credit_card', 'left', 'outlined'),
             $insurance,
             self::group('Modalidad de consulta', array_values(array_unique($modalities)), 'stethoscope', 'right'),
         ];
