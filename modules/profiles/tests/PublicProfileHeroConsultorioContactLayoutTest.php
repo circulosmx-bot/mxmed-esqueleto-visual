@@ -63,8 +63,8 @@ pdb04dAssert(str_contains($pageSource, 'syncBranding(panels.find(function (panel
 pdb04dAssert(str_contains($pageSource, 'panel.hidden = panel.id !== panelId;'), 'tab switch atomically swaps active contact and map panel');
 pdb04dAssert(str_contains($cssSource, 'height: 50px;') && str_contains($cssSource, 'min-height: 50px;') && str_contains($cssSource, 'min-height: 42px;'), 'compact branded bar and proportionally reduced cards are styled');
 pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'font-size: 0.86rem;'), 'consultorio eyebrow label is enlarged by approximately 30 percent');
-pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && substr_count($cssSource, 'background: var(--mxpp-surface);') >= 2, 'selected and unselected consultorio cards use the same white surface');
-pdb04dAssert(str_contains($cssSource, 'color: var(--profile-consultorio-fg-selected);') && str_contains($cssSource, 'color: var(--profile-consultorio-fg-unselected);'), 'consultorio selection uses tokenized theme-foreground alpha hierarchy');
+pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'background: var(--mxpp-surface);') && str_contains($cssSource, 'background: rgba(255, 255, 255, 0.5);'), 'consultorio selection uses opaque versus translucent white backgrounds');
+pdb04dAssert(substr_count($cssSource, 'color: var(--profile-consultorio-fg-selected);') >= 5 && !str_contains($cssSource, 'color: var(--profile-consultorio-fg-unselected);'), 'selected and unselected consultorio foregrounds use full-strength theme color');
 pdb04dAssert(str_contains($cssSource, 'border-color: var(--mxpp-border);') && str_contains($cssSource, 'outline: none;'), 'selected consultorio keeps only its neutral structural boundary');
 pdb04dAssert(!str_contains($cssSource, 'inset 0 0 0 1px var(--profile-consultorio-card-active-border)'), 'selected consultorio does not use an inset ring');
 

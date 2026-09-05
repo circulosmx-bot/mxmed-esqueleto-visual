@@ -597,8 +597,8 @@ body {
   min-height: 42px;
   border: 1px solid var(--mxpp-border);
   border-radius: 10px;
-  background: var(--mxpp-surface);
-  color: var(--profile-consultorio-fg-unselected);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--profile-consultorio-fg-selected);
   cursor: pointer;
   font: inherit;
   line-height: 1.08;
@@ -622,7 +622,7 @@ body {
 
 .mxpp-consultorio-tab__eyebrow {
   grid-area: eyebrow;
-  color: var(--profile-consultorio-fg-unselected);
+  color: var(--profile-consultorio-fg-selected);
   font-size: 0.86rem;
   font-weight: 600;
 }
@@ -635,12 +635,12 @@ body {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--profile-consultorio-fg-unselected);
+  color: var(--profile-consultorio-fg-selected);
 }
 
 .mxpp-consultorio-tab__chevron {
   grid-area: chevron;
-  color: var(--profile-consultorio-fg-unselected);
+  color: var(--profile-consultorio-fg-selected);
   font-size: 1.8rem;
   font-weight: 500;
   line-height: 1;
