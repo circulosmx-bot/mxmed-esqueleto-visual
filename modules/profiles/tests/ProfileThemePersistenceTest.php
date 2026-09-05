@@ -24,13 +24,13 @@ theme01aPersistenceAssert(is_array($before), 'fixture doctor exists');
 $original = $before['profile_theme_key'] ?? null;
 
 try {
-    $saved = $controller->patchByDoctorId($doctorId, ['profile_theme_key' => 'plum'], 'test');
+    $saved = $controller->patchByDoctorId($doctorId, ['profile_theme_key' => 'royal_blue'], 'test');
     theme01aPersistenceAssert(($saved['ok'] ?? false) === true, 'approved theme save succeeds');
-    theme01aPersistenceAssert(($repository->fetchIdentity($doctorId)['profile_theme_key'] ?? null) === 'plum', 'approved theme reload succeeds');
+    theme01aPersistenceAssert(($repository->fetchIdentity($doctorId)['profile_theme_key'] ?? null) === 'royal_blue', 'approved theme reload succeeds');
 
     $rejected = $controller->patchByDoctorId($doctorId, ['profile_theme_key' => '#ff00ff'], 'test');
     theme01aPersistenceAssert(($rejected['ok'] ?? true) === false, 'arbitrary value is rejected');
-    theme01aPersistenceAssert(($repository->fetchIdentity($doctorId)['profile_theme_key'] ?? null) === 'plum', 'rejected value does not mutate storage');
+    theme01aPersistenceAssert(($repository->fetchIdentity($doctorId)['profile_theme_key'] ?? null) === 'royal_blue', 'rejected value does not mutate storage');
 
     $reset = $controller->patchByDoctorId($doctorId, ['profile_theme_key' => null], 'test');
     theme01aPersistenceAssert(($reset['ok'] ?? false) === true, 'reset succeeds');

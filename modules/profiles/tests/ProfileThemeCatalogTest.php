@@ -28,7 +28,7 @@ $expected = [
     'dusty_pink' => '#F4B6C2', 'soft_coral' => '#FF6F61', 'terracotta' => '#C25A3C',
     'soft_gold' => '#E0BB58', 'warm_ivory' => '#F2E8D5', 'plum' => '#6A1B9A',
     'clinical_sky' => '#5DADE2', 'steel_blue' => '#5C7C9D', 'petroleum_blue' => '#2C7A7B',
-    'cobalt_blue' => '#2F5FB3', 'clinical_light_sky' => '#7EC2FF', 'royal_blue' => '#1A4DFF',
+    'cobalt_blue' => '#2F5FB3', 'clinical_light_sky' => '#7EC2FF', 'royal_blue' => '#00BFFF',
     'deep_ocean_blue' => '#0A3D62', 'ice_blue' => '#CFE2F3',
 ];
 
@@ -72,6 +72,8 @@ theme01aAssert($deepBlue['accent_soft_2'] === 'rgba(21, 105, 199, 0.24)', 'deep-
 theme01aAssert($deepBlue['accent_hover'] === '#1156A3', 'deep-blue hover token derives from the new base');
 theme01aAssert($deepBlue['accent_border'] === 'rgba(21, 105, 199, 0.42)', 'deep-blue border token derives from the new base');
 theme01aAssert($deepBlue['accent_strong'] === '#1156A3', 'deep-blue strong surface derives from the new base');
+
+theme01aAssert(ProfileThemeCatalog::resolve('royal_blue')['label'] === 'Azul Cielo Profundo', 'persisted royal_blue key exposes the approved deep-sky label');
 
 $whiteStrongKeys = [];
 $directorDarkForegroundKeys = [];

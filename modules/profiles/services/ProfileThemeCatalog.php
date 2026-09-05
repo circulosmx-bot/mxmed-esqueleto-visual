@@ -30,7 +30,7 @@ final class ProfileThemeCatalog
         'petroleum_blue' => ['Azul petróleo', '#2C7A7B'],
         'cobalt_blue' => ['Azul cobalto', '#2F5FB3'],
         'clinical_light_sky' => ['Cielo claro clínico', '#7EC2FF'],
-        'royal_blue' => ['Azul rey', '#1A4DFF'],
+        'royal_blue' => ['Azul Cielo Profundo', '#00BFFF'],
         'deep_ocean_blue' => ['Azul océano profundo', '#0A3D62'],
         'ice_blue' => ['Azul hielo', '#CFE2F3'],
     ];
