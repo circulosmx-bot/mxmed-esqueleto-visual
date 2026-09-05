@@ -53,7 +53,8 @@ theme01aIntegrationAssert(!str_contains($css, 'inset 0 0 0 1px var(--profile-con
 theme01aIntegrationAssert(str_contains($css, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__name'), 'active consultorio name explicitly follows the card foreground');
 theme01aIntegrationAssert(!preg_match('/\\.mxpp-consultorio-tab\\s*\\{[^}]*var\\(--profile-accent-strong\\)/s', $css), 'inactive consultorio does not consume strong fill');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-review-strip') && str_contains($css, '.mxpp-review-strip__header') && str_contains($css, '.mxpp-review-strip__body'), 'reviews surface and nested foreground hooks exist');
-theme01aIntegrationAssert(str_contains($css, '.mxpp-rating-stars') && substr_count($css, 'var(--profile-on-accent-strong)') >= 6, 'review stars and nested strong foreground use the semantic token');
+theme01aIntegrationAssert(str_contains($css, '.mxpp-rating-stars') && substr_count($css, 'var(--profile-reviews-foreground, var(--profile-on-accent-strong))') >= 7, 'review stars, count and bar foreground consume the reviews token with the existing theme fallback');
+theme01aIntegrationAssert(str_contains($css, 'body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])' . "\n" . ':is(.mxpp-rating-pill, .mxpp-review-strip) {' . "\n" . '  --profile-reviews-foreground: #FFFFFF;'), 'white reviews override is scoped to the two light themes and their colored reviews surfaces');
 theme01aIntegrationAssert(str_contains($css, '.mxpp-contact-cta--whatsapp') && str_contains($css, 'background: #29ac63;'), 'WhatsApp semantic green remains fixed');
 
 echo "ProfileThemeIntegrationContractTest PASS\n";

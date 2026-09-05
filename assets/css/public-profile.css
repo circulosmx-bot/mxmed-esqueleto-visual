@@ -1081,6 +1081,17 @@ body {
   margin: 0.34rem 0 0.26rem;
 }
 
+/* Light-theme exception applies only inside the two colored reviews surfaces. */
+body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
+:is(.mxpp-rating-pill, .mxpp-review-strip) {
+  --profile-reviews-foreground: #FFFFFF;
+}
+
+body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
+:is(.mxpp-rating-pill, .mxpp-review-strip) :where(a, button, svg) {
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
+}
+
 .mxpp-rating-pill {
   display: inline-flex;
   align-items: center;
@@ -1089,13 +1100,13 @@ body {
   margin: 0;
   border-radius: 7px;
   background: var(--profile-accent-strong);
-  color: var(--profile-on-accent-strong);
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
   padding: 0.26rem 0.56rem;
   line-height: 1;
 }
 
 .mxpp-rating-stars {
-  color: var(--profile-on-accent-strong);
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
   font-size: 1.04rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1103,7 +1114,7 @@ body {
 }
 
 .mxpp-rating-count {
-  color: var(--profile-on-accent-strong);
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
   font-size: 0.86rem;
   font-weight: 700;
   white-space: nowrap;
@@ -1729,14 +1740,14 @@ body {
   border-radius: 9px;
   background: var(--profile-accent-strong);
   padding: 0.62rem 0.75rem;
-  color: var(--profile-on-accent-strong);
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
   font-size: 0.88rem;
 }
 
 .mxpp-review-strip__header {
   margin: 0;
   font-weight: 700;
-  color: var(--profile-on-accent-strong);
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
 }
 
 /* Reserved controlled gallery header hook; inert until the public gallery exists. */
@@ -1748,7 +1759,7 @@ body {
 
 .mxpp-review-strip__body {
   margin: 0.4rem 0 0;
-  color: var(--profile-on-accent-strong);
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
   line-height: 1.45;
 }
 
@@ -1757,7 +1768,7 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
-  color: var(--profile-on-accent-strong);
+  color: var(--profile-reviews-foreground, var(--profile-on-accent-strong));
   font-weight: 700;
 }
 
