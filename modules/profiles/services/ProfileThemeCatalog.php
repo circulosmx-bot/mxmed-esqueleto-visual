@@ -7,9 +7,10 @@ final class ProfileThemeCatalog
 {
     public const DEFAULT_KEY = 'mxmed_teal';
 
-    private const LIGHT_STRONG_SURFACE_KEYS = [
+    private const LIGHT_THEME_SURFACE_KEYS = [
         'soft_lavender',
         'dusty_pink',
+        'soft_gold',
         'warm_ivory',
         'clinical_light_sky',
         'ice_blue',
@@ -62,8 +63,10 @@ final class ProfileThemeCatalog
         [$red, $green, $blue] = self::rgb($accent);
         $contrast = self::contrastColor($red, $green, $blue);
         $accentHover = $definition[2] ?? self::shade($red, $green, $blue, 0.82);
-        $onAccentStrong = in_array($resolvedKey, self::LIGHT_STRONG_SURFACE_KEYS, true)
-            ? '#000000'
+        $isLightThemeSurface = in_array($resolvedKey, self::LIGHT_THEME_SURFACE_KEYS, true);
+        $onThemeSurface = $isLightThemeSurface ? '#113D59' : $contrast;
+        $onAccentStrong = $isLightThemeSurface
+            ? '#113D59'
             : '#FFFFFF';
         $accentStrong = ($onAccentStrong === '#FFFFFF' && $resolvedKey !== self::DEFAULT_KEY)
             ? self::ensureWhiteContrast($accentHover)
@@ -79,6 +82,7 @@ final class ProfileThemeCatalog
             'accent_hover' => $accentHover,
             'accent_border' => sprintf('rgba(%d, %d, %d, 0.42)', $red, $green, $blue),
             'accent_contrast' => $contrast,
+            'on_theme_surface' => $onThemeSurface,
             'accent_strong' => $accentStrong,
             'on_accent_strong' => $onAccentStrong,
             'strong_foreground' => $onAccentStrong === '#FFFFFF' ? 'WHITE' : 'DARK',
@@ -102,6 +106,7 @@ final class ProfileThemeCatalog
             '--profile-accent-hover' => $theme['accent_hover'] ?? '',
             '--profile-accent-border' => $theme['accent_border'] ?? '',
             '--profile-accent-contrast' => $theme['accent_contrast'] ?? '',
+            '--profile-on-theme-surface' => $theme['on_theme_surface'] ?? '',
             '--profile-accent-strong' => $theme['accent_strong'] ?? '',
             '--profile-on-accent-strong' => $theme['on_accent_strong'] ?? '',
             '--profile-consultorio-card-active-border' => $theme['consultorio_card_active_border'] ?? '',

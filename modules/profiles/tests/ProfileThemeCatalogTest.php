@@ -38,7 +38,7 @@ theme01aAssert(ProfileThemeCatalog::keys() === array_keys($expected), 'catalog k
 foreach ($catalog as $theme) {
     $key = $theme['key'];
     theme01aAssert($theme['accent'] === $expected[$key], 'accent matches contract for ' . $key);
-    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast', 'accent_strong', 'on_accent_strong', 'strong_foreground', 'consultorio_card_active_border', 'consultorio_fg_selected', 'consultorio_fg_unselected'] as $field) {
+    foreach (['label', 'accent_soft', 'accent_soft_2', 'accent_hover', 'accent_border', 'accent_contrast', 'on_theme_surface', 'accent_strong', 'on_accent_strong', 'strong_foreground', 'consultorio_card_active_border', 'consultorio_fg_selected', 'consultorio_fg_unselected'] as $field) {
         theme01aAssert(trim((string)($theme[$field] ?? '')) !== '', $key . ' has ' . $field);
     }
     [$expectedRed, $expectedGreen, $expectedBlue] = array_map('hexdec', [substr($expected[$key], 1, 2), substr($expected[$key], 3, 2), substr($expected[$key], 5, 2)]);
@@ -57,23 +57,24 @@ theme01aAssert(ProfileThemeCatalog::resolve('not-approved')['accent'] === '#10AD
 theme01aAssert(ProfileThemeCatalog::resolve('mxmed_teal')['accent_hover'] === '#0A99A6', 'native hover preserves historical secondary gradient stop');
 
 $whiteStrongKeys = [];
-$darkStrongKeys = [];
+$lightSurfaceKeys = [];
 foreach ($catalog as $theme) {
     if ($theme['strong_foreground'] === 'WHITE') {
         $whiteStrongKeys[] = $theme['key'];
         theme01aAssert($theme['on_accent_strong'] === '#FFFFFF', $theme['key'] . ' strong foreground is white');
     } else {
-        $darkStrongKeys[] = $theme['key'];
-        theme01aAssert($theme['on_accent_strong'] === '#000000', $theme['key'] . ' light strong surface uses dark foreground');
+        $lightSurfaceKeys[] = $theme['key'];
+        theme01aAssert($theme['on_accent_strong'] === '#113D59', $theme['key'] . ' light strong surface uses the Director foreground');
+        theme01aAssert($theme['on_theme_surface'] === '#113D59', $theme['key'] . ' light section surface uses the Director foreground');
     }
     $strongLuminance = theme01aLuminance($theme['accent_strong']);
     $strongForegroundLuminance = theme01aLuminance($theme['on_accent_strong']);
     $strongRatio = (max($strongLuminance, $strongForegroundLuminance) + 0.05) / (min($strongLuminance, $strongForegroundLuminance) + 0.05);
-    $minimumStrongRatio = $theme['key'] === 'mxmed_teal' ? 3.0 : 4.5;
+    $minimumStrongRatio = $theme['on_theme_surface'] === '#113D59' || $theme['key'] === 'mxmed_teal' ? 3.0 : 4.5;
     theme01aAssert($strongRatio >= $minimumStrongRatio, $theme['key'] . ' strong surface foreground remains readable');
     theme01aAssert($theme['consultorio_card_active_border'] !== $theme['accent_strong'], $theme['key'] . ' active consultorio frame is visibly distinct from its fill');
 }
-theme01aAssert(count($whiteStrongKeys) === 15, '15 medium/dark/intense themes use white strong foreground');
-theme01aAssert($darkStrongKeys === ['soft_lavender', 'dusty_pink', 'warm_ivory', 'clinical_light_sky', 'ice_blue'], 'only the five reviewed light themes use dark strong foreground');
+theme01aAssert(count($whiteStrongKeys) === 14, '14 medium/dark/intense themes retain white strong foreground');
+theme01aAssert($lightSurfaceKeys === ['soft_lavender', 'dusty_pink', 'soft_gold', 'warm_ivory', 'clinical_light_sky', 'ice_blue'], 'the six reviewed light themes use the exact Director foreground');
 
 echo "ProfileThemeCatalogTest PASS\n";

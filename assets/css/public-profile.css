@@ -15,6 +15,8 @@
   --profile-accent-hover: #0a99a6;
   --profile-accent-border: rgba(16, 173, 186, 0.42);
   --profile-accent-contrast: #000000;
+  --profile-on-light-theme-surface: #113d59;
+  --profile-on-theme-surface: #000000;
   --profile-accent-strong: #0a99a6;
   --profile-on-accent-strong: #ffffff;
   --profile-consultorio-card-active-border: #076871;
@@ -519,7 +521,7 @@ body {
   margin: 0;
   max-width: 210px;
   font-size: 1rem;
-  color: #fff;
+  color: var(--profile-on-theme-surface);
   font-weight: 700;
   text-align: left;
   overflow-wrap: anywhere;
@@ -572,8 +574,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.82rem;
-  height: 50px;
-  min-height: 50px;
+  height: 60px;
+  min-height: 60px;
   padding: 0.25rem 0.78rem;
 }
 
@@ -1331,12 +1333,12 @@ body {
   gap: 0.75rem;
   background: linear-gradient(90deg, var(--profile-accent) 0%, var(--profile-accent-hover) 100%);
   padding: 0.43rem 0.72rem;
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-theme-surface);
 }
 
 .mxpp-agenda-compact__header h2 {
   margin: 0 0 0.12rem;
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-theme-surface);
   font-size: 0.96rem;
   line-height: 1.1;
 }
@@ -1356,14 +1358,14 @@ body {
 
 .mxpp-agenda-compact__open {
   flex: 0 0 auto;
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-theme-surface);
   font-size: 0.88rem;
   font-weight: 800;
   text-decoration: none;
 }
 
 .mxpp-agenda-compact__header p {
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-theme-surface);
   font-size: 0.8rem;
   line-height: 1.25;
 }
@@ -1513,7 +1515,7 @@ body {
 
 .mxpp-agenda-compact__open:hover,
 .mxpp-agenda-compact__open:focus {
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-theme-surface);
   text-decoration: underline;
 }
 
@@ -1756,7 +1758,7 @@ body {
 /* Reserved controlled gallery header hook; inert until the public gallery exists. */
 .mxpp-gallery-bar {
   background: linear-gradient(90deg, var(--profile-accent), var(--profile-accent-hover));
-  color: var(--profile-accent-contrast);
+  color: var(--profile-on-theme-surface);
   border-color: var(--profile-accent-border);
 }
 

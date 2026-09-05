@@ -61,7 +61,7 @@ pdb04dAssert(str_contains($pageSource, 'brandName.hidden = true;') && str_contai
 pdb04dAssert(str_contains($pageSource, 'mxpp-consultorio-tab__name') && str_contains($pageSource, '$consultorio[\'name\']'), 'tabs retain persisted consultorio labels');
 pdb04dAssert(str_contains($pageSource, 'syncBranding(panels.find(function (panel)'), 'tab switch synchronizes active branding');
 pdb04dAssert(str_contains($pageSource, 'panel.hidden = panel.id !== panelId;'), 'tab switch atomically swaps active contact and map panel');
-pdb04dAssert(str_contains($cssSource, 'height: 50px;') && str_contains($cssSource, 'min-height: 50px;') && str_contains($cssSource, 'min-height: 42px;'), 'compact branded bar and proportionally reduced cards are styled');
+pdb04dAssert(str_contains($cssSource, 'height: 60px;') && str_contains($cssSource, 'min-height: 60px;') && str_contains($cssSource, 'align-items: center;') && str_contains($cssSource, 'min-height: 42px;'), '60px branded bar vertically centers the unchanged 42px consultorio cards');
 pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'font-size: 0.86rem;'), 'consultorio eyebrow label is enlarged by approximately 30 percent');
 pdb04dAssert(str_contains($cssSource, '.mxpp-consultorio-tab--active .mxpp-consultorio-tab__eyebrow') && str_contains($cssSource, 'background: var(--mxpp-surface);') && str_contains($cssSource, 'background: rgba(255, 255, 255, 0.5);'), 'consultorio selection uses opaque versus translucent white backgrounds');
 pdb04dAssert(substr_count($cssSource, 'color: var(--profile-consultorio-fg-selected);') >= 2, 'selected consultorio foreground uses full-strength theme color');
