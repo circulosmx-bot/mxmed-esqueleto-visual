@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePlanCapabilities.php';
 require_once __DIR__ . '/../modules/profiles/services/ProfileThemeCatalog.php';
+require_once __DIR__ . '/../modules/profiles/services/PublicProfilePanelContent.php';
 
 function h($value): string
 {
@@ -641,7 +642,7 @@ if ($showPaidProfileCheck && $displayName !== null) {
     $paidProfileNameLead = $displayNameParts !== [] ? implode(' ', $displayNameParts) : null;
 }
 $showAgendaSlot = ($showPublicAgenda && $agendaEndpoint !== null);
-$consultaTarget = $showAgendaSlot ? '#proximas-citas' : '#consultorios';
+$profilePanelViews = \Profiles\Services\PublicProfilePanelContent::build($data);
 $institutionalImageUrl = null;
 $showInstitutionalImageSlot = (
     !$showAgendaSlot
@@ -848,7 +849,7 @@ if (isLocalDevRequest()) {
               <?php endif; ?>
             </div>
 
-            <div class="mxpp-about-target"<?= $showAboutAction ? ' id="sobre-mi"' : '' ?>>
+            <div class="mxpp-about-target">
               <?php if ($showSuggestCorrection): ?>
                 <a class="mxpp-action-link mxpp-action-link--summary" href="#" aria-disabled="true">Sugerir corrección</a>
               <?php elseif ($bioShort !== null): ?>
@@ -868,16 +869,16 @@ if (isLocalDevRequest()) {
               <?php if ($showAboutAction || $showConsultaAction): ?>
                 <nav class="mxpp-hero-actions" aria-label="Navegación del perfil">
                 <?php if ($showAboutAction): ?>
-                  <a class="mxpp-hero-action" href="#sobre-mi">
+                  <button class="mxpp-hero-action" type="button" data-mxpp-profile-view-trigger="about" aria-controls="consultorios" aria-pressed="false">
                     <span class="material-symbols-rounded mxpp-hero-action__icon mxpp-hero-action__icon--about" aria-hidden="true">person_text</span>
                     <span>Sobre mí</span>
-                  </a>
+                  </button>
                 <?php endif; ?>
                 <?php if ($showConsultaAction): ?>
-                  <a class="mxpp-hero-action" href="<?= h($consultaTarget) ?>">
+                  <button class="mxpp-hero-action" type="button" data-mxpp-profile-view-trigger="consultation" aria-controls="consultorios" aria-pressed="false">
                     <span class="material-symbols-rounded mxpp-hero-action__icon" aria-hidden="true">event</span>
                     <span>Consulta</span>
-                  </a>
+                  </button>
                 <?php endif; ?>
                 </nav>
               <?php endif; ?>
@@ -888,9 +889,9 @@ if (isLocalDevRequest()) {
         </div>
       </section>
 
-      <section id="consultorios" class="mxpp-card mxpp-consultorio-block" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
+      <section id="consultorios" class="mxpp-card mxpp-consultorio-block mxpp-content-panel" data-mxpp-content-panel data-profile-view="location" aria-label="Consultorios públicos" <?= $showConsultorioSwitcher ? 'data-mxpp-consultorio-switcher' : '' ?>>
         <div class="mxpp-consultorio-bar">
-          <div class="mxpp-consultorio-brand <?= $primaryBrandLogoUrl !== null ? 'mxpp-consultorio-brand--with-logo' : '' ?>" data-mxpp-consultorio-brand>
+          <div class="mxpp-consultorio-brand <?= $primaryBrandLogoUrl !== null ? 'mxpp-consultorio-brand--with-logo' : '' ?>" data-mxpp-consultorio-brand data-mxpp-location-heading>
             <img
               class="mxpp-consultorio-brand__logo"
               data-mxpp-consultorio-brand-logo
@@ -901,7 +902,7 @@ if (isLocalDevRequest()) {
             <h2 class="mxpp-consultorio-name" data-mxpp-consultorio-brand-name <?= $primaryBrandLogoUrl !== null ? 'hidden' : '' ?>><?= h($primaryBrandName) ?></h2>
           </div>
           <?php if ($showConsultorioSwitcher): ?>
-            <div class="mxpp-consultorio-tabs" role="tablist" aria-label="Consultorios disponibles">
+            <div class="mxpp-consultorio-tabs" data-mxpp-location-heading role="tablist" aria-label="Consultorios disponibles">
               <?php foreach ($consultorioPanels as $index => $consultorio): ?>
                 <?php
                   $tabId = 'mxpp-consultorio-tab-' . ($index + 1);
@@ -925,7 +926,10 @@ if (isLocalDevRequest()) {
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
+          <h2 class="mxpp-content-panel__title" id="mxpp-content-panel-title" data-mxpp-content-title hidden></h2>
+          <button class="mxpp-content-panel__return" type="button" data-mxpp-profile-view-trigger="location" aria-controls="consultorios" hidden>VER DOMICILIO</button>
         </div>
+        <div data-mxpp-profile-view="location">
         <?php foreach ($consultorioPanels as $index => $consultorio): ?>
           <?php
             $tabId = 'mxpp-consultorio-tab-' . ($index + 1);
@@ -1036,6 +1040,27 @@ if (isLocalDevRequest()) {
                 <?php endif; ?>
               </div>
             </div>
+          </div>
+        <?php endforeach; ?>
+        </div>
+        <?php foreach ($profilePanelViews as $viewKey => $view): ?>
+          <div class="mxpp-content-panel__body" data-mxpp-profile-view="<?= h($viewKey) ?>" data-mxpp-view-title="<?= h($view['title']) ?>" aria-labelledby="mxpp-content-panel-title" role="region" hidden>
+            <?php if ($view['groups'] === []): ?>
+              <p class="mxpp-content-panel__empty"><?= h($view['empty_message']) ?></p>
+            <?php else: ?>
+              <div class="mxpp-content-panel__groups">
+                <?php foreach ($view['groups'] as $group): ?>
+                  <section class="mxpp-content-panel__group">
+                    <h3><?= h($group['title']) ?></h3>
+                    <ul>
+                      <?php foreach ($group['items'] as $item): ?>
+                        <li><?= h($item) ?></li>
+                      <?php endforeach; ?>
+                    </ul>
+                  </section>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
           </div>
         <?php endforeach; ?>
       </section>
@@ -2117,5 +2142,6 @@ if (isLocalDevRequest()) {
       })();
     </script>
   <?php endif; ?>
+  <script src="/assets/js/public-profile-panel.js" defer></script>
 </body>
 </html>

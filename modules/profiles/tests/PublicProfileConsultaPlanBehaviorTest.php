@@ -32,14 +32,14 @@ pdb04eConsultaAssert(!(bool)($basic['public_visibility']['show_public_agenda'] ?
 foreach (['standard', 'optimum', 'professional'] as $agendaPlan) {
     $contract = pdb04eConsultaContract($agendaPlan);
     pdb04eConsultaAssert((bool)($contract['public_visibility']['show_consulta_action'] ?? false), $agendaPlan . ' shows Consulta');
-    pdb04eConsultaAssert((bool)($contract['public_visibility']['show_public_agenda'] ?? false), $agendaPlan . ' targets public Agenda');
+    pdb04eConsultaAssert((bool)($contract['public_visibility']['show_public_agenda'] ?? false), $agendaPlan . ' retains public Agenda');
 }
 
 $pageSource = (string)file_get_contents(__DIR__ . '/../../../profiles/doctor.php');
-pdb04eConsultaAssert(str_contains($pageSource, '$consultaTarget = $showAgendaSlot ? \'#proximas-citas\' : \'#consultorios\';'), 'Consulta target follows Agenda capability');
+pdb04eConsultaAssert(str_contains($pageSource, 'data-mxpp-profile-view-trigger="consultation"') && !str_contains($pageSource, '$consultaTarget'), 'Consulta uses an in-place panel trigger for every eligible plan');
 pdb04eConsultaAssert(str_contains($pageSource, '<section id="consultorios"'), 'consultorio target exists');
 pdb04eConsultaAssert(str_contains($pageSource, 'id="proximas-citas"'), 'Agenda target exists when rendered');
 pdb04eConsultaAssert(str_contains($pageSource, '<?php if ($showConsultaAction): ?>'), 'Consulta has no free placeholder');
-pdb04eConsultaAssert(!preg_match('/href="<\?= h\(\$consultaTarget\) \?>"[^>]*data-mxpp-booking-trigger/', $pageSource), 'Consulta never creates an appointment directly');
+pdb04eConsultaAssert(!preg_match('/<button[^>]*data-mxpp-profile-view-trigger="consultation"[^>]*data-mxpp-booking-trigger/', $pageSource), 'Consulta never creates an appointment directly');
 
 echo "PublicProfileConsultaPlanBehaviorTest PASS\n";
