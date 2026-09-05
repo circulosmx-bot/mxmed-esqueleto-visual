@@ -8,6 +8,7 @@
   --mxpp-teal-dark: #0b7689;
   --mxpp-border: #e0edf2;
   --mxpp-shadow: none;
+  --mxpp-consultorio-unselected-fg: #ffffff;
   --profile-accent: #10adba;
   --profile-accent-soft: rgba(16, 173, 186, 0.14);
   --profile-accent-soft-2: rgba(16, 173, 186, 0.24);
@@ -598,7 +599,7 @@ body {
   border: 1px solid var(--mxpp-border);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.5);
-  color: var(--profile-consultorio-fg-selected);
+  color: var(--mxpp-consultorio-unselected-fg);
   cursor: pointer;
   font: inherit;
   line-height: 1.08;
@@ -622,7 +623,7 @@ body {
 
 .mxpp-consultorio-tab__eyebrow {
   grid-area: eyebrow;
-  color: var(--profile-consultorio-fg-selected);
+  color: var(--mxpp-consultorio-unselected-fg);
   font-size: 0.86rem;
   font-weight: 600;
 }
@@ -635,12 +636,12 @@ body {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--profile-consultorio-fg-selected);
+  color: var(--mxpp-consultorio-unselected-fg);
 }
 
 .mxpp-consultorio-tab__chevron {
   grid-area: chevron;
-  color: var(--profile-consultorio-fg-selected);
+  color: var(--mxpp-consultorio-unselected-fg);
   font-size: 1.8rem;
   font-weight: 500;
   line-height: 1;
