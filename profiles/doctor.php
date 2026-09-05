@@ -675,6 +675,9 @@ if (isLocalDevRequest()) {
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=badge,call,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,school,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=alarm,credit_card,group" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
+  <?php if (isset($profilePanelViews['about'])): ?>
+    <link rel="stylesheet" href="/assets/css/public-profile-about.css" />
+  <?php endif; ?>
   <?php if ($renderJsonLd): ?>
     <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
   <?php endif; ?>
@@ -2175,5 +2178,8 @@ if (isLocalDevRequest()) {
     </script>
   <?php endif; ?>
   <script src="/assets/js/public-profile-panel.js" defer></script>
+  <?php if (isset($profilePanelViews['about'])): ?>
+    <script src="/assets/js/public-profile-about.js" defer></script>
+  <?php endif; ?>
 </body>
 </html>

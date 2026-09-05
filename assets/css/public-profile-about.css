@@ -1,0 +1,73 @@
+[data-mxpp-profile-view="about"] .mxpp-content-panel__copy { overflow-wrap: anywhere; }
+[data-mxpp-profile-view="about"] .mxpp-about-text-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.mxpp-about-more {
+  display: block;
+  min-height: 44px;
+  padding: .5rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--mxpp-profile-ink, #113d59);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.mxpp-about-more:focus-visible,
+.mxpp-about-dialog__close:focus-visible {
+  outline: 2px solid #40a8b0;
+  outline-offset: 3px;
+}
+.mxpp-about-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(760px, calc(100dvh - 32px));
+  padding: 0;
+  border: 1px solid #d5e1e7;
+  border-radius: 10px;
+  color: #113d59;
+  background: #fff;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.mxpp-about-dialog[open] { display: flex; flex-direction: column; }
+.mxpp-about-dialog::backdrop { background: rgb(17 61 89 / 55%); }
+.mxpp-about-dialog__header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem 1rem;
+  background: #113d59;
+  color: #fff;
+  flex-shrink: 0;
+}
+.mxpp-about-dialog__header h2 { margin: 0; font-size: 1.15rem; line-height: 1.3; overflow-wrap: anywhere; }
+.mxpp-about-dialog__header .mxpp-content-panel__icon { color: #fff; flex-shrink: 0; }
+.mxpp-about-dialog__close {
+  flex-shrink: 0;
+  margin-left: auto;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #fff;
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.mxpp-about-dialog__content {
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  min-height: 0;
+  line-height: 1.5;
+}
+.mxpp-about-dialog__content ul { margin: 0; padding-left: 1.25rem; }
+.mxpp-about-dialog__content li { margin-bottom: .5rem; white-space: pre-line; }
+.mxpp-about-dialog__content p { margin: 0; white-space: pre-line; }
