@@ -108,7 +108,7 @@ window.MxmedPublicNextAvailable = function (block, booking) {
         const dateTime = create('div', '', 'mx-ag-next-slot-main');
         dateTime.append(create('div', 'Fecha y hora', 'mx-ag-next-slot-label'),
           create('div', `${weekday}, ${date.getDate()} de ${month} ${date.getFullYear()}`, 'mx-ag-next-slot-date'),
-          create('div', booking.formatTime(slot.start_at) + ' - ' + booking.formatTime(slot.end_at) + ' h', 'mx-ag-next-slot-time'));
+          create('div', booking.formatTime(slot.start_at) + ' h', 'mx-ag-next-slot-time'));
         const office = create('div', '', 'mx-ag-next-slot-consultorio');
         const officeName = create('div', '', 'mx-ag-next-slot-consultorio-name');
         officeName.append(icon('hospital'), create('span', names[slot.consultorio_id] || 'Consultorio'));
