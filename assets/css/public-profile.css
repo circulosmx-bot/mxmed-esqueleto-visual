@@ -2516,3 +2516,25 @@ button.mxpp-hero-action:focus-visible {
 @media (max-width: 920px) {
   .mxpp-content-panel__view .mxpp-consultorio-body { grid-template-rows: auto 1fr; }
 }
+
+/* Compact only the patient-data step; keep the other booking panels intact. */
+.mxpp-booking-modal__dialog:has([data-mxpp-booking-step="patient"]:not([hidden])) {
+  padding: 0.85rem;
+}
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 1rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.65rem;
+}
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary p { margin: 0; }
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary p:first-child { grid-column: 1 / -1; }
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__form { margin-top: 0.5rem; gap: 0.5rem; }
+[data-mxpp-booking-step="patient"] .mxpp-booking-data-section { gap: 0.35rem 0.62rem; }
+[data-mxpp-booking-step="patient"] .mxpp-booking-data-section legend { margin-bottom: 0.35rem; }
+[data-mxpp-booking-step="patient"] textarea { min-height: 54px; }
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__actions { margin-top: 0.5rem; }
+@media (max-width: 600px) {
+  [data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1218,16 +1218,14 @@ if (isLocalDevRequest()) {
               </footer>
             </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="patient" hidden>
-              <p class="mxpp-booking-modal__eyebrow">Datos del paciente</p>
-              <h2 id="mxpp-booking-patient-title">Datos primarios</h2>
+              <h2 id="mxpp-booking-patient-title">Datos del paciente</h2>
               <div class="mxpp-booking-modal__summary">
                 <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
                 <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
               </div>
               <form class="mxpp-booking-modal__form" data-mxpp-booking-form>
-                <fieldset class="mxpp-booking-data-section">
-                  <legend>Datos del paciente</legend>
+                <fieldset class="mxpp-booking-data-section" aria-labelledby="mxpp-booking-patient-title">
                 <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" required /></label>
                 <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" required /></label>
                 <label>Apellido materno <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
@@ -1242,7 +1240,7 @@ if (isLocalDevRequest()) {
                     <option value="No especifica">No especifica</option>
                   </select>
                 </label>
-                <label class="mxpp-booking-modal__field--wide">Motivo de consulta <span>opcional</span><textarea name="reason" rows="3" maxlength="1000"></textarea></label>
+                <label class="mxpp-booking-modal__field--wide">Motivo de consulta <span>opcional</span><textarea name="reason" rows="2" maxlength="1000"></textarea></label>
                 </fieldset>
                 <fieldset class="mxpp-booking-data-section" data-mxpp-booker-fields hidden disabled>
                   <legend>Datos de quien agenda</legend>
