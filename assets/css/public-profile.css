@@ -1312,15 +1312,14 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   scroll-margin-top: 1rem;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(160px, 190px);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "header header"
-    "badge badge"
-    "status status"
-    "nav nav"
-    "days footer"
-    "selection selection"
-    "alert alert";
+    "header"
+    "badge"
+    "status"
+    "nav"
+    "days"
+    "alert";
   gap: 0 0.78rem;
   padding: 0;
 }
@@ -1412,7 +1411,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 
 .mxpp-agenda-compact__days {
   grid-area: days;
-  margin: 0.62rem 0 0.75rem 0.78rem;
+  margin: 0.62rem 0.78rem 0.75rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
@@ -1449,25 +1448,6 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   font-weight: 800;
 }
 
-.mxpp-agenda-compact__selection {
-  grid-area: selection;
-  margin: 0 0.78rem 0.64rem;
-  border: 1px solid #c9dce2;
-  border-radius: 8px;
-  background: #fff;
-  color: #58707a;
-  font-size: 0.86rem;
-  font-weight: 700;
-  line-height: 1.4;
-  padding: 0.48rem 0.62rem;
-}
-
-.mxpp-agenda-compact__selection--active {
-  border-color: #77b9c8;
-  background: #e9f8fb;
-  color: #104d64;
-}
-
 .mxpp-agenda-compact__alert {
   grid-area: alert;
   margin: 0 0.78rem 0.64rem;
@@ -1492,7 +1472,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
+  min-height: 44px;
   padding: 0.28rem 0.45rem;
   border: 1px solid rgba(12, 84, 98, 0.24);
   border-radius: 8px;
@@ -1527,19 +1507,6 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   box-shadow: 0 0 0 3px rgba(11, 111, 131, 0.18);
   color: #fff;
   text-decoration: none;
-}
-
-.mxpp-agenda-compact__footer {
-  grid-area: footer;
-  align-self: center;
-  margin: 0.62rem 0.78rem 0.75rem 0;
-}
-
-.mxpp-agenda-compact__footer .mxpp-book-cta {
-  width: 100%;
-  min-height: 58px;
-  padding: 0.62rem 0.8rem;
-  text-align: center;
 }
 
 .mxpp-booking-modal[hidden] {
@@ -1931,26 +1898,6 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
     grid-template-columns: 1fr;
   }
 
-  .mxpp-agenda-compact {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "header"
-      "badge"
-      "status"
-      "nav"
-      "days"
-      "selection"
-      "alert"
-      "footer";
-  }
-
-  .mxpp-agenda-compact__days {
-    margin-right: 0.78rem;
-  }
-
-  .mxpp-agenda-compact__footer {
-    margin: 0 0.78rem 0.78rem;
-  }
 }
 
 @media (max-width: 640px) {

@@ -1139,13 +1139,7 @@ if (isLocalDevRequest()) {
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-next disabled aria-label="Ver siguientes fechas disponibles">Siguiente</button>
           </div>
           <div class="mxpp-agenda-compact__days" data-mxpp-agenda-days hidden></div>
-          <div class="mxpp-agenda-compact__selection" data-mxpp-agenda-selection aria-live="polite">
-            <span class="mxpp-agenda-compact__selection-text" data-mxpp-agenda-selection-text>Selecciona un horario para continuar.</span>
-          </div>
           <p class="mxpp-agenda-compact__alert" data-mxpp-agenda-alert hidden>Antes de continuar, selecciona una cita disponible.</p>
-          <div class="mxpp-agenda-compact__footer">
-            <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>" data-mxpp-booking-trigger>Agendar cita</a>
-          </div>
         </section>
         <div class="mxpp-booking-modal" data-mxpp-booking-modal hidden aria-hidden="true">
           <div class="mxpp-booking-modal__backdrop" data-mxpp-booking-close></div>
@@ -1705,14 +1699,6 @@ if (isLocalDevRequest()) {
           });
           hideSelectionAlert(block);
           closeBookingModal();
-          var selection = block.querySelector('[data-mxpp-agenda-selection]');
-          var selectionText = block.querySelector('[data-mxpp-agenda-selection-text]');
-          if (selection) {
-            selection.classList.remove('mxpp-agenda-compact__selection--active');
-          }
-          if (selectionText) {
-            selectionText.textContent = 'Selecciona un horario para continuar.';
-          }
         }
 
         function setSelectedSlot(block, state, slotData) {
@@ -1726,15 +1712,7 @@ if (isLocalDevRequest()) {
             button.classList.toggle('mxpp-agenda-compact__slot--selected', isSelected);
             button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
           });
-          var selection = block.querySelector('[data-mxpp-agenda-selection]');
-          var selectionText = block.querySelector('[data-mxpp-agenda-selection-text]');
-          if (selection) {
-            selection.classList.add('mxpp-agenda-compact__selection--active');
-          }
           hideSelectionAlert(block);
-          if (selectionText) {
-            selectionText.textContent = 'Horario seleccionado: ' + formatDate(slotData.date) + ', ' + formatTime(slotData.start_at) + '. Pulsa Agendar cita para continuar.';
-          }
         }
 
         function getConsultorioIdFromBlock(blockData) {
@@ -1802,6 +1780,7 @@ if (isLocalDevRequest()) {
                 doctor_id: state.doctorId,
                 booking_url: state.bookingUrl
               });
+              openBookingModal(block, state);
             });
           });
         }
