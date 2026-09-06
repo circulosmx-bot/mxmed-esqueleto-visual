@@ -265,7 +265,7 @@ class PublicAppointmentsController
         }
 
         $createPayload = $this->buildAppointmentPayload($row);
-        $writer = new AppointmentWriteController();
+        $writer = new AppointmentWriteController($this->pdo);
         $created = $writer->createFromPayload($createPayload);
 
         if (($created['ok'] ?? false) !== true) {
@@ -348,7 +348,7 @@ class PublicAppointmentsController
             return $this->mapSlotErrorForReserve($slotCheck, $doctorId, $consultorioId, (string)$validated['start_at'], (string)$validated['end_at']);
         }
 
-        $writer = new AppointmentWriteController();
+        $writer = new AppointmentWriteController($this->pdo);
         $createPayload = $this->buildReserveCreatePayload($validated, $consultorioId);
         $created = $writer->createFromPayload($createPayload);
         if (($created['ok'] ?? false) !== true) {
@@ -1541,7 +1541,7 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
             ];
         }
 
-        $availability = new AvailabilityController();
+        $availability = new AvailabilityController($this->pdo);
         $dayResponse = $availability->index([
             'doctor_id' => $doctorId,
             'consultorio_id' => $consultorioId,

@@ -31,10 +31,10 @@ class AppointmentWriteController
     private array $actorContext = [];
     private array $contextWarnings = [];
 
-    public function __construct()
+    public function __construct(?\PDO $pdo = null)
     {
         try {
-            $pdo = mxmed_pdo();
+            $pdo ??= mxmed_pdo();
             $this->pdo = $pdo;
         } catch (RuntimeException $e) {
             $this->dbConnectionError = true;

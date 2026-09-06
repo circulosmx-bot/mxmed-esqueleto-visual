@@ -46,18 +46,16 @@ class AvailabilityController
     private array $actorContext = [];
     private array $contextWarnings = [];
 
-    public function __construct()
+    public function __construct(?PDO $pdo = null)
     {
         $this->qaNotReady = DbHelpers\isQaModeNotReady();
         if ($this->qaNotReady) {
             return;
         }
 
-        $pdo = null;
-
         // 1) Conexión + repo base (capa A)
         try {
-            $pdo = mxmed_pdo();
+            $pdo ??= mxmed_pdo();
             $this->pdo = $pdo;
             $this->repository = new AvailabilityRepository($pdo);
         } catch (RuntimeException $e) {
@@ -596,7 +594,7 @@ class AvailabilityController
         }
 
         try {
-            $pdo = mxmed_pdo();
+            $pdo = $this->pdo ?? mxmed_pdo();
         } catch (\Throwable $e) {
             return null;
         }

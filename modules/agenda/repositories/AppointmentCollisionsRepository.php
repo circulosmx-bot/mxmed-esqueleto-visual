@@ -10,6 +10,7 @@ use DateTimeZone;
 
 class AppointmentCollisionsRepository
 {
+    private const PUBLIC_FLOW_TABLE = 'agenda_public_appointment_flows';
     private PDO $pdo;
     private array $config;
     private string $appointmentPk;
@@ -61,10 +62,14 @@ class AppointmentCollisionsRepository
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $expiredPendingPublicAppointments = $this->expiredPendingPublicAppointmentIds($rows, $statusCol);
         $tz = new DateTimeZone(self::TIMEZONE);
         $busy = [];
         foreach ($rows as $row) {
             if ($this->isCancelled($row, $statusCol, $cancelCols)) {
+                continue;
+            }
+            if (isset($expiredPendingPublicAppointments[(string)($row[$this->appointmentPk] ?? '')])) {
                 continue;
             }
             $start = $this->parseDatetime($row[$startCol] ?? '', $tz);
@@ -79,6 +84,55 @@ class AppointmentCollisionsRepository
             ];
         }
         return $busy;
+    }
+
+    /**
+     * A public pending-OTP appointment stops blocking availability at its flow TTL.
+     * This intentionally remains a read-only projection: reserve/confirm retain the
+     * existing physical reconciliation before they mutate appointment state.
+     */
+    private function expiredPendingPublicAppointmentIds(array $rows, ?string $statusCol): array
+    {
+        if (!$statusCol || !$this->tableExists(self::PUBLIC_FLOW_TABLE)) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($rows as $row) {
+            if (strtolower(trim((string)($row[$statusCol] ?? ''))) !== 'pending_otp') {
+                continue;
+            }
+            $id = trim((string)($row[$this->appointmentPk] ?? ''));
+            if ($id !== '') {
+                $ids[$id] = true;
+            }
+        }
+        if ($ids === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = ['now' => (new DateTimeImmutable('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s')];
+        foreach (array_keys($ids) as $index => $id) {
+            $name = 'appointment_' . $index;
+            $placeholders[] = ':' . $name;
+            $params[$name] = $id;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'SELECT appointment_id
+             FROM ' . self::PUBLIC_FLOW_TABLE . '
+             WHERE status = "pending_otp"
+               AND expires_at <= :now
+               AND appointment_id IN (' . implode(', ', $placeholders) . ')'
+        );
+        $stmt->execute($params);
+
+        $expired = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+            $expired[(string)$id] = true;
+        }
+        return $expired;
     }
 
     private function tableExists(string $name): bool
