@@ -108,6 +108,7 @@ try {
       assert.ok(await ev(`document.activeElement.matches('[data-mxpp-booking-step="subject"] .mxpp-next-dialog__close')`), 'focus trap');
       await ev(`document.querySelector('[data-mxpp-booking-subject="other"]').focus()`); await key('Enter',13); assert.ok(await step('patient'));
       assert.ok(await ev(`__subjectTestState.booker_is_patient===false&&!document.querySelector('[data-mxpp-booker-fields]').hidden&&document.querySelector('[name="booker.relationship"]').required`));
+      assert.ok(await ev(`document.querySelector('#mxpp-booking-patient-title').textContent==='Reserva de cita'&&document.querySelector('#mxpp-booking-patient-section-title').textContent==='Datos del paciente'&&document.querySelector('[data-mxpp-booker-fields] legend').textContent==='Datos de quien solicita'&&document.querySelector('[data-mxpp-booking-submit]').textContent==='Continuar con la reserva'`), 'other-person hierarchy and CTA copy');
       await fill({...patient,...booker,'booker.relationship':''}); await click('[data-mxpp-booking-submit]');
       assert.ok(await step('patient')); assert.ok(await ev(`document.querySelector('[data-mxpp-booking-message]').textContent.includes('relación')&&__subjectTestState.preparedPayload===null`));
       await fill({'booker.relationship':'madre'});
@@ -126,6 +127,7 @@ try {
       await click('.mxpp-agenda-compact__slot'); await click('[data-mxpp-booking-next]'); await click('[data-mxpp-booking-subject="other"]');
       await fill({...patient,...booker}); await click('[data-mxpp-booking-back]'); await click('[data-mxpp-booking-subject="self"]');
       assert.ok(await ev(`__subjectTestState.booker_is_patient===true&&document.querySelector('[data-mxpp-booker-fields]').hidden&&[...document.querySelectorAll('[data-mxpp-booker-fields] input,[data-mxpp-booker-fields] select')].every(e=>!e.required&&e.value==='')`));
+      assert.ok(await ev(`document.querySelector('#mxpp-booking-patient-title').textContent==='Reserva de cita'&&document.querySelector('#mxpp-booking-patient-section-title').textContent==='Datos del paciente'&&document.querySelector('[data-mxpp-booker-fields]').hidden&&document.querySelector('[data-mxpp-booking-submit]').textContent==='Continuar con la reserva'`), 'self hierarchy has no requester section');
       await shot(device + '-' + entry + '-self-data'); await click('[data-mxpp-booking-submit]'); await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden`);
       assert.ok(await ev(`(()=>{const p=__subjectTestState.preparedPayload;return p.booker_is_patient===true&&p.booker.email===p.patient.email&&!('relationship' in p.booker)&&!JSON.stringify(p).includes('booker@example.test')&&p.patient_type==='first_time'})()`));
       await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`);

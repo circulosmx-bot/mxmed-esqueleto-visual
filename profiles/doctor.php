@@ -1218,14 +1218,15 @@ if (isLocalDevRequest()) {
               </footer>
             </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="patient" hidden>
-              <h2 id="mxpp-booking-patient-title">Datos del paciente</h2>
+              <h2 id="mxpp-booking-patient-title">Reserva de cita</h2>
               <div class="mxpp-booking-modal__summary">
                 <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
                 <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
               </div>
               <form class="mxpp-booking-modal__form" data-mxpp-booking-form>
-                <fieldset class="mxpp-booking-data-section" aria-labelledby="mxpp-booking-patient-title">
+                <fieldset class="mxpp-booking-data-section" aria-labelledby="mxpp-booking-patient-section-title">
+                <legend id="mxpp-booking-patient-section-title">Datos del paciente</legend>
                 <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" required /></label>
                 <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" required /></label>
                 <label>Apellido materno <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
@@ -1243,7 +1244,7 @@ if (isLocalDevRequest()) {
                 <label class="mxpp-booking-modal__field--wide">Motivo de consulta <span>opcional</span><textarea name="reason" rows="2" maxlength="1000"></textarea></label>
                 </fieldset>
                 <fieldset class="mxpp-booking-data-section" data-mxpp-booker-fields hidden disabled>
-                  <legend>Datos de quien agenda</legend>
+                  <legend>Datos de quien solicita</legend>
                   <label>Nombre completo<input type="text" name="booker.name" maxlength="160" autocomplete="off" /></label>
                   <label>Teléfono móvil<input type="tel" name="booker.phone" maxlength="32" autocomplete="off" /></label>
                   <label>Correo electrónico<input type="email" name="booker.email" maxlength="191" autocomplete="off" /></label>
@@ -1266,7 +1267,7 @@ if (isLocalDevRequest()) {
               <div class="mxpp-booking-modal__actions">
                 <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-back>Atrás</button>
                 <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cerrar</button>
-                <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-submit>Solicitar código</button>
+                <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-submit>Continuar con la reserva</button>
               </div>
             </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="otp" hidden>
@@ -2165,7 +2166,7 @@ if (isLocalDevRequest()) {
             return;
           }
           button.disabled = busy;
-          button.textContent = label || 'Solicitar código';
+          button.textContent = label || 'Continuar con la reserva';
         }
 
         function fillBookingOtpStep(modal, state, destinationHint) {
@@ -2258,9 +2259,9 @@ if (isLocalDevRequest()) {
         function submitInlineBooking(modal, state, block) {
           clearBookingModalMessage(modal);
           if (state.appointmentId) {
-            setBookingSubmitState(modal, true, 'Solicitando código…');
+            setBookingSubmitState(modal, true, 'Continuando con la reserva…');
             requestBookingOtp(block, modal, state).finally(function () {
-              setBookingSubmitState(modal, false, 'Solicitar código');
+              setBookingSubmitState(modal, false, 'Continuar con la reserva');
             });
             return;
           }
@@ -2277,7 +2278,7 @@ if (isLocalDevRequest()) {
             return;
           }
           state.preparedPayload = prepared.payload;
-          setBookingSubmitState(modal, true, 'Solicitando código…');
+          setBookingSubmitState(modal, true, 'Continuando con la reserva…');
           postPublicBooking('/public/appointments/reserve', prepared.payload)
             .then(function (result) {
               var payload = result.body || {};
@@ -2300,7 +2301,7 @@ if (isLocalDevRequest()) {
               showBookingModalMessage(modal, 'error', 'No pudimos reservar el horario. Inténtalo de nuevo.');
             })
             .finally(function () {
-              setBookingSubmitState(modal, false, 'Solicitar código');
+              setBookingSubmitState(modal, false, 'Continuar con la reserva');
             });
         }
 
