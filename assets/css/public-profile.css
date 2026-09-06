@@ -2538,3 +2538,19 @@ button.mxpp-hero-action:focus-visible {
 @media (max-width: 600px) {
   [data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Patient-data typography: separate field content from label emphasis. */
+[data-mxpp-booking-step="patient"] .mxpp-booking-data-section legend,
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__form label,
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__form label span {
+  font-weight: 600;
+}
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__form input,
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__form select,
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__form textarea {
+  font-weight: 400;
+}
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__primary,
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__secondary {
+  font-weight: 700;
+}
