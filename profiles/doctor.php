@@ -1118,6 +1118,7 @@ if (isLocalDevRequest()) {
           data-doctor-id="<?= h($doctorId) ?>"
           data-doctor-name="<?= h($displayName ?? 'Médico') ?>"
           data-booking-url="<?= h($bookAppointmentUrl) ?>"
+          data-public-consultorios="<?= h(json_encode(array_column($consultorioPanels, 'name', 'id'), JSON_UNESCAPED_UNICODE)) ?>"
           <?php if ($agendaMockMode !== null): ?>
             data-mock-mode="<?= h($agendaMockMode) ?>"
             data-mock-density="16,8,2|4,16,1|8,3,16"
@@ -1135,6 +1136,7 @@ if (isLocalDevRequest()) {
           <?php endif; ?>
           <p class="mxpp-agenda-compact__status" data-mxpp-agenda-status>Cargando horarios...</p>
           <div class="mxpp-agenda-compact__nav" aria-label="Navegación de horarios disponibles">
+            <button class="mxpp-agenda-compact__nav-btn mxpp-agenda-compact__find" type="button" data-mxpp-next-available>Buscar siguiente cita disponible</button>
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-prev disabled aria-label="Ver fechas anteriores">Anterior</button>
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-next disabled aria-label="Ver siguientes fechas disponibles">Siguiente</button>
           </div>
@@ -1493,6 +1495,7 @@ if (isLocalDevRequest()) {
     })();
   </script>
   <?php if ($showAgendaSlot): ?>
+    <script src="/assets/js/public-profile-next-available.js"></script>
     <script>
       (function () {
         function escapeHtml(value) {
@@ -1509,11 +1512,12 @@ if (isLocalDevRequest()) {
           if (Number.isNaN(date.getTime())) {
             return String(dateYmd || '');
           }
-          return new Intl.DateTimeFormat('es-MX', {
-            weekday: 'short',
+          var formatted = new Intl.DateTimeFormat('es-MX', {
+            weekday: 'long',
             day: 'numeric',
-            month: 'short'
-          }).format(date);
+            month: 'long'
+          }).format(date).replace(',', '');
+          return formatted.charAt(0).toLocaleUpperCase('es-MX') + formatted.slice(1);
         }
 
         function formatTime(dateTimeValue) {
@@ -1763,7 +1767,6 @@ if (isLocalDevRequest()) {
 
             return '<article class="mxpp-agenda-compact__day"' + (mockCount !== null ? ' data-mock-slot-count="' + escapeHtml(String(mockCount)) + '"' : '') + '>'
               + '<h3>' + escapeHtml(formatDate(date)) + '</h3>'
-              + '<p>' + escapeHtml(date) + '</p>'
               + mockCountHtml
               + '<div class="mxpp-agenda-compact__slots">' + slotHtml + '</div>'
               + '</article>';
@@ -2149,6 +2152,21 @@ if (isLocalDevRequest()) {
 
           updateControls(block, state);
           bindBookingModalControls(block, state);
+          window.MxmedPublicNextAvailable(block, {
+            formatDate: formatDate,
+            formatTime: formatTime,
+            getContext: function () {
+              return {
+                doctorId: state.doctorId,
+                consultorioId: getConsultorioIdFromBlock(state.blocks[state.currentBlockIndex]),
+                bookingUrl: state.bookingUrl
+              };
+            },
+            choose: function (slot) {
+              setSelectedSlot(block, state, slot);
+              openBookingModal(block, state);
+            }
+          });
           if (state.isMock) {
             loadMockAgenda(block, state);
             return;

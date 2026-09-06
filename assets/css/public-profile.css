@@ -1424,20 +1424,13 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   padding: 0.54rem;
 }
 
-.mxpp-agenda-compact__day h3,
-.mxpp-agenda-compact__day p {
+.mxpp-agenda-compact__day h3 {
   margin: 0;
 }
 
 .mxpp-agenda-compact__day h3 {
   color: #104d64;
   font-size: 0.9rem;
-}
-
-.mxpp-agenda-compact__day p {
-  margin-top: 0.12rem;
-  color: #5d747e;
-  font-size: 0.78rem;
 }
 
 .mxpp-agenda-compact__mock-count {
@@ -1507,6 +1500,85 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   box-shadow: 0 0 0 3px rgba(11, 111, 131, 0.18);
   color: #fff;
   text-decoration: none;
+}
+
+.mxpp-agenda-compact__nav {
+  flex-wrap: wrap;
+}
+
+.mxpp-agenda-compact__find {
+  margin-right: auto;
+  white-space: normal;
+}
+
+.mxpp-next-dialog {
+  box-sizing: border-box;
+  width: min(580px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid #c9dce2;
+  border-radius: 12px;
+  background: #fff;
+  color: #113d59;
+  font-family: inherit;
+}
+
+.mxpp-next-dialog::backdrop {
+  background: rgba(17, 61, 89, 0.48);
+}
+
+.mxpp-next-dialog__header,
+.mxpp-next-dialog__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mxpp-next-dialog__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.mxpp-next-dialog__results {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.mxpp-next-dialog__result {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #c9dce2;
+  border-radius: 8px;
+  color: inherit;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mxpp-next-dialog__result span:last-child {
+  justify-self: end;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  background: var(--profile-accent);
+  color: var(--profile-on-theme-surface);
+  font-weight: 700;
+}
+
+.mxpp-next-dialog button:focus-visible,
+.mxpp-agenda-compact__find:focus-visible {
+  outline: 2px solid #113d59;
+  outline-offset: 2px;
+}
+
+.mxpp-next-dialog__result:hover {
+  border-color: var(--profile-accent);
 }
 
 .mxpp-booking-modal[hidden] {
