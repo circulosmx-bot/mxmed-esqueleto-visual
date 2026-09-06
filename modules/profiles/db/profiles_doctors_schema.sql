@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `profiles_doctors` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `doctor_id` VARCHAR(64) NOT NULL,
   `display_name` VARCHAR(190) DEFAULT NULL,
+  `professional_designation` VARCHAR(120) DEFAULT NULL,
   `prefix` VARCHAR(32) DEFAULT NULL,
   `gender` VARCHAR(32) DEFAULT NULL,
   `gender_label` VARCHAR(64) DEFAULT NULL,

@@ -15,6 +15,7 @@ final class PrivateProfileController
 
     private const EDITABLE_FIELDS = [
         'display_name',
+        'professional_designation',
         'prefix',
         'gender',
         'gender_label',
@@ -193,6 +194,8 @@ final class PrivateProfileController
     private function fieldMaxLength(string $field): int
     {
         switch ($field) {
+            case 'professional_designation':
+                return 120;
             case 'display_name':
             case 'specialty_primary':
                 return 190;
@@ -225,6 +228,7 @@ final class PrivateProfileController
                 'doctor_id' => $doctorId,
                 'identity_public' => [
                     'display_name' => $this->nullableText($row['display_name'] ?? null),
+                    'professional_designation' => $this->nullableText($row['professional_designation'] ?? null),
                     'prefix' => $this->nullableText($row['prefix'] ?? null),
                     'gender' => $this->nullableText($row['gender'] ?? null),
                     'gender_label' => $this->nullableText($row['gender_label'] ?? null),

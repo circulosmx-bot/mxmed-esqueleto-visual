@@ -198,6 +198,7 @@ final class PublicProfileController
             'public_visibility' => $publicVisibility,
             'identity' => [
                 'display_name' => $displayName,
+                'professional_designation' => $this->firstNonEmpty($identity['professional_designation'] ?? null),
                 'prefix' => $this->firstNonEmpty($identity['prefix'] ?? null),
                 'gender_label' => $this->firstNonEmpty($identity['gender_label'] ?? null),
                 'photo_url' => $this->firstNonEmpty($identity['photo_url'] ?? null),

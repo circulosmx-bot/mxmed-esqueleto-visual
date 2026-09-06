@@ -1146,6 +1146,7 @@ console.info('app.js loaded :: 20251123a');
 
   const els = {
     displayName: document.getElementById('mxpi-display-name'),
+    professionalDesignation: document.getElementById('mxpi-professional-designation'),
     prefix: document.getElementById('mxpi-prefix'),
     genderLabel: document.getElementById('mxpi-gender-label'),
     professionalLicense: document.getElementById('mxpi-prof-license'),
@@ -2051,6 +2052,7 @@ console.info('app.js loaded :: 20251123a');
     const bioShort = normalizeText(data.bio_short, 1500);
 
     els.displayName.value = displayName || '';
+    if(els.professionalDesignation) els.professionalDesignation.value = normalizeText(data.professional_designation, 120) || '';
     if(els.prefix){
       ensureSelectOption(els.prefix, prefix);
       els.prefix.value = prefix || '';
@@ -2245,6 +2247,7 @@ console.info('app.js loaded :: 20251123a');
     const displayFromPublicField = normalizeText(els.displayName?.value, 190);
     return {
       display_name: displayFromPublicField,
+      professional_designation: normalizeText(els.professionalDesignation?.value, 120),
       prefix: normalizeText(els.prefix?.value, 32),
       gender: mapGenderValue(genderLabel),
       gender_label: genderLabel,
@@ -2277,7 +2280,7 @@ console.info('app.js loaded :: 20251123a');
     input.addEventListener('blur', ()=> markLegacyTouched('blur'));
   });
 
-  ['mxpi-prefix', 'mxpi-gender-label', 'mxpi-bio-short'].forEach((id)=>{
+  ['mxpi-professional-designation', 'mxpi-prefix', 'mxpi-gender-label', 'mxpi-bio-short'].forEach((id)=>{
     const input = document.getElementById(id);
     if(!input) return;
     input.addEventListener('input', markIdentityDirty);

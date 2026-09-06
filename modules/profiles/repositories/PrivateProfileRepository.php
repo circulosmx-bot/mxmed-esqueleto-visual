@@ -16,6 +16,7 @@ final class PrivateProfileRepository
     private const READ_COLUMNS = [
         'doctor_id',
         'display_name',
+        'professional_designation',
         'prefix',
         'gender',
         'gender_label',
@@ -35,6 +36,7 @@ final class PrivateProfileRepository
 
     private const EDITABLE_TO_COLUMN = [
         'display_name' => 'display_name',
+        'professional_designation' => 'professional_designation',
         'prefix' => 'prefix',
         'gender' => 'gender',
         'gender_label' => 'gender_label',
@@ -185,6 +187,7 @@ final class PrivateProfileRepository
         return [
             'doctor_id' => $doctorId,
             'display_name' => $this->toNullableText($row['display_name'] ?? null),
+            'professional_designation' => $this->toNullableText($row['professional_designation'] ?? null),
             'prefix' => $this->toNullableText($row['prefix'] ?? null),
             'gender' => $this->toNullableText($row['gender'] ?? null),
             'gender_label' => $this->toNullableText($row['gender_label'] ?? null),

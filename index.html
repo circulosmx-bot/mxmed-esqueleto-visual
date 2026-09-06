@@ -1139,7 +1139,7 @@
                           <div class="fw-semibold">Identidad pública profesional</div>
                           <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
                         </div>
-                        <div class="text-muted small">Sólo nombre público, prefijo/tratamiento y bio breve se guardan desde este panel.</div>
+                        <div class="text-muted small">Nombre público, denominación profesional, prefijo/tratamiento y bio breve se guardan desde este panel.</div>
                         <div class="text-muted small">El autosave local no publica cambios hasta que guardes.</div>
                         <div class="text-muted small">Las credenciales verificadas se gestionan en la sección administrativa y no se sustituyen aquí.</div>
                       </div>
@@ -1150,6 +1150,11 @@
                       <div class="col-md-6">
                         <label class="form-label mx-field-label" for="mxpi-display-name">Nombre público<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label mx-field-label" for="mxpi-professional-designation">Denominación profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
+                        <input class="form-control" id="mxpi-professional-designation" type="text" maxlength="120" aria-describedby="mxpi-designation-help">
+                        <div class="text-muted small mt-1 mxpi-field-note" id="mxpi-designation-help">Ej. Endocrinóloga, Cardiólogo, Cirujana dentista. Se utiliza para referirse profesionalmente al médico y no sustituye la especialidad.</div>
                       </div>
                       <div class="col-md-3">
                         <label class="form-label mx-field-label" for="mxpi-prefix">Prefijo profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
