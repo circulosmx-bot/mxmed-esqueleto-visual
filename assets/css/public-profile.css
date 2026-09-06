@@ -1626,6 +1626,9 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 .mxpp-booking-modal:has(.mxpp-confirm-visual) { padding: 0; }
 .mxpp-booking-modal:has(.mxpp-confirm-visual) .mxpp-booking-modal__backdrop { background: rgba(0, 0, 0, .5); }
 .mxpp-confirm-visual { position: relative; width: min(640px, calc(100% - 24px)); }
+@media (min-width: 992px) {
+  .mxpp-confirm-visual { width: min(864px, calc(100% - 24px)); }
+}
 .mxpp-confirm-visual > .mxpp-booking-modal__close { display: none; }
 .mxpp-confirm-header { border-bottom: 1px solid #dceaf2; }
 .mxpp-confirm-card { grid-template-columns: minmax(0, 1fr); }

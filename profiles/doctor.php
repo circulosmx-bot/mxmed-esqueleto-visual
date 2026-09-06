@@ -559,6 +559,7 @@ $primarySpecialty = null;
 if (!empty($specialties) && is_array($specialties[0])) {
     $primarySpecialty = toText($specialties[0]['name_es'] ?? null);
 }
+$confirmationDesignation = toText($identity['professional_designation'] ?? null) ?? $primarySpecialty;
 
 $professionalLicense = toText($professional['professional_license'] ?? null);
 $specialtyLicense = toText($professional['specialty_license'] ?? null);
@@ -1176,8 +1177,8 @@ if (isLocalDevRequest()) {
                       <div>
                         <div class="mx-ag-next-slot-label">Doctor</div>
                         <div class="mx-ag-next-slot-date" data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></div>
-                        <?php if ($primarySpecialty !== null): ?>
-                          <div class="mxpp-confirm-specialty"><?= h($primarySpecialty) ?></div>
+                        <?php if ($confirmationDesignation !== null): ?>
+                          <div class="mxpp-confirm-specialty"><?= h($confirmationDesignation) ?></div>
                         <?php endif; ?>
                       </div>
                       <div class="mx-ag-next-slot-main">
