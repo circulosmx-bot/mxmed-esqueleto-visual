@@ -1197,15 +1197,37 @@ if (isLocalDevRequest()) {
                 <button class="mx-ag-next-slot-choose" type="button" data-mxpp-booking-next>Confirmar y continuar</button>
               </footer>
             </div>
+            <div class="mxpp-booking-modal__step" data-mxpp-booking-step="subject" hidden>
+              <header class="mxpp-next-dialog__header mx-ag-next-slots-modal-header mxpp-confirm-header">
+                <div class="mx-ag-next-slots-header-main">
+                  <span class="mx-ag-next-slots-header-icon" aria-hidden="true"><i class="bi bi-people"></i></span>
+                  <div class="mx-ag-next-slots-header-copy">
+                    <h2 class="modal-title" id="mxpp-booking-subject-title">¿Para quién es la cita?</h2>
+                    <div class="mx-ag-next-slots-header-subtitle">Selecciona quién recibirá la atención médica.</div>
+                  </div>
+                </div>
+                <button class="mxpp-next-dialog__close" type="button" data-mxpp-booking-close aria-label="Cerrar"></button>
+              </header>
+              <div class="mx-ag-next-slots-modal-body mxpp-booking-subject-options" role="group" aria-labelledby="mxpp-booking-subject-title">
+                <button class="mxpp-booking-subject-option" type="button" data-mxpp-booking-subject="self" aria-pressed="false"><i class="bi bi-person" aria-hidden="true"></i><span>Para mí</span></button>
+                <button class="mxpp-booking-subject-option" type="button" data-mxpp-booking-subject="other" aria-pressed="false"><i class="bi bi-people" aria-hidden="true"></i><span>Para otra persona</span></button>
+              </div>
+              <footer class="mxpp-next-dialog__nav mx-ag-next-slots-modal-footer">
+                <button class="btn" type="button" data-mxpp-booking-subject-back>Atrás</button>
+                <button class="btn" type="button" data-mxpp-booking-close>Cancelar</button>
+              </footer>
+            </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="patient" hidden>
               <p class="mxpp-booking-modal__eyebrow">Datos del paciente</p>
-              <h2>Datos primarios</h2>
+              <h2 id="mxpp-booking-patient-title">Datos primarios</h2>
               <div class="mxpp-booking-modal__summary">
                 <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
                 <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
               </div>
               <form class="mxpp-booking-modal__form" data-mxpp-booking-form>
+                <fieldset class="mxpp-booking-data-section">
+                  <legend>Datos del paciente</legend>
                 <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" required /></label>
                 <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" required /></label>
                 <label>Apellido materno <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
@@ -1221,8 +1243,28 @@ if (isLocalDevRequest()) {
                   </select>
                 </label>
                 <label class="mxpp-booking-modal__field--wide">Motivo de consulta <span>opcional</span><textarea name="reason" rows="3" maxlength="1000"></textarea></label>
+                </fieldset>
+                <fieldset class="mxpp-booking-data-section" data-mxpp-booker-fields hidden disabled>
+                  <legend>Datos de quien agenda</legend>
+                  <label>Nombre completo<input type="text" name="booker.name" maxlength="160" autocomplete="off" /></label>
+                  <label>Teléfono móvil<input type="tel" name="booker.phone" maxlength="32" autocomplete="off" /></label>
+                  <label>Correo electrónico<input type="email" name="booker.email" maxlength="191" autocomplete="off" /></label>
+                  <label>Relación con el paciente
+                    <select name="booker.relationship">
+                      <option value="">Selecciona</option>
+                      <option value="madre">Madre</option>
+                      <option value="padre">Padre</option>
+                      <option value="hijo">Hijo</option>
+                      <option value="hija">Hija</option>
+                      <option value="nieto">Nieto</option>
+                      <option value="amigo">Amigo</option>
+                      <option value="cuidador">Cuidador</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </label>
+                </fieldset>
               </form>
-              <p class="mxpp-booking-modal__message" data-mxpp-booking-message hidden></p>
+              <p class="mxpp-booking-modal__message" data-mxpp-booking-message role="alert" hidden></p>
               <div class="mxpp-booking-modal__actions">
                 <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-back>Atrás</button>
                 <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cerrar</button>
@@ -1231,7 +1273,7 @@ if (isLocalDevRequest()) {
             </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="sent" hidden>
               <p class="mxpp-booking-modal__eyebrow">Vista previa</p>
-              <h2>Solicitud en preparación</h2>
+              <h2 id="mxpp-booking-sent-title">Solicitud en preparación</h2>
               <p>Este paso quedará conectado a la confirmación por código en la siguiente fase. No se ha creado ninguna cita todavía.</p>
               <div class="mxpp-booking-modal__summary">
                 <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
@@ -1532,6 +1574,7 @@ if (isLocalDevRequest()) {
   </script>
   <?php if ($showAgendaSlot): ?>
     <script src="/assets/js/public-profile-next-available.js"></script>
+    <script src="/assets/js/public-profile-booking-subject.js"></script>
     <script>
       (function () {
         function escapeHtml(value) {
@@ -1669,15 +1712,26 @@ if (isLocalDevRequest()) {
           if (!modal) {
             return;
           }
-          modal.querySelector('.mxpp-booking-modal__dialog').classList.toggle('mxpp-confirm-visual', stepName === 'confirm');
+          var dialog = modal.querySelector('.mxpp-booking-modal__dialog');
+          dialog.classList.toggle('mxpp-confirm-visual', stepName === 'confirm' || stepName === 'subject');
+          var titles = { confirm: 'mxpp-booking-modal-title', subject: 'mxpp-booking-subject-title', patient: 'mxpp-booking-patient-title', sent: 'mxpp-booking-sent-title' };
+          dialog.setAttribute('aria-labelledby', titles[stepName]);
           modal.querySelectorAll('[data-mxpp-booking-step]').forEach(function (step) {
             var isActive = step.getAttribute('data-mxpp-booking-step') === stepName;
             step.hidden = !isActive;
             step.classList.toggle('mxpp-booking-modal__step--active', isActive);
           });
+          dialog.scrollTop = 0;
+          var focusTargets = { confirm: '[data-mxpp-booking-next]', subject: '[data-mxpp-booking-subject][aria-pressed="true"], [data-mxpp-booking-subject]', patient: '[name="first_name"]', sent: '[data-mxpp-booking-step="sent"] button' };
+          if (!modal.hidden) {
+            var focusTarget = stepName === 'subject'
+              ? (modal.querySelector('[data-mxpp-booking-subject][aria-pressed="true"]') || modal.querySelector('[data-mxpp-booking-subject]'))
+              : modal.querySelector(focusTargets[stepName]);
+            if (focusTarget) focusTarget.focus({ preventScroll: true });
+          }
         }
 
-        function closeBookingModal() {
+        function closeBookingModal(state) {
           var modal = getBookingModal();
           if (!modal) {
             return;
@@ -1690,6 +1744,11 @@ if (isLocalDevRequest()) {
           var form = modal.querySelector('[data-mxpp-booking-form]');
           if (form) {
             form.reset();
+          }
+          if (state) {
+            state.booker_is_patient = null;
+            state.preparedPayload = null;
+            syncBookingSubject(modal, state);
           }
           if (wasOpen && modal.mxppReturnFocus && modal.mxppReturnFocus.isConnected) {
             modal.mxppReturnFocus.focus({ preventScroll: true });
@@ -1750,10 +1809,11 @@ if (isLocalDevRequest()) {
             button.setAttribute('aria-pressed', 'false');
           });
           hideSelectionAlert(block);
-          closeBookingModal();
+          closeBookingModal(state);
         }
 
         function setSelectedSlot(block, state, slotData) {
+          state.preparedPayload = null;
           state.selectedSlot = slotData;
           state.appointmentId = null;
           state.cancelToken = null;
@@ -1995,7 +2055,13 @@ if (isLocalDevRequest()) {
             email: String(data.get('email') || '').trim(),
             birth_date: String(data.get('birth_date') || '').trim(),
             gender: String(data.get('gender') || '').trim(),
-            reason: String(data.get('reason') || '').trim()
+            reason: String(data.get('reason') || '').trim(),
+            booker: {
+              name: String(data.get('booker.name') || '').trim(),
+              phone: String(data.get('booker.phone') || '').trim(),
+              email: String(data.get('booker.email') || '').trim(),
+              relationship: String(data.get('booker.relationship') || '').trim()
+            }
           };
         }
 
@@ -2074,9 +2140,31 @@ if (isLocalDevRequest()) {
           }
 
           var patientData = valid.data;
+          var prepared = window.MxmedPublicBookingSubject.prepare(state, patientData, patientData.booker);
+          if (!prepared.ok) {
+            showBookingModalMessage(modal, 'error', prepared.message);
+            return;
+          }
+          // Memory-only contract preparation. No reservation or OTP request is sent.
+          state.preparedPayload = prepared.payload;
           fillBookingSentStep(modal, state, patientData);
           setBookingModalStep(modal, 'sent');
           setBookingSubmitState(modal, false, 'Solicitar código');
+        }
+
+        function syncBookingSubject(modal, state) {
+          var section = modal.querySelector('[data-mxpp-booker-fields]');
+          var separate = state.booker_is_patient === false;
+          section.hidden = !separate;
+          section.disabled = !separate;
+          section.querySelectorAll('input, select').forEach(function (input) {
+            input.required = separate;
+            if (!separate) input.value = '';
+          });
+          modal.querySelectorAll('[data-mxpp-booking-subject]').forEach(function (button) {
+            var value = button.getAttribute('data-mxpp-booking-subject') === 'self';
+            button.setAttribute('aria-pressed', String(state.booker_is_patient === value));
+          });
         }
 
         function bindBookingModalControls(block, state) {
@@ -2097,26 +2185,35 @@ if (isLocalDevRequest()) {
           }
           modal.setAttribute('data-mxpp-booking-bound', 'true');
           modal.querySelectorAll('[data-mxpp-booking-close]').forEach(function (button) {
-            button.addEventListener('click', closeBookingModal);
+            button.addEventListener('click', function () { closeBookingModal(state); });
           });
           var nextButton = modal.querySelector('[data-mxpp-booking-next]');
           if (nextButton) {
             nextButton.addEventListener('click', function () {
-              setBookingModalStep(modal, 'patient');
-              var firstInput = modal.querySelector('[data-mxpp-booking-step="patient"] input');
-              if (firstInput) {
-                firstInput.focus();
-              }
+              setBookingModalStep(modal, 'subject');
             });
           }
+          modal.querySelectorAll('[data-mxpp-booking-subject]').forEach(function (button) {
+            button.addEventListener('click', function () {
+              window.MxmedPublicBookingSubject.choose(state, button.getAttribute('data-mxpp-booking-subject') === 'self');
+              syncBookingSubject(modal, state);
+              clearBookingModalMessage(modal);
+              setBookingModalStep(modal, 'patient');
+            });
+          });
+          modal.querySelector('[data-mxpp-booking-subject-back]').addEventListener('click', function () {
+            setBookingModalStep(modal, 'confirm');
+          });
           var backButton = modal.querySelector('[data-mxpp-booking-back]');
           if (backButton) {
             backButton.addEventListener('click', function () {
-              setBookingModalStep(modal, 'confirm');
+              clearBookingModalMessage(modal);
+              setBookingModalStep(modal, 'subject');
             });
           }
           var form = modal.querySelector('[data-mxpp-booking-form]');
           if (form) {
+            form.addEventListener('input', function () { state.preparedPayload = null; });
             form.addEventListener('submit', function (event) {
               event.preventDefault();
               submitInlineBookingPreview(modal, state);
@@ -2136,7 +2233,7 @@ if (isLocalDevRequest()) {
               else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
             }
             if (event.key === 'Escape' && !modal.hidden) {
-              closeBookingModal();
+              closeBookingModal(state);
             }
           });
         }
@@ -2152,6 +2249,8 @@ if (isLocalDevRequest()) {
             currentBlockIndex: -1,
             blocks: [],
             selectedSlot: null,
+            booker_is_patient: null,
+            preparedPayload: null,
             isLoading: false,
             hasMore: true,
             isMock: mockMode === 'mixed',
