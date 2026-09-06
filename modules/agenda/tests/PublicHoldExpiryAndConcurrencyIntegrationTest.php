@@ -7,11 +7,29 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../helpers/db_helpers.php';
+require_once __DIR__ . '/../contracts/OtpProviderPort.php';
 require_once __DIR__ . '/../controllers/PublicAppointmentsController.php';
 require_once __DIR__ . '/../controllers/AvailabilityController.php';
+require_once __DIR__ . '/../controllers/PublicOtpController.php';
 
+use Agenda\Contracts\OtpDeliveryResult;
+use Agenda\Contracts\OtpProviderPort;
 use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\PublicAppointmentsController;
+use Agenda\Controllers\PublicOtpController;
+
+final class Pdb07bMemoryOtpProvider implements OtpProviderPort
+{
+    public array $deliveries = [];
+
+    public function providerId(): string { return 'pdb07b_memory'; }
+    public function configured(): bool { return true; }
+    public function deliver(string $channel, string $destination, string $secret, array $context = []): OtpDeliveryResult
+    {
+        $this->deliveries[] = compact('channel', 'destination', 'secret', 'context');
+        return new OtpDeliveryResult(true, 'accepted', null);
+    }
+}
 
 function pdb07bAssert(bool $condition, string $message): void
 {
@@ -58,6 +76,27 @@ function pdb07bPayload(string $startAt = '2030-01-07 10:00:00'): array
     ];
 }
 
+function pdb07bOtherPersonPayload(string $startAt = '2030-01-07 11:00:00'): array
+{
+    $payload = pdb07bPayload($startAt);
+    $payload['booker_is_patient'] = false;
+    $payload['patient'] = [
+        'name' => 'Paciente alternativa',
+        'phone' => '5550000002',
+        'email' => 'other.patient@example.test',
+        'dob' => '1992-02-02',
+        'gender' => 'F',
+        'reason' => '',
+    ];
+    $payload['booker'] = [
+        'name' => 'Persona agenda',
+        'phone' => '5550000003',
+        'email' => 'booker.profile@example.test',
+        'relationship' => 'madre',
+    ];
+    return $payload;
+}
+
 function pdb07bReserve(PDO $pdo, array $payload): array
 {
     return (new PublicAppointmentsController(null, $pdo))->reserve($payload);
@@ -67,6 +106,7 @@ function pdb07bSetup(PDO $pdo): void
 {
     foreach ([
         'agenda_public_appointment_flows',
+        'agenda_public_otps',
         'agenda_appointment_events',
         'agenda_appointments',
         'agenda_availability_overrides',
@@ -132,6 +172,17 @@ function pdb07bSetup(PDO $pdo): void
         KEY idx_public_flow_status_expires (status, expires_at),
         KEY idx_public_flow_slot (doctor_id, consultorio_id, start_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE agenda_public_otps (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        doctor_id VARCHAR(64) NOT NULL,
+        contact_type VARCHAR(32) NOT NULL,
+        contact_value VARCHAR(191) NOT NULL,
+        code_hash VARCHAR(255) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        attempts INT NOT NULL DEFAULT 0,
+        verified TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $pdo->exec("CREATE TABLE agenda_availability_overrides (
         override_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         doctor_id VARCHAR(64) NOT NULL,
@@ -182,6 +233,9 @@ function pdb07bSetup(PDO $pdo): void
     $pdo->exec("INSERT INTO patients_patients VALUES ('p_pdb07bpatient','active','2030-01-01 00:00:00')");
     $pdo->exec("INSERT INTO patients_contacts VALUES ('c_pdb07bpatient','p_pdb07bpatient','5550000001','patient@example.test',1,'2030-01-01 00:00:00')");
     $pdo->exec("INSERT INTO patients_doctor_links VALUES ('1','p_pdb07bpatient','active',NULL)");
+    $pdo->exec("INSERT INTO patients_patients VALUES ('p_pdb07bother','active','2030-01-01 00:00:00')");
+    $pdo->exec("INSERT INTO patients_contacts VALUES ('c_pdb07bother','p_pdb07bother','5550000002','other.patient@example.test',1,'2030-01-01 00:00:00')");
+    $pdo->exec("INSERT INTO patients_doctor_links VALUES ('1','p_pdb07bother','active',NULL)");
 }
 
 function pdb07bAvailabilityContains(PDO $pdo, string $startAt): bool
@@ -247,6 +301,62 @@ function pdb07bExpiryProof(PDO $pdo): array
     $reclaimed = pdb07bReserve($pdo, $payload);
     pdb07bAssert(($reclaimed['ok'] ?? false) === true, 'expired slot is physically reclaimed through reserve');
     return ['expired_appointment_id' => $appointmentId, 'reclaimed_appointment_id' => (string)$reclaimed['data']['appointment_id']];
+}
+
+function pdb07bProfileActivationProof(PDO $pdo): array
+{
+    pdb07bSetup($pdo);
+    $provider = new Pdb07bMemoryOtpProvider();
+    $selfReserve = (new PublicAppointmentsController(null, $pdo, $provider))->reserve(pdb07bPayload());
+    pdb07bAssert(($selfReserve['ok'] ?? false) === true, 'profile self reserve creates a pending OTP appointment');
+    $selfAppointmentId = (string)($selfReserve['data']['appointment_id'] ?? '');
+    $selfOtp = (new PublicOtpController($pdo, $provider))->request(['appointment_id' => $selfAppointmentId]);
+    pdb07bAssert(($selfOtp['ok'] ?? false) === true, 'profile self OTP request is appointment-bound');
+    $selfOtpId = (string)($selfOtp['data']['otp_id'] ?? '');
+    $selfCode = (string)($provider->deliveries[0]['secret'] ?? '');
+    $selfConfirm = (new PublicAppointmentsController(null, $pdo, $provider))->confirm([
+        'appointment_id' => $selfAppointmentId,
+        'otp_id' => $selfOtpId,
+        'code' => $selfCode,
+    ]);
+    pdb07bAssert(($selfConfirm['data']['status'] ?? '') === 'confirmed', 'profile self confirmation transitions the same appointment');
+    $selfReplay = (new PublicAppointmentsController(null, $pdo, $provider))->confirm([
+        'appointment_id' => $selfAppointmentId,
+        'otp_id' => $selfOtpId,
+        'code' => $selfCode,
+    ]);
+    pdb07bAssert(((array)($selfReplay['meta'] ?? []))['idempotent'] ?? false, 'profile confirmation replay remains idempotent');
+
+    $otherReserve = (new PublicAppointmentsController(null, $pdo, $provider))->reserve(pdb07bOtherPersonPayload());
+    pdb07bAssert(($otherReserve['ok'] ?? false) === true, 'profile other-person reserve creates a pending OTP appointment');
+    $otherAppointmentId = (string)($otherReserve['data']['appointment_id'] ?? '');
+    $flowPayload = $pdo->prepare('SELECT payload_json FROM agenda_public_appointment_flows WHERE appointment_id = :id');
+    $flowPayload->execute(['id' => $otherAppointmentId]);
+    $otherFlowPayload = json_decode((string)$flowPayload->fetchColumn(), true);
+    pdb07bAssert(
+        ($otherFlowPayload['booker_is_patient'] ?? null) === false
+            && ($otherFlowPayload['booker']['relationship'] ?? '') === 'madre',
+        'profile other-person relationship is serialized in the authoritative reserve flow'
+    );
+    $otherOtp = (new PublicOtpController($pdo, $provider))->request(['appointment_id' => $otherAppointmentId]);
+    pdb07bAssert(($otherOtp['ok'] ?? false) === true, 'profile other-person OTP request is appointment-bound');
+    $otherOtpId = (string)($otherOtp['data']['otp_id'] ?? '');
+    $otherCode = (string)($provider->deliveries[1]['secret'] ?? '');
+    $otherConfirm = (new PublicAppointmentsController(null, $pdo, $provider))->confirm([
+        'appointment_id' => $otherAppointmentId,
+        'otp_id' => $otherOtpId,
+        'code' => $otherCode,
+    ]);
+    pdb07bAssert(($otherConfirm['data']['status'] ?? '') === 'confirmed', 'profile other-person confirmation transitions the same appointment');
+
+    $activeRows = (int)$pdo->query("SELECT COUNT(*) FROM agenda_appointments WHERE status = 'confirmed' AND start_at IN ('2030-01-07 10:00:00', '2030-01-07 11:00:00')")->fetchColumn();
+    pdb07bAssert($activeRows === 2, 'one confirmed active row exists for each profile test slot');
+    return [
+        'self_status' => 'confirmed',
+        'other_status' => 'confirmed',
+        'confirmed_active_rows' => $activeRows,
+        'otp_delivery_count' => count($provider->deliveries),
+    ];
 }
 
 function pdb07bConcurrentAttempt(string $readyFile, string $gateFile, string $resultFile, array $payload): never
@@ -315,6 +425,7 @@ function pdb07bConcurrencyRun(PDO $pdo, int $run): array
 }
 
 $expiry = pdb07bExpiryProof(pdb07bPdo());
+$profileActivation = pdb07bProfileActivationProof(pdb07bPdo());
 $runs = [];
 for ($run = 1; $run <= 5; $run++) {
     $runs[] = pdb07bConcurrencyRun(pdb07bPdo(), $run);
@@ -323,8 +434,10 @@ for ($run = 1; $run <= 5; $run++) {
 echo json_encode([
     'database_mode' => 'disposable',
     'expiry' => $expiry,
+    'profile_activation' => $profileActivation,
     'concurrency_runs' => $runs,
-    'otp_request_count' => 0,
+    'concurrency_otp_request_count' => 0,
+    'profile_test_fake_otp_delivery_count' => $profileActivation['otp_delivery_count'],
     'ses_send_call_count' => 0,
     'realtime_expiry_sleep_seconds' => 0,
 ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR), PHP_EOL;

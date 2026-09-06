@@ -1269,19 +1269,37 @@ if (isLocalDevRequest()) {
                 <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-submit>Solicitar código</button>
               </div>
             </div>
-            <div class="mxpp-booking-modal__step" data-mxpp-booking-step="sent" hidden>
-              <p class="mxpp-booking-modal__eyebrow">Vista previa</p>
-              <h2 id="mxpp-booking-sent-title">Solicitud en preparación</h2>
-              <p>Este paso quedará conectado a la confirmación por código en la siguiente fase. No se ha creado ninguna cita todavía.</p>
+            <div class="mxpp-booking-modal__step" data-mxpp-booking-step="otp" hidden>
+              <p class="mxpp-booking-modal__eyebrow">Confirmación segura</p>
+              <h2 id="mxpp-booking-otp-title">Verifica tu cita</h2>
+              <p>Enviamos un código de verificación al contacto registrado: <strong data-mxpp-booking-contact>contacto protegido</strong>.</p>
               <div class="mxpp-booking-modal__summary">
                 <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
                 <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
-                <p><strong>Teléfono:</strong> <span data-mxpp-booking-contact>Por confirmar</span></p>
               </div>
-              <p class="mxpp-booking-modal__message mxpp-booking-modal__message--success">No se ha creado ninguna cita todavía.</p>
+              <label class="mxpp-booking-otp-field">Código de 6 dígitos
+                <input type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" data-mxpp-booking-otp-code aria-describedby="mxpp-booking-otp-help" />
+              </label>
+              <p id="mxpp-booking-otp-help" class="mxpp-booking-otp-help">El código vence en 10 minutos.</p>
+              <p class="mxpp-booking-modal__message" data-mxpp-booking-message role="alert" hidden></p>
               <div class="mxpp-booking-modal__actions">
-                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cerrar</button>
+                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-otp-retry>Reenviar código</button>
+                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cancelar</button>
+                <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-otp-verify>Verificar y confirmar</button>
+              </div>
+            </div>
+            <div class="mxpp-booking-modal__step" data-mxpp-booking-step="success" hidden>
+              <p class="mxpp-booking-modal__eyebrow">Cita confirmada</p>
+              <h2 id="mxpp-booking-success-title">Tu cita está confirmada</h2>
+              <p>Tu cita fue registrada correctamente.</p>
+              <div class="mxpp-booking-modal__summary">
+                <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
+                <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
+                <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span> h</p>
+                <p><strong>Consultorio:</strong> <span data-mxpp-booking-office>Por confirmar</span></p>
+              </div>
+              <div class="mxpp-booking-modal__actions">
                 <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-close>Entendido</button>
               </div>
             </div>
@@ -1692,7 +1710,8 @@ if (isLocalDevRequest()) {
           if (!modal) {
             return;
           }
-          var message = modal.querySelector('[data-mxpp-booking-message]');
+          var message = modal.querySelector('[data-mxpp-booking-step]:not([hidden]) [data-mxpp-booking-message]')
+            || modal.querySelector('[data-mxpp-booking-message]');
           if (!message) {
             return;
           }
@@ -1712,7 +1731,13 @@ if (isLocalDevRequest()) {
           }
           var dialog = modal.querySelector('.mxpp-booking-modal__dialog');
           dialog.classList.toggle('mxpp-confirm-visual', stepName === 'confirm' || stepName === 'subject');
-          var titles = { confirm: 'mxpp-booking-modal-title', subject: 'mxpp-booking-subject-title', patient: 'mxpp-booking-patient-title', sent: 'mxpp-booking-sent-title' };
+          var titles = {
+            confirm: 'mxpp-booking-modal-title',
+            subject: 'mxpp-booking-subject-title',
+            patient: 'mxpp-booking-patient-title',
+            otp: 'mxpp-booking-otp-title',
+            success: 'mxpp-booking-success-title'
+          };
           dialog.setAttribute('aria-labelledby', titles[stepName]);
           modal.querySelectorAll('[data-mxpp-booking-step]').forEach(function (step) {
             var isActive = step.getAttribute('data-mxpp-booking-step') === stepName;
@@ -1720,7 +1745,13 @@ if (isLocalDevRequest()) {
             step.classList.toggle('mxpp-booking-modal__step--active', isActive);
           });
           dialog.scrollTop = 0;
-          var focusTargets = { confirm: '[data-mxpp-booking-next]', subject: '[data-mxpp-booking-subject][aria-pressed="true"], [data-mxpp-booking-subject]', patient: '[name="first_name"]', sent: '[data-mxpp-booking-step="sent"] button' };
+          var focusTargets = {
+            confirm: '[data-mxpp-booking-next]',
+            subject: '[data-mxpp-booking-subject][aria-pressed="true"], [data-mxpp-booking-subject]',
+            patient: '[name="first_name"]',
+            otp: '[data-mxpp-booking-otp-code]',
+            success: '[data-mxpp-booking-step="success"] button'
+          };
           if (!modal.hidden) {
             var focusTarget = stepName === 'subject'
               ? (modal.querySelector('[data-mxpp-booking-subject][aria-pressed="true"]') || modal.querySelector('[data-mxpp-booking-subject]'))
@@ -1746,6 +1777,8 @@ if (isLocalDevRequest()) {
           if (state) {
             state.booker_is_patient = null;
             state.preparedPayload = null;
+            state.appointmentId = null;
+            state.otpId = null;
             syncBookingSubject(modal, state);
           }
           if (wasOpen && modal.mxppReturnFocus && modal.mxppReturnFocus.isConnected) {
@@ -1768,7 +1801,11 @@ if (isLocalDevRequest()) {
           });
           modal.querySelector('[data-mxpp-confirm-date]').textContent = formatDate(state.selectedSlot.date).replace(' ', ', ') + ' ' + state.selectedSlot.date.slice(0, 4);
           var officeNames = JSON.parse(document.querySelector('[data-mxpp-agenda-compact]').getAttribute('data-public-consultorios') || '{}');
-          modal.querySelector('[data-mxpp-confirm-office]').textContent = officeNames[state.selectedSlot.consultorio_id] || 'Consultorio';
+          var officeName = officeNames[state.selectedSlot.consultorio_id] || 'Consultorio';
+          modal.querySelector('[data-mxpp-confirm-office]').textContent = officeName;
+          modal.querySelectorAll('[data-mxpp-booking-office]').forEach(function (node) {
+            node.textContent = officeName;
+          });
         }
 
         function openBookingModal(block, state) {
@@ -1840,6 +1877,15 @@ if (isLocalDevRequest()) {
           var usefulDays = currentBlock && Array.isArray(currentBlock.days) ? currentBlock.days : [];
           resetSelectionState(block, state);
           updateControls(block, state);
+
+          if (state.availabilityMessage) {
+            var refreshedAlert = block.querySelector('[data-mxpp-agenda-alert]');
+            if (refreshedAlert) {
+              refreshedAlert.textContent = state.availabilityMessage;
+              refreshedAlert.hidden = false;
+            }
+            state.availabilityMessage = null;
+          }
 
           if (usefulDays.length === 0) {
             renderStatus(block, 'No hay horarios disponibles por ahora. Puedes revisar más opciones en la agenda.');
@@ -2122,15 +2168,102 @@ if (isLocalDevRequest()) {
           button.textContent = label || 'Solicitar código';
         }
 
-        function fillBookingSentStep(modal, state, patientData) {
+        function fillBookingOtpStep(modal, state, destinationHint) {
           fillBookingModal(modal, state);
           modal.querySelectorAll('[data-mxpp-booking-contact]').forEach(function (node) {
-            node.textContent = patientData.mobile_phone;
+            node.textContent = destinationHint || 'contacto registrado';
           });
         }
 
-        function submitInlineBookingPreview(modal, state) {
+        function postPublicBooking(path, payload) {
+          return fetch('/api/agenda/index.php' + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload)
+          }).then(function (response) {
+            return response.json().catch(function () { return {}; }).then(function (body) {
+              return { response: response, body: body };
+            });
+          });
+        }
+
+        function returnToAvailability(block, modal, state, message) {
+          state.selectedSlot = null;
+          state.appointmentId = null;
+          state.otpId = null;
+          state.preparedPayload = null;
+          modal.hidden = true;
+          modal.setAttribute('aria-hidden', 'true');
+          block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
+            button.classList.remove('mxpp-agenda-compact__slot--selected');
+            button.setAttribute('aria-pressed', 'false');
+          });
+          var alert = block.querySelector('[data-mxpp-agenda-alert]');
+          if (alert) {
+            alert.textContent = message;
+            alert.hidden = false;
+          }
+          state.availabilityMessage = message;
+          var currentBlock = state.blocks[state.currentBlockIndex] || null;
+          if (!state.isMock && currentBlock) {
+            fetchAvailability(block, state, currentBlock.startDate || '');
+          }
+          block.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+
+        function friendlyOtpError(error) {
+          var messages = {
+            invalid_code: 'El código no es correcto. Inténtalo de nuevo.',
+            otp_mismatch: 'El código no corresponde a esta cita. Solicita uno nuevo.',
+            too_many_attempts: 'Alcanzaste el límite de intentos. Solicita un nuevo código.',
+            rate_limited: 'Espera un momento antes de solicitar otro código.',
+            otp_delivery_unavailable: 'No fue posible enviar el código. Inténtalo de nuevo.',
+            booking_email_unavailable: 'No fue posible enviar el código al contacto registrado.',
+            booking_not_eligible: 'La reserva ya no está disponible para verificación.'
+          };
+          return messages[error] || 'No pudimos confirmar la cita. Inténtalo de nuevo.';
+        }
+
+        function requestBookingOtp(block, modal, state) {
+          if (!state.appointmentId) {
+            showBookingModalMessage(modal, 'error', 'No encontramos una reserva pendiente. Selecciona nuevamente un horario.');
+            return Promise.resolve();
+          }
+          var retryButton = modal.querySelector('[data-mxpp-booking-otp-retry]');
+          if (retryButton) retryButton.disabled = true;
+          return postPublicBooking('/public/otp/request', { appointment_id: state.appointmentId })
+            .then(function (result) {
+              var payload = result.body || {};
+              if (!result.response.ok || payload.ok !== true) {
+                showBookingModalMessage(modal, 'error', friendlyOtpError(payload.error));
+                return;
+              }
+              state.otpId = String((payload.data || {}).otp_id || '');
+              if (state.otpId === '') {
+                showBookingModalMessage(modal, 'error', 'No pudimos preparar la verificación. Inténtalo de nuevo.');
+                return;
+              }
+              fillBookingOtpStep(modal, state, String((payload.data || {}).destination_hint || 'contacto registrado'));
+              clearBookingModalMessage(modal);
+              setBookingModalStep(modal, 'otp');
+            })
+            .catch(function () {
+              showBookingModalMessage(modal, 'error', 'No pudimos enviar el código. Inténtalo de nuevo.');
+            })
+            .finally(function () {
+              if (retryButton) retryButton.disabled = false;
+            });
+        }
+
+        function submitInlineBooking(modal, state, block) {
           clearBookingModalMessage(modal);
+          if (state.appointmentId) {
+            setBookingSubmitState(modal, true, 'Solicitando código…');
+            requestBookingOtp(block, modal, state).finally(function () {
+              setBookingSubmitState(modal, false, 'Solicitar código');
+            });
+            return;
+          }
           var valid = validateInlineBookingData(modal, state);
           if (!valid.ok) {
             showBookingModalMessage(modal, 'error', valid.message);
@@ -2143,11 +2276,66 @@ if (isLocalDevRequest()) {
             showBookingModalMessage(modal, 'error', prepared.message);
             return;
           }
-          // Memory-only contract preparation. No reservation or OTP request is sent.
           state.preparedPayload = prepared.payload;
-          fillBookingSentStep(modal, state, patientData);
-          setBookingModalStep(modal, 'sent');
-          setBookingSubmitState(modal, false, 'Solicitar código');
+          setBookingSubmitState(modal, true, 'Solicitando código…');
+          postPublicBooking('/public/appointments/reserve', prepared.payload)
+            .then(function (result) {
+              var payload = result.body || {};
+              if (!result.response.ok || payload.ok !== true) {
+                if (payload.error === 'slot_taken') {
+                  returnToAvailability(block, modal, state, 'Ese horario acaba de ser reservado. Selecciona otro horario disponible.');
+                  return;
+                }
+                showBookingModalMessage(modal, 'error', 'No pudimos reservar el horario. Inténtalo de nuevo.');
+                return;
+              }
+              state.appointmentId = String((payload.data || {}).appointment_id || '');
+              if (state.appointmentId === '') {
+                showBookingModalMessage(modal, 'error', 'No pudimos preparar la reserva. Inténtalo de nuevo.');
+                return;
+              }
+              return requestBookingOtp(block, modal, state);
+            })
+            .catch(function () {
+              showBookingModalMessage(modal, 'error', 'No pudimos reservar el horario. Inténtalo de nuevo.');
+            })
+            .finally(function () {
+              setBookingSubmitState(modal, false, 'Solicitar código');
+            });
+        }
+
+        function verifyBookingOtp(block, modal, state) {
+          var input = modal.querySelector('[data-mxpp-booking-otp-code]');
+          var code = String(input ? input.value : '').replace(/\D/g, '').slice(0, 6);
+          if (!/^\d{6}$/.test(code) || !state.appointmentId || !state.otpId) {
+            showBookingModalMessage(modal, 'error', 'Ingresa el código de 6 dígitos que recibiste.');
+            return;
+          }
+          var button = modal.querySelector('[data-mxpp-booking-otp-verify]');
+          if (button) button.disabled = true;
+          clearBookingModalMessage(modal);
+          postPublicBooking('/public/appointments/confirm', {
+            appointment_id: state.appointmentId,
+            otp_id: state.otpId,
+            code: code
+          }).then(function (result) {
+            var payload = result.body || {};
+            if (result.response.ok && payload.ok === true) {
+              fillBookingModal(modal, state);
+              clearBookingModalMessage(modal);
+              setBookingModalStep(modal, 'success');
+              return;
+            }
+            if (payload.error === 'otp_expired' || payload.error === 'expired' || payload.error === 'conflict' || payload.error === 'booking_not_eligible') {
+              returnToAvailability(block, modal, state, 'El tiempo para confirmar esta cita terminó. Selecciona nuevamente un horario disponible.');
+              return;
+            }
+            showBookingModalMessage(modal, 'error', friendlyOtpError(payload.error));
+          }).catch(function () {
+            showBookingModalMessage(modal, 'error', 'No pudimos confirmar la cita. Inténtalo de nuevo.');
+          }).finally(function () {
+            if (button) button.disabled = false;
+          });
         }
 
         function syncBookingSubject(modal, state) {
@@ -2214,13 +2402,32 @@ if (isLocalDevRequest()) {
             form.addEventListener('input', function () { state.preparedPayload = null; });
             form.addEventListener('submit', function (event) {
               event.preventDefault();
-              submitInlineBookingPreview(modal, state);
+              submitInlineBooking(modal, state, block);
             });
           }
           var submitButton = modal.querySelector('[data-mxpp-booking-submit]');
           if (submitButton) {
             submitButton.addEventListener('click', function () {
-              submitInlineBookingPreview(modal, state);
+              submitInlineBooking(modal, state, block);
+            });
+          }
+          var otpInput = modal.querySelector('[data-mxpp-booking-otp-code]');
+          if (otpInput) {
+            otpInput.addEventListener('input', function () {
+              otpInput.value = otpInput.value.replace(/\D/g, '').slice(0, 6);
+            });
+          }
+          var otpRetryButton = modal.querySelector('[data-mxpp-booking-otp-retry]');
+          if (otpRetryButton) {
+            otpRetryButton.addEventListener('click', function () {
+              clearBookingModalMessage(modal);
+              requestBookingOtp(block, modal, state);
+            });
+          }
+          var otpVerifyButton = modal.querySelector('[data-mxpp-booking-otp-verify]');
+          if (otpVerifyButton) {
+            otpVerifyButton.addEventListener('click', function () {
+              verifyBookingOtp(block, modal, state);
             });
           }
           document.addEventListener('keydown', function (event) {

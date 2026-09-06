@@ -1,5 +1,6 @@
 // Local browser integration. Requires Chrome --remote-debugging-port=9348 and UI :8092.
-// All mutation requests are blocked. Only synthetic form values are used.
+// Mutation requests are fulfilled in-browser with the canonical endpoint shapes.
+// No local database, OTP provider, or delivery transport is touched.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const base = process.env.MXMED_TEST_UI || 'http://127.0.0.1:8092';
@@ -8,7 +9,7 @@ for (const url of [base, cdp]) assert.ok(['127.0.0.1', 'localhost'].includes(new
 const tabs = await (await fetch(cdp + '/json')).json();
 const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl);
 await new Promise(r => ws.addEventListener('open', r, {once: true}));
-let id = 0; const pending = new Map(), denied = [], errors = [], records = [];
+let id = 0; let slotTakenMode = false, otpFailureMode = false; const pending = new Map(), errors = [], records = [], mutations = [];
 const send = (method, params = {}) => new Promise((resolve, reject) => {pending.set(++id, {resolve, reject}); ws.send(JSON.stringify({id, method, params}));});
 ws.addEventListener('message', async e => {
   const m = JSON.parse(e.data);
@@ -17,8 +18,40 @@ ws.addEventListener('message', async e => {
   if (m.method !== 'Fetch.requestPaused') return;
   const p = m.params;
   try {
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(p.request.method)) {
-      denied.push(p.request.method); await send('Fetch.failRequest', {requestId: p.requestId, errorReason: 'BlockedByClient'});
+    if (p.request.method === 'POST' && p.request.url.includes('/api/agenda/index.php/public/appointments/reserve')) {
+      const payload = JSON.parse(p.request.postData || '{}');
+      mutations.push({route: 'reserve', payload});
+      if (slotTakenMode) {
+        slotTakenMode = false;
+        await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 409,
+          responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
+          body: Buffer.from(JSON.stringify({ok: false, error: 'slot_taken', message: 'slot taken'})).toString('base64')});
+        return;
+      }
+      await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 200,
+        responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
+        body: Buffer.from(JSON.stringify({ok: true, data: {appointment_id: 'apt-profile-test-' + mutations.length, status: 'pending_otp'}})).toString('base64')});
+    } else if (p.request.method === 'POST' && p.request.url.includes('/api/agenda/index.php/public/otp/request')) {
+      const payload = JSON.parse(p.request.postData || '{}');
+      mutations.push({route: 'otp_request', payload});
+      if (otpFailureMode) {
+        otpFailureMode = false;
+        await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 503,
+          responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
+          body: Buffer.from(JSON.stringify({ok: false, error: 'otp_delivery_unavailable'})).toString('base64')});
+        return;
+      }
+      await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 200,
+        responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
+        body: Buffer.from(JSON.stringify({ok: true, data: {otp_id: 7000 + mutations.length, expires_in: 600, delivery_channel: 'email', destination_hint: 'p***@example.test'}})).toString('base64')});
+    } else if (p.request.method === 'POST' && p.request.url.includes('/api/agenda/index.php/public/appointments/confirm')) {
+      const payload = JSON.parse(p.request.postData || '{}');
+      mutations.push({route: 'confirm', payload});
+      await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 200,
+        responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
+        body: Buffer.from(JSON.stringify({ok: true, data: {appointment_id: payload.appointment_id, status: 'confirmed'}})).toString('base64')});
+    } else if (!['GET', 'HEAD', 'OPTIONS'].includes(p.request.method)) {
+      throw Error('unexpected mutation route');
     } else if (p.responseStatusCode && p.request.url.includes('/profiles/doctor.php')) {
       const body = await send('Fetch.getResponseBody', {requestId: p.requestId});
       const html = (body.base64Encoded ? Buffer.from(body.body, 'base64').toString() : body.body)
@@ -34,6 +67,7 @@ const click = selector => ev(`document.querySelector(${JSON.stringify(selector)}
 const step = name => ev(`!document.querySelector('[data-mxpp-booking-step="${name}"]').hidden`);
 const key = async (key, code) => {await send('Input.dispatchKeyEvent', {type: 'keyDown', key, windowsVirtualKeyCode: code, ...(key === 'Enter' ? {text: '\r'} : {})}); await send('Input.dispatchKeyEvent', {type: 'keyUp', key, windowsVirtualKeyCode: code});};
 const fill = values => ev(`Object.entries(${JSON.stringify(values)}).forEach(([name,value])=>{const e=document.querySelector('[data-mxpp-booking-form]').elements.namedItem(name);e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}));})`);
+const fillOtp = code => ev(`(()=>{const e=document.querySelector('[data-mxpp-booking-otp-code]');e.value=${JSON.stringify(code)};e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
 const patient = {first_name: 'Paciente', last_name: 'Sintético', second_last_name: '', mobile_phone: '5550000011', email: 'patient@example.test', birth_date: '2000-01-01', gender: 'F', reason: ''};
 const booker = {'booker.name': 'Persona Sintética', 'booker.phone': '5550000022', 'booker.email': 'booker@example.test', 'booker.relationship': 'madre'};
 const artifacts = process.env.MXMED_TEST_ARTIFACTS;
@@ -82,8 +116,9 @@ try {
       await click('[data-mxpp-booking-subject="other"]'); assert.ok(await ev(`document.querySelector('[name="booker.name"]').value==='Persona Sintética'`), 'draft retained');
       await ev(`document.querySelector('[data-mxpp-booker-fields]').scrollIntoView({block:'center',behavior:'instant'})`); await shot(device + '-' + entry + '-other-data');
       assert.ok(await ev(`(()=>{const d=document.querySelector('.mxpp-booking-modal__dialog');return d.scrollWidth<=d.clientWidth&&d.getBoundingClientRect().width<=innerWidth&&document.querySelector('[name="booker.relationship"]').labels.length===1})()`));
-      await click('[data-mxpp-booking-submit]'); assert.ok(await step('sent'));
+      await click('[data-mxpp-booking-submit]'); await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden`); assert.ok(await ev(`document.activeElement.matches('[data-mxpp-booking-otp-code]')`), 'OTP focus moves to the code input'); await shot(device + '-' + entry + '-otp');
       assert.ok(await ev(`__subjectTestState.preparedPayload.booker_is_patient===false&&__subjectTestState.preparedPayload.booker.relationship==='madre'&&__subjectTestState.preparedPayload.patient.email!==__subjectTestState.preparedPayload.booker.email`));
+      await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`); assert.ok(await ev(`document.activeElement.matches('[data-mxpp-booking-step="success"] button')`), 'success focus moves to its action'); await shot(device + '-' + entry + '-success');
       await key('Escape',27); assert.ok(await ev(`__subjectTestState.preparedPayload===null&&__subjectTestState.booker_is_patient===null`));
       assert.equal(await ev('JSON.stringify(__subjectTestState.selectedSlot)'),slot,'slot preserved on close');
       assert.ok(await ev(`document.activeElement.matches('.mxpp-agenda-compact__slot,[data-mxpp-next-available]')`));
@@ -91,8 +126,9 @@ try {
       await click('.mxpp-agenda-compact__slot'); await click('[data-mxpp-booking-next]'); await click('[data-mxpp-booking-subject="other"]');
       await fill({...patient,...booker}); await click('[data-mxpp-booking-back]'); await click('[data-mxpp-booking-subject="self"]');
       assert.ok(await ev(`__subjectTestState.booker_is_patient===true&&document.querySelector('[data-mxpp-booker-fields]').hidden&&[...document.querySelectorAll('[data-mxpp-booker-fields] input,[data-mxpp-booker-fields] select')].every(e=>!e.required&&e.value==='')`));
-      await shot(device + '-' + entry + '-self-data'); await click('[data-mxpp-booking-submit]'); assert.ok(await step('sent'));
+      await shot(device + '-' + entry + '-self-data'); await click('[data-mxpp-booking-submit]'); await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden`);
       assert.ok(await ev(`(()=>{const p=__subjectTestState.preparedPayload;return p.booker_is_patient===true&&p.booker.email===p.patient.email&&!('relationship' in p.booker)&&!JSON.stringify(p).includes('booker@example.test')&&p.patient_type==='first_time'})()`));
+      await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`);
       await key('Escape',27);
       // Cancel directly from subject also preserves the selected slot and focus.
       await click('.mxpp-agenda-compact__slot'); await click('[data-mxpp-booking-next]'); await click('[data-mxpp-booking-step="subject"] footer [data-mxpp-booking-close]');
@@ -101,7 +137,33 @@ try {
       console.log(device,entry,'PASS');
     }
   }
-  assert.equal(denied.length,0,'no mutation requests attempted'); assert.equal(errors.length,0,'no JS exceptions');
-  if (artifacts) fs.writeFileSync(artifacts+'/proof.json',JSON.stringify({records,mutationRequests:0,jsErrors:0},null,2),{mode:0o600});
-  console.log('PublicBookingSubjectBrowserTest PASS');
+  // A collision stays in the modern profile and never triggers OTP.
+  slotTakenMode = true;
+  await click('.mxpp-agenda-compact__slot'); await click('[data-mxpp-booking-next]'); await click('[data-mxpp-booking-subject="self"]');
+  await fill(patient); await click('[data-mxpp-booking-submit]');
+  await wait(`document.querySelector('[data-mxpp-booking-modal]').hidden===true`);
+  assert.ok(await ev(`!document.querySelector('[data-mxpp-agenda-alert]').hidden&&document.querySelector('[data-mxpp-agenda-alert]').textContent.includes('acaba de ser reservado')`), 'slot taken is patient-friendly');
+  assert.ok(await ev(`__subjectTestState.appointmentId===null&&__subjectTestState.otpId===null`), 'slot taken does not retain or request OTP state');
+  // A delivery failure retries the OTP request for the same reservation, without a second reserve.
+  const reserveCountBeforeRetry = mutations.filter(m => m.route === 'reserve').length;
+  otpFailureMode = true;
+  await click('.mxpp-agenda-compact__slot'); await click('[data-mxpp-booking-next]'); await click('[data-mxpp-booking-subject="self"]');
+  await fill(patient); await click('[data-mxpp-booking-submit]');
+  await wait(`!document.querySelector('[data-mxpp-booking-step="patient"]').hidden&&document.querySelector('[data-mxpp-booking-message]').textContent.includes('No fue posible enviar')`);
+  const retainedAppointment = await ev(`__subjectTestState.appointmentId`); assert.ok(retainedAppointment, 'failed delivery preserves pending appointment');
+  await click('[data-mxpp-booking-submit]'); await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden`);
+  assert.equal(mutations.filter(m => m.route === 'reserve').length, reserveCountBeforeRetry + 1, 'retry does not create a second reservation');
+  await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`); await key('Escape',27);
+  assert.equal(errors.length,0,'no JS exceptions');
+  assert.ok(mutations.length >= 24, 'both real endpoint paths are exercised for every desktop/mobile entry');
+  const reserves = mutations.filter(m => m.route === 'reserve');
+  const otpRequests = mutations.filter(m => m.route === 'otp_request');
+  const confirms = mutations.filter(m => m.route === 'confirm');
+  assert.ok(reserves.length >= 14 && otpRequests.length >= 14 && confirms.length >= 13, 'all profile endpoint stages were exercised');
+  assert.ok(reserves.some(m => m.payload.booker_is_patient === false && m.payload.booker.relationship === 'madre'), 'other-person relationship reaches reserve');
+  assert.ok(reserves.some(m => m.payload.booker_is_patient === true && !('relationship' in m.payload.booker)), 'self reserve preserves canonical shape');
+  assert.ok(otpRequests.every(m => typeof m.payload.appointment_id === 'string' && m.payload.appointment_id.startsWith('apt-profile-test-')), 'OTP request is appointment-bound');
+  assert.ok(confirms.every(m => /^\d{6}$/.test(m.payload.code) && m.payload.appointment_id && m.payload.otp_id), 'confirmation remains bound to appointment and OTP');
+  if (artifacts) fs.writeFileSync(artifacts+'/proof.json',JSON.stringify({records,mutationRequests:mutations.length,endpointSequence:true,jsErrors:0},null,2),{mode:0o600});
+  console.log('PublicBookingSubjectBrowserTest PASS: endpoint wiring mocked locally');
 } finally {await send('Fetch.disable'); ws.close();}

@@ -1822,6 +1822,36 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   resize: vertical;
 }
 
+.mxpp-booking-otp-field {
+  display: grid;
+  gap: 0.34rem;
+  margin-top: 0.9rem;
+  color: #294f5f;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.mxpp-booking-otp-field input {
+  width: min(100%, 260px);
+  border: 1px solid #91bdca;
+  border-radius: 8px;
+  color: #113d59;
+  font: 800 1.35rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.27em;
+  min-height: 48px;
+  padding: 0.45rem 0.7rem;
+}
+
+.mxpp-booking-otp-field input:focus-visible {
+  outline: 3px solid #0b9fa9;
+  outline-offset: 2px;
+}
+
+.mxpp-booking-otp-help {
+  margin-top: 0.35rem !important;
+  font-size: 0.85rem;
+}
+
 .mxpp-booking-modal__message {
   margin: 0.72rem 0 0;
   border: 1px solid #c9dce2;
