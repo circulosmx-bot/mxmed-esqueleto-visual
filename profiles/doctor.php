@@ -1150,21 +1150,41 @@ if (isLocalDevRequest()) {
         </section>
         <div class="mxpp-booking-modal" data-mxpp-booking-modal hidden aria-hidden="true">
           <div class="mxpp-booking-modal__backdrop" data-mxpp-booking-close></div>
-          <section class="mxpp-booking-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mxpp-booking-modal-title">
+          <section class="mxpp-booking-modal__dialog mxpp-confirm-visual" role="dialog" aria-modal="true" aria-labelledby="mxpp-booking-modal-title">
             <button class="mxpp-booking-modal__close" type="button" data-mxpp-booking-close aria-label="Cerrar">×</button>
             <div class="mxpp-booking-modal__step mxpp-booking-modal__step--active" data-mxpp-booking-step="confirm">
-              <p class="mxpp-booking-modal__eyebrow">Solicitud de cita</p>
-              <h2 id="mxpp-booking-modal-title">Confirma tu cita</h2>
-              <p>Estás a punto de solicitar una cita en el siguiente horario.</p>
-              <div class="mxpp-booking-modal__summary">
-                <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
-                <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
-                <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
+              <header class="mxpp-next-dialog__header mx-ag-next-slots-modal-header mxpp-confirm-header">
+                <div class="mx-ag-next-slots-header-main">
+                  <span class="mx-ag-next-slots-header-icon" aria-hidden="true"><i class="bi bi-calendar2-check"></i></span>
+                  <div class="mx-ag-next-slots-header-copy">
+                    <h2 class="modal-title" id="mxpp-booking-modal-title">Confirma tu cita</h2>
+                    <div class="mx-ag-next-slots-header-subtitle">Revisa los datos de tu cita antes de continuar.</div>
+                  </div>
+                </div>
+                <button class="mxpp-next-dialog__close" type="button" data-mxpp-booking-close aria-label="Cerrar"></button>
+              </header>
+              <div class="mx-ag-next-slots-modal-body">
+                <article class="mx-ag-next-slot-card mxpp-confirm-card">
+                  <div class="mx-ag-next-slot-focus-area">
+                    <div class="mx-ag-next-slot-ico" aria-hidden="true"><i class="bi bi-calendar2-check"></i></div>
+                    <div class="mx-ag-next-slot-main">
+                      <div class="mx-ag-next-slot-label">Fecha y hora</div>
+                      <div class="mx-ag-next-slot-date" data-mxpp-confirm-date>Por confirmar</div>
+                      <div class="mx-ag-next-slot-time"><span data-mxpp-booking-time>Por confirmar</span> h</div>
+                    </div>
+                    <div class="mxpp-confirm-details">
+                      <div class="mx-ag-next-slot-label">Doctor</div>
+                      <div class="mx-ag-next-slot-date" data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></div>
+                      <div class="mx-ag-next-slot-label mxpp-confirm-office-label">Consultorio</div>
+                      <div class="mx-ag-next-slot-consultorio-name"><i class="bi bi-hospital" aria-hidden="true"></i><span data-mxpp-confirm-office></span></div>
+                    </div>
+                  </div>
+                </article>
               </div>
-              <div class="mxpp-booking-modal__actions">
-                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cancelar</button>
-                <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-next>Confirmar y continuar</button>
-              </div>
+              <footer class="mxpp-next-dialog__nav mx-ag-next-slots-modal-footer">
+                <button class="btn" type="button" data-mxpp-booking-close>Cancelar</button>
+                <button class="mx-ag-next-slot-choose" type="button" data-mxpp-booking-next>Confirmar y continuar</button>
+              </footer>
             </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="patient" hidden>
               <p class="mxpp-booking-modal__eyebrow">Datos del paciente</p>
@@ -1638,6 +1658,7 @@ if (isLocalDevRequest()) {
           if (!modal) {
             return;
           }
+          modal.querySelector('.mxpp-booking-modal__dialog').classList.toggle('mxpp-confirm-visual', stepName === 'confirm');
           modal.querySelectorAll('[data-mxpp-booking-step]').forEach(function (step) {
             var isActive = step.getAttribute('data-mxpp-booking-step') === stepName;
             step.hidden = !isActive;
@@ -1650,6 +1671,7 @@ if (isLocalDevRequest()) {
           if (!modal) {
             return;
           }
+          var wasOpen = !modal.hidden;
           modal.hidden = true;
           modal.setAttribute('aria-hidden', 'true');
           setBookingModalStep(modal, 'confirm');
@@ -1657,6 +1679,9 @@ if (isLocalDevRequest()) {
           var form = modal.querySelector('[data-mxpp-booking-form]');
           if (form) {
             form.reset();
+          }
+          if (wasOpen && modal.mxppReturnFocus && modal.mxppReturnFocus.isConnected) {
+            modal.mxppReturnFocus.focus({ preventScroll: true });
           }
         }
 
@@ -1673,6 +1698,9 @@ if (isLocalDevRequest()) {
           modal.querySelectorAll('[data-mxpp-booking-time]').forEach(function (node) {
             node.textContent = formatTime(state.selectedSlot.start_at);
           });
+          modal.querySelector('[data-mxpp-confirm-date]').textContent = formatDate(state.selectedSlot.date).replace(' ', ', ') + ' ' + state.selectedSlot.date.slice(0, 4);
+          var officeNames = JSON.parse(document.querySelector('[data-mxpp-agenda-compact]').getAttribute('data-public-consultorios') || '{}');
+          modal.querySelector('[data-mxpp-confirm-office]').textContent = officeNames[state.selectedSlot.consultorio_id] || 'Consultorio';
         }
 
         function openBookingModal(block, state) {
@@ -1685,6 +1713,10 @@ if (isLocalDevRequest()) {
           var modal = getBookingModal();
           if (!modal) {
             return;
+          }
+          modal.mxppReturnFocus = document.activeElement;
+          if (!modal.mxppReturnFocus || modal.mxppReturnFocus === document.body || modal.mxppReturnFocus.closest('dialog:not([open])')) {
+            modal.mxppReturnFocus = block.querySelector('[data-mxpp-next-available]');
           }
           fillBookingModal(modal, state);
           clearBookingModalMessage(modal);
@@ -2086,6 +2118,12 @@ if (isLocalDevRequest()) {
             });
           }
           document.addEventListener('keydown', function (event) {
+            if (event.key === 'Tab' && !modal.hidden) {
+              var controls = Array.prototype.slice.call(modal.querySelectorAll('button:not(:disabled), input, select, textarea')).filter(function (node) { return node.getClientRects().length > 0; });
+              var first = controls[0], last = controls[controls.length - 1];
+              if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+              else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+            }
             if (event.key === 'Escape' && !modal.hidden) {
               closeBookingModal();
             }

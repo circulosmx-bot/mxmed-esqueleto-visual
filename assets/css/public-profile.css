@@ -1511,7 +1511,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   white-space: normal;
 }
 
-.mxpp-next-dialog {
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) {
   box-sizing: border-box;
   width: min(800px, calc(100% - 24px));
   max-width: none;
@@ -1525,7 +1525,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   font-family: 'Carlito', 'IBM Plex Sans', system-ui, sans-serif;
   line-height: 1.5;
 }
-.mxpp-next-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+:is(.mxpp-next-dialog, .mxpp-confirm-visual)::backdrop { background: rgba(0, 0, 0, .5); }
 .mxpp-next-dialog__header {
   display: flex;
   align-items: center;
@@ -1546,12 +1546,12 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   flex: 0 0 auto;
   cursor: pointer;
 }
-.mxpp-next-dialog [role="status"]:empty { display: none; }
-.mxpp-next-dialog .mx-ag-next-slot-focus-area {
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) [role="status"]:empty { display: none; }
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-focus-area {
   grid-template-columns: 74px minmax(0, 1.6fr) minmax(0, 1fr);
 }
-.mxpp-next-dialog .mx-ag-next-slot-focus-area:hover { background: transparent; }
-.mxpp-next-dialog .mx-ag-next-slot-consultorio-name { text-transform: uppercase; }
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-focus-area:hover { background: transparent; }
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-consultorio-name { text-transform: uppercase; }
 .mxpp-next-dialog__nav {
   display: flex;
   align-items: center;
@@ -1571,7 +1571,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 }
 .mxpp-next-dialog__nav .btn:disabled { opacity: .65; cursor: default; }
 .mxpp-next-dialog__nav .btn:hover:not(:disabled) { background: #6c757d; color: #fff; }
-.mxpp-next-dialog .mx-ag-next-slot-choose {
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-choose {
   padding: 6px 12px;
   border: 1px solid #005684;
   background: #005684;
@@ -1580,16 +1580,16 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   line-height: 1.5;
   cursor: pointer;
 }
-.mxpp-next-dialog .mx-ag-next-slot-choose:hover { background: #00738f; border-color: #00738f; }
-.mxpp-next-dialog button:focus-visible,
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-choose:hover { background: #00738f; border-color: #00738f; }
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) button:focus-visible,
 .mxpp-agenda-compact__find:focus-visible { outline: 2px solid #113d59; outline-offset: 2px; }
 @media (max-width: 991.98px) {
-  .mxpp-next-dialog .mx-ag-next-slot-focus-area { grid-template-columns: 58px minmax(0, 1fr); }
+  :is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-focus-area { grid-template-columns: 58px minmax(0, 1fr); }
 }
 @media (max-width: 575.98px) {
-  .mxpp-next-dialog .mx-ag-next-slots-header-main { align-items: flex-start; }
-  .mxpp-next-dialog .mx-ag-next-slot-choose { width: 100%; }
-  .mxpp-next-dialog .mx-ag-next-slot-time { overflow-wrap: anywhere; }
+  :is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slots-header-main { align-items: flex-start; }
+  :is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-choose { width: 100%; }
+  :is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-time { overflow-wrap: anywhere; }
 }
 
 .mxpp-booking-modal[hidden] {
@@ -1611,7 +1611,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   background: rgba(13, 45, 58, 0.52);
 }
 
-.mxpp-booking-modal__dialog {
+.mxpp-booking-modal__dialog:not(.mxpp-confirm-visual) {
   position: relative;
   width: min(560px, 100%);
   max-height: min(760px, calc(100vh - 2rem));
@@ -1621,6 +1621,19 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   background: #fff;
   box-shadow: 0 24px 70px rgba(16, 77, 100, 0.24);
   padding: 1.08rem;
+}
+
+.mxpp-booking-modal:has(.mxpp-confirm-visual) { padding: 0; }
+.mxpp-booking-modal:has(.mxpp-confirm-visual) .mxpp-booking-modal__backdrop { background: rgba(0, 0, 0, .5); }
+.mxpp-confirm-visual { position: relative; }
+.mxpp-confirm-visual > .mxpp-booking-modal__close { display: none; }
+.mxpp-confirm-header { border-bottom: 1px solid #dceaf2; }
+.mxpp-confirm-card { grid-template-columns: minmax(0, 1fr); }
+.mxpp-confirm-office-label { margin-top: 10px; }
+.mxpp-confirm-details { min-width: 0; }
+.mxpp-confirm-visual .mx-ag-next-slot-choose { margin: 4px; }
+@media (max-width: 991.98px) {
+  .mxpp-confirm-details { grid-column: 2; }
 }
 
 .mxpp-booking-modal__close {
@@ -2121,7 +2134,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
     padding: 0.62rem;
   }
 
-  .mxpp-booking-modal__dialog {
+  .mxpp-booking-modal__dialog:not(.mxpp-confirm-visual) {
     padding: 0.9rem;
   }
 
