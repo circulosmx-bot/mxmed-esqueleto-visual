@@ -1131,22 +1131,20 @@ if (isLocalDevRequest()) {
           <?php endif; ?>
         >
           <div class="mxpp-agenda-compact__header">
-            <div>
-              <h2>Próximas citas disponibles</h2>
-              <p>Reserva tu cita aquí</p>
+            <h2>Próximas citas disponibles</h2>
+            <div class="mxpp-agenda-compact__header-actions">
+              <button class="mxpp-agenda-compact__nav-btn mxpp-agenda-compact__find" type="button" data-mxpp-next-available>Buscar siguiente cita disponible</button>
             </div>
-            <a class="mxpp-agenda-compact__open" href="<?= h($bookAppointmentUrl) ?>" data-mxpp-booking-trigger>Ver agenda</a>
           </div>
           <?php if ($agendaMockMode !== null): ?>
             <p class="mxpp-agenda-compact__qa-badge">Simulación visual</p>
           <?php endif; ?>
           <p class="mxpp-agenda-compact__status" data-mxpp-agenda-status>Cargando horarios...</p>
+          <div class="mxpp-agenda-compact__days" data-mxpp-agenda-days hidden></div>
           <div class="mxpp-agenda-compact__nav" aria-label="Navegación de horarios disponibles">
-            <button class="mxpp-agenda-compact__nav-btn mxpp-agenda-compact__find" type="button" data-mxpp-next-available>Buscar siguiente cita disponible</button>
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-prev disabled aria-label="Ver fechas anteriores">Anterior</button>
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-next disabled aria-label="Ver siguientes fechas disponibles">Siguiente</button>
           </div>
-          <div class="mxpp-agenda-compact__days" data-mxpp-agenda-days hidden></div>
           <p class="mxpp-agenda-compact__alert" data-mxpp-agenda-alert hidden>Antes de continuar, selecciona una cita disponible.</p>
         </section>
         <div class="mxpp-booking-modal" data-mxpp-booking-modal hidden aria-hidden="true">
