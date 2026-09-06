@@ -1625,15 +1625,24 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 
 .mxpp-booking-modal:has(.mxpp-confirm-visual) { padding: 0; }
 .mxpp-booking-modal:has(.mxpp-confirm-visual) .mxpp-booking-modal__backdrop { background: rgba(0, 0, 0, .5); }
-.mxpp-confirm-visual { position: relative; }
+.mxpp-confirm-visual { position: relative; width: min(640px, calc(100% - 24px)); }
 .mxpp-confirm-visual > .mxpp-booking-modal__close { display: none; }
 .mxpp-confirm-header { border-bottom: 1px solid #dceaf2; }
 .mxpp-confirm-card { grid-template-columns: minmax(0, 1fr); }
-.mxpp-confirm-office-label { margin-top: 10px; }
-.mxpp-confirm-details { min-width: 0; }
+.mxpp-confirm-visual .mxpp-confirm-card .mx-ag-next-slot-focus-area {
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: start;
+}
+.mxpp-confirm-details {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+  overflow-wrap: anywhere;
+}
 .mxpp-confirm-visual .mx-ag-next-slot-choose { margin: 4px; }
 @media (max-width: 991.98px) {
   .mxpp-confirm-details { grid-column: 2; }
+  .mxpp-confirm-visual .mxpp-confirm-card .mx-ag-next-slot-focus-area { grid-template-columns: 58px minmax(0, 1fr); }
 }
 
 .mxpp-booking-modal__close {

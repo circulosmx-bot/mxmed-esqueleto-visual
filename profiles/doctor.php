@@ -1167,16 +1167,20 @@ if (isLocalDevRequest()) {
                 <article class="mx-ag-next-slot-card mxpp-confirm-card">
                   <div class="mx-ag-next-slot-focus-area">
                     <div class="mx-ag-next-slot-ico" aria-hidden="true"><i class="bi bi-calendar2-check"></i></div>
-                    <div class="mx-ag-next-slot-main">
-                      <div class="mx-ag-next-slot-label">Fecha y hora</div>
-                      <div class="mx-ag-next-slot-date" data-mxpp-confirm-date>Por confirmar</div>
-                      <div class="mx-ag-next-slot-time"><span data-mxpp-booking-time>Por confirmar</span> h</div>
-                    </div>
                     <div class="mxpp-confirm-details">
-                      <div class="mx-ag-next-slot-label">Doctor</div>
-                      <div class="mx-ag-next-slot-date" data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></div>
-                      <div class="mx-ag-next-slot-label mxpp-confirm-office-label">Consultorio</div>
-                      <div class="mx-ag-next-slot-consultorio-name"><i class="bi bi-hospital" aria-hidden="true"></i><span data-mxpp-confirm-office></span></div>
+                      <div>
+                        <div class="mx-ag-next-slot-label">Doctor</div>
+                        <div class="mx-ag-next-slot-date" data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></div>
+                      </div>
+                      <div class="mx-ag-next-slot-main">
+                        <div class="mx-ag-next-slot-label">Fecha y hora</div>
+                        <div class="mx-ag-next-slot-date" data-mxpp-confirm-date>Por confirmar</div>
+                        <div class="mx-ag-next-slot-time"><span data-mxpp-booking-time>Por confirmar</span> h</div>
+                      </div>
+                      <div>
+                        <div class="mx-ag-next-slot-label">Consultorio</div>
+                        <div class="mx-ag-next-slot-consultorio-name"><i class="bi bi-hospital" aria-hidden="true"></i><span data-mxpp-confirm-office></span></div>
+                      </div>
                     </div>
                   </div>
                 </article>
