@@ -1166,11 +1166,19 @@ if (isLocalDevRequest()) {
               <div class="mx-ag-next-slots-modal-body">
                 <article class="mx-ag-next-slot-card mxpp-confirm-card">
                   <div class="mx-ag-next-slot-focus-area">
-                    <div class="mx-ag-next-slot-ico" aria-hidden="true"><i class="bi bi-calendar2-check"></i></div>
+                    <div class="mx-ag-next-slot-ico" aria-hidden="true">
+                      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="7" r="3.5" />
+                        <path d="M2.5 21v-2a6.5 6.5 0 0 1 13 0v2M19 5v6M16 8h6" />
+                      </svg>
+                    </div>
                     <div class="mxpp-confirm-details">
                       <div>
                         <div class="mx-ag-next-slot-label">Doctor</div>
                         <div class="mx-ag-next-slot-date" data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></div>
+                        <?php if ($primarySpecialty !== null): ?>
+                          <div class="mxpp-confirm-specialty"><?= h($primarySpecialty) ?></div>
+                        <?php endif; ?>
                       </div>
                       <div class="mx-ag-next-slot-main">
                         <div class="mx-ag-next-slot-label">Fecha y hora</div>

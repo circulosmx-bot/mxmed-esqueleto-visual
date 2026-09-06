@@ -1639,6 +1639,18 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   gap: 18px;
   overflow-wrap: anywhere;
 }
+.mxpp-confirm-details [data-mxpp-booking-doctor] { font-size: 1.62rem; }
+.mxpp-confirm-details [data-mxpp-confirm-date] { font-size: 1.512rem; }
+.mxpp-confirm-specialty {
+  margin-top: 5px;
+  color: #133f58;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+.mxpp-confirm-details .mx-ag-next-slot-consultorio-name { font-size: 1.326rem; }
+.mxpp-confirm-details .mx-ag-next-slot-consultorio-name i { font-size: 1.43rem; }
 .mxpp-confirm-visual .mx-ag-next-slot-choose { margin: 4px; }
 @media (max-width: 991.98px) {
   .mxpp-confirm-details { grid-column: 2; }
