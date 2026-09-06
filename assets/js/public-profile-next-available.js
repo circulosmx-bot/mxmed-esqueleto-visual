@@ -10,23 +10,41 @@ window.MxmedPublicNextAvailable = function (block, booking) {
     if (tag === 'button') node.type = 'button';
     return node;
   };
-  const dialog = create('dialog', '', 'mxpp-next-dialog');
+  const icon = name => {
+    const node = create('i', '', 'bi bi-' + name);
+    node.setAttribute('aria-hidden', 'true');
+    return node;
+  };
+  const dialog = create('dialog', '', 'mxpp-next-dialog mx-ag-next-slots-modal');
   dialog.setAttribute('aria-labelledby', 'mxpp-next-title');
-  const header = create('header', '', 'mxpp-next-dialog__header');
-  const title = create('h2', 'Siguiente cita disponible');
+  const header = create('header', '', 'mxpp-next-dialog__header modal-header mx-ag-next-slots-modal-header');
+  const main = create('div', '', 'mx-ag-next-slots-header-main');
+  const headerIcon = create('span', '', 'mx-ag-next-slots-header-icon');
+  headerIcon.append(icon('calendar2-check'));
+  const copy = create('div', '', 'mx-ag-next-slots-header-copy');
+  const title = create('h2', 'Siguiente cita disponible', 'modal-title');
   title.id = 'mxpp-next-title';
-  const close = create('button', 'Cerrar', 'mxpp-agenda-compact__nav-btn');
-  header.append(title, close);
-  const intro = create('p', 'Selecciona el horario que mejor se ajuste a ti.');
+  const close = create('button', '', 'mxpp-next-dialog__close');
+  close.setAttribute('aria-label', 'Cerrar');
+  const intro = create('div', 'Selecciona el horario que mejor se ajuste a ti.', 'mx-ag-next-slots-header-subtitle');
+  copy.append(title, intro);
+  main.append(headerIcon, copy);
+  header.append(main, close);
+  const body = create('div', '', 'mx-ag-next-slots-modal-body');
   const status = create('p', '');
   status.setAttribute('role', 'status');
-  const results = create('div', '', 'mxpp-next-dialog__results');
-  const nav = create('nav', '', 'mxpp-next-dialog__nav');
+  const results = create('div', '', 'mxpp-next-dialog__results mx-ag-next-slots-results');
+  const info = create('div', '', 'mx-ag-next-slots-info-note');
+  info.append(icon('info-circle'), create('span', 'Las citas mostradas corresponden a la disponibilidad actual del médico y consultorio.'));
+  body.append(status, results, info);
+  const nav = create('nav', '', 'mxpp-next-dialog__nav mx-ag-next-slots-modal-footer');
   nav.setAttribute('aria-label', 'Más citas disponibles');
-  const previous = create('button', 'Ver 3 anteriores', 'mxpp-agenda-compact__nav-btn');
-  const next = create('button', 'Ver siguientes 3', 'mxpp-agenda-compact__nav-btn');
-  nav.append(previous, next);
-  dialog.append(header, intro, status, results, nav);
+  const previous = create('button', 'Ver 3 anteriores', 'btn');
+  const next = create('button', 'Ver siguientes 3', 'btn');
+  const footerClose = create('button', 'Cerrar', 'btn');
+  footerClose.addEventListener('click', () => dialog.close());
+  nav.append(previous, next, footerClose);
+  dialog.append(header, body, nav);
   document.body.append(dialog);
   const names = JSON.parse(block.dataset.publicConsultorios || '{}');
   let context, slots = [], offset = 0, startDate = '', exhausted = false, request = null;
@@ -79,15 +97,32 @@ window.MxmedPublicNextAvailable = function (block, booking) {
       const visible = slots.slice(offset, offset + 3);
       status.textContent = visible.length ? '' : 'No encontramos citas disponibles próximamente.';
       visible.forEach(slot => {
-        const button = create('button', '', 'mxpp-next-dialog__result');
-        button.append(create('strong', booking.formatDate(slot.date)),
-          create('span', booking.formatTime(slot.start_at) + ' – ' + booking.formatTime(slot.end_at)),
-          create('span', names[slot.consultorio_id] || 'Consultorio'), create('span', 'Elegir'));
+        const card = create('article', '', 'mxpp-next-dialog__result mx-ag-next-slot-card');
+        const details = create('div', '', 'mx-ag-next-slot-focus-area');
+        const calendar = create('div', '', 'mx-ag-next-slot-ico');
+        calendar.append(icon('calendar2-check'));
+        const date = new Date(slot.date + 'T00:00:00');
+        const capitalize = text => text.charAt(0).toLocaleUpperCase('es-MX') + text.slice(1);
+        const weekday = capitalize(new Intl.DateTimeFormat('es-MX', {weekday: 'long'}).format(date));
+        const month = capitalize(new Intl.DateTimeFormat('es-MX', {month: 'long'}).format(date));
+        const dateTime = create('div', '', 'mx-ag-next-slot-main');
+        dateTime.append(create('div', 'Fecha y hora', 'mx-ag-next-slot-label'),
+          create('div', `${weekday}, ${date.getDate()} de ${month} ${date.getFullYear()}`, 'mx-ag-next-slot-date'),
+          create('div', booking.formatTime(slot.start_at) + ' - ' + booking.formatTime(slot.end_at) + ' h', 'mx-ag-next-slot-time'));
+        const office = create('div', '', 'mx-ag-next-slot-consultorio');
+        const officeName = create('div', '', 'mx-ag-next-slot-consultorio-name');
+        officeName.append(icon('hospital'), create('span', names[slot.consultorio_id] || 'Consultorio'));
+        office.append(create('div', 'Consultorio', 'mx-ag-next-slot-label'), officeName);
+        details.append(calendar, dateTime, office);
+        const actions = create('div', '', 'mx-ag-next-slot-actions');
+        const button = create('button', 'Elegir', 'mx-ag-next-slot-choose');
         button.addEventListener('click', () => {
           dialog.close();
           booking.choose(slot);
         });
-        results.append(button);
+        actions.append(button);
+        card.append(details, actions);
+        results.append(card);
       });
       previous.disabled = offset === 0;
       next.disabled = exhausted && offset + 3 >= slots.length;

@@ -675,6 +675,11 @@ if (isLocalDevRequest()) {
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=badge,call,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,school,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=alarm,credit_card,group" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
+  <?php if ($showAgendaSlot): ?>
+    <link rel="stylesheet" href="/assets/css/next-available-modal.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;500;600;700&amp;display=swap" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <?php endif; ?>
   <?php if (isset($profilePanelViews['about'])): ?>
     <link rel="stylesheet" href="/assets/css/public-profile-about.css" />
   <?php endif; ?>

@@ -1,0 +1,231 @@
+.mx-ag-next-slots-modal .modal-header{
+  border-bottom: 1px solid #dceaf2;
+}
+.mx-ag-next-slots-modal-header{
+  padding: 14px 18px 12px;
+}
+.mx-ag-next-slots-header-main{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mx-ag-next-slots-header-icon{
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #10b9b3 0%, #0f8fb0 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex: 0 0 auto;
+}
+.mx-ag-next-slots-header-copy{
+  min-width: 0;
+}
+.mx-ag-next-slots-header-copy .modal-title{
+  font-size: 2rem;
+  line-height: 1.05;
+  font-weight: 800;
+  color: #103f59;
+  margin: 0;
+}
+.mx-ag-next-slots-header-subtitle{
+  margin-top: 5px;
+  font-size: 1.02rem;
+  color: #4e6778;
+  font-weight: 600;
+}
+.mx-ag-next-slots-modal-body{
+  padding: 14px 18px 12px;
+}
+.mx-ag-next-slots-results{
+  display: grid;
+  gap: 10px;
+}
+.mx-ag-next-slot-card{
+  border: 1px solid #d9e8f2;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(11, 77, 105, .06);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.mx-ag-next-slot-focus-area{
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, .75fr);
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+}
+.mx-ag-next-slot-focus-area:hover,
+.mx-ag-next-slot-focus-area:focus-visible{
+  background: #f6fbff;
+  outline: none;
+}
+.mx-ag-next-slot-ico{
+  width: 62px;
+  height: 62px;
+  border-radius: 14px;
+  background: #edf7fc;
+  color: #1078ad;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+.mx-ag-next-slot-main,
+.mx-ag-next-slot-consultorio,
+.mx-ag-next-slot-duration{
+  min-width: 0;
+}
+.mx-ag-next-slot-label{
+  font-size: .82rem;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #5c7486;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  margin-bottom: 4px;
+}
+.mx-ag-next-slot-date{
+  font-size: 1.08rem;
+  line-height: 1.15;
+  color: #133f58;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+.mx-ag-next-slot-time{
+  font-size: 2.02rem;
+  line-height: 1.04;
+  color: #0b7ba3;
+  font-weight: 900;
+}
+.mx-ag-next-slot-consultorio-name{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.02rem;
+  color: #113f59;
+  font-weight: 800;
+}
+.mx-ag-next-slot-consultorio-name i{
+  color: #2689b5;
+  font-size: 1.1rem;
+}
+.mx-ag-next-slot-duration-value{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 1.02rem;
+  color: #27485b;
+  font-weight: 700;
+}
+.mx-ag-next-slot-duration-value i{
+  font-size: 1.05rem;
+  color: #5f798b;
+}
+.mx-ag-next-slot-actions{
+  display: inline-flex;
+  align-items: center;
+}
+.mx-ag-next-slot-choose{
+  min-width: 116px;
+  border-radius: 10px;
+  min-height: 46px;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+.mx-ag-next-slots-waitlist-cta{
+  margin-top: 10px;
+  padding: 10px 11px;
+  border: 1px dashed #c6dbe8;
+  border-radius: 11px;
+  background: #f8fcff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mx-ag-next-slots-waitlist-question{
+  font-size: .9rem;
+  font-weight: 600;
+  color: #3e6276;
+}
+.mx-ag-next-slots-info-note{
+  margin-top: 12px;
+  border: 1px solid #d5e8f4;
+  border-radius: 11px;
+  background: #eef8ff;
+  color: #0d6289;
+  font-size: .95rem;
+  line-height: 1.3;
+  font-weight: 600;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mx-ag-next-slots-info-note i{
+  font-size: 1.05rem;
+}
+.mx-ag-next-slots-modal-footer{
+  border-top: 1px solid #dceaf2;
+  gap: 8px;
+  padding: 11px 18px;
+}
+.mx-ag-next-slots-modal-footer .btn{
+  min-height: 40px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+@media (max-width: 991.98px){
+  .mx-ag-next-slot-card{
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .mx-ag-next-slot-focus-area{
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .mx-ag-next-slot-ico{
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    font-size: 1.65rem;
+  }
+  .mx-ag-next-slot-consultorio,
+  .mx-ag-next-slot-duration{
+    grid-column: 2;
+  }
+  .mx-ag-next-slot-actions{
+    justify-content: flex-start;
+  }
+  .mx-ag-next-slot-time{
+    font-size: 1.65rem;
+  }
+  .mx-ag-next-slots-waitlist-cta{
+    align-items: flex-start;
+  }
+}
+@media (max-width: 575.98px){
+  .mx-ag-next-slots-header-copy .modal-title{
+    font-size: 1.45rem;
+  }
+  .mx-ag-next-slots-header-subtitle{
+    font-size: .92rem;
+  }
+}
