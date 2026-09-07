@@ -65,6 +65,9 @@ pdb08bPatient($pdo, 'p_ambiguous_a', 'doctor-a', 'Elena Mora', '1988-08-08', '44
 pdb08bPatient($pdo, 'p_ambiguous_b', 'doctor-a', 'Elena Mora', '1988-08-08', '4490000008', 'elena@example.test');
 $ambiguous = (new PublicBookingPatientIdentityResolver($pdo))->resolve('doctor-a', pdb08bPatientInput('ELENA MORA', '1988-08-08', '4490000008', 'elena@example.test'));
 pdb08bAssert($ambiguous['status'] === 'ambiguous' && $ambiguous['patient_id'] === null, 'multiple strong candidates are ambiguous');
+$ambiguousFirstTime = (new PublicBookingPatientIdentityResolver($pdo))->resolve('doctor-a', pdb08bPatientInput('ELENA MORA', '1988-08-08', '4490000008', 'elena@example.test') + ['patient_type' => 'first_time']);
+$ambiguousFollowUp = (new PublicBookingPatientIdentityResolver($pdo))->resolve('doctor-a', pdb08bPatientInput('ELENA MORA', '1988-08-08', '4490000008', 'elena@example.test') + ['patient_type' => 'follow_up']);
+pdb08bAssert($ambiguousFirstTime['status'] === 'ambiguous' && $ambiguousFollowUp['status'] === 'ambiguous', 'patient type declaration does not override ambiguity');
 
 // A returning declaration does not attach an unrelated historical patient.
 $noMatch = $resolver->resolve('doctor-a', pdb08bPatientInput('Paciente Nuevo', '2001-01-01', '4491111111', 'nuevo@example.test') + ['patient_type' => 'follow_up']);

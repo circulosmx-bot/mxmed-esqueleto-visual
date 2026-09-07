@@ -17,6 +17,10 @@
       return { ok: false, message: 'Selecciona para quién es la cita.' };
     }
     if (!state.selectedSlot) return { ok: false, message: 'Selecciona una cita disponible.' };
+    var patientType = String(patientData.patient_type || '');
+    if (patientType !== 'first_time' && patientType !== 'follow_up') {
+      return { ok: false, message: 'Indica si es primera consulta o si ya ha consultado antes.' };
+    }
     var patient = {
       name: patientData.full_name,
       phone: patientData.mobile_phone,
@@ -45,7 +49,7 @@
       start_at: state.selectedSlot.start_at,
       end_at: state.selectedSlot.end_at,
       visit_kind: 'presencial',
-      patient_type: 'first_time',
+      patient_type: patientType,
       booker_is_patient: state.booker_is_patient,
       patient: patient,
       booker: booker,

@@ -79,6 +79,7 @@ function pdb07bPayload(string $startAt = '2030-01-07 10:00:00'): array
 function pdb07bOtherPersonPayload(string $startAt = '2030-01-07 11:00:00'): array
 {
     $payload = pdb07bPayload($startAt);
+    $payload['patient_type'] = 'follow_up';
     $payload['booker_is_patient'] = false;
     $payload['patient'] = [
         'name' => 'Paciente alternativa',
@@ -350,6 +351,7 @@ function pdb07bProfileActivationProof(PDO $pdo): array
     pdb07bAssert(
         ($otherFlowPayload['booker_is_patient'] ?? null) === false
             && ($otherFlowPayload['booker']['relationship'] ?? '') === 'madre'
+            && ($otherFlowPayload['patient_type'] ?? '') === 'follow_up'
             && ($otherFlowPayload['patient_identity_resolution']['status'] ?? '') === 'matched'
             && ($otherFlow['patient_id'] ?? '') === 'p_pdb07bother',
         'other-person identity uses patient fields, persists the result, and preserves the booker relationship'

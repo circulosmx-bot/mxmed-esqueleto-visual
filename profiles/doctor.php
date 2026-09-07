@@ -1264,6 +1264,20 @@ if (isLocalDevRequest()) {
                     <option value="No especifica">No especifica</option>
                   </select>
                 </label>
+                <fieldset class="mxpp-booking-patient-type mxpp-booking-modal__field--wide" aria-describedby="mxpp-booking-patient-type-help">
+                  <legend data-mxpp-booking-patient-type-question>¿Es la primera vez que consultas con este especialista?</legend>
+                  <div class="mxpp-booking-patient-type__options">
+                    <label class="mxpp-booking-patient-type__option">
+                      <input class="mxpp-booking-patient-type__input" type="radio" name="patient_type" value="first_time" data-mxpp-booking-patient-type="first_time" required />
+                      <span>Primera consulta</span>
+                    </label>
+                    <label class="mxpp-booking-patient-type__option">
+                      <input class="mxpp-booking-patient-type__input" type="radio" name="patient_type" value="follow_up" data-mxpp-booking-patient-type="follow_up" />
+                      <span>Ya ha consultado antes</span>
+                    </label>
+                  </div>
+                  <span class="mxpp-visually-hidden" id="mxpp-booking-patient-type-help">Selecciona una opción para continuar con la reserva.</span>
+                </fieldset>
                 <label class="mxpp-booking-modal__field--wide">Motivo de consulta <span>opcional</span><textarea name="reason" rows="2" maxlength="1000"></textarea></label>
                 </fieldset>
                 <fieldset class="mxpp-booking-data-section" data-mxpp-booker-fields hidden disabled>
@@ -2125,6 +2139,7 @@ if (isLocalDevRequest()) {
             email: String(data.get('email') || '').trim(),
             birth_date: String(data.get('birth_date') || '').trim(),
             gender: String(data.get('gender') || '').trim(),
+            patient_type: String(data.get('patient_type') || '').trim(),
             reason: String(data.get('reason') || '').trim(),
             booker: {
               name: String(data.get('booker.name') || '').trim(),
@@ -2203,6 +2218,9 @@ if (isLocalDevRequest()) {
           }
           if (data.gender !== 'F' && data.gender !== 'M' && data.gender !== 'No especifica') {
             return { ok: false, message: 'Selecciona un género válido.' };
+          }
+          if (data.patient_type !== 'first_time' && data.patient_type !== 'follow_up') {
+            return { ok: false, message: 'Indica si es primera consulta o si ya ha consultado antes.' };
           }
           if (data.reason.length > 1000) {
             return { ok: false, message: 'El motivo de consulta es demasiado largo.' };
@@ -2403,6 +2421,11 @@ if (isLocalDevRequest()) {
           modal.querySelectorAll('[data-mxpp-booking-subject]').forEach(function (button) {
             var value = button.getAttribute('data-mxpp-booking-subject') === 'self';
             button.setAttribute('aria-pressed', String(state.booker_is_patient === value));
+          });
+          modal.querySelectorAll('[data-mxpp-booking-patient-type-question]').forEach(function (question) {
+            question.textContent = separate
+              ? '¿Es la primera vez que este paciente consulta con este especialista?'
+              : '¿Es la primera vez que consultas con este especialista?';
           });
         }
 

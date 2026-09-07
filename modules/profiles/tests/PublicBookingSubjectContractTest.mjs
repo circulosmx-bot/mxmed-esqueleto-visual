@@ -7,10 +7,11 @@ const context = {window: {}};
 vm.runInNewContext(fs.readFileSync(new URL('../../../assets/js/public-profile-booking-subject.js', import.meta.url), 'utf8'), context);
 const subject = context.window.MxmedPublicBookingSubject;
 const state = {doctorId: '1', selectedSlot: {consultorio_id: '2', start_at: '2026-09-07 16:00:00', end_at: '2026-09-07 16:30:00'}};
-const patient = {full_name: 'Paciente Sintético', mobile_phone: '5550000011', email: 'patient@example.test', birth_date: '2000-01-01', gender: 'F', reason: ''};
+const patient = {full_name: 'Paciente Sintético', mobile_phone: '5550000011', email: 'patient@example.test', birth_date: '2000-01-01', gender: 'F', reason: '', patient_type: 'first_time'};
 const booker = {name: 'Persona Sintética', phone: '5550000022', email: 'booker@example.test', relationship: 'madre'};
 assert.equal(subject.prepare(state, patient, booker).ok, false);
 subject.choose(state, false);
+assert.equal(subject.prepare(state, {...patient, patient_type: ''}, booker).ok, false, 'patient type is explicitly required');
 for (const field of ['name', 'phone', 'email', 'relationship']) {
   assert.equal(subject.prepare(state, patient, {...booker, [field]: ''}).ok, false, field + ' required');
 }
@@ -28,6 +29,8 @@ assert.equal(self.booker.email, self.patient.email);
 assert.equal(Object.hasOwn(self.booker, 'relationship'), false);
 assert.equal(JSON.stringify(self).includes(booker.email), false);
 assert.equal(self.patient_type, 'first_time');
+const followUp = subject.prepare(state, {...patient, patient_type: 'follow_up'}, booker).payload;
+assert.equal(followUp.patient_type, 'follow_up');
 assert.equal(self.end_at, state.selectedSlot.end_at);
 // Validate the exact prepared shapes against the authoritative pure validator.
 // Bypass construction: no PDO connection, reservation, or OTP operation occurs.
