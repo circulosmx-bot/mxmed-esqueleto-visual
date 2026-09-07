@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePlanCapabilities.php';
 require_once __DIR__ . '/../modules/profiles/services/ProfileThemeCatalog.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePanelContent.php';
+require_once __DIR__ . '/../modules/profiles/services/PublicBookingDoctorReference.php';
 
 function h($value): string
 {
@@ -560,6 +561,7 @@ if (!empty($specialties) && is_array($specialties[0])) {
     $primarySpecialty = toText($specialties[0]['name_es'] ?? null);
 }
 $confirmationDesignation = toText($identity['professional_designation'] ?? null) ?? $primarySpecialty;
+$bookingPatientTypeQuestion = \Profiles\Services\PublicBookingDoctorReference::question($identity);
 
 $professionalLicense = toText($professional['professional_license'] ?? null);
 $specialtyLicense = toText($professional['specialty_license'] ?? null);
@@ -1265,7 +1267,7 @@ if (isLocalDevRequest()) {
                   </select>
                 </label>
                 <fieldset class="mxpp-booking-patient-type mxpp-booking-modal__field--wide" aria-describedby="mxpp-booking-patient-type-help">
-                  <legend data-mxpp-booking-patient-type-question>¿Es la primera vez que consultas con este especialista?</legend>
+                  <legend data-mxpp-booking-patient-type-question data-question="<?= h($bookingPatientTypeQuestion) ?>"><?= h($bookingPatientTypeQuestion) ?></legend>
                   <div class="mxpp-booking-patient-type__options">
                     <label class="mxpp-booking-patient-type__option">
                       <input class="mxpp-booking-patient-type__input" type="radio" name="patient_type" value="first_time" data-mxpp-booking-patient-type="first_time" required />
@@ -2423,9 +2425,7 @@ if (isLocalDevRequest()) {
             button.setAttribute('aria-pressed', String(state.booker_is_patient === value));
           });
           modal.querySelectorAll('[data-mxpp-booking-patient-type-question]').forEach(function (question) {
-            question.textContent = separate
-              ? '¿Es la primera vez que este paciente consulta con este especialista?'
-              : '¿Es la primera vez que consultas con este especialista?';
+            question.textContent = question.getAttribute('data-question') || '¿Es su primera consulta con este especialista?';
           });
         }
 
