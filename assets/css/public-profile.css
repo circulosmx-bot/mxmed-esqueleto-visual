@@ -1830,12 +1830,19 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 }
 
 .mxpp-booking-birth-date label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
   min-width: 0;
   font-size: 0.73rem !important;
 }
 
-.mxpp-booking-birth-date input,
-.mxpp-booking-birth-date select {
+.mxpp-booking-birth-date > label > input,
+.mxpp-booking-birth-date > label > select {
+  box-sizing: border-box;
+  height: 38px;
+  min-height: 38px;
+  margin-top: 0;
   min-width: 0;
 }
 
