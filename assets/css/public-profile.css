@@ -1851,26 +1851,49 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   white-space: nowrap;
 }
 
-.mxpp-booking-patient-type__option span {
+.mxpp-booking-modal__form .mxpp-booking-patient-type__option > span {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 42px;
   padding: 0.44rem 0.58rem;
-  border: 1px solid #c7dfe8;
+  border: 1px solid rgba(1, 175, 183, 0.50);
   border-radius: 9px;
-  background: #fff;
-  color: #113d59;
+  background: rgba(1, 175, 183, 0.50);
+  color: #fff;
   font-size: 0.86rem;
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
 }
 
-.mxpp-booking-patient-type__input:checked + span {
+.mxpp-booking-modal__form .mxpp-booking-patient-type__option > span::before {
+  content: 'check';
+  display: inline-block;
+  width: 1.15em;
+  margin-right: 0.22rem;
+  color: #fff;
+  font-family: 'Material Symbols Rounded';
+  font-size: 1.12em;
+  font-weight: normal;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 20;
+  opacity: 0;
+}
+
+.mxpp-booking-modal__form .mxpp-booking-patient-type__option:hover > span {
+  background: rgba(1, 175, 183, 0.70);
+  border-color: rgba(1, 175, 183, 0.70);
+}
+
+.mxpp-booking-modal__form .mxpp-booking-patient-type__input:checked + span {
   border-color: #01AFB7;
-  background: #e9f9fa;
-  color: #006f75;
+  background: #01AFB7;
+  color: #fff;
+}
+
+.mxpp-booking-modal__form .mxpp-booking-patient-type__input:checked + span::before {
+  opacity: 1;
 }
 
 .mxpp-booking-patient-type__input:focus-visible + span {
