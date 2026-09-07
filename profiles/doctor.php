@@ -1237,7 +1237,7 @@ if (isLocalDevRequest()) {
                   <label>Día<input type="text" name="birth_day" inputmode="numeric" autocomplete="bday-day" maxlength="2" pattern="[0-9]*" data-mxpp-birth-day required /></label>
                   <label>Mes
                     <select name="birth_month" autocomplete="bday-month" data-mxpp-birth-month required>
-                      <option value="">Selecciona</option>
+                      <option value="" aria-label="Mes"></option>
                       <option value="1">Enero</option>
                       <option value="2">Febrero</option>
                       <option value="3">Marzo</option>
