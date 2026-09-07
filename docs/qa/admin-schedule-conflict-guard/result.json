@@ -1,0 +1,38 @@
+{
+  "report": [
+    {
+      "name": "desktop",
+      "geometry": {
+        "scroll": 664,
+        "width": 664,
+        "body": 1366,
+        "viewport": 1366
+      },
+      "multiple": true,
+      "actualIntersection": true,
+      "backFocus": true,
+      "invalidSaves": 0,
+      "correctedSaves": 1,
+      "staleServerRejection": true,
+      "noRetryLoop": true
+    },
+    {
+      "name": "narrow",
+      "geometry": {
+        "scroll": 252,
+        "width": 252,
+        "body": 320,
+        "viewport": 320
+      },
+      "multiple": true,
+      "actualIntersection": true,
+      "backFocus": true,
+      "invalidSaves": 0,
+      "correctedSaves": 1,
+      "staleServerRejection": true,
+      "noRetryLoop": true
+    }
+  ],
+  "adapter": "in-memory saves; real production editor functions",
+  "databaseWrites": 0
+}

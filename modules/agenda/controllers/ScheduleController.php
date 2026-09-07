@@ -259,22 +259,27 @@ class ScheduleController
             ];
         }
 
+        $conflicts = [];
+        $appendConflict = static function (array $conflict) use (&$conflicts): void {
+            $conflict['overlap_window'] = [
+                'start_time' => max($conflict['incoming_window']['start_time'], $conflict['conflict_window']['start_time']),
+                'end_time' => min($conflict['incoming_window']['end_time'], $conflict['conflict_window']['end_time']),
+            ];
+            $conflicts[json_encode($conflict)] = $conflict;
+        };
         foreach ($segmentsByWeekday as $weekday => $windows) {
-            usort($windows, function (array $a, array $b) {
-                return strcmp((string)$a['start_time'], (string)$b['start_time']);
-            });
-            $prev = null;
-            foreach ($windows as $window) {
-                if ($prev !== null && $this->windowsOverlap($window, $prev)) {
-                    return [
-                        'consultorio_id_conflict' => $consultorioId,
-                        'weekday' => (int)$weekday,
-                        'incoming_window' => $window,
-                        'conflict_window' => $prev,
-                        'conflict_scope' => 'same_consultorio',
-                    ];
+            for ($i = 0; $i < count($windows); $i++) {
+                for ($j = $i + 1; $j < count($windows); $j++) {
+                    if ($this->windowsOverlap($windows[$i], $windows[$j])) {
+                        $appendConflict([
+                            'consultorio_id_conflict' => $consultorioId,
+                            'weekday' => (int)$weekday,
+                            'incoming_window' => $windows[$i],
+                            'conflict_window' => $windows[$j],
+                            'conflict_scope' => 'same_consultorio',
+                        ]);
+                    }
                 }
-                $prev = $window;
             }
         }
 
@@ -313,7 +318,7 @@ class ScheduleController
                     ['start_time' => $incomingStart, 'end_time' => $incomingEnd],
                     $existingWindow
                 )) {
-                    return [
+                    $appendConflict([
                         'consultorio_id_conflict' => $existingConsultorioId,
                         'weekday' => $incomingWeekday,
                         'incoming_window' => [
@@ -322,12 +327,15 @@ class ScheduleController
                         ],
                         'conflict_window' => $existingWindow,
                         'conflict_scope' => 'other_consultorio',
-                    ];
+                    ]);
                 }
             }
         }
 
-        return null;
+        $conflicts = array_values($conflicts);
+        if ($conflicts === []) return null;
+        // Keep the existing first-conflict fields for older clients; new clients render the full list.
+        return array_merge($conflicts[0], ['conflicts' => $conflicts]);
     }
 
     private function windowsOverlap(array $a, array $b): bool

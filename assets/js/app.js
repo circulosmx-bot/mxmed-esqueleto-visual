@@ -30680,6 +30680,7 @@ console.info('app.js loaded :: 20251123a');
       return next;
     };
     const scheduleStateByConsultorio = Object.create(null);
+    const scheduleDoctorByConsultorio = Object.create(null);
     const saveTimersByConsultorio = new Map();
     let saving = false;
     let loading = false;
@@ -31799,11 +31800,13 @@ console.info('app.js loaded :: 20251123a');
     const collectScheduleBlocksByConsultorio = ()=>{
       const blocks = [];
       Object.entries(scheduleStateByConsultorio || {}).forEach(([consultorioId, scheduleState])=>{
+        if(scheduleDoctorByConsultorio[consultorioId] !== resolveScheduleContext().doctorId) return;
         if(!scheduleState || typeof scheduleState !== 'object') return;
         DAYS.forEach((day)=>{
           const dayKey = String(day?.key || '').trim();
           if(!dayKey) return;
           const row = scheduleState[dayKey] || {};
+          if(!row.act) return;
           const t1s = normalizeTime(row.a1, { allowArtificial: true });
           const t1e = normalizeTime(row.b1, { allowArtificial: true });
           const t2s = normalizeTime(row.a2, { allowArtificial: true });
@@ -31836,31 +31839,59 @@ console.info('app.js loaded :: 20251123a');
       }
       return { conflicts, conflictKeys };
     };
+    const showScheduleConflicts = (conflicts, consultorioId = getActiveConsultorioId())=>{
+      const note = ensureValidationNoteNode();
+      if(!note) return;
+      const signature = JSON.stringify([consultorioId, conflicts]);
+      if(note.dataset.conflictSignature === signature) return;
+      note.dataset.conflictSignature = signature;
+      note.className = 'alert alert-danger mt-2 mxm-schedule-conflict';
+      note.setAttribute('role', 'alert');
+      note.replaceChildren();
+      const list = document.createElement('ul');
+      conflicts.forEach(conflict=>{
+        const item = document.createElement('li');
+        const day = DAYS.find(day=>day.weekday === Number(conflict.weekday));
+        const range = conflict.overlap_window;
+        const same = conflict.conflict_scope === 'same_consultorio';
+        const title = document.createElement('strong');
+        title.textContent = same ? 'Hay tramos coincidentes en este consultorio.'
+          : `Este horario coincide con tu atención en ${resolveConsultorioLabel(conflict.consultorio_id_conflict)}.`;
+        const detail = document.createElement('div');
+        detail.textContent = `${day?.label || ''}, de ${range.start_time.slice(0,5)} a ${range.end_time.slice(0,5)}`;
+        item.append(title, detail); list.append(item);
+      });
+      const explanation = document.createElement('p');
+      explanation.textContent = 'No puedes configurar atención simultánea en dos consultorios.';
+      const back = document.createElement('button');
+      back.type = 'button'; back.className = 'btn btn-outline-secondary'; back.textContent = 'Volver';
+      back.addEventListener('click', ()=>{
+        const target = activeBody?.querySelector('button:not(:disabled), input:not(:disabled)');
+        target?.focus();
+      });
+      note.append(list, explanation, back);
+    };
+    const conflictsForScheduleSave = (consultorioId)=>findScheduleConflicts().conflicts
+      .filter(({a,b})=>a.consultorioId === consultorioId || b.consultorioId === consultorioId)
+      .map(({a,b})=>{
+        const incoming = a.consultorioId === consultorioId ? a : b;
+        const existing = incoming === a ? b : a;
+        return {consultorio_id_conflict: existing.consultorioId,
+          weekday: DAYS.find(day=>day.key === incoming.dayKey)?.weekday,
+          conflict_scope: 'other_consultorio',
+          overlap_window: {start_time: incoming.start > existing.start ? incoming.start : existing.start,
+            end_time: incoming.end < existing.end ? incoming.end : existing.end}};
+      });
     const renderScheduleValidationMessage = ()=>{
       const next = findScheduleConflicts();
-      scheduleValidationSnapshot = {
-        validated: true,
-        conflicts: next.conflicts,
-        conflictKeys: next.conflictKeys
-      };
-      const total = next.conflicts.length;
-      if(total <= 0){
+      scheduleValidationSnapshot = {validated: true, conflicts: next.conflicts, conflictKeys: next.conflictKeys};
+      const conflicts = conflictsForScheduleSave(getActiveConsultorioId());
+      if(conflicts.length) showScheduleConflicts(conflicts);
+      else {
+        const note = ensureValidationNoteNode();
+        if(note){ delete note.dataset.conflictSignature; note.removeAttribute('role'); note.className = 'small mt-1 text-muted'; }
         showValidationNote('✔ Sin conflictos de horario detectados.', 'success');
-        return scheduleValidationSnapshot;
       }
-      if(total === 1){
-        const first = next.conflicts[0];
-        const dayDef = DAYS.find((day)=> day.key === first.a.dayKey);
-        const dayLabel = String(dayDef?.label || first.a.dayKey || '').trim();
-        const aLabel = resolveConsultorioLabel(first.a.consultorioId);
-        const bLabel = resolveConsultorioLabel(first.b.consultorioId);
-        showValidationNote(
-          `⚠ Hay conflictos de horario entre consultorios. Revisa los bloques marcados. Conflicto: ${dayLabel}, ${aLabel} ${first.a.start}-${first.a.end} y ${bLabel} ${first.b.start}-${first.b.end}.`,
-          'danger'
-        );
-        return scheduleValidationSnapshot;
-      }
-      showValidationNote(`⚠ Hay conflictos de horario entre consultorios. Revisa los bloques marcados. ${total} conflictos detectados entre consultorios.`, 'danger');
       return scheduleValidationSnapshot;
     };
     const removeScheduleTurn = (dayKey, turn, consultorioId = '')=>{
@@ -32138,14 +32169,24 @@ console.info('app.js loaded :: 20251123a');
         showNote('Define doctor/consultorio activo en esta sección para guardar horarios oficiales.', 'danger');
         return;
       }
+      const conflicts = conflictsForScheduleSave(consultorioId);
+      if(conflicts.length){ showScheduleConflicts(conflicts, consultorioId); return; }
+      const draftDays = buildPayloadDays(consultorioId);
+      const draftSignature = JSON.stringify(draftDays);
       saving = true;
       try{
         const result = await apiSaveSchedule({
           doctor_id: doctorId,
           consultorio_id: consultorioId,
-          days: buildPayloadDays(consultorioId)
+          days: draftDays
         });
+        if(JSON.stringify(buildPayloadDays(consultorioId)) !== draftSignature || getActiveConsultorioId() !== consultorioId) return;
         if(!(result?.ok && result?.json?.ok === true)){
+          if(result?.json?.error === 'conflict' && Array.isArray(result.json.meta?.conflicts)){
+            showScheduleConflicts(result.json.meta.conflicts, consultorioId);
+            showNote('El horario no se guardó. Corrige los tramos indicados.', 'danger');
+            return;
+          }
           const msg = String(result?.json?.message || result?.json?.error || 'No se pudo guardar horario de atención.');
           showNote(msg, 'danger');
           return;
@@ -32156,6 +32197,9 @@ console.info('app.js loaded :: 20251123a');
         showNote('No se pudo guardar horario de atención.', 'danger');
       }finally{
         saving = false;
+        if(resolveScheduleContext().doctorId === doctorId && JSON.stringify(buildPayloadDays(consultorioId)) !== draftSignature){
+          queuePersist(consultorioId);
+        }
       }
     };
     const queuePersist = (consultorioId = '')=>{
@@ -32175,6 +32219,8 @@ console.info('app.js loaded :: 20251123a');
       renderScheduleValidationMessage();
       const existingTimer = saveTimersByConsultorio.get(targetConsultorioId);
       if(existingTimer) window.clearTimeout(existingTimer);
+      saveTimersByConsultorio.delete(targetConsultorioId);
+      if(conflictsForScheduleSave(targetConsultorioId).length) return;
       const timerId = window.setTimeout(()=>{
         saveTimersByConsultorio.delete(targetConsultorioId);
         persistSchedule(contextSnapshot).catch(()=> null);
@@ -32294,6 +32340,7 @@ console.info('app.js loaded :: 20251123a');
         });
         normalizeConsultorioScheduleState(nextState);
         scheduleStateByConsultorio[consultorioId] = nextState;
+        scheduleDoctorByConsultorio[consultorioId] = doctorId;
         loadedScheduleContextKeys.add(contextKey);
         loadedScheduleConsultorioIds.add(consultorioId);
         logScheduleStateRefCheck();

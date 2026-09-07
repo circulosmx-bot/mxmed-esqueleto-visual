@@ -20680,3 +20680,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media (prefers-reduced-motion: reduce){
   .subp-secure-payment-shell[data-subp-secure-payment-skeleton] *{ scroll-behavior:auto !important; transition:none !important }
 }
+
+/* Scoped feedback for the administrative schedule editor. */
+.mxm-schedule-conflict{max-width:100%;overflow-wrap:anywhere}
+.mxm-schedule-conflict ul{padding-left:1.25rem;margin-bottom:.75rem}
+.mxm-schedule-conflict li+li{margin-top:.65rem}
+.mxm-schedule-conflict .btn{min-height:44px}
