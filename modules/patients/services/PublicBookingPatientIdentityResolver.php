@@ -73,6 +73,38 @@ final class PublicBookingPatientIdentityResolver
         return ['status' => 'ambiguous', 'patient_id' => null, 'match_tier' => 'insufficient_public_evidence'];
     }
 
+    /**
+     * Private reconciliation helper. It deliberately shares the public-booking
+     * normalization, doctor-link query, and strong-match rule; callers must
+     * mask contacts before returning these rows to a browser.
+     *
+     * @return list<array{patient_id:string,display_name:string,birthdate:string,sex:?string,phones:list<string>,emails:list<string>}>
+     */
+    public function eligibleReviewCandidates(string $doctorId, array $patient, ?string $excludePatientId = null): array
+    {
+        $input = $this->normalizePatient($patient);
+        if ($doctorId === '' || $input['name'] === '' || $input['birthdate'] === '' || ($input['phone'] === '' && $input['email'] === '')) {
+            return [];
+        }
+
+        $excluded = trim((string)$excludePatientId);
+        $eligible = [];
+        foreach ($this->loadNamedDoctorCandidates($doctorId, $input['name']) as $candidate) {
+            if ($candidate['patient_id'] === $excluded || !$this->isPublicStrongMatch($candidate, $input)) {
+                continue;
+            }
+            $eligible[] = [
+                'patient_id' => $candidate['patient_id'],
+                'display_name' => $candidate['display_name'],
+                'birthdate' => $candidate['birthdate'],
+                'sex' => $candidate['sex'],
+                'phones' => $candidate['phones'],
+                'emails' => $candidate['emails'],
+            ];
+        }
+        return $eligible;
+    }
+
     /** @return array{status:string,patient_id:null,match_tier:string} */
     private function notFound(): array
     {
@@ -91,7 +123,7 @@ final class PublicBookingPatientIdentityResolver
         ];
     }
 
-    /** @return list<array{patient_id:string,name:string,birthdate:string,sex:?string,phones:list<string>,emails:list<string>}> */
+    /** @return list<array{patient_id:string,display_name:string,name:string,birthdate:string,sex:?string,phones:list<string>,emails:list<string>}> */
     private function loadNamedDoctorCandidates(string $doctorId, string $normalizedName): array
     {
         $stmt = $this->pdo->prepare(
@@ -119,6 +151,7 @@ final class PublicBookingPatientIdentityResolver
             if (!isset($candidates[$patientId])) {
                 $candidates[$patientId] = [
                     'patient_id' => $patientId,
+                    'display_name' => trim((string)($row['display_name'] ?? '')),
                     'name' => $normalizedName,
                     'birthdate' => self::normalizeBirthdate((string)($row['birthdate'] ?? '')),
                     'sex' => self::normalizeSex((string)($row['sex'] ?? '')),

@@ -4332,6 +4332,27 @@
                         <div class="mx-ag-event-reason-label"><i class="bi bi-chat-left-text"></i> Motivo</div>
                         <div class="mx-ag-event-reason-value" id="ag_event_action_reason">--</div>
                       </div>
+                      <section id="ag_event_identity_review_wrap" class="mx-ag-identity-review d-none" aria-live="polite">
+                        <div class="mx-ag-identity-review-head">
+                          <div>
+                            <div class="mx-ag-identity-review-title"><i class="bi bi-person-vcard"></i> Identidad del paciente</div>
+                            <div class="mx-ag-identity-review-copy">La declaración de la persona y la resolución de identidad se revisan por separado.</div>
+                          </div>
+                        </div>
+                        <div class="mx-ag-identity-review-statuses">
+                          <div class="mx-ag-identity-review-status"><span>Declaración del paciente</span><strong id="ag_event_identity_patient_type">--</strong></div>
+                          <div class="mx-ag-identity-review-status"><span>Resolución de identidad</span><strong id="ag_event_identity_status">--</strong></div>
+                        </div>
+                        <div id="ag_event_identity_warning" class="mx-ag-identity-review-warning d-none">
+                          <strong>Revisión de identidad requerida</strong>
+                          <span>La información proporcionada coincide con más de un posible paciente o no permite identificar un expediente de forma única.</span>
+                        </div>
+                        <div id="ag_event_identity_candidates" class="mx-ag-identity-candidates"></div>
+                        <div id="ag_event_identity_actions" class="mx-ag-identity-actions d-none">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_identity_keep_new_btn">Mantener como paciente nuevo</button>
+                        </div>
+                        <div id="ag_event_identity_feedback" class="small d-none"></div>
+                      </section>
                       <div id="ag_event_timeline_wrap" class="mx-ag-event-timeline-wrap">
                         <div class="mx-ag-event-timeline-title"><i class="bi bi-clock-history"></i> Historial de la cita</div>
                         <div id="ag_event_timeline_loading" class="small text-muted d-none">Cargando historial…</div>

@@ -3541,6 +3541,14 @@ console.info('app.js loaded :: 20251123a');
     eventActionOrigin: panel.querySelector('#ag_event_action_origin'),
     eventActionReasonWrap: panel.querySelector('#ag_event_action_reason_wrap'),
     eventActionReason: panel.querySelector('#ag_event_action_reason'),
+    eventIdentityReviewWrap: panel.querySelector('#ag_event_identity_review_wrap'),
+    eventIdentityPatientType: panel.querySelector('#ag_event_identity_patient_type'),
+    eventIdentityStatus: panel.querySelector('#ag_event_identity_status'),
+    eventIdentityWarning: panel.querySelector('#ag_event_identity_warning'),
+    eventIdentityCandidates: panel.querySelector('#ag_event_identity_candidates'),
+    eventIdentityActions: panel.querySelector('#ag_event_identity_actions'),
+    eventIdentityKeepNewBtn: panel.querySelector('#ag_event_identity_keep_new_btn'),
+    eventIdentityFeedback: panel.querySelector('#ag_event_identity_feedback'),
     eventActionConsultorioWrap: panel.querySelector('#ag_event_action_consultorio_wrap'),
     eventActionConsultorio: panel.querySelector('#ag_event_action_consultorio'),
     eventTimelineWrap: panel.querySelector('#ag_event_timeline_wrap'),
@@ -3745,6 +3753,8 @@ console.info('app.js loaded :: 20251123a');
   let eventActionIsCancelled = false;
   let eventTimelineLookupSeq = 0;
   let eventTimelineLookupCtrl = null;
+  let eventIdentityReviewLookupSeq = 0;
+  let eventIdentityReviewBusy = false;
   let eventCancelPostActionsEnabled = false;
   let eventCancelPostWaitlistLoaded = false;
   let eventCancelPostWaitlistBusy = false;
@@ -10662,6 +10672,115 @@ console.info('app.js loaded :: 20251123a');
       }
     }
   };
+  const resetEventIdentityReview = ()=>{
+    eventIdentityReviewLookupSeq += 1;
+    eventIdentityReviewBusy = false;
+    if(els.eventIdentityReviewWrap) els.eventIdentityReviewWrap.classList.add('d-none');
+    if(els.eventIdentityPatientType) els.eventIdentityPatientType.textContent = '--';
+    if(els.eventIdentityStatus) els.eventIdentityStatus.textContent = '--';
+    if(els.eventIdentityWarning) els.eventIdentityWarning.classList.add('d-none');
+    if(els.eventIdentityCandidates) els.eventIdentityCandidates.replaceChildren();
+    if(els.eventIdentityActions) els.eventIdentityActions.classList.add('d-none');
+    if(els.eventIdentityKeepNewBtn) els.eventIdentityKeepNewBtn.disabled = false;
+    if(els.eventIdentityFeedback){
+      els.eventIdentityFeedback.textContent = '';
+      els.eventIdentityFeedback.className = 'small d-none';
+    }
+  };
+  const setEventIdentityFeedback = (message = '', tone = '')=>{
+    if(!(els.eventIdentityFeedback instanceof HTMLElement)) return;
+    const safe = sanitizeText(message);
+    els.eventIdentityFeedback.textContent = safe;
+    els.eventIdentityFeedback.className = `small${safe ? '' : ' d-none'}${tone === 'success' ? ' text-success' : ''}${tone === 'danger' ? ' text-danger' : ''}`;
+  };
+  const identityCandidateMeta = (candidate = {})=>[
+    sanitizeText(candidate.birthdate || ''), sanitizeText(candidate.sex || ''),
+    sanitizeText(candidate.phone_masked || ''), sanitizeText(candidate.email_masked || ''),
+    sanitizeText(candidate.doctor_relationship || ''), sanitizeText(candidate.patient_status || '')
+  ].filter(Boolean).join(' · ');
+  const renderEventIdentityReview = (review = {})=>{
+    if(!(els.eventIdentityReviewWrap instanceof HTMLElement)) return;
+    const requiresReview = review?.requires_review === true;
+    els.eventIdentityReviewWrap.classList.remove('d-none');
+    if(els.eventIdentityPatientType) els.eventIdentityPatientType.textContent = sanitizeText(review?.patient_type || 'Primera consulta');
+    if(els.eventIdentityStatus) els.eventIdentityStatus.textContent = sanitizeText(review?.identity_status || 'Coincidencia confirmada');
+    if(els.eventIdentityWarning) els.eventIdentityWarning.classList.toggle('d-none', !requiresReview);
+    if(els.eventIdentityActions) els.eventIdentityActions.classList.toggle('d-none', !requiresReview);
+    if(!(els.eventIdentityCandidates instanceof HTMLElement)) return;
+    els.eventIdentityCandidates.replaceChildren();
+    if(!requiresReview) return;
+    const candidates = Array.isArray(review?.candidates) ? review.candidates : [];
+    if(!candidates.length){
+      const empty = document.createElement('div');
+      empty.className = 'small text-muted';
+      empty.textContent = 'No hay pacientes elegibles para vincular en este momento.';
+      els.eventIdentityCandidates.append(empty);
+      return;
+    }
+    candidates.forEach((candidate)=>{
+      const id = sanitizeText(candidate?.patient_id || '');
+      if(!id) return;
+      const row = document.createElement('article');
+      row.className = 'mx-ag-identity-candidate';
+      const copy = document.createElement('div');
+      const name = document.createElement('div');
+      name.className = 'mx-ag-identity-candidate-name';
+      name.textContent = sanitizeText(candidate?.full_name || 'Paciente');
+      const meta = document.createElement('div');
+      meta.className = 'mx-ag-identity-candidate-meta';
+      meta.textContent = identityCandidateMeta(candidate);
+      copy.append(name, meta);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-outline-primary btn-sm';
+      button.dataset.agIdentityRelink = id;
+      button.textContent = 'Vincular esta cita';
+      row.append(copy, button);
+      els.eventIdentityCandidates.append(row);
+    });
+  };
+  const loadEventIdentityReview = async (appointmentId = '')=>{
+    const safeAppointmentId = sanitizeText(appointmentId);
+    resetEventIdentityReview();
+    if(!safeAppointmentId || isAgendaDemoContext() || safeAppointmentId.toLowerCase().startsWith('demo-')) return;
+    const seq = eventIdentityReviewLookupSeq;
+    try{
+      const result = await AgendaApiClient.getAmbiguousPatientReconciliation(safeAppointmentId);
+      if(seq !== eventIdentityReviewLookupSeq || safeAppointmentId !== sanitizeText(activeEventActionAppointmentId)) return;
+      if(!result?.ok || result?.json?.ok !== true) return;
+      renderEventIdentityReview(result.json.data || {});
+    }catch(_){
+      // Preserve the existing private appointment UI if this optional review cannot load.
+    }
+  };
+  const submitEventIdentityReconciliation = async (payload = {})=>{
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
+    if(!appointmentId || eventIdentityReviewBusy) return;
+    eventIdentityReviewBusy = true;
+    if(els.eventIdentityKeepNewBtn) els.eventIdentityKeepNewBtn.disabled = true;
+    Array.from(els.eventIdentityCandidates?.querySelectorAll?.('[data-ag-identity-relink]') || []).forEach((button)=>{ button.disabled = true; });
+    setEventIdentityFeedback('Guardando resolución…');
+    try{
+      const result = await AgendaApiClient.resolveAmbiguousPatientReconciliation(appointmentId, payload);
+      if(!result?.ok || result?.json?.ok !== true){
+        setEventIdentityFeedback(sanitizeText(result?.json?.message || result?.json?.error || 'No fue posible guardar la conciliación.'), 'danger');
+        return;
+      }
+      const patientId = sanitizeText(result?.json?.data?.resulting_patient_id || '');
+      if(patientId && activeEventActionRef && typeof activeEventActionRef.setExtendedProp === 'function'){
+        try{ activeEventActionRef.setExtendedProp('patient_id', patientId); }catch(_){}
+      }
+      await loadEventIdentityReview(appointmentId);
+      setEventIdentityFeedback('Resolución de identidad registrada.', 'success');
+      loadEventTimeline(appointmentId).catch(()=> null);
+    }catch(_){
+      setEventIdentityFeedback('No fue posible guardar la conciliación.', 'danger');
+    }finally{
+      eventIdentityReviewBusy = false;
+      if(els.eventIdentityKeepNewBtn) els.eventIdentityKeepNewBtn.disabled = false;
+      Array.from(els.eventIdentityCandidates?.querySelectorAll?.('[data-ag-identity-relink]') || []).forEach((button)=>{ button.disabled = false; });
+    }
+  };
   const resetEventActionModalState = ()=>{
     eventActionCurrentSection = 'detail';
     eventActionIsCancelled = false;
@@ -10678,6 +10797,7 @@ console.info('app.js loaded :: 20251123a');
     setEventResolutionNote('');
     abortEventTimelineLookup();
     resetEventTimelineState();
+    resetEventIdentityReview();
     clearEventPatientBehaviorNotice();
     resetEventCancelPostActions();
     if(els.eventRescheduleConfirmBtn){
@@ -13023,6 +13143,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventActionConsultorioWrap) els.eventActionConsultorioWrap.classList.remove('d-none');
     refreshEventPatientBehaviorNotice(patientId).catch(()=> null);
     loadEventTimeline(activeEventActionAppointmentId).catch(()=> null);
+    loadEventIdentityReview(activeEventActionAppointmentId).catch(()=> null);
     if(els.eventResolutionWrap){
       const actionVisibility = resolveEventActionVisibility(eventRef);
       els.eventResolutionWrap.classList.toggle('d-none', !actionVisibility.showResolutionWrap);
@@ -16634,6 +16755,25 @@ console.info('app.js loaded :: 20251123a');
         status: resp.status,
         json: await resp.json().catch(()=> null)
       };
+    },
+    async getAmbiguousPatientReconciliation(appointmentId){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/identity-reconciliation`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      return { ok: resp.ok, status: resp.status, json: await resp.json().catch(()=> null) };
+    },
+    async resolveAmbiguousPatientReconciliation(appointmentId, payload = {}){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/identity-reconciliation`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return { ok: resp.ok, status: resp.status, json: await resp.json().catch(()=> null) };
     },
     async noShowAppointment(appointmentId, payload){
       const safeId = encodeURIComponent(String(appointmentId || '').trim());
@@ -24771,6 +24911,18 @@ console.info('app.js loaded :: 20251123a');
         section: eventActionCurrentSection
       });
       setEventActionSection('cancel');
+    });
+    els.eventIdentityKeepNewBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      submitEventIdentityReconciliation({ action: 'keep_new' }).catch(()=> null);
+    });
+    els.eventIdentityCandidates?.addEventListener('click', (event)=>{
+      const button = event.target.closest?.('[data-ag-identity-relink]');
+      if(!button) return;
+      event.preventDefault();
+      const candidatePatientId = sanitizeText(button.dataset.agIdentityRelink || '');
+      if(!candidatePatientId) return;
+      submitEventIdentityReconciliation({ action: 'relink_existing', candidate_patient_id: candidatePatientId }).catch(()=> null);
     });
     els.eventRescheduleDays?.addEventListener('click', (event)=>{
       const btn = event.target.closest('[data-ag-reschedule-day]');

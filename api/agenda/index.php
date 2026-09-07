@@ -15,6 +15,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php
 require_once __DIR__ . '/../../modules/agenda/controllers/OperatorsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/AmbiguousPatientReconciliationController.php';
 require_once __DIR__ . '/../../modules/agenda/repositories/OperatorsRepository.php';
 require_once __DIR__ . '/../../modules/agenda/composition/AgendaAuthorityCompositionRoot.php';
 require_once __DIR__ . '/../_lib/db.php';
@@ -36,6 +37,7 @@ use Agenda\Controllers\WaitlistController;
 use Agenda\Controllers\OperatorsController;
 use Agenda\Controllers\PublicAppointmentsController;
 use Agenda\Controllers\PublicOtpController;
+use Agenda\Controllers\AmbiguousPatientReconciliationController;
 use Agenda\Repositories\OperatorsRepository;
 
 $cut01aAgendaConfig = require __DIR__ . '/../../modules/agenda/config/agenda.php';
@@ -1055,6 +1057,20 @@ try {
             }
             if (isset($segments[1]) && $segments[1] !== '') {
                 $sub = $segments[2] ?? '';
+                if ($sub === 'identity-reconciliation') {
+                    $reconciliation = new AmbiguousPatientReconciliationController();
+                    if (is_array($actorContext)) {
+                        apply_actor_context($reconciliation, $actorContext);
+                    }
+                    if ($method === 'GET') {
+                        $response = $reconciliation->show($segments[1]);
+                    } elseif ($method === 'POST') {
+                        $response = $reconciliation->resolve($segments[1], read_json_body());
+                    } else {
+                        $response = ['ok' => false, 'error' => 'not_found', 'message' => 'route not found', 'data' => null, 'meta' => (object)[]];
+                    }
+                    break;
+                }
                 if ($method === 'PATCH' && $sub === 'reschedule') {
                     $writes = new AppointmentWriteController();
                     if (is_array($actorContext)) {
