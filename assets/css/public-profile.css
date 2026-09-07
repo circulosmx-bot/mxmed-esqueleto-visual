@@ -2866,7 +2866,7 @@ button.mxpp-hero-action:focus-visible {
 /* Global daily preview and exact-date dialog. Scoped to the public profile. */
 .mxpp-agenda-compact__slot{flex-direction:column}
 .mxpp-slot-office{display:block;font-size:.75rem;line-height:1.15;font-weight:400;white-space:normal;overflow-wrap:anywhere;max-width:8em;margin-top:.25rem}
-.mxpp-day-all{background:transparent;color:#113d59;border:1px solid #b9cdd8;border-radius:.5rem;padding:.6rem;margin-top:.65rem;font:inherit;font-weight:600;cursor:pointer;max-width:100%}
+.mxpp-day-all{display:block;background:transparent;color:#113d59;border:1px solid #b9cdd8;border-radius:.5rem;padding:.35rem .6rem;margin:.65rem 0 0 auto;font:inherit;font-size:.75rem;font-weight:600;cursor:pointer;max-width:100%;min-height:44px}
 .mxpp-daily-dialog{box-sizing:border-box;width:min(760px,calc(100% - 24px));max-height:calc(100dvh - 24px);padding:20px;border:1px solid #c5dbe4;border-radius:14px;color:#113d59;background:#fff;overflow-y:auto}
 .mxpp-daily-dialog::backdrop{background:rgb(17 61 89 / .45)}
 .mxpp-daily-dialog header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
@@ -2874,7 +2874,7 @@ button.mxpp-hero-action:focus-visible {
 .mxpp-daily-dialog header p{margin:.4rem 0}
 .mxpp-daily-dialog button{font:inherit;cursor:pointer;min-height:44px;border:1px solid #b9cdd8;border-radius:8px;background:#fff;color:#113d59;padding:10px 14px}
 .mxpp-daily-dialog [data-daily-close][aria-label]{font-size:1.5rem;line-height:1;flex-shrink:0}
-.mxpp-daily-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mxpp-daily-results{display:grid;grid-template-columns:repeat(auto-fit,7rem);justify-content:center;gap:.36rem;padding:.75rem;background:var(--profile-accent-soft);border-radius:9px}
 .mxpp-daily-dialog .mxpp-daily-slot{display:flex;flex-direction:column;gap:4px;text-align:left;overflow-wrap:anywhere}
 .mxpp-daily-slot strong{font-size:1.2rem}
 .mxpp-daily-slot span{font-size:.9rem}
@@ -2882,7 +2882,7 @@ button.mxpp-hero-action:focus-visible {
 .mxpp-daily-dialog button:disabled{opacity:.5;cursor:default}
 .mxpp-daily-dialog button:focus-visible,.mxpp-day-all:focus-visible{outline:3px solid #0b9fa9;outline-offset:2px}
 .mxpp-daily-slot:hover{background:#edf8f8}
-@media(max-width:540px){.mxpp-daily-dialog{padding:14px}.mxpp-daily-results{grid-template-columns:repeat(2,minmax(0,1fr))}.mxpp-daily-dialog h2{font-size:1.4rem}.mxpp-daily-dialog footer{justify-content:flex-start}}
+@media(max-width:540px){.mxpp-daily-dialog{padding:14px}.mxpp-daily-results{padding:.5rem}.mxpp-daily-dialog h2{font-size:1.4rem}.mxpp-daily-dialog footer{justify-content:flex-start}}
 
 /* Requester-only proportions; keep labels as direct children for compact spacing. */
 @media (min-width: 601px) {
@@ -2894,3 +2894,42 @@ button.mxpp-hero-action:focus-visible {
     grid-column: span 2;
   }
 }
+
+/* One chip geometry for sparse/full previews and the expanded day. */
+.mxpp-agenda-compact__slot,
+.mxpp-daily-dialog .mxpp-daily-slot {
+  box-sizing: border-box;
+  flex: 0 0 7rem;
+  width: 7rem;
+  height: 4rem;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: .28rem .45rem;
+  border: 1px solid rgba(12, 84, 98, .24);
+  border-radius: 8px;
+  text-align: center;
+  font-size: .83rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.mxpp-daily-slot strong { font-size: inherit; font-weight: inherit; }
+.mxpp-slot-office,
+.mxpp-daily-slot span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-width: 8em;
+  margin-top: .25rem;
+  font-size: .75rem;
+  font-weight: 400;
+  line-height: 1.15;
+}
+.mxpp-daily-dialog #mxpp-daily-date { font-size: 1.15rem; font-weight: 600; }
+.mxpp-daily-dialog nav { display: flex; flex-wrap: wrap; gap: .5rem; }
+.mxpp-daily-dialog nav button { font-size: .85rem; }
+.mxpp-daily-dialog [data-daily-status]:empty { display: none; }
+.mxpp-daily-results { margin-top: .75rem; }

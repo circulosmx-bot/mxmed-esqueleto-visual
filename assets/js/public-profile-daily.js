@@ -6,10 +6,11 @@ window.MxmedPublicDailyModal = function (block, booking) {
   dialog.setAttribute('aria-labelledby', 'mxpp-daily-title');
   dialog.setAttribute('aria-describedby', 'mxpp-daily-date');
   dialog.innerHTML = '<header><div><h2 id="mxpp-daily-title">Horarios disponibles</h2>'
-    + '<p id="mxpp-daily-date" aria-live="polite" aria-atomic="true"></p></div><button type="button" data-daily-close aria-label="Cerrar">×</button></header>'
+    + '<p id="mxpp-daily-date" aria-live="polite" aria-atomic="true"></p>'
+    + '<nav aria-label="Cambiar día"><button type="button" data-daily-prev>Día anterior</button>'
+    + '<button type="button" data-daily-next>Día siguiente</button></nav></div><button type="button" data-daily-close aria-label="Cerrar">×</button></header>'
     + '<p data-daily-status role="status"></p><div class="mxpp-daily-results" data-daily-results></div>'
-    + '<footer><button type="button" data-daily-prev>Día anterior</button>'
-    + '<button type="button" data-daily-next>Día siguiente</button><button type="button" data-daily-close>Cerrar</button></footer>';
+    + '<footer><button type="button" data-daily-close>Cerrar</button></footer>';
   document.body.append(dialog);
   const results = dialog.querySelector('[data-daily-results]');
   const status = dialog.querySelector('[data-daily-status]');
@@ -43,6 +44,7 @@ window.MxmedPublicDailyModal = function (block, booking) {
       slots.forEach(slot => {
         const button = document.createElement('button'); button.type = 'button';
         button.className = 'mxpp-daily-slot';
+        button.title = slot.consultorio_name;
         const time = document.createElement('strong'); time.textContent = booking.formatTime(slot.start_at) + ' h';
         const office = document.createElement('span'); office.textContent = slot.consultorio_name;
         button.append(time, office);
@@ -53,7 +55,7 @@ window.MxmedPublicDailyModal = function (block, booking) {
         });
         results.append(button);
       });
-      status.textContent = slots.length ? slots.length + ' horarios disponibles' : 'No hay horarios disponibles para este día.';
+      status.textContent = slots.length ? '' : 'No hay horarios disponibles para este día.';
     } catch (_) {
       if (request !== controller || !dialog.open) return;
       status.textContent = 'No pudimos consultar los horarios. Cierra esta ventana e inténtalo de nuevo.';
