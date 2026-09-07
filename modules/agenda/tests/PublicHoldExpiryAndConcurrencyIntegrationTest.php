@@ -204,8 +204,12 @@ function pdb07bSetup(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $pdo->exec("CREATE TABLE patients_patients (
         patient_id VARCHAR(64) NOT NULL PRIMARY KEY,
+        display_name VARCHAR(160) NOT NULL,
         status VARCHAR(32) NOT NULL,
-        created_at DATETIME NOT NULL
+        birthdate DATE NULL,
+        sex VARCHAR(32) NULL,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $pdo->exec("CREATE TABLE patients_contacts (
         contact_id VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -230,10 +234,10 @@ function pdb07bSetup(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     $pdo->exec("INSERT INTO consultorio_schedule VALUES ('1','1',1,'09:00:00','12:00:00',1)");
-    $pdo->exec("INSERT INTO patients_patients VALUES ('p_pdb07bpatient','active','2030-01-01 00:00:00')");
+    $pdo->exec("INSERT INTO patients_patients VALUES ('p_pdb07bpatient','Paciente sintético','active','1990-01-01','F','2030-01-01 00:00:00','2030-01-01 00:00:00')");
     $pdo->exec("INSERT INTO patients_contacts VALUES ('c_pdb07bpatient','p_pdb07bpatient','5550000001','patient@example.test',1,'2030-01-01 00:00:00')");
     $pdo->exec("INSERT INTO patients_doctor_links VALUES ('1','p_pdb07bpatient','active',NULL)");
-    $pdo->exec("INSERT INTO patients_patients VALUES ('p_pdb07bother','active','2030-01-01 00:00:00')");
+    $pdo->exec("INSERT INTO patients_patients VALUES ('p_pdb07bother','Paciente alternativa','active','1992-02-02','F','2030-01-01 00:00:00','2030-01-01 00:00:00')");
     $pdo->exec("INSERT INTO patients_contacts VALUES ('c_pdb07bother','p_pdb07bother','5550000002','other.patient@example.test',1,'2030-01-01 00:00:00')");
     $pdo->exec("INSERT INTO patients_doctor_links VALUES ('1','p_pdb07bother','active',NULL)");
 }
@@ -310,6 +314,15 @@ function pdb07bProfileActivationProof(PDO $pdo): array
     $selfReserve = (new PublicAppointmentsController(null, $pdo, $provider))->reserve(pdb07bPayload());
     pdb07bAssert(($selfReserve['ok'] ?? false) === true, 'profile self reserve creates a pending OTP appointment');
     $selfAppointmentId = (string)($selfReserve['data']['appointment_id'] ?? '');
+    $selfIdentity = $pdo->prepare('SELECT a.patient_id, f.payload_json FROM agenda_appointments a JOIN agenda_public_appointment_flows f ON f.appointment_id = a.appointment_id WHERE a.appointment_id = :id');
+    $selfIdentity->execute(['id' => $selfAppointmentId]);
+    $selfIdentity = $selfIdentity->fetch();
+    $selfIdentityPayload = json_decode((string)($selfIdentity['payload_json'] ?? ''), true);
+    pdb07bAssert(
+        ($selfIdentity['patient_id'] ?? '') === 'p_pdb07bpatient'
+            && ($selfIdentityPayload['patient_identity_resolution']['status'] ?? '') === 'matched',
+        'unique strong public identity reuses the patient and persists a bounded status'
+    );
     $selfOtp = (new PublicOtpController($pdo, $provider))->request(['appointment_id' => $selfAppointmentId]);
     pdb07bAssert(($selfOtp['ok'] ?? false) === true, 'profile self OTP request is appointment-bound');
     $selfOtpId = (string)($selfOtp['data']['otp_id'] ?? '');
@@ -330,13 +343,16 @@ function pdb07bProfileActivationProof(PDO $pdo): array
     $otherReserve = (new PublicAppointmentsController(null, $pdo, $provider))->reserve(pdb07bOtherPersonPayload());
     pdb07bAssert(($otherReserve['ok'] ?? false) === true, 'profile other-person reserve creates a pending OTP appointment');
     $otherAppointmentId = (string)($otherReserve['data']['appointment_id'] ?? '');
-    $flowPayload = $pdo->prepare('SELECT payload_json FROM agenda_public_appointment_flows WHERE appointment_id = :id');
+    $flowPayload = $pdo->prepare('SELECT a.patient_id, f.payload_json FROM agenda_appointments a JOIN agenda_public_appointment_flows f ON f.appointment_id = a.appointment_id WHERE a.appointment_id = :id');
     $flowPayload->execute(['id' => $otherAppointmentId]);
-    $otherFlowPayload = json_decode((string)$flowPayload->fetchColumn(), true);
+    $otherFlow = $flowPayload->fetch();
+    $otherFlowPayload = json_decode((string)($otherFlow['payload_json'] ?? ''), true);
     pdb07bAssert(
         ($otherFlowPayload['booker_is_patient'] ?? null) === false
-            && ($otherFlowPayload['booker']['relationship'] ?? '') === 'madre',
-        'profile other-person relationship is serialized in the authoritative reserve flow'
+            && ($otherFlowPayload['booker']['relationship'] ?? '') === 'madre'
+            && ($otherFlowPayload['patient_identity_resolution']['status'] ?? '') === 'matched'
+            && ($otherFlow['patient_id'] ?? '') === 'p_pdb07bother',
+        'other-person identity uses patient fields, persists the result, and preserves the booker relationship'
     );
     $otherOtp = (new PublicOtpController($pdo, $provider))->request(['appointment_id' => $otherAppointmentId]);
     pdb07bAssert(($otherOtp['ok'] ?? false) === true, 'profile other-person OTP request is appointment-bound');

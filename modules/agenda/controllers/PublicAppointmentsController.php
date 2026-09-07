@@ -8,6 +8,7 @@ use Agenda\Repositories\ConsultoriosRepository;
 use Agenda\Repositories\PublicOtpRepository;
 use Agenda\Services\DevOtpSender;
 use Agenda\Services\OtpSender;
+use Patients\Services\PublicBookingPatientIdentityResolver;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -24,6 +25,7 @@ require_once __DIR__ . '/AvailabilityController.php';
 require_once __DIR__ . '/AppointmentWriteController.php';
 require_once __DIR__ . '/../config/agenda.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
+require_once __DIR__ . '/../../patients/services/PublicBookingPatientIdentityResolver.php';
 
 class PublicAppointmentsController
 {
@@ -346,6 +348,18 @@ class PublicAppointmentsController
 
         if (($slotCheck['ok'] ?? false) !== true) {
             return $this->mapSlotErrorForReserve($slotCheck, $doctorId, $consultorioId, (string)$validated['start_at'], (string)$validated['end_at']);
+        }
+
+        $identityResolution = (new PublicBookingPatientIdentityResolver($this->pdo))->resolve(
+            (string)$validated['doctor_id'],
+            (array)$validated['patient']
+        );
+        $validated['patient_identity_resolution'] = [
+            'status' => (string)$identityResolution['status'],
+            'match_tier' => (string)$identityResolution['match_tier'],
+        ];
+        if (($identityResolution['status'] ?? '') === 'matched' && is_string($identityResolution['patient_id'] ?? null)) {
+            $validated['patient_identity_resolution']['patient_id'] = $identityResolution['patient_id'];
         }
 
         $writer = new AppointmentWriteController($this->pdo);
@@ -907,97 +921,15 @@ public function cancel(array $payload = []): array
             ],
         ];
 
-        $existingPatientId = $this->findExistingPatientIdForPublicReserve(
-            (string)$validated['doctor_id'],
-            (string)($patient['phone'] ?? ''),
-            (string)($patient['email'] ?? '')
-        );
-        if ($existingPatientId !== '') {
+        $identityResolution = is_array($validated['patient_identity_resolution'] ?? null)
+            ? $validated['patient_identity_resolution']
+            : [];
+        if (($identityResolution['status'] ?? '') === 'matched' && is_string($identityResolution['patient_id'] ?? null) && $identityResolution['patient_id'] !== '') {
             unset($payload['patient']);
-            $payload['patient_id'] = $existingPatientId;
+            $payload['patient_id'] = $identityResolution['patient_id'];
         }
 
         return $payload;
-    }
-
-    private function findExistingPatientIdForPublicReserve(string $doctorId, string $phone, string $email): string
-    {
-        if (!$this->pdo) {
-            return '';
-        }
-
-        $phoneDigits = $this->normalizePublicContactPhone($phone);
-        $emailNormalized = $this->normalizePublicContactEmail($email);
-        if ($phoneDigits === '' && $emailNormalized === '') {
-            return '';
-        }
-
-        try {
-            $stmt = $this->pdo->prepare(
-                'SELECT
-                    p.patient_id,
-                    c.phone,
-                    c.email
-                 FROM patients_doctor_links l
-                 JOIN patients_patients p ON p.patient_id = l.patient_id
-                 JOIN patients_contacts c ON c.patient_id = p.patient_id
-                 WHERE l.doctor_id = :doctor_id
-                   AND l.status = :link_status
-                   AND l.ended_at IS NULL
-                   AND p.status = :patient_status
-                   AND ((c.phone IS NOT NULL AND c.phone <> "") OR (c.email IS NOT NULL AND c.email <> ""))
-                 ORDER BY p.created_at ASC, p.patient_id ASC, c.is_primary DESC, c.created_at ASC, c.contact_id ASC'
-            );
-            $stmt->execute([
-                'doctor_id' => $doctorId,
-                'link_status' => 'active',
-                'patient_status' => 'active',
-            ]);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Throwable $e) {
-            return '';
-        }
-
-        if (!is_array($rows) || empty($rows)) {
-            return '';
-        }
-
-        if (strlen($phoneDigits) >= 8) {
-            foreach ($rows as $row) {
-                if ($phoneDigits === $this->normalizePublicContactPhone((string)($row['phone'] ?? ''))) {
-                    return (string)($row['patient_id'] ?? '');
-                }
-            }
-        }
-
-        if ($emailNormalized !== '') {
-            foreach ($rows as $row) {
-                if ($emailNormalized === $this->normalizePublicContactEmail((string)($row['email'] ?? ''))) {
-                    return (string)($row['patient_id'] ?? '');
-                }
-            }
-        }
-
-        return '';
-    }
-
-    private function normalizePublicContactPhone(string $value): string
-    {
-        return preg_replace('/\D+/', '', trim($value)) ?? '';
-    }
-
-    private function normalizePublicContactEmail(string $value): string
-    {
-        $value = trim($value);
-        if ($value === '') {
-            return '';
-        }
-
-        if (function_exists('mb_strtolower')) {
-            return mb_strtolower($value, 'UTF-8');
-        }
-
-        return strtolower($value);
     }
 
     private function mapSlotErrorForReserve(array $slotCheck, string $doctorId, string $consultorioId, string $startAt, string $endAt): array
