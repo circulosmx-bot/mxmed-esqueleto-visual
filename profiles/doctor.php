@@ -2480,6 +2480,44 @@ if (isLocalDevRequest()) {
               input.addEventListener('input', function () { syncBirthDateField(modal); });
               input.addEventListener('change', function () { syncBirthDateField(modal); });
             });
+            var birthMonth = modal.querySelector('[data-mxpp-birth-month]');
+            if (birthMonth) {
+              var monthTypeaheadBuffer = '';
+              var monthTypeaheadTimer = null;
+              var resetMonthTypeahead = function () {
+                monthTypeaheadBuffer = '';
+                if (monthTypeaheadTimer) {
+                  window.clearTimeout(monthTypeaheadTimer);
+                  monthTypeaheadTimer = null;
+                }
+              };
+              birthMonth.addEventListener('keydown', function (event) {
+                if (event.ctrlKey || event.metaKey || event.altKey || !/^[0-9a-záéíóúñ]$/i.test(event.key)) {
+                  return;
+                }
+                event.preventDefault();
+                monthTypeaheadBuffer += event.key.toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                var numeric = /^\d+$/.test(monthTypeaheadBuffer);
+                var matchingOption = null;
+                Array.prototype.some.call(birthMonth.options, function (option) {
+                  var value = String(option.value || '');
+                  var label = String(option.textContent || '').trim().toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                  if ((numeric && /^(?:0?[1-9]|1[0-2])$/.test(monthTypeaheadBuffer) && Number(value) === Number(monthTypeaheadBuffer)) || (!numeric && label.indexOf(monthTypeaheadBuffer) === 0)) {
+                    matchingOption = option;
+                    return true;
+                  }
+                  return false;
+                });
+                if (matchingOption && birthMonth.value !== matchingOption.value) {
+                  birthMonth.value = matchingOption.value;
+                  birthMonth.dispatchEvent(new Event('input', { bubbles: true }));
+                  birthMonth.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (monthTypeaheadTimer) window.clearTimeout(monthTypeaheadTimer);
+                monthTypeaheadTimer = window.setTimeout(resetMonthTypeahead, 800);
+              });
+              birthMonth.addEventListener('blur', resetMonthTypeahead);
+            }
             var canonicalBirthDate = modal.querySelector('[data-mxpp-birth-date]');
             if (canonicalBirthDate) {
               canonicalBirthDate.addEventListener('change', function () { prefillBirthDateFields(modal); });
