@@ -1222,7 +1222,7 @@ if (isLocalDevRequest()) {
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="patient" hidden>
               <h2 id="mxpp-booking-patient-title">Reserva de cita</h2>
               <div class="mxpp-booking-modal__summary">
-                <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
+                <p class="mxpp-booking-modal__doctor-summary"><span class="material-symbols-rounded" aria-hidden="true">stethoscope</span><span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
                 <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
               </div>
