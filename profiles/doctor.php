@@ -1232,7 +1232,30 @@ if (isLocalDevRequest()) {
                 <label>Apellido materno <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
                 <label>Teléfono móvil<input type="tel" name="mobile_phone" autocomplete="tel" required /></label>
                 <label>Correo electrónico<input type="email" name="email" autocomplete="email" required /></label>
-                <label>Fecha de nacimiento<input type="date" name="birth_date" required /></label>
+                <fieldset class="mxpp-booking-birth-date" aria-describedby="mxpp-booking-birth-date-help">
+                  <legend>Fecha de nacimiento</legend>
+                  <label>Día<input type="text" name="birth_day" inputmode="numeric" autocomplete="bday-day" maxlength="2" pattern="[0-9]*" data-mxpp-birth-day required /></label>
+                  <label>Mes
+                    <select name="birth_month" autocomplete="bday-month" data-mxpp-birth-month required>
+                      <option value="">Selecciona</option>
+                      <option value="1">Enero</option>
+                      <option value="2">Febrero</option>
+                      <option value="3">Marzo</option>
+                      <option value="4">Abril</option>
+                      <option value="5">Mayo</option>
+                      <option value="6">Junio</option>
+                      <option value="7">Julio</option>
+                      <option value="8">Agosto</option>
+                      <option value="9">Septiembre</option>
+                      <option value="10">Octubre</option>
+                      <option value="11">Noviembre</option>
+                      <option value="12">Diciembre</option>
+                    </select>
+                  </label>
+                  <label>Año<input type="text" name="birth_year" inputmode="numeric" autocomplete="bday-year" maxlength="4" pattern="[0-9]*" data-mxpp-birth-year required /></label>
+                  <input type="hidden" name="birth_date" data-mxpp-birth-date />
+                  <span class="mxpp-visually-hidden" id="mxpp-booking-birth-date-help">Ingresa día, mes y año de nacimiento.</span>
+                </fieldset>
                 <label>Género
                   <select name="gender" required>
                     <option value="">Selecciona</option>
@@ -1592,6 +1615,7 @@ if (isLocalDevRequest()) {
   <?php if ($showAgendaSlot): ?>
     <script src="/assets/js/public-profile-next-available.js"></script>
     <script src="/assets/js/public-profile-booking-subject.js"></script>
+    <script src="/assets/js/public-profile-birth-date.js"></script>
     <script>
       (function () {
         function escapeHtml(value) {
@@ -2091,6 +2115,7 @@ if (isLocalDevRequest()) {
           if (!form) {
             return null;
           }
+          syncBirthDateField(modal);
           var data = new FormData(form);
           return {
             first_name: String(data.get('first_name') || '').trim(),
@@ -2121,11 +2146,37 @@ if (isLocalDevRequest()) {
         }
 
         function isValidInlineDate(value) {
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            return false;
+          return !!(window.MxmedPublicBirthDate && window.MxmedPublicBirthDate.compose(window.MxmedPublicBirthDate.decompose(value)).ok);
+        }
+
+        function getBirthDateParts(modal) {
+          return {
+            day: (modal.querySelector('[data-mxpp-birth-day]') || {}).value || '',
+            month: (modal.querySelector('[data-mxpp-birth-month]') || {}).value || '',
+            year: (modal.querySelector('[data-mxpp-birth-year]') || {}).value || ''
+          };
+        }
+
+        function syncBirthDateField(modal) {
+          var canonical = modal ? modal.querySelector('[data-mxpp-birth-date]') : null;
+          if (!canonical || !window.MxmedPublicBirthDate) {
+            return { ok: false, value: '', message: 'Ingresa una fecha de nacimiento válida.' };
           }
-          var date = new Date(value + 'T00:00:00');
-          return !Number.isNaN(date.getTime());
+          var result = window.MxmedPublicBirthDate.compose(getBirthDateParts(modal));
+          canonical.value = result.ok ? result.value : '';
+          return result;
+        }
+
+        function prefillBirthDateFields(modal) {
+          var canonical = modal ? modal.querySelector('[data-mxpp-birth-date]') : null;
+          if (!canonical || !window.MxmedPublicBirthDate) return;
+          var parts = window.MxmedPublicBirthDate.decompose(canonical.value);
+          var day = modal.querySelector('[data-mxpp-birth-day]');
+          var month = modal.querySelector('[data-mxpp-birth-month]');
+          var year = modal.querySelector('[data-mxpp-birth-year]');
+          if (day) day.value = parts.day;
+          if (month) month.value = parts.month;
+          if (year) year.value = parts.year;
         }
 
         function validateInlineBookingData(modal, state) {
@@ -2146,8 +2197,9 @@ if (isLocalDevRequest()) {
           if (data.email === '' || !isValidInlineEmail(data.email)) {
             return { ok: false, message: 'Ingresa un correo electrónico válido.' };
           }
-          if (!isValidInlineDate(data.birth_date)) {
-            return { ok: false, message: 'Ingresa una fecha de nacimiento válida.' };
+          var birthDate = syncBirthDateField(modal);
+          if (!birthDate.ok || !isValidInlineDate(data.birth_date)) {
+            return { ok: false, message: birthDate.message || 'Ingresa una fecha de nacimiento válida.' };
           }
           if (data.gender !== 'F' && data.gender !== 'M' && data.gender !== 'No especifica') {
             return { ok: false, message: 'Selecciona un género válido.' };
@@ -2401,6 +2453,15 @@ if (isLocalDevRequest()) {
           var form = modal.querySelector('[data-mxpp-booking-form]');
           if (form) {
             form.addEventListener('input', function () { state.preparedPayload = null; });
+            modal.querySelectorAll('[data-mxpp-birth-day], [data-mxpp-birth-month], [data-mxpp-birth-year]').forEach(function (input) {
+              input.addEventListener('input', function () { syncBirthDateField(modal); });
+              input.addEventListener('change', function () { syncBirthDateField(modal); });
+            });
+            var canonicalBirthDate = modal.querySelector('[data-mxpp-birth-date]');
+            if (canonicalBirthDate) {
+              canonicalBirthDate.addEventListener('change', function () { prefillBirthDateFields(modal); });
+              prefillBirthDateFields(modal);
+            }
             form.addEventListener('submit', function (event) {
               event.preventDefault();
               submitInlineBooking(modal, state, block);

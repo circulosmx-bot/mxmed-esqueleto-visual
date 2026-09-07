@@ -1811,6 +1811,46 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   grid-column: 1 / -1;
 }
 
+.mxpp-booking-birth-date {
+  display: grid;
+  grid-template-columns: minmax(3.6rem, 0.72fr) minmax(0, 1.55fr) minmax(4.1rem, 0.9fr);
+  gap: 0.34rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mxpp-booking-birth-date legend {
+  grid-column: 1 / -1;
+  margin: 0 0 -0.03rem;
+  color: #294f5f;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.mxpp-booking-birth-date label {
+  min-width: 0;
+  font-size: 0.73rem !important;
+}
+
+.mxpp-booking-birth-date input,
+.mxpp-booking-birth-date select {
+  min-width: 0;
+}
+
+.mxpp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .mxpp-booking-modal__form input,
 .mxpp-booking-modal__form select,
 .mxpp-booking-modal__form textarea {
@@ -2596,6 +2636,7 @@ button.mxpp-hero-action:focus-visible {
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__form label span {
   font-weight: 600;
 }
+[data-mxpp-booking-step="patient"] .mxpp-booking-birth-date legend { font-size: 0.86rem; }
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__form input,
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__form select,
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__form textarea {
