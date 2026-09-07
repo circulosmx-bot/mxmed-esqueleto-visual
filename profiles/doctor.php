@@ -1285,8 +1285,6 @@ if (isLocalDevRequest()) {
                 <fieldset class="mxpp-booking-data-section" data-mxpp-booker-fields hidden disabled>
                   <legend>Datos de quien solicita</legend>
                   <label>Nombre completo<input type="text" name="booker.name" maxlength="160" autocomplete="off" /></label>
-                  <label>Teléfono móvil<input type="tel" name="booker.phone" maxlength="32" autocomplete="off" /></label>
-                  <label>Correo electrónico<input type="email" name="booker.email" maxlength="191" autocomplete="off" /></label>
                   <label>Relación con el paciente
                     <select name="booker.relationship">
                       <option value="">Selecciona</option>
@@ -1300,6 +1298,8 @@ if (isLocalDevRequest()) {
                       <option value="otro">Otro</option>
                     </select>
                   </label>
+                  <label>Teléfono móvil<input type="tel" name="booker.phone" maxlength="32" autocomplete="off" /></label>
+                  <label>Correo electrónico<input type="email" name="booker.email" maxlength="191" autocomplete="off" /></label>
                 </fieldset>
               </form>
               <p class="mxpp-booking-modal__message" data-mxpp-booking-message role="alert" hidden></p>

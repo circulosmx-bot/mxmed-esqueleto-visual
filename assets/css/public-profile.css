@@ -2883,3 +2883,14 @@ button.mxpp-hero-action:focus-visible {
 .mxpp-daily-dialog button:focus-visible,.mxpp-day-all:focus-visible{outline:3px solid #0b9fa9;outline-offset:2px}
 .mxpp-daily-slot:hover{background:#edf8f8}
 @media(max-width:540px){.mxpp-daily-dialog{padding:14px}.mxpp-daily-results{grid-template-columns:repeat(2,minmax(0,1fr))}.mxpp-daily-dialog h2{font-size:1.4rem}.mxpp-daily-dialog footer{justify-content:flex-start}}
+
+/* Requester-only proportions; keep labels as direct children for compact spacing. */
+@media (min-width: 601px) {
+  [data-mxpp-booker-fields] {
+    grid-template-columns: minmax(0, 40%) minmax(0, 1fr) minmax(156px, 28%);
+  }
+  [data-mxpp-booker-fields] > label:has([name="booker.name"]),
+  [data-mxpp-booker-fields] > label:has([name="booker.email"]) {
+    grid-column: span 2;
+  }
+}
