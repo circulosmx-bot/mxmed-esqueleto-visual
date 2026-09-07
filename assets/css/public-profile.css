@@ -2728,12 +2728,22 @@ button.mxpp-hero-action:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.32rem;
+  min-width: 0;
 }
-[data-mxpp-booking-step="patient"] .mxpp-booking-modal__doctor-summary .material-symbols-rounded {
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+}
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary .material-symbols-rounded {
   flex: 0 0 auto;
-  font-size: 1.05em;
+  font-size: 1.55em;
   font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
   line-height: 1;
+}
+[data-mxpp-booking-step="patient"] .mxpp-booking-modal__doctor-summary .material-symbols-rounded {
+  font-size: 2.05em;
 }
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__form { margin-top: 0.44rem; gap: 0.44rem; }
 [data-mxpp-booking-step="patient"] .mxpp-booking-data-section { gap: 0.29rem 0.62rem; }

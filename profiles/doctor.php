@@ -675,7 +675,7 @@ if (isLocalDevRequest()) {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600;700;900&family=Baloo+2:wght@400;500&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=badge,call,check,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,school,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=access_time,badge,call,check,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,schedule,school,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=alarm,credit_card,group" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
   <?php if ($showAgendaSlot): ?>
@@ -1223,8 +1223,8 @@ if (isLocalDevRequest()) {
               <h2 id="mxpp-booking-patient-title">Reserva de cita</h2>
               <div class="mxpp-booking-modal__summary">
                 <p class="mxpp-booking-modal__doctor-summary"><span class="material-symbols-rounded" aria-hidden="true">stethoscope</span><span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
-                <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
-                <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
+                <p class="mxpp-booking-modal__summary-detail"><span class="material-symbols-rounded" aria-hidden="true">schedule</span><span class="mxpp-visually-hidden">Fecha:</span><span data-mxpp-booking-date>Por confirmar</span></p>
+                <p class="mxpp-booking-modal__summary-detail"><span class="material-symbols-rounded" aria-hidden="true">access_time</span><span class="mxpp-visually-hidden">Hora:</span><span data-mxpp-booking-time>Por confirmar</span></p>
               </div>
               <form class="mxpp-booking-modal__form" data-mxpp-booking-form>
                 <fieldset class="mxpp-booking-data-section" aria-labelledby="mxpp-booking-patient-section-title">
