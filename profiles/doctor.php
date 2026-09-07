@@ -1228,8 +1228,8 @@ if (isLocalDevRequest()) {
                 <fieldset class="mxpp-booking-data-section" aria-labelledby="mxpp-booking-patient-section-title">
                 <legend id="mxpp-booking-patient-section-title">Datos del paciente</legend>
                 <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" required /></label>
-                <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" required /></label>
-                <label>Apellido materno <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
+                <label>Primer apellido<input type="text" name="last_name" autocomplete="family-name" required /></label>
+                <label>Segundo apellido <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
                 <label>Teléfono móvil<input type="tel" name="mobile_phone" autocomplete="tel" required /></label>
                 <label class="mxpp-booking-modal__field--birth-date-aligned">Correo electrónico<input type="email" name="email" autocomplete="email" required /></label>
                 <fieldset class="mxpp-booking-birth-date" aria-describedby="mxpp-booking-birth-date-help">
@@ -2203,7 +2203,7 @@ if (isLocalDevRequest()) {
             return { ok: false, message: 'No pudimos leer el formulario. Intenta de nuevo.' };
           }
           if (data.first_name === '' || data.last_name === '') {
-            return { ok: false, message: 'Completa nombre(s) y apellido paterno.' };
+            return { ok: false, message: 'Completa nombre(s) y primer apellido.' };
           }
           var phoneDigits = data.mobile_phone.replace(/\D+/g, '');
           if (phoneDigits.length < 10) {
