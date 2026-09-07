@@ -1319,9 +1319,91 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
     "status"
     "days"
     "nav"
-    "alert";
+    "alert"
+    "success";
   gap: 0 0.78rem;
   padding: 0;
+}
+
+.mxpp-agenda-compact__availability {
+  display: contents;
+}
+
+.mxpp-agenda-compact__availability[hidden],
+.mxpp-profile-booking-success[hidden] {
+  display: none;
+}
+
+.mxpp-profile-booking-success {
+  grid-area: success;
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  padding: clamp(1.1rem, 3vw, 1.7rem);
+  border-top: 4px solid var(--profile-accent);
+  background: linear-gradient(180deg, var(--profile-accent-soft), #fff 72%);
+  color: #113d59;
+  text-align: center;
+}
+
+.mxpp-profile-booking-success:focus {
+  outline: none;
+}
+
+.mxpp-profile-booking-success:focus-visible {
+  outline: 3px solid var(--profile-accent);
+  outline-offset: -5px;
+}
+
+.mxpp-profile-booking-success [data-mxpp-booking-success-content] {
+  width: min(100%, 620px);
+}
+
+.mxpp-profile-booking-success .mxpp-booking-modal__eyebrow {
+  margin: 0;
+}
+
+.mxpp-profile-booking-success h2 {
+  margin: 0.22rem 0 0.3rem;
+  color: #104d64;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+.mxpp-profile-booking-success p {
+  margin: 0.3rem 0 0;
+  color: #405e6a;
+  line-height: 1.45;
+}
+
+.mxpp-profile-booking-success .mxpp-booking-modal__summary {
+  width: min(100%, 520px);
+  margin: 0.85rem auto 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.mxpp-profile-booking-success__another {
+  min-height: 44px;
+  padding: 0.35rem 0.55rem;
+  border: 0;
+  background: transparent;
+  color: #0b6f83;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.mxpp-profile-booking-success__another:hover {
+  color: #084f60;
+}
+
+.mxpp-profile-booking-success__another:focus-visible {
+  border-radius: 6px;
+  outline: 3px solid var(--profile-accent);
+  outline-offset: 2px;
 }
 
 .mxpp-agenda-compact__header {

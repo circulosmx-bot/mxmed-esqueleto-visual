@@ -1132,6 +1132,7 @@ if (isLocalDevRequest()) {
             data-mock-density="16,8,2|4,16,1|8,3,16"
           <?php endif; ?>
         >
+          <div class="mxpp-agenda-compact__availability" data-mxpp-agenda-availability>
           <div class="mxpp-agenda-compact__header">
             <h2>Próximas citas disponibles</h2>
             <div class="mxpp-agenda-compact__header-actions">
@@ -1148,6 +1149,11 @@ if (isLocalDevRequest()) {
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-next disabled aria-label="Ver siguientes fechas disponibles">Siguiente</button>
           </div>
           <p class="mxpp-agenda-compact__alert" data-mxpp-agenda-alert hidden>Antes de continuar, selecciona una cita disponible.</p>
+          </div>
+          <section class="mxpp-profile-booking-success" data-mxpp-profile-booking-success hidden tabindex="-1" role="region" aria-labelledby="mxpp-profile-booking-success-title">
+            <div data-mxpp-profile-booking-success-content role="status" aria-live="polite" aria-atomic="true"></div>
+            <button class="mxpp-profile-booking-success__another" type="button" data-mxpp-book-another>Reservar otra cita</button>
+          </section>
         </section>
         <div class="mxpp-booking-modal" data-mxpp-booking-modal hidden aria-hidden="true">
           <div class="mxpp-booking-modal__backdrop" data-mxpp-booking-close></div>
@@ -1330,6 +1336,7 @@ if (isLocalDevRequest()) {
               </div>
             </div>
             <div class="mxpp-booking-modal__step" data-mxpp-booking-step="success" hidden>
+              <div data-mxpp-booking-success-content>
               <p class="mxpp-booking-modal__eyebrow">Cita confirmada</p>
               <h2 id="mxpp-booking-success-title">Tu cita está confirmada</h2>
               <p>Tu cita fue registrada correctamente.</p>
@@ -1338,6 +1345,7 @@ if (isLocalDevRequest()) {
                 <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span> h</p>
                 <p><strong>Consultorio:</strong> <span data-mxpp-booking-office>Por confirmar</span></p>
+              </div>
               </div>
               <div class="mxpp-booking-modal__actions">
                 <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-close>Entendido</button>
@@ -1801,14 +1809,37 @@ if (isLocalDevRequest()) {
           }
         }
 
-        function closeBookingModal(state) {
+        function showProfileBookingSuccess(block, modal) {
+          var profileSuccess = block ? block.querySelector('[data-mxpp-profile-booking-success]') : null;
+          var target = profileSuccess ? profileSuccess.querySelector('[data-mxpp-profile-booking-success-content]') : null;
+          var source = modal ? modal.querySelector('[data-mxpp-booking-success-content]') : null;
+          var availability = block ? block.querySelector('[data-mxpp-agenda-availability]') : null;
+          if (!profileSuccess || !target || !source || !availability) {
+            return false;
+          }
+          var content = source.cloneNode(true);
+          var title = content.querySelector('#mxpp-booking-success-title');
+          if (title) {
+            title.id = 'mxpp-profile-booking-success-title';
+          }
+          target.replaceChildren(content);
+          availability.hidden = true;
+          profileSuccess.hidden = false;
+          profileSuccess.focus({ preventScroll: true });
+          return true;
+        }
+
+        function closeBookingModal(block, state) {
           var modal = getBookingModal();
           if (!modal) {
             return;
           }
           var wasOpen = !modal.hidden;
+          var successStep = modal.querySelector('[data-mxpp-booking-step="success"]');
+          var persistConfirmation = wasOpen && state && state.confirmedBooking !== null && successStep && !successStep.hidden;
           modal.hidden = true;
           modal.setAttribute('aria-hidden', 'true');
+          var profileSuccessShown = persistConfirmation && showProfileBookingSuccess(block, modal);
           setBookingModalStep(modal, 'confirm');
           clearBookingModalMessage(modal);
           var form = modal.querySelector('[data-mxpp-booking-form]');
@@ -1822,7 +1853,7 @@ if (isLocalDevRequest()) {
             state.otpId = null;
             syncBookingSubject(modal, state);
           }
-          if (wasOpen && modal.mxppReturnFocus && modal.mxppReturnFocus.isConnected) {
+          if (wasOpen && !profileSuccessShown && modal.mxppReturnFocus && modal.mxppReturnFocus.isConnected) {
             modal.mxppReturnFocus.focus({ preventScroll: true });
           }
         }
@@ -1885,7 +1916,7 @@ if (isLocalDevRequest()) {
             button.setAttribute('aria-pressed', 'false');
           });
           hideSelectionAlert(block);
-          closeBookingModal(state);
+          closeBookingModal(block, state);
         }
 
         function setSelectedSlot(block, state, slotData) {
@@ -2393,7 +2424,12 @@ if (isLocalDevRequest()) {
             code: code
           }).then(function (result) {
             var payload = result.body || {};
-            if (result.response.ok && payload.ok === true) {
+            var confirmedStatus = String(((payload.data || {}).status) || '').toLowerCase();
+            if (result.response.ok && payload.ok === true && confirmedStatus === 'confirmed') {
+              state.confirmedBooking = {
+                appointmentId: state.appointmentId,
+                selectedSlot: Object.assign({}, state.selectedSlot)
+              };
               fillBookingModal(modal, state);
               clearBookingModalMessage(modal);
               setBookingModalStep(modal, 'success');
@@ -2447,8 +2483,42 @@ if (isLocalDevRequest()) {
           }
           modal.setAttribute('data-mxpp-booking-bound', 'true');
           modal.querySelectorAll('[data-mxpp-booking-close]').forEach(function (button) {
-            button.addEventListener('click', function () { closeBookingModal(state); });
+            button.addEventListener('click', function () { closeBookingModal(block, state); });
           });
+          var bookAnotherButton = block.querySelector('[data-mxpp-book-another]');
+          if (bookAnotherButton) {
+            bookAnotherButton.addEventListener('click', function () {
+              var availability = block.querySelector('[data-mxpp-agenda-availability]');
+              var profileSuccess = block.querySelector('[data-mxpp-profile-booking-success]');
+              var days = block.querySelector('[data-mxpp-agenda-days]');
+              state.confirmedBooking = null;
+              state.selectedSlot = null;
+              state.booker_is_patient = null;
+              state.preparedPayload = null;
+              state.appointmentId = null;
+              state.cancelToken = null;
+              state.otpId = null;
+              state.blocks = [];
+              state.currentBlockIndex = -1;
+              state.hasMore = true;
+              state.isLoading = false;
+              state.availabilityMessage = null;
+              if (days) {
+                days.innerHTML = '';
+                days.hidden = true;
+              }
+              hideSelectionAlert(block);
+              if (profileSuccess) profileSuccess.hidden = true;
+              if (availability) availability.hidden = false;
+              if (state.isMock) {
+                loadMockAgenda(block, state);
+              } else {
+                fetchAvailability(block, state, '');
+              }
+              var returnFocus = block.querySelector('[data-mxpp-next-available]');
+              if (returnFocus) returnFocus.focus({ preventScroll: true });
+            });
+          }
           var nextButton = modal.querySelector('[data-mxpp-booking-next]');
           if (nextButton) {
             nextButton.addEventListener('click', function () {
@@ -2561,7 +2631,7 @@ if (isLocalDevRequest()) {
               else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
             }
             if (event.key === 'Escape' && !modal.hidden) {
-              closeBookingModal(state);
+              closeBookingModal(block, state);
             }
           });
         }
@@ -2579,6 +2649,7 @@ if (isLocalDevRequest()) {
             selectedSlot: null,
             booker_is_patient: null,
             preparedPayload: null,
+            confirmedBooking: null,
             isLoading: false,
             hasMore: true,
             isMock: mockMode === 'mixed',

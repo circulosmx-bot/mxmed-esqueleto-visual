@@ -9,7 +9,9 @@ for (const url of [base, cdp]) assert.ok(['127.0.0.1', 'localhost'].includes(new
 const tabs = await (await fetch(cdp + '/json')).json();
 const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl);
 await new Promise(r => ws.addEventListener('open', r, {once: true}));
-let id = 0; let slotTakenMode = false, otpFailureMode = false; const pending = new Map(), errors = [], records = [], mutations = [];
+let id = 0; let slotTakenMode = false, otpFailureMode = false, otpConfirmFailureMode = false;
+const pending = new Map(), errors = [], records = [], mutations = [], availabilityRequests = [], successfulConfirmationIds = [];
+const appointmentSlots = new Map(), confirmedSlotStarts = new Set();
 const send = (method, params = {}) => new Promise((resolve, reject) => {pending.set(++id, {resolve, reject}); ws.send(JSON.stringify({id, method, params}));});
 ws.addEventListener('message', async e => {
   const m = JSON.parse(e.data);
@@ -18,7 +20,19 @@ ws.addEventListener('message', async e => {
   if (m.method !== 'Fetch.requestPaused') return;
   const p = m.params;
   try {
-    if (p.request.method === 'POST' && p.request.url.includes('/api/agenda/index.php/public/appointments/reserve')) {
+    if (p.request.method === 'GET' && p.request.url.includes('/api/agenda/index.php/public/availability') && p.responseStatusCode) {
+      const response = await send('Fetch.getResponseBody', {requestId: p.requestId});
+      const payload = JSON.parse(response.base64Encoded ? Buffer.from(response.body, 'base64').toString() : response.body);
+      for (const day of payload?.data?.days || []) {
+        day.slots = (day.slots || []).filter(slot => !confirmedSlotStarts.has(String(slot.start_at || '')));
+      }
+      await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: p.responseStatusCode,
+        responseHeaders: p.responseHeaders.filter(h => !['content-length', 'content-encoding'].includes(h.name.toLowerCase())),
+        body: Buffer.from(JSON.stringify(payload)).toString('base64')});
+    } else if (p.request.method === 'GET' && p.request.url.includes('/api/agenda/index.php/public/availability')) {
+      availabilityRequests.push(p.request.url);
+      await send('Fetch.continueRequest', {requestId: p.requestId});
+    } else if (p.request.method === 'POST' && p.request.url.includes('/api/agenda/index.php/public/appointments/reserve')) {
       const payload = JSON.parse(p.request.postData || '{}');
       mutations.push({route: 'reserve', payload});
       if (slotTakenMode) {
@@ -28,9 +42,11 @@ ws.addEventListener('message', async e => {
           body: Buffer.from(JSON.stringify({ok: false, error: 'slot_taken', message: 'slot taken'})).toString('base64')});
         return;
       }
+      const appointmentId = 'apt-profile-test-' + mutations.length;
+      appointmentSlots.set(appointmentId, String(payload.start_at || ''));
       await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 200,
         responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
-        body: Buffer.from(JSON.stringify({ok: true, data: {appointment_id: 'apt-profile-test-' + mutations.length, status: 'pending_otp'}})).toString('base64')});
+        body: Buffer.from(JSON.stringify({ok: true, data: {appointment_id: appointmentId, status: 'pending_otp'}})).toString('base64')});
     } else if (p.request.method === 'POST' && p.request.url.includes('/api/agenda/index.php/public/otp/request')) {
       const payload = JSON.parse(p.request.postData || '{}');
       mutations.push({route: 'otp_request', payload});
@@ -47,6 +63,15 @@ ws.addEventListener('message', async e => {
     } else if (p.request.method === 'POST' && p.request.url.includes('/api/agenda/index.php/public/appointments/confirm')) {
       const payload = JSON.parse(p.request.postData || '{}');
       mutations.push({route: 'confirm', payload});
+      if (otpConfirmFailureMode) {
+        otpConfirmFailureMode = false;
+        await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 422,
+          responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
+          body: Buffer.from(JSON.stringify({ok: false, error: 'invalid_code'})).toString('base64')});
+        return;
+      }
+      confirmedSlotStarts.add(appointmentSlots.get(payload.appointment_id));
+      successfulConfirmationIds.push(payload.appointment_id);
       await send('Fetch.fulfillRequest', {requestId: p.requestId, responseCode: 200,
         responseHeaders: [{name: 'Content-Type', value: 'application/json'}],
         body: Buffer.from(JSON.stringify({ok: true, data: {appointment_id: payload.appointment_id, status: 'confirmed'}})).toString('base64')});
@@ -82,14 +107,22 @@ const shot = async name => {
   fs.writeFileSync(artifacts + '/' + name + '.png', Buffer.from(result.data, 'base64'), {mode: 0o600});
   await ev(`document.querySelectorAll('[data-mxpp-booking-doctor]').forEach((e,i)=>e.textContent=__shotNames[i]);delete window.__shotNames`);
 };
+const shotAgenda = async name => {
+  if (!artifacts) return;
+  await ev(`window.__shotNames=[...document.querySelectorAll('[data-mxpp-booking-doctor]')].map(e=>e.textContent);document.querySelectorAll('[data-mxpp-booking-doctor]').forEach(e=>e.textContent='Profesional de prueba');document.querySelector('.mxpp-dev-plan-switcher')?.style.setProperty('display','none');document.querySelector('[data-mxpp-agenda-compact]').scrollIntoView({block:'center',behavior:'instant'})`);
+  const clip = await ev(`(()=>{const r=document.querySelector('[data-mxpp-agenda-compact]').getBoundingClientRect();return {x:r.x+scrollX,y:r.y+scrollY,width:r.width,height:r.height,scale:1}})()`);
+  const result = await send('Page.captureScreenshot', {format: 'png', clip, captureBeyondViewport: true});
+  fs.writeFileSync(artifacts + '/' + name + '.png', Buffer.from(result.data, 'base64'), {mode: 0o600});
+  await ev(`document.querySelectorAll('[data-mxpp-booking-doctor]').forEach((e,i)=>e.textContent=__shotNames[i]);delete window.__shotNames`);
+};
 await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable'); await send('Network.setCacheDisabled', {cacheDisabled: true});
-await send('Fetch.enable', {patterns: [{urlPattern: '*', requestStage: 'Request'}, {urlPattern: '*/profiles/doctor.php*', requestStage: 'Response'}]});
+await send('Fetch.enable', {patterns: [{urlPattern: '*', requestStage: 'Request'}, {urlPattern: '*/profiles/doctor.php*', requestStage: 'Response'}, {urlPattern: '*/api/agenda/index.php/public/availability*', requestStage: 'Response'}]});
 try {
   for (const [device, width, height] of [['desktop',1440,900], ['compact',1366,768], ['mobile',390,844], ['small',320,740]]) {
     for (const entry of ['direct', 'next']) {
       await send('Emulation.setDeviceMetricsOverride', {width, height, deviceScaleFactor: 1, mobile: !['desktop', 'compact'].includes(device)});
       await send('Page.navigate', {url: base + '/profiles/doctor.php?doctor_id=1&mxmed_plan=professional&mxmed_theme_preview=mxmed_teal'});
-      await wait(`document.querySelectorAll('.mxpp-agenda-compact__day').length===3`);
+      await wait(`document.querySelectorAll('.mxpp-agenda-compact__day').length>0`);
       if (entry === 'direct') {
         await ev(`document.querySelector('.mxpp-agenda-compact__slot').focus()`); await click('.mxpp-agenda-compact__slot');
       } else {
@@ -139,9 +172,20 @@ try {
       await click('[data-mxpp-booking-submit]'); await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden`); assert.ok(await ev(`document.activeElement.matches('[data-mxpp-booking-otp-code]')`), 'OTP focus moves to the code input'); await shot(device + '-' + entry + '-otp');
       assert.ok(await ev(`__subjectTestState.preparedPayload.booker_is_patient===false&&__subjectTestState.preparedPayload.booker.relationship==='madre'&&__subjectTestState.preparedPayload.patient.email!==__subjectTestState.preparedPayload.booker.email&&__subjectTestState.preparedPayload.patient_type==='first_time'`));
       await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`); assert.ok(await ev(`document.activeElement.matches('[data-mxpp-booking-step="success"] button')`), 'success focus moves to its action'); await shot(device + '-' + entry + '-success');
+      const firstConfirmedAppointment = await ev(`__subjectTestState.confirmedBooking.appointmentId`);
+      const bookedStart = JSON.parse(slot).start_at;
+      const availabilityCountBefore = availabilityRequests.length;
+      await ev(`window.__bookingSessionMarker={kept:true}`);
       await key('Escape',27); assert.ok(await ev(`__subjectTestState.preparedPayload===null&&__subjectTestState.booker_is_patient===null`));
       assert.equal(await ev('JSON.stringify(__subjectTestState.selectedSlot)'),slot,'slot preserved on close');
-      assert.ok(await ev(`document.activeElement.matches('.mxpp-agenda-compact__slot,[data-mxpp-next-available]')`));
+      const profileSuccessChecks = JSON.parse(await ev(`JSON.stringify((()=>{const success=document.querySelector('[data-mxpp-profile-booking-success]');const modalContent=document.querySelector('[data-mxpp-booking-success-content]').innerText.replace(/\\s+/g,' ').trim();const profileContent=document.querySelector('[data-mxpp-profile-booking-success-content]').innerText.replace(/\\s+/g,' ').trim();return {shown:!success.hidden,agendaHidden:document.querySelector('[data-mxpp-agenda-availability]').hidden,focused:document.activeElement===success,sameContent:modalContent===profileContent,expectedCopy:profileContent.includes('Tu cita está confirmada')&&profileContent.includes('Tu cita fue registrada correctamente.'),noOverflow:success.scrollWidth<=success.clientWidth}})())`));
+      assert.ok(Object.values(profileSuccessChecks).every(Boolean), 'closing a real confirmed modal reuses its content in the Agenda region and focuses the announced state: ' + JSON.stringify(profileSuccessChecks));
+      await shotAgenda(device + '-' + entry + '-profile-success');
+      await click('[data-mxpp-book-another]');
+      await wait(`!document.querySelector('[data-mxpp-agenda-availability]').hidden&&document.querySelector('[data-mxpp-profile-booking-success]').hidden&&document.querySelectorAll('.mxpp-agenda-compact__day').length>0`);
+      assert.ok(availabilityRequests.length > availabilityCountBefore, 'booking another requeries current availability');
+      assert.ok(await ev(`window.__bookingSessionMarker.kept===true&&__subjectTestState.confirmedBooking===null&&__subjectTestState.selectedSlot===null&&document.activeElement.matches('[data-mxpp-next-available]')`), 'booking another keeps the page session and clears only completed booking UI state');
+      assert.ok(await ev(`![...document.querySelectorAll('.mxpp-agenda-compact__slot')].some(button=>button.dataset.slotStart===${JSON.stringify(bookedStart)})`), 'refreshed availability does not reuse the confirmed slot');
       // Switching to self clears other-person draft; back preserves patient fields.
       await click('.mxpp-agenda-compact__slot'); await click('[data-mxpp-booking-next]'); await click('[data-mxpp-booking-subject="other"]');
       await fill({...patient,...booker}); await click('[data-mxpp-booking-back]'); await click('[data-mxpp-booking-subject="self"]');
@@ -151,11 +195,14 @@ try {
       await shot(device + '-' + entry + '-self-data'); await click('[data-mxpp-booking-submit]'); await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden`);
       assert.ok(await ev(`(()=>{const p=__subjectTestState.preparedPayload;return p.booker_is_patient===true&&p.booker.email===p.patient.email&&!('relationship' in p.booker)&&!JSON.stringify(p).includes('booker@example.test')&&p.patient_type==='follow_up'})()`));
       await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`);
+      assert.notEqual(await ev(`__subjectTestState.confirmedBooking.appointmentId`), firstConfirmedAppointment, 'a new booking uses a new appointment');
       await key('Escape',27);
+      assert.ok(await ev(`!document.querySelector('[data-mxpp-profile-booking-success]').hidden`));
+      await click('[data-mxpp-book-another]'); await wait(`!document.querySelector('[data-mxpp-agenda-availability]').hidden&&document.querySelectorAll('.mxpp-agenda-compact__day').length>0`);
       // Cancel directly from subject also preserves the selected slot and focus.
       await click('.mxpp-agenda-compact__slot'); await click('[data-mxpp-booking-next]'); await click('[data-mxpp-booking-step="subject"] footer [data-mxpp-booking-close]');
       assert.ok(await ev(`document.querySelector('[data-mxpp-booking-modal]').hidden&&__subjectTestState.selectedSlot!==null`));
-      records.push({device,entry,self:true,other:true,relationshipRequired:true,switchCleanup:true,focus:true,noOverflow:true});
+      records.push({device,entry,self:true,other:true,relationshipRequired:true,switchCleanup:true,focus:true,noOverflow:true,postConfirmation:true,bookAnotherRefresh:true});
       console.log(device,entry,'PASS');
     }
   }
@@ -175,7 +222,12 @@ try {
   const retainedAppointment = await ev(`__subjectTestState.appointmentId`); assert.ok(retainedAppointment, 'failed delivery preserves pending appointment');
   await click('[data-mxpp-booking-submit]'); await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden`);
   assert.equal(mutations.filter(m => m.route === 'reserve').length, reserveCountBeforeRetry + 1, 'retry does not create a second reservation');
-  await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`); await key('Escape',27);
+  otpConfirmFailureMode = true;
+  await fillOtp('123456'); await click('[data-mxpp-booking-otp-verify]');
+  await wait(`!document.querySelector('[data-mxpp-booking-step="otp"]').hidden&&document.querySelector('[data-mxpp-booking-step="otp"] [data-mxpp-booking-message]').textContent.includes('no es correcto')`);
+  assert.ok(await ev(`document.querySelector('[data-mxpp-profile-booking-success]').hidden&&__subjectTestState.confirmedBooking===null`), 'failed OTP confirmation never creates the profile success state');
+  await click('[data-mxpp-booking-otp-verify]'); await wait(`!document.querySelector('[data-mxpp-booking-step="success"]').hidden`); await key('Escape',27);
+  assert.ok(await ev(`!document.querySelector('[data-mxpp-profile-booking-success]').hidden`));
   assert.equal(errors.length,0,'no JS exceptions');
   assert.ok(mutations.length >= 24, 'both real endpoint paths are exercised for every desktop/mobile entry');
   const reserves = mutations.filter(m => m.route === 'reserve');
@@ -188,6 +240,7 @@ try {
   assert.ok(reserves.every(m => /^\d{4}-\d{2}-\d{2}$/.test(m.payload.patient.dob)), 'the API receives the unchanged canonical birth_date contract');
   assert.ok(otpRequests.every(m => typeof m.payload.appointment_id === 'string' && m.payload.appointment_id.startsWith('apt-profile-test-')), 'OTP request is appointment-bound');
   assert.ok(confirms.every(m => /^\d{6}$/.test(m.payload.code) && m.payload.appointment_id && m.payload.otp_id), 'confirmation remains bound to appointment and OTP');
-  if (artifacts) fs.writeFileSync(artifacts+'/proof.json',JSON.stringify({records,mutationRequests:mutations.length,endpointSequence:true,jsErrors:0},null,2),{mode:0o600});
+  assert.equal(new Set(successfulConfirmationIds).size, successfulConfirmationIds.length, 'every completed follow-up booking uses a new appointment id');
+  if (artifacts) fs.writeFileSync(artifacts+'/proof.json',JSON.stringify({records,mutationRequests:mutations.length,availabilityRequests:availabilityRequests.length,successfulConfirmations:successfulConfirmationIds.length,endpointSequence:true,jsErrors:0},null,2),{mode:0o600});
   console.log('PublicBookingSubjectBrowserTest PASS: endpoint wiring mocked locally');
 } finally {await send('Fetch.disable'); ws.close();}
