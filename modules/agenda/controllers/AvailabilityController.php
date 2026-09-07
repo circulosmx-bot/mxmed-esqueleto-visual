@@ -339,6 +339,10 @@ class AvailabilityController
             return $this->error('db_not_ready', 'availability base schedule not ready');
         }
 
+        if (in_array($params['mode'] ?? '', ['day', 'global_days'], true)) {
+            return $this->publicGlobalDailyAvailability($params);
+        }
+
         $doctorIdRequested = trim((string)($params['doctor_id'] ?? ''));
         $doctorId = $doctorIdRequested;
         $requestedConsultorioId = $params['consultorio_id'] ?? null;
@@ -579,6 +583,26 @@ class AvailabilityController
             ],
             'meta' => $nextMeta,
         ];
+    }
+
+    private function publicGlobalDailyAvailability(array $params): array
+    {
+        require_once __DIR__ . '/../../profiles/controllers/PublicProfileController.php';
+        require_once __DIR__ . '/../../profiles/services/PublicProfileRequestContext.php';
+        require_once __DIR__ . '/../services/PublicDailyAvailability.php';
+        $doctorId = trim((string)($params['doctor_id'] ?? ''));
+        try {
+            $profile = (new \Profiles\Controllers\PublicProfileController(
+                new \Profiles\Repositories\PublicProfileRepository($this->pdo)
+            ))->showByDoctorId($doctorId, \Profiles\Services\PublicProfileRequestContext::devPlanOverride($params, $_SERVER));
+            if (($profile['ok'] ?? false) !== true) return $profile;
+            return (new \Agenda\Services\PublicDailyAvailability())->build(
+                $profile['data'], $doctorId, $params,
+                fn(string $doctor, string $office, string $date): array => $this->publicDayAvailability($doctor, $office, $date, 30)
+            );
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'public availability unavailable');
+        }
     }
 
     private function resolvePublicConsultorioIdForRange(

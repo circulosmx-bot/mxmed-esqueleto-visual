@@ -85,7 +85,7 @@ try {
     }
     const mixed = await ev(rows);
     assert.ok(mixed[0].includes('12 de Septiembre') && mixed[0].includes('13:30 h'),JSON.stringify(mixed));
-    assert.ok(mixed[1].includes('14 de Septiembre') && mixed[1].includes('16:00 h'),JSON.stringify(mixed));
+    assert.ok(mixed[1].includes('14 de Septiembre') && mixed[1].includes('09:00 h') && mixed[1].includes('TORRE MÉDICA CMQ'),JSON.stringify(mixed));
     await screenshot(name+'-mixed');
     for (let i=0;i<3;i++) {
       await ev(`document.querySelector('dialog.mxpp-next-dialog .mxpp-next-dialog__nav button:first-child').click()`); await wait(ready);
@@ -111,7 +111,7 @@ try {
   assert.equal(await ev(`!!document.querySelector('[data-mxpp-next-available]')`),false);
   assert.equal(await ev(`!!document.querySelector('[data-mxpp-agenda-compact]')`),false);
   const availabilityCalls = calls.filter(r=>r.url.includes('/public/availability')).map(r=>new URL(r.url));
-  assert.ok(availabilityCalls.some(u=>!u.searchParams.has('consultorio_id'))); // normal agenda remains scoped by existing server fallback
+  assert.ok(availabilityCalls.some(u=>!u.searchParams.has('consultorio_id'))); // normal global Agenda still sends no single-office restriction
   assert.ok(availabilityCalls.some(u=>u.searchParams.get('consultorio_id')==='3'));
   assert.equal(calls.filter(r=>r.method!=='GET').length,0);
   assert.deepEqual(errors,[]);

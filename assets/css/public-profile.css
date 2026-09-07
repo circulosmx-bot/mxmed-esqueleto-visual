@@ -2862,3 +2862,24 @@ button.mxpp-hero-action:focus-visible {
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__secondary {
   font-weight: 700;
 }
+
+/* Global daily preview and exact-date dialog. Scoped to the public profile. */
+.mxpp-agenda-compact__slot{flex-direction:column}
+.mxpp-slot-office{display:block;font-size:.75rem;line-height:1.15;font-weight:400;white-space:normal;overflow-wrap:anywhere;max-width:8em;margin-top:.25rem}
+.mxpp-day-all{background:transparent;color:#113d59;border:1px solid #b9cdd8;border-radius:.5rem;padding:.6rem;margin-top:.65rem;font:inherit;font-weight:600;cursor:pointer;max-width:100%}
+.mxpp-daily-dialog{box-sizing:border-box;width:min(760px,calc(100% - 24px));max-height:calc(100dvh - 24px);padding:20px;border:1px solid #c5dbe4;border-radius:14px;color:#113d59;background:#fff;overflow-y:auto}
+.mxpp-daily-dialog::backdrop{background:rgb(17 61 89 / .45)}
+.mxpp-daily-dialog header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.mxpp-daily-dialog h2{margin:0;font-size:1.6rem}
+.mxpp-daily-dialog header p{margin:.4rem 0}
+.mxpp-daily-dialog button{font:inherit;cursor:pointer;min-height:44px;border:1px solid #b9cdd8;border-radius:8px;background:#fff;color:#113d59;padding:10px 14px}
+.mxpp-daily-dialog [data-daily-close][aria-label]{font-size:1.5rem;line-height:1;flex-shrink:0}
+.mxpp-daily-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mxpp-daily-dialog .mxpp-daily-slot{display:flex;flex-direction:column;gap:4px;text-align:left;overflow-wrap:anywhere}
+.mxpp-daily-slot strong{font-size:1.2rem}
+.mxpp-daily-slot span{font-size:.9rem}
+.mxpp-daily-dialog footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px}
+.mxpp-daily-dialog button:disabled{opacity:.5;cursor:default}
+.mxpp-daily-dialog button:focus-visible,.mxpp-day-all:focus-visible{outline:3px solid #0b9fa9;outline-offset:2px}
+.mxpp-daily-slot:hover{background:#edf8f8}
+@media(max-width:540px){.mxpp-daily-dialog{padding:14px}.mxpp-daily-results{grid-template-columns:repeat(2,minmax(0,1fr))}.mxpp-daily-dialog h2{font-size:1.4rem}.mxpp-daily-dialog footer{justify-content:flex-start}}

@@ -199,18 +199,8 @@ function isLocalDevRequest(): bool
 
 function resolveDevPlanOverride(): ?string
 {
-    if (!isLocalDevRequest()) {
-        return null;
-    }
-
-    $raw = toText($_GET['mxmed_plan'] ?? null);
-    if ($raw === null) {
-        return null;
-    }
-
-    $normalized = \Profiles\Services\PublicProfilePlanCapabilities::normalizePlanCode($raw);
-    $allowed = ['free', 'basic', 'standard', 'optimum', 'professional'];
-    return in_array($normalized, $allowed, true) ? $normalized : null;
+    require_once __DIR__ . '/../modules/profiles/services/PublicProfileRequestContext.php';
+    return \Profiles\Services\PublicProfileRequestContext::devPlanOverride($_GET, $_SERVER);
 }
 
 function parseHttpStatusCode(array $headers): ?int
@@ -1126,6 +1116,7 @@ if (isLocalDevRequest()) {
           data-doctor-id="<?= h($doctorId) ?>"
           data-doctor-name="<?= h($displayName ?? 'Médico') ?>"
           data-booking-url="<?= h($bookAppointmentUrl) ?>"
+          data-qa-plan="<?= h($devPlanOverride ?? '') ?>"
           data-public-consultorios="<?= h(json_encode(array_column($consultorioPanels, 'name', 'id'), JSON_UNESCAPED_UNICODE)) ?>"
           data-next-public-consultorios="<?= h(json_encode(array_column(array_filter($consultorios, static function ($office): bool {
               return is_array($office) && toBool($office['is_public'] ?? false) && toBool($office['is_active'] ?? false);
@@ -1641,6 +1632,7 @@ if (isLocalDevRequest()) {
   </script>
   <?php if ($showAgendaSlot): ?>
     <script src="/assets/js/public-profile-next-available.js"></script>
+    <script src="/assets/js/public-profile-daily.js"></script>
     <script src="/assets/js/public-profile-booking-subject.js"></script>
     <script src="/assets/js/public-profile-birth-date.js"></script>
     <script>
@@ -1930,7 +1922,8 @@ if (isLocalDevRequest()) {
           state.otpId = null;
           block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
             var isSelected = button.getAttribute('data-slot-date') === slotData.date
-              && button.getAttribute('data-slot-start') === slotData.start_at;
+              && button.getAttribute('data-slot-start') === slotData.start_at
+              && button.getAttribute('data-slot-office') === String(slotData.consultorio_id);
             button.classList.toggle('mxpp-agenda-compact__slot--selected', isSelected);
             button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
           });
@@ -1975,7 +1968,7 @@ if (isLocalDevRequest()) {
             var date = String(day.date || '');
             var slots = Array.isArray(day.slots) ? day.slots : [];
             var mockCount = state.isMock ? slots.length : null;
-            var slotHtml = slots.map(function (slot) {
+            var slotHtml = slots.slice(0, 10).map(function (slot) {
               var startAt = String(slot && slot.start_at ? slot.start_at : '');
               var endAt = String(slot && slot.end_at ? slot.end_at : '');
               if (startAt === '') {
@@ -1984,8 +1977,11 @@ if (isLocalDevRequest()) {
               return '<button class="mxpp-agenda-compact__slot" type="button" aria-pressed="false"'
                 + ' data-slot-date="' + escapeHtml(date) + '"'
                 + ' data-slot-start="' + escapeHtml(startAt) + '"'
-                + ' data-slot-end="' + escapeHtml(endAt) + '">'
+                + ' data-slot-end="' + escapeHtml(endAt) + '"'
+                + ' data-slot-office="' + escapeHtml(String(slot.consultorio_id || getConsultorioIdFromBlock(currentBlock))) + '"'
+                + ' title="' + escapeHtml(slot.consultorio_name || '') + '">'
                 + escapeHtml(formatTime(startAt))
+                + (slot.consultorio_name ? '<small class="mxpp-slot-office">' + escapeHtml(slot.consultorio_name) + '</small>' : '')
                 + '</button>';
             }).join('');
             var mockCountHtml = mockCount !== null
@@ -1996,9 +1992,14 @@ if (isLocalDevRequest()) {
               + '<h3>' + escapeHtml(formatDate(date)) + '</h3>'
               + mockCountHtml
               + '<div class="mxpp-agenda-compact__slots">' + slotHtml + '</div>'
+              + (slots.length > 10 ? '<button type="button" class="mxpp-day-all" data-full-day="' + escapeHtml(date) + '">Ver todos los horarios (' + slots.length + ')</button>' : '')
               + '</article>';
           }).join('');
           container.hidden = false;
+
+          container.querySelectorAll('[data-full-day]').forEach(function (button) {
+            button.addEventListener('click', function () { state.dailyModal.open(button.dataset.fullDay, button); });
+          });
 
           container.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (slotButton) {
             slotButton.addEventListener('click', function () {
@@ -2006,7 +2007,7 @@ if (isLocalDevRequest()) {
                 date: slotButton.getAttribute('data-slot-date') || '',
                 start_at: slotButton.getAttribute('data-slot-start') || '',
                 end_at: slotButton.getAttribute('data-slot-end') || '',
-                consultorio_id: getConsultorioIdFromBlock(currentBlock),
+                consultorio_id: slotButton.getAttribute('data-slot-office') || getConsultorioIdFromBlock(currentBlock),
                 doctor_id: state.doctorId,
                 booking_url: state.bookingUrl
               });
@@ -2099,11 +2100,10 @@ if (isLocalDevRequest()) {
 
           var params = new URLSearchParams();
           params.set('doctor_id', state.doctorId);
-          params.set('mode', 'next');
-          params.set('days', '3');
-          params.set('limit_per_day', '0');
+          params.set('mode', 'global_days');
+          if (block.dataset.qaPlan) params.set('mxmed_plan', block.dataset.qaPlan);
           if (startDate) {
-            params.set('start_date', startDate);
+            params.set('date', startDate);
           }
 
           fetch('/api/agenda/index.php/public/availability?' + params.toString(), {
@@ -2148,7 +2148,7 @@ if (isLocalDevRequest()) {
               state.blocks = state.blocks.slice(0, state.currentBlockIndex + 1);
               state.blocks.push(blockData);
               state.currentBlockIndex = state.blocks.length - 1;
-              state.hasMore = true;
+              state.hasMore = payload.meta.has_more;
               renderCurrentBlock(block, state);
             })
             .catch(function () {
@@ -2707,6 +2707,14 @@ if (isLocalDevRequest()) {
 
           updateControls(block, state);
           bindBookingModalControls(block, state);
+          state.dailyModal = window.MxmedPublicDailyModal(block, {
+            formatDate: formatDate, formatTime: formatTime,
+            choose: function (slot) {
+              slot.booking_url = state.bookingUrl;
+              setSelectedSlot(block, state, slot);
+              openBookingModal(block, state);
+            }
+          });
           window.MxmedPublicNextAvailable(block, {
             formatDate: formatDate,
             formatTime: formatTime,
