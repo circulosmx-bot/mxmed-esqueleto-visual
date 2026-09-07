@@ -1231,7 +1231,7 @@ if (isLocalDevRequest()) {
                 <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" required /></label>
                 <label>Apellido materno <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
                 <label>Teléfono móvil<input type="tel" name="mobile_phone" autocomplete="tel" required /></label>
-                <label>Correo electrónico<input type="email" name="email" autocomplete="email" required /></label>
+                <label class="mxpp-booking-modal__field--birth-date-aligned">Correo electrónico<input type="email" name="email" autocomplete="email" required /></label>
                 <fieldset class="mxpp-booking-birth-date" aria-describedby="mxpp-booking-birth-date-help">
                   <legend>Fecha de nacimiento</legend>
                   <label>Día<input type="text" name="birth_day" inputmode="numeric" autocomplete="bday-day" maxlength="2" pattern="[0-9]*" data-mxpp-birth-day required /></label>
