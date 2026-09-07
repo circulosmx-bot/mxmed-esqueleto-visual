@@ -1229,7 +1229,7 @@ if (isLocalDevRequest()) {
                 <legend id="mxpp-booking-patient-section-title">Datos del paciente</legend>
                 <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" required /></label>
                 <label>Primer apellido<input type="text" name="last_name" autocomplete="family-name" required /></label>
-                <label>Segundo apellido <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
+                <label>Segundo apellido <span>(opcional)</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
                 <label>Teléfono móvil<input type="tel" name="mobile_phone" autocomplete="tel" required /></label>
                 <label class="mxpp-booking-modal__field--birth-date-aligned">Correo electrónico<input type="email" name="email" autocomplete="email" required /></label>
                 <fieldset class="mxpp-booking-birth-date" aria-describedby="mxpp-booking-birth-date-help">

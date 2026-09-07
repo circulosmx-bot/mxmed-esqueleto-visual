@@ -16,7 +16,7 @@ for (const [name, source] of activeSurfaces) {
 
 const publicBooking = activeSurfaces[0][1];
 assert.match(publicBooking, /<label>Primer apellido<input[^>]*name="last_name"[^>]*required/);
-assert.match(publicBooking, /<label>Segundo apellido <span>opcional<\/span><input[^>]*name="second_last_name"/);
+assert.match(publicBooking, /<label>Segundo apellido <span>\(opcional\)<\/span><input[^>]*name="second_last_name"/);
 assert.match(publicBooking, /Completa nombre\(s\) y primer apellido\./);
 
 const admin = activeSurfaces[1][1];
