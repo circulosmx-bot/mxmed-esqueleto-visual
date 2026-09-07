@@ -1593,14 +1593,14 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 .mxpp-next-dialog__nav .btn:hover:not(:disabled) { background: #6c757d; color: #fff; }
 :is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-choose {
   padding: 6px 12px;
-  border: 1px solid #005684;
-  background: #005684;
+  border: 1px solid #01AFB7;
+  background: #01AFB7;
   color: #fff;
   font-family: inherit;
   line-height: 1.5;
   cursor: pointer;
 }
-:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-choose:hover { background: #00738f; border-color: #00738f; }
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-choose:hover { background: #008f96; border-color: #008f96; }
 :is(.mxpp-next-dialog, .mxpp-confirm-visual) button:focus-visible,
 .mxpp-agenda-compact__find:focus-visible { outline: 2px solid #113d59; outline-offset: 2px; }
 @media (max-width: 991.98px) {
@@ -1720,14 +1720,21 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 
 .mxpp-booking-modal__summary {
   margin-top: 0.78rem;
-  border: 1px solid #c7dfe8;
+  border: 1px solid #01AFB7;
   border-radius: 10px;
-  background: #f7fcfd;
+  background: #01AFB7;
+  color: #fff;
   padding: 0.68rem;
 }
 
 .mxpp-booking-modal__summary p {
   margin: 0;
+  color: #fff;
+  font-size: 1.15rem;
+}
+
+.mxpp-booking-modal__summary strong {
+  color: #fff;
 }
 
 .mxpp-booking-modal__summary p + p {
@@ -1905,9 +1912,20 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 }
 
 .mxpp-booking-modal__primary {
-  border: 1px solid #0b7189;
-  background: #0b7189;
+  border: 1px solid #01AFB7;
+  background: #01AFB7;
   color: #fff;
+}
+
+.mxpp-booking-modal__primary:hover:not(:disabled) {
+  border-color: #008f96;
+  background: #008f96;
+}
+
+.mxpp-booking-modal__primary:focus-visible,
+:is(.mxpp-next-dialog, .mxpp-confirm-visual) .mx-ag-next-slot-choose:focus-visible {
+  outline: 3px solid #006f75;
+  outline-offset: 2px;
 }
 
 .mxpp-booking-modal__secondary {
@@ -2562,7 +2580,10 @@ button.mxpp-hero-action:focus-visible {
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary p:first-child { grid-column: 1 / -1; }
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__form { margin-top: 0.5rem; gap: 0.5rem; }
 [data-mxpp-booking-step="patient"] .mxpp-booking-data-section { gap: 0.35rem 0.62rem; }
-[data-mxpp-booking-step="patient"] .mxpp-booking-data-section legend { margin-bottom: 0.35rem; }
+[data-mxpp-booking-step="patient"] .mxpp-booking-data-section legend {
+  margin-bottom: 0.35rem;
+  font-size: 1.2rem;
+}
 [data-mxpp-booking-step="patient"] textarea { min-height: 54px; }
 [data-mxpp-booking-step="patient"] .mxpp-booking-modal__actions { margin-top: 0.5rem; }
 @media (max-width: 600px) {

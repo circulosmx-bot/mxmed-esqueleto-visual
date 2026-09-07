@@ -97,6 +97,7 @@ try {
         await wait(`document.querySelectorAll('.mxpp-next-dialog__result').length===3`); await click('.mxpp-next-dialog__result button');
       }
       assert.ok(await step('confirm'));
+      assert.ok(await ev(`getComputedStyle(document.querySelector('[data-mxpp-booking-next]')).backgroundColor==='rgb(1, 175, 183)'&&getComputedStyle(document.querySelector('[data-mxpp-booking-next]')).color==='rgb(255, 255, 255)'`), 'confirmation progression CTA uses the booking primary color');
       const slot = await ev('JSON.stringify(__subjectTestState.selectedSlot)');
       assert.ok(await ev(`document.querySelector('.mxpp-confirm-specialty').innerText==='ENDOCRINÓLOGA'`));
       await click('[data-mxpp-booking-next]'); assert.ok(await step('subject'));
@@ -109,6 +110,7 @@ try {
       await ev(`document.querySelector('[data-mxpp-booking-subject="other"]').focus()`); await key('Enter',13); assert.ok(await step('patient'));
       assert.ok(await ev(`__subjectTestState.booker_is_patient===false&&!document.querySelector('[data-mxpp-booker-fields]').hidden&&document.querySelector('[name="booker.relationship"]').required`));
       assert.ok(await ev(`document.querySelector('#mxpp-booking-patient-title').textContent==='Reserva de cita'&&document.querySelector('#mxpp-booking-patient-section-title').textContent==='Datos del paciente'&&document.querySelector('[data-mxpp-booker-fields] legend').textContent==='Datos de quien solicita'&&document.querySelector('[data-mxpp-booking-submit]').textContent==='Continuar con la reserva'`), 'other-person hierarchy and CTA copy');
+      assert.ok(await ev(`(()=>{const summary=getComputedStyle(document.querySelector('[data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary'));const summaryText=getComputedStyle(document.querySelector('[data-mxpp-booking-step="patient"] .mxpp-booking-modal__summary p'));const patientHeading=getComputedStyle(document.querySelector('#mxpp-booking-patient-section-title'));const bookerHeading=getComputedStyle(document.querySelector('[data-mxpp-booker-fields] legend'));const cta=getComputedStyle(document.querySelector('[data-mxpp-booking-submit]'));return summary.backgroundColor==='rgb(1, 175, 183)'&&summaryText.color==='rgb(255, 255, 255)'&&parseFloat(summaryText.fontSize)>=18&&parseFloat(patientHeading.fontSize)>=19&&parseFloat(bookerHeading.fontSize)>=19&&cta.backgroundColor==='rgb(1, 175, 183)'&&cta.color==='rgb(255, 255, 255)'})()`), 'summary, section headings, and primary CTA visual contract');
       await fill({...patient,...booker,'booker.relationship':''}); await click('[data-mxpp-booking-submit]');
       assert.ok(await step('patient')); assert.ok(await ev(`document.querySelector('[data-mxpp-booking-message]').textContent.includes('relación')&&__subjectTestState.preparedPayload===null`));
       await fill({'booker.relationship':'madre'});
