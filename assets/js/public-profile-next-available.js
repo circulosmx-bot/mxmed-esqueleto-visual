@@ -1,3 +1,73 @@
+/* Global public search: merge server-calculated streams, never calculate availability here. */
+window.MxmedPublicGlobalAvailability = function (options) {
+  'use strict';
+  const {doctorId, consultorios, bookingUrl, fetcher = fetch, now = new Date()} = options;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+  }).formatToParts(now);
+  const p = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const today = `${p.year}-${p.month}-${p.day}`;
+  const instant = `${today} ${p.hour}:${p.minute}:${p.second}`;
+  const addDays = (date, count) => {
+    const value = new Date(date + 'T00:00:00Z');
+    value.setUTCDate(value.getUTCDate() + count);
+    return value.toISOString().slice(0, 10);
+  };
+  // Keep one fixed public 90-day horizon throughout pagination (exclusive upper bound).
+  const endDate = addDays(today, 90);
+  const streams = Object.keys(consultorios).filter(id => /^\d+$/.test(id)).map(id => ({
+    id, queue: [], cursor: today, exhausted: false, seen: new Set()
+  }));
+  const compare = (a, b) => a.start_at.localeCompare(b.start_at)
+    || a.consultorio_id.localeCompare(b.consultorio_id, 'en', {numeric: true})
+    || a.end_at.localeCompare(b.end_at);
+  const slots = [];
+  async function fill(stream, signal) {
+    while (!stream.queue.length && !stream.exhausted) {
+      const params = new URLSearchParams({doctor_id: doctorId, consultorio_id: stream.id,
+        mode: 'next', days: '3', limit_per_day: '0', start_date: stream.cursor});
+      const response = await fetcher('/api/agenda/index.php/public/availability?' + params, {
+        headers: {Accept: 'application/json'}, signal
+      });
+      const payload = await response.json();
+      if (!response.ok || payload.ok !== true || !Array.isArray(payload.data?.days)
+        || String(payload.meta?.consultorio_id_used || '') !== stream.id) throw new Error('availability');
+      const days = payload.data.days;
+      const dates = days.map(day => day.date).sort();
+      days.forEach(day => (day.slots || []).forEach(slot => {
+        if (!slot.start_at || !slot.end_at || slot.start_at <= instant
+          || slot.start_at.slice(0, 10) < stream.cursor || slot.start_at.slice(0, 10) >= endDate) return;
+        const key = `${doctorId}|${stream.id}|${slot.start_at}`;
+        if (stream.seen.has(key)) return;
+        stream.seen.add(key);
+        stream.queue.push({date: day.date, start_at: slot.start_at, end_at: slot.end_at,
+          consultorio_id: stream.id, consultorio_name: consultorios[stream.id],
+          doctor_id: doctorId, booking_url: bookingUrl});
+      }));
+      stream.queue.sort(compare);
+      const nextDate = dates.length ? addDays(dates[dates.length - 1], 1) : endDate;
+      stream.exhausted = days.length < 3 || nextDate >= endDate;
+      if (nextDate <= stream.cursor) throw new Error('cursor');
+      stream.cursor = nextDate;
+    }
+  }
+  return {
+    async page(offset, signal) {
+      // Refill every empty stream before choosing the next global result. Sorting a
+      // concatenation of independent pages would skip earlier results from another office.
+      while (slots.length < offset + 4) {
+        await Promise.all(streams.map(stream => fill(stream, signal)));
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        const ready = streams.filter(stream => stream.queue.length).sort((a, b) => compare(a.queue[0], b.queue[0]));
+        if (!ready.length) break;
+        slots.push(ready[0].queue.shift());
+      }
+      return {slots: slots.slice(offset, offset + 3), hasNext: slots.length > offset + 3};
+    }
+  };
+};
+
 /* Patient presentation over the existing public mode=next availability endpoint. */
 window.MxmedPublicNextAvailable = function (block, booking) {
   'use strict';
@@ -35,7 +105,7 @@ window.MxmedPublicNextAvailable = function (block, booking) {
   status.setAttribute('role', 'status');
   const results = create('div', '', 'mxpp-next-dialog__results mx-ag-next-slots-results');
   const info = create('div', '', 'mx-ag-next-slots-info-note');
-  info.append(icon('info-circle'), create('span', 'Las citas mostradas corresponden a la disponibilidad actual del médico y consultorio.'));
+  info.append(icon('info-circle'), create('span', 'Las citas mostradas corresponden a la disponibilidad actual del médico en sus consultorios.'));
   body.append(status, results, info);
   const nav = create('nav', '', 'mxpp-next-dialog__nav mx-ag-next-slots-modal-footer');
   nav.setAttribute('aria-label', 'Más citas disponibles');
@@ -46,8 +116,8 @@ window.MxmedPublicNextAvailable = function (block, booking) {
   nav.append(previous, next, footerClose);
   dialog.append(header, body, nav);
   document.body.append(dialog);
-  const names = JSON.parse(block.dataset.publicConsultorios || '{}');
-  let context, slots = [], offset = 0, startDate = '', exhausted = false, request = null;
+  const names = JSON.parse(block.dataset.nextPublicConsultorios || '{}');
+  let search, offset = 0, request = null;
 
   // Pagination slices server-produced slots; no schedules, capacity or private APIs here.
   async function showPage(target) {
@@ -60,41 +130,10 @@ window.MxmedPublicNextAvailable = function (block, booking) {
     request = controller;
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      while (slots.length < target + 3 && !exhausted) {
-        const params = new URLSearchParams({doctor_id: context.doctorId, mode: 'next', days: '3', limit_per_day: '0'});
-        if (context.consultorioId) params.set('consultorio_id', context.consultorioId);
-        if (startDate) params.set('start_date', startDate);
-        const response = await fetch('/api/agenda/index.php/public/availability?' + params, {
-          headers: {Accept: 'application/json'}, signal: controller.signal
-        });
-        const payload = await response.json();
-        if (!response.ok || payload.ok !== true || !Array.isArray(payload.data?.days)) throw new Error('availability');
-        if (request !== controller || !dialog.open) return;
-        const office = String(payload.meta?.consultorio_id_used || '');
-        if (!office || (context.consultorioId && context.consultorioId !== office)) throw new Error('context');
-        context.consultorioId = office;
-        // Compare SQL timestamps in the API's timezone, independently of the patient's timezone.
-        const parts = new Intl.DateTimeFormat('en-CA', {
-          timeZone: payload.meta?.timezone || 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
-        }).formatToParts(new Date());
-        const p = Object.fromEntries(parts.map(part => [part.type, part.value]));
-        const now = `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
-        const days = payload.data.days;
-        days.forEach(day => (day.slots || []).forEach(slot => {
-          if (!slot.start_at || !slot.end_at || slot.start_at <= now) return;
-          slots.push({date: day.date, start_at: slot.start_at, end_at: slot.end_at,
-            consultorio_id: office, doctor_id: context.doctorId, booking_url: context.bookingUrl});
-        }));
-        exhausted = days.length < 3;
-        if (days.length) {
-          const date = new Date(days[days.length - 1].date + 'T00:00:00Z');
-          date.setUTCDate(date.getUTCDate() + 1);
-          startDate = date.toISOString().slice(0, 10);
-        }
-      }
+      const page = await search.page(target, controller.signal);
+      if (request !== controller || !dialog.open) return;
       offset = target;
-      const visible = slots.slice(offset, offset + 3);
+      const visible = page.slots;
       status.textContent = visible.length ? '' : 'No encontramos citas disponibles próximamente.';
       visible.forEach(slot => {
         const card = create('article', '', 'mxpp-next-dialog__result mx-ag-next-slot-card');
@@ -125,7 +164,7 @@ window.MxmedPublicNextAvailable = function (block, booking) {
         results.append(card);
       });
       previous.disabled = offset === 0;
-      next.disabled = exhausted && offset + 3 >= slots.length;
+      next.disabled = !page.hasNext;
     } catch (_) {
       if (request !== controller || !dialog.open) return;
       status.textContent = 'No pudimos consultar los horarios. Cierra esta ventana e inténtalo de nuevo.';
@@ -139,8 +178,10 @@ window.MxmedPublicNextAvailable = function (block, booking) {
     }
   }
   trigger.addEventListener('click', () => {
-    context = booking.getContext();
-    slots = []; offset = 0; startDate = ''; exhausted = false;
+    const context = booking.getContext();
+    search = window.MxmedPublicGlobalAvailability({doctorId: context.doctorId,
+      consultorios: names, bookingUrl: context.bookingUrl});
+    offset = 0;
     dialog.showModal();
     close.focus({preventScroll: true});
     showPage(0);

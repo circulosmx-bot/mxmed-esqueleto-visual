@@ -1,0 +1,174 @@
+{
+  "report": [
+    {
+      "name": "desktop-1440",
+      "first": [
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n18:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n19:00 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n19:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir"
+      ],
+      "second": [
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n09:00 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n09:30 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n10:00 h\nCONSULTORIO\nMAC NORTE\nElegir"
+      ],
+      "mixed": [
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n13:30 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nLunes, 14 de Septiembre 2026\n16:00 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nLunes, 14 de Septiembre 2026\n16:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir"
+      ],
+      "selected": {
+        "date": "2026-09-12",
+        "start_at": "2026-09-12 09:00:00",
+        "end_at": "2026-09-12 09:30:00",
+        "consultorio_id": "3",
+        "consultorio_name": "MAC Norte",
+        "doctor_id": "1",
+        "booking_url": "/public-book.html?doctor_id=1"
+      },
+      "geometry": {
+        "width": 800,
+        "left": 320,
+        "right": 1120,
+        "viewport": 1440,
+        "overflow": false,
+        "cards": [
+          {
+            "scroll": 760,
+            "width": 760
+          },
+          {
+            "scroll": 760,
+            "width": 760
+          },
+          {
+            "scroll": 760,
+            "width": 760
+          }
+        ]
+      },
+      "normalAgendaUnchanged": true,
+      "previousNext": true,
+      "bookingHandoff": true
+    },
+    {
+      "name": "desktop-1366",
+      "first": [
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n18:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n19:00 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n19:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir"
+      ],
+      "second": [
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n09:00 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n09:30 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n10:00 h\nCONSULTORIO\nMAC NORTE\nElegir"
+      ],
+      "mixed": [
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n13:30 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nLunes, 14 de Septiembre 2026\n16:00 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nLunes, 14 de Septiembre 2026\n16:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir"
+      ],
+      "selected": {
+        "date": "2026-09-12",
+        "start_at": "2026-09-12 09:00:00",
+        "end_at": "2026-09-12 09:30:00",
+        "consultorio_id": "3",
+        "consultorio_name": "MAC Norte",
+        "doctor_id": "1",
+        "booking_url": "/public-book.html?doctor_id=1"
+      },
+      "geometry": {
+        "width": 800,
+        "left": 283,
+        "right": 1083,
+        "viewport": 1366,
+        "overflow": false,
+        "cards": [
+          {
+            "scroll": 760,
+            "width": 760
+          },
+          {
+            "scroll": 760,
+            "width": 760
+          },
+          {
+            "scroll": 760,
+            "width": 760
+          }
+        ]
+      },
+      "normalAgendaUnchanged": true,
+      "previousNext": true,
+      "bookingHandoff": true
+    },
+    {
+      "name": "mobile",
+      "first": [
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n18:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n19:00 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nViernes, 11 de Septiembre 2026\n19:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir"
+      ],
+      "second": [
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n09:00 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n09:30 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n10:00 h\nCONSULTORIO\nMAC NORTE\nElegir"
+      ],
+      "mixed": [
+        "FECHA Y HORA\nSábado, 12 de Septiembre 2026\n13:30 h\nCONSULTORIO\nMAC NORTE\nElegir",
+        "FECHA Y HORA\nLunes, 14 de Septiembre 2026\n16:00 h\nCONSULTORIO\nSTAR MÉDICA\nElegir",
+        "FECHA Y HORA\nLunes, 14 de Septiembre 2026\n16:30 h\nCONSULTORIO\nSTAR MÉDICA\nElegir"
+      ],
+      "selected": {
+        "date": "2026-09-12",
+        "start_at": "2026-09-12 09:00:00",
+        "end_at": "2026-09-12 09:30:00",
+        "consultorio_id": "3",
+        "consultorio_name": "MAC Norte",
+        "doctor_id": "1",
+        "booking_url": "/public-book.html?doctor_id=1"
+      },
+      "geometry": {
+        "width": 366,
+        "left": 12,
+        "right": 378,
+        "viewport": 390,
+        "overflow": false,
+        "cards": [
+          {
+            "scroll": 326,
+            "width": 326
+          },
+          {
+            "scroll": 326,
+            "width": 326
+          },
+          {
+            "scroll": 326,
+            "width": 326
+          }
+        ]
+      },
+      "normalAgendaUnchanged": true,
+      "previousNext": true,
+      "bookingHandoff": true
+    }
+  ],
+  "freeGating": true,
+  "requestsGetOnly": true,
+  "jsErrors": [],
+  "availabilityRequests": [
+    "/api/agenda/index.php/public/availability?doctor_id=1&mode=next&days=3&limit_per_day=0",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=1&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=2&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=3&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&mode=next&days=3&limit_per_day=0",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=1&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=2&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=3&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&mode=next&days=3&limit_per_day=0",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=1&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=2&mode=next&days=3&limit_per_day=0&start_date=2026-09-11",
+    "/api/agenda/index.php/public/availability?doctor_id=1&consultorio_id=3&mode=next&days=3&limit_per_day=0&start_date=2026-09-11"
+  ]
+}

@@ -1127,6 +1127,9 @@ if (isLocalDevRequest()) {
           data-doctor-name="<?= h($displayName ?? 'Médico') ?>"
           data-booking-url="<?= h($bookAppointmentUrl) ?>"
           data-public-consultorios="<?= h(json_encode(array_column($consultorioPanels, 'name', 'id'), JSON_UNESCAPED_UNICODE)) ?>"
+          data-next-public-consultorios="<?= h(json_encode(array_column(array_filter($consultorios, static function ($office): bool {
+              return is_array($office) && toBool($office['is_public'] ?? false) && toBool($office['is_active'] ?? false);
+          }), 'public_name', 'consultorio_id'), JSON_UNESCAPED_UNICODE)) ?>"
           <?php if ($agendaMockMode !== null): ?>
             data-mock-mode="<?= h($agendaMockMode) ?>"
             data-mock-density="16,8,2|4,16,1|8,3,16"
