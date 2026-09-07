@@ -15,11 +15,14 @@ assert(markup.includes('id="ag_event_actions_modal"'), 'uses existing appointmen
 assert(markup.includes('id="ag_event_identity_review_wrap"'), 'renders a bounded identity review block in the detail modal');
 assert(markup.includes('Declaración del paciente') && markup.includes('Resolución de identidad'), 'separates declaration and identity resolution labels');
 assert(markup.includes('Mantener como paciente nuevo'), 'includes the keep-new action');
+assert(markup.includes('Desactivar paciente duplicado') && script.includes('Registro duplicado desactivado'), 'extends the existing appointment detail with bounded cleanup status/action');
 assert(script.includes('getAmbiguousPatientReconciliation') && script.includes('resolveAmbiguousPatientReconciliation'), 'uses the private reconciliation endpoint from admin agenda only');
+assert(script.includes('cleanupAmbiguousPatientReconciliation') && script.includes('window.confirm'), 'cleanup remains a confirmed private admin action');
 assert(script.includes("action: 'relink_existing'") && script.includes("action: 'keep_new'"), 'submits only the two permitted actions');
 const reviewMarkup = markup.slice(markup.indexOf('id="ag_event_identity_review_wrap"'), markup.indexOf('id="ag_event_timeline_wrap"'));
 assert(script.includes("button.dataset.agIdentityRelink = id") && !reviewMarkup.includes('patient_id'), 'candidate internal identifiers are not rendered in the review markup');
 assert(css.includes('.mx-ag-identity-review') && css.includes('@media (max-width: 767.98px)'), 'includes desktop and mobile review styles');
 assert(route.includes("$sub === 'identity-reconciliation'") && route.includes('AmbiguousPatientReconciliationController'), 'private appointment route owns reconciliation');
+assert(route.includes("($segments[3] ?? '') === 'cleanup'") && !markup.includes('identity-reconciliation/cleanup'), 'cleanup endpoint is private and absent from public markup');
 
 console.log('AmbiguousPatientReconciliationUiContractTest PASS');

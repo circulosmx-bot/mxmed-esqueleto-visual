@@ -12869,6 +12869,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 #ag_event_actions_modal .mx-ag-identity-candidate-name{ color: #153e57; font-size: .92rem; font-weight: 800; }
 #ag_event_actions_modal .mx-ag-identity-candidate-meta{ color: #5f798b; font-size: .79rem; line-height: 1.35; }
 #ag_event_actions_modal .mx-ag-identity-actions{ display: flex; flex-wrap: wrap; gap: 8px; }
+#ag_event_actions_modal .mx-ag-identity-cleanup{
+  border-top: 1px solid #dce8f1;
+  padding-top: 10px;
+  display: grid;
+  gap: 7px;
+  color: #456578;
+}
+#ag_event_actions_modal .mx-ag-identity-cleanup .btn{ justify-self: start; }
 #ag_event_actions_modal .mx-ag-identity-feedback{ color: #416276; }
 #ag_event_actions_modal .mx-ag-identity-feedback.text-success{ color: #177756 !important; }
 @media (max-width: 767.98px){

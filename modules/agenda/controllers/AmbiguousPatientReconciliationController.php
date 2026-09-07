@@ -39,6 +39,11 @@ final class AmbiguousPatientReconciliationController
         return $this->run(fn() => $this->serviceOrFail()->resolve($appointmentId, $payload, $this->actorContext));
     }
 
+    public function cleanup(string $appointmentId, array $payload): array
+    {
+        return $this->run(fn() => $this->serviceOrFail()->cleanup($appointmentId, $payload, $this->actorContext));
+    }
+
     private function serviceOrFail(): AmbiguousPatientReconciliationService
     {
         if ($this->service === null) {

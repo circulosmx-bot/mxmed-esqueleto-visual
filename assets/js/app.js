@@ -3548,6 +3548,10 @@ console.info('app.js loaded :: 20251123a');
     eventIdentityCandidates: panel.querySelector('#ag_event_identity_candidates'),
     eventIdentityActions: panel.querySelector('#ag_event_identity_actions'),
     eventIdentityKeepNewBtn: panel.querySelector('#ag_event_identity_keep_new_btn'),
+    eventIdentityCleanupWrap: panel.querySelector('#ag_event_identity_cleanup_wrap'),
+    eventIdentityCleanupStatus: panel.querySelector('#ag_event_identity_cleanup_status'),
+    eventIdentityCleanupAction: panel.querySelector('#ag_event_identity_cleanup_action'),
+    eventIdentityCleanupBtn: panel.querySelector('#ag_event_identity_cleanup_btn'),
     eventIdentityFeedback: panel.querySelector('#ag_event_identity_feedback'),
     eventActionConsultorioWrap: panel.querySelector('#ag_event_action_consultorio_wrap'),
     eventActionConsultorio: panel.querySelector('#ag_event_action_consultorio'),
@@ -10682,6 +10686,10 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventIdentityCandidates) els.eventIdentityCandidates.replaceChildren();
     if(els.eventIdentityActions) els.eventIdentityActions.classList.add('d-none');
     if(els.eventIdentityKeepNewBtn) els.eventIdentityKeepNewBtn.disabled = false;
+    if(els.eventIdentityCleanupWrap) els.eventIdentityCleanupWrap.classList.add('d-none');
+    if(els.eventIdentityCleanupAction) els.eventIdentityCleanupAction.classList.add('d-none');
+    if(els.eventIdentityCleanupStatus) els.eventIdentityCleanupStatus.textContent = '';
+    if(els.eventIdentityCleanupBtn) els.eventIdentityCleanupBtn.disabled = false;
     if(els.eventIdentityFeedback){
       els.eventIdentityFeedback.textContent = '';
       els.eventIdentityFeedback.className = 'small d-none';
@@ -10706,6 +10714,10 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventIdentityStatus) els.eventIdentityStatus.textContent = sanitizeText(review?.identity_status || 'Coincidencia confirmada');
     if(els.eventIdentityWarning) els.eventIdentityWarning.classList.toggle('d-none', !requiresReview);
     if(els.eventIdentityActions) els.eventIdentityActions.classList.toggle('d-none', !requiresReview);
+    const cleanup = review?.cleanup || {};
+    if(els.eventIdentityCleanupWrap) els.eventIdentityCleanupWrap.classList.toggle('d-none', !cleanup?.eligible && !cleanup?.status);
+    if(els.eventIdentityCleanupStatus) els.eventIdentityCleanupStatus.textContent = sanitizeText(cleanup?.status || '');
+    if(els.eventIdentityCleanupAction) els.eventIdentityCleanupAction.classList.toggle('d-none', cleanup?.eligible !== true);
     if(!(els.eventIdentityCandidates instanceof HTMLElement)) return;
     els.eventIdentityCandidates.replaceChildren();
     if(!requiresReview) return;
@@ -10780,6 +10792,24 @@ console.info('app.js loaded :: 20251123a');
       if(els.eventIdentityKeepNewBtn) els.eventIdentityKeepNewBtn.disabled = false;
       Array.from(els.eventIdentityCandidates?.querySelectorAll?.('[data-ag-identity-relink]') || []).forEach((button)=>{ button.disabled = false; });
     }
+  };
+  const submitEventIdentityCleanup = async ()=>{
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
+    if(!appointmentId || eventIdentityReviewBusy) return;
+    eventIdentityReviewBusy = true;
+    if(els.eventIdentityCleanupBtn) els.eventIdentityCleanupBtn.disabled = true;
+    setEventIdentityFeedback('Desactivando registro duplicado…');
+    try{
+      const result = await AgendaApiClient.cleanupAmbiguousPatientReconciliation(appointmentId, { confirmed: true });
+      if(!result?.ok || result?.json?.ok !== true){
+        setEventIdentityFeedback(sanitizeText(result?.json?.message || 'No fue posible desactivar el registro.'), 'danger');
+        return;
+      }
+      await loadEventIdentityReview(appointmentId);
+      setEventIdentityFeedback('Registro duplicado desactivado.', 'success');
+      loadEventTimeline(appointmentId).catch(()=> null);
+    }catch(_){ setEventIdentityFeedback('No fue posible desactivar el registro.', 'danger'); }
+    finally{ eventIdentityReviewBusy = false; if(els.eventIdentityCleanupBtn) els.eventIdentityCleanupBtn.disabled = false; }
   };
   const resetEventActionModalState = ()=>{
     eventActionCurrentSection = 'detail';
@@ -16772,6 +16802,13 @@ console.info('app.js loaded :: 20251123a');
         headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify(payload || {})
+      });
+      return { ok: resp.ok, status: resp.status, json: await resp.json().catch(()=> null) };
+    },
+    async cleanupAmbiguousPatientReconciliation(appointmentId, payload = {}){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/identity-reconciliation/cleanup`, {
+        method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload || {})
       });
       return { ok: resp.ok, status: resp.status, json: await resp.json().catch(()=> null) };
     },
@@ -24915,6 +24952,11 @@ console.info('app.js loaded :: 20251123a');
     els.eventIdentityKeepNewBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       submitEventIdentityReconciliation({ action: 'keep_new' }).catch(()=> null);
+    });
+    els.eventIdentityCleanupBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      if(!window.confirm('El registro duplicado quedará inactivo. Sus contactos e historial de auditoría se conservarán; no se eliminarán datos clínicos. ¿Deseas continuar?')) return;
+      submitEventIdentityCleanup().catch(()=> null);
     });
     els.eventIdentityCandidates?.addEventListener('click', (event)=>{
       const button = event.target.closest?.('[data-ag-identity-relink]');

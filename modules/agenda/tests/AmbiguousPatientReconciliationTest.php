@@ -114,4 +114,62 @@ pdb08dAssert(($controller->show('apt_ambiguous')['error'] ?? '') === 'forbidden'
 $controller->setActorContext(pdb08dActor());
 pdb08dAssert(($controller->show('apt_ambiguous')['ok'] ?? false) === true, 'authorized doctor/operator scope accepted');
 
+function pdb08eCleanRelinkedCase(): array
+{
+    $pdo = pdb08dDatabase(); pdb08dSeedCase($pdo);
+    // A single historical candidate makes resolver-exclusion assertion deterministic.
+    $pdo->exec("DELETE FROM patients_contacts WHERE patient_id = 'p_candidate_b'");
+    $pdo->exec("DELETE FROM patients_doctor_links WHERE patient_id = 'p_candidate_b'");
+    $pdo->exec("DELETE FROM patients_patients WHERE patient_id = 'p_candidate_b'");
+    $service = new AmbiguousPatientReconciliationService($pdo);
+    $service->resolve('apt_ambiguous', ['action' => 'relink_existing', 'candidate_patient_id' => 'p_candidate_a'], pdb08dActor());
+    return [$pdo, $service];
+}
+
+// PDB08E-B happy path preserves the source/contact/audit trail while deactivating the exact duplicate.
+[$pdo, $service] = pdb08eCleanRelinkedCase();
+$eligible = $service->review('apt_ambiguous', pdb08dActor());
+pdb08dAssert(($eligible['cleanup']['eligible'] ?? false) === true, 'only a completed relinked preclinical orphan is offered cleanup');
+$cleanup = $service->cleanup('apt_ambiguous', ['confirmed' => true], pdb08dActor());
+pdb08dAssert($cleanup['idempotent'] === false && $pdo->query("SELECT status FROM patients_patients WHERE patient_id = 'p_new'")->fetchColumn() === 'inactive', 'safe orphan patient is made inactive');
+pdb08dAssert($pdo->query("SELECT status FROM patients_doctor_links WHERE patient_id = 'p_new'")->fetchColumn() === 'inactive' && $pdo->query("SELECT ended_at FROM patients_doctor_links WHERE patient_id = 'p_new'")->fetchColumn() !== null, 'original doctor link is ended instead of deleted');
+pdb08dAssert((int)$pdo->query("SELECT COUNT(*) FROM patients_contacts WHERE patient_id = 'p_new'")->fetchColumn() === 1 && $pdo->query("SELECT patient_id FROM agenda_appointments WHERE appointment_id = 'apt_ambiguous'")->fetchColumn() === 'p_candidate_a', 'contacts remain and appointment retains canonical patient');
+pdb08dAssert((int)$pdo->query("SELECT COUNT(*) FROM agenda_appointment_events WHERE event_type = 'preclinical_duplicate_deactivated'")->fetchColumn() === 1, 'one immutable cleanup audit event exists');
+pdb08dAssert(($service->review('apt_ambiguous', pdb08dActor())['cleanup']['status'] ?? '') === 'Registro duplicado desactivado', 'resolved cleanup status is read only');
+$resolver = new \Patients\Services\PublicBookingPatientIdentityResolver($pdo);
+$candidates = $resolver->eligibleReviewCandidates('doctor_a', ['name' => 'Elena Mora', 'dob' => '1988-08-08', 'gender' => 'F', 'phone' => '4490000008', 'email' => 'elena@example.test']);
+pdb08dAssert(count($candidates) === 1 && $candidates[0]['patient_id'] === 'p_candidate_a', 'inactive duplicate is excluded from future identity resolution');
+
+// Repeat and concurrent-like retries become a successful no-op with no duplicate event.
+$retry = $service->cleanup('apt_ambiguous', ['confirmed' => true], pdb08dActor());
+$secondService = new AmbiguousPatientReconciliationService($pdo);
+$concurrentRetry = $secondService->cleanup('apt_ambiguous', ['confirmed' => true], pdb08dActor());
+pdb08dAssert($retry['idempotent'] === true && $concurrentRetry['idempotent'] === true && (int)$pdo->query("SELECT COUNT(*) FROM agenda_appointment_events WHERE event_type = 'preclinical_duplicate_deactivated'")->fetchColumn() === 1, 'cleanup is idempotent and concurrent-safe');
+
+// A newly-owned appointment or clinical record appearing after the UI review blocks the transactional recheck.
+[$pdo, $service] = pdb08eCleanRelinkedCase();
+$pdo->exec("INSERT INTO agenda_appointments (appointment_id, doctor_id, consultorio_id, patient_id, status) VALUES ('apt_race', 'doctor_a', 'consultorio_a', 'p_new', 'confirmed')");
+try { $service->cleanup('apt_ambiguous', ['confirmed' => true], pdb08dActor()); throw new RuntimeException('new reference cleanup accepted'); }
+catch (ReconciliationException $e) { pdb08dAssert($e->codeName === 'unsafe_orphan', 'new appointment blocks write-time orphan predicate'); }
+pdb08dAssert($pdo->query("SELECT status FROM patients_patients WHERE patient_id = 'p_new'")->fetchColumn() === 'active', 'race block leaves source active');
+
+[$pdo, $service] = pdb08eCleanRelinkedCase();
+$pdo->exec('CREATE TABLE clinical_encounters (encounter_id INTEGER PRIMARY KEY, patient_id TEXT)');
+$pdo->exec("INSERT INTO clinical_encounters (patient_id) VALUES ('p_new')");
+try { $service->cleanup('apt_ambiguous', ['confirmed' => true], pdb08dActor()); throw new RuntimeException('clinical cleanup accepted'); }
+catch (ReconciliationException $e) { pdb08dAssert($e->codeName === 'unsafe_orphan', 'clinical dependency blocks cleanup'); }
+
+[$pdo, $service] = pdb08eCleanRelinkedCase();
+$pdo->exec("INSERT INTO patients_doctor_links (link_id, doctor_id, patient_id, status, ended_at) VALUES ('l_extra', 'doctor_b', 'p_new', 'active', NULL)");
+try { $service->cleanup('apt_ambiguous', ['confirmed' => true], pdb08dActor()); throw new RuntimeException('extra-link cleanup accepted'); }
+catch (ReconciliationException $e) { pdb08dAssert($e->codeName === 'unsafe_orphan', 'additional doctor link blocks cleanup'); }
+
+[$pdo, $service] = pdb08eCleanRelinkedCase();
+try { $service->cleanup('apt_ambiguous', ['confirmed' => true, 'source_patient_id' => 'p_candidate_a'], pdb08dActor()); throw new RuntimeException('arbitrary source accepted'); }
+catch (ReconciliationException $e) { pdb08dAssert($e->codeName === 'forbidden', 'arbitrary source id is rejected'); }
+try { $service->cleanup('apt_ambiguous', ['confirmed' => true], pdb08dActor('doctor_b')); throw new RuntimeException('cross doctor cleanup accepted'); }
+catch (ReconciliationException $e) { pdb08dAssert($e->codeName === 'forbidden', 'cleanup enforces doctor scope'); }
+try { $service->cleanup('apt_ambiguous', ['confirmed' => false], pdb08dActor()); throw new RuntimeException('unconfirmed cleanup accepted'); }
+catch (ReconciliationException $e) { pdb08dAssert($e->codeName === 'confirmation_required', 'cleanup requires explicit admin confirmation'); }
+
 echo "AmbiguousPatientReconciliationTest PASS\n";

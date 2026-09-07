@@ -1064,7 +1064,9 @@ try {
                     }
                     if ($method === 'GET') {
                         $response = $reconciliation->show($segments[1]);
-                    } elseif ($method === 'POST') {
+                    } elseif ($method === 'POST' && ($segments[3] ?? '') === 'cleanup') {
+                        $response = $reconciliation->cleanup($segments[1], read_json_body());
+                    } elseif ($method === 'POST' && !isset($segments[3])) {
                         $response = $reconciliation->resolve($segments[1], read_json_body());
                     } else {
                         $response = ['ok' => false, 'error' => 'not_found', 'message' => 'route not found', 'data' => null, 'meta' => (object)[]];

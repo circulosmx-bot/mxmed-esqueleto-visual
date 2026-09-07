@@ -20,6 +20,8 @@ final class AmbiguousPatientReconciliationService
     private const FLOW_TABLE = 'agenda_public_appointment_flows';
     private const APPOINTMENTS_TABLE = 'agenda_appointments';
     private const EVENTS_TABLE = 'agenda_appointment_events';
+    private const PATIENTS_TABLE = 'patients_patients';
+    private const LINKS_TABLE = 'patients_doctor_links';
 
     public function __construct(private PDO $pdo)
     {
@@ -121,6 +123,49 @@ final class AmbiguousPatientReconciliationService
         }
     }
 
+    /** Deactivates only the exact preclinical source left by a completed relink. */
+    public function cleanup(string $appointmentId, array $input, array $actor): array
+    {
+        if (($input['confirmed'] ?? false) !== true) {
+            throw new ReconciliationException('confirmation_required', 'Confirma la desactivación del registro duplicado.');
+        }
+        $this->pdo->beginTransaction();
+        try {
+            $appointment = $this->findAppointment($appointmentId, true);
+            $this->assertPrivateDoctorScope($appointment, $actor);
+            $flow = $this->findFlow($appointmentId, true);
+            if ($flow === null) throw new ReconciliationException('not_found', 'Cita no disponible para conciliación.');
+            [$payload, $identity, $reconciliation, $sourcePatientId, $targetPatientId] = $this->cleanupContext($appointment, $flow, $input);
+            $patient = $this->findPatient($sourcePatientId, true);
+            $links = $this->findDoctorLinks($sourcePatientId, true);
+            $cleanup = is_array($reconciliation['cleanup'] ?? null) ? $reconciliation['cleanup'] : null;
+            if (($cleanup['status'] ?? '') === 'deactivated' && ($patient['status'] ?? '') === 'inactive' && $this->allLinksInactive($links)) {
+                $this->pdo->commit();
+                return ['appointment_id' => $appointmentId, 'status' => 'deactivated', 'idempotent' => true];
+            }
+            $this->assertSafeOrphan($sourcePatientId, (string)$appointment['doctor_id'], $links);
+            if (($patient['status'] ?? '') !== 'active') throw new ReconciliationException('conflict', 'El registro ya no está disponible para esta desactivación.');
+            $now = $this->now();
+            $this->deactivatePatient($sourcePatientId, $now);
+            $this->endDoctorLink((string)$links[0]['link_id'], $now);
+            $reconciliation['cleanup'] = [
+                'status' => 'deactivated', 'action' => 'deactivate_preclinical_duplicate',
+                'cleanup_at' => $now, 'cleanup_by' => $this->actorReference($actor),
+                'source_patient_id' => $sourcePatientId, 'target_patient_id' => $targetPatientId,
+                'reason' => 'safe_preclinical_orphan_after_relink',
+            ];
+            $identity['admin_reconciliation'] = $reconciliation;
+            $payload['patient_identity_resolution'] = $identity;
+            $this->updateFlowPayload((int)$flow['flow_id'], $payload);
+            $this->appendAuditEvent($appointmentId, 'deactivate_preclinical_duplicate', $sourcePatientId, $targetPatientId, $actor, $now, 'preclinical_duplicate_deactivated', 'safe_preclinical_orphan_after_relink');
+            $this->pdo->commit();
+            return ['appointment_id' => $appointmentId, 'status' => 'deactivated', 'idempotent' => false];
+        } catch (\Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
+    }
+
     private function buildReview(array $appointment, array $flow): array
     {
         $payload = $this->decodePayload($flow);
@@ -133,6 +178,7 @@ final class AmbiguousPatientReconciliationService
         $ambiguous = ($identity['status'] ?? '') === 'ambiguous';
         $currentPatientId = trim((string)($appointment['patient_id'] ?? ''));
 
+        $cleanup = $this->cleanupReview($appointment, $identity, $reconciliation);
         return [
             'appointment_id' => (string)$appointment['appointment_id'],
             'patient_type' => $this->patientTypeLabel((string)($payload['patient_type'] ?? '')),
@@ -148,7 +194,26 @@ final class AmbiguousPatientReconciliationService
                 'status' => $this->reconciliationStatusLabel((string)($reconciliation['status'] ?? '')),
                 'resolved_at' => (string)($reconciliation['resolved_at'] ?? ''),
             ],
+            'cleanup' => $cleanup,
         ];
+    }
+
+    private function cleanupReview(array $appointment, array $identity, ?array $reconciliation): array
+    {
+        if ($reconciliation === null || ($reconciliation['action'] ?? '') !== 'relink_existing') return ['eligible' => false, 'status' => ''];
+        if (($reconciliation['cleanup']['status'] ?? '') === 'deactivated') return ['eligible' => false, 'status' => 'Registro duplicado desactivado'];
+        try {
+            $source = trim((string)($reconciliation['previous_patient_id'] ?? ''));
+            $target = trim((string)($reconciliation['resulting_patient_id'] ?? ''));
+            if (($identity['status'] ?? '') !== 'ambiguous' || $source === '' || $target === '' || $target !== (string)$appointment['patient_id']) throw new RuntimeException();
+            $patient = $this->findPatient($source, false);
+            $links = $this->findDoctorLinks($source, false);
+            if (($patient['status'] ?? '') !== 'active') throw new RuntimeException();
+            $this->assertSafeOrphan($source, (string)$appointment['doctor_id'], $links);
+            return ['eligible' => true, 'status' => ''];
+        } catch (\Throwable) {
+            return ['eligible' => false, 'status' => 'La desactivación simple ya no es segura; requiere conciliación avanzada.'];
+        }
     }
 
     private function eligibleCandidates(array $appointment, array $payload, string $excludePatientId): array
@@ -220,6 +285,98 @@ final class AmbiguousPatientReconciliationService
         }
     }
 
+    /** Re-derives the source from immutable reconciliation state; browser ids are never trusted. */
+    private function cleanupContext(array $appointment, array $flow, array $input): array
+    {
+        $payload = $this->decodePayload($flow);
+        $identity = is_array($payload['patient_identity_resolution'] ?? null) ? $payload['patient_identity_resolution'] : [];
+        $reconciliation = is_array($identity['admin_reconciliation'] ?? null) ? $identity['admin_reconciliation'] : [];
+        $source = trim((string)($reconciliation['previous_patient_id'] ?? ''));
+        $target = trim((string)($reconciliation['resulting_patient_id'] ?? ''));
+        if (($identity['status'] ?? '') !== 'ambiguous' || ($reconciliation['action'] ?? '') !== 'relink_existing' || $source === '' || $target === '' || $source === $target || $target !== (string)$appointment['patient_id']) {
+            throw new ReconciliationException('conflict', 'Este registro no cumple los requisitos para desactivación segura.');
+        }
+        $requested = trim((string)($input['source_patient_id'] ?? ''));
+        if ($requested !== '' && $requested !== $source) throw new ReconciliationException('forbidden', 'El registro indicado no corresponde a esta conciliación.');
+        return [$payload, $identity, $reconciliation, $source, $target];
+    }
+
+    private function findPatient(string $patientId, bool $forUpdate): array
+    {
+        if (!$this->tableExists(self::PATIENTS_TABLE)) throw new ReconciliationException('conflict', 'El registro no está disponible para esta desactivación.');
+        $stmt = $this->pdo->prepare('SELECT * FROM ' . self::PATIENTS_TABLE . ' WHERE patient_id = :patient_id LIMIT 1' . $this->forUpdate($forUpdate));
+        $stmt->execute(['patient_id' => $patientId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) throw new ReconciliationException('not_found', 'Registro de paciente no encontrado.');
+        return $row;
+    }
+
+    private function findDoctorLinks(string $patientId, bool $forUpdate): array
+    {
+        if (!$this->tableExists(self::LINKS_TABLE)) throw new ReconciliationException('conflict', 'No es posible validar la relación profesional del registro.');
+        $stmt = $this->pdo->prepare('SELECT * FROM ' . self::LINKS_TABLE . ' WHERE patient_id = :patient_id' . $this->forUpdate($forUpdate));
+        $stmt->execute(['patient_id' => $patientId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Locks/reference-checks every known ownership surface before mutation. */
+    private function assertSafeOrphan(string $patientId, string $doctorId, array $links): void
+    {
+        $activeLinks = array_values(array_filter($links, fn(array $link): bool => ($link['status'] ?? '') === 'active' && empty($link['ended_at'])));
+        if (count($links) !== 1 || count($activeLinks) !== 1 || (string)($activeLinks[0]['doctor_id'] ?? '') !== $doctorId) $this->unsafeOrphan();
+        foreach ([
+            self::APPOINTMENTS_TABLE, 'agenda_patient_flags', 'agenda_patient_incidents', 'agenda_waitlist_entries',
+            'clinical_encounters', 'clinical_record_entries', 'clinical_consents', 'clinical_cases', 'clinical_documents', 'hospital_stays',
+            'patients_profiles', 'patients_addresses', 'patients_consents',
+            'clinical_patient_identity_bridge', 'patient_identity_resolutions', 'patient_identity_legacy_links',
+        ] as $table) {
+            if ($this->tableHasPatientId($table) && $this->hasReference($table, 'patient_id', $patientId)) $this->unsafeOrphan();
+        }
+        foreach ([
+            ['clinical_patient_identity_bridge', 'canonical_patient_id'], ['patient_identity_resolutions', 'resolved_patient_id'], ['patient_identity_legacy_links', 'canonical_patient_id'],
+        ] as [$table, $column]) {
+            if ($this->tableExists($table) && $this->columnExists($table, $column) && $this->hasReference($table, $column, $patientId)) $this->unsafeOrphan();
+        }
+        if ($this->tableExists('clinical_case_items') && $this->tableExists('clinical_cases') && $this->columnExists('clinical_case_items', 'case_id') && $this->columnExists('clinical_cases', 'case_id')) {
+            $sql = 'SELECT ci.case_id FROM clinical_case_items ci JOIN clinical_cases cc ON cc.case_id = ci.case_id WHERE cc.patient_id = :patient_id LIMIT 1' . $this->forUpdate($this->pdo->inTransaction());
+            $stmt = $this->pdo->prepare($sql); $stmt->execute(['patient_id' => $patientId]);
+            if ($stmt->fetchColumn() !== false) $this->unsafeOrphan();
+        }
+    }
+
+    private function hasReference(string $table, string $column, string $patientId): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT ' . $column . ' FROM ' . $table . ' WHERE ' . $column . ' = :patient_id LIMIT 1' . $this->forUpdate($this->pdo->inTransaction()));
+        $stmt->execute(['patient_id' => $patientId]);
+        return $stmt->fetchColumn() !== false;
+    }
+
+    private function unsafeOrphan(): never
+    {
+        throw new ReconciliationException('unsafe_orphan', 'El registro ya tiene información asociada y no puede desactivarse mediante esta acción.');
+    }
+
+    private function allLinksInactive(array $links): bool
+    {
+        return count($links) === 1 && ($links[0]['status'] ?? '') === 'inactive' && !empty($links[0]['ended_at']);
+    }
+
+    private function deactivatePatient(string $patientId, string $at): void
+    {
+        $columns = ['status = :status']; $params = ['status' => 'inactive', 'patient_id' => $patientId];
+        if ($this->columnExists(self::PATIENTS_TABLE, 'updated_at')) { $columns[] = 'updated_at = :updated_at'; $params['updated_at'] = $at; }
+        $stmt = $this->pdo->prepare('UPDATE ' . self::PATIENTS_TABLE . ' SET ' . implode(', ', $columns) . ' WHERE patient_id = :patient_id AND status = :expected_status');
+        $params['expected_status'] = 'active'; $stmt->execute($params);
+        if ($stmt->rowCount() !== 1) throw new ReconciliationException('conflict', 'El registro ya no está disponible para esta desactivación.');
+    }
+
+    private function endDoctorLink(string $linkId, string $at): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE ' . self::LINKS_TABLE . ' SET status = :status, ended_at = :ended_at WHERE link_id = :link_id AND status = :expected_status AND ended_at IS NULL');
+        $stmt->execute(['status' => 'inactive', 'ended_at' => $at, 'link_id' => $linkId, 'expected_status' => 'active']);
+        if ($stmt->rowCount() !== 1) throw new ReconciliationException('conflict', 'La relación profesional ya no está disponible para esta desactivación.');
+    }
+
     private function findAppointment(string $appointmentId, bool $forUpdate): array
     {
         $sql = 'SELECT * FROM ' . self::APPOINTMENTS_TABLE . ' WHERE appointment_id = :appointment_id LIMIT 1' . $this->forUpdate($forUpdate);
@@ -254,14 +411,14 @@ final class AmbiguousPatientReconciliationService
         $stmt->execute(['payload_json' => $json, 'updated_at' => $this->now(), 'flow_id' => $flowId]);
     }
 
-    private function appendAuditEvent(string $appointmentId, string $action, string $previousPatientId, string $resultingPatientId, array $actor, string $at): void
+    private function appendAuditEvent(string $appointmentId, string $action, string $previousPatientId, string $resultingPatientId, array $actor, string $at, string $eventType = 'patient_identity_reconciled', string $reason = 'ambiguous_patient_identity_reconciliation'): void
     {
         if (!$this->tableExists(self::EVENTS_TABLE)) {
             throw new RuntimeException('appointment events not ready');
         }
         $notes = json_encode([
             'action' => $action,
-            'reason' => 'ambiguous_patient_identity_reconciliation',
+            'reason' => $reason,
             'previous_patient_id' => $previousPatientId,
             'resulting_patient_id' => $resultingPatientId,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
@@ -272,7 +429,7 @@ final class AmbiguousPatientReconciliationService
         $stmt->execute([
             'event_id' => 'air_' . bin2hex(random_bytes(12)),
             'appointment_id' => $appointmentId,
-            'event_type' => 'patient_identity_reconciled',
+            'event_type' => $eventType,
             'timestamp' => $at,
             'actor_role' => (string)$actor['actor_role'],
             'actor_id' => (string)($actor['actor_id'] ?? $actor['user_id'] ?? ''),
