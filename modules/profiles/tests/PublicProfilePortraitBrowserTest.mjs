@@ -53,11 +53,14 @@ try {
       await writeFile(`/tmp/mxmed-avatar-qa/${width}-${gender}.png`,Buffer.from(shot.data,'base64'));
       console.log(width,gender,result);
     }
-    await send('Page.navigate',{url:`${base}/profiles/doctor.php?doctor_id=1&mxmed_plan=professional`});
-    await wait(`document.querySelector('.mxpp-avatar--placeholder')`);
+    for(const plan of ['basic','standard','optimal','professional']){
+      await send('Page.navigate',{url:`${base}/profiles/doctor.php?doctor_id=1&mxmed_plan=${plan}`});
+      await wait(`document.querySelector('img.mxpp-avatar')?.complete && document.querySelector('img.mxpp-avatar').naturalWidth===1122`);
+      assert.ok(await evaluate(`document.querySelector('img.mxpp-avatar').src.endsWith('/dr-female.png')`));
+    }
 
   }
-  console.log('PASS: live Free female rendering, paid neutral fallback, both static portraits at four sizes; male image substituted only in DOM, no database writes');
+  console.log('PASS: live generic portrait in all five plans; both static portraits at four sizes; male image substituted only in DOM, no database writes');
 } finally {
   ws.close(); await fetch(`${cdp}/json/close/${tab.id}`);
 }

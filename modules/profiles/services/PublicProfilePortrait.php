@@ -5,14 +5,11 @@ namespace Profiles\Services;
 
 final class PublicProfilePortrait
 {
-    public static function resolve(array $identity, string $planCode): ?string
+    public static function resolve(array $identity): ?string
     {
         $photo = trim((string)($identity['photo_url'] ?? ''));
         if ($photo !== '') {
             return $photo;
-        }
-        if ($planCode !== 'free') {
-            return null;
         }
         // An explicit unsupported code remains unknown; never infer from a name/title.
         $gender = trim((string)($identity['gender'] ?? ''));

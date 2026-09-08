@@ -623,7 +623,7 @@ $planLabel = toText($plan['plan_label'] ?? null);
 $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
 $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
 $effectivePlanCode = \Profiles\Services\PublicProfilePlanCapabilities::normalizePlanCode($plan['plan_code'] ?? ($plan['code'] ?? null));
-$portraitUrl = \Profiles\Services\PublicProfilePortrait::resolve($identity, $effectivePlanCode);
+$portraitUrl = \Profiles\Services\PublicProfilePortrait::resolve($identity);
 $showPaidProfileCheck = (
     $isPublic
     && toBool($plan['is_paid'] ?? false)
