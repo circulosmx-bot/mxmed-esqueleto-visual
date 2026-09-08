@@ -1,73 +1,43 @@
-﻿(function(){
-  const MAX = 21;
-  const drop = document.getElementById('fotos-drop');
-  const grid = document.getElementById('fotos-grid');
-  const input = document.getElementById('fotos-input');
-  const countEl = document.getElementById('fotos-count');
-  const msgEl = document.getElementById('fotos-msg');
-  if(!drop || !grid || !input || !countEl) return;
-
-  function load(){ try { return JSON.parse(localStorage.getItem('mxmed_fotos')||'[]'); } catch(e){ return []; } }
-  function save(arr){ localStorage.setItem('mxmed_fotos', JSON.stringify(arr)); updateCount(arr); }
-  function updateCount(arr){
-    const n = (arr||load()).length;
-    countEl.textContent = n;
-    if(n >= MAX) countEl.parentElement?.classList.add('max');
-    else countEl.parentElement?.classList.remove('max');
-  }
-
-  let hideMsgTimer = null;
-
-  function showMsg(text){
-    if(!msgEl) return;
-    msgEl.textContent = text;
-    msgEl.classList.add('show');
-    drop.classList.add('error');
-    if(hideMsgTimer) clearTimeout(hideMsgTimer);
-    hideMsgTimer = setTimeout(()=>{ msgEl.classList.remove('show'); drop.classList.remove('error'); }, 3200);
-  }
-
-  function render(){
-    const items = load(); grid.innerHTML=''; drop.classList.toggle('has-items', items.length>0); document.getElementById('t-info-fotos')?.classList.toggle('has-items', items.length>0);
-    items.forEach((it,idx)=>{
-      const wrap = document.createElement('div'); wrap.className='foto-item';
-      const img = document.createElement('img'); img.src = it.data; img.alt = 'foto '+(idx+1);
-      const x = document.createElement('button'); x.type='button'; x.className='foto-x'; x.innerHTML='&times;'; x.title='Eliminar';
-      x.addEventListener('click', ()=>{ const arr=load(); arr.splice(idx,1); save(arr); render(); });
-      wrap.appendChild(img); wrap.appendChild(x); grid.appendChild(wrap);
+(() => {
+  const drop=document.getElementById('fotos-drop'), grid=document.getElementById('fotos-grid'), input=document.getElementById('fotos-input'), count=document.getElementById('fotos-count'), message=document.getElementById('fotos-msg');
+  if(!drop || !grid || !input || !count)return;
+  const endpoint='/api/media/gallery.php';
+  let csrf='',busy=false;
+  input.accept='image/jpeg,image/png,image/webp';
+  message?.setAttribute('role','status');
+  const notify=text=>{if(message){message.textContent=text;message.classList.toggle('show',Boolean(text));}};
+  const render=images=>{
+    grid.replaceChildren();count.textContent=images.length;
+    drop.classList.toggle('has-items',images.length>0);
+    document.getElementById('t-info-fotos')?.classList.toggle('has-items',images.length>0);
+    count.parentElement?.classList.toggle('max',images.length>=21);
+    images.forEach(asset=>{
+      const wrap=document.createElement('div');wrap.className='foto-item';
+      const img=document.createElement('img');img.src=asset.public_url;img.alt=asset.alt_text || '';
+      const remove=document.createElement('button');remove.type='button';remove.className='foto-x';remove.textContent='×';remove.setAttribute('aria-label','Eliminar imagen');
+      remove.addEventListener('click',()=>run(()=>request('DELETE',null,asset.media_id)));
+      wrap.append(img,remove);grid.append(wrap);
     });
-    updateCount(items);
+  };
+  async function request(method='GET',body=null,id=''){
+    const response=await fetch(endpoint+(id?'?media_id='+encodeURIComponent(id):''),{method,body,credentials:'same-origin',headers:method==='GET'?{}:{'X-Gallery-CSRF':csrf}});
+    const result=await response.json();
+    if(!response.ok || !result.ok)throw Error(result.message || 'No se pudieron cargar las fotos.');
+    csrf=result.data.csrf_token;render(result.data.images);
   }
-
-  function addFiles(files){
-    const arr = load();
-    const remaining = Math.max(0, MAX - arr.length);
-    if((files?.length||0) > remaining){
-      const extra = (files?.length||0) - remaining;
-      showMsg(`Límite ${MAX} alcanzado. Solo puedes agregar ${remaining} más (omitidas ${extra}).`);
-    }
-    for(const f of files){
-      if(!f || !f.type || !f.type.startsWith('image/')) continue;
-      if(arr.length >= MAX){ updateCount(arr); break; }
-      const reader = new FileReader();
-      reader.onload = (e)=>{
-        if(arr.length >= MAX){ updateCount(arr); showMsg(`Límite ${MAX} alcanzado.`); return; }
-        arr.push({ data: e.target.result });
-        save(arr); render();
-      };
-      reader.readAsDataURL(f);
-    }
+  async function run(action){
+    if(busy)return;busy=true;drop.setAttribute('aria-busy','true');notify('');
+    try{await action();}catch(error){notify(error.message);}finally{busy=false;drop.removeAttribute('aria-busy');input.value='';}
   }
-
-  drop.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.fotos-browse');
-    if(btn){ input.click(); }
+  const upload=files=>run(async()=>{
+    if(!csrf)await request();
+    for(const file of files){const body=new FormData();body.append('image',file);await request('POST',body);}
   });
-  input.addEventListener('change', (e)=>{ addFiles(Array.from(e.target.files||[])); input.value=''; });
-
-  drop.addEventListener('dragover', (e)=>{ e.preventDefault(); drop.classList.add('dragover'); });
-  drop.addEventListener('dragleave', ()=> drop.classList.remove('dragover'));
-  drop.addEventListener('drop', (e)=>{ e.preventDefault(); drop.classList.remove('dragover'); const files = e.dataTransfer?.files ? Array.from(e.dataTransfer.files) : []; addFiles(files); });
-
-  render();
+  drop.addEventListener('click',event=>{if(event.target.closest('.fotos-browse')&&!busy)input.click();});
+  input.addEventListener('change',()=>upload(Array.from(input.files || [])));
+  drop.addEventListener('dragover',event=>{event.preventDefault();drop.classList.add('dragover');});
+  drop.addEventListener('dragleave',()=>drop.classList.remove('dragover'));
+  drop.addEventListener('drop',event=>{event.preventDefault();drop.classList.remove('dragover');upload(Array.from(event.dataTransfer?.files || []));});
+  document.getElementById('t-info-fotos-tab')?.addEventListener('shown.bs.tab',()=>run(()=>request()));
+  run(()=>request());
 })();

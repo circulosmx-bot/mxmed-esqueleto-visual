@@ -43,6 +43,13 @@ final class MediaAssetsRepository
         ]);
     }
 
+    public function listDoctorGallery(string $doctorId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT media_id, public_url, alt_text, width, height FROM media_assets WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose='DOCTOR_GALLERY' AND classification='PUBLIC' AND status='READY' ORDER BY created_at, media_id");
+        $stmt->execute([$doctorId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function findReadyDuplicate(string $ownerType, string $ownerId, string $purpose, string $checksum): ?array
     {
         $stmt = $this->pdo->prepare(

@@ -7,12 +7,14 @@ final class PublicMediaPurpose
 {
     public const PHYSICIAN_PERSONAL_LOGO = 'PHYSICIAN_PERSONAL_LOGO';
     public const CONSULTORIO_GROUP_LOGO = 'CONSULTORIO_GROUP_LOGO';
+    public const DOCTOR_GALLERY = 'DOCTOR_GALLERY';
 
     public static function all(): array
     {
         return [
             self::PHYSICIAN_PERSONAL_LOGO,
             self::CONSULTORIO_GROUP_LOGO,
+            self::DOCTOR_GALLERY,
         ];
     }
 
