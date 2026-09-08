@@ -5,6 +5,7 @@ require_once __DIR__ . '/../modules/profiles/services/PublicProfilePlanCapabilit
 require_once __DIR__ . '/../modules/profiles/services/ProfileThemeCatalog.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePanelContent.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicBookingDoctorReference.php';
+require_once __DIR__ . '/../modules/profiles/services/PublicProfilePortrait.php';
 
 function h($value): string
 {
@@ -622,6 +623,7 @@ $planLabel = toText($plan['plan_label'] ?? null);
 $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
 $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
 $effectivePlanCode = \Profiles\Services\PublicProfilePlanCapabilities::normalizePlanCode($plan['plan_code'] ?? ($plan['code'] ?? null));
+$portraitUrl = \Profiles\Services\PublicProfilePortrait::resolve($identity, $effectivePlanCode);
 $showPaidProfileCheck = (
     $isPublic
     && toBool($plan['is_paid'] ?? false)
@@ -793,8 +795,8 @@ if (isLocalDevRequest()) {
         <aside class="mxpp-left-panel">
           <article class="mxpp-card mxpp-card--left-main">
             <div class="mxpp-avatar-wrap">
-              <?php if ($photoUrl !== null): ?>
-                <img src="<?= h($photoUrl) ?>" alt="Foto del médico" class="mxpp-avatar" />
+              <?php if ($portraitUrl !== null): ?>
+                <img src="<?= h($portraitUrl) ?>" alt="<?= h($photoUrl !== null ? 'Foto del médico' : 'Imagen de perfil de ' . ($displayName ?? 'este especialista')) ?>" class="mxpp-avatar" />
               <?php else: ?>
                 <div class="mxpp-avatar mxpp-avatar--placeholder" aria-hidden="true">
                   <div class="mxpp-avatar-shape"></div>

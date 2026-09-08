@@ -529,6 +529,7 @@ final class PublicProfileRepository
             'display_name' => null,
             'professional_designation' => null,
             'prefix' => null,
+            'gender' => null,
             'gender_label' => null,
             'photo_url' => null,
             'avatar_url' => null,
@@ -541,6 +542,7 @@ final class PublicProfileRepository
         $resolved['display_name'] = $this->toNullableText($profileRow['display_name'] ?? null);
         $resolved['professional_designation'] = $this->toNullableText($profileRow['professional_designation'] ?? null);
         $resolved['prefix'] = $this->toNullableText($profileRow['prefix'] ?? null);
+        $resolved['gender'] = $this->toNullableText($profileRow['gender'] ?? null);
         $resolved['gender_label'] = $this->toNullableText($profileRow['gender_label'] ?? null)
             ?? $this->toNullableText($profileRow['gender'] ?? null);
         $resolved['photo_url'] = $this->toNullableText($profileRow['photo_url'] ?? null);

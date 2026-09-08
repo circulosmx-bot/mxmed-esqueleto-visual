@@ -200,6 +200,7 @@ final class PublicProfileController
                 'display_name' => $displayName,
                 'professional_designation' => $this->firstNonEmpty($identity['professional_designation'] ?? null),
                 'prefix' => $this->firstNonEmpty($identity['prefix'] ?? null),
+                'gender' => $this->firstNonEmpty($identity['gender'] ?? null),
                 'gender_label' => $this->firstNonEmpty($identity['gender_label'] ?? null),
                 'photo_url' => $this->firstNonEmpty($identity['photo_url'] ?? null),
                 'avatar_url' => $this->firstNonEmpty($identity['avatar_url'] ?? null),
