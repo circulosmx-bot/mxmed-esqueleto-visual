@@ -2254,7 +2254,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 
 .mxpp-footer__brand {
   font-size: 1.28rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: #124a66;
 }
@@ -2275,7 +2275,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 .mxpp-footer__participa p {
   margin: 0;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -2730,14 +2730,14 @@ body:is(
 
 .mxpp-content-panel__group {
   display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr);
+  grid-template-columns: 2.875rem minmax(0, 1fr);
   align-items: start;
   gap: 0.8rem;
 }
 
 .mxpp-content-panel__icon {
   color: #505052;
-  font-size: 2.3rem;
+  font-size: 2.645rem;
   line-height: 1;
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 48;
 }
@@ -2849,6 +2849,12 @@ body:is(
 }
 .mxpp-content-panel__contact-line--phone .mxpp-contact-line__icon { color: #14864d; }
 .mxpp-content-panel__contact-line--whatsapp .mxpp-contact-line__icon { color: #29ac63; }
+.mxpp-content-panel__contact-line .mxpp-contact-line__icon { transform: scale(1.15); }
+/* Reversible turquoise preview. Original colors above: section icons #505052,
+   phone #14864d, WhatsApp #29ac63; phone number inherited --mxpp-profile-ink. */
+.mxpp-content-panel__icon,
+.mxpp-content-panel__contact-line .mxpp-contact-line__icon,
+.mxpp-content-panel__phone-number { color: #01afb7; }
 .mxpp-content-panel__contact-line:hover,
 .mxpp-content-panel__contact-line:focus-visible { text-decoration: underline; }
 .mxpp-content-panel__closure .mxpp-content-panel__reserve {
@@ -3064,7 +3070,7 @@ body:is(
   display: block;
   color: inherit;
   font-size: 1.55rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
 }

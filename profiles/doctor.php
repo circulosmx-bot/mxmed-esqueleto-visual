@@ -1084,7 +1084,7 @@ if (isLocalDevRequest()) {
                             <?php if ($panelContact['phone'] !== null): ?>
                               <a class="mxpp-content-panel__contact-line mxpp-content-panel__contact-line--phone" href="<?= h($panelContact['phone']) ?>">
                                 <span class="material-symbols-rounded mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true">call</span>
-                                <span><strong>Tel. Consultorio:</strong> <?= h($panelContact['phone_label'] ?? '') ?></span>
+                                <span><strong>Tel. Consultorio:</strong> <span class="mxpp-content-panel__phone-number"><?= h($panelContact['phone_label'] ?? '') ?></span></span>
                               </a>
                             <?php endif; ?>
                             <?php if ($panelContact['whatsapp'] !== null): ?>
