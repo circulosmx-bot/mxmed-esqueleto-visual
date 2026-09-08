@@ -90,7 +90,7 @@ try {
     assert.ok(polish.moreBackground === 'rgba(0, 0, 0, 0)' || polish.moreBackground === 'transparent');
     assert.ok(polish.moreSize >= 13,'preview action size increased');
     assert.equal(polish.moreRightAligned,true);
-    const cta=await ev(`(()=>{const button=document.querySelector('[data-mxpp-next-available]'),icon=button.querySelector('.mxpp-agenda-compact__find-icon'),label=button.querySelector('span:last-child'),header=button.closest('.mxpp-agenda-compact__header'),br=button.getBoundingClientRect(),ir=icon.getBoundingClientRect(),lr=label.getBoundingClientRect(),style=getComputedStyle(button),iconStyle=getComputedStyle(icon);return {copy:label.textContent,hasIcon:!!icon,iconOutlined:icon.classList.contains('material-symbols-outlined'),background:style.backgroundColor,color:style.color,borderColor:style.borderTopColor,borderWidth:parseFloat(style.borderTopWidth),textDecoration:style.textDecorationLine,iconColor:iconStyle.color,iconSize:parseFloat(iconStyle.fontSize),iconWeight:iconStyle.fontVariationSettings,iconLeading:ir.left<br.left+br.width/2,labelNotClipped:lr.left>=br.left&&lr.right<=br.right+1,headerNoOverflow:header.scrollWidth<=header.clientWidth}})()`);
+    const cta=await ev(`(()=>{const button=document.querySelector('[data-mxpp-next-available]'),icon=button.querySelector('.mxpp-agenda-compact__find-icon'),label=button.querySelector('span:last-child'),header=button.closest('.mxpp-agenda-compact__header'),br=button.getBoundingClientRect(),ir=icon.getBoundingClientRect(),lr=label.getBoundingClientRect(),style=getComputedStyle(button),iconStyle=getComputedStyle(icon);return {copy:label.textContent,hasIcon:!!icon,iconOutlined:icon.classList.contains('material-symbols-outlined'),background:style.backgroundColor,color:style.color,borderColor:style.borderTopColor,borderWidth:parseFloat(style.borderTopWidth),height:br.height,overflow:style.overflow,textDecoration:style.textDecorationLine,iconColor:iconStyle.color,iconSize:parseFloat(iconStyle.fontSize),iconWeight:iconStyle.fontVariationSettings,iconLeading:ir.left<br.left+br.width/2,iconVerticallyOverflows:ir.top<br.top&&ir.bottom>br.bottom,labelNotClipped:lr.left>=br.left&&lr.right<=br.right+1,headerNoOverflow:header.scrollWidth<=header.clientWidth}})()`);
     assert.equal(cta.copy,'Encontrar primera cita disponible');
     assert.equal(cta.hasIcon,true);
     assert.equal(cta.iconOutlined,true);
@@ -100,9 +100,12 @@ try {
     assert.ok(cta.borderWidth >= 2,'CTA border is thicker');
     assert.equal(cta.textDecoration,'none');
     assert.equal(cta.iconColor,'rgb(255, 255, 255)');
-    assert.ok(cta.iconSize >= 43,'CTA search icon is visually three times standard inline size');
+    assert.ok(cta.height <= (width > 540 ? 38 : 35),'CTA height is reduced by forty percent');
+    assert.equal(cta.overflow,'visible');
+    assert.ok(cta.iconSize >= (width > 540 ? 70 : 64),'CTA search icon is increased by fifty percent');
     assert.ok(cta.iconWeight.includes('600'),'CTA search icon uses Material Symbols weight 600');
     assert.equal(cta.iconLeading,true);
+    assert.equal(cta.iconVerticallyOverflows,true);
     assert.equal(cta.labelNotClipped,true);
     assert.equal(cta.headerNoOverflow,true);
     await ev(`document.querySelector('[data-mxpp-next-available]').scrollIntoView({block:'center',behavior:'instant'})`); await screenshot(name+'-cta');
