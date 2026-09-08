@@ -105,7 +105,7 @@ window.MxmedPublicNextAvailable = function (block, booking) {
   status.setAttribute('role', 'status');
   const results = create('div', '', 'mxpp-next-dialog__results mx-ag-next-slots-results');
   const info = create('div', '', 'mx-ag-next-slots-info-note');
-  info.append(icon('info-circle'), create('span', 'Las citas mostradas corresponden a la disponibilidad actual del médico en sus consultorios.'));
+  info.append(icon('info-circle'), create('span', 'La disponibilidad se actualiza continuamente. El horario queda reservado únicamente al completar la confirmación de la cita.'));
   body.append(status, results, info);
   const nav = create('nav', '', 'mxpp-next-dialog__nav mx-ag-next-slots-modal-footer');
   nav.setAttribute('aria-label', 'Más citas disponibles');

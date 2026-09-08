@@ -62,6 +62,9 @@ try {
     await ev(`document.querySelector('[data-mxpp-next-available]').click()`);
     await wait(ready);
     const first = await ev(rows);
+    const availabilityLegend = await ev(`(()=>{const note=document.querySelector('.mx-ag-next-slots-info-note');return {text:note.innerText,scroll:note.scrollWidth,client:note.clientWidth};})()`);
+    assert.equal(availabilityLegend.text,'La disponibilidad se actualiza continuamente. El horario queda reservado únicamente al completar la confirmación de la cita.');
+    assert.ok(availabilityLegend.scroll <= availabilityLegend.client + 1,'availability legend has no horizontal overflow');
     assert.equal(await ev(`document.querySelectorAll('.mxpp-next-dialog .mx-ag-next-slot-main .mx-ag-next-slot-label').length`),0);
     assert.equal(await ev(`Array.from(document.querySelectorAll('.mxpp-next-dialog__result')).some(e=>e.innerText.toLowerCase().includes('fecha y hora'))`),false);
     assert.ok(await ev(`parseFloat(getComputedStyle(document.querySelector('.mxpp-next-dialog .mx-ag-next-slot-date')).fontSize) >= 20.7`),'next-available date is increased by twenty percent');
