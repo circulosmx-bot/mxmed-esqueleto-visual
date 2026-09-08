@@ -2641,6 +2641,44 @@ button.mxpp-hero-action:focus-visible {
   text-decoration: none;
 }
 
+body:is(
+  [data-profile-theme="mxmed_teal"],
+  [data-profile-theme="soft_lavender"],
+  [data-profile-theme="dusty_pink"],
+  [data-profile-theme="soft_gold"],
+  [data-profile-theme="clinical_sky"],
+  [data-profile-theme="clinical_light_sky"],
+  [data-profile-theme="royal_blue"]
+) .mxpp-content-panel__return {
+  border-color: #022f50;
+  background: #022f50;
+  color: #fff;
+}
+
+body:is(
+  [data-profile-theme="mxmed_teal"],
+  [data-profile-theme="soft_lavender"],
+  [data-profile-theme="dusty_pink"],
+  [data-profile-theme="soft_gold"],
+  [data-profile-theme="clinical_sky"],
+  [data-profile-theme="clinical_light_sky"],
+  [data-profile-theme="royal_blue"]
+) .mxpp-content-panel__return:hover,
+body:is(
+  [data-profile-theme="mxmed_teal"],
+  [data-profile-theme="soft_lavender"],
+  [data-profile-theme="dusty_pink"],
+  [data-profile-theme="soft_gold"],
+  [data-profile-theme="clinical_sky"],
+  [data-profile-theme="clinical_light_sky"],
+  [data-profile-theme="royal_blue"]
+) .mxpp-content-panel__return:focus {
+  border-color: #01253f;
+  background: #01253f;
+  color: #fff;
+  text-decoration: none;
+}
+
 .mxpp-content-panel__return:focus-visible {
   outline: 2px solid var(--profile-on-theme-surface);
   outline-offset: 2px;
