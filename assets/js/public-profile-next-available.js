@@ -145,8 +145,7 @@ window.MxmedPublicNextAvailable = function (block, booking) {
         const weekday = capitalize(new Intl.DateTimeFormat('es-MX', {weekday: 'long'}).format(date));
         const month = capitalize(new Intl.DateTimeFormat('es-MX', {month: 'long'}).format(date));
         const dateTime = create('div', '', 'mx-ag-next-slot-main');
-        dateTime.append(create('div', 'Fecha y hora', 'mx-ag-next-slot-label'),
-          create('div', `${weekday}, ${date.getDate()} de ${month} ${date.getFullYear()}`, 'mx-ag-next-slot-date'),
+        dateTime.append(create('div', `${weekday}, ${date.getDate()} de ${month} ${date.getFullYear()}`, 'mx-ag-next-slot-date'),
           create('div', booking.formatTime(slot.start_at) + ' h', 'mx-ag-next-slot-time'));
         const office = create('div', '', 'mx-ag-next-slot-consultorio');
         const officeName = create('div', '', 'mx-ag-next-slot-consultorio-name');
