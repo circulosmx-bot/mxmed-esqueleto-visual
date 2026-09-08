@@ -15,6 +15,12 @@ final class GdPublicLogoProcessor
     public const TARGET_MAX_BYTES = 153600;
     public const OUTPUT_MIME = 'image/webp';
 
+    public function __construct(
+        private int $maxUploadBytes = self::MAX_UPLOAD_BYTES,
+        private int $maxSourceSide = self::MAX_WIDTH,
+        private int $maxPixels = self::MAX_PIXEL_COUNT
+    ) {}
+
     private const INPUT_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
     /**
@@ -40,7 +46,7 @@ final class GdPublicLogoProcessor
             if ($actualBytes <= 0) {
                 throw new RuntimeException('logo_upload_empty');
             }
-            if ($actualBytes > self::MAX_UPLOAD_BYTES) {
+            if ($actualBytes > $this->maxUploadBytes) {
                 throw new RuntimeException('logo_upload_bytes_exceeded');
             }
 
@@ -70,10 +76,10 @@ final class GdPublicLogoProcessor
             if ($sourceWidth <= 0 || $sourceHeight <= 0) {
                 throw new RuntimeException('logo_upload_dimensions_invalid');
             }
-            if ($sourceWidth > self::MAX_WIDTH || $sourceHeight > self::MAX_HEIGHT) {
+            if ($sourceWidth > $this->maxSourceSide || $sourceHeight > $this->maxSourceSide) {
                 throw new RuntimeException('logo_upload_dimensions_exceeded');
             }
-            if (($sourceWidth * $sourceHeight) > self::MAX_PIXEL_COUNT) {
+            if (($sourceWidth * $sourceHeight) > $this->maxPixels) {
                 throw new RuntimeException('logo_upload_pixel_count_exceeded');
             }
 

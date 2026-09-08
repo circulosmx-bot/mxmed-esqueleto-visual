@@ -54,7 +54,7 @@ start_api() {
     return
   fi
 
-  nohup bash -lc "echo -ne '\033]0;MXMED-API-8091\a'; exec php -S '$API_HOST:$API_PORT' -t '$ROOT_DIR'" > "$API_LOG" 2>&1 &
+  nohup bash -lc "echo -ne '\033]0;MXMED-API-8091\a'; exec php -d upload_max_filesize=10M -d post_max_size=12M -d memory_limit=256M -S '$API_HOST:$API_PORT' -t '$ROOT_DIR'" > "$API_LOG" 2>&1 &
   local pid=$!
   sleep 1
 
@@ -75,7 +75,7 @@ start_ui() {
     return
   fi
 
-  nohup bash -lc "echo -ne '\033]0;MXMED-UI-8092\a'; exec env MXMED_API_BASE='$UI_API_BASE' php -S '$UI_HOST:$UI_PORT' -t '$ROOT_DIR'" > "$UI_LOG" 2>&1 &
+  nohup bash -lc "echo -ne '\033]0;MXMED-UI-8092\a'; exec env MXMED_API_BASE='$UI_API_BASE' php -d upload_max_filesize=10M -d post_max_size=12M -d memory_limit=256M -S '$UI_HOST:$UI_PORT' -t '$ROOT_DIR'" > "$UI_LOG" 2>&1 &
   local pid=$!
   sleep 1
 
@@ -206,8 +206,8 @@ on run argv
   set uiPort to item 5 of argv
   set uiApiBase to item 6 of argv
 
-  set apiCmd to "cd " & quoted form of rootDir & "; printf '\\033]0;MXMED-API-8091\\a'; php -S " & apiHost & ":" & apiPort & " -t ."
-  set uiCmd to "cd " & quoted form of rootDir & "; printf '\\033]0;MXMED-UI-8092\\a'; MXMED_API_BASE=" & quoted form of uiApiBase & " php -S " & uiHost & ":" & uiPort & " -t ."
+  set apiCmd to "cd " & quoted form of rootDir & "; printf '\\033]0;MXMED-API-8091\\a'; php -d upload_max_filesize=10M -d post_max_size=12M -d memory_limit=256M -S " & apiHost & ":" & apiPort & " -t ."
+  set uiCmd to "cd " & quoted form of rootDir & "; printf '\\033]0;MXMED-UI-8092\\a'; MXMED_API_BASE=" & quoted form of uiApiBase & " php -d upload_max_filesize=10M -d post_max_size=12M -d memory_limit=256M -S " & uiHost & ":" & uiPort & " -t ."
 
   tell application "Terminal"
     activate

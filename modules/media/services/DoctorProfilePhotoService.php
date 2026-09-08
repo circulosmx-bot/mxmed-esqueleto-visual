@@ -12,6 +12,10 @@ require_once __DIR__.'/GdPublicLogoProcessor.php';
 
 final class DoctorProfilePhotoService
 {
+    public const MAX_UPLOAD_BYTES = 10485760;
+    public const MAX_DECODED_PIXELS = 25000000;
+    public const MAX_SOURCE_SIDE = 8192;
+
     public function __construct(private PDO $pdo, private PublicMediaStoragePort $storage) {}
 
     public function current(string $doctor): ?array
@@ -29,7 +33,7 @@ final class DoctorProfilePhotoService
         if (!in_array($ext, ['image/jpeg'=>['jpg','jpeg'],'image/png'=>['png'],'image/webp'=>['webp']][$mime] ?? [], true)) throw new RuntimeException('photo_invalid_extension');
         if ($mime==='image/jpeg' && !function_exists('exif_read_data')) throw new RuntimeException('safe_photo_orientation_unavailable');
         // Re-encode decoded pixels only; existing processor handles JPEG EXIF orientation.
-        $image=(new GdPublicLogoProcessor())->process($upload);
+        $image=(new GdPublicLogoProcessor(self::MAX_UPLOAD_BYTES, self::MAX_SOURCE_SIDE, self::MAX_DECODED_PIXELS))->process($upload);
         try { $this->replace($doctor,$image); }
         finally { if(is_file($image['path'])) unlink($image['path']); }
     }

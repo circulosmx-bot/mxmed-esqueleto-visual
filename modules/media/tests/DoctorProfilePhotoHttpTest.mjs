@@ -28,7 +28,14 @@ try{
  const other=await call(sessions[1]);assert.equal(other.body.data.photo,null,'doctor B must have no photo for this fixture');
  assert.equal((await call(sessions[1],'DELETE',null,other.body.data.csrf_token,'?doctor_id=1&media_id='+photo.media_id)).status,200);
  assert.equal(state().photo,photo.public_url,'B cannot delete A by query scope');
- const bad=[form(bytes,'image/png','payload.php'),form(bytes,'image/jpeg','portrait.png'),form(bytes.subarray(0,70),'image/png','broken.png'),form(new Uint8Array(2097153),'image/png','large.png')];
+ if(process.env.PHOTO_MODERN_SOURCE){
+  const previous=photo;
+  r=await call(sessions[0],'POST',form(await readFile(process.env.PHOTO_MODERN_SOURCE),'image/jpeg','camera.jpg'),token);
+  assert.equal(r.status,200,JSON.stringify(r));photo=r.body.data.photo;ids.push(photo.media_id);
+  assert.ok(photo.width<=800&&photo.height<=800&&photo.byte_size<=153600);retired(previous.media_id);
+  console.log('PASS: near-10 MiB / 12 MP upload through real PHP multipart endpoint');
+ }
+ const bad=[form(bytes,'image/png','payload.php'),form(bytes,'image/jpeg','portrait.png'),form(bytes.subarray(0,70),'image/png','broken.png'),form(new Uint8Array(10485761),'image/png','large.png')];
  for(const body of bad){r=await call(sessions[0],'POST',body,token);assert.equal(r.status,422,JSON.stringify(r));assert.equal(state().photo,photo.public_url);assert.equal(state().ready,1);}
  if(process.env.PROFILE_PHOTO_BROWSER_QA==='1'){
   try{execFileSync('node',['modules/media/tests/DoctorProfilePhotoBrowserTest.mjs'],{stdio:'inherit',env:{...process.env,PUBLIC_URL:base,PHOTO_QA_SESSION:sessions[0]}});}

@@ -26,7 +26,7 @@
     if(!file)return;
     await run(async()=>{
       if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Selecciona una imagen JPG, PNG o WebP.');
-      if(file.size>2097152)throw Error('La fotografía supera el máximo de 2 MiB.');
+      if(file.size>10485760)throw Error('La fotografía supera el máximo de 10 MiB.');
       if(!token)await request();
       const url=URL.createObjectURL(file);
       preview.hidden=false;preview.querySelector('img').src=url;status.textContent='Subiendo…';

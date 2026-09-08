@@ -41,5 +41,5 @@ try {
     $error = $e->getMessage();
     $status = $error === 'photo_profile_not_found' ? 404 : ((str_starts_with($error,'logo_') || str_starts_with($error,'photo_')) ? 422 : 500);
     photoReply($status, ['ok'=>false, 'error'=>$status===500?'profile_photo_unavailable':$error,
-        'message'=>$status===500?'No se pudo completar el cambio. Recarga para comprobar la foto guardada e intenta nuevamente.':'Usa JPG, PNG o WebP válido de hasta 2 MB, 4096 px por lado y 4 megapíxeles.']);
+        'message'=>$status===500?'No se pudo completar el cambio. Recarga para comprobar la foto guardada e intenta nuevamente.':'Usa JPG, PNG o WebP válido de hasta 10 MiB, 8192 px por lado y 25 megapíxeles.']);
 }
