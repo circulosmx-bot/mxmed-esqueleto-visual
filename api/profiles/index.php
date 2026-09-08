@@ -627,6 +627,7 @@ try {
             'unauthorized' => 401,
             'forbidden' => 403,
             'profile_private_unavailable' => 500,
+            'validation_error' => 422,
         ];
         if ($error !== '' && isset($statusMap[$error])) {
             profileRespond($response, $statusMap[$error]);

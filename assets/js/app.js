@@ -2049,7 +2049,7 @@ console.info('app.js loaded :: 20251123a');
     const specialtyLicense = normalizeText(data.specialty_license, 64);
     const specialtyPrimary = normalizeText(data.specialty_primary, 190);
     const specialtySecondary = specialtySecondaryToString(data.specialty_secondary);
-    const bioShort = normalizeText(data.bio_short, 1500);
+    const bioShort = data.bio_short == null ? '' : String(data.bio_short);
 
     els.displayName.value = displayName || '';
     if(els.professionalDesignation) els.professionalDesignation.value = normalizeText(data.professional_designation, 120) || '';
@@ -2067,6 +2067,7 @@ console.info('app.js loaded :: 20251123a');
     state.autoPublicSpecialty = specialtyPrimary || null;
     if(els.specialtySecondary) els.specialtySecondary.value = specialtySecondary || '';
     if(els.bioShort) els.bioShort.value = bioShort || '';
+    updateBioCounter();
     if(els.profileStatus) els.profileStatus.value = normalizeText(data.profile_status, 64) || 'hidden';
     if(els.publicCandidate) els.publicCandidate.value = data.is_public_candidate ? 'Sí' : 'No';
     renderPhysicianLogo(normalizeText(data.logo_url, 2048));
@@ -2251,7 +2252,7 @@ console.info('app.js loaded :: 20251123a');
       prefix: normalizeText(els.prefix?.value, 32),
       gender: mapGenderValue(genderLabel),
       gender_label: genderLabel,
-      bio_short: normalizeText(els.bioShort?.value, 1500),
+      bio_short: String(els.bioShort?.value || '').trim() || null,
       profile_theme_key: state.themeSelectedKey
     };
   }
@@ -2280,6 +2281,46 @@ console.info('app.js loaded :: 20251123a');
     input.addEventListener('blur', ()=> markLegacyTouched('blur'));
   });
 
+  function updateBioCounter(limitReached = false){
+    const count = Array.from(els.bioShort?.value || '').length;
+    const counter = document.getElementById('mxpi-bio-count');
+    if(counter){
+      counter.textContent = `${count} / 90`;
+      counter.className = 'small ' + (count >= 90 ? 'text-danger' : count > 75 ? 'text-warning' : 'text-muted');
+    }
+    const message = document.getElementById('mxpi-bio-limit');
+    if(message) message.hidden = !(limitReached || count >= 90);
+    els.bioShort?.setCustomValidity(count > 90 ? 'La Bio breve admite un máximo de 90 caracteres para conservar el diseño del perfil público.' : '');
+  }
+  els.bioShort?.addEventListener('input', ()=> updateBioCounter());
+  els.bioShort?.addEventListener('beforeinput', (event)=>{
+    if(!event.inputType?.startsWith('insert') || event.isComposing) return;
+    const input = els.bioShort;
+    const remaining = input.value.slice(0, input.selectionStart) + input.value.slice(input.selectionEnd);
+    if(event.data != null && (remaining + event.data).length > 90){
+      // Native maxlength counts UTF-16 units; preserve the API's Unicode character contract.
+      event.preventDefault();
+      insertBioText(event.data);
+    }else if(Array.from(remaining).length >= 90){
+      event.preventDefault(); updateBioCounter(true);
+    }
+  });
+  function insertBioText(pasted){
+    const input = els.bioShort;
+    const before = input.value.slice(0, input.selectionStart);
+    const after = input.value.slice(input.selectionEnd);
+    const room = Math.max(0, 90 - Array.from(before + after).length);
+    const inserted = Array.from(pasted).slice(0, room).join('');
+    input.setRangeText(inserted, input.selectionStart, input.selectionEnd, 'end');
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+    updateBioCounter(Array.from(pasted).length > room);
+  }
+  els.bioShort?.addEventListener('paste', (event)=>{
+    const pasted = event.clipboardData?.getData('text');
+    if(pasted == null) return;
+    event.preventDefault();
+    insertBioText(pasted);
+  });
   ['mxpi-professional-designation', 'mxpi-prefix', 'mxpi-gender-label', 'mxpi-bio-short'].forEach((id)=>{
     const input = document.getElementById(id);
     if(!input) return;
@@ -2366,6 +2407,11 @@ console.info('app.js loaded :: 20251123a');
   }
 
   async function savePrivateIdentity(){
+    if(Array.from(String(els.bioShort?.value || '').trim()).length > 90){
+      updateBioCounter(true);
+      els.bioShort?.focus();
+      return;
+    }
     if(state.saving || state.loading || !state.loaded){
       return;
     }

@@ -1190,6 +1190,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 
 .mxpp-bio {
   margin: 0.38rem 0 0;
+  overflow-wrap: anywhere;
   font-family: "Baloo 2", cursive;
   font-size: clamp(1.08rem, 1.75vw, 1.5rem);
   font-weight: 400;
@@ -1200,6 +1201,12 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 .mxpp-bio--pending {
   font-size: 0.94rem;
   color: #5f7b87;
+}
+
+@media (min-width: 769px) {
+  .mxpp-bio--long {
+    font-size: clamp(.9936rem, 1.61vw, 1.38rem);
+  }
 }
 
 .mxpp-plan-note {

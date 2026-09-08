@@ -1218,7 +1218,9 @@
                       </div>
                       <div class="col-12">
                         <label class="form-label mx-field-label" for="mxpi-bio-short">Bio breve<span class="mx-field-badge mx-field-badge--public">Público</span></label>
-                        <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="1500" placeholder="Resumen profesional breve visible en el perfil público"></textarea>
+                        <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="90" aria-describedby="mxpi-bio-count mxpi-bio-limit" placeholder="Resumen profesional breve visible en el perfil público"></textarea>
+                        <div id="mxpi-bio-count" class="small text-muted" aria-live="polite">0 / 90</div>
+                        <div id="mxpi-bio-limit" class="small text-danger" role="status" hidden>La Bio breve admite un máximo de 90 caracteres para conservar el diseño del perfil público.</div>
                       </div>
                       <div class="col-md-6">
                         <label class="form-label" for="mxpi-profile-status">Estado del perfil público</label>
