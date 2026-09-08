@@ -60,7 +60,31 @@ try {
     const previewGeometry=await ev(`Array.from(document.querySelectorAll('.mxpp-agenda-compact__slot')).map(e=>({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))`);
     assert.ok(previewGeometry.every(r=>r.width===previewGeometry[0].width && r.height===previewGeometry[0].height && r.height>=44),'sparse/full chip geometry');
     assert.equal(await ev(`getComputedStyle(${chooseDate}).marginLeft !== '0px'`),true,'secondary action right aligned');
-    assert.equal(await ev(`${chooseDate}.textContent`),'Ver más citas');
+    assert.equal(await ev(`${chooseDate}.textContent`),'Ver más citas...');
+    const polish=await ev(`(()=>{
+      const day=document.querySelector('.mxpp-agenda-compact__day');
+      const title=day.querySelector('h3');
+      const slot=day.querySelector('.mxpp-agenda-compact__slot');
+      const more=${chooseDate};
+      const titleStyle=getComputedStyle(title), slotStyle=getComputedStyle(slot), moreStyle=getComputedStyle(more);
+      const dayRect=day.getBoundingClientRect(), moreRect=more.getBoundingClientRect(), dayStyle=getComputedStyle(day);
+      return {
+        titleSize: parseFloat(titleStyle.fontSize),
+        slotTextAlign: slotStyle.textAlign,
+        slotColumnGap: parseFloat(getComputedStyle(day.querySelector('.mxpp-agenda-compact__slots')).columnGap),
+        moreBorder: moreStyle.borderTopWidth,
+        moreBackground: moreStyle.backgroundColor,
+        moreSize: parseFloat(moreStyle.fontSize),
+        moreRightAligned: parseFloat(moreStyle.marginLeft) > 0 && moreStyle.textAlign === 'right'
+      };
+    })()`);
+    assert.ok(polish.titleSize >= 20,'day heading enlarged');
+    assert.equal(polish.slotTextAlign,'center');
+    assert.ok(polish.slotColumnGap >= 8,'day chip column spacing increased');
+    assert.equal(polish.moreBorder,'0px');
+    assert.ok(polish.moreBackground === 'rgba(0, 0, 0, 0)' || polish.moreBackground === 'transparent');
+    assert.ok(polish.moreSize >= 13,'preview action size increased');
+    assert.equal(polish.moreRightAligned,true);
     await ev(`${chooseDate}.scrollIntoView({block:'center',behavior:'instant'})`); await screenshot(name+'-preview');
     await ev(`${chooseDate}.focus()`);
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13});
@@ -69,9 +93,26 @@ try {
     assert.equal(await ev(`document.querySelectorAll('.mxpp-daily-slot').length`),18);
     assert.equal(await ev(`document.querySelector('#mxpp-daily-title').textContent`),'Horarios disponibles');
     assert.equal(await ev(`document.querySelector('[data-daily-status]').textContent`),'');
-    assert.equal(await ev(`!!document.querySelector('.mxpp-daily-dialog header [data-daily-next]')`),true);
+    assert.equal(await ev(`!!document.querySelector('.mxpp-daily-dialog__date-nav [data-daily-next]')`),true);
     const chip=await ev(`(()=>{const e=document.querySelector('.mxpp-daily-slot'),r=e.getBoundingClientRect();return {width:r.width,height:r.height}})()`);
-    assert.deepEqual(chip,previewGeometry[0],'same preview/modal chip size');
+    assert.ok(chip.width >= previewGeometry[0].width && chip.height >= previewGeometry[0].height,'modal chip same family and not smaller than preview');
+    const modalPolish=await ev(`(()=>{
+      const group=document.querySelector('.mxpp-daily-dialog__date-nav'), date=document.querySelector('#mxpp-daily-date');
+      const prev=document.querySelector('[data-daily-prev]'), next=document.querySelector('[data-daily-next]');
+      const slot=document.querySelector('.mxpp-daily-slot');
+      const gr=group.getBoundingClientRect(), dr=date.getBoundingClientRect(), pr=prev.getBoundingClientRect(), nr=next.getBoundingClientRect();
+      return {
+        slotTextAlign:getComputedStyle(slot).textAlign,
+        grouped:!!group,
+        dateNavSameLine: Math.abs(dr.top-pr.top) < 30 && Math.abs(dr.top-nr.top) < 30,
+        mobileGroupedFallback: dr.top < pr.top && Math.abs(pr.top-nr.top) < 30,
+        groupRight: gr.right,
+        groupLeft: gr.left
+      };
+    })()`);
+    assert.equal(modalPolish.slotTextAlign,'center');
+    assert.equal(modalPolish.grouped,true);
+    assert.equal(width >= 720 ? modalPolish.dateNavSameLine : modalPolish.mobileGroupedFallback,true);
     assert.equal(await ev(`document.activeElement.getAttribute('aria-label')`),'Cerrar');
     const rows=await ev(`Array.from(document.querySelectorAll('.mxpp-daily-slot')).map(e=>e.textContent)`);
     assert.ok(rows[0].includes('09:00 h') && rows[0].includes('CMQ'));

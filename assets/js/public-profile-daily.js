@@ -6,9 +6,9 @@ window.MxmedPublicDailyModal = function (block, booking) {
   dialog.setAttribute('aria-labelledby', 'mxpp-daily-title');
   dialog.setAttribute('aria-describedby', 'mxpp-daily-date');
   dialog.innerHTML = '<header><div><h2 id="mxpp-daily-title">Horarios disponibles</h2>'
+    + '<div class="mxpp-daily-dialog__date-nav"><button type="button" data-daily-prev>Día anterior</button>'
     + '<p id="mxpp-daily-date" aria-live="polite" aria-atomic="true"></p>'
-    + '<nav aria-label="Cambiar día"><button type="button" data-daily-prev>Día anterior</button>'
-    + '<button type="button" data-daily-next>Día siguiente</button></nav></div><button type="button" data-daily-close aria-label="Cerrar">×</button></header>'
+    + '<button type="button" data-daily-next>Día siguiente</button></div></div><button type="button" data-daily-close aria-label="Cerrar">×</button></header>'
     + '<p data-daily-status role="status"></p><div class="mxpp-daily-results" data-daily-results></div>'
     + '<footer><button type="button" data-daily-close>Cerrar</button></footer>';
   document.body.append(dialog);

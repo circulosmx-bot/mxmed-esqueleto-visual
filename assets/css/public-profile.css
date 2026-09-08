@@ -1497,10 +1497,10 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 
 .mxpp-agenda-compact__days {
   grid-area: days;
-  margin: 0.62rem 0.78rem 0.75rem;
+  margin: 0.78rem 0.78rem 0.86rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: 0.72rem;
 }
 
 .mxpp-agenda-compact__day {
@@ -1508,7 +1508,7 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   border-radius: 9px;
   background: var(--profile-accent-soft);
   color: #113d59;
-  padding: 0.54rem;
+  padding: 0.72rem;
 }
 
 .mxpp-agenda-compact__day h3 {
@@ -1517,7 +1517,8 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 
 .mxpp-agenda-compact__day h3 {
   color: #113d59;
-  font-size: 0.9rem;
+  font-size: 1.48rem;
+  line-height: 1.08;
 }
 
 .mxpp-agenda-compact__mock-count {
@@ -1542,10 +1543,11 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 }
 
 .mxpp-agenda-compact__slots {
-  margin-top: 0.5rem;
+  margin-top: 0.72rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.36rem;
+  column-gap: 0.72rem;
+  row-gap: 0.58rem;
 }
 
 .mxpp-agenda-compact__slot {
@@ -2865,24 +2867,25 @@ button.mxpp-hero-action:focus-visible {
 
 /* Global daily preview and exact-date dialog. Scoped to the public profile. */
 .mxpp-agenda-compact__slot{flex-direction:column}
-.mxpp-slot-office{display:block;font-size:.75rem;line-height:1.15;font-weight:400;white-space:normal;overflow-wrap:anywhere;max-width:8em;margin-top:.25rem}
-.mxpp-day-all{display:block;background:transparent;color:#113d59;border:1px solid #b9cdd8;border-radius:.5rem;padding:.35rem .6rem;margin:.65rem 0 0 auto;font:inherit;font-size:.75rem;font-weight:600;cursor:pointer;max-width:100%;min-height:44px}
-.mxpp-daily-dialog{box-sizing:border-box;width:min(760px,calc(100% - 24px));max-height:calc(100dvh - 24px);padding:20px;border:1px solid #c5dbe4;border-radius:14px;color:#113d59;background:#fff;overflow-y:auto}
+.mxpp-slot-office{display:block;font-size:.75rem;line-height:1.15;font-weight:400;white-space:normal;overflow-wrap:anywhere;max-width:8em;margin:.25rem auto 0}
+.mxpp-day-all{display:block;width:max-content;background:transparent;color:#113d59;border:0;border-radius:0;padding:.38rem 0 .12rem;margin:.74rem 0 0 auto;font:inherit;font-size:.86rem;font-weight:800;line-height:1.2;cursor:pointer;max-width:100%;min-height:44px;text-align:right;text-decoration:underline;text-underline-offset:.16em}
+.mxpp-daily-dialog{box-sizing:border-box;width:min(790px,calc(100% - 24px));max-height:calc(100dvh - 24px);padding:20px;border:1px solid #c5dbe4;border-radius:14px;color:#113d59;background:#fff;overflow-y:auto}
 .mxpp-daily-dialog::backdrop{background:rgb(17 61 89 / .45)}
 .mxpp-daily-dialog header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.mxpp-daily-dialog header > div{flex:1;min-width:0}
 .mxpp-daily-dialog h2{margin:0;font-size:1.6rem}
-.mxpp-daily-dialog header p{margin:.4rem 0}
+.mxpp-daily-dialog header p{margin:0;text-align:center}
 .mxpp-daily-dialog button{font:inherit;cursor:pointer;min-height:44px;border:1px solid #b9cdd8;border-radius:8px;background:#fff;color:#113d59;padding:10px 14px}
 .mxpp-daily-dialog [data-daily-close][aria-label]{font-size:1.5rem;line-height:1;flex-shrink:0}
-.mxpp-daily-results{display:grid;grid-template-columns:repeat(auto-fit,7rem);justify-content:center;gap:.36rem;padding:.75rem;background:var(--profile-accent-soft);border-radius:9px}
-.mxpp-daily-dialog .mxpp-daily-slot{display:flex;flex-direction:column;gap:4px;text-align:left;overflow-wrap:anywhere}
+.mxpp-daily-results{display:grid;grid-template-columns:repeat(auto-fit,7.4rem);justify-content:center;gap:.62rem .76rem;padding:1rem;background:var(--profile-accent-soft);border-radius:9px}
+.mxpp-daily-dialog .mxpp-daily-slot{display:flex;flex-direction:column;gap:4px;text-align:center;overflow-wrap:anywhere}
 .mxpp-daily-slot strong{font-size:1.2rem}
 .mxpp-daily-slot span{font-size:.9rem}
 .mxpp-daily-dialog footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px}
 .mxpp-daily-dialog button:disabled{opacity:.5;cursor:default}
 .mxpp-daily-dialog button:focus-visible,.mxpp-day-all:focus-visible{outline:3px solid #0b9fa9;outline-offset:2px}
 .mxpp-daily-slot:hover{background:#edf8f8}
-@media(max-width:540px){.mxpp-daily-dialog{padding:14px}.mxpp-daily-results{padding:.5rem}.mxpp-daily-dialog h2{font-size:1.4rem}.mxpp-daily-dialog footer{justify-content:flex-start}}
+@media(max-width:540px){.mxpp-daily-dialog{padding:14px}.mxpp-daily-results{grid-template-columns:repeat(auto-fit,7rem);gap:.5rem;padding:.5rem}.mxpp-daily-dialog h2{font-size:1.4rem}.mxpp-daily-dialog footer{justify-content:flex-start}}
 
 /* Requester-only proportions; keep labels as direct children for compact spacing. */
 @media (min-width: 601px) {
@@ -2915,6 +2918,12 @@ button.mxpp-hero-action:focus-visible {
   line-height: 1.2;
 }
 .mxpp-daily-slot strong { font-size: inherit; font-weight: inherit; }
+.mxpp-daily-dialog .mxpp-daily-slot {
+  flex-basis: 7.4rem;
+  width: 7.4rem;
+  height: 4.3rem;
+  min-height: 4.3rem;
+}
 .mxpp-slot-office,
 .mxpp-daily-slot span {
   display: -webkit-box;
@@ -2929,7 +2938,18 @@ button.mxpp-hero-action:focus-visible {
   line-height: 1.15;
 }
 .mxpp-daily-dialog #mxpp-daily-date { font-size: 1.15rem; font-weight: 600; }
-.mxpp-daily-dialog nav { display: flex; flex-wrap: wrap; gap: .5rem; }
-.mxpp-daily-dialog nav button { font-size: .85rem; }
+.mxpp-daily-dialog__date-nav { display: flex; align-items: center; gap: .65rem; margin-top: .62rem; }
+.mxpp-daily-dialog__date-nav button { font-size: .85rem; padding: .48rem .7rem; }
 .mxpp-daily-dialog [data-daily-status]:empty { display: none; }
 .mxpp-daily-results { margin-top: .75rem; }
+@media(max-width:720px){
+  .mxpp-agenda-compact__day h3{font-size:1.28rem}
+  .mxpp-agenda-compact__slots{column-gap:.5rem}
+  .mxpp-daily-dialog__date-nav{flex-wrap:wrap;justify-content:center}
+  .mxpp-daily-dialog #mxpp-daily-date{order:-1;flex:1 0 100%}
+}
+@media(max-width:540px){
+  .mxpp-daily-dialog__date-nav{gap:.42rem}
+  .mxpp-daily-dialog__date-nav button{font-size:.78rem;padding:.42rem .44rem}
+  .mxpp-daily-dialog .mxpp-daily-slot{flex-basis:7rem;width:7rem;height:4.15rem;min-height:4.15rem}
+}

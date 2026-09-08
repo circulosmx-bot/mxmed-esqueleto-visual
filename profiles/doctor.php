@@ -1992,7 +1992,7 @@ if (isLocalDevRequest()) {
               + '<h3>' + escapeHtml(formatDate(date)) + '</h3>'
               + mockCountHtml
               + '<div class="mxpp-agenda-compact__slots">' + slotHtml + '</div>'
-              + (slots.length > 10 ? '<button type="button" class="mxpp-day-all" data-full-day="' + escapeHtml(date) + '">Ver más citas</button>' : '')
+              + (slots.length > 10 ? '<button type="button" class="mxpp-day-all" data-full-day="' + escapeHtml(date) + '">Ver más citas...</button>' : '')
               + '</article>';
           }).join('');
           container.hidden = false;
