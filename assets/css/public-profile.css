@@ -2623,14 +2623,22 @@ button.mxpp-hero-action:focus-visible {
 .mxpp-content-panel__return {
   margin-left: auto;
   padding: 0.38rem 0.8rem;
-  border: 1px solid var(--mxpp-profile-ink);
+  border: 1px solid #01afb7;
   border-radius: 4px;
-  background: var(--mxpp-profile-ink);
+  background: #01afb7;
   color: #fff;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.mxpp-content-panel__return:hover,
+.mxpp-content-panel__return:focus {
+  background: #008f96;
+  border-color: #008f96;
+  color: #fff;
+  text-decoration: none;
 }
 
 .mxpp-content-panel__return:focus-visible {
@@ -2770,10 +2778,20 @@ button.mxpp-hero-action:focus-visible {
 .mxpp-content-panel__office-actions { display: flex; flex-wrap: wrap; gap: .75rem 1rem; }
 .mxpp-content-panel__closure a { color: var(--mxpp-profile-ink); font-weight: 600; }
 .mxpp-content-panel__closure .mxpp-content-panel__reserve {
-  display: inline-block;
-  padding: .6rem .9rem;
-  border-radius: 5px;
-  background: var(--mxpp-profile-ink);
+  display: inline-flex;
+  align-items: center;
+  min-height: 60px;
+  padding: .75rem 1.35rem;
+  border-radius: 7px;
+  background: #01afb7;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.mxpp-content-panel__closure .mxpp-content-panel__reserve:hover,
+.mxpp-content-panel__closure .mxpp-content-panel__reserve:focus {
+  background: #008f96;
   color: #fff;
   text-decoration: none;
 }
