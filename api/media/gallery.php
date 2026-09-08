@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/media/bootstrap.php';
 require_once __DIR__ . '/../../modules/media/services/DoctorGalleryService.php';
+require_once __DIR__ . '/../../modules/media/services/GallerySessionScope.php';
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store');
 session_start();
@@ -12,9 +13,14 @@ function galleryReply(int $status, array $body): never {
     exit;
 }
 // Never accept identity headers or client-supplied doctor IDs.
-$user = trim((string)($_SESSION['user_id'] ?? $_SESSION['mxmed_user_id'] ?? $_SESSION['auth_user_id'] ?? ''));
-$doctor = trim((string)($_SESSION['doctor_id'] ?? $_SESSION['active_doctor_id'] ?? $_SESSION['mxmed_doctor_id'] ?? ''));
-if ($user === '' || $doctor === '') galleryReply(401, ['ok'=>false,'error'=>'unauthorized','message'=>'Inicia sesión para administrar tus fotos.']);
+$allowDevFixture = getenv('MXMED_SUBSCRIPTIONS_DEV_SESSION_FIXTURE_ENABLED') === '1'
+    && in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
+foreach (['APP_ENV', 'MXMED_ENV', 'MXMED_ENVIRONMENT', 'ENVIRONMENT'] as $name) {
+    if (in_array(strtolower((string)getenv($name)), ['prod', 'production'], true)) $allowDevFixture = false;
+}
+$scope = \Media\Services\GallerySessionScope::resolve($_SESSION, $allowDevFixture);
+if ($scope === null) galleryReply(401, ['ok'=>false,'error'=>'unauthorized','message'=>'Inicia sesión con un perfil médico autorizado para administrar tus fotos.']);
+$doctor = $scope['doctor_id'];
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if (!in_array($method, ['GET','POST','DELETE'], true)) galleryReply(405, ['ok'=>false,'error'=>'method_not_allowed']);
 $_SESSION['gallery_csrf'] ??= bin2hex(random_bytes(32));
