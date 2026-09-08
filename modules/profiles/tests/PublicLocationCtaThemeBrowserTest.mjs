@@ -53,10 +53,12 @@ try {
     await wait(`document.querySelector('[data-mxpp-profile-view-trigger="consultation"]')`);
     await evaluate(`document.querySelector('[data-mxpp-profile-view-trigger="consultation"]').click()`);
     await wait(`document.querySelector('.mxpp-content-panel__return') && document.querySelector('.mxpp-content-panel__return').offsetParent !== null`);
-    const actual = await evaluate(`(()=>{const location=document.querySelector('.mxpp-content-panel__return');const reserve=document.querySelector('.mxpp-content-panel__reserve');const cs=getComputedStyle(location);const r=location.getBoundingClientRect();return {theme:document.body.dataset.profileTheme,locationBg:cs.backgroundColor,locationColor:cs.color,reserveBg:getComputedStyle(reserve).backgroundColor,overflow:r.left < -1 || r.right > innerWidth + 1 || location.scrollWidth > location.clientWidth};})()`);
+    const actual = await evaluate(`(()=>{const location=document.querySelector('.mxpp-content-panel__return');const reserve=document.querySelector('.mxpp-content-panel__reserve');const cs=getComputedStyle(location);const r=location.getBoundingClientRect();return {theme:document.body.dataset.profileTheme,locationBg:cs.backgroundColor,locationColor:cs.color,transition:cs.transitionProperty,reserveBg:getComputedStyle(reserve).backgroundColor,overflow:r.left < -1 || r.right > innerWidth + 1 || location.scrollWidth > location.clientWidth};})()`);
     assert.equal(actual.theme, theme);
     assert.equal(actual.locationBg, `rgb(${parseInt(expected.slice(1, 3), 16)}, ${parseInt(expected.slice(3, 5), 16)}, ${parseInt(expected.slice(5, 7), 16)})`);
     assert.equal(actual.locationColor, 'rgb(255, 255, 255)');
+    assert.match(actual.transition, /background-color/);
+    assert.match(actual.transition, /border-color/);
     assert.equal(actual.reserveBg, 'rgb(1, 175, 183)');
     assert.equal(actual.overflow, false);
     await evaluate(`document.querySelector('.mxpp-content-panel__return').click()`);
