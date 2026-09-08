@@ -804,7 +804,7 @@ if (isLocalDevRequest()) {
                 </div>
               <?php endif; ?>
               <?php if ($galleryImages !== []): ?>
-                <button type="button" class="mxpp-gallery-trigger" data-gallery-open aria-haspopup="dialog"><span class="material-symbols-rounded" aria-hidden="true">photo_camera</span> Ver fotos · <?= count($galleryImages) ?></button>
+                <button type="button" class="mxpp-gallery-trigger" data-gallery-open aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M8 5 9.5 3h5L16 5h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><circle cx="12" cy="12" r="4"/></svg><span>Ver fotos · <?= count($galleryImages) ?></span></button>
               <?php endif; ?>
             </div>
           </article>
