@@ -62,8 +62,9 @@ try {
     await ev(`document.querySelector('[data-mxpp-next-available]').click()`);
     await wait(ready);
     const first = await ev(rows);
-    const availabilityLegend = await ev(`(()=>{const note=document.querySelector('.mx-ag-next-slots-info-note');return {text:note.innerText,scroll:note.scrollWidth,client:note.clientWidth};})()`);
-    assert.equal(availabilityLegend.text,'La disponibilidad se actualiza continuamente. El horario queda reservado únicamente al completar la confirmación de la cita.');
+    const availabilityLegend = await ev(`(()=>{const note=document.querySelector('.mx-ag-next-slots-info-note');return {text:note.innerText,lines:Array.from(note.querySelectorAll('.mx-ag-next-slots-info-note__line')).map(line=>line.textContent),scroll:note.scrollWidth,client:note.clientWidth};})()`);
+    assert.deepEqual(availabilityLegend.lines,['La disponibilidad se actualiza continuamente.','El horario queda reservado únicamente al completar la confirmación de la cita.']);
+    assert.equal(availabilityLegend.text,'La disponibilidad se actualiza continuamente.\nEl horario queda reservado únicamente al completar la confirmación de la cita.');
     assert.ok(availabilityLegend.scroll <= availabilityLegend.client + 1,'availability legend has no horizontal overflow');
     assert.equal(await ev(`document.querySelectorAll('.mxpp-next-dialog .mx-ag-next-slot-main .mx-ag-next-slot-label').length`),0);
     assert.equal(await ev(`Array.from(document.querySelectorAll('.mxpp-next-dialog__result')).some(e=>e.innerText.toLowerCase().includes('fecha y hora'))`),false);

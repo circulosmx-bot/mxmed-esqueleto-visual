@@ -182,6 +182,13 @@
 .mx-ag-next-slots-info-note i{
   font-size: 1.05rem;
 }
+.mx-ag-next-slots-info-note__copy{
+  display: grid;
+  gap: 2px;
+}
+.mx-ag-next-slots-info-note__line{
+  display: block;
+}
 .mx-ag-next-slots-modal-footer{
   border-top: 1px solid #dceaf2;
   gap: 8px;
