@@ -2813,8 +2813,34 @@ body:is(
   align-items: flex-start;
   gap: .75rem;
 }
-.mxpp-content-panel__office-actions { display: flex; flex-wrap: wrap; gap: .75rem 1rem; }
-.mxpp-content-panel__closure a { color: var(--mxpp-profile-ink); font-weight: 600; }
+.mxpp-content-panel__office-actions {
+  display: grid;
+  gap: .35rem;
+}
+.mxpp-content-panel__contact-prompt {
+  margin: 0 0 .12rem;
+  color: var(--mxpp-profile-ink);
+  font-size: .92rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.mxpp-content-panel__contact-line {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: .42rem;
+  color: var(--mxpp-profile-ink);
+  font-size: .94rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+.mxpp-content-panel__contact-line--phone .mxpp-contact-line__icon { color: #14864d; }
+.mxpp-content-panel__contact-line--whatsapp .mxpp-contact-line__icon { color: #29ac63; }
+.mxpp-content-panel__contact-line:hover,
+.mxpp-content-panel__contact-line:focus-visible { text-decoration: underline; }
 .mxpp-content-panel__closure .mxpp-content-panel__reserve {
   display: inline-flex;
   align-items: center;

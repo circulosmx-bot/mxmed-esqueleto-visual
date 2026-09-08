@@ -53,12 +53,16 @@ final class PublicProfilePanelContent
                 $schedules[] = $agenda ? $name : $name . ': ' . $summary;
             }
             // Office destinations have already passed the public-contact visibility gate.
-            $phone = self::phoneHref(self::text($office['phone_public'] ?? null));
-            $whatsapp = self::phoneHref(self::text($office['whatsapp_public'] ?? null));
+            $phoneLabel = self::text($office['phone_public'] ?? null);
+            $whatsappLabel = self::text($office['whatsapp_public'] ?? null);
+            $phone = self::phoneHref($phoneLabel);
+            $whatsapp = self::phoneHref($whatsappLabel);
             $contacts[] = [
                 'panel_id' => 'mxpp-consultorio-panel-' . ($index + 1),
                 'phone' => $phone,
+                'phone_label' => $phone !== null ? $phoneLabel : null,
                 'whatsapp' => $whatsapp !== null ? 'https://wa.me/' . preg_replace('/\D/', '', $whatsapp) : null,
+                'whatsapp_label' => $whatsapp !== null ? $whatsappLabel : null,
             ];
             foreach (self::items($office['modalities'] ?? []) as $mode) {
                 $label = ['in_person' => 'Consulta presencial', 'presencial' => 'Consulta presencial',

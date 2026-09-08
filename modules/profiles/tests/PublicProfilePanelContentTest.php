@@ -56,7 +56,7 @@ panelAssert(array_column($full['about']['columns']['right'], 'title') === ['Espe
 $about = array_column($full['about']['groups'], 'items', 'title');
 panelAssert($about['Certificaciones y asociaciones'] === ['Certificación publicada', 'Asociación publicada'], 'certifications and associations merge without inventing credentials');
 $contacts = $full['consultation']['contacts'];
-panelAssert($contacts[0]['phone'] === 'tel:4491234567' && $contacts[1]['phone'] === null, 'main public phone only; emergency and raw columns cannot become the main CTA');
+panelAssert($contacts[0]['phone'] === 'tel:4491234567' && $contacts[0]['phone_label'] === '(449) 123 4567' && $contacts[1]['phone'] === null, 'main public phone only; emergency and raw columns cannot become the main CTA');
 $public['consultorios'][0]['whatsapp_public'] = '+52 449 123 4567';
 $public['consultorios'][0]['modalities'] = ['in_person', 'online', 'private_unknown'];
 $public['professional']['target_audience'] = ['Niños y Adultos'];
@@ -80,7 +80,7 @@ panelAssert($groups['Horarios']['items'] === ['Sede A'] && isset($groups['Horari
 panelAssert($groups['Horarios']['icon'] === 'alarm' && $groups['Horarios']['icon_style'] === 'outlined', 'schedules use the requested outlined alarm icon');
 panelAssert($groups['Medios de pago']['icon'] === 'credit_card' && $groups['Medios de pago']['icon_style'] === 'outlined', 'payment methods use the requested outlined credit card icon');
 panelAssert($groups['Aseguradoras aceptadas']['logos'] === ['/assets/insurers/published.svg', null, 'https://example.com/logo.png', null], 'logo contract rejects unsafe destinations and retains insurer names');
-panelAssert($ready['contacts'][0]['whatsapp'] === 'https://wa.me/524491234567' && $ready['agenda'], 'public WhatsApp and gated reservation destination');
+panelAssert($ready['contacts'][0]['whatsapp'] === 'https://wa.me/524491234567' && $ready['contacts'][0]['whatsapp_label'] === '+52 449 123 4567' && $ready['agenda'], 'public WhatsApp and gated reservation destination');
 $public['public_visibility']['show_public_agenda'] = false;
 $basic = PublicProfilePanelContent::build($public)['consultation'];
 $hours = array_column($basic['groups'], null, 'title')['Horarios'];

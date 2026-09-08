@@ -1080,11 +1080,18 @@ if (isLocalDevRequest()) {
                       <div class="mxpp-content-panel__closure" aria-label="Contactar y reservar">
                         <?php foreach ($view['contacts'] as $contactIndex => $panelContact): ?>
                           <div class="mxpp-content-panel__office-actions" data-mxpp-office-actions="<?= h($panelContact['panel_id']) ?>" <?= $contactIndex > 0 ? 'hidden' : '' ?>>
+                            <p class="mxpp-content-panel__contact-prompt">¿Tienes dudas?</p>
                             <?php if ($panelContact['phone'] !== null): ?>
-                              <a href="<?= h($panelContact['phone']) ?>">¿Tienes dudas?</a>
+                              <a class="mxpp-content-panel__contact-line mxpp-content-panel__contact-line--phone" href="<?= h($panelContact['phone']) ?>">
+                                <span class="material-symbols-rounded mxpp-contact-line__icon mxpp-contact-line__icon--phone" aria-hidden="true">call</span>
+                                <span><strong>Tel. Consultorio:</strong> <?= h($panelContact['phone_label'] ?? '') ?></span>
+                              </a>
                             <?php endif; ?>
                             <?php if ($panelContact['whatsapp'] !== null): ?>
-                              <a href="<?= h($panelContact['whatsapp']) ?>" target="_blank" rel="noopener">Enviar WhatsApp</a>
+                              <a class="mxpp-content-panel__contact-line mxpp-content-panel__contact-line--whatsapp" href="<?= h($panelContact['whatsapp']) ?>" target="_blank" rel="noopener">
+                                <span class="mxpp-contact-line__icon mxpp-contact-line__icon--whatsapp" aria-hidden="true"></span>
+                                <span><strong>WhatsApp:</strong> <?= h($panelContact['whatsapp_label'] ?? '') ?></span>
+                              </a>
                             <?php endif; ?>
                           </div>
                         <?php endforeach; ?>
