@@ -53,3 +53,41 @@ Admin list/upload/delete use GET/POST/DELETE `/api/media/gallery.php`
 
 `PublicProfilePlanCapabilities::show_gallery` is false for Free/Basic and true
 from Standard upward. Preserve this rule; no new commercial restriction.
+
+## Public data and lightbox
+
+Canonical path: media_assets (PHYSICIAN + doctor ID, DOCTOR_GALLERY, PUBLIC,
+READY) → MediaAssetsRepository::listDoctorGallery → PublicProfileRepository
+snapshot.gallery → PublicProfileController data.gallery (public profile and
+existing show_gallery entitlement) → profiles/doctor.php → public-profile-gallery.js.
+Zero images render neither trigger nor dialog. Real portrait selection remains
+independent; the portrait is not added to the gallery automatically.
+
+Native dialog provides modal semantics, focus containment and Escape handling.
+The turquoise portrait badge opens it without navigation. Arrows wrap, thumbnail
+buttons synchronize selection, left/right keys navigate. One image hides arrows.
+Close button/backdrop/Escape return focus and scroll to the profile; no reload.
+The main image uses contain within a stable frame; thumbnail strip scrolls.
+Media alt_text is used unchanged (empty when no caption was supplied).
+
+## Phase 2 QA
+
+- PublicGalleryBrowserTest.mjs: PASS with canonical HTTP-uploaded 0/1/6-image
+  fixtures. Admin grid loads all six after navigation and page reload. Public
+  count is exact, Free hides access, Standard renders it. Arrow buttons,
+  thumbnail click, keyboard right, Escape, restored focus/scroll tested.
+- Responsive PASS at 1440×900, 1366×768, 390×844, 320×740; modal and close
+  control fit the viewport. Desktop/mobile screenshots reviewed at
+  `/tmp/mxmed-gallery-qa/{width}.png`.
+- Fixtures intentionally use the generic image as an uploaded QA file; they
+  do not demonstrate real clinic content and are not left on the profile.
+- DoctorGalleryHttpTest additionally rejects a non-image/PHP-named upload.
+- MediaFoundationStaticTest updated for the approved third purpose; PASS.
+- Logo processor/persistence/storage regression tests remain PASS.
+- All gallery QA rows, objects, and test sessions were removed. Final local
+  DOCTOR_GALLERY row count is zero; old browser photos were not imported.
+
+Packaging note: the existing LocalPersistentPublicMediaStorage source had been
+excluded by the broad `storage/` ignore pattern. The required source file is
+now explicitly tracked, including the new allowed gallery prefix. No stored
+user media files were added to Git.

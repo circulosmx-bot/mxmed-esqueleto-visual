@@ -5,6 +5,7 @@ namespace Profiles\Repositories;
 
 use PDO;
 use PDOException;
+require_once __DIR__ . '/../../media/repositories/MediaAssetsRepository.php';
 
 final class PublicProfileRepository
 {
@@ -46,6 +47,7 @@ final class PublicProfileRepository
             'plan_source' => $this->resolvePlanSource($canonicalProfile),
             'ownership_source' => $ownershipSource,
             'identity' => $this->resolveIdentity($canonicalProfile),
+            'gallery' => $this->tableExists('media_assets') ? (new \Media\Repositories\MediaAssetsRepository($this->pdo))->listDoctorGallery($doctorId) : [],
             'professional' => $this->resolveProfessional($canonicalProfile),
             'specialties' => $this->resolveSpecialties($canonicalProfile),
             'profile_theme_key' => $this->toNullableText($canonicalProfile['profile_theme_key'] ?? null),

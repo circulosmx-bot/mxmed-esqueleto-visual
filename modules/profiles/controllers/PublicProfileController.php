@@ -196,6 +196,7 @@ final class PublicProfileController
             ],
             'plan' => $plan,
             'public_visibility' => $publicVisibility,
+            'gallery' => $isPublic && ($publicVisibility['show_gallery'] ?? false) ? (array)($snapshot['gallery'] ?? []) : [],
             'identity' => [
                 'display_name' => $displayName,
                 'professional_designation' => $this->firstNonEmpty($identity['professional_designation'] ?? null),

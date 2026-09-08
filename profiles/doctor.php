@@ -541,6 +541,7 @@ $primaryBrandLogoUrl = toText($primaryConsultorio['brand_logo_url'] ?? null);
 $primaryBrandName = toText($primaryConsultorio['brand_name'] ?? null) ?? $primaryName;
 
 $photoUrl = toText($identity['photo_url'] ?? null);
+$galleryImages = safeArray($data['gallery'] ?? []);
 $physicianLogoUrl = toBool($publicVisibility['show_logo'] ?? false)
     ? toText($identity['logo_url'] ?? null)
     : null;
@@ -794,13 +795,16 @@ if (isLocalDevRequest()) {
       <section class="mxpp-profile-hero">
         <aside class="mxpp-left-panel">
           <article class="mxpp-card mxpp-card--left-main">
-            <div class="mxpp-avatar-wrap">
+            <div class="mxpp-avatar-wrap<?= $galleryImages !== [] ? ' mxpp-avatar-wrap--gallery' : '' ?>">
               <?php if ($portraitUrl !== null): ?>
                 <img src="<?= h($portraitUrl) ?>" alt="<?= h($photoUrl !== null ? 'Foto del médico' : 'Imagen de perfil de ' . ($displayName ?? 'este especialista')) ?>" class="mxpp-avatar" />
               <?php else: ?>
                 <div class="mxpp-avatar mxpp-avatar--placeholder" aria-hidden="true">
                   <div class="mxpp-avatar-shape"></div>
                 </div>
+              <?php endif; ?>
+              <?php if ($galleryImages !== []): ?>
+                <button type="button" class="mxpp-gallery-trigger" data-gallery-open aria-haspopup="dialog"><span class="material-symbols-rounded" aria-hidden="true">photo_camera</span> Ver fotos · <?= count($galleryImages) ?></button>
               <?php endif; ?>
             </div>
           </article>
@@ -2751,6 +2755,19 @@ if (isLocalDevRequest()) {
     </script>
   <?php endif; ?>
   <script src="/assets/js/public-profile-panel.js" defer></script>
+  <?php if ($galleryImages !== []): ?>
+    <dialog class="mxpp-gallery-dialog" data-gallery-dialog aria-labelledby="mxpp-gallery-title">
+      <header><h2 id="mxpp-gallery-title">Galería de imágenes</h2><span data-gallery-index aria-live="polite"></span><button type="button" data-gallery-close aria-label="Cerrar galería">×</button></header>
+      <div class="mxpp-gallery-stage"><img data-gallery-main alt="" /><button type="button" data-gallery-prev aria-label="Imagen anterior">‹</button><button type="button" data-gallery-next aria-label="Imagen siguiente">›</button></div>
+      <p data-gallery-error role="status" hidden>No se pudo cargar esta imagen.</p>
+      <div class="mxpp-gallery-thumbnails" aria-label="Imágenes de la galería">
+        <?php foreach ($galleryImages as $index => $asset): ?>
+          <button type="button" data-gallery-thumb="<?= $index ?>" aria-label="Ver imagen <?= $index + 1 ?>"><img src="<?= h($asset['public_url']) ?>" alt="<?= h($asset['alt_text'] ?? '') ?>" loading="lazy" /></button>
+        <?php endforeach; ?>
+      </div>
+    </dialog>
+    <script src="/assets/js/public-profile-gallery.js" defer></script>
+  <?php endif; ?>
   <?php if (isset($profilePanelViews['about'])): ?>
     <script src="/assets/js/public-profile-about.js" defer></script>
   <?php endif; ?>

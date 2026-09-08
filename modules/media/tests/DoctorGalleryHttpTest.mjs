@@ -14,6 +14,8 @@ try{
   assert.equal((await call(null)).status,401);
   const before=await call(sessions[0]);assert.equal(before.status,200);
   const token=before.body.data.csrf_token;
+  const invalid=new FormData();invalid.append('image',new Blob(['not an image'],{type:'image/png'}),'payload.php');
+  assert.equal((await call(sessions[0],'POST',invalid,token)).status,422);
   const bytes=await readFile('assets/img/doctors/avatars/dr-male.png');
   const form=()=>{const f=new FormData();f.append('image',new Blob([bytes],{type:'image/png'}),'sample.png');return f;};
   assert.equal((await call(sessions[0],'POST',form())).status,403);
