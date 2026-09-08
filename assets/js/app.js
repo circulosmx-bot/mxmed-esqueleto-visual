@@ -2133,6 +2133,8 @@ console.info('app.js loaded :: 20251123a');
   function renderPhysicianLogo(url){
     const safeUrl = String(url || '').trim();
     if(!els.logoImage || !els.logoPreview) return;
+    els.logoBox?.classList.toggle('has-logo', Boolean(safeUrl));
+    els.logoPreview.style.removeProperty('display');
     if(!safeUrl){
       els.logoImage.removeAttribute('src');
       els.logoPreview.hidden = true;
@@ -2141,11 +2143,11 @@ console.info('app.js loaded :: 20251123a');
     els.logoImage.src = safeUrl;
     els.logoImage.alt = 'Logotipo profesional';
     els.logoPreview.hidden = false;
-    els.logoPreview.style.display = 'block';
   }
 
   function setLogoBusy(busy){
     state.logoSaving = !!busy;
+    els.logoBox?.setAttribute('aria-busy', String(state.logoSaving));
     if(els.logoInput) els.logoInput.disabled = state.logoSaving;
     if(els.logoDelete) els.logoDelete.disabled = state.logoSaving;
     els.logoBox?.querySelectorAll('.mf-choose').forEach((button)=>{ button.disabled = state.logoSaving; });
@@ -2213,11 +2215,11 @@ console.info('app.js loaded :: 20251123a');
   }
 
   if(els.logoBox && els.logoInput){
-    els.logoBox.querySelector('.mf-choose')?.addEventListener('click', (event)=>{
+    els.logoBox.querySelectorAll('.mf-choose').forEach((button)=> button.addEventListener('click', (event)=>{
       event.preventDefault();
       event.stopPropagation();
       if(!state.logoSaving) els.logoInput.click();
-    });
+    }));
     els.logoBox.addEventListener('click', (event)=>{
       if(event.target.closest('button, input')) return;
       if(!state.logoSaving) els.logoInput.click();
