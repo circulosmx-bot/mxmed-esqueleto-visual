@@ -90,6 +90,18 @@ try {
     assert.ok(polish.moreBackground === 'rgba(0, 0, 0, 0)' || polish.moreBackground === 'transparent');
     assert.ok(polish.moreSize >= 13,'preview action size increased');
     assert.equal(polish.moreRightAligned,true);
+    const cta=await ev(`(()=>{const button=document.querySelector('[data-mxpp-next-available]'),icon=button.querySelector('.mxpp-agenda-compact__find-icon'),label=button.querySelector('span:last-child'),header=button.closest('.mxpp-agenda-compact__header'),br=button.getBoundingClientRect(),ir=icon.getBoundingClientRect(),lr=label.getBoundingClientRect(),style=getComputedStyle(button),iconStyle=getComputedStyle(icon);return {copy:label.textContent,hasIcon:!!icon,background:style.backgroundColor,color:style.color,iconColor:iconStyle.color,iconSize:parseFloat(iconStyle.fontSize),iconLeading:ir.left<br.left+br.width/2,iconProtrudes:ir.left<br.left,labelNotClipped:lr.left>=br.left&&lr.right<=br.right+1,headerNoOverflow:header.scrollWidth<=header.clientWidth}})()`);
+    assert.equal(cta.copy,'Encontrar primera cita disponible');
+    assert.equal(cta.hasIcon,true);
+    assert.equal(cta.background,'rgb(11, 159, 169)');
+    assert.equal(cta.color,'rgb(255, 255, 255)');
+    assert.equal(cta.iconColor,'rgb(255, 255, 255)');
+    assert.ok(cta.iconSize >= 23,'CTA search icon is prominent');
+    assert.equal(cta.iconLeading,true);
+    assert.equal(cta.iconProtrudes,width > 540);
+    assert.equal(cta.labelNotClipped,true);
+    assert.equal(cta.headerNoOverflow,true);
+    await ev(`document.querySelector('[data-mxpp-next-available]').scrollIntoView({block:'center',behavior:'instant'})`); await screenshot(name+'-cta');
     await ev(`${chooseDate}.scrollIntoView({block:'center',behavior:'instant'})`); await screenshot(name+'-preview');
     await ev(`${chooseDate}.focus()`);
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13});
@@ -126,6 +138,8 @@ try {
     assert.equal(modalPolish.grouped,true);
     assert.equal(width >= 720 ? modalPolish.dateNavSameLine : modalPolish.mobileGroupedFallback,true);
     assert.equal(await ev(`document.activeElement.getAttribute('aria-label')`),'Cerrar');
+    const navButtons=await ev(`Array.from(document.querySelectorAll('.mxpp-daily-dialog__date-nav button')).map(button=>{const style=getComputedStyle(button);return {background:style.backgroundColor,color:style.color,border:style.borderTopWidth};})`);
+    assert.deepEqual(navButtons,[{background:'rgb(1, 175, 183)',color:'rgb(255, 255, 255)',border:'0px'},{background:'rgb(1, 175, 183)',color:'rgb(255, 255, 255)',border:'0px'}]);
     const rows=await ev(`Array.from(document.querySelectorAll('.mxpp-daily-slot')).map(e=>e.textContent)`);
     assert.ok(rows[0].includes('09:00') && rows[0].includes('CMQ'));
     assert.ok(rows[10].includes('16:00') && rows[10].includes('Star Médica'));

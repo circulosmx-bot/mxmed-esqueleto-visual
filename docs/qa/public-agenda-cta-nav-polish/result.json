@@ -1,0 +1,706 @@
+{
+  "report": [
+    {
+      "name": "desktop-1440",
+      "normal": [
+        {
+          "date": "Lunes 7 de septiembre",
+          "count": 2
+        },
+        {
+          "date": "Martes 8 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        },
+        {
+          "date": "Miércoles 9 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        }
+      ],
+      "total": 18,
+      "rows": [
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
+      ],
+      "geometry": {
+        "left": 325,
+        "right": 1115,
+        "client": 788,
+        "scroll": 788,
+        "slots": [
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          }
+        ]
+      },
+      "selected": {
+        "date": "2026-09-08",
+        "doctor_id": "1",
+        "consultorio_id": "2",
+        "consultorio_name": "Star Médica",
+        "start_at": "2026-09-08 16:00:00",
+        "end_at": "2026-09-08 16:30:00",
+        "booking_url": "/public-book.html?doctor_id=1"
+      },
+      "emptyDay": true,
+      "modalDayNavigation": true,
+      "mainNavigation": true,
+      "keyboardFocus": true,
+      "nextAvailable": true
+    },
+    {
+      "name": "desktop-1366",
+      "normal": [
+        {
+          "date": "Lunes 7 de septiembre",
+          "count": 2
+        },
+        {
+          "date": "Martes 8 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        },
+        {
+          "date": "Miércoles 9 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        }
+      ],
+      "total": 18,
+      "rows": [
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
+      ],
+      "geometry": {
+        "left": 288,
+        "right": 1078,
+        "client": 788,
+        "scroll": 788,
+        "slots": [
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          },
+          {
+            "height": 68.796875,
+            "client": 116,
+            "scroll": 116
+          }
+        ]
+      },
+      "selected": {
+        "date": "2026-09-08",
+        "doctor_id": "1",
+        "consultorio_id": "2",
+        "consultorio_name": "Star Médica",
+        "start_at": "2026-09-08 16:00:00",
+        "end_at": "2026-09-08 16:30:00",
+        "booking_url": "/public-book.html?doctor_id=1"
+      },
+      "emptyDay": true,
+      "modalDayNavigation": true,
+      "mainNavigation": true,
+      "keyboardFocus": true,
+      "nextAvailable": true
+    },
+    {
+      "name": "mobile-390",
+      "normal": [
+        {
+          "date": "Lunes 7 de septiembre",
+          "count": 2
+        },
+        {
+          "date": "Martes 8 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        },
+        {
+          "date": "Miércoles 9 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        }
+      ],
+      "total": 18,
+      "rows": [
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
+      ],
+      "geometry": {
+        "left": 19,
+        "right": 371,
+        "client": 350,
+        "scroll": 350,
+        "slots": [
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          }
+        ]
+      },
+      "selected": {
+        "date": "2026-09-08",
+        "doctor_id": "1",
+        "consultorio_id": "2",
+        "consultorio_name": "Star Médica",
+        "start_at": "2026-09-08 16:00:00",
+        "end_at": "2026-09-08 16:30:00",
+        "booking_url": "/public-book.html?doctor_id=1"
+      },
+      "emptyDay": true,
+      "modalDayNavigation": true,
+      "mainNavigation": true,
+      "keyboardFocus": true,
+      "nextAvailable": true
+    },
+    {
+      "name": "mobile-320",
+      "normal": [
+        {
+          "date": "Lunes 7 de septiembre",
+          "count": 2
+        },
+        {
+          "date": "Martes 8 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        },
+        {
+          "date": "Miércoles 9 de septiembre",
+          "count": 10,
+          "all": "Ver más citas..."
+        }
+      ],
+      "total": 18,
+      "rows": [
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
+      ],
+      "geometry": {
+        "left": 19,
+        "right": 301,
+        "client": 280,
+        "scroll": 280,
+        "slots": [
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          },
+          {
+            "height": 66.390625,
+            "client": 110,
+            "scroll": 110
+          }
+        ]
+      },
+      "selected": {
+        "date": "2026-09-08",
+        "doctor_id": "1",
+        "consultorio_id": "2",
+        "consultorio_name": "Star Médica",
+        "start_at": "2026-09-08 16:00:00",
+        "end_at": "2026-09-08 16:30:00",
+        "booking_url": "/public-book.html?doctor_id=1"
+      },
+      "emptyDay": true,
+      "modalDayNavigation": true,
+      "mainNavigation": true,
+      "keyboardFocus": true,
+      "nextAvailable": true
+    }
+  ],
+  "freeGating": true,
+  "getOnly": true,
+  "jsErrors": [],
+  "apiCalls": [
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-07&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-10",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-13",
+    "?doctor_id=1&mode=global_days&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-07&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-12-05&mxmed_plan=professional",
+    "?doctor_id=1&consultorio_id=1&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=2&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=3&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-10",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-13",
+    "?doctor_id=1&mode=global_days&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&consultorio_id=1&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=2&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=3&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-10",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-13",
+    "?doctor_id=1&mode=global_days&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&consultorio_id=1&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=2&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=3&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-12&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-11&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-10&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-10",
+    "?doctor_id=1&mode=global_days&mxmed_plan=professional&date=2026-09-13",
+    "?doctor_id=1&mode=global_days&date=2026-09-13&mxmed_plan=professional",
+    "?doctor_id=1&consultorio_id=1&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=2&mode=next&days=3&limit_per_day=0&start_date=2026-09-07",
+    "?doctor_id=1&consultorio_id=3&mode=next&days=3&limit_per_day=0&start_date=2026-09-07"
+  ]
+}

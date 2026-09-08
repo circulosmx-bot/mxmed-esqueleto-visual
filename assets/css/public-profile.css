@@ -1602,6 +1602,10 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
 }
 
 .mxpp-agenda-compact__find {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
   min-height: 40px;
   padding: 0.35rem 0.75rem;
   font-size: 0.966rem;
@@ -1609,6 +1613,16 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   background: #0b9fa9;
   color: #fff;
   white-space: normal;
+}
+
+.mxpp-agenda-compact__find-icon {
+  flex: 0 0 auto;
+  margin-left: -0.85rem;
+  color: #fff;
+  font-size: 1.56rem;
+  font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 100, 'opsz' 48;
+  line-height: 1;
+  transform: translateX(-0.26rem);
 }
 
 .mxpp-agenda-compact__find:hover:not(:disabled),
@@ -2940,7 +2954,10 @@ button.mxpp-hero-action:focus-visible {
 }
 .mxpp-daily-dialog #mxpp-daily-date { font-size: 1.15rem; font-weight: 600; }
 .mxpp-daily-dialog__date-nav { display: flex; align-items: center; justify-content: center; gap: .65rem; margin-top: .62rem; }
-.mxpp-daily-dialog__date-nav button { font-size: .85rem; padding: .48rem .7rem; }
+.mxpp-daily-dialog__date-nav button { border: 0; background: #01afb7; color: #fff; font-size: .85rem; padding: .48rem .7rem; }
+.mxpp-daily-dialog__date-nav button:hover:not(:disabled),
+.mxpp-daily-dialog__date-nav button:focus:not(:disabled) { background: #008f96; color: #fff; }
+.mxpp-daily-dialog__date-nav button:focus-visible { outline-color: #113d59; }
 .mxpp-daily-dialog [data-daily-status]:empty { display: none; }
 .mxpp-daily-results { margin-top: .75rem; }
 .mxpp-slot-time,
@@ -2959,6 +2976,8 @@ button.mxpp-hero-action:focus-visible {
   .mxpp-daily-dialog #mxpp-daily-date{order:-1;flex:1 0 100%}
 }
 @media(max-width:540px){
+  .mxpp-agenda-compact__find { width: 100%; font-size: .88rem; }
+  .mxpp-agenda-compact__find-icon { margin-left: -.45rem; font-size: 1.48rem; transform: translateX(-.08rem); }
   .mxpp-daily-dialog__date-nav{gap:.42rem}
   .mxpp-daily-dialog__date-nav button{font-size:.78rem;padding:.42rem .44rem}
   .mxpp-daily-dialog .mxpp-daily-slot{flex-basis:7rem;width:7rem;height:4.15rem;min-height:4.15rem}
