@@ -84,7 +84,7 @@ final class LocalPersistentPublicMediaStorage implements PublicMediaStoragePort
 
     private function pathForKey(string $storageKey): string
     {
-        if (preg_match('#^public/(?:physician-personal-logo|consultorio-group-logo|doctor-gallery)/[a-f0-9]{64}/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.webp$#', $storageKey) !== 1) {
+        if (preg_match('#^public/(?:physician-personal-logo|consultorio-group-logo|doctor-gallery|doctor-profile-photo)/[a-f0-9]{64}/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.webp$#', $storageKey) !== 1) {
             throw new RuntimeException('invalid_public_media_storage_key');
         }
         return $this->root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storageKey);

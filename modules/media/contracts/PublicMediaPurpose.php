@@ -9,12 +9,15 @@ final class PublicMediaPurpose
     public const CONSULTORIO_GROUP_LOGO = 'CONSULTORIO_GROUP_LOGO';
     public const DOCTOR_GALLERY = 'DOCTOR_GALLERY';
 
+    public const DOCTOR_PROFILE_PHOTO = 'DOCTOR_PROFILE_PHOTO';
+
     public static function all(): array
     {
         return [
             self::PHYSICIAN_PERSONAL_LOGO,
             self::CONSULTORIO_GROUP_LOGO,
             self::DOCTOR_GALLERY,
+            self::DOCTOR_PROFILE_PHOTO,
         ];
     }
 

@@ -1,0 +1,6 @@
+#mx-dg-media-card #mxpi-photo-control { height: auto; aspect-ratio: auto; min-width: 0; }
+#mx-dg-media-card #mxpi-photo-preview { position: static; width: 100%; max-width: 180px; margin: 8px auto; }
+#mx-dg-media-card #mxpi-photo-preview:not([hidden]) { display: block; }
+#mx-dg-media-card #mxpi-photo-preview img { display: block; width: 100%; height: 160px; object-fit: contain; }
+#mxpi-photo-control .mf-actions { flex-wrap: wrap; }
+#mxpi-photo-status { font-size: .8rem; overflow-wrap: anywhere; }

@@ -13,8 +13,8 @@ function mediaStaticAssert(bool $condition, string $message): void
 }
 
 $purposes = PublicMediaPurpose::all();
-mediaStaticAssert($purposes === ['PHYSICIAN_PERSONAL_LOGO', 'CONSULTORIO_GROUP_LOGO', 'DOCTOR_GALLERY'], 'purpose allowlist exact and closed');
-mediaStaticAssert(count($purposes) === 3, 'purpose allowlist includes gallery');
+mediaStaticAssert($purposes === ['PHYSICIAN_PERSONAL_LOGO', 'CONSULTORIO_GROUP_LOGO', 'DOCTOR_GALLERY', 'DOCTOR_PROFILE_PHOTO'], 'purpose allowlist exact and closed');
+mediaStaticAssert(count($purposes) === 4, 'purpose allowlist includes gallery and profile photo');
 
 $migration = file_get_contents(__DIR__ . '/../db/migrations/2026_09_03_01_create_media_assets.sql');
 mediaStaticAssert(str_contains($migration, 'CREATE TABLE IF NOT EXISTS media_assets'), 'generic media metadata migration present');
