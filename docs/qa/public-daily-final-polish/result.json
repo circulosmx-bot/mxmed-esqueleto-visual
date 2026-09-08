@@ -5,7 +5,7 @@
       "normal": [
         {
           "date": "Lunes 7 de septiembre",
-          "count": 3
+          "count": 2
         },
         {
           "date": "Martes 8 de septiembre",
@@ -20,24 +20,24 @@
       ],
       "total": 18,
       "rows": [
-        "09:00 hTorre Médica CMQ",
-        "09:30 hTorre Médica CMQ",
-        "10:00 hTorre Médica CMQ",
-        "10:30 hTorre Médica CMQ",
-        "11:00 hTorre Médica CMQ",
-        "11:30 hTorre Médica CMQ",
-        "12:00 hTorre Médica CMQ",
-        "12:30 hTorre Médica CMQ",
-        "13:00 hTorre Médica CMQ",
-        "13:30 hTorre Médica CMQ",
-        "16:00 hStar Médica",
-        "16:30 hStar Médica",
-        "17:00 hStar Médica",
-        "17:30 hStar Médica",
-        "18:00 hStar Médica",
-        "18:30 hStar Médica",
-        "19:00 hStar Médica",
-        "19:30 hStar Médica"
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
       ],
       "geometry": {
         "left": 325,
@@ -157,7 +157,7 @@
       "normal": [
         {
           "date": "Lunes 7 de septiembre",
-          "count": 3
+          "count": 2
         },
         {
           "date": "Martes 8 de septiembre",
@@ -172,24 +172,24 @@
       ],
       "total": 18,
       "rows": [
-        "09:00 hTorre Médica CMQ",
-        "09:30 hTorre Médica CMQ",
-        "10:00 hTorre Médica CMQ",
-        "10:30 hTorre Médica CMQ",
-        "11:00 hTorre Médica CMQ",
-        "11:30 hTorre Médica CMQ",
-        "12:00 hTorre Médica CMQ",
-        "12:30 hTorre Médica CMQ",
-        "13:00 hTorre Médica CMQ",
-        "13:30 hTorre Médica CMQ",
-        "16:00 hStar Médica",
-        "16:30 hStar Médica",
-        "17:00 hStar Médica",
-        "17:30 hStar Médica",
-        "18:00 hStar Médica",
-        "18:30 hStar Médica",
-        "19:00 hStar Médica",
-        "19:30 hStar Médica"
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
       ],
       "geometry": {
         "left": 288,
@@ -309,7 +309,7 @@
       "normal": [
         {
           "date": "Lunes 7 de septiembre",
-          "count": 3
+          "count": 2
         },
         {
           "date": "Martes 8 de septiembre",
@@ -324,24 +324,24 @@
       ],
       "total": 18,
       "rows": [
-        "09:00 hTorre Médica CMQ",
-        "09:30 hTorre Médica CMQ",
-        "10:00 hTorre Médica CMQ",
-        "10:30 hTorre Médica CMQ",
-        "11:00 hTorre Médica CMQ",
-        "11:30 hTorre Médica CMQ",
-        "12:00 hTorre Médica CMQ",
-        "12:30 hTorre Médica CMQ",
-        "13:00 hTorre Médica CMQ",
-        "13:30 hTorre Médica CMQ",
-        "16:00 hStar Médica",
-        "16:30 hStar Médica",
-        "17:00 hStar Médica",
-        "17:30 hStar Médica",
-        "18:00 hStar Médica",
-        "18:30 hStar Médica",
-        "19:00 hStar Médica",
-        "19:30 hStar Médica"
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
       ],
       "geometry": {
         "left": 19,
@@ -461,7 +461,7 @@
       "normal": [
         {
           "date": "Lunes 7 de septiembre",
-          "count": 3
+          "count": 2
         },
         {
           "date": "Martes 8 de septiembre",
@@ -476,24 +476,24 @@
       ],
       "total": 18,
       "rows": [
-        "09:00 hTorre Médica CMQ",
-        "09:30 hTorre Médica CMQ",
-        "10:00 hTorre Médica CMQ",
-        "10:30 hTorre Médica CMQ",
-        "11:00 hTorre Médica CMQ",
-        "11:30 hTorre Médica CMQ",
-        "12:00 hTorre Médica CMQ",
-        "12:30 hTorre Médica CMQ",
-        "13:00 hTorre Médica CMQ",
-        "13:30 hTorre Médica CMQ",
-        "16:00 hStar Médica",
-        "16:30 hStar Médica",
-        "17:00 hStar Médica",
-        "17:30 hStar Médica",
-        "18:00 hStar Médica",
-        "18:30 hStar Médica",
-        "19:00 hStar Médica",
-        "19:30 hStar Médica"
+        "09:00Torre Médica CMQ",
+        "09:30Torre Médica CMQ",
+        "10:00Torre Médica CMQ",
+        "10:30Torre Médica CMQ",
+        "11:00Torre Médica CMQ",
+        "11:30Torre Médica CMQ",
+        "12:00Torre Médica CMQ",
+        "12:30Torre Médica CMQ",
+        "13:00Torre Médica CMQ",
+        "13:30Torre Médica CMQ",
+        "16:00Star Médica",
+        "16:30Star Médica",
+        "17:00Star Médica",
+        "17:30Star Médica",
+        "18:00Star Médica",
+        "18:30Star Médica",
+        "19:00Star Médica",
+        "19:30Star Médica"
       ],
       "geometry": {
         "left": 19,
@@ -614,6 +614,8 @@
   "jsErrors": [],
   "apiCalls": [
     "?doctor_id=1&mode=global_days&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
+    "?doctor_id=1&mode=day&date=2026-09-07&mxmed_plan=professional",
     "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
     "?doctor_id=1&mode=day&date=2026-09-08&mxmed_plan=professional",
     "?doctor_id=1&mode=day&date=2026-09-09&mxmed_plan=professional",

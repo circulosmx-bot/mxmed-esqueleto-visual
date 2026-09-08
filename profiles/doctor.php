@@ -1980,7 +1980,7 @@ if (isLocalDevRequest()) {
                 + ' data-slot-end="' + escapeHtml(endAt) + '"'
                 + ' data-slot-office="' + escapeHtml(String(slot.consultorio_id || getConsultorioIdFromBlock(currentBlock))) + '"'
                 + ' title="' + escapeHtml(slot.consultorio_name || '') + '">'
-                + escapeHtml(formatTime(startAt))
+                + '<strong class="mxpp-slot-time">' + escapeHtml(formatTime(startAt)) + '</strong>'
                 + (slot.consultorio_name ? '<small class="mxpp-slot-office">' + escapeHtml(slot.consultorio_name) + '</small>' : '')
                 + '</button>';
             }).join('');

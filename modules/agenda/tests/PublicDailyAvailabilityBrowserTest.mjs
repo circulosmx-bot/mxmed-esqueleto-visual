@@ -57,6 +57,7 @@ try {
     await wait(`!!${chooseDate}`);
     const normal=await ev(`Array.from(document.querySelectorAll('.mxpp-agenda-compact__day')).map(d=>({date:d.querySelector('h3').textContent,count:d.querySelectorAll('.mxpp-agenda-compact__slot').length,all:d.querySelector('[data-full-day]')?.textContent}))`);
     assert.ok(normal.every(d=>d.count>0 && d.count<=10));
+    assert.equal(await ev(`Array.from(document.querySelectorAll('.mxpp-agenda-compact__slot')).every(e=>!e.textContent.includes(' h'))`),true,'preview time labels omit the h suffix');
     const previewGeometry=await ev(`Array.from(document.querySelectorAll('.mxpp-agenda-compact__slot')).map(e=>({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))`);
     assert.ok(previewGeometry.every(r=>r.width===previewGeometry[0].width && r.height===previewGeometry[0].height && r.height>=44),'sparse/full chip geometry');
     assert.equal(await ev(`getComputedStyle(${chooseDate}).marginLeft !== '0px'`),true,'secondary action right aligned');
@@ -72,6 +73,8 @@ try {
         titleSize: parseFloat(titleStyle.fontSize),
         slotTextAlign: slotStyle.textAlign,
         slotColumnGap: parseFloat(getComputedStyle(day.querySelector('.mxpp-agenda-compact__slots')).columnGap),
+        slotsJustifyContent: getComputedStyle(day.querySelector('.mxpp-agenda-compact__slots')).justifyContent,
+        timeSize: parseFloat(getComputedStyle(slot.querySelector('.mxpp-slot-time')).fontSize),
         moreBorder: moreStyle.borderTopWidth,
         moreBackground: moreStyle.backgroundColor,
         moreSize: parseFloat(moreStyle.fontSize),
@@ -81,6 +84,8 @@ try {
     assert.ok(polish.titleSize >= 20,'day heading enlarged');
     assert.equal(polish.slotTextAlign,'center');
     assert.ok(polish.slotColumnGap >= 8,'day chip column spacing increased');
+    assert.equal(polish.slotsJustifyContent,'center');
+    assert.ok(polish.timeSize >= 24,'preview time hierarchy increased');
     assert.equal(polish.moreBorder,'0px');
     assert.ok(polish.moreBackground === 'rgba(0, 0, 0, 0)' || polish.moreBackground === 'transparent');
     assert.ok(polish.moreSize >= 13,'preview action size increased');
@@ -100,28 +105,46 @@ try {
       const group=document.querySelector('.mxpp-daily-dialog__date-nav'), date=document.querySelector('#mxpp-daily-date');
       const prev=document.querySelector('[data-daily-prev]'), next=document.querySelector('[data-daily-next]');
       const slot=document.querySelector('.mxpp-daily-slot');
-      const gr=group.getBoundingClientRect(), dr=date.getBoundingClientRect(), pr=prev.getBoundingClientRect(), nr=next.getBoundingClientRect();
+      const title=document.querySelector('#mxpp-daily-title'), dialog=document.querySelector('.mxpp-daily-dialog');
+      const gr=group.getBoundingClientRect(), dr=date.getBoundingClientRect(), pr=prev.getBoundingClientRect(), nr=next.getBoundingClientRect(), tr=title.getBoundingClientRect(), dialogRect=dialog.getBoundingClientRect();
       return {
         slotTextAlign:getComputedStyle(slot).textAlign,
+        timeSize:parseFloat(getComputedStyle(slot.querySelector('strong')).fontSize),
         grouped:!!group,
         dateNavSameLine: Math.abs(dr.top-pr.top) < 30 && Math.abs(dr.top-nr.top) < 30,
         mobileGroupedFallback: dr.top < pr.top && Math.abs(pr.top-nr.top) < 30,
+        titleCentered: Math.abs((tr.left + tr.width / 2) - (dialogRect.left + dialogRect.width / 2)) < 1,
+        dateNavCentered: Math.abs((gr.left + gr.width / 2) - (dialogRect.left + dialogRect.width / 2)) < 1,
         groupRight: gr.right,
         groupLeft: gr.left
       };
     })()`);
     assert.equal(modalPolish.slotTextAlign,'center');
+    assert.ok(modalPolish.timeSize >= 24,'modal time hierarchy increased');
+    assert.equal(modalPolish.titleCentered,true);
+    assert.equal(modalPolish.dateNavCentered,true);
     assert.equal(modalPolish.grouped,true);
     assert.equal(width >= 720 ? modalPolish.dateNavSameLine : modalPolish.mobileGroupedFallback,true);
     assert.equal(await ev(`document.activeElement.getAttribute('aria-label')`),'Cerrar');
     const rows=await ev(`Array.from(document.querySelectorAll('.mxpp-daily-slot')).map(e=>e.textContent)`);
-    assert.ok(rows[0].includes('09:00 h') && rows[0].includes('CMQ'));
-    assert.ok(rows[10].includes('16:00 h') && rows[10].includes('Star Médica'));
+    assert.ok(rows[0].includes('09:00') && rows[0].includes('CMQ'));
+    assert.ok(rows[10].includes('16:00') && rows[10].includes('Star Médica'));
+    assert.ok(rows.every(row=>!row.includes(' h')),'public full-day time labels omit the h suffix');
     assert.ok(!rows[10].includes('16:30'));
     const geo=await ev(`(()=>{const d=document.querySelector('.mxpp-daily-dialog'),r=d.getBoundingClientRect();return {left:r.left,right:r.right,client:d.clientWidth,scroll:d.scrollWidth,slots:Array.from(d.querySelectorAll('.mxpp-daily-slot')).map(e=>({height:e.getBoundingClientRect().height,client:e.clientWidth,scroll:e.scrollWidth}))}})()`);
     assert.ok(geo.left>=0 && geo.right<=width+1 && geo.scroll<=geo.client+1);
     assert.ok(geo.slots.every(s=>s.height>=44 && s.scroll<=s.client+1));
     await screenshot(name+'-modal');
+    if(name==='desktop-1440') {
+      const manyModal=await ev(`(()=>{const r=document.querySelector('.mxpp-daily-dialog').getBoundingClientRect();return {top:r.top,left:r.left,width:r.width,height:r.height}})()`);
+      await ev(`document.querySelector('[data-daily-prev]').click()`); await wait(ready);
+      assert.equal(await ev(`document.querySelectorAll('.mxpp-daily-slot').length`),2);
+      const fewModal=await ev(`(()=>{const r=document.querySelector('.mxpp-daily-dialog').getBoundingClientRect();return {top:r.top,left:r.left,width:r.width,height:r.height,resultsTop:document.querySelector('[data-daily-results]').getBoundingClientRect().top,footerTop:document.querySelector('.mxpp-daily-dialog footer').getBoundingClientRect().top}})()`);
+      assert.deepEqual({top:fewModal.top,left:fewModal.left,width:fewModal.width,height:fewModal.height},manyModal,'few-slot modal keeps the same placement and dimensions');
+      assert.ok(fewModal.footerTop > fewModal.resultsTop,'few-slot modal retains its lower content area');
+      await screenshot(name+'-few-modal');
+      await ev(`document.querySelector('[data-daily-next]').click()`); await wait(ready);
+    }
     // Native dialog Escape returns focus to the exact opener; no reservation is made.
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',windowsVirtualKeyCode:27});
     await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',windowsVirtualKeyCode:27});

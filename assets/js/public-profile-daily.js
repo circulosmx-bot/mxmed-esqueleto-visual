@@ -45,7 +45,7 @@ window.MxmedPublicDailyModal = function (block, booking) {
         const button = document.createElement('button'); button.type = 'button';
         button.className = 'mxpp-daily-slot';
         button.title = slot.consultorio_name;
-        const time = document.createElement('strong'); time.textContent = booking.formatTime(slot.start_at) + ' h';
+        const time = document.createElement('strong'); time.textContent = booking.formatTime(slot.start_at);
         const office = document.createElement('span'); office.textContent = slot.consultorio_name;
         button.append(time, office);
         button.addEventListener('click', () => {
