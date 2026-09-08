@@ -665,8 +665,8 @@ if (isLocalDevRequest()) {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600;700;900&family=Baloo+2:wght@400;500&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=access_time,badge,call,check,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,schedule,school,search,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=alarm,credit_card,group" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=access_time,badge,call,check,event,event_available,groups,health_and_safety,monitor_heart,payments,person,person_text,schedule,school,stethoscope,translate,work_history,workspace_premium" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=alarm,credit_card,group,search" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/public-profile.css" />
   <?php if ($showAgendaSlot): ?>
     <link rel="stylesheet" href="/assets/css/next-available-modal.css" />
@@ -1130,7 +1130,7 @@ if (isLocalDevRequest()) {
           <div class="mxpp-agenda-compact__header">
             <h2>Próximas citas disponibles</h2>
             <div class="mxpp-agenda-compact__header-actions">
-              <button class="mxpp-agenda-compact__nav-btn mxpp-agenda-compact__find" type="button" data-mxpp-next-available><span class="material-symbols-rounded mxpp-agenda-compact__find-icon" aria-hidden="true">search</span><span>Encontrar primera cita disponible</span></button>
+              <button class="mxpp-agenda-compact__nav-btn mxpp-agenda-compact__find" type="button" data-mxpp-next-available><span class="material-symbols-outlined mxpp-agenda-compact__find-icon" aria-hidden="true">search</span><span>Encontrar primera cita disponible</span></button>
             </div>
           </div>
           <?php if ($agendaMockMode !== null): ?>

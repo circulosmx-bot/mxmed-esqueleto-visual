@@ -1605,29 +1605,33 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.42rem;
-  min-height: 40px;
-  padding: 0.35rem 0.75rem;
+  gap: 0.2rem;
+  min-height: 62px;
+  padding: 0.3rem 0.86rem 0.3rem 0.5rem;
+  border: 2px solid rgb(255 255 255 / .5);
   font-size: 0.966rem;
-  border-color: rgba(255, 255, 255, 0.55);
   background: #0b9fa9;
   color: #fff;
+  text-decoration: none;
   white-space: normal;
 }
 
 .mxpp-agenda-compact__find-icon {
   flex: 0 0 auto;
-  margin-left: -0.85rem;
+  margin-left: -0.2rem;
   color: #fff;
-  font-size: 1.56rem;
+  font-size: 3rem;
   font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 100, 'opsz' 48;
   line-height: 1;
-  transform: translateX(-0.26rem);
 }
 
 .mxpp-agenda-compact__find:hover:not(:disabled),
-.mxpp-agenda-compact__find:focus:not(:disabled) {
+.mxpp-agenda-compact__find:focus:not(:disabled),
+.mxpp-agenda-compact__find:active:not(:disabled) {
+  border-color: rgb(255 255 255 / .5);
+  background: #078e98;
   color: #fff;
+  text-decoration: none;
 }
 
 :is(.mxpp-next-dialog, .mxpp-confirm-visual) {
@@ -2976,8 +2980,8 @@ button.mxpp-hero-action:focus-visible {
   .mxpp-daily-dialog #mxpp-daily-date{order:-1;flex:1 0 100%}
 }
 @media(max-width:540px){
-  .mxpp-agenda-compact__find { width: 100%; font-size: .88rem; }
-  .mxpp-agenda-compact__find-icon { margin-left: -.45rem; font-size: 1.48rem; transform: translateX(-.08rem); }
+  .mxpp-agenda-compact__find { width: 100%; min-height: 56px; gap: .16rem; padding-inline: .54rem; font-size: .88rem; }
+  .mxpp-agenda-compact__find-icon { margin-left: -.1rem; font-size: 2.7rem; }
   .mxpp-daily-dialog__date-nav{gap:.42rem}
   .mxpp-daily-dialog__date-nav button{font-size:.78rem;padding:.42rem .44rem}
   .mxpp-daily-dialog .mxpp-daily-slot{flex-basis:7rem;width:7rem;height:4.15rem;min-height:4.15rem}
