@@ -1,0 +1,56 @@
+{
+  "authority": "mxmed.audit.mp01c.r2.v1",
+  "security": "DEFINER",
+  "installation": "Replace exactly {{RESTRICTED_DEFINER}} with a separately provisioned restricted SQL account; never master or application; no implicit CURRENT_USER fallback.",
+  "dependencies": [
+    "mxmed.platform_audit_stream_heads: stream_key varchar(191) primary key,last_sequence_number bigint,last_event_hash char(64),hash_version varchar(32) nullable,updated_at datetime(6) nullable; utf8mb4_unicode_ci; InnoDB"
+  ],
+  "routines": [
+    {
+      "path": "audit_mp01c_r2_lock.sql",
+      "sha256": "d524ee45aca4e2cbb5082e54bf29fb6f205c11032139049a7aa28513e2060a38",
+      "recovered_source": "/Users/circulodigital/Downloads/mxmed_a1_g1_routine_collation_r2_offline_authority_20260823T010626Z/a1-g1-lock-routine-collation-r2.sql",
+      "recovered_sha256": "d1f58af911a6dbfa04f98575f8519926821732134936bc4702da81315f7297d4",
+      "signature": "PROCEDURE `mxmed`.`audit_mp01c_lock_stream_head_v1`(\n    IN p_stream_key VARCHAR(191)\n        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci\n)"
+    },
+    {
+      "path": "audit_mp01c_r2_cas.sql",
+      "sha256": "830d741c709911b52e86e9c2388fd141d6b870b7b56227945b62df5a2429d953",
+      "recovered_source": "/Users/circulodigital/Downloads/mxmed_a1_g1_routine_collation_r2_offline_authority_20260823T010626Z/a1-g1-cas-routine-collation-r2.sql",
+      "recovered_sha256": "fa5766cec3acb1e6a586a4acba88b0ededd3e025219e60e2f3e7160a8a83e723",
+      "signature": "PROCEDURE `mxmed`.`audit_mp01c_advance_stream_head_cas_v1`(\n    IN p_stream_key VARCHAR(191)\n        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,\n    IN p_expected_sequence BIGINT,\n    IN p_expected_hash CHAR(64)\n        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,\n    IN p_expected_hash_version VARCHAR(32)\n        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,\n    IN p_expected_updated_at VARCHAR(27),\n    IN p_new_sequence BIGINT,\n    IN p_new_hash CHAR(64)\n        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,\n    IN p_new_hash_version VARCHAR(32)\n        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,\n    IN p_new_updated_at VARCHAR(27)\n)"
+    }
+  ],
+  "privileges": {
+    "path": "audit_mp01c_r2_privileges.sql",
+    "sha256": "902a03fce695541020c0d214e17f6093dbb45e31b7fa70129b03382a15fdce3c",
+    "recovered_source": "/Users/circulodigital/Downloads/mxmed_a1_g1_privilege_contract_r2_20260822T234700Z/a1-g1-full-privilege-delta-r2.sql",
+    "recovered_sha256": "6697208793f630385dd057b2cc60affde1ca17ebfe010105a2fc352c3b0aeac7",
+    "required_rows": [
+      "P01_WRITER_INSERT_EVENTS",
+      "P02_WRITER_SELECT_EVENTS",
+      "P03_WRITER_INSERT_HEADS",
+      "P04_WRITER_SELECT_HEADS",
+      "P05_WRITER_EXECUTE_LOCK",
+      "P06_WRITER_EXECUTE_CAS",
+      "P07_DEFINER_SELECT_STREAM_KEY",
+      "P08_DEFINER_SELECT_LAST_SEQUENCE_NUMBER",
+      "P09_DEFINER_SELECT_LAST_EVENT_HASH",
+      "P10_DEFINER_SELECT_HASH_VERSION",
+      "P11_DEFINER_SELECT_UPDATED_AT",
+      "P12_DEFINER_UPDATE_LAST_SEQUENCE_NUMBER",
+      "P13_DEFINER_UPDATE_LAST_EVENT_HASH",
+      "P14_DEFINER_UPDATE_HASH_VERSION",
+      "P15_DEFINER_UPDATE_UPDATED_AT",
+      "P16_A1G1_DEFINER_EXECUTE_LOCK",
+      "P17_A1G1_DEFINER_EXECUTE_CAS"
+    ]
+  },
+  "acceptance": {
+    "source": "mxmed_a1_g1_local_real_audit_implementation_complete_20260823T045029Z.json",
+    "source_sha256": "f2f5dc60495814782002170ff52347e7245b8fbb9c88db2a514e2072a4762b9e",
+    "pp325_commit": "d0f6a37",
+    "coverage": "17/17",
+    "extras": 0
+  }
+}
