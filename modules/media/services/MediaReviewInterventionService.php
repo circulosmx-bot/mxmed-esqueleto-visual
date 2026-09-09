@@ -34,7 +34,7 @@ final class MediaReviewInterventionService
                 $source=$rows[0];$this->validateFile($candidate,$source);
                 $bytes=$this->verified($source);
                 $extension=$source['format']==='jpeg'?'jpg':$source['format'];
-                $result=['bytes'=>$bytes,'mime'=>$source['mime_type'],'filename'=>'foto-original-'.substr($id,0,8).'.'.$extension];
+                $result=['bytes'=>$bytes,'mime'=>$source['mime_type'],'filename'=>($candidate['purpose']==='PHYSICIAN_PERSONAL_LOGO'?'logo-original-':'foto-original-').substr($id,0,8).'.'.$extension];
                 return ['submission_id'=>$id,'physician_id'=>(string)$candidate['owner_id']];
             });
         return $result;
@@ -104,7 +104,7 @@ final class MediaReviewInterventionService
         }
         $s=$this->pdo->prepare('SELECT * FROM media_review_submissions WHERE submission_id=?'.($lock?' FOR UPDATE':''));$s->execute([$id]);$row=$s->fetch(PDO::FETCH_ASSOC);
         if(!$row)throw new RuntimeException('intervention_not_found');
-        if(($lock && (string)$row['owner_id']!==(string)$owner) || $row['owner_type']!=='PHYSICIAN' || $row['purpose']!=='DOCTOR_PROFILE_PHOTO' || $row['technical_status']!=='READY' || $row['review_status']!=='PENDING_REVIEW')throw new RuntimeException('intervention_conflict');
+        if(($lock && (string)$row['owner_id']!==(string)$owner) || $row['owner_type']!=='PHYSICIAN' || !in_array($row['purpose'],['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO'],true) || $row['technical_status']!=='READY' || $row['review_status']!=='PENDING_REVIEW')throw new RuntimeException('intervention_conflict');
         return $row;
     }
     private function validateFile(array $candidate,array $file):void

@@ -10,7 +10,7 @@ use Platform\Contracts\RiskLevel;
 
 final class ProfilePhotoApprovalHttp
 {
-    public static function run(bool $options=false): void
+    public static function run(bool $options=false, bool $logo=false): void
     {
         header('Content-Type: application/json; charset=UTF-8');
         header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');
@@ -44,7 +44,10 @@ final class ProfilePhotoApprovalHttp
             if (!is_string($input['csrf']??null) || !$identity->csrf()->validAuthenticated($input['csrf'],$session->session()->tokenDigest())) throw new \RuntimeException('approval_denied');
             require_once __DIR__.'/../../../api/_lib/db.php';
             require_once __DIR__.'/../private-bootstrap.php';
-            $service=new ProfilePhotoApprovalService(\mxmed_pdo(),\mxmed_private_media_storage(),\mxmed_public_media_storage());
+            require_once __DIR__.'/../services/PhysicianLogoApprovalService.php';
+            $service=$logo
+                ? new \Media\Services\PhysicianLogoApprovalService(\mxmed_pdo(),\mxmed_private_media_storage(),\mxmed_public_media_storage())
+                : new ProfilePhotoApprovalService(\mxmed_pdo(),\mxmed_private_media_storage(),\mxmed_public_media_storage());
             self::respond(200,$service->approve($context,$input['submission_id']));
         } catch (\Throwable $e) {
             $status=match($e->getMessage()) {'approval_denied'=>403,'approval_invalid_request'=>400,'approval_not_found'=>404,'approval_conflict'=>409,default=>503};

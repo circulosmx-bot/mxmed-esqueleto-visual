@@ -17,7 +17,7 @@ final class MediaReviewInboxService
         $limit = max(1,min(self::MAX_LIMIT,$limit));
         if ($offset < 0 || $offset > 1000000) throw new \InvalidArgumentException('invalid_pagination');
         // One metadata-only query: no N+1 owner lookup and no private file reads.
-        $s = $this->pdo->prepare("SELECT s.submission_id,s.owner_type,s.owner_id,p.display_name AS owner_display_name,s.purpose,s.technical_status,s.review_status,s.created_at,s.updated_at,f.mime_type,f.width,f.height,f.byte_size FROM media_review_submissions s JOIN media_review_files f ON f.submission_id=s.submission_id AND f.role='REVIEW' LEFT JOIN profiles_doctors p ON p.doctor_id=s.owner_id WHERE s.owner_type='PHYSICIAN' AND s.purpose='DOCTOR_PROFILE_PHOTO' AND s.technical_status='READY' AND s.review_status='PENDING_REVIEW' ORDER BY s.created_at ASC,s.submission_id ASC LIMIT ? OFFSET ?");
+        $s = $this->pdo->prepare("SELECT s.submission_id,s.owner_type,s.owner_id,p.display_name AS owner_display_name,s.purpose,s.technical_status,s.review_status,s.created_at,s.updated_at,f.mime_type,f.width,f.height,f.byte_size FROM media_review_submissions s JOIN media_review_files f ON f.submission_id=s.submission_id AND f.role='REVIEW' LEFT JOIN profiles_doctors p ON p.doctor_id=s.owner_id WHERE s.owner_type='PHYSICIAN' AND s.purpose IN ('DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO') AND s.technical_status='READY' AND s.review_status='PENDING_REVIEW' ORDER BY s.created_at ASC,s.submission_id ASC LIMIT ? OFFSET ?");
         $s->bindValue(1,$limit+1,PDO::PARAM_INT);$s->bindValue(2,$offset,PDO::PARAM_INT);$s->execute();
         $rows = $s->fetchAll(PDO::FETCH_ASSOC);
         $more = count($rows)>$limit;

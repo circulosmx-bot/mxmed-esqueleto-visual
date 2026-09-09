@@ -1,7 +1,7 @@
 (()=>{
  'use strict';
  const byId=id=>document.getElementById(id),cards=byId('pending-cards'),message=byId('inbox-message'),dialog=byId('review-detail');
- const labels={DOCTOR_PROFILE_PHOTO:'Foto de perfil'};
+ const labels={DOCTOR_PROFILE_PHOTO:'Foto de perfil',PHYSICIAN_PERSONAL_LOGO:'Logotipo profesional'};
  let offset=0,nextOffset=null,opener=null,selected=null,canApprove=false,busy=false,canDownload=false,canCorrect=false,reviewLoaded=false;
  const reviewObjectUrls=new Map();
  const reviewEndpoint=item=>'/api/internal/media-review/review-image.php?submission_id='+encodeURIComponent(item.submission_id);
@@ -12,11 +12,12 @@
  function node(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;}
  function openDetail(item,button){
   reviewLoaded=false;byId('approve-photo').disabled=true;byId('corrected-file').value='';byId('corrected-filename').textContent='';byId('submit-corrected').hidden=true;byId('intervention-message').textContent='';
+  byId('detail-purpose').textContent=labels[item.purpose]||'Imagen';byId('approval-question').textContent=item.purpose==='PHYSICIAN_PERSONAL_LOGO'?'¿Aprobar este logotipo profesional?':'¿Aprobar esta foto de perfil?';
   selected=item;byId('approval-confirmation').hidden=true;byId('approval-message').textContent='';byId('approve-photo').hidden=!canApprove;
   opener=button;byId('detail-title').textContent=item.owner_display_name;
   byId('detail-date').textContent='Recibida: '+dateLabel(item.created_at);byId('detail-specs').textContent=specs(item);
   const image=byId('detail-image');image.hidden=false;byId('detail-unavailable').hidden=true;
-  image.alt='Foto de perfil enviada por '+item.owner_display_name;image.src=imageUrl(item);
+  image.alt=(labels[item.purpose]||'Imagen')+' de '+item.owner_display_name;image.src=imageUrl(item);
   interventionControls();dialog.showModal();byId('close-detail').focus();
  }
  byId('close-detail').addEventListener('click',()=>{if(!busy)dialog.close();});
@@ -26,7 +27,7 @@
  byId('detail-image').addEventListener('error',()=>{reviewLoaded=false;byId('approve-photo').disabled=true;byId('detail-image').hidden=true;byId('detail-unavailable').hidden=false;});
  function render(item){
   const card=node('article','card'),thumb=node('div','review-thumb'),image=node('img');
-  image.alt='Foto de perfil enviada por '+item.owner_display_name;image.loading='lazy';image.decoding='async';image.width=item.review.width;image.height=item.review.height;
+  image.alt=(labels[item.purpose]||'Imagen')+' de '+item.owner_display_name;image.loading='lazy';image.decoding='async';image.width=item.review.width;image.height=item.review.height;
   image.addEventListener('error',()=>{image.hidden=true;thumb.append(node('p','', 'Imagen no disponible.'));},{once:true});image.src=imageUrl(item);thumb.append(image);
   const body=node('div','card-body'),button=node('button','', 'Ver imagen');button.type='button';button.setAttribute('aria-label','Ver imagen de '+item.owner_display_name);button.addEventListener('click',()=>openDetail(item,button));
   body.append(node('h3','',item.owner_display_name),node('p','purpose',labels[item.purpose]||'Imagen'),node('p','status-label','Pendiente de revisión'),node('p','received','Recibida: '+dateLabel(item.created_at)),node('p','specs',specs(item)),button);card.append(thumb,body);cards.append(card);
@@ -54,15 +55,15 @@
  byId('confirm-approval').addEventListener('click',async()=>{
   if(busy||!selected||!reviewLoaded)return;busy=true;const item=selected;
   for(const id of ['confirm-approval','cancel-approval','close-detail','download-source','choose-corrected','submit-corrected'])byId(id).disabled=true;
-  byId('confirm-approval').textContent='Publicando…';byId('approval-confirmation').setAttribute('aria-busy','true');byId('approval-message').textContent='Publicando foto…';
+  byId('confirm-approval').textContent='Publicando…';byId('approval-confirmation').setAttribute('aria-busy','true');byId('approval-message').textContent=item.purpose==='PHYSICIAN_PERSONAL_LOGO'?'Publicando logotipo…':'Publicando foto…';
   try{
    // Refresh the short-lived session-bound token; POST rechecks all authority.
    const options=await approvalOptions();if(!options.ok||!options.can_approve||!options.csrf)throw new Error('unavailable');
-   const response=await fetch('/api/internal/media-review/approve.php',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({submission_id:item.submission_id,csrf:options.csrf})});
+   const response=await fetch('/api/internal/media-review/'+(item.purpose==='PHYSICIAN_PERSONAL_LOGO'?'approve-logo.php':'approve.php'),{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({submission_id:item.submission_id,csrf:options.csrf})});
    if(response.status===409){dialog.close();await load();message.hidden=false;message.textContent='Esta solicitud ya fue procesada. La lista se actualizó.';message.tabIndex=-1;message.focus();return;}
    const result=await response.json();if(!response.ok||!result.ok)throw new Error('unavailable');
-   dialog.close();await load();message.hidden=false;message.textContent='Foto aprobada y publicada.';message.tabIndex=-1;message.focus();
-  }catch{byId('approval-message').textContent='No fue posible aprobar la foto. Intenta de nuevo.';}
+   dialog.close();await load();message.hidden=false;message.textContent=item.purpose==='PHYSICIAN_PERSONAL_LOGO'?'Logotipo aprobado y publicado.':'Foto aprobada y publicada.';message.tabIndex=-1;message.focus();
+  }catch{byId('approval-message').textContent='No fue posible aprobar la imagen. Intenta de nuevo.';}
   finally{busy=false;for(const id of ['confirm-approval','cancel-approval','close-detail','download-source','choose-corrected','submit-corrected'])byId(id).disabled=false;byId('confirm-approval').textContent='Aprobar';byId('approval-confirmation').setAttribute('aria-busy','false');}
  });
  function interventionControls(){

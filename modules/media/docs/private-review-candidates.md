@@ -397,3 +397,97 @@ MR5 publication of the corrected REVIEW. Browser QA covers 1440×900, 1366×768,
 refreshed image/specs, explicit MR5 approval, capability-specific controls, keyboard
 and failed-preview approval blocking. Captures are in `/tmp/mxmed-mr6-visual`.
 Director table/file snapshots must match; retained candidate remains unchanged.
+
+## MR7 — physician personal logo lifecycle
+
+MR7 adds `PHYSICIAN_PERSONAL_LOGO` for owner `PHYSICIAN`, with the same private
+submission/file tables and SOURCE → REVIEW → PENDING_REVIEW → APPROVED → PUBLIC
+lifecycle. `PhysicianMediaReviewCandidateService` supplies the shared candidate
+normalization and atomic pending replacement; explicit photo/logo wrappers fix
+the purpose server-side. Stored objects are verified before switching pending
+authority. A lost commit acknowledgement preserves potentially authoritative
+objects for reconciliation.
+
+`/api/media/physician-logo-review-candidate.php` supports GET/POST/DELETE using
+`GallerySessionScope`. GET returns owner metadata and `csrf_token`; mutations
+require `X-Physician-Logo-Candidate-CSRF`. POST takes multipart `image` only.
+Client owner identifiers are rejected and never used as authority. A replacement
+first completes SOURCE and REVIEW, then withdraws the prior pending logo in a
+transaction. DELETE withdraws only the current owner's pending logo. Neither
+operation writes public assets or `profiles_doctors.logo_url`.
+
+JPEG, PNG and WebP inputs allow 10,485,760 bytes, 25,000,000 pixels and 8192 pixels
+per side. SVG is rejected. Exact validated SOURCE remains private, including any
+original metadata. REVIEW is re-encoded WebP, at most 800 pixels per side and
+153,600 bytes, preserving aspect ratio, EXIF orientation and existing alpha while
+stripping metadata. No transparency is invented for opaque images.
+
+Apply `db/migrations/2026_09_08_media_review_pending_logo.sql` once before enabling
+the candidate endpoint. It adds only generated `active_logo_owner` and unique
+`uniq_review_active_logo(owner_type, active_logo_owner)`, preserving the existing
+photo slot. Photo and logo can each have one pending submission independently.
+
+The existing pending inbox and fixed-role `review-image.php` support both
+purposes. The advisor label is **Logotipo profesional**. The existing contain-fit
+preview and checkerboard show the complete image and alpha without cropping.
+Dimensions, optimized weight and WebP remain visible. Existing capabilities apply:
+`media_review_read`, `media_review_approve`, `media_review_source_download`, and
+`media_review_corrected_upload`. No real grants are seeded.
+
+The fixed `/api/internal/media-review/approve-logo.php` endpoint shares canonical
+session/CSRF checks with photo approval but delegates to the explicit
+`PhysicianLogoApprovalService`. It accepts only `submission_id` and `csrf`.
+It locks physician → submission → files, verifies eligibility and REVIEW
+integrity, writes `MEDIA_PHYSICIAN_LOGO_APPROVED` through the canonical R1 audit
+writer in the same transaction, stores/verifies exact REVIEW bytes publicly,
+inserts the PUBLIC/READY logo asset, switches `profiles_doctors.logo_url`, and
+marks the candidate APPROVED. Audit failure rolls back publication. Existing
+photo approval remains purpose-specific. Both correction and approval share the
+same lock order: correction-first publishes the new REVIEW; approval-first makes
+correction conflict. Duplicate approval cannot publish twice.
+
+### Historical reference policy
+
+MR7 **retains every previous immutable public logo row/file as READY**. Canonical
+profile references alone are not exhaustive reference counts:
+`LogoReferenceRepository::countReferences()` counts profiles and consultorios,
+while `assets/js/app.js` records `logo_url_resolved` and legacy localStorage
+branding; clinical viewers consume these snapshots. The database also has JSON
+payloads in `clinical_documents`, document backups, and `clinical_record_entries`,
+and separate consultorio/group/membership logo fields. Browser storage and
+historical JSON references cannot be exhaustively counted by that repository.
+No historical snapshots, clinical rendering, group branding or legacy precedence
+are rewritten. Existing current branding readers see the new canonical URL;
+historical URLs continue to resolve. MR7 does not change the legacy direct-public
+uploader's separate retirement behavior; switching that UI requires a later gate.
+
+Manual intervention uses the existing audited SOURCE download and CORRECTED
+upload endpoints, exact capabilities and R1 semantics. SOURCE → CORRECTED → REVIEW
+→ explicit APPROVAL publishes the new REVIEW; SOURCE stays immutable, CORRECTED
+stays private, and correction alone never changes the public logo.
+
+### Later user-control activation
+
+The accepted `uploadPhysicianLogo` and delete handlers in `assets/js/app.js`
+continue calling `${buildPrivateEndpoint(state.doctorId)}/logo` immediately.
+A later activation must route uploads to the candidate endpoint with its GET-issued
+CSRF token and multipart `image`, show pending/withdrawal state separately from the
+approved logo, and keep the current logo displayed until approval. Candidate
+withdrawal must not be confused with deletion of the approved public logo.
+
+Automatic logo improvement remains unimplemented. MR8 may evaluate it separately;
+MR7 introduces no improvement button, SVG, background removal or vectorization.
+
+### Isolated verification
+
+MR7 tests use only synthetic physicians/images in disposable MySQL on port 3309,
+Valkey on 6387, copied application configuration and separate private/public roots.
+`PhysicianLogoReviewTest.php`, `PhysicianLogoCandidateAtomicTest.php`,
+`PhysicianLogoApprovalTest.php`, `PhysicianLogoReviewPolicyTest.php`,
+`PhysicianLogoReviewRaceTest.mjs`, and `PhysicianLogoReviewHttpTest.mjs` cover the
+lifecycle, input boundaries, alpha/orientation, atomic failures, canonical audit,
+authority, historical public URLs, and both race orders. HTTP QA includes the owner
+endpoint, mixed inbox and existing public delivery. Its browser helper tests all
+four shapes at 1440×900, 1366×768, 390×844 and 320×740, native file selection,
+manual correction followed by explicit approval, stale-preview failure and
+capability-specific controls. Existing photo MR5/MR6 tests remain regression gates.

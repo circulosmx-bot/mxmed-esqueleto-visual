@@ -34,7 +34,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 </section>
 </main>
 <dialog id="review-detail" aria-labelledby="detail-title">
-<div class="detail-heading"><div><p class="eyebrow">Foto de perfil</p><h2 id="detail-title"></h2></div><button id="close-detail" type="button" aria-label="Cerrar imagen">Cerrar</button></div>
+<div class="detail-heading"><div><p class="eyebrow" id="detail-purpose"></p><h2 id="detail-title"></h2></div><button id="close-detail" type="button" aria-label="Cerrar imagen">Cerrar</button></div>
 <div class="detail-image-wrap"><img id="detail-image" alt=""><p id="detail-unavailable" hidden>Imagen no disponible.</p></div>
 <p id="detail-date"></p><p id="detail-specs"></p><p class="status-label">Pendiente de revisión</p>
 <button id="approve-photo" type="button" hidden>Aprobar</button>

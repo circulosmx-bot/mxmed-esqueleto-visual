@@ -53,7 +53,7 @@ final class MediaReviewAccessService
     private function resolve(string $id): array
     {
         if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',$id)) throw new RuntimeException('review_not_found');
-        $s = $this->pdo->prepare("SELECT s.submission_id,s.owner_type,s.owner_id,s.purpose,s.technical_status,s.review_status,s.created_at,s.updated_at,f.storage_key,f.mime_type,f.format,f.width,f.height,f.byte_size,f.checksum_sha256 FROM media_review_submissions s JOIN media_review_files f ON f.submission_id=s.submission_id AND f.role='REVIEW' WHERE s.submission_id=? AND s.purpose='DOCTOR_PROFILE_PHOTO' AND s.technical_status='READY' AND s.review_status='PENDING_REVIEW'");
+        $s = $this->pdo->prepare("SELECT s.submission_id,s.owner_type,s.owner_id,s.purpose,s.technical_status,s.review_status,s.created_at,s.updated_at,f.storage_key,f.mime_type,f.format,f.width,f.height,f.byte_size,f.checksum_sha256 FROM media_review_submissions s JOIN media_review_files f ON f.submission_id=s.submission_id AND f.role='REVIEW' WHERE s.submission_id=? AND s.owner_type='PHYSICIAN' AND s.purpose IN ('DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO') AND s.technical_status='READY' AND s.review_status='PENDING_REVIEW'");
         $s->execute([$id]);
         $row = $s->fetch(PDO::FETCH_ASSOC);
         if (!$row) throw new RuntimeException('review_not_found');
