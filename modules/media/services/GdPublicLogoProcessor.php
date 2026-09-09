@@ -26,7 +26,7 @@ final class GdPublicLogoProcessor
     /**
      * @return array{path:string,mime_type:string,format:string,width:int,height:int,byte_size:int,checksum_sha256:string,source_width:int,source_height:int,source_mime_type:string}
      */
-    public function process(array $upload, bool $deleteSource = true): array
+    public function process(array $upload, bool $deleteSource = true, ?callable $onValidatedSource = null): array
     {
         $sourcePath = trim((string)($upload['tmp_name'] ?? ''));
         $outputPath = null;
@@ -86,6 +86,11 @@ final class GdPublicLogoProcessor
             $source = $this->decode($sourcePath, $detectedMime);
             if (!$this->isImage($source)) {
                 throw new RuntimeException('logo_upload_safe_decode_failed');
+            }
+            // Private review callers may retain the original only after successful decode.
+            // Existing callers keep their original processing and cleanup behavior.
+            if ($onValidatedSource !== null) {
+                $onValidatedSource($sourcePath, $detectedMime, $sourceWidth, $sourceHeight, $actualBytes);
             }
             $oriented = $this->applyJpegOrientation($source, $sourcePath, $detectedMime);
             if (!$this->isImage($oriented)) {
