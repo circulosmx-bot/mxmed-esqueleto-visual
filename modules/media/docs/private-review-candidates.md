@@ -177,3 +177,43 @@ Use these credentials only for an isolated test server. The CLI fixture requires
 an `mxmed_gate4d_preview_mr3_*` database name and drops its own database afterward.
 Local application schema receives no synthetic accounts or grants. No real advisor
 is enabled until a separately authorized grant is provisioned in canonical identity.
+
+## MR4: read-only inbox
+
+`/internal/media-review/` authorizes through MR3 before emitting its HTML shell.
+`/api/internal/media-review/pending.php` independently enforces the same
+internal_operator / media_review_read requirement before querying protected data.
+No real operator grant is provisioned. SOURCE and editorial mutation remain absent.
+
+`MediaReviewInboxService` performs one metadata-only joined query against submissions,
+REVIEW files and `profiles_doctors.display_name` (the canonical public display-name
+field). It lists only PHYSICIAN / DOCTOR_PROFILE_PHOTO / READY / PENDING_REVIEW,
+ordered by created_at ASC, submission_id ASC. Offset pagination defaults to 25,
+caps at 50 and rejects offsets beyond 1,000,000. A limit+1 lookahead returns
+has_more/next_offset without an unbounded response or total-count scan. Offset
+pagination is deterministic per query; changes to the live queue can move rows
+between pages. No batch semantics are implied.
+
+Responses expose an explicit safe allowlist, no contact/account data or storage
+keys. List assembly never opens private files. Cards and a native dialog request
+only the existing authenticated review-image endpoint, with lazy thumbnails,
+reserved image space, object-fit:contain and a neutral transparency background.
+The UI displays recorded submission date, REVIEW dimensions/weight, and Spanish
+purpose/status labels. Empty, list-error and individual-image-error states are
+independent. Escape closes the dialog and restores focus. All UI requests are GET;
+there are no approval, publication, SOURCE or placeholder mutation controls.
+
+Focused tests:
+
+- `php modules/media/tests/MediaReviewInboxTest.php` uses an in-memory SQLite fixture
+  for ordering, pagination, excluded states/purposes, identity and metadata privacy.
+- The existing `ProductiveOperatorHttpTest.mjs` now covers the inbox page and list
+  with canonical synthetic accounts/grants, including denials and revocation.
+- `node modules/media/tests/MediaReviewInboxBrowserTest.mjs` uses an isolated browser
+  context on the local CDP endpoint (default port 9348) and a restricted MR2 fixture.
+  It captures 1440×900, 1366×768, 390×844 and 320×740 under `/tmp/mxmed-mr4-visual`,
+  verifies dialog/focus, empty/error behavior and GET-only private REVIEW requests.
+  Error fixtures are browser interceptions; retained media is not modified.
+
+MR4 changes no schema, grants, public media or candidate state. The inbox remains
+inaccessible to real accounts until a separate authorized grant assignment.
