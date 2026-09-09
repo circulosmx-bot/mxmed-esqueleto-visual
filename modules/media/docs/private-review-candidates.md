@@ -862,3 +862,12 @@ Local migration is applied. The database account cannot create triggers with its
 binary-log privilege policy, so MR11 does not require triggers or elevated server
 privileges. Membership immutability is enforced by service operations and tested
 under deterministic races; the owner FK and unique OPEN slot remain DB constraints.
+
+## MR11.1 correction
+
+The MR11 all-withdrawn/inert OPEN policy above is superseded by owner-withdrawal
+retirement: detach the never-submitted historical members and delete the empty
+OPEN grouping transactionally, with no ready signal. SUBMITTED membership remains
+unchanged. See [operational closeout](mr11-1-operational-closeout.md) for the tested
+fix and the unresolved productive scheduler/runtime prerequisite. No uploader
+activation or scheduling readiness is claimed.

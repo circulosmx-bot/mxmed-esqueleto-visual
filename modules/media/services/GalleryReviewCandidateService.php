@@ -32,6 +32,7 @@ final class GalleryReviewCandidateService
             $s=$this->pdo->prepare("SELECT review_status FROM media_review_submissions WHERE submission_id=? AND owner_type='PHYSICIAN' AND owner_id=? AND purpose='DOCTOR_GALLERY' FOR UPDATE");$s->execute([$id,$doctor]);$state=$s->fetchColumn();
             if($state===false)throw new RuntimeException('gallery_candidate_not_found');if($state!=='PENDING_REVIEW')throw new RuntimeException('gallery_candidate_conflict');
             $this->pdo->prepare("UPDATE media_review_submissions SET review_status='WITHDRAWN',updated_at=CURRENT_TIMESTAMP WHERE submission_id=?")->execute([$id]);
+            (new MediaReviewBatchService($this->pdo))->retireEmptyOpenLocked($doctor,$id);
             if(!$this->pdo->commit())throw new RuntimeException('gallery_commit_failed');
         }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
         // Retain private history; no binary cleanup policy or public mutation is needed for withdrawal.

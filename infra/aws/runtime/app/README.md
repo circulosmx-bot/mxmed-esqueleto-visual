@@ -1,16 +1,14 @@
 # MXMed application runtime scaffold
 
 This scaffold implements the static PHP 8.5 Apache/X86_64 contract without building an image.
-The future image pipeline must provide immutable digest values for `PHP_BASE_IMAGE`,
-`COMPOSER_BASE_IMAGE`, and a reviewed `PHPREDIS_VERSION`; no argument has a mutable default.
+The canonical packaging recipe at `scripts/packaging/README.md` provides immutable
+PHP/Composer digests and a pinned phpredis version; no Docker argument has a mutable default.
 
-Before invoking a build, the pipeline must assemble an allowlisted `application/` directory containing
-only the reviewed MXMed runtime payload. It must exclude repositories, documentation, QA, SQL, local
-uploads, secrets, caches, dependencies, and CDK outputs. Composer is available only in the discarded
-build stage and is not present in the final image.
+Use `node scripts/packaging/assemble-application.mjs` from the repository root to
+create the isolated `.application-build/` context. Version the recipe and runtime
+manifest, never a duplicated application tree. See that recipe for build and QA.
 
-`/healthz` is a dependency-free liveness endpoint. `/readyz` deliberately returns HTTP 503 with
-`readiness_not_integrated`; Edge traffic remains blocked until bounded MySQL and Valkey checks are
-implemented and tested in a later functional microphase.
+`/healthz` is dependency-free liveness. `/readyz` currently checks bounded Valkey
+connectivity/authentication; it does not validate application MySQL readiness.
 
 The image is not built, pulled, pushed, scanned, or deployed by CDK synth.

@@ -9,7 +9,8 @@ class Mr11RacePdo extends PDO{
 if($gate!==''&&!str_starts_with($gate,getenv('MR5_FIXTURE_ROOT').'/race-'))throw new RuntimeException('isolated_gate_required');
 $p=new Mr11RacePdo($gate);
 try{
- if($mode==='upload')$result=mr11Candidate($doctor,'DOCTOR_GALLERY',$p);
+ if($mode==='withdraw'){(new Media\Services\GalleryReviewCandidateService($p,mr5Storage()[0]))->withdraw($doctor,$argv[5]);$result=['withdrawn'=>true];}
+ elseif($mode==='upload')$result=mr11Candidate($doctor,'DOCTOR_GALLERY',$p);
  else $result=['submitted'=>(new Media\Services\MediaReviewBatchService($p))->submit($doctor,$mode==='auto'?$batch:null)];
  echo json_encode($result);
 }catch(Throwable $e){echo json_encode(['error'=>$e->getMessage()]);exit(2);}

@@ -23,6 +23,19 @@ final class MediaReviewBatchService
         $this->pdo->prepare('UPDATE media_review_batches SET last_activity_at=CURRENT_TIMESTAMP(6),updated_at=CURRENT_TIMESTAMP(6) WHERE batch_id=?')->execute([$id]);
         return $id;
     }
+    /** Owner withdrawal holds the physician lock; never detach submitted history. */
+    public function retireEmptyOpenLocked(string $doctor,string $withdrawnId): bool
+    {
+        if(!$this->pdo->inTransaction())throw new RuntimeException('batch_transaction_required');
+        $s=$this->pdo->prepare("SELECT b.batch_id FROM media_review_batches b WHERE b.owner_type='PHYSICIAN' AND b.owner_id=? AND b.status='OPEN' AND EXISTS(SELECT 1 FROM media_review_submissions s WHERE s.batch_id=b.batch_id AND s.submission_id=? AND s.review_status='WITHDRAWN') FOR UPDATE");
+        $s->execute([$doctor,$withdrawnId]);$id=$s->fetchColumn();if($id===false)return false;
+        $s=$this->pdo->prepare("SELECT submission_id FROM media_review_submissions WHERE batch_id=? AND technical_status='READY' AND review_status='PENDING_REVIEW' FOR UPDATE");
+        $s->execute([$id]);if($s->fetchColumn()!==false)return false;
+        $this->pdo->prepare('UPDATE media_review_submissions SET batch_id=NULL,updated_at=updated_at WHERE batch_id=?')->execute([$id]);
+        $s=$this->pdo->prepare("DELETE FROM media_review_batches WHERE batch_id=? AND status='OPEN'");$s->execute([$id]);
+        if($s->rowCount()!==1)throw new RuntimeException('batch_retirement_conflict');
+        return true;
+    }
     public function current(string $doctor): array
     {
         $s=$this->pdo->prepare("SELECT b.opened_at,b.last_activity_at,DATE_ADD(b.last_activity_at,INTERVAL ".self::MEDIA_REVIEW_BATCH_INACTIVITY_MINUTES." MINUTE) auto_submit_after,(SELECT COUNT(*) FROM media_review_submissions s WHERE s.batch_id=b.batch_id) item_count,(SELECT COUNT(*) FROM media_review_submissions s WHERE s.batch_id=b.batch_id AND s.technical_status='READY' AND s.review_status='PENDING_REVIEW') pending_count FROM media_review_batches b WHERE b.owner_type='PHYSICIAN' AND b.owner_id=? AND b.status='OPEN'");

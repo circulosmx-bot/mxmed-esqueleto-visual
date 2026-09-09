@@ -21,3 +21,6 @@ modules/clinical/qa/requests.sh
 
 # Runtime storage (uploads)
 storage/
+
+# Generated canonical application build context
+/.application-build/

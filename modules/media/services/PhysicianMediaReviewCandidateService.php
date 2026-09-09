@@ -123,6 +123,7 @@ final class PhysicianMediaReviewCandidateService
                 $s = $this->pdo->prepare('INSERT INTO media_review_files(file_id,submission_id,role,storage_key,mime_type,format,width,height,byte_size,checksum_sha256) VALUES(?,?,?,?,?,?,?,?,?,?)');
                 foreach ($files as $file) $s->execute([$file['file_id'],$id,$file['role'],$file['storage_key'],$file['mime_type'],$file['format'],$file['width'],$file['height'],$file['byte_size'],$file['checksum_sha256']]);
             }
+            if($id===null)foreach($oldIds as $oldId)(new MediaReviewBatchService($this->pdo))->retireEmptyOpenLocked($doctor,$oldId);
             $safeCleanup = false;
             if (!$this->pdo->commit()) throw new RuntimeException('candidate_commit_failed');
         } catch (\Throwable $e) {

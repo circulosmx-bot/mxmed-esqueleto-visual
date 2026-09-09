@@ -10,12 +10,10 @@ RUN case "${COMPOSER_BASE_IMAGE}" in *@sha256:[0-9a-f][0-9a-f]*) ;; *) exit 64 ;
 
 FROM ${PHP_BASE_IMAGE} AS extension-builder
 ARG PHP_BASE_IMAGE
-ARG PHPREDIS_VERSION
 RUN case "${PHP_BASE_IMAGE}" in *@sha256:[0-9a-f][0-9a-f]*) ;; *) exit 64 ;; esac \
     && test "$(php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" = "8.5" \
     && grep -q '^VERSION_CODENAME=bookworm$' /etc/os-release \
     && apache2 -v | grep -q 'Apache/2\.4' \
-    && test -n "${PHPREDIS_VERSION}" \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         libcurl4-openssl-dev \
@@ -29,6 +27,10 @@ RUN case "${PHP_BASE_IMAGE}" in *@sha256:[0-9a-f][0-9a-f]*) ;; *) exit 64 ;; esa
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && php --ri 'Zend OPcache' >/dev/null \
     && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring intl gd exif zip \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG PHPREDIS_VERSION
+RUN test -n "${PHPREDIS_VERSION}" \
     && pecl install "redis-${PHPREDIS_VERSION}" \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/* /tmp/pear
@@ -67,6 +69,7 @@ RUN cd /var/www/html \
         --no-progress \
         --optimize-autoloader \
     && test -f /var/www/html/vendor/autoload.php \
+    && chown -R www-data:www-data /var/www/html/vendor \
     && rm -rf /tmp/mxmed-composer \
     && rm -f /usr/local/bin/composer
 
