@@ -662,3 +662,70 @@ archive of accepted HEAD eeea182. MR8 event-policy regression and MP01F/G contra
 checks pass; no audit implementation or catalog changed in MR8.1.
 The additive migration was applied locally; Director row and file snapshots
 remain byte-for-byte identical before/after.
+
+## MR9 — audited replacement requests
+
+An internal reviewer can request another image for a READY/PENDING_REVIEW photo
+or physician personal logo. `POST /api/internal/media-review/request-replacement.php`
+requires canonical active account/session/current credentials, INTERNAL_OPERATOR,
+exact `media_review_request_replacement`, R1, canonical CSRF and mandatory audit.
+Read/approve/improve/design capabilities alone never authorize the decision. No real
+grant is provisioned and physician/customer sessions cannot make this decision.
+
+The transaction locks physician → submission → AUTO_PROPOSAL relationships, checks
+eligibility, then changes only editorial authority to READY/NEEDS_WORK and persists
+reason, optional user-facing feedback and decision time. The canonical
+`MEDIA_REVIEW_REPLACEMENT_REQUESTED` event records submission, physician, purpose and
+controlled reason code, never arbitrary feedback. Audit failure rolls back the
+whole decision. A repeated request returns 409 without another event or timestamp.
+SOURCE, CORRECTED, IMPROVEMENT_INPUT and REVIEW remain history. An AUTO_PROPOSAL
+relationship is removed atomically; its binary is deleted only after confirmed
+commit. Uncertain commits preserve bytes for reconciliation. No public URL or
+media_asset changes, and the existing pending query naturally excludes NEEDS_WORK.
+
+Apply `2026_09_11_media_review_replacement_feedback.sql` once. It adds nullable
+`review_reason_code VARCHAR(32)`, `review_feedback VARCHAR(400)` and
+`review_decided_at DATETIME(6)`, plus a controlled reason CHECK. Existing created_at
+is widened to DATETIME(6) with CURRENT_TIMESTAMP(6) so successive replacement
+uploads cannot be misordered by random UUIDs within one second. Legacy ties use
+decision time before UUID; an active legacy pending decision outranks its withdrawn
+predecessors. This precision correction was required by the real owner HTTP test.
+There are no new
+indexes, workflow tables or parent/supersedes relationships. The server validates
+exact codes WRONG_MEDIA_TYPE, QUALITY_INSUFFICIENT, CONTENT_NOT_APPROPRIATE and
+OTHER. Feedback is trimmed valid UTF-8 with at most 400 Unicode code points. It is
+plain text, including any literal angle brackets, and must never be inserted with
+innerHTML. HTML-like text is returned as JSON text; the advisor textarea uses value.
+
+Owner candidate GET prioritizes active PENDING. Without one, the latest relevant
+NEEDS_WORK submission returns only its ID, technical/review status, controlled
+reason and Spanish label, feedback and timestamps. No reviewer identity, audit,
+capabilities, storage paths or SOURCE metadata is returned in this feedback state.
+The existing authenticated owner scope remains authority; a client doctor ID cannot
+select another physician's feedback. A new owner upload creates a NEW pending
+submission and the old NEEDS_WORK row/files remain historical. Existing one-pending
+uniqueness stays enforced independently for photo and logo. Photos get SOURCE and
+REVIEW; logos additionally get IMPROVEMENT_INPUT.
+
+The advisor detail includes a neutral Solicitar reemplazo action gated by capability,
+a required reason selector and optional Indicaciones para el usuario. Cancel makes
+no change; busy state prevents overlapping decisions. Success closes the detail,
+reloads the database-backed queue and says “Se solicitó una nueva imagen al usuario.”
+This does not claim notification delivery. Current physician upload UIs are not
+activated for moderation. REJECTED remains reserved/unimplemented. Notifications,
+email, batching, gallery moderation and MR10 are not implemented.
+
+Focused MR9 QA uses disposable MySQL/Valkey, synthetic accounts and synthetic media.
+It covers both owner replacement lifecycles, a photograph-like logo with human
+WRONG_MEDIA_TYPE reason, 400-character Unicode boundaries, escaped/plain text,
+capability/session/CSRF denial, audit and commit failures, proposal cleanup,
+14 deterministic race orders, and eight viewport/purpose combinations at
+1440×900, 1366×768, 390×844 and 320×740. The prior 35 audit policy rows are checked
+by SHA-256; the one new event extends catalog counts without changing those rows.
+
+The migration is applied locally. Director baseline comparison removes only the
+three newly added NULL fields and normalizes the `.000000` date representation;
+all pre-existing row data and public/private file hashes match exactly. A separate
+check confirms zero populated feedback fields in real submissions and unchanged
+real grant rows, with zero active replacement grants. No real candidate decision
+was used for QA. MR8 HTTP/visual regression also passes after MR9.

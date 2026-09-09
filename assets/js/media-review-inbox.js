@@ -3,7 +3,8 @@
  const byId=id=>document.getElementById(id),cards=byId('pending-cards'),message=byId('inbox-message'),dialog=byId('review-detail');
  const labels={DOCTOR_PROFILE_PHOTO:'Foto de perfil',PHYSICIAN_PERSONAL_LOGO:'Logotipo profesional'};
  let offset=0,nextOffset=null,opener=null,selected=null,canApprove=false,busy=false,canDownload=false,canCorrect=false,reviewLoaded=false;
- let canImprove=false,proposalUrl=null,proposalLoaded=false,proposalEpoch=0;
+ let canReplace=false,canImprove=false,proposalUrl=null,proposalLoaded=false,proposalEpoch=0;
+ const replacementIds=['request-replacement','cancel-replacement','confirm-replacement','replacement-reason','replacement-feedback'];
  const improvementIds=['generate-improvement','accept-improvement','discard-improvement'];
  const reviewObjectUrls=new Map();
  const reviewEndpoint=item=>'/api/internal/media-review/review-image.php?submission_id='+encodeURIComponent(item.submission_id);
@@ -13,6 +14,7 @@
  const specs=item=>`${item.review.width} × ${item.review.height} px · ${(item.review.byte_size/1024).toLocaleString('es-MX',{maximumFractionDigits:1})} KB · WebP`;
  function node(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;}
  function openDetail(item,button){
+  byId('replacement-form').reset();byId('replacement-form').hidden=true;byId('replacement-message').textContent='';byId('replacement-count').textContent='0 / 400 caracteres';
   clearProposal();byId('improvement-message').textContent='';
   reviewLoaded=false;byId('approve-photo').disabled=true;byId('corrected-file').value='';byId('corrected-filename').textContent='';byId('submit-corrected').hidden=true;byId('intervention-message').textContent='';
   byId('detail-purpose').textContent=labels[item.purpose]||'Imagen';byId('approval-question').textContent=item.purpose==='PHYSICIAN_PERSONAL_LOGO'?'¿Aprobar este logotipo profesional?':'¿Aprobar esta foto de perfil?';
@@ -53,11 +55,11 @@
   const response=await fetch('/api/internal/media-review/approval-options.php',{credentials:'same-origin',cache:'no-store'});
   if(!response.ok)throw new Error('unavailable');return response.json();
  }
- byId('approve-photo').addEventListener('click',()=>{byId('approval-confirmation').hidden=false;byId('approve-photo').hidden=true;byId('cancel-approval').focus();});
+ byId('approve-photo').addEventListener('click',()=>{if(busy)return;byId('replacement-form').hidden=true;byId('approval-confirmation').hidden=false;byId('approve-photo').hidden=true;byId('cancel-approval').focus();});
  byId('cancel-approval').addEventListener('click',()=>{if(busy)return;byId('approval-confirmation').hidden=true;byId('approve-photo').hidden=false;byId('approve-photo').focus();});
  byId('confirm-approval').addEventListener('click',async()=>{
   if(busy||!selected||!reviewLoaded)return;busy=true;const item=selected;
-  for(const id of ['confirm-approval','cancel-approval','close-detail','download-source','choose-corrected','submit-corrected',...improvementIds])byId(id).disabled=true;
+  for(const id of ['confirm-approval','cancel-approval','close-detail','download-source','choose-corrected','submit-corrected',...improvementIds,...replacementIds])byId(id).disabled=true;
   byId('confirm-approval').textContent='Publicando…';byId('approval-confirmation').setAttribute('aria-busy','true');byId('approval-message').textContent=item.purpose==='PHYSICIAN_PERSONAL_LOGO'?'Publicando logotipo…':'Publicando foto…';
   try{
    // Refresh the short-lived session-bound token; POST rechecks all authority.
@@ -67,14 +69,15 @@
    const result=await response.json();if(!response.ok||!result.ok)throw new Error('unavailable');
    dialog.close();await load();message.hidden=false;message.textContent=item.purpose==='PHYSICIAN_PERSONAL_LOGO'?'Logotipo aprobado y publicado.':'Foto aprobada y publicada.';message.tabIndex=-1;message.focus();
   }catch{byId('approval-message').textContent='No fue posible aprobar la imagen. Intenta de nuevo.';}
-  finally{busy=false;for(const id of ['confirm-approval','cancel-approval','close-detail','download-source','choose-corrected','submit-corrected',...improvementIds])byId(id).disabled=false;byId('confirm-approval').textContent='Aprobar';byId('approval-confirmation').setAttribute('aria-busy','false');}
+  finally{busy=false;for(const id of ['confirm-approval','cancel-approval','close-detail','download-source','choose-corrected','submit-corrected',...improvementIds,...replacementIds])byId(id).disabled=false;byId('confirm-approval').textContent='Aprobar';byId('approval-confirmation').setAttribute('aria-busy','false');}
  });
  function interventionControls(){
+  byId('request-replacement').hidden=!canReplace;
   byId('logo-improvement').hidden=!canImprove||selected?.purpose!=='PHYSICIAN_PERSONAL_LOGO';
   byId('design-intervention').hidden=!canDownload&&!canCorrect;byId('download-source').hidden=!canDownload;byId('choose-corrected').hidden=!canCorrect;
  }
  function interventionBusy(value){
-  busy=value;for(const id of ['download-source','choose-corrected','submit-corrected','close-detail','confirm-approval','cancel-approval',...improvementIds])byId(id).disabled=value;
+  busy=value;for(const id of ['download-source','choose-corrected','submit-corrected','close-detail','confirm-approval','cancel-approval',...improvementIds,...replacementIds])byId(id).disabled=value;
   byId('approve-photo').disabled=value||!reviewLoaded;byId('design-intervention').setAttribute('aria-busy',String(value));
  }
  byId('choose-corrected').addEventListener('click',()=>{if(!busy)byId('corrected-file').click();});
@@ -150,7 +153,31 @@
   finally{interventionBusy(false);byId('accept-improvement').disabled=!proposalLoaded||!reviewLoaded;}
  });
 
- approvalOptions().then(options=>{canApprove=options.ok&&options.can_approve===true;canDownload=options.ok&&options.can_download_source===true;canCorrect=options.ok&&options.can_upload_corrected===true;canImprove=options.ok&&options.can_improve===true;interventionControls();if(dialog.open){byId('approve-photo').hidden=!canApprove;if(canImprove&&selected?.purpose==='PHYSICIAN_PERSONAL_LOGO')loadProposal(selected,false).catch(()=>{});}}).catch(()=>{canApprove=false;canDownload=false;canCorrect=false;interventionControls();});
+ byId('request-replacement').addEventListener('click',()=>{
+  if(busy||!selected||!canReplace)return;
+  byId('approval-confirmation').hidden=true;byId('approve-photo').hidden=!canApprove;
+  byId('replacement-form').hidden=false;byId('replacement-message').textContent='';byId('replacement-reason').focus();
+ });
+ byId('cancel-replacement').addEventListener('click',()=>{if(busy)return;byId('replacement-form').hidden=true;byId('request-replacement').focus();});
+ byId('replacement-feedback').addEventListener('input',()=>{
+  const input=byId('replacement-feedback'),chars=Array.from(input.value);if(chars.length>400)input.value=chars.slice(0,400).join('');
+  byId('replacement-count').textContent=Array.from(input.value).length+' / 400 caracteres';
+ });
+ byId('replacement-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(busy||!selected||!canReplace||!event.currentTarget.reportValidity())return;
+  const item=selected,reason=byId('replacement-reason').value,feedback=byId('replacement-feedback').value;
+  interventionBusy(true);byId('replacement-form').setAttribute('aria-busy','true');byId('replacement-message').textContent='Guardando solicitud…';
+  try{
+   const options=await approvalOptions();if(!options.ok||!options.can_request_replacement||!options.csrf)throw new Error('denied');
+   const response=await fetch('/api/internal/media-review/request-replacement.php',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({submission_id:item.submission_id,reason_code:reason,feedback,csrf:options.csrf})});
+   if(response.status===409){dialog.close();await load();message.hidden=false;message.textContent='Esta solicitud ya fue procesada. La lista se actualizó.';return;}
+   const result=await response.json();if(!response.ok||!result.ok)throw new Error('unavailable');
+   dialog.close();await load();message.hidden=false;message.textContent='Se solicitó una nueva imagen al usuario.';message.tabIndex=-1;message.focus();
+  }catch{byId('replacement-message').textContent='No fue posible solicitar el reemplazo. Intenta de nuevo.';}
+  finally{interventionBusy(false);byId('replacement-form').setAttribute('aria-busy','false');}
+ });
+
+ approvalOptions().then(options=>{canApprove=options.ok&&options.can_approve===true;canDownload=options.ok&&options.can_download_source===true;canCorrect=options.ok&&options.can_upload_corrected===true;canImprove=options.ok&&options.can_improve===true;canReplace=options.ok&&options.can_request_replacement===true;interventionControls();if(dialog.open){byId('approve-photo').hidden=!canApprove;if(canImprove&&selected?.purpose==='PHYSICIAN_PERSONAL_LOGO')loadProposal(selected,false).catch(()=>{});}}).catch(()=>{canApprove=false;canDownload=false;canCorrect=false;interventionControls();});
  window.addEventListener('pagehide',event=>{if(event.persisted)return;for(const url of reviewObjectUrls.values())URL.revokeObjectURL(url);reviewObjectUrls.clear();});
  load();
 })();

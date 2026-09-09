@@ -21,3 +21,9 @@ dialog:has(#design-intervention:not([hidden])) .detail-image-wrap { height:min(3
  #improvement-comparison:has(#proposal-panel:not([hidden])) { grid-template-columns:1fr; }
  #improvement-comparison:has(#proposal-panel:not([hidden])) .detail-image-wrap { height:160px; }
 }
+
+#replacement-form {margin-top:1rem;padding:1rem;border:1px solid #c9dce4;border-radius:.5rem;}
+#replacement-form label {display:block;margin:.75rem 0 .35rem;font-weight:600;}
+#replacement-form select,#replacement-form textarea {box-sizing:border-box;width:100%;max-width:100%;min-width:0;padding:.6rem;font:inherit;color:inherit;background:#fff;border:1px solid #9bb8c5;border-radius:.3rem;}
+#replacement-form textarea {resize:vertical;}
+#replacement-count {font-size:.85rem;}

@@ -46,6 +46,23 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <div class="approval-actions"><button id="cancel-approval" type="button">Cancelar</button><button id="confirm-approval" type="button">Aprobar</button></div>
 </section>
 <p id="approval-message" role="status"></p>
+<button id="request-replacement" type="button" hidden>Solicitar reemplazo</button>
+<form id="replacement-form" hidden aria-labelledby="replacement-title">
+<h3 id="replacement-title">Solicitar otra imagen</h3>
+<label for="replacement-reason">Motivo *</label>
+<select id="replacement-reason" required>
+<option value="">Selecciona un motivo</option>
+<option value="WRONG_MEDIA_TYPE">La imagen no corresponde al tipo solicitado.</option>
+<option value="QUALITY_INSUFFICIENT">La calidad de la imagen no es suficiente.</option>
+<option value="CONTENT_NOT_APPROPRIATE">La imagen no es adecuada para publicarse.</option>
+<option value="OTHER">Se requiere otra imagen.</option>
+</select>
+<label for="replacement-feedback">Indicaciones para el usuario (opcional)</label>
+<textarea id="replacement-feedback" rows="3" aria-describedby="replacement-count"></textarea>
+<p id="replacement-count">0 / 400 caracteres</p>
+<div class="approval-actions"><button id="cancel-replacement" type="button">Cancelar</button><button id="confirm-replacement" type="submit">Solicitar reemplazo</button></div>
+<p id="replacement-message" role="status"></p>
+</form>
 <section id="design-intervention" aria-labelledby="design-title" hidden>
 <h3 id="design-title">Intervención de diseño</h3>
 <div class="approval-actions"><button id="download-source" type="button" hidden>Descargar original</button><button id="choose-corrected" type="button" hidden>Subir versión corregida</button></div>

@@ -8,6 +8,7 @@ use RuntimeException;
 require_once __DIR__.'/../contracts/PrivateMediaStoragePort.php';
 require_once __DIR__.'/GdPublicLogoProcessor.php';
 require_once __DIR__.'/LosslessLogoInput.php';
+require_once __DIR__.'/MediaReplacementReasons.php';
 
 final class PhysicianMediaReviewCandidateService
 {
@@ -22,10 +23,17 @@ final class PhysicianMediaReviewCandidateService
     /** Owner metadata only: no physical keys, binary data or delivery URLs. */
     public function current(string $doctor): ?array
     {
-        $s = $this->pdo->prepare("SELECT submission_id,technical_status,review_status,created_at,updated_at FROM media_review_submissions WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose=? AND review_status='PENDING_REVIEW'");
-        $s->execute([$doctor, $this->purpose]);
-        $row = $s->fetch(PDO::FETCH_ASSOC);
-        if (!$row) return null;
+        // One selection gives PENDING priority without a race between two status queries.
+        $s=$this->pdo->prepare("SELECT submission_id,technical_status,review_status,created_at,updated_at,review_reason_code,review_feedback,review_decided_at FROM media_review_submissions WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose=? ORDER BY (review_status='PENDING_REVIEW') DESC,created_at DESC,review_decided_at DESC,submission_id DESC LIMIT 1");
+        $s->execute([$doctor,$this->purpose]);$row=$s->fetch(PDO::FETCH_ASSOC);
+        if(!$row)return null;
+        if($row['review_status']==='NEEDS_WORK') {
+            return ['submission_id'=>$row['submission_id'],'technical_status'=>$row['technical_status'],'review_status'=>$row['review_status'],
+                'reason_code'=>$row['review_reason_code'],'reason_label'=>MediaReplacementReasons::LABELS[$row['review_reason_code']]??'Se requiere otra imagen.',
+                'review_feedback'=>$row['review_feedback'],'review_decided_at'=>$row['review_decided_at'],'updated_at'=>$row['updated_at']];
+        }
+        if($row['review_status']!=='PENDING_REVIEW')return null;
+        unset($row['review_reason_code'],$row['review_feedback'],$row['review_decided_at']);
         $s = $this->pdo->prepare('SELECT role,mime_type,format,width,height,byte_size FROM media_review_files WHERE submission_id=? ORDER BY role');
         $s->execute([$row['submission_id']]);
         $row['files'] = $s->fetchAll(PDO::FETCH_ASSOC);
