@@ -37,5 +37,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <div class="detail-heading"><div><p class="eyebrow">Foto de perfil</p><h2 id="detail-title"></h2></div><button id="close-detail" type="button" aria-label="Cerrar imagen">Cerrar</button></div>
 <div class="detail-image-wrap"><img id="detail-image" alt=""><p id="detail-unavailable" hidden>Imagen no disponible.</p></div>
 <p id="detail-date"></p><p id="detail-specs"></p><p class="status-label">Pendiente de revisión</p>
+<button id="approve-photo" type="button" hidden>Aprobar</button>
+<section id="approval-confirmation" aria-labelledby="approval-question" hidden>
+<h3 id="approval-question">¿Aprobar esta foto de perfil?</h3>
+<div class="approval-actions"><button id="cancel-approval" type="button">Cancelar</button><button id="confirm-approval" type="button">Aprobar</button></div>
+</section>
+<p id="approval-message" role="status"></p>
 </dialog>
 </body></html>

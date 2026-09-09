@@ -217,3 +217,88 @@ Focused tests:
 
 MR4 changes no schema, grants, public media or candidate state. The inbox remains
 inaccessible to real accounts until a separate authorized grant assignment.
+
+## MR5: audited profile-photo approval
+
+READ remains `media_review_read` / R0. APPROVE requires canonical MR3 identity,
+both `media_review_read` and `media_review_approve`, INTERNAL_OPERATOR, action
+`approve`, resource `media_review_submission`, and R1 with required audit.
+The MR2 development fixture cannot approve. No real approve grant is seeded.
+
+`GET /api/internal/media-review/approval-options.php` exposes only the current
+read-authorized operator's approval availability and, when allowed, a short-lived
+canonical identity CSRF token bound to the validated session digest. It changes no
+editorial state. `POST /api/internal/media-review/approve.php` accepts JSON with
+only `submission_id` and `csrf`; each POST resolves session/account/credential and
+active grants anew. Query/body/header identities are never authority. All internal
+responses are private/no-store; error responses never include exception strings.
+
+The confirmation in the existing detail dialog offers Cancelar/Aprobar, disables
+controls while publishing, and refreshes the DB-backed queue after success or a
+409 conflict. Read-only operators have no active approve control. The only new
+editorial transition is `READY/PENDING_REVIEW → READY/APPROVED + PUBLIC` for
+`PHYSICIAN/DOCTOR_PROFILE_PHOTO`.
+
+`ProfilePhotoApprovalService` owns one PDO transaction. The authorization boundary
+checks trusted canonical identity and all requirements before invoking its audit
+port. That port locks the physician first (same order as MR1), re-locks/rechecks the
+candidate and private file relationship, verifies bounded REVIEW length/hash/WebP
+dimensions, locks the previous public photo rows, and appends a real canonical
+audit event. Only a successful append returns ACCEPTED to the boundary. Publication
+then copies those exact REVIEW bytes into a new immutable public UUID/key, verifies
+the stored copy, inserts a canonical media_asset, switches `photo_url`, retires old
+rows and marks the candidate APPROVED. A single outer commit confirms all DB changes,
+including audit. No SOURCE image is decoded or published during approval.
+
+The existing canonical writer, serializer, hash chain, physical mapper and controlled
+SQL lock/CAS calls are reused. `JoinedPdoCanonicalAuditTransactionAdapter` requires
+an active outer transaction and never commits it; ordinary canonical writer callers
+retain their existing transaction behavior. The additive canonical event
+`MEDIA_PROFILE_PHOTO_APPROVED` has WARN/R1, SUCCESS/ADMIN_DECISION, required actor
+and session, and allowlisted submission/physician/published-media identifiers.
+Real/effective actor is the internal account; the submission is the affected resource.
+Request/correlation UUIDs are server-generated. No private key, path, binary, EXIF,
+credential or session token is recorded. The original 28 event policies retain their
+semantic hash and MP01E/MP01F producer scopes stay 13/15; MR5 is a dedicated producer.
+No schema or migration changes are needed. Runtime requires the existing canonical
+audit INSERT/stream-head INSERT and controlled procedure EXECUTE privileges on the
+same database transaction; failure is closed, never a separate best-effort append.
+
+On a confirmed rollback, a newly staged public object is cleaned. Missing/tampered
+REVIEW, storage/DB/audit errors leave previous authority intact. If the connection
+loses the COMMIT acknowledgement, its outcome can be uncertain: preserve the new
+object, return a safe unavailable response and log reconciliation need; never delete
+an object that may already be canonical. A retry observes terminal state as 409 if
+the commit succeeded. Old physical files are deleted only after confirmed commit;
+cleanup failure is logged and cannot undo the new canonical state. Private SOURCE
+and REVIEW rows/files remain as history; no SOURCE HTTP route exists.
+
+### Isolated MR5 QA
+
+Use disposable MySQL 8 on **127.0.0.1:3309** (root/empty password only in this test
+container) and Valkey on **127.0.0.1:6387**, plus Chrome CDP on port 9348. The media
+fixture creates a fresh `mxmed` database on that fixed disposable server; it fails
+if the database already exists. It copies only current table DDL, never actual
+physician rows/files. Its controlled SQL procedures are test-only implementations
+of the canonical lock/CAS contract, not a deployment of production procedures.
+
+```sh
+MR5_FIXTURE_ROOT=/tmp/mxmed-mr5-qa php modules/media/tests/ProfilePhotoApprovalFixture.php setup
+MR5_FIXTURE_ROOT=/tmp/mxmed-mr5-qa php modules/media/tests/ProfilePhotoApprovalTest.php
+MR5_FIXTURE_ROOT=/tmp/mxmed-mr5-qa node modules/media/tests/ProfilePhotoApprovalHttpTest.mjs
+```
+
+The service suite verifies authority, eligibility, integrity, publication/audit
+atomicity, injected storage/insert/update/audit/CAS/commit failures, lost commit
+acknowledgement, repeat conflict, retained private history and post-commit cleanup
+failure. The HTTP suite uses synthetic canonical authenticated accounts, real
+SessionService/Valkey, active/revoked grants and session-bound CSRF. Two distinct
+reviewers concurrently produce one 200 and one 409 with one audit/public asset.
+It runs a copied application with an isolated media config; the actual application
+config is never replaced. Browser QA performs actual isolated approvals at
+1440×900, 1366×768, 390×844 and 320×740, including keyboard confirmation/cancel,
+busy/double-click protection, success, queue removal and read-only controls.
+Screenshots go to `/tmp/mxmed-mr5-visual`. Stop/remove the disposable containers and
+fixture storage after QA. These tests do not deploy productive identity or assign
+any real reviewer grant. Actual Director table/file snapshots must match before
+and after; the retained candidate stays READY/PENDING_REVIEW and public counts 1/1/8.

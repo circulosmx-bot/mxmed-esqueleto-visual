@@ -43,15 +43,15 @@ $fScope = $mp01f->eventTypes();
 $combined = array_merge($eScope, $fScope);
 $eligible = array_values(array_filter($rows, static fn(array $row): bool => ($row['self_timeline'] ?? false) === true));
 
-h01Ok($tests, count($events) === 28 && count(array_unique($events)) === 28, 'canonical_event_count');
+h01Ok($tests, count($events) === 29 && count(array_unique($events)) === 29, 'canonical_event_count');
 h01Ok($tests, $policyEvents === $events, 'policy_catalog_exact_order');
-h01Ok($tests, count($rows) === 28, 'policy_row_count');
+h01Ok($tests, count($rows) === 29, 'policy_row_count');
 h01Ok($tests, array_keys($operations->eventMap()) === $events, 'operation_mapping_complete');
 h01Ok($tests, array_keys($modules->eventMap()) === $events, 'source_module_mapping_complete');
 h01Ok($tests, count($eScope) === 13 && $eScope === array_slice($events, 0, 13), 'mp01e_scope_exact');
-h01Ok($tests, count($fScope) === 15 && $fScope === array_slice($events, 13), 'mp01f_scope_exact');
+h01Ok($tests, count($fScope) === 15 && $fScope === array_slice($events, 13, 15), 'mp01f_scope_exact');
 h01Ok($tests, count(array_intersect($eScope, $fScope)) === 0, 'scope_duplicate_zero');
-h01Ok($tests, $combined === $events, 'scope_unaccounted_zero');
+h01Ok($tests, array_merge($combined,['MEDIA_PROFILE_PHOTO_APPROVED']) === $events, 'scope_unaccounted_zero');
 h01Ok($tests, $mp01e instanceof AuditEventScopePolicy && $mp01f instanceof AuditEventScopePolicy, 'shared_scope_contract');
 h01Ok($tests, count($eligible) === 12, 'self_timeline_canonical_eligible_12');
 
@@ -93,11 +93,11 @@ h01Ok($tests, $summary['PRODUCTION_CUTOVER_READY'] === false, 'production_cutove
 h01Ok($tests, $summary['SELF_SUBJECT_SCOPE_PAGINATION_COMPATIBLE'] === 'REQUIRED_BEFORE_PRODUCTIVE_READ_WIRING', 'subject_pagination_future_invariant');
 
 echo "CROSS_PHASE_CONTRACT_COMPATIBILITY=PASS\n";
-echo "TOTAL_CANONICAL_AUDIT_EVENT_TYPES=28\n";
-echo "EVENT_CATALOG_MATCH=28/28\n";
-echo "POLICY_REGISTRY_MATCH=28/28\n";
-echo "OPERATION_MAPPING=28/28\n";
-echo "SOURCE_MODULE_MAPPING=28/28\n";
+echo "TOTAL_CANONICAL_AUDIT_EVENT_TYPES=29\n";
+echo "EVENT_CATALOG_MATCH=29/29\n";
+echo "POLICY_REGISTRY_MATCH=29/29\n";
+echo "OPERATION_MAPPING=29/29\n";
+echo "SOURCE_MODULE_MAPPING=29/29\n";
 echo "MP01E_SCOPE=13/13\n";
 echo "MP01F_SCOPE=15/15\n";
 echo "UNSCOPED_CANONICAL_EVENTS=0\n";

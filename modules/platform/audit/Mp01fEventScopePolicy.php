@@ -20,7 +20,7 @@ final class Mp01fEventScopePolicy implements AuditEventScopePolicy
     /** @return list<string> */
     public function eventTypes(): array
     {
-        $events = array_slice(CanonicalAuditEventType::all(), 13);
+        $events = array_slice(CanonicalAuditEventType::all(), 13, 15);
         if (count($events) !== 15) {
             throw new \LogicException('invalid_mp01f_canonical_scope');
         }
