@@ -73,3 +73,13 @@ export function mxmedC3AuditBucketName(account: string, region: string): string 
   );
   return `${mxmedName('stg', 'audit')}-${account}-${region}`;
 }
+
+/** Shared by compute and the cycle-free scheduler boundary ARN contract. */
+export function mxmedApplicationClusterName(environmentCode: string): string {
+  return mxmedName(environmentCode, 'application-cluster');
+}
+
+/** Future JobsStack task-definition family; revisions are scoped separately. */
+export function mxmedMediaReviewJobFamily(environmentCode: string): string {
+  return mxmedName(environmentCode, 'media-review-batch-job');
+}

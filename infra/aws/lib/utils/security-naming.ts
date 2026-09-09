@@ -32,7 +32,7 @@ export function mxmedCloudTrailLogGroupName(environmentName: MxMedEnvironmentNam
 
 export function mxmedBoundaryName(
   environmentCode: MxMedEnvironmentCode,
-  kind: 'workload' | 'deployment',
+  kind: 'workload' | 'deployment' | 'scheduler-invocation',
 ): string {
   return `mxmed-${environmentCode}-${kind}-boundary`;
 }

@@ -2092,7 +2092,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         covered += 1;
       }
     }
-    expect(covered).toBe(106);
+    expect(covered).toBe(108);
     expect(covered).toBe(expectedC3ResourceCount());
   });
 
@@ -2102,7 +2102,7 @@ describe('C3 per-stack CloudFormation execution authority', () => {
         (resource) => resource.Type === 'AWS::IAM::Role',
       ),
     );
-    expect(roles).toHaveLength(10);
+    expect(roles).toHaveLength(11);
     for (const role of roles) {
       expect(role.Properties?.PermissionsBoundary).toBeDefined();
       const trust = JSON.stringify(role.Properties?.AssumeRolePolicyDocument);

@@ -61,7 +61,7 @@ import {
 import type { MxMedRuntimeCapabilityProfile } from '../config/environment-config';
 import type { MxMedLaunchCapacity } from '../config/launch-profiles';
 import { resolveLaunchProfile } from '../config/launch-profiles';
-import { mxmedName } from '../utils/naming';
+import { mxmedApplicationClusterName, mxmedName } from '../utils/naming';
 import { BaseMxMedStack } from './base-mxmed-stack';
 import type { MxMedContractStackProps } from './base-mxmed-stack';
 
@@ -229,7 +229,7 @@ export class MxMedComputeStack extends BaseMxMedStack {
 
     this.cluster = new Cluster(this, 'ApplicationCluster', {
       vpc: props.vpc as unknown as IVpc,
-      clusterName: mxmedName(config.environmentCode, 'application-cluster'),
+      clusterName: mxmedApplicationClusterName(config.environmentCode),
       containerInsightsV2: ContainerInsights.ENABLED,
     });
     this.appLogGroup = this.createLogGroup(

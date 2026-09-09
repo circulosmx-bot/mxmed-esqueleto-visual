@@ -45,7 +45,7 @@ describe('C3 ephemeral runner graph', () => {
     expect(names).not.toEqual(expect.arrayContaining(['mxmed-stg-data', 'mxmed-stg-storage']));
   });
 
-  test('synthesizes 106 CloudFormation resources plus one direct runtime object', () => {
+  test('synthesizes 108 CloudFormation resources plus one direct runtime object', () => {
     const all = fixture.node.children
       .filter((child): child is Stack => Stack.isStack(child))
       .flatMap((stack) => resources(stack));
@@ -56,7 +56,7 @@ describe('C3 ephemeral runner graph', () => {
     );
     expect(all).toHaveLength(expectedC3ResourceCount());
     expect(counts).toEqual(MXMED_C3_EXPECTED_RESOURCE_TYPE_COUNTS);
-    expect(expectedC3ResourceCount()).toBe(106);
+    expect(expectedC3ResourceCount()).toBe(108);
     expect(all.filter((resource) => resource.Type === 'AWS::Budgets::Budget')).toHaveLength(0);
     expect(all.filter((resource) => resource.Type === 'AWS::RDS::DBInstance')).toHaveLength(0);
     expect(all.filter((resource) => resource.Type === 'AWS::ECS::Service')).toHaveLength(0);

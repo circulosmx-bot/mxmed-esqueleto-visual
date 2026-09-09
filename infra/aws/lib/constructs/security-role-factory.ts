@@ -7,7 +7,8 @@ import type { MxMedEnvironmentCode, MxMedEnvironmentName } from '../config/envir
 import { mxmedName } from '../utils/naming';
 import { assertMxMedCondition } from '../utils/validation';
 
-export type MxMedWorkloadRoleKind = 'ecs-execution' | 'application' | 'migration' | 'jobs';
+export type MxMedWorkloadRoleKind =
+  'ecs-execution' | 'application' | 'migration' | 'jobs' | 'jobs-execution';
 
 export interface MxMedHumanRoleProps {
   readonly principal: IPrincipal;

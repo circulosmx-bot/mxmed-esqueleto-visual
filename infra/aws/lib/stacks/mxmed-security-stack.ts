@@ -31,7 +31,7 @@ import { SecurityFoundationAspect } from '../aspects/security-foundation-aspect'
 import { MxMedSecurityRoleFactory, SecuritySecretContainer } from '../constructs';
 import { MXMED_C3_RUNNER_CONTRACT } from '../constructs/c3-runner-contract';
 import type { MxMedEnvironmentConfig } from '../config/environment-config';
-import { mxmedName } from '../utils/naming';
+import { mxmedApplicationClusterName, mxmedMediaReviewJobFamily, mxmedName } from '../utils/naming';
 import {
   mxmedBoundaryName,
   mxmedCloudTrailLogGroupName,
@@ -61,6 +61,7 @@ export class MxMedSecurityStack extends BaseMxMedStack {
   public readonly managementTrail: Trail;
   public readonly workloadBoundary: ManagedPolicy;
   public readonly deploymentBoundary: ManagedPolicy;
+  public readonly schedulerInvocationBoundary: ManagedPolicy;
   public readonly sessionSigningSecret: Secret;
   public readonly stripeSecretKeyReference: ISecret;
   public readonly stripeWebhookSecretReference: ISecret;
@@ -69,6 +70,7 @@ export class MxMedSecurityStack extends BaseMxMedStack {
   public readonly applicationTaskRole: Role;
   public readonly migrationTaskRole: Role;
   public readonly jobsTaskRole: Role;
+  public readonly jobsExecutionRole: Role;
   public readonly workloadRoleFactory: MxMedSecurityRoleFactory;
 
   public constructor(scope: Construct, id: string, props: MxMedSecurityStackProps) {
@@ -207,6 +209,47 @@ export class MxMedSecurityStack extends BaseMxMedStack {
       'jobs',
       'MXMed jobs task role; each future job receives explicit owner grants.',
     );
+    this.jobsExecutionRole = this.workloadRoleFactory.createWorkloadRole(
+      this,
+      'JobsExecutionRole',
+      'jobs-execution',
+      'MXMed job startup role; execution grants are deferred until job wiring.',
+    );
+    // Maximum authority only. No role attaches this boundary in MR11.4A.
+    this.schedulerInvocationBoundary = new ManagedPolicy(this, 'SchedulerInvocationBoundary', {
+      managedPolicyName: mxmedBoundaryName(config.environmentCode, 'scheduler-invocation'),
+      description: 'Maximum authority for the future media review Scheduler invocation role.',
+      statements: [
+        new PolicyStatement({
+          actions: ['ecs:RunTask'],
+          resources: [
+            this.formatArn({
+              service: 'ecs',
+              region: config.primaryRegion,
+              resource: 'task-definition',
+              resourceName: `${mxmedMediaReviewJobFamily(config.environmentCode)}:*`,
+              arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+            }),
+          ],
+          conditions: {
+            ArnEquals: {
+              'ecs:cluster': this.formatArn({
+                service: 'ecs',
+                region: config.primaryRegion,
+                resource: 'cluster',
+                resourceName: mxmedApplicationClusterName(config.environmentCode),
+                arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+              }),
+            },
+          },
+        }),
+        new PolicyStatement({
+          actions: ['iam:PassRole'],
+          resources: [this.jobsTaskRole.roleArn, this.jobsExecutionRole.roleArn],
+          conditions: { StringEquals: { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' } },
+        }),
+      ],
+    });
     this.auditBucket = new Bucket(this, 'AuditBucket', {
       ...(props.c3AuditBucketName === undefined ? {} : { bucketName: props.c3AuditBucketName }),
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
