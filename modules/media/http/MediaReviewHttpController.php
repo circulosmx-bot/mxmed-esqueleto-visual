@@ -16,11 +16,8 @@ final class MediaReviewHttpController
         header('X-Content-Type-Options: nosniff');
         header('Cross-Origin-Resource-Policy: same-origin');
         try {
-            session_start(['read_and_close'=>true,'use_strict_mode'=>true,'cache_limiter'=>'']);
-            $env = [];
-            foreach (['MXMED_MEDIA_REVIEW_DEV_OPERATOR_ENABLED','APP_ENV','MXMED_ENV','MXMED_ENVIRONMENT','ENVIRONMENT'] as $name) $env[$name] = (string)getenv($name);
-            $context = MediaReviewHttpContext::resolve($_SESSION, session_id(), $_SERVER, $env);
-            // Authorize before validating UUID, opening DB or revealing existence.
+            $context = MediaReviewHttpContext::fromRequest($_COOKIE, $_SERVER);
+            // Authorize before validating UUID or querying protected media.
             MediaReviewAuthority::requireRead($context);
             if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
                 http_response_code(405); header('Allow: GET'); echo '{"ok":false,"error":"method_not_allowed"}'; return;

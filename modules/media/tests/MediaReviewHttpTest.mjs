@@ -37,6 +37,9 @@ try{
   for(const key of ['role=SOURCE','storage_key='+encodeURIComponent(source.storage_key),'path='+encodeURIComponent(source.storage_key)])denied(await request(base,route,sessions.good,`submission_id=${id}&${key}`),400);
   for(const method of ['POST','DELETE','PUT'])denied(await request(base,route,sessions.good,`submission_id=${id}`,method),405);
  }
+ // An invalid canonical token must not fall back to an otherwise valid PHP fixture.
+ denied(await request(base,'submission',sessions.good,`submission_id=${id}`,'GET',
+  {Cookie:'PHPSESSID='+sessions.good+'; __Host-mxmed_session=invalid-token'}));
  const metadata=await request(base,'submission',sessions.good);assert.equal(metadata.status,200);const text=metadata.bytes.toString(),data=JSON.parse(text).data;
  assert.equal(data.review.role,'REVIEW');assert.equal(data.review_status,'PENDING_REVIEW');assert.equal(data.technical_status,'READY');
  for(const secret of ['storage_key','public_url','/source/','SOURCE','checksum',source.checksum_sha256,source.storage_key,review.storage_key,process.env.HOME])assert.ok(!text.includes(secret),'metadata leak');
@@ -50,6 +53,7 @@ try{
  const fakePath=join(root,review.storage_key);await mkdir(dirname(fakePath),{recursive:true,mode:0o700});await writeFile(fakePath,Buffer.alloc(+review.byte_size,120),{mode:0o600});
  denied(await request(faultBase,'review-image',sessions.good),500);
  const prod=await server(8100,{APP_ENV:'production'});denied(await request(prod,'review-image',sessions.good));
+ const staging=await server(8103,{APP_ENV:'staging'});denied(await request(staging,'submission',sessions.good));
  const disabled=await server(8101,{MXMED_MEDIA_REVIEW_DEV_OPERATOR_ENABLED:''});denied(await request(disabled,'submission',sessions.good));
  assert.deepEqual(snapshot(),before,'Public/private rows or files changed');
  console.log('PASS: real HTTP trusted reviewer metadata/exact REVIEW; anonymous/physician/no-capability/expired/revoked/invalid/header denial; anti-enumeration; SOURCE manipulation denied; missing/tampered zero image bytes; production/default deny; exact public and candidate snapshots unchanged');

@@ -5,9 +5,40 @@ require_once __DIR__.'/../services/MediaReviewAuthority.php';
 use Media\Services\MediaReviewAuthority;
 use Platform\Contracts\{AuthorizationContext,TrustedAuthorizationContext,AuthorizationPlane,RiskLevel,ActorReference,SessionReference,CapabilitySet};
 
-/** No productive INTERNAL_OPERATOR composition exists yet: default is denial. */
+/** Canonical identity first; PHP session fixture is a strictly isolated local fallback. */
 final class MediaReviewHttpContext
 {
+    public static function fromRequest(array $cookies, array $server): ?TrustedAuthorizationContext
+    {
+        // Presence of a canonical token always prevents fallback, including invalid tokens.
+        if (array_key_exists('__Host-mxmed_session', $cookies)) {
+            try {
+                $identity = \Identity\Http\IdentityHttpComposition::fromProcessEnvironment();
+                $authority = new \Identity\Services\InternalOperatorAuthority(
+                    new \Identity\Http\CanonicalHttpSessionResolver($identity->sessions()),
+                    new \Identity\Repositories\InternalOperatorGrantRepository($identity->pdo())
+                );
+                return $authority->resolve($cookies, 'read', 'media_review_submission', RiskLevel::R0);
+            } catch (\Throwable) {
+                error_log('media_review_canonical_authority_unavailable');
+                return null;
+            }
+        }
+        // No productive request reads a PHP fixture session or its opt-in flag.
+        $environment = [];
+        foreach (['APP_ENV','MXMED_ENV','MXMED_ENVIRONMENT','ENVIRONMENT'] as $name) {
+            $environment[$name] = (string)getenv($name);
+            $value = strtolower($environment[$name]);
+            if ($value !== '' && !in_array($value, ['local','development','test'], true)) return null;
+        }
+        if (!in_array(strtolower($environment['MXMED_ENVIRONMENT']), ['local','development'],true)) return null;
+        $environment['MXMED_MEDIA_REVIEW_DEV_OPERATOR_ENABLED'] = (string)getenv('MXMED_MEDIA_REVIEW_DEV_OPERATOR_ENABLED');
+        if ($environment['MXMED_MEDIA_REVIEW_DEV_OPERATOR_ENABLED'] !== '1'
+            || !in_array($server['REMOTE_ADDR'] ?? '', ['127.0.0.1','::1'],true)) return null;
+        session_start(['read_and_close'=>true,'use_strict_mode'=>true,'cache_limiter'=>'']);
+        return self::resolve($_SESSION, session_id(), $server, $environment);
+    }
+
     public static function resolve(array $session, string $sessionId, array $server, array $environment): ?TrustedAuthorizationContext
     {
         if (($environment['MXMED_MEDIA_REVIEW_DEV_OPERATOR_ENABLED'] ?? '') !== '1'

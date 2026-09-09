@@ -88,6 +88,22 @@ final class IdentityHttpComposition
         private ?ActorContextFactory $auditActors = null
     ) {}
 
+    /** Shared HTTP composition selection; authentication remains in SessionService. */
+    public static function fromProcessEnvironment(): self
+    {
+        $autoload = dirname(__DIR__, 3).'/vendor/autoload.php';
+        if (is_file($autoload)) require_once $autoload;
+        self::registerAutoloader();
+        $appEnvironment = (string)(getenv('APP_ENV') ?: '');
+        $selector = $appEnvironment === ''
+            ? IdentityHttpCompositionSelector::fromProcessEnvironment()
+            : IdentityHttpCompositionSelector::fromValues($appEnvironment, (string)(getenv('MXMED_PREVIEW_EXPLICIT') ?: ''));
+        return $selector->select(
+            static fn(): self => self::preview(),
+            static fn(string $environment): self => self::productive(ProductiveIdentityHttpConfiguration::fromProcessEnvironment($environment))
+        );
+    }
+
     public static function preview(): self
     {
         self::registerAutoloader();

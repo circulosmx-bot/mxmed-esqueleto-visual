@@ -139,7 +139,11 @@ $check('productive_factory_uses_ses_and_fail_closed_session_boundaries',
 );
 
 $entrypointSource = (string)file_get_contents(dirname(__DIR__, 3) . '/api/identity/index.php');
-$check('http_entrypoint_uses_environment_selector', str_contains($entrypointSource, 'IdentityHttpCompositionSelector::fromProcessEnvironment()'));
+$check('http_entrypoint_uses_shared_environment_selector',
+    str_contains($entrypointSource, 'IdentityHttpComposition::fromProcessEnvironment()')
+    && str_contains($compositionSource, 'IdentityHttpCompositionSelector::fromProcessEnvironment()')
+    && str_contains($compositionSource, 'ProductiveIdentityHttpConfiguration::fromProcessEnvironment($environment)')
+);
 $check('http_failure_contract_is_sanitized',
     str_contains($entrypointSource, "catch (\\Throwable) {\n    identityHttpJson(['ok' => false, 'error' => 'TEMPORARILY_UNAVAILABLE'], 503);")
     && !str_contains($entrypointSource, 'getMessage()')

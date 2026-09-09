@@ -76,11 +76,11 @@ physician ownership, client context and transitional_open never grant this acces
 SOURCE download remains unimplemented and should later have a separate, stronger
 capability/risk/audit requirement; these endpoints cannot select a file role.
 
-Production composition remains fail-closed. Inspection of `IdentityHttpComposition`
+At MR2, production composition remained fail-closed. Inspection of `IdentityHttpComposition`
 and `FailClosedAuthorizationService` found account/profile/group authorization,
 not an established internal-operator grant resolver. MR2 does not relabel those
-memberships as staff or create another authentication system. A production staff
-session/account/capability resolver is required before real reviewer activation.
+memberships as staff or create another authentication system. MR3 below adds the canonical account/session/grant resolver; real grants still
+require a separate authorized operational step.
 
 HTTP QA uses existing PHP sessions created by CLI, with a distinct server-owned
 `media_review_dev_operator` record, fixed synthetic account, explicit capability
@@ -113,3 +113,67 @@ sessions, and uses a separate disposable private root for missing/tampered-file
 checks. It never modifies the retained candidate, its SOURCE/REVIEW, or public
 media. No migration, staff panel, editorial transition or publishing operation
 is part of MR2.
+
+## MR3: canonical internal operator authority
+
+Canonical account → canonical session → active internal operator grant → backend
+TrustedAuthorizationContext → existing AuthorizationBoundary. Customer/professional
+roles, ownership and paid plans never imply staff authority. An operator needs no
+physician profile or professional membership.
+
+Authentication remains `CredentialAuthenticationService::authenticate`, followed by
+`SessionService::create`. The opaque token lives in the existing secure, HttpOnly,
+SameSite=Lax `__Host-mxmed_session` cookie. `CanonicalHttpSessionResolver` delegates
+validation to SessionService: session-store validity, idle/absolute expiry,
+revocation/supersession, current account state and credential version are checked
+before consulting grants. Production uses the existing Valkey composition with
+`PdoSessionAccountStateAdapter`; PHP `$_SESSION` is not productive authority.
+
+`IdentityHttpComposition::fromProcessEnvironment` centralizes the existing selector
+used by login and media reads. APP_ENV and the established configuration determine
+productive staging/production or explicit local preview. Requests cannot select
+that composition. This extraction does not change login/session behavior.
+
+Migration `modules/identity/db/migrations/2026_09_08_07_create_internal_operator_grants.sql`
+requires the existing canonical `auth_accounts` migration. It adds grant UUID,
+canonical account FK, case-sensitive explicit capability, ACTIVE/REVOKED status,
+created/updated/revoked timestamps and generated active-slot uniqueness per
+account/capability. There are no secrets, tokens, passwords, doctor IDs or seeds.
+Revoked rows preserve history and permit a later distinct active grant. The paired
+rollback drops only the grant table; existing canonical account schema is not
+owned by this rollback.
+
+`InternalOperatorGrantRepository` reads active grants on every request, without a
+session capability cache. `InternalOperatorAuthority` builds actor/session/account/
+credential facts from canonical validation and capabilities solely from those
+backend grants. MR2's exact `media_review_read`, internal_operator, read,
+media_review_submission and R0 requirements are unchanged. The repository has no
+productive grant mutation endpoint. Future real grant/revoke operations require
+explicit administration and separate security auditing; MR3 assigns no real grant.
+
+A supplied canonical cookie always takes precedence: invalid session, configuration
+or grant lookup never falls back to the MR2 fixture. With no canonical cookie,
+production/staging return denial before consulting PHP fixture state or its flag.
+The existing fixture remains opt-in, explicit local/development and loopback only.
+No SOURCE route or editorial transition is introduced.
+
+QA: `ProductiveOperatorHttpTest.mjs` uses canonical password authentication,
+SessionService and Valkey through the existing explicit preview composition, plus
+an isolated canonical identity DB. It exercises the same grant/context resolver
+used by productive composition, without the MR2 operator fixture. It verifies
+revocation, session/account/credential failures, exact REVIEW bytes and unchanged
+public/candidate snapshots. Productive selector/session contracts are tested
+separately; this QA does not deploy or connect to AWS.
+
+Run with a disposable MySQL server and Valkey instance (default Valkey port 6387):
+
+```sh
+MR3_TEST_DB_HOST=127.0.0.1 MR3_TEST_DB_PORT=3309 \
+MR3_TEST_DB_USER=root MR3_TEST_DB_PASS='' \
+node modules/media/tests/ProductiveOperatorHttpTest.mjs
+```
+
+Use these credentials only for an isolated test server. The CLI fixture requires
+an `mxmed_gate4d_preview_mr3_*` database name and drops its own database afterward.
+Local application schema receives no synthetic accounts or grants. No real advisor
+is enabled until a separately authorized grant is provisioned in canonical identity.

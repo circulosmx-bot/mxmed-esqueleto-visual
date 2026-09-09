@@ -10,8 +10,6 @@ use Identity\Contracts\ReasonCode;
 use Identity\Contracts\SessionCookieDescriptor;
 use Identity\Contracts\SessionValidationDecision;
 use Identity\Http\IdentityHttpComposition;
-use Identity\Http\IdentityHttpCompositionSelector;
-use Identity\Http\ProductiveIdentityHttpConfiguration;
 use Identity\Services\OneTimeTokenCodec;
 use Identity\Audit\TrustedIdentityId;
 use Identity\Audit\VerifiedAccountId;
@@ -161,15 +159,7 @@ function identityHttpAuditEmailVerified(IdentityHttpComposition $composition, st
 
 try {
     $operation = identityHttpOperation();
-    $appEnvironment = (string)(getenv('APP_ENV') ?: '');
-    $selector = $appEnvironment === ''
-        ? IdentityHttpCompositionSelector::fromProcessEnvironment()
-        : IdentityHttpCompositionSelector::fromValues($appEnvironment, (string)(getenv('MXMED_PREVIEW_EXPLICIT') ?: ''));
-    $composition = $selector->select(
-        static fn(): IdentityHttpComposition => IdentityHttpComposition::preview(),
-        static fn(string $environment): IdentityHttpComposition => IdentityHttpComposition::productive(ProductiveIdentityHttpConfiguration::fromProcessEnvironment($environment))
-    );
-    if (!$composition instanceof IdentityHttpComposition) throw new \RuntimeException('identity_composition_unavailable');
+    $composition = IdentityHttpComposition::fromProcessEnvironment();
     $clientIp = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
     $userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
     $clockDimensions = ['ip'=>$clientIp === '' ? null : $clientIp,'device'=>$userAgent === '' ? null : hash('sha256', $userAgent)];
