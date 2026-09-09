@@ -26,7 +26,7 @@ final class GdPublicLogoProcessor
     /**
      * @return array{path:string,mime_type:string,format:string,width:int,height:int,byte_size:int,checksum_sha256:string,source_width:int,source_height:int,source_mime_type:string}
      */
-    public function process(array $upload, bool $deleteSource = true, ?callable $onValidatedSource = null): array
+    public function process(array $upload, bool $deleteSource = true, ?callable $onValidatedSource = null, ?callable $transformWorking = null): array
     {
         $sourcePath = trim((string)($upload['tmp_name'] ?? ''));
         $outputPath = null;
@@ -105,6 +105,9 @@ final class GdPublicLogoProcessor
             if (!$this->isImage($working)) {
                 throw new RuntimeException('logo_derivative_resize_failed');
             }
+
+            // Optional internal editorial transform; source retention and normal callers are unchanged.
+            if ($transformWorking !== null) $transformWorking($working);
 
             $outputPath = tempnam(sys_get_temp_dir(), 'mxmed-public-logo-');
             if (!is_string($outputPath) || $outputPath === '') {

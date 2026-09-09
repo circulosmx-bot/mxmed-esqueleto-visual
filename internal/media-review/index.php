@@ -35,7 +35,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 </main>
 <dialog id="review-detail" aria-labelledby="detail-title">
 <div class="detail-heading"><div><p class="eyebrow" id="detail-purpose"></p><h2 id="detail-title"></h2></div><button id="close-detail" type="button" aria-label="Cerrar imagen">Cerrar</button></div>
-<div class="detail-image-wrap"><img id="detail-image" alt=""><p id="detail-unavailable" hidden>Imagen no disponible.</p></div>
+<div id="improvement-comparison">
+<div><p id="current-version-label" class="eyebrow" hidden>Versión actual</p><div class="detail-image-wrap"><img id="detail-image" alt=""><p id="detail-unavailable" hidden>Imagen no disponible.</p></div></div>
+<div id="proposal-panel" hidden><p class="eyebrow">Propuesta</p><div class="detail-image-wrap"><img id="proposal-image" alt="Propuesta de logotipo con fondo transparente"></div></div>
+</div>
 <p id="detail-date"></p><p id="detail-specs"></p><p class="status-label">Pendiente de revisión</p>
 <button id="approve-photo" type="button" hidden>Aprobar</button>
 <section id="approval-confirmation" aria-labelledby="approval-question" hidden>
@@ -50,6 +53,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <p id="corrected-filename"></p>
 <button id="submit-corrected" type="button" hidden>Guardar versión corregida</button>
 <p id="intervention-message" role="status"></p>
+</section>
+<section id="logo-improvement" hidden aria-label="Mejora de logotipo">
+<button id="generate-improvement" type="button">Mejorar automáticamente</button>
+<div id="proposal-actions" class="approval-actions" hidden><button id="discard-improvement" type="button">Descartar propuesta</button><button id="accept-improvement" type="button" disabled>Usar versión mejorada</button></div>
+<p id="improvement-message" role="status"></p>
 </section>
 </dialog>
 </body></html>

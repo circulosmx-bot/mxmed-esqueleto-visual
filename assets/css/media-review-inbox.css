@@ -11,3 +11,13 @@ dialog:has(#approval-confirmation:not([hidden])) .detail-image-wrap { height:min
 #corrected-filename { overflow-wrap:anywhere; }
 #corrected-filename:empty, #intervention-message:empty { display:none; }
 dialog:has(#design-intervention:not([hidden])) .detail-image-wrap { height:min(30dvh,280px); }
+
+#logo-improvement { border-top:1px solid #c6dce2; margin-top:16px; padding-top:16px; }
+#proposal-actions { margin-top:12px; }
+#improvement-comparison:has(#proposal-panel:not([hidden])) { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+#improvement-comparison>div { min-width:0; }
+#improvement-message:empty { display:none; }
+@media(max-width:600px) {
+ #improvement-comparison:has(#proposal-panel:not([hidden])) { grid-template-columns:1fr; }
+ #improvement-comparison:has(#proposal-panel:not([hidden])) .detail-image-wrap { height:160px; }
+}

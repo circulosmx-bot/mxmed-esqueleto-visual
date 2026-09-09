@@ -475,8 +475,8 @@ CSRF token and multipart `image`, show pending/withdrawal state separately from 
 approved logo, and keep the current logo displayed until approval. Candidate
 withdrawal must not be confused with deletion of the approved public logo.
 
-Automatic logo improvement remains unimplemented. MR8 may evaluate it separately;
-MR7 introduces no improvement button, SVG, background removal or vectorization.
+At the MR7 baseline automatic logo improvement was unimplemented. The isolated
+MR8 proposal pilot below adds conservative removal; SVG/vectorization remain absent.
 
 ### Isolated verification
 
@@ -491,3 +491,110 @@ endpoint, mixed inbox and existing public delivery. Its browser helper tests all
 four shapes at 1440×900, 1366×768, 390×844 and 320×740, native file selection,
 manual correction followed by explicit approval, stale-preview failure and
 capability-specific controls. Existing photo MR5/MR6 tests remain regression gates.
+
+## MR8 — conservative automatic logo proposals
+
+Only pending `PHYSICIAN_PERSONAL_LOGO` submissions can use this pilot. The server
+chooses current CORRECTED when present, otherwise SOURCE; clients cannot select
+roles, owners, thresholds or authority. The isolated user-facing logo uploader
+remains unchanged. No real `media_review_improve` grants are created.
+
+Effective SOURCE/CORRECTED → private AUTO_PROPOSAL → human comparison → explicit
+acceptance → REVIEW → separate audited approval → PUBLIC. Generating or discarding
+a proposal never changes REVIEW. Acceptance never publishes and leaves
+READY/PENDING_REVIEW, SOURCE and CORRECTED intact.
+
+### Deterministic algorithm and bounds
+
+The existing PHP GD processor decodes the integrity-verified effective source
+within 10 MiB / 25 MP / 8192-side limits, normalizes orientation and resizes without
+upscaling to at most 800 pixels per side. An optional internal working-image
+transform runs before the usual WebP encoder. Ordinary processor callers do not
+use this hook and retain their prior behavior.
+
+`ConservativeLogoBackground` uses this fixed server policy:
+
+- Minimum working side 16 pixels; maximum 800. Any existing nonzero alpha returns
+  ALREADY_TRANSPARENT without modification, including sparse transparency.
+- Compute per-channel median of every outer-border pixel, including all corners.
+  Every border pixel must be within maximum-channel RGB distance 2 of that color;
+  mean squared maximum-channel distance must be at most 1.
+- Seed a four-connected flood fill from all image edges. Only pixels **exactly**
+  equal to the detected dominant RGB color are traversable/removable. There is no
+  global color replacement. Enclosed matching white letters remain opaque.
+- Require a removable exterior of 5–95% of image pixels and at least 1% foreground
+  with maximum-channel distance at least 24. Otherwise return NO_SAFE_IMPROVEMENT.
+- Do not partially fade nonmatching pixels. Near-background thin lines and
+  anti-aliased edges remain opaque; conservative residual edges are preferable to
+  foreground loss. No uncalibrated confidence percentage appears in the UI.
+
+This accepts exact white, off-white and other solid colors. Near-solid borders
+may qualify, but only exact dominant-color connected pixels are removed. The
+pilot deliberately abstains on ambiguous borders/gradients and does not perform
+photographic segmentation. The working mask is at most 640,000 bytes; the packed
+queue at most 2,560,000 bytes. Source decode still consumes bounded GD native RAM.
+Output uses the existing metadata-stripping WebP envelope: 800-side / 153600 bytes,
+preserved aspect ratio and alpha. No external service, paid API, generative model,
+SVG, vectorization or new runtime dependency is used. External per-image service
+cost is zero; local CPU/RAM and storage still have infrastructure cost.
+
+### Endpoints, authority and audit
+
+All mutations require a canonical INTERNAL_OPERATOR session, the exact
+`media_review_improve` capability, R1 authorization and canonical session-bound
+CSRF. Read/approve/corrected capabilities never imply improvement. POST JSON accepts
+only `submission_id` and `csrf`:
+
+- `improve-logo.php`: generate/atomically replace one proposal.
+- `accept-improvement.php`: verify current input fingerprint and atomically copy
+  exact proposal bytes into a new REVIEW authority; retire proposal after commit.
+- `discard-improvement.php`: remove only the proposal, with post-commit cleanup.
+
+These routes live under `/api/internal/media-review/`. The fixed GET
+`improvement-preview.php?submission_id=...` requires canonical read authority and
+always resolves AUTO_PROPOSAL, with full bounded integrity checks, image/webp,
+private/no-store, nosniff and no storage-key disclosure. Arbitrary role/path/key
+parameters are rejected. Existing REVIEW delivery is unchanged.
+
+The canonical events are `MEDIA_LOGO_IMPROVEMENT_PROPOSED`,
+`MEDIA_LOGO_IMPROVEMENT_ACCEPTED`, and `MEDIA_LOGO_IMPROVEMENT_DISCARDED`; safe
+metadata contains submission/physician identifiers only. All three use the shared
+canonical writer joined to the candidate transaction. No-safe analysis is a
+successful no-mutation outcome, not a generated-proposal event. Audit or commit
+failure rolls back authority; ambiguous commit acknowledgement preserves possibly
+committed objects for reconciliation.
+
+Apply `2026_09_09_media_review_auto_proposal.sql` once. It extends the existing
+role enum and adds nullable `input_file_id`/`input_checksum_sha256` fields plus a
+proposal constraint. The existing submission+role unique key bounds proposal
+count. Fingerprints are required only for AUTO_PROPOSAL. Repeated generation uses
+atomic replacement. No new table or public asset is created.
+
+All mutations lock physician → submission → files, matching MR6/MR7. Human
+correction invalidates/removes any old AUTO_PROPOSAL in its own transaction.
+Acceptance checks both effective input file ID and checksum; timestamps confer no
+authority. MR7 approval ignores an unaccepted proposal and publishes only current
+REVIEW. Approval-first makes later generation/acceptance conflict; acceptance-first
+makes approval publish the improved REVIEW. Historical public-logo retention is
+unchanged. Rollback to code without AUTO_PROPOSAL support requires first retiring
+all proposal rows through the authorized workflow; do not truncate enum values or
+drop fingerprint fields while proposals exist.
+
+### Advisor UI and verification
+
+The capability-gated logo-only control creates a side-by-side comparison on wide
+screens and a stacked comparison on narrow screens, with equal contain-fit image
+areas, checkerboard backgrounds and explicit Versión actual / Propuesta labels.
+Only Usar versión mejorada changes REVIEW. Discard preserves it. A fresh private
+REVIEW is fetched after acceptance; failed refresh disables approval. Every busy
+mutation blocks overlapping local actions. Public approval remains a separate step.
+
+`LogoImprovementAlgorithmTest.php`, `LogoImprovementTest.php`,
+`LogoImprovementAtomicTest.php`, `LogoImprovementPolicyTest.php`,
+`LogoImprovementRaceTest.mjs` and `LogoImprovementHttpTest.mjs` use only synthetic
+media and disposable MySQL/Valkey/storage. They verify enclosed white and near-white
+thin-line protection, abstention, effective-input fingerprints, private delivery,
+audited rollback, lost commit acknowledgement and five deterministic race orders.
+Browser QA covers seven fixture categories at all four required viewports, actual
+alpha/interior pixels, keyboard actions, discard, acceptance and separate approval.
+MR8 stops here; user-facing moderation activation and MR9 remain separate work.

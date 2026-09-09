@@ -49,7 +49,7 @@ final class MediaReviewInterventionService
                     $candidate=$this->candidate($id,true);
                     $s=$this->pdo->prepare('SELECT * FROM media_review_files WHERE submission_id=? ORDER BY role FOR UPDATE');$s->execute([$id]);$files=$s->fetchAll(PDO::FETCH_ASSOC);$roles=[];
                     foreach($files as $file){$this->validateFile($candidate,$file);$roles[$file['role']]=$file;if($file['role']!=='SOURCE')$oldKeys[]=$file['storage_key'];}
-                    if(!isset($roles['SOURCE'],$roles['REVIEW']) || count($roles)!==count($files) || !in_array(count($files),[2,3],true))throw new RuntimeException('intervention_integrity_failed');
+                    if(!isset($roles['SOURCE'],$roles['REVIEW']) || count($roles)!==count($files) || !in_array(count($files),[2,3,4],true))throw new RuntimeException('intervention_integrity_failed');
                     $path=$upload['tmp_name']??null;
                     if(($upload['error']??-1)!==UPLOAD_ERR_OK || !is_string($path) || !is_file($path))throw new RuntimeException('intervention_invalid_upload');
                     $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);$ext=strtolower(pathinfo((string)($upload['name']??''),PATHINFO_EXTENSION));
@@ -64,7 +64,7 @@ final class MediaReviewInterventionService
                         });
                     $fileId=(new RandomAuditUuidProvider())->generateCanonicalUuid();$review=array_merge($review,['file_id'=>$fileId,'role'=>'REVIEW','storage_key'=>$prefix.'review/'.$fileId.'.webp']);
                     $this->store($review,$review['path'],$newKeys);
-                    $s=$this->pdo->prepare("DELETE FROM media_review_files WHERE submission_id=? AND role IN ('CORRECTED','REVIEW')");$s->execute([$id]);
+                    $s=$this->pdo->prepare("DELETE FROM media_review_files WHERE submission_id=? AND role IN ('CORRECTED','REVIEW','AUTO_PROPOSAL')");$s->execute([$id]);
                     $s=$this->pdo->prepare('INSERT INTO media_review_files(file_id,submission_id,role,storage_key,mime_type,format,width,height,byte_size,checksum_sha256) VALUES(?,?,?,?,?,?,?,?,?,?)');
                     foreach([$corrected,$review] as $f)$s->execute([$f['file_id'],$id,$f['role'],$f['storage_key'],$f['mime_type'],$f['format'],$f['width'],$f['height'],$f['byte_size'],$f['checksum_sha256']]);
                     $this->pdo->prepare('UPDATE media_review_submissions SET updated_at=CURRENT_TIMESTAMP WHERE submission_id=?')->execute([$id]);
@@ -110,12 +110,12 @@ final class MediaReviewInterventionService
     private function validateFile(array $candidate,array $file):void
     {
         $role=$file['role'];$format=$file['format'];$prefix='private/media-review/'.hash('sha256','PHYSICIAN:'.$candidate['owner_id']).'/'.$candidate['submission_id'].'/';
-        if(!in_array($role,['SOURCE','REVIEW','CORRECTED'],true) || !in_array($format,['jpeg','png','webp'],true) || $file['mime_type']!=='image/'.$format
+        if(!in_array($role,['SOURCE','REVIEW','CORRECTED','AUTO_PROPOSAL'],true) || !in_array($format,['jpeg','png','webp'],true) || $file['mime_type']!=='image/'.$format
             || !preg_match('/^[0-9a-f-]{36}$/D',$file['file_id']) || $file['storage_key']!==$prefix.strtolower($role).'/'.$file['file_id'].'.'.$format
             || (int)$file['byte_size']<1 || (int)$file['byte_size']>10485760 || min((int)$file['width'],(int)$file['height'])<1
             || max((int)$file['width'],(int)$file['height'])>8192 || (int)$file['width']*(int)$file['height']>25000000
             || !preg_match('/^[0-9a-f]{64}$/D',$file['checksum_sha256']))throw new RuntimeException('intervention_integrity_failed');
-        if($role==='REVIEW' && ($format!=='webp' || (int)$file['byte_size']>153600 || max((int)$file['width'],(int)$file['height'])>800))throw new RuntimeException('intervention_integrity_failed');
+        if(in_array($role,['REVIEW','AUTO_PROPOSAL'],true) && ($format!=='webp' || (int)$file['byte_size']>153600 || max((int)$file['width'],(int)$file['height'])>800))throw new RuntimeException('intervention_integrity_failed');
     }
     private function verified(array $file):string
     {

@@ -44,7 +44,7 @@ final class LocalPersistentPrivateMediaStorage implements PrivateMediaStoragePor
     private function path(string $key, bool $create = false): string
     {
         $uuid = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
-        if (!preg_match('#^private/media-review/[a-f0-9]{64}/'.$uuid.'/(?:(?:source|corrected)/'.$uuid.'\.(?:jpeg|png|webp)|review/'.$uuid.'\.webp)$#', $key)) {
+        if (!preg_match('#^private/media-review/[a-f0-9]{64}/'.$uuid.'/(?:(?:source|corrected)/'.$uuid.'\.(?:jpeg|png|webp)|(?:review|auto_proposal)/'.$uuid.'\.webp)$#', $key)) {
             throw new RuntimeException('invalid_private_media_storage_key');
         }
         $target = $this->root.'/'.$key;
