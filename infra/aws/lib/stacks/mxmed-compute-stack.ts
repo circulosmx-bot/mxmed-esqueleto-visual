@@ -143,6 +143,7 @@ export class MxMedComputeStack extends BaseMxMedStack {
   public readonly migrationLogGroup?: LogGroup;
   public readonly scalingTarget?: ScalableTaskCount;
   public readonly applicationImageDigestParameter?: CfnParameter;
+  public readonly applicationImageUri?: string;
   public readonly identityAllowedOriginParameter?: CfnParameter;
   public readonly activationMode: MxMedComputeStackProps['config']['computeActivationMode'];
   public readonly runtimeCapabilityProfile: MxMedRuntimeCapabilityProfile | null;
@@ -219,13 +220,12 @@ export class MxMedComputeStack extends BaseMxMedStack {
       allowedPattern: '^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?$',
       description: 'Canonical trusted HTTPS origin for the productive Identity boundary.',
     });
-    const image = ContainerImage.fromRegistry(
-      Fn.join('', [
-        applicationRepository.repositoryUri,
-        '@',
-        this.applicationImageDigestParameter.valueAsString,
-      ]),
-    );
+    this.applicationImageUri = Fn.join('', [
+      applicationRepository.repositoryUri,
+      '@',
+      this.applicationImageDigestParameter.valueAsString,
+    ]);
+    const image = ContainerImage.fromRegistry(this.applicationImageUri);
 
     this.cluster = new Cluster(this, 'ApplicationCluster', {
       vpc: props.vpc as unknown as IVpc,

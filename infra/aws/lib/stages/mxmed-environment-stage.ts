@@ -1,5 +1,6 @@
 import { Stage } from 'aws-cdk-lib';
 import type { StageProps } from 'aws-cdk-lib';
+import type { ICluster } from 'aws-cdk-lib/aws-ecs';
 import type { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import type { Construct } from 'constructs';
 
@@ -180,7 +181,41 @@ export class MxMedEnvironmentStage extends Stage {
       ? new MxMedRegionalOperationsStack(this, 'RegionalOperations', regionalOperationsProps)
       : undefined;
     this.regionalOperationsStack = this.operationsStack;
-    this.jobsStack = new MxMedJobsStack(this, 'Jobs', stackProps);
+    if (
+      computeCreatesTasks(props.config.computeActivationMode) &&
+      (!this.computeStack.cluster ||
+        !this.computeStack.applicationImageUri ||
+        !this.registryStack ||
+        !this.dataStack.applicationUserSecret)
+    ) {
+      throw new Error('MXMED_JOB_RUNTIME_PREREQUISITES_REQUIRED');
+    }
+    this.jobsStack = new MxMedJobsStack(this, 'Jobs', {
+      ...stackProps,
+      ...(this.computeStack.cluster &&
+      this.computeStack.applicationImageUri &&
+      this.registryStack &&
+      this.dataStack.applicationUserSecret
+        ? {
+            runtime: {
+              cluster: this.computeStack.cluster as unknown as ICluster,
+              applicationImageUri: this.computeStack.applicationImageUri,
+              applicationRepository: this.registryStack.applicationRepository,
+              privateAppSubnets: this.networkStack.privateAppSubnets,
+              applicationSecurityGroup: this.networkStack.applicationSecurityGroup,
+              applicationUserSecret: this.dataStack.applicationUserSecret,
+              databaseEndpoint: this.dataStack.databaseEndpoint,
+              databasePort: this.dataStack.databasePort,
+              databaseName: this.dataStack.databaseName,
+              jobsTaskRole: this.securityStack.jobsTaskRole,
+              jobsExecutionRole: this.securityStack.jobsExecutionRole,
+              schedulerInvocationBoundary: this.securityStack.schedulerInvocationBoundary,
+              auditKey: this.securityStack.auditKey,
+              secretsKey: this.securityStack.secretsKey,
+            },
+          }
+        : {}),
+    });
     if (backupDrCreatesRegional(props.config) && this.operationsStack === undefined) {
       throw new Error('backup_monitoring_topics_not_available');
     }
