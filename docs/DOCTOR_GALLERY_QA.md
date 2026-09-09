@@ -33,7 +33,10 @@ dimension, 4 megapixels. Existing GD normalization preserves JPEG orientation
 and re-encodes without source metadata. Existing single optimized WebP variant
 is reused: maximum edge 800 px, maximum 150 KB. No separate thumbnail variant
 is introduced. Original user filenames never determine storage paths.
-The current 21-image limit is serialized with a per-profile row lock.
+The permanent 16-image limit is serialized with a per-profile row lock. MR10
+counts READY/PUBLIC plus READY/PENDING_REVIEW together for both upload paths.
+Existing over-limit public galleries remain fully visible; additional uploads
+are blocked until capacity is available.
 
 Admin list/upload/delete use GET/POST/DELETE `/api/media/gallery.php`
 (DELETE adds `?media_id=...`). `assets/js/fotos.js` renders the server response;

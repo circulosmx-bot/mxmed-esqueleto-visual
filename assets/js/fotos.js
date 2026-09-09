@@ -10,7 +10,7 @@
     grid.replaceChildren();count.textContent=images.length;
     drop.classList.toggle('has-items',images.length>0);
     document.getElementById('t-info-fotos')?.classList.toggle('has-items',images.length>0);
-    count.parentElement?.classList.toggle('max',images.length>=21);
+    count.parentElement?.classList.toggle('max',images.length>=16);
     images.forEach(asset=>{
       const wrap=document.createElement('div');wrap.className='foto-item';
       const img=document.createElement('img');img.src=asset.public_url;img.alt=asset.alt_text || '';

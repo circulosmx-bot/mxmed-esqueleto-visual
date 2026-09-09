@@ -41,5 +41,5 @@ try {
     $error = $e->getMessage();
     $status = $error === 'gallery_asset_not_found' ? 404 : ((str_starts_with($error,'logo_') || str_starts_with($error,'gallery_')) ? 422 : 500);
     galleryReply($status, ['ok'=>false, 'error'=>$status===500?'gallery_unavailable':$error,
-        'message'=>$status===500?'No se pudieron guardar las fotos. Intenta nuevamente.':'No se pudo completar la operación. Usa JPG, PNG o WebP de hasta 2 MB y 4 megapíxeles (máximo 21 fotos).']);
+        'message'=>$status===500?'No se pudieron guardar las fotos. Intenta nuevamente.':'No se pudo completar la operación. Usa JPG, PNG o WebP de hasta 2 MB y 4 megapíxeles (máximo 16 fotos).']);
 }

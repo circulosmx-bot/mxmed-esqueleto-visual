@@ -1,5 +1,5 @@
 ﻿(function(){
-  const MAX = 21;
+  const MAX = 16;
   const drop = document.getElementById('fotos-drop');
   const grid = document.getElementById('fotos-grid');
   const input = document.getElementById('fotos-input');

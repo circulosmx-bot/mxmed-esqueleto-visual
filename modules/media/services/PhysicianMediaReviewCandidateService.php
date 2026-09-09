@@ -9,6 +9,7 @@ require_once __DIR__.'/../contracts/PrivateMediaStoragePort.php';
 require_once __DIR__.'/GdPublicLogoProcessor.php';
 require_once __DIR__.'/LosslessLogoInput.php';
 require_once __DIR__.'/MediaReplacementReasons.php';
+require_once __DIR__.'/GalleryCapacity.php';
 
 final class PhysicianMediaReviewCandidateService
 {
@@ -17,12 +18,13 @@ final class PhysicianMediaReviewCandidateService
     public const MAX_SIDE = 8192;
 
     public function __construct(private PDO $pdo, private PrivateMediaStoragePort $storage, private string $purpose) {
-        if (!in_array($purpose, ['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO'], true)) throw new RuntimeException('candidate_unsupported_purpose');
+        if (!in_array($purpose, ['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'], true)) throw new RuntimeException('candidate_unsupported_purpose');
     }
 
     /** Owner metadata only: no physical keys, binary data or delivery URLs. */
     public function current(string $doctor): ?array
     {
+        if($this->purpose==='DOCTOR_GALLERY')throw new RuntimeException('gallery_list_required');
         // One selection gives PENDING priority without a race between two status queries.
         $s=$this->pdo->prepare("SELECT submission_id,technical_status,review_status,created_at,updated_at,review_reason_code,review_feedback,review_decided_at FROM media_review_submissions WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose=? ORDER BY (review_status='PENDING_REVIEW') DESC,created_at DESC,review_decided_at DESC,submission_id DESC LIMIT 1");
         $s->execute([$doctor,$this->purpose]);$row=$s->fetch(PDO::FETCH_ASSOC);
@@ -87,7 +89,7 @@ final class PhysicianMediaReviewCandidateService
         // The request upload temporary file remains owned by PHP, including on error.
     }
 
-    public function withdraw(string $doctor): void { $this->switchPending($doctor, null, []); }
+    public function withdraw(string $doctor): void { if($this->purpose==='DOCTOR_GALLERY')throw new RuntimeException('gallery_selector_required');$this->switchPending($doctor, null, []); }
 
     private function switchPending(string $doctor, ?string $id, array $files, bool &$safeCleanup = true): void
     {
@@ -99,9 +101,13 @@ final class PhysicianMediaReviewCandidateService
             $s = $this->pdo->prepare('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE');
             $s->execute([$doctor]);
             if ($s->fetchColumn() === false) throw new RuntimeException('candidate_profile_not_found');
+            if($this->purpose==='DOCTOR_GALLERY'){
+                GalleryCapacity::requireCandidateSlot($this->pdo,$doctor);$oldIds=[];
+            }else{
             $s = $this->pdo->prepare("SELECT submission_id FROM media_review_submissions WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose=? AND review_status='PENDING_REVIEW' FOR UPDATE");
             $s->execute([$doctor, $this->purpose]);
             $oldIds = $s->fetchAll(PDO::FETCH_COLUMN);
+            }
             foreach ($oldIds as $oldId) {
                 $s = $this->pdo->prepare('SELECT storage_key FROM media_review_files WHERE submission_id=?');
                 $s->execute([$oldId]);

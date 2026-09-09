@@ -9,6 +9,7 @@ use Media\Repositories\MediaAssetsRepository;
 
 require_once __DIR__ . '/../repositories/MediaAssetsRepository.php';
 require_once __DIR__ . '/GdPublicLogoProcessor.php';
+require_once __DIR__ . '/GalleryCapacity.php';
 
 final class DoctorGalleryService
 {
@@ -30,12 +31,11 @@ final class DoctorGalleryService
         $key = null;
         try {
             $this->pdo->beginTransaction();
-            // Serialize uploads per doctor so the 21-image limit cannot race.
+            // Serialize uploads per doctor so the 16-image limit cannot race.
             $lock = $this->pdo->prepare('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE');
             $lock->execute([$doctorId]);
             if (!$lock->fetchColumn()) throw new RuntimeException('gallery_profile_not_found');
-            $items = $this->list($doctorId);
-            if (count($items) >= 21) throw new RuntimeException('gallery_limit_reached');
+            GalleryCapacity::requireCandidateSlot($this->pdo,$doctorId);
             $bytes = random_bytes(16);
             $bytes[6] = chr((ord($bytes[6]) & 15) | 64);
             $bytes[8] = chr((ord($bytes[8]) & 63) | 128);

@@ -112,7 +112,7 @@ final class MediaReviewInterventionService
         }
         $s=$this->pdo->prepare('SELECT * FROM media_review_submissions WHERE submission_id=?'.($lock?' FOR UPDATE':''));$s->execute([$id]);$row=$s->fetch(PDO::FETCH_ASSOC);
         if(!$row)throw new RuntimeException('intervention_not_found');
-        if(($lock && (string)$row['owner_id']!==(string)$owner) || $row['owner_type']!=='PHYSICIAN' || !in_array($row['purpose'],['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO'],true) || $row['technical_status']!=='READY' || $row['review_status']!=='PENDING_REVIEW')throw new RuntimeException('intervention_conflict');
+        if(($lock && (string)$row['owner_id']!==(string)$owner) || $row['owner_type']!=='PHYSICIAN' || !in_array($row['purpose'],['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'],true) || $row['technical_status']!=='READY' || $row['review_status']!=='PENDING_REVIEW')throw new RuntimeException('intervention_conflict');
         return $row;
     }
     private function validateFile(array $candidate,array $file):void

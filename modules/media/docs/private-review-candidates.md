@@ -713,7 +713,7 @@ no change; busy state prevents overlapping decisions. Success closes the detail,
 reloads the database-backed queue and says “Se solicitó una nueva imagen al usuario.”
 This does not claim notification delivery. Current physician upload UIs are not
 activated for moderation. REJECTED remains reserved/unimplemented. Notifications,
-email, batching, gallery moderation and MR10 are not implemented.
+email and batching are not implemented. Gallery moderation is described in MR10 below.
 
 Focused MR9 QA uses disposable MySQL/Valkey, synthetic accounts and synthetic media.
 It covers both owner replacement lifecycles, a photograph-like logo with human
@@ -729,3 +729,51 @@ all pre-existing row data and public/private file hashes match exactly. A separa
 check confirms zero populated feedback fields in real submissions and unchanged
 real grant rows, with zero active replacement grants. No real candidate decision
 was used for QA. MR8 HTTP/visual regression also passes after MR9.
+
+## MR10 — gallery moderation (canonical capacity 16)
+
+`/api/media/gallery-review-candidate.php` uses authenticated GallerySessionScope,
+never a client physician selector. GET returns up to 50 owner-safe pending/needs-work
+items and an offset; POST accepts one image with the session CSRF header; DELETE
+withdraws one owned pending submission. Each upload creates independent private
+SOURCE + REVIEW, without replacing other gallery candidates. SOURCE limits are
+10,485,760 bytes, 25,000,000 pixels and 8192 per side. REVIEW is metadata-free WebP,
+at most 800 per side and 153,600 bytes. Human correction retains SOURCE and adds
+CORRECTED while replacing REVIEW. Gallery has no automatic improvement proposal.
+
+The permanent product limit is 16. Both candidate intake and the existing direct
+public upload lock the physician and enforce READY/PUBLIC + READY/PENDING_REVIEW
+< 16 before adding an image. NEEDS_WORK and WITHDRAWN do not reserve slots.
+Examples: 0 public + 16 pending and 8 public + 8 pending are full; 8 public +
+7 pending + 1 NEEDS_WORK permits one more pending. Existing public assets above
+16 are preserved and listed in full; additions remain blocked until below capacity.
+The existing gallery UI still uses direct upload, with its original 2 MiB / 4 MP /
+4096 input limits. Only its capacity changes; moderation is not activated there.
+
+`/api/internal/media-review/approve-gallery.php` requires media_review_read and
+media_review_approve plus internal session CSRF. It locks the same physician,
+rechecks current public capacity, and copies exact REVIEW bytes into a new
+PUBLIC/READY DOCTOR_GALLERY asset. It never changes profile-photo or logo fields
+or retires another gallery image. The mandatory R1 canonical
+MEDIA_DOCTOR_GALLERY_APPROVED audit event and state changes commit atomically.
+15 public + 1 pending may approve to 16. A historical 16 public + 1 pending state
+returns 409 and remains pending. Current direct intake cannot take a reserved slot
+at 15 + 1: the combined invariant takes precedence over the contradictory legacy
+race example. Locking current reads also prevent stale repeatable-read snapshots.
+
+The existing private REVIEW endpoint, audited SOURCE download, human correction
+and request-replacement actions support gallery. The inbox adds gallery-only
+checkboxes, select-all for the current page and sequential individual approvals
+ordered by creation time and ID. Each operation refreshes CSRF and has its own
+transaction and audit event. Conflicts continue; authorization, storage and audit
+failures stop processing. The UI reports confirmed partial success and reloads
+from the database. There is no server bulk transaction, review batch, notification,
+new grant, new capability or schema/migration change.
+
+MR10 QA uses synthetic assets and disposable MySQL/Valkey only. GalleryReviewTest,
+GalleryReviewAtomicTest, GalleryReviewRaceTest and GalleryReviewHttpTest exercise
+capacity, ownership, private access, publication, rollback/uncertain commit,
+concurrent decisions and bulk partial success. Browser coverage uses 1440×900,
+1366×768, 390×844 and 320×740 with 1/4/16 gallery items and mixed queues. The prior
+36 audit policy rows remain unchanged. Director rows and media hashes are compared
+before/after; the eight Director gallery images are untouched.

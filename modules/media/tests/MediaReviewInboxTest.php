@@ -14,7 +14,7 @@ $service=new Inbox($p);ok($service->pending($context)['items']===[],'valid empty
 for($i=60;$i>=1;$i--){$id=sprintf('00000000-0000-4000-8000-%012d',$i);$q=$p->prepare("INSERT INTO media_review_submissions VALUES(?,'PHYSICIAN','1','DOCTOR_PROFILE_PHOTO','READY','PENDING_REVIEW',?,?)");$date=$i<=30?'2026-09-01 10:00:00':'2026-09-02 10:00:00';$q->execute([$id,$date,$date]);$q=$p->prepare("INSERT INTO media_review_files VALUES(?,'REVIEW','image/webp',800,600,10000,'private/review/secret')");$q->execute([$id]);$q=$p->prepare("INSERT INTO media_review_files VALUES(?,'SOURCE','image/jpeg',4000,3000,999999,'private/source/secret')");$q->execute([$id]);}
 foreach(['WITHDRAWN','APPROVED','REJECTED','NEEDS_WORK'] as $status)$p->exec("INSERT INTO media_review_submissions VALUES('$status','PHYSICIAN','1','DOCTOR_PROFILE_PHOTO','READY','$status','2020-01-01','2020-01-01')");
 $p->exec("INSERT INTO media_review_submissions VALUES('failed','PHYSICIAN','1','DOCTOR_PROFILE_PHOTO','FAILED','PENDING_REVIEW','2020-01-01','2020-01-01')");
-$p->exec("INSERT INTO media_review_submissions VALUES('other','PHYSICIAN','1','DOCTOR_GALLERY','READY','PENDING_REVIEW','2020-01-01','2020-01-01')");
+$p->exec("INSERT INTO media_review_submissions VALUES('other','PHYSICIAN','1','UNSUPPORTED','READY','PENDING_REVIEW','2020-01-01','2020-01-01')");
 foreach(['WITHDRAWN','APPROVED','REJECTED','NEEDS_WORK','failed','other'] as $id)$p->exec("INSERT INTO media_review_files VALUES('$id','REVIEW','image/webp',800,600,10000,'private/secret')");
 $a=$service->pending($context);ok(count($a['items'])===25,'default limit');ok($a['pagination']['next_offset']===25,'next offset');
 $b=$service->pending($context,999);ok(count($b['items'])===50,'max limit');$c=$service->pending($context,50,50);ok(count($c['items'])===10&&!$c['pagination']['has_more'],'last page');
@@ -24,3 +24,7 @@ $json=json_encode($all);foreach(['storage_key','SOURCE','private/','999999','ema
 $unavailable=new class extends PDO{public function __construct(){}public function prepare(string $q,array $o=[]):PDOStatement|false{throw new RuntimeException('query executed');}};
 try{(new Inbox($unavailable))->pending(null);throw new RuntimeException('allowed');}catch(RuntimeException $e){ok($e->getMessage()==='review_access_denied','auth before query');}
 echo "PASS: pending filters, excluded states/purposes, canonical name, single appearance, stable order, 25/50 pagination, empty list, metadata privacy, authorization before query\n";
+
+$p->exec("INSERT INTO media_review_submissions VALUES('00000000-0000-4000-8000-000000000061','PHYSICIAN','1','DOCTOR_GALLERY','READY','PENDING_REVIEW','2026-09-03','2026-09-03')");
+$p->exec("INSERT INTO media_review_files VALUES('00000000-0000-4000-8000-000000000061','REVIEW','image/webp',800,600,10000,'private/secret')");
+ok(in_array('DOCTOR_GALLERY',array_column($service->pending($context,50,50)['items'],'purpose'),true),'gallery_inbox_supported');

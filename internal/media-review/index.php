@@ -27,6 +27,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <section aria-labelledby="pending-title">
 <div class="section-heading"><h2 id="pending-title">Pendientes de revisión</h2><span id="page-count" aria-live="polite"></span></div>
 <p id="inbox-message" role="status">Cargando medios pendientes…</p>
+<section id="gallery-bulk" hidden aria-label="Aprobación de fotos de galería">
+<label><input id="select-page-gallery" type="checkbox"> Seleccionar fotos de galería de esta página</label>
+<button id="approve-selected-gallery" type="button" disabled>Aprobar seleccionadas (0)</button>
+<p id="gallery-bulk-message" role="status"></p>
+</section>
 <div id="pending-cards" class="cards" aria-busy="true"></div>
 <nav class="pagination" aria-label="Páginas de medios pendientes" hidden>
 <button id="previous-page" type="button">Anterior</button><span id="page-number"></span><button id="next-page" type="button">Siguiente</button>
