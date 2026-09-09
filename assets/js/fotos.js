@@ -31,7 +31,8 @@
   }
   const upload=files=>run(async()=>{
     if(!csrf)await request();
-    for(const file of files){const body=new FormData();body.append('image',file);await request('POST',body);}
+    for(const file of files)await window.mxmedMediaReview.upload('gallery',file);
+    notify('Pendiente de enviar');
   });
   drop.addEventListener('click',event=>{if(event.target.closest('.fotos-browse')&&!busy)input.click();});
   input.addEventListener('change',()=>upload(Array.from(input.files || [])));

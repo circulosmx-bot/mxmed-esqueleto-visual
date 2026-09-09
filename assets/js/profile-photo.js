@@ -28,10 +28,9 @@
       if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Selecciona una imagen JPG, PNG o WebP.');
       if(file.size>10485760)throw Error('La fotografía supera el máximo de 10 MiB.');
       if(!token)await request();
-      const url=URL.createObjectURL(file);
-      preview.hidden=false;preview.querySelector('img').src=url;status.textContent='Subiendo…';
-      try{const form=new FormData();form.append('image',file);await request('POST',form);status.textContent='Guardada';}
-      finally{URL.revokeObjectURL(url);}
+      status.textContent='Subiendo…';
+      await window.mxmedMediaReview.upload('photo',file);
+      status.textContent='Pendiente de enviar';
     });
   }
   select.addEventListener('click',()=>input.click());

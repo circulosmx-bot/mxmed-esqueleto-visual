@@ -2164,25 +2164,12 @@ console.info('app.js loaded :: 20251123a');
       setLogoFeedback('El logotipo no debe superar 2 MiB.', 'danger');
       return;
     }
-    const body = new FormData();
-    body.append('logo', file, file.name || 'logo');
     setLogoBusy(true);
-    setLogoFeedback('Optimizando y guardando logotipo...', 'muted');
+    setLogoFeedback('Subiendo logotipo...', 'muted');
     try{
-      const response = await fetch(`${buildPrivateEndpoint(state.doctorId)}/logo`, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin',
-        body
-      });
-      const json = await response.json().catch(()=> null);
-      const publicUrl = String(json?.data?.media?.public_url || '').trim();
-      if(!response.ok || json?.ok !== true || !publicUrl){
-        throw new Error(String(json?.message || 'logo_upload_failed'));
-      }
-      renderPhysicianLogo(publicUrl);
+      await window.mxmedMediaReview.upload('logo',file);
       if(els.logoInput) els.logoInput.value = '';
-      setLogoFeedback('Logotipo optimizado y guardado.', 'success');
+      setLogoFeedback('Pendiente de enviar', 'success');
     }catch(_){
       if(els.logoInput) els.logoInput.value = '';
       setLogoFeedback('No fue posible guardar el logotipo. Verifica formato, dimensiones y tamaño.', 'danger');

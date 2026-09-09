@@ -27,8 +27,13 @@ $actor=new Platform\Contracts\ActorReference('account','mr7_reader');
 $read=Platform\Contracts\TrustedAuthorizationContext::fromBackend(new Platform\Contracts\AuthorizationContext(realActor:$actor,effectiveActor:$actor,sessionReference:new Platform\Contracts\SessionReference('mr7_session'),accountId:'mr7_reader',credentialVersion:1,capabilities:new Platform\Contracts\CapabilitySet(['media_review_read']),action:'read',resource:'media_review_submission',authorizationPlane:Platform\Contracts\AuthorizationPlane::INTERNAL_OPERATOR,riskLevel:Platform\Contracts\RiskLevel::R0),'canonical_internal_operator','active',true,false);
 $access=new Media\Services\MediaReviewAccessService($p,$private);ok($access->reviewBytes($read,$id)===$review,'shared_review_delivery');
 $metadata=json_encode($access->metadata($read,$id));ok(!str_contains($metadata,'SOURCE')&&!str_contains($metadata,'storage_key')&&!str_contains($metadata,'private/'),'no_private_metadata_leak');
-$seen=[];for($offset=0;;$offset+=50){$page=(new Media\Services\MediaReviewInboxService($p))->pending($read,50,$offset);foreach($page['items'] as $item)if($item['owner_id']===$doctor)$seen[]=$item['purpose'];if(!$page['pagination']['has_more'])break;}
-sort($seen);ok($seen===['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO'],'inbox_both_purposes');
+require_once __DIR__.'/../services/MediaReviewBatchInboxService.php';
+$batch=$p->query("SELECT batch_id FROM media_review_submissions WHERE submission_id=".$p->quote($id))->fetchColumn();
+$inbox=new Media\Services\MediaReviewBatchInboxService($p);
+ok(!in_array($batch,array_column($inbox->listing($read,50)['items'],'batch_id'),true),'open_batch_hidden');
+(new Media\Services\MediaReviewBatchService($p))->submit($doctor);
+$seen=array_column($inbox->detail($read,$batch)['items'],'purpose');
+sort($seen);ok($seen===['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO'],'submitted_batch_both_purposes');
 foreach([['jpeg',4000,3000],['png',5000,5000],['webp',8192,100]] as [$format,$w,$h]){
  $u=$w===4000?mr6ModernFile():mr6File($format,$w,$h);
  try{$hash=hash_file('sha256',$u['tmp_name']);$candidates->upload($doctor,$u);}finally{unlink($u['tmp_name']);}
