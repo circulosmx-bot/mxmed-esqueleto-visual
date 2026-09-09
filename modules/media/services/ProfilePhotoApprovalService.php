@@ -85,11 +85,11 @@ final class ProfilePhotoApprovalService
             || $candidate['purpose']!=='DOCTOR_PROFILE_PHOTO' || $candidate['technical_status']!=='READY'
             || $candidate['review_status']!=='PENDING_REVIEW') throw new RuntimeException('approval_conflict');
         $s=$this->pdo->prepare('SELECT * FROM media_review_files WHERE submission_id=? ORDER BY role FOR UPDATE');$s->execute([$id]);$files=$s->fetchAll(PDO::FETCH_ASSOC);
-        if (count($files)!==2) throw new RuntimeException('approval_integrity_failed');
+        if (!in_array(count($files),[2,3],true)) throw new RuntimeException('approval_integrity_failed');
         $roles=[];$prefix='private/media-review/'.hash('sha256','PHYSICIAN:'.$owner).'/'.$id.'/';
         foreach ($files as $file) {
             $role=$file['role'];$format=$file['format'];
-            if (!in_array($role,['SOURCE','REVIEW'],true) || isset($roles[$role])
+            if (!in_array($role,['SOURCE','REVIEW','CORRECTED'],true) || isset($roles[$role])
                 || !isset(['jpeg'=>1,'png'=>1,'webp'=>1][$format]) || $file['mime_type']!=='image/'.$format
                 || !preg_match('/^[0-9a-f-]{36}$/D',$file['file_id'])
                 || $file['storage_key']!==$prefix.strtolower($role).'/'.$file['file_id'].'.'.$format
@@ -98,6 +98,11 @@ final class ProfilePhotoApprovalService
             $roles[$role]=$file;
         }
         if (!isset($roles['SOURCE'],$roles['REVIEW'])) throw new RuntimeException('approval_integrity_failed');
+        if (isset($roles['CORRECTED'])) {
+            $corrected=$roles['CORRECTED'];
+            if ((int)$corrected['byte_size']>10485760 || max((int)$corrected['width'],(int)$corrected['height'])>8192
+                || (int)$corrected['width']*(int)$corrected['height']>25000000 || !$this->private->exists($corrected['storage_key'])) throw new RuntimeException('approval_integrity_failed');
+        }
         $source=$roles['SOURCE'];$review=$roles['REVIEW'];
         if ((int)$source['byte_size']>10485760 || max((int)$source['width'],(int)$source['height'])>8192
             || (int)$source['width']*(int)$source['height']>25000000 || !$this->private->exists($source['storage_key'])

@@ -30,7 +30,9 @@ final class ProfilePhotoApprovalHttp
                 MediaReviewAuthority::requireRead($context);
                 if (($_SERVER['REQUEST_METHOD']??'')!=='GET') { self::respond(405,['ok'=>false,'error'=>'method_not_allowed'],'GET');return; }
                 $canApprove=$caps->contains(ProfilePhotoApprovalService::CAPABILITY);
-                self::respond(200,['ok'=>true,'can_approve'=>$canApprove,'csrf'=>$canApprove?$identity->csrf()->issueAuthenticated($session->session()->tokenDigest()):null]);return;
+                $canDownload=$caps->contains('media_review_source_download');$canCorrect=$caps->contains('media_review_corrected_upload');
+                self::respond(200,['ok'=>true,'can_approve'=>$canApprove,'can_download_source'=>$canDownload,'can_upload_corrected'=>$canCorrect,
+                    'csrf'=>($canApprove||$canCorrect)?$identity->csrf()->issueAuthenticated($session->session()->tokenDigest()):null]);return;
             }
             if (!$caps->contains(ProfilePhotoApprovalService::CAPABILITY)) throw new \RuntimeException('approval_denied');
             if (($_SERVER['REQUEST_METHOD']??'')!=='POST') { self::respond(405,['ok'=>false,'error'=>'method_not_allowed'],'POST');return; }

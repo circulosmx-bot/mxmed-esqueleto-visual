@@ -5,3 +5,9 @@
 #approval-question { font-size:1.1rem; }
 #approval-message:empty { display:none; }
 dialog:has(#approval-confirmation:not([hidden])) .detail-image-wrap { height:min(34dvh,320px); }
+
+#design-intervention { border-top:1px solid #c6dce2; margin-top:16px; padding-top:4px; }
+#design-title { font-size:1.05rem; }
+#corrected-filename { overflow-wrap:anywhere; }
+#corrected-filename:empty, #intervention-message:empty { display:none; }
+dialog:has(#design-intervention:not([hidden])) .detail-image-wrap { height:min(30dvh,280px); }

@@ -5,7 +5,7 @@ header('Content-Type: text/html; charset=UTF-8');
 header('Cache-Control: private, no-store');
 header('X-Content-Type-Options: nosniff');
 header('Cross-Origin-Resource-Policy: same-origin');
-header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
 try {
     \Media\Services\MediaReviewAuthority::requireRead(\Media\Http\MediaReviewHttpContext::fromRequest($_COOKIE,$_SERVER));
 } catch (Throwable) {
@@ -43,5 +43,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <div class="approval-actions"><button id="cancel-approval" type="button">Cancelar</button><button id="confirm-approval" type="button">Aprobar</button></div>
 </section>
 <p id="approval-message" role="status"></p>
+<section id="design-intervention" aria-labelledby="design-title" hidden>
+<h3 id="design-title">Intervención de diseño</h3>
+<div class="approval-actions"><button id="download-source" type="button" hidden>Descargar original</button><button id="choose-corrected" type="button" hidden>Subir versión corregida</button></div>
+<input id="corrected-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+<p id="corrected-filename"></p>
+<button id="submit-corrected" type="button" hidden>Guardar versión corregida</button>
+<p id="intervention-message" role="status"></p>
+</section>
 </dialog>
 </body></html>

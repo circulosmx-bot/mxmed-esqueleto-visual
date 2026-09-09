@@ -302,3 +302,98 @@ Screenshots go to `/tmp/mxmed-mr5-visual`. Stop/remove the disposable containers
 fixture storage after QA. These tests do not deploy productive identity or assign
 any real reviewer grant. Actual Director table/file snapshots must match before
 and after; the retained candidate stays READY/PENDING_REVIEW and public counts 1/1/8.
+
+## MR6: manual design intervention (profile photos only)
+
+The private lifecycle is now SOURCE (unchanged user original), CORRECTED (exact
+validated staff raster), REVIEW (normalized proposal), then MR5 PUBLIC (approved
+media_asset). CORRECTED never publishes directly and has no download/public URL.
+There is no designer assignment, design state, automatic processing workflow,
+logo/gallery intervention or real grant provisioning.
+
+- `GET /api/internal/media-review/source-download.php?submission_id=<uuid>` requires
+  canonical INTERNAL_OPERATOR authority with `media_review_source_download`, R1 and
+  required canonical audit. Endpoint semantics fix SOURCE; no role/key/path/filename
+  parameters are accepted. Eligibility is PHYSICIAN / DOCTOR_PROFILE_PHOTO /
+  READY / PENDING_REVIEW. The full bounded original (at most 10 MiB) is verified
+  against stored length/SHA-256 before the audit commits and before attachment
+  bytes/headers are emitted. JPEG/PNG/WebP MIME and a server-generated filename
+  are used with private/no-store, nosniff, same-origin resource policy and no CORS
+  wildcard. This GET changes no editorial state and requires no CSRF; it does not
+  reserve the candidate or hold physician/submission locks. Another reviewer may
+  approve after the source has been resolved/downloaded.
+- `POST /api/internal/media-review/corrected.php` accepts only multipart
+  `submission_id`, `csrf`, and file `corrected`. It requires canonical
+  `media_review_corrected_upload`, R1 and required audit; read/approve/source grants
+  do not imply this capability. CSRF is the existing canonical session-bound token.
+  Ownership is resolved from the submission, never from client fields. The route's
+  `.user.ini` uses the same 10M upload / 12M request / 256M memory envelope as the
+  existing profile-photo route; the built-in dev servers already use these limits.
+
+Both endpoints re-resolve active canonical account/session/credential/grants and
+reject the MR2 local operator fixture. UI options expose only `can_approve`,
+`can_download_source`, `can_upload_corrected` and CSRF where needed. The inbox still
+requires read authority; each operation independently requires its own capability.
+No real SOURCE-download or corrected-upload grant is seeded.
+
+Correction locks physician -> submission -> files, matching MR1/MR5. Under verified
+capability, it validates finfo MIME/extension, successful decode, 10 MiB/25 MP/8192
+side limits, then retains the exact CORRECTED input and generates/stores/validates
+its REVIEW with the existing processor (WebP, <=800 side, <=153600 bytes, normalized
+orientation, stripped metadata, preserved aspect/valid transparency). Unique current
+CORRECTED/REVIEW rows are replaced in one transaction with required audit; SOURCE
+is never deleted or updated. Submission remains READY/PENDING_REVIEW. Public media
+and `profiles_doctors` are not updated. Old private binaries are cleaned only after
+commit; confirmed rollback cleans staged files. An uncertain commit acknowledgement
+preserves potentially authoritative files and signals reconciliation. No versioning
+schema is added. MR5 now accepts SOURCE + REVIEW with optional valid CORRECTED and
+still publishes only the current verified REVIEW. Shared row locks serialize
+correction/approval: correction first means the new REVIEW is published; approval
+first means correction fails 409 without reopening anything.
+
+`MediaReviewAudit` shares the existing canonical writer/joined transaction machinery
+with MR5. Only two canonical events are added: `MEDIA_REVIEW_SOURCE_DOWNLOADED` and
+`MEDIA_REVIEW_CORRECTED_UPLOADED`, both WARN/R1. Safe metadata identifies submission,
+physician and, for correction, the new corrected/review file IDs. Actor is the
+canonical internal account, request/correlation IDs are server-generated; no binary,
+EXIF, filename, storage key, path or token enters audit metadata. Source success means
+verified authorized delivery is about to occur. Correction success is committed with
+its new private authority. Audit failure delivers no SOURCE bytes and commits no
+correction. The preceding 29 policy rows retain their semantic hash and legacy
+MP01E/MP01F scopes remain unchanged.
+
+The detail dialog shows capability-specific Descargar original/Subir versión
+corregida actions. The native JPEG/PNG/WebP picker displays a text-only basename and
+requires Guardar versión corregida. Busy state blocks duplicate upload and approval.
+After success the existing REVIEW endpoint is fetched with no-store and displayed
+through a new local Blob URL in the modal/cards, avoiding stale decoded-image reuse
+for the unchanged endpoint URL. CSP permits these REVIEW Blob images. Approval stays
+disabled until the refreshed image loads; a failed refresh hides the stale image and
+requires reload/inspection. There is no second corrected preview endpoint and no
+automatic approval.
+
+### Isolated MR6 QA
+
+Use the same disposable MySQL/Valkey/CDP setup documented for MR5. All mutation
+fixtures use the fixed disposable MySQL port 3309, a copied app config, synthetic
+canonical accounts and disjoint private/public roots. Existing table DDL is copied
+without application data; audit lock/CAS procedures are test contract implementations.
+Nothing here deploys production procedures or enables a real operator.
+
+```sh
+MR5_FIXTURE_ROOT=/tmp/mxmed-mr5-mr6qa php modules/media/tests/ProfilePhotoApprovalFixture.php setup
+php modules/media/tests/MediaReviewInterventionPolicyTest.php
+MR5_FIXTURE_ROOT=/tmp/mxmed-mr5-mr6qa php -d memory_limit=256M modules/media/tests/MediaReviewInterventionTest.php
+MR5_FIXTURE_ROOT=/tmp/mxmed-mr5-mr6qa node modules/media/tests/MediaReviewInterventionRaceTest.mjs
+MR5_FIXTURE_ROOT=/tmp/mxmed-mr5-mr6qa node modules/media/tests/MediaReviewInterventionHttpTest.mjs
+```
+
+Coverage includes exact audited SOURCE attachment, capability/session/revocation/CSRF
+failures, private integrity failures, JPEG/PNG/WebP normalization and rejected inputs,
+repeated correction, storage/DB/audit/commit rollback, unchanged public authority,
+12 MP / near-10 MiB HTTP upload, both deterministically gated approval races, and
+MR5 publication of the corrected REVIEW. Browser QA covers 1440×900, 1366×768,
+390×844 and 320×740: actual synthetic download, native picker, busy/duplicate guard,
+refreshed image/specs, explicit MR5 approval, capability-specific controls, keyboard
+and failed-preview approval blocking. Captures are in `/tmp/mxmed-mr6-visual`.
+Director table/file snapshots must match; retained candidate remains unchanged.
