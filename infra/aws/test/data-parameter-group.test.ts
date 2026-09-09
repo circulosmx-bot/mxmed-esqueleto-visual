@@ -1,4 +1,4 @@
-import { STAGING_CONFIG } from '../lib/config/environments';
+import { STAGING_CONFIG, PRODUCTION_CONFIG } from '../lib/config/environments';
 import { firstResource, properties, renderData, resourcesOfType } from './data-test-helpers';
 
 const rendered = (): ReturnType<typeof renderData> => renderData(STAGING_CONFIG);
@@ -64,6 +64,25 @@ describe('data subnet and parameter groups', () => {
   test('DATA-IMP-033 keeps lower_case_table_names at zero', () => {
     const params = parameterProperties().Parameters as Record<string, string>;
     expect(params.lower_case_table_names).toBe('0');
-    expect(Object.keys(params)).toHaveLength(11);
+    expect(Object.keys(params)).toHaveLength(12);
   });
 });
+
+for (const config of [STAGING_CONFIG, PRODUCTION_CONFIG]) {
+  test(`${config.environmentName}: infrastructure-owned trigger policy`, () => {
+    const resources = renderData(config).resources;
+    expect(resourcesOfType(resources, 'AWS::RDS::DBParameterGroup')).toHaveLength(1);
+    expect(properties(firstResource(resources, 'AWS::RDS::DBParameterGroup'))).toMatchObject({
+      Family: 'mysql8.4',
+      Parameters: {
+        log_bin_trust_function_creators: '1',
+        require_secure_transport: 'ON',
+        character_set_server: 'utf8mb4',
+        collation_server: 'utf8mb4_unicode_ci',
+        event_scheduler: 'OFF',
+        general_log: '0',
+        binlog_format: 'ROW',
+      },
+    });
+  });
+}

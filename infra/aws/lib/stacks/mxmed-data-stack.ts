@@ -34,6 +34,7 @@ const MYSQL_PARAMETERS = Object.freeze({
   general_log: '0',
   event_scheduler: 'OFF',
   binlog_format: 'ROW',
+  log_bin_trust_function_creators: '1',
   lower_case_table_names: '0',
 });
 
