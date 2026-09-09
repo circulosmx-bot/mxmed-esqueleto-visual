@@ -10,6 +10,7 @@ require_once __DIR__.'/GdPublicLogoProcessor.php';
 require_once __DIR__.'/LosslessLogoInput.php';
 require_once __DIR__.'/MediaReplacementReasons.php';
 require_once __DIR__.'/GalleryCapacity.php';
+require_once __DIR__.'/MediaReviewBatchService.php';
 
 final class PhysicianMediaReviewCandidateService
 {
@@ -116,8 +117,9 @@ final class PhysicianMediaReviewCandidateService
                 $s->execute([$oldId]);
             }
             if ($id !== null) {
-                $s = $this->pdo->prepare("INSERT INTO media_review_submissions(submission_id,owner_type,owner_id,purpose,technical_status,review_status) VALUES(?,'PHYSICIAN',?,?,'READY','PENDING_REVIEW')");
-                $s->execute([$id, $doctor, $this->purpose]);
+                $batchId=(new MediaReviewBatchService($this->pdo))->joinLocked($doctor);
+                $s = $this->pdo->prepare("INSERT INTO media_review_submissions(submission_id,owner_type,owner_id,purpose,technical_status,review_status,batch_id) VALUES(?,'PHYSICIAN',?,?,'READY','PENDING_REVIEW',?)");
+                $s->execute([$id, $doctor, $this->purpose, $batchId]);
                 $s = $this->pdo->prepare('INSERT INTO media_review_files(file_id,submission_id,role,storage_key,mime_type,format,width,height,byte_size,checksum_sha256) VALUES(?,?,?,?,?,?,?,?,?,?)');
                 foreach ($files as $file) $s->execute([$file['file_id'],$id,$file['role'],$file['storage_key'],$file['mime_type'],$file['format'],$file['width'],$file['height'],$file['byte_size'],$file['checksum_sha256']]);
             }

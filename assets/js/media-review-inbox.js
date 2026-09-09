@@ -6,16 +6,19 @@
  let canReplace=false,canImprove=false,proposalUrl=null,proposalLoaded=false,proposalEpoch=0;
  const replacementIds=['request-replacement','cancel-replacement','confirm-replacement','replacement-reason','replacement-feedback'];
  const improvementIds=['generate-improvement','accept-improvement','discard-improvement'];
+ let activeBatch=null,batchOffset=0,batchNext=null,loadEpoch=0,batchLoadEpoch=0;
  let pageItems=[];const selectedGallery=new Set();
  const reviewObjectUrls=new Map();
  const reviewEndpoint=item=>'/api/internal/media-review/review-image.php?submission_id='+encodeURIComponent(item.submission_id);
  const imageUrl=item=>reviewObjectUrls.get(item.submission_id)||reviewEndpoint(item);
  // DB dates have no timezone annotation: preserve their recorded wall-clock value.
  const dateLabel=value=>{const match=/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/.exec(value||'');return match?`${match[3]}/${match[2]}/${match[1]}, ${match[4]}`:'Fecha no disponible';};
- const specs=item=>`${item.review.width} × ${item.review.height} px · ${(item.review.byte_size/1024).toLocaleString('es-MX',{maximumFractionDigits:1})} KB · WebP`;
+ const pendingItem=item=>item.technical_status==='READY'&&item.review_status==='PENDING_REVIEW';
+ const statusLabel=item=>({PENDING_REVIEW:'Pendiente de revisión',APPROVED:'Aprobada',NEEDS_WORK:'Requiere otra imagen',WITHDRAWN:'Retirada',REJECTED:'Rechazada'}[item.review_status]||item.review_status);
+ const specs=item=>item.review.width===0?'Vista previa no disponible':`${item.review.width} × ${item.review.height} px · ${(item.review.byte_size/1024).toLocaleString('es-MX',{maximumFractionDigits:1})} KB · WebP`;
  function node(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;}
  function openDetail(item,button){
-  if(busy)return;
+  if(busy||!pendingItem(item))return;
   byId('replacement-form').reset();byId('replacement-form').hidden=true;byId('replacement-message').textContent='';byId('replacement-count').textContent='0 / 400 caracteres';
   clearProposal();byId('improvement-message').textContent='';
   reviewLoaded=false;byId('approve-photo').disabled=true;byId('corrected-file').value='';byId('corrected-filename').textContent='';byId('submit-corrected').hidden=true;byId('intervention-message').textContent='';
@@ -35,9 +38,9 @@
  function render(item,index){
   const card=node('article','card'),thumb=node('div','review-thumb'),image=node('img');
   image.alt=(labels[item.purpose]||'Imagen')+' de '+item.owner_display_name;image.loading='lazy';image.decoding='async';image.width=item.review.width;image.height=item.review.height;
-  image.addEventListener('error',()=>{image.hidden=true;thumb.append(node('p','', 'Imagen no disponible.'));},{once:true});image.src=imageUrl(item);thumb.append(image);
-  const body=node('div','card-body'),button=node('button','', 'Ver imagen');button.type='button';button.setAttribute('aria-label','Ver imagen de '+item.owner_display_name);button.addEventListener('click',()=>openDetail(item,button));
-  body.append(node('h3','',item.owner_display_name),node('p','purpose',labels[item.purpose]||'Imagen'),node('p','status-label','Pendiente de revisión'),node('p','received','Recibida: '+dateLabel(item.created_at)),node('p','specs',specs(item)),button);if(item.purpose==='DOCTOR_GALLERY'){
+  image.addEventListener('error',()=>{image.hidden=true;thumb.append(node('p','', 'Imagen no disponible.'));},{once:true});if(pendingItem(item)&&item.review.width>0){image.src=imageUrl(item);thumb.append(image);}else thumb.append(node('p','',statusLabel(item)));
+  const body=node('div','card-body'),button=node('button','', 'Ver imagen');button.type='button';button.disabled=!pendingItem(item);button.setAttribute('aria-label','Ver imagen de '+item.owner_display_name);button.addEventListener('click',()=>openDetail(item,button));
+  body.append(node('h3','',item.owner_display_name),node('p','purpose',labels[item.purpose]||'Imagen'),node('p','status-label',statusLabel(item)),node('p','received','Recibida: '+dateLabel(item.created_at)),node('p','specs',specs(item)),button);if(item.purpose==='DOCTOR_GALLERY'&&pendingItem(item)){
    const label=node('label','gallery-select'),checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=item.submission_id;
    checkbox.addEventListener('change',()=>{if(busy)return;if(checkbox.checked)selectedGallery.add(item.submission_id);else selectedGallery.delete(item.submission_id);bulkControls();});
    label.append(checkbox,document.createTextNode(' Seleccionar foto de galería de '+item.owner_display_name+', imagen '+(index+1)));label.hidden=!canApprove;body.append(label);
@@ -45,18 +48,20 @@
   card.append(thumb,body);cards.append(card);
  }
  async function load(){
+  const epoch=++loadEpoch,viewBatch=activeBatch;
   selectedGallery.clear();pageItems=[];bulkControls();cards.replaceChildren();cards.setAttribute('aria-busy','true');message.hidden=false;message.textContent='Cargando medios pendientes…';byId('page-count').textContent='';document.querySelector('.pagination').hidden=true;
   try{
-   const response=await fetch('/api/internal/media-review/pending.php?limit=25&offset='+offset,{credentials:'same-origin',cache:'no-store'});
+   if(!viewBatch)await loadBatches();if(epoch!==loadEpoch)return false;
+   const response=await fetch(viewBatch?'/api/internal/media-review/batch.php?batch_id='+encodeURIComponent(viewBatch)+'&limit=50&offset='+offset:'/api/internal/media-review/pending.php?limit=25&offset='+offset,{credentials:'same-origin',cache:'no-store'});
    if(!response.ok)throw new Error('unavailable');const result=await response.json();if(!result.ok||!Array.isArray(result.data?.items))throw new Error('unavailable');
-   const {items,pagination}=result.data;pageItems=items;items.forEach(render);bulkControls();byId('page-count').textContent=`${items.length} en esta página`;
+   if(epoch!==loadEpoch)return false;const {items,pagination}=result.data;if(viewBatch){byId('pending-title').textContent=result.data.batch.owner_display_name;byId('batch-summary').textContent=batchSummary(result.data.batch);}pageItems=items;items.forEach(render);bulkControls();byId('page-count').textContent=`${items.length} en esta página`;
    message.hidden=items.length>0;message.textContent='No hay medios pendientes de revisión.';
-   nextOffset=pagination.next_offset;byId('previous-page').disabled=offset===0;byId('next-page').disabled=!pagination.has_more;byId('page-number').textContent='Página '+(Math.floor(offset/25)+1);
+   nextOffset=pagination.next_offset;byId('previous-page').disabled=offset===0;byId('next-page').disabled=!pagination.has_more;byId('page-number').textContent='Página '+(Math.floor(offset/(activeBatch?50:25))+1);
    document.querySelector('.pagination').hidden=offset===0&&!pagination.has_more;return true;
-  }catch{message.hidden=false;message.textContent='No fue posible cargar los medios pendientes.';return false;}
-  finally{cards.setAttribute('aria-busy','false');}
+  }catch{if(epoch===loadEpoch){message.hidden=false;message.textContent='No fue posible cargar los medios pendientes.';}return false;}
+  finally{if(epoch===loadEpoch)cards.setAttribute('aria-busy','false');}
  }
- byId('previous-page').addEventListener('click',()=>{if(busy)return;offset=Math.max(0,offset-25);load();});
+ byId('previous-page').addEventListener('click',()=>{if(busy)return;offset=Math.max(0,offset-(activeBatch?50:25));load();});
  byId('next-page').addEventListener('click',()=>{if(busy)return;if(nextOffset!==null){offset=nextOffset;load();}});
  async function approvalOptions(){
   const response=await fetch('/api/internal/media-review/approval-options.php',{credentials:'same-origin',cache:'no-store'});
@@ -186,7 +191,7 @@
  });
 
  function bulkControls(){
-  const items=pageItems.filter(item=>item.purpose==='DOCTOR_GALLERY');
+  const items=pageItems.filter(item=>item.purpose==='DOCTOR_GALLERY'&&pendingItem(item));
   byId('gallery-bulk').hidden=!canApprove||items.length===0;
   byId('approve-selected-gallery').disabled=busy||!canApprove||selectedGallery.size===0;
   byId('approve-selected-gallery').textContent='Aprobar seleccionadas ('+selectedGallery.size+')';
@@ -195,10 +200,10 @@
   byId('select-page-gallery').indeterminate=selectedGallery.size>0&&!byId('select-page-gallery').checked;
   cards.querySelectorAll('.gallery-select').forEach(label=>{label.hidden=!canApprove;const input=label.querySelector('input');input.disabled=busy||!canApprove;input.checked=selectedGallery.has(input.value);});
  }
- byId('select-page-gallery').addEventListener('change',event=>{if(busy||!canApprove)return;for(const item of pageItems)if(item.purpose==='DOCTOR_GALLERY'){if(event.target.checked)selectedGallery.add(item.submission_id);else selectedGallery.delete(item.submission_id);}bulkControls();});
+ byId('select-page-gallery').addEventListener('change',event=>{if(busy||!canApprove)return;for(const item of pageItems)if(item.purpose==='DOCTOR_GALLERY'&&pendingItem(item)){if(event.target.checked)selectedGallery.add(item.submission_id);else selectedGallery.delete(item.submission_id);}bulkControls();});
  byId('approve-selected-gallery').addEventListener('click',async()=>{
   if(busy||!canApprove||selectedGallery.size===0)return;
-  const items=pageItems.filter(item=>item.purpose==='DOCTOR_GALLERY'&&selectedGallery.has(item.submission_id)).sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.submission_id.localeCompare(b.submission_id));
+  const items=pageItems.filter(item=>item.purpose==='DOCTOR_GALLERY'&&pendingItem(item)&&selectedGallery.has(item.submission_id)).sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.submission_id.localeCompare(b.submission_id));
   busy=true;bulkControls();byId('gallery-bulk').setAttribute('aria-busy','true');let approved=0,stopped=false;
   try{
    for(let i=0;i<items.length;i++){
@@ -214,6 +219,26 @@
    message.hidden=false;message.textContent='Se confirmó la aprobación de '+approved+' de '+items.length+' imágenes.'+(approved<items.length?' '+(items.length-approved)+' no se confirmaron.':'')+(!refreshed?' No fue posible actualizar la lista; vuelve a cargar la página.':'')+(stopped?' Se detuvo el proceso por un error.':'');message.tabIndex=-1;message.focus();
   }
  });
+
+ const batchSummary=batch=>`${batch.item_count} medios · ${batch.photo_count} fotos de perfil · ${batch.logo_count} logotipos · ${batch.gallery_count} fotos de galería · ${batch.pending_count} pendientes · ${batch.approved_count} aprobados · ${batch.needs_work_count} requieren otra imagen`;
+ async function loadBatches(){
+  const epoch=++batchLoadEpoch;
+  const container=byId('batch-cards');container.replaceChildren();byId('batch-message').textContent='Cargando lotes…';
+  try{
+   const response=await fetch('/api/internal/media-review/batches.php?limit=25&offset='+batchOffset,{credentials:'same-origin',cache:'no-store'});
+   if(!response.ok)throw new Error('unavailable');const result=await response.json();if(!result.ok)throw new Error('unavailable');
+   if(epoch!==batchLoadEpoch)return;for(const batch of result.data.items){
+    const card=node('article','card batch-card'),body=node('div','card-body'),button=node('button','', 'Abrir lote');button.type='button';button.dataset.batchId=batch.batch_id;
+    button.addEventListener('click',async()=>{if(busy)return;activeBatch=batch.batch_id;offset=0;byId('batch-queue').hidden=true;byId('close-batch').hidden=false;byId('batch-summary').hidden=false;await load();byId('pending-title').focus();});
+    body.append(node('h3','',batch.owner_display_name),node('p','',batchSummary(batch)),node('p','received','Enviado: '+dateLabel(batch.submitted_at)),button);card.append(body);container.append(card);
+   }
+   byId('batch-message').textContent=result.data.items.length?'':'No hay lotes pendientes de revisión.';batchNext=result.data.pagination.next_offset;
+   byId('batch-pagination').hidden=batchOffset===0&&!result.data.pagination.has_more;byId('previous-batches').disabled=batchOffset===0;byId('next-batches').disabled=!result.data.pagination.has_more;byId('batch-page').textContent='Página '+(Math.floor(batchOffset/25)+1);
+  }catch{if(epoch===batchLoadEpoch)byId('batch-message').textContent='No fue posible cargar los lotes.';}
+ }
+ byId('previous-batches').addEventListener('click',()=>{if(busy)return;batchOffset=Math.max(0,batchOffset-25);loadBatches();});
+ byId('next-batches').addEventListener('click',()=>{if(busy||batchNext===null)return;batchOffset=batchNext;loadBatches();});
+ byId('close-batch').addEventListener('click',async()=>{if(busy)return;const previous=activeBatch;activeBatch=null;offset=0;byId('batch-queue').hidden=false;byId('close-batch').hidden=true;byId('batch-summary').hidden=true;byId('pending-title').textContent='Solicitudes individuales';await load();const button=[...byId('batch-cards').querySelectorAll('button')].find(b=>b.dataset.batchId===previous);(button||byId('pending-title')).focus();});
 
  approvalOptions().then(options=>{canApprove=options.ok&&options.can_approve===true;canDownload=options.ok&&options.can_download_source===true;canCorrect=options.ok&&options.can_upload_corrected===true;canImprove=options.ok&&options.can_improve===true;canReplace=options.ok&&options.can_request_replacement===true;interventionControls();if(dialog.open){byId('approve-photo').hidden=!canApprove;if(canImprove&&selected?.purpose==='PHYSICIAN_PERSONAL_LOGO')loadProposal(selected,false).catch(()=>{});}}).catch(()=>{canApprove=false;canDownload=false;canCorrect=false;interventionControls();});
  window.addEventListener('pagehide',event=>{if(event.persisted)return;for(const url of reviewObjectUrls.values())URL.revokeObjectURL(url);reviewObjectUrls.clear();});

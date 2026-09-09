@@ -45,8 +45,9 @@ if (($argv[1]??'')==='setup') {
     $admin=new PDO('mysql:host=127.0.0.1;port=3309;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
     $admin->exec('CREATE DATABASE mxmed CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');$p=mr5Pdo();
     $source=mxmed_pdo();
-    foreach (['profiles_doctors','media_assets','media_review_submissions','media_review_files','platform_audit_events','platform_audit_stream_heads'] as $table) {
+    foreach (['profiles_doctors','media_assets','media_review_batches','media_review_submissions','media_review_files','media_review_batch_ready_events','platform_audit_events','platform_audit_stream_heads'] as $table) {
         // Schema only: no Director rows, keys, files, or audit history copied.
+        if(in_array($table,['media_review_batches','media_review_batch_ready_events'],true)&&!$source->query("SHOW TABLES LIKE '$table'")->fetchColumn())continue;
         $p->exec($source->query("SHOW CREATE TABLE `$table`")->fetch(PDO::FETCH_NUM)[1]);
     }
     // Test-only implementations of the existing controlled lock/CAS procedure contract.

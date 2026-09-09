@@ -777,3 +777,88 @@ concurrent decisions and bulk partial success. Browser coverage uses 1440×900,
 1366×768, 390×844 and 320×740 with 1/4/16 gallery items and mixed queues. The prior
 36 audit policy rows remain unchanged. Director rows and media hashes are compared
 before/after; the eight Director gallery images are untouched.
+
+## MR11 — review batches and one ready signal
+
+A submission remains one independently reviewable image. A batch is an owner work
+unit containing photo, logo and gallery submissions. New isolated candidate
+uploads atomically join the physician's only OPEN batch and refresh its
+last_activity_at using database time. opened_at never changes. The physician lock
+serializes candidate creation, manual submission and inactivity submission; a
+unique generated owner slot also enforces one OPEN batch in MySQL.
+
+Apply 2026_09_12_media_review_batches.sql once before deploying MR11 code. It adds
+media_review_batches, nullable media_review_submissions.batch_id and the minimal
+media_review_batch_ready_events table. The composite FK enforces matching owners.
+All membership writes are confined to candidate creation under the physician and
+OPEN-batch locks. No move, delete-membership, owner-change or reopen operation is
+exposed. Database keys enforce owner equality and the single OPEN slot. Existing
+submissions stay NULL/unbatched; there is no backfill. Member statuses remain
+independent and no batch_id is added to public media_assets.
+
+Owner GET /api/media/review-batch-submit.php returns a session CSRF token and safe
+OPEN metadata: has_open_batch, item_count, opened_at, last_activity_at,
+auto_submit_after and can_submit_now. POST accepts JSON containing only csrf.
+GallerySessionScope is authority (no client owner or batch selector). POST marks
+the current OPEN batch SUBMITTED and inserts its one durable ready event in the
+same transaction. Repeats without a reviewable OPEN batch return 409. The future
+physician CTA is “Enviar a revisión”; direct upload controls remain unchanged.
+
+MEDIA_REVIEW_BATCH_INACTIVITY_MINUTES=30 is server-side eligibility. Run
+php modules/media/bin/submit-inactive-review-batches.php [limit]
+with limit 1–100 (default 100). It selects a bounded eligible set, locks each owner,
+rechecks the exact batch and current inactivity, and submits once. Infrastructure
+errors return nonzero with a sanitized error. No daemon or scheduler is provisioned.
+Later scheduling should run approximately every five minutes; submission happens
+on the first successful run after eligibility, not at an exact second.
+
+An upload winning the lock refreshes activity; the executor then skips it. If
+submission wins first, the upload creates a new OPEN batch. Manual/automatic
+submission share the same transition. All-withdrawn batches remain inert OPEN
+batches, excluded from submission and the executor scan, and may accept later
+uploads. Membership is historical; item_count includes withdrawn members.
+NEEDS_WORK in a submitted batch remains there; its replacement joins the current
+or a new OPEN batch, never the old submitted batch. Photo/logo pending uniqueness
+and gallery READY_PUBLIC + PENDING_REVIEW <= 16 remain unchanged, including OPEN
+gallery members.
+
+Repository discovery found no suitable durable outbox (only unimplemented seams).
+The ready table uses batch_id as primary key and the fixed event type
+MEDIA_REVIEW_BATCH_READY. Its safe payload is just batch_id; owner, submitted_at
+and counts are resolved from canonical tables. created_at and nullable consumed_at
+provide a future delivery seam. No per-item event, external notification, email,
+webhook, recipient/channel schema, real capability grant or new canonical audit
+policy is introduced. Existing audit policy has no physician batch-submit event;
+the durable ready signal records this workflow without inventing internal-operator
+authority. Individual media decision audits remain unchanged.
+
+Reviewer /api/internal/media-review/batches.php lists SUBMITTED batches having
+pending_count > 0, with 25 default / 50 maximum pagination. The adjacent
+batch.php?batch_id=... endpoint returns safe summary metadata and members in
+created_at/submission_id order, 50 per page by default. Both require existing
+media_review_read. Counts are DB-derived. The flat pending endpoint lists only
+legacy unbatched items. OPEN members never appear as finalized work; there is no
+duplicate flat entry. Resolved batches leave the queue by pending_count=0, without
+persisted COMPLETED status. Details retain resolved/withdrawn summaries; reviewable
+items use the existing private REVIEW preview and individual decision controls.
+
+The advisor opens a batch, keeps individual photo/logo/gallery actions and selects
+pending gallery items on the visible page for sequential, individually audited
+approval. Photo/logo items are never selected by gallery bulk controls. Membership
+stays unchanged through partial approval and replacement. Activation remains MR12.
+
+QA uses disposable MySQL/Valkey and synthetic media: ReviewBatchTest,
+ReviewBatchAtomicTest, ReviewBatchRaceTest and ReviewBatchHttpTest cover the
+18-item/one-signal fixture, owner/CSRF/internal authority, privacy, 29/31-minute
+eligibility, both race orders and concurrent first uploads, immutable membership,
+failed signal/candidate commits and lost acknowledgement retries. Visual QA covers
+five scenarios at 1440×900, 1366×768, 390×844 and 320×740, including mixed, legacy
+and partial queues, gallery selection and keyboard focus. Existing normalization,
+atomicity, intervention, replacement, gallery capacity and audit policy regressions
+remain covered. Director comparison excludes only newly added NULL batch_id and
+checks all previous row/file hashes. No real batches or ready signals are created.
+
+Local migration is applied. The database account cannot create triggers with its
+binary-log privilege policy, so MR11 does not require triggers or elevated server
+privileges. Membership immutability is enforced by service operations and tested
+under deterministic races; the owner FK and unique OPEN slot remain DB constraints.

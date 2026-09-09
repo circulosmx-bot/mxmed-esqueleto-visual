@@ -24,8 +24,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <body>
 <main class="inbox">
 <header class="inbox-header"><p class="eyebrow">México Médico · Equipo interno</p><h1>Revisión de medios</h1><p>Consulta las imágenes recibidas para revisión.</p></header>
+<section id="batch-queue" aria-labelledby="batch-queue-title">
+<h2 id="batch-queue-title">Lotes pendientes de revisión</h2>
+<p id="batch-message" role="status"></p><div id="batch-cards" class="cards"></div>
+<nav id="batch-pagination" aria-label="Páginas de lotes" hidden><button id="previous-batches" type="button">Anterior</button><span id="batch-page"></span><button id="next-batches" type="button">Siguiente</button></nav>
+</section>
 <section aria-labelledby="pending-title">
-<div class="section-heading"><h2 id="pending-title">Pendientes de revisión</h2><span id="page-count" aria-live="polite"></span></div>
+<button id="close-batch" type="button" hidden>Volver a pendientes</button>
+<p id="batch-summary" hidden></p>
+<div class="section-heading"><h2 id="pending-title" tabindex="-1">Solicitudes individuales</h2><span id="page-count" aria-live="polite"></span></div>
 <p id="inbox-message" role="status">Cargando medios pendientes…</p>
 <section id="gallery-bulk" hidden aria-label="Aprobación de fotos de galería">
 <label><input id="select-page-gallery" type="checkbox"> Seleccionar fotos de galería de esta página</label>
