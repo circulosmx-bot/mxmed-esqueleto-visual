@@ -140,6 +140,8 @@
    const response=await fetch('/api/internal/media-review/'+route,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({submission_id:item.submission_id,csrf:options.csrf})});
    if(response.status===409){clearProposal();byId('improvement-message').textContent='La solicitud cambió. Recarga para revisar la versión actual.';reviewLoaded=false;byId('detail-image').hidden=true;return;}
    const result=await response.json();if(!response.ok||!result.ok)throw new Error('unavailable');
+   if(result.status==='IMPROVEMENT_INPUT_UNAVAILABLE'){clearProposal();byId('improvement-message').textContent='Este candidato requiere una nueva carga o corrección antes de generar una mejora.';return;}
+   if(result.status==='ALREADY_IMPROVED'){clearProposal();byId('improvement-message').textContent='La versión actual ya contiene esta mejora.';return;}
    if(['NO_SAFE_IMPROVEMENT','ALREADY_TRANSPARENT'].includes(result.status)){clearProposal();byId('improvement-message').textContent='No se detectó una mejora automática segura.';return;}
    if(result.status==='PROPOSAL_CREATED'){await freshReview(item);await loadProposal(item,true);byId('improvement-message').textContent='Compara ambas versiones antes de decidir.';byId('improvement-comparison').scrollIntoView({block:'start'});}
    else if(result.status==='PROPOSAL_ACCEPTED'){clearProposal();selected={...item,review:result.review};byId('detail-specs').textContent=specs(selected);await freshReview(selected);await load();byId('improvement-message').textContent='Versión mejorada lista para revisión. Aún requiere aprobación.';}

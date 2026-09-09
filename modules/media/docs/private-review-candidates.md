@@ -495,22 +495,22 @@ capability-specific controls. Existing photo MR5/MR6 tests remain regression gat
 ## MR8 — conservative automatic logo proposals
 
 Only pending `PHYSICIAN_PERSONAL_LOGO` submissions can use this pilot. The server
-chooses current CORRECTED when present, otherwise SOURCE; clients cannot select
+uses current IMPROVEMENT_INPUT (MR8.1) exclusively; clients cannot select
 roles, owners, thresholds or authority. The isolated user-facing logo uploader
 remains unchanged. No real `media_review_improve` grants are created.
 
-Effective SOURCE/CORRECTED → private AUTO_PROPOSAL → human comparison → explicit
+Bounded lossless IMPROVEMENT_INPUT → private AUTO_PROPOSAL → human comparison → explicit
 acceptance → REVIEW → separate audited approval → PUBLIC. Generating or discarding
 a proposal never changes REVIEW. Acceptance never publishes and leaves
 READY/PENDING_REVIEW, SOURCE and CORRECTED intact.
 
 ### Deterministic algorithm and bounds
 
-The existing PHP GD processor decodes the integrity-verified effective source
-within 10 MiB / 25 MP / 8192-side limits, normalizes orientation and resizes without
-upscaling to at most 800 pixels per side. An optional internal working-image
-transform runs before the usual WebP encoder. Ordinary processor callers do not
-use this hook and retain their prior behavior.
+The PHP GD processor decodes the integrity-verified lossless PNG within 4 MiB /
+640000 pixels / 800-side limits. Source normalization already applied orientation
+and bounded resizing at upload time. An optional internal working-image transform
+runs before the usual WebP encoder. Ordinary processor callers do not use this
+hook and retain their prior behavior.
 
 `ConservativeLogoBackground` uses this fixed server policy:
 
@@ -598,3 +598,67 @@ audited rollback, lost commit acknowledgement and five deterministic race orders
 Browser QA covers seven fixture categories at all four required viewports, actual
 alpha/interior pixels, keyboard actions, discard, acceptance and separate approval.
 MR8 stops here; user-facing moderation activation and MR9 remain separate work.
+
+### MR8.1 — bounded lossless logo analysis
+
+Automated improvement uses only private `IMPROVEMENT_INPUT`, a PNG with maximum
+800-pixel sides, 640000 pixels and 4194304 bytes. Logo candidate creation and human
+logo correction export the already oriented, bounded working raster before WebP
+encoding in the same source-decode pass. The PNG is decoded for bounded validation,
+never by decoding the original a second time. RGB and alpha are preserved losslessly
+from that working raster; metadata is not copied. Resampling still occurs when the
+original exceeds 800 pixels. Profile photo candidates do not get this derivative.
+Original upload limits remain 10 MiB / 25 MP / 8192 sides; REVIEW and public output
+remain WebP, maximum 800 sides / 153600 bytes.
+
+Apply `2026_09_10_media_review_improvement_input.sql` after the MR8 migration. It
+adds one role and a PNG bounds CHECK, retaining the submission+role unique key and
+existing fingerprint columns. There is no backfill. Legacy candidates without the
+lossless input return `IMPROVEMENT_INPUT_UNAVAILABLE`; generation never falls back
+to SOURCE, CORRECTED or REVIEW. Candidate replacement or corrected upload creates
+the input naturally. No new route, public asset or download of this derivative is
+introduced. Logo approval ignores analysis/proposal roles and publishes only REVIEW.
+
+Generation reads IMPROVEMENT_INPUT, writes and verifies AUTO_PROPOSAL, and leaves
+REVIEW unchanged. Proposal input ID and SHA-256 identify current IMPROVEMENT_INPUT.
+Correction atomically replaces CORRECTED, IMPROVEMENT_INPUT and REVIEW and removes
+any old proposal. Acceptance verifies the fingerprint and copies proposal bytes to
+new REVIEW, keeping SOURCE/CORRECTED/IMPROVEMENT_INPUT and pending status unchanged.
+Discard keeps REVIEW unchanged. Repeating an accepted improvement returns
+`ALREADY_IMPROVED` without a new proposal. Existing lock order and canonical audit
+semantics are unchanged. New keys are cleaned on confirmed rollback; uncertain
+commit outcomes retain potentially authoritative files for reconciliation.
+
+Attempt-1 diff classification, performed before editing:
+- Reused unchanged: removal of the high-resolution generation benchmark from the
+  algorithm test; existing conservative algorithm and thin-line safety assertions.
+- Reworked: bounded service reads, fingerprint tests, storage spy, standalone
+  benchmark and seven race orders now target IMPROVEMENT_INPUT instead of REVIEW.
+- Obsolete: REVIEW-as-analysis authority and its blocked-draft documentation.
+No intermediate commit was created and no whole-worktree reset was used.
+
+The original RGB254-on-RGB255 blocker goes through actual candidate normalization.
+Its private PNG preserves the distinction; exterior removal leaves the thin line
+opaque. Tests also cover enclosed white, off-white, gradient/photo abstention,
+existing alpha, orientation, metadata stripping, unchanged REVIEW encoding, legacy
+candidates, duplicate avoidance, authorization/CSRF, private delivery, audit rollback
+and candidate/corrected storage/insert failures with exact file+row preservation.
+`LogoImprovementReviewInputTest.php` retains the original blocker assertion and
+instruments every binary open. `LosslessLogoInputTest.php` compares every RGB/alpha
+pixel against the bounded fixture. `LosslessLogoAtomicTest.php` tests the new role's
+transactional lifecycle, including that profile photos do not acquire it.
+
+For a reproducible generation-only resource sample, create `candidate white 800 800`
+with `LogoImprovementFixture.php` in one process, then time
+`LogoImprovementBenchmark.php <submission-id>` in another against disposable QA
+storage/database. The 800×800 PNG was 4362 bytes; generation took 324.38 ms and the
+process peaked at 44384256 bytes RSS (42.33 MiB). Original creation/normalization is
+excluded from the measured process. No full-resolution source is reopened.
+User-facing moderation activation and MR9 remain separate work.
+
+QA note: `AuditMp01HStaticReadinessTest.php` reports the pre-existing
+`hidden_productive_wiring_zero` failure on both this worktree and a separate
+archive of accepted HEAD eeea182. MR8 event-policy regression and MP01F/G contract
+checks pass; no audit implementation or catalog changed in MR8.1.
+The additive migration was applied locally; Director row and file snapshots
+remain byte-for-byte identical before/after.

@@ -18,8 +18,8 @@ foreach(['white','offwhite','thin','gradient','photo','variance','edge','transpa
  $f=mr8Candidate($kind);$before=$pub();$old=mr6Rows($p,$f['id']);$result=$s->mutate(mr8Context('generate'),'generate',$f['id']);$files=mr6Rows($p,$f['id']);
  ok($files['SOURCE']===$old['SOURCE']&&$files['REVIEW']===$old['REVIEW']&&$pub()===$before,'generation_keeps_source_review_public_'.$kind);
  if(!in_array($kind,['white','offwhite','thin'],true)){ok(!isset($files['AUTO_PROPOSAL'])&&in_array($result['status'],['NO_SAFE_IMPROVEMENT','ALREADY_TRANSPARENT'],true),'no_broken_proposal_'.$kind);continue;}
- $proposal=$files['AUTO_PROPOSAL'];ok($proposal['input_file_id']===$files['SOURCE']['file_id']&&$proposal['input_checksum_sha256']===$files['SOURCE']['checksum_sha256'],'source_fingerprint');
- $s->mutate(mr8Context('generate'),'generate',$f['id']);$files=mr6Rows($p,$f['id']);ok(count($files)===3&&!$private->exists($proposal['storage_key']),'bounded_repeated_proposal');$proposal=$files['AUTO_PROPOSAL'];
+ $proposal=$files['AUTO_PROPOSAL'];ok($proposal['input_file_id']===$files['IMPROVEMENT_INPUT']['file_id']&&$proposal['input_checksum_sha256']===$files['IMPROVEMENT_INPUT']['checksum_sha256'],'lossless_fingerprint');
+ $s->mutate(mr8Context('generate'),'generate',$f['id']);$files=mr6Rows($p,$f['id']);ok(count($files)===4&&!$private->exists($proposal['storage_key']),'bounded_repeated_proposal');$proposal=$files['AUTO_PROPOSAL'];
  $result=$s->mutate(mr8Context('accept'),'accept',$f['id']);$files=mr6Rows($p,$f['id']);ok(!isset($files['AUTO_PROPOSAL'])&&$files['REVIEW']['checksum_sha256']===$proposal['checksum_sha256']&&$files['SOURCE']===$old['SOURCE']&&$pub()===$before,'accept_private_only');
  ok($p->query("SELECT review_status FROM media_review_submissions WHERE submission_id='".$f['id']."'")->fetchColumn()==='PENDING_REVIEW','accept_stays_pending');
  $result=(new Media\Services\PhysicianLogoApprovalService($p,$private,$public))->approve(mr5Context(),$f['id']);$asset=(new Media\Repositories\MediaAssetsRepository($p))->findByPublicUrl($result['public_url']);ok(readBytes($public,$asset)===readBytes($private,$files['REVIEW']),'explicit_approval_exact_improved_review');
@@ -27,7 +27,7 @@ foreach(['white','offwhite','thin','gradient','photo','variance','edge','transpa
 }
 $f=mr8Candidate();$before=$pub();$original=mr6Rows($p,$f['id']);$s->mutate(mr8Context('generate'),'generate',$f['id']);$s->mutate(mr8Context('discard'),'discard',$f['id']);ok(mr6Rows($p,$f['id'])===$original&&$pub()===$before,'discard_keeps_review_public');
 $correct=new Media\Services\MediaReviewInterventionService($p,$private);$u=mr8Upload('offwhite');try{$correct->corrected(mr6Context('upload_corrected',['media_review_corrected_upload']),$f['id'],$u);}finally{unlink($u['tmp_name']);}
-$s->mutate(mr8Context('generate'),'generate',$f['id']);$files=mr6Rows($p,$f['id']);ok($files['AUTO_PROPOSAL']['input_file_id']===$files['CORRECTED']['file_id']&&$files['AUTO_PROPOSAL']['input_checksum_sha256']===$files['CORRECTED']['checksum_sha256'],'corrected_precedence');
+$s->mutate(mr8Context('generate'),'generate',$f['id']);$files=mr6Rows($p,$f['id']);ok($files['AUTO_PROPOSAL']['input_file_id']===$files['IMPROVEMENT_INPUT']['file_id']&&$files['AUTO_PROPOSAL']['input_checksum_sha256']===$files['IMPROVEMENT_INPUT']['checksum_sha256'],'corrected_lossless_fingerprint');
 $p->prepare("UPDATE media_review_files SET input_file_id=UUID() WHERE submission_id=? AND role='AUTO_PROPOSAL'")->execute([$f['id']]);
 try{$s->mutate(mr8Context('accept'),'accept',$f['id']);throw new LogicException('stale accepted');}catch(RuntimeException $e){ok($e->getMessage()==='improvement_conflict','fingerprint_stale_blocked');}
 $s->mutate(mr8Context('generate'),'generate',$f['id']);$u=mr8Upload();try{$correct->corrected(mr6Context('upload_corrected',['media_review_corrected_upload']),$f['id'],$u);}finally{unlink($u['tmp_name']);}$files=mr6Rows($p,$f['id']);

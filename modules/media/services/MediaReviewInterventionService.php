@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Media\Services;
 require_once __DIR__.'/MediaReviewAudit.php';
 require_once __DIR__.'/GdPublicLogoProcessor.php';
+require_once __DIR__.'/LosslessLogoInput.php';
 require_once __DIR__.'/../contracts/PrivateMediaStoragePort.php';
 use Media\Contracts\PrivateMediaStoragePort;
 use Platform\Contracts\{TrustedAuthorizationContext,AuthorizationRequirement,AuthorizationPlane,RiskLevel,CapabilitySet};
@@ -49,24 +50,31 @@ final class MediaReviewInterventionService
                     $candidate=$this->candidate($id,true);
                     $s=$this->pdo->prepare('SELECT * FROM media_review_files WHERE submission_id=? ORDER BY role FOR UPDATE');$s->execute([$id]);$files=$s->fetchAll(PDO::FETCH_ASSOC);$roles=[];
                     foreach($files as $file){$this->validateFile($candidate,$file);$roles[$file['role']]=$file;if($file['role']!=='SOURCE')$oldKeys[]=$file['storage_key'];}
-                    if(!isset($roles['SOURCE'],$roles['REVIEW']) || count($roles)!==count($files) || !in_array(count($files),[2,3,4],true))throw new RuntimeException('intervention_integrity_failed');
+                    if(!isset($roles['SOURCE'],$roles['REVIEW']) || count($roles)!==count($files) || !in_array(count($files),[2,3,4,5],true))throw new RuntimeException('intervention_integrity_failed');
                     $path=$upload['tmp_name']??null;
                     if(($upload['error']??-1)!==UPLOAD_ERR_OK || !is_string($path) || !is_file($path))throw new RuntimeException('intervention_invalid_upload');
                     $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);$ext=strtolower(pathinfo((string)($upload['name']??''),PATHINFO_EXTENSION));
                     if(!in_array($ext,['image/jpeg'=>['jpg','jpeg'],'image/png'=>['png'],'image/webp'=>['webp']][$mime]??[],true))throw new RuntimeException('intervention_invalid_upload');
                     if($mime==='image/jpeg' && !function_exists('exif_read_data'))throw new RuntimeException('intervention_processor_unavailable');
-                    $prefix='private/media-review/'.hash('sha256','PHYSICIAN:'.$candidate['owner_id']).'/'.$id.'/';$corrected=null;
+                    $prefix='private/media-review/'.hash('sha256','PHYSICIAN:'.$candidate['owner_id']).'/'.$id.'/';$corrected=null;$input=null;
                     $review=(new GdPublicLogoProcessor(10485760,8192,25000000))->process($upload,false,
                         function(string $source,string $mime,int $width,int $height,int $bytes) use($prefix,&$corrected,&$newKeys):void {
                             $fileId=(new RandomAuditUuidProvider())->generateCanonicalUuid();$format=substr($mime,6);$key=$prefix.'corrected/'.$fileId.'.'.$format;
                             $corrected=['file_id'=>$fileId,'role'=>'CORRECTED','storage_key'=>$key,'mime_type'=>$mime,'format'=>$format,'width'=>$width,'height'=>$height,'byte_size'=>$bytes,'checksum_sha256'=>hash_file('sha256',$source)];
                             $this->store($corrected,$source,$newKeys);
-                        });
+                        },null,$candidate['purpose']==='PHYSICIAN_PERSONAL_LOGO' ? function(\GdImage $working) use($prefix,&$input,&$newKeys):void {
+                            $derivative=LosslessLogoInput::export($working);
+                            try {
+                                $fileId=(new RandomAuditUuidProvider())->generateCanonicalUuid();
+                                $input=array_merge($derivative,['file_id'=>$fileId,'role'=>'IMPROVEMENT_INPUT','storage_key'=>$prefix.'improvement_input/'.$fileId.'.png']);
+                                $this->store($input,$derivative['path'],$newKeys);
+                            }finally{unlink($derivative['path']);}
+                        }:null);
                     $fileId=(new RandomAuditUuidProvider())->generateCanonicalUuid();$review=array_merge($review,['file_id'=>$fileId,'role'=>'REVIEW','storage_key'=>$prefix.'review/'.$fileId.'.webp']);
                     $this->store($review,$review['path'],$newKeys);
-                    $s=$this->pdo->prepare("DELETE FROM media_review_files WHERE submission_id=? AND role IN ('CORRECTED','REVIEW','AUTO_PROPOSAL')");$s->execute([$id]);
+                    $s=$this->pdo->prepare("DELETE FROM media_review_files WHERE submission_id=? AND role IN ('CORRECTED','REVIEW','AUTO_PROPOSAL','IMPROVEMENT_INPUT')");$s->execute([$id]);
                     $s=$this->pdo->prepare('INSERT INTO media_review_files(file_id,submission_id,role,storage_key,mime_type,format,width,height,byte_size,checksum_sha256) VALUES(?,?,?,?,?,?,?,?,?,?)');
-                    foreach([$corrected,$review] as $f)$s->execute([$f['file_id'],$id,$f['role'],$f['storage_key'],$f['mime_type'],$f['format'],$f['width'],$f['height'],$f['byte_size'],$f['checksum_sha256']]);
+                    foreach(array_filter([$corrected,$input,$review]) as $f)$s->execute([$f['file_id'],$id,$f['role'],$f['storage_key'],$f['mime_type'],$f['format'],$f['width'],$f['height'],$f['byte_size'],$f['checksum_sha256']]);
                     $this->pdo->prepare('UPDATE media_review_submissions SET updated_at=CURRENT_TIMESTAMP WHERE submission_id=?')->execute([$id]);
                     return ['submission_id'=>$id,'physician_id'=>(string)$candidate['owner_id'],'corrected_file_id'=>$corrected['file_id'],'review_file_id'=>$review['file_id']];
                 },$safeCleanup);
@@ -110,11 +118,12 @@ final class MediaReviewInterventionService
     private function validateFile(array $candidate,array $file):void
     {
         $role=$file['role'];$format=$file['format'];$prefix='private/media-review/'.hash('sha256','PHYSICIAN:'.$candidate['owner_id']).'/'.$candidate['submission_id'].'/';
-        if(!in_array($role,['SOURCE','REVIEW','CORRECTED','AUTO_PROPOSAL'],true) || !in_array($format,['jpeg','png','webp'],true) || $file['mime_type']!=='image/'.$format
+        if(!in_array($role,['SOURCE','REVIEW','CORRECTED','AUTO_PROPOSAL','IMPROVEMENT_INPUT'],true) || !in_array($format,['jpeg','png','webp'],true) || $file['mime_type']!=='image/'.$format
             || !preg_match('/^[0-9a-f-]{36}$/D',$file['file_id']) || $file['storage_key']!==$prefix.strtolower($role).'/'.$file['file_id'].'.'.$format
             || (int)$file['byte_size']<1 || (int)$file['byte_size']>10485760 || min((int)$file['width'],(int)$file['height'])<1
             || max((int)$file['width'],(int)$file['height'])>8192 || (int)$file['width']*(int)$file['height']>25000000
             || !preg_match('/^[0-9a-f]{64}$/D',$file['checksum_sha256']))throw new RuntimeException('intervention_integrity_failed');
+        if($role==='IMPROVEMENT_INPUT' && ($candidate['purpose']!=='PHYSICIAN_PERSONAL_LOGO'||$format!=='png'||(int)$file['byte_size']>4194304||max((int)$file['width'],(int)$file['height'])>800))throw new RuntimeException('intervention_integrity_failed');
         if(in_array($role,['REVIEW','AUTO_PROPOSAL'],true) && ($format!=='webp' || (int)$file['byte_size']>153600 || max((int)$file['width'],(int)$file['height'])>800))throw new RuntimeException('intervention_integrity_failed');
     }
     private function verified(array $file):string

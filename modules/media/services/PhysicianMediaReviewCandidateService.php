@@ -7,6 +7,7 @@ use PDO;
 use RuntimeException;
 require_once __DIR__.'/../contracts/PrivateMediaStoragePort.php';
 require_once __DIR__.'/GdPublicLogoProcessor.php';
+require_once __DIR__.'/LosslessLogoInput.php';
 
 final class PhysicianMediaReviewCandidateService
 {
@@ -55,7 +56,14 @@ final class PhysicianMediaReviewCandidateService
                 $key = $prefix.'/source/'.$fileId.'.'.$format;
                 $this->storeVerified($key, $source, $newKeys);
                 $files[] = ['file_id'=>$fileId,'role'=>'SOURCE','storage_key'=>$key,'mime_type'=>$mime,'format'=>$format,'width'=>$width,'height'=>$height,'byte_size'=>$bytes,'checksum_sha256'=>hash_file('sha256', $source)];
-            });
+            }, null, $this->purpose==='PHYSICIAN_PERSONAL_LOGO' ? function(\GdImage $working) use (&$files, &$newKeys, $prefix): void {
+                $input=LosslessLogoInput::export($working);
+                try {
+                    $fileId=self::uuid();$key=$prefix.'/improvement_input/'.$fileId.'.png';
+                    $this->storeVerified($key,$input['path'],$newKeys);
+                    $files[]=array_merge($input,['file_id'=>$fileId,'role'=>'IMPROVEMENT_INPUT','storage_key'=>$key]);
+                } finally {unlink($input['path']);}
+            } : null);
             $fileId = self::uuid();
             $key = $prefix.'/review/'.$fileId.'.webp';
             $this->storeVerified($key, $review['path'], $newKeys);
