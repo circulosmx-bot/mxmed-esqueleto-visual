@@ -17,6 +17,7 @@ try {
  for(const [name,args] of [[names[0],['-p','127.0.0.1:3309:3306','-e','MYSQL_ALLOW_EMPTY_PASSWORD=yes','mysql:8.4']],[names[1],['-p','127.0.0.1:6387:6379','valkey/valkey:8-alpine']]]){exec('docker',['run','--rm','-d','--name',name,...args]);created.push(name);}
  for(let i=0;;i++){try{exec('docker',['exec',names[0],'mysqladmin','--protocol=TCP','-h127.0.0.1','ping']);break;}catch{if(i>90)throw Error('DB startup');await new Promise(r=>setTimeout(r,500));}}
  exec('php',['scripts/packaging/setup-test-db.php']);
+ console.log(exec('php',['modules/identity/tests/InternalGovernanceTest.php']));
  identity=JSON.parse(exec('php',['modules/identity/tests/InternalOperatorFixture.php','setup']));
  php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');foreach(['media_review_approve','media_review_request_replacement','media_review_corrected_upload','media_review_source_download'] as $cap)$p->prepare("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'mr3_good',?,'ACTIVE')")->execute([$cap]);`);
  console.log(exec('php',['modules/media/tests/OriginalArchiveTest.php']));

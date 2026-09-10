@@ -347,6 +347,8 @@
   "modules/identity/services/EmailVerificationService.php",
   "modules/identity/services/FailClosedAuthorizationService.php",
   "modules/identity/services/IdentityIdGenerator.php",
+  "modules/identity/services/InternalCapabilityCatalog.php",
+  "modules/identity/services/InternalGovernanceService.php",
   "modules/identity/services/InternalOperatorAuthority.php",
   "modules/identity/services/OneTimeTokenCodec.php",
   "modules/identity/services/RateLimitService.php",

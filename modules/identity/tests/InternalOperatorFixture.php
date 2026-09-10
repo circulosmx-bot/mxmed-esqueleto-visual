@@ -59,5 +59,6 @@ foreach(['good','customer','wrong','revoked_grant','inactive','blocked','expired
 foreach(["INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'mr3_good','media_review_read','ACTIVE')", "INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'missing_account','media_review_read','ACTIVE')", "INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'mr3_good','*','ACTIVE')"] as $sql){
  try{$p->exec($sql);}catch(PDOException){continue;}throw new RuntimeException('grant_constraint_failed');
 }
+$p->exec(file_get_contents(__DIR__.'/../db/migrations/2026_09_10_01_internal_governance.sql'));
 // Output is consumed privately by the Node test process, never logged.
 echo json_encode(['env'=>$env,'tokens'=>$tokens],JSON_THROW_ON_ERROR);
