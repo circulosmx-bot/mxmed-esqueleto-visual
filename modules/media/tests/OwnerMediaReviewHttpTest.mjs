@@ -18,7 +18,7 @@ try {
  for(let i=0;;i++){try{exec('docker',['exec',names[0],'mysqladmin','--protocol=TCP','-h127.0.0.1','ping']);break;}catch{if(i>90)throw Error('DB startup');await new Promise(r=>setTimeout(r,500));}}
  exec('php',['scripts/packaging/setup-test-db.php']);
  identity=JSON.parse(exec('php',['modules/identity/tests/InternalOperatorFixture.php','setup']));
- php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');foreach(['media_review_approve','media_review_request_replacement','media_review_correct','media_review_source_download'] as $cap)$p->prepare("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'mr3_good',?,'ACTIVE')")->execute([$cap]);`);
+ php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');foreach(['media_review_approve','media_review_request_replacement','media_review_corrected_upload','media_review_source_download'] as $cap)$p->prepare("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'mr3_good',?,'ACTIVE')")->execute([$cap]);`);
  console.log(exec('php',['modules/media/tests/OriginalArchiveTest.php']));
  const paths=JSON.parse(await readFile('scripts/packaging/runtime-files.json','utf8'));
  for(const path of new Set([...paths,'api/media/owner-review.php','assets/js/owner-media-review.js'])){await mkdir(root+'/'+path.split('/').slice(0,-1).join('/'),{recursive:true});await copyFile(path,root+'/'+path);}
@@ -74,6 +74,14 @@ try {
  console.log('MR12A1_MANUAL_HTTP=PASS: normal redirect; HttpOnly local cookie; no token delivery; invalid/owner/unauthenticated denied; capability revocation effective; invalid canonical session denied and fresh login recovers; helper outside package');
  const opts=await data(await review('approval-options.php'));
  const mutate=(route,id,extra={})=>review(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({submission_id:id,csrf:opts.csrf,...extra})});
+ assert.equal(opts.can_upload_corrected,true);assert.equal(opts.can_download_source,true);
+ const correctedPath=sql('echo mr6File("png",320,240)["tmp_name"];');const correctedBytes=await readFile(correctedPath);
+ const corrected=async(id,cookie='__Host-mxmed_session='+identity.tokens.good,csrf=opts.csrf)=>{
+  const body=new FormData();body.append('submission_id',id);body.append('csrf',csrf);body.append('corrected',new Blob([correctedBytes],{type:'image/png'}),'corregida.png');
+  return fetch(base+'/api/internal/media-review/corrected.php',{method:'POST',headers:cookie?{Cookie:cookie}:{},body});
+ };
+ const reviewRows=id=>JSON.parse(sql(`echo json_encode(mr6Rows($p,'${id}'));`));
+ const canonicalState=()=>JSON.parse(sql(`echo json_encode(['public'=>$p->query("SELECT photo_url,logo_url FROM profiles_doctors WHERE doctor_id='${doctor}'")->fetch(),'assets'=>$p->query("SELECT media_id,checksum_sha256 FROM media_assets WHERE owner_id='${doctor}' ORDER BY media_id")->fetchAll(),'submissions'=>$p->query("SELECT submission_id,batch_id,review_status FROM media_review_submissions WHERE owner_id='${doctor}' ORDER BY submission_id")->fetchAll(),'files'=>$p->query("SELECT f.submission_id,f.role,f.file_id,f.checksum_sha256 FROM media_review_files f JOIN media_review_submissions s ON s.submission_id=f.submission_id WHERE s.owner_id='${doctor}' ORDER BY f.submission_id,f.role")->fetchAll()]);`));
  const old=publicState();for(const key of Object.keys(routes))await data(await upload(key));
  assert.deepEqual(publicState(),old);let items=await listing();assert.equal(items.length,3);assert.ok(items.every(x=>x.state==='OPEN'));
  assert.equal(sql(`echo $p->query("SELECT COUNT(*) FROM media_review_batches WHERE owner_id='${doctor}' AND status='OPEN'")->fetchColumn();`),'1');
@@ -95,7 +103,31 @@ try {
  assert.equal((await review(zipRoute+'&owner_id=foreign')).status,400);
  const zipResponse=await review(zipRoute);assert.equal(zipResponse.status,200);assert.equal(zipResponse.headers.get('content-type'),'application/zip');assert.match(zipResponse.headers.get('content-disposition'),/MXMED_Originales_[a-f0-9]+_[0-9-]+_[a-f0-9]+\.zip/);assert.equal(Buffer.from(await zipResponse.arrayBuffer()).subarray(0,2).toString(),'PK');
  console.log('BATCH_SOURCE_ZIP_HTTP=PASS: authenticated attachment; owner/unauthenticated/customer/missing capability denied; foreign/extra authority denied');
+ const pendingId=items[0].id;
+ assert.equal((await corrected(pendingId,null)).status,403);
+ assert.equal((await corrected(pendingId,'PHPSESSID='+session)).status,403);
+ assert.equal((await corrected(pendingId,'__Host-mxmed_session='+identity.tokens.customer)).status,403);
+ const grantStatus=(where,state)=>php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');$p->exec("UPDATE internal_operator_grants SET status='${state}',revoked_at=${state==='ACTIVE'?'NULL':'CURRENT_TIMESTAMP'} WHERE account_id='mr3_good' AND ${where}");`);
+ grantStatus("capability='media_review_corrected_upload'",'REVOKED');assert.equal((await corrected(pendingId)).status,403);
+ // Leave exactly the download capability on the synthetic account for this negative.
+ grantStatus("capability<>'media_review_source_download'",'REVOKED');assert.equal((await corrected(pendingId)).status,403);assert.equal((await review('source-download.php?submission_id='+pendingId)).status,200);
+ grantStatus("capability<>'media_review_source_download'",'ACTIVE');
+ assert.equal((await corrected(pendingId,undefined,'forged')).status,403);
+ assert.equal((await corrected('00000000-0000-4000-8000-000000000000')).status,404);
+ assert.equal((await corrected('../foreign')).status,400);
+ for(const item of items){
+  const before=canonicalState(),filesBefore=reviewRows(item.id),sourceBefore=Buffer.from(await(await review('source-download.php?submission_id='+item.id)).arrayBuffer());
+  const result=await data(await corrected(item.id));assert.equal(result.review_status,'PENDING_REVIEW');
+  const after=canonicalState(),filesAfter=reviewRows(item.id);
+  assert.deepEqual(after.public,before.public);assert.deepEqual(after.assets,before.assets);assert.deepEqual(after.submissions,before.submissions);
+  assert.deepEqual(filesAfter.SOURCE,filesBefore.SOURCE);assert.notEqual(filesAfter.REVIEW.file_id,filesBefore.REVIEW.file_id);assert.notEqual(filesAfter.REVIEW.checksum_sha256,filesBefore.REVIEW.checksum_sha256);
+  assert.equal(filesAfter.CORRECTED.checksum_sha256,createHash('sha256').update(correctedBytes).digest('hex'));
+  assert.deepEqual(Buffer.from(await(await review('source-download.php?submission_id='+item.id)).arrayBuffer()),sourceBefore);
+ }
+ console.log('CORRECTED_HTTP=PASS: photo/logo/gallery; SOURCE unchanged and downloadable; REVIEW replaced; no publication/new submission/batch; unauth/owner/customer/revoked/download-only/CSRF/invalid-ID denied');
+ const processedId=items[0].id;
  for(const [purpose,route] of [['DOCTOR_PROFILE_PHOTO','approve.php'],['PHYSICIAN_PERSONAL_LOGO','approve-logo.php'],['DOCTOR_GALLERY','approve-gallery.php']]){const item=items.find(x=>x.purpose===purpose);await data(await mutate(route,item.id));assert.equal((await listing()).length,items.length-1);items=items.filter(x=>x.id!==item.id);}
+ assert.equal((await corrected(processedId)).status,409);
  assert.equal((await listing()).length,0);assert.notEqual(publicState().photo_url,old.photo_url);assert.notEqual(publicState().logo_url,old.logo_url);
  assert.equal((await fetch(base+old.logo_url)).status,200,'historical logo');
  assert.equal(sql(`echo $p->query("SELECT COUNT(*) FROM media_assets WHERE owner_id='${doctor}' AND purpose='DOCTOR_GALLERY' AND status='READY'")->fetchColumn();`),'2');
@@ -118,7 +150,7 @@ try {
  const publicPage=await fetch(base+'/profiles/doctor.php?doctor_id='+doctor);assert.equal(publicPage.status,200);assert.ok((await publicPage.text()).includes(publicState().photo_url));
  console.log('MR12A_HTTP_E2E=PASS: mixed batch; public preserved; photo/logo/gallery publication; historical logo; NEEDS_WORK new batch; owner previews and authorization/CSRF negatives');
  const browserImage=root+'/synthetic.png';await writeFile(browserImage,png);
- await ownerBrowser({base,image:browserImage});
+ await ownerBrowser({base,image:browserImage,correctedImage:correctedPath,canonicalState});await rm(correctedPath);
  if(!keep)for(const name of ['ProfilePhotoApprovalTest','MediaReviewInterventionTest','PhysicianLogoApprovalTest','PhysicianLogoReviewTest','GalleryReviewTest','MediaReplacementTest','MediaReplacementAtomicTest','LogoImprovementTest','LogoImprovementAtomicTest','LogoImprovementReviewInputTest','MediaReviewInterventionPolicyTest','GalleryReviewPolicyTest','ReviewBatchTest','ReviewBatchAtomicTest','EmptyReviewBatchTest']){exec('docker',['exec','-i',names[0],'mysql','-uroot'],{input:'DROP DATABASE mxmed;'});exec('php',['scripts/packaging/setup-test-db.php']);exec('php',['-d','memory_limit=512M','modules/media/tests/'+name+'.php']);console.log(name+'=PASS');}
  if(keep){console.log('Synthetic UI: '+base+'/qa-login.php?as=owner');console.log('Synthetic public profile: '+base+'/profiles/doctor.php?doctor_id='+doctor);console.log('Synthetic reviewer: '+base+'/qa-login.php?as=reviewer');console.log('Press Ctrl-C to remove this disposable environment.');await new Promise(resolve=>process.once('SIGINT',resolve));}
 } finally {await cleanup();}

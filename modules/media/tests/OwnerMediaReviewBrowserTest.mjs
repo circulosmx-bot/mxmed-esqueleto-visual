@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
-export async function ownerBrowser({base,image}) {
+export async function ownerBrowser({base,image,correctedImage,canonicalState}) {
  const profile=await mkdtemp('/tmp/mxmed-mr12a-browser-');
- const chrome=spawn(process.env.MXMED_QA_CHROME||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',['--headless=new','--no-first-run','--no-default-browser-check','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+profile],{stdio:'ignore'});
+ const chrome=spawn(process.env.MXMED_QA_CHROME||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',[...(process.env.MXMED_QA_VISIBLE_BROWSER==='1'?[]:['--headless=new']),'--no-first-run','--no-default-browser-check','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+profile],{stdio:'ignore'});
  let ws;
  try{
   let version;for(let i=0;i<100;i++){try{const port=(await readFile(profile+'/DevToolsActivePort','utf8')).split('\n')[0];version=await(await fetch('http://127.0.0.1:'+port+'/json/version')).json();break;}catch{await new Promise(r=>setTimeout(r,100));}}
@@ -51,7 +51,28 @@ export async function ownerBrowser({base,image}) {
   await evaluate('document.getElementById("download-batch-originals").click()');
   await until('document.getElementById("batch-download-message").textContent==="Originales listos para descargar."');
   await evaluate('document.querySelector("#pending-cards .card button").click()');await until('!document.getElementById("approve-photo").hidden && !document.getElementById("approve-photo").disabled');
+  await until('!document.getElementById("choose-corrected").hidden && !document.getElementById("download-source").hidden');
+  const beforeCorrected=canonicalState();
+  await evaluate('document.getElementById("download-source").click()');await until('document.getElementById("intervention-message").textContent==="Original listo para descargar."');
+  const previousPreview=await evaluate('document.getElementById("detail-image").src');
+  await send('Page.setInterceptFileChooserDialog',{enabled:true});
+  await evaluate('document.getElementById("choose-corrected").click()');
+  const fileInput=(await send('Runtime.evaluate',{expression:'document.getElementById("corrected-file")'})).result.objectId;
+  await send('DOM.setFileInputFiles',{objectId:fileInput,files:[correctedImage]});
+  await until('document.getElementById("corrected-filename").textContent.length>0 && !document.getElementById("submit-corrected").hidden');
+  await evaluate('document.getElementById("submit-corrected").click()');
+  await until('document.getElementById("intervention-message").textContent==="Versión corregida lista para revisión." && document.getElementById("detail-image").naturalWidth===320 && !document.getElementById("approve-photo").disabled');
+  assert.notEqual(await evaluate('document.getElementById("detail-image").src'),previousPreview);
+  const afterCorrected=canonicalState();assert.deepEqual(afterCorrected.public,beforeCorrected.public);assert.deepEqual(afterCorrected.assets,beforeCorrected.assets);assert.deepEqual(afterCorrected.submissions,beforeCorrected.submissions);
+  assert.deepEqual(afterCorrected.files.filter(f=>f.role==='SOURCE'),beforeCorrected.files.filter(f=>f.role==='SOURCE'));
+  const newCorrected=afterCorrected.files.filter(f=>f.role==='CORRECTED'&&!beforeCorrected.files.some(old=>old.file_id===f.file_id));assert.equal(newCorrected.length,1);
+  assert.equal(afterCorrected.submissions.find(s=>s.submission_id===newCorrected[0].submission_id).review_status,'PENDING_REVIEW');
+  const expectedReview=afterCorrected.files.find(f=>f.submission_id===newCorrected[0].submission_id&&f.role==='REVIEW');
+  const previewProof=await evaluate('(async()=>{const r=await fetch("/api/internal/media-review/review-image.php?submission_id="+'+JSON.stringify(expectedReview.submission_id)+');const b=await r.arrayBuffer();const hash=async b=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",b))].map(x=>x.toString(16).padStart(2,"0")).join("");const expected=await createImageBitmap(new Blob([b],{type:"image/webp"}));const pixels=async image=>{const c=document.createElement("canvas");c.width=320;c.height=240;const ctx=c.getContext("2d");ctx.drawImage(image,0,0);return hash(ctx.getImageData(0,0,320,240).data);};return {sha:await hash(b),visible:(await pixels(document.getElementById("detail-image")))===(await pixels(expected))}})()');assert.equal(previewProof.sha,expectedReview.checksum_sha256);assert.equal(previewProof.visible,true);
+  await evaluate('document.getElementById("download-source").click()');await until('document.getElementById("intervention-message").textContent==="Original listo para descargar."');
+  console.log('CORRECTED_BROWSER=PASS: both buttons; source download; file selection/name; save; updated REVIEW bytes visible; SOURCE unchanged; still pending; public unchanged before explicit approval');
   await evaluate('document.getElementById("approve-photo").click();document.getElementById("confirm-approval").click()');await until('!document.querySelector("dialog").open');
+  assert.ok(canonicalState().assets.some(a=>a.checksum_sha256===expectedReview.checksum_sha256),'explicit approval publishes REVIEW');
   assert.ok(requests.some(r=>r.method==='POST'&&/approve(?:-logo|-gallery)?\.php/.test(r.url)));
   await send('Page.navigate',{url:base+'/qa-login.php?as=owner'});
   await until('location.pathname==="/index.html" && Boolean(window.mxmedMediaReview)');

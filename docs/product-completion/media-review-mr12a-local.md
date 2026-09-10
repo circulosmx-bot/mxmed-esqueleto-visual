@@ -131,3 +131,28 @@ MR12A.2 agrega «Descargar originales del lote» al abrir un lote enviado. La
 descarga contiene SOURCE y manifiesto; no altera las decisiones de revisión.
 El [contrato de archivo histórico](media-review-mr12a2-original-archive.md) se
 prueba únicamente en almacenamiento local desechable; AWS permanece diferido.
+
+MR12A.3 corrige únicamente el permiso del revisor sintético:
+`media_review_corrected_upload` sustituye el nombre incorrecto
+`media_review_correct` del fixture. El backend, la sesión y la autorización
+productiva permanecen intactos. Se conserva el alcance existente de foto de perfil,
+logotipo personal y galería.
+
+Al abrir una solicitud pendiente, en «Intervención de diseño» aparecen «Descargar
+original» y «Subir versión corregida». Selecciona un JPG/PNG/WebP válido, comprueba
+el nombre y pulsa «Guardar versión corregida». La vista muestra el nuevo REVIEW;
+SOURCE permanece descargable y la solicitud sigue pendiente. Solo «Aprobar»
+publica el REVIEW; guardar la corrección no publica ni crea otra solicitud/lote.
+
+La regresión prueba esos pasos por la ruta normal `qa-login.php`, comprueba el
+SHA-256 del REVIEW mostrado y el estado canónico antes/después, y mantiene ZIP y
+archivo histórico. Las negativas cubren usuario sin sesión, propietario, cliente,
+permiso revocado, revisor con solo descarga, CSRF inválido, IDs inexistentes y
+solicitudes ya procesadas. Para ejecutar el navegador visible durante QA:
+
+```sh
+MXMED_QA_VISIBLE_BROWSER=1 node modules/media/tests/OwnerMediaReviewHttpTest.mjs --keep
+```
+
+Al finalizar, el entorno queda disponible en las rutas impresas. No se necesitan
+cambios de permisos reales ni intervención en AWS.
