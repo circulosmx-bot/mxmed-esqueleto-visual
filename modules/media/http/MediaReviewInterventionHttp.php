@@ -10,7 +10,7 @@ use Platform\Contracts\RiskLevel;
 
 final class MediaReviewInterventionHttp
 {
-    public static function run(bool $download):void
+    public static function run(bool $download,bool $batch=false):void
     {
         header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');header('Cross-Origin-Resource-Policy: same-origin');
         try {
@@ -21,8 +21,9 @@ final class MediaReviewInterventionHttp
             if($session===null || $context===null || $context->context()->accountId()!==$session->accountId() || !$context->context()->capabilities()->contains($cap))throw new \RuntimeException('intervention_denied');
             $method=$download?'GET':'POST';if(($_SERVER['REQUEST_METHOD']??'')!==$method){header('Allow: '.$method);self::error(405,'method_not_allowed');return;}
             if($download){
-                if(array_keys($_GET)!==['submission_id'] || !is_string($_GET['submission_id']))throw new \RuntimeException('intervention_invalid_request');
-                $id=$_GET['submission_id'];
+                $parameter=$batch?'batch_id':'submission_id';
+                if(array_keys($_GET)!==[$parameter] || !is_string($_GET[$parameter]) || $_POST || $_FILES)throw new \RuntimeException('intervention_invalid_request');
+                $id=$_GET[$parameter];
             }else{
                 if($_GET!==[] || array_diff(array_keys($_POST),['submission_id','csrf'])!==[] || !is_string($_POST['submission_id']??null))throw new \RuntimeException('intervention_invalid_request');
                 if(!is_string($_POST['csrf']??null) || !$identity->csrf()->validAuthenticated($_POST['csrf'],$session->session()->tokenDigest()))throw new \RuntimeException('intervention_denied');
@@ -32,11 +33,16 @@ final class MediaReviewInterventionHttp
             require_once __DIR__.'/../../../api/_lib/db.php';require_once __DIR__.'/../private-bootstrap.php';
             $service=new MediaReviewInterventionService(\mxmed_pdo(),\mxmed_private_media_storage());
             if($download){
+                if($batch){
+                    $file=$service->downloadBatch($context,$id);$zip=$file['zip'];
+                    register_shutdown_function(static fn()=>$zip->remove());
+                    try{header('Content-Type: application/zip');header('Content-Disposition: attachment; filename="'.$file['filename'].'"');header('Content-Length: '.filesize($zip->path()));readfile($zip->path());}finally{$zip->remove();}return;
+                }
                 $file=$service->download($context,$id);
                 header('Content-Type: '.$file['mime']);header('Content-Disposition: attachment; filename="'.$file['filename'].'"');header('Content-Length: '.strlen($file['bytes']));echo $file['bytes'];
             }else{header('Content-Type: application/json; charset=UTF-8');echo json_encode($service->corrected($context,$id,$_FILES['corrected']),JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);}
         }catch(\Throwable $e){
-            $status=match($e->getMessage()){'intervention_denied'=>403,'intervention_invalid_request','intervention_invalid_upload'=>400,'intervention_not_found'=>404,'intervention_conflict'=>409,default=>str_starts_with($e->getMessage(),'logo_upload_')?400:503};
+            $status=match($e->getMessage()){'intervention_denied','review_access_denied'=>403,'intervention_invalid_request','intervention_invalid_upload'=>400,'intervention_not_found'=>404,'intervention_conflict'=>409,default=>str_starts_with($e->getMessage(),'logo_upload_')?400:503};
             if($status===503)error_log('media_intervention_unavailable');
             self::error($status,match($status){403=>'forbidden',400=>'invalid_request',404=>'not_found',409=>'already_processed_or_ineligible',default=>'unavailable'});
         }

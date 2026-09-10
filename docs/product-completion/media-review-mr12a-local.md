@@ -126,3 +126,8 @@ Q1/Q2, la clínica, el bootstrap global, AWS y los costes permanecen sin cambios
 El conteo 8 de galería del Director es el baseline comunicado; la prueba no
 consulta su BD para volver a medirlo. MR11.5Q/Q3/Q4 y el despliegue físico siguen
 diferidos. MR12A termina en revisión manual del Director.
+
+MR12A.2 agrega «Descargar originales del lote» al abrir un lote enviado. La
+descarga contiene SOURCE y manifiesto; no altera las decisiones de revisión.
+El [contrato de archivo histórico](media-review-mr12a2-original-archive.md) se
+prueba únicamente en almacenamiento local desechable; AWS permanece diferido.

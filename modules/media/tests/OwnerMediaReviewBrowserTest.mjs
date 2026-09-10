@@ -47,6 +47,9 @@ export async function ownerBrowser({base,image}) {
   assert.equal(await evaluate('document.cookie.includes("mxmed_mr12a_qa")'),false,'QA cookie is HttpOnly');
   assert.equal(await evaluate('(async()=>{const r=await fetch("/api/media/owner-review.php");return r.status})()'),401,'reviewer not owner');
   await evaluate('document.querySelector("#batch-cards button").click()');await until('document.querySelectorAll("#pending-cards .card").length===3');
+  await until('!document.getElementById("download-batch-originals").hidden');
+  await evaluate('document.getElementById("download-batch-originals").click()');
+  await until('document.getElementById("batch-download-message").textContent==="Originales listos para descargar."');
   await evaluate('document.querySelector("#pending-cards .card button").click()');await until('!document.getElementById("approve-photo").hidden && !document.getElementById("approve-photo").disabled');
   await evaluate('document.getElementById("approve-photo").click();document.getElementById("confirm-approval").click()');await until('!document.querySelector("dialog").open');
   assert.ok(requests.some(r=>r.method==='POST'&&/approve(?:-logo|-gallery)?\.php/.test(r.url)));

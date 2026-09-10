@@ -85,6 +85,7 @@
  });
  function interventionControls(){
   bulkControls();
+  byId('download-batch-originals').hidden=!activeBatch||!canDownload;
   byId('request-replacement').hidden=!canReplace;
   byId('logo-improvement').hidden=!canImprove||selected?.purpose!=='PHYSICIAN_PERSONAL_LOGO';
   byId('design-intervention').hidden=!canDownload&&!canCorrect;byId('download-source').hidden=!canDownload;byId('choose-corrected').hidden=!canCorrect;
@@ -229,16 +230,28 @@
    if(!response.ok)throw new Error('unavailable');const result=await response.json();if(!result.ok)throw new Error('unavailable');
    if(epoch!==batchLoadEpoch)return;for(const batch of result.data.items){
     const card=node('article','card batch-card'),body=node('div','card-body'),button=node('button','', 'Abrir lote');button.type='button';button.dataset.batchId=batch.batch_id;
-    button.addEventListener('click',async()=>{if(busy)return;activeBatch=batch.batch_id;offset=0;byId('batch-queue').hidden=true;byId('close-batch').hidden=false;byId('batch-summary').hidden=false;await load();byId('pending-title').focus();});
+    button.addEventListener('click',async()=>{if(busy)return;activeBatch=batch.batch_id;offset=0;interventionControls();byId('batch-download-message').textContent='';byId('batch-queue').hidden=true;byId('close-batch').hidden=false;byId('batch-summary').hidden=false;await load();byId('pending-title').focus();});
     body.append(node('h3','',batch.owner_display_name),node('p','',batchSummary(batch)),node('p','received','Enviado: '+dateLabel(batch.submitted_at)),button);card.append(body);container.append(card);
    }
    byId('batch-message').textContent=result.data.items.length?'':'No hay lotes pendientes de revisión.';batchNext=result.data.pagination.next_offset;
    byId('batch-pagination').hidden=batchOffset===0&&!result.data.pagination.has_more;byId('previous-batches').disabled=batchOffset===0;byId('next-batches').disabled=!result.data.pagination.has_more;byId('batch-page').textContent='Página '+(Math.floor(batchOffset/25)+1);
   }catch{if(epoch===batchLoadEpoch)byId('batch-message').textContent='No fue posible cargar los lotes.';}
  }
+ byId('download-batch-originals').addEventListener('click',async()=>{
+  if(!activeBatch||!canDownload||busy)return;const button=byId('download-batch-originals'),batch=activeBatch;button.disabled=true;
+  byId('batch-download-message').textContent='Preparando originales…';
+  try{
+   const response=await fetch('/api/internal/media-review/batch-source-download.php?batch_id='+encodeURIComponent(batch),{credentials:'same-origin',cache:'no-store'});
+   if(!response.ok)throw new Error('unavailable');
+   const filename=/filename="([A-Za-z0-9_.-]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1];if(!filename)throw new Error('unavailable');
+   const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+   if(activeBatch===batch)byId('batch-download-message').textContent='Originales listos para descargar.';
+  }catch{if(activeBatch===batch)byId('batch-download-message').textContent='No fue posible descargar los originales del lote.';}
+  finally{button.disabled=false;}
+ });
  byId('previous-batches').addEventListener('click',()=>{if(busy)return;batchOffset=Math.max(0,batchOffset-25);loadBatches();});
  byId('next-batches').addEventListener('click',()=>{if(busy||batchNext===null)return;batchOffset=batchNext;loadBatches();});
- byId('close-batch').addEventListener('click',async()=>{if(busy)return;const previous=activeBatch;activeBatch=null;offset=0;byId('batch-queue').hidden=false;byId('close-batch').hidden=true;byId('batch-summary').hidden=true;byId('pending-title').textContent='Solicitudes individuales';await load();const button=[...byId('batch-cards').querySelectorAll('button')].find(b=>b.dataset.batchId===previous);(button||byId('pending-title')).focus();});
+ byId('close-batch').addEventListener('click',async()=>{if(busy)return;const previous=activeBatch;activeBatch=null;offset=0;interventionControls();byId('batch-download-message').textContent='';byId('batch-queue').hidden=false;byId('close-batch').hidden=true;byId('batch-summary').hidden=true;byId('pending-title').textContent='Solicitudes individuales';await load();const button=[...byId('batch-cards').querySelectorAll('button')].find(b=>b.dataset.batchId===previous);(button||byId('pending-title')).focus();});
 
  approvalOptions().then(options=>{canApprove=options.ok&&options.can_approve===true;canDownload=options.ok&&options.can_download_source===true;canCorrect=options.ok&&options.can_upload_corrected===true;canImprove=options.ok&&options.can_improve===true;canReplace=options.ok&&options.can_request_replacement===true;interventionControls();if(dialog.open){byId('approve-photo').hidden=!canApprove;if(canImprove&&selected?.purpose==='PHYSICIAN_PERSONAL_LOGO')loadProposal(selected,false).catch(()=>{});}}).catch(()=>{canApprove=false;canDownload=false;canCorrect=false;interventionControls();});
  window.addEventListener('pagehide',event=>{if(event.persisted)return;for(const url of reviewObjectUrls.values())URL.revokeObjectURL(url);reviewObjectUrls.clear();});

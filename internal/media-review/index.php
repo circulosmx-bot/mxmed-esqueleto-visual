@@ -32,6 +32,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {http_response_code(405);heade
 <section aria-labelledby="pending-title">
 <button id="close-batch" type="button" hidden>Volver a pendientes</button>
 <p id="batch-summary" hidden></p>
+<button id="download-batch-originals" type="button" hidden>Descargar originales del lote</button>
+<p id="batch-download-message" role="status"></p>
 <div class="section-heading"><h2 id="pending-title" tabindex="-1">Solicitudes individuales</h2><span id="page-count" aria-live="polite"></span></div>
 <p id="inbox-message" role="status">Cargando medios pendientes…</p>
 <section id="gallery-bulk" hidden aria-label="Aprobación de fotos de galería">

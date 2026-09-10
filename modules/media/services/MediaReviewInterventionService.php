@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace Media\Services;
 require_once __DIR__.'/MediaReviewAudit.php';
+require_once __DIR__.'/BatchOriginals.php';
+require_once __DIR__.'/TemporaryOriginalsZip.php';
 require_once __DIR__.'/GdPublicLogoProcessor.php';
 require_once __DIR__.'/LosslessLogoInput.php';
 require_once __DIR__.'/../contracts/PrivateMediaStoragePort.php';
@@ -39,6 +41,30 @@ final class MediaReviewInterventionService
                 return ['submission_id'=>$id,'physician_id'=>(string)$candidate['owner_id']];
             });
         return $result;
+    }
+    /** Every SOURCE is audited using the existing authority before any ZIP bytes are sent. */
+    public function downloadBatch(?TrustedAuthorizationContext $context,string $id):array
+    {
+        if($context===null||$context->trustSource()!=='canonical_internal_operator'||!$context->context()->capabilities()->contains(self::DOWNLOAD)||!$context->context()->capabilities()->contains('media_review_read'))throw new RuntimeException('intervention_denied');
+        $data=BatchOriginals::load($this->pdo,$id);$zip=new TemporaryOriginalsZip();$manifest=[];$total=0;
+        try {
+            foreach($data['items'] as $i=>$item){
+                $this->transaction($context,self::DOWNLOAD,'MEDIA_REVIEW_SOURCE_DOWNLOADED','GET /api/internal/media-review/batch-source-download.php',function()use($item,$data,$i,$zip,&$manifest,&$total):array{
+                    $bytes=$this->sourceBytes($item,$item['source']);$total+=strlen($bytes);
+                    if($total>209715200)throw new RuntimeException('intervention_conflict');
+                    $entry=BatchOriginals::entry($data['batch'],$item,$i+1);$zip->add($entry['archive_filename'],$bytes);$manifest[]=$entry;
+                    return ['submission_id'=>$item['submission_id'],'physician_id'=>$item['owner_id']];
+                });
+            }
+            $zip->add('manifest.json',json_encode(['archive_schema_version'=>1,'sources'=>$manifest],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));$zip->finish();
+            return ['zip'=>$zip,'filename'=>'MXMED_Originales_'.substr(hash('sha256',$data['batch']['owner_id']),0,12).'_'.substr($data['batch']['submitted_at'],0,10).'_'.substr($id,0,8).'.zip'];
+        }catch(\Throwable $e){$zip->remove();throw $e;}
+    }
+    /** Internal verified read shared by download and archive; no public route or authority bypass. */
+    public function sourceBytes(array $candidate,array $source):string
+    {
+        if($source['role']!=='SOURCE'||$source['submission_id']!==$candidate['submission_id'])throw new RuntimeException('intervention_integrity_failed');
+        $this->validateFile($candidate,$source);return $this->verified($source);
     }
     public function corrected(?TrustedAuthorizationContext $context,string $id,array $upload): array
     {

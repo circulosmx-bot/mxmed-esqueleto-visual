@@ -19,6 +19,7 @@ try {
  exec('php',['scripts/packaging/setup-test-db.php']);
  identity=JSON.parse(exec('php',['modules/identity/tests/InternalOperatorFixture.php','setup']));
  php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');foreach(['media_review_approve','media_review_request_replacement','media_review_correct','media_review_source_download'] as $cap)$p->prepare("INSERT INTO internal_operator_grants(grant_id,account_id,capability,status) VALUES(UUID(),'mr3_good',?,'ACTIVE')")->execute([$cap]);`);
+ console.log(exec('php',['modules/media/tests/OriginalArchiveTest.php']));
  const paths=JSON.parse(await readFile('scripts/packaging/runtime-files.json','utf8'));
  for(const path of new Set([...paths,'api/media/owner-review.php','assets/js/owner-media-review.js'])){await mkdir(root+'/'+path.split('/').slice(0,-1).join('/'),{recursive:true});await copyFile(path,root+'/'+path);}
  await writeFile(root+'/api/mxmed-db.config.php',"<?php return ['mysql'=>['host'=>'127.0.0.1','port'=>3309,'dbname'=>'mxmed','user'=>'root','pass'=>'','charset'=>'utf8mb4','collation'=>'utf8mb4_unicode_ci']];");
@@ -82,6 +83,18 @@ try {
  assert.equal((await owner('review-batch-submit.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:'forged'})})).status,403);
  await submit();assert.ok((await listing()).every(x=>x.state==='SUBMITTED'));
  const inbox=await data(await review('batches.php'));assert.equal(inbox.data.items.filter(x=>x.owner_id===doctor).length,1);
+ const batchId=inbox.data.items.find(x=>x.owner_id===doctor).batch_id;
+ const zipRoute='batch-source-download.php?batch_id='+batchId;
+ assert.equal((await fetch(base+'/api/internal/media-review/'+zipRoute)).status,403);
+ assert.equal((await fetch(base+'/api/internal/media-review/'+zipRoute,{headers:{Cookie:'PHPSESSID='+session}})).status,403);
+ assert.equal((await review(zipRoute,{},identity.tokens.customer)).status,403);
+ php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');$p->exec("UPDATE internal_operator_grants SET status='REVOKED',revoked_at=CURRENT_TIMESTAMP WHERE account_id='mr3_good' AND capability='media_review_source_download'");`);
+ assert.equal((await review(zipRoute)).status,403);
+ php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');$p->exec("UPDATE internal_operator_grants SET status='ACTIVE',revoked_at=NULL WHERE account_id='mr3_good' AND capability='media_review_source_download'");`);
+ assert.equal((await review('batch-source-download.php?batch_id=00000000-0000-4000-8000-000000000000')).status,404);
+ assert.equal((await review(zipRoute+'&owner_id=foreign')).status,400);
+ const zipResponse=await review(zipRoute);assert.equal(zipResponse.status,200);assert.equal(zipResponse.headers.get('content-type'),'application/zip');assert.match(zipResponse.headers.get('content-disposition'),/MXMED_Originales_[a-f0-9]+_[0-9-]+_[a-f0-9]+\.zip/);assert.equal(Buffer.from(await zipResponse.arrayBuffer()).subarray(0,2).toString(),'PK');
+ console.log('BATCH_SOURCE_ZIP_HTTP=PASS: authenticated attachment; owner/unauthenticated/customer/missing capability denied; foreign/extra authority denied');
  for(const [purpose,route] of [['DOCTOR_PROFILE_PHOTO','approve.php'],['PHYSICIAN_PERSONAL_LOGO','approve-logo.php'],['DOCTOR_GALLERY','approve-gallery.php']]){const item=items.find(x=>x.purpose===purpose);await data(await mutate(route,item.id));assert.equal((await listing()).length,items.length-1);items=items.filter(x=>x.id!==item.id);}
  assert.equal((await listing()).length,0);assert.notEqual(publicState().photo_url,old.photo_url);assert.notEqual(publicState().logo_url,old.logo_url);
  assert.equal((await fetch(base+old.logo_url)).status,200,'historical logo');
