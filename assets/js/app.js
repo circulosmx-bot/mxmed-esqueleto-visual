@@ -2595,12 +2595,8 @@ console.info('app.js loaded :: 20251123a');
     setExpanded(false);
   });
 
-  sidebar.addEventListener('click', (event)=>{
-    if(!isDesktop() || expanded) return;
-    const navTarget = event.target.closest('.menu-main, .menu-sub-btn');
-    if(!navTarget) return;
-    setExpanded(true);
-  });
+  // SB01: destination clicks preserve the user's compact preference.
+  // Child navigation is presented by navigation.js in the existing submenu.
 
   document.addEventListener('keydown', (event)=>{
     if(!isDesktop() || !expanded) return;

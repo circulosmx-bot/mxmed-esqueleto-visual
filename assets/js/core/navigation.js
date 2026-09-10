@@ -3,6 +3,151 @@ const SIDEBAR_ACTIVE_PANEL_ALIASES = {
   'p-pac-archivo': 'p-expediente'
 };
 
+// SB01 presentation only: retain the original submenu nodes and click handlers.
+function sb01SidebarCollapsed(){
+  return matchMedia('(min-width:993px)').matches && document.body.classList.contains('mx-sidebar-collapsed');
+}
+function sb01CloseFlyout(restoreFocus = false){
+  const pane = document.querySelector('#mmSidebar .sb01-flyout-visible');
+  if(!pane) return;
+  const trigger = document.querySelector('#mmSidebar .menu-main[aria-controls="'+pane.id+'"]');
+  pane.classList.remove('sb01-flyout-visible');
+  trigger?.setAttribute('aria-expanded', 'false');
+  if(restoreFocus) trigger?.focus();
+}
+function sb01PositionFlyout(){
+  const pane = document.querySelector('#mmSidebar .sb01-flyout-visible');
+  if(!pane) return;
+  const trigger = document.querySelector('#mmSidebar .menu-main[aria-controls="'+pane.id+'"]');
+  if(!trigger) return;
+  const rect = trigger.getBoundingClientRect();
+  pane.style.setProperty('--sb01-flyout-left', (rect.right + 10)+'px');
+  pane.style.setProperty('--sb01-flyout-top', Math.max(8, Math.min(rect.top, innerHeight - pane.offsetHeight - 8))+'px');
+}
+function sb01ToggleFlyout(trigger){
+  const pane = trigger.nextElementSibling;
+  if(!pane?.matches('.menu-sub:not(.d-none)')) return;
+  const wasOpen = pane.classList.contains('sb01-flyout-visible');
+  sb01CloseFlyout();
+  if(wasOpen) return;
+  pane.classList.add('sb01-flyout-visible');
+  trigger.setAttribute('aria-expanded', 'true');
+  sb01PositionFlyout();
+}
+
+$(function(){
+  const sidebar = document.getElementById('mmSidebar');
+  if(!sidebar) return;
+  const tooltip = document.createElement('span');
+  tooltip.id = 'sb01-sidebar-tooltip';
+  tooltip.className = 'sb01-sidebar-tooltip';
+  tooltip.setAttribute('role', 'tooltip');
+  tooltip.hidden = true;
+  sidebar.append(tooltip);
+  let tooltipOwner = null;
+  const hideTooltip = ()=>{
+    tooltip.hidden = true;
+    tooltipOwner?.removeAttribute('aria-describedby');
+    tooltipOwner = null;
+  };
+  sidebar.querySelectorAll(':scope > .menu-main:not(.d-none)').forEach((button, index)=>{
+    const label = button.querySelector('.ttl')?.textContent.trim();
+    button.setAttribute('aria-label', label || '');
+    const pane = button.nextElementSibling;
+    if(pane?.matches('.menu-sub:not(.d-none)')){
+      pane.id ||= 'sb01-submenu-'+index;
+      button.setAttribute('aria-controls', pane.id);
+      button.setAttribute('aria-expanded', 'false');
+      button.classList.add('sb01-has-children');
+      const heading = document.createElement('span');
+      heading.className = 'sb01-flyout-heading';
+      heading.textContent = label;
+      pane.prepend(heading);
+      pane.setAttribute('role', 'group');
+      pane.setAttribute('aria-label', label);
+    }
+    const showTooltip = ()=>{
+      hideTooltip();
+      if(!sb01SidebarCollapsed() || pane?.classList.contains('sb01-flyout-visible')) return;
+      // Replace mouse-only native titles with the same label on hover and focus.
+      button.removeAttribute('title');
+      tooltipOwner = button;
+      tooltip.textContent = label;
+      button.setAttribute('aria-describedby', tooltip.id);
+      tooltip.hidden = false;
+      const rect = button.getBoundingClientRect();
+      tooltip.style.left = (rect.right + 10)+'px';
+      tooltip.style.top = Math.max(8, Math.min(rect.top, innerHeight-tooltip.offsetHeight-8))+'px';
+    };
+    button.addEventListener('mouseenter', showTooltip);
+    button.addEventListener('focus', showTooltip);
+    button.addEventListener('mouseleave', hideTooltip);
+    button.addEventListener('blur', hideTooltip);
+  });
+  const sync = ()=>{
+    const selected = document.querySelector('#viewport > section[id^="p-"]:not(.d-none)');
+    sidebar.querySelectorAll('[data-panel]').forEach(button=>{
+      const current = button.dataset.panel === selected?.id;
+      button.toggleAttribute('aria-current', current);
+      if(current) button.setAttribute('aria-current', 'page');
+      if(button.matches('.menu-sub-btn')) button.classList.toggle('active', current);
+    });
+    sidebar.querySelectorAll('.sb01-has-children').forEach(button=>{
+      const pane = button.nextElementSibling;
+      button.classList.toggle('sb01-current-group', !!pane.querySelector('[aria-current="page"]'));
+      button.setAttribute('aria-expanded', String(sb01SidebarCollapsed() ? pane.classList.contains('sb01-flyout-visible') : pane.classList.contains('open')));
+    });
+  };
+  sidebar.addEventListener('click', event=>{
+    hideTooltip();
+    if(event.target.closest('.menu-sub-btn')) sb01CloseFlyout(true);
+    else if(event.target.closest('.menu-main[data-panel]')) sb01CloseFlyout();
+    sync();
+  });
+  document.addEventListener('click', event=>{
+    if(!sidebar.contains(event.target)){ sb01CloseFlyout(); hideTooltip(); }
+  });
+  document.addEventListener('keydown', event=>{
+    if(event.key === 'Escape'){ sb01CloseFlyout(true); hideTooltip(); }
+  });
+  sidebar.addEventListener('keydown', event=>{
+    const trigger = event.target.closest('.sb01-has-children');
+    if(trigger && sb01SidebarCollapsed() && ['ArrowDown','ArrowRight'].includes(event.key)){
+      event.preventDefault();
+      if(!trigger.nextElementSibling.classList.contains('sb01-flyout-visible')) sb01ToggleFlyout(trigger);
+      const pane = trigger.nextElementSibling;
+      (pane.querySelector('[aria-current="page"]') || pane.querySelector('.menu-sub-btn'))?.focus();
+    }else{
+      const pane = event.target.closest('.sb01-flyout-visible');
+      if(!pane || !['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
+      const buttons = [...pane.querySelectorAll('.menu-sub-btn')].filter(b=>!b.disabled && b.getClientRects().length);
+      const index = buttons.indexOf(document.activeElement);
+      const next = event.key==='Home' ? 0 : event.key==='End' ? buttons.length-1 : (index + (event.key==='ArrowDown' ? 1 : -1) + buttons.length)%buttons.length;
+      event.preventDefault(); buttons[next]?.focus();
+    }
+  });
+  // Wait for the browser's next focus target (blur precedes focus on pointerdown).
+  sidebar.addEventListener('focusout', ()=>setTimeout(()=>{
+    const pane = sidebar.querySelector('.sb01-flyout-visible');
+    if(pane && !pane.contains(document.activeElement) && document.activeElement!==pane.previousElementSibling) sb01CloseFlyout();
+  }));
+  window.addEventListener('mxmed:workspace-mode', ()=>{
+    sb01CloseFlyout(!!document.activeElement?.closest('.sb01-flyout-visible'));
+    sync();
+  });
+  window.addEventListener('mxmed:sidebar-toggled', ()=>{
+    sb01CloseFlyout(); hideTooltip();
+    if(!sb01SidebarCollapsed() && matchMedia('(min-width:993px)').matches){
+      const pane = sidebar.querySelector('.menu-sub-btn[aria-current="page"]')?.closest('.menu-sub:not(.d-none)');
+      if(pane && !pane.classList.contains('open')) openGroup(pane.dataset.group);
+    }
+    sync();
+  });
+  window.addEventListener('resize', ()=>{ sb01CloseFlyout(); hideTooltip(); sync(); });
+  window.addEventListener('scroll', ()=>{ sb01PositionFlyout(); hideTooltip(); }, true);
+  sync();
+});
+
 function resolveSidebarActivePanel(panelId){
   const safePanelId = String(panelId || '').trim();
   return SIDEBAR_ACTIVE_PANEL_ALIASES[safePanelId] || safePanelId;
@@ -85,6 +230,10 @@ $('.menu-main').on('click', function(){
     localStorage.setItem('mxmed_last_panel', panel);
     localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
   }else if(grp){ // con submenú (acordeón)
+    if(sb01SidebarCollapsed()){
+      sb01ToggleFlyout(this);
+      return;
+    }
     const $pane = $('.menu-sub[data-group="'+grp+'"]');
     if($pane.hasClass('open')){
       $pane.removeClass('open').slideUp(100);
