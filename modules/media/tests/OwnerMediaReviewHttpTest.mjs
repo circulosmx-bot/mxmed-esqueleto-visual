@@ -1,8 +1,9 @@
+import {installOwnerReviewQaLogin} from './OwnerMediaReviewQaLogin.mjs';
 import {ownerBrowser} from './OwnerMediaReviewBrowserTest.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync,spawn} from 'node:child_process';
 import {mkdtemp,mkdir,copyFile,writeFile,readFile,rm,realpath} from 'node:fs/promises';
-import {randomBytes} from 'node:crypto';
+import {randomBytes,createHash} from 'node:crypto';
 const keep=process.argv.includes('--keep'), suffix=randomBytes(5).toString('hex');
 const root=await mkdtemp('/tmp/mxmed-mr12a-'),fixtureRoot=await realpath(await mkdtemp('/tmp/mxmed-mr5-mr12a-'));
 const names=['mxmed-mr12a-db-'+suffix,'mxmed-mr12a-session-'+suffix];let server,identity,created=[];
@@ -31,8 +32,8 @@ try {
  const publicState=()=>JSON.parse(sql(`echo json_encode($p->query("SELECT photo_url,logo_url FROM profiles_doctors WHERE doctor_id='${doctor}'")->fetch());`));
  // Establish three approved public assets through the accepted services, synthetic only.
  sql(`$d='${doctor}';foreach(['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'] as $purpose){$f=mr11Candidate($d,$purpose);(new Media\\Services\\MediaReviewBatchService($p))->submit($d);[$private,$public]=mr5Storage();$class=match($purpose){'DOCTOR_PROFILE_PHOTO'=>Media\\Services\\ProfilePhotoApprovalService::class,'PHYSICIAN_PERSONAL_LOGO'=>Media\\Services\\PhysicianLogoApprovalService::class,default=>Media\\Services\\GalleryApprovalService::class};(new $class($p,$private,$public))->approve(mr5Context(),$f['id']);}`);
- await writeFile(root+'/qa-login.php',`<?php if(!in_array($_SERVER['REMOTE_ADDR'],['127.0.0.1','::1'],true)){http_response_code(404);exit;} if(($_GET['as']??'')==='reviewer'){setcookie('__Host-mxmed_session',${JSON.stringify(identity.tokens.good)},['path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);header('Location: /internal/media-review/');}else{setcookie('PHPSESSID',${JSON.stringify(session)},['path'=>'/','httponly'=>true,'samesite'=>'Lax']);header('Location: /index.html');}`);
- server=spawn('php',['-d','upload_max_filesize=10M','-d','post_max_size=12M','-S','127.0.0.1:8128','-t',root],{env:{...env,...identity.env,MXMED_PUBLIC_MEDIA_ROOT:fixtureRoot+'/public',MXMED_PRIVATE_MEDIA_ROOT:fixtureRoot+'/private',PHP_CLI_SERVER_WORKERS:'4',MXMED_PROFILES_API_BASE:base,MXMED_API_BASE:base},detached:true,stdio:['ignore','ignore','pipe']});
+ const qa=await installOwnerReviewQaLogin({root,fixtureRoot,doctor,identityDb:env.MR3_TEST_DB});
+ server=spawn('php',['-d','auto_prepend_file='+qa.prepend,'-d','upload_max_filesize=10M','-d','post_max_size=12M','-S','127.0.0.1:8128','-t',root],{env:{...env,...identity.env,...qa.environment,MXMED_PUBLIC_MEDIA_ROOT:fixtureRoot+'/public',MXMED_PRIVATE_MEDIA_ROOT:fixtureRoot+'/private',PHP_CLI_SERVER_WORKERS:'4',MXMED_PROFILES_API_BASE:base,MXMED_API_BASE:base},detached:true,stdio:['ignore','ignore','pipe']});
  let errors='';server.stderr.on('data',b=>errors+=b);
  for(let i=0;i<100;i++){try{await fetch(base+'/api/media/owner-review.php');break;}catch{await new Promise(r=>setTimeout(r,50));}}
  const owner=(route,init={},cookie=session)=>fetch(base+'/api/media/'+route,{...init,headers:{Cookie:'PHPSESSID='+cookie,...init.headers}});
@@ -42,6 +43,34 @@ try {
  const routes={photo:['profile-photo-review-candidate.php','X-Profile-Photo-Candidate-CSRF'],logo:['physician-logo-review-candidate.php','X-Physician-Logo-Candidate-CSRF'],gallery:['gallery-review-candidate.php','X-Gallery-Review-Candidate-CSRF']};
  const upload=async (key,cookie=session)=>{const [route,h]=routes[key],get=await data(await owner(route,{},cookie));const body=new FormData();body.append('image',new Blob([png],{type:'image/png'}),'synthetic.png');return owner(route,{method:'POST',headers:{[h]:get.data.csrf_token},body},cookie);};
  const submit=async()=>{const x=await data(await owner('review-batch-submit.php'));return data(await owner('review-batch-submit.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:x.data.csrf})}));};
+ // The documented manual login, including expiry recovery, is a separate auth path.
+ const manualLogin=async()=>{
+  const r=await fetch(base+'/qa-login.php?as=reviewer',{redirect:'manual'});
+  assert.equal(r.status,302);assert.equal(r.headers.get('location'),'/internal/media-review/');
+  const cookie=r.headers.getSetCookie().filter(c=>c.startsWith('mxmed_mr12a_qa=')&&!c.startsWith('mxmed_mr12a_qa=;')).at(-1);
+  assert.ok(cookie&&cookie.includes('HttpOnly')&&!/;\s*secure(?:;|$)/i.test(cookie));
+  assert.ok(r.headers.getSetCookie().some(c=>c.startsWith('__Host-mxmed_session=deleted;')&&/;\s*secure(?:;|$)/i.test(c)&&/max-age=0/i.test(c)));
+  assert.equal(await r.text(),'');return cookie.split(';')[0];
+ };
+ const manualRequest=cookie=>fetch(base+'/api/internal/media-review/batches.php',{headers:cookie?{Cookie:cookie}:{}});
+ assert.equal((await fetch(base+'/internal/media-review/')).status,403);
+ assert.equal((await fetch(base+'/internal/media-review/',{headers:{Cookie:'PHPSESSID='+session}})).status,403);
+ assert.equal((await manualRequest('mxmed_mr12a_qa='+ '0'.repeat(64))).status,403);
+ const qaCookie=await manualLogin();await data(await manualRequest(qaCookie));
+ assert.equal((await manualRequest(qaCookie+'; __Host-mxmed_session=invalid')).status,403,'canonical invalid prevents fallback');
+ const capChange=state=>php(`$p=new PDO('mysql:host=127.0.0.1;port=3309;dbname=${env.MR3_TEST_DB}','root','');$p->exec("UPDATE internal_operator_grants SET status='${state}',revoked_at=${state==='ACTIVE'?'NULL':'CURRENT_TIMESTAMP'} WHERE account_id='mr3_good' AND capability='media_review_read'");`);
+ capChange('REVOKED');assert.equal((await manualRequest(qaCookie)).status,403);
+ assert.equal((await manualRequest(await manualLogin())).status,403,'login never grants capabilities');capChange('ACTIVE');
+ const handle=qaCookie.split('=')[1],recordPath=fixtureRoot+'/qa-auth/'+createHash('sha256').update(handle).digest('hex')+'.json';
+ // Simulate an expired/revoked canonical session without changing TTL or printing a token.
+ exec('php',['-r',String.raw`require 'modules/identity/http/IdentityHttpComposition.php';Identity\Http\IdentityHttpComposition::registerAutoloader();$r=json_decode(file_get_contents('${recordPath}'),true);Identity\Http\IdentityHttpComposition::fromProcessEnvironment()->sessions()->logout($r['token']);`],{env:{...env,...identity.env}});
+ assert.equal((await manualRequest(qaCookie)).status,403);await data(await manualRequest(await manualLogin()));
+ assert.ok(!paths.some(p=>/qa-login|OwnerMediaReviewQaLogin|qa-auth/.test(p)));
+ assert.ok(!qa.prepend.startsWith(await realpath(root)+'/'));
+ await assert.rejects(readFile(root+'/qa-auth/prepend.php'),{code:'ENOENT'});
+ const unavailableShim=await(await fetch(base+'/qa-auth/prepend.php')).text();
+ assert.ok(!unavailableShim.includes('function mr12a_qa_allowed')&&!unavailableShim.includes('mr12a_qa_token_path'));
+ console.log('MR12A1_MANUAL_HTTP=PASS: normal redirect; HttpOnly local cookie; no token delivery; invalid/owner/unauthenticated denied; capability revocation effective; invalid canonical session denied and fresh login recovers; helper outside package');
  const opts=await data(await review('approval-options.php'));
  const mutate=(route,id,extra={})=>review(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({submission_id:id,csrf:opts.csrf,...extra})});
  const old=publicState();for(const key of Object.keys(routes))await data(await upload(key));
@@ -76,7 +105,7 @@ try {
  const publicPage=await fetch(base+'/profiles/doctor.php?doctor_id='+doctor);assert.equal(publicPage.status,200);assert.ok((await publicPage.text()).includes(publicState().photo_url));
  console.log('MR12A_HTTP_E2E=PASS: mixed batch; public preserved; photo/logo/gallery publication; historical logo; NEEDS_WORK new batch; owner previews and authorization/CSRF negatives');
  const browserImage=root+'/synthetic.png';await writeFile(browserImage,png);
- await ownerBrowser({base,image:browserImage,owner:session,reviewer:identity.tokens.good});
+ await ownerBrowser({base,image:browserImage});
  if(!keep)for(const name of ['ProfilePhotoApprovalTest','MediaReviewInterventionTest','PhysicianLogoApprovalTest','PhysicianLogoReviewTest','GalleryReviewTest','MediaReplacementTest','MediaReplacementAtomicTest','LogoImprovementTest','LogoImprovementAtomicTest','LogoImprovementReviewInputTest','MediaReviewInterventionPolicyTest','GalleryReviewPolicyTest','ReviewBatchTest','ReviewBatchAtomicTest','EmptyReviewBatchTest']){exec('docker',['exec','-i',names[0],'mysql','-uroot'],{input:'DROP DATABASE mxmed;'});exec('php',['scripts/packaging/setup-test-db.php']);exec('php',['-d','memory_limit=512M','modules/media/tests/'+name+'.php']);console.log(name+'=PASS');}
  if(keep){console.log('Synthetic UI: '+base+'/qa-login.php?as=owner');console.log('Synthetic public profile: '+base+'/profiles/doctor.php?doctor_id='+doctor);console.log('Synthetic reviewer: '+base+'/qa-login.php?as=reviewer');console.log('Press Ctrl-C to remove this disposable environment.');await new Promise(resolve=>process.once('SIGINT',resolve));}
 } finally {await cleanup();}
