@@ -7,7 +7,14 @@ const SIDEBAR_ACTIVE_PANEL_ALIASES = {
 function sb01SidebarCollapsed(){
   return matchMedia('(min-width:993px)').matches && document.body.classList.contains('mx-sidebar-collapsed');
 }
+const SB01_FLYOUT_LEAVE_DELAY_MS = 250;
+let sb01FlyoutCloseTimer;
+function sb01CancelFlyoutClose(){
+  clearTimeout(sb01FlyoutCloseTimer);
+  sb01FlyoutCloseTimer = undefined;
+}
 function sb01CloseFlyout(restoreFocus = false){
+  sb01CancelFlyoutClose();
   const pane = document.querySelector('#mmSidebar .sb01-flyout-visible');
   if(!pane) return;
   const trigger = document.querySelector('#mmSidebar .menu-main[aria-controls="'+pane.id+'"]');
@@ -107,14 +114,46 @@ $(function(){
   };
   sidebar.addEventListener('click', event=>{
     hideTooltip();
-    if(event.target.closest('.menu-sub-btn')) sb01CloseFlyout(true);
-    else if(event.target.closest('.menu-main[data-panel]')) sb01CloseFlyout();
+    if(event.target.closest('.menu-main[data-panel]')) sb01CloseFlyout();
     sync();
+  });
+  // The icon, flyout and their 10px bridge form one pointer interaction region.
+  // Mouse-click focus must not prevent pointer dismissal; keyboard focus must.
+  let keyboardInteraction = false;
+  const focusInRegion = pane=>pane.contains(document.activeElement) || document.activeElement===pane.previousElementSibling;
+  const scheduleClose = ()=>{
+    const pane = sidebar.querySelector('.sb01-flyout-visible');
+    if(!pane || !sb01SidebarCollapsed() || (keyboardInteraction && focusInRegion(pane)) || sb01FlyoutCloseTimer!==undefined) return;
+    sb01FlyoutCloseTimer = setTimeout(()=>{
+      sb01FlyoutCloseTimer = undefined;
+      if(pane.classList.contains('sb01-flyout-visible') && !(keyboardInteraction && focusInRegion(pane))) sb01CloseFlyout();
+    }, SB01_FLYOUT_LEAVE_DELAY_MS);
+  };
+  document.addEventListener('pointerdown', ()=>{ keyboardInteraction = false; sb01CancelFlyoutClose(); });
+  document.addEventListener('pointermove', event=>{
+    if(event.pointerType==='touch' || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+    const pane = sidebar.querySelector('.sb01-flyout-visible');
+    if(!pane || !sb01SidebarCollapsed()) return;
+    const icon = pane.previousElementSibling.getBoundingClientRect();
+    const flyout = pane.getBoundingClientRect();
+    const inside = rect=>event.clientX>=rect.left && event.clientX<=rect.right && event.clientY>=rect.top && event.clientY<=rect.bottom;
+    const bridge = {left:icon.right,right:flyout.left,top:Math.min(icon.top,flyout.top),bottom:Math.max(icon.bottom,flyout.bottom)};
+    if(inside(icon) || inside(flyout) || inside(bridge)) sb01CancelFlyoutClose();
+    else scheduleClose();
+  });
+  document.addEventListener('pointerout', event=>{
+    if(event.pointerType!=='touch' && !event.relatedTarget && matchMedia('(hover:hover) and (pointer:fine)').matches) scheduleClose();
+  });
+  sidebar.addEventListener('focusin', ()=>{
+    const pane = sidebar.querySelector('.sb01-flyout-visible');
+    if(pane && focusInRegion(pane)) sb01CancelFlyoutClose();
   });
   document.addEventListener('click', event=>{
     if(!sidebar.contains(event.target)){ sb01CloseFlyout(); hideTooltip(); }
   });
   document.addEventListener('keydown', event=>{
+    keyboardInteraction = true;
+    sb01CancelFlyoutClose();
     if(event.key === 'Escape'){ sb01CloseFlyout(true); hideTooltip(); }
   });
   sidebar.addEventListener('keydown', event=>{
@@ -139,8 +178,12 @@ $(function(){
     if(pane && !pane.contains(document.activeElement) && document.activeElement!==pane.previousElementSibling) sb01CloseFlyout();
   }));
   window.addEventListener('mxmed:workspace-mode', ()=>{
-    sb01CloseFlyout(!!document.activeElement?.closest('.sb01-flyout-visible'));
+    const pane = sidebar.querySelector('.sb01-flyout-visible');
+    const selected = document.querySelector('#viewport > section[id^="p-"]:not(.d-none)');
+    const sameGroup = pane && [...pane.querySelectorAll('[data-panel]')].some(button=>button.dataset.panel===selected?.id);
+    if(!sameGroup) sb01CloseFlyout(!!document.activeElement?.closest('.sb01-flyout-visible'));
     sync();
+    sb01PositionFlyout();
   });
   window.addEventListener('mxmed:sidebar-toggled', ()=>{
     sb01CloseFlyout(); hideTooltip();
@@ -237,10 +280,13 @@ $('.menu-main').on('click', function(){
     localStorage.setItem('mxmed_last_panel', panel);
     localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
   }else if(grp){ // con submenú (acordeón)
-    // Both primary groups use their existing first child and exclusive accordion.
+    // Keep the exclusive accordion and existing default when entering a group.
     if(grp === 'agenda' || grp === 'perfil'){
+      const currentPanel = document.querySelector('#viewport > section[id^="p-"]:not(.d-none)');
+      const currentChild = [...this.nextElementSibling.querySelectorAll('[data-panel]')].some(button=>button.dataset.panel===currentPanel?.id);
       openGroup(grp);
-      activateFirstSub(grp);
+      // Reopening the current collapsed group reveals its active child.
+      if(!sb01SidebarCollapsed() || !currentChild) activateFirstSub(grp);
       if(sb01SidebarCollapsed()) sb01ToggleFlyout(this);
       return;
     }
