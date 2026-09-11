@@ -20897,3 +20897,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media (min-width:993px){
   .mx-global-header .mx-gh-identity{ justify-content:flex-end; }
 }
+
+/* HB01.5: local session emphasis without changing the approved row height. */
+.mx-global-header .mx-hb-session-label{ font-size:.8625rem; }
+.mx-global-header .mx-hb-account-trigger .mx-hb-session-chevron{ font-size:28px; line-height:24px; height:24px; }
