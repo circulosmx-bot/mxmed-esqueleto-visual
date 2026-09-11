@@ -2592,6 +2592,8 @@ console.info('app.js loaded :: 20251123a');
   document.addEventListener('click', (event)=>{
     if(!isDesktop() || !expanded) return;
     if(sidebar.contains(event.target)) return;
+    // Home navigation preserves the current sidebar preference.
+    if(event.target.closest('.mx-gh-brand[data-panel="p-resumen"]')) return;
     setExpanded(false);
   });
 

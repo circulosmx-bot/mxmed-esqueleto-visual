@@ -57,7 +57,7 @@ $(function(){
     tooltipOwner?.removeAttribute('aria-describedby');
     tooltipOwner = null;
   };
-  sidebar.querySelectorAll(':scope > .menu-main:not(.d-none), .sb01-utility').forEach((button, index)=>{
+  sidebar.querySelectorAll(':scope > .menu-main:not(.d-none)').forEach((button, index)=>{
     const label = button.querySelector('.ttl')?.textContent.trim();
     button.setAttribute('aria-label', label || '');
     const pane = button.nextElementSibling;
@@ -343,10 +343,8 @@ $(document).on('click', '.dropdown-menu [data-profile-panel]', function(ev){
   }
   if(!allowed) return;
 
-  const profileDestination = ['p-info','p-consultorio','p-opiniones'].includes(panelId);
-  openGroup(profileDestination ? 'perfil' : '');
-  if(profileDestination) localStorage.setItem('mxmed_btn_perfil', panelId);
-  else localStorage.removeItem('mxmed_menu_group');
+  openGroup('perfil');
+  localStorage.setItem('mxmed_btn_perfil', panelId);
 
   const dropdownRoot = this.closest('.dropdown');
   const toggleEl = dropdownRoot ? dropdownRoot.querySelector('[data-bs-toggle="dropdown"]') : null;

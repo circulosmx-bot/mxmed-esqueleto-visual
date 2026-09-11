@@ -20677,25 +20677,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   box-shadow:0 4px 12px rgba(0,49,82,.18);
 }
 #mmSidebar .sb01-sidebar-tooltip[hidden]{display:none}
-/* Account actions reuse navigation handlers, with quieter lower-region styling. */
-#mmSidebar .sb01-account-utilities{
-  display:flex;flex-shrink:0;gap:4px;
-  margin-top:auto;border-top:1px solid rgba(255,255,255,.4);
-}
-#mmSidebar .menu-main.sb01-utility{
-  flex:1;min-width:0;height:32px;min-height:32px;padding:4px;background:transparent;
-  border-radius:6px;box-shadow:none;color:#fff;
-}
-#mmSidebar .menu-main.sb01-utility .ttl{font-size:.85rem;font-weight:500}
-#mmSidebar .menu-main.sb01-utility .txt{padding:0}
-#mmSidebar .menu-main.sb01-utility .ico{
-  position:static;transform:none;flex:0 0 22px;width:22px;height:22px;
-  margin-left:auto;font-size:22px;
-}
-#mmSidebar .menu-main.sb01-utility .ico > *{font-size:inherit}
-#mmSidebar .sb01-utility::before,#mmSidebar .sb01-utility::after{display:none}
-#mmSidebar .sb01-utility:is(:hover,:focus-visible,[aria-current="page"]){
-  background:#F2FBFC;color:#003152;
+/* Mi Perfil precedes the operational modules without changing their density. */
+#mmSidebar > .menu-main[data-group="agenda"]{margin-top:12px}
+#mmSidebar .menu-sub .sb01-profile-account-start{
+  margin-top:6px !important;border-top:1px solid rgba(255,255,255,.4);
 }
 #p-info .sb01-contextual-profile{
   margin-left:auto;white-space:nowrap;flex-shrink:0;
@@ -20703,11 +20688,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #p-info .sb01-contextual-profile::after{content:' ↗'}
 @media (max-width:992px){
-  #mmSidebar .menu-main.sb01-utility{height:44px;min-height:44px}
   #p-info .mx-panel-subheader{flex-wrap:wrap;gap:8px}
-}
-@media (min-width:993px){
-  body.mx-sidebar-collapsed #mmSidebar .sb01-account-utilities{flex-direction:column}
 }
 @media (min-width:993px){
   #mmSidebar{
