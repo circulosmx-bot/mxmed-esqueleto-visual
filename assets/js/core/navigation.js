@@ -38,6 +38,27 @@ function sb01ToggleFlyout(trigger){
 $(function(){
   const sidebar = document.getElementById('mmSidebar');
   if(!sidebar) return;
+  // SB01.2: the header remains the source of the public URL and new-tab contract.
+  const publicSource = document.querySelector('.mx-gh-user-menu-dropdown a[target="_blank"]');
+  const profileGroup = sidebar.querySelector('.menu-sub[data-group="perfil"]');
+  if(publicSource && profileGroup){
+    const link = publicSource.cloneNode(false);
+    link.className = 'menu-sub-btn sb01-public-profile';
+    const copy = document.createElement('span'); copy.className = 'block';
+    const label = document.createElement('span'); label.className = 'l1';
+    label.textContent = publicSource.querySelector('.mx-prof-dd-label').textContent;
+    copy.append(label);
+    const icon = publicSource.querySelector('.mx-prof-dd-icon').cloneNode(true);
+    icon.className = 'ico-right';
+    link.append(copy, icon); profileGroup.append(link);
+    const syncPublicLink = ()=>{
+      for(const name of ['href','target','rel']){
+        const value = publicSource.getAttribute(name);
+        if(value===null) link.removeAttribute(name); else link.setAttribute(name,value);
+      }
+    };
+    new MutationObserver(syncPublicLink).observe(publicSource,{attributes:true,attributeFilter:['href','target','rel']});
+  }
   const tooltip = document.createElement('span');
   tooltip.id = 'sb01-sidebar-tooltip';
   tooltip.className = 'sb01-sidebar-tooltip';
@@ -230,8 +251,8 @@ $('.menu-main').on('click', function(){
     localStorage.setItem('mxmed_last_panel', panel);
     localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
   }else if(grp){ // con submenú (acordeón)
-    // SB01.1: Agenda always opens its existing default child, even when open.
-    if(grp === 'agenda'){
+    // Both primary groups use their existing first child and exclusive accordion.
+    if(grp === 'agenda' || grp === 'perfil'){
       openGroup(grp);
       activateFirstSub(grp);
       if(sb01SidebarCollapsed()) sb01ToggleFlyout(this);
