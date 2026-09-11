@@ -230,6 +230,13 @@ $('.menu-main').on('click', function(){
     localStorage.setItem('mxmed_last_panel', panel);
     localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
   }else if(grp){ // con submenú (acordeón)
+    // SB01.1: Agenda always opens its existing default child, even when open.
+    if(grp === 'agenda'){
+      openGroup(grp);
+      activateFirstSub(grp);
+      if(sb01SidebarCollapsed()) sb01ToggleFlyout(this);
+      return;
+    }
     if(sb01SidebarCollapsed()){
       sb01ToggleFlyout(this);
       return;
