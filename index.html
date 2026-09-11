@@ -221,9 +221,17 @@
       </button>
       <div class="mx-gh-account-summary" aria-label="Resumen profesional y plan actual">
         <div class="mx-gh-identity" aria-label="Identidad profesional">
+          <span class="mx-gh-user-avatar" aria-hidden="true"><span class="mx-gh-user-avatar-mark"></span></span>
+          <div class="mx-gh-identity-copy">
+            <span class="mx-gh-identity-name">
+              <span class="mx-gh-identity-name-text"></span>
+              <span class="mx-gh-identity-badge" data-profile-verification-badge hidden aria-label="Perfil verificado">✓</span>
+            </span>
+            <div class="mx-gh-identity-meta">
+              <span class="mx-gh-identity-role"></span>
         <div class="mx-hb-account dropdown">
-          <button class="mx-hb-account-trigger" id="mxHeaderAccount" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de cuenta">
-            <span class="mx-gh-user-avatar" aria-hidden="true"><span class="mx-gh-user-avatar-mark"></span></span><span aria-hidden="true">▾</span>
+          <button class="mx-hb-account-trigger" id="mxHeaderAccount" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Opciones de sesión">
+            <span class="mx-hb-session-label">Sesión iniciada</span><span class="material-symbols-rounded mx-hb-session-chevron" aria-hidden="true">expand_more</span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end mx-hb-account-menu" aria-labelledby="mxHeaderAccount">
             <li><h2 class="dropdown-header">Cuenta</h2></li>
@@ -232,13 +240,6 @@
             <li><p class="mx-hb-account-status" role="status" hidden></p></li>
           </ul>
         </div>
-          <div class="mx-gh-identity-copy">
-            <span class="mx-gh-identity-name">
-              <span class="mx-gh-identity-name-text"></span>
-              <span class="mx-gh-identity-badge" data-profile-verification-badge hidden aria-label="Perfil verificado">✓</span>
-            </span>
-            <div class="mx-gh-identity-meta">
-              <span class="mx-gh-identity-role"></span>
             </div>
           </div>
         </div>

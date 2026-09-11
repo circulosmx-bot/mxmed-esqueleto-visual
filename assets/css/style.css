@@ -20866,3 +20866,19 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mx-global-header .mx-gh-identity-copy{ flex:1 1 auto; min-width:0; }
   .mx-global-header .mx-gh-identity .mx-hb-account-trigger{ min-width:28px; }
 }
+
+/* HB01.2: session action belongs to the secondary identity row. */
+.mx-global-header .mx-gh-identity-copy{ max-width:min(480px,46vw); }
+.mx-global-header .mx-gh-identity-meta{ gap:14px; }
+.mx-global-header .mx-gh-identity .mx-hb-account-trigger{ min-height:28px; padding:2px 4px; gap:3px; }
+.mx-global-header .mx-hb-session-label{ font-size:.75rem; font-weight:400; color:#536e7c; }
+.mx-global-header .mx-hb-account-trigger .mx-hb-session-chevron{ font-size:24px; font-variation-settings:'wght' 500; }
+.mx-global-header .mx-gh-user-avatar{ position:relative; overflow:hidden; }
+.mx-global-header .mx-hb-current-photo{ width:100%; height:100%; object-fit:cover; object-position:center; border-radius:50%; }
+.mx-global-header .mx-gh-user-avatar.has-current-photo .mx-gh-user-avatar-mark{ display:none; }
+@media (max-width:576px){
+  .mx-global-header .mx-gh-identity-copy{ max-width:100%; }
+  .mx-global-header .mx-gh-identity-meta{ gap:2px; }
+  .mx-global-header .mx-hb-session-label{ display:none; }
+  .mx-global-header .mx-gh-identity-role{ min-width:0; }
+}
