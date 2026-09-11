@@ -20767,16 +20767,19 @@ body{margin:0;background:var(--mm-fondo-base);}
     width:calc(100% - 12px);align-self:flex-end;margin:0 0 10px !important;
   }
   #mmSidebar .menu-sub-btn:not(.active){background:#2CBDCE;color:#fff}
-  /* Recovered from f5bf3d51725b1f378b3eef8ece3749157601dd6b:
-     .menu-main:not(.active):hover/:focus-visible and corresponding children
-     use #F2FBFC / #003152. The old --btn-bg pseudo-layer is replaced by the
-     SB01 direct background. Icons inherit the same ink. Active children retain
-     their 3px indicator; the original persistent open-parent behavior is kept
-     with SB01's approved #00738F rather than the old #3D647D. */
-  #mmSidebar .menu-main:hover,
-  #mmSidebar .menu-main:focus-visible,
-  #mmSidebar .menu-sub-btn:hover,
-  #mmSidebar .menu-sub-btn:focus-visible{background:#F2FBFC;color:#003152}
+  /* SB01.5: transient interaction lightens turquoise; white means selected. */
+  #mmSidebar .menu-main:not(.active):not([aria-current="page"]):not(.sb01-current-group):not([aria-expanded="true"]):is(:hover,:focus-visible){
+    background:linear-gradient(rgba(255,255,255,.12),rgba(255,255,255,.12)),var(--mm-fondo-base);
+    color:#fff;
+  }
+  #mmSidebar .menu-sub-btn:not(.active):is(:hover,:focus-visible){
+    background:linear-gradient(rgba(255,255,255,.12),rgba(255,255,255,.12)),#2CBDCE;
+    color:#fff;
+  }
+  #mmSidebar .menu-main[aria-current="page"]:is(:hover,:focus-visible),
+  #mmSidebar .menu-sub-btn.active:is(:hover,:focus-visible){
+    background:#F2FBFC;color:var(--mm-acc-contraido);
+  }
   #mmSidebar .menu-main.sb01-current-group:is(:hover,:focus-visible),
   #mmSidebar .menu-main[aria-expanded="true"]:is(:hover,:focus-visible){
     background:var(--mm-acc-activo);color:#fff;
