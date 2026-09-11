@@ -20816,3 +20816,41 @@ body{margin:0;background:var(--mm-fondo-base);}
     justify-content:flex-start;opacity:1;
   }
 }
+
+/* HB01: header identity and account; approved sidebar remains unchanged. */
+.mx-global-header .mx-gh-identity-name{ gap:8px; }
+.mx-global-header .mx-hb-account{ flex:0 0 auto; border-left:1px solid #dce7ec; padding-left:18px; }
+.mx-global-header .mx-hb-account-trigger{ display:flex; align-items:center; justify-content:center; gap:5px; min-width:48px; min-height:44px; padding:6px; border:0; border-radius:10px; background:transparent; color:#003152; }
+.mx-global-header .mx-hb-account-trigger .material-symbols-rounded{ font-size:28px; }
+.mx-global-header .mx-hb-account-trigger:hover{ background:#e6fafc; }
+.mx-global-header .mx-hb-account-trigger:focus-visible,
+.mx-global-header .mx-hb-account-menu .dropdown-item:focus-visible,
+.mx-global-header .mx-gh-brand:focus-visible{ outline:3px solid #005684; outline-offset:3px; }
+.mx-global-header .mx-hb-account-menu{ min-width:200px; padding:8px; border:1px solid #dce7ec; border-radius:12px; box-shadow:0 12px 28px #00315226; }
+.mx-global-header .mx-hb-account-menu .dropdown-header{ margin:0; font-size:.75rem; text-transform:uppercase; color:#536e7c; }
+.mx-global-header .mx-hb-account-menu .dropdown-item{ display:flex; align-items:center; gap:8px; min-height:44px; border-radius:6px; color:#003152; }
+.mx-global-header .mx-hb-account-menu .dropdown-item:hover,
+.mx-global-header .mx-hb-account-menu .dropdown-item:focus{ background:#e6fafc; }
+.mx-global-header .mx-hb-account-status{ max-width:220px; margin:8px; font-size:.85rem; color:#003152; }
+@media (min-width:993px){
+  :is(body, body:has(#p-suscripcion:not(.d-none))) .mx-global-header .wrap{ padding-inline:12px; }
+  :is(body, body:has(#p-suscripcion:not(.d-none))) .mx-global-header .mx-gh-left{ display:flex; gap:8px; }
+  :is(body, body:has(#p-suscripcion:not(.d-none))) .mx-global-header .mx-gh-toggle{ margin-inline-start:0; }
+  :is(body, body:has(#p-suscripcion:not(.d-none))) .mx-global-header .mx-gh-brand{ position:static; margin-inline-start:25px; transform:none; flex:0 0 auto; }
+  :is(body, body:has(#p-suscripcion:not(.d-none))) .mx-global-header .mx-gh-account-summary{ padding:0 0 0 22px; width:auto; max-width:none; gap:22px; }
+}
+@media (max-width:992px){
+  .mx-global-header .mx-hb-account{ padding-left:6px; }
+  .mx-global-header .mx-gh-account-summary{ gap:6px; }
+}
+@media (max-width:576px){
+  .mx-global-header .mx-gh-user-avatar{ display:none; }
+  .mx-global-header .mx-gh-identity{ overflow:hidden; }
+  .mx-global-header .mx-gh-identity-copy{ max-width:100%; }
+  .mx-global-header .mx-gh-identity-role{ overflow:hidden; text-overflow:ellipsis; }
+  .mx-global-header .mx-hb-account{ padding-left:2px; }
+  .mx-global-header .mx-hb-account-trigger{ min-width:36px; padding:2px; gap:0; }
+  .mx-global-header .mx-hb-account-trigger .material-symbols-rounded{ font-size:24px; }
+  .mx-global-header .mx-gh-current-plan-label{ margin-left:0; }
+  .mx-global-header .mx-gh-current-plan-name{ padding:6px; font-size:.72rem; }
+}

@@ -216,7 +216,7 @@
       <button class="mx-gh-toggle" type="button" data-action="sidebar-toggle-proxy" aria-label="Contraer menú lateral" aria-expanded="true">
         <span class="material-symbols-rounded" aria-hidden="true">menu</span>
       </button>
-      <button class="mx-gh-brand menu-main" type="button" data-panel="p-resumen" title="Ir al panel principal" aria-label="Ir al panel principal de mi perfil">
+      <button class="mx-gh-brand menu-main" type="button" data-panel="p-resumen" title="Ir al panel principal" aria-label="Ir al panel principal">
         <img src="assets/mexico-medico.svg" alt="MXMed">
       </button>
       <div class="mx-gh-account-summary" aria-label="Resumen profesional y plan actual">
@@ -224,28 +224,11 @@
           <span class="mx-gh-user-avatar" aria-hidden="true"><span class="mx-gh-user-avatar-mark"></span></span>
           <div class="mx-gh-identity-copy">
             <span class="mx-gh-identity-name">
-              <span class="mx-gh-identity-name-text">Dra. Leticia Muñoz Romo</span>
+              <span class="mx-gh-identity-name-text"></span>
+              <span class="mx-gh-identity-badge" data-profile-verification-badge hidden aria-label="Perfil verificado">✓</span>
             </span>
             <div class="mx-gh-identity-meta">
-              <span class="mx-gh-identity-role">ENDOCRINÓLOGO</span>
-              <div class="mx-gh-user-menu dropdown">
-                <button class="mx-gh-identity-controls mx-gh-user-menu-trigger" id="mxGhUserMenu" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-haspopup="menu" aria-label="Abrir menú de perfil y cuenta">
-                  <span class="mx-gh-identity-badge" data-profile-verification-badge hidden aria-label="Perfil verificado">✓</span>
-                  <span class="mx-gh-user-menu-chevron" aria-hidden="true">&#9662;</span>
-              </button>
-              <ul class="dropdown-menu mx-gh-user-menu-dropdown" aria-labelledby="mxGhUserMenu">
-                <li><h6 class="dropdown-header">Mi perfil profesional</h6></li>
-                <li><button class="dropdown-item" type="button" data-profile-panel="p-info"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><i class="bi bi-person-badge"></i></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Información</span><span class="mx-prof-dd-sub">Datos personales</span></span></span></button></li>
-                <li><button class="dropdown-item" type="button" data-profile-panel="p-consultorio"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><i class="bi bi-building"></i></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Consultorio</span><span class="mx-prof-dd-sub">Datos y contacto</span></span></span></button></li>
-                <li><button class="dropdown-item" type="button" data-profile-panel="p-opiniones"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><i class="bi bi-chat-quote"></i></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Opiniones</span><span class="mx-prof-dd-sub">Supervisión y comentarios</span></span></span></button></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header">Cuenta y seguridad</h6></li>
-                <li><button class="dropdown-item" type="button" data-profile-panel="p-seguridad"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><span class="material-symbols-rounded">vpn_key</span></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Seguridad</span><span class="mx-prof-dd-sub">Acceso y privacidad</span></span></span></button></li>
-                <li><button class="dropdown-item" type="button" data-profile-panel="p-suscripcion"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><span class="material-symbols-rounded">license</span></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Suscripción</span><span class="mx-prof-dd-sub">Plan contratado</span></span></span></button></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><span class="material-symbols-rounded">open_in_new</span></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Ver perfil público</span><span class="mx-prof-dd-sub">Abre en una pestaña nueva</span></span></span></a></li>
-              </ul>
-              </div>
+              <span class="mx-gh-identity-role"></span>
             </div>
           </div>
         </div>
@@ -258,6 +241,17 @@
             <span class="mx-gh-current-plan-renewal">Vigencia por consultar</span>
             <button class="mx-gh-current-plan-action" type="button" aria-label="Incrementar vigencia del plan"><span class="mx-gh-current-plan-action-plus" aria-hidden="true">+</span> Incrementar vigencia</button>
           </div>
+        </div>
+        <div class="mx-hb-account dropdown">
+          <button class="mx-hb-account-trigger" id="mxHeaderAccount" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de cuenta">
+            <span class="material-symbols-rounded" aria-hidden="true">account_circle</span><span aria-hidden="true">▾</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end mx-hb-account-menu" aria-labelledby="mxHeaderAccount">
+            <li><h2 class="dropdown-header">Cuenta</h2></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item" type="button" data-header-logout><span class="material-symbols-rounded" aria-hidden="true">logout</span> Cerrar sesión</button></li>
+            <li><p class="mx-hb-account-status" role="status" hidden></p></li>
+          </ul>
         </div>
       </div>
     </div>
@@ -10489,6 +10483,7 @@
 <script src="assets/js/subscription-messages.js"></script>
 <script src="assets/js/owner-media-review.js?v=mr12a"></script>
 <script src="assets/js/app.js?v=media-review-mr12a"></script>
+<script src="assets/js/core/header-account.js"></script>
 <script src="assets/js/perfil/datos-generales.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>
 
