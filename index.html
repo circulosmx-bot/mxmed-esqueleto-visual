@@ -221,7 +221,17 @@
       </button>
       <div class="mx-gh-account-summary" aria-label="Resumen profesional y plan actual">
         <div class="mx-gh-identity" aria-label="Identidad profesional">
-          <span class="mx-gh-user-avatar" aria-hidden="true"><span class="mx-gh-user-avatar-mark"></span></span>
+        <div class="mx-hb-account dropdown">
+          <button class="mx-hb-account-trigger" id="mxHeaderAccount" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de cuenta">
+            <span class="mx-gh-user-avatar" aria-hidden="true"><span class="mx-gh-user-avatar-mark"></span></span><span aria-hidden="true">▾</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end mx-hb-account-menu" aria-labelledby="mxHeaderAccount">
+            <li><h2 class="dropdown-header">Cuenta</h2></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item" type="button" data-header-logout><span class="material-symbols-rounded" aria-hidden="true">logout</span> Cerrar sesión</button></li>
+            <li><p class="mx-hb-account-status" role="status" hidden></p></li>
+          </ul>
+        </div>
           <div class="mx-gh-identity-copy">
             <span class="mx-gh-identity-name">
               <span class="mx-gh-identity-name-text"></span>
@@ -242,17 +252,7 @@
             <button class="mx-gh-current-plan-action" type="button" aria-label="Incrementar vigencia del plan"><span class="mx-gh-current-plan-action-plus" aria-hidden="true">+</span> Incrementar vigencia</button>
           </div>
         </div>
-        <div class="mx-hb-account dropdown">
-          <button class="mx-hb-account-trigger" id="mxHeaderAccount" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de cuenta">
-            <span class="material-symbols-rounded" aria-hidden="true">account_circle</span><span aria-hidden="true">▾</span>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end mx-hb-account-menu" aria-labelledby="mxHeaderAccount">
-            <li><h2 class="dropdown-header">Cuenta</h2></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><button class="dropdown-item" type="button" data-header-logout><span class="material-symbols-rounded" aria-hidden="true">logout</span> Cerrar sesión</button></li>
-            <li><p class="mx-hb-account-status" role="status" hidden></p></li>
-          </ul>
-        </div>
+
       </div>
     </div>
   </div>

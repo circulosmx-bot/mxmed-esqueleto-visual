@@ -20854,3 +20854,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mx-global-header .mx-gh-current-plan-label{ margin-left:0; }
   .mx-global-header .mx-gh-current-plan-name{ padding:6px; font-size:.72rem; }
 }
+
+/* HB01.1: a single identity/account cluster, with an informational name. */
+.mx-global-header .mx-gh-identity .mx-hb-account{ border:0; padding:0; }
+.mx-global-header .mx-gh-identity .mx-hb-account-trigger{ padding:0; gap:6px; min-width:44px; min-height:44px; cursor:pointer; }
+.mx-global-header .mx-gh-identity .mx-hb-account-menu{ white-space:normal; }
+.mx-global-header .mx-gh-identity .mx-hb-account-status{ line-height:1.4; }
+.mx-global-header .mx-gh-identity-copy{ cursor:default; }
+@media (max-width:576px){
+  .mx-global-header .mx-gh-identity{ overflow:visible; }
+  .mx-global-header .mx-gh-identity-copy{ flex:1 1 auto; min-width:0; }
+  .mx-global-header .mx-gh-identity .mx-hb-account-trigger{ min-width:28px; }
+}
