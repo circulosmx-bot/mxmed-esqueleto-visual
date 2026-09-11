@@ -38,26 +38,12 @@ function sb01ToggleFlyout(trigger){
 $(function(){
   const sidebar = document.getElementById('mmSidebar');
   if(!sidebar) return;
-  // SB01.2: the header remains the source of the public URL and new-tab contract.
-  const publicSource = document.querySelector('.mx-gh-user-menu-dropdown a[target="_blank"]');
-  const profileGroup = sidebar.querySelector('.menu-sub[data-group="perfil"]');
-  if(publicSource && profileGroup){
-    const link = publicSource.cloneNode(false);
-    link.className = 'menu-sub-btn sb01-public-profile';
-    const copy = document.createElement('span'); copy.className = 'block';
-    const label = document.createElement('span'); label.className = 'l1';
-    label.textContent = publicSource.querySelector('.mx-prof-dd-label').textContent;
-    copy.append(label);
-    const icon = publicSource.querySelector('.mx-prof-dd-icon').cloneNode(true);
-    icon.className = 'ico-right';
-    link.append(copy, icon); profileGroup.append(link);
-    const syncPublicLink = ()=>{
-      for(const name of ['href','target','rel']){
-        const value = publicSource.getAttribute(name);
-        if(value===null) link.removeAttribute(name); else link.setAttribute(name,value);
-      }
-    };
-    new MutationObserver(syncPublicLink).observe(publicSource,{attributes:true,attributeFilter:['href','target','rel']});
+  // Reuse the existing Información action, including its live URL authority.
+  const publicLink = document.getElementById('mx-public-profile-link');
+  const informationHeader = document.querySelector('#p-info .mx-panel-subheader');
+  if(publicLink && informationHeader){
+    publicLink.classList.add('sb01-contextual-profile');
+    informationHeader.append(publicLink);
   }
   const tooltip = document.createElement('span');
   tooltip.id = 'sb01-sidebar-tooltip';
@@ -71,7 +57,7 @@ $(function(){
     tooltipOwner?.removeAttribute('aria-describedby');
     tooltipOwner = null;
   };
-  sidebar.querySelectorAll(':scope > .menu-main:not(.d-none)').forEach((button, index)=>{
+  sidebar.querySelectorAll(':scope > .menu-main:not(.d-none), .sb01-utility').forEach((button, index)=>{
     const label = button.querySelector('.ttl')?.textContent.trim();
     button.setAttribute('aria-label', label || '');
     const pane = button.nextElementSibling;
@@ -357,8 +343,10 @@ $(document).on('click', '.dropdown-menu [data-profile-panel]', function(ev){
   }
   if(!allowed) return;
 
-  openGroup('perfil');
-  localStorage.setItem('mxmed_btn_perfil', panelId);
+  const profileDestination = ['p-info','p-consultorio','p-opiniones'].includes(panelId);
+  openGroup(profileDestination ? 'perfil' : '');
+  if(profileDestination) localStorage.setItem('mxmed_btn_perfil', panelId);
+  else localStorage.removeItem('mxmed_menu_group');
 
   const dropdownRoot = this.closest('.dropdown');
   const toggleEl = dropdownRoot ? dropdownRoot.querySelector('[data-bs-toggle="dropdown"]') : null;
