@@ -21226,3 +21226,94 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-info #t-info-datos #dg-signature-desktop,
   #p-info #t-info-datos #dg-signature-mobile{margin-top:12px!important;text-align:left}
 }
+/* DG02.1: compact professional media composition after Director review. */
+@media (min-width:768px){
+  #p-info #t-info-datos #mx-dg-media-card .card-body{
+    padding:13px 15px 14px;
+  }
+  #p-info #t-info-datos #mx-dg-media-card .mx-dg-card-head{
+    margin-bottom:8px;
+  }
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload-grid{
+    gap:10px;
+    align-items:start;
+  }
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload.square{
+    min-height:132px;
+    padding:10px 12px;
+  }
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload[data-type="logo"].has-logo{
+    display:grid;
+    grid-template-columns:112px minmax(0,1fr);
+    grid-template-rows:auto 1fr;
+    gap:7px 13px;
+    min-height:132px;
+    padding:10px 12px;
+    align-items:center;
+    text-align:left;
+  }
+  #p-info #t-info-datos #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview:not([hidden])){
+    display:grid;
+    grid-template-columns:112px minmax(0,1fr);
+    grid-template-rows:auto auto 1fr auto;
+    gap:3px 13px;
+    min-height:132px;
+    align-items:center;
+    text-align:left;
+  }
+  #p-info #t-info-datos #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview:not([hidden])) > .mf-title,
+  #p-info #t-info-datos #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview:not([hidden])) > .mf-sub,
+  #p-info #t-info-datos #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview:not([hidden])) > .mf-actions,
+  #p-info #t-info-datos #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview:not([hidden])) > #mxpi-photo-status{
+    grid-column:2;
+    width:auto;
+    margin:0;
+    justify-content:flex-start;
+  }
+  #p-info #t-info-datos #mx-dg-media-card #mxpi-photo-control #mxpi-photo-preview:not([hidden]){
+    grid-column:1;
+    grid-row:1 / 5;
+    width:112px;
+    height:112px;
+    margin:0;
+    padding:5px;
+    border:1px solid #d3e3e9;
+    border-radius:10px;
+    background:#fff;
+  }
+  #p-info #t-info-datos #mx-dg-media-card #mxpi-photo-control #mxpi-photo-preview:not([hidden]) img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+  }
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload[data-type="logo"].has-logo::before{
+    content:"Logotipo profesional";
+    grid-column:2;
+    align-self:end;
+    color:var(--dg01-ink);
+    font-size:.9rem;
+    font-weight:800;
+    line-height:1.2;
+  }
+  #p-info #t-info-datos #mx-dg-media-card #mx-dg-logo-prev:not([hidden]){
+    grid-column:1;
+    grid-row:1 / 3;
+    width:112px;
+    height:112px;
+    margin:0;
+    padding:5px;
+    border:1px solid #d3e3e9;
+    border-radius:10px;
+    background:#fff;
+  }
+  #p-info #t-info-datos #mx-dg-media-card .mx-dg-logo-loaded-actions{
+    grid-column:2;
+    width:auto;
+    align-self:start;
+    justify-content:flex-start;
+  }
+  #p-info #t-info-datos #mx-dg-media-card .mf-actions .btn{
+    min-height:34px;
+    padding:5px 10px;
+  }
+}
