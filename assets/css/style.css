@@ -21441,3 +21441,80 @@ body{margin:0;background:var(--mm-fondo-base);}
     line-height:1.25;
   }
 }
+
+/* DG03B: visibility semantics live in compact contextual help. */
+#p-info #tabs-info.mx-panel-tabs{margin-bottom:6px!important}
+#p-info .mx-visibility-help-access{
+  display:none;
+  justify-content:flex-end;
+  margin:0 2px 8px;
+}
+#p-info #tabs-info:has(#t-info-datos-tab.active) + .mx-visibility-help-access{display:flex}
+#p-info .mx-visibility-help-trigger{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:28px;
+  padding:3px 8px;
+  border:1px solid #c8dce4;
+  border-radius:999px;
+  background:#f8fbfc;
+  color:#31586a;
+  font:inherit;
+  font-size:.72rem;
+  font-weight:700;
+  line-height:1.1;
+  cursor:pointer;
+}
+#p-info .mx-visibility-help-trigger:hover{border-color:#77cbd4;background:#eefafb;color:#07536e}
+#p-info .mx-visibility-help-trigger:focus-visible{outline:3px solid rgba(0,174,190,.22);outline-offset:2px}
+#p-info .mx-visibility-help-trigger .material-symbols-outlined{font-size:17px}
+.mx-visibility-help-modal .modal-dialog{max-width:520px;padding-inline:12px}
+.mx-visibility-help-modal .modal-content{
+  overflow:hidden;
+  border:1px solid #d3e3e9;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 18px 48px rgba(5,55,80,.18);
+}
+.mx-visibility-help-modal .modal-header{
+  align-items:flex-start;
+  gap:16px;
+  padding:18px 20px 10px;
+  border:0;
+}
+.mx-visibility-help-modal .modal-title{color:#073b5a;font-size:1.1rem;font-weight:800;line-height:1.2}
+.mx-visibility-help-modal .mx-visibility-help-intro{margin:5px 0 0;color:#58717e;font-size:.82rem;line-height:1.35}
+.mx-visibility-help-modal .btn-close{flex:0 0 auto;margin:0;padding:7px}
+.mx-visibility-help-modal .modal-body{padding:5px 20px 12px}
+.mx-visibility-help-list{display:grid;gap:8px}
+.mx-visibility-help-item{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-height:58px;
+  padding:9px 11px;
+  border:1px solid transparent;
+  border-radius:11px;
+}
+.mx-visibility-help-item > span:last-child{display:grid;gap:1px}
+.mx-visibility-help-item strong{color:#123f56;font-size:.82rem;line-height:1.2;text-transform:uppercase}
+.mx-visibility-help-item small{color:#58717e;font-size:.76rem;line-height:1.25}
+.mx-visibility-help-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:50%;font-size:20px}
+.mx-visibility-help-item--public{border-color:#c8eaf0;background:#f2fbfc}
+.mx-visibility-help-item--public .mx-visibility-help-icon{background:#ddf6fa;color:#159ab2}
+.mx-visibility-help-item--private{border-color:#e5d9f3;background:#fbf8fe}
+.mx-visibility-help-item--private .mx-visibility-help-icon{background:#f0e5fa;color:#8053b5}
+.mx-visibility-help-item--verified{border-color:#f0dfb9;background:#fffaf1}
+.mx-visibility-help-item--verified .mx-visibility-help-icon{background:#fff0ce;color:#bf7a00}
+.mx-visibility-help-modal .modal-footer{padding:4px 20px 16px;border:0}
+.mx-visibility-help-modal .modal-footer .btn{min-width:104px;min-height:36px;border-radius:8px;font-weight:700}
+@media (max-width:575px){
+  #p-info .mx-visibility-help-access{margin-bottom:7px}
+  .mx-visibility-help-modal .modal-dialog{margin:10px auto;padding-inline:8px}
+  .mx-visibility-help-modal .modal-header{padding:16px 16px 9px}
+  .mx-visibility-help-modal .modal-body{padding:4px 16px 10px}
+  .mx-visibility-help-modal .modal-footer{padding:4px 16px 14px}
+  .mx-visibility-help-item{min-height:56px;padding:8px 10px}
+  .mx-visibility-help-modal .modal-footer .btn{width:100%}
+}
