@@ -830,62 +830,6 @@
                   </div>
                 </div>
 
-                <div class="card mt-3 mx-dg-card mx-dg-card-verified" id="mx-dg-verified-card">
-                  <div class="card-body">
-                    <div class="mx-dg-card-head">
-                      <div class="mx-dg-card-title-row mx-dg-admin-title-row">
-                        <div class="mx-dg-card-title">Información verificada / administrativa</div>
-                        <span class="mx-dg-verify-badge" role="status">Sólo lectura</span>
-                        <div class="mx-dg-admin-actions">
-                          <button
-                            type="button"
-                            class="btn btn-link btn-sm mx-dg-context-help-btn"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#mx-dg-admin-help"
-                            aria-expanded="false"
-                            aria-controls="mx-dg-admin-help"
-                          >
-                            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-                            Ayuda
-                          </button>
-                        <button
-                          type="button"
-                          class="btn btn-outline-secondary btn-sm mx-dg-request-change-btn"
-                          data-bs-toggle="collapse"
-                          data-bs-target="#mx-dg-request-change-placeholder"
-                          aria-expanded="false"
-                          aria-controls="mx-dg-request-change-placeholder"
-                        >
-                          Solicitar cambio
-                        </button>
-                        </div>
-                      </div>
-                      <div class="collapse mx-dg-context-help" id="mx-dg-admin-help">
-                        <div class="mx-dg-context-help-copy">Datos protegidos de sólo lectura; las correcciones requieren revisión.</div>
-                      </div>
-                      <div class="collapse mx-dg-context-help" id="mx-dg-request-change-placeholder">
-                        <div class="mx-dg-request-change-msg" role="status" aria-live="polite">
-                          La solicitud de corrección aún no está disponible en este panel.
-                        </div>
-                      </div>
-                    </div>
-                    <div class="row g-3 mx-dg-verified-grid">
-
-                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label mx-field-label">Nombre(s)<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-nombres" placeholder="Nombre(s)" readonly aria-readonly="true"></div>
-
-                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label mx-field-label">Primer apellido<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-apellido-paterno" placeholder="Primer apellido" readonly aria-readonly="true"></div>
-
-                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label mx-field-label">Segundo apellido<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-apellido-materno" placeholder="Segundo apellido" readonly aria-readonly="true"></div>
-
-                  <div class="col-sm-6 col-lg-3 mx-dg-col-birth mx-dg-personal-field"><label class="form-label mx-field-label">Fecha de nacimiento<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-fecha-nacimiento" type="date" placeholder="AAAA-MM-DD" disabled></div>
-
-                  <div class="col-sm-6 col-lg-3 mx-dg-col-gender mx-dg-personal-field"><label class="form-label mx-field-label">Género<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><select class="form-select" id="dp-genero" disabled><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
-
-
-                    </div>
-                  </div>
-                </div>
-
                 <div class="card mt-3 mx-dg-card mx-dg-card-contact" id="mx-dg-contact-card">
                   <div class="card-body">
                     <div class="mx-dg-card-head">
@@ -914,20 +858,65 @@
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                       <div>
                         <div class="mxpi-title-row">
-                          <div class="fw-semibold">Identidad pública profesional</div>
+                          <div class="fw-semibold">Identidad en el perfil</div>
                           <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
                         </div>
-                        <div class="text-muted small">Esta información se muestra en tu perfil público.</div>
                       </div>
                       <a id="mx-public-profile-link" class="btn btn-outline-secondary btn-sm" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener">Ver perfil público</a>
                     </div>
 
                     <div class="row g-3 mxpi-public-grid">
-                      <div class="col-md-6">
-                        <label class="form-label mx-field-label" for="mxpi-display-name">Nombre público<span class="mx-field-badge mx-field-badge--public">Público</span></label>
-                        <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
+                      <div class="col-12 mxpi-name-editor" id="mxpi-name-editor">
+                        <div class="mxpi-name-editor__title">Nombre en el perfil</div>
+
+                        <div class="mxpi-verified-name" id="mxpi-verified-name" hidden>
+                          <div class="mxpi-verified-name__controls">
+                            <div>
+                              <label class="form-label mx-field-label" for="mxpi-verified-given-names">Nombre(s)</label>
+                              <select class="form-select" id="mxpi-verified-given-names"></select>
+                            </div>
+                            <div>
+                              <div class="form-label mx-field-label">Primer apellido</div>
+                              <div class="mxpi-protected-value" id="mxpi-verified-first-surname"></div>
+                            </div>
+                            <div class="mxpi-second-surname" id="mxpi-second-surname" hidden>
+                              <div class="form-label mx-field-label">Segundo apellido</div>
+                              <label class="mxpi-second-surname__control" for="mxpi-show-second-surname">
+                                <input class="form-check-input" id="mxpi-show-second-surname" type="checkbox">
+                                <span>Mostrar <strong id="mxpi-verified-second-surname"></strong></span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div class="mxpi-current-name" id="mxpi-current-name" hidden>
+                            Nombre público actual: <strong id="mxpi-current-name-value"></strong>
+                          </div>
+                          <div class="mxpi-name-editor__summary">
+                            <div class="mxpi-public-preview"><span>Vista pública:</span> <strong id="mxpi-public-name-preview"></strong></div>
+                            <div class="mxpi-verified-reference"><span class="material-symbols-outlined" aria-hidden="true">verified</span>Identidad verificada: <strong id="mxpi-verified-full-name"></strong></div>
+                          </div>
+                        </div>
+
+                        <div class="mxpi-legacy-name" id="mxpi-legacy-name">
+                          <label class="form-label mx-field-label" for="mxpi-display-name">Nombre público<span class="mx-field-badge mx-field-badge--public">Público</span></label>
+                          <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
+                        </div>
+
+                        <details class="mxpi-verified-details" id="mxpi-verified-details" hidden>
+                          <summary>Ver datos verificados</summary>
+                          <div class="mxpi-verified-details__grid">
+                            <div>
+                              <label class="form-label mx-field-label" for="dp-fecha-nacimiento">Fecha de nacimiento</label>
+                              <input class="form-control" id="dp-fecha-nacimiento" type="date" placeholder="AAAA-MM-DD" disabled>
+                            </div>
+                            <div>
+                              <label class="form-label mx-field-label" for="dp-genero">Género</label>
+                              <select class="form-select" id="dp-genero" disabled><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select>
+                            </div>
+                          </div>
+                        </details>
                       </div>
-                      <div class="col-md-6">
+                      <div class="col-md-6 mxpi-designation-field">
                         <label class="form-label mx-field-label" for="mxpi-professional-designation">Denominación profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <input class="form-control" id="mxpi-professional-designation" type="text" maxlength="120" aria-describedby="mxpi-designation-help">
                         <div class="text-muted small mt-1 mxpi-field-note" id="mxpi-designation-help">Ej. Endocrinóloga, Cardiólogo, Cirujana dentista. Se utiliza para referirse profesionalmente al médico y no sustituye la especialidad.</div>

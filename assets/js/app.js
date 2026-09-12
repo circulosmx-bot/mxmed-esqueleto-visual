@@ -1146,6 +1146,18 @@ console.info('app.js loaded :: 20251123a');
 
   const els = {
     displayName: document.getElementById('mxpi-display-name'),
+    verifiedName: document.getElementById('mxpi-verified-name'),
+    legacyName: document.getElementById('mxpi-legacy-name'),
+    verifiedGivenNames: document.getElementById('mxpi-verified-given-names'),
+    verifiedFirstSurname: document.getElementById('mxpi-verified-first-surname'),
+    secondSurname: document.getElementById('mxpi-second-surname'),
+    showSecondSurname: document.getElementById('mxpi-show-second-surname'),
+    verifiedSecondSurname: document.getElementById('mxpi-verified-second-surname'),
+    publicNamePreview: document.getElementById('mxpi-public-name-preview'),
+    verifiedFullName: document.getElementById('mxpi-verified-full-name'),
+    currentName: document.getElementById('mxpi-current-name'),
+    currentNameValue: document.getElementById('mxpi-current-name-value'),
+    verifiedDetails: document.getElementById('mxpi-verified-details'),
     professionalDesignation: document.getElementById('mxpi-professional-designation'),
     prefix: document.getElementById('mxpi-prefix'),
     genderLabel: document.getElementById('mxpi-gender-label'),
@@ -1194,9 +1206,6 @@ console.info('app.js loaded :: 20251123a');
     'mxpi-specialty-secondary',
     'mxpi-profile-status',
     'mxpi-public-candidate',
-    'dp-nombres',
-    'dp-apellido-paterno',
-    'dp-apellido-materno',
     'dp-fecha-nacimiento',
     'dp-genero',
     'ced-prof',
@@ -1284,6 +1293,10 @@ console.info('app.js loaded :: 20251123a');
     loading: false,
     saving: false,
     displayNameTouched: false,
+    verifiedIdentity: null,
+    publicNamePolicy: null,
+    verifiedNameMode: false,
+    verifiedNameSelectionTouched: false,
     legacyNameTouched: false,
     hydratingIdentity: false,
     dirty: false,
@@ -1760,41 +1773,6 @@ console.info('app.js loaded :: 20251123a');
     return '';
   }
 
-  function splitLegacyName(displayName, prefix){
-    const fullName = normalizeText(displayName, 190);
-    if(!fullName){
-      return { nombres: '', apellidoPaterno: '', apellidoMaterno: '' };
-    }
-
-    let cleanName = fullName;
-    const safePrefix = normalizeText(prefix, 32);
-    if(safePrefix){
-      const escaped = safePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp('^' + escaped + '\\s+', 'i');
-      cleanName = cleanName.replace(re, '').trim();
-    }
-
-    const tokens = cleanName.split(/\s+/).filter(Boolean);
-    if(tokens.length === 0){
-      return { nombres: fullName, apellidoPaterno: '', apellidoMaterno: '' };
-    }
-    if(tokens.length === 1){
-      return { nombres: tokens[0], apellidoPaterno: '', apellidoMaterno: '' };
-    }
-    if(tokens.length === 2){
-      return { nombres: tokens[0], apellidoPaterno: tokens[1], apellidoMaterno: '' };
-    }
-
-    const apellidoMaterno = tokens[tokens.length - 1];
-    const apellidoPaterno = tokens[tokens.length - 2];
-    const nombres = tokens.slice(0, -2).join(' ');
-    return {
-      nombres: nombres || fullName,
-      apellidoPaterno,
-      apellidoMaterno
-    };
-  }
-
   function writeLegacyValue(inputEl, value){
     if(!inputEl) return;
     const safeValue = String(value || '').trim();
@@ -1802,27 +1780,6 @@ console.info('app.js loaded :: 20251123a');
       inputEl.value = safeValue;
       try{ inputEl.dispatchEvent(new Event('change', { bubbles: true })); }catch(_){}
     }
-  }
-
-  function readLegacyAdministrativeName(){
-    return {
-      nombres: normalizeText(document.getElementById('dp-nombres')?.value, 190),
-      apellidoPaterno: normalizeText(document.getElementById('dp-apellido-paterno')?.value, 190),
-      apellidoMaterno: normalizeText(document.getElementById('dp-apellido-materno')?.value, 190)
-    };
-  }
-
-  function buildDisplayNameFromLegacy(prefix, legacyName = {}){
-    const names = [
-      normalizeText(legacyName.nombres, 190),
-      normalizeText(legacyName.apellidoPaterno, 190),
-      normalizeText(legacyName.apellidoMaterno, 190)
-    ].filter(Boolean);
-    if(!names.length){
-      return null;
-    }
-    const pref = normalizeText(prefix, 32);
-    return normalizeText([pref, ...names].filter(Boolean).join(' '), 190);
   }
 
   function ensureSelectOption(selectEl, value){
@@ -2179,7 +2136,114 @@ console.info('app.js loaded :: 20251123a');
     }
   }
 
-  function applyIdentity(identity){
+  function comparablePublicName(value){
+    return String(value || '')
+      .trim()
+      .replace(/[\s\u00a0]+/g, ' ')
+      .normalize('NFC')
+      .toLocaleLowerCase('es-MX');
+  }
+
+  function controlledDisplayName(){
+    if(!state.verifiedNameMode || !state.verifiedIdentity) return null;
+    const givenNames = normalizeText(els.verifiedGivenNames?.value, 190);
+    const firstSurname = normalizeText(state.verifiedIdentity.first_surname, 120);
+    const secondSurname = els.showSecondSurname?.checked
+      ? normalizeText(state.verifiedIdentity.second_surname, 120)
+      : null;
+    if(!givenNames || !firstSurname) return null;
+    return normalizeText([givenNames, firstSurname, secondSurname].filter(Boolean).join(' '), 190);
+  }
+
+  function updatePublicNamePreview(){
+    if(!state.verifiedNameMode || !els.publicNamePreview) return;
+    const prefix = normalizeText(els.prefix?.value, 32);
+    const displayName = controlledDisplayName();
+    els.publicNamePreview.textContent = displayName
+      ? [prefix, displayName].filter(Boolean).join(' ')
+      : 'Selecciona una presentación';
+  }
+
+  function applyVerifiedNameReadModel(displayName, verifiedIdentity, publicNamePolicy){
+    const identity = verifiedIdentity && typeof verifiedIdentity === 'object' ? verifiedIdentity : null;
+    const policy = publicNamePolicy && typeof publicNamePolicy === 'object' ? publicNamePolicy : null;
+    const verifiedMode = Boolean(identity && policy?.verified_identity_available === true);
+
+    state.verifiedIdentity = identity;
+    state.publicNamePolicy = policy;
+    state.verifiedNameMode = verifiedMode;
+    state.verifiedNameSelectionTouched = false;
+
+    if(els.verifiedName) els.verifiedName.hidden = !verifiedMode;
+    if(els.legacyName) els.legacyName.hidden = verifiedMode;
+    if(els.verifiedDetails){
+      els.verifiedDetails.hidden = !verifiedMode;
+      els.verifiedDetails.open = false;
+    }
+    if(!verifiedMode) return;
+
+    const allowed = Array.isArray(policy.allowed_given_name_presentations)
+      ? policy.allowed_given_name_presentations.map((value)=> normalizeText(value, 190)).filter(Boolean)
+      : [];
+    const policyStatus = String(policy.current_display_name_policy_status || '');
+    const legacyNonconforming = policyStatus === 'LEGACY_NONCONFORMING';
+    if(els.verifiedGivenNames){
+      els.verifiedGivenNames.innerHTML = '';
+      if(legacyNonconforming){
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecciona una presentación';
+        placeholder.disabled = true;
+        els.verifiedGivenNames.appendChild(placeholder);
+      }
+      allowed.forEach((value)=>{
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        els.verifiedGivenNames.appendChild(option);
+      });
+    }
+
+    const firstSurname = normalizeText(identity.first_surname, 120) || '';
+    const secondSurname = normalizeText(identity.second_surname, 120) || '';
+    if(els.verifiedFirstSurname) els.verifiedFirstSurname.textContent = firstSurname || '—';
+    if(els.verifiedSecondSurname) els.verifiedSecondSurname.textContent = secondSurname;
+    if(els.secondSurname) els.secondSurname.hidden = !secondSurname;
+
+    let matchingGivenName = '';
+    let matchingSecondSurname = false;
+    for(const givenName of allowed){
+      const firstOnly = [givenName, firstSurname].filter(Boolean).join(' ');
+      const withSecond = [firstOnly, secondSurname].filter(Boolean).join(' ');
+      if(comparablePublicName(displayName) === comparablePublicName(firstOnly)){
+        matchingGivenName = givenName;
+        matchingSecondSurname = false;
+        break;
+      }
+      if(secondSurname && comparablePublicName(displayName) === comparablePublicName(withSecond)){
+        matchingGivenName = givenName;
+        matchingSecondSurname = true;
+        break;
+      }
+    }
+    if(els.verifiedGivenNames){
+      els.verifiedGivenNames.value = matchingGivenName || (legacyNonconforming ? '' : allowed[0]) || '';
+      els.verifiedGivenNames.disabled = allowed.length === 0;
+    }
+    if(els.showSecondSurname){
+      els.showSecondSurname.checked = matchingGivenName ? matchingSecondSurname : Boolean(secondSurname);
+    }
+
+    if(els.currentName) els.currentName.hidden = !legacyNonconforming;
+    if(els.currentNameValue) els.currentNameValue.textContent = displayName || '—';
+    if(els.verifiedFullName) els.verifiedFullName.textContent = normalizeText(identity.full_name, 430) || '—';
+    if(!legacyNonconforming && els.displayName){
+      els.displayName.value = controlledDisplayName() || displayName || '';
+    }
+    updatePublicNamePreview();
+  }
+
+  function applyIdentity(identity, verifiedIdentity = null, publicNamePolicy = null){
     state.hydratingIdentity = true;
     const data = identity && typeof identity === 'object' ? identity : {};
     const displayName = normalizeText(data.display_name, 190);
@@ -2235,10 +2299,7 @@ console.info('app.js loaded :: 20251123a');
       writeLegacyValue(legacyGenero, legacyGenderLabel);
     }
 
-    const legacyName = splitLegacyName(displayName, prefix);
-    writeLegacyValue(document.getElementById('dp-nombres'), legacyName.nombres);
-    writeLegacyValue(document.getElementById('dp-apellido-paterno'), legacyName.apellidoPaterno);
-    writeLegacyValue(document.getElementById('dp-apellido-materno'), legacyName.apellidoMaterno);
+    applyVerifiedNameReadModel(displayName, verifiedIdentity, publicNamePolicy);
 
     const inferredTitleKey = inferTitleKeyFromSpecialty(specialtyPrimary);
     const preferredLegacyTitle = firstNonEmptySelectValue(getLegacySelectList('esp-1'))
@@ -2251,7 +2312,7 @@ console.info('app.js loaded :: 20251123a');
     if(specialtySummary && specialtyPrimary){
       specialtySummary.textContent = specialtyPrimary;
     }
-    const headerName = document.querySelector('.user-id .name');
+    const headerName = document.querySelector('.mx-gh-identity-name-text, .user-id .name');
     if(headerName && displayName){
       headerName.textContent = displayName;
     }
@@ -2381,9 +2442,7 @@ console.info('app.js loaded :: 20251123a');
 
   function buildPatchPayload(){
     const genderLabel = normalizeText(els.genderLabel?.value, 64);
-    const displayFromPublicField = normalizeText(els.displayName?.value, 190);
-    return {
-      display_name: displayFromPublicField,
+    const payload = {
       professional_designation: normalizeText(els.professionalDesignation?.value, 120),
       prefix: normalizeText(els.prefix?.value, 32),
       gender: mapGenderValue(genderLabel),
@@ -2391,6 +2450,16 @@ console.info('app.js loaded :: 20251123a');
       bio_short: String(els.bioShort?.value || '').trim() || null,
       profile_theme_key: state.themeSelectedKey
     };
+    if(!state.verifiedNameMode){
+      payload.display_name = normalizeText(els.displayName?.value, 190);
+    }else{
+      const policyStatus = String(state.publicNamePolicy?.current_display_name_policy_status || '');
+      const requestedDisplayName = controlledDisplayName();
+      if(requestedDisplayName && (policyStatus !== 'LEGACY_NONCONFORMING' || state.verifiedNameSelectionTouched)){
+        payload.display_name = requestedDisplayName;
+      }
+    }
+    return payload;
   }
 
   els.displayName.addEventListener('input', ()=>{
@@ -2404,18 +2473,17 @@ console.info('app.js loaded :: 20251123a');
     markIdentityDirty();
   });
 
-  ['dp-nombres', 'dp-apellido-paterno', 'dp-apellido-materno'].forEach((id)=>{
-    const input = document.getElementById(id);
-    if(!input) return;
-    const markLegacyTouched = (eventType = 'input')=>{
-      if(state.hydratingIdentity) return;
-      state.legacyNameTouched = false;
-      setLegacyFeedback('Dato verificado: solicita cambio para revisión.', 'muted');
-    };
-    input.addEventListener('input', ()=> markLegacyTouched('input'));
-    input.addEventListener('change', ()=> markLegacyTouched('change'));
-    input.addEventListener('blur', ()=> markLegacyTouched('blur'));
-  });
+  function onControlledNameChange(){
+    if(state.hydratingIdentity || !state.verifiedNameMode) return;
+    state.verifiedNameSelectionTouched = true;
+    state.displayNameTouched = true;
+    const requestedDisplayName = controlledDisplayName();
+    if(els.displayName && requestedDisplayName) els.displayName.value = requestedDisplayName;
+    updatePublicNamePreview();
+    markIdentityDirty();
+  }
+  els.verifiedGivenNames?.addEventListener('change', onControlledNameChange);
+  els.showSecondSurname?.addEventListener('change', onControlledNameChange);
 
   function updateBioCounter(limitReached = false){
     const count = Array.from(els.bioShort?.value || '').length;
@@ -2463,6 +2531,7 @@ console.info('app.js loaded :: 20251123a');
     input.addEventListener('input', markIdentityDirty);
     input.addEventListener('change', markIdentityDirty);
   });
+  els.prefix?.addEventListener('change', updatePublicNamePreview);
 
   const onProfessionalTitleChange = (sourceValue = '')=>{
     const preferredTitle = String(sourceValue || firstNonEmptySelectValue(getLegacySelectList('esp-1')) || '').trim();
@@ -2526,7 +2595,7 @@ console.info('app.js loaded :: 20251123a');
       if(!response.ok || !json || json.ok !== true || !json.data || !json.data.identity_public){
         throw new Error('No fue posible cargar la identidad pública.');
       }
-      applyIdentity(json.data.identity_public);
+      applyIdentity(json.data.identity_public, json.data.verified_identity, json.data.public_name_policy);
       applyThemeContract(json.data.profile_theme);
       state.loaded = true;
       await loadAdministrativeContacts();
@@ -2568,14 +2637,19 @@ console.info('app.js loaded :: 20251123a');
       });
       const json = await response.json().catch(()=> null);
       if(!response.ok || !json || json.ok !== true || !json.data || !json.data.identity_public){
-        throw new Error('No fue posible guardar la identidad pública.');
+        const error = new Error('No fue posible guardar la identidad pública.');
+        error.code = String(json?.error || '');
+        throw error;
       }
-      applyIdentity(json.data.identity_public);
+      applyIdentity(json.data.identity_public, json.data.verified_identity, json.data.public_name_policy);
       applyThemeContract(json.data.profile_theme);
       setFeedback('Cambios guardados. El perfil público ya puede reflejar esta información.', 'success');
       setLegacyFeedback('Datos verificados sin cambios.', 'muted');
-    }catch(_){
-      setFeedback('No se pudieron guardar los cambios. Revisa la conexión e inténtalo nuevamente.', 'danger');
+    }catch(error){
+      const message = error?.code === 'invalid_public_display_name'
+        ? 'El nombre público debe corresponder con tu identidad verificada.'
+        : 'No se pudieron guardar los cambios. Revisa la conexión e inténtalo nuevamente.';
+      setFeedback(message, 'danger');
       setLegacyFeedback('No se pudieron guardar los cambios.', 'danger');
     }finally{
       state.saving = false;
