@@ -10,6 +10,7 @@ use Profiles\Services\VerifiedPhysicianIdentityService;
 require_once __DIR__ . '/../repositories/PrivateProfileRepository.php';
 require_once __DIR__ . '/../services/ProfileThemeCatalog.php';
 require_once __DIR__ . '/../services/VerifiedPhysicianIdentityService.php';
+require_once __DIR__ . '/../services/VerifiedDoctorCredentialService.php';
 
 final class PrivateProfileController
 {
@@ -46,7 +47,8 @@ final class PrivateProfileController
 
     public function __construct(
         PrivateProfileRepository $repository,
-        ?VerifiedPhysicianIdentityService $verifiedIdentityService = null
+        ?VerifiedPhysicianIdentityService $verifiedIdentityService = null,
+        private ?\Profiles\Services\VerifiedDoctorCredentialService $credentialService = null
     )
     {
         $this->repository = $repository;
@@ -288,6 +290,10 @@ final class PrivateProfileController
                 ],
                 'verified_identity' => $nameReadModel['verified_identity'],
                 'public_name_policy' => $nameReadModel['public_name_policy'],
+                ...($this->credentialService?->physicianReadModel($doctorId) ?? [
+                    'verified_credentials' => ['professional' => null, 'specialties' => []],
+                    'primary_specialty_credential_id' => null,
+                ]),
             ],
             'meta' => array_merge([
                 'contract' => 'profile_private_identity_mvp',
