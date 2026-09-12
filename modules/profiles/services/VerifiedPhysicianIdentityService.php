@@ -8,9 +8,12 @@ use Profiles\Repositories\VerifiedPhysicianIdentityRepository;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/VerifiedPhysicianIdentityRepository.php';
+require_once __DIR__ . '/PublicDisplayNamePolicy.php';
 
 final class VerifiedPhysicianIdentityService
 {
+    private PublicDisplayNamePolicy $publicDisplayNamePolicy;
+
     private const SOURCE_TYPES = [
         'admission_approved',
         'internal_provisioning',
@@ -20,8 +23,10 @@ final class VerifiedPhysicianIdentityService
 
     public function __construct(
         private VerifiedPhysicianIdentityRepository $repository,
-        private bool $allowSyntheticFixtures = false
+        private bool $allowSyntheticFixtures = false,
+        ?PublicDisplayNamePolicy $publicDisplayNamePolicy = null
     ) {
+        $this->publicDisplayNamePolicy = $publicDisplayNamePolicy ?? new PublicDisplayNamePolicy();
     }
 
     public function readForPhysician(string $doctorId): ?array
@@ -70,6 +75,23 @@ final class VerifiedPhysicianIdentityService
         ];
 
         return $this->repository->create($record);
+    }
+
+    public function physicianNameReadModel(string $doctorId, ?string $currentDisplayName): array
+    {
+        $identity = $this->readForPhysician($doctorId);
+        return [
+            'verified_identity' => $identity,
+            'public_name_policy' => $this->publicDisplayNamePolicy->describe($identity, $currentDisplayName),
+        ];
+    }
+
+    public function validatePublicDisplayName(string $doctorId, ?string $requestedDisplayName): array
+    {
+        return $this->publicDisplayNamePolicy->validate(
+            $this->readForPhysician($doctorId),
+            $requestedDisplayName
+        );
     }
 
     private function fullName(array $identity): string

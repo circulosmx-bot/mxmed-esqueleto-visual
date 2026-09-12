@@ -609,6 +609,7 @@
   "modules/profiles/repositories/PublicProfileRepository.php",
   "modules/profiles/repositories/VerifiedPhysicianIdentityRepository.php",
   "modules/profiles/services/ProfileThemeCatalog.php",
+  "modules/profiles/services/PublicDisplayNamePolicy.php",
   "modules/profiles/services/PublicBookingDoctorReference.php",
   "modules/profiles/services/PublicProfileEligibility.php",
   "modules/profiles/services/PublicProfilePanelContent.php",

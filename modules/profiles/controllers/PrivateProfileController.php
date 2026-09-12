@@ -65,7 +65,7 @@ final class PrivateProfileController
             return $this->error('profile_identity_not_found', 'profile identity not found', $authMode);
         }
 
-        return $this->success($doctorId, $row, $authMode, [], $this->verifiedIdentity($doctorId));
+        return $this->success($doctorId, $row, $authMode);
     }
 
     public function patchByDoctorId(string $doctorId, array $payload, string $authMode = 'transitional_open'): array
@@ -87,6 +87,21 @@ final class PrivateProfileController
                 'unknown_fields' => array_values($prepared['unknown_fields']),
             ]);
         }
+        if (array_key_exists('display_name', $prepared['editable']) && $this->verifiedIdentityService !== null) {
+            $displayNameDecision = $this->verifiedIdentityService->validatePublicDisplayName(
+                $doctorId,
+                $prepared['editable']['display_name']
+            );
+            if (!($displayNameDecision['valid'] ?? false)) {
+                return $this->error(
+                    'invalid_public_display_name',
+                    'El nombre público debe usar los nombres verificados seleccionados, conservar el primer apellido y mantener el orden oficial.',
+                    $authMode,
+                    ['field' => 'display_name']
+                );
+            }
+            $prepared['editable']['display_name'] = $displayNameDecision['canonical_display_name'];
+        }
         if (empty($prepared['editable'])) {
             $row = $this->repository->fetchIdentity($doctorId);
             if (!is_array($row)) {
@@ -101,7 +116,7 @@ final class PrivateProfileController
                 'blocked_fields_ignored' => array_values($prepared['blocked_fields']),
                 'editable_fields_applied' => [],
                 'no_editable_fields_applied' => true,
-            ], $this->verifiedIdentity($doctorId));
+            ]);
         }
 
         $updated = $this->repository->upsertIdentity($doctorId, $prepared['editable']);
@@ -111,7 +126,7 @@ final class PrivateProfileController
         if (!empty($prepared['blocked_fields'])) {
             $metaExtra['blocked_fields_ignored'] = array_values($prepared['blocked_fields']);
         }
-        return $this->success($doctorId, $updated, $authMode, $metaExtra, $this->verifiedIdentity($doctorId));
+        return $this->success($doctorId, $updated, $authMode, $metaExtra);
     }
 
     private function prepareEditablePayload(array $payload): array
@@ -238,10 +253,10 @@ final class PrivateProfileController
         string $doctorId,
         array $row,
         string $authMode,
-        array $metaExtra = [],
-        ?array $verifiedIdentity = null
+        array $metaExtra = []
     ): array
     {
+        $nameReadModel = $this->physicianNameReadModel($doctorId, $this->nullableText($row['display_name'] ?? null));
         return [
             'ok' => true,
             'error' => null,
@@ -271,7 +286,8 @@ final class PrivateProfileController
                     'default_key' => ProfileThemeCatalog::DEFAULT_KEY,
                     'catalog' => ProfileThemeCatalog::all(),
                 ],
-                'verified_identity' => $verifiedIdentity,
+                'verified_identity' => $nameReadModel['verified_identity'],
+                'public_name_policy' => $nameReadModel['public_name_policy'],
             ],
             'meta' => array_merge([
                 'contract' => 'profile_private_identity_mvp',
@@ -282,9 +298,22 @@ final class PrivateProfileController
         ];
     }
 
-    private function verifiedIdentity(string $doctorId): ?array
+    private function physicianNameReadModel(string $doctorId, ?string $currentDisplayName): array
     {
-        return $this->verifiedIdentityService?->readForPhysician($doctorId);
+        if ($this->verifiedIdentityService !== null) {
+            return $this->verifiedIdentityService->physicianNameReadModel($doctorId, $currentDisplayName);
+        }
+        return [
+            'verified_identity' => null,
+            'public_name_policy' => [
+                'verified_identity_available' => false,
+                'current_display_name' => $currentDisplayName,
+                'allowed_given_name_presentations' => [],
+                'first_surname_required' => false,
+                'second_surname_optional' => true,
+                'current_display_name_policy_status' => 'NOT_APPLICABLE',
+            ],
+        ];
     }
 
     private function error(string $code, string $message, string $authMode, array $metaExtra = []): array
