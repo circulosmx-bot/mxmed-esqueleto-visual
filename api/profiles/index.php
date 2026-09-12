@@ -8,6 +8,8 @@ require_once __DIR__ . '/../../modules/profiles/repositories/PublicDiscoveryRepo
 require_once __DIR__ . '/../../modules/profiles/controllers/PublicDiscoveryController.php';
 require_once __DIR__ . '/../../modules/profiles/repositories/PrivateProfileRepository.php';
 require_once __DIR__ . '/../../modules/profiles/controllers/PrivateProfileController.php';
+require_once __DIR__ . '/../../modules/profiles/repositories/VerifiedPhysicianIdentityRepository.php';
+require_once __DIR__ . '/../../modules/profiles/services/VerifiedPhysicianIdentityService.php';
 require_once __DIR__ . '/../../modules/profiles/repositories/DoctorContactPointsRepository.php';
 require_once __DIR__ . '/../../modules/profiles/controllers/DoctorContactPointsController.php';
 require_once __DIR__ . '/../../modules/media/bootstrap.php';
@@ -18,6 +20,8 @@ use Profiles\Repositories\PublicDiscoveryRepository;
 use Profiles\Controllers\PublicDiscoveryController;
 use Profiles\Repositories\PrivateProfileRepository;
 use Profiles\Controllers\PrivateProfileController;
+use Profiles\Repositories\VerifiedPhysicianIdentityRepository;
+use Profiles\Services\VerifiedPhysicianIdentityService;
 use Profiles\Repositories\DoctorContactPointsRepository;
 use Profiles\Controllers\DoctorContactPointsController;
 
@@ -110,7 +114,7 @@ function profileBoolEnvFlag($value): bool
     return in_array($raw, ['1', 'true', 'yes', 'on'], true);
 }
 
-function profileResolvePrivateContext(string $doctorId): array
+function profileResolvePrivateContext(string $doctorId, bool $requireDoctorScope = false): array
 {
     $strict = profileBoolEnvFlag(getenv('MXMED_PROFILES_PRIVATE_AUTH_REQUIRED'));
     $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
@@ -141,6 +145,25 @@ function profileResolvePrivateContext(string $doctorId): array
                 'ok' => false,
                 'error' => 'unauthorized',
                 'message' => 'authentication required',
+                'data' => null,
+                'meta' => [
+                    'contract' => 'profile_private_identity_mvp',
+                    'version' => 'PP-7H2-A',
+                    'generated_at' => gmdate('c'),
+                    'auth_mode' => $authMode,
+                ],
+            ],
+        ];
+    }
+
+    if ($strict && $requireDoctorScope && $scopeDoctorId === '') {
+        return [
+            'ok' => false,
+            'status' => 403,
+            'response' => [
+                'ok' => false,
+                'error' => 'forbidden',
+                'message' => 'doctor scope required',
                 'data' => null,
                 'meta' => [
                     'contract' => 'profile_private_identity_mvp',
@@ -591,15 +614,19 @@ try {
             return;
         }
 
-        $context = profileResolvePrivateContext($doctorId);
+        $context = profileResolvePrivateContext($doctorId, true);
         if (!(bool)($context['ok'] ?? false)) {
             profileRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
             return;
         }
         $authMode = (string)($context['auth_mode'] ?? 'transitional_open');
 
-        $repo = new PrivateProfileRepository(mxmed_pdo());
-        $controller = new PrivateProfileController($repo);
+        $pdo = mxmed_pdo();
+        $repo = new PrivateProfileRepository($pdo);
+        $verifiedIdentity = new VerifiedPhysicianIdentityService(
+            new VerifiedPhysicianIdentityRepository($pdo)
+        );
+        $controller = new PrivateProfileController($repo, $verifiedIdentity);
         if ($method === 'GET') {
             $response = $controller->showByDoctorId($doctorId, $authMode);
         } else {
