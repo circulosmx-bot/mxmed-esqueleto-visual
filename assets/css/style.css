@@ -21760,6 +21760,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* DG04B: verified public-name editing replaces the administrative dossier. */
 #p-info #t-info-datos > #mx-public-identity-card{order:4}
 #p-info #t-info-datos > #mx-dg-contact-card{order:5}
+#p-info #t-info-datos > #dg-signature-card{order:99}
 #p-info #t-info-datos #mx-public-identity-card > .card-body{padding:16px}
 #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor{
   padding:12px 14px;

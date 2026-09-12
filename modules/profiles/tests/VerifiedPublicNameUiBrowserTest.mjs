@@ -143,11 +143,17 @@ try{
     photoFallback:document.querySelector('#mxpi-photo-preview img')?.dataset.avatarKind,
     credentials:document.querySelectorAll('#t-info-formacion #ced-prof').length,
     mediaReview:typeof window.mxmedMediaReview==='object',
+    identityFieldOrder:[...document.querySelectorAll('#mx-public-identity-card .mxpi-public-grid > div')]
+      .map((field)=>field.querySelector('select, input, textarea')?.id)
+      .filter((id)=>['mxpi-gender-label','mxpi-prefix','mxpi-professional-designation'].includes(id)),
+    signatureIsLast:document.getElementById('t-info-datos').lastElementChild?.id==='dg-signature-card',
     overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth
   }))()`);
   assert.deepEqual(verifiedState.allowed, ['Luis','Armando','Luis Armando']);
-  assert.deepEqual(verifiedState, {...verifiedState,verifiedVisible:true,legacyHidden:true,first:'Reynoso',reference:'Luis Armando Reynoso Femat',detailsClosed:true,noAdminCard:true,tabs:5,photoFallback:'generic',credentials:1,mediaReview:true,overflow:false});
+  assert.deepEqual(verifiedState, {...verifiedState,verifiedVisible:true,legacyHidden:true,first:'Reynoso',reference:'Luis Armando Reynoso Femat',detailsClosed:true,noAdminCard:true,tabs:5,photoFallback:'generic',credentials:1,mediaReview:true,identityFieldOrder:['mxpi-gender-label','mxpi-prefix','mxpi-professional-designation'],signatureIsLast:true,overflow:false});
   assert.equal(verifiedState.allowed.includes('Fernando'), false);
+  assert.equal(await evaluate(`(()=>{const ids=['mxpi-gender-label','mxpi-prefix','mxpi-professional-designation'];const boxes=ids.map((id)=>document.getElementById(id).getBoundingClientRect());return boxes[0].left<boxes[1].left&&boxes[1].left<boxes[2].left&&Math.max(...boxes.map((box)=>box.top))-Math.min(...boxes.map((box)=>box.top))<2})()`), true, 'desktop identity fields must render as Género, Prefijo, Denominación');
+  assert.equal(await evaluate(`document.getElementById('dg-signature-card').getBoundingClientRect().top>=document.getElementById('mx-public-identity-card').getBoundingClientRect().bottom`), true, 'signature card must render below identity');
   await screenshot('dg04b-name-editor-1440.png');
 
   const expected = [];
@@ -174,6 +180,7 @@ try{
   await send('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:1,mobile:true});
   await evaluate(`document.getElementById('mxpi-verified-details').open=false;document.getElementById('mx-public-identity-card').scrollIntoView({block:'start',behavior:'instant'})`);
   assert.equal(await evaluate('document.documentElement.scrollWidth>document.documentElement.clientWidth'), false);
+  assert.equal(await evaluate(`(()=>{const ids=['mxpi-gender-label','mxpi-prefix','mxpi-professional-designation'];const tops=ids.map((id)=>document.getElementById(id).getBoundingClientRect().top);return tops[0]<tops[1]&&tops[1]<tops[2]})()`), true, 'mobile identity fields must stack as Género, Prefijo, Denominación');
   await screenshot('dg04b-name-editor-mobile.png');
 
   await send('Emulation.setDeviceMetricsOverride', {width:1366,height:768,deviceScaleFactor:1,mobile:false});
