@@ -655,6 +655,7 @@ try {
             'forbidden' => 403,
             'profile_private_unavailable' => 500,
             'validation_error' => 422,
+            'invalid_public_display_name' => 422,
         ];
         if ($error !== '' && isset($statusMap[$error])) {
             profileRespond($response, $statusMap[$error]);

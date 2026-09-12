@@ -172,6 +172,9 @@ try {
     vid01Assert(($own['data']['verified_identity']['full_name'] ?? null) === 'Luis Armando Reynoso Femat', 'derived full verified name is exact');
     vid01Assert(!array_key_exists('verified_by_account_id', $own['data']['verified_identity']), 'internal approver is not exposed to physician');
     vid01Assert(!array_key_exists('source_reference', $own['data']['verified_identity']), 'internal source reference is not exposed to physician');
+    vid01Assert(($own['data']['public_name_policy']['verified_identity_available'] ?? false) === true, 'private read model exposes verified-name policy');
+    vid01Assert(($own['data']['public_name_policy']['allowed_given_name_presentations'] ?? null) === ['Luis', 'Armando', 'Luis Armando'], 'private read model exposes allowed given-name presentations');
+    vid01Assert(($own['data']['public_name_policy']['current_display_name_policy_status'] ?? null) === 'LEGACY_NONCONFORMING', 'existing nonconforming display name remains visible and is reported');
 
     $legacyBefore = (string)$pdo->query("SELECT display_name FROM profiles_doctors WHERE doctor_id = 'vid01-legacy'")->fetchColumn();
     $legacy = $private->showByDoctorId('vid01-legacy', 'strict');
@@ -179,8 +182,15 @@ try {
         array_key_exists('verified_identity', $legacy['data']) && $legacy['data']['verified_identity'] === null,
         'legacy doctor without verified identity is supported'
     );
+    vid01Assert(($legacy['data']['public_name_policy']['verified_identity_available'] ?? true) === false, 'legacy private read model reports no verified identity');
     $legacyAfter = (string)$pdo->query("SELECT display_name FROM profiles_doctors WHERE doctor_id = 'vid01-legacy'")->fetchColumn();
     vid01Assert($legacyAfter === $legacyBefore, 'legacy display name was neither split nor modified');
+    $legacyUpdate = $private->patchByDoctorId('vid01-legacy', [
+        'display_name' => 'Nombre público legado libre',
+        'prefix' => 'Dra.',
+    ], 'strict');
+    vid01Assert(($legacyUpdate['ok'] ?? false) === true, 'legacy physician retains existing display-name update behavior');
+    vid01Assert(($legacyUpdate['data']['identity_public']['display_name'] ?? null) === 'Nombre público legado libre', 'legacy arbitrary display name remains supported');
 
     $blockedWrite = $private->patchByDoctorId('vid01-luis', [
         'verified_identity' => ['given_names' => 'Fernando'],
@@ -239,6 +249,7 @@ try {
     ]);
     vid01Assert($ownHttp['status'] === 200, 'physician can read own private verified identity');
     vid01Assert(($ownHttp['json']['data']['verified_identity']['full_name'] ?? null) === 'Luis Armando Reynoso Femat', 'private API exposes own verified identity');
+    vid01Assert(($ownHttp['json']['data']['public_name_policy']['current_display_name_policy_status'] ?? null) === 'LEGACY_NONCONFORMING', 'private API reports nonconforming current legacy name without rewriting it');
     $writeHttp = vid01Request($base . '/private/doctor/vid01-luis', [
         'X-User-Id: account-vid01',
         'X-Doctor-Id: vid01-luis',
@@ -249,6 +260,34 @@ try {
     vid01Assert($writeHttp['status'] === 200, 'private profile PATCH safely ignores verified identity input');
     vid01Assert(($writeHttp['json']['meta']['no_editable_fields_applied'] ?? false) === true, 'verified identity has no physician write path');
     vid01Assert(($writeHttp['json']['data']['verified_identity']['full_name'] ?? null) === 'Luis Armando Reynoso Femat', 'private API PATCH cannot mutate verified identity');
+
+    $beforeBypass = $pdo->query("SELECT display_name, bio_short, prefix FROM profiles_doctors WHERE doctor_id = 'vid01-luis'")->fetch(PDO::FETCH_ASSOC);
+    $bypassHttp = vid01Request($base . '/private/doctor/vid01-luis', [
+        'X-User-Id: account-vid01',
+        'X-Doctor-Id: vid01-luis',
+    ], 'PATCH', [
+        'display_name' => 'Fernando Reynoso',
+        'bio_short' => 'Este campo no debe guardarse',
+        'prefix' => 'Dr.',
+    ]);
+    vid01Assert($bypassHttp['status'] === 422, 'direct HTTP bypass with invented given name is rejected');
+    vid01Assert(($bypassHttp['json']['error'] ?? null) === 'invalid_public_display_name', 'stable invalid public display-name error returned');
+    $afterBypass = $pdo->query("SELECT display_name, bio_short, prefix FROM profiles_doctors WHERE doctor_id = 'vid01-luis'")->fetch(PDO::FETCH_ASSOC);
+    vid01Assert($afterBypass === $beforeBypass, 'invalid grouped PATCH persists no sibling public-identity fields');
+
+    $validNameHttp = vid01Request($base . '/private/doctor/vid01-luis', [
+        'X-User-Id: account-vid01',
+        'X-Doctor-Id: vid01-luis',
+    ], 'PATCH', [
+        'display_name' => "  lUiS\u{00A0}rEyNoSo  ",
+        'professional_designation' => 'Endocrinólogo',
+        'prefix' => 'Dr.',
+    ]);
+    vid01Assert($validNameHttp['status'] === 200, 'allowed verified-name subset saves through grouped private PATCH');
+    vid01Assert(($validNameHttp['json']['data']['identity_public']['display_name'] ?? null) === 'Luis Reynoso', 'HTTP PATCH saves canonical verified spelling');
+    vid01Assert(($validNameHttp['json']['data']['identity_public']['professional_designation'] ?? null) === 'Endocrinólogo', 'valid grouped PATCH preserves sibling update behavior');
+    vid01Assert(($validNameHttp['json']['data']['identity_public']['prefix'] ?? null) === 'Dr.', 'prefix remains a separate public-presentation field');
+    vid01Assert(($validNameHttp['json']['data']['public_name_policy']['current_display_name_policy_status'] ?? null) === 'VALID', 'read model reports valid status after compliant change');
     $missingScopeHttp = vid01Request($base . '/private/doctor/vid01-luis', [
         'X-User-Id: account-vid01-other',
     ]);
@@ -261,15 +300,16 @@ try {
     vid01Assert(($crossHttp['json']['data'] ?? null) === null, 'cross-doctor response exposes no identity');
     $publicHttp = vid01Request($base . '/public/doctor/vid01-luis');
     vid01Assert($publicHttp['status'] === 200, 'existing public profile endpoint still succeeds');
-    vid01Assert(($publicHttp['json']['data']['identity']['display_name'] ?? null) === 'Luis público previo', 'public profile still uses display_name');
+    vid01Assert(($publicHttp['json']['data']['identity']['display_name'] ?? null) === 'Luis Reynoso', 'public profile still uses the saved display_name');
     vid01Assert(!str_contains(json_encode($publicHttp['json'], JSON_THROW_ON_ERROR), 'verified_identity'), 'public API does not expose verified identity');
+    vid01Assert(!str_contains(json_encode($publicHttp['json'], JSON_THROW_ON_ERROR), 'public_name_policy'), 'public API does not expose private name policy');
 
     foreach (['profiles/doctor.php', 'profiles/listing.php', 'modules/profiles/repositories/PublicProfileRepository.php', 'modules/profiles/repositories/PublicDiscoveryRepository.php'] as $publicFile) {
         $source = (string)file_get_contents($root . '/' . $publicFile);
         vid01Assert(!str_contains($source, 'profiles_verified_identities'), 'public source remains independent: ' . $publicFile);
     }
 
-    echo "VerifiedPhysicianIdentityTest PASS (schema/idempotency, structured identity, provenance, uniqueness, private scope, immutable physician contract, legacy null, public isolation)\n";
+    echo "VerifiedPhysicianIdentityTest PASS (VID01 authority plus VID02 private policy, direct HTTP rejection, grouped atomicity, legacy compatibility, public isolation)\n";
 } finally {
     if (is_resource($server)) {
         proc_terminate($server);
