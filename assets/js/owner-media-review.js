@@ -2,6 +2,15 @@
   const purposes={photo:['profile-photo-review-candidate.php','X-Profile-Photo-Candidate-CSRF','Foto de perfil','mxpi-photo-input'],logo:['physician-logo-review-candidate.php','X-Physician-Logo-Candidate-CSRF','Logotipo profesional',null],gallery:['gallery-review-candidate.php','X-Gallery-Review-Candidate-CSRF','Imagen de galería','fotos-input']};
   const keys={DOCTOR_PROFILE_PHOTO:'photo',PHYSICIAN_PERSONAL_LOGO:'logo',DOCTOR_GALLERY:'gallery'};
   const panels=[];let busy=false;
+  function hideForMissingSession(panel){
+    panel.replaceChildren();
+    panel.hidden=true;
+    panel.classList.add('is-session-hidden');
+  }
+  function reveal(panel){
+    panel.hidden=false;
+    panel.classList.remove('is-session-hidden');
+  }
   async function json(url,options={}){
     let r;
     try{
@@ -28,7 +37,7 @@
   async function refresh(){
     if(!panels.length)return;
     try{const [owner,batch]=await Promise.all([json('owner-review.php'),json('review-batch-submit.php')]);
-      for(const panel of panels){panel.replaceChildren(element('h3','Imágenes en revisión','h6'),element('p','Tus imágenes públicas siguen visibles hasta que se aprueben los cambios.','small text-muted'));
+      for(const panel of panels){reveal(panel);panel.replaceChildren(element('h3','Imágenes en revisión','h6'),element('p','Tus imágenes públicas siguen visibles hasta que se aprueben los cambios.','small text-muted'));
         if(!owner.items.length)panel.append(element('p','No tienes imágenes pendientes.','small'));
         for(const item of owner.items){const key=keys[item.purpose];if(!key)continue;const row=element('div','','border rounded p-2 mb-2');const image=document.createElement('img');image.src=item.preview_url;image.alt=purposes[key][2];image.width=72;image.height=72;image.style.objectFit='contain';row.append(image,element('strong',purposes[key][2],'ms-2'),element('p',({OPEN:'Pendiente de enviar',SUBMITTED:'Enviado a revisión',NEEDS_WORK:'Necesita cambios'})[item.state],'small mb-1'));
           if(item.state==='NEEDS_WORK'){row.append(element('p','Motivo: '+item.reason,'small'));if(item.feedback)row.append(element('p',item.feedback,'small'));const replace=element('button','Reemplazar imagen','btn btn-sm btn-outline-primary');replace.type='button';replace.onclick=()=>{const input=key==='logo'?document.querySelector('#mx-dg-media-card [data-profile-logo-upload] input[type=file]'):document.getElementById(purposes[key][3]);input?.click();};row.append(replace);}
@@ -39,14 +48,17 @@
       }
     }catch(e){
       for(const panel of panels){
+        if(e?.kind==='session'){
+          hideForMissingSession(panel);
+          continue;
+        }
+        reveal(panel);
         const wrap=element('div','','mx-owner-media-review-error');
-        const message=e?.kind==='session'
-          ? 'Inicia sesión con un perfil médico autorizado para consultar tus imágenes pendientes.'
-          : e?.kind==='permission'
+        const message=e?.kind==='permission'
             ? 'Tu sesión no tiene acceso a las imágenes pendientes.'
             : 'No pudimos consultar tus imágenes pendientes.';
         wrap.append(element('p',message,'small mb-0'));
-        if(e?.kind!=='session'&&e?.kind!=='permission'){
+        if(e?.kind!=='permission'){
           const retry=element('button','Reintentar','btn btn-sm btn-outline-secondary');
           retry.type='button';
           retry.onclick=refresh;
@@ -58,6 +70,6 @@
   }
   async function perform(action){if(busy)return;busy=true;panels.forEach(p=>p.querySelectorAll('button').forEach(b=>b.disabled=true));try{await action();}catch(e){panels.forEach(p=>p.append(element('p',e.message,'text-danger')));}finally{busy=false;panels.forEach(p=>p.querySelectorAll('button').forEach(b=>b.disabled=false));}}
   window.mxmedMediaReview={upload,refresh};
-  for(const anchor of ['fotos-drop','mx-dg-media-card']){const el=document.getElementById(anchor);if(el){const panel=document.createElement('section');panel.className='mx-owner-media-review my-3';panel.setAttribute('aria-live','polite');el.after(panel);panels.push(panel);}}
+  for(const anchor of ['fotos-drop','mx-dg-media-card']){const el=document.getElementById(anchor);if(el){const panel=document.createElement('section');panel.className='mx-owner-media-review my-3 is-session-hidden';panel.setAttribute('aria-live','polite');panel.hidden=true;el.after(panel);panels.push(panel);}}
   document.addEventListener('shown.bs.tab',refresh);window.addEventListener('focus',refresh);refresh();
 })();

@@ -21633,3 +21633,52 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   #p-info #t-info-datos .mx-owner-media-review-error{align-items:flex-start;flex-direction:column}
 }
+
+/* DG03D: session-aware media visibility and denser verified-data sheet. */
+#p-info #t-info-datos > .mx-owner-media-review.is-session-hidden,
+#p-info #t-info-datos > .mx-owner-media-review[hidden]{
+  display:none!important;
+  height:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid{
+  --bs-gutter-y:0;
+  row-gap:10px!important;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > *{margin-top:0}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-personal-field,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-ced,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-ced,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-ced,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-uni,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-uni,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-uni,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-1),
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-2),
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-3){
+  padding-top:4px;
+  padding-bottom:4px;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-subhead{
+  margin-block:0;
+  padding-block:0;
+}
+@media (max-width:767px){
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid{row-gap:12px!important}
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-personal-field,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-1),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-2),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-3){
+    padding-top:6px;
+    padding-bottom:6px;
+  }
+}
