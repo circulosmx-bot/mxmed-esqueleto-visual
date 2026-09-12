@@ -31,6 +31,11 @@ final class SensitiveAdminActionCatalog
         'STEP_UP_CHALLENGE_FAILED',
         'BREAK_GLASS_STARTED',
         'BREAK_GLASS_ENDED',
+        'PHYSICIAN_CREDENTIAL_PROVISIONED',
+        'PHYSICIAN_CREDENTIAL_VERIFIED',
+        'PHYSICIAN_CREDENTIAL_REJECTED',
+        'PHYSICIAN_CREDENTIAL_INACTIVATED',
+        'PHYSICIAN_CREDENTIAL_REVOKED',
     ];
 
     /** @return array<string,array{target_type:string,authority:string}> */
