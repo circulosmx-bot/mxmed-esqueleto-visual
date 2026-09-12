@@ -98,6 +98,7 @@
   "assets/js/messages.js",
   "assets/js/owner-media-review.js",
   "assets/js/perfil/consultorio/multisede.js",
+  "assets/js/perfil/credenciales.js",
   "assets/js/perfil/datos-generales.js",
   "assets/js/perfil/visibility-help.js",
   "assets/js/perfil/formacion.js",

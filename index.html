@@ -948,20 +948,6 @@
                         <input class="form-control" id="mxpi-professional-designation" type="text" maxlength="120" aria-describedby="mxpi-designation-help">
                         <div class="text-muted small mt-1 mxpi-field-note" id="mxpi-designation-help">Ej. Endocrinóloga, Cardiólogo, Cirujana dentista. Se utiliza para referirse profesionalmente al médico y no sustituye la especialidad.</div>
                       </div>
-                      <div class="col-12 mxpi-subsection mxpi-subsection-future">
-                        <div class="mxpi-subsection-title">Clasificaciones públicas / áreas de atención visibles</div>
-                        <div class="mxpi-subsection-note">Disponibles en fase posterior; hoy se muestran sólo como referencia de lectura.</div>
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label mx-field-label" for="mxpi-specialty-secondary">Áreas de atención visibles (transicional)<span class="mx-field-badge mx-field-badge--verified">Fase posterior</span></label>
-                        <input class="form-control" id="mxpi-specialty-secondary" maxlength="1500" placeholder="Separadas por coma" readonly aria-readonly="true">
-                        <div class="text-muted small mt-1 mxpi-field-note">Disponible en fase posterior; no se guarda desde este panel.</div>
-                        <div class="text-muted small mt-1 mxpi-field-note" id="mxpi-classification-suggestions">Sugerencias iniciales de clasificación pública según especialidad verificada: Clínica del dolor, Cuidados paliativos, Manejo del dolor crónico.</div>
-                      </div>
-                      <div class="col-12 mxpi-subsection mxpi-subsection-future mxpi-subsection-phase">
-                        <div class="mxpi-subsection-title">Clasificaciones públicas — fase posterior</div>
-                        <div class="mxpi-subsection-note">En una fase siguiente podrás definir clasificaciones visibles para búsquedas, separadas de tus credenciales verificadas.</div>
-                      </div>
                       <div class="col-12">
                         <label class="form-label mx-field-label" for="mxpi-bio-short">Bio breve<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="90" aria-describedby="mxpi-bio-count mxpi-bio-limit" placeholder="Resumen profesional breve visible en el perfil público"></textarea>
@@ -1282,13 +1268,11 @@
                   <div class="col-12">
                     <div class="card mx-dg-card mx-formacion-credentials" id="mx-formacion-credentials-card">
                       <div class="card-body">
-                        <div class="mx-dg-card-head">
-                          <div class="mx-dg-card-title-row">
-                            <div class="mx-dg-card-title">Credenciales profesionales</div>
-                            <span class="mx-dg-verify-badge" role="status">Verificado / revisión</span>
-                          </div>
-                          <div class="mx-dg-card-note">Cada cédula debe integrar número, institución y formación/especialidad asociada.</div>
+                        <h2 class="mx-credential-heading" id="mx-credential-heading">Credenciales profesionales</h2>
+                        <div id="mx-credential-list" class="mx-credential-list" aria-labelledby="mx-credential-heading" aria-live="polite">
+                          <p class="mx-credential-empty">Cargando información profesional…</p>
                         </div>
+                        <div id="mx-credential-legacy-compat" hidden inert aria-hidden="true">
                         <div class="row mx-formacion-credentials-grid">
                           <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-1-ced"><label class="form-label mx-field-label">Cédula Profesional<span class="mx-field-badge mx-field-badge--verified">Verificado</span></label><input class="form-control" id="ced-prof" placeholder="Número de Cédula" readonly aria-readonly="true"></div>
                           <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-1-uni"><label class="form-label mx-field-label">Universidad / Institución<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="uni-prof" placeholder="p.ej. UNAM" readonly aria-readonly="true"></div>
@@ -1306,6 +1290,7 @@
                             <span class="small text-muted" id="mxpi-legacy-feedback" aria-live="polite"></span>
                             <button id="mxpi-save-btn-legacy" type="button" disabled hidden aria-hidden="true" tabindex="-1">Solicitud en fase posterior</button>
                           </div>
+                        </div>
                         </div>
                       </div>
                     </div>
@@ -10346,6 +10331,7 @@
 
 <script src="assets/js/subscription-messages.js"></script>
 <script src="assets/js/owner-media-review.js?v=mr12a"></script>
+<script src="assets/js/perfil/credenciales.js"></script>
 <script src="assets/js/app.js?v=media-review-mr12a"></script>
 <script src="assets/js/core/header-account.js"></script>
 <script src="assets/js/perfil/datos-generales.js"></script>

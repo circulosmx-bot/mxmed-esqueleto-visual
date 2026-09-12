@@ -21872,3 +21872,20 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-info #t-info-datos #mx-public-identity-card .mxpi-verified-details__grid{grid-template-columns:1fr}
   #p-info #t-info-datos #mx-public-identity-card .mxpi-verified-details summary{max-width:100%}
 }
+
+/* CRD03: credentials are compact read-only data; legacy anchors stay inert. */
+#mx-credential-legacy-compat[hidden]{display:none!important}
+#mx-formacion-credentials-card .mx-credential-heading{font-size:1.1rem;font-weight:700;margin:0 0 8px;color:var(--mm-azul,#0b3750)}
+#mx-formacion-credentials-card .mx-credential-row{padding:12px 0;min-width:0}
+#mx-formacion-credentials-card .mx-credential-row + .mx-credential-row{border-top:1px solid #dbe8ee}
+#mx-formacion-credentials-card .mx-credential-row-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#mx-formacion-credentials-card .mx-credential-row h3{font-size:1rem;font-weight:700;margin:0;flex:1 1 220px;overflow-wrap:anywhere}
+#mx-formacion-credentials-card .mx-credential-row p{margin:4px 0 0;color:#526d7c;font-size:.9rem;overflow-wrap:anywhere}
+#mx-formacion-credentials-card .mx-credential-primary,
+#mx-formacion-credentials-card .mx-credential-verified{font-size:.75rem;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap}
+#mx-formacion-credentials-card .mx-credential-primary{color:#075b70;background:#e4f5fa}
+#mx-formacion-credentials-card .mx-credential-verified{color:#167148;background:#e8f6ee}
+#mx-formacion-credentials-card .mx-credential-empty{margin:8px 0;color:#526d7c;font-size:.9rem}
+@media(max-width:575.98px){
+  #mx-formacion-credentials-card .mx-credential-row h3{flex-basis:100%}
+}

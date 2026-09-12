@@ -2584,6 +2584,7 @@ console.info('app.js loaded :: 20251123a');
     state.loading = true;
     setBusyState();
     setFeedback('Cargando identidad pública...', 'muted');
+    window.mxmedRenderCredentials?.(null);
 
     try{
       const response = await fetch(buildPrivateEndpoint(state.doctorId), {
@@ -2596,6 +2597,7 @@ console.info('app.js loaded :: 20251123a');
         throw new Error('No fue posible cargar la identidad pública.');
       }
       applyIdentity(json.data.identity_public, json.data.verified_identity, json.data.public_name_policy);
+      window.mxmedRenderCredentials?.(json.data);
       applyThemeContract(json.data.profile_theme);
       state.loaded = true;
       await loadAdministrativeContacts();
@@ -2604,6 +2606,7 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){
       state.loaded = false;
       setFeedback('No fue posible cargar la identidad pública. Intenta nuevamente.', 'danger');
+      window.mxmedRenderCredentials?.(null, 'unavailable');
       setLegacyFeedback('No fue posible cargar identidad pública.', 'danger');
     }finally{
       state.loading = false;
@@ -2642,6 +2645,7 @@ console.info('app.js loaded :: 20251123a');
         throw error;
       }
       applyIdentity(json.data.identity_public, json.data.verified_identity, json.data.public_name_policy);
+      window.mxmedRenderCredentials?.(json.data);
       applyThemeContract(json.data.profile_theme);
       setFeedback('Cambios guardados. El perfil público ya puede reflejar esta información.', 'success');
       setLegacyFeedback('Datos verificados sin cambios.', 'muted');
