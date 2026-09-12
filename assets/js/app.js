@@ -1151,7 +1151,6 @@ console.info('app.js loaded :: 20251123a');
     genderLabel: document.getElementById('mxpi-gender-label'),
     professionalLicense: document.getElementById('mxpi-prof-license'),
     specialtyLicense: document.getElementById('mxpi-specialty-license'),
-    specialtyPrimary: document.getElementById('mxpi-specialty-primary'),
     specialtySecondary: document.getElementById('mxpi-specialty-secondary'),
     bioShort: document.getElementById('mxpi-bio-short'),
     profileStatus: document.getElementById('mxpi-profile-status'),
@@ -1167,6 +1166,9 @@ console.info('app.js loaded :: 20251123a');
     contactCreateType: document.getElementById('mx-dg-contact-create-type'),
     contactCreateValue: document.getElementById('mx-dg-contact-create-value'),
     contactCreateBtn: document.getElementById('mx-dg-contact-create-btn'),
+    adminPhone: document.getElementById('mx-admin-phone'),
+    adminWhatsapp: document.getElementById('mx-admin-whatsapp'),
+    adminContactFeedback: document.getElementById('mx-admin-contact-feedback'),
     logoBox: document.querySelector('#mx-dg-media-card [data-profile-logo-upload]'),
     logoInput: document.getElementById('mx-dg-logo'),
     logoPreview: document.getElementById('mx-dg-logo-prev'),
@@ -1189,7 +1191,6 @@ console.info('app.js loaded :: 20251123a');
   const readOnlyProfileFieldIds = [
     'mxpi-prof-license',
     'mxpi-specialty-license',
-    'mxpi-specialty-primary',
     'mxpi-specialty-secondary',
     'mxpi-profile-status',
     'mxpi-public-candidate',
@@ -1288,6 +1289,8 @@ console.info('app.js loaded :: 20251123a');
     dirty: false,
     autoPublicSpecialty: null,
     logoSaving: false,
+    adminContacts: new Map(),
+    adminContactBusy: new Set(),
     themeStoredKey: null,
     themeSelectedKey: null,
     themeCatalog: []
@@ -1569,6 +1572,144 @@ console.info('app.js loaded :: 20251123a');
     const base = buildPrivateEndpoint(doctorId) + '/contact-points';
     const safeId = String(contactPointId || '').trim();
     return safeId ? base + '/' + encodeURIComponent(safeId) : base;
+  }
+
+  const ADMIN_CONTACT_CONFIG = Object.freeze({
+    phone: Object.freeze({ element: els.adminPhone, label: 'Teléfono administrativo', sortOrder: 20 }),
+    whatsapp: Object.freeze({ element: els.adminWhatsapp, label: 'WhatsApp administrativo', sortOrder: 30 })
+  });
+
+  function setAdminContactFeedback(message, tone = 'muted'){
+    if(!els.adminContactFeedback) return;
+    const classes = {
+      success: 'small text-success mx-dg-admin-contact-feedback',
+      danger: 'small text-danger mx-dg-admin-contact-feedback',
+      warning: 'small text-warning mx-dg-admin-contact-feedback',
+      muted: 'small text-muted mx-dg-admin-contact-feedback'
+    };
+    els.adminContactFeedback.className = classes[tone] || classes.muted;
+    els.adminContactFeedback.textContent = String(message || '').trim();
+  }
+
+  function adminContactValueIsValid(value){
+    const digits = String(value || '').replace(/\D+/g, '');
+    return digits.length >= 10 && digits.length <= 15;
+  }
+
+  function isCanonicalAdministrativeContact(contact, type){
+    return contact
+      && String(contact.type || '').trim().toLowerCase() === type
+      && String(contact.scope || '').trim().toLowerCase() === 'platform_admin'
+      && contact.use_for_platform_admin === true
+      && contact.is_public !== true
+      && contact.use_for_public_profile !== true
+      && String(contact.status || '').trim().toLowerCase() === 'active';
+  }
+
+  function applyAdministrativeContacts(items){
+    const contacts = Array.isArray(items) ? items : [];
+    state.adminContacts = new Map();
+    Object.entries(ADMIN_CONTACT_CONFIG).forEach(([type, config])=>{
+      const contact = contacts.find((item)=> isCanonicalAdministrativeContact(item, type)) || null;
+      if(contact) state.adminContacts.set(type, contact);
+      if(!config.element) return;
+      const value = String(contact?.value || '').trim();
+      config.element.value = value;
+      config.element.dataset.persistedValue = value;
+      config.element.classList.remove('is-invalid');
+    });
+  }
+
+  async function administrativeContactRequest(url, options = {}){
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      ...options,
+      headers: { 'Accept': 'application/json', ...(options.headers || {}) }
+    });
+    const json = await response.json().catch(()=> null);
+    if(!response.ok || !json || json.ok !== true){
+      throw new Error(String(json?.message || json?.error || 'No fue posible guardar el contacto administrativo.'));
+    }
+    return json.data || {};
+  }
+
+  async function loadAdministrativeContacts(){
+    if(!els.adminPhone && !els.adminWhatsapp) return;
+    const doctorId = sanitizeDoctorId(state.doctorId) || resolveDoctorId();
+    if(!doctorId) return;
+    setAdminContactFeedback('Cargando contactos administrativos...');
+    try{
+      const data = await administrativeContactRequest(buildContactPointsEndpoint(doctorId));
+      applyAdministrativeContacts(data.items);
+      setAdminContactFeedback('');
+    }catch(err){
+      setAdminContactFeedback(String(err?.message || 'No fue posible cargar los contactos administrativos.'), 'danger');
+    }
+  }
+
+  async function persistAdministrativeContact(type){
+    const config = ADMIN_CONTACT_CONFIG[type];
+    const input = config?.element;
+    if(!input || state.adminContactBusy.has(type)) return;
+    const value = String(input.value || '').trim();
+    const previousValue = String(input.dataset.persistedValue || '');
+    if(value === previousValue) return;
+    if(!adminContactValueIsValid(value)){
+      input.classList.add('is-invalid');
+      setAdminContactFeedback(`Captura ${config.label.toLowerCase()} con 10 a 15 dígitos.`, 'warning');
+      return;
+    }
+
+    const doctorId = sanitizeDoctorId(state.doctorId) || resolveDoctorId();
+    if(!doctorId){
+      setAdminContactFeedback('No se pudo identificar al médico.', 'danger');
+      return;
+    }
+
+    state.adminContactBusy.add(type);
+    input.disabled = true;
+    input.classList.remove('is-invalid');
+    setAdminContactFeedback('Guardando contacto administrativo...');
+    try{
+      let contact = state.adminContacts.get(type) || null;
+      if(!contact){
+        const created = await administrativeContactRequest(buildContactPointsEndpoint(doctorId), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, value, label: config.label, sort_order: config.sortOrder })
+        });
+        contact = created.contact_point || null;
+      }
+      const contactId = String(contact?.contact_point_id || '').trim();
+      if(!contactId) throw new Error('No fue posible identificar el contacto administrativo.');
+      const saved = await administrativeContactRequest(buildContactPointsEndpoint(doctorId, contactId), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          value,
+          label: config.label,
+          scope: 'platform_admin',
+          is_public: false,
+          use_for_security: false,
+          use_for_platform_admin: true,
+          use_for_public_profile: false,
+          use_for_appointments: false,
+          status: 'active',
+          sort_order: config.sortOrder
+        })
+      });
+      const persisted = saved.contact_point || contact;
+      state.adminContacts.set(type, persisted);
+      input.value = String(persisted.value || value).trim();
+      input.dataset.persistedValue = input.value;
+      setAdminContactFeedback(`${config.label} guardado.`, 'success');
+    }catch(err){
+      setAdminContactFeedback(String(err?.message || 'No fue posible guardar el contacto administrativo.'), 'danger');
+    }finally{
+      state.adminContactBusy.delete(type);
+      input.disabled = false;
+    }
   }
 
   function normalizeText(value, maxLen){
@@ -2051,6 +2192,13 @@ console.info('app.js loaded :: 20251123a');
     const specialtySecondary = specialtySecondaryToString(data.specialty_secondary);
     const bioShort = data.bio_short == null ? '' : String(data.bio_short);
 
+    if(document.body){
+      document.body.dataset.profileGender = gender || genderLabel || '';
+      window.dispatchEvent(new CustomEvent('mxmed:profile-identity-hydrated', {
+        detail: { gender: gender || null, genderLabel: genderLabel || null }
+      }));
+    }
+
     els.displayName.value = displayName || '';
     if(els.professionalDesignation) els.professionalDesignation.value = normalizeText(data.professional_designation, 120) || '';
     if(els.prefix){
@@ -2063,7 +2211,6 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.professionalLicense) els.professionalLicense.value = professionalLicense || '';
     if(els.specialtyLicense) els.specialtyLicense.value = specialtyLicense || '';
-    if(els.specialtyPrimary) els.specialtyPrimary.value = specialtyPrimary || '';
     state.autoPublicSpecialty = specialtyPrimary || null;
     if(els.specialtySecondary) els.specialtySecondary.value = specialtySecondary || '';
     if(els.bioShort) els.bioShort.value = bioShort || '';
@@ -2382,7 +2529,7 @@ console.info('app.js loaded :: 20251123a');
       applyIdentity(json.data.identity_public);
       applyThemeContract(json.data.profile_theme);
       state.loaded = true;
-      loadContactPublicOptIn();
+      await loadAdministrativeContacts();
       setFeedback('Identidad pública cargada.', 'muted');
       setLegacyFeedback('Sin cambios pendientes.', 'muted');
     }catch(_){
@@ -2439,6 +2586,22 @@ console.info('app.js loaded :: 20251123a');
   els.contactCreateForm?.addEventListener('submit', (event)=>{
     event.preventDefault();
     createPrivateContactPoint();
+  });
+  Object.entries(ADMIN_CONTACT_CONFIG).forEach(([type, config])=>{
+    const input = config.element;
+    if(!input) return;
+    input.addEventListener('input', ()=>{
+      input.classList.remove('is-invalid');
+      if(String(input.value || '').trim() !== String(input.dataset.persistedValue || '')){
+        setAdminContactFeedback('Cambio pendiente de guardar.');
+      }
+    });
+    input.addEventListener('blur', ()=> persistAdministrativeContact(type));
+    input.addEventListener('keydown', (event)=>{
+      if(event.key !== 'Enter') return;
+      event.preventDefault();
+      input.blur();
+    });
   });
   els.saveBtn.addEventListener('click', savePrivateIdentity);
   els.themeReset?.addEventListener('click', ()=> selectTheme('mxmed_teal', { reset: true, markDirty: true }));

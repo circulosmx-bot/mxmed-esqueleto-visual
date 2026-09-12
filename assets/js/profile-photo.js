@@ -4,10 +4,17 @@
   const input=document.getElementById('mxpi-photo-input'), select=document.getElementById('mxpi-photo-select'), remove=document.getElementById('mxpi-photo-remove'), preview=document.getElementById('mxpi-photo-preview'), status=document.getElementById('mxpi-photo-status');
   const endpoint='/api/media/profile-photo.php';
   let token='',photo=null,busy=false;
+  const genericAvatar=()=>{
+    const value=String(document.body?.dataset?.profileGender||'').trim().toLowerCase();
+    if(['f','female','feminine','mujer','femenino'].includes(value))return '/assets/img/doctors/avatars/dr-female.png';
+    return '/assets/img/doctors/avatars/dr-male.png';
+  };
   const render=()=>{
-    preview.hidden=!photo;remove.hidden=!photo;
-    if(photo)preview.querySelector('img').src=photo.public_url;
-    else preview.querySelector('img').removeAttribute('src');
+    const image=preview.querySelector('img');
+    preview.hidden=false;remove.hidden=!photo;
+    image.src=photo?.public_url||genericAvatar();
+    image.alt=photo?'Fotografía de perfil':'Imagen genérica de perfil médico';
+    image.dataset.avatarKind=photo?'public':'generic';
     select.textContent=photo?'Cambiar foto':'Seleccionar foto';
   };
   async function request(method='GET',body=null){
@@ -38,6 +45,7 @@
   box.addEventListener('dragover',e=>e.preventDefault());
   box.addEventListener('drop',e=>{e.preventDefault();upload(e.dataTransfer?.files?.[0]);});
   remove.addEventListener('click',()=>run(async()=>{status.textContent='Eliminando…';await request('DELETE');status.textContent='Foto eliminada';}));
+  window.addEventListener('mxmed:profile-identity-hydrated',()=>{if(!photo)render();});
   document.getElementById('t-info-datos-tab')?.addEventListener('shown.bs.tab',()=>run(()=>request()));
   run(()=>request());
 })();

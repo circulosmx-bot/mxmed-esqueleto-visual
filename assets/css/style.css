@@ -21682,3 +21682,77 @@ body{margin:0;background:var(--mm-fondo-base);}
     padding-bottom:6px;
   }
 }
+
+/* DG04A: canonical credentials and compact private administrative contact. */
+#p-info #t-info-formacion .mx-formacion-credentials{
+  border:1px solid #cfe0e7;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:none;
+}
+#p-info #t-info-formacion .mx-formacion-credentials > .card-body{padding:16px}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-dg-card-title-row{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-dg-card-title{font-weight:700}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-dg-verify-badge{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #efd296;
+  border-radius:999px;
+  padding:2px 8px;
+  background:#fff7e6;
+  color:#9b6700;
+  font-size:12px;
+  font-weight:700;
+}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-dg-card-note{
+  margin-top:3px;
+  color:#5b7483;
+  font-size:13px;
+}
+#p-info #t-info-formacion .mx-formacion-credentials-grid{
+  --bs-gutter-x:14px;
+  --bs-gutter-y:0;
+  row-gap:10px;
+}
+#p-info #t-info-formacion .mx-formacion-credentials-grid > *{margin-top:0;padding-block:4px}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-field-label{margin-bottom:4px}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-field-badge{
+  display:inline-flex;
+  align-items:center;
+  margin-left:6px;
+  border:1px solid #efd296;
+  border-radius:999px;
+  padding:1px 6px;
+  background:#fff7e6;
+  color:#9b6700;
+  font-size:10px;
+  font-weight:700;
+  line-height:1.3;
+}
+#p-info #t-info-formacion .mx-formacion-credentials :is(.form-control,.form-select){min-height:42px}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-dg-legacy-feedback-slot{padding-block:0}
+#p-info #t-info-formacion .mx-formacion-credentials .mx-dg-legacy-feedback-slot:has(#mxpi-legacy-feedback:empty){display:none}
+
+#p-info #t-info-datos #mx-dg-verified-card > .card-body,
+#p-info #t-info-datos #mx-dg-contact-card > .card-body{padding:16px}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-admin-contact-grid{
+  --bs-gutter-x:14px;
+  --bs-gutter-y:0;
+  row-gap:10px;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-field-label{margin-bottom:4px}
+#p-info #t-info-datos #mx-dg-contact-card :is(.form-control,.form-select){min-height:42px}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-admin-contact-feedback:not(:empty){margin-top:8px}
+
+@media (max-width:767px){
+  #p-info #t-info-formacion .mx-formacion-credentials > .card-body,
+  #p-info #t-info-datos #mx-dg-contact-card > .card-body{padding:14px}
+  #p-info #t-info-formacion .mx-formacion-credentials-grid,
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-admin-contact-grid{row-gap:12px}
+  #p-info #t-info-formacion .mx-formacion-credentials-grid > *{padding-block:3px}
+}
