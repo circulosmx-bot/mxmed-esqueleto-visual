@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../modules/profiles/services/VerifiedPhysicianIdenti
 require_once __DIR__ . '/../../modules/profiles/repositories/DoctorContactPointsRepository.php';
 require_once __DIR__ . '/../../modules/profiles/controllers/DoctorContactPointsController.php';
 require_once __DIR__ . '/../../modules/media/bootstrap.php';
+require_once __DIR__ . '/../../modules/media/services/GallerySessionScope.php';
 
 use Profiles\Repositories\PublicProfileRepository;
 use Profiles\Controllers\PublicProfileController;
@@ -626,7 +627,13 @@ try {
         $verifiedIdentity = new VerifiedPhysicianIdentityService(
             new VerifiedPhysicianIdentityRepository($pdo)
         );
-        $controller = new PrivateProfileController($repo, $verifiedIdentity);
+        // Credentials use the established server-side physician session scope only.
+        // The legacy open/header compatibility path never loads credential authority.
+        $credentialScope = \Media\Services\GallerySessionScope::resolve($_SESSION);
+        $credentialService = $credentialScope !== null && $credentialScope['doctor_id'] === $doctorId
+            ? new \Profiles\Services\VerifiedDoctorCredentialService(new \Profiles\Repositories\DoctorCredentialRepository($pdo))
+            : null;
+        $controller = new PrivateProfileController($repo, $verifiedIdentity, $credentialService);
         if ($method === 'GET') {
             $response = $controller->showByDoctorId($doctorId, $authMode);
         } else {
