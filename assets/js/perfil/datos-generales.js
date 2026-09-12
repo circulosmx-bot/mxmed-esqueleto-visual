@@ -81,11 +81,14 @@
     const span = document.createElement('span'); span.className='input-group-text'; span.textContent='🇲🇽 +52';
     const col = w.closest('[class^="col-"]');
     col.replaceChildren();
-    const lab = document.createElement('label'); lab.className='form-label'; lab.textContent='Teléfono Whatsapp';
+    const lab = document.createElement('label'); lab.className='form-label mx-field-label'; lab.htmlFor='dp-whatsapp'; lab.append('Teléfono Whatsapp');
+    const badge = document.createElement('span'); badge.className='mx-field-badge mx-field-badge--private'; badge.textContent='Privado'; lab.appendChild(badge);
+    const note = document.createElement('div'); note.className='mx-dg-contact-field-note'; note.textContent='Sólo en este navegador; el WhatsApp del consultorio se gestiona por sede.';
     col.appendChild(lab);
     col.appendChild(wrap);
     wrap.appendChild(span);
     w.placeholder='10 dígitos'; w.maxLength=14; wrap.appendChild(w);
+    col.appendChild(note);
   }
 
   // Validación de correo y teléfono (básica) + tooltips

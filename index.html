@@ -834,12 +834,21 @@
                 <div class="card mt-3 mx-dg-card mx-dg-card-verified" id="mx-dg-verified-card">
                   <div class="card-body">
                     <div class="mx-dg-card-head">
-                      <div class="mx-dg-card-title-row">
+                      <div class="mx-dg-card-title-row mx-dg-admin-title-row">
                         <div class="mx-dg-card-title">Información verificada / administrativa</div>
-                        <span class="mx-data-badge mx-data-badge--verified"><span class="material-symbols-outlined" aria-hidden="true">verified</span>Verificado / revisión</span>
-                      </div>
-                      <div class="mx-dg-verify-status-row">
-                        <span class="mx-dg-verify-badge" role="status" aria-live="polite">Información pendiente de validación</span>
+                        <span class="mx-dg-verify-badge" role="status">Sólo lectura</span>
+                        <div class="mx-dg-admin-actions">
+                          <button
+                            type="button"
+                            class="btn btn-link btn-sm mx-dg-context-help-btn"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#mx-dg-admin-help"
+                            aria-expanded="false"
+                            aria-controls="mx-dg-admin-help"
+                          >
+                            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                            Ayuda
+                          </button>
                         <button
                           type="button"
                           class="btn btn-outline-secondary btn-sm mx-dg-request-change-btn"
@@ -850,11 +859,14 @@
                         >
                           Solicitar cambio
                         </button>
+                        </div>
                       </div>
-                      <div class="mx-dg-card-note">Datos protegidos de sólo lectura; las correcciones requieren revisión.</div>
-                      <div class="collapse mt-2" id="mx-dg-request-change-placeholder">
+                      <div class="collapse mx-dg-context-help" id="mx-dg-admin-help">
+                        <div class="mx-dg-context-help-copy">Datos protegidos de sólo lectura; las correcciones requieren revisión.</div>
+                      </div>
+                      <div class="collapse mx-dg-context-help" id="mx-dg-request-change-placeholder">
                         <div class="mx-dg-request-change-msg" role="status" aria-live="polite">
-                          En una siguiente fase podrás solicitar la corrección de tus datos profesionales verificados para que el equipo de México Médico los revise.
+                          La solicitud de corrección aún no está disponible en este panel.
                         </div>
                       </div>
                     </div>
@@ -873,7 +885,7 @@
 
                   <div class="col-12 mx-dg-subhead mx-dg-subhead-cred">
                     <div class="mx-dg-subhead-title">Credenciales verificadas</div>
-                    <div class="mx-dg-subhead-note">Cada credencial integra número, institución y formación/especialidad asociada.</div>
+                    <div class="mx-dg-subhead-note">Cada cédula debe integrar número, institución y formación/especialidad asociada.</div>
                   </div>
 
 
@@ -902,16 +914,9 @@
 
 
 
-                  <div class="col-12">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border rounded p-2 bg-light mx-dg-legacy-save">
-                      <div class="small text-muted">
-                        Datos verificados de sólo lectura. Solicita cualquier corrección para revisión.
-                      </div>
-                      <div class="d-flex flex-wrap align-items-center gap-2">
-                        <span class="small text-muted" id="mxpi-legacy-feedback" aria-live="polite">Dato verificado: solicita cambio.</span>
-                        <button class="btn btn-outline-secondary btn-sm" id="mxpi-save-btn-legacy" type="button" disabled>Solicitud en fase posterior</button>
-                      </div>
-                    </div>
+                  <div class="col-12 mx-dg-legacy-feedback-slot">
+                    <span class="small text-muted" id="mxpi-legacy-feedback" aria-live="polite"></span>
+                    <button id="mxpi-save-btn-legacy" type="button" disabled hidden aria-hidden="true" tabindex="-1">Solicitud en fase posterior</button>
                   </div>
 
                     </div>
@@ -924,12 +929,24 @@
                       <div class="mx-dg-card-title-row">
                         <div class="mx-dg-card-title">Datos de contacto</div>
                         <span class="mx-data-badge mx-data-badge--private"><span class="material-symbols-outlined" aria-hidden="true">lock</span>Privado · No publicado</span>
+                        <button
+                          type="button"
+                          class="btn btn-link btn-sm mx-dg-context-help-btn"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#mx-dg-contact-help"
+                          aria-expanded="false"
+                          aria-controls="mx-dg-contact-help"
+                        >
+                          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                          Usos de contacto
+                        </button>
                       </div>
                       <div class="mx-dg-card-note">Administra tus datos privados y los contactos que decidas publicar.</div>
-                      <div class="mx-dg-contact-usage" aria-label="Uso previsto de estos datos">
+                      <div class="collapse mx-dg-context-help" id="mx-dg-contact-help">
+                      <div class="mx-dg-contact-usage" aria-label="Usos de los datos de contacto">
                         <div class="mx-dg-contact-usage-head">
-                          <div class="mx-dg-contact-usage-title">Uso previsto de estos datos</div>
-                          <div class="mx-dg-contact-usage-note">Estas categorías ayudarán a separar más adelante el uso de cada dato de contacto. Por ahora son únicamente una referencia visual y no modifican la privacidad ni la publicación de tu información.</div>
+                          <div class="mx-dg-contact-usage-title">Usos de contacto</div>
+                          <div class="mx-dg-contact-usage-note">Cada uso conserva su propia autoridad de privacidad y publicación.</div>
                         </div>
                         <div class="mx-dg-contact-usage-grid">
                           <div class="mx-dg-contact-usage-item">
@@ -945,7 +962,7 @@
                               <span>Público</span>
                               <span class="mx-dg-contact-usage-badge is-inactive">No activo</span>
                             </div>
-                            <div class="mx-dg-contact-usage-copy">Solo se mostrará a pacientes si el profesional lo activa más adelante y el plan lo permite.</div>
+                            <div class="mx-dg-contact-usage-copy">Se muestra a pacientes sólo con activación explícita y un plan compatible.</div>
                           </div>
                           <div class="mx-dg-contact-usage-item">
                             <div class="mx-dg-contact-usage-item-title">Operativo</div>
@@ -957,6 +974,7 @@
                           </div>
                         </div>
                       </div>
+                      </div>
                     </div>
                     <div class="row g-3">
                       <div class="col-md-6 col-lg-8 mx-dg-col-email">
@@ -966,36 +984,12 @@
                           <span class="mx-field-hint">No visible en perfil público.</span>
                         </label>
                         <input class="form-control" id="dp-correo" placeholder="nombre@correo.com">
-                        <div class="mx-dg-contact-field-note">Uso transicional privado. No alimenta el perfil público ni sustituye el futuro contacto público configurable.</div>
+                        <div class="mx-dg-contact-field-note">Sólo en este navegador; no alimenta el perfil público.</div>
                       </div>
                       <div class="col-md-6 col-lg-4 mx-dg-col-phone">
                         <label class="form-label mx-field-label" for="dp-whatsapp">Teléfono Whatsapp<span class="mx-field-badge mx-field-badge--private">Privado</span></label>
                         <input class="form-control" id="dp-whatsapp" placeholder="+52 ...">
-                        <div class="mx-dg-contact-field-note">No visible en perfil público. El WhatsApp de consultorio se gestiona por sede.</div>
-                      </div>
-                      <div class="col-12">
-                        <div class="mx-dg-contact-import" aria-label="Estado de privacidad de datos de contacto">
-                          <div class="mx-dg-contact-import__head">
-                            <div>
-                              <div class="mx-dg-contact-import__title">Contacto privado</div>
-                              <div class="mx-dg-contact-import__text">El correo y WhatsApp de esta tarjeta son datos privados de tu cuenta. No se publican en tu perfil y no se copian a tus consultorios.</div>
-                            </div>
-                            <span class="mx-dg-contact-field-badge is-muted">Privado · No publicado</span>
-                          </div>
-                          <div class="mx-dg-contact-import__items" aria-label="Datos de contacto privados">
-                            <div class="mx-dg-contact-import__item">
-                              <span class="material-symbols-outlined" aria-hidden="true">mail</span>
-                              <span>Correo privado</span>
-                            </div>
-                            <div class="mx-dg-contact-import__item">
-                              <span class="material-symbols-outlined" aria-hidden="true">chat</span>
-                              <span>WhatsApp privado</span>
-                            </div>
-                          </div>
-                          <div class="mx-dg-contact-import__note">El contacto público del perfil y el WhatsApp de cada consultorio se configuran por separado.</div>
-                          <div class="mx-dg-contact-import__note">Este WhatsApp privado no se copia al consultorio. El WhatsApp de sede se gestiona en Consultorio.</div>
-                          <div class="mx-dg-contact-import__note">Guardado localmente por ahora. En una fase posterior se guardará automáticamente como contacto privado seguro.</div>
-                        </div>
+                        <div class="mx-dg-contact-field-note">Sólo en este navegador; el WhatsApp del consultorio se gestiona por sede.</div>
                       </div>
                       <div class="col-12">
                         <div class="mx-dg-public-contact-editor" id="mx-dg-public-contact-editor" aria-label="Publicación controlada de contactos">
@@ -1009,7 +1003,7 @@
                           <form class="mx-dg-contact-create" id="mx-dg-contact-create-form" aria-label="Agregar contacto privado">
                             <div class="mx-dg-contact-create__head">
                               <div class="mx-dg-contact-create__title">Agregar contacto privado</div>
-                              <div class="mx-dg-contact-create__text">Los contactos nuevos se guardan como privados. Podrás marcarlos como públicos después si deseas mostrarlos en tu perfil público y tu plan lo permite.</div>
+                              <div class="mx-dg-contact-create__text">Se agregan como privados; puedes publicarlos después.</div>
                             </div>
                             <div class="mx-dg-contact-create__row">
                               <select class="form-select form-select-sm no-check" id="mx-dg-contact-create-type" data-no-check="1" aria-label="Tipo de contacto">
@@ -1025,13 +1019,6 @@
                             <div class="mx-dg-public-contact-empty">Cargando contactos configurables...</div>
                           </div>
                           <div class="mx-dg-public-contact-feedback small text-muted" id="mx-dg-public-contact-feedback" aria-live="polite"></div>
-                        </div>
-                      </div>
-                      <div class="col-12">
-                        <div class="mx-dg-contact-privacy-strip">
-                          <span class="mx-dg-contact-field-badge">Privado</span>
-                          <span class="mx-dg-contact-field-badge is-muted">No publicado</span>
-                          <span>El correo y WhatsApp de esta tarjeta son transicionales y privados. No son el contacto público del perfil ni sustituyen el WhatsApp de cada consultorio.</span>
                         </div>
                       </div>
                     </div>

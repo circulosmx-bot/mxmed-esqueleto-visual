@@ -2,7 +2,26 @@
   const purposes={photo:['profile-photo-review-candidate.php','X-Profile-Photo-Candidate-CSRF','Foto de perfil','mxpi-photo-input'],logo:['physician-logo-review-candidate.php','X-Physician-Logo-Candidate-CSRF','Logotipo profesional',null],gallery:['gallery-review-candidate.php','X-Gallery-Review-Candidate-CSRF','Imagen de galería','fotos-input']};
   const keys={DOCTOR_PROFILE_PHOTO:'photo',PHYSICIAN_PERSONAL_LOGO:'logo',DOCTOR_GALLERY:'gallery'};
   const panels=[];let busy=false;
-  async function json(url,options={}){const r=await fetch('/api/media/'+url,{credentials:'same-origin',...options});const v=await r.json();if(!r.ok||!v.ok)throw Error(v.error==='gallery_limit_reached'?'Puedes tener hasta 16 imágenes públicas y pendientes.':'No se pudo completar la acción. Intenta nuevamente.');return v.data;}
+  async function json(url,options={}){
+    let r;
+    try{
+      r=await fetch('/api/media/'+url,{credentials:'same-origin',...options});
+    }catch(_){
+      const error=Error('No pudimos comunicarnos con el servicio de imágenes.');
+      error.kind='network';
+      throw error;
+    }
+    const v=await r.json().catch(()=>null);
+    if(!r.ok||!v?.ok){
+      const code=String(v?.error||'').trim();
+      const error=Error(code==='gallery_limit_reached'?'Puedes tener hasta 16 imágenes públicas y pendientes.':'No se pudo completar la acción. Intenta nuevamente.');
+      error.status=r.status;
+      error.code=code;
+      error.kind=r.status===401?'session':r.status===403?'permission':'service';
+      throw error;
+    }
+    return v.data;
+  }
   async function candidate(key,method,body){const [route,header]=purposes[key];const current=await json(route);return json(route,{method,headers:{[header]:current.csrf_token,...(typeof body==='string'?{'Content-Type':'application/json'}:{})},body});}
   async function upload(key,file){const form=new FormData();form.append('image',file);await candidate(key,'POST',form);await refresh();}
   const element=(tag,text,cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
@@ -18,7 +37,24 @@
         }
         if(batch.can_submit_now){const submit=element('button','Enviar a revisión','btn btn-primary');submit.type='button';submit.onclick=()=>perform(async()=>{await json('review-batch-submit.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:batch.csrf})});await refresh();});panel.append(submit);}
       }
-    }catch(e){for(const panel of panels)panel.textContent='No se pudieron cargar las imágenes pendientes. Vuelve a abrir esta sección.';}
+    }catch(e){
+      for(const panel of panels){
+        const wrap=element('div','','mx-owner-media-review-error');
+        const message=e?.kind==='session'
+          ? 'Inicia sesión con un perfil médico autorizado para consultar tus imágenes pendientes.'
+          : e?.kind==='permission'
+            ? 'Tu sesión no tiene acceso a las imágenes pendientes.'
+            : 'No pudimos consultar tus imágenes pendientes.';
+        wrap.append(element('p',message,'small mb-0'));
+        if(e?.kind!=='session'&&e?.kind!=='permission'){
+          const retry=element('button','Reintentar','btn btn-sm btn-outline-secondary');
+          retry.type='button';
+          retry.onclick=refresh;
+          wrap.append(retry);
+        }
+        panel.replaceChildren(wrap);
+      }
+    }
   }
   async function perform(action){if(busy)return;busy=true;panels.forEach(p=>p.querySelectorAll('button').forEach(b=>b.disabled=true));try{await action();}catch(e){panels.forEach(p=>p.append(element('p',e.message,'text-danger')));}finally{busy=false;panels.forEach(p=>p.querySelectorAll('button').forEach(b=>b.disabled=false));}}
   window.mxmedMediaReview={upload,refresh};

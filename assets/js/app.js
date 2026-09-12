@@ -1718,9 +1718,9 @@ console.info('app.js loaded :: 20251123a');
   function setLegacyFeedback(message, tone){
     if(!els.legacyFeedback) return;
     const msg = String(message || '').trim();
-    if(!msg){
+    if(!msg || tone === 'muted'){
       els.legacyFeedback.className = 'small text-muted';
-      els.legacyFeedback.textContent = 'Sin cambios pendientes.';
+      els.legacyFeedback.textContent = '';
       return;
     }
     const classes = {
