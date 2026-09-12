@@ -5,13 +5,16 @@ namespace Profiles\Controllers;
 
 use Profiles\Repositories\PrivateProfileRepository;
 use Profiles\Services\ProfileThemeCatalog;
+use Profiles\Services\VerifiedPhysicianIdentityService;
 
 require_once __DIR__ . '/../repositories/PrivateProfileRepository.php';
 require_once __DIR__ . '/../services/ProfileThemeCatalog.php';
+require_once __DIR__ . '/../services/VerifiedPhysicianIdentityService.php';
 
 final class PrivateProfileController
 {
     private PrivateProfileRepository $repository;
+    private ?VerifiedPhysicianIdentityService $verifiedIdentityService;
 
     private const EDITABLE_FIELDS = [
         'display_name',
@@ -33,11 +36,21 @@ final class PrivateProfileController
         'logo_url',
         'profile_status',
         'is_public_candidate',
+        'verified_identity',
+        'given_names',
+        'first_surname',
+        'second_surname',
+        'verified_at',
+        'verified_by_account_id',
     ];
 
-    public function __construct(PrivateProfileRepository $repository)
+    public function __construct(
+        PrivateProfileRepository $repository,
+        ?VerifiedPhysicianIdentityService $verifiedIdentityService = null
+    )
     {
         $this->repository = $repository;
+        $this->verifiedIdentityService = $verifiedIdentityService;
     }
 
     public function showByDoctorId(string $doctorId, string $authMode = 'transitional_open'): array
@@ -52,7 +65,7 @@ final class PrivateProfileController
             return $this->error('profile_identity_not_found', 'profile identity not found', $authMode);
         }
 
-        return $this->success($doctorId, $row, $authMode);
+        return $this->success($doctorId, $row, $authMode, [], $this->verifiedIdentity($doctorId));
     }
 
     public function patchByDoctorId(string $doctorId, array $payload, string $authMode = 'transitional_open'): array
@@ -88,7 +101,7 @@ final class PrivateProfileController
                 'blocked_fields_ignored' => array_values($prepared['blocked_fields']),
                 'editable_fields_applied' => [],
                 'no_editable_fields_applied' => true,
-            ]);
+            ], $this->verifiedIdentity($doctorId));
         }
 
         $updated = $this->repository->upsertIdentity($doctorId, $prepared['editable']);
@@ -98,7 +111,7 @@ final class PrivateProfileController
         if (!empty($prepared['blocked_fields'])) {
             $metaExtra['blocked_fields_ignored'] = array_values($prepared['blocked_fields']);
         }
-        return $this->success($doctorId, $updated, $authMode, $metaExtra);
+        return $this->success($doctorId, $updated, $authMode, $metaExtra, $this->verifiedIdentity($doctorId));
     }
 
     private function prepareEditablePayload(array $payload): array
@@ -221,7 +234,13 @@ final class PrivateProfileController
         }
     }
 
-    private function success(string $doctorId, array $row, string $authMode, array $metaExtra = []): array
+    private function success(
+        string $doctorId,
+        array $row,
+        string $authMode,
+        array $metaExtra = [],
+        ?array $verifiedIdentity = null
+    ): array
     {
         return [
             'ok' => true,
@@ -252,6 +271,7 @@ final class PrivateProfileController
                     'default_key' => ProfileThemeCatalog::DEFAULT_KEY,
                     'catalog' => ProfileThemeCatalog::all(),
                 ],
+                'verified_identity' => $verifiedIdentity,
             ],
             'meta' => array_merge([
                 'contract' => 'profile_private_identity_mvp',
@@ -260,6 +280,11 @@ final class PrivateProfileController
                 'auth_mode' => $authMode,
             ], $metaExtra),
         ];
+    }
+
+    private function verifiedIdentity(string $doctorId): ?array
+    {
+        return $this->verifiedIdentityService?->readForPhysician($doctorId);
     }
 
     private function error(string $code, string $message, string $authMode, array $metaExtra = []): array
