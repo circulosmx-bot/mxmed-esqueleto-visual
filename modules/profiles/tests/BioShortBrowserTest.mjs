@@ -1,109 +1,181 @@
+// Read-only Leticia review QA. Stress text is DOM-only and grouped PATCH is mocked.
 import assert from 'node:assert/strict';
-import {mkdir, writeFile} from 'node:fs/promises';
+import {spawn} from 'node:child_process';
+import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 
-const cdp = process.env.CDP_URL || 'http://127.0.0.1:9348';
-const base = process.env.PUBLIC_URL || 'http://127.0.0.1:8092';
-const output = process.env.QA_OUTPUT || '/tmp/mxmed-bio-short-qa';
+const base = process.env.PUBLIC_URL || 'http://127.0.0.1:18143';
+const output = process.env.QA_OUTPUT || '/tmp/mxmed-crd031';
+const profile = await mkdtemp('/tmp/mxmed-crd03-browser-');
 await mkdir(output, {recursive:true});
-const tab = await (await fetch(`${cdp}/json/new?about:blank`, {method:'PUT'})).json();
-const ws = new WebSocket(tab.webSocketDebuggerUrl);
-await new Promise(resolve=>ws.addEventListener('open', resolve, {once:true}));
-let id=0;
-const pending=new Map();
-const send=(method,params={})=>new Promise((resolve,reject)=>{
-  pending.set(++id,{resolve,reject}); ws.send(JSON.stringify({id,method,params}));
-});
-ws.addEventListener('message',event=>{
-  const m=JSON.parse(event.data); if(!m.id)return;
-  const h=pending.get(m.id); pending.delete(m.id);
-  m.error?h.reject(m.error):h.resolve(m.result);
-});
-const evaluate=async expression=>{
-  const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
-  if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));
-  return r.result.value;
-};
-const wait=async expression=>{
-  for(let i=0;i<120;i++){
-    if(await evaluate(expression))return;
-    await new Promise(r=>setTimeout(r,100));
-  }
-  throw Error(`Timeout: ${expression}`);
-};
-const samples=[
-  'Atención médica profesional y cercana.',
-  'Especialista en diabetes, tiroides y metabolismo. Atención médica a pacientes.',
-  'Especialista en alteraciones del sistema endocrino y enfermedades metabólicas.',
-  'Especialista en diabetes, tiroides y metabolismo. Atención integral para adultos y familias.'
-];
-samples[1]=Array.from(samples[1]).slice(0,75).join('');
-samples[3]=Array.from(samples[3]).slice(0,90).join('');
-assert.deepEqual(samples.map(s=>Array.from(s).length),[38,75,78,90]);
-const results=[];
+
+const chrome = spawn(
+  process.env.MXMED_QA_CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  ['--headless=new', '--no-first-run', '--no-default-browser-check', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0', `--user-data-dir=${profile}`],
+  {stdio:'ignore'}
+);
+
+let ws;
 try{
-  await send('Page.enable');
-  for(const [width,height] of [[1440,900],[1366,768],[390,844],[320,740]]){
-    await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<600});
-    await send('Page.navigate',{url:`${base}/profiles/doctor.php?doctor_id=1&mxmed_plan=professional`});
-    await wait(`document.querySelector('.mxpp-bio')`);
-    await evaluate('document.fonts.ready.then(()=>true)');
-    for(const sample of samples){
-      const measurement=await evaluate(`(()=>{
-        const bio=document.querySelector('.mxpp-bio');
-        bio.textContent=${JSON.stringify(sample)};
-        bio.classList.toggle('mxpp-bio--long',Array.from(bio.textContent).length>75 && Array.from(bio.textContent).length<=90);
-        const range=document.createRange();range.selectNodeContents(bio);
-        const rects=Array.from(range.getClientRects());
-        const r=bio.getBoundingClientRect();
-        return {length:Array.from(bio.textContent).length,lines:new Set(rects.map(r=>r.top)).size,font:getComputedStyle(bio).fontSize,
-          overflow:rects.some(x=>x.left<r.left-1||x.right>r.right+1),
-          collision:r.bottom>document.querySelector('.mxpp-hero-brand-actions').getBoundingClientRect().top};
-      })()`);
-      results.push({width,...measurement});
-      if(width>600)assert.ok(measurement.lines<=2,JSON.stringify(results.at(-1)));
-      assert.equal(measurement.overflow,false);
-      assert.equal(measurement.collision,false);
+  let version;
+  for(let attempt = 0; attempt < 100; attempt += 1){
+    try{
+      const port = (await readFile(`${profile}/DevToolsActivePort`, 'utf8')).split('\n')[0];
+      version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+      break;
+    }catch{
+      await new Promise((resolve)=> setTimeout(resolve, 100));
     }
-    if(width<600){
-      await evaluate(`document.querySelector('.mxpp-bio').scrollIntoView({block:'center',behavior:'instant'})`);
-      await new Promise(resolve=>setTimeout(resolve,300));
-    }
-    const shot=await send('Page.captureScreenshot',{format:'png'});
-    await writeFile(`${output}/${width}.png`,Buffer.from(shot.data,'base64'));
   }
-  // Admin hydration and editing only: no save requests from this browser test.
-  await send('Page.navigate',{url:`${base}/index.html`});
-  await wait(`document.querySelector('#mxpi-bio-short')?.value && document.querySelector('#mxpi-bio-count')?.textContent !== '0 / 90'`);
-  const admin=await evaluate(`(()=>{
-    const field=document.querySelector('#mxpi-bio-short');
-    const counter=document.querySelector('#mxpi-bio-count');
-    const initial=counter.textContent===Array.from(field.value).length+' / 90';
-    const insert=(text)=>{const data=new DataTransfer();data.setData('text/plain',text);field.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));};
-    field.value='';field.setSelectionRange(0,0);insert('áéíóúñ');
-    const accents=counter.textContent==='6 / 90';
-    field.select();insert('😀'.repeat(91));
-    const paste=Array.from(field.value).length===90 && counter.textContent==='90 / 90';
-    const event=new InputEvent('beforeinput',{inputType:'insertText',data:'a',cancelable:true});
-    field.dispatchEvent(event);
-    const blocked=event.defaultPrevented && Array.from(field.value).length===90;
-    const message=!document.querySelector('#mxpi-bio-limit').hidden;
-    field.value='á'.repeat(89);field.setSelectionRange(89,89);
-    field.dispatchEvent(new InputEvent('beforeinput',{inputType:'insertText',data:'😀',cancelable:true}));
-    const unicodeTyping=Array.from(field.value).length===90;
-    field.value='á'.repeat(75);field.dispatchEvent(new Event('input',{bubbles:true}));
-    const deletion=counter.textContent==='75 / 90' && counter.classList.contains('text-muted');
-    return {initial,accents,paste,blocked,message,unicodeTyping,deletion,maxlength:field.maxLength};
+  assert.ok(version?.webSocketDebuggerUrl, 'Chrome DevTools did not start');
+  ws = new WebSocket(version.webSocketDebuggerUrl);
+  await new Promise((resolve)=> ws.addEventListener('open', resolve, {once:true}));
+
+  let sequence = 0;
+  let session;
+  const pending = new Map();
+  const send = (method, params = {}, sid = session)=> new Promise((resolve, reject)=>{
+    const id = ++sequence;
+    pending.set(id, {resolve, reject, method});
+    ws.send(JSON.stringify({id, method, params, ...(sid ? {sessionId:sid} : {})}));
+  });
+  ws.addEventListener('message', (event)=>{
+    const message = JSON.parse(event.data);
+    if(!message.id) return;
+    const request = pending.get(message.id);
+    pending.delete(message.id);
+    message.error ? request.reject(Error(`${request.method}: ${JSON.stringify(message.error)}`)) : request.resolve(message.result);
+  });
+
+  const target = (await send('Target.createTarget', {url:'about:blank'}, null)).targetId;
+  session = (await send('Target.attachToTarget', {targetId:target, flatten:true}, null)).sessionId;
+  await send('Page.enable');
+  await send('Runtime.enable');
+  const evaluate = async(expression)=>{
+    const result = await send('Runtime.evaluate', {expression, returnByValue:true, awaitPromise:true});
+    if(result.exceptionDetails) throw Error(JSON.stringify(result.exceptionDetails));
+    return result.result.value;
+  };
+  const until = async(expression)=>{
+    for(let attempt = 0; attempt < 180; attempt += 1){
+      if(await evaluate(expression)) return;
+      await new Promise((resolve)=> setTimeout(resolve, 100));
+    }
+    throw Error(`Browser timeout: ${expression}`);
+  };
+  const screenshot = async(name)=>{
+    await new Promise(resolve=>setTimeout(resolve,250));
+    const result = await send('Page.captureScreenshot',{format:'png'});
+    await writeFile(`${output}/${name}`,Buffer.from(result.data,'base64'));
+  };
+  const plan = process.env.QA_PUBLIC_PLAN || 'standard'; // Existing local plan preview; no plan/data writes.
+  const current = await (await fetch(`${base}/api/profiles/public/doctor/1`)).json();
+  assert.equal(current.ok,true);
+  const currentBio = current.data.professional.bio_short;
+  const currentPrivate = await (await fetch(`${base}/api/profiles/private/doctor/1`)).json();
+  const natural = length => Array.from('Atención médica especializada en diabetes, tiroides y metabolismo. Diagnóstico y seguimiento personalizados para adultos y familias. Prevención y bienestar.').slice(0,length).join('');
+  const samples = [
+    ['leticia',currentBio], ['100',natural(100)], ['120',natural(120)], ['140',natural(140)], ['150',natural(150)],
+    ['narrow-150','i'.repeat(150)], ['wide-150','W'.repeat(150)],
+    ['accents-150',Array.from('áéíóúñ ÁÉÍÓÚÑ atención médica '.repeat(8)).slice(0,150).join('')],
+  ];
+  assert.equal(Array.from(samples[4][1]).length,150);
+  const results=[];
+  for(const [width,height] of [[1440,900],[1366,768],[390,844]]){
+    await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<600});
+    await send('Page.navigate',{url:`${base}/profiles/doctor.php?doctor_id=1&mxmed_plan=${plan}`});
+    await until(`document.readyState==='complete' && document.querySelector('.mxpp-bio')`);
+    await evaluate(`document.fonts.ready.then(()=>true)`);
+    await new Promise(resolve=>setTimeout(resolve,200));
+    const originalMarkup = await evaluate(`({hero:document.querySelector('.mxpp-hero-brand-actions')?.outerHTML,licenses:[...document.querySelectorAll('.mxpp-license-inline')].map(e=>e.textContent),consultorios:[...document.querySelectorAll('[data-mxpp-consultorio-panel]')].map(e=>e.outerHTML),agenda:[...document.querySelectorAll('[data-mxpp-agenda-compact]')].map(e=>e.dataset)})`);
+    for(const [name,text] of samples){
+      await evaluate(`document.querySelector('.mxpp-bio').textContent=${JSON.stringify(text)};window.dispatchEvent(new Event('resize'))`);
+      await new Promise(resolve=>setTimeout(resolve,220));
+      const measurement = await evaluate(`(()=>{
+        const bio=document.querySelector('.mxpp-bio');
+        const normal=()=>{const range=document.createRange();range.selectNodeContents(bio);const rects=[...range.getClientRects()];const r=bio.getBoundingClientRect();const css=getComputedStyle(bio);return {scrollHeight:bio.scrollHeight,clientHeight:bio.clientHeight,lineHeight:css.lineHeight,height:r.height,lines:new Set(rects.map(x=>Math.round(x.top*10))).size,font:parseFloat(css.fontSize),overflow:rects.some(x=>x.left<r.left-1||x.right>r.right+1),hidden:css.overflowY==='hidden'||css.textOverflow==='ellipsis'||parseInt(css.webkitLineClamp)>0,collision:r.bottom>document.querySelector('.mxpp-hero-brand-actions').getBoundingClientRect().top+1};};
+        const fitted=normal(),inline=bio.style.fontSize;
+        bio.style.removeProperty('font-size');const baseline=normal();
+        const normalFont=baseline.font;
+        bio.style.fontSize=inline;
+        let priorLines=null;
+        if(fitted.font<normalFont){bio.style.fontSize=Math.min(normalFont,fitted.font+0.5)+'px';priorLines=normal().lines;bio.style.fontSize=inline;}
+        return {...fitted,text:bio.textContent,length:Array.from(bio.textContent).length,normalFont,normalLines:baseline.lines,priorLines,pageOverflow:document.documentElement.scrollWidth>innerWidth+1};
+      })()`);
+      const entry={width,name,...measurement};results.push(entry);
+      assert.equal(measurement.text,text,'No clipping/truncation or duplicate copy');
+      assert.equal(measurement.hidden,false);assert.equal(measurement.overflow,false);assert.equal(measurement.pageOverflow,false);assert(measurement.font>=16);
+      const target=width>768?2:3;
+      if(measurement.normalLines<=target)assert.equal(measurement.font,measurement.normalFont,JSON.stringify(entry));
+      if(measurement.lines>target)assert.equal(measurement.font,16,'Only the readability floor may allow extra natural lines');
+      if(measurement.font<measurement.normalFont && measurement.font>16)assert(measurement.priorLines>target,'Reduction stops at first fit');
+      assert.equal(measurement.collision,false,'Brand/action row does not overlap Bio');
+      if(width===1440 && name==='leticia')await screenshot('crd031-public-leticia-current-bio.png');
+      if(width===1440 && name==='120')await screenshot('crd031-public-bio-120.png');
+      if(width===1440 && name==='150')await screenshot('crd031-public-bio-150.png');
+      if(width===390 && name==='150')await screenshot('crd031-public-mobile-bio.png');
+    }
+    assert.deepEqual(await evaluate(`({hero:document.querySelector('.mxpp-hero-brand-actions')?.outerHTML,licenses:[...document.querySelectorAll('.mxpp-license-inline')].map(e=>e.textContent),consultorios:[...document.querySelectorAll('[data-mxpp-consultorio-panel]')].map(e=>e.outerHTML),agenda:[...document.querySelectorAll('[data-mxpp-agenda-compact]')].map(e=>e.dataset)})`), originalMarkup,'Bio fitting leaves all other public sections unchanged');
+  }
+  const adminResults=[];
+  for(const [width,height] of [[1440,900],[1366,768],[390,844]]){
+    await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<600});
+    await send('Page.navigate',{url:`${base}/index.html?review=crd031-leticia`});
+    await until(`document.readyState==='complete' && typeof showPanel==='function'`);
+    await evaluate(`showPanel('p-info');document.getElementById('t-info-datos-tab').click()`);
+    await until(`document.querySelector('#mxpi-bio-short')?.value===${JSON.stringify(currentBio)} && document.querySelector('#mx-credential-list')?.dataset.mode==='legacy'`);
+    await new Promise(resolve=>setTimeout(resolve,700));
+    await evaluate(`document.querySelectorAll('.modal.show [data-bs-dismiss=modal]').forEach(e=>e.click())`);
+    await until(`!document.querySelector('.modal.show')`);
+    const state=await evaluate(`({width:innerWidth,gender:document.querySelector('label[for=mxpi-gender-label]').childNodes[0].textContent.trim(),maxlength:document.querySelector('#mxpi-bio-short').maxLength,counter:document.querySelector('#mxpi-bio-count').textContent,statusNodes:document.querySelectorAll('#mxpi-profile-status,#mxpi-public-candidate,label[for=mxpi-profile-status],label[for=mxpi-public-candidate]').length,header:document.querySelector('.mx-gh-identity-name-text').textContent,photo:document.querySelector('#mxpi-photo-preview img').src,logo:document.querySelector('#mx-dg-logo-img').src,credentials:document.querySelector('#mx-credential-list').textContent,pageOverflow:document.documentElement.scrollWidth>innerWidth+1})`);
+    assert.equal(state.gender,'Género');assert.equal(state.maxlength,150);assert.equal(state.counter,Array.from(currentBio).length+' / 150');assert.equal(state.statusNodes,0);assert(state.header.includes('Leticia Muñoz Romo'));assert.equal(state.pageOverflow,false);
+    assert(state.photo.includes(currentPrivate.data.identity_public.photo_url));assert(state.logo.includes(currentPrivate.data.identity_public.logo_url)||state.logo.includes('a1e44098-a0ef-403f-b51e-8bee88100ef8'));
+    assert(state.credentials.includes('0123456')&&state.credentials.includes('6543210'));adminResults.push(state);
+    await evaluate(`document.getElementById('mxpi-gender-label').scrollIntoView({block:'center'})`);
+    if(width===1440){await screenshot('crd031-admin-gender-bio-1440.png');await screenshot('crd031-admin-no-system-status-fields.png');}
+  }
+  // Input/dirty/grouped-save checks use a mocked PATCH response only. Leticia DB is never mutated.
+  const editing = await evaluate(`(()=>{
+    const input=document.querySelector('#mxpi-bio-short'),counter=document.querySelector('#mxpi-bio-count');
+    const insert=text=>{const data=new DataTransfer();data.setData('text/plain',text);input.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));};
+    input.value='';input.setSelectionRange(0,0);insert('áéíóúñ');const accents=counter.textContent==='6 / 150';
+    input.select();insert('😀'.repeat(151));const paste=Array.from(input.value).length===150&&counter.textContent==='150 / 150';
+    const extra=new InputEvent('beforeinput',{inputType:'insertText',data:'a',cancelable:true});input.dispatchEvent(extra);
+    const blocked=extra.defaultPrevented&&Array.from(input.value).length===150;
+    input.value='á'.repeat(149);input.setSelectionRange(149,149);input.dispatchEvent(new InputEvent('beforeinput',{inputType:'insertText',data:'😀',cancelable:true}));const unicode=Array.from(input.value).length===150;
+    input.value='ñ'.repeat(151);input.dispatchEvent(new Event('input',{bubbles:true}));const invalid=!input.checkValidity();
+    return {accents,paste,blocked,unicode,invalid};
   })()`);
-  for(const [key,value] of Object.entries(admin))assert.equal(value,key==='maxlength'?90:true,key);
-  await evaluate(`(()=>{const field=document.querySelector('#mxpi-bio-short');document.body.append(field);field.style.cssText='position:fixed;top:0;left:0;z-index:999999';field.value='';field.focus();})()`);
-  await send('Input.insertText',{text:'á'.repeat(90)});
-  await send('Input.insertText',{text:'ñ'});
-  assert.equal(await evaluate(`document.querySelector('#mxpi-bio-short').value`),'á'.repeat(90));
-  await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});
-  await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});
-  assert.equal(await evaluate(`document.querySelector('#mxpi-bio-count').textContent`),'89 / 90');
-  await writeFile(`${output}/results.json`,JSON.stringify({results,admin},null,2));
-  console.log(JSON.stringify({results,admin,output},null,2));
+  for(const value of Object.values(editing))assert.equal(value,true);
+  const savedDto=await evaluate(`fetch('/api/profiles/private/doctor/1').then(r=>r.json())`);
+  await evaluate(`(()=>{
+    const dto=${JSON.stringify(savedDto)},originalFetch=window.fetch;
+    window.__qaBioPatches=[];
+    window.fetch=async(url,options={})=>{
+      if(String(url).includes('/private/doctor/1')&&options.method==='PATCH'){
+        const payload=JSON.parse(options.body);window.__qaBioPatches.push(payload);
+        Object.assign(dto.data.identity_public,payload);dto.data.public_name_policy.current_display_name_policy_status='CONFORMING';
+        return new Response(JSON.stringify(dto),{status:200,headers:{'Content-Type':'application/json'}});
+      }
+      return originalFetch(url,options);
+    };
+    document.querySelector('#mxpi-save-btn').click();
+  })()`);
+  assert.equal(await evaluate(`window.__qaBioPatches.length`),0,'151 characters cannot be saved from UI');
+  await evaluate(`(()=>{
+    const bio=document.getElementById('mxpi-bio-short');bio.value='ñ'.repeat(150);bio.dispatchEvent(new Event('input',{bubbles:true}));
+    const names=document.getElementById('mxpi-verified-given-names');names.value='Leticia';names.dispatchEvent(new Event('change',{bubbles:true}));
+    const second=document.getElementById('mxpi-show-second-surname');second.checked=true;second.dispatchEvent(new Event('change',{bubbles:true}));
+    document.getElementById('mxpi-save-btn').click();
+  })()`);
+  await until(`window.__qaBioPatches.length===1 && document.querySelector('#mxpi-feedback').textContent.includes('Cambios guardados')`);
+  const patch=await evaluate(`window.__qaBioPatches[0]`);
+  assert.deepEqual(Object.keys(patch).sort(),['display_name','professional_designation','prefix','gender','gender_label','bio_short','profile_theme_key'].sort());
+  assert.equal(Array.from(patch.bio_short).length,150);assert(!('profile_status' in patch));assert(!('is_public_candidate' in patch));
+  assert.equal(await evaluate(`document.querySelector('#mxpi-feedback').classList.contains('text-success')`),true,'Save clears dirty feedback');
+  const narrow=results.find(r=>r.width===1440&&r.name==='narrow-150'),wide=results.find(r=>r.width===1440&&r.name==='wide-150');
+  assert.notEqual(narrow.font,wide.font,'Equal character counts with different rendered width fit differently');
+  await writeFile(`${output}/results.json`,JSON.stringify({results,adminResults,editing,groupedPatch:patch},null,2));
+  console.log(JSON.stringify({results:results.map(({text,...r})=>r),adminResults,editing,output},null,2));
 }finally{
-  ws.close();await fetch(`${cdp}/json/close/${tab.id}`);
+  ws?.close();chrome.kill();await new Promise(resolve=>chrome.once('exit',resolve));await rm(profile,{recursive:true,force:true});
 }

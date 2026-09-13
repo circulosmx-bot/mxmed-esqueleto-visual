@@ -1251,12 +1251,6 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
   color: #5f7b87;
 }
 
-@media (min-width: 769px) {
-  .mxpp-bio--long {
-    font-size: clamp(.9936rem, 1.61vw, 1.38rem);
-  }
-}
-
 .mxpp-plan-note {
   margin: 0.68rem 0 0;
   font-size: 0.82rem;
@@ -2607,9 +2601,12 @@ body:is([data-profile-theme="warm_ivory"], [data-profile-theme="ice_blue"])
     font-size: 1.45rem;
   }
 
-  .mxpp-license-block p,
-  .mxpp-bio {
+  .mxpp-license-block p {
     font-size: 0.96rem;
+  }
+
+  .mxpp-bio {
+    font-size: 1rem;
   }
 
   .mxpp-footer__top {

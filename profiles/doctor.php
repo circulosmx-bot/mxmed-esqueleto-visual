@@ -861,7 +861,7 @@ if (isLocalDevRequest()) {
               <?php if ($showSuggestCorrection): ?>
                 <a class="mxpp-action-link mxpp-action-link--summary" href="#" aria-disabled="true">Sugerir corrección</a>
               <?php elseif ($bioShort !== null): ?>
-                <p class="mxpp-bio<?= mb_strlen($bioShort, 'UTF-8') > 75 && mb_strlen($bioShort, 'UTF-8') <= 90 ? ' mxpp-bio--long' : '' ?>"><?= h($bioShort) ?></p>
+                <p class="mxpp-bio"><?= h($bioShort) ?></p>
               <?php else: ?>
                 <p class="mxpp-bio mxpp-bio--pending">Descripción profesional en actualización.</p>
               <?php endif; ?>
@@ -2755,6 +2755,7 @@ if (isLocalDevRequest()) {
     </script>
   <?php endif; ?>
   <script src="/assets/js/public-profile-panel.js" defer></script>
+  <script src="/assets/js/public-profile-bio.js" defer></script>
   <?php if ($galleryImages !== []): ?>
     <dialog class="mxpp-gallery-dialog" data-gallery-dialog aria-labelledby="mxpp-gallery-title">
       <header><h2 id="mxpp-gallery-title">Galería de imágenes</h2><span data-gallery-index aria-live="polite"></span><button type="button" data-gallery-close aria-label="Cerrar galería">×</button></header>

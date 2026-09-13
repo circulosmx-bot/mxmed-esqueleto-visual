@@ -110,6 +110,7 @@
   "assets/js/public-profile-gallery.js",
   "assets/js/public-profile-next-available.js",
   "assets/js/public-profile-panel.js",
+  "assets/js/public-profile-bio.js",
   "assets/js/public/agenda-cancel.js",
   "assets/js/public/agenda-publica.js",
   "assets/js/public/agenda-wizard.js",

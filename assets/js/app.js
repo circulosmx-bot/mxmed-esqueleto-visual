@@ -2485,27 +2485,28 @@ console.info('app.js loaded :: 20251123a');
   els.verifiedGivenNames?.addEventListener('change', onControlledNameChange);
   els.showSecondSurname?.addEventListener('change', onControlledNameChange);
 
+  const BIO_SHORT_MAX = 150;
   function updateBioCounter(limitReached = false){
     const count = Array.from(els.bioShort?.value || '').length;
     const counter = document.getElementById('mxpi-bio-count');
     if(counter){
-      counter.textContent = `${count} / 90`;
-      counter.className = 'small ' + (count >= 90 ? 'text-danger' : count > 75 ? 'text-warning' : 'text-muted');
+      counter.textContent = `${count} / ${BIO_SHORT_MAX}`;
+      counter.className = 'small ' + (count >= BIO_SHORT_MAX ? 'text-danger' : count > BIO_SHORT_MAX * 0.8 ? 'text-warning' : 'text-muted');
     }
     const message = document.getElementById('mxpi-bio-limit');
-    if(message) message.hidden = !(limitReached || count >= 90);
-    els.bioShort?.setCustomValidity(count > 90 ? 'La Bio breve admite un máximo de 90 caracteres para conservar el diseño del perfil público.' : '');
+    if(message) message.hidden = !(limitReached || count >= BIO_SHORT_MAX);
+    els.bioShort?.setCustomValidity(count > BIO_SHORT_MAX ? 'La Bio breve admite un máximo de 150 caracteres.' : '');
   }
   els.bioShort?.addEventListener('input', ()=> updateBioCounter());
   els.bioShort?.addEventListener('beforeinput', (event)=>{
     if(!event.inputType?.startsWith('insert') || event.isComposing) return;
     const input = els.bioShort;
     const remaining = input.value.slice(0, input.selectionStart) + input.value.slice(input.selectionEnd);
-    if(event.data != null && (remaining + event.data).length > 90){
+    if(event.data != null && (remaining + event.data).length > BIO_SHORT_MAX){
       // Native maxlength counts UTF-16 units; preserve the API's Unicode character contract.
       event.preventDefault();
       insertBioText(event.data);
-    }else if(Array.from(remaining).length >= 90){
+    }else if(Array.from(remaining).length >= BIO_SHORT_MAX){
       event.preventDefault(); updateBioCounter(true);
     }
   });
@@ -2513,7 +2514,7 @@ console.info('app.js loaded :: 20251123a');
     const input = els.bioShort;
     const before = input.value.slice(0, input.selectionStart);
     const after = input.value.slice(input.selectionEnd);
-    const room = Math.max(0, 90 - Array.from(before + after).length);
+    const room = Math.max(0, BIO_SHORT_MAX - Array.from(before + after).length);
     const inserted = Array.from(pasted).slice(0, room).join('');
     input.setRangeText(inserted, input.selectionStart, input.selectionEnd, 'end');
     input.dispatchEvent(new Event('input', {bubbles:true}));
@@ -2615,7 +2616,7 @@ console.info('app.js loaded :: 20251123a');
   }
 
   async function savePrivateIdentity(){
-    if(Array.from(String(els.bioShort?.value || '').trim()).length > 90){
+    if(Array.from(String(els.bioShort?.value || '').trim()).length > BIO_SHORT_MAX){
       updateBioCounter(true);
       els.bioShort?.focus();
       return;

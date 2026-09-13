@@ -80,8 +80,8 @@ final class PrivateProfileController
             return $this->error('invalid_payload', 'payload object required', $authMode);
         }
 
-        if (isset($payload['bio_short']) && (!is_scalar($payload['bio_short']) || mb_strlen(trim((string)$payload['bio_short']), 'UTF-8') > 90)) {
-            return $this->error('validation_error', 'La Bio breve admite un máximo de 90 caracteres para conservar el diseño del perfil público.', $authMode, ['field' => 'bio_short', 'max_characters' => 90]);
+        if (isset($payload['bio_short']) && (!is_scalar($payload['bio_short']) || mb_strlen(trim((string)$payload['bio_short']), 'UTF-8') > 150)) {
+            return $this->error('validation_error', 'La Bio breve admite un máximo de 150 caracteres.', $authMode, ['field' => 'bio_short', 'max_characters' => 150]);
         }
         $prepared = $this->prepareEditablePayload($payload);
         if (!empty($prepared['unknown_fields'])) {
@@ -241,7 +241,7 @@ final class PrivateProfileController
             case 'specialty_license':
                 return 64;
             case 'bio_short':
-                return 1500;
+                return 150;
             case 'photo_url':
             case 'avatar_url':
             case 'logo_url':
