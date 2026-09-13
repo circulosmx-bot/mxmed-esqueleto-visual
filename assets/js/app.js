@@ -1322,6 +1322,99 @@ console.info('app.js loaded :: 20251123a');
   let guardOrigin;
   let closingForNavigation = false;
   let guardOpening = false;
+  let prefixConfirming = false;
+  let saveAttemptPending = false;
+  const prefixConfirmation = document.getElementById('mxpi-prefix-confirmation-modal');
+  function closeNavigationDialog(){
+    if(!guardOpening && !guardElement.classList.contains('show')) return Promise.resolve();
+    closingForNavigation = true;
+    return new Promise(resolve=>{
+      guardElement.addEventListener('hidden.bs.modal', ()=>{
+        closingForNavigation = false;
+        resolve();
+      }, { once: true });
+      const modal = bootstrap.Modal.getInstance(guardElement);
+      if(guardOpening){
+        guardElement.addEventListener('shown.bs.modal', ()=> modal.hide(), { once: true });
+      }else modal.hide();
+    });
+  }
+  function confirmPrefixChange(oldPrefix, newPrefix){
+    if(!prefixConfirmation || !window.bootstrap?.Modal) return Promise.resolve(false);
+    const body = document.getElementById('mxpi-prefix-confirmation-body');
+    const transition = oldPrefix
+      ? (newPrefix ? `de «${oldPrefix}» a «${newPrefix}»` : `de «${oldPrefix}» a ningún prefijo`)
+      : `a «${newPrefix}»; actualmente no tienes un prefijo`;
+    body.textContent = `Estás por cambiar tu prefijo profesional ${transition}. Este cambio será visible en tu perfil público. ¿Deseas continuar?`;
+    const cancel = document.getElementById('mxpi-prefix-cancel');
+    const confirm = document.getElementById('mxpi-prefix-confirm');
+    const modal = bootstrap.Modal.getOrCreateInstance(prefixConfirmation, { backdrop: 'static', keyboard: true, focus: true });
+    return new Promise(resolve=>{
+      let accepted = false;
+      let decided = false;
+      let shown = false;
+      const close = ()=>{
+        if(shown) modal.hide();
+        else prefixConfirmation.addEventListener('shown.bs.modal', ()=> modal.hide(), { once: true });
+      };
+      const cancelAttempt = ()=>{
+        if(decided) return;
+        decided = true;
+        close();
+      };
+      const accept = ()=>{
+        if(decided) return;
+        decided = true;
+        accepted = true;
+        close();
+      };
+      const ready = ()=>{ shown = true; cancel.focus(); };
+      const hidden = ()=>{
+        cancel.removeEventListener('click', cancelAttempt);
+        confirm.removeEventListener('click', accept);
+        resolve(accepted);
+      };
+      cancel.addEventListener('click', cancelAttempt);
+      confirm.addEventListener('click', accept);
+      prefixConfirmation.addEventListener('shown.bs.modal', ready, { once: true });
+      prefixConfirmation.addEventListener('hidden.bs.modal', hidden, { once: true });
+      modal.show();
+    });
+  }
+  async function requestProfileSave(continueNavigation = false){
+    if(saveAttemptPending || state.saving || state.loading || !state.loaded) return false;
+    saveAttemptPending = true;
+    let handedOff = false;
+    try{
+      const oldPrefix = normalizeText(state.persistedPrefix, 32);
+      const newPrefix = normalizeText(els.prefix?.value, 32);
+      if(oldPrefix !== newPrefix){
+        if(continueNavigation){
+          handedOff = true;
+          await closeNavigationDialog();
+        }
+        prefixConfirming = true;
+        setBusyState();
+        const origin = continueNavigation ? els.prefix : els.saveBtn;
+        const accepted = await confirmPrefixChange(oldPrefix, newPrefix);
+        prefixConfirming = false;
+        setBusyState();
+        if(origin?.isConnected) origin.focus({ preventScroll: true });
+        if(!accepted || normalizeText(els.prefix?.value, 32) !== newPrefix) return false;
+      }
+      if(continueNavigation){
+        await saveSurface.saveAndContinue();
+        return !dirtyTracker.isDirty();
+      }
+      return await savePrivateIdentity();
+    }finally{
+      prefixConfirming = false;
+      saveAttemptPending = false;
+      // A cancelled/failed prefix attempt abandons the exit, preserving all drafts.
+      if(handedOff && dirtyTracker.isDirty()) saveSurface.continueEditing();
+      setBusyState();
+    }
+  }
   const generalContextActive = ()=>{
     const info = document.getElementById('p-info');
     return !info?.classList.contains('d-none') && document.getElementById('t-info-datos')?.classList.contains('active');
@@ -1329,7 +1422,7 @@ console.info('app.js loaded :: 20251123a');
   const saveSurface = window.mxmedCreateExplicitSaveSurface({
     isDirty: ()=> state.loaded && dirtyTracker.isDirty(),
     isActive: generalContextActive,
-    isSaving: ()=> state.saving,
+    isSaving: ()=> state.saving || prefixConfirming,
     save: savePrivateIdentity,
     discard: ()=>{
       if(!baselineForm) return;
@@ -1363,20 +1456,7 @@ console.info('app.js loaded :: 20251123a');
         guardOpening = true;
         bootstrap.Modal.getOrCreateInstance(guardElement, { backdrop: 'static', keyboard: true, focus: true }).show();
       },
-      close(){
-        closingForNavigation = true;
-        return new Promise(resolve=>{
-          guardElement.addEventListener('hidden.bs.modal', ()=>{
-            closingForNavigation = false;
-            resolve();
-          }, { once: true });
-          const modal = bootstrap.Modal.getInstance(guardElement);
-          // A very fast save can finish before the opening transition completes.
-          if(guardOpening){
-            guardElement.addEventListener('shown.bs.modal', ()=> modal.hide(), { once: true });
-          }else modal.hide();
-        });
-      },
+      close: closeNavigationDialog,
       error(){
         guardError.textContent = els.feedback?.classList.contains('text-danger')
           ? els.feedback.textContent : 'Revisa los cambios pendientes antes de continuar.';
@@ -1385,7 +1465,7 @@ console.info('app.js loaded :: 20251123a');
     }
   });
   guardElement?.addEventListener('shown.bs.modal', ()=>{ guardOpening = false; });
-  guardSave?.addEventListener('click', ()=> saveSurface.saveAndContinue());
+  guardSave?.addEventListener('click', ()=> requestProfileSave(true));
   guardDiscard?.addEventListener('click', ()=> saveSurface.discardAndContinue());
   guardEdit?.addEventListener('click', ()=>{
     if(saveSurface.continueEditing()) bootstrap.Modal.getInstance(guardElement)?.hide();
@@ -2305,7 +2385,7 @@ console.info('app.js loaded :: 20251123a');
   function setBusyState(){
     saveSurface.sync();
     if(els.saveBtn){
-      els.saveBtn.disabled = state.loading || state.saving || !state.loaded;
+      els.saveBtn.disabled = state.loading || state.saving || prefixConfirming || !state.loaded;
       els.saveBtn.textContent = state.saving ? 'Guardando…' : 'Guardar cambios';
     }
     if(els.saveLegacyBtn){
@@ -2915,7 +2995,7 @@ console.info('app.js loaded :: 20251123a');
       input.blur();
     });
   });
-  els.saveBtn.addEventListener('click', savePrivateIdentity);
+  els.saveBtn.addEventListener('click', ()=> requestProfileSave());
   els.themeReset?.addEventListener('click', ()=> selectTheme('mxmed_teal', { reset: true, markDirty: true }));
   els.saveLegacyBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
