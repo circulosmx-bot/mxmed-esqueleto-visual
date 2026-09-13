@@ -194,6 +194,7 @@ try{
   await openProfile('nonconforming');
   assert.equal(await evaluate('window.__dg04bPatchBodies.length'), 0, 'page open must not PATCH');
   assert.equal(await evaluate('document.getElementById("mxpi-current-name-value").textContent'), 'Nombre histórico no conforme');
+  assert.equal(await evaluate(`document.getElementById('mxpi-current-name').textContent.trim().replace(/\\s+/g,' ')`), 'Nombre público en tu perfil: Nombre histórico no conforme');
   assert.equal(await evaluate('document.getElementById("mxpi-verified-given-names").value'), '', 'nonconforming legacy name requires an explicit valid selection');
   await evaluate(`document.getElementById('mxpi-professional-designation').value='Endocrinología clínica';document.getElementById('mxpi-professional-designation').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('mxpi-save-btn').click()`);
   await until('window.__dg04bPatchBodies.length === 1');

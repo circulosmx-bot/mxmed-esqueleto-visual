@@ -44,8 +44,6 @@
 #p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid { margin-top: 0; }
 #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor { margin-top: 0; }
 /* Identity controls start immediately; verified details live only in the Bootstrap modal. */
-#mx-public-identity-card .mxpi-name-editor__heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
-#p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor__heading .mxpi-name-editor__title { margin: 0; }
 .mxpi-verified-data-modal .modal-dialog { max-width: 620px; }
 .mxpi-verified-data-modal .modal-title { font-size: 1.15rem; }
 .mxpi-verified-data-modal .modal-body { overflow-wrap: anywhere; }

@@ -21760,13 +21760,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:10px;
   background:#f6fafb;
 }
-#p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor__title{
-  margin-bottom:9px;
-  color:#073b5a;
-  font-size:.9rem;
-  font-weight:800;
-  line-height:1.2;
-}
 #p-info #t-info-datos #mx-public-identity-card :is(.mxpi-verified-name,.mxpi-legacy-name)[hidden],
 #p-info #t-info-datos #mx-public-identity-card :is(.mxpi-second-surname,.mxpi-current-name,.mxpi-verified-details)[hidden]{display:none!important}
 #p-info #t-info-datos #mx-public-identity-card .mxpi-verified-name__controls{
@@ -21801,11 +21794,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   flex:0 0 auto;
   margin:0;
 }
+/* CRD03.6: 1.5 × the measured .74rem public-name text, in existing heading blue. */
 #p-info #t-info-datos #mx-public-identity-card .mxpi-current-name{
   margin-top:8px;
-  color:#725619;
-  font-size:.74rem;
+  color:#073b5a;
+  font-size:1.11rem;
   line-height:1.3;
+  overflow-wrap:anywhere;
 }
 #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor__summary{
   display:flex;

@@ -88,7 +88,7 @@ try{
   assert.equal(await evaluate(`document.querySelector('[data-profile-logo-upload] .mx-media-public-badge').textContent`),'Publicado');
   assert.equal(await evaluate(`document.querySelector('[data-profile-logo-upload] .mx-media-public-badge').getBoundingClientRect().width`),await evaluate(`document.getElementById('mx-dg-logo-prev').clientWidth`),'published badge stays on its thumbnail');
   assert.equal(await evaluate(`document.querySelector('#mx-public-identity-card .mxpi-title-row')`),null);
-  assert.equal(await evaluate(`document.querySelector('#mx-public-identity-card > .card-body > .mxpi-public-grid .mxpi-name-editor__title').textContent`),'Nombre en el perfil');
+  assert.equal(await evaluate(`document.querySelector('#mx-public-identity-card .mxpi-name-editor__title, #mx-public-identity-card .mxpi-name-editor__heading')`),null);
   assert.equal(await evaluate(`document.querySelector('.mx-media-review-caption,#mxpi-verified-details,.mxpi-verified-details__grid')`),null);
   await screenshot('crd033-leticia-single-photo-thumbnail.png');await screenshot('crd033-photo-en-revision.png');
   await evaluate(`document.getElementById('mx-public-identity-card').scrollIntoView({block:'start',behavior:'instant'})`);
