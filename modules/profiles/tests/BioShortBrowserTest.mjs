@@ -153,7 +153,7 @@ try{
     window.fetch=async(url,options={})=>{
       if(String(url).includes('/private/doctor/1')&&options.method==='PATCH'){
         const payload=JSON.parse(options.body);window.__qaBioPatches.push(payload);
-        Object.assign(dto.data.identity_public,payload);dto.data.public_name_policy.current_display_name_policy_status='CONFORMING';
+        Object.assign(dto.data.identity_public,payload);if(payload.display_name){dto.data.public_name_policy.current_display_name=payload.display_name;dto.data.public_name_policy.current_display_name_policy_status='VALID';}
         return new Response(JSON.stringify(dto),{status:200,headers:{'Content-Type':'application/json'}});
       }
       return originalFetch(url,options);
@@ -164,7 +164,7 @@ try{
   await evaluate(`(()=>{
     const bio=document.getElementById('mxpi-bio-short');bio.value='ñ'.repeat(150);bio.dispatchEvent(new Event('input',{bubbles:true}));
     const names=document.getElementById('mxpi-verified-given-names');names.value='Leticia';names.dispatchEvent(new Event('change',{bubbles:true}));
-    const second=document.getElementById('mxpi-show-second-surname');second.checked=true;second.dispatchEvent(new Event('change',{bubbles:true}));
+    const second=document.getElementById('mxpi-show-second-surname');second.checked=false;second.dispatchEvent(new Event('change',{bubbles:true}));
     document.getElementById('mxpi-save-btn').click();
   })()`);
   await until(`window.__qaBioPatches.length===1 && document.querySelector('#mxpi-feedback').textContent.includes('Cambios guardados')`);

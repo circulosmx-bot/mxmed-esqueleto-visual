@@ -120,7 +120,7 @@ try{
     assert.ok(state.nameBlockHeight<=baseline.nameBlockHeight+5,'emphasized name must not materially enlarge the block');
     assert.equal(state.overflow,false);assert.notEqual(state.textOverflow,'ellipsis');assert.notEqual(state.whiteSpace,'nowrap');
     if(width>500)assert.equal(state.lines,1,'desktop public name must remain a single line');
-    assert.equal(state.given,'');assert.equal(state.first,'Muñoz');assert.equal(state.second,'Romo');assert.equal(state.showSecond,true);
+    assert.equal(state.given,'Leticia');assert.equal(state.first,'Muñoz');assert.equal(state.second,'Romo');assert.equal(state.showSecond,true);
     assert.deepEqual(state.labels,['Nombre(s)','Primer apellido','Segundo apellido']);
     assert.equal(state.labelFor,'mxpi-verified-given-names');assert.equal(state.checkboxFor,'mxpi-show-second-surname');
     assert.deepEqual(state.utilities,['mxpi-verified-data-trigger','mx-visibility-help-trigger','mx-public-profile-link']);

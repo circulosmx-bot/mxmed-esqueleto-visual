@@ -1299,6 +1299,7 @@ console.info('app.js loaded :: 20251123a');
     hydratingIdentity: false,
     dirty: false,
     persistedDisplayName: null,
+    persistedPrefix: null,
     autoPublicSpecialty: null,
     logoSaving: false,
     adminContacts: new Map(),
@@ -1534,7 +1535,8 @@ console.info('app.js loaded :: 20251123a');
   function selectTheme(key, options = {}){
     const theme = approvedTheme(key) || approvedTheme('mxmed_teal') || state.themeCatalog[0];
     if(!theme) return;
-    state.themeSelectedKey = options.reset ? null : theme.key;
+    state.themeSelectedKey = options.reset || (state.themeStoredKey === null && theme.key === 'mxmed_teal')
+      ? null : theme.key;
     els.themeSwatches?.querySelectorAll('[role="radio"]').forEach((button)=>{
       button.setAttribute('aria-checked', button.dataset.themeKey === theme.key ? 'true' : 'false');
       button.tabIndex = button.dataset.themeKey === theme.key ? 0 : -1;
@@ -2126,7 +2128,8 @@ console.info('app.js loaded :: 20251123a');
   function readProfileFormState(){
     return {
       display_name: state.verifiedNameMode
-        ? controlledDisplayName() || state.persistedDisplayName
+        ? (state.publicNamePolicy?.current_display_name_policy_status === 'LEGACY_NONCONFORMING' && !nameControlsDiffer()
+          ? state.persistedDisplayName : controlledDisplayName() || state.persistedDisplayName)
         : normalizeText(els.displayName?.value, 190),
       givenPresentation: state.verifiedNameMode ? els.verifiedGivenNames?.value || '' : null,
       showSecondSurname: state.verifiedNameMode ? Boolean(els.showSecondSurname?.checked) : null,
@@ -2138,11 +2141,12 @@ console.info('app.js loaded :: 20251123a');
   }
 
   function captureProfileBaseline(){
-    dirtyTracker.captureBaseline();
     baselineNameControls = {
       given: els.verifiedGivenNames?.value || '',
       second: Boolean(els.showSecondSurname?.checked)
     };
+    dirtyTracker.captureBaseline();
+    updatePublicNamePreview();
     state.dirty = false;
   }
 
@@ -2188,13 +2192,27 @@ console.info('app.js loaded :: 20251123a');
     return normalizeText([givenNames, firstSurname, secondSurname].filter(Boolean).join(' '), 190);
   }
 
+  function nameControlsDiffer(){
+    return Boolean(baselineNameControls && (
+      (els.verifiedGivenNames?.value || '') !== baselineNameControls.given ||
+      Boolean(els.showSecondSurname?.checked) !== baselineNameControls.second
+    ));
+  }
+
   function updatePublicNamePreview(){
-    if(!state.verifiedNameMode || !els.publicNamePreview) return;
+    if(!state.verifiedNameMode) return;
     const prefix = normalizeText(els.prefix?.value, 32);
     const displayName = controlledDisplayName();
-    els.publicNamePreview.textContent = displayName
+    const presentation = displayName
       ? [prefix, displayName].filter(Boolean).join(' ')
-      : 'Selecciona una presentación';
+      : state.persistedDisplayName || 'Selecciona una presentación';
+    if(els.publicNamePreview) els.publicNamePreview.textContent = presentation;
+    // CRD03 uses the existing public summary instead of the older preview node.
+    if(els.currentNameValue) els.currentNameValue.textContent = presentation;
+    if(els.currentName){
+      els.currentName.hidden = state.publicNamePolicy?.current_display_name_policy_status !== 'LEGACY_NONCONFORMING'
+        && !nameControlsDiffer() && prefix === state.persistedPrefix;
+    }
   }
 
   function applyVerifiedNameReadModel(displayName, verifiedIdentity, publicNamePolicy){
@@ -2216,9 +2234,38 @@ console.info('app.js loaded :: 20251123a');
       : [];
     const policyStatus = String(policy.current_display_name_policy_status || '');
     const legacyNonconforming = policyStatus === 'LEGACY_NONCONFORMING';
+    const firstSurname = normalizeText(identity.first_surname, 120) || '';
+    const secondSurname = normalizeText(identity.second_surname, 120) || '';
+    if(els.verifiedFirstSurname) els.verifiedFirstSurname.textContent = firstSurname || '—';
+    if(els.verifiedSecondSurname) els.verifiedSecondSurname.textContent = secondSurname;
+    if(els.secondSurname) els.secondSurname.hidden = !secondSurname;
+
+    // Match only policy-supplied presentations combined with canonical surnames.
+    // A recognized professional prefix is independent from the given-name value.
+    const currentDisplayName = normalizeText(policy.current_display_name, 190) || displayName;
+    const prefixes = ['', normalizeText(els.prefix?.value, 32), 'Dr.', 'Dra.'];
+    const matchesCurrent = (candidate)=> prefixes.some((prefix)=>
+      comparablePublicName(currentDisplayName) === comparablePublicName([prefix, candidate].filter(Boolean).join(' '))
+    );
+    let matchingGivenName = '';
+    let matchingSecondSurname = false;
+    for(const givenName of allowed){
+      const firstOnly = [givenName, firstSurname].filter(Boolean).join(' ');
+      const withSecond = [firstOnly, secondSurname].filter(Boolean).join(' ');
+      if(matchesCurrent(firstOnly)){
+        matchingGivenName = givenName;
+        matchingSecondSurname = false;
+        break;
+      }
+      if(secondSurname && matchesCurrent(withSecond)){
+        matchingGivenName = givenName;
+        matchingSecondSurname = true;
+        break;
+      }
+    }
     if(els.verifiedGivenNames){
       els.verifiedGivenNames.innerHTML = '';
-      if(legacyNonconforming){
+      if(!matchingGivenName){
         const placeholder = document.createElement('option');
         placeholder.value = '';
         placeholder.textContent = 'Selecciona una presentación';
@@ -2233,30 +2280,8 @@ console.info('app.js loaded :: 20251123a');
       });
     }
 
-    const firstSurname = normalizeText(identity.first_surname, 120) || '';
-    const secondSurname = normalizeText(identity.second_surname, 120) || '';
-    if(els.verifiedFirstSurname) els.verifiedFirstSurname.textContent = firstSurname || '—';
-    if(els.verifiedSecondSurname) els.verifiedSecondSurname.textContent = secondSurname;
-    if(els.secondSurname) els.secondSurname.hidden = !secondSurname;
-
-    let matchingGivenName = '';
-    let matchingSecondSurname = false;
-    for(const givenName of allowed){
-      const firstOnly = [givenName, firstSurname].filter(Boolean).join(' ');
-      const withSecond = [firstOnly, secondSurname].filter(Boolean).join(' ');
-      if(comparablePublicName(displayName) === comparablePublicName(firstOnly)){
-        matchingGivenName = givenName;
-        matchingSecondSurname = false;
-        break;
-      }
-      if(secondSurname && comparablePublicName(displayName) === comparablePublicName(withSecond)){
-        matchingGivenName = givenName;
-        matchingSecondSurname = true;
-        break;
-      }
-    }
     if(els.verifiedGivenNames){
-      els.verifiedGivenNames.value = matchingGivenName || (legacyNonconforming ? '' : allowed[0]) || '';
+      els.verifiedGivenNames.value = matchingGivenName;
       els.verifiedGivenNames.disabled = allowed.length === 0;
     }
     if(els.showSecondSurname){
@@ -2293,6 +2318,7 @@ console.info('app.js loaded :: 20251123a');
     }
 
     state.persistedDisplayName = displayName;
+    state.persistedPrefix = prefix;
     els.displayName.value = displayName || '';
     if(els.professionalDesignation) els.professionalDesignation.value = normalizeText(data.professional_designation, 120) || '';
     if(els.prefix){
@@ -2478,7 +2504,7 @@ console.info('app.js loaded :: 20251123a');
     }else{
       const policyStatus = String(state.publicNamePolicy?.current_display_name_policy_status || '');
       const requestedDisplayName = controlledDisplayName();
-      if(requestedDisplayName && (policyStatus !== 'LEGACY_NONCONFORMING' || state.verifiedNameSelectionTouched)){
+      if(requestedDisplayName && (policyStatus !== 'LEGACY_NONCONFORMING' || nameControlsDiffer())){
         payload.display_name = requestedDisplayName;
       }
     }
@@ -2762,8 +2788,9 @@ console.info('app.js loaded :: 20251123a');
     }, 120);
   });
 
-  readPrivateIdentity();
-  window.addEventListener('load', ()=>{ readPrivateIdentity(); }, { once: true });
+  // Start one initial hydration after the shell scripts have initialized.
+  if(document.readyState === 'complete') readPrivateIdentity();
+  else window.addEventListener('load', ()=>{ readPrivateIdentity(); }, { once: true });
 })();
 
 // Shell sidebar compact mode (default collapsed on desktop)

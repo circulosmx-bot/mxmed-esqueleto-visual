@@ -83,10 +83,11 @@ try{
     window.__dg04bRejectName = false;
     let persistedName = new URL(location.href).searchParams.get('mode') === 'nonconforming'
       ? 'Nombre histórico no conforme'
-      : 'Luis Reynoso Femat';
+      : new URL(location.href).searchParams.get('mode') === 'prefixed'
+        ? 'Dr. Luis Reynoso Femat' : 'Luis Reynoso Femat';
     const responseData = ()=>{
       const legacy = new URL(location.href).searchParams.get('mode') === 'legacy';
-      const nonconforming = persistedName === 'Nombre histórico no conforme';
+      const nonconforming = persistedName === 'Nombre histórico no conforme' || persistedName.startsWith('Dr. ');
       return {
         ok:true, error:null, data:{
           doctor_id:'1',
@@ -191,6 +192,17 @@ try{
   await screenshot('dg04b-name-editor-mobile.png');
 
   await send('Emulation.setDeviceMetricsOverride', {width:1366,height:768,deviceScaleFactor:1,mobile:false});
+  await openProfile('prefixed');
+  assert.equal(await evaluate('window.__dg04bPatchBodies.length'),0);
+  assert.equal(await evaluate('document.getElementById("mxpi-verified-given-names").value'),'Luis');
+  assert.equal(await evaluate('document.getElementById("mxpi-show-second-surname").checked'),true);
+  assert.deepEqual(await evaluate('[...document.getElementById("mxpi-verified-given-names").options].map(o=>o.value)'),['Luis','Armando','Luis Armando']);
+  await evaluate(`document.getElementById('mxpi-show-second-surname').click();document.getElementById('mxpi-show-second-surname').click()`);
+  assert.equal(await evaluate('document.getElementById("mxpi-floating-save").hidden'),true);
+  await evaluate(`document.getElementById('mxpi-bio-short').value='Descripción editada';document.getElementById('mxpi-bio-short').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('mxpi-save-btn').click()`);
+  await until('window.__dg04bPatchBodies.length===1 && !document.getElementById("mxpi-save-btn").disabled');
+  assert.equal(await evaluate(`Object.hasOwn(window.__dg04bPatchBodies[0],'display_name')`),false,'revert then sibling save must preserve the exact prefixed legacy display_name');
+
   await openProfile('nonconforming');
   assert.equal(await evaluate('window.__dg04bPatchBodies.length'), 0, 'page open must not PATCH');
   assert.equal(await evaluate('document.getElementById("mxpi-current-name-value").textContent'), 'Nombre histórico no conforme');

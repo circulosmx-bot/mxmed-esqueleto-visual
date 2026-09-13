@@ -94,7 +94,7 @@ try{
         const payload=JSON.parse(options.body);
         Object.assign(result.data.identity_public,payload);
         result.data.profile_theme.stored_key=payload.profile_theme_key;
-        result.data.public_name_policy.current_display_name_policy_status=payload.display_name ? 'CONFORMING' : result.data.public_name_policy.current_display_name_policy_status;
+        if(payload.display_name){result.data.public_name_policy.current_display_name=payload.display_name;result.data.public_name_policy.current_display_name_policy_status='VALID';}
         return new Response(JSON.stringify(result),{status:200,headers:{'Content-Type':'application/json'}});
       }
       return new Response(JSON.stringify({ok:false,error:'blocked_qa_write'}),{status:503});
@@ -159,6 +159,7 @@ try{
   await new Promise(r=>setTimeout(r,400));
   assert.equal(await evaluate(`document.getElementById('mxpi-bio-short').value`),'Borrador local');
   await edit('mxpi-verified-given-names',original.data.public_name_policy.allowed_given_name_presentations[0],'change');
+  await evaluate(`document.getElementById('mxpi-show-second-surname').click()`);
   await edit('mxpi-prefix','Dr.','change');
   await theme(alternate);
   await screenshot('crd039-dirty-floating-save-1440.png');
@@ -172,7 +173,7 @@ try{
   assert.ok(await evaluate(`document.getElementById('mx-profile-theme-feedback').textContent.endsWith('color actual.')`));
   const patch=(await writes())[0];
   assert.equal(patch.method,'PATCH');assert.equal(patch.payload.prefix,'Dr.');assert.equal(patch.payload.bio_short,'Borrador local');assert.equal(patch.payload.profile_theme_key,alternate);
-  assert.equal(patch.payload.display_name,'Leticia Muñoz Romo');
+  assert.equal(patch.payload.display_name,'Leticia Muñoz');
   assert.deepEqual(Object.keys(patch.payload).sort(),['bio_short','display_name','prefix','professional_designation','profile_theme_key']);
   await evaluate(`document.getElementById('mx-public-identity-card').scrollIntoView({block:'center'})`);
   await screenshot('crd039-save-success.png');
