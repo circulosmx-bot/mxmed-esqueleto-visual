@@ -46,8 +46,8 @@ try {
     ];
     $saved = $controller->patchByDoctorId('1', $payload, 'test');
     bioAssert($saved['ok'] === true, 'Grouped identity PATCH accepted');
-    bioAssert(count($saved['meta']['editable_fields_applied']) === 7, 'Seven grouped editable fields preserved');
-    bioAssert(count($saved['meta']['blocked_fields_ignored']) === 2, 'System authority remains blocked');
+    bioAssert(count($saved['meta']['editable_fields_applied']) === 5, 'Five grouped editable fields preserved');
+    bioAssert(count($saved['meta']['blocked_fields_ignored']) === 4, 'System and admission gender authority remain blocked');
     bioAssert($saved['data']['identity_public']['profile_status'] === $row['profile_status'], 'Publication state preserved');
     bioAssert($saved['data']['identity_public']['is_public_candidate'] === $row['is_public_candidate'], 'Candidate state preserved');
 } finally {

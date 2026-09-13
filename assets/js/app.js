@@ -1159,7 +1159,6 @@ console.info('app.js loaded :: 20251123a');
     currentNameValue: document.getElementById('mxpi-current-name-value'),
     professionalDesignation: document.getElementById('mxpi-professional-designation'),
     prefix: document.getElementById('mxpi-prefix'),
-    genderLabel: document.getElementById('mxpi-gender-label'),
     professionalLicense: document.getElementById('mxpi-prof-license'),
     specialtyLicense: document.getElementById('mxpi-specialty-license'),
     specialtySecondary: document.getElementById('mxpi-specialty-secondary'),
@@ -2264,10 +2263,6 @@ console.info('app.js loaded :: 20251123a');
       ensureSelectOption(els.prefix, prefix);
       els.prefix.value = prefix || '';
     }
-    if(els.genderLabel){
-      ensureSelectOption(els.genderLabel, genderLabel);
-      els.genderLabel.value = genderLabel || '';
-    }
     if(els.professionalLicense) els.professionalLicense.value = professionalLicense || '';
     if(els.specialtyLicense) els.specialtyLicense.value = specialtyLicense || '';
     state.autoPublicSpecialty = specialtyPrimary || null;
@@ -2436,12 +2431,9 @@ console.info('app.js loaded :: 20251123a');
   });
 
   function buildPatchPayload(){
-    const genderLabel = normalizeText(els.genderLabel?.value, 64);
     const payload = {
       professional_designation: normalizeText(els.professionalDesignation?.value, 120),
       prefix: normalizeText(els.prefix?.value, 32),
-      gender: mapGenderValue(genderLabel),
-      gender_label: genderLabel,
       bio_short: String(els.bioShort?.value || '').trim() || null,
       profile_theme_key: state.themeSelectedKey
     };
@@ -2521,7 +2513,7 @@ console.info('app.js loaded :: 20251123a');
     event.preventDefault();
     insertBioText(pasted);
   });
-  ['mxpi-professional-designation', 'mxpi-prefix', 'mxpi-gender-label', 'mxpi-bio-short'].forEach((id)=>{
+  ['mxpi-professional-designation', 'mxpi-prefix', 'mxpi-bio-short'].forEach((id)=>{
     const input = document.getElementById(id);
     if(!input) return;
     input.addEventListener('input', markIdentityDirty);

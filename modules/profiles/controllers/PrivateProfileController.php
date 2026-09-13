@@ -21,13 +21,13 @@ final class PrivateProfileController
         'display_name',
         'professional_designation',
         'prefix',
-        'gender',
-        'gender_label',
         'bio_short',
         'profile_theme_key',
     ];
 
     private const BLOCKED_FIELDS = [
+        'gender',
+        'gender_label',
         'professional_license',
         'specialty_license',
         'specialty_primary',

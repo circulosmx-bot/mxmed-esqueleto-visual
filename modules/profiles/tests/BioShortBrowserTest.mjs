@@ -126,11 +126,11 @@ try{
     await new Promise(resolve=>setTimeout(resolve,700));
     await evaluate(`document.querySelectorAll('.modal.show [data-bs-dismiss=modal]').forEach(e=>e.click())`);
     await until(`!document.querySelector('.modal.show')`);
-    const state=await evaluate(`({width:innerWidth,gender:document.querySelector('label[for=mxpi-gender-label]').childNodes[0].textContent.trim(),maxlength:document.querySelector('#mxpi-bio-short').maxLength,counter:document.querySelector('#mxpi-bio-count').textContent,statusNodes:document.querySelectorAll('#mxpi-profile-status,#mxpi-public-candidate,label[for=mxpi-profile-status],label[for=mxpi-public-candidate]').length,header:document.querySelector('.mx-gh-identity-name-text').textContent,photo:document.querySelector('#mxpi-photo-preview img').src,logo:document.querySelector('#mx-dg-logo-img').src,credentials:document.querySelector('#mx-credential-list').textContent,pageOverflow:document.documentElement.scrollWidth>innerWidth+1})`);
-    assert.equal(state.gender,'Género');assert.equal(state.maxlength,150);assert.equal(state.counter,Array.from(currentBio).length+' / 150');assert.equal(state.statusNodes,0);assert(state.header.includes('Leticia Muñoz Romo'));assert.equal(state.pageOverflow,false);
+    const state=await evaluate(`({width:innerWidth,genderControls:document.querySelectorAll('#mxpi-gender-label').length,maxlength:document.querySelector('#mxpi-bio-short').maxLength,counter:document.querySelector('#mxpi-bio-count').textContent,statusNodes:document.querySelectorAll('#mxpi-profile-status,#mxpi-public-candidate,label[for=mxpi-profile-status],label[for=mxpi-public-candidate]').length,header:document.querySelector('.mx-gh-identity-name-text').textContent,photo:document.querySelector('#mxpi-photo-preview img').src,logo:document.querySelector('#mx-dg-logo-img').src,credentials:document.querySelector('#mx-credential-list').textContent,pageOverflow:document.documentElement.scrollWidth>innerWidth+1})`);
+    assert.equal(state.genderControls,0);assert.equal(state.maxlength,150);assert.equal(state.counter,Array.from(currentBio).length+' / 150');assert.equal(state.statusNodes,0);assert(state.header.includes('Leticia Muñoz Romo'));assert.equal(state.pageOverflow,false);
     assert(state.photo.includes(currentPrivate.data.identity_public.photo_url));assert(state.logo.includes(currentPrivate.data.identity_public.logo_url)||state.logo.includes('a1e44098-a0ef-403f-b51e-8bee88100ef8'));
     assert(state.credentials.includes('0123456')&&state.credentials.includes('6543210'));adminResults.push(state);
-    await evaluate(`document.getElementById('mxpi-gender-label').scrollIntoView({block:'center'})`);
+    await evaluate(`document.getElementById('mxpi-prefix').scrollIntoView({block:'center'})`);
     if(width===1440){await screenshot('crd031-admin-gender-bio-1440.png');await screenshot('crd031-admin-no-system-status-fields.png');}
   }
   // Input/dirty/grouped-save checks use a mocked PATCH response only. Leticia DB is never mutated.
@@ -169,7 +169,7 @@ try{
   })()`);
   await until(`window.__qaBioPatches.length===1 && document.querySelector('#mxpi-feedback').textContent.includes('Cambios guardados')`);
   const patch=await evaluate(`window.__qaBioPatches[0]`);
-  assert.deepEqual(Object.keys(patch).sort(),['display_name','professional_designation','prefix','gender','gender_label','bio_short','profile_theme_key'].sort());
+  assert.deepEqual(Object.keys(patch).sort(),['display_name','professional_designation','prefix','bio_short','profile_theme_key'].sort());
   assert.equal(Array.from(patch.bio_short).length,150);assert(!('profile_status' in patch));assert(!('is_public_candidate' in patch));
   assert.equal(await evaluate(`document.querySelector('#mxpi-feedback').classList.contains('text-success')`),true,'Save clears dirty feedback');
   const narrow=results.find(r=>r.width===1440&&r.name==='narrow-150'),wide=results.find(r=>r.width===1440&&r.name==='wide-150');
