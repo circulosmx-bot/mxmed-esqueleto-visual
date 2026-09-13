@@ -46,8 +46,6 @@
 /* Identity controls start immediately; verified details live only in the Bootstrap modal. */
 #mx-public-identity-card .mxpi-name-editor__heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor__heading .mxpi-name-editor__title { margin: 0; }
-#mx-public-identity-card .mxpi-verified-data-trigger { display: block; width: fit-content; max-width: 100%; margin-top: 8px; padding: 4px 0; border: 0; border-top: 1px solid #dbe7eb; background: transparent; color: #315d70; font-size: .74rem; font-weight: 700; text-align: left; }
-#mx-public-identity-card .mxpi-verified-data-trigger[hidden] { display: none; }
 .mxpi-verified-data-modal .modal-dialog { max-width: 620px; }
 .mxpi-verified-data-modal .modal-title { font-size: 1.15rem; }
 .mxpi-verified-data-modal .modal-body { overflow-wrap: anywhere; }

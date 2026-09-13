@@ -47,10 +47,10 @@ $(function(){
   if(!sidebar) return;
   // Reuse the existing Información action, including its live URL authority.
   const publicLink = document.getElementById('mx-public-profile-link');
-  const informationHeader = document.querySelector('#p-info .mx-panel-subheader');
-  if(publicLink && informationHeader){
+  const informationActions = document.querySelector('#p-info .mx-profile-utility-actions');
+  if(publicLink && informationActions){
     publicLink.classList.add('sb01-contextual-profile');
-    informationHeader.append(publicLink);
+    informationActions.append(publicLink);
   }
   const tooltip = document.createElement('span');
   tooltip.id = 'sb01-sidebar-tooltip';

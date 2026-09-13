@@ -136,7 +136,7 @@ try{
     legacyHidden:document.getElementById('mxpi-legacy-name').hidden,
     allowed:[...document.getElementById('mxpi-verified-given-names').options].map(o=>o.value),
     first:document.getElementById('mxpi-verified-first-surname').textContent,
-    reference:document.getElementById('mxpi-verified-full-name').textContent,
+    metaAbsent:!document.getElementById('mxpi-verified-full-name')&&!document.getElementById('mxpi-public-name-preview'),
     detailsClosed:!document.getElementById('mxpi-verified-data-modal').classList.contains('show'),
     noAdminCard:!document.getElementById('mx-dg-verified-card'),
     tabs:document.querySelectorAll('#tabs-info [role="tab"]').length,
@@ -150,7 +150,7 @@ try{
     overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth
   }))()`);
   assert.deepEqual(verifiedState.allowed, ['Luis','Armando','Luis Armando']);
-  assert.deepEqual(verifiedState, {...verifiedState,verifiedVisible:true,legacyHidden:true,first:'Reynoso',reference:'Luis Armando Reynoso Femat',detailsClosed:true,noAdminCard:true,tabs:5,photoFallback:'generic',credentials:1,mediaReview:true,identityFieldOrder:['mxpi-prefix','mxpi-professional-designation'],signatureIsLast:true,overflow:false});
+  assert.deepEqual(verifiedState, {...verifiedState,verifiedVisible:true,legacyHidden:true,first:'Reynoso',metaAbsent:true,detailsClosed:true,noAdminCard:true,tabs:5,photoFallback:'generic',credentials:1,mediaReview:true,identityFieldOrder:['mxpi-prefix','mxpi-professional-designation'],signatureIsLast:true,overflow:false});
   assert.equal(verifiedState.allowed.includes('Fernando'), false);
   assert.equal(await evaluate(`(()=>{const ids=['mxpi-prefix','mxpi-professional-designation'];const boxes=ids.map((id)=>document.getElementById(id).getBoundingClientRect());return boxes[0].left<boxes[1].left&&Math.max(...boxes.map((box)=>box.top))-Math.min(...boxes.map((box)=>box.top))<2})()`), true, 'desktop identity fields must render as Prefijo, Denominación');
   assert.equal(await evaluate(`document.getElementById('dg-signature-card').getBoundingClientRect().top>=document.getElementById('mx-public-identity-card').getBoundingClientRect().bottom`), true, 'signature card must render below identity');
@@ -159,11 +159,13 @@ try{
   const expected = [];
   for(const given of ['Luis','Armando','Luis Armando']){
     for(const second of [false,true]){
-      const preview = await evaluate(`(()=>{const select=document.getElementById('mxpi-verified-given-names');select.value=${JSON.stringify(given)};select.dispatchEvent(new Event('change',{bubbles:true}));const check=document.getElementById('mxpi-show-second-surname');check.checked=${second};check.dispatchEvent(new Event('change',{bubbles:true}));return document.getElementById('mxpi-public-name-preview').textContent})()`);
-      expected.push(preview);
+      await evaluate(`(()=>{const select=document.getElementById('mxpi-verified-given-names');select.value=${JSON.stringify(given)};select.dispatchEvent(new Event('change',{bubbles:true}));const check=document.getElementById('mxpi-show-second-surname');check.checked=${second};check.dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('mxpi-save-btn').click()})()`);
+      await until(`window.__dg04bPatchBodies.length === ${expected.length+1} && document.getElementById('mxpi-save-btn').disabled === false`);
+      expected.push(await evaluate('window.__dg04bPatchBodies.at(-1).display_name'));
+      assert.equal(await evaluate('window.__dg04bPatchBodies.at(-1).prefix'), 'Dr.');
     }
   }
-  assert.deepEqual(expected, ['Dr. Luis Reynoso','Dr. Luis Reynoso Femat','Dr. Armando Reynoso','Dr. Armando Reynoso Femat','Dr. Luis Armando Reynoso','Dr. Luis Armando Reynoso Femat']);
+  assert.deepEqual(expected, ['Luis Reynoso','Luis Reynoso Femat','Armando Reynoso','Armando Reynoso Femat','Luis Armando Reynoso','Luis Armando Reynoso Femat']);
 
   await send('Emulation.setDeviceMetricsOverride', {width:1366,height:768,deviceScaleFactor:1,mobile:false});
   await evaluate(`document.getElementById('mx-public-identity-card').scrollIntoView({block:'start',behavior:'instant'})`);
@@ -209,7 +211,7 @@ try{
   await openProfile('legacy');
   assert.equal(await evaluate('document.getElementById("mxpi-legacy-name").hidden'), false);
   assert.equal(await evaluate('document.getElementById("mxpi-verified-name").hidden'), true);
-  assert.equal(await evaluate('document.getElementById("mxpi-verified-full-name").textContent'), '');
+  assert.equal(await evaluate('document.getElementById("mxpi-verified-full-name")'), null);
   await screenshot('dg04b-legacy-fallback.png');
   await evaluate(`const n=document.getElementById('mxpi-display-name');n.value='Nombre público legado libre';n.dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('mxpi-save-btn').click()`);
   await until('window.__dg04bPatchBodies.length === 1');

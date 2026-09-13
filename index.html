@@ -137,7 +137,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=qa-visual-20260510-day-simple-b" />
+<link rel="stylesheet" href="assets/css/style.css?v=crd035" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=theme-01a" />
 
@@ -203,7 +203,7 @@
 
 <link rel="stylesheet" href="assets/css/profile-photo.css?v=profile-photo-20260908">
 <link rel="stylesheet" href="assets/css/professional-logo.css?v=professional-logo-state-20260908">
-<link rel="stylesheet" href="assets/css/owner-media-review.css?v=crd033">
+<link rel="stylesheet" href="assets/css/owner-media-review.css?v=crd035">
 </head>
 
 <body class="mx-sidebar-expanded" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -683,6 +683,13 @@
                   <h2 class="mx-panel-subheader-title">Datos Personales</h2>
                 </div>
               </div>
+              <div class="mx-profile-utility-actions" role="group" aria-label="Acciones del perfil">
+                <button class="mxpi-verified-data-trigger" id="mxpi-verified-data-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mxpi-verified-data-modal" hidden>Ver datos verificados</button>
+                <button class="mx-visibility-help-trigger" id="mx-visibility-help-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mx-visibility-help-modal">
+                  <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  <span>Visibilidad de los datos</span>
+                </button>
+              </div>
             </header>
           </div>
 
@@ -751,14 +758,6 @@
               </li>
 
             </ul>
-
-            <div class="mx-visibility-help-access">
-              <button class="mx-visibility-help-trigger" id="mx-visibility-help-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mx-visibility-help-modal">
-                <span class="material-symbols-outlined" aria-hidden="true">info</span>
-                <span>Visibilidad de los datos</span>
-              </button>
-            </div>
-
 
               <div class="tab-content" id="tabs-infoContent">
 
@@ -886,10 +885,6 @@
                           <div class="mxpi-current-name" id="mxpi-current-name" hidden>
                             Nombre público actual: <strong id="mxpi-current-name-value"></strong>
                           </div>
-                          <div class="mxpi-name-editor__summary">
-                            <div class="mxpi-public-preview"><span>Vista pública:</span> <strong id="mxpi-public-name-preview"></strong></div>
-                            <div class="mxpi-verified-reference"><span class="material-symbols-outlined" aria-hidden="true">verified</span>Identidad verificada: <strong id="mxpi-verified-full-name"></strong></div>
-                          </div>
                         </div>
 
                         <div class="mxpi-legacy-name" id="mxpi-legacy-name">
@@ -897,7 +892,6 @@
                           <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
                         </div>
 
-                        <button class="mxpi-verified-data-trigger" id="mxpi-verified-data-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mxpi-verified-data-modal" hidden>Ver datos verificados</button>
                       </div>
                       <div class="col-md-2">
                         <label class="form-label mx-field-label" for="mxpi-prefix">Prefijo profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
@@ -10301,7 +10295,7 @@
 
 
 
-<script src="assets/js/core/navigation.js"></script>
+<script src="assets/js/core/navigation.js?v=crd035"></script>
 
 <script src="assets/js/core/dashboard.js"></script>
 

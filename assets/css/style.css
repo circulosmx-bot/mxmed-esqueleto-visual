@@ -21444,12 +21444,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* DG03B: visibility semantics live in compact contextual help. */
 #p-info #tabs-info.mx-panel-tabs{margin-bottom:6px!important}
-#p-info .mx-visibility-help-access{
-  display:none;
-  justify-content:flex-end;
-  margin:0 2px 8px;
-}
-#p-info #tabs-info:has(#t-info-datos-tab.active) + .mx-visibility-help-access{display:flex}
 #p-info .mx-visibility-help-trigger{
   display:inline-flex;
   align-items:center;
@@ -21510,7 +21504,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-visibility-help-modal .modal-footer{padding:4px 20px 16px;border:0}
 .mx-visibility-help-modal .modal-footer .btn{min-width:104px;min-height:36px;border-radius:8px;font-weight:700}
 @media (max-width:575px){
-  #p-info .mx-visibility-help-access{margin-bottom:7px}
   .mx-visibility-help-modal .modal-dialog{margin:10px auto;padding-inline:8px}
   .mx-visibility-help-modal .modal-header{padding:16px 16px 9px}
   .mx-visibility-help-modal .modal-body{padding:4px 16px 10px}
@@ -21888,4 +21881,27 @@ body{margin:0;background:var(--mm-fondo-base);}
 #mx-formacion-credentials-card .mx-credential-empty{margin:8px 0;color:#526d7c;font-size:.9rem}
 @media(max-width:575.98px){
   #mx-formacion-credentials-card .mx-credential-row h3{flex-basis:100%}
+}
+
+/* CRD03.5: existing profile utilities share the panel action row. */
+#p-info .mx-profile-utility-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  margin-left:auto;min-width:0;
+}
+#p-info .mx-profile-utility-actions > button{
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+  min-height:30px;padding:5px 9px;border:1px solid #c8dce4;
+  border-radius:6px;background:#f8fbfc;color:#31586a;
+  font:inherit;font-size:.78rem;font-weight:600;line-height:1.2;cursor:pointer;
+}
+#p-info .mx-profile-utility-actions > button[hidden]{display:none}
+#p-info .mx-profile-utility-actions > button:hover{border-color:#77cbd4;background:#eefafb;color:#07536e}
+#p-info .mx-profile-utility-actions > button:focus-visible{outline:3px solid rgba(0,174,190,.22);outline-offset:2px}
+#p-info .mx-profile-utility-actions .sb01-contextual-profile{margin-left:0}
+@media (max-width:1399px){
+  #p-info .mx-profile-utility-actions{gap:6px}
+  #p-info .mx-profile-utility-actions > button{padding-inline:7px}
+}
+@media (max-width:767px){
+  #p-info .mx-profile-utility-actions{flex-wrap:wrap;justify-content:flex-start;width:100%;margin-left:0}
 }
