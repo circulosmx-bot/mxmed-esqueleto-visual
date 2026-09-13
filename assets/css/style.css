@@ -21959,7 +21959,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* DG05: compact media stack beside identity; preserve the identity event parent. */
 #p-info #t-info-datos #mx-public-identity-card .mx-dg-media-identity-layout{
   display:grid;
-  grid-template-columns:340px minmax(0,1fr);
+  grid-template-columns:420px minmax(0,1fr);
   align-items:start;
   gap:16px;
   margin-bottom:0;
@@ -22007,16 +22007,19 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload-grid{
   grid-template-columns:minmax(0,1fr);
   gap:8px;
+  grid-template-rows:repeat(2,minmax(160px,1fr));
   margin-bottom:0;
 }
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload.square{
   display:grid;
-  grid-template-columns:90px minmax(0,1fr);
+  grid-template-columns:120px minmax(0,1fr);
   grid-template-rows:auto auto 1fr auto;
   gap:3px 10px;
   align-items:center;
   min-width:0;
-  min-height:102px;
+  max-width:none;
+  height:100%;
+  min-height:160px;
   padding:5px;
   border:1px solid #cfe0e7;
   border-radius:10px;
@@ -22026,12 +22029,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > :is(.mf-prev,.mf-illus,.mx-dg-media-placeholder,.mx-media-review-candidate){
   grid-column:1;
   grid-row:1 / 5;
-  width:90px;
+  width:120px;
   margin:0;
   align-self:center;
 }
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > :is(.mf-prev,.mf-illus,.mx-dg-media-placeholder),
-#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-media-review-thumbnail{width:90px;height:90px}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-media-review-thumbnail{width:120px;height:120px}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > :is(.mf-title,.mf-sub,.mf-actions){
   grid-column:2;
   width:100%;
@@ -22097,10 +22100,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-data-badge .material-symbols-outlined{font-size:12px}
 /* Override the earlier public-photo layout even when a candidate occupies its slot. */
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview){
-  grid-template-columns:90px minmax(0,1fr);
+  grid-template-columns:120px minmax(0,1fr);
   grid-template-rows:auto auto auto auto auto;
   gap:3px 10px;
-  min-height:102px;
+  min-height:160px;
 }
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview) > .mf-sub{
   grid-column:1 / -1;
@@ -22108,6 +22111,36 @@ body{margin:0;background:var(--mm-fondo-base);}
   width:100%;
 }
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview):has(.mx-media-review-observations) > .mf-sub{grid-column:2;grid-row:3}
-#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control #mxpi-photo-preview:not([hidden]){width:90px;height:90px;grid-row:1 / 4}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control #mxpi-photo-preview:not([hidden]){width:120px;height:120px;grid-row:1 / 4}
 #p-info #t-info-datos #mx-public-identity-card > .card-body{padding-top:10px}
 #p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid > :is(.col-md-2,.mxpi-designation-field){margin-top:8px}
+
+/* DG05B: prefix precedes names; retain the empty host for actual review states/errors. */
+#p-info #t-info-datos #mx-public-identity-card .mx-dg-prefix-field{
+  width:100%;
+  margin-bottom:12px;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-card-head:empty{display:none;margin:0}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid > .mxpi-designation-field{width:100%}
+
+
+/* DG05C: professional fields share one row; remove duplicated Bootstrap row spacing. */
+#p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid{--bs-gutter-y:0}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row{
+  display:grid;
+  grid-template-columns:minmax(180px,3fr) minmax(0,7fr);
+  align-items:start;
+  column-gap:16px;
+  margin-top:8px;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row > :is(.mx-dg-prefix-field,.mxpi-designation-field){
+  width:100%;
+  min-width:0;
+  margin:0;
+}
+@media (max-width:767px){
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row{
+    grid-template-columns:minmax(0,1fr);
+    row-gap:12px;
+  }
+}

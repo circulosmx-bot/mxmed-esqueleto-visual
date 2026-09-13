@@ -137,7 +137,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=dg05" />
+<link rel="stylesheet" href="assets/css/style.css?v=dg05c" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -866,13 +866,8 @@
                       </div>
                       <div class="card mt-3 mx-dg-card mx-dg-card-media" id="mx-dg-media-card">
                         <div class="card-body">
-                          <div class="mx-dg-card-head">
-                            <div class="mx-dg-card-title-row">
-                              <div class="mx-dg-card-title">Foto y logotipo profesional</div>
-                              <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
-                            </div>
-                            <div class="mx-dg-card-note">Los cambios de imágenes requieren revisión; mientras tanto la versión actual permanece visible.</div>
-                          </div>
+                          <!-- Functional review feedback/batch host; no permanent media heading or copy. -->
+                          <div class="mx-dg-card-head"></div>
                           <div class="mf-upload-grid">
 
                             <div class="mf-upload square" data-type="foto" id="mxpi-photo-control">
@@ -931,28 +926,30 @@
                       </div>
                     </div>
                     <div class="row g-3 mxpi-public-grid">
-                      <div class="col-md-2">
-                        <label class="form-label mx-field-label" for="mxpi-prefix">Prefijo profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
-                        <select class="form-select" id="mxpi-prefix">
-                          <option value="">Selecciona</option>
-                          <option value="Dr.">Dr.</option>
-                          <option value="Dra.">Dra.</option>
-                          <option value="Psic.">Psic.</option>
-                          <option value="Psicóloga">Psicóloga</option>
-                          <option value="Lic.">Lic.</option>
-                          <option value="Mtro.">Mtro.</option>
-                          <option value="Mtra.">Mtra.</option>
-                          <option value="C.D.">C.D.</option>
-                          <option value="Dent.">Dent.</option>
-                          <option value="QFB">QFB</option>
-                          <option value="Nut.">Nut.</option>
-                          <option value="Fisio.">Fisio.</option>
-                        </select>
-                      </div>
-                      <div class="col-md-10 mxpi-designation-field">
-                        <label class="form-label mx-field-label" for="mxpi-professional-designation">Denominación profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
-                        <input class="form-control" id="mxpi-professional-designation" type="text" maxlength="120" aria-describedby="mxpi-designation-help">
-                        <div class="text-muted small mt-1 mxpi-field-note" id="mxpi-designation-help">Ej. Endocrinóloga, Cardiólogo, Cirujana dentista. Se utiliza para referirse profesionalmente al médico y no sustituye la especialidad.</div>
+                      <div class="col-12 mxpi-professional-row">
+                        <div class="col-md-2 mx-dg-prefix-field">
+                          <label class="form-label mx-field-label" for="mxpi-prefix">Prefijo profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
+                          <select class="form-select" id="mxpi-prefix">
+                            <option value="">Selecciona</option>
+                            <option value="Dr.">Dr.</option>
+                            <option value="Dra.">Dra.</option>
+                            <option value="Psic.">Psic.</option>
+                            <option value="Psicóloga">Psicóloga</option>
+                            <option value="Lic.">Lic.</option>
+                            <option value="Mtro.">Mtro.</option>
+                            <option value="Mtra.">Mtra.</option>
+                            <option value="C.D.">C.D.</option>
+                            <option value="Dent.">Dent.</option>
+                            <option value="QFB">QFB</option>
+                            <option value="Nut.">Nut.</option>
+                            <option value="Fisio.">Fisio.</option>
+                          </select>
+                        </div>
+                        <div class="col-md-10 mxpi-designation-field">
+                          <label class="form-label mx-field-label" for="mxpi-professional-designation">Denominación profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
+                          <input class="form-control" id="mxpi-professional-designation" type="text" maxlength="120" aria-describedby="mxpi-designation-help">
+                          <div class="text-muted small mt-1 mxpi-field-note" id="mxpi-designation-help">Ej. Endocrinóloga, Cardiólogo, Cirujana dentista. Se utiliza para referirse profesionalmente al médico y no sustituye la especialidad.</div>
+                        </div>
                       </div>
                       <div class="col-12">
                         <label class="form-label mx-field-label" for="mxpi-bio-short">Describe brevemente tu actividad profesional para el encabezado de tu perfil<span class="mx-field-badge mx-field-badge--public">Público</span></label>
