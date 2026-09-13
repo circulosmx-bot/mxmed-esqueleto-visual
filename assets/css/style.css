@@ -21920,7 +21920,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:rgba(129,226,223,.75);border:1px solid rgba(0,49,82,.12);border-radius:12px;padding:12px;
   box-shadow:0 8px 26px rgba(0,49,82,.16);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #p-info .mxpi-dirty-label{margin:0;font-size:14.25px;font-weight:700;line-height:1.1;
-  color:#5E1E28;text-align:center;white-space:nowrap;background:transparent}
+  color:#FFFFFF;text-align:center;white-space:nowrap;background:transparent}
 @media(max-width:767px){
   #p-info.mxpi-form-dirty .body{padding-bottom:calc(152px + env(safe-area-inset-bottom,0px))}
 }
@@ -21936,17 +21936,17 @@ body{margin:0;background:var(--mm-fondo-base);}
   #mxpi-unsaved-navigation-modal .modal-footer .btn{margin:0;min-height:44px;white-space:normal}
 }
 
-/* CRD03.15: only this modal's surface is glass; descendants stay fully opaque. */
-#mxpi-unsaved-navigation-modal .modal-content{background-color:rgba(129,226,223,.75);
+/* CRD03.15 color polish: neutral modal glass; the floating tray stays turquoise. */
+#mxpi-unsaved-navigation-modal .modal-content{background-color:rgba(255,255,255,.75);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(0,49,82,.12);
   box-shadow:0 8px 26px rgba(0,49,82,.16)}
 #mxpi-unsaved-navigation-modal .modal-header,
 #mxpi-unsaved-navigation-modal .modal-body,
 #mxpi-unsaved-navigation-modal .modal-footer{background:transparent}
-#mxpi-unsaved-navigation-modal .btn-outline-danger{color:#5E1E28;border-color:#5E1E28}
-#mxpi-unsaved-navigation-modal .btn-outline-secondary{color:#212529;border-color:#212529}
-#mxpi-unsaved-navigation-modal .btn-outline-danger:hover,
-#mxpi-unsaved-navigation-modal .btn-outline-danger:active,
-#mxpi-unsaved-navigation-modal .btn-outline-secondary:hover,
-#mxpi-unsaved-navigation-modal .btn-outline-secondary:active{color:#fff}
+#mxpi-unsaved-navigation-modal .btn-outline-danger{background:#fff;color:#B23E46;border-color:rgba(178,62,70,.45)}
+#mxpi-unsaved-navigation-modal .btn-outline-danger:hover{background:#FFF2F3}
+#mxpi-unsaved-navigation-modal .btn-outline-danger:active{background:#FFE4E7}
+#mxpi-unsaved-navigation-modal .btn-outline-secondary{background:#fff;color:#07536E;border-color:rgba(7,83,110,.45)}
+#mxpi-unsaved-navigation-modal .btn-outline-secondary:hover{background:#EFFAFB}
+#mxpi-unsaved-navigation-modal .btn-outline-secondary:active{background:#DCF3F5}
 #mxpi-unsaved-navigation-modal .text-danger{color:#5E1E28!important}
