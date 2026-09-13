@@ -137,7 +137,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=crd0318" />
+<link rel="stylesheet" href="assets/css/style.css?v=dg05" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -807,72 +807,6 @@
 
               <div class="tab-pane fade" id="t-info-datos" role="tabpanel">
 
-                <div class="card mt-3 mx-dg-card mx-dg-card-media" id="mx-dg-media-card">
-                  <div class="card-body">
-                    <div class="mx-dg-card-head">
-                      <div class="mx-dg-card-title-row">
-                        <div class="mx-dg-card-title">Foto y logotipo profesional</div>
-                        <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
-                      </div>
-                      <div class="mx-dg-card-note">Los cambios de imágenes requieren revisión; mientras tanto la versión actual permanece visible.</div>
-                    </div>
-                    <div class="mf-upload-grid">
-
-                      <div class="mf-upload square" data-type="foto" id="mxpi-photo-control">
-                        <div class="mf-title">Fotografía de perfil</div>
-                        <div class="mf-sub">JPG, PNG o WebP · hasta 10 MiB y 25 megapíxeles</div>
-                        <div class="mf-prev" id="mxpi-photo-preview"><img src="/assets/img/doctors/avatars/dr-male.png" alt="Imagen genérica de perfil médico" data-avatar-kind="generic" /><span class="mx-media-review-badge mx-media-public-badge">Publicada</span></div>
-                        <div class="mf-actions">
-                          <button type="button" class="btn btn-outline-primary btn-sm" id="mxpi-photo-select">Seleccionar foto</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm" id="mxpi-photo-remove" hidden>Eliminar foto</button>
-                        </div>
-                        <input type="file" id="mxpi-photo-input" accept="image/jpeg,image/png,image/webp" class="d-none" />
-                        <div id="mxpi-photo-status" role="status" aria-live="polite"></div>
-                      </div>
-
-                      <div class="mf-upload square" data-type="logo" data-profile-logo-upload>
-
-                        <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
-
-                          <rect x="12" y="26" width="40" height="12" rx="6" fill="#c7dbe4"/>
-
-                          <path d="M32 10v44M10 32h44" stroke="#99bfd0" stroke-width="2" stroke-linecap="round"/>
-
-                          <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
-
-                        </svg>
-
-                        <div class="mf-title">Logotipo profesional</div>
-
-                        <div class="mf-sub">Arrastra el archivo aquí o haz clic para subirlo</div>
-
-                        <div class="mf-actions mx-dg-logo-empty-actions">
-
-                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
-
-                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr" disabled>Tomar con cámara</button>
-
-                        </div>
-
-                        <input id="mx-dg-logo" type="file" accept="image/jpeg,image/png,image/webp" class="d-none mf-input">
-
-                        <div id="mx-dg-logo-prev" class="mf-prev" hidden>
-                          <img id="mx-dg-logo-img" alt="Logotipo profesional">
-                          <span class="mx-media-review-badge mx-media-public-badge">Publicado</span>
-                        </div>
-                        <div class="mf-actions mx-dg-logo-loaded-actions">
-                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Cambiar logotipo</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm" id="mx-dg-logo-del">Eliminar logotipo</button>
-                        </div>
-
-                      </div>
-
-                      <p id="mx-dg-logo-feedback" class="small text-muted mb-0" role="status" aria-live="polite"></p>
-
-                    </div>
-                  </div>
-                </div>
-
                 <div class="card mt-3 mx-dg-card mx-dg-card-contact" id="mx-dg-contact-card">
                   <div class="card-body">
                     <div class="mx-dg-card-head">
@@ -898,7 +832,7 @@
 
                 <div class="card mt-3 mx-dg-card mx-dg-card-public" id="mx-public-identity-card">
                   <div class="card-body">
-                    <div class="row g-3 mxpi-public-grid">
+                    <div class="mx-dg-media-identity-layout">
                       <div class="col-12 mxpi-name-editor" id="mxpi-name-editor">
                         <div class="mxpi-verified-name" id="mxpi-verified-name" hidden>
                           <div class="mxpi-verified-name__controls">
@@ -930,6 +864,73 @@
                         </div>
 
                       </div>
+                      <div class="card mt-3 mx-dg-card mx-dg-card-media" id="mx-dg-media-card">
+                        <div class="card-body">
+                          <div class="mx-dg-card-head">
+                            <div class="mx-dg-card-title-row">
+                              <div class="mx-dg-card-title">Foto y logotipo profesional</div>
+                              <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
+                            </div>
+                            <div class="mx-dg-card-note">Los cambios de imágenes requieren revisión; mientras tanto la versión actual permanece visible.</div>
+                          </div>
+                          <div class="mf-upload-grid">
+
+                            <div class="mf-upload square" data-type="foto" id="mxpi-photo-control">
+                              <div class="mf-title">Fotografía de perfil</div>
+                              <div class="mf-sub">JPG, PNG o WebP · hasta 10 MiB y 25 megapíxeles</div>
+                              <div class="mf-prev" id="mxpi-photo-preview"><img src="/assets/img/doctors/avatars/dr-male.png" alt="Imagen genérica de perfil médico" data-avatar-kind="generic" /><span class="mx-media-review-badge mx-media-public-badge">Publicada</span></div>
+                              <div class="mf-actions">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="mxpi-photo-select">Seleccionar foto</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="mxpi-photo-remove" hidden>Eliminar foto</button>
+                              </div>
+                              <input type="file" id="mxpi-photo-input" accept="image/jpeg,image/png,image/webp" class="d-none" />
+                              <div id="mxpi-photo-status" role="status" aria-live="polite"></div>
+                            </div>
+
+                            <div class="mf-upload square" data-type="logo" data-profile-logo-upload>
+
+                              <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+
+                                <rect x="12" y="26" width="40" height="12" rx="6" fill="#c7dbe4"/>
+
+                                <path d="M32 10v44M10 32h44" stroke="#99bfd0" stroke-width="2" stroke-linecap="round"/>
+
+                                <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+
+                              </svg>
+
+                              <div class="mf-title">Logotipo profesional</div>
+
+                              <div class="mf-sub">Arrastra el archivo aquí o haz clic para subirlo</div>
+
+                              <div class="mf-actions mx-dg-logo-empty-actions">
+
+                                <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+
+                                <button type="button" class="btn btn-outline-secondary btn-sm mf-qr" disabled>Tomar con cámara</button>
+
+                              </div>
+
+                              <input id="mx-dg-logo" type="file" accept="image/jpeg,image/png,image/webp" class="d-none mf-input">
+
+                              <div id="mx-dg-logo-prev" class="mf-prev" hidden>
+                                <img id="mx-dg-logo-img" alt="Logotipo profesional">
+                                <span class="mx-media-review-badge mx-media-public-badge">Publicado</span>
+                              </div>
+                              <div class="mf-actions mx-dg-logo-loaded-actions">
+                                <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Cambiar logotipo</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="mx-dg-logo-del">Eliminar logotipo</button>
+                              </div>
+
+                            </div>
+
+                            <p id="mx-dg-logo-feedback" class="small text-muted mb-0" role="status" aria-live="polite"></p>
+
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row g-3 mxpi-public-grid">
                       <div class="col-md-2">
                         <label class="form-label mx-field-label" for="mxpi-prefix">Prefijo profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <select class="form-select" id="mxpi-prefix">

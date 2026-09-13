@@ -21954,3 +21954,160 @@ body{margin:0;background:var(--mm-fondo-base);}
 #mxpi-unsaved-navigation-modal .btn-outline-secondary:hover{background:#EFFAFB}
 #mxpi-unsaved-navigation-modal .btn-outline-secondary:active{background:#DCF3F5}
 #mxpi-unsaved-navigation-modal .text-danger{color:#5E1E28!important}
+
+
+/* DG05: compact media stack beside identity; preserve the identity event parent. */
+#p-info #t-info-datos #mx-public-identity-card .mx-dg-media-identity-layout{
+  display:grid;
+  grid-template-columns:340px minmax(0,1fr);
+  align-items:start;
+  gap:16px;
+  margin-bottom:0;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor{
+  grid-column:2;
+  grid-row:1;
+  min-width:0;
+  width:100%;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-verified-name__controls{
+  grid-template-columns:minmax(0,1fr);
+  gap:9px;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card{
+  grid-column:1;
+  grid-row:1;
+  min-width:0;
+  margin:0!important;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card > .card-body{padding:0}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-card-head{
+  grid-template-columns:minmax(0,1fr);
+  gap:3px;
+  margin-bottom:7px;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-card-title-row{
+  grid-column:1;
+  flex-wrap:wrap;
+  gap:4px 7px;
+  white-space:normal;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-card-title{font-size:.85rem}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-data-badge{font-size:.65rem;padding:2px 6px}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-card-note{
+  grid-column:1;
+  margin:0;
+  font-size:.73rem;
+  line-height:1.2;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload-grid{
+  grid-template-columns:minmax(0,1fr);
+  gap:8px;
+  margin-bottom:0;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload.square{
+  display:grid;
+  grid-template-columns:90px minmax(0,1fr);
+  grid-template-rows:auto auto 1fr auto;
+  gap:3px 10px;
+  align-items:center;
+  min-width:0;
+  min-height:102px;
+  padding:5px;
+  border:1px solid #cfe0e7;
+  border-radius:10px;
+  box-shadow:none;
+  text-align:left;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > :is(.mf-prev,.mf-illus,.mx-dg-media-placeholder,.mx-media-review-candidate){
+  grid-column:1;
+  grid-row:1 / 5;
+  width:90px;
+  margin:0;
+  align-self:center;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > :is(.mf-prev,.mf-illus,.mx-dg-media-placeholder),
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-media-review-thumbnail{width:90px;height:90px}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > :is(.mf-title,.mf-sub,.mf-actions){
+  grid-column:2;
+  width:100%;
+  margin:0;
+  justify-self:start;
+  text-align:left;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-title{display:block;font-size:.88rem;align-self:center}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-sub{font-size:.73rem;line-height:1.2}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-actions{
+  justify-content:flex-start;
+  flex-wrap:wrap;
+  gap:4px;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-actions .btn{
+  flex:0 1 auto;
+  max-width:100%;
+  min-height:32px;
+  padding:5px 8px;
+  font-size:.73rem;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload::before{content:none}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mx-dg-logo-feedback:empty{display:none}
+@media (max-width:991px){
+  #p-info #t-info-datos #mx-public-identity-card .mx-dg-media-identity-layout{grid-template-columns:minmax(0,1fr)}
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor,
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card{grid-column:1;grid-row:auto}
+}
+@media (max-width:767px){
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-actions .btn{min-height:42px}
+}
+
+/* The ordinary candidate shares the card grid, keeping both actions beside its preview. */
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mx-media-review-candidate:not(:has(.mx-media-review-observations)){
+  grid-column:1 / -1;
+  grid-row:1 / 4;
+  display:grid;
+  grid-template-columns:subgrid;
+  grid-template-rows:subgrid;
+  gap:inherit;
+  width:auto;
+  align-self:stretch;
+  justify-self:stretch;
+  pointer-events:none;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-media-review-candidate:not(:has(.mx-media-review-observations)) > .mx-media-review-thumbnail{
+  grid-column:1;
+  grid-row:1 / 4;
+  align-self:center;
+  pointer-events:auto;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-media-review-candidate:not(:has(.mx-media-review-observations)) > .btn{
+  grid-column:2;
+  grid-row:3;
+  pointer-events:auto;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mf-title{grid-row:1}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mf-actions{grid-row:2}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload[data-type="foto"] > .mf-sub{grid-column:1 / -1;grid-row:4}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload[data-type="foto"] > :is(.mf-prev,.mx-dg-media-placeholder){grid-row:1 / 4}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-status{grid-column:1 / -1;grid-row:5}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-status:empty{display:none}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-data-badge .material-symbols-outlined{font-size:12px}
+/* Override the earlier public-photo layout even when a candidate occupies its slot. */
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview){
+  grid-template-columns:90px minmax(0,1fr);
+  grid-template-rows:auto auto auto auto auto;
+  gap:3px 10px;
+  min-height:102px;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview) > .mf-sub{
+  grid-column:1 / -1;
+  grid-row:4;
+  width:100%;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview):has(.mx-media-review-observations) > .mf-sub{grid-column:2;grid-row:3}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control #mxpi-photo-preview:not([hidden]){width:90px;height:90px;grid-row:1 / 4}
+#p-info #t-info-datos #mx-public-identity-card > .card-body{padding-top:10px}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid > :is(.col-md-2,.mxpi-designation-field){margin-top:8px}
