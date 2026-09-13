@@ -32,13 +32,13 @@ export async function ownerBrowser({base,image,correctedImage,canonicalState}) {
    assert.equal(requests.filter(r=>r.method==='POST'&&r.url.includes('review-candidate.php')).length,before+1,selector);
    await until('!document.querySelector("[data-profile-logo-upload][aria-busy=true]") && !document.getElementById("mxpi-photo-control").hasAttribute("aria-busy") && !document.getElementById("fotos-drop").hasAttribute("aria-busy")');
   }
-  await until('[...document.querySelectorAll("section[aria-live] p")].filter(e=>e.textContent==="Pendiente de enviar").length===6');
+  await until('[...document.querySelectorAll(".mx-media-review-badge")].filter(e=>e.textContent==="Pendiente de enviar").length===3');
   assert.ok(!requests.some(r=>r.method==='POST'&&(/\/api\/media\/(profile-photo|gallery)\.php/.test(r.url)||/\/logo(?:\?|$)/.test(r.url))),'no immediate-public upload');
   assert.ok(!requests.some(r=>/SOURCE|storage_key|\/source\//.test(r.url)),'no source request');
-  for(const width of [1366,390]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<500});await evaluate('document.getElementById("mx-dg-media-card").nextElementSibling.scrollIntoView({behavior:"instant",block:"start"})');await new Promise(r=>setTimeout(r,600));const shot=await send('Page.captureScreenshot',{format:'png'});await writeFile('/tmp/mxmed-mr12a-owner-'+width+'.png',Buffer.from(shot.data,'base64'));}
-  await evaluate('[...document.querySelectorAll("section[aria-live] button")].find(b=>b.textContent==="Enviar a revisión").click()');
-  await until('[...document.querySelectorAll("section[aria-live] p")].filter(e=>e.textContent==="Enviado a revisión").length===6');
-  assert.equal(await evaluate('[...document.querySelectorAll("section[aria-live] button")].filter(b=>b.textContent==="Enviar a revisión").length'),0);
+  for(const width of [1366,390]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<500});await evaluate('document.getElementById("mx-dg-media-card").scrollIntoView({behavior:"instant",block:"start"})');await new Promise(r=>setTimeout(r,600));const shot=await send('Page.captureScreenshot',{format:'png'});await writeFile('/tmp/mxmed-mr12a-owner-'+width+'.png',Buffer.from(shot.data,'base64'));}
+  await evaluate('[...document.querySelectorAll("[data-media-review-ui] button")].find(b=>b.textContent==="Enviar a revisión").click()');
+  await until('[...document.querySelectorAll(".mx-media-review-badge")].filter(e=>e.textContent==="En revisión").length===3');
+  assert.equal(await evaluate('[...document.querySelectorAll("[data-media-review-ui] button")].filter(b=>b.textContent==="Enviar a revisión").length'),0);
   await send('Page.navigate',{url:base+'/qa-login.php?as=reviewer'});
   await until('location.pathname==="/internal/media-review/" && document.querySelectorAll("#batch-cards button").length===1');
   const cookies=(await send('Network.getCookies')).cookies;

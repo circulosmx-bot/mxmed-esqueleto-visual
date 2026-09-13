@@ -7,7 +7,10 @@
   message?.setAttribute('role','status');
   const notify=text=>{if(message){message.textContent=text;message.classList.toggle('show',Boolean(text));}};
   const render=images=>{
-    grid.replaceChildren();count.textContent=images.length;
+    // Refresh public thumbnails without discarding the inline review candidates.
+    grid.querySelectorAll(':scope > .foto-item:not([data-review-candidate])').forEach(item=>item.remove());
+    const publicItems=document.createDocumentFragment();
+    count.textContent=images.length;
     drop.classList.toggle('has-items',images.length>0);
     document.getElementById('t-info-fotos')?.classList.toggle('has-items',images.length>0);
     count.parentElement?.classList.toggle('max',images.length>=16);
@@ -16,8 +19,9 @@
       const img=document.createElement('img');img.src=asset.public_url;img.alt=asset.alt_text || '';
       const remove=document.createElement('button');remove.type='button';remove.className='foto-x';remove.textContent='×';remove.setAttribute('aria-label','Eliminar imagen');
       remove.addEventListener('click',()=>run(()=>request('DELETE',null,asset.media_id)));
-      wrap.append(img,remove);grid.append(wrap);
+      wrap.append(img,remove);publicItems.append(wrap);
     });
+    grid.prepend(publicItems);
   };
   async function request(method='GET',body=null,id=''){
     const response=await fetch(endpoint+(id?'?media_id='+encodeURIComponent(id):''),{method,body,credentials:'same-origin',headers:method==='GET'?{}:{'X-Gallery-CSRF':csrf}});
