@@ -93,7 +93,9 @@ try{
   assert.ok(await evaluate(`[...document.querySelectorAll('[data-review-candidate]')].every(n=>n.getAttribute('aria-label').includes('Pendiente de enviar') && n.querySelector('img').getAttribute('src')===${JSON.stringify(real.preview)})`));
   assert.equal(await evaluate(`document.querySelector('.mx-media-review-batch span').textContent`),'4 cambios pendientes');
   assert.equal(await evaluate(`document.querySelector('#mxpi-photo-control img:not([data-review-candidate] img)').src`),real.photo);
+  assert.equal(await evaluate(`document.querySelector('#mxpi-photo-preview').getBoundingClientRect().height`),0);
   assert.equal(await evaluate(`document.querySelector('[data-profile-logo-upload] img:not([data-review-candidate] img)').src`),real.logo);
+  assert.equal(await evaluate(`document.getElementById('mx-dg-logo-prev').getBoundingClientRect().height`),0);
   await screenshot('crd032-open-pending-send.png');
   await evaluate(`document.querySelector('.mx-media-review-batch button').click()`);
   await until(`document.querySelectorAll('.mx-media-review-badge[data-review-state=SUBMITTED]').length===4 && !document.querySelector('.mx-media-review-batch')`);

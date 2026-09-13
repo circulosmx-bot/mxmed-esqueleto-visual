@@ -3,7 +3,65 @@
   const text = value => typeof value === 'string' ? value.trim() : '';
   const eligible = (row, type) => row && row.credential_type === type
     && row.verification_status === 'VERIFIED' && row.lifecycle_status === 'ACTIVE';
+  const node = (tag, value, className = '') => {
+    const element = document.createElement(tag);
+    element.textContent = value;
+    element.className = className;
+    return element;
+  };
+  function renderVerifiedModal(data, state){
+    const content = document.getElementById('mxpi-verified-data-content');
+    const trigger = document.getElementById('mxpi-verified-data-trigger');
+    if(!content || !trigger) return;
+    content.replaceChildren();
+    trigger.hidden = !data;
+    if(!data){
+      content.append(node('p', state === 'unavailable' ? 'No se pudieron cargar los datos verificados.' : 'Cargando datos verificados…'));
+      return;
+    }
+    const identity = text(data.verified_identity?.full_name);
+    const canonical = data.verified_credentials || {};
+    const professional = eligible(canonical.professional, 'PROFESSIONAL') ? canonical.professional : null;
+    const specialties = Array.isArray(canonical.specialties) ? canonical.specialties.filter(row => eligible(row, 'SPECIALTY')) : [];
+    const identitySection = node('section', '');
+    identitySection.dataset.verifiedModalIdentity = '';
+    identitySection.append(node('h3', 'Identidad'));
+    if(identity){
+      identitySection.append(node('p', identity), node('span', '✓ Verificada', 'mx-verified-modal-status'));
+    }else identitySection.append(node('p', 'No hay identidad verificada disponible.', 'mx-verified-modal-note'));
+    content.append(identitySection);
+    const section = node('section', '');
+    const credential = (row, verified) => {
+      const article = node('article', '', 'mx-verified-modal-credential');
+      article.dataset.kind = row.credential_type === 'PROFESSIONAL' ? 'professional' : 'specialty';
+      article.dataset.verified = String(verified);
+      const title = text(row.professional_area_label);
+      if(title) article.append(node('strong', title));
+      const license = text(row.license_number);
+      if(license) article.append(node('p', (row.credential_type === 'PROFESSIONAL' ? 'Cédula profesional: ' : 'Cédula de especialidad: ') + license));
+      const institution = text(row.institution_name);
+      if(institution) article.append(node('p', institution));
+      if(verified) article.append(node('span', '✓ Verificada', 'mx-verified-modal-status'));
+      section.append(article);
+    };
+    if(professional || specialties.length){
+      section.dataset.credentialMode = 'canonical';
+      section.append(node('h3', 'Credenciales profesionales'));
+      if(professional) credential(professional, true);
+      specialties.forEach(row => credential(row, true));
+    }else{
+      section.dataset.credentialMode = 'legacy';
+      section.append(node('h3', 'Credenciales registradas'));
+      const legacy = data.identity_public || {};
+      if(text(legacy.professional_license)) credential({credential_type:'PROFESSIONAL',license_number:legacy.professional_license}, false);
+      if(text(legacy.specialty_license)) credential({credential_type:'SPECIALTY',license_number:legacy.specialty_license}, false);
+      if(section.querySelector('article')) section.append(node('p', 'Estas credenciales aún no cuentan con la nueva validación estructurada.', 'mx-verified-modal-note'));
+      else section.append(node('p', 'No hay credenciales registradas.', 'mx-verified-modal-note'));
+    }
+    content.append(section);
+  }
   window.mxmedRenderCredentials = function(data, state = 'loading'){
+    renderVerifiedModal(data, state);
     const host = document.getElementById('mx-credential-list');
     const heading = document.getElementById('mx-credential-heading');
     if(!host || !heading) return;

@@ -203,7 +203,7 @@
 
 <link rel="stylesheet" href="assets/css/profile-photo.css?v=profile-photo-20260908">
 <link rel="stylesheet" href="assets/css/professional-logo.css?v=professional-logo-state-20260908">
-<link rel="stylesheet" href="assets/css/owner-media-review.css?v=crd032">
+<link rel="stylesheet" href="assets/css/owner-media-review.css?v=crd033">
 </head>
 
 <body class="mx-sidebar-expanded" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -780,7 +780,7 @@
                       <div class="mf-upload square" data-type="foto" id="mxpi-photo-control">
                         <div class="mf-title">Fotografía de perfil</div>
                         <div class="mf-sub">JPG, PNG o WebP · hasta 10 MiB y 25 megapíxeles</div>
-                        <div class="mf-prev" id="mxpi-photo-preview"><img src="/assets/img/doctors/avatars/dr-male.png" alt="Imagen genérica de perfil médico" data-avatar-kind="generic" /></div>
+                        <div class="mf-prev" id="mxpi-photo-preview"><img src="/assets/img/doctors/avatars/dr-male.png" alt="Imagen genérica de perfil médico" data-avatar-kind="generic" /><span class="mx-media-review-badge mx-media-public-badge">Publicada</span></div>
                         <div class="mf-actions">
                           <button type="button" class="btn btn-outline-primary btn-sm" id="mxpi-photo-select">Seleccionar foto</button>
                           <button type="button" class="btn btn-outline-secondary btn-sm" id="mxpi-photo-remove" hidden>Eliminar foto</button>
@@ -817,6 +817,7 @@
 
                         <div id="mx-dg-logo-prev" class="mf-prev" hidden>
                           <img id="mx-dg-logo-img" alt="Logotipo profesional">
+                          <span class="mx-media-review-badge mx-media-public-badge">Publicado</span>
                         </div>
                         <div class="mf-actions mx-dg-logo-loaded-actions">
                           <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Cambiar logotipo</button>
@@ -856,19 +857,12 @@
 
                 <div class="card mt-3 mx-dg-card mx-dg-card-public" id="mx-public-identity-card">
                   <div class="card-body">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                      <div>
-                        <div class="mxpi-title-row">
-                          <div class="fw-semibold">Identidad en el perfil</div>
-                          <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
-                        </div>
-                      </div>
-                      <a id="mx-public-profile-link" class="btn btn-outline-secondary btn-sm" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener">Ver perfil público</a>
-                    </div>
-
                     <div class="row g-3 mxpi-public-grid">
                       <div class="col-12 mxpi-name-editor" id="mxpi-name-editor">
-                        <div class="mxpi-name-editor__title">Nombre en el perfil</div>
+                        <div class="mxpi-name-editor__heading">
+                          <div class="mxpi-name-editor__title">Nombre en el perfil</div>
+                          <a id="mx-public-profile-link" class="btn btn-outline-secondary btn-sm" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener">Ver perfil público</a>
+                        </div>
 
                         <div class="mxpi-verified-name" id="mxpi-verified-name" hidden>
                           <div class="mxpi-verified-name__controls">
@@ -903,19 +897,7 @@
                           <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
                         </div>
 
-                        <details class="mxpi-verified-details" id="mxpi-verified-details" hidden>
-                          <summary>Ver datos verificados</summary>
-                          <div class="mxpi-verified-details__grid">
-                            <div>
-                              <label class="form-label mx-field-label" for="dp-fecha-nacimiento">Fecha de nacimiento</label>
-                              <input class="form-control" id="dp-fecha-nacimiento" type="date" placeholder="AAAA-MM-DD" disabled>
-                            </div>
-                            <div>
-                              <label class="form-label mx-field-label" for="dp-genero">Género</label>
-                              <select class="form-select" id="dp-genero" disabled><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select>
-                            </div>
-                          </div>
-                        </details>
+                        <button class="mxpi-verified-data-trigger" id="mxpi-verified-data-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mxpi-verified-data-modal" hidden>Ver datos verificados</button>
                       </div>
                       <div class="col-md-3">
                         <label class="form-label mx-field-label" for="mxpi-gender-label">Género<span class="mx-field-badge mx-field-badge--public">Público</span></label>
@@ -10250,6 +10232,21 @@
   </div>
 </div>
 
+<div class="modal fade mxpi-verified-data-modal" id="mxpi-verified-data-modal" tabindex="-1" aria-labelledby="mxpi-verified-data-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="mxpi-verified-data-title">Datos verificados</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body" id="mxpi-verified-data-content"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade mx-visibility-help-modal" id="mx-visibility-help-modal" tabindex="-1" aria-labelledby="mx-visibility-help-title" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -10321,9 +10318,9 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
 
 <script src="assets/js/subscription-messages.js"></script>
-<script src="assets/js/owner-media-review.js?v=crd032"></script>
-<script src="assets/js/perfil/credenciales.js"></script>
-<script src="assets/js/app.js?v=media-review-mr12a"></script>
+<script src="assets/js/owner-media-review.js?v=crd033"></script>
+<script src="assets/js/perfil/credenciales.js?v=crd033"></script>
+<script src="assets/js/app.js?v=crd033"></script>
 <script src="assets/js/core/header-account.js"></script>
 <script src="assets/js/perfil/datos-generales.js"></script>
 <script src="assets/js/perfil/visibility-help.js"></script>

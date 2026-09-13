@@ -123,11 +123,10 @@
     row.dataset.reviewPurpose = item.purpose;
     row.setAttribute('role', 'group');
     row.setAttribute('aria-label', purposes[key][2] + ': ' + labels[item.state]);
-    row.append(element('span', 'Cambio propuesto', 'mx-media-review-caption'));
     const thumbnail = element('div', '', 'mx-media-review-thumbnail');
     const image = document.createElement('img');
     image.src = item.preview_url;
-    image.alt = purposes[key][2] + ': cambio propuesto';
+    image.alt = purposes[key][2] + ': ' + labels[item.state];
     image.width = 88;
     image.height = 88;
     const badge = element('span', labels[item.state], 'mx-media-review-badge');

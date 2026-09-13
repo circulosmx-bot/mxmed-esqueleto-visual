@@ -1,6 +1,5 @@
 /* CRD03.2: candidate state belongs to its media thumbnail, not a separate panel. */
 .mx-media-review-candidate { min-width: 0; display: grid; gap: 4px; align-content: start; text-align: left; }
-.mx-media-review-caption { font-size: .65rem; line-height: 1.2; color: #536e7e; }
 .mx-media-review-thumbnail { position: relative; width: 88px; height: 88px; max-width: 100%; border: 1px solid #93cbd5; border-radius: 7px; background: #fff; overflow: hidden; }
 .mx-media-review-thumbnail img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .mx-media-review-badge { position: absolute; bottom: 0; left: 0; right: 0; padding: 3px 4px; background: #07536e; color: #fff; font-size: .65rem; font-weight: 700; line-height: 1.15; text-align: center; }
@@ -22,15 +21,39 @@
 #fotos-grid .mx-media-review-candidate { padding: 5px; }
 #fotos-grid:has(> [data-review-candidate]) > .foto-item:not([data-review-candidate]) { align-self: start; aspect-ratio: 1; }
 #fotos-grid .mx-media-review-thumbnail { width: 100%; height: auto; aspect-ratio: 1; }
-@media (min-width: 1200px) {
-  #p-info #t-info-datos #mx-dg-media-card .mf-upload:has(> .mx-media-review-candidate) { grid-template-columns: 112px minmax(0, 1fr) 104px; }
-  #p-info #t-info-datos #mx-dg-media-card .mf-upload > .mx-media-review-candidate { grid-column: 3; grid-row: 1 / 5; align-self: center; }
-}
-@media (min-width: 768px) and (max-width: 1199px) {
-  #p-info #t-info-datos #mx-dg-media-card .mf-upload > .mx-media-review-candidate { grid-column: 1 / -1; grid-row: 5; grid-template-columns: 88px minmax(0, 1fr); }
-  #p-info #t-info-datos #mx-dg-media-card .mx-media-review-candidate > .mx-media-review-thumbnail { grid-column: 1; grid-row: 1 / 4; }
+/* CRD03.3: keep published pointers intact, display the candidate in the sole Admin slot. */
+#p-info #t-info-datos #mx-dg-media-card .mf-upload:has(> .mx-media-review-candidate) > .mf-prev,
+#p-info #t-info-datos #mx-dg-media-card .mf-upload:has(> .mx-media-review-candidate) > .mf-illus,
+#p-info #t-info-datos #mx-dg-media-card .mf-upload:has(> .mx-media-review-candidate) :is(#mxpi-photo-remove, #mx-dg-logo-del) { display: none; }
+#p-info #t-info-datos #mx-dg-media-card .mf-prev { position: relative; inset: auto; }
+.mx-media-public-badge { display: none; }
+#mxpi-photo-preview:has(img[data-avatar-kind="public"]) > .mx-media-public-badge,
+#mx-dg-logo-prev:not([hidden]) > .mx-media-public-badge { display: block; }
+#p-info #t-info-datos #mx-dg-media-card .mf-upload > .mx-media-review-candidate { justify-self: center; }
+@media (min-width: 768px) {
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload:has(> .mx-media-review-candidate) { display: grid; grid-template-columns: 112px minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; gap: 3px 13px; align-items: center; text-align: left; }
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload > .mx-media-review-candidate { grid-column: 1; grid-row: 1 / 5; align-self: center; }
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload:has(> .mx-media-review-candidate) > :is(.mf-title, .mf-sub, .mf-actions) { grid-column: 2; }
+  #p-info #t-info-datos #mx-dg-media-card [data-profile-logo-upload]:has(> .mx-media-review-candidate) > .mf-title { display: block; width: auto; margin: 0; }
+  #p-info #t-info-datos #mx-dg-media-card [data-profile-logo-upload]:has(> .mx-media-review-candidate) > .mf-sub { display: none; }
+  #p-info #t-info-datos #mx-dg-media-card [data-profile-logo-upload]:has(> .mx-media-review-candidate)::before { content: none; }
 }
 @media (max-width: 767px) {
-  #p-info #t-info-datos #mx-dg-media-card .mf-upload > .mx-media-review-candidate { margin: 8px auto 0; grid-template-columns: 88px minmax(0, 1fr); gap: 5px 10px; align-items: center; }
-  #p-info #t-info-datos #mx-dg-media-card .mx-media-review-candidate > .mx-media-review-thumbnail { grid-column: 1; grid-row: 1 / 4; }
+  #p-info #t-info-datos #mx-dg-media-card .mf-upload > .mx-media-review-candidate { order: -1; margin: 8px auto; }
 }
+#p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid { margin-top: 0; }
+#p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor { margin-top: 0; }
+/* Identity controls start immediately; verified details live only in the Bootstrap modal. */
+#mx-public-identity-card .mxpi-name-editor__heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+#p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor__heading .mxpi-name-editor__title { margin: 0; }
+#mx-public-identity-card .mxpi-verified-data-trigger { display: block; width: fit-content; max-width: 100%; margin-top: 8px; padding: 4px 0; border: 0; border-top: 1px solid #dbe7eb; background: transparent; color: #315d70; font-size: .74rem; font-weight: 700; text-align: left; }
+#mx-public-identity-card .mxpi-verified-data-trigger[hidden] { display: none; }
+.mxpi-verified-data-modal .modal-dialog { max-width: 620px; }
+.mxpi-verified-data-modal .modal-title { font-size: 1.15rem; }
+.mxpi-verified-data-modal .modal-body { overflow-wrap: anywhere; }
+.mxpi-verified-data-modal section + section { margin-top: 18px; }
+.mxpi-verified-data-modal h3 { margin: 0 0 8px; color: #073b5a; font-size: .95rem; }
+.mxpi-verified-data-modal p { margin: 4px 0; overflow-wrap: anywhere; }
+.mxpi-verified-data-modal .mx-verified-modal-credential { padding: 8px 0; border-bottom: 1px solid #e4ecef; }
+.mxpi-verified-data-modal .mx-verified-modal-status { color: #176948; font-size: .8rem; }
+.mxpi-verified-data-modal .mx-verified-modal-note { color: #536e7e; font-size: .8rem; }

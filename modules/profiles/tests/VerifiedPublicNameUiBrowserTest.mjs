@@ -137,7 +137,7 @@ try{
     allowed:[...document.getElementById('mxpi-verified-given-names').options].map(o=>o.value),
     first:document.getElementById('mxpi-verified-first-surname').textContent,
     reference:document.getElementById('mxpi-verified-full-name').textContent,
-    detailsClosed:!document.getElementById('mxpi-verified-details').open,
+    detailsClosed:!document.getElementById('mxpi-verified-data-modal').classList.contains('show'),
     noAdminCard:!document.getElementById('mx-dg-verified-card'),
     tabs:document.querySelectorAll('#tabs-info [role="tab"]').length,
     photoFallback:document.querySelector('#mxpi-photo-preview img')?.dataset.avatarKind,
@@ -174,11 +174,16 @@ try{
   await evaluate(`document.getElementById('mxpi-show-second-surname').checked=true;document.getElementById('mxpi-show-second-surname').dispatchEvent(new Event('change',{bubbles:true}))`);
   await screenshot('dg04b-second-surname-visible.png');
   await screenshot('dg04b-verified-details-closed.png');
-  await evaluate(`document.getElementById('mxpi-verified-details').open=true`);
+  await evaluate(`document.getElementById('mxpi-verified-data-trigger').click()`);
+  await until(`document.getElementById('mxpi-verified-data-modal').classList.contains('show')`);
+  await new Promise(resolve=>setTimeout(resolve,400));
   await screenshot('dg04b-verified-details-open.png');
 
   await send('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:1,mobile:true});
-  await evaluate(`document.getElementById('mxpi-verified-details').open=false;document.getElementById('mx-public-identity-card').scrollIntoView({block:'start',behavior:'instant'})`);
+  await evaluate(`document.querySelector('#mxpi-verified-data-modal [data-bs-dismiss=modal]').click()`);
+  await until(`!document.getElementById('mxpi-verified-data-modal').classList.contains('show')`);
+  await new Promise(resolve=>setTimeout(resolve,400));
+  await evaluate(`document.getElementById('mx-public-identity-card').scrollIntoView({block:'start',behavior:'instant'})`);
   assert.equal(await evaluate('document.documentElement.scrollWidth>document.documentElement.clientWidth'), false);
   assert.equal(await evaluate(`(()=>{const ids=['mxpi-gender-label','mxpi-prefix','mxpi-professional-designation'];const tops=ids.map((id)=>document.getElementById(id).getBoundingClientRect().top);return tops[0]<tops[1]&&tops[1]<tops[2]})()`), true, 'mobile identity fields must stack as Género, Prefijo, Denominación');
   await screenshot('dg04b-name-editor-mobile.png');

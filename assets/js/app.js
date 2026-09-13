@@ -1157,7 +1157,6 @@ console.info('app.js loaded :: 20251123a');
     verifiedFullName: document.getElementById('mxpi-verified-full-name'),
     currentName: document.getElementById('mxpi-current-name'),
     currentNameValue: document.getElementById('mxpi-current-name-value'),
-    verifiedDetails: document.getElementById('mxpi-verified-details'),
     professionalDesignation: document.getElementById('mxpi-professional-designation'),
     prefix: document.getElementById('mxpi-prefix'),
     genderLabel: document.getElementById('mxpi-gender-label'),
@@ -2176,10 +2175,6 @@ console.info('app.js loaded :: 20251123a');
 
     if(els.verifiedName) els.verifiedName.hidden = !verifiedMode;
     if(els.legacyName) els.legacyName.hidden = verifiedMode;
-    if(els.verifiedDetails){
-      els.verifiedDetails.hidden = !verifiedMode;
-      els.verifiedDetails.open = false;
-    }
     if(!verifiedMode) return;
 
     const allowed = Array.isArray(policy.allowed_given_name_presentations)
