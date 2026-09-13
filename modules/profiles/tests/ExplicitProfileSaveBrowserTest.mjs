@@ -199,7 +199,7 @@ try{
     await edit('mxpi-bio-short','Borrador visible');
     await evaluate(`document.getElementById('mx-public-identity-card').scrollIntoView({block:'center'})`);
     const geometry=await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),f=document.getElementById('mxpi-floating-save'),c=getComputedStyle(f);return {x:r.x,y:r.y,width:r.width,height:r.height,right:innerWidth-r.right,bottom:innerHeight-r.bottom,position:c.position,overflow:document.documentElement.scrollWidth>innerWidth,background:getComputedStyle(b).backgroundColor};})()`);
-    assert.equal(geometry.position,'fixed');assert.equal(geometry.overflow,false);assert.equal(geometry.background,'rgb(0, 174, 190)');
+    assert.equal(geometry.position,'fixed');assert.equal(geometry.overflow,false);assert.equal(geometry.background,'rgb(25, 135, 84)');
     assert.ok(geometry.height>=44);assert.ok(geometry.bottom>=16);
     assert.equal(geometry.right,width<500?16:24);
     assert.equal(await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()`),true,'button is reachable in explicit local QA view');

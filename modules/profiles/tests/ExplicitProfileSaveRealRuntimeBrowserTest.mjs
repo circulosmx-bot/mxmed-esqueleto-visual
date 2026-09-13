@@ -113,7 +113,7 @@ try{
     assert.equal(await evaluate(`!document.getElementById('mxpi-floating-save').hidden`),expected);
     if(expected){
       const v=await evaluate(`(()=>{const f=document.getElementById('mxpi-floating-save'),b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),c=getComputedStyle(f);return {label:f.querySelector('.mxpi-dirty-label').textContent,button:b.textContent,display:c.display,visibility:c.visibility,width:f.getBoundingClientRect().width,reachable:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b,overflow:document.documentElement.scrollWidth>innerWidth}})()`);
-      assert.equal(v.label,'Cambios sin guardar');assert.equal(v.button,'Guardar cambios');assert.equal(v.visibility,'visible');assert.notEqual(v.display,'none');assert.equal(v.reachable,true);assert.equal(v.overflow,false);
+      assert.equal(v.label,'Tienes cambios sin guardar');assert.equal(v.button,'Guardar cambios');assert.equal(v.visibility,'visible');assert.notEqual(v.display,'none');assert.equal(v.reachable,true);assert.equal(v.overflow,false);
     }
   };
   const open=async(width,height,hide)=>{
