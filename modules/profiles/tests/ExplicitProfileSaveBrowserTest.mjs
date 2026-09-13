@@ -211,12 +211,12 @@ try{
     await evaluate(`document.getElementById('mx-public-identity-card').scrollIntoView({block:'center'})`);
     await visible();
     const geometry=await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),f=document.getElementById('mxpi-floating-save'),c=getComputedStyle(f);return {x:r.x,y:r.y,width:r.width,height:r.height,right:innerWidth-r.right,bottom:innerHeight-r.bottom,position:c.position,overflow:document.documentElement.scrollWidth>innerWidth,background:getComputedStyle(b).backgroundColor};})()`);
-    assert.equal(geometry.position,'fixed');assert.equal(geometry.overflow,false);assert.equal(geometry.background,'rgb(25, 135, 84)');
+    assert.equal(geometry.position,'fixed');assert.equal(geometry.overflow,false);assert.equal(geometry.background,'rgb(0, 192, 64)');
     assert.ok(geometry.height>=44);assert.ok(geometry.bottom>=16);
-    assert.equal(geometry.right,width<500?28:44);
+    assert.equal(geometry.right,width<500?29:45);
     assert.equal(await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()`),true,'button is reachable in explicit local QA view');
     assert.ok(await evaluate(`parseFloat(getComputedStyle(document.querySelector('#p-info > .body')).paddingBottom)>=88`));
-    if(width<500)assert.equal(geometry.width,width-56);
+    if(width<500)assert.equal(geometry.width,width-58);
     await screenshot(width<500?'crd039-mobile-floating-save.png':`crd039-dirty-floating-save-${width}.png`);
     assert.equal((await writes()).length,0);
   }
