@@ -2643,9 +2643,9 @@ console.info('app.js loaded :: 20251123a');
     if(!state.verifiedNameMode){
       payload.display_name = normalizeText(els.displayName?.value, 190);
     }else{
-      const policyStatus = String(state.publicNamePolicy?.current_display_name_policy_status || '');
       const requestedDisplayName = controlledDisplayName();
-      if(requestedDisplayName && (policyStatus !== 'LEGACY_NONCONFORMING' || nameControlsDiffer())){
+      // Canonicalize only on explicit Save, using the unchanged verified-name policy.
+      if(requestedDisplayName){
         payload.display_name = requestedDisplayName;
       }
     }

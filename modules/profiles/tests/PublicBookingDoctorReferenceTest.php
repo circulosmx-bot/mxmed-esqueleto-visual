@@ -22,4 +22,8 @@ $assert(PublicBookingDoctorReference::question([
     'display_name' => 'Dra. Nombre Visible Incorrecto', 'first_surname' => 'Autoritativo', 'gender_label' => 'female',
 ]) === '¿Es su primera consulta con la Dra. Autoritativo?', 'structured surname takes precedence');
 
+$assert(PublicBookingDoctorReference::question([
+    'display_name' => 'Dra. Leticia Muñoz Romo', 'prefix' => 'Lic.', 'gender_label' => 'Femenino',
+]) === '¿Es su primera consulta con Lic. Muñoz?', 'current persisted professional prefix');
+
 echo "PublicBookingDoctorReferenceTest PASS\n";

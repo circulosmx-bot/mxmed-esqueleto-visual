@@ -7,12 +7,14 @@ use Profiles\Repositories\PublicProfileRepository;
 use Profiles\Services\PublicProfileEligibility;
 use Profiles\Services\PublicProfilePlanCapabilities;
 use Profiles\Services\ProfileThemeCatalog;
+use Profiles\Services\PublicNamePresentation;
 use function Agenda\Helpers\ConsultorioMap\buildConsultorioPublicMapPayload;
 
 require_once __DIR__ . '/../repositories/PublicProfileRepository.php';
 require_once __DIR__ . '/../services/PublicProfileEligibility.php';
 require_once __DIR__ . '/../services/PublicProfilePlanCapabilities.php';
 require_once __DIR__ . '/../services/ProfileThemeCatalog.php';
+require_once __DIR__ . '/../services/PublicNamePresentation.php';
 require_once __DIR__ . '/../../agenda/helpers/consultorio_map.php';
 
 final class PublicProfileController
@@ -118,17 +120,18 @@ final class PublicProfileController
 
         $city = $this->firstNonEmpty($consultorios[0]['city'] ?? null);
         $displayName = $this->firstNonEmpty($identity['display_name'] ?? null);
+        $presentationName = PublicNamePresentation::compose($identity['prefix'] ?? null, $displayName);
         $title = null;
         $description = null;
         $h1 = null;
-        if ($displayName !== null && $city !== null) {
-            $title = sprintf('%s en %s | Mexico Medico', $displayName, $city);
-            $description = sprintf('Perfil profesional de %s en %s.', $displayName, $city);
-            $h1 = $displayName;
-        } elseif ($displayName !== null) {
-            $title = sprintf('%s | Mexico Medico', $displayName);
-            $description = sprintf('Perfil profesional de %s.', $displayName);
-            $h1 = $displayName;
+        if ($presentationName !== null && $city !== null) {
+            $title = sprintf('%s en %s | Mexico Medico', $presentationName, $city);
+            $description = sprintf('Perfil profesional de %s en %s.', $presentationName, $city);
+            $h1 = $presentationName;
+        } elseif ($presentationName !== null) {
+            $title = sprintf('%s | Mexico Medico', $presentationName);
+            $description = sprintf('Perfil profesional de %s.', $presentationName);
+            $h1 = $presentationName;
         }
         $sanitizedSpecialties = $this->sanitizeSpecialties($specialties);
         $publicNavigationTaxonomy = $this->buildPublicNavigationTaxonomy();
@@ -633,7 +636,7 @@ final class PublicProfileController
                 $citySlug,
                 $listingLabel,
                 $profileListingCandidateUrl,
-                $displayName,
+                PublicNamePresentation::compose($identity['prefix'] ?? null, $displayName),
                 $preferredCandidateUrl ?? $fallbackCandidateUrl
             ),
             'warnings' => array_values(array_unique($warnings)),

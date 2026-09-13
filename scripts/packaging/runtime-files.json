@@ -621,6 +621,7 @@
   "modules/profiles/services/PublicProfilePanelContent.php",
   "modules/profiles/services/PublicProfilePlanCapabilities.php",
   "modules/profiles/services/PublicProfilePortrait.php",
+  "modules/profiles/services/PublicNamePresentation.php",
   "modules/profiles/services/PublicProfileRequestContext.php",
   "modules/profiles/services/VerifiedDoctorCredentialService.php",
   "modules/profiles/services/VerifiedPhysicianIdentityService.php",

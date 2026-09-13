@@ -113,7 +113,7 @@ try{
   };
   const assertDirty=async(expected)=>{
     assert.equal(await evaluate(`window.__realProfileTracker.isDirty()`),expected);
-    await evaluate(`window.__explicitSaveClock.advance(2000)`);
+    await evaluate(`window.__explicitSaveClock.advance(4000)`);
     assert.equal(await evaluate(`!document.getElementById('mxpi-floating-save').hidden`),expected);
     if(expected){
       const v=await evaluate(`(()=>{const f=document.getElementById('mxpi-floating-save'),b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),c=getComputedStyle(f);return {label:f.querySelector('.mxpi-dirty-label').textContent,button:b.textContent,display:c.display,visibility:c.visibility,width:f.getBoundingClientRect().width,reachable:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b,overflow:document.documentElement.scrollWidth>innerWidth}})()`);

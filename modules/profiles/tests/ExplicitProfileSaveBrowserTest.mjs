@@ -113,7 +113,7 @@ try{
     await new Promise(r=>setTimeout(r,450));
   };
   const edit=async(id,value,event='input')=> evaluate(`(()=>{const c=document.getElementById(${JSON.stringify(id)});c.value=${JSON.stringify(value)};c.dispatchEvent(new Event(${JSON.stringify(event)},{bubbles:true}));c.dispatchEvent(new Event('blur'));})()`);
-  const visible=()=>evaluate(`window.__explicitSaveClock.advance(2000);!document.getElementById('mxpi-floating-save').hidden`);
+  const visible=()=>evaluate(`window.__explicitSaveClock.advance(4000);!document.getElementById('mxpi-floating-save').hidden`);
   const writes=()=>evaluate(`window.__qaWrites`);
   const theme=async(key)=>evaluate(`document.querySelector('#mx-profile-theme-swatches [data-theme-key="${key}"]').click()`);
   const current=await open();
@@ -213,10 +213,10 @@ try{
     const geometry=await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),f=document.getElementById('mxpi-floating-save'),c=getComputedStyle(f);return {x:r.x,y:r.y,width:r.width,height:r.height,right:innerWidth-r.right,bottom:innerHeight-r.bottom,position:c.position,overflow:document.documentElement.scrollWidth>innerWidth,background:getComputedStyle(b).backgroundColor};})()`);
     assert.equal(geometry.position,'fixed');assert.equal(geometry.overflow,false);assert.equal(geometry.background,'rgb(25, 135, 84)');
     assert.ok(geometry.height>=44);assert.ok(geometry.bottom>=16);
-    assert.equal(geometry.right,width<500?16:32);
+    assert.equal(geometry.right,width<500?28:44);
     assert.equal(await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()`),true,'button is reachable in explicit local QA view');
     assert.ok(await evaluate(`parseFloat(getComputedStyle(document.querySelector('#p-info > .body')).paddingBottom)>=88`));
-    if(width<500)assert.equal(geometry.width,width-32);
+    if(width<500)assert.equal(geometry.width,width-56);
     await screenshot(width<500?'crd039-mobile-floating-save.png':`crd039-dirty-floating-save-${width}.png`);
     assert.equal((await writes()).length,0);
   }

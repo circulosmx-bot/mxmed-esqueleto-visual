@@ -3,7 +3,7 @@
   'use strict';
   window.mxmedCreateExplicitSaveSurface = function({
     isDirty, isActive, isSaving = ()=> false, save, discard, render, dialog,
-    idleDelay = 2000, clock = window
+    idleDelay = 4000, clock = window
   }){
     let timer = null;
     let reminderVisible = false;

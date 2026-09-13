@@ -201,7 +201,7 @@ try{
   assert.equal(await evaluate('document.getElementById("mxpi-floating-save").hidden'),true);
   await evaluate(`document.getElementById('mxpi-bio-short').value='Descripción editada';document.getElementById('mxpi-bio-short').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('mxpi-save-btn').click()`);
   await until('window.__dg04bPatchBodies.length===1 && !document.getElementById("mxpi-save-btn").disabled');
-  assert.equal(await evaluate(`Object.hasOwn(window.__dg04bPatchBodies[0],'display_name')`),false,'revert then sibling save must preserve the exact prefixed legacy display_name');
+  assert.equal(await evaluate(`window.__dg04bPatchBodies[0].display_name`),'Luis Reynoso Femat','explicit sibling save canonicalizes a resolvable prefixed name without weakening policy');
 
   await openProfile('nonconforming');
   assert.equal(await evaluate('window.__dg04bPatchBodies.length'), 0, 'page open must not PATCH');

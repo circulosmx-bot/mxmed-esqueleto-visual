@@ -3,15 +3,24 @@ declare(strict_types=1);
 
 namespace Profiles\Services;
 
+require_once __DIR__ . '/PublicNamePresentation.php';
+
 final class PublicBookingDoctorReference
 {
     public static function question(array $identity): string
     {
-        $title = self::titleFromExplicitGender($identity['gender_label'] ?? $identity['gender'] ?? null);
         $surname = self::firstSurname($identity);
-        if ($title === null || $surname === null) {
+        if ($surname === null) {
             return '¿Es su primera consulta con este especialista?';
         }
+        $prefix = trim((string)($identity['prefix'] ?? ''));
+        if ($prefix !== '') {
+            $reference = PublicNamePresentation::compose($prefix, $surname);
+            $article = $prefix === 'Dra.' ? 'la ' : ($prefix === 'Dr.' ? 'el ' : '');
+            return sprintf('¿Es su primera consulta con %s%s?', $article, $reference);
+        }
+        $title = self::titleFromExplicitGender($identity['gender_label'] ?? $identity['gender'] ?? null);
+        if ($title === null) return '¿Es su primera consulta con este especialista?';
         $article = $title === 'Dra.' ? 'la' : 'el';
         return sprintf('¿Es su primera consulta con %s %s %s?', $article, $title, $surname);
     }
@@ -41,7 +50,7 @@ final class PublicBookingDoctorReference
         if ($displayName === '') {
             return null;
         }
-        $displayName = preg_replace('/^(?:dra?|doctor(?:a)?)\.?\s+/iu', '', $displayName) ?? '';
+        $displayName = PublicNamePresentation::withoutLegacyPrefix($displayName) ?? '';
         $parts = preg_split('/\s+/u', trim($displayName), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         if (count($parts) < 2) {
             return null;

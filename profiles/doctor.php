@@ -6,6 +6,7 @@ require_once __DIR__ . '/../modules/profiles/services/ProfileThemeCatalog.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePanelContent.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicBookingDoctorReference.php';
 require_once __DIR__ . '/../modules/profiles/services/PublicProfilePortrait.php';
+require_once __DIR__ . '/../modules/profiles/services/PublicNamePresentation.php';
 
 function h($value): string
 {
@@ -440,7 +441,7 @@ if (isLocalDevRequest()) {
 $resolvedProfileTheme = \Profiles\Services\ProfileThemeCatalog::resolve($themeKey);
 $profileThemeStyle = \Profiles\Services\ProfileThemeCatalog::cssVariables($resolvedProfileTheme);
 
-$displayName = toText($identity['display_name'] ?? null);
+$displayName = \Profiles\Services\PublicNamePresentation::compose($identity['prefix'] ?? null, $identity['display_name'] ?? null);
 $profileStatus = toText($profile['status'] ?? null) ?? 'hidden';
 $isPublic = toBool($profile['is_public'] ?? false);
 $hasPublicProfile = toBool($featureFlags['has_public_profile'] ?? false);

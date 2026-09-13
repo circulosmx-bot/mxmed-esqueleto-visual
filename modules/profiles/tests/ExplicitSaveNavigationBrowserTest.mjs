@@ -141,8 +141,8 @@ try{
   const bio=original.data.identity_public.bio_short;
   await type(bio+' QA');assert.equal(await dirty(),true);assert.equal(await reminder(),false);
   await screenshot('crd0312-dirty-before-delay.png');
-  await advance(1999);assert.equal(await reminder(),false);
-  await type(bio+' QA2');await advance(1999);assert.equal(await reminder(),false);
+  await advance(3999);assert.equal(await reminder(),false);
+  await type(bio+' QA2');await advance(3999);assert.equal(await reminder(),false);
   const beforeReveal=await evaluate(`({focus:document.activeElement.id,scroll:scrollY})`);
   await advance(1);assert.equal(await reminder(),true);
   assert.deepEqual(await evaluate(`({focus:document.activeElement.id,scroll:scrollY})`),beforeReveal,'passive reveal never changes focus or scroll');
@@ -152,11 +152,11 @@ try{
   await type(bio+' QA');await advance(1000);await type(bio);await advance(5000);assert.equal(await reminder(),false);
   await type(bio+' QA');await advance(1000);
   await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:1,y:1});
-  await evaluate(`window.scrollBy(0,20)`);await advance(1000);assert.equal(await reminder(),true);await type(bio);
+  await evaluate(`window.scrollBy(0,20)`);await advance(3000);assert.equal(await reminder(),true);await type(bio);
   // A relevant input event resets inactivity even when the value did not change.
   await type(bio+' QA');await advance(1500);
   await evaluate(`document.getElementById('mxpi-verified-given-names').dispatchEvent(new Event('input',{bubbles:true}))`);
-  await advance(1999);assert.equal(await reminder(),false);await advance(1);assert.equal(await reminder(),true);await type(bio);
+  await advance(3999);assert.equal(await reminder(),false);await advance(1);assert.equal(await reminder(),true);await type(bio);
   await type(bio+' QA');assert.equal(await reminder(),false);
   await attempt('#t-info-formacion-tab');await screenshot('crd0312-unsaved-navigation-modal.png');
   await advance(5000);assert.equal(await reminder(),false,'timer paused behind navigation modal');
@@ -214,15 +214,15 @@ try{
     const saved=await(await fetch(base+'/api/profiles/private/doctor/1')).json();assert.equal(saved.data.profile_theme.stored_key,'soft_coral');
     assert.deepEqual(saved.data.identity_public,original.data.identity_public);
     await click('#t-info-datos-tab');
-    await evaluate(`document.querySelector(${JSON.stringify(original.data.profile_theme.stored_key?'[data-theme-key="'+original.data.profile_theme.stored_key+'"]':'#mx-profile-theme-reset')}).click()`);await advance(2000);await click('#mxpi-save-btn');
+    await evaluate(`document.querySelector(${JSON.stringify(original.data.profile_theme.stored_key?'[data-theme-key="'+original.data.profile_theme.stored_key+'"]':'#mx-profile-theme-reset')}).click()`);await advance(4000);await click('#mxpi-save-btn');
     await until(`document.getElementById('mxpi-feedback').textContent==='Cambios guardados' && document.getElementById('mxpi-floating-save').hidden`);
     const restored=await(await fetch(base+'/api/profiles/private/doctor/1')).json();assert.equal(restored.data.profile_theme.stored_key,original.data.profile_theme.stored_key);assert.deepEqual(restored.data.identity_public,original.data.identity_public);
   }
   const metrics=[];
   for(const [width,height] of [[1440,900],[1366,768],[390,844]]){
-    await open(width,height);await type(bio+' QA');assert.equal(await reminder(),false);await advance(2000);
-    const m=await evaluate(`(()=>{const f=document.getElementById('mxpi-floating-save'),b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),c=getComputedStyle(f);return {width:innerWidth,right:innerWidth-r.right,bottom:innerHeight-r.bottom,left:r.left,overflow:document.documentElement.scrollWidth>innerWidth,visible:!f.hidden,background:getComputedStyle(b).backgroundColor,direction:c.flexDirection,card:c.backgroundColor,reachable:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b}})()`);
-    assert.equal(m.right,width<500?16:32);assert.equal(m.bottom,width<500?16:32);assert.equal(m.overflow,false);assert.equal(m.visible,true);assert.equal(m.direction,'column');assert.equal(m.background,'rgb(25, 135, 84)');assert.equal(m.card,'rgba(0, 0, 0, 0)');assert.equal(m.reachable,true);metrics.push(m);
+    await open(width,height);await type(bio+' QA');assert.equal(await reminder(),false);await advance(4000);
+    const m=await evaluate(`(()=>{const f=document.getElementById('mxpi-floating-save'),b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),c=getComputedStyle(f);return {width:innerWidth,right:innerWidth-r.right,bottom:innerHeight-r.bottom,left:r.left,overflow:document.documentElement.scrollWidth>innerWidth,visible:!f.hidden,background:getComputedStyle(b).backgroundColor,direction:c.flexDirection,card:c.backgroundColor,trayRight:c.right,trayBottom:c.bottom,opacity:c.opacity,modalBackground:getComputedStyle(document.querySelector('#mxpi-unsaved-navigation-modal .modal-content')).backgroundColor,reachable:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b}})()`);
+    assert.equal(m.right,width<500?28:44);assert.equal(m.bottom,width<500?28:44);assert.equal(m.overflow,false);assert.equal(m.visible,true);assert.equal(m.direction,'column');assert.equal(m.background,'rgb(25, 135, 84)');assert.equal(m.card,'rgba(255, 255, 255, 0.75)');assert.equal(m.modalBackground,'rgba(255, 255, 255, 0.75)');assert.equal(m.opacity,'1');assert.equal(m.trayRight,width<500?'16px':'32px');assert.equal(m.trayBottom,width<500?'16px':'32px');assert.equal(m.reachable,true);metrics.push(m);
     await screenshot(width<500?'crd0312-mobile-save-tray.png':`crd0312-save-tray-margins-${width}.png`);
     await attempt('#t-info-formacion-tab');
     if(width<500){await screenshot('crd0312-mobile-unsaved-modal.png');assert.equal(await evaluate(`document.documentElement.scrollWidth>innerWidth`),false)}
