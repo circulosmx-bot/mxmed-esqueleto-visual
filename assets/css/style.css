@@ -22124,14 +22124,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid > .mxpi-designation-field{width:100%}
 
 
-/* DG05C: professional fields share one row; remove duplicated Bootstrap row spacing. */
-#p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid{--bs-gutter-y:0}
+/* DG05C.1: professional row above names in the right column; Bio follows the top composition. */
+#p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid{--bs-gutter-y:0;margin-top:12px}
 #p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row{
   display:grid;
   grid-template-columns:minmax(180px,3fr) minmax(0,7fr);
   align-items:start;
   column-gap:16px;
-  margin-top:8px;
+  margin-top:0;
+  margin-bottom:12px;
 }
 #p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row > :is(.mx-dg-prefix-field,.mxpi-designation-field){
   width:100%;
@@ -22144,3 +22145,57 @@ body{margin:0;background:var(--mm-fondo-base);}
     row-gap:12px;
   }
 }
+
+/* DG05C.2: shared desktop rows align the media stack with the surname field,
+   leaving any conditional public-name preview in its own row below. */
+@media (min-width:992px){
+  #p-info #t-info-datos #mx-public-identity-card .mx-dg-media-identity-layout{
+    grid-template-columns:460px minmax(0,1fr);
+    grid-template-rows:auto auto auto;
+    row-gap:0;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor{
+    display:grid;
+    grid-row:1 / 4;
+    grid-template-rows:subgrid;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row{grid-row:1}
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-verified-name{
+    display:grid;
+    grid-row:2 / 4;
+    grid-template-rows:subgrid;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-verified-name__controls{grid-row:1}
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-current-name{grid-row:2}
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-legacy-name{grid-row:2 / 4}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card{
+    grid-row:1 / 3;
+    align-self:stretch;
+  }
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card > .card-body{
+    display:flex;
+    flex-direction:column;
+  }
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload-grid{flex:1}
+}
+
+/* DG05C3: edit-time guidance overlays the page without reserving row height. */
+#p-info #t-info-datos #mx-public-identity-card .mxpi-designation-field{position:relative}
+#p-info #t-info-datos #mx-public-identity-card #mxpi-designation-help{
+  display:none;
+  position:absolute;
+  inset-inline:0;
+  top:100%;
+  z-index:10;
+  margin-top:5px!important;
+  padding:8px 10px;
+  border:1px solid #cbdde4;
+  border-radius:8px;
+  background:#fff;
+  color:#173f54!important;
+  box-shadow:0 3px 12px rgba(7,83,110,.12);
+  overflow-wrap:anywhere;
+  pointer-events:none;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-designation-field:focus-within #mxpi-designation-help{display:block}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row{margin-bottom:10px}
