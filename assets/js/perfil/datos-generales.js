@@ -1763,6 +1763,8 @@
 
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
+      // Canonical DG identity edits belong to its explicit-save baseline, never dp: storage.
+      if(ctrl.closest('#mx-public-identity-card')) return;
       // excluir campos de búsqueda u opt-out manual
       if(ctrl.type==='search' || ctrl.classList.contains('no-check') || ctrl.dataset.noCheck==='1') return;
       if(isHumanNameFieldForNativeTextAssist(ctrl)) return;

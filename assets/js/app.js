@@ -1298,6 +1298,7 @@ console.info('app.js loaded :: 20251123a');
     legacyNameTouched: false,
     hydratingIdentity: false,
     dirty: false,
+    persistedDisplayName: null,
     autoPublicSpecialty: null,
     logoSaving: false,
     adminContacts: new Map(),
@@ -1306,6 +1307,9 @@ console.info('app.js loaded :: 20251123a');
     themeSelectedKey: null,
     themeCatalog: []
   };
+  const dirtyTracker = window.mxmedCreateDirtyTracker({ readState: readProfileFormState });
+  let baselineNameControls = null;
+  let successFeedbackTimer;
   const PUBLIC_CONTACT_TYPES = new Set(['phone', 'whatsapp', 'email']);
   const PUBLIC_PLAN_OPTIONS = [
     ['basic', 'Básico'],
@@ -1576,7 +1580,12 @@ console.info('app.js loaded :: 20251123a');
       els.themeSwatches.appendChild(button);
     });
     els.themeAdmin.hidden = false;
-    selectTheme(state.themeStoredKey || data.default_key || 'mxmed_teal');
+    selectTheme(state.themeStoredKey || data.default_key || 'mxmed_teal', { reset: state.themeStoredKey === null });
+    if(els.themeFeedback){
+      els.themeFeedback.textContent = state.themeStoredKey
+        ? `${approvedTheme(state.themeStoredKey).label}: color actual.`
+        : 'Tema predeterminado de México Médico.';
+    }
   }
 
   function buildContactPointsEndpoint(doctorId, contactPointId = ''){
@@ -2114,19 +2123,45 @@ console.info('app.js loaded :: 20251123a');
     }
   }
 
+  function readProfileFormState(){
+    return {
+      display_name: state.verifiedNameMode
+        ? controlledDisplayName() || state.persistedDisplayName
+        : normalizeText(els.displayName?.value, 190),
+      givenPresentation: state.verifiedNameMode ? els.verifiedGivenNames?.value || '' : null,
+      showSecondSurname: state.verifiedNameMode ? Boolean(els.showSecondSurname?.checked) : null,
+      prefix: normalizeText(els.prefix?.value, 32),
+      professional_designation: normalizeText(els.professionalDesignation?.value, 120),
+      bio_short: String(els.bioShort?.value || '').trim() || null,
+      profile_theme_key: state.themeSelectedKey
+    };
+  }
+
+  function captureProfileBaseline(){
+    dirtyTracker.captureBaseline();
+    baselineNameControls = {
+      given: els.verifiedGivenNames?.value || '',
+      second: Boolean(els.showSecondSurname?.checked)
+    };
+    state.dirty = false;
+  }
+
   function markIdentityDirty(){
-    if(state.hydratingIdentity) return;
-    state.dirty = true;
-    setFeedback('Cambios sin guardar. Guarda para actualizar tu perfil público.', 'warning');
-    if(!state.legacyNameTouched){
-      setLegacyFeedback('Cambios sin guardar.', 'warning');
-    }
+    if(state.hydratingIdentity || !state.loaded) return;
+    state.dirty = dirtyTracker.isDirty();
+    window.clearTimeout(successFeedbackTimer);
+    setFeedback('', 'muted');
+    setBusyState();
   }
 
   function setBusyState(){
+    const pending = state.dirty || state.saving;
+    const floating = document.getElementById('mxpi-floating-save');
+    if(floating) floating.hidden = !pending;
+    document.getElementById('p-info')?.classList.toggle('mxpi-form-dirty', pending);
     if(els.saveBtn){
       els.saveBtn.disabled = state.loading || state.saving || !state.loaded;
-      els.saveBtn.textContent = state.saving ? 'Guardando...' : 'Guardar cambios del perfil público';
+      els.saveBtn.textContent = state.saving ? 'Guardando…' : 'Guardar cambios';
     }
     if(els.saveLegacyBtn){
       els.saveLegacyBtn.disabled = true;
@@ -2257,6 +2292,7 @@ console.info('app.js loaded :: 20251123a');
       }));
     }
 
+    state.persistedDisplayName = displayName;
     els.displayName.value = displayName || '';
     if(els.professionalDesignation) els.professionalDesignation.value = normalizeText(data.professional_designation, 120) || '';
     if(els.prefix){
@@ -2567,6 +2603,8 @@ console.info('app.js loaded :: 20251123a');
   window.setTimeout(()=>{ applyProfileContractReadOnlyState(); }, 0);
 
   async function readPrivateIdentity(){
+    // The mounted form owns its draft; returning to Información must not replace it.
+    if(state.loading || state.saving || (state.loaded && dirtyTracker.isDirty())) return;
     state.doctorId = resolveDoctorId();
     updateProfileLink();
     state.loading = true;
@@ -2584,12 +2622,14 @@ console.info('app.js loaded :: 20251123a');
       if(!response.ok || !json || json.ok !== true || !json.data || !json.data.identity_public){
         throw new Error('No fue posible cargar la identidad pública.');
       }
+      if(state.loaded && dirtyTracker.isDirty()) return;
       applyIdentity(json.data.identity_public, json.data.verified_identity, json.data.public_name_policy);
       window.mxmedRenderCredentials?.(json.data);
       applyThemeContract(json.data.profile_theme);
       state.loaded = true;
+      captureProfileBaseline();
       await loadAdministrativeContacts();
-      setFeedback('Identidad pública cargada.', 'muted');
+      setFeedback('', 'muted');
       setLegacyFeedback('Sin cambios pendientes.', 'muted');
     }catch(_){
       state.loaded = false;
@@ -2608,12 +2648,19 @@ console.info('app.js loaded :: 20251123a');
       els.bioShort?.focus();
       return;
     }
-    if(state.saving || state.loading || !state.loaded){
+    if(state.saving || state.loading || !state.loaded || !dirtyTracker.isDirty()) return;
+    if(state.verifiedNameMode && !controlledDisplayName() && baselineNameControls && (
+      (els.verifiedGivenNames?.value || '') !== baselineNameControls.given ||
+      Boolean(els.showSecondSurname?.checked) !== baselineNameControls.second
+    )){
+      setFeedback('Selecciona una presentación del nombre.', 'danger');
+      els.verifiedGivenNames?.focus();
       return;
     }
+    const submittedState = dirtyTracker.currentState();
     state.saving = true;
     setBusyState();
-    setFeedback('Guardando identidad pública...', 'muted');
+    setFeedback('', 'muted');
 
     try{
       const payload = buildPatchPayload();
@@ -2632,10 +2679,38 @@ console.info('app.js loaded :: 20251123a');
         error.code = String(json?.error || '');
         throw error;
       }
+      // Preserve edits made while the submitted snapshot was in flight.
+      const hasNewEdits = JSON.stringify(dirtyTracker.currentState()) !== JSON.stringify(submittedState);
+      const draft = hasNewEdits ? {
+        form: dirtyTracker.currentState(),
+        rawName: els.displayName.value,
+        rawBio: els.bioShort?.value || '',
+        rawDesignation: els.professionalDesignation?.value || '',
+        rawPrefix: els.prefix?.value || '',
+        nameTouched: state.verifiedNameSelectionTouched
+      } : null;
       applyIdentity(json.data.identity_public, json.data.verified_identity, json.data.public_name_policy);
       window.mxmedRenderCredentials?.(json.data);
       applyThemeContract(json.data.profile_theme);
-      setFeedback('Cambios guardados. El perfil público ya puede reflejar esta información.', 'success');
+      captureProfileBaseline();
+      if(draft){
+        els.displayName.value = draft.rawName;
+        if(els.verifiedGivenNames) els.verifiedGivenNames.value = draft.form.givenPresentation || '';
+        if(els.showSecondSurname) els.showSecondSurname.checked = draft.form.showSecondSurname;
+        if(els.prefix) els.prefix.value = draft.rawPrefix;
+        if(els.professionalDesignation) els.professionalDesignation.value = draft.rawDesignation;
+        if(els.bioShort) els.bioShort.value = draft.rawBio;
+        state.verifiedNameSelectionTouched = draft.nameTouched;
+        selectTheme(draft.form.profile_theme_key || 'mxmed_teal', { reset: draft.form.profile_theme_key === null });
+        updatePublicNamePreview();
+        updateBioCounter();
+        state.dirty = dirtyTracker.isDirty();
+      }
+      setFeedback('Cambios guardados', 'success');
+      window.clearTimeout(successFeedbackTimer);
+      successFeedbackTimer = window.setTimeout(()=>{
+        if(els.feedback?.textContent === 'Cambios guardados') setFeedback('', 'muted');
+      }, 4000);
       setLegacyFeedback('Datos verificados sin cambios.', 'muted');
     }catch(error){
       const message = error?.code === 'invalid_public_display_name'

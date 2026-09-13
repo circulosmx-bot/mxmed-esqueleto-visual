@@ -21896,3 +21896,20 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media (max-width:767px){
   #p-info .mx-profile-utility-actions{flex-wrap:wrap;justify-content:flex-start;width:100%;margin-left:0}
 }
+
+/* CRD03.9: one mounted profile save action, visible only for a dirty draft. */
+#p-info .mxpi-floating-save{position:fixed;right:24px;bottom:24px;z-index:1040}
+#p-info .mxpi-floating-save[hidden]{display:none!important}
+#p-info .mxpi-floating-save .btn{min-height:44px;padding:11px 24px;border-radius:8px;
+  border-color:#00aebe;background:#00aebe;color:#fff;font-weight:700;box-shadow:0 3px 12px rgba(0,49,82,.18)}
+#p-info .mxpi-floating-save .btn:hover,#p-info .mxpi-floating-save .btn:active{background:#008f9e;border-color:#008f9e}
+#p-info .mxpi-floating-save .btn:focus-visible{outline:3px solid #123d59;outline-offset:3px}
+#p-info.mxpi-form-dirty .body{padding-bottom:88px}
+@media(max-width:767px){
+  #p-info .mxpi-floating-save{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  #p-info .mxpi-floating-save .btn{width:100%}
+  #p-info.mxpi-form-dirty .body{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+}
+/* Longer human-facing preview copy must fit the existing compact preview. */
+#p-info .mx-theme-admin__preview-content { flex-wrap: wrap; }
+#p-info .mx-theme-admin__preview-content button { max-width: 100%; }

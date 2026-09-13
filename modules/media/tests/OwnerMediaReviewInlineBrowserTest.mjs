@@ -83,6 +83,8 @@ try{
   await screenshot('crd032-leticia-inline-photo-review-1440.png');
   await screenshot('crd032-no-standalone-review-panel.png');
   await evaluate(`window.reviewMock={items:[],mode:'ok',canSubmit:true,calls:[],clicked:[]};window.realFetch=window.fetch;window.fetch=async(url,options={})=>{const m=window.reviewMock,route=String(url).split('/').pop();if(!['owner-review.php','review-batch-submit.php','profile-photo-review-candidate.php','physician-logo-review-candidate.php','gallery-review-candidate.php'].includes(route))return window.realFetch(url,options);m.calls.push({route,method:options.method||'GET',headers:options.headers,body:typeof options.body==='string'?options.body:null,form:options.body instanceof FormData});if(m.mode==='network')throw Error('network');if(m.mode==='parse')return new Response('invalid',{status:200});if(m.mode==='401'||m.mode==='403'||m.mode==='503')return Response.json({ok:false,error:'mock'},{status:Number(m.mode)});if(route==='owner-review.php')return Response.json({ok:true,data:{items:m.items}});if(route==='review-batch-submit.php'){if(options.method==='POST')m.items=m.items.map(i=>({...i,state:'SUBMITTED'}));return Response.json({ok:true,data:{csrf:'batch-csrf',can_submit_now:m.canSubmit}})}if(options.method==='DELETE'){const purpose={'profile-photo-review-candidate.php':'DOCTOR_PROFILE_PHOTO','physician-logo-review-candidate.php':'PHYSICIAN_PERSONAL_LOGO','gallery-review-candidate.php':'DOCTOR_GALLERY'}[route];m.items=m.items.filter(i=>i.purpose!==purpose || (options.body && i.id!==JSON.parse(options.body).submission_id))}return Response.json({ok:true,data:{csrf_token:'candidate-csrf'}})};document.querySelectorAll('#mxpi-photo-input,#fotos-input,[data-profile-logo-upload] input[type=file]').forEach(input=>input.click=()=>window.reviewMock.clicked.push(input.id||'logo'));window.setReview=async(items,mode='ok',canSubmit=true)=>{Object.assign(window.reviewMock,{items,mode,canSubmit});await window.mxmedMediaReview.refresh()};`);
+  const assertFormClean = async()=> assert.equal(await evaluate(`document.getElementById('mxpi-floating-save').hidden`),true,'independent media actions never dirty the profile form');
+  await assertFormClean();
   const items=['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY','DOCTOR_GALLERY'].map((purpose,i)=>({id:'mock-'+i,purpose,state:'OPEN',preview_url:'/assets/img/dr-female.svg',reason:'QUALITY_INSUFFICIENT',feedback:'Usa una imagen más nítida. <script>safe</script>'}));
   // Use the exact supplied REVIEW preview URL; never fetch SOURCE or replace public media.
   items.forEach(i=>i.preview_url=real.preview);
@@ -96,9 +98,11 @@ try{
   assert.equal(await evaluate(`document.querySelector('#mxpi-photo-preview').getBoundingClientRect().height`),0);
   assert.equal(await evaluate(`document.querySelector('[data-profile-logo-upload] img:not([data-review-candidate] img)').src`),real.logo);
   assert.equal(await evaluate(`document.getElementById('mx-dg-logo-prev').getBoundingClientRect().height`),0);
+  await assertFormClean();
   await screenshot('crd032-open-pending-send.png');
   await evaluate(`document.querySelector('.mx-media-review-batch button').click()`);
   await until(`document.querySelectorAll('.mx-media-review-badge[data-review-state=SUBMITTED]').length===4 && !document.querySelector('.mx-media-review-batch')`);
+  await assertFormClean();
   assert.equal(await evaluate(`JSON.parse(window.reviewMock.calls.find(c=>c.route==='review-batch-submit.php'&&c.method==='POST').body).csrf`),'batch-csrf');
   await evaluate(`setReview(${JSON.stringify(items.slice(0,1))},'ok',false)`);
   assert.equal(await evaluate(`document.querySelector('.mx-media-review-batch button').disabled`),true);
@@ -107,6 +111,7 @@ try{
     await evaluate(`setReview(${JSON.stringify(items.map(i=>({...i,state:'SUBMITTED'})))})`);
     await evaluate(`document.querySelector('[data-review-candidate=${key}] button').click()`);
     await until(`!document.querySelector('[data-review-id=mock-${key==='photo'?0:key==='logo'?1:2}]')`);
+    await assertFormClean();
     const call=await evaluate(`window.reviewMock.calls.filter(c=>c.method==='DELETE').at(-1)`);
     assert.ok(Object.values(call.headers).includes('candidate-csrf'));
     if(key==='gallery')assert.equal(JSON.parse(call.body).submission_id,'mock-2');
@@ -121,6 +126,7 @@ try{
   for(const key of ['photo','logo','gallery'])await evaluate(`document.querySelector('[data-review-candidate=${key}] button').click()`);
   assert.deepEqual(await evaluate('window.reviewMock.clicked'),['mxpi-photo-input','mx-dg-logo','fotos-input']);
   for(const key of ['photo','logo','gallery'])await evaluate(`window.mxmedMediaReview.upload('${key}',new File(['synthetic'],'synthetic.png',{type:'image/png'}))`);
+  await assertFormClean();
   assert.equal(await evaluate(`window.reviewMock.calls.filter(c=>c.method==='POST'&&c.form).length`),3);
   assert.equal(await evaluate(`window.reviewMock.calls.filter(c=>c.method==='POST'&&c.route==='review-batch-submit.php').length`),1,'upload does not auto-submit');
   for(const mode of ['ok','401']){
