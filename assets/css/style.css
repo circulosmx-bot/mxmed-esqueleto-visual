@@ -21898,14 +21898,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 /* CRD03.9: one mounted profile save action, visible only for a dirty draft. */
-#p-info .mxpi-floating-save{position:fixed;right:24px;bottom:24px;z-index:1040}
+#p-info .mxpi-floating-save{position:fixed;right:32px;bottom:32px;z-index:1040}
 #p-info .mxpi-floating-save[hidden]{display:none!important}
 #p-info .mxpi-floating-save .btn{min-height:44px;padding:11px 24px;border-radius:8px;
   border-color:#198754;background:#198754;color:#fff;font-weight:700;box-shadow:0 3px 12px rgba(0,49,82,.18)}
 #p-info .mxpi-floating-save .btn:hover{background:#157347;border-color:#157347}
 #p-info .mxpi-floating-save .btn:active{background:#146c43;border-color:#146c43}
 #p-info .mxpi-floating-save .btn:focus-visible{outline:3px solid #123d59;outline-offset:3px}
-#p-info.mxpi-form-dirty .body{padding-bottom:88px}
+#p-info.mxpi-form-dirty .body{padding-bottom:112px}
 @media(max-width:767px){
   #p-info .mxpi-floating-save{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
   #p-info .mxpi-floating-save .btn{width:100%}
@@ -21922,4 +21922,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#C85C5C;text-align:center;white-space:nowrap}
 @media(max-width:767px){
   #p-info.mxpi-form-dirty .body{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
+}
+
+/* CRD03.12: the blocking exit confirmation shares the explicit save semantics. */
+#mxpi-unsaved-navigation-modal .mxpi-unsaved-save{background:#198754;border-color:#198754;color:#fff}
+#mxpi-unsaved-navigation-modal .mxpi-unsaved-save:hover{background:#157347;border-color:#157347}
+#mxpi-unsaved-navigation-modal .mxpi-unsaved-save:active{background:#146c43;border-color:#146c43}
+#mxpi-unsaved-navigation-modal .mxpi-unsaved-save:focus-visible{outline:3px solid #123d59;outline-offset:3px}
+#mxpi-unsaved-navigation-modal .modal-footer{gap:8px}
+@media(max-width:575px){
+  #mxpi-unsaved-navigation-modal .modal-footer{flex-direction:column;align-items:stretch}
+  #mxpi-unsaved-navigation-modal .modal-footer .btn{margin:0;min-height:44px;white-space:normal}
 }

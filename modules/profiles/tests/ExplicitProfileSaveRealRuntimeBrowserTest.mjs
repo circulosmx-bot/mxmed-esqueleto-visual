@@ -1,6 +1,7 @@
 // Real HTTP/controller integration. Saves allowed only on the explicitly gated disposable runtime.
 // Requires an isolated local review runtime: doctor 1 has trusted synthetic
 // professional + three verified specialties; doctor 2 has legacy fields only.
+import {explicitSaveClockSource} from './ExplicitSaveBrowserClock.mjs';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
@@ -77,6 +78,8 @@ try{
     assert.equal(new URL(base).hostname,'127.0.0.1');
     assert.notEqual(new URL(base).port,'18143','Never save against the Director runtime');
   }
+  await send('Page.addScriptToEvaluateOnNewDocument',{source:explicitSaveClockSource});
+  ws.addEventListener('message',({data})=>{const m=JSON.parse(data);if(m.method==='Page.javascriptDialogOpening' && m.params.type==='beforeunload')send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});});
   const original=await (await fetch(base+'/api/profiles/private/doctor/1')).json();
   assert.equal(original.ok,true);
   const identity=original.data.identity_public,policy=original.data.public_name_policy;
@@ -110,6 +113,7 @@ try{
   };
   const assertDirty=async(expected)=>{
     assert.equal(await evaluate(`window.__realProfileTracker.isDirty()`),expected);
+    await evaluate(`window.__explicitSaveClock.advance(2000)`);
     assert.equal(await evaluate(`!document.getElementById('mxpi-floating-save').hidden`),expected);
     if(expected){
       const v=await evaluate(`(()=>{const f=document.getElementById('mxpi-floating-save'),b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),c=getComputedStyle(f);return {label:f.querySelector('.mxpi-dirty-label').textContent,button:b.textContent,display:c.display,visibility:c.visibility,width:f.getBoundingClientRect().width,reachable:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b,overflow:document.documentElement.scrollWidth>innerWidth}})()`);
@@ -173,7 +177,7 @@ try{
       assert.ok(await evaluate(`['mxpi-professional-designation','mxpi-bio-short','mxpi-show-second-surname'].every(id=>window.__realProfileAudit.events.some(e=>e.id===id&&e.trusted))`),'trusted real text and checkbox input drives the actual controller');
       const geometry=await evaluate(`(()=>{const f=document.getElementById('mxpi-floating-save'),css=getComputedStyle(f);return {width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,position:css.position,right:css.right,bottom:css.bottom,baseline:window.__realProfileAudit.captures[0]}})()`);
       assert.equal(geometry.overflow,false);assert.equal(geometry.position,'fixed');
-      if(hide){assert.equal(geometry.right,width<500?'16px':'24px');assert.equal(geometry.bottom,width<500?'16px':'24px')}
+      if(hide){assert.equal(geometry.right,width<500?'16px':'32px');assert.equal(geometry.bottom,width<500?'16px':'32px')}
       metrics.push({width,height,hide,...geometry});
       assert.equal(mutations().length,0,'No autosave before explicit Save');
     }

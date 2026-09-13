@@ -92,6 +92,7 @@
   "assets/js/app.js",
   "assets/js/core/dashboard.js",
   "assets/js/core/dirty-tracker.js",
+  "assets/js/core/explicit-save-surface.js",
   "assets/js/core/identity.js",
   "assets/js/core/navigation.js",
   "assets/js/fotos.js",

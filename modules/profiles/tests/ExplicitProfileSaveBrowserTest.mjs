@@ -1,6 +1,7 @@
 // Real Director hydration; every mutation intercepted in memory. Never writes Director data.
 // Requires an isolated local review runtime: doctor 1 has trusted synthetic
 // professional + three verified specialties; doctor 2 has legacy fields only.
+import {explicitSaveClockSource} from './ExplicitSaveBrowserClock.mjs';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
@@ -70,6 +71,8 @@ try{
     await writeFile(`${output}/${name}`,Buffer.from(result.data,'base64'));
   };
 
+  await send('Page.addScriptToEvaluateOnNewDocument',{source:explicitSaveClockSource});
+  ws.addEventListener('message',({data})=>{const m=JSON.parse(data);if(m.method==='Page.javascriptDialogOpening' && m.params.type==='beforeunload')send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});});
   const original = await (await fetch(`${base}/api/profiles/private/doctor/1`)).json();
   assert.equal(original.ok, true);
   const errors = [];
@@ -110,7 +113,7 @@ try{
     await new Promise(r=>setTimeout(r,450));
   };
   const edit=async(id,value,event='input')=> evaluate(`(()=>{const c=document.getElementById(${JSON.stringify(id)});c.value=${JSON.stringify(value)};c.dispatchEvent(new Event(${JSON.stringify(event)},{bubbles:true}));c.dispatchEvent(new Event('blur'));})()`);
-  const visible=()=>evaluate(`!document.getElementById('mxpi-floating-save').hidden`);
+  const visible=()=>evaluate(`window.__explicitSaveClock.advance(2000);!document.getElementById('mxpi-floating-save').hidden`);
   const writes=()=>evaluate(`window.__qaWrites`);
   const theme=async(key)=>evaluate(`document.querySelector('#mx-profile-theme-swatches [data-theme-key="${key}"]').click()`);
   const current=await open();
@@ -154,6 +157,14 @@ try{
   assert.equal((await writes()).length,0);
   await edit('mxpi-bio-short','Borrador local');
   await evaluate(`document.getElementById('t-info-formacion-tab').click()`);
+  await until(`document.getElementById('mxpi-unsaved-navigation-modal').classList.contains('show')`);
+  assert.equal(await evaluate(`document.getElementById('mxpi-unsaved-navigation-modal').classList.contains('show')`),true);
+  assert.equal(await evaluate(`document.getElementById('t-info-datos').classList.contains('active')`),true);
+  await until(`!document.querySelector('.modal.show') || document.getElementById('mxpi-unsaved-edit').getBoundingClientRect().height>0`);
+  await new Promise(r=>setTimeout(r,400));
+  await evaluate(`document.getElementById('mxpi-unsaved-edit').click()`);
+  await until(`!document.getElementById('mxpi-unsaved-navigation-modal').classList.contains('show')`);
+  await new Promise(r=>setTimeout(r,400));
   assert.equal(await visible(),true);
   await evaluate(`document.getElementById('t-info-datos-tab').click();document.querySelector('[data-panel="p-info"]')?.click()`);
   await new Promise(r=>setTimeout(r,400));
@@ -198,10 +209,11 @@ try{
     await open(width,height);
     await edit('mxpi-bio-short','Borrador visible');
     await evaluate(`document.getElementById('mx-public-identity-card').scrollIntoView({block:'center'})`);
+    await visible();
     const geometry=await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect(),f=document.getElementById('mxpi-floating-save'),c=getComputedStyle(f);return {x:r.x,y:r.y,width:r.width,height:r.height,right:innerWidth-r.right,bottom:innerHeight-r.bottom,position:c.position,overflow:document.documentElement.scrollWidth>innerWidth,background:getComputedStyle(b).backgroundColor};})()`);
     assert.equal(geometry.position,'fixed');assert.equal(geometry.overflow,false);assert.equal(geometry.background,'rgb(25, 135, 84)');
     assert.ok(geometry.height>=44);assert.ok(geometry.bottom>=16);
-    assert.equal(geometry.right,width<500?16:24);
+    assert.equal(geometry.right,width<500?16:32);
     assert.equal(await evaluate(`(()=>{const b=document.getElementById('mxpi-save-btn'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()`),true,'button is reachable in explicit local QA view');
     assert.ok(await evaluate(`parseFloat(getComputedStyle(document.querySelector('#p-info > .body')).paddingBottom)>=88`));
     if(width<500)assert.equal(geometry.width,width-32);

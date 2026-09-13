@@ -1311,6 +1311,144 @@ console.info('app.js loaded :: 20251123a');
   const dirtyTracker = window.mxmedCreateDirtyTracker({ readState: readProfileFormState });
   let baselineNameControls = null;
   let successFeedbackTimer;
+  let baselineForm = null;
+  let readAfterDiscard = false;
+  const floating = document.getElementById('mxpi-floating-save');
+  const guardElement = document.getElementById('mxpi-unsaved-navigation-modal');
+  const guardSave = document.getElementById('mxpi-unsaved-save');
+  const guardDiscard = document.getElementById('mxpi-unsaved-discard');
+  const guardEdit = document.getElementById('mxpi-unsaved-edit');
+  const guardError = document.getElementById('mxpi-unsaved-navigation-error');
+  let guardOrigin;
+  let closingForNavigation = false;
+  let guardOpening = false;
+  const generalContextActive = ()=>{
+    const info = document.getElementById('p-info');
+    return !info?.classList.contains('d-none') && document.getElementById('t-info-datos')?.classList.contains('active');
+  };
+  const saveSurface = window.mxmedCreateExplicitSaveSurface({
+    isDirty: ()=> state.loaded && dirtyTracker.isDirty(),
+    isActive: generalContextActive,
+    isSaving: ()=> state.saving,
+    save: savePrivateIdentity,
+    discard: ()=>{
+      if(!baselineForm) return;
+      els.displayName.value = baselineForm.displayName;
+      if(els.verifiedGivenNames) els.verifiedGivenNames.value = baselineForm.form.givenPresentation || '';
+      if(els.showSecondSurname) els.showSecondSurname.checked = baselineForm.form.showSecondSurname;
+      if(els.prefix) els.prefix.value = baselineForm.prefix;
+      if(els.professionalDesignation) els.professionalDesignation.value = baselineForm.designation;
+      if(els.bioShort) els.bioShort.value = baselineForm.bio;
+      state.displayNameTouched = false;
+      state.verifiedNameSelectionTouched = false;
+      state.legacyNameTouched = false;
+      selectTheme(baselineForm.form.profile_theme_key || 'mxmed_teal', { reset: baselineForm.form.profile_theme_key === null });
+      updatePublicNamePreview();
+      updateBioCounter();
+      state.dirty = dirtyTracker.isDirty();
+      setFeedback('', 'muted');
+      readAfterDiscard = true;
+      setBusyState();
+    },
+    render: ({ visible, busy, saving })=>{
+      if(floating) floating.hidden = !visible;
+      document.getElementById('p-info')?.classList.toggle('mxpi-form-dirty', visible);
+      [guardSave, guardDiscard, guardEdit].forEach(button=>{ if(button) button.disabled = busy; });
+      if(guardSave) guardSave.textContent = saving ? 'Guardando…' : 'Guardar y continuar';
+    },
+    dialog: {
+      open(control){
+        guardOrigin = control || document.activeElement;
+        guardError.hidden = true;
+        guardOpening = true;
+        bootstrap.Modal.getOrCreateInstance(guardElement, { backdrop: 'static', keyboard: true, focus: true }).show();
+      },
+      close(){
+        closingForNavigation = true;
+        return new Promise(resolve=>{
+          guardElement.addEventListener('hidden.bs.modal', ()=>{
+            closingForNavigation = false;
+            resolve();
+          }, { once: true });
+          const modal = bootstrap.Modal.getInstance(guardElement);
+          // A very fast save can finish before the opening transition completes.
+          if(guardOpening){
+            guardElement.addEventListener('shown.bs.modal', ()=> modal.hide(), { once: true });
+          }else modal.hide();
+        });
+      },
+      error(){
+        guardError.textContent = els.feedback?.classList.contains('text-danger')
+          ? els.feedback.textContent : 'Revisa los cambios pendientes antes de continuar.';
+        guardError.hidden = false;
+      }
+    }
+  });
+  guardElement?.addEventListener('shown.bs.modal', ()=>{ guardOpening = false; });
+  guardSave?.addEventListener('click', ()=> saveSurface.saveAndContinue());
+  guardDiscard?.addEventListener('click', ()=> saveSurface.discardAndContinue());
+  guardEdit?.addEventListener('click', ()=>{
+    if(saveSurface.continueEditing()) bootstrap.Modal.getInstance(guardElement)?.hide();
+  });
+  guardElement?.addEventListener('hide.bs.modal', event=>{
+    if(!closingForNavigation && !saveSurface.continueEditing()) event.preventDefault();
+  });
+  guardElement?.addEventListener('hidden.bs.modal', ()=>{
+    if(!closingForNavigation && guardOrigin?.isConnected) guardOrigin.focus({ preventScroll: true });
+  });
+
+  function interceptGeneralExit(event, control, proceed){
+    if(!saveSurface.requestNavigation({ control, proceed })) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+  // Capture before the existing Sidebar, Header and Bootstrap handlers; replay the
+  // original control only after a successful save or an explicit discard.
+  window.addEventListener('click', event=>{
+    const control = event.target?.closest?.('[data-panel], [data-profile-panel], .menu-main[data-group], #tabs-info [data-bs-toggle="pill"], a[href], [data-header-logout]');
+    if(!control || !generalContextActive()) return;
+    const tabTarget = control.closest('#tabs-info') && control.getAttribute('data-bs-target');
+    if(tabTarget){
+      if(tabTarget === '#t-info-datos') return;
+    }else if(control.hasAttribute('data-panel') || control.hasAttribute('data-profile-panel')){
+      if((control.dataset.panel || control.dataset.profilePanel) === 'p-info') return;
+    }else if(control.matches('.menu-main[data-group]')){
+      const group = control.dataset.group;
+      const pane = [...document.querySelectorAll('.menu-sub[data-group]')].find(el=> el.dataset.group === group);
+      // Opening the current profile flyout or collapsing a group does not leave.
+      if(group === 'perfil') return;
+      if(group !== 'agenda' && (sb01SidebarCollapsed() || pane?.classList.contains('open'))) return;
+      if(!pane?.querySelector('[data-panel]')) return;
+    }else if(control.matches('a[href]')){
+      const href = control.getAttribute('href');
+      if(!href || href.startsWith('#') || control.target === '_blank' || control.hasAttribute('download') || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    }else if(!control.hasAttribute('data-header-logout')) return;
+    interceptGeneralExit(event, control, ()=> control.click());
+  }, true);
+  panel.addEventListener('input', event=>{
+    if(['mxpi-display-name', 'mxpi-verified-given-names', 'mxpi-show-second-surname',
+      'mxpi-prefix', 'mxpi-professional-designation', 'mxpi-bio-short'].includes(event.target.id)){
+      saveSurface.sync({ activity: true });
+    }
+  });
+  // Bootstrap's public tab API can also initiate a subtab change without a click.
+  document.getElementById('tabs-info')?.addEventListener('show.bs.tab', event=>{
+    if(event.target.id === 't-info-datos-tab') return;
+    interceptGeneralExit(event, event.target, ()=> bootstrap.Tab.getOrCreateInstance(event.target).show());
+  });
+  document.getElementById('t-info-datos-tab')?.addEventListener('shown.bs.tab', ()=>{
+    if(readAfterDiscard){
+      readAfterDiscard = false;
+      readPrivateIdentity();
+    }
+    saveSurface.sync();
+  });
+  window.addEventListener('beforeunload', event=>{
+    if(!saveSurface.shouldWarnBeforeUnload()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
   const PUBLIC_CONTACT_TYPES = new Set(['phone', 'whatsapp', 'email']);
   const PUBLIC_PLAN_OPTIONS = [
     ['basic', 'Básico'],
@@ -2146,6 +2284,11 @@ console.info('app.js loaded :: 20251123a');
       second: Boolean(els.showSecondSurname?.checked)
     };
     dirtyTracker.captureBaseline();
+    baselineForm = {
+      form: dirtyTracker.currentState(), displayName: els.displayName.value,
+      prefix: els.prefix?.value || '', designation: els.professionalDesignation?.value || '',
+      bio: els.bioShort?.value || ''
+    };
     updatePublicNamePreview();
     state.dirty = false;
   }
@@ -2156,13 +2299,11 @@ console.info('app.js loaded :: 20251123a');
     window.clearTimeout(successFeedbackTimer);
     setFeedback('', 'muted');
     setBusyState();
+    saveSurface.sync({ activity: true });
   }
 
   function setBusyState(){
-    const pending = state.dirty || state.saving;
-    const floating = document.getElementById('mxpi-floating-save');
-    if(floating) floating.hidden = !pending;
-    document.getElementById('p-info')?.classList.toggle('mxpi-form-dirty', pending);
+    saveSurface.sync();
     if(els.saveBtn){
       els.saveBtn.disabled = state.loading || state.saving || !state.loaded;
       els.saveBtn.textContent = state.saving ? 'Guardando…' : 'Guardar cambios';
@@ -2672,17 +2813,19 @@ console.info('app.js loaded :: 20251123a');
     if(Array.from(String(els.bioShort?.value || '').trim()).length > BIO_SHORT_MAX){
       updateBioCounter(true);
       els.bioShort?.focus();
-      return;
+      return false;
     }
-    if(state.saving || state.loading || !state.loaded || !dirtyTracker.isDirty()) return;
+    if(state.saving || state.loading || !state.loaded) return false;
+    if(!dirtyTracker.isDirty()) return true;
     if(state.verifiedNameMode && !controlledDisplayName() && baselineNameControls && (
       (els.verifiedGivenNames?.value || '') !== baselineNameControls.given ||
       Boolean(els.showSecondSurname?.checked) !== baselineNameControls.second
     )){
       setFeedback('Selecciona una presentación del nombre.', 'danger');
       els.verifiedGivenNames?.focus();
-      return;
+      return false;
     }
+    let saved = false;
     const submittedState = dirtyTracker.currentState();
     state.saving = true;
     setBusyState();
@@ -2732,6 +2875,7 @@ console.info('app.js loaded :: 20251123a');
         updateBioCounter();
         state.dirty = dirtyTracker.isDirty();
       }
+      saved = true;
       setFeedback('Cambios guardados', 'success');
       window.clearTimeout(successFeedbackTimer);
       successFeedbackTimer = window.setTimeout(()=>{
@@ -2748,6 +2892,7 @@ console.info('app.js loaded :: 20251123a');
       state.saving = false;
       setBusyState();
     }
+    return saved && !dirtyTracker.isDirty();
   }
 
   els.contactCreateForm?.addEventListener('submit', (event)=>{
