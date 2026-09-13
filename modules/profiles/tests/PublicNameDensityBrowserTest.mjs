@@ -94,8 +94,8 @@ try{
       return {width:${width},nameBlockHeight:box('mxpi-name-editor').height,controlsTopY:controls.top+scrollY,
         controlsTopGap:controls.top-box('mxpi-name-editor').top,controlHeight:box('mxpi-verified-given-names').height,
         lineHeight:box('mxpi-current-name').height,fontSize:parseFloat(style.fontSize),cssLineHeight:parseFloat(style.lineHeight),
-        color:style.color,textOverflow:style.textOverflow,whiteSpace:style.whiteSpace,
-        lines:[...new Set([...range.getClientRects()].map(r=>Math.round(r.top)))].length,
+        color:style.color,labelFontSize:parseFloat(getComputedStyle(line.querySelector('.mxpi-public-name-label')).fontSize),valueFontSize:parseFloat(getComputedStyle(line.querySelector('.mxpi-public-name-value')).fontSize),textOverflow:style.textOverflow,whiteSpace:style.whiteSpace,
+        lines:Math.ceil(range.getBoundingClientRect().height/parseFloat(style.lineHeight)),
         overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,
         heading:!!document.querySelector('.mxpi-name-editor__title,.mxpi-name-editor__heading'),
         copy:line.textContent.trim().replace(/\s+/g,' '),given:document.getElementById('mxpi-verified-given-names').value,
@@ -110,7 +110,9 @@ try{
         bio:document.getElementById('mxpi-bio-short').value,writes:window.__crd036Writes};})()`);
     const baseline=before.find(m=>m.width===width);
     assert.equal(state.heading,false);assert.equal(state.copy,'Nombre público en tu perfil: Dra. Leticia Muñoz Romo');
-    assert.equal(state.color,'rgb(7, 59, 90)');
+    assert.equal(state.color,'rgb(37, 150, 190)');
+    assert.ok(Math.abs(state.labelFontSize/state.valueFontSize-.85)<.01);
+    assert.equal(state.valueFontSize,state.fontSize);
     assert.ok(Math.abs(state.fontSize/baseline.fontSize-1.5)<.01,'public name must be approximately 50% larger');
     assert.ok(state.controlsTopY<baseline.controlsTopY-20,'controls must move upward naturally');
     assert.ok(state.controlsTopGap<baseline.controlsTopGap-20,'removed heading must not reserve its old spacing');
