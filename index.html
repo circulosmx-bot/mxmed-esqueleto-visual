@@ -137,7 +137,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=datos-personales-identity" />
+<link rel="stylesheet" href="assets/css/style.css?v=bio-counter-inside" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -953,8 +953,10 @@
                     <div class="row g-3 mxpi-public-grid">
                       <div class="col-12">
                         <label class="form-label mx-field-label" for="mxpi-bio-short">Describe brevemente tu actividad profesional para el encabezado de tu perfil<span class="mx-field-badge mx-field-badge--public">Público</span></label>
-                        <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="150" aria-describedby="mxpi-bio-count mxpi-bio-limit" placeholder="Ej. Resume en una frase tu actividad profesional y los principales servicios que brindas."></textarea>
-                        <div id="mxpi-bio-count" class="small text-muted" aria-live="polite">0 / 150</div>
+                        <div class="mxpi-bio-field">
+                          <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="150" aria-describedby="mxpi-bio-count mxpi-bio-limit" placeholder="Ej. Resume en una frase tu actividad profesional y los principales servicios que brindas."></textarea>
+                          <div id="mxpi-bio-count" class="small text-muted" aria-live="polite">0 / 150</div>
+                        </div>
                         <div id="mxpi-bio-limit" class="small text-danger" role="status" hidden>La Bio breve admite un máximo de 150 caracteres.</div>
                       </div>
                     </div>

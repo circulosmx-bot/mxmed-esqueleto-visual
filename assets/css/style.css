@@ -21191,8 +21191,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid{row-gap:10px!important}
 #p-info #t-info-datos #mx-public-identity-card .mxpi-subsection{padding:7px 9px}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-bio-field{position:relative}
+#p-info #t-info-datos #mx-public-identity-card textarea#mxpi-bio-short{padding-right:96px}
 #p-info #t-info-datos #mx-public-identity-card #mxpi-bio-count{
-  width:max-content;margin:-1px 4px 0 auto;padding:2px 7px;border-radius:999px;background:#edf6f8
+  position:absolute;right:16px;bottom:6px;pointer-events:none;
+  width:max-content;margin:0;padding:2px 7px;border-radius:999px;background:#edf6f8
 }
 #p-info #t-info-datos #mx-profile-theme-admin{padding:12px 14px;background:#f7fafb}
 #p-info #t-info-datos #mx-profile-theme-admin .mx-theme-admin__head{
