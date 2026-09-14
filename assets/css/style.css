@@ -22327,3 +22327,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action--delete .bi{
   flex:0 0 auto;margin:0;font-size:14px;line-height:1;
 }
+
+/* Shared DG content guides replace nested horizontal padding. */
+#p-info #t-info-datos{--dg-content-inset:30px}
+#p-info #t-info-datos :is(#mx-public-identity-card,#mx-dg-contact-card,#dg-signature-card) > .card-body{
+  padding-inline:var(--dg-content-inset);
+}
+#p-info #t-info-datos #mx-public-identity-card :is(.mxpi-name-editor,#mx-profile-theme-admin){padding-inline:0}
+@media (max-width:767px){
+  #p-info #t-info-datos{--dg-content-inset:26px}
+}
