@@ -90,6 +90,60 @@ try{
   async function guardedExit(){await click('#t-info-datos-tab');await until(`document.getElementById('mxpi-unsaved-navigation-modal').classList.contains('show')`);}
   console.log('OPEN');await open();console.log('LOADED');assert.equal(await dirty(),false);assert.equal(await evaluate(`document.getElementById('mxpi-floating-save').hidden`),true);
   assert.equal(await evaluate(`document.getElementById('cert-list').textContent.includes('UNTRUSTED')`),false);
+  // IP01B: real focus/keyboard/pointer gestures; all mutations stay in the synthetic draft.
+  await evaluate(`document.querySelectorAll('.modal.show').forEach(m=>bootstrap.Modal.getInstance(m)?.hide())`);
+  await new Promise(r=>setTimeout(r,450));
+  const focusInput=async(scope,value)=>{
+    await evaluate(`document.getElementById('${scope}-input').focus()`);await type(scope+'-input',value);
+  };
+  const key=async(key,code)=>{await send('Input.dispatchKeyEvent',{type:'keyDown',key,code,windowsVirtualKeyCode:key==='Tab'?9:13});await send('Input.dispatchKeyEvent',{type:'keyUp',key,code,windowsVirtualKeyCode:key==='Tab'?9:13});};
+  const pointer=async(selector,touch=false)=>{
+    const point=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.scrollIntoView({block:'center',behavior:'instant'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+    if(touch){await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+    else{await send('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});await send('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});}
+  };
+  const chipCount=scope=>evaluate(`document.querySelectorAll('#${scope}-list .chip').length`);
+  for(const scope of ['cert','cursos','dipl','miem','enf','trt']){
+    const initial=await chipCount(scope);
+    for(const [n,gesture] of ['enter','add','blur','tab','blur-add'].entries()){
+      await focusInput(scope,'  IP01B '+scope+' '+gesture+'  ');
+      if(gesture==='enter')await key('Enter','Enter');
+      else if(gesture==='tab'){await key('Tab','Tab');assert.equal(await evaluate(`document.activeElement.id==='${scope}-input'`),false);}
+      else if(gesture==='blur')await evaluate(`document.getElementById('professional-summary').focus()`);
+      else if(gesture==='add')await click('#'+scope+'-add');
+      else await pointer('#'+scope+'-add');
+      assert.equal(await chipCount(scope),initial+n+1,scope+' '+gesture);
+      assert.equal(await evaluate(`document.getElementById('${scope}-input').value`),'');
+    }
+    for(const value of ['   ',' IP01B '+scope+' enter ', 'x'.repeat(scope==='enf'||scope==='trt'?41:51)]){
+      await focusInput(scope,value);await evaluate(`document.getElementById('professional-summary').focus()`);
+      assert.equal(await chipCount(scope),initial+5,scope+' rejects empty/duplicate/invalid');
+      if(value.startsWith('x'))assert.equal(await evaluate(`document.getElementById('${scope}-input').value`),value);
+    }
+    await type(scope+'-input','');
+  }
+  assert.equal(await dirty(),true);assert.equal(await writes(),0);assert.deepEqual(await evaluate('ipStorageWrites'),[]);
+  await new Promise(r=>setTimeout(r,4200));assert.equal(await evaluate(`document.getElementById('mxpi-floating-save').hidden`),false);
+  // Persist/reload every category using only the real synthetic grouped endpoint.
+  await save();const blurSaved=await evaluate('ipWrites[0]');await open();
+  for(const [scope,key]of [['cert','CERTIFICATION'],['cursos','COURSE'],['dipl','DIPLOMA'],['miem','MEMBERSHIP'],['enf','DISEASE'],['trt','TREATMENT']]){
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('#${scope}-list .chip')].map(c=>c.firstChild.textContent)`),blurSaved.items[key]);
+    await focusInput(scope,'Revertir IP01B');await evaluate(`document.getElementById('professional-summary').focus()`);
+    await click('#'+scope+'-list .chip:last-of-type .chip-x');assert.equal(await dirty(),false);
+  }
+  // Pending text becomes dirty before actual navigation click and remains guarded.
+  await focusInput('cert','Salir pendiente IP01B');await pointer('#t-info-datos-tab');
+  await until(`document.getElementById('mxpi-unsaved-navigation-modal').classList.contains('show')`);
+  await click('#mxpi-unsaved-discard');await until(`document.getElementById('t-info-datos').classList.contains('active')`);
+  assert.equal(await writes(),0);await open();assert.equal(await evaluate(`document.getElementById('cert-list').textContent.includes('Salir pendiente IP01B')`),false);
+  for(const [width,height]of [[1440,900],[1366,768],[820,1180],[390,844]]){
+    await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<500});
+    await focusInput('cert','Touch IP01B');await pointer('#cert-add',true);assert.equal(await dirty(),true);
+    await click('#cert-list .chip:last-of-type .chip-x');assert.equal(await dirty(),false);
+    assert.equal(await evaluate(`document.documentElement.scrollWidth>innerWidth`),false);await screenshot('ip01b-'+width+'.png');
+  }
+  await send('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
+  console.log('IP01B_GESTURES_ALL_SIX_CATEGORIES=PASS');
   await type('srv1','Servicio QA');assert.equal(await dirty(),true);assert.equal(await writes(),0);
   assert.equal(await evaluate(`document.getElementById('mxpi-floating-save').hidden`),true);
   await new Promise(r=>setTimeout(r,4200));assert.equal(await evaluate(`document.getElementById('mxpi-floating-save').hidden`),false);

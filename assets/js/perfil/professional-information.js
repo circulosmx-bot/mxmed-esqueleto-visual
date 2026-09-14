@@ -55,10 +55,22 @@
     });
   }
   document.getElementById('sort-save')?.addEventListener('click',()=>{if(sortScope&&!busy){draft.items[types[sortScope]]=[...sorted];renderList(sortScope);updateControls();announce(true);}bootstrap.Modal.getInstance(document.getElementById('modalSortChips'))?.hide();});
+  // All entry gestures update only the draft. Synchronous clearing makes blur + click idempotent.
+  function commitChipInput(scope,input){
+    const value=input.value.trim();
+    if(busy||!loaded||!value||value.length>input.maxLength||!input.checkValidity())return;
+    const values=draft.items[types[scope]];
+    if(!values.some(existing=>existing.trim()===value)){values.push(value);renderList(scope);}
+    input.value='';updateControls();announce(true);
+  }
   for(const [scope,type] of Object.entries(types)){
     const input=document.getElementById(scope+'-input');
     input.addEventListener('input',()=>{updateControls();announce(true);});
-    document.getElementById(scope+'-add').addEventListener('click',()=>{const value=input.value.trim();if(busy||!loaded||!value||value.length>input.maxLength)return;draft.items[type].push(value);input.value='';renderList(scope);updateControls();announce(true);});
+    document.getElementById(scope+'-add').addEventListener('click',()=>commitChipInput(scope,input));
+    input.addEventListener('blur',()=>commitChipInput(scope,input));
+    input.addEventListener('keydown',event=>{
+      if(event.key==='Enter'&&!event.isComposing){event.preventDefault();commitChipInput(scope,input);}
+    });
   }
   [...services,summary].forEach(input=>input.addEventListener('input',()=>{updateControls();announce(true);}));
   async function request(method='GET',body){
