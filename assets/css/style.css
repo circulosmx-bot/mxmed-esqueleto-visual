@@ -4810,7 +4810,15 @@ body{margin:0;background:var(--mm-fondo-base);}
     line-height:1.16;
   }
   #p-info #t-info-datos #mx-public-identity-card textarea#mxpi-bio-short{
-    min-height:72px;
+    /* One comfortable editing line; content-sized browsers may grow on wrap. */
+    height:calc(1.5em + .75rem + 2px);
+    min-height:calc(1.5em + .75rem + 2px);
+  }
+  @supports (field-sizing:content){
+    #p-info #t-info-datos #mx-public-identity-card textarea#mxpi-bio-short{
+      field-sizing:content;
+      height:auto;
+    }
   }
 }
 @media (max-width:1180px) and (min-width:993px){
