@@ -22367,3 +22367,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-helper{margin:-5px 0 10px}
+
+/* SIG03A independent signing controls, no QR/fullscreen UI. */
+#p-info #t-info-datos #dg-signature-card .mx-signature-authority{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+#dg-signature-preview{max-width:100%;width:auto;max-height:140px;object-fit:contain;align-self:flex-start}
+#dg-signature-editor[hidden],#dg-signature-preview[hidden]{display:none}
+#dg-signature-pad{display:block;width:100%;height:180px;background:#fff;border:1px solid #a9c2ce;border-radius:9px;touch-action:none}
+#dg-signature-pad:focus-visible{outline:3px solid #008a98;outline-offset:2px}

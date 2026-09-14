@@ -4,7 +4,7 @@ namespace Platform\Services;
 final class CanonicalAuditPolicyRegistry
 {
     private array $rows=[];
-    private function __construct(array $rows){foreach($rows as $row){$event=$row['event_type']??null;if(!is_string($event)||isset($this->rows[$event]))throw new \InvalidArgumentException('invalid_canonical_policy_rows');$this->rows[$event]=$row;}if(count($this->rows)!==44)throw new \InvalidArgumentException('canonical_policy_row_count');}
+    private function __construct(array $rows){foreach($rows as $row){$event=$row['event_type']??null;if(!is_string($event)||isset($this->rows[$event]))throw new \InvalidArgumentException('invalid_canonical_policy_rows');$this->rows[$event]=$row;}if(count($this->rows)!==47)throw new \InvalidArgumentException('canonical_policy_row_count');}
     public static function canonical(): self{return new self(self::canonicalRows());}
     public static function canonicalRows(): array{return [
             [
@@ -1565,6 +1565,33 @@ final class CanonicalAuditPolicyRegistry
                 'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'MEDIA_REVIEW_CANDIDATE_SUBMITTED',
                 'producer'=>'Media','reason_required'=>true,'retention_class'=>'ROLE_ADMIN',
                 'self_timeline'=>false,'session_required'=>false,'severity'=>'INFO','target_required'=>true,
+            ],
+            [
+                'actor_required'=>true,'allowed_producer_metadata'=>['asset_id','previous_asset_id'],
+                'allowed_reason_codes'=>['USER_REQUEST'],
+                'allowed_result_reason_pairs'=>[['reason_code'=>'USER_REQUEST','result'=>'SUCCESS']],
+                'allowed_results'=>['SUCCESS'],'allowed_writer_internal_metadata'=>[],
+                'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'PHYSICIAN_SIGNATURE_CREATED',
+                'producer'=>'Signatures','reason_required'=>true,'retention_class'=>'ROLE_ADMIN',
+                'self_timeline'=>false,'session_required'=>true,'severity'=>'INFO','target_required'=>true,
+            ],
+            [
+                'actor_required'=>true,'allowed_producer_metadata'=>['asset_id','previous_asset_id'],
+                'allowed_reason_codes'=>['USER_REQUEST'],
+                'allowed_result_reason_pairs'=>[['reason_code'=>'USER_REQUEST','result'=>'SUCCESS']],
+                'allowed_results'=>['SUCCESS'],'allowed_writer_internal_metadata'=>[],
+                'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'PHYSICIAN_SIGNATURE_REPLACED',
+                'producer'=>'Signatures','reason_required'=>true,'retention_class'=>'ROLE_ADMIN',
+                'self_timeline'=>false,'session_required'=>true,'severity'=>'INFO','target_required'=>true,
+            ],
+            [
+                'actor_required'=>true,'allowed_producer_metadata'=>['asset_id','previous_asset_id'],
+                'allowed_reason_codes'=>['USER_REQUEST'],
+                'allowed_result_reason_pairs'=>[['reason_code'=>'USER_REQUEST','result'=>'SUCCESS']],
+                'allowed_results'=>['SUCCESS'],'allowed_writer_internal_metadata'=>[],
+                'authority_status'=>'DIRECTOR_RATIFIED_COMPLETE','event_type'=>'PHYSICIAN_SIGNATURE_DELETED',
+                'producer'=>'Signatures','reason_required'=>true,'retention_class'=>'ROLE_ADMIN',
+                'self_timeline'=>false,'session_required'=>true,'severity'=>'INFO','target_required'=>true,
             ],
         ];}
     public function count(): int{return count($this->rows);}

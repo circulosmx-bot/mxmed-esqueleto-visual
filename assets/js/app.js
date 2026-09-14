@@ -43627,28 +43627,7 @@ console.info('app.js loaded :: 20251123a');
       }
       els.signatureStatus.textContent = 'Sin firma';
     };
-    const readRegisteredDoctorSignature = ()=>{
-      const candidates = [
-        window.localStorage?.getItem('mxmed.doctor.signature'),
-        window.mxmedStore?.doctorSignature,
-        window.mxmedStore?.doctor_signature,
-        window.mxmedDoctor?.signature_data
-      ];
-      for(const raw of candidates){
-        const value = String(raw || '').trim();
-        if(value && /^data:image\//i.test(value)) return value;
-      }
-      return '';
-    };
-    const persistRegisteredDoctorSignature = (imageData = '')=>{
-      const safeImage = String(imageData || '').trim();
-      if(!safeImage || !/^data:image\//i.test(safeImage)) return false;
-      try{
-        window.localStorage?.setItem('mxmed.signature', safeImage);
-        window.localStorage?.setItem('mxmed.doctor.signature', safeImage);
-      }catch(_){ }
-      return true;
-    };
+    const readRegisteredDoctorSignature = ()=> window.mxmedPhysicianSignature?.read() || '';
     const refreshDoctorRegisteredSignature = ()=>{
       state.doctorRegisteredSignatureData = readRegisteredDoctorSignature();
       const hasRegistered = !!state.doctorRegisteredSignatureData;
@@ -50555,6 +50534,13 @@ console.info('app.js loaded :: 20251123a');
       }
       refreshCertificadoSignatureStatus();
     };
+    document.addEventListener('mxmed:signature-changed',()=>{
+      refreshDoctorRegisteredSignature();refreshInformeRegisteredSignature();refreshNotaRegisteredSignature();
+      refreshAltaRegisteredSignature();refreshInterconsultaRegisteredSignature();refreshResponsivaRegisteredDoctorSignature();refreshCertificadoRegisteredSignature();
+    });
+    document.addEventListener('shown.bs.modal',event=>{
+      if(event.target.closest('#p-expediente'))window.mxmedPhysicianSignature?.refresh().catch(()=>{});
+    });
     const refreshCertificadoSignatureStatus = ()=>{
       if(!els.certificadoSignatureStatus) return;
       const hasRemote = certificadoState.signaturePreferredSource === 'remote' && !!certificadoState.remoteSignature?.image_data;
