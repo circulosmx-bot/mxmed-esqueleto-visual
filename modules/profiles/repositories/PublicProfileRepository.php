@@ -6,6 +6,7 @@ namespace Profiles\Repositories;
 use PDO;
 use PDOException;
 require_once __DIR__ . '/../../media/repositories/MediaAssetsRepository.php';
+require_once __DIR__ . '/../services/ProfessionalInformationService.php';
 
 final class PublicProfileRepository
 {
@@ -577,6 +578,16 @@ final class PublicProfileRepository
         $result['specialty_license'] = $this->toNullableText($profileRow['specialty_license'] ?? null);
         $result['specialty_primary'] = $this->toNullableText($profileRow['specialty_primary'] ?? null);
         $result['bio_short'] = $this->toNullableText($profileRow['bio_short'] ?? null);
+        if ($this->tableExists('profiles_doctor_professional_information') && $this->tableExists('profiles_doctor_professional_items')) {
+            $editable = (new \Profiles\Services\ProfessionalInformationService($this->pdo))->current((string)$profileRow['doctor_id']);
+            $items = $editable['items'];
+            $result['bio_long'] = $this->toNullableText($editable['public_professional_summary']);
+            $result['education'] = array_merge($items['COURSE'], $items['DIPLOMA']);
+            $result['certifications'] = $items['CERTIFICATION'];
+            $result['professional_associations'] = $items['MEMBERSHIP'];
+            $result['services'] = $items['SERVICE'];
+            $result['conditions_treated'] = array_merge($items['DISEASE'], $items['TREATMENT']);
+        }
         return $result;
     }
 

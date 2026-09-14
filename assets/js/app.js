@@ -194,11 +194,6 @@ console.info('app.js loaded :: 20251123a');
     setInputValue('cons-urg1', profile.contact.phone_emergency);
     setInputValue('cons-wa', profile.contact.whatsapp);
 
-    // Servicios principales de referencia
-    setInputValue('srv1', profile.services[0] || '');
-    setInputValue('srv2', profile.services[1] || '');
-    setInputValue('srv3', profile.services[2] || '');
-
     // Persistencia local existente (sin backend nuevo)
     setLocalStorageValue('dp:ced-prof', profile.professional_license);
     setLocalStorageValue('dp:uni-prof', profile.professional_university);
@@ -208,9 +203,6 @@ console.info('app.js loaded :: 20251123a');
     setLocalStorageValue('dp:dp-whatsapp', profile.contact.whatsapp);
     setLocalStorageValue('dp:esp-1', profile.professional_title || 'Médico Cirujano');
     setLocalStorageValue('dp:esp-2', profile.specialty_academic || profile.specialty_visible);
-    setLocalStorageValue('dp:srv1', profile.services[0] || '');
-    setLocalStorageValue('dp:srv2', profile.services[1] || '');
-    setLocalStorageValue('dp:srv3', profile.services[2] || '');
 
     window.mxmedStore.doctorId = profile.doctor_id;
     window.mxmedStore.doctor_id = profile.doctor_id;
@@ -1309,6 +1301,8 @@ console.info('app.js loaded :: 20251123a');
     themeSelectedKey: null,
     themeCatalog: []
   };
+  const professionalEditor = window.mxmedProfessionalInformation;
+  const professionalActive = ()=> Boolean(professionalEditor?.active());
   const dirtyTracker = window.mxmedCreateDirtyTracker({ readState: readProfileFormState });
   let baselineNameControls = null;
   let successFeedbackTimer;
@@ -1335,9 +1329,11 @@ console.info('app.js loaded :: 20251123a');
         resolve();
       }, { once: true });
       const modal = bootstrap.Modal.getInstance(guardElement);
-      if(guardOpening){
-        guardElement.addEventListener('shown.bs.modal', ()=> modal.hide(), { once: true });
-      }else modal.hide();
+      const closeWhenShown = ()=> modal?.hide();
+      guardElement.addEventListener('shown.bs.modal', closeWhenShown, { once: true });
+      guardElement.addEventListener('hidden.bs.modal', ()=> guardElement.removeEventListener('shown.bs.modal', closeWhenShown), { once: true });
+      // Hide immediately when already shown; retry after an opening transition.
+      modal?.hide();
     });
   }
   function confirmPrefixChange(oldPrefix, newPrefix){
@@ -1383,6 +1379,10 @@ console.info('app.js loaded :: 20251123a');
     });
   }
   async function requestProfileSave(continueNavigation = false){
+    if(professionalActive()){
+      if(continueNavigation){await saveSurface.saveAndContinue();return !professionalEditor.dirty();}
+      return professionalEditor.save();
+    }
     if(saveAttemptPending || state.saving || state.loading || !state.loaded) return false;
     saveAttemptPending = true;
     let handedOff = false;
@@ -1421,11 +1421,12 @@ console.info('app.js loaded :: 20251123a');
     return !info?.classList.contains('d-none') && document.getElementById('t-info-datos')?.classList.contains('active');
   };
   const saveSurface = window.mxmedCreateExplicitSaveSurface({
-    isDirty: ()=> state.loaded && dirtyTracker.isDirty(),
-    isActive: generalContextActive,
-    isSaving: ()=> state.saving || prefixConfirming,
-    save: savePrivateIdentity,
+    isDirty: ()=> professionalActive() ? professionalEditor.dirty() : state.loaded && dirtyTracker.isDirty(),
+    isActive: ()=> generalContextActive() || professionalActive(),
+    isSaving: ()=> professionalActive() ? professionalEditor.busy : state.saving || prefixConfirming,
+    save: ()=> professionalActive() ? professionalEditor.save() : savePrivateIdentity(),
     discard: ()=>{
+      if(professionalActive()){professionalEditor.discard();return;}
       if(!baselineForm) return;
       els.displayName.value = baselineForm.displayName;
       if(els.verifiedGivenNames) els.verifiedGivenNames.value = baselineForm.form.givenPresentation || '';
@@ -1459,12 +1460,14 @@ console.info('app.js loaded :: 20251123a');
       },
       close: closeNavigationDialog,
       error(){
-        guardError.textContent = els.feedback?.classList.contains('text-danger')
+        guardError.textContent = professionalActive() ? professionalEditor.error : els.feedback?.classList.contains('text-danger')
           ? els.feedback.textContent : 'Revisa los cambios pendientes antes de continuar.';
         guardError.hidden = false;
       }
     }
   });
+  document.addEventListener('mxmed:professional-draft', event=>{saveSurface.sync({activity: Boolean(event.detail?.activity)});setBusyState();});
+  document.getElementById('tabs-info')?.addEventListener('shown.bs.tab', ()=>setBusyState());
   guardElement?.addEventListener('shown.bs.modal', ()=>{ guardOpening = false; });
   guardSave?.addEventListener('click', ()=> requestProfileSave(true));
   guardDiscard?.addEventListener('click', ()=> saveSurface.discardAndContinue());
@@ -1487,10 +1490,10 @@ console.info('app.js loaded :: 20251123a');
   // original control only after a successful save or an explicit discard.
   window.addEventListener('click', event=>{
     const control = event.target?.closest?.('[data-panel], [data-profile-panel], .menu-main[data-group], #tabs-info [data-bs-toggle="pill"], a[href], [data-header-logout]');
-    if(!control || !generalContextActive()) return;
+    if(!control || !(generalContextActive() || professionalActive())) return;
     const tabTarget = control.closest('#tabs-info') && control.getAttribute('data-bs-target');
     if(tabTarget){
-      if(tabTarget === '#t-info-datos') return;
+      if(tabTarget === (professionalActive() ? '#t-info-profesional' : '#t-info-datos')) return;
     }else if(control.hasAttribute('data-panel') || control.hasAttribute('data-profile-panel')){
       if((control.dataset.panel || control.dataset.profilePanel) === 'p-info') return;
     }else if(control.matches('.menu-main[data-group]')){
@@ -1514,7 +1517,7 @@ console.info('app.js loaded :: 20251123a');
   });
   // Bootstrap's public tab API can also initiate a subtab change without a click.
   document.getElementById('tabs-info')?.addEventListener('show.bs.tab', event=>{
-    if(event.target.id === 't-info-datos-tab') return;
+    if(event.target.id === (professionalActive() ? 't-info-formacion-tab' : 't-info-datos-tab')) return;
     interceptGeneralExit(event, event.target, ()=> bootstrap.Tab.getOrCreateInstance(event.target).show());
   });
   document.getElementById('t-info-datos-tab')?.addEventListener('shown.bs.tab', ()=>{
@@ -1525,7 +1528,7 @@ console.info('app.js loaded :: 20251123a');
     saveSurface.sync();
   });
   window.addEventListener('beforeunload', event=>{
-    if(!saveSurface.shouldWarnBeforeUnload()) return;
+    if(!saveSurface.shouldWarnBeforeUnload() && !professionalEditor?.dirty() && !dirtyTracker.isDirty()) return;
     event.preventDefault();
     event.returnValue = '';
   });
@@ -2388,8 +2391,8 @@ console.info('app.js loaded :: 20251123a');
   function setBusyState(){
     saveSurface.sync();
     if(els.saveBtn){
-      els.saveBtn.disabled = state.loading || state.saving || prefixConfirming || !state.loaded;
-      els.saveBtn.querySelector('[data-dg-button-label]').textContent = state.saving ? 'Guardando…' : 'Guardar cambios';
+      els.saveBtn.disabled = professionalActive() ? professionalEditor.busy || !professionalEditor.loaded : state.loading || state.saving || prefixConfirming || !state.loaded;
+      els.saveBtn.querySelector('[data-dg-button-label]').textContent = (professionalActive() ? professionalEditor.busy : state.saving) ? 'Guardando…' : 'Guardar cambios';
     }
     if(els.saveLegacyBtn){
       els.saveLegacyBtn.disabled = true;
