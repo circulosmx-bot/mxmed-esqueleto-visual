@@ -73,7 +73,7 @@ theme01aAssert($deepBlue['accent_hover'] === '#1156A3', 'deep-blue hover token d
 theme01aAssert($deepBlue['accent_border'] === 'rgba(21, 105, 199, 0.42)', 'deep-blue border token derives from the new base');
 theme01aAssert($deepBlue['accent_strong'] === '#1156A3', 'deep-blue strong surface derives from the new base');
 
-theme01aAssert(ProfileThemeCatalog::resolve('royal_blue')['label'] === 'Azul Cielo Profundo', 'persisted royal_blue key exposes the approved deep-sky label');
+theme01aAssert(ProfileThemeCatalog::resolve('royal_blue')['label'] === 'Azul profundo brillante', 'persisted royal_blue key exposes the approved display label');
 
 $whiteStrongKeys = [];
 $directorDarkForegroundKeys = [];
