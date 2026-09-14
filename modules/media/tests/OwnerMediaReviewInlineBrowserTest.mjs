@@ -1,5 +1,5 @@
-// Read-only Director review runtime: one existing SUBMITTED photo candidate,
-// public photo/logo and eight gallery images. All mutation/state QA uses mocked fetch.
+// Read-only Director review runtime: public photo/logo and eight gallery images.
+// Review states and mutations use mocked fetch; an absent live candidate is simulated.
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
@@ -76,13 +76,28 @@ try{
   await new Promise(resolve=>setTimeout(resolve,900));
   await evaluate('document.querySelectorAll(".modal.show [data-bs-dismiss=modal]").forEach(b=>b.click())');
   await new Promise(resolve=>setTimeout(resolve,400));
+  await until('document.querySelector("#mxpi-photo-preview img")?.naturalWidth>0');
+  await evaluate(`window.reviewMock={items:[],mode:'ok',canSubmit:true,calls:[],clicked:[]};window.realFetch=window.fetch;window.fetch=async(url,options={})=>{const m=window.reviewMock,route=String(url).split('/').pop();if(!['owner-review.php','review-batch-submit.php','profile-photo-review-candidate.php','physician-logo-review-candidate.php','gallery-review-candidate.php'].includes(route)){if(!['GET','HEAD'].includes(options.method||'GET'))throw Error('Blocked unexpected real mutation in inline media QA');return window.realFetch(url,options);}m.calls.push({route,method:options.method||'GET',headers:options.headers,body:typeof options.body==='string'?options.body:null,form:options.body instanceof FormData});if(m.mode==='network')throw Error('network');if(m.mode==='parse')return new Response('invalid',{status:200});if(m.mode==='401'||m.mode==='403'||m.mode==='503')return Response.json({ok:false,error:'mock'},{status:Number(m.mode)});if(route==='owner-review.php')return Response.json({ok:true,data:{items:m.items}});if(route==='review-batch-submit.php'){if(options.method==='POST')m.items=m.items.map(i=>({...i,state:'SUBMITTED'}));return Response.json({ok:true,data:{csrf:'batch-csrf',can_submit_now:m.canSubmit}})}if(options.method==='DELETE'){const purpose={'profile-photo-review-candidate.php':'DOCTOR_PROFILE_PHOTO','physician-logo-review-candidate.php':'PHYSICIAN_PERSONAL_LOGO','gallery-review-candidate.php':'DOCTOR_GALLERY'}[route];m.items=m.items.filter(i=>i.purpose!==purpose || (options.body && i.id!==JSON.parse(options.body).submission_id))}return Response.json({ok:true,data:{csrf_token:'candidate-csrf',candidate:m.items.find(i=>i.purpose==='DOCTOR_PROFILE_PHOTO')?{submission_id:m.items.find(i=>i.purpose==='DOCTOR_PROFILE_PHOTO').id,review_status:m.items.find(i=>i.purpose==='DOCTOR_PROFILE_PHOTO').state==='NEEDS_WORK'?'NEEDS_WORK':'PENDING_REVIEW'}:null}})};document.querySelectorAll('#mxpi-photo-input,#fotos-input,[data-profile-logo-upload] input[type=file]').forEach(input=>input.click=()=>window.reviewMock.clicked.push(input.id||'logo'));window.setReview=async(items,mode='ok',canSubmit=true)=>{Object.assign(window.reviewMock,{items,mode,canSubmit});await window.mxmedMediaReview.refresh()};`);
+  const hasLiveCandidate=await evaluate(`Boolean(document.querySelector('[data-review-candidate=photo]'))`);
+  // Use a synthetic review image when no live QA candidate exists.
+  if(!hasLiveCandidate){
+    await evaluate(`setReview([{id:'synthetic-initial-photo',purpose:'DOCTOR_PROFILE_PHOTO',state:'SUBMITTED',preview_url:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="600" height="800"%3E%3Cpath fill="%23288db6" d="M0 0h600v800H0z"/%3E%3C/svg%3E'}])`);
+  }
   await until('document.querySelector("[data-review-candidate=photo] img")?.naturalWidth>0');
   const real=await evaluate(`({pending:document.querySelectorAll('[data-review-candidate]').length,photo:document.querySelector('#mxpi-photo-control img:not([data-review-candidate] img)').src,logo:document.querySelector('[data-profile-logo-upload] img:not([data-review-candidate] img)').src,tabHeight:document.getElementById('t-info-datos').getBoundingClientRect().height,mediaHeight:document.getElementById('mx-dg-media-card').getBoundingClientRect().height,preview:document.querySelector('[data-review-candidate=photo] img').getAttribute('src'),standalone:document.querySelectorAll('.mx-owner-media-review').length})`);
   assert.equal(real.pending,1);assert.equal(real.standalone,0);
   assert.equal(await evaluate(`document.querySelector('[data-review-candidate=photo] .mx-media-review-badge').textContent`),'En revisión');
   await screenshot('crd032-leticia-inline-photo-review-1440.png');
   await screenshot('crd032-no-standalone-review-panel.png');
-  await evaluate(`window.reviewMock={items:[],mode:'ok',canSubmit:true,calls:[],clicked:[]};window.realFetch=window.fetch;window.fetch=async(url,options={})=>{const m=window.reviewMock,route=String(url).split('/').pop();if(!['owner-review.php','review-batch-submit.php','profile-photo-review-candidate.php','physician-logo-review-candidate.php','gallery-review-candidate.php'].includes(route))return window.realFetch(url,options);m.calls.push({route,method:options.method||'GET',headers:options.headers,body:typeof options.body==='string'?options.body:null,form:options.body instanceof FormData});if(m.mode==='network')throw Error('network');if(m.mode==='parse')return new Response('invalid',{status:200});if(m.mode==='401'||m.mode==='403'||m.mode==='503')return Response.json({ok:false,error:'mock'},{status:Number(m.mode)});if(route==='owner-review.php')return Response.json({ok:true,data:{items:m.items}});if(route==='review-batch-submit.php'){if(options.method==='POST')m.items=m.items.map(i=>({...i,state:'SUBMITTED'}));return Response.json({ok:true,data:{csrf:'batch-csrf',can_submit_now:m.canSubmit}})}if(options.method==='DELETE'){const purpose={'profile-photo-review-candidate.php':'DOCTOR_PROFILE_PHOTO','physician-logo-review-candidate.php':'PHYSICIAN_PERSONAL_LOGO','gallery-review-candidate.php':'DOCTOR_GALLERY'}[route];m.items=m.items.filter(i=>i.purpose!==purpose || (options.body && i.id!==JSON.parse(options.body).submission_id))}return Response.json({ok:true,data:{csrf_token:'candidate-csrf'}})};document.querySelectorAll('#mxpi-photo-input,#fotos-input,[data-profile-logo-upload] input[type=file]').forEach(input=>input.click=()=>window.reviewMock.clicked.push(input.id||'logo'));window.setReview=async(items,mode='ok',canSubmit=true)=>{Object.assign(window.reviewMock,{items,mode,canSubmit});await window.mxmedMediaReview.refresh()};`);
+
+  const photoAction = async action => {
+    await evaluate(`document.getElementById('${action==='change'?'mxpi-photo-select':'mxpi-photo-remove'}').click()`);
+    await until(`document.getElementById('mxpi-photo-target-modal').classList.contains('show')`);
+    await new Promise(resolve=>setTimeout(resolve,350));
+    await evaluate(`document.querySelector('#mxpi-photo-target-modal [data-photo-target=candidate]').click()`);
+    await until(`!document.getElementById('mxpi-photo-target-modal').classList.contains('show')`);
+    await new Promise(resolve=>setTimeout(resolve,350));
+  };
   const assertFormClean = async()=> assert.equal(await evaluate(`document.getElementById('mxpi-floating-save').hidden`),true,'independent media actions never dirty the profile form');
   await assertFormClean();
   const items=['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY','DOCTOR_GALLERY'].map((purpose,i)=>({id:'mock-'+i,purpose,state:'OPEN',preview_url:'/assets/img/dr-female.svg',reason:'QUALITY_INSUFFICIENT',feedback:'Usa una imagen más nítida. <script>safe</script>'}));
@@ -111,7 +126,7 @@ try{
   assert.equal(await evaluate(`document.querySelector('.mx-media-review-batch span').textContent`),'1 cambio pendiente');
   for(const key of ['photo','logo','gallery']){
     await evaluate(`setReview(${JSON.stringify(items.map(i=>({...i,state:'SUBMITTED'})))})`);
-    await evaluate(`document.querySelector('[data-review-candidate=${key}] button').click()`);
+    if(key==='photo')await photoAction('delete');else await evaluate(`document.querySelector('[data-review-candidate=${key}] button').click()`);
     await until(`!document.querySelector('[data-review-id=mock-${key==='photo'?0:key==='logo'?1:2}]')`);
     await assertFormClean();
     const call=await evaluate(`window.reviewMock.calls.filter(c=>c.method==='DELETE').at(-1)`);
@@ -125,7 +140,7 @@ try{
   assert.ok(await evaluate(`document.querySelector('[data-review-candidate=photo] details').open && document.querySelector('[data-review-candidate=photo] details').textContent.includes('QUALITY_INSUFFICIENT')`));
   assert.equal(await evaluate(`document.querySelector('[data-review-candidate=photo] details script')`),null);
   await screenshot('crd032-needs-work.png');
-  for(const key of ['photo','logo','gallery'])await evaluate(`document.querySelector('[data-review-candidate=${key}] button').click()`);
+  for(const key of ['photo','logo','gallery']){if(key==='photo')await photoAction('change');else await evaluate(`document.querySelector('[data-review-candidate=${key}] button').click()`);}
   assert.deepEqual(await evaluate('window.reviewMock.clicked'),['mxpi-photo-input','mx-dg-logo','fotos-input']);
   for(const key of ['photo','logo','gallery'])await evaluate(`window.mxmedMediaReview.upload('${key}',new File(['synthetic'],'synthetic.png',{type:'image/png'}))`);
   await assertFormClean();
@@ -161,6 +176,6 @@ try{
     await evaluate(`document.getElementById('t-info-datos-tab').click()`);viewports.push({width,height,...sizes});
     if(width===390){await evaluate(`document.getElementById('mxpi-photo-control').scrollIntoView({block:'start',behavior:'instant'})`);await screenshot('crd032-mobile-inline-review.png');}else if(width===1366)await screenshot('crd032-inline-review-1366.png');
   }
-  await writeFile(output+'/inline-report.json',JSON.stringify({real,viewports,states:['OPEN','SUBMITTED','NEEDS_WORK','empty','401','403','network','503','parse'],publicUnchanged:true,standaloneHeightAfter:0},null,2));
+  await writeFile(output+'/inline-report.json',JSON.stringify({real,syntheticCandidate:!hasLiveCandidate,viewports,states:['OPEN','SUBMITTED','NEEDS_WORK','empty','401','403','network','503','parse'],publicUnchanged:true,standaloneHeightAfter:0},null,2));
   console.log('INLINE_MEDIA_REVIEW_BROWSER=PASS: exact purpose routing; public preserved; states; submit CSRF; withdraw CSRF; feedback/replacement; candidate upload; zero empty/401 height; errors/retry; gallery async preservation; accessibility; 3 viewports');
 }finally{ws?.close();chrome.kill();await new Promise(resolve=>setTimeout(resolve,300));await rm(profile,{recursive:true,force:true});}

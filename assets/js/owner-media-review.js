@@ -155,14 +155,16 @@
       details.append(element('p', 'Motivo: ' + (item.reason || 'Se requiere otra imagen.')));
       if (item.feedback) details.append(element('p', item.feedback));
       row.append(details);
-      const replace = mediaAction(key, 'change', 'Reemplazar imagen', 'btn btn-sm btn-outline-primary');
-      replace.type = 'button';
-      replace.onclick = () => {
-        const input = key === 'logo' ? document.querySelector('#mx-dg-media-card [data-profile-logo-upload] input[type=file]') : document.getElementById(purposes[key][3]);
-        input?.click();
-      };
-      row.append(replace);
-    } else {
+      if (key !== 'photo') {
+        const replace = mediaAction(key, 'change', 'Reemplazar imagen', 'btn btn-sm btn-outline-primary');
+        replace.type = 'button';
+        replace.onclick = () => {
+          const input = key === 'logo' ? document.querySelector('#mx-dg-media-card [data-profile-logo-upload] input[type=file]') : document.getElementById(purposes[key][3]);
+          input?.click();
+        };
+        row.append(replace);
+      }
+    } else if (key !== 'photo') {
       const withdraw = mediaAction(key, 'delete', 'Retirar imagen', 'btn btn-sm btn-outline-secondary');
       withdraw.type = 'button';
       withdraw.onclick = () => perform(async () => {

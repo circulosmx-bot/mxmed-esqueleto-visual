@@ -137,7 +137,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=dg05c3" />
+<link rel="stylesheet" href="assets/css/style.css?v=photo-target-selection" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -10335,7 +10335,7 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
 
 <script src="assets/js/subscription-messages.js"></script>
-<script src="assets/js/owner-media-review.js?v=crd033"></script>
+<script src="assets/js/owner-media-review.js?v=photo-target-selection"></script>
 <script src="assets/js/perfil/credenciales.js?v=crd033"></script>
 <script src="assets/js/core/dirty-tracker.js?v=crd0310"></script>
 <script src="assets/js/core/explicit-save-surface.js?v=crd0313"></script>
@@ -10352,7 +10352,34 @@
 <script src="assets/js/messages.js"></script>
 
 <script src="assets/js/fotos.js?v=crd032"></script>
-<script src="assets/js/profile-photo.js?v=media-review-mr12a"></script>
+<div class="modal fade" id="mxpi-photo-target-modal" tabindex="-1" aria-labelledby="mxpi-photo-target-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="mxpi-photo-target-title">¿Qué foto quieres cambiar?</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-grid gap-2">
+          <button type="button" class="btn btn-outline-primary text-start" data-photo-target="approved">
+            <strong>Foto publicada</strong>
+            <span>Es la fotografía que actualmente ven los pacientes.</span>
+          </button>
+          <button type="button" class="btn btn-outline-primary text-start" data-photo-target="candidate">
+            <strong>Foto en revisión</strong>
+            <span data-photo-target-copy>Es la nueva fotografía pendiente de aprobación.</span>
+            <small data-photo-target-state></small>
+          </button>
+        </div>
+        <p class="mb-0 mt-3" data-photo-target-note></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="assets/js/profile-photo.js?v=photo-target-selection"></script>
 
 <template id="tpl-manejo-hospitalario">
   <div class="mh-app" data-mh-section="manejo_hospitalario">
