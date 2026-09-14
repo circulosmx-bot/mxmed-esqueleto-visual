@@ -159,7 +159,7 @@
   box-sizing: border-box;
   border: 1px solid #b3b3b3;
   border-radius: 5px;
-  background: #474747;
+  background: #01AFB9;
 }
 #p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset > span {
   position: relative;
@@ -173,4 +173,4 @@
   color: #fff;
   box-shadow: none;
 }
-#p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset:is(:hover,:active)::before {background:#383838}
+#p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset:is(:hover,:active)::before {background:#009da7}
