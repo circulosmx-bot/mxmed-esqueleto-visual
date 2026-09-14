@@ -2650,7 +2650,8 @@ console.info('app.js loaded :: 20251123a');
     try{
       await window.mxmedMediaReview.upload('logo',file);
       if(els.logoInput) els.logoInput.value = '';
-      setLogoFeedback('Pendiente de enviar', 'success');
+      // Keep submission state in the canonical candidate badge, not upload feedback.
+      setLogoFeedback('');
     }catch(_){
       if(els.logoInput) els.logoInput.value = '';
       setLogoFeedback('No fue posible guardar el logotipo. Verifica formato, dimensiones y tamaño.', 'danger');

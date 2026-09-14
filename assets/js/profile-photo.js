@@ -102,7 +102,8 @@
       await validateTarget(context,'change');
       status.textContent='Subiendo…';
       await window.mxmedMediaReview.upload('photo',file);
-      status.textContent='Pendiente de enviar';
+      // Candidate state is rendered by the canonical owner-media read model.
+      status.textContent='';
     });
   }
   select.addEventListener('click',async()=>{

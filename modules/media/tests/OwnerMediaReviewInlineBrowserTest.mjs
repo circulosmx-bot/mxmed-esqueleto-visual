@@ -34,6 +34,7 @@ try{
   let sequence = 0;
   let session;
   const pending = new Map();
+  const runtimeExceptions = [];
   const send = (method, params = {}, sid = session)=> new Promise((resolve, reject)=>{
     const id = ++sequence;
     pending.set(id, {resolve, reject, method});
@@ -41,6 +42,7 @@ try{
   });
   ws.addEventListener('message', (event)=>{
     const message = JSON.parse(event.data);
+    if(message.method==='Runtime.exceptionThrown')runtimeExceptions.push(message.params);
     if(!message.id) return;
     const request = pending.get(message.id);
     pending.delete(message.id);
@@ -147,6 +149,28 @@ try{
   assert.equal(await evaluate(`window.reviewMock.calls.filter(c=>c.method==='POST'&&c.form).length`),3);
   assert.equal(await evaluate(`window.reviewMock.calls.filter(c=>c.method==='POST'&&c.route==='review-batch-submit.php').length`),1,'upload never auto-submits the full batch');
   assert.equal(await evaluate(`window.reviewMock.calls.filter(c=>c.method==='POST'&&c.route==='review-candidate-submit.php').length`),1,'only photo auto-submits individually');
+  // Exercise the photo input handler too: the prior regression came from its
+  // post-upload feedback, not from the shared candidate badge renderer.
+  await evaluate(`setReview(${JSON.stringify(items.map(i=>({...i,state:'SUBMITTED'})))})`);
+  await photoAction('change');
+  await evaluate(`{const input=document.getElementById('mxpi-photo-input'),data=new DataTransfer();data.items.add(new File(['synthetic'],'synthetic.png',{type:'image/png'}));input.files=data.files;input.dispatchEvent(new Event('change',{bubbles:true}));}`);
+  await until(`!document.getElementById('mxpi-photo-control').hasAttribute('aria-busy')`);
+  assert.equal(await evaluate(`document.getElementById('mxpi-photo-status').textContent`),'','no duplicate photo success state');
+  const logoInput = `document.querySelector('[data-profile-logo-upload] input[type=file]')`;
+  await evaluate(`{const input=${logoInput},data=new DataTransfer();data.items.add(new File(['synthetic'],'synthetic.png',{type:'image/png'}));input.files=data.files;input.dispatchEvent(new Event('change',{bubbles:true}));}`);
+  await until(`document.querySelector('[data-profile-logo-upload]').getAttribute('aria-busy')!=='true'`);
+  assert.equal(await evaluate(`document.getElementById('mx-dg-logo-feedback').textContent`),'','no duplicate logo success state');
+  for(const states of [['OPEN'],['SUBMITTED'],['OPEN','OPEN'],['SUBMITTED','SUBMITTED'],['SUBMITTED','OPEN']]){
+    const matrix=items.slice(0,states.length).map((item,i)=>({...item,state:states[i]}));
+    await evaluate(`setReview(${JSON.stringify(matrix)})`);
+    const photoText=await evaluate(`document.getElementById('mxpi-photo-control').textContent`);
+    assert.equal(photoText.includes('Pendiente de enviar'),states[0]==='OPEN','photo status consistency');
+    if(states[0]==='SUBMITTED')assert.ok(photoText.includes('En revisión'));
+    if(states.length===2){const logoText=await evaluate(`document.querySelector('[data-profile-logo-upload]').textContent`);assert.equal(logoText.includes('Pendiente de enviar'),states[1]==='OPEN','logo manual pending preserved');}
+    const count=states.filter(state=>state==='OPEN').length;
+    assert.equal(await evaluate(`Boolean(document.querySelector('.mx-media-review-batch'))`),count>0,'CTA counts only unsent items');
+    if(count)assert.equal(await evaluate(`document.querySelector('.mx-media-review-batch span').textContent`),count===1?'1 cambio pendiente':`${count} cambios pendientes`);
+  }
   for(const mode of ['ok','401']){
     await evaluate(`setReview([],'${mode}')`);
     assert.equal(await evaluate(`document.querySelectorAll('[data-media-review-ui]').length`),0,'empty/session reserves zero review height');
@@ -177,6 +201,7 @@ try{
     await evaluate(`document.getElementById('t-info-datos-tab').click()`);viewports.push({width,height,...sizes});
     if(width===390){await evaluate(`document.getElementById('mxpi-photo-control').scrollIntoView({block:'start',behavior:'instant'})`);await screenshot('crd032-mobile-inline-review.png');}else if(width===1366)await screenshot('crd032-inline-review-1366.png');
   }
-  await writeFile(output+'/inline-report.json',JSON.stringify({real,syntheticCandidate:!hasLiveCandidate,viewports,states:['OPEN','SUBMITTED','NEEDS_WORK','empty','401','403','network','503','parse'],publicUnchanged:true,standaloneHeightAfter:0},null,2));
+  assert.deepEqual(runtimeExceptions,[],'no uncaught browser exceptions');
+  await writeFile(output+'/inline-report.json',JSON.stringify({real,syntheticCandidate:!hasLiveCandidate,viewports,states:['OPEN','SUBMITTED','NEEDS_WORK','empty','401','403','network','503','parse'],publicUnchanged:true,standaloneHeightAfter:0,statusCopyMatrixPassed:true,photoUploadFeedbackEmpty:true,logoUploadFeedbackEmpty:true,runtimeExceptions},null,2));
   console.log('INLINE_MEDIA_REVIEW_BROWSER=PASS: exact purpose routing; public preserved; states; submit CSRF; withdraw CSRF; feedback/replacement; candidate upload; zero empty/401 height; errors/retry; gallery async preservation; accessibility; 3 viewports');
 }finally{ws?.close();chrome.kill();await new Promise(resolve=>setTimeout(resolve,300));await rm(profile,{recursive:true,force:true});}
