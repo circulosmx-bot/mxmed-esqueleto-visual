@@ -33,14 +33,19 @@ final class PhysicianSignatureService
     }
     public function save(string $doctor,string $data,TrustedAuditContext $context): void
     {
+        $this->saveAtomically($doctor,$data,$context);
+    }
+    /** Internal composition hooks join the canonical save transaction; never request callbacks. */
+    public function saveAtomically(string $doctor,string $data,TrustedAuditContext $context,?callable $lockAndAuthorize=null,?callable $complete=null): void
+    {
         $image=SignatureImage::normalize($data);$asset=self::uuid();$key='private/signatures/'.hash('sha256',$doctor).'/'.$asset.'.png';$tmp=tempnam(sys_get_temp_dir(),'mxmed-signature-');$old=null;$stored=false;$committed=false;
         try {
             if($tmp===false || file_put_contents($tmp,$image['bytes'])!==strlen($image['bytes']))throw new \RuntimeException('signature_temp_failed');
-            chmod($tmp,0600);$this->begin($doctor,$context);$old=$this->row($doctor);
+            chmod($tmp,0600);$this->begin($doctor,$context);if($lockAndAuthorize)$lockAndAuthorize();$old=$this->row($doctor);
             $this->storage->storeImmutable($key,$tmp);$stored=true;
             $s=$this->pdo->prepare('INSERT INTO physician_signatures (doctor_id,asset_id,storage_key,checksum_sha256,byte_size,width,height) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE asset_id=VALUES(asset_id),storage_key=VALUES(storage_key),checksum_sha256=VALUES(checksum_sha256),byte_size=VALUES(byte_size),width=VALUES(width),height=VALUES(height),updated_at=CURRENT_TIMESTAMP(6)');
             $s->execute([$doctor,$asset,$key,hash('sha256',$image['bytes']),strlen($image['bytes']),$image['width'],$image['height']]);
-            $this->audit($doctor,$old?'REPLACED':'CREATED',$old,$asset,$context);$this->pdo->commit();$committed=true;
+            $this->audit($doctor,$old?'REPLACED':'CREATED',$old,$asset,$context);if($complete)$complete();$this->pdo->commit();$committed=true;
         }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();if($stored&&!$committed)$this->cleanup($key);throw $e;}
         finally{if(is_string($tmp)&&is_file($tmp))unlink($tmp);}
         if($old)$this->cleanup($old['storage_key']);

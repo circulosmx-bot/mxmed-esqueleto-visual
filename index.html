@@ -137,7 +137,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=sig03a" />
+<link rel="stylesheet" href="assets/css/style.css?v=sig03b" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -972,6 +972,7 @@
                     <img id="dg-signature-preview" alt="Firma vigente de tu cuenta" hidden>
                     <div class="d-flex gap-2 flex-wrap">
                       <button type="button" class="btn btn-outline-primary" id="dg-signature-change">Crear firma</button>
+                      <button type="button" class="btn btn-outline-primary" id="dg-signature-handoff-open">Firmar desde teléfono o tablet</button>
                       <button type="button" class="btn btn-outline-danger" id="dg-signature-delete" hidden>Eliminar firma</button>
                     </div>
                     <div id="dg-signature-editor" hidden>
@@ -10319,7 +10320,17 @@
 <script src="assets/js/perfil/credenciales.js?v=crd033"></script>
 <script src="assets/js/core/dirty-tracker.js?v=crd0310"></script>
 <script src="assets/js/core/explicit-save-surface.js?v=crd0313"></script>
+<div class="modal fade" id="dg-signature-handoff-modal" tabindex="-1" aria-labelledby="dg-signature-handoff-title" aria-hidden="true">
+ <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h2 class="modal-title fs-5" id="dg-signature-handoff-title">Firmar desde teléfono o tablet</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <div class="modal-body"><p>Escanea el código con tu teléfono o tablet para firmar.</p><div id="dg-signature-handoff-qr" aria-label="Código QR del enlace temporal"></div><p id="dg-signature-handoff-status" role="status" aria-live="polite">Preparando código…</p><p id="dg-signature-handoff-expiry" class="small text-muted"></p></div>
+  <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button></div>
+ </div></div>
+</div>
+
+<script src="assets/vendor/qrcodejs/qrcode.min.js"></script>
 <script src="assets/js/physician-signature.js?v=sig03a"></script>
+<script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/app.js?v=sig03a"></script>
 <script src="assets/js/core/header-account.js"></script>
 <script src="assets/js/perfil/datos-generales.js?v=crd0310"></script>

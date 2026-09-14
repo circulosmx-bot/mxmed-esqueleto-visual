@@ -22374,3 +22374,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 #dg-signature-editor[hidden],#dg-signature-preview[hidden]{display:none}
 #dg-signature-pad{display:block;width:100%;height:180px;background:#fff;border:1px solid #a9c2ce;border-radius:9px;touch-action:none}
 #dg-signature-pad:focus-visible{outline:3px solid #008a98;outline-offset:2px}
+
+/* SIG03B: local QR rendering with a quiet zone; signing authority stays private. */
+#dg-signature-handoff-qr{width:272px;max-width:100%;padding:16px;margin:0 auto 14px;background:#fff}
+#dg-signature-handoff-qr canvas,#dg-signature-handoff-qr img{display:block;max-width:100%;height:auto}
+#dg-signature-handoff-status,#dg-signature-handoff-expiry{margin-bottom:8px}
