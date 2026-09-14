@@ -22129,8 +22129,39 @@ body{margin:0;background:var(--mm-fondo-base);}
   grid-row:4;
   width:100%;
 }
-#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview):has(.mx-media-review-observations) > .mf-sub{grid-column:2;grid-row:3}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview):has(.mx-media-review-observations) > .mf-sub{grid-column:1 / -1;grid-row:4}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control #mxpi-photo-preview:not([hidden]){width:120px;height:120px;grid-row:1 / 4}
+/* Photo only: published and candidate previews share the existing card;
+   candidate actions retain their governed target in one visual action area. */
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate):has(#mxpi-photo-preview img[data-avatar-kind="public"]){
+  grid-template-columns:120px 120px minmax(0,1fr);
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate) #mxpi-photo-preview:has(img[data-avatar-kind="public"]){display:block;grid-column:1}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control > .mx-media-review-candidate{
+  display:grid;grid-column:1 / -1;grid-row:1 / 4;
+  grid-template-columns:subgrid;grid-template-rows:subgrid;
+  gap:inherit;width:auto;margin:0;align-self:stretch;justify-self:stretch;pointer-events:none;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview img[data-avatar-kind="public"]) > .mx-media-review-candidate{grid-column:2 / -1}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control > .mx-media-review-candidate > .mx-media-review-thumbnail{
+  grid-column:1;grid-row:1 / 4;align-self:center;pointer-events:auto;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate) > :is(.mf-title,.mf-actions){grid-column:-2 / -1}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control > .mx-media-review-candidate > :is(.btn,.mx-media-review-observations){grid-column:2;grid-row:3;pointer-events:auto}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(.mx-media-review-observations) > .mf-actions{display:none}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control > .mx-media-review-candidate:has(.mx-media-review-observations) > .btn{grid-row:2}
+@media (max-width:767px){
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload-grid:has(> #mxpi-photo-control > .mx-media-review-candidate):has(#mxpi-photo-control img[data-avatar-kind="public"]){grid-template-rows:auto auto}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate):has(#mxpi-photo-preview img[data-avatar-kind="public"]){grid-template-columns:120px minmax(120px,1fr);grid-template-rows:auto 120px auto auto auto auto}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate) #mxpi-photo-preview:has(img[data-avatar-kind="public"]){grid-row:2;align-self:center}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview img[data-avatar-kind="public"]) > .mx-media-review-candidate{grid-column:1 / -1;grid-row:2 / 5}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview img[data-avatar-kind="public"]) > .mx-media-review-candidate > .mx-media-review-thumbnail{grid-column:2;grid-row:1;justify-self:start}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate):has(#mxpi-photo-preview img[data-avatar-kind="public"]) > .mf-title{grid-column:1 / -1;grid-row:1}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate):has(#mxpi-photo-preview img[data-avatar-kind="public"]) > .mf-actions{grid-column:1 / -1;grid-row:3}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview img[data-avatar-kind="public"]) > .mx-media-review-candidate > :is(.btn,.mx-media-review-observations){grid-column:1 / -1}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate):has(#mxpi-photo-preview img[data-avatar-kind="public"]) > .mf-sub{grid-row:5}
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(> .mx-media-review-candidate):has(#mxpi-photo-preview img[data-avatar-kind="public"]) > #mxpi-photo-status{grid-row:6}
+}
 #p-info #t-info-datos #mx-public-identity-card > .card-body{padding-top:10px}
 
 /* Photo/logo actions only: light outlines and decorative Bootstrap icons. */
