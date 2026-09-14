@@ -2,6 +2,33 @@
 
 Status: Director-approved visual closeout. Advisor governance remains deferred and blocked by missing canonical physician admission authority. This closeout includes only the approved compact layout, contextual guidance and documentation; no advisor backend edit path, capability, admission authority or audit event was activated.
 
+## ADM01 accepted governance checkpoint
+
+Accepted audit baseline: `design/physician-crd03-credentials-ui-v1` at `8cf28b1db4e2d951420133c3f3550e3b3d3b44e6`.
+
+```text
+ADM01_STATUS=CLOSED_ACCEPTED
+CANONICAL_ADMISSION_AUTHORITY_FOUND=false
+NEXT_GOVERNANCE_PHASE=ADM02_IMPLEMENT_CANONICAL_PHYSICIAN_ADMISSION_AUTHORITY
+ADM02_STATUS=DEFERRED_BY_DIRECTOR
+DEFER_REASON=Continue physician Admin UI visual refinement before resuming internal governance implementation.
+CURRENT_PRIORITY=PHYSICIAN_ADMIN_UI_VISUAL_REFINEMENT
+ADVISOR_DESIGNATION_EDIT_STATUS=DEFERRED_UNTIL_ADMISSION_AUTHORITY
+LEGACY_BACKFILL_DECISION=DEFERRED_TO_DIRECTOR
+```
+
+ADM01 found no persisted, auditable, efficiently queryable current-state authority for whole-physician admission. Profile existence, `profile_status`, publication/public eligibility, verified identity, verified credentials, membership/ownership, account activation, plan/subscription and media approval are separate authorities and do not establish admission.
+
+`source_type=admission_approved` is identity/credential provenance, not global admission authority. No production caller of `VerifiedPhysicianIdentityService::provisionFromTrustedAuthority` establishes admission; the identity calls using that source are tests. No existing capability semantically authorizes admission decisions or advisor professional-designation edits. The product execution guide describes human accreditation in C4, but that phase is documented as not started and not authorized; ADM02 must align with that contract rather than create a parallel decision authority.
+
+Deferred sequence: continue physician Admin visual refinement; later, with Director authorization, resume ADM02 to define and implement canonical admission authority; after its implementation and acceptance, continue Internal Advisor Admin construction; only then wire governed advisor editing of the same canonical field, `profiles_doctors.professional_designation`. No shadow designation fields or ownership bypass through the physician self-edit endpoint are permitted.
+
+Future advisor authorization requires an active auth account, active internal/staff state, an explicit capability and physician admission `APPROVED`. Missing, ambiguous or unavailable admission authority must fail closed. Governance class or role name alone is not an operational permission.
+
+Non-authorized design direction: one current-state record per `doctor_id`, with `status`, `decided_at`, `decided_by_internal_account_id`, `created_at` and `updated_at`; provenance/reference only if justified. Preferred initial states are `PENDING`, `APPROVED` and `REJECTED`, with existing canonical audit infrastructure for history. No table name is finalized and no schema implementation is authorized.
+
+Before ADM02 implementation, the Director must decide how existing physician records are classified. No blind legacy backfill is authorized: existence, visibility, payment, identity, credentials, ownership, account state or unrelated dates must not fabricate approval, decision timestamps or deciding actors. Resume only under separate Director authorization resolving that classification and the admission contract. This checkpoint changes documentation only; it activates no governance or product behavior.
+
 ## Current authority inventory
 
 - `InternalCapabilityCatalog` defines six Media Review operational capabilities and `internal_advisors_manage`. None authorizes physician profile/designation editing.
