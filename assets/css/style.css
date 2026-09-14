@@ -22312,3 +22312,18 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-color:#008a98;
   box-shadow:0 0 0 3px rgba(0,174,190,.16);
 }
+
+/* Open DG grouping: retain spacing/geometry, remove nested tinted surfaces. */
+#p-info #t-info-datos :is(#mx-public-identity-card,#mx-dg-contact-card,#dg-signature-card),
+#p-info #t-info-datos #mx-public-identity-card :is(.mxpi-name-editor,.mxpi-subsection,#mx-profile-theme-admin),
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload.square{
+  background:transparent;
+  border-color:transparent;
+  box-shadow:none;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action--delete{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action--delete .bi{
+  flex:0 0 auto;margin:0;font-size:14px;line-height:1;
+}
