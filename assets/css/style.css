@@ -21195,13 +21195,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 @media (min-width:992px){
   #p-info #t-info-datos #mx-profile-theme-admin:not([hidden]){
-    display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);column-gap:24px;
+    /* Seven 78px click targets plus six 8px gaps; remaining width goes to the preview. */
+    display:grid;grid-template-columns:594px minmax(0,1fr);column-gap:24px;
   }
   #p-info #t-info-datos #mx-profile-theme-admin .mx-theme-admin__head{
     grid-column:1;grid-row:1;min-width:0;
   }
   #p-info #t-info-datos #mx-profile-theme-swatches{
-    grid-column:1;grid-row:2;width:100%;min-width:0;
+    grid-column:1;grid-row:2;width:100%;min-width:0;grid-template-columns:repeat(7,78px);
   }
   #p-info #t-info-datos #mx-profile-theme-feedback{grid-column:1;grid-row:3;min-width:0}
   #p-info #t-info-datos #mx-profile-theme-preview{
