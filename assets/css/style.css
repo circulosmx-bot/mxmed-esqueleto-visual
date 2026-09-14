@@ -22379,3 +22379,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 #dg-signature-handoff-qr{width:272px;max-width:100%;padding:16px;margin:0 auto 14px;background:#fff}
 #dg-signature-handoff-qr canvas,#dg-signature-handoff-qr img{display:block;max-width:100%;height:auto}
 #dg-signature-handoff-status,#dg-signature-handoff-expiry{margin-bottom:8px}
+
+/* Signature heading gap halves the measured 18px; visible media actions use 10px. */
+#dg-signature-card .mx-signature-heading{display:flex;flex-direction:column;gap:9px}
+#dg-signature-card .mx-signature-heading > h3{margin-bottom:0}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-actions{row-gap:10px}
