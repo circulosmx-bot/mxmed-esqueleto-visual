@@ -22134,6 +22134,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card > .card-body{padding-top:10px}
 
 /* Photo/logo actions only: light outlines and decorative Bootstrap icons. */
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-actions{
+  flex-direction:column;align-items:flex-start;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-logo-empty-actions .mf-qr{display:none}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action{
   align-self:start;
   min-height:32px;max-width:100%;padding:5px 8px;border:1px solid;border-radius:7px;

@@ -26,6 +26,12 @@
   };
   const owned = node => {node.dataset.mediaReviewUi = ''; return node;};
   const areaFor = key => areas.find(area => area.keys.includes(key));
+  const updateLogoActionLabel = () => {
+    const label = hosts.logo?.querySelector('.mx-dg-logo-empty-actions .mx-dg-media-action span');
+    if (label) label.textContent = hosts.logo.classList.contains('has-logo') || hosts.logo.querySelector('.mx-media-review-candidate') ? 'Cambiar logotipo' : 'Agregar logotipo';
+  };
+  if (hosts.logo) new MutationObserver(updateLogoActionLabel).observe(hosts.logo, {childList: true, attributes: true, attributeFilter: ['class']});
+  updateLogoActionLabel();
   const mediaAction = (key, action, fallback, cls) => {
     if (key === 'gallery') return element('button', fallback, cls);
     const label = (action === 'change' ? 'Cambiar ' : 'Eliminar ') + (key === 'photo' ? 'foto' : 'logotipo');

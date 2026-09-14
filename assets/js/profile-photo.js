@@ -4,6 +4,11 @@
   const input=document.getElementById('mxpi-photo-input'), select=document.getElementById('mxpi-photo-select'), remove=document.getElementById('mxpi-photo-remove'), preview=document.getElementById('mxpi-photo-preview'), status=document.getElementById('mxpi-photo-status');
   const endpoint='/api/media/profile-photo.php';
   let token='',photo=null,busy=false;
+  const updateActionLabel=()=>{
+    const label=select.querySelector('span');
+    if(label)label.textContent=photo||box.querySelector('.mx-media-review-candidate')?'Cambiar foto':'Agregar foto';
+  };
+  new MutationObserver(updateActionLabel).observe(box,{childList:true});
   const genericAvatar=()=>{
     const value=String(document.body?.dataset?.profileGender||'').trim().toLowerCase();
     if(['f','female','feminine','mujer','femenino'].includes(value))return '/assets/img/doctors/avatars/dr-female.png';
@@ -15,6 +20,7 @@
     image.src=photo?.public_url||genericAvatar();
     image.alt=photo?'Fotografía de perfil':'Imagen genérica de perfil médico';
     image.dataset.avatarKind=photo?'public':'generic';
+    updateActionLabel();
   };
   async function request(method='GET',body=null){
     const response=await fetch(endpoint,{method,body,credentials:'same-origin',headers:method==='GET'?{}:{'X-Profile-Photo-CSRF':token}});
