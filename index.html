@@ -685,12 +685,12 @@
                 </div>
               </div>
               <div class="mx-profile-utility-actions" role="group" aria-label="Acciones del perfil">
-                <button class="mxpi-verified-data-trigger" id="mxpi-verified-data-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mxpi-verified-data-modal" hidden>Ver datos verificados</button>
+                <button class="mxpi-verified-data-trigger" id="mxpi-verified-data-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mxpi-verified-data-modal" hidden><i class="bi bi-shield-check" aria-hidden="true"></i><span data-dg-button-label>Ver datos verificados</span></button>
                 <button class="mx-visibility-help-trigger" id="mx-visibility-help-trigger" type="button" data-bs-toggle="modal" data-bs-target="#mx-visibility-help-modal">
                   <span class="material-symbols-outlined" aria-hidden="true">info</span>
                   <span>Visibilidad de los datos</span>
                 </button>
-                <a id="mx-public-profile-link" class="btn btn-outline-secondary btn-sm" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener">Ver perfil público</a>
+                <a id="mx-public-profile-link" class="btn btn-outline-secondary btn-sm" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span data-dg-button-label>Ver perfil público</span></a>
               </div>
             </header>
           </div>
@@ -706,9 +706,9 @@
                   <p id="mxpi-unsaved-navigation-error" class="text-danger small mt-2 mb-0" role="alert" hidden></p>
                 </div>
                 <div class="modal-footer">
-                  <button id="mxpi-unsaved-save" type="button" class="btn mxpi-unsaved-save">Guardar y continuar</button>
-                  <button id="mxpi-unsaved-discard" type="button" class="btn btn-outline-danger">Salir sin guardar</button>
-                  <button id="mxpi-unsaved-edit" type="button" class="btn btn-outline-secondary">Seguir editando</button>
+                  <button id="mxpi-unsaved-save" type="button" class="btn mxpi-unsaved-save"><i class="bi bi-floppy-fill" aria-hidden="true"></i><span data-dg-button-label>Guardar y continuar</span></button>
+                  <button id="mxpi-unsaved-discard" type="button" class="btn btn-outline-danger"><i class="bi bi-trash-fill" aria-hidden="true"></i><span data-dg-button-label>Salir sin guardar</span></button>
+                  <button id="mxpi-unsaved-edit" type="button" class="btn btn-outline-secondary"><i class="bi bi-pencil-square" aria-hidden="true"></i><span data-dg-button-label>Seguir editando</span></button>
                 </div>
               </div>
             </div>
@@ -725,7 +725,7 @@
                 </div>
                 <div class="modal-footer">
                   <button id="mxpi-prefix-cancel" type="button" class="btn btn-outline-secondary">Cancelar</button>
-                  <button id="mxpi-prefix-confirm" type="button" class="btn btn-primary">Sí, cambiar y guardar</button>
+                  <button id="mxpi-prefix-confirm" type="button" class="btn btn-primary"><i class="bi bi-floppy-fill" aria-hidden="true"></i><span data-dg-button-label>Sí, cambiar y guardar</span></button>
                 </div>
               </div>
             </div>
@@ -733,7 +733,7 @@
 
           <div class="mxpi-floating-save" id="mxpi-floating-save" hidden>
             <span class="mxpi-dirty-label" role="status" aria-live="polite">Tienes cambios sin guardar</span>
-            <button class="btn btn-primary" id="mxpi-save-btn" type="button">Guardar cambios</button>
+            <button class="btn btn-primary" id="mxpi-save-btn" type="button"><i class="bi bi-floppy-fill" aria-hidden="true"></i><span data-dg-button-label>Guardar cambios</span></button>
           </div>
 
           <div class="body">
@@ -974,16 +974,16 @@
                     </div>
                     <img id="dg-signature-preview" alt="Firma vigente de tu cuenta" hidden>
                     <div class="d-flex gap-2 flex-wrap">
-                      <button type="button" class="btn btn-outline-primary" id="dg-signature-change">Crear firma</button>
-                      <button type="button" class="btn btn-outline-primary" id="dg-signature-handoff-open">Firmar desde teléfono o tablet</button>
-                      <button type="button" class="btn btn-outline-danger" id="dg-signature-delete" hidden>Eliminar firma</button>
+                      <button type="button" class="btn btn-outline-primary" id="dg-signature-change"><i class="bi bi-pen-fill" aria-hidden="true"></i><span data-dg-button-label>Crear firma</span></button>
+                      <button type="button" class="btn btn-outline-primary" id="dg-signature-handoff-open"><i class="bi bi-phone" aria-hidden="true"></i><span data-dg-button-label>Firmar desde teléfono o tablet</span></button>
+                      <button type="button" class="btn btn-outline-danger" id="dg-signature-delete" hidden><i class="bi bi-trash-fill" aria-hidden="true"></i><span data-dg-button-label>Eliminar firma</span></button>
                     </div>
                     <div id="dg-signature-editor" hidden>
                       <canvas id="dg-signature-pad" width="1000" height="300" tabindex="0" aria-label="Área para dibujar la firma"></canvas>
                       <div class="d-flex gap-2 flex-wrap mt-2">
                         <button type="button" class="btn btn-outline-secondary" id="dg-signature-clear">Limpiar</button>
                         <button type="button" class="btn btn-outline-secondary" id="dg-signature-cancel">Cancelar</button>
-                        <button type="button" class="btn btn-primary" id="dg-signature-save">Guardar firma</button>
+                        <button type="button" class="btn btn-primary" id="dg-signature-save"><i class="bi bi-floppy-fill" aria-hidden="true"></i><span data-dg-button-label>Guardar firma</span></button>
                       </div>
                     </div>
                     <p id="dg-signature-feedback" class="small text-muted mb-0" role="status" aria-live="polite"></p>

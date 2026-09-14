@@ -5,8 +5,8 @@
     #mxpi-photo-target-modal, #mxpi-verified-data-modal, #mx-visibility-help-modal) .btn:not(.mx-theme-admin__reset):not([data-photo-target]),
 #p-info .mx-profile-utility-actions > :is(button,a) {
   --dg-button-fill: #fff;
-  --dg-button-ink: #07536e;
-  --dg-button-border: #64bbc5;
+  --dg-button-ink: #008391;
+  --dg-button-border: #01afb9;
   --dg-button-hover: #effafb;
   --dg-button-active: #dcf3f5;
   display: inline-flex;
@@ -47,8 +47,8 @@
 :is(#t-info-datos, #mxpi-unsaved-navigation-modal) .btn.btn.btn:is(.btn-outline-danger,.mx-dg-media-action--delete),
 #t-info-datos [data-media-action="delete"] {
   --dg-button-fill: #fff;
-  --dg-button-ink: #b23e46;
-  --dg-button-border: #c7767c;
+  --dg-button-ink: #d5213b;
+  --dg-button-border: #e6384f;
   --dg-button-hover: #fff2f3;
   --dg-button-active: #ffe4e7;
 }
@@ -80,4 +80,11 @@
       #mxpi-prefix-confirmation-modal, #dg-signature-handoff-modal,
       #mxpi-photo-target-modal, #mxpi-verified-data-modal, #mx-visibility-help-modal) .btn:not(.mx-theme-admin__reset):not([data-photo-target]),
   #p-info .mx-profile-utility-actions > :is(button,a) {height:42px !important;min-height:42px !important}
+}
+
+/* DG06B: match the guide's stronger semantic icon presence. */
+:is(#t-info-datos, #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
+    #mxpi-prefix-confirmation-modal) .btn:not(.mx-theme-admin__reset) .bi,
+#p-info .mx-profile-utility-actions .bi {
+  -webkit-text-stroke: .2px currentColor;
 }

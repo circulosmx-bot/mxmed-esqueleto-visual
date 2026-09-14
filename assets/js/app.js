@@ -1448,7 +1448,7 @@ console.info('app.js loaded :: 20251123a');
       if(floating) floating.hidden = !visible;
       document.getElementById('p-info')?.classList.toggle('mxpi-form-dirty', visible);
       [guardSave, guardDiscard, guardEdit].forEach(button=>{ if(button) button.disabled = busy; });
-      if(guardSave) guardSave.textContent = saving ? 'Guardando…' : 'Guardar y continuar';
+      if(guardSave) guardSave.querySelector('[data-dg-button-label]').textContent = saving ? 'Guardando…' : 'Guardar y continuar';
     },
     dialog: {
       open(control){
@@ -2389,7 +2389,7 @@ console.info('app.js loaded :: 20251123a');
     saveSurface.sync();
     if(els.saveBtn){
       els.saveBtn.disabled = state.loading || state.saving || prefixConfirming || !state.loaded;
-      els.saveBtn.textContent = state.saving ? 'Guardando…' : 'Guardar cambios';
+      els.saveBtn.querySelector('[data-dg-button-label]').textContent = state.saving ? 'Guardando…' : 'Guardar cambios';
     }
     if(els.saveLegacyBtn){
       els.saveLegacyBtn.disabled = true;

@@ -22,7 +22,7 @@
   const pad=card.querySelector('#dg-signature-pad'),preview=card.querySelector('#dg-signature-preview'),editor=card.querySelector('#dg-signature-editor'),status=card.querySelector('#dg-signature-feedback');
   const context=pad.getContext('2d');let drawing=false,ink=false,busy=false;
   function clear(){context.clearRect(0,0,pad.width,pad.height);ink=false;}
-  function render(){const current=authority.read();preview.hidden=!current;if(current)preview.src=current;else preview.removeAttribute('src');card.querySelector('#dg-signature-change').textContent=current?'Cambiar firma':'Crear firma';card.querySelector('#dg-signature-delete').hidden=!current;}
+  function render(){const current=authority.read();preview.hidden=!current;if(current)preview.src=current;else preview.removeAttribute('src');card.querySelector('#dg-signature-change [data-dg-button-label]').textContent=current?'Cambiar firma':'Crear firma';card.querySelector('#dg-signature-delete').hidden=!current;}
   function point(event){const r=pad.getBoundingClientRect();return [(event.clientX-r.left)*pad.width/r.width,(event.clientY-r.top)*pad.height/r.height];}
   pad.addEventListener('pointerdown',event=>{if(busy||event.button>0)return;event.preventDefault();pad.setPointerCapture(event.pointerId);drawing=true;const [x,y]=point(event);context.beginPath();context.moveTo(x,y);});
   pad.addEventListener('pointermove',event=>{if(!drawing)return;const samples=event.getCoalescedEvents?.();for(const sample of samples?.length?samples:[event]){const [x,y]=point(sample);context.lineTo(x,y);context.stroke();ink=true;}});
