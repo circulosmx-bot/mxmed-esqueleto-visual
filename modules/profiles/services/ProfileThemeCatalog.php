@@ -24,7 +24,7 @@ final class ProfileThemeCatalog
         'terracotta' => ['Terracota', '#C25A3C'],
         'soft_gold' => ['Dorado Metálico', '#E0BB58'],
         'warm_ivory' => ['Marfil', '#F2E8D5'],
-        'plum' => ['Ciruela', '#6A1B9A'],
+        'plum' => ['Púrpura', '#6A1B9A'],
         'clinical_sky' => ['Azul cielo', '#5DADE2'],
         'steel_blue' => ['Azul acero', '#5C7C9D'],
         'petroleum_blue' => ['Azul verde', '#2C7A7B'],
