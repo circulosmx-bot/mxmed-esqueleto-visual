@@ -22298,3 +22298,17 @@ body{margin:0;background:var(--mm-fondo-base);}
 #mxpi-photo-target-modal [data-photo-target] strong{margin-bottom:3px}
 #mxpi-photo-target-modal [data-photo-target] :is(span,small),
 #mxpi-photo-target-modal [data-photo-target-note]{font-size:.8rem;line-height:1.4}
+
+/* Editable DG controls: clearer boundaries without changing geometry or authority. */
+#p-info #t-info-datos :is(.form-control,.form-select):not([readonly]):not(:disabled):not([aria-readonly="true"]),
+#p-info #t-info-datos #mx-public-identity-card :is(.form-control,.form-select):not([readonly]):not(:disabled):not([aria-readonly="true"]),
+#p-info #t-info-datos #mx-public-identity-card .mxpi-second-surname__control:has(input:not(:disabled)){
+  border-color:#a9c2ce;
+  box-shadow:0 1px 2px rgba(7,59,90,.04);
+}
+#p-info #t-info-datos :is(.form-control,.form-select):not([readonly]):not(:disabled):not([aria-readonly="true"]):focus,
+#p-info #t-info-datos #mx-public-identity-card :is(.form-control,.form-select):not([readonly]):not(:disabled):not([aria-readonly="true"]):focus,
+#p-info #t-info-datos #mx-public-identity-card .mxpi-second-surname__control:has(input:not(:disabled)):focus-within{
+  border-color:#008a98;
+  box-shadow:0 0 0 3px rgba(0,174,190,.16);
+}
