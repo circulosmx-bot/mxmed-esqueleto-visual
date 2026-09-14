@@ -20932,8 +20932,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:var(--dg01-page);
   box-shadow:0 7px 22px rgba(7,59,90,.07);
 }
-#p-info .mx-panel-subheader-title{color:var(--dg01-ink)}
-#p-info .mx-panel-subheader-icon{color:var(--dg01-primary)}
+#p-info .mx-panel-subheader-title{color:#fff}
+#p-info .mx-panel-subheader-icon{color:#fff;font-size:2rem}
+#mmSidebar .menu-sub-btn[data-panel="p-info"] .l1{
+  font-size:calc(var(--ttl-main) * 1.1);line-height:1.2;
+  white-space:normal;overflow-wrap:normal;
+}
 #p-info #tabs-info.mx-panel-tabs{
   display:grid;
   grid-template-columns:repeat(5,minmax(0,1fr));
