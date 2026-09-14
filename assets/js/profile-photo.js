@@ -15,7 +15,6 @@
     image.src=photo?.public_url||genericAvatar();
     image.alt=photo?'Fotografía de perfil':'Imagen genérica de perfil médico';
     image.dataset.avatarKind=photo?'public':'generic';
-    select.textContent=photo?'Cambiar foto':'Seleccionar foto';
   };
   async function request(method='GET',body=null){
     const response=await fetch(endpoint,{method,body,credentials:'same-origin',headers:method==='GET'?{}:{'X-Profile-Photo-CSRF':token}});

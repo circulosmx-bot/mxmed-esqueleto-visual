@@ -26,6 +26,15 @@
   };
   const owned = node => {node.dataset.mediaReviewUi = ''; return node;};
   const areaFor = key => areas.find(area => area.keys.includes(key));
+  const mediaAction = (key, action, fallback, cls) => {
+    if (key === 'gallery') return element('button', fallback, cls);
+    const label = (action === 'change' ? 'Cambiar ' : 'Eliminar ') + (key === 'photo' ? 'foto' : 'logotipo');
+    const button = element('button', '', cls + ' mx-dg-media-action mx-dg-media-action--' + action);
+    const icon = element('i', '', 'bi bi-' + (action === 'change' ? 'upload' : 'trash'));
+    icon.setAttribute('aria-hidden', 'true');
+    button.append(icon, element('span', label));
+    return button;
+  };
 
   function clearContent() {
     document.querySelectorAll('[data-media-review-ui]:not(.mx-media-review-announcement)').forEach(node => node.remove());
@@ -140,7 +149,7 @@
       details.append(element('p', 'Motivo: ' + (item.reason || 'Se requiere otra imagen.')));
       if (item.feedback) details.append(element('p', item.feedback));
       row.append(details);
-      const replace = element('button', 'Reemplazar imagen', 'btn btn-sm btn-outline-primary');
+      const replace = mediaAction(key, 'change', 'Reemplazar imagen', 'btn btn-sm btn-outline-primary');
       replace.type = 'button';
       replace.onclick = () => {
         const input = key === 'logo' ? document.querySelector('#mx-dg-media-card [data-profile-logo-upload] input[type=file]') : document.getElementById(purposes[key][3]);
@@ -148,7 +157,7 @@
       };
       row.append(replace);
     } else {
-      const withdraw = element('button', 'Retirar imagen', 'btn btn-sm btn-outline-secondary');
+      const withdraw = mediaAction(key, 'delete', 'Retirar imagen', 'btn btn-sm btn-outline-secondary');
       withdraw.type = 'button';
       withdraw.onclick = () => perform(async () => {
         await candidate(key, 'DELETE', key === 'gallery' ? JSON.stringify({submission_id: item.id}) : undefined);

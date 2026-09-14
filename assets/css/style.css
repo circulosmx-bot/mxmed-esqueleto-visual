@@ -22132,6 +22132,27 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control:has(#mxpi-photo-preview):has(.mx-media-review-observations) > .mf-sub{grid-column:2;grid-row:3}
 #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control #mxpi-photo-preview:not([hidden]){width:120px;height:120px;grid-row:1 / 4}
 #p-info #t-info-datos #mx-public-identity-card > .card-body{padding-top:10px}
+
+/* Photo/logo actions only: light outlines and decorative Bootstrap icons. */
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action{
+  align-self:start;
+  min-height:32px;max-width:100%;padding:5px 8px;border:1px solid;border-radius:7px;
+  background:#fff;font-size:.73rem;line-height:1.2;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action--change{
+  color:#007F8F;border-color:#20B7C7;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action--delete{
+  color:#D92D3A;border-color:#F4A8AD;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action--change:is(:hover,:active){background:#eaf9fb}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action--delete:is(:hover,:active){background:#fff0f1}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action .bi{font-size:14px;line-height:1;margin-right:6px;vertical-align:middle}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action > span{vertical-align:middle}
+@media (max-width:767px){
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mx-dg-media-action{min-height:42px}
+}
 #p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid > :is(.col-md-2,.mxpi-designation-field){margin-top:8px}
 
 /* DG05B: prefix precedes names; retain the empty host for actual review states/errors. */

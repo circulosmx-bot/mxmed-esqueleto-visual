@@ -900,8 +900,8 @@
                               <div class="mf-sub">JPG, PNG o WebP · hasta 10 MiB y 25 megapíxeles</div>
                               <div class="mf-prev" id="mxpi-photo-preview"><img src="/assets/img/doctors/avatars/dr-male.png" alt="Imagen genérica de perfil médico" data-avatar-kind="generic" /><span class="mx-media-review-badge mx-media-public-badge">Publicada</span></div>
                               <div class="mf-actions">
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="mxpi-photo-select">Seleccionar foto</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="mxpi-photo-remove" hidden>Eliminar foto</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm mx-dg-media-action mx-dg-media-action--change" id="mxpi-photo-select"><i class="bi bi-upload" aria-hidden="true"></i><span>Cambiar foto</span></button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm mx-dg-media-action mx-dg-media-action--delete" id="mxpi-photo-remove" hidden><i class="bi bi-trash" aria-hidden="true"></i><span>Eliminar foto</span></button>
                               </div>
                               <input type="file" id="mxpi-photo-input" accept="image/jpeg,image/png,image/webp" class="d-none" />
                               <div id="mxpi-photo-status" role="status" aria-live="polite"></div>
@@ -925,7 +925,7 @@
 
                               <div class="mf-actions mx-dg-logo-empty-actions">
 
-                                <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm mf-choose mx-dg-media-action mx-dg-media-action--change"><i class="bi bi-upload" aria-hidden="true"></i><span>Cambiar logotipo</span></button>
 
                                 <button type="button" class="btn btn-outline-secondary btn-sm mf-qr" disabled>Tomar con cámara</button>
 
@@ -938,8 +938,8 @@
                                 <span class="mx-media-review-badge mx-media-public-badge">Publicado</span>
                               </div>
                               <div class="mf-actions mx-dg-logo-loaded-actions">
-                                <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Cambiar logotipo</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="mx-dg-logo-del">Eliminar logotipo</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm mf-choose mx-dg-media-action mx-dg-media-action--change"><i class="bi bi-upload" aria-hidden="true"></i><span>Cambiar logotipo</span></button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm mx-dg-media-action mx-dg-media-action--delete" id="mx-dg-logo-del"><i class="bi bi-trash" aria-hidden="true"></i><span>Eliminar logotipo</span></button>
                               </div>
 
                             </div>
