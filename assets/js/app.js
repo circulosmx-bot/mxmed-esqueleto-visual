@@ -1800,6 +1800,7 @@ console.info('app.js loaded :: 20251123a');
       });
       els.themeSwatches.appendChild(button);
     });
+    if(els.themeReset) els.themeSwatches.appendChild(els.themeReset);
     els.themeAdmin.hidden = false;
     selectTheme(state.themeStoredKey || data.default_key || 'mxmed_teal', { reset: state.themeStoredKey === null });
     if(els.themeFeedback){

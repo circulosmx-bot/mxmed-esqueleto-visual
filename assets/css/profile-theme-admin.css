@@ -129,3 +129,48 @@
   color: #fff;
   box-shadow: inset 0 2px 3px rgba(0, 49, 82, 0.15);
 }
+
+/* The existing reset action fills slot 21 without becoming a catalog color. */
+#p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset {
+  position: relative;
+  width: 78px;
+  min-width: 78px;
+  height: 44px;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: none;
+}
+#p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset::before {
+  content: "";
+  position: absolute;
+  width: 72px;
+  height: 34px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  border: 1px solid #b3b3b3;
+  border-radius: 5px;
+  background: #474747;
+}
+#p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset > span {
+  position: relative;
+  border: 0;
+  text-decoration: none;
+  box-shadow: none;
+}
+#p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset:is(:hover,:active) {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  box-shadow: none;
+}
+#p-info #t-info-datos #mx-profile-theme-reset.mx-theme-admin__reset:is(:hover,:active)::before {background:#383838}
