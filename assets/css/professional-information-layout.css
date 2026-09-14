@@ -1,0 +1,45 @@
+/* Professional information: compact, scoped layout; field contracts unchanged. */
+#p-info #t-info-profesional .mx-professional-section {
+  margin-bottom:14px;
+  padding:16px;
+  border:1px solid #d3e3e9;
+  border-radius:12px;
+  background:#fff;
+}
+#p-info #t-info-profesional .mx-professional-heading {margin-bottom:12px}
+#p-info #t-info-profesional .mx-professional-section > .row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:12px 20px;
+  margin:0;
+}
+#p-info #t-info-profesional .mx-professional-section > .row > .col-12 {
+  width:auto;min-width:0;margin:0;padding:0;
+}
+#p-info #t-info-profesional .form-label {margin-bottom:6px}
+#p-info #t-info-profesional .chips-row {display:flex;flex-wrap:nowrap;gap:8px}
+#p-info #t-info-profesional :is(.chip-input-wrap,.srv-input-wrap) {flex:1;min-width:0;width:100%}
+#p-info #t-info-profesional :is(.chip-input,.srv-input) {width:100%;min-width:0}
+#p-info #t-info-profesional .chip-add {flex-shrink:0}
+#p-info #t-info-profesional .chip-list {gap:6px 8px;margin-top:6px!important}
+#p-info #t-info-profesional .chip-list:empty {margin-top:0!important}
+#p-info #t-info-profesional .chip {max-width:100%;overflow-wrap:anywhere;padding:4px 20px 4px 10px}
+#p-info #t-info-profesional .chip .chip-x {top:2px;right:0}
+#p-info #t-info-profesional .sp-note {font-size:.9rem;font-weight:400;line-height:1.4;margin:0}
+#p-info #t-info-profesional #mx-formacion-credentials-card {margin:0}
+#p-info #t-info-profesional #mx-formacion-credentials-card .card-body {padding:0}
+#p-info #t-info-profesional #mx-credential-list {display:grid;grid-template-columns:minmax(0,1fr);gap:8px 20px}
+#p-info #t-info-profesional #mx-credential-list .mx-credential-row {padding:8px 0;border-top:0}
+#p-info #t-info-profesional #mx-credential-list .mx-credential-row h3 {flex-basis:auto}
+#p-info #t-info-profesional textarea {min-height:96px;resize:vertical}
+@media(min-width:992px) {
+  #p-info #t-info-profesional :is(#t-info-formacion,#t-info-servicios) > .row {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #p-info #t-info-profesional #t-info-formacion > .row > :is(:first-child,:last-child),
+  #p-info #t-info-profesional #t-info-servicios > .row > :first-child {grid-column:1 / -1}
+  #p-info #t-info-profesional #mx-credential-list {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #p-info #t-info-profesional textarea {height:76px;min-height:76px}
+}
+@media(max-width:767px) {
+  #p-info #t-info-profesional .mx-professional-section {padding:12px}
+  #p-info #t-info-profesional .chip-add {padding-inline:8px}
+}
