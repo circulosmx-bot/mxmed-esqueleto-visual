@@ -1176,6 +1176,7 @@ console.info('app.js loaded :: 20251123a');
     contactCreateType: document.getElementById('mx-dg-contact-create-type'),
     contactCreateValue: document.getElementById('mx-dg-contact-create-value'),
     contactCreateBtn: document.getElementById('mx-dg-contact-create-btn'),
+    adminEmail: document.getElementById('mx-admin-email'),
     adminPhone: document.getElementById('mx-admin-phone'),
     adminWhatsapp: document.getElementById('mx-admin-whatsapp'),
     adminContactFeedback: document.getElementById('mx-admin-contact-feedback'),
@@ -1815,8 +1816,9 @@ console.info('app.js loaded :: 20251123a');
   }
 
   const ADMIN_CONTACT_CONFIG = Object.freeze({
-    phone: Object.freeze({ element: els.adminPhone, label: 'Teléfono administrativo', sortOrder: 20 }),
-    whatsapp: Object.freeze({ element: els.adminWhatsapp, label: 'WhatsApp administrativo', sortOrder: 30 })
+    email: Object.freeze({ element: els.adminEmail, label: 'Correo electrónico', sortOrder: 10 }),
+    phone: Object.freeze({ element: els.adminPhone, label: 'Teléfono', sortOrder: 20 }),
+    whatsapp: Object.freeze({ element: els.adminWhatsapp, label: 'WhatsApp', sortOrder: 30 })
   });
 
   function setAdminContactFeedback(message, tone = 'muted'){
@@ -1874,7 +1876,7 @@ console.info('app.js loaded :: 20251123a');
   }
 
   async function loadAdministrativeContacts(){
-    if(!els.adminPhone && !els.adminWhatsapp) return;
+    if(!els.adminEmail && !els.adminPhone && !els.adminWhatsapp) return;
     const doctorId = sanitizeDoctorId(state.doctorId) || resolveDoctorId();
     if(!doctorId) return;
     setAdminContactFeedback('Cargando contactos administrativos...');
@@ -1894,9 +1896,9 @@ console.info('app.js loaded :: 20251123a');
     const value = String(input.value || '').trim();
     const previousValue = String(input.dataset.persistedValue || '');
     if(value === previousValue) return;
-    if(!adminContactValueIsValid(value)){
+    if(type === 'email' ? (!value || !input.validity.valid) : !adminContactValueIsValid(value)){
       input.classList.add('is-invalid');
-      setAdminContactFeedback(`Captura ${config.label.toLowerCase()} con 10 a 15 dígitos.`, 'warning');
+      setAdminContactFeedback(type === 'email' ? 'Captura un correo electrónico válido.' : `Captura ${config.label.toLowerCase()} con 10 a 15 dígitos.`, 'warning');
       return;
     }
 

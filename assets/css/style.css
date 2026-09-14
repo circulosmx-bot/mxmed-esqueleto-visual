@@ -22365,3 +22365,5 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload[data-type="logo"]:not(:has(> .mx-media-review-candidate)) > :is(.mf-prev,.mf-illus){grid-row:2}
   #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload[data-type="logo"]:not(:has(> .mx-media-review-candidate)) > .mf-actions{grid-column:1 / -1;grid-row:3}
 }
+
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-helper{margin:-5px 0 10px}
