@@ -21206,8 +21206,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   #p-info #t-info-datos #mx-profile-theme-feedback{grid-column:1;grid-row:3;min-width:0}
   #p-info #t-info-datos #mx-profile-theme-preview{
-    grid-column:2;grid-row:1 / span 3;align-self:center;min-width:0;margin:0;
+    grid-column:2;grid-row:2 / span 2;align-self:stretch;min-width:0;margin:12px 0 0;
+    display:flex;flex-direction:column;
   }
+  #p-info #t-info-datos #mx-profile-theme-preview .mx-theme-admin__preview-content{flex:1}
 }
 
 #p-info #t-info-datos #dg-signature-card .card-body{
