@@ -22337,3 +22337,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media (max-width:767px){
   #p-info #t-info-datos{--dg-content-inset:26px}
 }
+
+/* Professional information reuses the existing section IDs and controls. */
+#p-info #tabs-info.mx-panel-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+#p-info #t-info-profesional .mx-professional-section{min-width:0;margin-bottom:28px;scroll-margin-top:16px}
+#p-info #t-info-profesional .mx-professional-heading{
+  display:flex;align-items:center;gap:8px;margin:0 0 16px;
+  font-size:1.25rem;font-weight:700;color:#073b5a;
+}
+#p-info #t-info-profesional #mx-formacion-credentials-card{border-color:transparent;background:transparent;box-shadow:none}
+@media (max-width:767px){
+  #p-info #tabs-info .mx-panel-tabs-label{white-space:normal}
+}

@@ -235,12 +235,22 @@ const INFO_TAB_ALIASES = {
   '#t-fotos': '#t-info-fotos'
 };
 function normalizeInfoTab(selector){
-  return INFO_TAB_ALIASES[selector] || selector;
+  const target = INFO_TAB_ALIASES[selector] || selector;
+  return ['#t-info-formacion','#t-info-servicios','#t-info-enfermedades'].includes(target) ? '#t-info-profesional' : target;
 }
 function selectInfoTab(selector){
   const normalized = normalizeInfoTab(selector);
   const btn = document.querySelector('[data-bs-target="'+normalized+'"]');
-  if(btn){ new bootstrap.Tab(btn).show(); localStorage.setItem('mxmed_info_tab', normalized); }
+  if(btn){
+    const section = INFO_TAB_ALIASES[selector] || selector;
+    const focusSection = ()=> document.querySelector(section)?.scrollIntoView({block:'start', behavior:'instant'});
+    if(normalized === '#t-info-profesional' && section !== normalized){
+      if(btn.classList.contains('active')) focusSection();
+      else btn.addEventListener('shown.bs.tab', focusSection, {once:true});
+    }
+    new bootstrap.Tab(btn).show();
+    localStorage.setItem('mxmed_info_tab', normalized === '#t-info-profesional' ? section : normalized);
+  }
 }
 function selectPaqTab(selector){
   const btn = document.querySelector('[data-bs-target="'+selector+'"]');
@@ -429,10 +439,7 @@ $(function(){
 
   // Restaurar pestaña interna de Información – Mi Perfil
   let lastInfoTab = localStorage.getItem('mxmed_info_tab') || '#t-info-datos';
-  lastInfoTab = normalizeInfoTab(lastInfoTab);
-  localStorage.setItem('mxmed_info_tab', lastInfoTab);
-  const tabTrigger = document.querySelector(`[data-bs-target="${lastInfoTab}"]`);
-  if(tabTrigger){ new bootstrap.Tab(tabTrigger).show(); }
+  selectInfoTab(lastInfoTab);
 });
 
 // Bloqueo de tabs deshabilitados en Expediente (no avanzar si faltan datos base)

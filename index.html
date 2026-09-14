@@ -137,7 +137,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=panel-alignment" />
+<link rel="stylesheet" href="assets/css/style.css?v=professional-consolidation" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -753,39 +753,19 @@
 
               <li class="nav-item mx-panel-tabs-item">
 
-                <button class="nav-link mx-panel-tabs-link" id="t-info-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-info-formacion" type="button" role="tab" aria-controls="t-info-formacion" aria-selected="false">
+                <button class="nav-link mx-panel-tabs-link" id="t-info-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-info-profesional" type="button" role="tab" aria-controls="t-info-profesional" aria-selected="false">
 
                   <span class="tab-ico material-symbols-rounded" aria-hidden="true">edit_note</span>
 
-                  <span class="tab-lbl mx-panel-tabs-label">FORMACIÓN PROFESIONAL</span>
+                  <span class="tab-lbl mx-panel-tabs-label">INFORMACIÓN PROFESIONAL</span>
 
                 </button>
 
               </li>
 
-              <li class="nav-item mx-panel-tabs-item">
 
-                <button class="nav-link mx-panel-tabs-link" id="t-info-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-info-servicios" type="button" role="tab" aria-controls="t-info-servicios" aria-selected="false">
 
-                  <span class="tab-ico material-symbols-rounded" aria-hidden="true">groups</span>
 
-                  <span class="tab-lbl mx-panel-tabs-label">PRINCIPALES SERVICIOS</span>
-
-                </button>
-
-              </li>
-
-              <li class="nav-item mx-panel-tabs-item">
-
-                <button class="nav-link mx-panel-tabs-link" id="t-info-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-info-enfermedades" type="button" role="tab" aria-controls="t-info-enfermedades" aria-selected="false">
-
-                  <span class="tab-ico material-symbols-rounded" aria-hidden="true">medication</span>
-
-                  <span class="tab-lbl mx-panel-tabs-label">ENFERMEDADES<br>Y TRATAMIENTOS</span>
-
-                </button>
-
-              </li>
 
               <li class="nav-item mx-panel-tabs-item">
 
@@ -1065,149 +1045,13 @@
 
               <!-- SERVICIOS PRINCIPALES -->
 
-              <div class="tab-pane fade" id="t-info-servicios" role="tabpanel">
 
-                <div class="row g-3">
-
-                  <div class="col-12"><div class="sp-note text-muted">Describe de 2 a 4 servicios, cada uno con texto corto.</div></div>
-
-                  <div class="col-12">
-
-                    <label class="form-label" for="srv1">Servicio principal 1</label>
-
-                    <div class="srv-row">
-
-                      <div class="srv-input-wrap">
-
-                        <input id="srv1" class="form-control srv-input" maxlength="50" placeholder="p.ej. Diagnóstico">
-
-                        <small id="srv1-count" class="chip-count">50/50</small>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                  <div class="col-12">
-
-                    <label class="form-label" for="srv2">Servicio principal 2</label>
-
-                    <div class="srv-row">
-
-                      <div class="srv-input-wrap">
-
-                        <input id="srv2" class="form-control srv-input" maxlength="50" placeholder="p.ej. Tratamiento Quirúrgico">
-
-                        <small id="srv2-count" class="chip-count">50/50</small>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                  <div class="col-12">
-
-                    <label class="form-label" for="srv3">Servicio principal 3</label>
-
-                    <div class="srv-row">
-
-                      <div class="srv-input-wrap">
-
-                        <input id="srv3" class="form-control srv-input" maxlength="50" placeholder="p.ej. Rehabilitación Intestinal pediátrica">
-
-                        <small id="srv3-count" class="chip-count">50/50</small>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                  <div class="col-12">
-
-                    <label class="form-label" for="srv4">Servicio principal 4 (opcional)</label>
-
-                    <div class="srv-row">
-
-                      <div class="srv-input-wrap">
-
-                        <input id="srv4" class="form-control srv-input" maxlength="50" placeholder="">
-
-                        <small id="srv4-count" class="chip-count">50/50</small>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
 
 
 
               <!-- ENFERMEDADES Y TRATAMIENTOS -->
 
-              <div class="tab-pane fade" id="t-info-enfermedades" role="tabpanel">
 
-                <div class="row g-3">
-
-                  <!-- Enfermedades: nota + input + agregar + chips -->
-
-                  <div class="col-12"><div class="sp-note text-muted">¿Qué tipo de enfermedades atiendes? Agrégalas una por una.</div></div>
-
-                  <div class="col-12 tight-top">                    <label class="form-label" for="enf-input">Enfermedad</label>
-
-                    <div class="chips-row">
-
-                      <div class="chip-input-wrap">
-
-                        <input id="enf-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Cáncer de mama">
-
-                        <small id="enf-count" class="chip-count">40/40</small>
-
-                      </div>
-
-                      <button id="enf-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
-
-                    </div>
-
-                    <div id="enf-list" class="chip-list mt-2" aria-live="polite"></div>
-
-                  </div>
-
-
-
-                  <!-- Tratamientos/servicios: nota + input + agregar + chips -->
-
-                  <div class="col-12 chips-section-second"><div class="sp-note text-muted">Agrega uno a uno tratamientos procedimientos o terapias que realizas regularmente</div></div>
-
-                  <div class="col-12 tight-top">                    <label class="form-label" for="trt-input">Tratamiento / Procedimiento</label>
-
-                    <div class="chips-row">
-
-                      <div class="chip-input-wrap">
-
-                        <input id="trt-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Quimioterapia">
-
-                        <small id="trt-count" class="chip-count">40/40</small>
-
-                      </div>
-
-                      <button id="trt-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
-
-                    </div>
-
-                    <div id="trt-list" class="chip-list mt-2" aria-live="polite"></div>
-
-                  </div>
-
-                </div>
-
-              </div>
 
 
 
@@ -1251,9 +1095,10 @@
 
 
 
-              <!-- MI FORMACIÓN PROFESIONAL -->
+              <div class="tab-pane fade" id="t-info-profesional" role="tabpanel" aria-labelledby="t-info-formacion-tab">
+<div class="mx-professional-section" id="t-info-formacion" role="region" aria-labelledby="mx-professional-formacion-heading">
+<h2 class="mx-professional-heading" id="mx-professional-formacion-heading"><span class="material-symbols-rounded" aria-hidden="true">edit_note</span>Formación profesional</h2>
 
-                            <div class="tab-pane fade" id="t-info-formacion" role="tabpanel">
 
                 <div class="row g-3">
 
@@ -1377,6 +1222,152 @@
                 </div>
 
               </div>
+<div class="mx-professional-section" id="t-info-servicios" role="region" aria-labelledby="mx-professional-servicios-heading">
+<h2 class="mx-professional-heading" id="mx-professional-servicios-heading"><span class="material-symbols-rounded" aria-hidden="true">groups</span>Principales servicios</h2>
+
+
+                <div class="row g-3">
+
+                  <div class="col-12"><div class="sp-note text-muted">Describe de 2 a 4 servicios, cada uno con texto corto.</div></div>
+
+                  <div class="col-12">
+
+                    <label class="form-label" for="srv1">Servicio principal 1</label>
+
+                    <div class="srv-row">
+
+                      <div class="srv-input-wrap">
+
+                        <input id="srv1" class="form-control srv-input" maxlength="50" placeholder="p.ej. Diagnóstico">
+
+                        <small id="srv1-count" class="chip-count">50/50</small>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  <div class="col-12">
+
+                    <label class="form-label" for="srv2">Servicio principal 2</label>
+
+                    <div class="srv-row">
+
+                      <div class="srv-input-wrap">
+
+                        <input id="srv2" class="form-control srv-input" maxlength="50" placeholder="p.ej. Tratamiento Quirúrgico">
+
+                        <small id="srv2-count" class="chip-count">50/50</small>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  <div class="col-12">
+
+                    <label class="form-label" for="srv3">Servicio principal 3</label>
+
+                    <div class="srv-row">
+
+                      <div class="srv-input-wrap">
+
+                        <input id="srv3" class="form-control srv-input" maxlength="50" placeholder="p.ej. Rehabilitación Intestinal pediátrica">
+
+                        <small id="srv3-count" class="chip-count">50/50</small>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  <div class="col-12">
+
+                    <label class="form-label" for="srv4">Servicio principal 4 (opcional)</label>
+
+                    <div class="srv-row">
+
+                      <div class="srv-input-wrap">
+
+                        <input id="srv4" class="form-control srv-input" maxlength="50" placeholder="">
+
+                        <small id="srv4-count" class="chip-count">50/50</small>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+<div class="mx-professional-section" id="t-info-enfermedades" role="region" aria-labelledby="mx-professional-enfermedades-heading">
+<h2 class="mx-professional-heading" id="mx-professional-enfermedades-heading"><span class="material-symbols-rounded" aria-hidden="true">medication</span>Enfermedades y tratamientos</h2>
+
+
+                <div class="row g-3">
+
+                  <!-- Enfermedades: nota + input + agregar + chips -->
+
+                  <div class="col-12"><div class="sp-note text-muted">¿Qué tipo de enfermedades atiendes? Agrégalas una por una.</div></div>
+
+                  <div class="col-12 tight-top">                    <label class="form-label" for="enf-input">Enfermedad</label>
+
+                    <div class="chips-row">
+
+                      <div class="chip-input-wrap">
+
+                        <input id="enf-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Cáncer de mama">
+
+                        <small id="enf-count" class="chip-count">40/40</small>
+
+                      </div>
+
+                      <button id="enf-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+
+                    </div>
+
+                    <div id="enf-list" class="chip-list mt-2" aria-live="polite"></div>
+
+                  </div>
+
+
+
+                  <!-- Tratamientos/servicios: nota + input + agregar + chips -->
+
+                  <div class="col-12 chips-section-second"><div class="sp-note text-muted">Agrega uno a uno tratamientos procedimientos o terapias que realizas regularmente</div></div>
+
+                  <div class="col-12 tight-top">                    <label class="form-label" for="trt-input">Tratamiento / Procedimiento</label>
+
+                    <div class="chips-row">
+
+                      <div class="chip-input-wrap">
+
+                        <input id="trt-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Quimioterapia">
+
+                        <small id="trt-count" class="chip-count">40/40</small>
+
+                      </div>
+
+                      <button id="trt-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+
+                    </div>
+
+                    <div id="trt-list" class="chip-list mt-2" aria-live="polite"></div>
+
+                  </div>
+
+                </div>
+
+              </div>
+</div>
+<!-- MI FORMACIÓN PROFESIONAL -->
+
+
 
               </div>
 
@@ -1562,7 +1553,7 @@
                     <input class="form-control" placeholder="Ejemplo: Frente al parque central, segundo piso, arriba de farmacia."/>
                   </div>
 
-                  
+
 
                   <div class="col-12"><strong style="color:#005684;font-size:120%;">Teléfonos del consultorio</strong></div>
 
@@ -1631,7 +1622,7 @@
 
                   </div>
 
-                  
+
 
                   <!-- Archivos: Logotipo de grupo médico y Fotografía del consultorio (al final del panel) -->
 
@@ -2033,13 +2024,13 @@
 
 
 
-                                                                                
 
-        
 
-        
 
-                
+
+
+
+
 
         <!-- SEGURIDAD -->
 
@@ -2173,7 +2164,7 @@
                     Activa los m&eacute;todos de verificaci&oacute;n necesarios para proteger tu cuenta
                   </h6>
 
-                  
+
 
                   <div class="list-group">
 
@@ -10329,7 +10320,7 @@
 
 
 
-<script src="assets/js/core/navigation.js?v=crd035"></script>
+<script src="assets/js/core/navigation.js?v=professional-consolidation-crd035"></script>
 
 <script src="assets/js/core/dashboard.js"></script>
 
