@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/../_lib/db.php';
 require_once __DIR__.'/../../modules/media/private-bootstrap.php';
 require_once __DIR__.'/../../modules/media/services/GallerySessionScope.php';
+require_once __DIR__.'/../../modules/media/services/MediaSubmissionState.php';
 require_once __DIR__.'/../../modules/media/services/MediaReplacementReasons.php';
 header('Cache-Control: private, no-store');
 header('X-Content-Type-Options: nosniff');
@@ -26,7 +27,7 @@ try {
         if(!is_string($bytes)||strlen($bytes)>10485760||!hash_equals($row['checksum_sha256'],hash('sha256',$bytes)))throw new RuntimeException('invalid_preview');
         header('Content-Type: image/webp');header('Content-Length: '.strlen($bytes));echo $bytes;exit;
     }
-    $s=$pdo->prepare("SELECT s.submission_id,s.purpose,s.review_status,s.review_reason_code,s.review_feedback,b.status batch_status FROM media_review_submissions s LEFT JOIN media_review_batches b ON b.batch_id=s.batch_id WHERE s.owner_type='PHYSICIAN' AND s.owner_id=? AND s.review_status IN ('PENDING_REVIEW','NEEDS_WORK') ORDER BY s.created_at,s.submission_id");
+    $s=$pdo->prepare("SELECT s.submission_id,s.batch_id,s.submitted_for_review_at,s.purpose,s.review_status,s.review_reason_code,s.review_feedback,b.status batch_status FROM media_review_submissions s LEFT JOIN media_review_batches b ON b.batch_id=s.batch_id WHERE s.owner_type='PHYSICIAN' AND s.owner_id=? AND s.review_status IN ('PENDING_REVIEW','NEEDS_WORK') ORDER BY s.created_at,s.submission_id");
     $s->execute([$scope['doctor_id']]);$items=[];
     $current=[];
     foreach(['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO'] as $purpose){
@@ -36,7 +37,7 @@ try {
     foreach($s->fetchAll(PDO::FETCH_ASSOC) as $r){
         if(array_key_exists($r['purpose'],$current)&&$current[$r['purpose']]!==$r['submission_id'])continue;
         $needs=$r['review_status']==='NEEDS_WORK';
-        $items[]=['id'=>$r['submission_id'],'purpose'=>$r['purpose'],'state'=>$needs?'NEEDS_WORK':($r['batch_status']==='OPEN'?'OPEN':'SUBMITTED'),'reason'=>$needs?(Media\Services\MediaReplacementReasons::LABELS[$r['review_reason_code']]??'Se requiere otra imagen.'):null,'feedback'=>$needs?$r['review_feedback']:null,'preview_url'=>'/api/media/owner-review.php?preview='.rawurlencode($r['submission_id'])];
+        $items[]=['id'=>$r['submission_id'],'purpose'=>$r['purpose'],'state'=>$needs?'NEEDS_WORK':(Media\Services\MediaSubmissionState::submitted($r)?'SUBMITTED':'OPEN'),'reason'=>$needs?(Media\Services\MediaReplacementReasons::LABELS[$r['review_reason_code']]??'Se requiere otra imagen.'):null,'feedback'=>$needs?$r['review_feedback']:null,'preview_url'=>'/api/media/owner-review.php?preview='.rawurlencode($r['submission_id'])];
     }
     ownerReviewReply(200,['ok'=>true,'data'=>['items'=>$items]]);
 } catch(Throwable $e){ownerReviewReply(503,['ok'=>false,'error'=>'review_unavailable']);}

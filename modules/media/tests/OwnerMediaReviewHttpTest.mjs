@@ -33,7 +33,7 @@ try {
  const other=sql("session_id(bin2hex(random_bytes(16)));session_start();$_SESSION=['user_id'=>'mr12a_other','doctor_id'=>'mr12a_other'];echo session_id();session_write_close();");
  const publicState=()=>JSON.parse(sql(`echo json_encode($p->query("SELECT photo_url,logo_url FROM profiles_doctors WHERE doctor_id='${doctor}'")->fetch());`));
  // Establish three approved public assets through the accepted services, synthetic only.
- sql(`$d='${doctor}';foreach(['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'] as $purpose){$f=mr11Candidate($d,$purpose);(new Media\\Services\\MediaReviewBatchService($p))->submit($d);[$private,$public]=mr5Storage();$class=match($purpose){'DOCTOR_PROFILE_PHOTO'=>Media\\Services\\ProfilePhotoApprovalService::class,'PHYSICIAN_PERSONAL_LOGO'=>Media\\Services\\PhysicianLogoApprovalService::class,default=>Media\\Services\\GalleryApprovalService::class};(new $class($p,$private,$public))->approve(mr5Context(),$f['id']);}`);
+ sql(`$d='${doctor}';foreach(['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'] as $purpose){$f=mr11Candidate($d,$purpose);(new Media\\Services\\MediaReviewBatchService($p))->submit($d,null,mr11Actor($d));[$private,$public]=mr5Storage();$class=match($purpose){'DOCTOR_PROFILE_PHOTO'=>Media\\Services\\ProfilePhotoApprovalService::class,'PHYSICIAN_PERSONAL_LOGO'=>Media\\Services\\PhysicianLogoApprovalService::class,default=>Media\\Services\\GalleryApprovalService::class};(new $class($p,$private,$public))->approve(mr5Context(),$f['id']);}`);
  const qa=await installOwnerReviewQaLogin({root,fixtureRoot,doctor,identityDb:env.MR3_TEST_DB});
  server=spawn('php',['-d','auto_prepend_file='+qa.prepend,'-d','upload_max_filesize=10M','-d','post_max_size=12M','-S','127.0.0.1:8128','-t',root],{env:{...env,...identity.env,...qa.environment,MXMED_PUBLIC_MEDIA_ROOT:fixtureRoot+'/public',MXMED_PRIVATE_MEDIA_ROOT:fixtureRoot+'/private',PHP_CLI_SERVER_WORKERS:'4',MXMED_PROFILES_API_BASE:base,MXMED_API_BASE:base},detached:true,stdio:['ignore','ignore','pipe']});
  let errors='';server.stderr.on('data',b=>errors+=b);
@@ -145,7 +145,7 @@ try {
  const capSession=sql(`session_id(bin2hex(random_bytes(16)));session_start();$_SESSION=['user_id'=>'cap_owner','doctor_id'=>'${capDoctor}'];echo session_id();session_write_close();`);
  await data(await upload('gallery',capSession));assert.equal((await upload('gallery',capSession)).status,409);
  const capId=sql(`echo $p->query("SELECT submission_id FROM media_review_submissions WHERE owner_id='${capDoctor}'")->fetchColumn();`);
- sql(`(new Media\\Services\\MediaReviewBatchService($p))->submit('${capDoctor}');`);
+ sql(`(new Media\\Services\\MediaReviewBatchService($p))->submit('${capDoctor}',null,mr11Actor('${capDoctor}'));`);
  await data(await mutate('approve-gallery.php',capId));assert.equal((await upload('gallery',capSession)).status,409);
  console.log('GALLERY_CAPACITY_16_HTTP=PASS');
  const publicPage=await fetch(base+'/profiles/doctor.php?doctor_id='+doctor);assert.equal(publicPage.status,200);assert.ok((await publicPage.text()).includes(publicState().photo_url));

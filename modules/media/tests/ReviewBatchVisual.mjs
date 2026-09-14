@@ -19,7 +19,7 @@ export async function runBatchVisualQA({base,tokens,batch,legacy,sql}){
 
   for(const [width,height] of [[1440,900],[1366,768],[390,844],[320,740]])for(const scenario of ['single','eighteen','mixed','legacy','partial']){
    const f=batch(scenario==='single'?1:16,scenario!=='single');
-   const submit=f=>sql('(new Media\\Services\\MediaReviewBatchService($p))->submit("'+f.doctor+'");');submit(f);
+   const submit=f=>sql('(new Media\\Services\\MediaReviewBatchService($p))->submit("'+f.doctor+'",null,mr11Actor("'+f.doctor+'"));');submit(f);
    if(scenario==='mixed')submit(batch(2,true));if(scenario==='legacy')legacy();
    if(scenario==='partial')sql('$ids=$p->query("SELECT submission_id FROM media_review_submissions WHERE batch_id=\\x27'+f.batch_id+'\\x27 AND purpose=\\x27DOCTOR_GALLERY\\x27 ORDER BY created_at,submission_id")->fetchAll(PDO::FETCH_COLUMN);[$pr,$pu]=mr5Storage();for($i=0;$i<2;$i++)(new Media\\Services\\GalleryApprovalService($p,$pr,$pu))->approve(mr5Context(),$ids[$i]);(new Media\\Services\\MediaReplacementService($p,$pr))->request(mr9Context(),$ids[2],"OTHER");');
    await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<500});await send('Page.navigate',{url:base+'/internal/media-review/'});

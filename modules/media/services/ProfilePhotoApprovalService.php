@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Media\Services;
+require_once __DIR__.'/MediaSubmissionState.php';
 require_once __DIR__.'/ProfilePhotoApprovalAudit.php';
 require_once __DIR__.'/../repositories/MediaAssetsRepository.php';
 require_once __DIR__.'/../contracts/PrivateMediaStoragePort.php';
@@ -84,6 +85,7 @@ final class ProfilePhotoApprovalService
         if (!$candidate || (string)$candidate['owner_id']!==(string)$owner || $candidate['owner_type']!=='PHYSICIAN'
             || $candidate['purpose']!=='DOCTOR_PROFILE_PHOTO' || $candidate['technical_status']!=='READY'
             || $candidate['review_status']!=='PENDING_REVIEW') throw new RuntimeException('approval_conflict');
+        MediaSubmissionState::requireReviewable($this->pdo,$candidate,'approval_conflict');
         $s=$this->pdo->prepare('SELECT * FROM media_review_files WHERE submission_id=? ORDER BY role FOR UPDATE');$s->execute([$id]);$files=$s->fetchAll(PDO::FETCH_ASSOC);
         if (!in_array(count($files),[2,3],true)) throw new RuntimeException('approval_integrity_failed');
         $roles=[];$prefix='private/media-review/'.hash('sha256','PHYSICIAN:'.$owner).'/'.$id.'/';

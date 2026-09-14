@@ -77,7 +77,7 @@ foreach (['normal','cleanup'] as $mode) {
     $old=(new Media\Repositories\MediaAssetsRepository($p))->findByPublicUrl($f['old']['public_url']);check($old['status']==='READY' && $public->exists($old['storage_key']),'historical_logo_retained_'.$mode);
     $s=$p->prepare('SELECT * FROM media_review_files WHERE submission_id=? ORDER BY role');$s->execute([$f['id']]);check($s->fetchAll()===$history,'private_history_retained');
     foreach($history as $file)check($private->exists($file['storage_key']),'private_file_retained');
-    $s=$p->prepare('SELECT * FROM platform_audit_events WHERE resource_reference=?');$s->execute([$f['id']]);$audit=$s->fetchAll();check(count($audit)===1,'one_canonical_audit');$event=$audit[0];$metadata=json_decode($event['metadata_json'],true);
+    $s=$p->prepare('SELECT * FROM platform_audit_events WHERE resource_reference=? ORDER BY sequence_number');$s->execute([$f['id']]);$audit=$s->fetchAll();check(count($audit)===2 && $audit[0]['action']==='MEDIA_REVIEW_CANDIDATE_SUBMITTED','submission followed by one approval audit');$event=$audit[1];check($event['previous_hash']===$audit[0]['event_hash'],'approval chains from submission');$metadata=json_decode($event['metadata_json'],true);
     check($event['action']==='MEDIA_PHYSICIAN_LOGO_APPROVED' && $event['risk_level']==='R1' && $event['outcome']==='SUCCESS'
         && $event['real_actor_reference']==='account:mr5_synthetic_operator' && $event['effective_actor_reference']===$event['real_actor_reference']
         && $metadata['producer_metadata']==['physician_id'=>$f['doctor'],'published_media_id'=>$result['published_media_id'],'submission_id'=>$f['id']]

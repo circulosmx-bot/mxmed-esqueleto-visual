@@ -7,7 +7,7 @@ use Media\Services\{MediaReviewInterventionService as Download,BatchOriginals,Hi
 function a12(bool $ok,string $label):void{if(!$ok)throw new RuntimeException($label);echo "PASS $label\n";}
 function denied12(Closure $run,string $label):void{try{$run();}catch(RuntimeException){a12(true,$label);return;}throw new LogicException($label);}
 $p=mr5Pdo();[$private,$public]=mr5Storage();$service=new Download($p,$private);$context=mr6Context('download_source',['media_review_read',Download::DOWNLOAD]);
-$f=mr11Batch(2);$id=$f['batch_id'];(new MediaReviewBatchService($p))->submit($f['doctor']);$data=BatchOriginals::load($p,$id);
+$f=mr11Batch(2);$id=$f['batch_id'];(new MediaReviewBatchService($p))->submit($f['doctor'],null,mr11Actor($f['doctor']));$data=BatchOriginals::load($p,$id);
 $root=sys_get_temp_dir().'/mxmed-archive-'.bin2hex(random_bytes(8));mkdir($root,0700);$adapter=new Media\Storage\LocalDisposableHistoricalArchive($root);$archive=new Archive($p,$service,$adapter);
 try{
  denied12(fn()=>$archive->archive($id),'submitted_not_archive_eligible');

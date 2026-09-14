@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Media\Services;
+require_once __DIR__.'/MediaSubmissionState.php';
 use PDO;
 use RuntimeException;
 /** Canonical submitted membership and SOURCE metadata; never a client-selected key. */
@@ -9,9 +10,9 @@ final class BatchOriginals
     public static function load(PDO $pdo,string $id):array
     {
         if(!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',$id))throw new RuntimeException('intervention_invalid_request');
-        $s=$pdo->prepare("SELECT * FROM media_review_batches WHERE batch_id=? AND owner_type='PHYSICIAN' AND status='SUBMITTED'");$s->execute([$id]);$batch=$s->fetch(PDO::FETCH_ASSOC);
+        $s=$pdo->prepare("SELECT * FROM media_review_batches WHERE batch_id=? AND owner_type='PHYSICIAN'");$s->execute([$id]);$batch=$s->fetch(PDO::FETCH_ASSOC);
         if(!$batch)throw new RuntimeException('intervention_not_found');
-        $s=$pdo->prepare('SELECT * FROM media_review_submissions WHERE batch_id=? ORDER BY purpose,created_at,submission_id');$s->execute([$id]);$items=$s->fetchAll(PDO::FETCH_ASSOC);
+        $s=$pdo->prepare('SELECT s.* FROM media_review_submissions s WHERE batch_id=? AND '.MediaSubmissionState::sql().' ORDER BY purpose,created_at,submission_id');$s->execute([$id]);$items=$s->fetchAll(PDO::FETCH_ASSOC);
         if(!$items||count($items)>100)throw new RuntimeException('intervention_conflict');
         foreach($items as &$item){
             if($item['owner_type']!=='PHYSICIAN'||$item['owner_id']!==$batch['owner_id']||$item['technical_status']!=='READY'||!in_array($item['purpose'],['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'],true)||!in_array($item['review_status'],['PENDING_REVIEW','APPROVED','NEEDS_WORK','WITHDRAWN'],true))throw new RuntimeException('intervention_conflict');

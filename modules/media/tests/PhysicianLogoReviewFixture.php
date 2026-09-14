@@ -5,13 +5,14 @@ require_once __DIR__.'/MediaReviewInterventionFixture.php';
 require_once __DIR__.'/../services/PhysicianLogoReviewCandidateService.php';
 require_once __DIR__.'/../services/PhysicianLogoApprovalService.php';
 require_once __DIR__.'/../services/PublicLogoMediaService.php';
-function mr7Candidate(PDO $p,string $label='Logotipo sintético MR7',int $width=900,int $height=300):array {
+function mr7Candidate(PDO $p,string $label='Logotipo sintético MR7',int $width=900,int $height=300,bool $submitted=true):array {
     [$private,$public]=mr5Storage();$doctor='mr7_'.bin2hex(random_bytes(6));
     $p->prepare('INSERT INTO profiles_doctors(doctor_id,display_name) VALUES(?,?)')->execute([$doctor,$label]);
     $old=(new Media\Services\PublicLogoMediaService($p,$public,new Media\Services\GdPublicLogoProcessor(),new Media\Repositories\MediaAssetsRepository($p),new Media\Repositories\LogoReferenceRepository($p)))->replacePhysicianLogo($doctor,mr6File('png',240,160));
     $upload=mr6File('png',$width,$height);$sourceHash=hash_file('sha256',$upload['tmp_name']);
     $service=new Media\Services\PhysicianLogoReviewCandidateService($p,$private);
     try{$service->upload($doctor,$upload);}finally{unlink($upload['tmp_name']);}
+    if($submitted)mr11Submit($p,$doctor);
     return ['doctor'=>$doctor,'id'=>$service->current($doctor)['submission_id'],'old'=>$old,'source_hash'=>$sourceHash];
 }
 if(realpath($_SERVER['SCRIPT_FILENAME']??'')===__FILE__){

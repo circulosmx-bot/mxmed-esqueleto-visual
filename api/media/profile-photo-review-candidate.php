@@ -28,14 +28,15 @@ session_write_close();
 try {
     $service = new \Media\Services\ProfilePhotoReviewCandidateService(mxmed_pdo(), mxmed_private_media_storage());
     $doctor = $scope['doctor_id'];
+    $createdId = null;
     if ($method === 'POST') {
         $upload = $_FILES['image'] ?? [];
         if (!is_uploaded_file((string)($upload['tmp_name'] ?? ''))) throw new RuntimeException('candidate_upload_invalid');
-        $service->upload($doctor, $upload);
+        $createdId = $service->upload($doctor, $upload);
     } elseif ($method === 'DELETE') {
         $service->withdraw($doctor);
     }
-    candidateReply(200, ['ok'=>true,'data'=>['candidate'=>$service->current($doctor),'csrf_token'=>$token]]);
+    candidateReply(200, ['ok'=>true,'data'=>['created_submission_id'=>$createdId,'candidate'=>$service->current($doctor),'csrf_token'=>$token]]);
 } catch (Throwable $e) {
     $error = $e->getMessage();
     $inputErrors = ['candidate_upload_invalid','candidate_invalid_extension'];

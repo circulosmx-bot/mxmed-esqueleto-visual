@@ -12,7 +12,12 @@ final class MediaReviewAudit implements AuditTrailPort
     private CanonicalAuditWriter $writer;
     public function __construct(\PDO $pdo, private TrustedAuthorizationContext $context, private \Closure $prepare, private string $eventType, private string $capability, private string $route)
     {
-        $this->writer = new CanonicalAuditWriter(CanonicalAuditPolicyRegistry::canonical(), new CanonicalAuditMetadataSanitizer(),
+        $this->writer = self::writer($pdo);
+    }
+    /** Shared canonical writer; joins the caller's transaction, never commits it. */
+    public static function writer(\PDO $pdo): CanonicalAuditWriter
+    {
+        return new CanonicalAuditWriter(CanonicalAuditPolicyRegistry::canonical(), new CanonicalAuditMetadataSanitizer(),
             new TrustedAuditContextValidator(), new RandomAuditUuidProvider(), new SystemAuditUtcClock(),
             new HmacSha256AuditIpHasher(new EnvironmentAuditSecretProvider()), new CoarseAuditUserAgentSummarizer(),
             new JoinedPdoCanonicalAuditTransactionAdapter($pdo), new CanonicalAuditSealer(new CanonicalAuditSerializer()), new AuditV1PhysicalMapper());

@@ -20,6 +20,8 @@ final class HistoricalOriginalArchive
     }
     public static function resolved(array $data):?\DateTimeImmutable
     {
+        // Item-visible OPEN batches are still accepting members; never archive/purge them.
+        if($data['batch']['status']!=='SUBMITTED')return null;
         $latest=null;
         foreach($data['items'] as $item){
             // WITHDRAWN is not a review decision; fail closed for it and unknown states.

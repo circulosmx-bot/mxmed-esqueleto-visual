@@ -11,6 +11,6 @@ $p=new Mr11RacePdo($gate);
 try{
  if($mode==='withdraw'){(new Media\Services\GalleryReviewCandidateService($p,mr5Storage()[0]))->withdraw($doctor,$argv[5]);$result=['withdrawn'=>true];}
  elseif($mode==='upload')$result=mr11Candidate($doctor,'DOCTOR_GALLERY',$p);
- else $result=['submitted'=>(new Media\Services\MediaReviewBatchService($p))->submit($doctor,$mode==='auto'?$batch:null)];
+ else $result=['submitted'=>(new Media\Services\MediaReviewBatchService($p))->submit($doctor,$mode==='auto'?$batch:null,$mode==='auto'?Media\Services\MediaSubmissionActor::executor($doctor):mr11Actor($doctor))];
  echo json_encode($result);
 }catch(Throwable $e){echo json_encode(['error'=>$e->getMessage()]);exit(2);}

@@ -17,6 +17,7 @@
     {root: document.querySelector('#mx-dg-media-card .mx-dg-card-head'), keys: ['photo', 'logo']},
     {root: document.getElementById('fotos-drop'), keys: ['gallery']}
   ].filter(area => area.root);
+  let photoSubmissionInFlight = false;
   let busy = false, refreshSequence = 0, announcement, lastAnnouncement = '';
   const element = (tag, text = '', cls = '') => {
     const node = document.createElement(tag);
@@ -90,8 +91,29 @@
   async function upload(key, file) {
     const form = new FormData();
     form.append('image', file);
-    await candidate(key, 'POST', form);
-    await refresh();
+    if (key !== 'photo') {
+      await candidate(key, 'POST', form);
+      await refresh();
+      return;
+    }
+    photoSubmissionInFlight = true;
+    ++refreshSequence; // Ignore owner responses started before this upload.
+    let created = false;
+    try {
+      const uploaded = await candidate(key, 'POST', form);
+      created = true;
+      const id = uploaded?.created_submission_id;
+      if (!id) throw Error('missing_created_candidate');
+      const batch = await json('review-batch-submit.php');
+      await json('review-candidate-submit.php', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({csrf: batch.csrf, submission_id: id})});
+    } catch (error) {
+      if (created) error.message = 'La foto se guardó, pero no pudimos confirmar su envío. Revisa su estado; si sigue pendiente, puedes enviarla a revisión.';
+      throw error;
+    } finally {
+      photoSubmissionInFlight = false;
+      await refresh();
+    }
   }
 
   function feedback(area, error, actionFailure = false) {
@@ -177,7 +199,7 @@
   }
 
   async function refresh() {
-    if (!areas.length) return;
+    if (!areas.length || photoSubmissionInFlight) return;
     const sequence = ++refreshSequence;
     try {
       const [owner, batch] = await Promise.all([json('owner-review.php'), json('review-batch-submit.php')]);

@@ -32,7 +32,8 @@ export async function ownerBrowser({base,image,correctedImage,canonicalState}) {
    assert.equal(requests.filter(r=>r.method==='POST'&&r.url.includes('review-candidate.php')).length,before+1,selector);
    await until('!document.querySelector("[data-profile-logo-upload][aria-busy=true]") && !document.getElementById("mxpi-photo-control").hasAttribute("aria-busy") && !document.getElementById("fotos-drop").hasAttribute("aria-busy")');
   }
-  await until('[...document.querySelectorAll(".mx-media-review-badge")].filter(e=>e.textContent==="Pendiente de enviar").length===3');
+  await until('[...document.querySelectorAll(".mx-media-review-badge")].filter(e=>e.textContent==="Pendiente de enviar").length===2');
+  assert.equal(await evaluate('[...document.querySelectorAll(".mx-media-review-badge")].filter(e=>e.textContent==="En revisión").length'),1,'photo auto-submitted alone');
   assert.ok(!requests.some(r=>r.method==='POST'&&(/\/api\/media\/(profile-photo|gallery)\.php/.test(r.url)||/\/logo(?:\?|$)/.test(r.url))),'no immediate-public upload');
   assert.ok(!requests.some(r=>/SOURCE|storage_key|\/source\//.test(r.url)),'no source request');
   for(const width of [1366,390]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<500});await evaluate('document.getElementById("mx-dg-media-card").scrollIntoView({behavior:"instant",block:"start"})');await new Promise(r=>setTimeout(r,600));const shot=await send('Page.captureScreenshot',{format:'png'});await writeFile('/tmp/mxmed-mr12a-owner-'+width+'.png',Buffer.from(shot.data,'base64'));}

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Media\Services;
+require_once __DIR__.'/MediaSubmissionState.php';
 require_once __DIR__.'/MediaReviewAudit.php';
 require_once __DIR__.'/MediaReplacementReasons.php';
 require_once __DIR__.'/../contracts/PrivateMediaStoragePort.php';
@@ -34,6 +35,7 @@ final class MediaReplacementService
                 $s=$this->pdo->prepare('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE');$s->execute([$owner]);if($s->fetchColumn()===false)throw new RuntimeException('replacement_conflict');
                 $s=$this->pdo->prepare('SELECT * FROM media_review_submissions WHERE submission_id=? FOR UPDATE');$s->execute([$id]);$candidate=$s->fetch(PDO::FETCH_ASSOC);
                 if(!$candidate||$candidate['owner_id']!==$owner||$candidate['owner_type']!=='PHYSICIAN'||!in_array($candidate['purpose'],['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'],true)||$candidate['technical_status']!=='READY'||$candidate['review_status']!=='PENDING_REVIEW')throw new RuntimeException('replacement_conflict');
+                MediaSubmissionState::requireReviewable($this->pdo,$candidate,'replacement_conflict');
                 [$code,$text]=MediaReplacementReasons::validate($reason,$feedback);
                 $s=$this->pdo->prepare("SELECT * FROM media_review_files WHERE submission_id=? AND role='AUTO_PROPOSAL' FOR UPDATE");$s->execute([$id]);
                 foreach($s->fetchAll(PDO::FETCH_ASSOC) as $file){

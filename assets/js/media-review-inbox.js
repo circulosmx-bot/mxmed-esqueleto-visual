@@ -231,7 +231,7 @@
    if(epoch!==batchLoadEpoch)return;for(const batch of result.data.items){
     const card=node('article','card batch-card'),body=node('div','card-body'),button=node('button','', 'Abrir lote');button.type='button';button.dataset.batchId=batch.batch_id;
     button.addEventListener('click',async()=>{if(busy)return;activeBatch=batch.batch_id;offset=0;interventionControls();byId('batch-download-message').textContent='';byId('batch-queue').hidden=true;byId('close-batch').hidden=false;byId('batch-summary').hidden=false;await load();byId('pending-title').focus();});
-    body.append(node('h3','',batch.owner_display_name),node('p','',batchSummary(batch)),node('p','received','Enviado: '+dateLabel(batch.submitted_at)),button);card.append(body);container.append(card);
+    body.append(node('h3','',batch.owner_display_name),node('p','',batchSummary(batch)),node('p','received','Enviado: '+dateLabel(batch.first_submitted_at || batch.submitted_at)),button);card.append(body);container.append(card);
    }
    byId('batch-message').textContent=result.data.items.length?'':'No hay lotes pendientes de revisión.';batchNext=result.data.pagination.next_offset;
    byId('batch-pagination').hidden=batchOffset===0&&!result.data.pagination.has_more;byId('previous-batches').disabled=batchOffset===0;byId('next-batches').disabled=!result.data.pagination.has_more;byId('batch-page').textContent='Página '+(Math.floor(batchOffset/25)+1);

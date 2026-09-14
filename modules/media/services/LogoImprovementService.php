@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Media\Services;
+require_once __DIR__.'/MediaSubmissionState.php';
 require_once __DIR__.'/MediaReviewAudit.php';
 require_once __DIR__.'/ConservativeLogoBackground.php';
 require_once __DIR__.'/GdPublicLogoProcessor.php';
@@ -91,6 +92,7 @@ final class LogoImprovementService
         if($lock){$s=$this->pdo->prepare('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE');$s->execute([$owner]);if($s->fetchColumn()===false)throw new RuntimeException('improvement_conflict');}
         $s=$this->pdo->prepare('SELECT * FROM media_review_submissions WHERE submission_id=?'.($lock?' FOR UPDATE':''));$s->execute([$id]);$candidate=$s->fetch(PDO::FETCH_ASSOC);
         if(!$candidate||$candidate['owner_id']!==$owner||$candidate['owner_type']!=='PHYSICIAN'||$candidate['purpose']!=='PHYSICIAN_PERSONAL_LOGO'||$candidate['technical_status']!=='READY'||$candidate['review_status']!=='PENDING_REVIEW')throw new RuntimeException('improvement_conflict');
+        MediaSubmissionState::requireReviewable($this->pdo,$candidate,'improvement_conflict');
         $s=$this->pdo->prepare("SELECT * FROM media_review_files WHERE submission_id=? AND role IN ('REVIEW','AUTO_PROPOSAL','IMPROVEMENT_INPUT') ORDER BY role".($lock?' FOR UPDATE':''));$s->execute([$id]);$files=[];
         foreach($s->fetchAll(PDO::FETCH_ASSOC) as $file){$role=$file['role'];$format=$file['format'];$key='private/media-review/'.hash('sha256','PHYSICIAN:'.$owner).'/'.$id.'/'.strtolower($role).'/'.$file['file_id'].'.'.$format;
             if(!in_array($role,['REVIEW','AUTO_PROPOSAL','IMPROVEMENT_INPUT'],true)||isset($files[$role])||!preg_match('/^[a-f0-9-]{36}$/D',$file['file_id'])||$format!==($role==='IMPROVEMENT_INPUT'?'png':'webp')||$file['mime_type']!=='image/'.$format||$file['storage_key']!==$key||!preg_match('/^[a-f0-9]{64}$/D',$file['checksum_sha256'])||min((int)$file['width'],(int)$file['height'],(int)$file['byte_size'])<1||max((int)$file['width'],(int)$file['height'])>800||(int)$file['width']*(int)$file['height']>640000||(int)$file['byte_size']>($role==='IMPROVEMENT_INPUT'?4194304:153600))throw new RuntimeException('improvement_integrity_failed');

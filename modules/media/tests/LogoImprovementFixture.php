@@ -15,6 +15,6 @@ function mr8Image(string $kind='white',int $w=600,int $h=300):GdImage{
  return $im;
 }
 function mr8Upload(string $kind='white',int $w=600,int $h=300):array{$p=tempnam(sys_get_temp_dir(),'mr8-synthetic-');rename($p,$p.'.png');$p.='.png';$im=mr8Image($kind,$w,$h);imagepng($im,$p);$im=null;return ['tmp_name'=>$p,'name'=>'logo-sintetico.png','type'=>'image/png','error'=>0];}
-function mr8Candidate(string $kind='white',int $w=600,int $h=300):array{$p=mr5Pdo();$f=mr7Candidate($p);[$private]=$st=mr5Storage();$u=mr8Upload($kind,$w,$h);$service=new Media\Services\PhysicianLogoReviewCandidateService($p,$private);try{$service->upload($f['doctor'],$u);}finally{unlink($u['tmp_name']);}$f['id']=$service->current($f['doctor'])['submission_id'];return $f;}
+function mr8Candidate(string $kind='white',int $w=600,int $h=300):array{$p=mr5Pdo();$f=mr7Candidate($p);[$private]=$st=mr5Storage();$u=mr8Upload($kind,$w,$h);$service=new Media\Services\PhysicianLogoReviewCandidateService($p,$private);try{$service->upload($f['doctor'],$u);}finally{unlink($u['tmp_name']);}$f['id']=$service->current($f['doctor'])['submission_id'];mr11Submit($p,$f['doctor']);return $f;}
 function mr8Context(string $action,array $caps=['media_review_improve']):Platform\Contracts\TrustedAuthorizationContext{return mr6Context('improvement_'.$action,$caps);}
 if(realpath($_SERVER['SCRIPT_FILENAME']??'')===__FILE__){if(($argv[1]??'')==='candidate')echo json_encode(mr8Candidate($argv[2]??'white',(int)($argv[3]??600),(int)($argv[4]??300)));}

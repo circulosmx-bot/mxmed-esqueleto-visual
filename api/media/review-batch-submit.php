@@ -10,7 +10,7 @@ $scope=Media\Services\GallerySessionScope::resolve($_SESSION,false);
 if($scope===null)batchReply(401,['ok'=>false,'error'=>'unauthorized']);
 $method=$_SERVER['REQUEST_METHOD']??'GET';
 if(!in_array($method,['GET','POST'],true))batchReply(405,['ok'=>false,'error'=>'method_not_allowed']);
-$_SESSION['media_review_batch_csrf']??=bin2hex(random_bytes(32));$csrf=$_SESSION['media_review_batch_csrf'];session_write_close();
+$_SESSION['media_review_batch_csrf']??=bin2hex(random_bytes(32));$csrf=$_SESSION['media_review_batch_csrf'];$actor=Media\Services\MediaSubmissionActor::fromSession($_SESSION,session_id());session_write_close();
 try{
     if($_GET!==[]||$_FILES!==[]||$_POST!==[])throw new InvalidArgumentException();
     if($method==='POST'){
@@ -20,6 +20,6 @@ try{
         if(!hash_equals($csrf,$input['csrf']))batchReply(403,['ok'=>false,'error'=>'csrf_failed']);
     }
     $service=new Media\Services\MediaReviewBatchService(mxmed_pdo());
-    if($method==='POST'&&!$service->submit($scope['doctor_id']))batchReply(409,['ok'=>false,'error'=>'nothing_to_submit']);
+    if($method==='POST'&&!$service->submit($scope['doctor_id'],null,$actor))batchReply(409,['ok'=>false,'error'=>'nothing_to_submit']);
     batchReply(200,['ok'=>true,'data'=>[...$service->current($scope['doctor_id']),'csrf'=>$csrf]]);
 }catch(Throwable $e){batchReply($e instanceof InvalidArgumentException?400:503,['ok'=>false,'error'=>$e instanceof InvalidArgumentException?'invalid_request':'batch_unavailable']);}

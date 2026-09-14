@@ -15,6 +15,6 @@ final class ProfilePhotoReviewCandidateService
         $this->inner = new PhysicianMediaReviewCandidateService($pdo, $storage, 'DOCTOR_PROFILE_PHOTO');
     }
     public function current(string $doctor): ?array { return $this->inner->current($doctor); }
-    public function upload(string $doctor, array $upload): void { $this->inner->upload($doctor, $upload); }
+    public function upload(string $doctor, array $upload): string { return $this->inner->upload($doctor, $upload); }
     public function withdraw(string $doctor): void { $this->inner->withdraw($doctor); }
 }

@@ -10,7 +10,7 @@ checkBatch((int)$p->query("SELECT COUNT(*) FROM media_review_batches WHERE owner
 checkBatch(!in_array($id,array_column($inbox->listing($ctx,50)['items'],'batch_id'),true),'open hidden');
 checkBatch(!in_array($f['id'],array_column((new Media\Services\MediaReviewInboxService($p))->pending($ctx,50)['items'],'submission_id'),true),'open members not flat');
 rejectsBatch(fn()=>$inbox->detail($ctx,$id),'open detail hidden');
-checkBatch($b->submit($d)&&!$b->submit($d),'manual idempotency');
+checkBatch($b->submit($d,null,mr11Actor($d))&&!$b->submit($d,null,mr11Actor($d)),'manual idempotency');
 $detail=$inbox->detail($ctx,$id);checkBatch($detail['batch']['item_count']===18&&$detail['batch']['pending_count']===18&&count($detail['items'])===18,'18-member detail');
 checkBatch(count(array_filter($inbox->listing($ctx,50)['items'],fn($r)=>$r['batch_id']===$id))===1,'one top level card');
 checkBatch((int)$p->query("SELECT COUNT(*) FROM media_review_batch_ready_events WHERE batch_id='$id'")->fetchColumn()===1,'single signal');
@@ -25,7 +25,7 @@ $other=mr11Batch(1,false);
 rejectsBatch(fn()=>$p->exec("INSERT INTO media_review_submissions(submission_id,owner_type,owner_id,purpose,technical_status,review_status,batch_id) VALUES(UUID(),'PHYSICIAN','$d','DOCTOR_GALLERY','READY','PENDING_REVIEW','".$other['batch_id']."')"),'database cross owner rejected');
 foreach([29,31] as $minutes){$x=mr11Batch(1,false);$p->exec("UPDATE media_review_batches SET last_activity_at=DATE_SUB(CURRENT_TIMESTAMP(6),INTERVAL $minutes MINUTE) WHERE batch_id='".$x['batch_id']."'");$b->submitInactive();checkBatch($b->current($x['doctor'])['has_open_batch']===($minutes===29),'inactivity '.$minutes);}
 $signals=$p->query('SELECT COUNT(*) FROM media_review_batch_ready_events')->fetchColumn();$b->submitInactive();checkBatch($signals===$p->query('SELECT COUNT(*) FROM media_review_batch_ready_events')->fetchColumn(),'executor idempotent');
-$x=mr11Batch(1,false);(new Media\Services\GalleryReviewCandidateService($p,$private))->withdraw($x['doctor'],$x['id']);$p->exec("UPDATE media_review_batches SET last_activity_at=DATE_SUB(CURRENT_TIMESTAMP(6),INTERVAL 31 MINUTE) WHERE batch_id='".$x['batch_id']."'");$b->submitInactive();checkBatch(!$b->submit($x['doctor'])&&!$b->current($x['doctor'])['has_open_batch'],'all withdrawn retired');
+$x=mr11Batch(1,false);(new Media\Services\GalleryReviewCandidateService($p,$private))->withdraw($x['doctor'],$x['id']);$p->exec("UPDATE media_review_batches SET last_activity_at=DATE_SUB(CURRENT_TIMESTAMP(6),INTERVAL 31 MINUTE) WHERE batch_id='".$x['batch_id']."'");$b->submitInactive();checkBatch(!$b->submit($x['doctor'],null,mr11Actor($x['doctor']))&&!$b->current($x['doctor'])['has_open_batch'],'all withdrawn retired');
 $legacy=mr11Legacy();checkBatch(in_array($legacy['id'],array_column((new Media\Services\MediaReviewInboxService($p))->pending($ctx,50)['items'],'submission_id'),true),'legacy visible');
 rejectsBatch(fn()=>$inbox->listing(null),'batch requires capability');
 checkBatch(!preg_match('/storage_key|SOURCE|feedback|csrf|session|checksum/',json_encode($detail)),'safe batch metadata');

@@ -12,11 +12,11 @@ foreach(['candidate','submit'] as $action)foreach(['insert','commit'] as $failur
  if($failure==='insert')$p->exec("CREATE TRIGGER mr11_failure BEFORE INSERT ON ".($action==='candidate'?'media_review_submissions':'media_review_batch_ready_events')." FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic_failure'");
  $db=$failure==='commit'?new Mr11FailedCommit('mysql:host=127.0.0.1;port=3309;dbname=mxmed;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]):$p;
  $failed=false;
- try{if($action==='candidate')mr11Candidate($d,'DOCTOR_GALLERY',$db);else (new Media\Services\MediaReviewBatchService($db))->submit($d);}catch(Throwable){$failed=true;}finally{if($failure==='insert')$p->exec('DROP TRIGGER mr11_failure');}
+ try{if($action==='candidate')mr11Candidate($d,'DOCTOR_GALLERY',$db);else (new Media\Services\MediaReviewBatchService($db))->submit($d,null,mr11Actor($d));}catch(Throwable){$failed=true;}finally{if($failure==='insert')$p->exec('DROP TRIGGER mr11_failure');}
  checkAtomic($failed&&$state()===$before&&$files()===$beforeFiles,$action.' '.$failure.' atomic rollback');
 }
 $d=mr11Doctor();$f=mr11Candidate($d);$db=new Mr11LostAck('mysql:host=127.0.0.1;port=3309;dbname=mxmed;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
-try{(new Media\Services\MediaReviewBatchService($db))->submit($d);}catch(Throwable){}
-checkAtomic(!(new Media\Services\MediaReviewBatchService($p))->submit($d),'lost acknowledgement retry no-op');
+try{(new Media\Services\MediaReviewBatchService($db))->submit($d,null,mr11Actor($d));}catch(Throwable){}
+checkAtomic(!(new Media\Services\MediaReviewBatchService($p))->submit($d,null,mr11Actor($d)),'lost acknowledgement retry no-op');
 checkAtomic((int)$p->query("SELECT COUNT(*) FROM media_review_batch_ready_events WHERE batch_id='".$f['batch_id']."'")->fetchColumn()===1,'lost acknowledgement one durable signal');
 echo "MR11_ATOMIC_QA=PASS\n";

@@ -79,9 +79,9 @@ $metadata=[
     'PHYSICIAN_CREDENTIAL_REVOKED'=>['credential_type'=>'SPECIALTY','previous_lifecycle_status'=>'ACTIVE','new_lifecycle_status'=>'REVOKED'],
 ];
 $rows=CanonicalAuditPolicyRegistry::canonicalRows();
-check(count($rows)===43 && count(CanonicalAuditEventType::all())===43,'43 events/policies');
+check(count($rows)===44 && count(CanonicalAuditEventType::all())===44,'44 events/policies');
 check(array_column($rows,'event_type')===CanonicalAuditEventType::all(),'catalog order');
-check(array_slice(CanonicalAuditEventType::all(),38)===array_keys($metadata),'exactly five new events');
+check(array_slice(CanonicalAuditEventType::all(),38,5)===array_keys($metadata),'exactly five new events');
 check(hash('sha256',json_encode(array_slice($rows,0,38),JSON_UNESCAPED_SLASHES))==='aa7327ccd64e9e4537cc9da4e86cb7216d0a66684f0da9e4122704390f64d958','existing 38 policies unchanged');
 $catalog=new SensitiveAdminActionCatalog();
 check($catalog->all()===[],'generic catalog remains empty');

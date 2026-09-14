@@ -15,10 +15,10 @@ foreach(['DOCTOR_PROFILE_PHOTO','PHYSICIAN_PERSONAL_LOGO','DOCTOR_GALLERY'] as $
  emptyCheck((int)$p->query("SELECT COUNT(*) FROM media_review_batch_ready_events WHERE batch_id='".$a['batch_id']."'")->fetchColumn()===0,'retirement signals zero');
 }
 $d=mr11Doctor();$a=mr11Candidate($d);$b=mr11Candidate($d);$gallery=new Media\Services\GalleryReviewCandidateService($p,$private);$gallery->withdraw($d,$a['id']);
-emptyCheck($batch->current($d)['has_open_batch']&&$batch->current($d)['item_count']===2,'partial withdrawal keeps grouping');
+emptyCheck($batch->current($d)['has_open_batch']&&$batch->current($d)['item_count']===1,'partial withdrawal keeps grouping; counter excludes withdrawn');
 $gallery->withdraw($d,$b['id']);emptyCheck(!$batch->current($d)['has_open_batch'],'last member retires grouping');
 emptyCheck((int)$p->query("SELECT COUNT(*) FROM media_review_submissions WHERE owner_id='$d' AND batch_id IS NULL AND review_status='WITHDRAWN'")->fetchColumn()===2,'both historical members detached');
-$f=mr11Batch(1,false);$batch->submit($f['doctor']);$later=mr11Candidate($f['doctor']);$gallery->withdraw($f['doctor'],$f['id']);
+$f=mr11Batch(1,false);$batch->submit($f['doctor'],null,mr11Actor($f['doctor']));$later=mr11Candidate($f['doctor']);$gallery->withdraw($f['doctor'],$f['id']);
 emptyCheck($p->query("SELECT batch_id FROM media_review_submissions WHERE submission_id='".$f['id']."'")->fetchColumn()===$f['batch_id'],'submitted membership preserved');
 emptyCheck($batch->current($f['doctor'])['has_open_batch'],'unrelated current open preserved');
 emptyCheck((int)$p->query("SELECT COUNT(*) FROM media_review_batch_ready_events WHERE batch_id='".$f['batch_id']."'")->fetchColumn()===1,'normal signal remains one');

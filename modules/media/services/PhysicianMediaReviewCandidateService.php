@@ -43,7 +43,7 @@ final class PhysicianMediaReviewCandidateService
         return $row;
     }
 
-    public function upload(string $doctor, array $upload): void
+    public function upload(string $doctor, array $upload): string
     {
         $path = (string)($upload['tmp_name'] ?? '');
         if (($upload['error'] ?? -1) !== UPLOAD_ERR_OK || !is_file($path)) throw new RuntimeException('candidate_upload_invalid');
@@ -88,6 +88,7 @@ final class PhysicianMediaReviewCandidateService
             if ($review !== null && is_file($review['path']) && !unlink($review['path'])) error_log('candidate_review_temp_cleanup_failed');
         }
         // The request upload temporary file remains owned by PHP, including on error.
+        return $id;
     }
 
     public function withdraw(string $doctor): void { if($this->purpose==='DOCTOR_GALLERY')throw new RuntimeException('gallery_selector_required');$this->switchPending($doctor, null, []); }

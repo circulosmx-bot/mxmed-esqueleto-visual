@@ -8,7 +8,7 @@ function mr10Doctor():string{$p=mr5Pdo();$f=mr5Candidate($p);(new Media\Services
 function mr10Candidate(?string $doctor=null,string $kind='photo'):array{
  $doctor??=mr10Doctor();$p=mr5Pdo();$u=mr8Upload($kind);
  try{(new Media\Services\GalleryReviewCandidateService($p,mr5Storage()[0]))->upload($doctor,$u);}finally{unlink($u['tmp_name']);}
- $s=$p->prepare("SELECT submission_id FROM media_review_submissions WHERE owner_id=? AND purpose='DOCTOR_GALLERY' ORDER BY created_at DESC,submission_id DESC LIMIT 1");$s->execute([$doctor]);return ['doctor'=>$doctor,'id'=>$s->fetchColumn()];
+ $s=$p->prepare("SELECT submission_id FROM media_review_submissions WHERE owner_id=? AND purpose='DOCTOR_GALLERY' ORDER BY created_at DESC,submission_id DESC LIMIT 1");$s->execute([$doctor]);$id=$s->fetchColumn();mr11Submit($p,$doctor);return ['doctor'=>$doctor,'id'=>$id];
 }
 /** Seed historical public assets, including over-limit fixtures, without exercising new upload authority. */
 function mr10SeedPublic(string $doctor,int $count):void{

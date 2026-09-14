@@ -9,6 +9,12 @@ require_once __DIR__.'/../services/ProfilePhotoApprovalService.php';
 function mr5Pdo(): PDO {
     return new PDO('mysql:host=127.0.0.1;port=3309;dbname=mxmed;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 }
+function mr11Actor(string $doctor): Media\Services\MediaSubmissionActor {
+    return Media\Services\MediaSubmissionActor::fromSession(['user_id'=>'synthetic_owner','doctor_id'=>$doctor],'synthetic_owner_session');
+}
+function mr11Submit(PDO $pdo,string $doctor): bool {
+    return (new Media\Services\MediaReviewBatchService($pdo))->submit($doctor,null,mr11Actor($doctor));
+}
 function mr5Storage(): array {
     $base=(string)getenv('MR5_FIXTURE_ROOT');
     if (!preg_match('#^/private/tmp/mxmed-mr5-[a-zA-Z0-9_-]+$#D',$base) && !preg_match('#^/tmp/mxmed-mr5-[a-zA-Z0-9_-]+$#D',$base)) throw new RuntimeException('isolated_storage_required');
@@ -30,6 +36,7 @@ function mr5Candidate(PDO $p,string $label='Prueba sintética MR5'): array {
         $service=new Media\Services\ProfilePhotoReviewCandidateService($p,$private);
         $service->upload($doctor,['tmp_name'=>$path,'name'=>'synthetic.png','error'=>0]);
         $id=$service->current($doctor)['submission_id'];
+        mr11Submit($p,$doctor);
         return ['doctor'=>$doctor,'id'=>$id,'old'=>$old];
     } finally { if(is_file($path)) unlink($path); }
 }
