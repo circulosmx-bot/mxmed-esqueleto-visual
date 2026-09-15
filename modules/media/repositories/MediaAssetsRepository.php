@@ -17,13 +17,17 @@ final class MediaAssetsRepository
             'INSERT INTO media_assets (
                 media_id, owner_type, owner_id, purpose, classification,
                 storage_key, public_url, mime_type, format, width, height,
-                byte_size, checksum_sha256, alt_text, status, created_at, updated_at
+                byte_size, checksum_sha256, alt_text, display_order, status, created_at, updated_at
              ) VALUES (
                 :media_id, :owner_type, :owner_id, :purpose, :classification,
                 :storage_key, :public_url, :mime_type, :format, :width, :height,
-                :byte_size, :checksum_sha256, :alt_text, :status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                :byte_size, :checksum_sha256, :alt_text, :display_order, :status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
              )'
         );
+        $displayOrder = null;
+        if ($asset['owner_type'] === 'PHYSICIAN' && $asset['purpose'] === 'DOCTOR_GALLERY') {
+            $displayOrder = $asset['display_order'] ?? $this->nextDoctorGalleryDisplayOrder((string)$asset['owner_id']);
+        }
         $stmt->execute([
             'media_id' => $asset['media_id'],
             'owner_type' => $asset['owner_type'],
@@ -39,15 +43,38 @@ final class MediaAssetsRepository
             'byte_size' => $asset['byte_size'],
             'checksum_sha256' => $asset['checksum_sha256'],
             'alt_text' => $asset['alt_text'],
+            'display_order' => $displayOrder,
             'status' => 'READY',
         ]);
     }
 
     public function listDoctorGallery(string $doctorId): array
     {
-        $stmt = $this->pdo->prepare("SELECT media_id, public_url, alt_text, width, height FROM media_assets WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose='DOCTOR_GALLERY' AND classification='PUBLIC' AND status='READY' ORDER BY created_at, media_id");
+        $stmt = $this->pdo->prepare("SELECT media_id, public_url, alt_text, width, height, display_order FROM media_assets WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose='DOCTOR_GALLERY' AND classification='PUBLIC' AND status='READY' ORDER BY display_order IS NULL, display_order, created_at, media_id");
         $stmt->execute([$doctorId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function lockDoctorGallery(string $doctorId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT media_id, display_order FROM media_assets WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose='DOCTOR_GALLERY' AND classification='PUBLIC' AND status='READY' ORDER BY display_order IS NULL, display_order, created_at, media_id FOR UPDATE");
+        $stmt->execute([$doctorId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function replaceDoctorGalleryOrder(string $doctorId, array $mediaIds): void
+    {
+        $stmt = $this->pdo->prepare("UPDATE media_assets SET display_order=? WHERE media_id=? AND owner_type='PHYSICIAN' AND owner_id=? AND purpose='DOCTOR_GALLERY' AND classification='PUBLIC' AND status='READY'");
+        foreach (array_values($mediaIds) as $index => $mediaId) {
+            $stmt->execute([$index + 1, $mediaId, $doctorId]);
+        }
+    }
+
+    private function nextDoctorGalleryDisplayOrder(string $doctorId): int
+    {
+        $stmt = $this->pdo->prepare("SELECT COALESCE(MAX(display_order),0)+1 FROM media_assets WHERE owner_type='PHYSICIAN' AND owner_id=? AND purpose='DOCTOR_GALLERY' AND classification='PUBLIC' AND status='READY'");
+        $stmt->execute([$doctorId]);
+        return (int)$stmt->fetchColumn();
     }
 
     public function findReadyDuplicate(string $ownerType, string $ownerId, string $purpose, string $checksum): ?array

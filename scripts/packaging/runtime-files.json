@@ -58,6 +58,7 @@
   "api/verify-password.php",
   "api/verify-sms.php",
   "assets/css/clinical-doc-base.css",
+  "assets/css/activity-gallery-layout.css",
   "assets/css/media-review-inbox.css",
   "assets/css/next-available-modal.css",
   "assets/css/professional-logo.css",

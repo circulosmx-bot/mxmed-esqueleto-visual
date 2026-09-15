@@ -20,6 +20,41 @@ final class DoctorGalleryService
         return (new MediaAssetsRepository($this->pdo))->listDoctorGallery($doctorId);
     }
 
+    public function reorder(string $doctorId, array $mediaIds): array
+    {
+        if ($this->pdo->inTransaction()) throw new RuntimeException('gallery_outer_transaction');
+        if (count($mediaIds) > 256) throw new RuntimeException('gallery_invalid_order');
+        foreach ($mediaIds as $mediaId) {
+            if (!is_string($mediaId) || !preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D', $mediaId)) {
+                throw new RuntimeException('gallery_invalid_order');
+            }
+        }
+        if (count(array_unique($mediaIds)) !== count($mediaIds)) throw new RuntimeException('gallery_invalid_order');
+
+        try {
+            if (!$this->pdo->beginTransaction()) throw new RuntimeException('gallery_begin_failed');
+            $lock = $this->pdo->prepare('SELECT doctor_id FROM profiles_doctors WHERE doctor_id=? FOR UPDATE');
+            $lock->execute([$doctorId]);
+            if ($lock->fetchColumn() === false) throw new RuntimeException('gallery_profile_not_found');
+
+            $repository = new MediaAssetsRepository($this->pdo);
+            $current = array_column($repository->lockDoctorGallery($doctorId), 'media_id');
+            $expected = $current;
+            $submitted = $mediaIds;
+            sort($expected, SORT_STRING);
+            sort($submitted, SORT_STRING);
+            if ($submitted !== $expected) throw new RuntimeException('gallery_order_conflict');
+
+            $repository->replaceDoctorGalleryOrder($doctorId, $mediaIds);
+            if (!$this->pdo->commit()) throw new RuntimeException('gallery_commit_failed');
+        } catch (\Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
+
+        return $this->list($doctorId);
+    }
+
     public function upload(string $doctorId, array $upload): array
     {
         $extension = strtolower(pathinfo((string)($upload['name'] ?? ''), PATHINFO_EXTENSION));

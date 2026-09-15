@@ -1002,7 +1002,13 @@
 
                   <header class="mx-activity-gallery__header">
 
-                    <h2 id="mx-activity-gallery-title">Agrega fotografías de tu práctica médica</h2>
+                    <div class="mx-activity-gallery__intro">
+
+                      <h2 id="mx-activity-gallery-title">Agrega fotografías de tu práctica médica</h2>
+
+                      <p id="fotos-order-help">Arrastra las fotografías para cambiar el orden en que se muestran en tu perfil.</p>
+
+                    </div>
 
                     <div class="fotos-counter" role="status" aria-live="polite" aria-atomic="true"><strong id="fotos-count">0</strong><span> de 16 fotografías</span></div>
 
@@ -1038,7 +1044,21 @@
 
                   </div>
 
-                  <div id="fotos-grid" class="fotos-grid" aria-live="polite"></div>
+                  <div id="fotos-order-toolbar" class="fotos-order-toolbar" hidden>
+
+                    <div class="fotos-order-actions" hidden>
+
+                      <button type="button" class="btn btn-outline-secondary" id="fotos-order-reset">Restablecer orden</button>
+
+                      <button type="button" class="btn btn-primary" id="fotos-order-save">Guardar orden</button>
+
+                    </div>
+
+                    <div id="fotos-order-msg" class="fotos-order-msg" role="status" aria-live="polite"></div>
+
+                  </div>
+
+                  <div id="fotos-grid" class="fotos-grid" aria-live="polite" aria-describedby="fotos-order-help"></div>
 
                 </section>
 
