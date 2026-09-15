@@ -75,7 +75,7 @@
     const value = await response.json().catch(() => null);
     if (!response.ok || !value?.ok) {
       const code = String(value?.error || '').trim();
-      const error = Error(code === 'gallery_limit_reached' ? 'Puedes tener hasta 16 imágenes públicas y pendientes.' : 'No se pudo completar la acción. Intenta nuevamente.');
+      const error = Error(code === 'gallery_limit_reached' ? 'Límite máximo de fotografías: 16' : 'No se pudo completar la acción. Intenta nuevamente.');
       error.status = response.status;
       error.code = code;
       error.kind = response.status === 401 ? 'session' : response.status === 403 ? 'permission' : 'service';

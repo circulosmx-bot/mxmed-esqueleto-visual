@@ -3,6 +3,7 @@
   const grid = document.getElementById('fotos-grid');
   const input = document.getElementById('fotos-input');
   const count = document.getElementById('fotos-count');
+  const countLabel = document.getElementById('fotos-count-label');
   const message = document.getElementById('fotos-msg');
   const orderToolbar = document.getElementById('fotos-order-toolbar');
   const orderActions = orderToolbar?.querySelector('.fotos-order-actions');
@@ -189,9 +190,9 @@
     grid.querySelectorAll(':scope > .foto-item:not([data-review-candidate])').forEach(item => item.remove());
     const publicItems = document.createDocumentFragment();
     count.textContent = images.length;
+    if (countLabel) countLabel.textContent = images.length === 1 ? ' Fotografía' : ' Fotografías';
     drop.classList.toggle('has-items', images.length > 0);
     document.getElementById('t-info-fotos')?.classList.toggle('has-items', images.length > 0);
-    count.parentElement?.classList.toggle('max', images.length >= 16);
     images.forEach((asset, index) => {
       const wrap = document.createElement('div');
       wrap.className = 'foto-item';
