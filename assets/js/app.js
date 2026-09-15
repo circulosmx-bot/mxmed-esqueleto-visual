@@ -1489,13 +1489,13 @@ console.info('app.js loaded :: 20251123a');
   // Capture before the existing Sidebar, Header and Bootstrap handlers; replay the
   // original control only after a successful save or an explicit discard.
   window.addEventListener('click', event=>{
-    const control = event.target?.closest?.('[data-panel], [data-profile-panel], .menu-main[data-group], #tabs-info [data-bs-toggle="pill"], a[href], [data-header-logout]');
+    const control = event.target?.closest?.('[data-panel], [data-profile-panel], [data-account-panel], .menu-main[data-group], #tabs-info [data-bs-toggle="pill"], a[href], [data-header-logout]');
     if(!control || !(generalContextActive() || professionalActive())) return;
     const tabTarget = control.closest('#tabs-info') && control.getAttribute('data-bs-target');
     if(tabTarget){
       if(tabTarget === (professionalActive() ? '#t-info-profesional' : '#t-info-datos')) return;
-    }else if(control.hasAttribute('data-panel') || control.hasAttribute('data-profile-panel')){
-      if((control.dataset.panel || control.dataset.profilePanel) === 'p-info') return;
+    }else if(control.hasAttribute('data-panel') || control.hasAttribute('data-profile-panel') || control.hasAttribute('data-account-panel')){
+      if((control.dataset.panel || control.dataset.profilePanel || control.dataset.accountPanel) === 'p-info') return;
     }else if(control.matches('.menu-main[data-group]')){
       const group = control.dataset.group;
       const pane = [...document.querySelectorAll('.menu-sub[data-group]')].find(el=> el.dataset.group === group);

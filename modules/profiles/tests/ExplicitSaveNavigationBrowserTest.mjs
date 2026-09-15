@@ -164,14 +164,14 @@ try{
   const initialCount=await patchCount();await keepEditing();assert.equal(await patchCount(),initialCount);assert.equal(await evaluate(`document.getElementById('mxpi-bio-short').value`),bio+' QA');
   assert.equal(await evaluate(`document.activeElement.id`),'t-info-formacion-tab');
   await attempt('#t-info-formacion-tab');
-  await evaluate(`document.querySelector('[data-panel="p-seguridad"]').click()`);assert.equal(await evaluate(`document.querySelectorAll('#mxpi-unsaved-navigation-modal').length`),1);
+  await evaluate(`document.querySelector('[data-account-panel="p-seguridad"]').click()`);assert.equal(await evaluate(`document.querySelectorAll('#mxpi-unsaved-navigation-modal').length`),1);
   await click('#mxpi-unsaved-discard');await until(`document.getElementById('t-info-formacion').classList.contains('active') && !document.querySelector('.modal.show')`);
   assert.equal(await patchCount(),initialCount);assert.equal(await dirty(),false);
   await click('#t-info-datos-tab');await until(`!document.getElementById('mxpi-save-btn').disabled`);assert.equal(await evaluate(`document.getElementById('mxpi-bio-short').value`),bio);assert.equal(await reminder(),false);
   // Audit every currently rendered outgoing subtab and Sidebar destination.
   await type(bio+' QA');
   for(const selector of ['#t-info-servicios-tab','#t-info-enfermedades-tab','#t-info-fotos-tab',
-    '[data-panel="p-consultorio"]','[data-panel="p-opiniones"]','[data-panel="p-seguridad"]','[data-panel="p-suscripcion"]',
+    '[data-panel="p-consultorio"]','[data-panel="p-opiniones"]','[data-account-panel="p-seguridad"]','[data-account-panel="p-suscripcion"]',
     '.menu-main[data-group="agenda"]','.menu-main[data-panel="p-expediente"]','.menu-main[data-panel="p-pac-recetas"]',
     '.menu-main[data-panel="p-facturacion"]','.menu-main[data-panel="p-paquetes"]','.menu-main[data-panel="p-Notificaciones"]',
     '.mx-gh-brand[data-panel="p-resumen"]','[data-header-logout]']){

@@ -20687,9 +20687,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 #mmSidebar .sb01-sidebar-tooltip[hidden]{display:none}
 /* Mi Perfil precedes the operational modules without changing their density. */
 #mmSidebar > .menu-main[data-group="agenda"]{margin-top:12px}
-#mmSidebar .menu-sub .sb01-profile-account-start{
-  margin-top:6px !important;border-top:1px solid rgba(255,255,255,.4);
-}
 #p-info .sb01-contextual-profile{
   margin-left:auto;white-space:nowrap;flex-shrink:0;
   color:#003152;background:#F2FBFC;border-color:#F2FBFC;
@@ -20837,8 +20834,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-global-header .mx-hb-account-menu{ min-width:200px; padding:8px; border:1px solid #dce7ec; border-radius:12px; box-shadow:0 12px 28px #00315226; }
 .mx-global-header .mx-hb-account-menu .dropdown-header{ margin:0; font-size:.75rem; text-transform:uppercase; color:#536e7c; }
 .mx-global-header .mx-hb-account-menu .dropdown-item{ display:flex; align-items:center; gap:8px; min-height:44px; border-radius:6px; color:#003152; }
+.mx-global-header .mx-hb-account-menu .dropdown-item .material-symbols-rounded{ font-size:20px; }
 .mx-global-header .mx-hb-account-menu .dropdown-item:hover,
 .mx-global-header .mx-hb-account-menu .dropdown-item:focus{ background:#e6fafc; }
+.mx-global-header .mx-hb-account-menu .dropdown-item.active,
+.mx-global-header .mx-hb-account-menu .dropdown-item[aria-current="page"]{ background:#e6fafc; color:#003152; font-weight:700; }
 .mx-global-header .mx-hb-account-status{ max-width:220px; margin:8px; font-size:.85rem; color:#003152; }
 @media (min-width:993px){
   :is(body, body:has(#p-suscripcion:not(.d-none))) .mx-global-header .wrap{ padding-inline:12px; }

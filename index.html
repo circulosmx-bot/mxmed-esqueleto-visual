@@ -234,11 +234,13 @@
             <div class="mx-gh-identity-meta">
               <span class="mx-gh-identity-role"></span>
         <div class="mx-hb-account dropdown">
-          <button class="mx-hb-account-trigger" id="mxHeaderAccount" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Opciones de sesión">
+          <button class="mx-hb-account-trigger" id="mxHeaderAccount" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Opciones de cuenta y sesión">
             <span class="mx-hb-session-label">Sesión iniciada</span><span class="material-symbols-rounded mx-hb-session-chevron" aria-hidden="true">expand_more</span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end mx-hb-account-menu" aria-labelledby="mxHeaderAccount">
             <li><h2 class="dropdown-header">Cuenta</h2></li>
+            <li><button class="dropdown-item" type="button" data-account-panel="p-seguridad"><span class="material-symbols-rounded" aria-hidden="true">shield_lock</span> Seguridad</button></li>
+            <li><button class="dropdown-item" type="button" data-account-panel="p-suscripcion"><span class="material-symbols-rounded" aria-hidden="true">license</span> Plan y suscripción</button></li>
             <li><hr class="dropdown-divider"></li>
             <li><button class="dropdown-item" type="button" data-header-logout><span class="material-symbols-rounded" aria-hidden="true">logout</span> Cerrar sesión</button></li>
             <li><p class="mx-hb-account-status" role="status" hidden></p></li>
@@ -326,16 +328,6 @@
 
         </button>
 
-        <div class="menu-sep"></div>
-
-        <button class="menu-sub-btn sb01-profile-account-start" data-panel="p-seguridad">
-          <span class="block"><span class="l1">Seguridad</span><span class="l2">Acceso y privacidad</span></span>
-          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">vpn_key</span></span>
-        </button>
-        <button class="menu-sub-btn" data-panel="p-suscripcion">
-          <span class="block"><span class="l1">Suscripción</span><span class="l2">Plan contratado</span></span>
-          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">license</span></span>
-        </button>
       </div>
 
 

@@ -410,6 +410,46 @@ $(document).on('click', '.dropdown-menu [data-profile-panel]', function(ev){
   }
 });
 
+function syncHeaderAccountActive(panelId){
+  document.querySelectorAll('.mx-hb-account-menu [data-account-panel]').forEach((button)=>{
+    const isCurrent = button.dataset.accountPanel === panelId;
+    button.classList.toggle('active', isCurrent);
+    if(isCurrent) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+}
+
+window.addEventListener('mxmed:workspace-mode', (event)=>{
+  syncHeaderAccountActive(String(event.detail?.panelId || ''));
+});
+
+// Account-level destinations live in the Header and keep their canonical panels.
+$(document).on('click', '.mx-hb-account-menu [data-account-panel]', function(ev){
+  ev.preventDefault();
+  const panelId = String($(this).attr('data-account-panel') || '').trim();
+  if(!panelId) return;
+
+  let allowed = true;
+  if(typeof jumpTo === 'function'){
+    const result = jumpTo(panelId);
+    if(result === false) allowed = false;
+  }else{
+    showPanel(panelId);
+  }
+  if(!allowed) return;
+
+  $('.menu-sub').removeClass('open').stop(true, true).slideUp(100);
+  $('.menu-main').removeClass('active');
+  localStorage.removeItem('mxmed_menu_group');
+
+  const dropdownRoot = this.closest('.dropdown');
+  const toggleEl = dropdownRoot ? dropdownRoot.querySelector('[data-bs-toggle="dropdown"]') : null;
+  if(toggleEl && window.bootstrap && window.bootstrap.Dropdown){
+    const instance = window.bootstrap.Dropdown.getInstance(toggleEl) || new window.bootstrap.Dropdown(toggleEl);
+    instance.hide();
+  }
+});
+
 /* ===== Restaurar estado previo ===== */
 $(function(){
   // Forzar mostrar Actividad (RESUMEN) al recargar
