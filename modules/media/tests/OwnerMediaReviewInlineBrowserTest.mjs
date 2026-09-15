@@ -197,7 +197,7 @@ try{
     const sizes=await evaluate(`({width:innerWidth,scroll:document.documentElement.scrollWidth,card:document.getElementById('mx-dg-media-card').getBoundingClientRect().height,candidates:[...document.querySelectorAll('#mx-dg-media-card .mx-media-review-thumbnail')].map(n=>({w:n.getBoundingClientRect().width,h:n.getBoundingClientRect().height}))})`);
     assert.ok(sizes.scroll<=sizes.width,JSON.stringify(sizes));await evaluate(`document.getElementById('t-info-fotos-tab').click()`);await new Promise(resolve=>setTimeout(resolve,400));
     assert.ok(await evaluate(`document.documentElement.scrollWidth<=innerWidth`),'gallery overflow');
-    assert.ok(await evaluate(`[...document.querySelectorAll('#fotos-grid .foto-item:not([data-review-candidate])')].every(n=>Math.abs(n.getBoundingClientRect().width-n.getBoundingClientRect().height)<1)`),'public gallery thumbnail dimensions preserved');
+    assert.ok(await evaluate(`[...document.querySelectorAll('#fotos-grid .foto-item:not([data-review-candidate])')].every(n=>{const r=n.getBoundingClientRect(),ratio=r.width/r.height;return ratio>1.3&&ratio<1.36})`),'public gallery thumbnails preserve the compact 4:3 presentation');
     await evaluate(`document.getElementById('t-info-datos-tab').click()`);viewports.push({width,height,...sizes});
     if(width===390){await evaluate(`document.getElementById('mxpi-photo-control').scrollIntoView({block:'start',behavior:'instant'})`);await screenshot('crd032-mobile-inline-review.png');}else if(width===1366)await screenshot('crd032-inline-review-1366.png');
   }

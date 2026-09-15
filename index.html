@@ -206,6 +206,7 @@
 <link rel="stylesheet" href="assets/css/owner-media-review.css?v=crd036">
 <link rel="stylesheet" href="assets/css/datos-generales-buttons.css?v=dg06">
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
+<link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 </head>
 
 <body class="mx-sidebar-expanded" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -997,37 +998,49 @@
 
               <div class="tab-pane fade" id="t-info-fotos" role="tabpanel">
 
-                <div class="sp-note mb-2">Agrega fotografías de tu práctica médica</div>
+                <section class="mx-activity-gallery" aria-labelledby="mx-activity-gallery-title">
 
-                <div id="fotos-drop" class="fotos-drop" role="region" aria-label="Cargar fotos">
+                  <header class="mx-activity-gallery__header">
 
-                  <div class="fotos-drop-inner">
+                    <h2 id="mx-activity-gallery-title">Agrega fotografías de tu práctica médica</h2>
 
-                    <img class="fotos-ico-img" src="assets/icons/carga-de-imagenes.svg" alt="Icono carga de imágenes" aria-hidden="true">
+                    <div class="fotos-counter" role="status" aria-live="polite" aria-atomic="true"><strong id="fotos-count">0</strong><span> de 16 fotografías</span></div>
 
-                    <div class="fotos-title">Arrastra y suelta tus imágenes aquí</div>
+                  </header>
 
-                    <div>
+                  <div id="fotos-drop" class="fotos-drop" role="region" aria-label="Cargar fotos">
+
+                    <div class="fotos-drop-inner">
+
+                      <img class="fotos-ico-img" src="assets/icons/carga-de-imagenes.svg" alt="" aria-hidden="true">
+
+                      <div class="mx-activity-gallery__drop-copy">
+
+                        <div class="fotos-title">Arrastra aquí tus fotografías</div>
+
+                        <div class="fotos-helper">JPG, PNG o WebP · hasta 10 MiB por imagen.</div>
+
+                      </div>
 
                       <button type="button" class="fotos-browse fotos-btn-img" aria-label="Cargar imágenes">
 
-                        <img src="assets/icons/boton-carga-de-imagenes.svg" alt="cargar imágenes">
+                        <span class="material-symbols-rounded" aria-hidden="true">add_photo_alternate</span>
+
+                        <span>Cargar imágenes</span>
 
                       </button>
 
+                      <div id="fotos-msg" class="fotos-msg" role="alert" aria-live="assertive"></div>
+
                     </div>
 
-                    <div class="fotos-counter"><span id="fotos-count">0</span> / 16</div>
-
-                    <div id="fotos-msg" class="fotos-msg" role="alert" aria-live="assertive"></div>
+                    <input id="fotos-input" class="d-none" type="file" accept="image/*" multiple>
 
                   </div>
 
-                  <input id="fotos-input" class="d-none" type="file" accept="image/*" multiple>
+                  <div id="fotos-grid" class="fotos-grid" aria-live="polite"></div>
 
-                </div>
-
-                <div id="fotos-grid" class="fotos-grid" aria-live="polite"></div>
+                </section>
 
               </div>
 
