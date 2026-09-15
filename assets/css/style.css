@@ -22366,7 +22366,21 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload[data-type="logo"]:not(:has(> .mx-media-review-candidate)) > .mf-actions{grid-column:1 / -1;grid-row:3}
 }
 
-#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-helper{margin:-5px 0 10px}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-helper{margin:.15rem 0 0}
+
+/* Final scoped helper typography pass: each size is its previous value +15%. */
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-control > .mf-sub{font-size:.8395rem}
+#p-info #t-info-datos #mx-profile-theme-admin .mx-theme-admin__head .small,
+#p-info #t-info-datos #mx-profile-theme-feedback,
+#p-info #t-info-datos #dg-signature-card .mx-signature-heading > p{font-size:1.00625rem}
+#p-info #t-info-datos #mx-profile-theme-feedback{font-weight:700}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-helper{
+  font-size:.966rem;
+  white-space:nowrap;
+}
+@media (max-width:767px){
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-helper{white-space:normal}
+}
 
 /* SIG03A independent signing controls, no QR/fullscreen UI. */
 #p-info #t-info-datos #dg-signature-card .mx-signature-authority{display:flex;flex-direction:column;align-items:stretch;gap:10px}

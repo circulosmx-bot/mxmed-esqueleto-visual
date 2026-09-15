@@ -47,7 +47,7 @@
 #p-info #t-info-profesional .chip .chip-x:focus-visible {
   outline:2px solid var(--mm-acc-contraido,#003152);outline-offset:1px;
 }
-#p-info #t-info-profesional .sp-note {font-size:.9rem;font-weight:400;line-height:1.4;margin:0}
+#p-info #t-info-profesional .sp-note {font-size:1.035rem;font-weight:400;line-height:1.4;margin:0}
 #p-info #t-info-profesional #mx-formacion-credentials-card {margin:0}
 #p-info #t-info-profesional #mx-formacion-credentials-card .card-body {padding:0}
 #p-info #t-info-profesional #mx-credential-list {display:grid;grid-template-columns:minmax(0,1fr);gap:8px 20px}
