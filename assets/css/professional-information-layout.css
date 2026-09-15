@@ -118,3 +118,50 @@
   flex:0 0 auto;font-size:2.5em;line-height:1;font-weight:400;color:inherit;
   font-variation-settings:'FILL' 0,'wght' 100,'GRAD' -50,'opsz' 24;
 }
+
+/* DG07: media titles are compact card headers; governed media stays in the body. */
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload.square {
+  grid-template-rows:auto minmax(120px,1fr) auto auto auto;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mf-title.mx-section-heading {
+  grid-column:1 / -1!important;
+  grid-row:1!important;
+  align-self:center;
+  width:100%;
+  margin:0;
+  gap:6px;
+  white-space:nowrap;
+  font-size:1rem!important;
+  line-height:1.2!important;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mf-title.mx-section-heading > .material-symbols-rounded {
+  font-size:2.5em;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > :is(.mf-prev,.mf-illus,.mx-dg-media-placeholder) {
+  grid-row:2!important;
+  align-self:center;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mf-actions {
+  grid-column:-2 / -1!important;
+  grid-row:2!important;
+  align-self:center;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mf-sub {
+  grid-column:1 / -1!important;
+  grid-row:3!important;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card #mxpi-photo-status {
+  grid-column:1 / -1!important;
+  grid-row:4!important;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mx-media-review-candidate {
+  grid-row:2!important;
+  grid-template-rows:minmax(120px,auto)!important;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mx-media-review-candidate > .mx-media-review-thumbnail {
+  grid-row:1!important;
+}
+#p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card .mf-upload > .mx-media-review-candidate > :is(.btn,.mx-media-review-observations) {
+  grid-row:1!important;
+  align-self:center;
+}
