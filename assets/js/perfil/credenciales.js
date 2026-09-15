@@ -101,7 +101,7 @@
         top.append(badge);
       }
       const detail = document.createElement('p');
-      detail.textContent = [institution, license ? `Cédula ${license}` : ''].filter(Boolean).join(' · ');
+      detail.textContent = [institution, license].filter(Boolean).join(' · ');
       item.append(top, detail);
       host.append(item);
       return item;

@@ -91,3 +91,13 @@
 @media(min-width:992px) {
   #p-info #t-info-profesional .mx-formation-header {grid-template-columns:auto minmax(0,1fr)}
 }
+
+/* Credential records flow as one compact summary, rather than independent columns. */
+#p-info #t-info-profesional .mx-formation-header #mx-credential-list {display:block}
+#p-info #t-info-profesional .mx-formation-header :is(.mx-credential-row,.mx-credential-row-head,.mx-credential-row h3,.mx-credential-row p) {
+  display:inline;margin:0;padding:0;
+}
+#p-info #t-info-profesional .mx-formation-header .mx-credential-row-head::after {content:" "}
+#p-info #t-info-profesional .mx-formation-header .mx-credential-row + .mx-credential-row::before {
+  content:" / ";color:#526d7c;font-size:.9rem;font-weight:400;
+}
