@@ -109,7 +109,7 @@
     if(professional || specialties.length){
       host.dataset.mode = 'canonical';
       if(professional){
-        row(text(professional.professional_area_label), text(professional.institution_name), text(professional.license_number), true).dataset.kind = 'professional';
+        row('Cédula profesional', text(professional.institution_name), text(professional.license_number), true).dataset.kind = 'professional';
       }
       // A single current primary marker; no physician selection or persistence.
       const primaryId = data.primary_specialty_credential_id == null ? null : String(data.primary_specialty_credential_id);
@@ -117,14 +117,14 @@
         ? specialties.find(item => String(item.credential_id) === primaryId)
         : specialties.find(item => item.is_primary === true);
       specialties.forEach(item => {
-        row(text(item.professional_area_label), text(item.institution_name), text(item.license_number), true, item === primary).dataset.kind = 'specialty';
+        row('Cédula especialidad', text(item.institution_name), text(item.license_number), true, item === primary).dataset.kind = 'specialty';
       });
       return;
     }
     const legacy = data.identity_public || {};
     if(text(legacy.professional_license)) row('Cédula profesional', '', text(legacy.professional_license), false);
     if(text(legacy.specialty_primary) || text(legacy.specialty_license)){
-      row(text(legacy.specialty_primary) || 'Especialidad registrada', '', text(legacy.specialty_license), false);
+      row('Cédula especialidad', '', text(legacy.specialty_license), false);
     }
     if(!host.children.length) empty('No hay información profesional registrada.');
   };
