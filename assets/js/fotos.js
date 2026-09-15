@@ -14,11 +14,16 @@
   const endpoint = '/api/media/gallery.php';
   const TOUCH_DRAG_DELAY_MS = 250;
   const TOUCH_DRAG_MOVEMENT_THRESHOLD = 10;
+  const SIBLING_REFLOW_DURATION_MS = 170;
+  const DROP_SETTLE_DURATION_MS = 140;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let csrf = '';
   let busy = false;
   let savedOrder = [];
   let pointerOrder = null;
   let touchOrder = null;
+  let dragVisual = null;
+  const reflowAnimations = new WeakMap();
   input.accept = 'image/jpeg,image/png,image/webp';
   message?.setAttribute('role', 'status');
 
@@ -62,15 +67,112 @@
     cards.forEach(card => grid.insertBefore(card, anchor));
   };
 
+  const captureCardPositions = cards => {
+    if (reducedMotion.matches || typeof Element.prototype.animate !== 'function') return null;
+    const positions = new Map(cards.map(card => [card, card.getBoundingClientRect()]));
+    cards.forEach(card => {
+      reflowAnimations.get(card)?.cancel();
+      reflowAnimations.delete(card);
+    });
+    return positions;
+  };
+
+  const animateCardReflow = (cards, positions, placeholder) => {
+    if (!positions) return;
+    cards.forEach(card => {
+      if (card === placeholder) return;
+      const before = positions.get(card);
+      const after = card.getBoundingClientRect();
+      const deltaX = before.left - after.left;
+      const deltaY = before.top - after.top;
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+      const animation = card.animate([
+        {transform: `translate3d(${deltaX}px, ${deltaY}px, 0)`},
+        {transform: 'translate3d(0, 0, 0)'},
+      ], {
+        duration: SIBLING_REFLOW_DURATION_MS,
+        easing: 'ease-out',
+      });
+      animation.id = 'mx-gallery-reflow';
+      reflowAnimations.set(card, animation);
+      const clearAnimation = () => {
+        if (reflowAnimations.get(card) === animation) reflowAnimations.delete(card);
+      };
+      animation.addEventListener('finish', clearAnimation, {once: true});
+      animation.addEventListener('cancel', clearAnimation, {once: true});
+    });
+  };
+
+  const positionDragGhost = (clientX, clientY) => {
+    if (!dragVisual) return;
+    dragVisual.x = clientX - dragVisual.offsetX;
+    dragVisual.y = clientY - dragVisual.offsetY;
+    dragVisual.ghost.style.transform = `translate3d(${dragVisual.x}px, ${dragVisual.y}px, 0) scale(1.02)`;
+  };
+
+  const startDragVisual = (card, clientX, clientY, grabX = clientX, grabY = clientY) => {
+    if (dragVisual) return;
+    const rect = card.getBoundingClientRect();
+    const ghost = card.cloneNode(true);
+    ghost.classList.remove('is-ordering', 'is-order-placeholder', 'is-drop-settling');
+    ghost.classList.add('foto-drag-ghost');
+    ghost.removeAttribute('data-gallery-media-id');
+    ghost.removeAttribute('id');
+    ghost.removeAttribute('role');
+    ghost.removeAttribute('aria-label');
+    ghost.removeAttribute('aria-roledescription');
+    ghost.removeAttribute('aria-keyshortcuts');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.tabIndex = -1;
+    ghost.querySelectorAll('[id]').forEach(element => element.removeAttribute('id'));
+    ghost.querySelectorAll('button,a,input,select,textarea,[tabindex]').forEach(element => element.tabIndex = -1);
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.height = `${rect.height}px`;
+    document.body.append(ghost);
+    card.classList.add('is-ordering', 'is-order-placeholder');
+    grid.classList.add('is-internal-ordering');
+    dragVisual = {
+      card,
+      ghost,
+      offsetX: grabX - rect.left,
+      offsetY: grabY - rect.top,
+      x: rect.left,
+      y: rect.top,
+    };
+    positionDragGhost(clientX, clientY);
+  };
+
+  const settleDragVisual = card => {
+    const visual = dragVisual?.card === card ? dragVisual : null;
+    dragVisual = null;
+    card.classList.remove('is-ordering', 'is-order-placeholder');
+    grid.classList.remove('is-internal-ordering');
+    if (!visual) return;
+    const finish = () => visual.ghost.remove();
+    if (reducedMotion.matches) {
+      finish();
+      return;
+    }
+    const target = card.getBoundingClientRect();
+    visual.ghost.getBoundingClientRect();
+    visual.ghost.classList.add('is-settling');
+    visual.ghost.style.transform = `translate3d(${target.left}px, ${target.top}px, 0) scale(1)`;
+    card.classList.add('is-drop-settling');
+    window.setTimeout(() => card.classList.remove('is-drop-settling'), DROP_SETTLE_DURATION_MS);
+    window.setTimeout(finish, DROP_SETTLE_DURATION_MS + 30);
+  };
+
   const moveCard = (card, targetIndex, announce = true) => {
     const cards = publicCards();
     const from = cards.indexOf(card);
     if (from < 0) return false;
     const to = Math.max(0, Math.min(cards.length - 1, targetIndex));
     if (from === to) return false;
+    const positions = captureCardPositions(cards);
     cards.splice(from, 1);
     cards.splice(to, 0, card);
     placeCards(cards);
+    animateCardReflow(cards, positions, dragVisual?.card === card ? card : null);
     updateOrderState(announce ? `Fotografía movida a la posición ${to + 1}. Guarda el orden para publicarlo.` : '');
     return true;
   };
@@ -213,8 +315,11 @@
   grid.addEventListener('pointermove', event => {
     if (!pointerOrder || pointerOrder.pointerId !== event.pointerId) return;
     if (!pointerOrder.moved && Math.hypot(event.clientX - pointerOrder.startX, event.clientY - pointerOrder.startY) < 6) return;
-    pointerOrder.moved = true;
-    pointerOrder.card.classList.add('is-ordering');
+    if (!pointerOrder.moved) {
+      pointerOrder.moved = true;
+      startDragVisual(pointerOrder.card, event.clientX, event.clientY, pointerOrder.startX, pointerOrder.startY);
+    }
+    positionDragGhost(event.clientX, event.clientY);
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-gallery-media-id]');
     if (!target || target === pointerOrder.card || target.parentElement !== grid) return;
     const cards = publicCards();
@@ -231,9 +336,9 @@
   const finishPointerOrder = event => {
     if (!pointerOrder || pointerOrder.pointerId !== event.pointerId) return;
     const {card, moved} = pointerOrder;
-    card.classList.remove('is-ordering');
     pointerOrder = null;
     if (moved) {
+      settleDragVisual(card);
       const position = publicCards().indexOf(card) + 1;
       updateOrderState(`Fotografía movida a la posición ${position}. Guarda el orden para publicarlo.`);
     }
@@ -245,7 +350,6 @@
   const clearTouchOrder = () => {
     if (!touchOrder) return;
     clearTimeout(touchOrder.timer);
-    touchOrder.card.classList.remove('is-ordering');
     grid.classList.remove('is-touch-ordering');
     touchOrder = null;
   };
@@ -254,6 +358,7 @@
     const {card, active} = touchOrder;
     if (active) {
       event.preventDefault();
+      settleDragVisual(card);
       const position = publicCards().indexOf(card) + 1;
       updateOrderState(`Fotografía movida a la posición ${position}. Guarda el orden para publicarlo.`);
     }
@@ -270,13 +375,15 @@
       identifier: touch.identifier,
       startX: touch.clientX,
       startY: touch.clientY,
+      lastX: touch.clientX,
+      lastY: touch.clientY,
       active: false,
       timer: setTimeout(() => {
         if (!touchOrder || touchOrder.card !== card) return;
         touchOrder.active = true;
-        card.classList.add('is-ordering');
         grid.classList.add('is-touch-ordering');
         card.focus({preventScroll: true});
+        startDragVisual(card, touchOrder.lastX, touchOrder.lastY, touchOrder.startX, touchOrder.startY);
       }, TOUCH_DRAG_DELAY_MS),
     };
   }, {passive: true});
@@ -285,12 +392,15 @@
     if (!touchOrder) return;
     const touch = touchByIdentifier(event.touches, touchOrder.identifier);
     if (!touch) return;
+    touchOrder.lastX = touch.clientX;
+    touchOrder.lastY = touch.clientY;
     const distance = Math.hypot(touch.clientX - touchOrder.startX, touch.clientY - touchOrder.startY);
     if (!touchOrder.active) {
       if (distance > TOUCH_DRAG_MOVEMENT_THRESHOLD) clearTouchOrder();
       return;
     }
     event.preventDefault();
+    positionDragGhost(touch.clientX, touch.clientY);
     const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.foto-item[data-gallery-media-id]');
     if (!target || target === touchOrder.card || target.parentElement !== grid) return;
     const cards = publicCards();
