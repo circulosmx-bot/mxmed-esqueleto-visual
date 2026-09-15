@@ -12,10 +12,13 @@
   if (!drop || !grid || !input || !count) return;
 
   const endpoint = '/api/media/gallery.php';
+  const TOUCH_DRAG_DELAY_MS = 250;
+  const TOUCH_DRAG_MOVEMENT_THRESHOLD = 10;
   let csrf = '';
   let busy = false;
   let savedOrder = [];
   let pointerOrder = null;
+  let touchOrder = null;
   input.accept = 'image/jpeg,image/png,image/webp';
   message?.setAttribute('role', 'status');
 
@@ -38,11 +41,9 @@
     const cards = publicCards();
     cards.forEach((card, index) => {
       const position = index + 1;
-      const handle = card.querySelector('.foto-order-handle');
       const badge = card.querySelector('.foto-order-position');
-      if (handle) handle.setAttribute('aria-label', `Reordenar fotografía ${position}. Usa las flechas para moverla.`);
+      card.setAttribute('aria-label', `Fotografía ${position} de ${cards.length}. Posición ${position}. Usa las flechas para reordenarla.`);
       if (badge) badge.textContent = String(position);
-      if (handle) handle.hidden = cards.length < 2;
       if (badge) badge.hidden = cards.length < 2;
     });
     const dirty = !sameOrder(currentOrder(), savedOrder);
@@ -93,17 +94,15 @@
       const wrap = document.createElement('div');
       wrap.className = 'foto-item';
       wrap.dataset.galleryMediaId = asset.media_id;
+      wrap.tabIndex = 0;
+      wrap.setAttribute('role', 'group');
+      wrap.setAttribute('aria-roledescription', 'fotografía reordenable');
+      wrap.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown Home End');
 
       const img = document.createElement('img');
       img.src = asset.public_url;
       img.alt = asset.alt_text || '';
       img.draggable = false;
-
-      const handle = document.createElement('button');
-      handle.type = 'button';
-      handle.className = 'foto-order-handle';
-      handle.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">drag_indicator</span>';
-      handle.setAttribute('aria-label', `Reordenar fotografía ${index + 1}. Usa las flechas para moverla.`);
 
       const position = document.createElement('span');
       position.className = 'foto-order-position';
@@ -116,7 +115,7 @@
       remove.textContent = '×';
       remove.setAttribute('aria-label', 'Eliminar imagen');
       remove.addEventListener('click', () => run(() => request('DELETE', null, asset.media_id)));
-      wrap.append(img, handle, position, remove);
+      wrap.append(img, position, remove);
       publicItems.append(wrap);
     });
     grid.prepend(publicItems);
@@ -189,30 +188,26 @@
   });
 
   grid.addEventListener('keydown', event => {
-    const handle = event.target.closest('.foto-order-handle');
-    if (!handle || busy) return;
-    const card = handle.closest('[data-gallery-media-id]');
+    const card = event.target.closest('.foto-item[data-gallery-media-id]');
+    if (!card || event.target !== card || busy) return;
     const cards = publicCards();
     const index = cards.indexOf(card);
     const columns = columnCount();
     const target = ({ArrowLeft: index - 1, ArrowRight: index + 1, ArrowUp: index - columns, ArrowDown: index + columns, Home: 0, End: cards.length - 1})[event.key];
     if (target === undefined) return;
     event.preventDefault();
-    if (moveCard(card, target)) handle.focus();
+    if (moveCard(card, target)) card.focus();
   });
 
   grid.addEventListener('pointerdown', event => {
-    const hitHandle = event.target.closest('.foto-order-handle');
-    if (busy || (event.pointerType === 'mouse' && (event.button !== 0 || !hitHandle))) return;
-    if (event.target.closest('.foto-x')) return;
-    const card = hitHandle?.closest('[data-gallery-media-id]') ||
-      (event.pointerType !== 'mouse' ? event.target.closest('[data-gallery-media-id]') : null);
-    const handle = hitHandle || card?.querySelector('.foto-order-handle');
-    if (!card || !handle) return;
+    if (busy || event.pointerType === 'touch' || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    if (event.target.closest('button,a,input,select,textarea,[role="button"]')) return;
+    const card = event.target.closest('.foto-item[data-gallery-media-id]');
+    if (!card) return;
     event.preventDefault();
-    handle.focus({preventScroll: true});
+    card.focus({preventScroll: true});
     card.setPointerCapture(event.pointerId);
-    pointerOrder = {handle, card, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false};
+    pointerOrder = {card, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false};
   });
 
   grid.addEventListener('pointermove', event => {
@@ -245,6 +240,72 @@
   };
   grid.addEventListener('pointerup', finishPointerOrder);
   grid.addEventListener('pointercancel', finishPointerOrder);
+
+  const touchByIdentifier = (touches, identifier) => Array.from(touches).find(touch => touch.identifier === identifier);
+  const clearTouchOrder = () => {
+    if (!touchOrder) return;
+    clearTimeout(touchOrder.timer);
+    touchOrder.card.classList.remove('is-ordering');
+    grid.classList.remove('is-touch-ordering');
+    touchOrder = null;
+  };
+  const finishTouchOrder = event => {
+    if (!touchOrder) return;
+    const {card, active} = touchOrder;
+    if (active) {
+      event.preventDefault();
+      const position = publicCards().indexOf(card) + 1;
+      updateOrderState(`Fotografía movida a la posición ${position}. Guarda el orden para publicarlo.`);
+    }
+    clearTouchOrder();
+  };
+
+  grid.addEventListener('touchstart', event => {
+    if (busy || touchOrder || event.touches.length !== 1 || event.target.closest('button,a,input,select,textarea,[role="button"]')) return;
+    const card = event.target.closest('.foto-item[data-gallery-media-id]');
+    const touch = event.touches[0];
+    if (!card || !touch) return;
+    touchOrder = {
+      card,
+      identifier: touch.identifier,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      active: false,
+      timer: setTimeout(() => {
+        if (!touchOrder || touchOrder.card !== card) return;
+        touchOrder.active = true;
+        card.classList.add('is-ordering');
+        grid.classList.add('is-touch-ordering');
+        card.focus({preventScroll: true});
+      }, TOUCH_DRAG_DELAY_MS),
+    };
+  }, {passive: true});
+
+  grid.addEventListener('touchmove', event => {
+    if (!touchOrder) return;
+    const touch = touchByIdentifier(event.touches, touchOrder.identifier);
+    if (!touch) return;
+    const distance = Math.hypot(touch.clientX - touchOrder.startX, touch.clientY - touchOrder.startY);
+    if (!touchOrder.active) {
+      if (distance > TOUCH_DRAG_MOVEMENT_THRESHOLD) clearTouchOrder();
+      return;
+    }
+    event.preventDefault();
+    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.foto-item[data-gallery-media-id]');
+    if (!target || target === touchOrder.card || target.parentElement !== grid) return;
+    const cards = publicCards();
+    const from = cards.indexOf(touchOrder.card);
+    let to = cards.indexOf(target);
+    const rect = target.getBoundingClientRect();
+    const after = touch.clientY > rect.top + rect.height / 2 ||
+      (Math.abs(touch.clientY - (rect.top + rect.height / 2)) < rect.height / 3 && touch.clientX > rect.left + rect.width / 2);
+    if (after) to += 1;
+    if (from < to) to -= 1;
+    moveCard(touchOrder.card, to, false);
+  }, {passive: false});
+
+  grid.addEventListener('touchend', finishTouchOrder, {passive: false});
+  grid.addEventListener('touchcancel', finishTouchOrder, {passive: false});
 
   drop.addEventListener('click', event => {
     if (event.target.closest('.fotos-browse') && !busy) input.click();
