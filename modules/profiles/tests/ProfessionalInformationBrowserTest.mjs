@@ -176,6 +176,17 @@ try{
     assert.equal(await evaluate(`document.documentElement.scrollWidth>innerWidth`),false);
     await evaluate(`document.activeElement?.blur()`);
     console.log('IP01C_METRICS',width,await evaluate(`JSON.stringify({section:document.getElementById('t-info-formacion').getBoundingClientRect().height,chip:document.querySelector('#cert-list .chip').getBoundingClientRect().height})`));
+    // IP01D: scoped add affordance remains secondary, readable and contained.
+    assert.deepEqual(await evaluate(`(()=>{
+      const failures=[];
+      document.querySelectorAll('#t-info-profesional .chip-add').forEach(button=>{
+        const plus=button.querySelector('.chip-plus'),word=button.querySelector('.chip-word');
+        if(getComputedStyle(plus).fontSize!=='22px'||getComputedStyle(word).fontSize!=='12px')failures.push('icon scale');
+        if(button.tagName!=='BUTTON'||word.textContent!=='agregar')failures.push('semantics');
+        const r=button.getBoundingClientRect();
+        for(const child of [plus,word]){const c=child.getBoundingClientRect();if(c.left<r.left||c.right>r.right||c.top<r.top||c.bottom>r.bottom)failures.push('clipped content');}
+      });return failures;
+    })()`),[]);
     // IP01C: every removal affordance stays within its capsule, including wrapped mobile labels.
     assert.deepEqual(await evaluate(`(()=>{
       const failures=[];
@@ -190,7 +201,7 @@ try{
     await evaluate(`document.querySelector('#cert-list .chip-x').focus()`);
     await key('Tab','Tab');
     assert.equal(await evaluate(`getComputedStyle(document.activeElement).outlineStyle==='solid'`),true);
-    await screenshot('ip01c-'+width+'.png');
+    await screenshot('ip01d-'+width+'.png');
   }
   assert.deepEqual(await evaluate('ipStorageWrites'),[]);assert.equal(runtimeExceptions.length,0);
   console.log('IP01A_BROWSER_QA=PASS');

@@ -63,13 +63,15 @@
 #p-info #t-info-profesional .chip-add {
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   min-height:32px;padding:0 10px;border:1px solid #01afb9;border-radius:7px;
-  background:#fff;color:#008391;font-size:12px;font-weight:600;
+  background:#effafb;color:#00738f;font-size:12px;font-weight:600;
 }
-#p-info #t-info-profesional .chip-add:hover:not(:disabled){background:#effafb}
+#p-info #t-info-profesional .chip-add:hover:not(:disabled){background:#e2f3f5}
 #p-info #t-info-profesional .chip-add:focus-visible{outline:3px solid #123d59;outline-offset:3px}
-#p-info #t-info-profesional .chip-add:disabled{opacity:.55}
+#p-info #t-info-profesional .chip-add:disabled{opacity:.78}
 #professional-information-feedback:empty{display:none}
 @media(max-width:767px){#p-info #t-info-profesional .chip-add{min-height:42px}}
 #p-info #t-info-profesional .chip-add :is(.chip-word,.chip-plus){color:inherit;font-size:inherit}
-#p-info #t-info-profesional .chip-add:is(:hover,:active,:disabled){transform:none;color:#008391!important}
+#p-info #t-info-profesional .chip-add:is(:hover,:active,:disabled){transform:none;color:#00738f!important}
 #p-info #t-info-profesional .chip-add .chip-word{top:0}
+
+#p-info #t-info-profesional .chip-add .chip-plus{font-size:22px;font-weight:800;line-height:1}
