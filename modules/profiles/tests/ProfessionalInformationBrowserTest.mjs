@@ -173,7 +173,24 @@ try{
   for(const [width,height]of [[1440,900],[1366,768],[820,1180],[390,844]]){
     await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<500});
     await evaluate(`document.getElementById('mx-professional-formacion-heading').scrollIntoView({block:'start',behavior:'instant'})`);
-    assert.equal(await evaluate(`document.documentElement.scrollWidth>innerWidth`),false);await screenshot('ip01a-'+width+'.png');
+    assert.equal(await evaluate(`document.documentElement.scrollWidth>innerWidth`),false);
+    await evaluate(`document.activeElement?.blur()`);
+    console.log('IP01C_METRICS',width,await evaluate(`JSON.stringify({section:document.getElementById('t-info-formacion').getBoundingClientRect().height,chip:document.querySelector('#cert-list .chip').getBoundingClientRect().height})`));
+    // IP01C: every removal affordance stays within its capsule, including wrapped mobile labels.
+    assert.deepEqual(await evaluate(`(()=>{
+      const failures=[];
+      document.querySelectorAll('#t-info-profesional .chip').forEach(chip=>{
+        const button=chip.querySelector('.chip-x'),r=chip.getBoundingClientRect(),b=button.getBoundingClientRect(),s=getComputedStyle(button);
+        if(b.left<r.left||b.right>r.right||b.top<r.top||b.bottom>r.bottom)failures.push('outside chip');
+        if(b.width<24||b.height<24)failures.push('small target');
+        if(s.position==='absolute'||s.color==='rgb(255, 255, 255)')failures.push('floating badge');
+        if(!button.getAttribute('aria-label')?.startsWith('Eliminar '))failures.push('accessible name');
+      });return failures;
+    })()`),[]);
+    await evaluate(`document.querySelector('#cert-list .chip-x').focus()`);
+    await key('Tab','Tab');
+    assert.equal(await evaluate(`getComputedStyle(document.activeElement).outlineStyle==='solid'`),true);
+    await screenshot('ip01c-'+width+'.png');
   }
   assert.deepEqual(await evaluate('ipStorageWrites'),[]);assert.equal(runtimeExceptions.length,0);
   console.log('IP01A_BROWSER_QA=PASS');

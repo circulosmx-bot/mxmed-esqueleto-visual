@@ -23,8 +23,24 @@
 #p-info #t-info-profesional .chip-add {flex-shrink:0}
 #p-info #t-info-profesional .chip-list {gap:6px 8px;margin-top:6px!important}
 #p-info #t-info-profesional .chip-list:empty {margin-top:0!important}
-#p-info #t-info-profesional .chip {max-width:100%;overflow-wrap:anywhere;padding:4px 20px 4px 10px}
-#p-info #t-info-profesional .chip .chip-x {top:2px;right:0}
+/* Shared capsule for the six editable chip categories only. */
+#p-info #t-info-profesional .chip {
+  display:inline-grid;grid-template-columns:minmax(0,1fr) 24px;align-items:center;gap:4px;
+  max-width:100%;min-height:30px;overflow-wrap:anywhere;padding:2px 4px 2px 8px;
+  background:#effafb;border:1px solid #b9e4eb;border-radius:16px;
+  color:var(--mm-acc-contraido,#003152);font-size:.9rem;font-weight:400;line-height:20px;
+}
+#p-info #t-info-profesional .chip .chip-x {
+  position:static;width:24px;height:24px;padding:0;border:0;border-radius:6px;
+  background:transparent;color:var(--mm-acc-activo,#00738f);
+  font-size:19px;font-weight:400;line-height:1;
+}
+#p-info #t-info-profesional .chip .chip-x:is(:hover,:focus-visible) {
+  background:#e2f3f5;color:var(--mm-acc-contraido,#003152);
+}
+#p-info #t-info-profesional .chip .chip-x:focus-visible {
+  outline:2px solid var(--mm-acc-contraido,#003152);outline-offset:1px;
+}
 #p-info #t-info-profesional .sp-note {font-size:.9rem;font-weight:400;line-height:1.4;margin:0}
 #p-info #t-info-profesional #mx-formacion-credentials-card {margin:0}
 #p-info #t-info-profesional #mx-formacion-credentials-card .card-body {padding:0}
