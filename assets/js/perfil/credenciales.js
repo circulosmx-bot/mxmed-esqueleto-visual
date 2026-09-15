@@ -63,10 +63,8 @@
   window.mxmedRenderCredentials = function(data, state = 'loading'){
     renderVerifiedModal(data, state);
     const host = document.getElementById('mx-credential-list');
-    const heading = document.getElementById('mx-credential-heading');
-    if(!host || !heading) return;
+    if(!host) return;
     host.replaceChildren();
-    heading.textContent = 'Credenciales profesionales';
     host.dataset.mode = data ? 'legacy' : state;
     const empty = message => {
       const p = document.createElement('p');
@@ -123,7 +121,6 @@
       });
       return;
     }
-    heading.textContent = 'Información profesional registrada';
     const legacy = data.identity_public || {};
     if(text(legacy.professional_license)) row('Cédula profesional', '', text(legacy.professional_license), false);
     if(text(legacy.specialty_primary) || text(legacy.specialty_license)){

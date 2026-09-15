@@ -56,7 +56,7 @@
 #p-info #t-info-profesional textarea {min-height:96px;resize:vertical}
 @media(min-width:992px) {
   #p-info #t-info-profesional :is(#t-info-formacion,#t-info-servicios) > .row {grid-template-columns:repeat(2,minmax(0,1fr))}
-  #p-info #t-info-profesional #t-info-formacion > .row > :is(:first-child,:last-child),
+  #p-info #t-info-profesional #t-info-formacion > .row > :last-child,
   #p-info #t-info-profesional #t-info-servicios > .row > :first-child {grid-column:1 / -1}
   #p-info #t-info-profesional #mx-credential-list {grid-template-columns:repeat(2,minmax(0,1fr))}
   #p-info #t-info-profesional textarea {height:76px;min-height:76px}
@@ -81,3 +81,13 @@
 #p-info #t-info-profesional .chip-add .chip-word{top:0}
 
 #p-info #t-info-profesional .chip-add .chip-plus{font-size:22px;font-weight:800;line-height:1}
+
+/* Reuse the governed summary within the formation title band. */
+#p-info #t-info-profesional .mx-formation-header {
+  display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:8px 24px;margin-bottom:12px;
+}
+#p-info #t-info-profesional .mx-formation-header > .mx-professional-heading {margin-bottom:0}
+#p-info #t-info-profesional .mx-formation-header > #mx-formacion-credentials-card {min-width:0}
+@media(min-width:992px) {
+  #p-info #t-info-profesional .mx-formation-header {grid-template-columns:auto minmax(0,1fr)}
+}
