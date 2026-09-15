@@ -216,3 +216,20 @@
     align-self:start;
   }
 }
+
+/* DG09: one rhythm separates the major Personal Information blocks. */
+#p-info #t-info-datos.active {
+  --mx-personal-section-gap:8px;
+  gap:var(--mx-personal-section-gap);
+}
+#p-info #t-info-datos > :is(#mx-public-identity-card,#mx-dg-contact-card,#dg-signature-card) {
+  margin-top:0!important;
+}
+#p-info #t-info-datos #mx-profile-theme-admin {
+  margin-top:var(--mx-personal-section-gap);
+}
+@media(max-width:767px) {
+  #p-info #t-info-datos.active {
+    --mx-personal-section-gap:10px;
+  }
+}
