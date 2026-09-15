@@ -165,3 +165,54 @@
   grid-row:1!important;
   align-self:center;
 }
+
+/* DG08: Bio belongs to the identity stack; one rhythm replaces stretched subgrid rows. */
+#p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor > .mxpi-bio-row {
+  width:100%;
+  margin:8px 0 0;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor > .mxpi-bio-row > .col-12 {
+  width:100%;
+  padding:0;
+}
+@media(min-width:992px) {
+  #p-info #t-info-datos #mx-public-identity-card .mx-dg-media-identity-layout {
+    grid-template-rows:auto;
+    align-items:start;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor {
+    display:grid;
+    grid-row:1;
+    grid-template-rows:none;
+    align-self:start;
+    gap:8px;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-professional-row {
+    grid-row:auto;
+    margin-bottom:0;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-verified-name {
+    display:block;
+    grid-row:auto;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-verified-name__controls {
+    grid-row:auto;
+    gap:8px;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-current-name,
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-legacy-name {
+    grid-row:auto;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-name-editor > .mxpi-bio-row {
+    margin:0;
+  }
+  #p-info #t-info-datos #mx-public-identity-card textarea#mxpi-bio-short {
+    field-sizing:fixed;
+    height:calc(1.5em + .75rem + 2px);
+    min-height:calc(1.5em + .75rem + 2px);
+  }
+  #p-info #t-info-datos #mx-public-identity-card #mx-dg-media-card {
+    grid-row:1;
+    align-self:start;
+  }
+}

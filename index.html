@@ -875,6 +875,17 @@
                           <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
                         </div>
 
+                        <div class="row g-3 mxpi-public-grid mxpi-bio-row">
+                          <div class="col-12">
+                            <label class="form-label mx-field-label" for="mxpi-bio-short">Describe brevemente tu actividad profesional para el encabezado de tu perfil<span class="mx-field-badge mx-field-badge--public">Público</span></label>
+                            <div class="mxpi-bio-field">
+                              <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="150" aria-describedby="mxpi-bio-count mxpi-bio-limit" placeholder="Ej. Resume en una frase tu actividad profesional y los principales servicios que brindas."></textarea>
+                              <div id="mxpi-bio-count" class="small text-muted" aria-live="polite">0 / 150</div>
+                            </div>
+                            <div id="mxpi-bio-limit" class="small text-danger" role="status" hidden>La Bio breve admite un máximo de 150 caracteres.</div>
+                          </div>
+                        </div>
+
                       </div>
                       <div class="card mt-3 mx-dg-card mx-dg-card-media" id="mx-dg-media-card">
                         <div class="card-body">
@@ -937,17 +948,6 @@
                         </div>
                       </div>
                     </div>
-                    <div class="row g-3 mxpi-public-grid">
-                      <div class="col-12">
-                        <label class="form-label mx-field-label" for="mxpi-bio-short">Describe brevemente tu actividad profesional para el encabezado de tu perfil<span class="mx-field-badge mx-field-badge--public">Público</span></label>
-                        <div class="mxpi-bio-field">
-                          <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="150" aria-describedby="mxpi-bio-count mxpi-bio-limit" placeholder="Ej. Resume en una frase tu actividad profesional y los principales servicios que brindas."></textarea>
-                          <div id="mxpi-bio-count" class="small text-muted" aria-live="polite">0 / 150</div>
-                        </div>
-                        <div id="mxpi-bio-limit" class="small text-danger" role="status" hidden>La Bio breve admite un máximo de 150 caracteres.</div>
-                      </div>
-                    </div>
-
                     <section class="mx-theme-admin" id="mx-profile-theme-admin" hidden aria-labelledby="mx-profile-theme-title">
                       <div class="mx-theme-admin__head">
                         <div>
