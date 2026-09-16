@@ -38838,14 +38838,6 @@ console.info('app.js loaded :: 20251123a');
   const expHeaderLastDx = pane.querySelector('[data-role="exp-h-last-dx"]');
   const expHeaderActiveStrip = pane.querySelector('[data-role="exp-h-active-strip"]');
   const expHeaderActiveStripScroll = pane.querySelector('[data-role="exp-h-active-strip-scroll"]');
-  const expInitialSearchPanel = pane.querySelector('[data-exp-initial-search-panel]');
-  const expInitialSearchForm = pane.querySelector('[data-exp-initial-search-form]');
-  const expInitialSearchInput = pane.querySelector('[data-exp-initial-search-input]');
-  const expInitialSearchSubmit = pane.querySelector('[data-exp-initial-search-submit]');
-  const expInitialSearchCancel = pane.querySelector('[data-exp-initial-search-cancel]');
-  const expInitialSearchRecent = pane.querySelector('[data-exp-initial-search-recent]');
-  const expInitialSearchNew = pane.querySelector('[data-exp-initial-search-new]');
-  const expInitialSearchFeedback = pane.querySelector('[data-exp-initial-search-feedback]');
   const p10StartBtn = document.querySelector('#mm-p10-bar [data-action="p10-start-encounter"]');
   const p10FinalizeBtn = document.querySelector('#mm-p10-bar [data-action="p10-finalize-encounter"]');
   const p10BarNode = document.getElementById('mm-p10-bar');
@@ -55926,7 +55918,6 @@ console.info('app.js loaded :: 20251123a');
         syncState({ allowNavigate:true });
         return;
       }
-      clearExpedienteInitialSearch();
       setActivePatientId(pid, { emitEvent:false, skipActiveEncounterConfirm:true });
       syncState({ allowNavigate:true });
     };
@@ -55949,122 +55940,6 @@ console.info('app.js loaded :: 20251123a');
     const targetDatosBtn = pane.querySelector('[data-tab-key="t-datos"]');
     if(targetDatosBtn){
       window.setTimeout(()=>{ activateWithBootstrap(targetDatosBtn); }, 0);
-    }
-  };
-  const setExpedienteInitialSearchFeedback = (message = '', tone = 'info')=>{
-    if(!expInitialSearchFeedback) return;
-    const text = sanitizeText(message);
-    expInitialSearchFeedback.classList.toggle('d-none', text === '');
-    expInitialSearchFeedback.classList.toggle('is-error', tone === 'error');
-    expInitialSearchFeedback.textContent = text;
-  };
-  const clearExpedienteInitialSearch = ({ clearQuery = true } = {})=>{
-    delete pane.dataset.expInitialMode;
-    pane.removeAttribute('data-exp-initial-mode');
-    if(clearQuery && expInitialSearchInput){
-      expInitialSearchInput.value = '';
-    }
-    setExpedienteInitialSearchFeedback('');
-  };
-  const focusExpedienteInitialSearchInput = ()=>{
-    if(!expInitialSearchInput || typeof expInitialSearchInput.focus !== 'function') return;
-    window.requestAnimationFrame(()=>{
-      try{
-        expInitialSearchInput.focus({ preventScroll:true });
-      }catch(_){
-        expInitialSearchInput.focus();
-      }
-    });
-  };
-  const openExpedienteInitialSearch = (source = 'patient_empty_state_search')=>{
-    clearClinicalCompletionHub('expediente_initial_search');
-    activateDatosGeneralesTab();
-    pane.dataset.expInitialMode = 'search';
-    pane.setAttribute('data-exp-initial-mode', 'search');
-    setExpedienteInitialSearchFeedback('');
-    focusExpedienteInitialSearchInput();
-    try{
-      window.dispatchEvent(new CustomEvent('mxmed:expediente-initial-search', {
-        detail: { source }
-      }));
-    }catch(_){}
-    return true;
-  };
-  const runExpedienteInitialSearch = async ()=>{
-    if(!expInitialSearchInput || !expInitialSearchSubmit) return false;
-    const query = sanitizeText(expInitialSearchInput.value || '');
-    if(query.length < 2){
-      setExpedienteInitialSearchFeedback('Escribe al menos 2 caracteres para buscar.', 'info');
-      return false;
-    }
-    if(typeof window.mxmedOpenPatientArchiveSearchModal !== 'function'){
-      setExpedienteInitialSearchFeedback('No se pudo iniciar la búsqueda de pacientes.', 'error');
-      return false;
-    }
-    expInitialSearchSubmit.disabled = true;
-    expInitialSearchSubmit.textContent = 'Buscando...';
-    setExpedienteInitialSearchFeedback('Buscando pacientes...', 'info');
-    try{
-      const result = await window.mxmedOpenPatientArchiveSearchModal({
-        query,
-        source: 'expediente_initial'
-      });
-      if(!result || result.ok !== true){
-        setExpedienteInitialSearchFeedback(result?.message || 'No se pudo buscar pacientes.', 'error');
-        return false;
-      }
-      const count = Number(result.count || (Array.isArray(result.items) ? result.items.length : 0));
-      if(count <= 0){
-        setExpedienteInitialSearchFeedback('Sin resultados para esta búsqueda.', 'info');
-        return true;
-      }
-      if(result.opened === true){
-        setExpedienteInitialSearchFeedback(`Coincidencias encontradas: ${count}. Selecciona un paciente en la ventana.`, 'info');
-        return true;
-      }
-      setExpedienteInitialSearchFeedback('No se pudo abrir la ventana de resultados. Intenta nuevamente.', 'error');
-      return false;
-    }catch(err){
-      setExpedienteInitialSearchFeedback(String(err?.message || 'Error de red al buscar pacientes.'), 'error');
-      return false;
-    }finally{
-      expInitialSearchSubmit.disabled = false;
-      expInitialSearchSubmit.textContent = 'Buscar';
-    }
-  };
-  const runExpedienteRecentPatients = async ()=>{
-    if(!expInitialSearchRecent) return false;
-    if(typeof window.mxmedOpenPatientArchiveRecentModal !== 'function'){
-      setExpedienteInitialSearchFeedback('No se pudo cargar pacientes recientes.', 'error');
-      return false;
-    }
-    expInitialSearchRecent.disabled = true;
-    setExpedienteInitialSearchFeedback('Cargando pacientes recientes...', 'info');
-    try{
-      const result = await window.mxmedOpenPatientArchiveRecentModal({
-        limit: 30,
-        source: 'expediente_initial_recent'
-      });
-      if(!result || result.ok !== true){
-        setExpedienteInitialSearchFeedback(result?.message || 'No se pudo cargar pacientes recientes.', 'error');
-        return false;
-      }
-      const count = Number(result.count || (Array.isArray(result.items) ? result.items.length : 0));
-      if(count <= 0){
-        setExpedienteInitialSearchFeedback('No hay pacientes recientes para mostrar.', 'info');
-        return true;
-      }
-      if(result.opened === true){
-        setExpedienteInitialSearchFeedback(`Pacientes recientes: ${count}. Selecciona un expediente en la ventana.`, 'info');
-        return true;
-      }
-      setExpedienteInitialSearchFeedback('No se pudo abrir la ventana de pacientes recientes.', 'error');
-      return false;
-    }catch(err){
-      setExpedienteInitialSearchFeedback(String(err?.message || 'Error de red al cargar pacientes recientes.'), 'error');
-      return false;
-    }finally{
-      expInitialSearchRecent.disabled = false;
     }
   };
   const focusPatientFirstNameInput = ()=>{
@@ -56207,11 +56082,7 @@ console.info('app.js loaded :: 20251123a');
     if(!hasNewPatientDraftProgress()) return true;
     return window.confirm('Hay datos sin guardar. ¿Deseas cancelar el registro y descartar la captura?');
   };
-  const clearNewPatientEntryState = (source = 'new_patient_entry_cancel', opts = {})=>{
-    const shouldClearSearch = opts?.clearSearch !== false;
-    if(shouldClearSearch){
-      clearExpedienteInitialSearch();
-    }
+  const clearNewPatientEntryState = (source = 'new_patient_entry_cancel')=>{
     delete pane.dataset.newEntryMode;
     pane.removeAttribute('data-new-entry-mode');
     try{
@@ -56233,7 +56104,6 @@ console.info('app.js loaded :: 20251123a');
   };
   const startNewPatientEntry = (source = 'patient_empty_state')=>{
     clearClinicalCompletionHub('start_new_patient');
-    clearExpedienteInitialSearch();
     pane.dataset.newEntryMode = '1';
     pane.setAttribute('data-new-entry-mode', '1');
     try{
@@ -56248,15 +56118,9 @@ console.info('app.js loaded :: 20251123a');
   const openInitialPatientSearchMode = (source = 'patient_empty_state_search')=>{
     if(isNewPatientEntryModeActive()){
       if(!confirmDiscardNewPatientDraft()) return false;
-      clearNewPatientEntryState(source, { clearSearch:false });
+      clearNewPatientEntryState(source);
     }
-    openExpedienteInitialSearch(source);
-    window.setTimeout(()=>{
-      if(!getPanePatientContextId() && !isNewPatientEntryModeActive()){
-        openExpedienteInitialSearch(source);
-      }
-    }, 0);
-    return true;
+    return navigateToPatientArchive('expediente_initial');
   };
 	  const QUICK_RX_PATIENT_SEARCH_INTENT = 'quick_rx_patient_search';
 	  const getQuickRxPatientSearchIntent = ()=>{
@@ -56368,6 +56232,11 @@ console.info('app.js loaded :: 20251123a');
 	  const navigateToPatientArchive = (source = '')=>{
 	    if(sanitizeText(source) !== QUICK_RX_PATIENT_SEARCH_INTENT){
 	      clearQuickRxPatientSearchIntent();
+	    }
+	    const archivePane = document.getElementById('p-pac-archivo');
+	    const searchOrigin = sanitizeText(source);
+	    if(archivePane && (searchOrigin === 'expediente_initial' || searchOrigin === 'expediente_change')){
+	      archivePane.dataset.expedienteSearchOrigin = searchOrigin;
 	    }
 	    clearClinicalCompletionHub('navigate_patient_archive');
 	    if(typeof jumpTo === 'function'){
@@ -56797,7 +56666,6 @@ console.info('app.js loaded :: 20251123a');
 	    const currentPatientId = sanitizeText(getActivePatientId());
 	    if(!currentPatientId) return false;
 	    clearClinicalCompletionHub('close_active_patient');
-	    clearExpedienteInitialSearch();
 	    captureExpedienteIdentityDraft(currentPatientId);
 	    captureCurrentMotivoDraftForPatient(currentPatientId);
 	    if(window.mxmedStore && typeof window.mxmedStore === 'object'){
@@ -56858,7 +56726,7 @@ console.info('app.js loaded :: 20251123a');
 	      }
 	      if(activeSearchTrigger){
 	        ev.preventDefault();
-	        navigateToPatientArchive();
+	        navigateToPatientArchive('expediente_change');
 	        return;
 	      }
 	      const mode = String(trigger.getAttribute('data-encounter-action-mode') || '').trim();
@@ -56878,22 +56746,6 @@ console.info('app.js loaded :: 20251123a');
       }
     });
   }
-  expInitialSearchForm?.addEventListener('submit', (ev)=>{
-    ev.preventDefault();
-    runExpedienteInitialSearch().catch(()=> null);
-  });
-  expInitialSearchCancel?.addEventListener('click', (ev)=>{
-    ev.preventDefault();
-    clearExpedienteInitialSearch();
-  });
-  expInitialSearchRecent?.addEventListener('click', (ev)=>{
-    ev.preventDefault();
-    runExpedienteRecentPatients().catch(()=> null);
-  });
-  expInitialSearchNew?.addEventListener('click', (ev)=>{
-    ev.preventDefault();
-    startNewPatientEntry('expediente_initial_search_new');
-  });
   if(expHeaderActiveStripScroll){
     expHeaderActiveStripScroll.addEventListener('click', async (ev)=>{
       const chip = ev.target.closest('[data-action="exp-switch-active-enc"]');
@@ -75741,6 +75593,7 @@ function mxResetLogoPreview(){
   const qEl = document.getElementById('mm-pac-archivo-q');
   const filterEl = document.getElementById('mm-pac-archivo-filter');
   const searchBtn = document.getElementById('mm-pac-archivo-search');
+  const backBtn = document.getElementById('mm-pac-archivo-back');
   const newBtn = document.getElementById('mm-pac-archivo-new');
   const msgEl = document.getElementById('mm-pac-archivo-msg');
   const tbodyEl = document.getElementById('mm-pac-archivo-tbody');
@@ -75812,6 +75665,52 @@ function mxResetLogoPreview(){
     tbodyEl.innerHTML = '';
     setInlineResultsVisible(false);
   };
+
+  const resetSearchControls = ()=>{
+    if(debounceTimer){
+      window.clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    qEl.value = '';
+    filterEl.value = 'all';
+    hideMsg();
+    clearResults();
+  };
+
+  const clearExpedienteSearchOrigin = ()=>{
+    delete pane.dataset.expedienteSearchOrigin;
+    backBtn?.classList.add('d-none');
+  };
+  let archiveWasVisible = !pane.classList.contains('d-none');
+  const syncExpedienteSearchOrigin = ()=>{
+    if(pane.classList.contains('d-none')){
+      if(archiveWasVisible) clearExpedienteSearchOrigin();
+      archiveWasVisible = false;
+      return;
+    }
+    archiveWasVisible = true;
+    const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
+    backBtn?.classList.toggle('d-none', origin !== 'expediente_initial' && origin !== 'expediente_change');
+  };
+  new MutationObserver(syncExpedienteSearchOrigin).observe(pane, {
+    attributes:true,
+    attributeFilter:['class', 'data-expediente-search-origin']
+  });
+  backBtn?.addEventListener('click', ()=>{
+    const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
+    if(origin !== 'expediente_initial' && origin !== 'expediente_change') return;
+    let opened = false;
+    if(typeof jumpTo === 'function'){
+      opened = jumpTo('p-expediente') !== false;
+    }else if(typeof showPanel === 'function'){
+      showPanel('p-expediente');
+      opened = true;
+    }
+    if(opened){
+      clearExpedienteSearchOrigin();
+      resetSearchControls();
+    }
+  });
 
   const escapeHtml = (value = '')=> String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -76569,6 +76468,8 @@ function mxResetLogoPreview(){
     if(changed === false){
       return false;
     }
+    clearExpedienteSearchOrigin();
+    resetSearchControls();
     if(shouldReturnToQuickRx && typeof window.mxmedConsumeQuickRxPatientSearchIntent === 'function'){
       window.mxmedConsumeQuickRxPatientSearchIntent();
     }
@@ -76642,6 +76543,8 @@ function mxResetLogoPreview(){
     if(typeof window.mxmedStartNewPatientEntry === 'function'){
       window.mxmedStartNewPatientEntry('archive_new_patient');
     }
+    clearExpedienteSearchOrigin();
+    resetSearchControls();
     if(typeof jumpTo === 'function'){
       jumpTo('p-expediente');
       return;

@@ -232,13 +232,13 @@
   outline-offset:3px;
   box-shadow:none;
 }
-#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success,.mx-exp-initial-search-submit) {
+#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success) {
   border-color:transparent;
   background:#00c040;
   color:#fff;
 }
-#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success,.mx-exp-initial-search-submit):hover {background:#00a936;color:#fff}
-#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success,.mx-exp-initial-search-submit):active {background:#00972f!important;color:#fff!important}
+#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success):hover {background:#00a936;color:#fff}
+#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success):active {background:#00972f!important;color:#fff!important}
 #p-expediente :is(.body,.modal) :is(.btn-outline-primary,.btn-outline-info) {
   border-color:#01afb9;
   background:#fff;
@@ -264,7 +264,7 @@
 
 /* Structural headings adopt the VIS01 accent; field/group labels remain in
    the ordinary form-label hierarchy above. */
-#p-expediente :is(.exp-card-title,.mx-clinical-completion-copy h3,.mx-exp-initial-copy h3,.mx-exp-initial-search-copy h3) {
+#p-expediente :is(.exp-card-title,.mx-clinical-completion-copy h3,.mx-exp-initial-copy h3) {
   color:#06aeb8;
   font-family:inherit;
   font-size:1.25rem;
