@@ -1,0 +1,9 @@
+# FISC01 — Perfiles de facturación de pacientes
+
+`billing_patient_profiles` pertenece a la relación médico–paciente, no a la identidad global del paciente. La API usa únicamente el médico de la sesión y exige una relación activa en `patients_doctor_links` y un paciente activo. Los identificadores de perfil se consultan siempre junto con médico y paciente. No se delega el acceso mediante el permiso `billing` de Operadores de Agenda.
+
+La migración `db/2026_09_16_01_create_patient_billing_profiles.sql` se debe aplicar **sólo después** de inspeccionar el esquema físico y descartar una autoridad fiscal preexistente. FISC01 no contiene tablas de facturas ni almacenamiento de XML/PDF. El archivo lógico conserva perfiles archivados para futuras referencias y la clave única generada impide dos predeterminados activos por médico y paciente. Las transacciones bloquean la relación médico–paciente antes de cambiar el predeterminado.
+
+El archivo `catalog/sat-cfdi-4-20260903.json` contiene todas las filas de `c_RegimenFiscal` (19) y `c_UsoCFDI` (24) extraídas de [Catálogo CFDI 4.0 del SAT](http://omawww.sat.gob.mx/tramitesyservicios/Paginas/documentos/catCFDI_V_4_20260903.xls), publicado el **03-09-2026** y verificado el **16-09-2026**. El JSON registra el SHA-256 del XLS, tipo de persona, fechas de vigencia y regímenes permitidos para cada uso. La validación comprueba claves, vigencia y compatibilidad; no verifica la inscripción efectiva del RFC ante el SAT.
+
+Ruta: `/api/billing/patient-profiles.php`. `GET?action=catalog` entrega el catálogo y token CSRF; `GET?action=search&q=...` reutiliza `PatientsRepository::searchPatientsByDoctorId`; `GET?patient_id=...` lista perfiles activos. `POST` crea, `PUT` edita, `POST` con `action=set_default` cambia el predeterminado y `DELETE` archiva. Las escrituras requieren `X-Billing-Profiles-CSRF`. Las respuestas llevan `Cache-Control: private, no-store`; no se registran valores fiscales en logs.

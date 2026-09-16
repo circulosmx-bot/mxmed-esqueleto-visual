@@ -209,6 +209,7 @@
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
 <link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=exp01">
+<link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=fisc01">
 </head>
 
 <body class="mx-sidebar-expanded" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -9910,8 +9911,54 @@
 
               </div>
 
-              <div class="tab-pane fade" id="cfdi-pacientes"><div class="alert alert-info">Directorio fiscal de pacientes
-</div></div>
+              <div class="tab-pane fade" id="cfdi-pacientes">
+                <div class="mx-billing-patients">
+                  <div class="mx-billing-patients-head">
+                    <div>
+                      <h3>Pacientes</h3>
+                      <p>Busca un paciente para administrar sus datos de facturación.</p>
+                    </div>
+                  </div>
+                  <form id="mx-billing-patient-search" class="mx-billing-patient-search" role="search">
+                    <label class="form-label" for="mx-billing-patient-query">Buscar paciente</label>
+                    <div class="mx-billing-patient-search-row">
+                      <input id="mx-billing-patient-query" class="form-control" type="search" minlength="2" maxlength="100" autocomplete="off" placeholder="Nombre, teléfono o correo" required>
+                      <button class="btn mx-billing-btn-primary" type="submit">Buscar</button>
+                    </div>
+                  </form>
+                  <p id="mx-billing-patient-feedback" class="mx-billing-feedback" role="status" aria-live="polite"></p>
+                  <div id="mx-billing-patient-results" class="mx-billing-patient-results" aria-label="Resultados de pacientes"></div>
+                  <section id="mx-billing-profile-area" class="mx-billing-profile-area" hidden>
+                    <div class="mx-billing-profile-head">
+                      <div>
+                        <span class="mx-billing-kicker">Paciente seleccionado</span>
+                        <h3 id="mx-billing-selected-name"></h3>
+                      </div>
+                      <button id="mx-billing-change-patient" class="btn mx-billing-btn-secondary" type="button">Cambiar paciente</button>
+                    </div>
+                    <div class="mx-billing-profile-title-row">
+                      <h4>DATOS DE FACTURACIÓN</h4>
+                      <button id="mx-billing-add-profile" class="btn mx-billing-btn-secondary" type="button">+ Agregar datos de facturación</button>
+                    </div>
+                    <div id="mx-billing-profile-list" class="mx-billing-profile-list"></div>
+                    <form id="mx-billing-profile-editor" class="mx-billing-profile-editor" hidden>
+                      <h5 id="mx-billing-editor-title">Agregar datos de facturación</h5>
+                      <div class="mx-billing-form-grid">
+                        <div><label class="form-label" for="mx-billing-alias">Alias</label><input class="form-control" id="mx-billing-alias" name="alias" maxlength="80" required placeholder="Personal, Empresa, Familiar…"></div>
+                        <div class="mx-billing-name"><label class="form-label" for="mx-billing-receiver-name">Nombre, denominación o razón social</label><input class="form-control" id="mx-billing-receiver-name" name="receiver_legal_name" maxlength="254" required></div>
+                        <div><label class="form-label" for="mx-billing-rfc">RFC</label><input class="form-control" id="mx-billing-rfc" name="rfc" maxlength="13" required autocapitalize="characters"></div>
+                        <div><label class="form-label" for="mx-billing-zip">Código postal fiscal</label><input class="form-control" id="mx-billing-zip" name="fiscal_zip_code" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" required></div>
+                        <div><label class="form-label" for="mx-billing-regime">Régimen fiscal</label><select class="form-select" id="mx-billing-regime" name="fiscal_regime_code" required></select></div>
+                        <div><label class="form-label" for="mx-billing-use">Uso CFDI predeterminado</label><select class="form-select" id="mx-billing-use" name="default_cfdi_use_code" required></select></div>
+                        <div><label class="form-label" for="mx-billing-email">Correo de facturación (opcional)</label><input class="form-control" id="mx-billing-email" name="billing_email" type="email" maxlength="190" autocomplete="email"></div>
+                        <label class="mx-billing-default"><input id="mx-billing-default" name="is_default" type="checkbox"> Predeterminado</label>
+                      </div>
+                      <p class="mx-billing-form-help">El receptor fiscal puede ser distinto del paciente. Verifica sus datos en la constancia fiscal.</p>
+                      <div class="mx-billing-editor-actions"><button class="btn mx-billing-btn-primary" type="submit">Guardar</button><button id="mx-billing-cancel-editor" class="btn mx-billing-btn-secondary" type="button">Cancelar</button></div>
+                    </form>
+                  </section>
+                </div>
+              </div>
 
               <div class="tab-pane fade" id="cfdi-canceladas"><div class="alert alert-warning">Listado de canceladas y motivo
 </div></div>
@@ -10287,6 +10334,7 @@
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/app.js?v=exp02"></script>
+<script src="assets/js/billing/patient-profiles.js?v=fisc01"></script>
 <script src="assets/js/core/header-account.js"></script>
 <script src="assets/js/perfil/datos-generales.js?v=exp02"></script>
 <script src="assets/js/perfil/visibility-help.js"></script>

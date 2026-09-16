@@ -1,0 +1,57 @@
+/* FISC01: only the real Facturación > Pacientes surface uses the VIS01 language. */
+#cfdi-pacientes .mx-billing-patients{color:#123f56;display:grid;gap:16px;min-width:0}
+#cfdi-pacientes [hidden]{display:none!important}
+#cfdi-pacientes .mx-billing-patients-head h3,
+#cfdi-pacientes .mx-billing-profile-head h3{margin:0;color:#06aeb8;font-size:20px;font-weight:700;line-height:1.2}
+#cfdi-pacientes .mx-billing-patients-head p{margin:4px 0 0;color:#5f7685}
+#cfdi-pacientes .mx-billing-patient-search,
+#cfdi-pacientes .mx-billing-profile-area{padding:16px;border:1px solid #cbdde4;border-radius:12px;background:#fff;min-width:0}
+#cfdi-pacientes .form-label{display:block;margin-bottom:4px;color:#073b5a;font-weight:650}
+#cfdi-pacientes :is(.form-control,.form-select){min-width:0;min-height:42px;border:1px solid #a9c2ce;border-radius:9px;background:#fff;color:#123f56;box-shadow:0 1px 2px rgba(7,59,90,.04)}
+#cfdi-pacientes :is(.form-control,.form-select):focus{border-color:#008a98;box-shadow:0 0 0 3px rgba(0,174,190,.16)}
+#cfdi-pacientes .mx-billing-patient-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+#cfdi-pacientes .btn{min-height:32px;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;line-height:1.2;box-shadow:none}
+#cfdi-pacientes .btn:focus-visible{outline:3px solid #123d59;outline-offset:3px}
+#cfdi-pacientes .mx-billing-btn-primary{border:1px solid transparent;background:#00c040;color:#fff}
+#cfdi-pacientes .mx-billing-btn-primary:hover{background:#00a936;color:#fff}
+#cfdi-pacientes .mx-billing-btn-secondary{border:1px solid #01afb9;background:#fff;color:#008391}
+#cfdi-pacientes .mx-billing-btn-secondary:hover{background:#effafb;color:#07536e}
+#cfdi-pacientes .mx-billing-btn-danger{border:1px solid #e6384f;background:#fff;color:#d5213b}
+#cfdi-pacientes .mx-billing-btn-danger:hover{background:#fff2f3;color:#b51d34}
+#cfdi-pacientes .mx-billing-feedback{margin:0;min-height:1.25em;color:#5f7685}
+#cfdi-pacientes .mx-billing-feedback:empty{display:none}
+#cfdi-pacientes .mx-billing-patient-results{display:grid;gap:8px}
+#cfdi-pacientes .mx-billing-result{width:100%;text-align:left;border:1px solid #cbdde4;background:#f8fbfc;color:#123f56;border-radius:9px;padding:10px 12px}
+#cfdi-pacientes .mx-billing-result:hover{border-color:#01afb9;background:#effafb}
+#cfdi-pacientes .mx-billing-result:focus-visible{outline:3px solid #123d59;outline-offset:2px}
+#cfdi-pacientes .mx-billing-profile-head,
+#cfdi-pacientes .mx-billing-profile-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#cfdi-pacientes .mx-billing-profile-head{padding-bottom:12px;border-bottom:1px solid #dce8ed}
+#cfdi-pacientes .mx-billing-kicker{color:#5f7685;font-size:13px}
+#cfdi-pacientes .mx-billing-profile-title-row{margin:16px 0 12px}
+#cfdi-pacientes .mx-billing-profile-title-row h4{margin:0;color:#06aeb8;font-size:20px;line-height:1.2;font-weight:700}
+#cfdi-pacientes .mx-billing-profile-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px}
+#cfdi-pacientes .mx-billing-card{min-width:0;padding:14px;border:1px solid #cbdde4;border-radius:10px;background:#f8fbfc}
+#cfdi-pacientes .mx-billing-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+#cfdi-pacientes .mx-billing-card h5{margin:0;color:#073b5a;font-weight:700;font-size:16px;overflow-wrap:anywhere}
+#cfdi-pacientes .mx-billing-default-badge{border-radius:999px;background:#e5f8ed;color:#137644;padding:3px 7px;font-size:11px;font-weight:700;white-space:nowrap}
+#cfdi-pacientes .mx-billing-card p{margin:5px 0;color:#405d6c;overflow-wrap:anywhere}
+#cfdi-pacientes .mx-billing-card .mx-billing-receiver{color:#073b5a;font-weight:650}
+#cfdi-pacientes .mx-billing-card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+#cfdi-pacientes .mx-billing-profile-editor{margin-top:14px;padding:14px;border:1px solid #b9e4eb;border-radius:10px;background:#f8fbfc}
+#cfdi-pacientes .mx-billing-profile-editor h5{margin:0 0 12px;color:#06aeb8;font-size:18px;font-weight:700}
+#cfdi-pacientes .mx-billing-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#cfdi-pacientes .mx-billing-name{grid-column:span 2}
+#cfdi-pacientes .mx-billing-default{align-self:end;display:flex;gap:8px;align-items:center;min-height:42px;color:#073b5a;font-weight:650}
+#cfdi-pacientes .mx-billing-form-help{margin:12px 0;color:#5f7685;font-size:14px}
+#cfdi-pacientes .mx-billing-editor-actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:767px){
+  #cfdi-pacientes .btn{min-height:42px}
+  #cfdi-pacientes .mx-billing-form-grid{grid-template-columns:minmax(0,1fr)}
+  #cfdi-pacientes .mx-billing-name{grid-column:auto}
+}
+@media(max-width:500px){
+  #cfdi-pacientes .mx-billing-patient-search-row{grid-template-columns:minmax(0,1fr)}
+  #cfdi-pacientes .mx-billing-patient-search-row .btn{width:100%}
+  #cfdi-pacientes .mx-billing-profile-title-row .btn{width:100%}
+}

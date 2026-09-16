@@ -1,0 +1,658 @@
+{
+  "source": "SAT Catálogo CFDI versión 4.0",
+  "source_url": "http://omawww.sat.gob.mx/tramitesyservicios/Paginas/documentos/catCFDI_V_4_20260903.xls",
+  "source_last_modified": "2026-09-03",
+  "verified_on": "2026-09-16",
+  "source_sha256": "a5ce7a602726f08ab8cee71710d5ea8e6029e3bfbdcf9a19a433e31070128b99",
+  "sheets": [
+    "c_RegimenFiscal",
+    "c_UsoCFDI"
+  ],
+  "regimes": [
+    {
+      "code": "601",
+      "label": "General de Ley Personas Morales",
+      "person_physical": false,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "603",
+      "label": "Personas Morales con Fines no Lucrativos",
+      "person_physical": false,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "605",
+      "label": "Sueldos y Salarios e Ingresos Asimilados a Salarios",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "606",
+      "label": "Arrendamiento",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "607",
+      "label": "Régimen de Enajenación o Adquisición de Bienes",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "608",
+      "label": "Demás ingresos",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "610",
+      "label": "Residentes en el Extranjero sin Establecimiento Permanente en México",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "611",
+      "label": "Ingresos por Dividendos (socios y accionistas)",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "612",
+      "label": "Personas Físicas con Actividades Empresariales y Profesionales",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "614",
+      "label": "Ingresos por intereses",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "615",
+      "label": "Régimen de los ingresos por obtención de premios",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "616",
+      "label": "Sin obligaciones fiscales",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "620",
+      "label": "Sociedades Cooperativas de Producción que optan por diferir sus ingresos",
+      "person_physical": false,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "621",
+      "label": "Incorporación Fiscal",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "622",
+      "label": "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras",
+      "person_physical": false,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "623",
+      "label": "Opcional para Grupos de Sociedades",
+      "person_physical": false,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "624",
+      "label": "Coordinados",
+      "person_physical": false,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "625",
+      "label": "Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    },
+    {
+      "code": "626",
+      "label": "Régimen Simplificado de Confianza",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null
+    }
+  ],
+  "uses": [
+    {
+      "code": "G01",
+      "label": "Adquisición de mercancías.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "G02",
+      "label": "Devoluciones, descuentos o bonificaciones.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "616",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "G03",
+      "label": "Gastos en general.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I01",
+      "label": "Construcciones.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I02",
+      "label": "Mobiliario y equipo de oficina por inversiones.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I03",
+      "label": "Equipo de transporte.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I04",
+      "label": "Equipo de computo y accesorios.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I05",
+      "label": "Dados, troqueles, moldes, matrices y herramental.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I06",
+      "label": "Comunicaciones telefónicas.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I07",
+      "label": "Comunicaciones satelitales.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "I08",
+      "label": "Otra maquinaria y equipo.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "606",
+        "612",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "D01",
+      "label": "Honorarios médicos, dentales y gastos hospitalarios.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D02",
+      "label": "Gastos médicos por incapacidad o discapacidad.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D03",
+      "label": "Gastos funerales.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D04",
+      "label": "Donativos.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D05",
+      "label": "Intereses reales efectivamente pagados por créditos hipotecarios (casa habitación).",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D06",
+      "label": "Aportaciones voluntarias al SAR.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D07",
+      "label": "Primas por seguros de gastos médicos.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D08",
+      "label": "Gastos de transportación escolar obligatoria.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D09",
+      "label": "Depósitos en cuentas para el ahorro, primas que tengan como base planes de pensiones.",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "D10",
+      "label": "Pagos por servicios educativos (colegiaturas).",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605",
+        "606",
+        "608",
+        "611",
+        "612",
+        "614",
+        "607",
+        "615",
+        "625"
+      ]
+    },
+    {
+      "code": "S01",
+      "label": "Sin efectos fiscales.",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "605",
+        "606",
+        "608",
+        "610",
+        "611",
+        "612",
+        "614",
+        "616",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "607",
+        "615",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "CP01",
+      "label": "Pagos",
+      "person_physical": true,
+      "person_legal": true,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "601",
+        "603",
+        "605",
+        "606",
+        "608",
+        "610",
+        "611",
+        "612",
+        "614",
+        "616",
+        "620",
+        "621",
+        "622",
+        "623",
+        "624",
+        "607",
+        "615",
+        "625",
+        "626"
+      ]
+    },
+    {
+      "code": "CN01",
+      "label": "Nómina",
+      "person_physical": true,
+      "person_legal": false,
+      "valid_from": "2022-01-01",
+      "valid_to": null,
+      "allowed_regimes": [
+        "605"
+      ]
+    }
+  ]
+}
