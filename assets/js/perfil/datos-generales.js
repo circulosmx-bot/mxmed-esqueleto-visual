@@ -1637,65 +1637,107 @@
         daySelect.addEventListener('blur', flushDayNumberBuffer);
       }
 
-      if(monthSelect && !monthSelect.__mxmedBirthMonthNumericBound){
-        monthSelect.__mxmedBirthMonthNumericBound = true;
-        let monthNumberBuffer = '';
-        let monthNumberTimer = null;
-        const commitMonthNumber = (value)=>{
-          const month = Number(value);
-          if(!Number.isInteger(month) || month < 1 || month > 12) return false;
-          const next = String(month).padStart(2, '0');
-          if(monthSelect.value !== next){
-            monthSelect.value = next;
+      if(monthSelect && !monthSelect.__mxmedBirthMonthTypeaheadBound){
+        monthSelect.__mxmedBirthMonthTypeaheadBound = true;
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const normalizeMonth = (value)=> String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        let buffer = '';
+        let kind = '';
+        let timer = null;
+        let programmaticChange = false;
+        const clearBuffer = ()=>{
+          buffer = '';
+          kind = '';
+          if(timer) window.clearTimeout(timer);
+          timer = null;
+        };
+        const selectMonth = (value)=>{
+          if(monthSelect.value === value) return;
+          monthSelect.value = value;
+          programmaticChange = true;
+          try{
             monthSelect.dispatchEvent(new Event('input', { bubbles: true }));
             monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }finally{
+            programmaticChange = false;
           }
-          return true;
         };
-        const clearMonthNumberBuffer = ()=>{
-          monthNumberBuffer = '';
-          if(monthNumberTimer){
-            window.clearTimeout(monthNumberTimer);
-            monthNumberTimer = null;
+        const resolveMonth = ()=>{
+          if(kind === 'number'){
+            const number = Number(buffer);
+            return /^\d{1,2}$/.test(buffer) && number >= 1 && number <= 12
+              ? String(number).padStart(2, '0') : '';
           }
+          // Ambiguous Spanish prefixes resolve in calendar order until more letters arrive:
+          // Ma -> Marzo, May -> Mayo; Ju -> Junio, Jul -> Julio; A -> Abril, Ag -> Agosto.
+          const index = monthNames.findIndex((name)=> normalizeMonth(name).startsWith(normalizeMonth(buffer)));
+          return index < 0 ? '' : String(index + 1).padStart(2, '0');
         };
         monthSelect.addEventListener('keydown', (event)=>{
           if(event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-          if(!/^\d$/.test(event.key || '')) return;
-          event.preventDefault();
-          if(monthNumberTimer){
-            window.clearTimeout(monthNumberTimer);
-          }
-          monthNumberBuffer = (monthNumberBuffer + event.key).slice(-2);
-          const numeric = Number(monthNumberBuffer);
-          if(monthNumberBuffer.length === 2){
-            if(numeric >= 10 && numeric <= 12){
-              commitMonthNumber(monthNumberBuffer);
-              clearMonthNumberBuffer();
-              return;
-            }
-            monthNumberBuffer = event.key;
-          }
-          if(event.key !== '1'){
-            commitMonthNumber(event.key);
-            clearMonthNumberBuffer();
+          if(event.key === 'Tab' || event.key === 'Enter'){
+            if(kind === 'number' && buffer) selectMonth(resolveMonth());
+            const hadTypeahead = !!buffer;
+            clearBuffer();
+            if(event.key === 'Enter' && hadTypeahead) event.preventDefault();
             return;
           }
-          monthNumberTimer = window.setTimeout(()=>{
-            commitMonthNumber(monthNumberBuffer);
-            clearMonthNumberBuffer();
-          }, 650);
-        });
-        monthSelect.addEventListener('blur', ()=>{
-          if(monthNumberBuffer){
-            commitMonthNumber(monthNumberBuffer);
+          if(event.key === 'Backspace' || event.key === 'Delete'){
+            clearBuffer();
+            return;
           }
-          clearMonthNumberBuffer();
+          if(!/^[0-9a-zA-ZÁÉÍÓÚÜáéíóúü]$/.test(event.key || '')) return;
+          event.preventDefault();
+          const nextKind = /^\d$/.test(event.key) ? 'number' : 'name';
+          buffer = kind === nextKind ? buffer + event.key : event.key;
+          kind = nextKind;
+          if(timer) window.clearTimeout(timer);
+          if(kind === 'number'){
+            // Keep 0 and 1 pending so 05/07 and 11/12 can be completed.
+            if(buffer.length >= 2){
+              selectMonth(resolveMonth());
+              clearBuffer();
+              return;
+            }
+            if(!/^[01]$/.test(buffer)){
+              selectMonth(resolveMonth());
+            }
+          }else{
+            selectMonth(resolveMonth());
+          }
+          timer = window.setTimeout(()=>{
+            if(kind === 'number') selectMonth(resolveMonth());
+            clearBuffer();
+          }, 1000);
+        });
+        monthSelect.addEventListener('pointerdown', clearBuffer);
+        monthSelect.addEventListener('change', ()=>{ if(!programmaticChange) clearBuffer(); });
+        monthSelect.addEventListener('blur', ()=>{
+          if(kind === 'number' && buffer) selectMonth(resolveMonth());
+          clearBuffer();
         });
       }
 
       if(yearSelect && !yearSelect.__mxmedBirthYearNativeAnchorBound){
         yearSelect.__mxmedBirthYearNativeAnchorBound = true;
+        let yearDigits = '';
+        let yearDigitsTimer = null;
+        const clearYearDigits = ()=>{
+          yearDigits = '';
+          if(yearDigitsTimer) window.clearTimeout(yearDigitsTimer);
+          yearDigitsTimer = null;
+        };
+        const commitYearDigits = ()=>{
+          if(!yearDigits) return;
+          const next = /^\d{4}$/.test(yearDigits) && Array.from(yearSelect.options).some((option)=> option.value === yearDigits)
+            ? yearDigits : '';
+          if(yearSelect.value !== next){
+            yearSelect.value = next;
+            yearSelect.dispatchEvent(new Event('input', { bubbles: true }));
+            yearSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          clearYearDigits();
+        };
         const yearAnchorValue = '2000';
         let yearAnchorRestoreTimer = null;
         const hasYearAnchor = ()=>{
@@ -1746,12 +1788,26 @@
         }, true);
         yearSelect.addEventListener('keydown', (event)=>{
           if(event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+          if(/^\d$/.test(event.key || '')){
+            event.preventDefault();
+            if(yearDigitsTimer) window.clearTimeout(yearDigitsTimer);
+            yearDigits = (yearDigits + event.key).slice(-4);
+            if(yearDigits.length === 4){
+              commitYearDigits();
+            }else{
+              yearDigitsTimer = window.setTimeout(commitYearDigits, 1200);
+            }
+            return;
+          }
+          if(event.key === 'Tab' || event.key === 'Enter') commitYearDigits();
+          if(event.key === 'Backspace' || event.key === 'Delete') clearYearDigits();
           if(!shouldPrimeYearAnchorForKey(event.key || '')) return;
           primeYearAnchorForNativeOpen();
         }, true);
         yearSelect.addEventListener('input', cancelTemporaryYearAnchor);
         yearSelect.addEventListener('change', cancelTemporaryYearAnchor);
         yearSelect.addEventListener('blur', ()=>{
+          commitYearDigits();
           clearYearAnchorRestoreTimer();
           restoreTemporaryYearAnchor();
         });

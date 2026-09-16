@@ -4605,7 +4605,7 @@
 
                       <div class="col-auto">
                         <div class="dg-date-field">
-                          <select class="form-select dg-date-dd" data-dg-dia>
+                          <select class="form-select dg-date-dd" data-dg-dia aria-label="Día de nacimiento">
                             <option value="">Día</option>
                             <option value="01">01</option>
                             <option value="02">02</option>
@@ -4647,7 +4647,7 @@
 
                         <div class="dg-date-field">
 
-                        <select class="form-select dg-date-mm" data-dg-mes>
+                        <select class="form-select dg-date-mm" data-dg-mes aria-label="Mes de nacimiento">
 
                           <option value="">Mes</option>
                           <option value="01">Enero</option>
@@ -4674,7 +4674,7 @@
 
                         <div class="dg-date-field dg-date-year">
 
-                        <select class="form-select dg-date-yy" data-dg-anio>
+                        <select class="form-select dg-date-yy" data-dg-anio aria-label="Año de nacimiento">
 
                           <option value="">Año</option>
                           <option value="2026">2026</option>
@@ -10362,9 +10362,9 @@
 <script src="assets/js/physician-signature.js?v=sig03a"></script>
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
-<script src="assets/js/app.js?v=ip01a"></script>
+<script src="assets/js/app.js?v=exp02"></script>
 <script src="assets/js/core/header-account.js"></script>
-<script src="assets/js/perfil/datos-generales.js?v=crd0310"></script>
+<script src="assets/js/perfil/datos-generales.js?v=exp02"></script>
 <script src="assets/js/perfil/visibility-help.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>
 
@@ -11257,6 +11257,7 @@
         sex: sexo || '--',
         clinical_reason: motivo || '',
         current_date: new Date().toISOString().slice(0, 10),
+        display_current_date: typeof window.mxmedLocalClinicalDateISO === 'function' ? window.mxmedLocalClinicalDateISO() : '',
         encounter_status: p10Bar && p10Bar.dataset && String(p10Bar.dataset.encounterKey || '').trim() ? 'Consulta activa' : 'Sin consulta activa',
         allergies: allergies,
         current_medication: currentMeds,
@@ -11277,7 +11278,8 @@
       var ageRaw = clean(safePayload.age || safePayload.patient_age);
       var sex = clean(safePayload.sex || safePayload.patient_sex) || '--';
       var reason = clean(safePayload.clinical_reason || safePayload.reason);
-      var date = clean(safePayload.current_date || safePayload.date) || 'No registrada';
+      var rawDate = clean(safePayload.display_current_date || safePayload.current_date || safePayload.date);
+      var date = (typeof window.mxmedFormatClinicalCurrentDate === 'function' ? window.mxmedFormatClinicalCurrentDate(rawDate) : rawDate) || 'No registrada';
       var status = clean(safePayload.encounter_status || safePayload.encounter_id) || 'Sin consulta activa';
       var allergies = toListText(
         Array.isArray(safePayload.allergies) ? safePayload.allergies : [],

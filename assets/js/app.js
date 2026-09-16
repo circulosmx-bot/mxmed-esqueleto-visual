@@ -37792,12 +37792,26 @@ console.info('app.js loaded :: 20251123a');
     allergies: 'Sin alergias registradas',
     current_medication: 'Sin medicación actual registrada'
   };
+  const clinicalDateMonths = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const localClinicalDateISO = (date = new Date()) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  // Parse calendar components directly: UTC parsing can move a local date to another day.
+  const formatClinicalCurrentDate = (value) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').trim());
+    if (!match) return String(value || '').trim();
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return String(value || '').trim();
+    return `${day} de ${clinicalDateMonths[month - 1]} ${match[1]}`;
+  };
+  window.mxmedLocalClinicalDateISO = localClinicalDateISO;
+  window.mxmedFormatClinicalCurrentDate = formatClinicalCurrentDate;
   const normalizeClinicalHeaderData = (input = {}) => {
     const patientName = normalizeRecetaText(input.patient_name);
     const ageRaw = normalizeRecetaText(input.age || input.patient_age);
     const sex = normalizeRecetaText(input.sex || input.patient_sex);
     const clinicalReasonRaw = normalizeRecetaText(input.clinical_reason || input.reason);
-    const currentDate = normalizeRecetaText(input.current_date || input.date);
+    const currentDate = normalizeRecetaText(input.display_current_date || input.current_date || input.date);
     const encounterStatus = normalizeRecetaText(input.encounter_status || input.encounter_id);
     const allergiesList = Array.isArray(input.allergies) ? input.allergies : [];
     const currentMedsList = Array.isArray(input.current_medication)
@@ -37816,7 +37830,7 @@ console.info('app.js loaded :: 20251123a');
       age: ageRaw ? (/\banos?\b|\baños?\b/i.test(ageRaw) ? ageRaw : `${ageRaw} años`) : CLINICAL_HEADER_EMPTY_STATE.age,
       sex: sex || CLINICAL_HEADER_EMPTY_STATE.sex,
       clinical_reason: clinicalReasonRaw ? `Motivo: ${clinicalReasonRaw}` : `Motivo: ${CLINICAL_HEADER_EMPTY_STATE.clinical_reason}`,
-      current_date: currentDate || CLINICAL_HEADER_EMPTY_STATE.current_date,
+      current_date: currentDate ? formatClinicalCurrentDate(currentDate) : CLINICAL_HEADER_EMPTY_STATE.current_date,
       encounter_status: encounterStatus || CLINICAL_HEADER_EMPTY_STATE.encounter_status,
       encounter_action_label: normalizeRecetaText(input.encounter_action_label || ''),
       encounter_action_mode: normalizeRecetaText(input.encounter_action_mode || ''),
@@ -38078,6 +38092,7 @@ console.info('app.js loaded :: 20251123a');
       doctor_name: normalizeRecetaText(ctx?.medico?.nombre || ctx?.actor?.nombre_completo),
       current_date: new Date().toISOString().slice(0, 10),
       date: new Date().toISOString().slice(0, 10),
+      display_current_date: localClinicalDateISO(),
       encounter_status: encounterStatus,
       allergies,
       current_medications: currentMedications,
