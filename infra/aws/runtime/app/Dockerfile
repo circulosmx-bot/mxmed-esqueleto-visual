@@ -26,7 +26,7 @@ RUN case "${PHP_BASE_IMAGE}" in *@sha256:[0-9a-f][0-9a-f]*) ;; *) exit 64 ;; esa
         libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && php --ri 'Zend OPcache' >/dev/null \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring intl gd exif zip \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring intl gd exif zip bcmath \
     && rm -rf /var/lib/apt/lists/*
 
 ARG PHPREDIS_VERSION
@@ -51,6 +51,7 @@ RUN apt-get update \
         libzip4 \
     && php --ri gd >/dev/null \
     && php -r 'exit(function_exists("imagecreatetruecolor") ? 0 : 1);' \
+    && php -r 'exit(function_exists("bcadd") ? 0 : 1);' \
     && a2enmod rewrite mime \
     && rm -rf /var/lib/apt/lists/* \
     && install -d -o www-data -g www-data \

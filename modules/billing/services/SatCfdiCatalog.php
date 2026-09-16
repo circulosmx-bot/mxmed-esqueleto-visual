@@ -38,6 +38,13 @@ final class SatCfdiCatalog
         }
     }
 
+    public function validateRegime(string $rfc, string $regimeCode): void
+    {
+        $kind = mb_strlen($rfc, 'UTF-8') === 12 ? 'person_legal' : 'person_physical';
+        $regime = $this->findActive('regimes', $regimeCode);
+        if ($regime === null || !$regime[$kind]) throw new \InvalidArgumentException('invalid_fiscal_regime_code');
+    }
+
     private function activeRows(string $group): array
     {
         $today = gmdate('Y-m-d');

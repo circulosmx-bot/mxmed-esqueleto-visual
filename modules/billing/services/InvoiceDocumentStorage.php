@@ -32,6 +32,8 @@ final class InvoiceDocumentStorage
         return new self($root);
     }
 
+    public function canonicalRoot(): string { return $this->root; }
+
     public static function key(string $doctorId, string $invoiceId, string $kind): string
     {
         if (!in_array($kind, ['xml','pdf'], true) || !preg_match('/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/D', $invoiceId)) {
