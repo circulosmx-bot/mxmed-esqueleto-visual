@@ -55909,19 +55909,8 @@ console.info('app.js loaded :: 20251123a');
     const target = sanitizeText(completionTarget.getAttribute('data-exp-completion-target'));
     if(!target) return;
     ev.preventDefault();
-    if(target === clinicalTabTargets.historialAtencion){
-      window.__mxmedSkipNextHistorialAutoModal = true;
-      window.setTimeout(()=>{
-        if(window.__mxmedSkipNextHistorialAutoModal === true){
-          window.__mxmedSkipNextHistorialAutoModal = false;
-        }
-      }, 2000);
-    }
     clearClinicalCompletionHub('completion_hub_card');
-    const opened = showClinicalTab(target);
-    if(!opened && target === clinicalTabTargets.historialAtencion){
-      window.__mxmedSkipNextHistorialAutoModal = false;
-    }
+    showClinicalTab(target);
   });
   syncExpedienteSectionTopbarTitle();
 
