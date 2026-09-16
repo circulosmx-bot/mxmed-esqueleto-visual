@@ -210,6 +210,7 @@
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
 <link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=exp01">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=fisc01">
+<link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 </head>
 
 <body class="mx-sidebar-expanded" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -9883,32 +9884,30 @@
 
                   <div class="col-md-3"><label class="form-label">Total</label><input class="form-control" placeholder="$0.00"></div>
 
-                  <div class="col-md-3 d-grid"><button class="btn btn-primary mt-4">Timbrar</button></div>
+                  <div class="col-md-3 d-grid"><button class="btn btn-primary mt-4" type="button" disabled title="La emisión CFDI estará disponible en una fase posterior">Timbrar</button></div>
+                  <p class="col-12 text-muted mb-0">La emisión y el timbrado CFDI aún no están disponibles. Para conservar facturas existentes, usa Pacientes → Facturas.</p>
 
                 </div>
 
               </div>
 
               <div class="tab-pane fade" id="cfdi-listar">
-
-                <div class="table-responsive">
-
-                  <table class="table table-sm">
-
-                    <thead><tr><th>Folio</th><th>Fecha</th><th>Paciente</th><th>Importe</th><th>Estatus</th><th></th></tr></thead>
-
-                    <tbody>
-
-                      <tr><td>A-1023</td><td>2025-09-12</td><td>J. Pérez</td><td>$1,200</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
-
-                      <tr><td>A-1018</td><td>2025-09-02</td><td>M. Díaz</td><td>$900</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
-
-                    </tbody>
-
-                  </table>
-
-                </div>
-
+                <section class="mx-invoice-surface" aria-label="Facturas del médico">
+                  <h3>LISTAR FACTURAS</h3>
+                  <form id="mx-invoice-filters" class="mx-invoice-filters" role="search">
+                    <div class="mx-invoice-patient-filter"><label for="mx-invoice-filter-patient">Paciente</label><input id="mx-invoice-filter-patient" class="form-control" type="search" autocomplete="off" placeholder="Buscar paciente"><input id="mx-invoice-filter-patient-id" type="hidden"><div id="mx-invoice-patient-results" class="mx-invoice-patient-results" hidden></div></div>
+                    <div><label for="mx-invoice-filter-receiver">Receptor</label><input id="mx-invoice-filter-receiver" name="receiver" class="form-control" type="search"></div>
+                    <div><label for="mx-invoice-filter-rfc">RFC</label><input id="mx-invoice-filter-rfc" name="rfc" class="form-control" type="search"></div>
+                    <div><label for="mx-invoice-filter-uuid">UUID</label><input id="mx-invoice-filter-uuid" name="uuid" class="form-control" type="search"></div>
+                    <div><label for="mx-invoice-filter-from">Desde</label><input id="mx-invoice-filter-from" name="date_from" class="form-control" type="date"></div>
+                    <div><label for="mx-invoice-filter-to">Hasta</label><input id="mx-invoice-filter-to" name="date_to" class="form-control" type="date"></div>
+                    <div><label for="mx-invoice-filter-status">Estado</label><select id="mx-invoice-filter-status" name="status" class="form-select"><option value="">Todos</option><option value="UNKNOWN">Sin verificar</option><option value="VERIFIED_VALID">Vigente verificada</option><option value="VERIFIED_CANCELED">Cancelada verificada</option></select></div>
+                    <button type="submit" class="btn mx-billing-btn-primary">Filtrar</button>
+                  </form>
+                  <p id="mx-invoice-global-feedback" class="mx-invoice-feedback" role="status" aria-live="polite"></p>
+                  <div id="mx-invoice-global-list" class="mx-invoice-list"></div>
+                  <div id="mx-invoice-global-detail" class="mx-invoice-detail" hidden></div>
+                </section>
               </div>
 
               <div class="tab-pane fade" id="cfdi-pacientes">
@@ -9936,6 +9935,8 @@
                       </div>
                       <button id="mx-billing-change-patient" class="btn mx-billing-btn-secondary" type="button">Cambiar paciente</button>
                     </div>
+                    <div class="mx-billing-inner-tabs" role="tablist" aria-label="Facturación del paciente"><button id="mx-billing-tab-data" type="button" role="tab" aria-selected="true" aria-controls="mx-billing-data-panel">DATOS DE FACTURACIÓN</button><button id="mx-billing-tab-invoices" type="button" role="tab" aria-selected="false" aria-controls="mx-billing-invoices-panel">FACTURAS</button></div>
+                    <div id="mx-billing-data-panel" role="tabpanel" aria-labelledby="mx-billing-tab-data">
                     <div class="mx-billing-profile-title-row">
                       <h4>DATOS DE FACTURACIÓN</h4>
                       <button id="mx-billing-add-profile" class="btn mx-billing-btn-secondary" type="button">+ Agregar datos de facturación</button>
@@ -9956,12 +9957,24 @@
                       <p class="mx-billing-form-help">El receptor fiscal puede ser distinto del paciente. Verifica sus datos en la constancia fiscal.</p>
                       <div class="mx-billing-editor-actions"><button class="btn mx-billing-btn-primary" type="submit">Guardar</button><button id="mx-billing-cancel-editor" class="btn mx-billing-btn-secondary" type="button">Cancelar</button></div>
                     </form>
+                    </div>
+                    <div id="mx-billing-invoices-panel" role="tabpanel" aria-labelledby="mx-billing-tab-invoices" hidden>
+                      <div class="mx-billing-profile-title-row"><h4>FACTURAS</h4><button id="mx-invoice-open-import" class="btn mx-billing-btn-primary" type="button">+ Cargar factura histórica</button></div>
+                      <p id="mx-invoice-patient-feedback" class="mx-invoice-feedback" role="status" aria-live="polite"></p>
+                      <div id="mx-invoice-patient-list" class="mx-invoice-list"></div>
+                      <form id="mx-invoice-import-form" class="mx-invoice-import" hidden>
+                        <h5>Cargar factura histórica</h5><p>El XML timbrado es obligatorio. El PDF es opcional. La importación no comprueba el estado actual ante el SAT.</p>
+                        <div class="mx-invoice-import-fields"><div><label for="mx-invoice-xml">CFDI XML</label><input id="mx-invoice-xml" name="xml_file" class="form-control" type="file" accept=".xml,application/xml,text/xml" required></div><div><label for="mx-invoice-pdf">PDF (opcional)</label><input id="mx-invoice-pdf" name="pdf_file" class="form-control" type="file" accept=".pdf,application/pdf"></div><div><label for="mx-invoice-profile">Perfil de facturación de referencia (opcional)</label><select id="mx-invoice-profile" name="billing_profile_id" class="form-select"><option value="">Sin vínculo a perfil</option></select></div></div>
+                        <div class="mx-invoice-actions"><button type="submit" class="btn mx-billing-btn-secondary">Revisar XML</button><button id="mx-invoice-cancel-import" type="button" class="btn mx-billing-btn-secondary">Cerrar</button></div>
+                      </form>
+                      <div id="mx-invoice-preview" class="mx-invoice-detail" hidden></div>
+                      <div id="mx-invoice-patient-detail" class="mx-invoice-detail" hidden></div>
+                    </div>
                   </section>
                 </div>
               </div>
 
-              <div class="tab-pane fade" id="cfdi-canceladas"><div class="alert alert-warning">Listado de canceladas y motivo
-</div></div>
+              <div class="tab-pane fade" id="cfdi-canceladas"><div class="alert alert-warning">La consulta de facturas canceladas estará disponible cuando exista verificación fiscal confiable. Las importaciones históricas aparecen como «Sin verificar».</div></div>
 
             </div>
 
@@ -10335,6 +10348,7 @@
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/app.js?v=exp02"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fisc01"></script>
+<script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/core/header-account.js"></script>
 <script src="assets/js/perfil/datos-generales.js?v=exp02"></script>
 <script src="assets/js/perfil/visibility-help.js"></script>

@@ -1,0 +1,50 @@
+/* FISC02A invoice archive, scoped to the two live billing surfaces. */
+#cfdi-pacientes .mx-billing-inner-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px;border-bottom:1px solid #dce8ed;padding-bottom:8px}
+#cfdi-pacientes .mx-billing-inner-tabs button{border:1px solid #b9d7df;border-radius:8px;background:#fff;color:#07536e;padding:8px 14px;font-weight:700}
+#cfdi-pacientes .mx-billing-inner-tabs button[aria-selected="true"]{border-color:#01afb9;background:#01afb9;color:#fff}
+#cfdi-pacientes .mx-billing-inner-tabs button:focus-visible{outline:3px solid #123d59;outline-offset:2px}
+#cfdi-pacientes #mx-billing-data-panel,#cfdi-pacientes #mx-billing-invoices-panel{min-width:0}
+#cfdi-pacientes #mx-billing-invoices-panel[hidden],#cfdi-pacientes #mx-billing-data-panel[hidden],
+#cfdi-pacientes .mx-invoice-import[hidden],#cfdi-pacientes .mx-invoice-detail[hidden],#cfdi-listar .mx-invoice-detail[hidden],#cfdi-listar .mx-invoice-patient-results[hidden]{display:none!important}
+#cfdi-listar .mx-invoice-surface{padding:16px;border:1px solid #cbdde4;border-radius:12px;background:#fff;color:#123f56;min-width:0}
+#cfdi-listar .mx-invoice-surface h3{margin:0 0 14px;color:#06aeb8;font-size:20px;font-weight:700}
+#cfdi-listar .mx-invoice-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end;padding:12px;border:1px solid #dce8ed;border-radius:10px;background:#f8fbfc}
+#cfdi-listar .mx-invoice-filters>div{min-width:0}
+#cfdi-listar .mx-invoice-filters label,#cfdi-pacientes .mx-invoice-import label{display:block;margin-bottom:4px;color:#073b5a;font-weight:650}
+#cfdi-listar .form-control,#cfdi-listar .form-select,#cfdi-pacientes .mx-invoice-import .form-control,#cfdi-pacientes .mx-invoice-import .form-select{width:100%;min-width:0;min-height:42px;border:1px solid #a9c2ce;border-radius:9px;background:#fff;color:#123f56;box-shadow:0 1px 2px rgba(7,59,90,.04)}
+#cfdi-listar :is(.form-control,.form-select):focus,#cfdi-pacientes .mx-invoice-import :is(.form-control,.form-select):focus{border-color:#008a98;box-shadow:0 0 0 3px rgba(0,174,190,.16)}
+#cfdi-listar .btn,#cfdi-pacientes .mx-invoice-actions .btn,#cfdi-pacientes #mx-invoice-open-import{min-height:34px;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;line-height:1.2}
+#cfdi-listar .btn:focus-visible,#cfdi-pacientes .mx-invoice-actions .btn:focus-visible{outline:3px solid #123d59;outline-offset:2px}
+#cfdi-listar .mx-billing-btn-primary{border:1px solid transparent;background:#00c040;color:#fff}
+#cfdi-listar .mx-billing-btn-primary:hover{background:#00a936}
+#cfdi-listar .mx-billing-btn-secondary{border:1px solid #01afb9;background:#fff;color:#008391}
+#cfdi-listar .mx-billing-btn-secondary:hover{background:#effafb}
+.mx-invoice-patient-filter{position:relative}
+.mx-invoice-patient-results{position:absolute;z-index:4;inset-inline:0;top:100%;max-height:220px;overflow:auto;border:1px solid #cbdde4;border-radius:8px;background:#fff;box-shadow:0 7px 22px rgba(7,59,90,.13)}
+.mx-invoice-patient-results button{display:block;width:100%;padding:9px 10px;text-align:left;border:0;border-bottom:1px solid #e9f1f4;background:#fff;color:#123f56}
+.mx-invoice-patient-results button:hover,.mx-invoice-patient-results button:focus-visible{background:#effafb}
+.mx-invoice-feedback{margin:10px 0;color:#5f7685}
+.mx-invoice-feedback:empty{display:none}
+.mx-invoice-list{display:grid;gap:8px;min-width:0}
+.mx-invoice-row,.mx-invoice-import,.mx-invoice-detail,.mx-invoice-empty{padding:13px;border:1px solid #cbdde4;border-radius:10px;background:#f8fbfc;min-width:0}
+.mx-invoice-row-main{display:grid;grid-template-columns:100px minmax(90px,.8fr) minmax(130px,1.2fr) minmax(130px,1fr) minmax(80px,.65fr) minmax(100px,.7fr);gap:10px;align-items:center;color:#123f56}
+.mx-invoice-row-main>*{min-width:0;overflow-wrap:anywhere}
+.mx-invoice-status{color:#725118;font-weight:650}
+.mx-invoice-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.mx-invoice-import{margin-top:12px}
+.mx-invoice-import h5,.mx-invoice-detail h4,.mx-invoice-detail h5{margin:0 0 6px;color:#06aeb8;font-size:18px;font-weight:700}
+.mx-invoice-import p,.mx-invoice-detail p{margin:4px 0 10px;color:#5f7685}
+.mx-invoice-import-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mx-invoice-import-fields>div{min-width:0}
+.mx-invoice-detail{margin-top:12px;background:#fff}
+.mx-invoice-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.mx-invoice-detail dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+.mx-invoice-detail dl>div{min-width:0;padding:8px;border-bottom:1px solid #dce8ed}
+.mx-invoice-detail dt{color:#5f7685;font-size:13px}
+.mx-invoice-detail dd{margin:2px 0;color:#123f56;font-weight:650;overflow-wrap:anywhere}
+#cfdi-pacientes #mx-invoice-open-import{border:1px solid transparent;background:#00c040;color:#fff}
+#cfdi-pacientes #mx-invoice-open-import:hover{background:#00a936}
+@media(max-width:1100px){.mx-invoice-row-main{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:820px){#cfdi-listar .mx-invoice-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.mx-invoice-detail dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.mx-invoice-row-main{grid-template-columns:repeat(2,minmax(0,1fr))}.mx-invoice-import-fields{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:420px){#cfdi-listar .mx-invoice-filters{grid-template-columns:minmax(0,1fr)}.mx-invoice-row-main,.mx-invoice-detail dl{grid-template-columns:minmax(0,1fr)}#cfdi-pacientes .mx-billing-inner-tabs button{flex:1 1 100%}}

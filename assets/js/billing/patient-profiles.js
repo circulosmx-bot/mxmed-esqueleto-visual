@@ -59,12 +59,13 @@
     patient=entry;editingId='';els.editor.hidden=true;
     els.name.textContent=entry.display_name;
     els.area.hidden=false;els.results.innerHTML='';message('');
-    try{await loadProfiles()}catch(error){message(errorText(error));els.area.hidden=true;patient=null}
+    try{await loadProfiles();pane.dispatchEvent(new CustomEvent('mxmed:billing-patient-selected',{detail:{patient:{...patient},profiles:[...profiles]}}))}catch(error){message(errorText(error));els.area.hidden=true;patient=null}
   }
   async function loadProfiles(){
     const data=await request('GET',{patient_id:patient.patient_id});
     profiles=Array.isArray(data.profiles)?data.profiles:[];
     renderProfiles();
+    pane.dispatchEvent(new CustomEvent('mxmed:billing-profiles-updated',{detail:{profiles:[...profiles]}}));
   }
   function openEditor(profile=null){
     editingId=profile?.billing_profile_id||'';
@@ -88,7 +89,7 @@
     const id=button.dataset.patientId;
     selectPatient({patient_id:id,display_name:button.textContent.trim()});
   });
-  els.change.addEventListener('click',()=>{patient=null;els.area.hidden=true;els.results.innerHTML='';message('');els.query.focus()});
+  els.change.addEventListener('click',()=>{patient=null;els.area.hidden=true;els.results.innerHTML='';message('');pane.dispatchEvent(new CustomEvent('mxmed:billing-patient-cleared'));els.query.focus()});
   els.add.addEventListener('click',()=>openEditor());
   els.cancel.addEventListener('click',()=>{els.editor.hidden=true;editingId=''});
   els.rfc.addEventListener('input',()=>renderCatalogOptions());
