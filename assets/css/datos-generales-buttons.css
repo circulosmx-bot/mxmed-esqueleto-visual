@@ -1,6 +1,8 @@
-/* DG06: reuse Bootstrap's .btn semantic variants within Datos Generales only.
-   Bounded overrides bridge the existing ID-scoped visual refinement cascade. */
-:is(#t-info-datos, #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
+/* DG06/CON01: reuse Bootstrap's semantic variants in the VIS01-aligned profile
+   surfaces. Bounded overrides bridge the existing ID-scoped visual cascade. */
+:is(#t-info-datos, #p-consultorio, #modalConsulAdd, #modalConsulDel,
+    #modalGrupoUnlinkLogo, #modalFotoPrincipalRemove, #modalLogoManualRemove, #modalGrupoSuggest,
+    #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
     #mxpi-prefix-confirmation-modal, #dg-signature-handoff-modal,
     #mxpi-photo-target-modal, #mxpi-verified-data-modal, #mx-visibility-help-modal) .btn:not(.mx-theme-admin__reset):not([data-photo-target]),
 #p-info .mx-profile-utility-actions > :is(button,a) {
@@ -33,10 +35,14 @@
   transition: background-color .15s ease, border-color .15s ease;
 }
 /* Hidden governed actions must remain hidden despite the shared flex display. */
-:is(#t-info-datos, #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
+:is(#t-info-datos, #p-consultorio, #modalConsulAdd, #modalConsulDel,
+    #modalGrupoUnlinkLogo, #modalFotoPrincipalRemove, #modalLogoManualRemove, #modalGrupoSuggest,
+    #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
     #mxpi-prefix-confirmation-modal, #dg-signature-handoff-modal) .btn[hidden],
 #p-info .mx-profile-utility-actions > [hidden] {display:none !important}
-:is(#t-info-datos, #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
+:is(#t-info-datos, #p-consultorio, #modalConsulAdd, #modalConsulDel,
+    #modalGrupoUnlinkLogo, #modalFotoPrincipalRemove, #modalLogoManualRemove, #modalGrupoSuggest,
+    #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
     #mxpi-prefix-confirmation-modal, #mx-visibility-help-modal) .btn.btn:is(.btn-primary,.mxpi-unsaved-save):not(.mx-theme-admin__reset) {
   --dg-button-fill: #00c040;
   --dg-button-ink: #fff;
@@ -44,7 +50,8 @@
   --dg-button-hover: #00a936;
   --dg-button-active: #00972f;
 }
-:is(#t-info-datos, #mxpi-unsaved-navigation-modal) .btn.btn.btn:is(.btn-outline-danger,.mx-dg-media-action--delete),
+:is(#t-info-datos, #p-consultorio, #modalConsulDel, #modalGrupoUnlinkLogo,
+    #mxpi-unsaved-navigation-modal) .btn.btn.btn:is(.btn-danger,.btn-outline-danger,.mx-dg-media-action--delete),
 #t-info-datos [data-media-action="delete"] {
   --dg-button-fill: #fff;
   --dg-button-ink: #d5213b;
@@ -58,7 +65,9 @@
   --dg-button-hover: #eef6f8;
   --dg-button-active: #e2f0f3;
 }
-:is(#t-info-datos, #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
+:is(#t-info-datos, #p-consultorio, #modalConsulAdd, #modalConsulDel,
+    #modalGrupoUnlinkLogo, #modalFotoPrincipalRemove, #modalLogoManualRemove, #modalGrupoSuggest,
+    #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
     #mxpi-prefix-confirmation-modal, #dg-signature-handoff-modal,
     #mxpi-photo-target-modal, #mxpi-verified-data-modal, #mx-visibility-help-modal) .btn:not(.mx-theme-admin__reset):not([data-photo-target]),
 #p-info .mx-profile-utility-actions > :is(button,a) {
@@ -76,7 +85,9 @@
   }
 }
 @media (max-width:767px) {
-  :is(#t-info-datos, #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
+  :is(#t-info-datos, #p-consultorio, #modalConsulAdd, #modalConsulDel,
+      #modalGrupoUnlinkLogo, #modalFotoPrincipalRemove, #modalLogoManualRemove, #modalGrupoSuggest,
+      #mxpi-floating-save, #mxpi-unsaved-navigation-modal,
       #mxpi-prefix-confirmation-modal, #dg-signature-handoff-modal,
       #mxpi-photo-target-modal, #mxpi-verified-data-modal, #mx-visibility-help-modal) .btn:not(.mx-theme-admin__reset):not([data-photo-target]),
   #p-info .mx-profile-utility-actions > :is(button,a) {height:42px !important;min-height:42px !important}

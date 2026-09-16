@@ -207,6 +207,7 @@
 <link rel="stylesheet" href="assets/css/datos-generales-buttons.css?v=dg06">
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
+<link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
 </head>
 
 <body class="mx-sidebar-expanded" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
@@ -1572,7 +1573,12 @@
 
 
 
-                  <div class="col-12"><strong style="color:#005684;font-size:120%;">Teléfonos del consultorio</strong></div>
+                  <div class="col-12">
+                    <h3 class="mx-cons-section-heading">
+                      <span class="material-symbols-rounded" aria-hidden="true">call</span>
+                      <span>Teléfonos del consultorio</span>
+                    </h3>
+                  </div>
 
                   <div class="col-md-3"><label class="form-label" for="cons-tel1">Teléfono 01</label><div class="save-wrap"><input id="cons-tel1" class="form-control" inputmode="tel" data-validate="phone" placeholder="(###) ### ####"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
@@ -1599,8 +1605,8 @@
                     <div class="mb-2 mx-cons-horarios-head schedule-consultorio-header" data-cons-horarios-head="1">
                       <div class="schedule-consultorio-title-row">
                         <div class="mx-cons-horarios-active schedule-consultorio-active" data-cons-horarios-title></div>
-                        <div class="schedule-section-label">
-                          <span class="schedule-section-icon">🕒</span>
+                        <div class="schedule-section-label mx-cons-section-heading">
+                          <span class="schedule-section-icon material-symbols-rounded" aria-hidden="true">schedule</span>
                           <span>Horario de atención</span>
                         </div>
                       </div>
@@ -1611,11 +1617,11 @@
 
                       <div class="d-flex justify-content-between align-items-center mb-2">
 
-                        <strong style="color:#005684;font-size:120%;">Indica tus días de atención y define horarios por día.</strong>
+                        <strong class="mx-cons-schedule-helper">Indica tus días de atención y define horarios por día.</strong>
 
                         <div class="d-flex gap-2">
 
-                          <button type="button" class="btn btn-sm text-white" style="background:#00ADC1;border-color:#00ADC1;font-weight:700;" id="sched-copy-mon">Copiar lunes a todos</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="sched-copy-mon">Copiar lunes a todos</button>
 
                           <button type="button" class="btn btn-outline-secondary btn-sm" id="sched-clear">Limpiar</button>
 

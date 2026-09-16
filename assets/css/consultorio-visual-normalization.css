@@ -1,0 +1,324 @@
+/* CON01: Consultorio consumes the VIS01 visual authority without changing its
+   mature autosave, multi-office, media, schedule or Agenda contracts. */
+#p-consultorio {
+  --dg01-ink:#073b5a;
+  --dg01-muted:#5f7685;
+  --dg01-primary:#00aebe;
+  --dg01-primary-dark:#07536e;
+  --dg01-primary-soft:#eaf9fb;
+  --dg01-border:#d6e4ea;
+  --dg01-surface:#fff;
+  --dg01-page:#f7fbfc;
+  --dg01-readonly:#f2f6f8;
+  --dg01-card-radius:14px;
+  --dg01-control-radius:9px;
+}
+
+#p-consultorio.mm-card .body {
+  padding:18px 20px 22px;
+  overflow:hidden;
+  border:1px solid rgba(7,59,90,.1);
+  border-radius:16px;
+  background:var(--dg01-page);
+  box-shadow:0 7px 22px rgba(7,59,90,.07);
+}
+
+/* The office switcher follows the same quiet container/solid active-tab
+   hierarchy as the VIS01 profile tabs. */
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) {
+  display:flex;
+  flex-wrap:nowrap;
+  gap:7px;
+  min-height:60px;
+  margin:0 0 16px;
+  padding:7px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  border:1px solid transparent;
+  border-radius:12px;
+  background:#eef5f7;
+  scrollbar-width:thin;
+}
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item {
+  flex:1 1 0;
+  min-width:0;
+}
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link {
+  width:100%;
+  min-height:44px;
+  height:44px;
+  gap:6px;
+  padding:6px 10px;
+  border:1px solid transparent;
+  border-radius:9px;
+  background:#fff;
+  color:var(--dg01-ink);
+  font-size:.78rem;
+  font-weight:700;
+  line-height:1.1;
+  box-shadow:none;
+  filter:none;
+}
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-ico,
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .ico-plus {
+  flex:0 0 25px;
+  width:25px;
+  min-width:25px;
+  height:25px;
+  font-size:24px;
+  line-height:25px;
+  text-align:center;
+}
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link:hover {
+  border-color:transparent;
+  background:#e7f8fa;
+  color:var(--dg01-primary-dark);
+}
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link:focus-visible {
+  border-color:transparent;
+  outline:3px solid rgba(0,174,190,.24);
+  outline-offset:2px;
+  background:#e7f8fa;
+  color:var(--dg01-primary-dark);
+}
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link.active {
+  border-color:transparent;
+  background:#01afb9;
+  color:#fff;
+  box-shadow:none;
+}
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .consul-add-btn.nav-link,
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item .consul-add-btn {
+  border-color:transparent;
+  background:#fff;
+  color:var(--dg01-ink);
+}
+
+/* VIS01 editable, governed and disabled control states. */
+#p-consultorio .form-label {
+  display:block;
+  margin-bottom:4px;
+  color:var(--dg01-ink);
+  font-size:1rem;
+  font-weight:650;
+  line-height:1.5;
+}
+#p-consultorio :is(.form-control,.form-select) {
+  min-height:42px;
+  padding:6px 12px;
+  border:1px solid #a9c2ce;
+  border-radius:var(--dg01-control-radius);
+  background:#fff;
+  color:#123f56;
+  font-size:1rem;
+  font-weight:400;
+  line-height:1.5;
+  box-shadow:0 1px 2px rgba(7,59,90,.04);
+}
+#p-consultorio :is(.form-control,.form-select):hover:not(:disabled):not([readonly]) {
+  border-color:#7ca4b5;
+}
+#p-consultorio :is(.form-control,.form-select):focus {
+  border-color:#008a98;
+  outline:0;
+  box-shadow:0 0 0 3px rgba(0,174,190,.16);
+}
+#p-consultorio :is(.form-control,.form-select)[readonly] {
+  border-color:#d1dee4;
+  background:var(--dg01-readonly);
+  color:#405d6c;
+  box-shadow:inset 3px 0 #a9bdc7;
+}
+#p-consultorio :is(.form-control,.form-select):disabled:not([readonly]) {
+  border-color:#dce5e9;
+  background:#e9eff2;
+  color:#647a86;
+  opacity:1;
+  box-shadow:none;
+}
+#p-consultorio :is(.form-control,.form-select)::placeholder {
+  color:#8295a0;
+  opacity:1;
+}
+#p-consultorio .form-text,
+#p-consultorio .mx-cons-contact-note {
+  color:var(--dg01-muted);
+  font-size:.84rem;
+  line-height:1.35;
+}
+#p-consultorio .tab-pane > .row.g-3 {
+  --bs-gutter-x:14px;
+  --bs-gutter-y:14px;
+}
+#p-consultorio .cp-label {position:relative;margin-top:14px}
+#p-consultorio .cp-label .cp-over {
+  top:-15px;
+  color:var(--dg01-primary-dark);
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.025em;
+}
+
+/* True structural headings reuse the approved VIS01 heading values. */
+#p-consultorio .mx-cons-section-heading {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  margin:4px 0 0;
+  color:#06aeb8;
+  font-family:inherit;
+  font-size:1.25rem;
+  font-weight:700;
+  line-height:1.2;
+}
+#p-consultorio .mx-cons-section-heading > .material-symbols-rounded {
+  flex:0 0 auto;
+  color:inherit;
+  font-size:2.5em;
+  font-weight:400;
+  line-height:1;
+  font-variation-settings:'FILL' 0,'wght' 100,'GRAD' -50,'opsz' 24;
+}
+
+/* Retain office identity while simplifying nested surfaces. */
+#p-consultorio .ratio:has(> iframe) {
+  height:clamp(220px,22vw,280px);
+  --bs-aspect-ratio:0!important;
+  overflow:hidden;
+  border-color:var(--dg01-border)!important;
+  border-radius:var(--dg01-card-radius)!important;
+  background:#fff;
+}
+#p-consultorio .grupo-medico-bar {
+  border:0;
+  border-radius:10px;
+  background:var(--dg01-primary-soft);
+}
+#p-consultorio .grupo-medico-bar .form-label {color:var(--dg01-primary-dark)}
+#p-consultorio .form-check-input {
+  border-color:#8fb0be;
+  box-shadow:none;
+}
+#p-consultorio .form-check-input:checked {
+  border-color:var(--dg01-primary);
+  background-color:var(--dg01-primary);
+}
+#p-consultorio .form-check-input:focus-visible {
+  outline:3px solid rgba(0,174,190,.24);
+  outline-offset:2px;
+  box-shadow:none;
+}
+
+#p-consultorio .mx-cons-horarios-head,
+#p-consultorio .schedule-consultorio-header {
+  gap:7px;
+  margin-bottom:8px;
+}
+#p-consultorio .schedule-consultorio-title-row {gap:12px}
+#p-consultorio .mx-cons-horarios-active,
+#p-consultorio .schedule-consultorio-active,
+#p-consultorio .mx-cons-horarios-head [data-cons-horarios-title] {
+  min-height:32px;
+  padding:6px 11px;
+  border-radius:8px;
+  background:var(--dg01-primary-dark);
+  font-size:.78rem;
+  font-weight:700;
+}
+#p-consultorio .schedule-section-label.mx-cons-section-heading {margin:0}
+#p-consultorio .sched-card {
+  padding:14px!important;
+  border:1px solid var(--dg01-border);
+  border-radius:var(--dg01-card-radius);
+  background:var(--dg01-surface);
+  box-shadow:none;
+}
+#p-consultorio .mx-cons-schedule-helper {
+  color:var(--dg01-ink);
+  font-size:.95rem;
+  font-weight:650;
+  line-height:1.35;
+}
+#p-consultorio .sched-table {margin-bottom:0;color:#123f56}
+#p-consultorio .sched-table thead th {
+  border-bottom-color:#cbdde4;
+  color:var(--dg01-ink);
+  font-size:.82rem;
+  font-weight:700;
+}
+
+#p-consultorio .mf-upload-grid {gap:14px}
+#p-consultorio .mf-upload.square {
+  width:100%;
+  max-width:none;
+  min-height:190px;
+  height:190px;
+  aspect-ratio:auto;
+  margin-inline:0;
+  padding:16px;
+  border:1px dashed #9fc7d2;
+  border-radius:12px;
+  background:#fbfdfe;
+  box-shadow:none;
+}
+#p-consultorio .logo-slot-preview {
+  width:100%;
+  max-width:none;
+  height:190px;
+  aspect-ratio:auto;
+  border-color:var(--dg01-border);
+  border-radius:12px;
+  background:#fbfdfe;
+}
+#p-consultorio .mf-upload.square:hover {
+  border-color:var(--dg01-primary);
+  background:#f2fbfc;
+}
+#p-consultorio .mf-upload .mf-title {
+  color:var(--dg01-ink);
+  font-size:1rem;
+  font-weight:700;
+}
+#p-consultorio .mf-upload .mf-sub,
+#p-consultorio .cons-logo-sync-msg {color:var(--dg01-muted)}
+
+/* Consultorio-owned dialogs keep their behavior and adopt the same restrained
+   white surface used by VIS01 guarded actions. */
+:is(#modalConsulAdd,#modalConsulDel,#modalGrupoUnlinkLogo,#modalFotoPrincipalRemove,#modalLogoManualRemove,#modalGrupoSuggest) .modal-content {
+  overflow:hidden;
+  border:1px solid var(--dg01-border,#d6e4ea);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 16px 42px rgba(7,59,90,.16);
+}
+:is(#modalConsulAdd,#modalConsulDel,#modalGrupoUnlinkLogo,#modalFotoPrincipalRemove,#modalLogoManualRemove,#modalGrupoSuggest) .modal-header {
+  border-bottom-color:#e1eaee;
+  background:#f8fbfc;
+}
+:is(#modalConsulAdd,#modalConsulDel,#modalGrupoUnlinkLogo,#modalFotoPrincipalRemove,#modalLogoManualRemove,#modalGrupoSuggest) .modal-title {
+  color:#073b5a;
+  font-weight:700;
+}
+:is(#modalConsulAdd,#modalConsulDel,#modalGrupoUnlinkLogo,#modalFotoPrincipalRemove,#modalLogoManualRemove,#modalGrupoSuggest) .modal-footer {
+  gap:8px;
+  border-top-color:#e1eaee;
+  background:#fbfdfe;
+}
+
+@media (max-width:767px) {
+  #p-consultorio.mm-card .body {padding:12px;border-radius:14px}
+  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) {padding:6px;scroll-snap-type:x proximity}
+  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item {flex:0 0 180px;scroll-snap-align:start}
+  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link {font-size:.72rem}
+  #p-consultorio :is(.form-control,.form-select) {min-height:42px}
+  #p-consultorio .ratio:has(> iframe) {height:220px}
+  #p-consultorio .schedule-consultorio-title-row {align-items:flex-start}
+  #p-consultorio .mx-cons-horarios-active,
+  #p-consultorio .schedule-consultorio-active,
+  #p-consultorio .mx-cons-horarios-head [data-cons-horarios-title] {width:auto;max-width:100%}
+  #p-consultorio .sched-card > .d-flex:first-child {align-items:flex-start!important;flex-direction:column;gap:10px}
+  #p-consultorio .sched-card > .d-flex:first-child > .d-flex {width:100%;flex-wrap:wrap}
+  #p-consultorio .mf-upload.square,
+  #p-consultorio .logo-slot-preview {min-height:180px;height:180px}
+}
