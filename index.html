@@ -4223,15 +4223,18 @@
                   <p class="mx-panel-subheader-text">Localiza pacientes registrados y abre su expediente clínico.</p>
                 </div>
               </div>
-              <button type="button" id="mm-pac-archivo-back" class="btn btn-outline-secondary ms-auto d-none">Volver</button>
+              <div class="mx-pac-archivo-header-actions">
+                <button id="mm-pac-archivo-new" type="button" class="btn btn-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Nuevo paciente</button>
+                <button type="button" id="mm-pac-archivo-back" class="btn btn-outline-secondary d-none">Volver</button>
+              </div>
             </header>
           </div>
 
           <div class="body">
 
-            <div class="row g-3">
+            <div class="row g-2 mx-pac-archivo-search-row">
 
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="visually-hidden" for="mm-pac-archivo-q">Buscar paciente</label>
                 <div class="mx-pac-archivo-search-control">
                   <span class="material-symbols-rounded" aria-hidden="true">search</span>
@@ -4239,11 +4242,9 @@
                 </div>
               </div>
 
-              <div class="col-md-3"><select id="mm-pac-archivo-filter" class="form-select"><option value="all">Todos</option><option value="recent">Con citas recientes</option><option value="inactive">Inactivos</option></select></div>
+              <div class="col-md-4"><select id="mm-pac-archivo-filter" class="form-select" aria-label="Filtrar pacientes"><option value="all">Todos</option><option value="recent">Con citas recientes</option><option value="inactive">Inactivos</option></select></div>
 
-              <div class="col-md-2"><button id="mm-pac-archivo-search" type="button" class="btn btn-outline-primary w-100">Buscar</button></div>
-
-              <div class="col-md-3"><button id="mm-pac-archivo-new" class="btn btn-primary w-100"><i class="bi bi-person-plus"></i> Nuevo paciente</button></div>
+              <div class="col-md-2"><button id="mm-pac-archivo-search" type="button" class="btn btn-primary w-100">Buscar</button></div>
 
             </div>
 
