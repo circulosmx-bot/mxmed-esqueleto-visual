@@ -151,14 +151,7 @@
   --bs-gutter-x:14px;
   --bs-gutter-y:14px;
 }
-#p-consultorio .cp-label {position:relative;margin-top:14px}
-#p-consultorio .cp-label .cp-over {
-  top:-15px;
-  color:var(--dg01-primary-dark);
-  font-size:.72rem;
-  font-weight:700;
-  letter-spacing:.025em;
-}
+#p-consultorio .cp-label {white-space:nowrap}
 
 /* True structural headings reuse the approved VIS01 heading values. */
 #p-consultorio .mx-cons-section-heading {
@@ -186,6 +179,14 @@
 #p-consultorio .mx-cons-section-heading,
 #p-consultorio .mf-upload .mf-title {
   text-transform:uppercase;
+}
+
+/* CON01B: keep the exact postal label on one line at tablet widths while the
+   four address controls remain in one aligned row. Desktop proportions and
+   the stacked mobile layout are unchanged. */
+@media (min-width:768px) and (max-width:991.98px) {
+  #p-consultorio .mx-cons-postal-field {flex:0 0 35%;width:35%;max-width:35%}
+  #p-consultorio .mx-cons-colonia-field {flex:0 0 31.666667%;width:31.666667%;max-width:31.666667%}
 }
 
 /* Retain office identity while simplifying nested surfaces. */
