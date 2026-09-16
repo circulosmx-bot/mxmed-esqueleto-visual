@@ -4255,12 +4255,6 @@
               </table>
             </div>
 
-            <div class="mt-3">
-              <button type="button" class="btn btn-outline-primary btn-sm" id="mm-open-historial-tab">
-                Ver historial de atención
-              </button>
-            </div>
-
           </div>
 
         </section>
@@ -11506,26 +11500,6 @@
     }
     updateTimelineFilterVisibility(activeMode);
     updateP10Polling();
-  })();
-</script>
-<script>
-  (function () {
-    var HIST_TAB_ID = 't-historial-atencion';
-    var HIST_TAB_TARGET = '#' + HIST_TAB_ID;
-    var openHistorialBtn = document.getElementById('mm-open-historial-tab');
-    if (!openHistorialBtn) return;
-    openHistorialBtn.addEventListener('click', function () {
-      var historialTabBtn = document.querySelector('[data-bs-target="' + HIST_TAB_TARGET + '"]');
-      if (!historialTabBtn) {
-        window.location.hash = HIST_TAB_ID;
-        return;
-      }
-      if (window.bootstrap && window.bootstrap.Tab) {
-        window.bootstrap.Tab.getOrCreateInstance(historialTabBtn).show();
-      } else {
-        historialTabBtn.click();
-      }
-    });
   })();
 </script>
 </body>
