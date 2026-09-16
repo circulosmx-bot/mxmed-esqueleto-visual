@@ -23,37 +23,38 @@
   box-shadow:0 7px 22px rgba(7,59,90,.07);
 }
 
-/* The office switcher follows the same quiet container/solid active-tab
-   hierarchy as the VIS01 profile tabs. */
+/* CON01A local design exception: the Director approved the PRE-CON01 office
+   tabs as the exact visual authority. VIS01 remains authoritative everywhere
+   else in Consultorio. Touch/keyboard behavior stays on the current DOM. */
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) {
   display:flex;
   flex-wrap:nowrap;
-  gap:7px;
-  min-height:60px;
-  margin:0 0 16px;
-  padding:7px;
+  gap:8px;
+  min-height:0;
+  margin:-18px -20px 16px;
+  padding:8px;
   overflow-x:auto;
   overflow-y:hidden;
-  border:1px solid transparent;
-  border-radius:12px;
-  background:#eef5f7;
+  border:1px solid #c7e2f3;
+  border-radius:10px;
+  background:linear-gradient(180deg,#edf8ff 0%,#e6f3fb 100%);
   scrollbar-width:thin;
 }
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item {
-  flex:1 1 0;
-  min-width:0;
+  flex:0 0 240px;
+  min-width:240px;
 }
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link {
   width:100%;
-  min-height:44px;
-  height:44px;
-  gap:6px;
-  padding:6px 10px;
-  border:1px solid transparent;
+  min-height:52px;
+  height:auto;
+  gap:8px;
+  padding:8px 14px;
+  border:1px solid #b8e1eb;
   border-radius:9px;
   background:#fff;
-  color:var(--dg01-ink);
-  font-size:.78rem;
+  color:#015684;
+  font-size:.87rem;
   font-weight:700;
   line-height:1.1;
   box-shadow:none;
@@ -61,37 +62,37 @@
 }
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-ico,
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .ico-plus {
-  flex:0 0 25px;
-  width:25px;
-  min-width:25px;
-  height:25px;
-  font-size:24px;
-  line-height:25px;
+  flex:0 0 2.35rem;
+  width:2.35rem;
+  min-width:2.35rem;
+  height:auto;
+  font-size:2.35rem;
+  line-height:1;
   text-align:center;
 }
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link:hover {
-  border-color:transparent;
-  background:#e7f8fa;
-  color:var(--dg01-primary-dark);
+  border-color:#72cbd8;
+  background:#ecfbfd;
+  color:#004f7a;
 }
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link:focus-visible {
-  border-color:transparent;
+  border-color:#72cbd8;
   outline:3px solid rgba(0,174,190,.24);
   outline-offset:2px;
-  background:#e7f8fa;
-  color:var(--dg01-primary-dark);
+  background:#ecfbfd;
+  color:#004f7a;
 }
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link.active {
-  border-color:transparent;
-  background:#01afb9;
+  border-color:#00adc1;
+  background:#00adc1;
   color:#fff;
   box-shadow:none;
 }
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .consul-add-btn.nav-link,
 #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item .consul-add-btn {
-  border-color:transparent;
+  border-color:#b8e1eb;
   background:#fff;
-  color:var(--dg01-ink);
+  color:#015684;
 }
 
 /* VIS01 editable, governed and disabled control states. */
@@ -179,6 +180,12 @@
   font-weight:400;
   line-height:1;
   font-variation-settings:'FILL' 0,'wght' 100,'GRAD' -50,'opsz' 24;
+}
+/* CON01A local exception: structural Consultorio subtitles retain their
+   approved uppercase presentation without mutating persisted/user text. */
+#p-consultorio .mx-cons-section-heading,
+#p-consultorio .mf-upload .mf-title {
+  text-transform:uppercase;
 }
 
 /* Retain office identity while simplifying nested surfaces. */
@@ -308,9 +315,8 @@
 
 @media (max-width:767px) {
   #p-consultorio.mm-card .body {padding:12px;border-radius:14px}
-  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) {padding:6px;scroll-snap-type:x proximity}
-  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item {flex:0 0 180px;scroll-snap-align:start}
-  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link {font-size:.72rem}
+  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) {margin:-12px -12px 16px;padding:8px;scroll-snap-type:x proximity}
+  #p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item {flex:0 0 240px;min-width:240px;scroll-snap-align:start}
   #p-consultorio :is(.form-control,.form-select) {min-height:42px}
   #p-consultorio .ratio:has(> iframe) {height:220px}
   #p-consultorio .schedule-consultorio-title-row {align-items:flex-start}
