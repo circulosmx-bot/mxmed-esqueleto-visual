@@ -1,0 +1,375 @@
+/* EXP01: Expediente Paciente consumes the VIS01 visual language while its
+   patient, encounter, clinical-document and Agenda contracts remain intact. */
+#p-expediente {
+  --exp01-ink:#073b5a;
+  --exp01-text:#123f56;
+  --exp01-muted:#5f7685;
+  --exp01-primary:#00aebe;
+  --exp01-primary-dark:#07536e;
+  --exp01-primary-soft:#effafb;
+  --exp01-border:#d6e4ea;
+  --exp01-control-border:#a9c2ce;
+  --exp01-surface:#fff;
+  --exp01-page:#f7fbfc;
+  --exp01-readonly:#f2f6f8;
+  --exp01-card-radius:14px;
+  --exp01-control-radius:9px;
+}
+
+#p-expediente.mm-card .body {
+  margin:0;
+  padding:18px 20px 22px;
+  overflow:hidden;
+  border:1px solid rgba(7,59,90,.1);
+  border-radius:16px;
+  background:var(--exp01-page);
+  box-shadow:0 7px 22px rgba(7,59,90,.07);
+}
+
+/* The two clinical navigation rows are a local Expediente exception: their
+   dense overview is useful when moving between record domains. Their visual
+   treatment follows VIS01 without changing the tab model or DOM order. */
+#p-expediente [data-exp-tabs] {
+  gap:7px;
+  margin:0 0 8px!important;
+  padding:6px;
+  border:1px solid transparent;
+  border-radius:12px;
+  background:#eef5f7;
+  box-shadow:none;
+}
+#p-expediente [data-exp-tabs] .mm-tabs-row {gap:7px}
+#p-expediente [data-exp-tabs] .nav-link {
+  min-height:44px;
+  height:44px;
+  gap:8px;
+  padding:6px 10px;
+  border:1px solid transparent;
+  border-radius:9px;
+  background:#fff;
+  color:var(--exp01-ink);
+  font-weight:700;
+  box-shadow:none;
+  filter:none;
+}
+#p-expediente [data-exp-tabs] .nav-link:hover {
+  border-color:transparent;
+  background:#e7f8fa;
+  color:#07536e;
+  box-shadow:none;
+}
+#p-expediente [data-exp-tabs] .nav-link:focus-visible {
+  border-color:transparent;
+  outline:3px solid rgba(0,174,190,.24);
+  outline-offset:2px;
+  background:#e7f8fa;
+  color:#07536e;
+  box-shadow:none;
+}
+#p-expediente [data-exp-tabs] .nav-link.active,
+#p-expediente [data-exp-tabs] .nav-link.active:hover {
+  border-color:transparent!important;
+  background:#01afb9;
+  color:#fff;
+  box-shadow:none;
+}
+#p-expediente [data-exp-tabs] .nav-link .tab-ico {
+  color:inherit;
+  font-size:24px;
+  line-height:1;
+}
+
+/* VIS01 editable, governed and disabled control states. */
+#p-expediente .body .form-label {
+  display:block;
+  margin-bottom:4px;
+  color:var(--exp01-ink);
+  font-size:1rem;
+  font-weight:650;
+  line-height:1.5;
+}
+#p-expediente .body :is(.form-control,.form-select) {
+  min-height:42px;
+  padding:6px 12px;
+  border:1px solid var(--exp01-control-border);
+  border-radius:var(--exp01-control-radius);
+  background:#fff;
+  color:var(--exp01-text);
+  font-family:inherit;
+  font-size:1rem;
+  font-weight:400;
+  line-height:1.5;
+  box-shadow:0 1px 2px rgba(7,59,90,.04);
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+#p-expediente .body .form-select {padding-right:36px}
+#p-expediente .body textarea.form-control {
+  min-height:88px;
+  resize:vertical;
+}
+#p-expediente .body :is(.form-control,.form-select):hover:not(:disabled):not([readonly]) {
+  border-color:#7ca4b5;
+}
+#p-expediente.mm-card .body :is(.form-control,.form-select):focus {
+  border-color:#008a98;
+  outline:0;
+  box-shadow:0 0 0 3px rgba(0,174,190,.16);
+}
+#p-expediente .body :is(.form-control,.form-select)[readonly] {
+  border-color:#cbdde4;
+  background:#fff;
+  color:#173f54;
+  font-weight:650;
+  box-shadow:none;
+}
+#p-expediente .body :is(.form-control,.form-select):disabled:not([readonly]) {
+  border-color:#dce5e9;
+  background:var(--exp01-readonly);
+  color:#405d6c;
+  opacity:1;
+  box-shadow:inset 3px 0 #a9bdc7;
+}
+#p-expediente .body :is(.form-control,.form-select)::placeholder {
+  color:#ccc;
+  opacity:1;
+}
+#p-expediente .body :is(.form-control,.form-select).is-invalid,
+#p-expediente .body :is(.form-control,.form-select):invalid:not(:placeholder-shown) {
+  border-color:#dc3545;
+}
+#p-expediente .body :is(.form-control,.form-select).is-invalid:focus,
+#p-expediente .body :is(.form-control,.form-select):invalid:not(:placeholder-shown):focus {
+  box-shadow:0 0 0 3px rgba(220,53,69,.15);
+}
+#p-expediente .body .form-text,
+#p-expediente .body .text-muted {
+  color:var(--exp01-muted)!important;
+}
+#p-expediente .body .row.g-3 {
+  --bs-gutter-x:14px;
+  --bs-gutter-y:14px;
+}
+
+/* Datos Generales has a compact legacy rule with two-ID specificity. This
+   narrow override brings only its controls and labels to the canonical VIS01
+   measurements; its grid and patient data contract remain unchanged. */
+#p-expediente.mm-card #t-datos > .dg-form .form-label {
+  margin-bottom:4px;
+  color:var(--exp01-ink);
+  font-size:1rem;
+  font-weight:650;
+  line-height:1.5;
+}
+#p-expediente.mm-card #t-datos > .dg-form .form-control,
+#p-expediente.mm-card #t-datos > .dg-form .form-select,
+#p-expediente.mm-card #t-datos .dg-date-field .form-select {
+  min-height:42px;
+  padding:6px 12px;
+  border:1px solid var(--exp01-control-border);
+  border-radius:var(--exp01-control-radius);
+  color:var(--exp01-text);
+  font-size:1rem;
+  line-height:1.5;
+}
+#p-expediente.mm-card #t-datos > .dg-form .form-select,
+#p-expediente.mm-card #t-datos .dg-date-field .form-select {padding-right:36px}
+#p-expediente.mm-card #t-datos > .dg-form .form-control:focus,
+#p-expediente.mm-card #t-datos > .dg-form .form-select:focus,
+#p-expediente.mm-card #t-datos .dg-date-field .form-select:focus {
+  border-color:#008a98;
+  outline:0;
+  box-shadow:0 0 0 3px rgba(0,174,190,.16);
+}
+#p-expediente.mm-card #t-datos .mx-phone-country {
+  min-height:42px;
+  border-color:var(--exp01-control-border);
+  border-radius:var(--exp01-control-radius) 0 0 var(--exp01-control-radius);
+  background:#fff;
+  color:var(--exp01-text);
+  box-shadow:0 1px 2px rgba(7,59,90,.04);
+}
+#p-expediente.mm-card #t-datos .mx-phone-field > .form-control,
+#p-expediente.mm-card #t-datos .mx-phone-field > .save-field > .form-control {
+  border-top-left-radius:0;
+  border-bottom-left-radius:0;
+}
+
+#p-expediente .body .form-check-input {
+  border-color:#8fb0be;
+  box-shadow:none;
+}
+#p-expediente .body .form-check-input:checked {
+  border-color:var(--exp01-primary);
+  background-color:var(--exp01-primary);
+}
+#p-expediente .body .form-check-input:focus-visible {
+  outline:3px solid rgba(0,174,190,.24);
+  outline-offset:2px;
+  box-shadow:none;
+}
+
+/* Shared VIS01 action geometry. Custom clinical launchers retain their own
+   structure; ordinary Bootstrap actions receive semantic variants only. */
+#p-expediente :is(.body,.modal) .btn:not(.btn-link):not(.btn-close) {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  gap:6px;
+  padding:0 10px;
+  border-radius:7px;
+  font-size:12px;
+  font-weight:600;
+  line-height:14.4px;
+  box-shadow:none;
+}
+#p-expediente :is(.body,.modal) .btn:not(.btn-link):not(.btn-close) :is(.bi,.material-symbols-outlined,.material-symbols-rounded) {
+  font-size:16px;
+  line-height:1;
+}
+#p-expediente :is(.body,.modal) .btn:not(.btn-link):not(.btn-close):focus-visible {
+  outline:3px solid #123d59;
+  outline-offset:3px;
+  box-shadow:none;
+}
+#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success,.mx-exp-initial-search-submit) {
+  border-color:transparent;
+  background:#00c040;
+  color:#fff;
+}
+#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success,.mx-exp-initial-search-submit):hover {background:#00a936;color:#fff}
+#p-expediente :is(.body,.modal) :is(.btn-primary,.btn-success,.mx-exp-initial-search-submit):active {background:#00972f!important;color:#fff!important}
+#p-expediente :is(.body,.modal) :is(.btn-outline-primary,.btn-outline-info) {
+  border-color:#01afb9;
+  background:#fff;
+  color:#008391;
+}
+#p-expediente :is(.body,.modal) :is(.btn-outline-primary,.btn-outline-info):hover {border-color:#01afb9;background:#effafb;color:#008391}
+#p-expediente :is(.body,.modal) :is(.btn-outline-primary,.btn-outline-info):active {background:#dcf3f5!important;color:#008391!important}
+#p-expediente :is(.body,.modal) :is(.btn-danger,.btn-outline-danger) {
+  border-color:#e6384f;
+  background:#fff;
+  color:#d5213b;
+}
+#p-expediente :is(.body,.modal) :is(.btn-danger,.btn-outline-danger):hover {border-color:#e6384f;background:#fff2f3;color:#d5213b}
+#p-expediente :is(.body,.modal) :is(.btn-danger,.btn-outline-danger):active {background:#ffe4e7!important;color:#d5213b!important}
+#p-expediente :is(.body,.modal) :is(.btn-secondary,.btn-outline-secondary,.btn-light) {
+  border-color:#b5cbd2;
+  background:#f8fbfc;
+  color:#008391;
+}
+#p-expediente :is(.body,.modal) :is(.btn-secondary,.btn-outline-secondary,.btn-light):hover {border-color:#b5cbd2;background:#eef6f8;color:#008391}
+#p-expediente :is(.body,.modal) :is(.btn-secondary,.btn-outline-secondary,.btn-light):active {background:#e2f0f3!important;color:#008391!important}
+#p-expediente :is(.body,.modal) .btn:disabled {opacity:.55;cursor:default}
+
+/* Structural headings adopt the VIS01 accent; field/group labels remain in
+   the ordinary form-label hierarchy above. */
+#p-expediente :is(.exp-card-title,.mx-clinical-completion-copy h3,.mx-exp-initial-copy h3,.mx-exp-initial-search-copy h3) {
+  color:#06aeb8;
+  font-family:inherit;
+  font-size:1.25rem;
+  font-weight:700;
+  line-height:1.2;
+}
+#p-expediente :is(.exp-card-title,.mx-clinical-completion-copy h3) :is(.material-symbols-outlined,.material-symbols-rounded) {
+  color:inherit;
+}
+#p-expediente :is(.est-side-head,.est-summary-title,.docs-launcher-group-title,.ne-rx-section-title,.hc-gyn-subsection>h6) {
+  color:var(--exp01-primary-dark);
+  font-size:1rem;
+  font-weight:700;
+  line-height:1.35;
+}
+
+/* Content surfaces, lists and tables are intentionally quiet so clinical
+   meaning, not nested decoration, remains dominant. */
+#p-expediente :is(.exp-card,.est-block,.hc-gyn-subsection,.mx-clinical-completion-card,.est-order-card,.est-doc-preview) {
+  border:1px solid var(--exp01-border);
+  border-radius:var(--exp01-card-radius);
+  background:var(--exp01-surface);
+  box-shadow:none;
+}
+#p-expediente .mx-clinical-completion-card:hover {
+  border-color:#9fc7d2;
+  background:#f7fcfd;
+  box-shadow:none;
+}
+#p-expediente .mx-clinical-completion-card:focus-visible {
+  outline:3px solid rgba(0,174,190,.24);
+  outline-offset:2px;
+}
+#p-expediente .table {
+  --bs-table-bg:#fff;
+  --bs-table-color:var(--exp01-text);
+  --bs-table-border-color:#d6e4ea;
+  --bs-table-hover-bg:#effafb;
+  margin-bottom:0;
+}
+#p-expediente .table thead th {
+  background:#eef5f7;
+  color:var(--exp01-ink);
+  font-size:.82rem;
+  font-weight:700;
+}
+#p-expediente :is(.list-group-item,.docs-launcher-row) {
+  border-color:var(--exp01-border);
+  background:#fff;
+  color:var(--exp01-text);
+}
+#p-expediente :is(.list-group-item,.docs-launcher-row):hover {background:#f7fcfd}
+
+#p-expediente :is(.chip,.hc-chip,.est-selected-chips>span) {
+  border:1px solid #b9e4eb;
+  border-radius:16px;
+  background:#effafb;
+  color:#003152;
+  box-shadow:none;
+}
+#p-expediente .badge {border-radius:999px}
+
+/* Modal behavior, order and focus trapping stay owned by Bootstrap/current
+   module code; only the VIS01 surface and action family are applied. */
+#p-expediente .modal-content {
+  overflow:hidden;
+  border:1px solid rgba(0,49,82,.12);
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 8px 26px rgba(0,49,82,.16);
+}
+#p-expediente .modal-header {
+  border-bottom-color:#dee2e6;
+  background:#fff;
+}
+#p-expediente .modal-title {
+  color:var(--exp01-ink);
+  font-size:1.25rem;
+  font-weight:500;
+}
+#p-expediente .modal-footer {
+  gap:8px;
+  border-top-color:#dee2e6;
+  background:#fff;
+}
+
+/* Local clinical exception: the identity/encounter header and its four
+   semantic status cards retain their established colors. They distinguish
+   patient context, active consultation, allergies and medication at a glance. */
+#p-expediente .head .mx-clinical-header--shell,
+#p-expediente .head .mx-clinical-header--shell .ne-rx-ch-item {
+  border-radius:10px;
+}
+
+@media (max-width:767.98px) {
+  #p-expediente.mm-card .body {
+    padding:12px;
+    border-radius:14px;
+  }
+  #p-expediente [data-exp-tabs] {
+    gap:6px;
+    padding:6px;
+  }
+  #p-expediente [data-exp-tabs] .mm-tabs-row {gap:6px}
+  #p-expediente :is(.body,.modal) .btn:not(.btn-link):not(.btn-close) {min-height:42px}
+  #p-expediente .body :is(.form-control,.form-select) {min-height:42px}
+  #p-expediente .body textarea.form-control {min-height:88px}
+}
