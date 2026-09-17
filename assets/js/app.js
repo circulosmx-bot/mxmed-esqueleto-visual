@@ -37861,6 +37861,7 @@ console.info('app.js loaded :: 20251123a');
       headerData?.new_patient_mode === true ||
       headerData?.newPatientMode === true
     );
+	    const isChangeLanding = isEmptyState && !isNewPatientMode && opts.selectionMode === 'change';
 	    const isDraftPatientMode = !isEmptyState && (
 	      opts.draftPatientMode === true ||
 	      headerData?.draft_patient_mode === true ||
@@ -37899,7 +37900,9 @@ console.info('app.js loaded :: 20251123a');
             ]
           }
         : {
-            title: 'Selecciona o registra un paciente para comenzar',
+            title: isChangeLanding
+              ? 'Selecciona o registra otro paciente para continuar'
+              : 'Selecciona o registra un paciente para comenzar',
             text: 'Puedes crear un nuevo expediente o buscar un paciente existente en tu archivo.',
             actionsLabel: 'Acciones iniciales de expediente',
             actions: [
@@ -55486,12 +55489,22 @@ console.info('app.js loaded :: 20251123a');
     // 1) Identidad fija del paciente (siempre visible cuando hay contexto)
     const patientId = String(getPanePatientContextId() || '').trim();
     const hasPatientContext = !!patientId;
+    if(!hasPatientContext) delete pane.dataset.patientSelectionMode;
+    const isChangeLanding = pane.dataset.patientSelectionMode === 'change' && hasPatientContext;
     const headerState = resolveExpedienteHeaderState(patientId);
     const isNewPatientMode = headerState.mode === 'new-patient';
     const isNewDraftMode = headerState.mode === 'new-draft';
-    pane.classList.toggle('mx-expediente-empty-patient', !hasPatientContext && !isNewDraftMode);
+    pane.classList.toggle('mx-expediente-empty-patient', isChangeLanding || (!hasPatientContext && !isNewDraftMode));
     pane.classList.toggle('mx-expediente-new-patient', isNewPatientMode);
     pane.classList.toggle('mx-expediente-new-draft', isNewDraftMode);
+    const returnToPatientBtn = pane.querySelector('[data-exp-return-to-patient]');
+    returnToPatientBtn?.classList.toggle('d-none', !isChangeLanding);
+    if(isChangeLanding){
+      window.mxmedRenderClinicalSlimHeader?.(expClinicalContext, {}, {
+        layout: 'shell', emptyState: true, selectionMode: 'change'
+      });
+      return;
+    }
     const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
     const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
     const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
@@ -55718,7 +55731,7 @@ console.info('app.js loaded :: 20251123a');
   const applyPatientGate = ()=>{
     const gateOn = String(getPanePatientContextId() || '').trim() !== '';
     const isNewPatientMode = !gateOn && isNewPatientEntryModeActive();
-    pane.classList.toggle('mx-expediente-empty-patient', !gateOn);
+    pane.classList.toggle('mx-expediente-empty-patient', !gateOn || pane.dataset.patientSelectionMode === 'change');
     pane.classList.toggle('mx-expediente-new-patient', isNewPatientMode);
     const isFemaleExp = normalizeExpGender(pane.getAttribute('data-exp-gender')) === 'F';
     const panes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
@@ -56127,6 +56140,28 @@ console.info('app.js loaded :: 20251123a');
     }
     return navigateToPatientArchive('expediente_initial');
   };
+  const openContextualChangeLanding = ()=>{
+    if(!String(getPanePatientContextId() || '').trim()) return false;
+    pane.dataset.patientSelectionMode = 'change';
+    syncExpedienteHeaderContext();
+    window.requestAnimationFrame(()=>{
+      pane.querySelector('[data-exp-return-to-patient]')?.focus({ preventScroll:true });
+    });
+    return true;
+  };
+  const cancelContextualChangeLanding = async ()=>{
+    if(pane.dataset.patientSelectionMode !== 'change') return false;
+    delete pane.dataset.patientSelectionMode;
+    await syncExpedienteHeaderContext();
+    window.requestAnimationFrame(()=>{
+      const target = pane.querySelector('[data-clinical-action="active-search"]');
+      if(target?.getClientRects().length) target.focus({ preventScroll:true });
+    });
+    return true;
+  };
+  pane.querySelector('[data-exp-return-to-patient]')?.addEventListener('click', ()=>{
+    cancelContextualChangeLanding();
+  });
 	  const QUICK_RX_PATIENT_SEARCH_INTENT = 'quick_rx_patient_search';
 	  const getQuickRxPatientSearchIntent = ()=>{
 	    const intent = window.mxmedQuickRxPatientSearchIntent;
@@ -56256,8 +56291,10 @@ console.info('app.js loaded :: 20251123a');
 	    if(archivePane){
 	      if(searchOrigin === 'expediente_all'){
 	        archivePane.dataset.expedienteSearchOrigin = searchOrigin;
+	        archivePane.dataset.returnToChangeLanding = pane.dataset.patientSelectionMode === 'change' ? '1' : '0';
 	      }else{
 	        delete archivePane.dataset.expedienteSearchOrigin;
+	        delete archivePane.dataset.returnToChangeLanding;
 	      }
 	    }
 	    clearClinicalCompletionHub('navigate_patient_archive');
@@ -56719,6 +56756,7 @@ console.info('app.js loaded :: 20251123a');
         ev.preventDefault();
         const action = String(emptyAction.getAttribute('data-exp-empty-action') || '').trim();
         if(action === 'new'){
+          delete pane.dataset.patientSelectionMode;
           startNewPatientEntry('patient_empty_state');
           return;
         }
@@ -56727,7 +56765,11 @@ console.info('app.js loaded :: 20251123a');
           return;
         }
         if(action === 'search'){
-          openInitialPatientSearchMode('patient_empty_state_search');
+          if(pane.dataset.patientSelectionMode === 'change'){
+            navigateToPatientArchive('expediente_change');
+          }else{
+            openInitialPatientSearchMode('patient_empty_state_search');
+          }
           return;
         }
         if(action === 'all'){
@@ -56752,7 +56794,7 @@ console.info('app.js loaded :: 20251123a');
 	      }
 	      if(activeSearchTrigger){
 	        ev.preventDefault();
-	        navigateToPatientArchive('expediente_change');
+	        openContextualChangeLanding();
 	        return;
 	      }
 	      const mode = String(trigger.getAttribute('data-encounter-action-mode') || '').trim();
@@ -56953,7 +56995,12 @@ console.info('app.js loaded :: 20251123a');
     }));
   window.addEventListener('mxmed:workspace-mode', (ev)=>{
     const panelId = String(ev?.detail?.panelId || '').trim();
-    if(panelId !== 'p-expediente') return;
+    if(panelId !== 'p-expediente'){
+      const archiveReturn = panelId === 'p-pac-archivo'
+        && document.getElementById('p-pac-archivo')?.dataset.returnToChangeLanding === '1';
+      if(!archiveReturn) delete pane.dataset.patientSelectionMode;
+      return;
+    }
     window.requestAnimationFrame(()=>{
       if(pane.classList.contains('d-none')) return;
       applyPatientGate();
@@ -75736,6 +75783,7 @@ function mxResetLogoPreview(){
 
   const clearExpedienteSearchOrigin = ()=>{
     delete pane.dataset.expedienteSearchOrigin;
+    delete pane.dataset.returnToChangeLanding;
     backBtn?.classList.add('d-none');
   };
   const clearEmbeddedSearchOrigin = ()=>{
@@ -75793,11 +75841,8 @@ function mxResetLogoPreview(){
     const origin = String(expedientePane?.dataset.expedienteSearchOrigin || '').trim();
     if(origin !== 'expediente_initial' && origin !== 'expediente_change') return;
     clearEmbeddedSearchOrigin();
-    const targetSelector = origin === 'expediente_change'
-      ? '[data-clinical-action="active-search"]'
-      : '[data-exp-empty-action="search"]';
     window.requestAnimationFrame(()=>{
-      const target = expedientePane?.querySelector(targetSelector);
+      const target = expedientePane?.querySelector('[data-exp-empty-action="search"]');
       if(target?.getClientRects().length) target.focus({ preventScroll:true });
     });
   });
@@ -75808,6 +75853,7 @@ function mxResetLogoPreview(){
   });
   document.querySelector('.menu-main[data-panel="p-pac-archivo"]')?.addEventListener('click', ()=>{
     clearExpedienteSearchOrigin();
+    if(expedientePane) delete expedientePane.dataset.patientSelectionMode;
     if(!pane.classList.contains('d-none')){
       syncExpedienteSearchOrigin();
       loadArchivePage();
@@ -75816,6 +75862,8 @@ function mxResetLogoPreview(){
   backBtn?.addEventListener('click', ()=>{
     const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
     if(origin !== 'expediente_all') return;
+    const returnToChangeLanding = pane.dataset.returnToChangeLanding === '1';
+    if(!returnToChangeLanding && expedientePane) delete expedientePane.dataset.patientSelectionMode;
     let opened = false;
     if(typeof jumpTo === 'function'){
       opened = jumpTo('p-expediente') !== false;
@@ -75826,6 +75874,12 @@ function mxResetLogoPreview(){
     if(opened){
       clearExpedienteSearchOrigin();
       resetSearchControls();
+      window.requestAnimationFrame(()=>{
+        const target = expedientePane?.querySelector(returnToChangeLanding
+          ? '[data-exp-return-to-patient]'
+          : '[data-exp-empty-action="all"]');
+        if(target?.getClientRects().length) target.focus({ preventScroll:true });
+      });
     }
   });
 
@@ -76566,6 +76620,7 @@ function mxResetLogoPreview(){
     if(changed === false){
       return false;
     }
+    if(expedientePane) delete expedientePane.dataset.patientSelectionMode;
     clearExpedienteSearchOrigin();
     clearEmbeddedSearchOrigin();
     if(shouldReturnToQuickRx && typeof window.mxmedConsumeQuickRxPatientSearchIntent === 'function'){
