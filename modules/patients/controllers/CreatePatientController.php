@@ -99,6 +99,10 @@ class CreatePatientController
             }
         }
 
+        if (isset($p['sex']) && $p['sex'] !== '' && !in_array($p['sex'], ['M', 'F', 'O'], true)) {
+            $errors['sex'] = 'invalid';
+        }
+
         // Validate contacts
         if (isset($p['contacts'])) {
             if (!is_array($p['contacts'])) {

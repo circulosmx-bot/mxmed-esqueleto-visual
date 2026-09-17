@@ -982,7 +982,7 @@ class PatientsRepository
     private function fetchMaskedContacts(string $patientId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT contact_id, phone, email, preferred_contact_method, is_primary, created_at
+            'SELECT contact_id, phone, email, preferred_contact_method, contact_role, is_primary, created_at
              FROM patients_contacts WHERE patient_id = :patient_id'
         );
         $stmt->execute(['patient_id' => $patientId]);
@@ -993,6 +993,7 @@ class PatientsRepository
                 'contact_id' => $row['contact_id'],
                 'is_primary' => (bool)$row['is_primary'],
                 'preferred_contact_method' => $row['preferred_contact_method'] ?? null,
+                'contact_role' => $row['contact_role'] ?? null,
                 'created_at' => $row['created_at'],
             ];
             if (!empty($row['phone'])) {
@@ -1012,7 +1013,7 @@ class PatientsRepository
     private function fetchEditableContactsRows(string $patientId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT contact_id, phone, email, preferred_contact_method, is_primary, created_at
+            'SELECT contact_id, phone, email, preferred_contact_method, contact_role, is_primary, created_at
              FROM patients_contacts
              WHERE patient_id = :patient_id
              ORDER BY is_primary DESC, created_at ASC, contact_id ASC'
@@ -1025,6 +1026,7 @@ class PatientsRepository
                 'contact_id' => $row['contact_id'],
                 'is_primary' => (bool)$row['is_primary'],
                 'preferred_contact_method' => $row['preferred_contact_method'] ?? null,
+                'contact_role' => $row['contact_role'] ?? null,
                 'created_at' => $row['created_at'],
             ];
             if (!empty($row['phone'])) {

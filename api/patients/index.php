@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../modules/patients/controllers/UpsertEditablePatien
 require_once __DIR__ . '/../../modules/patients/controllers/CreatePatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientAddressController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientProfileController.php';
+require_once __DIR__ . '/../../modules/patients/controllers/SavePatientDetailsController.php';
 require_once __DIR__ . '/../../modules/patients/composition/PatientsAuthorityCompositionRoot.php';
 
 use Patients\Composition\PatientsAuthorityCompositionRoot;
@@ -22,6 +23,7 @@ use Patients\Controllers\UpsertEditablePatientContactsController;
 use Patients\Controllers\CreatePatientController;
 use Patients\Controllers\UpsertPatientAddressController;
 use Patients\Controllers\UpsertPatientProfileController;
+use Patients\Controllers\SavePatientDetailsController;
 use Agenda\Helpers as DbHelpers;
 
 $cut01aAgendaConfig = require __DIR__ . '/../../modules/agenda/config/agenda.php';
@@ -110,26 +112,17 @@ if ($method === 'GET') {
             $response = $controller->handle($decoded);
         }
     } elseif (count($segments) === 3 && $segments[0] === 'patients' && $segments[2] === 'address') {
-        $payloadRaw = file_get_contents('php://input');
-        $decoded = json_decode($payloadRaw, true);
-        if (!is_array($decoded)) {
-            $response = ['ok' => false, 'error' => 'invalid_params', 'message' => 'invalid json', 'data' => null, 'meta' => ['visibility' => ['contact' => 'masked']]];
-        } else {
-            $controller = new UpsertPatientAddressController();
-            $response = $controller->handle($segments[1], $decoded);
-        }
+        $response = ['ok' => false, 'error' => 'forbidden', 'message' => 'Use doctor-scoped datos-generales save', 'data' => null, 'meta' => (object)[], 'http_status' => 403];
     } elseif (count($segments) === 3 && $segments[0] === 'patients' && $segments[2] === 'profile') {
-        $payloadRaw = file_get_contents('php://input');
-        $decoded = json_decode($payloadRaw, true);
-        if (!is_array($decoded)) {
-            $response = ['ok' => false, 'error' => 'invalid_params', 'message' => 'invalid json', 'data' => null, 'meta' => ['visibility' => ['contact' => 'masked']]];
-        } else {
-            $controller = new UpsertPatientProfileController();
-            $response = $controller->handle($segments[1], $decoded);
-        }
+        $response = ['ok' => false, 'error' => 'forbidden', 'message' => 'Use doctor-scoped datos-generales save', 'data' => null, 'meta' => (object)[], 'http_status' => 403];
     }
 } elseif ($method === 'PUT') {
-    if (count($segments) === 6 && $segments[0] === 'doctors' && $segments[2] === 'patients' && $segments[4] === 'contacts' && $segments[5] === 'editable') {
+    if (count($segments) === 5 && $segments[0] === 'doctors' && $segments[2] === 'patients' && $segments[4] === 'datos-generales') {
+        $decoded = json_decode(file_get_contents('php://input'), true);
+        $response = is_array($decoded)
+            ? (new SavePatientDetailsController())->handle($segments[1], $segments[3], $decoded)
+            : ['ok' => false, 'error' => 'invalid_params', 'message' => 'invalid json', 'data' => null, 'meta' => (object)[], 'http_status' => 400];
+    } elseif (count($segments) === 6 && $segments[0] === 'doctors' && $segments[2] === 'patients' && $segments[4] === 'contacts' && $segments[5] === 'editable') {
         $payloadRaw = file_get_contents('php://input');
         $decoded = json_decode($payloadRaw, true);
         if (!is_array($decoded)) {

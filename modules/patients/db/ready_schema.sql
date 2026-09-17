@@ -35,11 +35,13 @@ CREATE TABLE IF NOT EXISTS `patients_contacts` (
   `phone` VARCHAR(32) DEFAULT NULL,
   `email` VARCHAR(190) DEFAULT NULL,
   `preferred_contact_method` VARCHAR(32) DEFAULT NULL,
+  `contact_role` VARCHAR(32) DEFAULT NULL,
   `is_primary` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`contact_id`),
   KEY `idx_contacts_patient` (`patient_id`),
-  KEY `idx_contacts_email` (`email`)
+  KEY `idx_contacts_email` (`email`),
+  UNIQUE KEY `uq_patient_contact_role` (`patient_id`, `contact_role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `patients_addresses` (

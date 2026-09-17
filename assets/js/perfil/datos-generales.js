@@ -154,6 +154,7 @@
   function initAutosave(){
     const expedienteRoot = document.getElementById('p-expediente');
     let creatingPatientPromise = null;
+    let pendingCreatedPatientId = '';
     let explicitSaveCompleted = false;
     const savePatientBtn = document.getElementById('dg-save-patient');
     const savePatientFeedback = document.getElementById('dg-save-feedback');
@@ -552,24 +553,6 @@
       ].some((value)=> String(value || '').trim() !== '');
     };
 
-    const savePatientProfile = async (patientId, profile, { force = false } = {})=>{
-      const pid = String(patientId || '').trim();
-      if(!pid) throw new Error('patient_id requerido');
-      const payload = normalizeProfilePayload(profile);
-      if(!force && !hasPatientProfileData(payload)) return null;
-      const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(payload)
-      });
-      const json = await response.json().catch(()=> null);
-      if(!response.ok || json?.ok !== true){
-        throw new Error(String(json?.message || json?.error || 'No se pudo guardar el perfil.'));
-      }
-      return json?.data?.profile || null;
-    };
-
     const dispatchProfileChange = (field, eventName = 'change')=>{
       if(!field) return;
       field.dispatchEvent(new Event(eventName, { bubbles: true }));
@@ -688,14 +671,25 @@
 
     const hydrateEditableMobilePhoneIntoDom = (contacts)=>{
       const controls = getPatientMobilePhoneControls();
-      if(!controls?.input) return false;
+      const fields = getContactFields();
+      if(!controls?.input || !fields) return false;
       const list = Array.isArray(contacts) ? contacts : [];
       const phones = list.filter((contact)=> String(contact?.type || '').trim() === 'phone');
-      const primaryPhone = phones.find((contact)=> contact?.is_primary === true) || phones[0] || null;
+      const emails = list.filter((contact)=> String(contact?.type || '').trim() === 'email');
+      const byRole = (role)=> list.find((contact)=> contact?.contact_role === role) || null;
+      const primaryPhone = byRole('mobile') || phones.find((contact)=> contact?.is_primary === true) || phones[0] || null;
+      const homePhone = byRole('home') || phones.find((contact)=> contact !== primaryPhone) || null;
+      const contactPhone = byRole('contact') || phones.find((contact)=> contact !== primaryPhone && contact !== homePhone) || null;
+      const primaryEmail = byRole('primary_email') || emails.find((contact)=> contact?.is_primary === true) || emails[0] || null;
+      const alternateEmail = byRole('alternate_email') || emails.find((contact)=> contact !== primaryEmail) || null;
       const rawValue = primaryPhone?.value || primaryPhone?.phone || '';
       const nationalDigits = normalizeMxPhoneNationalDigits(rawValue);
       setMobilePhoneCountryMx(controls);
       setPrimaryFieldValue(controls.input, nationalDigits, { dispatchEvents: true });
+      setPrimaryFieldValue(fields.homePhone, homePhone?.value || '', { dispatchEvents: false });
+      setPrimaryFieldValue(fields.contactPhone, contactPhone?.value || '', { dispatchEvents: false });
+      setPrimaryFieldValue(fields.primaryEmail, primaryEmail?.value || '', { dispatchEvents: false });
+      setPrimaryFieldValue(fields.alternateEmail, alternateEmail?.value || '', { dispatchEvents: false });
       setPatientMobilePhoneFeedback('');
       lastHydratedEditableMobilePhoneSnapshot = serializeEditableMobilePhoneSnapshot(rawValue);
       return true;
@@ -734,7 +728,7 @@
           patient_id: pid,
           message: String(err?.message || '').trim()
         });
-        contacts = [];
+        return false;
       }
       if(shouldApply() !== true) return false;
       return hydrateEditableMobilePhoneIntoDom(contacts || []);
@@ -804,30 +798,6 @@
         value,
         snapshot: serializeEditableMobilePhoneSnapshot(value)
       };
-    };
-
-    const saveEditableMobilePhone = async (patientId, mobilePhone)=>{
-      const url = buildEditablePatientContactsUrl(patientId);
-      if(!url) throw new Error('No se pudo identificar al médico para guardar el teléfono.');
-      const payload = {
-        contacts: [{
-          type: 'phone',
-          value: mobilePhone.value,
-          is_primary: true,
-          preferred_contact_method: 'phone'
-        }]
-      };
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(payload)
-      });
-      const json = await response.json().catch(()=> null);
-      if(!response.ok || json?.ok !== true){
-        throw new Error(String(json?.message || json?.error || 'No se pudo guardar el teléfono.'));
-      }
-      return Array.isArray(json?.data?.contacts) ? json.data.contacts : [];
     };
 
     const setPatientGenderValue = (sex)=>{
@@ -921,7 +891,9 @@
       setPrimaryFieldValue(expedienteRoot.querySelector('[data-dg-mes]'), birth.month, { dispatchEvents: true });
       setPrimaryFieldValue(expedienteRoot.querySelector('[data-dg-anio]'), birth.year, { dispatchEvents: true });
       setPatientGenderValue(patient.sex || patient.gender || '');
-      hydratePatientContactsIntoDom(patient.contacts || [], { preserveMobilePhone: true });
+      if(lastEditableContactsHydratedPatientId !== String(patient.patient_id || '').trim()){
+        hydratePatientContactsIntoDom([], { preserveMobilePhone: true });
+      }
       rememberProfileSnapshotFromDom();
       return true;
     };
@@ -999,6 +971,8 @@
     const cleanAddressValue = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
     const cleanAddressCp = (value)=> String(value || '').replace(/\D+/g, '').slice(0, 5);
     let lastHydratedAddressSnapshot = '';
+    let lastHydratedAddressCatalogId = null;
+    let lastHydratedAddressLocationKey = '';
 
     const readPatientAddressFromDom = ()=>{
       const fields = getAddressFields();
@@ -1014,7 +988,8 @@
         exterior_number: cleanAddressValue(fields.exteriorNumber?.value || ''),
         interior_number: cleanAddressValue(fields.interiorNumber?.value || ''),
         floor: cleanAddressValue(fields.floor?.value || ''),
-        catalog_cp_colonia_id: null
+        catalog_cp_colonia_id: `${cleanAddressCp(fields.cp?.value || '')}|${cleanAddressValue(fields.colony?.value || '')}` === lastHydratedAddressLocationKey
+          ? lastHydratedAddressCatalogId : null
       };
     };
 
@@ -1062,25 +1037,6 @@
         return 'El código postal debe tener 5 dígitos.';
       }
       return null;
-    };
-
-    const savePatientPrimaryAddress = async (patientId, address)=>{
-      const pid = String(patientId || '').trim();
-      if(!pid) throw new Error('patient_id requerido');
-      if(!hasPatientAddressData(address)) return null;
-      const validationError = validatePatientAddress(address);
-      if(validationError) throw new Error(validationError);
-      const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}/address`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(address)
-      });
-      const json = await response.json().catch(()=> null);
-      if(!response.ok || json?.ok !== true){
-        throw new Error(String(json?.message || json?.error || 'No se pudo guardar el domicilio.'));
-      }
-      return json?.data?.address || null;
     };
 
     const dispatchAddressChange = (field, eventName = 'change')=>{
@@ -1134,6 +1090,8 @@
       setAddressFieldValue(fields.exteriorNumber, address.exterior_number || '');
       setAddressFieldValue(fields.interiorNumber, address.interior_number || '');
       setAddressFieldValue(fields.floor, address.floor || '');
+      lastHydratedAddressCatalogId = address.catalog_cp_colonia_id ?? null;
+      lastHydratedAddressLocationKey = `${cleanAddressCp(address.postal_code || '')}|${cleanAddressValue(address.colony || '')}`;
       rememberAddressSnapshotFromDom();
       return true;
     };
@@ -1156,6 +1114,8 @@
         fields.colony.setAttribute('disabled', 'disabled');
         dispatchAddressChange(fields.colony, 'change');
       }
+      lastHydratedAddressCatalogId = null;
+      lastHydratedAddressLocationKey = '';
       rememberAddressSnapshotFromDom();
     };
 
@@ -1180,11 +1140,9 @@
 
     window.mxmedReadPatientAddressFromDom = readPatientAddressFromDom;
     window.mxmedHasPatientAddressData = hasPatientAddressData;
-    window.mxmedSavePatientPrimaryAddress = savePatientPrimaryAddress;
     window.mxmedHydratePatientAddressIntoDom = hydratePatientAddressIntoDom;
     window.mxmedReadPatientProfileFromDom = readPatientProfileFromDom;
     window.mxmedHasPatientProfileData = hasPatientProfileData;
-    window.mxmedSavePatientProfile = savePatientProfile;
     window.mxmedHydratePatientProfileIntoDom = hydratePatientProfileIntoDom;
     window.mxmedHydratePatientDetailIntoDatosGenerales = hydratePatientDetailIntoDatosGenerales;
 
@@ -1288,126 +1246,82 @@
       savePatientFeedback.className = cls;
     };
 
-    const saveDatosGeneralesForActivePatient = ()=>{
+    const buildCompletePatientDetailsPayload = ()=>{
+      const nameValidation = readValidatedPatientNameParts({ requirePaternal: false });
+      if(!nameValidation.valid) throw new Error(nameValidation.message || 'Captura un nombre de paciente válido.');
+      if(typeof window.mxmedValidatePatientEmails === 'function' && window.mxmedValidatePatientEmails() === false){
+        throw new Error('Revisa el formato de los correos electrónicos.');
+      }
+      const mobile = readEditableMobilePhoneForSave();
+      if(!mobile.valid) throw new Error(mobile.message || 'Revisa el teléfono celular.');
+      const address = readPatientAddressFromDom() || {};
+      const addressError = validatePatientAddress(address);
+      if(addressError) throw new Error(addressError);
+      const core = buildCreatePayload(nameValidation) || {};
+      const day = expedienteRoot.querySelector('[data-dg-dia]')?.value || '';
+      const month = expedienteRoot.querySelector('[data-dg-mes]')?.value || '';
+      const year = expedienteRoot.querySelector('[data-dg-anio]')?.value || '';
+      if([day, month, year].some(Boolean) && ![day, month, year].every(Boolean)){
+        throw new Error('Completa día, mes y año de nacimiento.');
+      }
+      const fields = getContactFields();
+      return {
+        profile: readPatientProfileFromDom() || {},
+        birthdate: core.birthdate || null,
+        sex: core.sex || null,
+        contacts: {
+          mobile: mobile.hasValue ? mobile.value : '',
+          home: String(fields?.homePhone?.value || '').trim(),
+          contact: String(fields?.contactPhone?.value || '').trim(),
+          primary_email: String(fields?.primaryEmail?.value || '').trim(),
+          alternate_email: String(fields?.alternateEmail?.value || '').trim()
+        },
+        address
+      };
+    };
+
+    const saveCompletePatientDetails = async (patientId)=>{
+      const doctorId = resolveDatosGeneralesDoctorId();
+      if(!doctorId || !patientId) throw new Error('Selecciona un paciente y médico válido.');
+      const payload = buildCompletePatientDetailsPayload();
+      const response = await fetch(`/api/patients/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/datos-generales`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || json?.ok !== true) throw new Error(String(json?.message || json?.error || 'No se pudieron guardar los datos generales.'));
+      const saved = json?.data || null;
+      if(saved){
+        hydratePatientDetailIntoDatosGenerales(saved);
+        hydrateEditableMobilePhoneIntoDom(saved.editable_contacts || []);
+      }
+      if(typeof window.mxmedInvalidatePatientsIndexCache === 'function') window.mxmedInvalidatePatientsIndexCache();
+      return saved;
+    };
+
+    const saveDatosGeneralesForActivePatient = async ()=>{
       const patientId = getActivePatientId();
       if(!patientId){
         setSaveFeedback('Selecciona un paciente para guardar datos generales.', 'error');
-        return Promise.resolve(null);
-      }
-      const nameValidation = readValidatedPatientNameParts({ requirePaternal: false });
-      if(!nameValidation.valid){
-        setSaveFeedback(nameValidation.message || 'Captura un nombre de paciente válido.', 'error');
-        return Promise.resolve(null);
-      }
-      const profile = readPatientProfileFromDom();
-      const address = readPatientAddressFromDom();
-      const mobilePhone = readEditableMobilePhoneForSave();
-      if(!mobilePhone.valid){
-        setPatientMobilePhoneFeedback(mobilePhone.message || 'Revisa el teléfono celular.');
-        setSaveFeedback(mobilePhone.message || 'Revisa el teléfono celular.', 'error');
-        return Promise.resolve(null);
-      }
-      setPatientMobilePhoneFeedback('');
-      const validationError = validatePatientAddress(address);
-      if(validationError){
-        setSaveFeedback(validationError, 'error');
-        return Promise.resolve(null);
-      }
-      const shouldSaveAddress = hasPatientAddressData(address);
-      const profileChanged = serializeProfileSnapshot(profile || {}) !== lastHydratedProfileSnapshot;
-      const addressChanged = shouldSaveAddress && serializeAddressSnapshot(address || {}) !== lastHydratedAddressSnapshot;
-      const mobilePhoneChanged = mobilePhone.hasValue && mobilePhone.snapshot !== lastHydratedEditableMobilePhoneSnapshot;
-      if(!profileChanged && !addressChanged && !mobilePhoneChanged){
-        setSaveFeedback('No hay cambios por guardar.', 'muted');
-        return Promise.resolve({ profileSaved: null, addressSaved: null, phoneSaved: null });
+        return null;
       }
       if(savePatientBtn) savePatientBtn.disabled = true;
       setSaveFeedback('Guardando datos generales...', 'muted');
-      const slowSaveFeedbackTimer = window.setTimeout(()=>{
-        if(savePatientBtn?.disabled){
-          setSaveFeedback('Guardando cambios; el servidor sigue procesando la solicitud...', 'muted');
+      try{
+        if(lastEditableContactsHydratedPatientId !== patientId){
+          throw new Error('Los contactos aún no están listos; vuelve a abrir el expediente antes de guardar.');
         }
-      }, 8000);
-      const profileSavePromise = profileChanged
-        ? savePatientProfile(patientId, profile, { force: true })
-        .then((savedProfile)=>{
-          if(savedProfile) hydratePatientProfileIntoDom(savedProfile);
-          return true;
-        })
-        .catch((err)=>{
-          console.warn('[DG-PROFILE-SAVE] request_error', {
-            patient_id: patientId,
-            message: String(err?.message || '').trim()
-          });
-          return false;
-        })
-        : Promise.resolve(null);
-      const addressSavePromise = addressChanged
-        ? savePatientPrimaryAddress(patientId, address)
-            .then((savedAddress)=>{
-              if(savedAddress) hydratePatientAddressIntoDom(savedAddress);
-              return true;
-            })
-            .catch((err)=>{
-              console.warn('[DG-ADDRESS-SAVE] request_error', {
-                patient_id: patientId,
-                message: String(err?.message || '').trim()
-              });
-              return false;
-            })
-        : Promise.resolve(null);
-      const phoneSavePromise = mobilePhoneChanged
-        ? saveEditableMobilePhone(patientId, mobilePhone)
-            .then((contacts)=>{
-              hydrateEditableMobilePhoneIntoDom(contacts);
-              if(typeof window.mxmedInvalidatePatientsIndexCache === 'function'){
-                window.mxmedInvalidatePatientsIndexCache();
-              }
-              return true;
-            })
-            .catch((err)=>{
-              console.warn('[DG-CONTACTS-EDITABLE-SAVE] request_error', {
-                patient_id: patientId,
-                message: String(err?.message || '').trim()
-              });
-              return false;
-            })
-        : Promise.resolve(null);
-      return Promise.all([profileSavePromise, addressSavePromise, phoneSavePromise])
-        .then(([profileSaved, addressSaved, phoneSaved])=>{
-          if(profileSaved === false && addressSaved === false && phoneSaved === false){
-            setSaveFeedback('No se pudieron guardar los datos generales.', 'error');
-          }else if(phoneSaved === false){
-            setSaveFeedback('Datos generales guardados parcialmente; no se pudo guardar el teléfono.', 'error');
-          }else if(profileSaved === false){
-            setSaveFeedback('Datos generales guardados parcialmente; no se pudo guardar el perfil.', 'error');
-          }else if(addressSaved === false){
-            setSaveFeedback('Datos generales guardados parcialmente; no se pudo guardar el domicilio.', 'error');
-          }else if(phoneSaved === true && (profileSaved === true || addressSaved === true)){
-            setSaveFeedback('Datos generales guardados correctamente.', 'success');
-          }else if(phoneSaved === true){
-            setSaveFeedback('Teléfono guardado correctamente.', 'success');
-          }else if(addressSaved === true){
-            setSaveFeedback('Perfil y domicilio guardados correctamente.', 'success');
-          }else if(profileSaved === true){
-            setSaveFeedback('Perfil guardado correctamente.', 'success');
-          }else{
-            setSaveFeedback('Cambios guardados correctamente.', 'success');
-          }
-          return { profileSaved, addressSaved, phoneSaved };
-        })
-        .catch((err)=>{
-          console.warn('[DG-PROFILE-SAVE] request_error', {
-            patient_id: patientId,
-            message: String(err?.message || '').trim()
-          });
-          setSaveFeedback(String(err?.message || 'No se pudieron guardar los datos generales.'), 'error');
-          return null;
-        })
-        .finally(()=>{
-          window.clearTimeout(slowSaveFeedbackTimer);
-          if(savePatientBtn) savePatientBtn.disabled = false;
-        });
+        const saved = await saveCompletePatientDetails(patientId);
+        setSaveFeedback('Datos generales guardados correctamente.', 'success');
+        return saved;
+      }catch(err){
+        setSaveFeedback(String(err?.message || 'No se pudieron guardar los datos generales.'), 'error');
+        return null;
+      }finally{
+        if(savePatientBtn) savePatientBtn.disabled = false;
+      }
     };
 
     const createPatientFromExplicitSave = ()=>{
@@ -1425,6 +1339,16 @@
         setSaveFeedback('Captura nombre y apellidos para guardar.', 'error');
         return Promise.resolve(null);
       }
+      if(!payload.doctor_id){
+        setSaveFeedback('Selecciona un médico válido antes de guardar.', 'error');
+        return Promise.resolve(null);
+      }
+      try{
+        buildCompletePatientDetailsPayload();
+      }catch(err){
+        setSaveFeedback(String(err?.message || 'Revisa los datos generales.'), 'error');
+        return Promise.resolve(null);
+      }
       const mobileValidation = validateRequiredPatientMobilePhone();
       if(!mobileValidation.valid){
         setPatientMobilePhoneFeedback(mobileValidation.message);
@@ -1434,10 +1358,7 @@
       }
       setPatientMobilePhoneFeedback('');
       appendPatientMobileContactToPayload(payload, mobileValidation.phone);
-      const profile = readPatientProfileFromDom();
-      const shouldSaveProfile = hasPatientProfileData(profile);
       const address = readPatientAddressFromDom();
-      const shouldSaveAddress = hasPatientAddressData(address);
       const addressValidationError = validatePatientAddress(address);
       if(addressValidationError){
         setSaveFeedback(addressValidationError, 'error');
@@ -1462,65 +1383,25 @@
           if(json?.ok === true && patientId){
             console.info('[P14-PATIENT-SAVE] success', { patient_id: patientId });
             persistIdentityDraftForPatient(patientId);
-            explicitSaveCompleted = true;
-            syncNewPatientDirtyState();
-            const profileSavePromise = shouldSaveProfile
-              ? savePatientProfile(patientId, profile)
-                  .then((savedProfile)=>{
-                    if(savedProfile) hydratePatientProfileIntoDom(savedProfile);
-                    return true;
-                  })
-                  .catch((err)=>{
-                    console.warn('[DG-PROFILE-SAVE] after_create_error', {
-                      patient_id: patientId,
-                      message: String(err?.message || '').trim()
-                    });
-                    return false;
-                  })
-              : Promise.resolve(null);
-            const addressSavePromise = shouldSaveAddress
-              ? savePatientPrimaryAddress(patientId, address)
-                  .then((savedAddress)=>{
-                    if(savedAddress) hydratePatientAddressIntoDom(savedAddress);
-                    return true;
-                  })
-                  .catch((err)=>{
-                    console.warn('[DG-ADDRESS-SAVE] after_create_error', {
-                      patient_id: patientId,
-                      message: String(err?.message || '').trim()
-                    });
-                    return false;
-                  })
-              : Promise.resolve(null);
-            return Promise.all([profileSavePromise, addressSavePromise]).then(([profileSaved, addressSaved])=>{
+            return saveCompletePatientDetails(patientId).then(()=>{
               Promise.resolve(setActivePatientId(patientId, { applyEntryRule: false }))
-              .catch(()=> null)
-              .finally(()=>{
-                if(typeof window.mxmedShowClinicalCompletionHub === 'function'){
-                  try{
-                    window.mxmedShowClinicalCompletionHub({ patientId, source: 'datos-generales', event: 'explicit_save' });
-                  }catch(_){}
-                }
-              });
-            if(typeof window.mxmedInvalidatePatientsIndexCache === 'function'){
-              window.mxmedInvalidatePatientsIndexCache();
-            }
-              if(profileSaved === false && addressSaved === false){
-                setSaveFeedback('Paciente guardado, pero no se pudieron guardar perfil ni domicilio.', 'error');
-              }else if(profileSaved === false){
-                setSaveFeedback('Paciente guardado, pero no se pudo guardar perfil.', 'error');
-              }else if(addressSaved === false){
-                setSaveFeedback('Paciente guardado, pero no se pudo guardar domicilio.', 'error');
-              }else if(shouldSaveProfile && shouldSaveAddress){
-                setSaveFeedback('Paciente, perfil y domicilio guardados correctamente.', 'success');
-              }else if(shouldSaveProfile){
-                setSaveFeedback('Paciente y perfil guardados correctamente.', 'success');
-              }else if(shouldSaveAddress){
-                setSaveFeedback('Paciente y domicilio guardados correctamente.', 'success');
-              }else{
-                setSaveFeedback('Paciente guardado correctamente.', 'success');
-              }
+                .catch(()=> null)
+                .finally(()=>{
+                  if(typeof window.mxmedShowClinicalCompletionHub === 'function'){
+                    try{
+                      window.mxmedShowClinicalCompletionHub({ patientId, source: 'datos-generales', event: 'explicit_save' });
+                    }catch(_){}
+                  }
+                });
+              pendingCreatedPatientId = '';
+              explicitSaveCompleted = true;
+              syncNewPatientDirtyState();
+              setSaveFeedback('Paciente y datos generales guardados correctamente.', 'success');
               return patientId;
+            }).catch((err)=>{
+              pendingCreatedPatientId = patientId;
+              setSaveFeedback(`Paciente creado, pero faltan datos generales: ${String(err?.message || 'error de guardado')}. Corrige y vuelve a guardar.`, 'error');
+              return null;
             });
           }
           console.warn('[P14-PATIENT-SAVE] no_create', {
@@ -1549,6 +1430,20 @@
       const activePatientId = getActivePatientId();
       if(activePatientId && !isInNewEntryMode()){
         saveDatosGeneralesForActivePatient();
+        return;
+      }
+      if(pendingCreatedPatientId){
+        const pendingId = pendingCreatedPatientId;
+        if(savePatientBtn) savePatientBtn.disabled = true;
+        saveCompletePatientDetails(pendingId).then(()=>{
+          pendingCreatedPatientId = '';
+          explicitSaveCompleted = true;
+          syncNewPatientDirtyState();
+          Promise.resolve(setActivePatientId(pendingId, { applyEntryRule: false })).catch(()=> null);
+          setSaveFeedback('Paciente y datos generales guardados correctamente.', 'success');
+        }).catch((err)=>{
+          setSaveFeedback(`No se pudieron completar los datos generales: ${String(err?.message || 'error de guardado')}`, 'error');
+        }).finally(()=>{ if(savePatientBtn) savePatientBtn.disabled = false; });
         return;
       }
       createPatientFromExplicitSave();
@@ -1820,7 +1715,7 @@
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
       // Canonical DG identity edits belong to its explicit-save baseline, never dp: storage.
-      if(ctrl.closest('#mx-public-identity-card, #t-info-profesional')) return;
+      if(ctrl.closest('#mx-public-identity-card, #t-info-profesional, [data-exp-datos-form]')) return;
       // excluir campos de búsqueda u opt-out manual
       if(ctrl.type==='search' || ctrl.classList.contains('no-check') || ctrl.dataset.noCheck==='1') return;
       if(isHumanNameFieldForNativeTextAssist(ctrl)) return;

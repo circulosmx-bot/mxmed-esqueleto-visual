@@ -75,15 +75,14 @@ $routes = [
     ['GET', '/doctors/{}/patients/search', "count(\$segments) === 4 && \$segments[0] === 'doctors' && \$segments[2] === 'patients' && \$segments[3] === 'search'"],
     ['GET', '/doctors/{}/patients', "count(\$segments) === 3 && \$segments[0] === 'doctors' && \$segments[2] === 'patients'"],
     ['POST', '/patients', "count(\$segments) === 1 && \$segments[0] === 'patients'"],
-    ['POST', '/patients/{}/address', "count(\$segments) === 3 && \$segments[0] === 'patients' && \$segments[2] === 'address'"],
-    ['POST', '/patients/{}/profile', "count(\$segments) === 3 && \$segments[0] === 'patients' && \$segments[2] === 'profile'"],
+    ['PUT', '/doctors/{}/patients/{}/datos-generales', "count(\$segments) === 5 && \$segments[0] === 'doctors' && \$segments[2] === 'patients' && \$segments[4] === 'datos-generales'"],
     ['PUT', '/doctors/{}/patients/{}/contacts/editable', "count(\$segments) === 6 && \$segments[0] === 'doctors' && \$segments[2] === 'patients' && \$segments[4] === 'contacts' && \$segments[5] === 'editable'"],
 ];
-cut01aPatientsAssert(count($routes) === 8, 'exactly eight Patients routes represented');
+cut01aPatientsAssert(count($routes) === 7, 'seven active Patients routes represented');
 cut01aPatientsAssert(count(array_filter($routes, static fn(array $route): bool => $route[0] === 'GET')) === 4, 'exactly four reads');
-cut01aPatientsAssert(count(array_filter($routes, static fn(array $route): bool => $route[0] !== 'GET')) === 4, 'exactly four writes');
+cut01aPatientsAssert(count(array_filter($routes, static fn(array $route): bool => $route[0] !== 'GET')) === 3, 'exactly three active writes');
 foreach ($routes as [$method, $path, $source]) {
-    cut01aPatientsAssert(str_contains($router, $source), 'legacy route preserved: ' . $method . ' ' . $path);
+    cut01aPatientsAssert(str_contains($router, $source), 'active route preserved: ' . $method . ' ' . $path);
 }
 
 $composition = new PatientsAuthorityCompositionRoot(new AuthorizationBoundary());
@@ -135,8 +134,8 @@ cut01aPatientsAssert(str_contains($rootSource, 'AuthorizationBoundary'), 'canoni
 cut01aPatientsAssert(($config['feature_flags']['canonical_actor_authority'] ?? null) === false, 'literal false preserves legacy path');
 cut01aPatientsAssert(!str_contains($router, 'resolveServerAuthority('), 'router does not execute canonical Patients authority');
 cut01aPatientsAssert(!str_contains($router, 'new PatientsAuthorityCompositionRoot('), 'router does not instantiate canonical Patients root');
-cut01aPatientsAssert(substr_count($router, '$controller = new ') === 8, 'eight legacy controller dispatches remain');
-cut01aPatientsAssert(substr_count($router, 'invalid json') === 4, 'legacy invalid JSON payload contracts remain');
+cut01aPatientsAssert(substr_count($router, '$controller = new ') === 6 && str_contains($router, 'new SavePatientDetailsController()'), 'six legacy dispatches and one scoped aggregate dispatch remain');
+cut01aPatientsAssert(substr_count($router, 'invalid json') === 3, 'three active JSON payload contracts remain');
 cut01aPatientsAssert(str_contains($router, "http_response_code(\$status);") && str_contains($router, 'echo json_encode($response);'), 'legacy status and payload response path remains');
 cut01aPatientsAssert(!preg_match('/PatientIdentityResolver|PatientIdentityPersistence|Gate8F|Gate8G|\\bmerge\\b/i', $rootSource . "\n" . $router), 'patient identity, persistence and merge remain inactive');
 cut01aPatientsAssert(!preg_match('/\\bPDO\\b|mxmed_pdo|->exec\\s*\\(|\\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\\b|file_put_contents|fwrite/i', $rootSource), 'composition has zero DB, SQL and writes');

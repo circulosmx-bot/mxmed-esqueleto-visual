@@ -44,6 +44,15 @@ class UpsertEditablePatientContactsController
         if (trim($doctorId) === '' || trim($patientId) === '') {
             return $this->error('invalid_params', 'doctor_id and patient_id required', 400, $meta);
         }
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $sessionDoctorId = trim((string)($_SESSION['doctor_id'] ?? $_SESSION['active_doctor_id'] ?? $_SESSION['mxmed_doctor_id'] ?? ''));
+        $sessionUserId = trim((string)($_SESSION['user_id'] ?? $_SESSION['mxmed_user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['actor_user_id'] ?? ''));
+        if ($sessionDoctorId === '' || $sessionUserId === '') {
+            return $this->error('unauthorized', 'authentication required', 401, $meta);
+        }
+        if ($sessionDoctorId !== $doctorId) {
+            return $this->error('forbidden', 'doctor scope mismatch', 403, $meta);
+        }
 
         $phoneContact = $this->resolvePhoneContact($payload);
         if ($phoneContact === null) {
