@@ -37753,6 +37753,10 @@ console.info('app.js loaded :: 20251123a');
               <span class="material-symbols-rounded" aria-hidden="true" data-exp-empty-action-icon>folder_open</span>
               <span data-exp-empty-action-label>Buscar paciente</span>
             </button>
+            <button type="button" class="mx-exp-empty-action mx-exp-empty-action--secondary" data-exp-empty-action="all">
+              <span class="material-symbols-rounded" aria-hidden="true" data-exp-empty-action-icon>format_list_bulleted</span>
+              <span data-exp-empty-action-label>Ver todos</span>
+            </button>
           </div>
         </div>
       </div>
@@ -37900,7 +37904,8 @@ console.info('app.js loaded :: 20251123a');
             actionsLabel: 'Acciones iniciales de expediente',
             actions: [
               { action: 'new', icon: 'person_add', label: 'Nuevo paciente', variant: 'primary' },
-              { action: 'search', icon: 'folder_open', label: 'Buscar paciente', variant: 'secondary' }
+              { action: 'search', icon: 'folder_open', label: 'Buscar paciente', variant: 'secondary' },
+              { action: 'all', icon: 'format_list_bulleted', label: 'Ver todos', variant: 'secondary' }
             ]
           };
       const titleNode = emptyStateNode.querySelector('.mx-exp-empty-title');
@@ -56235,8 +56240,12 @@ console.info('app.js loaded :: 20251123a');
 	    }
 	    const archivePane = document.getElementById('p-pac-archivo');
 	    const searchOrigin = sanitizeText(source);
-	    if(archivePane && (searchOrigin === 'expediente_initial' || searchOrigin === 'expediente_change')){
-	      archivePane.dataset.expedienteSearchOrigin = searchOrigin;
+	    if(archivePane){
+	      if(['expediente_initial', 'expediente_change', 'expediente_all'].includes(searchOrigin)){
+	        archivePane.dataset.expedienteSearchOrigin = searchOrigin;
+	      }else{
+	        delete archivePane.dataset.expedienteSearchOrigin;
+	      }
 	    }
 	    clearClinicalCompletionHub('navigate_patient_archive');
 	    if(typeof jumpTo === 'function'){
@@ -56706,6 +56715,10 @@ console.info('app.js loaded :: 20251123a');
         }
         if(action === 'search'){
           openInitialPatientSearchMode('patient_empty_state_search');
+          return;
+        }
+        if(action === 'all'){
+          navigateToPatientArchive('expediente_all');
           return;
         }
 	      }
@@ -75719,8 +75732,9 @@ function mxResetLogoPreview(){
     archiveWasVisible = true;
     const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
     const isClinicalSearch = origin === 'expediente_initial' || origin === 'expediente_change';
+    const isFromExpediente = isClinicalSearch || origin === 'expediente_all';
     if(isClinicalSearch) archiveRequestToken++;
-    backBtn?.classList.toggle('d-none', !isClinicalSearch);
+    backBtn?.classList.toggle('d-none', !isFromExpediente);
     browserEl?.classList.toggle('d-none', isClinicalSearch);
     clinicalSearchEl?.classList.toggle('d-none', !isClinicalSearch);
     if(archiveTitleEl) archiveTitleEl.textContent = isClinicalSearch ? 'Buscar paciente en mi archivo' : 'Archivo de pacientes';
@@ -75742,7 +75756,7 @@ function mxResetLogoPreview(){
   });
   backBtn?.addEventListener('click', ()=>{
     const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
-    if(origin !== 'expediente_initial' && origin !== 'expediente_change') return;
+    if(origin !== 'expediente_initial' && origin !== 'expediente_change' && origin !== 'expediente_all') return;
     let opened = false;
     if(typeof jumpTo === 'function'){
       opened = jumpTo('p-expediente') !== false;
