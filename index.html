@@ -4256,7 +4256,7 @@
                   <button type="button" id="mm-pac-archive-more" class="mx-pac-archive-more" aria-expanded="false" aria-controls="mm-pac-archive-more-panel">Más filtros <span class="material-symbols-rounded" aria-hidden="true">tune</span></button>
                 </div>
                 <label class="mx-pac-archive-sort" for="mm-pac-archive-sort">Ordenar
-                  <select id="mm-pac-archive-sort" class="form-select" data-no-check="1"><option value="surname_asc">Primer apellido A–Z</option><option value="surname_desc">Primer apellido Z–A</option><option value="age_asc">Edad menor a mayor</option><option value="age_desc">Edad mayor a menor</option><option value="registered_desc">Registro más reciente</option><option value="registered_asc">Registro más antiguo</option></select>
+                  <select id="mm-pac-archive-sort" class="form-select" data-no-check="1"><option value="surname_asc">Primer apellido A–Z</option><option value="surname_desc">Primer apellido Z–A</option><option value="age_asc">Edad menor a mayor</option><option value="age_desc">Edad mayor a menor</option><option value="last_consultation_desc">Última consulta más reciente</option><option value="last_consultation_asc">Última consulta más antigua</option><option value="next_appointment_asc">Próxima cita más cercana</option><option value="next_appointment_desc">Próxima cita más lejana</option><option value="consultations_desc">Más consultas</option><option value="consultations_asc">Menos consultas</option></select>
                 </label>
               </div>
               <div id="mm-pac-archive-more-panel" class="mx-pac-archive-more-panel" hidden>
@@ -4270,7 +4270,15 @@
               <p id="mm-pac-archive-status" class="mx-pac-archive-status" role="status" aria-live="polite"></p>
               <div class="mx-pac-archive-table-wrap">
                 <table class="mx-pac-archive-table" aria-label="Archivo de pacientes">
-                  <thead><tr><th scope="col" aria-sort="ascending"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="patient" aria-label="Ordenar pacientes por primer apellido"><span>Paciente</span><span class="material-symbols-rounded" aria-hidden="true">arrow_upward</span></button></th><th scope="col" aria-sort="none"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="age" aria-label="Ordenar pacientes por edad"><span>Edad</span><span class="material-symbols-rounded" aria-hidden="true">unfold_more</span></button></th><th scope="col">Género</th><th scope="col" aria-sort="none"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="registered" aria-label="Ordenar pacientes por fecha de registro"><span>Registrado</span><span class="material-symbols-rounded" aria-hidden="true">unfold_more</span></button></th><th scope="col"><span class="visually-hidden">Abrir expediente</span></th></tr></thead>
+                  <thead><tr>
+                    <th scope="col" aria-sort="ascending"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="patient" aria-label="Ordenar pacientes por primer apellido"><span>Paciente</span><span class="material-symbols-rounded" aria-hidden="true">arrow_upward</span></button></th>
+                    <th scope="col" aria-sort="none"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="age" aria-label="Ordenar pacientes por edad"><span>Edad</span><span class="material-symbols-rounded" aria-hidden="true">unfold_more</span></button></th>
+                    <th scope="col">Género</th>
+                    <th scope="col" aria-sort="none"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="last_consultation" aria-label="Ordenar pacientes por última consulta"><span>Última consulta</span><span class="material-symbols-rounded" aria-hidden="true">unfold_more</span></button></th>
+                    <th scope="col" aria-sort="none"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="next_appointment" aria-label="Ordenar pacientes por próxima cita"><span>Próxima cita</span><span class="material-symbols-rounded" aria-hidden="true">unfold_more</span></button></th>
+                    <th scope="col" aria-sort="none"><button type="button" class="mx-pac-archive-sort-header" data-archive-sort-header="consultations" aria-label="Ordenar pacientes por número de consultas"><span>Consultas</span><span class="material-symbols-rounded" aria-hidden="true">unfold_more</span></button></th>
+                    <th scope="col"><span class="visually-hidden">Abrir expediente</span></th>
+                  </tr></thead>
                   <tbody id="mm-pac-archive-rows"></tbody>
                 </table>
               </div>

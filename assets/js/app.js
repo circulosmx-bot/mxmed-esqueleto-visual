@@ -76608,19 +76608,24 @@ function mxResetLogoPreview(){
     openArchivePatientRecord(entry, { openOrigin }).catch(()=> null);
   });
 
-  const formatArchiveRegistration = (value = '')=>{
+  const formatArchiveDate = (value = '', includeTime = false)=>{
     const raw = String(value || '').trim();
-    if(!/^\d{4}-\d{2}-\d{2}/.test(raw)) return '—';
-    const date = new Date(`${raw.slice(0, 10)}T00:00:00`);
-    if(Number.isNaN(date.getTime())) return '—';
-    return new Intl.DateTimeFormat('es-MX', { day:'2-digit', month:'short', year:'numeric' }).format(date);
+    const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(raw);
+    if(!match) return '—';
+    const [, year, month, day, hour, minute] = match;
+    const monthIndex = Number(month) - 1;
+    const date = new Date(Number(year), monthIndex, Number(day));
+    if(date.getFullYear() !== Number(year) || date.getMonth() !== monthIndex || date.getDate() !== Number(day)) return '—';
+    const monthName = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][monthIndex];
+    if(includeTime) return `${Number(day)} ${monthName} · ${hour || '00'}:${minute || '00'}`;
+    return `${Number(day)} ${monthName} ${year}`;
   };
 
   const renderArchiveBrowseRows = (items = [])=>{
     if(!archiveRowsEl) return;
     archiveBrowseItems = Array.isArray(items) ? items.slice() : [];
     if(!archiveBrowseItems.length){
-      archiveRowsEl.innerHTML = '<tr><td class="mx-pac-archive-empty" colspan="5">No hay pacientes que coincidan con los filtros.</td></tr>';
+      archiveRowsEl.innerHTML = '<tr><td class="mx-pac-archive-empty" colspan="7">No hay pacientes que coincidan con los filtros.</td></tr>';
       return;
     }
     archiveRowsEl.innerHTML = archiveBrowseItems.map((item)=>{
@@ -76632,12 +76637,18 @@ function mxResetLogoPreview(){
       const icon = sexMeta.key === 'female' ? 'face_3' : (sexMeta.key === 'male' ? 'face' : 'person');
       const age = resolvePatientAge(item);
       const ageLabel = Number.isFinite(age) ? String(age) : '—';
-      const registered = formatArchiveRegistration(item.registered_at);
+      const count = Number(item.consultation_count) || 0;
+      const legacyOnly = count === 0 && (item.has_unattributed_legacy_consultation === true || Number(item.has_unattributed_legacy_consultation) === 1);
+      const lastConsultation = count > 0 ? formatArchiveDate(item.last_consultation_at) : (legacyOnly ? 'Historial sin atribuir' : 'Sin consultas');
+      const consultations = legacyOnly ? '—' : String(count);
+      const nextAppointment = item.next_appointment_at ? formatArchiveDate(item.next_appointment_at, true) : 'Sin cita';
       return `<tr>
         <td data-label="Paciente"><button type="button" class="mx-pac-archive-open" data-pid="${escapeAttr(pid)}" aria-label="Abrir expediente de ${escapeAttr(name)}"><span class="mx-pac-archive-avatar ${escapeAttr(sexMeta.key || 'unknown')}"><span class="material-symbols-outlined" aria-hidden="true">${icon}</span></span><span>${escapeHtml(name)}</span></button></td>
         <td data-label="Edad">${escapeHtml(ageLabel)}</td>
         <td data-label="Género">${escapeHtml(sexLabel)}</td>
-        <td data-label="Registrado">${escapeHtml(registered)}</td>
+        <td data-label="Última consulta" class="${count === 0 ? 'mx-pac-archive-muted' : ''}">${escapeHtml(lastConsultation)}</td>
+        <td data-label="Próxima cita" class="${item.next_appointment_at ? '' : 'mx-pac-archive-muted'}">${escapeHtml(nextAppointment)}</td>
+        <td data-label="Consultas" class="${legacyOnly ? 'mx-pac-archive-muted' : ''}">${escapeHtml(consultations)}</td>
         <td class="mx-pac-archive-arrow" aria-hidden="true"><span class="material-symbols-rounded">chevron_right</span></td>
       </tr>`;
     }).join('');
@@ -76670,7 +76681,7 @@ function mxResetLogoPreview(){
     const dateTo = String(archiveDateToEl?.value || '');
     if(dateFrom && dateTo && dateFrom > dateTo){
       if(archiveStatusEl) archiveStatusEl.textContent = 'La fecha inicial debe ser anterior o igual a la fecha final.';
-      if(archiveRowsEl) archiveRowsEl.innerHTML = '<tr><td class="mx-pac-archive-empty" colspan="5">Corrige el rango de fechas para mostrar pacientes.</td></tr>';
+      if(archiveRowsEl) archiveRowsEl.innerHTML = '<tr><td class="mx-pac-archive-empty" colspan="7">Corrige el rango de fechas para mostrar pacientes.</td></tr>';
       if(archiveRangeEl) archiveRangeEl.textContent = 'Mostrando 0 de 0';
       return;
     }
@@ -76718,7 +76729,7 @@ function mxResetLogoPreview(){
 
   const syncArchiveSortHeaders = ()=>{
     const sort = String(archiveSortEl?.value || 'surname_asc');
-    const criterion = sort.startsWith('surname_') ? 'patient' : (sort.startsWith('age_') ? 'age' : 'registered');
+    const criterion = sort.startsWith('surname_') ? 'patient' : (sort.startsWith('age_') ? 'age' : sort.replace(/_(?:asc|desc)$/, ''));
     const direction = sort.endsWith('_asc') ? 'ascending' : 'descending';
     archiveSortButtons.forEach((button)=>{
       const active = button.dataset.archiveSortHeader === criterion;
@@ -76732,11 +76743,16 @@ function mxResetLogoPreview(){
     if(!archiveSortEl) return;
     const current = archiveSortEl.value;
     const criterion = button.dataset.archiveSortHeader;
-    archiveSortEl.value = criterion === 'patient'
-      ? (current === 'surname_asc' ? 'surname_desc' : 'surname_asc')
-      : criterion === 'age'
-        ? (current === 'age_asc' ? 'age_desc' : 'age_asc')
-        : (current === 'registered_desc' ? 'registered_asc' : 'registered_desc');
+    const firstSort = {
+      patient: 'surname_asc', age: 'age_asc', last_consultation: 'last_consultation_desc',
+      next_appointment: 'next_appointment_asc', consultations: 'consultations_desc'
+    }[criterion];
+    const secondSort = {
+      patient: 'surname_desc', age: 'age_desc', last_consultation: 'last_consultation_asc',
+      next_appointment: 'next_appointment_desc', consultations: 'consultations_asc'
+    }[criterion];
+    if(!firstSort) return;
+    archiveSortEl.value = current === firstSort ? secondSort : firstSort;
     syncArchiveSortHeaders();
     refreshArchiveFilters();
   }));

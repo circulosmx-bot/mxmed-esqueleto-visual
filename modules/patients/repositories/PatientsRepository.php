@@ -241,6 +241,7 @@ class PatientsRepository
         $filteredStmt->execute();
         $filteredTotal = (int)$filteredStmt->fetchColumn();
 
+        $surnameTie = "(pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name ASC, p.display_name ASC, p.patient_id ASC";
         $sortSql = [
             'surname_asc' => "(pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name ASC, p.display_name ASC",
             'surname_desc' => "(pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name DESC, p.display_name DESC",
@@ -248,14 +249,46 @@ class PatientsRepository
             'age_desc' => "(p.birthdate IS NULL) ASC, p.birthdate ASC, (pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name ASC, p.display_name ASC",
             'registered_desc' => 'l.created_at DESC, p.display_name ASC',
             'registered_asc' => 'l.created_at ASC, p.display_name ASC',
+            'last_consultation_desc' => 'cm.last_consultation_at IS NULL ASC, cm.last_consultation_at DESC, ' . $surnameTie,
+            'last_consultation_asc' => 'cm.last_consultation_at IS NULL ASC, cm.last_consultation_at ASC, ' . $surnameTie,
+            'next_appointment_asc' => 'na.next_appointment_at IS NULL ASC, na.next_appointment_at ASC, ' . $surnameTie,
+            'next_appointment_desc' => 'na.next_appointment_at IS NULL ASC, na.next_appointment_at DESC, ' . $surnameTie,
+            'consultations_desc' => '(cm.consultation_count IS NULL AND legacy.patient_id IS NOT NULL) ASC, COALESCE(cm.consultation_count, 0) DESC, ' . $surnameTie,
+            'consultations_asc' => '(cm.consultation_count IS NULL AND legacy.patient_id IS NOT NULL) ASC, COALESCE(cm.consultation_count, 0) ASC, ' . $surnameTie,
         ][(string)($filters['sort'] ?? 'surname_asc')];
+        $agendaNow = (new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City')))->format('Y-m-d H:i:s');
+        $metricsJoin = "
+            LEFT JOIN (
+                SELECT patient_id, MAX(encounter_dt) AS last_consultation_at, COUNT(*) AS consultation_count
+                FROM clinical_encounters
+                WHERE doctor_id = :clinical_doctor_id AND LOWER(TRIM(status)) = 'closed'
+                GROUP BY patient_id
+            ) cm ON cm.patient_id = p.patient_id
+            LEFT JOIN (
+                SELECT patient_id FROM clinical_encounters
+                WHERE doctor_id IS NULL AND LOWER(TRIM(status)) = 'closed'
+                GROUP BY patient_id
+            ) legacy ON legacy.patient_id = p.patient_id
+            LEFT JOIN (
+                SELECT patient_id, MIN(start_at) AS next_appointment_at
+                FROM agenda_appointments
+                WHERE doctor_id = :agenda_doctor_id AND start_at > :agenda_now
+                  AND LOWER(TRIM(status)) IN ('confirmed', 'scheduled', 'pending', 'tentative')
+                GROUP BY patient_id
+            ) na ON na.patient_id = p.patient_id";
         $listStmt = $this->pdo->prepare(
-            'SELECT p.patient_id, p.display_name, p.sex, p.birthdate, l.created_at AS registered_at'
-            . $from . $where . ' ORDER BY ' . $sortSql . ', p.patient_id ASC LIMIT :limit OFFSET :offset'
+            'SELECT p.patient_id, p.display_name, p.sex, p.birthdate, l.created_at AS registered_at,
+                    cm.last_consultation_at, COALESCE(cm.consultation_count, 0) AS consultation_count,
+                    (legacy.patient_id IS NOT NULL) AS has_unattributed_legacy_consultation,
+                    na.next_appointment_at'
+            . $from . $metricsJoin . $where . ' ORDER BY ' . $sortSql . ', p.patient_id ASC LIMIT :limit OFFSET :offset'
         );
         foreach ($params as $key => $value) {
             $listStmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
         }
+        $listStmt->bindValue(':clinical_doctor_id', $doctorId);
+        $listStmt->bindValue(':agenda_doctor_id', $doctorId);
+        $listStmt->bindValue(':agenda_now', $agendaNow);
         $listStmt->bindValue(':limit', (int)$filters['limit'], PDO::PARAM_INT);
         $listStmt->bindValue(':offset', ((int)$filters['page'] - 1) * (int)$filters['limit'], PDO::PARAM_INT);
         $listStmt->execute();
