@@ -5,10 +5,21 @@
   const pane=document.getElementById('cfdi-pacientes');
   if(!pane)return;
   const $=(selector)=>pane.querySelector(selector);
-  const els={search:$('#mx-billing-patient-search'),query:$('#mx-billing-patient-query'),feedback:$('#mx-billing-patient-feedback'),results:$('#mx-billing-patient-results'),area:$('#mx-billing-profile-area'),name:$('#mx-billing-selected-name'),change:$('#mx-billing-change-patient'),add:$('#mx-billing-add-profile'),list:$('#mx-billing-profile-list'),editor:$('#mx-billing-profile-editor'),editorTitle:$('#mx-billing-editor-title'),cancel:$('#mx-billing-cancel-editor'),rfc:$('#mx-billing-rfc'),regime:$('#mx-billing-regime'),use:$('#mx-billing-use')};
+  const els={search:$('#mx-billing-patient-search'),query:$('#mx-billing-patient-query'),feedback:$('#mx-billing-patient-feedback'),results:$('#mx-billing-patient-results'),area:$('#mx-billing-profile-area'),name:$('#mx-billing-selected-name'),icon:$('#mx-billing-selected-icon'),change:$('#mx-billing-change-patient'),add:$('#mx-billing-add-profile'),list:$('#mx-billing-profile-list'),editor:$('#mx-billing-profile-editor'),editorTitle:$('#mx-billing-editor-title'),cancel:$('#mx-billing-cancel-editor'),rfc:$('#mx-billing-rfc'),regime:$('#mx-billing-regime'),use:$('#mx-billing-use')};
   const endpoint='api/billing/patient-profiles.php';
-  let csrf='';let catalog=null;let patient=null;let profiles=[];let editingId='';
+  let csrf='';let catalog=null;let patient=null;let profiles=[];let editingId='';let searchResults=[];
   const esc=(value)=>String(value??'').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  // Only explicit values from patients_patients.sex determine the graphic cue.
+  const iconKind=sex=>{
+    const value=String(sex??'').trim().toLowerCase();
+    if(['f','female','femenino','mujer'].includes(value))return 'female';
+    if(['m','male','masculino','hombre'].includes(value))return 'male';
+    return 'neutral';
+  };
+  const patientIconSvg=kind=>{
+    const marker=kind==='female'?'<circle cx="24" cy="9" r="3"/><path d="M24 12v5m-2.5-2.5h5"/>':kind==='male'?'<circle cx="24" cy="12" r="3"/><path d="m26.1 9.9 3.2-3.2m-3.2 0h3.2v3.2"/>':'';
+    return `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4 25v-2c0-4.4 3.6-8 8-8s8 3.6 8 8v2H4Z"/>${marker}</svg>`;
+  };
   const message=(value)=>{els.feedback.textContent=value||''};
   const errorText=(error)=>({unauthorized:'Inicia sesión con tu perfil médico para consultar datos de facturación.',patient_scope_denied:'No tienes acceso a este paciente.',billing_profile_not_found:'Estos datos ya no están disponibles. Recarga la sección.',invalid_rfc:'Revisa el formato del RFC.',invalid_fiscal_zip_code:'El código postal fiscal debe tener cinco dígitos.',invalid_fiscal_regime_code:'Selecciona un régimen fiscal válido para este RFC.',invalid_cfdi_use_code:'Selecciona un uso CFDI compatible con el régimen y el RFC.',invalid_billing_email:'Revisa el correo de facturación.',billing_profiles_unavailable:'No se pudieron cargar los datos de facturación. Intenta de nuevo.'})[error?.message]||'No se pudo completar la operación. Revisa los datos e intenta de nuevo.';
   async function request(method,params={},body=null){
@@ -41,7 +52,8 @@
     if(uses.some(row=>row.code===wantedUse))els.use.value=wantedUse;
   }
   function renderResults(items){
-    els.results.innerHTML=items.map(row=>`<button type="button" class="mx-billing-result" data-patient-id="${esc(row.patient_id)}">${esc(row.display_name)}</button>`).join('');
+    searchResults=items;
+    els.results.innerHTML=items.map(row=>{const kind=iconKind(row.sex);return `<button type="button" class="mx-billing-result" data-patient-id="${esc(row.patient_id)}"><span class="mx-billing-patient-icon" data-patient-icon-kind="${kind}" aria-hidden="true">${patientIconSvg(kind)}</span><span class="mx-billing-result-name">${esc(row.display_name)}</span></button>`}).join('');
     if(!items.length)message('No se encontraron pacientes en tu archivo.');
     else message(`${items.length} paciente${items.length===1?'':'s'} encontrado${items.length===1?'':'s'}.`);
   }
@@ -58,6 +70,7 @@
   async function selectPatient(entry){
     patient=entry;editingId='';els.editor.hidden=true;
     els.name.textContent=entry.display_name;
+    const kind=iconKind(entry.sex);els.icon.dataset.patientIconKind=kind;els.icon.innerHTML=patientIconSvg(kind);
     els.area.hidden=false;els.results.innerHTML='';message('');
     try{await loadProfiles();pane.dispatchEvent(new CustomEvent('mxmed:billing-patient-selected',{detail:{patient:{...patient},profiles:[...profiles]}}))}catch(error){message(errorText(error));els.area.hidden=true;patient=null}
   }
@@ -87,7 +100,8 @@
   els.results.addEventListener('click',(event)=>{
     const button=event.target.closest('[data-patient-id]');if(!button)return;
     const id=button.dataset.patientId;
-    selectPatient({patient_id:id,display_name:button.textContent.trim()});
+    const entry=searchResults.find(row=>String(row.patient_id)===id);
+    if(entry)selectPatient(entry);
   });
   els.change.addEventListener('click',()=>{patient=null;els.area.hidden=true;els.results.innerHTML='';message('');pane.dispatchEvent(new CustomEvent('mxmed:billing-patient-cleared'));els.query.focus()});
   els.add.addEventListener('click',()=>openEditor());

@@ -51,7 +51,7 @@ try {
         $query = trim((string)($_GET['q'] ?? ''));
         if (mb_strlen($query) < 2 || mb_strlen($query) > 100) billingProfilesReply(422, ['ok'=>false,'error'=>'invalid_search_query']);
         $patients = (new PatientsRepository($pdo))->searchPatientsByDoctorId($scope['doctor_id'], $query, 25);
-        $items = array_map(static fn(array $row): array => ['patient_id'=>(string)$row['patient_id'], 'display_name'=>(string)$row['display_name']], $patients);
+        $items = array_map(static fn(array $row): array => ['patient_id'=>(string)$row['patient_id'], 'display_name'=>(string)$row['display_name'], 'sex'=>is_string($row['sex']??null)?$row['sex']:null], $patients);
         billingProfilesReply(200, ['ok'=>true,'data'=>['patients'=>$items,'csrf_token'=>$csrf]]);
     }
     if ($method === 'GET' && array_diff(array_keys($_GET), ['patient_id'])) billingProfilesReply(400, ['ok'=>false,'error'=>'invalid_request']);
