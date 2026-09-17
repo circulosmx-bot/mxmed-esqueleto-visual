@@ -376,14 +376,14 @@
 
 /* EXP-UX05: patient search results use the same unfilled Material faces as Billing. */
 #mm_pac_archive_lookup_modal .mx-ag-shared-phone-item {
-  grid-template-columns:52px minmax(0,1fr) 20px;
+  grid-template-columns:78px minmax(0,1fr) 20px;
 }
 #mm_pac_archive_lookup_modal .mx-ag-shared-phone-avatar {
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:52px;
-  height:52px;
+  width:78px;
+  height:78px;
   overflow:visible;
   border:0;
   border-radius:0;
@@ -392,34 +392,34 @@
   color:#07536e;
 }
 #mm_pac_archive_lookup_modal .mx-exp-patient-face {
-  font-size:40px;
+  font-size:70px;
   font-weight:300;
   line-height:1;
   font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 40;
 }
 #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-item {
-  grid-template-columns:46px minmax(0,1fr) 20px;
+  grid-template-columns:70px minmax(0,1fr) 20px;
 }
 #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-avatar {
-  width:46px;
-  height:46px;
+  width:70px;
+  height:70px;
 }
-#mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-exp-patient-face {font-size:36px}
+#mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-exp-patient-face {font-size:63px}
 @media (max-width:767.98px) {
   #mm_pac_archive_lookup_modal .mx-ag-shared-phone-item {
-    grid-template-columns:44px minmax(0,1fr) 18px;
+    grid-template-columns:68px minmax(0,1fr) 18px;
   }
   #mm_pac_archive_lookup_modal .mx-ag-shared-phone-avatar {
-    width:44px;
-    height:44px;
+    width:68px;
+    height:68px;
   }
-  #mm_pac_archive_lookup_modal .mx-exp-patient-face {font-size:34px}
+  #mm_pac_archive_lookup_modal .mx-exp-patient-face {font-size:59.5px}
   #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-item {
-    grid-template-columns:42px minmax(0,1fr) 18px;
+    grid-template-columns:64px minmax(0,1fr) 18px;
   }
   #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-avatar {
-    width:42px;
-    height:42px;
+    width:64px;
+    height:64px;
   }
-  #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-exp-patient-face {font-size:32px}
+  #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-exp-patient-face {font-size:56px}
 }

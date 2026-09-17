@@ -26,6 +26,7 @@
 #cfdi-pacientes .mx-billing-selected-identity{display:flex;align-items:center;gap:10px;min-width:0}
 #cfdi-pacientes .mx-billing-selected-identity h3{min-width:0;overflow-wrap:anywhere}
 #cfdi-pacientes .mx-billing-patient-symbol{display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px;color:#07536e;font-size:30px;font-weight:300;line-height:1;font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 40}
+#cfdi-pacientes .mx-billing-result .mx-billing-patient-symbol{flex-basis:58px;width:58px;height:58px;font-size:52.5px}
 #cfdi-pacientes .mx-billing-result:hover{border-color:#01afb9;background:#effafb}
 #cfdi-pacientes .mx-billing-result:focus-visible{outline:3px solid #123d59;outline-offset:2px}
 #cfdi-pacientes .mx-billing-profile-head,
