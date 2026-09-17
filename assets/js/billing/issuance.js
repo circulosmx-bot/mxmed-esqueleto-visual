@@ -1,4 +1,4 @@
-/* FISC02B: provider-neutral CFDI draft composer. No browser-side fiscal authority. */
+/* FISC-UX01: task-oriented CFDI draft composer. No browser-side fiscal authority. */
 (()=>{
   'use strict';
   const pane=document.getElementById('cfdi-crear');
@@ -7,27 +7,24 @@
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const option=(value,label)=>`<option value="${esc(value)}">${esc(label)}</option>`;
   pane.innerHTML=`<section class="mx-issuance" aria-label="Crear factura CFDI">
-    <div class="mx-issuance-head"><div><h3>CREAR FACTURA</h3><p>Prepara y revisa un borrador CFDI 4.0 antes de emitirlo.</p></div><span class="mx-issuance-gate">Timbrado pendiente de PAC autorizado</span></div>
+    <div class="mx-issuance-head"><div><h3>CREAR FACTURA</h3><p>Prepara y revisa un borrador CFDI 4.0 antes de emitirlo.</p></div></div>
     <label class="mx-issuance-resume">Borradores guardados<select id="mx-issuance-saved-drafts" class="form-select"><option value="">Crear nuevo borrador</option></select></label>
     <p id="mx-issuance-feedback" role="status" aria-live="polite"></p>
     <div class="mx-issuance-columns">
-      <section class="mx-issuance-card"><h4>Paciente y receptor</h4><p id="mx-issuance-patient-name">Ningún paciente seleccionado.</p><button id="mx-issuance-pick-patient" class="btn mx-billing-btn-secondary" type="button">Buscar paciente en mi archivo</button><label for="mx-issuance-receiver">Datos de facturación del receptor</label><select id="mx-issuance-receiver" class="form-select"><option value="">Selecciona un paciente</option></select><p id="mx-issuance-receiver-help" class="mx-issuance-help">Los datos fiscales se administran en Pacientes → Datos de facturación.</p></section>
-      <section class="mx-issuance-card"><div class="mx-issuance-card-head"><h4>Emisor fiscal</h4><button id="mx-issuance-toggle-issuer" class="btn mx-billing-btn-secondary" type="button" aria-expanded="false">+ Agregar emisor</button></div><label for="mx-issuance-issuer">Perfil emisor</label><select id="mx-issuance-issuer" class="form-select"><option value="">Sin emisor configurado</option></select><p class="mx-issuance-help">El emisor puede ser distinto del nombre público del médico.</p><div id="mx-issuance-issuer-actions" class="mx-issuance-actions"></div>
-        <form id="mx-issuance-issuer-editor" hidden><div class="mx-issuance-fields"><label>Alias<input name="alias" class="form-control" maxlength="80" required></label><label>Nombre o razón social fiscal<input name="issuer_legal_name" class="form-control" maxlength="254" required></label><label>RFC<input name="rfc" class="form-control" maxlength="13" required></label><label>Régimen fiscal<select name="fiscal_regime_code" class="form-select" required></select></label><label>Código postal de expedición<input name="expedition_postal_code" class="form-control" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" required></label><label class="mx-issuance-check"><input name="is_default" type="checkbox"> Predeterminado</label></div><div class="mx-issuance-actions"><button class="btn mx-billing-btn-primary" type="submit">Guardar emisor</button><button id="mx-issuance-cancel-issuer" class="btn mx-billing-btn-secondary" type="button">Cancelar</button></div></form>
-        <div id="mx-issuance-csd-area" hidden><h5>Certificado de Sello Digital</h5><p id="mx-issuance-csd-status" class="mx-issuance-help"></p><form id="mx-issuance-csd-form" class="mx-issuance-fields"><label>Archivo .cer<input name="certificate" class="form-control" type="file" accept=".cer" required></label><label>Archivo .key<input name="private_key" class="form-control" type="file" accept=".key" required></label><label>Contraseña de llave<input name="password" class="form-control" type="password" autocomplete="new-password" required></label><button class="btn mx-billing-btn-secondary" type="submit">Registrar CSD privado</button></form><p class="mx-issuance-help">El registro técnico no confirma por sí solo que el certificado sea un CSD autorizado para timbrar.</p></div>
-      </section>
+      <section class="mx-issuance-card"><h4>Paciente y receptor</h4><p id="mx-issuance-patient-name">Ningún paciente seleccionado.</p><button id="mx-issuance-pick-patient" class="btn mx-billing-btn-secondary" type="button">Buscar paciente en mi archivo</button><label for="mx-issuance-receiver">Datos de facturación del receptor</label><select id="mx-issuance-receiver" class="form-select"><option value="">Selecciona un paciente</option></select><p id="mx-issuance-receiver-help" class="mx-issuance-help">Los datos fiscales se administran en Pacientes → Datos de facturación.</p><div id="mx-issuance-receiver-action"></div></section>
+      <section class="mx-issuance-card"><h4>Emisor</h4><div id="mx-issuance-issuer-state"></div><select id="mx-issuance-issuer" class="form-select" hidden aria-label="Selecciona un emisor"></select></section>
     </div>
     <form id="mx-issuance-draft-form">
       <section class="mx-issuance-card"><h4>Datos CFDI</h4><div class="mx-issuance-fields"><label>Uso CFDI<select id="mx-issuance-use" class="form-select" required></select></label><label>Método de pago<select id="mx-issuance-method" class="form-select" required></select></label><label>Forma de pago<select id="mx-issuance-form" class="form-select" required></select></label><label>Moneda<select id="mx-issuance-currency" class="form-select" required></select></label><label>Serie (opcional)<input id="mx-issuance-series" class="form-control" maxlength="25"></label><label>Folio interno (opcional)<input id="mx-issuance-folio" class="form-control" maxlength="40"></label></div></section>
       <section class="mx-issuance-card"><div class="mx-issuance-card-head"><h4>Conceptos</h4><button id="mx-issuance-add-item" class="btn mx-billing-btn-secondary" type="button">+ Agregar concepto</button></div><div id="mx-issuance-items"></div></section>
       <section class="mx-issuance-card"><h4>Totales calculados por el servidor</h4><div id="mx-issuance-totals" class="mx-issuance-totals">Guarda el borrador para calcular los importes definitivos.</div><div class="mx-issuance-actions"><button class="btn mx-billing-btn-primary" type="submit">Guardar borrador y revisar</button><button id="mx-issuance-new-draft" class="btn mx-billing-btn-secondary" type="button">Nuevo borrador</button></div></section>
     </form>
-    <section id="mx-issuance-preview" class="mx-issuance-card" hidden><h4>Vista previa antes de certificar</h4><div id="mx-issuance-preview-body"></div><label class="mx-issuance-check"><input id="mx-issuance-confirm" type="checkbox"> Confirmo que revisé emisor, receptor, conceptos, importes y datos CFDI.</label><div class="mx-issuance-actions"><button id="mx-issuance-stamp" class="btn mx-billing-btn-primary" type="button" disabled>Timbrar CFDI</button><span>Disponible sólo después de seleccionar y validar un PAC autorizado.</span></div></section>
+    <section id="mx-issuance-preview" class="mx-issuance-card" hidden><h4>Vista previa antes de certificar</h4><div id="mx-issuance-preview-body"></div><label class="mx-issuance-check"><input id="mx-issuance-confirm" type="checkbox"> Confirmo que revisé emisor, receptor, conceptos, importes y datos CFDI.</label><div class="mx-issuance-actions"><button id="mx-issuance-stamp" class="btn mx-billing-btn-primary" type="button" disabled>Timbrar CFDI</button><span>Emisión no disponible temporalmente.</span></div></section>
   </section>`;
   const $=selector=>pane.querySelector(selector);
-  const els={feedback:$('#mx-issuance-feedback'),patientName:$('#mx-issuance-patient-name'),receiver:$('#mx-issuance-receiver'),receiverHelp:$('#mx-issuance-receiver-help'),issuer:$('#mx-issuance-issuer'),issuerActions:$('#mx-issuance-issuer-actions'),issuerEditor:$('#mx-issuance-issuer-editor'),issuerToggle:$('#mx-issuance-toggle-issuer'),csdArea:$('#mx-issuance-csd-area'),csdStatus:$('#mx-issuance-csd-status'),csdForm:$('#mx-issuance-csd-form'),draftForm:$('#mx-issuance-draft-form'),items:$('#mx-issuance-items'),totals:$('#mx-issuance-totals'),preview:$('#mx-issuance-preview'),previewBody:$('#mx-issuance-preview-body')};
+  const els={feedback:$('#mx-issuance-feedback'),patientName:$('#mx-issuance-patient-name'),receiver:$('#mx-issuance-receiver'),receiverHelp:$('#mx-issuance-receiver-help'),receiverAction:$('#mx-issuance-receiver-action'),issuer:$('#mx-issuance-issuer'),issuerState:$('#mx-issuance-issuer-state'),draftForm:$('#mx-issuance-draft-form'),items:$('#mx-issuance-items'),totals:$('#mx-issuance-totals'),preview:$('#mx-issuance-preview'),previewBody:$('#mx-issuance-preview-body')};
   const api='api/billing/issuance.php';
-  let csrf='',sat=null,fiscal=null,issuers=[],savedDrafts=[],patient=null,profiles=[],draft=null,editingIssuer='',csdRegistrationAvailable=false;
+  let csrf='',sat=null,fiscal=null,issuers=[],savedDrafts=[],patient=null,profiles=[],draft=null;
   const message=text=>{els.feedback.textContent=text||''};
   const validationText=code=>({active_verified_csd_required:'Falta verificar un CSD vigente para el emisor.',tax_rate_catalog_unverified:'La tasa o cuota requiere cotejo con el catálogo fiscal vigente antes de timbrar.',sat_catalog_effective_dates_unverified:'Falta cotejar la vigencia de las claves SAT de los conceptos.',tax_object_rule_unverified:'La regla de este objeto de impuesto requiere cotejo fiscal.',currency_precision_catalog_unverified:'La precisión de esta moneda requiere cotejo fiscal antes de timbrar.',issuer_profile_not_found:'Selecciona un emisor activo.',billing_profile_not_found:'Selecciona datos de facturación vigentes.',patient_scope_denied:'El paciente ya no pertenece a tu archivo.',payment_method_form_conflict:'Método y forma de pago incompatibles.',invoice_items_required:'Agrega al menos un concepto.'})[code]||code;
   async function request(method,action,body=null){
@@ -44,19 +41,21 @@
     els.receiver.innerHTML='<option value="">Selecciona datos de facturación</option>'+profiles.map(row=>option(row.billing_profile_id,`${row.alias} · ${row.receiver_legal_name} · ${row.rfc}`)).join('');
     const preferred=profiles.find(row=>Number(row.is_default)===1)||profiles[0];if(preferred)els.receiver.value=preferred.billing_profile_id;
     els.receiverHelp.textContent=profiles.length?'Selecciona los datos fiscales que se incluirán en esta factura.':'Este paciente aún no tiene datos de facturación. Agrégalos en Pacientes → Datos de facturación.';
+    els.receiverAction.innerHTML=patient&&!profiles.length?'<button class="btn mx-billing-btn-secondary" type="button" data-go-patients>Configurar datos de facturación</button>':'';
   }
   function renderIssuers(selected=''){
+    const previous=selected||(draft?els.issuer.value:'');
+    const preferred=issuers.find(row=>Number(row.is_default)===1);
+    const previousActive=issuers.find(row=>row.issuer_profile_id===previous);
+    const missingDraftIssuer=Boolean(draft&&previous&&!previousActive);
+    const chosen=missingDraftIssuer?'':previousActive?.issuer_profile_id||preferred?.issuer_profile_id||(issuers.length===1?issuers[0].issuer_profile_id:'');
     els.issuer.innerHTML='<option value="">Selecciona un emisor</option>'+issuers.map(row=>option(row.issuer_profile_id,`${row.alias} · ${row.issuer_legal_name} · ${row.rfc}`)).join('');
-    els.issuer.value=selected||issuers.find(row=>Number(row.is_default)===1)?.issuer_profile_id||issuers[0]?.issuer_profile_id||'';
-    const current=issuers.find(row=>row.issuer_profile_id===els.issuer.value);
-    els.issuerActions.innerHTML=current?`<button type="button" data-issuer-action="edit" class="btn mx-billing-btn-secondary">Editar</button>${Number(current.is_default)===1?'':`<button type="button" data-issuer-action="default" class="btn mx-billing-btn-secondary">Hacer predeterminado</button>`}<button type="button" data-issuer-action="archive" class="btn mx-billing-btn-danger">Archivar</button>`:'';
-    els.csdArea.hidden=!current;
-    if(current){els.csdForm.hidden=!csdRegistrationAvailable;loadCsd(current.issuer_profile_id);}
-  }
-  async function loadCsd(id){
-    try{const result=await request('GET','issuer_csd',{issuer_id:id});if(els.issuer.value!==id)return;
-      els.csdStatus.textContent=(result.credentials.length?result.credentials.map(c=>`Serie ${c.certificate_serial} · ${c.certificate_type} · vence ${c.valid_to}`).join(' | '):'No hay CSD registrado para este emisor.')+(csdRegistrationAvailable?'':' El registro requiere configurar la clave de cifrado privada del servidor.');
-    }catch(error){els.csdStatus.textContent='No se pudo consultar el CSD.'}
+    els.issuer.value=chosen;
+    if(!issuers.length){els.issuer.hidden=true;els.issuerState.innerHTML='<p>No tienes un perfil fiscal configurado.</p><button class="btn mx-billing-btn-secondary" type="button" data-go-fiscal>Configurar perfil fiscal</button>';return;}
+    if(missingDraftIssuer){els.issuer.hidden=false;els.issuerState.innerHTML='<p>El emisor de este borrador ya no está activo. Selecciona uno vigente.</p><button class="btn mx-billing-btn-secondary" type="button" data-go-fiscal>Administrar perfil fiscal</button>';return;}
+    if(issuers.length===1){const issuer=issuers[0];els.issuer.hidden=true;els.issuerState.innerHTML=`<p class="mx-issuance-issuer-summary"><strong>${esc(issuer.issuer_legal_name)}</strong><span>RFC: ${esc(issuer.rfc)}</span></p>`;return;}
+    els.issuer.hidden=false;
+    els.issuerState.innerHTML='<button class="btn mx-billing-btn-secondary" type="button" data-go-fiscal>Administrar perfil fiscal</button>';
   }
   function setOptions(select,rows,placeholder){select.innerHTML=option('',placeholder)+rows.map(row=>option(row.code,row.label||row.code)).join('')}
   function renderCatalog(){
@@ -66,7 +65,6 @@
     setOptions($('#mx-issuance-currency'),sat.currencies.map(code=>({code})),'Selecciona moneda');
     $('#mx-issuance-currency').value='MXN';
     $('#mx-issuance-method').value='PUE';
-    const regime=els.issuerEditor.elements.namedItem('fiscal_regime_code');setOptions(regime,fiscal.regimes,'Selecciona régimen');
   }
   function itemMarkup(item={}){
     return `<article class="mx-issuance-item"><div class="mx-issuance-card-head"><h5>Concepto</h5><button class="btn mx-billing-btn-danger mx-issuance-remove-item" type="button">Quitar</button></div><div class="mx-issuance-fields">
@@ -110,30 +108,20 @@
     els.previewBody.innerHTML=`<dl><dt>Emisor</dt><dd>${esc(issuer?.issuer_legal_name||'No disponible')} · ${esc(issuer?.rfc||'')}</dd><dt>Receptor</dt><dd>${esc(receiver?.receiver_legal_name||'No disponible')} · ${esc(receiver?.rfc||'')}</dd><dt>Datos CFDI</dt><dd>Uso ${esc(d.cfdi_use_code)} · Método ${esc(d.payment_method_code)} · Forma ${esc(d.payment_form_code)} · Moneda ${esc(d.currency_code)}</dd><dt>Conceptos</dt><dd><ol>${d.items.map(item=>`<li>${esc(item.description)} · ${esc(item.product_service_code)} · ${esc(item.quantity)} × ${esc(item.unit_value)} = ${esc(item.line_total)}</li>`).join('')}</ol></dd><dt>Total</dt><dd>${esc(d.total)} ${esc(d.currency_code)}</dd></dl>${errors?`<div class="mx-issuance-validation"><strong>Validación pendiente:</strong><ul>${errors}</ul></div>`:''}`;
     els.preview.hidden=false;
   }
-  async function bootstrap(){try{const result=await request('GET','bootstrap');issuers=result.issuers;savedDrafts=result.drafts;sat=result.sat;fiscal=result.fiscal;csdRegistrationAvailable=result.csd_registration_available===true;renderCatalog();renderIssuers();renderSavedDrafts();if(!els.items.children.length)addItem();message('Borradores disponibles. El timbrado requiere un PAC autorizado y CSD verificado.')}catch(error){message('No se pudo cargar el compositor de facturas. Recarga la página.');console.error('Billing issuance bootstrap failed',error.message)}}
+  async function bootstrap(){try{const result=await request('GET','bootstrap');issuers=result.issuers;savedDrafts=result.drafts;sat=result.sat;fiscal=result.fiscal;renderCatalog();renderIssuers();renderSavedDrafts();if(!els.items.children.length)addItem();message('Borradores disponibles.')}catch(error){message('No se pudo cargar el compositor de facturas. Recarga la página.');console.error('Billing issuance bootstrap failed',error.message)}}
+  function goFiscal(){document.querySelector('[data-bs-target="#cfdi-perfil-fiscal"]')?.click()}
   $('#mx-issuance-pick-patient').addEventListener('click',showPatientPane);
+  els.issuerState.addEventListener('click',event=>{if(event.target.closest('[data-go-fiscal]'))goFiscal()});
+  els.receiverAction.addEventListener('click',event=>{if(event.target.closest('[data-go-patients]'))showPatientPane()});
+  document.addEventListener('mxmed:billing-issuers-updated',async()=>{try{issuers=(await request('GET','bootstrap')).issuers;renderIssuers()}catch(error){message('No se pudo actualizar la lista de emisores.')}});
   patientPane.addEventListener('mxmed:billing-patient-selected',event=>{patient=event.detail.patient;profiles=event.detail.profiles||[];renderReceiver();document.querySelector('[data-bs-target="#cfdi-crear"]')?.click();message(profiles.length?'Paciente seleccionado.':'Agrega datos de facturación para este paciente en la pestaña Pacientes.');});
   patientPane.addEventListener('mxmed:billing-profiles-updated',event=>{if(patient){profiles=event.detail.profiles||[];renderReceiver()}});
   $('#mx-issuance-add-item').addEventListener('click',()=>addItem());
   els.items.addEventListener('click',event=>{const target=event.target;if(target.closest('.mx-issuance-remove-item')){if(els.items.children.length>1)target.closest('.mx-issuance-item').remove();return;}if(target.closest('.mx-issuance-add-tax'))target.closest('.mx-issuance-item').querySelector('.mx-issuance-tax-list').insertAdjacentHTML('beforeend',taxMarkup());if(target.closest('.mx-issuance-remove-tax'))target.closest('.mx-issuance-tax').remove();});
   $('#mx-issuance-saved-drafts').addEventListener('change',event=>{if(!event.target.value){draft=null;els.preview.hidden=true;return;}loadDraft(event.target.value).catch(error=>message(error.message));});
-  els.issuer.addEventListener('change',()=>renderIssuers(els.issuer.value));
-  els.issuerToggle.addEventListener('click',()=>{editingIssuer='';els.issuerEditor.reset();els.issuerEditor.hidden=!els.issuerEditor.hidden;els.issuerToggle.setAttribute('aria-expanded',String(!els.issuerEditor.hidden));if(!els.issuerEditor.hidden)els.issuerEditor.elements.namedItem('alias').focus()});
-  $('#mx-issuance-cancel-issuer').addEventListener('click',()=>{els.issuerEditor.hidden=true;els.issuerToggle.setAttribute('aria-expanded','false')});
-  els.issuerActions.addEventListener('click',async event=>{const action=event.target.dataset.issuerAction;if(!action)return;const issuer=issuers.find(row=>row.issuer_profile_id===els.issuer.value);if(!issuer)return;
-    if(action==='edit'){editingIssuer=issuer.issuer_profile_id;for(const key of ['alias','issuer_legal_name','rfc','fiscal_regime_code','expedition_postal_code'])els.issuerEditor.elements.namedItem(key).value=issuer[key];els.issuerEditor.elements.namedItem('is_default').checked=Number(issuer.is_default)===1;els.issuerEditor.hidden=false;els.issuerToggle.setAttribute('aria-expanded','true');return;}
-    if(action==='archive'&&!confirm('¿Archivar este emisor? Los borradores existentes conservarán su referencia.'))return;
-    try{await request(action==='archive'?'DELETE':'POST',action==='archive'?'archive_issuer':'default_issuer',{issuer_id:issuer.issuer_profile_id});const data=await request('GET','bootstrap');issuers=data.issuers;renderIssuers();message(action==='archive'?'Emisor archivado.':'Emisor predeterminado actualizado.')}catch(error){message(error.message)}
-  });
-  els.issuerEditor.addEventListener('submit',async event=>{event.preventDefault();if(!els.issuerEditor.reportValidity())return;const form=new FormData(els.issuerEditor);const profile=Object.fromEntries(['alias','issuer_legal_name','rfc','fiscal_regime_code','expedition_postal_code'].map(key=>[key,String(form.get(key)||'').trim()]));profile.is_default=form.has('is_default');
-    try{const data=await request(editingIssuer?'PUT':'POST',editingIssuer?'update_issuer':'create_issuer',{...(editingIssuer?{issuer_id:editingIssuer}:{}),profile});const id=data.issuer.issuer_profile_id;issuers=(await request('GET','bootstrap')).issuers;renderIssuers(id);els.issuerEditor.hidden=true;els.issuerToggle.setAttribute('aria-expanded','false');message('Emisor guardado.')}catch(error){message(error.message)}
-  });
-  els.csdForm.addEventListener('submit',async event=>{event.preventDefault();if(!els.csdForm.reportValidity()||!els.issuer.value)return;const form=new FormData(els.csdForm);form.set('action','register_csd');form.set('issuer_id',els.issuer.value);
-    try{const response=await fetch(api,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'X-Billing-Issuance-CSRF':csrf},body:form});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'csd_registration_failed');els.csdForm.reset();await loadCsd(els.issuer.value);message('Certificado registrado en almacenamiento privado. Su tipo CSD requiere verificación antes de timbrar.')}catch(error){message(error.message)}
-  });
   els.draftForm.addEventListener('submit',async event=>{event.preventDefault();if(!els.draftForm.reportValidity())return;
     try{const payload=readDraft();const result=await request(draft?'PUT':'POST',draft?'update_draft':'create_draft',{...(draft?{draft_id:draft.draft_id}:{}),draft:payload});draft=result.draft;totalsView(draft);savedDrafts=(await request('GET','bootstrap')).drafts;renderSavedDrafts(draft.draft_id);await preview();message('Borrador guardado. Revisa la vista previa y las validaciones pendientes.')}catch(error){message(error.message)}
   });
-  $('#mx-issuance-new-draft').addEventListener('click',()=>{draft=null;$('#mx-issuance-saved-drafts').value='';els.preview.hidden=true;els.totals.textContent='Guarda el borrador para calcular los importes definitivos.';message('Nuevo borrador listo.');});
+  $('#mx-issuance-new-draft').addEventListener('click',()=>{draft=null;$('#mx-issuance-saved-drafts').value='';renderIssuers();els.preview.hidden=true;els.totals.textContent='Guarda el borrador para calcular los importes definitivos.';message('Nuevo borrador listo.');});
   bootstrap();
 })();
