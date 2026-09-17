@@ -154,6 +154,117 @@ class PatientsRepository
         return $rows;
     }
 
+    /** @return array{items: array, total: int, filtered_total: int} */
+    public function browsePatientsByDoctorId(string $doctorId, array $filters): array
+    {
+        $this->ensureTables();
+
+        $from = ' FROM patients_doctor_links l
+                  JOIN patients_patients p ON p.patient_id = l.patient_id
+                  LEFT JOIN patients_profiles pf ON pf.patient_id = p.patient_id';
+        $where = " WHERE l.doctor_id = :doctor_id AND l.status = 'active' AND p.status = 'active'";
+        $params = ['doctor_id' => $doctorId];
+
+        $query = trim((string)($filters['q'] ?? ''));
+        if ($query !== '') {
+            $pattern = '%' . addcslashes($query, '%_\\') . '%';
+            $where .= " AND (p.display_name LIKE :name_query
+                        OR CONCAT_WS(' ', pf.first_name, pf.paternal_last_name, pf.maternal_last_name) LIKE :profile_query";
+            $phoneDigits = preg_replace('/\D+/', '', $query) ?? '';
+            if (strlen($phoneDigits) >= 4) {
+                $where .= " OR EXISTS (
+                            SELECT 1 FROM patients_contacts c
+                            WHERE c.patient_id = p.patient_id
+                              AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(c.phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') LIKE :phone_query
+                        )";
+                $params['phone_query'] = '%' . $phoneDigits . '%';
+            }
+            $where .= ')';
+            $params['name_query'] = $pattern;
+            $params['profile_query'] = $pattern;
+        }
+
+        $sex = (string)($filters['gender'] ?? 'all');
+        if ($sex === 'female') {
+            $where .= " AND LOWER(TRIM(p.sex)) IN ('f', 'female', 'femenino', 'mujer')";
+        } elseif ($sex === 'male') {
+            $where .= " AND LOWER(TRIM(p.sex)) IN ('m', 'male', 'masculino', 'hombre')";
+        } elseif ($sex === 'other') {
+            $where .= " AND p.sex IS NOT NULL AND TRIM(p.sex) <> ''
+                        AND LOWER(TRIM(p.sex)) NOT IN ('f', 'female', 'femenino', 'mujer', 'm', 'male', 'masculino', 'hombre')";
+        }
+
+        $age = (string)($filters['age'] ?? 'all');
+        $ageRanges = [
+            'under_18' => [0, 17],
+            '18_29' => [18, 29],
+            '30_44' => [30, 44],
+            '45_59' => [45, 59],
+            '60_plus' => [60, 130],
+        ];
+        if (isset($ageRanges[$age])) {
+            $where .= ' AND TIMESTAMPDIFF(YEAR, p.birthdate, CURDATE()) BETWEEN :age_min AND :age_max';
+            [$params['age_min'], $params['age_max']] = $ageRanges[$age];
+        }
+
+        $registration = (string)($filters['registration'] ?? 'all');
+        $registrationIntervals = ['last_7' => 7, 'last_30' => 30, 'last_90' => 90];
+        if (isset($registrationIntervals[$registration])) {
+            $where .= ' AND l.created_at >= DATE_SUB(NOW(), INTERVAL :registration_days DAY)';
+            $params['registration_days'] = $registrationIntervals[$registration];
+        } elseif ($registration === 'this_year') {
+            $where .= ' AND YEAR(l.created_at) = YEAR(CURDATE())';
+        }
+        if (($filters['date_from'] ?? '') !== '') {
+            $where .= ' AND l.created_at >= :date_from';
+            $params['date_from'] = $filters['date_from'] . ' 00:00:00';
+        }
+        if (($filters['date_to'] ?? '') !== '') {
+            $where .= ' AND l.created_at < DATE_ADD(:date_to, INTERVAL 1 DAY)';
+            $params['date_to'] = $filters['date_to'];
+        }
+        $phone = (string)($filters['phone'] ?? 'all');
+        if ($phone === 'with' || $phone === 'without') {
+            $exists = "EXISTS (SELECT 1 FROM patients_contacts pc
+                         WHERE pc.patient_id = p.patient_id AND pc.phone IS NOT NULL AND TRIM(pc.phone) <> '')";
+            $where .= $phone === 'with' ? ' AND ' . $exists : ' AND NOT ' . $exists;
+        }
+
+        $totalStmt = $this->pdo->prepare('SELECT COUNT(*)' . $from . " WHERE l.doctor_id = :doctor_id AND l.status = 'active' AND p.status = 'active'");
+        $totalStmt->execute(['doctor_id' => $doctorId]);
+        $total = (int)$totalStmt->fetchColumn();
+
+        $filteredStmt = $this->pdo->prepare('SELECT COUNT(*)' . $from . $where);
+        foreach ($params as $key => $value) {
+            $filteredStmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $filteredStmt->execute();
+        $filteredTotal = (int)$filteredStmt->fetchColumn();
+
+        $sortSql = [
+            'surname_asc' => "(pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name ASC, p.display_name ASC",
+            'surname_desc' => "(pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name DESC, p.display_name DESC",
+            'registered_desc' => 'l.created_at DESC, p.display_name ASC',
+            'registered_asc' => 'l.created_at ASC, p.display_name ASC',
+        ][(string)($filters['sort'] ?? 'surname_asc')];
+        $listStmt = $this->pdo->prepare(
+            'SELECT p.patient_id, p.display_name, p.sex, p.birthdate, l.created_at AS registered_at'
+            . $from . $where . ' ORDER BY ' . $sortSql . ', p.patient_id ASC LIMIT :limit OFFSET :offset'
+        );
+        foreach ($params as $key => $value) {
+            $listStmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $listStmt->bindValue(':limit', (int)$filters['limit'], PDO::PARAM_INT);
+        $listStmt->bindValue(':offset', ((int)$filters['page'] - 1) * (int)$filters['limit'], PDO::PARAM_INT);
+        $listStmt->execute();
+
+        return [
+            'items' => $listStmt->fetchAll(PDO::FETCH_ASSOC),
+            'total' => $total,
+            'filtered_total' => $filteredTotal,
+        ];
+    }
+
     public function searchPatientsByDoctorId(string $doctorId, string $query, int $limit = 25): array
     {
         $this->ensureTables();

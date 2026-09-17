@@ -172,7 +172,7 @@ try{
   await type(bio+' QA');
   for(const selector of ['#t-info-servicios-tab','#t-info-enfermedades-tab','#t-info-fotos-tab',
     '[data-panel="p-consultorio"]','[data-panel="p-opiniones"]','[data-account-panel="p-seguridad"]','[data-account-panel="p-suscripcion"]',
-    '.menu-main[data-group="agenda"]','.menu-main[data-panel="p-expediente"]','.menu-main[data-panel="p-pac-recetas"]',
+    '.menu-main[data-group="agenda"]','.menu-main[data-panel="p-pac-archivo"]','.menu-main[data-panel="p-pac-recetas"]',
     '.menu-main[data-panel="p-facturacion"]','.menu-main[data-panel="p-paquetes"]','.menu-main[data-panel="p-Notificaciones"]',
     '.mx-gh-brand[data-panel="p-resumen"]','[data-header-logout]']){
     await attempt(selector);await keepEditing();

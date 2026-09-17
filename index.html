@@ -138,7 +138,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=patux01" />
+<link rel="stylesheet" href="assets/css/style.css?v=patientarchive01" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -390,7 +390,7 @@
 
       <!-- Pacientes -->
 
-      <button class="menu-main" data-panel="p-expediente">
+      <button class="menu-main" data-panel="p-pac-archivo">
 
         <span class="txt"><span class="ttl">Pacientes</span></span>
 
@@ -4223,8 +4223,8 @@
               <div class="mx-panel-subheader-main">
                 <span class="mx-panel-subheader-icon material-symbols-rounded" aria-hidden="true">folder_shared</span>
                 <div class="mx-panel-subheader-copy">
-                  <h2 class="mx-panel-subheader-title">Buscar paciente en mi archivo</h2>
-                  <p class="mx-panel-subheader-text">Localiza pacientes registrados y abre su expediente clínico.</p>
+                  <h2 class="mx-panel-subheader-title" id="mm-pac-archivo-title">Archivo de pacientes</h2>
+                  <p class="mx-panel-subheader-text" id="mm-pac-archivo-subtitle">Cargando pacientes…</p>
                 </div>
               </div>
               <div class="mx-pac-archivo-header-actions">
@@ -4235,6 +4235,59 @@
           </div>
 
           <div class="body">
+
+            <div class="mx-pac-archive-browser" id="mm-pac-archive-browser">
+              <label class="visually-hidden" for="mm-pac-archive-query">Buscar por nombre o teléfono</label>
+              <div class="mx-pac-archive-query-wrap">
+                <span class="material-symbols-rounded" aria-hidden="true">search</span>
+                <input id="mm-pac-archive-query" type="search" class="form-control" data-no-check="1" placeholder="Buscar por nombre o teléfono…" autocomplete="off">
+              </div>
+              <div class="mx-pac-archive-toolbar">
+                <div class="mx-pac-archive-filters">
+                  <label for="mm-pac-archive-gender">Género
+                    <select id="mm-pac-archive-gender" class="form-select" data-no-check="1"><option value="all">Todos</option><option value="female">Mujer</option><option value="male">Hombre</option><option value="other">Otro</option></select>
+                  </label>
+                  <label for="mm-pac-archive-age">Edad
+                    <select id="mm-pac-archive-age" class="form-select" data-no-check="1"><option value="all">Todas</option><option value="under_18">Menores de 18</option><option value="18_29">18–29</option><option value="30_44">30–44</option><option value="45_59">45–59</option><option value="60_plus">60 o más</option></select>
+                  </label>
+                  <label for="mm-pac-archive-registration">Registro
+                    <select id="mm-pac-archive-registration" class="form-select" data-no-check="1"><option value="all">Cualquier fecha</option><option value="last_7">Últimos 7 días</option><option value="last_30">Últimos 30 días</option><option value="last_90">Últimos 90 días</option><option value="this_year">Este año</option></select>
+                  </label>
+                  <button type="button" id="mm-pac-archive-more" class="mx-pac-archive-more" aria-expanded="false" aria-controls="mm-pac-archive-more-panel">Más filtros <span class="material-symbols-rounded" aria-hidden="true">tune</span></button>
+                </div>
+                <label class="mx-pac-archive-sort" for="mm-pac-archive-sort">Ordenar por:
+                  <select id="mm-pac-archive-sort" class="form-select" data-no-check="1"><option value="surname_asc">Primer apellido A–Z</option><option value="surname_desc">Primer apellido Z–A</option><option value="registered_desc">Registro más reciente</option><option value="registered_asc">Registro más antiguo</option></select>
+                </label>
+              </div>
+              <div id="mm-pac-archive-more-panel" class="mx-pac-archive-more-panel" hidden>
+                <label for="mm-pac-archive-date-from">Registro desde <input id="mm-pac-archive-date-from" type="date" class="form-control" data-no-check="1"></label>
+                <label for="mm-pac-archive-date-to">Registro hasta <input id="mm-pac-archive-date-to" type="date" class="form-control" data-no-check="1"></label>
+                <label for="mm-pac-archive-phone">Teléfono registrado
+                  <select id="mm-pac-archive-phone" class="form-select" data-no-check="1"><option value="all">Todos</option><option value="with">Con teléfono</option><option value="without">Sin teléfono</option></select>
+                </label>
+                <button type="button" id="mm-pac-archive-clear-more" class="mx-pac-archive-clear">Limpiar filtros adicionales</button>
+              </div>
+              <p id="mm-pac-archive-status" class="mx-pac-archive-status" role="status" aria-live="polite"></p>
+              <div class="mx-pac-archive-table-wrap">
+                <table class="mx-pac-archive-table" aria-label="Archivo de pacientes">
+                  <thead><tr><th scope="col">Paciente</th><th scope="col">Edad</th><th scope="col">Género</th><th scope="col">Registrado</th><th scope="col"><span class="visually-hidden">Abrir expediente</span></th></tr></thead>
+                  <tbody id="mm-pac-archive-rows"></tbody>
+                </table>
+              </div>
+              <div class="mx-pac-archive-footer">
+                <span id="mm-pac-archive-range">Mostrando 0 de 0</span>
+                <div class="mx-pac-archive-pagination">
+                  <label for="mm-pac-archive-page-size">Por página
+                    <select id="mm-pac-archive-page-size" class="form-select" data-no-check="1"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select>
+                  </label>
+                  <button type="button" id="mm-pac-archive-prev" class="mx-pac-archive-page" aria-label="Página anterior">‹</button>
+                  <span id="mm-pac-archive-pages" class="mx-pac-archive-pages"></span>
+                  <button type="button" id="mm-pac-archive-next" class="mx-pac-archive-page" aria-label="Página siguiente">›</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mx-pac-clinical-search d-none" id="mm-pac-clinical-search">
 
             <div class="row g-2 mx-pac-archivo-search-row">
 
@@ -4258,6 +4311,7 @@
                 <thead><tr><th>Paciente</th><th>CURP</th><th></th></tr></thead>
                 <tbody id="mm-pac-archivo-tbody"></tbody>
               </table>
+            </div>
             </div>
 
           </div>
@@ -10324,7 +10378,7 @@
 
 
 
-<script src="assets/js/core/navigation.js?v=professional-consolidation-crd035"></script>
+<script src="assets/js/core/navigation.js?v=patientarchive01"></script>
 
 <script src="assets/js/core/dashboard.js"></script>
 
@@ -10348,7 +10402,7 @@
 <script src="assets/js/physician-signature.js?v=sig03a"></script>
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
-<script src="assets/js/app.js?v=expux05"></script>
+<script src="assets/js/app.js?v=patientarchive01"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

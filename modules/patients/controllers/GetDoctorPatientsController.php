@@ -46,6 +46,10 @@ class GetDoctorPatientsController
             return $this->error('invalid_params', 'doctor_id required', $metaBase);
         }
 
+        if (($query['view'] ?? '') === 'archive') {
+            return $this->browseArchive($doctorId, $query, $metaBase);
+        }
+
         $limit = 50;
         if (isset($query['limit'])) {
             $limit = (int)$query['limit'];
@@ -66,6 +70,65 @@ class GetDoctorPatientsController
                 return $this->error('db_not_ready', 'patients db not ready', $metaBase);
             }
             return $this->error('db_error', 'database error', $metaBase);
+        } catch (PDOException $e) {
+            return $this->error('db_error', 'database error', $metaBase);
+        }
+    }
+
+    private function browseArchive(string $doctorId, array $query, array $metaBase): array
+    {
+        foreach (['q', 'gender', 'age', 'registration', 'sort', 'phone', 'date_from', 'date_to', 'page', 'limit'] as $key) {
+            if (isset($query[$key]) && !is_scalar($query[$key])) {
+                return $this->error('invalid_params', $key . ' invalid', $metaBase);
+            }
+        }
+        $allowed = [
+            'gender' => ['all', 'female', 'male', 'other'],
+            'age' => ['all', 'under_18', '18_29', '30_44', '45_59', '60_plus'],
+            'registration' => ['all', 'last_7', 'last_30', 'last_90', 'this_year'],
+            'sort' => ['surname_asc', 'surname_desc', 'registered_desc', 'registered_asc'],
+            'phone' => ['all', 'with', 'without'],
+        ];
+        $filters = ['q' => trim((string)($query['q'] ?? ''))];
+        if (mb_strlen($filters['q']) > 120) {
+            return $this->error('invalid_params', 'query too long', $metaBase);
+        }
+        foreach ($allowed as $key => $values) {
+            $value = (string)($query[$key] ?? $values[0]);
+            if (!in_array($value, $values, true)) {
+                return $this->error('invalid_params', $key . ' invalid', $metaBase);
+            }
+            $filters[$key] = $value;
+        }
+        foreach (['date_from', 'date_to'] as $key) {
+            $value = trim((string)($query[$key] ?? ''));
+            if ($value !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) || !checkdate((int)substr($value, 5, 2), (int)substr($value, 8, 2), (int)substr($value, 0, 4)))) {
+                return $this->error('invalid_params', $key . ' invalid', $metaBase);
+            }
+            $filters[$key] = $value;
+        }
+        if ($filters['date_from'] !== '' && $filters['date_to'] !== '' && $filters['date_from'] > $filters['date_to']) {
+            return $this->error('invalid_params', 'date range invalid', $metaBase);
+        }
+        $page = filter_var($query['page'] ?? 1, FILTER_VALIDATE_INT);
+        $limit = filter_var($query['limit'] ?? 25, FILTER_VALIDATE_INT);
+        if ($page === false || $page < 1 || $page > 100000 || !in_array($limit, [25, 50, 100], true)) {
+            return $this->error('invalid_params', 'paging invalid', $metaBase);
+        }
+        $filters['page'] = $page;
+        $filters['limit'] = $limit;
+
+        try {
+            $result = $this->repo->browsePatientsByDoctorId($doctorId, $filters);
+            return $this->success(['items' => $result['items']], [
+                'visibility' => ['contact' => 'not_returned'],
+                'total' => $result['total'],
+                'filtered_total' => $result['filtered_total'],
+                'paging' => ['page' => $page, 'limit' => $limit],
+            ]);
+        } catch (RuntimeException $e) {
+            $notReady = $e->getMessage() === 'patients not ready';
+            return $this->error($notReady ? 'db_not_ready' : 'db_error', $notReady ? 'patients db not ready' : 'database error', $metaBase);
         } catch (PDOException $e) {
             return $this->error('db_error', 'database error', $metaBase);
         }

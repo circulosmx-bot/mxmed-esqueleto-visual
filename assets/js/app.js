@@ -75598,6 +75598,28 @@ function mxResetLogoPreview(){
   const msgEl = document.getElementById('mm-pac-archivo-msg');
   const tbodyEl = document.getElementById('mm-pac-archivo-tbody');
   const inlineResultsWrapEl = document.getElementById('mm-pac-archivo-table')?.closest('.table-responsive') || null;
+  const browserEl = document.getElementById('mm-pac-archive-browser');
+  const clinicalSearchEl = document.getElementById('mm-pac-clinical-search');
+  const archiveTitleEl = document.getElementById('mm-pac-archivo-title');
+  const archiveSubtitleEl = document.getElementById('mm-pac-archivo-subtitle');
+  const archiveQueryEl = document.getElementById('mm-pac-archive-query');
+  const archiveGenderEl = document.getElementById('mm-pac-archive-gender');
+  const archiveAgeEl = document.getElementById('mm-pac-archive-age');
+  const archiveRegistrationEl = document.getElementById('mm-pac-archive-registration');
+  const archiveMoreBtn = document.getElementById('mm-pac-archive-more');
+  const archiveMorePanelEl = document.getElementById('mm-pac-archive-more-panel');
+  const archiveDateFromEl = document.getElementById('mm-pac-archive-date-from');
+  const archiveDateToEl = document.getElementById('mm-pac-archive-date-to');
+  const archivePhoneEl = document.getElementById('mm-pac-archive-phone');
+  const archiveClearMoreEl = document.getElementById('mm-pac-archive-clear-more');
+  const archiveSortEl = document.getElementById('mm-pac-archive-sort');
+  const archiveSizeEl = document.getElementById('mm-pac-archive-page-size');
+  const archiveRowsEl = document.getElementById('mm-pac-archive-rows');
+  const archiveStatusEl = document.getElementById('mm-pac-archive-status');
+  const archiveRangeEl = document.getElementById('mm-pac-archive-range');
+  const archivePagesEl = document.getElementById('mm-pac-archive-pages');
+  const archivePrevEl = document.getElementById('mm-pac-archive-prev');
+  const archiveNextEl = document.getElementById('mm-pac-archive-next');
   if(!qEl || !filterEl || !searchBtn || !msgEl || !tbodyEl) return;
 
   function resolveDoctorId(){
@@ -75639,6 +75661,11 @@ function mxResetLogoPreview(){
   let archiveLookupEntries = [];
   let archiveLookupSelectedId = '';
   let archiveLookupMode = '';
+  let archivePage = 1;
+  let archivePageCount = 1;
+  let archiveRequestToken = 0;
+  let archiveSearchTimer = null;
+  let archiveBrowseItems = [];
   window.mxmedInvalidatePatientsIndexCache = ()=>{
     cachedList = null;
     cachedAt = 0;
@@ -75688,13 +75715,30 @@ function mxResetLogoPreview(){
       archiveWasVisible = false;
       return;
     }
+    const becameVisible = !archiveWasVisible;
     archiveWasVisible = true;
     const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
-    backBtn?.classList.toggle('d-none', origin !== 'expediente_initial' && origin !== 'expediente_change');
+    const isClinicalSearch = origin === 'expediente_initial' || origin === 'expediente_change';
+    if(isClinicalSearch) archiveRequestToken++;
+    backBtn?.classList.toggle('d-none', !isClinicalSearch);
+    browserEl?.classList.toggle('d-none', isClinicalSearch);
+    clinicalSearchEl?.classList.toggle('d-none', !isClinicalSearch);
+    if(archiveTitleEl) archiveTitleEl.textContent = isClinicalSearch ? 'Buscar paciente en mi archivo' : 'Archivo de pacientes';
+    if(archiveSubtitleEl && isClinicalSearch){
+      archiveSubtitleEl.textContent = 'Localiza pacientes registrados y abre su expediente clínico.';
+    }
+    if(!isClinicalSearch && becameVisible) loadArchivePage();
   };
   new MutationObserver(syncExpedienteSearchOrigin).observe(pane, {
     attributes:true,
     attributeFilter:['class', 'data-expediente-search-origin']
+  });
+  document.querySelector('.menu-main[data-panel="p-pac-archivo"]')?.addEventListener('click', ()=>{
+    clearExpedienteSearchOrigin();
+    if(!pane.classList.contains('d-none')){
+      syncExpedienteSearchOrigin();
+      loadArchivePage();
+    }
   });
   backBtn?.addEventListener('click', ()=>{
     const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
@@ -76548,4 +76592,163 @@ function mxResetLogoPreview(){
     };
     openArchivePatientRecord(entry, { openOrigin }).catch(()=> null);
   });
+
+  const formatArchiveRegistration = (value = '')=>{
+    const raw = String(value || '').trim();
+    if(!/^\d{4}-\d{2}-\d{2}/.test(raw)) return '—';
+    const date = new Date(`${raw.slice(0, 10)}T00:00:00`);
+    if(Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('es-MX', { day:'2-digit', month:'short', year:'numeric' }).format(date);
+  };
+
+  const renderArchiveBrowseRows = (items = [])=>{
+    if(!archiveRowsEl) return;
+    archiveBrowseItems = Array.isArray(items) ? items.slice() : [];
+    if(!archiveBrowseItems.length){
+      archiveRowsEl.innerHTML = '<tr><td class="mx-pac-archive-empty" colspan="5">No hay pacientes que coincidan con los filtros.</td></tr>';
+      return;
+    }
+    archiveRowsEl.innerHTML = archiveBrowseItems.map((item)=>{
+      const pid = String(item.patient_id || '').trim();
+      const name = resolvePatientDisplayName(item);
+      const sexRaw = String(item.sex || '').trim();
+      const sexMeta = resolvePatientSexMeta(sexRaw);
+      const sexLabel = sexMeta.label || (sexRaw ? 'Otro' : 'No especificado');
+      const icon = sexMeta.key === 'female' ? 'face_3' : (sexMeta.key === 'male' ? 'face' : 'person');
+      const age = resolvePatientAge(item);
+      const ageLabel = Number.isFinite(age) ? String(age) : '—';
+      const registered = formatArchiveRegistration(item.registered_at);
+      return `<tr>
+        <td data-label="Paciente"><button type="button" class="mx-pac-archive-open" data-pid="${escapeAttr(pid)}" aria-label="Abrir expediente de ${escapeAttr(name)}"><span class="mx-pac-archive-avatar ${escapeAttr(sexMeta.key || 'unknown')}"><span class="material-symbols-outlined" aria-hidden="true">${icon}</span></span><span>${escapeHtml(name)}</span></button></td>
+        <td data-label="Edad">${escapeHtml(ageLabel)}</td>
+        <td data-label="Género">${escapeHtml(sexLabel)}</td>
+        <td data-label="Registrado">${escapeHtml(registered)}</td>
+        <td class="mx-pac-archive-arrow" aria-hidden="true"><span class="material-symbols-rounded">chevron_right</span></td>
+      </tr>`;
+    }).join('');
+  };
+
+  const renderArchivePageLinks = ()=>{
+    if(!archivePagesEl) return;
+    const pages = new Set([1, archivePageCount]);
+    for(let page = Math.max(1, archivePage - 2); page <= Math.min(archivePageCount, archivePage + 2); page++) pages.add(page);
+    const sorted = [...pages].sort((a, b)=> a - b);
+    let previous = 0;
+    archivePagesEl.innerHTML = sorted.map((page)=>{
+      const gap = page - previous > 1 ? '<span class="mx-pac-archive-ellipsis" aria-hidden="true">…</span>' : '';
+      previous = page;
+      return `${gap}<button type="button" class="mx-pac-archive-page${page === archivePage ? ' is-current' : ''}" data-page="${page}" aria-label="Página ${page}"${page === archivePage ? ' aria-current="page"' : ''}>${page}</button>`;
+    }).join('');
+    if(archivePrevEl) archivePrevEl.disabled = archivePage <= 1;
+    if(archiveNextEl) archiveNextEl.disabled = archivePage >= archivePageCount;
+  };
+
+  async function loadArchivePage(){
+    if(!browserEl || pane.classList.contains('d-none') || browserEl.classList.contains('d-none')) return;
+    const doctorId = resolveDoctorId();
+    if(!doctorId){
+      if(archiveStatusEl) archiveStatusEl.textContent = 'No se pudo identificar al médico para cargar el archivo.';
+      return;
+    }
+    const token = ++archiveRequestToken;
+    const dateFrom = String(archiveDateFromEl?.value || '');
+    const dateTo = String(archiveDateToEl?.value || '');
+    if(dateFrom && dateTo && dateFrom > dateTo){
+      if(archiveStatusEl) archiveStatusEl.textContent = 'La fecha inicial debe ser anterior o igual a la fecha final.';
+      if(archiveRowsEl) archiveRowsEl.innerHTML = '<tr><td class="mx-pac-archive-empty" colspan="5">Corrige el rango de fechas para mostrar pacientes.</td></tr>';
+      if(archiveRangeEl) archiveRangeEl.textContent = 'Mostrando 0 de 0';
+      return;
+    }
+    if(archiveStatusEl) archiveStatusEl.textContent = 'Cargando pacientes…';
+    const url = new URL(`/api/patients/index.php/doctors/${encodeURIComponent(doctorId)}/patients`, window.location.origin);
+    const params = {
+      view:'archive', q:String(archiveQueryEl?.value || '').trim(), gender:String(archiveGenderEl?.value || 'all'),
+      age:String(archiveAgeEl?.value || 'all'), registration:String(archiveRegistrationEl?.value || 'all'),
+      date_from:dateFrom, date_to:dateTo, phone:String(archivePhoneEl?.value || 'all'),
+      sort:String(archiveSortEl?.value || 'surname_asc'), page:String(archivePage), limit:String(archiveSizeEl?.value || '25')
+    };
+    Object.entries(params).forEach(([key, value])=> url.searchParams.set(key, value));
+    try{
+      const response = await fetch(url.toString(), { headers:{ Accept:'application/json' }, credentials:'same-origin' });
+      const payload = await response.json().catch(()=> null);
+      if(!response.ok || payload?.ok !== true) throw new Error('No se pudo cargar el archivo de pacientes.');
+      if(token !== archiveRequestToken) return;
+      const items = Array.isArray(payload.data?.items) ? payload.data.items : [];
+      const total = Math.max(0, Number(payload.meta?.total) || 0);
+      const filteredTotal = Math.max(0, Number(payload.meta?.filtered_total) || 0);
+      const limit = Math.max(1, Number(archiveSizeEl?.value) || 25);
+      archivePageCount = Math.max(1, Math.ceil(filteredTotal / limit));
+      if(archivePage > archivePageCount){
+        archivePage = archivePageCount;
+        loadArchivePage();
+        return;
+      }
+      if(archiveSubtitleEl) archiveSubtitleEl.textContent = `${total} ${total === 1 ? 'paciente registrado' : 'pacientes registrados'}`;
+      renderArchiveBrowseRows(items);
+      const start = filteredTotal ? (archivePage - 1) * limit + 1 : 0;
+      const end = filteredTotal ? start + items.length - 1 : 0;
+      if(archiveRangeEl) archiveRangeEl.textContent = `Mostrando ${start}–${end} de ${filteredTotal}`;
+      if(archiveStatusEl) archiveStatusEl.textContent = filteredTotal === total ? '' : `${filteredTotal} ${filteredTotal === 1 ? 'coincidencia' : 'coincidencias'} de ${total} pacientes`;
+      renderArchivePageLinks();
+    }catch(_){
+      if(token !== archiveRequestToken) return;
+      renderArchiveBrowseRows([]);
+      if(archiveStatusEl) archiveStatusEl.textContent = 'No se pudo cargar el archivo de pacientes. Intenta de nuevo.';
+      if(archiveRangeEl) archiveRangeEl.textContent = 'Mostrando 0 de 0';
+      archivePage = 1;
+      archivePageCount = 1;
+      renderArchivePageLinks();
+    }
+  }
+
+  const refreshArchiveFilters = ()=>{ archivePage = 1; loadArchivePage(); };
+  archiveQueryEl?.addEventListener('input', ()=>{
+    window.clearTimeout(archiveSearchTimer);
+    archiveSearchTimer = window.setTimeout(refreshArchiveFilters, 250);
+  });
+  archiveQueryEl?.addEventListener('keydown', (event)=>{
+    if(event.key === 'Enter'){
+      event.preventDefault();
+      window.clearTimeout(archiveSearchTimer);
+      refreshArchiveFilters();
+    }
+  });
+  [archiveGenderEl, archiveAgeEl, archiveSortEl, archiveSizeEl, archivePhoneEl].forEach((control)=> control?.addEventListener('change', refreshArchiveFilters));
+  archiveRegistrationEl?.addEventListener('change', ()=>{
+    if(archiveRegistrationEl.value !== 'all'){
+      if(archiveDateFromEl) archiveDateFromEl.value = '';
+      if(archiveDateToEl) archiveDateToEl.value = '';
+    }
+    refreshArchiveFilters();
+  });
+  [archiveDateFromEl, archiveDateToEl].forEach((control)=> control?.addEventListener('change', ()=>{
+    if(archiveRegistrationEl) archiveRegistrationEl.value = 'all';
+    refreshArchiveFilters();
+  }));
+  archiveMoreBtn?.addEventListener('click', ()=>{
+    const expanded = archiveMoreBtn.getAttribute('aria-expanded') === 'true';
+    archiveMoreBtn.setAttribute('aria-expanded', String(!expanded));
+    if(archiveMorePanelEl) archiveMorePanelEl.hidden = expanded;
+  });
+  archiveClearMoreEl?.addEventListener('click', ()=>{
+    if(archiveDateFromEl) archiveDateFromEl.value = '';
+    if(archiveDateToEl) archiveDateToEl.value = '';
+    if(archivePhoneEl) archivePhoneEl.value = 'all';
+    refreshArchiveFilters();
+  });
+  archivePrevEl?.addEventListener('click', ()=>{ if(archivePage > 1){ archivePage--; loadArchivePage(); } });
+  archiveNextEl?.addEventListener('click', ()=>{ if(archivePage < archivePageCount){ archivePage++; loadArchivePage(); } });
+  archivePagesEl?.addEventListener('click', (event)=>{
+    const button = event.target.closest('[data-page]');
+    const page = Number(button?.getAttribute('data-page'));
+    if(Number.isInteger(page) && page >= 1 && page <= archivePageCount){ archivePage = page; loadArchivePage(); }
+  });
+  archiveRowsEl?.addEventListener('click', (event)=>{
+    const button = event.target.closest('[data-pid]');
+    const patientId = String(button?.getAttribute('data-pid') || '').trim();
+    const entry = archiveBrowseItems.find((item)=> String(item.patient_id || '') === patientId);
+    if(entry) openArchivePatientRecord(entry).catch(()=> null);
+  });
+  syncExpedienteSearchOrigin();
+  if(!pane.classList.contains('d-none') && !browserEl?.classList.contains('d-none')) loadArchivePage();
 })();
