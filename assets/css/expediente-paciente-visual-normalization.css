@@ -373,3 +373,53 @@
   #p-expediente .body :is(.form-control,.form-select) {min-height:42px}
   #p-expediente .body textarea.form-control {min-height:88px}
 }
+
+/* EXP-UX05: patient search results use the same unfilled Material faces as Billing. */
+#mm_pac_archive_lookup_modal .mx-ag-shared-phone-item {
+  grid-template-columns:52px minmax(0,1fr) 20px;
+}
+#mm_pac_archive_lookup_modal .mx-ag-shared-phone-avatar {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:52px;
+  height:52px;
+  overflow:visible;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  color:#07536e;
+}
+#mm_pac_archive_lookup_modal .mx-exp-patient-face {
+  font-size:40px;
+  font-weight:300;
+  line-height:1;
+  font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 40;
+}
+#mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-item {
+  grid-template-columns:46px minmax(0,1fr) 20px;
+}
+#mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-avatar {
+  width:46px;
+  height:46px;
+}
+#mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-exp-patient-face {font-size:36px}
+@media (max-width:767.98px) {
+  #mm_pac_archive_lookup_modal .mx-ag-shared-phone-item {
+    grid-template-columns:44px minmax(0,1fr) 18px;
+  }
+  #mm_pac_archive_lookup_modal .mx-ag-shared-phone-avatar {
+    width:44px;
+    height:44px;
+  }
+  #mm_pac_archive_lookup_modal .mx-exp-patient-face {font-size:34px}
+  #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-item {
+    grid-template-columns:42px minmax(0,1fr) 18px;
+  }
+  #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-ag-shared-phone-avatar {
+    width:42px;
+    height:42px;
+  }
+  #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-exp-patient-face {font-size:32px}
+}

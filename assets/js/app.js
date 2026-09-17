@@ -75994,13 +75994,13 @@ function mxResetLogoPreview(){
   const resolvePatientSexMeta = (value = '')=>{
     const raw = norm(value || '');
     if(!raw) return { key: '', label: '' };
-    if(raw === 'm' || raw.includes('masc') || raw.includes('male') || raw.includes('hombre')){
-      return { key: 'male', label: 'Hombre' };
-    }
-    if(raw === 'f' || raw.includes('fem') || raw.includes('female') || raw.includes('mujer')){
+    if(['f', 'female', 'femenino', 'mujer'].includes(raw)){
       return { key: 'female', label: 'Mujer' };
     }
-    return { key: '', label: String(value || '').trim() };
+    if(['m', 'male', 'masculino', 'hombre'].includes(raw)){
+      return { key: 'male', label: 'Hombre' };
+    }
+    return { key: '', label: '' };
   };
 
   const resolvePatientAge = (entry = {})=>{
@@ -76029,24 +76029,6 @@ function mxResetLogoPreview(){
       month: 'short',
       year: 'numeric'
     });
-  };
-
-  const resolvePatientAvatarSrc = (entry = {})=>{
-    const sexMeta = resolvePatientSexMeta(entry.sex || entry.gender || '');
-    const age = resolvePatientAge(entry);
-    const isFemale = sexMeta.key === 'female';
-    const isMale = sexMeta.key === 'male';
-    if(Number.isFinite(age)){
-      if(age >= 3 && age <= 10){
-        return isFemale ? 'assets/img/patients/avatars/girl.png' : 'assets/img/patients/avatars/boy.png';
-      }
-      if(age >= 11 && age <= 21){
-        return isFemale ? 'assets/img/patients/avatars/young-female.png' : 'assets/img/patients/avatars/young-male.png';
-      }
-    }
-    if(isFemale) return 'assets/img/patients/avatars/female.png';
-    if(isMale) return 'assets/img/patients/avatars/male.png';
-    return 'assets/img/patients/avatars/male.png';
   };
 
   const buildPatientMetaLabel = (entry = {})=>{
@@ -76099,7 +76081,8 @@ function mxResetLogoPreview(){
     const isSelected = patientId && patientId === archiveLookupSelectedId;
     const isRecentMode = archiveLookupMode === 'recent';
     const displayName = resolvePatientDisplayName(entry);
-    const avatarSrc = resolvePatientAvatarSrc(entry);
+    const sexMeta = resolvePatientSexMeta(entry.sex || entry.gender || '');
+    const patientIcon = sexMeta.key === 'female' ? 'face_3' : 'face';
     const metaLabel = buildPatientMetaLabel(entry);
     const phoneLabel = resolvePatientPhoneLabel(entry);
     const recentActivityPrefix = buildPatientRecentActivityPrefix(entry);
@@ -76115,9 +76098,7 @@ function mxResetLogoPreview(){
     return `
       <div class="mx-ag-shared-phone-entry${isSelected ? ' is-selected' : ''}" data-mm-pac-identity-entry="${escapeAttr(patientId)}">
         <button type="button" class="mx-ag-shared-phone-item" data-mm-pac-identity-select="${escapeAttr(patientId)}">
-          <span class="mx-ag-shared-phone-avatar">
-            <img src="${escapeAttr(avatarSrc)}" alt="${escapeAttr(displayName)}">
-          </span>
+          <span class="mx-ag-shared-phone-avatar"><span class="material-symbols-outlined mx-exp-patient-face" aria-hidden="true">${patientIcon}</span></span>
           <span class="mx-ag-shared-phone-item-body">
             <span class="mx-ag-shared-phone-item-name">${displayNameHtml}</span>
             <span class="mx-ag-shared-phone-item-meta">${metaHtml}</span>
