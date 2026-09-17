@@ -16,10 +16,7 @@
     if(['m','male','masculino','hombre'].includes(value))return 'male';
     return 'neutral';
   };
-  const patientIconSvg=kind=>{
-    const marker=kind==='female'?'<circle cx="24" cy="9" r="3"/><path d="M24 12v5m-2.5-2.5h5"/>':kind==='male'?'<circle cx="24" cy="12" r="3"/><path d="m26.1 9.9 3.2-3.2m-3.2 0h3.2v3.2"/>':'';
-    return `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4 25v-2c0-4.4 3.6-8 8-8s8 3.6 8 8v2H4Z"/>${marker}</svg>`;
-  };
+  const patientIconName=kind=>kind==='female'?'face_3':'face';
   const message=(value)=>{els.feedback.textContent=value||''};
   const errorText=(error)=>({unauthorized:'Inicia sesión con tu perfil médico para consultar datos de facturación.',patient_scope_denied:'No tienes acceso a este paciente.',billing_profile_not_found:'Estos datos ya no están disponibles. Recarga la sección.',invalid_rfc:'Revisa el formato del RFC.',invalid_fiscal_zip_code:'El código postal fiscal debe tener cinco dígitos.',invalid_fiscal_regime_code:'Selecciona un régimen fiscal válido para este RFC.',invalid_cfdi_use_code:'Selecciona un uso CFDI compatible con el régimen y el RFC.',invalid_billing_email:'Revisa el correo de facturación.',billing_profiles_unavailable:'No se pudieron cargar los datos de facturación. Intenta de nuevo.'})[error?.message]||'No se pudo completar la operación. Revisa los datos e intenta de nuevo.';
   async function request(method,params={},body=null){
@@ -53,7 +50,7 @@
   }
   function renderResults(items){
     searchResults=items;
-    els.results.innerHTML=items.map(row=>{const kind=iconKind(row.sex);return `<button type="button" class="mx-billing-result" data-patient-id="${esc(row.patient_id)}"><span class="mx-billing-patient-icon" data-patient-icon-kind="${kind}" aria-hidden="true">${patientIconSvg(kind)}</span><span class="mx-billing-result-name">${esc(row.display_name)}</span></button>`}).join('');
+    els.results.innerHTML=items.map(row=>{const kind=iconKind(row.sex);return `<button type="button" class="mx-billing-result" data-patient-id="${esc(row.patient_id)}"><span class="material-symbols-outlined mx-billing-patient-symbol" data-patient-icon-kind="${kind}" aria-hidden="true">${patientIconName(kind)}</span><span class="mx-billing-result-name">${esc(row.display_name)}</span></button>`}).join('');
     if(!items.length)message('No se encontraron pacientes en tu archivo.');
     else message(`${items.length} paciente${items.length===1?'':'s'} encontrado${items.length===1?'':'s'}.`);
   }
@@ -70,7 +67,7 @@
   async function selectPatient(entry){
     patient=entry;editingId='';els.editor.hidden=true;
     els.name.textContent=entry.display_name;
-    const kind=iconKind(entry.sex);els.icon.dataset.patientIconKind=kind;els.icon.innerHTML=patientIconSvg(kind);
+    const kind=iconKind(entry.sex);els.icon.dataset.patientIconKind=kind;els.icon.textContent=patientIconName(kind);
     els.area.hidden=false;els.results.innerHTML='';message('');
     try{await loadProfiles();pane.dispatchEvent(new CustomEvent('mxmed:billing-patient-selected',{detail:{patient:{...patient},profiles:[...profiles]}}))}catch(error){message(errorText(error));els.area.hidden=true;patient=null}
   }
