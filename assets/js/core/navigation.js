@@ -1,6 +1,6 @@
 ﻿/* ===== Helpers de navegación rápida ===== */
 const SIDEBAR_ACTIVE_PANEL_ALIASES = {
-  'p-expediente': 'p-pac-archivo'
+  'p-pac-archivo': 'p-expediente'
 };
 
 // SB01 presentation only: retain the original submenu nodes and click handlers.
