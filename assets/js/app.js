@@ -56240,8 +56240,21 @@ console.info('app.js loaded :: 20251123a');
 	    }
 	    const archivePane = document.getElementById('p-pac-archivo');
 	    const searchOrigin = sanitizeText(source);
+	    if(searchOrigin === 'expediente_initial' || searchOrigin === 'expediente_change'){
+	      if(archivePane) delete archivePane.dataset.expedienteSearchOrigin;
+	      pane.dataset.expedienteSearchOrigin = searchOrigin;
+	      let opened = false;
+	      if(typeof jumpTo === 'function'){
+	        opened = jumpTo('p-expediente') !== false;
+	      }else if(typeof showPanel === 'function'){
+	        showPanel('p-expediente');
+	        opened = true;
+	      }
+	      if(!opened) delete pane.dataset.expedienteSearchOrigin;
+	      return opened;
+	    }
 	    if(archivePane){
-	      if(['expediente_initial', 'expediente_change', 'expediente_all'].includes(searchOrigin)){
+	      if(searchOrigin === 'expediente_all'){
 	        archivePane.dataset.expedienteSearchOrigin = searchOrigin;
 	      }else{
 	        delete archivePane.dataset.expedienteSearchOrigin;
@@ -75602,6 +75615,7 @@ function mxResetLogoPreview(){
 (function(){
   const pane = document.getElementById('p-pac-archivo');
   if(!pane) return;
+  const expedientePane = document.getElementById('p-expediente');
 
   const qEl = document.getElementById('mm-pac-archivo-q');
   const filterEl = document.getElementById('mm-pac-archivo-filter');
@@ -75613,6 +75627,8 @@ function mxResetLogoPreview(){
   const inlineResultsWrapEl = document.getElementById('mm-pac-archivo-table')?.closest('.table-responsive') || null;
   const browserEl = document.getElementById('mm-pac-archive-browser');
   const clinicalSearchEl = document.getElementById('mm-pac-clinical-search');
+  const embeddedBackBtn = expedientePane?.querySelector('[data-exp-search-back]');
+  const embeddedNewBtn = expedientePane?.querySelector('[data-exp-search-new]');
   const archiveTitleEl = document.getElementById('mm-pac-archivo-title');
   const archiveSubtitleEl = document.getElementById('mm-pac-archivo-subtitle');
   const archiveQueryEl = document.getElementById('mm-pac-archive-query');
@@ -75722,6 +75738,38 @@ function mxResetLogoPreview(){
     delete pane.dataset.expedienteSearchOrigin;
     backBtn?.classList.add('d-none');
   };
+  const clearEmbeddedSearchOrigin = ()=>{
+    if(expedientePane) delete expedientePane.dataset.expedienteSearchOrigin;
+    clinicalSearchEl?.classList.add('d-none');
+    resetSearchControls();
+  };
+  let embeddedWasVisible = false;
+  const syncEmbeddedSearchOrigin = ()=>{
+    if(!expedientePane || !clinicalSearchEl) return;
+    const origin = String(expedientePane.dataset.expedienteSearchOrigin || '').trim();
+    const isClinicalSearch = origin === 'expediente_initial' || origin === 'expediente_change';
+    const visible = isClinicalSearch && !expedientePane.classList.contains('d-none');
+    if(!visible && embeddedWasVisible && expedientePane.classList.contains('d-none')){
+      clearEmbeddedSearchOrigin();
+    }
+    clinicalSearchEl.classList.toggle('d-none', !visible);
+    embeddedNewBtn?.classList.toggle('d-none', origin === 'expediente_change');
+    if(visible && !embeddedWasVisible){
+      resetSearchControls();
+      window.requestAnimationFrame(()=>{
+        if(!expedientePane.classList.contains('d-none') && expedientePane.dataset.expedienteSearchOrigin === origin){
+          qEl.focus({ preventScroll:true });
+        }
+      });
+    }
+    embeddedWasVisible = visible;
+  };
+  if(expedientePane){
+    new MutationObserver(syncEmbeddedSearchOrigin).observe(expedientePane, {
+      attributes:true,
+      attributeFilter:['class', 'data-expediente-search-origin']
+    });
+  }
   let archiveWasVisible = !pane.classList.contains('d-none');
   const syncExpedienteSearchOrigin = ()=>{
     if(pane.classList.contains('d-none')){
@@ -75732,21 +75780,31 @@ function mxResetLogoPreview(){
     const becameVisible = !archiveWasVisible;
     archiveWasVisible = true;
     const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
-    const isClinicalSearch = origin === 'expediente_initial' || origin === 'expediente_change';
-    const isFromExpediente = isClinicalSearch || origin === 'expediente_all';
-    if(isClinicalSearch) archiveRequestToken++;
-    backBtn?.classList.toggle('d-none', !isFromExpediente);
-    browserEl?.classList.toggle('d-none', isClinicalSearch);
-    clinicalSearchEl?.classList.toggle('d-none', !isClinicalSearch);
-    if(archiveTitleEl) archiveTitleEl.textContent = isClinicalSearch ? 'Buscar paciente en mi archivo' : 'Archivo de pacientes';
-    if(archiveSubtitleEl && isClinicalSearch){
-      archiveSubtitleEl.textContent = 'Localiza pacientes registrados y abre su expediente clínico.';
-    }
-    if(!isClinicalSearch && becameVisible) loadArchivePage();
+    backBtn?.classList.toggle('d-none', origin !== 'expediente_all');
+    browserEl?.classList.remove('d-none');
+    if(archiveTitleEl) archiveTitleEl.textContent = 'Archivo de pacientes';
+    if(becameVisible) loadArchivePage();
   };
   new MutationObserver(syncExpedienteSearchOrigin).observe(pane, {
     attributes:true,
     attributeFilter:['class', 'data-expediente-search-origin']
+  });
+  embeddedBackBtn?.addEventListener('click', ()=>{
+    const origin = String(expedientePane?.dataset.expedienteSearchOrigin || '').trim();
+    if(origin !== 'expediente_initial' && origin !== 'expediente_change') return;
+    clearEmbeddedSearchOrigin();
+    const targetSelector = origin === 'expediente_change'
+      ? '[data-clinical-action="active-search"]'
+      : '[data-exp-empty-action="search"]';
+    window.requestAnimationFrame(()=>{
+      const target = expedientePane?.querySelector(targetSelector);
+      if(target?.getClientRects().length) target.focus({ preventScroll:true });
+    });
+  });
+  embeddedNewBtn?.addEventListener('click', ()=>{
+    if(expedientePane?.dataset.expedienteSearchOrigin !== 'expediente_initial') return;
+    clearEmbeddedSearchOrigin();
+    newBtn?.click();
   });
   document.querySelector('.menu-main[data-panel="p-pac-archivo"]')?.addEventListener('click', ()=>{
     clearExpedienteSearchOrigin();
@@ -75757,7 +75815,7 @@ function mxResetLogoPreview(){
   });
   backBtn?.addEventListener('click', ()=>{
     const origin = String(pane.dataset.expedienteSearchOrigin || '').trim();
-    if(origin !== 'expediente_initial' && origin !== 'expediente_change' && origin !== 'expediente_all') return;
+    if(origin !== 'expediente_all') return;
     let opened = false;
     if(typeof jumpTo === 'function'){
       opened = jumpTo('p-expediente') !== false;
@@ -76509,7 +76567,7 @@ function mxResetLogoPreview(){
       return false;
     }
     clearExpedienteSearchOrigin();
-    resetSearchControls();
+    clearEmbeddedSearchOrigin();
     if(shouldReturnToQuickRx && typeof window.mxmedConsumeQuickRxPatientSearchIntent === 'function'){
       window.mxmedConsumeQuickRxPatientSearchIntent();
     }
@@ -76808,6 +76866,7 @@ function mxResetLogoPreview(){
     const entry = archiveBrowseItems.find((item)=> String(item.patient_id || '') === patientId);
     if(entry) openArchivePatientRecord(entry).catch(()=> null);
   });
+  syncEmbeddedSearchOrigin();
   syncExpedienteSearchOrigin();
   if(!pane.classList.contains('d-none') && !browserEl?.classList.contains('d-none')) loadArchivePage();
 })();

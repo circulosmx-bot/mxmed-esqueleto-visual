@@ -4295,33 +4295,6 @@
               </div>
             </div>
 
-            <div class="mx-pac-clinical-search d-none" id="mm-pac-clinical-search">
-
-            <div class="row g-2 mx-pac-archivo-search-row">
-
-              <div class="col-md-6">
-                <label class="visually-hidden" for="mm-pac-archivo-q">Buscar paciente</label>
-                <div class="mx-pac-archivo-search-control">
-                  <span class="material-symbols-rounded" aria-hidden="true">search</span>
-                  <input id="mm-pac-archivo-q" type="search" class="form-control" placeholder="Nombre, apellido o teléfono" autocomplete="off">
-                </div>
-              </div>
-
-              <div class="col-md-4"><select id="mm-pac-archivo-filter" class="form-select" aria-label="Filtrar pacientes"><option value="all">Todos</option><option value="recent">Con citas recientes</option><option value="inactive">Inactivos</option></select></div>
-
-              <div class="col-md-2"><button id="mm-pac-archivo-search" type="button" class="btn btn-primary w-100">Buscar</button></div>
-
-            </div>
-
-            <div id="mm-pac-archivo-msg" class="alert alert-info mt-3 d-none"></div>
-            <div class="table-responsive mt-2">
-              <table class="table table-sm" id="mm-pac-archivo-table">
-                <thead><tr><th>Paciente</th><th>CURP</th><th></th></tr></thead>
-                <tbody id="mm-pac-archivo-tbody"></tbody>
-              </table>
-            </div>
-            </div>
-
           </div>
 
         </section>
@@ -4486,6 +4459,40 @@
           </div>
 
           <div class="body">
+
+            <section class="mx-exp-embedded-search" aria-labelledby="mm-exp-embedded-search-title">
+              <div class="mx-exp-embedded-search-head">
+                <div>
+                  <h3 id="mm-exp-embedded-search-title">Buscar paciente en mi archivo</h3>
+                  <p>Localiza pacientes registrados y abre su expediente clínico.</p>
+                </div>
+                <button type="button" class="btn btn-outline-primary" data-exp-search-new>Nuevo paciente</button>
+              </div>
+
+              <div class="mx-pac-clinical-search d-none" id="mm-pac-clinical-search">
+                <div class="row g-2 mx-pac-archivo-search-row">
+                  <div class="col-md-6">
+                    <label class="visually-hidden" for="mm-pac-archivo-q">Buscar paciente</label>
+                    <div class="mx-pac-archivo-search-control">
+                      <span class="material-symbols-rounded" aria-hidden="true">search</span>
+                      <input id="mm-pac-archivo-q" type="search" class="form-control" placeholder="Nombre, apellido o teléfono" autocomplete="off">
+                    </div>
+                  </div>
+                  <div class="col-md-4"><select id="mm-pac-archivo-filter" class="form-select" aria-label="Filtrar pacientes"><option value="all">Todos</option><option value="recent">Con citas recientes</option><option value="inactive">Inactivos</option></select></div>
+                  <div class="col-md-2"><button id="mm-pac-archivo-search" type="button" class="btn btn-primary w-100">Buscar</button></div>
+                </div>
+                <div id="mm-pac-archivo-msg" class="alert alert-info mt-3 d-none"></div>
+                <div class="table-responsive mt-2">
+                  <table class="table table-sm" id="mm-pac-archivo-table">
+                    <thead><tr><th>Paciente</th><th>CURP</th><th></th></tr></thead>
+                    <tbody id="mm-pac-archivo-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="mx-exp-embedded-search-actions">
+                <button type="button" class="btn btn-outline-secondary" data-exp-search-back>Volver</button>
+              </div>
+            </section>
 
             <div class="mm-tabs mm-tabs-rows mb-3" data-exp-tabs>
 
