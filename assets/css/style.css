@@ -5479,7 +5479,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-pac-archivo .mx-pac-archive-filters label{
   min-width:140px;
 }
-#p-pac-archivo .mx-pac-archive-sort{
+#p-pac-archivo .mx-pac-archive-toolbar .mx-pac-archive-sort{
+  display:none;
   min-width:225px;
 }
 #p-pac-archivo .mx-pac-archive-more,
@@ -5546,6 +5547,35 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:800;
   text-transform:uppercase;
   letter-spacing:.03em;
+}
+#p-pac-archivo .mx-pac-archive-sort-header{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  letter-spacing:inherit;
+  text-transform:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+#p-pac-archivo .mx-pac-archive-sort-header .material-symbols-rounded{
+  flex:none;
+  width:18px;
+  font-size:18px;
+  line-height:1;
+  opacity:.6;
+}
+#p-pac-archivo .mx-pac-archive-table th[aria-sort="ascending"] .mx-pac-archive-sort-header,
+#p-pac-archivo .mx-pac-archive-table th[aria-sort="descending"] .mx-pac-archive-sort-header{
+  color:#06536e;
+}
+#p-pac-archivo .mx-pac-archive-table th[aria-sort="ascending"] .material-symbols-rounded,
+#p-pac-archivo .mx-pac-archive-table th[aria-sort="descending"] .material-symbols-rounded{
+  opacity:1;
 }
 #p-pac-archivo .mx-pac-archive-table td{
   padding:11px 16px;
@@ -5656,6 +5686,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   outline-offset:2px;
 }
 @media (max-width:760px){
+  #p-pac-archivo .mx-pac-archive-toolbar .mx-pac-archive-sort{
+    display:grid;
+  }
   #p-pac-archivo .mx-pac-archive-toolbar,
   #p-pac-archivo .mx-pac-archive-sort{
     width:100%;

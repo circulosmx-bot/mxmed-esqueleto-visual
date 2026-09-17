@@ -244,6 +244,8 @@ class PatientsRepository
         $sortSql = [
             'surname_asc' => "(pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name ASC, p.display_name ASC",
             'surname_desc' => "(pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name DESC, p.display_name DESC",
+            'age_asc' => "(p.birthdate IS NULL) ASC, p.birthdate DESC, (pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name ASC, p.display_name ASC",
+            'age_desc' => "(p.birthdate IS NULL) ASC, p.birthdate ASC, (pf.paternal_last_name IS NULL OR TRIM(pf.paternal_last_name) = '') ASC, pf.paternal_last_name ASC, p.display_name ASC",
             'registered_desc' => 'l.created_at DESC, p.display_name ASC',
             'registered_asc' => 'l.created_at ASC, p.display_name ASC',
         ][(string)($filters['sort'] ?? 'surname_asc')];

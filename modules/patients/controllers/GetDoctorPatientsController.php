@@ -96,7 +96,7 @@ class GetDoctorPatientsController
             'gender' => ['all', 'female', 'male', 'other'],
             'age' => ['all', 'under_18', '18_29', '30_44', '45_59', '60_plus'],
             'registration' => ['all', 'last_7', 'last_30', 'last_90', 'this_year'],
-            'sort' => ['surname_asc', 'surname_desc', 'registered_desc', 'registered_asc'],
+            'sort' => ['surname_asc', 'surname_desc', 'age_asc', 'age_desc', 'registered_desc', 'registered_asc'],
             'phone' => ['all', 'with', 'without'],
         ];
         $filters = ['q' => trim((string)($query['q'] ?? ''))];

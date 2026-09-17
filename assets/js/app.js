@@ -75626,6 +75626,7 @@ function mxResetLogoPreview(){
   const archivePhoneEl = document.getElementById('mm-pac-archive-phone');
   const archiveClearMoreEl = document.getElementById('mm-pac-archive-clear-more');
   const archiveSortEl = document.getElementById('mm-pac-archive-sort');
+  const archiveSortButtons = [...(browserEl?.querySelectorAll('[data-archive-sort-header]') || [])];
   const archiveSizeEl = document.getElementById('mm-pac-archive-page-size');
   const archiveRowsEl = document.getElementById('mm-pac-archive-rows');
   const archiveStatusEl = document.getElementById('mm-pac-archive-status');
@@ -76715,7 +76716,35 @@ function mxResetLogoPreview(){
     }
   }
 
+  const syncArchiveSortHeaders = ()=>{
+    const sort = String(archiveSortEl?.value || 'surname_asc');
+    const criterion = sort.startsWith('surname_') ? 'patient' : (sort.startsWith('age_') ? 'age' : 'registered');
+    const direction = sort.endsWith('_asc') ? 'ascending' : 'descending';
+    archiveSortButtons.forEach((button)=>{
+      const active = button.dataset.archiveSortHeader === criterion;
+      button.closest('th')?.setAttribute('aria-sort', active ? direction : 'none');
+      const icon = button.querySelector('.material-symbols-rounded');
+      if(icon) icon.textContent = active ? (direction === 'ascending' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more';
+    });
+  };
   const refreshArchiveFilters = ()=>{ archivePage = 1; loadArchivePage(); };
+  archiveSortButtons.forEach((button)=> button.addEventListener('click', ()=>{
+    if(!archiveSortEl) return;
+    const current = archiveSortEl.value;
+    const criterion = button.dataset.archiveSortHeader;
+    archiveSortEl.value = criterion === 'patient'
+      ? (current === 'surname_asc' ? 'surname_desc' : 'surname_asc')
+      : criterion === 'age'
+        ? (current === 'age_asc' ? 'age_desc' : 'age_asc')
+        : (current === 'registered_desc' ? 'registered_asc' : 'registered_desc');
+    syncArchiveSortHeaders();
+    refreshArchiveFilters();
+  }));
+  archiveSortEl?.addEventListener('change', ()=>{
+    syncArchiveSortHeaders();
+    refreshArchiveFilters();
+  });
+  syncArchiveSortHeaders();
   archiveQueryEl?.addEventListener('input', ()=>{
     window.clearTimeout(archiveSearchTimer);
     archiveSearchTimer = window.setTimeout(refreshArchiveFilters, 250);
@@ -76727,7 +76756,7 @@ function mxResetLogoPreview(){
       refreshArchiveFilters();
     }
   });
-  [archiveGenderEl, archiveAgeEl, archiveSortEl, archiveSizeEl, archivePhoneEl].forEach((control)=> control?.addEventListener('change', refreshArchiveFilters));
+  [archiveGenderEl, archiveAgeEl, archiveSizeEl, archivePhoneEl].forEach((control)=> control?.addEventListener('change', refreshArchiveFilters));
   archiveRegistrationEl?.addEventListener('change', ()=>{
     if(archiveRegistrationEl.value !== 'all'){
       if(archiveDateFromEl) archiveDateFromEl.value = '';
