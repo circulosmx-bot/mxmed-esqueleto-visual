@@ -140,6 +140,7 @@ CREATE TABLE IF NOT EXISTS clinical_case_items (
 CREATE TABLE IF NOT EXISTS clinical_encounters (
   encounter_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   patient_id VARCHAR(64) NOT NULL,
+  doctor_id VARCHAR(64) DEFAULT NULL,
   appointment_id VARCHAR(64) DEFAULT NULL,
   encounter_dt DATETIME NOT NULL,
   encounter_type VARCHAR(32) NOT NULL DEFAULT 'outpatient',
@@ -148,6 +149,7 @@ CREATE TABLE IF NOT EXISTS clinical_encounters (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   KEY idx_patient_dt (patient_id, encounter_dt),
+  KEY idx_clinical_encounters_doctor_patient_status_dt (doctor_id, patient_id, status, encounter_dt),
   KEY idx_appt (appointment_id),
   CONSTRAINT fk_encounters_patient_v0
     FOREIGN KEY (patient_id)

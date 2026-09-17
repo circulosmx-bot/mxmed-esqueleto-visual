@@ -378,6 +378,74 @@ function clinical_has_active_doctor_patient_link(PDO $pdo, string $doctorId, str
     return (int)$stmt->fetchColumn() > 0;
 }
 
+/** @return array{doctor_id:string,user_id:string}|null */
+function clinical_authenticated_doctor_context(): ?array
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start(['read_and_close' => true]);
+    }
+    $doctorId = trim((string)($_SESSION['doctor_id'] ?? $_SESSION['active_doctor_id'] ?? $_SESSION['mxmed_doctor_id'] ?? ''));
+    $userId = trim((string)($_SESSION['user_id'] ?? $_SESSION['mxmed_user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['actor_user_id'] ?? ''));
+    return ($doctorId !== '' && $userId !== '') ? ['doctor_id' => $doctorId, 'user_id' => $userId] : null;
+}
+
+function clinical_appointment_matches_encounter_owner(PDO $pdo, string $appointmentId, string $doctorId, string $patientId): bool
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM agenda_appointments WHERE appointment_id = :appointment_id AND doctor_id = :doctor_id AND patient_id = :patient_id');
+    $stmt->execute(['appointment_id' => $appointmentId, 'doctor_id' => $doctorId, 'patient_id' => $patientId]);
+    return (int)$stmt->fetchColumn() === 1;
+}
+
+function clinical_encounter_owned_by_doctor(array $encounter, string $doctorId): bool
+{
+    $owner = trim((string)($encounter['doctor_id'] ?? ''));
+    return $owner !== '' && $owner === $doctorId;
+}
+
+/** @return array{doctor_id:string,user_id:string}|null */
+function clinical_require_doctor_context(string $route): ?array
+{
+    $context = clinical_authenticated_doctor_context();
+    if ($context === null) {
+        clinical_send_response(['ok' => false, 'error' => 'unauthorized', 'message' => 'authentication required',
+            'data' => null, 'meta' => ['route' => $route]], 401);
+    }
+    return $context;
+}
+
+function clinical_require_doctor_patient_scope(PDO $pdo, string $doctorId, string $patientId, string $route): bool
+{
+    if (clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+        return true;
+    }
+    clinical_send_response(['ok' => false, 'error' => 'not_found', 'message' => 'patient no encontrado',
+        'data' => null, 'meta' => ['route' => $route]], 404);
+    return false;
+}
+
+function clinical_require_encounter_owner(array $encounter, string $doctorId, string $route): bool
+{
+    if (clinical_encounter_owned_by_doctor($encounter, $doctorId)) {
+        return true;
+    }
+    clinical_send_response(['ok' => false, 'error' => 'not_found', 'message' => 'encounter no encontrado',
+        'data' => null, 'meta' => ['route' => $route]], 404);
+    return false;
+}
+
+function clinical_validate_document_encounter_owner(PDO $pdo, array $encounterRow, string $patientId): void
+{
+    $context = clinical_authenticated_doctor_context();
+    if ($context === null) {
+        throw new ClinicalDocumentsPatientWriteException('unauthorized', 'authentication required', 401);
+    }
+    if (!clinical_encounter_owned_by_doctor($encounterRow, $context['doctor_id'])
+        || trim((string)($encounterRow['patient_id'] ?? '')) !== $patientId
+        || !clinical_has_active_doctor_patient_link($pdo, $context['doctor_id'], $patientId)) {
+        throw new ClinicalDocumentsPatientWriteException('forbidden', 'encounter owner mismatch', 403);
+    }
+}
+
 function clinical_is_local_host(): bool
 {
     $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? '')));
@@ -1745,6 +1813,14 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args, bool $requir
     }
 
     $doc = mxmed_build_clinical_document($args);
+    if ($requireCanonicalPatient && (int)($doc['context']['encounter_id'] ?? 0) > 0) {
+        clinical_encounters_ensure_schema($pdo);
+        $encounterRow = clinical_encounter_get_by_id($pdo, (int)$doc['context']['encounter_id']);
+        if (!is_array($encounterRow)) {
+            throw new ClinicalDocumentsPatientWriteException('not_found', 'encounter no encontrado', 404);
+        }
+        clinical_validate_document_encounter_owner($pdo, $encounterRow, trim((string)($doc['context']['patient_id'] ?? '')));
+    }
     $apptId = trim((string)($doc['context']['appointment_id'] ?? ''));
     if ($apptId !== '') {
         $payload = is_array($doc['content']['payload'] ?? null) ? $doc['content']['payload'] : [];
@@ -2314,6 +2390,9 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
             throw new InvalidArgumentException((string)($resolved['error_message'] ?? 'encounter inválido'));
         }
         $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+        if ($requireCanonicalPatient) {
+            clinical_validate_document_encounter_owner($pdo, $encounterRow, trim((string)($encounterRow['patient_id'] ?? '')));
+        }
         $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
         $patientId = trim((string)($encounterRow['patient_id'] ?? $patientId));
         $appointmentId = trim((string)($encounterRow['appointment_id'] ?? $appointmentId));
@@ -2321,6 +2400,14 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
 
     if ($patientId === '') {
         throw new InvalidArgumentException('patient_id requerido');
+    }
+    if ($requireCanonicalPatient && $encounterKey === '' && $encounterId > 0) {
+        clinical_encounters_ensure_schema($pdo);
+        $encounterRow = clinical_encounter_get_by_id($pdo, $encounterId);
+        if (!is_array($encounterRow)) {
+            throw new ClinicalDocumentsPatientWriteException('not_found', 'encounter no encontrado', 404);
+        }
+        clinical_validate_document_encounter_owner($pdo, $encounterRow, $patientId);
     }
     if ($requireCanonicalPatient) {
         $patientId = clinical_documents_validate_canonical_patient_id_for_write($pdo, $patientId);
@@ -2655,7 +2742,7 @@ function clinical_timeline_bundle_notes_map(PDO $pdo, string $patientId, array $
     return $notesByBundleId;
 }
 
-function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
+function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, string $doctorId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
 {
     $baseSelect = "
         SELECT
@@ -2667,8 +2754,12 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
             event_datetime,
             payload_json,
             hospital_stay_id
-        FROM clinical_documents
-        WHERE patient_id = :patient_id
+        FROM clinical_documents d
+        WHERE d.patient_id = :patient_id
+          AND (d.encounter_id IS NULL OR TRIM(d.encounter_id) = '' OR EXISTS (
+            SELECT 1 FROM clinical_encounters e
+            WHERE e.encounter_id = d.encounter_id AND e.doctor_id = :doctor_id
+          ))
     ";
     $baseSelectWithAppointment = "
         SELECT
@@ -2681,11 +2772,15 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
             appointment_id,
             payload_json,
             hospital_stay_id
-        FROM clinical_documents
-        WHERE patient_id = :patient_id
+        FROM clinical_documents d
+        WHERE d.patient_id = :patient_id
+          AND (d.encounter_id IS NULL OR TRIM(d.encounter_id) = '' OR EXISTS (
+            SELECT 1 FROM clinical_encounters e
+            WHERE e.encounter_id = d.encounter_id AND e.doctor_id = :doctor_id
+          ))
     ";
 
-    $paramsBase = [':patient_id' => $patientId];
+    $paramsBase = [':patient_id' => $patientId, ':doctor_id' => $doctorId];
     $cursorClause = '';
     $orderLimit = " ORDER BY event_datetime DESC, document_uuid DESC LIMIT :limit";
 
@@ -2709,8 +2804,11 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
         return is_array($rows) ? $rows : [];
     };
 
-    $sqlWithAppointment = $baseSelectWithAppointment . " AND (appointment_id IS NULL OR document_type = 'procedure') " . $cursorClause . $orderLimit;
+    $sqlWithAppointment = $baseSelectWithAppointment . " AND (d.appointment_id IS NULL OR (d.document_type = 'procedure' AND EXISTS (
+      SELECT 1 FROM agenda_appointments a WHERE a.appointment_id = d.appointment_id AND a.doctor_id = :doctor_id_for_appointment
+    ))) " . $cursorClause . $orderLimit;
     $params = $paramsBase;
+    $params[':doctor_id_for_appointment'] = $doctorId;
     if ($cursorDt !== null && $cursorUuid !== null) {
         $params[':cursor_dt'] = $cursorDt;
         $params[':cursor_uuid'] = $cursorUuid;
@@ -2727,6 +2825,7 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
 
     // Backward-compatible fallback for legacy schemas without appointment_id.
     $sqlLegacy = $baseSelect . $cursorClause . $orderLimit;
+    unset($params[':doctor_id_for_appointment']);
     return $run($sqlLegacy, $params);
 }
 
@@ -3011,16 +3110,17 @@ function clinical_timeline_extract_appointment_id(array $timelineItem): string
     return trim((string)$ref);
 }
 
-function clinical_timeline_encounters_fetch(PDO $pdo, string $patientId, int $limit): array
+function clinical_timeline_encounters_fetch(PDO $pdo, string $patientId, string $doctorId, int $limit): array
 {
     $stmt = $pdo->prepare("
         SELECT encounter_id, appointment_id, encounter_dt, encounter_type, status
         FROM clinical_encounters
-        WHERE patient_id = :patient_id
+        WHERE patient_id = :patient_id AND doctor_id = :doctor_id
         ORDER BY encounter_dt DESC, encounter_id DESC
         LIMIT :limit
     ");
     $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':doctor_id', $doctorId, PDO::PARAM_STR);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -3109,7 +3209,7 @@ function clinical_timeline_legacy_patient_ids(PDO $pdo, string $canonicalPatient
     return array_keys($result);
 }
 
-function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPatientIds, int $limit, string $direction): array
+function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPatientIds, string $doctorId, int $limit, string $direction): array
 {
     if ($legacyPatientIds === []) {
         return [];
@@ -3140,7 +3240,7 @@ function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPati
             created_by_role,
             created_by_id
         FROM agenda_appointments
-        WHERE patient_id IN (" . implode(',', $placeholders) . ")
+        WHERE patient_id IN (" . implode(',', $placeholders) . ") AND doctor_id = :doctor_id
         ORDER BY start_at {$orderDir}, appointment_id {$orderDir}
         LIMIT :limit
     ";
@@ -3149,6 +3249,7 @@ function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPati
     foreach ($params as $ph => $value) {
         $stmt->bindValue($ph, $value, PDO::PARAM_STR);
     }
+    $stmt->bindValue(':doctor_id', $doctorId, PDO::PARAM_STR);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
 
@@ -3196,6 +3297,7 @@ function clinical_encounters_ensure_schema(PDO $pdo): void
         CREATE TABLE IF NOT EXISTS clinical_encounters (
             encounter_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
             patient_id VARCHAR(64) NOT NULL,
+            doctor_id VARCHAR(64) DEFAULT NULL,
             appointment_id VARCHAR(64) DEFAULT NULL,
             encounter_dt DATETIME NOT NULL,
             encounter_type VARCHAR(32) NOT NULL DEFAULT 'outpatient',
@@ -3207,6 +3309,7 @@ function clinical_encounters_ensure_schema(PDO $pdo): void
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             KEY idx_patient_dt (patient_id, encounter_dt),
+            KEY idx_clinical_encounters_doctor_patient_status_dt (doctor_id, patient_id, status, encounter_dt),
             KEY idx_appt (appointment_id),
             CONSTRAINT fk_encounters_patient
                 FOREIGN KEY (patient_id) REFERENCES patients_patients (patient_id)
@@ -3216,6 +3319,8 @@ function clinical_encounters_ensure_schema(PDO $pdo): void
     ");
 
     $alterStatements = [
+        "ALTER TABLE clinical_encounters ADD COLUMN doctor_id VARCHAR(64) NULL AFTER patient_id",
+        "ALTER TABLE clinical_encounters ADD KEY idx_clinical_encounters_doctor_patient_status_dt (doctor_id, patient_id, status, encounter_dt)",
         "ALTER TABLE clinical_encounters ADD COLUMN opened_by_user_id VARCHAR(64) NULL AFTER encounter_type",
         "ALTER TABLE clinical_encounters MODIFY COLUMN status VARCHAR(32) NOT NULL DEFAULT 'open'",
         "ALTER TABLE clinical_encounters ADD COLUMN closed_at DATETIME NULL AFTER status",
@@ -3246,7 +3351,7 @@ function clinical_encounter_get_by_id(PDO $pdo, int $encounterId): ?array
 {
     $stmt = $pdo->prepare("
         SELECT
-            encounter_id, patient_id, appointment_id, encounter_dt,
+            encounter_id, patient_id, doctor_id, appointment_id, encounter_dt,
             encounter_type, opened_by_user_id, status, closed_at, closed_by_user_id, auto_note_uuid_final, created_at, updated_at
         FROM clinical_encounters
         WHERE encounter_id = :encounter_id
@@ -3262,7 +3367,7 @@ function clinical_encounter_get_latest_by_appointment(PDO $pdo, string $appointm
 {
     $stmt = $pdo->prepare("
         SELECT
-            encounter_id, patient_id, appointment_id, encounter_dt,
+            encounter_id, patient_id, doctor_id, appointment_id, encounter_dt,
             encounter_type, opened_by_user_id, status, closed_at, closed_by_user_id, auto_note_uuid_final, created_at, updated_at
         FROM clinical_encounters
         WHERE appointment_id = :appointment_id
@@ -3380,19 +3485,28 @@ function clinical_resolve_encounter_key(PDO $pdo, string $encounterKey): array
 function clinical_encounters_create(
     PDO $pdo,
     string $patientId,
+    string $doctorId,
     ?string $appointmentId,
     string $encounterDt,
     string $encounterType,
     string $status,
     ?string $openedByUserId = null
 ): array {
+    $doctorId = trim($doctorId);
+    if ($doctorId === '' || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+        throw new InvalidArgumentException('doctor patient link required');
+    }
+    if ($appointmentId !== null && $appointmentId !== '' && !clinical_appointment_matches_encounter_owner($pdo, $appointmentId, $doctorId, $patientId)) {
+        throw new InvalidArgumentException('appointment doctor/patient mismatch');
+    }
     $stmt = $pdo->prepare("
         INSERT INTO clinical_encounters
-            (patient_id, appointment_id, encounter_dt, encounter_type, opened_by_user_id, status, created_at, updated_at)
+            (patient_id, doctor_id, appointment_id, encounter_dt, encounter_type, opened_by_user_id, status, created_at, updated_at)
         VALUES
-            (:patient_id, :appointment_id, :encounter_dt, :encounter_type, :opened_by_user_id, :status, NOW(), NOW())
+            (:patient_id, :doctor_id, :appointment_id, :encounter_dt, :encounter_type, :opened_by_user_id, :status, NOW(), NOW())
     ");
     $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':doctor_id', $doctorId, PDO::PARAM_STR);
     if ($appointmentId === null || $appointmentId === '') {
         $stmt->bindValue(':appointment_id', null, PDO::PARAM_NULL);
     } else {
@@ -3417,44 +3531,47 @@ function clinical_encounters_create(
     return $row;
 }
 
-function clinical_encounters_list_fetch(PDO $pdo, string $patientId, int $limit): array
+function clinical_encounters_list_fetch(PDO $pdo, string $patientId, string $doctorId, int $limit): array
 {
     $stmt = $pdo->prepare("
         SELECT
-            encounter_id, patient_id, appointment_id, encounter_dt,
+            encounter_id, patient_id, doctor_id, appointment_id, encounter_dt,
             encounter_type, opened_by_user_id, status, closed_at, closed_by_user_id, auto_note_uuid_final, created_at, updated_at
         FROM clinical_encounters
-        WHERE patient_id = :patient_id
+        WHERE patient_id = :patient_id AND doctor_id = :doctor_id
         ORDER BY encounter_dt DESC, encounter_id DESC
         LIMIT :limit
     ");
     $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':doctor_id', $doctorId, PDO::PARAM_STR);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     return is_array($rows) ? $rows : [];
 }
 
-function clinical_encounter_open_fetch(PDO $pdo, string $patientId, string $openedByUserId): ?array
+function clinical_encounter_open_fetch(PDO $pdo, string $patientId, string $doctorId, string $openedByUserId): ?array
 {
     $patientId = trim($patientId);
     $openedByUserId = trim($openedByUserId);
-    if ($patientId === '' || $openedByUserId === '') {
+    if ($patientId === '' || $doctorId === '' || $openedByUserId === '') {
         return null;
     }
 
     $stmt = $pdo->prepare("
         SELECT
-            encounter_id, patient_id, appointment_id, encounter_dt,
+            encounter_id, patient_id, doctor_id, appointment_id, encounter_dt,
             encounter_type, opened_by_user_id, status, closed_at, closed_by_user_id, auto_note_uuid_final, created_at, updated_at
         FROM clinical_encounters
         WHERE patient_id = :patient_id
+          AND doctor_id = :doctor_id
           AND opened_by_user_id = :opened_by_user_id
           AND LOWER(TRIM(status)) = 'open'
         ORDER BY encounter_dt DESC, encounter_id DESC
         LIMIT 1
     ");
     $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':doctor_id', $doctorId, PDO::PARAM_STR);
     $stmt->bindValue(':opened_by_user_id', $openedByUserId, PDO::PARAM_STR);
     $stmt->execute();
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -3877,6 +3994,9 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('patients/{patient_id}/timeline');
+        if ($doctorContext === null) return;
+
         $limit = 30;
         $limitRaw = $_GET['limit'] ?? null;
         if ($limitRaw !== null && trim((string)$limitRaw) !== '') {
@@ -3989,14 +4109,15 @@ try {
                 $pdo = clinical_documents_pdo();
                 clinical_cases_ensure_schema($pdo);
                 clinical_encounters_ensure_schema($pdo);
+                if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], $patientId, 'patients/{patient_id}/timeline')) return;
                 $activeCase = clinical_cases_active_fetch($pdo, $patientId);
                 if ($includeClinical) {
-                    $encounters = clinical_timeline_encounters_fetch($pdo, $patientId, $limit);
-                    $rows = clinical_timeline_documents_fetch($pdo, $patientId, $limit, $cursorDt, $cursorUuid);
+                    $encounters = clinical_timeline_encounters_fetch($pdo, $patientId, $doctorContext['doctor_id'], $limit);
+                    $rows = clinical_timeline_documents_fetch($pdo, $patientId, $doctorContext['doctor_id'], $limit, $cursorDt, $cursorUuid);
                 }
                 if ($includeAgenda) {
                     $legacyPatientIds = clinical_timeline_legacy_patient_ids($pdo, $patientId);
-                    $agendaAppointments = clinical_timeline_agenda_appointments_fetch($pdo, $legacyPatientIds, $limit, $direction);
+                    $agendaAppointments = clinical_timeline_agenda_appointments_fetch($pdo, $legacyPatientIds, $doctorContext['doctor_id'], $limit, $direction);
                 }
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
@@ -5402,6 +5523,9 @@ try {
             return;
         }
 
+        $doctorContext = clinical_require_doctor_context('debug/seed_encounter');
+        if ($doctorContext === null) return;
+
         $body = clinical_read_json_body();
         if (($body['ok'] ?? false) !== true) {
             clinical_send_response([
@@ -5416,7 +5540,7 @@ try {
 
         $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
         $patientId = trim((string)($payload['patient_id'] ?? ''));
-        $appointmentId = trim((string)($payload['appointment_id'] ?? '9001'));
+        $appointmentId = trim((string)($payload['appointment_id'] ?? ''));
         $encounterDt = trim((string)($payload['encounter_dt'] ?? ''));
         $encounterType = trim((string)($payload['encounter_type'] ?? 'outpatient'));
         $status = trim((string)($payload['status'] ?? 'open'));
@@ -5464,7 +5588,14 @@ try {
                 return;
             }
 
-            $created = clinical_encounters_create($pdo, $patientId, ($appointmentId !== '' ? $appointmentId : null), $encounterDt, $encounterType, $status);
+            if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], $patientId, 'debug/seed_encounter')) return;
+            if ($appointmentId !== '' && !clinical_appointment_matches_encounter_owner($pdo, $appointmentId, $doctorContext['doctor_id'], $patientId)) {
+                clinical_send_response(['ok' => false, 'error' => 'forbidden', 'message' => 'appointment doctor/patient mismatch',
+                    'data' => null, 'meta' => ['route' => 'debug/seed_encounter']], 403);
+                return;
+            }
+
+            $created = clinical_encounters_create($pdo, $patientId, $doctorContext['doctor_id'], ($appointmentId !== '' ? $appointmentId : null), $encounterDt, $encounterType, $status, $doctorContext['user_id']);
             $encounterId = (int)($created['encounter_id'] ?? 0);
             $appt = trim((string)($created['appointment_id'] ?? ''));
             $key = clinical_encounter_key($encounterId, $appt);
@@ -5487,6 +5618,7 @@ try {
             'data' => [
                 'encounter_id' => $encounterId,
                 'patient_id' => $patientId,
+                'doctor_id' => $doctorContext['doctor_id'],
                 'appointment_id' => ($appt !== '' ? $appt : null),
                 'encounter_dt' => $encounterDt,
                 'encounter_type' => $encounterType,
@@ -5572,17 +5704,9 @@ try {
             return;
         }
 
-        $currentUserId = clinical_request_actor_user_id_strict();
-        if ($currentUserId === '') {
-            clinical_send_response([
-                'ok' => false,
-                'error' => ['code' => 'bad_request', 'message' => 'missing user_id'],
-                'message' => 'missing user_id',
-                'data' => null,
-                'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active'],
-            ], 400);
-            return;
-        }
+        $context = clinical_require_doctor_context('patients/{patient_id}/encounters/active');
+        if ($context === null) return;
+        $currentUserId = $context['user_id'];
 
         try {
             $pdo = clinical_documents_pdo();
@@ -5597,7 +5721,8 @@ try {
                 ], 404);
                 return;
             }
-            $active = clinical_encounter_open_fetch($pdo, $patientId, $currentUserId);
+            if (!clinical_require_doctor_patient_scope($pdo, $context['doctor_id'], $patientId, 'patients/{patient_id}/encounters/active')) return;
+            $active = clinical_encounter_open_fetch($pdo, $patientId, $context['doctor_id'], $currentUserId);
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());
             clinical_send_response([
@@ -5628,6 +5753,7 @@ try {
             'data' => [
                 'encounter_key' => clinical_encounter_key((int)($active['encounter_id'] ?? 0), (string)($active['appointment_id'] ?? '')),
                 'patient_id' => (string)($active['patient_id'] ?? ''),
+                'doctor_id' => (string)($active['doctor_id'] ?? ''),
                 'appointment_id' => (($active['appointment_id'] ?? null) !== '' ? $active['appointment_id'] : null),
                 'event_datetime' => (string)($active['encounter_dt'] ?? ''),
                 'status' => 'open',
@@ -5662,6 +5788,9 @@ try {
             return;
         }
 
+        $context = clinical_require_doctor_context('patients/{patient_id}/encounters');
+        if ($context === null) return;
+
         try {
             $pdo = clinical_documents_pdo();
             clinical_encounters_ensure_schema($pdo);
@@ -5675,6 +5804,7 @@ try {
                 ], 404);
                 return;
             }
+            if (!clinical_require_doctor_patient_scope($pdo, $context['doctor_id'], $patientId, 'patients/{patient_id}/encounters')) return;
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());
             clinical_send_response([
@@ -5716,7 +5846,7 @@ try {
             }
 
             try {
-                $list = clinical_encounters_list_fetch($pdo, $patientId, $limit);
+                $list = clinical_encounters_list_fetch($pdo, $patientId, $context['doctor_id'], $limit);
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
@@ -5752,7 +5882,7 @@ try {
         }
 
         $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
-        $openedByUserId = clinical_request_actor_user_id_strict($payload);
+        $openedByUserId = $context['user_id'];
         $encounterDt = trim((string)($payload['encounter_dt'] ?? ''));
         $appointmentId = trim((string)($payload['appointment_id'] ?? ''));
         $encounterType = trim((string)($payload['encounter_type'] ?? 'outpatient'));
@@ -5770,6 +5900,11 @@ try {
         }
         if (mb_strlen($appointmentId) > 64) {
             $appointmentId = mb_substr($appointmentId, 0, 64);
+        }
+        if ($appointmentId !== '' && !clinical_appointment_matches_encounter_owner($pdo, $appointmentId, $context['doctor_id'], $patientId)) {
+            clinical_send_response(['ok' => false, 'error' => 'forbidden', 'message' => 'appointment doctor/patient mismatch',
+                'data' => null, 'meta' => ['route' => 'patients/{patient_id}/encounters']], 403);
+            return;
         }
         if ($encounterType === '') {
             $encounterType = 'outpatient';
@@ -5797,7 +5932,7 @@ try {
 
         if (strtolower($status) === 'open') {
             try {
-                $existingOpen = clinical_encounter_open_fetch($pdo, $patientId, $openedByUserId);
+                $existingOpen = clinical_encounter_open_fetch($pdo, $patientId, $context['doctor_id'], $openedByUserId);
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
@@ -5829,6 +5964,7 @@ try {
             $created = clinical_encounters_create(
                 $pdo,
                 $patientId,
+                $context['doctor_id'],
                 ($appointmentId !== '' ? $appointmentId : null),
                 $encounterDt,
                 $encounterType,
@@ -6307,9 +6443,9 @@ try {
     if (($segments[0] ?? '') === 'encounters') {
         if (count($segments) === 3 && ($segments[2] ?? '') === 'finalize' && $method === 'POST') {
             $encounterKey = urldecode(trim((string)$segments[1]));
-            $body = clinical_read_json_body();
-            $payload = (($body['ok'] ?? false) === true && is_array($body['data'] ?? null)) ? $body['data'] : [];
-            $closedByUserId = clinical_request_actor_user_id($payload);
+            $doctorContext = clinical_require_doctor_context('encounters/{encounter_key}/finalize');
+            if ($doctorContext === null) return;
+            $closedByUserId = $doctorContext['user_id'];
 
             try {
                 $pdo = clinical_documents_pdo();
@@ -6327,6 +6463,8 @@ try {
                     return;
                 }
                 $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+                if (!clinical_require_encounter_owner($encounterRow, $doctorContext['doctor_id'], 'encounters/{encounter_key}/finalize')) return;
+                if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], (string)($encounterRow['patient_id'] ?? ''), 'encounters/{encounter_key}/finalize')) return;
                 $finalized = clinical_encounter_finalize($pdo, $encounterRow, $closedByUserId);
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
@@ -6352,6 +6490,8 @@ try {
 
         if (count($segments) === 3 && ($segments[2] ?? '') === 'documents' && $method === 'POST') {
             $encounterKey = urldecode(trim((string)$segments[1]));
+            $doctorContext = clinical_require_doctor_context('encounters/{encounter_key}/documents');
+            if ($doctorContext === null) return;
             $contentType = strtolower((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? ''));
             $isMultipart = (strpos($contentType, 'multipart/form-data') !== false);
             $payload = [];
@@ -6459,6 +6599,8 @@ try {
                 }
 
                 $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+                if (!clinical_require_encounter_owner($encounterRow, $doctorContext['doctor_id'], 'encounters/{encounter_key}/documents')) return;
+                if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], (string)($encounterRow['patient_id'] ?? ''), 'encounters/{encounter_key}/documents')) return;
                 $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
                 $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
                 $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
@@ -6610,6 +6752,8 @@ try {
 
         if (count($segments) === 2 && $method === 'GET') {
             $encounterKey = urldecode(trim((string)$segments[1]));
+            $doctorContext = clinical_require_doctor_context('encounters/{encounter_key}');
+            if ($doctorContext === null) return;
             $appointmentId = null;
             $patientId = null;
             $eventDatetime = null;
@@ -6634,6 +6778,8 @@ try {
                 }
 
                 $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+                if (!clinical_require_encounter_owner($encounterRow, $doctorContext['doctor_id'], 'encounters/{encounter_key}')) return;
+                if (!clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], (string)($encounterRow['patient_id'] ?? ''), 'encounters/{encounter_key}')) return;
                 $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
                 $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
                 $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
@@ -6703,6 +6849,7 @@ try {
                     'encounter_id' => $encounterId,
                     'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
                     'patient_id' => $patientId,
+                    'doctor_id' => (string)($encounterRow['doctor_id'] ?? ''),
                     'event_datetime' => $eventDatetime,
                     'status' => (string)($encounterRow['status'] ?? 'open'),
                     'closed_at' => ($encounterRow['closed_at'] ?? null),
@@ -8277,6 +8424,10 @@ try {
                         ], 400);
                         return;
                     }
+                    $replicationContext = clinical_require_doctor_context('documents/{uuid}/replicate');
+                    if ($replicationContext === null) return;
+                    if (!clinical_require_encounter_owner($encounterRow, $replicationContext['doctor_id'], 'documents/{uuid}/replicate')) return;
+                    if (!clinical_require_doctor_patient_scope($pdo, $replicationContext['doctor_id'], $patientId, 'documents/{uuid}/replicate')) return;
                     $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
                     $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
                 }
