@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__.'/../_lib/db.php';
 require_once __DIR__.'/../../modules/media/services/GallerySessionScope.php';
 require_once __DIR__.'/../../modules/billing/services/IssuerProfileService.php';
+require_once __DIR__.'/../../modules/billing/services/IssuerPreferencesService.php';
 require_once __DIR__.'/../../modules/billing/services/CsdCredentialService.php';
 require_once __DIR__.'/../../modules/billing/services/InvoiceDraftService.php';
 require_once __DIR__.'/../../modules/billing/services/CfdiPreStampValidator.php';
@@ -13,6 +14,7 @@ require_once __DIR__.'/../../modules/billing/services/BillingIssuanceAudit.php';
 use Billing\Services\SatCfdiCatalog;
 use Billing\Services\SatIssuanceCatalog;
 use Billing\Services\IssuerProfileService;
+use Billing\Services\IssuerPreferencesService;
 use Billing\Services\InvoiceDraftService;
 use Billing\Services\CfdiPreStampValidator;
 use Billing\Services\CsdCredentialService;
@@ -36,11 +38,13 @@ session_write_close();
 
 try {
     $pdo=mxmed_pdo();$doctorId=$scope['doctor_id'];$fiscal=new SatCfdiCatalog();$codes=new SatIssuanceCatalog();
-    $issuers=new IssuerProfileService($pdo,$fiscal);$drafts=new InvoiceDraftService($pdo,$fiscal,$codes);
+    $issuers=new IssuerProfileService($pdo,$fiscal);$preferences=new IssuerPreferencesService($pdo,$issuers);$drafts=new InvoiceDraftService($pdo,$fiscal,$codes);
     $action=(string)($_GET['action']??'');
     if($method==='GET'){
         if(array_diff(array_keys($_GET),['action','issuer_id','draft_id']))issuanceReply(400,['ok'=>false,'error'=>'invalid_request']);
         if($action==='bootstrap')issuanceReply(200,['ok'=>true,'data'=>['csrf_token'=>$csrf,'issuers'=>$issuers->list($doctorId),
+            'issuer_preferences'=>$preferences->list($doctorId),'default_concept_suggestion'=>$preferences->suggestion($doctorId),
+            'professional_logo_available'=>$preferences->professionalLogoAvailable($doctorId),
             'drafts'=>$drafts->list($doctorId),'sat'=>$codes->publicData(),'fiscal'=>$fiscal->publicData(),
             'pac_provider_selected'=>false,'certification_enabled'=>false,'csd_registration_available'=>(bool)getenv('MXMED_CSD_ENCRYPTION_KEY')]]);
         if($action==='issuer_csd' && is_string($_GET['issuer_id']??null)){
@@ -83,6 +87,7 @@ try {
     if($action==='update_issuer' && $method==='PUT' && is_string($body['issuer_id']??null) && is_array($body['profile']??null))issuanceReply(200,['ok'=>true,'data'=>['issuer'=>$issuers->update($doctorId,$body['issuer_id'],$body['profile'])]]);
     if($action==='default_issuer' && $method==='POST' && is_string($body['issuer_id']??null))issuanceReply(200,['ok'=>true,'data'=>['issuer'=>$issuers->makeDefault($doctorId,$body['issuer_id'])]]);
     if($action==='archive_issuer' && $method==='DELETE' && is_string($body['issuer_id']??null)){$issuers->archive($doctorId,$body['issuer_id']);issuanceReply(200,['ok'=>true,'data'=>['archived'=>true]]);}
+    if($action==='save_issuer_preferences' && $method==='PUT' && is_string($body['issuer_id']??null) && is_array($body['preferences']??null))issuanceReply(200,['ok'=>true,'data'=>['preferences'=>$preferences->save($doctorId,$body['issuer_id'],$body['preferences'])]]);
     if($action==='create_draft' && $method==='POST' && is_array($body['draft']??null))issuanceReply(201,['ok'=>true,'data'=>['draft'=>$drafts->save($doctorId,$body['draft'])]]);
     if($action==='update_draft' && $method==='PUT' && is_string($body['draft_id']??null) && is_array($body['draft']??null))issuanceReply(200,['ok'=>true,'data'=>['draft'=>$drafts->save($doctorId,$body['draft'],$body['draft_id'])]]);
     if($action==='certify' && $method==='POST'){
