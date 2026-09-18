@@ -22953,12 +22953,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   height:auto;
   border-radius:0;
   background:transparent;
-  color:#0a6b82;
 }
-#p-expediente #t-datos .dg-gender-item:has(#pac-gen-f) .dg-gender-ico{color:#8b4c81}
-#p-expediente #t-datos .dg-gender-item:has(#pac-gen-o) .dg-gender-ico{color:#5f8291}
-#p-expediente #t-datos .dg-gender-ico .material-symbols-outlined{
-  font-size:29px;
+#p-expediente #t-datos .dg-gender-inline{
+  flex-wrap:wrap;
 }
 
 @media (max-width:1199.98px){
