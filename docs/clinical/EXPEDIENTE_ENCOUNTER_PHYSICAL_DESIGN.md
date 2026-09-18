@@ -1,23 +1,38 @@
 # CLIN-REFORM-PHASE2-PHYS01 — Diseño físico de integridad de consulta
 
 ```text
-STATUS=FINAL_REPAIRED_READY_FOR_DIRECTOR_REVIEW
+STATUS=ACCEPTED
 PHASE_2_STATUS=IN_PROGRESS
-PHASE_2_PHYS01=FINAL_REPAIRED_READY_FOR_DIRECTOR_REVIEW
-PHASE_2_PHYS01A=INCORPORATED
-PHASE_2_PHYS01B=READY_FOR_DIRECTOR_REVIEW
+PHASE_2_PHYS01=ACCEPTED
+PHASE_2_PHYS01A=ACCEPTED
+PHASE_2_PHYS01B=ACCEPTED
+PHYSICAL_DESIGN_ACCEPTED=true
 ACCEPTED_CONCEPTUAL_BASELINE=4161120ad2c8a54b3e1455019f4ba994a6a9fd26
 PHASE_2_CONTRACT01=ACCEPTED
 PHASE_2_CONTRACT01A=ACCEPTED
 PHYSICAL_DESIGN_CREATED=true
-IMPLEMENTATION_AUTHORIZED=false
+G1_PHYSICAL_SCHEMA_DESIGN_ACCEPTED=true
+G2_API_CONTRACT_ACCEPTED=true
+G3_LEGACY_PLAN_ACCEPTED=true
+G4_GET_DDL_REMOVAL_PLAN_ACCEPTED=true
+G5_SAFE_RETURN_ACCEPTED=true
+G6_SYNTHETIC_QA_PLAN_ACCEPTED=true
+PHASE_2_IMPL01_AUTHORIZED=true
+PHASE_2_IMPL01_STATUS=NOT_STARTED
+PHASE_2_IMPL01_SCOPE=REPOSITORY_IMPLEMENTATION_ONLY
+IMPLEMENTATION_AUTHORIZED=REPOSITORY_ONLY_NOT_EXECUTION
+IMPLEMENTATION_REPOSITORY_CHANGES_AUTHORIZED=true
+DB_MIGRATION_EXECUTION_AUTHORIZED=false
 WRITE_VALIDATION_AUTHORIZED=false
 WRITE_VALIDATION_EXECUTED=false
+RUNTIME_CUTOVER_AUTHORIZED=false
+PRODUCTION_EXECUTION_AUTHORIZED=false
+MIGRATIONS_EXECUTED=NONE
 VALIDATION_SCENARIOS_COUNT=35
 DIRECTOR_DECISIONS_REQUIRED_COUNT=0
 ```
 
-Este documento propone la arquitectura física de los contratos [CONTRACT01/CONTRACT01A](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md), sujeta a aceptación del Director/asistente. El [plan vivo](PLAN_REFORMA_EXPEDIENTE_CLINICO.md), el [modelo conceptual de PHASE 1](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md), la [auditoría de PHASE 0](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md) y el [Plan Maestro](../PLAN_MAESTRO_MXMED.md) conservan sus respectivas autoridades. Aquí sólo se inspeccionaron código, metadatos y agregados locales mediante lectura; no se ejecutó DDL, migración, endpoint clínico ni prueba con escrituras. Las definiciones SQL son **contratos de diseño**, no migraciones listas para ejecutar.
+El Director/asistente aceptó la arquitectura física de PHYS01, PHYS01A y PHYS01B para los contratos [CONTRACT01/CONTRACT01A](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md). El [plan vivo](PLAN_REFORMA_EXPEDIENTE_CLINICO.md), el [modelo conceptual de PHASE 1](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md), la [auditoría de PHASE 0](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md) y el [Plan Maestro](../PLAN_MAESTRO_MXMED.md) conservan sus respectivas autoridades. Para este diseño sólo se inspeccionaron código, metadatos y agregados locales mediante lectura; no se ejecutó DDL, migración, endpoint clínico ni prueba con escrituras. Las definiciones SQL son **contratos de diseño aceptados**, no migraciones listas para ejecutar.
 
 ## Motor, esquema y límites comprobados
 
@@ -177,4 +192,10 @@ Fixture aislado: médico D, operador A y operador B autorizados para D, médico 
 
 T04 y T11 usarán **dos clientes HTTP independientes, dos sesiones/actores y dos conexiones InnoDB** sincronizados con una barrera de prueba instrumentada antes del INSERT/lock; lanzar ambos simultáneamente, conservar timestamps de inicio/commit, request IDs, código/response saneado y query de verificación posterior. Repetir con doble clic, retry tras timeout y un deadlock inducido controladamente en QA desechable; no basta una secuencia de dos llamadas. T26 usa la misma barrera entre FINALIZE y VOID. Si falla cualquier invariante, detener escrituras, guardar evidencia y activar retorno/limpieza del entorno aislado. La instancia local inspeccionada hoy **no** es ese entorno autorizado para QA.
 
-Gates previos a autorización de implementación: `G1_PHYSICAL_SCHEMA_DESIGN_ACCEPTED`, `G2_API_CONTRACT_ACCEPTED`, `G3_LEGACY_PLAN_ACCEPTED`, `G4_GET_DDL_REMOVAL_PLAN_ACCEPTED`, `G5_SAFE_RETURN_ACCEPTED`, `G6_SYNTHETIC_QA_PLAN_ACCEPTED`. Además, la versión real del motor destino debe pasar prueba desechable de columna generada, índice único con NULL, CHECK/trigger, FKs, migración sobre copia e inicio/finalización concurrentes; si falla, se vuelve al diseño sin ejecutar en producción. La elección entre técnicas de índice, storage y locks no cambia semántica clínica ni requiere nueva decisión del Director. `DIRECTOR_DECISIONS_REQUIRED=NONE`; cualquier hallazgo posterior que cambie interpretación histórica o flujo médico vuelve al Director antes de implementarse.
+Los gates de **diseño** `G1_PHYSICAL_SCHEMA_DESIGN_ACCEPTED`, `G2_API_CONTRACT_ACCEPTED`, `G3_LEGACY_PLAN_ACCEPTED`, `G4_GET_DDL_REMOVAL_PLAN_ACCEPTED`, `G5_SAFE_RETURN_ACCEPTED` y `G6_SYNTHETIC_QA_PLAN_ACCEPTED` están aceptados. Esto no acredita migración aplicada ni comportamiento físicamente probado. La versión real del motor destino aún debe pasar, bajo autorización posterior, prueba desechable de columna generada, índice único con NULL, CHECK/trigger, FKs, migración sobre copia e inicio/finalización concurrentes; si falla, se vuelve al diseño sin ejecutar en producción. La elección entre técnicas de índice, storage y locks no cambia semántica clínica ni requiere nueva decisión del Director. `DIRECTOR_DECISIONS_REQUIRED=NONE`; cualquier hallazgo posterior que cambie interpretación histórica o flujo médico vuelve al Director antes de implementarse.
+
+## J. Aceptación PHYS01C y límite de la siguiente etapa
+
+El diseño aceptado conserva `clinical_encounters` como autoridad canónica; OPEN/CLOSED/VOIDED y una OPEN por médico/paciente mediante candidato `open_guard` nullable más índice único; START idempotente, reanudación multioperador, FINALIZE/VOID transaccionales y relación única de nota final; secciones con `payload_schema_version`, observaciones estructuradas con `row_version`, exploración explícita `NORMAL`/`ABNORMAL`/ausencia `NOT_REVIEWED`, enmiendas append-only, lineage documental y corrección histórica de cita. También acepta resultados nuevos relacionados con CLOSED sin reabrir, aislamiento legacy sin inferir médico, retiro de DDL desde GET, FK históricas no destructivas, ocho etapas M0–M7 y T01–T35 **diseñadas, no ejecutadas**.
+
+`PHASE2-IMPL01` queda autorizado para **crear y revisar artefactos de repositorio**: migraciones versionadas sin ejecutarlas, repositorios/APIs y guards detrás de activación controlada, ledger de idempotencia, validadores/modelos, adaptadores de compatibilidad y pruebas puras o harness futuro sin escrituras. La UI actual de Historia/Exploración no cambia a la nueva persistencia en ese capítulo. La ejecución de migraciones en la DB de trabajo, la validación con escrituras, la activación del cutover y cualquier ejecución productiva siguen sin autorización. PHASE 2 permanece `IN_PROGRESS`; IMPL01 está `NOT_STARTED` hasta su siguiente capítulo y requerirá revisión de código del Director/asistente antes de avanzar. Los gates de diseño aceptados no levantan estas prohibiciones de ejecución.
