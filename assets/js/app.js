@@ -1752,6 +1752,14 @@ console.info('app.js loaded :: 20251123a');
       '--profile-consultorio-card-active-border': theme.consultorio_card_active_border
     };
     Object.entries(vars).forEach(([name, value])=> els.themeAdmin.style.setProperty(name, String(value || '')));
+    const patientHeader = document.querySelector('#p-expediente [data-role="exp-header"]');
+    if(patientHeader){
+      patientHeader.style.setProperty('--exp-header-theme', theme.accent);
+      patientHeader.style.setProperty('--exp-header-theme-ink', theme.accent_contrast);
+      patientHeader.style.setProperty('--exp-header-theme-strong', theme.accent_strong);
+      // The default teal's canonical white foreground is below 4.5:1 on its strong shade.
+      patientHeader.style.setProperty('--exp-header-theme-strong-ink', theme.key === 'mxmed_teal' ? '#000000' : theme.on_accent_strong);
+    }
   }
 
   function selectTheme(key, options = {}){
@@ -37770,6 +37778,7 @@ console.info('app.js loaded :: 20251123a');
         <span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">description</span>
         <div class="mx-ch-enc-wrap">
 	          <span class="ne-rx-ch-value" data-clinical-field="encounter_status">Sin consulta activa</span>
+	          <span class="mx-ch-date-inline"><span>Hoy · </span><span data-clinical-field="current_date">No registrada</span></span>
 	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="encounter">Iniciar consulta</button>
 	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="draft-search">Buscar paciente</button>
 	        </div>
@@ -37871,6 +37880,7 @@ console.info('app.js loaded :: 20251123a');
     container.classList.toggle('mx-clinical-header--empty', isEmptyState);
     container.classList.toggle('mx-clinical-header--new-patient', isNewPatientMode);
     container.classList.toggle('mx-clinical-header--new-draft', isDraftPatientMode);
+    if(opts.layout === 'shell') container.closest('.mx-clinical-subheader')?.classList.toggle('mx-exp-header--active', isActivePatientMode);
     container.setAttribute('data-clinical-empty-state', isEmptyState ? '1' : '0');
     container.setAttribute('data-clinical-empty-mode', isEmptyState ? (isNewPatientMode ? 'new-patient' : 'initial') : (isDraftPatientMode ? 'new-draft' : 'active'));
     const emptyStateNode = container.querySelector('[data-role="exp-empty-state"]');
@@ -37937,9 +37947,9 @@ console.info('app.js loaded :: 20251123a');
     const normalized = normalizeClinicalHeaderData(headerData);
     const fields = Object.keys(CLINICAL_HEADER_EMPTY_STATE);
     fields.forEach((field) => {
-      const node = container.querySelector(`[data-clinical-field="${field}"]`);
-      if (!node) return;
-      node.textContent = normalized[field];
+      container.querySelectorAll(`[data-clinical-field="${field}"]`).forEach((node) => {
+        node.textContent = normalized[field];
+      });
     });
     const actionBtn = container.querySelector('[data-clinical-action="encounter"]');
     if (actionBtn) {
