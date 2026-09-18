@@ -2,15 +2,16 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=edfa1326c602a1efcd3c94cfb705c582a170516e
+CURRENT_ACCEPTED_HEAD=7a4a29936135d689b6386bff5ac686e42359c145
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_0_CURRENT_STATE_AUDIT
 CURRENT_OBJECTIVE=Auditar y mapear el flujo vigente del Expediente Clínico antes de implementar su reforma estructural de UX.
-NEXT_AUTHORIZED_STEP=Execute the read-only/current-state functional audit of Expediente Clínico.
+NEXT_AUTHORIZED_STEP=Director/assistant review of PHASE 0 current-state audit findings.
 CLIN-REFORM-PLAN01=ACCEPTED
+PHASE_0_AUDIT01=READY_FOR_DIRECTOR_REVIEW
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en el commit indicado arriba. La auditoría de PHASE 0 queda autorizada como siguiente paso, en un capítulo posterior a la aceptación de esta sincronización; no se inicia aquí. **PLAN01 y PLAN01A no autorizan implementación, cambios de runtime, esquema ni datos.**
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`; `CURRENT_ACCEPTED_HEAD` registra el baseline aceptado inmediatamente anterior a la auditoría. [CLIN-REFORM-PHASE0-AUDIT01](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md) está listo para revisión en el commit `b31e3aeea63a535ddb0074dbd2d5d3b69be310ef`. **PHASE 0 sigue en progreso:** la entrega de la auditoría no equivale a su aceptación ni autoriza implementación, cambios de runtime, esquema o datos.
 
 ## Visión y problema
 
@@ -132,9 +133,9 @@ No se crea un expediente de paciente separado por especialidad. Los siguientes w
 - [ ] **PHASE 5 — CLINICAL ↔ ADMINISTRATIVE RELATIONSHIP** · `NOT_STARTED`. Permitir localizar cita, pago, recibo y factura sin fusionar autoridades financieras y clínicas. **Salida:** el estado administrativo relacionado con una consulta es localizable y mantiene la separación de dominio.
 - [ ] **PHASE 6 — SPECIALTY MODULES** · `NOT_STARTED`. Implementar progresivamente extensiones validadas **después** de estabilizar el núcleo de consulta. Cada especialidad exige análisis de flujo, validación clínica, contratos de datos y UX, estrategia histórica/versionado y QA.
 
-### Primer entregable futuro de PHASE 0
+### Entregable de auditoría de PHASE 0 — pendiente de revisión
 
-El siguiente capítulo, de **sólo lectura**, producirá una matriz de estado actual con una fila por cada sección: Datos Generales, Exploración Física, Historia Clínica, Historial de Atención, Estudios Diagnóstico, Tratamiento / Recetas, Manejo Hospitalario, Documentos Clínicos y Archivo.
+El [capítulo CLIN-REFORM-PHASE0-AUDIT01](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md), de **sólo lectura para el producto**, presenta una matriz de estado actual con una fila por cada sección: Datos Generales, Exploración Física, Historia Clínica, Historial de Atención, Estudios Diagnóstico, Tratamiento / Recetas, Manejo Hospitalario, Documentos Clínicos y Archivo. Estado: `READY_FOR_DIRECTOR_REVIEW`; no se marca PHASE 0 completa.
 
 Cada fila deberá incluir exactamente estas columnas; un dato no comprobado se marcará `NO_VERIFICADO` y no se inferirá:
 
@@ -145,7 +146,7 @@ CASE_SCOPED | PERSISTS_AFTER_RELOAD | BEHAVIOR_ON_NEXT_ENCOUNTER |
 KNOWN_BLOCKERS | LOCAL_FIXTURE_DEPENDENCY | DUPLICATE_AUTHORITY_RISK | NOTES
 ```
 
-La auditoría debe contrastar código, contratos, entorno y comportamiento físico disponible antes de proponer cambios. No empieza por la creación de este plan.
+La auditoría contrasta código, contratos, entorno y comportamiento físico disponible; las pruebas impedidas por el entorno quedan marcadas `NO_VERIFICADO`. Las decisiones de reforma posteriores esperan la revisión del Director/asistente.
 
 ## Calidad y aceptación futura
 
@@ -182,3 +183,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | DATE | CHAPTER | COMMIT / BASELINE | DECISION / RESULT |
 | --- | --- | --- | --- |
 | 2026-09-18 | REFORM-PLAN01 | Pre-plan baseline/checkpoint `4bf0d740fe82949dbc0450ff6ee6e65185216aff`; accepted commit `edfa1326c602a1efcd3c94cfb705c582a170516e` | Plan creado y aceptado (`CLIN-REFORM-PLAN01=ACCEPTED`); auditoría de `PHASE_0_CURRENT_STATE_AUDIT` autorizada como siguiente capítulo, aún no iniciada. |
+| 2026-09-18 | CLIN-REFORM-PHASE0-AUDIT01 | Baseline aceptado `7a4a29936135d689b6386bff5ac686e42359c145`; commit de auditoría `b31e3aeea63a535ddb0074dbd2d5d3b69be310ef` | Matrices y hallazgos de las nueve secciones, temporalidad, alcance, seguridad y dependencias locales; `READY_FOR_DIRECTOR_REVIEW`. PHASE 0 permanece `IN_PROGRESS`; siguiente paso: revisión del Director/asistente. |
