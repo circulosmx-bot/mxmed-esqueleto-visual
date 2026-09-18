@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=4161120ad2c8a54b3e1455019f4ba994a6a9fd26
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of the physical encounter architecture, schema/API design, migration order, safe-return strategy and synthetic QA plan before authorizing implementation.
+NEXT_AUTHORIZED_STEP=Director/assistant final review of repaired PHYS01 physical architecture before implementation authorization.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -26,7 +26,8 @@ PHASE_2_AUTHORIZED=true
 PHASE_2_CONTRACT01=ACCEPTED
 PHASE_2_CONTRACT01A=ACCEPTED
 PHASE_2_PHYSICAL_DESIGN_AUTHORIZED=true
-PHASE_2_PHYS01=READY_FOR_DIRECTOR_REVIEW
+PHASE_2_PHYS01=REPAIRED_READY_FOR_DIRECTOR_REVIEW
+PHASE_2_PHYS01A=READY_FOR_DIRECTOR_REVIEW
 IMPLEMENTATION_AUTHORIZED=false
 WRITE_VALIDATION_AUTHORIZED=false
 WRITE_VALIDATION_EXECUTED=false
@@ -221,7 +222,7 @@ El [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.
 
 ### CLIN-REFORM-PHASE2-PHYS01 — diseño físico propuesto
 
-El [diseño físico PHYS01](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md) se apoya en inspección de MySQL/InnoDB local y de las rutas/esquemas actuales. Propone unicidad OPEN impuesta por índice, inicio/cierre/anulación transaccionales, contenido y mediciones por encuentro, control de versión multioperador, enmiendas append-only, contexto documental, tratamiento legacy, eliminación de DDL en GET, etapas de migración y retorno seguro. Conserva T01–T24 y añade cuatro escenarios para 28 pruebas sintéticas **diseñadas, no ejecutadas**. `PHASE_2_PHYS01=READY_FOR_DIRECTOR_REVIEW`; la fase sigue `IN_PROGRESS` y el siguiente paso es su revisión por el Director/asistente antes de considerar una autorización separada de implementación.
+El [diseño físico PHYS01](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md), candidato en `76fda0529840eb51c7c28b106b43a8e2069f7052`, se apoya en inspección de MySQL/InnoDB local y de las rutas/esquemas actuales. Propone unicidad OPEN impuesta por índice, inicio/cierre/anulación transaccionales, contenido y mediciones por encuentro, control de versión multioperador, enmiendas append-only, contexto documental, tratamiento legacy, eliminación de DDL en GET, etapas de migración y retorno seguro. PHYS01A aclara que CLOSED impide mutar contenido histórico, pero admite documentos nuevos de resultado relacionados con una orden/acción originada en E, con identidad, tiempo y procedencia propios, sin reabrir E, enmendar por defecto ni regenerar la nota final. El estado «RESULTADO PENDIENTE» sigue derivado de orden/resultado. Conserva T01–T28 y añade T29–T30 para 30 pruebas sintéticas **diseñadas, no ejecutadas**. `PHASE_2_PHYS01=REPAIRED_READY_FOR_DIRECTOR_REVIEW` y `PHASE_2_PHYS01A=READY_FOR_DIRECTOR_REVIEW`; la fase sigue `IN_PROGRESS` y el siguiente paso es la revisión final del Director/asistente antes de considerar una autorización separada de implementación.
 
 ## Calidad y aceptación futura
 
@@ -268,3 +269,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-18 | CLIN-REFORM-PHASE2-CONTRACT01A | Baseline de trabajo/checkpoint `2966cda3b4c95b97a8698fa1ea84e144a144fe8c`; último aceptado `8698b1f66466867360651db5fa62e54d28fba797` | D1–D5 ratificadas: scope OPEN médico/paciente, `VOIDED / ANULADA`, corrección CLOSED por enmienda, cita histórica fija y enmienda híbrida. Plan ampliado a 24 escenarios sin ejecutar; CONTRACT01 `DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE`, PHASE 2 `IN_PROGRESS`. Sin cambios runtime, API, esquema o datos. |
 | 2026-09-18 | CLIN-REFORM-PHASE2-CONTRACT01B | Baseline aceptado previo al cierre `8c8a34314c39a34d43c5b34d5af580c5e4358d72` | CONTRACT01 y CONTRACT01A aceptados como autoridad conceptual; D1–D5 finales y 24 escenarios de validación aceptados, no ejecutados. PHASE 2 sigue `IN_PROGRESS`. Autorizado sólo el siguiente capítulo de diseño físico, migración y validación controlada; implementación y validación con escrituras no autorizadas. |
 | 2026-09-18 | CLIN-REFORM-PHASE2-PHYS01 | Baseline aceptado/checkpoint `4161120ad2c8a54b3e1455019f4ba994a6a9fd26` | Arquitectura física, persistencia por consulta, observaciones, concurrencia/idempotencia, enmiendas, legacy, retiro de DDL en GET, migración/corte/retorno seguro y QA sintética documentados; `READY_FOR_DIRECTOR_REVIEW`, 28 escenarios sin ejecutar. Sin implementación, API, esquema ni datos modificados. |
+| 2026-09-18 | CLIN-REFORM-PHASE2-PHYS01A | Candidato PHYS01 `76fda0529840eb51c7c28b106b43a8e2069f7052`; último baseline aceptado `4161120ad2c8a54b3e1455019f4ba994a6a9fd26` | Arquitectura PHYS01 preservada; separación entre mutación histórica prohibida y artefacto relacionado posterior, con resultados elegibles vinculables a CLOSED, nota final estable y pendiente derivado de orden/resultado. T29–T30 amplían a 30 escenarios sin ejecutar. `PHASE_2_PHYS01=REPAIRED_READY_FOR_DIRECTOR_REVIEW`, `PHASE_2_PHYS01A=READY_FOR_DIRECTOR_REVIEW`. Sin implementación, API, esquema, migraciones ni datos modificados. |
