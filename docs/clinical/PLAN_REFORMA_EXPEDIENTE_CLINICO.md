@@ -2,14 +2,15 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=4bf0d740fe82949dbc0450ff6ee6e65185216aff
+CURRENT_ACCEPTED_HEAD=edfa1326c602a1efcd3c94cfb705c582a170516e
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_0_CURRENT_STATE_AUDIT
 CURRENT_OBJECTIVE=Auditar y mapear el flujo vigente del Expediente Clínico antes de implementar su reforma estructural de UX.
-NEXT_AUTHORIZED_STEP=Complete a read-only/current-state functional audit of Expediente Clínico.
+NEXT_AUTHORIZED_STEP=Execute the read-only/current-state functional audit of Expediente Clínico.
+CLIN-REFORM-PLAN01=ACCEPTED
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El siguiente paso sólo puede comenzar después de la aceptación de este capítulo por el Director/asistente. **PLAN01 no autoriza implementación, cambios de runtime, esquema ni datos.**
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en el commit indicado arriba. La auditoría de PHASE 0 queda autorizada como siguiente paso, en un capítulo posterior a la aceptación de esta sincronización; no se inicia aquí. **PLAN01 y PLAN01A no autorizan implementación, cambios de runtime, esquema ni datos.**
 
 ## Visión y problema
 
@@ -180,4 +181,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 
 | DATE | CHAPTER | COMMIT / BASELINE | DECISION / RESULT |
 | --- | --- | --- | --- |
-| 2026-09-18 | REFORM-PLAN01 | Baseline `4bf0d740fe82949dbc0450ff6ee6e65185216aff` | Reforma clínica del Expediente abierta formalmente; fase actual `PHASE_0_CURRENT_STATE_AUDIT`. Documento pendiente de aceptación para iniciar la auditoría. |
+| 2026-09-18 | REFORM-PLAN01 | Pre-plan baseline/checkpoint `4bf0d740fe82949dbc0450ff6ee6e65185216aff`; accepted commit `edfa1326c602a1efcd3c94cfb705c582a170516e` | Plan creado y aceptado (`CLIN-REFORM-PLAN01=ACCEPTED`); auditoría de `PHASE_0_CURRENT_STATE_AUDIT` autorizada como siguiente capítulo, aún no iniciada. |
