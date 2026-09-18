@@ -171,3 +171,120 @@ No se hicieron pruebas de escritura ni de acceso cruzado. La inspección de fuen
 ## Límites de la prueba y estado de revisión
 
 La inspección física se limitó a proceso/HTTP local y consultas `SELECT` de metadatos/agregados en `mxmed`; no se leyeron payloads clínicos ni identificadores de paciente, no se ejecutaron endpoints clínicos con potencial DDL y no se escribieron datos. La presencia de filas demuestra almacenamiento, **no** guardado/recarga, firma, permisos efectivos ni QA de dos consultas. El fallo del router impide observar los nueve paneles funcionando en el runtime local. Los hallazgos de riesgos de sobrescritura, ausencia de doctor scope en rutas y default Normal son derivados de fuente y requieren revisión del Director; no equivalen a una decisión de implementación. `PHASE_0_AUDIT01=READY_FOR_DIRECTOR_REVIEW`; `PHASE_0_CURRENT_STATE_AUDIT` continúa `IN_PROGRESS` hasta aceptación explícita.
+
+## CLIN-REFORM-PHASE0-AUDIT02 — Physical Runtime Validation
+
+```text
+AUDIT02_DATE=2026-09-18
+AUDIT02_STARTING_ACCEPTED_HEAD=d0602f9c443c1d3e215934c4cc2aa6084e126d12
+AUDIT01_STATUS=ACCEPTED
+AUDIT02_STATUS=READY_FOR_DIRECTOR_REVIEW
+PHASE_0_STATUS=IN_PROGRESS
+PRODUCT_SOURCE_CHANGED=false
+PRODUCT_DATA_MUTATIONS=0
+```
+
+Esta sección **añade** evidencia física al corte de AUDIT01; su matriz y hallazgos originales se conservan como registro de ese momento. `PHYSICAL_RUNTIME_EVIDENCE` se limita a las rutas y vistas efectivamente ejecutadas. La auditoría usó una sesión de QA local ya existente, un paciente vinculado a ese médico y sólo navegación/lectura. No se publican identificadores ni valores del paciente. Todas las peticiones no clasificadas `SAFE_READ` se abortaron en el navegador antes de llegar al servidor. No se ejecutaron acciones de guardar, generar, iniciar, finalizar ni subir.
+
+### Recuperación reproducible del servidor
+
+El proceso anterior en `127.0.0.1:8091` invocaba `/tmp/mxmed-qa02-20260912/director-router.php`, archivo ausente. Se detuvo ese proceso y se inició PHP directamente con raíz documental en el repositorio; no se creó router nuevo ni se modificó fuente. Los valores de conexión no secretos se tomaron del entorno autorizado del proceso anterior. Comando equivalente para este entorno local:
+
+```bash
+MXMED_DB_HOST=127.0.0.1 MXMED_DB_PORT=3306 MXMED_DB_NAME=mxmed MXMED_DB_USER=root MXMED_PROFILES_PRIVATE_AUTH_REQUIRED=1 \
+php -d upload_max_filesize=10M -d post_max_size=12M -d memory_limit=256M \
+  -d session.save_path=/tmp/mxmed-qa02-20260912/sessions \
+  -S 127.0.0.1:8091 -t /Users/circulodigital/Documents/GitHub/mxmed-crd03-credentials-ui
+```
+
+La carpeta de sesiones es una **dependencia de QA autenticada**, no un router ni autoridad de producto; el servidor sirve HTML/CSS/JS y el shell de Historial sin ella. No se crearon usuarios, credenciales ni sesiones. El proceso nuevo quedó escuchando en `127.0.0.1:8091` con ese document root. `CUSTOM_ROUTER_REQUIRED=false`; `OLD_TMP_ROUTER_USED=false`; `AUDIT_ROUTER_CREATED=false`; `AUDIT_ROUTER_SHA256=NO_APLICA`.
+
+| Ruta directa | Resultado físico | Evidencia |
+| --- | --- | --- |
+| `/` y `/index.html` | HTTP 200, 764699 bytes, idénticos al `index.html` versionado, sin fatal PHP | `PHYSICAL_RUNTIME_EVIDENCE`; comparación byte a byte |
+| `/assets/css/style.css` | HTTP 200, 675757 bytes, idénticos al archivo versionado | `PHYSICAL_RUNTIME_EVIDENCE` |
+| `/assets/js/app.js` | HTTP 200, 3342511 bytes, idénticos al archivo versionado | `PHYSICAL_RUNTIME_EVIDENCE` |
+| `/modules/clinical/ui/historial.php?embed=1` **sin paciente** | HTTP 200, shell `clinical-historial` presente, sin fatal | `PHYSICAL_RUNTIME_EVIDENCE`; no equivale a timeline clínica |
+
+El shell de Historial con `patient_id` **no se solicitó**: `modules/clinical/ui/historial.php:1259-1443` hace GET a timeline, encuentro activo y caso **desde PHP**; un interceptor del navegador no detendría esas llamadas. El shell sin paciente evita esos bloques. El GET de timeline en `api/clinical/index.php:4110-4111` invoca aseguramiento de esquema con posible DDL. Por tanto, `HISTORIAL_SHELL_RENDER=true`, `TIMELINE_DATA_RENDER=NO_VERIFICADO_SAFETY_GATE` y `OLD_ROUTER_FAILURE_RESOLVED_AS_ENVIRONMENT=true`. La clasificación actual del **shell** pasa de `BROKEN` local de AUDIT01 a `PARTIAL`; el flujo de datos de Historial **no** se declara funcional. El log del servidor directo no contiene fatales PHP.
+
+### Clasificación previa de rutas y barrera de red
+
+| Método y patrón | Clasificación | Ejecución | Razón de fuente |
+| --- | --- | --- | --- |
+| GET `/api/patients/index.php/doctors/{doctor}/patients?view=archive` | SAFE_READ | Sí | `GetDoctorPatientsController` exige sesión/médico y delega lectura a `PatientsRepository`; la rama GET no muta (`api/patients/index.php:100-123`). |
+| GET `/api/patients/index.php/patients/{patient}` | SAFE_READ | Sí | `GetPatientController` exige sesión y link activo antes de `findPatientById` (`modules/patients/controllers/GetPatientController.php:24-75`). |
+| GET `/api/clinical/index.php/patients/{patient}/history` | READ_WITH_POTENTIAL_DDL | NOT_EXECUTED_SAFETY_GATE | Arranque del gateway llama aseguramiento de esquema (`api/clinical/index.php:3953-3975`). |
+| GET `/api/clinical/index.php/patients/{patient}/physical-exam` | READ_WITH_POTENTIAL_DDL | NOT_EXECUTED_SAFETY_GATE | Mismo arranque del gateway. |
+| GET `/api/clinical/index.php/patients/{patient}/timeline` | READ_WITH_POTENTIAL_DDL | NOT_EXECUTED_SAFETY_GATE | La excepción al aseguramiento inicial sigue ejecutando `clinical_cases_ensure_schema` y `clinical_encounters_ensure_schema` (`:4110-4111`). |
+| GET `/api/clinical/index.php/patients/{patient}/encounters/active`, detalle/casos/documentos | READ_WITH_POTENTIAL_DDL | NOT_EXECUTED_SAFETY_GATE | Arranque y/o bloque de ruta pueden asegurar esquema. |
+| POST/PUT/PATCH/DELETE de cualquier API | WRITE | NOT_EXECUTED_SAFETY_GATE | Bloqueados antes de red; no se pulsaron acciones de escritura. |
+| GET media/agenda/perfiles/billing y cualquier ruta no examinada | UNKNOWN | NOT_EXECUTED_SAFETY_GATE | Arranque normal de la página intentó algunas lecturas; no se autorizó inferir que fueran seguras. |
+
+**Registro de peticiones API efectivamente recibidas por el servidor directo** (log local normalizado; sin cookies, tokens, consultas ni IDs):
+
+| METHOD | PATH_PATTERN | CLASSIFICATION | EXECUTED | HTTP_STATUS | EFFECTIVE_DB_WRITE |
+| --- | --- | --- | --- | --- | --- |
+| GET | `/api/patients/index.php/patients/{patient}` | SAFE_READ | 17 | 200 | 0 |
+| GET | `/api/patients/index.php/doctors/{doctor}/patients` | SAFE_READ | 6 | 200 | 0 |
+
+Total: 23 peticiones API `SAFE_READ`, 0 clínicas, 0 de escritura. El navegador produjo errores de red esperados para peticiones que el interceptor abortó deliberadamente; no se atribuyen al producto. En los recorridos registrados hubo **cero excepciones JavaScript `pageerror`**. Las llamadas abortadas no llegaron al servidor. No se infiere ausencia de errores funcionales en flujos cuyas APIs se bloquearon.
+
+### Paciente existente, lectura y navegación
+
+`PHYSICAL_RUNTIME_EVIDENCE`: desde Pacientes se abrió «Ver todos»; el archivo mostró 25 filas en su primera página. Se abrió una fila de paciente ya vinculada al médico de la sesión QA, sin crear consulta. `#p-expediente[data-patient-id]` coincidió con la fila elegida. Se renderizaron «Cerrar expediente» y «Cambiar paciente», sin invocarlos. La ruta GET de detalle respondió HTTP 200 y la vista mostró no vacíos los tres campos de nombre estructurado. Tras recarga dura del documento, se conservó el mismo paciente y esos tres valores coincidieron exactamente; dos GET directos adicionales del mismo detalle devolvieron un objeto de diez campos con huella local coincidente. La huella y los valores no se guardaron ni publicaron. Este resultado prueba **lectura/recarga de identidad estructurada**, no contactos, domicilio, guardado ni un flujo completo de Datos Generales.
+
+| SECTION | PATIENT_CONTEXT_PRESENT | PATIENT_CONTEXT_CORRECT | ENCOUNTER_CONTEXT_PRESENT | ERROR_PRESENT |
+| --- | --- | --- | --- | --- |
+| Datos Generales | true | true | false | Sin fatal JS; errores de APIs bloqueadas posibles |
+| Estudios Diagnóstico | true | true | false | Datos remotos `NO_VERIFICADO_SAFETY_GATE` |
+| Tratamiento / Recetas | true | true | false | Datos remotos `NO_VERIFICADO_SAFETY_GATE` |
+| Manejo Hospitalario | true en Expediente | false en aviso/contexto hospitalario | false | Aviso de paciente + capacidad deshabilitada |
+| Documentos Clínicos | true | true | false | Datos remotos `NO_VERIFICADO_SAFETY_GATE` |
+| Archivo | true | true | false | Sin fatal JS; pestaña sólo textual |
+
+No se abrieron físicamente Historia Clínica ni Exploración Física con un paciente, pues sus GET son `READ_WITH_POTENTIAL_DDL`. `HISTORIA_PHYSICAL_READ`, `HISTORIA_RELOAD_PHYSICAL`, `EXPLORACION_PHYSICAL_READ` y `DEFAULT_NORMAL_PHYSICAL_STATE` permanecen `NO_VERIFICADO_SAFETY_GATE`; el default «Normal» de AUDIT01 sigue siendo evidencia de fuente, no hallazgo clínico físico.
+
+`PHYSICAL_RUNTIME_EVIDENCE`: Estudios mostró sus controles y conservó el paciente, sin crear orden/resultado. Tratamiento / Recetas mostró «Emitir receta»; pulsar **sólo el lanzador** abrió `#modalReceta` y conservó el paciente, sin emitir nada. Documentos Clínicos mostró diez lanzadores visibles; Archivo mostró «Adjuntos del expediente» sin `input[type=file]` ni listado en esa pestaña. La lectura de órdenes, recetas, adjuntos o documentos existentes no se verificó porque las APIs clínicas quedaron bloqueadas.
+
+| DOCUMENT_TYPE | LAUNCHER_RENDER | TARGET_OPENED | TARGET_CLASSIFICATION | WRITE_EXECUTED |
+| --- | --- | --- | --- | --- |
+| Consentimiento informado | true | true | REAL_MODAL | false |
+| Responsiva médica | true | true | REAL_MODAL | false |
+| Consentimiento multimedia | true | true | CONFIGURATION_INITIAL_PLACEHOLDER | false |
+| Certificado médico | true | true | REAL_MODAL | false |
+| Certificados especiales | true | true | CONFIGURATION_INITIAL_PLACEHOLDER | false |
+| Interconsulta | true | true | REAL_MODAL | false |
+| Informe médico | true | true | REAL_MODAL | false |
+| Nota médica | true | true | REAL_MODAL | false |
+| Alta médica | true | true | REAL_MODAL | false |
+| Documento libre | true | true | CONFIGURATION_INITIAL_PLACEHOLDER | false |
+
+`TARGET_OPENED` sólo acredita apertura del modal, **no** generación, firma, persistencia, atribución médica ni corrección histórica.
+
+### Manejo Hospitalario: capacidad y contexto por separado
+
+`PHYSICAL_RUNTIME_EVIDENCE`: en el servidor local la capacidad hospitalaria quedó `DISABLED`; se mostró «Manejo hospitalario no disponible en este entorno» y «Iniciar hospitalización» estaba deshabilitado. Al mismo tiempo, `#p-expediente[data-patient-id]`, el resolver global y el store de paciente coincidían con el paciente activo, pero `#mh_context_notice` **seguía visible** con «Selecciona paciente» y el contexto hospitalario no contenía ese ID. La puerta de capacidad y la propagación de paciente son, por tanto, dos observaciones distintas. `HOSPITAL_CONTEXT_BUG_PROVEN=true` **para este runtime local**; la causa definitiva no se probó. `SOURCE_EVIDENCE`: `assets/js/manejo-hospitalario.js:214-225,382-410,436-475,624-650,950-975` muestra la puerta y la sincronización de contexto. No se llamó `api/hospital-stays.php` ni se inició/cerró una estancia.
+
+### Guardia de datos antes y después
+
+Una consulta `SELECT` con doce conteos se capturó antes de la QA y se repitió después. Los pares pre/post fueron idénticos:
+
+| Tabla | PRE | POST |
+| --- | ---: | ---: |
+| `patients_patients` | 169 | 169 |
+| `patients_profiles` | 29 | 29 |
+| `patients_contacts` | 152 | 152 |
+| `patients_addresses` | 27 | 27 |
+| `patients_doctor_links` | 171 | 171 |
+| `clinical_record_entries` | 18 | 18 |
+| `clinical_encounters` | 13 | 13 |
+| `clinical_documents` | 413 | 413 |
+| `clinical_cases` | 2 | 2 |
+| `clinical_case_items` | 15 | 15 |
+| `hospital_stays` | 5 | 5 |
+| `agenda_appointments` | 206 | 206 |
+
+`ROW_COUNT_DRIFT=0`. Se ejecutaron siete sentencias `SELECT` directas (dos guardias y selección/conteo de sesión-paciente QA) más las consultas internas de las 23 rutas `SAFE_READ` de Pacientes, cuyo número interno no se infiere. Los conteos no prueban por sí solos ausencia de UPDATE; la barrera HTTP, la inspección de las dos rutas permitidas y la ausencia de acciones de escritura sustentan `WRITE_DB_QUERIES_EXECUTED=0`, `DDL_EXECUTED=0` y `PRODUCT_DATA_MUTATIONS=0` por esta auditoría.
+
+AUDIT02 cierra la dependencia del **router ausente** y la recarga física de identidad estructurada; mantiene abiertas las lecturas clínicas/temporales que el contrato de cero escrituras impide probar. `PHASE_0_AUDIT02=READY_FOR_DIRECTOR_REVIEW`; PHASE 0 sigue `IN_PROGRESS` a la espera de decisión del Director/asistente.
