@@ -1,14 +1,19 @@
 # CLIN-REFORM-PHASE2-CONTRACT01 — Integridad de la consulta clínica
 
 ```text
-STATUS=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE
+STATUS=ACCEPTED
 PHASE_2_STATUS=IN_PROGRESS
-ACCEPTED_BASELINE=8698b1f66466867360651db5fa62e54d28fba797
-PHASE_2_CONTRACT01=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE
+ACCEPTED_BASELINE=8c8a34314c39a34d43c5b34d5af580c5e4358d72
+PHASE_2_CONTRACT01=ACCEPTED
+PHASE_2_CONTRACT01A=ACCEPTED
+PHASE_2_PHYSICAL_DESIGN_AUTHORIZED=true
+IMPLEMENTATION_AUTHORIZED=false
+NEXT_AUTHORIZED_STEP=Design the physical encounter-integrity architecture, API/schema migration plan, safe-return strategy and isolated synthetic validation plan for the accepted CONTRACT01 rules, without implementation.
 ENCOUNTER_AUTHORITY=clinical_encounters
 ENCOUNTER_OWNER=DOCTOR_ID
 ACTIVE_LOOKUP_TARGET_SCOPE=DOCTOR_ID+PATIENT_ID+OPEN
 MULTI_OPERATOR_RESUME_RULE=AUTHORIZED_OPERATORS_RESOLVE_SAME_OPEN_ENCOUNTER
+ONE_OPEN_ENCOUNTER_PER_DOCTOR_PATIENT=true
 OPENED_BY_USER_ID_IS_NOT_ENCOUNTER_OWNER=true
 START_ENCOUNTER_CREATES_STATUS=OPEN_ONLY
 CLIENT_CANNOT_ARBITRARILY_SELECT_ENCOUNTER_STATUS=true
@@ -18,12 +23,20 @@ CONCURRENT_START_SAFETY=REQUIRED
 CONCURRENT_START_REQUESTS_MUST_NOT_CREATE_DUPLICATE_OPEN_ENCOUNTERS=true
 FINALIZE_IDEMPOTENCY=REQUIRED
 AUTO_FINAL_NOTE_MAX_ONE_PER_ENCOUNTER=true
+VOIDED_VISIBLE_TERM=ANULADA
+VOIDED_COUNTS_AS_VALID_CONSULTATION=false
+VOIDED_COUNTS_AS_COMPLETED_CLINICAL_ENCOUNTER=false
 CLOSED_TO_OPEN_TRANSITION=false
 NORMAL_EDIT_OF_CLOSED_ENCOUNTER=false
+CLOSED_REOPEN_FOR_SILENT_EDIT=false
 VOIDED_TO_OPEN_TRANSITION=false
 VOIDED_TO_CLOSED_TRANSITION=false
 DELETE_ENCOUNTER_AS_NORMAL_CORRECTION=false
 CROSS_ENCOUNTER_OVERWRITE_ALLOWED=false
+PREVIOUS_VALUE_MUST_NOT_AUTOFILL_AS_CURRENT_MEASUREMENT=true
+MISSING_INFORMATION_IS_NORMAL_FINDING=false
+UNRECORDED_PHYSICAL_EXAM_IS_NORMAL=false
+APPOINTMENT_REQUIRED_FOR_ENCOUNTER=false
 ACTIVE_ENCOUNTER_RACE_RISK=OPEN_UNTIL_PHYSICAL_ENFORCEMENT_PROVEN
 CLINICAL_GET_SCHEMA_SIDE_EFFECT_RISK=OPEN
 LEGACY_UNATTRIBUTED_ENCOUNTERS=KNOWN_EXISTING_CONSTRAINT
@@ -34,7 +47,7 @@ DIRECTOR_DECISIONS_RATIFIED=5/5
 DIRECTOR_DECISIONS_REQUIRED_COUNT=0
 ```
 
-El Director ratificó D1–D5 como reglas conceptuales; el contrato completo sigue **pendiente de aceptación final**. El plan de prueba controlada permanece sin ejecutar. El [plan vivo](PLAN_REFORMA_EXPEDIENTE_CLINICO.md) gobierna la fase, el [modelo aceptado de PHASE 1](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) fija la titularidad conceptual y la [auditoría de PHASE 0](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md) distingue evidencia de fuente, datos físicos y pruebas no ejecutadas. El [Plan Maestro](../PLAN_MAESTRO_MXMED.md) conserva autoridad global. **La ratificación no prueba funcionamiento físico ni autoriza esquema, API, migración, UI o validación con escrituras.**
+El Director/asistente aceptó CONTRACT01 y CONTRACT01A como autoridad **conceptual** de integridad de la consulta, incluidas D1–D5 y los 24 escenarios de validación. El plan de prueba controlada permanece sin ejecutar. El [plan vivo](PLAN_REFORMA_EXPEDIENTE_CLINICO.md) gobierna la fase, el [modelo aceptado de PHASE 1](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) fija la titularidad conceptual y la [auditoría de PHASE 0](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md) distingue evidencia de fuente, datos físicos y pruebas no ejecutadas. El [Plan Maestro](../PLAN_MAESTRO_MXMED.md) conserva autoridad global. **La aceptación conceptual no prueba funcionamiento físico ni autoriza implementar esquema, API, migración, UI o validación con escrituras.**
 
 ## Evidencia de la implementación actual
 
@@ -59,11 +72,11 @@ El Director ratificó D1–D5 como reglas conceptuales; el contrato completo sig
 
 La tabla `clinical_encounters` de PHASE 0 tenía 13 encuentros, todos sin `doctor_id` (11 cerrados, 2 abiertos). Esos datos legacy son una restricción histórica, no evidencia de que el flujo actual de creación falle ni permiso para asignar médico por inferencia. `CURRENT_ACTIVE_SCOPE=PATIENT_ID+DOCTOR_ID+OPENED_BY_USER_ID+OPEN` y `CURRENT_START_IDEMPOTENCY=PARTIAL`; `CURRENT_FINALIZE_PRESENT=true`, `CURRENT_FINALIZE_IDEMPOTENCY=PARTIAL`, `CURRENT_AUTO_FINAL_NOTE=CONFIRMED_IN_SOURCE`.
 
-## Titularidad y estados ratificados conceptualmente
+## Titularidad y estados aceptados conceptualmente
 
 `CLINICAL_OWNER=clinical_encounters.doctor_id`; `PATIENT_ID` identifica al sujeto de atención. `ACTOR` es el usuario autenticado que inicia o modifica una operación, incluido `opened_by_user_id` y quien cierra. `OPERATOR` es un actor autorizado a operar en el flujo del médico según capacidades existentes; esa capacidad **no** lo convierte en dueño clínico. Ninguna cita, vínculo de paciente, usuario que abrió ni autor de documento sustituye `doctor_id`. Una consulta nueva debe tener dueño médico explícito. `doctor_id=NULL` legacy permanece `UNATTRIBUTED` hasta conciliación futura basada en evidencia; `NO_INFERENCE_OF_LEGACY_DOCTOR_OWNERSHIP`.
 
-Modelo conceptual ratificado: `OPEN → CLOSED` por finalización explícita o `OPEN → VOIDED / ANULADA` por anulación explícita de una apertura errónea sin atención clínica válida. `VOIDED` conserva identidad, paciente, médico, actor, fecha/hora, razón y rastro auditable; no es cancelación de cita, no-show, consulta completada, eliminación ni registro oculto. `VOIDED_COUNTS_AS_COMPLETED_CLINICAL_ENCOUNTER=false`; `VOIDED_COUNTS_AS_VALID_CONSULTATION=false`. `CLOSED → VOIDED` no es transición ordinaria automática; `VOIDED → OPEN` y `VOIDED → CLOSED` no son flujos normales. Una corrección extraordinaria tras cierre exige política auditada separada. No existe aquí diseño físico ni prueba de esta transición.
+Modelo conceptual aceptado: `NEW → OPEN` por inicio explícito; `OPEN → CLOSED` por finalización explícita o `OPEN → VOIDED / ANULADA` por anulación explícita de una apertura errónea sin atención clínica válida. `VOIDED` conserva identidad, paciente, médico, actor, fecha/hora, razón y rastro auditable; no es cancelación de cita, no-show, consulta completada, eliminación ni registro oculto. `VOIDED_COUNTS_AS_COMPLETED_CLINICAL_ENCOUNTER=false`; `VOIDED_COUNTS_AS_VALID_CONSULTATION=false`. `CLOSED → OPEN`, `VOIDED → OPEN` y `VOIDED → CLOSED` no son transiciones normales. `CLOSED → VOIDED` tampoco es transición ordinaria automática. Una corrección extraordinaria tras cierre exige enmienda explícita y auditable, no reapertura. No existe aquí diseño físico ni prueba de esta transición.
 
 ```text
           ┌──────────→ VOIDED / ANULADA
@@ -194,4 +207,14 @@ DIRECTOR_DECISIONS_REQUIRED_COUNT=0
 | D4 | Cita ligada al inicio queda fija históricamente. | Cambios administrativos posteriores no reescriben la referencia; error de vínculo se corrige con auditoría explícita. |
 | D5 | Enmienda híbrida por autoridad afectada. | Encounter y documento conservan historias propias; ambos se corrigen si ambos cambian, sin duplicar la autoridad. |
 
-`DIRECTOR_DECISIONS_REQUIRED_COUNT=0`. La fuente actual sigue aceptando un `status` enviado por el cliente y su default histórico `completed`, con normalización posterior a `open`: `CLIENT_CONTROLLED_ENCOUNTER_STATUS_RISK=OPEN`. El contrato ratificado exige start→OPEN solamente; no se corrige la fuente aquí. No se elige tabla, columna, índice, SQL de migración, payload, permiso nuevo, UI final ni esquema de enmienda. La **aceptación final del contrato completo** aún corresponde a una revisión separada; después podría autorizarse otro capítulo de diseño físico/validación. PHASE 3 conserva workspace y navegación finales; especialidades, tendencias completas e integración visual de billing siguen fuera de CONTRACT01A.
+`DIRECTOR_DECISIONS_REQUIRED_COUNT=0`. La fuente actual sigue aceptando un `status` enviado por el cliente y su default histórico `completed`, con normalización posterior a `open`: `CLIENT_CONTROLLED_ENCOUNTER_STATUS_RISK=OPEN`. El contrato aceptado exige start→OPEN solamente; no se corrige la fuente aquí. No se elige tabla, columna, índice, SQL de migración, payload, permiso nuevo, UI final ni esquema de enmienda. PHASE 3 conserva workspace y navegación finales; especialidades, tendencias completas e integración visual de billing siguen fuera de CONTRACT01A.
+
+## CONTRACT01B — aceptación final y siguiente capítulo autorizado
+
+CONTRACT01 y CONTRACT01A son la autoridad conceptual aceptada para integridad de consulta: estados, unicidad OPEN por médico/paciente, inicio y cierre idempotentes, anulación, enmiendas, cita histórica, independencia entre consultas, contexto documental y reglas legacy. Sus 24 escenarios sintéticos son criterios de validación **aceptados pero no ejecutados**. PHASE 2 sigue `IN_PROGRESS`; los riesgos `CLIENT_CONTROLLED_ENCOUNTER_STATUS_RISK=OPEN`, `ACTIVE_ENCOUNTER_RACE_RISK=OPEN_UNTIL_PHYSICAL_ENFORCEMENT_PROVEN` y `CLINICAL_GET_SCHEMA_SIDE_EFFECT_RISK=OPEN` permanecen abiertos.
+
+El siguiente capítulo debe **diseñar, sin ejecutar**, una arquitectura física exacta para: (1) unicidad OPEN; (2) ciclo de estados; (3) idempotencia y concurrencia de inicio; (4) idempotencia de finalización; (5) anulación; (6) contenido por consulta; (7) mediciones y procedencia; (8) snapshots/lectura histórica; (9) enmiendas de consulta; (10) enmiendas/reemplazos documentales; (11) corrección del vínculo histórico de cita; (12) borradores legacy por paciente; (13) encuentros legacy sin médico atribuido; (14) eliminación de DDL en GET; (15) contratos API; (16) orden de migración; (17) rollback/retorno seguro; y (18) plan de QA sintética aislada. Puede ampliar los 24 escenarios según la arquitectura elegida, sin ejecutarlos todavía.
+
+Debe resolver expresamente el defecto actual de Historia Clínica y Exploración Física en `clinical_record_entries`: borradores mutables por paciente sin titularidad de consulta. Motivo, evolución, revisión por sistemas, mediciones, exploración, valoración, plan y seguimiento propios de una atención necesitan persistencia por `encounter_id`, sin sobrescribir consultas anteriores. El diseño evaluará el equilibrio entre datos normalizados, estructurados y documentales, sin presuponer una fila JSON gigante ni una tabla por campo. Medicación actual, problemas activos, alergias y antecedentes longitudinales conservan autoridad separada; pueden referenciarse durante una consulta sin mudarse a almacenamiento sólo por consulta.
+
+El diseño preservará mediante evolución preferentemente aditiva las autoridades `patients_*`, `clinical_encounters`, `clinical_documents`, `clinical_cases`/`clinical_case_items`, `agenda_appointments` y billing. Para `ONE_OPEN_ENCOUNTER_PER_DOCTOR_PATIENT` evaluará opciones compatibles con MySQL —clave única generada, bloqueo transaccional, tabla de bloqueo activo o invariante equivalente impuesto por la base— y elegirá una que resista doble clic, reintentos y operadores concurrentes. Un SELECT→INSERT sólo en aplicación no es suficiente. Los contratos futuros deberán restringir START→OPEN, FINALIZE→CLOSED y VOID→VOIDED sin estado arbitrario elegido por el cliente; conservar original y enmiendas de consulta/documento, incluidos los documentos firmados o finales. Ninguna de esas decisiones físicas se toma ni se implementa en CONTRACT01B.
