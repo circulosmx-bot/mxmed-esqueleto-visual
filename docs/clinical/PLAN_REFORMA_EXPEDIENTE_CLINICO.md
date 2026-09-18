@@ -2,17 +2,21 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=d0602f9c443c1d3e215934c4cc2aa6084e126d12
+CURRENT_ACCEPTED_HEAD=ef378fddef3edaff07f603d965defa82365a80de
 REFORM_START_DATE=2026-09-18
-CURRENT_PHASE=PHASE_0_CURRENT_STATE_AUDIT
-CURRENT_OBJECTIVE=Auditar y mapear el flujo vigente del Expediente Clínico antes de implementar su reforma estructural de UX.
-NEXT_AUTHORIZED_STEP=Director/assistant review of PHASE 0 AUDIT02 physical-runtime findings and decision whether PHASE 0 can close or requires another targeted audit.
+CURRENT_PHASE=PHASE_1_CLINICAL_INFORMATION_MODEL_UX_CONTRACT
+CURRENT_OBJECTIVE=Definir el modelo de información clínica y el contrato UX antes de cualquier implementación estructural.
+NEXT_AUTHORIZED_STEP=Design and document the Clinical Information Model / UX Contract that assigns current and future Expediente data/actions to patient, encounter, episode/case, document, or administrative ownership before structural implementation.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
-PHASE_0_AUDIT02=READY_FOR_DIRECTOR_REVIEW
+PHASE_0_AUDIT02=ACCEPTED
+PHASE_0_CURRENT_STATE_AUDIT=COMPLETE
+PHASE_0_STATUS=COMPLETE
+PHASE_1_STATUS=NOT_STARTED
+PHASE_1_AUTHORIZED=true
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e` y CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`. `CURRENT_ACCEPTED_HEAD` registra ese baseline aceptado inmediatamente anterior a AUDIT02. [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) está listo para revisión del Director/asistente en el commit `504bd136854518d301915d743911c5f0f60c7aa1`. **PHASE 0 sigue en progreso:** la entrega de AUDIT02 no equivale a su aceptación ni autoriza implementación, cambios de producto, esquema o datos.
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12` y la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`. `CURRENT_ACCEPTED_HEAD` registra el baseline aceptado previo a este cierre. PHASE 0 está completa; PHASE 1 queda autorizada para **diseño y contrato**, todavía no iniciada. Este cierre no autoriza implementación, cambios de producto, esquema o datos.
 
 ## Visión y problema
 
@@ -56,17 +60,17 @@ Esta es la base arquitectónica aceptada para orientar la auditoría, no una con
 | Agenda | `agenda_appointments` y autoridades existentes de Agenda. |
 | Facturación | Arquitectura de billing separada: paciente no equivale a receptor fiscal y médico no equivale automáticamente a emisor fiscal. |
 
-## Observaciones vigentes por comprobar
+## Observaciones iniciales y resultado de PHASE 0
 
-Se registran como **preguntas de auditoría**, nunca como conclusiones de arquitectura ni permisos para reparar en PLAN01.
+Estas fueron preguntas de auditoría iniciales. Su resultado se documenta sin convertir la evidencia limitada en permiso de implementación.
 
-| Observación | Verificación pendiente |
+| Observación inicial | Resultado aceptado al cierre |
 | --- | --- |
-| Historial de Atención mostró una falla local relacionada con `/tmp/.../director-router.php`. | Distinguir configuración/dependencia temporal del entorno de un defecto de producto. |
-| Manejo Hospitalario puede mostrar “Selecciona paciente” y “Manejo hospitalario no disponible en este entorno” aun con un paciente visible. | Auditar por separado propagación de contexto y capacidad del entorno. |
-| Tratamiento / Recetas delega algunas operaciones a Actividad Clínica. | Identificar la autoridad de recetas antes de cambiar navegación. |
-| Archivo presenta adjuntos clínicos. | Verificar alcance real, almacenamiento y autoridad de lectura/escritura. |
-| La persistencia de Datos Generales ya está implementada y aceptada. | Registrar comportamiento actual sin rediseñarla en la auditoría inicial. |
+| Historial de Atención mostró una falla local relacionada con `/tmp/.../director-router.php`. | El router temporal ausente causó el fatal local; PHP directo sirve el shell. Los datos de timeline no se ejecutaron por riesgo de DDL en GET. |
+| Manejo Hospitalario podía mostrar “Selecciona paciente” y “no disponible” con un paciente visible. | Capacidad local deshabilitada y propagación de paciente inconsistente en ese runtime; son estados distintos. |
+| Tratamiento / Recetas delega operaciones a Actividad Clínica. | La receta se emite como documento clínico; la medicación actual mostrada carece de una autoridad canónica única demostrada. |
+| Archivo presenta adjuntos clínicos. | La pestaña es un placeholder, sin autoridad de archivo clínico demostrada. |
+| La persistencia de Datos Generales ya estaba implementada. | La identidad estructurada del paciente se leyó y conservó tras recarga; no se probó escritura en esta auditoría. |
 
 ## Capas de información propuestas para validar
 
@@ -126,7 +130,7 @@ No se crea un expediente de paciente separado por especialidad. Los siguientes w
 
 ## Fases y criterios de salida
 
-- [ ] **PHASE 0 — CURRENT STATE AUDIT** · `IN_PROGRESS`. Determinar qué hace realmente el sistema. Revisar por sección UI, backend, persistencia, almacenamiento canónico, alcance de paciente/médico/consulta/caso/documento, lectura frente a edición, recarga, consulta siguiente, errores, fixtures locales, autoridad duplicada y seguridad. **Salida:** mapa factual del estado actual, sin clasificaciones basadas sólo en apariencia o documentación obsoleta.
+- [x] **PHASE 0 — CURRENT STATE AUDIT** · `COMPLETE`. AUDIT01 y AUDIT02 aceptados; mapa factual de nueve secciones, autoridades, temporalidad, límites de lectura física y riesgos heredados registrado. Las pruebas que requieren escritura o GET con posible DDL pasan a capítulos posteriores de integridad/implementación; no se requiere AUDIT03.
 - [ ] **PHASE 1 — CLINICAL INFORMATION MODEL / UX CONTRACT** · `NOT_STARTED`. Aprobar modelo paciente/consulta/episodio/documento/administración antes de una implementación estructural. **Salida:** cada campo y acción importante tiene titularidad y ciclo de vida de destino.
 - [ ] **PHASE 2 — ENCOUNTER INTEGRITY** · `NOT_STARTED`. Probar inicio, guardado, reanudación, finalización, lectura histórica, correcciones/enmiendas y relación documental con atribución médica. **Salida:** dos o más consultas del mismo paciente se crean y revisan de forma independiente, recuperable y doctor-scoped, sin sobrescritura histórica.
 - [ ] **PHASE 3 — AMBULATORY CONSULTATION WORKSPACE** · `NOT_STARTED`. Construir el flujo diario con resumen del paciente, motivo/evolución, exploración/mediciones, valoración, plan, documentos/acciones y revisión/finalización. **Salida:** una consulta ambulatoria normal se completa sin saltos innecesarios entre módulos.
@@ -134,9 +138,9 @@ No se crea un expediente de paciente separado por especialidad. Los siguientes w
 - [ ] **PHASE 5 — CLINICAL ↔ ADMINISTRATIVE RELATIONSHIP** · `NOT_STARTED`. Permitir localizar cita, pago, recibo y factura sin fusionar autoridades financieras y clínicas. **Salida:** el estado administrativo relacionado con una consulta es localizable y mantiene la separación de dominio.
 - [ ] **PHASE 6 — SPECIALTY MODULES** · `NOT_STARTED`. Implementar progresivamente extensiones validadas **después** de estabilizar el núcleo de consulta. Cada especialidad exige análisis de flujo, validación clínica, contratos de datos y UX, estrategia histórica/versionado y QA.
 
-### Entregables de auditoría de PHASE 0 — AUDIT02 pendiente de revisión
+### Entregables de auditoría de PHASE 0 — aceptados
 
-El [capítulo CLIN-REFORM-PHASE0-AUDIT01](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md), de **sólo lectura para el producto**, presenta una matriz de estado actual con una fila por cada sección: Datos Generales, Exploración Física, Historia Clínica, Historial de Atención, Estudios Diagnóstico, Tratamiento / Recetas, Manejo Hospitalario, Documentos Clínicos y Archivo. AUDIT01 está `ACCEPTED`. [AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) agrega validación física segura y permanece `READY_FOR_DIRECTOR_REVIEW`; PHASE 0 no está completa.
+El [capítulo CLIN-REFORM-PHASE0-AUDIT01](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md), de **sólo lectura para el producto**, presenta una matriz de estado actual con una fila por cada sección: Datos Generales, Exploración Física, Historia Clínica, Historial de Atención, Estudios Diagnóstico, Tratamiento / Recetas, Manejo Hospitalario, Documentos Clínicos y Archivo. AUDIT01 está `ACCEPTED`. [AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) agrega validación física segura y está `ACCEPTED`. La matriz original conserva su evidencia histórica; el cierre canónico y los límites de prueba constan aquí.
 
 Cada fila deberá incluir exactamente estas columnas; un dato no comprobado se marcará `NO_VERIFICADO` y no se inferirá:
 
@@ -147,7 +151,45 @@ CASE_SCOPED | PERSISTS_AFTER_RELOAD | BEHAVIOR_ON_NEXT_ENCOUNTER |
 KNOWN_BLOCKERS | LOCAL_FIXTURE_DEPENDENCY | DUPLICATE_AUTHORITY_RISK | NOTES
 ```
 
-La auditoría contrasta código, contratos, entorno y comportamiento físico disponible; las pruebas impedidas por el entorno quedan marcadas `NO_VERIFICADO`. Las decisiones de reforma posteriores esperan la revisión del Director/asistente.
+La auditoría contrasta código, contratos, entorno y comportamiento físico disponible; las pruebas impedidas por el contrato de cero escrituras o por GET con potencial DDL conservan `NO_VERIFICADO`. Esos límites ya no impiden cerrar el levantamiento del estado actual; requieren validación controlada en capítulos posteriores.
+
+### CLIN-REFORM-PHASE0-CLOSEOUT — hallazgos aceptados
+
+1. **Identidad del paciente:** la identidad y persistencia canónicas (`patients_*`) son longitudinales/administrativas y distintas de la consulta; Datos Generales no debe duplicarse por encounter.
+2. **Exploración Física:** la autoridad vigente es un borrador mutable por paciente en `clinical_record_entries`, sin versión independiente por consulta ni fecha efectiva, médico y encounter canónicos por medición.
+3. **Historia Clínica:** antecedentes longitudinales y contenido de una consulta coexisten en el mismo borrador mutable del paciente; PHASE 1 debe resolver esa temporalidad mixta.
+4. **Ausente no es normal:** la fuente contiene un estado/fallback «normal» de exploración. `MISSING_INFORMATION != NORMAL_FINDING`; no se atribuye normalidad a una exploración no registrada. Su comportamiento físico de guardado no se probó.
+5. **Consulta:** `clinical_encounters` permanece como autoridad canónica; no se creará una autoridad paralela. Los encuentros legacy sin atribución médica son una restricción existente y no se reasignan por inferencia.
+6. **Historial:** el fatal local provenía del router de QA ausente; el servidor PHP directo sirve el shell. La timeline con datos quedó `NO_VERIFICADO_SAFETY_GATE` porque sus GET pueden ejecutar DDL; ello no bloquea este cierre.
+7. **GET clínico:** algunos GET invocan aseguramiento de esquema con `CREATE`/`ALTER`. `CLINICAL_GET_SCHEMA_SIDE_EFFECT_RISK=OPEN`; no se repara en este capítulo.
+8. **Documentos:** `clinical_documents` es una autoridad real y poblada, sin enlace universal a encounter. El futuro contrato distinguirá documento de paciente, de consulta y de episodio/caso.
+9. **Receta/medicación:** las recetas documentales y la presentación de medicación vigente no son una única autoridad canónica. `PRESCRIPTION != CURRENT_MEDICATION`.
+10. **Hospital:** se comprobó una inconsistencia local de propagación del paciente con la capacidad deshabilitada. La inspección del API hospitalario tampoco estableció autorización por médico/vínculo activo; no se probó acceso cruzado.
+11. **Archivo:** la pestaña actual es un placeholder y no representa una autoridad canónica de archivo clínico.
+12. **Especialidades:** ninguna arquitectura de expediente paralelo por especialidad está aprobada; las extensiones futuras parten del núcleo paciente + encounter.
+
+Los hallazgos derivados de fuente, los hechos de base agregados y los comportamientos físicos se distinguen en AUDIT01/AUDIT02. Ningún `NO_VERIFICADO` se convierte aquí en prueba funcional.
+
+### Riesgos y restricciones que continúan
+
+```text
+CLINICAL_GET_SCHEMA_SIDE_EFFECT_RISK=OPEN
+PHYSICAL_EXAM_PATIENT_DRAFT_OVERWRITE_RISK=OPEN
+HISTORY_MIXED_TEMPORALITY_RISK=OPEN
+DEFAULT_NORMAL_SEMANTICS_RISK=OPEN
+DOCUMENT_ENCOUNTER_LINKAGE_GAP=OPEN
+PRESCRIPTION_MEDICATION_AUTHORITY_GAP=OPEN
+HOSPITAL_CONTEXT_PROPAGATION_RISK=OPEN
+HOSPITAL_AUTHORIZATION_SCOPE_RISK=OPEN
+ARCHIVE_PLACEHOLDER_GAP=OPEN
+LEGACY_UNATTRIBUTED_ENCOUNTERS=KNOWN_EXISTING_CONSTRAINT
+```
+
+Estos riesgos alimentan el diseño y las pruebas posteriores; no son todos bloqueos de PHASE 1. Su registro no autoriza migraciones, correcciones ni operaciones clínicas.
+
+### Frontera autorizada de PHASE 1
+
+El siguiente capítulo definirá **sólo** el Clinical Information Model / UX Contract y asignará datos y acciones actuales/futuros a paciente, consulta, episodio/caso, documento o administración antes de implementar cambios estructurales. `PHASE_1_STATUS=NOT_STARTED` hasta ese capítulo. Esta autorización no permite migrar esquema o datos, eliminar pestañas, rediseñar la UI en runtime, cambiar APIs/encounters/documentos, corregir Hospital o GET/DDL ni implementar especialidades.
 
 ## Calidad y aceptación futura
 
@@ -163,7 +205,7 @@ La consulta histórica debe permanecer intacta.
 
 ## Decisiones aceptadas, bloqueos y decisiones superadas
 
-Los principios de dominio, la separación de autoridades y la secuencia de fases de este plan son la base de gobierno inicial. PLAN01 no aprueba una nueva pantalla, esquema, endpoint ni cambio de flujo. Los cinco puntos de “Observaciones vigentes por comprobar” son preguntas, no bloqueos confirmados. Cada bloqueo futuro debe anotar evidencia, impacto, responsable y condición de salida.
+Los principios de dominio, la separación de autoridades y la secuencia de fases de este plan siguen vigentes. PLAN01 no aprobó una nueva pantalla, esquema, endpoint ni cambio de flujo. Las cinco observaciones iniciales tienen resultado en PHASE 0; los riesgos abiertos constan en la lista de continuidad y cada decisión de implementación posterior requiere su propio capítulo y evidencia.
 
 ### SUPERSEDED DECISIONS
 
@@ -186,3 +228,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-18 | REFORM-PLAN01 | Pre-plan baseline/checkpoint `4bf0d740fe82949dbc0450ff6ee6e65185216aff`; accepted commit `edfa1326c602a1efcd3c94cfb705c582a170516e` | Plan creado y aceptado (`CLIN-REFORM-PLAN01=ACCEPTED`); auditoría de `PHASE_0_CURRENT_STATE_AUDIT` autorizada como siguiente capítulo, aún no iniciada. |
 | 2026-09-18 | CLIN-REFORM-PHASE0-AUDIT01 | Baseline aceptado `7a4a29936135d689b6386bff5ac686e42359c145`; commit de auditoría `b31e3aeea63a535ddb0074dbd2d5d3b69be310ef` | Matrices y hallazgos de las nueve secciones, temporalidad, alcance, seguridad y dependencias locales; `READY_FOR_DIRECTOR_REVIEW`. PHASE 0 permanece `IN_PROGRESS`; siguiente paso: revisión del Director/asistente. |
 | 2026-09-18 | CLIN-REFORM-PHASE0-AUDIT02 | Baseline aceptado `d0602f9c443c1d3e215934c4cc2aa6084e126d12`; commit de auditoría física `504bd136854518d301915d743911c5f0f60c7aa1` | AUDIT01 aceptado. Servidor local sin router histórico, lectura/recarga de identidad y navegación seguras verificadas; timeline y GET clínicos con posible DDL quedan sin ejecutar. AUDIT02 `READY_FOR_DIRECTOR_REVIEW`; PHASE 0 `IN_PROGRESS`, pendiente de decisión del Director/asistente. |
+| 2026-09-18 | CLIN-REFORM-PHASE0-CLOSEOUT | Baseline aceptado previo al cierre `ef378fddef3edaff07f603d965defa82365a80de`; cadena AUDIT02 `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de` | AUDIT02 aceptado; PHASE 0 `COMPLETE`, mapa factual y riesgos heredados aceptados. PHASE 1 autorizada para diseño/contrato, `NOT_STARTED`. Sin implementación de producto. |
