@@ -6,6 +6,8 @@ Este plan maestro NO duplica ese mapa completo; lo usa como referencia operativa
 > Este documento reemplaza al “Documento Limpio FSD Maestro” como fuente viva de coordinación.
 > El FSD queda absorbido por este Plan Maestro; todo hallazgo nuevo de fuentes/PDFs se traduce obligatoriamente a Decision Log + Checklist + Backlog.
 
+La gobernanza detallada de la reforma del Expediente Clínico se mantiene en el [Plan de reforma del Expediente Clínico](clinical/PLAN_REFORMA_EXPEDIENTE_CLINICO.md). Este Plan Maestro conserva la autoridad global; el plan clínico documenta el workstream sin duplicarlo aquí.
+
 ## A. Propósito y principios (Etapa 1 = perfil médico)
 
 ### Propósito
