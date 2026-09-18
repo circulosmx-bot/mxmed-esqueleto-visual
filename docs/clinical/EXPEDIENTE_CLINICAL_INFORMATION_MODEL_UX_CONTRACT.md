@@ -2,18 +2,21 @@
 
 ```text
 CHAPTER=CLIN-REFORM-PHASE1-MODEL01
-STATUS=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE
-PHASE_1_MODEL01=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE
+STATUS=ACCEPTED
+PHASE_1_MODEL01=ACCEPTED
+PHASE_1_MODEL01A=ACCEPTED
+PHASE_1_STATUS=COMPLETE
 DATE=2026-09-18
 STARTING_ACCEPTED_HEAD=a1dd2860f90094260c08388d363410198e5a7495
 CONCEPTS_CLASSIFIED=68
 DIRECTOR_DECISIONS_RATIFIED=6/6
 DIRECTOR_DECISIONS_REQUIRED_COUNT=0
+MODEL01_ACCEPTANCE_EFFECT=All conceptual ownership/lifecycle proposals in this contract are accepted unless explicitly classified as PRUEBA, unresolved technical risk, or future implementation detail.
 PRODUCT_IMPLEMENTATION=NONE
 SCHEMA_MIGRATION=NONE
 ```
 
-Este documento propone la titularidad lógica y el acceso médico a los datos. Las seis decisiones de producto del Director quedaron ratificadas en MODEL01A, pero el documento completo será autoridad detallada de PHASE 1 **sólo tras aceptación final del Director/asistente**; el [plan vivo](PLAN_REFORMA_EXPEDIENTE_CLINICO.md) conserva la autoridad de gobierno. Su base factual es [PHASE 0 AUDIT01/AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md) y los principios del [Plan Maestro](../PLAN_MAESTRO_MXMED.md). Las columnas «destino» describen el contrato futuro, **no** tablas, endpoints, permisos ni migraciones existentes. `NO_VERIFICADO` no se eleva a hecho.
+El Director/asistente aceptó MODEL01 y MODEL01A como contrato conceptual de titularidad y acceso médico a los datos. Este documento es la autoridad detallada de PHASE 1; el [plan vivo](PLAN_REFORMA_EXPEDIENTE_CLINICO.md) conserva la autoridad de gobierno. Su base factual es [PHASE 0 AUDIT01/AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md) y los principios del [Plan Maestro](../PLAN_MAESTRO_MXMED.md). Las columnas «destino» describen el contrato futuro, **no** tablas, endpoints, permisos ni migraciones existentes. `NO_VERIFICADO` no se eleva a hecho.
 
 ## Dominios y límites
 
@@ -29,7 +32,7 @@ Este documento propone la titularidad lógica y el acceso médico a los datos. L
 
 ## Matriz de titularidad de campos y conceptos
 
-**Lectura de la matriz.** `Actual` nombra autoridad comprobada en PHASE 0; `sin autoridad probada` significa que la UI o la idea existe sin persistencia canónica demostrada. `Nuevo encuentro`: `vacío` significa instancia nueva sin arrastre automático; `ref.` significa valor anterior visible sólo como referencia; `vigente` mantiene dato longitudinal; `n/a` no depende de iniciar consulta. `Histórico`: `versión` exige conservar versiones/correcciones; `instancia` exige preservar cada consulta; `fecha` exige fecha/procedencia; `actual` no acredita historia pasada. `Comparación`: `sí` sólo cuando aporta valor clínico, siempre con fecha y origen. `Documento`: `puede` expresa relación posible, no que todo dato sea hoy un documento. `Administración`: `enlace` nunca fusiona autoridades. `Especialidad`: `ext.` permite extensión validada; `base` pertenece al núcleo. `Estado`: `REGLA` sigue principios aceptados; `RATIFICADO` corresponde a las seis decisiones del Director incorporadas en MODEL01A, sin significar aceptación final del contrato; `PROPUESTA` espera esa aceptación final; `PRUEBA` necesita validación posterior. Ninguna fila autoriza un cambio de esquema.
+**Lectura de la matriz.** `Actual` nombra autoridad comprobada en PHASE 0; `sin autoridad probada` significa que la UI o la idea existe sin persistencia canónica demostrada. `Nuevo encuentro`: `vacío` significa instancia nueva sin arrastre automático; `ref.` significa valor anterior visible sólo como referencia; `vigente` mantiene dato longitudinal; `n/a` no depende de iniciar consulta. `Histórico`: `versión` exige conservar versiones/correcciones; `instancia` exige preservar cada consulta; `fecha` exige fecha/procedencia; `actual` no acredita historia pasada. `Comparación`: `sí` sólo cuando aporta valor clínico, siempre con fecha y origen. `Documento`: `puede` expresa relación posible, no que todo dato sea hoy un documento. `Administración`: `enlace` nunca fusiona autoridades. `Especialidad`: `ext.` permite extensión validada; `base` pertenece al núcleo. `Estado`: `REGLA` sigue principios previos; `RATIFICADO` registra las seis decisiones del Director de MODEL01A; las filas `PROPUESTA` quedan **aceptadas como diseño conceptual** por el cierre de MODEL01. `PRUEBA`, riesgos técnicos no resueltos y detalles de implementación futura no se consideran probados ni implementados. Se conserva la etiqueta histórica `PROPUESTA` para evitar ruido en 68 filas. Ninguna fila autoriza un cambio de esquema.
 
 | CONCEPT | CURRENT_SURFACE | CURRENT_AUTHORITY | TARGET_OWNER | TEMPORALITY | NEW_ENCOUNTER_BEHAVIOR | HISTORICAL_REQUIREMENT | COMPARISON_VALUE | DOCUMENT_RELATIONSHIP | ADMIN_RELATIONSHIP | SPECIALTY_EXTENSIBLE | DECISION_STATUS | NOTES |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -118,6 +121,8 @@ Peso de hoy: [vacío hasta registrar]
 ```
 
 Una futura acción «usar anterior como referencia/copiar intencionalmente», si se aprueba clínicamente, exige acción explícita y conserva la procedencia; copiar no afirma que se midió hoy. En exploración por sistema el estado lógico es `NOT_REVIEWED`, `NORMAL` o `ABNORMAL`. El control intacto queda `NOT_REVIEWED`, jamás `NORMAL`; texto libre sin revisión explícita tampoco demuestra normalidad. Esta regla corrige conceptualmente el riesgo de fallback «normal» observado en fuente, sin cambiarlo todavía.
+
+Reglas vinculantes: `PREVIOUS_VALUE_MUST_NOT_AUTOFILL_AS_CURRENT_MEASUREMENT`; `MISSING_INFORMATION != NORMAL_FINDING`; `UNRECORDED_PHYSICAL_EXAM != NORMAL`.
 
 ## Resumen longitudinal y medicación
 
@@ -226,4 +231,12 @@ DIRECTOR_DECISIONS_RATIFIED=6/6
 DIRECTOR_DECISIONS_REQUIRED_COUNT=0
 ```
 
-Estas seis decisiones de producto están ratificadas; no quedan decisiones materiales **de este grupo** pendientes. «Documento libre» sigue siendo placeholder y requiere prueba/contrato posterior de subtipo, no una séptima decisión de MODEL01A. Los riesgos técnicos de PHASE 0 siguen abiertos en el plan vivo. `PHASE_1_MODEL01=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE`: la ratificación de decisiones no equivale a aceptación final de todo MODEL01 ni al cierre de PHASE 1. No se diseña esquema, migración, API ni UI ejecutable.
+Estas seis decisiones de producto están ratificadas; no quedan decisiones materiales **de este grupo** pendientes. «Documento libre» sigue siendo placeholder y requiere prueba/contrato posterior de subtipo, no una séptima decisión de MODEL01A. Los riesgos técnicos de PHASE 0 siguen abiertos en el plan vivo. La aceptación final de MODEL01 y MODEL01A cierra PHASE 1 **conceptualmente**; no diseña esquema, migración, API ni UI ejecutable.
+
+## PHASE 1 CLOSEOUT — alcance aceptado y límites
+
+`PATIENT` comprende identidad longitudinal y estado clínico revisado, incluida medicación vigente y problemas activos como conceptos de primera clase; alergias, antecedentes y alertas relevantes conservan procedencia, fecha de revisión, médico revisor cuando aplica, transiciones e historia clínicamente significativa. `ENCOUNTER` comprende una atención concreta: motivo, evolución, interrogatorio, mediciones, exploración, valoración, problemas tratados hoy, plan, recomendaciones, seguimiento y acciones/documentos de esa consulta. Cada encounter nuevo tiene instancia independiente; los valores previos siguen históricos y sólo se muestran como referencia. `EPISODE_CASE` es agrupación opcional de varias consultas, visible como «Caso clínico». `DOCUMENT` es artefacto clínico versionado con contexto y procedencia explícitos; `PATIENT_DOCUMENT`, `ENCOUNTER_DOCUMENT` y `EPISODE_DOCUMENT` son contextos conceptuales, y un documento único puede aparecer en varias vistas. `ADMINISTRATIVE` conserva cita, finanzas, recibo y factura separados de la verdad clínica. `DERIVED_VIEW` es proyección de sólo lectura, nunca autoridad writable paralela.
+
+El resumen derivado, sus seis prioridades, las cinco áreas de navegación y el workspace de consulta separado quedan aceptados **conceptualmente**. Permanecen vinculantes la distinción entre receta y medicación vigente, las reglas de medición anterior/actual, la prohibición de interpretar datos no registrados como normales y la separación entre finalización clínica y cobro/facturación. La ubicación visual final y el comportamiento de runtime pertenecen a capítulos posteriores.
+
+Quedan **diferidos sin bloquear este cierre**: diseño físico de esquema; migración de `clinical_record_entries` y borradores legacy; vínculo físico documento/encounter; reparación del DDL potencial en GET; autorización/contexto hospitalario; implementación de enmiendas históricas; almacenamiento físico de medicación vigente y problemas activos; esquema/UI por especialidad; «Documento libre»; y encuentros legacy sin atribución médica. No se infiere médico para los registros legacy ni se transforma un borrador compartido en consulta histórica sin prueba. PHASE 2 debe diseñar primero su contrato de integridad y plan de validación controlada antes de cualquier implementación.

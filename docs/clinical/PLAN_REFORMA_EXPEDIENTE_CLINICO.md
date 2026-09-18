@@ -2,24 +2,28 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=a1dd2860f90094260c08388d363410198e5a7495
+CURRENT_ACCEPTED_HEAD=63d9e22403ce64ac8a49f2b06afe3f875724baa3
 REFORM_START_DATE=2026-09-18
-CURRENT_PHASE=PHASE_1_CLINICAL_INFORMATION_MODEL_UX_CONTRACT
-CURRENT_OBJECTIVE=Definir el modelo de información clínica y el contrato UX antes de cualquier implementación estructural.
-NEXT_AUTHORIZED_STEP=Director/assistant final review of ratified MODEL01 and decision whether PHASE 1 can close or requires one additional contract chapter before PHASE 2.
+CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
+CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
+NEXT_AUTHORIZED_STEP=Design and document the Encounter Integrity contract and controlled validation plan covering start, save, resume, finalize, historical read, amendment, ownership and document relationships before implementation.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
 PHASE_0_CURRENT_STATE_AUDIT=COMPLETE
 PHASE_0_STATUS=COMPLETE
-PHASE_1_STATUS=IN_PROGRESS
+PHASE_1_STATUS=COMPLETE
 PHASE_1_AUTHORIZED=true
-PHASE_1_MODEL01=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE
+PHASE_1_CLINICAL_INFORMATION_MODEL_UX_CONTRACT=COMPLETE
+PHASE_1_MODEL01=ACCEPTED
+PHASE_1_MODEL01A=ACCEPTED
 DIRECTOR_DECISIONS_RATIFIED=6/6
 DIRECTOR_DECISIONS_REQUIRED_COUNT=0
+PHASE_2_STATUS=NOT_STARTED
+PHASE_2_AUTHORIZED=true
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de` y el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495`. `CURRENT_ACCEPTED_HEAD` registra ese último baseline aceptado; MODEL01 en `0ba07c9d8798ee6ecf03083453f5a587fff812b8` sigue siendo el capítulo de trabajo. El Director ratificó sus seis decisiones en MODEL01A, pero la [versión actualizada del contrato](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) espera **aceptación final**. PHASE 1 continúa en progreso; no se autorizan implementación, esquema ni datos.
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. `CURRENT_ACCEPTED_HEAD` registra el baseline aceptado **previo a este cierre**. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 queda autorizada para comenzar por contrato y plan de validación, todavía `NOT_STARTED`; no se autorizan implementación, esquema ni datos en este capítulo.
 
 ## Visión y problema
 
@@ -75,9 +79,9 @@ Estas fueron preguntas de auditoría iniciales. Su resultado se documenta sin co
 | Archivo presenta adjuntos clínicos. | La pestaña es un placeholder, sin autoridad de archivo clínico demostrada. |
 | La persistencia de Datos Generales ya estaba implementada. | La identidad estructurada del paciente se leyó y conservó tras recarga; no se probó escritura en esta auditoría. |
 
-## Capas de información propuestas para validar
+## Capas de información conceptuales aceptadas
 
-Estas capas son **hipótesis de clasificación**, no tablas nuevas ni contratos aprobados.
+Estas capas describen la clasificación lógica aceptada en MODEL01/MODEL01A; el [contrato detallado](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) resuelve titularidad y ciclos de vida. No son tablas nuevas ni prueba de implementación física.
 
 | Capa | Ejemplos |
 | --- | --- |
@@ -134,8 +138,8 @@ No se crea un expediente de paciente separado por especialidad. Los siguientes w
 ## Fases y criterios de salida
 
 - [x] **PHASE 0 — CURRENT STATE AUDIT** · `COMPLETE`. AUDIT01 y AUDIT02 aceptados; mapa factual de nueve secciones, autoridades, temporalidad, límites de lectura física y riesgos heredados registrado. Las pruebas que requieren escritura o GET con posible DDL pasan a capítulos posteriores de integridad/implementación; no se requiere AUDIT03.
-- [ ] **PHASE 1 — CLINICAL INFORMATION MODEL / UX CONTRACT** · `IN_PROGRESS`. Las seis decisiones de MODEL01 están ratificadas; el contrato completo espera aceptación final. Aprobar modelo paciente/consulta/episodio/documento/administración antes de una implementación estructural. **Salida:** cada campo y acción importante tiene titularidad y ciclo de vida de destino.
-- [ ] **PHASE 2 — ENCOUNTER INTEGRITY** · `NOT_STARTED`. Probar inicio, guardado, reanudación, finalización, lectura histórica, correcciones/enmiendas y relación documental con atribución médica. **Salida:** dos o más consultas del mismo paciente se crean y revisan de forma independiente, recuperable y doctor-scoped, sin sobrescritura histórica.
+- [x] **PHASE 1 — CLINICAL INFORMATION MODEL / UX CONTRACT** · `COMPLETE`. MODEL01 y MODEL01A aceptados; cinco dominios de titularidad, vistas derivadas, ciclos de vida, navegación conceptual y seis decisiones del Director cerrados. La representación física permanece diferida.
+- [ ] **PHASE 2 — ENCOUNTER INTEGRITY** · `NOT_STARTED`, autorizada para contrato y plan de validación. Probar inicio, guardado, reanudación, finalización, lectura histórica, correcciones/enmiendas y relación documental con atribución médica. **Salida:** dos o más consultas del mismo paciente se crean y revisan de forma independiente, recuperable y doctor-scoped, sin sobrescritura histórica.
 - [ ] **PHASE 3 — AMBULATORY CONSULTATION WORKSPACE** · `NOT_STARTED`. Construir el flujo diario con resumen del paciente, motivo/evolución, exploración/mediciones, valoración, plan, documentos/acciones y revisión/finalización. **Salida:** una consulta ambulatoria normal se completa sin saltos innecesarios entre módulos.
 - [ ] **PHASE 4 — LONGITUDINAL FOLLOW-UP** · `NOT_STARTED`. Evaluar comparación anterior/actual, mediciones históricas, tendencias, historial de medicación y recetas, resultados y pendientes clínicos. **Salida:** preguntas centrales de seguimiento se responden rápidamente con fecha y procedencia explícitas.
 - [ ] **PHASE 5 — CLINICAL ↔ ADMINISTRATIVE RELATIONSHIP** · `NOT_STARTED`. Permitir localizar cita, pago, recibo y factura sin fusionar autoridades financieras y clínicas. **Salida:** el estado administrativo relacionado con una consulta es localizable y mantiene la separación de dominio.
@@ -190,13 +194,17 @@ LEGACY_UNATTRIBUTED_ENCOUNTERS=KNOWN_EXISTING_CONSTRAINT
 
 Estos riesgos alimentan el diseño y las pruebas posteriores; no son todos bloqueos de PHASE 1. Su registro no autoriza migraciones, correcciones ni operaciones clínicas.
 
-### Frontera autorizada de PHASE 1
+### Cierre de PHASE 1 y frontera de PHASE 2
 
-El [capítulo MODEL01](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) define **sólo** el Clinical Information Model / UX Contract y asigna datos y acciones actuales/futuros a paciente, consulta, episodio/caso, documento o administración. `PHASE_1_STATUS=IN_PROGRESS` y `PHASE_1_MODEL01=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE`: las seis decisiones fueron ratificadas, pero el contrato completo no está aceptado ni permite migrar esquema o datos, eliminar pestañas, rediseñar la UI en runtime, cambiar APIs/encounters/documentos, corregir Hospital o GET/DDL ni implementar especialidades.
+El [capítulo MODEL01/MODEL01A](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) es el contrato conceptual aceptado. `PATIENT` conserva identidad y estado clínico longitudinal revisado; `ENCOUNTER` representa una consulta específica; `EPISODE_CASE` es agrupación opcional visible como «Caso clínico»; `DOCUMENT` conserva artefacto versionado con contexto y procedencia; `ADMINISTRATIVE` mantiene Agenda y finanzas separados de la verdad clínica; `DERIVED_VIEW` es lectura proyectada, nunca autoridad editable paralela. Medicación vigente y problemas activos son longitudinales de primera clase. La nueva consulta obtiene instancia propia; los valores previos siguen históricos y no se autocompletan como mediciones actuales. `MISSING_INFORMATION != NORMAL_FINDING` y `UNRECORDED_PHYSICAL_EXAM != NORMAL`.
 
-### Entregable MODEL01 pendiente de aceptación final
+### Entregable MODEL01/MODEL01A aceptado
 
-El [contrato de información clínica y UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) presenta la matriz de titularidad de 68 conceptos, reglas para nuevas consultas y mediciones, ausencia frente a normalidad, resumen longitudinal derivado, separación receta/medicación, contexto documental, casos clínicos, relación administrativa, cuatro estados de trabajo médico, navegación ratificada y límite de especialidades. `DIRECTOR_DECISIONS_RATIFIED=6/6`; las decisiones materiales de MODEL01 ya no están abiertas. PHASE 0 sigue como insumo factual vinculante; ninguna ruta, tabla ni pantalla cambia por publicar el contrato. El siguiente paso autorizado es la **revisión final** del Director/asistente para decidir si PHASE 1 puede cerrar o necesita otro capítulo de contrato antes de PHASE 2.
+El [contrato de información clínica y UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) presenta la matriz de titularidad de 68 conceptos, las reglas de mediciones/exploración, resumen derivado en seis prioridades, distinción receta/medicación, contexto documental paciente/consulta/caso, cinco áreas de navegación, workspace de consulta separado y separación administrativa: finalizar consulta no equivale a cobrar ni facturar. Las seis decisiones del Director quedaron ratificadas y el contrato completo aceptado. Sus filas `PROPUESTA` tienen efecto de **diseño conceptual aceptado**, salvo `PRUEBA`, riesgo técnico no resuelto o detalle de implementación futura. PHASE 0 sigue siendo el insumo factual vinculante; ninguna ruta, tabla ni pantalla cambia por este cierre.
+
+Siguen diferidos, sin impedir PHASE 1 completa: diseño físico de esquema, migración de `clinical_record_entries`/borradores legacy, vínculo físico documento/encounter, reparación GET/DDL, contexto y autorización de Hospital, enmiendas históricas, almacenamiento físico de medicación y problemas activos, especialidades, «Documento libre» y encuentros legacy sin atribución. Los riesgos abiertos de PHASE 0 no se cierran por aceptar el modelo conceptual.
+
+PHASE 2 debe diseñar y demostrar la integridad del ciclo de vida de `clinical_encounters`: iniciar, guardar/borrador, reanudar, finalizar, leer historia, enmendar/corregir, relacionar documentos, atribuir médico/paciente, vincular cita opcional y conservar varias consultas del mismo paciente. La prueba clave es que Consulta 1 permanezca intacta cuando se abre Consulta 2 con datos actuales independientes, valores previos sólo de referencia, documentos en su contexto y recarga/reanudación sin duplicados ni sobrescritura histórica. **El próximo capítulo es contrato y plan de validación controlada.** Implementación de esquema/API exige autorización posterior separada; el workspace ambulatorio final, navegación final, módulos de especialidad, tendencias completas e integración visual de billing pertenecen a fases posteriores.
 
 ## Calidad y aceptación futura
 
@@ -238,3 +246,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-18 | CLIN-REFORM-PHASE0-CLOSEOUT | Baseline aceptado previo al cierre `ef378fddef3edaff07f603d965defa82365a80de`; cadena AUDIT02 `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de` | AUDIT02 aceptado; PHASE 0 `COMPLETE`, mapa factual y riesgos heredados aceptados. PHASE 1 autorizada para diseño/contrato, `NOT_STARTED`. Sin implementación de producto. |
 | 2026-09-18 | CLIN-REFORM-PHASE1-MODEL01 | Baseline aceptado/checkpoint `a1dd2860f90094260c08388d363410198e5a7495` | Contrato de titularidad clínica y UX documentado para revisión; `PHASE_1_STATUS=IN_PROGRESS`, `PHASE_1_MODEL01=READY_FOR_DIRECTOR_REVIEW`. Seis decisiones del Director pendientes. Sin implementación ni diseño de esquema. |
 | 2026-09-18 | CLIN-REFORM-PHASE1-MODEL01A | Baseline de trabajo/checkpoint `0ba07c9d8798ee6ecf03083453f5a587fff812b8`; último aceptado `a1dd2860f90094260c08388d363410198e5a7495` | Seis decisiones del Director ratificadas e incorporadas a la matriz/contrato; `PHASE_1_MODEL01=DIRECTOR_DECISIONS_RATIFIED_READY_FOR_FINAL_ACCEPTANCE`. PHASE 1 sigue `IN_PROGRESS`, pendiente aceptación final. Sin cambios runtime, API, esquema o datos. |
+| 2026-09-18 | CLIN-REFORM-PHASE1-CLOSEOUT | Baseline aceptado previo al cierre `63d9e22403ce64ac8a49f2b06afe3f875724baa3`; MODEL01 `0ba07c9d8798ee6ecf03083453f5a587fff812b8` y MODEL01A `63d9e22403ce64ac8a49f2b06afe3f875724baa3` | MODEL01/MODEL01A aceptados; seis decisiones ratificadas; PHASE 1 `COMPLETE`, titularidad/ciclo de vida conceptual aceptados; PHASE 2 autorizada y `NOT_STARTED` para contrato/plan. Sin implementación. |
