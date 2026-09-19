@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=ccd2a4aa553c841ce72cb77897dd02bf8ba305bc
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Execute PHASE 2 M5 T01-T35 only in a new isolated synthetic disposable QA environment with the accepted encounter-integrity V1 code and required real concurrency harness; no working MXMed database, cutover, production or PHASE 3 UI action authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M5 PREP01 deterministic concurrency harness before executing T01-T35 synthetic QA.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -93,6 +93,8 @@ PRODUCTION_EXECUTION_AUTHORIZED=false
 M5_SYNTHETIC_QA_AUTHORIZED=true
 PHASE_2_M5_STATUS=NOT_STARTED
 PHASE_2_M5_SCOPE=T01_T35_DISPOSABLE_SYNTHETIC_QA_ONLY
+PHASE_2_M5_PREP01=READY_FOR_CODE_REVIEW
+M5_CONCURRENCY_BARRIER=IMPLEMENTED_PENDING_CODE_REVIEW
 FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_M5_DISPOSABLE_QA_ONLY=true
 FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_WORKING_MXMED=false
 FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_PRODUCTION=false
@@ -377,3 +379,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-MIG01A-CLOSEOUT | Evidencia aceptada `da31ed437fed8867ac0cb45342f4eb03c2c476e1` | El primer ensayo quedó históricamente bloqueado por MySQL 1295; R1 reparó el DDL de triggers y el reensayo completo posterior pasó. Aplicación, convergencia e invariantes de 01–04 se probaron únicamente en MySQL local, sintético y desechable; todas las bases se eliminaron. MIG01A `ACCEPTED`; la base MXMed de trabajo sigue sin migrar y no autorizada. PHASE 2 permanece `IN_PROGRESS`. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-IMPL01B | MIG01A aceptado `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; candidato sobre `40a55d339f957780fdb19b50fed1936a5a666642` | Se implementó para revisión el restante conocido de T34: ruta canónica de enmienda/reemplazo documental con documento nuevo, linaje append-only e idempotencia durable. No se ejecutaron migraciones, escrituras físicas, T01–T35 ni activación del feature gate; M5 permanece no autorizado pendiente de revisión. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-IMPL01B-CLOSEOUT | Candidato aceptado `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc` | Comando canónico append-only e idempotencia durable de revisión documental aceptados; prerrequisito de repositorio T34 satisfecho. M5 T01–T35 queda autorizado como siguiente capítulo sólo en QA sintética desechable con concurrencia real; no se ejecutó M5 y la base MXMed de trabajo permanece prohibida. PHASE 2 sigue `IN_PROGRESS`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M5-PREP01 | Baseline aceptado `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; candidato sobre `5cec02501076267d7bf28e949f7bf1872f77fa2f` | Instrumentación QA-only de rendezvous determinista preparada para T04, T11 y T26; apagada por defecto, limitada a entorno local/dev desechable explícito y sin estado clínico. `READY_FOR_CODE_REVIEW`; no se ejecutaron M5, T01–T35, HTTP writes, migraciones ni conexión a la base MXMed de trabajo. |

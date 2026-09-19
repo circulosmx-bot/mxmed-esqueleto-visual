@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_idempotency.php';
 require_once __DIR__ . '/clinical_encounter_sections.php';
 require_once __DIR__ . '/clinical_observations.php';
+require_once __DIR__ . '/../../modules/clinical/qa/m5_concurrency_barrier.php';
 
 function clinical_encounter_integrity_v1_enabled(): bool
 {
@@ -356,6 +357,7 @@ final class ClinicalEncounterIntegrityRepository
             $claim->execute([':doctor'=>$doctorId,':key'=>$key,':hash'=>$hash,':actor'=>$actorId,':patient'=>$patientId]);
             $requestId=(int)$this->pdo->lastInsertId();
             $created = false;
+            clinical_m5_qa_barrier_reach(['T04_CONCURRENT_START_BEFORE_INSERT']);
             $open=$this->findOpen($doctorId,$patientId,true);
             if($open===null){
                 $stmt=$this->pdo->prepare("INSERT INTO clinical_encounters
@@ -395,6 +397,10 @@ final class ClinicalEncounterIntegrityRepository
     {
         $this->pdo->beginTransaction();
         try {
+            clinical_m5_qa_barrier_reach([
+                'T11_CONCURRENT_FINALIZE_BEFORE_TERMINAL_LOCK_OR_COMMIT',
+                'T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK',
+            ]);
             $row = $this->getForUpdate($encounterId);
             $status = (string)$row['status'];
             if ($status === 'closed') {
@@ -437,7 +443,9 @@ final class ClinicalEncounterIntegrityRepository
     public function void(int $encounterId,string $actorId,string $reason): array
     {
         $reason=trim($reason);if($reason==='')throw new InvalidArgumentException('VOID_REASON_REQUIRED');
-        $this->pdo->beginTransaction();try{$row=$this->getForUpdate($encounterId);$status=(string)$row['status'];
+        $this->pdo->beginTransaction();try{
+          clinical_m5_qa_barrier_reach(['T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK']);
+          $row=$this->getForUpdate($encounterId);$status=(string)$row['status'];
           if($status==='voided'){$this->pdo->commit();return $row;}if($status!=='open')throw new RuntimeException('ENCOUNTER_CLOSED');
           $stmt=$this->pdo->prepare("UPDATE clinical_encounters SET status='voided',voided_at=UTC_TIMESTAMP(),voided_by_user_id=:actor,void_reason=:reason,updated_at=UTC_TIMESTAMP() WHERE encounter_id=:id AND status='open'");
           $stmt->execute([':actor'=>$actorId,':reason'=>$reason,':id'=>$encounterId]);if($stmt->rowCount()!==1)throw new RuntimeException('ENCOUNTER_TERMINAL');
