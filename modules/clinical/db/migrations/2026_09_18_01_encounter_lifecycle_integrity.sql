@@ -1,4 +1,4 @@
--- CLIN-REFORM-PHASE2-IMPL01A-R1 — review artifact only. DO NOT EXECUTE in this chapter.
+-- CLIN-REFORM-PHASE2-IMPL01A-R2 — review artifact only. DO NOT EXECUTE in this chapter.
 -- Guarded, additive lifecycle migration. It never infers doctor ownership or rewrites status.
 
 DELIMITER $$
@@ -87,10 +87,16 @@ BEGIN
 
   SELECT COUNT(*),MAX(ACTION_STATEMENT) INTO object_count,object_shape FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='trg_clinical_encounters_v1_before_update' AND EVENT_OBJECT_TABLE='clinical_encounters';
   IF object_count=0 THEN
-    SET @ddl='CREATE TRIGGER trg_clinical_encounters_v1_before_update BEFORE UPDATE ON clinical_encounters FOR EACH ROW BEGIN IF NOT (NEW.patient_id<=>OLD.patient_id) OR NOT (NEW.doctor_id<=>OLD.doctor_id) OR NOT (NEW.appointment_id<=>OLD.appointment_id) OR NOT (NEW.opened_by_user_id<=>OLD.opened_by_user_id) OR NOT (NEW.encounter_dt<=>OLD.encounter_dt) OR NOT (NEW.encounter_type<=>OLD.encounter_type) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''ENCOUNTER_OWNERSHIP_IMMUTABLE''; END IF; IF BINARY NEW.status<>BINARY OLD.status AND NOT (BINARY OLD.status=BINARY ''open'' AND BINARY NEW.status IN (BINARY ''closed'',BINARY ''voided'')) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''ENCOUNTER_TRANSITION_FORBIDDEN''; END IF; END';
+    SET @ddl='CREATE TRIGGER trg_clinical_encounters_v1_before_update BEFORE UPDATE ON clinical_encounters FOR EACH ROW BEGIN IF NOT (NEW.patient_id<=>OLD.patient_id) OR NOT (NEW.doctor_id<=>OLD.doctor_id) OR NOT (NEW.appointment_id<=>OLD.appointment_id) OR NOT (NEW.opened_by_user_id<=>OLD.opened_by_user_id) OR NOT (NEW.encounter_dt<=>OLD.encounter_dt) OR NOT (NEW.encounter_type<=>OLD.encounter_type) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''ENCOUNTER_OWNERSHIP_IMMUTABLE''; END IF; IF BINARY NEW.status<>BINARY OLD.status AND NOT (BINARY OLD.status=BINARY ''open'' AND BINARY NEW.status IN (BINARY ''closed'',BINARY ''voided'')) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''ENCOUNTER_TRANSITION_FORBIDDEN''; END IF; IF BINARY OLD.status=BINARY ''closed'' AND (NOT (NEW.closed_at<=>OLD.closed_at) OR NOT (NEW.closed_by_user_id<=>OLD.closed_by_user_id) OR NOT (NEW.auto_note_uuid_final<=>OLD.auto_note_uuid_final)) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''FIRST_CLOSE_IMMUTABLE''; END IF; IF BINARY OLD.status=BINARY ''voided'' AND (NOT (NEW.voided_at<=>OLD.voided_at) OR NOT (NEW.voided_by_user_id<=>OLD.voided_by_user_id) OR NOT (NEW.void_reason<=>OLD.void_reason)) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''FIRST_VOID_IMMUTABLE''; END IF; END';
     PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;
-  ELSEIF object_count<>1 OR LOWER(object_shape) NOT LIKE '%encounter_ownership_immutable%' OR LOWER(object_shape) NOT LIKE '%encounter_transition_forbidden%' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: update trigger'; END IF;
+  ELSEIF object_count<>1 OR LOWER(object_shape) NOT LIKE '%encounter_ownership_immutable%' OR LOWER(object_shape) NOT LIKE '%encounter_transition_forbidden%'
+      OR LOWER(object_shape) NOT LIKE '%first_close_immutable%' OR LOWER(object_shape) NOT LIKE '%first_void_immutable%'
+  THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: update trigger'; END IF;
 END$$
 CALL mxmed_migrate_encounter_lifecycle_v1()$$
 DROP PROCEDURE mxmed_migrate_encounter_lifecycle_v1$$
 DELIMITER ;
+
+-- Legacy doctor_id=NULL rows intentionally remain UNATTRIBUTED. Evidence-based
+-- ownership reconciliation requires a separately authorized migration that
+-- safely manages this trigger; normal runtime UPDATE may never assign ownership.

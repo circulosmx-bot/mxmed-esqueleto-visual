@@ -520,6 +520,12 @@ function mxmed_build_clinical_document(array $args): array {
         $summary = mxmed_build_prescription_summary($payload);
     }
 
+    $requestedTitle=trim((string)($args['title']??''));
+    if($requestedTitle!=='')$title=$requestedTitle;
+    if(array_key_exists('summary',$args))$summary=trim((string)$args['summary']);
+    $eventDatetime=trim((string)($args['event_datetime']??''));
+    if($eventDatetime==='')$eventDatetime=$now;
+
     return [
         'document_id' => $uuid,
         'document_type' => $type,
@@ -559,11 +565,58 @@ function mxmed_build_clinical_document(array $args): array {
             'edited_flag' => 0,
         ],
         'ui' => [
-            'event_datetime' => $now,
+            'event_datetime' => $eventDatetime,
             'widget_group' => 'documentos_clinicos',
             'printable' => true,
         ],
     ];
+}
+
+function mxmed_clinical_document_initial_state(): array {
+    return ['status'=>'generated','signed_at'=>null];
+}
+
+/**
+ * Canonical transaction-safe persistence primitive. The caller owns the PDO
+ * transaction and must have completed schema readiness checks; this function
+ * never creates or alters schema.
+ */
+function mxmed_persist_clinical_document_in_transaction(PDO $pdo,array $doc,array $extraColumns=[]): int {
+    if(!$pdo->inTransaction())throw new LogicException('CLINICAL_DOCUMENT_TRANSACTION_REQUIRED');
+    $payloadJson=json_encode((array)($doc['content']['payload']??[]),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+    $values=[
+        'document_uuid'=>$doc['document_id'],'document_type'=>$doc['document_type'],'title'=>$doc['title'],
+        'version'=>(int)$doc['version'],'status'=>$doc['status'],'patient_id'=>$doc['context']['patient_id'],
+        'appointment_id'=>$doc['context']['appointment_id']??null,'encounter_id'=>$doc['context']['encounter_id']??null,
+        'hospital_stay_id'=>$doc['context']['hospital_stay_id']??null,'care_setting'=>$doc['context']['care_setting'],
+        'service'=>$doc['context']['service']??null,'payload_json'=>$payloadJson,
+        'rendered_text'=>$doc['content']['rendered_text']??null,'summary'=>$doc['content']['summary']??null,
+        'edited_flag'=>(int)($doc['content']['edited_flag']??0),'event_datetime'=>$doc['ui']['event_datetime'],
+        'widget_group'=>$doc['ui']['widget_group'],'printable'=>!empty($doc['ui']['printable'])?1:0,
+        'created_at'=>$doc['timestamps']['created_at'],'updated_at'=>$doc['timestamps']['updated_at'],
+        'generated_at'=>$doc['timestamps']['generated_at'],'signed_at'=>$doc['timestamps']['signed_at'],
+        'created_by_user_id'=>$doc['audit']['created_by_user_id'],'updated_by_user_id'=>$doc['audit']['updated_by_user_id'],
+    ]+$extraColumns;
+    $columnStmt=$pdo->query('SHOW COLUMNS FROM clinical_documents');$available=[];
+    foreach(($columnStmt?$columnStmt->fetchAll(PDO::FETCH_ASSOC):[]) as $column){$available[(string)($column['Field']??'')]=true;}
+    $insert=[];$holders=[];$params=[];
+    foreach($values as $column=>$value){
+        if(!isset($available[$column]))continue;
+        $insert[]='`'.$column.'`';$placeholder=':doc_'.$column;$holders[]=$placeholder;$params[$placeholder]=$value;
+    }
+    $stmt=$pdo->prepare('INSERT INTO clinical_documents ('.implode(',',$insert).') VALUES ('.implode(',',$holders).')');
+    $stmt->execute($params);$documentId=(int)$pdo->lastInsertId();
+    if($documentId<=0)throw new RuntimeException('CLINICAL_DOCUMENT_CREATE_FAILED');
+    $participant=$pdo->prepare('INSERT INTO clinical_document_participants
+      (clinical_document_id,user_id,role,participation_type,signed_at,created_at)
+      VALUES (:document_id,:user_id,:role,:participation_type,:signed_at,:created_at)');
+    foreach((array)($doc['participants']??[]) as $entry){
+        if(!is_array($entry))continue;
+        $participant->execute([':document_id'=>$documentId,':user_id'=>(string)($entry['user_id']??''),
+          ':role'=>(string)($entry['role']??''),':participation_type'=>(string)($entry['participation_type']??''),
+          ':signed_at'=>$entry['signed_at']??null,':created_at'=>$doc['timestamps']['created_at']]);
+    }
+    return $documentId;
 }
 
 function mxmed_ensure_clinical_docs_schema(PDO $pdo): void {

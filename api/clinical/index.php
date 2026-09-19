@@ -3780,6 +3780,7 @@ function clinical_v1_error_status(Throwable $error): int
     if ($error instanceof ClinicalIdempotencyException) return $error->httpStatus;
     $code=$error->getMessage();
     if(str_starts_with($code,'SCHEMA_NOT_READY'))return 503;
+    if($code==='V1_MULTIPART_STORAGE_NOT_READY')return 503;
     if(in_array($code,['VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH'],true))return 409;
     if($error instanceof InvalidArgumentException||$error instanceof ClinicalSectionValidationException||$error instanceof ClinicalObservationValidationException)return 400;
     return 500;
@@ -3809,34 +3810,28 @@ function clinical_v1_authorized_encounter(PDO $pdo,string $encounterKey,array $d
 
 function clinical_encounter_final_note_create_v1(PDO $pdo,array $encounterRow,string $actorId): array
 {
+    require_once __DIR__ . '/../_lib/clinical_documents.php';
     $encounterId=(int)($encounterRow['encounter_id']??0);$patientId=trim((string)($encounterRow['patient_id']??''));
     if($encounterId<=0||$patientId==='')throw new RuntimeException('FINAL_NOTE_CONTEXT_INVALID');
     $existing=$pdo->prepare('SELECT d.id AS document_id,d.document_uuid FROM clinical_encounter_final_notes f JOIN clinical_documents d ON d.id=f.document_id WHERE f.encounter_id=:id');
     $existing->execute([':id'=>$encounterId]);
     if(is_array($existing->fetch(PDO::FETCH_ASSOC)))throw new RuntimeException('FINAL_NOTE_ALREADY_EXISTS');
-    $uuid=clinical_generate_document_uuid();$now=gmdate('Y-m-d H:i:s');
+    $now=gmdate('Y-m-d H:i:s');
     $payload=['auto_generated'=>true,'snapshot_type'=>'encounter_auto_final','finalized'=>true,'context'=>[
         'patient_id'=>$patientId,'encounter_id'=>(string)$encounterId,'appointment_id'=>$encounterRow['appointment_id']??null,
     ],'snapshot'=>['captured_at'=>$now,'consultation_datetime'=>$encounterRow['encounter_dt']??$now]];
-    $stmt=$pdo->prepare("INSERT INTO clinical_documents
-      (document_uuid,document_type,title,version,status,patient_id,encounter_id,encounter_ref_id,care_setting,payload_json,
-       rendered_text,summary,edited_flag,event_datetime,widget_group,printable,created_at,updated_at,generated_at,signed_at,created_by_user_id,updated_by_user_id)
-      VALUES (:uuid,'note','Nota clínica AUTO (Cierre)',1,'signed',:patient,:encounter_text,:encounter_ref,'consulta',:payload,
-       :rendered,'Cierre AUTO de consulta',0,:event_dt,'documentos_clinicos',1,:now,:now,:now,:now,:actor,:actor)");
-    $stmt->execute([':uuid'=>$uuid,':patient'=>$patientId,':encounter_text'=>(string)$encounterId,':encounter_ref'=>$encounterId,
-      ':payload'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),
-      ':rendered'=>'Cierre de consulta '.$encounterId,':event_dt'=>$encounterRow['encounter_dt']??$now,':now'=>$now,':actor'=>$actorId]);
-    return ['document_id'=>(int)$pdo->lastInsertId(),'document_uuid'=>$uuid];
+    $doc=mxmed_build_clinical_document(['type'=>'note','title'=>'Nota clínica AUTO (Cierre)','summary'=>'Cierre AUTO de consulta',
+      'event_datetime'=>$encounterRow['encounter_dt']??$now,'context'=>['patient_id'=>$patientId,'appointment_id'=>$encounterRow['appointment_id']??null,
+      'encounter_id'=>(string)$encounterId,'care_setting'=>'consulta'],'payload'=>$payload,'actor'=>['user_id'=>$actorId]]);
+    $doc['status']='signed';$doc['timestamps']['signed_at']=$now;$doc['timestamps']['updated_at']=$now;$doc['audit']['updated_by_user_id']=$actorId;
+    foreach($doc['participants'] as &$participant){$participant['signed_at']=$now;}unset($participant);
+    $documentId=mxmed_persist_clinical_document_in_transaction($pdo,$doc,['encounter_ref_id'=>$encounterId]);
+    return ['document_id'=>$documentId,'document_uuid'=>(string)$doc['document_id']];
 }
 
 function clinical_v1_document_class(array $payload): string
 {
-    $class=strtoupper(trim((string)($payload['document_class']??'')));
-    if($class!=='')return $class;
-    return match(strtolower(trim((string)($payload['document_type']??'')))){
-        'lab_result'=>'LAB_RESULT','imaging_result'=>'IMAGING_RESULT','external_result'=>'EXTERNAL_RESULT','external_report'=>'EXTERNAL_REPORT',
-        'prescription','receta'=>'PRESCRIPTION','order','orden_estudio'=>'ORDER',default=>'ENCOUNTER_DOCUMENT',
-    };
+    return clinical_assert_document_class($payload);
 }
 
 function clinical_v1_originating_order_valid(PDO $pdo,array $payload,array $encounterRow): bool
@@ -3847,32 +3842,24 @@ function clinical_v1_originating_order_valid(PDO $pdo,array $payload,array $enco
     if($refs===[])return false;
     foreach($refs as $ref){
         $stmt=$pdo->prepare("SELECT id FROM clinical_documents WHERE (CAST(id AS CHAR)=:ref OR document_uuid=:ref)
-          AND patient_id=:patient AND encounter_ref_id=:encounter AND document_type IN ('order','orden_estudio') LIMIT 1");
+          AND patient_id=:patient AND encounter_ref_id=:encounter
+          AND document_type IN ('order','orders','lab_order','imaging_order','orden_estudio') LIMIT 1");
         $stmt->execute([':ref'=>(string)$ref,':patient'=>(string)$encounterRow['patient_id'],':encounter'=>(int)$encounterRow['encounter_id']]);
         if($stmt->fetchColumn()!==false)return true;
     }
     return false;
 }
 
-function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload,?array $uploadFile,string $actorId): int
+function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload,string $actorId): int
 {
-    $uuid=clinical_generate_document_uuid();$payloadData=is_array($payload['payload']??null)?$payload['payload']:[];
-    if(is_array($uploadFile)){$fileMeta=clinical_store_uploaded_file($uploadFile,$uuid);$payloadData['render_mode']=$fileMeta['render_mode']??'image';$payloadData['file']=$fileMeta;}
+    require_once __DIR__ . '/../_lib/clinical_documents.php';
+    $payloadData=is_array($payload['payload']??null)?$payload['payload']:[];
     $type=strtolower(trim((string)($payload['document_type']??'')));if($type==='')throw new InvalidArgumentException('DOCUMENT_TYPE_REQUIRED');
-    $title=trim((string)($payload['title']??''));if($title==='')$title='Documento clínico ('.$type.')';
     $event=trim((string)($payload['event_datetime']??''));if($event==='')$event=gmdate('Y-m-d H:i:s');
-    $now=gmdate('Y-m-d H:i:s');
-    $stmt=$pdo->prepare("INSERT INTO clinical_documents
-      (document_uuid,document_type,title,version,status,patient_id,encounter_id,encounter_ref_id,care_setting,payload_json,rendered_text,summary,
-       edited_flag,event_datetime,widget_group,printable,created_at,updated_at,generated_at,signed_at,created_by_user_id,updated_by_user_id)
-      VALUES (:uuid,:type,:title,1,'signed',:patient,:encounter_text,:encounter_ref,'consulta',:payload,:rendered,:summary,
-       0,:event_dt,'documentos_clinicos',1,:now,:now,:now,:now,:actor,:actor)");
-    $stmt->execute([':uuid'=>$uuid,':type'=>$type,':title'=>$title,':patient'=>$encounterRow['patient_id'],
-      ':encounter_text'=>(string)$encounterRow['encounter_id'],':encounter_ref'=>(int)$encounterRow['encounter_id'],
-      ':payload'=>json_encode($payloadData,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),
-      ':rendered'=>is_string($payloadData['text']??null)?$payloadData['text']:null,':summary'=>$payload['summary']??'',
-      ':event_dt'=>$event,':now'=>$now,':actor'=>$actorId]);
-    return (int)$pdo->lastInsertId();
+    $doc=mxmed_build_clinical_document(['type'=>$type,'title'=>$payload['title']??'','summary'=>$payload['summary']??'',
+      'event_datetime'=>$event,'context'=>['patient_id'=>$encounterRow['patient_id'],'appointment_id'=>$encounterRow['appointment_id']??null,
+      'encounter_id'=>(string)$encounterRow['encounter_id'],'care_setting'=>'consulta'],'payload'=>$payloadData,'actor'=>['user_id'=>$actorId]]);
+    return mxmed_persist_clinical_document_in_transaction($pdo,$doc,['encounter_ref_id'=>(int)$encounterRow['encounter_id']]);
 }
 
 function clinical_v1_document_fetch(PDO $pdo,int $id): array
@@ -6837,6 +6824,9 @@ try {
                 if(clinical_encounter_integrity_v1_enabled()){
                     $encounterRow=clinical_v1_authorized_encounter($pdo,$encounterKey,$doctorContext,'encounters/{encounter_key}/documents');
                     if($encounterRow===null)return;
+                    if(!clinical_v1_multipart_document_write_allowed($isMultipart,is_array($uploadFile))){
+                        throw new RuntimeException('V1_MULTIPART_STORAGE_NOT_READY');
+                    }
                     $documentClass=clinical_v1_document_class($payload);
                     $createOperation=clinical_document_create_operation($documentClass);
                     $policyOperation=clinical_document_policy_operation($documentClass);
@@ -6847,14 +6837,13 @@ try {
                     $policy=clinical_document_operation_policy($policyOperation,$documentClass,(string)$encounterRow['status'],$policyContext);
                     if(($policy['allowed']??false)!==true)throw new RuntimeException((string)($policy['code']??'DOCUMENT_OPERATION_UNSUPPORTED'));
                     $contentHash=null;
-                    if(is_array($uploadFile)){$tmp=(string)($uploadFile['tmp_name']??'');if($tmp===''||!is_file($tmp))throw new InvalidArgumentException('UPLOAD_TEMP_FILE_INVALID');$contentHash=hash_file('sha256',$tmp);if(!is_string($contentHash))throw new RuntimeException('UPLOAD_HASH_FAILED');}
                     $semantic=clinical_document_semantic_request($payload,$contentHash)+['encounter_id'=>(int)$encounterRow['encounter_id'],'patient_id'=>(string)$encounterRow['patient_id'],'operation'=>$createOperation];
                     $service=new ClinicalEncounterIntegrityService($pdo);
                     $result=$service->idempotentCreate($createOperation,$doctorContext['doctor_id'],'ENCOUNTER',(string)$encounterRow['encounter_id'],(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''),$semantic,'document_id',$doctorContext['user_id'],
-                      function()use($pdo,$encounterRow,$payload,$uploadFile,$doctorContext,$policyOperation,$documentClass,$policyContext):int{
+                      function()use($pdo,$encounterRow,$payload,$doctorContext,$policyOperation,$documentClass,$policyContext):int{
                         $lock=$pdo->prepare('SELECT * FROM clinical_encounters WHERE encounter_id=:id FOR UPDATE');$lock->execute([':id'=>$encounterRow['encounter_id']]);$locked=$lock->fetch(PDO::FETCH_ASSOC);if(!is_array($locked))throw new RuntimeException('ENCOUNTER_NOT_FOUND');
                         $decision=clinical_document_operation_policy($policyOperation,$documentClass,(string)$locked['status'],$policyContext);if(($decision['allowed']??false)!==true)throw new RuntimeException((string)$decision['code']);
-                        return clinical_v1_document_insert($pdo,$locked,$payload,$uploadFile,$doctorContext['user_id']);
+                        return clinical_v1_document_insert($pdo,$locked,$payload,$doctorContext['user_id']);
                       },fn(int $id):array=>clinical_v1_document_fetch($pdo,$id));
                     $replay=($result['_idempotency_replay']??false)===true;unset($result['_idempotency_replay']);
                     clinical_send_response(['ok'=>true,'error'=>null,'message'=>'document created','data'=>$result,'meta'=>['method'=>'POST','route'=>'encounters/{encounter_key}/documents','idempotency_replay'=>$replay]],$replay?200:201);return;

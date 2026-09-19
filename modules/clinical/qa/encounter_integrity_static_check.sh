@@ -9,6 +9,7 @@ php_files=(
   "$ROOT/api/_lib/clinical_encounter_sections.php"
   "$ROOT/api/_lib/clinical_observations.php"
   "$ROOT/api/_lib/clinical_encounter_integrity.php"
+  "$ROOT/api/_lib/clinical_documents.php"
   "$ROOT/api/clinical/index.php"
   "$ROOT/modules/clinical/qa/encounter_integrity_pure_test.php"
 )
@@ -54,6 +55,39 @@ grep -q 'CREATE_ENCOUNTER_AMENDMENT' "$ROOT/api/_lib/clinical_encounter_integrit
 grep -q "CREATE_POST_ENCOUNTER_RESULT" "$ROUTER"
 grep -q 'idempotentCreate' "$ROUTER"
 grep -q 'auto_note_uuid_final=:document_uuid' "$ROOT/api/_lib/clinical_encounter_integrity.php"
+
+LIFECYCLE="$MIGRATIONS/2026_09_18_01_encounter_lifecycle_integrity.sql"
+INTEGRITY="$ROOT/api/_lib/clinical_encounter_integrity.php"
+grep -q 'FIRST_CLOSE_IMMUTABLE' "$LIFECYCLE"
+grep -q 'FIRST_VOID_IMMUTABLE' "$LIFECYCLE"
+grep -q 'first_close_immutable' "$INTEGRITY"
+grep -q 'first_void_immutable' "$INTEGRITY"
+
+critical_checks=(
+  chk_clinical_encounter_lifecycle_v1
+  chk_encounter_section_type_v1 chk_encounter_section_version_v1
+  chk_observation_version_v1 chk_observation_source_v1 chk_observation_bp_v1
+  chk_encounter_amendment_reason_v1 chk_encounter_start_commit_v1
+  chk_idempotency_context_v1 chk_idempotency_operation_v1 chk_idempotency_committed_result_v1
+  chk_document_revision_reason_v1
+)
+for check_name in "${critical_checks[@]}"; do
+  grep -q "$check_name" "$INTEGRITY"
+  grep -q "$check_name" "$MIGRATIONS"/2026_09_18_0*_encounter_*.sql
+done
+
+grep -q 'clinical_canonical_document_class' "$INTEGRITY"
+grep -q 'DOCUMENT_CLASS_MISMATCH' "$INTEGRITY"
+grep -q "'order', 'orders', 'lab_order', 'imaging_order', 'orden_estudio'" "$INTEGRITY"
+grep -q "'lab_result', 'lab_pdf'" "$INTEGRITY"
+grep -q "default => 'ENCOUNTER_DOCUMENT'" "$INTEGRITY"
+grep -q 'mxmed_build_clinical_document' "$ROUTER"
+grep -q 'mxmed_persist_clinical_document_in_transaction' "$ROUTER"
+grep -q 'V1_MULTIPART_STORAGE_NOT_READY' "$ROUTER"
+! sed -n '/function clinical_v1_document_insert/,/function clinical_v1_document_fetch/p' "$ROUTER" | grep -q "status='signed'"
+! sed -n '/function clinical_v1_document_insert/,/function clinical_v1_document_fetch/p' "$ROUTER" | grep -q 'clinical_store_uploaded_file'
+! sed -n '/function clinical_v1_document_insert/,/function clinical_v1_document_fetch/p' "$ROUTER" | grep -q 'mxmed_ensure_clinical_docs_schema'
+grep -q "getenv('MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1') ?: ''" "$INTEGRITY"
 
 # The three encounter GET branches use readiness inspection when V1 is enabled.
 test "$(grep -c 'clinical_encounter_integrity_assert_schema_ready' "$ROUTER")" -ge 4

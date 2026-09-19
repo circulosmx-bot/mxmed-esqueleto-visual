@@ -26,6 +26,54 @@ function clinical_encounter_attribution_classification(?string $doctorId): strin
     return $doctorId === null || trim($doctorId) === '' ? 'UNATTRIBUTED' : 'ATTRIBUTED';
 }
 
+function clinical_terminal_audit_change_code(array $old, array $new): ?string
+{
+    if (($old['status'] ?? null) === 'closed') {
+        foreach (['closed_at', 'closed_by_user_id', 'auto_note_uuid_final'] as $field) {
+            if (($old[$field] ?? null) !== ($new[$field] ?? null)) return 'FIRST_CLOSE_IMMUTABLE';
+        }
+    }
+    if (($old['status'] ?? null) === 'voided') {
+        foreach (['voided_at', 'voided_by_user_id', 'void_reason'] as $field) {
+            if (($old[$field] ?? null) !== ($new[$field] ?? null)) return 'FIRST_VOID_IMMUTABLE';
+        }
+    }
+    return null;
+}
+
+function clinical_canonical_document_class(string $documentType): string
+{
+    return match (strtolower(trim($documentType))) {
+        'order', 'orders', 'lab_order', 'imaging_order', 'orden_estudio' => 'ORDER',
+        'lab_result', 'lab_pdf' => 'LAB_RESULT',
+        'imaging_result' => 'IMAGING_RESULT',
+        'external_result' => 'EXTERNAL_RESULT',
+        'external_report' => 'EXTERNAL_REPORT',
+        'prescription', 'receta' => 'PRESCRIPTION',
+        default => 'ENCOUNTER_DOCUMENT',
+    };
+}
+
+function clinical_assert_document_class(array $payload): string
+{
+    $derived=clinical_canonical_document_class((string)($payload['document_type']??''));
+    if(array_key_exists('document_class',$payload)){
+        $asserted=strtoupper(trim((string)$payload['document_class']));
+        if($asserted!==$derived)throw new InvalidArgumentException('DOCUMENT_CLASS_MISMATCH');
+    }
+    return $derived;
+}
+
+function clinical_document_type_is_order(string $documentType): bool
+{
+    return clinical_canonical_document_class($documentType)==='ORDER';
+}
+
+function clinical_v1_multipart_document_write_allowed(bool $isMultipart, bool $hasFile): bool
+{
+    return !$isMultipart && !$hasFile;
+}
+
 function clinical_document_content_rewrite_allowed(string $status, bool $isFinalEncounterNote = false): bool
 {
     $status = strtolower(trim($status));
@@ -66,7 +114,8 @@ function clinical_document_semantic_request(array $payload, ?string $contentSha2
 {
     return [
         'content_sha256' => $contentSha256,
-        'document_class' => strtoupper(trim((string)($payload['document_class'] ?? $payload['document_type'] ?? ''))),
+        'document_class' => clinical_assert_document_class($payload),
+        'document_type' => strtolower(trim((string)($payload['document_type'] ?? ''))),
         'event_datetime' => $payload['event_datetime'] ?? null,
         'logical_payload' => is_array($payload['payload'] ?? null) ? $payload['payload'] : [],
         'media_tag_key' => $payload['media_tag_key'] ?? null,
@@ -113,7 +162,8 @@ function clinical_document_operation_policy(string $operation, string $documentC
 function clinical_encounter_integrity_required_schema(): array
 {
     return ['clinical_encounters','clinical_encounter_sections','clinical_observations','clinical_encounter_amendments',
-      'clinical_encounter_start_requests','clinical_idempotency_requests','clinical_encounter_final_notes','clinical_document_revisions','clinical_documents'];
+      'clinical_encounter_start_requests','clinical_idempotency_requests','clinical_encounter_final_notes','clinical_document_revisions',
+      'clinical_documents','clinical_document_participants'];
 }
 
 function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
@@ -149,10 +199,16 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
     $indexes=[
         ['clinical_encounters','uq_clinical_encounter_one_open','doctor_id,patient_id,open_guard',0],
         ['clinical_encounter_sections','uq_encounter_section_concept','encounter_id,section_type',0],
+        ['clinical_observations','idx_observation_encounter_code_effective','encounter_id,code,effective_at',1],
+        ['clinical_encounter_amendments','idx_encounter_amendment_history','encounter_id,amended_at,amendment_id',1],
         ['clinical_encounter_start_requests','uq_encounter_start_idempotency','doctor_id,idempotency_key',0],
+        ['clinical_encounter_start_requests','idx_encounter_start_result','encounter_id',1],
         ['clinical_idempotency_requests','uq_clinical_command_idempotency','operation_type,doctor_id,context_type,context_id,idempotency_key',0],
         ['clinical_encounter_final_notes','PRIMARY','encounter_id',0],
         ['clinical_encounter_final_notes','uq_encounter_final_note_document','document_id',0],
+        ['clinical_document_revisions','uq_document_revision_new_document','new_document_id',0],
+        ['clinical_document_revisions','idx_document_revision_original','original_document_id,revision_id',1],
+        ['clinical_documents','idx_clinical_documents_encounter_ref','encounter_ref_id,event_datetime',1],
     ];
     foreach($indexes as [$table,$name,$expected,$nonUnique]){
         $q=$pdo->prepare('SELECT NON_UNIQUE,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ",") AS columns_csv
@@ -163,27 +219,45 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
 
     $triggers=[
         'trg_clinical_encounters_v1_before_insert'=>['INSERT','BEFORE','start_must_create_open','doctor_id_required'],
-        'trg_clinical_encounters_v1_before_update'=>['UPDATE','BEFORE','encounter_ownership_immutable','encounter_transition_forbidden'],
+        'trg_clinical_encounters_v1_before_update'=>['UPDATE','BEFORE','encounter_ownership_immutable','encounter_transition_forbidden','first_close_immutable','first_void_immutable'],
     ];
-    foreach($triggers as $trigger=>[$event,$timing,$markerA,$markerB]){
+    foreach($triggers as $trigger=>$expected){
+        [$event,$timing]=$expected;$markers=array_slice($expected,2);
         $q=$pdo->prepare('SELECT EVENT_MANIPULATION,ACTION_TIMING,ACTION_STATEMENT FROM information_schema.TRIGGERS
             WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=? AND EVENT_OBJECT_TABLE="clinical_encounters"');
         $q->execute([$trigger]);$row=$q->fetch(PDO::FETCH_ASSOC);$body=strtolower((string)($row['ACTION_STATEMENT']??''));
-        if(!is_array($row)||(string)$row['EVENT_MANIPULATION']!==$event||(string)$row['ACTION_TIMING']!==$timing
-            ||!str_contains($body,$markerA)||!str_contains($body,$markerB))$drift[]='trigger.'.$trigger;
+        if(!is_array($row)||(string)$row['EVENT_MANIPULATION']!==$event||(string)$row['ACTION_TIMING']!==$timing)$drift[]='trigger.'.$trigger;
+        foreach($markers as $marker){if(!str_contains($body,$marker))$drift[]='trigger.'.$trigger;}
     }
-    $q=$pdo->prepare('SELECT cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc
-        JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME
-        WHERE tc.CONSTRAINT_SCHEMA=DATABASE() AND tc.TABLE_NAME="clinical_encounters"
-          AND tc.CONSTRAINT_NAME="chk_clinical_encounter_lifecycle_v1" AND tc.CONSTRAINT_TYPE="CHECK"');
-    $q->execute();$check=strtolower((string)$q->fetchColumn());
-    foreach(['doctor_id','open','closed','voided','closed_at','voided_at','void_reason'] as $marker){if(!str_contains($check,$marker))$drift[]='clinical_encounters.chk_clinical_encounter_lifecycle_v1';}
+    $checks=[
+        ['clinical_encounters','chk_clinical_encounter_lifecycle_v1',['doctor_id','open','closed','voided','closed_at','voided_at','void_reason']],
+        ['clinical_encounter_sections','chk_encounter_section_type_v1',['reason_evolution','physical_exam','follow_up']],
+        ['clinical_encounter_sections','chk_encounter_section_version_v1',['payload_schema_version','row_version']],
+        ['clinical_observations','chk_observation_version_v1',['row_version']],
+        ['clinical_observations','chk_observation_source_v1',['direct_measurement','patient_report','import']],
+        ['clinical_observations','chk_observation_bp_v1',['blood_pressure','systolic_mm_hg','diastolic_mm_hg','mmhg']],
+        ['clinical_encounter_amendments','chk_encounter_amendment_reason_v1',['reason','char_length']],
+        ['clinical_encounter_start_requests','chk_encounter_start_commit_v1',['committed_at','encounter_id']],
+        ['clinical_idempotency_requests','chk_idempotency_context_v1',['context_type','encounter','patient']],
+        ['clinical_idempotency_requests','chk_idempotency_operation_v1',['create_observation','create_encounter_document','create_post_encounter_result','create_encounter_amendment','create_document_amendment_or_replacement']],
+        ['clinical_idempotency_requests','chk_idempotency_committed_result_v1',['committed_at','observation_id','document_id','encounter_amendment_id','document_revision_id']],
+        ['clinical_document_revisions','chk_document_revision_reason_v1',['reason','char_length']],
+    ];
+    foreach($checks as [$table,$name,$markers]){
+        $q=$pdo->prepare('SELECT cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc
+            JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME
+            WHERE tc.CONSTRAINT_SCHEMA=DATABASE() AND tc.TABLE_NAME=? AND tc.CONSTRAINT_NAME=? AND tc.CONSTRAINT_TYPE="CHECK"');
+        $q->execute([$table,$name]);$clause=strtolower((string)$q->fetchColumn());
+        if($clause===''){$drift[]=$table.'.'.$name;continue;}
+        foreach($markers as $marker){if(!str_contains($clause,$marker))$drift[]=$table.'.'.$name;}
+    }
 
     $foreignKeys=[
         ['clinical_encounter_sections','fk_encounter_sections_encounter','encounter_id','clinical_encounters','encounter_id'],
         ['clinical_observations','fk_observations_encounter','encounter_id','clinical_encounters','encounter_id'],
         ['clinical_encounter_amendments','fk_encounter_amendments_encounter','encounter_id','clinical_encounters','encounter_id'],
         ['clinical_encounter_start_requests','fk_encounter_start_result','encounter_id','clinical_encounters','encounter_id'],
+        ['clinical_encounter_start_requests','fk_encounter_start_patient','patient_id','patients_patients','patient_id'],
         ['clinical_encounter_final_notes','fk_encounter_final_note_encounter','encounter_id','clinical_encounters','encounter_id'],
         ['clinical_encounter_final_notes','fk_encounter_final_note_document','document_id','clinical_documents','id'],
         ['clinical_document_revisions','fk_document_revision_original','original_document_id','clinical_documents','id'],
@@ -194,6 +268,7 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
         ['clinical_idempotency_requests','fk_idempotency_encounter_amendment','encounter_amendment_id','clinical_encounter_amendments','amendment_id'],
         ['clinical_idempotency_requests','fk_idempotency_document','document_id','clinical_documents','id'],
         ['clinical_idempotency_requests','fk_idempotency_document_revision','document_revision_id','clinical_document_revisions','revision_id'],
+        ['clinical_document_participants','fk_cdp_doc','clinical_document_id','clinical_documents','id'],
     ];
     foreach($foreignKeys as [$table,$name,$column,$referenced,$referencedColumn]){
         $q=$pdo->prepare('SELECT rc.REFERENCED_TABLE_NAME,rc.DELETE_RULE,rc.UPDATE_RULE,kcu.COLUMN_NAME,kcu.REFERENCED_COLUMN_NAME
@@ -201,8 +276,9 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
               ON kcu.CONSTRAINT_SCHEMA=rc.CONSTRAINT_SCHEMA AND kcu.TABLE_NAME=rc.TABLE_NAME AND kcu.CONSTRAINT_NAME=rc.CONSTRAINT_NAME
             WHERE rc.CONSTRAINT_SCHEMA=DATABASE() AND rc.TABLE_NAME=? AND rc.CONSTRAINT_NAME=?');
         $q->execute([$table,$name]);$row=$q->fetch(PDO::FETCH_ASSOC);
-        if(!is_array($row)||(string)$row['REFERENCED_TABLE_NAME']!==$referenced||(string)$row['DELETE_RULE']!=='RESTRICT'
-            ||(string)$row['UPDATE_RULE']!=='RESTRICT'||(string)$row['COLUMN_NAME']!==$column||(string)$row['REFERENCED_COLUMN_NAME']!==$referencedColumn){
+        $expectedDelete=$name==='fk_cdp_doc'?'CASCADE':'RESTRICT';
+        if(!is_array($row)||(string)$row['REFERENCED_TABLE_NAME']!==$referenced||(string)$row['DELETE_RULE']!==$expectedDelete
+            ||($name!=='fk_cdp_doc'&&(string)$row['UPDATE_RULE']!=='RESTRICT')||(string)$row['COLUMN_NAME']!==$column||(string)$row['REFERENCED_COLUMN_NAME']!==$referencedColumn){
             $drift[]=$table.'.'.$name;
         }
     }

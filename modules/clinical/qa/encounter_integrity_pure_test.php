@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../../api/_lib/clinical_encounter_integrity.php';
+require_once __DIR__ . '/../../../api/_lib/clinical_documents.php';
 
 $passed = 0;
 
@@ -24,6 +25,18 @@ check(!clinical_encounter_transition_allowed('closed', 'open'), 'CLOSED -> OPEN 
 check(!clinical_encounter_transition_allowed('OPEN', 'closed'), 'noncanonical uppercase lifecycle state rejected');
 check(!clinical_encounter_status_is_canonical(' open'), 'noncanonical spaced lifecycle state rejected');
 check(clinical_encounter_attribution_classification(null) === 'UNATTRIBUTED', 'legacy NULL doctor remains unattributed');
+check(clinical_terminal_audit_change_code(
+    ['status'=>'closed','closed_at'=>'2026-09-18 12:00:00','closed_by_user_id'=>'u1','auto_note_uuid_final'=>'d1'],
+    ['status'=>'closed','closed_at'=>'2026-09-18 12:00:01','closed_by_user_id'=>'u1','auto_note_uuid_final'=>'d1']
+) === 'FIRST_CLOSE_IMMUTABLE', 'first close audit values are immutable');
+check(clinical_terminal_audit_change_code(
+    ['status'=>'closed','closed_at'=>'2026-09-18 12:00:00','closed_by_user_id'=>'u1','auto_note_uuid_final'=>'d1'],
+    ['status'=>'closed','closed_at'=>'2026-09-18 12:00:00','closed_by_user_id'=>'u1','auto_note_uuid_final'=>'d2']
+) === 'FIRST_CLOSE_IMMUTABLE', 'final auto note identity is immutable after close');
+check(clinical_terminal_audit_change_code(
+    ['status'=>'voided','voided_at'=>'2026-09-18 12:00:00','voided_by_user_id'=>'u1','void_reason'=>'duplicate'],
+    ['status'=>'voided','voided_at'=>'2026-09-18 12:00:00','voided_by_user_id'=>'u1','void_reason'=>'changed']
+) === 'FIRST_VOID_IMMUTABLE', 'first void audit values are immutable');
 
 check(clinical_encounter_section_type_validate('assessment') === 'assessment', 'known section accepted');
 try {
@@ -58,15 +71,33 @@ check(clinical_section_write_error_code($duplicate) === 'VERSION_CONFLICT', 'con
 
 check(clinical_document_create_operation('LAB_RESULT') === 'CREATE_POST_ENCOUNTER_RESULT', 'post-close result selects result idempotency operation');
 check(clinical_document_create_operation('PRESCRIPTION') === 'CREATE_ENCOUNTER_DOCUMENT', 'ordinary document selects encounter document operation');
+check(clinical_canonical_document_class('lab_order') === 'ORDER', 'lab_order maps to canonical ORDER');
+check(clinical_canonical_document_class('imaging_order') === 'ORDER', 'imaging_order maps to canonical ORDER');
+check(clinical_canonical_document_class('lab_pdf') === 'LAB_RESULT', 'lab_pdf maps to canonical LAB_RESULT');
+check(clinical_canonical_document_class('image') === 'ENCOUNTER_DOCUMENT', 'generic image is ordinary document');
+check(clinical_canonical_document_class('pdf') === 'ENCOUNTER_DOCUMENT', 'generic pdf is ordinary document');
+check(clinical_document_type_is_order('orders'), 'canonical order aliases are recognized');
+try {
+    clinical_assert_document_class(['document_type'=>'prescription','document_class'=>'LAB_RESULT']);
+    check(false, 'spoofed client document class rejected');
+} catch (InvalidArgumentException $e) {
+    check($e->getMessage()==='DOCUMENT_CLASS_MISMATCH', 'spoofed client document class rejected');
+}
+check(clinical_assert_document_class(['document_type'=>'lab_result','document_class'=>'LAB_RESULT'])==='LAB_RESULT', 'matching class assertion accepted');
+check(clinical_v1_multipart_document_write_allowed(true,true)===false, 'V1 multipart write fails closed');
+check(clinical_v1_multipart_document_write_allowed(false,false)===true, 'V1 JSON document write remains eligible');
+$initialState=mxmed_clinical_document_initial_state();
+check($initialState['status']==='generated'&&$initialState['signed_at']===null, 'canonical document initial state is generated and unsigned');
 
 $semanticA = clinical_document_semantic_request([
+    'document_type' => 'lab_result',
     'document_class' => 'LAB_RESULT',
     'title' => 'Química sanguínea',
     'payload' => ['related_order_document_uuid' => 'order-1'],
     'tmp_name' => '/tmp/php-a',
 ], str_repeat('a', 64));
 $semanticB = clinical_document_semantic_request([
-    'document_class' => 'LAB_RESULT',
+    'document_type' => 'lab_result',
     'title' => 'Química sanguínea',
     'payload' => ['related_order_document_uuid' => 'order-1'],
     'tmp_name' => '/tmp/php-b',

@@ -1,4 +1,4 @@
--- CLIN-REFORM-PHASE2-IMPL01A-R1 — review artifact only. DO NOT EXECUTE in this chapter.
+-- CLIN-REFORM-PHASE2-IMPL01A-R2 — review artifact only. DO NOT EXECUTE in this chapter.
 -- Guarded document linkage. No legacy encounter link is inferred or backfilled.
 
 DELIMITER $$
@@ -35,10 +35,12 @@ BEGIN
     PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;
   ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: clinical_encounter_final_notes';
   ELSE
-    SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) INTO shape_value FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_encounter_final_notes' AND INDEX_NAME='PRIMARY';
-    IF shape_value<>'encounter_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: final note PK'; END IF;
-    SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) INTO shape_value FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_encounter_final_notes' AND INDEX_NAME='uq_encounter_final_note_document';
-    IF shape_value<>'document_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: final note document unique'; END IF;
+    SELECT COUNT(DISTINCT INDEX_NAME),CONCAT(MAX(NON_UNIQUE),'|',GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX)) INTO n,shape_value FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_encounter_final_notes' AND INDEX_NAME='PRIMARY';
+    IF n=0 THEN ALTER TABLE clinical_encounter_final_notes ADD PRIMARY KEY (encounter_id);
+    ELSEIF n<>1 OR shape_value<>'0|encounter_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: final note PK'; END IF;
+    SELECT COUNT(DISTINCT INDEX_NAME),CONCAT(MAX(NON_UNIQUE),'|',GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX)) INTO n,shape_value FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_encounter_final_notes' AND INDEX_NAME='uq_encounter_final_note_document';
+    IF n=0 THEN ALTER TABLE clinical_encounter_final_notes ADD UNIQUE KEY uq_encounter_final_note_document (document_id);
+    ELSEIF n<>1 OR shape_value<>'0|document_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: final note document unique'; END IF;
   END IF;
 
   SELECT COUNT(*) INTO n FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions';
@@ -47,8 +49,36 @@ BEGIN
     PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;
   ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: clinical_document_revisions';
   ELSE
-    SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) INTO shape_value FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' AND INDEX_NAME='uq_document_revision_new_document';
-    IF shape_value<>'new_document_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: document revision unique'; END IF;
+    SELECT COUNT(DISTINCT INDEX_NAME),CONCAT(MAX(NON_UNIQUE),'|',GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX)) INTO n,shape_value FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' AND INDEX_NAME='uq_document_revision_new_document';
+    IF n=0 THEN ALTER TABLE clinical_document_revisions ADD UNIQUE KEY uq_document_revision_new_document (new_document_id);
+    ELSEIF n<>1 OR shape_value<>'0|new_document_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: document revision unique'; END IF;
+  END IF;
+
+  SELECT COUNT(DISTINCT INDEX_NAME),CONCAT(MAX(NON_UNIQUE),'|',GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX)) INTO n,shape_value FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' AND INDEX_NAME='idx_document_revision_original';
+  IF n=0 THEN ALTER TABLE clinical_document_revisions ADD KEY idx_document_revision_original (original_document_id,revision_id);
+  ELSEIF n<>1 OR shape_value<>'1|original_document_id,revision_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: idx_document_revision_original'; END IF;
+
+  SELECT COUNT(*) INTO n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='clinical_encounter_final_notes' AND CONSTRAINT_NAME='fk_encounter_final_note_encounter';
+  IF n=0 THEN ALTER TABLE clinical_encounter_final_notes ADD CONSTRAINT fk_encounter_final_note_encounter FOREIGN KEY (encounter_id) REFERENCES clinical_encounters(encounter_id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+  ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: fk_encounter_final_note_encounter'; END IF;
+  SELECT COUNT(*) INTO n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='clinical_encounter_final_notes' AND CONSTRAINT_NAME='fk_encounter_final_note_document';
+  IF n=0 THEN ALTER TABLE clinical_encounter_final_notes ADD CONSTRAINT fk_encounter_final_note_document FOREIGN KEY (document_id) REFERENCES clinical_documents(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+  ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: fk_encounter_final_note_document'; END IF;
+  SELECT COUNT(*) INTO n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' AND CONSTRAINT_NAME='fk_document_revision_original';
+  IF n=0 THEN ALTER TABLE clinical_document_revisions ADD CONSTRAINT fk_document_revision_original FOREIGN KEY (original_document_id) REFERENCES clinical_documents(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+  ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: fk_document_revision_original'; END IF;
+  SELECT COUNT(*) INTO n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' AND CONSTRAINT_NAME='fk_document_revision_supersedes';
+  IF n=0 THEN ALTER TABLE clinical_document_revisions ADD CONSTRAINT fk_document_revision_supersedes FOREIGN KEY (supersedes_document_id) REFERENCES clinical_documents(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+  ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: fk_document_revision_supersedes'; END IF;
+  SELECT COUNT(*) INTO n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' AND CONSTRAINT_NAME='fk_document_revision_new';
+  IF n=0 THEN ALTER TABLE clinical_document_revisions ADD CONSTRAINT fk_document_revision_new FOREIGN KEY (new_document_id) REFERENCES clinical_documents(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+  ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: fk_document_revision_new'; END IF;
+
+  SELECT COUNT(*) INTO n FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='clinical_document_revisions' AND CONSTRAINT_NAME='chk_document_revision_reason_v1' AND CONSTRAINT_TYPE='CHECK';
+  IF n=0 THEN ALTER TABLE clinical_document_revisions ADD CONSTRAINT chk_document_revision_reason_v1 CHECK (CHAR_LENGTH(TRIM(reason))>0);
+  ELSE
+    SELECT LOWER(CHECK_CLAUSE) INTO shape_value FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND CONSTRAINT_NAME='chk_document_revision_reason_v1';
+    IF n<>1 OR shape_value NOT LIKE '%char_length%' OR shape_value NOT LIKE '%reason%' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: chk_document_revision_reason_v1'; END IF;
   END IF;
 
   SELECT COUNT(*) INTO n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='clinical_idempotency_requests' AND CONSTRAINT_NAME='fk_idempotency_document';
@@ -65,7 +95,12 @@ BEGIN
       (operation_type IN ('CREATE_ENCOUNTER_DOCUMENT','CREATE_POST_ENCOUNTER_RESULT') AND observation_id IS NULL AND document_id IS NOT NULL AND encounter_amendment_id IS NULL AND document_revision_id IS NULL) OR
       (operation_type='CREATE_ENCOUNTER_AMENDMENT' AND observation_id IS NULL AND document_id IS NULL AND encounter_amendment_id IS NOT NULL AND document_revision_id IS NULL) OR
       (operation_type='CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT' AND observation_id IS NULL AND document_id IS NULL AND encounter_amendment_id IS NULL AND document_revision_id IS NOT NULL))));
-  ELSEIF n<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: idempotency result check'; END IF;
+  ELSE
+    SELECT LOWER(CHECK_CLAUSE) INTO shape_value FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND CONSTRAINT_NAME='chk_idempotency_committed_result_v1';
+    IF n<>1 OR shape_value NOT LIKE '%committed_at%' OR shape_value NOT LIKE '%observation_id%' OR shape_value NOT LIKE '%document_id%'
+      OR shape_value NOT LIKE '%encounter_amendment_id%' OR shape_value NOT LIKE '%document_revision_id%'
+    THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: idempotency result check'; END IF;
+  END IF;
 
   SELECT COUNT(*) INTO n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE()
     AND DELETE_RULE='RESTRICT' AND UPDATE_RULE='RESTRICT' AND (

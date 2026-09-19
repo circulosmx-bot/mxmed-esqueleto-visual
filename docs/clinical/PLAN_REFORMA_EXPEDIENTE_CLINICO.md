@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=6730a59cfdaf92ddd45ddb271c1a0c7a2a3a7ec8
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant code review of repaired IMPL01A before any migration execution or write validation.
+NEXT_AUTHORIZED_STEP=Director/assistant final code review of IMPL01A-R2 before accepting the repository foundation or authorizing any migration rehearsal.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -38,7 +38,7 @@ G5_SAFE_RETURN_ACCEPTED=true
 G6_SYNTHETIC_QA_PLAN_ACCEPTED=true
 PHASE_2_IMPL01_AUTHORIZED=true
 PHASE_2_IMPL01_STATUS=IN_PROGRESS
-PHASE_2_IMPL01A=REPAIRED_READY_FOR_CODE_REVIEW
+PHASE_2_IMPL01A=R2_READY_FOR_CODE_REVIEW
 PHASE_2_IMPL01_SCOPE=REPOSITORY_IMPLEMENTATION_ONLY
 IMPLEMENTATION_AUTHORIZED=REPOSITORY_ONLY_NOT_EXECUTION
 IMPLEMENTATION_REPOSITORY_CHANGES_AUTHORIZED=true
@@ -243,7 +243,7 @@ El [diseño físico PHYS01](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md), aceptado s
 
 ### CLIN-REFORM-PHASE2-IMPL01 — implementación en repositorio en progreso
 
-IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`. IMPL01A-R1 (el commit candidato que contiene esta entrada) repara el guard escalar OPEN, la tolerancia explícita a encounters legacy sin médico atribuido, los guardas de migración y el manifiesto de readiness; conecta FINALIZE, VOID, secciones, observaciones, enmiendas y política documental bajo el gate; integra cuatro consumidores reales del ledger general de idempotencia; sincroniza la relación de nota final con `auto_note_uuid_final`; y elimina DDL de los GET V1 de encounter. Las cuatro migraciones siguen **no ejecutadas**, el gate permanece predeterminado apagado y no se redirigieron los formularios actuales de Historia/Exploración. `PHASE_2_IMPL01_STATUS=IN_PROGRESS` y `PHASE_2_IMPL01A=REPAIRED_READY_FOR_CODE_REVIEW`; siguen prohibidos la ejecución de migraciones, T01–T35, validación con escrituras, activación del gate, cutover runtime y producción. La cadena candidata es `6fe5fec2156df87649668343d167ca409f0e60fb` → IMPL01A-R1 (este commit). El siguiente paso es exclusivamente la revisión de código del Director/asistente antes de cualquier migración o validación con escrituras.
+IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`. IMPL01A-R2 (el commit candidato que contiene esta entrada) congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`: bajo el gate, multipart termina con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos; una etapa posterior debe diseñar staging/finalización o compensación, retries, SHA idempotente, detección de huérfanos e integridad de almacenamiento privado. `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=DEFERRED_TO_IMPL01B`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. Las cuatro migraciones siguen **no ejecutadas**, el gate permanece apagado y no se redirigieron formularios. `PHASE_2_IMPL01_STATUS=IN_PROGRESS` y `PHASE_2_IMPL01A=R2_READY_FOR_CODE_REVIEW`; continúan prohibidos migraciones, T01–T35, escrituras de validación, activación del gate, cutover y producción. Cadena candidata: `6fe5fec2156df87649668343d167ca409f0e60fb` → `377381ce70af2525113975eacd5ec316458a2370` → IMPL01A-R2 (este commit). El siguiente paso es exclusivamente la revisión final de código del Director/asistente antes de aceptar la base de repositorio o autorizar cualquier ensayo de migración.
 
 ## Calidad y aceptación futura
 
