@@ -2,11 +2,11 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=09022adffd4e3ad0824cb923893b4b2ae0e8ec42
+CURRENT_ACCEPTED_HEAD=cc8bcf502f3953942ba67cc655490d49813401fc
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant code review of MIG01A-R1 trigger DDL compatibility repair; no migration rehearsal rerun authorized yet.
+NEXT_AUTHORIZED_STEP=Rerun MIG01A from the beginning using NEW isolated synthetic disposable local MySQL databases and the accepted MIG01A-R1 source; working MXMed database remains prohibited.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -50,14 +50,16 @@ ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS
 GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
 PHASE_2_MIG01A_AUTHORIZED=true
-PHASE_2_MIG01A_STATUS=BLOCKED_PENDING_R1_REPAIR_REVIEW
+PHASE_2_MIG01A_STATUS=R1_ACCEPTED_READY_FOR_RERUN
 PHASE_2_MIG01A_SCOPE=DISPOSABLE_MIGRATION_REHEARSAL_ONLY
 MIG01A_FIRST_REHEARSAL_RESULT=BLOCKED
 MIG01A_FIRST_BLOCKER=MYSQL_1295_CREATE_TRIGGER_PREPARE_UNSUPPORTED
 MIG01A_FIRST_REHEARSAL_MYSQL_VERSION=8.4.11
 MIG01A_FIRST_REHEARSAL_TARGET_CLASS=DISPOSABLE_SYNTHETIC_LOCAL_ONLY
 MIG01A_RESIDUAL_DATABASE_COUNT=0
-PHASE_2_MIG01A_R1=READY_FOR_CODE_REVIEW
+PHASE_2_MIG01A_R1=ACCEPTED
+MIG01A_R1_ACCEPTED_HEAD=cc8bcf502f3953942ba67cc655490d49813401fc
+PHASE_2_MIG01A_RERUN_AUTHORIZED=true
 DB_MIGRATION_EXECUTION_AUTHORIZED=false
 WORKING_MXMED_DB_MIGRATION_AUTHORIZED=false
 WRITE_VALIDATION_AUTHORIZED=false
@@ -72,7 +74,7 @@ MIGRATIONS_EXECUTED=DISPOSABLE_REHEARSAL_PARTIAL_BLOCKED_ONLY
 WORKING_MXMED_DB_MIGRATIONS_EXECUTED=NONE
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`, ahora `CURRENT_ACCEPTED_HEAD`. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS`: el [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md), las cinco decisiones del Director y el [diseño físico](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md) son autoridad aceptada. IMPL01A se acepta exclusivamente como `REPOSITORY_FOUNDATION`; no representa esquema físicamente migrado, activación del gate, validación con escrituras ni cutover.
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`, ahora `CURRENT_ACCEPTED_HEAD`. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS`: el [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md), las cinco decisiones del Director y el [diseño físico](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md) son autoridad aceptada. IMPL01A se acepta exclusivamente como `REPOSITORY_FOUNDATION`; no representa esquema físicamente migrado, activación del gate, validación con escrituras ni cutover.
 
 ## Visión y problema
 
@@ -267,7 +269,7 @@ El [diseño físico PHYS01](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md), aceptado s
 
 IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`; IMPL01A-R2 quedó aceptado como `REPOSITORY_FOUNDATION` en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`. R2 congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`: bajo el gate, multipart termina con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos; una etapa posterior debe diseñar staging/finalización o compensación, retries, SHA idempotente, detección de huérfanos e integridad de almacenamiento privado. `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=DEFERRED_TO_IMPL01B`; `ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS`; `GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. El primer ensayo físico desechable inició la migración `2026_09_18_01` y se bloqueó en MySQL 8.4.11 con error 1295 porque `CREATE TRIGGER` se intentó mediante `PREPARE/EXECUTE`; no se ejecutaron las migraciones 02–04. Todas las bases desechables se eliminaron (`MIG01A_RESIDUAL_DATABASE_COUNT=0`), la base MXMed de trabajo no se tocó, el gate permanece apagado y no se redirigieron formularios. `PHASE_2_IMPL01_STATUS=IN_PROGRESS` y `PHASE_2_IMPL01A=ACCEPTED`; continúan prohibidos migrar la base MXMed de trabajo, ejecutar T01–T35, validar con escrituras, activar el gate, hacer cutover o ejecutar en producción.
 
-El primer ensayo MIG01A en una base MySQL **nueva, aislada, sintética y desechable** quedó `BLOCKED` por `MYSQL_1295_CREATE_TRIGGER_PREPARE_UNSUPPORTED`. MIG01A-R1 corrige únicamente la compatibilidad del DDL de triggers y queda `READY_FOR_CODE_REVIEW`; todavía no está autorizado repetir el ensayo físico. No se autorizó conexión ni cambios sobre la base MXMed de trabajo. `modules/clinical/db/migrations/2026_09_17_clinical_encounter_doctor_attribution.sql` permanece en cuarentena y fuera de MIG01A: su atribución/backfill derivado de citas no pertenece al contrato de encounter aceptado.
+El primer ensayo MIG01A en una base MySQL **nueva, aislada, sintética y desechable** quedó `BLOCKED` por `MYSQL_1295_CREATE_TRIGGER_PREPARE_UNSUPPORTED`. MIG01A-R1 corrigió únicamente la compatibilidad del DDL de triggers y quedó `ACCEPTED` en `cc8bcf502f3953942ba67cc655490d49813401fc`; queda autorizado repetir desde cero el ensayo físico únicamente en nuevas bases locales aisladas, sintéticas y desechables. No se autorizó conexión ni cambios sobre la base MXMed de trabajo. `modules/clinical/db/migrations/2026_09_17_clinical_encounter_doctor_attribution.sql` permanece en cuarentena y fuera de MIG01A: su atribución/backfill derivado de citas no pertenece al contrato de encounter aceptado.
 
 El alcance futuro de MIG01A queda limitado exactamente a:
 
@@ -331,3 +333,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-18 | CLIN-REFORM-PHASE2-IMPL01A | Baseline aceptado `6730a59cfdaf92ddd45ddb271c1a0c7a2a3a7ec8` | Base de implementación en repositorio creada para revisión: migraciones no ejecutadas, V1 bajo gate apagado, secciones/observaciones/enmiendas, idempotencia, lifecycle/finalize/void, política/lineage documental y QA estática/pura. UI vigente sin cutover; cero mutación DB y cero QA HTTP con escrituras. `READY_FOR_CODE_REVIEW`. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-IMPL01A-CLOSEOUT | Candidato aceptado `09022adffd4e3ad0824cb923893b4b2ae0e8ec42` | IMPL01A-R2 aceptado exclusivamente como `REPOSITORY_FOUNDATION`; PHASE 2 e IMPL01 siguen `IN_PROGRESS`. No se ejecutaron migraciones y el feature gate permanece apagado/sin activar. MIG01A queda autorizado como siguiente capítulo sólo para ensayo de migración en una base MySQL nueva, aislada, sintética y desechable; estado `NOT_STARTED`. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-MIG01A-R1 | Baseline aceptado `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; reparación candidata sobre `601fd17de2c31475645369882210e6d2380b8901` | El primer ensayo físico desechable MIG01A se bloqueó en MySQL 8.4.11 con error 1295 porque `CREATE TRIGGER` se intentó mediante `PREPARE/EXECUTE`. La base MXMed de trabajo no se tocó y todas las bases desechables se eliminaron. R1 repara únicamente la compatibilidad del DDL de triggers y queda pendiente de revisión de código del Director/asistente; no autoriza repetir el ensayo físico. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-MIG01A-R1-CLOSEOUT | R1 aceptado `cc8bcf502f3953942ba67cc655490d49813401fc` | Reparación del bloqueo de DDL de triggers en MySQL 8.4 aceptada. Este cierre no ejecutó reintento físico; autoriza un nuevo ensayo MIG01A completo desde cero sólo en bases locales aisladas, sintéticas y desechables. La base MXMed de trabajo permanece prohibida. |
