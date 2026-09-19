@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=da31ed437fed8867ac0cb45342f4eb03c2c476e1
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant definition and authorization of the next PHASE 2 chapter after accepted MIG01A; no additional implementation, working-database migration, write QA, T01-T35, feature-gate activation, cutover, or production execution is authorized by this closeout.
+NEXT_AUTHORIZED_STEP=Director/assistant code review of IMPL01B document amendment/replacement command before authorizing M5 synthetic T01-T35 QA.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -39,13 +39,15 @@ G6_SYNTHETIC_QA_PLAN_ACCEPTED=true
 PHASE_2_IMPL01_AUTHORIZED=true
 PHASE_2_IMPL01_STATUS=IN_PROGRESS
 PHASE_2_IMPL01A=ACCEPTED
+PHASE_2_IMPL01B=READY_FOR_CODE_REVIEW
+IMPL01B_SCOPE=DOCUMENT_AMENDMENT_REPLACEMENT_COMMAND_ONLY
 IMPL01A_ACCEPTED_HEAD=09022adffd4e3ad0824cb923893b4b2ae0e8ec42
 IMPL01A_R2_REPOSITORY_FOUNDATION_ACCEPTED=true
 IMPL01A_ACCEPTED_AS=REPOSITORY_FOUNDATION
 PHASE_2_IMPL01_SCOPE=REPOSITORY_IMPLEMENTATION_ONLY
 IMPLEMENTATION_AUTHORIZED=REPOSITORY_ONLY_NOT_EXECUTION
 IMPLEMENTATION_REPOSITORY_CHANGES_AUTHORIZED=true
-DOCUMENT_REVISION_CREATE_IDEMPOTENCY=DEFERRED_TO_IMPL01B
+DOCUMENT_REVISION_CREATE_IDEMPOTENCY=IMPLEMENTED_PENDING_CODE_REVIEW
 ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS
 GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
@@ -78,6 +80,7 @@ RUNTIME_CUTOVER_EXECUTED=false
 PRODUCTION_EXECUTION_AUTHORIZED=false
 FEATURE_GATE_ACTIVATION_AUTHORIZED=false
 T01_T35_EXECUTION_AUTHORIZED=false
+M5_SYNTHETIC_QA_AUTHORIZED=false
 MIGRATIONS_EXECUTED=DISPOSABLE_REHEARSAL_ONLY
 WORKING_MXMED_DB_MIGRATIONS_EXECUTED=NONE
 ```
@@ -275,7 +278,7 @@ El [diseño físico PHYS01](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md), aceptado s
 
 ### CLIN-REFORM-PHASE2-IMPL01 — base de repositorio aceptada; fase en progreso
 
-IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`; IMPL01A-R2 quedó aceptado como `REPOSITORY_FOUNDATION` en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`. R2 congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`: bajo el gate, multipart termina con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos; una etapa posterior debe diseñar staging/finalización o compensación, retries, SHA idempotente, detección de huérfanos e integridad de almacenamiento privado. `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=DEFERRED_TO_IMPL01B`; `ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS`; `GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. El primer ensayo físico desechable inició la migración `2026_09_18_01` y se bloqueó en MySQL 8.4.11 con error 1295 porque `CREATE TRIGGER` se intentó mediante `PREPARE/EXECUTE`; no se ejecutaron las migraciones 02–04. Todas las bases desechables se eliminaron (`MIG01A_RESIDUAL_DATABASE_COUNT=0`), la base MXMed de trabajo no se tocó, el gate permanece apagado y no se redirigieron formularios. `PHASE_2_IMPL01_STATUS=IN_PROGRESS` y `PHASE_2_IMPL01A=ACCEPTED`; continúan prohibidos migrar la base MXMed de trabajo, ejecutar T01–T35, validar con escrituras, activar el gate, hacer cutover o ejecutar en producción.
+IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`; IMPL01A-R2 quedó aceptado como `REPOSITORY_FOUNDATION` en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`. R2 congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`: bajo el gate, multipart termina con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos; una etapa posterior debe diseñar staging/finalización o compensación, retries, SHA idempotente, detección de huérfanos e integridad de almacenamiento privado. IMPL01B implementa para revisión `POST /documents/{id}/amendments` con documento nuevo, linaje append-only e idempotencia durable; `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=IMPLEMENTED_PENDING_CODE_REVIEW`. `ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS`; `GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. El primer ensayo físico desechable inició la migración `2026_09_18_01` y se bloqueó en MySQL 8.4.11 con error 1295 porque `CREATE TRIGGER` se intentó mediante `PREPARE/EXECUTE`; no se ejecutaron las migraciones 02–04. Todas las bases desechables se eliminaron (`MIG01A_RESIDUAL_DATABASE_COUNT=0`), la base MXMed de trabajo no se tocó, el gate permanece apagado y no se redirigieron formularios. `PHASE_2_IMPL01_STATUS=IN_PROGRESS`, `PHASE_2_IMPL01A=ACCEPTED` y `PHASE_2_IMPL01B=READY_FOR_CODE_REVIEW`; continúan prohibidos migrar la base MXMed de trabajo, ejecutar T01–T35, validar con escrituras, activar el gate, hacer cutover o ejecutar en producción.
 
 El primer ensayo MIG01A en una base MySQL **nueva, aislada, sintética y desechable** quedó `BLOCKED` por `MYSQL_1295_CREATE_TRIGGER_PREPARE_UNSUPPORTED`. MIG01A-R1 corrigió únicamente la compatibilidad del DDL de triggers y quedó `ACCEPTED` en `cc8bcf502f3953942ba67cc655490d49813401fc`. El reensayo completo desde cero en MySQL 8.4.11 terminó `PASS`: aplicación limpia y segunda ejecución de 01–04, triggers físicos, `open_guard`, 12 CHECK críticos, inmutabilidad terminal, FK históricas, recuperación parcial, deriva de esquema/trigger y readiness fueron verificados; todas las bases desechables se eliminaron (`MIG01A_RERUN_RESIDUAL_DATABASE_COUNT=0`). La evidencia fue revisada y aceptada por el Director/asistente; PHASE 2 permanece `IN_PROGRESS` y este cierre no autoriza ningún paso técnico adicional. No se autorizó conexión ni cambios sobre la base MXMed de trabajo. `modules/clinical/db/migrations/2026_09_17_clinical_encounter_doctor_attribution.sql` permanece en cuarentena y fuera de MIG01A: su atribución/backfill derivado de citas no pertenece al contrato de encounter aceptado.
 
@@ -344,3 +347,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-MIG01A-R1-CLOSEOUT | R1 aceptado `cc8bcf502f3953942ba67cc655490d49813401fc` | Reparación del bloqueo de DDL de triggers en MySQL 8.4 aceptada. Este cierre no ejecutó reintento físico; autoriza un nuevo ensayo MIG01A completo desde cero sólo en bases locales aisladas, sintéticas y desechables. La base MXMed de trabajo permanece prohibida. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-MIG01A-RERUN | Fuente R1 aceptada `cc8bcf502f3953942ba67cc655490d49813401fc`; autorización `77389a60ce007287f8f62ac30d88c1ea6eee22c1` | Reensayo físico completo en MySQL 8.4.11 `PASS` sobre bases locales aisladas, sintéticas y desechables: aplicación y rerun 01–04, triggers R1, invariantes, recuperación parcial, derivas fail-closed y readiness verificados. Teardown completo con cero bases residuales. Evidencia `READY_FOR_DIRECTOR_REVIEW`; la base MXMed de trabajo permanece prohibida. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-MIG01A-CLOSEOUT | Evidencia aceptada `da31ed437fed8867ac0cb45342f4eb03c2c476e1` | El primer ensayo quedó históricamente bloqueado por MySQL 1295; R1 reparó el DDL de triggers y el reensayo completo posterior pasó. Aplicación, convergencia e invariantes de 01–04 se probaron únicamente en MySQL local, sintético y desechable; todas las bases se eliminaron. MIG01A `ACCEPTED`; la base MXMed de trabajo sigue sin migrar y no autorizada. PHASE 2 permanece `IN_PROGRESS`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-IMPL01B | MIG01A aceptado `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; candidato sobre `40a55d339f957780fdb19b50fed1936a5a666642` | Se implementó para revisión el restante conocido de T34: ruta canónica de enmienda/reemplazo documental con documento nuevo, linaje append-only e idempotencia durable. No se ejecutaron migraciones, escrituras físicas, T01–T35 ni activación del feature gate; M5 permanece no autorizado pendiente de revisión. |

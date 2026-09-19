@@ -105,6 +105,44 @@ $semanticB = clinical_document_semantic_request([
 check(hash_equals(clinical_idempotency_request_hash($semanticA), clinical_idempotency_request_hash($semanticB)), 'document semantic hash ignores volatile upload temp path');
 check(($semanticA['content_sha256'] ?? null) === str_repeat('a', 64), 'document semantic hash includes stable content digest');
 
+check(clinical_document_amendment_reason_validate('  corrige dosis  ') === 'corrige dosis', 'document amendment reason is trimmed and required');
+try {
+    clinical_document_amendment_reason_validate('   ');
+    check(false, 'empty document amendment reason rejected');
+} catch (InvalidArgumentException $e) {
+    check($e->getMessage() === 'AMENDMENT_REASON_REQUIRED', 'empty document amendment reason rejected');
+}
+$lineageDocument = ['patient_id' => 'patient-1', 'encounter_ref_id' => 17];
+check(clinical_document_lineage_context_matches($lineageDocument, ['patient_id' => 'patient-1', 'encounter_ref_id' => '17']), 'document lineage accepts identical patient and encounter context');
+check(!clinical_document_lineage_context_matches($lineageDocument, ['patient_id' => 'patient-2', 'encounter_ref_id' => 17]), 'document lineage rejects cross-patient context');
+check(!clinical_document_lineage_context_matches($lineageDocument, ['patient_id' => 'patient-1', 'encounter_ref_id' => 18]), 'document lineage rejects cross-encounter context');
+
+$amendmentOriginal = ['id' => 41, 'document_uuid' => 'doc-41', 'patient_id' => 'patient-1', 'encounter_ref_id' => 17];
+$amendmentReplacement = [
+    'document_type' => 'prescription',
+    'title' => 'Receta corregida',
+    'summary' => 'Corrección de dosis',
+    'event_datetime' => '2026-09-19 12:00:00',
+    'payload' => ['items' => [['medicine' => 'A', 'dose' => '10 mg']]],
+    'provenance' => 'physician-correction',
+];
+$amendmentSemanticA = clinical_document_amendment_semantic_request('doctor-1', $amendmentOriginal, $amendmentReplacement, 'Corrige dosis');
+$amendmentSemanticB = clinical_document_amendment_semantic_request('doctor-1', $amendmentOriginal, $amendmentReplacement, 'Corrige dosis');
+$amendmentChanged = $amendmentReplacement;
+$amendmentChanged['payload']['items'][0]['dose'] = '20 mg';
+check(hash_equals(clinical_idempotency_request_hash($amendmentSemanticA), clinical_idempotency_request_hash($amendmentSemanticB)), 'same document amendment semantics produce replay hash');
+check(!hash_equals(clinical_idempotency_request_hash($amendmentSemanticA), clinical_idempotency_request_hash(
+    clinical_document_amendment_semantic_request('doctor-1', $amendmentOriginal, $amendmentChanged, 'Corrige dosis')
+)), 'material document amendment content changes request hash');
+check(($amendmentSemanticA['operation'] ?? null) === 'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT', 'document amendment binds canonical idempotency operation');
+
+$amendOpen = clinical_document_operation_policy('AMEND_DOCUMENT', 'PRESCRIPTION', 'open');
+$amendClosed = clinical_document_operation_policy('AMEND_DOCUMENT', 'PRESCRIPTION', 'closed');
+$amendVoided = clinical_document_operation_policy('AMEND_DOCUMENT', 'PRESCRIPTION', 'voided');
+check($amendOpen['allowed'] === true, 'document amendment is supported for OPEN encounter');
+check($amendClosed['allowed'] === true, 'document amendment is supported for CLOSED encounter');
+check($amendVoided['allowed'] === false && $amendVoided['code'] === 'ENCOUNTER_VOIDED', 'document amendment is denied for VOIDED encounter');
+
 $ordinaryClosed = clinical_document_operation_policy('CREATE_ENCOUNTER_DOCUMENT', 'PRESCRIPTION', 'closed');
 check($ordinaryClosed['allowed'] === false && $ordinaryClosed['code'] === 'ENCOUNTER_TERMINAL', 'ordinary document denied after close');
 

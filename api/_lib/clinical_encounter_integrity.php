@@ -124,6 +124,52 @@ function clinical_document_semantic_request(array $payload, ?string $contentSha2
     ];
 }
 
+function clinical_document_amendment_reason_validate(string $reason): string
+{
+    $reason = trim($reason);
+    if ($reason === '') {
+        throw new InvalidArgumentException('AMENDMENT_REASON_REQUIRED');
+    }
+    $length = function_exists('mb_strlen') ? mb_strlen($reason, 'UTF-8') : strlen($reason);
+    if ($length > 1000) {
+        throw new InvalidArgumentException('AMENDMENT_REASON_TOO_LONG');
+    }
+    return $reason;
+}
+
+function clinical_document_lineage_context_matches(array $left, array $right): bool
+{
+    $leftPatient = trim((string)($left['patient_id'] ?? ''));
+    $rightPatient = trim((string)($right['patient_id'] ?? ''));
+    $leftEncounter = $left['encounter_ref_id'] ?? null;
+    $rightEncounter = $right['encounter_ref_id'] ?? null;
+    $leftEncounter = ($leftEncounter === null || $leftEncounter === '') ? null : (string)$leftEncounter;
+    $rightEncounter = ($rightEncounter === null || $rightEncounter === '') ? null : (string)$rightEncounter;
+    return $leftPatient !== '' && $leftPatient === $rightPatient && $leftEncounter === $rightEncounter;
+}
+
+function clinical_document_amendment_semantic_request(
+    string $doctorId,
+    array $original,
+    array $replacement,
+    string $reason
+): array {
+    $payload = is_array($replacement['payload'] ?? null) ? $replacement['payload'] : [];
+    return [
+        'canonicalization_version' => clinical_idempotency_canonicalization_version(),
+        'operation' => 'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT',
+        'doctor_id' => trim($doctorId),
+        'original_document_id' => (int)($original['id'] ?? 0),
+        'original_document_uuid' => (string)($original['document_uuid'] ?? ''),
+        'patient_id' => (string)($original['patient_id'] ?? ''),
+        'encounter_id' => $original['encounter_ref_id'] ?? null,
+        'reason' => clinical_document_amendment_reason_validate($reason),
+        'replacement' => clinical_document_semantic_request($replacement, null) + [
+            'provenance' => $replacement['provenance'] ?? ($payload['provenance'] ?? null),
+        ],
+    ];
+}
+
 function clinical_finalize_result_normalize(array $encounter, ?array $finalDocument): array
 {
     return [
@@ -430,6 +476,7 @@ final class ClinicalEncounterIntegrityRepository
 
     public function createDocumentRevision(int $originalId,int $newId,string $reason,string $actor,?int $supersedesId=null): int
     {
+        if(!$this->pdo->inTransaction())throw new LogicException('DOCUMENT_REVISION_TRANSACTION_REQUIRED');
         $reason=trim($reason);
         if($originalId<=0||$newId<=0||$originalId===$newId||$reason==='')throw new InvalidArgumentException('DOCUMENT_REVISION_INVALID');
         $stmt=$this->pdo->prepare('INSERT INTO clinical_document_revisions

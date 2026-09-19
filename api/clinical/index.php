@@ -3781,7 +3781,8 @@ function clinical_v1_error_status(Throwable $error): int
     $code=$error->getMessage();
     if(str_starts_with($code,'SCHEMA_NOT_READY'))return 503;
     if($code==='V1_MULTIPART_STORAGE_NOT_READY')return 503;
-    if(in_array($code,['VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH'],true))return 409;
+    if($code==='DOCUMENT_NOT_FOUND')return 404;
+    if(in_array($code,['VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH','DOCUMENT_TYPE_MISMATCH','DOCUMENT_ALREADY_SUPERSEDED','DOCUMENT_LINEAGE_INVALID'],true))return 409;
     if($error instanceof InvalidArgumentException||$error instanceof ClinicalSectionValidationException||$error instanceof ClinicalObservationValidationException)return 400;
     return 500;
 }
@@ -3866,6 +3867,95 @@ function clinical_v1_document_fetch(PDO $pdo,int $id): array
 {
     $stmt=$pdo->prepare('SELECT id AS document_id,document_uuid,document_type,patient_id,encounter_ref_id,status,event_datetime FROM clinical_documents WHERE id=:id');
     $stmt->execute([':id'=>$id]);$row=$stmt->fetch(PDO::FETCH_ASSOC);if(!is_array($row))throw new RuntimeException('DOCUMENT_NOT_FOUND');return $row;
+}
+
+function clinical_v1_document_record_by_token(PDO $pdo,string $token,bool $forUpdate=false): ?array
+{
+    $token=trim($token);if($token==='')return null;
+    $where=preg_match('/^\d+$/',$token)===1?'id=:token':'document_uuid=:token';
+    $sql='SELECT id,document_uuid,document_type,title,status,patient_id,appointment_id,encounter_id,encounter_ref_id,
+      hospital_stay_id,care_setting,service,summary,event_datetime FROM clinical_documents WHERE '.$where.' LIMIT 1';
+    if($forUpdate)$sql.=' FOR UPDATE';
+    $stmt=$pdo->prepare($sql);$stmt->execute([':token'=>$token]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($row)?$row:null;
+}
+
+function clinical_v1_document_amendment_request(array $request,array $original): array
+{
+    $reason=clinical_document_amendment_reason_validate((string)($request['reason']??''));
+    if(is_array($request['replacement']??null))$replacement=$request['replacement'];
+    elseif(is_array($request['correction']??null))$replacement=$request['correction'];
+    elseif(is_array($request['document']??null))$replacement=$request['document'];
+    else{$replacement=$request;unset($replacement['reason']);}
+    if(!array_key_exists('payload',$replacement)||!is_array($replacement['payload']))throw new InvalidArgumentException('DOCUMENT_CONTENT_REQUIRED');
+    $type=strtolower(trim((string)($replacement['document_type']??$original['document_type']??'')));
+    if($type===''||$type!==strtolower(trim((string)($original['document_type']??''))))throw new RuntimeException('DOCUMENT_TYPE_MISMATCH');
+    foreach(['patient_id'=>(string)($original['patient_id']??''),'encounter_id'=>(string)($original['encounter_ref_id']??'')] as $field=>$expected){
+        if(array_key_exists($field,$replacement)&&trim((string)$replacement[$field])!==$expected)throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+    }
+    if(is_array($replacement['context']??null)){
+        $context=$replacement['context'];
+        if(array_key_exists('patient_id',$context)&&trim((string)$context['patient_id'])!==(string)$original['patient_id'])throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+        if(array_key_exists('encounter_id',$context)&&trim((string)$context['encounter_id'])!==trim((string)($original['encounter_ref_id']??'')))throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+    }
+    $replacement['document_type']=$type;
+    $replacement['title']=array_key_exists('title',$replacement)?(string)$replacement['title']:(string)($original['title']??'');
+    $replacement['summary']=array_key_exists('summary',$replacement)?(string)$replacement['summary']:(string)($original['summary']??'');
+    $replacement['event_datetime']=array_key_exists('event_datetime',$replacement)?(string)$replacement['event_datetime']:(string)($original['event_datetime']??'');
+    if(preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/',trim($replacement['event_datetime']))!==1)throw new InvalidArgumentException('DOCUMENT_EVENT_DATETIME_INVALID');
+    clinical_assert_document_class($replacement);
+    return ['reason'=>$reason,'replacement'=>$replacement];
+}
+
+function clinical_v1_document_revision_fetch(PDO $pdo,int $revisionId): array
+{
+    $stmt=$pdo->prepare('SELECT r.revision_id AS document_revision_id,r.original_document_id,r.supersedes_document_id,
+      r.new_document_id,d.document_uuid AS new_document_uuid,d.status AS new_document_status,d.signed_at AS new_document_signed_at
+      FROM clinical_document_revisions r JOIN clinical_documents d ON d.id=r.new_document_id WHERE r.revision_id=:id');
+    $stmt->execute([':id'=>$revisionId]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!is_array($row))throw new RuntimeException('DOCUMENT_REVISION_NOT_FOUND');
+    foreach(['document_revision_id','original_document_id','new_document_id'] as $field)$row[$field]=(int)$row[$field];
+    $row['supersedes_document_id']=$row['supersedes_document_id']===null?null:(int)$row['supersedes_document_id'];
+    return $row;
+}
+
+function clinical_v1_document_amendment_insert(PDO $pdo,array $authorizedOriginal,array $replacement,string $reason,array $doctorContext): int
+{
+    $target=clinical_v1_document_record_by_token($pdo,(string)$authorizedOriginal['id'],true);
+    if($target===null||!clinical_document_lineage_context_matches($authorizedOriginal,$target))throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+    if((string)$target['document_uuid']!==(string)$authorizedOriginal['document_uuid']
+      || strtolower((string)$target['document_type'])!==strtolower((string)$authorizedOriginal['document_type']))throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+    if(!clinical_has_active_doctor_patient_link($pdo,(string)$doctorContext['doctor_id'],(string)$target['patient_id']))throw new RuntimeException('DOCUMENT_NOT_FOUND');
+    $encounterId=isset($target['encounter_ref_id'])?(int)$target['encounter_ref_id']:0;
+    if($encounterId>0){
+        $lock=$pdo->prepare('SELECT * FROM clinical_encounters WHERE encounter_id=:id FOR UPDATE');$lock->execute([':id'=>$encounterId]);$encounter=$lock->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($encounter)||(string)($encounter['doctor_id']??'')!==(string)$doctorContext['doctor_id'])throw new RuntimeException('DOCUMENT_NOT_FOUND');
+        if((string)($encounter['patient_id']??'')!==(string)$target['patient_id'])throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+        $decision=clinical_document_operation_policy('AMEND_DOCUMENT',clinical_canonical_document_class((string)$target['document_type']),(string)$encounter['status']);
+        if(($decision['allowed']??false)!==true)throw new RuntimeException((string)($decision['code']??'DOCUMENT_OPERATION_UNSUPPORTED'));
+    }
+    $prior=$pdo->prepare('SELECT original_document_id FROM clinical_document_revisions WHERE new_document_id=:target LIMIT 1 FOR UPDATE');
+    $prior->execute([':target'=>(int)$target['id']]);$priorRow=$prior->fetch(PDO::FETCH_ASSOC);
+    $rootId=is_array($priorRow)?(int)$priorRow['original_document_id']:(int)$target['id'];
+    if(is_array($priorRow)&&($rootId<=0||$rootId===(int)$target['id']))throw new RuntimeException('DOCUMENT_LINEAGE_INVALID');
+    $root=clinical_v1_document_record_by_token($pdo,(string)$rootId,true);
+    if($root===null||!clinical_document_lineage_context_matches($root,$target))throw new RuntimeException('DOCUMENT_LINEAGE_INVALID');
+    if(strtolower((string)$root['document_type'])!==strtolower((string)$target['document_type']))throw new RuntimeException('DOCUMENT_LINEAGE_INVALID');
+    $successor=$pdo->prepare('SELECT revision_id FROM clinical_document_revisions
+      WHERE supersedes_document_id=:target OR (original_document_id=:target AND supersedes_document_id IS NULL) LIMIT 1 FOR UPDATE');
+    $successor->execute([':target'=>(int)$target['id']]);
+    if($successor->fetchColumn()!==false)throw new RuntimeException('DOCUMENT_ALREADY_SUPERSEDED');
+    require_once __DIR__ . '/../_lib/clinical_documents.php';
+    $contextEncounter=$encounterId>0?(string)$encounterId:(string)($target['encounter_id']??'');
+    $doc=mxmed_build_clinical_document(['type'=>$replacement['document_type'],'title'=>$replacement['title'],'summary'=>$replacement['summary'],
+      'event_datetime'=>$replacement['event_datetime'],'context'=>['patient_id'=>$target['patient_id'],'appointment_id'=>$target['appointment_id']??null,
+      'encounter_id'=>$contextEncounter!==''?$contextEncounter:null,'hospital_stay_id'=>$target['hospital_stay_id']??null,
+      'care_setting'=>$target['care_setting']??'consulta','service'=>$target['service']??null],
+      'payload'=>$replacement['payload'],'actor'=>['user_id'=>$doctorContext['user_id']]]);
+    $newId=mxmed_persist_clinical_document_in_transaction($pdo,$doc,['encounter_ref_id'=>$encounterId>0?$encounterId:null]);
+    return (new ClinicalEncounterIntegrityRepository($pdo))->createDocumentRevision(
+      $rootId,$newId,$reason,(string)$doctorContext['user_id'],(int)$target['id']
+    );
 }
 
 function clinical_case_items_list_fetch(PDO $pdo, int $caseId, int $limit): array
@@ -8419,6 +8509,62 @@ try {
 
             $segments = ['documents', $sourceUuid, 'replicate'];
         }
+    }
+
+    // CLIN-REFORM-PHASE2-IMPL01B canonical route: unavailable while the V1 gate is off.
+    if (clinical_encounter_integrity_v1_enabled()
+        && $method === 'POST'
+        && count($segments) === 3
+        && ($segments[0] ?? '') === 'documents'
+        && ($segments[2] ?? '') === 'amendments') {
+        $routeName='documents/{document_id_or_uuid}/amendments';
+        $doctorContext=clinical_require_doctor_context($routeName);if($doctorContext===null)return;
+        $documentToken=rawurldecode(trim((string)($segments[1]??'')));
+        if($documentToken===''){
+            clinical_send_response(['ok'=>false,'error'=>['code'=>'not_found','message'=>'documento no encontrado'],'data'=>null,'meta'=>['route'=>$routeName]],404);return;
+        }
+        $contentType=strtolower((string)($_SERVER['CONTENT_TYPE']??$_SERVER['HTTP_CONTENT_TYPE']??''));
+        if(!clinical_v1_multipart_document_write_allowed(strpos($contentType,'multipart/form-data')!==false,!empty($_FILES))){
+            clinical_send_response(['ok'=>false,'error'=>['code'=>'V1_MULTIPART_STORAGE_NOT_READY','message'=>'V1_MULTIPART_STORAGE_NOT_READY'],'data'=>null,'meta'=>['route'=>$routeName]],503);return;
+        }
+        $body=clinical_read_json_body();
+        if(($body['ok']??false)!==true){
+            clinical_send_response(['ok'=>false,'error'=>['code'=>'bad_request','message'=>(string)($body['error']??'invalid body')],'data'=>null,'meta'=>['route'=>$routeName]],400);return;
+        }
+        try{
+            $idempotencyKey=clinical_idempotency_key_validate((string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+            $pdo=clinical_documents_pdo();clinical_encounter_integrity_assert_schema_ready($pdo);
+            $original=clinical_v1_document_record_by_token($pdo,$documentToken);
+            if($original===null||!clinical_has_active_doctor_patient_link($pdo,$doctorContext['doctor_id'],(string)($original['patient_id']??''))){
+                throw new RuntimeException('DOCUMENT_NOT_FOUND');
+            }
+            $command=clinical_v1_document_amendment_request(is_array($body['data']??null)?$body['data']:[],$original);
+            $encounterId=isset($original['encounter_ref_id'])?(int)$original['encounter_ref_id']:0;
+            if($encounterId>0){
+                $stmt=$pdo->prepare('SELECT * FROM clinical_encounters WHERE encounter_id=:id');$stmt->execute([':id'=>$encounterId]);$encounter=$stmt->fetch(PDO::FETCH_ASSOC);
+                if(!is_array($encounter)||(string)($encounter['doctor_id']??'')!==$doctorContext['doctor_id'])throw new RuntimeException('DOCUMENT_NOT_FOUND');
+                if((string)($encounter['patient_id']??'')!==(string)$original['patient_id'])throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+                $decision=clinical_document_operation_policy('AMEND_DOCUMENT',clinical_canonical_document_class((string)$original['document_type']),(string)$encounter['status']);
+                if(($decision['allowed']??false)!==true)throw new RuntimeException((string)($decision['code']??'DOCUMENT_OPERATION_UNSUPPORTED'));
+            }
+            $semantic=clinical_document_amendment_semantic_request($doctorContext['doctor_id'],$original,$command['replacement'],$command['reason']);
+            $contextType=$encounterId>0?'ENCOUNTER':'PATIENT';
+            $contextId=$encounterId>0?(string)$encounterId:(string)$original['patient_id'];
+            $service=new ClinicalEncounterIntegrityService($pdo);
+            $result=$service->idempotentCreate(
+              'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT',$doctorContext['doctor_id'],$contextType,$contextId,
+              $idempotencyKey,$semantic,'document_revision_id',$doctorContext['user_id'],
+              fn():int=>clinical_v1_document_amendment_insert($pdo,$original,$command['replacement'],$command['reason'],$doctorContext),
+              fn(int $id):array=>clinical_v1_document_revision_fetch($pdo,$id)
+            );
+            $replay=($result['_idempotency_replay']??false)===true;unset($result['_idempotency_replay']);
+            clinical_send_response(['ok'=>true,'error'=>null,'message'=>'document amendment created','data'=>$result,
+              'meta'=>['method'=>'POST','route'=>$routeName,'idempotency_replay'=>$replay]],$replay?200:201);
+        }catch(Throwable $e){
+            clinical_send_response(['ok'=>false,'error'=>['code'=>clinical_v1_error_code($e),'message'=>$e->getMessage()],
+              'data'=>null,'meta'=>['method'=>'POST','route'=>$routeName]],clinical_v1_error_status($e));
+        }
+        return;
     }
 
     if (($segments[0] ?? '') === 'documents') {
