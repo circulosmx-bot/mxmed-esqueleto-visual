@@ -2,11 +2,11 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=6730a59cfdaf92ddd45ddb271c1a0c7a2a3a7ec8
+CURRENT_ACCEPTED_HEAD=09022adffd4e3ad0824cb923893b4b2ae0e8ec42
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant final code review of IMPL01A-R2 before accepting the repository foundation or authorizing any migration rehearsal.
+NEXT_AUTHORIZED_STEP=Execute MIG01A only in a NEW, ISOLATED, SYNTHETIC, DISPOSABLE MySQL database; never against the working MXMed database.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -38,19 +38,34 @@ G5_SAFE_RETURN_ACCEPTED=true
 G6_SYNTHETIC_QA_PLAN_ACCEPTED=true
 PHASE_2_IMPL01_AUTHORIZED=true
 PHASE_2_IMPL01_STATUS=IN_PROGRESS
-PHASE_2_IMPL01A=R2_READY_FOR_CODE_REVIEW
+PHASE_2_IMPL01A=ACCEPTED
+IMPL01A_ACCEPTED_HEAD=09022adffd4e3ad0824cb923893b4b2ae0e8ec42
+IMPL01A_R2_REPOSITORY_FOUNDATION_ACCEPTED=true
+IMPL01A_ACCEPTED_AS=REPOSITORY_FOUNDATION
 PHASE_2_IMPL01_SCOPE=REPOSITORY_IMPLEMENTATION_ONLY
 IMPLEMENTATION_AUTHORIZED=REPOSITORY_ONLY_NOT_EXECUTION
 IMPLEMENTATION_REPOSITORY_CHANGES_AUTHORIZED=true
+DOCUMENT_REVISION_CREATE_IDEMPOTENCY=DEFERRED_TO_IMPL01B
+ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS
+GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
+V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
+PHASE_2_MIG01A_AUTHORIZED=true
+PHASE_2_MIG01A_STATUS=NOT_STARTED
+PHASE_2_MIG01A_SCOPE=DISPOSABLE_MIGRATION_REHEARSAL_ONLY
 DB_MIGRATION_EXECUTION_AUTHORIZED=false
+WORKING_MXMED_DB_MIGRATION_AUTHORIZED=false
 WRITE_VALIDATION_AUTHORIZED=false
 WRITE_VALIDATION_EXECUTED=false
+HTTP_WRITE_QA_EXECUTED=false
 RUNTIME_CUTOVER_AUTHORIZED=false
+RUNTIME_CUTOVER_EXECUTED=false
 PRODUCTION_EXECUTION_AUTHORIZED=false
+FEATURE_GATE_ACTIVATION_AUTHORIZED=false
+T01_T35_EXECUTION_AUTHORIZED=false
 MIGRATIONS_EXECUTED=NONE
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; el baseline de repositorio autorizado para IMPL01A es `6730a59cfdaf92ddd45ddb271c1a0c7a2a3a7ec8`, ahora `CURRENT_ACCEPTED_HEAD`. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS`: el [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md), las cinco decisiones del Director y el [diseño físico](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md) son autoridad aceptada. Se autorizó sólo la implementación de artefactos en repositorio para IMPL01; migraciones, validación con escrituras y cutover siguen sin autorización.
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`, ahora `CURRENT_ACCEPTED_HEAD`. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS`: el [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md), las cinco decisiones del Director y el [diseño físico](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md) son autoridad aceptada. IMPL01A se acepta exclusivamente como `REPOSITORY_FOUNDATION`; no representa esquema físicamente migrado, activación del gate, validación con escrituras ni cutover.
 
 ## Visión y problema
 
@@ -241,9 +256,22 @@ El [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.
 
 El [diseño físico PHYS01](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md), aceptado sobre el candidato PHYS01B `51518d0fb0875e338a20be865ff2394075993a55`, se apoya en inspección de MySQL/InnoDB local y de las rutas/esquemas actuales. Fija unicidad OPEN por índice, inicio/cierre/anulación transaccionales, contenido y mediciones por encuentro, control de versión multioperador, enmiendas append-only, contexto documental, tratamiento legacy, eliminación de DDL en GET, ocho etapas de migración y retorno seguro. PHYS01A admite resultados nuevos relacionados con CLOSED sin mutar historia; PHYS01B añade `payload_schema_version` persistida, idempotencia durable para creaciones no START y FK históricas sin borrado en cascada. T01–T35 están **diseñadas y aceptadas, no ejecutadas**. `PHASE_2_PHYS01=ACCEPTED`, `PHASE_2_PHYS01A=ACCEPTED`, `PHASE_2_PHYS01B=ACCEPTED` y `PHYSICAL_DESIGN_ACCEPTED=true`; PHASE 2 permanece `IN_PROGRESS`.
 
-### CLIN-REFORM-PHASE2-IMPL01 — implementación en repositorio en progreso
+### CLIN-REFORM-PHASE2-IMPL01 — base de repositorio aceptada; fase en progreso
 
-IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`. IMPL01A-R2 (el commit candidato que contiene esta entrada) congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`: bajo el gate, multipart termina con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos; una etapa posterior debe diseñar staging/finalización o compensación, retries, SHA idempotente, detección de huérfanos e integridad de almacenamiento privado. `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=DEFERRED_TO_IMPL01B`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. Las cuatro migraciones siguen **no ejecutadas**, el gate permanece apagado y no se redirigieron formularios. `PHASE_2_IMPL01_STATUS=IN_PROGRESS` y `PHASE_2_IMPL01A=R2_READY_FOR_CODE_REVIEW`; continúan prohibidos migraciones, T01–T35, escrituras de validación, activación del gate, cutover y producción. Cadena candidata: `6fe5fec2156df87649668343d167ca409f0e60fb` → `377381ce70af2525113975eacd5ec316458a2370` → IMPL01A-R2 (este commit). El siguiente paso es exclusivamente la revisión final de código del Director/asistente antes de aceptar la base de repositorio o autorizar cualquier ensayo de migración.
+IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`; IMPL01A-R2 quedó aceptado como `REPOSITORY_FOUNDATION` en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`. R2 congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`: bajo el gate, multipart termina con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos; una etapa posterior debe diseñar staging/finalización o compensación, retries, SHA idempotente, detección de huérfanos e integridad de almacenamiento privado. `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=DEFERRED_TO_IMPL01B`; `ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS`; `GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. Las cuatro migraciones siguen **no ejecutadas**, el gate permanece apagado y no se redirigieron formularios. `PHASE_2_IMPL01_STATUS=IN_PROGRESS` y `PHASE_2_IMPL01A=ACCEPTED`; continúan prohibidos migrar la base MXMed de trabajo, ejecutar T01–T35, validar con escrituras, activar el gate, hacer cutover o ejecutar en producción.
+
+`PHASE_2_MIG01A_AUTHORIZED=true` autoriza únicamente el siguiente capítulo, todavía `NOT_STARTED`, para ensayar las cuatro migraciones `2026_09_18_01` a `2026_09_18_04` en una base MySQL **nueva, aislada, sintética y desechable**. No autoriza conexión ni cambios sobre la base MXMed de trabajo. `modules/clinical/db/migrations/2026_09_17_clinical_encounter_doctor_attribution.sql` permanece en cuarentena y fuera de MIG01A: su atribución/backfill derivado de citas no pertenece al contrato de encounter aceptado.
+
+El alcance futuro de MIG01A queda limitado exactamente a:
+
+```text
+modules/clinical/db/migrations/2026_09_18_01_encounter_lifecycle_integrity.sql
+modules/clinical/db/migrations/2026_09_18_02_encounter_structured_content.sql
+modules/clinical/db/migrations/2026_09_18_03_encounter_command_idempotency.sql
+modules/clinical/db/migrations/2026_09_18_04_encounter_document_integrity.sql
+```
+
+`modules/clinical/db/migrations/2026_09_17_clinical_encounter_doctor_attribution.sql` no forma parte de ese manifiesto y continúa en cuarentena.
 
 ## Calidad y aceptación futura
 
@@ -294,3 +322,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-18 | CLIN-REFORM-PHASE2-PHYS01B | Candidato PHYS01A `cd9350e66e528e7d0220c3621f62632ae7014af8`; último baseline aceptado `4161120ad2c8a54b3e1455019f4ba994a6a9fd26` | Versión de esquema del payload persistida; idempotencia durable de comandos de creación no START con ledger transaccional; política FK/delete no destructiva. T31–T35 amplían a 35 escenarios sin ejecutar. Arquitectura física restante intacta; PHYS01 `FINAL_REPAIRED_READY_FOR_DIRECTOR_REVIEW`, PHYS01A `INCORPORATED`, PHYS01B `READY_FOR_DIRECTOR_REVIEW`. Sin implementación, API, esquema, migraciones ni datos modificados. |
 | 2026-09-18 | CLIN-REFORM-PHASE2-PHYS01C | Diseño candidato aceptado `51518d0fb0875e338a20be865ff2394075993a55` | PHYS01/PHYS01A/PHYS01B y 35 escenarios físicos aceptados; gates G1–G6 de diseño aceptados. PHASE 2 sigue `IN_PROGRESS`. IMPL01 autorizado sólo para cambios en repositorio y permanece `NOT_STARTED`; ejecución de migraciones, QA con escrituras y cutover runtime no autorizados. Sin cambios runtime/API/esquema/datos ni migraciones ejecutadas. |
 | 2026-09-18 | CLIN-REFORM-PHASE2-IMPL01A | Baseline aceptado `6730a59cfdaf92ddd45ddb271c1a0c7a2a3a7ec8` | Base de implementación en repositorio creada para revisión: migraciones no ejecutadas, V1 bajo gate apagado, secciones/observaciones/enmiendas, idempotencia, lifecycle/finalize/void, política/lineage documental y QA estática/pura. UI vigente sin cutover; cero mutación DB y cero QA HTTP con escrituras. `READY_FOR_CODE_REVIEW`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-IMPL01A-CLOSEOUT | Candidato aceptado `09022adffd4e3ad0824cb923893b4b2ae0e8ec42` | IMPL01A-R2 aceptado exclusivamente como `REPOSITORY_FOUNDATION`; PHASE 2 e IMPL01 siguen `IN_PROGRESS`. No se ejecutaron migraciones y el feature gate permanece apagado/sin activar. MIG01A queda autorizado como siguiente capítulo sólo para ensayo de migración en una base MySQL nueva, aislada, sintética y desechable; estado `NOT_STARTED`. |
