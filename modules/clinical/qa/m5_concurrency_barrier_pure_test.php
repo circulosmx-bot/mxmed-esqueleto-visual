@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/m5_concurrency_barrier.php';
-
 $passed = 0;
 function m5_check(bool $condition, string $name): void
 {
@@ -11,6 +9,74 @@ function m5_check(bool $condition, string $name): void
     $passed++;
     echo "PASS: {$name}\n";
 }
+
+function m5_isolated_php(string $code): array
+{
+    $pipes = [];
+    $process = proc_open(
+        [PHP_BINARY, '-d', 'display_errors=1', '-r', $code],
+        [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+        $pipes
+    );
+    if (!is_resource($process)) {
+        throw new RuntimeException('FAIL: unable to start isolated PHP probe');
+    }
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    return [proc_close($process), $stdout, $stderr];
+}
+
+$integrityFile = realpath(__DIR__ . '/../../../api/_lib/clinical_encounter_integrity.php');
+if ($integrityFile === false) throw new RuntimeException('FAIL: integrity runtime not found');
+$integrityLiteral = var_export($integrityFile, true);
+
+[$status, $stdout, $stderr] = m5_isolated_php(<<<PHP
+putenv('MXMED_CLINICAL_M5_QA_MODE');
+require {$integrityLiteral};
+if (function_exists('clinical_m5_qa_barrier_reach')) exit(10);
+if (clinical_m5_qa_barrier_reach_if_enabled(['T04_CONCURRENT_START_BEFORE_INSERT'], '/missing/m5-barrier.php') !== false) exit(11);
+if (function_exists('clinical_m5_qa_barrier_reach')) exit(12);
+PHP);
+m5_check($status === 0, 'QA mode off does not load or require QA implementation: ' . trim($stdout . $stderr));
+
+$offDirectory = sys_get_temp_dir() . '/mxmed-m5-r1-off-' . bin2hex(random_bytes(8));
+$offDirectoryLiteral = var_export($offDirectory, true);
+[$status, $stdout, $stderr] = m5_isolated_php(<<<PHP
+putenv('MXMED_CLINICAL_M5_QA_MODE=0');
+putenv('MXMED_CLINICAL_M5_BARRIER_DIR=' . {$offDirectoryLiteral});
+require {$integrityLiteral};
+clinical_m5_qa_barrier_reach_if_enabled(['T04_CONCURRENT_START_BEFORE_INSERT'], '/missing/m5-barrier.php');
+if (file_exists({$offDirectoryLiteral})) exit(20);
+PHP);
+m5_check($status === 0 && !file_exists($offDirectory), 'QA mode off creates no barrier filesystem state: ' . trim($stdout . $stderr));
+
+[$status, $stdout, $stderr] = m5_isolated_php(<<<PHP
+putenv('MXMED_CLINICAL_M5_QA_MODE=1');
+putenv('MXMED_CLINICAL_M5_QA_ENVIRONMENT_ID=m5-disposable-lazy-load-test');
+putenv('MXMED_BUILD=test');
+\$_SERVER['SERVER_ADDR'] = '127.0.0.1';
+require {$integrityLiteral};
+if (function_exists('clinical_m5_qa_barrier_reach')) exit(25);
+if (clinical_m5_qa_barrier_reach_if_enabled(['T04_CONCURRENT_START_BEFORE_INSERT']) !== false) exit(26);
+if (!function_exists('clinical_m5_qa_barrier_reach')) exit(27);
+PHP);
+m5_check($status === 0, 'QA mode on lazily loads the barrier implementation: ' . trim($stdout . $stderr));
+
+[$status, $stdout, $stderr] = m5_isolated_php(<<<PHP
+putenv('MXMED_CLINICAL_M5_QA_MODE=1');
+require {$integrityLiteral};
+try {
+    clinical_m5_qa_barrier_reach_if_enabled(['T04_CONCURRENT_START_BEFORE_INSERT'], '/missing/m5-barrier.php');
+} catch (RuntimeException \$error) {
+    if (\$error->getMessage() === 'M5_QA_BARRIER_IMPLEMENTATION_NOT_AVAILABLE') exit(0);
+}
+exit(30);
+PHP);
+m5_check($status === 0, 'QA mode on with missing implementation fails closed: ' . trim($stdout . $stderr));
+
+require_once __DIR__ . '/m5_concurrency_barrier.php';
 
 $validEnvironment = [
     'MXMED_CLINICAL_M5_QA_MODE' => '1',

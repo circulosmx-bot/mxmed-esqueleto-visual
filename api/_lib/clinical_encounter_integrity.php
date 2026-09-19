@@ -4,7 +4,26 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_idempotency.php';
 require_once __DIR__ . '/clinical_encounter_sections.php';
 require_once __DIR__ . '/clinical_observations.php';
-require_once __DIR__ . '/../../modules/clinical/qa/m5_concurrency_barrier.php';
+
+function clinical_m5_qa_barrier_reach_if_enabled(array $allowedPoints, ?string $implementationFile = null): bool
+{
+    $value = getenv('MXMED_CLINICAL_M5_QA_MODE');
+    $requested = $value !== false
+        && in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
+    if (!$requested) {
+        return false;
+    }
+
+    $implementationFile ??= __DIR__ . '/../../modules/clinical/qa/m5_concurrency_barrier.php';
+    if (!is_file($implementationFile) || !is_readable($implementationFile)) {
+        throw new RuntimeException('M5_QA_BARRIER_IMPLEMENTATION_NOT_AVAILABLE');
+    }
+    require_once $implementationFile;
+    if (!function_exists('clinical_m5_qa_barrier_reach')) {
+        throw new RuntimeException('M5_QA_BARRIER_IMPLEMENTATION_NOT_AVAILABLE');
+    }
+    return clinical_m5_qa_barrier_reach($allowedPoints);
+}
 
 function clinical_encounter_integrity_v1_enabled(): bool
 {
@@ -357,7 +376,7 @@ final class ClinicalEncounterIntegrityRepository
             $claim->execute([':doctor'=>$doctorId,':key'=>$key,':hash'=>$hash,':actor'=>$actorId,':patient'=>$patientId]);
             $requestId=(int)$this->pdo->lastInsertId();
             $created = false;
-            clinical_m5_qa_barrier_reach(['T04_CONCURRENT_START_BEFORE_INSERT']);
+            clinical_m5_qa_barrier_reach_if_enabled(['T04_CONCURRENT_START_BEFORE_INSERT']);
             $open=$this->findOpen($doctorId,$patientId,true);
             if($open===null){
                 $stmt=$this->pdo->prepare("INSERT INTO clinical_encounters
@@ -397,7 +416,7 @@ final class ClinicalEncounterIntegrityRepository
     {
         $this->pdo->beginTransaction();
         try {
-            clinical_m5_qa_barrier_reach([
+            clinical_m5_qa_barrier_reach_if_enabled([
                 'T11_CONCURRENT_FINALIZE_BEFORE_TERMINAL_LOCK_OR_COMMIT',
                 'T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK',
             ]);
@@ -444,7 +463,7 @@ final class ClinicalEncounterIntegrityRepository
     {
         $reason=trim($reason);if($reason==='')throw new InvalidArgumentException('VOID_REASON_REQUIRED');
         $this->pdo->beginTransaction();try{
-          clinical_m5_qa_barrier_reach(['T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK']);
+          clinical_m5_qa_barrier_reach_if_enabled(['T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK']);
           $row=$this->getForUpdate($encounterId);$status=(string)$row['status'];
           if($status==='voided'){$this->pdo->commit();return $row;}if($status!=='open')throw new RuntimeException('ENCOUNTER_CLOSED');
           $stmt=$this->pdo->prepare("UPDATE clinical_encounters SET status='voided',voided_at=UTC_TIMESTAMP(),voided_by_user_id=:actor,void_reason=:reason,updated_at=UTC_TIMESTAMP() WHERE encounter_id=:id AND status='open'");

@@ -10,6 +10,12 @@ php -l "$BARRIER" >/dev/null
 php -l "$ROOT/modules/clinical/qa/m5_concurrency_barrier_pure_test.php" >/dev/null
 bash -n "$CONTROL"
 
+! grep -Eq "^require_once .*modules/clinical/qa/m5_concurrency_barrier\\.php" "$INTEGRITY"
+grep -q 'function clinical_m5_qa_barrier_reach_if_enabled' "$INTEGRITY"
+grep -q "getenv('MXMED_CLINICAL_M5_QA_MODE')" "$INTEGRITY"
+grep -q "throw new RuntimeException('M5_QA_BARRIER_IMPLEMENTATION_NOT_AVAILABLE')" "$INTEGRITY"
+grep -q 'require_once $implementationFile' "$INTEGRITY"
+grep -q 'clinical_m5_qa_barrier_reach_if_enabled' "$INTEGRITY"
 grep -q 'MXMED_CLINICAL_M5_QA_MODE' "$BARRIER"
 grep -q 'MXMED_CLINICAL_M5_QA_ENVIRONMENT_ID' "$BARRIER"
 grep -q 'M5_QA_BARRIER_ENVIRONMENT_DENIED' "$BARRIER"
