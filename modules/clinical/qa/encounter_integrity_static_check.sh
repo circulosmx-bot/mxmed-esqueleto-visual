@@ -62,6 +62,10 @@ grep -q 'FIRST_CLOSE_IMMUTABLE' "$LIFECYCLE"
 grep -q 'FIRST_VOID_IMMUTABLE' "$LIFECYCLE"
 grep -q 'first_close_immutable' "$INTEGRITY"
 grep -q 'first_void_immutable' "$INTEGRITY"
+normalized_lifecycle="$(tr '\n\r\t' '   ' < "$LIFECYCLE")"
+grep -Eq 'CREATE[[:space:]]+TRIGGER[[:space:]]+IF[[:space:]]+NOT[[:space:]]+EXISTS[[:space:]]+trg_clinical_encounters_v1_before_insert' <<< "$normalized_lifecycle"
+grep -Eq 'CREATE[[:space:]]+TRIGGER[[:space:]]+IF[[:space:]]+NOT[[:space:]]+EXISTS[[:space:]]+trg_clinical_encounters_v1_before_update' <<< "$normalized_lifecycle"
+! grep -Eiq "SET[[:space:]]+@[[:alnum:]_]+[[:space:]]*=.*CREATE[[:space:]]+TRIGGER" <<< "$normalized_lifecycle"
 
 critical_checks=(
   chk_clinical_encounter_lifecycle_v1

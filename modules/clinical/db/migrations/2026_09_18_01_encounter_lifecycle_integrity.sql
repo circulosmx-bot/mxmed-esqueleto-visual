@@ -79,22 +79,65 @@ BEGIN
     THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: lifecycle check'; END IF;
   END IF;
 
-  SELECT COUNT(*),MAX(ACTION_STATEMENT) INTO object_count,object_shape FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='trg_clinical_encounters_v1_before_insert' AND EVENT_OBJECT_TABLE='clinical_encounters';
-  IF object_count=0 THEN
-    SET @ddl='CREATE TRIGGER trg_clinical_encounters_v1_before_insert BEFORE INSERT ON clinical_encounters FOR EACH ROW BEGIN IF BINARY NEW.status<>BINARY ''open'' THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''START_MUST_CREATE_OPEN''; END IF; IF NEW.doctor_id IS NULL OR TRIM(NEW.doctor_id)='''' THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''DOCTOR_ID_REQUIRED''; END IF; END';
-    PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;
-  ELSEIF object_count<>1 OR LOWER(object_shape) NOT LIKE '%start_must_create_open%' OR LOWER(object_shape) NOT LIKE '%doctor_id_required%' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: insert trigger'; END IF;
+  SELECT COUNT(*),MAX(CONCAT(EVENT_OBJECT_TABLE,'|',ACTION_TIMING,'|',EVENT_MANIPULATION,'|',ACTION_STATEMENT))
+    INTO object_count,object_shape FROM information_schema.TRIGGERS
+    WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='trg_clinical_encounters_v1_before_insert';
+  IF object_count<>0 AND (object_count<>1 OR object_shape NOT LIKE 'clinical_encounters|BEFORE|INSERT|%'
+      OR LOWER(object_shape) NOT LIKE '%start_must_create_open%' OR LOWER(object_shape) NOT LIKE '%doctor_id_required%')
+  THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: insert trigger'; END IF;
 
-  SELECT COUNT(*),MAX(ACTION_STATEMENT) INTO object_count,object_shape FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='trg_clinical_encounters_v1_before_update' AND EVENT_OBJECT_TABLE='clinical_encounters';
-  IF object_count=0 THEN
-    SET @ddl='CREATE TRIGGER trg_clinical_encounters_v1_before_update BEFORE UPDATE ON clinical_encounters FOR EACH ROW BEGIN IF NOT (NEW.patient_id<=>OLD.patient_id) OR NOT (NEW.doctor_id<=>OLD.doctor_id) OR NOT (NEW.appointment_id<=>OLD.appointment_id) OR NOT (NEW.opened_by_user_id<=>OLD.opened_by_user_id) OR NOT (NEW.encounter_dt<=>OLD.encounter_dt) OR NOT (NEW.encounter_type<=>OLD.encounter_type) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''ENCOUNTER_OWNERSHIP_IMMUTABLE''; END IF; IF BINARY NEW.status<>BINARY OLD.status AND NOT (BINARY OLD.status=BINARY ''open'' AND BINARY NEW.status IN (BINARY ''closed'',BINARY ''voided'')) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''ENCOUNTER_TRANSITION_FORBIDDEN''; END IF; IF BINARY OLD.status=BINARY ''closed'' AND (NOT (NEW.closed_at<=>OLD.closed_at) OR NOT (NEW.closed_by_user_id<=>OLD.closed_by_user_id) OR NOT (NEW.auto_note_uuid_final<=>OLD.auto_note_uuid_final)) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''FIRST_CLOSE_IMMUTABLE''; END IF; IF BINARY OLD.status=BINARY ''voided'' AND (NOT (NEW.voided_at<=>OLD.voided_at) OR NOT (NEW.voided_by_user_id<=>OLD.voided_by_user_id) OR NOT (NEW.void_reason<=>OLD.void_reason)) THEN SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT=''FIRST_VOID_IMMUTABLE''; END IF; END';
-    PREPARE s FROM @ddl; EXECUTE s; DEALLOCATE PREPARE s;
-  ELSEIF object_count<>1 OR LOWER(object_shape) NOT LIKE '%encounter_ownership_immutable%' OR LOWER(object_shape) NOT LIKE '%encounter_transition_forbidden%'
+  SELECT COUNT(*),MAX(CONCAT(EVENT_OBJECT_TABLE,'|',ACTION_TIMING,'|',EVENT_MANIPULATION,'|',ACTION_STATEMENT))
+    INTO object_count,object_shape FROM information_schema.TRIGGERS
+    WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='trg_clinical_encounters_v1_before_update';
+  IF object_count<>0 AND (object_count<>1 OR object_shape NOT LIKE 'clinical_encounters|BEFORE|UPDATE|%'
+      OR LOWER(object_shape) NOT LIKE '%encounter_ownership_immutable%' OR LOWER(object_shape) NOT LIKE '%encounter_transition_forbidden%'
       OR LOWER(object_shape) NOT LIKE '%first_close_immutable%' OR LOWER(object_shape) NOT LIKE '%first_void_immutable%'
-  THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: update trigger'; END IF;
+  ) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MIGRATION_DRIFT: update trigger'; END IF;
 END$$
 CALL mxmed_migrate_encounter_lifecycle_v1()$$
 DROP PROCEDURE mxmed_migrate_encounter_lifecycle_v1$$
+
+CREATE TRIGGER IF NOT EXISTS trg_clinical_encounters_v1_before_insert
+BEFORE INSERT ON clinical_encounters
+FOR EACH ROW
+BEGIN
+  IF BINARY NEW.status<>BINARY 'open' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='START_MUST_CREATE_OPEN';
+  END IF;
+  IF NEW.doctor_id IS NULL OR TRIM(NEW.doctor_id)='' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='DOCTOR_ID_REQUIRED';
+  END IF;
+END$$
+
+CREATE TRIGGER IF NOT EXISTS trg_clinical_encounters_v1_before_update
+BEFORE UPDATE ON clinical_encounters
+FOR EACH ROW
+BEGIN
+  IF NOT (NEW.patient_id<=>OLD.patient_id)
+      OR NOT (NEW.doctor_id<=>OLD.doctor_id)
+      OR NOT (NEW.appointment_id<=>OLD.appointment_id)
+      OR NOT (NEW.opened_by_user_id<=>OLD.opened_by_user_id)
+      OR NOT (NEW.encounter_dt<=>OLD.encounter_dt)
+      OR NOT (NEW.encounter_type<=>OLD.encounter_type) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ENCOUNTER_OWNERSHIP_IMMUTABLE';
+  END IF;
+  IF BINARY NEW.status<>BINARY OLD.status
+      AND NOT (BINARY OLD.status=BINARY 'open' AND BINARY NEW.status IN (BINARY 'closed',BINARY 'voided')) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ENCOUNTER_TRANSITION_FORBIDDEN';
+  END IF;
+  IF BINARY OLD.status=BINARY 'closed'
+      AND (NOT (NEW.closed_at<=>OLD.closed_at)
+        OR NOT (NEW.closed_by_user_id<=>OLD.closed_by_user_id)
+        OR NOT (NEW.auto_note_uuid_final<=>OLD.auto_note_uuid_final)) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='FIRST_CLOSE_IMMUTABLE';
+  END IF;
+  IF BINARY OLD.status=BINARY 'voided'
+      AND (NOT (NEW.voided_at<=>OLD.voided_at)
+        OR NOT (NEW.voided_by_user_id<=>OLD.voided_by_user_id)
+        OR NOT (NEW.void_reason<=>OLD.void_reason)) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='FIRST_VOID_IMMUTABLE';
+  END IF;
+END$$
 DELIMITER ;
 
 -- Legacy doctor_id=NULL rows intentionally remain UNATTRIBUTED. Evidence-based
