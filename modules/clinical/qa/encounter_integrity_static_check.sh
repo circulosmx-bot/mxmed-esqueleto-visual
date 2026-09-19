@@ -23,6 +23,11 @@ test "$(find "$MIGRATIONS" -maxdepth 1 -name '2026_09_18_0*_encounter_*.sql' | w
 grep -q 'MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1' "$ROOT/api/_lib/clinical_encounter_integrity.php"
 grep -q 'SCHEMA_NOT_READY' "$ROOT/api/_lib/clinical_encounter_integrity.php"
 grep -q 'open_guard' "$MIGRATIONS/2026_09_18_01_encounter_lifecycle_integrity.sql"
+grep -Eq 'open_guard TINYINT.*GENERATED ALWAYS|ADD COLUMN open_guard TINYINT GENERATED ALWAYS' "$MIGRATIONS/2026_09_18_01_encounter_lifecycle_integrity.sql"
+grep -q 'UNIQUE KEY uq_clinical_encounter_one_open (doctor_id,patient_id,open_guard)' "$MIGRATIONS/2026_09_18_01_encounter_lifecycle_integrity.sql"
+! grep -Eiq 'open_guard[^;]*(concat|doctor_id.*:.*patient_id)' "$MIGRATIONS/2026_09_18_01_encounter_lifecycle_integrity.sql"
+! grep -Eiq 'UPDATE[[:space:]]+clinical_encounters[[:space:]]+SET[[:space:]]+doctor_id' "$MIGRATIONS/2026_09_18_0"*_encounter_*.sql
+! grep -Eiq "completed[^;]*(open)|status[^;]*=[^;]*'open'[^;]*completed" "$MIGRATIONS/2026_09_18_0"*_encounter_*.sql
 grep -q 'clinical_encounter_sections' "$MIGRATIONS/2026_09_18_02_encounter_structured_content.sql"
 grep -q 'clinical_observations' "$MIGRATIONS/2026_09_18_02_encounter_structured_content.sql"
 grep -q 'clinical_encounter_amendments' "$MIGRATIONS/2026_09_18_02_encounter_structured_content.sql"
@@ -32,6 +37,27 @@ grep -q 'clinical_encounter_final_notes' "$MIGRATIONS/2026_09_18_04_encounter_do
 grep -q 'clinical_document_revisions' "$MIGRATIONS/2026_09_18_04_encounter_document_integrity.sql"
 grep -q 'encounter_ref_id' "$MIGRATIONS/2026_09_18_04_encounter_document_integrity.sql"
 test "$(grep -h -c 'ON DELETE RESTRICT' "$MIGRATIONS"/2026_09_18_0*_encounter_*.sql | awk '{s+=$1} END {print s+0}')" -ge 10
+
+# Every migration is a guarded procedure and explicitly fails closed on drift.
+test "$(grep -l 'information_schema' "$MIGRATIONS"/2026_09_18_0*_encounter_*.sql | wc -l | tr -d ' ')" = "4"
+test "$(grep -l 'MIGRATION_DRIFT' "$MIGRATIONS"/2026_09_18_0*_encounter_*.sql | wc -l | tr -d ' ')" = "4"
+
+ROUTER="$ROOT/api/clinical/index.php"
+grep -q "encounters/{encounter_key}/finalize" "$ROUTER"
+grep -q "encounters/{encounter_key}/void" "$ROUTER"
+grep -q "encounters/{encounter_key}/sections/{type}" "$ROUTER"
+grep -q "encounters/{encounter_key}/observations" "$ROUTER"
+grep -q "encounters/{encounter_key}/amendments" "$ROUTER"
+grep -q 'clinical_document_operation_policy' "$ROUTER"
+grep -q 'CREATE_OBSERVATION' "$ROOT/api/_lib/clinical_encounter_integrity.php"
+grep -q 'CREATE_ENCOUNTER_AMENDMENT' "$ROOT/api/_lib/clinical_encounter_integrity.php"
+grep -q "CREATE_POST_ENCOUNTER_RESULT" "$ROUTER"
+grep -q 'idempotentCreate' "$ROUTER"
+grep -q 'auto_note_uuid_final=:document_uuid' "$ROOT/api/_lib/clinical_encounter_integrity.php"
+
+# The three encounter GET branches use readiness inspection when V1 is enabled.
+test "$(grep -c 'clinical_encounter_integrity_assert_schema_ready' "$ROUTER")" -ge 4
+grep -q "doctor_id,patient_id,open_guard" "$ROOT/api/_lib/clinical_encounter_integrity.php"
 
 php "$ROOT/modules/clinical/qa/encounter_integrity_pure_test.php"
 echo 'STATIC_QA_RESULT=PASS'

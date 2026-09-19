@@ -52,19 +52,26 @@ final class ClinicalObservationsRepository
         $input=clinical_observation_validate($input);
         $this->pdo->beginTransaction();
         try {
-            $this->assertOpen($encounterId);
-            $stmt=$this->pdo->prepare('INSERT INTO clinical_observations
-              (encounter_id, code, value_numeric, value_text, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, recorded_at,
-               recorded_by_user_id, source, provenance_json, row_version, created_at, updated_at)
-              VALUES (:encounter_id,:code,:value_numeric,NULL,:unit,:systolic,:diastolic,:effective_at,UTC_TIMESTAMP(),:actor,:source,:provenance,1,UTC_TIMESTAMP(),UTC_TIMESTAMP())');
-            $stmt->execute([
-                ':encounter_id'=>$encounterId, ':code'=>$input['code'], ':value_numeric'=>$input['value_numeric'] ?? null,
-                ':unit'=>$input['unit'], ':systolic'=>$input['systolic_mm_hg'] ?? null, ':diastolic'=>$input['diastolic_mm_hg'] ?? null,
-                ':effective_at'=>$input['effective_at'] ?? gmdate('Y-m-d H:i:s'), ':actor'=>$actor, ':source'=>$input['source'],
-                ':provenance'=>json_encode($input['provenance'] ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
-            ]);
-            $row=$this->fetch((int)$this->pdo->lastInsertId()); $this->pdo->commit(); return $row;
+            $id=$this->createOpenInTransaction($encounterId,$input,$actor);
+            $row=$this->fetch($id); $this->pdo->commit(); return $row;
         } catch (Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
+    }
+
+    public function createOpenInTransaction(int $encounterId, array $input, string $actor): int
+    {
+        $input=clinical_observation_validate($input);
+        $this->assertOpen($encounterId);
+        $stmt=$this->pdo->prepare('INSERT INTO clinical_observations
+          (encounter_id, code, value_numeric, value_text, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, recorded_at,
+           recorded_by_user_id, source, provenance_json, row_version, created_at, updated_at)
+          VALUES (:encounter_id,:code,:value_numeric,NULL,:unit,:systolic,:diastolic,:effective_at,UTC_TIMESTAMP(),:actor,:source,:provenance,1,UTC_TIMESTAMP(),UTC_TIMESTAMP())');
+        $stmt->execute([
+            ':encounter_id'=>$encounterId, ':code'=>$input['code'], ':value_numeric'=>$input['value_numeric'] ?? null,
+            ':unit'=>$input['unit'], ':systolic'=>$input['systolic_mm_hg'] ?? null, ':diastolic'=>$input['diastolic_mm_hg'] ?? null,
+            ':effective_at'=>$input['effective_at'] ?? gmdate('Y-m-d H:i:s'), ':actor'=>$actor, ':source'=>$input['source'],
+            ':provenance'=>json_encode($input['provenance'] ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
+        ]);
+        return (int)$this->pdo->lastInsertId();
     }
 
     public function updateOpen(int $encounterId, int $observationId, array $input, int $expectedVersion, string $actor): array
@@ -93,7 +100,7 @@ final class ClinicalObservationsRepository
         if ($stmt->fetchColumn() !== 'open') throw new RuntimeException('ENCOUNTER_TERMINAL');
     }
 
-    private function fetch(int $id): array
+    public function fetch(int $id): array
     {
         $stmt=$this->pdo->prepare('SELECT * FROM clinical_observations WHERE observation_id=:id'); $stmt->execute([':id'=>$id]);
         $row=$stmt->fetch(PDO::FETCH_ASSOC); if(!is_array($row)) throw new RuntimeException('OBSERVATION_NOT_FOUND'); return $row;

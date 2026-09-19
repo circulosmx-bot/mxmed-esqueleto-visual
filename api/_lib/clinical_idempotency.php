@@ -149,3 +149,79 @@ final class ClinicalIdempotencyRepository
         return $row;
     }
 }
+
+final class ClinicalIdempotentCreateExecutor
+{
+    private ClinicalIdempotencyRepository $requests;
+
+    public function __construct(private PDO $pdo)
+    {
+        $this->requests = new ClinicalIdempotencyRepository($pdo);
+    }
+
+    /**
+     * @param callable():int $createResource Creates one resource on this PDO transaction.
+     * @param callable(int):array $fetchResource Resolves the durable typed result reference.
+     */
+    public function execute(
+        string $operationType,
+        string $doctorId,
+        string $contextType,
+        string $contextId,
+        string $idempotencyKey,
+        array $semanticRequest,
+        string $resultColumn,
+        string $actorUserId,
+        callable $createResource,
+        callable $fetchResource
+    ): array {
+        $requestHash = clinical_idempotency_request_hash($semanticRequest);
+        $this->pdo->beginTransaction();
+        try {
+            try {
+                $requestId = $this->requests->claim(
+                    $operationType,
+                    $doctorId,
+                    $contextType,
+                    $contextId,
+                    $idempotencyKey,
+                    $requestHash,
+                    $actorUserId
+                );
+            } catch (PDOException $claimError) {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                if ((string)$claimError->getCode() !== '23000') {
+                    throw $claimError;
+                }
+                $replay = $this->requests->replay(
+                    $operationType,
+                    $doctorId,
+                    $contextType,
+                    $contextId,
+                    $idempotencyKey,
+                    $requestHash
+                );
+                $resourceId = (int)($replay[$resultColumn] ?? 0);
+                if ($resourceId <= 0) {
+                    throw new ClinicalIdempotencyException('IDEMPOTENCY_RESULT_NOT_READY', 'Committed result reference missing', 409);
+                }
+                return $fetchResource($resourceId) + ['_idempotency_replay' => true];
+            }
+            $resourceId = (int)$createResource();
+            if ($resourceId <= 0) {
+                throw new RuntimeException('IDEMPOTENT_CREATE_RESULT_INVALID');
+            }
+            $this->requests->complete($requestId, $resultColumn, $resourceId);
+            $resource = $fetchResource($resourceId);
+            $this->pdo->commit();
+            return $resource + ['_idempotency_replay' => false];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+}

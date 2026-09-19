@@ -13,7 +13,17 @@ function clinical_encounter_integrity_v1_enabled(): bool
 
 function clinical_encounter_transition_allowed(string $from, string $to): bool
 {
-    return strtolower($from) === 'open' && in_array(strtolower($to), ['closed','voided'], true);
+    return $from === 'open' && in_array($to, ['closed','voided'], true);
+}
+
+function clinical_encounter_status_is_canonical(string $status): bool
+{
+    return in_array($status, ['open', 'closed', 'voided'], true);
+}
+
+function clinical_encounter_attribution_classification(?string $doctorId): string
+{
+    return $doctorId === null || trim($doctorId) === '' ? 'UNATTRIBUTED' : 'ATTRIBUTED';
 }
 
 function clinical_document_content_rewrite_allowed(string $status, bool $isFinalEncounterNote = false): bool
@@ -33,9 +43,54 @@ function clinical_encounter_start_semantic_request(string $doctorId, string $pat
     ];
 }
 
+function clinical_document_create_operation(string $documentClass): string
+{
+    return in_array(strtoupper(trim($documentClass)), ['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT'], true)
+        ? 'CREATE_POST_ENCOUNTER_RESULT'
+        : 'CREATE_ENCOUNTER_DOCUMENT';
+}
+
+function clinical_document_policy_operation(string $documentClass): string
+{
+    return match (strtoupper(trim($documentClass))) {
+        'LAB_RESULT' => 'CREATE_LAB_RESULT',
+        'IMAGING_RESULT' => 'CREATE_IMAGING_RESULT',
+        'EXTERNAL_RESULT', 'EXTERNAL_REPORT' => 'CREATE_EXTERNAL_RESULT',
+        'PRESCRIPTION' => 'CREATE_PRESCRIPTION',
+        'ORDER' => 'CREATE_ORDER',
+        default => 'CREATE_ENCOUNTER_DOCUMENT',
+    };
+}
+
+function clinical_document_semantic_request(array $payload, ?string $contentSha256): array
+{
+    return [
+        'content_sha256' => $contentSha256,
+        'document_class' => strtoupper(trim((string)($payload['document_class'] ?? $payload['document_type'] ?? ''))),
+        'event_datetime' => $payload['event_datetime'] ?? null,
+        'logical_payload' => is_array($payload['payload'] ?? null) ? $payload['payload'] : [],
+        'media_tag_key' => $payload['media_tag_key'] ?? null,
+        'summary' => $payload['summary'] ?? null,
+        'title' => $payload['title'] ?? null,
+    ];
+}
+
+function clinical_finalize_result_normalize(array $encounter, ?array $finalDocument): array
+{
+    return [
+        'encounter_id' => (int)($encounter['encounter_id'] ?? 0),
+        'status' => (string)($encounter['status'] ?? ''),
+        'closed_at' => $encounter['closed_at'] ?? null,
+        'closed_by_user_id' => $encounter['closed_by_user_id'] ?? null,
+        'auto_note_uuid_final' => $encounter['auto_note_uuid_final'] ?? ($finalDocument['document_uuid'] ?? null),
+        'final_document_id' => isset($finalDocument['document_id']) ? (int)$finalDocument['document_id'] : null,
+    ];
+}
+
 function clinical_document_operation_policy(string $operation, string $documentClass, string $encounterStatus, array $context=[]): array
 {
-    $operation=strtoupper(trim($operation)); $class=strtoupper(trim($documentClass)); $status=strtolower(trim($encounterStatus));
+    $operation=strtoupper(trim($operation)); $class=strtoupper(trim($documentClass)); $status=$encounterStatus;
+    if(!clinical_encounter_status_is_canonical($status))return ['allowed'=>false,'code'=>'ENCOUNTER_STATE_INVALID'];
     if ($status === 'voided') return ['allowed'=>false,'code'=>'ENCOUNTER_VOIDED'];
     if (in_array($operation,['AMEND_DOCUMENT','REPLACE_DOCUMENT'],true)) {
         return ['allowed'=>in_array($status,['open','closed'],true),'code'=>in_array($status,['open','closed'],true)?'ALLOWED':'ENCOUNTER_STATE_INVALID'];
@@ -63,30 +118,95 @@ function clinical_encounter_integrity_required_schema(): array
 
 function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
 {
+    $drift=[];
     $required=clinical_encounter_integrity_required_schema();
     $marks=implode(',',array_fill(0,count($required),'?'));
     $stmt=$pdo->prepare("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ($marks)");
-    $stmt->execute($required); $found=$stmt->fetchAll(PDO::FETCH_COLUMN); $missing=array_values(array_diff($required,is_array($found)?$found:[]));
+    $stmt->execute($required);
+    $found=$stmt->fetchAll(PDO::FETCH_COLUMN);
+    $drift=array_values(array_diff($required,is_array($found)?$found:[]));
+
     $columns=[
-        ['clinical_encounters','open_guard'],
-        ['clinical_encounters','voided_at'],
-        ['clinical_encounters','voided_by_user_id'],
-        ['clinical_encounters','void_reason'],
-        ['clinical_encounter_sections','payload_schema_version'],
-        ['clinical_encounter_sections','row_version'],
-        ['clinical_observations','row_version'],
-        ['clinical_documents','encounter_ref_id'],
+        ['clinical_encounters','open_guard','tinyint'],['clinical_encounters','voided_at',null],
+        ['clinical_encounters','voided_by_user_id',null],['clinical_encounters','void_reason',null],
+        ['clinical_encounter_sections','payload_schema_version',null],['clinical_encounter_sections','row_version',null],
+        ['clinical_observations','row_version',null],['clinical_documents','encounter_ref_id','bigint'],
     ];
-    foreach($columns as [$table,$column]){
-        $q=$pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?');
-        $q->execute([$table,$column]); if((int)$q->fetchColumn()!==1)$missing[]=$table.'.'.$column;
+    foreach($columns as [$table,$column,$type]){
+        $q=$pdo->prepare('SELECT DATA_TYPE,GENERATION_EXPRESSION,IS_NULLABLE,EXTRA FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?');
+        $q->execute([$table,$column]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row)||($type!==null&&strtolower((string)$row['DATA_TYPE'])!==$type)){$drift[]=$table.'.'.$column;continue;}
+        if($column==='open_guard'){
+            $expr=strtolower((string)($row['GENERATION_EXPRESSION']??''));
+            if(!str_contains($expr,'status')||!str_contains($expr,'open')||str_contains($expr,'concat')
+                ||(string)($row['IS_NULLABLE']??'')!=='YES'||!str_contains(strtolower((string)($row['EXTRA']??'')),'stored generated')){
+                $drift[]='clinical_encounters.open_guard.expression';
+            }
+        }
     }
-    $index=$pdo->prepare("SELECT COUNT(*) FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_encounters'
-          AND INDEX_NAME='uq_clinical_encounter_one_open' AND NON_UNIQUE=0");
-    $index->execute();
-    if ((int)$index->fetchColumn() < 1) $missing[]='clinical_encounters.uq_clinical_encounter_one_open';
-    if($missing!==[]) throw new RuntimeException('SCHEMA_NOT_READY: '.implode(',',$missing));
+
+    $indexes=[
+        ['clinical_encounters','uq_clinical_encounter_one_open','doctor_id,patient_id,open_guard',0],
+        ['clinical_encounter_sections','uq_encounter_section_concept','encounter_id,section_type',0],
+        ['clinical_encounter_start_requests','uq_encounter_start_idempotency','doctor_id,idempotency_key',0],
+        ['clinical_idempotency_requests','uq_clinical_command_idempotency','operation_type,doctor_id,context_type,context_id,idempotency_key',0],
+        ['clinical_encounter_final_notes','PRIMARY','encounter_id',0],
+        ['clinical_encounter_final_notes','uq_encounter_final_note_document','document_id',0],
+    ];
+    foreach($indexes as [$table,$name,$expected,$nonUnique]){
+        $q=$pdo->prepare('SELECT NON_UNIQUE,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ",") AS columns_csv
+            FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? GROUP BY NON_UNIQUE');
+        $q->execute([$table,$name]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row)||(int)$row['NON_UNIQUE']!==$nonUnique||(string)$row['columns_csv']!==$expected)$drift[]=$table.'.'.$name;
+    }
+
+    $triggers=[
+        'trg_clinical_encounters_v1_before_insert'=>['INSERT','BEFORE','start_must_create_open','doctor_id_required'],
+        'trg_clinical_encounters_v1_before_update'=>['UPDATE','BEFORE','encounter_ownership_immutable','encounter_transition_forbidden'],
+    ];
+    foreach($triggers as $trigger=>[$event,$timing,$markerA,$markerB]){
+        $q=$pdo->prepare('SELECT EVENT_MANIPULATION,ACTION_TIMING,ACTION_STATEMENT FROM information_schema.TRIGGERS
+            WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=? AND EVENT_OBJECT_TABLE="clinical_encounters"');
+        $q->execute([$trigger]);$row=$q->fetch(PDO::FETCH_ASSOC);$body=strtolower((string)($row['ACTION_STATEMENT']??''));
+        if(!is_array($row)||(string)$row['EVENT_MANIPULATION']!==$event||(string)$row['ACTION_TIMING']!==$timing
+            ||!str_contains($body,$markerA)||!str_contains($body,$markerB))$drift[]='trigger.'.$trigger;
+    }
+    $q=$pdo->prepare('SELECT cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc
+        JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME
+        WHERE tc.CONSTRAINT_SCHEMA=DATABASE() AND tc.TABLE_NAME="clinical_encounters"
+          AND tc.CONSTRAINT_NAME="chk_clinical_encounter_lifecycle_v1" AND tc.CONSTRAINT_TYPE="CHECK"');
+    $q->execute();$check=strtolower((string)$q->fetchColumn());
+    foreach(['doctor_id','open','closed','voided','closed_at','voided_at','void_reason'] as $marker){if(!str_contains($check,$marker))$drift[]='clinical_encounters.chk_clinical_encounter_lifecycle_v1';}
+
+    $foreignKeys=[
+        ['clinical_encounter_sections','fk_encounter_sections_encounter','encounter_id','clinical_encounters','encounter_id'],
+        ['clinical_observations','fk_observations_encounter','encounter_id','clinical_encounters','encounter_id'],
+        ['clinical_encounter_amendments','fk_encounter_amendments_encounter','encounter_id','clinical_encounters','encounter_id'],
+        ['clinical_encounter_start_requests','fk_encounter_start_result','encounter_id','clinical_encounters','encounter_id'],
+        ['clinical_encounter_final_notes','fk_encounter_final_note_encounter','encounter_id','clinical_encounters','encounter_id'],
+        ['clinical_encounter_final_notes','fk_encounter_final_note_document','document_id','clinical_documents','id'],
+        ['clinical_document_revisions','fk_document_revision_original','original_document_id','clinical_documents','id'],
+        ['clinical_document_revisions','fk_document_revision_supersedes','supersedes_document_id','clinical_documents','id'],
+        ['clinical_document_revisions','fk_document_revision_new','new_document_id','clinical_documents','id'],
+        ['clinical_documents','fk_clinical_documents_encounter_ref','encounter_ref_id','clinical_encounters','encounter_id'],
+        ['clinical_idempotency_requests','fk_idempotency_observation','observation_id','clinical_observations','observation_id'],
+        ['clinical_idempotency_requests','fk_idempotency_encounter_amendment','encounter_amendment_id','clinical_encounter_amendments','amendment_id'],
+        ['clinical_idempotency_requests','fk_idempotency_document','document_id','clinical_documents','id'],
+        ['clinical_idempotency_requests','fk_idempotency_document_revision','document_revision_id','clinical_document_revisions','revision_id'],
+    ];
+    foreach($foreignKeys as [$table,$name,$column,$referenced,$referencedColumn]){
+        $q=$pdo->prepare('SELECT rc.REFERENCED_TABLE_NAME,rc.DELETE_RULE,rc.UPDATE_RULE,kcu.COLUMN_NAME,kcu.REFERENCED_COLUMN_NAME
+            FROM information_schema.REFERENTIAL_CONSTRAINTS rc JOIN information_schema.KEY_COLUMN_USAGE kcu
+              ON kcu.CONSTRAINT_SCHEMA=rc.CONSTRAINT_SCHEMA AND kcu.TABLE_NAME=rc.TABLE_NAME AND kcu.CONSTRAINT_NAME=rc.CONSTRAINT_NAME
+            WHERE rc.CONSTRAINT_SCHEMA=DATABASE() AND rc.TABLE_NAME=? AND rc.CONSTRAINT_NAME=?');
+        $q->execute([$table,$name]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row)||(string)$row['REFERENCED_TABLE_NAME']!==$referenced||(string)$row['DELETE_RULE']!=='RESTRICT'
+            ||(string)$row['UPDATE_RULE']!=='RESTRICT'||(string)$row['COLUMN_NAME']!==$column||(string)$row['REFERENCED_COLUMN_NAME']!==$referencedColumn){
+            $drift[]=$table.'.'.$name;
+        }
+    }
+    if($drift!==[])throw new RuntimeException('SCHEMA_NOT_READY: '.implode(',',array_unique($drift)));
 }
 
 final class ClinicalEncounterIntegrityRepository
@@ -95,7 +215,7 @@ final class ClinicalEncounterIntegrityRepository
 
     public function findOpen(string $doctorId,string $patientId,bool $forUpdate=false): ?array
     {
-        $sql="SELECT * FROM clinical_encounters WHERE doctor_id=:doctor AND patient_id=:patient AND status='open' ORDER BY encounter_id LIMIT 1".($forUpdate?' FOR UPDATE':'');
+        $sql="SELECT * FROM clinical_encounters WHERE doctor_id=:doctor AND patient_id=:patient AND BINARY status=BINARY 'open' ORDER BY encounter_id LIMIT 1".($forUpdate?' FOR UPDATE':'');
         $stmt=$this->pdo->prepare($sql);$stmt->execute([':doctor'=>$doctorId,':patient'=>$patientId]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
         return is_array($row)?$row:null;
     }
@@ -154,31 +274,36 @@ final class ClinicalEncounterIntegrityRepository
         $this->pdo->beginTransaction();
         try {
             $row = $this->getForUpdate($encounterId);
-            $status = strtolower((string)$row['status']);
+            $status = (string)$row['status'];
             if ($status === 'closed') {
+                $finalDocument=$this->finalDocument($encounterId);
                 $this->pdo->commit();
-                return $row;
+                return clinical_finalize_result_normalize($row,$finalDocument);
             }
             if ($status !== 'open') {
                 throw new RuntimeException('ENCOUNTER_VOIDED');
             }
-            $finalDocumentId = (int)$finalNoteFactory($this->pdo, $row);
-            if ($finalDocumentId <= 0) {
+            $finalDocument=$finalNoteFactory($this->pdo,$row);
+            if(!is_array($finalDocument))throw new RuntimeException('FINAL_NOTE_CREATION_FAILED');
+            $finalDocumentId=(int)($finalDocument['document_id']??0);
+            $finalDocumentUuid=trim((string)($finalDocument['document_uuid']??''));
+            if ($finalDocumentId <= 0||$finalDocumentUuid==='') {
                 throw new RuntimeException('FINAL_NOTE_CREATION_FAILED');
             }
             $relation = $this->pdo->prepare('INSERT INTO clinical_encounter_final_notes
                 (encounter_id, document_id, created_at) VALUES (:encounter_id, :document_id, UTC_TIMESTAMP())');
             $relation->execute([':encounter_id' => $encounterId, ':document_id' => $finalDocumentId]);
             $update = $this->pdo->prepare("UPDATE clinical_encounters
-                SET status='closed', closed_at=UTC_TIMESTAMP(), closed_by_user_id=:actor, updated_at=UTC_TIMESTAMP()
+                SET status='closed', closed_at=UTC_TIMESTAMP(), closed_by_user_id=:actor,
+                    auto_note_uuid_final=:document_uuid, updated_at=UTC_TIMESTAMP()
                 WHERE encounter_id=:encounter_id AND status='open'");
-            $update->execute([':actor' => $actorId, ':encounter_id' => $encounterId]);
+            $update->execute([':actor' => $actorId,':document_uuid'=>$finalDocumentUuid, ':encounter_id' => $encounterId]);
             if ($update->rowCount() !== 1) {
                 throw new RuntimeException('ENCOUNTER_TERMINAL');
             }
             $closed = $this->getForUpdate($encounterId);
             $this->pdo->commit();
-            return $closed;
+            return clinical_finalize_result_normalize($closed,$finalDocument);
         } catch (Throwable $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
@@ -209,6 +334,24 @@ final class ClinicalEncounterIntegrityRepository
           $id=(int)$this->pdo->lastInsertId();$this->pdo->commit();return $id;
         }catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}}
 
+    public function appendEncounterAmendmentInTransaction(int $encounterId,array $target,string $reason,string $actor,array $correction): int
+    {
+        $reason=trim($reason);if($reason==='')throw new InvalidArgumentException('AMENDMENT_REASON_REQUIRED');
+        $e=$this->getForUpdate($encounterId);if(($e['status']??'')!=='closed')throw new RuntimeException('AMENDMENT_REQUIRES_CLOSED');
+        $stmt=$this->pdo->prepare('INSERT INTO clinical_encounter_amendments
+          (encounter_id,target_type,target_id,target_field,reason,author_user_id,amended_at,correction_payload_json,previous_effective_reference)
+          VALUES (:e,:type,:target,:field,:reason,:actor,UTC_TIMESTAMP(),:payload,:previous)');
+        $stmt->execute([':e'=>$encounterId,':type'=>$target['type']??'',':target'=>$target['id']??null,':field'=>$target['field']??null,
+          ':reason'=>$reason,':actor'=>$actor,':payload'=>json_encode($correction,JSON_THROW_ON_ERROR),':previous'=>$target['previous_reference']??null]);
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    public function fetchAmendment(int $amendmentId): array
+    {
+        $stmt=$this->pdo->prepare('SELECT * FROM clinical_encounter_amendments WHERE amendment_id=:id');$stmt->execute([':id'=>$amendmentId]);
+        $row=$stmt->fetch(PDO::FETCH_ASSOC);if(!is_array($row))throw new RuntimeException('AMENDMENT_NOT_FOUND');return $row;
+    }
+
     public function createDocumentRevision(int $originalId,int $newId,string $reason,string $actor,?int $supersedesId=null): int
     {
         $reason=trim($reason);
@@ -237,6 +380,7 @@ final class ClinicalEncounterIntegrityRepository
 
     private function getForUpdate(int $id): array{$stmt=$this->pdo->prepare('SELECT * FROM clinical_encounters WHERE encounter_id=:id FOR UPDATE');$stmt->execute([':id'=>$id]);$r=$stmt->fetch(PDO::FETCH_ASSOC);if(!is_array($r))throw new RuntimeException('ENCOUNTER_NOT_FOUND');return $r;}
     private function get(int $id): ?array{$stmt=$this->pdo->prepare('SELECT * FROM clinical_encounters WHERE encounter_id=:id');$stmt->execute([':id'=>$id]);$r=$stmt->fetch(PDO::FETCH_ASSOC);return is_array($r)?$r:null;}
+    private function finalDocument(int $encounterId): ?array{$stmt=$this->pdo->prepare('SELECT d.id AS document_id,d.document_uuid FROM clinical_encounter_final_notes f JOIN clinical_documents d ON d.id=f.document_id WHERE f.encounter_id=:id');$stmt->execute([':id'=>$encounterId]);$r=$stmt->fetch(PDO::FETCH_ASSOC);return is_array($r)?$r:null;}
 }
 
 /**
@@ -357,10 +501,17 @@ final class ClinicalEncounterIntegrityService
         return $this->sections->saveOpen($encounterId, $type, $schemaVersion, $payload, $narrative, $actorId, $expectedVersion);
     }
 
-    public function createObservation(int $encounterId, array $payload, string $actorId): array
+    public function createObservation(int $encounterId, array $payload, string $actorId, string $doctorId, string $idempotencyKey): array
     {
         $this->assertAvailable();
-        return $this->observations->createOpen($encounterId, $payload, $actorId);
+        $validated=clinical_observation_validate($payload);
+        return (new ClinicalIdempotentCreateExecutor($this->pdo))->execute(
+            'CREATE_OBSERVATION',$doctorId,'ENCOUNTER',(string)$encounterId,$idempotencyKey,
+            ['encounter_id'=>$encounterId,'observation'=>$validated],
+            'observation_id',$actorId,
+            fn():int=>$this->observations->createOpenInTransaction($encounterId,$validated,$actorId),
+            fn(int $id):array=>$this->observations->fetch($id)
+        );
     }
 
     public function updateObservation(int $encounterId, int $observationId, array $payload, int $expectedVersion, string $actorId): array
@@ -369,10 +520,16 @@ final class ClinicalEncounterIntegrityService
         return $this->observations->updateOpen($encounterId, $observationId, $payload, $expectedVersion, $actorId);
     }
 
-    public function appendAmendment(int $encounterId, array $target, string $reason, string $actorId, array $correction): int
+    public function appendAmendment(int $encounterId, array $target, string $reason, string $actorId, array $correction, string $doctorId, string $idempotencyKey): array
     {
         $this->assertAvailable();
-        return $this->encounters->appendEncounterAmendment($encounterId, $target, $reason, $actorId, $correction);
+        return (new ClinicalIdempotentCreateExecutor($this->pdo))->execute(
+            'CREATE_ENCOUNTER_AMENDMENT',$doctorId,'ENCOUNTER',(string)$encounterId,$idempotencyKey,
+            ['encounter_id'=>$encounterId,'target'=>$target,'reason'=>$reason,'correction'=>$correction],
+            'encounter_amendment_id',$actorId,
+            fn():int=>$this->encounters->appendEncounterAmendmentInTransaction($encounterId,$target,$reason,$actorId,$correction),
+            fn(int $id):array=>$this->encounters->fetchAmendment($id)
+        );
     }
 
     public function documentPolicy(string $operation, string $documentClass, string $encounterStatus, array $context = []): array
@@ -385,5 +542,16 @@ final class ClinicalEncounterIntegrityService
     {
         $this->assertAvailable();
         return $this->encounters->assertDocumentEncounterContext($documentId, $encounterId, $doctorId);
+    }
+
+    public function idempotentCreate(
+        string $operationType,string $doctorId,string $contextType,string $contextId,string $idempotencyKey,
+        array $semanticRequest,string $resultColumn,string $actorId,callable $createResource,callable $fetchResource
+    ): array {
+        $this->assertAvailable();
+        return (new ClinicalIdempotentCreateExecutor($this->pdo))->execute(
+            $operationType,$doctorId,$contextType,$contextId,$idempotencyKey,$semanticRequest,
+            $resultColumn,$actorId,$createResource,$fetchResource
+        );
     }
 }

@@ -21,6 +21,9 @@ check(clinical_encounter_integrity_v1_enabled() === false, 'feature gate default
 check(clinical_encounter_transition_allowed('open', 'closed'), 'OPEN -> CLOSED allowed');
 check(clinical_encounter_transition_allowed('open', 'voided'), 'OPEN -> VOIDED allowed');
 check(!clinical_encounter_transition_allowed('closed', 'open'), 'CLOSED -> OPEN denied');
+check(!clinical_encounter_transition_allowed('OPEN', 'closed'), 'noncanonical uppercase lifecycle state rejected');
+check(!clinical_encounter_status_is_canonical(' open'), 'noncanonical spaced lifecycle state rejected');
+check(clinical_encounter_attribution_classification(null) === 'UNATTRIBUTED', 'legacy NULL doctor remains unattributed');
 
 check(clinical_encounter_section_type_validate('assessment') === 'assessment', 'known section accepted');
 try {
@@ -50,6 +53,27 @@ $hashC = clinical_idempotency_request_hash(['a' => ['x' => 3, 'y' => 5], 'b' => 
 check(hash_equals($hashA, $hashB), 'semantic equality produces same request hash');
 check(!hash_equals($hashA, $hashC), 'semantic change produces different request hash');
 
+$duplicate = new PDOException('duplicate', 23000);
+check(clinical_section_write_error_code($duplicate) === 'VERSION_CONFLICT', 'concurrent section create maps duplicate to VERSION_CONFLICT');
+
+check(clinical_document_create_operation('LAB_RESULT') === 'CREATE_POST_ENCOUNTER_RESULT', 'post-close result selects result idempotency operation');
+check(clinical_document_create_operation('PRESCRIPTION') === 'CREATE_ENCOUNTER_DOCUMENT', 'ordinary document selects encounter document operation');
+
+$semanticA = clinical_document_semantic_request([
+    'document_class' => 'LAB_RESULT',
+    'title' => 'Química sanguínea',
+    'payload' => ['related_order_document_uuid' => 'order-1'],
+    'tmp_name' => '/tmp/php-a',
+], str_repeat('a', 64));
+$semanticB = clinical_document_semantic_request([
+    'document_class' => 'LAB_RESULT',
+    'title' => 'Química sanguínea',
+    'payload' => ['related_order_document_uuid' => 'order-1'],
+    'tmp_name' => '/tmp/php-b',
+], str_repeat('a', 64));
+check(hash_equals(clinical_idempotency_request_hash($semanticA), clinical_idempotency_request_hash($semanticB)), 'document semantic hash ignores volatile upload temp path');
+check(($semanticA['content_sha256'] ?? null) === str_repeat('a', 64), 'document semantic hash includes stable content digest');
+
 $ordinaryClosed = clinical_document_operation_policy('CREATE_ENCOUNTER_DOCUMENT', 'PRESCRIPTION', 'closed');
 check($ordinaryClosed['allowed'] === false && $ordinaryClosed['code'] === 'ENCOUNTER_TERMINAL', 'ordinary document denied after close');
 
@@ -71,5 +95,14 @@ check($voided['allowed'] === false && $voided['code'] === 'ENCOUNTER_VOIDED', 'o
 
 check(!clinical_document_content_rewrite_allowed('signed'), 'signed document rewrite blocked');
 check(!clinical_document_content_rewrite_allowed('generated', true), 'final encounter note rewrite blocked');
+
+$finalized = clinical_finalize_result_normalize([
+    'encounter_id' => 7,
+    'status' => 'closed',
+    'closed_at' => '2026-09-18 12:00:00',
+    'closed_by_user_id' => 'doctor-user',
+    'auto_note_uuid_final' => 'doc-final-uuid',
+], ['document_id' => 91, 'document_uuid' => 'doc-final-uuid']);
+check($finalized['auto_note_uuid_final'] === 'doc-final-uuid' && $finalized['final_document_id'] === 91, 'finalize result preserves compatibility UUID mirror and relation');
 
 echo "PURE_TESTS_PASSED={$passed}\n";

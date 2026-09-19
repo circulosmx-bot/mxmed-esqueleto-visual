@@ -54,6 +54,13 @@ function clinical_physical_exam_state(array $payload, string $system): string
     return strtoupper(trim((string)($systems[$system]['state'] ?? '')));
 }
 
+function clinical_section_write_error_code(Throwable $error): string
+{
+    return $error instanceof PDOException && (string)$error->getCode() === '23000'
+        ? 'VERSION_CONFLICT'
+        : $error->getMessage();
+}
+
 final class ClinicalEncounterSectionsRepository
 {
     public function __construct(private PDO $pdo) {}
@@ -83,6 +90,9 @@ final class ClinicalEncounterSectionsRepository
             return $row;
         } catch (Throwable $e) {
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            if (clinical_section_write_error_code($e) === 'VERSION_CONFLICT') {
+                throw new RuntimeException('VERSION_CONFLICT', 409, $e);
+            }
             throw $e;
         }
     }
