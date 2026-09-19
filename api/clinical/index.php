@@ -4,6 +4,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../modules/clinical/src/timeline_catalog.php';
+require_once __DIR__ . '/../_lib/clinical_encounter_integrity.php';
 
 function clinical_normalize_response($response): array
 {
@@ -3966,7 +3967,7 @@ try {
         && count($segments) === 3);
 
     // Ensure bridge schema at gateway startup (best-effort to avoid breaking non-DB routes).
-    if (!$isTimelineRoute) {
+    if (!$isTimelineRoute && !clinical_encounter_integrity_v1_enabled()) {
         try {
             $bridgePdo = clinical_documents_pdo();
             clinical_ensure_identity_bridge_schema($bridgePdo);
@@ -5575,7 +5576,11 @@ try {
 
         try {
             $pdo = clinical_documents_pdo();
-            clinical_encounters_ensure_schema($pdo);
+            if (clinical_encounter_integrity_v1_enabled()) {
+                clinical_encounter_integrity_assert_schema_ready($pdo);
+            } else {
+                clinical_encounters_ensure_schema($pdo);
+            }
 
             if (!clinical_patient_exists($pdo, $patientId)) {
                 clinical_send_response([
@@ -5710,7 +5715,11 @@ try {
 
         try {
             $pdo = clinical_documents_pdo();
-            clinical_encounters_ensure_schema($pdo);
+            if (clinical_encounter_integrity_v1_enabled()) {
+                clinical_encounter_integrity_assert_schema_ready($pdo);
+            } else {
+                clinical_encounters_ensure_schema($pdo);
+            }
             if (!clinical_patient_exists($pdo, $patientId)) {
                 clinical_send_response([
                     'ok' => false,
@@ -5722,16 +5731,19 @@ try {
                 return;
             }
             if (!clinical_require_doctor_patient_scope($pdo, $context['doctor_id'], $patientId, 'patients/{patient_id}/encounters/active')) return;
-            $active = clinical_encounter_open_fetch($pdo, $patientId, $context['doctor_id'], $currentUserId);
+            $active = clinical_encounter_integrity_v1_enabled()
+                ? (new ClinicalEncounterIntegrityService($pdo))->active($context['doctor_id'], $patientId)
+                : clinical_encounter_open_fetch($pdo, $patientId, $context['doctor_id'], $currentUserId);
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());
+            $schemaNotReady = str_starts_with($msg, 'SCHEMA_NOT_READY');
             clinical_send_response([
                 'ok' => false,
-                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'error' => ['code' => $schemaNotReady ? 'SCHEMA_NOT_READY' : 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
                 'message' => '',
                 'data' => null,
                 'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active'],
-            ], 500);
+            ], $schemaNotReady ? 503 : 500);
             return;
         }
 
@@ -5793,7 +5805,11 @@ try {
 
         try {
             $pdo = clinical_documents_pdo();
-            clinical_encounters_ensure_schema($pdo);
+            if (clinical_encounter_integrity_v1_enabled()) {
+                clinical_encounter_integrity_assert_schema_ready($pdo);
+            } else {
+                clinical_encounters_ensure_schema($pdo);
+            }
             if (!clinical_patient_exists($pdo, $patientId)) {
                 clinical_send_response([
                     'ok' => false,
@@ -5807,13 +5823,14 @@ try {
             if (!clinical_require_doctor_patient_scope($pdo, $context['doctor_id'], $patientId, 'patients/{patient_id}/encounters')) return;
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());
+            $schemaNotReady = str_starts_with($msg, 'SCHEMA_NOT_READY');
             clinical_send_response([
                 'ok' => false,
-                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'error' => ['code' => $schemaNotReady ? 'SCHEMA_NOT_READY' : 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
                 'message' => '',
                 'data' => null,
                 'meta' => ['method' => $method, 'route' => 'patients/{patient_id}/encounters'],
-            ], 500);
+            ], $schemaNotReady ? 503 : 500);
             return;
         }
 
@@ -5882,6 +5899,68 @@ try {
         }
 
         $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
+
+        if (clinical_encounter_integrity_v1_enabled()) {
+            $idempotencyKey = trim((string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+            $appointmentIdV1 = trim((string)($payload['appointment_id'] ?? ''));
+            if ($appointmentIdV1 !== '' && !clinical_appointment_matches_encounter_owner($pdo, $appointmentIdV1, $context['doctor_id'], $patientId)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'INVALID_APPOINTMENT_SCOPE', 'message' => 'appointment doctor/patient mismatch'],
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/encounters'],
+                ], 403);
+                return;
+            }
+            if ($appointmentIdV1 === '') {
+                $payload['appointment_id'] = null;
+            }
+            try {
+                $created = (new ClinicalEncounterIntegrityService($pdo))->start(
+                    $context['doctor_id'],
+                    $context['user_id'],
+                    $patientId,
+                    $payload,
+                    $idempotencyKey
+                );
+                $startCreated = ($created['_integrity_start_created'] ?? false) === true;
+                unset($created['_integrity_start_created']);
+                clinical_send_response([
+                    'ok' => true,
+                    'error' => null,
+                    'message' => 'encounter active',
+                    'data' => $created + [
+                        'encounter_key' => clinical_encounter_key((int)$created['encounter_id'], (string)($created['appointment_id'] ?? '')),
+                    ],
+                    'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/encounters', 'integrity_v1' => true],
+                ], $startCreated ? 201 : 200);
+            } catch (ClinicalIdempotencyException $e) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => $e->errorCode, 'message' => $e->getMessage()],
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/encounters', 'integrity_v1' => true],
+                ], $e->httpStatus);
+            } catch (InvalidArgumentException $e) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => $e->getMessage(), 'message' => $e->getMessage()],
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/encounters', 'integrity_v1' => true],
+                ], 400);
+            } catch (Throwable $e) {
+                $message = trim($e->getMessage());
+                $schemaNotReady = str_starts_with($message, 'SCHEMA_NOT_READY');
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => $schemaNotReady ? 'SCHEMA_NOT_READY' : 'server_error', 'message' => $message],
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/encounters', 'integrity_v1' => true],
+                ], $schemaNotReady ? 503 : 500);
+            }
+            return;
+        }
+
         $openedByUserId = $context['user_id'];
         $encounterDt = trim((string)($payload['encounter_dt'] ?? ''));
         $appointmentId = trim((string)($payload['appointment_id'] ?? ''));
