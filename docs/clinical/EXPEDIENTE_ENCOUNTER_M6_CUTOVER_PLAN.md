@@ -17,7 +17,12 @@ M6_ROUTE01_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
 CURRENT_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
 M6_COHORT_ROUTING_CAPABILITY=ACCEPTED
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
-PHASE_2_M6_MULTI01=READY_FOR_DIRECTOR_REVIEW
+PHASE_2_M6_MULTI01=ACCEPTED
+M6_MULTI01_ACCEPTED_HEAD=e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa
+MULTIPART_DESIGN=ACCEPTED
+PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
+MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
+MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 PLANNING=true
@@ -106,7 +111,7 @@ Supporting sources were audited but are not counted as separate clinical-state c
 
 ### Multipart deferral
 
-`V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`. Active consent attachments, order/result uploads and diagnostic uploads use multipart legacy document routes. They are a current cutover blocker because the V1 encounter-document and document-amendment surfaces reject multipart with `503/V1_MULTIPART_STORAGE_NOT_READY`. `MULTIPART_ACTIVE_CALLER_BLOCKER=true`. The [MULTI01 physical storage design](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md) is ready for Director review, but no schema, storage service, caller adapter or QA implementation is authorized. Design completion does not clear this blocker.
+`V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`. Active consent attachments, order/result uploads and diagnostic uploads use multipart legacy document routes. They are a current cutover blocker because the V1 encounter-document and document-amendment surfaces reject multipart with `503/V1_MULTIPART_STORAGE_NOT_READY`. `MULTIPART_ACTIVE_CALLER_BLOCKER=true`. The [MULTI01 physical storage design](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md) is accepted. MULTI02A now supplies its repository-only additive schema/readiness candidate, but migration 05 has not been executed and no storage service, caller adapter or multipart QA implementation is present. Neither design acceptance nor this schema candidate clears the blocker.
 
 ## 4. Legacy writers and runtime DDL
 
@@ -207,12 +212,14 @@ MIGRATION_01_STATE=NOT_APPLIED
 MIGRATION_02_STATE=NOT_APPLIED
 MIGRATION_03_STATE=NOT_APPLIED
 MIGRATION_04_STATE=NOT_APPLIED
+MIGRATION_05_STATE=REPOSITORY_ONLY_PENDING_REVIEW_NOT_APPLIED
 ```
 
 - **01 encounter lifecycle integrity:** the table lacks `voided_at`, `voided_by_user_id`, `void_reason`, `open_guard`, the accepted one-open unique index, lifecycle checks and accepted triggers.
 - **02 structured content:** sections, observations and encounter amendments are absent.
 - **03 command idempotency:** start-request and general idempotency tables are absent.
 - **04 document integrity:** `encounter_ref_id`, final-note and document-revision structures are absent.
+- **05 clinical binary storage:** repository artifact only; no physical database was connected or inspected in MULTI02A and the two proposed structures remain pending a separate disposable rehearsal.
 
 The only future migration sequence permitted by the accepted plan is:
 
@@ -220,8 +227,9 @@ The only future migration sequence permitted by the accepted plan is:
 2. `2026_09_18_02_encounter_structured_content.sql`
 3. `2026_09_18_03_encounter_command_idempotency.sql`
 4. `2026_09_18_04_encounter_document_integrity.sql`
+5. `2026_09_19_05_clinical_binary_storage.sql`
 
-`2026_09_17_clinical_encounter_doctor_attribution.sql` remains explicitly prohibited. The 13 NULL doctor rows must remain unattributed.
+Migration 05 is repository-only and is not physically accepted until a later isolated disposable rehearsal. `2026_09_17_clinical_encounter_doctor_attribution.sql` remains explicitly prohibited. The 13 NULL doctor rows must remain unattributed.
 
 ## 7. Backup and restore plan
 
@@ -441,21 +449,38 @@ ROUTE_SELECTION_CAUSES_DML=false
 GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
 ```
 
-## 12B. MULTI01 design — V1 multipart storage remains fail-closed
+## 12B. MULTI01 accepted design — V1 multipart storage remains fail-closed
 
 MULTI01 audits the legacy public-path filesystem write and defines the future V1 contract: private bounded staging, SHA-256-bound idempotency, an additive relational binary manifest, create-only immutable final storage, authenticated retrieval, explicit compensation, stale-staging cleanup and read-only orphan reconciliation. It maps C04, C05 and C21 into one canonical binary service and defines MPU01–MPU20 for a later isolated implementation chapter.
 
-The design status is `MULTIPART_DESIGN_READY_FOR_IMPLEMENTATION_REVIEW`. This is documentation, not the missing implementation. The existing `503/V1_MULTIPART_STORAGE_NOT_READY` response and all accepted legacy-writer guards remain mandatory. Runtime routing is still inactive.
+The design is accepted at `e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa`. The existing `503/V1_MULTIPART_STORAGE_NOT_READY` response and all accepted legacy-writer guards remain mandatory. Runtime routing is still inactive.
 
 ```text
-PHASE_2_M6_MULTI01=READY_FOR_DIRECTOR_REVIEW
+PHASE_2_M6_MULTI01=ACCEPTED
+M6_MULTI01_ACCEPTED_HEAD=e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa
 MULTIPART_DESIGN_COMPLETE=true
-MULTIPART_DESIGN_STATUS=MULTIPART_DESIGN_READY_FOR_IMPLEMENTATION_REVIEW
+MULTIPART_DESIGN=ACCEPTED
+MULTIPART_DESIGN_STATUS=ACCEPTED
 MULTIPART_SCHEMA_CHANGE_REQUIRED=true
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 ```
+
+## 12C. MULTI02A repository-only binary schema foundation
+
+Migration 05 now defines `clinical_binary_uploads` and `clinical_document_binaries` as an additive repository artifact with explicit drift validation, immutable manifest keys, named checks and historical `RESTRICT` foreign keys. A separate read-only readiness authority catalogs and inspects the critical tables, columns, indexes, foreign keys and checks. It is not wired into existing JSON V1 readiness or multipart routes.
+
+```text
+PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
+MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
+MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
+MULTI02A_PHYSICAL_MIGRATION_EXECUTED=false
+MULTIPART_STORAGE_IMPLEMENTATION=PENDING
+MULTIPART_PHYSICAL_QA=PENDING
+```
+
+This chapter did not connect to any database. Staging/finalization, authenticated retrieval, reconciliation/cleanup execution, C04/C05/C21 adapters and multipart activation remain absent.
 
 ## 13. Monitoring invariants
 
@@ -539,10 +564,10 @@ ROUTE01 is accepted; M6 remains blocked independently by multipart implementatio
 
 Known blockers, in actionable order:
 
-1. MULTI01 design is ready for review, but V1 multipart schema/storage/adapters/QA are not implemented; the active caller blocker and fail-closed `503` remain.
+1. MULTI01 is accepted and the MULTI02A repository schema foundation is pending review, but migration 05 has no physical rehearsal and V1 multipart storage/adapters/QA are not implemented; the active caller blocker and fail-closed `503` remain.
 2. ROUTE01 capability is accepted, but cohort runtime routing remains inactive and unauthorized.
 3. The accepted uncontrolled-writer count is 0, but that does not authorize M6.
-4. The working schema is pre-migration (01–04 not applied).
+4. The working schema is pre-migration (01–05 not applied; 05 remains repository-only).
 5. No restorable backup has been proved.
 6. No isolated working-data clone migration rehearsal has been executed.
 7. No distinct least-privilege migration account exists; runtime uses broad-privilege root.
@@ -553,5 +578,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of the MULTI01 V1 multipart storage design. Multipart implementation remains a separate unauthorized chapter; no backup, clone, working-database migration, routing activation or runtime cutover is authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI02A additive clinical binary schema foundation. If accepted, authorize a separate isolated disposable MySQL MULTI02B rehearsal for migration 05 only; no working-database migration, multipart activation or cutover authorized.
 ```

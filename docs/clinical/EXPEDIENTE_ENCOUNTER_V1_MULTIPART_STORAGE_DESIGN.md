@@ -4,7 +4,13 @@
 CHAPTER=CLIN-REFORM-PHASE2-M6-MULTI01
 DESIGN_SCOPE=DOCUMENTATION_ONLY
 BASELINE_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
-MULTIPART_DESIGN_STATUS=MULTIPART_DESIGN_READY_FOR_IMPLEMENTATION_REVIEW
+PHASE_2_M6_MULTI01=ACCEPTED
+M6_MULTI01_ACCEPTED_HEAD=e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa
+MULTIPART_DESIGN=ACCEPTED
+MULTIPART_DESIGN_STATUS=ACCEPTED
+PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
+MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
+MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
@@ -13,7 +19,7 @@ DB_SCHEMA_PHYSICALLY_CHANGED=false
 DB_DATA_CHANGED=false
 ```
 
-This chapter defines the physical contract needed before V1 may accept a multipart clinical document. It does not implement storage, add routes, change schema, activate cohort routing or remove the current `503/V1_MULTIPART_STORAGE_NOT_READY` response. The design separates the database document authority from the binary object authority and requires both to agree before a document becomes visible.
+MULTI01 defines the accepted physical contract needed before V1 may accept a multipart clinical document. MULTI02A adds only the repository migration and read-only schema-readiness authority for the two accepted tables. It does not execute that migration, implement storage, add routes, activate cohort routing or remove the current `503/V1_MULTIPART_STORAGE_NOT_READY` response. The design separates the database document authority from the binary object authority and requires both to agree before a document becomes visible.
 
 ## 1. Current legacy upload behavior
 
@@ -331,7 +337,7 @@ All adapters must resolve doctor authority from session/service authorization an
 
 ## 19. Implementation chapter boundaries
 
-MULTI01 authorizes no implementation. A separate chapter must review and authorize, in order:
+MULTI01 is accepted at `e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa`. Its implementation boundary is split into separately reviewed chapters, in order:
 
 1. additive schema/migration plus drift/readiness checks for the two proposed structures;
 2. private storage adapter, staging/finalization and reconciliation command;
@@ -344,8 +350,18 @@ MULTI01 authorizes no implementation. A separate chapter must review and authori
 
 The implementation must preserve `503/V1_MULTIPART_STORAGE_NOT_READY` until schema, service, adapters and all multipart QA are accepted. `GLOBAL_CLINICAL_GET_DDL_REMOVAL` remains a separate later blocker.
 
+### MULTI02A repository-only schema foundation
+
+MULTI02A implements only item 1 of that sequence as a review candidate. `2026_09_19_05_clinical_binary_storage.sql` defines the additive `clinical_binary_uploads` coordination table and immutable `clinical_document_binaries` manifest, with explicit drift checks, named constraints and `RESTRICT` foreign keys. `clinical_multipart_storage_assert_schema_ready()` inspects tables, columns, indexes, foreign keys and checks using `information_schema`; it performs no DDL or DML and is not wired into existing JSON V1 readiness or multipart routing.
+
+Migration 05 has not been executed. File staging, finalization, retrieval, reconciliation execution, C04/C05/C21 adapters and multipart acceptance remain pending. The next possible technical chapter after review is an isolated disposable MySQL rehearsal of migration 05 only.
+
 ```text
-PHASE_2_M6_MULTI01=READY_FOR_DIRECTOR_REVIEW
+PHASE_2_M6_MULTI01=ACCEPTED
+M6_MULTI01_ACCEPTED_HEAD=e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa
+PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
+MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
+MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
 PHASE_2_M6_EXECUTION_AUTHORIZED=false
 M6_AUTHORIZED=false
 WORKING_DB_SCHEMA_STATE=PRE_MIGRATION
@@ -389,6 +405,7 @@ Each scenario must additionally assert no public static path, no PHI in telemetr
 ```text
 MULTIPART_QA_SCENARIOS_COUNT=20
 MULTIPART_DESIGN_COMPLETE=true
-MULTIPART_DESIGN_STATUS=MULTIPART_DESIGN_READY_FOR_IMPLEMENTATION_REVIEW
+MULTIPART_DESIGN=ACCEPTED
+MULTIPART_DESIGN_STATUS=ACCEPTED
 M6_GO_NO_GO=NO_GO_BLOCKED
 ```
