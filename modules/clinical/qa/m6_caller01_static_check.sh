@@ -50,17 +50,18 @@ test "$guard_line" -lt "$get_line"
 test "$guard_line" -lt "$post_line"
 
 ! grep -q 'clinical_m6_cohort_authorized' "$ROUTER"
-git -C "$ROOT" diff --quiet bcb2606ba7a95818673b402a9e006ecc0431ff73 -- api/clinical/index.php
-git -C "$ROOT" diff --quiet bcb2606ba7a95818673b402a9e006ecc0431ff73 -- api/_lib/clinical_m6_cutover.php
+git -C "$ROOT" diff --quiet 0baeefb8eff98f9de80429d0ad9d164190508fbc -- assets/js/app.js
+git -C "$ROOT" diff --quiet 0baeefb8eff98f9de80429d0ad9d164190508fbc -- modules/agenda/services/ClinicalEncounterBridge.php
 
 for file in "$M6_PLAN" "$LIVING_PLAN"; do
     grep -q 'PHASE_2_M6_GUARD01=ACCEPTED' "$file"
     grep -q 'M6_GUARD01_ACCEPTED_HEAD=bcb2606ba7a95818673b402a9e006ecc0431ff73' "$file"
-    grep -q 'PHASE_2_M6_CALLER01=READY_FOR_CODE_REVIEW' "$file"
+    grep -q 'PHASE_2_M6_CALLER01=ACCEPTED' "$file"
+    grep -q 'M6_CALLER01_ACCEPTED_HEAD=0baeefb8eff98f9de80429d0ad9d164190508fbc' "$file"
     grep -q 'C02_ADAPTED=true' "$file"
     grep -q 'C03_ADAPTED=true' "$file"
     grep -q 'C14_RESOLVED=true' "$file"
-    grep -q 'UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=3' "$file"
+    grep -q 'UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0' "$file"
     grep -q 'CANDIDATE_UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0' "$file"
     grep -q 'MULTIPART_ACTIVE_CALLER_BLOCKER=true' "$file"
     grep -q 'M6_COHORT_RUNTIME_ROUTING_ACTIVE=false' "$file"

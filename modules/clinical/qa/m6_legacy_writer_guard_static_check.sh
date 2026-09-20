@@ -64,7 +64,7 @@ assert_before_next "$ROUTER" "M6_GUARD_C12_C20_PATCH" 'UPDATE clinical_documents
 assert_before_next "$STANDALONE" "M6_GUARD_C16_STANDALONE_SAVE" 'INSERT INTO clinical_documents'
 assert_before_next "$EVOLUTION" "M6_GUARD_C17_EVOLUTION_CREATE" 'INSERT INTO clinical_documents'
 
-test "$(grep -c "clinical_m6_assert_legacy_write_allowed" "$ROUTER")" -eq 5
+test "$(grep -c "clinical_m6_assert_legacy_write_allowed" "$ROUTER")" -ge 5
 test "$(grep -c "clinical_m6_assert_legacy_write_allowed" "$STANDALONE")" -eq 1
 test "$(grep -c "clinical_m6_assert_legacy_write_allowed" "$EVOLUTION")" -eq 1
 

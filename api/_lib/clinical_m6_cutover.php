@@ -142,6 +142,23 @@ function clinical_m6_cohort_authorized(string $doctorId, string $patientId): boo
     return clinical_m6_cohort_pair_configured($doctorId, $patientId);
 }
 
+function clinical_m6_v1_route_enabled_for_pair(bool $masterEnabled, string $doctorId, string $patientId): bool
+{
+    // The V1 flag remains the master authority.  In particular, an active or
+    // malformed M6 configuration must be inert while the master is disabled.
+    if (!$masterEnabled) {
+        return false;
+    }
+
+    // M5 and the pre-M6 runtime use the global V1 behavior when cohort mode is
+    // explicitly or implicitly off.
+    if (clinical_m6_cohort_mode() === 'off') {
+        return true;
+    }
+
+    return clinical_m6_cohort_authorized($doctorId, $patientId);
+}
+
 function clinical_m6_patient_in_any_cohort(string $patientId): bool
 {
     $patientId = trim($patientId);
