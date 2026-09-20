@@ -89,6 +89,7 @@ try {
     m6_caller01_bridge_check($e->getMessage() === 'M6_AGENDA_CLINICAL_BRIDGE_PAUSED', 'Agenda bridge uses shared write-window authority');
 }
 unlink($windowPath);
+rmdir($windowPath . '.leases');
 rmdir($windowRoot);
 
 putenv('AGENDA_ENABLE_CLINICAL_ENCOUNTER_BRIDGE');

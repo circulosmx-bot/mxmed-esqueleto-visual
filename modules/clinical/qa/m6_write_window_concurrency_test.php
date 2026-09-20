@@ -39,5 +39,5 @@ $status=clinical_m6_write_window_status(); cc_check($status['state']==='BLOCK_WR
 clinical_m6_write_window_set_state('OPEN');
 $GLOBALS['clinical_m6_write_window_admitted']=false; clinical_m6_write_window_admit(); clinical_m6_write_window_release();
 cc_check(clinical_m6_write_window_status()['active_writers']===0, 'normal admission resumes after exit');
-foreach([$ready,$release,$state] as $file) @unlink($file); rmdir($root);
+foreach([$ready,$release,$state] as $file) @unlink($file); rmdir($state . '.leases'); rmdir($root);
 echo "M6_WRITE_WINDOW_CONCURRENCY_TESTS_PASSED=7\n";

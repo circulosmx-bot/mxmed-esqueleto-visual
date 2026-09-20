@@ -8,10 +8,17 @@ authorize migration of the working database.
 
 `MXMED_CLINICAL_WRITE_WINDOW_CONTROL=OPEN` (also the unset default) preserves
 the current runtime. An operational window uses `FILE` plus an absolute
-`MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH`. The state file is shared by all PHP
-workers on the host and every admission/state transition is serialized with
-`flock(LOCK_EX)`. Missing, unreadable, malformed, or unknown FILE authority
-fails closed for writers.
+`MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH`. The state file and its adjacent
+`.leases` directory are shared by all PHP workers on the host. Every admission
+and state transition is serialized with the state-file `flock(LOCK_EX)`. Each
+admitted writer holds an exclusive lock on an opaque per-writer lease for its
+full lifetime. Missing, unreadable, malformed, or unknown FILE authority fails
+closed for writers.
+
+All clinical workers must share one flock-compatible filesystem lock namespace.
+This host-local mechanism does not coordinate independent hosts or containers
+without such shared storage. Deployment preflight must compare the authority
+and `shared_lock_namespace` reported by every worker.
 
 The operator command is:
 
@@ -33,9 +40,11 @@ this file or command.
    and that the state is valid and OPEN.
 2. Run `block`. The exclusive lock changes state before any later writer can be
    admitted.
-3. Run `status` until the same snapshot reports `state=BLOCK_WRITES` and
-   `active_writers=0`. This is the observable quiescence checkpoint; no timed
-   sleep establishes quiescence.
+3. Run `status` until the same snapshot reports `state=BLOCK_WRITES`,
+   `active_writers=0`, and `live_writer_leases=0`. Status probes every lease
+   lock non-blockingly and reclaims only unlocked artifacts, including those
+   left by a hard-killed worker. This is the observable quiescence checkpoint;
+   no timed sleep establishes quiescence.
 4. The server operator enables `log_bin_trust_function_creators=1`; the separate
    migration account then performs the authorized migrations.
 

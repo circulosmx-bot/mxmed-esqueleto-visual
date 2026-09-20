@@ -23,7 +23,11 @@ foreach (['garbage', 'block-ish', '0'] as $bad) {
 $root = sys_get_temp_dir() . '/mxmed-ww-pure-' . bin2hex(random_bytes(6));
 mkdir($root, 0700, true); $path = $root . '/state.json';
 clinical_m6_write_window_initialize_file($path); ww_env('FILE', $path);
-ww_check(clinical_m6_write_window_status()['state'] === 'OPEN', 'initialized state open');
+$initial = clinical_m6_write_window_status();
+ww_check($initial['state'] === 'OPEN', 'initialized state open');
+ww_check($initial['state_authority_permissions_valid'] === true, 'state authority permissions valid');
+ww_check($initial['lease_authority_permissions_valid'] === true, 'lease authority permissions valid');
+ww_check(is_string($initial['shared_lock_namespace'] ?? null), 'shared lock namespace observable');
 clinical_m6_write_window_set_state('BLOCK_WRITES');
 ww_check(clinical_m6_write_window_blocks_writes(), 'blocked state observable');
 try { clinical_m6_write_window_admit(); ww_check(false, 'blocked admission rejected'); }
@@ -33,6 +37,9 @@ clinical_m6_write_window_admit();
 ww_check(clinical_m6_write_window_status()['active_writers'] === 1, 'writer counted');
 clinical_m6_write_window_release();
 ww_check(clinical_m6_write_window_status()['active_writers'] === 0, 'writer released');
+rmdir($path . '.leases');
+ww_check(clinical_m6_write_window_blocks_writes(), 'unavailable lease authority fails closed');
+mkdir($path . '.leases', 0770); chmod($path . '.leases', 0770);
 
 $cases = [
     ['GET',['encounters','e1'],false], ['POST',['patients','p1','encounters'],true],
@@ -44,5 +51,5 @@ foreach ($cases as [$method,$segments,$expected]) ww_check(clinical_m6_write_win
 
 file_put_contents($path, '{bad json');
 ww_check(clinical_m6_write_window_blocks_writes(), 'malformed state fails closed');
-unlink($path); rmdir($root); ww_env(null, null);
+unlink($path); rmdir($path . '.leases'); rmdir($root); ww_env(null, null);
 echo "M6_WRITE_WINDOW_PURE_TESTS_PASSED={$passed}\n";

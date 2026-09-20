@@ -29,14 +29,12 @@ function clinical_m6_write_window_path(): string
     return $path;
 }
 
-/** @return array{version:int,state:string,active_writers:int,generation:int,updated_at:string} */
+/** @return array{version:int,state:string,generation:int,updated_at:string} */
 function clinical_m6_write_window_validate_state(mixed $decoded): array
 {
     if (!is_array($decoded)
-        || ($decoded['version'] ?? null) !== 1
+        || ($decoded['version'] ?? null) !== 2
         || !in_array($decoded['state'] ?? null, ['OPEN', 'BLOCK_WRITES'], true)
-        || !is_int($decoded['active_writers'] ?? null)
-        || $decoded['active_writers'] < 0
         || !is_int($decoded['generation'] ?? null)
         || $decoded['generation'] < 0
         || !is_string($decoded['updated_at'] ?? null)
@@ -44,6 +42,48 @@ function clinical_m6_write_window_validate_state(mixed $decoded): array
         throw new ClinicalM6WriteWindowConfigException();
     }
     return $decoded;
+}
+
+function clinical_m6_write_window_lease_dir(): string
+{
+    return clinical_m6_write_window_path() . '.leases';
+}
+
+function clinical_m6_write_window_assert_lease_authority(): string
+{
+    $dir = clinical_m6_write_window_lease_dir();
+    if (!is_dir($dir) || is_link($dir) || !is_readable($dir) || !is_writable($dir)) {
+        throw new ClinicalM6WriteWindowConfigException();
+    }
+    return $dir;
+}
+
+/** State lock must already be held. Returns the live lease count and reaps unlocked artifacts. */
+function clinical_m6_write_window_reconcile_leases_locked(): int
+{
+    $dir = clinical_m6_write_window_assert_lease_authority();
+    $names = scandir($dir);
+    if (!is_array($names)) throw new ClinicalM6WriteWindowConfigException();
+    $live = 0;
+    foreach ($names as $name) {
+        if (!preg_match('/^writer-[a-f0-9]{32}\.lease$/', $name)) continue;
+        $path = $dir . DIRECTORY_SEPARATOR . $name;
+        $lease = @fopen($path, 'r+');
+        if (!is_resource($lease)) throw new ClinicalM6WriteWindowConfigException();
+        if (!flock($lease, LOCK_EX | LOCK_NB)) {
+            $live++;
+            fclose($lease);
+            continue;
+        }
+        if (!@unlink($path)) {
+            flock($lease, LOCK_UN);
+            fclose($lease);
+            throw new ClinicalM6WriteWindowConfigException();
+        }
+        flock($lease, LOCK_UN);
+        fclose($lease);
+    }
+    return $live;
 }
 
 /** @return resource */
@@ -81,13 +121,22 @@ function clinical_m6_write_window_write_locked($handle, array $state): void
 function clinical_m6_write_window_status(): array
 {
     if (clinical_m6_write_window_mode() === 'OPEN') {
-        return ['version'=>1,'state'=>'OPEN','active_writers'=>0,'generation'=>0,
+        return ['version'=>2,'state'=>'OPEN','active_writers'=>0,'live_writer_leases'=>0,'generation'=>0,
             'updated_at'=>'repository-default','authority'=>'repository_default'];
     }
-    $handle = clinical_m6_write_window_open_locked(LOCK_SH);
-    try { $state = clinical_m6_write_window_read_locked($handle); }
+    $handle = clinical_m6_write_window_open_locked(LOCK_EX);
+    try {
+        $state = clinical_m6_write_window_read_locked($handle);
+        $state['active_writers'] = clinical_m6_write_window_reconcile_leases_locked();
+        $state['live_writer_leases'] = $state['active_writers'];
+    }
     finally { flock($handle, LOCK_UN); fclose($handle); }
-    $state['authority'] = 'locked_file_v1';
+    $state['authority'] = 'locked_file_v2_crash_safe_leases';
+    $state['shared_lock_namespace'] = hash('sha256', clinical_m6_write_window_lease_dir());
+    $stateMode = @fileperms(clinical_m6_write_window_path());
+    $leaseMode = @fileperms(clinical_m6_write_window_lease_dir());
+    $state['state_authority_permissions_valid'] = is_int($stateMode) && (($stateMode & 0007) === 0);
+    $state['lease_authority_permissions_valid'] = is_int($leaseMode) && (($leaseMode & 0007) === 0);
     return $state;
 }
 
@@ -111,7 +160,7 @@ function clinical_m6_write_window_route_is_clinical_writer(string $method, array
 
 function clinical_m6_write_window_admit(): void
 {
-    if (($GLOBALS['clinical_m6_write_window_admitted'] ?? false) === true) return;
+    if (is_resource($GLOBALS['clinical_m6_write_window_lease_handle'] ?? null)) return;
     if (clinical_m6_write_window_mode() === 'OPEN') {
         $GLOBALS['clinical_m6_write_window_admitted'] = 'default-open';
         return;
@@ -120,10 +169,24 @@ function clinical_m6_write_window_admit(): void
     try {
         $state = clinical_m6_write_window_read_locked($handle);
         if ($state['state'] !== 'OPEN') throw new ClinicalM6WriteWindowBlockedException();
-        $state['active_writers']++;
-        $state['updated_at'] = gmdate('c');
-        clinical_m6_write_window_write_locked($handle, $state);
+        $dir = clinical_m6_write_window_assert_lease_authority();
+        $leaseId = bin2hex(random_bytes(16));
+        $leasePath = $dir . DIRECTORY_SEPARATOR . 'writer-' . $leaseId . '.lease';
+        $lease = @fopen($leasePath, 'x+');
+        if (!is_resource($lease) || !flock($lease, LOCK_EX | LOCK_NB)) {
+            if (is_resource($lease)) fclose($lease);
+            @unlink($leasePath);
+            throw new ClinicalM6WriteWindowConfigException();
+        }
+        @chmod($leasePath, 0660);
+        $metadata = json_encode(['lease_id'=>$leaseId,'pid'=>getmypid(),'admitted_at'=>gmdate('c')]);
+        if (!is_string($metadata) || fwrite($lease, $metadata . "\n") === false || !fflush($lease)) {
+            flock($lease, LOCK_UN); fclose($lease); @unlink($leasePath);
+            throw new ClinicalM6WriteWindowConfigException();
+        }
         $GLOBALS['clinical_m6_write_window_admitted'] = true;
+        $GLOBALS['clinical_m6_write_window_lease_handle'] = $lease;
+        $GLOBALS['clinical_m6_write_window_lease_path'] = $leasePath;
         register_shutdown_function('clinical_m6_write_window_release');
     } finally {
         flock($handle, LOCK_UN);
@@ -133,16 +196,19 @@ function clinical_m6_write_window_admit(): void
 
 function clinical_m6_write_window_release(): void
 {
-    if (($GLOBALS['clinical_m6_write_window_admitted'] ?? false) !== true) return;
+    $lease = $GLOBALS['clinical_m6_write_window_lease_handle'] ?? null;
+    $leasePath = (string)($GLOBALS['clinical_m6_write_window_lease_path'] ?? '');
+    if (!is_resource($lease)) return;
     $GLOBALS['clinical_m6_write_window_admitted'] = false;
+    $GLOBALS['clinical_m6_write_window_lease_handle'] = null;
+    $GLOBALS['clinical_m6_write_window_lease_path'] = null;
     try {
         $handle = clinical_m6_write_window_open_locked(LOCK_EX);
         try {
-            $state = clinical_m6_write_window_read_locked($handle);
-            if ($state['active_writers'] < 1) throw new ClinicalM6WriteWindowConfigException();
-            $state['active_writers']--;
-            $state['updated_at'] = gmdate('c');
-            clinical_m6_write_window_write_locked($handle, $state);
+            clinical_m6_write_window_read_locked($handle);
+            flock($lease, LOCK_UN);
+            fclose($lease);
+            if ($leasePath === '' || !@unlink($leasePath)) throw new ClinicalM6WriteWindowConfigException();
         } finally { flock($handle, LOCK_UN); fclose($handle); }
     } catch (Throwable $e) {
         error_log('M6_WRITE_WINDOW_RELEASE_FAILED:' . $e->getMessage());
@@ -160,8 +226,11 @@ function clinical_m6_write_window_set_state(string $next): array
         $state['state'] = $next;
         $state['updated_at'] = gmdate('c');
         clinical_m6_write_window_write_locked($handle, $state);
+        $live = clinical_m6_write_window_reconcile_leases_locked();
     } finally { flock($handle, LOCK_UN); fclose($handle); }
-    $state['authority'] = 'locked_file_v1';
+    $state['active_writers'] = $live;
+    $state['live_writer_leases'] = $live;
+    $state['authority'] = 'locked_file_v2_crash_safe_leases';
     return $state;
 }
 
@@ -170,12 +239,17 @@ function clinical_m6_write_window_initialize_file(string $path): array
     if ($path === '' || str_contains($path, "\0")) throw new ClinicalM6WriteWindowConfigException();
     $dir = dirname($path);
     if (!is_dir($dir) || !is_writable($dir)) throw new ClinicalM6WriteWindowConfigException();
+    $leaseDir = $path . '.leases';
+    if (file_exists($path) || file_exists($leaseDir)) throw new ClinicalM6WriteWindowConfigException();
+    if (!@mkdir($leaseDir, 0770) || !@chmod($leaseDir, 0770)) throw new ClinicalM6WriteWindowConfigException();
     $handle = @fopen($path, 'x+');
     if (!is_resource($handle) || !flock($handle, LOCK_EX)) throw new ClinicalM6WriteWindowConfigException();
-    $state = ['version'=>1,'state'=>'OPEN','active_writers'=>0,'generation'=>0,'updated_at'=>gmdate('c')];
+    $state = ['version'=>2,'state'=>'OPEN','generation'=>0,'updated_at'=>gmdate('c')];
     try { clinical_m6_write_window_write_locked($handle, $state); }
     finally { flock($handle, LOCK_UN); fclose($handle); }
     @chmod($path, 0660);
+    $state['active_writers'] = 0;
+    $state['live_writer_leases'] = 0;
     return $state;
 }
 
