@@ -2,11 +2,11 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=2c9d725eeb02bdecaa8dec894ad414862b8d9f82
+CURRENT_ACCEPTED_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of M5 REPAIR01 canonical V1 document domain-error HTTP mapping before authorizing another complete T01-T35 M5 rerun.
+NEXT_AUTHORIZED_STEP=Director/assistant review of complete PHASE 2 M5 T01-T35 RERUN2 evidence; no M6, working-database migration, runtime cutover, production or PHASE 3 action authorized.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -91,7 +91,7 @@ RUNTIME_CUTOVER_AUTHORIZED=false
 RUNTIME_CUTOVER_EXECUTED=false
 PRODUCTION_EXECUTION_AUTHORIZED=false
 M5_SYNTHETIC_QA_AUTHORIZED=true
-PHASE_2_M5_STATUS=BLOCKED_PENDING_SOURCE_REPAIR_REVIEW
+PHASE_2_M5_STATUS=PASS_READY_FOR_DIRECTOR_REVIEW
 PHASE_2_M5_SCOPE=T01_T35_DISPOSABLE_SYNTHETIC_QA_ONLY
 PHASE_2_M5_PREP01=ACCEPTED
 M5_PREP01_ACCEPTED_HEAD=5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d
@@ -126,10 +126,20 @@ M5_EXEC01_RERUN_WORKING_MXMED_DB_CONNECTED=false
 M5_EXEC01_RERUN_RESIDUAL_DATABASE_COUNT=0
 M5_EXEC01_RERUN_RESIDUAL_HTTP_PROCESS_COUNT=0
 M5_EXEC01_RERUN_RESIDUAL_BARRIER_STATE=false
-PHASE_2_M5_REPAIR01=READY_FOR_CODE_REVIEW
-M5_T27_HTTP_MAPPING_REPAIR=IMPLEMENTED_PENDING_CODE_REVIEW
-M5_RERUN_AUTHORIZED=false
-M5_NEXT_RERUN_AUTHORIZED=false
+PHASE_2_M5_REPAIR01=ACCEPTED
+M5_REPAIR01_ACCEPTED_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
+M5_T27_HTTP_MAPPING_REPAIR=ACCEPTED
+M5_RERUN_AUTHORIZED=true
+M5_NEXT_RERUN_AUTHORIZED=true
+M5_EXEC01_RERUN2_EXECUTED=true
+M5_EXEC01_RERUN2_SOURCE_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
+M5_EXEC01_RERUN2_T01_T35=PASS
+M5_EXEC01_RERUN2_VALIDATION_SCENARIOS_EXECUTED_COUNT=35
+M5_EXEC01_RERUN2_VALIDATION_SCENARIOS_PASS_COUNT=35
+M5_EXEC01_RERUN2_WORKING_MXMED_DB_CONNECTED=false
+M5_EXEC01_RERUN2_RESIDUAL_DATABASE_COUNT=0
+M5_EXEC01_RERUN2_RESIDUAL_HTTP_PROCESS_COUNT=0
+M5_EXEC01_RERUN2_RESIDUAL_BARRIER_STATE=false
 M5_FINAL_RERUN_RANGE=T01_T35
 FINAL_M5_EVIDENCE_MUST_USE_ONE_SOURCE_HEAD=true
 T31_SCENARIO=SECTION_SCHEMA_VERSION_HISTORY
@@ -152,6 +162,7 @@ SECTION_SCHEMA_V2_IMPLEMENTED=false
 SECTION_SCHEMA_V2_IMPLEMENTATION_AUTHORIZED=false
 HISTORICAL_PAYLOAD_INTERPRETATION_MUST_BE_VERSIONED=true
 VALIDATION_SCENARIOS_COUNT=35
+VALIDATION_SCENARIOS_PASS_COUNT=35
 T31_CURRENT_EXECUTION_COMPONENT=T31A
 T31_OVERALL_CURRENT_M5_RESULT=PASS_WITH_FUTURE_T31B_CONDITIONAL_OBLIGATION
 M5_QA_BARRIER_DEFAULT_OFF=true
@@ -176,9 +187,10 @@ WRITE_VALIDATION_AUTHORIZED_FOR_WORKING_MXMED=false
 HTTP_WRITE_QA_AUTHORIZED_FOR_M5_DISPOSABLE_QA_ONLY=true
 HTTP_WRITE_QA_AUTHORIZED_FOR_WORKING_MXMED=false
 T01_T35_EXECUTION_AUTHORIZED_FOR_M5_DISPOSABLE_QA_ONLY=true
-T01_T35_EXECUTED=false
+T01_T35_EXECUTED=true
+T01_T35_CURRENT_M5_PASS=true
 M5_EXECUTED=true
-M5_RESULT=BLOCKED
+M5_RESULT=PASS
 PHP_SESSION_BASED_OPERATOR_IDENTITY=true
 TWO_INDEPENDENT_HTTP_CLIENTS=true
 TWO_AUTHORIZED_OPERATOR_SESSIONS=true
@@ -188,9 +200,10 @@ M5_REAL_CONCURRENCY_SCENARIOS=T04,T11,T26
 NO_INFERENCE_OF_LEGACY_DOCTOR_OWNERSHIP=true
 MIGRATIONS_EXECUTED=DISPOSABLE_REHEARSAL_ONLY
 WORKING_MXMED_DB_MIGRATIONS_EXECUTED=NONE
+M6_AUTHORIZED=false
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`; la evidencia física MIG01A quedó aceptada en `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; IMPL01B quedó aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; PREP01 y su reparación R1 quedaron aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d`; ADJ01 quedó aceptado en `c1fa6bea057992d35f4ccc7e0f8534cbe8a5a4b7`; PREP01-R2 quedó aceptado en `2c9d725eeb02bdecaa8dec894ad414862b8d9f82`, ahora `CURRENT_ACCEPTED_HEAD`. El primer intento físico M5 pasó T01–T25 y se bloqueó en T26 por una carrera del directorio del arnés QA antes del row lock; T27–T35 no se ejecutaron por fail-fast. El rerun completo desde T01 pasó T01–T26 y se bloqueó en T27 porque la validación `DOCUMENT_CONTEXT_MISMATCH` evitó correctamente la inserción, pero el `catch` exterior respondió `500/server_error` en lugar del rechazo canónico `409`; T28–T35 no se ejecutaron por fail-fast. REPAIR01 corrige únicamente ese mapeo HTTP V1 y queda pendiente de revisión antes de autorizar otro rerun T01–T35. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS`: el [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md), las cinco decisiones del Director y el [diseño físico](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md) son autoridad aceptada. IMPL01A se acepta exclusivamente como `REPOSITORY_FOUNDATION`; ambos intentos M5 ocurrieron sólo sobre entornos locales sintéticos y desechables, sin migrar ni conectar la base MXMed de trabajo y sin autorizar cutover.
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`; la evidencia física MIG01A quedó aceptada en `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; IMPL01B quedó aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; PREP01 y su reparación R1 quedaron aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d`; ADJ01 quedó aceptado en `c1fa6bea057992d35f4ccc7e0f8534cbe8a5a4b7`; PREP01-R2 quedó aceptado en `2c9d725eeb02bdecaa8dec894ad414862b8d9f82`. El primer intento físico M5 pasó T01–T25 y se bloqueó en T26 por una carrera del directorio del arnés QA antes del row lock; T27–T35 no se ejecutaron por fail-fast. El segundo intento completo desde T01 pasó T01–T26 y se bloqueó en T27 porque la validación `DOCUMENT_CONTEXT_MISMATCH` evitó correctamente la inserción, pero el `catch` exterior respondió `500/server_error` en lugar del rechazo canónico `409`; T28–T35 no se ejecutaron por fail-fast. REPAIR01 quedó aceptado en `115923cac322958ad4f443ab783a8cf19f9c5093`, ahora `CURRENT_ACCEPTED_HEAD`, y el RERUN2 físico sobre una copia exacta de ese commit pasó T01–T35, las barreras concurrentes T04/T11/T26 y el deadlock InnoDB controlado. T27 respondió el rechazo canónico `409/DOCUMENT_CONTEXT_MISMATCH` sin documento ni idempotencia persistidos; T28 no causó DDL ni DML. Todo ocurrió sólo en bases locales sintéticas y desechables, con teardown completo y sin conectar la base MXMed de trabajo. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS` y M5 queda `PASS_READY_FOR_DIRECTOR_REVIEW`; no se autorizan M6, migración de la base de trabajo, cutover, producción ni PHASE 3.
 
 ## Adjudicación T31 para M5 V1 y compatibilidad V2 futura
 
@@ -468,3 +481,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-PREP01-R2 | Baseline/checkpoint previo `c1fa6bea057992d35f4ccc7e0f8534cbe8a5a4b7`; reparación aceptada `2c9d725eeb02bdecaa8dec894ad414862b8d9f82` | Aceptada la creación idempotente y segura ante concurrencia del directorio compartido, con error real fail-closed y regresión física de dos procesos. La aceptación autorizó el segundo intento M5 completo desde T01 en un único source HEAD. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-EXEC01-RERUN | PREP01-R2 aceptado y fuente única `2c9d725eeb02bdecaa8dec894ad414862b8d9f82` | Segundo intento físico M5 desde T01: T01–T26 `PASS`; T27 `FAIL_HTTP_MAPPING` porque `DOCUMENT_CONTEXT_MISMATCH` evitó documento e idempotencia pero fue traducido a `500/server_error`; T28–T35 no ejecutados por fail-fast. Teardown completo con cero bases, procesos HTTP o barreras residuales; base MXMed de trabajo no conectada. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-REPAIR01 | Baseline aceptado/checkpoint `2c9d725eeb02bdecaa8dec894ad414862b8d9f82` | Reparación limitada al `catch` compartido de `POST /encounters/{encounter_key}/documents`: la rama V1 delega código/estado a los mapeadores canónicos y conserva el comportamiento legacy. `READY_FOR_CODE_REVIEW`; M5 permanece `BLOCKED` y otro rerun T01–T35 no está autorizado hasta revisión. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M5-EXEC01-RERUN2 | REPAIR01 aceptado y fuente única `115923cac322958ad4f443ab783a8cf19f9c5093` | Tercer intento físico M5 completo desde T01: T01–T35 `PASS`; T04/T11/T26 probaron concurrencia real con dos conexiones InnoDB; T27 devolvió `409/DOCUMENT_CONTEXT_MISMATCH` sin insertar documento ni idempotencia; T28 no produjo DDL/DML; deadlock controlado e invariantes posteriores `PASS`. Teardown completo con cero bases, procesos HTTP, barreras o raíces temporales residuales; la base MXMed de trabajo no se conectó. `PHASE_2_M5_STATUS=PASS_READY_FOR_DIRECTOR_REVIEW`; M6, migración de base de trabajo, cutover, producción y PHASE 3 continúan no autorizados. |
