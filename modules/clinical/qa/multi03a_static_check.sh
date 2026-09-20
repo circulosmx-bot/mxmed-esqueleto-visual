@@ -46,7 +46,6 @@ fi
 
 # Protected runtime, legacy upload implementation and schema migration remain byte-for-byte unchanged.
 protected_paths=(
-  api/clinical/index.php
   api/clinical-documents.php
   api/evolution-note-generate.php
   api/_lib/clinical_encounter_integrity.php
@@ -65,3 +64,6 @@ echo 'GENERAL_FINAL_BINARY_DELETE_API=false'
 echo 'V1_MULTIPART_503_PRESERVED=true'
 echo 'FINALIZATION_PRESERVES_STAGING=true'
 echo 'MULTI03A_STATIC_QA_MIGRATION05_PATH_CORRECT=true'
+
+# MULTI04B permits only the bounded GET insertion and read-only storage construction.
+bash "$repo_root/modules/clinical/qa/multi04b_static_check.sh"

@@ -2,11 +2,11 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
+CURRENT_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI04A authorized private-binary retrieval service. If accepted, add a separate controlled read-only HTTP binary controller/route and physically validate authentication/integrity streaming before adapting multipart write callers. Multipart writes, working-database migration and cutover remain unauthorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI04B read-only private binary HTTP controller. If accepted, run isolated MULTI04C physical HTTP QA on a disposable MySQL 9.6 database and private temporary storage, proving authenticated success, generic denial, integrity failure and exact streaming. Multipart writes and working-database migration remain unauthorized.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -298,10 +298,17 @@ PHASE_2_M6_MULTI03B_R1=ACCEPTED
 M6_MULTI03B_R1_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
 PHASE_2_M6_MULTI03C=ACCEPTED
 M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
-PHASE_2_M6_MULTI04A=READY_FOR_CODE_REVIEW
-PRIVATE_BINARY_AUTHORIZATION_SERVICE=IMPLEMENTED_PENDING_REVIEW
-PRIVATE_BINARY_INTEGRITY_RETRIEVAL=IMPLEMENTED_PENDING_REVIEW
-MULTI04A_HTTP_WIRING_ACTIVE=false
+PHASE_2_M6_MULTI04A=ACCEPTED
+M6_MULTI04A_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
+PHASE_2_M6_MULTI04B=READY_FOR_CODE_REVIEW
+PRIVATE_BINARY_HTTP_CONTROLLER=IMPLEMENTED_PENDING_REVIEW
+PRIVATE_BINARY_HTTP_ROUTE=IMPLEMENTED_PENDING_REVIEW
+PRIVATE_BINARY_HTTP_RANGE_SUPPORT=false
+MULTI04B_PHYSICAL_HTTP_QA_EXECUTED=false
+PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
+PRIVATE_BINARY_AUTHORIZATION_SERVICE=ACCEPTED
+PRIVATE_BINARY_INTEGRITY_RETRIEVAL=ACCEPTED
+MULTI04A_HTTP_WIRING_ACTIVE=GATED_SOURCE_ONLY
 MULTIPART_COORDINATION_PHYSICAL_QA=ACCEPTED
 MULTIPART_REAL_MYSQL_TRANSACTION_QA=PASS
 MULTIPART_REAL_FILESYSTEM_COORDINATION_QA=PASS
@@ -667,6 +674,7 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI03B-R1 | MULTI03B candidato `b86bf10499e7e745e31ac48d6cb41f9bc45e8597` bloqueado pendiente R1 | Cleanup inicial sólo con no-commit confirmado; staging ambiguo retenido. Clasificador puro detecta staging sin coordinación y retenido tras finalización. R1 `READY_FOR_CODE_REVIEW`; baseline aceptado sin cambio, ninguna DB, M6 `NO_GO_BLOCKED`. |
 | 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI03C | MULTI03B/R1 aceptados `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f` | PC01–PC08 PASS en MySQL 9.6.0/InnoDB y filesystem temporal sintético; teardown completo. Evidencia `PASS_READY_FOR_DIRECTOR_REVIEW`; fuente intacta, multipart fail-closed y M6 NO_GO_BLOCKED. |
 | 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI04A | Evidencia MULTI03C aceptada `a614f7347ebca01f94a43da48bc987b0d8a6984c` | Retrieval interno SELECT-only con autorización canónica, integridad y stream privado. QA pura/fake PDO PASS, sin DB/HTTP. `READY_FOR_CODE_REVIEW`; baseline de implementación se conserva en `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`. |
+| 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI04B | MULTI04A aceptado `99422dfb601282a5c5eceaafa6a02c34dc8b183b` | Ruta GET binaria gated, headers seguros y transferencia acotada; QA pura/estática y regresiones PASS. Sin DB/HTTP físico ni activación. `READY_FOR_CODE_REVIEW`; siguiente revisión antes de MULTI04C. |
 
 ### MULTI03B — repository-only coordination candidate (2026-09-19)
 
@@ -850,3 +858,51 @@ MULTI04A verification: retrieval QA (22 cases), static QA, MULTI03B semantic/spy
 MULTI03A filesystem/reconciliation/static, MULTI02A readiness, M6 CTRL/GUARD/CALLER01/ROUTE01,
 encounter-integrity and M5 barrier suites all PASS. PHP lint, shell syntax and
 `git diff --check`: PASS. No DB connected; synthetic temporary storage fully removed.
+
+
+### MULTI04B — gated read-only binary HTTP candidate (2026-09-20)
+
+MULTI04A is accepted at `99422dfb601282a5c5eceaafa6a02c34dc8b183b`, now the accepted
+implementation head. MULTI04B is READY_FOR_CODE_REVIEW, not physically HTTP-tested.
+One non-overlapping branch in the existing documents block recognizes exactly
+GET `/documents/{id_or_uuid}/binary/{variant}` (four segments). Other methods and
+existing document routes are unchanged. Server context comes from
+`clinical_require_doctor_context`; the existing `clinical_m6_document_route_uses_v1`
+gate runs before retrieval loading. Gate false returns generic 404; malformed cohort
+configuration continues through the existing fail-closed handling.
+
+The route reuses `clinical_documents_pdo`, then requires explicit
+MXMED_CLINICAL_PRIVATE_STORAGE_ROOT. Missing/invalid configuration maps to a path-free
+503 PRIVATE_BINARY_STORAGE_NOT_CONFIGURED. No root fallback is introduced.
+A necessary additive constructor option opens only existing private storage without
+mkdir/chmod: GET cannot use the upload constructor's directory creation behavior.
+The default upload construction behavior and all storage methods remain unchanged.
+
+`clinical_private_binary_http.php` isolates pure headers/error mapping and bounded
+transfer. Metadata comes only from the accepted verified retrieval descriptor.
+Headers: manifest Content-Type, nosniff, private/no-store, verified Content-Length,
+and inline disposition with generated document.pdf/jpg/png/webp. Stored filenames
+are never concatenated into headers. Retrieval authorization remains solely MULTI04A.
+The controller sends the verified stream in at most 64-KiB chunks without reopening
+paths; finally closes it on success, disconnect and errors. Transfer failures log
+only CLINICAL_BINARY_TRANSFER_FAILED; no partial binary response becomes JSON.
+Before transfer, not-found maps to generic 404, missing/integrity to bounded 503,
+and unknown errors to generic 500. No Range, conditional cache, signed/static URL,
+DB/storage mutation, UI or multipart-write behavior is added.
+
+QA: 15 pure cases verify allowed MIME/extensions, injection-proof generated disposition,
+error mapping, exact/chunked transfer, short stream, disconnect, emitter failure,
+stream closure and no creation/permission changes in read-only construction.
+Static QA verifies authentication/gate order, exact GET shape, no client doctor
+input, configuration authority and original router equality after removing only the
+new branch. Existing static guards now delegate these two precisely bounded changes
+to MULTI04B checks; unrelated source and migration protection remains intact.
+All requested retrieval, multipart, readiness, M6, encounter and M5 regressions pass.
+PHP lint, shell syntax and diff checks pass. No MySQL connection or HTTP server/request
+was used. Temporary synthetic QA storage was removed.
+
+The route exists only as gated source capability. Working DB remains PRE_MIGRATION;
+master/cohort runtime activation is unchanged and false. Multipart write 503,
+C04/C05/C21=false, M6 NO_GO_BLOCKED and all migration/cutover/production boundaries
+remain. Next: Director/assistant review, then separately authorized MULTI04C physical
+HTTP QA. No physical route invocation or activation occurred in this chapter.

@@ -8774,6 +8774,44 @@ try {
     }
 
     if (($segments[0] ?? '') === 'documents') {
+        // MULTI04B BEGIN: non-overlapping read-only binary route.
+        if ($method === 'GET' && count($segments) === 4 && ($segments[2] ?? '') === 'binary') {
+            $doctorContext = clinical_require_doctor_context('document_binary');
+            if ($doctorContext === null) return;
+            $pdo = clinical_documents_pdo();
+            $documentToken = (string)$segments[1];
+            // Keep malformed cohort configuration in the existing fail-closed router handling.
+            if (!clinical_m6_document_route_uses_v1($pdo, $documentToken, $doctorContext)) {
+                clinical_send_response(['ok'=>false,'error'=>'not_found','message'=>'resource not found'], 404);
+                return;
+            }
+            require_once __DIR__ . '/../_lib/clinical_private_binary_http.php';
+            $descriptor = null;
+            try {
+                require_once __DIR__ . '/../_lib/clinical_private_binary_retrieval.php';
+                $root = getenv('MXMED_CLINICAL_PRIVATE_STORAGE_ROOT');
+                if (!is_string($root) || trim($root) === '') {
+                    throw new RuntimeException('PRIVATE_BINARY_STORAGE_NOT_CONFIGURED');
+                }
+                try {
+                    $storage = new ClinicalPrivateBinaryStorage($root, null, null, true);
+                } catch (Throwable) {
+                    throw new RuntimeException('PRIVATE_BINARY_STORAGE_NOT_CONFIGURED');
+                }
+                $descriptor = (new ClinicalPrivateBinaryRetrieval($pdo, $storage))->retrieve(
+                    (string)$doctorContext['doctor_id'], (string)$doctorContext['user_id'],
+                    $documentToken, (string)$segments[3]);
+                $headers = clinical_binary_http_headers($descriptor['binary']);
+            } catch (Throwable $error) {
+                if (is_array($descriptor) && is_resource($descriptor['stream'] ?? null)) fclose($descriptor['stream']);
+                [$status, $code, $message] = clinical_binary_http_error($error);
+                clinical_send_response(['ok'=>false,'error'=>$code,'message'=>$message], $status);
+                return;
+            }
+            clinical_binary_http_send($descriptor, $headers);
+            return;
+        }
+        // MULTI04B END.
         if ($method === 'POST' && count($segments) === 1) {
             $meta = [
                 'method' => 'POST',

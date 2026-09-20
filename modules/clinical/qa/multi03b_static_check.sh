@@ -47,7 +47,7 @@ $delete = code('ClinicalMultipartCoordinationRepository','deleteRedundantStaged'
 foreach (["storage_state='STAGED'",'document_id IS NULL','idempotency_request_id IS NULL'] as $guard) check(str_contains($delete,$guard),'Unsafe delete');
 echo "MULTI03B_STATIC_TRANSACTION_ORDER=PASS\nMULTI03B_STATIC_AUTHORITIES=PASS\n";
 PHP
-protected_paths=(api/clinical/index.php api/clinical-documents.php api/evolution-note-generate.php api/_lib/clinical_idempotency.php api/_lib/clinical_encounter_integrity.php api/_lib/clinical_multipart_storage_schema.php modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql)
+protected_paths=(api/clinical-documents.php api/evolution-note-generate.php api/_lib/clinical_idempotency.php api/_lib/clinical_encounter_integrity.php api/_lib/clinical_multipart_storage_schema.php modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql)
 git diff --exit-code 683f99fabbd6617f58fff50eb8fb78b891b26213 -- "${protected_paths[@]}"
 if rg -n 'clinical_multipart_document_service' api --glob '*.php' --glob '!clinical_multipart_document_service.php'; then
   echo 'FAIL: runtime service wiring' >&2
@@ -65,7 +65,6 @@ from pathlib import Path
 import subprocess
 baseline = 'b86bf10499e7e745e31ac48d6cb41f9bc45e8597'
 for path, boundary, side in [
-    ('api/_lib/clinical_private_binary_storage.php', 'final class ClinicalBinaryReconciliation', 0),
     ('api/_lib/clinical_multipart_document_service.php', '    private function coordinate(', 1),
 ]:
     before = subprocess.check_output(['git', 'show', baseline + ':' + path], text=True)
@@ -73,3 +72,6 @@ for path, boundary, side in [
     assert before.split(boundary, 1)[side] == after.split(boundary, 1)[side], 'Protected implementation changed: ' + path
 print('MULTI03B_R1_STATIC_PROTECTION=PASS')
 PYCODE
+
+# MULTI04B permits only the bounded GET insertion and read-only storage construction.
+bash "$repo_root/modules/clinical/qa/multi04b_static_check.sh"

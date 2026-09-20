@@ -61,7 +61,8 @@ final class ClinicalPrivateBinaryStorage
     public function __construct(
         string $root,
         ?string $documentRoot = null,
-        ?callable $opaqueStagingIdentityFactory = null
+        ?callable $opaqueStagingIdentityFactory = null,
+        bool $readOnly = false
     ) {
         $root = self::normalizeAbsolutePath($root, 'PRIVATE_STORAGE_ROOT_MUST_BE_ABSOLUTE');
         $documentRoot = $documentRoot ?? (isset($_SERVER['DOCUMENT_ROOT']) ? (string) $_SERVER['DOCUMENT_ROOT'] : '');
@@ -79,7 +80,9 @@ final class ClinicalPrivateBinaryStorage
         self::assertNotEqualOrInside($root, $documentRoot);
         self::assertNotEqualOrInside(self::resolveProspectivePath($root), $documentRoot);
         $this->assertRootIsNotSymlink($root);
-        $this->makeDirectory($root);
+        if (!$readOnly) {
+            $this->makeDirectory($root);
+        }
 
         $resolvedRoot = realpath($root);
         if ($resolvedRoot === false) {
@@ -92,7 +95,11 @@ final class ClinicalPrivateBinaryStorage
         $this->opaqueStagingIdentityFactory = $opaqueStagingIdentityFactory;
 
         foreach (['staging', 'clinical', 'quarantine'] as $namespace) {
-            $this->ensureDirectoryForKey($namespace);
+            if ($readOnly) {
+                $this->assertDirectoryChain($namespace);
+            } else {
+                $this->ensureDirectoryForKey($namespace);
+            }
         }
     }
 

@@ -17,10 +17,13 @@ $descriptor=substr($s,strpos($s,'        return ['),strpos($s,'    /** Bounded')
 if(preg_match('/storage_key|public_url|absolute_path|private_root/',$descriptor))throw new RuntimeException('Descriptor leak');
 echo "MULTI04A_STATIC_ORDER_PRIVACY=PASS\n";
 PHP
-if rg -n 'clinical_private_binary_retrieval' api --glob '*.php' --glob '!clinical_private_binary_retrieval.php'; then
+if rg -n 'clinical_private_binary_retrieval' api --glob '*.php' --glob '!clinical_private_binary_retrieval.php' --glob '!index.php'; then
   echo 'FAIL runtime wiring' >&2; exit 1
 fi
-git diff --exit-code a614f7347ebca01f94a43da48bc987b0d8a6984c -- api/clinical/index.php api/clinical-documents.php api/evolution-note-generate.php api/_lib/clinical_private_binary_storage.php api/_lib/clinical_idempotency.php api/_lib/clinical_multipart_document_service.php modules/clinical/db/migrations assets/js/app.js
+git diff --exit-code a614f7347ebca01f94a43da48bc987b0d8a6984c -- api/clinical-documents.php api/evolution-note-generate.php api/_lib/clinical_idempotency.php api/_lib/clinical_multipart_document_service.php modules/clinical/db/migrations assets/js/app.js
 rg -q 'V1_MULTIPART_STORAGE_NOT_READY' api/clinical/index.php
 echo 'MULTI04A_STATIC_QA=PASS'
 echo 'ANY_DATABASE_CONNECTED=false'
+
+# MULTI04B permits only the bounded GET insertion and read-only storage construction.
+bash "$repo_root/modules/clinical/qa/multi04b_static_check.sh"
