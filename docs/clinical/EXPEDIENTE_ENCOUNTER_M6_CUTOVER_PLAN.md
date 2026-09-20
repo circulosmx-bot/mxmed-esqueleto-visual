@@ -2,7 +2,9 @@
 
 ```text
 CHAPTER=CLIN-REFORM-PHASE2-M6-PLAN01
-PLAN_STATUS=READY_FOR_DIRECTOR_REVIEW
+PLAN_STATUS=ACCEPTED
+PLAN_ACCEPTED_HEAD=7dc615c772ef611a49229e3e1da91b569d6cf73d
+CTRL01_STATUS=READY_FOR_CODE_REVIEW
 PLANNING=true
 REPOSITORY_INVENTORY=true
 WORKING_DB_PREFLIGHT=READ_ONLY_ONLY
@@ -316,14 +318,17 @@ No flag was enabled by PLAN01.
 
 ## 12. Cohort/patient scoping capability
 
-Current code reads one process-wide environment boolean. It has no accepted patient, doctor or operational cohort allowlist for the V1 repository.
+CTRL01 provides a repository-only candidate control-plane primitive in `api/_lib/clinical_m6_cutover.php`. It reads only server environment configuration, defaults OFF, requires exact canonical doctor/patient pairs, derives patient-level membership for future legacy-write blocking, fails closed on malformed active configuration and gives emergency OFF highest precedence.
 
 ```text
-M6_COHORT_SCOPING_CAPABILITY=NOT_AVAILABLE
-REPOSITORY_CHANGE_REQUIRED_BEFORE_M6_EXECUTION=true
+M6_COHORT_SCOPING_CAPABILITY=CANDIDATE_AVAILABLE_PENDING_REVIEW
+M6_COHORT_CONTROL_PLANE=IMPLEMENTED_PENDING_CODE_REVIEW
+M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
+LEGACY_WRITER_BLOCKING_ACTIVE=false
+COHORT_STATE_STORED_IN_CLINICAL_DB=false
 ```
 
-A future repository chapter must define a fail-closed operational cohort without inventing a new clinical identity authority. It must use the existing canonical session doctor and canonical patient ID, make the decision observable, prevent mixed legacy/V1 writes for the same encounter and preserve a global emergency OFF. PLAN01 does not implement it.
+The candidate does not determine identity, does not read client-controlled cohort enrollment, is not included by the router, and does not activate `MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1`. After acceptance, a separate caller-hardening chapter must wire canonical session doctor/patient evaluation and patient-level legacy-write guards. Until then, global runtime behavior and the uncontrolled writer count remain unchanged.
 
 ## 13. Monitoring invariants
 
@@ -394,7 +399,7 @@ SAFE_RETURN_PLAN_READY=true
 | `MIGRATION_ACCOUNT_READY=true` | `FAIL` | Runtime is broad-privilege root; no distinct account. |
 | `WRITE_WINDOW_READY=true` | `FAIL` | No comprehensive writer pause/block mechanism rehearsed. |
 | `SCHEMA_READINESS_REHEARSAL=PASS` | `NOT_YET_PROVEN` | Only synthetic M5/MIG rehearsal, not working-data clone. |
-| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Plan ready for Director review; global-only gate cannot scope cohort. |
+| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | PLAN01 accepted; CTRL01 cohort control is a candidate pending code review and is not wired. |
 | `MONITORING_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Invariants defined; acceptance/operationalization pending. |
 | `SAFE_RETURN_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Procedure defined; acceptance/rehearsal pending. |
 | `CALLER_COMPATIBILITY_PASS=true` | `FAIL` | Adapters/blocks not implemented. |
@@ -409,7 +414,7 @@ Known blockers, in actionable order:
 
 1. 11 active caller families can bypass or fail the hardened V1 contract; adapters/explicit blocks are absent.
 2. Active multipart clinical writes conflict with V1's fail-closed multipart deferral.
-3. Cohort scoping is unavailable because the gate is global-only.
+3. The candidate cohort control plane is pending code review and is not wired to runtime routing or legacy guards.
 4. The working schema is pre-migration (01–04 not applied).
 5. No restorable backup has been proved.
 6. No isolated working-data clone migration rehearsal has been executed.
@@ -421,5 +426,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of M6 PLAN01 and adjudication of the identified caller-compatibility, multipart, cohort-scoping, migration-account, backup/restore, clone-rehearsal, write-window and runtime-DDL blockers. No backup, restore, clone, working-database migration, feature-gate activation, runtime cutover, production execution or PHASE 3 work is authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CTRL01 fail-closed cohort control plane before wiring caller adapters and explicit legacy-write blocks. No backup, clone, migration, feature-gate activation or cutover authorized.
 ```
