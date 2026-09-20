@@ -17,23 +17,28 @@ MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-CURRENT_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
+CURRENT_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
 PHASE_2_M6_MULTI03A=ACCEPTED
 M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
 MULTI03A_BLOCKER=NONE
 PHASE_2_M6_MULTI03A_R1=ACCEPTED
 M6_MULTI03A_R1_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
-PHASE_2_M6_MULTI03B=BLOCKED_PENDING_R1_REVIEW
+PHASE_2_M6_MULTI03B=ACCEPTED
 M6_MULTI03B_CANDIDATE_HEAD=b86bf10499e7e745e31ac48d6cb41f9bc45e8597
-MULTI03B_BLOCKER=STAGING_RECOVERY_INCOMPLETE_FOR_UNTRACKED_AND_POST_FINALIZATION_OBJECTS
-PHASE_2_M6_MULTI03B_R1=READY_FOR_CODE_REVIEW
+MULTI03B_BLOCKER=NONE
+PHASE_2_M6_MULTI03B_R1=ACCEPTED
+M6_MULTI03B_R1_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
+PHASE_2_M6_MULTI03C=PASS_READY_FOR_DIRECTOR_REVIEW
+MULTIPART_COORDINATION_PHYSICAL_QA=PASS
+MULTIPART_REAL_MYSQL_TRANSACTION_QA=PASS
+MULTIPART_REAL_FILESYSTEM_COORDINATION_QA=PASS
 STAGING_WITHOUT_COORDINATION_DETECTED=true
 FINALIZED_RESOURCE_WITH_STAGING_RETAINED_DETECTED=true
 CONFIRMED_INITIAL_COORDINATION_ROLLBACK_CLEANS_STAGING=true
 AMBIGUOUS_INITIAL_COORDINATION_COMMIT_PRESERVES_STAGING=true
-MULTIPART_COORDINATION_REPOSITORY=IMPLEMENTED_PENDING_REVIEW
-MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
-MULTIPART_TRANSACTION_ORCHESTRATION=IMPLEMENTED_PENDING_REVIEW
+MULTIPART_COORDINATION_REPOSITORY=ACCEPTED
+MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=ACCEPTED
+MULTIPART_TRANSACTION_ORCHESTRATION=ACCEPTED
 FINALIZATION_PRESERVES_STAGING=true
 STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
 PRIVATE_BINARY_STORAGE_ADAPTER=ACCEPTED
@@ -409,17 +414,22 @@ M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
 MULTI03A_BLOCKER=NONE
 PHASE_2_M6_MULTI03A_R1=ACCEPTED
 M6_MULTI03A_R1_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
-PHASE_2_M6_MULTI03B=BLOCKED_PENDING_R1_REVIEW
+PHASE_2_M6_MULTI03B=ACCEPTED
 M6_MULTI03B_CANDIDATE_HEAD=b86bf10499e7e745e31ac48d6cb41f9bc45e8597
-MULTI03B_BLOCKER=STAGING_RECOVERY_INCOMPLETE_FOR_UNTRACKED_AND_POST_FINALIZATION_OBJECTS
-PHASE_2_M6_MULTI03B_R1=READY_FOR_CODE_REVIEW
+MULTI03B_BLOCKER=NONE
+PHASE_2_M6_MULTI03B_R1=ACCEPTED
+M6_MULTI03B_R1_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
+PHASE_2_M6_MULTI03C=PASS_READY_FOR_DIRECTOR_REVIEW
+MULTIPART_COORDINATION_PHYSICAL_QA=PASS
+MULTIPART_REAL_MYSQL_TRANSACTION_QA=PASS
+MULTIPART_REAL_FILESYSTEM_COORDINATION_QA=PASS
 STAGING_WITHOUT_COORDINATION_DETECTED=true
 FINALIZED_RESOURCE_WITH_STAGING_RETAINED_DETECTED=true
 CONFIRMED_INITIAL_COORDINATION_ROLLBACK_CLEANS_STAGING=true
 AMBIGUOUS_INITIAL_COORDINATION_COMMIT_PRESERVES_STAGING=true
-MULTIPART_COORDINATION_REPOSITORY=IMPLEMENTED_PENDING_REVIEW
-MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
-MULTIPART_TRANSACTION_ORCHESTRATION=IMPLEMENTED_PENDING_REVIEW
+MULTIPART_COORDINATION_REPOSITORY=ACCEPTED
+MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=ACCEPTED
+MULTIPART_TRANSACTION_ORCHESTRATION=ACCEPTED
 FINALIZATION_PRESERVES_STAGING=true
 STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
 PRIVATE_BINARY_STORAGE_ADAPTER=ACCEPTED
@@ -428,7 +438,7 @@ CREATE_ONLY_FINALIZATION_PRIMITIVE=ACCEPTED
 RECONCILIATION_PRIMITIVES=ACCEPTED
 MULTI03A_RUNTIME_WIRING_ACTIVE=false
 MULTIPART_HTTP_ACCEPTANCE=false
-MULTIPART_STORAGE_SERVICE_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
+MULTIPART_STORAGE_SERVICE_INTEGRATION=ACCEPTED
 C04_MULTIPART_ADAPTER=false
 C05_MULTIPART_ADAPTER=false
 C21_MULTIPART_ADAPTER=false
@@ -484,7 +494,7 @@ M6_GO_NO_GO=NO_GO_BLOCKED
 ### MULTI03B — repository-only coordination candidate (2026-09-19)
 
 MULTI03A/R1 is accepted at `683f99fabbd6617f58fff50eb8fb78b891b26213`;
-MULTI03B candidate `b86bf10499e7e745e31ac48d6cb41f9bc45e8597` is `BLOCKED_PENDING_R1_REVIEW`; R1 is `READY_FOR_CODE_REVIEW`. Neither is physically validated or runtime-enabled.
+Historical MULTI03B evidence: candidate `b86bf10499e7e745e31ac48d6cb41f9bc45e8597` required R1. MULTI03B/R1 are now accepted at `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`; physical MULTI03C evidence below passes pending review. Runtime remains inactive.
 `clinical_multipart_document_service.php` reuses `ClinicalIdempotencyRepository`
 and the accepted private storage adapter. The explicit caller supplies canonical
 doctor/patient/context, document metadata, expiration and authorized creation/read
@@ -531,8 +541,9 @@ results only; actual SQL transaction and crash validation remains MULTI03C work.
 ### MULTI03B-R1 — staging recovery completeness (2026-09-19)
 
 Review found two inventory blind spots and unconditional staging retention after a
-confirmed initial coordination rollback in MULTI03B. The accepted baseline remains
-`683f99fabbd6617f58fff50eb8fb78b891b26213`; MULTI03B is not yet accepted.
+confirmed initial coordination rollback in MULTI03B. At the R1 chapter, the accepted baseline remained
+`683f99fabbd6617f58fff50eb8fb78b891b26213`. MULTI03C authorization now accepts R1
+at `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`.
 
 The initial short transaction now records whether INSERT and COMMIT were attempted.
 Failure before any INSERT/COMMIT (including failed BEGIN), or positively confirmed
@@ -556,7 +567,7 @@ scenarios), plus R1-05–R1-08 reconciliation and manifest-evidence coverage. Ex
 12 orchestration scenarios and 26 semantic assertions remain. Static protection
 compares the main transaction/replay/F5 service code and all storage primitives
 byte-for-byte with MULTI03B; only the pure classifier changes in the storage file.
-No MySQL connection or physical coordination QA is performed. Migration 05,
+No MySQL connection or physical coordination QA was performed during R1. Migration 05,
 idempotency authority, HTTP callers and the fail-closed 503 remain unchanged.
 M6 remains NO_GO_BLOCKED. Review R1 before authorizing any separate MULTI03C work.
 
@@ -566,3 +577,64 @@ static authority/order protections, MULTI03A filesystem/reconciliation/static,
 MULTI02A readiness/static, M6 CTRL/GUARD/CALLER01/ROUTE01, encounter-integrity,
 and M5 barrier suites. PHP lint, shell syntax and `git diff --check`: PASS.
 Temporary test storage was removed; no database was connected.
+
+
+### MULTI03C — isolated physical coordination evidence (2026-09-20)
+
+MULTI03B/R1 is accepted at `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`.
+MULTI03C is `PASS_READY_FOR_DIRECTOR_REVIEW`; it does not activate multipart or M6.
+The checkpoint `checkpoint/clinical-pre-multi03c-20260919` was pushed at that exact
+source commit. The rehearsal used an exact temporary Git archive, with full file
+hashes equal before/after. No application or migration source changed.
+
+Physical target: MySQL **9.6.0**, hostname `192.168.1.10`, endpoint
+`127.0.0.1:3306`. Initial `SELECT DATABASE()` returned NULL. The unique database
+`mxmed_multi03c_vpeczam1_mysql96` was proven absent before creation and selected
+explicitly afterward. No connection selected `mxmed`; no real data or dump was used.
+The minimal synthetic prerequisite authorities were `patients_patients`,
+`clinical_encounters`, `clinical_documents` and `clinical_document_participants`;
+legacy DDL was extracted from frozen source without running the HTTP router.
+Migrations 01–05 ran once as prerequisites, excluding the 2026-09-17 attribution
+migration. No migration re-audit was performed. Both readiness checks passed and
+SHOW CREATE TABLE snapshots were unchanged across readiness calls.
+
+The PHP harness used the accepted service, real PDO/InnoDB, tiny synthetic PDFs
+(finfo: application/pdf), and private OS-temporary storage outside the repository
+and document root. Its bounded document callback used the service transaction and
+supplied UUID, inserted one synthetic document and never committed or rolled back.
+No HTTP server, request, network-kill fault, caller adapter or download route ran.
+
+| Scenario | Physical result |
+|---|---|
+| PC01 | PASS: one document, committed ledger row, FINALIZED coordination with result/ledger references, ORIGINAL version-1 manifest; one final, no staging/quarantine; SHA-256, bytes and MIME matched. |
+| PC02 | PASS: response discarded; same bytes/key replayed the database resource. Full row/storage snapshot unchanged; no redundant coordination or second final. |
+| PC03 | PASS: changed PDF with same key returned IDEMPOTENCY_KEY_REUSED. Row/storage snapshot unchanged. |
+| PC04 | PASS: callback failure rolled back command; one retryable STAGED coordination and staged object remained, no document/ledger/manifest/final added. |
+| PC05 | PASS: disposable BEFORE INSERT trigger raised SQLSTATE 45000 at manifest insertion. Document/ledger/manifest rolled back; final absent, staging and quarantine present, coordination ORPHANED. Trigger dropped immediately. |
+| PC06 | PASS: real inventory, coordination, manifests and committed-ledger evidence yielded HEALTHY_FINALIZED for PC01; PC05 was not healthy. Full snapshots proved classifier non-mutation. |
+| PC07 | PASS: adapter-created staging without coordination yielded STAGING_WITHOUT_COORDINATION; only the QA staging artifact was then removed. |
+| PC08 | PASS: temporary duplicate staging plus synthetic finalized coordination referencing PC01 yielded both HEALTHY_FINALIZED and STAGING_RETAINED_AFTER_FINALIZATION; cleanup preserved original DB/final state. |
+
+Baseline counts (documents, ledger, uploads, manifests): **0,0,0,0**.
+Final pre-teardown counts: **1,1,3,1**. Upload states: FINALIZED=1, STAGED=1,
+ORPHANED=1. Ledger: CREATE_ENCOUNTER_DOCUMENT=1 committed. Manifest: ORIGINAL=1.
+Storage baseline (staging, final, quarantine): **0,0,0**; final pre-teardown:
+**2,1,1**. The two staged objects are the explained PC04/PC05 recovery candidates.
+No failed command committed a clinical resource. Manifest keys remained opaque;
+no public URL was created.
+
+Preparation initially hit a local Python archive-option incompatibility before
+creating any database or executing a scenario. Only the temporary extraction
+harness was corrected to use `git archive`/`tar`; accepted source was untouched.
+All mandatory physical scenarios then passed without source repairs or reruns.
+
+Teardown removed the QA trigger, disposable database, private storage, source archive
+and temporary harness. Verified residual database count=0, trigger count=0 and
+temporary-root count=0. No working DB schema/data, patient, clinical, Agenda or
+billing data changed. Multipart retains `503/V1_MULTIPART_STORAGE_NOT_READY`;
+C04/C05/C21 adapters remain false and M6 remains `NO_GO_BLOCKED`.
+
+Next is Director/assistant review of this evidence. Only after acceptance and
+separate authorization may repository-only authenticated retrieval and controlled
+multipart adapters begin. Working-DB migration, feature activation, cutover,
+production and PHASE 3 remain unauthorized.
