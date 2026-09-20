@@ -10,7 +10,13 @@ def prior(path):return subprocess.check_output(['git','show',base+':'+path],text
 r=Path('api/clinical/index.php').read_text()
 pattern=r'        // MULTI04B BEGIN:[\s\S]*?        // MULTI04B END\.\n'
 blocks=re.findall(pattern,r);assert len(blocks)==1
-b=blocks[0];assert re.sub(pattern,'',r)==prior('api/clinical/index.php'),'unrelated router change'
+b=blocks[0]
+# MULTI05A protects the complete router against MULTI04C, permitting only its
+# exact UUID extension and canonical bridge; MULTI04B GET block stays byte-identical.
+accepted=subprocess.check_output(['git','show','10c09aa8fa0960fd5d1d57d72c765755026c2c06:api/clinical/index.php'],text=True)
+assert b==re.findall(pattern,accepted)[0]
+assert re.sub(pattern,'',accepted)==prior('api/clinical/index.php'),'unrelated accepted router change'
+subprocess.run(['bash','modules/clinical/qa/multi05a_static_check.sh'],check=True)
 assert "$method === 'GET' && count($segments) === 4" in b and "($segments[2] ?? '') === 'binary'" in b
 last=0
 for item in ['clinical_require_doctor_context(', 'clinical_documents_pdo()', 'clinical_m6_document_route_uses_v1(', 'clinical_private_binary_retrieval.php', "getenv('MXMED_CLINICAL_PRIVATE_STORAGE_ROOT')", 'new ClinicalPrivateBinaryStorage($root, null, null, true)', '->retrieve(', 'clinical_binary_http_send(']:

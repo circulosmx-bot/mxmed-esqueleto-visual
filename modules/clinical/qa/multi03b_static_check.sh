@@ -49,10 +49,12 @@ echo "MULTI03B_STATIC_TRANSACTION_ORDER=PASS\nMULTI03B_STATIC_AUTHORITIES=PASS\n
 PHP
 protected_paths=(api/clinical-documents.php api/evolution-note-generate.php api/_lib/clinical_idempotency.php api/_lib/clinical_encounter_integrity.php api/_lib/clinical_multipart_storage_schema.php modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql)
 git diff --exit-code 683f99fabbd6617f58fff50eb8fb78b891b26213 -- "${protected_paths[@]}"
-if rg -n 'clinical_multipart_document_service' api --glob '*.php' --glob '!clinical_multipart_document_service.php'; then
+if rg -n 'clinical_multipart_document_service' api --glob '*.php' --glob '!clinical_multipart_document_service.php' --glob '!clinical_encounter_multipart_adapter.php'; then
   echo 'FAIL: runtime service wiring' >&2
   exit 1
 fi
+# The single MULTI05A adapter is checked structurally, all other wiring stays forbidden.
+bash "$repo_root/modules/clinical/qa/multi05a_static_check.sh"
 rg -q 'V1_MULTIPART_STORAGE_NOT_READY' api/clinical/index.php
 test -f modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql
 echo 'MULTI03B_STATIC_QA=PASS'

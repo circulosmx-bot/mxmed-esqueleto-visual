@@ -3970,7 +3970,7 @@ function clinical_v1_originating_order_valid(PDO $pdo,array $payload,array $enco
     return false;
 }
 
-function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload,string $actorId): int
+function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload,string $actorId,?string $documentUuid=null): int
 {
     require_once __DIR__ . '/../_lib/clinical_documents.php';
     $payloadData=is_array($payload['payload']??null)?$payload['payload']:[];
@@ -3979,6 +3979,9 @@ function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload
     $doc=mxmed_build_clinical_document(['type'=>$type,'title'=>$payload['title']??'','summary'=>$payload['summary']??'',
       'event_datetime'=>$event,'context'=>['patient_id'=>$encounterRow['patient_id'],'appointment_id'=>$encounterRow['appointment_id']??null,
       'encounter_id'=>(string)$encounterRow['encounter_id'],'care_setting'=>'consulta'],'payload'=>$payloadData,'actor'=>['user_id'=>$actorId]]);
+    // MULTI05A UUID BEGIN.
+    if ($documentUuid !== null) $doc['document_id'] = $documentUuid;
+    // MULTI05A UUID END.
     return mxmed_persist_clinical_document_in_transaction($pdo,$doc,['encounter_ref_id'=>(int)$encounterRow['encounter_id']]);
 }
 
@@ -7069,9 +7072,6 @@ try {
                 if($useV1){
                     $encounterRow=clinical_v1_authorized_encounter($pdo,$encounterKey,$doctorContext,'encounters/{encounter_key}/documents');
                     if($encounterRow===null)return;
-                    if(!clinical_v1_multipart_document_write_allowed($isMultipart,is_array($uploadFile))){
-                        throw new RuntimeException('V1_MULTIPART_STORAGE_NOT_READY');
-                    }
                     $documentClass=clinical_v1_document_class($payload);
                     $createOperation=clinical_document_create_operation($documentClass);
                     $policyOperation=clinical_document_policy_operation($documentClass);
@@ -7081,6 +7081,23 @@ try {
                       'effective_at'=>$eventDatetime,'provenance'=>(string)($payload['provenance']??($payloadData['provenance']??''))];
                     $policy=clinical_document_operation_policy($policyOperation,$documentClass,(string)$encounterRow['status'],$policyContext);
                     if(($policy['allowed']??false)!==true)throw new RuntimeException((string)($policy['code']??'DOCUMENT_OPERATION_UNSUPPORTED'));
+                    // MULTI05A BRIDGE BEGIN.
+                    if ($isMultipart) {
+                        require_once __DIR__ . '/../_lib/clinical_encounter_multipart_adapter.php';
+                        try {
+                            $result = clinical_encounter_multipart_execute($pdo, $encounterRow, $doctorContext,
+                                $payload, $createOperation, $policyOperation, $documentClass, $policyContext,
+                                $_FILES, (string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+                            [$status, $response] = clinical_encounter_multipart_response($result);
+                            clinical_send_response($response, $status);
+                        } catch (Throwable $error) {
+                            [$status, $code] = clinical_encounter_multipart_error($error);
+                            clinical_send_response(['ok'=>false,'error'=>['code'=>$code,'message'=>$code],
+                                'data'=>null,'meta'=>['route'=>'encounters/{encounter_key}/documents']], $status);
+                        }
+                        return;
+                    }
+                    // MULTI05A BRIDGE END.
                     $contentHash=null;
                     $semantic=clinical_document_semantic_request($payload,$contentHash)+['encounter_id'=>(int)$encounterRow['encounter_id'],'patient_id'=>(string)$encounterRow['patient_id'],'operation'=>$createOperation];
                     $service=new ClinicalEncounterIntegrityService($pdo);

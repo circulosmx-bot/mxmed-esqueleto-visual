@@ -34,8 +34,12 @@ PHASE_2_M6_MULTI04A=ACCEPTED
 M6_MULTI04A_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
 PHASE_2_M6_MULTI04B=ACCEPTED
 M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
-PHASE_2_M6_MULTI04C=PASS_READY_FOR_DIRECTOR_REVIEW
-PRIVATE_BINARY_HTTP_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI04C=ACCEPTED
+M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
+PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
+MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
+PRIVATE_BINARY_HTTP_PHYSICAL_QA=ACCEPTED
 PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
 PRIVATE_BINARY_STREAMING_PHYSICAL_QA=PASS
 PRIVATE_BINARY_HTTP_CONTROLLER=ACCEPTED
@@ -62,7 +66,7 @@ PRIVATE_BINARY_STORAGE_ADAPTER=ACCEPTED
 PRIVATE_STAGING_PRIMITIVE=ACCEPTED
 CREATE_ONLY_FINALIZATION_PRIMITIVE=ACCEPTED
 RECONCILIATION_PRIMITIVES=ACCEPTED
-V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 WORKING_MXMED_DB_CONNECTED=false
@@ -442,8 +446,12 @@ PHASE_2_M6_MULTI04A=ACCEPTED
 M6_MULTI04A_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
 PHASE_2_M6_MULTI04B=ACCEPTED
 M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
-PHASE_2_M6_MULTI04C=PASS_READY_FOR_DIRECTOR_REVIEW
-PRIVATE_BINARY_HTTP_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI04C=ACCEPTED
+M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
+PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
+MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
+PRIVATE_BINARY_HTTP_PHYSICAL_QA=ACCEPTED
 PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
 PRIVATE_BINARY_STREAMING_PHYSICAL_QA=PASS
 PRIVATE_BINARY_HTTP_CONTROLLER=ACCEPTED
@@ -855,7 +863,7 @@ MULTI04C_RESIDUAL_TEMP_ROOT_COUNT=0
 PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 V1_MULTIPART_503_PRESERVED=true
-V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 MULTIPART_HTTP_ACCEPTANCE=false
 C04_MULTIPART_ADAPTER=false
@@ -880,5 +888,89 @@ MULTI04C is `PASS_READY_FOR_DIRECTOR_REVIEW`. The next-step candidate below appl
 only after successful Director/assistant review; it was not executed in this chapter.
 
 ```text
-NEXT_AUTHORIZED_STEP=Proceed to repository-only multipart write integration/adapters, beginning with the canonical V1 encounter-document multipart service path and then C04/C05/C21 one by one. Preserve legacy guards until each caller is separately accepted. Working-database migration, activation and cutover remain unauthorized.
+NEXT_AUTHORIZED_STEP=Run a separate isolated MULTI05B physical HTTP multipart QA against disposable MySQL 9.6 and private temporary storage, proving canonical encounter-document create, replay, changed-binary conflict, policy denial before staging, storage/schema fail-closed and exact private binary retrieval. C04/C05/C21 remain untouched until that physical path is accepted.
 ```
+
+
+### MULTI05A — canonical encounter multipart adapter candidate (2026-09-20)
+
+MULTI04C evidence `10c09aa8fa0960fd5d1d57d72c765755026c2c06` is accepted.
+The accepted implementation baseline remains `0daa1e52dd2bda11cad5d50f09ac0516725ef004`
+until review. Checkpoint `checkpoint/clinical-pre-multi05a-20260920` was pushed
+at the exact pre-head. MULTI05A is repository-only `READY_FOR_CODE_REVIEW`.
+
+Only the existing V1 branch of POST `/encounters/{encounter_key}/documents` now
+calls `ClinicalMultipartDocumentService` for multipart requests. The existing
+session/gate/encounter-owner/patient-scope authority is reused. Existing early
+media-tag/event syntax checks remain in place; canonical class, server-derived
+operation and operation policy must pass before entering the adapter. JSON retains
+its original `ClinicalEncounterIntegrityService::idempotentCreate` path. Legacy
+code and the private GET binary route are byte-for-byte protected.
+
+The adapter requires exactly one PHP-uploaded `file` with UPLOAD_ERR_OK, a regular
+`tmp_name` passing `is_uploaded_file`, and string display filename. No file cannot
+fall back to JSON. Client MIME/path/operation are not authorities. Configuration
+requires explicit `MXMED_CLINICAL_PRIVATE_STORAGE_ROOT` and integer
+`MXMED_CLINICAL_STAGING_TTL_SECONDS` in 1–86400; no default is created. The bound is
+an implementation limit, not a product retention promise. UTC now plus TTL is passed
+to the accepted service; default writable storage mode is used. Storage continues
+to own finfo MIME, SHA, 25-MiB maximum, staging, manifest, idempotency and recovery.
+PHP upload/post limits remain deployment prerequisites for later physical QA.
+
+Service context uses authenticated doctor, canonical encounter/patient, derived
+operation/type and `clinical_document_semantic_request($payload, null)` metadata.
+Only HTTP Idempotency-Key is forwarded. The callback locks the encounter FOR UPDATE,
+rechecks stored doctor/patient, rechecks originating-order authority for late results,
+and reruns the same operation policy before persistence. It never owns the transaction.
+The existing insert helper accepts an optional server UUID, replacing only the
+builder-generated identity when supplied; default JSON generation is unchanged.
+Both paths retain the canonical builder and transactional writer. Fetch remains
+`clinical_v1_document_fetch`; no second SQL document writer or response model exists.
+
+Create/replay return 201/200 with meta.idempotency_replay. Cleanup status moves out
+of data into meta.binary_cleanup_pending. Configuration/schema errors become bounded
+503 V1_MULTIPART_STORAGE_NOT_READY; upload-validation errors are bounded 400; canonical
+idempotency/policy mapping is preserved. Unexpected coordination failures return a
+non-sensitive 500 and never fall back to legacy, JSON or public storage. Amendment/
+replacement multipart and other unadapted surfaces retain their fail-closed guards.
+
+QA: W01–W15 covered by bounded pure/PDO-fake and structural checks, without a PDO
+driver connection. Actual canonical builder/writer parameters prove supplied UUID
+and unchanged default UUID behavior. Tests cover missing file, arbitrary local path,
+missing root, TTL bounds, safe error mapping, replay and cleanup metadata. Structural
+checks prove context/operation/semantics, callback locking/policy/persistence order,
+no transaction ownership, and exact protected source equivalence. MULTI04B's old
+whole-router guard now delegates only the exact MULTI05A changes; MULTI03B's old
+no-wiring guard permits only this adapter under the same structural checks.
+
+All requested MULTI04B/A, MULTI03B/A, MULTI02A, M6 CTRL/GUARD/CALLER01/ROUTE01,
+encounter-integrity and M5 barrier regressions PASS. PHP lint and git diff checks PASS.
+No database connection, physical multipart HTTP request, UI invocation, migration,
+working configuration change or C04/C05/C21 adaptation occurred.
+
+```text
+PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
+MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
+CANONICAL_MULTIPART_WRITE_WORKING_DB_ACTIVE=false
+MULTIPART_HTTP_ACCEPTANCE=false
+MULTIPART_ACTIVE_CALLER_BLOCKER=true
+C04_MULTIPART_ADAPTER=false
+C05_MULTIPART_ADAPTER=false
+C21_MULTIPART_ADAPTER=false
+ANY_DATABASE_CONNECTED=false
+M6_GO_NO_GO=NO_GO_BLOCKED
+WORKING_DB_SCHEMA_STATE=PRE_MIGRATION
+M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
+PHASE_2_M6_EXECUTION_AUTHORIZED=false
+M6_AUTHORIZED=false
+WORKING_MXMED_DB_MIGRATION_AUTHORIZED=false
+FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_WORKING_MXMED=false
+RUNTIME_CUTOVER_AUTHORIZED=false
+PRODUCTION_EXECUTION_AUTHORIZED=false
+```
+
+Global GET-DDL removal remains pending; backup/clone readiness, migration account and
+write window remain unproven/unready. The next-step candidate is MULTI05B only after
+Director/assistant acceptance of this code. It is not started automatically.
