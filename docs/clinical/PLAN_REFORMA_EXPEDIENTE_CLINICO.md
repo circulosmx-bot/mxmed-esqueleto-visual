@@ -2,11 +2,11 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=05369176c3fc6a8b89043ee79c6b431161b3d5f4
+CURRENT_ACCEPTED_HEAD=bcb2606ba7a95818673b402a9e006ecc0431ff73
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of M6 GUARD01 cohort-aware legacy writer containment before adapting C02/C03 and resolving C14. No backup, clone, migration, feature-gate activation or cutover authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CALLER01. If accepted, caller compatibility reaches zero uncontrolled cohort writers; next address cohort runtime routing and remaining M6 infrastructure blockers before any backup/clone/migration authorization.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -257,21 +257,28 @@ M6_COHORT_CONTROL_PLANE=ACCEPTED
 M6_COHORT_SCOPING_CAPABILITY=AVAILABLE_REPOSITORY_CONTROL
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 LEGACY_WRITER_BLOCKING_ACTIVE=false
-PHASE_2_M6_GUARD01=READY_FOR_CODE_REVIEW
-M6_LEGACY_WRITER_GUARDS=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_GUARD01=ACCEPTED
+M6_GUARD01_ACCEPTED_HEAD=bcb2606ba7a95818673b402a9e006ecc0431ff73
+M6_LEGACY_WRITER_GUARDS=ACCEPTED
 M6_LEGACY_WRITE_BLOCK_ERROR=M6_LEGACY_WRITE_BLOCKED
 M6_LEGACY_WRITE_BLOCK_HTTP_STATUS=409
 GUARDED_LEGACY_WRITER_FAMILIES=8
 REMAINING_UNCONTROLLED_WRITER_FAMILIES=3
+UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=3
+PHASE_2_M6_CALLER01=READY_FOR_CODE_REVIEW
+C02_ADAPTED=true
+C03_ADAPTED=true
+C14_RESOLVED=true
+C14_RESOLUTION=BLOCK_FOR_CONFIGURED_M6_COHORT
+CANDIDATE_UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0
 PHASE_2_M6_EXECUTION_AUTHORIZED=false
 M6_AUTHORIZED=false
 M6_GO_NO_GO=NO_GO_BLOCKED
-M6_FIRST_BLOCKER=UNCONTROLLED_LEGACY_CLINICAL_WRITERS_PRESENT
+M6_FIRST_BLOCKER=CALLER01_PENDING_REVIEW
 M6_CALLER_INVENTORY_COMPLETE=true
 M6_TOTAL_CLINICAL_RUNTIME_CALLERS=21
 M6_WRITE_CAPABLE_CALLERS=17
-M6_UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=11
-UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=11
+M6_UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=3
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_WORKING_DB_PREFLIGHT_EXECUTED=true
 M6_WORKING_DB_PREFLIGHT_MODE=READ_ONLY
@@ -282,7 +289,7 @@ M6_CLONE_MIGRATION_REHEARSAL=NOT_YET_EXECUTED
 M6_MIGRATION_ACCOUNT_READY=false
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`; la evidencia física MIG01A quedó aceptada en `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; IMPL01B quedó aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; PREP01 y su reparación R1 quedaron aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d`; ADJ01 quedó aceptado en `c1fa6bea057992d35f4ccc7e0f8534cbe8a5a4b7`; PREP01-R2 quedó aceptado en `2c9d725eeb02bdecaa8dec894ad414862b8d9f82`. El primer intento físico M5 pasó T01–T25 y se bloqueó en T26 por una carrera del directorio del arnés QA antes del row lock; T27–T35 no se ejecutaron por fail-fast. El segundo intento completo desde T01 pasó T01–T26 y se bloqueó en T27 porque la validación `DOCUMENT_CONTEXT_MISMATCH` evitó correctamente la inserción, pero el `catch` exterior respondió `500/server_error` en lugar del rechazo canónico `409`; T28–T35 no se ejecutaron por fail-fast. REPAIR01 quedó aceptado como fuente clínica M5 en `115923cac322958ad4f443ab783a8cf19f9c5093`, y el RERUN2 físico sobre una copia exacta de ese commit pasó T01–T35, las barreras concurrentes T04/T11/T26 y el deadlock InnoDB controlado. T27 respondió el rechazo canónico `409/DOCUMENT_CONTEXT_MISMATCH` sin documento ni idempotencia persistidos; T28 no causó DDL ni DML. Todo ocurrió sólo en bases locales sintéticas y desechables, con teardown completo y sin conectar la base MXMed de trabajo. El commit de evidencia `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2` y M5 quedan aceptados. CTRL01/R1 queda aceptado en `05369176c3fc6a8b89043ee79c6b431161b3d5f4`, ahora `CURRENT_ACCEPTED_HEAD`; el control de cohorte y la semántica de retorno seguro quedan aceptados sin routing activo. GUARD01 contiene ocho familias de writers legacy como candidato pendiente de revisión. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 continúa `IN_PROGRESS`. PLAN01 de M6 sigue aceptado en `7dc615c772ef611a49229e3e1da91b569d6cf73d` con resultado `NO_GO_BLOCKED`. Backups/restores, clones, migración de la base de trabajo, activación del feature gate, cutover, producción y PHASE 3 siguen no autorizados.
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`; la evidencia física MIG01A quedó aceptada en `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; IMPL01B quedó aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; PREP01 y su reparación R1 quedaron aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d`; ADJ01 quedó aceptado en `c1fa6bea057992d35f4ccc7e0f8534cbe8a5a4b7`; PREP01-R2 quedó aceptado en `2c9d725eeb02bdecaa8dec894ad414862b8d9f82`. El primer intento físico M5 pasó T01–T25 y se bloqueó en T26 por una carrera del directorio del arnés QA antes del row lock; T27–T35 no se ejecutaron por fail-fast. El segundo intento completo desde T01 pasó T01–T26 y se bloqueó en T27 porque la validación `DOCUMENT_CONTEXT_MISMATCH` evitó correctamente la inserción, pero el `catch` exterior respondió `500/server_error` en lugar del rechazo canónico `409`; T28–T35 no se ejecutaron por fail-fast. REPAIR01 quedó aceptado como fuente clínica M5 en `115923cac322958ad4f443ab783a8cf19f9c5093`, y el RERUN2 físico sobre una copia exacta de ese commit pasó T01–T35, las barreras concurrentes T04/T11/T26 y el deadlock InnoDB controlado. T27 respondió el rechazo canónico `409/DOCUMENT_CONTEXT_MISMATCH` sin documento ni idempotencia persistidos; T28 no causó DDL ni DML. Todo ocurrió sólo en bases locales sintéticas y desechables, con teardown completo y sin conectar la base MXMed de trabajo. El commit de evidencia `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2` y M5 quedan aceptados. CTRL01/R1 queda aceptado en `05369176c3fc6a8b89043ee79c6b431161b3d5f4`; GUARD01 queda aceptado en `bcb2606ba7a95818673b402a9e006ecc0431ff73`, ahora `CURRENT_ACCEPTED_HEAD`, con ocho familias legacy contenidas y tres writers no controlados aceptados. CALLER01 adapta C02/C03 y bloquea C14 para cohorte como candidato con cuenta cero pendiente de revisión, sin routing activo. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 continúa `IN_PROGRESS`. PLAN01 de M6 sigue aceptado en `7dc615c772ef611a49229e3e1da91b569d6cf73d` con resultado `NO_GO_BLOCKED`. Backups/restores, clones, migración de la base de trabajo, activación del feature gate, cutover, producción y PHASE 3 siguen no autorizados.
 
 ## Adjudicación T31 para M5 V1 y compatibilidad V2 futura
 
@@ -298,9 +305,9 @@ La UI anterior debe conservar lecturas y borradores legacy aislados. El retorno 
 
 ## Estado PLAN01 de M6
 
-El [plan de cutover backend M6](EXPEDIENTE_ENCOUNTER_M6_CUTOVER_PLAN.md) queda `ACCEPTED` en `7dc615c772ef611a49229e3e1da91b569d6cf73d`. El inventario cubre 21 familias runtime, 17 con capacidad de escritura; 11 requieren adaptador o bloqueo explícito antes de M6. El preflight autorizado fue estrictamente de sólo lectura y confirmó la identidad de la base de trabajo, 13 encounters legacy sin atribución médica y esquema `PRE_MIGRATION` con migraciones 01–04 `NOT_APPLIED`. No se infirió titularidad ni se cambió esquema o dato alguno. CTRL01/R1 queda aceptado en `05369176c3fc6a8b89043ee79c6b431161b3d5f4`; GUARD01 propone contención fail-closed para C04, C05, C11, C12, C16, C17, C20 y C21, pendiente de revisión.
+El [plan de cutover backend M6](EXPEDIENTE_ENCOUNTER_M6_CUTOVER_PLAN.md) queda `ACCEPTED` en `7dc615c772ef611a49229e3e1da91b569d6cf73d`. El inventario cubre 21 familias runtime, 17 con capacidad de escritura; 11 requieren adaptador o bloqueo explícito antes de M6. El preflight autorizado fue estrictamente de sólo lectura y confirmó la identidad de la base de trabajo, 13 encounters legacy sin atribución médica y esquema `PRE_MIGRATION` con migraciones 01–04 `NOT_APPLIED`. No se infirió titularidad ni se cambió esquema o dato alguno. CTRL01/R1 queda aceptado en `05369176c3fc6a8b89043ee79c6b431161b3d5f4`; GUARD01 y su contención fail-closed para C04, C05, C11, C12, C16, C17, C20 y C21 quedan aceptados en `bcb2606ba7a95818673b402a9e006ecc0431ff73`.
 
-M6 permanece `NO_GO_BLOCKED`: el valor aceptado sigue siendo 11 writers legacy no controlados; GUARD01 sólo propone contener ocho y C02/C03/C14 permanecen sin resolver. Multipart activo continúa incompatible con el V1 fail-closed, el routing de cohorte no está activo, no existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
+M6 permanece `NO_GO_BLOCKED`: tras GUARD01 el valor aceptado es 3 writers no controlados (C02/C03/C14). CALLER01 propone adaptar C02/C03 y bloquear C14 para cohorte, con cuenta candidata cero pendiente de revisión. Multipart activo continúa incompatible con el V1 fail-closed, el routing de cohorte no está activo, no existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
 
 ## Visión y problema
 
@@ -578,3 +585,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-CTRL01 | PLAN01 aceptado `7dc615c772ef611a49229e3e1da91b569d6cf73d` | La revisión detectó que emergency OFF borraba la membresía configurada por paciente y podía reabrir futuros writers legacy durante retorno seguro. CTRL01 queda `BLOCKED_PENDING_R1_REVIEW`; sin wiring runtime, bloqueo legacy activo, conexión DB, migración, gate o cutover. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-CTRL01-R1 | Reparación sobre `0c527528847ae425f373c062baf6b9d89821101b` | Separadas membresía configurada, autorización activa V1 y decisión futura de bloqueo legacy. Emergency OFF detiene routing M6 pero conserva membresía y bloqueo; configuración activa inválida sigue fallando con `M6_COHORT_CONFIG_INVALID` y no puede desbloquear legacy. `READY_FOR_CODE_REVIEW`; sin wiring runtime ni cambios DB. M6 continúa `NO_GO_BLOCKED`. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-GUARD01 | CTRL01/R1 aceptado `05369176c3fc6a8b89043ee79c6b431161b3d5f4` | Candidato repository-only de contención para C04/C05/C11/C12/C16/C17/C20/C21 con error estable `409/M6_LEGACY_WRITE_BLOCKED`, paciente como autoridad, emergency OFF seguro, configuración inválida fail-closed y lecturas preservadas. Sin routing V1, activación normal de cohorte, DB, migración ni cutover. `READY_FOR_CODE_REVIEW`; cuenta aceptada permanece 11 y M6 sigue `NO_GO_BLOCKED`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M6-CALLER01 | GUARD01 aceptado `bcb2606ba7a95818673b402a9e006ecc0431ff73` | Candidato repository-only: C02 añade idempotencia estable y manejo 200/201 sin fallback; C03 exige encounter y usa la ruta documental canónica sin autoridad doctor del cliente ni fallback legacy; C14 bloquea el bridge antes de HTTP para pacientes M6, incluso emergency OFF o configuración inválida. Cuenta aceptada 3, candidata 0. Sin routing, gate, DB, migración ni cutover. `READY_FOR_CODE_REVIEW`; M6 sigue `NO_GO_BLOCKED`. |

@@ -6,7 +6,11 @@ PLAN_STATUS=ACCEPTED
 PLAN_ACCEPTED_HEAD=7dc615c772ef611a49229e3e1da91b569d6cf73d
 CTRL01_STATUS=ACCEPTED
 CTRL01_R1_STATUS=ACCEPTED
-GUARD01_STATUS=READY_FOR_CODE_REVIEW
+GUARD01_STATUS=ACCEPTED
+GUARD01_ACCEPTED_HEAD=bcb2606ba7a95818673b402a9e006ecc0431ff73
+PHASE_2_M6_GUARD01=ACCEPTED
+M6_GUARD01_ACCEPTED_HEAD=bcb2606ba7a95818673b402a9e006ecc0431ff73
+CALLER01_STATUS=READY_FOR_CODE_REVIEW
 PLANNING=true
 REPOSITORY_INVENTORY=true
 WORKING_DB_PREFLIGHT=READ_ONLY_ONLY
@@ -28,7 +32,7 @@ This chapter does **not** authorize or perform a backup, restore, database clone
 | Branch | `design/physician-crd03-credentials-ui-v1` |
 | PLAN01 pre-head and checkpoint | `4d99237e3fe87679bfb74cb30ac213d7530a30f5` |
 | Accepted M5 clinical source | `115923cac322958ad4f443ab783a8cf19f9c5093` |
-| Current accepted repository head / CTRL01-R1 | `05369176c3fc6a8b89043ee79c6b431161b3d5f4` |
+| Current accepted repository head / GUARD01 | `bcb2606ba7a95818673b402a9e006ecc0431ff73` |
 | Accepted M5 evidence | `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2` |
 | M5 result | `T01_T35=PASS`, accepted |
 | M6 execution | not authorized |
@@ -42,8 +46,8 @@ Inventory unit: one independently actionable runtime operation family. A row can
 | CALLER_ID | FILE | RUNTIME_ROLE | OPERATION | ENDPOINT_OR_DIRECT_DB_PATH | V1_GATE_AWARE | USES_CANONICAL_DOCTOR_CONTEXT | USES_CANONICAL_PATIENT_ID | USES_IDEMPOTENCY_KEY | EXPECTED_RESPONSE_CONTRACT | LEGACY_WRITE_CAPABILITY | M6_COMPATIBILITY | ACTION_REQUIRED |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | C01 | `assets/js/app.js` | Expediente context bridge | Resolve active encounter and read encounter detail | `GET /patients/{patient}/encounters/active`; `GET /encounters/{key}` | yes | yes (session) | yes | n/a | `{ok,data,meta}` | no | `READ_ONLY_NO_CUTOVER_IMPACT` | Retain and regression-test under gate ON. |
-| C02 | `assets/js/app.js` | Expediente open-patient flow | START when no active encounter exists | `POST /patients/{patient}/encounters` | endpoint switches, caller is not V1-contract complete | yes (session) | yes | **no** | legacy `{ok,data.encounter_key}` assumption | yes | `REQUIRES_ADAPTER_BEFORE_M6` | Add accepted V1 START request/idempotency contract and explicit V1 errors before cohort activation. |
-| C03 | `assets/js/app.js` | Evolution note, prescription and generic document composer | Create JSON clinical documents | `POST /doctors/{doctor}/patients/{patient}/documents` | no | no; path doctor ID is client-resolved | yes after bridge | no | legacy scoped document response | yes | `REQUIRES_ADAPTER_BEFORE_M6` | Route encounter-owned writes through `/encounters/{key}/documents`, session doctor authority and idempotency. |
+| C02 | `assets/js/app.js` | Expediente open-patient flow | START when no active encounter exists | `POST /patients/{patient}/encounters` | endpoint switches; CALLER01 client contract is V1-compatible pending review | yes (session) | yes | yes, stable per logical command | canonical `200/201` plus explicit canonical errors | yes | `ADAPTED_PENDING_REVIEW` | Stable command nonce, in-flight dedupe, lost-response retry and no secondary START fallback; routing remains inactive. |
+| C03 | `assets/js/app.js` | Evolution note, prescription and encounter-owned JSON composer | Create encounter-owned JSON clinical documents | `POST /encounters/{encounter_key}/documents` | contract-compatible; cohort routing still inactive | yes (session); no client doctor path | authoritative encounter plus canonical patient context | yes, stable per logical content | canonical `200/201`; canonical failures do not fall back | yes | `ADAPTED_PENDING_REVIEW` | Active encounter required; JSON only. Multipart remains deferred and fail-closed. |
 | C04 | `assets/js/app.js` | Consent identity attachment UI | Create uploaded identity attachment | multipart `POST /doctors/{doctor}/patients/{patient}/documents` | no | no; path doctor ID is client-resolved | yes | no | uploaded legacy document | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Block for M6 cohort until accepted V1 multipart storage exists. |
 | C05 | `assets/js/app.js` | Orders/results/diagnostic uploads | Create result/order upload and legacy replacement | multipart scoped document create; `POST .../replace` | no | no; path doctor ID is client-resolved | yes | no | legacy document/replace response | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Block encounter-owned upload/replace; later adapt to V1 document and amendment commands. |
 | C06 | `assets/js/app.js` | Historia Clínica editor | Update longitudinal patient history | `PUT /patients/{patient}/history` → `clinical_record_entries` | no | session check at gateway, not encounter command | yes | no | legacy history payload | yes | `LEGACY_ONLY_DEFERRED` | Keep patient-level draft isolated; prohibit use as encounter-history overwrite. |
@@ -54,7 +58,7 @@ Inventory unit: one independently actionable runtime operation family. A row can
 | C11 | `modules/clinical/ui/document.php` | Document viewer | Read and replicate document | `GET /doctors/{doctor}/documents/{id}`; `POST .../replicate` | no | path doctor plus link check | derived from document | no | legacy replicated document | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Keep viewing; suppress replication for M6 cohort until mapped to canonical create/amendment. |
 | C12 | `modules/clinical/ui/viewer.php` | Certificate/document editor | PATCH rendered document content | `PATCH /doctors/{doctor}/documents/{id}` | no | path doctor plus link check | derived from document | no | mutable legacy document | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Disable editing of encounter-linked documents; use append-only V1 amendment later. |
 | C13 | `assets/js/manejo-hospitalario.js` | Hospital episode UI | Create/list hospital documents | scoped doctor/patient document routes | no | no; client-resolved doctor path | yes | no | legacy hospital document | yes | `LEGACY_ONLY_DEFERRED` | Keep hospital-only and outside initial M6 cohort; prove isolation before activation. |
-| C14 | `modules/agenda/services/ClinicalEncounterBridge.php` | Agenda completion bridge | Find or START encounter after appointment completion | HTTP `GET/POST /patients/{patient}/encounters` | no | **no session/cookie propagation** | patient ID supplied by Agenda | no | legacy list/create response | yes | `REQUIRES_ADAPTER_BEFORE_M6` | Adapt to authenticated canonical command with idempotency or disable bridge during M6. |
+| C14 | `modules/agenda/services/ClinicalEncounterBridge.php` | Agenda completion bridge | Find or START encounter after appointment completion | non-cohort HTTP `GET/POST /patients/{patient}/encounters`; blocked before HTTP for configured cohort | no routing activation | no invented authentication | patient ID supplied by Agenda and checked against accepted membership | no | stable `M6_AGENDA_CLINICAL_BRIDGE_BLOCKED` for cohort | yes outside cohort | `BLOCKED_FOR_M6_COHORT_PENDING_REVIEW` | Configured cohort, emergency OFF and malformed active configuration fail closed before bridge GET/POST; appointment state remains unchanged. |
 | C15 | `modules/agenda/services/AmbiguousPatientReconciliationService.php` | Patient reconciliation guard | Check clinical references before patient reconciliation | direct aggregate reads of `clinical_encounters`, `clinical_record_entries`, `clinical_documents` | n/a | canonical Agenda doctor check | yes | n/a | throws on any clinical reference | no clinical-table write | `READ_ONLY_NO_CUTOVER_IMPACT` | Preserve fail-closed reference checks; no clinical rewrite is allowed. |
 | C16 | `api/clinical-documents.php` | Standalone legacy document endpoint | Direct create document/participants; list/get | direct `clinical_documents`, `clinical_document_participants`; runtime DDL helper | no | no canonical session doctor authority | validates patient only | no | legacy `{ok,document}` | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Deny write access for M6 cohort and remove caller dependencies before cutover. |
 | C17 | `api/evolution-note-generate.php` | Standalone legacy evolution-note endpoint | Direct create evolution note/participants | direct `clinical_documents`, `clinical_document_participants`; runtime DDL helper | no | no canonical session doctor authority | validates patient only | no | legacy generated document | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Deny for M6 cohort; canonical encounter document creation replaces it. |
@@ -69,15 +73,16 @@ Inventory totals:
 TOTAL_CLINICAL_RUNTIME_CALLERS=21
 WRITE_CAPABLE_CALLERS=17
 COMPATIBLE_AS_IS_CALLERS=2
-REQUIRES_ADAPTER_CALLERS=3
-MUST_BLOCK_AT_M6_CALLERS=8
+REQUIRES_ADAPTER_CALLERS_AT_PLAN01=3
+GUARDED_LEGACY_WRITER_FAMILIES=8
 READ_ONLY_NO_CUTOVER_IMPACT_CALLERS=4
 LEGACY_ONLY_DEFERRED_CALLERS=4
-UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=11
+UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=3
+CANDIDATE_UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0
 UNKNOWN_WRITE_CAPABLE_CALLERS=0
 ```
 
-The current uncontrolled count is the three active families requiring adapters plus the eight families requiring explicit blocking. Deferred legacy families are not counted as controlled until cohort isolation is proved; if that proof fails they must move to `MUST_BE_EXPLICITLY_BLOCKED_AT_M6`, increasing the count. The mandatory future gate is exactly `UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0`.
+After accepted GUARD01, the accepted uncontrolled count is the three active families C02, C03 and C14. CALLER01 adapts or blocks those three as a candidate, producing `CANDIDATE_UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0`; the accepted count remains 3 until CALLER01 review. Deferred legacy families remain subject to the documented cohort-isolation proof. Zero candidate writers does not authorize M6.
 
 Supporting sources were audited but are not counted as separate clinical-state caller families: `modules/clinical/ui/timeline.php` is covered by the timeline read family C10; `modules/patients/repositories/PatientsRepository.php` only reads attributed/unattributed encounter aggregates for archive metrics and is covered by C08; `assets/js/core/identity.js` calls the patient-identity resolver, which does not write the encounter, record-entry or document authorities listed in the inventory. The latter can still invoke the legacy identity-bridge schema helper and is therefore included in the global runtime-DDL blocker. Repository libraries in `api/_lib/` are implementations reached by the inventoried endpoints, not independent runtime entry callers.
 
@@ -334,17 +339,21 @@ EMERGENCY_OFF_MEANS_REENABLE_LEGACY_WRITES=false
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 LEGACY_WRITER_BLOCKING_ACTIVE=false
 COHORT_STATE_STORED_IN_CLINICAL_DB=false
-M6_LEGACY_WRITER_GUARDS=IMPLEMENTED_PENDING_REVIEW
+M6_LEGACY_WRITER_GUARDS=ACCEPTED
 M6_LEGACY_WRITE_BLOCK_ERROR=M6_LEGACY_WRITE_BLOCKED
 M6_LEGACY_WRITE_BLOCK_HTTP_STATUS=409
 GUARDED_LEGACY_WRITER_FAMILIES=8
 REMAINING_UNCONTROLLED_WRITER_FAMILIES=3
-C02_ADAPTED=false
-C03_ADAPTED=false
-C14_RESOLVED=false
+UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=3
+PHASE_2_M6_CALLER01=READY_FOR_CODE_REVIEW
+C02_ADAPTED=true
+C03_ADAPTED=true
+C14_RESOLVED=true
+C14_RESOLUTION=BLOCK_FOR_CONFIGURED_M6_COHORT
+CANDIDATE_UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0
 ```
 
-GUARD01 includes the accepted control library only on the three legacy server mutation surfaces. It does not consult client-controlled cohort enrollment, call `clinical_m6_cohort_authorized()`, activate routing or change `MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1`. With cohort mode OFF, the guard is a no-op. With a configured patient, `M6_LEGACY_WRITE_BLOCKED` returns HTTP 409 before the mapped clinical mutation. Malformed active configuration fails closed as `M6_COHORT_CONFIG_INVALID`. Reads and safe token-status operations remain available. The accepted uncontrolled-writer count remains 11 until GUARD01 is reviewed and accepted.
+GUARD01 is accepted at `bcb2606ba7a95818673b402a9e006ecc0431ff73`. Its eight legacy writer families remain contained with patient authority, stable `409/M6_LEGACY_WRITE_BLOCKED`, emergency-OFF persistence and malformed-config fail-closed behavior. It does not activate cohort routing or change `MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1`. The accepted uncontrolled-writer count is therefore 3: C02, C03 and C14.
 
 ### GUARD01 coverage matrix
 
@@ -373,6 +382,33 @@ DEFAULT_OFF_ZERO_RUNTIME_BEHAVIOR_CHANGE=true
 NON_COHORT_LEGACY_BEHAVIOR_PRESERVED=true
 LEGACY_WRITE_BLOCK_PERSISTS_DURING_EMERGENCY_OFF=true
 MALFORMED_CONFIG_CAN_ALLOW_LEGACY_WRITE=false
+```
+
+### CALLER01 candidate coverage
+
+| Family | Candidate behavior | Authority and failure rule | Routing state |
+| --- | --- | --- | --- |
+| C02 | START sends a stable per-command `Idempotency-Key`, coalesces the same in-flight command, retains key and payload across lost-response retry, accepts 200/201 and replaces the key only after an authoritative result. | Doctor remains PHP-session authority; canonical failures never invoke another START mechanism. | unchanged; endpoint remains shared and cohort routing is inactive |
+| C03 | Encounter-owned JSON note/prescription commands require an active encounter and use `POST /encounters/{encounter_key}/documents` with stable idempotency. | Encounter is authoritative; no client doctor path and no legacy fallback after canonical intent. Multipart is not adapted. | unchanged; V1 gate is not activated |
+| C14 | Configured M6 cohort patients fail with `M6_AGENDA_CLINICAL_BRIDGE_BLOCKED` before Agenda bridge GET/POST. | Patient membership comes from accepted server configuration; emergency OFF preserves block and malformed configuration fails closed. No service identity is invented. | non-cohort bridge preserved; appointment status semantics unchanged |
+
+```text
+C02_START_IDEMPOTENCY_HEADER_PRESENT=true
+C02_SAME_LOGICAL_RETRY_REUSES_KEY=true
+C02_NEW_COMMAND_CAN_USE_NEW_KEY=true
+C02_CLIENT_DOCTOR_AUTHORITY=false
+C02_NO_SECONDARY_LEGACY_START_FALLBACK=true
+C03_ENCOUNTER_OWNED_JSON_USES_CANONICAL_ROUTE=true
+C03_IDEMPOTENCY_HEADER_PRESENT=true
+C03_REQUIRES_ENCOUNTER_KEY=true
+C03_CANONICAL_FAILURE_LEGACY_FALLBACK=false
+C03_MULTIPART_NOT_ADAPTED=true
+C14_NON_COHORT_BRIDGE_PRESERVED=true
+C14_COHORT_BRIDGE_BLOCKED=true
+C14_EMERGENCY_OFF_COHORT_BRIDGE_BLOCKED=true
+C14_MALFORMED_CONFIG_FAILS_CLOSED=true
+C14_DOES_NOT_INVENT_CLINICAL_AUTHENTICATION=true
+M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 ```
 
 ## 13. Monitoring invariants
@@ -434,7 +470,7 @@ SAFE_RETURN_PLAN_READY=true
 | --- | --- | --- |
 | `M5_ACCEPTED` | `PASS` | M5 accepted; T01–T35 passed. |
 | `CALLER_INVENTORY_COMPLETE` | `PASS` | 21 operation families; no unknown write-capable row. |
-| `UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0` | `FAIL` | Current count 11. |
+| `UNCONTROLLED_LEGACY_CLINICAL_WRITER_COUNT=0` | `CANDIDATE_PENDING_REVIEW` | Accepted count 3 after GUARD01; CALLER01 candidate count 0. |
 | `WORKING_DB_IDENTITY_PROVEN` | `PASS` | Environment source and read-only identity query recorded. |
 | `WORKING_DB_PREFLIGHT_PASS` | `PASS` | Authorized read-only inspection completed; its result is pre-migration and therefore not schema readiness. |
 | `DUPLICATE_OPEN_DOCTOR_PATIENT_GROUP_COUNT=0` | `PASS` | Aggregate zero for attributed groups; all legacy rows remain unattributed. |
@@ -444,22 +480,22 @@ SAFE_RETURN_PLAN_READY=true
 | `MIGRATION_ACCOUNT_READY=true` | `FAIL` | Runtime is broad-privilege root; no distinct account. |
 | `WRITE_WINDOW_READY=true` | `FAIL` | No comprehensive writer pause/block mechanism rehearsed. |
 | `SCHEMA_READINESS_REHEARSAL=PASS` | `NOT_YET_PROVEN` | Only synthetic M5/MIG rehearsal, not working-data clone. |
-| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | PLAN01 and CTRL01/R1 accepted; GUARD01 is pending code review and cohort routing remains inactive. |
+| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | PLAN01, CTRL01/R1 and GUARD01 accepted; CALLER01 pending review and cohort routing remains inactive. |
 | `MONITORING_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Invariants defined; acceptance/operationalization pending. |
 | `SAFE_RETURN_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Procedure defined; acceptance/rehearsal pending. |
-| `CALLER_COMPATIBILITY_PASS=true` | `FAIL` | Adapters/blocks not implemented. |
+| `CALLER_COMPATIBILITY_PASS=true` | `CANDIDATE_PENDING_REVIEW` | C02/C03 adapted and C14 cohort-blocked in CALLER01; no routing activation. |
 
 `M6_GO_NO_GO=NO_GO_BLOCKED`.
 
 ## 17. Unresolved blockers
 
-The first blocker is `UNCONTROLLED_LEGACY_CLINICAL_WRITERS_PRESENT`.
+The current review blocker is `CALLER01_PENDING_REVIEW`; M6 remains blocked independently by multipart and infrastructure gates.
 
 Known blockers, in actionable order:
 
-1. The accepted count remains 11 active caller families; GUARD01 candidate guards eight, while C02/C03 still require adapters and C14 requires a decision.
+1. The accepted uncontrolled-writer count is 3; CALLER01 proposes C02/C03 adapters and a C14 cohort block, yielding candidate count 0 pending review.
 2. Active multipart clinical writes conflict with V1's fail-closed multipart deferral.
-3. GUARD01 containment is pending code review; cohort runtime routing remains inactive.
+3. Cohort runtime routing remains inactive and is not authorized by CALLER01.
 4. The working schema is pre-migration (01–04 not applied).
 5. No restorable backup has been proved.
 6. No isolated working-data clone migration rehearsal has been executed.
@@ -471,5 +507,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of M6 GUARD01 cohort-aware legacy writer containment before adapting C02/C03 and resolving C14. No backup, clone, migration, feature-gate activation or cutover authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CALLER01. If accepted, caller compatibility reaches zero uncontrolled cohort writers; next address cohort runtime routing and remaining M6 infrastructure blockers before any backup/clone/migration authorization.
 ```

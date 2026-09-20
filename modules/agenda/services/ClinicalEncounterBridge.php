@@ -3,6 +3,8 @@ namespace Agenda\Services;
 
 use RuntimeException;
 
+require_once dirname(__DIR__, 3) . '/api/_lib/clinical_m6_cutover.php';
+
 class ClinicalEncounterBridge
 {
     private string $apiBase;
@@ -41,6 +43,9 @@ class ClinicalEncounterBridge
             return;
         }
 
+        // M6_CALLER01_C14_COHORT_BRIDGE_BLOCK
+        $this->assertM6ClinicalBridgeAllowed($patientId);
+
         if ($this->encounterExistsForAppointment($patientId, $appointmentId)) {
             return;
         }
@@ -70,6 +75,18 @@ class ClinicalEncounterBridge
         if (($result['ok'] ?? false) !== true) {
             $msg = trim((string)($result['message'] ?? 'clinical bridge post failed'));
             throw new RuntimeException($msg !== '' ? $msg : 'clinical bridge post failed');
+        }
+    }
+
+    private function assertM6ClinicalBridgeAllowed(string $patientId): void
+    {
+        try {
+            $blocked = \clinical_m6_legacy_write_block_required($patientId);
+        } catch (\ClinicalM6CohortConfigException $e) {
+            throw new RuntimeException('M6_AGENDA_CLINICAL_BRIDGE_BLOCKED', 0, $e);
+        }
+        if ($blocked) {
+            throw new RuntimeException('M6_AGENDA_CLINICAL_BRIDGE_BLOCKED');
         }
     }
 

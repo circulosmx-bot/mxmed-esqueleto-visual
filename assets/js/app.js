@@ -30406,6 +30406,63 @@ console.info('app.js loaded :: 20251123a');
   console.info('P11 shim active');
 })();
 
+// M6 CALLER01 stable command keys for START and encounter-owned JSON documents.
+(function(){
+  if(window.mxmedClinicalCommandKeys) return;
+
+  // M6_CALLER01_COMMAND_KEY_HELPER_START
+  function mxmedCreateClinicalCommandKeyRegistry(options = {}){
+    const entries = new Map();
+    let fallbackCounter = 0;
+    const uuidFactory = (typeof options.uuidFactory === 'function')
+      ? options.uuidFactory
+      : ()=> {
+          const cryptoRef = options.cryptoRef || (typeof globalThis !== 'undefined' ? globalThis.crypto : null);
+          if(cryptoRef && typeof cryptoRef.randomUUID === 'function'){
+            return cryptoRef.randomUUID();
+          }
+          fallbackCounter += 1;
+          return `${Date.now().toString(36)}-${fallbackCounter.toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+        };
+    const normalize = (value)=> String(value || '').trim();
+    const makeKey = ()=> `mxmed-${normalize(uuidFactory()).replace(/[^A-Za-z0-9._:-]/g, '-')}`;
+    const entryFor = (scope, fingerprint, commandFactory)=> {
+      const safeScope = normalize(scope);
+      const safeFingerprint = normalize(fingerprint);
+      if(!safeScope || !safeFingerprint) throw new Error('CLINICAL_COMMAND_SCOPE_REQUIRED');
+      const current = entries.get(safeScope);
+      if(current && current.fingerprint === safeFingerprint) return current;
+      const next = {
+        key: makeKey(),
+        fingerprint: safeFingerprint,
+        command: (typeof commandFactory === 'function') ? commandFactory() : null,
+        promise: null
+      };
+      entries.set(safeScope, next);
+      return next;
+    };
+    const run = (scope, fingerprint, commandFactory, executor)=> {
+      const entry = entryFor(scope, fingerprint, commandFactory);
+      if(entry.promise) return entry.promise;
+      entry.promise = Promise.resolve()
+        .then(()=> executor({ key: entry.key, command: entry.command }))
+        .then((result)=> {
+          if(entries.get(normalize(scope)) === entry) entries.delete(normalize(scope));
+          return result;
+        })
+        .catch((error)=> {
+          entry.promise = null;
+          throw error;
+        });
+      return entry.promise;
+    };
+    return Object.freeze({ run });
+  }
+  // M6_CALLER01_COMMAND_KEY_HELPER_END
+
+  window.mxmedClinicalCommandKeys = mxmedCreateClinicalCommandKeyRegistry();
+})();
+
 // P12 clinical context bridge (encounter_key as single source)
 (function(){
   if(window.__mxmedClinicalContextBridgeApplied) return;
@@ -34522,9 +34579,12 @@ console.info('app.js loaded :: 20251123a');
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        const msg = data?.error || (Array.isArray(data?.errors) ? data.errors.join(' ') : '') || `HTTP ${res.status}`;
+        const structuredError = (data?.error && typeof data.error === 'object') ? data.error : null;
+        const code = String(structuredError?.code || (typeof data?.error === 'string' ? data.error : '') || '').trim();
+        const msg = String(structuredError?.message || data?.message || code || (Array.isArray(data?.errors) ? data.errors.join(' ') : '') || `HTTP ${res.status}`);
         const err = new Error(msg);
         err.status = res.status;
+        err.code = code;
         err.data = data;
         throw err;
       }
@@ -34687,7 +34747,7 @@ console.info('app.js loaded :: 20251123a');
     };
 
     const normalizeSavedDocumentResponse = (payload, source = '') => {
-      const document = payload?.data?.document ?? payload?.document ?? null;
+      const document = payload?.data?.document ?? payload?.data ?? payload?.document ?? null;
       if (!document || typeof document !== 'object') {
         throw new Error('invalid save response');
       }
@@ -34704,11 +34764,12 @@ console.info('app.js loaded :: 20251123a');
         ? String(window.getActiveEncounterKey() || '').trim()
         : '';
       const encounterKey = String(context.encounter_key || fromBridge || '').trim();
-      if (encounterKey) {
-        context.encounter_key = encounterKey;
-      } else {
-        delete context.encounter_key;
+      if (!encounterKey) {
+        const error = new Error('Selecciona o inicia una consulta antes de guardar este documento clínico.');
+        error.code = 'ACTIVE_ENCOUNTER_REQUIRED';
+        throw error;
       }
+      context.encounter_key = encounterKey;
       requestArgs.context = context;
       const contextPatientId = String(context.patient_id ?? '').trim();
       const explicitLegacyPatientId = String(context.legacy_patient_id ?? '').trim();
@@ -34717,210 +34778,135 @@ console.info('app.js loaded :: 20251123a');
         : await resolveCanonicalPatientIdSafe(contextPatientId).catch(() => null);
       const legacyPatientId = explicitLegacyPatientId || contextPatientId;
 
-      const errors = [];
-      if (canonicalPatientId) {
-        const gatewayArgs = {
-          ...requestArgs,
-          context: {
-            ...context,
-            patient_id: canonicalPatientId,
-            legacy_patient_id: legacyPatientId || undefined
+      if (!canonicalPatientId) {
+        console.warn('[CLINICAL-DOCUMENTS-CANONICAL-CREATE] canonical_patient_unavailable', {
+          encounter_key: encounterKey,
+          patient_id: contextPatientId || null,
+          source: 'app'
+        });
+        if (isEvolutionNote) {
+          throw new Error('No se pudo resolver el paciente para guardar la nota de evolución.');
+        }
+        if (isPrescription) {
+          throw new Error('No se pudo resolver el paciente para guardar la receta.');
+        }
+        throw new Error('No se pudo resolver el paciente para guardar el documento clínico.');
+      }
+
+      const gatewayArgs = {
+        ...requestArgs,
+        document_type: requestedDocumentType,
+        context: {
+          ...context,
+          patient_id: canonicalPatientId,
+          legacy_patient_id: legacyPatientId || undefined
+        }
+      };
+
+      if (isPrescription) {
+        const prescriptionSourcePayload = (gatewayArgs.payload && typeof gatewayArgs.payload === 'object') ? gatewayArgs.payload : {};
+        const prescriptionItems = resolvePrescriptionPayloadItems(prescriptionSourcePayload)
+          .map((item) => {
+            const name = String(item?.name || item?.medicamento || '').trim();
+            const dose = String(item?.dose || item?.dosis || '').trim();
+            const route = String(item?.route || item?.via || '').trim();
+            const frequency = String(item?.frequency || item?.frecuencia || item?.periodicidad || '').trim();
+            const duration = String(item?.duration || item?.duracion || '').trim();
+            const indications = [
+              String(item?.instructions || item?.indicaciones || '').trim(),
+              String(item?.presentation || '').trim() ? `Presentación: ${String(item.presentation).trim()}` : '',
+              String(item?.quantity || item?.cantidad || '').trim() ? `Cantidad: ${String(item?.quantity || item?.cantidad).trim()}` : ''
+            ].filter(Boolean).join(' · ');
+            return {
+              medicamento: name,
+              dosis: dose,
+              via: route,
+              frecuencia: frequency,
+              periodicidad: frequency,
+              duracion: duration,
+              indicaciones: indications
+            };
+          });
+        const prescriptionObservations = [
+          ...(Array.isArray(prescriptionSourcePayload?.analysis?.results?.observations) ? prescriptionSourcePayload.analysis.results.observations : []),
+          ...(Array.isArray(prescriptionSourcePayload?.analysis?.observations) ? prescriptionSourcePayload.analysis.observations : [])
+        ].map((item) => String(item || '').trim()).filter(Boolean).join(' ');
+        const prescriptionPayload = {
+          ...prescriptionSourcePayload,
+          contract_version: prescriptionSourcePayload.contract_version || 1,
+          prescription: {
+            ...((prescriptionSourcePayload.prescription && typeof prescriptionSourcePayload.prescription === 'object') ? prescriptionSourcePayload.prescription : {}),
+            items: prescriptionItems,
+            observaciones: String(prescriptionSourcePayload?.prescription?.observaciones || prescriptionObservations || '').trim()
           }
         };
+        gatewayArgs.payload = prescriptionPayload;
+        gatewayArgs.content = {
+          ...((gatewayArgs.content && typeof gatewayArgs.content === 'object') ? gatewayArgs.content : {}),
+          payload: prescriptionPayload,
+          rendered_text: buildPrescriptionRenderedText(prescriptionPayload, context, requestArgs.actor || {}),
+          summary: window.buildPrescriptionSummary(prescriptionPayload)
+        };
+      }
 
-        if (isEvolutionNote) {
-          const doctorId = resolveGatewayDocumentsDoctorId();
-          if (!doctorId || !canonicalPatientId) {
-            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-NOTA] missing_doctor_scope', {
-              doctor_id: doctorId || null,
-              patient_id: canonicalPatientId || null
-            });
-            throw new Error('No se pudo resolver el médico o paciente para guardar la nota de evolución.');
-          }
+      console.debug('SAVE canonical encounter document attempt', {
+        encounter_key: encounterKey,
+        patient_id: canonicalPatientId,
+        legacy_patient_id: legacyPatientId || null,
+        source: 'app'
+      });
 
-          console.debug('SAVE gateway scoped nota attempt', {
-            doctor_id: doctorId,
-            patient_id: canonicalPatientId,
-            legacy_patient_id: legacyPatientId || null,
-            source: 'app'
-          });
-
-          try {
-            const gatewayPayload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(canonicalPatientId)}/documents`, {
-              method: 'POST',
-              headers: { Accept: 'application/json' },
-              body: JSON.stringify(gatewayArgs)
-            });
-            const normalized = normalizeSavedDocumentResponse(gatewayPayload, 'gateway');
-            console.debug('SAVE gateway scoped nota ok', {
-              doctor_id: doctorId,
-              patient_id: canonicalPatientId,
-              source: 'app'
-            });
-            return normalized;
-          } catch (e) {
-            errors.push(e);
-            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-NOTA] scoped_create_failed', {
-              doctor_id: doctorId,
-              patient_id: canonicalPatientId,
-              status: e?.status || null,
-              message: e?.message || null
-            });
-            const mergedMessage = errors.map((err)=> String(err?.message || '').trim()).filter(Boolean).join(' | ');
-            throw new Error(mergedMessage || 'No se pudo guardar nota de evolución.');
-          }
-        }
-
-        if (isPrescription) {
-          const doctorId = resolveGatewayDocumentsDoctorId();
-          if (!doctorId || !canonicalPatientId) {
-            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-PRESCRIPTION] missing_doctor_scope', {
-              doctor_id: doctorId || null,
-              patient_id: canonicalPatientId || null
-            });
-            throw new Error('No se pudo resolver el médico o paciente para guardar la receta.');
-          }
-
-          const prescriptionSourcePayload = (gatewayArgs.payload && typeof gatewayArgs.payload === 'object') ? gatewayArgs.payload : {};
-          const prescriptionItems = resolvePrescriptionPayloadItems(prescriptionSourcePayload)
-            .map((item) => {
-              const name = String(item?.name || item?.medicamento || '').trim();
-              const dose = String(item?.dose || item?.dosis || '').trim();
-              const route = String(item?.route || item?.via || '').trim();
-              const frequency = String(item?.frequency || item?.frecuencia || item?.periodicidad || '').trim();
-              const duration = String(item?.duration || item?.duracion || '').trim();
-              const indications = [
-                String(item?.instructions || item?.indicaciones || '').trim(),
-                String(item?.presentation || '').trim() ? `Presentación: ${String(item.presentation).trim()}` : '',
-                String(item?.quantity || item?.cantidad || '').trim() ? `Cantidad: ${String(item?.quantity || item?.cantidad).trim()}` : ''
-              ].filter(Boolean).join(' · ');
-              return {
-                medicamento: name,
-                dosis: dose,
-                via: route,
-                frecuencia: frequency,
-                periodicidad: frequency,
-                duracion: duration,
-                indicaciones: indications
-              };
-            });
-          const prescriptionObservations = [
-            ...(Array.isArray(prescriptionSourcePayload?.analysis?.results?.observations) ? prescriptionSourcePayload.analysis.results.observations : []),
-            ...(Array.isArray(prescriptionSourcePayload?.analysis?.observations) ? prescriptionSourcePayload.analysis.observations : [])
-          ].map((item) => String(item || '').trim()).filter(Boolean).join(' ');
-          const prescriptionPayload = {
-            ...prescriptionSourcePayload,
-            contract_version: prescriptionSourcePayload.contract_version || 1,
-            prescription: {
-              ...((prescriptionSourcePayload.prescription && typeof prescriptionSourcePayload.prescription === 'object') ? prescriptionSourcePayload.prescription : {}),
-              items: prescriptionItems,
-              observaciones: String(prescriptionSourcePayload?.prescription?.observaciones || prescriptionObservations || '').trim()
-            }
-          };
-          const prescriptionGatewayArgs = {
+      const commandFingerprint = JSON.stringify(gatewayArgs);
+      const commandScope = `encounter-document:${encounterKey}:${requestedDocumentType}`;
+      try {
+        const gatewayPayload = await window.mxmedClinicalCommandKeys.run(
+          commandScope,
+          commandFingerprint,
+          ()=> ({
             ...gatewayArgs,
-            payload: prescriptionPayload,
-            content: {
-              ...((gatewayArgs.content && typeof gatewayArgs.content === 'object') ? gatewayArgs.content : {}),
-              payload: prescriptionPayload,
-              rendered_text: buildPrescriptionRenderedText(prescriptionPayload, context, requestArgs.actor || {}),
-              summary: window.buildPrescriptionSummary(prescriptionPayload)
-            }
-          };
-
-          console.debug('SAVE gateway scoped prescription attempt', {
-            doctor_id: doctorId,
-            patient_id: canonicalPatientId,
-            legacy_patient_id: legacyPatientId || null,
-            source: 'app'
-          });
-
-          try {
-            const gatewayPayload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(canonicalPatientId)}/documents`, {
+            event_datetime: gatewayArgs.event_datetime || new Date().toISOString().slice(0, 19).replace('T', ' ')
+          }),
+          async ({ key, command })=> {
+            const payload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/encounters/${encodeURIComponent(encounterKey)}/documents`, {
               method: 'POST',
-              headers: { Accept: 'application/json' },
-              body: JSON.stringify(prescriptionGatewayArgs)
+              headers: { Accept: 'application/json', 'Idempotency-Key': key },
+              body: JSON.stringify(command)
             });
-            const normalized = normalizeSavedDocumentResponse(gatewayPayload, 'gateway');
-            console.debug('SAVE gateway scoped prescription ok', {
-              doctor_id: doctorId,
-              patient_id: canonicalPatientId,
-              source: 'app'
-            });
-            return normalized;
-          } catch (e) {
-            errors.push(e);
-            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-PRESCRIPTION] scoped_create_failed', {
-              doctor_id: doctorId,
-              patient_id: canonicalPatientId,
-              status: e?.status || null,
-              message: e?.message || null
-            });
-            const mergedMessage = errors.map((err)=> String(err?.message || '').trim()).filter(Boolean).join(' | ');
-            throw new Error(mergedMessage || 'No se pudo guardar la receta.');
+            normalizeSavedDocumentResponse(payload, 'gateway');
+            return payload;
           }
+        );
+        const normalized = normalizeSavedDocumentResponse(gatewayPayload, 'gateway');
+        if(!normalized.document.content || typeof normalized.document.content !== 'object'){
+          normalized.document.content = {
+            payload: gatewayArgs.payload || null,
+            rendered_text: gatewayArgs.content?.rendered_text || gatewayArgs.payload?.text || ''
+          };
         }
-
-        const doctorId = resolveGatewayDocumentsDoctorId();
-        if (!doctorId || !canonicalPatientId) {
-          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE] missing_doctor_scope', {
-            doctor_id: doctorId || null,
-            patient_id: canonicalPatientId || null
-          });
-          throw new Error('No se pudo resolver el médico o paciente para guardar el documento clínico.');
-        }
-
-        console.debug('SAVE gateway scoped document attempt', {
-          doctor_id: doctorId,
+        console.debug('SAVE canonical encounter document ok', {
+          encounter_key: encounterKey,
           patient_id: canonicalPatientId,
-          legacy_patient_id: legacyPatientId || null,
           source: 'app'
         });
-
-        try {
-          const gatewayPayload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(canonicalPatientId)}/documents`, {
-            method: 'POST',
-            headers: { Accept: 'application/json' },
-            body: JSON.stringify(gatewayArgs)
-          });
-          const normalized = normalizeSavedDocumentResponse(gatewayPayload, 'gateway');
-          console.debug('SAVE gateway scoped document ok', {
-            doctor_id: doctorId,
-            patient_id: canonicalPatientId,
-            source: 'app'
-          });
-          return normalized;
-        } catch (e) {
-          errors.push(e);
-          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE] scoped_create_failed', {
-            doctor_id: doctorId,
-            patient_id: canonicalPatientId,
-            status: e?.status || null,
-            message: e?.message || null
-          });
-          const mergedMessage = errors.map((err)=> String(err?.message || '').trim()).filter(Boolean).join(' | ');
-          throw new Error(mergedMessage || 'No se pudo guardar el documento clínico.');
-        }
-      } else {
-        console.debug('SAVE scoped create unavailable', {
-          reason: 'canonical_unavailable',
-          source: 'app'
+        return normalized;
+      } catch (error) {
+        const canonicalErrors = new Set([
+          'DOCUMENT_CONTEXT_MISMATCH',
+          'ENCOUNTER_CLOSED',
+          'ENCOUNTER_VOIDED',
+          'V1_MULTIPART_STORAGE_NOT_READY',
+          'IDEMPOTENCY_KEY_REUSED',
+          'SCHEMA_NOT_READY'
+        ]);
+        console.warn('[CLINICAL-DOCUMENTS-CANONICAL-CREATE] encounter_create_failed', {
+          encounter_key: encounterKey,
+          patient_id: canonicalPatientId,
+          code: error?.code || null,
+          canonical_error: canonicalErrors.has(String(error?.code || '')),
+          status: error?.status || null,
+          message: error?.message || null
         });
-        if (isEvolutionNote) {
-          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-NOTA] missing_doctor_scope', {
-            doctor_id: resolveGatewayDocumentsDoctorId() || null,
-            patient_id: canonicalPatientId || null
-          });
-          throw new Error('No se pudo resolver el médico o paciente para guardar la nota de evolución.');
-        }
-        if (isPrescription) {
-          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-PRESCRIPTION] missing_doctor_scope', {
-            doctor_id: resolveGatewayDocumentsDoctorId() || null,
-            patient_id: canonicalPatientId || null
-          });
-          throw new Error('No se pudo resolver el médico o paciente para guardar la receta.');
-        }
-        throw new Error('No se pudo resolver el médico o paciente para guardar el documento clínico.');
+        throw error;
       }
     };
 
@@ -76562,21 +76548,57 @@ function mxResetLogoPreview(){
           }
         }
         const createUrl = `/api/clinical/index.php/patients/${encodeURIComponent(safePid)}/encounters`;
-        const createResp = await fetch(createUrl, {
-          method: 'POST',
-          headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            status: 'open',
-            encounter_dt: formatDateTime()
-          })
-        });
-        const createJson = await createResp.json().catch(()=> null);
-        if(createJson?.ok !== true){
-          console.warn('[P11] ensureActiveEncounter create failed');
-          return null;
+        const createJson = await window.mxmedClinicalCommandKeys.run(
+          `encounter-start:${safePid}`,
+          `START:${safePid}`,
+          ()=> ({ status: 'open', encounter_dt: formatDateTime() }),
+          async ({ key, command })=> {
+            const createResp = await fetch(createUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type':'application/json',
+                'Accept':'application/json',
+                'Idempotency-Key': key
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify(command)
+            });
+            const payload = await createResp.json().catch(()=> null);
+            if(!createResp.ok || payload?.ok !== true){
+              const structuredError = (payload?.error && typeof payload.error === 'object') ? payload.error : null;
+              const code = String(structuredError?.code || (typeof payload?.error === 'string' ? payload.error : '') || '').trim();
+              const canonicalErrors = new Set([
+                'IDEMPOTENCY_KEY_REUSED',
+                'INVALID_APPOINTMENT_SCOPE',
+                'SCHEMA_NOT_READY',
+                'unauthorized',
+                'not_found'
+              ]);
+              const error = new Error(String(structuredError?.message || payload?.message || code || `HTTP ${createResp.status}`));
+              error.code = code;
+              error.status = createResp.status;
+              error.data = payload;
+              if(canonicalErrors.has(code)) throw error;
+              throw error;
+            }
+            const resolvedKey = String(payload?.data?.encounter_key || payload?.encounter_key || '').trim();
+            if(!resolvedKey){
+              const invalidResponse = new Error('La respuesta no incluyó un encounter canónico.');
+              invalidResponse.code = 'INVALID_ENCOUNTER_RESPONSE';
+              invalidResponse.status = createResp.status;
+              throw invalidResponse;
+            }
+            return payload;
+          }
+        );
+        const createdEncounter = (createJson?.data && typeof createJson.data === 'object') ? createJson.data : {};
+        encounterKey = String(createdEncounter.encounter_key || createJson?.encounter_key || '').trim();
+        if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+          window.mxmedStore.activeEncounterId = createdEncounter.encounter_id || null;
+          window.mxmedStore.activeEncounterPatientId = createdEncounter.patient_id || safePid;
+          window.mxmedStore.activeEncounterDoctorId = createdEncounter.doctor_id || null;
+          window.mxmedStore.activeEncounterStatus = createdEncounter.status || 'open';
         }
-        encounterKey = String(createJson?.data?.encounter_key || createJson?.encounter_key || '').trim();
       }
 
       if(!encounterKey){
@@ -76603,8 +76625,20 @@ function mxResetLogoPreview(){
         });
       }
       return encounterKey;
-    }catch(_){
-      console.warn('[P11] ensureActiveEncounter failed');
+    }catch(error){
+      const code = String(error?.code || '').trim();
+      const messages = {
+        IDEMPOTENCY_KEY_REUSED: 'No se pudo reintentar el inicio porque cambió el comando. Intenta iniciar una consulta nueva.',
+        INVALID_APPOINTMENT_SCOPE: 'La cita seleccionada no corresponde al paciente o médico de esta consulta.',
+        SCHEMA_NOT_READY: 'El expediente clínico aún no está listo para iniciar la consulta.',
+        unauthorized: 'Tu sesión no permite iniciar esta consulta.',
+        not_found: 'No se encontró el paciente solicitado.'
+      };
+      console.warn('[P11] ensureActiveEncounter failed', {
+        code: code || null,
+        status: error?.status || null
+      });
+      if(messages[code]) window.alert(messages[code]);
       return null;
     }
   };
