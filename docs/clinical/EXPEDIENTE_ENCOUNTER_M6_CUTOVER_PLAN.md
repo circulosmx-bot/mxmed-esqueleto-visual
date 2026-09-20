@@ -14,7 +14,7 @@ CALLER01_STATUS=ACCEPTED
 M6_CALLER01_ACCEPTED_HEAD=0baeefb8eff98f9de80429d0ad9d164190508fbc
 PHASE_2_M6_ROUTE01=ACCEPTED
 M6_ROUTE01_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
-CURRENT_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
+CURRENT_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
 M6_COHORT_ROUTING_CAPABILITY=ACCEPTED
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 PHASE_2_M6_MULTI01=ACCEPTED
@@ -43,9 +43,14 @@ PHASE_2_M6_MULTI03C=ACCEPTED
 M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
 PHASE_2_M6_MULTI04A=ACCEPTED
 M6_MULTI04A_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
-PHASE_2_M6_MULTI04B=READY_FOR_CODE_REVIEW
-PRIVATE_BINARY_HTTP_CONTROLLER=IMPLEMENTED_PENDING_REVIEW
-PRIVATE_BINARY_HTTP_ROUTE=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI04B=ACCEPTED
+M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
+PHASE_2_M6_MULTI04C=PASS_READY_FOR_DIRECTOR_REVIEW
+PRIVATE_BINARY_HTTP_PHYSICAL_QA=PASS
+PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
+PRIVATE_BINARY_STREAMING_PHYSICAL_QA=PASS
+PRIVATE_BINARY_HTTP_CONTROLLER=ACCEPTED
+PRIVATE_BINARY_HTTP_ROUTE=ACCEPTED
 PRIVATE_BINARY_HTTP_RANGE_SUPPORT=false
 MULTI04B_PHYSICAL_HTTP_QA_EXECUTED=false
 PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
@@ -539,9 +544,14 @@ PHASE_2_M6_MULTI03C=ACCEPTED
 M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
 PHASE_2_M6_MULTI04A=ACCEPTED
 M6_MULTI04A_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
-PHASE_2_M6_MULTI04B=READY_FOR_CODE_REVIEW
-PRIVATE_BINARY_HTTP_CONTROLLER=IMPLEMENTED_PENDING_REVIEW
-PRIVATE_BINARY_HTTP_ROUTE=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI04B=ACCEPTED
+M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
+PHASE_2_M6_MULTI04C=PASS_READY_FOR_DIRECTOR_REVIEW
+PRIVATE_BINARY_HTTP_PHYSICAL_QA=PASS
+PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
+PRIVATE_BINARY_STREAMING_PHYSICAL_QA=PASS
+PRIVATE_BINARY_HTTP_CONTROLLER=ACCEPTED
+PRIVATE_BINARY_HTTP_ROUTE=ACCEPTED
 PRIVATE_BINARY_HTTP_RANGE_SUPPORT=false
 MULTI04B_PHYSICAL_HTTP_QA_EXECUTED=false
 PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
@@ -671,7 +681,7 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI04B read-only private binary HTTP controller. If accepted, run isolated MULTI04C physical HTTP QA on a disposable MySQL 9.6 database and private temporary storage, proving authenticated success, generic denial, integrity failure and exact streaming. Multipart writes and working-database migration remain unauthorized.
+NEXT_AUTHORIZED_STEP=Proceed to repository-only multipart write integration/adapters, beginning with the canonical V1 encounter-document multipart service path and then C04/C05/C21 one by one. Preserve legacy guards until each caller is separately accepted. Working-database migration, activation and cutover remain unauthorized.
 ```
 
 
@@ -861,8 +871,10 @@ encounter-integrity and M5 barrier suites all PASS. PHP lint, shell syntax and
 
 ### MULTI04B — gated read-only binary HTTP candidate (2026-09-20)
 
-MULTI04A is accepted at `99422dfb601282a5c5eceaafa6a02c34dc8b183b`, now the accepted
-implementation head. MULTI04B is READY_FOR_CODE_REVIEW, not physically HTTP-tested.
+Historical MULTI04B implementation record: MULTI04A was accepted at
+`99422dfb601282a5c5eceaafa6a02c34dc8b183b`. At creation, MULTI04B was
+READY_FOR_CODE_REVIEW and had no physical HTTP QA. MULTI04B is now accepted at
+`0daa1e52dd2bda11cad5d50f09ac0516725ef004`; MULTI04C evidence follows below.
 One non-overlapping branch in the existing documents block recognizes exactly
 GET `/documents/{id_or_uuid}/binary/{variant}` (four segments). Other methods and
 existing document routes are unchanged. Server context comes from
@@ -903,5 +915,33 @@ was used. Temporary synthetic QA storage was removed.
 The route exists only as gated source capability. Working DB remains PRE_MIGRATION;
 master/cohort runtime activation is unchanged and false. Multipart write 503,
 C04/C05/C21=false, M6 NO_GO_BLOCKED and all migration/cutover/production boundaries
-remain. Next: Director/assistant review, then separately authorized MULTI04C physical
-HTTP QA. No physical route invocation or activation occurred in this chapter.
+remain. At that chapter close, the next step was review followed by authorized
+MULTI04C physical HTTP QA. No physical invocation occurred during MULTI04B.
+
+
+### MULTI04C — physical HTTP evidence ready for review (2026-09-20)
+
+MULTI04B is accepted at `0daa1e52dd2bda11cad5d50f09ac0516725ef004`.
+MULTI04C passed HC01–HC10 on its exact ephemeral archive using MySQL 9.6.0,
+real PHP sessions, private temporary storage and raw HTTP streaming.
+Database `mxmed_multi04c_87d850ea9b_mysql96` was synthetic and disposable;
+`mxmed` was never selected. Migrations 01–05 served only as QA prerequisites.
+The 77-byte PDF matched client-side SHA-256 and all required headers.
+Denied/missing/corrupt/configuration/gate-off requests returned the expected bounded
+401/404/503 responses without binary or private-path disclosure.
+Six table row-count/hash baselines and private storage/source hashes were unchanged.
+Residual database/process/session/temp-root counts are all zero.
+
+Full scenario, header, hash and teardown evidence:
+[Multipart storage design — MULTI04C](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md#multi04c--isolated-physical-http-rehearsal-2026-09-20).
+
+Status: `PHASE_2_M6_MULTI04C=PASS_READY_FOR_DIRECTOR_REVIEW`.
+Authentication, streaming and HTTP physical QA are PASS. This does not accept
+multipart HTTP writes: `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`,
+`MULTIPART_ACTIVE_CALLER_BLOCKER=true`, `MULTIPART_HTTP_ACCEPTANCE=false`, and
+C04/C05/C21 adapters remain false. M6 remains `NO_GO_BLOCKED`; working schema
+remains `PRE_MIGRATION`. Backup/clone/migration-account/write-window prerequisites
+remain unproven/unready. Working-DB migration, feature-gate activation, runtime
+cutover, production and PHASE 3 remain unauthorized. No UI, caller adapter or
+application source was changed. The next repository-only write integration step
+is a candidate after Director/assistant review, not executed or auto-started here.

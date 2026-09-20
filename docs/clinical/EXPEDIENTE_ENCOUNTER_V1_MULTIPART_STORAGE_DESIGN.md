@@ -17,7 +17,7 @@ MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-CURRENT_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
+CURRENT_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
 PHASE_2_M6_MULTI03A=ACCEPTED
 M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
 MULTI03A_BLOCKER=NONE
@@ -32,9 +32,14 @@ PHASE_2_M6_MULTI03C=ACCEPTED
 M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
 PHASE_2_M6_MULTI04A=ACCEPTED
 M6_MULTI04A_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
-PHASE_2_M6_MULTI04B=READY_FOR_CODE_REVIEW
-PRIVATE_BINARY_HTTP_CONTROLLER=IMPLEMENTED_PENDING_REVIEW
-PRIVATE_BINARY_HTTP_ROUTE=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI04B=ACCEPTED
+M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
+PHASE_2_M6_MULTI04C=PASS_READY_FOR_DIRECTOR_REVIEW
+PRIVATE_BINARY_HTTP_PHYSICAL_QA=PASS
+PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
+PRIVATE_BINARY_STREAMING_PHYSICAL_QA=PASS
+PRIVATE_BINARY_HTTP_CONTROLLER=ACCEPTED
+PRIVATE_BINARY_HTTP_ROUTE=ACCEPTED
 PRIVATE_BINARY_HTTP_RANGE_SUPPORT=false
 MULTI04B_PHYSICAL_HTTP_QA_EXECUTED=false
 PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
@@ -435,9 +440,14 @@ PHASE_2_M6_MULTI03C=ACCEPTED
 M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
 PHASE_2_M6_MULTI04A=ACCEPTED
 M6_MULTI04A_ACCEPTED_HEAD=99422dfb601282a5c5eceaafa6a02c34dc8b183b
-PHASE_2_M6_MULTI04B=READY_FOR_CODE_REVIEW
-PRIVATE_BINARY_HTTP_CONTROLLER=IMPLEMENTED_PENDING_REVIEW
-PRIVATE_BINARY_HTTP_ROUTE=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI04B=ACCEPTED
+M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
+PHASE_2_M6_MULTI04C=PASS_READY_FOR_DIRECTOR_REVIEW
+PRIVATE_BINARY_HTTP_PHYSICAL_QA=PASS
+PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
+PRIVATE_BINARY_STREAMING_PHYSICAL_QA=PASS
+PRIVATE_BINARY_HTTP_CONTROLLER=ACCEPTED
+PRIVATE_BINARY_HTTP_ROUTE=ACCEPTED
 PRIVATE_BINARY_HTTP_RANGE_SUPPORT=false
 MULTI04B_PHYSICAL_HTTP_QA_EXECUTED=false
 PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
@@ -716,8 +726,10 @@ encounter-integrity and M5 barrier suites all PASS. PHP lint, shell syntax and
 
 ### MULTI04B — gated read-only binary HTTP candidate (2026-09-20)
 
-MULTI04A is accepted at `99422dfb601282a5c5eceaafa6a02c34dc8b183b`, now the accepted
-implementation head. MULTI04B is READY_FOR_CODE_REVIEW, not physically HTTP-tested.
+Historical MULTI04B implementation record: MULTI04A was accepted at
+`99422dfb601282a5c5eceaafa6a02c34dc8b183b`. At creation, MULTI04B was
+READY_FOR_CODE_REVIEW and had no physical HTTP QA. MULTI04B is now accepted at
+`0daa1e52dd2bda11cad5d50f09ac0516725ef004`; MULTI04C evidence follows below.
 One non-overlapping branch in the existing documents block recognizes exactly
 GET `/documents/{id_or_uuid}/binary/{variant}` (four segments). Other methods and
 existing document routes are unchanged. Server context comes from
@@ -758,5 +770,115 @@ was used. Temporary synthetic QA storage was removed.
 The route exists only as gated source capability. Working DB remains PRE_MIGRATION;
 master/cohort runtime activation is unchanged and false. Multipart write 503,
 C04/C05/C21=false, M6 NO_GO_BLOCKED and all migration/cutover/production boundaries
-remain. Next: Director/assistant review, then separately authorized MULTI04C physical
-HTTP QA. No physical route invocation or activation occurred in this chapter.
+remain. At that chapter close, the next step was review followed by authorized
+MULTI04C physical HTTP QA. No physical invocation occurred during MULTI04B.
+
+
+### MULTI04C — isolated physical HTTP rehearsal (2026-09-20)
+
+MULTI04B controller and route are accepted at
+`0daa1e52dd2bda11cad5d50f09ac0516725ef004`. All ten mandatory HTTP scenarios
+passed against an exact `git archive` of that commit. The pushed annotated checkpoint
+is `checkpoint/clinical-pre-multi04c-20260920` at the same commit.
+
+The local engine reported MySQL **9.6.0**, hostname `192.168.1.10`, port `3306`,
+endpoint `127.0.0.1:3306`. The initial connection had `DATABASE()=NULL`.
+`mxmed_multi04c_87d850ea9b_mysql96` was proved absent, created, explicitly selected,
+and dropped after QA. No connection selected `mxmed`; no clone or real data was used.
+Migrations 01–05 were applied in order as synthetic prerequisites only, not re-audited;
+the September 17 attribution migration was not run.
+
+Minimal synthetic authority consisted of doctor A/B identities, patient A, only an
+active A→patient relationship, and an open encounter owned by A. The accepted internal
+multipart service/storage primitives created one document and ORIGINAL v1 manifest
+before the GET baseline (no multipart HTTP POST). The PDF was deterministic, 77 bytes,
+SHA-256 `68d3dbe223d4659eb030429ecc280a437eb6e9b042a59797cbbd9e16f56c1d56`.
+
+The frozen copy had no `api/mxmed-db.config.php`. Environment configuration selected
+only the disposable database. Private storage and PHP session files lived outside
+the source/document root in a unique OS-temp root. PHP 8.5.2 used real session files
+and normal PHPSESSID cookies; no authentication bypass or source injection was added.
+Localhost-only single-worker servers used ports 53470, 53488 and 53493 sequentially.
+Only their process environments enabled V1; cohort mode stayed off. HC09 unset the
+storage-root variable; HC10 disabled the master gate with the correct root restored.
+
+| Scenario | Physical result |
+| --- | --- |
+| HC01 no session | PASS — 401, no binary |
+| HC02 doctor B | PASS — generic 404, no identity/existence/path disclosure |
+| HC03 doctor A / UUID / ORIGINAL | PASS — 200, exact PDF bytes and SHA |
+| HC04 numeric document token | PASS — 200, identical PDF and headers |
+| HC05 absent DISPLAY | PASS — 404, no ORIGINAL fallback |
+| HC06 invalid OTHER | PASS — 404, no binary |
+| HC07 final object temporarily moved | PASS — 503 BINARY_UNAVAILABLE; exact object restored |
+| HC08 controlled temporary corruption | PASS — 503 BINARY_INTEGRITY_FAILED; exact bytes restored |
+| HC09 storage configuration unset | PASS — 503 PRIVATE_BINARY_STORAGE_NOT_CONFIGURED |
+| HC10 V1 master off | PASS — generic 404 |
+
+HC03/HC04 returned `Content-Type: application/pdf`, `X-Content-Type-Options: nosniff`,
+`Cache-Control: private, no-store`, `Content-Length: 77`, and
+`Content-Disposition: inline; filename="document.pdf"`.
+HC10 combines physical 404 with accepted source ordering: the master gate returns
+before document lookup/retrieval; no invasive query instrumentation was introduced.
+Range was not tested. No UI or multipart POST was invoked.
+
+All error bodies were scanned for private root/key/file path, synthetic patient/doctor
+identifiers and document UUID. Server logs were scanned for private root/key/file path
+and binary content; no disclosures found. Standard request URLs were permitted.
+Counts and SHA-256 hashes of ordered complete rows were identical before/after GETs:
+
+| Table | Rows | Before = after SHA-256 |
+| --- | ---: | --- |
+| clinical_documents | 1 | `9a0a39ff55353ef23ce776c463033e09ce8530c77f90e227392fb3bd8e7af2a9` |
+| clinical_document_binaries | 1 | `d1f77e1a059e2fb15e39ec98a496a6d25cc7d5b8d7c00da02073a8ce9c1cd69d` |
+| clinical_binary_uploads | 1 | `a29fa22f4fd0e700ced3eac48ffea3930554419609aa7c82a64c665fc7602b17` |
+| clinical_idempotency_requests | 1 | `083dad21f621f42e50939cecc7b6d5e66f0a13ca10eeff0028cd34808d6fc701` |
+| patients_doctor_links | 1 | `b3a83891fafe58641650e20b63b7549e6cb19a7a6a9f67363eca61a78b7a0f53` |
+| clinical_encounters | 1 | `2bc8e32efe118a5a86b4a7cc54a290e1e0f3142f34534a341829a1aafdb8a3a3` |
+
+Private-file relative keys, lengths, SHA-256 and permissions matched the post-fixture
+baseline after normal GETs, both controlled restorations, and final QA. All archived
+source file hashes matched, including router, HTTP helper, retrieval, storage,
+multipart service and migrations 01–05. No source repair occurred.
+Teardown verified zero residual databases, PHP processes, session files and temp roots;
+the temporary harness was removed. Only these three governance documents changed.
+
+```text
+MULTI04C_SOURCE_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
+SOURCE_CHANGED_DURING_HTTP_QA=false
+DB_ROWS_CHANGED_BY_HTTP_GET=false
+PRIVATE_STORAGE_CHANGED_BY_NORMAL_HTTP_GET=false
+MULTI04C_RESIDUAL_DATABASE_COUNT=0
+MULTI04C_RESIDUAL_HTTP_PROCESS_COUNT=0
+MULTI04C_RESIDUAL_SESSION_FILE_COUNT=0
+MULTI04C_RESIDUAL_TEMP_ROOT_COUNT=0
+PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
+M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
+V1_MULTIPART_503_PRESERVED=true
+V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
+MULTIPART_ACTIVE_CALLER_BLOCKER=true
+MULTIPART_HTTP_ACCEPTANCE=false
+C04_MULTIPART_ADAPTER=false
+C05_MULTIPART_ADAPTER=false
+C21_MULTIPART_ADAPTER=false
+M6_GO_NO_GO=NO_GO_BLOCKED
+GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
+WORKING_DB_SCHEMA_STATE=PRE_MIGRATION
+BACKUP_RESTORABLE=NOT_YET_PROVEN
+CLONE_MIGRATION_REHEARSAL=NOT_YET_EXECUTED
+MIGRATION_ACCOUNT_READY=false
+WRITE_WINDOW_READY=false
+PHASE_2_M6_EXECUTION_AUTHORIZED=false
+M6_AUTHORIZED=false
+WORKING_MXMED_DB_MIGRATION_AUTHORIZED=false
+FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_WORKING_MXMED=false
+RUNTIME_CUTOVER_AUTHORIZED=false
+PRODUCTION_EXECUTION_AUTHORIZED=false
+```
+
+MULTI04C is `PASS_READY_FOR_DIRECTOR_REVIEW`. The next-step candidate below applies
+only after successful Director/assistant review; it was not executed in this chapter.
+
+```text
+NEXT_AUTHORIZED_STEP=Proceed to repository-only multipart write integration/adapters, beginning with the canonical V1 encounter-document multipart service path and then C04/C05/C21 one by one. Preserve legacy guards until each caller is separately accepted. Working-database migration, activation and cutover remain unauthorized.
+```
