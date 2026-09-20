@@ -94,14 +94,11 @@ function clinical_m6_cohort_pairs(): array
     return array_values($pairs);
 }
 
-function clinical_m6_cohort_authorized(string $doctorId, string $patientId): bool
+function clinical_m6_cohort_pair_configured(string $doctorId, string $patientId): bool
 {
     $doctorId = trim($doctorId);
     $patientId = trim($patientId);
     if ($doctorId === '' || $patientId === '') {
-        return false;
-    }
-    if (clinical_m6_emergency_off()) {
         return false;
     }
     if (clinical_m6_cohort_mode() === 'off') {
@@ -118,13 +115,24 @@ function clinical_m6_cohort_authorized(string $doctorId, string $patientId): boo
     return false;
 }
 
+function clinical_m6_cohort_authorized(string $doctorId, string $patientId): bool
+{
+    $doctorId = trim($doctorId);
+    $patientId = trim($patientId);
+    if ($doctorId === '' || $patientId === '') {
+        return false;
+    }
+    if (clinical_m6_emergency_off()) {
+        return false;
+    }
+
+    return clinical_m6_cohort_pair_configured($doctorId, $patientId);
+}
+
 function clinical_m6_patient_in_any_cohort(string $patientId): bool
 {
     $patientId = trim($patientId);
     if ($patientId === '') {
-        return false;
-    }
-    if (clinical_m6_emergency_off()) {
         return false;
     }
     if (clinical_m6_cohort_mode() === 'off') {
@@ -138,4 +146,9 @@ function clinical_m6_patient_in_any_cohort(string $patientId): bool
     }
 
     return false;
+}
+
+function clinical_m6_legacy_write_block_required(string $patientId): bool
+{
+    return clinical_m6_patient_in_any_cohort($patientId);
 }

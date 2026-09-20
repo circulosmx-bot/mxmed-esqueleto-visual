@@ -4,7 +4,8 @@
 CHAPTER=CLIN-REFORM-PHASE2-M6-PLAN01
 PLAN_STATUS=ACCEPTED
 PLAN_ACCEPTED_HEAD=7dc615c772ef611a49229e3e1da91b569d6cf73d
-CTRL01_STATUS=READY_FOR_CODE_REVIEW
+CTRL01_STATUS=BLOCKED_PENDING_R1_REVIEW
+CTRL01_R1_STATUS=READY_FOR_CODE_REVIEW
 PLANNING=true
 REPOSITORY_INVENTORY=true
 WORKING_DB_PREFLIGHT=READ_ONLY_ONLY
@@ -318,11 +319,16 @@ No flag was enabled by PLAN01.
 
 ## 12. Cohort/patient scoping capability
 
-CTRL01 provides a repository-only candidate control-plane primitive in `api/_lib/clinical_m6_cutover.php`. It reads only server environment configuration, defaults OFF, requires exact canonical doctor/patient pairs, derives patient-level membership for future legacy-write blocking, fails closed on malformed active configuration and gives emergency OFF highest precedence.
+CTRL01 provides a repository-only candidate control-plane primitive in `api/_lib/clinical_m6_cutover.php`. It reads only server environment configuration, defaults OFF, requires exact canonical doctor/patient pairs, derives patient-level membership for future legacy-write blocking and fails closed on malformed active configuration. Review found that the original helper gave emergency OFF precedence over configured patient membership. That erased the information needed to keep legacy writers blocked during safe return, so CTRL01 is blocked pending R1 review.
+
+R1 separates configured membership from active V1 routing authorization. `clinical_m6_cohort_pair_configured()` evaluates the exact configured doctor/patient pair without consulting emergency OFF. `clinical_m6_patient_in_any_cohort()` derives configured patient membership the same way, and `clinical_m6_legacy_write_block_required()` preserves that membership as the future legacy-write block decision. `clinical_m6_cohort_authorized()` alone applies emergency OFF before permitting V1 routing. A malformed active allowlist continues to raise `M6_COHORT_CONFIG_INVALID` in membership and legacy-block paths even while emergency OFF is active; it cannot silently reopen a legacy writer.
 
 ```text
 M6_COHORT_SCOPING_CAPABILITY=CANDIDATE_AVAILABLE_PENDING_REVIEW
 M6_COHORT_CONTROL_PLANE=IMPLEMENTED_PENDING_CODE_REVIEW
+M6_SAFE_RETURN_MEMBERSHIP_SEMANTICS=REPAIRED_PENDING_REVIEW
+EMERGENCY_OFF_MEANS_STOP_M6_ROUTING=true
+EMERGENCY_OFF_MEANS_REENABLE_LEGACY_WRITES=false
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 LEGACY_WRITER_BLOCKING_ACTIVE=false
 COHORT_STATE_STORED_IN_CLINICAL_DB=false
@@ -414,7 +420,7 @@ Known blockers, in actionable order:
 
 1. 11 active caller families can bypass or fail the hardened V1 contract; adapters/explicit blocks are absent.
 2. Active multipart clinical writes conflict with V1's fail-closed multipart deferral.
-3. The candidate cohort control plane is pending code review and is not wired to runtime routing or legacy guards.
+3. The R1 candidate cohort control plane is pending code review and is not wired to runtime routing or legacy guards.
 4. The working schema is pre-migration (01–04 not applied).
 5. No restorable backup has been proved.
 6. No isolated working-data clone migration rehearsal has been executed.
@@ -426,5 +432,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CTRL01 fail-closed cohort control plane before wiring caller adapters and explicit legacy-write blocks. No backup, clone, migration, feature-gate activation or cutover authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CTRL01-R1 safe-return cohort-membership semantics before runtime routing, caller adapters or legacy-write blocking. No backup, clone, migration, feature-gate activation or cutover authorized.
 ```

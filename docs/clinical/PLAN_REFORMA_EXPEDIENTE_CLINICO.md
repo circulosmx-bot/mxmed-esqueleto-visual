@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CTRL01 fail-closed cohort control plane before wiring caller adapters and explicit legacy-write blocks. No backup, clone, migration, feature-gate activation or cutover authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CTRL01-R1 safe-return cohort-membership semantics before runtime routing, caller adapters or legacy-write blocking. No backup, clone, migration, feature-gate activation or cutover authorized.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -249,7 +249,10 @@ PHASE_2_M6_PLAN_AUTHORIZED=true
 PHASE_2_M6_PLAN01=ACCEPTED
 M6_PLAN01_ACCEPTED_HEAD=7dc615c772ef611a49229e3e1da91b569d6cf73d
 PHASE_2_M6_STATUS=PLANNING
-PHASE_2_M6_CTRL01=READY_FOR_CODE_REVIEW
+PHASE_2_M6_CTRL01=BLOCKED_PENDING_R1_REVIEW
+M6_CTRL01_BLOCKER=EMERGENCY_OFF_ERASES_CONFIGURED_PATIENT_MEMBERSHIP
+PHASE_2_M6_CTRL01_R1=READY_FOR_CODE_REVIEW
+M6_SAFE_RETURN_MEMBERSHIP_SEMANTICS=REPAIRED_PENDING_REVIEW
 M6_COHORT_CONTROL_PLANE=IMPLEMENTED_PENDING_CODE_REVIEW
 M6_COHORT_SCOPING_CAPABILITY=CANDIDATE_AVAILABLE_PENDING_REVIEW
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
@@ -289,7 +292,7 @@ La UI anterior debe conservar lecturas y borradores legacy aislados. El retorno 
 
 ## Estado PLAN01 de M6
 
-El [plan de cutover backend M6](EXPEDIENTE_ENCOUNTER_M6_CUTOVER_PLAN.md) queda `ACCEPTED` en `7dc615c772ef611a49229e3e1da91b569d6cf73d`. El inventario cubre 21 familias runtime, 17 con capacidad de escritura; 11 requieren adaptador o bloqueo explícito antes de M6. El preflight autorizado fue estrictamente de sólo lectura y confirmó la identidad de la base de trabajo, 13 encounters legacy sin atribución médica y esquema `PRE_MIGRATION` con migraciones 01–04 `NOT_APPLIED`. No se infirió titularidad ni se cambió esquema o dato alguno.
+El [plan de cutover backend M6](EXPEDIENTE_ENCOUNTER_M6_CUTOVER_PLAN.md) queda `ACCEPTED` en `7dc615c772ef611a49229e3e1da91b569d6cf73d`. El inventario cubre 21 familias runtime, 17 con capacidad de escritura; 11 requieren adaptador o bloqueo explícito antes de M6. El preflight autorizado fue estrictamente de sólo lectura y confirmó la identidad de la base de trabajo, 13 encounters legacy sin atribución médica y esquema `PRE_MIGRATION` con migraciones 01–04 `NOT_APPLIED`. No se infirió titularidad ni se cambió esquema o dato alguno. CTRL01 queda `BLOCKED_PENDING_R1_REVIEW` porque emergency OFF borraba la membresía configurada por paciente; R1 separa esa membresía de la autorización activa y conserva el futuro bloqueo legacy durante retorno seguro.
 
 M6 permanece `NO_GO_BLOCKED`: hay writers legacy no controlados, multipart activo incompatible con el V1 fail-closed, la capacidad candidata de cohorte CTRL01 está pendiente de revisión y aún no se conecta al runtime, no existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
 
@@ -566,4 +569,5 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-EXEC01-RERUN2 | REPAIR01 aceptado y fuente única `115923cac322958ad4f443ab783a8cf19f9c5093` | Tercer intento físico M5 completo desde T01: T01–T35 `PASS`; T04/T11/T26 probaron concurrencia real con dos conexiones InnoDB; T27 devolvió `409/DOCUMENT_CONTEXT_MISMATCH` sin insertar documento ni idempotencia; T28 no produjo DDL/DML; deadlock controlado e invariantes posteriores `PASS`. Teardown completo con cero bases, procesos HTTP, barreras o raíces temporales residuales; la base MXMed de trabajo no se conectó. `PHASE_2_M5_STATUS=PASS_READY_FOR_DIRECTOR_REVIEW`; M6, migración de base de trabajo, cutover, producción y PHASE 3 continúan no autorizados. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-CLOSEOUT | Evidencia aceptada `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2`; source probado y aceptado `115923cac322958ad4f443ab783a8cf19f9c5093` | M5 y la matriz física T01–T35 quedan `ACCEPTED`; concurrencia T04/T11/T26, reparación T27, ausencia de DDL/DML en T28, T31A, idempotencia T32–T34, integridad T35, deadlock controlado, aislamiento y teardown aceptados. PHASE 2 continúa `IN_PROGRESS`; sólo queda autorizada la preparación/revisión del plan y preflight M6. Ejecución M6, migración de la base de trabajo, feature gate, cutover, producción y PHASE 3 permanecen no autorizados. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-PLAN01 | Baseline/checkpoint `4d99237e3fe87679bfb74cb30ac213d7530a30f5`; source clínico aceptado `115923cac322958ad4f443ab783a8cf19f9c5093` | Inventario completo de 21 familias runtime y preflight de sólo lectura de la base de trabajo. Esquema `PRE_MIGRATION`; 13 encounters legacy `UNATTRIBUTED`; migraciones 01–04 no aplicadas. Plan de backup/restore, clon, cuenta separada, ventana, gate, monitoreo, abort y retorno seguro documentado. `READY_FOR_DIRECTOR_REVIEW`, `NO_GO_BLOCKED`; cero cambios DB/runtime y ejecución M6 no autorizada. |
-| 2026-09-19 | CLIN-REFORM-PHASE2-M6-CTRL01 | PLAN01 aceptado `7dc615c772ef611a49229e3e1da91b569d6cf73d` | Control de cohorte fail-closed preparado para revisión: configuración server-only, default OFF, pares exactos médico/paciente, membresía por paciente derivada, error estable ante configuración activa inválida y emergency OFF con precedencia. Sin wiring runtime, bloqueo legacy, conexión DB, migración, gate o cutover. `READY_FOR_CODE_REVIEW`; M6 continúa `NO_GO_BLOCKED`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M6-CTRL01 | PLAN01 aceptado `7dc615c772ef611a49229e3e1da91b569d6cf73d` | La revisión detectó que emergency OFF borraba la membresía configurada por paciente y podía reabrir futuros writers legacy durante retorno seguro. CTRL01 queda `BLOCKED_PENDING_R1_REVIEW`; sin wiring runtime, bloqueo legacy activo, conexión DB, migración, gate o cutover. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M6-CTRL01-R1 | Reparación sobre `0c527528847ae425f373c062baf6b9d89821101b` | Separadas membresía configurada, autorización activa V1 y decisión futura de bloqueo legacy. Emergency OFF detiene routing M6 pero conserva membresía y bloqueo; configuración activa inválida sigue fallando con `M6_COHORT_CONFIG_INVALID` y no puede desbloquear legacy. `READY_FOR_CODE_REVIEW`; sin wiring runtime ni cambios DB. M6 continúa `NO_GO_BLOCKED`. |
