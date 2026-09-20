@@ -168,6 +168,37 @@ function clinical_document_lineage_context_matches(array $left, array $right): b
     return $leftPatient !== '' && $leftPatient === $rightPatient && $leftEncounter === $rightEncounter;
 }
 
+function clinical_document_result_lineage_refs_match(array $originalPayload, array $replacementPayload): bool
+{
+    $originalRefs = clinical_document_related_order_refs($originalPayload);
+    $replacementRefs = clinical_document_related_order_refs($replacementPayload);
+    sort($originalRefs);
+    sort($replacementRefs);
+    return $originalRefs !== [] && $replacementRefs === $originalRefs;
+}
+
+function clinical_document_related_order_refs(array $payload): array
+{
+    $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+    $values = [
+        $payload['related_order_document_id'] ?? null,
+        $payload['related_order_document_uuid'] ?? null,
+        $payload['related_document_id'] ?? null,
+        $payload['related_document_uuid'] ?? null,
+        $payload['related_order_id'] ?? null,
+        $context['related_order_document_id'] ?? null,
+        $context['related_order_document_uuid'] ?? null,
+        $context['related_document_id'] ?? null,
+        $context['related_document_uuid'] ?? null,
+    ];
+    $refs = [];
+    foreach ($values as $value) {
+        $value = trim((string)($value ?? ''));
+        if ($value !== '' && !in_array($value, $refs, true)) $refs[] = $value;
+    }
+    return $refs;
+}
+
 function clinical_document_amendment_semantic_request(
     string $doctorId,
     array $original,

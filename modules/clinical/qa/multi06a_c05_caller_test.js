@@ -37,7 +37,14 @@ async function failedRetry(scope, fingerprint) {
   await failedRetry("c05-result:enc:1:order-1:lab_result", "changed-result-fingerprint");
   if (observed[4].key === observed[3].key) throw new Error("changed result reused semantic key");
 
-  console.log("MULTI06A_C05_CALLER_QA=PASS Q04,Q15 stable retry keys and changed semantics");
+  await failedRetry("c05-order-replacement:order-1:lab_order", "replacement-fingerprint");
+  await failedRetry("c05-order-replacement:order-1:lab_order", "replacement-fingerprint");
+  if (observed[5].key !== observed[6].key) throw new Error("replacement retry changed key");
+
+  await failedRetry("c05-order-replacement:order-1:lab_order", "changed-replacement-fingerprint");
+  if (observed[7].key === observed[6].key) throw new Error("changed replacement reused semantic key");
+
+  console.log("MULTI06A_C05_CALLER_QA=PASS Q04,Q15 replacement stable retry keys and changed semantics");
 })().catch((error) => {
   console.error(error.stack || error);
   process.exitCode = 1;

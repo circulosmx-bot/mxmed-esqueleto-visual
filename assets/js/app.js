@@ -71463,11 +71463,10 @@ function mxResetLogoPreview(){
     if(!safeEncounterKey) return '';
     return `/api/clinical/index.php/encounters/${encodeURIComponent(safeEncounterKey)}/documents`;
   }
-  function buildScopedClinicalDocumentReplaceUrl(docRef){
-    const doctorId = resolveClinicalDocumentsDoctorId();
+  function buildClinicalDocumentAmendmentUrl(docRef){
     const safeRef = clean(docRef);
-    if(!doctorId || !safeRef) return '';
-    return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeRef)}/replace`;
+    if(!safeRef) return '';
+    return `/api/clinical/index.php/documents/${encodeURIComponent(safeRef)}/amendments`;
   }
   function setOrderFeedback(message, tone = 'muted'){
     if(!orderFeedbackEl) return;
@@ -72835,6 +72834,16 @@ function mxResetLogoPreview(){
   function syncCanonicalOrderCardsFromDocuments(rows, resultsIndex = new Map()){
     if(!orderList || !Array.isArray(rows)) return;
     orderList.innerHTML = '';
+    const lineageSuccessors = new Map();
+    rows.forEach((row)=>{
+      const payload = (row && typeof row.__docPayload === 'object') ? row.__docPayload : {};
+      const lifecycle = resolveDiagnosticOrderLifecycle(payload);
+      if(!lifecycle.replacementSourceRef) return;
+      lineageSuccessors.set(lifecycle.replacementSourceRef, {
+        id: clean(row?.id || row?.__docId),
+        uuid: clean(row?.document_uuid || row?.document_id || row?.__docUuid || '')
+      });
+    });
     const newestRow = rows.find((row)=> resolveDocRefMatch(row, lastCreatedOrderRef)) || null;
     const historicalRows = newestRow ? rows.filter((row)=> !resolveDocRefMatch(row, lastCreatedOrderRef)) : rows.slice();
     const historicalLimit = 5;
@@ -72852,6 +72861,11 @@ function mxResetLogoPreview(){
       const parsedSelectionCount = countMatch ? Number(countMatch[1]) : 0;
       const payload = (row && typeof row.__docPayload === 'object') ? row.__docPayload : {};
       const lifecycle = resolveDiagnosticOrderLifecycle(payload);
+      const successor = lineageSuccessors.get(docUuid) || lineageSuccessors.get(docId) || null;
+      if(successor){
+        lifecycle.status = 'replaced';
+        lifecycle.replacedByRef = successor.uuid || successor.id;
+      }
       const preview = buildDiagnosticOrderPreview(row, payload);
       const relatedResult = resultsIndex.get(docId) || resultsIndex.get(docUuid) || null;
       prependOrderCard({
@@ -73092,31 +73106,64 @@ function mxResetLogoPreview(){
       let resp;
       let json = null;
       if(isReplacementMode){
-        const body = {
-          document_type: documentType,
-          order_area: area || null,
-          priority: priority || null,
-          indication: indication || null,
-          requested_studies: items,
-          flags: flags,
-          replacement_reason: replacementReason || null,
-          summary_override: summary,
-          title_override: title,
-          event_datetime: eventDatetime
-        };
-        const replaceUrl = buildScopedClinicalDocumentReplaceUrl(replacementRef);
-        if(!replaceUrl){
-          throw new Error('No se pudo resolver el médico para reemplazar documentos clínicos.');
+        const amendmentUrl = buildClinicalDocumentAmendmentUrl(replacementRef);
+        if(!amendmentUrl){
+          throw new Error('No se pudo resolver el documento clínico que se reemplazará.');
         }
-        resp = await fetch(replaceUrl, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json'
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(body)
+        if(!window.mxmedClinicalCommandKeys?.run){
+          throw new Error('No está disponible la protección idempotente para reemplazar la orden.');
+        }
+        const reason = replacementReason || 'Reemplazo de orden diagnóstica';
+        const replacementPayload = {
+          ...payloadData,
+          source: 'estudios_host_replace',
+          replacement_mode: 'replacement',
+          replacement_source_document_id: clean(orderReplacementState.sourceId || '') || null,
+          replacement_source_document_uuid: clean(orderReplacementState.sourceUuid || '') || null
+        };
+        const scope = `c05-order-replacement:${replacementRef}:${documentType}`;
+        const fingerprint = JSON.stringify({
+          replacementRef,
+          documentType,
+          title,
+          summary,
+          reason,
+          payload: replacementPayload
         });
+        const canonicalResult = await window.mxmedClinicalCommandKeys.run(
+          scope,
+          fingerprint,
+          ()=> ({ amendmentUrl, documentType, title, summary, eventDatetime, reason, replacementPayload }),
+          async ({ key, command })=> {
+            const response = await fetch(command.amendmentUrl, {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'Idempotency-Key': key
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                reason: command.reason,
+                replacement: {
+                  document_type: command.documentType,
+                  title: command.title,
+                  summary: command.summary,
+                  event_datetime: command.eventDatetime,
+                  payload: command.replacementPayload
+                }
+              })
+            });
+            const responseJson = await response.json().catch(()=> null);
+            if(!response.ok || !responseJson || responseJson.ok !== true){
+              const message = clean(responseJson?.message || responseJson?.error?.message || responseJson?.error || `HTTP ${response.status}`) || 'No se pudo reemplazar la orden.';
+              throw new Error(message);
+            }
+            return { response, json: responseJson };
+          }
+        );
+        resp = canonicalResult.response;
+        json = canonicalResult.json;
       }else{
         const createUrl = encounterKey
           ? buildEncounterClinicalDocumentCreateUrl(encounterKey)
@@ -73193,7 +73240,8 @@ function mxResetLogoPreview(){
         throw new Error(message);
       }
       const documentUuid = clean(
-        json?.data?.replacement_document?.document_id
+        json?.data?.new_document_uuid
+        || json?.data?.replacement_document?.document_id
         || json?.data?.replacement_document_uuid
         || json?.data?.document?.document_uuid
         || json?.data?.document?.document_id
@@ -73202,7 +73250,8 @@ function mxResetLogoPreview(){
         || ''
       );
       const documentDbId = clean(
-        json?.data?.replacement_document?.document_db_id
+        json?.data?.new_document_id
+        || json?.data?.replacement_document?.document_db_id
         || json?.data?.replacement_document_id
         || json?.data?.document?.document_db_id
         || json?.data?.document?.id

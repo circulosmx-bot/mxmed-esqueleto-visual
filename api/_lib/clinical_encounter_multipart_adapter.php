@@ -76,6 +76,49 @@ function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array 
     );
 }
 
+/** Canonical append-only amendment with an immutable successor binary. */
+function clinical_document_amendment_multipart_execute(PDO $pdo, array $original, array $command,
+    array $doctor, array $files, string $idempotencyKey): array
+{
+    $file = clinical_encounter_multipart_file($files);
+    [$root, $ttl] = clinical_encounter_multipart_config();
+    try {
+        $storage = new ClinicalPrivateBinaryStorage($root);
+    } catch (Throwable) {
+        throw new RuntimeException('V1_MULTIPART_STORAGE_NOT_READY');
+    }
+    $replacement = $command['replacement'];
+    $encounterId = isset($original['encounter_ref_id']) ? (int)$original['encounter_ref_id'] : 0;
+    $context = [
+        'operation' => 'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT',
+        'doctor_id' => $doctor['doctor_id'],
+        'patient_id' => $original['patient_id'],
+        'context_type' => $encounterId > 0 ? 'ENCOUNTER' : 'PATIENT',
+        'context_id' => $encounterId > 0 ? (string)$encounterId : (string)$original['patient_id'],
+        'document_type' => strtolower(trim((string)$replacement['document_type'])),
+        'metadata' => clinical_document_amendment_semantic_request(
+            (string)$doctor['doctor_id'], $original, $replacement, (string)$command['reason']
+        ),
+    ];
+    return (new ClinicalMultipartDocumentService($pdo, $storage))->execute(
+        $context, $idempotencyKey, (string)$doctor['user_id'], $file['tmp_name'], $file['name'],
+        (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $ttl . ' seconds'),
+        function (PDO $transaction, string $documentUuid) use ($original, $replacement, $command, $doctor): array {
+            $revisionId = clinical_v1_document_amendment_insert(
+                $transaction, $original, $replacement, (string)$command['reason'], $doctor, $documentUuid
+            );
+            $revision = clinical_v1_document_revision_fetch($transaction, $revisionId);
+            return [
+                'document_id' => (int)$revision['new_document_id'],
+                'document_uuid' => $documentUuid,
+                'result_column' => 'document_revision_id',
+                'result_id' => $revisionId,
+            ];
+        },
+        static fn(PDO $transaction, string $column, int $id): array => clinical_v1_document_revision_fetch($transaction, $id)
+    );
+}
+
 /** Public error codes only; never forward storage paths or exception text. */
 function clinical_encounter_multipart_error(Throwable $error): array
 {
@@ -84,7 +127,11 @@ function clinical_encounter_multipart_error(Throwable $error): array
     if ($code === 'V1_MULTIPART_STORAGE_NOT_READY' || str_starts_with($code, 'MULTIPART_STORAGE_SCHEMA_NOT_READY')) return [503, 'V1_MULTIPART_STORAGE_NOT_READY'];
     if ($code === 'MULTIPART_FILE_REQUIRED') return [400, $code];
     if (in_array($code, ['STAGING_MAX_BYTES_EXCEEDED', 'STAGING_MIME_NOT_ALLOWED', 'STAGING_SOURCE_NOT_REGULAR_FILE'], true)) return [400, 'MULTIPART_FILE_INVALID'];
-    if (in_array($code, ['ENCOUNTER_VOIDED', 'ENCOUNTER_TERMINAL', 'ENCOUNTER_CLOSED', 'DOCUMENT_CONTEXT_MISMATCH', 'DOCUMENT_OPERATION_UNSUPPORTED', 'ENCOUNTER_NOT_FOUND'], true)) return [clinical_v1_error_status($error), clinical_v1_error_code($error)];
+    if (in_array($code, ['ENCOUNTER_VOIDED', 'ENCOUNTER_TERMINAL', 'ENCOUNTER_CLOSED', 'DOCUMENT_CONTEXT_MISMATCH',
+        'DOCUMENT_TYPE_MISMATCH', 'DOCUMENT_ALREADY_SUPERSEDED', 'DOCUMENT_LINEAGE_INVALID',
+        'DOCUMENT_OPERATION_UNSUPPORTED', 'DOCUMENT_NOT_FOUND', 'ENCOUNTER_NOT_FOUND'], true)) {
+        return [clinical_v1_error_status($error), clinical_v1_error_code($error)];
+    }
     return [500, 'server_error'];
 }
 
@@ -96,6 +143,18 @@ function clinical_encounter_multipart_response(array $result): array
     return [$replay ? 200 : 201, [
         'ok' => true, 'error' => null, 'message' => 'document created', 'data' => $result,
         'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents',
+            'idempotency_replay' => $replay, 'binary_cleanup_pending' => $cleanup],
+    ]];
+}
+
+function clinical_document_amendment_multipart_response(array $result): array
+{
+    $replay = ($result['_idempotency_replay'] ?? false) === true;
+    $cleanup = ($result['cleanup_pending'] ?? false) === true;
+    unset($result['_idempotency_replay'], $result['cleanup_pending']);
+    return [$replay ? 200 : 201, [
+        'ok' => true, 'error' => null, 'message' => 'document amendment created', 'data' => $result,
+        'meta' => ['method' => 'POST', 'route' => 'documents/{document_id_or_uuid}/amendments',
             'idempotency_replay' => $replay, 'binary_cleanup_pending' => $cleanup],
     ]];
 }

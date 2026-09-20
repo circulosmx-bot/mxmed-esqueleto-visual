@@ -23,6 +23,7 @@ verify(clinical_encounter_multipart_error(new RuntimeException('MULTIPART_STORAG
 verify(clinical_encounter_multipart_error(new RuntimeException('/private/secret'))===[500,'server_error'],'W14 unknown path redacted');
 foreach(['MULTIPART_DATABASE_COORDINATION_FAILED','MULTIPART_STAGED_COORDINATION_FAILED'] as $code)verify(clinical_encounter_multipart_error(new RuntimeException($code))===[500,'server_error'],'W13 coordination fails closed');
 foreach([false,true] as $replay){[$status,$response]=clinical_encounter_multipart_response(['document_id'=>1,'document_uuid'=>'uuid','_idempotency_replay'=>$replay,'cleanup_pending'=>true]);verify($status===($replay?200:201)&&$response['meta']['idempotency_replay']===$replay&&!isset($response['data']['cleanup_pending'])&&$response['meta']['binary_cleanup_pending']===true,'W15 canonical response replay '.(int)$replay);}
+foreach([false,true] as $replay){[$status,$response]=clinical_document_amendment_multipart_response(['document_revision_id'=>3,'new_document_id'=>2,'new_document_uuid'=>'uuid-2','_idempotency_replay'=>$replay,'cleanup_pending'=>false]);verify($status===($replay?200:201)&&$response['meta']['idempotency_replay']===$replay&&!isset($response['data']['cleanup_pending'])&&$response['data']['document_revision_id']===3,'C05 amendment response replay '.(int)$replay);}
 // Fake PDO captures actual canonical builder/writer parameters without a driver/connection.
 class W05Statement extends PDOStatement {
  public function __construct(private W05Pdo $pdo,private bool $columns=false,private bool $document=false){}
@@ -44,3 +45,4 @@ echo "MULTI05A_ADAPTER_QA=PASS; ANY_DATABASE_CONNECTED=false\n";
 
 foreach(['IDEMPOTENCY_KEY_INVALID'=>400,'IDEMPOTENCY_KEY_REUSED'=>409,'IDEMPOTENCY_RESULT_NOT_READY'=>409] as $code=>$status) verify(clinical_encounter_multipart_error(new ClinicalIdempotencyException($code,'nonpublic internal details',$status))===[$status,$code],'canonical idempotency '.$code);
 foreach(['ENCOUNTER_VOIDED','ENCOUNTER_TERMINAL','DOCUMENT_CONTEXT_MISMATCH','DOCUMENT_OPERATION_UNSUPPORTED'] as $code){$error=new RuntimeException($code);verify(clinical_encounter_multipart_error($error)===[clinical_v1_error_status($error),clinical_v1_error_code($error)],'canonical policy '.$code);}
+foreach(['DOCUMENT_TYPE_MISMATCH','DOCUMENT_ALREADY_SUPERSEDED','DOCUMENT_LINEAGE_INVALID','DOCUMENT_NOT_FOUND'] as $code){$error=new RuntimeException($code);verify(clinical_encounter_multipart_error($error)===[clinical_v1_error_status($error),clinical_v1_error_code($error)],'canonical amendment '.$code);}

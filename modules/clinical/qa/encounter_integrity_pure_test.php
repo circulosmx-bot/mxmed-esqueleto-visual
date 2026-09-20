@@ -132,6 +132,15 @@ check(clinical_document_lineage_context_matches($lineageDocument, ['patient_id' 
 check(!clinical_document_lineage_context_matches($lineageDocument, ['patient_id' => 'patient-2', 'encounter_ref_id' => 17]), 'document lineage rejects cross-patient context');
 check(!clinical_document_lineage_context_matches($lineageDocument, ['patient_id' => 'patient-1', 'encounter_ref_id' => 18]), 'document lineage rejects cross-encounter context');
 
+$resultLineage = ['related_order_document_id' => '71', 'related_order_document_uuid' => 'order-71'];
+check(clinical_document_result_lineage_refs_match($resultLineage, [
+    'related_order_document_uuid' => 'order-71', 'related_order_document_id' => '71',
+]), 'result replacement preserves the exact originating order reference set');
+check(!clinical_document_result_lineage_refs_match($resultLineage, [
+    'related_order_document_id' => '72', 'related_order_document_uuid' => 'order-72',
+]), 'result replacement rejects a different originating order');
+check(!clinical_document_result_lineage_refs_match($resultLineage, []), 'result replacement cannot drop originating order authority');
+
 $amendmentOriginal = ['id' => 41, 'document_uuid' => 'doc-41', 'patient_id' => 'patient-1', 'encounter_ref_id' => 17];
 $amendmentReplacement = [
     'document_type' => 'prescription',
