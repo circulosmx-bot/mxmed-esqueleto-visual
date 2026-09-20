@@ -7077,6 +7077,17 @@ try {
                 if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
+                if (clinical_encounter_integrity_v1_enabled()) {
+                    $code = clinical_v1_error_code($e);
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => ['code' => $code, 'message' => $e->getMessage()],
+                        'message' => '',
+                        'data' => null,
+                        'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                    ], clinical_v1_error_status($e));
+                    return;
+                }
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
                     'ok' => false,

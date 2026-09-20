@@ -120,6 +120,15 @@ grep -q 'V1_MULTIPART_STORAGE_NOT_READY' "$ROUTER"
 ! sed -n '/function clinical_v1_document_insert/,/function clinical_v1_document_fetch/p' "$ROUTER" | grep -q 'mxmed_ensure_clinical_docs_schema'
 grep -q "getenv('MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1') ?: ''" "$INTEGRITY"
 
+# REPAIR01: the shared document route preserves legacy behavior while V1 domain
+# exceptions delegate to the canonical error code and status mappers.
+document_route="$(sed -n "/if (count(\$segments) === 3 && (\$segments\[2\] ?? '') === 'documents' && \$method === 'POST')/,/if (count(\$segments) === 2 && \$method === 'GET')/p" "$ROUTER")"
+grep -q 'if (clinical_encounter_integrity_v1_enabled())' <<< "$document_route"
+grep -q 'clinical_v1_error_code($e)' <<< "$document_route"
+grep -q 'clinical_v1_error_status($e)' <<< "$document_route"
+grep -q "'error' => 'server_error'" <<< "$document_route"
+grep -q "'DOCUMENT_CONTEXT_MISMATCH'.*return 409" "$ROUTER"
+
 # The three encounter GET branches use readiness inspection when V1 is enabled.
 test "$(grep -c 'clinical_encounter_integrity_assert_schema_ready' "$ROUTER")" -ge 4
 grep -q "doctor_id,patient_id,open_guard" "$ROOT/api/_lib/clinical_encounter_integrity.php"

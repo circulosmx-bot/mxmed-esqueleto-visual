@@ -16,6 +16,21 @@ function check(bool $condition, string $name): void
     echo "PASS: {$name}\n";
 }
 
+putenv('MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1=1');
+$_SERVER['REQUEST_METHOD'] = 'GET';
+$_SERVER['REQUEST_URI'] = '/api/clinical/__qa_mapping_probe__';
+$_SERVER['SCRIPT_NAME'] = '/api/clinical/index.php';
+ob_start();
+require_once __DIR__ . '/../../../api/clinical/index.php';
+ob_end_clean();
+
+$documentContextMismatch = new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+check(clinical_v1_error_status($documentContextMismatch) === 409, 'document context mismatch maps to HTTP 409');
+check(clinical_v1_error_code($documentContextMismatch) === 'DOCUMENT_CONTEXT_MISMATCH', 'document context mismatch preserves canonical error code');
+$unknownV1Error = new RuntimeException('unexpected internal failure');
+check(clinical_v1_error_status($unknownV1Error) === 500, 'unknown V1 exception maps to HTTP 500');
+check(clinical_v1_error_code($unknownV1Error) === 'server_error', 'unknown V1 exception maps to server_error');
+
 putenv('MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1');
 check(clinical_encounter_integrity_v1_enabled() === false, 'feature gate defaults OFF');
 
