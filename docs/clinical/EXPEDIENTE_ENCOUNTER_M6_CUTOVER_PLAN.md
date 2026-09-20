@@ -14,7 +14,7 @@ CALLER01_STATUS=ACCEPTED
 M6_CALLER01_ACCEPTED_HEAD=0baeefb8eff98f9de80429d0ad9d164190508fbc
 PHASE_2_M6_ROUTE01=ACCEPTED
 M6_ROUTE01_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
-CURRENT_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
+CURRENT_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
 M6_COHORT_ROUTING_CAPABILITY=ACCEPTED
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 PHASE_2_M6_MULTI01=ACCEPTED
@@ -29,16 +29,21 @@ MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-PHASE_2_M6_MULTI03A=BLOCKED_PENDING_R1_REVIEW
+PHASE_2_M6_MULTI03A=ACCEPTED
 M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
-MULTI03A_BLOCKER=FINALIZATION_REMOVES_STAGING_BEFORE_FUTURE_DB_COMMIT
-PHASE_2_M6_MULTI03A_R1=READY_FOR_CODE_REVIEW
+MULTI03A_BLOCKER=NONE
+PHASE_2_M6_MULTI03A_R1=ACCEPTED
+M6_MULTI03A_R1_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
+PHASE_2_M6_MULTI03B=READY_FOR_CODE_REVIEW
+MULTIPART_COORDINATION_REPOSITORY=IMPLEMENTED_PENDING_REVIEW
+MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
+MULTIPART_TRANSACTION_ORCHESTRATION=IMPLEMENTED_PENDING_REVIEW
 FINALIZATION_PRESERVES_STAGING=true
 STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
-PRIVATE_BINARY_STORAGE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
-PRIVATE_STAGING_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
-CREATE_ONLY_FINALIZATION_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
-RECONCILIATION_PRIMITIVES=IMPLEMENTED_PENDING_REVIEW
+PRIVATE_BINARY_STORAGE_ADAPTER=ACCEPTED
+PRIVATE_STAGING_PRIMITIVE=ACCEPTED
+CREATE_ONLY_FINALIZATION_PRIMITIVE=ACCEPTED
+RECONCILIATION_PRIMITIVES=ACCEPTED
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 PLANNING=true
@@ -127,7 +132,7 @@ Supporting sources were audited but are not counted as separate clinical-state c
 
 ### Multipart deferral
 
-`V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`. Active consent attachments, order/result uploads and diagnostic uploads use multipart legacy document routes. They are a current cutover blocker because the V1 encounter-document and document-amendment surfaces reject multipart with `503/V1_MULTIPART_STORAGE_NOT_READY`. `MULTIPART_ACTIVE_CALLER_BLOCKER=true`. The [MULTI01 physical storage design](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md) is accepted. MULTI02A now supplies its repository-only additive schema/readiness candidate, but migration 05 has not been executed and no storage service, caller adapter or multipart QA implementation is present. Neither design acceptance nor this schema candidate clears the blocker.
+`V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`. Active consent attachments, order/result uploads and diagnostic uploads use multipart legacy document routes. They are a current cutover blocker because the V1 encounter-document and document-amendment surfaces reject multipart with `503/V1_MULTIPART_STORAGE_NOT_READY`. `MULTIPART_ACTIVE_CALLER_BLOCKER=true`. The [MULTI01 physical storage design](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md) is accepted. MULTI02A and the isolated migration-05 evidence MULTI02B are accepted, as is MULTI03A/R1 private storage. MULTI03B adds internal coordination pending review; physical coordination QA and caller adapters remain absent. Migration 05 has not been applied to the working database. These repository stages do not clear the active caller blocker.
 
 ## 4. Legacy writers and runtime DDL
 
@@ -483,7 +488,7 @@ MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 ```
 
-## 12C. MULTI02A/MULTI02B accepted foundation and MULTI03A storage candidate
+## 12C. MULTI02A/MULTI02B accepted foundation and MULTI03A/R1 accepted storage and MULTI03B coordination candidate
 
 Migration 05 defines `clinical_binary_uploads` and `clinical_document_binaries` as an additive repository artifact with explicit drift validation, immutable manifest keys, named checks and historical `RESTRICT` foreign keys. A separate read-only readiness authority catalogs and inspects the critical tables, columns, indexes, foreign keys and checks. MULTI02A is accepted at `3e06decd0f96771248da567d7e5c92186506f34f`; it is not wired into existing JSON V1 readiness or multipart routes.
 
@@ -496,26 +501,31 @@ M6_MULTI02B_EVIDENCE_COMMIT=4c125344b97009c236e243b86c4290844c229ed6
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-PHASE_2_M6_MULTI03A=BLOCKED_PENDING_R1_REVIEW
+PHASE_2_M6_MULTI03A=ACCEPTED
 M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
-MULTI03A_BLOCKER=FINALIZATION_REMOVES_STAGING_BEFORE_FUTURE_DB_COMMIT
-PHASE_2_M6_MULTI03A_R1=READY_FOR_CODE_REVIEW
+MULTI03A_BLOCKER=NONE
+PHASE_2_M6_MULTI03A_R1=ACCEPTED
+M6_MULTI03A_R1_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
+PHASE_2_M6_MULTI03B=READY_FOR_CODE_REVIEW
+MULTIPART_COORDINATION_REPOSITORY=IMPLEMENTED_PENDING_REVIEW
+MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
+MULTIPART_TRANSACTION_ORCHESTRATION=IMPLEMENTED_PENDING_REVIEW
 FINALIZATION_PRESERVES_STAGING=true
 STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
-PRIVATE_BINARY_STORAGE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
-PRIVATE_STAGING_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
-CREATE_ONLY_FINALIZATION_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
-RECONCILIATION_PRIMITIVES=IMPLEMENTED_PENDING_REVIEW
-MULTIPART_STORAGE_SERVICE_INTEGRATION=false
+PRIVATE_BINARY_STORAGE_ADAPTER=ACCEPTED
+PRIVATE_STAGING_PRIMITIVE=ACCEPTED
+CREATE_ONLY_FINALIZATION_PRIMITIVE=ACCEPTED
+RECONCILIATION_PRIMITIVES=ACCEPTED
+MULTIPART_STORAGE_SERVICE_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
 MULTIPART_HTTP_ACCEPTANCE=false
 MULTIPART_PHYSICAL_QA=PENDING
 ```
 
 MULTI02B used a new disposable database on local MySQL `9.6.0` at `127.0.0.1:3306`; the selected target was `mxmed_multi02b_20260919224322_80852_mysql96`. Migrations 01–04 provided only the prerequisite synthetic baseline. Migration 05 passed clean and second application, exact shape inspection, CHECK enforcement, uniqueness, FK restrictions, valid synthetic inserts, read-only readiness, missing-schema failure and representative column/index/FK/CHECK drift detection. All temporary databases and harness files were removed. `mxmed` was never selected or changed, and no real patient, clinical, Agenda or billing data was used.
 
-MULTI03A adds the isolated private filesystem primitives for exact-byte staging, create-only finalization, stat/read streams, staging-only cleanup, quarantine, inventory and pure reconciliation. Review found that candidate `1e948d5c6250259b54f72e92122a42e246de999d` unlinked staging immediately after finalization, before the future database commit boundary required by MULTI01. MULTI03A remains blocked pending R1 review. R1 preserves staging after successful final creation and verification; explicit `deleteUncommitted()` remains separate for a future service to call only after commit. Failure, integrity rejection, collision and quarantine paths retain the retryable staging object.
+MULTI03A adds the isolated private filesystem primitives for exact-byte staging, create-only finalization, stat/read streams, staging-only cleanup, quarantine, inventory and pure reconciliation. Review found that candidate `1e948d5c6250259b54f72e92122a42e246de999d` unlinked staging immediately after finalization, before the future database commit boundary required by MULTI01. MULTI03A and R1 are now accepted at `683f99fabbd6617f58fff50eb8fb78b891b26213`. R1 preserves staging after successful final creation and verification; explicit `deleteUncommitted()` remains separate for the coordinating service to call only after commit. Failure, integrity rejection, collision and quarantine paths retain the retryable staging object.
 
-The root remains explicit and outside the document root; storage keys remain opaque; no DB, router or HTTP surface loads the adapter. It does not coordinate `clinical_binary_uploads` or `clinical_document_binaries`, decide idempotent replay, authorize retrieval, schedule reconciliation or adapt callers. Service integration, authenticated retrieval, reconciliation/cleanup execution, C04/C05/C21 adapters and multipart activation remain absent. The accepted `503/V1_MULTIPART_STORAGE_NOT_READY` therefore remains mandatory.
+The root remains explicit and outside the document root; storage keys remain opaque; no DB, router or HTTP surface loads the adapter. It does not coordinate `clinical_binary_uploads` or `clinical_document_binaries`, decide idempotent replay, authorize retrieval, schedule reconciliation or adapt callers. MULTI03B adds the internal coordination service for review; authenticated retrieval, scheduled reconciliation/cleanup, C04/C05/C21 adapters and multipart activation remain absent. The accepted `503/V1_MULTIPART_STORAGE_NOT_READY` therefore remains mandatory.
 
 ## 13. Monitoring invariants
 
@@ -599,7 +609,7 @@ ROUTE01 is accepted; M6 remains blocked independently by multipart implementatio
 
 Known blockers, in actionable order:
 
-1. MULTI01, MULTI02A and MULTI02B are accepted. MULTI03A is blocked pending review of R1's staging-lifetime repair; coordination/service integration, authenticated retrieval, caller adapters and complete multipart QA are still absent, so the active caller blocker and fail-closed `503` remain.
+1. MULTI01, MULTI02A and MULTI02B are accepted. MULTI03A/R1 are accepted; MULTI03B internal coordination is implemented pending review, while authenticated retrieval, caller adapters and physical coordination QA are still absent, so the active caller blocker and fail-closed `503` remain.
 2. ROUTE01 capability is accepted, but cohort runtime routing remains inactive and unauthorized.
 3. The accepted uncontrolled-writer count is 0, but that does not authorize M6.
 4. The working schema is pre-migration (01–05 not applied; 05 remains repository-only).
@@ -613,5 +623,44 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI03A-R1 staging-lifetime repair. If accepted, proceed to repository-only MULTI03B coordination/service integration with clinical_binary_uploads, clinical_document_binaries and durable command idempotency. Multipart HTTP acceptance, working-database migration and cutover remain unauthorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI03B database/storage/idempotency coordination service. If accepted, execute a separate isolated disposable MULTI03C physical coordination QA covering transaction rollback, F5 compensation, replay and lost-response semantics. Multipart HTTP acceptance and working-database migration remain unauthorized.
 ```
+
+
+### MULTI03B — repository-only coordination candidate (2026-09-19)
+
+MULTI03A/R1 is accepted at `683f99fabbd6617f58fff50eb8fb78b891b26213`;
+MULTI03B is `READY_FOR_CODE_REVIEW`, not physically validated or runtime-enabled.
+`clinical_multipart_document_service.php` reuses `ClinicalIdempotencyRepository`
+and the accepted private storage adapter. The explicit caller supplies canonical
+doctor/patient/context, document metadata, expiration and authorized creation/read
+callbacks; it retains clinical policy and readiness responsibility. Callbacks must
+not commit or roll back the service-owned transaction.
+
+The service stages bytes and commits a separate STAGED coordination row before
+claiming the canonical ledger in the main transaction. Its semantic hash includes
+binary SHA-256, size and MIME but excludes generated identifiers. Coordination
+stores only the key digest. Creation, verified finalization, immutable ORIGINAL
+manifest insertion, FINALIZED coordination and ledger completion precede the same
+commit. Staging deletion occurs afterward. Duplicate claims use canonical replay;
+changed bytes conflict, and redundant candidates receive narrowly guarded cleanup.
+
+Confirmed rollback after final creation quarantines the final object while retaining
+staging. An ambiguous commit outcome preserves both paths for reconciliation rather
+than risking a committed final object. Recovery writes are separate, bounded and
+best effort. Post-commit staging cleanup failure returns the committed resource with
+`cleanup_pending=true` and attempts RECONCILIATION_REQUIRED; it cannot undo success.
+Raw database failures are surfaced as a stable coordination error. No derivatives,
+public URLs, arbitrary manifest mutation or new ownership authority are introduced.
+
+Evidence consists of semantic pure tests, comment-independent static call-order and
+authority checks, and an in-memory PDO spy using synthetic temporary filesystem
+objects. The spy is not evidence of actual MySQL locking, SQL execution, isolation,
+crash durability or commit behavior. No database connection or physical coordination
+QA was performed. Migration 05 and the existing JSON executor/readiness are unchanged.
+The accepted MULTI02B evidence remains `4c125344b97009c236e243b86c4290844c229ed6`.
+
+M6 remains `NO_GO_BLOCKED`; HTTP wiring, C04/C05/C21 adapters, downloads, working DB
+migration and cohort activation remain unauthorized. V1 multipart still returns
+`503/V1_MULTIPART_STORAGE_NOT_READY`. Next: review MULTI03B, then only after acceptance
+and separate authorization perform disposable MULTI03C physical coordination QA.
