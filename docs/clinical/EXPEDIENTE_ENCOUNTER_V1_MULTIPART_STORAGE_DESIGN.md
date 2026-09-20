@@ -28,8 +28,13 @@ M6_MULTI03B_CANDIDATE_HEAD=b86bf10499e7e745e31ac48d6cb41f9bc45e8597
 MULTI03B_BLOCKER=NONE
 PHASE_2_M6_MULTI03B_R1=ACCEPTED
 M6_MULTI03B_R1_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
-PHASE_2_M6_MULTI03C=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTIPART_COORDINATION_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI03C=ACCEPTED
+M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
+PHASE_2_M6_MULTI04A=READY_FOR_CODE_REVIEW
+PRIVATE_BINARY_AUTHORIZATION_SERVICE=IMPLEMENTED_PENDING_REVIEW
+PRIVATE_BINARY_INTEGRITY_RETRIEVAL=IMPLEMENTED_PENDING_REVIEW
+MULTI04A_HTTP_WIRING_ACTIVE=false
+MULTIPART_COORDINATION_PHYSICAL_QA=ACCEPTED
 MULTIPART_REAL_MYSQL_TRANSACTION_QA=PASS
 MULTIPART_REAL_FILESYSTEM_COORDINATION_QA=PASS
 STAGING_WITHOUT_COORDINATION_DETECTED=true
@@ -419,8 +424,13 @@ M6_MULTI03B_CANDIDATE_HEAD=b86bf10499e7e745e31ac48d6cb41f9bc45e8597
 MULTI03B_BLOCKER=NONE
 PHASE_2_M6_MULTI03B_R1=ACCEPTED
 M6_MULTI03B_R1_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
-PHASE_2_M6_MULTI03C=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTIPART_COORDINATION_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI03C=ACCEPTED
+M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
+PHASE_2_M6_MULTI04A=READY_FOR_CODE_REVIEW
+PRIVATE_BINARY_AUTHORIZATION_SERVICE=IMPLEMENTED_PENDING_REVIEW
+PRIVATE_BINARY_INTEGRITY_RETRIEVAL=IMPLEMENTED_PENDING_REVIEW
+MULTI04A_HTTP_WIRING_ACTIVE=false
+MULTIPART_COORDINATION_PHYSICAL_QA=ACCEPTED
 MULTIPART_REAL_MYSQL_TRANSACTION_QA=PASS
 MULTIPART_REAL_FILESYSTEM_COORDINATION_QA=PASS
 STAGING_WITHOUT_COORDINATION_DETECTED=true
@@ -582,7 +592,7 @@ Temporary test storage was removed; no database was connected.
 ### MULTI03C — isolated physical coordination evidence (2026-09-20)
 
 MULTI03B/R1 is accepted at `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`.
-MULTI03C is `PASS_READY_FOR_DIRECTOR_REVIEW`; it does not activate multipart or M6.
+MULTI03C is accepted with evidence `a614f7347ebca01f94a43da48bc987b0d8a6984c`; it does not activate multipart or M6.
 The checkpoint `checkpoint/clinical-pre-multi03c-20260919` was pushed at that exact
 source commit. The rehearsal used an exact temporary Git archive, with full file
 hashes equal before/after. No application or migration source changed.
@@ -638,3 +648,53 @@ Next is Director/assistant review of this evidence. Only after acceptance and
 separate authorization may repository-only authenticated retrieval and controlled
 multipart adapters begin. Working-DB migration, feature activation, cutover,
 production and PHASE 3 remain unauthorized.
+
+
+### MULTI04A — internal authorized private-binary retrieval candidate (2026-09-20)
+
+MULTI03C physical evidence is accepted at `a614f7347ebca01f94a43da48bc987b0d8a6984c`.
+The accepted implementation head stays `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`.
+`clinical_private_binary_retrieval.php` is READY_FOR_CODE_REVIEW, with no HTTP wiring.
+
+The service accepts server-authoritative doctor/user identifiers and numeric document
+ID or UUID. A bounded SELECT-only equivalent of the router's canonical token lookup
+projects only required document fields, without loading the router. Active
+`patients_doctor_links` is mandatory. Encounter-linked documents additionally require
+matching canonical encounter doctor and patient; NULL legacy doctor fails closed.
+Patient-level documents require the active link without an invented encounter.
+All scope denials return DOCUMENT_BINARY_NOT_FOUND before manifest/storage access.
+Voided status remains descriptor metadata, not a storage deletion/visibility policy.
+
+Manifest selection uses document ID, exact ORIGINAL/DISPLAY/THUMBNAIL role and
+version 1, without fallback to another variant, payload URLs or legacy files.
+Retrieval refuses an existing caller transaction to avoid exposing uncommitted rows.
+The final namespace, allowed manifest MIME, byte length and SHA-256 are checked before
+stream opening. The opened handle is hashed again, rewound and returned only when
+its bytes match; failed handles are closed. The caller must close successful streams.
+Missing directories/objects produce DOCUMENT_BINARY_MISSING; integrity failures
+produce DOCUMENT_BINARY_INTEGRITY_MISMATCH without quarantine, repair or mutation.
+
+The descriptor contains canonical document context/status and binary metadata, with
+sanitized display filename. It excludes keys, absolute paths, private roots and URLs.
+The storage primitives, write service, idempotency authority and migrations are unchanged.
+
+Future controller contract (not implemented): authenticated server context; generic
+404 for unauthorized access; Content-Type from the allowed manifest MIME;
+X-Content-Type-Options: nosniff; Cache-Control: private, no-store;
+Content-Disposition: inline|attachment with safely encoded sanitized filename.
+No header emission, streaming response, download route or HTTP session extraction
+is implemented here. Only SELECT statements run through the injected PDO.
+
+QA uses a PDO fake and synthetic temporary filesystem, never MySQL or real data.
+The 22 retrieval cases include R01–R14 plus UUID lookup, voided status, patient mismatch,
+missing encounter/document, invalid MIME/variant and uncommitted-caller rejection.
+Static checks cover authorization/integrity order, descriptor privacy, no writes/DDL,
+no HTTP wiring, and the preserved multipart 503. Physical authentication/streaming
+validation remains future work after review and separate authorization.
+M6 remains NO_GO_BLOCKED; multipart writes, C04/C05/C21, working-DB migration,
+cohort activation, cutover, production and PHASE 3 remain unauthorized.
+
+MULTI04A verification: retrieval QA (22 cases), static QA, MULTI03B semantic/spy/static,
+MULTI03A filesystem/reconciliation/static, MULTI02A readiness, M6 CTRL/GUARD/CALLER01/ROUTE01,
+encounter-integrity and M5 barrier suites all PASS. PHP lint, shell syntax and
+`git diff --check`: PASS. No DB connected; synthetic temporary storage fully removed.

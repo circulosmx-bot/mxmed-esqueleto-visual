@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI03C physical evidence. After acceptance, proceed to the next repository-only multipart layer, beginning with authenticated private-binary retrieval and then controlled V1 multipart endpoint/caller adapters. Do not activate multipart or migrate the working database until those layers and their QA are separately accepted.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI04A authorized private-binary retrieval service. If accepted, add a separate controlled read-only HTTP binary controller/route and physically validate authentication/integrity streaming before adapting multipart write callers. Multipart writes, working-database migration and cutover remain unauthorized.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -296,8 +296,13 @@ M6_MULTI03B_CANDIDATE_HEAD=b86bf10499e7e745e31ac48d6cb41f9bc45e8597
 MULTI03B_BLOCKER=NONE
 PHASE_2_M6_MULTI03B_R1=ACCEPTED
 M6_MULTI03B_R1_ACCEPTED_HEAD=77eff8ba515b1a5b26a6d8c30b403325f4aafb8f
-PHASE_2_M6_MULTI03C=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTIPART_COORDINATION_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI03C=ACCEPTED
+M6_MULTI03C_EVIDENCE_COMMIT=a614f7347ebca01f94a43da48bc987b0d8a6984c
+PHASE_2_M6_MULTI04A=READY_FOR_CODE_REVIEW
+PRIVATE_BINARY_AUTHORIZATION_SERVICE=IMPLEMENTED_PENDING_REVIEW
+PRIVATE_BINARY_INTEGRITY_RETRIEVAL=IMPLEMENTED_PENDING_REVIEW
+MULTI04A_HTTP_WIRING_ACTIVE=false
+MULTIPART_COORDINATION_PHYSICAL_QA=ACCEPTED
 MULTIPART_REAL_MYSQL_TRANSACTION_QA=PASS
 MULTIPART_REAL_FILESYSTEM_COORDINATION_QA=PASS
 STAGING_WITHOUT_COORDINATION_DETECTED=true
@@ -360,7 +365,7 @@ La UI anterior debe conservar lecturas y borradores legacy aislados. El retorno 
 
 El [plan de cutover backend M6](EXPEDIENTE_ENCOUNTER_M6_CUTOVER_PLAN.md) queda `ACCEPTED` en `7dc615c772ef611a49229e3e1da91b569d6cf73d`. El inventario cubre 21 familias runtime, 17 con capacidad de escritura; 11 requieren adaptador o bloqueo explícito antes de M6. El preflight autorizado fue estrictamente de sólo lectura y confirmó la identidad de la base de trabajo, 13 encounters legacy sin atribución médica y esquema `PRE_MIGRATION` con migraciones 01–04 `NOT_APPLIED`. No se infirió titularidad ni se cambió esquema o dato alguno. CTRL01/R1 queda aceptado en `05369176c3fc6a8b89043ee79c6b431161b3d5f4`; GUARD01 y su contención fail-closed para C04, C05, C11, C12, C16, C17, C20 y C21 quedan aceptados en `bcb2606ba7a95818673b402a9e006ecc0431ff73`.
 
-M6 permanece `NO_GO_BLOCKED`: CALLER01 está aceptado con cero writers no controlados y ROUTE01 queda aceptado en `f01b2f60c6363b10b43b931b20f42fb3348acdf1`, pero el routing runtime no está activo. El [diseño MULTI01](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md), MULTI02A y la evidencia física MULTI02B están aceptados. MULTI03A/R1 quedan aceptados en `683f99fabbd6617f58fff50eb8fb78b891b26213`; R1 separa cleanup y preserva staging tras finalización. MULTI03B añade coordinación interna candidata, sin conexión DB, router, HTTP ni autoridad clínica nueva. La validación física MULTI03C pasó y queda pendiente de revisión del Director y el `503/V1_MULTIPART_STORAGE_NOT_READY` permanece fail-closed. Tampoco existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
+M6 permanece `NO_GO_BLOCKED`: CALLER01 está aceptado con cero writers no controlados y ROUTE01 queda aceptado en `f01b2f60c6363b10b43b931b20f42fb3348acdf1`, pero el routing runtime no está activo. El [diseño MULTI01](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md), MULTI02A y la evidencia física MULTI02B están aceptados. MULTI03A/R1 quedan aceptados en `683f99fabbd6617f58fff50eb8fb78b891b26213`; R1 separa cleanup y preserva staging tras finalización. MULTI03B añade coordinación interna candidata, sin conexión DB, router, HTTP ni autoridad clínica nueva. La evidencia física MULTI03C está aceptada y el `503/V1_MULTIPART_STORAGE_NOT_READY` permanece fail-closed. Tampoco existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
 
 ## Visión y problema
 
@@ -661,6 +666,7 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI03B-R1 | MULTI03B candidato `b86bf10499e7e745e31ac48d6cb41f9bc45e8597` bloqueado pendiente R1 | Cleanup inicial sólo con no-commit confirmado; staging ambiguo retenido. Clasificador puro detecta staging sin coordinación y retenido tras finalización. R1 `READY_FOR_CODE_REVIEW`; baseline aceptado sin cambio, ninguna DB, M6 `NO_GO_BLOCKED`. |
 | 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI03C | MULTI03B/R1 aceptados `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f` | PC01–PC08 PASS en MySQL 9.6.0/InnoDB y filesystem temporal sintético; teardown completo. Evidencia `PASS_READY_FOR_DIRECTOR_REVIEW`; fuente intacta, multipart fail-closed y M6 NO_GO_BLOCKED. |
+| 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI04A | Evidencia MULTI03C aceptada `a614f7347ebca01f94a43da48bc987b0d8a6984c` | Retrieval interno SELECT-only con autorización canónica, integridad y stream privado. QA pura/fake PDO PASS, sin DB/HTTP. `READY_FOR_CODE_REVIEW`; baseline de implementación se conserva en `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`. |
 
 ### MULTI03B — repository-only coordination candidate (2026-09-19)
 
@@ -738,7 +744,7 @@ M6 remains NO_GO_BLOCKED. Review R1 before authorizing any separate MULTI03C wor
 ### MULTI03C — isolated physical coordination evidence (2026-09-20)
 
 MULTI03B/R1 is accepted at `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`.
-MULTI03C is `PASS_READY_FOR_DIRECTOR_REVIEW`; it does not activate multipart or M6.
+MULTI03C is accepted with evidence `a614f7347ebca01f94a43da48bc987b0d8a6984c`; it does not activate multipart or M6.
 The checkpoint `checkpoint/clinical-pre-multi03c-20260919` was pushed at that exact
 source commit. The rehearsal used an exact temporary Git archive, with full file
 hashes equal before/after. No application or migration source changed.
@@ -794,3 +800,53 @@ Next is Director/assistant review of this evidence. Only after acceptance and
 separate authorization may repository-only authenticated retrieval and controlled
 multipart adapters begin. Working-DB migration, feature activation, cutover,
 production and PHASE 3 remain unauthorized.
+
+
+### MULTI04A — internal authorized private-binary retrieval candidate (2026-09-20)
+
+MULTI03C physical evidence is accepted at `a614f7347ebca01f94a43da48bc987b0d8a6984c`.
+The accepted implementation head stays `77eff8ba515b1a5b26a6d8c30b403325f4aafb8f`.
+`clinical_private_binary_retrieval.php` is READY_FOR_CODE_REVIEW, with no HTTP wiring.
+
+The service accepts server-authoritative doctor/user identifiers and numeric document
+ID or UUID. A bounded SELECT-only equivalent of the router's canonical token lookup
+projects only required document fields, without loading the router. Active
+`patients_doctor_links` is mandatory. Encounter-linked documents additionally require
+matching canonical encounter doctor and patient; NULL legacy doctor fails closed.
+Patient-level documents require the active link without an invented encounter.
+All scope denials return DOCUMENT_BINARY_NOT_FOUND before manifest/storage access.
+Voided status remains descriptor metadata, not a storage deletion/visibility policy.
+
+Manifest selection uses document ID, exact ORIGINAL/DISPLAY/THUMBNAIL role and
+version 1, without fallback to another variant, payload URLs or legacy files.
+Retrieval refuses an existing caller transaction to avoid exposing uncommitted rows.
+The final namespace, allowed manifest MIME, byte length and SHA-256 are checked before
+stream opening. The opened handle is hashed again, rewound and returned only when
+its bytes match; failed handles are closed. The caller must close successful streams.
+Missing directories/objects produce DOCUMENT_BINARY_MISSING; integrity failures
+produce DOCUMENT_BINARY_INTEGRITY_MISMATCH without quarantine, repair or mutation.
+
+The descriptor contains canonical document context/status and binary metadata, with
+sanitized display filename. It excludes keys, absolute paths, private roots and URLs.
+The storage primitives, write service, idempotency authority and migrations are unchanged.
+
+Future controller contract (not implemented): authenticated server context; generic
+404 for unauthorized access; Content-Type from the allowed manifest MIME;
+X-Content-Type-Options: nosniff; Cache-Control: private, no-store;
+Content-Disposition: inline|attachment with safely encoded sanitized filename.
+No header emission, streaming response, download route or HTTP session extraction
+is implemented here. Only SELECT statements run through the injected PDO.
+
+QA uses a PDO fake and synthetic temporary filesystem, never MySQL or real data.
+The 22 retrieval cases include R01–R14 plus UUID lookup, voided status, patient mismatch,
+missing encounter/document, invalid MIME/variant and uncommitted-caller rejection.
+Static checks cover authorization/integrity order, descriptor privacy, no writes/DDL,
+no HTTP wiring, and the preserved multipart 503. Physical authentication/streaming
+validation remains future work after review and separate authorization.
+M6 remains NO_GO_BLOCKED; multipart writes, C04/C05/C21, working-DB migration,
+cohort activation, cutover, production and PHASE 3 remain unauthorized.
+
+MULTI04A verification: retrieval QA (22 cases), static QA, MULTI03B semantic/spy/static,
+MULTI03A filesystem/reconciliation/static, MULTI02A readiness, M6 CTRL/GUARD/CALLER01/ROUTE01,
+encounter-integrity and M5 barrier suites all PASS. PHP lint, shell syntax and
+`git diff --check`: PASS. No DB connected; synthetic temporary storage fully removed.
