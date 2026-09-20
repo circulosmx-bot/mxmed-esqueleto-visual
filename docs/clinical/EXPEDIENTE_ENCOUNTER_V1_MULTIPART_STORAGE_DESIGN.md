@@ -8,9 +8,14 @@ PHASE_2_M6_MULTI01=ACCEPTED
 M6_MULTI01_ACCEPTED_HEAD=e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa
 MULTIPART_DESIGN=ACCEPTED
 MULTIPART_DESIGN_STATUS=ACCEPTED
-PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
-MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
-MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
+PHASE_2_M6_MULTI02A=ACCEPTED
+M6_MULTI02A_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
+MULTIPART_SCHEMA_FOUNDATION=ACCEPTED
+PHASE_2_M6_MULTI02B=PASS_READY_FOR_DIRECTOR_REVIEW
+MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL_PASS_PENDING_REVIEW
+MIGRATION_05_PHYSICAL_REHEARSAL=PASS
+MIGRATION_05_TARGET_MYSQL96=PASS
+MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
@@ -350,18 +355,26 @@ MULTI01 is accepted at `e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa`. Its implement
 
 The implementation must preserve `503/V1_MULTIPART_STORAGE_NOT_READY` until schema, service, adapters and all multipart QA are accepted. `GLOBAL_CLINICAL_GET_DDL_REMOVAL` remains a separate later blocker.
 
-### MULTI02A repository-only schema foundation
+### MULTI02A accepted foundation and MULTI02B physical rehearsal
 
-MULTI02A implements only item 1 of that sequence as a review candidate. `2026_09_19_05_clinical_binary_storage.sql` defines the additive `clinical_binary_uploads` coordination table and immutable `clinical_document_binaries` manifest, with explicit drift checks, named constraints and `RESTRICT` foreign keys. `clinical_multipart_storage_assert_schema_ready()` inspects tables, columns, indexes, foreign keys and checks using `information_schema`; it performs no DDL or DML and is not wired into existing JSON V1 readiness or multipart routing.
+MULTI02A is accepted at `3e06decd0f96771248da567d7e5c92186506f34f`. `2026_09_19_05_clinical_binary_storage.sql` defines the additive `clinical_binary_uploads` coordination table and immutable `clinical_document_binaries` manifest, with explicit drift checks, named constraints and `RESTRICT` foreign keys. `clinical_multipart_storage_assert_schema_ready()` inspects tables, columns, indexes, foreign keys and checks using `information_schema`; it performs no DDL or DML and is not wired into existing JSON V1 readiness or multipart routing.
 
-Migration 05 has not been executed. File staging, finalization, retrieval, reconciliation execution, C04/C05/C21 adapters and multipart acceptance remain pending. The next possible technical chapter after review is an isolated disposable MySQL rehearsal of migration 05 only.
+MULTI02B physically rehearsed migration 05 on local MySQL `9.6.0` at `127.0.0.1:3306` using only new isolated synthetic databases. Clean apply and identical second apply passed. The physical 20-column upload table, 14-column binary table, all required indexes, `RESTRICT` foreign keys, named checks, positive rows, negative CHECK cases, unique constraints and delete restrictions passed. Readiness passed without schema or row-count change; missing schema and representative column/index/FK/CHECK drift failed closed. The working `mxmed` database was never selected, every disposable database was removed and no target-engine incompatibility was observed.
+
+The first drift-only harness attempt tried to reuse an FK name in the same `ALTER TABLE`; MySQL rejected that harness statement before applying the drift, and teardown completed. The two remaining probes were then executed on fresh disposable databases with separate `DROP` and `ADD` statements and passed. This was not a migration-05 or readiness defect.
+
+File staging, finalization, retrieval, reconciliation execution, C04/C05/C21 adapters and multipart acceptance remain pending. Physical schema success does not activate multipart.
 
 ```text
 PHASE_2_M6_MULTI01=ACCEPTED
 M6_MULTI01_ACCEPTED_HEAD=e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa
-PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
-MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
-MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
+PHASE_2_M6_MULTI02A=ACCEPTED
+M6_MULTI02A_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
+MULTIPART_SCHEMA_FOUNDATION=ACCEPTED
+PHASE_2_M6_MULTI02B=PASS_READY_FOR_DIRECTOR_REVIEW
+MIGRATION_05_PHYSICAL_REHEARSAL=PASS
+MIGRATION_05_TARGET_MYSQL96=PASS
+MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
 PHASE_2_M6_EXECUTION_AUTHORIZED=false
 M6_AUTHORIZED=false
 WORKING_DB_SCHEMA_STATE=PRE_MIGRATION

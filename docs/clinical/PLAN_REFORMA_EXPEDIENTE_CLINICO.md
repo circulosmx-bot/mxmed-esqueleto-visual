@@ -2,11 +2,11 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
+CURRENT_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI02A additive clinical binary schema foundation. If accepted, authorize a separate isolated disposable MySQL MULTI02B rehearsal for migration 05 only; no working-database migration, multipart activation or cutover authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI02B physical migration-05 evidence. If accepted, proceed to repository-only implementation of the private multipart storage adapter, staging/finalization and reconciliation primitives. No working-database migration, multipart activation, cohort routing activation or cutover authorized.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -277,9 +277,14 @@ MULTIPART_DESIGN=ACCEPTED
 MULTIPART_DESIGN_COMPLETE=true
 MULTIPART_DESIGN_STATUS=ACCEPTED
 MULTIPART_SCHEMA_CHANGE_REQUIRED=true
-PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
-MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
-MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
+PHASE_2_M6_MULTI02A=ACCEPTED
+M6_MULTI02A_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
+MULTIPART_SCHEMA_FOUNDATION=ACCEPTED
+PHASE_2_M6_MULTI02B=PASS_READY_FOR_DIRECTOR_REVIEW
+MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL_PASS_PENDING_REVIEW
+MIGRATION_05_PHYSICAL_REHEARSAL=PASS
+MIGRATION_05_TARGET_MYSQL96=PASS
+MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
 MULTIPART_STORAGE_IMPLEMENTATION=PENDING
 MULTIPART_PHYSICAL_QA=PENDING
 C02_ADAPTED=true
@@ -323,7 +328,7 @@ La UI anterior debe conservar lecturas y borradores legacy aislados. El retorno 
 
 El [plan de cutover backend M6](EXPEDIENTE_ENCOUNTER_M6_CUTOVER_PLAN.md) queda `ACCEPTED` en `7dc615c772ef611a49229e3e1da91b569d6cf73d`. El inventario cubre 21 familias runtime, 17 con capacidad de escritura; 11 requieren adaptador o bloqueo explícito antes de M6. El preflight autorizado fue estrictamente de sólo lectura y confirmó la identidad de la base de trabajo, 13 encounters legacy sin atribución médica y esquema `PRE_MIGRATION` con migraciones 01–04 `NOT_APPLIED`. No se infirió titularidad ni se cambió esquema o dato alguno. CTRL01/R1 queda aceptado en `05369176c3fc6a8b89043ee79c6b431161b3d5f4`; GUARD01 y su contención fail-closed para C04, C05, C11, C12, C16, C17, C20 y C21 quedan aceptados en `bcb2606ba7a95818673b402a9e006ecc0431ff73`.
 
-M6 permanece `NO_GO_BLOCKED`: CALLER01 está aceptado con cero writers no controlados y ROUTE01 queda aceptado en `f01b2f60c6363b10b43b931b20f42fb3348acdf1`, pero el routing runtime no está activo. El [diseño MULTI01](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md) está aceptado; MULTI02A deja la migración 05 y readiness de sólo lectura como candidato repository-only, pendiente de revisión y sin ejecución física. La implementación de almacenamiento multipart sigue ausente y el `503/V1_MULTIPART_STORAGE_NOT_READY` permanece fail-closed. Tampoco existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
+M6 permanece `NO_GO_BLOCKED`: CALLER01 está aceptado con cero writers no controlados y ROUTE01 queda aceptado en `f01b2f60c6363b10b43b931b20f42fb3348acdf1`, pero el routing runtime no está activo. El [diseño MULTI01](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md) y MULTI02A están aceptados; MULTI02B demuestra que migración 05 y readiness pasan físicamente en MySQL 9.6 local desechable, sin conectar `mxmed`. La implementación de almacenamiento multipart sigue ausente y el `503/V1_MULTIPART_STORAGE_NOT_READY` permanece fail-closed. Tampoco existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
 
 ## Visión y problema
 
@@ -541,7 +546,7 @@ modules/clinical/db/migrations/2026_09_18_04_encounter_document_integrity.sql
 modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql
 ```
 
-La migración 05 permanece `REPOSITORY_ONLY_PENDING_REVIEW` y requiere un capítulo MULTI02B separado para ensayo físico aislado y desechable. No forma parte del alcance histórico ya aceptado de MIG01A, que permanece limitado exactamente a 01–04.
+La migración 05 está aceptada como artefacto de repositorio y su ensayo MULTI02B en MySQL 9.6 local, aislado, sintético y desechable terminó `PASS_READY_FOR_DIRECTOR_REVIEW`. No fue aplicada a la base de trabajo y no forma parte del alcance histórico ya aceptado de MIG01A, que permanece limitado exactamente a 01–04.
 
 ## Calidad y aceptación futura
 
@@ -617,3 +622,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-ROUTE01 | CALLER01 aceptado `0baeefb8eff98f9de80429d0ad9d164190508fbc`; ROUTE01 aceptado `f01b2f60c6363b10b43b931b20f42fb3348acdf1` | Capacidad repository-only de selección V1 por par doctor/paciente aceptada, con master global intacto, M5 compatible, resolutores de solo lectura y runtime inactivo. `M6_COHORT_ROUTING_CAPABILITY=ACCEPTED`; no autoriza activación y M6 sigue `NO_GO_BLOCKED`. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI01 | ROUTE01 aceptado / baseline `f01b2f60c6363b10b43b931b20f42fb3348acdf1` | Diseño físico documental de multipart V1: audit legacy, staging privado, finalización/compensación F1–F7, SHA/idempotencia, manifiesto relacional, recuperación autorizada, inmutabilidad, reconciliación, limpieza bounded y MPU01–MPU20. `READY_FOR_DIRECTOR_REVIEW`; `503/V1_MULTIPART_STORAGE_NOT_READY`, blocker activo, routing inactivo y todas las autorizaciones de ejecución preservadas. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI02A | MULTI01 aceptado `e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa` | Candidato repository-only de esquema binario: migración aditiva 05 para coordinación y manifiesto inmutable, readiness de `information_schema` sólo lectura y QA estática/pura. No se conectó ninguna DB, no se ejecutó migración, JSON V1 no cambió y multipart conserva `503/V1_MULTIPART_STORAGE_NOT_READY`. `READY_FOR_CODE_REVIEW`; M6 sigue `NO_GO_BLOCKED`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI02B | MULTI02A aceptado `3e06decd0f96771248da567d7e5c92186506f34f` | Ensayo físico de migración 05 `PASS` en MySQL 9.6 local y bases nuevas sintéticas: clean/rerun, 20+14 columnas, índices/FKs/CHECKs, casos positivos/negativos, unicidad, delete restrict, readiness sin DDL/DML, esquema ausente y deriva representativa. Teardown completo; `mxmed` no conectado ni alterado. Evidencia `PASS_READY_FOR_DIRECTOR_REVIEW`; multipart y M6 siguen bloqueados. |

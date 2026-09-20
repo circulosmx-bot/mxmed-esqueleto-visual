@@ -14,15 +14,20 @@ CALLER01_STATUS=ACCEPTED
 M6_CALLER01_ACCEPTED_HEAD=0baeefb8eff98f9de80429d0ad9d164190508fbc
 PHASE_2_M6_ROUTE01=ACCEPTED
 M6_ROUTE01_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
-CURRENT_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
+CURRENT_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
 M6_COHORT_ROUTING_CAPABILITY=ACCEPTED
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 PHASE_2_M6_MULTI01=ACCEPTED
 M6_MULTI01_ACCEPTED_HEAD=e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa
 MULTIPART_DESIGN=ACCEPTED
-PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
-MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
-MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
+PHASE_2_M6_MULTI02A=ACCEPTED
+M6_MULTI02A_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
+MULTIPART_SCHEMA_FOUNDATION=ACCEPTED
+PHASE_2_M6_MULTI02B=PASS_READY_FOR_DIRECTOR_REVIEW
+MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL_PASS_PENDING_REVIEW
+MIGRATION_05_PHYSICAL_REHEARSAL=PASS
+MIGRATION_05_TARGET_MYSQL96=PASS
+MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
 V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 PLANNING=true
@@ -212,14 +217,14 @@ MIGRATION_01_STATE=NOT_APPLIED
 MIGRATION_02_STATE=NOT_APPLIED
 MIGRATION_03_STATE=NOT_APPLIED
 MIGRATION_04_STATE=NOT_APPLIED
-MIGRATION_05_STATE=REPOSITORY_ONLY_PENDING_REVIEW_NOT_APPLIED
+MIGRATION_05_STATE=NOT_APPLIED_WORKING_DB_PHYSICAL_DISPOSABLE_REHEARSAL_PASS
 ```
 
 - **01 encounter lifecycle integrity:** the table lacks `voided_at`, `voided_by_user_id`, `void_reason`, `open_guard`, the accepted one-open unique index, lifecycle checks and accepted triggers.
 - **02 structured content:** sections, observations and encounter amendments are absent.
 - **03 command idempotency:** start-request and general idempotency tables are absent.
 - **04 document integrity:** `encounter_ref_id`, final-note and document-revision structures are absent.
-- **05 clinical binary storage:** repository artifact only; no physical database was connected or inspected in MULTI02A and the two proposed structures remain pending a separate disposable rehearsal.
+- **05 clinical binary storage:** accepted repository artifact with a passing isolated disposable MySQL 9.6 physical rehearsal; it remains unapplied and unauthorized on the working database.
 
 The only future migration sequence permitted by the accepted plan is:
 
@@ -229,7 +234,7 @@ The only future migration sequence permitted by the accepted plan is:
 4. `2026_09_18_04_encounter_document_integrity.sql`
 5. `2026_09_19_05_clinical_binary_storage.sql`
 
-Migration 05 is repository-only and is not physically accepted until a later isolated disposable rehearsal. `2026_09_17_clinical_encounter_doctor_attribution.sql` remains explicitly prohibited. The 13 NULL doctor rows must remain unattributed.
+Migration 05 passed its isolated disposable rehearsal but is not accepted for or applied to the working database. `2026_09_17_clinical_encounter_doctor_attribution.sql` remains explicitly prohibited. The 13 NULL doctor rows must remain unattributed.
 
 ## 7. Backup and restore plan
 
@@ -467,20 +472,25 @@ MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 ```
 
-## 12C. MULTI02A repository-only binary schema foundation
+## 12C. MULTI02A accepted foundation and MULTI02B physical evidence
 
-Migration 05 now defines `clinical_binary_uploads` and `clinical_document_binaries` as an additive repository artifact with explicit drift validation, immutable manifest keys, named checks and historical `RESTRICT` foreign keys. A separate read-only readiness authority catalogs and inspects the critical tables, columns, indexes, foreign keys and checks. It is not wired into existing JSON V1 readiness or multipart routes.
+Migration 05 defines `clinical_binary_uploads` and `clinical_document_binaries` as an additive repository artifact with explicit drift validation, immutable manifest keys, named checks and historical `RESTRICT` foreign keys. A separate read-only readiness authority catalogs and inspects the critical tables, columns, indexes, foreign keys and checks. MULTI02A is accepted at `3e06decd0f96771248da567d7e5c92186506f34f`; it is not wired into existing JSON V1 readiness or multipart routes.
 
 ```text
-PHASE_2_M6_MULTI02A=READY_FOR_CODE_REVIEW
-MULTIPART_SCHEMA_FOUNDATION=IMPLEMENTED_PENDING_REVIEW
-MIGRATION_05_STATUS=REPOSITORY_ONLY_PENDING_REVIEW
-MULTI02A_PHYSICAL_MIGRATION_EXECUTED=false
+PHASE_2_M6_MULTI02A=ACCEPTED
+M6_MULTI02A_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
+MULTIPART_SCHEMA_FOUNDATION=ACCEPTED
+PHASE_2_M6_MULTI02B=PASS_READY_FOR_DIRECTOR_REVIEW
+MIGRATION_05_PHYSICAL_REHEARSAL=PASS
+MIGRATION_05_TARGET_MYSQL96=PASS
+MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
 MULTIPART_STORAGE_IMPLEMENTATION=PENDING
 MULTIPART_PHYSICAL_QA=PENDING
 ```
 
-This chapter did not connect to any database. Staging/finalization, authenticated retrieval, reconciliation/cleanup execution, C04/C05/C21 adapters and multipart activation remain absent.
+MULTI02B used a new disposable database on local MySQL `9.6.0` at `127.0.0.1:3306`; the selected target was `mxmed_multi02b_20260919224322_80852_mysql96`. Migrations 01–04 provided only the prerequisite synthetic baseline. Migration 05 passed clean and second application, exact shape inspection, CHECK enforcement, uniqueness, FK restrictions, valid synthetic inserts, read-only readiness, missing-schema failure and representative column/index/FK/CHECK drift detection. All temporary databases and harness files were removed. `mxmed` was never selected or changed, and no real patient, clinical, Agenda or billing data was used.
+
+Staging/finalization, authenticated retrieval, reconciliation/cleanup execution, C04/C05/C21 adapters and multipart activation remain absent.
 
 ## 13. Monitoring invariants
 
@@ -564,7 +574,7 @@ ROUTE01 is accepted; M6 remains blocked independently by multipart implementatio
 
 Known blockers, in actionable order:
 
-1. MULTI01 is accepted and the MULTI02A repository schema foundation is pending review, but migration 05 has no physical rehearsal and V1 multipart storage/adapters/QA are not implemented; the active caller blocker and fail-closed `503` remain.
+1. MULTI01 and MULTI02A are accepted and migration 05 has a passing disposable MySQL 9.6 rehearsal, but V1 multipart storage/adapters/QA are not implemented; the active caller blocker and fail-closed `503` remain.
 2. ROUTE01 capability is accepted, but cohort runtime routing remains inactive and unauthorized.
 3. The accepted uncontrolled-writer count is 0, but that does not authorize M6.
 4. The working schema is pre-migration (01–05 not applied; 05 remains repository-only).
@@ -578,5 +588,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI02A additive clinical binary schema foundation. If accepted, authorize a separate isolated disposable MySQL MULTI02B rehearsal for migration 05 only; no working-database migration, multipart activation or cutover authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI02B physical migration-05 evidence. If accepted, proceed to repository-only implementation of the private multipart storage adapter, staging/finalization and reconciliation primitives. No working-database migration, multipart activation, cohort routing activation or cutover authorized.
 ```
