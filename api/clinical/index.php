@@ -5,6 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../modules/clinical/src/timeline_catalog.php';
 require_once __DIR__ . '/../_lib/clinical_encounter_integrity.php';
+require_once __DIR__ . '/../_lib/clinical_m6_cutover.php';
 
 function clinical_normalize_response($response): array
 {
@@ -127,6 +128,28 @@ function clinical_documents_send_patient_write_error(ClinicalDocumentsPatientWri
         'data' => null,
         'meta' => $meta,
     ], $e->statusCode());
+}
+
+function clinical_m6_send_legacy_write_blocked(array $meta): void
+{
+    clinical_send_response([
+        'ok' => false,
+        'error' => 'M6_LEGACY_WRITE_BLOCKED',
+        'message' => 'This legacy clinical mutation path is not permitted for the patient.',
+        'data' => null,
+        'meta' => $meta,
+    ], 409);
+}
+
+function clinical_m6_send_cohort_config_invalid(array $meta): void
+{
+    clinical_send_response([
+        'ok' => false,
+        'error' => 'M6_COHORT_CONFIG_INVALID',
+        'message' => 'M6_COHORT_CONFIG_INVALID',
+        'data' => null,
+        'meta' => $meta,
+    ], 500);
 }
 
 function clinical_route_segments(): array
@@ -1835,6 +1858,9 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args, bool $requir
         $doc['context']['patient_id'] = $safePatientId;
     }
 
+    // M6_GUARD_C04_C05_C20_CREATE: deny before document/participant mutation.
+    clinical_m6_assert_legacy_write_allowed(trim((string)($doc['context']['patient_id'] ?? '')));
+
     if (($doc['document_type'] ?? '') === 'nota_evolucion') {
         $errs = mxmed_evolution_note_validate_to_generate((array)($doc['content']['payload'] ?? []));
         if (count($errs) > 0) {
@@ -2413,6 +2439,9 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
     if ($requireCanonicalPatient) {
         $patientId = clinical_documents_validate_canonical_patient_id_for_write($pdo, $patientId);
     }
+
+    // M6_GUARD_C04_C05_C20_MULTIPART: deny before clinical_store_uploaded_file().
+    clinical_m6_assert_legacy_write_allowed($patientId);
 
     $renderedText = null;
     if (is_string($payloadData['text'] ?? null)) {
@@ -7950,6 +7979,19 @@ try {
 
             try {
                 $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+            } catch (ClinicalM6LegacyWriteBlockedException $e) {
+                // M6_GUARD_C21_NOTE_CAPTURE_UPLOAD: token reads/status remain available.
+                clinical_m6_send_legacy_write_blocked([
+                    'method' => 'POST',
+                    'route' => 'note-capture-tokens/{token}/upload',
+                ]);
+                return;
+            } catch (ClinicalM6CohortConfigException $e) {
+                clinical_m6_send_cohort_config_invalid([
+                    'method' => 'POST',
+                    'route' => 'note-capture-tokens/{token}/upload',
+                ]);
+                return;
             } catch (InvalidArgumentException $e) {
                 clinical_send_response([
                     'ok' => false,
@@ -8126,6 +8168,13 @@ try {
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
                 $document = clinical_documents_save_create_request($pdo, $payload, $uploadFile, $isMultipart);
+            } catch (ClinicalM6LegacyWriteBlockedException $e) {
+                // M6_GUARD_C04_C05_C20_SCOPED_CREATE: route patient is authoritative.
+                clinical_m6_send_legacy_write_blocked($meta);
+                return;
+            } catch (ClinicalM6CohortConfigException $e) {
+                clinical_m6_send_cohort_config_invalid($meta);
+                return;
             } catch (InvalidArgumentException $e) {
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
@@ -8640,6 +8689,13 @@ try {
                 } else {
                     $document = clinical_documents_save_passthrough($pdo, $payload, true);
                 }
+            } catch (ClinicalM6LegacyWriteBlockedException $e) {
+                // M6_GUARD_C20_GENERIC_CREATE: parsed canonical patient controls the guard.
+                clinical_m6_send_legacy_write_blocked($meta);
+                return;
+            } catch (ClinicalM6CohortConfigException $e) {
+                clinical_m6_send_cohort_config_invalid($meta);
+                return;
             } catch (ClinicalDocumentsPatientWriteException $e) {
                 clinical_documents_send_patient_write_error($e, $meta);
                 return;
@@ -8801,6 +8857,8 @@ try {
                     ]);
                     return;
                 }
+                // M6_GUARD_C11_C20_REPLICATE: stored source patient is authoritative.
+                clinical_m6_assert_legacy_write_allowed($patientId);
 
                 if ($targetPatientId !== '' && $targetPatientId !== $patientId) {
                     clinical_send_response([
@@ -8964,6 +9022,18 @@ try {
                     ],
                 ], 200);
                 return;
+            } catch (ClinicalM6LegacyWriteBlockedException $e) {
+                clinical_m6_send_legacy_write_blocked([
+                    'method' => 'POST',
+                    'route' => 'documents/{uuid}/replicate',
+                ]);
+                return;
+            } catch (ClinicalM6CohortConfigException $e) {
+                clinical_m6_send_cohort_config_invalid([
+                    'method' => 'POST',
+                    'route' => 'documents/{uuid}/replicate',
+                ]);
+                return;
             } catch (Throwable $e) {
                 clinical_send_response([
                     'ok' => false,
@@ -9091,6 +9161,8 @@ try {
                     ]);
                     return;
                 }
+                // M6_GUARD_C05_C20_REPLACE: stored source patient is authoritative.
+                clinical_m6_assert_legacy_write_allowed($patientId);
                 $sourcePayload = json_decode((string)($sourceRow['payload_json'] ?? ''), true);
                 if (!is_array($sourcePayload)) {
                     $sourcePayload = [];
@@ -9325,6 +9397,24 @@ try {
                         'route' => 'documents/{id_or_uuid}/replace',
                     ],
                 ], 200);
+                return;
+            } catch (ClinicalM6LegacyWriteBlockedException $e) {
+                if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                    try { $pdo->rollBack(); } catch (Throwable $ignore) {}
+                }
+                clinical_m6_send_legacy_write_blocked([
+                    'method' => 'POST',
+                    'route' => 'documents/{id_or_uuid}/replace',
+                ]);
+                return;
+            } catch (ClinicalM6CohortConfigException $e) {
+                if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                    try { $pdo->rollBack(); } catch (Throwable $ignore) {}
+                }
+                clinical_m6_send_cohort_config_invalid([
+                    'method' => 'POST',
+                    'route' => 'documents/{id_or_uuid}/replace',
+                ]);
                 return;
             } catch (Throwable $e) {
                 if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
@@ -9570,6 +9660,8 @@ try {
                     ]);
                     return;
                 }
+                // M6_GUARD_C12_C20_PATCH: stored document patient is authoritative.
+                clinical_m6_assert_legacy_write_allowed($patientId);
                 $actorUserId = clinical_request_actor_user_id($body);
                 if ($actorUserId === '') {
                     $actorUserId = 'viewer_editor';
@@ -9603,6 +9695,20 @@ try {
                         'source' => 'clinical_documents_pdo',
                     ],
                 ], 200);
+                return;
+            } catch (ClinicalM6LegacyWriteBlockedException $e) {
+                clinical_m6_send_legacy_write_blocked([
+                    'method' => 'PATCH',
+                    'route' => 'documents/{id_or_uuid}',
+                    'source' => 'clinical_documents_pdo',
+                ]);
+                return;
+            } catch (ClinicalM6CohortConfigException $e) {
+                clinical_m6_send_cohort_config_invalid([
+                    'method' => 'PATCH',
+                    'route' => 'documents/{id_or_uuid}',
+                    'source' => 'clinical_documents_pdo',
+                ]);
                 return;
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());

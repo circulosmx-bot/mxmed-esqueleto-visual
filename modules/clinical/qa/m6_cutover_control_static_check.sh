@@ -25,7 +25,8 @@ grep -q "hash_equals" "$LIB"
 
 ! grep -Eq '\$_(SERVER|GET|POST|COOKIE|REQUEST)' "$LIB"
 ! grep -Eiq '\b(PDO|SELECT|INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP|TRUNCATE)\b' "$LIB"
-! grep -q "clinical_m6_cutover.php" "$ROUTER"
+grep -q "clinical_m6_cutover.php" "$ROUTER"
+! grep -q "clinical_m6_cohort_authorized" "$ROUTER"
 ! grep -q "MXMED_CLINICAL_M6_COHORT" "$ROUTER"
 ! grep -R -q "MXMED_CLINICAL_M6_COHORT" "$MIGRATIONS"
 

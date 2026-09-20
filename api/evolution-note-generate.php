@@ -18,6 +18,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/_lib/http.php';
 require_once __DIR__ . '/_lib/db.php';
 require_once __DIR__ . '/_lib/clinical_documents.php';
+require_once __DIR__ . '/_lib/clinical_m6_cutover.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     mxmed_json_response(['ok' => false, 'error' => 'Método no permitido'], 405);
@@ -98,7 +99,24 @@ function mxmed_evolution_note_validate_patient_id(PDO $pdo, array $body): string
 }
 
 $body = mxmed_read_json_body();
-$body['context']['patient_id'] = mxmed_evolution_note_validate_patient_id($pdo, $body);
+$patientId = mxmed_evolution_note_validate_patient_id($pdo, $body);
+try {
+    // M6_GUARD_C17_EVOLUTION_CREATE: deny before document/participant INSERT.
+    clinical_m6_assert_legacy_write_allowed($patientId);
+} catch (ClinicalM6LegacyWriteBlockedException $e) {
+    mxmed_json_response([
+        'ok' => false,
+        'error' => 'M6_LEGACY_WRITE_BLOCKED',
+        'message' => 'This legacy clinical mutation path is not permitted for the patient.',
+    ], 409);
+} catch (ClinicalM6CohortConfigException $e) {
+    mxmed_json_response([
+        'ok' => false,
+        'error' => 'M6_COHORT_CONFIG_INVALID',
+        'message' => 'M6_COHORT_CONFIG_INVALID',
+    ], 500);
+}
+$body['context']['patient_id'] = $patientId;
 $context = is_array($body['context'] ?? null) ? $body['context'] : [];
 $payload = is_array($body['payload'] ?? null) ? $body['payload'] : [];
 $actor = is_array($body['actor'] ?? null) ? $body['actor'] : [];

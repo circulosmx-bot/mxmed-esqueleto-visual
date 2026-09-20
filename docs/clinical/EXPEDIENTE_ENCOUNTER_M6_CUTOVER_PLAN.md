@@ -4,8 +4,9 @@
 CHAPTER=CLIN-REFORM-PHASE2-M6-PLAN01
 PLAN_STATUS=ACCEPTED
 PLAN_ACCEPTED_HEAD=7dc615c772ef611a49229e3e1da91b569d6cf73d
-CTRL01_STATUS=BLOCKED_PENDING_R1_REVIEW
-CTRL01_R1_STATUS=READY_FOR_CODE_REVIEW
+CTRL01_STATUS=ACCEPTED
+CTRL01_R1_STATUS=ACCEPTED
+GUARD01_STATUS=READY_FOR_CODE_REVIEW
 PLANNING=true
 REPOSITORY_INVENTORY=true
 WORKING_DB_PREFLIGHT=READ_ONLY_ONLY
@@ -26,7 +27,8 @@ This chapter does **not** authorize or perform a backup, restore, database clone
 | --- | --- |
 | Branch | `design/physician-crd03-credentials-ui-v1` |
 | PLAN01 pre-head and checkpoint | `4d99237e3fe87679bfb74cb30ac213d7530a30f5` |
-| Accepted clinical source | `115923cac322958ad4f443ab783a8cf19f9c5093` |
+| Accepted M5 clinical source | `115923cac322958ad4f443ab783a8cf19f9c5093` |
+| Current accepted repository head / CTRL01-R1 | `05369176c3fc6a8b89043ee79c6b431161b3d5f4` |
 | Accepted M5 evidence | `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2` |
 | M5 result | `T01_T35=PASS`, accepted |
 | M6 execution | not authorized |
@@ -319,22 +321,59 @@ No flag was enabled by PLAN01.
 
 ## 12. Cohort/patient scoping capability
 
-CTRL01 provides a repository-only candidate control-plane primitive in `api/_lib/clinical_m6_cutover.php`. It reads only server environment configuration, defaults OFF, requires exact canonical doctor/patient pairs, derives patient-level membership for future legacy-write blocking and fails closed on malformed active configuration. Review found that the original helper gave emergency OFF precedence over configured patient membership. That erased the information needed to keep legacy writers blocked during safe return, so CTRL01 is blocked pending R1 review.
+CTRL01/R1 is accepted at `05369176c3fc6a8b89043ee79c6b431161b3d5f4`. The repository control plane reads only server environment configuration, defaults OFF, requires exact canonical doctor/patient pairs, derives patient-level membership for legacy-write blocking and fails closed on malformed active configuration.
 
 R1 separates configured membership from active V1 routing authorization. `clinical_m6_cohort_pair_configured()` evaluates the exact configured doctor/patient pair without consulting emergency OFF. `clinical_m6_patient_in_any_cohort()` derives configured patient membership the same way, and `clinical_m6_legacy_write_block_required()` preserves that membership as the future legacy-write block decision. `clinical_m6_cohort_authorized()` alone applies emergency OFF before permitting V1 routing. A malformed active allowlist continues to raise `M6_COHORT_CONFIG_INVALID` in membership and legacy-block paths even while emergency OFF is active; it cannot silently reopen a legacy writer.
 
 ```text
-M6_COHORT_SCOPING_CAPABILITY=CANDIDATE_AVAILABLE_PENDING_REVIEW
-M6_COHORT_CONTROL_PLANE=IMPLEMENTED_PENDING_CODE_REVIEW
-M6_SAFE_RETURN_MEMBERSHIP_SEMANTICS=REPAIRED_PENDING_REVIEW
+M6_COHORT_SCOPING_CAPABILITY=AVAILABLE_REPOSITORY_CONTROL
+M6_COHORT_CONTROL_PLANE=ACCEPTED
+M6_SAFE_RETURN_MEMBERSHIP_SEMANTICS=ACCEPTED
 EMERGENCY_OFF_MEANS_STOP_M6_ROUTING=true
 EMERGENCY_OFF_MEANS_REENABLE_LEGACY_WRITES=false
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 LEGACY_WRITER_BLOCKING_ACTIVE=false
 COHORT_STATE_STORED_IN_CLINICAL_DB=false
+M6_LEGACY_WRITER_GUARDS=IMPLEMENTED_PENDING_REVIEW
+M6_LEGACY_WRITE_BLOCK_ERROR=M6_LEGACY_WRITE_BLOCKED
+M6_LEGACY_WRITE_BLOCK_HTTP_STATUS=409
+GUARDED_LEGACY_WRITER_FAMILIES=8
+REMAINING_UNCONTROLLED_WRITER_FAMILIES=3
+C02_ADAPTED=false
+C03_ADAPTED=false
+C14_RESOLVED=false
 ```
 
-The candidate does not determine identity, does not read client-controlled cohort enrollment, is not included by the router, and does not activate `MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1`. After acceptance, a separate caller-hardening chapter must wire canonical session doctor/patient evaluation and patient-level legacy-write guards. Until then, global runtime behavior and the uncontrolled writer count remain unchanged.
+GUARD01 includes the accepted control library only on the three legacy server mutation surfaces. It does not consult client-controlled cohort enrollment, call `clinical_m6_cohort_authorized()`, activate routing or change `MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1`. With cohort mode OFF, the guard is a no-op. With a configured patient, `M6_LEGACY_WRITE_BLOCKED` returns HTTP 409 before the mapped clinical mutation. Malformed active configuration fails closed as `M6_COHORT_CONFIG_INVALID`. Reads and safe token-status operations remain available. The accepted uncontrolled-writer count remains 11 until GUARD01 is reviewed and accepted.
+
+### GUARD01 coverage matrix
+
+| Family | File | Route/action | Authoritative `patient_id` derivation | Guard location | Mutation prevented |
+| --- | --- | --- | --- | --- | --- |
+| C04 | `api/clinical/index.php` | scoped multipart create; note-capture identity upload | doctor/patient route parameter forced into payload; otherwise stored token row | shared upload save before `clinical_store_uploaded_file()`; note-capture upload catch maps 409 | uploaded-file storage and clinical document INSERT |
+| C05 | `api/clinical/index.php` | scoped/generic multipart create; `POST /documents/{id_or_uuid}/replace` | validated create context or stored source-document patient | shared upload guard before file storage; replace guard after stored patient lookup and before transaction | file storage, replacement INSERT and source UPDATE |
+| C11 | `api/clinical/index.php` | `POST /doctors/{doctor}/documents/{uuid}/replicate` → `POST /documents/{uuid}/replicate` | stored source-document patient; doctor path is not cohort authority | after canonical patient validation and before replication payload/INSERT | replicated document INSERT |
+| C12 | `api/clinical/index.php` | `PATCH /doctors/{doctor}/documents/{id_or_uuid}` → `PATCH /documents/{id_or_uuid}` | stored document patient | after canonical patient validation and before UPDATE | mutable `rendered_text` UPDATE |
+| C16 | `api/clinical-documents.php?action=save` | standalone save | validated request `context.patient_id` confirmed against patient storage | after patient validation and before document build/transaction | document and participant INSERTs |
+| C17 | `api/evolution-note-generate.php` | legacy evolution-note POST | validated request `context.patient_id` confirmed against patient storage | after patient validation and before document build/transaction | evolution document and participant INSERTs |
+| C20 | `api/clinical/index.php` | generic/scoped create, PATCH, replace and replicate | validated create context/route patient or stored source document | shared create guards plus operation-specific stored-context guards | all mapped legacy document mutations |
+| C21 | `api/clinical/index.php` | `POST /note-capture-tokens/{token}/upload` | stored token-row patient | shared upload guard before file/document persistence | clinical file and document persistence; token reads/status remain allowed |
+
+```text
+C04=GUARDED
+C05=GUARDED
+C11=GUARDED
+C12=GUARDED
+C16=GUARDED
+C17=GUARDED
+C20=GUARDED
+C21=GUARDED
+COHORT_READ_COMPATIBILITY_PRESERVED=true
+DEFAULT_OFF_ZERO_RUNTIME_BEHAVIOR_CHANGE=true
+NON_COHORT_LEGACY_BEHAVIOR_PRESERVED=true
+LEGACY_WRITE_BLOCK_PERSISTS_DURING_EMERGENCY_OFF=true
+MALFORMED_CONFIG_CAN_ALLOW_LEGACY_WRITE=false
+```
 
 ## 13. Monitoring invariants
 
@@ -405,7 +444,7 @@ SAFE_RETURN_PLAN_READY=true
 | `MIGRATION_ACCOUNT_READY=true` | `FAIL` | Runtime is broad-privilege root; no distinct account. |
 | `WRITE_WINDOW_READY=true` | `FAIL` | No comprehensive writer pause/block mechanism rehearsed. |
 | `SCHEMA_READINESS_REHEARSAL=PASS` | `NOT_YET_PROVEN` | Only synthetic M5/MIG rehearsal, not working-data clone. |
-| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | PLAN01 accepted; CTRL01 cohort control is a candidate pending code review and is not wired. |
+| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | PLAN01 and CTRL01/R1 accepted; GUARD01 is pending code review and cohort routing remains inactive. |
 | `MONITORING_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Invariants defined; acceptance/operationalization pending. |
 | `SAFE_RETURN_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Procedure defined; acceptance/rehearsal pending. |
 | `CALLER_COMPATIBILITY_PASS=true` | `FAIL` | Adapters/blocks not implemented. |
@@ -418,9 +457,9 @@ The first blocker is `UNCONTROLLED_LEGACY_CLINICAL_WRITERS_PRESENT`.
 
 Known blockers, in actionable order:
 
-1. 11 active caller families can bypass or fail the hardened V1 contract; adapters/explicit blocks are absent.
+1. The accepted count remains 11 active caller families; GUARD01 candidate guards eight, while C02/C03 still require adapters and C14 requires a decision.
 2. Active multipart clinical writes conflict with V1's fail-closed multipart deferral.
-3. The R1 candidate cohort control plane is pending code review and is not wired to runtime routing or legacy guards.
+3. GUARD01 containment is pending code review; cohort runtime routing remains inactive.
 4. The working schema is pre-migration (01–04 not applied).
 5. No restorable backup has been proved.
 6. No isolated working-data clone migration rehearsal has been executed.
@@ -432,5 +471,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of M6 CTRL01-R1 safe-return cohort-membership semantics before runtime routing, caller adapters or legacy-write blocking. No backup, clone, migration, feature-gate activation or cutover authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M6 GUARD01 cohort-aware legacy writer containment before adapting C02/C03 and resolving C14. No backup, clone, migration, feature-gate activation or cutover authorized.
 ```

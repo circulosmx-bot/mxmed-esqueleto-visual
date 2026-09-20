@@ -9,6 +9,19 @@ final class ClinicalM6CohortConfigException extends RuntimeException
     }
 }
 
+final class ClinicalM6LegacyWriteBlockedException extends RuntimeException
+{
+    public function __construct()
+    {
+        parent::__construct('M6_LEGACY_WRITE_BLOCKED');
+    }
+
+    public function httpStatus(): int
+    {
+        return 409;
+    }
+}
+
 function clinical_m6_cohort_config_invalid(): never
 {
     throw new ClinicalM6CohortConfigException();
@@ -151,4 +164,11 @@ function clinical_m6_patient_in_any_cohort(string $patientId): bool
 function clinical_m6_legacy_write_block_required(string $patientId): bool
 {
     return clinical_m6_patient_in_any_cohort($patientId);
+}
+
+function clinical_m6_assert_legacy_write_allowed(string $patientId): void
+{
+    if (clinical_m6_legacy_write_block_required($patientId)) {
+        throw new ClinicalM6LegacyWriteBlockedException();
+    }
 }
