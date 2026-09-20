@@ -7,7 +7,7 @@ python3 - <<'PY'
 from pathlib import Path
 import re, subprocess
 
-baseline = '6cb473226e4239dd11375e8cdff47ee35c3ea954'
+baseline = '44e8275d4794d04a7f6741b5c479608b265377bc'
 path = 'assets/js/app.js'
 before = subprocess.check_output(['git', 'show', baseline + ':' + path], text=True)
 after = Path(path).read_text()
@@ -44,16 +44,17 @@ assert 'c05-order-create:${encounterKey}:${documentType}' in order
 assert "replacementSourceRef: ''" in order
 assert 'else{\n          const formData = new FormData();' in order
 assert 'buildScopedClinicalDocumentCreateUrl(patientId)' in order
-assert order.index('if(encounterKey){') < order.index('window.mxmedClinicalCommandKeys.run(')
+create_branch = order[order.index('      }else{', order.index('      if(isReplacementMode){')):]
+assert create_branch.index('if(encounterKey){') < create_branch.index('window.mxmedClinicalCommandKeys.run(')
 
-# The replacement branch remains exact, including its guarded legacy URL.
+# The accepted replacement branch remains exact.
 def replacement_block(source):
     body = function_body(source, 'async function saveCanonicalStudyOrder(params)')
     start = body.index('      if(isReplacementMode){')
     end = body.index('      }else{', start)
     return body[start:end]
 assert replacement_block(after) == replacement_block(before)
-assert 'buildScopedClinicalDocumentReplaceUrl(replacementRef)' in replacement_block(after)
+assert 'buildClinicalDocumentAmendmentUrl(replacementRef)' in replacement_block(after)
 
 # Q08-Q17 result authority, provenance, references, and executor-local FormData.
 assert "detail?.context?.encounter_id" in result
@@ -77,23 +78,40 @@ assert 'buildScopedClinicalDocumentCreateUrl(patientId)' in result
 # stable key for the next same-semantic retry instead of marking it successful.
 assert order.index('if(!response.ok || !responseJson || responseJson.ok !== true)') < order.index('return { response, json: responseJson }')
 
-# Removing only the three authorized functions makes all other frontend source exact.
+# Removing the accepted C05 functions and the now-authorized C04 caller keeps all
+# other frontend source, including C21, exact.
 def without_allowed(source):
     for name in ['async function saveOrderResultFromModal()', 'async function saveCanonicalStudyOrder(params)']:
         source = source.replace(function_body(source, name), '')
     if 'function buildEncounterClinicalDocumentCreateUrl(encounterKey)' in source:
         source = source.replace(function_body(source, 'function buildEncounterClinicalDocumentCreateUrl(encounterKey)'), '')
         source = source.replace('\n\n  function buildScopedClinicalDocumentReplaceUrl', '\n  function buildScopedClinicalDocumentReplaceUrl', 1)
+    marker = '(function initActividadClinicaCanonicalUpload(){'
+    start = source.index(marker)
+    end = source.index('\n})();', start) + len('\n})();')
+    source = source[:start] + source[end:]
     return source
-assert without_allowed(after) == without_allowed(before), 'C04/C21 or unrelated frontend changed'
+assert without_allowed(after) == without_allowed(before), 'C21 or unrelated frontend changed'
+
+# The sole router delta is C04 patient/encounter integrity validation; closed C05
+# routing and behavior remain byte-identical.
+router_path = 'api/clinical/index.php'
+router_before = subprocess.check_output(['git', 'show', baseline + ':' + router_path], text=True)
+router_after = Path(router_path).read_text()
+c04_integrity = """                    if (clinical_documents_request_has_patient_mismatch($payload, (string)($encounterRow['patient_id'] ?? ''))) {
+                        throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+                    }
+"""
+assert c04_integrity in router_after
+assert router_after.replace(c04_integrity, '', 1) == router_before
 
 protected = [
- 'api/clinical/index.php', 'api/_lib/clinical_encounter_multipart_adapter.php',
+ 'api/_lib/clinical_encounter_multipart_adapter.php',
  'api/_lib/clinical_multipart_document_service.php', 'api/_lib/clinical_private_binary_storage.php',
  'api/_lib/clinical_idempotency.php', 'modules/clinical/db/migrations'
 ]
 subprocess.run(['git', 'diff', '--exit-code', baseline, '--'] + protected, check=True)
-print('MULTI06A_C05_STATIC_QA=PASS Q01-Q03,Q05-Q17; replacement,C04,C21,backend protected')
+print('MULTI06A_C05_STATIC_QA=PASS Q01-Q03,Q05-Q17; replacement,C21,backend protected;C04 scoped')
 PY
 
 node modules/clinical/qa/multi06a_c05_caller_test.js

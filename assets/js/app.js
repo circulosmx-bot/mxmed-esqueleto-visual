@@ -74706,6 +74706,11 @@ function mxResetLogoPreview(){
     if(!doctorId || !safePatientId) return '';
     return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents`;
   };
+  const buildEncounterClinicalDocumentCreateUrl = (encounterKey)=>{
+    const safeEncounterKey = clean(encounterKey);
+    if(!safeEncounterKey) return '';
+    return `/api/clinical/index.php/encounters/${encodeURIComponent(safeEncounterKey)}/documents`;
+  };
   let previewObjectUrl = '';
   let previewRenderKey = '';
   const setFeedback = (message, tone = 'muted')=>{
@@ -74738,6 +74743,11 @@ function mxResetLogoPreview(){
     if(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(normalized)) return `${normalized}:00`;
     if(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(normalized)) return normalized;
     return '';
+  };
+  const nowSqlDatetime = ()=>{
+    const now = new Date();
+    const pad = (value)=> String(value).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   };
   const resolveActivePatientIdForUpload = ()=>{
     const fromResolver = (typeof window.resolveActivePatientId === 'function')
@@ -75191,19 +75201,25 @@ function mxResetLogoPreview(){
       payload.payload.selection_count = requestedStudies.length;
     }
 
-    const formData = new FormData();
-    Object.keys(payload).forEach((key)=>{
-      const value = payload[key];
-      if(value == null || value === '') return;
-      if(key === 'payload'){
-        formData.append(key, JSON.stringify(value));
-      }else{
-        formData.append(key, String(value));
-      }
-    });
-    formData.append('file', file);
+    const buildFormData = (commandPayload)=>{
+      const formData = new FormData();
+      Object.keys(commandPayload).forEach((key)=>{
+        const value = commandPayload[key];
+        if(value == null || value === '') return;
+        if(key === 'payload'){
+          formData.append(key, JSON.stringify(value));
+        }else{
+          formData.append(key, String(value));
+        }
+      });
+      formData.append('file', file);
+      return formData;
+    };
 
-    const createUrl = buildScopedClinicalDocumentCreateUrl(patientId);
+    const encounterOwned = encounterKey !== '';
+    const createUrl = encounterOwned
+      ? buildEncounterClinicalDocumentCreateUrl(encounterKey)
+      : buildScopedClinicalDocumentCreateUrl(patientId);
     if(!createUrl){
       setFeedback('No se pudo resolver el médico para guardar documentos clínicos.', 'error');
       return;
@@ -75220,13 +75236,61 @@ function mxResetLogoPreview(){
     }catch(_){}
 
     try{
-      const resp = await fetch(createUrl, {
-        method: 'POST',
-        body: formData,
-        headers: { Accept: 'application/json' },
-        credentials: 'same-origin'
-      });
-      const json = await resp.json().catch(()=> null);
+      let resp;
+      let json;
+      if(encounterOwned){
+        if(!window.mxmedClinicalCommandKeys?.run){
+          throw new Error('No está disponible la protección idempotente para adjuntar el documento.');
+        }
+        const canonicalPayload = {
+          ...payload,
+          event_datetime: payload.event_datetime || nowSqlDatetime()
+        };
+        const commandScope = `c04-encounter-upload:${encounterKey}:${patientId}:${documentType}`;
+        const commandFingerprint = JSON.stringify({
+          encounterKey,
+          patientId,
+          payload: canonicalPayload,
+          file: {
+            name: clean(file.name || ''),
+            size: Number(file.size || 0),
+            lastModified: Number(file.lastModified || 0),
+            type: clean(file.type || '')
+          }
+        });
+        const canonicalResult = await window.mxmedClinicalCommandKeys.run(
+          commandScope,
+          commandFingerprint,
+          ()=> ({ createUrl, payload: canonicalPayload }),
+          async ({ key, command })=> {
+            const response = await fetch(command.createUrl, {
+              method: 'POST',
+              body: buildFormData(command.payload),
+              headers: { Accept: 'application/json', 'Idempotency-Key': key },
+              credentials: 'same-origin'
+            });
+            const responseJson = await response.json().catch(()=> null);
+            if(!response.ok || !responseJson || responseJson.ok !== true){
+              const message = clean(responseJson?.message || responseJson?.error?.message || responseJson?.error || `HTTP ${response.status}`) || 'No se pudo guardar el documento.';
+              const canonicalError = new Error(message);
+              canonicalError.status = response.status;
+              canonicalError.code = clean(responseJson?.error?.code || responseJson?.error || '');
+              throw canonicalError;
+            }
+            return { response, json: responseJson };
+          }
+        );
+        resp = canonicalResult.response;
+        json = canonicalResult.json;
+      }else{
+        resp = await fetch(createUrl, {
+          method: 'POST',
+          body: buildFormData(payload),
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin'
+        });
+        json = await resp.json().catch(()=> null);
+      }
       if(!resp.ok || !json || json.ok !== true){
         const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el documento.';
         throw new Error(message);

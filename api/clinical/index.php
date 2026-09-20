@@ -7059,6 +7059,9 @@ try {
                 if($useV1){
                     $encounterRow=clinical_v1_authorized_encounter($pdo,$encounterKey,$doctorContext,'encounters/{encounter_key}/documents');
                     if($encounterRow===null)return;
+                    if (clinical_documents_request_has_patient_mismatch($payload, (string)($encounterRow['patient_id'] ?? ''))) {
+                        throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+                    }
                     $documentClass=clinical_v1_document_class($payload);
                     $createOperation=clinical_document_create_operation($documentClass);
                     $policyOperation=clinical_document_policy_operation($documentClass);

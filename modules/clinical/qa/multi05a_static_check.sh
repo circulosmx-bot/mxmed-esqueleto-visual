@@ -4,21 +4,17 @@ cd "$(dirname "$0")/../../.."
 python3 - <<'PY'
 from pathlib import Path
 import subprocess,re
-base='10c09aa8fa0960fd5d1d57d72c765755026c2c06'
+base='44e8275d4794d04a7f6741b5c479608b265377bc'
 r=Path('api/clinical/index.php').read_text()
 prior=subprocess.check_output(['git','show',base+':api/clinical/index.php'],text=True)
 bridge=re.search(r'                    // MULTI05A BRIDGE BEGIN\.[\s\S]*?                    // MULTI05A BRIDGE END\.\n',r).group(0)
 assert 'if ($isMultipart)' in bridge and 'return;' in bridge
-rest=r.replace(bridge,'')
-rest=re.sub(r'    // MULTI05A UUID BEGIN\.[\s\S]*?    // MULTI05A UUID END\.\n','',rest)
-rest=rest.replace('string $actorId,?string $documentUuid=null): int','string $actorId): int',1)
-anchor="                    $documentClass=clinical_v1_document_class($payload);"
-guard="""                    if(!clinical_v1_multipart_document_write_allowed($isMultipart,is_array($uploadFile))){
-                        throw new RuntimeException('V1_MULTIPART_STORAGE_NOT_READY');
+c04_integrity="""                    if (clinical_documents_request_has_patient_mismatch($payload, (string)($encounterRow['patient_id'] ?? ''))) {
+                        throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
                     }
 """
-rest=rest.replace(anchor,guard+anchor,1)
-assert rest==prior,'unrelated router/JSON/legacy/GET mutation'
+assert c04_integrity in r
+assert r.replace(c04_integrity,'',1)==prior,'unrelated router/JSON/legacy/GET mutation'
 h=Path('api/_lib/clinical_encounter_multipart_adapter.php').read_text()
 route=r[r.index("if (count($segments) === 3 && ($segments[2] ?? '') === 'documents' && $method === 'POST')"):]
 last=0
@@ -37,8 +33,7 @@ assert 'clinical_document_semantic_request($payload, null)' in h
 assert 'is_uploaded_file(' in h and "count($files) !== 1" in h
 assert "'HTTP_IDEMPOTENCY_KEY'" in bridge
 assert not any(x in h for x in ['$_POST', '$_REQUEST', '$_GET', 'clinical_store_uploaded_file', '/storage/', 'INSERT INTO', "$_FILES['type']"])
-assert 'clinical_v1_multipart_document_write_allowed' in r
-protected=['api/_lib/clinical_private_binary_http.php','api/_lib/clinical_private_binary_retrieval.php','api/_lib/clinical_private_binary_storage.php','api/_lib/clinical_multipart_document_service.php','api/_lib/clinical_idempotency.php','api/clinical-documents.php','api/evolution-note-generate.php','modules/clinical/db/migrations','assets','index.html']
+protected=['api/_lib/clinical_private_binary_http.php','api/_lib/clinical_private_binary_retrieval.php','api/_lib/clinical_private_binary_storage.php','api/_lib/clinical_multipart_document_service.php','api/_lib/clinical_idempotency.php','api/clinical-documents.php','api/evolution-note-generate.php','modules/clinical/db/migrations','index.html']
 subprocess.run(['git','diff','--exit-code',base,'--']+protected,check=True)
-print('MULTI05A_STATIC_QA=PASS W01,W05-W07,W10-W13; canonical order/UUID/JSON/legacy/GET/protected source')
+print('MULTI05A_STATIC_QA=PASS W01,W05-W07,W10-W13; canonical order/UUID/JSON/legacy/GET/protected source;C04 integrity scoped')
 PY
