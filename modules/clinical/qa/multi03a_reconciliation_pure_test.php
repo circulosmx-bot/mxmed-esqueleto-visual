@@ -81,8 +81,31 @@ try {
     reconcile_check(!reconcile_has($findings, 'STALE_STAGED', $future), 'unexpired staging classified stale');
     reconcile_check(!reconcile_has($findings, 'STALE_STAGED', $committedStage), 'committed resource classified stale');
 
+    // R1-05: a crash before coordination leaves a discoverable, untouched staging file.
+    $untracked = 'staging/untracked/item';
+    $retained = 'staging/finalized/item';
+    $recoveryStage = 'staging/reconciliation/item';
+    $manifestStage = 'staging/manifest/item';
+    $r1Inventory = array_merge($inventory, array_map(static fn($key) => ['key'=>$key,'byte_length'=>10,'sha256'=>str_repeat('a',64)], [$untracked,$retained,$recoveryStage,$manifestStage]));
+    $r1Rows = array_merge($coordination, [
+        ['storage_state'=>'FINALIZED','staging_key'=>$retained,'final_key'=>$healthy,'document_id'=>1],
+        ['storage_state'=>'RECONCILIATION_REQUIRED','staging_key'=>$recoveryStage,'committed_resource'=>true],
+        ['storage_state'=>'RECONCILIATION_REQUIRED','staging_key'=>$manifestStage,'final_key'=>$healthy],
+    ]);
+    $r1Before = serialize([$r1Inventory,$r1Rows,$manifests]);
+    $r1 = ClinicalBinaryReconciliation::classify($r1Inventory,$r1Rows,$manifests,$now);
+    reconcile_check(reconcile_has($r1,'STAGING_WITHOUT_COORDINATION',$untracked), 'R1-05 missing untracked staging');
+    reconcile_check(reconcile_has($r1,'HEALTHY_FINALIZED',$healthy) && reconcile_has($r1,'STAGING_RETAINED_AFTER_FINALIZATION',$retained), 'R1-06 healthy final hides staging');
+    reconcile_check(reconcile_has($r1,'STAGING_RETAINED_AFTER_FINALIZATION',$recoveryStage), 'R1-07 reconciliation state omitted');
+    reconcile_check(reconcile_has($r1,'STAGING_RETAINED_AFTER_FINALIZATION',$manifestStage), 'manifest evidence omitted');
+    reconcile_check(reconcile_has($r1,'STALE_STAGED',$stale) && !reconcile_has($r1,'STAGING_WITHOUT_COORDINATION',$stale), 'R1-08 stale staging correlation changed');
+    foreach ([$leased,$future,$retained,$recoveryStage,$manifestStage] as $key) {
+        reconcile_check(!reconcile_has($r1,'STAGING_WITHOUT_COORDINATION',$key), 'referenced staging classified untracked');
+    }
+    reconcile_check($r1Before===serialize([$r1Inventory,$r1Rows,$manifests]), 'R1 mutated input');
+    echo "MULTI03B_R1_RECONCILIATION_QA=PASS\nR1_RECONCILIATION_CASES=R1-05,R1-06,R1-07,R1-08\n";
     echo "MULTI03A_RECONCILIATION_QA=PASS\n";
-    echo "RECONCILIATION_CLASSIFICATIONS_COVERED=8\n";
+    echo "RECONCILIATION_CLASSIFICATIONS_COVERED=10\n";
     echo "RECONCILIATION_CLASSIFIER_MUTATES_STORAGE=false\n";
     echo "RECONCILIATION_CLASSIFIER_MUTATES_DB=false\n";
 } catch (Throwable $exception) {

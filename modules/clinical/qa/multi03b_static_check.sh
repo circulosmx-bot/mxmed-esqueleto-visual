@@ -23,6 +23,9 @@ function ordered(string $source, array $calls): void {
 $c = 'ClinicalMultipartDocumentService';
 $execute = code($c, 'execute');
 ordered($execute, ['clinical_multipart_storage_assert_schema_ready(', '->stageFile(', '->insertStaged(', '$this->commit();', '$this->coordinate(']);
+check(str_contains($execute, '$notCommittedConfirmed = (!$insertAttempted && !$commitAttempted) || $rollbackConfirmed;'), 'Missing positive non-commit proof');
+ordered($execute, ['$insertAttempted = false;', '$commitAttempted = false;', '$this->begin();', '$insertAttempted = true;', '->insertStaged(', '$commitAttempted = true;', '$this->commit();', '$rollbackConfirmed = $this->rollbackConfirmed();', 'if ($notCommittedConfirmed)', "->deleteUncommitted(\$binary['staging_key'])"]);
+check(substr_count($execute, '->deleteUncommitted(') === 1, 'Unexpected initial cleanup path');
 $main = code($c, 'coordinate');
 ordered($main, ['->claim(', '->bindRequest(', '$createResource(', '->buildFinalKey(', '->finalizeCreateOnly(', '->insertOriginal(', '->finalize(', '->complete(', '$this->commit();', '$this->cleanupCommittedStaging(']);
 check(!str_contains($main, '->deleteUncommitted('), 'Direct cleanup inside transaction');
@@ -44,7 +47,7 @@ $delete = code('ClinicalMultipartCoordinationRepository','deleteRedundantStaged'
 foreach (["storage_state='STAGED'",'document_id IS NULL','idempotency_request_id IS NULL'] as $guard) check(str_contains($delete,$guard),'Unsafe delete');
 echo "MULTI03B_STATIC_TRANSACTION_ORDER=PASS\nMULTI03B_STATIC_AUTHORITIES=PASS\n";
 PHP
-protected_paths=(api/clinical/index.php api/clinical-documents.php api/evolution-note-generate.php api/_lib/clinical_idempotency.php api/_lib/clinical_encounter_integrity.php api/_lib/clinical_private_binary_storage.php api/_lib/clinical_multipart_storage_schema.php modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql)
+protected_paths=(api/clinical/index.php api/clinical-documents.php api/evolution-note-generate.php api/_lib/clinical_idempotency.php api/_lib/clinical_encounter_integrity.php api/_lib/clinical_multipart_storage_schema.php modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql)
 git diff --exit-code 683f99fabbd6617f58fff50eb8fb78b891b26213 -- "${protected_paths[@]}"
 if rg -n 'clinical_multipart_document_service' api --glob '*.php' --glob '!clinical_multipart_document_service.php'; then
   echo 'FAIL: runtime service wiring' >&2
@@ -54,3 +57,19 @@ rg -q 'V1_MULTIPART_STORAGE_NOT_READY' api/clinical/index.php
 test -f modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql
 echo 'MULTI03B_STATIC_QA=PASS'
 echo 'ANY_DATABASE_CONNECTED=false'
+
+# Only the pure classifier may change in the accepted storage file. Main service
+# transaction, F5, replay and post-commit cleanup remain byte-for-byte preserved.
+python3 - <<'PYCODE'
+from pathlib import Path
+import subprocess
+baseline = 'b86bf10499e7e745e31ac48d6cb41f9bc45e8597'
+for path, boundary, side in [
+    ('api/_lib/clinical_private_binary_storage.php', 'final class ClinicalBinaryReconciliation', 0),
+    ('api/_lib/clinical_multipart_document_service.php', '    private function coordinate(', 1),
+]:
+    before = subprocess.check_output(['git', 'show', baseline + ':' + path], text=True)
+    after = Path(path).read_text()
+    assert before.split(boundary, 1)[side] == after.split(boundary, 1)[side], 'Protected implementation changed: ' + path
+print('MULTI03B_R1_STATIC_PROTECTION=PASS')
+PYCODE

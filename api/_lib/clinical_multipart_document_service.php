@@ -218,14 +218,28 @@ final class ClinicalMultipartDocumentService
             'staging_key' => $binary['staging_key'], 'planned_final_prefix' => substr($plannedKey, 0, strrpos($plannedKey, '/')),
             'expires_at' => $expiresAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
         ];
+        $insertAttempted = false;
+        $commitAttempted = false;
         try {
             // Separate transaction makes STAGED evidence durable before clinical work.
             $this->begin();
+            $insertAttempted = true;
             $this->uploads->insertStaged($row);
+            $commitAttempted = true;
             $this->commit();
         } catch (Throwable $error) {
-            $this->rollbackConfirmed();
-            // Preserve staged bytes even if the short commit outcome is unknown.
+            $rollbackConfirmed = $this->rollbackConfirmed();
+            // A failed BEGIN cannot persist this row: no INSERT or COMMIT was attempted.
+            // Once INSERT was attempted, only a confirmed rollback permits deletion.
+            $notCommittedConfirmed = (!$insertAttempted && !$commitAttempted) || $rollbackConfirmed;
+            if ($notCommittedConfirmed) {
+                try {
+                    $this->storage->deleteUncommitted($binary['staging_key']);
+                } catch (Throwable) {
+                    // Pure inventory reconciliation discovers any untracked retained bytes.
+                }
+            }
+            // Unknown COMMIT outcomes retain staging and never enter the main transaction.
             throw new RuntimeException('MULTIPART_STAGED_COORDINATION_FAILED', 0, $error);
         }
         return $this->coordinate($semantic, $key, $actorUserId, $requestHash, $uploadId,

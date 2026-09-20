@@ -23,7 +23,14 @@ M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
 MULTI03A_BLOCKER=NONE
 PHASE_2_M6_MULTI03A_R1=ACCEPTED
 M6_MULTI03A_R1_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
-PHASE_2_M6_MULTI03B=READY_FOR_CODE_REVIEW
+PHASE_2_M6_MULTI03B=BLOCKED_PENDING_R1_REVIEW
+M6_MULTI03B_CANDIDATE_HEAD=b86bf10499e7e745e31ac48d6cb41f9bc45e8597
+MULTI03B_BLOCKER=STAGING_RECOVERY_INCOMPLETE_FOR_UNTRACKED_AND_POST_FINALIZATION_OBJECTS
+PHASE_2_M6_MULTI03B_R1=READY_FOR_CODE_REVIEW
+STAGING_WITHOUT_COORDINATION_DETECTED=true
+FINALIZED_RESOURCE_WITH_STAGING_RETAINED_DETECTED=true
+CONFIRMED_INITIAL_COORDINATION_ROLLBACK_CLEANS_STAGING=true
+AMBIGUOUS_INITIAL_COORDINATION_COMMIT_PRESERVES_STAGING=true
 MULTIPART_COORDINATION_REPOSITORY=IMPLEMENTED_PENDING_REVIEW
 MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
 MULTIPART_TRANSACTION_ORCHESTRATION=IMPLEMENTED_PENDING_REVIEW
@@ -402,7 +409,14 @@ M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
 MULTI03A_BLOCKER=NONE
 PHASE_2_M6_MULTI03A_R1=ACCEPTED
 M6_MULTI03A_R1_ACCEPTED_HEAD=683f99fabbd6617f58fff50eb8fb78b891b26213
-PHASE_2_M6_MULTI03B=READY_FOR_CODE_REVIEW
+PHASE_2_M6_MULTI03B=BLOCKED_PENDING_R1_REVIEW
+M6_MULTI03B_CANDIDATE_HEAD=b86bf10499e7e745e31ac48d6cb41f9bc45e8597
+MULTI03B_BLOCKER=STAGING_RECOVERY_INCOMPLETE_FOR_UNTRACKED_AND_POST_FINALIZATION_OBJECTS
+PHASE_2_M6_MULTI03B_R1=READY_FOR_CODE_REVIEW
+STAGING_WITHOUT_COORDINATION_DETECTED=true
+FINALIZED_RESOURCE_WITH_STAGING_RETAINED_DETECTED=true
+CONFIRMED_INITIAL_COORDINATION_ROLLBACK_CLEANS_STAGING=true
+AMBIGUOUS_INITIAL_COORDINATION_COMMIT_PRESERVES_STAGING=true
 MULTIPART_COORDINATION_REPOSITORY=IMPLEMENTED_PENDING_REVIEW
 MULTIPART_DURABLE_IDEMPOTENCY_INTEGRATION=IMPLEMENTED_PENDING_REVIEW
 MULTIPART_TRANSACTION_ORCHESTRATION=IMPLEMENTED_PENDING_REVIEW
@@ -470,7 +484,7 @@ M6_GO_NO_GO=NO_GO_BLOCKED
 ### MULTI03B — repository-only coordination candidate (2026-09-19)
 
 MULTI03A/R1 is accepted at `683f99fabbd6617f58fff50eb8fb78b891b26213`;
-MULTI03B is `READY_FOR_CODE_REVIEW`, not physically validated or runtime-enabled.
+MULTI03B candidate `b86bf10499e7e745e31ac48d6cb41f9bc45e8597` is `BLOCKED_PENDING_R1_REVIEW`; R1 is `READY_FOR_CODE_REVIEW`. Neither is physically validated or runtime-enabled.
 `clinical_multipart_document_service.php` reuses `ClinicalIdempotencyRepository`
 and the accepted private storage adapter. The explicit caller supplies canonical
 doctor/patient/context, document metadata, expiration and authorized creation/read
@@ -512,3 +526,43 @@ static checks; MULTI02A readiness/static; M6 CTRL, GUARD, CALLER01, ROUTE01;
 encounter-integrity pure/static; M5 barrier pure/static/concurrent-directory checks:
 all PASS. PHP lint and `git diff --check`: PASS. These are repository/pure/filesystem
 results only; actual SQL transaction and crash validation remains MULTI03C work.
+
+
+### MULTI03B-R1 — staging recovery completeness (2026-09-19)
+
+Review found two inventory blind spots and unconditional staging retention after a
+confirmed initial coordination rollback in MULTI03B. The accepted baseline remains
+`683f99fabbd6617f58fff50eb8fb78b891b26213`; MULTI03B is not yet accepted.
+
+The initial short transaction now records whether INSERT and COMMIT were attempted.
+Failure before any INSERT/COMMIT (including failed BEGIN), or positively confirmed
+rollback, permits `deleteUncommitted(staging_key)`. Unknown commit or rollback
+outcomes preserve staging and fail closed without entering the main transaction.
+Cleanup failure also returns `MULTIPART_STAGED_COORDINATION_FAILED`; it performs no
+final-object deletion or automatic DB repair.
+
+Pure reconciliation correlates every inventory `staging/` key against all supplied
+coordination rows, including RECONCILIATION_REQUIRED. Unreferenced objects report
+`STAGING_WITHOUT_COORDINATION`. Referenced existing staging with supplied committed
+resource/manifest evidence reports `STAGING_RETAINED_AFTER_FINALIZATION`, independently
+of `HEALTHY_FINALIZED`. Expired, unleased, uncommitted coordinated STAGED rows still
+report `STALE_STAGED`. These findings never delete files or mutate database state.
+The future evidence supplier remains responsible for canonical committed-resource
+facts; the classifier does not query a database.
+
+R1 QA covers failed BEGIN, failed INSERT with rollback, failed short COMMIT with
+rollback, ambiguous short COMMIT, failed cleanup and unconfirmed rollback (six spy
+scenarios), plus R1-05–R1-08 reconciliation and manifest-evidence coverage. Existing
+12 orchestration scenarios and 26 semantic assertions remain. Static protection
+compares the main transaction/replay/F5 service code and all storage primitives
+byte-for-byte with MULTI03B; only the pure classifier changes in the storage file.
+No MySQL connection or physical coordination QA is performed. Migration 05,
+idempotency authority, HTTP callers and the fail-closed 503 remain unchanged.
+M6 remains NO_GO_BLOCKED. Review R1 before authorizing any separate MULTI03C work.
+
+R1 verification: PASS for initial-coordination spies (6), R1-05–R1-08 pure
+reconciliation, original orchestration spies (12), semantic QA (26 assertions),
+static authority/order protections, MULTI03A filesystem/reconciliation/static,
+MULTI02A readiness/static, M6 CTRL/GUARD/CALLER01/ROUTE01, encounter-integrity,
+and M5 barrier suites. PHP lint, shell syntax and `git diff --check`: PASS.
+Temporary test storage was removed; no database was connected.

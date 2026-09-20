@@ -814,6 +814,7 @@ final class ClinicalBinaryReconciliation
             }
         }
 
+        $coordinatedStaging = [];
         foreach ($coordination as $record) {
             $state = strtoupper((string) ($record['storage_state'] ?? ''));
             $stagingKey = (string) ($record['staging_key'] ?? '');
@@ -821,6 +822,13 @@ final class ClinicalBinaryReconciliation
             $committedResource = (bool) ($record['committed_resource'] ?? false)
                 || !empty($record['document_id'])
                 || ($finalKey !== '' && isset($manifestByKey[$finalKey]));
+
+            if ($stagingKey !== '') {
+                $coordinatedStaging[$stagingKey] = true;
+            }
+            if (str_starts_with($stagingKey, 'staging/') && isset($inventoryByKey[$stagingKey]) && $committedResource) {
+                $findings[] = self::finding('STAGING_RETAINED_AFTER_FINALIZATION', $stagingKey);
+            }
 
             if ($state === 'STAGED' && $stagingKey !== '' && isset($inventoryByKey[$stagingKey])) {
                 $expiresAt = self::dateValue($record['expires_at'] ?? null);
@@ -841,6 +849,9 @@ final class ClinicalBinaryReconciliation
         }
 
         foreach ($inventoryByKey as $key => $item) {
+            if (str_starts_with($key, 'staging/') && !isset($coordinatedStaging[$key])) {
+                $findings[] = self::finding('STAGING_WITHOUT_COORDINATION', $key);
+            }
             if (str_starts_with($key, 'clinical/') && !isset($manifestByKey[$key])) {
                 $findings[] = self::finding('FINAL_WITHOUT_COMMITTED_MANIFEST', $key);
             }

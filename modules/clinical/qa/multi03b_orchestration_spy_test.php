@@ -11,6 +11,8 @@ final class Multi03bPdoSpy extends PDO
     public array $snapshot = [];
     public array $events = [];
     public int $commits = 0;
+    public int $begins = 0;
+    public $atInitialFailure = null;
     public string $fail = '';
     public $atCommit = null;
     public $atManifest = null;
@@ -18,12 +20,18 @@ final class Multi03bPdoSpy extends PDO
     public function getAttribute(int $attribute): mixed { return PDO::ERRMODE_EXCEPTION; }
     public function inTransaction(): bool { return $this->transaction; }
     public function beginTransaction(): bool {
+        $this->begins++;
+        if ($this->fail==='initial-begin') throw new PDOException('initial begin failure');
         if ($this->transaction) throw new RuntimeException('nested transaction');
         $this->snapshot=[$this->rows,$this->ledger]; $this->transaction=true; $this->events[]='begin'; return true;
     }
     public function commit(): bool {
         $this->commits++;
         if ($this->atCommit) ($this->atCommit)($this);
+        if ($this->commits===1 && in_array($this->fail,['initial-commit','initial-ambiguous'],true)) {
+            if ($this->fail==='initial-ambiguous') $this->transaction=false;
+            throw new PDOException('initial commit failure');
+        }
         if ($this->commits===2 && in_array($this->fail,['commit','ambiguous'],true)) {
             if ($this->fail==='ambiguous') $this->transaction=false;
             throw new RuntimeException('INJECTED_COMMIT_FAILURE');
@@ -31,6 +39,7 @@ final class Multi03bPdoSpy extends PDO
         $this->transaction=false; $this->events[]='commit'; return true;
     }
     public function rollBack(): bool {
+        if ($this->fail==='initial-rollback') throw new PDOException('rollback unconfirmed');
         [$this->rows,$this->ledger]=$this->snapshot; $this->transaction=false; $this->events[]='rollback'; return true;
     }
     public function lastInsertId(?string $name=null): string|false { return '11'; }
@@ -47,6 +56,10 @@ final class Multi03bStatementSpy extends PDOStatement
         if (str_contains($sql,'information_schema.')) return true;
         if (str_contains($sql,'INSERT INTO clinical_binary_uploads')) {
             if (!$db->transaction) throw new RuntimeException('staged insert outside transaction');
+            if (in_array($db->fail,['initial-insert','initial-cleanup','initial-rollback'],true)) {
+                if ($db->atInitialFailure) ($db->atInitialFailure)($p);
+                throw new PDOException('initial insert failure');
+            }
             $db->rows[$p['upload_id']]=$p+['state'=>'STAGED','bound'=>false]; $db->events[]='staged';
         } elseif (str_contains($sql,'INSERT INTO clinical_idempotency_requests')) {
             $db->events[]='claim';
@@ -185,6 +198,41 @@ try {
         }
         $scenarios++;
     }
+    $r1Scenarios = 0;
+    foreach (['initial-begin','initial-insert','initial-commit','initial-ambiguous','initial-cleanup','initial-rollback'] as $failure) {
+        $db = new Multi03bPdoSpy();
+        $db->fail = $failure;
+        $private = $root . '/' . $failure;
+        $storage = new ClinicalPrivateBinaryStorage($private, dirname(__DIR__,3));
+        $service = new ClinicalMultipartDocumentService($db, $storage);
+        if ($failure === 'initial-cleanup') {
+            $db->atInitialFailure = static function ($row) use ($private): void {
+                // Preserve synthetic bytes in the inventory while forcing safe-delete rejection.
+                rename($private . '/' . $row['staging_key'], $private . '/' . $row['staging_key'] . '.retained');
+                mkdir($private . '/' . $row['staging_key'], 0700);
+            };
+        }
+        $callback = static function (): array { throw new RuntimeException('main callback reached'); };
+        try {
+            $service->execute($context, 'r1-key', 'actor', $fixture, null, $expires, $callback, $callback);
+            throw new RuntimeException('initial failure returned success');
+        } catch (RuntimeException $error) {
+            spy_check($error->getMessage() === 'MULTIPART_STAGED_COORDINATION_FAILED', 'initial failure must have stable code');
+        }
+        spy_check($db->begins === 1 && !in_array('claim', $db->events, true), 'main transaction entered');
+        spy_check($db->ledger === [], 'initial failure created clinical ledger');
+        $objects = $storage->inventory();
+        spy_check(count(array_filter($objects, fn($i)=>str_starts_with($i['key'],'clinical/'))) === 0, 'initial failure created final');
+        $retained = in_array($failure, ['initial-ambiguous','initial-cleanup','initial-rollback'], true);
+        spy_check(count(array_filter($objects, fn($i)=>str_starts_with($i['key'],'staging/'))) === ($retained ? 1 : 0), 'initial staging lifetime: ' . $failure);
+        if (!$retained) spy_check($db->rows === [], 'confirmed rollback left coordination');
+        if ($failure === 'initial-cleanup') {
+            $findings = ClinicalBinaryReconciliation::classify($objects, [], [], new DateTimeImmutable());
+            spy_check(in_array('STAGING_WITHOUT_COORDINATION', array_column($findings,'classification'),true), 'failed cleanup not discoverable');
+        }
+        $r1Scenarios++;
+    }
+    echo "MULTI03B_R1_INITIAL_COORDINATION_QA=PASS\nR1_INITIAL_SCENARIOS=$r1Scenarios\n";
     echo "MULTI03B_ORCHESTRATION_SPY_QA=PASS\nSCENARIOS=$scenarios\nANY_DATABASE_CONNECTED=false\nPHYSICAL_DB_QA_EXECUTED=false\n";
 } finally { spy_remove($root); }
 spy_check(!file_exists($root),'temporary root remains');
