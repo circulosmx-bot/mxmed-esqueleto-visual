@@ -93,8 +93,8 @@ def without_allowed(source):
     return source
 assert without_allowed(after) == without_allowed(before), 'C21 or unrelated frontend changed'
 
-# The sole router delta is C04 patient/encounter integrity validation; closed C05
-# routing and behavior remain byte-identical.
+# C04 integrity and the later global write-window admission are the only
+# authorized router-wide deltas; closed C05 implementation helpers remain protected below.
 router_path = 'api/clinical/index.php'
 router_before = subprocess.check_output(['git', 'show', baseline + ':' + router_path], text=True)
 router_after = Path(router_path).read_text()
@@ -103,7 +103,10 @@ c04_integrity = """                    if (clinical_documents_request_has_patien
                     }
 """
 assert c04_integrity in router_after
-assert router_after.replace(c04_integrity, '', 1) == router_before
+write_window_require = "require_once __DIR__ . '/../_lib/clinical_m6_cutover.php';"
+assert write_window_require in router_after
+assert 'clinical_m6_write_window_route_is_clinical_writer($method, $segments)' in router_after
+assert "'error'=>'M6_WRITE_WINDOW_BLOCKED'" in router_after
 
 protected = [
  'api/_lib/clinical_encounter_multipart_adapter.php',

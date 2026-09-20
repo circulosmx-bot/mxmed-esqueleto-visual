@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_m6_write_window.php';
+
 final class ClinicalM6CohortConfigException extends RuntimeException
 {
     public function __construct()

@@ -25,7 +25,8 @@ grep -q 'hash_equals(\$storedDoctorId, \$sessionDoctorId)' "$ROUTER"
 # The raw master flag remains only in the route wrapper plus the accepted
 # startup legacy bootstrap and debug/M5 seed behavior.
 test "$(grep -c 'clinical_encounter_integrity_v1_enabled()' "$ROUTER")" = "3"
-grep -q 'if (!\$isTimelineRoute && !clinical_encounter_integrity_v1_enabled())' "$ROUTER"
+grep -q 'if (!\$isTimelineRoute && !clinical_encounter_integrity_v1_enabled()' "$ROUTER"
+grep -q '&& !clinical_m6_write_window_blocks_writes())' "$ROUTER"
 
 active_route="$(sed -n "/patients\/{patient_id}\/encounters\/active/,/no active encounter/p" "$ROUTER")"
 grep -q 'clinical_m6_patient_route_uses_v1' <<< "$active_route"

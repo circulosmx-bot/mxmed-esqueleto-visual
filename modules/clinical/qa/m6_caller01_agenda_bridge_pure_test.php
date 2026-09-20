@@ -73,9 +73,29 @@ m6_caller01_bridge_env('off', '', '0');
 $assertAllowed->invoke($bridge, 'p_any');
 m6_caller01_bridge_check(true, 'default OFF preserves current bridge behavior');
 
+$windowRoot = sys_get_temp_dir() . '/mxmed-agenda-window-' . bin2hex(random_bytes(5));
+mkdir($windowRoot, 0700, true);
+$windowPath = $windowRoot . '/state.json';
+clinical_m6_write_window_initialize_file($windowPath);
+putenv('MXMED_CLINICAL_WRITE_WINDOW_CONTROL=FILE');
+putenv('MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH=' . $windowPath);
+clinical_m6_write_window_set_state('BLOCK_WRITES');
+try {
+    $assertAllowed->invoke($bridge, 'p_any');
+    m6_caller01_bridge_check(false, 'write window pauses Agenda clinical bridge');
+} catch (ReflectionException $e) {
+    throw $e;
+} catch (RuntimeException $e) {
+    m6_caller01_bridge_check($e->getMessage() === 'M6_AGENDA_CLINICAL_BRIDGE_PAUSED', 'Agenda bridge uses shared write-window authority');
+}
+unlink($windowPath);
+rmdir($windowRoot);
+
 putenv('AGENDA_ENABLE_CLINICAL_ENCOUNTER_BRIDGE');
 putenv('MXMED_CLINICAL_M6_COHORT_MODE');
 putenv('MXMED_CLINICAL_M6_COHORT_PAIRS');
 putenv('MXMED_CLINICAL_M6_EMERGENCY_OFF');
+putenv('MXMED_CLINICAL_WRITE_WINDOW_CONTROL');
+putenv('MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH');
 
 echo "M6_CALLER01_AGENDA_BRIDGE_PURE_TESTS_PASSED={$passed}\n";

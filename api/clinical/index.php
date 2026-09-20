@@ -575,6 +575,7 @@ function clinical_debug_enabled(): bool
 
 function clinical_ensure_identity_bridge_schema(PDO $pdo): void
 {
+    if (clinical_m6_write_window_blocks_writes()) return;
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS clinical_patient_identity_bridge (
             id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -688,6 +689,7 @@ function clinical_documents_pdo(): PDO
 
 function clinical_note_capture_tokens_ensure_schema(PDO $pdo): void
 {
+    if (clinical_m6_write_window_blocks_writes()) return;
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS clinical_note_capture_tokens (
             id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -3326,6 +3328,7 @@ function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPati
 
 function clinical_cases_ensure_schema(PDO $pdo): void
 {
+    if (clinical_m6_write_window_blocks_writes()) return;
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS clinical_cases (
             case_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -3360,6 +3363,7 @@ function clinical_cases_ensure_schema(PDO $pdo): void
 
 function clinical_encounters_ensure_schema(PDO $pdo): void
 {
+    if (clinical_m6_write_window_blocks_writes()) return;
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS clinical_encounters (
             encounter_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -4286,13 +4290,29 @@ try {
 
     $segments = clinical_route_segments();
     $route = implode('/', $segments);
+    if (clinical_m6_write_window_route_is_clinical_writer($method, $segments)) {
+        try {
+            clinical_m6_write_window_admit();
+        } catch (ClinicalM6WriteWindowBlockedException $e) {
+            clinical_send_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_BLOCKED',
+                'message'=>'Clinical writes are temporarily paused.','data'=>null,
+                'meta'=>['method'=>$method,'route'=>$route]], $e->httpStatus());
+            return;
+        } catch (ClinicalM6WriteWindowConfigException $e) {
+            clinical_send_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_CONFIG_INVALID',
+                'message'=>'Clinical write control is unavailable.','data'=>null,
+                'meta'=>['method'=>$method,'route'=>$route]], 503);
+            return;
+        }
+    }
     $isTimelineRoute = ($method === 'GET'
         && ($segments[0] ?? '') === 'patients'
         && ($segments[2] ?? '') === 'timeline'
         && count($segments) === 3);
 
     // Ensure bridge schema at gateway startup (best-effort to avoid breaking non-DB routes).
-    if (!$isTimelineRoute && !clinical_encounter_integrity_v1_enabled()) {
+    if (!$isTimelineRoute && !clinical_encounter_integrity_v1_enabled()
+        && !clinical_m6_write_window_blocks_writes()) {
         try {
             $bridgePdo = clinical_documents_pdo();
             clinical_ensure_identity_bridge_schema($bridgePdo);

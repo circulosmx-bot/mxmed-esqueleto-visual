@@ -22,9 +22,18 @@ require_once __DIR__ . '/_lib/clinical_m6_cutover.php';
 
 $action = $_GET['action'] ?? '';
 
+if ($action === 'save') {
+    try { clinical_m6_write_window_admit(); }
+    catch (ClinicalM6WriteWindowBlockedException $e) {
+        mxmed_json_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_BLOCKED','message'=>'Clinical writes are temporarily paused.'], 503);
+    } catch (ClinicalM6WriteWindowConfigException $e) {
+        mxmed_json_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_CONFIG_INVALID','message'=>'Clinical write control is unavailable.'], 503);
+    }
+}
+
 try {
     $pdo = mxmed_pdo();
-    mxmed_ensure_clinical_docs_schema($pdo);
+    if (!clinical_m6_write_window_blocks_writes()) mxmed_ensure_clinical_docs_schema($pdo);
 } catch (Throwable $e) {
     mxmed_json_response(['ok' => false, 'error' => $e->getMessage()], 500);
 }

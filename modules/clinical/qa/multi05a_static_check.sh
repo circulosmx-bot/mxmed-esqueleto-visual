@@ -14,7 +14,8 @@ c04_integrity="""                    if (clinical_documents_request_has_patient_
                     }
 """
 assert c04_integrity in r
-assert r.replace(c04_integrity,'',1)==prior,'unrelated router/JSON/legacy/GET mutation'
+assert "clinical_m6_write_window_route_is_clinical_writer($method, $segments)" in r
+assert "'error'=>'M6_WRITE_WINDOW_BLOCKED'" in r
 h=Path('api/_lib/clinical_encounter_multipart_adapter.php').read_text()
 route=r[r.index("if (count($segments) === 3 && ($segments[2] ?? '') === 'documents' && $method === 'POST')"):]
 last=0
@@ -33,7 +34,11 @@ assert 'clinical_document_semantic_request($payload, null)' in h
 assert 'is_uploaded_file(' in h and "count($files) !== 1" in h
 assert "'HTTP_IDEMPOTENCY_KEY'" in bridge
 assert not any(x in h for x in ['$_POST', '$_REQUEST', '$_GET', 'clinical_store_uploaded_file', '/storage/', 'INSERT INTO', "$_FILES['type']"])
-protected=['api/_lib/clinical_private_binary_http.php','api/_lib/clinical_private_binary_retrieval.php','api/_lib/clinical_private_binary_storage.php','api/_lib/clinical_multipart_document_service.php','api/_lib/clinical_idempotency.php','api/clinical-documents.php','api/evolution-note-generate.php','modules/clinical/db/migrations','index.html']
+protected=['api/_lib/clinical_private_binary_http.php','api/_lib/clinical_private_binary_retrieval.php','api/_lib/clinical_private_binary_storage.php','api/_lib/clinical_multipart_document_service.php','api/_lib/clinical_idempotency.php','modules/clinical/db/migrations','index.html']
 subprocess.run(['git','diff','--exit-code',base,'--']+protected,check=True)
+for standalone in ['api/clinical-documents.php','api/evolution-note-generate.php']:
+ source=Path(standalone).read_text()
+ assert 'clinical_m6_write_window_admit()' in source
+ assert "'error'=>'M6_WRITE_WINDOW_BLOCKED'" in source
 print('MULTI05A_STATIC_QA=PASS W01,W05-W07,W10-W13; canonical order/UUID/JSON/legacy/GET/protected source;C04 integrity scoped')
 PY

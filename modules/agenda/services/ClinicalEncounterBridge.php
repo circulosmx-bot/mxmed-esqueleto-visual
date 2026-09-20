@@ -81,7 +81,10 @@ class ClinicalEncounterBridge
     private function assertM6ClinicalBridgeAllowed(string $patientId): void
     {
         try {
+            \clinical_m6_write_window_assert_bridge_open();
             $blocked = \clinical_m6_legacy_write_block_required($patientId);
+        } catch (\ClinicalM6WriteWindowBlockedException|\ClinicalM6WriteWindowConfigException $e) {
+            throw new RuntimeException('M6_AGENDA_CLINICAL_BRIDGE_PAUSED', 0, $e);
         } catch (\ClinicalM6CohortConfigException $e) {
             throw new RuntimeException('M6_AGENDA_CLINICAL_BRIDGE_BLOCKED', 0, $e);
         }
