@@ -17,7 +17,7 @@ MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-CURRENT_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
+CURRENT_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
 PHASE_2_M6_MULTI03A=ACCEPTED
 M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
 MULTI03A_BLOCKER=NONE
@@ -36,8 +36,14 @@ PHASE_2_M6_MULTI04B=ACCEPTED
 M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
 PHASE_2_M6_MULTI04C=ACCEPTED
 M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
-PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
-CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI05A=ACCEPTED
+M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
+PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
+MULTI05B_RERUN1=PASS
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
 MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
 PRIVATE_BINARY_HTTP_PHYSICAL_QA=ACCEPTED
 PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
@@ -66,7 +72,7 @@ PRIVATE_BINARY_STORAGE_ADAPTER=ACCEPTED
 PRIVATE_STAGING_PRIMITIVE=ACCEPTED
 CREATE_ONLY_FINALIZATION_PRIMITIVE=ACCEPTED
 RECONCILIATION_PRIMITIVES=ACCEPTED
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 WORKING_MXMED_DB_CONNECTED=false
@@ -448,8 +454,14 @@ PHASE_2_M6_MULTI04B=ACCEPTED
 M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
 PHASE_2_M6_MULTI04C=ACCEPTED
 M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
-PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
-CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI05A=ACCEPTED
+M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
+PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
+MULTI05B_RERUN1=PASS
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
 MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
 PRIVATE_BINARY_HTTP_PHYSICAL_QA=ACCEPTED
 PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
@@ -863,7 +875,7 @@ MULTI04C_RESIDUAL_TEMP_ROOT_COUNT=0
 PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 V1_MULTIPART_503_PRESERVED=true
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 MULTIPART_HTTP_ACCEPTANCE=false
 C04_MULTIPART_ADAPTER=false
@@ -888,7 +900,7 @@ MULTI04C is `PASS_READY_FOR_DIRECTOR_REVIEW`. The next-step candidate below appl
 only after successful Director/assistant review; it was not executed in this chapter.
 
 ```text
-NEXT_AUTHORIZED_STEP=Run a separate isolated MULTI05B physical HTTP multipart QA against disposable MySQL 9.6 and private temporary storage, proving canonical encounter-document create, replay, changed-binary conflict, policy denial before staging, storage/schema fail-closed and exact private binary retrieval. C04/C05/C21 remain untouched until that physical path is accepted.
+NEXT_AUTHORIZED_STEP=Audit the exact current C04/C05/C21 request shapes against the physically validated canonical multipart endpoint, then adapt one caller family at a time. Preserve GUARD01 for all remaining legacy writers. Working-database migration, activation and cutover remain unauthorized.
 ```
 
 
@@ -949,9 +961,15 @@ No database connection, physical multipart HTTP request, UI invocation, migratio
 working configuration change or C04/C05/C21 adaptation occurred.
 
 ```text
-PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
-CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI05A=ACCEPTED
+M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
+PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
+MULTI05B_RERUN1=PASS
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
 MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
 CANONICAL_MULTIPART_WRITE_WORKING_DB_ACTIVE=false
 MULTIPART_HTTP_ACCEPTANCE=false
@@ -974,3 +992,93 @@ PRODUCTION_EXECUTION_AUTHORIZED=false
 Global GET-DDL removal remains pending; backup/clone readiness, migration account and
 write window remain unproven/unready. The next-step candidate is MULTI05B only after
 Director/assistant acceptance of this code. It is not started automatically.
+
+
+### MULTI05B-RERUN1 — physical canonical multipart HTTP evidence (2026-09-20)
+
+MULTI05A is accepted at `2de0cc40f0a65a0716795a174c4b7588fc17d9fb`.
+The initial MULTI05B attempt stopped at WB01 with 404/empty route and completed
+teardown. D1 subsequently proved both canonical encoded PATH_INFO and query-route
+controls return 401 without authentication; no application repair was needed.
+RERUN1 restarted at WB01 on new disposable resources, never resumed at WB02.
+
+All WB01–WB10 passed against an exact git archive of the accepted source, reusing
+`checkpoint/clinical-pre-multi05b-20260920`. The same server first returned 401 to
+unauthenticated `curl -F` at the exact future WB01 URL, before creating either DB.
+Every request logged method, full URL, programmatically encoded encounter key and
+suffix without cookies or raw idempotency keys. Canonical PATH_INFO only was used;
+no query-route contract or application source was changed.
+
+MySQL reported `9.6.0`, hostname `192.168.1.10`, endpoint `127.0.0.1:3306`.
+Initial DATABASE() was NULL. Both names were proved absent before creation and
+explicit selection: `mxmed_multi05b_50241e1677_mysql96` (migrations 01–05) and
+`mxmed_multi05b_50241e1677_no05_mysql96` (01–04 only). These were minimal synthetic
+prerequisites, not migration re-audits; the September 17 attribution migration was
+not run. Doctor A/patient A had one active link and synthetic open/closed encounters.
+The closed fixture was seeded before lifecycle transition triggers were installed.
+No working `mxmed` connection, clone or real data was used.
+
+Real PHP sessions and curl multipart processing exercised `is_uploaded_file`.
+The archive contained no local overriding DB config. Private roots, PHP uploads and
+sessions were outside its document root. QA-only V1 master was on, cohort mode off,
+and staging TTL was explicitly 600 seconds (no product default). Effective PHP
+upload_max_filesize=2M and post_max_size=8M permitted the tiny fixtures.
+
+| Scenario | Result |
+| --- | --- |
+| WB01 | PASS 201; one document, committed ledger result, FINALIZED coordination row, ORIGINAL v1 manifest and final object; UUID/manifest/bytes match |
+| WB02 | PASS 200; replay=true and same resource; row hashes and final storage unchanged, no redundant staging |
+| WB03 | PASS 409 IDEMPOTENCY_KEY_REUSED for changed PDF bytes; no second resource |
+| WB04 | PASS 400 MULTIPART_FILE_REQUIRED; all row/storage snapshots unchanged, no JSON fallback |
+| WB05 | PASS 409 ENCOUNTER_TERMINAL on closed encounter; storage and coordination unchanged |
+| WB06 | PASS 400 MULTIPART_FILE_INVALID despite fake PDF filename/client MIME; no residual staging or commit |
+| WB07 | PASS 503 V1_MULTIPART_STORAGE_NOT_READY with private-root variable unset; row/storage snapshots unchanged |
+| WB08 | PASS 503 V1_MULTIPART_STORAGE_NOT_READY without migration 05; no document or staging/final files |
+| WB09 | PASS 200 application/pdf; exact 94-byte PDF_A retrieved privately after HTTP creation |
+| WB10 | PASS 201 JSON create; second document/ledger result, no new binary manifest/coordination/file |
+
+PDF_A SHA-256: `1c91b711ba61597912407906e0126fa82c9d82a6aef172b70c30441329dd3acf`.
+PDF_B differed in SHA; both were verified with server finfo as application/pdf.
+Response/log scans found no private root, upload path, storage key or raw
+Idempotency-Key disclosures. All source hashes remained unchanged, including router,
+adapter, storage/coordination/retrieval/HTTP/idempotency helpers and migrations.
+All temporary PHP servers, sessions, both DBs, storage, archive and harness were
+removed: residual database/process/session/temp-root counts are each zero.
+
+MULTI05B-RERUN1 is PASS_READY_FOR_DIRECTOR_REVIEW. Canonical route success does not
+clear MULTIPART_HTTP_ACCEPTANCE=false or MULTIPART_ACTIVE_CALLER_BLOCKER=true.
+C04/C05/C21 are untouched and unadapted; GUARD01 remains. M6 stays NO_GO_BLOCKED,
+working schema PRE_MIGRATION, global GET-DDL removal pending, backup/clone readiness
+unproven and migration account/write window unready. Working migration, gate
+activation, cutover, production and PHASE 3 remain unauthorized. No next caller
+chapter starts until Director/assistant accepts this evidence.
+
+
+RERUN1 exact initial server command (temporary paths no longer exist):
+
+```text
+php -d session.save_path=/private/var/folders/dm/s5xmdd8s11769mplkg8v6fy40000gn/T/mxmed_rerun1_07yhn3_2/sessions -d upload_tmp_dir=/private/var/folders/dm/s5xmdd8s11769mplkg8v6fy40000gn/T/mxmed_rerun1_07yhn3_2/uploads -S 127.0.0.1:54527 -t /private/var/folders/dm/s5xmdd8s11769mplkg8v6fy40000gn/T/mxmed_rerun1_07yhn3_2/source
+RERUN_CANONICAL_POST_URL=http://127.0.0.1:54527/api/clinical/index.php/encounters/enc%3A1/documents
+RERUN_ENCOUNTER_KEY_RAW=enc:1
+RERUN_ENCOUNTER_KEY_ENCODED=enc%3A1
+```
+
+WB05 used the same URL with enc%3A2. Restarts retained the same command arguments,
+changing only the port: 54642 (WB07, root unset), 54676 (WB08, second DB/root),
+54691 (WB09/WB10, main DB/root restored). WB09 URL:
+`http://127.0.0.1:54691/api/clinical/index.php/documents/5edd4776-452d-4f1c-9cb2-01de589e63c0/binary/ORIGINAL`.
+
+Final bounded table snapshots (ordered complete-row SHA-256, before teardown):
+
+| Table | Count | SHA-256 |
+| --- | ---: | --- |
+| clinical_documents | 2 | d95dfb9156f328065f5f5a0660e44dabf073345f04e7fa24b80fbd46b22cc836 |
+| clinical_idempotency_requests | 2 | 0483595cbd910dda1bd464db71f393404fbb3604e538b0eaddc1397e3311bb31 |
+| clinical_binary_uploads | 1 | 23624ceebbc433d7f6209d722052921d37621896f31c9f1126da26c5548a0232 |
+| clinical_document_binaries | 1 | 57efd7e07915f986d32f385f100b84868c9cf93e869dc6aab6e09681e98efa36 |
+| clinical_encounters | 2 | 83309c6edbe5438947af815f0f14eb887c971b7de3f8d89429554fc2ac316441 |
+| patients_doctor_links | 1 | 45b5d15f48ccbb087de80804cc96a5bfa01033996609bbf02ca82e650f99b246 |
+
+Final private-file inventory: one relative key
+`clinical/2026/09/5edd4776-452d-4f1c-9cb2-01de589e63c0/ac13437c-1e0d-4669-86d1-6ee4441310a0-original`,
+94 bytes, SHA-256 matching PDF_A above. No staging or quarantine files.

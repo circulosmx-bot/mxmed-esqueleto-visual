@@ -2,11 +2,11 @@
 
 ```text
 REFORM_STATUS=IN_PROGRESS
-CURRENT_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
+CURRENT_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Run a separate isolated MULTI05B physical HTTP multipart QA against disposable MySQL 9.6 and private temporary storage, proving canonical encounter-document create, replay, changed-binary conflict, policy denial before staging, storage/schema fail-closed and exact private binary retrieval. C04/C05/C21 remain untouched until that physical path is accepted.
+NEXT_AUTHORIZED_STEP=Audit the exact current C04/C05/C21 request shapes against the physically validated canonical multipart endpoint, then adapt one caller family at a time. Preserve GUARD01 for all remaining legacy writers. Working-database migration, activation and cutover remain unauthorized.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -63,7 +63,7 @@ DOCUMENT_REVISION_CREATE_IDEMPOTENCY=IMPLEMENTED_ACCEPTED
 T34_DOCUMENT_AMENDMENT_RETRY_REPOSITORY_PREREQUISITE=SATISFIED
 ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS
 GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
 PHASE_2_MIG01A_AUTHORIZED=true
 PHASE_2_MIG01A_STATUS=ACCEPTED
 PHASE_2_MIG01A_SCOPE=DISPOSABLE_MIGRATION_REHEARSAL_ONLY
@@ -304,8 +304,14 @@ PHASE_2_M6_MULTI04B=ACCEPTED
 M6_MULTI04B_ACCEPTED_HEAD=0daa1e52dd2bda11cad5d50f09ac0516725ef004
 PHASE_2_M6_MULTI04C=ACCEPTED
 M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
-PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
-CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI05A=ACCEPTED
+M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
+PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
+MULTI05B_RERUN1=PASS
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
 MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
 PRIVATE_BINARY_HTTP_PHYSICAL_QA=ACCEPTED
 PRIVATE_BINARY_AUTHENTICATION_PHYSICAL_QA=PASS
@@ -574,7 +580,7 @@ El [diseño físico PHYS01](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md), aceptado s
 
 ### CLIN-REFORM-PHASE2-IMPL01 — base de repositorio aceptada; fase en progreso
 
-IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`; IMPL01A-R2 quedó aceptado como `REPOSITORY_FOUNDATION` en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`. R2 congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. `V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW`: bajo el gate, multipart termina con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos. MULTI01 ya define staging privado, finalización/compensación, SHA idempotente, detección de huérfanos, recuperación, acceso autorizado y esquema aditivo propuesto, pero no implementa nada ni elimina el bloqueo. IMPL01B queda aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`: `POST /documents/{id}/amendments` crea un documento nuevo, conserva el original, registra linaje append-only y usa idempotencia durable; `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=IMPLEMENTED_ACCEPTED` y el prerrequisito de repositorio de T34 está satisfecho. `ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS`; `GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. La base MXMed de trabajo, cutover, producción y PHASE 3 siguen prohibidos. `PHASE_2_IMPL01_STATUS=IN_PROGRESS`, `PHASE_2_IMPL01A=ACCEPTED`, `PHASE_2_IMPL01B=ACCEPTED` y PHASE 2 permanece `IN_PROGRESS`.
+IMPL01A creó la base revisable de `REPOSITORY_IMPLEMENTATION_ONLY` en `6fe5fec2156df87649668343d167ca409f0e60fb`; IMPL01A-R1 quedó en `377381ce70af2525113975eacd5ec316458a2370`; IMPL01A-R2 quedó aceptado como `REPOSITORY_FOUNDATION` en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`. R2 congela físicamente la primera auditoría CLOSED/VOIDED, completa los 12 CHECK críticos en migraciones y readiness, vuelve server-authoritative la clasificación documental, reutiliza el builder y escritor transaccional canónicos de `clinical_documents`, conserva participantes y deja documentos ordinarios en `generated` sin firma implícita. En el momento de IMPL01A, `V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`: bajo el gate, multipart terminaba con `V1_MULTIPART_STORAGE_NOT_READY` antes de mover archivos. Ese estado histórico es distinto del estado actual de MULTI05A aceptado y de la evidencia física MULTI05B pendiente de revisión. MULTI01 ya define staging privado, finalización/compensación, SHA idempotente, detección de huérfanos, recuperación, acceso autorizado y esquema aditivo propuesto, pero no implementa nada ni elimina el bloqueo. IMPL01B queda aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`: `POST /documents/{id}/amendments` crea un documento nuevo, conserva el original, registra linaje append-only y usa idempotencia durable; `DOCUMENT_REVISION_CREATE_IDEMPOTENCY=IMPLEMENTED_ACCEPTED` y el prerrequisito de repositorio de T34 está satisfecho. `ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS`; `GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE`. Los encounters legacy con `doctor_id=NULL` permanecen `UNATTRIBUTED`; conciliarlos con evidencia exige otra migración autorizada que gestione de forma segura el trigger de propiedad, nunca un UPDATE runtime normal. La base MXMed de trabajo, cutover, producción y PHASE 3 siguen prohibidos. `PHASE_2_IMPL01_STATUS=IN_PROGRESS`, `PHASE_2_IMPL01A=ACCEPTED`, `PHASE_2_IMPL01B=ACCEPTED` y PHASE 2 permanece `IN_PROGRESS`.
 
 El primer ensayo MIG01A en una base MySQL **nueva, aislada, sintética y desechable** quedó `BLOCKED` por `MYSQL_1295_CREATE_TRIGGER_PREPARE_UNSUPPORTED`. MIG01A-R1 corrigió únicamente la compatibilidad del DDL de triggers y quedó `ACCEPTED` en `cc8bcf502f3953942ba67cc655490d49813401fc`. El reensayo completo desde cero en MySQL 8.4.11 terminó `PASS`: aplicación limpia y segunda ejecución de 01–04, triggers físicos, `open_guard`, 12 CHECK críticos, inmutabilidad terminal, FK históricas, recuperación parcial, deriva de esquema/trigger y readiness fueron verificados; todas las bases desechables se eliminaron (`MIG01A_RERUN_RESIDUAL_DATABASE_COUNT=0`). La evidencia fue revisada y aceptada por el Director/asistente; PHASE 2 permanece `IN_PROGRESS` y este cierre no autoriza ningún paso técnico adicional. No se autorizó conexión ni cambios sobre la base MXMed de trabajo. `modules/clinical/db/migrations/2026_09_17_clinical_encounter_doctor_attribution.sql` permanece en cuarentena y fuera de MIG01A: su atribución/backfill derivado de citas no pertenece al contrato de encounter aceptado.
 
@@ -1006,9 +1012,15 @@ No database connection, physical multipart HTTP request, UI invocation, migratio
 working configuration change or C04/C05/C21 adaptation occurred.
 
 ```text
-PHASE_2_M6_MULTI05A=READY_FOR_CODE_REVIEW
-CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=IMPLEMENTED_PENDING_REVIEW
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_MULTI05A=ACCEPTED
+M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
+PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
+MULTI05B_RERUN1=PASS
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
+CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
 MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
 CANONICAL_MULTIPART_WRITE_WORKING_DB_ACTIVE=false
 MULTIPART_HTTP_ACCEPTANCE=false
@@ -1031,3 +1043,63 @@ PRODUCTION_EXECUTION_AUTHORIZED=false
 Global GET-DDL removal remains pending; backup/clone readiness, migration account and
 write window remain unproven/unready. The next-step candidate is MULTI05B only after
 Director/assistant acceptance of this code. It is not started automatically.
+
+
+### MULTI05B-RERUN1 — physical canonical multipart HTTP evidence (2026-09-20)
+
+MULTI05A is accepted at `2de0cc40f0a65a0716795a174c4b7588fc17d9fb`.
+The initial MULTI05B attempt stopped at WB01 with 404/empty route and completed
+teardown. D1 subsequently proved both canonical encoded PATH_INFO and query-route
+controls return 401 without authentication; no application repair was needed.
+RERUN1 restarted at WB01 on new disposable resources, never resumed at WB02.
+
+All WB01–WB10 passed against an exact git archive of the accepted source, reusing
+`checkpoint/clinical-pre-multi05b-20260920`. The same server first returned 401 to
+unauthenticated `curl -F` at the exact future WB01 URL, before creating either DB.
+Every request logged method, full URL, programmatically encoded encounter key and
+suffix without cookies or raw idempotency keys. Canonical PATH_INFO only was used;
+no query-route contract or application source was changed.
+
+MySQL reported `9.6.0`, hostname `192.168.1.10`, endpoint `127.0.0.1:3306`.
+Initial DATABASE() was NULL. Both names were proved absent before creation and
+explicit selection: `mxmed_multi05b_50241e1677_mysql96` (migrations 01–05) and
+`mxmed_multi05b_50241e1677_no05_mysql96` (01–04 only). These were minimal synthetic
+prerequisites, not migration re-audits; the September 17 attribution migration was
+not run. Doctor A/patient A had one active link and synthetic open/closed encounters.
+The closed fixture was seeded before lifecycle transition triggers were installed.
+No working `mxmed` connection, clone or real data was used.
+
+Real PHP sessions and curl multipart processing exercised `is_uploaded_file`.
+The archive contained no local overriding DB config. Private roots, PHP uploads and
+sessions were outside its document root. QA-only V1 master was on, cohort mode off,
+and staging TTL was explicitly 600 seconds (no product default). Effective PHP
+upload_max_filesize=2M and post_max_size=8M permitted the tiny fixtures.
+
+| Scenario | Result |
+| --- | --- |
+| WB01 | PASS 201; one document, committed ledger result, FINALIZED coordination row, ORIGINAL v1 manifest and final object; UUID/manifest/bytes match |
+| WB02 | PASS 200; replay=true and same resource; row hashes and final storage unchanged, no redundant staging |
+| WB03 | PASS 409 IDEMPOTENCY_KEY_REUSED for changed PDF bytes; no second resource |
+| WB04 | PASS 400 MULTIPART_FILE_REQUIRED; all row/storage snapshots unchanged, no JSON fallback |
+| WB05 | PASS 409 ENCOUNTER_TERMINAL on closed encounter; storage and coordination unchanged |
+| WB06 | PASS 400 MULTIPART_FILE_INVALID despite fake PDF filename/client MIME; no residual staging or commit |
+| WB07 | PASS 503 V1_MULTIPART_STORAGE_NOT_READY with private-root variable unset; row/storage snapshots unchanged |
+| WB08 | PASS 503 V1_MULTIPART_STORAGE_NOT_READY without migration 05; no document or staging/final files |
+| WB09 | PASS 200 application/pdf; exact 94-byte PDF_A retrieved privately after HTTP creation |
+| WB10 | PASS 201 JSON create; second document/ledger result, no new binary manifest/coordination/file |
+
+PDF_A SHA-256: `1c91b711ba61597912407906e0126fa82c9d82a6aef172b70c30441329dd3acf`.
+PDF_B differed in SHA; both were verified with server finfo as application/pdf.
+Response/log scans found no private root, upload path, storage key or raw
+Idempotency-Key disclosures. All source hashes remained unchanged, including router,
+adapter, storage/coordination/retrieval/HTTP/idempotency helpers and migrations.
+All temporary PHP servers, sessions, both DBs, storage, archive and harness were
+removed: residual database/process/session/temp-root counts are each zero.
+
+MULTI05B-RERUN1 is PASS_READY_FOR_DIRECTOR_REVIEW. Canonical route success does not
+clear MULTIPART_HTTP_ACCEPTANCE=false or MULTIPART_ACTIVE_CALLER_BLOCKER=true.
+C04/C05/C21 are untouched and unadapted; GUARD01 remains. M6 stays NO_GO_BLOCKED,
+working schema PRE_MIGRATION, global GET-DDL removal pending, backup/clone readiness
+unproven and migration account/write window unready. Working migration, gate
+activation, cutover, production and PHASE 3 remain unauthorized. No next caller
+chapter starts until Director/assistant accepts this evidence.
