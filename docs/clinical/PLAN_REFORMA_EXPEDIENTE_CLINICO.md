@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=3e06decd0f96771248da567d7e5c92186506f34f
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI03A private binary storage primitives. If accepted, proceed to repository-only MULTI03B coordination/service integration with clinical_binary_uploads, clinical_document_binaries and durable command idempotency. Multipart HTTP acceptance, working-database migration and cutover remain unauthorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI03A-R1 staging-lifetime repair. If accepted, proceed to repository-only MULTI03B coordination/service integration with clinical_binary_uploads, clinical_document_binaries and durable command idempotency. Multipart HTTP acceptance, working-database migration and cutover remain unauthorized.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -286,7 +286,12 @@ MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-PHASE_2_M6_MULTI03A=READY_FOR_CODE_REVIEW
+PHASE_2_M6_MULTI03A=BLOCKED_PENDING_R1_REVIEW
+M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
+MULTI03A_BLOCKER=FINALIZATION_REMOVES_STAGING_BEFORE_FUTURE_DB_COMMIT
+PHASE_2_M6_MULTI03A_R1=READY_FOR_CODE_REVIEW
+FINALIZATION_PRESERVES_STAGING=true
+STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
 PRIVATE_BINARY_STORAGE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
 PRIVATE_STAGING_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
 CREATE_ONLY_FINALIZATION_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
@@ -338,7 +343,7 @@ La UI anterior debe conservar lecturas y borradores legacy aislados. El retorno 
 
 El [plan de cutover backend M6](EXPEDIENTE_ENCOUNTER_M6_CUTOVER_PLAN.md) queda `ACCEPTED` en `7dc615c772ef611a49229e3e1da91b569d6cf73d`. El inventario cubre 21 familias runtime, 17 con capacidad de escritura; 11 requieren adaptador o bloqueo explícito antes de M6. El preflight autorizado fue estrictamente de sólo lectura y confirmó la identidad de la base de trabajo, 13 encounters legacy sin atribución médica y esquema `PRE_MIGRATION` con migraciones 01–04 `NOT_APPLIED`. No se infirió titularidad ni se cambió esquema o dato alguno. CTRL01/R1 queda aceptado en `05369176c3fc6a8b89043ee79c6b431161b3d5f4`; GUARD01 y su contención fail-closed para C04, C05, C11, C12, C16, C17, C20 y C21 quedan aceptados en `bcb2606ba7a95818673b402a9e006ecc0431ff73`.
 
-M6 permanece `NO_GO_BLOCKED`: CALLER01 está aceptado con cero writers no controlados y ROUTE01 queda aceptado en `f01b2f60c6363b10b43b931b20f42fb3348acdf1`, pero el routing runtime no está activo. El [diseño MULTI01](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md), MULTI02A y la evidencia física MULTI02B están aceptados. MULTI03A implementa para revisión sólo primitivas de filesystem privado, sin DB, router, HTTP ni autoridad clínica. La coordinación/servicio multipart sigue ausente y el `503/V1_MULTIPART_STORAGE_NOT_READY` permanece fail-closed. Tampoco existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
+M6 permanece `NO_GO_BLOCKED`: CALLER01 está aceptado con cero writers no controlados y ROUTE01 queda aceptado en `f01b2f60c6363b10b43b931b20f42fb3348acdf1`, pero el routing runtime no está activo. El [diseño MULTI01](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md), MULTI02A y la evidencia física MULTI02B están aceptados. MULTI03A queda bloqueado pendiente de revisión R1 porque el candidato eliminaba staging antes del futuro commit DB; R1 separa cleanup y preserva staging tras finalización. No hay DB, router, HTTP ni autoridad clínica nueva. La coordinación/servicio multipart sigue ausente y el `503/V1_MULTIPART_STORAGE_NOT_READY` permanece fail-closed. Tampoco existe cuenta de migración separada, no se ha probado backup restaurable ni ensayo de clon de datos de trabajo, no está lista la ventana integral de escrituras y continúa DDL runtime legacy global. PLAN01 define migración, backup/restauración, clon, privilegios, ventana, activación, monitoreo, abort y retorno seguro, pero no ejecuta ni autoriza ninguno de esos pasos.
 
 ## Visión y problema
 
@@ -633,4 +638,5 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI01 | ROUTE01 aceptado / baseline `f01b2f60c6363b10b43b931b20f42fb3348acdf1` | Diseño físico documental de multipart V1: audit legacy, staging privado, finalización/compensación F1–F7, SHA/idempotencia, manifiesto relacional, recuperación autorizada, inmutabilidad, reconciliación, limpieza bounded y MPU01–MPU20. `READY_FOR_DIRECTOR_REVIEW`; `503/V1_MULTIPART_STORAGE_NOT_READY`, blocker activo, routing inactivo y todas las autorizaciones de ejecución preservadas. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI02A | MULTI01 aceptado `e61f1c9fe0ba0bedad3f33e99399c5321f3ac5aa` | Candidato repository-only de esquema binario: migración aditiva 05 para coordinación y manifiesto inmutable, readiness de `information_schema` sólo lectura y QA estática/pura. No se conectó ninguna DB, no se ejecutó migración, JSON V1 no cambió y multipart conserva `503/V1_MULTIPART_STORAGE_NOT_READY`. `READY_FOR_CODE_REVIEW`; M6 sigue `NO_GO_BLOCKED`. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI02B | MULTI02A aceptado `3e06decd0f96771248da567d7e5c92186506f34f`; evidencia aceptada `4c125344b97009c236e243b86c4290844c229ed6` | Ensayo físico de migración 05 `PASS` y aceptado en MySQL 9.6 local y bases nuevas sintéticas: clean/rerun, 20+14 columnas, índices/FKs/CHECKs, casos positivos/negativos, unicidad, delete restrict, readiness sin DDL/DML, esquema ausente y deriva representativa. Teardown completo; `mxmed` no conectado ni alterado. Multipart y M6 siguen bloqueados. |
-| 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI03A | MULTI02B aceptado; evidencia `4c125344b97009c236e243b86c4290844c229ed6` | Candidato repository-only del adaptador de filesystem privado: raíz explícita fuera del document root, staging exacto con SHA/bytes/MIME y límite de 25 MiB, finalización create-only, stat/read, cleanup sólo de staging, cuarentena, inventario y clasificador puro. QA sintética temporal; sin DB, wiring runtime, HTTP multipart, adaptadores C04/C05/C21 ni eliminación del `503`. `READY_FOR_CODE_REVIEW`; M6 sigue `NO_GO_BLOCKED`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI03A | MULTI02B aceptado; candidato `1e948d5c6250259b54f72e92122a42e246de999d` | Candidato repository-only del adaptador de filesystem privado. La revisión detectó que `finalizeCreateOnly()` eliminaba staging antes del futuro commit DB exigido por MULTI01. `BLOCKED_PENDING_R1_REVIEW`; sin DB, wiring runtime, HTTP multipart ni eliminación del `503`. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M6-MULTI03A-R1 | Reparación sobre `1e948d5c6250259b54f72e92122a42e246de999d` | Finalización create-only conserva staging y devuelve retención explícita; cleanup queda separado para después del futuro commit. Fallo, integridad, colisión y cuarentena preservan staging. Ocho escenarios R1, regresión filesystem y QA estática incluyen la ruta real de migración 05. `READY_FOR_CODE_REVIEW`; MULTI03A aún no aceptado y M6 sigue `NO_GO_BLOCKED`. |

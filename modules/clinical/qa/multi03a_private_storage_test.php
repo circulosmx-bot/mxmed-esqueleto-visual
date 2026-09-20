@@ -202,8 +202,9 @@ try {
             $stagedPdf['sha256'],
             $stagedPdf['byte_length']
         );
-        multi03a_assert($result['cleanup_pending'] === false, 'staging cleanup pending unexpectedly');
-        multi03a_assert($storage->stat($stagedPdf['staging_key'])['exists'] === false, 'staging object remains');
+        multi03a_assert(($result['staging_retained'] ?? false) === true, 'staging retention not explicit');
+        multi03a_assert(!array_key_exists('cleanup_pending', $result), 'finalization reported unattempted cleanup');
+        multi03a_assert($storage->stat($stagedPdf['staging_key'])['exists'] === true, 'staging object removed before commit');
         $final = $storage->stat($finalKey);
         multi03a_assert($final['exists'] === true, 'final object missing');
         multi03a_assert($final['sha256'] === hash('sha256', $pdfBytes), 'final bytes changed');
@@ -239,10 +240,11 @@ try {
         $storage->deleteUncommitted($staged['staging_key']);
     });
 
-    multi03a_case('FS13', function () use (&$storage, $pdfPath): void {
-        $staged = $storage->stageFile($pdfPath);
-        multi03a_assert($storage->deleteUncommitted($staged['staging_key']) === true, 'staging delete failed');
-        multi03a_assert($storage->stat($staged['staging_key'])['exists'] === false, 'deleted staging remains');
+    multi03a_case('FS13', function () use (&$storage, &$stagedPdf, &$finalKey): void {
+        $finalBeforeCleanup = $storage->stat($finalKey);
+        multi03a_assert($storage->deleteUncommitted($stagedPdf['staging_key']) === true, 'staging delete failed');
+        multi03a_assert($storage->stat($stagedPdf['staging_key'])['exists'] === false, 'deleted staging remains');
+        multi03a_assert($storage->stat($finalKey) === $finalBeforeCleanup, 'post-commit staging cleanup changed final');
     });
 
     multi03a_case('FS14', function () use (&$storage, &$finalKey): void {
@@ -371,13 +373,139 @@ try {
         multi03a_assert(($fileMode & 0077) === 0, 'private file is group/world accessible');
     });
 
-    multi03a_assert($scenarioCount === 24, 'Expected 24 scenarios');
+    $r1Staged = [];
+    $r1FinalKey = '';
+    multi03a_case('R1-01', function () use (&$storage, &$r1Staged, &$r1FinalKey, $pdfPath): void {
+        $r1Staged = $storage->stageFile($pdfPath);
+        $r1FinalKey = $storage->buildFinalKey(
+            '11111111-2222-4333-8444-555555555555',
+            '66666666-7777-4888-8999-aaaaaaaaaaaa',
+            'ORIGINAL',
+            new DateTimeImmutable('2026-09-19T00:00:00Z')
+        );
+        $result = $storage->finalizeCreateOnly(
+            $r1Staged['staging_key'],
+            $r1FinalKey,
+            $r1Staged['sha256'],
+            $r1Staged['byte_length']
+        );
+        multi03a_assert(($result['staging_retained'] ?? false) === true, 'R1 finalization did not report retained staging');
+        multi03a_assert(!array_key_exists('cleanup_pending', $result), 'R1 finalization reported cleanup that was not attempted');
+        multi03a_assert($storage->stat($r1Staged['staging_key'])['exists'] === true, 'R1 finalization removed staging');
+    });
+
+    multi03a_case('R1-02', function () use (&$storage, &$r1FinalKey, $pdfBytes): void {
+        $final = $storage->stat($r1FinalKey);
+        multi03a_assert($final['exists'] === true, 'R1 final object missing');
+        multi03a_assert($final['sha256'] === hash('sha256', $pdfBytes), 'R1 final hash mismatch');
+        multi03a_assert($final['byte_length'] === strlen($pdfBytes), 'R1 final length mismatch');
+    });
+
+    multi03a_case('R1-03', function () use (&$storage, &$r1Staged, &$r1FinalKey): void {
+        $finalBeforeCleanup = $storage->stat($r1FinalKey);
+        multi03a_assert($storage->deleteUncommitted($r1Staged['staging_key']) === true, 'R1 post-commit staging cleanup failed');
+        multi03a_assert($storage->stat($r1Staged['staging_key'])['exists'] === false, 'R1 staging remains after explicit cleanup');
+        multi03a_assert($storage->stat($r1FinalKey) === $finalBeforeCleanup, 'R1 explicit cleanup changed final');
+    });
+
+    multi03a_case('R1-04', function () use (&$storage, &$r1FinalKey, $pdfPath): void {
+        $collisionStage = $storage->stageFile($pdfPath);
+        multi03a_expect_code(
+            static fn() => $storage->finalizeCreateOnly(
+                $collisionStage['staging_key'],
+                $r1FinalKey,
+                $collisionStage['sha256'],
+                $collisionStage['byte_length']
+            ),
+            'FINAL_KEY_ALREADY_EXISTS'
+        );
+        multi03a_assert($storage->stat($collisionStage['staging_key'])['exists'] === true, 'R1 collision removed staging');
+        $storage->deleteUncommitted($collisionStage['staging_key']);
+    });
+
+    multi03a_case('R1-05', function () use (&$storage, $pdfPath): void {
+        $integrityStage = $storage->stageFile($pdfPath);
+        $integrityFinal = $storage->buildFinalKey(
+            'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+            '01234567-89ab-4cde-8fab-0123456789ab',
+            'ORIGINAL',
+            new DateTimeImmutable('2026-09-19T00:00:00Z')
+        );
+        multi03a_expect_code(
+            static fn() => $storage->finalizeCreateOnly(
+                $integrityStage['staging_key'],
+                $integrityFinal,
+                str_repeat('0', 64),
+                $integrityStage['byte_length']
+            ),
+            'FINAL_BINARY_INTEGRITY_MISMATCH'
+        );
+        multi03a_assert($storage->stat($integrityStage['staging_key'])['exists'] === true, 'R1 integrity failure removed staging');
+        multi03a_assert($storage->stat($integrityFinal)['exists'] === false, 'R1 defective final remains');
+
+        $method = new ReflectionMethod(ClinicalPrivateBinaryStorage::class, 'finalizeCreateOnly');
+        $sourceLines = file($method->getFileName());
+        $methodSource = implode('', array_slice(
+            $sourceLines,
+            $method->getStartLine() - 1,
+            $method->getEndLine() - $method->getStartLine() + 1
+        ));
+        multi03a_assert(str_contains($methodSource, '@unlink($finalPath)'), 'R1 final integrity compensation missing');
+        multi03a_assert(!str_contains($methodSource, 'unlink($stagingPath)'), 'R1 final integrity path can remove staging');
+        $storage->deleteUncommitted($integrityStage['staging_key']);
+    });
+
+    multi03a_case('R1-06', function () use (&$storage, $pdfPath, $pdfBytes): void {
+        $quarantineStage = $storage->stageFile($pdfPath);
+        $quarantineFinal = $storage->buildFinalKey(
+            'fedcba98-7654-4321-8fed-cba987654321',
+            'abcdef01-2345-4678-8abc-def012345678',
+            'ORIGINAL',
+            new DateTimeImmutable('2026-09-19T00:00:00Z')
+        );
+        $storage->finalizeCreateOnly(
+            $quarantineStage['staging_key'],
+            $quarantineFinal,
+            $quarantineStage['sha256'],
+            $quarantineStage['byte_length']
+        );
+        $quarantineResult = $storage->quarantine($quarantineFinal);
+        multi03a_assert($storage->stat($quarantineFinal)['exists'] === false, 'R1 quarantine retained final path');
+        multi03a_assert($storage->stat($quarantineStage['staging_key'])['exists'] === true, 'R1 quarantine destroyed staging');
+        multi03a_assert($storage->stat($quarantineResult['quarantine_key'])['sha256'] === hash('sha256', $pdfBytes), 'R1 quarantine bytes changed');
+        $storage->deleteUncommitted($quarantineStage['staging_key']);
+        multi03a_assert($storage->stat($quarantineResult['quarantine_key'])['exists'] === true, 'R1 staging cleanup destroyed quarantine');
+    });
+
+    multi03a_case('R1-07', function () use (&$storage, &$r1FinalKey): void {
+        multi03a_expect_code(static fn() => $storage->deleteUncommitted($r1FinalKey), 'STORAGE_NAMESPACE_NOT_ALLOWED');
+        multi03a_assert($storage->stat($r1FinalKey)['exists'] === true, 'R1 staging cleanup deleted final namespace');
+    });
+
+    multi03a_case('R1-08', function (): void {
+        $method = new ReflectionMethod(ClinicalPrivateBinaryStorage::class, 'finalizeCreateOnly');
+        $sourceLines = file($method->getFileName());
+        $methodSource = implode('', array_slice(
+            $sourceLines,
+            $method->getStartLine() - 1,
+            $method->getEndLine() - $method->getStartLine() + 1
+        ));
+        multi03a_assert(!str_contains($methodSource, 'unlink($stagingPath)'), 'automatic staging unlink remains in finalization');
+        multi03a_assert(str_contains($methodSource, "'staging_retained' => true"), 'explicit staging retention result missing');
+    });
+
+    multi03a_assert($scenarioCount === 32, 'Expected 32 scenarios');
     multi03a_remove_tree($temporaryRoot);
     $residualCount = count(glob($temporaryRoot, GLOB_ONLYDIR) ?: []);
     multi03a_assert($residualCount === 0, 'Temporary root remains');
 
     echo "MULTI03A_FILESYSTEM_QA=PASS\n";
     echo 'FILESYSTEM_QA_SCENARIOS=' . $scenarioCount . "\n";
+    echo "MULTI03A_R1_QA_SCENARIOS=8\n";
+    echo "FINALIZATION_PRESERVES_STAGING=true\n";
+    echo "STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true\n";
+    echo "POST_COMMIT_STAGING_CLEANUP_PRESERVES_FINAL=true\n";
+    echo "QUARANTINE_DOES_NOT_DESTROY_STAGING=true\n";
     echo "PERMISSION_QA=PASS\n";
     echo "QA_PRIVATE_ROOT_INSIDE_REPOSITORY=false\n";
     echo "MULTI03A_RESIDUAL_TEMP_ROOT_COUNT=0\n";

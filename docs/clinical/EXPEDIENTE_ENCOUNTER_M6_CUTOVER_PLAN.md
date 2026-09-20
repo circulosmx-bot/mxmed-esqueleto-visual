@@ -29,7 +29,12 @@ MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-PHASE_2_M6_MULTI03A=READY_FOR_CODE_REVIEW
+PHASE_2_M6_MULTI03A=BLOCKED_PENDING_R1_REVIEW
+M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
+MULTI03A_BLOCKER=FINALIZATION_REMOVES_STAGING_BEFORE_FUTURE_DB_COMMIT
+PHASE_2_M6_MULTI03A_R1=READY_FOR_CODE_REVIEW
+FINALIZATION_PRESERVES_STAGING=true
+STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
 PRIVATE_BINARY_STORAGE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
 PRIVATE_STAGING_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
 CREATE_ONLY_FINALIZATION_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
@@ -491,7 +496,12 @@ M6_MULTI02B_EVIDENCE_COMMIT=4c125344b97009c236e243b86c4290844c229ed6
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-PHASE_2_M6_MULTI03A=READY_FOR_CODE_REVIEW
+PHASE_2_M6_MULTI03A=BLOCKED_PENDING_R1_REVIEW
+M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
+MULTI03A_BLOCKER=FINALIZATION_REMOVES_STAGING_BEFORE_FUTURE_DB_COMMIT
+PHASE_2_M6_MULTI03A_R1=READY_FOR_CODE_REVIEW
+FINALIZATION_PRESERVES_STAGING=true
+STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
 PRIVATE_BINARY_STORAGE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
 PRIVATE_STAGING_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
 CREATE_ONLY_FINALIZATION_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
@@ -503,7 +513,9 @@ MULTIPART_PHYSICAL_QA=PENDING
 
 MULTI02B used a new disposable database on local MySQL `9.6.0` at `127.0.0.1:3306`; the selected target was `mxmed_multi02b_20260919224322_80852_mysql96`. Migrations 01–04 provided only the prerequisite synthetic baseline. Migration 05 passed clean and second application, exact shape inspection, CHECK enforcement, uniqueness, FK restrictions, valid synthetic inserts, read-only readiness, missing-schema failure and representative column/index/FK/CHECK drift detection. All temporary databases and harness files were removed. `mxmed` was never selected or changed, and no real patient, clinical, Agenda or billing data was used.
 
-MULTI03A adds the isolated private filesystem primitives for exact-byte staging, create-only finalization, stat/read streams, staging-only cleanup, quarantine, inventory and pure reconciliation. Its root is explicit and outside the document root; storage keys are opaque; no DB, router or HTTP surface loads it. It does not coordinate `clinical_binary_uploads` or `clinical_document_binaries`, decide idempotent replay, authorize retrieval, schedule reconciliation or adapt callers. Service integration, authenticated retrieval, reconciliation/cleanup execution, C04/C05/C21 adapters and multipart activation remain absent. The accepted `503/V1_MULTIPART_STORAGE_NOT_READY` therefore remains mandatory.
+MULTI03A adds the isolated private filesystem primitives for exact-byte staging, create-only finalization, stat/read streams, staging-only cleanup, quarantine, inventory and pure reconciliation. Review found that candidate `1e948d5c6250259b54f72e92122a42e246de999d` unlinked staging immediately after finalization, before the future database commit boundary required by MULTI01. MULTI03A remains blocked pending R1 review. R1 preserves staging after successful final creation and verification; explicit `deleteUncommitted()` remains separate for a future service to call only after commit. Failure, integrity rejection, collision and quarantine paths retain the retryable staging object.
+
+The root remains explicit and outside the document root; storage keys remain opaque; no DB, router or HTTP surface loads the adapter. It does not coordinate `clinical_binary_uploads` or `clinical_document_binaries`, decide idempotent replay, authorize retrieval, schedule reconciliation or adapt callers. Service integration, authenticated retrieval, reconciliation/cleanup execution, C04/C05/C21 adapters and multipart activation remain absent. The accepted `503/V1_MULTIPART_STORAGE_NOT_READY` therefore remains mandatory.
 
 ## 13. Monitoring invariants
 
@@ -587,7 +599,7 @@ ROUTE01 is accepted; M6 remains blocked independently by multipart implementatio
 
 Known blockers, in actionable order:
 
-1. MULTI01, MULTI02A and MULTI02B are accepted, and MULTI03A supplies the private storage primitive candidate; coordination/service integration, authenticated retrieval, caller adapters and complete multipart QA are still absent, so the active caller blocker and fail-closed `503` remain.
+1. MULTI01, MULTI02A and MULTI02B are accepted. MULTI03A is blocked pending review of R1's staging-lifetime repair; coordination/service integration, authenticated retrieval, caller adapters and complete multipart QA are still absent, so the active caller blocker and fail-closed `503` remain.
 2. ROUTE01 capability is accepted, but cohort runtime routing remains inactive and unauthorized.
 3. The accepted uncontrolled-writer count is 0, but that does not authorize M6.
 4. The working schema is pre-migration (01–05 not applied; 05 remains repository-only).
@@ -601,5 +613,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI03A private binary storage primitives. If accepted, proceed to repository-only MULTI03B coordination/service integration with clinical_binary_uploads, clinical_document_binaries and durable command idempotency. Multipart HTTP acceptance, working-database migration and cutover remain unauthorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of MULTI03A-R1 staging-lifetime repair. If accepted, proceed to repository-only MULTI03B coordination/service integration with clinical_binary_uploads, clinical_document_binaries and durable command idempotency. Multipart HTTP acceptance, working-database migration and cutover remain unauthorized.
 ```

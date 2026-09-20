@@ -341,7 +341,11 @@ final class ClinicalPrivateBinaryStorage
     }
 
     /**
-     * @return array{final_key:string,sha256:string,byte_length:int,cleanup_pending:bool}
+     * Create and verify the immutable final object while retaining staging.
+     * The future coordinating service is solely responsible for calling
+     * deleteUncommitted() after its canonical database commit succeeds.
+     *
+     * @return array{final_key:string,sha256:string,byte_length:int,staging_retained:true}
      */
     public function finalizeCreateOnly(
         string $stagingKey,
@@ -402,13 +406,11 @@ final class ClinicalPrivateBinaryStorage
                 throw new ClinicalPrivateBinaryStorageException('FINAL_BINARY_INTEGRITY_MISMATCH');
             }
 
-            $cleanupPending = !@unlink($stagingPath);
-
             return [
                 'final_key' => $finalKey,
                 'sha256' => $expectedSha256,
                 'byte_length' => $expectedBytes,
-                'cleanup_pending' => $cleanupPending,
+                'staging_retained' => true,
             ];
         } finally {
             flock($source, LOCK_UN);

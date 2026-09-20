@@ -35,7 +35,14 @@ grep -Fq 'public function inventory(' "$adapter"
 grep -Fq 'final class ClinicalBinaryReconciliation' "$adapter"
 grep -Fq 'random_bytes(' "$adapter"
 grep -Fq 'finfo(FILEINFO_MIME_TYPE)' "$adapter"
+grep -Fq "'staging_retained' => true" "$adapter"
 grep -Fq 'V1_MULTIPART_STORAGE_NOT_READY' "$router"
+
+finalize_source="$(sed -n '/public function finalizeCreateOnly(/,/public function deleteUncommitted(/p' "$adapter")"
+if grep -Fq 'unlink($stagingPath)' <<<"$finalize_source"; then
+  echo 'MULTI03A_STATIC_QA=FAIL finalization removes staging' >&2
+  exit 1
+fi
 
 # Protected runtime, legacy upload implementation and schema migration remain byte-for-byte unchanged.
 protected_paths=(
@@ -43,7 +50,7 @@ protected_paths=(
   api/clinical-documents.php
   api/evolution-note-generate.php
   api/_lib/clinical_encounter_integrity.php
-  api/migrations/05_clinical_document_binary_storage.sql
+  modules/clinical/db/migrations/2026_09_19_05_clinical_binary_storage.sql
 )
 if ! git -C "$repo_root" diff --quiet "$baseline" -- "${protected_paths[@]}"; then
   echo 'MULTI03A_STATIC_QA=FAIL protected runtime or migration changed' >&2
@@ -56,3 +63,5 @@ echo 'MULTI03A_RUNTIME_WIRING_ACTIVE=false'
 echo 'ANY_DATABASE_CONNECTED=false'
 echo 'GENERAL_FINAL_BINARY_DELETE_API=false'
 echo 'V1_MULTIPART_503_PRESERVED=true'
+echo 'FINALIZATION_PRESERVES_STAGING=true'
+echo 'MULTI03A_STATIC_QA_MIGRATION05_PATH_CORRECT=true'

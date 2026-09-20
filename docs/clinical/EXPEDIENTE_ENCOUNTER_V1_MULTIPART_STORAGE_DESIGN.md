@@ -17,7 +17,12 @@ MIGRATION_05_STATUS=ACCEPTED_REPOSITORY_PHYSICAL_REHEARSAL
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-PHASE_2_M6_MULTI03A=READY_FOR_CODE_REVIEW
+PHASE_2_M6_MULTI03A=BLOCKED_PENDING_R1_REVIEW
+M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
+MULTI03A_BLOCKER=FINALIZATION_REMOVES_STAGING_BEFORE_FUTURE_DB_COMMIT
+PHASE_2_M6_MULTI03A_R1=READY_FOR_CODE_REVIEW
+FINALIZATION_PRESERVES_STAGING=true
+STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
 PRIVATE_BINARY_STORAGE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
 PRIVATE_STAGING_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
 CREATE_ONLY_FINALIZATION_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
@@ -369,7 +374,9 @@ MULTI02B physically rehearsed migration 05 on local MySQL `9.6.0` at `127.0.0.1:
 
 The first drift-only harness attempt tried to reuse an FK name in the same `ALTER TABLE`; MySQL rejected that harness statement before applying the drift, and teardown completed. The two remaining probes were then executed on fresh disposable databases with separate `DROP` and `ADD` statements and passed. This was not a migration-05 or readiness defect. MULTI02B and that evidence commit are now accepted.
 
-MULTI03A implements only the private binary storage primitives in `api/_lib/clinical_private_binary_storage.php`. The root is caller-supplied, absolute and rejected when equal to or inside the effective document root. Opaque storage keys reject traversal. Staging retains exact bytes with a 25 MiB limit, content MIME detection, SHA-256 and byte count. Finalization uses create-only same-root hard-link semantics, verifies source and final integrity, never overwrites, and removes only its uncommitted staging link. Read-only stat/stream/inventory, staging-only deletion, final-object quarantine and a pure non-mutating reconciliation classifier are included. Synthetic QA uses only an OS temporary root and removes it completely.
+MULTI03A implements only the private binary storage primitives in `api/_lib/clinical_private_binary_storage.php`. The root is caller-supplied, absolute and rejected when equal to or inside the effective document root. Opaque storage keys reject traversal. Staging retains exact bytes with a 25 MiB limit, content MIME detection, SHA-256 and byte count. Finalization uses create-only same-root hard-link semantics, verifies source and final integrity and never overwrites. Read-only stat/stream/inventory, staging-only deletion, final-object quarantine and a pure non-mutating reconciliation classifier are included. Synthetic QA uses only an OS temporary root and removes it completely.
+
+Review of candidate `1e948d5c6250259b54f72e92122a42e246de999d` found that finalization removed staging before the future database transaction could commit. MULTI03A is therefore `BLOCKED_PENDING_R1_REVIEW`. R1 repairs the accepted distributed-commit order: successful finalization preserves both staging and final paths and returns `staging_retained=true`; only the future coordinating service may call `deleteUncommitted()` after successful commit. Finalization failure, integrity failure and final-key collision preserve staging. Quarantine removes the supplied orphan-final path while retaining staging. The adapter still makes no database, authorization or replay decision.
 
 The adapter has no DB or runtime wiring and does not decide authorization, document policy, ownership or command replay. It generates no image derivatives and exposes no public locator. Table coordination/service integration, authenticated retrieval, reconciliation scheduling or mutation, C04/C05/C21 adapters and multipart HTTP acceptance remain pending. Physical schema success and this storage candidate do not activate multipart.
 
@@ -384,7 +391,12 @@ M6_MULTI02B_EVIDENCE_COMMIT=4c125344b97009c236e243b86c4290844c229ed6
 MIGRATION_05_PHYSICAL_REHEARSAL=ACCEPTED
 MIGRATION_05_TARGET_MYSQL96=PASS
 MULTIPART_SCHEMA_READINESS_PHYSICAL=PASS
-PHASE_2_M6_MULTI03A=READY_FOR_CODE_REVIEW
+PHASE_2_M6_MULTI03A=BLOCKED_PENDING_R1_REVIEW
+M6_MULTI03A_CANDIDATE_HEAD=1e948d5c6250259b54f72e92122a42e246de999d
+MULTI03A_BLOCKER=FINALIZATION_REMOVES_STAGING_BEFORE_FUTURE_DB_COMMIT
+PHASE_2_M6_MULTI03A_R1=READY_FOR_CODE_REVIEW
+FINALIZATION_PRESERVES_STAGING=true
+STAGING_CLEANUP_SEPARATE_FROM_FINALIZATION=true
 PRIVATE_BINARY_STORAGE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
 PRIVATE_STAGING_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
 CREATE_ONLY_FINALIZATION_PRIMITIVE=IMPLEMENTED_PENDING_REVIEW
