@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Audit the exact current C04/C05/C21 request shapes against the physically validated canonical multipart endpoint, then adapt one caller family at a time. Preserve GUARD01 for all remaining legacy writers. Working-database migration, activation and cutover remain unauthorized.
+NEXT_AUTHORIZED_STEP=Run isolated C05 physical caller QA against disposable MySQL 9.6/private storage, proving browser-style canonical order creation, result upload tied to the originating encounter, stable replay, closed-encounter late result and no legacy fallback. C05 replacement, C04 and C21 remain guarded and unadapted.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -63,7 +63,20 @@ DOCUMENT_REVISION_CREATE_IDEMPOTENCY=IMPLEMENTED_ACCEPTED
 T34_DOCUMENT_AMENDMENT_RETRY_REPOSITORY_PREREQUISITE=SATISFIED
 ENCOUNTER_V1_GET_DDL_REMOVAL=IMPLEMENTED_FOR_V1_ENCOUNTER_PATHS
 GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_ACCEPTED
+PHASE_2_M6_MULTI05B=ACCEPTED
+MULTI05B_RERUN1=ACCEPTED
+M6_MULTI05B_EVIDENCE_COMMIT=6cb473226e4239dd11375e8cdff47ee35c3ea954
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=ACCEPTED
+CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
+CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI06A_C05=READY_FOR_CODE_REVIEW
+C05_ORDER_CREATE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_RESULT_MULTIPART_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_REPLACEMENT_ADAPTER=false
+C05_ADAPTATION_STATUS=PARTIAL_PENDING_REPLACEMENT
+C04_MULTIPART_ADAPTER=false
+C21_MULTIPART_ADAPTER=false
 PHASE_2_MIG01A_AUTHORIZED=true
 PHASE_2_MIG01A_STATUS=ACCEPTED
 PHASE_2_MIG01A_SCOPE=DISPOSABLE_MIGRATION_REHEARSAL_ONLY
@@ -306,9 +319,10 @@ PHASE_2_M6_MULTI04C=ACCEPTED
 M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
 PHASE_2_M6_MULTI05A=ACCEPTED
 M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
-PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTI05B_RERUN1=PASS
-CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI05B=ACCEPTED
+MULTI05B_RERUN1=ACCEPTED
+M6_MULTI05B_EVIDENCE_COMMIT=6cb473226e4239dd11375e8cdff47ee35c3ea954
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=ACCEPTED
 CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
 CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
 CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
@@ -692,6 +706,8 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI04B | MULTI04A aceptado `99422dfb601282a5c5eceaafa6a02c34dc8b183b` | Ruta GET binaria gated, headers seguros y transferencia acotada; QA pura/estática y regresiones PASS. Sin DB/HTTP físico ni activación. `READY_FOR_CODE_REVIEW`; siguiente revisión antes de MULTI04C. |
 | 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI04C | MULTI04B aceptado `0daa1e52dd2bda11cad5d50f09ac0516725ef004` | HC01–HC10 HTTP físico PASS; sesiones reales, MySQL 9.6.0 y PDF exacto; sin mutaciones GET, teardown completo. `PASS_READY_FOR_DIRECTOR_REVIEW`; M6 y escrituras multipart siguen bloqueados. |
 | 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI05A | MULTI04C aceptado `10c09aa8fa0960fd5d1d57d72c765755026c2c06` | Adaptador multipart canónico V1 repository-only; QA pura/estructural PASS. `READY_FOR_CODE_REVIEW`; sin DB/HTTP físico, callers ni activación. |
+| 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI05B | MULTI05A aceptado `2de0cc40f0a65a0716795a174c4b7588fc17d9fb`; evidencia aceptada `6cb473226e4239dd11375e8cdff47ee35c3ea954` | WB01–WB10 PASS sobre MySQL 9.6, HTTP multipart real y almacenamiento privado desechable; replay, bytes distintos, fallos fail-closed, recuperación binaria y teardown completo aceptados. La base de trabajo no se conectó. |
+| 2026-09-20 | CLIN-REFORM-PHASE2-M6-MULTI06A-C05 | MULTI05B aceptado `6cb473226e4239dd11375e8cdff47ee35c3ea954` | Candidato repository-only: C05-A crea orden por ruta canónica con JSON e idempotencia estable; C05-B usa el encounter de la orden originaria y multipart idempotente con procedencia. Reemplazo C05, C04 y C21 permanecen guardados. `READY_FOR_CODE_REVIEW`; sin DB, HTTP, backend, migración ni activación. |
 
 ### MULTI03B — repository-only coordination candidate (2026-09-19)
 
@@ -1014,13 +1030,14 @@ working configuration change or C04/C05/C21 adaptation occurred.
 ```text
 PHASE_2_M6_MULTI05A=ACCEPTED
 M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
-PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTI05B_RERUN1=PASS
-CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI05B=ACCEPTED
+MULTI05B_RERUN1=ACCEPTED
+M6_MULTI05B_EVIDENCE_COMMIT=6cb473226e4239dd11375e8cdff47ee35c3ea954
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=ACCEPTED
 CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
 CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
 CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_ACCEPTED
 MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
 CANONICAL_MULTIPART_WRITE_WORKING_DB_ACTIVE=false
 MULTIPART_HTTP_ACCEPTANCE=false
@@ -1096,10 +1113,49 @@ adapter, storage/coordination/retrieval/HTTP/idempotency helpers and migrations.
 All temporary PHP servers, sessions, both DBs, storage, archive and harness were
 removed: residual database/process/session/temp-root counts are each zero.
 
-MULTI05B-RERUN1 is PASS_READY_FOR_DIRECTOR_REVIEW. Canonical route success does not
-clear MULTIPART_HTTP_ACCEPTANCE=false or MULTIPART_ACTIVE_CALLER_BLOCKER=true.
-C04/C05/C21 are untouched and unadapted; GUARD01 remains. M6 stays NO_GO_BLOCKED,
-working schema PRE_MIGRATION, global GET-DDL removal pending, backup/clone readiness
-unproven and migration account/write window unready. Working migration, gate
-activation, cutover, production and PHASE 3 remain unauthorized. No next caller
-chapter starts until Director/assistant accepts this evidence.
+MULTI05B-RERUN1 produced the PASS evidence later accepted in commit
+`6cb473226e4239dd11375e8cdff47ee35c3ea954`. That acceptance does not clear
+MULTIPART_HTTP_ACCEPTANCE=false or MULTIPART_ACTIVE_CALLER_BLOCKER=true. At this
+historical evidence point C04/C05/C21 were untouched; the MULTI06A section below
+records the later partial C05 candidate. M6 stays NO_GO_BLOCKED, working schema
+PRE_MIGRATION, global GET-DDL removal pending, backup/clone readiness unproven and
+migration account/write window unready. Working migration, gate activation,
+cutover, production and PHASE 3 remain unauthorized.
+
+### MULTI06A-C05 — candidate de adaptación de caller (2026-09-20)
+
+Se acepta MULTI05B/RERUN1 con commit de evidencia
+`6cb473226e4239dd11375e8cdff47ee35c3ea954`: el HTTP multipart canónico,
+la idempotencia y el almacenamiento privado V1 quedan físicamente aceptados. La
+autoridad de implementación aceptada permanece en
+`2de0cc40f0a65a0716795a174c4b7588fc17d9fb` hasta revisar este candidato.
+
+MULTI06A adapta únicamente la creación C05 de órdenes y la carga C05 de resultados.
+La orden usa la ruta canónica del encounter, JSON y el registro compartido de llaves
+idempotentes. El resultado toma su encounter exclusivamente del contexto canónico
+de la orden originaria, conserva referencias y procedencia, y construye FormData
+dentro del ejecutor idempotente. Un fallo canónico no desvía a legacy. La
+compatibilidad previa a intención canónica y GUARD01 se conservan.
+
+```text
+PHASE_2_M6_MULTI06A_C05=READY_FOR_CODE_REVIEW
+C05_ORDER_CREATE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_RESULT_MULTIPART_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_REPLACEMENT_ADAPTER=false
+C05_ADAPTATION_STATUS=PARTIAL_PENDING_REPLACEMENT
+C04_MULTIPART_ADAPTER=false
+C21_MULTIPART_ADAPTER=false
+C21_AUTHORITY=TOKEN_ROW
+C21_ENCOUNTER_KEY_OPTIONAL=true
+MULTIPART_HTTP_ACCEPTANCE=false
+MULTIPART_ACTIVE_CALLER_BLOCKER=true
+M6_GO_NO_GO=NO_GO_BLOCKED
+```
+
+C04 requiere después separar adjuntos ligados a encounter de adjuntos a nivel
+paciente. C21 conserva autoridad por token y su encounter opcional; no se redirige
+desde cliente. Reemplazo C05, C04 y C21 siguen guardados y sin adaptar. No hubo
+cambio de backend, esquema, migración, base, datos ni routing runtime. El siguiente
+paso autorizado es sólo QA físico aislado de C05 sobre MySQL 9.6 y almacenamiento
+privado desechables, incluyendo replay estable, resultado tardío ligado al encounter
+originario cerrado y ausencia de fallback legacy.

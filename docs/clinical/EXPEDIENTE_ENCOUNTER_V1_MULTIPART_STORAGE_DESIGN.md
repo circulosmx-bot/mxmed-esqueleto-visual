@@ -38,9 +38,10 @@ PHASE_2_M6_MULTI04C=ACCEPTED
 M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
 PHASE_2_M6_MULTI05A=ACCEPTED
 M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
-PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTI05B_RERUN1=PASS
-CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI05B=ACCEPTED
+MULTI05B_RERUN1=ACCEPTED
+M6_MULTI05B_EVIDENCE_COMMIT=6cb473226e4239dd11375e8cdff47ee35c3ea954
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=ACCEPTED
 CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
 CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
 CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
@@ -72,7 +73,14 @@ PRIVATE_BINARY_STORAGE_ADAPTER=ACCEPTED
 PRIVATE_STAGING_PRIMITIVE=ACCEPTED
 CREATE_ONLY_FINALIZATION_PRIMITIVE=ACCEPTED
 RECONCILIATION_PRIMITIVES=ACCEPTED
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_ACCEPTED
+PHASE_2_M6_MULTI06A_C05=READY_FOR_CODE_REVIEW
+C05_ORDER_CREATE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_RESULT_MULTIPART_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_REPLACEMENT_ADAPTER=false
+C05_ADAPTATION_STATUS=PARTIAL_PENDING_REPLACEMENT
+C04_MULTIPART_ADAPTER=false
+C21_MULTIPART_ADAPTER=false
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 WORKING_MXMED_DB_CONNECTED=false
@@ -456,9 +464,10 @@ PHASE_2_M6_MULTI04C=ACCEPTED
 M6_MULTI04C_EVIDENCE_COMMIT=10c09aa8fa0960fd5d1d57d72c765755026c2c06
 PHASE_2_M6_MULTI05A=ACCEPTED
 M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
-PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTI05B_RERUN1=PASS
-CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI05B=ACCEPTED
+MULTI05B_RERUN1=ACCEPTED
+M6_MULTI05B_EVIDENCE_COMMIT=6cb473226e4239dd11375e8cdff47ee35c3ea954
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=ACCEPTED
 CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
 CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
 CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
@@ -875,7 +884,7 @@ MULTI04C_RESIDUAL_TEMP_ROOT_COUNT=0
 PRIVATE_BINARY_ROUTE_WORKING_DB_ACTIVE=false
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 V1_MULTIPART_503_PRESERVED=true
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_ACCEPTED
 MULTIPART_ACTIVE_CALLER_BLOCKER=true
 MULTIPART_HTTP_ACCEPTANCE=false
 C04_MULTIPART_ADAPTER=false
@@ -900,7 +909,7 @@ MULTI04C is `PASS_READY_FOR_DIRECTOR_REVIEW`. The next-step candidate below appl
 only after successful Director/assistant review; it was not executed in this chapter.
 
 ```text
-NEXT_AUTHORIZED_STEP=Audit the exact current C04/C05/C21 request shapes against the physically validated canonical multipart endpoint, then adapt one caller family at a time. Preserve GUARD01 for all remaining legacy writers. Working-database migration, activation and cutover remain unauthorized.
+NEXT_AUTHORIZED_STEP=Run isolated C05 physical caller QA against disposable MySQL 9.6/private storage, proving browser-style canonical order creation, result upload tied to the originating encounter, stable replay, closed-encounter late result and no legacy fallback. C05 replacement, C04 and C21 remain guarded and unadapted.
 ```
 
 
@@ -963,13 +972,14 @@ working configuration change or C04/C05/C21 adaptation occurred.
 ```text
 PHASE_2_M6_MULTI05A=ACCEPTED
 M6_MULTI05A_ACCEPTED_HEAD=2de0cc40f0a65a0716795a174c4b7588fc17d9fb
-PHASE_2_M6_MULTI05B=PASS_READY_FOR_DIRECTOR_REVIEW
-MULTI05B_RERUN1=PASS
-CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=PASS
+PHASE_2_M6_MULTI05B=ACCEPTED
+MULTI05B_RERUN1=ACCEPTED
+M6_MULTI05B_EVIDENCE_COMMIT=6cb473226e4239dd11375e8cdff47ee35c3ea954
+CANONICAL_V1_MULTIPART_HTTP_PHYSICAL_QA=ACCEPTED
 CANONICAL_V1_MULTIPART_IDEMPOTENCY_PHYSICAL_QA=PASS
 CANONICAL_V1_MULTIPART_PRIVATE_STORAGE_PHYSICAL_QA=PASS
 CANONICAL_V1_ENCOUNTER_MULTIPART_WRITE=ACCEPTED
-V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_PENDING_DIRECTOR_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_ACCEPTED
 MULTI05A_PHYSICAL_MULTIPART_QA_EXECUTED=false
 CANONICAL_MULTIPART_WRITE_WORKING_DB_ACTIVE=false
 MULTIPART_HTTP_ACCEPTANCE=false
@@ -1045,13 +1055,14 @@ adapter, storage/coordination/retrieval/HTTP/idempotency helpers and migrations.
 All temporary PHP servers, sessions, both DBs, storage, archive and harness were
 removed: residual database/process/session/temp-root counts are each zero.
 
-MULTI05B-RERUN1 is PASS_READY_FOR_DIRECTOR_REVIEW. Canonical route success does not
-clear MULTIPART_HTTP_ACCEPTANCE=false or MULTIPART_ACTIVE_CALLER_BLOCKER=true.
-C04/C05/C21 are untouched and unadapted; GUARD01 remains. M6 stays NO_GO_BLOCKED,
-working schema PRE_MIGRATION, global GET-DDL removal pending, backup/clone readiness
-unproven and migration account/write window unready. Working migration, gate
-activation, cutover, production and PHASE 3 remain unauthorized. No next caller
-chapter starts until Director/assistant accepts this evidence.
+MULTI05B-RERUN1 produced the PASS evidence later accepted in commit
+`6cb473226e4239dd11375e8cdff47ee35c3ea954`. That acceptance does not clear
+MULTIPART_HTTP_ACCEPTANCE=false or MULTIPART_ACTIVE_CALLER_BLOCKER=true. At this
+historical evidence point C04/C05/C21 were untouched; the MULTI06A section below
+records the later partial C05 candidate. M6 stays NO_GO_BLOCKED, working schema
+PRE_MIGRATION, global GET-DDL removal pending, backup/clone readiness unproven and
+migration account/write window unready. Working migration, gate activation,
+cutover, production and PHASE 3 remain unauthorized.
 
 
 RERUN1 exact initial server command (temporary paths no longer exist):
@@ -1082,3 +1093,43 @@ Final bounded table snapshots (ordered complete-row SHA-256, before teardown):
 Final private-file inventory: one relative key
 `clinical/2026/09/5edd4776-452d-4f1c-9cb2-01de589e63c0/ac13437c-1e0d-4669-86d1-6ee4441310a0-original`,
 94 bytes, SHA-256 matching PDF_A above. No staging or quarantine files.
+
+### MULTI06A-C05 caller adaptation candidate (2026-09-20)
+
+MULTI05B/RERUN1 and its evidence commit
+`6cb473226e4239dd11375e8cdff47ee35c3ea954` are accepted. Consequently,
+`V1_MULTIPART_DOCUMENT_WRITE=CANONICAL_ENCOUNTER_ROUTE_PHYSICALLY_VALIDATED_ACCEPTED`.
+The accepted implementation head remains
+`2de0cc40f0a65a0716795a174c4b7588fc17d9fb` pending review of this caller candidate.
+
+```text
+PHASE_2_M6_MULTI06A_C05=READY_FOR_CODE_REVIEW
+C05_ORDER_CREATE_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_RESULT_MULTIPART_ADAPTER=IMPLEMENTED_PENDING_REVIEW
+C05_REPLACEMENT_ADAPTER=false
+C05_ADAPTATION_STATUS=PARTIAL_PENDING_REPLACEMENT
+```
+
+C05-A uses the encounter URL as authority and JSON plus the shared stable
+Idempotency-Key. C05-B uses only the originating order context for encounter
+authority and builds multipart inside the same shared idempotent executor. Its
+root and logical payload carry `provenance=estudios_host_resultado`; existing
+related-order ID and UUID fields remain unchanged. Canonical failures cannot enter
+either compatibility branch.
+
+```text
+C04_MULTIPART_ADAPTER=false
+C04_ENCOUNTER_KEY_OPTIONAL=true
+C04_LATER_SPLIT=ENCOUNTER_OWNED_VS_PATIENT_LEVEL
+C21_MULTIPART_ADAPTER=false
+C21_AUTHORITY=TOKEN_ROW
+C21_ENCOUNTER_KEY_OPTIONAL=true
+C21_DIRECT_CLIENT_REDIRECT_TO_CANONICAL_ENCOUNTER_ENDPOINT=false
+MULTIPART_HTTP_ACCEPTANCE=false
+MULTIPART_ACTIVE_CALLER_BLOCKER=true
+M6_GO_NO_GO=NO_GO_BLOCKED
+```
+
+No server or migration source changed. Working schema remains PRE_MIGRATION;
+runtime cohort routing, working-database migration, feature-gate activation,
+cutover and production execution remain unauthorized.

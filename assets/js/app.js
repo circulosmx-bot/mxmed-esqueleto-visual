@@ -71458,6 +71458,11 @@ function mxResetLogoPreview(){
     if(!doctorId || !safePatientId) return '';
     return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents`;
   }
+  function buildEncounterClinicalDocumentCreateUrl(encounterKey){
+    const safeEncounterKey = clean(encounterKey);
+    if(!safeEncounterKey) return '';
+    return `/api/clinical/index.php/encounters/${encodeURIComponent(safeEncounterKey)}/documents`;
+  }
   function buildScopedClinicalDocumentReplaceUrl(docRef){
     const doctorId = resolveClinicalDocumentsDoctorId();
     const safeRef = clean(docRef);
@@ -72318,7 +72323,12 @@ function mxResetLogoPreview(){
       setOrderResultFeedback(refs, 'No se pudo resolver el paciente activo para guardar el resultado.', 'error');
       return;
     }
-    const createUrl = buildScopedClinicalDocumentCreateUrl(patientId);
+    const orderEncounterId = clean(detail?.context?.encounter_id || '');
+    const hasCanonicalOrderEncounter = /^\d+$/.test(orderEncounterId) && Number(orderEncounterId) > 0;
+    const originatingEncounterKey = hasCanonicalOrderEncounter ? `enc:${orderEncounterId}` : '';
+    const createUrl = hasCanonicalOrderEncounter
+      ? buildEncounterClinicalDocumentCreateUrl(originatingEncounterKey)
+      : buildScopedClinicalDocumentCreateUrl(patientId);
     if(!createUrl){
       setOrderResultFeedback(refs, 'No se pudo resolver el médico para guardar documentos clínicos.', 'error');
       return;
@@ -72337,26 +72347,81 @@ function mxResetLogoPreview(){
       selection_count: studies.length,
       indication: clean(payload?.indication || ''),
       observations: observations || null,
-      result_file_name: clean(file.name || '')
+      result_file_name: clean(file.name || ''),
+      provenance: 'estudios_host_resultado'
     };
-    const formData = new FormData();
-    formData.append('patient_id', patientId);
-    formData.append('document_type', resultDocumentType);
-    formData.append('summary', buildResultSummary(detail, studies));
-    formData.append('event_datetime', nowSqlDateTime());
-    formData.append('payload', JSON.stringify(payloadData));
-    formData.append('file', file);
+    const summary = buildResultSummary(detail, studies);
+    const eventDatetime = nowSqlDateTime();
+    const orderRef = clean(detail.uuid || detail.id || '');
+    const resultScope = `c05-result:${originatingEncounterKey || 'legacy'}:${orderRef}:${resultDocumentType}`;
+    const resultFingerprint = JSON.stringify({
+      originatingEncounterKey,
+      orderDocumentId: clean(detail.id || ''),
+      orderDocumentUuid: clean(detail.uuid || ''),
+      resultDocumentType,
+      summary,
+      payload: payloadData,
+      file: {
+        name: clean(file.name || ''),
+        size: Number(file.size || 0),
+        lastModified: Number(file.lastModified || 0),
+        type: clean(file.type || '')
+      }
+    });
     orderResultModalState.saving = true;
     if(refs.saveBtn) refs.saveBtn.disabled = true;
     setOrderResultFeedback(refs, 'Guardando resultado canónico…');
     try{
-      const resp = await fetch(createUrl, {
-        method: 'POST',
-        headers: { Accept: 'application/json' },
-        credentials: 'same-origin',
-        body: formData
-      });
-      const json = await resp.json().catch(()=> null);
+      let resp;
+      let json = null;
+      if(hasCanonicalOrderEncounter){
+        if(!window.mxmedClinicalCommandKeys?.run){
+          throw new Error('No está disponible la protección idempotente para guardar el resultado.');
+        }
+        const canonicalResult = await window.mxmedClinicalCommandKeys.run(
+          resultScope,
+          resultFingerprint,
+          ()=> ({ createUrl, resultDocumentType, summary, eventDatetime, payloadData }),
+          async ({ key, command })=> {
+            const formData = new FormData();
+            formData.append('document_type', command.resultDocumentType);
+            formData.append('summary', command.summary);
+            formData.append('event_datetime', command.eventDatetime);
+            formData.append('provenance', 'estudios_host_resultado');
+            formData.append('payload', JSON.stringify(command.payloadData));
+            formData.append('file', file);
+            const response = await fetch(command.createUrl, {
+              method: 'POST',
+              headers: { Accept: 'application/json', 'Idempotency-Key': key },
+              credentials: 'same-origin',
+              body: formData
+            });
+            const responseJson = await response.json().catch(()=> null);
+            if(!response.ok || !responseJson || responseJson.ok !== true){
+              const message = clean(responseJson?.message || responseJson?.error?.message || responseJson?.error || `HTTP ${response.status}`) || 'No se pudo guardar el resultado.';
+              throw new Error(message);
+            }
+            return { response, json: responseJson };
+          }
+        );
+        resp = canonicalResult.response;
+        json = canonicalResult.json;
+      }else{
+        const formData = new FormData();
+        formData.append('patient_id', patientId);
+        formData.append('document_type', resultDocumentType);
+        formData.append('summary', summary);
+        formData.append('event_datetime', eventDatetime);
+        formData.append('payload', JSON.stringify(payloadData));
+        formData.append('file', file);
+        resp = await fetch(createUrl, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+          body: formData
+        });
+      }
+      if(!json) json = await resp.json().catch(()=> null);
       if(!resp.ok || !json || json.ok !== true){
         const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el resultado.';
         throw new Error(message);
@@ -73022,19 +73087,10 @@ function mxResetLogoPreview(){
     }
     orderSubmitLock.signature = signature;
     orderSubmitLock.ts = nowTs;
-    const formData = new FormData();
-    formData.append('patient_id', patientId);
-    formData.append('document_type', documentType);
-    formData.append('title', title);
-    formData.append('summary', summary);
-    formData.append('event_datetime', eventDatetime);
-    formData.append('payload', JSON.stringify(payloadData));
-    if(encounterKey) formData.append('encounter_key', encounterKey);
-    if(appointmentId) formData.append('appointment_id', appointmentId);
-
     setOrderFeedback(isReplacementMode ? 'Guardando orden de reemplazo…' : 'Guardando orden canónica…');
     try{
       let resp;
+      let json = null;
       if(isReplacementMode){
         const body = {
           document_type: documentType,
@@ -73062,20 +73118,76 @@ function mxResetLogoPreview(){
           body: JSON.stringify(body)
         });
       }else{
-        const createUrl = buildScopedClinicalDocumentCreateUrl(patientId);
+        const createUrl = encounterKey
+          ? buildEncounterClinicalDocumentCreateUrl(encounterKey)
+          : buildScopedClinicalDocumentCreateUrl(patientId);
         if(!createUrl){
           throw new Error('No se pudo resolver el médico para guardar documentos clínicos.');
         }
-        resp = await fetch(createUrl, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json'
-          },
-          credentials: 'same-origin',
-          body: formData
-        });
+        if(encounterKey){
+          if(!window.mxmedClinicalCommandKeys?.run){
+            throw new Error('No está disponible la protección idempotente para guardar la orden.');
+          }
+          const scope = `c05-order-create:${encounterKey}:${documentType}`;
+          const fingerprint = JSON.stringify({
+            encounterKey,
+            documentType,
+            orderArea: area,
+            priority,
+            indication,
+            requestedStudies: items,
+            flags,
+            replacementSourceRef: ''
+          });
+          const canonicalResult = await window.mxmedClinicalCommandKeys.run(
+            scope,
+            fingerprint,
+            ()=> ({ createUrl, documentType, title, summary, eventDatetime, payloadData }),
+            async ({ key, command })=> {
+              const response = await fetch(command.createUrl, {
+                method: 'POST',
+                headers: {
+                  Accept: 'application/json',
+                  'Content-Type': 'application/json',
+                  'Idempotency-Key': key
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  document_type: command.documentType,
+                  title: command.title,
+                  summary: command.summary,
+                  event_datetime: command.eventDatetime,
+                  payload: command.payloadData
+                })
+              });
+              const responseJson = await response.json().catch(()=> null);
+              if(!response.ok || !responseJson || responseJson.ok !== true){
+                const message = clean(responseJson?.message || responseJson?.error?.message || responseJson?.error || `HTTP ${response.status}`) || 'No se pudo guardar la orden.';
+                throw new Error(message);
+              }
+              return { response, json: responseJson };
+            }
+          );
+          resp = canonicalResult.response;
+          json = canonicalResult.json;
+        }else{
+          const formData = new FormData();
+          formData.append('patient_id', patientId);
+          formData.append('document_type', documentType);
+          formData.append('title', title);
+          formData.append('summary', summary);
+          formData.append('event_datetime', eventDatetime);
+          formData.append('payload', JSON.stringify(payloadData));
+          if(appointmentId) formData.append('appointment_id', appointmentId);
+          resp = await fetch(createUrl, {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+            body: formData
+          });
+        }
       }
-      const json = await resp.json().catch(()=> null);
+      if(!json) json = await resp.json().catch(()=> null);
       if(!resp.ok || !json || json.ok !== true){
         const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar la orden.';
         throw new Error(message);
