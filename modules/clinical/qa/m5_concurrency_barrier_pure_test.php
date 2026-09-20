@@ -101,6 +101,38 @@ m5_check(clinical_m5_qa_barrier_points() === [
     'T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK',
 ], 'only accepted M5 barrier points are exposed');
 
+$directoryRoot = sys_get_temp_dir() . '/mxmed-m5-r2-directory-' . bin2hex(random_bytes(8));
+$directory = $directoryRoot . '/nested/barrier';
+clinical_m5_qa_ensure_directory($directory);
+m5_check(is_dir($directory), 'barrier directory is created');
+$directoryMode = fileperms($directory);
+m5_check($directoryMode !== false && (($directoryMode & 0777) === 0700), 'barrier directory mode is 0700');
+clinical_m5_qa_ensure_directory($directory);
+m5_check(is_dir($directory), 'existing barrier directory is accepted idempotently');
+
+$failurePath = $directoryRoot . '/not-a-directory';
+file_put_contents($failurePath, "file\n");
+$directoryFailure = null;
+set_error_handler(static function (int $severity, string $message, string $file, int $line): void {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+try {
+    clinical_m5_qa_ensure_directory($failurePath);
+} catch (Throwable $error) {
+    $directoryFailure = $error;
+} finally {
+    restore_error_handler();
+}
+m5_check(
+    $directoryFailure instanceof RuntimeException
+        && $directoryFailure->getMessage() === 'M5_QA_BARRIER_DIRECTORY_CREATE_FAILED',
+    'actual directory creation failure fails closed under strict HTTP warning handling'
+);
+unlink($failurePath);
+rmdir($directory);
+rmdir(dirname($directory));
+rmdir($directoryRoot);
+
 $previousMode = getenv('MXMED_CLINICAL_M5_QA_MODE');
 putenv('MXMED_CLINICAL_M5_QA_MODE');
 $before = glob(sys_get_temp_dir() . '/mxmed-m5-mode-off-*') ?: [];

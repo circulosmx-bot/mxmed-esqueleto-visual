@@ -82,6 +82,30 @@ function clinical_m5_qa_safe_identifier(string $value, string $errorCode): strin
     return $value;
 }
 
+function clinical_m5_qa_ensure_directory(string $directory): void
+{
+    if (is_dir($directory)) {
+        return;
+    }
+
+    $created = false;
+    try {
+        $created = @mkdir($directory, 0700, true);
+    } catch (Throwable) {
+        // The HTTP runtime converts warnings to exceptions; verify the path below.
+    }
+    if ($created) {
+        return;
+    }
+
+    clearstatcache(true, $directory);
+    if (is_dir($directory)) {
+        return;
+    }
+
+    throw new RuntimeException('M5_QA_BARRIER_DIRECTORY_CREATE_FAILED');
+}
+
 function clinical_m5_qa_barrier_reach(array $allowedPoints): bool
 {
     $environment = clinical_m5_qa_environment_snapshot();
@@ -120,9 +144,7 @@ function clinical_m5_qa_barrier_reach(array $allowedPoints): bool
 
     $directory = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $environmentId
         . DIRECTORY_SEPARATOR . $runId . DIRECTORY_SEPARATOR . $requestedPoint;
-    if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
-        throw new RuntimeException('M5_QA_BARRIER_DIRECTORY_CREATE_FAILED');
-    }
+    clinical_m5_qa_ensure_directory($directory);
 
     $arrival = $directory . DIRECTORY_SEPARATOR . 'arrived_' . $participant;
     $handle = @fopen($arrival, 'x');

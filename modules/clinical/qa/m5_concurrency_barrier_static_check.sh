@@ -4,10 +4,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 BARRIER="$ROOT/modules/clinical/qa/m5_concurrency_barrier.php"
 CONTROL="$ROOT/modules/clinical/qa/m5_barrier_release.sh"
+RACE="$ROOT/modules/clinical/qa/m5_concurrency_barrier_directory_race_test.php"
 INTEGRITY="$ROOT/api/_lib/clinical_encounter_integrity.php"
 
 php -l "$BARRIER" >/dev/null
 php -l "$ROOT/modules/clinical/qa/m5_concurrency_barrier_pure_test.php" >/dev/null
+php -l "$RACE" >/dev/null
 bash -n "$CONTROL"
 
 ! grep -Eq "^require_once .*modules/clinical/qa/m5_concurrency_barrier\\.php" "$INTEGRITY"
@@ -24,6 +26,14 @@ grep -q 'arrived_A' "$BARRIER"
 grep -q 'arrived_B' "$BARRIER"
 grep -q "DIRECTORY_SEPARATOR . 'release'" "$BARRIER"
 grep -q 'is_file($arrivedA) && is_file($arrivedB) && is_file($release)' "$BARRIER"
+grep -q 'function clinical_m5_qa_ensure_directory' "$BARRIER"
+grep -q '@mkdir($directory, 0700, true)' "$BARRIER"
+grep -q 'catch (Throwable)' "$BARRIER"
+grep -q 'clearstatcache(true, $directory)' "$BARRIER"
+grep -q "throw new RuntimeException('M5_QA_BARRIER_DIRECTORY_CREATE_FAILED')" "$BARRIER"
+grep -q 'clinical_m5_qa_ensure_directory($directory)' "$BARRIER"
+grep -q "@fopen(\$arrival, 'x')" "$BARRIER"
+grep -q 'M5_QA_BARRIER_PARTICIPANT_DUPLICATE' "$BARRIER"
 ! grep -Eiq 'clinical_(encounters|documents|observations)|patients_' "$BARRIER"
 
 for point in \
@@ -44,4 +54,5 @@ grep -q 'T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK' <<< "$finalize_block"
 grep -q 'T26_FINALIZE_VOID_RACE_BEFORE_TERMINAL_LOCK' <<< "$void_block"
 
 php "$ROOT/modules/clinical/qa/m5_concurrency_barrier_pure_test.php"
+php "$RACE"
 echo 'M5_PREP01_STATIC_QA_RESULT=PASS'
