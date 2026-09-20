@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Director/assistant review of complete PHASE 2 M5 T01-T35 RERUN2 evidence; no M6, working-database migration, runtime cutover, production or PHASE 3 action authorized.
+NEXT_AUTHORIZED_STEP=Prepare PHASE 2 M6 backend clinical cutover plan and preflight: inventory compatible callers, working-database migration prerequisites, backup/restore proof, clone rehearsal, activation window, monitoring invariants and safe-return procedure. No working-database migration, feature-gate activation or runtime cutover authorized yet.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -91,7 +91,11 @@ RUNTIME_CUTOVER_AUTHORIZED=false
 RUNTIME_CUTOVER_EXECUTED=false
 PRODUCTION_EXECUTION_AUTHORIZED=false
 M5_SYNTHETIC_QA_AUTHORIZED=true
-PHASE_2_M5_STATUS=PASS_READY_FOR_DIRECTOR_REVIEW
+PHASE_2_M5_STATUS=ACCEPTED
+PHASE_2_M5=ACCEPTED
+M5_ACCEPTED=true
+M5_ACCEPTED_SOURCE_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
+M5_EVIDENCE_COMMIT=b069fe7cfa66fc71a2aaf323676dc74a411f1ec2
 PHASE_2_M5_SCOPE=T01_T35_DISPOSABLE_SYNTHETIC_QA_ONLY
 PHASE_2_M5_PREP01=ACCEPTED
 M5_PREP01_ACCEPTED_HEAD=5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d
@@ -130,7 +134,7 @@ PHASE_2_M5_REPAIR01=ACCEPTED
 M5_REPAIR01_ACCEPTED_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
 M5_T27_HTTP_MAPPING_REPAIR=ACCEPTED
 M5_RERUN_AUTHORIZED=true
-M5_NEXT_RERUN_AUTHORIZED=true
+M5_NEXT_RERUN_AUTHORIZED=false
 M5_EXEC01_RERUN2_EXECUTED=true
 M5_EXEC01_RERUN2_SOURCE_HEAD=115923cac322958ad4f443ab783a8cf19f9c5093
 M5_EXEC01_RERUN2_T01_T35=PASS
@@ -157,6 +161,8 @@ T31B_TRIGGER=SECTION_SCHEMA_V2_CONTRACT_ACCEPTED
 T31B_CURRENT_APPLICABILITY=NOT_APPLICABLE_PRECONDITION_NOT_MET
 T31B_NOT_REQUIRED_FOR_CURRENT_M5_PASS=true
 T31B_RESULT=NOT_APPLICABLE_PRECONDITION_NOT_MET
+T31A_RESULT=PASS
+T31A_RESULT_ACCEPTED=true
 SECTION_SCHEMA_V2_CONTRACT=NOT_DEFINED
 SECTION_SCHEMA_V2_IMPLEMENTED=false
 SECTION_SCHEMA_V2_IMPLEMENTATION_AUTHORIZED=false
@@ -179,6 +185,30 @@ BARRIER_STATE_STORED_IN_CLINICAL_DB=false
 T04_CONCURRENT_START_BARRIER_ACCEPTED=true
 T11_CONCURRENT_FINALIZE_BARRIER_ACCEPTED=true
 T26_FINALIZE_VOID_BARRIER_ACCEPTED=true
+T04_REAL_CONCURRENCY=ACCEPTED
+T11_REAL_CONCURRENCY=ACCEPTED
+T26_REAL_CONCURRENCY=ACCEPTED
+TWO_REAL_INNODB_CONNECTIONS_VERIFIED=true
+SYNCHRONIZED_CONCURRENCY_BARRIER_VALIDATED=true
+T26_TERMINAL_WINNER_COUNT=1
+T26_FINAL_NOTE_COUNT=1
+T26_BARRIER_DIRECTORY_RACE_RECURRED=false
+T27_REPAIR01_PHYSICAL_VERIFIED=true
+T27_HTTP_STATUS=409
+T27_ERROR_CODE=DOCUMENT_CONTEXT_MISMATCH
+T27_INVALID_DOCUMENT_INSERTED=false
+T27_IDEMPOTENCY_ROW_INSERTED=false
+T28_SCHEMA_NOT_READY_HTTP_STATUS=503
+T28_GET_CAUSED_DDL=false
+T28_GET_CAUSED_DML=false
+T32_OBSERVATION_IDEMPOTENCY=ACCEPTED
+T33_POST_CLOSE_RESULT_IDEMPOTENCY=ACCEPTED
+T34_ENCOUNTER_AMENDMENT_IDEMPOTENCY=ACCEPTED
+T34_DOCUMENT_REVISION_IDEMPOTENCY=ACCEPTED
+T35_HISTORICAL_DELETE_INTEGRITY=ACCEPTED
+CONTROLLED_INNODB_DEADLOCK_EXERCISED=true
+CONTROLLED_INNODB_DEADLOCK_RESULT=ACCEPTED
+POST_DEADLOCK_CLINICAL_INVARIANTS_VALID=true
 FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_M5_DISPOSABLE_QA_ONLY=true
 FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_WORKING_MXMED=false
 FEATURE_GATE_ACTIVATION_AUTHORIZED_FOR_PRODUCTION=false
@@ -189,6 +219,7 @@ HTTP_WRITE_QA_AUTHORIZED_FOR_WORKING_MXMED=false
 T01_T35_EXECUTION_AUTHORIZED_FOR_M5_DISPOSABLE_QA_ONLY=true
 T01_T35_EXECUTED=true
 T01_T35_CURRENT_M5_PASS=true
+T01_T35_PHYSICAL_QA=ACCEPTED
 M5_EXECUTED=true
 M5_RESULT=PASS
 PHP_SESSION_BASED_OPERATOR_IDENTITY=true
@@ -200,16 +231,38 @@ M5_REAL_CONCURRENCY_SCENARIOS=T04,T11,T26
 NO_INFERENCE_OF_LEGACY_DOCTOR_OWNERSHIP=true
 MIGRATIONS_EXECUTED=DISPOSABLE_REHEARSAL_ONLY
 WORKING_MXMED_DB_MIGRATIONS_EXECUTED=NONE
+M5_TARGET_CLASS=DISPOSABLE_SYNTHETIC_LOCAL_ONLY
+WORKING_MXMED_DB_CONNECTED=false
+WORKING_MXMED_DB_SCHEMA_CHANGED=false
+WORKING_MXMED_DB_DATA_CHANGED=false
+PATIENT_REAL_DATA_USED=false
+CLINICAL_REAL_DATA_USED=false
+AGENDA_REAL_DATA_USED=false
+BILLING_REAL_DATA_USED=false
+NO_UNEXPECTED_DRIFT_OUTSIDE_FIXTURE=true
+M5_RESIDUAL_DATABASE_COUNT=0
+M5_RESIDUAL_HTTP_PROCESS_COUNT=0
+M5_RESIDUAL_BARRIER_STATE=false
+M5_RESIDUAL_TEMP_ROOT_COUNT=0
+M5_TEARDOWN=ACCEPTED
+PHASE_2_M6_PLAN_AUTHORIZED=true
+PHASE_2_M6_EXECUTION_AUTHORIZED=false
 M6_AUTHORIZED=false
 ```
 
-Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`; la evidencia física MIG01A quedó aceptada en `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; IMPL01B quedó aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; PREP01 y su reparación R1 quedaron aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d`; ADJ01 quedó aceptado en `c1fa6bea057992d35f4ccc7e0f8534cbe8a5a4b7`; PREP01-R2 quedó aceptado en `2c9d725eeb02bdecaa8dec894ad414862b8d9f82`. El primer intento físico M5 pasó T01–T25 y se bloqueó en T26 por una carrera del directorio del arnés QA antes del row lock; T27–T35 no se ejecutaron por fail-fast. El segundo intento completo desde T01 pasó T01–T26 y se bloqueó en T27 porque la validación `DOCUMENT_CONTEXT_MISMATCH` evitó correctamente la inserción, pero el `catch` exterior respondió `500/server_error` en lugar del rechazo canónico `409`; T28–T35 no se ejecutaron por fail-fast. REPAIR01 quedó aceptado en `115923cac322958ad4f443ab783a8cf19f9c5093`, ahora `CURRENT_ACCEPTED_HEAD`, y el RERUN2 físico sobre una copia exacta de ese commit pasó T01–T35, las barreras concurrentes T04/T11/T26 y el deadlock InnoDB controlado. T27 respondió el rechazo canónico `409/DOCUMENT_CONTEXT_MISMATCH` sin documento ni idempotencia persistidos; T28 no causó DDL ni DML. Todo ocurrió sólo en bases locales sintéticas y desechables, con teardown completo y sin conectar la base MXMed de trabajo. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS` y M5 queda `PASS_READY_FOR_DIRECTOR_REVIEW`; no se autorizan M6, migración de la base de trabajo, cutover, producción ni PHASE 3.
+Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`; la evidencia física MIG01A quedó aceptada en `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; IMPL01B quedó aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; PREP01 y su reparación R1 quedaron aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d`; ADJ01 quedó aceptado en `c1fa6bea057992d35f4ccc7e0f8534cbe8a5a4b7`; PREP01-R2 quedó aceptado en `2c9d725eeb02bdecaa8dec894ad414862b8d9f82`. El primer intento físico M5 pasó T01–T25 y se bloqueó en T26 por una carrera del directorio del arnés QA antes del row lock; T27–T35 no se ejecutaron por fail-fast. El segundo intento completo desde T01 pasó T01–T26 y se bloqueó en T27 porque la validación `DOCUMENT_CONTEXT_MISMATCH` evitó correctamente la inserción, pero el `catch` exterior respondió `500/server_error` en lugar del rechazo canónico `409`; T28–T35 no se ejecutaron por fail-fast. REPAIR01 quedó aceptado en `115923cac322958ad4f443ab783a8cf19f9c5093`, ahora `CURRENT_ACCEPTED_HEAD`, y el RERUN2 físico sobre una copia exacta de ese commit pasó T01–T35, las barreras concurrentes T04/T11/T26 y el deadlock InnoDB controlado. T27 respondió el rechazo canónico `409/DOCUMENT_CONTEXT_MISMATCH` sin documento ni idempotencia persistidos; T28 no causó DDL ni DML. Todo ocurrió sólo en bases locales sintéticas y desechables, con teardown completo y sin conectar la base MXMed de trabajo. El commit de evidencia `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2` y M5 quedan aceptados. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 continúa `IN_PROGRESS`. Se autoriza únicamente preparar y revisar el plan/preflight M6; su ejecución, la migración de la base de trabajo, la activación del feature gate, el cutover, producción y PHASE 3 siguen no autorizados.
 
 ## Adjudicación T31 para M5 V1 y compatibilidad V2 futura
 
 T31 conserva un único lugar dentro de los 35 escenarios aceptados. En el M5 actual se ejecuta T31A: escribir una sección V1 por la API aceptada, registrar antes de la lectura `payload_schema_version`, hash de `payload_json`, `row_version` y `updated_at`, leerla y demostrar igualdad exacta de esos cuatro valores. También debe probarse que una versión desconocida falla explícitamente como `PAYLOAD_SCHEMA_VERSION_UNSUPPORTED` y nunca se interpreta como la versión más reciente ni se migra en silencio.
 
 T31B no se ejecuta ni se califica PASS/FAIL mientras no exista `SECTION_SCHEMA_V2_CONTRACT=ACCEPTED`; su resultado actual es `NOT_APPLICABLE_PRECONDITION_NOT_MET`. Cuando exista un contrato V2 real, T31B deberá demostrar soporte simultáneo V1/V2, lectura de la fila histórica con intérprete V1 y ausencia de reescritura o migración automática. Esta separación no elimina, omite ni renumera escenarios y no autoriza campos, parsers, renderers, constraints ni escrituras V2.
+
+## Frontera autorizada para el plan M6
+
+El siguiente capítulo puede preparar y someter a revisión el plan/preflight del cutover clínico backend. Debe inventariar todos los callers START/finalize/write y demostrar que son compatibles o quedan bloqueados explícitamente; comenzar con preflight de sólo lectura de la base de trabajo; exigir prueba de backup restaurable antes de autorizar migración; ensayar la migración sobre un clon; separar la cuenta de migración; controlar la ventana de escritura; definir la activación del feature gate, monitoreo de invariantes y retorno seguro. El trigger de cutover requiere gates aceptados, QA física aceptada y clientes compatibles.
+
+La UI anterior debe conservar lecturas y borradores legacy aislados. El retorno seguro nunca puede ejecutar `DROP` o `TRUNCATE` sobre historia clínica nueva, inferir titularidad médica legacy ni purgar recursos o filas de idempotencia ya confirmados. Estas condiciones son requisitos del plan M6; no prueban preflight, backup, compatibilidad ni autorización de ejecución en este closeout.
 
 ## Visión y problema
 
@@ -482,3 +535,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-EXEC01-RERUN | PREP01-R2 aceptado y fuente única `2c9d725eeb02bdecaa8dec894ad414862b8d9f82` | Segundo intento físico M5 desde T01: T01–T26 `PASS`; T27 `FAIL_HTTP_MAPPING` porque `DOCUMENT_CONTEXT_MISMATCH` evitó documento e idempotencia pero fue traducido a `500/server_error`; T28–T35 no ejecutados por fail-fast. Teardown completo con cero bases, procesos HTTP o barreras residuales; base MXMed de trabajo no conectada. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-REPAIR01 | Baseline aceptado/checkpoint `2c9d725eeb02bdecaa8dec894ad414862b8d9f82` | Reparación limitada al `catch` compartido de `POST /encounters/{encounter_key}/documents`: la rama V1 delega código/estado a los mapeadores canónicos y conserva el comportamiento legacy. `READY_FOR_CODE_REVIEW`; M5 permanece `BLOCKED` y otro rerun T01–T35 no está autorizado hasta revisión. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-EXEC01-RERUN2 | REPAIR01 aceptado y fuente única `115923cac322958ad4f443ab783a8cf19f9c5093` | Tercer intento físico M5 completo desde T01: T01–T35 `PASS`; T04/T11/T26 probaron concurrencia real con dos conexiones InnoDB; T27 devolvió `409/DOCUMENT_CONTEXT_MISMATCH` sin insertar documento ni idempotencia; T28 no produjo DDL/DML; deadlock controlado e invariantes posteriores `PASS`. Teardown completo con cero bases, procesos HTTP, barreras o raíces temporales residuales; la base MXMed de trabajo no se conectó. `PHASE_2_M5_STATUS=PASS_READY_FOR_DIRECTOR_REVIEW`; M6, migración de base de trabajo, cutover, producción y PHASE 3 continúan no autorizados. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M5-CLOSEOUT | Evidencia aceptada `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2`; source probado y aceptado `115923cac322958ad4f443ab783a8cf19f9c5093` | M5 y la matriz física T01–T35 quedan `ACCEPTED`; concurrencia T04/T11/T26, reparación T27, ausencia de DDL/DML en T28, T31A, idempotencia T32–T34, integridad T35, deadlock controlado, aislamiento y teardown aceptados. PHASE 2 continúa `IN_PROGRESS`; sólo queda autorizada la preparación/revisión del plan y preflight M6. Ejecución M6, migración de la base de trabajo, feature gate, cutover, producción y PHASE 3 permanecen no autorizados. |
