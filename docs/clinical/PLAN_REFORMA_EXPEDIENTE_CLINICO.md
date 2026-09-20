@@ -6,7 +6,7 @@ CURRENT_ACCEPTED_HEAD=5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d
 REFORM_START_DATE=2026-09-18
 CURRENT_PHASE=PHASE_2_ENCOUNTER_INTEGRITY
 CURRENT_OBJECTIVE=Definir y demostrar la integridad del ciclo de vida de la consulta antes de implementar el nuevo workspace ambulatorio.
-NEXT_AUTHORIZED_STEP=Execute PHASE 2 M5 T01-T35 in a NEW isolated synthetic disposable QA environment using the accepted PREP01 deterministic concurrency harness; no working MXMed database, runtime cutover, production or PHASE 3 action authorized.
+NEXT_AUTHORIZED_STEP=Director/assistant review of M5 ADJ01 T31A/T31B adjudication before physical execution of M5 T01-T35.
 CLIN-REFORM-PLAN01=ACCEPTED
 PHASE_0_AUDIT01=ACCEPTED
 PHASE_0_AUDIT02=ACCEPTED
@@ -97,6 +97,29 @@ PHASE_2_M5_PREP01=ACCEPTED
 M5_PREP01_ACCEPTED_HEAD=5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d
 M5_CONCURRENCY_BARRIER=ACCEPTED
 M5_PREP01_R1_REASON=REMOVE_UNCONDITIONAL_RUNTIME_DEPENDENCY_ON_QA_TREE
+PHASE_2_M5_ADJ01=READY_FOR_DIRECTOR_REVIEW
+T31_SCENARIO=SECTION_SCHEMA_VERSION_HISTORY
+T31_ADJUDICATION=V1_NOW_REAL_V2_LATER
+T31A_CURRENT_V1_VERSION_SAFETY=REQUIRED_FOR_CURRENT_M5
+T31A_V1_VERSION_PERSISTED=REQUIRED
+T31A_V1_VERSION_RETURNED_EXPLICITLY=REQUIRED
+T31A_READ_DOES_NOT_REWRITE_PAYLOAD=REQUIRED
+T31A_READ_DOES_NOT_CHANGE_SCHEMA_VERSION=REQUIRED
+T31A_UNKNOWN_VERSION_REJECTED=REQUIRED
+T31A_UNKNOWN_VERSION_NOT_TREATED_AS_LATEST=REQUIRED
+T31A_NO_SILENT_SCHEMA_MIGRATION=REQUIRED
+T31B_REAL_V2_BACKWARD_COMPATIBILITY=DEFERRED_CONDITIONAL
+T31B_TRIGGER=SECTION_SCHEMA_V2_CONTRACT_ACCEPTED
+T31B_CURRENT_APPLICABILITY=NOT_APPLICABLE_PRECONDITION_NOT_MET
+T31B_NOT_REQUIRED_FOR_CURRENT_M5_PASS=true
+T31B_RESULT=NOT_APPLICABLE_PRECONDITION_NOT_MET
+SECTION_SCHEMA_V2_CONTRACT=NOT_DEFINED
+SECTION_SCHEMA_V2_IMPLEMENTED=false
+SECTION_SCHEMA_V2_IMPLEMENTATION_AUTHORIZED=false
+HISTORICAL_PAYLOAD_INTERPRETATION_MUST_BE_VERSIONED=true
+VALIDATION_SCENARIOS_COUNT=35
+T31_CURRENT_EXECUTION_COMPONENT=T31A
+T31_OVERALL_CURRENT_M5_RESULT=PASS_WITH_FUTURE_T31B_CONDITIONAL_OBLIGATION
 M5_QA_BARRIER_DEFAULT_OFF=true
 M5_QA_BARRIER_EXPLICIT_ENABLE_REQUIRED=true
 M5_QA_BARRIER_LOCAL_DEV_ONLY=true
@@ -133,6 +156,12 @@ WORKING_MXMED_DB_MIGRATIONS_EXECUTED=NONE
 ```
 
 Este plan es la autoridad subordinada y viva de la reforma del Expediente Clínico. El [Plan Maestro MXMed](../PLAN_MAESTRO_MXMED.md) conserva la autoridad global del proyecto. El Director/asistente aceptó CLIN-REFORM-PLAN01 en `edfa1326c602a1efcd3c94cfb705c582a170516e`, CLIN-REFORM-PHASE0-AUDIT01 en el baseline `d0602f9c443c1d3e215934c4cc2aa6084e126d12`, la cadena [CLIN-REFORM-PHASE0-AUDIT02](EXPEDIENTE_CURRENT_STATE_AUDIT_PHASE0.md#clin-reform-phase0-audit02--physical-runtime-validation) `504bd136854518d301915d743911c5f0f60c7aa1` → `ef378fddef3edaff07f603d965defa82365a80de`, el cierre de PHASE 0 en `a1dd2860f90094260c08388d363410198e5a7495` y la cadena MODEL01/MODEL01A `0ba07c9d8798ee6ecf03083453f5a587fff812b8` → `63d9e22403ce64ac8a49f2b06afe3f875724baa3`. El cierre de PHASE 1 está aceptado en `8698b1f66466867360651db5fa62e54d28fba797`. El baseline aceptado de CONTRACT01/CONTRACT01A es `4161120ad2c8a54b3e1455019f4ba994a6a9fd26`; el diseño físico PHYS01/PHYS01A/PHYS01B quedó aceptado en `51518d0fb0875e338a20be865ff2394075993a55`; la base de repositorio IMPL01A-R2 quedó aceptada en `09022adffd4e3ad0824cb923893b4b2ae0e8ec42`; la reparación MIG01A-R1 quedó aceptada en `cc8bcf502f3953942ba67cc655490d49813401fc`; la evidencia física MIG01A quedó aceptada en `da31ed437fed8867ac0cb45342f4eb03c2c476e1`; IMPL01B quedó aceptado en `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; PREP01 y su reparación R1 quedaron aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d`, ahora `CURRENT_ACCEPTED_HEAD`. El [modelo de información y contrato UX](EXPEDIENTE_CLINICAL_INFORMATION_MODEL_UX_CONTRACT.md) está aceptado; PHASE 1 está completa. PHASE 2 sigue `IN_PROGRESS`: el [contrato de integridad de consulta](EXPEDIENTE_ENCOUNTER_INTEGRITY_CONTRACT.md), las cinco decisiones del Director y el [diseño físico](EXPEDIENTE_ENCOUNTER_PHYSICAL_DESIGN.md) son autoridad aceptada. IMPL01A se acepta exclusivamente como `REPOSITORY_FOUNDATION`; no representa esquema físicamente migrado, activación del gate, validación con escrituras ni cutover.
+
+## Adjudicación T31 para M5 V1 y compatibilidad V2 futura
+
+T31 conserva un único lugar dentro de los 35 escenarios aceptados. En el M5 actual se ejecuta T31A: escribir una sección V1 por la API aceptada, registrar antes de la lectura `payload_schema_version`, hash de `payload_json`, `row_version` y `updated_at`, leerla y demostrar igualdad exacta de esos cuatro valores. También debe probarse que una versión desconocida falla explícitamente como `PAYLOAD_SCHEMA_VERSION_UNSUPPORTED` y nunca se interpreta como la versión más reciente ni se migra en silencio.
+
+T31B no se ejecuta ni se califica PASS/FAIL mientras no exista `SECTION_SCHEMA_V2_CONTRACT=ACCEPTED`; su resultado actual es `NOT_APPLICABLE_PRECONDITION_NOT_MET`. Cuando exista un contrato V2 real, T31B deberá demostrar soporte simultáneo V1/V2, lectura de la fila histórica con intérprete V1 y ausencia de reescritura o migración automática. Esta separación no elimina, omite ni renumera escenarios y no autoriza campos, parsers, renderers, constraints ni escrituras V2.
 
 ## Visión y problema
 
@@ -399,3 +428,4 @@ Sin entradas iniciales. Una decisión rechazada o sustituida se trasladará aqu�
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-PREP01 | Baseline aceptado `ccd2a4aa553c841ce72cb77897dd02bf8ba305bc`; candidato sobre `5cec02501076267d7bf28e949f7bf1872f77fa2f` | Instrumentación QA-only de rendezvous determinista preparada para T04, T11 y T26; apagada por defecto, limitada a entorno local/dev desechable explícito y sin estado clínico. `READY_FOR_CODE_REVIEW`; no se ejecutaron M5, T01–T35, HTTP writes, migraciones ni conexión a la base MXMed de trabajo. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-PREP01-R1 | Hallazgo de revisión sobre `5646cfa5386f2363dc47e32b78b4accf0b8974de` | Eliminada la dependencia runtime incondicional del árbol QA: con modo M5 apagado no se carga ni requiere la implementación; con activación explícita se carga de forma diferida y su ausencia falla cerrada. Barreras, guardas y estado M5 `NOT_STARTED` preservados; sin DB, HTTP writes, migraciones ni ejecución T01–T35. |
 | 2026-09-19 | CLIN-REFORM-PHASE2-M5-PREP01-CLOSEOUT | PREP01 original y reparación R1 aceptados en `5f7aa2224a9af4d6ad6bb4e091d084e7d52e8f1d` | Aceptadas las barreras deterministas T04/T11/T26 y la carga diferida R1 que elimina la dependencia runtime incondicional del árbol QA: modo OFF no requiere el archivo y modo ON falla cerrado si falta. M5 sigue autorizado pero `NOT_STARTED`; T01–T35 no ejecutados y base MXMed de trabajo prohibida. |
+| 2026-09-19 | CLIN-REFORM-PHASE2-M5-ADJ01 | Adjudicación del Director sobre T31 antes de M5 | El diseño pedía leer V1 bajo soporte V2, pero no existe contrato V2 real y se rechazó inventarlo para QA. T31A exige ahora seguridad/versionado V1 y rechazo fail-closed de versiones desconocidas; T31B conserva la obligación real V1/V2 cuando exista contrato aceptado. Se mantienen 35 escenarios, no se autoriza V2 y M5 no fue ejecutado. |
