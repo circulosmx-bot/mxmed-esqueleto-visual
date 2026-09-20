@@ -12,9 +12,14 @@ PHASE_2_M6_GUARD01=ACCEPTED
 M6_GUARD01_ACCEPTED_HEAD=bcb2606ba7a95818673b402a9e006ecc0431ff73
 CALLER01_STATUS=ACCEPTED
 M6_CALLER01_ACCEPTED_HEAD=0baeefb8eff98f9de80429d0ad9d164190508fbc
-PHASE_2_M6_ROUTE01=READY_FOR_CODE_REVIEW
-M6_COHORT_ROUTING_CAPABILITY=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_ROUTE01=ACCEPTED
+M6_ROUTE01_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
+CURRENT_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
+M6_COHORT_ROUTING_CAPABILITY=ACCEPTED
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
+PHASE_2_M6_MULTI01=READY_FOR_DIRECTOR_REVIEW
+V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
+MULTIPART_ACTIVE_CALLER_BLOCKER=true
 PLANNING=true
 REPOSITORY_INVENTORY=true
 WORKING_DB_PREFLIGHT=READ_ONLY_ONLY
@@ -36,7 +41,7 @@ This chapter does **not** authorize or perform a backup, restore, database clone
 | Branch | `design/physician-crd03-credentials-ui-v1` |
 | PLAN01 pre-head and checkpoint | `4d99237e3fe87679bfb74cb30ac213d7530a30f5` |
 | Accepted M5 clinical source | `115923cac322958ad4f443ab783a8cf19f9c5093` |
-| Current accepted repository head / CALLER01 | `0baeefb8eff98f9de80429d0ad9d164190508fbc` |
+| Current accepted repository head / ROUTE01 | `f01b2f60c6363b10b43b931b20f42fb3348acdf1` |
 | Accepted M5 evidence | `b069fe7cfa66fc71a2aaf323676dc74a411f1ec2` |
 | M5 result | `T01_T35=PASS`, accepted |
 | M6 execution | not authorized |
@@ -51,7 +56,7 @@ Inventory unit: one independently actionable runtime operation family. A row can
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | C01 | `assets/js/app.js` | Expediente context bridge | Resolve active encounter and read encounter detail | `GET /patients/{patient}/encounters/active`; `GET /encounters/{key}` | yes | yes (session) | yes | n/a | `{ok,data,meta}` | no | `READ_ONLY_NO_CUTOVER_IMPACT` | Retain and regression-test under gate ON. |
 | C02 | `assets/js/app.js` | Expediente open-patient flow | START when no active encounter exists | `POST /patients/{patient}/encounters` | pair-aware endpoint routing; CALLER01 client contract accepted | yes (session) | yes | yes, stable per logical command | canonical `200/201` plus explicit canonical errors | yes | `ADAPTED_ACCEPTED` | Stable command nonce, in-flight dedupe, lost-response retry and no secondary START fallback; routing remains inactive. |
-| C03 | `assets/js/app.js` | Evolution note, prescription and encounter-owned JSON composer | Create encounter-owned JSON clinical documents | `POST /encounters/{encounter_key}/documents` | pair-aware capability implemented pending review; runtime routing inactive | yes (session); no client doctor path | authoritative encounter plus canonical patient context | yes, stable per logical content | canonical `200/201`; canonical failures do not fall back | yes | `ADAPTED_ACCEPTED` | Active encounter required; JSON only. Multipart remains deferred and fail-closed. |
+| C03 | `assets/js/app.js` | Evolution note, prescription and encounter-owned JSON composer | Create encounter-owned JSON clinical documents | `POST /encounters/{encounter_key}/documents` | pair-aware capability accepted; runtime routing inactive | yes (session); no client doctor path | authoritative encounter plus canonical patient context | yes, stable per logical content | canonical `200/201`; canonical failures do not fall back | yes | `ADAPTED_ACCEPTED` | Active encounter required; JSON only. Multipart remains deferred and fail-closed. |
 | C04 | `assets/js/app.js` | Consent identity attachment UI | Create uploaded identity attachment | multipart `POST /doctors/{doctor}/patients/{patient}/documents` | no | no; path doctor ID is client-resolved | yes | no | uploaded legacy document | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Block for M6 cohort until accepted V1 multipart storage exists. |
 | C05 | `assets/js/app.js` | Orders/results/diagnostic uploads | Create result/order upload and legacy replacement | multipart scoped document create; `POST .../replace` | no | no; path doctor ID is client-resolved | yes | no | legacy document/replace response | yes | `MUST_BE_EXPLICITLY_BLOCKED_AT_M6` | Block encounter-owned upload/replace; later adapt to V1 document and amendment commands. |
 | C06 | `assets/js/app.js` | Historia Clínica editor | Update longitudinal patient history | `PUT /patients/{patient}/history` → `clinical_record_entries` | no | session check at gateway, not encounter command | yes | no | legacy history payload | yes | `LEGACY_ONLY_DEFERRED` | Keep patient-level draft isolated; prohibit use as encounter-history overwrite. |
@@ -101,7 +106,7 @@ Supporting sources were audited but are not counted as separate clinical-state c
 
 ### Multipart deferral
 
-`V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`. Active consent attachments, order/result uploads and diagnostic uploads use multipart legacy document routes. They are a current cutover blocker because the V1 encounter-document and document-amendment surfaces reject multipart with `503/V1_MULTIPART_STORAGE_NOT_READY`. `MULTIPART_ACTIVE_CALLER_BLOCKER=true`. They may remain only if the initial cohort is demonstrably isolated from those actions; current global-only gating cannot prove that isolation.
+`V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED`. Active consent attachments, order/result uploads and diagnostic uploads use multipart legacy document routes. They are a current cutover blocker because the V1 encounter-document and document-amendment surfaces reject multipart with `503/V1_MULTIPART_STORAGE_NOT_READY`. `MULTIPART_ACTIVE_CALLER_BLOCKER=true`. The [MULTI01 physical storage design](EXPEDIENTE_ENCOUNTER_V1_MULTIPART_STORAGE_DESIGN.md) is ready for Director review, but no schema, storage service, caller adapter or QA implementation is authorized. Design completion does not clear this blocker.
 
 ## 4. Legacy writers and runtime DDL
 
@@ -417,15 +422,16 @@ C14_DOES_NOT_INVENT_CLINICAL_AUTHENTICATION=true
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 ```
 
-## 12A. ROUTE01 candidate — cohort-aware V1 route selection
+## 12A. ROUTE01 accepted — cohort-aware V1 route selection
 
-CALLER01 is accepted at `0baeefb8eff98f9de80429d0ad9d164190508fbc` with C02/C03 adapted, C14 resolved and zero uncontrolled legacy clinical writers. ROUTE01 adds a repository-only pair selector layered on the unchanged global V1 master flag. Master OFF short-circuits to legacy behavior; master ON with cohort mode OFF preserves M5 global V1 behavior; allowlist mode selects only the exact authenticated doctor/stored patient pair; emergency OFF disables V1 selection. Malformed active configuration fails closed.
+CALLER01 is accepted at `0baeefb8eff98f9de80429d0ad9d164190508fbc` with C02/C03 adapted, C14 resolved and zero uncontrolled legacy clinical writers. ROUTE01 is accepted at `f01b2f60c6363b10b43b931b20f42fb3348acdf1`. It adds a repository-only pair selector layered on the unchanged global V1 master flag. Master OFF short-circuits to legacy behavior; master ON with cohort mode OFF preserves M5 global V1 behavior; allowlist mode selects only the exact authenticated doctor/stored patient pair; emergency OFF disables V1 selection. Malformed active configuration fails closed.
 
 Patient routes bind session doctor plus route patient. Encounter-key routes use the read-only encounter resolver, require stored doctor to equal session doctor and never infer ownership for legacy `doctor_id=NULL`. Document amendments use a minimal common-schema `document token -> patient_id` lookup before V1 schema readiness. Route selection performs no DDL or DML. V1-only subroutes remain unavailable when the pair is not selected; the shared encounter-document create route retains its legacy-compatible branch for non-cohort pairs, while configured patients remain protected by the accepted legacy-write guard during emergency OFF.
 
 ```text
-PHASE_2_M6_ROUTE01=READY_FOR_CODE_REVIEW
-M6_COHORT_ROUTING_CAPABILITY=IMPLEMENTED_PENDING_REVIEW
+PHASE_2_M6_ROUTE01=ACCEPTED
+M6_ROUTE01_ACCEPTED_HEAD=f01b2f60c6363b10b43b931b20f42fb3348acdf1
+M6_COHORT_ROUTING_CAPABILITY=ACCEPTED
 M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 GLOBAL_V1_MASTER_GATE_SEMANTICS_CHANGED=false
 M5_GLOBAL_V1_BEHAVIOR_PRESERVED=true
@@ -433,6 +439,22 @@ DEFAULT_RUNTIME_BEHAVIOR_UNCHANGED=true
 ROUTE_SELECTION_CAUSES_DDL=false
 ROUTE_SELECTION_CAUSES_DML=false
 GLOBAL_CLINICAL_GET_DDL_REMOVAL=PENDING_LATER_IMPL_STAGE
+```
+
+## 12B. MULTI01 design — V1 multipart storage remains fail-closed
+
+MULTI01 audits the legacy public-path filesystem write and defines the future V1 contract: private bounded staging, SHA-256-bound idempotency, an additive relational binary manifest, create-only immutable final storage, authenticated retrieval, explicit compensation, stale-staging cleanup and read-only orphan reconciliation. It maps C04, C05 and C21 into one canonical binary service and defines MPU01–MPU20 for a later isolated implementation chapter.
+
+The design status is `MULTIPART_DESIGN_READY_FOR_IMPLEMENTATION_REVIEW`. This is documentation, not the missing implementation. The existing `503/V1_MULTIPART_STORAGE_NOT_READY` response and all accepted legacy-writer guards remain mandatory. Runtime routing is still inactive.
+
+```text
+PHASE_2_M6_MULTI01=READY_FOR_DIRECTOR_REVIEW
+MULTIPART_DESIGN_COMPLETE=true
+MULTIPART_DESIGN_STATUS=MULTIPART_DESIGN_READY_FOR_IMPLEMENTATION_REVIEW
+MULTIPART_SCHEMA_CHANGE_REQUIRED=true
+V1_MULTIPART_DOCUMENT_WRITE=DEFERRED_FAIL_CLOSED
+MULTIPART_ACTIVE_CALLER_BLOCKER=true
+M6_COHORT_RUNTIME_ROUTING_ACTIVE=false
 ```
 
 ## 13. Monitoring invariants
@@ -504,7 +526,7 @@ SAFE_RETURN_PLAN_READY=true
 | `MIGRATION_ACCOUNT_READY=true` | `FAIL` | Runtime is broad-privilege root; no distinct account. |
 | `WRITE_WINDOW_READY=true` | `FAIL` | No comprehensive writer pause/block mechanism rehearsed. |
 | `SCHEMA_READINESS_REHEARSAL=PASS` | `NOT_YET_PROVEN` | Only synthetic M5/MIG rehearsal, not working-data clone. |
-| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | PLAN01, CTRL01/R1, GUARD01 and CALLER01 accepted; ROUTE01 capability is pending review and runtime routing remains inactive. |
+| `FEATURE_GATE_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | PLAN01, CTRL01/R1, GUARD01, CALLER01 and ROUTE01 capability are accepted; runtime routing remains inactive and activation is not authorized. |
 | `MONITORING_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Invariants defined; acceptance/operationalization pending. |
 | `SAFE_RETURN_PLAN_ACCEPTED=true` | `NOT_YET_PROVEN` | Procedure defined; acceptance/rehearsal pending. |
 | `CALLER_COMPATIBILITY_PASS=true` | `PASS` | C02/C03 adapted and C14 cohort-blocked in accepted CALLER01; no routing activation. |
@@ -513,12 +535,12 @@ SAFE_RETURN_PLAN_READY=true
 
 ## 17. Unresolved blockers
 
-ROUTE01 is ready for code review; M6 remains blocked independently by multipart and infrastructure gates.
+ROUTE01 is accepted; M6 remains blocked independently by multipart implementation and infrastructure gates.
 
 Known blockers, in actionable order:
 
-1. Active multipart clinical writes conflict with V1's fail-closed multipart deferral.
-2. ROUTE01 implements repository routing capability pending review; cohort runtime routing remains inactive.
+1. MULTI01 design is ready for review, but V1 multipart schema/storage/adapters/QA are not implemented; the active caller blocker and fail-closed `503` remain.
+2. ROUTE01 capability is accepted, but cohort runtime routing remains inactive and unauthorized.
 3. The accepted uncontrolled-writer count is 0, but that does not authorize M6.
 4. The working schema is pre-migration (01–04 not applied).
 5. No restorable backup has been proved.
@@ -531,5 +553,5 @@ Known blockers, in actionable order:
 ## 18. Exact next authorized action
 
 ```text
-NEXT_AUTHORIZED_STEP=Director/assistant review of M6 ROUTE01 cohort-aware routing capability. If accepted, proceed to the remaining pre-cutover repository/infrastructure blockers, beginning with legacy runtime-DDL containment/removal; no backup, clone, working-database migration or runtime activation authorized yet.
+NEXT_AUTHORIZED_STEP=Director/assistant review of the MULTI01 V1 multipart storage design. Multipart implementation remains a separate unauthorized chapter; no backup, clone, working-database migration, routing activation or runtime cutover is authorized.
 ```
