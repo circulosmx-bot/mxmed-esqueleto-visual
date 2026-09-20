@@ -893,6 +893,39 @@ function clinical_note_capture_status_data(array $row): array
     return $data;
 }
 
+/** Resolve clinical ownership only from the persisted token and encounter rows. */
+function clinical_note_capture_encounter_authority(PDO $pdo, array $tokenRow): array
+{
+    $encounterKey = trim((string)($tokenRow['encounter_key'] ?? ''));
+    $tokenPatientId = trim((string)($tokenRow['patient_id'] ?? ''));
+    if ($encounterKey === '' || $tokenPatientId === '') {
+        throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+    }
+
+    $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
+    if (($resolved['ok'] ?? false) !== true) {
+        throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+    }
+    $encounter = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+    $encounterPatientId = trim((string)($encounter['patient_id'] ?? ''));
+    $doctorId = trim((string)($encounter['doctor_id'] ?? ''));
+    if ($encounterPatientId === '' || $doctorId === ''
+        || !hash_equals($tokenPatientId, $encounterPatientId)
+        || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $encounterPatientId)) {
+        throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+    }
+    return $encounter;
+}
+
+function clinical_note_capture_encounter_uses_v1(array $encounter): bool
+{
+    return clinical_m6_v1_route_enabled_for_pair(
+        clinical_m6_v1_master_enabled_for_route(),
+        trim((string)($encounter['doctor_id'] ?? '')),
+        trim((string)($encounter['patient_id'] ?? ''))
+    );
+}
+
 function clinical_documents_list_fetch(PDO $pdo, string $patientId, string $documentType, string $hospitalStayId, int $limit): array
 {
     $sql = "
@@ -8127,8 +8160,56 @@ try {
                 $payload['encounter_key'] = $encounterKey;
             }
 
+            $canonicalC21 = false;
+            if ($encounterKey !== '') {
+                require_once __DIR__ . '/../_lib/clinical_encounter_multipart_adapter.php';
+            }
             try {
-                $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+                if ($encounterKey !== '') {
+                    $encounterAuthority = clinical_note_capture_encounter_authority($pdo, $row);
+                    $canonicalC21 = clinical_note_capture_encounter_uses_v1($encounterAuthority);
+                    if ($canonicalC21) {
+                        $documentClass = clinical_v1_document_class($payload);
+                        $createOperation = clinical_document_create_operation($documentClass);
+                        $policyOperation = clinical_document_policy_operation($documentClass);
+                        $isPostResult = $createOperation === 'CREATE_POST_ENCOUNTER_RESULT';
+                        $validOrder = $isPostResult
+                            ? clinical_v1_originating_order_valid($pdo, $payload, $encounterAuthority)
+                            : false;
+                        $policyContext = [
+                            'same_patient' => true,
+                            'valid_originating_order' => $validOrder,
+                            'effective_at' => $eventDatetime,
+                            'provenance' => (string)($payload['provenance'] ?? ($payload['payload']['provenance'] ?? '')),
+                        ];
+                        $policy = clinical_document_operation_policy(
+                            $policyOperation,
+                            $documentClass,
+                            (string)($encounterAuthority['status'] ?? ''),
+                            $policyContext
+                        );
+                        if (($policy['allowed'] ?? false) !== true) {
+                            throw new RuntimeException((string)($policy['code'] ?? 'DOCUMENT_OPERATION_UNSUPPORTED'));
+                        }
+                        require_once __DIR__ . '/../_lib/clinical_note_capture_multipart_adapter.php';
+                        $document = clinical_note_capture_multipart_execute(
+                            $pdo,
+                            $encounterAuthority,
+                            $row,
+                            $payload,
+                            $_FILES,
+                            $createOperation,
+                            $policyOperation,
+                            $documentClass,
+                            $policyContext
+                        );
+                    } else {
+                        $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+                    }
+                } else {
+                    // A genuinely encounter-less token keeps the existing patient-level authority.
+                    $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+                }
             } catch (ClinicalM6LegacyWriteBlockedException $e) {
                 // M6_GUARD_C21_NOTE_CAPTURE_UPLOAD: token reads/status remain available.
                 clinical_m6_send_legacy_write_blocked([
@@ -8156,6 +8237,28 @@ try {
                 return;
             } catch (RuntimeException $e) {
                 $message = trim((string)$e->getMessage());
+                if ($canonicalC21 || in_array($message, [
+                    'DOCUMENT_CONTEXT_MISMATCH',
+                    'NOTE_CAPTURE_TOKEN_INVALID',
+                    'ENCOUNTER_NOT_FOUND',
+                    'ENCOUNTER_VOIDED',
+                    'ENCOUNTER_TERMINAL',
+                    'ENCOUNTER_CLOSED',
+                    'DOCUMENT_OPERATION_UNSUPPORTED',
+                ], true)) {
+                    [$statusCode, $errorCode] = clinical_encounter_multipart_error($e);
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => $errorCode,
+                        'message' => $errorCode,
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'note-capture-tokens/{token}/upload',
+                        ],
+                    ], $statusCode);
+                    return;
+                }
                 if ($message === 'MEDIA_TAG_REQUIRED') {
                     $message = 'Selecciona una etiqueta para esta imagen.';
                 }
@@ -8185,9 +8288,15 @@ try {
             }
 
             $uploadedAt = gmdate('Y-m-d H:i:s');
-            $documentId = (int)($document['document_db_id'] ?? 0);
-            $documentUuid = trim((string)($document['document_id'] ?? ($document['document_uuid'] ?? '')));
-            $previewUrl = clinical_note_capture_extract_preview_url($document);
+            if ($canonicalC21) {
+                $documentId = (int)($document['document_id'] ?? 0);
+                $documentUuid = trim((string)($document['document_uuid'] ?? ''));
+                $previewUrl = '';
+            } else {
+                $documentId = (int)($document['document_db_id'] ?? 0);
+                $documentUuid = trim((string)($document['document_id'] ?? ($document['document_uuid'] ?? '')));
+                $previewUrl = clinical_note_capture_extract_preview_url($document);
+            }
             $update = $pdo->prepare("
                 UPDATE clinical_note_capture_tokens
                 SET
