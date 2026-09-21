@@ -4500,6 +4500,7 @@
               <ul class="nav nav-pills mm-tabs-row mm-tabs-row-top" role="tablist">
 
                 <li class="nav-item" data-exp-datos-tab-item><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-resumen-longitudinal" data-tab-key="t-resumen-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">summarize</span><span class="tab-lbl">Resumen</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
@@ -4528,6 +4529,23 @@
             </div>
 
             <div class="tab-content">
+
+              <div class="tab-pane fade" id="t-resumen-longitudinal">
+                <section class="lon02-summary" id="lon02-summary" aria-labelledby="lon02-title">
+                  <div class="lon02-head"><div><p class="m7-workspace-eyebrow">Paciente · Lectura longitudinal</p><h3 id="lon02-title">Resumen</h3><p>Contexto clínico disponible, con fecha y fuente. No inicia una consulta.</p></div><button type="button" class="btn btn-outline-primary" data-lon02-refresh>Actualizar</button></div>
+                  <p data-lon02-status role="status" aria-live="polite">Selecciona un paciente para ver su resumen.</p>
+                  <div class="m7-workspace-error d-none" data-lon02-error role="alert"></div>
+                  <div class="lon02-grid d-none" data-lon02-content>
+                    <section class="lon02-card lon02-card-current"><h4>Consulta en curso</h4><div data-lon02-open></div></section>
+                    <section class="lon02-card"><h4>Consultas recientes</h4><div data-lon02-recent></div><button type="button" class="btn btn-outline-primary btn-sm" data-lon02-history>Ver Consultas / Historial</button></section>
+                    <section class="lon02-card"><h4>Últimas mediciones registradas</h4><div data-lon02-measurements></div></section>
+                    <section class="lon02-card"><h4>Órdenes sin resultado vinculado</h4><div data-lon02-pending></div></section>
+                    <section class="lon02-card"><h4>Resultados posteriores al cierre</h4><div data-lon02-late></div></section>
+                    <section class="lon02-card"><h4>Documentos recientes</h4><div data-lon02-documents></div><p class="lon02-note">Consulta los documentos y archivos privados desde su contexto autorizado.</p></section>
+                    <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Problemas activos, medicación actual y seguimiento clínico: autoridad longitudinal no disponible todavía. Las recetas y citas previas no confirman estos estados.</p><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
+                  </div>
+                </section>
+              </div>
 
               <div class="tab-pane fade show active" id="t-datos">
 
@@ -10541,6 +10559,7 @@
 <script src="assets/js/clinical/m7-workspace.js?v=m7ws05"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=m7ws06"></script>
 <script src="assets/js/clinical/lon01-history.js?v=lon01"></script>
+<script src="assets/js/clinical/lon02-summary.js?v=lon02"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

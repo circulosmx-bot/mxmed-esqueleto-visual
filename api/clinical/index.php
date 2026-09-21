@@ -6094,6 +6094,76 @@ try {
         return;
     }
 
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal-summary' && count($segments) === 3) {
+        $routeName = 'patients/{patient_id}/longitudinal-summary';
+        if ($method !== 'GET') {
+            clinical_send_response(['ok' => false, 'error' => 'not_found', 'data' => null, 'meta' => ['route' => $routeName]], 404);
+            return;
+        }
+        $patientId = trim((string)$segments[1]);
+        if ($patientId === '') {
+            clinical_send_response(['ok' => false, 'error' => ['code' => 'bad_request', 'message' => 'patient_id requerido'], 'data' => null, 'meta' => ['route' => $routeName]], 400);
+            return;
+        }
+        $context = clinical_require_doctor_context($routeName);
+        if ($context === null) return;
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_encounter_integrity_assert_schema_ready($pdo);
+            if (!clinical_patient_exists($pdo, $patientId)) {
+                clinical_send_response(['ok' => false, 'error' => ['code' => 'not_found', 'message' => 'patient no encontrado'], 'data' => null, 'meta' => ['route' => $routeName]], 404);
+                return;
+            }
+            if (!clinical_require_doctor_patient_scope($pdo, $context['doctor_id'], $patientId, $routeName)) return;
+            $doctorId = $context['doctor_id'];
+            $openQuery = $pdo->prepare("SELECT encounter_id,encounter_dt,status FROM clinical_encounters WHERE patient_id=:patient AND doctor_id=:doctor AND status='open' ORDER BY encounter_dt DESC,encounter_id DESC LIMIT 1");
+            $openQuery->execute([':patient' => $patientId, ':doctor' => $doctorId]);
+            $openRow = $openQuery->fetch(PDO::FETCH_ASSOC);
+            $open = $openRow ? ['encounter_key' => 'enc:' . $openRow['encounter_id'], 'date' => $openRow['encounter_dt'], 'status' => 'open', 'provenance' => 'canonical_encounter'] : null;
+            $encounters = $pdo->prepare("SELECT encounter_id, encounter_dt, status FROM clinical_encounters WHERE patient_id=:patient AND doctor_id=:doctor AND status<>'open' ORDER BY encounter_dt DESC, encounter_id DESC LIMIT 2");
+            $encounters->execute([':patient' => $patientId, ':doctor' => $doctorId]);
+            $recent = [];
+            foreach ($encounters->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $item = ['encounter_key' => 'enc:' . $row['encounter_id'], 'date' => $row['encounter_dt'], 'status' => $row['status'], 'provenance' => 'canonical_encounter'];
+                $recent[] = $item;
+            }
+            $observations = $pdo->prepare('SELECT o.code,o.value_numeric,o.unit,o.systolic_mm_hg,o.diastolic_mm_hg,o.effective_at,o.source,e.encounter_id, EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=o.encounter_id AND a.target_type IN (\'observation\',\'observations\') AND a.target_id=CAST(o.observation_id AS CHAR)) AS has_amendment FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id WHERE e.patient_id=:patient AND e.doctor_id=:doctor AND e.status<>\'voided\' ORDER BY o.effective_at DESC,o.observation_id DESC LIMIT 100');
+            $observations->execute([':patient' => $patientId, ':doctor' => $doctorId]);
+            $latest = [];
+            foreach ($observations->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $code = (string)$row['code'];
+                if (!isset($latest[$code])) $latest[$code] = ['code' => $code, 'value' => $code === 'blood_pressure' ? $row['systolic_mm_hg'] . '/' . $row['diastolic_mm_hg'] : $row['value_numeric'], 'unit' => $row['unit'], 'date' => $row['effective_at'], 'source' => $row['source'], 'has_amendment' => (int)$row['has_amendment'] === 1, 'encounter_key' => 'enc:' . $row['encounter_id'], 'provenance' => 'canonical_observation'];
+                if (count($latest) >= 6) break;
+            }
+            // Only canonical encounter-linked documents owned by this doctor are eligible.
+            // Newer linked results necessarily precede their order in this descending window.
+            $documents = $pdo->prepare("SELECT d.id,d.document_uuid,d.document_type,d.title,d.event_datetime,d.payload_json,d.encounter_ref_id, EXISTS(SELECT 1 FROM clinical_encounter_final_notes f WHERE f.encounter_id=d.encounter_ref_id AND d.id>f.document_id) AS created_after_final_note FROM clinical_documents d JOIN clinical_encounters e ON e.encounter_id=d.encounter_ref_id WHERE d.patient_id=:patient AND e.patient_id=:patient AND e.doctor_id=:doctor ORDER BY d.id DESC LIMIT 500");
+            $documents->execute([':patient' => $patientId, ':doctor' => $doctorId]);
+            $documentRows = $documents->fetchAll(PDO::FETCH_ASSOC);
+            $resultsByOrder = [];
+            foreach ($documentRows as $row) {
+                if (!in_array(clinical_canonical_document_class((string)$row['document_type']), ['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT'], true) && (string)$row['document_type'] !== 'result') continue;
+                $payload = json_decode((string)$row['payload_json'], true) ?: [];
+                foreach (clinical_document_extract_related_order_refs($payload) as $ref) $resultsByOrder[$ref] = true;
+            }
+            $pending = [];
+            $recentDocuments = [];
+            $lateResults = [];
+            foreach ($documentRows as $row) {
+                $class = clinical_canonical_document_class((string)$row['document_type']);
+                $item = ['title' => (string)($row['title'] ?: $row['document_type']), 'type' => $row['document_type'], 'date' => $row['event_datetime'], 'encounter_key' => 'enc:' . $row['encounter_ref_id'], 'provenance' => 'canonical_document'];
+                if ($class === 'ORDER' && !isset($resultsByOrder[(string)$row['id']]) && !isset($resultsByOrder[(string)$row['document_uuid']]) && count($pending) < 4) $pending[] = $item;
+                if ((in_array($class, ['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT'], true) || (string)$row['document_type'] === 'result') && (int)$row['created_after_final_note'] === 1 && count($lateResults) < 3) $lateResults[] = $item;
+                if (count($recentDocuments) < 3) $recentDocuments[] = $item;
+            }
+            clinical_send_response(['ok' => true, 'data' => ['open_encounter' => $open, 'recent_encounters' => $recent, 'latest_measurements' => array_values($latest), 'pending_orders' => $pending, 'late_results' => $lateResults, 'recent_documents' => $recentDocuments], 'meta' => ['route' => $routeName, 'method' => 'GET']], 200);
+        } catch (Throwable $e) {
+            $schemaNotReady = str_starts_with($e->getMessage(), 'SCHEMA_NOT_READY');
+            clinical_send_response(['ok' => false, 'error' => ['code' => $schemaNotReady ? 'SCHEMA_NOT_READY' : 'server_error', 'message' => $schemaNotReady ? 'El esquema clínico no está listo' : 'No se pudo cargar el resumen'], 'data' => null, 'meta' => ['route' => $routeName]], $schemaNotReady ? 503 : 500);
+        }
+        return;
+    }
+
     if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal-history' && count($segments) === 3) {
         $routeName = 'patients/{patient_id}/longitudinal-history';
         if ($method !== 'GET') {

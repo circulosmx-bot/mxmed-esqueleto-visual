@@ -1,0 +1,89 @@
+// LON02: read-only patient summary. No encounter command or clinical writer.
+(function () {
+  const pane = document.getElementById('p-expediente');
+  const root = document.getElementById('lon02-summary');
+  if (!pane || !root) return;
+  const $ = selector => root.querySelector(selector);
+  const status = $('[data-lon02-status]');
+  const error = $('[data-lon02-error]');
+  const content = $('[data-lon02-content]');
+  const patient = () => String(pane.dataset.patientId || pane.dataset.activePatientId || '').trim();
+  const date = value => String(value || '').trim().replace('T', ' ') || 'Fecha no disponible';
+  const state = value => ({open:'En curso', closed:'Finalizada', voided:'Anulada'})[String(value || '').toLowerCase()] || 'Estado no disponible';
+  const source = value => ({direct_measurement:'Medición directa', patient_report:'Referido por paciente', import:'Importación'})[String(value || '')] || 'Fuente no disponible';
+  const measure = value => ({blood_pressure:'Presión arterial',heart_rate:'Frecuencia cardiaca',respiratory_rate:'Frecuencia respiratoria',temperature:'Temperatura',oxygen_saturation:'Saturación de oxígeno',pain:'Dolor',weight:'Peso',height:'Estatura',waist:'Cintura'})[String(value || '')] || String(value || 'Medición');
+  const documentType = value => ({order:'Orden',orders:'Orden',lab_order:'Orden de laboratorio',imaging_order:'Orden de imagen',lab_result:'Resultado de laboratorio',lab_pdf:'Resultado de laboratorio',imaging_result:'Resultado de imagen',external_result:'Resultado externo',external_report:'Reporte externo',prescription:'Receta',receta:'Receta',pdf:'Documento PDF'})[String(value || '')] || 'Documento';
+  const number = value => Number.isFinite(Number(value)) ? String(Number(value)) : String(value ?? 'Sin valor');
+  let selected = '';
+  let epoch = 0;
+
+  function line(target, title, detail) {
+    const row = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = title;
+    const small = document.createElement('span');
+    small.textContent = detail;
+    row.append(strong, small);
+    target.append(row);
+  }
+  function list(selector, rows, empty, render) {
+    const target = $(selector);
+    target.replaceChildren();
+    if (!rows.length) { target.textContent = empty; return; }
+    rows.forEach(row => render(target, row));
+  }
+  function goToHistory(resume = false) {
+    const tab = pane.querySelector('[data-bs-target="#t-historial-atencion"]');
+    if (!tab) return;
+    if (window.bootstrap?.Tab) window.bootstrap.Tab.getOrCreateInstance(tab).show();
+    else tab.click();
+    const target = resume ? pane.querySelector('#m7-workspace [data-m7-resume]:not(.d-none)') || pane.querySelector('#m7-workspace-title') : pane.querySelector('#lon01-title');
+    if (target) {
+      if (!target.matches('button, a, input, select, textarea')) target.setAttribute('tabindex', '-1');
+      requestAnimationFrame(() => { target.focus(); target.scrollIntoView({block:'nearest'}); });
+    }
+  }
+  function render(data) {
+    const open = data.open_encounter;
+    list('[data-lon02-open]', open ? [open] : [], 'No hay una consulta en curso registrada.', (target, row) => {
+      line(target, 'Consulta en curso', `Encuentro canónico · Iniciada ${date(row.date)}`);
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'btn btn-outline-primary btn-sm'; button.textContent = 'Ir a la consulta en curso';
+      button.addEventListener('click', () => goToHistory(true)); target.append(button);
+    });
+    list('[data-lon02-recent]', data.recent_encounters || [], 'No hay consultas canónicas anteriores disponibles.', (target, row) => line(target, `Consulta ${state(row.status)}`, `Encuentro canónico · ${date(row.date)}`));
+    list('[data-lon02-measurements]', data.latest_measurements || [], 'No hay mediciones canónicas disponibles.', (target, row) => line(target, `${measure(row.code)}: ${row.code === 'blood_pressure' ? row.value : number(row.value)} ${row.unit || ''}`.trim(), `Registrada ${date(row.date)} · ${source(row.source)} · encuentro canónico${row.has_amendment ? ' · Valor original enmendado; revisar historial' : ''}`));
+    list('[data-lon02-pending]', data.pending_orders || [], 'No hay órdenes recientes sin resultado vinculado en el conjunto consultado.', (target, row) => line(target, row.title, `Orden canónica · ${date(row.date)} · resultado vinculado pendiente`));
+    list('[data-lon02-late]', data.late_results || [], 'No hay resultados posteriores al cierre en el conjunto consultado.', (target, row) => line(target, row.title, `Resultado canónico recibido después de finalizar · ${date(row.date)}`));
+    list('[data-lon02-documents]', data.recent_documents || [], 'No hay documentos canónicos recientes disponibles.', (target, row) => line(target, row.title, `${documentType(row.type)} · ${date(row.date)} · encuentro canónico`));
+    content.classList.remove('d-none');
+  }
+  async function load() {
+    const id = patient();
+    selected = id;
+    const request = ++epoch;
+    content.classList.add('d-none');
+    error.classList.add('d-none');
+    if (!id) { status.textContent = 'Selecciona un paciente para ver su resumen.'; return; }
+    status.textContent = 'Cargando resumen…';
+    try {
+      const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/longitudinal-summary`, {credentials:'same-origin', headers:{Accept:'application/json'}});
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.ok !== true) throw new Error(result?.error?.message || 'No se pudo cargar el resumen.');
+      if (request !== epoch || patient() !== id) return;
+      render(result.data || {});
+      status.textContent = 'Resumen de sólo lectura actualizado.';
+    } catch (failure) {
+      if (request !== epoch) return;
+      error.textContent = failure.message;
+      error.classList.remove('d-none');
+      status.textContent = 'Resumen no disponible.';
+    }
+  }
+  $('[data-lon02-refresh]').addEventListener('click', load);
+  $('[data-lon02-history]').addEventListener('click', () => goToHistory(false));
+  for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, load);
+  pane.querySelector('[data-bs-target="#t-resumen-longitudinal"]')?.addEventListener('shown.bs.tab', load);
+  new MutationObserver(() => { if (patient() !== selected) load(); }).observe(pane, {attributes:true, attributeFilter:['data-patient-id','data-active-patient-id']});
+  if (patient()) load();
+})();

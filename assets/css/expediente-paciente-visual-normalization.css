@@ -456,6 +456,23 @@
 #p-expediente .lon01-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem;background:#fff;border:1px solid #e1edf1;border-radius:8px;padding:8px}
 #p-expediente [data-lon01-more]{margin-top:10px}
 @media(max-width:700px){#p-expediente .lon01-history{padding:14px}#p-expediente .lon01-head,#p-expediente .lon01-detail-head{flex-direction:column}#p-expediente .lon01-columns{grid-template-columns:1fr;gap:4px}#p-expediente .lon01-head .btn{width:100%}}
+
+/* LON02: compact, patient-level read-only orientation before consultation. */
+#p-expediente .lon02-summary{border:1px solid #c9e1e8;border-radius:16px;background:#fff;padding:18px;margin:8px 0 12px;color:#173b4d}
+#p-expediente .lon02-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+#p-expediente .lon02-head h3{font-size:1.13rem;font-weight:700;color:#06536e;margin:0 0 5px}
+#p-expediente .lon02-head p:not(.m7-workspace-eyebrow),#p-expediente [data-lon02-status]{font-size:.88rem;color:#526976;margin:0 0 10px}
+#p-expediente .lon02-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+#p-expediente .lon02-card{min-width:0;padding:13px;border:1px solid #d5e8ed;border-radius:12px;background:#fbfdfd;overflow-wrap:anywhere}
+#p-expediente .lon02-card-current{border-color:#86d3db;background:#effafb}
+#p-expediente .lon02-card-unknown{grid-column:1/-1;background:#f7fafb}
+#p-expediente .lon02-card h4{font-size:.95rem;font-weight:700;color:#06536e;margin:0 0 8px}
+#p-expediente .lon02-card p{display:flex;flex-direction:column;gap:2px;font-size:.85rem;margin:0 0 8px}
+#p-expediente .lon02-card p span,#p-expediente .lon02-note{font-size:.79rem;color:#526976}
+#p-expediente .lon02-card .btn{margin-top:5px}
+#p-expediente .lon02-card-unknown p{display:block}
+#p-expediente .lon02-summary button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
+@media(max-width:700px){#p-expediente .lon02-summary{padding:14px}#p-expediente .lon02-head{flex-direction:column}#p-expediente .lon02-grid{grid-template-columns:1fr}#p-expediente .lon02-head .btn{width:100%}}
 #p-expediente .m7-workspace-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 #p-expediente .m7-workspace-head h3{font-size:1.13rem;font-weight:700;margin:0 0 5px;color:#06536e}
 #p-expediente .m7-workspace-eyebrow{margin:0 0 4px;font-size:.78rem;font-weight:700;color:#008f9a;text-transform:uppercase;letter-spacing:.04em}
