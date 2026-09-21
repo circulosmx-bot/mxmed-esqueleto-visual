@@ -4992,6 +4992,16 @@ try {
         }
 
         try {
+            clinical_m6_assert_legacy_write_allowed($patientId);
+        } catch (ClinicalM6LegacyWriteBlockedException $e) {
+            clinical_m6_send_legacy_write_blocked($historyMeta);
+            return;
+        } catch (ClinicalM6CohortConfigException $e) {
+            clinical_m6_send_cohort_config_invalid($historyMeta);
+            return;
+        }
+
+        try {
             $record = clinical_history_upsert_draft($pdo, $patientId, $payload);
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());
@@ -5146,6 +5156,16 @@ try {
                 'data' => null,
                 'meta' => $physicalExamMeta,
             ], 400);
+            return;
+        }
+
+        try {
+            clinical_m6_assert_legacy_write_allowed($patientId);
+        } catch (ClinicalM6LegacyWriteBlockedException $e) {
+            clinical_m6_send_legacy_write_blocked($physicalExamMeta);
+            return;
+        } catch (ClinicalM6CohortConfigException $e) {
+            clinical_m6_send_cohort_config_invalid($physicalExamMeta);
             return;
         }
 

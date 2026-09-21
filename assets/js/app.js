@@ -57603,6 +57603,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       });
       const data = await response.json().catch(()=> null);
       if(!response.ok || !data || data.ok !== true){
+        if(data?.error === 'M6_LEGACY_WRITE_BLOCKED' || data?.error?.code === 'M6_LEGACY_WRITE_BLOCKED'){
+          throw new Error('Este registro anterior es sólo de consulta. Para nueva atención clínica, abre Consulta ambulatoria en Historial de atención.');
+        }
         const message = clean(data?.message || data?.error?.message || 'No se pudo guardar la historia clínica.');
         throw new Error(message || 'No se pudo guardar la historia clínica.');
       }
@@ -75901,6 +75904,9 @@ function mxResetLogoPreview(){
       });
       const data = await response.json().catch(()=> null);
       if(!response.ok || !data || data.ok !== true){
+        if(data?.error === 'M6_LEGACY_WRITE_BLOCKED' || data?.error?.code === 'M6_LEGACY_WRITE_BLOCKED'){
+          throw new Error('Este registro anterior es sólo de consulta. Para nueva exploración, abre Consulta ambulatoria en Historial de atención.');
+        }
         const message = clean(data?.message || data?.error?.message || 'No se pudo guardar la exploración física.');
         throw new Error(message || 'No se pudo guardar la exploración física.');
       }
