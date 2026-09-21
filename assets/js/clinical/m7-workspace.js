@@ -1,4 +1,4 @@
-// M7 WS01/WS02 — encounter boundary and structured OPEN consultation sections.
+// M7 WS01–WS03 — encounter boundary and structured OPEN consultation sections.
 (function(){
   const patientPane = document.getElementById('p-expediente');
   const root = document.getElementById('m7-workspace');
@@ -27,7 +27,7 @@
   const conflictReload = root.querySelector('[data-m7-conflict-reload]');
   const conflictUseDraft = root.querySelector('[data-m7-conflict-use-draft]');
   const sectionButtons = [...root.querySelectorAll('[data-m7-section]')];
-  const sectionTypes = { reason:'reason_evolution', assessment:'assessment', plan:'plan' };
+  const sectionTypes = { reason:'reason_evolution', measurements:'measurements', exam:'physical_exam', assessment:'assessment', plan:'plan' };
   const sectionTitles = { reason_evolution:'Motivo / Evolución', assessment:'Valoración', plan:'Plan' };
   let epoch = 0;
   let active = null;
@@ -42,6 +42,12 @@
   let sectionBaseline = '';
   let sectionVersion = null;
   const localDrafts = new Map();
+  const ws03 = window.mxmedM7WS03?.(root, encounterUrlForWs03, ()=>patientId, ()=>{
+    active = null;
+    show(currentButton, false);
+    show(resumeButton, false);
+  });
+  function encounterUrlForWs03(key){ return `/api/clinical/index.php/encounters/${encodeURIComponent(key)}`; }
 
   const selectedPatient = ()=> String(patientPane.dataset.patientId || patientPane.dataset.activePatientId || '').trim();
   const show = (node, visible)=> node?.classList.toggle('d-none', !visible);
@@ -91,15 +97,24 @@
     try { sessionStorage.removeItem(id); } catch (_) { /* In-memory state is already clear. */ }
   }
   function isDirty(){
-    return sectionMode === 'open' && !!body.dataset.encounterKey && editorText.value !== sectionBaseline;
+    return sectionMode === 'open' && !!body.dataset.encounterKey &&
+      (selectedSection === 'measurements' || selectedSection === 'physical_exam' ? !!ws03?.isDirty() : editorText.value !== sectionBaseline);
   }
   function protectNavigation(){
     if(!isDirty()) return true;
-    rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
+    else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     return window.confirm('Tienes cambios clínicos sin guardar. Se conservará tu borrador en esta pestaña. ¿Deseas continuar?');
   }
   function sectionRow(type){ return loadedSections[type] || null; }
   function paintSection(){
+    const ws03Selected = selectedSection === 'measurements' || selectedSection === 'physical_exam';
+    show(editor, !ws03Selected);
+    ws03?.select(selectedSection);
+    if(ws03Selected){
+      sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
+      return;
+    }
     const key = body.dataset.encounterKey || '';
     const row = sectionRow(selectedSection);
     sectionVersion = row ? Number(row.row_version) : null;
@@ -138,10 +153,12 @@
     editorSave.disabled = true;
     sectionButtons.forEach(button=>{ if(sectionTypes[button.dataset.m7Section]) button.disabled = false; });
     try {
-      const detail = Object.prototype.hasOwnProperty.call(encounter, 'sections') ? encounter : await get(encounterUrl(key));
+      const detail = Object.prototype.hasOwnProperty.call(encounter, 'sections') && Object.prototype.hasOwnProperty.call(encounter, 'observations')
+        ? encounter : await get(encounterUrl(key));
       if(seen !== sectionEpoch || key !== body.dataset.encounterKey || String(detail.patient_id || '') !== patientId) return;
       loadedSections = detail.sections && typeof detail.sections === 'object' ? detail.sections : {};
       sectionMode = String(detail.status || '').toLowerCase() === 'open' ? 'open' : 'terminal';
+      ws03?.load(detail, key, sectionMode);
       paintSection();
     } catch (error) {
       if(seen !== sectionEpoch) return;
@@ -257,6 +274,7 @@
   }
   function reset(){
     sectionEpoch++;
+    ws03?.reset();
     sectionMode = 'none';
     sectionConflict = false;
     active = null;
@@ -314,7 +332,10 @@
   }
   async function refresh(){
     const hadDraft = isDirty();
-    if(hadDraft) rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    if(hadDraft){
+      if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
+      else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    }
     const seen = ++epoch;
     patientId = selectedPatient();
     reset();
@@ -369,7 +390,7 @@
   currentButton.addEventListener('click', ()=>{ if(active && protectNavigation()) renderEncounter(active, false); });
   sectionButtons.forEach(button=>button.addEventListener('click', ()=>{
     const type = sectionTypes[button.dataset.m7Section];
-    if(!type || button.disabled || type === selectedSection || !protectNavigation()) return;
+    if(!type || button.disabled || type === selectedSection || sectionBusy || ws03?.isBusy() || !protectNavigation()) return;
     selectedSection = type;
     sectionConflict = false;
     show(conflictBox, false);
@@ -392,14 +413,17 @@
   });
   window.addEventListener('beforeunload', event=>{
     if(!isDirty()) return;
-    rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
+    else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     event.preventDefault();
     event.returnValue = '';
   });
   ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>{
     window.addEventListener(name, ()=> refresh());
   });
-  patientPane.querySelector('[data-bs-target="#t-historial-atencion"]')?.addEventListener('shown.bs.tab', refresh);
+  const workspaceTab = patientPane.querySelector('[data-bs-target="#t-historial-atencion"]');
+  workspaceTab?.addEventListener('shown.bs.tab', refresh);
+  workspaceTab?.addEventListener('hide.bs.tab', event=>{ if(!protectNavigation()) event.preventDefault(); });
   new MutationObserver(()=>{ if(selectedPatient() !== patientId) refresh(); }).observe(patientPane, { attributes:true, attributeFilter:['data-patient-id','data-active-patient-id'] });
   refresh();
 })();

@@ -470,6 +470,18 @@
 #p-expediente .m7-workspace-history-item{border:1px solid #b9d5dc;border-radius:9px;background:#fff;color:#06536e;min-height:42px;padding:7px 11px}
 #p-expediente .m7-workspace-history-item:hover{background:#effafb}
 #p-expediente .m7-workspace-history-item:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
+#p-expediente .m7-measurement-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+#p-expediente .m7-measurement-item{border:1px solid #b9d5dc;border-radius:9px;background:#f6fbfc;color:#173f54;padding:8px 10px;text-align:left}
+#p-expediente .m7-measurement-item[aria-pressed="true"]{border-color:#06aeb8;background:#e9f9fa}
+#p-expediente .m7-measurement-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#p-expediente .m7-measurement-fields label{display:block;min-width:0;color:#244b60;font-size:.88rem;font-weight:600}
+#p-expediente .m7-measurement-fields input,#p-expediente .m7-measurement-fields select,#p-expediente .m7-exam-row input,#p-expediente .m7-exam-row select{display:block;width:100%;min-width:0;min-height:42px;margin-top:5px;border:1px solid #abcbd4;border-radius:9px;background:#fff;color:#173f54;padding:8px 10px}
+#p-expediente .m7-measurement-fields input:focus-visible,#p-expediente .m7-measurement-fields select:focus-visible,#p-expediente .m7-exam-row input:focus-visible,#p-expediente .m7-exam-row select:focus-visible,#p-expediente .m7-measurement-item:focus-visible{outline:2px solid #06aeb8;outline-offset:1px}
+#p-expediente .m7-pressure-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+#p-expediente .m7-exam-row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(145px,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:8px 0;border-top:1px solid #e1edf1}
+#p-expediente .m7-exam-row strong{color:#244b60;font-size:.88rem}
+#p-expediente .m7-exam-row input,#p-expediente .m7-exam-row select{margin-top:0}
+#p-expediente .m7-section-conflict pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto;background:#fff;padding:8px;border-radius:8px;font-size:.8rem}
 @media(max-width:767.98px){
   #p-expediente .m7-workspace{padding:14px}
   #p-expediente .m7-workspace-head{flex-direction:column}
@@ -480,4 +492,6 @@
   #p-expediente .m7-section-editor-state{text-align:left}
   #p-expediente .m7-section-conflict-columns{grid-template-columns:1fr}
   #p-expediente .m7-section-editor-actions .btn{width:100%}
+  #p-expediente .m7-measurement-fields{grid-template-columns:1fr}
+  #p-expediente .m7-exam-row{grid-template-columns:1fr;gap:6px}
 }

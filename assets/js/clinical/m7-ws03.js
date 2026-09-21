@@ -1,0 +1,344 @@
+// M7 WS03: encounter-owned observations and explicit three-state physical examination.
+(function(){
+  window.mxmedM7WS03 = function(root, encounterUrl, currentPatient, onTerminal){
+    const q = selector => root.querySelector(selector);
+    const measurementPanel = q('[data-m7-measurements]');
+    const examPanel = q('[data-m7-exam]');
+    const form = q('[data-m7-measurements-form]');
+    const code = q('[data-m7-measurement-code]');
+    const value = q('[data-m7-measurement-value]');
+    const valueLabel = q('[data-m7-measurement-value-label]');
+    const pressureLabel = q('[data-m7-measurement-pressure-label]');
+    const systolic = q('[data-m7-measurement-systolic]');
+    const diastolic = q('[data-m7-measurement-diastolic]');
+    const unit = q('[data-m7-measurement-unit]');
+    const time = q('[data-m7-measurement-time]');
+    const source = q('[data-m7-measurement-source]');
+    const measurementState = q('[data-m7-measurements-state]');
+    const measurementList = q('[data-m7-measurements-list]');
+    const measurementConflict = q('[data-m7-measurement-conflict]');
+    const measurementDraft = q('[data-m7-measurement-draft]');
+    const measurementServer = q('[data-m7-measurement-server]');
+    const examState = q('[data-m7-exam-state]');
+    const examMeta = q('[data-m7-exam-meta]');
+    const examSystems = q('[data-m7-exam-systems]');
+    const examSave = q('[data-m7-exam-save]');
+    const examConflict = q('[data-m7-exam-conflict]');
+    const examDraft = q('[data-m7-exam-draft]');
+    const examServer = q('[data-m7-exam-server]');
+    const catalog = {
+      blood_pressure:['Presión arterial','mmHg'],heart_rate:['Frecuencia cardíaca','bpm'],
+      respiratory_rate:['Frecuencia respiratoria','rpm'],temperature:['Temperatura','°C'],
+      oxygen_saturation:['Saturación de oxígeno','%'],pain:['Dolor','score'],
+      weight:['Peso','kg'],height:['Estatura','cm'],waist:['Cintura','cm']
+    };
+    const systems = {
+      general:'Estado general', cardiovascular:'Cardiovascular', respiratory:'Respiratorio',
+      abdomen:'Abdomen', neurological:'Neurológico', musculoskeletal:'Musculoesquelético', skin:'Piel'
+    };
+    let key = '', patient = '', mode = 'none', selected = '', observations = [], selectedObservation = null;
+    let baselineMeasurement = '', baselineExam = '', examVersion = null, busy = false;
+    let measurementLocked = false, examLocked = false;
+    let createKey = '', loadedExam = {}, measurementNotice = '', examNotice = '';
+    let retainedMeasurementDraft = '', retainedExamDraft = '';
+    const drafts = new Map();
+    const hide = (node, visible)=>node.classList.toggle('d-none', !visible);
+    const draftId = type=>`mxmed.m7.ws03.draft:${key}:${type}`;
+    const toLocalDateTime = stamp=>{
+      if(!stamp) return '';
+      const date=new Date(String(stamp).replace(' ','T').slice(0,19)+'Z');
+      if(Number.isNaN(date.getTime())) return '';
+      const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);
+      return local.toISOString().slice(0,16);
+    };
+    const toUtcDateTime = local=>new Date(`${local}:00`).toISOString().slice(0,19).replace('T',' ');
+    const createKeyId = ()=>`mxmed.m7.ws03.create-key:${key}`;
+    function forgetCreateKey(){
+      createKey=''; try{sessionStorage.removeItem(createKeyId());}catch(_){}
+    }
+    function getDraft(type){
+      const id=draftId(type);
+      if(drafts.has(id)) return drafts.get(id);
+      try { return sessionStorage.getItem(id); } catch(_){ return null; }
+    }
+    function setDraft(type, text){
+      if(!key) return;
+      const id=draftId(type); drafts.set(id,text);
+      try { sessionStorage.setItem(id,text); } catch(_){}
+    }
+    function clearDraft(type){
+      const id=draftId(type); drafts.delete(id);
+      try { sessionStorage.removeItem(id); } catch(_){}
+    }
+    function measurementSnapshot(){
+      return JSON.stringify({ observation_id:selectedObservation?.observation_id || null,
+        code:code.value, value:value.value, systolic:systolic.value, diastolic:diastolic.value,
+        time:time.value, source:source.value });
+    }
+    function examSnapshot(){
+      const result={};
+      examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
+        result[row.dataset.m7ExamSystem]={state:row.querySelector('select').value,finding:row.querySelector('input').value};
+      });
+      return JSON.stringify(result);
+    }
+    function isDirty(){
+      return mode==='open' && (selected==='measurements' ? measurementSnapshot()!==baselineMeasurement
+        : selected==='physical_exam' ? examSnapshot()!==baselineExam : false);
+    }
+    function remember(){
+      if(!isDirty()) return;
+      setDraft(selected, selected==='measurements' ? measurementSnapshot() : examSnapshot());
+    }
+    function restore(type, inputDraft=null){
+      const raw=inputDraft ?? getDraft(type); if(!raw) return;
+      try{
+        const draft=JSON.parse(raw);
+        if(type==='measurements'){
+          const row=observations.find(item=>Number(item.observation_id)===Number(draft.observation_id));
+          selectedObservation=row || null;
+          code.value=draft.code || 'blood_pressure'; value.value=draft.value || '';
+          systolic.value=draft.systolic || ''; diastolic.value=draft.diastolic || '';
+          time.value=draft.time || ''; source.value=draft.source || '';
+          syncCode();
+        } else {
+          Object.entries(draft).forEach(([name,item])=>{
+            const row=[...examSystems.querySelectorAll('[data-m7-exam-system]')].find(node=>node.dataset.m7ExamSystem===name);
+            if(row){ row.querySelector('select').value=item.state || 'NOT_REVIEWED'; row.querySelector('input').value=item.finding || ''; syncExamRow(row); }
+          });
+        }
+      }catch(_){}
+    }
+    function syncCode(){
+      const isPressure=code.value==='blood_pressure';
+      hide(valueLabel,!isPressure); hide(pressureLabel,isPressure);
+      value.required=!isPressure; systolic.required=isPressure; diastolic.required=isPressure;
+      unit.value=catalog[code.value]?.[1] || '';
+    }
+    function measurementPayload(){
+      const date=time.value.trim();
+      const data={code:code.value,unit:unit.value,source:source.value,effective_at:toUtcDateTime(date),provenance:selectedObservation?.provenance || {}};
+      if(code.value==='blood_pressure'){
+        data.systolic_mm_hg=Number(systolic.value); data.diastolic_mm_hg=Number(diastolic.value);
+      } else data.value_numeric=Number(value.value);
+      return data;
+    }
+    function fillMeasurement(row, discardDraft=true){
+      selectedObservation=row || null;
+      code.value=row?.code || 'blood_pressure'; value.value=row?.value_numeric ?? '';
+      systolic.value=row?.systolic_mm_hg ?? ''; diastolic.value=row?.diastolic_mm_hg ?? '';
+      time.value=toLocalDateTime(row?.effective_at);
+      source.querySelector('option[value="import"]').disabled=!row;
+      source.value=row?.source || ''; syncCode();
+      baselineMeasurement=measurementSnapshot();
+      if(discardDraft) clearDraft('measurements');
+      if(discardDraft) forgetCreateKey();
+      measurementLocked=false; measurementNotice=''; hide(measurementConflict,false);
+      paintMeasurement();
+    }
+    function paintMeasurement(){
+      measurementList.replaceChildren();
+      observations.forEach(row=>{
+        const button=document.createElement('button'); button.type='button'; button.className='m7-measurement-item';
+        const label=catalog[row.code]?.[0] || row.code;
+        const reading=row.code==='blood_pressure' ? `${row.systolic_mm_hg}/${row.diastolic_mm_hg}` : row.value_numeric;
+        button.textContent=`${label}: ${reading} ${row.unit} · ${String(row.effective_at || '').replace('T',' ')} · v${row.row_version}`;
+        button.setAttribute('aria-pressed',String(Number(selectedObservation?.observation_id)===Number(row.observation_id)));
+        button.addEventListener('click',()=>{ if(isDirty() && !window.confirm('Tienes una medición sin guardar. ¿Cambiar de registro?')) return; fillMeasurement(row); });
+        measurementList.append(button);
+      });
+      measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'Sin cambios');
+      [...form.elements].forEach(control=>{ control.disabled=mode!=='open'||busy||measurementLocked; });
+      q('[data-m7-measurement-save]').disabled=mode!=='open'||busy||measurementLocked||!isDirty();
+      q('[data-m7-measurement-new]').disabled=mode!=='open'||busy||measurementLocked;
+      hide(form,!!key);
+    }
+    function syncExamRow(row){
+      const state=row.querySelector('select').value;
+      const finding=row.querySelector('input');
+      finding.disabled=mode!=='open'||state!=='ABNORMAL'||busy||examLocked;
+      finding.required=state==='ABNORMAL';
+      if(state!=='ABNORMAL') finding.value='';
+    }
+    function paintExam(){
+      examState.textContent=examNotice || (mode!=='open'?'Sólo lectura':examLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'Sin cambios');
+      examMeta.textContent=examVersion===null?'Aún no hay exploración guardada. Sin revisión no equivale a normal.':`Versión ${examVersion} · Sin revisión no equivale a normal.`;
+      examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
+        row.querySelector('select').disabled=mode!=='open'||busy||examLocked;
+        syncExamRow(row);
+      });
+      examSave.disabled=mode!=='open'||busy||examLocked||!isDirty();
+      hide(examSave,mode==='open');
+    }
+    function load(detail, encounterKey, state, restoreDrafts=true){
+      if(key!==encounterKey) createKey='';
+      key=encounterKey; patient=String(detail.patient_id || ''); mode=state;
+      observations=Array.isArray(detail.observations)?detail.observations:[];
+      loadedExam=detail.sections?.physical_exam || {};
+      examVersion=loadedExam.row_version==null?null:Number(loadedExam.row_version);
+      const saved=loadedExam.payload?.systems || {};
+      examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
+        const entry=saved[row.dataset.m7ExamSystem];
+        row.querySelector('select').value=entry?.state || 'NOT_REVIEWED';
+        row.querySelector('input').value=entry?.state==='ABNORMAL'?String(entry.finding || ''):'';
+      });
+      baselineExam=examSnapshot();
+      fillMeasurement(null,false);
+      if(mode==='open'){
+        restore('measurements');
+        if(restoreDrafts) restore('physical_exam');
+      }
+      measurementLocked=false; examLocked=false; measurementNotice=''; examNotice=''; hide(examConflict,false); hide(measurementConflict,false);
+      paintMeasurement(); paintExam();
+    }
+    function select(type){
+      selected=type;
+      hide(measurementPanel,type==='measurements'); hide(examPanel,type==='physical_exam');
+      if(type==='measurements') paintMeasurement();
+      if(type==='physical_exam') paintExam();
+    }
+    function reset(){
+      key=''; patient=''; mode='none'; selected=''; observations=[]; selectedObservation=null;
+      createKey=''; measurementNotice=''; examNotice='';
+      hide(measurementPanel,false); hide(examPanel,false);
+    }
+    async function responseJson(response){
+      const data=await response.json().catch(()=>null);
+      if(!response.ok || data?.ok!==true){
+        const error=new Error(data?.error?.message || data?.message || 'No se pudo guardar.');
+        error.code=typeof data?.error==='string'?data.error:String(data?.error?.code || response.status);
+        throw error;
+      }
+      return data;
+    }
+    async function reloadCurrent(){
+      const response=await fetch(encounterUrl(key),{credentials:'same-origin',headers:{Accept:'application/json'}});
+      const data=await responseJson(response);
+      if(String(data.data?.patient_id || '')!==patient || currentPatient()!==patient) throw new Error('El contexto del paciente cambió.');
+      return data.data;
+    }
+    function terminal(detail){
+      mode='terminal';
+      onTerminal?.();
+      if(selected==='measurements' && getDraft('measurements')){
+        measurementDraft.textContent=getDraft('measurements');
+        const row=detail?.observations?.find(item=>Number(item.observation_id)===Number(selectedObservation?.observation_id));
+        measurementServer.textContent=row?`${catalog[row.code]?.[0]||row.code}: ${row.code==='blood_pressure'?`${row.systolic_mm_hg}/${row.diastolic_mm_hg}`:row.value_numeric} ${row.unit} · v${row.row_version}`:'Sin versión guardada para esta medición.';
+        measurementConflict.querySelector('strong').textContent='La consulta terminó. El borrador no se guardó.';
+        hide(measurementConflict,true);
+      }
+      if(selected==='physical_exam' && getDraft('physical_exam')){
+        examDraft.textContent=getDraft('physical_exam');
+        examServer.textContent=JSON.stringify(detail?.sections?.physical_exam?.payload?.systems || {},null,2);
+        examConflict.querySelector('strong').textContent='La consulta terminó. El borrador no se guardó.';
+        hide(examConflict,true);
+      }
+      root.querySelector('[data-m7-body]').dataset.encounterState=String(detail?.status || 'closed');
+      root.querySelector('[data-m7-context]').textContent=`Consulta histórica · ${detail?.status==='voided'?'Anulada':'Finalizada'}`;
+      root.querySelector('[data-m7-status]').textContent='Consulta histórica de sólo lectura.';
+      paintMeasurement(); paintExam();
+    }
+    async function saveMeasurement(event){
+      event.preventDefault();
+      if(mode!=='open'||busy||measurementLocked||!isDirty()||!form.reportValidity()) return;
+      const oldKey=key, oldPatient=patient, draft=measurementSnapshot();
+      const row=selectedObservation, data=measurementPayload();
+      if(!createKey){
+        try{createKey=sessionStorage.getItem(createKeyId()) || '';}catch(_){}
+        if(!createKey) createKey=crypto.randomUUID ? crypto.randomUUID() : [...crypto.getRandomValues(new Uint8Array(16))].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+        try{sessionStorage.setItem(createKeyId(),createKey);}catch(_){}
+      }
+      busy=true; paintMeasurement();
+      try{
+        const url=row?`${encounterUrl(key)}/observations/${row.observation_id}`:`${encounterUrl(key)}/observations`;
+        const payload=row?{...data,row_version:Number(row.row_version)}:data;
+        const response=await fetch(url,{method:row?'PATCH':'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json',...(row?{}:{'Idempotency-Key':createKey})},body:JSON.stringify(payload)});
+        const result=await responseJson(response);
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==patient) return;
+        const saved=result.data;
+        observations=[saved,...observations.filter(item=>Number(item.observation_id)!==Number(saved.observation_id))];
+        fillMeasurement(saved); measurementNotice=result.meta?.idempotency_replay?'Guardado (reintento seguro)':'Guardado';
+      }catch(error){
+        setDraft('measurements',draft);
+        if(error.code==='VERSION_CONFLICT'){
+          measurementLocked=true; hide(measurementConflict,true);
+          retainedMeasurementDraft=draft; measurementDraft.textContent=JSON.stringify(JSON.parse(draft),null,2);
+          q('[data-m7-measurement-use-draft]').disabled=true;
+          try{ const detail=await reloadCurrent(); const server=detail.observations?.find(item=>Number(item.observation_id)===Number(row?.observation_id)); measurementServer.textContent=server?`${catalog[server.code]?.[0]||server.code}: ${server.code==='blood_pressure'?`${server.systolic_mm_hg}/${server.diastolic_mm_hg}`:server.value_numeric} ${server.unit} · ${server.effective_at} · v${server.row_version}`:'Versión guardada no disponible.'; }catch(_){measurementServer.textContent='No se pudo cargar la versión guardada.';}
+        } else if(['ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED'].includes(error.code)){
+          measurementNotice='La consulta terminó. Tu borrador se conserva para copiarlo.';
+          try{terminal(await reloadCurrent());}catch(_){terminal();}
+        } else measurementNotice=error.code==='M6_WRITE_WINDOW_BLOCKED'?'Escrituras pausadas. Tu borrador se conserva.':error.code==='SCHEMA_NOT_READY'?'Esquema no disponible. Tu borrador se conserva.':'No se guardó. Tu borrador se conserva.';
+      }finally{ busy=false; if(key===oldKey){paintMeasurement();paintExam();} }
+    }
+    async function saveExam(){
+      if(mode!=='open'||busy||examLocked||!isDirty()) return;
+      const draft=examSnapshot(); const oldKey=key, oldPatient=patient;
+      const parsed=JSON.parse(draft), payload={systems:{}};
+      for(const [name,item] of Object.entries(parsed)){
+        if(item.state==='NOT_REVIEWED') continue;
+        if(item.state==='ABNORMAL'&&!item.finding.trim()){
+          examSystems.querySelector(`[data-m7-exam-system="${name}"] input`).focus();
+          examState.textContent='Describe cada hallazgo anormal antes de guardar.'; return;
+        }
+        payload.systems[name]=item.state==='ABNORMAL'?{state:'ABNORMAL',finding:item.finding.trim()}:{state:'NORMAL'};
+      }
+      const data={payload_schema_version:1,payload,narrative_text:''};
+      if(examVersion!==null) data.row_version=examVersion;
+      busy=true; paintExam();
+      try{
+        const response=await fetch(`${encounterUrl(key)}/sections/physical_exam`,{method:'PUT',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify(data)});
+        const result=await responseJson(response);
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==patient)return;
+        loadedExam=result.data||{}; examVersion=Number(loadedExam.row_version);
+        baselineExam=examSnapshot(); clearDraft('physical_exam'); examNotice='Guardado';
+      }catch(error){
+        setDraft('physical_exam',draft);
+        if(error.code==='VERSION_CONFLICT'){
+          examLocked=true; hide(examConflict,true);
+          retainedExamDraft=draft; examDraft.textContent=JSON.stringify(JSON.parse(draft),null,2);
+          q('[data-m7-exam-use-draft]').disabled=true;
+          try{const detail=await reloadCurrent(); const server=detail.sections?.physical_exam; examServer.textContent=server?JSON.stringify(server.payload?.systems||{},null,2):'Sin exploración guardada.';}catch(_){examServer.textContent='No se pudo cargar la versión guardada.';}
+        }else if(['ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED'].includes(error.code)){
+          examNotice='La consulta terminó. Tu borrador se conserva para copiarlo.';
+          try{terminal(await reloadCurrent());}catch(_){terminal();}
+        }else examNotice=error.code==='M6_WRITE_WINDOW_BLOCKED'?'Escrituras pausadas. Tu borrador se conserva.':error.code==='SCHEMA_NOT_READY'?'Esquema no disponible. Tu borrador se conserva.':'No se guardó. Tu borrador se conserva.';
+      }finally{busy=false;if(key===oldKey){paintExam();paintMeasurement();}}
+    }
+    Object.entries(catalog).forEach(([name,[label]])=>{ const option=document.createElement('option');option.value=name;option.textContent=label;code.append(option); });
+    Object.entries(systems).forEach(([name,label])=>{
+      const row=document.createElement('div');row.className='m7-exam-row';row.dataset.m7ExamSystem=name;
+      const title=document.createElement('strong');title.textContent=label;
+      const state=document.createElement('select');state.setAttribute('aria-label',`${label}: estado`);
+      [['NOT_REVIEWED','Sin revisión'],['NORMAL','Normal'],['ABNORMAL','Anormal']].forEach(([id,text])=>{const option=document.createElement('option');option.value=id;option.textContent=text;state.append(option);});
+      const finding=document.createElement('input');finding.type='text';finding.placeholder='Describe el hallazgo';finding.setAttribute('aria-label',`${label}: hallazgo anormal`);
+      state.addEventListener('change',()=>{examNotice='';syncExamRow(row);setDraft('physical_exam',examSnapshot());paintExam();});
+      finding.addEventListener('input',()=>{examNotice='';setDraft('physical_exam',examSnapshot());paintExam();});
+      row.append(title,state,finding);examSystems.append(row);
+    });
+    code.addEventListener('change',()=>{measurementNotice='';syncCode();forgetCreateKey();setDraft('measurements',measurementSnapshot());paintMeasurement();});
+    form.addEventListener('input',()=>{measurementNotice='';forgetCreateKey();setDraft('measurements',measurementSnapshot());paintMeasurement();});
+    form.addEventListener('change',()=>{measurementNotice='';forgetCreateKey();setDraft('measurements',measurementSnapshot());paintMeasurement();});
+    form.addEventListener('submit',saveMeasurement);
+    q('[data-m7-measurement-new]').addEventListener('click',()=>{if(isDirty()&&!window.confirm('Tienes una medición sin guardar. ¿Crear otra?'))return;fillMeasurement(null);});
+    q('[data-m7-measurement-reload]').addEventListener('click',async()=>{
+      try{const detail=await reloadCurrent();const row=detail.observations?.find(item=>Number(item.observation_id)===Number(selectedObservation?.observation_id));if(row){observations=detail.observations;fillMeasurement(row);hide(measurementConflict,true);q('[data-m7-measurement-use-draft]').disabled=false;}else{measurementNotice='No se encontró la medición guardada.';paintMeasurement();}}catch(_){measurementNotice='No se pudo cargar la versión guardada.';paintMeasurement();}
+    });
+    q('[data-m7-measurement-use-draft]').addEventListener('click',()=>{
+      if(mode!=='open'||measurementLocked||!retainedMeasurementDraft)return;
+      restore('measurements',retainedMeasurementDraft);setDraft('measurements',measurementSnapshot());
+      hide(measurementConflict,false);paintMeasurement();
+    });
+    examSave.addEventListener('click',saveExam);
+    q('[data-m7-exam-reload]').addEventListener('click',async()=>{
+      try{const detail=await reloadCurrent();clearDraft('physical_exam');load(detail,key,detail.status==='open'?'open':'terminal',false);hide(examConflict,true);q('[data-m7-exam-use-draft]').disabled=mode!=='open';}catch(_){examNotice='No se pudo cargar la versión guardada.';paintExam();}
+    });
+    q('[data-m7-exam-use-draft]').addEventListener('click',()=>{
+      if(mode!=='open'||examLocked||!retainedExamDraft)return;
+      restore('physical_exam',retainedExamDraft);setDraft('physical_exam',examSnapshot());
+      hide(examConflict,false);paintExam();
+    });
+    syncCode();
+    return {load,select,reset,isDirty,remember,isBusy:()=>busy};
+  };
+})();

@@ -9,7 +9,7 @@ const api = readFileSync(resolve(root, 'api/clinical/index.php'), 'utf8');
 const html = readFileSync(resolve(root, 'index.html'), 'utf8');
 const save = ui.slice(ui.indexOf('async function saveSection(){'), ui.indexOf('\n  function reset(){'));
 
-assert.match(ui, /reason:'reason_evolution', assessment:'assessment', plan:'plan'/);
+assert.match(ui, /reason:'reason_evolution'.*assessment:'assessment', plan:'plan'/);
 assert.match(ui, /sectionVersion = row \? Number\(row\.row_version\) : null/);
 assert.match(save, /data\.row_version = expectedVersion/);
 assert.match(save, /method:'PUT'/);
@@ -18,7 +18,7 @@ assert.match(save, /ENCOUNTER_TERMINAL/);
 assert.match(save, /M6_WRITE_WINDOW_BLOCKED/);
 assert.doesNotMatch(save, /\/patients\/\$\{[^}]+\}\/(history|physical-exam)/);
 assert.doesNotMatch(save, /mxmedExplicitStartEncounter|\/finalize|\/observations|\/documents/);
-assert.match(api, /AND section_type IN \('reason_evolution', 'assessment', 'plan'\)/);
+assert.match(api, /AND section_type IN \('reason_evolution', 'assessment', 'plan', 'physical_exam'\)/);
 assert.match(api, /'sections' => \$structuredSections/);
 assert.match(html, /data-m7-section="measurements" disabled/);
 assert.match(html, /data-m7-section="exam" disabled/);

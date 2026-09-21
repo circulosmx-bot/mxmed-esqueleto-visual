@@ -7380,6 +7380,7 @@ try {
             $responseEncounterKey = $encounterKey;
             $rows = [];
             $structuredSections = [];
+            $structuredObservations = [];
             $useV1 = false;
 
             try {
@@ -7415,7 +7416,7 @@ try {
                 if ($useV1) {
                     $sectionQuery = $pdo->prepare("SELECT section_type, payload_schema_version, payload_json, narrative_text, row_version, created_at, updated_at
                         FROM clinical_encounter_sections WHERE encounter_id = :encounter_id
-                        AND section_type IN ('reason_evolution', 'assessment', 'plan')");
+                        AND section_type IN ('reason_evolution', 'assessment', 'plan', 'physical_exam')");
                     $sectionQuery->execute([':encounter_id' => $encounterId]);
                     foreach ($sectionQuery->fetchAll(PDO::FETCH_ASSOC) as $sectionRow) {
                         $type = (string)$sectionRow['section_type'];
@@ -7428,6 +7429,16 @@ try {
                             'created_at' => (string)$sectionRow['created_at'],
                             'updated_at' => (string)$sectionRow['updated_at'],
                         ];
+                    }
+                    $observationQuery = $pdo->prepare('SELECT observation_id, encounter_id, code, value_numeric, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, recorded_at, source, provenance_json, row_version, created_at, updated_at FROM clinical_observations WHERE encounter_id = :encounter_id ORDER BY effective_at DESC, observation_id DESC');
+                    $observationQuery->execute([':encounter_id' => $encounterId]);
+                    foreach ($observationQuery->fetchAll(PDO::FETCH_ASSOC) as $observationRow) {
+                        $observationRow['observation_id'] = (int)$observationRow['observation_id'];
+                        $observationRow['encounter_id'] = (int)$observationRow['encounter_id'];
+                        $observationRow['row_version'] = (int)$observationRow['row_version'];
+                        $observationRow['provenance'] = json_decode((string)$observationRow['provenance_json'], true) ?: [];
+                        unset($observationRow['provenance_json']);
+                        $structuredObservations[] = $observationRow;
                     }
                 }
 
@@ -7502,6 +7513,7 @@ try {
                     'event_datetime' => $eventDatetime,
                     'status' => (string)($encounterRow['status'] ?? 'open'),
                     'sections' => $structuredSections,
+                    'observations' => $structuredObservations,
                     'closed_at' => ($encounterRow['closed_at'] ?? null),
                     'closed_by_user_id' => ($encounterRow['closed_by_user_id'] ?? null),
                     'auto_note_uuid_final' => ($encounterRow['auto_note_uuid_final'] ?? null),
