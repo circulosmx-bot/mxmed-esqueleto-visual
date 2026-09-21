@@ -6123,7 +6123,7 @@ try {
                 'error' => null,
                 'message' => 'no active encounter',
                 'data' => null,
-                'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active'],
+                'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active', 'integrity_v1' => $useV1],
             ], 200);
             return;
         }
@@ -6141,7 +6141,7 @@ try {
                 'status' => 'open',
                 'opened_by_user_id' => (string)($active['opened_by_user_id'] ?? ''),
             ],
-            'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active'],
+            'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/encounters/active', 'integrity_v1' => $useV1],
         ], 200);
         return;
     }

@@ -5283,6 +5283,38 @@
 
               </div>
               <div class="tab-pane fade" id="t-historial-atencion">
+                <section class="m7-workspace" id="m7-workspace" aria-labelledby="m7-workspace-title">
+                  <div class="m7-workspace-head">
+                    <div>
+                      <p class="m7-workspace-eyebrow">Paciente · Consulta</p>
+                      <h3 id="m7-workspace-title">Consulta ambulatoria</h3>
+                      <p class="m7-workspace-status" data-m7-status role="status" aria-live="polite">Selecciona un paciente para consultar su atención.</p>
+                    </div>
+                    <div class="m7-workspace-actions">
+                      <button type="button" class="btn btn-primary d-none" data-m7-start>Iniciar consulta</button>
+                      <button type="button" class="btn btn-outline-primary d-none" data-m7-resume>Continuar consulta</button>
+                      <button type="button" class="btn btn-outline-secondary d-none" data-m7-current>Volver a consulta activa</button>
+                    </div>
+                  </div>
+                  <div class="m7-workspace-error d-none" data-m7-error role="alert"></div>
+                  <div class="m7-workspace-body d-none" data-m7-body>
+                    <p class="m7-workspace-context" data-m7-context></p>
+                    <nav class="m7-workspace-sections" aria-label="Áreas de la consulta">
+                      <button type="button" data-m7-section="reason" disabled>Motivo / Evolución</button>
+                      <button type="button" data-m7-section="measurements" disabled>Mediciones</button>
+                      <button type="button" data-m7-section="exam" disabled>Exploración</button>
+                      <button type="button" data-m7-section="assessment" disabled>Valoración</button>
+                      <button type="button" data-m7-section="plan" disabled>Plan</button>
+                      <button type="button" data-m7-section="documents" disabled>Documentos / Acciones</button>
+                      <button type="button" data-m7-section="finalize" disabled>Finalizar</button>
+                    </nav>
+                    <p class="m7-workspace-note">La captura de estas áreas estará disponible en una etapa posterior. Esta vista no modifica la consulta.</p>
+                  </div>
+                  <div class="m7-workspace-history d-none" data-m7-history>
+                    <h4>Consultas anteriores</h4>
+                    <div data-m7-history-list></div>
+                  </div>
+                </section>
                 <div class="clinical-panel mt-2 p-2">
                   <div id="mm-p10-bar" class="d-none mb-1" style="position:sticky;top:0;z-index:1020;background:rgba(248,249,250,.95);backdrop-filter:saturate(1.2) blur(2px);">
                     <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-1 px-2 mb-0">
@@ -10419,6 +10451,7 @@
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/app.js?v=patientarchive01"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=m7ws01"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>
@@ -11066,63 +11099,19 @@
       if (!safePatientId) {
         return Promise.reject(new Error('No se encontró patient_id activo.'));
       }
-      if (typeof window.mxmedClearSuppressedAutoEncounterContext === 'function') {
-        window.mxmedClearSuppressedAutoEncounterContext(safePatientId);
+      if (typeof window.mxmedExplicitStartEncounter !== 'function') {
+        return Promise.reject(new Error('La autoridad de inicio de consulta no está disponible.'));
       }
-      var lookupRawActive = function () {
-        return fetchJson('/api/clinical/index.php/patients/' + encodeURIComponent(safePatientId) + '/encounters/active', {
-          method: 'GET',
-          headers: buildClinicalHeaders(),
-          credentials: 'same-origin'
-        }).then(function (result) {
-          var resp = result.data;
-          if (!resp || resp.ok !== true || !resp.data || !resp.data.encounter_key) {
-            return null;
-          }
-          return {
-            hasActive: true,
-            encounter_key: String(resp.data.encounter_key || '').trim(),
-            appointment_id: String(resp.data.appointment_id || '').trim(),
-            status: String(resp.data.status || '').trim()
-          };
-        }).catch(function () { return null; });
-      };
-      return lookupRawActive().then(function (rawActive) {
-        if (rawActive && rawActive.hasActive && rawActive.encounter_key) {
-          return rawActive;
+      return window.mxmedExplicitStartEncounter(safePatientId).then(function (encounter) {
+        if (typeof window.mxmedClearSuppressedAutoEncounterContext === 'function') {
+          window.mxmedClearSuppressedAutoEncounterContext(safePatientId);
         }
-        return fetchActiveEncounter(safePatientId);
-      }).then(function (activeState) {
-        if (activeState && activeState.hasActive && activeState.encounter_key) {
-          return activeState;
-        }
-        if (typeof window.mxmedCanStartEncounter === 'function') {
-          var gate = window.mxmedCanStartEncounter(safePatientId, 3);
-          if (gate && gate.allowed === false) {
-            throw new Error('Ya tienes 3 consultas activas. Cierra una consulta antes de iniciar otra.');
-          }
-        }
-        return fetchJson('/api/clinical/index.php/patients/' + encodeURIComponent(safePatientId) + '/encounters', {
-          method: 'POST',
-          headers: buildClinicalHeaders({ 'Content-Type': 'application/json' }),
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            status: 'open',
-            encounter_type: 'outpatient',
-            encounter_dt: formatNowMysql()
-          })
-        }).then(function (result) {
-          var resp = result.data;
-          if (!resp || resp.ok !== true || !resp.data || !resp.data.encounter_key) {
-            throw new Error(String((resp && (resp.message || resp.error)) || 'No se pudo iniciar la consulta.'));
-          }
-          return {
-            hasActive: true,
-            encounter_key: String(resp.data.encounter_key || '').trim(),
-            appointment_id: String(resp.data.appointment_id || '').trim(),
-            status: String(resp.data.status || 'open').trim()
-          };
-        });
+        return {
+          hasActive: true,
+          encounter_key: String(encounter.encounter_key || '').trim(),
+          appointment_id: String(encounter.appointment_id || '').trim(),
+          status: String(encounter.status || 'open').trim()
+        };
       });
     }
 

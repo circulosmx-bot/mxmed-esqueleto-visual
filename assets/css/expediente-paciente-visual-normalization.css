@@ -426,3 +426,36 @@
   }
   #mm_pac_archive_lookup_modal[data-mm-pac-lookup-mode="recent"] .mx-exp-patient-face {font-size:56px}
 }
+#p-expediente .m7-workspace{
+  border:1px solid #c9e1e8;
+  border-radius:16px;
+  background:#fff;
+  padding:18px;
+  margin:8px 0 12px;
+  color:#173b4d;
+}
+#p-expediente .m7-workspace-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+#p-expediente .m7-workspace-head h3{font-size:1.13rem;font-weight:700;margin:0 0 5px;color:#06536e}
+#p-expediente .m7-workspace-eyebrow{margin:0 0 4px;font-size:.78rem;font-weight:700;color:#008f9a;text-transform:uppercase;letter-spacing:.04em}
+#p-expediente .m7-workspace-status,#p-expediente .m7-workspace-context,#p-expediente .m7-workspace-note{margin:0;color:#526976;font-size:.9rem}
+#p-expediente .m7-workspace-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+#p-expediente .m7-workspace-error{margin-top:12px;padding:10px 12px;border:1px solid #e8b5ba;border-radius:10px;color:#a32035;background:#fff5f6}
+#p-expediente .m7-workspace-body{margin-top:16px;border-top:1px solid #e1edf1;padding-top:14px}
+#p-expediente .m7-workspace-context{font-weight:700;color:#06536e;margin-bottom:12px}
+#p-expediente .m7-workspace-sections{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px}
+#p-expediente .m7-workspace-sections button{min-height:44px;border:1px solid #c7e0e5;border-radius:10px;background:#f6fbfc;color:#426477;text-align:left;padding:8px 11px;font-weight:600}
+#p-expediente .m7-workspace-sections button:disabled{opacity:1;cursor:not-allowed}
+#p-expediente .m7-workspace-note{margin-top:10px}
+#p-expediente .m7-workspace-history{margin-top:16px;border-top:1px solid #e1edf1;padding-top:12px}
+#p-expediente .m7-workspace-history h4{font-size:.92rem;font-weight:700;color:#06536e;margin:0 0 8px}
+#p-expediente [data-m7-history-list]{display:flex;flex-wrap:wrap;gap:8px}
+#p-expediente .m7-workspace-history-item{border:1px solid #b9d5dc;border-radius:9px;background:#fff;color:#06536e;min-height:42px;padding:7px 11px}
+#p-expediente .m7-workspace-history-item:hover{background:#effafb}
+#p-expediente .m7-workspace-history-item:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
+@media(max-width:767.98px){
+  #p-expediente .m7-workspace{padding:14px}
+  #p-expediente .m7-workspace-head{flex-direction:column}
+  #p-expediente .m7-workspace-actions{width:100%;justify-content:stretch}
+  #p-expediente .m7-workspace-actions .btn{width:100%;min-height:44px}
+  #p-expediente .m7-workspace-sections{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}
+}

@@ -30463,6 +30463,70 @@ console.info('app.js loaded :: 20251123a');
   window.mxmedClinicalCommandKeys = mxmedCreateClinicalCommandKeyRegistry();
 })();
 
+// M7 WS01: the only frontend START command. All visible entry points delegate here.
+window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
+  const pid = String(patientId || '').trim();
+  if(!pid) throw new Error('Selecciona un paciente antes de iniciar la consulta.');
+  const base = `/api/clinical/index.php/patients/${encodeURIComponent(pid)}/encounters`;
+  const read = async ()=>{
+    const response = await fetch(`${base}/active`, { credentials:'same-origin', headers:{ Accept:'application/json' } });
+    const body = await response.json().catch(()=> null);
+    if(!response.ok || body?.ok !== true){
+      const error = new Error(body?.error?.message || body?.message || 'No se pudo comprobar la consulta activa.');
+      error.code = body?.error?.code || body?.error || 'ACTIVE_LOOKUP_FAILED';
+      throw error;
+    }
+    return { encounter: body?.data?.encounter_key ? body.data : null, integrityV1: body?.meta?.integrity_v1 === true };
+  };
+  const snapshot = await read();
+  if(options.requireV1 === true && !snapshot.integrityV1){
+    const error = new Error('El workspace de consulta aún no está disponible para este contexto.');
+    error.code = 'M7_V1_ROUTE_REQUIRED';
+    throw error;
+  }
+  if(snapshot.encounter) return snapshot.encounter;
+  if(!window.mxmedClinicalCommandKeys?.run) throw new Error('La autoridad de reintentos no está disponible.');
+  let result;
+  try{ result = await window.mxmedClinicalCommandKeys.run(
+    `encounter-start:${pid}`, `START:${pid}:${snapshot.integrityV1 ? 'v1' : 'legacy'}`,
+    ()=> {
+      const now = new Date();
+      const pad = value=> String(value).padStart(2,'0');
+      const datetime = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      return snapshot.integrityV1
+        ? { encounter_dt:datetime, encounter_type:'outpatient' }
+        : { status:'open', encounter_dt:datetime, encounter_type:'outpatient' };
+    },
+    async ({ key, command })=>{
+      const response = await fetch(base, {
+        method:'POST', credentials:'same-origin',
+        headers:{ 'Content-Type':'application/json', Accept:'application/json', 'Idempotency-Key':key },
+        body:JSON.stringify(command)
+      });
+      const body = await response.json().catch(()=> null);
+      if(!response.ok || body?.ok !== true || !body?.data?.encounter_key){
+        const error = new Error(body?.error?.message || body?.message || 'No se pudo iniciar la consulta.');
+        error.code = body?.error?.code || body?.error || 'START_FAILED';
+        throw error;
+      }
+      return body.data;
+    }
+  ); }catch(error){
+    // A concurrent operator may have committed the one OPEN while this request
+    // lost an InnoDB race. Only the authoritative active read can resolve it.
+    for(const delay of [0, 150, 350]){
+      if(delay) await new Promise(resolve=> setTimeout(resolve, delay));
+      try{
+        const accepted = await read();
+        if(accepted.encounter) return accepted.encounter;
+      }catch(_lookupError){ /* Preserve the original START failure. */ }
+    }
+    throw error;
+  }
+  // The server enforces one OPEN per doctor/patient. Re-read its accepted identity.
+  return (await read()).encounter || result;
+};
+
 // P12 clinical context bridge (encounter_key as single source)
 (function(){
   if(window.__mxmedClinicalContextBridgeApplied) return;
@@ -56805,8 +56869,13 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       if(mode === 'start'){
-        if(!p10StartBtn || p10StartBtn.disabled) return;
-        p10StartBtn.click();
+        const m7Start = pane.querySelector('[data-m7-start]');
+        if(m7Start && !m7Start.classList.contains('d-none')){
+          if(!m7Start.disabled){ ev.preventDefault(); m7Start.click(); }
+        }else if(p10StartBtn && !p10StartBtn.disabled){
+          ev.preventDefault();
+          p10StartBtn.click();
+        }
       }
     });
   }
@@ -76764,68 +76833,6 @@ function mxResetLogoPreview(){
       }
       let encounterKey = String(activeJson?.data?.encounter_key || activeJson?.encounter_key || '').trim();
 
-      if(!encounterKey && activeJson?.data === null){
-        if(typeof window.mxmedCanStartEncounter === 'function'){
-          const gate = window.mxmedCanStartEncounter(safePid, 3);
-          if(gate && gate.allowed === false){
-            window.alert('Ya tienes 3 consultas activas. Cierra una consulta antes de iniciar otra.');
-            return null;
-          }
-        }
-        const createUrl = `/api/clinical/index.php/patients/${encodeURIComponent(safePid)}/encounters`;
-        const createJson = await window.mxmedClinicalCommandKeys.run(
-          `encounter-start:${safePid}`,
-          `START:${safePid}`,
-          ()=> ({ status: 'open', encounter_dt: formatDateTime() }),
-          async ({ key, command })=> {
-            const createResp = await fetch(createUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type':'application/json',
-                'Accept':'application/json',
-                'Idempotency-Key': key
-              },
-              credentials: 'same-origin',
-              body: JSON.stringify(command)
-            });
-            const payload = await createResp.json().catch(()=> null);
-            if(!createResp.ok || payload?.ok !== true){
-              const structuredError = (payload?.error && typeof payload.error === 'object') ? payload.error : null;
-              const code = String(structuredError?.code || (typeof payload?.error === 'string' ? payload.error : '') || '').trim();
-              const canonicalErrors = new Set([
-                'IDEMPOTENCY_KEY_REUSED',
-                'INVALID_APPOINTMENT_SCOPE',
-                'SCHEMA_NOT_READY',
-                'unauthorized',
-                'not_found'
-              ]);
-              const error = new Error(String(structuredError?.message || payload?.message || code || `HTTP ${createResp.status}`));
-              error.code = code;
-              error.status = createResp.status;
-              error.data = payload;
-              if(canonicalErrors.has(code)) throw error;
-              throw error;
-            }
-            const resolvedKey = String(payload?.data?.encounter_key || payload?.encounter_key || '').trim();
-            if(!resolvedKey){
-              const invalidResponse = new Error('La respuesta no incluyó un encounter canónico.');
-              invalidResponse.code = 'INVALID_ENCOUNTER_RESPONSE';
-              invalidResponse.status = createResp.status;
-              throw invalidResponse;
-            }
-            return payload;
-          }
-        );
-        const createdEncounter = (createJson?.data && typeof createJson.data === 'object') ? createJson.data : {};
-        encounterKey = String(createdEncounter.encounter_key || createJson?.encounter_key || '').trim();
-        if(window.mxmedStore && typeof window.mxmedStore === 'object'){
-          window.mxmedStore.activeEncounterId = createdEncounter.encounter_id || null;
-          window.mxmedStore.activeEncounterPatientId = createdEncounter.patient_id || safePid;
-          window.mxmedStore.activeEncounterDoctorId = createdEncounter.doctor_id || null;
-          window.mxmedStore.activeEncounterStatus = createdEncounter.status || 'open';
-        }
-      }
-
       if(!encounterKey){
         return null;
       }
@@ -76924,9 +76931,7 @@ function mxResetLogoPreview(){
       finalizeQuickRxReturn();
     }
     const safeOrigin = String(openOrigin || 'search_general').trim().toLowerCase();
-    if(safeOrigin === 'clinical_explicit'){
-      ensureActiveEncounter(pid).catch(()=> null);
-    }
+    // Navigation, including the old clinical_explicit origin, never starts a consultation.
     return true;
   };
 
