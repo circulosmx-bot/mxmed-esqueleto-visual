@@ -2,6 +2,9 @@
 declare(strict_types=1);
 
 function mxmed_json_response($data, int $status = 200): void {
+    if (function_exists('clinical_m6_observability_response') && is_array($data)) {
+        clinical_m6_observability_response($data, $status);
+    }
     http_response_code($status);
     header('Content-Type: application/json; charset=UTF-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -24,4 +27,3 @@ function mxmed_require($value, string $message) {
     if (is_string($value) && trim($value) === '') mxmed_json_response(['ok' => false, 'error' => $message], 400);
     return $value;
 }
-

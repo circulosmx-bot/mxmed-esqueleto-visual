@@ -2,6 +2,7 @@
   ".htaccess",
   "api/_lib/clinical_documents.php",
   "api/_lib/clinical_documents_hospital.php",
+  "api/_lib/clinical_m6_observability.php",
   "api/_lib/db.php",
   "api/_lib/http.php",
   "api/agenda/index.php",
@@ -131,6 +132,7 @@
   "modules/_partials/mm_shell_bottom.php",
   "modules/_partials/mm_shell_top.php",
   "modules/_partials/mxmed-ui.css",
+  "modules/clinical/monitoring/m6_monitoring_rules.json",
   "modules/agenda/adapters/CanonicalAppointmentLifecycleAdapter.php",
   "modules/agenda/adapters/CanonicalAvailabilityCompareAdapter.php",
   "modules/agenda/adapters/CanonicalPublicAgendaAdapter.php",
@@ -678,6 +680,7 @@
   "public/identity/restablecer-acceso.php",
   "public/identity/verificar-correo.php",
   "public/note-capture.html",
+  "scripts/clinical-m6-monitor.php",
   "sepomex-local.php",
   "sepomex-proxy.php"
 ]

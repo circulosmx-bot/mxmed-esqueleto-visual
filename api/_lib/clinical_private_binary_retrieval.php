@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_private_binary_storage.php';
+require_once __DIR__ . '/clinical_m6_observability.php';
 
 /** Internal only: trusted server identity in, verified private stream out. */
 final class ClinicalPrivateBinaryRetrieval
@@ -78,6 +79,7 @@ final class ClinicalPrivateBinaryRetrieval
                 throw new RuntimeException('DOCUMENT_BINARY_INTEGRITY_MISMATCH');
             }
         } catch (Throwable $error) {
+            clinical_m6_observability_storage('PRIVATE_READ_FAILED', false, $error->getMessage());
             if (is_resource($stream)) {
                 fclose($stream);
             }
@@ -87,6 +89,7 @@ final class ClinicalPrivateBinaryRetrieval
             }
             throw $error;
         }
+        clinical_m6_observability_storage('PRIVATE_READ_VERIFIED', true);
         return [
             'document' => [
                 'document_id' => (int)$document['id'], 'document_uuid' => $document['document_uuid'],

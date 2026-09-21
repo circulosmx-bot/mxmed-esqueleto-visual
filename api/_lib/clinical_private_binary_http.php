@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/clinical_m6_observability.php';
+
 /** Pure response metadata; only accepted manifest MIME controls the extension. */
 function clinical_binary_http_headers(array $binary): array
 {
@@ -65,7 +67,9 @@ function clinical_binary_http_send(array $descriptor, array $headers): void
         clinical_binary_http_transfer($descriptor['stream'], $descriptor['binary']['byte_length'],
             static function (string $chunk): void { echo $chunk; },
             static fn(): bool => connection_aborted() !== 0);
-    } catch (Throwable) {
+        clinical_m6_observability_storage('PRIVATE_HTTP_READ', true);
+    } catch (Throwable $error) {
+        clinical_m6_observability_storage('PRIVATE_HTTP_READ_FAILED', false, $error->getMessage());
         error_log('CLINICAL_BINARY_TRANSFER_FAILED');
     } finally {
         if (is_resource($descriptor['stream'])) {

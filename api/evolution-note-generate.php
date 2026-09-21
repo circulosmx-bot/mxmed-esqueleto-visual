@@ -19,6 +19,10 @@ require_once __DIR__ . '/_lib/http.php';
 require_once __DIR__ . '/_lib/db.php';
 require_once __DIR__ . '/_lib/clinical_documents.php';
 require_once __DIR__ . '/_lib/clinical_m6_cutover.php';
+require_once __DIR__ . '/_lib/clinical_m6_observability.php';
+
+clinical_m6_observability_request_started_at();
+clinical_m6_observability_route('C17_EVOLUTION_NOTE', 'CREATE_DOCUMENT', 'GUARDED_LEGACY');
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     mxmed_json_response(['ok' => false, 'error' => 'Método no permitido'], 405);
@@ -26,8 +30,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 
 try { clinical_m6_write_window_admit(); }
 catch (ClinicalM6WriteWindowBlockedException $e) {
+    clinical_m6_observability_route('C17_EVOLUTION_NOTE', 'CREATE_DOCUMENT', 'BLOCKED');
     mxmed_json_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_BLOCKED','message'=>'Clinical writes are temporarily paused.'], 503);
 } catch (ClinicalM6WriteWindowConfigException $e) {
+    clinical_m6_observability_route('C17_EVOLUTION_NOTE', 'CREATE_DOCUMENT', 'BLOCKED');
     mxmed_json_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_CONFIG_INVALID','message'=>'Clinical write control is unavailable.'], 503);
 }
 

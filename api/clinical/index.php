@@ -6,6 +6,9 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../modules/clinical/src/timeline_catalog.php';
 require_once __DIR__ . '/../_lib/clinical_encounter_integrity.php';
 require_once __DIR__ . '/../_lib/clinical_m6_cutover.php';
+require_once __DIR__ . '/../_lib/clinical_m6_observability.php';
+
+clinical_m6_observability_request_started_at();
 
 function clinical_normalize_response($response): array
 {
@@ -86,6 +89,13 @@ function clinical_send_response($response, ?int $status = null): void
 
     http_response_code($status);
 
+    if (!isset($GLOBALS['clinical_m6_observability_route'])) {
+        $meta = is_object($response['meta'] ?? null) ? (array)$response['meta'] : (array)($response['meta'] ?? []);
+        clinical_m6_observability_route((string)($meta['route'] ?? 'clinical'),
+            (string)($meta['method'] ?? ($_SERVER['REQUEST_METHOD'] ?? 'unknown')), 'UNCLASSIFIED');
+    }
+    clinical_m6_observability_response($response, $status);
+
     $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     if ($json === false) {
         http_response_code(500);
@@ -132,6 +142,8 @@ function clinical_documents_send_patient_write_error(ClinicalDocumentsPatientWri
 
 function clinical_m6_send_legacy_write_blocked(array $meta): void
 {
+    clinical_m6_observability_route((string)($meta['route'] ?? 'clinical'),
+        (string)($meta['method'] ?? 'write'), 'BLOCKED');
     clinical_send_response([
         'ok' => false,
         'error' => 'M6_LEGACY_WRITE_BLOCKED',
@@ -143,6 +155,8 @@ function clinical_m6_send_legacy_write_blocked(array $meta): void
 
 function clinical_m6_send_cohort_config_invalid(array $meta): void
 {
+    clinical_m6_observability_route((string)($meta['route'] ?? 'clinical'),
+        (string)($meta['method'] ?? 'write'), 'BLOCKED');
     clinical_send_response([
         'ok' => false,
         'error' => 'M6_COHORT_CONFIG_INVALID',
@@ -159,11 +173,13 @@ function clinical_m6_v1_master_enabled_for_route(): bool
 
 function clinical_m6_patient_route_uses_v1(array $doctorContext, string $patientId): bool
 {
-    return clinical_m6_v1_route_enabled_for_pair(
+    $selected = clinical_m6_v1_route_enabled_for_pair(
         clinical_m6_v1_master_enabled_for_route(),
         trim((string)($doctorContext['doctor_id'] ?? '')),
         trim($patientId)
     );
+    clinical_m6_observability_route('PATIENT_CLINICAL', 'ROUTE_SELECT', $selected ? 'CANONICAL_V1' : 'GUARDED_LEGACY');
+    return $selected;
 }
 
 function clinical_m6_send_v1_route_unavailable(string $route): void
@@ -3556,6 +3572,7 @@ function clinical_resolve_encounter_key(PDO $pdo, string $encounterKey): array
 function clinical_m6_encounter_route_uses_v1(PDO $pdo, string $encounterKey, array $doctorContext): bool
 {
     if (!clinical_m6_v1_master_enabled_for_route()) {
+        clinical_m6_observability_route('ENCOUNTER_CLINICAL', 'ROUTE_SELECT', 'GUARDED_LEGACY');
         return false;
     }
 
@@ -3575,7 +3592,9 @@ function clinical_m6_encounter_route_uses_v1(PDO $pdo, string $encounterKey, arr
         return false;
     }
 
-    return clinical_m6_v1_route_enabled_for_pair(true, $sessionDoctorId, $storedPatientId);
+    $selected = clinical_m6_v1_route_enabled_for_pair(true, $sessionDoctorId, $storedPatientId);
+    clinical_m6_observability_route('ENCOUNTER_CLINICAL', 'ROUTE_SELECT', $selected ? 'CANONICAL_V1' : 'GUARDED_LEGACY');
+    return $selected;
 }
 
 function clinical_m6_document_patient_id(PDO $pdo, string $documentToken): ?string
@@ -3603,6 +3622,7 @@ function clinical_m6_document_patient_id(PDO $pdo, string $documentToken): ?stri
 function clinical_m6_document_route_uses_v1(PDO $pdo, string $documentToken, array $doctorContext): bool
 {
     if (!clinical_m6_v1_master_enabled_for_route()) {
+        clinical_m6_observability_route('DOCUMENT_CLINICAL', 'ROUTE_SELECT', 'GUARDED_LEGACY');
         return false;
     }
 
@@ -3611,11 +3631,13 @@ function clinical_m6_document_route_uses_v1(PDO $pdo, string $documentToken, arr
         return false;
     }
 
-    return clinical_m6_v1_route_enabled_for_pair(
+    $selected = clinical_m6_v1_route_enabled_for_pair(
         true,
         trim((string)($doctorContext['doctor_id'] ?? '')),
         $patientId
     );
+    clinical_m6_observability_route('DOCUMENT_CLINICAL', 'ROUTE_SELECT', $selected ? 'CANONICAL_V1' : 'GUARDED_LEGACY');
+    return $selected;
 }
 
 function clinical_encounters_create(
@@ -4294,11 +4316,13 @@ try {
         try {
             clinical_m6_write_window_admit();
         } catch (ClinicalM6WriteWindowBlockedException $e) {
+            clinical_m6_observability_route($route, $method, 'BLOCKED');
             clinical_send_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_BLOCKED',
                 'message'=>'Clinical writes are temporarily paused.','data'=>null,
                 'meta'=>['method'=>$method,'route'=>$route]], $e->httpStatus());
             return;
         } catch (ClinicalM6WriteWindowConfigException $e) {
+            clinical_m6_observability_route($route, $method, 'BLOCKED');
             clinical_send_response(['ok'=>false,'error'=>'M6_WRITE_WINDOW_CONFIG_INVALID',
                 'message'=>'Clinical write control is unavailable.','data'=>null,
                 'meta'=>['method'=>$method,'route'=>$route]], 503);
@@ -7118,6 +7142,10 @@ try {
                     $documentClass=clinical_v1_document_class($payload);
                     $createOperation=clinical_document_create_operation($documentClass);
                     $policyOperation=clinical_document_policy_operation($documentClass);
+                    $observedOperation = $createOperation === 'CREATE_POST_ENCOUNTER_RESULT'
+                        ? 'C05_RESULT_CREATE'
+                        : ($policyOperation === 'CREATE_ORDER' ? 'C05_ORDER_CREATE' : 'C04_C05_ENCOUNTER_DOCUMENT');
+                    clinical_m6_observability_route('ENCOUNTER_DOCUMENT', $observedOperation, 'CANONICAL_V1');
                     $isPostResult=$createOperation==='CREATE_POST_ENCOUNTER_RESULT';
                     $validOrder=$isPostResult?clinical_v1_originating_order_valid($pdo,$payload,$encounterRow):false;
                     $policyContext=['same_patient'=>true,'valid_originating_order'=>$validOrder,
@@ -8224,10 +8252,12 @@ try {
                             $policyContext
                         );
                     } else {
+                        clinical_m6_observability_route('C21_TOKEN_UPLOAD', 'PATIENT_UPLOAD', 'GUARDED_LEGACY');
                         $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
                     }
                 } else {
                     // A genuinely encounter-less token keeps the existing patient-level authority.
+                    clinical_m6_observability_route('C21_TOKEN_UPLOAD', 'PATIENT_UPLOAD', 'PATIENT_LEVEL_C04');
                     $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
                 }
             } catch (ClinicalM6LegacyWriteBlockedException $e) {
@@ -8388,6 +8418,7 @@ try {
 
     if (($segments[0] ?? '') === 'doctors') {
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
+            clinical_m6_observability_route('C04_PATIENT_DOCUMENT', 'CREATE_DOCUMENT', 'PATIENT_LEVEL_C04');
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
             $meta = [

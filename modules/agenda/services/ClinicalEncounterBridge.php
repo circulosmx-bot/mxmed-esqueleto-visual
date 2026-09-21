@@ -4,6 +4,7 @@ namespace Agenda\Services;
 use RuntimeException;
 
 require_once dirname(__DIR__, 3) . '/api/_lib/clinical_m6_cutover.php';
+require_once dirname(__DIR__, 3) . '/api/_lib/clinical_m6_observability.php';
 
 class ClinicalEncounterBridge
 {
@@ -44,6 +45,7 @@ class ClinicalEncounterBridge
         }
 
         // M6_CALLER01_C14_COHORT_BRIDGE_BLOCK
+        \clinical_m6_observability_route('AGENDA_CLINICAL_BRIDGE', 'START', 'GUARDED_LEGACY');
         $this->assertM6ClinicalBridgeAllowed($patientId);
 
         if ($this->encounterExistsForAppointment($patientId, $appointmentId)) {
@@ -73,9 +75,11 @@ class ClinicalEncounterBridge
 
         $result = $this->httpJson('POST', $url, $payload);
         if (($result['ok'] ?? false) !== true) {
+            \clinical_m6_observability_emit('agenda_bridge', ['outcome'=>'failure','http_status'=>(int)($result['status']??0)]);
             $msg = trim((string)($result['message'] ?? 'clinical bridge post failed'));
             throw new RuntimeException($msg !== '' ? $msg : 'clinical bridge post failed');
         }
+        \clinical_m6_observability_emit('agenda_bridge', ['outcome'=>'success','http_status'=>(int)($result['status']??200)]);
     }
 
     private function assertM6ClinicalBridgeAllowed(string $patientId): void
@@ -84,17 +88,24 @@ class ClinicalEncounterBridge
             \clinical_m6_write_window_assert_bridge_open();
             $blocked = \clinical_m6_legacy_write_block_required($patientId);
         } catch (\ClinicalM6WriteWindowBlockedException|\ClinicalM6WriteWindowConfigException $e) {
+            \clinical_m6_observability_route('AGENDA_CLINICAL_BRIDGE', 'START', 'BLOCKED');
+            \clinical_m6_observability_emit('agenda_bridge', ['outcome'=>'expected_protection','error_identity'=>'M6_WRITE_WINDOW_BLOCKED']);
             throw new RuntimeException('M6_AGENDA_CLINICAL_BRIDGE_PAUSED', 0, $e);
         } catch (\ClinicalM6CohortConfigException $e) {
+            \clinical_m6_observability_route('AGENDA_CLINICAL_BRIDGE', 'START', 'BLOCKED');
+            \clinical_m6_observability_emit('agenda_bridge', ['outcome'=>'failure','error_identity'=>'M6_COHORT_CONFIG_INVALID']);
             throw new RuntimeException('M6_AGENDA_CLINICAL_BRIDGE_BLOCKED', 0, $e);
         }
         if ($blocked) {
+            \clinical_m6_observability_route('AGENDA_CLINICAL_BRIDGE', 'START', 'BLOCKED');
+            \clinical_m6_observability_emit('agenda_bridge', ['outcome'=>'expected_protection','error_identity'=>'M6_LEGACY_WRITE_BLOCKED']);
             throw new RuntimeException('M6_AGENDA_CLINICAL_BRIDGE_BLOCKED');
         }
     }
 
     private function encounterExistsForAppointment(string $patientId, string $appointmentId): bool
     {
+        \clinical_m6_observability_emit('agenda_read', ['outcome'=>'attempted']);
         $url = $this->apiBase
             . '/api/clinical/index.php/patients/' . rawurlencode($patientId)
             . '/encounters?limit=100';

@@ -80,6 +80,7 @@ function clinical_m6_write_window_reconcile_leases_locked(): int
             fclose($lease);
             throw new ClinicalM6WriteWindowConfigException();
         }
+        $GLOBALS['clinical_m6_write_window_stale_recovered'] = (int)($GLOBALS['clinical_m6_write_window_stale_recovered'] ?? 0) + 1;
         flock($lease, LOCK_UN);
         fclose($lease);
     }
@@ -129,6 +130,7 @@ function clinical_m6_write_window_status(): array
         $state = clinical_m6_write_window_read_locked($handle);
         $state['active_writers'] = clinical_m6_write_window_reconcile_leases_locked();
         $state['live_writer_leases'] = $state['active_writers'];
+        $state['stale_leases_recovered'] = (int)($GLOBALS['clinical_m6_write_window_stale_recovered'] ?? 0);
     }
     finally { flock($handle, LOCK_UN); fclose($handle); }
     $state['authority'] = 'locked_file_v2_crash_safe_leases';
@@ -231,6 +233,11 @@ function clinical_m6_write_window_set_state(string $next): array
     $state['active_writers'] = $live;
     $state['live_writer_leases'] = $live;
     $state['authority'] = 'locked_file_v2_crash_safe_leases';
+    $state['stale_leases_recovered'] = (int)($GLOBALS['clinical_m6_write_window_stale_recovered'] ?? 0);
+    if (function_exists('clinical_m6_observability_emit')) {
+        clinical_m6_observability_emit('write_window_state_change', ['outcome'=>'success',
+            'state'=>$next,'live_writer_leases'=>$live,'stale_leases_recovered'=>$state['stale_leases_recovered']]);
+    }
     return $state;
 }
 

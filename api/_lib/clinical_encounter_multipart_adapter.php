@@ -35,6 +35,8 @@ function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array 
     array $payload, string $createOperation, string $policyOperation, string $documentClass,
     array $policyContext, array $files, string $idempotencyKey): array
 {
+    $family = $createOperation === 'CREATE_POST_ENCOUNTER_RESULT' ? 'C05_RESULT_CREATE' : 'C04_C05_ENCOUNTER_DOCUMENT';
+    clinical_m6_observability_route($family, $createOperation, 'CANONICAL_V1');
     $file = clinical_encounter_multipart_file($files);
     [$root, $ttl] = clinical_encounter_multipart_config();
     try {
@@ -80,6 +82,7 @@ function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array 
 function clinical_document_amendment_multipart_execute(PDO $pdo, array $original, array $command,
     array $doctor, array $files, string $idempotencyKey): array
 {
+    clinical_m6_observability_route('C05_REPLACEMENT', 'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT', 'CANONICAL_V1');
     $file = clinical_encounter_multipart_file($files);
     [$root, $ttl] = clinical_encounter_multipart_config();
     try {

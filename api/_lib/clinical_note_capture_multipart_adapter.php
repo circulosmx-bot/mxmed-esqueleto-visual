@@ -43,6 +43,7 @@ function clinical_note_capture_multipart_execute(
     string $documentClass,
     array $policyContext
 ): array {
+    clinical_m6_observability_route('C21_TOKEN_UPLOAD', $createOperation, 'CANONICAL_V1');
     $doctorId = trim((string)($encounter['doctor_id'] ?? ''));
     if ($doctorId === '') {
         throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/clinical_idempotency.php';
 require_once __DIR__ . '/clinical_private_binary_storage.php';
 require_once __DIR__ . '/clinical_multipart_storage_schema.php';
+require_once __DIR__ . '/clinical_m6_observability.php';
 
 /** Internal server input only. Authorization and clinical policy belong to the caller. */
 function clinical_multipart_semantic_request(array $context, array $binary): array
@@ -203,7 +204,14 @@ final class ClinicalMultipartDocumentService
         // Validate context before performing filesystem writes; real binary identity follows staging.
         clinical_multipart_semantic_request($context, ['sha256' => str_repeat('0', 64), 'byte_length' => 1, 'mime_type' => 'application/pdf']);
         clinical_multipart_storage_assert_schema_ready($this->pdo);
-        $binary = $this->storage->stageFile($sourcePath, $sourceFilename);
+        clinical_m6_observability_storage('STAGING_BEGIN', true);
+        try {
+            $binary = $this->storage->stageFile($sourcePath, $sourceFilename);
+            clinical_m6_observability_storage('STAGING_COMPLETE', true);
+        } catch (Throwable $error) {
+            clinical_m6_observability_storage('STAGING_FAILED', false, $error->getMessage());
+            throw $error;
+        }
         $semantic = clinical_multipart_semantic_request($context, $binary);
         $requestHash = clinical_idempotency_request_hash($semantic);
         $uploadId = ClinicalPrivateBinaryStorage::uuidV4();
@@ -289,7 +297,9 @@ final class ClinicalMultipartDocumentService
             $finalAttempted = true;
             $this->storage->finalizeCreateOnly($binary['staging_key'], $finalKey, $binary['sha256'], $binary['byte_length']);
             $finalCreated = true;
+            clinical_m6_observability_storage('FINAL_OBJECT_COMMIT', true);
             $this->binaries->insertOriginal($documentId, $binaryUuid, $finalKey, $binary);
+            clinical_m6_observability_storage('MANIFEST_COMMIT', true);
             $this->uploads->finalize($uploadId, $requestId, $documentId);
             $this->requests->complete($requestId, $resultColumn, $resultId);
             $resource = $fetchResource($this->pdo, $resultColumn, $resultId);
@@ -299,6 +309,7 @@ final class ClinicalMultipartDocumentService
             $commitAttempted = true;
             $this->commit();
         } catch (Throwable $error) {
+            clinical_m6_observability_storage($finalAttempted ? 'FINAL_OR_MANIFEST_FAILED' : 'COORDINATION_FAILED', false, $error->getMessage());
             $rollbackConfirmed = $this->rollbackConfirmed();
             $state = 'STAGED';
             $code = 'MULTIPART_PRECOMMIT_FAILED';
@@ -331,6 +342,7 @@ final class ClinicalMultipartDocumentService
         }
         // Outside the pre-commit catch: cleanup failure cannot roll back success.
         $cleanupPending = !$this->cleanupCommittedStaging($uploadId, $binary['staging_key']);
+        clinical_m6_observability_emit('clinical_writer', ['outcome'=>'success','replay'=>false,'storage_cleanup_pending'=>$cleanupPending]);
         return array_merge($resource, ['_idempotency_replay' => false, 'cleanup_pending' => $cleanupPending]);
     }
 
@@ -358,6 +370,7 @@ final class ClinicalMultipartDocumentService
             throw $error;
         }
         $cleaned = $this->cleanupRedundantStaging($uploadId, $binary['staging_key']);
+        clinical_m6_observability_emit('clinical_writer', ['outcome'=>'success','replay'=>true,'storage_cleanup_pending'=>!$cleaned]);
         return array_merge($resource, ['_idempotency_replay' => true, 'cleanup_pending' => !$cleaned]);
     }
 

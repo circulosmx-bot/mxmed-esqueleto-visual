@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "rules": [
+    {"id":"unexpected_fallback","type":"zero","metric":"unexpected_fallback_count","action":"EMERGENCY_HALT"},
+    {"id":"parallel_writer","type":"zero","metric":"parallel_writer_evidence_count","action":"EMERGENCY_HALT"},
+    {"id":"invalid_gate_config","type":"error_zero","error":"M6_COHORT_CONFIG_INVALID","action":"EMERGENCY_HALT"},
+    {"id":"context_mismatch","type":"error_zero","error":"DOCUMENT_CONTEXT_MISMATCH","action":"DEACTIVATE"},
+    {"id":"visibility","type":"freshness","max_age_seconds":300,"action":"HOLD"},
+    {"id":"visibility_loss","type":"health","action":"EMERGENCY_HALT"},
+    {"id":"server_errors","type":"count","status":"500","maximum":0,"action":"DEACTIVATE"},
+    {"id":"route_latency","type":"latency","maximum_ms":null,"action":"HOLD"}
+  ],
+  "action_precedence":["CONTINUE","HOLD","DEACTIVATE","EMERGENCY_HALT","ESCALATE_SAFE_RETURN"]
+}
