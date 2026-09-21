@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../modules/clinical/src/timeline_catalog.php';
 require_once __DIR__ . '/../_lib/clinical_encounter_integrity.php';
 require_once __DIR__ . '/../_lib/clinical_m6_cutover.php';
 require_once __DIR__ . '/../_lib/clinical_m6_observability.php';
+require_once __DIR__ . '/../_lib/clinical_longitudinal_antecedents.php';
 
 clinical_m6_observability_request_started_at();
 
@@ -4348,6 +4349,42 @@ try {
                 'meta'=>['method'=>$method,'route'=>$route]], 503);
             return;
         }
+    }
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal'
+        && in_array($segments[3] ?? '', ['antecedents','antecedent-reviews','allergies','allergy-reviews'], true)) {
+        $routeName='patients/{patient_id}/longitudinal/{resource}';
+        $context=clinical_require_doctor_context($routeName);
+        if ($context===null) return;
+        $patientId=trim(rawurldecode((string)($segments[1]??'')));
+        $resource=(string)$segments[3];
+        $count=count($segments);
+        $itemId=null;
+        $history=false;
+        if ($count===5 && $segments[4]!=='history') {
+            if (!ctype_digit((string)$segments[4]) || (int)$segments[4]<1) {
+                clinical_send_response(['ok'=>false,'error'=>'bad_request','message'=>'invalid id','meta'=>['route'=>$routeName]],400);return;
+            }
+            $itemId=(int)$segments[4];
+        } elseif ($count===5 && $segments[4]==='history') $history=true;
+        elseif ($count===6 && ctype_digit((string)$segments[4]) && $segments[5]==='history') {
+            $itemId=(int)$segments[4];$history=true;
+        } elseif ($count!==4) {clinical_send_response(['ok'=>false,'error'=>'not_found','meta'=>['route'=>$routeName]],404);return;}
+        try {
+            $service=new ClinicalLongitudinalAntecedents(clinical_documents_pdo());
+            if ($method==='GET') $data=$service->read($resource,$context['doctor_id'],$patientId,$itemId,$history);
+            elseif (($method==='POST' && $count===4) || ($method==='PATCH' && $count===5 && $itemId!==null)) {
+                $key=trim((string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                $raw=file_get_contents('php://input');
+                $body=json_decode((string)$raw,true);
+                if (!is_array($body) || array_is_list($body)) throw new ClinicalLongitudinalException('INVALID_BODY',400);
+                $data=$service->mutate($resource,$context['doctor_id'],$patientId,$context['user_id'],
+                    $method==='POST'?'CREATE':'UPDATE',$body,$key,$itemId);
+            } else {clinical_send_response(['ok'=>false,'error'=>'not_found','meta'=>['route'=>$routeName]],404);return;}
+            clinical_send_response(['ok'=>true,'data'=>$data,'meta'=>['route'=>$routeName,'method'=>$method]],200);
+        } catch (ClinicalLongitudinalException $e) {
+            clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->errorCode,'meta'=>['route'=>$routeName]],$e->httpStatus);
+        }
+        return;
     }
     $isTimelineRoute = ($method === 'GET'
         && ($segments[0] ?? '') === 'patients'
