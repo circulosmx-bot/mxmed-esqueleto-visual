@@ -63,16 +63,18 @@
     const antecedents = $('[data-lon02-antecedents]');
     const allergyTarget = $('[data-lon02-allergies]');
     const problemsTarget = $('[data-lon02-problems]');
+    const medicationsTarget = $('[data-lon02-medications]');
     antecedents.textContent = 'Cargando estado revisado…';
     allergyTarget.textContent = 'Cargando estado revisado…';
     problemsTarget.textContent = 'Cargando problemas…';
+    medicationsTarget.textContent = 'Cargando medicación…';
     async function read(resource) {
       const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/longitudinal/${resource}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result.data || {};
     }
-    const [facts, allergies, problems] = await Promise.allSettled([read('antecedents'),read('allergies'),read('problems')]);
+    const [facts, allergies, problems, medications] = await Promise.allSettled([read('antecedents'),read('allergies'),read('problems'),read('medications')]);
     if (request !== epoch || patient() !== id) return;
     antecedents.replaceChildren();
     if (facts.status !== 'fulfilled') antecedents.textContent = 'Estado no disponible.';
@@ -109,6 +111,18 @@
       const active = (problems.value.items || []).filter(row => row.status === 'ACTIVE');
       if (active.length) active.forEach(row => line(problemsTarget, row.label, `Activo · actualizado ${date(row.updated_at)}`));
       else problemsTarget.textContent = 'Sin problemas activos registrados. Esto no confirma ausencia clínica; consulta Problemas para ver los inactivos y resueltos.';
+    }
+    medicationsTarget.replaceChildren();
+    if (medications.status !== 'fulfilled') medicationsTarget.textContent = 'Estado no disponible.';
+    else {
+      const rows = medications.value.items || [];
+      const current = rows.filter(row => row.state === 'ACTIVE_CONFIRMED');
+      const reported = rows.filter(row => row.state === 'REPORTED_BY_PATIENT');
+      const prescribed = rows.filter(row => row.state === 'PRESCRIBED_NOT_CONFIRMED_ACTIVE');
+      current.forEach(row => line(medicationsTarget, row.medication_name, 'Uso actual confirmado por el clínico.'));
+      reported.forEach(row => line(medicationsTarget, row.medication_name, 'Referido por el paciente; no confirmado como uso actual.'));
+      prescribed.forEach(row => line(medicationsTarget, row.medication_name, 'Prescrito; uso actual no confirmado.'));
+      if (!current.length && !reported.length && !prescribed.length) medicationsTarget.textContent = 'Sin medicación actual confirmada en el registro longitudinal. Esto no confirma que el paciente no tome medicamentos.';
     }
   }
   async function load() {

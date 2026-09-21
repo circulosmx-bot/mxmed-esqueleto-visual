@@ -98,6 +98,11 @@
       const actions = document.createElement('div'); actions.className = 'm7-doc-card-actions';
       if (row.has_private_binary == 1) { const read = document.createElement('button'); read.type = 'button'; read.className = 'btn btn-outline-primary btn-sm'; read.textContent = 'Abrir archivo'; read.addEventListener('click', () => privateRead(row)); actions.append(read); }
       if (available() && row.has_successor != 1 && payloadOf(row).auto_generated !== true) { const replace = document.createElement('button'); replace.type = 'button'; replace.className = 'btn btn-outline-secondary btn-sm'; replace.textContent = 'Reemplazar'; replace.addEventListener('click', () => { selectedReplacement = row; $('[data-m7-replace-target]').textContent = row.title || documentLabel(row); show(replaceForm, true); replaceForm.scrollIntoView({ block:'nearest' }); }); actions.append(replace); }
+      if (sameContext() && ['prescription','receta'].includes(String(row.document_type || '').toLowerCase()) && ['generated','signed'].includes(String(row.status || '').toLowerCase()) && row.has_successor != 1) {
+        const addMedication = document.createElement('button'); addMedication.type = 'button'; addMedication.className = 'btn btn-outline-primary btn-sm'; addMedication.textContent = 'Agregar a medicación';
+        addMedication.addEventListener('click', () => root.dispatchEvent(new CustomEvent('lon05b:prescription-selected', {bubbles:true,detail:{documentId:Number(row.id),patientId:context.patientId,title:row.title || 'Receta',trigger:addMedication}})));
+        actions.append(addMedication);
+      }
       node.append(actions); return node;
     }
     function paint() {

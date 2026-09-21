@@ -4503,6 +4503,7 @@
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-resumen-longitudinal" data-tab-key="t-resumen-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">summarize</span><span class="tab-lbl">Resumen</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-antecedentes-longitudinal" data-tab-key="t-antecedentes-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">fact_check</span><span class="tab-lbl">Antecedentes</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-problemas-longitudinal" data-tab-key="t-problemas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Problemas</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-medicamentos-longitudinal" data-tab-key="t-medicamentos-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">medication</span><span class="tab-lbl">Medicamentos</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
@@ -4547,7 +4548,8 @@
                     <section class="lon02-card"><h4>Antecedentes revisados</h4><div data-lon02-antecedents>Estado no disponible.</div></section>
                     <section class="lon02-card"><h4>Alergias revisadas</h4><div data-lon02-allergies>Estado no disponible.</div></section>
                     <section class="lon02-card"><h4>Problemas activos</h4><div data-lon02-problems>Estado no disponible.</div></section>
-                    <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Medicación actual y seguimiento clínico: autoridad longitudinal no disponible todavía. Las recetas y citas previas no confirman estos estados.</p><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
+                    <section class="lon02-card"><h4>Medicación actual</h4><div data-lon02-medications>Estado no disponible.</div></section>
+                    <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Seguimiento clínico: autoridad longitudinal no disponible todavía. Las citas previas no confirman este estado.</p><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
                   </div>
                 </section>
               </div>
@@ -4592,6 +4594,31 @@
                     <div data-lon04b-reason-wrap class="d-none"><label for="lon04b-reason">Motivo clínico</label><input id="lon04b-reason" maxlength="255" data-lon04b-reason></div>
                     <div class="lon04b-conflict d-none" data-lon04b-conflict role="alert"><p>El problema cambió en otra sesión. Tu borrador permanece en el formulario.</p><p data-lon04b-server-state></p><button type="button" class="btn btn-outline-primary btn-sm" data-lon04b-reload>Recargar y descartar mi borrador</button></div>
                     <p class="lon04b-form-error d-none" data-lon04b-form-error role="alert" tabindex="-1"></p><div class="lon04b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon04b-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-lon04b-save>Confirmar</button></div>
+                  </form></dialog>
+                </section>
+              </div>
+
+              <div class="tab-pane fade" id="t-medicamentos-longitudinal">
+                <section class="lon05b" id="lon05b-medications" aria-labelledby="lon05b-title">
+                  <div class="lon05b-head"><div><p class="m7-workspace-eyebrow">Paciente · Estado longitudinal</p><h3 id="lon05b-title" tabindex="-1">Medicación actual</h3><p>Sólo la medicación confirmada por el clínico representa uso actual confirmado.</p></div><div class="lon05b-head-actions"><button type="button" class="btn btn-primary" data-lon05b-add-reported>Agregar referido por paciente</button><button type="button" class="btn btn-outline-primary" data-lon05b-add-clinician>Agregar medicación confirmada</button><button type="button" class="btn btn-outline-primary" data-lon05b-reconcile>Reconciliar medicamentos</button><button type="button" class="btn btn-outline-secondary" data-lon05b-history>Ver conciliaciones</button><button type="button" class="btn btn-outline-secondary" data-lon05b-refresh>Actualizar</button></div></div>
+                  <p data-lon05b-status role="status" aria-live="polite">Selecciona un paciente para ver su medicación.</p><div class="m7-workspace-error d-none" data-lon05b-error role="alert"></div>
+                  <div class="lon05b-history d-none" data-lon05b-reconciliation-history></div>
+                  <div class="lon05b-groups d-none" data-lon05b-groups>
+                    <section class="lon05b-group" aria-labelledby="lon05b-confirmed-title"><h4 id="lon05b-confirmed-title">Confirmada como actual</h4><p>Uso actual confirmado explícitamente por el clínico.</p><div data-lon05b-active-confirmed></div></section>
+                    <section class="lon05b-group" aria-labelledby="lon05b-reported-title"><h4 id="lon05b-reported-title">Referida por el paciente</h4><p>Uso referido; pendiente de confirmación clínica.</p><div data-lon05b-reported-by-patient></div></section>
+                    <section class="lon05b-group" aria-labelledby="lon05b-prescribed-title"><h4 id="lon05b-prescribed-title">Prescrita, uso no confirmado</h4><p>La receta no confirma que el paciente la esté tomando.</p><div data-lon05b-prescribed-not-confirmed-active></div></section>
+                    <section class="lon05b-group" aria-labelledby="lon05b-discontinued-title"><h4 id="lon05b-discontinued-title">Suspendida</h4><div data-lon05b-discontinued></div></section>
+                    <section class="lon05b-group" aria-labelledby="lon05b-completed-title"><h4 id="lon05b-completed-title">Tratamiento completado</h4><div data-lon05b-completed></div></section>
+                  </div>
+                  <dialog class="lon05b-dialog" data-lon05b-dialog aria-labelledby="lon05b-dialog-title"><form data-lon05b-form novalidate><h4 id="lon05b-dialog-title" data-lon05b-dialog-title></h4><p data-lon05b-context></p>
+                    <div data-lon05b-regimen><label for="lon05b-name">Medicamento</label><input id="lon05b-name" maxlength="500" data-lon05b-name required><div class="lon05b-fields"><div><label for="lon05b-dose">Dosis</label><input id="lon05b-dose" maxlength="128" data-lon05b-dose></div><div><label for="lon05b-unit">Unidad</label><input id="lon05b-unit" maxlength="64" data-lon05b-unit></div><div><label for="lon05b-route">Vía</label><input id="lon05b-route" maxlength="128" data-lon05b-route></div><div><label for="lon05b-frequency">Frecuencia</label><input id="lon05b-frequency" maxlength="255" data-lon05b-frequency></div></div><label for="lon05b-started">Inicio conocido, si aplica</label><input id="lon05b-started" type="datetime-local" data-lon05b-started></div>
+                    <div class="d-none" data-lon05b-reason-wrap><label for="lon05b-reason">Motivo clínico</label><input id="lon05b-reason" maxlength="255" data-lon05b-reason></div>
+                    <div class="lon05b-conflict d-none" data-lon05b-conflict role="alert"><p>El episodio cambió en otra sesión. Tu borrador permanece sin cambios.</p><p data-lon05b-server-state></p><button type="button" class="btn btn-outline-primary btn-sm" data-lon05b-reload>Recargar y descartar mi borrador</button></div>
+                    <p class="lon05b-form-error d-none" data-lon05b-form-error role="alert" tabindex="-1"></p><div class="lon05b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon05b-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-lon05b-save>Confirmar</button></div>
+                  </form></dialog>
+                  <dialog class="lon05b-dialog lon05b-reconcile-dialog" data-lon05b-reconcile-dialog aria-labelledby="lon05b-reconcile-title"><form data-lon05b-reconcile-form novalidate><h4 id="lon05b-reconcile-title" tabindex="-1">Reconciliar medicamentos</h4><p>Revisa la lista cargada del servidor. Sólo las decisiones elegidas se enviarán en una operación atómica.</p><p data-lon05b-reconcile-version></p><div data-lon05b-reconcile-items></div><label for="lon05b-reconcile-add">Agregar un medicamento durante esta revisión, si aplica</label><input id="lon05b-reconcile-add" maxlength="500" data-lon05b-reconcile-add placeholder="Nombre del medicamento"><label for="lon05b-reconcile-note">Nota de conciliación, si aplica</label><input id="lon05b-reconcile-note" maxlength="1000" data-lon05b-reconcile-note>
+                    <div class="lon05b-conflict d-none" data-lon05b-reconcile-conflict role="alert"><p>La lista cambió en otra sesión. Tus decisiones permanecen visibles.</p><p data-lon05b-reconcile-server-state></p><button type="button" class="btn btn-outline-primary btn-sm" data-lon05b-reconcile-reload>Recargar lista y descartar mis decisiones</button></div>
+                    <p class="lon05b-form-error d-none" data-lon05b-reconcile-error role="alert" tabindex="-1"></p><div class="lon05b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon05b-reconcile-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-lon05b-reconcile-save>Guardar conciliación</button></div>
                   </form></dialog>
                 </section>
               </div>
@@ -10612,6 +10639,7 @@
 <script src="assets/js/clinical/lon02-summary.js?v=lon02"></script>
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
 <script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>
+<script src="assets/js/clinical/lon05b-medications.js?v=lon05b"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

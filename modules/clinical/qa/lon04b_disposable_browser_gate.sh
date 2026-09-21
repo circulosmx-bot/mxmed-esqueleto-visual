@@ -27,6 +27,7 @@ INSERT INTO clinical_record_entries VALUES (401,'p_a','{"legacy":"preserved"}');
 SQL
 mysql "$qa_db" < "$root_dir/modules/clinical/db/migrations/2026_09_21_06_longitudinal_antecedents.sql"
 mysql "$qa_db" < "$root_dir/modules/clinical/db/migrations/2026_09_21_07_longitudinal_problems.sql"
+mysql "$qa_db" < "$root_dir/modules/clinical/db/migrations/2026_09_21_08_longitudinal_medications.sql"
 mkdir "$qa_root/sessions"
 for user in a b; do
   LON04B_QA_USER="u_$user" LON04B_QA_SESSION="lon04b-$user" php -d "session.save_path=$qa_root/sessions" -r 'session_id(getenv("LON04B_QA_SESSION"));session_start();$_SESSION["doctor_id"]="d_a";$_SESSION["user_id"]=getenv("LON04B_QA_USER");session_write_close();'
