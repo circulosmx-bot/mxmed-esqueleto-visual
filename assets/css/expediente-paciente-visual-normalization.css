@@ -504,6 +504,19 @@
 #p-expediente .m7-doc-capture>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:9px}
 #p-expediente .m7-doc-capture a{overflow-wrap:anywhere}
 #p-expediente [data-m7-doc-state][data-state=failed],#p-expediente [data-m7-doc-state][data-state=conflict],#p-expediente [data-m7-doc-state][data-state=blocked]{color:#a32035}
+#p-expediente .m7-terminal h5{font-size:.9rem;font-weight:700;color:#06536e;margin:0 0 6px}
+#p-expediente .m7-terminal p{overflow-wrap:anywhere}
+#p-expediente .m7-terminal-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+#p-expediente .m7-terminal-actions>div,#p-expediente .m7-terminal-actions>form,#p-expediente .m7-amendment-form{min-width:0;border:1px solid #d5e6ea;border-radius:10px;background:#fbfdfd;padding:12px}
+#p-expediente .m7-terminal-actions p,#p-expediente .m7-amendment-form>p{font-size:.82rem;color:#526976;margin:0 0 9px}
+#p-expediente .m7-terminal label{display:block;margin:8px 0;font-size:.84rem;font-weight:600;color:#244b60}
+#p-expediente .m7-terminal select{display:block;width:100%;min-width:0;min-height:42px;margin-top:4px;border:1px solid #abcbd4;border-radius:9px;background:#fff;color:#173f54;padding:8px 10px}
+#p-expediente .m7-terminal pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f9fa;border:1px solid #d5e6ea;border-radius:8px;padding:10px;color:#173f54;font-size:.82rem}
+#p-expediente .m7-amendment-history{margin-top:14px}
+#p-expediente .m7-amendment-item{border:1px solid #d5e6ea;border-radius:9px;padding:9px 11px;margin-top:8px;background:#f8fcfd;overflow-wrap:anywhere}
+#p-expediente .m7-amendment-item p{margin:3px 0;font-size:.82rem}
+#p-expediente [data-m7-terminal-state][data-state=failed]{color:#a32035}
+#p-expediente .m7-terminal :focus-visible{outline:2px solid #06aeb8;outline-offset:2px}
 @media(max-width:1100px){#p-expediente .m7-doc-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:767.98px){
   #p-expediente .m7-workspace{padding:14px}
@@ -519,4 +532,6 @@
   #p-expediente .m7-exam-row{grid-template-columns:1fr;gap:6px}
   #p-expediente .m7-doc-columns,#p-expediente .m7-doc-actions{grid-template-columns:1fr}
   #p-expediente .m7-documents .btn{min-height:42px}
+  #p-expediente .m7-terminal-actions{grid-template-columns:1fr}
+  #p-expediente .m7-terminal .btn{min-height:42px}
 }

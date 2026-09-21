@@ -339,6 +339,7 @@
       hide(examConflict,false);paintExam();
     });
     syncCode();
-    return {load,select,reset,isDirty,remember,isBusy:()=>busy};
+    return {load,select,reset,isDirty,remember,isBusy:()=>busy,
+      hasSavedDrafts:()=>!!key && (getDraft('measurements') !== null || getDraft('physical_exam') !== null)};
   };
 })();

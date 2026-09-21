@@ -1,4 +1,4 @@
-// M7 WS01–WS04 — encounter boundary, structured sections, and canonical document actions.
+// M7 WS01–WS05 — encounter boundary, structured content, documents, and terminal actions.
 (function(){
   const patientPane = document.getElementById('p-expediente');
   const root = document.getElementById('m7-workspace');
@@ -27,7 +27,7 @@
   const conflictReload = root.querySelector('[data-m7-conflict-reload]');
   const conflictUseDraft = root.querySelector('[data-m7-conflict-use-draft]');
   const sectionButtons = [...root.querySelectorAll('[data-m7-section]')];
-  const sectionTypes = { reason:'reason_evolution', measurements:'measurements', exam:'physical_exam', assessment:'assessment', plan:'plan', documents:'documents' };
+  const sectionTypes = { reason:'reason_evolution', measurements:'measurements', exam:'physical_exam', assessment:'assessment', plan:'plan', documents:'documents', finalize:'finalize' };
   const sectionTitles = { reason_evolution:'Motivo / Evolución', assessment:'Valoración', plan:'Plan' };
   let epoch = 0;
   let active = null;
@@ -48,6 +48,16 @@
     show(resumeButton, false);
   });
   const ws04 = window.mxmedM7WS04?.(root, encounterUrlForWs03, ()=>patientId);
+  const ws05 = window.mxmedM7WS05?.(root, encounterUrlForWs03, ()=>patientId, hasAnyUnsaved, detail=>{
+    active = null;
+    renderEncounter(detail, true);
+    show(currentButton, false);
+    show(resumeButton, false);
+    const seen = epoch;
+    get(`/api/clinical/index.php/patients/${encodeURIComponent(patientId)}/encounters?limit=20`)
+      .then(rows=>{ if(seen === epoch) renderHistory(rows, seen); })
+      .catch(()=>{ if(seen === epoch) renderHistory([detail], seen); });
+  });
   function encounterUrlForWs03(key){ return `/api/clinical/index.php/encounters/${encodeURIComponent(key)}`; }
 
   const selectedPatient = ()=> String(patientPane.dataset.patientId || patientPane.dataset.activePatientId || '').trim();
@@ -98,12 +108,24 @@
     try { sessionStorage.removeItem(id); } catch (_) { /* In-memory state is already clear. */ }
   }
   function isDirty(){
+    if(selectedSection === 'finalize') return !!ws05?.isDirty();
     if(selectedSection === 'documents') return !!body.dataset.encounterKey && !!ws04?.isDirty();
     return sectionMode === 'open' && !!body.dataset.encounterKey &&
       (selectedSection === 'measurements' || selectedSection === 'physical_exam' ? !!ws03?.isDirty() : editorText.value !== sectionBaseline);
   }
+  function hasAnyUnsaved(){
+    const key = body.dataset.encounterKey || '';
+    if(!key || isDirty() || ws03?.isDirty() || ws04?.isDirty() || ws03?.isBusy() || ws04?.isBusy() || sectionBusy) return true;
+    for(const type of ['reason_evolution','assessment','plan']){
+      const draft = readDraft(key,type);
+      const saved = String(loadedSections[type]?.narrative_text || '');
+      if(draft !== null && draft !== saved) return true;
+    }
+    return !!ws03?.hasSavedDrafts?.();
+  }
   function protectNavigation(){
     if(!isDirty()) return true;
+    if(selectedSection === 'finalize') return window.confirm('Hay texto de corrección o anulación sin enviar. ¿Deseas continuar?');
     if(selectedSection === 'documents') return window.confirm('Hay una acción clínica sin guardar. ¿Deseas salir y descartar la selección local?');
     if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
     else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
@@ -113,10 +135,12 @@
   function paintSection(){
     const ws03Selected = selectedSection === 'measurements' || selectedSection === 'physical_exam';
     const ws04Selected = selectedSection === 'documents';
-    show(editor, !ws03Selected && !ws04Selected);
+    const ws05Selected = selectedSection === 'finalize';
+    show(editor, !ws03Selected && !ws04Selected && !ws05Selected);
     ws03?.select(selectedSection);
     ws04?.select(ws04Selected);
-    if(ws03Selected || ws04Selected){
+    ws05?.select(ws05Selected);
+    if(ws03Selected || ws04Selected || ws05Selected){
       sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
       return;
     }
@@ -165,6 +189,7 @@
       sectionMode = String(detail.status || '').toLowerCase() === 'open' ? 'open' : 'terminal';
       ws03?.load(detail, key, sectionMode);
       ws04?.load(detail);
+      ws05?.load(detail);
       paintSection();
     } catch (error) {
       if(seen !== sectionEpoch) return;
@@ -282,6 +307,7 @@
     sectionEpoch++;
     ws03?.reset();
     ws04?.reset();
+    ws05?.reset();
     sectionMode = 'none';
     sectionConflict = false;
     active = null;
@@ -332,7 +358,7 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'm7-workspace-history-item';
-      button.textContent = `${String(row.status).toLowerCase() === 'voided' ? 'Anulada' : 'Finalizada'} · ${String(row.encounter_dt || '').trim() || 'Fecha no disponible'}`;
+      button.textContent = `${String(row.status).toLowerCase() === 'voided' ? 'Anulada' : 'Finalizada'} · ${String(row.encounter_dt || row.event_datetime || '').trim() || 'Fecha no disponible'}`;
       button.addEventListener('click', ()=> selectHistorical(row, seen));
       historyList.append(button);
     });
@@ -398,7 +424,7 @@
   currentButton.addEventListener('click', ()=>{ if(active && protectNavigation()) renderEncounter(active, false); });
   sectionButtons.forEach(button=>button.addEventListener('click', ()=>{
     const type = sectionTypes[button.dataset.m7Section];
-    if(!type || button.disabled || type === selectedSection || sectionBusy || ws03?.isBusy() || !protectNavigation()) return;
+    if(!type || button.disabled || type === selectedSection || sectionBusy || ws03?.isBusy() || ws04?.isBusy() || ws05?.isBusy() || !protectNavigation()) return;
     selectedSection = type;
     sectionConflict = false;
     show(conflictBox, false);

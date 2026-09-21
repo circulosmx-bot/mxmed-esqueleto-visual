@@ -5306,7 +5306,7 @@
                       <button type="button" data-m7-section="assessment" disabled>Valoración</button>
                       <button type="button" data-m7-section="plan" disabled>Plan</button>
                       <button type="button" data-m7-section="documents" disabled>Documentos / Acciones</button>
-                      <button type="button" data-m7-section="finalize" disabled>Finalizar</button>
+                      <button type="button" data-m7-section="finalize" disabled>Finalizar / Estado</button>
                     </nav>
                     <section class="m7-section-editor m7-documents d-none" data-m7-documents aria-label="Documentos y acciones clínicas">
                       <div class="m7-section-editor-head"><div><h4>Documentos / Acciones</h4><p class="m7-section-editor-meta">Los documentos de esta consulta y los del paciente conservan su propio contexto.</p></div><button type="button" class="btn btn-outline-primary" data-m7-doc-refresh>Actualizar</button></div>
@@ -5371,7 +5371,17 @@
                       <div class="m7-section-editor-actions"><button type="button" class="btn btn-primary" data-m7-exam-save>Guardar exploración</button></div>
                       <div class="m7-section-conflict d-none" data-m7-exam-conflict role="alert"><strong>La exploración cambió en otra sesión.</strong><p>Tu borrador se conserva. Revisa la versión guardada antes de reconciliar.</p><div class="m7-section-conflict-columns"><div><strong>Tu borrador</strong><pre data-m7-exam-draft></pre></div><div><strong>Versión guardada</strong><pre data-m7-exam-server></pre></div></div><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-primary" data-m7-exam-reload>Cargar versión guardada</button><button type="button" class="btn btn-outline-secondary" data-m7-exam-use-draft disabled>Usar mi borrador después de revisar</button></div></div>
                     </div>
-                    <p class="m7-workspace-note">Finalizar estará disponible en una etapa posterior.</p>
+                    <section class="m7-section-editor m7-terminal d-none" data-m7-terminal aria-label="Estado y correcciones de la consulta">
+                      <div class="m7-section-editor-head"><div><h4>Estado y correcciones</h4><p class="m7-section-editor-meta">Finalizar o anular es una decisión explícita. Las correcciones posteriores conservan el original.</p></div><button type="button" class="btn btn-outline-primary" data-m7-terminal-refresh>Actualizar</button></div>
+                      <p class="m7-section-editor-state" data-m7-terminal-state role="status" aria-live="polite"></p>
+                      <p class="m7-terminal-void d-none" data-m7-terminal-void></p>
+                      <div class="m7-terminal-actions" data-m7-terminal-actions>
+                        <div><h5>Finalizar consulta</h5><p>Después de finalizar, el contenido clínico normal queda en sólo lectura. La consulta no se elimina.</p><button type="button" class="btn btn-primary" data-m7-finalize>Finalizar consulta</button></div>
+                        <form data-m7-void-form><h5>Anular consulta</h5><p>La consulta anulada permanece en el historial y no cuenta como atención finalizada.</p><label>Motivo de anulación<textarea data-m7-void-reason required maxlength="1000" rows="2"></textarea></label><button type="submit" class="btn btn-outline-danger">Anular consulta</button></form>
+                      </div>
+                      <form class="m7-amendment-form d-none" data-m7-amendment-form><h5>Enmienda del encuentro</h5><p>Corrige contenido de esta consulta; el original permanece visible. Para reemplazar un archivo, usa “Reemplazar” en Documentos / Acciones. Un resultado tardío se añade allí como resultado, no como enmienda.</p><label>Contenido original<select data-m7-amendment-target></select></label><pre data-m7-amendment-original></pre><label>Motivo de la corrección<textarea data-m7-amendment-reason required maxlength="1000" rows="2"></textarea></label><label>Corrección o adenda<textarea data-m7-amendment-text required rows="4"></textarea></label><button type="submit" class="btn btn-primary">Añadir enmienda</button></form>
+                      <div class="m7-amendment-history"><h5>Historial de enmiendas del encuentro</h5><div data-m7-amendment-list></div></div>
+                    </section>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history>
                     <h4>Consultas anteriores</h4>
@@ -10516,7 +10526,8 @@
 <script src="assets/js/app.js?v=patientarchive01"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=m7ws03"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=m7ws04"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=m7ws04"></script>
+<script src="assets/js/clinical/m7-ws05.js?v=m7ws05"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=m7ws05"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

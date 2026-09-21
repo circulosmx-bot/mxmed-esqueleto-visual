@@ -6931,12 +6931,14 @@ try {
                 $pdo = clinical_documents_pdo();
                 $useV1 = clinical_m6_encounter_route_uses_v1($pdo, $encounterKey, $doctorContext);
                 if($useV1){
+                    clinical_m6_observability_emit('m7_terminal_action', ['operation'=>'finalize','outcome'=>'attempt']);
                     $encounterRow=clinical_v1_authorized_encounter($pdo,$encounterKey,$doctorContext,'encounters/{encounter_key}/finalize');
                     if($encounterRow===null)return;
                     $finalized=(new ClinicalEncounterIntegrityService($pdo))->finalize(
                         (int)$encounterRow['encounter_id'],$closedByUserId,
                         fn(PDO $transactionPdo,array $lockedEncounter):array=>clinical_encounter_final_note_create_v1($transactionPdo,$lockedEncounter,$closedByUserId)
                     );
+                    clinical_m6_observability_emit('m7_terminal_action', ['operation'=>'finalize','outcome'=>'success']);
                 }else{
                 clinical_encounters_ensure_schema($pdo);
                 $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
@@ -7003,9 +7005,11 @@ try {
             $routeName='encounters/{encounter_key}/void';$context=clinical_require_doctor_context($routeName);if($context===null)return;
             $routePdo=clinical_documents_pdo();$useV1=clinical_m6_encounter_route_uses_v1($routePdo,urldecode((string)$segments[1]),$context);
             if(!$useV1){clinical_m6_send_v1_route_unavailable($routeName);return;}
+            clinical_m6_observability_emit('m7_terminal_action', ['operation'=>'void','outcome'=>'attempt']);
             $body=clinical_read_json_body();if(($body['ok']??false)!==true){clinical_send_response(['ok'=>false,'error'=>['code'=>'bad_request','message'=>(string)($body['error']??'invalid body')],'data'=>null,'meta'=>['route'=>$routeName]],400);return;}
             try{$pdo=clinical_documents_pdo();$row=clinical_v1_authorized_encounter($pdo,urldecode((string)$segments[1]),$context,$routeName);if($row===null)return;
                 $data=is_array($body['data']??null)?$body['data']:[];$result=(new ClinicalEncounterIntegrityService($pdo))->void((int)$row['encounter_id'],$context['user_id'],(string)($data['reason']??''));
+                clinical_m6_observability_emit('m7_terminal_action', ['operation'=>'void','outcome'=>'success']);
                 clinical_send_response(['ok'=>true,'error'=>null,'message'=>'encounter voided','data'=>$result,'meta'=>['route'=>$routeName]],200);
             }catch(Throwable $e){clinical_send_response(['ok'=>false,'error'=>['code'=>clinical_v1_error_code($e),'message'=>$e->getMessage()],'data'=>null,'meta'=>['route'=>$routeName]],clinical_v1_error_status($e));}return;
         }
@@ -7048,9 +7052,11 @@ try {
             $routeName='encounters/{encounter_key}/amendments';$context=clinical_require_doctor_context($routeName);if($context===null)return;
             $routePdo=clinical_documents_pdo();$useV1=clinical_m6_encounter_route_uses_v1($routePdo,urldecode((string)$segments[1]),$context);
             if(!$useV1){clinical_m6_send_v1_route_unavailable($routeName);return;}
+            clinical_m6_observability_emit('m7_terminal_action', ['operation'=>'encounter_amendment','outcome'=>'attempt']);
             $body=clinical_read_json_body();if(($body['ok']??false)!==true){clinical_send_response(['ok'=>false,'error'=>['code'=>'bad_request','message'=>(string)($body['error']??'invalid body')],'data'=>null,'meta'=>['route'=>$routeName]],400);return;}
             try{$pdo=clinical_documents_pdo();$row=clinical_v1_authorized_encounter($pdo,urldecode((string)$segments[1]),$context,$routeName);if($row===null)return;
                 $data=is_array($body['data']??null)?$body['data']:[];$result=(new ClinicalEncounterIntegrityService($pdo))->appendAmendment((int)$row['encounter_id'],is_array($data['target']??null)?$data['target']:[],(string)($data['reason']??''),$context['user_id'],is_array($data['correction']??null)?$data['correction']:[],$context['doctor_id'],(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                clinical_m6_observability_emit('m7_terminal_action', ['operation'=>'encounter_amendment','outcome'=>'success']);
                 $replay=($result['_idempotency_replay']??false)===true;unset($result['_idempotency_replay']);clinical_send_response(['ok'=>true,'error'=>null,'message'=>'amendment created','data'=>$result,'meta'=>['route'=>$routeName,'idempotency_replay'=>$replay]],$replay?200:201);
             }catch(Throwable $e){clinical_send_response(['ok'=>false,'error'=>['code'=>clinical_v1_error_code($e),'message'=>$e->getMessage()],'data'=>null,'meta'=>['route'=>$routeName]],clinical_v1_error_status($e));}return;
         }
@@ -7434,6 +7440,9 @@ try {
                 $responseEncounterKey = (string)($resolved['encounter_key'] ?? $encounterKey);
 
                 if ($useV1) {
+                    $terminalQuery = $pdo->prepare('SELECT voided_at, voided_by_user_id, void_reason FROM clinical_encounters WHERE encounter_id = :encounter_id');
+                    $terminalQuery->execute([':encounter_id' => $encounterId]);
+                    $terminalMetadata = $terminalQuery->fetch(PDO::FETCH_ASSOC) ?: [];
                     $sectionQuery = $pdo->prepare("SELECT section_type, payload_schema_version, payload_json, narrative_text, row_version, created_at, updated_at
                         FROM clinical_encounter_sections WHERE encounter_id = :encounter_id
                         AND section_type IN ('reason_evolution', 'assessment', 'plan', 'physical_exam')");
@@ -7459,6 +7468,14 @@ try {
                         $observationRow['provenance'] = json_decode((string)$observationRow['provenance_json'], true) ?: [];
                         unset($observationRow['provenance_json']);
                         $structuredObservations[] = $observationRow;
+                    }
+                    $amendmentQuery = $pdo->prepare('SELECT amendment_id, target_type, target_id, target_field, reason, author_user_id, amended_at, correction_payload_json, previous_effective_reference FROM clinical_encounter_amendments WHERE encounter_id = :encounter_id ORDER BY amended_at, amendment_id');
+                    $amendmentQuery->execute([':encounter_id' => $encounterId]);
+                    foreach ($amendmentQuery->fetchAll(PDO::FETCH_ASSOC) as $amendmentRow) {
+                        $amendmentRow['amendment_id'] = (int)$amendmentRow['amendment_id'];
+                        $amendmentRow['correction'] = json_decode((string)$amendmentRow['correction_payload_json'], true) ?: [];
+                        unset($amendmentRow['correction_payload_json']);
+                        $structuredAmendments[] = $amendmentRow;
                     }
                 }
 
@@ -7534,8 +7551,12 @@ try {
                     'status' => (string)($encounterRow['status'] ?? 'open'),
                     'sections' => $structuredSections,
                     'observations' => $structuredObservations,
+                    'amendments' => $structuredAmendments ?? [],
                     'closed_at' => ($encounterRow['closed_at'] ?? null),
                     'closed_by_user_id' => ($encounterRow['closed_by_user_id'] ?? null),
+                    'voided_at' => ($terminalMetadata['voided_at'] ?? null),
+                    'voided_by_user_id' => ($terminalMetadata['voided_by_user_id'] ?? null),
+                    'void_reason' => ($terminalMetadata['void_reason'] ?? null),
                     'auto_note_uuid_final' => ($encounterRow['auto_note_uuid_final'] ?? null),
                     'documents' => $documents,
                     'vitals' => $mapList($buckets['vitals']),
