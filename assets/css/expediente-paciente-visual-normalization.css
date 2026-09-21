@@ -473,6 +473,40 @@
 #p-expediente .lon02-card-unknown p{display:block}
 #p-expediente .lon02-summary button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
 @media(max-width:700px){#p-expediente .lon02-summary{padding:14px}#p-expediente .lon02-head{flex-direction:column}#p-expediente .lon02-grid{grid-template-columns:1fr}#p-expediente .lon02-head .btn{width:100%}}
+/* LON03B: patient-level antecedents and distinct allergy authority. */
+#p-expediente .lon03b{border:1px solid #c9e1e8;border-radius:16px;background:#fff;padding:18px;margin:8px 0 12px;color:#173b4d;min-width:0}
+#p-expediente .lon03b-head,#p-expediente .lon03b-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#p-expediente .lon03b-head h3{font-size:1.13rem;font-weight:700;color:#06536e;margin:0 0 5px}
+#p-expediente .lon03b-head p:not(.m7-workspace-eyebrow),#p-expediente [data-lon03b-status],#p-expediente .lon03b-section-head p{font-size:.88rem;color:#526976;margin:0 0 10px}
+#p-expediente .lon03b-content{display:grid;gap:14px;margin-top:12px}
+#p-expediente .lon03b-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#p-expediente .lon03b-category,#p-expediente .lon03b-allergies{min-width:0;padding:13px;border:1px solid #d5e8ed;border-radius:12px;background:#fbfdfd;overflow-wrap:anywhere}
+#p-expediente .lon03b-allergies{border-color:#9dd5dc;background:#f4fbfc}
+#p-expediente .lon03b-section-head h4{font-size:.95rem;font-weight:700;color:#06536e;margin:0 0 8px}
+#p-expediente .lon03b-review-state{display:inline-block;border:1px solid #c7e0e5;border-radius:999px;background:#fff;color:#476575;padding:2px 8px;font-size:.75rem;white-space:normal;text-align:center}
+#p-expediente .lon03b-allergy-state{font-size:.85rem;font-weight:700;color:#06536e}
+#p-expediente .lon03b-empty{font-size:.84rem;color:#526976;margin:0 0 9px}
+#p-expediente .lon03b-item{border-top:1px solid #e1edf1;padding:9px 0}
+#p-expediente .lon03b-item:first-child{border-top:0;padding-top:0}
+#p-expediente .lon03b-item p{margin:0 0 4px;font-size:.85rem}
+#p-expediente .lon03b-item-value{font-weight:650;white-space:pre-wrap;overflow-wrap:anywhere}
+#p-expediente .lon03b-item-meta{color:#526976;font-size:.77rem!important}
+#p-expediente .lon03b-item-actions,#p-expediente .lon03b-category-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+#p-expediente .lon03b-history{border-left:2px solid #9dd5dc;padding:4px 8px;margin-top:6px}
+#p-expediente .lon03b-history p{font-size:.77rem;color:#526976}
+#p-expediente .lon03b-dialog{width:min(520px,calc(100vw - 24px));max-height:min(90vh,760px);border:1px solid #a8d8df;border-radius:15px;background:#fff;color:#173b4d;padding:18px;box-shadow:0 16px 50px #173b4d30;overflow:auto}
+#p-expediente .lon03b-dialog::backdrop{background:#082d4270}
+#p-expediente .lon03b-dialog h4{font-size:1.07rem;color:#06536e;margin:0 0 4px}
+#p-expediente .lon03b-dialog-context{font-size:.85rem;color:#526976;margin:0 0 11px}
+#p-expediente .lon03b-dialog label{display:block;font-size:.82rem;font-weight:700;margin:10px 0 4px;color:#173b4d}
+#p-expediente .lon03b-dialog input,#p-expediente .lon03b-dialog select,#p-expediente .lon03b-dialog textarea{display:block;width:100%;min-width:0;border:1px solid #a8cbd4;border-radius:9px;background:#fff;color:#173b4d;padding:8px 10px;font:inherit;font-size:.9rem}
+#p-expediente .lon03b-dialog textarea{resize:vertical}
+#p-expediente .lon03b-dialog input:focus-visible,#p-expediente .lon03b-dialog select:focus-visible,#p-expediente .lon03b-dialog textarea:focus-visible{outline:2px solid #06aeb8;outline-offset:1px}
+#p-expediente .lon03b-dialog-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:16px}
+#p-expediente .lon03b-conflict{border:1px solid #e9b7bf;border-radius:10px;padding:10px;background:#fff6f7;margin-top:12px}
+#p-expediente .lon03b-conflict p,#p-expediente .lon03b-form-error{font-size:.83rem;color:#923044;margin:0 0 7px}
+#p-expediente .lon03b button:focus-visible,#p-expediente .lon03b-dialog button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
+@media(max-width:700px){#p-expediente .lon03b{padding:14px}#p-expediente .lon03b-head,#p-expediente .lon03b-section-head{flex-direction:column}#p-expediente .lon03b-categories{grid-template-columns:1fr}#p-expediente .lon03b-head .btn,#p-expediente .lon03b-section-head .btn{width:100%}#p-expediente .lon03b-dialog-actions .btn{flex:1 1 130px}}
 #p-expediente .m7-workspace-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 #p-expediente .m7-workspace-head h3{font-size:1.13rem;font-weight:700;margin:0 0 5px;color:#06536e}
 #p-expediente .m7-workspace-eyebrow{margin:0 0 4px;font-size:.78rem;font-weight:700;color:#008f9a;text-transform:uppercase;letter-spacing:.04em}

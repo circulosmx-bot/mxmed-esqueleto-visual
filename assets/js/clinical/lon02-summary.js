@@ -14,6 +14,7 @@
   const measure = value => ({blood_pressure:'Presión arterial',heart_rate:'Frecuencia cardiaca',respiratory_rate:'Frecuencia respiratoria',temperature:'Temperatura',oxygen_saturation:'Saturación de oxígeno',pain:'Dolor',weight:'Peso',height:'Estatura',waist:'Cintura'})[String(value || '')] || String(value || 'Medición');
   const documentType = value => ({order:'Orden',orders:'Orden',lab_order:'Orden de laboratorio',imaging_order:'Orden de imagen',lab_result:'Resultado de laboratorio',lab_pdf:'Resultado de laboratorio',imaging_result:'Resultado de imagen',external_result:'Resultado externo',external_report:'Reporte externo',prescription:'Receta',receta:'Receta',pdf:'Documento PDF'})[String(value || '')] || 'Documento';
   const number = value => Number.isFinite(Number(value)) ? String(Number(value)) : String(value ?? 'Sin valor');
+  const antecedentCategories = {PERSONAL_PATHOLOGICAL:'Personales patológicos',PERSONAL_NON_PATHOLOGICAL:'Personales no patológicos',SURGICAL:'Quirúrgicos',FAMILY:'Familiares',HABITS:'Hábitos',VACCINATION:'Vacunación',GYNECOLOGICAL:'Ginecológicos',OTHER:'Otros'};
   let selected = '';
   let epoch = 0;
 
@@ -58,6 +59,49 @@
     list('[data-lon02-documents]', data.recent_documents || [], 'No hay documentos canónicos recientes disponibles.', (target, row) => line(target, row.title, `${documentType(row.type)} · ${date(row.date)} · encuentro canónico`));
     content.classList.remove('d-none');
   }
+  async function renderLongitudinalAuthority(id, request) {
+    const antecedents = $('[data-lon02-antecedents]');
+    const allergyTarget = $('[data-lon02-allergies]');
+    antecedents.textContent = 'Cargando estado revisado…';
+    allergyTarget.textContent = 'Cargando estado revisado…';
+    async function read(resource) {
+      const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/longitudinal/${resource}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.ok !== true) throw new Error('unavailable');
+      return result.data || {};
+    }
+    const [facts, allergies] = await Promise.allSettled([read('antecedents'),read('allergies')]);
+    if (request !== epoch || patient() !== id) return;
+    antecedents.replaceChildren();
+    if (facts.status !== 'fulfilled') antecedents.textContent = 'Estado no disponible.';
+    else {
+      const data = facts.value;
+      const states = data.knowledge_state_by_category || {};
+      const reviewed = Object.entries(states).filter(([,state]) => state === 'REVIEWED_WITH_FACTS');
+      const none = Object.entries(states).filter(([,state]) => state === 'CONFIRMED_NONE');
+      const unknown = Object.entries(states).filter(([,state]) => state === 'UNKNOWN').length;
+      const pending = Object.entries(states).filter(([,state]) => state === 'NEEDS_REVIEW').length;
+      reviewed.forEach(([category]) => {
+        const current = (data.items || []).filter(row => row.category === category && row.state === 'CURRENT');
+        line(antecedents, antecedentCategories[category] || category, current.map(row => row.content).join('; ') || 'Revisión sin dato visible');
+      });
+      none.forEach(([category]) => line(antecedents, antecedentCategories[category] || category, 'Sin datos conocidos · revisión explícita'));
+      if (pending) line(antecedents, 'Revisión pendiente', `${pending} categoría(s) cambiaron desde la última revisión.`);
+      if (unknown) line(antecedents, 'Sin revisar', `${unknown} categoría(s) sin confirmación clínica.`);
+      if (!reviewed.length && !none.length && !pending && !unknown) antecedents.textContent = 'Estado no establecido.';
+    }
+    allergyTarget.replaceChildren();
+    if (allergies.status !== 'fulfilled') allergyTarget.textContent = 'Estado no disponible.';
+    else {
+      const data = allergies.value;
+      if (data.knowledge_state === 'CONFIRMED_NONE') allergyTarget.textContent = 'Sin alergias conocidas · revisión explícita.';
+      else if (data.knowledge_state === 'REVIEWED_WITH_ALLERGIES') {
+        const current = (data.items || []).filter(row => row.state === 'CURRENT');
+        allergyTarget.textContent = current.length ? current.map(row => row.substance).join('; ') : 'Revisión sin dato visible.';
+      } else if (data.knowledge_state === 'NEEDS_REVIEW') allergyTarget.textContent = 'Registro modificado; revisión pendiente.';
+      else allergyTarget.textContent = 'Sin revisar. La ausencia de registros no confirma ausencia de alergias.';
+    }
+  }
   async function load() {
     const id = patient();
     selected = id;
@@ -73,6 +117,7 @@
       if (request !== epoch || patient() !== id) return;
       render(result.data || {});
       status.textContent = 'Resumen de sólo lectura actualizado.';
+      await renderLongitudinalAuthority(id, request);
     } catch (failure) {
       if (request !== epoch) return;
       error.textContent = failure.message;
