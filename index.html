@@ -5283,6 +5283,17 @@
 
               </div>
               <div class="tab-pane fade" id="t-historial-atencion">
+                <section class="lon01-history" id="lon01-history" aria-labelledby="lon01-title">
+                  <div class="lon01-head"><div><p class="m7-workspace-eyebrow">Paciente · Historial longitudinal</p><h3 id="lon01-title">Consultas / Historial</h3><p>Consultas canónicas y registros anteriores conservan su procedencia.</p></div><button type="button" class="btn btn-outline-primary" data-lon01-refresh>Actualizar historial</button></div>
+                  <p data-lon01-status role="status" aria-live="polite">Selecciona un paciente para ver su historial.</p>
+                  <div class="m7-workspace-error d-none" data-lon01-error role="alert"></div>
+                  <div class="lon01-columns d-none" data-lon01-content>
+                    <div><h4>Consulta actual / en curso</h4><div data-lon01-current></div><h4>Consultas anteriores</h4><div data-lon01-previous></div></div>
+                    <div><h4>Registros anteriores</h4><p class="lon01-legacy-note">Registros históricos; su fecha exacta de consulta y su orden cronológico no están confirmados.</p><div data-lon01-legacy></div></div>
+                  </div>
+                  <button type="button" class="btn btn-outline-primary d-none" data-lon01-more>Cargar más registros</button>
+                  <section class="lon01-detail d-none" data-lon01-detail aria-labelledby="lon01-detail-title"><div class="lon01-detail-head"><h4 id="lon01-detail-title" data-lon01-detail-title></h4><button type="button" class="btn btn-outline-secondary" data-lon01-close>Cerrar detalle</button></div><p data-lon01-detail-meta></p><div data-lon01-detail-body></div></section>
+                </section>
                 <section class="m7-workspace" id="m7-workspace" aria-labelledby="m7-workspace-title">
                   <div class="m7-workspace-head">
                     <div>
@@ -5383,7 +5394,7 @@
                       <div class="m7-amendment-history"><h5>Historial de enmiendas del encuentro</h5><div data-m7-amendment-list></div></div>
                     </section>
                   </div>
-                  <div class="m7-workspace-history d-none" data-m7-history>
+                  <div class="m7-workspace-history d-none" data-m7-history hidden>
                     <h4>Consultas anteriores</h4>
                     <div data-m7-history-list></div>
                   </div>
@@ -10529,6 +10540,7 @@
 <script src="assets/js/clinical/m7-ws05.js?v=m7ws05"></script>
 <script src="assets/js/clinical/m7-workspace.js?v=m7ws05"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=m7ws06"></script>
+<script src="assets/js/clinical/lon01-history.js?v=lon01"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

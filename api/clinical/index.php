@@ -6094,6 +6094,66 @@ try {
         return;
     }
 
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal-history' && count($segments) === 3) {
+        $routeName = 'patients/{patient_id}/longitudinal-history';
+        if ($method !== 'GET') {
+            clinical_send_response(['ok' => false, 'error' => 'not_found', 'data' => null, 'meta' => ['route' => $routeName]], 404);
+            return;
+        }
+        $patientId = trim((string)$segments[1]);
+        $context = clinical_require_doctor_context($routeName);
+        if ($context === null) return;
+        $limitRaw = (string)($_GET['limit'] ?? '25');
+        $offsetRaw = (string)($_GET['offset'] ?? '0');
+        if ($patientId === '' || preg_match('/^[0-9]+$/', $limitRaw) !== 1 || preg_match('/^[0-9]+$/', $offsetRaw) !== 1
+            || (int)$limitRaw < 1 || (int)$limitRaw > 50 || (int)$offsetRaw > 10000) {
+            clinical_send_response(['ok' => false, 'error' => ['code' => 'bad_request', 'message' => 'Parámetros de historial inválidos'], 'data' => null, 'meta' => ['route' => $routeName]], 400);
+            return;
+        }
+        $limit = (int)$limitRaw;
+        $offset = (int)$offsetRaw;
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_encounter_integrity_assert_schema_ready($pdo);
+            if (!clinical_patient_exists($pdo, $patientId) || !clinical_require_doctor_patient_scope($pdo, $context['doctor_id'], $patientId, $routeName)) return;
+            $encounters = $pdo->prepare('SELECT encounter_id, encounter_dt, status, closed_at, appointment_id FROM clinical_encounters WHERE patient_id = :patient AND doctor_id = :doctor ORDER BY encounter_dt DESC, encounter_id DESC LIMIT :limit OFFSET :offset');
+            $encounters->bindValue(':patient', $patientId, PDO::PARAM_STR);
+            $encounters->bindValue(':doctor', $context['doctor_id'], PDO::PARAM_STR);
+            $encounters->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
+            $encounters->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $encounters->execute();
+            $canonical = $encounters->fetchAll(PDO::FETCH_ASSOC);
+            $moreCanonical = count($canonical) > $limit;
+            $canonical = array_slice($canonical, 0, $limit);
+            foreach ($canonical as &$item) {
+                $item['encounter_key'] = 'enc:' . $item['encounter_id'];
+                $item['provenance'] = 'canonical_encounter';
+                unset($item['encounter_id']);
+            }
+            unset($item);
+            // entry_date defaults to insertion time in legacy storage; it is not a proven consultation date.
+            $legacyQuery = $pdo->prepare('SELECT entry_id, note_type, status, payload_json, subjective, objective, assessment, plan, created_at FROM clinical_record_entries WHERE patient_id = :patient ORDER BY entry_id DESC LIMIT :limit OFFSET :offset');
+            $legacyQuery->bindValue(':patient', $patientId, PDO::PARAM_STR);
+            $legacyQuery->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
+            $legacyQuery->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $legacyQuery->execute();
+            $legacy = $legacyQuery->fetchAll(PDO::FETCH_ASSOC);
+            $moreLegacy = count($legacy) > $limit;
+            $legacy = array_slice($legacy, 0, $limit);
+            foreach ($legacy as &$item) {
+                $item['provenance'] = 'legacy_record';
+                $item['payload'] = json_decode((string)($item['payload_json'] ?? ''), true) ?: [];
+                unset($item['payload_json']);
+            }
+            unset($item);
+            clinical_send_response(['ok' => true, 'data' => ['canonical' => $canonical, 'legacy' => $legacy, 'has_more' => $moreCanonical || $moreLegacy, 'offset' => $offset, 'limit' => $limit], 'meta' => ['route' => $routeName, 'method' => 'GET']], 200);
+        } catch (Throwable $e) {
+            $schemaNotReady = str_starts_with($e->getMessage(), 'SCHEMA_NOT_READY');
+            clinical_send_response(['ok' => false, 'error' => ['code' => $schemaNotReady ? 'SCHEMA_NOT_READY' : 'server_error', 'message' => $schemaNotReady ? 'El esquema clínico no está listo' : 'No se pudo cargar el historial'], 'data' => null, 'meta' => ['route' => $routeName]], $schemaNotReady ? 503 : 500);
+        }
+        return;
+    }
+
     if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'encounters' && count($segments) === 4 && ($segments[3] ?? '') === 'active') {
         if ($method !== 'GET') {
             clinical_send_response([
