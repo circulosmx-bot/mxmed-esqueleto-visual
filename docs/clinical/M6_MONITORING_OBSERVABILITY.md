@@ -27,12 +27,27 @@ Operator commands are read-only except for writing monitoring evidence into the 
 ```sh
 php scripts/clinical-m6-monitor.php heartbeat
 php scripts/clinical-m6-monitor.php status --minutes 30
-php scripts/clinical-m6-monitor.php status --since 2026-09-20T12:00:00Z
-php scripts/clinical-m6-monitor.php baseline before-cohort --minutes 30
-php scripts/clinical-m6-monitor.php compare before-cohort --minutes 30
-php scripts/clinical-m6-monitor.php snapshot cohort-1 --minutes 30
-php scripts/clinical-m6-monitor.php decision HOLD VISIBILITY_REVIEW
+php scripts/clinical-m6-monitor.php status --profile /private/config/m6-thresholds.json --stage internal_exact_pair --since 2026-09-20T12:00:00Z
+php scripts/clinical-m6-monitor.php baseline before-cohort --profile /private/config/m6-thresholds.json --stage internal_exact_pair --minutes 30
+php scripts/clinical-m6-monitor.php compare before-cohort --profile /private/config/m6-thresholds.json --stage internal_exact_pair --minutes 30
+php scripts/clinical-m6-monitor.php snapshot cohort-1 --baseline before-cohort --profile /private/config/m6-thresholds.json --stage internal_exact_pair --minutes 30
+php scripts/clinical-m6-monitor.php decision HOLD VISIBILITY_REVIEW --profile /private/config/m6-thresholds.json --stage internal_exact_pair
 ```
+
+Rollout evaluation requires an explicitly selected, reviewable threshold profile and rollout stage:
+
+```sh
+php scripts/clinical-m6-monitor.php status --profile /private/config/m6-thresholds.json --stage internal_exact_pair --minutes 30
+php scripts/clinical-m6-monitor.php compare before-cohort --profile /private/config/m6-thresholds.json --stage internal_exact_pair --minutes 30
+```
+
+Without a profile, status remains available for diagnosis but reports
+`MONITORING_THRESHOLD_PROFILE_REQUIRED`, marks rollout evaluation invalid, and recommends at least `HOLD`.
+Decisions require a valid profile. Profiles follow `m6_threshold_profile.schema.json`, declare a generic rollout
+stage without doctor or patient identifiers, and activate error-rate, latency, and freshness definitions. Both
+absolute and baseline-relative latency limits must pass when `mode` is `both`; insufficient samples or baseline
+dimensions fail with `HOLD`. Profile identity, version, stage, SHA-256 hash, and active rule families are included
+in operator status, baselines, snapshots, and decisions.
 
 Set `MXMED_CLINICAL_M6_WORKER_GENERATION` to the deployment generation expected after worker reload. Status
 reports that value, a non-identifying process hash, the effective configuration fingerprint, monitoring

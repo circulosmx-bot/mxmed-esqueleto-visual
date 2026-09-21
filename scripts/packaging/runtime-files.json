@@ -134,6 +134,7 @@
   "modules/_partials/mm_shell_top.php",
   "modules/_partials/mxmed-ui.css",
   "modules/clinical/monitoring/m6_monitoring_rules.json",
+  "modules/clinical/monitoring/m6_threshold_profile.schema.json",
   "modules/agenda/adapters/CanonicalAppointmentLifecycleAdapter.php",
   "modules/agenda/adapters/CanonicalAvailabilityCompareAdapter.php",
   "modules/agenda/adapters/CanonicalPublicAgendaAdapter.php",

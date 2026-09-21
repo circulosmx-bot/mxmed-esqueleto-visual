@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mxmed.m6.threshold-profile.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "profile_version", "status", "rollout_stage", "rules"],
+  "properties": {
+    "schema": {"const": "mxmed.m6.threshold-profile.v1"},
+    "profile_id": {"type": "string", "pattern": "^[A-Z0-9_.-]{3,64}$"},
+    "profile_version": {"type": "integer", "minimum": 1},
+    "status": {"const": "active"},
+    "rollout_stage": {"enum": ["internal_exact_pair", "bounded_pair_set", "broader_pair_set", "any"]},
+    "rules": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "oneOf": [
+          {"type":"object","additionalProperties":false,"required":["id","maximum_rate","minimum_requests","unit","action"],"properties":{"id":{"const":"unexpected_error_rate"},"maximum_rate":{"type":"number","minimum":0,"maximum":1},"minimum_requests":{"type":"integer","minimum":1},"unit":{"const":"ratio"},"action":{"enum":["HOLD","DEACTIVATE","EMERGENCY_HALT"]}}},
+          {"type":"object","additionalProperties":false,"required":["id","mode","minimum_samples","unit","action"],"properties":{"id":{"const":"route_latency"},"mode":{"enum":["absolute","baseline_relative","both"]},"maximum_ms":{"type":"number","minimum":0},"maximum_multiplier":{"type":"number","minimum":1},"minimum_samples":{"type":"integer","minimum":1},"unit":{"const":"milliseconds"},"action":{"enum":["HOLD","DEACTIVATE","EMERGENCY_HALT"]}}},
+          {"type":"object","additionalProperties":false,"required":["id","maximum_age_seconds","unit","action"],"properties":{"id":{"const":"visibility"},"maximum_age_seconds":{"type":"integer","minimum":1},"unit":{"const":"seconds"},"action":{"enum":["HOLD","DEACTIVATE","EMERGENCY_HALT"]}}}
+        ]
+      }
+    }
+  }
+}

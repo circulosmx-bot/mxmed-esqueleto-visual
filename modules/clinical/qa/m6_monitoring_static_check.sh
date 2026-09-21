@@ -17,6 +17,8 @@ for command in ['heartbeat','status','baseline','compare','snapshot','decision']
     assert command in c,command
 for capability in ['unexpected_error_rate','authority_error_rates','latency','monitoring_health','recommended_action']:
     assert capability in a or capability in c,capability
+for capability in ['clinical_m6_monitoring_profile_load','MONITORING_THRESHOLD_PROFILE_STAGE_MISMATCH','BASELINE_NOT_SUFFICIENT_FOR_ACTIVE_RULE']:
+    assert capability in a,capability
 for needle in ['C04_PATIENT_DOCUMENT','C21_TOKEN_UPLOAD','clinical_m6_observability_response']:
     assert needle in router,needle
 assert 'AGENDA_CLINICAL_BRIDGE' in agenda
@@ -24,5 +26,10 @@ for needle in ['STAGING_BEGIN','FINAL_OBJECT_COMMIT','MANIFEST_COMMIT','clinical
     assert needle in service,needle
 rules=json.loads((r/'modules/clinical/monitoring/m6_monitoring_rules.json').read_text())
 assert {x['type'] for x in rules['rules']} >= {'zero','count','rate','latency','freshness','health','error_zero'}
+schema=json.loads((r/'modules/clinical/monitoring/m6_threshold_profile.schema.json').read_text())
+assert schema['$id']=='mxmed.m6.threshold-profile.v1'
+manifest=json.loads((r/'scripts/packaging/runtime-files.json').read_text())
+assert 'api/_lib/clinical_m6_monitoring_analysis.php' in manifest
+assert 'modules/clinical/monitoring/m6_threshold_profile.schema.json' in manifest
 print('M6_MONITORING_STATIC_CHECK=PASS')
 PY
