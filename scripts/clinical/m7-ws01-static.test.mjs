@@ -19,6 +19,8 @@ assert.match(shell, /snapshot\.meta\.integrity_v1 !== true/);
 assert.match(shell, /\['closed','voided'\]/);
 assert.match(shell, /show\(legacyPanel, false\)/);
 assert.equal((html.match(/data-m7-section=/g) || []).length, 7);
-assert.doesNotMatch(html.slice(html.indexOf('id="m7-workspace"'), html.indexOf('id="mm-p10-bar"')), /<(input|textarea|select)\b/i);
+for (const section of ['measurements', 'exam', 'documents', 'finalize']) {
+  assert.match(html, new RegExp(`data-m7-section="${section}" disabled`));
+}
 assert.match(endpoint, /clinical_m6_patient_route_uses_v1\(\$context, \$patientId\)/);
 console.log('M7 WS01 static boundary: PASS');

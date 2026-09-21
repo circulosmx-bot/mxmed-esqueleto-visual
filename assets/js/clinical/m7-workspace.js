@@ -1,4 +1,4 @@
-// M7 WS01 — patient/encounter boundary and read-only consultation shell.
+// M7 WS01/WS02 — encounter boundary and structured OPEN consultation sections.
 (function(){
   const patientPane = document.getElementById('p-expediente');
   const root = document.getElementById('m7-workspace');
@@ -13,10 +13,35 @@
   const resumeButton = root.querySelector('[data-m7-resume]');
   const currentButton = root.querySelector('[data-m7-current]');
   const legacyPanel = root.parentElement.querySelector('.clinical-panel');
+  const editor = root.querySelector('[data-m7-editor]');
+  const editorTitle = root.querySelector('[data-m7-editor-title]');
+  const editorMeta = root.querySelector('[data-m7-editor-meta]');
+  const editorState = root.querySelector('[data-m7-editor-state]');
+  const editorText = root.querySelector('[data-m7-editor-text]');
+  const editorSave = root.querySelector('[data-m7-editor-save]');
+  const conflictBox = root.querySelector('[data-m7-conflict]');
+  const conflictTitle = root.querySelector('[data-m7-conflict-title]');
+  const conflictMessage = root.querySelector('[data-m7-conflict-message]');
+  const conflictDraft = root.querySelector('[data-m7-conflict-draft]');
+  const conflictServer = root.querySelector('[data-m7-conflict-server]');
+  const conflictReload = root.querySelector('[data-m7-conflict-reload]');
+  const conflictUseDraft = root.querySelector('[data-m7-conflict-use-draft]');
+  const sectionButtons = [...root.querySelectorAll('[data-m7-section]')];
+  const sectionTypes = { reason:'reason_evolution', assessment:'assessment', plan:'plan' };
+  const sectionTitles = { reason_evolution:'Motivo / Evolución', assessment:'Valoración', plan:'Plan' };
   let epoch = 0;
   let active = null;
   let patientId = '';
   let busy = false;
+  let sectionEpoch = 0;
+  let selectedSection = 'reason_evolution';
+  let loadedSections = {};
+  let sectionMode = 'none';
+  let sectionBusy = false;
+  let sectionConflict = false;
+  let sectionBaseline = '';
+  let sectionVersion = null;
+  const localDrafts = new Map();
 
   const selectedPatient = ()=> String(patientPane.dataset.patientId || patientPane.dataset.activePatientId || '').trim();
   const show = (node, visible)=> node?.classList.toggle('d-none', !visible);
@@ -47,7 +72,193 @@
     }
     return withMeta ? { data:result.data, meta:result.meta || {} } : result.data;
   }
+  const encounterUrl = key=> `/api/clinical/index.php/encounters/${encodeURIComponent(key)}`;
+  const draftKey = (key, type)=> `mxmed.m7.ws02.draft:${key}:${type}`;
+  function readDraft(key, type){
+    const id = draftKey(key, type);
+    if(localDrafts.has(id)) return localDrafts.get(id);
+    try { return sessionStorage.getItem(id); } catch (_) { return null; }
+  }
+  function rememberDraft(key, type, value){
+    if(!key || !type) return;
+    const id = draftKey(key, type);
+    localDrafts.set(id, value);
+    try { sessionStorage.setItem(id, value); } catch (_) { /* In-memory draft remains available. */ }
+  }
+  function clearDraft(key, type){
+    const id = draftKey(key, type);
+    localDrafts.delete(id);
+    try { sessionStorage.removeItem(id); } catch (_) { /* In-memory state is already clear. */ }
+  }
+  function isDirty(){
+    return sectionMode === 'open' && !!body.dataset.encounterKey && editorText.value !== sectionBaseline;
+  }
+  function protectNavigation(){
+    if(!isDirty()) return true;
+    rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    return window.confirm('Tienes cambios clínicos sin guardar. Se conservará tu borrador en esta pestaña. ¿Deseas continuar?');
+  }
+  function sectionRow(type){ return loadedSections[type] || null; }
+  function paintSection(){
+    const key = body.dataset.encounterKey || '';
+    const row = sectionRow(selectedSection);
+    sectionVersion = row ? Number(row.row_version) : null;
+    sectionBaseline = row ? String(row.narrative_text || '') : '';
+    const draft = readDraft(key, selectedSection);
+    editorText.value = draft === null ? sectionBaseline : draft;
+    editorText.readOnly = sectionMode !== 'open' || sectionConflict || sectionBusy;
+    editorSave.disabled = sectionMode !== 'open' || sectionBusy || sectionConflict || !isDirty();
+    show(editorSave, sectionMode === 'open');
+    editorTitle.textContent = sectionTitles[selectedSection];
+    editorMeta.textContent = row ? `Versión ${sectionVersion} · Actualizada ${String(row.updated_at || '')}` : 'Aún no hay contenido guardado en esta consulta.';
+    editorState.textContent = sectionMode !== 'open' ? 'Sólo lectura' : sectionConflict ? 'Conflicto: revisa ambas versiones' : isDirty() ? 'Cambios sin guardar' : 'Sin cambios';
+    sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
+  }
+  function setConflict(title, message, draft, server){
+    sectionConflict = true;
+    conflictTitle.textContent = title;
+    conflictMessage.textContent = message;
+    conflictDraft.value = draft;
+    conflictServer.value = server;
+    conflictUseDraft.disabled = true;
+    show(conflictBox, true);
+    paintSection();
+  }
+  async function loadSections(encounter){
+    const seen = ++sectionEpoch;
+    const key = String(encounter.encounter_key || '').trim();
+    const state = String(encounter.status || '').toLowerCase();
+    sectionMode = state === 'open' ? 'open' : 'terminal';
+    sectionConflict = false;
+    loadedSections = {};
+    show(conflictBox, false);
+    show(editor, true);
+    editorState.textContent = 'Cargando contenido de esta consulta…';
+    editorText.readOnly = true;
+    editorSave.disabled = true;
+    sectionButtons.forEach(button=>{ if(sectionTypes[button.dataset.m7Section]) button.disabled = false; });
+    try {
+      const detail = Object.prototype.hasOwnProperty.call(encounter, 'sections') ? encounter : await get(encounterUrl(key));
+      if(seen !== sectionEpoch || key !== body.dataset.encounterKey || String(detail.patient_id || '') !== patientId) return;
+      loadedSections = detail.sections && typeof detail.sections === 'object' ? detail.sections : {};
+      sectionMode = String(detail.status || '').toLowerCase() === 'open' ? 'open' : 'terminal';
+      paintSection();
+    } catch (error) {
+      if(seen !== sectionEpoch) return;
+      sectionMode = 'error';
+      editorState.textContent = errorCode(error?.code) === 'SCHEMA_NOT_READY'
+        ? 'El esquema clínico no está listo. No se cargó esta sección.'
+        : 'No se pudo cargar esta sección. Vuelve a abrir la consulta.';
+      editorText.readOnly = true;
+      editorSave.disabled = true;
+    }
+  }
+  async function reloadAfterConflict(){
+    const key = body.dataset.encounterKey;
+    const type = selectedSection;
+    const draft = conflictDraft.value;
+    conflictReload.disabled = true;
+    try {
+      const detail = await get(encounterUrl(key));
+      if(key !== body.dataset.encounterKey || type !== selectedSection || String(detail.patient_id || '') !== patientId) return;
+      loadedSections = detail.sections || {};
+      if(String(detail.status || '').toLowerCase() !== 'open'){
+        sectionMode = 'terminal';
+        conflictMessage.textContent = 'La consulta terminó. Tu borrador sigue disponible para copiarlo; no se puede guardar aquí.';
+        paintSection();
+        return;
+      }
+      sectionMode = 'open';
+      sectionConflict = false;
+      clearDraft(key, type);
+      paintSection();
+      conflictDraft.value = draft;
+      conflictServer.value = editorText.value;
+      conflictMessage.textContent = 'Revisa la versión guardada y tu borrador. Puedes copiar cambios o elegir tu borrador; después deberás guardar deliberadamente.';
+      conflictUseDraft.disabled = false;
+      show(conflictBox, true);
+    } catch (_) {
+      conflictMessage.textContent = 'No se pudo cargar la versión actual. Tu borrador permanece disponible; inténtalo de nuevo.';
+    } finally { conflictReload.disabled = false; }
+  }
+  async function saveSection(){
+    const key = body.dataset.encounterKey;
+    const type = selectedSection;
+    if(sectionBusy || sectionConflict || sectionMode !== 'open' || !key || !isDirty()) return;
+    const draft = editorText.value;
+    const expectedVersion = sectionVersion;
+    sectionBusy = true;
+    editorText.readOnly = true;
+    editorSave.disabled = true;
+    editorState.textContent = 'Guardando…';
+    const data = { payload_schema_version:1, payload:{}, narrative_text:draft };
+    if(expectedVersion !== null) data.row_version = expectedVersion;
+    try {
+      const response = await fetch(`${encounterUrl(key)}/sections/${encodeURIComponent(type)}`, {
+        method:'PUT', credentials:'same-origin', headers:{ Accept:'application/json', 'Content-Type':'application/json' },
+        body:JSON.stringify(data)
+      });
+      const result = await response.json().catch(()=>null);
+      const code = errorCode(result?.error) || String(response.status);
+      if(key !== body.dataset.encounterKey || type !== selectedSection) return;
+      if(!response.ok || result?.ok !== true){
+        if(code === 'VERSION_CONFLICT'){
+          rememberDraft(key, type, draft);
+          let server = '';
+          try {
+            const detail = await get(encounterUrl(key));
+            server = String(detail?.sections?.[type]?.narrative_text || '');
+          } catch (_) { /* Preserve local text even when the competing version cannot load. */ }
+          setConflict('Otra persona actualizó esta sección.', 'Tu borrador no se guardó. Revisa ambas versiones antes de decidir.', draft, server);
+        } else if(code === 'ENCOUNTER_TERMINAL' || code === 'ENCOUNTER_CLOSED' || code === 'ENCOUNTER_VOIDED'){
+          rememberDraft(key, type, draft);
+          setConflict('Esta consulta ya terminó.', 'El guardado fue rechazado. Tu borrador sigue disponible para copiarlo; no se reabrirá la consulta.', draft, '');
+          sectionMode = 'terminal';
+          try {
+            const detail = await get(encounterUrl(key));
+            loadedSections = detail.sections || {};
+            conflictServer.value = String(loadedSections[type]?.narrative_text || '');
+            const state = String(detail.status || '').toLowerCase();
+            body.dataset.encounterState = state;
+            context.textContent = `Consulta histórica · ${state === 'voided' ? 'Anulada' : 'Finalizada'}`;
+            status.textContent = 'Consulta histórica de sólo lectura.';
+            active = null;
+            show(currentButton, false);
+          } catch (_) {}
+          paintSection();
+        } else {
+          rememberDraft(key, type, draft);
+          if(code === 'DOCUMENT_CONTEXT_MISMATCH') sectionMode = 'error';
+          editorState.textContent = code === 'M6_WRITE_WINDOW_BLOCKED' ? 'Guardado temporalmente pausado; tu borrador se conserva.'
+            : code === 'SCHEMA_NOT_READY' ? 'El esquema clínico no está listo; tu borrador se conserva.'
+            : code === 'DOCUMENT_CONTEXT_MISMATCH' ? 'El contexto de la consulta cambió. Vuelve a abrirla antes de guardar.'
+            : 'No se guardó la sección. Tu borrador se conserva.';
+        }
+        return;
+      }
+      const row = result.data || {};
+      loadedSections[type] = {
+        section_type:type, narrative_text:String(row.narrative_text || draft), row_version:Number(row.row_version),
+        updated_at:String(row.updated_at || ''), payload_schema_version:Number(row.payload_schema_version || 1)
+      };
+      clearDraft(key, type);
+      paintSection();
+      editorState.textContent = 'Guardado';
+    } catch (_) {
+      rememberDraft(key, type, draft);
+      editorState.textContent = 'Sin conexión. Tu borrador se conserva; inténtalo de nuevo.';
+    } finally {
+      sectionBusy = false;
+      if(key === body.dataset.encounterKey && type === selectedSection){
+        editorText.readOnly = sectionMode !== 'open' || sectionConflict;
+        if(!sectionConflict) editorSave.disabled = sectionMode !== 'open' || !isDirty();
+      }
+    }
+  }
   function reset(){
+    sectionEpoch++;
+    sectionMode = 'none';
+    sectionConflict = false;
     active = null;
     show(legacyPanel, true);
     show(body, false);
@@ -56,6 +267,9 @@
     show(resumeButton, false);
     show(currentButton, false);
     show(errorBox, false);
+    show(editor, false);
+    show(conflictBox, false);
+    sectionButtons.forEach(button=>{ button.disabled = true; button.removeAttribute('aria-current'); });
     historyList.replaceChildren();
     status.textContent = 'Selecciona un paciente para consultar su atención.';
   }
@@ -71,8 +285,10 @@
     status.textContent = historical ? 'Consulta histórica de sólo lectura.' : 'Consulta activa de este paciente.';
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
     body.dataset.encounterState = state;
+    loadSections(encounter);
   }
   async function selectHistorical(row, seen){
+    if(!protectNavigation()) return;
     const key = String(row.encounter_key || (row.encounter_id ? `enc:${row.encounter_id}` : '')).trim();
     if(!key) return;
     show(errorBox, false);
@@ -97,6 +313,8 @@
     });
   }
   async function refresh(){
+    const hadDraft = isDirty();
+    if(hadDraft) rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     const seen = ++epoch;
     patientId = selectedPatient();
     reset();
@@ -119,6 +337,10 @@
       status.textContent = active ? 'Hay una consulta activa. Puedes continuarla.' : 'Este paciente no tiene una consulta activa.';
       show(resumeButton, !!active);
       show(startButton, !active);
+      if(hadDraft){
+        errorBox.textContent = 'Tu borrador sin guardar se conserva en esta pestaña para la consulta de origen.';
+        show(errorBox, true);
+      }
       try{
         const rows = await get(`${base}?limit=20`);
         if(seen === epoch) renderHistory(rows, seen);
@@ -144,7 +366,36 @@
     finally{ busy = false; startButton.disabled = false; }
   });
   resumeButton.addEventListener('click', ()=>{ if(active) renderEncounter(active, false); });
-  currentButton.addEventListener('click', ()=>{ if(active) renderEncounter(active, false); });
+  currentButton.addEventListener('click', ()=>{ if(active && protectNavigation()) renderEncounter(active, false); });
+  sectionButtons.forEach(button=>button.addEventListener('click', ()=>{
+    const type = sectionTypes[button.dataset.m7Section];
+    if(!type || button.disabled || type === selectedSection || !protectNavigation()) return;
+    selectedSection = type;
+    sectionConflict = false;
+    show(conflictBox, false);
+    paintSection();
+  }));
+  editorText.addEventListener('input', ()=>{
+    if(sectionMode !== 'open') return;
+    rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    editorState.textContent = isDirty() ? 'Cambios sin guardar' : 'Sin cambios';
+    editorSave.disabled = sectionBusy || sectionConflict || !isDirty();
+  });
+  editorSave.addEventListener('click', saveSection);
+  conflictReload.addEventListener('click', reloadAfterConflict);
+  conflictUseDraft.addEventListener('click', ()=>{
+    if(sectionConflict || sectionMode !== 'open' || conflictUseDraft.disabled) return;
+    editorText.value = conflictDraft.value;
+    rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    paintSection();
+    editorText.focus();
+  });
+  window.addEventListener('beforeunload', event=>{
+    if(!isDirty()) return;
+    rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
+    event.preventDefault();
+    event.returnValue = '';
+  });
   ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>{
     window.addEventListener(name, ()=> refresh());
   });

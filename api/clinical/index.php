@@ -7379,6 +7379,7 @@ try {
             $encounterId = null;
             $responseEncounterKey = $encounterKey;
             $rows = [];
+            $structuredSections = [];
             $useV1 = false;
 
             try {
@@ -7410,6 +7411,25 @@ try {
                 $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
                 $eventDatetime = trim((string)($encounterRow['encounter_dt'] ?? ''));
                 $responseEncounterKey = (string)($resolved['encounter_key'] ?? $encounterKey);
+
+                if ($useV1) {
+                    $sectionQuery = $pdo->prepare("SELECT section_type, payload_schema_version, payload_json, narrative_text, row_version, created_at, updated_at
+                        FROM clinical_encounter_sections WHERE encounter_id = :encounter_id
+                        AND section_type IN ('reason_evolution', 'assessment', 'plan')");
+                    $sectionQuery->execute([':encounter_id' => $encounterId]);
+                    foreach ($sectionQuery->fetchAll(PDO::FETCH_ASSOC) as $sectionRow) {
+                        $type = (string)$sectionRow['section_type'];
+                        $structuredSections[$type] = [
+                            'section_type' => $type,
+                            'payload_schema_version' => (int)$sectionRow['payload_schema_version'],
+                            'payload' => json_decode((string)$sectionRow['payload_json'], true) ?: [],
+                            'narrative_text' => (string)($sectionRow['narrative_text'] ?? ''),
+                            'row_version' => (int)$sectionRow['row_version'],
+                            'created_at' => (string)$sectionRow['created_at'],
+                            'updated_at' => (string)$sectionRow['updated_at'],
+                        ];
+                    }
+                }
 
                 $rows = clinical_encounter_documents_direct_fetch($pdo, $patientId, $encounterId, 'DESC');
                 if ($rows === [] && $appointmentId !== '') {
@@ -7481,6 +7501,7 @@ try {
                     'doctor_id' => (string)($encounterRow['doctor_id'] ?? ''),
                     'event_datetime' => $eventDatetime,
                     'status' => (string)($encounterRow['status'] ?? 'open'),
+                    'sections' => $structuredSections,
                     'closed_at' => ($encounterRow['closed_at'] ?? null),
                     'closed_by_user_id' => ($encounterRow['closed_by_user_id'] ?? null),
                     'auto_note_uuid_final' => ($encounterRow['auto_note_uuid_final'] ?? null),

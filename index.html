@@ -5308,7 +5308,33 @@
                       <button type="button" data-m7-section="documents" disabled>Documentos / Acciones</button>
                       <button type="button" data-m7-section="finalize" disabled>Finalizar</button>
                     </nav>
-                    <p class="m7-workspace-note">La captura de estas áreas estará disponible en una etapa posterior. Esta vista no modifica la consulta.</p>
+                    <div class="m7-section-editor d-none" data-m7-editor>
+                      <div class="m7-section-editor-head">
+                        <div>
+                          <h4 data-m7-editor-title></h4>
+                          <p class="m7-section-editor-meta" data-m7-editor-meta></p>
+                        </div>
+                        <span class="m7-section-editor-state" data-m7-editor-state role="status" aria-live="polite"></span>
+                      </div>
+                      <label class="m7-section-editor-label" for="m7-section-text">Contenido de la consulta</label>
+                      <textarea id="m7-section-text" data-m7-editor-text rows="6"></textarea>
+                      <div class="m7-section-editor-actions">
+                        <button type="button" class="btn btn-primary" data-m7-editor-save>Guardar sección</button>
+                      </div>
+                      <div class="m7-section-conflict d-none" data-m7-conflict role="alert">
+                        <strong data-m7-conflict-title></strong>
+                        <p data-m7-conflict-message></p>
+                        <div class="m7-section-conflict-columns">
+                          <label>Tu borrador<textarea data-m7-conflict-draft readonly rows="4"></textarea></label>
+                          <label>Versión guardada<textarea data-m7-conflict-server readonly rows="4"></textarea></label>
+                        </div>
+                        <div class="m7-section-editor-actions">
+                          <button type="button" class="btn btn-outline-primary" data-m7-conflict-reload>Cargar versión guardada</button>
+                          <button type="button" class="btn btn-outline-secondary" data-m7-conflict-use-draft disabled>Usar mi borrador después de revisar</button>
+                        </div>
+                      </div>
+                    </div>
+                    <p class="m7-workspace-note">Mediciones, Exploración, Documentos y Finalizar estarán disponibles en una etapa posterior.</p>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history>
                     <h4>Consultas anteriores</h4>
@@ -10451,7 +10477,7 @@
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/app.js?v=patientarchive01"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=m7ws01"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=m7ws02"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>
