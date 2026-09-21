@@ -39,4 +39,12 @@ reports that value, a non-identifying process hash, the effective configuration 
 self-health, route/status/error and latency aggregates, storage failures, write-window state, rule results,
 and the optional `MXMED_CLINICAL_SCHEMA_READINESS_EVIDENCE` artifact reference. Thresholds live in
 `modules/clinical/monitoring/m6_monitoring_rules.json`; the latency threshold remains unset until accepted by
-the Director. Recorded decisions are evidence only and cannot change the feature gate.
+the Director. Inactive numeric rules are reported as pending acceptance. Any active rate or latency rule must
+provide a valid threshold and unit or configuration fails closed. Latency rules support absolute milliseconds
+and relative-to-baseline multipliers.
+
+`compare` reports request and event deltas, expected protections, unexpected-error rates globally and by
+authority, equivalent route-family latency statistics, and monitoring health/freshness transitions. A zero
+request window produces `null` rates instead of division by zero or infinity. Its rule result and recommended
+action are evidence only and cannot change the feature gate. Numeric values used by automated implementation
+tests are marked `DISPOSABLE_TEST_THRESHOLD`; they are not rollout thresholds.

@@ -168,6 +168,8 @@ function clinical_m6_observability_classification(?string $error, int $status): 
 {
     if (in_array($error, ['M6_WRITE_WINDOW_BLOCKED','M6_LEGACY_WRITE_BLOCKED','NOTE_CAPTURE_TOKEN_EXPIRED',
         'NOTE_CAPTURE_TOKEN_CANCELLED','NOTE_CAPTURE_TOKEN_CONSUMED','IDEMPOTENCY_KEY_REUSED'], true)) return 'expected_protection';
+    if (in_array($error, ['M6_COHORT_CONFIG_INVALID','DOCUMENT_CONTEXT_MISMATCH','SCHEMA_NOT_READY',
+        'DOCUMENT_BINARY_INTEGRITY_MISMATCH','M6_WRITE_WINDOW_CONFIG_INVALID'], true)) return 'failure';
     if ($status >= 500) return 'failure';
     if ($status >= 400) return 'protection';
     return 'success';
@@ -321,8 +323,10 @@ function clinical_m6_observability_read_events(?int $sinceEpoch = null): array
 function clinical_m6_observability_aggregate(array $events): array
 {
     $summary = ['event_count'=>count($events),'request_count'=>0,'route_counts'=>[],'authority_counts'=>[],
-        'request_route_counts'=>[],'request_authority_counts'=>[],'operation_counts'=>[],'outcome_counts'=>[],'status_counts'=>[],
+        'request_route_counts'=>[],'request_authority_counts'=>[],'request_authority_stats'=>[],
+        'operation_counts'=>[],'outcome_counts'=>[],'status_counts'=>[],
         'error_counts'=>[],'storage_failures'=>0,'unexpected_fallback_count'=>0,'parallel_writer_evidence_count'=>0,
+        'expected_protection_count'=>0,'unexpected_failure_count'=>0,
         'latency'=>[],'latest_event_at'=>null];
     $latencies = [];
     foreach ($events as $event) {
@@ -334,10 +338,19 @@ function clinical_m6_observability_aggregate(array $events): array
             $summary['request_count']++;
             $summary['request_route_counts'][$family] = ($summary['request_route_counts'][$family] ?? 0) + 1;
             $summary['request_authority_counts'][$authority] = ($summary['request_authority_counts'][$authority] ?? 0) + 1;
+            $summary['request_authority_stats'][$authority] ??= ['requests'=>0,'unexpected_failures'=>0,'expected_protections'=>0];
+            $summary['request_authority_stats'][$authority]['requests']++;
             $operation = (string)($event['operation'] ?? 'UNKNOWN');
             $outcome = (string)($event['outcome'] ?? 'unknown');
             $summary['operation_counts'][$operation] = ($summary['operation_counts'][$operation] ?? 0) + 1;
             $summary['outcome_counts'][$outcome] = ($summary['outcome_counts'][$outcome] ?? 0) + 1;
+            if ($outcome === 'expected_protection') {
+                $summary['expected_protection_count']++;
+                $summary['request_authority_stats'][$authority]['expected_protections']++;
+            } elseif ($outcome === 'failure') {
+                $summary['unexpected_failure_count']++;
+                $summary['request_authority_stats'][$authority]['unexpected_failures']++;
+            }
         }
         if (isset($event['http_status'])) {
             $status = (string)$event['http_status'];
@@ -356,7 +369,9 @@ function clinical_m6_observability_aggregate(array $events): array
         $summary['latency'][$family] = ['count'=>$count,'min_ms'=>$values[0],'max_ms'=>$values[$count-1],
             'avg_ms'=>round(array_sum($values)/$count, 2),'p95_ms'=>$values[(int)ceil($count*.95)-1]];
     }
-    foreach (['route_counts','authority_counts','request_route_counts','request_authority_counts','operation_counts',
+    $summary['unexpected_error_event_count'] = $summary['unexpected_failure_count'] + $summary['storage_failures']
+        + $summary['unexpected_fallback_count'] + $summary['parallel_writer_evidence_count'];
+    foreach (['route_counts','authority_counts','request_route_counts','request_authority_counts','request_authority_stats','operation_counts',
         'outcome_counts','status_counts','error_counts'] as $key) ksort($summary[$key]);
     return $summary;
 }

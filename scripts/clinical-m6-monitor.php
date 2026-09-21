@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/api/_lib/clinical_m6_observability.php';
+require_once dirname(__DIR__) . '/api/_lib/clinical_m6_monitoring_analysis.php';
 
 if (PHP_SAPI !== 'cli') { fwrite(STDERR, "CLI only\n"); exit(2); }
 
@@ -30,42 +30,6 @@ function monitor_safe_name(string $value): string
 {
     if (!preg_match('/^[A-Za-z0-9_.-]{1,64}$/D', $value)) throw new InvalidArgumentException('MONITORING_NAME_INVALID');
     return $value;
-}
-
-function monitor_rules(array $summary, array $health): array
-{
-    $path = dirname(__DIR__) . '/modules/clinical/monitoring/m6_monitoring_rules.json';
-    $authority = json_decode((string)file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-    $results = [];
-    $rank = array_flip($authority['action_precedence']);
-    $recommended = 'CONTINUE';
-    foreach ($authority['rules'] as $rule) {
-        $pass = true; $observed = null; $configured = true;
-        switch ($rule['type']) {
-            case 'zero':
-                $observed = (int)($summary[$rule['metric']] ?? 0); $pass = $observed === 0; break;
-            case 'error_zero':
-                $observed = (int)($summary['error_counts'][$rule['error']] ?? 0); $pass = $observed === 0; break;
-            case 'freshness':
-                $observed = (bool)($health['stale'] ?? true); $pass = !$observed; break;
-            case 'health':
-                $observed = (bool)($health['visibility_loss'] ?? true); $pass = !$observed; break;
-            case 'count':
-                $observed = (int)($summary['status_counts'][(string)$rule['status']] ?? 0);
-                $pass = $observed <= (int)$rule['maximum']; break;
-            case 'latency':
-                if ($rule['maximum_ms'] === null) { $configured = false; $pass = true; $observed = 'THRESHOLD_REQUIRES_ACCEPTANCE'; }
-                else {
-                    $observed = max(array_map(static fn(array $v): int => (int)$v['p95_ms'], $summary['latency'] ?: [['p95_ms'=>0]]));
-                    $pass = $observed <= (int)$rule['maximum_ms'];
-                }
-                break;
-            default: throw new RuntimeException('MONITORING_RULE_TYPE_INVALID');
-        }
-        if (!$pass && ($rank[$rule['action']] ?? 0) > ($rank[$recommended] ?? 0)) $recommended = $rule['action'];
-        $results[] = ['id'=>$rule['id'],'pass'=>$pass,'configured'=>$configured,'observed'=>$observed,'action'=>$rule['action']];
-    }
-    return ['results'=>$results,'recommended_action'=>$recommended,'authority_version'=>$authority['version']];
 }
 
 function monitor_prune(string $root): int
@@ -103,7 +67,7 @@ try {
         'feature_gate'=>clinical_m6_observability_feature_state(),
         'write_window'=>clinical_m6_observability_write_window_state(),
         'monitoring'=>$health,'summary'=>$summary,
-        'rules'=>monitor_rules($summary,$health),
+        'rules'=>clinical_m6_monitoring_rules_evaluate($summary,$health,clinical_m6_monitoring_rules_load()),
         'schema_readiness_evidence'=>getenv('MXMED_CLINICAL_SCHEMA_READINESS_EVIDENCE') ?: null,
     ];
     $status['operator_metrics'] = [
@@ -129,12 +93,18 @@ try {
     if ($command === 'compare') {
         $name = monitor_safe_name((string)($argv[2] ?? ''));
         $baseline = json_decode((string)file_get_contents($root.'/baselines/'.$name.'.json'),true,512,JSON_THROW_ON_ERROR);
-        $base = $baseline['status']['summary'] ?? [];
-        monitor_json(['command'=>'compare','baseline'=>$name,'current'=>$status,
-            'delta'=>['event_count'=>$summary['event_count']-(int)($base['event_count']??0),
-                'storage_failures'=>$summary['storage_failures']-(int)($base['storage_failures']??0),
-                'unexpected_fallback_count'=>$summary['unexpected_fallback_count']-(int)($base['unexpected_fallback_count']??0),
-                'parallel_writer_evidence_count'=>$summary['parallel_writer_evidence_count']-(int)($base['parallel_writer_evidence_count']??0)]]);
+        $baselineStatus = is_array($baseline['status'] ?? null) ? $baseline['status'] : [];
+        $comparison = clinical_m6_monitoring_compare($baselineStatus, $status);
+        $rules = clinical_m6_monitoring_rules_evaluate($summary,$health,clinical_m6_monitoring_rules_load(),$comparison);
+        $legacyDelta = ['event_count'=>$comparison['event_count_delta'],
+            'storage_failures'=>$comparison['storage_failures_delta'],
+            'unexpected_fallback_count'=>$comparison['unexpected_fallback_count_delta'],
+            'parallel_writer_evidence_count'=>$comparison['parallel_writer_evidence_count_delta']];
+        monitor_json(['command'=>'compare','baseline'=>$name,
+            'baseline_reference'=>['created_at'=>$baseline['created_at']??null,'observation_since'=>$baselineStatus['observation_since']??null],
+            'observation_interval'=>['since'=>$status['observation_since'],'through'=>gmdate('c')],
+            'current'=>$status,'delta'=>$legacyDelta,'comparison'=>$comparison,
+            'rules'=>$rules,'recommended_action'=>$rules['recommended_action']]);
     }
     if ($command === 'snapshot') {
         $name = monitor_safe_name((string)($argv[2] ?? ('snapshot-' . gmdate('YmdHis'))));

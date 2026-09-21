@@ -3,6 +3,7 @@
   "api/_lib/clinical_documents.php",
   "api/_lib/clinical_documents_hospital.php",
   "api/_lib/clinical_m6_observability.php",
+  "api/_lib/clinical_m6_monitoring_analysis.php",
   "api/_lib/db.php",
   "api/_lib/http.php",
   "api/agenda/index.php",
