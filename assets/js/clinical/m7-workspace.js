@@ -19,6 +19,8 @@
   const editorState = root.querySelector('[data-m7-editor-state]');
   const editorText = root.querySelector('[data-m7-editor-text]');
   const editorSave = root.querySelector('[data-m7-editor-save]');
+  const promoteProblem = root.querySelector('[data-lon04b-m7-promote]');
+  editorText?.addEventListener('input',()=>{if(promoteProblem && selectedSection==='assessment') promoteProblem.classList.toggle('d-none',editorText.value!==sectionBaseline);});
   const conflictBox = root.querySelector('[data-m7-conflict]');
   const conflictTitle = root.querySelector('[data-m7-conflict-title]');
   const conflictMessage = root.querySelector('[data-m7-conflict-message]');
@@ -146,10 +148,12 @@
     }
     const key = body.dataset.encounterKey || '';
     const row = sectionRow(selectedSection);
+    if(promoteProblem){promoteProblem.dataset.sectionId = row?.section_id || '';promoteProblem.dataset.encounterId = body.dataset.encounterId || '';}
     sectionVersion = row ? Number(row.row_version) : null;
     sectionBaseline = row ? String(row.narrative_text || '') : '';
     const draft = readDraft(key, selectedSection);
     editorText.value = draft === null ? sectionBaseline : draft;
+    show(promoteProblem, selectedSection === 'assessment' && !!row?.section_id && !!sectionBaseline.trim() && editorText.value === sectionBaseline);
     editorText.readOnly = sectionMode !== 'open' || sectionConflict || sectionBusy;
     editorSave.disabled = sectionMode !== 'open' || sectionBusy || sectionConflict || !isDirty();
     show(editorSave, sectionMode === 'open');
@@ -286,7 +290,7 @@
       }
       const row = result.data || {};
       loadedSections[type] = {
-        section_type:type, narrative_text:String(row.narrative_text || draft), row_version:Number(row.row_version),
+        section_id:Number(row.section_id), section_type:type, narrative_text:String(row.narrative_text || draft), row_version:Number(row.row_version),
         updated_at:String(row.updated_at || ''), payload_schema_version:Number(row.payload_schema_version || 1)
       };
       clearDraft(key, type);
@@ -335,6 +339,7 @@
     context.textContent = `${historical ? 'Consulta histórica' : 'Consulta actual'} · ${label}${when ? ` · ${when}` : ''}${encounter.appointment_id ? ' · Vinculada a cita' : ''}`;
     status.textContent = historical ? 'Consulta histórica de sólo lectura.' : 'Consulta activa de este paciente.';
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
+    body.dataset.encounterId = String(encounter.encounter_id || '').trim();
     body.dataset.encounterState = state;
     loadSections(encounter);
   }

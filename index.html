@@ -4502,6 +4502,7 @@
                 <li class="nav-item" data-exp-datos-tab-item><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-resumen-longitudinal" data-tab-key="t-resumen-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">summarize</span><span class="tab-lbl">Resumen</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-antecedentes-longitudinal" data-tab-key="t-antecedentes-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">fact_check</span><span class="tab-lbl">Antecedentes</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-problemas-longitudinal" data-tab-key="t-problemas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Problemas</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
@@ -4545,7 +4546,8 @@
                     <section class="lon02-card"><h4>Documentos recientes</h4><div data-lon02-documents></div><p class="lon02-note">Consulta los documentos y archivos privados desde su contexto autorizado.</p></section>
                     <section class="lon02-card"><h4>Antecedentes revisados</h4><div data-lon02-antecedents>Estado no disponible.</div></section>
                     <section class="lon02-card"><h4>Alergias revisadas</h4><div data-lon02-allergies>Estado no disponible.</div></section>
-                    <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Problemas activos, medicación actual y seguimiento clínico: autoridad longitudinal no disponible todavía. Las recetas y citas previas no confirman estos estados.</p><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
+                    <section class="lon02-card"><h4>Problemas activos</h4><div data-lon02-problems>Estado no disponible.</div></section>
+                    <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Medicación actual y seguimiento clínico: autoridad longitudinal no disponible todavía. Las recetas y citas previas no confirman estos estados.</p><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
                   </div>
                 </section>
               </div>
@@ -4570,6 +4572,27 @@
                       <p class="lon03b-form-error d-none" data-lon03b-form-error role="alert" tabindex="-1"></p><div class="lon03b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon03b-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-lon03b-save>Guardar</button></div>
                     </form>
                   </dialog>
+                </section>
+              </div>
+
+              <div class="tab-pane fade" id="t-problemas-longitudinal">
+                <section class="lon04b" id="lon04b-problems" aria-labelledby="lon04b-title">
+                  <div class="lon04b-head"><div><p class="m7-workspace-eyebrow">Paciente · Estado longitudinal</p><h3 id="lon04b-title" tabindex="-1">Problemas</h3><p>Los estados cambian sólo mediante una decisión clínica explícita.</p></div><div class="lon04b-head-actions"><button type="button" class="btn btn-primary" data-lon04b-add>Agregar problema</button><button type="button" class="btn btn-outline-primary" data-lon04b-refresh>Actualizar</button></div></div>
+                  <p data-lon04b-status role="status" aria-live="polite">Selecciona un paciente para ver sus problemas.</p>
+                  <div class="m7-workspace-error d-none" data-lon04b-error role="alert"></div>
+                  <div class="lon04b-groups d-none" data-lon04b-groups>
+                    <section class="lon04b-group" aria-labelledby="lon04b-active-title"><h4 id="lon04b-active-title">Activos</h4><p>Problemas actuales que siguen siendo clínicamente relevantes, incluso si están controlados.</p><div data-lon04b-active></div></section>
+                    <section class="lon04b-group" aria-labelledby="lon04b-inactive-title"><h4 id="lon04b-inactive-title">Inactivos</h4><p>Historia válida que actualmente no requiere manejo activo.</p><div data-lon04b-inactive></div></section>
+                    <section class="lon04b-group" aria-labelledby="lon04b-resolved-title"><h4 id="lon04b-resolved-title">Resueltos</h4><p>Problemas que el clínico determinó concluidos; conservan su historial.</p><div data-lon04b-resolved></div></section>
+                  </div>
+                  <dialog class="lon04b-dialog" data-lon04b-dialog aria-labelledby="lon04b-dialog-title"><form data-lon04b-form novalidate>
+                    <h4 id="lon04b-dialog-title" data-lon04b-dialog-title></h4><p data-lon04b-context></p>
+                    <div data-lon04b-identity><label for="lon04b-label">Problema clínico</label><input id="lon04b-label" maxlength="500" data-lon04b-label required><div class="lon04b-paired"><div><label for="lon04b-code-system">Sistema de código, si se conoce</label><input id="lon04b-code-system" maxlength="64" data-lon04b-code-system></div><div><label for="lon04b-code-value">Código</label><input id="lon04b-code-value" maxlength="128" data-lon04b-code-value></div></div><label for="lon04b-onset">Fecha de inicio, si se conoce</label><input id="lon04b-onset" type="date" data-lon04b-onset></div>
+                    <div data-lon04b-provenance-wrap><label for="lon04b-provenance">Origen</label><select id="lon04b-provenance" data-lon04b-provenance><option value="EXPLICIT_LONGITUDINAL_ENTRY">Registrado por el profesional</option><option value="PATIENT_REPORTED">Reportado por el paciente</option></select></div>
+                    <div data-lon04b-reason-wrap class="d-none"><label for="lon04b-reason">Motivo clínico</label><input id="lon04b-reason" maxlength="255" data-lon04b-reason></div>
+                    <div class="lon04b-conflict d-none" data-lon04b-conflict role="alert"><p>El problema cambió en otra sesión. Tu borrador permanece en el formulario.</p><p data-lon04b-server-state></p><button type="button" class="btn btn-outline-primary btn-sm" data-lon04b-reload>Recargar y descartar mi borrador</button></div>
+                    <p class="lon04b-form-error d-none" data-lon04b-form-error role="alert" tabindex="-1"></p><div class="lon04b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon04b-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-lon04b-save>Confirmar</button></div>
+                  </form></dialog>
                 </section>
               </div>
 
@@ -5390,6 +5413,7 @@
                       <textarea id="m7-section-text" data-m7-editor-text rows="6"></textarea>
                       <div class="m7-section-editor-actions">
                         <button type="button" class="btn btn-primary" data-m7-editor-save>Guardar sección</button>
+                        <button type="button" class="btn btn-outline-primary d-none" data-lon04b-m7-promote>Agregar a problemas</button>
                       </div>
                       <div class="m7-section-conflict d-none" data-m7-conflict role="alert">
                         <strong data-m7-conflict-title></strong>
@@ -10587,6 +10611,7 @@
 <script src="assets/js/clinical/lon01-history.js?v=lon01"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=lon02"></script>
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
+<script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

@@ -62,15 +62,17 @@
   async function renderLongitudinalAuthority(id, request) {
     const antecedents = $('[data-lon02-antecedents]');
     const allergyTarget = $('[data-lon02-allergies]');
+    const problemsTarget = $('[data-lon02-problems]');
     antecedents.textContent = 'Cargando estado revisado…';
     allergyTarget.textContent = 'Cargando estado revisado…';
+    problemsTarget.textContent = 'Cargando problemas…';
     async function read(resource) {
       const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/longitudinal/${resource}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result.data || {};
     }
-    const [facts, allergies] = await Promise.allSettled([read('antecedents'),read('allergies')]);
+    const [facts, allergies, problems] = await Promise.allSettled([read('antecedents'),read('allergies'),read('problems')]);
     if (request !== epoch || patient() !== id) return;
     antecedents.replaceChildren();
     if (facts.status !== 'fulfilled') antecedents.textContent = 'Estado no disponible.';
@@ -100,6 +102,13 @@
         allergyTarget.textContent = current.length ? current.map(row => row.substance).join('; ') : 'Revisión sin dato visible.';
       } else if (data.knowledge_state === 'NEEDS_REVIEW') allergyTarget.textContent = 'Registro modificado; revisión pendiente.';
       else allergyTarget.textContent = 'Sin revisar. La ausencia de registros no confirma ausencia de alergias.';
+    }
+    problemsTarget.replaceChildren();
+    if (problems.status !== 'fulfilled') problemsTarget.textContent = 'Estado no disponible.';
+    else {
+      const active = (problems.value.items || []).filter(row => row.status === 'ACTIVE');
+      if (active.length) active.forEach(row => line(problemsTarget, row.label, `Activo · actualizado ${date(row.updated_at)}`));
+      else problemsTarget.textContent = 'Sin problemas activos registrados. Esto no confirma ausencia clínica; consulta Problemas para ver los inactivos y resueltos.';
     }
   }
   async function load() {
