@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=patux01">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=m7ws04">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5308,6 +5308,21 @@
                       <button type="button" data-m7-section="documents" disabled>Documentos / Acciones</button>
                       <button type="button" data-m7-section="finalize" disabled>Finalizar</button>
                     </nav>
+                    <section class="m7-section-editor m7-documents d-none" data-m7-documents aria-label="Documentos y acciones clínicas">
+                      <div class="m7-section-editor-head"><div><h4>Documentos / Acciones</h4><p class="m7-section-editor-meta">Los documentos de esta consulta y los del paciente conservan su propio contexto.</p></div><button type="button" class="btn btn-outline-primary" data-m7-doc-refresh>Actualizar</button></div>
+                      <p class="m7-section-editor-state" data-m7-doc-state role="status" aria-live="polite"></p>
+                      <div class="m7-doc-columns">
+                        <div><h5>De esta consulta</h5><div data-m7-encounter-documents></div></div>
+                        <div><h5>Del paciente, sin consulta</h5><div data-m7-patient-documents></div></div>
+                      </div>
+                      <div class="m7-doc-actions" data-m7-doc-actions>
+                        <form data-m7-doc-upload-form><h5>Adjuntar a esta consulta</h5><p>Los documentos del paciente sin consulta se muestran arriba como historial.</p><label>Título<input data-m7-doc-title required maxlength="160"></label><label>Archivo PDF o imagen<input data-m7-doc-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><label class="d-none" data-m7-doc-image-tag-wrap>Etiqueta de imagen<input data-m7-doc-image-tag value="clinical_attachment" maxlength="80"></label><button type="submit" class="btn btn-primary" data-m7-doc-upload>Guardar adjunto</button></form>
+                        <form data-m7-order-form><h5>Orden de estudio</h5><label>Estudio solicitado<input data-m7-order-title required maxlength="160"></label><label>Indicación<textarea data-m7-order-summary rows="2"></textarea></label><button type="submit" class="btn btn-primary">Crear orden</button></form>
+                        <form data-m7-result-form><h5>Resultado de una orden</h5><p>El resultado se guarda en la consulta donde nació la orden, incluso si ya finalizó.</p><label>Orden de esta consulta<select data-m7-result-order required></select></label><label>Tipo<select data-m7-result-type><option value="lab_result">Laboratorio</option><option value="imaging_result">Imagen</option><option value="external_report">Informe externo</option></select></label><label>Título<input data-m7-result-title required maxlength="160"></label><label>Procedencia<input data-m7-result-provenance required maxlength="160"></label><label>Archivo PDF o imagen<input data-m7-result-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><button type="submit" class="btn btn-primary">Guardar resultado</button></form>
+                      </div>
+                      <form class="m7-doc-replace d-none" data-m7-replace-form><h5>Reemplazar documento</h5><p>Se añadirá una versión nueva; la anterior permanecerá en el historial.</p><strong data-m7-replace-target></strong><label>Motivo del reemplazo<textarea data-m7-replace-reason required maxlength="1000" rows="2"></textarea></label><label>Archivo nuevo<input data-m7-replace-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-replace-cancel>Cancelar</button><button type="submit" class="btn btn-primary">Guardar nueva versión</button></div></form>
+                      <div class="m7-doc-capture" data-m7-capture><h5>Captura desde otro dispositivo</h5><button type="button" class="btn btn-outline-primary" data-m7-capture-start>Crear enlace de captura</button><div class="d-none" data-m7-capture-session><a data-m7-capture-link target="_blank" rel="noopener noreferrer">Abrir captura</a><span data-m7-capture-state role="status"></span><button type="button" class="btn btn-outline-secondary" data-m7-capture-check>Comprobar estado</button><button type="button" class="btn btn-outline-danger" data-m7-capture-cancel>Cancelar enlace</button></div></div>
+                    </section>
                     <div class="m7-section-editor d-none" data-m7-editor>
                       <div class="m7-section-editor-head">
                         <div>
@@ -5356,7 +5371,7 @@
                       <div class="m7-section-editor-actions"><button type="button" class="btn btn-primary" data-m7-exam-save>Guardar exploración</button></div>
                       <div class="m7-section-conflict d-none" data-m7-exam-conflict role="alert"><strong>La exploración cambió en otra sesión.</strong><p>Tu borrador se conserva. Revisa la versión guardada antes de reconciliar.</p><div class="m7-section-conflict-columns"><div><strong>Tu borrador</strong><pre data-m7-exam-draft></pre></div><div><strong>Versión guardada</strong><pre data-m7-exam-server></pre></div></div><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-primary" data-m7-exam-reload>Cargar versión guardada</button><button type="button" class="btn btn-outline-secondary" data-m7-exam-use-draft disabled>Usar mi borrador después de revisar</button></div></div>
                     </div>
-                    <p class="m7-workspace-note">Documentos / Acciones y Finalizar estarán disponibles en una etapa posterior.</p>
+                    <p class="m7-workspace-note">Finalizar estará disponible en una etapa posterior.</p>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history>
                     <h4>Consultas anteriores</h4>
@@ -10500,7 +10515,8 @@
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/app.js?v=patientarchive01"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=m7ws03"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=m7ws03"></script>
+<script src="assets/js/clinical/m7-ws04.js?v=m7ws04"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=m7ws04"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

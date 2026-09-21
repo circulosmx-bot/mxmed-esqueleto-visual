@@ -946,30 +946,50 @@ function clinical_note_capture_encounter_uses_v1(array $encounter): bool
 
 function clinical_documents_list_fetch(PDO $pdo, string $patientId, string $documentType, string $hospitalStayId, int $limit): array
 {
+    // Additive read metadata for the M7 document workspace. Older installations
+    // retain the existing list contract until the canonical schema is present.
+    $tables = $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('clinical_document_revisions','clinical_document_binaries','clinical_encounter_final_notes')")->fetchAll(PDO::FETCH_COLUMN);
+    $hasRevisions = in_array('clinical_document_revisions', $tables, true);
+    $hasBinaries = in_array('clinical_document_binaries', $tables, true);
+    $columns = clinical_table_columns($pdo, 'clinical_documents');
+    $encounterProjection = isset($columns['encounter_ref_id']) ? 'd.encounter_ref_id' : 'NULL AS encounter_ref_id';
+    $rootProjection = $hasRevisions ? 'COALESCE((SELECT r.original_document_id FROM clinical_document_revisions r WHERE r.new_document_id=d.id LIMIT 1), d.id) AS lineage_root_id' : 'd.id AS lineage_root_id';
+    $successorProjection = $hasRevisions ? "EXISTS(SELECT 1 FROM clinical_document_revisions r WHERE r.supersedes_document_id=d.id OR (r.original_document_id=d.id AND r.supersedes_document_id IS NULL)) AS has_successor" : '0 AS has_successor';
+    $binaryProjection = $hasBinaries ? "EXISTS(SELECT 1 FROM clinical_document_binaries b WHERE b.document_id=d.id AND b.variant_role='ORIGINAL' AND b.variant_version=1) AS has_private_binary" : '0 AS has_private_binary';
+    $lateProjection = in_array('clinical_encounter_final_notes', $tables, true) && isset($columns['encounter_ref_id'])
+        ? 'EXISTS(SELECT 1 FROM clinical_encounter_final_notes f WHERE f.encounter_id=d.encounter_ref_id AND d.id>f.document_id) AS created_after_final_note'
+        : '0 AS created_after_final_note';
     $sql = "
         SELECT
-            id,
-            document_uuid,
-            title,
-            document_type,
-            summary,
-            event_datetime,
-            printable,
-            payload_json,
+            d.id,
+            d.document_uuid,
+            d.title,
+            d.document_type,
+            d.summary,
+            d.event_datetime,
+            d.printable,
+            d.payload_json,
+            d.encounter_id,
+            {$encounterProjection},
+            d.status,
+            {$rootProjection},
+            {$successorProjection},
+            {$binaryProjection},
+            {$lateProjection},
             JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.snapshot.medico.nombre_completo')) AS doctor_name
-        FROM clinical_documents
-        WHERE patient_id = :patient_id
+        FROM clinical_documents d
+        WHERE d.patient_id = :patient_id
     ";
     $params = [':patient_id' => $patientId];
     if ($documentType !== '') {
-        $sql .= " AND document_type = :type";
+        $sql .= " AND d.document_type = :type";
         $params[':type'] = $documentType;
     }
     if ($hospitalStayId !== '') {
-        $sql .= " AND hospital_stay_id = :hospital_stay_id";
+        $sql .= " AND d.hospital_stay_id = :hospital_stay_id";
         $params[':hospital_stay_id'] = $hospitalStayId;
     }
-    $sql .= " ORDER BY event_datetime DESC, id DESC LIMIT {$limit}";
+    $sql .= " ORDER BY d.event_datetime DESC, d.id DESC LIMIT {$limit}";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

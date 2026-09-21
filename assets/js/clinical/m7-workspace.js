@@ -1,4 +1,4 @@
-// M7 WS01–WS03 — encounter boundary and structured OPEN consultation sections.
+// M7 WS01–WS04 — encounter boundary, structured sections, and canonical document actions.
 (function(){
   const patientPane = document.getElementById('p-expediente');
   const root = document.getElementById('m7-workspace');
@@ -27,7 +27,7 @@
   const conflictReload = root.querySelector('[data-m7-conflict-reload]');
   const conflictUseDraft = root.querySelector('[data-m7-conflict-use-draft]');
   const sectionButtons = [...root.querySelectorAll('[data-m7-section]')];
-  const sectionTypes = { reason:'reason_evolution', measurements:'measurements', exam:'physical_exam', assessment:'assessment', plan:'plan' };
+  const sectionTypes = { reason:'reason_evolution', measurements:'measurements', exam:'physical_exam', assessment:'assessment', plan:'plan', documents:'documents' };
   const sectionTitles = { reason_evolution:'Motivo / Evolución', assessment:'Valoración', plan:'Plan' };
   let epoch = 0;
   let active = null;
@@ -47,6 +47,7 @@
     show(currentButton, false);
     show(resumeButton, false);
   });
+  const ws04 = window.mxmedM7WS04?.(root, encounterUrlForWs03, ()=>patientId);
   function encounterUrlForWs03(key){ return `/api/clinical/index.php/encounters/${encodeURIComponent(key)}`; }
 
   const selectedPatient = ()=> String(patientPane.dataset.patientId || patientPane.dataset.activePatientId || '').trim();
@@ -97,11 +98,13 @@
     try { sessionStorage.removeItem(id); } catch (_) { /* In-memory state is already clear. */ }
   }
   function isDirty(){
+    if(selectedSection === 'documents') return !!body.dataset.encounterKey && !!ws04?.isDirty();
     return sectionMode === 'open' && !!body.dataset.encounterKey &&
       (selectedSection === 'measurements' || selectedSection === 'physical_exam' ? !!ws03?.isDirty() : editorText.value !== sectionBaseline);
   }
   function protectNavigation(){
     if(!isDirty()) return true;
+    if(selectedSection === 'documents') return window.confirm('Hay una acción clínica sin guardar. ¿Deseas salir y descartar la selección local?');
     if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
     else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     return window.confirm('Tienes cambios clínicos sin guardar. Se conservará tu borrador en esta pestaña. ¿Deseas continuar?');
@@ -109,9 +112,11 @@
   function sectionRow(type){ return loadedSections[type] || null; }
   function paintSection(){
     const ws03Selected = selectedSection === 'measurements' || selectedSection === 'physical_exam';
-    show(editor, !ws03Selected);
+    const ws04Selected = selectedSection === 'documents';
+    show(editor, !ws03Selected && !ws04Selected);
     ws03?.select(selectedSection);
-    if(ws03Selected){
+    ws04?.select(ws04Selected);
+    if(ws03Selected || ws04Selected){
       sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
       return;
     }
@@ -159,6 +164,7 @@
       loadedSections = detail.sections && typeof detail.sections === 'object' ? detail.sections : {};
       sectionMode = String(detail.status || '').toLowerCase() === 'open' ? 'open' : 'terminal';
       ws03?.load(detail, key, sectionMode);
+      ws04?.load(detail);
       paintSection();
     } catch (error) {
       if(seen !== sectionEpoch) return;
@@ -275,6 +281,7 @@
   function reset(){
     sectionEpoch++;
     ws03?.reset();
+    ws04?.reset();
     sectionMode = 'none';
     sectionConflict = false;
     active = null;
@@ -333,7 +340,8 @@
   async function refresh(){
     const hadDraft = isDirty();
     if(hadDraft){
-      if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
+      if(selectedSection === 'documents') { /* Form controls remain local until navigation completes. */ }
+      else if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
       else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     }
     const seen = ++epoch;
@@ -413,7 +421,8 @@
   });
   window.addEventListener('beforeunload', event=>{
     if(!isDirty()) return;
-    if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
+    if(selectedSection === 'documents') { /* The browser owns the selected File until the page closes. */ }
+    else if(selectedSection === 'measurements' || selectedSection === 'physical_exam') ws03?.remember();
     else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     event.preventDefault();
     event.returnValue = '';

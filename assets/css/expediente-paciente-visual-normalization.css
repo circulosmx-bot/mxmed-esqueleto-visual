@@ -482,6 +482,29 @@
 #p-expediente .m7-exam-row strong{color:#244b60;font-size:.88rem}
 #p-expediente .m7-exam-row input,#p-expediente .m7-exam-row select{margin-top:0}
 #p-expediente .m7-section-conflict pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto;background:#fff;padding:8px;border-radius:8px;font-size:.8rem}
+#p-expediente .m7-documents{min-width:0}
+#p-expediente .m7-documents h5{font-size:.9rem;font-weight:700;color:#06536e;margin:0 0 8px}
+#p-expediente .m7-doc-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:12px 0}
+#p-expediente .m7-doc-columns>div{min-width:0}
+#p-expediente .m7-doc-columns>div>div>p{color:#526976;font-size:.86rem}
+#p-expediente .m7-doc-card{min-width:0;border:1px solid #c7e0e5;border-radius:10px;background:#f8fcfd;padding:10px;margin-bottom:8px;overflow-wrap:anywhere}
+#p-expediente .m7-doc-card strong{display:block;color:#173f54;font-size:.91rem}
+#p-expediente .m7-doc-card p{margin:3px 0;color:#526976;font-size:.82rem}
+#p-expediente .m7-doc-badge{display:inline-block;margin:4px 6px 3px 0;padding:3px 7px;border-radius:999px;background:#e6f5f6;color:#06536e;font-size:.74rem;font-weight:700}
+#p-expediente .m7-doc-late{background:#fff1dc;color:#74500a}
+#p-expediente .m7-doc-card-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+#p-expediente .m7-doc-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:12px;margin-top:12px}
+#p-expediente .m7-doc-actions form,#p-expediente .m7-doc-replace,#p-expediente .m7-doc-capture{min-width:0;border:1px solid #d5e6ea;border-radius:10px;background:#fbfdfd;padding:12px}
+#p-expediente .m7-doc-actions form>p,#p-expediente .m7-doc-replace>p{font-size:.81rem;color:#526976;margin:0 0 9px}
+#p-expediente .m7-doc-actions label,#p-expediente .m7-doc-replace label{display:block;min-width:0;margin:8px 0;color:#244b60;font-size:.84rem;font-weight:600}
+#p-expediente .m7-doc-actions input,#p-expediente .m7-doc-actions select,#p-expediente .m7-doc-actions textarea,#p-expediente .m7-doc-replace input,#p-expediente .m7-doc-replace textarea{display:block;width:100%;min-width:0;min-height:42px;margin-top:4px;border:1px solid #abcbd4;border-radius:9px;background:#fff;color:#173f54;padding:8px 10px}
+#p-expediente .m7-doc-actions input[type=file],#p-expediente .m7-doc-replace input[type=file]{font-size:.78rem;padding:7px}
+#p-expediente .m7-doc-actions :focus-visible,#p-expediente .m7-doc-replace :focus-visible,#p-expediente .m7-doc-capture :focus-visible{outline:2px solid #06aeb8;outline-offset:2px}
+#p-expediente .m7-doc-replace,#p-expediente .m7-doc-capture{margin-top:12px}
+#p-expediente .m7-doc-capture>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:9px}
+#p-expediente .m7-doc-capture a{overflow-wrap:anywhere}
+#p-expediente [data-m7-doc-state][data-state=failed],#p-expediente [data-m7-doc-state][data-state=conflict],#p-expediente [data-m7-doc-state][data-state=blocked]{color:#a32035}
+@media(max-width:1100px){#p-expediente .m7-doc-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:767.98px){
   #p-expediente .m7-workspace{padding:14px}
   #p-expediente .m7-workspace-head{flex-direction:column}
@@ -494,4 +517,6 @@
   #p-expediente .m7-section-editor-actions .btn{width:100%}
   #p-expediente .m7-measurement-fields{grid-template-columns:1fr}
   #p-expediente .m7-exam-row{grid-template-columns:1fr;gap:6px}
+  #p-expediente .m7-doc-columns,#p-expediente .m7-doc-actions{grid-template-columns:1fr}
+  #p-expediente .m7-documents .btn{min-height:42px}
 }
