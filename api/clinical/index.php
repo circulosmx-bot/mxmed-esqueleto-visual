@@ -9,6 +9,7 @@ require_once __DIR__ . '/../_lib/clinical_m6_cutover.php';
 require_once __DIR__ . '/../_lib/clinical_m6_observability.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_antecedents.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_problems.php';
+require_once __DIR__ . '/../_lib/clinical_longitudinal_medications.php';
 
 clinical_m6_observability_request_started_at();
 
@@ -4350,6 +4351,46 @@ try {
                 'meta'=>['method'=>$method,'route'=>$route]], 503);
             return;
         }
+    }
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal'
+        && in_array($segments[3] ?? '', ['medications','medication-reconciliations'],true)) {
+        $resource=(string)$segments[3];$routeName='patients/{patient_id}/longitudinal/'.$resource;
+        $context=clinical_require_doctor_context($routeName);if($context===null)return;
+        $patientId=trim(rawurldecode((string)($segments[1]??'')));
+        $count=count($segments);$itemId=null;$history=false;$operation=null;
+        if($count===4 && $method==='POST') $operation=$resource==='medications'?'CREATE':'RECONCILE';
+        elseif($count===5 && $resource==='medications' && $method==='POST') $operation=match($segments[4]) {
+            'patient-reported'=>'PATIENT_REPORTED_CREATE','from-prescription'=>'PRESCRIPTION_DERIVED_CREATE',default=>null
+        };
+        elseif($count===5 && $resource==='medications' && $method==='GET' && $segments[4]==='history')$history=true;
+        elseif(($count===5||$count===6) && ctype_digit((string)$segments[4]) && (int)$segments[4]>0) {
+            $itemId=(int)$segments[4];
+            if($resource==='medications') {
+                if($count===5 && $method==='PATCH')$operation='UPDATE_REGIMEN';
+                elseif($count===6 && $method==='GET' && $segments[5]==='history')$history=true;
+                elseif($count===6 && $method==='POST')$operation=match($segments[5]) {
+                    'confirm-active'=>'CONFIRM_ACTIVE','discontinue'=>'DISCONTINUE','complete'=>'COMPLETE',default=>null
+                };
+            }
+        }
+        $validRead=$method==='GET' && ($count===4 || ($count===5 && ($itemId!==null||$history)) || ($count===6 && $history));
+        if(!$validRead && $operation===null){clinical_send_response(['ok'=>false,'error'=>'not_found','meta'=>['route'=>$routeName]],404);return;}
+        try {
+            $service=new ClinicalLongitudinalMedications(clinical_documents_pdo());
+            if($validRead)$data=$service->read($context['doctor_id'],$patientId,$itemId,$resource,$history);
+            else {
+                $key=trim((string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                $body=json_decode((string)file_get_contents('php://input'),true);
+                if(!is_array($body)||array_is_list($body))throw new ClinicalLongitudinalException('INVALID_BODY',400);
+                $data=$operation==='RECONCILE'
+                    ?$service->reconcile($context['doctor_id'],$patientId,$context['user_id'],$body,$key)
+                    :$service->mutate($context['doctor_id'],$patientId,$context['user_id'],$operation,$body,$key,$itemId);
+            }
+            clinical_send_response(['ok'=>true,'data'=>$data,'meta'=>['route'=>$routeName,'method'=>$method]],200);
+        } catch(ClinicalLongitudinalException $e) {
+            clinical_send_response(['ok'=>false,'error'=>$e->errorCode,'message'=>$e->errorCode,'meta'=>['route'=>$routeName]],$e->httpStatus);
+        }
+        return;
     }
     if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal'
         && ($segments[3] ?? '') === 'problems') {
