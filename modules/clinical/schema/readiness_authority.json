@@ -1,0 +1,1908 @@
+{
+  "authority_version": 1,
+  "dependencies": {
+    "C04": [
+      "clinical_encounter_sections",
+      "clinical_observations",
+      "clinical_encounter_amendments",
+      "clinical_documents.encounter_ref_id"
+    ],
+    "C05": [
+      "clinical_idempotency_requests",
+      "clinical_document_revisions",
+      "clinical_binary_uploads",
+      "clinical_document_binaries"
+    ],
+    "C21": [
+      "clinical_encounters",
+      "clinical_documents.encounter_ref_id",
+      "clinical_idempotency_requests",
+      "clinical_binary_uploads",
+      "clinical_document_binaries"
+    ]
+  },
+  "migration_set": [
+    "2026_09_18_01",
+    "2026_09_18_02",
+    "2026_09_18_03",
+    "2026_09_18_04",
+    "2026_09_19_05"
+  ],
+  "poststate": {
+    "forbidden_routines": [
+      "mxmed_migrate_encounter_lifecycle_v1",
+      "mxmed_migrate_encounter_content_v1",
+      "mxmed_migrate_encounter_idempotency_v1",
+      "mxmed_migrate_encounter_documents_v1",
+      "mxmed_migrate_clinical_binary_storage_v1"
+    ],
+    "objects": {
+      "clinical_binary_uploads": {
+        "checks": [
+          {
+            "clause": "((char_length(`idempotency_key_digest`) = 64) and regexp_like(`idempotency_key_digest`,_utf8mb4\\'^[0-9A-Fa-f]{64}$\\') and (char_length(`semantic_request_hash`) = 64) and regexp_like(`semantic_request_hash`,_utf8mb4\\'^[0-9A-Fa-f]{64}$\\') and (char_length(`binary_sha256`) = 64) and regexp_like(`binary_sha256`,_utf8mb4\\'^[0-9A-Fa-f]{64}$\\'))",
+            "name": "chk_binary_upload_hashes_v1"
+          },
+          {
+            "clause": "((`byte_length` > 0) and (char_length(trim(`mime_type`)) > 0) and (char_length(trim(`staging_key`)) > 0) and (char_length(trim(`planned_final_prefix`)) > 0))",
+            "name": "chk_binary_upload_integrity_v1"
+          },
+          {
+            "clause": "(`storage_state` in (_utf8mb4\\'STAGED\\',_utf8mb4\\'FINALIZED\\',_utf8mb4\\'ORPHANED\\',_utf8mb4\\'RECONCILIATION_REQUIRED\\'))",
+            "name": "chk_binary_upload_state_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "upload_id",
+            "nullable": "NO",
+            "type": "char(36)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "operation_type",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "doctor_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "context_type",
+            "nullable": "NO",
+            "type": "varchar(16)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "context_id",
+            "nullable": "NO",
+            "type": "varchar(128)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "idempotency_key_digest",
+            "nullable": "NO",
+            "type": "char(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "idempotency_request_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "semantic_request_hash",
+            "nullable": "NO",
+            "type": "char(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "binary_sha256",
+            "nullable": "NO",
+            "type": "char(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "byte_length",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "mime_type",
+            "nullable": "NO",
+            "type": "varchar(100)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "staging_key",
+            "nullable": "NO",
+            "type": "varchar(512)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "planned_final_prefix",
+            "nullable": "NO",
+            "type": "varchar(512)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "storage_state",
+            "nullable": "NO",
+            "type": "varchar(32)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "document_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "updated_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "expires_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "lease_until",
+            "nullable": "YES",
+            "type": "datetime"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "last_error_code",
+            "nullable": "YES",
+            "type": "varchar(64)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "document_id",
+            "delete": "RESTRICT",
+            "name": "fk_binary_upload_document",
+            "referenced_columns": "id",
+            "referenced_table": "clinical_documents",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "idempotency_request_id",
+            "delete": "RESTRICT",
+            "name": "fk_binary_upload_idempotency",
+            "referenced_columns": "request_id",
+            "referenced_table": "clinical_idempotency_requests",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "document_id",
+            "name": "idx_binary_upload_document",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "idempotency_request_id",
+            "name": "idx_binary_upload_idempotency",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "binary_sha256",
+            "name": "idx_binary_upload_sha256",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "storage_state,expires_at",
+            "name": "idx_binary_upload_state_expiry",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "upload_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "staging_key",
+            "name": "uq_binary_upload_staging_key",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_document_binaries": {
+        "checks": [
+          {
+            "clause": "(((`width_px` is null) and (`height_px` is null)) or ((`width_px` is not null) and (`height_px` is not null) and (`width_px` > 0) and (`height_px` > 0)))",
+            "name": "chk_document_binary_dimensions_v1"
+          },
+          {
+            "clause": "((char_length(`sha256`) = 64) and regexp_like(`sha256`,_utf8mb4\\'^[0-9A-Fa-f]{64}$\\'))",
+            "name": "chk_document_binary_hash_v1"
+          },
+          {
+            "clause": "((`variant_version` > 0) and (`byte_length` > 0) and (char_length(trim(`mime_type`)) > 0) and (char_length(trim(`storage_key`)) > 0))",
+            "name": "chk_document_binary_integrity_v1"
+          },
+          {
+            "clause": "(`variant_role` in (_utf8mb4\\'ORIGINAL\\',_utf8mb4\\'DISPLAY\\',_utf8mb4\\'THUMBNAIL\\'))",
+            "name": "chk_document_binary_role_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "auto_increment",
+            "generation": "",
+            "name": "binary_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "binary_uuid",
+            "nullable": "NO",
+            "type": "char(36)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "document_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "variant_role",
+            "nullable": "NO",
+            "type": "varchar(16)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "variant_version",
+            "nullable": "NO",
+            "type": "smallint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "storage_key",
+            "nullable": "NO",
+            "type": "varchar(512)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "sha256",
+            "nullable": "NO",
+            "type": "char(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "byte_length",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "mime_type",
+            "nullable": "NO",
+            "type": "varchar(100)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "width_px",
+            "nullable": "YES",
+            "type": "int unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "height_px",
+            "nullable": "YES",
+            "type": "int unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "source_filename",
+            "nullable": "YES",
+            "type": "varchar(255)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "finalized_at",
+            "nullable": "NO",
+            "type": "datetime"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "document_id",
+            "delete": "RESTRICT",
+            "name": "fk_document_binary_document",
+            "referenced_columns": "id",
+            "referenced_table": "clinical_documents",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "binary_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "storage_key",
+            "name": "uq_document_binary_storage_key",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "binary_uuid",
+            "name": "uq_document_binary_uuid",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "document_id,variant_role,variant_version",
+            "name": "uq_document_binary_variant",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_document_revisions": {
+        "checks": [
+          {
+            "clause": "(char_length(trim(`reason`)) > 0)",
+            "name": "chk_document_revision_reason_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "auto_increment",
+            "generation": "",
+            "name": "revision_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "original_document_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "supersedes_document_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "new_document_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "reason",
+            "nullable": "NO",
+            "type": "varchar(1000)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "author_user_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "new_document_id",
+            "delete": "RESTRICT",
+            "name": "fk_document_revision_new",
+            "referenced_columns": "id",
+            "referenced_table": "clinical_documents",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "original_document_id",
+            "delete": "RESTRICT",
+            "name": "fk_document_revision_original",
+            "referenced_columns": "id",
+            "referenced_table": "clinical_documents",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "supersedes_document_id",
+            "delete": "RESTRICT",
+            "name": "fk_document_revision_supersedes",
+            "referenced_columns": "id",
+            "referenced_table": "clinical_documents",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "supersedes_document_id",
+            "name": "fk_document_revision_supersedes",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "original_document_id,revision_id",
+            "name": "idx_document_revision_original",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "revision_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "new_document_id",
+            "name": "uq_document_revision_new_document",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_documents": {
+        "checks": [],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "encounter_ref_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "encounter_ref_id",
+            "delete": "RESTRICT",
+            "name": "fk_clinical_documents_encounter_ref",
+            "referenced_columns": "encounter_id",
+            "referenced_table": "clinical_encounters",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "encounter_ref_id,event_datetime",
+            "name": "idx_clinical_documents_encounter_ref",
+            "non_unique": "1",
+            "type": "BTREE"
+          }
+        ]
+      },
+      "clinical_encounter_amendments": {
+        "checks": [
+          {
+            "clause": "(char_length(trim(`reason`)) > 0)",
+            "name": "chk_encounter_amendment_reason_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "auto_increment",
+            "generation": "",
+            "name": "amendment_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "encounter_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "target_type",
+            "nullable": "NO",
+            "type": "varchar(40)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "target_id",
+            "nullable": "YES",
+            "type": "varchar(128)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "target_field",
+            "nullable": "YES",
+            "type": "varchar(128)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "reason",
+            "nullable": "NO",
+            "type": "varchar(1000)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "author_user_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "amended_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "correction_payload_json",
+            "nullable": "NO",
+            "type": "json"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "previous_effective_reference",
+            "nullable": "YES",
+            "type": "varchar(255)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "encounter_id",
+            "delete": "RESTRICT",
+            "name": "fk_encounter_amendments_encounter",
+            "referenced_columns": "encounter_id",
+            "referenced_table": "clinical_encounters",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "encounter_id,amended_at,amendment_id",
+            "name": "idx_encounter_amendment_history",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "amendment_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_encounter_final_notes": {
+        "checks": [],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "encounter_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "document_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "document_id",
+            "delete": "RESTRICT",
+            "name": "fk_encounter_final_note_document",
+            "referenced_columns": "id",
+            "referenced_table": "clinical_documents",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "encounter_id",
+            "delete": "RESTRICT",
+            "name": "fk_encounter_final_note_encounter",
+            "referenced_columns": "encounter_id",
+            "referenced_table": "clinical_encounters",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "encounter_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "document_id",
+            "name": "uq_encounter_final_note_document",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_encounter_sections": {
+        "checks": [
+          {
+            "clause": "(`section_type` in (_utf8mb4\\'reason_evolution\\',_utf8mb4\\'review_of_systems\\',_utf8mb4\\'physical_exam\\',_utf8mb4\\'assessment\\',_utf8mb4\\'plan\\',_utf8mb4\\'follow_up\\'))",
+            "name": "chk_encounter_section_type_v1"
+          },
+          {
+            "clause": "((`payload_schema_version` >= 1) and (`row_version` >= 1))",
+            "name": "chk_encounter_section_version_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "auto_increment",
+            "generation": "",
+            "name": "section_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "encounter_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "section_type",
+            "nullable": "NO",
+            "type": "varchar(40)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "payload_schema_version",
+            "nullable": "NO",
+            "type": "smallint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "payload_json",
+            "nullable": "NO",
+            "type": "json"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "narrative_text",
+            "nullable": "YES",
+            "type": "text"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "created_by_user_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "updated_by_user_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "1",
+            "extra": "",
+            "generation": "",
+            "name": "row_version",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "generation": "",
+            "name": "updated_at",
+            "nullable": "NO",
+            "type": "datetime"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "encounter_id",
+            "delete": "RESTRICT",
+            "name": "fk_encounter_sections_encounter",
+            "referenced_columns": "encounter_id",
+            "referenced_table": "clinical_encounters",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "section_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "encounter_id,section_type",
+            "name": "uq_encounter_section_concept",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_encounter_start_requests": {
+        "checks": [
+          {
+            "clause": "(((`committed_at` is null) and (`encounter_id` is null)) or ((`committed_at` is not null) and (`encounter_id` is not null)))",
+            "name": "chk_encounter_start_commit_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "auto_increment",
+            "generation": "",
+            "name": "request_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "doctor_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_bin",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "idempotency_key",
+            "nullable": "NO",
+            "type": "varchar(128)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "canonicalization_version",
+            "nullable": "NO",
+            "type": "smallint unsigned"
+          },
+          {
+            "charset": "ascii",
+            "collation": "ascii_bin",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "request_hash",
+            "nullable": "NO",
+            "type": "char(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "actor_user_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "patient_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "encounter_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "committed_at",
+            "nullable": "YES",
+            "type": "datetime"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "patient_id",
+            "delete": "RESTRICT",
+            "name": "fk_encounter_start_patient",
+            "referenced_columns": "patient_id",
+            "referenced_table": "patients_patients",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "encounter_id",
+            "delete": "RESTRICT",
+            "name": "fk_encounter_start_result",
+            "referenced_columns": "encounter_id",
+            "referenced_table": "clinical_encounters",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "patient_id",
+            "name": "fk_encounter_start_patient",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "encounter_id",
+            "name": "idx_encounter_start_result",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "request_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "doctor_id,idempotency_key",
+            "name": "uq_encounter_start_idempotency",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_encounters": {
+        "checks": [
+          {
+            "clause": "((`doctor_id` is null) or ((cast(`status` as char charset binary) = cast(_utf8mb4\\'open\\' as char charset binary)) and (`closed_at` is null) and (`closed_by_user_id` is null) and (`voided_at` is null) and (`voided_by_user_id` is null) and (`void_reason` is null)) or ((cast(`status` as char charset binary) = cast(_utf8mb4\\'closed\\' as char charset binary)) and (`closed_at` is not null) and (`closed_by_user_id` is not null) and (`voided_at` is null) and (`voided_by_user_id` is null) and (`void_reason` is null)) or ((cast(`status` as char charset binary) = cast(_utf8mb4\\'voided\\' as char charset binary)) and (`voided_at` is not null) and (`voided_by_user_id` is not null) and (char_length(trim(`void_reason`)) > 0) and (`closed_at` is null) and (`closed_by_user_id` is null)))",
+            "name": "chk_clinical_encounter_lifecycle_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "voided_at",
+            "nullable": "YES",
+            "type": "datetime"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "voided_by_user_id",
+            "nullable": "YES",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "void_reason",
+            "nullable": "YES",
+            "type": "varchar(1000)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "STORED GENERATED",
+            "generation": "(case when (cast(`status` as char charset binary) = cast(_utf8mb4\\'open\\' as char charset binary)) then 1 else NULL end)",
+            "name": "open_guard",
+            "nullable": "YES",
+            "type": "tinyint"
+          }
+        ],
+        "foreign_keys": [],
+        "indexes": [
+          {
+            "columns": "doctor_id,patient_id,open_guard",
+            "name": "uq_clinical_encounter_one_open",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ]
+      },
+      "clinical_idempotency_requests": {
+        "checks": [
+          {
+            "clause": "(((`committed_at` is null) and (`observation_id` is null) and (`document_id` is null) and (`encounter_amendment_id` is null) and (`document_revision_id` is null)) or ((`committed_at` is not null) and (((`operation_type` = _utf8mb4\\'CREATE_OBSERVATION\\') and (`observation_id` is not null) and (`document_id` is null) and (`encounter_amendment_id` is null) and (`document_revision_id` is null)) or ((`operation_type` in (_utf8mb4\\'CREATE_ENCOUNTER_DOCUMENT\\',_utf8mb4\\'CREATE_POST_ENCOUNTER_RESULT\\')) and (`observation_id` is null) and (`document_id` is not null) and (`encounter_amendment_id` is null) and (`document_revision_id` is null)) or ((`operation_type` = _utf8mb4\\'CREATE_ENCOUNTER_AMENDMENT\\') and (`observation_id` is null) and (`document_id` is null) and (`encounter_amendment_id` is not null) and (`document_revision_id` is null)) or ((`operation_type` = _utf8mb4\\'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT\\') and (`observation_id` is null) and (`document_id` is null) and (`encounter_amendment_id` is null) and (`document_revision_id` is not null)))))",
+            "name": "chk_idempotency_committed_result_v1"
+          },
+          {
+            "clause": "(`context_type` in (_utf8mb4\\'ENCOUNTER\\',_utf8mb4\\'PATIENT\\'))",
+            "name": "chk_idempotency_context_v1"
+          },
+          {
+            "clause": "(`operation_type` in (_utf8mb4\\'CREATE_OBSERVATION\\',_utf8mb4\\'CREATE_ENCOUNTER_DOCUMENT\\',_utf8mb4\\'CREATE_POST_ENCOUNTER_RESULT\\',_utf8mb4\\'CREATE_ENCOUNTER_AMENDMENT\\',_utf8mb4\\'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT\\'))",
+            "name": "chk_idempotency_operation_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "auto_increment",
+            "generation": "",
+            "name": "request_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "operation_type",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "doctor_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "context_type",
+            "nullable": "NO",
+            "type": "varchar(16)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "context_id",
+            "nullable": "NO",
+            "type": "varchar(128)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_bin",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "idempotency_key",
+            "nullable": "NO",
+            "type": "varchar(128)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "canonicalization_version",
+            "nullable": "NO",
+            "type": "smallint unsigned"
+          },
+          {
+            "charset": "ascii",
+            "collation": "ascii_bin",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "request_hash",
+            "nullable": "NO",
+            "type": "char(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "actor_user_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "observation_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "document_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "encounter_amendment_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "document_revision_id",
+            "nullable": "YES",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "committed_at",
+            "nullable": "YES",
+            "type": "datetime"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "document_id",
+            "delete": "RESTRICT",
+            "name": "fk_idempotency_document",
+            "referenced_columns": "id",
+            "referenced_table": "clinical_documents",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "document_revision_id",
+            "delete": "RESTRICT",
+            "name": "fk_idempotency_document_revision",
+            "referenced_columns": "revision_id",
+            "referenced_table": "clinical_document_revisions",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "encounter_amendment_id",
+            "delete": "RESTRICT",
+            "name": "fk_idempotency_encounter_amendment",
+            "referenced_columns": "amendment_id",
+            "referenced_table": "clinical_encounter_amendments",
+            "update": "RESTRICT"
+          },
+          {
+            "columns": "observation_id",
+            "delete": "RESTRICT",
+            "name": "fk_idempotency_observation",
+            "referenced_columns": "observation_id",
+            "referenced_table": "clinical_observations",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "document_id",
+            "name": "fk_idempotency_document",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "document_revision_id",
+            "name": "fk_idempotency_document_revision",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "encounter_amendment_id",
+            "name": "fk_idempotency_encounter_amendment",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "observation_id",
+            "name": "fk_idempotency_observation",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "request_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          },
+          {
+            "columns": "operation_type,doctor_id,context_type,context_id,idempotency_key",
+            "name": "uq_clinical_command_idempotency",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      },
+      "clinical_observations": {
+        "checks": [
+          {
+            "clause": "(((`code` = _utf8mb4\\'blood_pressure\\') and (`systolic_mm_hg` > 0) and (`diastolic_mm_hg` > 0) and (`value_numeric` is null) and ((`value_text` is null) or (trim(`value_text`) = _utf8mb4\\'\\')) and (`unit` = _utf8mb4\\'mmHg\\')) or ((`code` <> _utf8mb4\\'blood_pressure\\') and (`value_numeric` is not null) and (`systolic_mm_hg` is null) and (`diastolic_mm_hg` is null)))",
+            "name": "chk_observation_bp_v1"
+          },
+          {
+            "clause": "(`source` in (_utf8mb4\\'direct_measurement\\',_utf8mb4\\'patient_report\\',_utf8mb4\\'import\\'))",
+            "name": "chk_observation_source_v1"
+          },
+          {
+            "clause": "(`row_version` >= 1)",
+            "name": "chk_observation_version_v1"
+          }
+        ],
+        "columns": [
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "auto_increment",
+            "generation": "",
+            "name": "observation_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "encounter_id",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "code",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "value_numeric",
+            "nullable": "YES",
+            "type": "decimal(18,6)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "value_text",
+            "nullable": "YES",
+            "type": "varchar(1000)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "unit",
+            "nullable": "NO",
+            "type": "varchar(32)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "systolic_mm_hg",
+            "nullable": "YES",
+            "type": "decimal(6,2)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "diastolic_mm_hg",
+            "nullable": "YES",
+            "type": "decimal(6,2)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "effective_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "recorded_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "recorded_by_user_id",
+            "nullable": "NO",
+            "type": "varchar(64)"
+          },
+          {
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "source",
+            "nullable": "NO",
+            "type": "varchar(32)"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "<NULL>",
+            "extra": "",
+            "generation": "",
+            "name": "provenance_json",
+            "nullable": "NO",
+            "type": "json"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "1",
+            "extra": "",
+            "generation": "",
+            "name": "row_version",
+            "nullable": "NO",
+            "type": "bigint unsigned"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "generation": "",
+            "name": "created_at",
+            "nullable": "NO",
+            "type": "datetime"
+          },
+          {
+            "charset": "<NULL>",
+            "collation": "<NULL>",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "generation": "",
+            "name": "updated_at",
+            "nullable": "NO",
+            "type": "datetime"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "columns": "encounter_id",
+            "delete": "RESTRICT",
+            "name": "fk_observations_encounter",
+            "referenced_columns": "encounter_id",
+            "referenced_table": "clinical_encounters",
+            "update": "RESTRICT"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": "encounter_id,code,effective_at",
+            "name": "idx_observation_encounter_code_effective",
+            "non_unique": "1",
+            "type": "BTREE"
+          },
+          {
+            "columns": "observation_id",
+            "name": "PRIMARY",
+            "non_unique": "0",
+            "type": "BTREE"
+          }
+        ],
+        "table": {
+          "collation": "utf8mb4_unicode_ci",
+          "engine": "InnoDB"
+        }
+      }
+    },
+    "triggers": [
+      {
+        "event": "INSERT",
+        "name": "trg_clinical_encounters_v1_before_insert",
+        "statement": "BEGIN\n  IF BINARY NEW.status<>BINARY 'open' THEN\n    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='START_MUST_CREATE_OPEN';\n  END IF;\n  IF NEW.doctor_id IS NULL OR TRIM(NEW.doctor_id)='' THEN\n    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='DOCTOR_ID_REQUIRED';\n  END IF;\nEND",
+        "table": "clinical_encounters",
+        "timing": "BEFORE"
+      },
+      {
+        "event": "UPDATE",
+        "name": "trg_clinical_encounters_v1_before_update",
+        "statement": "BEGIN\n  IF NOT (NEW.patient_id<=>OLD.patient_id)\n      OR NOT (NEW.doctor_id<=>OLD.doctor_id)\n      OR NOT (NEW.appointment_id<=>OLD.appointment_id)\n      OR NOT (NEW.opened_by_user_id<=>OLD.opened_by_user_id)\n      OR NOT (NEW.encounter_dt<=>OLD.encounter_dt)\n      OR NOT (NEW.encounter_type<=>OLD.encounter_type) THEN\n    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ENCOUNTER_OWNERSHIP_IMMUTABLE';\n  END IF;\n  IF BINARY NEW.status<>BINARY OLD.status\n      AND NOT (BINARY OLD.status=BINARY 'open' AND BINARY NEW.status IN (BINARY 'closed',BINARY 'voided')) THEN\n    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ENCOUNTER_TRANSITION_FORBIDDEN';\n  END IF;\n  IF BINARY OLD.status=BINARY 'closed'\n      AND (NOT (NEW.closed_at<=>OLD.closed_at)\n        OR NOT (NEW.closed_by_user_id<=>OLD.closed_by_user_id)\n        OR NOT (NEW.auto_note_uuid_final<=>OLD.auto_note_uuid_final)) THEN\n    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='FIRST_CLOSE_IMMUTABLE';\n  END IF;\n  IF BINARY OLD.status=BINARY 'voided'\n      AND (NOT (NEW.voided_at<=>OLD.voided_at)\n        OR NOT (NEW.voided_by_user_id<=>OLD.voided_by_user_id)\n        OR NOT (NEW.void_reason<=>OLD.void_reason)) THEN\n    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='FIRST_VOID_IMMUTABLE';\n  END IF;\nEND",
+        "table": "clinical_encounters",
+        "timing": "BEFORE"
+      }
+    ]
+  },
+  "prestate": {
+    "data_checks": [
+      "legacy_status_domain",
+      "duplicate_attributed_open",
+      "attributed_lifecycle_consistency"
+    ],
+    "forbidden_columns": {
+      "clinical_documents": [
+        "encounter_ref_id"
+      ],
+      "clinical_encounters": [
+        "voided_at",
+        "voided_by_user_id",
+        "void_reason",
+        "open_guard"
+      ]
+    },
+    "forbidden_named_objects": {
+      "checks": {
+        "clinical_encounters": [
+          "chk_clinical_encounter_lifecycle_v1"
+        ],
+        "clinical_idempotency_requests": [
+          "chk_idempotency_committed_result_v1"
+        ]
+      },
+      "foreign_keys": {
+        "clinical_documents": [
+          "fk_clinical_documents_encounter_ref"
+        ],
+        "clinical_idempotency_requests": [
+          "fk_idempotency_document",
+          "fk_idempotency_document_revision"
+        ]
+      },
+      "indexes": {
+        "clinical_documents": [
+          "idx_clinical_documents_encounter_ref"
+        ],
+        "clinical_encounters": [
+          "uq_clinical_encounter_one_open"
+        ]
+      }
+    },
+    "forbidden_routines": [
+      "mxmed_migrate_encounter_lifecycle_v1",
+      "mxmed_migrate_encounter_content_v1",
+      "mxmed_migrate_encounter_idempotency_v1",
+      "mxmed_migrate_encounter_documents_v1",
+      "mxmed_migrate_clinical_binary_storage_v1"
+    ],
+    "forbidden_tables": [
+      "clinical_encounter_sections",
+      "clinical_observations",
+      "clinical_encounter_amendments",
+      "clinical_encounter_start_requests",
+      "clinical_idempotency_requests",
+      "clinical_encounter_final_notes",
+      "clinical_document_revisions",
+      "clinical_binary_uploads",
+      "clinical_document_binaries"
+    ],
+    "forbidden_triggers": [
+      "trg_clinical_encounters_v1_before_insert",
+      "trg_clinical_encounters_v1_before_update"
+    ],
+    "required_columns": {
+      "clinical_documents": {
+        "encounter_id": {
+          "nullable": "YES",
+          "type": "varchar(128)"
+        },
+        "event_datetime": {
+          "nullable": "NO",
+          "type": "datetime"
+        },
+        "id": {
+          "nullable": "NO",
+          "type": "bigint unsigned"
+        },
+        "patient_id": {
+          "nullable": "NO",
+          "type": "varchar(128)"
+        }
+      },
+      "clinical_encounters": {
+        "appointment_id": {
+          "nullable": "YES",
+          "type": "varchar(64)"
+        },
+        "auto_note_uuid_final": {
+          "nullable": "YES",
+          "type": "varchar(64)"
+        },
+        "closed_at": {
+          "nullable": "YES",
+          "type": "datetime"
+        },
+        "closed_by_user_id": {
+          "nullable": "YES",
+          "type": "varchar(64)"
+        },
+        "doctor_id": {
+          "nullable": "YES",
+          "type": "varchar(64)"
+        },
+        "encounter_dt": {
+          "nullable": "NO",
+          "type": "datetime"
+        },
+        "encounter_id": {
+          "nullable": "NO",
+          "type": "bigint unsigned"
+        },
+        "encounter_type": {
+          "nullable": "NO",
+          "type": "varchar(32)"
+        },
+        "opened_by_user_id": {
+          "nullable": "YES",
+          "type": "varchar(64)"
+        },
+        "patient_id": {
+          "nullable": "NO",
+          "type": "varchar(64)"
+        },
+        "status": {
+          "nullable": "NO",
+          "type": "varchar(32)"
+        }
+      },
+      "patients_patients": {
+        "patient_id": {
+          "nullable": "NO",
+          "type": "varchar(64)"
+        }
+      }
+    },
+    "required_indexes": {
+      "clinical_documents": {
+        "PRIMARY": {
+          "columns": "id",
+          "non_unique": "0",
+          "type": "BTREE"
+        }
+      },
+      "clinical_encounters": {
+        "PRIMARY": {
+          "columns": "encounter_id",
+          "non_unique": "0",
+          "type": "BTREE"
+        }
+      },
+      "patients_patients": {
+        "PRIMARY": {
+          "columns": "patient_id",
+          "non_unique": "0",
+          "type": "BTREE"
+        }
+      }
+    },
+    "required_table_collations": {
+      "clinical_documents": "utf8mb4_unicode_ci",
+      "clinical_encounters": "utf8mb4_unicode_ci",
+      "patients_patients": "utf8mb4_unicode_ci"
+    },
+    "required_tables": [
+      "patients_patients",
+      "clinical_encounters",
+      "clinical_documents"
+    ]
+  },
+  "unresolved_placeholders": []
+}
