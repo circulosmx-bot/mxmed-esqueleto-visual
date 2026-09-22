@@ -962,3 +962,34 @@
  #lon01-history .lon01-detail {padding:12px}
  #lon01-history .lon01-detail button {min-height:44px}
 }
+
+/* VIS06: only the three document destinations; existing capture callers retained. */
+#p-expediente .vis06-ready:not(.vis06-capture-open)>:not(.vis06-module):not(.modal) {display:none!important}
+#p-expediente .vis06-module {padding:16px;border:1px solid #c9e1e8;border-radius:14px;background:#fff;color:#173b4d}
+#p-expediente .vis06-head {display:flex;justify-content:space-between;align-items:start;gap:14px;margin-bottom:12px}
+#p-expediente .vis06-head h3 {font-size:18px;color:#06536e;font-weight:700;margin:0 0 5px}
+#p-expediente .vis06-head p {font-size:14px;margin:0;color:#526976}
+#p-expediente .vis06-head>.btn {flex-shrink:0}
+#p-expediente .vis06-controls {display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,230px) auto;gap:10px;margin-bottom:10px}
+#p-expediente .vis06-notice {font-size:13px;color:#526976;margin:8px 0}
+#p-expediente .vis06-row {display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid #deebef;padding:12px 0}
+#p-expediente .vis06-row-main {min-width:0;overflow-wrap:anywhere}
+#p-expediente .vis06-row h4 {font-size:15px;color:#06536e;font-weight:700;margin:0 0 4px}
+#p-expediente .vis06-row p {font-size:13px;line-height:1.4;margin:4px 0;color:#526976}
+#p-expediente .vis06-actions {display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;max-width:40%}
+#p-expediente .vis06-status {display:inline-block;background:#edf5f7;border-radius:5px;padding:3px 7px;font-size:12px;margin:3px 6px 0 0}
+#p-expediente .vis06-row .vis06-late {color:#795718}
+#p-expediente .vis06-detail {background:#f5fafb;border:1px solid #bfdce2;border-radius:10px;padding:14px;margin:12px 0;overflow-wrap:anywhere}
+#p-expediente .vis06-detail h4 {font-size:16px;color:#06536e}
+#p-expediente .vis06-detail h5 {font-size:14px;color:#06536e}
+#p-expediente .vis06-detail p,#p-expediente .vis06-version {font-size:14px;white-space:pre-wrap}
+#p-expediente .vis06-version {display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #d5e8ed}
+#p-expediente .vis06-empty {padding:16px;background:#f5fafb;border-radius:8px;color:#526976}
+#p-expediente .vis06-module :focus-visible {outline:2px solid #008c9b;outline-offset:2px}
+#p-expediente .vis06-capture-open .vis06-controls,#p-expediente .vis06-capture-open .vis06-list,#p-expediente .vis06-capture-open .vis06-detail,#p-expediente .vis06-capture-open .vis06-notice {display:none}
+@media(max-width:700px){
+ #p-expediente .vis06-head,#p-expediente .vis06-row,#p-expediente .vis06-version {flex-direction:column;align-items:stretch;gap:8px}
+ #p-expediente .vis06-controls {grid-template-columns:minmax(0,1fr)}
+ #p-expediente .vis06-actions {max-width:100%;justify-content:flex-start}
+ #p-expediente .vis06-module .btn {min-height:44px}
+}
