@@ -38039,6 +38039,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	      activeSearchBtn.classList.toggle('d-none', !showActiveSearch);
 	      activeSearchBtn.textContent = showActiveSearch ? searchLabel : '';
 	    }
+    window.mxmedUpdateCanonicalPatientHeader?.(container, headerData, isActivePatientMode);
 	  };
   window.mxmedNormalizeClinicalHeaderData = normalizeClinicalHeaderData;
   window.mxmedRenderClinicalSlimHeader = renderClinicalSlimHeader;
@@ -55627,6 +55628,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       window.mxmedRenderClinicalSlimHeader(expClinicalContext, {
         ...sharedHeaderData,
         ...draftHeaderData,
+        patient_id: patientId,
         patient_name: fullName,
         age: ageText || '--',
         sex: sexText,

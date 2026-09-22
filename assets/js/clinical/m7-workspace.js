@@ -53,6 +53,7 @@
   const ws05 = window.mxmedM7WS05?.(root, encounterUrlForWs03, ()=>patientId, hasAnyUnsaved, detail=>{
     active = null;
     renderEncounter(detail, true);
+    window.dispatchEvent(new Event('m7:encounter-state-changed'));
     show(currentButton, false);
     show(resumeButton, false);
     const seen = epoch;
@@ -462,6 +463,17 @@
     window.addEventListener(name, ()=> refresh());
   });
   const workspaceTab = patientPane.querySelector('[data-bs-target="#t-consulta-actual"]');
+  // Header CTA reuses the workspace's explicit command and resume handlers.
+  window.mxmedM7OpenFromHeader = async (id, intent) => {
+    if (selectedPatient() !== id || !workspaceTab) return;
+    if (workspaceTab.classList.contains('active') && !protectNavigation()) return;
+    window.bootstrap?.Tab.getOrCreateInstance(workspaceTab).show();
+    if (!workspaceTab.classList.contains('active')) return; // dirty guard declined
+    await refresh();
+    if (selectedPatient() !== id || !workspaceTab.classList.contains('active') || root.classList.contains('d-none')) return;
+    if (active) resumeButton.click();
+    else if (intent === 'start' && !startButton.classList.contains('d-none')) startButton.click();
+  };
   workspaceTab?.addEventListener('shown.bs.tab', refresh);
   workspaceTab?.addEventListener('hide.bs.tab', event=>{ if(!protectNavigation()) event.preventDefault(); });
   new MutationObserver(()=>{ if(selectedPatient() !== patientId) refresh(); }).observe(patientPane, { attributes:true, attributeFilter:['data-patient-id','data-active-patient-id'] });
