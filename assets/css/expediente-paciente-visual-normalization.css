@@ -993,3 +993,29 @@
  #p-expediente .vis06-actions {max-width:100%;justify-content:flex-start}
  #p-expediente .vis06-module .btn {min-height:44px}
 }
+
+/* VIS07: administrative overview; patient creation and existing save stay intact. */
+#t-datos.vis07-ready:not(.vis07-editing) [data-exp-datos-form] {display:none!important}
+#t-datos .vis07-admin {padding:16px;border:1px solid #c9e1e8;border-radius:14px;background:#fff;color:#173b4d}
+#t-datos .vis07-admin h3 {font-size:18px;font-weight:700;color:#06536e;margin:0 0 6px}
+#t-datos .vis07-admin h4 {font-size:16px;font-weight:700;color:#06536e;margin:0}
+#t-datos .vis07-intro,#t-datos .vis07-card p {font-size:14px;color:#526976;line-height:1.5;margin:8px 0 12px}
+#t-datos .vis07-grid {display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px}
+#t-datos .vis07-card {border:1px solid #d9e6eb;border-radius:10px;padding:14px;min-width:0}
+#t-datos .vis07-contact {grid-row:span 2}
+#t-datos .vis07-card-head {display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+#t-datos .vis07-data {display:grid;grid-template-columns:minmax(100px,.7fr) minmax(0,1fr);gap:10px 16px;margin:0;font-size:14px}
+#t-datos .vis07-data dt {font-weight:600;color:#526976}
+#t-datos .vis07-data dd {margin:0;overflow-wrap:anywhere}
+#t-datos .vis07-boundary,#t-datos .vis07-edit-hint {font-size:13px;color:#526976;margin:12px 0 0}
+#t-datos .vis07-editor-nav {margin:12px 0}
+#t-datos .vis07-admin :focus-visible,#t-datos .vis07-editor-nav :focus-visible {outline:2px solid #008c9b;outline-offset:3px}
+#t-datos.vis07-editing .vis07-grid {display:none}
+@media(max-width:700px){
+ #t-datos .vis07-grid {grid-template-columns:minmax(0,1fr)}
+ #t-datos .vis07-contact {grid-row:auto}
+ #t-datos .vis07-card-head {flex-wrap:wrap}
+ #t-datos .vis07-admin .btn,#t-datos .vis07-editor-nav .btn {min-height:44px}
+ #t-datos .vis07-data {grid-template-columns:minmax(0,1fr);gap:3px}
+ #t-datos .vis07-data dd {margin-bottom:9px}
+}
