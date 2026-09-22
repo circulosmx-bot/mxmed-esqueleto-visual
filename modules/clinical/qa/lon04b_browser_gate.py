@@ -43,6 +43,7 @@ def page_for(browser, user='a', width=1440, height=900):
     context = browser.new_context(viewport={'width':width,'height':height})
     context.add_cookies([{'name':'PHPSESSID','value':f'lon04b-{user}','url':base}])
     page = context.new_page()
+    page.route('**/longitudinal/tasks',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'items':[]}})))
     page.route('**/longitudinal-summary',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{}})))
     page.goto(base + '/modules/clinical/README.md')
     page.set_content(fixture,wait_until='load')

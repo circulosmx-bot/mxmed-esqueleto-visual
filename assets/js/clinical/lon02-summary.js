@@ -64,17 +64,19 @@
     const allergyTarget = $('[data-lon02-allergies]');
     const problemsTarget = $('[data-lon02-problems]');
     const medicationsTarget = $('[data-lon02-medications]');
+    const tasksTarget = $('[data-lon02-tasks]');
     antecedents.textContent = 'Cargando estado revisado…';
     allergyTarget.textContent = 'Cargando estado revisado…';
     problemsTarget.textContent = 'Cargando problemas…';
     medicationsTarget.textContent = 'Cargando medicación…';
+    tasksTarget.textContent = 'Cargando tareas…';
     async function read(resource) {
       const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/longitudinal/${resource}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result.data || {};
     }
-    const [facts, allergies, problems, medications] = await Promise.allSettled([read('antecedents'),read('allergies'),read('problems'),read('medications')]);
+    const [facts, allergies, problems, medications, tasks] = await Promise.allSettled([read('antecedents'),read('allergies'),read('problems'),read('medications'),read('tasks')]);
     if (request !== epoch || patient() !== id) return;
     antecedents.replaceChildren();
     if (facts.status !== 'fulfilled') antecedents.textContent = 'Estado no disponible.';
@@ -123,6 +125,16 @@
       reported.forEach(row => line(medicationsTarget, row.medication_name, 'Referido por el paciente; no confirmado como uso actual.'));
       prescribed.forEach(row => line(medicationsTarget, row.medication_name, 'Prescrito; uso actual no confirmado.'));
       if (!current.length && !reported.length && !prescribed.length) medicationsTarget.textContent = 'Sin medicación actual confirmada en el registro longitudinal. Esto no confirma que el paciente no tome medicamentos.';
+    }
+    tasksTarget.replaceChildren();
+    if (tasks.status !== 'fulfilled') tasksTarget.textContent = 'Estado no disponible.';
+    else {
+      const open = (tasks.value.items || []).filter(row => row.state === 'OPEN');
+      open.forEach(row => {
+        const overdue = row.due_at && Date.parse(row.due_at.replace(' ', 'T') + 'Z') < Date.now();
+        line(tasksTarget, row.title, `${row.task_type === 'FOLLOW_UP' ? 'Seguimiento' : 'Tarea clínica'} · ${row.due_at ? `Límite ${row.due_at} UTC${overdue ? ' · Vencida' : ''}` : 'Sin fecha límite'}`);
+      });
+      if (!open.length) tasksTarget.textContent = 'Sin tareas abiertas registradas. Las citas y órdenes pendientes no se consideran tareas por sí solas.';
     }
   }
   async function load() {

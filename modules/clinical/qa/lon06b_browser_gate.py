@@ -1,0 +1,62 @@
+"""Disposable authenticated LON06B browser/API gate."""
+import json, os, subprocess
+from pathlib import Path
+from playwright.sync_api import sync_playwright, expect
+base=os.environ['LON06B_QA_BASE']; root=Path(os.environ['LON06B_QA_ROOT']); db=os.environ['LON06B_QA_DB']; window_path=os.environ['LON06B_QA_WINDOW_PATH']
+source=(root/'index.html').read_text();start=source.index('<div class="tab-pane fade" id="t-resumen-longitudinal">');end=source.index('<div class="tab-pane fade show active" id="t-datos">',start);panes=source[start:end]
+fixture=f'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="{base}/assets/css/expediente-paciente-visual-normalization.css"><style>body{{margin:0;background:#eef8fa;font:16px Arial,sans-serif}}#p-expediente{{max-width:1400px;margin:auto;padding:18px}}.d-none{{display:none!important}}.btn{{border:1px solid #06aeb8;border-radius:9px;background:#fff;color:#06536e;padding:7px 12px;cursor:pointer}}.btn-primary{{background:#06aeb8;color:#fff}}</style></head><body><div id="p-expediente" data-patient-id="p_a"><button data-bs-target="#t-tareas-longitudinal">Tareas</button>{panes}<section id="m7-workspace"><div data-m7-body data-encounter-id="101"></div><button type="button" data-lon06b-m7-follow-up>Crear seguimiento desde consulta</button></section></div><script src="{base}/assets/js/clinical/lon02-summary.js"></script><script src="{base}/assets/js/clinical/lon06b-tasks.js"></script></body></html>'''
+def check(value,name):
+    assert value,name
+    print('PASS',name)
+def rows(table):
+    return int(subprocess.check_output(['mysql','--batch','--skip-column-names',db,'-e',f'SELECT COUNT(*) FROM {table}']).decode().strip())
+def page_for(browser,user='a',width=1440,height=900):
+    context=browser.new_context(viewport={'width':width,'height':height});context.add_cookies([{'name':'PHPSESSID','value':f'lon06b-{user}','url':base}]);page=context.new_page()
+    page.route('**/longitudinal-summary',lambda route:route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{}})))
+    for resource in ['antecedents','allergies','problems','medications']:
+        page.route('**/longitudinal/'+resource,lambda route:route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'items':[]}})))
+    page.goto(base+'/modules/clinical/README.md');page.set_content(fixture,wait_until='load');expect(page.locator('[data-lon06b-status]')).to_have_text('Tareas longitudinales actualizadas.');return context,page
+def tasks(page):
+    return page.request.get(base+'/api/clinical/index.php/patients/p_a/longitudinal/tasks').json()['data']['items']
+def set_window(state):
+    env=os.environ.copy();env['MXMED_CLINICAL_WRITE_WINDOW_CONTROL']='FILE';env['MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH']=window_path
+    subprocess.run(['php','-r','require $argv[1];clinical_m6_write_window_set_state($argv[2]);',str(root/'api/_lib/clinical_m6_write_window.php'),state],env=env,check=True)
+with sync_playwright() as p:
+    browser=p.chromium.launch(channel='chrome',headless=True);ca,a=page_for(browser);failures=[];starts=[]
+    a.on('pageerror',lambda e:failures.append(str(e)));a.on('console',lambda m:failures.append(m.text) if m.type=='error' and not (m.text.startswith('Failed to load resource:') and ('503' in m.text or '409' in m.text or '404' in m.text)) else None);a.on('request',lambda r:starts.append(r.url) if '/encounters' in r.url and r.method=='POST' else None);a.on('dialog',lambda d:d.accept())
+    expect(a.locator('[data-lon02-tasks]')).to_contain_text('Las citas y órdenes pendientes no se consideran tareas')
+    a.locator('[data-lon06b-add-task]').click();expect(a.locator('[data-lon06b-dialog]')).to_be_visible();check(a.evaluate('document.activeElement.id')=='lon06b-title-field','dialog keyboard focus');a.locator('[data-lon06b-title]').fill('Control clínico vencido');a.locator('[data-lon06b-due]').fill('2020-01-02T10:00');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-open]')).to_contain_text('Control clínico vencido');check('Vencida' in a.locator('[data-lon06b-open]').inner_text(),'derived overdue visible');first=tasks(a)[0];check(first['state']=='OPEN','overdue persists OPEN')
+    a.locator('[data-lon02-refresh]').click();expect(a.locator('[data-lon02-tasks]')).to_contain_text('Control clínico vencido');check('Vencida' in a.locator('[data-lon02-tasks]').inner_text(),'LON02 read-only overdue projection')
+    a.locator('[data-lon06b-add-follow-up]').click();a.locator('[data-lon06b-title]').fill('Seguimiento en consulta');a.locator('[data-lon06b-appointment]').fill('a_a');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-open]')).to_contain_text('Seguimiento en consulta');check(any(t['task_type']=='FOLLOW_UP' and t['appointment_id']=='a_a' for t in tasks(a)),'follow-up and Agenda link explicit')
+    follow=next(t for t in tasks(a) if t['task_type']=='FOLLOW_UP');card=a.locator('.lon06b-item').filter(has_text='Seguimiento en consulta').first;card.get_by_role('button',name='Editar').click();a.locator('[data-lon06b-title]').fill('Seguimiento actualizado');a.locator('[data-lon06b-reason]').fill('Ajuste clínico');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-open]')).to_contain_text('Seguimiento actualizado');card=a.locator('.lon06b-item').filter(has_text='Seguimiento actualizado').first;card.get_by_role('button',name='Ver historial').click();expect(card.locator('.lon06b-history')).to_contain_text('Editada')
+    cb,b=page_for(browser,'b');b.on('dialog',lambda d:d.accept());bcard=b.locator('.lon06b-item').filter(has_text='Seguimiento actualizado').first;bcard.get_by_role('button',name='Editar').click();b.locator('[data-lon06b-title]').fill('Borrador de otra sesión');card.get_by_role('button',name='Resolver').click();a.locator('[data-lon06b-reason]').fill('Concluido');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-terminal]')).to_contain_text('Seguimiento actualizado');b.locator('[data-lon06b-reason]').fill('Edición concurrente');b.locator('[data-lon06b-save]').click();expect(b.locator('[data-lon06b-conflict]')).to_be_visible();check(b.locator('[data-lon06b-title]').input_value()=='Borrador de otra sesión','stale draft preserved');check(next(t for t in tasks(a) if t['task_id']==follow['task_id'])['state']=='RESOLVED','newer terminal state retained');b.locator('[data-lon06b-reload]').click();check(b.locator('[data-lon06b-save]').is_disabled(),'terminal cannot reopen');b.locator('[data-lon06b-cancel]').click()
+    card=a.locator('.lon06b-item').filter(has_text='Control clínico vencido').first;card.get_by_role('button',name='Cancelar tarea').click();a.locator('[data-lon06b-reason]').fill('Ya no aplica');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-terminal]')).to_contain_text('Control clínico vencido')
+    a.locator('[data-lon06b-add-task]').click();a.locator('[data-lon06b-title]').fill('Control clínico vencido');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-open]')).to_contain_text('Control clínico vencido');check(len([t for t in tasks(a) if t['title']=='Control clínico vencido'])==2,'recurrence is a new task; terminal record retained')
+    a.locator('[data-lon06b-m7-follow-up]').click();expect(a.locator('[data-lon06b-context]')).to_contain_text('consulta 101');a.locator('[data-lon06b-title]').fill('Seguimiento desde M7');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-open]')).to_contain_text('Seguimiento desde M7');check(any(t['title']=='Seguimiento desde M7' and t['source_encounter_id']==101 for t in tasks(a)),'M7 explicit provenance')
+    task_url=base+'/api/clinical/index.php/patients/p_a/longitudinal/tasks'
+    check(a.request.get(base+'/api/clinical/index.php/patients/p_b/longitudinal/tasks').status==404,'foreign patient hidden')
+    foreign_encounter=a.request.post(task_url,data={'task_type':'FOLLOW_UP','title':'Origen ajeno','source_encounter_id':102},headers={'Content-Type':'application/json','Idempotency-Key':'lon06b-foreign-source'})
+    check(foreign_encounter.status==409 and foreign_encounter.json()['error']=='FOREIGN_SOURCE','foreign encounter rejected')
+    foreign_appointment=a.request.post(task_url,data={'task_type':'FOLLOW_UP','title':'Cita ajena','appointment_id':'a_b'},headers={'Content-Type':'application/json','Idempotency-Key':'lon06b-foreign-appointment'})
+    check(foreign_appointment.status==409 and foreign_appointment.json()['error']=='FOREIGN_APPOINTMENT','foreign appointment rejected')
+    replay_key={'Content-Type':'application/json','Idempotency-Key':'lon06b-replay'}
+    replay_body={'task_type':'CLINICAL_ACTION','title':'Acción repetida'}
+    first_response=a.request.post(task_url,data=replay_body,headers=replay_key);second_response=a.request.post(task_url,data=replay_body,headers=replay_key)
+    check(first_response.status==200 and second_response.status==200 and first_response.json()['data']==second_response.json()['data'],'exact replay returns same task')
+    changed=a.request.post(task_url,data={'task_type':'CLINICAL_ACTION','title':'Otro contenido'},headers=replay_key)
+    check(changed.status==409 and changed.json()['error']=='IDEMPOTENCY_PAYLOAD_CONFLICT','changed payload conflicts without retry')
+    a.locator('[data-lon06b-refresh]').click();b.locator('[data-lon06b-refresh]').click();expect(b.locator('[data-lon06b-open]')).to_contain_text('Acción repetida')
+    b.locator('[data-lon06b-open] .lon06b-item').filter(has_text='Acción repetida').get_by_role('button',name='Cancelar tarea').click()
+    a.locator('[data-lon06b-open] .lon06b-item').filter(has_text='Acción repetida').get_by_role('button',name='Resolver').click();a.locator('[data-lon06b-reason]').fill('Acción realizada');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-terminal]')).to_contain_text('Acción repetida')
+    b.locator('[data-lon06b-reason]').fill('Decisión concurrente');b.locator('[data-lon06b-save]').click();expect(b.locator('[data-lon06b-conflict]')).to_be_visible();check(next(t for t in tasks(a) if t['title']=='Acción repetida')['state']=='RESOLVED','resolve versus cancel newer state wins');b.locator('[data-lon06b-cancel]').click()
+    a.locator('[data-lon02-refresh]').click();expect(a.locator('[data-lon02-tasks]')).to_contain_text('Seguimiento desde M7');check('Acción repetida' not in a.locator('[data-lon02-tasks]').inner_text(),'terminal task absent from pending summary')
+    set_window('BLOCK_WRITES')
+    a.locator('[data-lon06b-add-task]').click();a.locator('[data-lon06b-title]').fill('Borrador bloqueado');a.locator('[data-lon06b-save]').click();expect(a.locator('[data-lon06b-form-error]')).to_contain_text('pausadas');check(a.locator('[data-lon06b-title]').input_value()=='Borrador bloqueado','write-window preserves draft');a.locator('[data-lon06b-cancel]').click();set_window('OPEN')
+    for width,height in [(1440,900),(1366,768),(390,844)]:
+        a.set_viewport_size({'width':width,'height':height});check(a.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),f'no overflow {width}x{height}')
+        a.locator('[data-lon06b-add-follow-up]').click();check(a.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),f'dialog no overflow {width}x{height}');check(a.locator('[data-lon06b-appointment]').is_visible(),f'Agenda link visible {width}x{height}');a.locator('[data-lon06b-cancel]').click()
+    check(starts==[],'view and task actions do not START encounter');check(failures==[],'browser console and page exceptions zero')
+    check(rows('clinical_patient_tasks')==5,'only explicit actions created tasks');check(rows('clinical_patient_task_audit_events')>=8,'immutable history recorded')
+    a.locator('[data-lon06b-add-task]').click();a.locator('[data-lon06b-title]').fill('Borrador del paciente anterior');a.locator('#p-expediente').evaluate("node => node.dataset.patientId='p_b'");expect(a.locator('[data-lon06b-dialog]')).not_to_be_visible();expect(a.locator('[data-lon06b-status]')).to_have_text('No se pudieron cargar las tareas.');check(a.locator('[data-lon06b-groups]').is_hidden(),'patient switch hides prior clinical content')
+    ca.close();cb.close();browser.close()
+print('LON06B_BROWSER_GATE=PASS')

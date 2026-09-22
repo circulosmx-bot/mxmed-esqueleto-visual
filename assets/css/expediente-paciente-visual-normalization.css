@@ -573,6 +573,35 @@
 #p-expediente .lon05b button:focus-visible,#p-expediente .lon05b-dialog button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
 @media(max-width:1100px){#p-expediente .lon05b-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){#p-expediente .lon05b{padding:14px}#p-expediente .lon05b-head{flex-direction:column}#p-expediente .lon05b-head-actions{width:100%;justify-content:stretch}#p-expediente .lon05b-head-actions .btn{flex:1 1 180px}#p-expediente .lon05b-groups,#p-expediente .lon05b-fields,#p-expediente .lon05b-reconcile-row{grid-template-columns:1fr}#p-expediente .lon05b-dialog-actions .btn{flex:1 1 130px}}
+
+#p-expediente .lon06b{border:1px solid #c9e1e8;border-radius:16px;background:#fff;padding:18px;margin:8px 0 12px;color:#173b4d;min-width:0}
+#p-expediente .lon06b-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+#p-expediente .lon06b-head h3{font-size:1.13rem;font-weight:700;color:#06536e;margin:0 0 5px}
+#p-expediente .lon06b-head p:not(.m7-workspace-eyebrow),#p-expediente [data-lon06b-status]{font-size:.88rem;color:#526976;margin:0 0 10px}
+#p-expediente .lon06b-actions,#p-expediente .lon06b-item-actions,#p-expediente .lon06b-dialog-actions{display:flex;flex-wrap:wrap;gap:8px}
+#p-expediente .lon06b-actions{justify-content:flex-end}
+#p-expediente .lon06b-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+#p-expediente .lon06b-group{min-width:0;border:1px solid #d5e8ed;border-radius:12px;background:#fbfdfd;padding:13px;overflow-wrap:anywhere}
+#p-expediente .lon06b-group h4{font-size:.96rem;font-weight:700;color:#06536e;margin:0 0 9px}
+#p-expediente .lon06b-item{border-top:1px solid #e1edf1;padding:10px 0}
+#p-expediente .lon06b-item:first-child{border-top:0;padding-top:0}
+#p-expediente .lon06b-item h5{font-size:.9rem;font-weight:700;color:#173b4d;margin:0 0 5px}
+#p-expediente .lon06b-meta,#p-expediente .lon06b-empty,#p-expediente .lon06b-hint{font-size:.79rem;color:#526976;margin:0 0 7px}
+#p-expediente .lon06b-overdue{color:#a82d42;font-weight:700}
+#p-expediente .lon06b-history{border-left:2px solid #9dd5dc;padding:4px 8px;margin-top:7px}
+#p-expediente .lon06b-history p{font-size:.78rem;color:#526976;margin:0 0 5px}
+#p-expediente .lon06b-dialog{width:min(600px,calc(100vw - 24px));max-height:min(90vh,800px);border:1px solid #a8d8df;border-radius:15px;background:#fff;color:#173b4d;padding:18px;box-shadow:0 16px 50px #173b4d30;overflow:auto}
+#p-expediente .lon06b-dialog::backdrop{background:#082d4270}
+#p-expediente .lon06b-dialog h4{font-size:1.07rem;color:#06536e;margin:0 0 5px}
+#p-expediente .lon06b-dialog p{font-size:.83rem;color:#526976;overflow-wrap:anywhere;margin:0 0 10px}
+#p-expediente .lon06b-dialog label{display:block;font-size:.82rem;font-weight:700;margin:10px 0 4px;color:#173b4d}
+#p-expediente .lon06b-dialog input{display:block;width:100%;min-width:0;border:1px solid #a8cbd4;border-radius:9px;background:#fff;color:#173b4d;padding:8px 10px;font:inherit;font-size:.9rem}
+#p-expediente .lon06b-dialog :is(input,button):focus-visible,#p-expediente .lon06b button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
+#p-expediente .lon06b-dialog-actions{justify-content:flex-end;margin-top:16px}
+#p-expediente .lon06b-conflict{border:1px solid #e9b7bf;border-radius:10px;padding:10px;background:#fff6f7;margin-top:12px}
+#p-expediente .lon06b-error,#p-expediente .lon06b-form-error{font-size:.83rem;color:#923044;margin:0 0 7px}
+@media(max-width:800px){#p-expediente .lon06b-groups{grid-template-columns:1fr}}
+@media(max-width:700px){#p-expediente .lon06b{padding:14px}#p-expediente .lon06b-head{flex-direction:column}#p-expediente .lon06b-actions{width:100%;justify-content:stretch}#p-expediente .lon06b-actions .btn,#p-expediente .lon06b-dialog-actions .btn{flex:1 1 130px}}
 #p-expediente .m7-workspace-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 #p-expediente .m7-workspace-head h3{font-size:1.13rem;font-weight:700;margin:0 0 5px;color:#06536e}
 #p-expediente .m7-workspace-eyebrow{margin:0 0 4px;font-size:.78rem;font-weight:700;color:#008f9a;text-transform:uppercase;letter-spacing:.04em}

@@ -45,6 +45,7 @@ def page_for(browser, user, width=1440, height=900):
     context = browser.new_context(viewport={'width': width, 'height': height})
     context.add_cookies([{'name':'PHPSESSID','value':f'lon03b-{user}','url':base}])
     page = context.new_page()
+    page.route('**/longitudinal/tasks',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'items':[]}})))
     page.route('**/longitudinal-summary', lambda route: route.fulfill(status=200,
         content_type='application/json', body=json.dumps({'ok':True,'data':{}})))
     page.goto(base + '/modules/clinical/README.md')
@@ -75,7 +76,8 @@ with sync_playwright() as playwright:
     check('Sin alergias conocidas' not in a.locator('[data-lon03b-allergies]').inner_text(), 'absence never implies no allergies')
     a.locator('[data-lon02-refresh]').click()
     expect(a.locator('[data-lon02-allergies]')).to_contain_text('Sin revisar')
-    check('Sin revisar' in a.locator('[data-lon02-antecedents]').inner_text(), 'LON02 unknown projection')
+    expect(a.locator('[data-lon02-antecedents]')).to_contain_text('Sin revisar')
+    print('PASS LON02 unknown projection')
 
     family(a).get_by_role('button', name='Confirmar sin datos conocidos').click()
     expect(family(a).locator('.lon03b-review-state')).to_have_text('Sin datos conocidos, confirmado')

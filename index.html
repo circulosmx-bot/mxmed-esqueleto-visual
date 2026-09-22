@@ -4504,6 +4504,7 @@
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-antecedentes-longitudinal" data-tab-key="t-antecedentes-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">fact_check</span><span class="tab-lbl">Antecedentes</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-problemas-longitudinal" data-tab-key="t-problemas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Problemas</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-medicamentos-longitudinal" data-tab-key="t-medicamentos-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">medication</span><span class="tab-lbl">Medicamentos</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tareas-longitudinal" data-tab-key="t-tareas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">task_alt</span><span class="tab-lbl">Tareas clínicas</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
@@ -4549,7 +4550,8 @@
                     <section class="lon02-card"><h4>Alergias revisadas</h4><div data-lon02-allergies>Estado no disponible.</div></section>
                     <section class="lon02-card"><h4>Problemas activos</h4><div data-lon02-problems>Estado no disponible.</div></section>
                     <section class="lon02-card"><h4>Medicación actual</h4><div data-lon02-medications>Estado no disponible.</div></section>
-                    <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Seguimiento clínico: autoridad longitudinal no disponible todavía. Las citas previas no confirman este estado.</p><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
+                    <section class="lon02-card"><h4>Tareas clínicas y seguimiento pendientes</h4><div data-lon02-tasks>Estado no disponible.</div></section>
+                    <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
                   </div>
                 </section>
               </div>
@@ -4619,6 +4621,20 @@
                   <dialog class="lon05b-dialog lon05b-reconcile-dialog" data-lon05b-reconcile-dialog aria-labelledby="lon05b-reconcile-title"><form data-lon05b-reconcile-form novalidate><h4 id="lon05b-reconcile-title" tabindex="-1">Reconciliar medicamentos</h4><p>Revisa la lista cargada del servidor. Sólo las decisiones elegidas se enviarán en una operación atómica.</p><p data-lon05b-reconcile-version></p><div data-lon05b-reconcile-items></div><label for="lon05b-reconcile-add">Agregar un medicamento durante esta revisión, si aplica</label><input id="lon05b-reconcile-add" maxlength="500" data-lon05b-reconcile-add placeholder="Nombre del medicamento"><label for="lon05b-reconcile-note">Nota de conciliación, si aplica</label><input id="lon05b-reconcile-note" maxlength="1000" data-lon05b-reconcile-note>
                     <div class="lon05b-conflict d-none" data-lon05b-reconcile-conflict role="alert"><p>La lista cambió en otra sesión. Tus decisiones permanecen visibles.</p><p data-lon05b-reconcile-server-state></p><button type="button" class="btn btn-outline-primary btn-sm" data-lon05b-reconcile-reload>Recargar lista y descartar mis decisiones</button></div>
                     <p class="lon05b-form-error d-none" data-lon05b-reconcile-error role="alert" tabindex="-1"></p><div class="lon05b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon05b-reconcile-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-lon05b-reconcile-save>Guardar conciliación</button></div>
+                  </form></dialog>
+                </section>
+              </div>
+
+              <div class="tab-pane fade" id="t-tareas-longitudinal">
+                <section class="lon06b" id="lon06b-tasks" aria-labelledby="lon06b-title">
+                  <div class="lon06b-head"><div><p class="m7-workspace-eyebrow">Paciente · Estado longitudinal</p><h3 id="lon06b-title" tabindex="-1">Tareas clínicas y seguimiento</h3><p>Las acciones se registran de forma explícita; una cita o un plan no crean tareas.</p></div><div class="lon06b-actions"><button type="button" class="btn btn-primary" data-lon06b-add-task>Crear tarea clínica</button><button type="button" class="btn btn-outline-primary" data-lon06b-add-follow-up>Crear seguimiento</button><button type="button" class="btn btn-outline-secondary" data-lon06b-refresh>Actualizar</button></div></div>
+                  <p data-lon06b-status role="status" aria-live="polite">Selecciona un paciente para ver sus tareas.</p><p class="lon06b-error d-none" data-lon06b-error role="alert"></p>
+                  <div class="lon06b-groups d-none" data-lon06b-groups><section class="lon06b-group"><h4>Abiertas</h4><div data-lon06b-open></div></section><section class="lon06b-group"><h4>Historial · resueltas y canceladas</h4><div data-lon06b-terminal></div></section></div>
+                  <dialog class="lon06b-dialog" data-lon06b-dialog aria-labelledby="lon06b-dialog-title"><form data-lon06b-form novalidate><h4 id="lon06b-dialog-title" data-lon06b-dialog-title></h4><p data-lon06b-context></p>
+                    <div data-lon06b-editable><label for="lon06b-title-field">Acción clínica</label><input id="lon06b-title-field" maxlength="500" required data-lon06b-title><label for="lon06b-due">Fecha límite, si aplica</label><input id="lon06b-due" type="datetime-local" data-lon06b-due><p class="lon06b-hint">Sin fecha límite no se considera vencida.</p><label for="lon06b-appointment">ID de cita existente, si deseas vincularla</label><input id="lon06b-appointment" maxlength="64" data-lon06b-appointment><p class="lon06b-hint">La cita debe pertenecer a este paciente. Vincularla no cambia su estado ni la fecha límite.</p></div>
+                    <div data-lon06b-reason-wrap class="d-none"><label for="lon06b-reason">Motivo clínico</label><input id="lon06b-reason" maxlength="255" data-lon06b-reason></div>
+                    <div class="lon06b-conflict d-none" data-lon06b-conflict role="alert"><p>Esta tarea cambió en otra sesión. Tu borrador permanece en el formulario.</p><p data-lon06b-server-state></p><button type="button" class="btn btn-outline-primary btn-sm" data-lon06b-reload>Recargar y descartar mi borrador</button></div>
+                    <p class="lon06b-form-error d-none" data-lon06b-form-error role="alert" tabindex="-1"></p><div class="lon06b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon06b-cancel>Seguir revisando</button><button type="submit" class="btn btn-primary" data-lon06b-save>Confirmar</button></div>
                   </form></dialog>
                 </section>
               </div>
@@ -5441,6 +5457,7 @@
                       <div class="m7-section-editor-actions">
                         <button type="button" class="btn btn-primary" data-m7-editor-save>Guardar sección</button>
                         <button type="button" class="btn btn-outline-primary d-none" data-lon04b-m7-promote>Agregar a problemas</button>
+                        <button type="button" class="btn btn-outline-primary" data-lon06b-m7-follow-up>Crear seguimiento</button>
                       </div>
                       <div class="m7-section-conflict d-none" data-m7-conflict role="alert">
                         <strong data-m7-conflict-title></strong>
@@ -10640,6 +10657,7 @@
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
 <script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>
 <script src="assets/js/clinical/lon05b-medications.js?v=lon05b"></script>
+<script src="assets/js/clinical/lon06b-tasks.js?v=lon06b"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>
