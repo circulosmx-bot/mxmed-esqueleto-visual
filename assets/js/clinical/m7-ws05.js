@@ -129,7 +129,8 @@
     voidForm.addEventListener('submit', event => {
       event.preventDefault();
       if (context?.status !== 'open' || busy || !voidForm.reportValidity()) return;
-      if (hasUnsaved()) { notice('Hay cambios locales sin guardar. Resuélvelos antes de anular.', 'failed'); return; }
+      // The command owns its reason; unrelated clinical drafts still block VOID.
+      if (hasUnsaved({excludeVoidReason:true})) { notice('Hay cambios locales sin guardar. Resuélvelos antes de anular.', 'failed'); return; }
       const reason = $('[data-m7-void-reason]').value.trim();
       if (!reason) return;
       if (!window.confirm('Anular conservará esta consulta y su motivo en el historial. No podrá reabrirse. ¿Anular ahora?')) return;
@@ -161,7 +162,7 @@
       },
       select(selected) { show(panel, selected); if (selected && context) reload().catch(() => notice('No se pudo actualizar la consulta.', 'failed')); },
       reset() { context = null; attempt = ''; busy = false; show(panel,false); },
-      isDirty() { return !!(context && ($('[data-m7-void-reason]').value.trim() || $('[data-m7-amendment-reason]').value.trim() || $('[data-m7-amendment-text]').value.trim())); },
+      isDirty({excludeVoidReason = false} = {}) { return !!(context && ((!excludeVoidReason && $('[data-m7-void-reason]').value.trim()) || $('[data-m7-amendment-reason]').value.trim() || $('[data-m7-amendment-text]').value.trim())); },
       isBusy() { return busy; }
     };
   };

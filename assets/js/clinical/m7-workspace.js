@@ -110,15 +110,15 @@
     localDrafts.delete(id);
     try { sessionStorage.removeItem(id); } catch (_) { /* In-memory state is already clear. */ }
   }
-  function isDirty(){
-    if(selectedSection === 'finalize') return !!ws05?.isDirty();
+  function isDirty(options){
+    if(selectedSection === 'finalize') return !!ws05?.isDirty(options);
     if(selectedSection === 'documents') return !!body.dataset.encounterKey && !!ws04?.isDirty();
     return sectionMode === 'open' && !!body.dataset.encounterKey &&
       (selectedSection === 'measurements' || selectedSection === 'physical_exam' ? !!ws03?.isDirty() : editorText.value !== sectionBaseline);
   }
-  function hasAnyUnsaved(){
+  function hasAnyUnsaved(options){
     const key = body.dataset.encounterKey || '';
-    if(!key || isDirty() || ws03?.isDirty() || ws04?.isDirty() || ws03?.isBusy() || ws04?.isBusy() || sectionBusy) return true;
+    if(!key || isDirty(options) || ws03?.isDirty() || ws04?.isDirty() || ws03?.isBusy() || ws04?.isBusy() || sectionBusy) return true;
     for(const type of ['reason_evolution','assessment','plan']){
       const draft = readDraft(key,type);
       const saved = String(loadedSections[type]?.narrative_text || '');
