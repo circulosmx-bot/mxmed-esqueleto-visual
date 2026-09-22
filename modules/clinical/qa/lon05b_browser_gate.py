@@ -112,6 +112,7 @@ with sync_playwright() as playwright:
     terminal_id=int(prescribed['medication_id'])
     card(a,'Amoxicilina prescrita').get_by_role('button',name='Registrar nuevo episodio').click()
     a.locator('[data-lon05b-save]').click()
+    expect(a.locator('[data-lon05b-active-confirmed]')).to_contain_text('Amoxicilina prescrita')
     check(count('clinical_patient_medications')==3,'new episode retains old terminal record')
     check(row_for(a,'Amoxicilina prescrita')['state']=='COMPLETED','old terminal episode immutable')
     card(a,'Metformina referida').get_by_role('button',name='Suspender').click()
