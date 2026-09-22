@@ -473,6 +473,49 @@
 #p-expediente .lon02-card-unknown p{display:block}
 #p-expediente .lon02-summary button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
 @media(max-width:700px){#p-expediente .lon02-summary{padding:14px}#p-expediente .lon02-head{flex-direction:column}#p-expediente .lon02-grid{grid-template-columns:1fr}#p-expediente .lon02-head .btn{width:100%}}
+
+#p-expediente .lon07c{border:1px solid #c9e1e8;border-radius:16px;background:#fff;padding:18px;margin:8px 0 12px;color:#173b4d}
+#p-expediente .lon07c-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+#p-expediente .lon07c-head h3{font-size:1.13rem;font-weight:700;color:#06536e;margin:0 0 5px}
+#p-expediente .lon07c-head p:not(.m7-workspace-eyebrow),#p-expediente [data-lon07c-status]{font-size:.88rem;color:#526976;margin:0 0 10px}
+#p-expediente .lon07c-controls{display:grid;grid-template-columns:minmax(220px,2fr) minmax(135px,1fr) minmax(135px,1fr) auto;align-items:end;gap:10px;margin:14px 0}
+#p-expediente .lon07c-controls label{min-width:0;font-size:.82rem;font-weight:700;color:#06536e}
+#p-expediente .lon07c-controls select,#p-expediente .lon07c-controls input{display:block;width:100%;min-width:0;height:42px;margin-top:4px;border:1px solid #b9d5dc;border-radius:9px;background:#fff;color:#173b4d;padding:7px 10px}
+#p-expediente .lon07c-controls .btn{min-height:42px}
+#p-expediente .lon07c-content{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+#p-expediente .lon07c-chart{order:1}
+#p-expediente .lon07c-points{order:2}
+#p-expediente .lon07c-history{order:3}
+#p-expediente .lon07c-card{min-width:0;padding:13px;border:1px solid #d5e8ed;border-radius:12px;background:#fbfdfd}
+#p-expediente .lon07c-card h4{font-size:.95rem;font-weight:700;color:#06536e;margin:0 0 8px}
+#p-expediente .lon07c-card p{font-size:.82rem;color:#526976;margin:0 0 8px}
+#p-expediente [data-lon07c-latest]{display:flex;flex-wrap:wrap;gap:10px}
+#p-expediente [data-lon07c-latest] p{display:flex;flex-direction:column;gap:3px;min-width:180px;margin:0;padding:9px 12px;border:1px solid #d5e8ed;border-radius:9px;background:#fff}
+#p-expediente [data-lon07c-latest] strong{font-size:1rem;color:#06536e}
+#p-expediente .lon07c-table-wrap{max-width:100%;overflow-x:auto}
+#p-expediente .lon07c-card table{width:100%;border-collapse:collapse;font-size:.82rem}
+#p-expediente .lon07c-card th,#p-expediente .lon07c-card td{text-align:left;padding:8px;border-bottom:1px solid #e0edf0;vertical-align:top}
+#p-expediente .lon07c-card th{color:#06536e;font-weight:700}
+#p-expediente .lon07c-history-only{color:#7c4e2f;font-weight:600}
+#p-expediente .lon07c-card .btn{margin-top:9px}
+#p-expediente [data-lon07c-chart] svg{display:block;width:100%;height:auto;max-height:240px;background:#fff;border:1px solid #e0edf0;border-radius:9px}
+#p-expediente [data-lon07c-chart] p{margin:6px 0 0}
+#p-expediente .lon07c button:focus-visible,#p-expediente .lon07c select:focus-visible,#p-expediente .lon07c input:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
+@media(max-width:900px){#p-expediente .lon07c-controls{grid-template-columns:repeat(2,minmax(0,1fr))}#p-expediente .lon07c-points{order:1}#p-expediente .lon07c-chart{order:2}}
+@media(max-width:500px){
+  #p-expediente .lon07c{padding:14px}
+  #p-expediente .lon07c-head{flex-direction:column}
+  #p-expediente .lon07c-head .btn{width:100%}
+  #p-expediente .lon07c-controls{grid-template-columns:1fr}
+  #p-expediente .lon07c-table-wrap{overflow:visible}
+  #p-expediente .lon07c-card table,#p-expediente .lon07c-card tbody,#p-expediente .lon07c-card tr{display:block;width:100%}
+  #p-expediente .lon07c-card thead{display:none}
+  #p-expediente .lon07c-card tr{border:1px solid #d5e8ed;border-radius:9px;background:#fff;padding:5px 8px;margin:0 0 8px}
+  #p-expediente .lon07c-card td{display:grid;grid-template-columns:82px minmax(0,1fr);gap:6px;overflow-wrap:anywhere;padding:5px 2px;font-size:.79rem}
+  #p-expediente .lon07c-card td::before{content:attr(data-label);font-weight:700;color:#06536e}
+  #p-expediente .lon07c-card td[colspan]{display:block}
+  #p-expediente .lon07c-card td[colspan]::before{display:none}
+}
 /* LON03B: patient-level antecedents and distinct allergy authority. */
 #p-expediente .lon03b{border:1px solid #c9e1e8;border-radius:16px;background:#fff;padding:18px;margin:8px 0 12px;color:#173b4d;min-width:0}
 #p-expediente .lon03b-head,#p-expediente .lon03b-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}

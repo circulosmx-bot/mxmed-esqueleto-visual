@@ -4501,6 +4501,7 @@
 
                 <li class="nav-item" data-exp-datos-tab-item><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-resumen-longitudinal" data-tab-key="t-resumen-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">summarize</span><span class="tab-lbl">Resumen</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-mediciones-longitudinal" data-tab-key="t-mediciones-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">monitoring</span><span class="tab-lbl">Mediciones y tendencias</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-antecedentes-longitudinal" data-tab-key="t-antecedentes-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">fact_check</span><span class="tab-lbl">Antecedentes</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-problemas-longitudinal" data-tab-key="t-problemas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Problemas</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-medicamentos-longitudinal" data-tab-key="t-medicamentos-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">medication</span><span class="tab-lbl">Medicamentos</span></button></li>
@@ -4542,7 +4543,7 @@
                   <div class="lon02-grid d-none" data-lon02-content>
                     <section class="lon02-card lon02-card-current"><h4>Consulta en curso</h4><div data-lon02-open></div></section>
                     <section class="lon02-card"><h4>Consultas recientes</h4><div data-lon02-recent></div><button type="button" class="btn btn-outline-primary btn-sm" data-lon02-history>Ver Consultas / Historial</button></section>
-                    <section class="lon02-card"><h4>Últimas mediciones registradas</h4><div data-lon02-measurements></div></section>
+                    <section class="lon02-card"><h4>Últimas mediciones comparables · 12 meses</h4><div data-lon02-measurements></div><button type="button" class="btn btn-outline-primary btn-sm" data-lon02-trends>Ver Mediciones y tendencias</button></section>
                     <section class="lon02-card"><h4>Órdenes sin resultado vinculado</h4><div data-lon02-pending></div></section>
                     <section class="lon02-card"><h4>Resultados posteriores al cierre</h4><div data-lon02-late></div></section>
                     <section class="lon02-card"><h4>Documentos recientes</h4><div data-lon02-documents></div><p class="lon02-note">Consulta los documentos y archivos privados desde su contexto autorizado.</p></section>
@@ -4552,6 +4553,21 @@
                     <section class="lon02-card"><h4>Medicación actual</h4><div data-lon02-medications>Estado no disponible.</div></section>
                     <section class="lon02-card"><h4>Tareas clínicas y seguimiento pendientes</h4><div data-lon02-tasks>Estado no disponible.</div></section>
                     <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
+                  </div>
+                </section>
+              </div>
+
+              <div class="tab-pane fade" id="t-mediciones-longitudinal">
+                <section class="lon07c" id="lon07c-measurements" aria-labelledby="lon07c-title">
+                  <div class="lon07c-head"><div><p class="m7-workspace-eyebrow">Paciente · Lectura longitudinal</p><h3 id="lon07c-title" tabindex="-1">Mediciones y tendencias</h3><p>Lecturas comparables y registros históricos, con su fecha y origen.</p></div><button type="button" class="btn btn-outline-primary" data-lon07c-refresh>Actualizar</button></div>
+                  <p data-lon07c-status role="status" aria-live="polite">Selecciona un paciente para ver sus mediciones.</p>
+                  <div class="m7-workspace-error d-none" data-lon07c-error role="alert"></div>
+                  <div class="lon07c-content d-none" data-lon07c-content>
+                    <div class="lon07c-controls"><label>Serie comparable<select data-lon07c-series aria-label="Serie comparable"></select></label><label>Desde<input type="date" data-lon07c-from></label><label>Hasta<input type="date" data-lon07c-to></label><button type="button" class="btn btn-outline-primary" data-lon07c-apply>Aplicar fechas</button></div>
+                    <section class="lon07c-card lon07c-latest" aria-labelledby="lon07c-latest-title"><h4 id="lon07c-latest-title">Última lectura comparable</h4><div data-lon07c-latest></div></section>
+                    <section class="lon07c-card lon07c-points" aria-labelledby="lon07c-points-title"><h4 id="lon07c-points-title">Lecturas de la serie</h4><div class="lon07c-table-wrap"><table><thead><tr><th scope="col">Fecha y hora (UTC)</th><th scope="col">Valor</th><th scope="col">Fuente</th></tr></thead><tbody data-lon07c-points-body></tbody></table></div><button type="button" class="btn btn-outline-primary btn-sm d-none" data-lon07c-more-points>Ver más lecturas</button></section>
+                    <section class="lon07c-card lon07c-chart" aria-labelledby="lon07c-chart-title"><h4 id="lon07c-chart-title">Gráfico de lecturas</h4><div data-lon07c-chart></div><p>Se muestran lecturas registradas, sin interpolación ni rangos de referencia.</p></section>
+                    <section class="lon07c-card lon07c-history" aria-labelledby="lon07c-history-title"><h4 id="lon07c-history-title">Historial de mediciones</h4><p>Los registros sin hora de medición confirmada y los valores no comparables se conservan aquí; no aparecen en el gráfico.</p><div class="lon07c-table-wrap"><table><thead><tr><th scope="col">Medición</th><th scope="col">Valor</th><th scope="col">Fecha y hora (UTC)</th><th scope="col">Origen</th><th scope="col">Estado</th></tr></thead><tbody data-lon07c-history-body></tbody></table></div><button type="button" class="btn btn-outline-primary btn-sm d-none" data-lon07c-more-history>Ver más historial</button></section>
                   </div>
                 </section>
               </div>
@@ -10654,6 +10670,7 @@
 <script src="assets/js/clinical/m7-ws06.js?v=m7ws06"></script>
 <script src="assets/js/clinical/lon01-history.js?v=lon01"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=lon02"></script>
+<script src="assets/js/clinical/lon07c-measurements.js?v=lon07c"></script>
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
 <script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>
 <script src="assets/js/clinical/lon05b-medications.js?v=lon05b"></script>

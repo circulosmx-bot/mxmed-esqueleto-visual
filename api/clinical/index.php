@@ -6310,13 +6310,21 @@ try {
                 $item = ['encounter_key' => 'enc:' . $row['encounter_id'], 'date' => $row['encounter_dt'], 'status' => $row['status'], 'provenance' => 'canonical_encounter'];
                 $recent[] = $item;
             }
-            $observations = $pdo->prepare('SELECT o.code,o.value_numeric,o.unit,o.systolic_mm_hg,o.diastolic_mm_hg,o.effective_at,o.source,e.encounter_id, EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=o.encounter_id AND a.target_type IN (\'observation\',\'observations\') AND a.target_id=CAST(o.observation_id AS CHAR)) AS has_amendment FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id WHERE e.patient_id=:patient AND e.doctor_id=:doctor AND e.status<>\'voided\' ORDER BY o.effective_at DESC,o.observation_id DESC LIMIT 100');
-            $observations->execute([':patient' => $patientId, ':doctor' => $doctorId]);
-            $latest = [];
-            foreach ($observations->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $code = (string)$row['code'];
-                if (!isset($latest[$code])) $latest[$code] = ['code' => $code, 'value' => $code === 'blood_pressure' ? $row['systolic_mm_hg'] . '/' . $row['diastolic_mm_hg'] : $row['value_numeric'], 'unit' => $row['unit'], 'date' => $row['effective_at'], 'source' => $row['source'], 'has_amendment' => (int)$row['has_amendment'] === 1, 'encounter_key' => 'enc:' . $row['encounter_id'], 'provenance' => 'canonical_observation'];
-                if (count($latest) >= 6) break;
+            require_once __DIR__.'/../_lib/clinical_measurement_trends.php';
+            $measurementService = new ClinicalMeasurementTrends($pdo);
+            $measurementService->assertReady();
+            $series = $measurementService->read($doctorId,$patientId,ClinicalMeasurementTrends::options([]))['series'];
+            usort($series,static fn(array $a,array $b):int => strcmp((string)$b['latest_comparable_observation']['effective_at'],(string)$a['latest_comparable_observation']['effective_at'])
+                ?: ((int)$b['latest_comparable_observation']['observation_id'] <=>(int)$a['latest_comparable_observation']['observation_id'])
+                ?: strcmp((string)$a['series_key'],(string)$b['series_key']));
+            $latest=[];
+            foreach(array_slice($series,0,6) as $entry){
+                $row=$entry['latest_comparable_observation'];
+                $latest[]=['code'=>$entry['code'],'component'=>$entry['component'],'series_key'=>$entry['series_key'],
+                    'value'=>$row['value_numeric'],'unit'=>$entry['unit'],'date'=>$row['effective_at'],
+                    'source'=>$entry['source'],'has_amendment'=>$row['encounter_has_amendment'],
+                    'encounter_key'=>$row['encounter_key'],'provenance'=>'canonical_observation',
+                    'effective_at_authority'=>$row['effective_at_authority']];
             }
             // Only canonical encounter-linked documents owned by this doctor are eligible.
             // Newer linked results necessarily precede their order in this descending window.

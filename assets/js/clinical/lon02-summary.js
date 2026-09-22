@@ -53,7 +53,7 @@
       button.addEventListener('click', () => goToHistory(true)); target.append(button);
     });
     list('[data-lon02-recent]', data.recent_encounters || [], 'No hay consultas canónicas anteriores disponibles.', (target, row) => line(target, `Consulta ${state(row.status)}`, `Encuentro canónico · ${date(row.date)}`));
-    list('[data-lon02-measurements]', data.latest_measurements || [], 'No hay mediciones canónicas disponibles.', (target, row) => line(target, `${measure(row.code)}: ${row.code === 'blood_pressure' ? row.value : number(row.value)} ${row.unit || ''}`.trim(), `Registrada ${date(row.date)} · ${source(row.source)} · encuentro canónico${row.has_amendment ? ' · Valor original enmendado; revisar historial' : ''}`));
+    list('[data-lon02-measurements]', data.latest_measurements || [], 'Sin mediciones comparables en los últimos 12 meses.', (target, row) => line(target, `${measure(row.code)}${row.component ? ` ${row.component === 'systolic' ? 'sistólica' : 'diastólica'}` : ''}: ${number(row.value)} ${row.unit || ''}`.trim(), `Última lectura comparable · ${date(row.date)} UTC · ${source(row.source)}${row.has_amendment ? ' · Consulta con enmienda' : ''}`));
     list('[data-lon02-pending]', data.pending_orders || [], 'No hay órdenes recientes sin resultado vinculado en el conjunto consultado.', (target, row) => line(target, row.title, `Orden canónica · ${date(row.date)} · resultado vinculado pendiente`));
     list('[data-lon02-late]', data.late_results || [], 'No hay resultados posteriores al cierre en el conjunto consultado.', (target, row) => line(target, row.title, `Resultado canónico recibido después de finalizar · ${date(row.date)}`));
     list('[data-lon02-documents]', data.recent_documents || [], 'No hay documentos canónicos recientes disponibles.', (target, row) => line(target, row.title, `${documentType(row.type)} · ${date(row.date)} · encuentro canónico`));
@@ -162,6 +162,13 @@
   }
   $('[data-lon02-refresh]').addEventListener('click', load);
   $('[data-lon02-history]').addEventListener('click', () => goToHistory(false));
+  $('[data-lon02-trends]')?.addEventListener('click', () => {
+    const tab = pane.querySelector('[data-bs-target="#t-mediciones-longitudinal"]');
+    if (!tab) return;
+    if (window.bootstrap?.Tab) window.bootstrap.Tab.getOrCreateInstance(tab).show(); else tab.click();
+    const title = pane.querySelector('#lon07c-title');
+    requestAnimationFrame(() => title?.focus());
+  });
   for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, load);
   pane.querySelector('[data-bs-target="#t-resumen-longitudinal"]')?.addEventListener('shown.bs.tab', load);
   new MutationObserver(() => { if (patient() !== selected) load(); }).observe(pane, {attributes:true, attributeFilter:['data-patient-id','data-active-patient-id']});
