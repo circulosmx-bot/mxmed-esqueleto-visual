@@ -7758,7 +7758,7 @@ try {
                             'updated_at' => (string)$sectionRow['updated_at'],
                         ];
                     }
-                    $observationQuery = $pdo->prepare('SELECT observation_id, encounter_id, code, value_numeric, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, recorded_at, source, provenance_json, row_version, created_at, updated_at FROM clinical_observations WHERE encounter_id = :encounter_id ORDER BY effective_at DESC, observation_id DESC');
+                    $observationQuery = $pdo->prepare('SELECT observation_id, encounter_id, code, value_numeric, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, effective_at_authority, recorded_at, source, provenance_json, row_version, created_at, updated_at FROM clinical_observations WHERE encounter_id = :encounter_id ORDER BY effective_at DESC, observation_id DESC');
                     $observationQuery->execute([':encounter_id' => $encounterId]);
                     foreach ($observationQuery->fetchAll(PDO::FETCH_ASSOC) as $observationRow) {
                         $observationRow['observation_id'] = (int)$observationRow['observation_id'];

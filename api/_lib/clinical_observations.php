@@ -20,6 +20,9 @@ function clinical_observation_catalog(): array
 
 function clinical_observation_validate(array $input): array
 {
+    if (array_key_exists('effective_at_authority', $input)) {
+        throw new ClinicalObservationValidationException('OBSERVATION_TIME_AUTHORITY_SERVER_ONLY');
+    }
     $code=trim((string)($input['code'] ?? ''));
     $catalog=clinical_observation_catalog();
     if (!isset($catalog[$code])) throw new ClinicalObservationValidationException('OBSERVATION_CODE_UNSUPPORTED');
@@ -40,7 +43,20 @@ function clinical_observation_validate(array $input): array
     if (!in_array($source, ['direct_measurement','patient_report','import'], true)) {
         throw new ClinicalObservationValidationException('OBSERVATION_PROVENANCE_INVALID');
     }
+    if (array_key_exists('effective_at', $input)) {
+        $time=$input['effective_at'];
+        if (!is_string($time) || !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',$time)
+            || !($parsed=DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$time,new DateTimeZone('UTC')))
+            || $parsed->format('Y-m-d H:i:s')!==$time) {
+            throw new ClinicalObservationValidationException('OBSERVATION_EFFECTIVE_AT_INVALID');
+        }
+    }
     return $input;
+}
+
+function clinical_observation_time_trend_eligible(string $authority): bool
+{
+    return $authority === 'EXPLICIT_EFFECTIVE_TIME';
 }
 
 final class ClinicalObservationsRepository
@@ -61,14 +77,18 @@ final class ClinicalObservationsRepository
     {
         $input=clinical_observation_validate($input);
         $this->assertOpen($encounterId);
+        $capturedAt=gmdate('Y-m-d H:i:s');
+        $explicitTime=array_key_exists('effective_at',$input);
         $stmt=$this->pdo->prepare('INSERT INTO clinical_observations
-          (encounter_id, code, value_numeric, value_text, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, recorded_at,
+          (encounter_id, code, value_numeric, value_text, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, effective_at_authority, recorded_at,
            recorded_by_user_id, source, provenance_json, row_version, created_at, updated_at)
-          VALUES (:encounter_id,:code,:value_numeric,NULL,:unit,:systolic,:diastolic,:effective_at,UTC_TIMESTAMP(),:actor,:source,:provenance,1,UTC_TIMESTAMP(),UTC_TIMESTAMP())');
+          VALUES (:encounter_id,:code,:value_numeric,NULL,:unit,:systolic,:diastolic,:effective_at,:time_authority,:recorded_at,:actor,:source,:provenance,1,UTC_TIMESTAMP(),UTC_TIMESTAMP())');
         $stmt->execute([
             ':encounter_id'=>$encounterId, ':code'=>$input['code'], ':value_numeric'=>$input['value_numeric'] ?? null,
             ':unit'=>$input['unit'], ':systolic'=>$input['systolic_mm_hg'] ?? null, ':diastolic'=>$input['diastolic_mm_hg'] ?? null,
-            ':effective_at'=>$input['effective_at'] ?? gmdate('Y-m-d H:i:s'), ':actor'=>$actor, ':source'=>$input['source'],
+            ':effective_at'=>$explicitTime?$input['effective_at']:$capturedAt,
+            ':time_authority'=>$explicitTime?'EXPLICIT_EFFECTIVE_TIME':'CAPTURE_TIME_FALLBACK',
+            ':recorded_at'=>$capturedAt, ':actor'=>$actor, ':source'=>$input['source'],
             ':provenance'=>json_encode($input['provenance'] ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
         ]);
         return (int)$this->pdo->lastInsertId();
@@ -79,15 +99,19 @@ final class ClinicalObservationsRepository
         $input=clinical_observation_validate($input); $this->pdo->beginTransaction();
         try {
             $this->assertOpen($encounterId);
+            $explicitTime=array_key_exists('effective_at',$input);
+            $timeSet=$explicitTime?'effective_at=:effective_at,effective_at_authority=\'EXPLICIT_EFFECTIVE_TIME\',':'';
             $stmt=$this->pdo->prepare('UPDATE clinical_observations SET code=:code,value_numeric=:value_numeric,value_text=NULL,unit=:unit,
-              systolic_mm_hg=:systolic,diastolic_mm_hg=:diastolic,effective_at=:effective_at,recorded_by_user_id=:actor,
+              systolic_mm_hg=:systolic,diastolic_mm_hg=:diastolic,'.$timeSet.'recorded_by_user_id=:actor,
               source=:source,provenance_json=:provenance,row_version=row_version+1,updated_at=UTC_TIMESTAMP()
               WHERE observation_id=:observation_id AND encounter_id=:encounter_id AND row_version=:expected_version');
-            $stmt->execute([':code'=>$input['code'],':value_numeric'=>$input['value_numeric']??null,':unit'=>$input['unit'],
+            $params=[':code'=>$input['code'],':value_numeric'=>$input['value_numeric']??null,':unit'=>$input['unit'],
               ':systolic'=>$input['systolic_mm_hg']??null,':diastolic'=>$input['diastolic_mm_hg']??null,
-              ':effective_at'=>$input['effective_at']??gmdate('Y-m-d H:i:s'),':actor'=>$actor,':source'=>$input['source'],
+              ':actor'=>$actor,':source'=>$input['source'],
               ':provenance'=>json_encode($input['provenance']??[],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
-              ':observation_id'=>$observationId,':encounter_id'=>$encounterId,':expected_version'=>$expectedVersion]);
+              ':observation_id'=>$observationId,':encounter_id'=>$encounterId,':expected_version'=>$expectedVersion];
+            if($explicitTime)$params[':effective_at']=$input['effective_at'];
+            $stmt->execute($params);
             if ($stmt->rowCount() !== 1) throw new RuntimeException('VERSION_CONFLICT');
             $row=$this->fetch($observationId); $this->pdo->commit(); return $row;
         } catch (Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
