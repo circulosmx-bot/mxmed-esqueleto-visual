@@ -26,9 +26,7 @@
   box-shadow:0 7px 22px rgba(7,59,90,.07);
 }
 
-/* The two clinical navigation rows are a local Expediente exception: their
-   dense overview is useful when moving between record domains. Their visual
-   treatment follows VIS01 without changing the tab model or DOM order. */
+/* Shared patient-record navigation appearance. */
 #p-expediente [data-exp-tabs] {
   gap:7px;
   margin:0 0 8px!important;
@@ -745,4 +743,70 @@
   #p-expediente .m7-documents .btn{min-height:42px}
   #p-expediente .m7-terminal-actions{grid-template-columns:1fr}
   #p-expediente .m7-terminal .btn{min-height:42px}
+}
+
+/* VIS01: seven primary destinations; existing modules remain contextual. */
+#p-expediente .vis01-primary-navigation .mm-tabs-row {
+  display:grid;
+  grid-template-columns:repeat(7, minmax(0, 1fr));
+  gap:6px;
+}
+#p-expediente .vis01-primary-navigation [data-vis01-secondary],
+#p-expediente [data-vis01-context][hidden],
+#p-expediente [data-vis01-open][hidden] { display:none!important; }
+#p-expediente .vis01-primary-navigation .nav-item { min-width:0; }
+#p-expediente .vis01-primary-navigation .nav-link {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  width:100%;
+  height:66px;
+  min-height:66px;
+  gap:5px;
+  padding:7px 4px;
+}
+/* Override only legacy per-tab compact calibrations, including gender offsets. */
+#p-expediente .vis01-primary-navigation .nav-link .tab-lbl {
+  font-size:14px!important;
+  line-height:1.2!important;
+  text-transform:none;
+  white-space:nowrap;
+  flex:0 0 auto!important;
+  transform:none!important;
+}
+#p-expediente .vis01-primary-navigation .nav-link .tab-ico {
+  font-size:24px!important;
+  flex:0 0 24px!important;
+  margin:0!important;
+  transform:none!important;
+}
+#p-expediente .vis01-primary-navigation .mm-tabs-row .nav-link.vis01-context-active {
+  background:#01afb9;
+  color:#fff;
+}
+#p-expediente .vis01-primary-navigation .nav-link:focus-visible {
+  outline:2px solid #06536e;
+  outline-offset:1px;
+}
+#p-expediente .vis01-context-navigation,
+#p-expediente .vis01-secondary-links {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+}
+#p-expediente .vis01-context-navigation > span { color:var(--exp01-ink); font-weight:600; }
+#p-expediente .vis01-legacy-consulta { display:none; }
+#p-expediente #m7-workspace.d-none + .vis01-legacy-consulta { display:block; }
+@media (max-width:1199.98px) {
+  #p-expediente .vis01-primary-navigation {
+    max-width:100%;
+    overflow-x:auto;
+  }
+  #p-expediente .vis01-primary-navigation .mm-tabs-row {
+    grid-template-columns:repeat(7, minmax(150px, 1fr))!important;
+    width:max-content;
+    min-width:100%;
+  }
 }

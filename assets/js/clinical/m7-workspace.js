@@ -12,7 +12,7 @@
   const startButton = root.querySelector('[data-m7-start]');
   const resumeButton = root.querySelector('[data-m7-resume]');
   const currentButton = root.querySelector('[data-m7-current]');
-  const legacyPanel = root.parentElement.querySelector('.clinical-panel');
+  const legacyPanel = patientPane.querySelector('#t-historial-atencion > .clinical-panel');
   const editor = root.querySelector('[data-m7-editor]');
   const editorTitle = root.querySelector('[data-m7-editor-title]');
   const editorMeta = root.querySelector('[data-m7-editor-meta]');
@@ -461,7 +461,7 @@
   ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>{
     window.addEventListener(name, ()=> refresh());
   });
-  const workspaceTab = patientPane.querySelector('[data-bs-target="#t-historial-atencion"]');
+  const workspaceTab = patientPane.querySelector('[data-bs-target="#t-consulta-actual"]');
   workspaceTab?.addEventListener('shown.bs.tab', refresh);
   workspaceTab?.addEventListener('hide.bs.tab', event=>{ if(!protectNavigation()) event.preventDefault(); });
   new MutationObserver(()=>{ if(selectedPatient() !== patientId) refresh(); }).observe(patientPane, { attributes:true, attributeFilter:['data-patient-id','data-active-patient-id'] });

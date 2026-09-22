@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=m7ws04">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis01">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -4495,43 +4495,33 @@
               </div>
             </section>
 
-            <div class="mm-tabs mm-tabs-rows mb-3" data-exp-tabs>
-
-              <ul class="nav nav-pills mm-tabs-row mm-tabs-row-top" role="tablist">
-
-                <li class="nav-item" data-exp-datos-tab-item><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-resumen-longitudinal" data-tab-key="t-resumen-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">summarize</span><span class="tab-lbl">Resumen</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-mediciones-longitudinal" data-tab-key="t-mediciones-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">monitoring</span><span class="tab-lbl">Mediciones y tendencias</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-antecedentes-longitudinal" data-tab-key="t-antecedentes-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">fact_check</span><span class="tab-lbl">Antecedentes</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-problemas-longitudinal" data-tab-key="t-problemas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Problemas</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-medicamentos-longitudinal" data-tab-key="t-medicamentos-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">medication</span><span class="tab-lbl">Medicamentos</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tareas-longitudinal" data-tab-key="t-tareas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">task_alt</span><span class="tab-lbl">Tareas clínicas</span></button></li>
-
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-historial"><span class="tab-line">Historial</span><span class="tab-line tab-line-sub">de atención</span></span></button></li>
-
-                <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco"><span class="tab-ico material-symbols-rounded" aria-hidden="true">pregnant_woman</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-gineco"><span class="tab-line">Antecedentes</span><span class="tab-line">Gineco</span><span class="tab-line">Obstétricos</span></span></button></li>
-
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-estudios" data-tab-key="t-estudios"><span class="tab-ico material-symbols-outlined" aria-hidden="true">radiology</span><span class="tab-lbl">Estudios Diagnóstico</span></button></li>
-
+            <div class="mm-tabs mm-tabs-rows mb-3 vis01-primary-navigation" data-exp-tabs>
+              <ul class="nav nav-pills mm-tabs-row mm-tabs-row-top" role="tablist" aria-label="Secciones del expediente">
+                <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-resumen-longitudinal" data-tab-key="t-resumen-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">summarize</span><span class="tab-lbl">Resumen</span></button></li>
+                <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consulta-actual" data-tab-key="t-consulta-actual"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Consulta</span></button></li>
+                <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl">Historial</span></button></li>
+                <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-estudios" data-tab-key="t-estudios"><span class="tab-ico material-symbols-outlined" aria-hidden="true">science</span><span class="tab-lbl">Órdenes y resultados</span></button></li>
+                <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consent" data-tab-key="t-consent"><span class="tab-ico material-symbols-outlined" aria-hidden="true">folder_open</span><span class="tab-lbl">Documentos</span></button></li>
+                <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tratamiento" data-tab-key="t-tratamiento"><span class="tab-ico material-symbols-outlined" aria-hidden="true">prescriptions</span><span class="tab-lbl">Recetas</span></button></li>
+                <li class="nav-item" data-exp-datos-tab-item><button type="button" class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">settings</span><span class="tab-lbl">Administrativo</span></button></li>
+                <!-- Stable Bootstrap targets for contextual callers; hidden and inert in primary navigation. -->
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-mediciones-longitudinal" data-tab-key="t-mediciones-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">monitoring</span><span class="tab-lbl">Mediciones y tendencias</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-antecedentes-longitudinal" data-tab-key="t-antecedentes-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">fact_check</span><span class="tab-lbl">Antecedentes</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-problemas-longitudinal" data-tab-key="t-problemas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Problemas</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-medicamentos-longitudinal" data-tab-key="t-medicamentos-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">medication</span><span class="tab-lbl">Medicamentos</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tareas-longitudinal" data-tab-key="t-tareas-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">task_alt</span><span class="tab-lbl">Tareas clínicas</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item d-none" data-tab-conditional="gineco"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco"><span class="tab-ico material-symbols-rounded" aria-hidden="true">pregnant_woman</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-gineco"><span class="tab-line">Antecedentes</span><span class="tab-line">Gineco</span><span class="tab-line">Obstétricos</span></span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item d-none" data-tab-technical="actividad-clinica"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-notas" data-tab-key="t-notas"><span class="tab-ico material-symbols-outlined" aria-hidden="true">stylus_note</span><span class="tab-lbl">Actividad Clínica</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-manejo" data-tab-key="t-manejo"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Manejo Hospitalario</span></button></li>
+                <li hidden inert data-vis01-secondary class="nav-item"><button tabindex="-1" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-archivo" data-tab-key="t-archivo"><span class="tab-ico material-symbols-rounded" aria-hidden="true">folder_open</span><span class="tab-lbl">Archivo</span></button></li>
               </ul>
-
-              <ul class="nav nav-pills mm-tabs-row mm-tabs-row-bottom" role="tablist">
-
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tratamiento" data-tab-key="t-tratamiento"><span class="tab-ico material-symbols-outlined" aria-hidden="true">prescriptions</span><span class="tab-lbl">Tratamiento Recetas</span></button></li>
-
-                <li class="nav-item d-none" data-tab-technical="actividad-clinica"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-notas" data-tab-key="t-notas"><span class="tab-ico material-symbols-outlined" aria-hidden="true">stylus_note</span><span class="tab-lbl">Actividad Clínica</span></button></li>
-
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-manejo" data-tab-key="t-manejo"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Manejo Hospitalario</span></button></li>
-
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consent" data-tab-key="t-consent"><span class="tab-ico material-symbols-outlined" aria-hidden="true">assignment_turned_in</span><span class="tab-lbl">DOCUMENTOS CLÍNICOS</span></button></li>
-
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-archivo" data-tab-key="t-archivo"><span class="tab-ico material-symbols-rounded" aria-hidden="true">folder_open</span><span class="tab-lbl">Archivo</span></button></li>
-
-              </ul>
-
             </div>
+            <nav class="vis01-context-navigation" data-vis01-context hidden aria-label="Contexto de la sección">
+              <button type="button" class="btn btn-outline-primary btn-sm" data-vis01-return>Volver a Resumen</button>
+              <span data-vis01-context-title></span>
+            </nav>
 
             <div class="tab-content">
 
@@ -4547,11 +4537,11 @@
                     <section class="lon02-card"><h4>Órdenes sin resultado vinculado</h4><div data-lon02-pending></div></section>
                     <section class="lon02-card"><h4>Resultados posteriores al cierre</h4><div data-lon02-late></div></section>
                     <section class="lon02-card"><h4>Documentos recientes</h4><div data-lon02-documents></div><p class="lon02-note">Consulta los documentos y archivos privados desde su contexto autorizado.</p></section>
-                    <section class="lon02-card"><h4>Antecedentes revisados</h4><div data-lon02-antecedents>Estado no disponible.</div></section>
-                    <section class="lon02-card"><h4>Alergias revisadas</h4><div data-lon02-allergies>Estado no disponible.</div></section>
-                    <section class="lon02-card"><h4>Problemas activos</h4><div data-lon02-problems>Estado no disponible.</div></section>
-                    <section class="lon02-card"><h4>Medicación actual</h4><div data-lon02-medications>Estado no disponible.</div></section>
-                    <section class="lon02-card"><h4>Tareas clínicas y seguimiento pendientes</h4><div data-lon02-tasks>Estado no disponible.</div></section>
+                    <section class="lon02-card"><h4>Antecedentes revisados</h4><div data-lon02-antecedents>Estado no disponible.</div><button type="button" class="btn btn-outline-primary btn-sm" data-vis01-open="#t-antecedentes-longitudinal">Ver antecedentes y alergias</button></section>
+                    <section class="lon02-card"><h4>Alergias revisadas</h4><div data-lon02-allergies>Estado no disponible.</div><button type="button" class="btn btn-outline-primary btn-sm" data-vis01-open="#t-antecedentes-longitudinal">Ver alergias</button></section>
+                    <section class="lon02-card"><h4>Problemas activos</h4><div data-lon02-problems>Estado no disponible.</div><button type="button" class="btn btn-outline-primary btn-sm" data-vis01-open="#t-problemas-longitudinal">Ver todos los problemas</button></section>
+                    <section class="lon02-card"><h4>Medicación actual</h4><div data-lon02-medications>Estado no disponible.</div><button type="button" class="btn btn-outline-primary btn-sm" data-vis01-open="#t-medicamentos-longitudinal">Ver medicación</button></section>
+                    <section class="lon02-card"><h4>Tareas clínicas y seguimiento pendientes</h4><div data-lon02-tasks>Estado no disponible.</div><button type="button" class="btn btn-outline-primary btn-sm" data-vis01-open="#t-tareas-longitudinal">Ver tareas y seguimiento</button></section>
                     <section class="lon02-card lon02-card-unknown"><h4>Información longitudinal aún no establecida</h4><p>Los antecedentes de registros anteriores conservan su procedencia en Consultas / Historial.</p></section>
                   </div>
                 </section>
@@ -4712,11 +4702,11 @@
                       </span>
                       <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
                     </button>
-                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-historial-atencion">
-                      <span class="material-symbols-rounded" aria-hidden="true">history</span>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-consulta-actual">
+                      <span class="material-symbols-rounded" aria-hidden="true">clinical_notes</span>
                       <span class="mx-clinical-completion-card-copy">
-                        <strong>Historial de atención</strong>
-                        <span>Consulta y da seguimiento a atenciones previas.</span>
+                        <strong>Consulta</strong>
+                        <span>Inicia o continúa la consulta ambulatoria de este paciente.</span>
                       </span>
                       <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
                     </button>
@@ -5408,18 +5398,7 @@
                 <div class="mx-clinical-completion-hub" data-exp-completion-hub-panel data-exp-completion-hub-panel-source="historia-clinica"></div>
 
               </div>
-              <div class="tab-pane fade" id="t-historial-atencion">
-                <section class="lon01-history" id="lon01-history" aria-labelledby="lon01-title">
-                  <div class="lon01-head"><div><p class="m7-workspace-eyebrow">Paciente · Historial longitudinal</p><h3 id="lon01-title">Consultas / Historial</h3><p>Consultas canónicas y registros anteriores conservan su procedencia.</p></div><button type="button" class="btn btn-outline-primary" data-lon01-refresh>Actualizar historial</button></div>
-                  <p data-lon01-status role="status" aria-live="polite">Selecciona un paciente para ver su historial.</p>
-                  <div class="m7-workspace-error d-none" data-lon01-error role="alert"></div>
-                  <div class="lon01-columns d-none" data-lon01-content>
-                    <div><h4>Consulta actual / en curso</h4><div data-lon01-current></div><h4>Consultas anteriores</h4><div data-lon01-previous></div></div>
-                    <div><h4>Registros anteriores</h4><p class="lon01-legacy-note">Registros históricos; su fecha exacta de consulta y su orden cronológico no están confirmados.</p><div data-lon01-legacy></div></div>
-                  </div>
-                  <button type="button" class="btn btn-outline-primary d-none" data-lon01-more>Cargar más registros</button>
-                  <section class="lon01-detail d-none" data-lon01-detail aria-labelledby="lon01-detail-title"><div class="lon01-detail-head"><h4 id="lon01-detail-title" data-lon01-detail-title></h4><button type="button" class="btn btn-outline-secondary" data-lon01-close>Cerrar detalle</button></div><p data-lon01-detail-meta></p><div data-lon01-detail-body></div></section>
-                </section>
+              <div class="tab-pane fade" id="t-consulta-actual">
                 <section class="m7-workspace" id="m7-workspace" aria-labelledby="m7-workspace-title">
                   <div class="m7-workspace-head">
                     <div>
@@ -5526,6 +5505,22 @@
                     <h4>Consultas anteriores</h4>
                     <div data-m7-history-list></div>
                   </div>
+                </section>
+                <div class="vis01-legacy-consulta"><button type="button" class="btn btn-outline-primary" data-vis01-open="#t-historial-atencion">Abrir atención en el historial</button></div>
+              </div>
+
+              <div class="tab-pane fade" id="t-historial-atencion">
+                <nav class="vis01-secondary-links" aria-label="Registros clínicos anteriores"><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-historia">Historia anterior</button><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-exploracion">Exploración anterior</button><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-gineco">Antecedentes gineco-obstétricos</button><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-manejo">Manejo hospitalario</button></nav>
+                <section class="lon01-history" id="lon01-history" aria-labelledby="lon01-title">
+                  <div class="lon01-head"><div><p class="m7-workspace-eyebrow">Paciente · Historial longitudinal</p><h3 id="lon01-title">Consultas / Historial</h3><p>Consultas canónicas y registros anteriores conservan su procedencia.</p></div><button type="button" class="btn btn-outline-primary" data-lon01-refresh>Actualizar historial</button></div>
+                  <p data-lon01-status role="status" aria-live="polite">Selecciona un paciente para ver su historial.</p>
+                  <div class="m7-workspace-error d-none" data-lon01-error role="alert"></div>
+                  <div class="lon01-columns d-none" data-lon01-content>
+                    <div><h4>Consulta actual / en curso</h4><div data-lon01-current></div><h4>Consultas anteriores</h4><div data-lon01-previous></div></div>
+                    <div><h4>Registros anteriores</h4><p class="lon01-legacy-note">Registros históricos; su fecha exacta de consulta y su orden cronológico no están confirmados.</p><div data-lon01-legacy></div></div>
+                  </div>
+                  <button type="button" class="btn btn-outline-primary d-none" data-lon01-more>Cargar más registros</button>
+                  <section class="lon01-detail d-none" data-lon01-detail aria-labelledby="lon01-detail-title"><div class="lon01-detail-head"><h4 id="lon01-detail-title" data-lon01-detail-title></h4><button type="button" class="btn btn-outline-secondary" data-lon01-close>Cerrar detalle</button></div><p data-lon01-detail-meta></p><div data-lon01-detail-body></div></section>
                 </section>
                 <div class="clinical-panel mt-2 p-2">
                   <div id="mm-p10-bar" class="d-none mb-1" style="position:sticky;top:0;z-index:1020;background:rgba(248,249,250,.95);backdrop-filter:saturate(1.2) blur(2px);">
@@ -8427,6 +8422,7 @@
               <div class="tab-pane fade" id="t-manejo"></div>
 
               <div class="tab-pane fade" id="t-consent">
+                <nav class="vis01-secondary-links" aria-label="Archivo de documentos"><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-archivo">Ver archivo</button></nav>
                 <div class="exp-card exp-card--secondary mb-3" id="docs_catalog_panel">
                   <div class="exp-card-title mb-1">
                     <span>Documentos clínicos</span>
@@ -10666,15 +10662,16 @@
 <script src="assets/js/clinical/m7-ws03.js?v=m7ws03"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=m7ws04"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=m7ws05"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=m7ws05"></script>
-<script src="assets/js/clinical/m7-ws06.js?v=m7ws06"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=vis01"></script>
+<script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=lon01"></script>
-<script src="assets/js/clinical/lon02-summary.js?v=lon02"></script>
+<script src="assets/js/clinical/lon02-summary.js?v=vis01"></script>
 <script src="assets/js/clinical/lon07c-measurements.js?v=lon07c"></script>
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
 <script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>
 <script src="assets/js/clinical/lon05b-medications.js?v=lon05b"></script>
 <script src="assets/js/clinical/lon06b-tasks.js?v=lon06b"></script>
+<script src="assets/js/clinical/vis01-navigation.js?v=vis01"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>

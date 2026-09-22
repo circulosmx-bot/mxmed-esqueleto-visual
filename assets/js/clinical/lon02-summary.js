@@ -34,7 +34,7 @@
     rows.forEach(row => render(target, row));
   }
   function goToHistory(resume = false) {
-    const tab = pane.querySelector('[data-bs-target="#t-historial-atencion"]');
+    const tab = pane.querySelector(resume ? '[data-bs-target="#t-consulta-actual"]' : '[data-bs-target="#t-historial-atencion"]');
     if (!tab) return;
     if (window.bootstrap?.Tab) window.bootstrap.Tab.getOrCreateInstance(tab).show();
     else tab.click();

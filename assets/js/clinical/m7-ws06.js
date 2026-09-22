@@ -7,7 +7,7 @@
   const changedByCutover = new WeakSet();
   const legacyCards = ['#t-historia', '#t-exploracion'].map(target=>
     document.querySelector(`[data-exp-completion-target="${target}"]`)).filter(Boolean);
-  const currentCard = document.querySelector('[data-exp-completion-target="#t-historial-atencion"]');
+  const currentCard = document.querySelector('[data-exp-completion-target="#t-consulta-actual"]');
   const currentCardDescription = currentCard?.querySelector('.mx-clinical-completion-card-copy span');
   const originalCurrentDescription = currentCardDescription?.textContent || '';
   const originalLabels = ['t-historia', 't-exploracion'].map(key=>{
@@ -23,7 +23,7 @@
     banner.innerHTML = '<strong>Registro anterior · sólo lectura.</strong> Los datos guardados permanecen disponibles como referencia histórica. Los borradores anteriores no se convierten en consultas. <button type="button" class="btn btn-outline-primary btn-sm ms-2" data-m7-legacy-open>Ir a consulta ambulatoria</button>';
     pane.prepend(banner);
     banner.querySelector('[data-m7-legacy-open]').addEventListener('click', ()=>{
-      const tab = document.querySelector('[data-bs-target="#t-historial-atencion"], [href="#t-historial-atencion"]');
+      const tab = document.querySelector('[data-bs-target="#t-consulta-actual"], [href="#t-consulta-actual"]');
       if(tab && window.bootstrap?.Tab){
         tab.addEventListener('shown.bs.tab', ()=>document.getElementById('m7-workspace-title')?.focus(), { once:true });
         document.getElementById('m7-workspace-title')?.setAttribute('tabindex', '-1');
