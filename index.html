@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis04">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis05">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5517,15 +5517,22 @@
               <div class="tab-pane fade" id="t-historial-atencion">
                 <nav class="vis01-secondary-links" aria-label="Registros clínicos anteriores"><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-historia">Historia anterior</button><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-exploracion">Exploración anterior</button><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-gineco">Antecedentes gineco-obstétricos</button><button type="button" class="btn btn-outline-secondary btn-sm" data-vis01-open="#t-manejo">Manejo hospitalario</button></nav>
                 <section class="lon01-history" id="lon01-history" aria-labelledby="lon01-title">
-                  <div class="lon01-head"><div><p class="m7-workspace-eyebrow">Paciente · Historial longitudinal</p><h3 id="lon01-title">Consultas / Historial</h3><p>Consultas canónicas y registros anteriores conservan su procedencia.</p></div><button type="button" class="btn btn-outline-primary" data-lon01-refresh>Actualizar historial</button></div>
+                  <div class="lon01-head"><div><p class="m7-workspace-eyebrow">Paciente · Historial</p><h3 id="lon01-title">Historial clínico</h3><p>Revisa consultas y registros históricos, sin iniciar una nueva atención.</p></div><button type="button" class="btn btn-outline-primary" data-lon01-refresh>Actualizar historial</button></div>
                   <p data-lon01-status role="status" aria-live="polite">Selecciona un paciente para ver su historial.</p>
                   <div class="m7-workspace-error d-none" data-lon01-error role="alert"></div>
-                  <div class="lon01-columns d-none" data-lon01-content>
-                    <div><h4>Consulta actual / en curso</h4><div data-lon01-current></div><h4>Consultas anteriores</h4><div data-lon01-previous></div></div>
-                    <div><h4>Registros anteriores</h4><p class="lon01-legacy-note">Registros históricos; su fecha exacta de consulta y su orden cronológico no están confirmados.</p><div data-lon01-legacy></div></div>
+                  <div class="vis05-split">
+                    <div class="vis05-timeline" aria-label="Lista de consultas y registros históricos">
+                      <div class="lon01-columns d-none" data-lon01-content>
+                        <div><h4>En curso</h4><div data-lon01-current></div><h4>Consultas anteriores</h4><div data-lon01-previous></div></div>
+                        <div><h4>Registros históricos</h4><p class="lon01-legacy-note">Sin fecha de consulta confirmada. Se conservan separados de la cronología de consultas.</p><div data-lon01-legacy></div></div>
+                      </div>
+                      <button type="button" class="btn btn-outline-primary d-none" data-lon01-more>Cargar más registros</button>
+                    </div>
+                    <div class="vis05-reading">
+                      <p class="vis05-empty" data-vis05-empty>Selecciona una consulta o un registro para revisar su detalle de sólo lectura.</p>
+                      <section class="lon01-detail d-none" data-lon01-detail aria-labelledby="lon01-detail-title"><div class="lon01-detail-head"><div><p class="vis05-readonly">Sólo lectura</p><h4 id="lon01-detail-title" data-lon01-detail-title></h4></div><button type="button" class="btn btn-outline-secondary" data-lon01-close>Volver a la lista</button></div><p data-lon01-detail-meta></p><div data-lon01-detail-body></div></section>
+                    </div>
                   </div>
-                  <button type="button" class="btn btn-outline-primary d-none" data-lon01-more>Cargar más registros</button>
-                  <section class="lon01-detail d-none" data-lon01-detail aria-labelledby="lon01-detail-title"><div class="lon01-detail-head"><h4 id="lon01-detail-title" data-lon01-detail-title></h4><button type="button" class="btn btn-outline-secondary" data-lon01-close>Cerrar detalle</button></div><p data-lon01-detail-meta></p><div data-lon01-detail-body></div></section>
                 </section>
                 <div class="clinical-panel mt-2 p-2">
                   <div id="mm-p10-bar" class="d-none mb-1" style="position:sticky;top:0;z-index:1020;background:rgba(248,249,250,.95);backdrop-filter:saturate(1.2) blur(2px);">
@@ -10671,7 +10678,7 @@
 <script src="assets/js/clinical/m7-workspace.js?v=vis04-r1"></script>
 <script src="assets/js/clinical/vis04-consultation.js?v=vis04"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
-<script src="assets/js/clinical/lon01-history.js?v=lon01"></script>
+<script src="assets/js/clinical/lon01-history.js?v=vis05"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=vis03"></script>
 <script src="assets/js/clinical/lon07c-measurements.js?v=lon07c"></script>
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
