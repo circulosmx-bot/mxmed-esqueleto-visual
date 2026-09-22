@@ -6243,6 +6243,40 @@ try {
         return;
     }
 
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal' && ($segments[3] ?? '') === 'measurements' && count($segments) === 4) {
+        $routeName='patients/{patient_id}/longitudinal/measurements';
+        if ($method!=='GET') {
+            clinical_send_response(['ok'=>false,'error'=>'not_found','data'=>null,'meta'=>['route'=>$routeName]],404);
+            return;
+        }
+        $context=clinical_require_doctor_context($routeName);
+        if ($context===null) return;
+        $patientId=trim((string)$segments[1]);
+        try {
+            require_once __DIR__.'/../_lib/clinical_measurement_trends.php';
+            $options=ClinicalMeasurementTrends::options($_GET);
+        } catch (InvalidArgumentException $e) {
+            clinical_send_response(['ok'=>false,'error'=>['code'=>'bad_request','message'=>$e->getMessage()],'data'=>null,'meta'=>['route'=>$routeName]],400);
+            return;
+        }
+        try {
+            $pdo=clinical_documents_pdo();
+            if ($patientId==='' || !clinical_patient_exists($pdo,$patientId)) {
+                clinical_send_response(['ok'=>false,'error'=>['code'=>'not_found','message'=>'Paciente no encontrado'],'data'=>null,'meta'=>['route'=>$routeName]],404);
+                return;
+            }
+            if (!clinical_require_doctor_patient_scope($pdo,$context['doctor_id'],$patientId,$routeName)) return;
+            $service=new ClinicalMeasurementTrends($pdo);
+            $service->assertReady();
+            $result=$service->read($context['doctor_id'],$patientId,$options);
+            clinical_send_response(['ok'=>true,'data'=>$result,'meta'=>['route'=>$routeName,'method'=>'GET']],200);
+        } catch (Throwable $e) {
+            $schemaNotReady=$e->getMessage()==='SCHEMA_NOT_READY';
+            clinical_send_response(['ok'=>false,'error'=>['code'=>$schemaNotReady?'SCHEMA_NOT_READY':'server_error','message'=>$schemaNotReady?'El esquema clínico no está listo':'No se pudieron cargar las mediciones'],'data'=>null,'meta'=>['route'=>$routeName]],$schemaNotReady?503:500);
+        }
+        return;
+    }
+
     if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal-summary' && count($segments) === 3) {
         $routeName = 'patients/{patient_id}/longitudinal-summary';
         if ($method !== 'GET') {
