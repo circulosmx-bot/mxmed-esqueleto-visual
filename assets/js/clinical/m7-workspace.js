@@ -331,7 +331,7 @@
   }
   function renderEncounter(encounter, historical){
     const state = String(encounter.status || '').toLowerCase();
-    const label = state === 'voided' ? 'Anulada' : state === 'closed' ? 'Finalizada' : 'Activa';
+    const label = state === 'voided' ? 'Anulada' : state === 'closed' ? 'Finalizada' : 'En curso';
     const when = String(encounter.event_datetime || encounter.encounter_dt || '').trim();
     show(body, true);
     show(currentButton, historical && !!active);

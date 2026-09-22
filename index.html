@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis03">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis04">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5404,10 +5404,10 @@
                   <div class="m7-workspace-head">
                     <div>
                       <p class="m7-workspace-eyebrow">Paciente · Consulta</p>
-                      <h3 id="m7-workspace-title">Consulta ambulatoria</h3>
+                      <h3 id="m7-workspace-title">Consulta actual</h3>
                       <p class="m7-workspace-status" data-m7-status role="status" aria-live="polite">Selecciona un paciente para consultar su atención.</p>
                     </div>
-                    <div class="m7-workspace-actions">
+                    <div class="m7-workspace-actions"><button type="button" class="btn btn-outline-secondary" data-vis01-open="#t-resumen-longitudinal">Volver al expediente</button>
                       <button type="button" class="btn btn-primary d-none" data-m7-start>Iniciar consulta</button>
                       <button type="button" class="btn btn-outline-primary d-none" data-m7-resume>Continuar consulta</button>
                       <button type="button" class="btn btn-outline-secondary d-none" data-m7-current>Volver a consulta activa</button>
@@ -5416,15 +5416,16 @@
                   <div class="m7-workspace-error d-none" data-m7-error role="alert"></div>
                   <div class="m7-workspace-body d-none" data-m7-body>
                     <p class="m7-workspace-context" data-m7-context></p>
-                    <nav class="m7-workspace-sections" aria-label="Áreas de la consulta">
-                      <button type="button" data-m7-section="reason" disabled>Motivo / Evolución</button>
-                      <button type="button" data-m7-section="measurements" disabled>Mediciones</button>
-                      <button type="button" data-m7-section="exam" disabled>Exploración</button>
-                      <button type="button" data-m7-section="assessment" disabled>Valoración</button>
-                      <button type="button" data-m7-section="plan" disabled>Plan</button>
-                      <button type="button" data-m7-section="documents" disabled>Documentos / Acciones</button>
-                      <button type="button" data-m7-section="finalize" disabled>Finalizar / Estado</button>
+                    <nav class="m7-workspace-sections" aria-label="Pasos de la consulta">
+                      <button type="button" data-m7-section="reason" disabled><span class="vis04-step-number" aria-hidden="true">1</span><span>Motivo / Evolución</span></button>
+                      <button type="button" data-m7-section="measurements" disabled><span class="vis04-step-number" aria-hidden="true">2</span><span>Mediciones</span></button>
+                      <button type="button" data-m7-section="exam" disabled><span class="vis04-step-number" aria-hidden="true">3</span><span>Exploración</span></button>
+                      <button type="button" data-m7-section="assessment" disabled><span class="vis04-step-number" aria-hidden="true">4</span><span>Valoración</span></button>
+                      <button type="button" data-m7-section="plan" disabled><span class="vis04-step-number" aria-hidden="true">5</span><span>Plan</span></button>
+                      <button type="button" data-m7-section="documents" disabled><span class="vis04-step-number" aria-hidden="true">6</span><span>Documentos / Acciones</span></button>
+                      <button type="button" data-m7-section="finalize" disabled><span class="vis04-step-number" aria-hidden="true">7</span><span>Finalizar</span></button>
                     </nav>
+                    <div class="vis04-layout"><div class="vis04-capture">
                     <section class="m7-section-editor m7-documents d-none" data-m7-documents aria-label="Documentos y acciones clínicas">
                       <div class="m7-section-editor-head"><div><h4>Documentos / Acciones</h4><p class="m7-section-editor-meta">Los documentos de esta consulta y los del paciente conservan su propio contexto.</p></div><button type="button" class="btn btn-outline-primary" data-m7-doc-refresh>Actualizar</button></div>
                       <p class="m7-section-editor-state" data-m7-doc-state role="status" aria-live="polite"></p>
@@ -5448,8 +5449,8 @@
                         </div>
                         <span class="m7-section-editor-state" data-m7-editor-state role="status" aria-live="polite"></span>
                       </div>
-                      <label class="m7-section-editor-label" for="m7-section-text">Contenido de la consulta</label>
-                      <textarea id="m7-section-text" data-m7-editor-text rows="6"></textarea>
+                      <label class="m7-section-editor-label" for="m7-section-text" data-vis04-editor-label>Contenido de la consulta</label>
+                      <p class="vis04-helper d-none" id="vis04-reason-help">Motivo de consulta: describe la razón de atención. Evolución / padecimiento actual: registra síntomas y cambios relevantes en el mismo campo.</p><textarea id="m7-section-text" data-m7-editor-text rows="6" aria-describedby="vis04-reason-help"></textarea>
                       <div class="m7-section-editor-actions">
                         <button type="button" class="btn btn-primary" data-m7-editor-save>Guardar sección</button>
                         <button type="button" class="btn btn-outline-primary d-none" data-lon04b-m7-promote>Agregar a problemas</button>
@@ -5501,6 +5502,9 @@
                       <form class="m7-amendment-form d-none" data-m7-amendment-form><h5>Enmienda del encuentro</h5><p>Corrige contenido de esta consulta; el original permanece visible. Para reemplazar un archivo, usa “Reemplazar” en Documentos / Acciones. Un resultado tardío se añade allí como resultado, no como enmienda.</p><label>Contenido original<select data-m7-amendment-target></select></label><pre data-m7-amendment-original></pre><label>Motivo de la corrección<textarea data-m7-amendment-reason required maxlength="1000" rows="2"></textarea></label><label>Corrección o adenda<textarea data-m7-amendment-text required rows="4"></textarea></label><button type="submit" class="btn btn-primary">Añadir enmienda</button></form>
                       <div class="m7-amendment-history"><h5>Historial de enmiendas del encuentro</h5><div data-m7-amendment-list></div></div>
                     </section>
+                    <nav class="vis04-progression" aria-label="Avanzar por la consulta"><button type="button" class="btn btn-outline-secondary" data-vis04-prev>Anterior</button><span data-vis04-progress aria-live="polite"></span><button type="button" class="btn btn-outline-primary" data-vis04-next>Siguiente</button></nav>
+                    <p class="vis04-helper">Guardar conserva el contenido. Sólo “Finalizar consulta” cierra la atención; salir de esta pantalla no la finaliza.</p>
+                    </div><aside class="vis04-context" aria-labelledby="vis04-context-title"><h4 id="vis04-context-title">Contexto clínico</h4><p class="vis04-helper">Información longitudinal actual · Sólo lectura</p><section><h5>Alergias</h5><p data-vis04-context="allergies">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-antecedentes-longitudinal">Ver alergias</button></section><section><h5>Problemas activos</h5><p data-vis04-context="problems">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-problemas-longitudinal">Ver problemas</button></section><section><h5>Medicación actual</h5><p data-vis04-context="medications">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-medicamentos-longitudinal">Ver medicación</button></section><section><h5>Pendientes clínicos</h5><p data-vis04-context="tasks">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-tareas-longitudinal">Ver seguimiento</button></section><section><h5>Última consulta</h5><p data-vis04-context="recent">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-historial-atencion">Ver historial</button></section></aside></div>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history hidden>
                     <h4>Consultas anteriores</h4>
@@ -10664,7 +10668,8 @@
 <script src="assets/js/clinical/m7-ws03.js?v=m7ws03"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=m7ws04"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=m7ws05"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=vis02"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=vis04"></script>
+<script src="assets/js/clinical/vis04-consultation.js?v=vis04"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=lon01"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=vis03"></script>

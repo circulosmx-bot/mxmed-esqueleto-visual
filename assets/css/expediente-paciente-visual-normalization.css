@@ -892,3 +892,42 @@
   #lon02-summary .lon02-grid, #lon02-summary .vis03-timeline {grid-template-columns:minmax(0,1fr)}
   #lon02-summary .lon02-card .btn, #lon02-summary .vis03-evolution-head .btn {min-height:44px}
 }
+
+/* VIS04: consultation workspace only; no global dimensional normalization. */
+#p-expediente #m7-workspace {padding:14px}
+#m7-workspace .m7-workspace-body {margin-top:10px;padding-top:10px}
+#m7-workspace .m7-workspace-sections {grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-bottom:12px}
+#m7-workspace .m7-workspace-sections button {display:flex;align-items:center;gap:6px;padding:8px 6px;font-size:13px;line-height:1.25;min-width:0;border:0;border-bottom:2px solid transparent;border-radius:6px;background:#f5f9fa}
+#m7-workspace .m7-workspace-sections button[aria-current=true] {border-bottom-color:#008b9a;background:#e9f9fa}
+#m7-workspace .vis04-step-number {display:inline-flex;align-items:center;justify-content:center;flex:0 0 24px;height:24px;border-radius:50%;background:#e1eef2;color:#06536e;font-weight:700}
+#m7-workspace [aria-current=true] .vis04-step-number {background:#008b9a;color:white}
+#m7-workspace .vis04-layout {display:grid;grid-template-columns:minmax(0,2.7fr) minmax(240px,1fr);gap:14px;align-items:start}
+#m7-workspace .vis04-capture {min-width:0}
+#m7-workspace .m7-section-editor {margin-top:0;padding:12px}
+#m7-workspace .vis04-context {min-width:0;padding:12px;border:1px solid #d5e8ed;border-radius:12px;background:#f6fbfc}
+#m7-workspace .vis04-context h4 {font-size:16px;font-weight:700;color:#06536e;margin:0 0 4px}
+#m7-workspace .vis04-context section {border-top:1px solid #d5e8ed;padding:9px 0}
+#m7-workspace .vis04-context section:last-child {padding-bottom:0}
+#m7-workspace .vis04-context h5 {font-size:14px;font-weight:700;color:#06536e;margin:0 0 4px}
+#m7-workspace .vis04-context p {font-size:13px;line-height:1.4;margin:0 0 4px;overflow-wrap:anywhere}
+#m7-workspace .vis04-context .btn-link {padding:4px 0;min-height:32px;text-align:left;font-size:13px;color:#06677b}
+#m7-workspace .vis04-helper {font-size:13px;line-height:1.4;color:#526976;margin:6px 0 10px}
+#m7-workspace .vis04-progression {display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0 6px}
+#m7-workspace .vis04-progression span {font-size:13px;color:#526976}
+#m7-workspace .m7-section-editor-state {padding:4px 7px;border-radius:6px;background:#eff6f8;max-width:48%;overflow-wrap:anywhere}
+#m7-workspace .m7-doc-actions {grid-template-columns:repeat(2,minmax(0,1fr))}
+#m7-workspace .vis04-context :focus-visible,#m7-workspace .vis04-progression :focus-visible {outline:2px solid #008b9a;outline-offset:2px}
+@media(max-width:1199.98px) {
+  #m7-workspace .vis04-layout {grid-template-columns:minmax(0,1fr)}
+  #m7-workspace .vis04-context {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+  #m7-workspace .vis04-context>h4,#m7-workspace .vis04-context>.vis04-helper {grid-column:1/-1}
+  #m7-workspace .m7-workspace-sections {display:flex;overflow-x:auto;padding:3px}
+  #m7-workspace .m7-workspace-sections button {flex:0 0 130px}
+}
+@media(max-width:575.98px) {
+  #m7-workspace .vis04-context,#m7-workspace .m7-doc-actions {grid-template-columns:minmax(0,1fr)}
+  #m7-workspace .m7-workspace-sections button {flex-basis:115px;min-height:48px}
+  #m7-workspace .vis04-context .btn-link,#m7-workspace .vis04-progression .btn {min-height:44px}
+  #m7-workspace .m7-section-editor-head {flex-direction:column;gap:6px}
+  #m7-workspace .m7-section-editor-state {max-width:100%;text-align:left}
+}
