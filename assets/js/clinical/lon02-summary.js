@@ -14,7 +14,7 @@
   const measure = value => ({blood_pressure:'Presión arterial',heart_rate:'Frecuencia cardiaca',respiratory_rate:'Frecuencia respiratoria',temperature:'Temperatura',oxygen_saturation:'Saturación de oxígeno',pain:'Dolor',weight:'Peso',height:'Estatura',waist:'Cintura'})[String(value || '')] || String(value || 'Medición');
   const documentType = value => ({order:'Orden',orders:'Orden',lab_order:'Orden de laboratorio',imaging_order:'Orden de imagen',lab_result:'Resultado de laboratorio',lab_pdf:'Resultado de laboratorio',imaging_result:'Resultado de imagen',external_result:'Resultado externo',external_report:'Reporte externo',prescription:'Receta',receta:'Receta',pdf:'Documento PDF'})[String(value || '')] || 'Documento';
   const number = value => Number.isFinite(Number(value)) ? String(Number(value)) : String(value ?? 'Sin valor');
-  const antecedentCategories = {PERSONAL_PATHOLOGICAL:'Personales patológicos',PERSONAL_NON_PATHOLOGICAL:'Personales no patológicos',SURGICAL:'Quirúrgicos',FAMILY:'Familiares',HABITS:'Hábitos',VACCINATION:'Vacunación',GYNECOLOGICAL:'Ginecológicos',OTHER:'Otros'};
+
   let selected = '';
   let epoch = 0;
 
@@ -33,39 +33,75 @@
     if (!rows.length) { target.textContent = empty; return; }
     rows.forEach(row => render(target, row));
   }
-  function goToHistory(resume = false) {
-    const tab = pane.querySelector(resume ? '[data-bs-target="#t-consulta-actual"]' : '[data-bs-target="#t-historial-atencion"]');
+  function goToHistory() {
+    const tab = pane.querySelector('[data-bs-target="#t-historial-atencion"]');
     if (!tab) return;
-    if (window.bootstrap?.Tab) window.bootstrap.Tab.getOrCreateInstance(tab).show();
-    else tab.click();
-    const target = resume ? pane.querySelector('#m7-workspace [data-m7-resume]:not(.d-none)') || pane.querySelector('#m7-workspace-title') : pane.querySelector('#lon01-title');
-    if (target) {
-      if (!target.matches('button, a, input, select, textarea')) target.setAttribute('tabindex', '-1');
-      requestAnimationFrame(() => { target.focus(); target.scrollIntoView({block:'nearest'}); });
+    window.bootstrap?.Tab.getOrCreateInstance(tab).show();
+    const title = pane.querySelector('#lon01-title');
+    if (title && tab.classList.contains('active')) {
+      title.setAttribute('tabindex', '-1');
+      requestAnimationFrame(() => { title.focus(); title.scrollIntoView({block:'nearest'}); });
+    }
+  }
+  function compact(selector, rows, empty, render, limit = 2) {
+    list(selector, rows.slice(0, limit), empty, render);
+    if (rows.length > limit) {
+      const more = document.createElement('span'); more.className = 'lon02-note';
+      more.textContent = `+ ${rows.length - limit} más`; $(selector).append(more);
     }
   }
   function render(data) {
-    const open = data.open_encounter;
-    list('[data-lon02-open]', open ? [open] : [], 'No hay una consulta en curso registrada.', (target, row) => {
-      line(target, 'Consulta en curso', `Encuentro canónico · Iniciada ${date(row.date)}`);
-      const button = document.createElement('button');
-      button.type = 'button'; button.className = 'btn btn-outline-primary btn-sm'; button.textContent = 'Ir a la consulta en curso';
-      button.addEventListener('click', () => goToHistory(true)); target.append(button);
-    });
-    list('[data-lon02-recent]', data.recent_encounters || [], 'No hay consultas canónicas anteriores disponibles.', (target, row) => line(target, `Consulta ${state(row.status)}`, `Encuentro canónico · ${date(row.date)}`));
-    list('[data-lon02-measurements]', data.latest_measurements || [], 'Sin mediciones comparables en los últimos 12 meses.', (target, row) => line(target, `${measure(row.code)}${row.component ? ` ${row.component === 'systolic' ? 'sistólica' : 'diastólica'}` : ''}: ${number(row.value)} ${row.unit || ''}`.trim(), `Última lectura comparable · ${date(row.date)} UTC · ${source(row.source)}${row.has_amendment ? ' · Consulta con enmienda' : ''}`));
-    list('[data-lon02-pending]', data.pending_orders || [], 'No hay órdenes recientes sin resultado vinculado en el conjunto consultado.', (target, row) => line(target, row.title, `Orden canónica · ${date(row.date)} · resultado vinculado pendiente`));
-    list('[data-lon02-late]', data.late_results || [], 'No hay resultados posteriores al cierre en el conjunto consultado.', (target, row) => line(target, row.title, `Resultado canónico recibido después de finalizar · ${date(row.date)}`));
-    list('[data-lon02-documents]', data.recent_documents || [], 'No hay documentos canónicos recientes disponibles.', (target, row) => line(target, row.title, `${documentType(row.type)} · ${date(row.date)} · encuentro canónico`));
+    const recent = data.recent_encounters || [];
+    // LON02 supplies a bounded, descending canonical history; never infer a visit from Agenda.
+    const latest = recent.find(row => row.status === 'closed');
+    list('[data-lon02-latest]', latest ? [latest] : [], 'Sin consulta finalizada en el resumen disponible.', (target, row) => line(target, date(row.date), 'Consulta finalizada · Ver detalle en Historial'));
+    list('[data-lon02-recent]', recent.slice(0, 2), 'Sin consultas anteriores en el resumen disponible.', (target, row) => line(target, date(row.date), `Consulta ${state(row.status)} · Encuentro canónico`));
+    // Already selected by LON07B latest-comparable authority. Do not re-sort observations.
+    list('[data-lon02-measurements]', data.latest_measurements || [], 'Sin mediciones comparables en los últimos 12 meses.', (target, row) => line(target, `${measure(row.code)}${row.component ? ` ${row.component === 'systolic' ? 'sistólica' : 'diastólica'}` : ''}: ${number(row.value)} ${row.unit || ''}`.trim(), `${date(row.date)} UTC · ${source(row.source)}${row.has_amendment ? ' · Con enmienda' : ''}`));
+    const late = data.late_results || [];
+    const isSame = (a, b) => a.encounter_key === b.encounter_key && a.date === b.date && a.title === b.title;
+    const resultTypes = ['lab_result','lab_pdf','imaging_result','external_result','external_report','result'];
+    const results = [
+      ...(data.pending_orders || []).map(row => ({...row, context:'Orden sin resultado vinculado'})),
+      ...late.map(row => ({...row, context:'Recibido después del cierre'})),
+      ...(data.recent_documents || []).filter(row => resultTypes.includes(String(row.type || '').trim().toLowerCase()) && !late.some(item => isSame(item, row))).map(row => ({...row, context:documentType(row.type)}))
+    ];
+    compact('[data-lon02-results]', results, 'Sin órdenes pendientes ni resultados en el resumen disponible.', (target, row) => line(target, row.title, `${row.context} · ${date(row.date)}`), 3);
     content.classList.remove('d-none');
   }
+  async function renderAppointment(id, request) {
+    const target = $('[data-lon02-appointment]'); target.textContent = 'Consultando Agenda…';
+    try {
+      // Reuse the accepted patient-archive projection of Agenda's next eligible appointment.
+      // Match the immutable patient ID, never a name match alone; no backend contract changes.
+      const doctor = String(window.mxmedStore?.activeProfessionalContext?.doctor_id || window.mxmedStore?.doctor_id || '').trim();
+      if (!doctor) throw new Error('unavailable');
+      const read = async url => {
+        const response = await fetch(url, {credentials:'same-origin', headers:{Accept:'application/json'}});
+        const result = await response.json();
+        if (!response.ok || result?.ok !== true) throw new Error('unavailable');
+        return result;
+      };
+      const profile = await read(`/api/patients/index.php/patients/${encodeURIComponent(id)}`);
+      const name = profile.data?.display_name;
+      if (!name) throw new Error('unavailable');
+      const query = new URLSearchParams({view:'archive',q:name,limit:'100'});
+      const archive = await read(`/api/patients/index.php/doctors/${encodeURIComponent(doctor)}/patients?${query}`);
+      if (request !== epoch || patient() !== id) return;
+      const item = archive.data?.items?.find(row => String(row.patient_id) === id);
+      if (!item || !Object.hasOwn(item, 'next_appointment_at')) throw new Error('unavailable');
+      target.replaceChildren();
+      if (item.next_appointment_at) line(target, date(item.next_appointment_at), 'Hora de Agenda · Ciudad de México');
+      else target.textContent = 'Sin próxima cita registrada en Agenda.';
+    } catch (_) {
+      if (request === epoch && patient() === id) target.textContent = 'Próxima cita no disponible.';
+    }
+  }
   async function renderLongitudinalAuthority(id, request) {
-    const antecedents = $('[data-lon02-antecedents]');
     const allergyTarget = $('[data-lon02-allergies]');
     const problemsTarget = $('[data-lon02-problems]');
     const medicationsTarget = $('[data-lon02-medications]');
     const tasksTarget = $('[data-lon02-tasks]');
-    antecedents.textContent = 'Cargando estado revisado…';
     allergyTarget.textContent = 'Cargando estado revisado…';
     problemsTarget.textContent = 'Cargando problemas…';
     medicationsTarget.textContent = 'Cargando medicación…';
@@ -76,26 +112,8 @@
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result.data || {};
     }
-    const [facts, allergies, problems, medications, tasks] = await Promise.allSettled([read('antecedents'),read('allergies'),read('problems'),read('medications'),read('tasks')]);
+    const [allergies, problems, medications, tasks] = await Promise.allSettled([read('allergies'),read('problems'),read('medications'),read('tasks')]);
     if (request !== epoch || patient() !== id) return;
-    antecedents.replaceChildren();
-    if (facts.status !== 'fulfilled') antecedents.textContent = 'Estado no disponible.';
-    else {
-      const data = facts.value;
-      const states = data.knowledge_state_by_category || {};
-      const reviewed = Object.entries(states).filter(([,state]) => state === 'REVIEWED_WITH_FACTS');
-      const none = Object.entries(states).filter(([,state]) => state === 'CONFIRMED_NONE');
-      const unknown = Object.entries(states).filter(([,state]) => state === 'UNKNOWN').length;
-      const pending = Object.entries(states).filter(([,state]) => state === 'NEEDS_REVIEW').length;
-      reviewed.forEach(([category]) => {
-        const current = (data.items || []).filter(row => row.category === category && row.state === 'CURRENT');
-        line(antecedents, antecedentCategories[category] || category, current.map(row => row.content).join('; ') || 'Revisión sin dato visible');
-      });
-      none.forEach(([category]) => line(antecedents, antecedentCategories[category] || category, 'Sin datos conocidos · revisión explícita'));
-      if (pending) line(antecedents, 'Revisión pendiente', `${pending} categoría(s) cambiaron desde la última revisión.`);
-      if (unknown) line(antecedents, 'Sin revisar', `${unknown} categoría(s) sin confirmación clínica.`);
-      if (!reviewed.length && !none.length && !pending && !unknown) antecedents.textContent = 'Estado no establecido.';
-    }
     allergyTarget.replaceChildren();
     if (allergies.status !== 'fulfilled') allergyTarget.textContent = 'Estado no disponible.';
     else {
@@ -103,7 +121,7 @@
       if (data.knowledge_state === 'CONFIRMED_NONE') allergyTarget.textContent = 'Sin alergias conocidas · revisión explícita.';
       else if (data.knowledge_state === 'REVIEWED_WITH_ALLERGIES') {
         const current = (data.items || []).filter(row => row.state === 'CURRENT');
-        allergyTarget.textContent = current.length ? current.map(row => row.substance).join('; ') : 'Revisión sin dato visible.';
+        compact('[data-lon02-allergies]', current, 'Revisión sin dato visible.', (target, row) => line(target, row.substance, [row.reaction, row.validation_state === 'CLINICIAN_REVIEWED' ? '' : 'Reportada; sin validación clínica'].filter(Boolean).join(' · ')));
       } else if (data.knowledge_state === 'NEEDS_REVIEW') allergyTarget.textContent = 'Registro modificado; revisión pendiente.';
       else allergyTarget.textContent = 'Sin revisar. La ausencia de registros no confirma ausencia de alergias.';
     }
@@ -111,30 +129,24 @@
     if (problems.status !== 'fulfilled') problemsTarget.textContent = 'Estado no disponible.';
     else {
       const active = (problems.value.items || []).filter(row => row.status === 'ACTIVE');
-      if (active.length) active.forEach(row => line(problemsTarget, row.label, `Activo · actualizado ${date(row.updated_at)}`));
-      else problemsTarget.textContent = 'Sin problemas activos registrados. Esto no confirma ausencia clínica; consulta Problemas para ver los inactivos y resueltos.';
+      if (active.length) compact('[data-lon02-problems]', active, '', (target, row) => line(target, row.label, 'Activo'));
+      else problemsTarget.textContent = 'Sin problemas activos registrados. No confirma ausencia clínica.';
     }
     medicationsTarget.replaceChildren();
     if (medications.status !== 'fulfilled') medicationsTarget.textContent = 'Estado no disponible.';
     else {
       const rows = medications.value.items || [];
       const current = rows.filter(row => row.state === 'ACTIVE_CONFIRMED');
-      const reported = rows.filter(row => row.state === 'REPORTED_BY_PATIENT');
-      const prescribed = rows.filter(row => row.state === 'PRESCRIBED_NOT_CONFIRMED_ACTIVE');
-      current.forEach(row => line(medicationsTarget, row.medication_name, 'Uso actual confirmado por el clínico.'));
-      reported.forEach(row => line(medicationsTarget, row.medication_name, 'Referido por el paciente; no confirmado como uso actual.'));
-      prescribed.forEach(row => line(medicationsTarget, row.medication_name, 'Prescrito; uso actual no confirmado.'));
-      if (!current.length && !reported.length && !prescribed.length) medicationsTarget.textContent = 'Sin medicación actual confirmada en el registro longitudinal. Esto no confirma que el paciente no tome medicamentos.';
+      compact('[data-lon02-medications]', current, 'Sin medicación actual confirmada en el registro.', (target, row) => line(target, row.medication_name, [row.dose, row.dose_unit, row.frequency].filter(Boolean).join(' ') || 'Uso actual confirmado'));
     }
     tasksTarget.replaceChildren();
     if (tasks.status !== 'fulfilled') tasksTarget.textContent = 'Estado no disponible.';
     else {
       const open = (tasks.value.items || []).filter(row => row.state === 'OPEN');
-      open.forEach(row => {
+      compact('[data-lon02-tasks]', open, 'Sin tareas abiertas registradas.', (target, row) => {
         const overdue = row.due_at && Date.parse(row.due_at.replace(' ', 'T') + 'Z') < Date.now();
-        line(tasksTarget, row.title, `${row.task_type === 'FOLLOW_UP' ? 'Seguimiento' : 'Tarea clínica'} · ${row.due_at ? `Límite ${row.due_at} UTC${overdue ? ' · Vencida' : ''}` : 'Sin fecha límite'}`);
+        line(target, row.title, `${row.task_type === 'FOLLOW_UP' ? 'Seguimiento' : 'Tarea clínica'} · ${row.due_at ? `Límite ${row.due_at} UTC${overdue ? ' · Vencida' : ''}` : 'Sin fecha límite'}`);
       });
-      if (!open.length) tasksTarget.textContent = 'Sin tareas abiertas registradas. Las citas y órdenes pendientes no se consideran tareas por sí solas.';
     }
   }
   async function load() {
@@ -152,7 +164,7 @@
       if (request !== epoch || patient() !== id) return;
       render(result.data || {});
       status.textContent = 'Resumen de sólo lectura actualizado.';
-      await renderLongitudinalAuthority(id, request);
+      await Promise.all([renderLongitudinalAuthority(id, request), renderAppointment(id, request)]);
     } catch (failure) {
       if (request !== epoch) return;
       error.textContent = failure.message;
@@ -161,14 +173,7 @@
     }
   }
   $('[data-lon02-refresh]').addEventListener('click', load);
-  $('[data-lon02-history]').addEventListener('click', () => goToHistory(false));
-  $('[data-lon02-trends]')?.addEventListener('click', () => {
-    const tab = pane.querySelector('[data-bs-target="#t-mediciones-longitudinal"]');
-    if (!tab) return;
-    if (window.bootstrap?.Tab) window.bootstrap.Tab.getOrCreateInstance(tab).show(); else tab.click();
-    const title = pane.querySelector('#lon07c-title');
-    requestAnimationFrame(() => title?.focus());
-  });
+  $('[data-lon02-history]').addEventListener('click', () => goToHistory());
   for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, load);
   pane.querySelector('[data-bs-target="#t-resumen-longitudinal"]')?.addEventListener('shown.bs.tab', load);
   new MutationObserver(() => { if (patient() !== selected) load(); }).observe(pane, {attributes:true, attributeFilter:['data-patient-id','data-active-patient-id']});
