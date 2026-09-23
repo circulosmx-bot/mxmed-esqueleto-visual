@@ -1,0 +1,283 @@
+/*
+ * VIS09 shell color modes.
+ * Default / Mode A: navy sidebar and panel header, turquoise patient subheader.
+ * Rescue / Mode B: turquoise sidebar and panel header, navy patient subheader.
+ * Switch the single data-shell-color-mode value on <body> between "a" and "b".
+ */
+:root {
+  --mm-shell-navy: #08457c;
+  --mm-shell-turquoise: #00b0c5;
+  --mm-shell-patient-turquoise: #00a6ba;
+  --mm-shell-foreground: #fff;
+  --mm-shell-sidebar-rail-w: 220px;
+  --mm-shell-sidebar-hover: rgba(255, 255, 255, .14);
+  --mm-shell-sidebar-group: rgba(255, 255, 255, .21);
+  --mm-shell-sidebar-active-bg: #f2fbfc;
+  --mm-shell-sidebar-active-ink: #08457c;
+}
+
+body:not([data-shell-color-mode]),
+body[data-shell-color-mode="a"] {
+  --mm-shell-sidebar-color: var(--mm-shell-navy);
+  --mm-shell-panel-header-color: var(--mm-shell-navy);
+  --mm-shell-patient-subheader-color: var(--mm-shell-patient-turquoise);
+}
+
+body[data-shell-color-mode="b"] {
+  --mm-shell-sidebar-color: var(--mm-shell-turquoise);
+  --mm-shell-panel-header-color: var(--mm-shell-turquoise);
+  --mm-shell-patient-subheader-color: var(--mm-shell-navy);
+  --mm-shell-sidebar-active-ink: #003152;
+}
+
+/* The platform header stays white; only the sidebar rail occupies its left edge. */
+.mx-global-header {
+  background: linear-gradient(180deg, #eff8fc 0%, #fff 100%);
+}
+.mx-global-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--mm-shell-sidebar-rail-w);
+  background: var(--mm-shell-sidebar-color);
+  transition: width .24s ease, background-color var(--mm-transition);
+  pointer-events: none;
+}
+.mx-global-header .wrap {
+  z-index: 1;
+}
+.mx-global-header .mx-gh-left {
+  box-sizing: border-box;
+  padding-left: var(--mm-shell-sidebar-rail-w);
+  transition: padding-left .24s ease;
+}
+.mx-global-header .mx-gh-toggle {
+  position: absolute;
+  z-index: 2;
+  left: calc((var(--mm-shell-sidebar-rail-w) - 40px) / 2);
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, .34);
+  background: transparent;
+  color: var(--mm-shell-foreground);
+  box-shadow: none;
+  transition: background-color var(--mm-transition), border-color var(--mm-transition);
+}
+.mx-global-header .mx-gh-toggle:hover,
+.mx-global-header .mx-gh-toggle:focus-visible {
+  background: var(--mm-shell-sidebar-hover);
+  border-color: rgba(255, 255, 255, .72);
+  color: var(--mm-shell-foreground);
+}
+.mx-global-header .mx-gh-toggle:active {
+  background: var(--mm-shell-sidebar-group);
+}
+.mx-global-header .mx-gh-toggle:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -3px;
+}
+.mx-global-header .mx-gh-brand {
+  margin-inline-start: 12px;
+  transform: none;
+}
+
+/* Join the three shell layers and let the headers reach the viewport edge. */
+.mm-wrap {
+  background: var(--mm-shell-sidebar-color);
+}
+.mm-wrap .mm-grid.page {
+  padding-inline-end: 0;
+}
+.mm-grid {
+  gap: 0;
+  padding-block: 0 18px;
+}
+.mm-sidebar {
+  background: var(--mm-shell-sidebar-color);
+  color: var(--mm-shell-foreground);
+  transition: width .24s ease, flex-basis .24s ease, background-color var(--mm-transition);
+}
+.mm-main,
+#viewport,
+#viewport [id^="p-"].mm-card {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.mm-card > .head,
+.mm-card > .mx-panel-subheader {
+  background: var(--mm-shell-panel-header-color);
+  border-color: var(--mm-shell-panel-header-color);
+  color: var(--mm-shell-foreground);
+}
+#p-expediente > .head {
+  padding-inline: 0 !important;
+}
+.mm-card > .head .mx-panel-subheader,
+.mm-card > .head :is(h2, h5),
+.mm-card > .mx-panel-subheader,
+.mm-card > .mx-panel-subheader :is(.material-symbols-rounded, .material-symbols-outlined, .bi) {
+  color: var(--mm-shell-foreground);
+}
+
+/* Expediente has its own patient layer; its light context cards remain untouched. */
+#p-expediente {
+  --exp-header-theme: var(--mm-shell-patient-subheader-color);
+  --exp-header-theme-ink: var(--mm-shell-foreground);
+}
+#p-expediente .head .mx-exp-header--active .mx-clinical-header--shell :is(
+  .ne-rx-ch-patient-name,
+  .ne-rx-ch-meta,
+  .ne-rx-ch-reason,
+  .vis02-patient-id
+) {
+  color: var(--mm-shell-foreground);
+}
+
+/* One interaction language for both palettes and both sidebar widths. */
+#mmSidebar :is(.menu-main, .menu-sub-btn) {
+  --btn-bg: transparent;
+  background: transparent;
+  color: var(--mm-shell-foreground);
+  transition: background-color var(--mm-transition), color var(--mm-transition), box-shadow var(--mm-transition);
+}
+#mmSidebar .menu-sub-btn:not(.active) {
+  --btn-bg: rgba(255, 255, 255, .07);
+  background: rgba(255, 255, 255, .07);
+}
+#mmSidebar :is(.menu-main, .menu-sub-btn):not(.active):not([aria-current="page"]):not(.sb01-current-group):not([aria-expanded="true"]):is(:hover, :focus-visible) {
+  --btn-bg: var(--mm-shell-sidebar-hover);
+  background: var(--mm-shell-sidebar-hover);
+  color: var(--mm-shell-foreground);
+}
+#mmSidebar :is(.menu-main[aria-current="page"], .menu-sub-btn.active) {
+  --btn-bg: var(--mm-shell-sidebar-active-bg);
+  background: var(--mm-shell-sidebar-active-bg);
+  color: var(--mm-shell-sidebar-active-ink);
+  box-shadow: inset 4px 0 var(--mm-shell-sidebar-color);
+}
+#mmSidebar :is(.menu-main.sb01-current-group, .menu-main[aria-expanded="true"]) {
+  --btn-bg: var(--mm-shell-sidebar-group);
+  background: var(--mm-shell-sidebar-group);
+  color: var(--mm-shell-foreground);
+}
+#mmSidebar :is(.menu-main[aria-current="page"], .menu-sub-btn.active):is(:hover, :focus-visible) {
+  --btn-bg: var(--mm-shell-sidebar-active-bg);
+  background: var(--mm-shell-sidebar-active-bg);
+  color: var(--mm-shell-sidebar-active-ink);
+}
+#mmSidebar :is(.menu-main, .menu-sub-btn):focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 5px var(--mm-shell-sidebar-color);
+}
+#mmSidebar .sidebar-profile-access {
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--mm-shell-sidebar-color) 84%, transparent) 24%, var(--mm-shell-sidebar-color) 100%);
+}
+
+@media (min-width: 993px) {
+  body.mx-sidebar-collapsed {
+    --mm-shell-sidebar-rail-w: var(--mm-sidebar-collapsed-w);
+  }
+  body.mx-sidebar-expanded {
+    --mm-shell-sidebar-rail-w: 220px;
+  }
+  .mm-sidebar {
+    top: var(--mm-global-header-h);
+    max-height: calc(100vh - var(--mm-global-header-h));
+  }
+  .mm-grid.is-sidebar-collapsed,
+  body.mx-sidebar-collapsed .mm-grid {
+    gap: 0;
+  }
+  body .mx-global-header .mx-gh-left {
+    display: flex;
+    gap: 8px;
+    padding-left: var(--mm-shell-sidebar-rail-w);
+  }
+  body .mx-global-header .mx-gh-toggle {
+    position: absolute;
+    left: calc((var(--mm-shell-sidebar-rail-w) - 40px) / 2);
+    margin: 0;
+  }
+  body .mx-global-header .mx-gh-brand {
+    position: static;
+    margin-inline-start: 12px;
+    transform: none;
+  }
+  body .mx-global-header .mx-gh-account-summary {
+    width: auto;
+    max-width: none;
+    padding-left: 22px;
+    padding-right: 0;
+  }
+  body.mx-sidebar-collapsed #mmSidebar .menu-sub.sb01-flyout-visible {
+    background: var(--mm-shell-sidebar-color);
+    border-color: rgba(255, 255, 255, .52);
+  }
+}
+
+@media (max-width: 992px) {
+  :root {
+    --mm-shell-sidebar-rail-w: 64px;
+  }
+  .mx-global-header .mx-gh-toggle {
+    display: inline-flex;
+  }
+  .mx-global-header .mx-gh-brand {
+    margin-inline-start: 6px;
+  }
+  .mm-grid {
+    gap: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .mx-global-header .wrap {
+    padding-inline: 0 4px;
+  }
+  .mx-global-header .mx-gh-left {
+    gap: 3px;
+  }
+  .mx-global-header .mx-gh-brand {
+    --mx-gh-logo-w: 102px;
+    --mx-gh-logo-h: 30px;
+    margin-inline-start: 4px;
+    flex: 0 0 102px;
+  }
+  .mx-global-header .mx-gh-account-summary {
+    min-width: 0;
+    gap: 3px;
+    padding-left: 2px;
+  }
+  .mx-global-header .mx-gh-user-avatar {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+  .mx-global-header .mx-gh-identity {
+    min-width: 0;
+    gap: 3px;
+  }
+  .mx-global-header .mx-gh-identity-copy {
+    min-width: 0;
+  }
+  .mx-global-header .mx-gh-identity-name-text {
+    display: block;
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mx-global-header .mx-gh-identity-role {
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mx-global-header .mx-gh-current-plan-label {
+    margin-left: 0;
+  }
+  .mx-global-header .mx-gh-current-plan-name {
+    padding: 5px 7px;
+    font-size: .75rem;
+  }
+}

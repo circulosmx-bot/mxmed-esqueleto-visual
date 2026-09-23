@@ -33,10 +33,6 @@ html{
   --mm-sidebar-collapsed-w:64px;
   --mm-header-logo-panel-align-offset:28px; /* alinea inicio del logo con icono/titulo del panel */
 
-  /* VIS09A reversible platform header experiment. */
-  --mm-platform-header-color:#2596be;
-  --mm-platform-header-foreground:#071943;
-
   --mm-verde:#1fbf75;
   --agenda-origin-user:#2F80ED;
   --agenda-origin-operator:#13B8B5;
@@ -23001,20 +22997,4 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-expediente .head .mx-exp-header--active .mx-clinical-header--shell .ne-rx-ch-item:nth-child(2){
     grid-column:auto;
   }
-}
-
-/* VIS09A: canonical page/module headers only; Sidecar keeps its own palette. */
-.mm-card > .head,
-.mm-card > .mx-panel-subheader{
-  background:var(--mm-platform-header-color);
-  border-color:var(--mm-platform-header-color);
-}
-.mm-card > .head .mx-panel-subheader,
-.mm-card > .head :is(h2,h5),
-.mm-card > .mx-panel-subheader{
-  color:var(--mm-platform-header-foreground);
-}
-#p-expediente{
-  --exp-header-theme:var(--mm-platform-header-color);
-  --exp-header-theme-ink:#000;
 }
