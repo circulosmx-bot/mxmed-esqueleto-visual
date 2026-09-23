@@ -3,12 +3,29 @@
   let host, patient = '', epoch = 0, encounterState = 'unavailable';
   const selected = () => String(document.getElementById('p-expediente')?.dataset.patientId || document.getElementById('p-expediente')?.dataset.activePatientId || '').trim();
   const definitions = [
-    ['consulta', 'Consulta', 'description', 'INICIAR CONSULTA', '#t-consulta-actual'],
+    ['consulta', 'Consulta', 'description', 'CONSULTANDO…', '#t-consulta-actual'],
     ['allergies', 'Alergias', 'warning', 'Ver todas', '#t-antecedentes-longitudinal'],
     ['medications', 'Medicación actual', 'medication', 'Ver medicación', '#t-medicamentos-longitudinal'],
     ['problems', 'Problemas activos', 'clinical_notes', 'Ver todos', '#t-problemas-longitudinal']
   ];
   function message(key, text) { host.querySelector(`[data-vis02-value="${key}"]`).textContent = text; }
+  function consultationState(state) {
+    const cta = host.querySelector('[data-vis02-action="consulta"]');
+    encounterState = state;
+    if (state === 'open') {
+      message('consulta', 'En curso');
+      cta.textContent = 'CONTINUAR CONSULTA';
+      cta.disabled = false;
+    } else if (state === 'none') {
+      message('consulta', 'Sin consulta activa');
+      cta.textContent = 'INICIAR CONSULTA';
+      cta.disabled = false;
+    } else {
+      message('consulta', state === 'legacy' ? 'Consultar estado de atención' : 'Estado no disponible');
+      cta.textContent = 'CONSULTAR ESTADO';
+      cta.disabled = true;
+    }
+  }
   function latestConsultation(text) {
     const target = host?.querySelector('[data-vis10b-last-consultation]');
     if (target) target.textContent = text;
@@ -30,7 +47,8 @@
     if (!host || !patient || selected() !== patient) return;
     const id = patient, run = ++epoch;
     encounterState = 'unavailable';
-    const cta = host.querySelector('[data-vis02-action="consulta"]'); cta.disabled = true;
+    const cta = host.querySelector('[data-vis02-action="consulta"]');
+    cta.textContent = 'CONSULTANDO…'; cta.disabled = true;
     definitions.forEach(([key]) => message(key, 'Consultando…'));
     latestConsultation('Última consulta: Consultando…');
     const read = async suffix => {
@@ -44,10 +62,8 @@
     const [enc, allergies, medications, problems, longitudinal] = results;
     if (enc.status === 'fulfilled') {
       const snapshot = enc.value;
-      encounterState = snapshot.meta?.integrity_v1 !== true ? 'legacy' : snapshot.data?.encounter_key ? 'open' : 'none';
-      message('consulta', encounterState === 'open' ? 'En curso' : encounterState === 'none' ? 'Sin consulta activa' : 'Consultar estado de atención');
-      cta.textContent = 'INICIAR CONSULTA'; cta.disabled = false;
-    } else { message('consulta', 'Estado no disponible'); cta.textContent = 'INICIAR CONSULTA'; cta.disabled = false; }
+      consultationState(snapshot.meta?.integrity_v1 !== true ? 'legacy' : snapshot.data?.encounter_key ? 'open' : 'none');
+    } else consultationState('unavailable');
     if (allergies.status !== 'fulfilled') message('allergies', 'Estado no disponible');
     else {
       const data = allergies.value.data || {};
@@ -86,8 +102,10 @@
         const button = event.target.closest('[data-vis02-action]');
         if (!button || selected() !== patient) return;
         if (button.dataset.vis02Action === 'consulta') {
+          const mode = encounterState === 'open' ? 'resume' : encounterState === 'none' ? 'start' : '';
+          if (!mode) return;
           button.disabled = true;
-          try { await window.mxmedM7OpenFromHeader?.(patient, encounterState === 'none' ? 'start' : 'resume'); }
+          try { await window.mxmedM7OpenFromHeader?.(patient, mode); }
           finally { if (selected() === patient) refresh(); }
         } else {
           const tab = document.querySelector(`#p-expediente [data-bs-target="${button.dataset.vis02Target}"]`);
