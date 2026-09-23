@@ -1634,3 +1634,38 @@
     grid-template-columns:max-content max-content;
   }
 }
+
+/* VIS10D-R4: rebalance card typography and match the 19px row rhythm. */
+#p-expediente #lon02-summary .lon02-card h4 {
+  font-size:15.395625px;
+}
+#p-expediente #lon02-summary .lon02-card p {
+  font-size:14.906875px;
+}
+#p-expediente #lon02-summary .lon02-card p span,
+#p-expediente #lon02-summary .lon02-card .lon02-note {
+  font-size:12.7075px;
+}
+#p-expediente #lon02-summary .lon02-card .btn-link {
+  font-size:13.19625px;
+}
+#lon02-summary .lon02-measurement-label {
+  font-size:13.19625px;
+}
+#lon02-summary .lon02-measurement-value {
+  font-size:14.906875px;
+}
+#lon02-summary .lon02-measurement-meta {
+  font-size:10.7525px;
+}
+#lon02-summary .vis03-priority-context {
+  margin-top:16px;
+}
+@media(min-width:1200px) {
+  #lon02-summary .vis03-priority-essential .lon02-card {
+    min-height:136px;
+  }
+  #lon02-summary .vis03-priority-context .lon02-card {
+    min-height:230.65625px;
+  }
+}
