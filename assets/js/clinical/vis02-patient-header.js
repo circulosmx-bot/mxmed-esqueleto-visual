@@ -9,6 +9,10 @@
     ['problems', 'Problemas activos', 'clinical_notes', 'Ver todos', '#t-problemas-longitudinal']
   ];
   function message(key, text) { host.querySelector(`[data-vis02-value="${key}"]`).textContent = text; }
+  function latestConsultation(text) {
+    const target = host?.querySelector('[data-vis10b-last-consultation]');
+    if (target) target.textContent = text;
+  }
   function summary(key, rows, label, detail, empty) {
     const box = host.querySelector(`[data-vis02-value="${key}"]`);
     box.replaceChildren();
@@ -28,15 +32,16 @@
     encounterState = 'unavailable';
     const cta = host.querySelector('[data-vis02-action="consulta"]'); cta.disabled = true;
     definitions.forEach(([key]) => message(key, 'Consultando…'));
+    latestConsultation('Última consulta: Consultando…');
     const read = async suffix => {
       const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/${suffix}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
       const result = await response.json();
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result;
     };
-    const results = await Promise.allSettled(['encounters/active','longitudinal/allergies','longitudinal/medications','longitudinal/problems'].map(read));
+    const results = await Promise.allSettled(['encounters/active','longitudinal/allergies','longitudinal/medications','longitudinal/problems','longitudinal-summary'].map(read));
     if (run !== epoch || selected() !== id || patient !== id) return;
-    const [enc, allergies, medications, problems] = results;
+    const [enc, allergies, medications, problems, longitudinal] = results;
     if (enc.status === 'fulfilled') {
       const snapshot = enc.value;
       encounterState = snapshot.meta?.integrity_v1 !== true ? 'legacy' : snapshot.data?.encounter_key ? 'open' : 'none';
@@ -54,6 +59,12 @@
     else summary('medications', (medications.value.data?.items || []).filter(row => row.state === 'ACTIVE_CONFIRMED'), row => row.medication_name, row => [row.dose,row.dose_unit,row.frequency].filter(Boolean).join(' '), 'Sin medicación actual confirmada');
     if (problems.status !== 'fulfilled') message('problems', 'Estado no disponible');
     else summary('problems', (problems.value.data?.items || []).filter(row => row.status === 'ACTIVE'), row => row.label, () => '', 'Sin problemas activos registrados');
+    if (longitudinal.status !== 'fulfilled') latestConsultation('Última consulta: No disponible');
+    else {
+      const latest = (longitudinal.value.data?.recent_encounters || []).find(row => row.status === 'closed');
+      const encounterDate = String(latest?.date || '').trim().replace('T', ' ').slice(0, 10);
+      latestConsultation(latest && encounterDate ? `Última consulta: ${encounterDate} · Finalizada` : 'Última consulta: Sin consulta finalizada registrada');
+    }
   }
   window.mxmedUpdateCanonicalPatientHeader = (container, data, active) => {
     if (container.id !== 'exp_clinical_context') return;
@@ -63,6 +74,11 @@
     if (!host.querySelector('.vis02-context')) {
       const metadata = document.createElement('span'); metadata.className = 'vis02-patient-id';
       host.querySelector('.ne-rx-ch-patient-line').append(metadata);
+      const latest = document.createElement('div');
+      latest.className = 'vis10b-last-consultation';
+      latest.setAttribute('data-vis10b-last-consultation', '');
+      latest.setAttribute('aria-live', 'polite');
+      host.querySelector('.ne-rx-ch-patient-line').after(latest);
       const cards = document.createElement('div'); cards.className = 'vis02-context'; cards.setAttribute('aria-label', 'Contexto clínico inmediato');
       cards.innerHTML = definitions.map(([key,title,icon,label,target]) => `<section class="vis02-card"><h3><span class="material-symbols-outlined" aria-hidden="true">${icon}</span>${title}</h3><div data-vis02-value="${key}" aria-live="polite">Consultando…</div><button type="button" class="btn ${key === 'consulta' ? 'btn-primary' : 'btn-link'}" data-vis02-action="${key}" data-vis02-target="${target}">${label}</button></section>`).join('');
       host.append(cards);

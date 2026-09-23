@@ -53,8 +53,6 @@
   function render(data) {
     const recent = data.recent_encounters || [];
     // LON02 supplies a bounded, descending canonical history; never infer a visit from Agenda.
-    const latest = recent.find(row => row.status === 'closed');
-    list('[data-lon02-latest]', latest ? [latest] : [], 'Sin consulta finalizada en el resumen disponible.', (target, row) => line(target, date(row.date), 'Consulta finalizada · Ver detalle en Historial'));
     list('[data-lon02-recent]', recent.slice(0, 2), 'Sin consultas anteriores en el resumen disponible.', (target, row) => line(target, date(row.date), `Consulta ${state(row.status)} · Encuentro canónico`));
     // Already selected by LON07B latest-comparable authority. Do not re-sort observations.
     list('[data-lon02-measurements]', data.latest_measurements || [], 'Sin mediciones comparables en los últimos 12 meses.', (target, row) => line(target, `${measure(row.code)}${row.component ? ` ${row.component === 'systolic' ? 'sistólica' : 'diastólica'}` : ''}: ${number(row.value)} ${row.unit || ''}`.trim(), `${date(row.date)} UTC · ${source(row.source)}${row.has_amendment ? ' · Con enmienda' : ''}`));
@@ -100,11 +98,9 @@
   async function renderLongitudinalAuthority(id, request) {
     const allergyTarget = $('[data-lon02-allergies]');
     const problemsTarget = $('[data-lon02-problems]');
-    const medicationsTarget = $('[data-lon02-medications]');
     const tasksTarget = $('[data-lon02-tasks]');
     allergyTarget.textContent = 'Cargando estado revisado…';
     problemsTarget.textContent = 'Cargando problemas…';
-    medicationsTarget.textContent = 'Cargando medicación…';
     tasksTarget.textContent = 'Cargando tareas…';
     async function read(resource) {
       const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/longitudinal/${resource}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
@@ -112,7 +108,7 @@
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result.data || {};
     }
-    const [allergies, problems, medications, tasks] = await Promise.allSettled([read('allergies'),read('problems'),read('medications'),read('tasks')]);
+    const [allergies, problems, tasks] = await Promise.allSettled([read('allergies'),read('problems'),read('tasks')]);
     if (request !== epoch || patient() !== id) return;
     allergyTarget.replaceChildren();
     if (allergies.status !== 'fulfilled') allergyTarget.textContent = 'Estado no disponible.';
@@ -131,13 +127,6 @@
       const active = (problems.value.items || []).filter(row => row.status === 'ACTIVE');
       if (active.length) compact('[data-lon02-problems]', active, '', (target, row) => line(target, row.label, 'Activo'));
       else problemsTarget.textContent = 'Sin problemas activos registrados. No confirma ausencia clínica.';
-    }
-    medicationsTarget.replaceChildren();
-    if (medications.status !== 'fulfilled') medicationsTarget.textContent = 'Estado no disponible.';
-    else {
-      const rows = medications.value.items || [];
-      const current = rows.filter(row => row.state === 'ACTIVE_CONFIRMED');
-      compact('[data-lon02-medications]', current, 'Sin medicación actual confirmada en el registro.', (target, row) => line(target, row.medication_name, [row.dose, row.dose_unit, row.frequency].filter(Boolean).join(' ') || 'Uso actual confirmado'));
     }
     tasksTarget.replaceChildren();
     if (tasks.status !== 'fulfilled') tasksTarget.textContent = 'Estado no disponible.';

@@ -1332,3 +1332,29 @@
     padding:10px;
   }
 }
+
+/* VIS10B: wider three-column summary cards and concise canonical visit context. */
+#p-expediente .head .vis02-active .vis10b-last-consultation {
+  margin-top:2px;
+  color:rgba(255,255,255,.88);
+  font-size:12px;
+  font-weight:600;
+  line-height:1.15;
+  overflow-wrap:anywhere;
+}
+#lon02-summary .lon02-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+#lon02-summary .lon02-card h4 {
+  letter-spacing:.01em;
+}
+@media(max-width:1199.98px) {
+  #lon02-summary .lon02-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:575.98px) {
+  #lon02-summary .lon02-grid {
+    grid-template-columns:minmax(0,1fr);
+  }
+}
