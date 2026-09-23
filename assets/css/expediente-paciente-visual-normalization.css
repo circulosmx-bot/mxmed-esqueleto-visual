@@ -1141,3 +1141,53 @@
     --vis09e-context-row-height:117.078125px;
   }
 }
+
+/* VIS09F: scale only the active patient's identity block. */
+#p-expediente .head .mx-clinical-subheader.vis02-active {
+  --vis09f-photo-width:calc(72px * 1.15);
+  --vis09f-photo-height:calc(80px * 1.15);
+}
+#p-expediente .head .vis02-active .exp-hdr-left {
+  grid-template-columns:var(--vis09f-photo-width) minmax(240px,.9fr) minmax(0,2fr);
+}
+#p-expediente .head .vis02-active .exp-patient-photo-slot,
+#p-expediente .head .vis02-active #pac-foto-slot {
+  width:var(--vis09f-photo-width);
+  min-width:var(--vis09f-photo-width);
+  max-width:var(--vis09f-photo-width);
+  height:var(--vis09f-photo-height);
+  min-height:var(--vis09f-photo-height);
+  max-height:var(--vis09f-photo-height);
+}
+#p-expediente .head .vis02-active #pac-foto-slot .mf-illus rect:last-child {
+  display:none;
+}
+#p-expediente .head .vis02-active #exp_clinical_context .ne-rx-ch-patient-name {
+  font-size:23px;
+}
+#p-expediente .head .vis02-active #exp_clinical_context .ne-rx-ch-meta {
+  color:#fff;
+  font-size:14.95px;
+}
+#p-expediente .head .vis02-active #exp_clinical_context .vis02-patient-id {
+  color:#fff;
+}
+@media(max-width:1199.98px) {
+  #p-expediente .head .vis02-active .exp-hdr-left {
+    position:relative;
+    grid-template-columns:72px minmax(0,1fr);
+    column-gap:16px;
+    row-gap:12px;
+  }
+  #p-expediente .head .vis02-active .exp-patient-photo-slot {
+    position:absolute;
+    top:0;
+    left:0;
+  }
+  #p-expediente .head .vis02-active #exp_clinical_context .ne-rx-ch-patient-line {
+    row-gap:0;
+  }
+  #p-expediente .head .vis02-active #exp_clinical_context .ne-rx-ch-actions {
+    margin-top:4.859375px;
+  }
+}
