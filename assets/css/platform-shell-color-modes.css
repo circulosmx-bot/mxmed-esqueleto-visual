@@ -14,7 +14,9 @@
   --mxmed-sidebar-expanded-icon-end-inset: 22px;
   --mxmed-sidebar-toggle-hit-size: 40px;
   --mxmed-sidebar-expanded-icon-axis-x: calc(var(--mxmed-sidebar-expanded-width) - var(--mxmed-sidebar-expanded-icon-end-inset) - (var(--mxmed-sidebar-primary-icon-size) / 2));
-  --mxmed-content-left-guide-inset: 21px;
+  --mxmed-content-inline-gutter: 33px;
+  --mxmed-content-left-guide-inset: var(--mxmed-content-inline-gutter);
+  --mxmed-content-right-guide-inset: var(--mxmed-content-inline-gutter);
   --mm-sidebar-collapsed-w: var(--mxmed-sidebar-collapsed-width);
   --mm-sidebar-expanded-w: var(--mxmed-sidebar-expanded-width);
   --mm-shell-sidebar-rail-w: var(--mxmed-sidebar-expanded-width);
@@ -165,6 +167,13 @@ body {
 #p-expediente > .head {
   padding-inline: 0 !important;
 }
+#p-expediente > .head > .mx-panel-subheader {
+  padding-inline: var(--mxmed-content-inline-gutter);
+}
+#p-expediente > .head > .mx-clinical-subheader.vis02-active,
+#p-expediente.mm-card > .body {
+  padding-inline: calc(var(--mxmed-content-inline-gutter) - 1px);
+}
 .mm-card > .head .mx-panel-subheader,
 .mm-card > .head :is(h2, h5),
 .mm-card > .mx-panel-subheader,
@@ -273,17 +282,12 @@ body {
     background: var(--mm-shell-sidebar-color);
     border-color: rgba(255, 255, 255, .52);
   }
-  #p-expediente > .head > .mx-panel-subheader {
-    padding-inline-start: var(--mxmed-content-left-guide-inset);
-  }
-  #p-expediente > .head > .mx-clinical-subheader.vis02-active {
-    padding-inline-start: calc(var(--mxmed-content-left-guide-inset) - 1px);
-  }
 }
 
 @media (max-width: 992px) {
   :root {
     --mm-shell-sidebar-rail-w: 64px;
+    --mxmed-content-inline-gutter: 21px;
   }
   .mx-global-header .mx-gh-toggle {
     display: inline-flex;
@@ -297,6 +301,9 @@ body {
 }
 
 @media (max-width: 576px) {
+  :root {
+    --mxmed-content-inline-gutter: 13px;
+  }
   .mx-global-header .wrap {
     padding-inline: 0 4px;
   }
