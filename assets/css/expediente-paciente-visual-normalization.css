@@ -1669,3 +1669,26 @@
     min-height:230.65625px;
   }
 }
+
+/* VIS10D-R5: let Summary CTAs follow their content and remove reserved rows. */
+#lon02-summary .lon02-grid {
+  align-items:start;
+}
+#lon02-summary .lon02-card:not(:has(> .btn-link)) {
+  align-self:stretch;
+}
+#p-expediente #lon02-summary .lon02-card:has(> .btn-link) {
+  padding-bottom:5px;
+}
+#p-expediente #lon02-summary .lon02-card:has(> .btn-link) > div {
+  margin-bottom:1px;
+}
+#p-expediente #lon02-summary .lon02-card > .btn-link {
+  margin-top:0;
+}
+@media(min-width:1200px) {
+  #lon02-summary .vis03-priority-essential .lon02-card,
+  #lon02-summary .vis03-priority-context .lon02-card {
+    min-height:0;
+  }
+}
