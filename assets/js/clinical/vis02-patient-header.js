@@ -3,7 +3,7 @@
   let host, patient = '', epoch = 0, encounterState = 'unavailable';
   const selected = () => String(document.getElementById('p-expediente')?.dataset.patientId || document.getElementById('p-expediente')?.dataset.activePatientId || '').trim();
   const definitions = [
-    ['consulta', 'Consulta', 'description', 'Ir a consulta', '#t-consulta-actual'],
+    ['consulta', 'Consulta', 'description', 'INICIAR CONSULTA', '#t-consulta-actual'],
     ['allergies', 'Alergias', 'warning', 'Ver todas', '#t-antecedentes-longitudinal'],
     ['medications', 'Medicación actual', 'medication', 'Ver medicación', '#t-medicamentos-longitudinal'],
     ['problems', 'Problemas activos', 'clinical_notes', 'Ver todos', '#t-problemas-longitudinal']
@@ -41,8 +41,8 @@
       const snapshot = enc.value;
       encounterState = snapshot.meta?.integrity_v1 !== true ? 'legacy' : snapshot.data?.encounter_key ? 'open' : 'none';
       message('consulta', encounterState === 'open' ? 'En curso' : encounterState === 'none' ? 'Sin consulta activa' : 'Consultar estado de atención');
-      cta.textContent = encounterState === 'none' ? 'Iniciar consulta' : 'Ir a consulta'; cta.disabled = false;
-    } else { message('consulta', 'Estado no disponible'); cta.textContent = 'Ir a consulta'; cta.disabled = false; }
+      cta.textContent = 'INICIAR CONSULTA'; cta.disabled = false;
+    } else { message('consulta', 'Estado no disponible'); cta.textContent = 'INICIAR CONSULTA'; cta.disabled = false; }
     if (allergies.status !== 'fulfilled') message('allergies', 'Estado no disponible');
     else {
       const data = allergies.value.data || {};
