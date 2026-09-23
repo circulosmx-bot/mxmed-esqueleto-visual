@@ -50,12 +50,72 @@
       more.textContent = `+ ${rows.length - limit} más`; $(selector).append(more);
     }
   }
+  function measurementRows(rows) {
+    const output = [];
+    const consumed = new Set();
+    rows.forEach((row, index) => {
+      if (consumed.has(index)) return;
+      const observationKey = row.observation_key || row.observation_id || row.measurement_event_key || '';
+      if (row.code === 'blood_pressure' && ['systolic', 'diastolic'].includes(row.component) && observationKey) {
+        const opposite = row.component === 'systolic' ? 'diastolic' : 'systolic';
+        const pairIndex = rows.findIndex((candidate, candidateIndex) => candidateIndex !== index
+          && !consumed.has(candidateIndex)
+          && candidate.code === 'blood_pressure'
+          && candidate.component === opposite
+          && (candidate.observation_key || candidate.observation_id || candidate.measurement_event_key || '') === observationKey
+          && candidate.date === row.date
+          && candidate.source === row.source
+          && candidate.unit === row.unit
+          && candidate.provenance === row.provenance
+          && candidate.effective_at_authority === row.effective_at_authority
+          && Boolean(candidate.has_amendment) === Boolean(row.has_amendment));
+        if (pairIndex !== -1) {
+          const systolic = row.component === 'systolic' ? row : rows[pairIndex];
+          const diastolic = row.component === 'diastolic' ? row : rows[pairIndex];
+          consumed.add(index);
+          consumed.add(pairIndex);
+          output.push({...systolic, component:null, value:`${number(systolic.value)} / ${number(diastolic.value)}`});
+          return;
+        }
+      }
+      output.push(row);
+    });
+    return output;
+  }
+  function measurementLine(target, row) {
+    const item = document.createElement('div'); item.className = 'lon02-measurement-row';
+    const label = document.createElement('span'); label.className = 'lon02-measurement-label';
+    label.textContent = `${measure(row.code)}${row.component ? ` ${row.component === 'systolic' ? 'sistólica' : 'diastólica'}` : ''}`;
+    const value = document.createElement('strong'); value.className = 'lon02-measurement-value';
+    value.textContent = `${number(row.value)} ${row.unit || ''}`.trim();
+    item.append(label, value); target.append(item);
+  }
+  function renderMeasurements(rows) {
+    const target = $('[data-lon02-measurements]');
+    target.replaceChildren();
+    const normalized = measurementRows(rows);
+    if (!normalized.length) { target.textContent = 'Sin mediciones comparables en los últimos 12 meses.'; return; }
+    const groups = new Map();
+    normalized.forEach(row => {
+      const key = [row.date, row.source, Boolean(row.has_amendment), row.encounter_key, row.provenance, row.effective_at_authority].join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(row);
+    });
+    groups.forEach(groupRows => {
+      const group = document.createElement('div'); group.className = 'lon02-measurement-group';
+      groupRows.forEach(row => measurementLine(group, row));
+      const row = groupRows[0];
+      const meta = document.createElement('small'); meta.className = 'lon02-measurement-meta';
+      meta.textContent = `${date(row.date)} UTC · ${source(row.source)}${row.has_amendment ? ' · Con enmienda' : ''}`;
+      group.append(meta); target.append(group);
+    });
+  }
   function render(data) {
     const recent = data.recent_encounters || [];
     // LON02 supplies a bounded, descending canonical history; never infer a visit from Agenda.
     list('[data-lon02-recent]', recent.slice(0, 2), 'Sin consultas anteriores en el resumen disponible.', (target, row) => line(target, date(row.date), `Consulta ${state(row.status)} · Encuentro canónico`));
     // Already selected by LON07B latest-comparable authority. Do not re-sort observations.
-    list('[data-lon02-measurements]', data.latest_measurements || [], 'Sin mediciones comparables en los últimos 12 meses.', (target, row) => line(target, `${measure(row.code)}${row.component ? ` ${row.component === 'systolic' ? 'sistólica' : 'diastólica'}` : ''}: ${number(row.value)} ${row.unit || ''}`.trim(), `${date(row.date)} UTC · ${source(row.source)}${row.has_amendment ? ' · Con enmienda' : ''}`));
+    renderMeasurements(data.latest_measurements || []);
     const late = data.late_results || [];
     const isSame = (a, b) => a.encounter_key === b.encounter_key && a.date === b.date && a.title === b.title;
     const resultTypes = ['lab_result','lab_pdf','imaging_result','external_result','external_report','result'];

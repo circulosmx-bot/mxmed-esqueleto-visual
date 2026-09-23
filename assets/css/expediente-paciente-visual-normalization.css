@@ -1131,6 +1131,7 @@
     min-height:34px;
   }
 }
+
 @media(min-width:576px) and (max-width:992px) {
   #p-expediente .head .vis02-active .vis02-context {
     column-gap:calc(var(--exp-inline-gap) + 6px);
@@ -1379,5 +1380,101 @@
   }
   #lon02-summary .lon02-head .btn {
     width:auto;
+  }
+}
+
+/* VIS10D: stronger card identity while category color remains supplementary. */
+#p-expediente #lon02-summary .lon02-card {
+  --lon02-accent:#1689a0;
+  --lon02-accent-soft:#e4f5f8;
+  --lon02-border:#9bcfd9;
+  border-color:var(--lon02-border);
+  border-top:2px solid var(--lon02-accent);
+  background:linear-gradient(135deg,var(--lon02-accent-soft) 0,rgba(255,255,255,.96) 42%);
+}
+#p-expediente #lon02-summary .lon02-card--problems {--lon02-accent:#197d9d;--lon02-accent-soft:#e8f5f9;--lon02-border:#9bcddd}
+#p-expediente #lon02-summary .lon02-card--allergies {--lon02-accent:#c97812;--lon02-accent-soft:#fff4df;--lon02-border:#eccb91}
+#p-expediente #lon02-summary .lon02-card--tasks {--lon02-accent:#476fc3;--lon02-accent-soft:#edf2ff;--lon02-border:#b5c7ed}
+#p-expediente #lon02-summary .lon02-card--measurements {--lon02-accent:#078f83;--lon02-accent-soft:#e4f8f4;--lon02-border:#9eddd5}
+#p-expediente #lon02-summary .lon02-card--results {--lon02-accent:#356fc4;--lon02-accent-soft:#edf3ff;--lon02-border:#b4c8eb}
+#p-expediente #lon02-summary .lon02-card--appointment {--lon02-accent:#078f83;--lon02-accent-soft:#e4f8f4;--lon02-border:#9eddd5}
+#p-expediente #lon02-summary .lon02-card h4 {
+  align-items:center;
+  gap:9px;
+  margin-bottom:3px;
+  color:#16485d;
+  font-weight:750;
+}
+#p-expediente #lon02-summary .lon02-card h4 .material-symbols-outlined {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 32px;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:var(--lon02-accent-soft);
+  color:var(--lon02-accent);
+  font-size:25px;
+  line-height:1;
+}
+#p-expediente #lon02-summary .lon02-card > div {margin-bottom:3px}
+#p-expediente #lon02-summary .lon02-card p strong {
+  color:#173b4d;
+  font-weight:700;
+}
+#p-expediente #lon02-summary .lon02-card p span,
+#p-expediente #lon02-summary .lon02-card .lon02-note {color:#58707c}
+#p-expediente #lon02-summary .lon02-card .btn-link {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  color:#06677b;
+  font-weight:600;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+#p-expediente #lon02-summary .lon02-card .btn-link::after {
+  content:'→';
+  color:var(--lon02-accent);
+  font-size:16px;
+  line-height:1;
+  text-decoration:none;
+}
+#lon02-summary [data-lon02-measurements] {
+  display:grid;
+  gap:4px;
+}
+#lon02-summary .lon02-measurement-group {
+  display:grid;
+  gap:2px;
+}
+#lon02-summary .lon02-measurement-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:1px 8px;
+  align-items:baseline;
+}
+#lon02-summary .lon02-measurement-label {
+  min-width:0;
+  color:#355362;
+  font-size:12px;
+}
+#lon02-summary .lon02-measurement-value {
+  color:#173b4d;
+  font-size:12.5px;
+  font-weight:750;
+  white-space:nowrap;
+}
+#lon02-summary .lon02-measurement-meta {
+  color:#6a7f89;
+  font-size:10.5px;
+  line-height:1.15;
+}
+@media(max-width:575.98px) {
+  #p-expediente #lon02-summary .lon02-card h4 .material-symbols-outlined {
+    flex-basis:32px;
+    width:32px;
+    height:32px;
   }
 }
