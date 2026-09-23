@@ -1113,3 +1113,31 @@
   #p-expediente #t-datos .vis07-data {row-gap:3px}
   #p-expediente .body .btn {min-width:44px}
 }
+
+/* VIS09E: breathing room for the four patient-context cards. */
+@media(min-width:576px) {
+  #p-expediente .head .vis02-active .vis02-context {
+    --vis09e-context-row-height:118.375px;
+    column-gap:calc(var(--exp-inline-gap) + 12px);
+    align-items:center;
+    height:var(--vis09e-context-row-height);
+  }
+  #p-expediente .head .vis02-card {
+    height:calc(100% - 12px);
+    min-height:0;
+    padding-block:3px;
+  }
+  #p-expediente .head .vis02-card .btn {
+    min-height:34px;
+  }
+}
+@media(min-width:576px) and (max-width:992px) {
+  #p-expediente .head .vis02-active .vis02-context {
+    column-gap:calc(var(--exp-inline-gap) + 6px);
+  }
+}
+@media(min-width:1400px) and (max-width:1499.98px) {
+  body.mx-sidebar-collapsed #p-expediente .head .vis02-active .vis02-context {
+    --vis09e-context-row-height:117.078125px;
+  }
+}
