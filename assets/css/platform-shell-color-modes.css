@@ -8,7 +8,16 @@
   --mm-shell-navy: #08457c;
   --mm-shell-turquoise: #00a6ba;
   --mm-shell-foreground: #fff;
-  --mm-shell-sidebar-rail-w: 220px;
+  --mxmed-sidebar-collapsed-width: 76px;
+  --mxmed-sidebar-expanded-width: 232px;
+  --mxmed-sidebar-primary-icon-size: 36px;
+  --mxmed-sidebar-expanded-icon-end-inset: 22px;
+  --mxmed-sidebar-toggle-hit-size: 40px;
+  --mxmed-sidebar-expanded-icon-axis-x: calc(var(--mxmed-sidebar-expanded-width) - var(--mxmed-sidebar-expanded-icon-end-inset) - (var(--mxmed-sidebar-primary-icon-size) / 2));
+  --mxmed-content-left-guide-inset: 21px;
+  --mm-sidebar-collapsed-w: var(--mxmed-sidebar-collapsed-width);
+  --mm-sidebar-expanded-w: var(--mxmed-sidebar-expanded-width);
+  --mm-shell-sidebar-rail-w: var(--mxmed-sidebar-expanded-width);
   --mm-shell-sidebar-hover: rgba(255, 255, 255, .14);
   --mm-shell-sidebar-group: rgba(255, 255, 255, .21);
   --mm-shell-sidebar-active-bg: #f2fbfc;
@@ -54,6 +63,7 @@ body {
 /* The platform header stays white; only the sidebar rail occupies its left edge. */
 .mx-global-header {
   background: var(--mxmed-platform-header-bg);
+  border-bottom: 0;
 }
 .mx-global-header::before {
   content: "";
@@ -64,8 +74,21 @@ body {
   transition: width .24s ease, background-color var(--mm-transition);
   pointer-events: none;
 }
+.mx-global-header::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--mm-shell-sidebar-rail-w);
+  height: 1px;
+  background: rgba(0, 49, 82, .12);
+  transition: left .24s ease;
+  pointer-events: none;
+}
 .mx-global-header .wrap {
   z-index: 1;
+  padding-inline-start: 0 !important;
 }
 .mx-global-header .mx-gh-left {
   box-sizing: border-box;
@@ -75,13 +98,20 @@ body {
 .mx-global-header .mx-gh-toggle {
   position: absolute;
   z-index: 2;
-  left: calc((var(--mm-shell-sidebar-rail-w) - 40px) / 2);
+  left: calc((var(--mm-shell-sidebar-rail-w) - var(--mxmed-sidebar-toggle-hit-size)) / 2);
+  width: var(--mxmed-sidebar-toggle-hit-size);
+  height: var(--mxmed-sidebar-toggle-hit-size);
   margin: 0;
-  border: 1px solid rgba(255, 255, 255, .34);
+  border: 0;
   background: transparent;
   color: var(--mxmed-sidebar-fg);
   box-shadow: none;
   transition: background-color var(--mm-transition), border-color var(--mm-transition);
+}
+.mx-global-header .mx-gh-toggle .material-symbols-rounded {
+  width: var(--mxmed-sidebar-primary-icon-size);
+  height: var(--mxmed-sidebar-primary-icon-size);
+  font-size: 2.25rem;
 }
 .mx-global-header .mx-gh-toggle:hover,
 .mx-global-header .mx-gh-toggle:focus-visible {
@@ -111,6 +141,9 @@ body {
 .mm-grid {
   gap: 0;
   padding-block: 0 18px;
+}
+#mmSidebar {
+  --mm-sidebar-expanded-w: var(--mxmed-sidebar-expanded-width);
 }
 .mm-sidebar {
   background: var(--mm-shell-sidebar-color);
@@ -200,7 +233,7 @@ body {
     --mm-shell-sidebar-rail-w: var(--mm-sidebar-collapsed-w);
   }
   body.mx-sidebar-expanded {
-    --mm-shell-sidebar-rail-w: 220px;
+    --mm-shell-sidebar-rail-w: var(--mxmed-sidebar-expanded-width);
   }
   .mm-sidebar {
     top: var(--mm-global-header-h);
@@ -216,9 +249,14 @@ body {
     padding-left: var(--mm-shell-sidebar-rail-w);
   }
   body .mx-global-header .mx-gh-toggle {
-    position: absolute;
-    left: calc((var(--mm-shell-sidebar-rail-w) - 40px) / 2);
-    margin: 0;
+    position: absolute !important;
+    margin: 0 !important;
+  }
+  body.mx-sidebar-collapsed .mx-global-header .mx-gh-toggle {
+    left: calc((var(--mxmed-sidebar-collapsed-width) - var(--mxmed-sidebar-toggle-hit-size)) / 2) !important;
+  }
+  body.mx-sidebar-expanded .mx-global-header .mx-gh-toggle {
+    left: calc(var(--mxmed-sidebar-expanded-icon-axis-x) - (var(--mxmed-sidebar-toggle-hit-size) / 2)) !important;
   }
   body .mx-global-header .mx-gh-brand {
     position: static;
@@ -234,6 +272,12 @@ body {
   body.mx-sidebar-collapsed #mmSidebar .menu-sub.sb01-flyout-visible {
     background: var(--mm-shell-sidebar-color);
     border-color: rgba(255, 255, 255, .52);
+  }
+  #p-expediente > .head > .mx-panel-subheader {
+    padding-inline-start: var(--mxmed-content-left-guide-inset);
+  }
+  #p-expediente > .head > .mx-clinical-subheader.vis02-active {
+    padding-inline-start: calc(var(--mxmed-content-left-guide-inset) - 1px);
   }
 }
 
