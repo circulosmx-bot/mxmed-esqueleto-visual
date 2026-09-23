@@ -1478,3 +1478,69 @@
     height:32px;
   }
 }
+
+/* VIS10D-R1: denser desktop composition and larger card information scale. */
+#p-expediente #lon02-summary .lon02-card h4 {
+  gap:8px;
+  margin-bottom:2px;
+  font-size:15px;
+  line-height:1.18;
+}
+#p-expediente #lon02-summary .lon02-card h4 .material-symbols-outlined {
+  flex-basis:36px;
+  width:36px;
+  height:36px;
+  font-size:29px;
+}
+#p-expediente #lon02-summary .lon02-card p {
+  margin-bottom:2px;
+  font-size:14.5px;
+  line-height:1.18;
+}
+#p-expediente #lon02-summary .lon02-card p span,
+#p-expediente #lon02-summary .lon02-card .lon02-note {
+  font-size:13px;
+  line-height:1.18;
+}
+#p-expediente #lon02-summary .lon02-card .btn-link {
+  min-height:28px!important;
+  padding-top:2px;
+  font-size:13.5px;
+  line-height:1.15;
+}
+#lon02-summary .lon02-measurement-group {
+  gap:1px;
+}
+#lon02-summary .lon02-measurement-row {
+  grid-template-columns:minmax(0,170px) max-content;
+  column-gap:10px;
+  justify-content:start;
+  line-height:1.12;
+}
+#lon02-summary .lon02-measurement-label {
+  font-size:13.5px;
+  white-space:nowrap;
+}
+#lon02-summary .lon02-measurement-value {
+  font-size:14.5px;
+}
+#lon02-summary .lon02-measurement-meta {
+  font-size:11px;
+  line-height:1.1;
+}
+@media(min-width:1200px) {
+  #lon02-summary .lon02-grid {
+    width:85%;
+    margin-inline:auto;
+  }
+}
+@media(max-width:575.98px) {
+  #p-expediente #lon02-summary .lon02-card h4 .material-symbols-outlined {
+    flex-basis:36px;
+    width:36px;
+    height:36px;
+  }
+  #lon02-summary .lon02-measurement-row {
+    grid-template-columns:minmax(0,165px) max-content;
+  }
+}
