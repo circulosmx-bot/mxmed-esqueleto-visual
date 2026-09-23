@@ -1,13 +1,12 @@
 /*
- * VIS09 shell color modes.
- * Default / Mode A: navy sidebar and panel header, turquoise patient subheader.
- * Rescue / Mode B: turquoise sidebar and panel header, navy patient subheader.
- * Switch the single data-shell-color-mode value on <body> between "a" and "b".
+ * VIS09B shell color modes.
+ * Active: turquoise sidebar and panel header, navy patient subheader.
+ * Alternate: navy sidebar and panel header, turquoise patient subheader.
+ * Switch the single data-shell-color-mode value on <body>.
  */
 :root {
   --mm-shell-navy: #08457c;
-  --mm-shell-turquoise: #00b0c5;
-  --mm-shell-patient-turquoise: #00a6ba;
+  --mm-shell-turquoise: #00a6ba;
   --mm-shell-foreground: #fff;
   --mm-shell-sidebar-rail-w: 220px;
   --mm-shell-sidebar-hover: rgba(255, 255, 255, .14);
@@ -17,22 +16,44 @@
 }
 
 body:not([data-shell-color-mode]),
-body[data-shell-color-mode="a"] {
-  --mm-shell-sidebar-color: var(--mm-shell-navy);
-  --mm-shell-panel-header-color: var(--mm-shell-navy);
-  --mm-shell-patient-subheader-color: var(--mm-shell-patient-turquoise);
+body[data-shell-color-mode="turquoise-shell-blue-patient"],
+body[data-shell-color-mode="b"] {
+  --mxmed-platform-header-bg: #fff;
+  --mxmed-sidebar-bg: var(--mm-shell-turquoise);
+  --mxmed-sidebar-fg: var(--mm-shell-foreground);
+  --mxmed-section-header-bg: var(--mm-shell-turquoise);
+  --mxmed-section-header-fg: var(--mm-shell-foreground);
+  --mxmed-expediente-subheader-bg: var(--mm-shell-navy);
+  --mxmed-expediente-subheader-fg: var(--mm-shell-foreground);
+  --mxmed-sidebar-hover-bg: var(--mm-shell-sidebar-hover);
+  --mxmed-sidebar-active-bg: var(--mm-shell-sidebar-active-bg);
+  --mxmed-sidebar-active-fg: #003152;
 }
 
-body[data-shell-color-mode="b"] {
-  --mm-shell-sidebar-color: var(--mm-shell-turquoise);
-  --mm-shell-panel-header-color: var(--mm-shell-turquoise);
-  --mm-shell-patient-subheader-color: var(--mm-shell-navy);
-  --mm-shell-sidebar-active-ink: #003152;
+body[data-shell-color-mode="blue-shell-turquoise-patient"],
+body[data-shell-color-mode="a"] {
+  --mxmed-platform-header-bg: #fff;
+  --mxmed-sidebar-bg: var(--mm-shell-navy);
+  --mxmed-sidebar-fg: var(--mm-shell-foreground);
+  --mxmed-section-header-bg: var(--mm-shell-navy);
+  --mxmed-section-header-fg: var(--mm-shell-foreground);
+  --mxmed-expediente-subheader-bg: var(--mm-shell-turquoise);
+  --mxmed-expediente-subheader-fg: var(--mm-shell-foreground);
+  --mxmed-sidebar-hover-bg: var(--mm-shell-sidebar-hover);
+  --mxmed-sidebar-active-bg: var(--mm-shell-sidebar-active-bg);
+  --mxmed-sidebar-active-fg: var(--mm-shell-sidebar-active-ink);
+}
+
+body {
+  --mm-shell-sidebar-color: var(--mxmed-sidebar-bg);
+  --mm-shell-panel-header-color: var(--mxmed-section-header-bg);
+  --mm-shell-patient-subheader-color: var(--mxmed-expediente-subheader-bg);
+  --mm-shell-sidebar-active-ink: var(--mxmed-sidebar-active-fg);
 }
 
 /* The platform header stays white; only the sidebar rail occupies its left edge. */
 .mx-global-header {
-  background: linear-gradient(180deg, #eff8fc 0%, #fff 100%);
+  background: var(--mxmed-platform-header-bg);
 }
 .mx-global-header::before {
   content: "";
@@ -58,15 +79,15 @@ body[data-shell-color-mode="b"] {
   margin: 0;
   border: 1px solid rgba(255, 255, 255, .34);
   background: transparent;
-  color: var(--mm-shell-foreground);
+  color: var(--mxmed-sidebar-fg);
   box-shadow: none;
   transition: background-color var(--mm-transition), border-color var(--mm-transition);
 }
 .mx-global-header .mx-gh-toggle:hover,
 .mx-global-header .mx-gh-toggle:focus-visible {
-  background: var(--mm-shell-sidebar-hover);
+  background: var(--mxmed-sidebar-hover-bg);
   border-color: rgba(255, 255, 255, .72);
-  color: var(--mm-shell-foreground);
+  color: var(--mxmed-sidebar-fg);
 }
 .mx-global-header .mx-gh-toggle:active {
   background: var(--mm-shell-sidebar-group);
@@ -93,7 +114,7 @@ body[data-shell-color-mode="b"] {
 }
 .mm-sidebar {
   background: var(--mm-shell-sidebar-color);
-  color: var(--mm-shell-foreground);
+  color: var(--mxmed-sidebar-fg);
   transition: width .24s ease, flex-basis .24s ease, background-color var(--mm-transition);
 }
 .mm-main,
@@ -106,7 +127,7 @@ body[data-shell-color-mode="b"] {
 .mm-card > .mx-panel-subheader {
   background: var(--mm-shell-panel-header-color);
   border-color: var(--mm-shell-panel-header-color);
-  color: var(--mm-shell-foreground);
+  color: var(--mxmed-section-header-fg);
 }
 #p-expediente > .head {
   padding-inline: 0 !important;
@@ -114,14 +135,15 @@ body[data-shell-color-mode="b"] {
 .mm-card > .head .mx-panel-subheader,
 .mm-card > .head :is(h2, h5),
 .mm-card > .mx-panel-subheader,
-.mm-card > .mx-panel-subheader :is(.material-symbols-rounded, .material-symbols-outlined, .bi) {
-  color: var(--mm-shell-foreground);
+.mm-card > .head .mx-panel-subheader :is(.mx-panel-subheader-title, .mx-panel-subheader-text, .mx-panel-subheader-icon),
+.mm-card > .mx-panel-subheader :is(.mx-panel-subheader-title, .mx-panel-subheader-text, .mx-panel-subheader-icon, .material-symbols-rounded, .material-symbols-outlined, .bi) {
+  color: var(--mxmed-section-header-fg);
 }
 
 /* Expediente has its own patient layer; its light context cards remain untouched. */
 #p-expediente {
   --exp-header-theme: var(--mm-shell-patient-subheader-color);
-  --exp-header-theme-ink: var(--mm-shell-foreground);
+  --exp-header-theme-ink: var(--mxmed-expediente-subheader-fg);
 }
 #p-expediente .head .mx-exp-header--active .mx-clinical-header--shell :is(
   .ne-rx-ch-patient-name,
@@ -129,14 +151,14 @@ body[data-shell-color-mode="b"] {
   .ne-rx-ch-reason,
   .vis02-patient-id
 ) {
-  color: var(--mm-shell-foreground);
+  color: var(--mxmed-expediente-subheader-fg);
 }
 
 /* One interaction language for both palettes and both sidebar widths. */
 #mmSidebar :is(.menu-main, .menu-sub-btn) {
   --btn-bg: transparent;
   background: transparent;
-  color: var(--mm-shell-foreground);
+  color: var(--mxmed-sidebar-fg);
   transition: background-color var(--mm-transition), color var(--mm-transition), box-shadow var(--mm-transition);
 }
 #mmSidebar .menu-sub-btn:not(.active) {
@@ -144,25 +166,25 @@ body[data-shell-color-mode="b"] {
   background: rgba(255, 255, 255, .07);
 }
 #mmSidebar :is(.menu-main, .menu-sub-btn):not(.active):not([aria-current="page"]):not(.sb01-current-group):not([aria-expanded="true"]):is(:hover, :focus-visible) {
-  --btn-bg: var(--mm-shell-sidebar-hover);
-  background: var(--mm-shell-sidebar-hover);
-  color: var(--mm-shell-foreground);
+  --btn-bg: var(--mxmed-sidebar-hover-bg);
+  background: var(--mxmed-sidebar-hover-bg);
+  color: var(--mxmed-sidebar-fg);
 }
 #mmSidebar :is(.menu-main[aria-current="page"], .menu-sub-btn.active) {
-  --btn-bg: var(--mm-shell-sidebar-active-bg);
-  background: var(--mm-shell-sidebar-active-bg);
-  color: var(--mm-shell-sidebar-active-ink);
+  --btn-bg: var(--mxmed-sidebar-active-bg);
+  background: var(--mxmed-sidebar-active-bg);
+  color: var(--mxmed-sidebar-active-fg);
   box-shadow: inset 4px 0 var(--mm-shell-sidebar-color);
 }
 #mmSidebar :is(.menu-main.sb01-current-group, .menu-main[aria-expanded="true"]) {
   --btn-bg: var(--mm-shell-sidebar-group);
   background: var(--mm-shell-sidebar-group);
-  color: var(--mm-shell-foreground);
+  color: var(--mxmed-sidebar-fg);
 }
 #mmSidebar :is(.menu-main[aria-current="page"], .menu-sub-btn.active):is(:hover, :focus-visible) {
-  --btn-bg: var(--mm-shell-sidebar-active-bg);
-  background: var(--mm-shell-sidebar-active-bg);
-  color: var(--mm-shell-sidebar-active-ink);
+  --btn-bg: var(--mxmed-sidebar-active-bg);
+  background: var(--mxmed-sidebar-active-bg);
+  color: var(--mxmed-sidebar-active-fg);
 }
 #mmSidebar :is(.menu-main, .menu-sub-btn):focus-visible {
   outline: 3px solid #fff;

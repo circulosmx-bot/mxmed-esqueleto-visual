@@ -213,10 +213,23 @@
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
-<link rel="stylesheet" href="assets/css/platform-shell-color-modes.css?v=vis09">
+<link rel="stylesheet" href="assets/css/platform-shell-color-modes.css?v=vis09b">
 </head>
 
-<body class="mx-sidebar-expanded" data-shell-color-mode="a" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
+<body class="mx-sidebar-expanded" data-shell-color-mode="turquoise-shell-blue-patient" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
+<script>
+(function(){
+  if(!/^(localhost|127\.0\.0\.1)$/i.test(location.hostname)) return;
+  var requestedMode = new URLSearchParams(location.search).get('shell_mode');
+  var localPreviewModes = {
+    turquoise: 'turquoise-shell-blue-patient',
+    blue: 'blue-shell-turquoise-patient'
+  };
+  if(localPreviewModes[requestedMode]) {
+    document.body.dataset.shellColorMode = localPreviewModes[requestedMode];
+  }
+})();
+</script>
 
 
 
