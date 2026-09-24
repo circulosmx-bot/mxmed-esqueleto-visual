@@ -4,6 +4,7 @@
   const root = document.getElementById('m7-workspace');
   if(!patientPane || !root) return;
   const status = root.querySelector('[data-m7-status]');
+  const activeIndicator = root.querySelector('[data-vis15-active-indicator]');
   const errorBox = root.querySelector('[data-m7-error]');
   const body = root.querySelector('[data-m7-body]');
   const context = root.querySelector('[data-m7-context]');
@@ -46,6 +47,7 @@
   const localDrafts = new Map();
   const ws03 = window.mxmedM7WS03?.(root, encounterUrlForWs03, ()=>patientId, ()=>{
     active = null;
+    show(activeIndicator, false);
     show(currentButton, false);
     show(resumeButton, false);
   });
@@ -268,6 +270,7 @@
           rememberDraft(key, type, draft);
           setConflict('Esta consulta ya terminó.', 'El guardado fue rechazado. Tu borrador sigue disponible para copiarlo; no se reabrirá la consulta.', draft, '');
           sectionMode = 'terminal';
+          show(activeIndicator, false);
           try {
             const detail = await get(encounterUrl(key));
             loadedSections = detail.sections || {};
@@ -319,6 +322,7 @@
     active = null;
     show(legacyPanel, true);
     show(body, false);
+    show(activeIndicator, false);
     delete body.dataset.encounterKey;
     delete body.dataset.encounterId;
     delete body.dataset.encounterState;
@@ -341,9 +345,11 @@
     show(currentButton, historical && !!active);
     show(resumeButton, false);
     show(startButton, false);
-    const contextLine = `${label}${when ? ` · ${when}` : ''}${encounter.appointment_id ? ' · Vinculada a cita' : ''}`;
+    show(activeIndicator, state === 'open' && !historical);
+    const metadataLine = [when, encounter.appointment_id ? 'Vinculada a cita' : ''].filter(Boolean).join(' · ');
+    const contextLine = historical ? `${label}${metadataLine ? ` · ${metadataLine}` : ''}` : metadataLine;
     context.textContent = contextLine;
-    status.textContent = historical ? `Sólo lectura · ${contextLine}` : contextLine;
+    status.textContent = historical ? `Sólo lectura · ${contextLine}` : metadataLine || 'Consulta activa';
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
     body.dataset.encounterId = String(encounter.encounter_id || '').trim();
     body.dataset.encounterState = state;

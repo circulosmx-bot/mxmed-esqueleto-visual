@@ -1818,3 +1818,37 @@
     min-height:144px;
   }
 }
+
+/* VIS15: persistent canonical OPEN state, separate from consultation metadata. */
+#m7-workspace .vis15-workspace-title-row {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px 10px;
+  margin-bottom:2px;
+}
+#m7-workspace .vis15-workspace-title-row h3 {
+  margin-bottom:0;
+}
+#m7-workspace .vis15-active-indicator {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:24px;
+  padding:3px 9px;
+  border-radius:999px;
+  background:#087f8d;
+  color:#fff;
+  font-size:11.5px;
+  line-height:1.2;
+  font-weight:800;
+  letter-spacing:.035em;
+  white-space:nowrap;
+}
+#m7-workspace .vis15-active-indicator > span {
+  width:7px;
+  height:7px;
+  flex:0 0 7px;
+  border-radius:50%;
+  background:#fff;
+}
