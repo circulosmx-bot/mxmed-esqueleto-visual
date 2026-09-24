@@ -14,8 +14,6 @@
   const currentButton = root.querySelector('[data-m7-current]');
   const legacyPanel = patientPane.querySelector('#t-historial-atencion > .clinical-panel');
   const editor = root.querySelector('[data-m7-editor]');
-  const editorTitle = root.querySelector('[data-m7-editor-title]');
-  const editorMeta = root.querySelector('[data-m7-editor-meta]');
   const editorState = root.querySelector('[data-m7-editor-state]');
   const editorText = root.querySelector('[data-m7-editor-text]');
   const editorSave = root.querySelector('[data-m7-editor-save]');
@@ -30,7 +28,6 @@
   const conflictUseDraft = root.querySelector('[data-m7-conflict-use-draft]');
   const sectionButtons = [...root.querySelectorAll('[data-m7-section]')];
   const sectionTypes = { reason:'reason_evolution', measurements:'measurements', exam:'physical_exam', assessment:'assessment', plan:'plan', documents:'documents', finalize:'finalize' };
-  const sectionTitles = { reason_evolution:'Motivo / Evolución', assessment:'Valoración', plan:'Plan' };
   let epoch = 0;
   let active = null;
   let patientId = '';
@@ -299,9 +296,6 @@
     editorText.readOnly = sectionMode !== 'open' || sectionConflict || sectionBusy;
     editorSave.disabled = sectionMode !== 'open' || sectionBusy || sectionConflict || !isDirty();
     show(editorSave, sectionMode === 'open');
-    editorTitle.textContent = sectionTitles[selectedSection];
-    editorMeta.textContent = '';
-    editorMeta.hidden = true;
     setEditorState(sectionMode !== 'open' ? 'Sólo lectura' : sectionConflict ? 'Conflicto: revisa ambas versiones' : isDirty() ? 'Cambios sin guardar' : '');
     sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
   }

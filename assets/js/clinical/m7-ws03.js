@@ -147,7 +147,7 @@
         button.addEventListener('click',()=>{ if(isDirty() && !window.confirm('Tienes una medición sin guardar. ¿Cambiar de registro?')) return; fillMeasurement(row); });
         measurementList.append(button);
       });
-      measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'Sin cambios');
+      measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'');
       [...form.elements].forEach(control=>{ control.disabled=mode!=='open'||busy||measurementLocked; });
       q('[data-m7-measurement-save]').disabled=mode!=='open'||busy||measurementLocked||!isDirty();
       q('[data-m7-measurement-new]').disabled=mode!=='open'||busy||measurementLocked;
@@ -161,7 +161,7 @@
       if(state!=='ABNORMAL') finding.value='';
     }
     function paintExam(){
-      examState.textContent=examNotice || (mode!=='open'?'Sólo lectura':examLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'Sin cambios');
+      examState.textContent=examNotice || (mode!=='open'?'Sólo lectura':examLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'');
       examMeta.textContent=examVersion===null?'Aún no hay exploración guardada. Sin revisión no equivale a normal.':`Versión ${examVersion} · Sin revisión no equivale a normal.`;
       examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
         row.querySelector('select').disabled=mode!=='open'||busy||examLocked;

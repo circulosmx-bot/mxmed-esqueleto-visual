@@ -6,7 +6,7 @@
     const $ = selector => panel.querySelector(selector);
     const encounterList = $('[data-m7-encounter-documents]');
     const patientList = $('[data-m7-patient-documents]');
-    const state = $('[data-m7-doc-state]');
+    const state = root.querySelector('[data-m7-doc-state]');
     const uploadForm = $('[data-m7-doc-upload-form]');
     const orderForm = $('[data-m7-order-form]');
     const resultForm = $('[data-m7-result-form]');

@@ -2046,3 +2046,102 @@
   #m7-workspace .m7-workspace-head > div:first-child {flex-basis:100%}
   #m7-workspace [data-m7-editor] .m7-section-editor-state {max-width:55%;text-align:right}
 }
+
+/* VIS21 — one synchronized step context above the stepper, with capture space reclaimed below. */
+#m7-workspace .vis21-step-context {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-width:0;
+  margin:0 0 7px;
+  padding:6px 10px;
+  border-left:3px solid #54bdc5;
+  background:#f3fafb;
+  color:#173f54;
+}
+#m7-workspace .vis21-step-copy {
+  display:grid;
+  grid-template-columns:auto auto minmax(0,1fr);
+  align-items:baseline;
+  gap:2px 12px;
+  min-width:0;
+}
+#m7-workspace .vis21-step-heading {
+  display:contents;
+}
+#m7-workspace .vis21-step-heading h4 {
+  margin:0;
+  color:#06536e;
+  font-size:1rem;
+  font-weight:750;
+  line-height:1.2;
+  white-space:nowrap;
+}
+#m7-workspace .vis21-step-heading span {
+  color:#365f73;
+  font-size:.82rem;
+  font-weight:650;
+  line-height:1.25;
+  white-space:nowrap;
+}
+#m7-workspace .vis21-step-copy p {
+  min-width:0;
+  margin:0;
+  color:#526976;
+  font-size:.8rem;
+  line-height:1.25;
+}
+#m7-workspace .vis21-step-state {
+  flex:0 0 auto;
+  min-width:0;
+}
+#m7-workspace .vis21-step-state > .m7-section-editor-state {
+  display:none;
+  max-width:280px;
+}
+#m7-workspace:has([data-m7-section="reason"][aria-current="true"]) .vis21-step-state > [data-m7-editor-state]:not([hidden]):not(:empty),
+#m7-workspace:has([data-m7-section="assessment"][aria-current="true"]) .vis21-step-state > [data-m7-editor-state]:not([hidden]):not(:empty),
+#m7-workspace:has([data-m7-section="plan"][aria-current="true"]) .vis21-step-state > [data-m7-editor-state]:not([hidden]):not(:empty),
+#m7-workspace:has([data-m7-section="measurements"][aria-current="true"]) .vis21-step-state > [data-m7-measurements-state]:not(:empty),
+#m7-workspace:has([data-m7-section="exam"][aria-current="true"]) .vis21-step-state > [data-m7-exam-state]:not(:empty),
+#m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .vis21-step-state > [data-m7-doc-state]:not(:empty),
+#m7-workspace:has([data-m7-section="finalize"][aria-current="true"]) .vis21-step-state > [data-m7-terminal-state]:not(:empty) {
+  display:inline-flex;
+}
+#m7-workspace .vis21-panel-toolbar {
+  display:flex;
+  justify-content:flex-end;
+  margin:0 0 6px;
+}
+#m7-workspace .vis21-panel-toolbar .btn {
+  min-height:32px;
+  padding:4px 10px;
+}
+@media (max-width:1199.98px) {
+  #m7-workspace .vis21-step-copy {
+    grid-template-columns:auto minmax(0,1fr);
+  }
+  #m7-workspace .vis21-step-copy p {
+    grid-column:1/-1;
+  }
+}
+@media (max-width:575.98px) {
+  #m7-workspace .vis21-step-context {
+    align-items:flex-start;
+    padding:7px 9px;
+  }
+  #m7-workspace .vis21-step-copy {
+    grid-template-columns:1fr;
+    gap:2px;
+  }
+  #m7-workspace .vis21-step-heading {display:block}
+  #m7-workspace .vis21-step-heading h4,
+  #m7-workspace .vis21-step-heading span {white-space:normal}
+  #m7-workspace .vis21-step-heading span {display:block;margin-top:1px}
+  #m7-workspace .vis21-step-copy p {grid-column:auto}
+  #m7-workspace .vis21-step-state > .m7-section-editor-state {
+    max-width:120px;
+    text-align:right;
+  }
+}

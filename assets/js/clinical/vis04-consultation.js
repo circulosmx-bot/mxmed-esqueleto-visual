@@ -9,20 +9,33 @@
   const next = root.querySelector('[data-vis04-next]');
   const progress = root.querySelector('[data-vis04-progress]');
   const label = root.querySelector('[data-vis04-editor-label]');
-  const reasonHelp = root.querySelector('#vis04-reason-help');
+  const stepTitle = root.querySelector('[data-vis21-step-title]');
+  const stepDescriptor = root.querySelector('[data-vis21-step-descriptor]');
+  const stepHelper = root.querySelector('[data-vis21-step-helper]');
+  const stepCopy = {
+    reason: ['Motivo / Evolución','Registro de motivo y evolución','Motivo de atención, síntomas y evolución relevante.'],
+    measurements: ['Mediciones','Registro de mediciones','Signos y medidas clínicas de esta consulta.'],
+    exam: ['Exploración','Registro de exploración física','Hallazgos de exploración física por sistema o apartado.'],
+    assessment: ['Valoración','Registro de valoración clínica','Impresión clínica, análisis y juicio médico.'],
+    plan: ['Plan','Registro del plan de atención','Indicaciones, estudios, tratamiento y conducta.'],
+    documents: ['Documentos / Acciones','Documentos y acciones clínicas','Adjunta documentos o ejecuta acciones relacionadas con esta consulta.'],
+    finalize: ['Finalizar','Cierre de la consulta','Revisa la atención antes de finalizar o anular.']
+  };
   const currentIndex = () => steps.findIndex(button => button.getAttribute('aria-current') === 'true');
   function syncStep() {
     const index = currentIndex();
     previous.disabled = index <= 0;
     next.disabled = index < 0 || index === steps.length - 1;
     progress.textContent = index < 0 ? '' : `Paso ${index + 1} de 7`;
-    const reason = steps[index]?.dataset.m7Section === 'reason';
-    label.textContent = reason ? 'Registro de motivo y evolución' : 'Contenido de la consulta';
-    label.classList.toggle('visually-hidden', reason);
-    reasonHelp.classList.toggle('d-none', !reason);
+    const selected = steps[index]?.dataset.m7Section;
+    const copy = stepCopy[selected] || stepCopy.reason;
+    stepTitle.textContent = copy[0];
+    stepDescriptor.textContent = copy[1];
+    stepHelper.textContent = copy[2];
+    label.textContent = copy[1];
     const editor = root.querySelector('[data-m7-editor-text]');
-    if (reason) editor.setAttribute('aria-describedby', 'vis04-reason-help');
-    else editor.removeAttribute('aria-describedby');
+    editor.setAttribute('aria-labelledby', 'vis21-step-title');
+    editor.setAttribute('aria-describedby', 'vis21-step-helper');
   }
   function advance(delta) {
     const before = currentIndex(), target = steps[before + delta];
