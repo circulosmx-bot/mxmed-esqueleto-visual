@@ -2009,6 +2009,7 @@
   border-radius:16px;
   box-shadow:0 16px 44px rgba(5,60,76,.18);
 }
+
 #m7-open-consultation-leave-modal .modal-header {
   border-bottom-color:#d8eaee;
   background:#edf8fa;
@@ -2025,4 +2026,23 @@
 @media (max-width:575.98px) {
   #m7-open-consultation-leave-modal .m7-leave-intent-actions {grid-template-columns:1fr}
   #m7-open-consultation-leave-modal [data-m7-leave-choice="keep-open"] {grid-column:auto}
+}
+
+/* VIS20 — clinically useful encounter context and quiet idle save state. */
+#m7-workspace .m7-workspace-head > div:first-child {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:0 5px;
+  min-width:0;
+}
+#m7-workspace .m7-workspace-head h3 {margin:0}
+#m7-workspace .m7-workspace-status:empty,
+#m7-workspace .m7-section-editor-meta[hidden],
+#m7-workspace .m7-section-editor-state[hidden] {display:none}
+#m7-workspace [data-m7-editor] .m7-section-editor-head {flex-direction:row}
+#m7-workspace [data-m7-editor] .m7-section-editor-state {flex:0 1 auto}
+@media (max-width:575.98px) {
+  #m7-workspace .m7-workspace-head > div:first-child {flex-basis:100%}
+  #m7-workspace [data-m7-editor] .m7-section-editor-state {max-width:55%;text-align:right}
 }

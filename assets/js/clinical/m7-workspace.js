@@ -46,6 +46,8 @@
   let transitionBusy = false;
   let primaryTabBypass = false;
   let authorizedPatientChange = '';
+  let appointmentHeaderEpoch = 0;
+  let editorStateTimer = 0;
   const localDrafts = new Map();
   const ws03 = window.mxmedM7WS03?.(root, encounterUrlForWs03, ()=>patientId, ()=>{
     active = null;
@@ -68,6 +70,61 @@
 
   const selectedPatient = ()=> String(patientPane.dataset.patientId || patientPane.dataset.activePatientId || '').trim();
   const show = (node, visible)=> node?.classList.toggle('d-none', !visible);
+  function setEditorState(message = '', { transient = false } = {}){
+    clearTimeout(editorStateTimer);
+    editorStateTimer = 0;
+    editorState.textContent = String(message || '');
+    editorState.hidden = !editorState.textContent;
+    if(transient && editorState.textContent){
+      const expected = editorState.textContent;
+      editorStateTimer = window.setTimeout(()=>{
+        editorStateTimer = 0;
+        if(editorState.textContent === expected && !sectionBusy && !sectionConflict && !isDirty()){
+          editorState.textContent = '';
+          editorState.hidden = true;
+        }
+      }, 2000);
+    }
+  }
+  function parseLocalClinicalDateTime(value){
+    const safe = String(value || '').trim();
+    const match = safe.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if(!match) return null;
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6] || 0));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  function formatClinicalTime(value){
+    const date = parseLocalClinicalDateTime(value);
+    if(!date) return '';
+    const hour = date.getHours();
+    return `${hour % 12 || 12}:${String(date.getMinutes()).padStart(2,'0')} ${hour < 12 ? 'a. m.' : 'p. m.'}`;
+  }
+  function appointmentOriginLabel(appointment){
+    const channel = String(appointment?.channel_origin || '').trim().toLowerCase();
+    if(['public_agenda','agenda_public_profile','public_profile'].includes(channel)) return 'Reserva en línea';
+    if(['call_center','call-center'].includes(channel)) return 'Call Center';
+    return '';
+  }
+  function setCurrentEncounterHeader(detail){
+    const safe = String(detail || '').trim();
+    status.textContent = safe ? `· ${safe}` : '';
+  }
+  async function hydrateLinkedAppointmentHeader(encounter, token){
+    const appointmentId = String(encounter?.appointment_id || '').trim();
+    if(!appointmentId) return;
+    try {
+      const appointment = await get(`/api/agenda/index.php/appointments/${encodeURIComponent(appointmentId)}`);
+      if(token !== appointmentHeaderEpoch || body.dataset.encounterKey !== String(encounter.encounter_key || '').trim()) return;
+      const appointmentPatient = String(appointment?.patient_id || '').trim();
+      if(appointmentPatient && appointmentPatient !== String(encounter.patient_id || patientId).trim()) return;
+      const scheduledTime = formatClinicalTime(appointment?.start_at);
+      if(!scheduledTime) return;
+      const origin = appointmentOriginLabel(appointment);
+      const detail = `Cita ${scheduledTime}${origin ? ` · ${origin}` : ''}`;
+      setCurrentEncounterHeader(detail);
+      context.textContent = detail;
+    } catch (_) { /* No encounter timestamp may substitute for a missing appointment time. */ }
+  }
   const errorCode = (value)=> typeof value === 'string' ? value : String(value?.code || '');
   const messages = {
     SCHEMA_NOT_READY:'El expediente clínico no está listo. Vuelve a intentarlo después de verificar el sistema.',
@@ -243,8 +300,9 @@
     editorSave.disabled = sectionMode !== 'open' || sectionBusy || sectionConflict || !isDirty();
     show(editorSave, sectionMode === 'open');
     editorTitle.textContent = sectionTitles[selectedSection];
-    editorMeta.textContent = row ? `Versión ${sectionVersion} · Actualizada ${String(row.updated_at || '')}` : 'Aún no hay contenido guardado en esta consulta.';
-    editorState.textContent = sectionMode !== 'open' ? 'Sólo lectura' : sectionConflict ? 'Conflicto: revisa ambas versiones' : isDirty() ? 'Cambios sin guardar' : 'Sin cambios';
+    editorMeta.textContent = '';
+    editorMeta.hidden = true;
+    setEditorState(sectionMode !== 'open' ? 'Sólo lectura' : sectionConflict ? 'Conflicto: revisa ambas versiones' : isDirty() ? 'Cambios sin guardar' : '');
     sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
   }
   function setConflict(title, message, draft, server){
@@ -284,9 +342,9 @@
     } catch (error) {
       if(seen !== sectionEpoch) return;
       sectionMode = 'error';
-      editorState.textContent = errorCode(error?.code) === 'SCHEMA_NOT_READY'
+      setEditorState(errorCode(error?.code) === 'SCHEMA_NOT_READY'
         ? 'El esquema clínico no está listo. No se cargó esta sección.'
-        : 'No se pudo cargar esta sección. Vuelve a abrir la consulta.';
+        : 'No se pudo cargar esta sección. Vuelve a abrir la consulta.');
       editorText.readOnly = true;
       editorSave.disabled = true;
     }
@@ -329,7 +387,7 @@
     sectionBusy = true;
     editorText.readOnly = true;
     editorSave.disabled = true;
-    editorState.textContent = 'Guardando…';
+    setEditorState('Guardando…');
     const data = { payload_schema_version:1, payload:{}, narrative_text:draft };
     if(expectedVersion !== null) data.row_version = expectedVersion;
     try {
@@ -368,10 +426,10 @@
         } else {
           rememberDraft(key, type, draft);
           if(code === 'DOCUMENT_CONTEXT_MISMATCH') sectionMode = 'error';
-          editorState.textContent = code === 'M6_WRITE_WINDOW_BLOCKED' ? 'Guardado temporalmente pausado; tu borrador se conserva.'
+          setEditorState(code === 'M6_WRITE_WINDOW_BLOCKED' ? 'Guardado temporalmente pausado; tu borrador se conserva.'
             : code === 'SCHEMA_NOT_READY' ? 'El esquema clínico no está listo; tu borrador se conserva.'
             : code === 'DOCUMENT_CONTEXT_MISMATCH' ? 'El contexto de la consulta cambió. Vuelve a abrirla antes de guardar.'
-            : 'No se guardó la sección. Tu borrador se conserva.';
+            : 'No se guardó la sección. Tu borrador se conserva.');
         }
         return false;
       }
@@ -382,11 +440,11 @@
       };
       clearDraft(key, type);
       paintSection();
-      editorState.textContent = 'Guardado';
+      setEditorState('Guardado', { transient:true });
       return true;
     } catch (_) {
       rememberDraft(key, type, draft);
-      editorState.textContent = 'Sin conexión. Tu borrador se conserva; inténtalo de nuevo.';
+      setEditorState('Sin conexión. Tu borrador se conserva; inténtalo de nuevo.');
       return false;
     } finally {
       sectionBusy = false;
@@ -397,6 +455,8 @@
     }
   }
   function reset(){
+    appointmentHeaderEpoch++;
+    setEditorState('');
     sectionEpoch++;
     ws03?.reset();
     ws04?.reset();
@@ -421,6 +481,7 @@
     status.textContent = 'Selecciona un paciente para consultar su atención.';
   }
   function renderEncounter(encounter, historical){
+    const headerToken = ++appointmentHeaderEpoch;
     const state = String(encounter.status || '').toLowerCase();
     const label = state === 'voided' ? 'Anulada' : state === 'closed' ? 'Finalizada' : 'En curso';
     const when = String(encounter.event_datetime || encounter.encounter_dt || '').trim();
@@ -428,14 +489,17 @@
     show(currentButton, historical && !!active);
     show(resumeButton, false);
     show(startButton, false);
-    const metadataLine = [when, encounter.appointment_id ? 'Vinculada a cita' : ''].filter(Boolean).join(' · ');
-    const contextLine = historical ? `${label}${metadataLine ? ` · ${metadataLine}` : ''}` : metadataLine;
+    const startedTime = formatClinicalTime(when);
+    const fallbackDetail = historical ? `${label}${when ? ` · ${when}` : ''}` : encounter.appointment_id ? '' : startedTime ? `Iniciada ${startedTime}` : '';
+    const contextLine = fallbackDetail;
     context.textContent = contextLine;
-    status.textContent = historical ? `Sólo lectura · ${contextLine}` : metadataLine || 'Consulta activa';
+    if(historical) status.textContent = `· Sólo lectura${contextLine ? ` · ${contextLine}` : ''}`;
+    else setCurrentEncounterHeader(fallbackDetail);
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
     body.dataset.encounterId = String(encounter.encounter_id || '').trim();
     body.dataset.encounterState = state;
     loadSections(encounter);
+    if(!historical && encounter.appointment_id) void hydrateLinkedAppointmentHeader(encounter, headerToken);
   }
   async function selectHistorical(row, seen){
     if(!protectNavigation()) return;
@@ -543,7 +607,7 @@
   editorText.addEventListener('input', ()=>{
     if(sectionMode !== 'open') return;
     rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
-    editorState.textContent = isDirty() ? 'Cambios sin guardar' : 'Sin cambios';
+    setEditorState(isDirty() ? 'Cambios sin guardar' : '');
     editorSave.disabled = sectionBusy || sectionConflict || !isDirty();
   });
   editorSave.addEventListener('click', saveSection);
