@@ -2874,3 +2874,10 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
     max-width:105px;
   }
 }
+
+/* VIS24 — one concise step sentence; the stepper remains the step-name authority. */
+#p-expediente #m7-workspace .vis21-step-copy p {
+  color:#3f6577;
+  font-size:.86rem;
+  font-weight:650;
+}

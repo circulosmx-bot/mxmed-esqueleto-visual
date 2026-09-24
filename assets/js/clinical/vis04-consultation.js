@@ -10,17 +10,15 @@
   const next = root.querySelector('[data-vis04-next]');
   const progress = root.querySelector('[data-vis04-progress]');
   const label = root.querySelector('[data-vis04-editor-label]');
-  const stepTitle = root.querySelector('[data-vis21-step-title]');
-  const stepDescriptor = root.querySelector('[data-vis21-step-descriptor]');
   const stepHelper = root.querySelector('[data-vis21-step-helper]');
   const stepCopy = {
-    reason: ['Motivo / Evolución','Registro de motivo y evolución','Motivo de atención, síntomas y evolución relevante.'],
-    measurements: ['Mediciones','Registro de mediciones','Signos y medidas clínicas de esta consulta.'],
-    exam: ['Exploración','Registro de exploración física','Hallazgos de exploración física por sistema o apartado.'],
-    assessment: ['Valoración','Registro de valoración clínica','Impresión clínica, análisis y juicio médico.'],
-    plan: ['Plan','Registro del plan de atención','Indicaciones, estudios, tratamiento y conducta.'],
-    documents: ['Documentos / Acciones','Documentos y acciones clínicas','Adjunta documentos o ejecuta acciones relacionadas con esta consulta.'],
-    finalize: ['Finalizar','Cierre de la consulta','Revisa la atención antes de finalizar o anular.']
+    reason: ['Motivo / Evolución','Motivo de atención, síntomas o evolución.'],
+    measurements: ['Mediciones','Signos vitales y mediciones clínicas.'],
+    exam: ['Exploración','Hallazgos de la exploración física.'],
+    assessment: ['Valoración','Impresión y valoración clínica.'],
+    plan: ['Plan','Indicaciones, tratamiento y plan de atención.'],
+    documents: ['Documentos / Acciones','Documentos y acciones de esta consulta.'],
+    finalize: ['Finalizar','Revisión y cierre de la consulta.']
   };
   let focusWasActive = false, focusScrollToken = 0;
   const currentIndex = () => steps.findIndex(button => button.getAttribute('aria-current') === 'true');
@@ -60,13 +58,11 @@
     progress.textContent = index < 0 ? '' : `Paso ${index + 1} de 7`;
     const selected = steps[index]?.dataset.m7Section;
     const copy = stepCopy[selected] || stepCopy.reason;
-    stepTitle.textContent = copy[0];
-    stepDescriptor.textContent = copy[1];
-    stepHelper.textContent = copy[2];
-    stepHelper.title = copy[2];
-    label.textContent = copy[1];
+    stepHelper.textContent = copy[1];
+    stepHelper.title = copy[1];
+    label.textContent = copy[0];
     const editor = root.querySelector('[data-m7-editor-text]');
-    editor.setAttribute('aria-labelledby', 'vis21-step-title');
+    editor.removeAttribute('aria-labelledby');
     editor.setAttribute('aria-describedby', 'vis21-step-helper');
   }
   function advance(delta) {

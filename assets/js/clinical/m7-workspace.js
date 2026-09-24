@@ -3,6 +3,7 @@
   const patientPane = document.getElementById('p-expediente');
   const root = document.getElementById('m7-workspace');
   if(!patientPane || !root) return;
+  const workspaceTitle = root.querySelector('#m7-workspace-title');
   const status = root.querySelector('[data-m7-status]');
   const errorBox = root.querySelector('[data-m7-error]');
   const body = root.querySelector('[data-m7-body]');
@@ -105,6 +106,9 @@
   function setCurrentEncounterHeader(detail){
     const safe = String(detail || '').trim();
     status.textContent = safe;
+  }
+  function setWorkspaceTitle(state){
+    workspaceTitle.textContent = String(state || '').toLowerCase() === 'open' ? 'CONSULTA EN CURSO' : 'CONSULTA ACTUAL';
   }
   async function hydrateLinkedAppointmentHeader(encounter, token){
     const appointmentId = String(encounter?.appointment_id || '').trim();
@@ -410,6 +414,7 @@
             loadedSections = detail.sections || {};
             conflictServer.value = String(loadedSections[type]?.narrative_text || '');
             const state = String(detail.status || '').toLowerCase();
+            setWorkspaceTitle(state);
             body.dataset.encounterState = state;
             context.textContent = `Consulta histórica · ${state === 'voided' ? 'Anulada' : 'Finalizada'}`;
             status.textContent = 'Consulta histórica de sólo lectura.';
@@ -472,11 +477,13 @@
     show(conflictBox, false);
     sectionButtons.forEach(button=>{ button.disabled = true; button.removeAttribute('aria-current'); });
     historyList.replaceChildren();
+    setWorkspaceTitle('');
     status.textContent = 'Selecciona un paciente para consultar su atención.';
   }
   function renderEncounter(encounter, historical){
     const headerToken = ++appointmentHeaderEpoch;
     const state = String(encounter.status || '').toLowerCase();
+    setWorkspaceTitle(state);
     const label = state === 'voided' ? 'Anulada' : state === 'closed' ? 'Finalizada' : 'En curso';
     const when = String(encounter.event_datetime || encounter.encounter_dt || '').trim();
     show(body, true);
