@@ -319,6 +319,9 @@
     active = null;
     show(legacyPanel, true);
     show(body, false);
+    delete body.dataset.encounterKey;
+    delete body.dataset.encounterId;
+    delete body.dataset.encounterState;
     show(history, false);
     show(startButton, false);
     show(resumeButton, false);
@@ -371,7 +374,7 @@
       historyList.append(button);
     });
   }
-  async function refresh(){
+  async function refresh({ openExisting = false } = {}){
     const hadDraft = isDirty();
     if(hadDraft){
       if(selectedSection === 'documents') { /* Form controls remain local until navigation completes. */ }
@@ -397,9 +400,12 @@
       show(legacyPanel, false); // No parallel legacy current-consultation writer in M7.
       const current = snapshot.data;
       active = current?.encounter_key ? current : null;
-      status.textContent = active ? 'Hay una consulta activa. Puedes continuarla.' : 'Este paciente no tiene una consulta activa.';
-      show(resumeButton, !!active);
-      show(startButton, !active);
+      if(active && openExisting) renderEncounter(active, false);
+      else {
+        status.textContent = active ? 'Hay una consulta activa. Puedes continuarla.' : 'Este paciente no tiene una consulta activa.';
+        show(resumeButton, !!active);
+        show(startButton, !active);
+      }
       if(hadDraft){
         errorBox.textContent = 'Tu borrador sin guardar se conserva en esta pestaña para la consulta de origen.';
         show(errorBox, true);
@@ -461,23 +467,34 @@
     event.preventDefault();
     event.returnValue = '';
   });
-  ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>{
-    window.addEventListener(name, ()=> refresh());
-  });
   const workspaceTab = patientPane.querySelector('[data-bs-target="#t-consulta-actual"]');
+  let pendingEntryIntent = '';
+  let workspaceEntryPromise = Promise.resolve();
+  async function enterCurrentConsultation(intent = ''){
+    const id = selectedPatient();
+    await refresh({ openExisting:true });
+    if(selectedPatient() !== id || !workspaceTab?.classList.contains('active') || root.classList.contains('d-none')) return;
+    if(!active && intent === 'start' && !startButton.classList.contains('d-none')) startButton.click();
+  }
+  ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>{
+    window.addEventListener(name, ()=> workspaceTab?.classList.contains('active') ? enterCurrentConsultation() : refresh());
+  });
   // Header CTA reuses the workspace's explicit command and resume handlers.
   window.mxmedM7OpenFromHeader = async (id, intent) => {
     if (selectedPatient() !== id || !workspaceTab) return;
     if (workspaceTab.classList.contains('active') && !protectNavigation()) return;
+    if (workspaceTab.classList.contains('active')) return enterCurrentConsultation(intent);
+    pendingEntryIntent = intent;
     window.bootstrap?.Tab.getOrCreateInstance(workspaceTab).show();
     if (!workspaceTab.classList.contains('active')) return; // dirty guard declined
-    await refresh();
-    if (selectedPatient() !== id || !workspaceTab.classList.contains('active') || root.classList.contains('d-none')) return;
-    if (active) resumeButton.click();
-    else if (intent === 'start' && !startButton.classList.contains('d-none')) startButton.click();
+    await workspaceEntryPromise;
   };
-  workspaceTab?.addEventListener('shown.bs.tab', refresh);
+  workspaceTab?.addEventListener('shown.bs.tab', ()=>{
+    const intent = pendingEntryIntent;
+    pendingEntryIntent = '';
+    workspaceEntryPromise = enterCurrentConsultation(intent);
+  });
   workspaceTab?.addEventListener('hide.bs.tab', event=>{ if(!protectNavigation()) event.preventDefault(); });
-  new MutationObserver(()=>{ if(selectedPatient() !== patientId) refresh(); }).observe(patientPane, { attributes:true, attributeFilter:['data-patient-id','data-active-patient-id'] });
+  new MutationObserver(()=>{ if(selectedPatient() !== patientId) workspaceTab?.classList.contains('active') ? enterCurrentConsultation() : refresh(); }).observe(patientPane, { attributes:true, attributeFilter:['data-patient-id','data-active-patient-id'] });
   refresh();
 })();
