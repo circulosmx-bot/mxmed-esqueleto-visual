@@ -14,17 +14,28 @@
   }
   function syncConsultationCtaVisibility() {
     const cta = host?.querySelector('[data-vis02-action="consulta"]');
-    if (!cta) return;
-    const hidden = insideConsultation();
-    cta.hidden = hidden;
-    cta.classList.toggle('d-none', hidden);
+    const finalize = host?.querySelector('[data-vis16-finalize]');
+    const actions = host?.querySelector('[data-vis16-consultation-actions]');
+    if (!cta || !finalize || !actions) return;
+    const ctaHidden = insideConsultation();
+    const finalizeHidden = encounterState !== 'open';
+    cta.hidden = ctaHidden;
+    cta.classList.toggle('d-none', ctaHidden);
+    finalize.hidden = finalizeHidden;
+    finalize.classList.toggle('d-none', finalizeHidden);
+    actions.hidden = ctaHidden && finalizeHidden;
+    actions.classList.toggle('d-none', ctaHidden && finalizeHidden);
+    actions.classList.toggle('vis16-primary-only', !ctaHidden && finalizeHidden);
+    actions.classList.toggle('vis16-finalize-only', ctaHidden && !finalizeHidden);
   }
   function consultationState(state) {
     const cta = host.querySelector('[data-vis02-action="consulta"]');
+    const card = cta.closest('.vis02-card');
     encounterState = state;
+    card.classList.toggle('vis16-consultation-open', state === 'open');
     if (state === 'open') {
-      message('consulta', 'En curso');
-      cta.textContent = 'CONTINUAR CONSULTA';
+      message('consulta', 'CONSULTA EN CURSO');
+      cta.textContent = 'VOLVER A CONSULTA';
       cta.disabled = false;
     } else if (state === 'none') {
       message('consulta', 'Sin consulta activa');
@@ -57,11 +68,14 @@
   async function refresh() {
     if (!host || !patient || selected() !== patient) return;
     const id = patient, run = ++epoch;
-    encounterState = 'unavailable';
     const cta = host.querySelector('[data-vis02-action="consulta"]');
-    cta.textContent = 'CONSULTANDO…'; cta.disabled = true;
+    if (!['open', 'none', 'legacy'].includes(encounterState)) {
+      encounterState = 'unavailable';
+      cta.textContent = 'CONSULTANDO…'; cta.disabled = true;
+      message('consulta', 'Consultando…');
+    }
     syncConsultationCtaVisibility();
-    definitions.forEach(([key]) => message(key, 'Consultando…'));
+    definitions.filter(([key]) => key !== 'consulta').forEach(([key]) => message(key, 'Consultando…'));
     latestConsultation('Última consulta: Consultando…');
     const read = async suffix => {
       const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(id)}/${suffix}`, {credentials:'same-origin',headers:{Accept:'application/json'}});
@@ -108,9 +122,23 @@
       latest.setAttribute('aria-live', 'polite');
       host.querySelector('.ne-rx-ch-patient-line').after(latest);
       const cards = document.createElement('div'); cards.className = 'vis02-context'; cards.setAttribute('aria-label', 'Contexto clínico inmediato');
-      cards.innerHTML = definitions.map(([key,title,icon,label,target]) => `<section class="vis02-card"><h3><span class="material-symbols-outlined" aria-hidden="true">${icon}</span>${title}</h3><div data-vis02-value="${key}" aria-live="polite">Consultando…</div><button type="button" class="btn ${key === 'consulta' ? 'btn-primary' : 'btn-link'}" data-vis02-action="${key}" data-vis02-target="${target}">${label}</button></section>`).join('');
+      cards.innerHTML = definitions.map(([key,title,icon,label,target]) => {
+        const action = `<button type="button" class="btn ${key === 'consulta' ? 'btn-primary' : 'btn-link'}" data-vis02-action="${key}" data-vis02-target="${target}">${label}</button>`;
+        const actions = key === 'consulta'
+          ? `<div class="vis16-consultation-actions vis16-primary-only" data-vis16-consultation-actions>${action}<button type="button" class="btn btn-link vis16-finalize-action d-none" data-vis16-finalize hidden>FINALIZAR CONSULTA</button></div>`
+          : action;
+        return `<section class="vis02-card${key === 'consulta' ? ' vis16-consultation-card' : ''}"><h3><span class="material-symbols-outlined" aria-hidden="true">${icon}</span>${title}</h3><div data-vis02-value="${key}" aria-live="polite">Consultando…</div>${actions}</section>`;
+      }).join('');
       host.append(cards);
       cards.addEventListener('click', async event => {
+        const finalize = event.target.closest('[data-vis16-finalize]');
+        if (finalize) {
+          if (selected() !== patient || encounterState !== 'open') return;
+          finalize.disabled = true;
+          try { await window.mxmedM7OpenFinalizationFromHeader?.(patient); }
+          finally { if (selected() === patient) refresh(); }
+          return;
+        }
         const button = event.target.closest('[data-vis02-action]');
         if (!button || selected() !== patient) return;
         if (button.dataset.vis02Action === 'consulta') {
@@ -129,7 +157,7 @@
     const reason = host.querySelector('.ne-rx-ch-reason');
     reason.classList.toggle('vis02-no-reason', !String(data.clinical_reason || '').trim());
     syncConsultationCtaVisibility();
-    if (patient !== selected()) { patient = selected(); refresh(); }
+    if (patient !== selected()) { patient = selected(); encounterState = 'unavailable'; refresh(); }
   };
   ['m7:encounter-started','m7:encounter-state-changed','mxmed:encounter-lifecycle','mxmed:encounter-changed'].forEach(name => window.addEventListener(name, refresh));
   document.addEventListener('shown.bs.tab', event => {

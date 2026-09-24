@@ -37794,7 +37794,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
         </div>
         <div class="ne-rx-ch-reason" data-clinical-field="clinical_reason">Motivo: Sin motivo registrado</div>
         <div class="ne-rx-ch-actions" aria-label="Acciones del expediente">
-          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-close">Cerrar expediente</button>
+          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-close">Salir del expediente</button>
           <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-search">Cambiar paciente</button>
         </div>
         <div class="mx-exp-empty-state" data-role="exp-empty-state">
@@ -55637,7 +55637,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	        encounter_action_label: isNewDraftMode ? 'Cancelar' : (hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : ''),
 	        encounter_action_mode: isNewDraftMode ? 'draft-cancel' : (hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''),
 	        draft_search_action_label: isNewDraftMode ? 'Buscar paciente' : '',
-	        active_close_action_label: hasPatientContext && !isNewDraftMode ? 'Cerrar expediente' : '',
+	        active_close_action_label: hasPatientContext && !isNewDraftMode ? 'Salir del expediente' : '',
 	        active_search_action_label: hasPatientContext && !isNewDraftMode ? 'Cambiar paciente' : ''
 	      }, {
         layout: 'shell',
