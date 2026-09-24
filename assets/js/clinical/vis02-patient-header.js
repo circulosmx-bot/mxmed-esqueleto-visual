@@ -9,6 +9,16 @@
     ['problems', 'Problemas activos', 'clinical_notes', 'Ver todos', '#t-problemas-longitudinal']
   ];
   function message(key, text) { host.querySelector(`[data-vis02-value="${key}"]`).textContent = text; }
+  function insideConsultation() {
+    return document.querySelector('#p-expediente .vis01-primary-navigation .nav-link.active')?.dataset.bsTarget === '#t-consulta-actual';
+  }
+  function syncConsultationCtaVisibility() {
+    const cta = host?.querySelector('[data-vis02-action="consulta"]');
+    if (!cta) return;
+    const hidden = insideConsultation();
+    cta.hidden = hidden;
+    cta.classList.toggle('d-none', hidden);
+  }
   function consultationState(state) {
     const cta = host.querySelector('[data-vis02-action="consulta"]');
     encounterState = state;
@@ -25,6 +35,7 @@
       cta.textContent = 'CONSULTAR ESTADO';
       cta.disabled = true;
     }
+    syncConsultationCtaVisibility();
   }
   function latestConsultation(text) {
     const target = host?.querySelector('[data-vis10b-last-consultation]');
@@ -49,6 +60,7 @@
     encounterState = 'unavailable';
     const cta = host.querySelector('[data-vis02-action="consulta"]');
     cta.textContent = 'CONSULTANDO…'; cta.disabled = true;
+    syncConsultationCtaVisibility();
     definitions.forEach(([key]) => message(key, 'Consultando…'));
     latestConsultation('Última consulta: Consultando…');
     const read = async suffix => {
@@ -116,9 +128,14 @@
     host.querySelector('.vis02-patient-id').textContent = `ID: ${data.patient_id || selected()}`;
     const reason = host.querySelector('.ne-rx-ch-reason');
     reason.classList.toggle('vis02-no-reason', !String(data.clinical_reason || '').trim());
+    syncConsultationCtaVisibility();
     if (patient !== selected()) { patient = selected(); refresh(); }
   };
   ['m7:encounter-started','m7:encounter-state-changed','mxmed:encounter-lifecycle','mxmed:encounter-changed'].forEach(name => window.addEventListener(name, refresh));
-  document.addEventListener('shown.bs.tab', event => { if (event.target.closest('#p-expediente [data-exp-tabs]')) refresh(); });
+  document.addEventListener('shown.bs.tab', event => {
+    if (!event.target.closest('#p-expediente [data-exp-tabs]')) return;
+    syncConsultationCtaVisibility();
+    refresh();
+  });
   document.addEventListener('close', event => { if (event.target.matches('#p-expediente dialog')) refresh(); }, true);
 })();
