@@ -265,23 +265,41 @@ function openGroup(group){
   localStorage.setItem('mxmed_menu_group', group);
 }
 
-function activateFirstSub(group){
+async function requestM7ExternalPanelNavigation(panelId, reason = 'sidebar_navigation'){
+  const destination = String(panelId || '').trim();
+  const expediente = document.getElementById('p-expediente');
+  if(!destination || destination === 'p-expediente' || !expediente || expediente.classList.contains('d-none')) return true;
+  const patientId = String(expediente.dataset.patientId || expediente.dataset.activePatientId || '').trim();
+  if(typeof window.mxmedM7RequestLeaveCurrentPatientContext === 'function'){
+    const allowed = await window.mxmedM7RequestLeaveCurrentPatientContext({ patientId, destination, reason });
+    if(!allowed) return false;
+  }
+  if(destination === 'p-ag-admin'){
+    if(typeof window.mxmedAgendaHandoffCurrentPatient !== 'function' || !(await window.mxmedAgendaHandoffCurrentPatient(patientId))) return false;
+  }
+  return true;
+}
+
+async function activateFirstSub(group){
   const first = document.querySelector(`.menu-sub[data-group="${group}"] .menu-sub-btn[data-panel]`);
-  if(!first) return;
+  if(!first) return false;
   const panelId = first.getAttribute('data-panel');
+  if(!(await requestM7ExternalPanelNavigation(panelId))) return false;
   $('.menu-sub-btn').removeClass('active');
   first.classList.add('active');
   showPanel(panelId);
   localStorage.setItem('mxmed_btn_'+group, panelId);
   localStorage.setItem('mxmed_last_panel', panelId);
+  return true;
 }
 
 /* Click en menú principal */
-$('.menu-main').on('click', function(){
+$('.menu-main').on('click', async function(){
   const panel = $(this).data('panel');   // panel directo
   const grp   = $(this).data('group');   // grupo acordeón
 
   if(panel){ // sin submenú: abrir panel directo
+    if(!(await requestM7ExternalPanelNavigation(panel))) return;
     $('.menu-sub').removeClass('open').slideUp(100);
     showPanel(panel);
     // activar este botón principal y desactivar los demás
@@ -296,7 +314,7 @@ $('.menu-main').on('click', function(){
       const currentChild = [...this.nextElementSibling.querySelectorAll('[data-panel]')].some(button=>button.dataset.panel===currentPanel?.id);
       openGroup(grp);
       // Reopening the current collapsed group reveals its active child.
-      if(!sb01SidebarCollapsed() || !currentChild) activateFirstSub(grp);
+      if(!sb01SidebarCollapsed() || !currentChild) await activateFirstSub(grp);
       if(sb01SidebarCollapsed()) sb01ToggleFlyout(this);
       return;
     }
@@ -311,7 +329,7 @@ $('.menu-main').on('click', function(){
       localStorage.removeItem('mxmed_menu_group');
     }else{
       openGroup(grp);
-      activateFirstSub(grp);
+      if(!(await activateFirstSub(grp))) return;
       $('.menu-main').removeClass('active');
       $(this).addClass('active');
     }
@@ -372,12 +390,13 @@ function showPanel(id){
     }
   }));
 }
-$('.menu-sub-btn').on('click', function(){
+$('.menu-sub-btn').on('click', async function(){
+  const id = $(this).data('panel');
+  if(id && !(await requestM7ExternalPanelNavigation(id))) return;
   $('.menu-sub-btn').removeClass('active');
   $(this).addClass('active');
   // limpiar activos en botones principales cuando se usa submenú
   $('.menu-main').removeClass('active');
-  const id = $(this).data('panel');
   if(id) showPanel(id);
   const grp = $(this).closest('.menu-sub').data('group');
   localStorage.setItem('mxmed_btn_'+grp, id);

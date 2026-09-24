@@ -43,6 +43,9 @@
   let sectionConflict = false;
   let sectionBaseline = '';
   let sectionVersion = null;
+  let transitionBusy = false;
+  let primaryTabBypass = false;
+  let authorizedPatientChange = '';
   const localDrafts = new Map();
   const ws03 = window.mxmedM7WS03?.(root, encounterUrlForWs03, ()=>patientId, ()=>{
     active = null;
@@ -134,17 +137,86 @@
     else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     return window.confirm('Tienes cambios clínicos sin guardar. Se conservará tu borrador en esta pestaña. ¿Deseas continuar?');
   }
-  function mayLeaveCurrentPatientContext(options = {}){
+  function eligibleCaptureIsDirty(){
+    return ['reason_evolution','measurements','physical_exam','assessment','plan'].includes(selectedSection) && isDirty();
+  }
+  async function saveEligibleCapture(){
+    if(!eligibleCaptureIsDirty()) return true;
+    if(transitionBusy || sectionBusy || ws03?.isBusy()) return false;
+    transitionBusy = true;
+    sectionButtons.forEach(button=>button.disabled = true);
+    try {
+      if(selectedSection === 'measurements' || selectedSection === 'physical_exam') return (await ws03?.saveSelected?.()) === true;
+      return (await saveSection()) === true;
+    } finally {
+      transitionBusy = false;
+      sectionButtons.forEach(button=>{ if(sectionTypes[button.dataset.m7Section]) button.disabled = false; });
+    }
+  }
+  function patientDisplayName(){
+    return String(patientPane.querySelector('.vis02-patient-name, [data-clinical-field="patient_name"]')?.textContent || 'este paciente').trim();
+  }
+  function ensureLeaveDialog(){
+    let modal = document.getElementById('m7-open-consultation-leave-modal');
+    if(modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'm7-open-consultation-leave-modal';
+    modal.className = 'modal fade';
+    modal.tabIndex = -1;
+    modal.setAttribute('aria-labelledby','m7-open-consultation-leave-title');
+    modal.setAttribute('aria-describedby','m7-open-consultation-leave-copy');
+    modal.setAttribute('aria-hidden','true');
+    modal.innerHTML = `<div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+      <div class="modal-header"><h2 class="modal-title fs-5" id="m7-open-consultation-leave-title">Consulta en curso</h2></div>
+      <div class="modal-body"><p id="m7-open-consultation-leave-copy"></p><p class="mb-0">¿Qué deseas hacer?</p></div>
+      <div class="modal-footer m7-leave-intent-actions">
+        <button type="button" class="btn btn-outline-secondary" data-m7-leave-choice="continue">Continuar aquí</button>
+        <button type="button" class="btn btn-outline-primary" data-m7-leave-choice="finalize">Ir a finalizar consulta</button>
+        <button type="button" class="btn btn-primary" data-m7-leave-choice="keep-open">Salir y mantener consulta en curso</button>
+      </div></div></div>`;
+    document.body.append(modal);
+    return modal;
+  }
+  function chooseExternalLeaveIntent(){
+    const modal = ensureLeaveDialog();
+    modal.querySelector('#m7-open-consultation-leave-copy').textContent = `La consulta de ${patientDisplayName()} permanecerá abierta.`;
+    return new Promise(resolve=>{
+      const instance = window.bootstrap?.Modal.getOrCreateInstance(modal,{backdrop:'static',keyboard:false});
+      let settled = false;
+      const finish = choice=>{
+        if(settled) return;
+        settled = true;
+        modal.removeEventListener('click', onClick);
+        instance?.hide();
+        resolve(choice);
+      };
+      const onClick = event=>{
+        const button = event.target.closest('[data-m7-leave-choice]');
+        if(button) finish(button.dataset.m7LeaveChoice);
+      };
+      modal.addEventListener('click', onClick);
+      instance?.show();
+    });
+  }
+  async function mayLeaveCurrentPatientContext(options = {}){
     const currentPatientId = selectedPatient();
-    const requestedPatientId = String(options.patientId || '').trim();
-    if(requestedPatientId && requestedPatientId !== currentPatientId) return true;
+    if(options.reason === 'change_patient' && authorizedPatientChange === currentPatientId){ authorizedPatientChange = ''; return true; }
     if(!active || String(active.status || '').toLowerCase() !== 'open') return true;
     if(String(active.patient_id || currentPatientId).trim() !== currentPatientId) return true;
     const activeKey = String(active.encounter_key || '').trim();
     if(!activeKey || String(body.dataset.encounterKey || '').trim() !== activeKey) return true;
-    if(!hasAnyUnsaved()) return true;
-    if(isDirty()) return protectNavigation();
-    return window.confirm('Tienes cambios clínicos sin guardar en esta consulta. Los borradores conservados permanecerán disponibles al regresar. ¿Deseas continuar?');
+    if((selectedSection === 'documents' || selectedSection === 'finalize') && isDirty() && !protectNavigation()) return false;
+    const choice = await chooseExternalLeaveIntent();
+    if(choice === 'continue') return false;
+    if(choice === 'finalize'){
+      if(eligibleCaptureIsDirty() && !(await saveEligibleCapture())) return false;
+      await openFinalizationStep();
+      return false;
+    }
+    if(choice !== 'keep-open') return false;
+    if(eligibleCaptureIsDirty() && !(await saveEligibleCapture())) return false;
+    if(options.reason === 'change_patient_landing') authorizedPatientChange = currentPatientId;
+    return true;
   }
   function sectionRow(type){ return loadedSections[type] || null; }
   function paintSection(){
@@ -250,7 +322,8 @@
   async function saveSection(){
     const key = body.dataset.encounterKey;
     const type = selectedSection;
-    if(sectionBusy || sectionConflict || sectionMode !== 'open' || !key || !isDirty()) return;
+    if(sectionBusy || sectionConflict || sectionMode !== 'open' || !key) return false;
+    if(!isDirty()) return true;
     const draft = editorText.value;
     const expectedVersion = sectionVersion;
     sectionBusy = true;
@@ -300,7 +373,7 @@
             : code === 'DOCUMENT_CONTEXT_MISMATCH' ? 'El contexto de la consulta cambió. Vuelve a abrirla antes de guardar.'
             : 'No se guardó la sección. Tu borrador se conserva.';
         }
-        return;
+        return false;
       }
       const row = result.data || {};
       loadedSections[type] = {
@@ -310,9 +383,11 @@
       clearDraft(key, type);
       paintSection();
       editorState.textContent = 'Guardado';
+      return true;
     } catch (_) {
       rememberDraft(key, type, draft);
       editorState.textContent = 'Sin conexión. Tu borrador se conserva; inténtalo de nuevo.';
+      return false;
     } finally {
       sectionBusy = false;
       if(key === body.dataset.encounterKey && type === selectedSection){
@@ -449,13 +524,21 @@
   });
   resumeButton.addEventListener('click', ()=>{ if(active) renderEncounter(active, false); });
   currentButton.addEventListener('click', ()=>{ if(active && protectNavigation()) renderEncounter(active, false); });
-  sectionButtons.forEach(button=>button.addEventListener('click', ()=>{
-    const type = sectionTypes[button.dataset.m7Section];
-    if(!type || button.disabled || type === selectedSection || sectionBusy || ws03?.isBusy() || ws04?.isBusy() || ws05?.isBusy() || !protectNavigation()) return;
+  async function transitionToSection(type){
+    if(!type || type === selectedSection || transitionBusy || sectionBusy || ws03?.isBusy() || ws04?.isBusy() || ws05?.isBusy()) return false;
+    if(eligibleCaptureIsDirty()){
+      if(!(await saveEligibleCapture())) return false;
+    } else if(!protectNavigation()) return false;
     selectedSection = type;
     sectionConflict = false;
     show(conflictBox, false);
     paintSection();
+    return true;
+  }
+  sectionButtons.forEach(button=>button.addEventListener('click', async ()=>{
+    const type = sectionTypes[button.dataset.m7Section];
+    if(!type || button.disabled) return;
+    await transitionToSection(type);
   }));
   editorText.addEventListener('input', ()=>{
     if(sectionMode !== 'open') return;
@@ -483,16 +566,24 @@
   const workspaceTab = patientPane.querySelector('[data-bs-target="#t-consulta-actual"]');
   let pendingEntryIntent = '';
   let workspaceEntryPromise = Promise.resolve();
-  function openFinalizationStep(){
+  async function openFinalizationStep(){
     if(!active || String(active.status || '').toLowerCase() !== 'open') return false;
+    if(!workspaceTab?.classList.contains('active')){
+      pendingEntryIntent = 'finalize';
+      window.bootstrap?.Tab.getOrCreateInstance(workspaceTab).show();
+      await Promise.resolve();
+      await workspaceEntryPromise;
+      return selectedSection === 'finalize' && workspaceTab.classList.contains('active');
+    }
     const button = root.querySelector('[data-m7-section="finalize"]');
     if(!button || button.disabled) return false;
     if(body.dataset.encounterKey !== String(active.encounter_key || '') || body.dataset.encounterState !== 'open'){
-      if(!protectNavigation()) return false;
+      if(eligibleCaptureIsDirty()){
+        if(!(await saveEligibleCapture())) return false;
+      } else if(!protectNavigation()) return false;
       renderEncounter(active, false);
     }
-    if(selectedSection !== 'finalize') button.click();
-    if(selectedSection !== 'finalize') return false;
+    if(selectedSection !== 'finalize' && !(await transitionToSection('finalize'))) return false;
     window.requestAnimationFrame(()=>{
       const panel = root.querySelector('[data-m7-terminal]');
       panel?.scrollIntoView({behavior:'smooth', block:'start'});
@@ -505,7 +596,7 @@
     await refresh({ openExisting:true });
     if(selectedPatient() !== id || !workspaceTab?.classList.contains('active') || root.classList.contains('d-none')) return;
     if(!active && intent === 'start' && !startButton.classList.contains('d-none')) startButton.click();
-    if(active && intent === 'finalize') openFinalizationStep();
+    if(active && intent === 'finalize') await openFinalizationStep();
   }
   ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>{
     window.addEventListener(name, ()=> workspaceTab?.classList.contains('active') ? enterCurrentConsultation() : refresh());
@@ -513,7 +604,8 @@
   // Header CTA reuses the workspace's explicit command and resume handlers.
   window.mxmedM7OpenFromHeader = async (id, intent) => {
     if (selectedPatient() !== id || !workspaceTab) return;
-    if (workspaceTab.classList.contains('active') && !protectNavigation()) return;
+    if (workspaceTab.classList.contains('active') && eligibleCaptureIsDirty() && !(await saveEligibleCapture())) return;
+    if (workspaceTab.classList.contains('active') && !eligibleCaptureIsDirty() && !protectNavigation()) return;
     if (workspaceTab.classList.contains('active')) return enterCurrentConsultation(intent);
     pendingEntryIntent = intent;
     window.bootstrap?.Tab.getOrCreateInstance(workspaceTab).show();
@@ -522,46 +614,35 @@
   };
   window.mxmedM7OpenFinalizationFromHeader = async id => {
     if(selectedPatient() !== id || !workspaceTab) return false;
-    if(workspaceTab.classList.contains('active')) return openFinalizationStep();
+    if(workspaceTab.classList.contains('active')) return await openFinalizationStep();
     pendingEntryIntent = 'finalize';
     window.bootstrap?.Tab.getOrCreateInstance(workspaceTab).show();
     if(!workspaceTab.classList.contains('active')) return false;
     await workspaceEntryPromise;
     return selectedSection === 'finalize';
   };
-  // VIS17: one shared decision point for every action that leaves this patient context.
+  // VIS19: save eligible capture before transitions and use one deliberate OPEN-leave decision.
   window.mxmedM7MayLeaveCurrentPatientContext = mayLeaveCurrentPatientContext;
-  document.addEventListener('click', event=>{
-    if(patientPane.classList.contains('d-none')) return;
-    const close = event.target.closest('[data-clinical-action="active-close"]');
-    if(close && !mayLeaveCurrentPatientContext({ patientId:selectedPatient(), reason:'leave_expediente' })){
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      return;
-    }
-    const nav = event.target.closest('.menu-main[data-panel], .menu-main[data-group], .menu-sub-btn[data-panel]');
-    if(!nav) return;
-    const targetPanel = String(nav.getAttribute('data-panel') || '').trim();
-    const targetGroup = String(nav.getAttribute('data-group') || '').trim();
-    const groupPanel = targetGroup
-      ? String(document.querySelector(`.menu-sub[data-group="${targetGroup}"] .menu-sub-btn[data-panel]`)?.getAttribute('data-panel') || '').trim()
-      : '';
-    const destination = targetPanel || groupPanel;
-    const visiblePanel = document.querySelector('#viewport > section[id^="p-"]:not(.d-none)')?.id || '';
-    const groupContainsVisiblePanel = targetGroup && !!document.querySelector(`.menu-sub[data-group="${targetGroup}"] [data-panel="${visiblePanel}"]`);
-    if(!destination || destination === 'p-expediente' || groupContainsVisiblePanel) return;
-    if(mayLeaveCurrentPatientContext({ patientId:selectedPatient(), reason:'sidebar_navigation' })) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-  }, true);
+  window.mxmedM7RequestLeaveCurrentPatientContext = mayLeaveCurrentPatientContext;
   workspaceTab?.addEventListener('shown.bs.tab', ()=>{
     const intent = pendingEntryIntent;
     pendingEntryIntent = '';
     workspaceEntryPromise = enterCurrentConsultation(intent);
   });
-  workspaceTab?.addEventListener('hide.bs.tab', event=>{ if(!protectNavigation()) event.preventDefault(); });
+  workspaceTab?.addEventListener('hide.bs.tab', event=>{
+    if(primaryTabBypass){ primaryTabBypass = false; return; }
+    if(eligibleCaptureIsDirty()){
+      event.preventDefault();
+      const destination = event.relatedTarget;
+      void saveEligibleCapture().then(saved=>{
+        if(!saved || !destination) return;
+        primaryTabBypass = true;
+        window.bootstrap?.Tab.getOrCreateInstance(destination).show();
+      });
+      return;
+    }
+    if(!protectNavigation()) event.preventDefault();
+  });
   new MutationObserver(()=>{ if(selectedPatient() !== patientId) workspaceTab?.classList.contains('active') ? enterCurrentConsultation() : refresh(); }).observe(patientPane, { attributes:true, attributeFilter:['data-patient-id','data-active-patient-id'] });
   refresh();
 })();

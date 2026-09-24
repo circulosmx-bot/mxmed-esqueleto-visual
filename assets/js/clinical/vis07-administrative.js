@@ -24,7 +24,7 @@
     const link = button(action, async () => {
       const patientId = patient();
       if (typeof window.mxmedM7MayLeaveCurrentPatientContext === 'function' &&
-          !window.mxmedM7MayLeaveCurrentPatientContext({ patientId, reason:target === 'p-ag-admin' ? 'admin_to_agenda' : 'admin_to_module' })) return;
+          !(await window.mxmedM7MayLeaveCurrentPatientContext({ patientId, destination:target, reason:target === 'p-ag-admin' ? 'admin_to_agenda' : 'admin_to_module' }))) return;
       if (target === 'p-ag-admin') {
         if (typeof window.mxmedAgendaHandoffCurrentPatient !== 'function' || !(await window.mxmedAgendaHandoffCurrentPatient(patientId))) return;
         if (typeof window.openGroup === 'function') window.openGroup('agenda');

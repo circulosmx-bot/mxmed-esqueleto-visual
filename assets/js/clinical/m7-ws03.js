@@ -239,8 +239,10 @@
       paintMeasurement(); paintExam();
     }
     async function saveMeasurement(event){
-      event.preventDefault();
-      if(mode!=='open'||busy||measurementLocked||!isDirty()||!form.reportValidity()) return;
+      event?.preventDefault();
+      if(mode!=='open'||busy||measurementLocked) return false;
+      if(!isDirty()) return true;
+      if(!form.reportValidity()) return false;
       const oldKey=key, oldPatient=patient, draft=measurementSnapshot();
       const row=selectedObservation, data=measurementPayload();
       if(!createKey){
@@ -258,6 +260,7 @@
         const saved=result.data;
         observations=[saved,...observations.filter(item=>Number(item.observation_id)!==Number(saved.observation_id))];
         fillMeasurement(saved); measurementNotice=result.meta?.idempotency_replay?'Guardado (reintento seguro)':'Guardado';
+        return true;
       }catch(error){
         setDraft('measurements',draft);
         if(error.code==='VERSION_CONFLICT'){
@@ -269,17 +272,19 @@
           measurementNotice='La consulta terminó. Tu borrador se conserva para copiarlo.';
           try{terminal(await reloadCurrent());}catch(_){terminal();}
         } else measurementNotice=error.code==='M6_WRITE_WINDOW_BLOCKED'?'Escrituras pausadas. Tu borrador se conserva.':error.code==='SCHEMA_NOT_READY'?'Esquema no disponible. Tu borrador se conserva.':'No se guardó. Tu borrador se conserva.';
+        return false;
       }finally{ busy=false; if(key===oldKey){paintMeasurement();paintExam();} }
     }
     async function saveExam(){
-      if(mode!=='open'||busy||examLocked||!isDirty()) return;
+      if(mode!=='open'||busy||examLocked) return false;
+      if(!isDirty()) return true;
       const draft=examSnapshot(); const oldKey=key, oldPatient=patient;
       const parsed=JSON.parse(draft), payload={systems:{}};
       for(const [name,item] of Object.entries(parsed)){
         if(item.state==='NOT_REVIEWED') continue;
         if(item.state==='ABNORMAL'&&!item.finding.trim()){
           examSystems.querySelector(`[data-m7-exam-system="${name}"] input`).focus();
-          examState.textContent='Describe cada hallazgo anormal antes de guardar.'; return;
+          examState.textContent='Describe cada hallazgo anormal antes de guardar.'; return false;
         }
         payload.systems[name]=item.state==='ABNORMAL'?{state:'ABNORMAL',finding:item.finding.trim()}:{state:'NORMAL'};
       }
@@ -292,6 +297,7 @@
         if(key!==oldKey||patient!==oldPatient||currentPatient()!==patient)return;
         loadedExam=result.data||{}; examVersion=Number(loadedExam.row_version);
         baselineExam=examSnapshot(); clearDraft('physical_exam'); examNotice='Guardado';
+        return true;
       }catch(error){
         setDraft('physical_exam',draft);
         if(error.code==='VERSION_CONFLICT'){
@@ -303,6 +309,7 @@
           examNotice='La consulta terminó. Tu borrador se conserva para copiarlo.';
           try{terminal(await reloadCurrent());}catch(_){terminal();}
         }else examNotice=error.code==='M6_WRITE_WINDOW_BLOCKED'?'Escrituras pausadas. Tu borrador se conserva.':error.code==='SCHEMA_NOT_READY'?'Esquema no disponible. Tu borrador se conserva.':'No se guardó. Tu borrador se conserva.';
+        return false;
       }finally{busy=false;if(key===oldKey){paintExam();paintMeasurement();}}
     }
     Object.entries(catalog).forEach(([name,[label]])=>{ const option=document.createElement('option');option.value=name;option.textContent=label;code.append(option); });
@@ -340,6 +347,7 @@
     });
     syncCode();
     return {load,select,reset,isDirty,remember,isBusy:()=>busy,
+      saveSelected:()=>selected==='measurements'?saveMeasurement():selected==='physical_exam'?saveExam():Promise.resolve(true),
       hasSavedDrafts:()=>!!key && (getDraft('measurements') !== null || getDraft('physical_exam') !== null)};
   };
 })();

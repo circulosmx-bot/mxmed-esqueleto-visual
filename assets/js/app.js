@@ -54780,7 +54780,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
     if(!next) return false;
     const current = String(getActivePatientId() || '').trim();
     if(current && next !== current && opts.skipM7DirtyGuard !== true && typeof window.mxmedM7MayLeaveCurrentPatientContext === 'function'){
-      const allowed = window.mxmedM7MayLeaveCurrentPatientContext({ patientId:current, reason:'change_patient' });
+      const allowed = await window.mxmedM7MayLeaveCurrentPatientContext({ patientId:current, targetPatientId:next, reason:'change_patient' });
       if(!allowed) return false;
     }
     if(opts.preserveCompletionHub !== true){
@@ -56873,7 +56873,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	  };
 
 	  if(expClinicalContext){
-	    expClinicalContext.addEventListener('click', (ev)=>{
+	    expClinicalContext.addEventListener('click', async (ev)=>{
 	      const emptyAction = ev.target.closest('[data-exp-empty-action]');
       if(emptyAction){
         ev.preventDefault();
@@ -56912,11 +56912,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 	      }
 	      if(activeCloseTrigger){
 	        ev.preventDefault();
+	        if(typeof window.mxmedM7RequestLeaveCurrentPatientContext === 'function' &&
+	          !(await window.mxmedM7RequestLeaveCurrentPatientContext({patientId:getActivePatientId(),reason:'leave_expediente'}))) return;
 	        closeActivePatientContext('active_header_close');
 	        return;
 	      }
 	      if(activeSearchTrigger){
 	        ev.preventDefault();
+	        if(typeof window.mxmedM7RequestLeaveCurrentPatientContext === 'function' &&
+	          !(await window.mxmedM7RequestLeaveCurrentPatientContext({patientId:getActivePatientId(),reason:'change_patient_landing'}))) return;
 	        openContextualChangeLanding();
 	        return;
 	      }

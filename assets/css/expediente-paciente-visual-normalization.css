@@ -2002,3 +2002,27 @@
     white-space:normal;
   }
 }
+
+/* VIS19 — explicit OPEN-consultation leave intent. */
+#m7-open-consultation-leave-modal .modal-content {
+  border:1px solid #b9dce3;
+  border-radius:16px;
+  box-shadow:0 16px 44px rgba(5,60,76,.18);
+}
+#m7-open-consultation-leave-modal .modal-header {
+  border-bottom-color:#d8eaee;
+  background:#edf8fa;
+  color:#064f69;
+}
+#m7-open-consultation-leave-modal .m7-leave-intent-actions {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+#m7-open-consultation-leave-modal [data-m7-leave-choice="keep-open"] {
+  grid-column:1/-1;
+}
+@media (max-width:575.98px) {
+  #m7-open-consultation-leave-modal .m7-leave-intent-actions {grid-template-columns:1fr}
+  #m7-open-consultation-leave-modal [data-m7-leave-choice="keep-open"] {grid-column:auto}
+}
