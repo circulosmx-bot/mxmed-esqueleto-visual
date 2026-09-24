@@ -2145,3 +2145,176 @@
     text-align:right;
   }
 }
+
+/* VIS22 — Consultation is a progression, distinct from the primary Expediente tabs. */
+#p-expediente #m7-workspace .m7-workspace-sections {
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:6px;
+  margin-bottom:10px;
+  padding:2px 4px 4px;
+  overflow:visible;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button {
+  position:relative;
+  z-index:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:4px;
+  min-width:0;
+  min-height:58px;
+  padding:2px 4px 8px;
+  overflow:visible;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  color:#315b70;
+  text-align:center;
+  font-size:12px;
+  font-weight:600;
+  line-height:1.15;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  top:15px;
+  left:50%;
+  width:calc(100% + 6px);
+  border-top:1px solid #b9d9df;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button:last-child::before {
+  display:none;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button::after {
+  content:"";
+  position:absolute;
+  right:24%;
+  bottom:1px;
+  left:24%;
+  height:3px;
+  border-radius:999px;
+  background:transparent;
+}
+#p-expediente #m7-workspace .m7-workspace-sections .vis04-step-number {
+  position:relative;
+  z-index:1;
+  display:grid;
+  flex:0 0 28px;
+  width:28px;
+  height:28px;
+  place-items:center;
+  border:1px solid #b9d9df;
+  border-radius:50%;
+  background:#e7f3f5;
+  color:#315b70;
+  font-size:12px;
+  font-weight:750;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button:not(:disabled):hover,
+#p-expediente #m7-workspace .m7-workspace-sections button:not(:disabled):focus-visible {
+  border:0;
+  background:transparent;
+  color:#07536e;
+  box-shadow:none;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button:not(:disabled):hover .vis04-step-number,
+#p-expediente #m7-workspace .m7-workspace-sections button:not(:disabled):focus-visible .vis04-step-number {
+  border-color:#5dbac4;
+  background:#d9f0f2;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button:focus-visible {
+  outline:2px solid #078d99;
+  outline-offset:2px;
+  border-radius:6px;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button[aria-current="true"] {
+  border:0;
+  background:transparent;
+  color:#06536e;
+  font-weight:800;
+  box-shadow:none;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button[aria-current="true"]::after {
+  background:#08a9b5;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button[aria-current="true"] .vis04-step-number,
+#p-expediente #m7-workspace .m7-workspace-sections button[aria-current="true"]:not(:disabled):hover .vis04-step-number,
+#p-expediente #m7-workspace .m7-workspace-sections button[aria-current="true"]:not(:disabled):focus-visible .vis04-step-number {
+  border-color:#078d99;
+  background:#078d99;
+  color:#fff;
+  box-shadow:0 1px 4px rgba(7,141,153,.22);
+}
+
+/* VIS22 — subtle visual focus; no overlay and no interaction changes. */
+body.exp-consultation-focus-active .mx-global-header,
+body.exp-consultation-focus-active .mm-sidebar,
+body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader,
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr,
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation {
+  transition:opacity .16s ease,filter .16s ease;
+}
+body.exp-consultation-focus-active .mx-global-header,
+body.exp-consultation-focus-active .mm-sidebar,
+body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader {
+  opacity:.86;
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr {
+  filter:saturate(.86) brightness(1.035);
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation {
+  opacity:.9;
+  filter:saturate(.88);
+}
+body.exp-consultation-focus-active .mx-global-header:is(:hover,:focus-within),
+body.exp-consultation-focus-active .mm-sidebar:is(:hover,:focus-within),
+body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader:is(:hover,:focus-within),
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr:is(:hover,:focus-within),
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation:is(:hover,:focus-within) {
+  opacity:1;
+  filter:none;
+}
+body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"] {
+  color:#064f69;
+  background:#e8f6f8;
+}
+body.exp-consultation-focus-active #m7-workspace,
+body.exp-consultation-focus-active #m7-workspace .vis04-context {
+  opacity:1;
+  filter:none;
+}
+@media (max-width:1199.98px) {
+  #p-expediente #m7-workspace .m7-workspace-sections {
+    display:flex;
+    gap:4px;
+    padding:3px 2px 6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+  }
+  #p-expediente #m7-workspace .m7-workspace-sections button {
+    flex:0 0 126px;
+    min-height:62px;
+  }
+  #p-expediente #m7-workspace .m7-workspace-sections button::before {
+    width:130px;
+  }
+}
+@media (max-width:575.98px) {
+  #p-expediente #m7-workspace .m7-workspace-sections button {
+    flex-basis:112px;
+    min-height:64px;
+    font-size:11px;
+  }
+  #p-expediente #m7-workspace .m7-workspace-sections button::before {
+    width:116px;
+  }
+}

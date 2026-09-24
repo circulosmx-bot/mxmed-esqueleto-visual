@@ -5,6 +5,7 @@
   if (!root || !pane) return;
   const body = root.querySelector('[data-m7-body]');
   const steps = [...root.querySelectorAll('[data-m7-section]')];
+  const consultationTab = pane.querySelector('[data-bs-target="#t-consulta-actual"]');
   const previous = root.querySelector('[data-vis04-prev]');
   const next = root.querySelector('[data-vis04-next]');
   const progress = root.querySelector('[data-vis04-progress]');
@@ -22,6 +23,13 @@
     finalize: ['Finalizar','Cierre de la consulta','Revisa la atención antes de finalizar o anular.']
   };
   const currentIndex = () => steps.findIndex(button => button.getAttribute('aria-current') === 'true');
+  function syncFocusMode() {
+    const active = body.dataset.encounterState === 'open'
+      && !body.classList.contains('d-none')
+      && consultationTab?.classList.contains('active')
+      && !pane.classList.contains('d-none');
+    document.body.classList.toggle('exp-consultation-focus-active', !!active);
+  }
   function syncStep() {
     const index = currentIndex();
     previous.disabled = index <= 0;
@@ -47,7 +55,11 @@
   previous.addEventListener('click', () => advance(-1));
   next.addEventListener('click', () => advance(1));
   new MutationObserver(syncStep).observe(root.querySelector('.m7-workspace-sections'), {subtree:true,attributes:true,attributeFilter:['aria-current','disabled']});
+  new MutationObserver(syncFocusMode).observe(body, {attributes:true,attributeFilter:['class','data-encounter-state']});
+  new MutationObserver(syncFocusMode).observe(pane, {attributes:true,attributeFilter:['class']});
+  if (consultationTab) new MutationObserver(syncFocusMode).observe(consultationTab, {attributes:true,attributeFilter:['class','aria-selected']});
   syncStep();
+  syncFocusMode();
   let identity = '', epoch = 0;
   const selected = () => String(pane.dataset.patientId || pane.dataset.activePatientId || '').trim();
   const text = (key, value) => { root.querySelector(`[data-vis04-context="${key}"]`).textContent = value; };
@@ -96,7 +108,10 @@
   }
   new MutationObserver(refreshContext).observe(body, {attributes:true,attributeFilter:['class','data-encounter-key']});
   document.addEventListener('shown.bs.tab', () => {
+    syncFocusMode();
     if (root.getClientRects().length) { identity = ''; refreshContext(); }
   });
+  document.addEventListener('hidden.bs.tab', syncFocusMode);
+  ['m7:encounter-started','m7:encounter-state-changed','mxmed:encounter-lifecycle','mxmed:encounter-changed'].forEach(name => window.addEventListener(name, syncFocusMode));
   refreshContext();
 })();
