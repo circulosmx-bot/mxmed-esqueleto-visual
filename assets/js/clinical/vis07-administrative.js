@@ -21,8 +21,16 @@
   const editorNav = el('div', '', 'vis07-editor-nav'); editorNav.append(back, hint);
   function moduleCard(label, copy, action, target) {
     const card = el('section', '', 'vis07-card');
-    const link = button(action, () => {
-      document.querySelector(`[data-panel="${target}"]`)?.click();
+    const link = button(action, async () => {
+      const patientId = patient();
+      if (typeof window.mxmedM7MayLeaveCurrentPatientContext === 'function' &&
+          !window.mxmedM7MayLeaveCurrentPatientContext({ patientId, reason:target === 'p-ag-admin' ? 'admin_to_agenda' : 'admin_to_module' })) return;
+      if (target === 'p-ag-admin') {
+        if (typeof window.mxmedAgendaHandoffCurrentPatient !== 'function' || !(await window.mxmedAgendaHandoffCurrentPatient(patientId))) return;
+        if (typeof window.openGroup === 'function') window.openGroup('agenda');
+      }
+      if (typeof window.jumpTo === 'function') window.jumpTo(target);
+      else document.querySelector(`[data-panel="${target}"]`)?.click();
       if (target === 'p-facturacion' && !document.getElementById(target)?.classList.contains('d-none')) document.querySelector('[data-bs-target="#cfdi-pacientes"]')?.click();
     });
     card.append(el('h4', label), el('p', copy), link); return card;

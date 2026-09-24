@@ -4241,6 +4241,8 @@ console.info('app.js loaded :: 20251123a');
   let createActivePatientMode = 'manual';
   let createPatientMode = '';
   let activePatientContextId = '';
+  let agendaPatientHandoffId = '';
+  let agendaPatientHandoffName = '';
   let weeklyHoursExpanded = false;
   let visibleScheduleRange = null;
   let consultorioScheduleVisibleRange = null;
@@ -9624,6 +9626,45 @@ console.info('app.js loaded :: 20251123a');
       patientDetailsCache.set(safePatientId, null);
       return null;
     }
+  };
+  const ensureAgendaPatientHandoffNotice = ()=>{
+    if(!els.agendaFrontendV1) return null;
+    let notice = els.agendaFrontendV1.querySelector('#ag_patient_handoff_notice');
+    if(notice) return notice;
+    notice = document.createElement('div');
+    notice.id = 'ag_patient_handoff_notice';
+    notice.className = 'alert alert-primary d-none mx-3 mt-3 mb-2';
+    notice.setAttribute('role', 'status');
+    els.agendaFrontendV1.prepend(notice);
+    return notice;
+  };
+  const renderAgendaPatientHandoff = ()=>{
+    const notice = ensureAgendaPatientHandoffNotice();
+    if(!notice) return;
+    const currentPatientId = resolveActivePatientId();
+    const valid = !!agendaPatientHandoffId && agendaPatientHandoffId === currentPatientId;
+    if(!valid){
+      agendaPatientHandoffId = '';
+      agendaPatientHandoffName = '';
+      notice.classList.add('d-none');
+      notice.textContent = '';
+      return;
+    }
+    const strong = document.createElement('strong');
+    strong.textContent = 'Paciente del expediente: ';
+    notice.replaceChildren(strong, document.createTextNode(`${agendaPatientHandoffName || 'Paciente'} · ID ${agendaPatientHandoffId}. Seleccionado para la próxima cita que abras.`));
+    notice.classList.remove('d-none');
+  };
+  window.mxmedAgendaHandoffCurrentPatient = async patientId =>{
+    const requestedPatientId = sanitizeText(patientId || '');
+    const currentPatientId = resolveActivePatientId();
+    if(!requestedPatientId || requestedPatientId !== currentPatientId) return false;
+    const detail = await fetchPatientDetailById(requestedPatientId);
+    agendaPatientHandoffId = requestedPatientId;
+    agendaPatientHandoffName = sanitizeText(detail?.display_name || detail?.nombre_completo || detail?.name || '');
+    renderAgendaPatientHandoff();
+    syncActivePatientPrompt();
+    return true;
   };
   const applyExistingPatientSelection = async ({ patientId = '', patientName = '', birthdate = '' } = {})=>{
     const safePatientId = sanitizeText(patientId || '');
@@ -19440,11 +19481,22 @@ console.info('app.js loaded :: 20251123a');
   };
   const syncActivePatientPrompt = ()=>{
     activePatientContextId = resolveActivePatientId();
-    if(!els.activePatientBox || !els.activePatientText) return;
-    // UX Agenda Nueva cita: no sugerir paciente activo en este flujo.
+    const useHandoff = !!agendaPatientHandoffId && agendaPatientHandoffId === activePatientContextId;
+    if(agendaPatientHandoffId && !useHandoff){
+      agendaPatientHandoffId = '';
+      agendaPatientHandoffName = '';
+    }
+    renderAgendaPatientHandoff();
+    if(!els.activePatientBox || !els.activePatientText) return useHandoff;
+    if(useHandoff){
+      els.activePatientText.textContent = `Paciente del expediente: ${agendaPatientHandoffName || activePatientContextId}.`;
+      els.activePatientBox.classList.remove('d-none');
+      return true;
+    }
     els.activePatientBox.classList.add('d-none');
     setActivePatientMode('manual');
     clearCreatePatientBehaviorNotice();
+    return false;
   };
   const resetCreateForm = ()=>{
     createWaitlistContext = null;
@@ -19456,7 +19508,7 @@ console.info('app.js loaded :: 20251123a');
     });
     setCreateError('');
     clearCreatePatientBehaviorNotice();
-    syncActivePatientPrompt();
+    const usePatientHandoff = syncActivePatientPrompt();
     switchCreatePatientMode(null);
     if(els.patientId){
       els.patientId.value = '';
@@ -19520,6 +19572,11 @@ console.info('app.js loaded :: 20251123a');
     }
     createRequestInFlight = false;
     applyCreateFlowMode('appointment');
+    if(usePatientHandoff){
+      switchCreatePatientMode('existing');
+      setActivePatientMode('active');
+      setPatientSearchMsg(`Paciente seleccionado: ${agendaPatientHandoffName || activePatientContextId}`, 'success');
+    }
   };
   const syncCreateStartInfoFromDate = (dateValue, endDateValue = null)=>{
     const date = dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue || '');
@@ -54721,10 +54778,14 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
   const setActivePatientId = async (pid, opts = {})=>{
     const next = String(pid || '').trim();
     if(!next) return false;
+    const current = String(getActivePatientId() || '').trim();
+    if(current && next !== current && opts.skipM7DirtyGuard !== true && typeof window.mxmedM7MayLeaveCurrentPatientContext === 'function'){
+      const allowed = window.mxmedM7MayLeaveCurrentPatientContext({ patientId:current, reason:'change_patient' });
+      if(!allowed) return false;
+    }
     if(opts.preserveCompletionHub !== true){
       clearClinicalCompletionHub('set_active_patient');
     }
-    const current = String(getActivePatientId() || '').trim();
     const source = String(opts.source || '').trim();
     const isSearchOpen = source === 'search_open';
     const shouldSuppressAutoEncounterContext = opts.suppressEncounterAutoContext === true;

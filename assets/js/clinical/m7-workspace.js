@@ -134,6 +134,18 @@
     else rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     return window.confirm('Tienes cambios clínicos sin guardar. Se conservará tu borrador en esta pestaña. ¿Deseas continuar?');
   }
+  function mayLeaveCurrentPatientContext(options = {}){
+    const currentPatientId = selectedPatient();
+    const requestedPatientId = String(options.patientId || '').trim();
+    if(requestedPatientId && requestedPatientId !== currentPatientId) return true;
+    if(!active || String(active.status || '').toLowerCase() !== 'open') return true;
+    if(String(active.patient_id || currentPatientId).trim() !== currentPatientId) return true;
+    const activeKey = String(active.encounter_key || '').trim();
+    if(!activeKey || String(body.dataset.encounterKey || '').trim() !== activeKey) return true;
+    if(!hasAnyUnsaved()) return true;
+    if(isDirty()) return protectNavigation();
+    return window.confirm('Tienes cambios clínicos sin guardar en esta consulta. Los borradores conservados permanecerán disponibles al regresar. ¿Deseas continuar?');
+  }
   function sectionRow(type){ return loadedSections[type] || null; }
   function paintSection(){
     const ws03Selected = selectedSection === 'measurements' || selectedSection === 'physical_exam';
@@ -517,6 +529,33 @@
     await workspaceEntryPromise;
     return selectedSection === 'finalize';
   };
+  // VIS17: one shared decision point for every action that leaves this patient context.
+  window.mxmedM7MayLeaveCurrentPatientContext = mayLeaveCurrentPatientContext;
+  document.addEventListener('click', event=>{
+    if(patientPane.classList.contains('d-none')) return;
+    const close = event.target.closest('[data-clinical-action="active-close"]');
+    if(close && !mayLeaveCurrentPatientContext({ patientId:selectedPatient(), reason:'leave_expediente' })){
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+    const nav = event.target.closest('.menu-main[data-panel], .menu-main[data-group], .menu-sub-btn[data-panel]');
+    if(!nav) return;
+    const targetPanel = String(nav.getAttribute('data-panel') || '').trim();
+    const targetGroup = String(nav.getAttribute('data-group') || '').trim();
+    const groupPanel = targetGroup
+      ? String(document.querySelector(`.menu-sub[data-group="${targetGroup}"] .menu-sub-btn[data-panel]`)?.getAttribute('data-panel') || '').trim()
+      : '';
+    const destination = targetPanel || groupPanel;
+    const visiblePanel = document.querySelector('#viewport > section[id^="p-"]:not(.d-none)')?.id || '';
+    const groupContainsVisiblePanel = targetGroup && !!document.querySelector(`.menu-sub[data-group="${targetGroup}"] [data-panel="${visiblePanel}"]`);
+    if(!destination || destination === 'p-expediente' || groupContainsVisiblePanel) return;
+    if(mayLeaveCurrentPatientContext({ patientId:selectedPatient(), reason:'sidebar_navigation' })) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  }, true);
   workspaceTab?.addEventListener('shown.bs.tab', ()=>{
     const intent = pendingEntryIntent;
     pendingEntryIntent = '';
