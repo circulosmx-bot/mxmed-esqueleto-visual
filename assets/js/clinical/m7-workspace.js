@@ -104,7 +104,7 @@
   }
   function setCurrentEncounterHeader(detail){
     const safe = String(detail || '').trim();
-    status.textContent = safe ? `· ${safe}` : '';
+    status.textContent = safe;
   }
   async function hydrateLinkedAppointmentHeader(encounter, token){
     const appointmentId = String(encounter?.appointment_id || '').trim();

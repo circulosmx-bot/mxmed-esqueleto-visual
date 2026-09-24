@@ -2554,3 +2554,323 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
     opacity:.86;
   }
 }
+
+/* VIS23 — denser consultation header, stronger focus separation, and larger progression. */
+#p-expediente #m7-workspace .m7-workspace-head {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+}
+#p-expediente #m7-workspace .vis23-workspace-context-line {
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:baseline;
+  gap:0 12px;
+  min-width:0;
+}
+#p-expediente #m7-workspace .m7-workspace-head h3 {
+  flex:0 0 auto;
+  margin:0;
+  color:#064f69;
+  font-size:1.36rem;
+  font-weight:820;
+  line-height:1.1;
+  letter-spacing:.012em;
+  white-space:nowrap;
+}
+#p-expediente #m7-workspace .vis23-appointment-meta {
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+  color:#285a70;
+}
+#p-expediente #m7-workspace .vis23-appointment-icon {
+  display:none;
+  flex:0 0 auto;
+  font-size:1.28rem;
+  line-height:1;
+}
+#p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) .vis23-appointment-icon {
+  display:inline-flex;
+}
+#p-expediente #m7-workspace .m7-workspace-status {
+  margin:0;
+  color:#285a70;
+  font-size:1.35rem;
+  font-weight:620;
+  line-height:1.12;
+  white-space:nowrap;
+}
+#p-expediente #m7-workspace .vis21-step-context {
+  display:flex;
+  flex:1 1 auto;
+  align-items:baseline;
+  justify-content:flex-start;
+  gap:8px;
+  min-width:0;
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+}
+#p-expediente #m7-workspace:has([data-m7-body].d-none) .vis21-step-context {
+  display:none;
+}
+#p-expediente #m7-workspace .vis21-step-copy {
+  display:flex;
+  flex:1 1 auto;
+  align-items:baseline;
+  gap:0 10px;
+  min-width:0;
+}
+#p-expediente #m7-workspace .vis21-step-heading {
+  display:contents;
+}
+#p-expediente #m7-workspace .vis21-step-heading h4,
+#p-expediente #m7-workspace .vis21-step-heading span,
+#p-expediente #m7-workspace .vis21-step-copy p {
+  position:relative;
+  margin:0;
+  padding-left:11px;
+  line-height:1.2;
+  white-space:nowrap;
+}
+#p-expediente #m7-workspace .vis21-step-heading h4::before,
+#p-expediente #m7-workspace .vis21-step-heading span::before,
+#p-expediente #m7-workspace .vis21-step-copy p::before {
+  content:"";
+  position:absolute;
+  top:.16em;
+  bottom:.16em;
+  left:0;
+  width:1px;
+  background:#a9cad2;
+}
+#p-expediente #m7-workspace .vis21-step-heading h4 {
+  flex:0 0 auto;
+  color:#07536e;
+  font-size:.95rem;
+  font-weight:780;
+}
+#p-expediente #m7-workspace .vis21-step-heading span {
+  flex:0 1 auto;
+  color:#3f6577;
+  font-size:.78rem;
+  font-weight:650;
+}
+#p-expediente #m7-workspace .vis21-step-copy p {
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  color:#617681;
+  font-size:.76rem;
+  text-overflow:ellipsis;
+}
+#p-expediente #m7-workspace .vis21-step-state {
+  flex:0 0 auto;
+}
+#p-expediente #m7-workspace .m7-workspace-actions {
+  align-self:center;
+}
+#p-expediente #m7-workspace .m7-workspace-body {
+  margin-top:8px;
+}
+#p-expediente #m7-workspace .m7-workspace-sections {
+  gap:6px;
+  margin-bottom:10px;
+  padding-top:3px;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button {
+  gap:5px;
+  min-height:68px;
+  padding:2px 4px 8px;
+  font-size:12.5px;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button::before {
+  top:19px;
+  border-top-width:3px;
+}
+#p-expediente #m7-workspace .m7-workspace-sections .vis04-step-number {
+  flex-basis:35px;
+  width:35px;
+  height:35px;
+  font-size:15px;
+}
+
+/* VIS23 — all content above the accepted cut remains present and interactive, with lower visual weight. */
+body.exp-consultation-focus-active .mx-global-header {
+  opacity:.58;
+  filter:saturate(.38) brightness(.7);
+}
+body.exp-consultation-focus-active .mm-sidebar {
+  opacity:.64;
+  filter:saturate(.42) brightness(.68);
+}
+body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader {
+  opacity:.6;
+  filter:saturate(.34) brightness(.66);
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr {
+  background:#253d4e;
+  box-shadow:0 4px 12px rgba(3,29,44,.08);
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .exp-patient-photo-slot,
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .ne-rx-ch-top {
+  opacity:.5;
+  filter:saturate(.46) brightness(.84);
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card {
+  opacity:.46;
+  filter:saturate(.4) brightness(.84);
+  border-color:#bfc9cc;
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis16-consultation-card.vis16-consultation-open {
+  opacity:.72;
+  filter:saturate(.58) brightness(.9);
+  border-color:#8fbfc8;
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation {
+  background:rgba(177,194,199,.84);
+  border-color:rgba(102,137,145,.68);
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link {
+  opacity:.5;
+  filter:saturate(.42) brightness(.86);
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active {
+  opacity:.6;
+  filter:saturate(.48) brightness(.84);
+}
+
+@media (max-width:1199.98px) {
+  #p-expediente #m7-workspace .m7-workspace-head {
+    grid-template-columns:1fr auto;
+    align-items:start;
+  }
+  #p-expediente #m7-workspace .vis23-workspace-context-line {
+    flex-wrap:wrap;
+    row-gap:5px;
+  }
+  #p-expediente #m7-workspace .vis21-step-context {
+    flex-basis:100%;
+  }
+  #p-expediente #m7-workspace .vis21-step-heading h4 {
+    padding-left:0;
+  }
+  #p-expediente #m7-workspace .vis21-step-heading h4::before {
+    display:none;
+  }
+}
+@media (min-width:820px) and (max-width:1199.98px) {
+  body.exp-consultation-focus-active .mx-global-header,
+  body.exp-consultation-focus-active .mm-sidebar,
+  body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader {
+    opacity:.68;
+    filter:saturate(.5) brightness(.76);
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr {
+    background:#2c485a;
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .exp-patient-photo-slot,
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .ne-rx-ch-top,
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card {
+    opacity:.6;
+    filter:saturate(.54) brightness(.88);
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis16-consultation-card.vis16-consultation-open {
+    opacity:.78;
+    filter:saturate(.66) brightness(.92);
+  }
+  body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link {
+    opacity:.58;
+    filter:saturate(.5) brightness(.88);
+  }
+  body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active {
+    opacity:.68;
+  }
+}
+@media (max-width:819.98px) {
+  #p-expediente #m7-workspace .m7-workspace-head {
+    grid-template-columns:1fr;
+  }
+  #p-expediente #m7-workspace .vis23-workspace-context-line {
+    gap:5px 9px;
+  }
+  #p-expediente #m7-workspace .m7-workspace-head h3 {
+    font-size:1.18rem;
+  }
+  #p-expediente #m7-workspace .m7-workspace-status {
+    font-size:1rem;
+  }
+  #p-expediente #m7-workspace .vis23-appointment-icon {
+    font-size:1.05rem;
+  }
+  #p-expediente #m7-workspace .vis21-step-copy {
+    flex-wrap:wrap;
+    gap:3px 8px;
+  }
+  #p-expediente #m7-workspace .vis21-step-heading span,
+  #p-expediente #m7-workspace .vis21-step-copy p {
+    white-space:normal;
+  }
+  #p-expediente #m7-workspace .vis21-step-copy p {
+    flex-basis:100%;
+    overflow:visible;
+    padding-left:0;
+    text-overflow:clip;
+  }
+  #p-expediente #m7-workspace .vis21-step-copy p::before {
+    display:none;
+  }
+  #p-expediente #m7-workspace .m7-workspace-actions {
+    width:100%;
+  }
+  body.exp-consultation-focus-active .mx-global-header,
+  body.exp-consultation-focus-active .mm-sidebar,
+  body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader {
+    opacity:.74;
+    filter:saturate(.64) brightness(.84);
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr {
+    background:#315367;
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .exp-patient-photo-slot,
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .ne-rx-ch-top,
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card {
+    opacity:.7;
+    filter:saturate(.68) brightness(.92);
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis16-consultation-card.vis16-consultation-open {
+    opacity:.84;
+    filter:saturate(.76) brightness(.96);
+  }
+  body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link {
+    opacity:.7;
+    filter:saturate(.66) brightness(.92);
+  }
+  body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active {
+    opacity:.78;
+  }
+}
+@media (max-width:575.98px) {
+  #p-expediente #m7-workspace .vis21-step-context {
+    align-items:flex-start;
+  }
+  #p-expediente #m7-workspace .vis21-step-copy {
+    display:flex;
+  }
+  #p-expediente #m7-workspace .vis21-step-heading {
+    display:contents;
+  }
+  #p-expediente #m7-workspace .vis21-step-heading h4,
+  #p-expediente #m7-workspace .vis21-step-heading span {
+    display:block;
+    margin:0;
+  }
+  #p-expediente #m7-workspace .vis21-step-state > .m7-section-editor-state {
+    max-width:105px;
+  }
+}

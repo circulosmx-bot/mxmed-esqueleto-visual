@@ -63,6 +63,7 @@
     stepTitle.textContent = copy[0];
     stepDescriptor.textContent = copy[1];
     stepHelper.textContent = copy[2];
+    stepHelper.title = copy[2];
     label.textContent = copy[1];
     const editor = root.querySelector('[data-m7-editor-text]');
     editor.setAttribute('aria-labelledby', 'vis21-step-title');
