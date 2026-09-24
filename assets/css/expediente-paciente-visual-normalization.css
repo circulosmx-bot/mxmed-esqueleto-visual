@@ -2906,21 +2906,21 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   padding:5px 12px;
 }
 
-/* VIS26 — decorative OPEN indicator; status and text remain authoritative. */
+/* VIS27 R1 — larger decorative dot with a continuous soft fade. */
 #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"]::before,
 #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title::before {
   content:"";
-  flex:0 0 6px;
-  width:6px;
-  height:6px;
-  margin-inline-end:7px;
+  flex:0 0 7.5px;
+  width:7.5px;
+  height:7.5px;
+  margin-inline-end:5.5px;
   border-radius:50%;
   background-color:#fff;
-  animation:vis26-open-dot-pulse 2.2s ease-in-out infinite;
+  animation:vis26-open-dot-pulse 2s ease-in-out infinite;
 }
 @keyframes vis26-open-dot-pulse {
-  0%, 100% { opacity:.72; transform:scale(.88); }
-  50% { opacity:1; transform:scale(1); }
+  0%, 100% { opacity:.3; transform:scale(.92); }
+  50% { opacity:1; transform:scale(1.08); }
 }
 @media (prefers-reduced-motion: reduce) {
   #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"]::before,
@@ -2931,19 +2931,19 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   }
 }
 
-/* VIS27 — a background-only sheen stays inside the radius and behind the text. */
+/* VIS27 R1 — stronger background sheen stays inside the radius and behind the text. */
 #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"],
 body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"],
 #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title {
-  background-image:linear-gradient(105deg, transparent, rgba(255,255,255,.2) 50%, transparent);
-  background-size:32% 100%;
+  background-image:linear-gradient(105deg, transparent, rgba(255,255,255,.4) 50%, transparent);
+  background-size:36% 100%;
   background-repeat:no-repeat;
-  background-position:-50% 0;
+  background-position:-65% 0;
   animation:vis27-open-chip-sheen 2.8s ease-in-out infinite;
 }
 @keyframes vis27-open-chip-sheen {
-  0%, 12% { background-position:-50% 0; }
-  88%, 100% { background-position:150% 0; }
+  0%, 12% { background-position:-65% 0; }
+  88%, 100% { background-position:165% 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"],
