@@ -2890,7 +2890,7 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   align-items:center;
   justify-content:center;
   border-radius:8px;
-  background-color:#00f0ff;
+  background-color:#09C9DA;
   color:#fff;
   font-weight:850;
   text-shadow:0 1px 1px rgba(0,68,86,.72);
@@ -2904,4 +2904,29 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
 #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title {
   min-height:32px;
   padding:5px 12px;
+}
+
+/* VIS26 — decorative OPEN indicator; status and text remain authoritative. */
+#p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"]::before,
+#p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title::before {
+  content:"";
+  flex:0 0 6px;
+  width:6px;
+  height:6px;
+  margin-inline-end:7px;
+  border-radius:50%;
+  background-color:#fff;
+  animation:vis26-open-dot-pulse 2.2s ease-in-out infinite;
+}
+@keyframes vis26-open-dot-pulse {
+  0%, 100% { opacity:.72; transform:scale(.88); }
+  50% { opacity:1; transform:scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"]::before,
+  #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title::before {
+    animation:none;
+    opacity:1;
+    transform:none;
+  }
 }
