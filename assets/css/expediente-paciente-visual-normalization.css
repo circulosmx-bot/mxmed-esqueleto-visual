@@ -2318,3 +2318,112 @@ body.exp-consultation-focus-active #m7-workspace .vis04-context {
     width:116px;
   }
 }
+
+/* VIS22-R1 — strengthen the visual hierarchy without changing focus authority. */
+body.exp-consultation-focus-active #p-expediente #m7-workspace {
+  position:relative;
+  z-index:1;
+  border-color:#8fcbd4;
+  background:#fff;
+  box-shadow:0 14px 34px rgba(9,65,88,.14),0 3px 8px rgba(9,65,88,.08);
+  transition:border-color .16s ease,box-shadow .16s ease;
+}
+body.exp-consultation-focus-active .mx-global-header {
+  opacity:.76;
+  filter:saturate(.76);
+}
+body.exp-consultation-focus-active .mm-sidebar {
+  opacity:.78;
+  filter:saturate(.78);
+}
+body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader {
+  opacity:.76;
+  filter:saturate(.72);
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr {
+  opacity:1;
+  filter:none;
+  background:#3d6b8f;
+  box-shadow:0 8px 18px rgba(6,54,83,.11);
+  transition:background-color .16s ease,box-shadow .16s ease;
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .exp-patient-photo-slot,
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .ne-rx-ch-top {
+  opacity:.8;
+  transition:opacity .16s ease;
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card {
+  opacity:.76;
+  filter:saturate(.78);
+  border-color:#d7e4e8;
+  box-shadow:none;
+  transition:opacity .16s ease,filter .16s ease,border-color .16s ease;
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis16-consultation-card.vis16-consultation-open {
+  opacity:.96;
+  filter:none;
+  border-color:#b9dde3;
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation {
+  opacity:1;
+  filter:none;
+  background:rgba(224,243,246,.68);
+  border-color:rgba(158,205,215,.58);
+  transition:background-color .16s ease,border-color .16s ease;
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link {
+  opacity:.74;
+  filter:saturate(.7);
+  transition:opacity .16s ease,filter .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active {
+  opacity:.82;
+  filter:saturate(.76);
+}
+body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link:is(:hover,:focus-visible) {
+  opacity:1;
+  filter:none;
+}
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .exp-patient-photo-slot:is(:hover,:focus-within),
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .ne-rx-ch-top:is(:hover,:focus-within),
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card:is(:hover,:focus-within) {
+  opacity:1;
+  filter:none;
+}
+@media (max-width:819.98px) {
+  body.exp-consultation-focus-active .mx-global-header,
+  body.exp-consultation-focus-active .mm-sidebar,
+  body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader {
+    opacity:.86;
+  }
+  body.exp-consultation-focus-active .mx-global-header,
+  body.exp-consultation-focus-active .mm-sidebar {
+    filter:saturate(.86);
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .mx-panel-subheader {
+    filter:saturate(.84);
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr {
+    background:#31648b;
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .exp-patient-photo-slot,
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .ne-rx-ch-top,
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card {
+    opacity:.86;
+    filter:saturate(.88);
+  }
+  body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis16-consultation-card.vis16-consultation-open {
+    opacity:.98;
+    filter:none;
+  }
+  body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link {
+    opacity:.86;
+    filter:saturate(.86);
+  }
+  body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active {
+    opacity:.9;
+  }
+  body.exp-consultation-focus-active #p-expediente #m7-workspace {
+    box-shadow:0 9px 22px rgba(9,65,88,.11),0 2px 6px rgba(9,65,88,.07);
+  }
+}
