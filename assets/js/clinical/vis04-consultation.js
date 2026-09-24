@@ -22,13 +22,36 @@
     documents: ['Documentos / Acciones','Documentos y acciones clínicas','Adjunta documentos o ejecuta acciones relacionadas con esta consulta.'],
     finalize: ['Finalizar','Cierre de la consulta','Revisa la atención antes de finalizar o anular.']
   };
+  let focusWasActive = false, focusScrollToken = 0;
   const currentIndex = () => steps.findIndex(button => button.getAttribute('aria-current') === 'true');
+  function consultationStartIsComfortablyVisible() {
+    const rect = root.getBoundingClientRect();
+    const compact = matchMedia('(max-width:819.98px)').matches;
+    const minimumTop = compact ? 8 : 64;
+    const maximumTop = compact ? Math.min(innerHeight * .24, 170) : Math.min(innerHeight * .28, 250);
+    const usefulBottom = Math.min(innerHeight * .62, compact ? 440 : 540);
+    return rect.top >= minimumTop && rect.top <= maximumTop && rect.bottom >= usefulBottom;
+  }
+  function positionActiveConsultation() {
+    const token = ++focusScrollToken;
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+        if (token !== focusScrollToken
+          || !document.body.classList.contains('exp-consultation-focus-active')
+          || !root.getClientRects().length
+          || consultationStartIsComfortablyVisible()) return;
+        const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+        root.scrollIntoView({behavior, block:'start', inline:'nearest'});
+      }, 180)));
+  }
   function syncFocusMode() {
     const active = body.dataset.encounterState === 'open'
       && !body.classList.contains('d-none')
       && consultationTab?.classList.contains('active')
       && !pane.classList.contains('d-none');
     document.body.classList.toggle('exp-consultation-focus-active', !!active);
+    if (active && !focusWasActive) positionActiveConsultation();
+    if (!active) focusScrollToken++;
+    focusWasActive = !!active;
   }
   function syncStep() {
     const index = currentIndex();
