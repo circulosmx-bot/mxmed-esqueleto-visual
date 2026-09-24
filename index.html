@@ -5415,7 +5415,6 @@
                 <section class="m7-workspace" id="m7-workspace" aria-labelledby="m7-workspace-title">
                   <div class="m7-workspace-head">
                     <div>
-                      <p class="m7-workspace-eyebrow">Paciente · Consulta</p>
                       <h3 id="m7-workspace-title">Consulta actual</h3>
                       <p class="m7-workspace-status" data-m7-status role="status" aria-live="polite">Selecciona un paciente para consultar su atención.</p>
                     </div>
@@ -5462,11 +5461,11 @@
                         <span class="m7-section-editor-state" data-m7-editor-state role="status" aria-live="polite"></span>
                       </div>
                       <label class="m7-section-editor-label" for="m7-section-text" data-vis04-editor-label>Contenido de la consulta</label>
-                      <p class="vis04-helper d-none" id="vis04-reason-help">Motivo de consulta: describe la razón de atención. Evolución / padecimiento actual: registra síntomas y cambios relevantes en el mismo campo.</p><textarea id="m7-section-text" data-m7-editor-text rows="6" aria-describedby="vis04-reason-help"></textarea>
+                      <p class="vis04-helper d-none" id="vis04-reason-help">Motivo de atención, síntomas y evolución relevante.</p><textarea id="m7-section-text" data-m7-editor-text rows="6" aria-describedby="vis04-reason-help"></textarea>
                       <div class="m7-section-editor-actions">
                         <button type="button" class="btn btn-primary" data-m7-editor-save>Guardar sección</button>
                         <button type="button" class="btn btn-outline-primary d-none" data-lon04b-m7-promote>Agregar a problemas</button>
-                        <button type="button" class="btn btn-outline-primary" data-lon06b-m7-follow-up>Crear seguimiento</button>
+                        <button type="button" class="btn btn-link vis12-follow-up-action" data-lon06b-m7-follow-up>Crear seguimiento</button>
                       </div>
                       <div class="m7-section-conflict d-none" data-m7-conflict role="alert">
                         <strong data-m7-conflict-title></strong>
@@ -5516,7 +5515,7 @@
                     </section>
                     <nav class="vis04-progression" aria-label="Avanzar por la consulta"><button type="button" class="btn btn-outline-secondary" data-vis04-prev>Anterior</button><span data-vis04-progress aria-live="polite"></span><button type="button" class="btn btn-outline-primary" data-vis04-next>Siguiente</button></nav>
                     <p class="vis04-helper">Guardar conserva el contenido. Sólo “Finalizar consulta” cierra la atención; salir de esta pantalla no la finaliza.</p>
-                    </div><aside class="vis04-context" aria-labelledby="vis04-context-title"><h4 id="vis04-context-title">Contexto clínico</h4><p class="vis04-helper">Información longitudinal actual · Sólo lectura</p><section><h5>Alergias</h5><p data-vis04-context="allergies">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-antecedentes-longitudinal">Ver alergias</button></section><section><h5>Problemas activos</h5><p data-vis04-context="problems">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-problemas-longitudinal">Ver problemas</button></section><section><h5>Medicación actual</h5><p data-vis04-context="medications">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-medicamentos-longitudinal">Ver medicación</button></section><section><h5>Pendientes clínicos</h5><p data-vis04-context="tasks">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-tareas-longitudinal">Ver seguimiento</button></section><section><h5>Última consulta</h5><p data-vis04-context="recent">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-historial-atencion">Ver historial</button></section></aside></div>
+                    </div><aside class="vis04-context" aria-labelledby="vis04-context-title"><h4 id="vis04-context-title">Contexto clínico</h4><p class="vis04-helper">Información longitudinal actual · Sólo lectura</p><div class="vis12-review-cue d-none" data-vis12-review-cue role="status"><strong>Información del paciente pendiente de revisar</strong><span data-vis12-review-cue-items></span></div><section><h5>Alergias</h5><p data-vis04-context="allergies">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-antecedentes-longitudinal">Ver alergias</button></section><section><h5>Problemas activos</h5><p data-vis04-context="problems">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-problemas-longitudinal">Ver problemas</button></section><section><h5>Medicación actual</h5><p data-vis04-context="medications">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-medicamentos-longitudinal">Ver medicación</button></section><section><h5>Pendientes clínicos</h5><p data-vis04-context="tasks">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-tareas-longitudinal">Ver seguimiento</button></section><section><h5>Última consulta</h5><p data-vis04-context="recent">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-historial-atencion">Ver historial</button></section></aside></div>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history hidden>
                     <h4>Consultas anteriores</h4>
@@ -10688,7 +10687,7 @@
 <script src="assets/js/clinical/m7-ws04.js?v=m7ws04"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=vis04-r1"></script>
 <script src="assets/js/clinical/m7-workspace.js?v=vis04-r1"></script>
-<script src="assets/js/clinical/vis04-consultation.js?v=vis04"></script>
+<script src="assets/js/clinical/vis04-consultation.js?v=vis12"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=vis05"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=vis10d"></script>

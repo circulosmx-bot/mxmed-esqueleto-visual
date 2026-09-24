@@ -190,6 +190,7 @@
       const detail = Object.prototype.hasOwnProperty.call(encounter, 'sections') && Object.prototype.hasOwnProperty.call(encounter, 'observations')
         ? encounter : await get(encounterUrl(key));
       if(seen !== sectionEpoch || key !== body.dataset.encounterKey || String(detail.patient_id || '') !== patientId) return;
+      body.dataset.encounterId = String(detail.encounter_id || body.dataset.encounterId || '').trim();
       loadedSections = detail.sections && typeof detail.sections === 'object' ? detail.sections : {};
       sectionMode = String(detail.status || '').toLowerCase() === 'open' ? 'open' : 'terminal';
       ws03?.load(detail, key, sectionMode);
@@ -337,8 +338,9 @@
     show(currentButton, historical && !!active);
     show(resumeButton, false);
     show(startButton, false);
-    context.textContent = `${historical ? 'Consulta histórica' : 'Consulta actual'} · ${label}${when ? ` · ${when}` : ''}${encounter.appointment_id ? ' · Vinculada a cita' : ''}`;
-    status.textContent = historical ? 'Consulta histórica de sólo lectura.' : 'Consulta activa de este paciente.';
+    const contextLine = `${label}${when ? ` · ${when}` : ''}${encounter.appointment_id ? ' · Vinculada a cita' : ''}`;
+    context.textContent = contextLine;
+    status.textContent = historical ? `Sólo lectura · ${contextLine}` : contextLine;
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
     body.dataset.encounterId = String(encounter.encounter_id || '').trim();
     body.dataset.encounterState = state;

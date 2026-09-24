@@ -1692,3 +1692,129 @@
     min-height:0;
   }
 }
+
+/* VIS12: compact Step 1 while keeping encounter and longitudinal authorities distinct. */
+#m7-workspace .m7-workspace-head {
+  align-items:center;
+}
+#m7-workspace .m7-workspace-head h3 {
+  margin-bottom:2px;
+}
+#m7-workspace .m7-workspace-status {
+  font-size:13px;
+  line-height:1.25;
+}
+#m7-workspace .m7-workspace-body {
+  margin-top:5px;
+  padding-top:0;
+  border-top:0;
+}
+#m7-workspace .m7-workspace-context {
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+#m7-workspace .m7-workspace-sections {
+  gap:3px;
+  margin-bottom:7px;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button {
+  min-height:34px;
+  gap:5px;
+  padding:4px 5px;
+  font-size:12px;
+  line-height:1.15;
+}
+#m7-workspace .vis04-step-number {
+  flex-basis:22px;
+  height:22px;
+}
+#m7-workspace .m7-section-editor {
+  padding:10px 12px;
+}
+#m7-workspace .m7-section-editor-head {
+  align-items:center;
+  margin-bottom:5px;
+}
+#m7-workspace .m7-section-editor-meta {
+  font-size:12px;
+}
+#m7-workspace .vis04-helper {
+  margin:3px 0 6px;
+}
+#m7-workspace:has([data-m7-section="reason"][aria-current="true"]) [data-m7-editor-text] {
+  height:118px;
+  min-height:118px;
+}
+#m7-workspace [data-m7-editor] > .m7-section-editor-actions {
+  align-items:center;
+  margin-top:7px;
+}
+#m7-workspace .vis12-follow-up-action {
+  min-height:34px;
+  padding:5px 7px;
+  color:#426477;
+  font-weight:500;
+  text-decoration:none;
+}
+#m7-workspace .vis12-follow-up-action:hover {
+  color:#06536e;
+  text-decoration:underline;
+}
+#m7-workspace .vis04-progression {
+  margin:7px 0 3px;
+}
+#m7-workspace .vis04-capture > .vis04-helper:last-child {
+  margin-top:3px;
+  font-size:12px;
+}
+#m7-workspace .vis04-context {
+  padding:10px 12px;
+}
+#m7-workspace .vis04-context > .vis04-helper {
+  margin:2px 0 5px;
+}
+#m7-workspace .vis04-context section {
+  padding:6px 0;
+}
+#m7-workspace .vis04-context .btn-link {
+  min-height:28px;
+  padding:2px 0;
+}
+#m7-workspace .vis12-review-cue {
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  margin:2px 0 5px;
+  padding:7px 9px;
+  border:1px solid #e8cf91;
+  border-radius:8px;
+  background:#fff9e9;
+  color:#624d19;
+  font-size:12px;
+  line-height:1.3;
+}
+@media(max-width:1199.98px) {
+  #p-expediente #m7-workspace .m7-workspace-sections button {
+    min-height:40px;
+  }
+}
+@media(max-width:575.98px) {
+  #m7-workspace .m7-workspace-head {
+    align-items:stretch;
+  }
+  #p-expediente #m7-workspace .m7-workspace-sections button,
+  #m7-workspace .vis12-follow-up-action {
+    min-height:44px;
+  }
+  #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) [data-m7-editor-text] {
+    height:144px;
+    min-height:144px;
+  }
+}

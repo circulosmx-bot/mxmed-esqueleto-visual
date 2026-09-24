@@ -17,7 +17,8 @@
     next.disabled = index < 0 || index === steps.length - 1;
     progress.textContent = index < 0 ? '' : `Paso ${index + 1} de 7`;
     const reason = steps[index]?.dataset.m7Section === 'reason';
-    label.textContent = reason ? 'Motivo de consulta / Evolución o padecimiento actual' : 'Contenido de la consulta';
+    label.textContent = reason ? 'Registro de motivo y evolución' : 'Contenido de la consulta';
+    label.classList.toggle('visually-hidden', reason);
     reasonHelp.classList.toggle('d-none', !reason);
     const editor = root.querySelector('[data-m7-editor-text]');
     if (reason) editor.setAttribute('aria-describedby', 'vis04-reason-help');
@@ -38,6 +39,18 @@
   const selected = () => String(pane.dataset.patientId || pane.dataset.activePatientId || '').trim();
   const text = (key, value) => { root.querySelector(`[data-vis04-context="${key}"]`).textContent = value; };
   const brief = (rows, title, empty) => rows.length ? title(rows[0]) + (rows.length > 1 ? ` · + ${rows.length - 1} más` : '') : empty;
+  const reviewCue = root.querySelector('[data-vis12-review-cue]');
+  const reviewCueItems = root.querySelector('[data-vis12-review-cue-items]');
+  function paintReviewCue(antecedents, allergies, medications, problems) {
+    const pending = [];
+    const antecedentStates = antecedents.status === 'fulfilled' ? Object.values(antecedents.value.knowledge_state_by_category || {}) : [];
+    if (antecedentStates.some(state => ['UNKNOWN','NEEDS_REVIEW'].includes(String(state)))) pending.push('Antecedentes');
+    if (allergies.status === 'fulfilled' && !['CONFIRMED_NONE','REVIEWED_WITH_ALLERGIES'].includes(String(allergies.value.knowledge_state || 'UNKNOWN'))) pending.push('Alergias');
+    if (medications.status === 'fulfilled' && ['UNKNOWN','UNREVIEWED','NEEDS_REVIEW'].includes(String(medications.value.knowledge_state || ''))) pending.push('Medicación');
+    if (problems.status === 'fulfilled' && ['UNKNOWN','UNREVIEWED','NEEDS_REVIEW'].includes(String(problems.value.knowledge_state || ''))) pending.push('Problemas');
+    reviewCueItems.textContent = pending.join(' · ');
+    reviewCue.classList.toggle('d-none', pending.length === 0);
+  }
   async function refreshContext() {
     const patient = selected(), key = body.dataset.encounterKey || '';
     const nextIdentity = body.classList.contains('d-none') ? '' : `${patient}:${key}`;
@@ -52,8 +65,9 @@
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result.data || {};
     };
-    const [allergies,problems,medications,tasks,recent] = await Promise.allSettled(['longitudinal/allergies','longitudinal/problems','longitudinal/medications','longitudinal/tasks','longitudinal-summary'].map(read));
+    const [antecedents,allergies,problems,medications,tasks,recent] = await Promise.allSettled(['longitudinal/antecedents','longitudinal/allergies','longitudinal/problems','longitudinal/medications','longitudinal/tasks','longitudinal-summary'].map(read));
     if (run !== epoch || selected() !== patient || body.dataset.encounterKey !== key) return;
+    paintReviewCue(antecedents, allergies, medications, problems);
     if (allergies.status !== 'fulfilled') text('allergies','Estado no disponible.');
     else {
       const a = allergies.value;
