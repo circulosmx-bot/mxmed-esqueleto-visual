@@ -1872,3 +1872,133 @@
   color:#053c4c;
   background:#e3f5f7;
 }
+
+/* VIS18 — Proposal A: shared tab language with explicit level hierarchy. */
+.mx-panel-tabs.mx-panel-tabs-list {
+  gap:7px;
+  padding:8px;
+  border:1px solid #c7e3e8;
+  border-radius:14px;
+  background:#edf8fa;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+.mx-panel-tabs.mx-panel-tabs-list .nav-link.mx-panel-tabs-link {
+  border:1px solid #c8dfe5;
+  border-radius:10px;
+  background:#fff;
+  color:#123f56;
+  box-shadow:0 1px 2px rgba(7,59,90,.04);
+}
+.mx-panel-tabs.mx-panel-tabs-list .nav-link.mx-panel-tabs-link:hover,
+.mx-panel-tabs.mx-panel-tabs-list .nav-link.mx-panel-tabs-link:focus-visible {
+  border-color:#87cdd6;
+  background:#f7fcfd;
+  color:#07536e;
+}
+.mx-panel-tabs.mx-panel-tabs-list .nav-link.mx-panel-tabs-link.active {
+  border-color:#007e8b;
+  background:#008f9c;
+  color:#fff;
+  box-shadow:0 2px 6px rgba(0,126,142,.16);
+}
+
+#p-expediente [data-exp-tabs].vis01-primary-navigation {
+  gap:7px;
+  margin-bottom:12px!important;
+  padding:8px;
+  border:1px solid #c4e1e6;
+  border-radius:14px;
+  background:#e8f6f8;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+}
+#p-expediente [data-exp-tabs].vis01-primary-navigation .mm-tabs-row {
+  gap:7px;
+}
+#p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link {
+  border:1px solid #c8dfe5;
+  border-radius:10px;
+  background:#fff;
+  color:#123f56;
+  box-shadow:0 1px 2px rgba(7,59,90,.04);
+}
+#p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link:not(.active):hover,
+#p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link:not(.active):focus-visible {
+  border-color:#85cbd4;
+  background:#f8fcfd;
+  color:#07536e;
+}
+#p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active,
+#p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active:hover,
+#p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.active:focus,
+#p-expediente [data-exp-tabs].vis01-primary-navigation .nav-link.vis01-context-active {
+  border-color:#007e8b!important;
+  background:#008f9c!important;
+  color:#fff!important;
+  box-shadow:0 2px 7px rgba(0,126,142,.18);
+}
+
+#p-expediente #m7-workspace .m7-workspace-sections,
+#p-expediente .vis01-secondary-links {
+  gap:6px;
+  padding:6px;
+  border:1px solid #d5e8ec;
+  border-radius:12px;
+  background:#f1f8fa;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.82);
+}
+#p-expediente #m7-workspace .m7-workspace-sections {
+  margin-bottom:10px;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button,
+#p-expediente .vis01-secondary-links .btn {
+  border:1px solid #d1e2e7;
+  border-radius:9px;
+  background:#fff;
+  color:#36586a;
+  box-shadow:none;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button:not(:disabled):hover,
+#p-expediente #m7-workspace .m7-workspace-sections button:not(:disabled):focus-visible,
+#p-expediente .vis01-secondary-links .btn:hover,
+#p-expediente .vis01-secondary-links .btn:focus-visible {
+  border-color:#9acfd6;
+  background:#f8fcfd;
+  color:#07536e;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button[aria-current="true"],
+#p-expediente .vis01-secondary-links .btn:is(.active,[aria-current="true"]) {
+  border-color:#78c5ce;
+  background:#dff3f5;
+  color:#06536e;
+  font-weight:750;
+  box-shadow:inset 0 -2px #36aeba;
+}
+#p-expediente #m7-workspace .m7-workspace-sections button[aria-current="true"] .vis04-step-number {
+  background:#078d99;
+  color:#fff;
+}
+
+@media (max-width:1199.98px) {
+  #p-expediente [data-exp-tabs].vis01-primary-navigation {
+    scrollbar-color:#9bcfd6 transparent;
+    scrollbar-width:thin;
+  }
+  #p-expediente #m7-workspace .m7-workspace-sections {
+    scrollbar-color:#b2d7dc transparent;
+    scrollbar-width:thin;
+  }
+}
+@media (max-width:575.98px) {
+  #p-expediente [data-exp-tabs].vis01-primary-navigation {
+    padding:6px;
+  }
+  #p-expediente .vis01-secondary-links {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  #p-expediente .vis01-secondary-links .btn {
+    width:100%;
+    min-width:0;
+    white-space:normal;
+  }
+}
