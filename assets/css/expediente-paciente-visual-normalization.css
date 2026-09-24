@@ -2930,3 +2930,26 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
     transform:none;
   }
 }
+
+/* VIS27 — a background-only sheen stays inside the radius and behind the text. */
+#p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"],
+body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"],
+#p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title {
+  background-image:linear-gradient(105deg, transparent, rgba(255,255,255,.2) 50%, transparent);
+  background-size:32% 100%;
+  background-repeat:no-repeat;
+  background-position:-50% 0;
+  animation:vis27-open-chip-sheen 2.8s ease-in-out infinite;
+}
+@keyframes vis27-open-chip-sheen {
+  0%, 12% { background-position:-50% 0; }
+  88%, 100% { background-position:150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"],
+  body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.vis16-consultation-open [data-vis02-value="consulta"],
+  #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title {
+    animation:none;
+    background-image:none;
+  }
+}
