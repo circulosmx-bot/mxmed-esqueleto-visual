@@ -17,7 +17,6 @@
     const measurementState = q('[data-m7-measurements-state]');
     const measurementList = q('[data-m7-measurements-list]');
     const priorList = q('[data-vis29-prior]');
-    const reuseContext = q('[data-vis29-reuse-context]');
     const formTitle = q('[data-vis29-form-title]');
     let priorEpoch=0, priorRows=[], reuseCandidate=null, lastCode='blood_pressure', noticeTimer=0, createPending=false;
     const measurementConflict = q('[data-m7-measurement-conflict]');
@@ -161,12 +160,15 @@
       rows.forEach(row=>{
         const dates=dateParts(row);
         const line=document.createElement('div');line.className='vis29-reading';
+        const priorSelected=prior&&!!reuseCandidate&&String(row.observation_id)===String(reuseCandidate.observation_id)&&String(row.encounter_key)===String(reuseCandidate.encounter_key);
+        line.classList.toggle('vis29-prior-selected',priorSelected);
         const name=document.createElement('span');name.textContent=catalog[row.code]?.[0]||row.code;
         const val=document.createElement('strong');val.textContent=reading(row);
         const timeLabel=document.createElement('small');timeLabel.textContent=[dates.day,dates.time].filter(Boolean).join(' · ');
         line.append(name,val,timeLabel);
         if(mode==='open'){
           const button=document.createElement('button');button.type='button';button.className='btn btn-link';button.textContent=prior?'Usar valor':'Editar';button.disabled=busy||measurementLocked||createPending;
+          if(prior)button.setAttribute('aria-pressed',String(priorSelected));
           button.setAttribute('aria-label',`${button.textContent}: ${name.textContent} · ${val.textContent}`);
           button.addEventListener('click',()=>{
             if(!canReplaceCapture()) return;
@@ -197,10 +199,8 @@
     function paintMeasurement(){
       renderRows(measurementList,observations);
       if(priorRows.length)renderRows(priorList,priorRows,true);
-      formTitle.textContent=selectedObservation?'Editar medición':'Registrar medición';
-      reuseContext.hidden=!reuseCandidate;
-      reuseContext.textContent=reuseCandidate?`Valor anterior seleccionado: ${catalog[reuseCandidate.code]?.[0]} · ${reading(reuseCandidate)} · ${dateParts(reuseCandidate).day}. Revisa el origen y registra una nueva medición en esta consulta.`:'';
-      measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'');
+      formTitle.textContent=selectedObservation?'Editar medición':'Registrar valores';
+      measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':'');
       [...form.elements].forEach(control=>{ control.disabled=mode!=='open'||busy||measurementLocked||createPending; });
       source.querySelector('option[value="import"]').disabled=!selectedObservation;
       const save=q('[data-m7-measurement-save]'),cancel=q('[data-m7-measurement-new]');
@@ -259,7 +259,7 @@
       if(type==='physical_exam') paintExam();
     }
     function reset(){
-      ++priorEpoch;priorRows=[];reuseCandidate=null;clearTimeout(noticeTimer);createPending=false;
+      ++priorEpoch;priorRows=[];reuseCandidate=null;priorList.replaceChildren();clearTimeout(noticeTimer);createPending=false;
       key=''; patient=''; mode='none'; selected=''; observations=[]; selectedObservation=null;
       createKey=''; measurementNotice=''; examNotice='';
       hide(measurementPanel,false); hide(examPanel,false);

@@ -3133,3 +3133,19 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   #p-expediente #m7-workspace .vis29-register:has([data-m7-measurement-pressure-label]:not(.d-none)) label:first-child {grid-column:1}
   #p-expediente #m7-workspace .vis29-register [data-m7-measurement-pressure-label] {grid-column:2}
 }
+
+/* VIS29-R3 — compact source/capture row; selection is only a loaded prior value. */
+#p-expediente #m7-workspace .vis29-prior-selected {background:#eaf9fa;border-radius:6px;box-shadow:inset 3px 0 #009bad}
+#p-expediente #m7-workspace .vis29-prior-selected > span,
+#p-expediente #m7-workspace .vis29-prior-selected > small {padding-left:6px}
+#p-expediente #m7-workspace .vis29-register {padding:12px}
+#p-expediente #m7-workspace .vis29-register .vis29-description {margin-bottom:8px}
+#p-expediente #m7-workspace .vis29-register .m7-measurement-fields {gap:8px}
+#p-expediente #m7-workspace .vis29-register .m7-section-editor-actions {margin-top:12px}
+#p-expediente #m7-workspace .vis29-capture-details {grid-column:1 / -1;display:flex;flex-direction:column;gap:8px;min-width:0}
+#p-expediente #m7-workspace .vis29-capture-details > label {flex:1;min-width:0}
+@media(min-width:1200px){
+  #p-expediente #m7-workspace .vis29-prior,
+  #p-expediente #m7-workspace .vis29-register {align-self:stretch}
+  #p-expediente #m7-workspace .vis29-capture-details {flex-direction:row;align-items:end}
+}

@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis29-r2">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis29-r3">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5491,15 +5491,16 @@
                     <div class="m7-section-editor d-none" data-m7-measurements>
                       <section class="vis29-prior" aria-labelledby="vis29-prior-title"><h5 id="vis29-prior-title"><span class="material-symbols-rounded" aria-hidden="true">history</span>Últimos valores registrados</h5><p class="vis29-description">Selecciona un valor para usarlo en esta consulta.</p><div data-vis29-prior></div></section>
                       <form class="vis29-register" data-m7-measurements-form>
-                        <div class="vis29-form-heading"><span class="material-symbols-rounded" aria-hidden="true">add_circle</span><h5 data-vis29-form-title>Registrar medición</h5></div><p class="vis29-description">Completa o edita la información de la medición.</p>
-                        <p class="vis29-reuse-context" data-vis29-reuse-context role="status" hidden></p>
+                        <div class="vis29-form-heading"><span class="material-symbols-rounded" aria-hidden="true">add_circle</span><h5 data-vis29-form-title>Registrar valores</h5></div><p class="vis29-description">Completa o edita la información de la medición.</p>
                         <div class="m7-measurement-fields">
                           <label>Medición<select data-m7-measurement-code required></select></label>
                           <label data-m7-measurement-value-label>Valor<input data-m7-measurement-value type="number" step="any" min="0" required></label>
                           <label class="d-none" data-m7-measurement-pressure-label>Presión sistólica / diastólica<div class="m7-pressure-inputs"><input data-m7-measurement-systolic type="number" step="any" min="0" aria-label="Presión sistólica"><input data-m7-measurement-diastolic type="number" step="any" min="0" aria-label="Presión diastólica"></div></label>
                           <label>Unidad<input data-m7-measurement-unit readonly></label>
+                          <div class="vis29-capture-details">
                           <label>Fecha y hora de medición<input data-m7-measurement-time type="datetime-local" required></label>
                           <label>Origen<select data-m7-measurement-source required><option value="">Selecciona el origen</option><option value="direct_measurement">Medición directa</option><option value="patient_report">Informado por el paciente</option><option value="import">Importado</option></select></label>
+                          </div>
                         </div>
                         <span class="m7-section-editor-state vis29-save-state" data-m7-measurements-state role="status" aria-live="polite"></span>
                         <div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-measurement-new>Cancelar captura</button><button type="submit" class="btn btn-primary" data-m7-measurement-save>Agregar a esta consulta</button></div>
@@ -10694,7 +10695,7 @@
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis16"></script>
 <script src="assets/js/app.js?v=vis19"></script>
-<script src="assets/js/clinical/m7-ws03.js?v=vis29-r2"></script>
+<script src="assets/js/clinical/m7-ws03.js?v=vis29-r3"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=vis21"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=vis29-r2"></script>
 <script src="assets/js/clinical/m7-workspace.js?v=vis29-r2"></script>
