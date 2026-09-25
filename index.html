@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis27-r1">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis28">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5425,7 +5425,6 @@
                           <p id="vis21-step-helper" data-vis21-step-helper>Motivo de atención, síntomas o evolución.</p>
                         </div>
                         <div class="vis21-step-state" aria-live="polite">
-                          <span class="m7-section-editor-state" data-m7-editor-state role="status"></span>
                           <span class="m7-section-editor-state" data-m7-measurements-state role="status"></span>
                           <span class="m7-section-editor-state" data-m7-exam-state role="status"></span>
                           <span class="m7-section-editor-state" data-m7-doc-state role="status"></span>
@@ -5469,8 +5468,11 @@
                     <div class="m7-section-editor d-none" data-m7-editor>
                       <label class="m7-section-editor-label visually-hidden" for="m7-section-text" data-vis04-editor-label>Contenido de la consulta</label>
                       <textarea id="m7-section-text" data-m7-editor-text rows="6" aria-describedby="vis21-step-helper"></textarea>
-                      <div class="m7-section-editor-actions">
-                        <button type="button" class="btn btn-primary" data-m7-editor-save>Guardar sección</button>
+                      <div class="vis28-save-utility">
+                        <span class="m7-section-editor-state" data-m7-editor-state role="status" aria-live="polite" hidden></span>
+                        <button type="button" class="btn btn-link" data-m7-editor-save disabled>Guardar ahora</button>
+                      </div>
+                      <div class="m7-section-editor-actions vis28-clinical-actions">
                         <button type="button" class="btn btn-outline-primary d-none" data-lon04b-m7-promote>Agregar a problemas</button>
                         <button type="button" class="btn btn-link vis12-follow-up-action" data-lon06b-m7-follow-up>Crear seguimiento</button>
                       </div>
@@ -5498,14 +5500,14 @@
                           <label>Fecha y hora de medición<input data-m7-measurement-time type="datetime-local" required></label>
                           <label>Origen<select data-m7-measurement-source required><option value="">Selecciona el origen</option><option value="direct_measurement">Medición directa</option><option value="patient_report">Informado por el paciente</option><option value="import">Importado</option></select></label>
                         </div>
-                        <div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-measurement-new>Nueva medición</button><button type="submit" class="btn btn-primary" data-m7-measurement-save>Guardar medición</button></div>
+                        <div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-measurement-new>Nueva medición</button><button type="submit" class="btn btn-outline-secondary" data-m7-measurement-save>Guardar medición</button></div>
                       </form>
                       <div class="m7-section-conflict d-none" data-m7-measurement-conflict role="alert"><strong>La medición cambió en otra sesión.</strong><p>Tu edición se conserva. Compara la versión guardada antes de volver a editar.</p><div class="m7-section-conflict-columns"><div><strong>Tu borrador</strong><pre data-m7-measurement-draft></pre></div><div><strong>Versión guardada</strong><pre data-m7-measurement-server></pre></div></div><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-primary" data-m7-measurement-reload>Cargar versión guardada</button><button type="button" class="btn btn-outline-secondary" data-m7-measurement-use-draft disabled>Usar mi borrador después de revisar</button></div></div>
                     </div>
                     <div class="m7-section-editor d-none" data-m7-exam>
                       <span data-m7-exam-meta hidden></span>
                       <div data-m7-exam-systems></div>
-                      <div class="m7-section-editor-actions"><button type="button" class="btn btn-primary" data-m7-exam-save>Guardar exploración</button></div>
+                      <div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-exam-save>Guardar exploración</button></div>
                       <div class="m7-section-conflict d-none" data-m7-exam-conflict role="alert"><strong>La exploración cambió en otra sesión.</strong><p>Tu borrador se conserva. Revisa la versión guardada antes de reconciliar.</p><div class="m7-section-conflict-columns"><div><strong>Tu borrador</strong><pre data-m7-exam-draft></pre></div><div><strong>Versión guardada</strong><pre data-m7-exam-server></pre></div></div><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-primary" data-m7-exam-reload>Cargar versión guardada</button><button type="button" class="btn btn-outline-secondary" data-m7-exam-use-draft disabled>Usar mi borrador después de revisar</button></div></div>
                     </div>
                     <section class="m7-section-editor m7-terminal d-none" data-m7-terminal aria-label="Estado y correcciones de la consulta">
@@ -5518,8 +5520,8 @@
                       <form class="m7-amendment-form d-none" data-m7-amendment-form><h5>Enmienda del encuentro</h5><p>Corrige contenido de esta consulta; el original permanece visible. Para reemplazar un archivo, usa “Reemplazar” en Documentos / Acciones. Un resultado tardío se añade allí como resultado, no como enmienda.</p><label>Contenido original<select data-m7-amendment-target></select></label><pre data-m7-amendment-original></pre><label>Motivo de la corrección<textarea data-m7-amendment-reason required maxlength="1000" rows="2"></textarea></label><label>Corrección o adenda<textarea data-m7-amendment-text required rows="4"></textarea></label><button type="submit" class="btn btn-primary">Añadir enmienda</button></form>
                       <div class="m7-amendment-history"><h5>Historial de enmiendas del encuentro</h5><div data-m7-amendment-list></div></div>
                     </section>
-                    <nav class="vis04-progression" aria-label="Avanzar por la consulta"><button type="button" class="btn btn-outline-secondary" data-vis04-prev>Anterior</button><span data-vis04-progress aria-live="polite"></span><button type="button" class="btn btn-outline-primary" data-vis04-next>Siguiente</button></nav>
-                    <p class="vis04-helper">Guardar conserva el contenido. Sólo “Finalizar consulta” cierra la atención; salir de esta pantalla no la finaliza.</p>
+                    <nav class="vis04-progression" aria-label="Avanzar por la consulta"><button type="button" class="btn btn-outline-secondary" data-vis04-prev>Anterior</button><span data-vis04-progress aria-live="polite"></span><button type="button" class="btn btn-primary" data-vis04-next>Siguiente</button></nav>
+                    <p class="vis04-helper">Los cambios se guardan automáticamente al cambiar de paso. Sólo “Finalizar consulta” cierra la atención.</p>
                     </div><aside class="vis04-context" aria-labelledby="vis04-context-title"><h4 id="vis04-context-title">Contexto clínico</h4><p class="vis04-helper">Información longitudinal actual · Sólo lectura</p><div class="vis12-review-cue d-none" data-vis12-review-cue role="status"><strong>Información del paciente pendiente de revisar</strong><span data-vis12-review-cue-items></span></div><section><h5>Alergias</h5><p data-vis04-context="allergies">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-antecedentes-longitudinal">Ver alergias</button></section><section><h5>Problemas activos</h5><p data-vis04-context="problems">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-problemas-longitudinal">Ver problemas</button></section><section><h5>Medicación actual</h5><p data-vis04-context="medications">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-medicamentos-longitudinal">Ver medicación</button></section><section><h5>Pendientes clínicos</h5><p data-vis04-context="tasks">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-tareas-longitudinal">Ver seguimiento</button></section><section><h5>Última consulta</h5><p data-vis04-context="recent">Consultando…</p><button type="button" class="btn btn-link" data-vis01-open="#t-historial-atencion">Ver historial</button></section></aside></div>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history hidden>

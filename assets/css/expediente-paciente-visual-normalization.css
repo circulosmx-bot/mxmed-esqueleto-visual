@@ -2953,3 +2953,42 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
     background-image:none;
   }
 }
+
+/* VIS28 — progression is primary; manual save stays beside its canonical state. */
+#p-expediente #m7-workspace .vis28-save-utility {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:4px 10px;
+  margin-top:6px;
+}
+#p-expediente #m7-workspace .vis28-save-utility .m7-section-editor-state {
+  max-width:100%;
+  text-align:left;
+}
+#p-expediente #m7-workspace [data-m7-editor-save] {
+  min-height:44px;
+  padding:6px 4px;
+  font-size:.82rem;
+  font-weight:500;
+  color:#426477;
+  background:transparent;
+  border-color:transparent;
+}
+#p-expediente #m7-workspace [data-m7-editor-save]:disabled,
+#p-expediente #m7-workspace .vis28-save-utility:has([data-m7-editor-state][hidden]):has([data-m7-editor-save]:disabled),
+#p-expediente #m7-workspace:not(:has([data-m7-section="plan"][aria-current="true"])) [data-lon06b-m7-follow-up],
+#p-expediente #m7-workspace:not(:has([data-m7-section="plan"][aria-current="true"])) .vis28-clinical-actions:has([data-lon04b-m7-promote].d-none) {
+  display:none;
+}
+#p-expediente #m7-workspace [data-vis04-next] {
+  min-height:44px;
+  background:#009bad;
+  border-color:#009bad;
+  color:#fff;
+  font-weight:750;
+}
+#p-expediente #m7-workspace [data-vis04-next]:hover {
+  background:#007f90;
+  border-color:#007f90;
+}
