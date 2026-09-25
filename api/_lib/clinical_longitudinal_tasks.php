@@ -95,6 +95,58 @@ final class ClinicalLongitudinalTasks {
         $s=$this->pdo->prepare('SELECT * FROM clinical_patient_tasks WHERE doctor_id=? AND patient_id=? ORDER BY (state="OPEN") DESC,due_at IS NULL,due_at,task_id');
         $s->execute([$doctor,$patient]);return ['items'=>array_map(self::project(...),$s->fetchAll(PDO::FETCH_ASSOC))];
     }
+    /** Physician-scoped Agenda projection. Task rows still pass through the canonical per-patient reader. */
+    public function readAgendaFollowUps(string $doctor): array {
+        if($doctor==='')self::fail('NOT_FOUND',404);
+        $s=$this->pdo->prepare("SELECT DISTINCT t.patient_id,p.display_name FROM clinical_patient_tasks t
+            JOIN patients_doctor_links l ON l.doctor_id=t.doctor_id AND l.patient_id=t.patient_id AND l.status='active'
+            JOIN patients_patients p ON p.patient_id=t.patient_id
+            WHERE t.doctor_id=? AND t.task_type='FOLLOW_UP' AND t.state='OPEN' ORDER BY p.display_name,t.patient_id");
+        $s->execute([$doctor]);
+        $groups=['overdue'=>[],'today'=>[],'upcoming'=>[],'no_due'=>[]];
+        $zone=new DateTimeZone('America/Mexico_City');
+        $today=(new DateTimeImmutable('now',$zone))->format('Y-m-d');
+        $nowLocal=(new DateTimeImmutable('now',$zone))->format('Y-m-d H:i:s');
+        $appointment=null;
+        foreach($s->fetchAll(PDO::FETCH_ASSOC) as $patient){
+            foreach($this->read($doctor,(string)$patient['patient_id'])['items'] as $row){
+                if($row['task_type']!=='FOLLOW_UP'||$row['state']!=='OPEN')continue;
+                $due=$row['due_at']===null?null:DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',(string)$row['due_at'],new DateTimeZone('UTC'));
+                $localDue=$due?$due->setTimezone($zone):null;
+                $group=$row['derived_due_state']==='OVERDUE'?'overdue':($localDue===null?'no_due':($localDue->format('Y-m-d')===$today?'today':'upcoming'));
+                $linkedDisplay=null;
+                if($row['appointment_id']!==null){
+                    try{
+                        $appointment??=$this->pdo->prepare('SELECT start_at,status FROM agenda_appointments WHERE appointment_id=? AND doctor_id=? AND patient_id=?');
+                        $appointment->execute([$row['appointment_id'],$doctor,$patient['patient_id']]);
+                        $linked=$appointment->fetch(PDO::FETCH_ASSOC);
+                        if(is_array($linked)&&in_array(strtolower((string)$linked['status']),['pending_otp','pending','scheduled','confirmed'],true)&&(string)$linked['start_at']>$nowLocal){
+                            $linkedDisplay='Cita vinculada · '.self::localDisplay((string)$linked['start_at']);
+                        }
+                    }catch(PDOException $ignored){$linkedDisplay=null;}
+                }
+                $groups[$group][]=[
+                    'task_id'=>(int)$row['task_id'],
+                    'patient_id'=>(string)$row['patient_id'],
+                    'patient_name'=>(string)$patient['display_name'],
+                    'title'=>(string)$row['title'],
+                    'due_at'=>$row['due_at'],
+                    'due_display'=>$localDue===null?null:self::localDisplay($localDue->format('Y-m-d H:i:s'),true),
+                    'derived_due_state'=>$row['derived_due_state'],
+                    'linked_appointment_display'=>$linkedDisplay,
+                ];
+            }
+        }
+        foreach(['overdue','today','upcoming'] as $group)usort($groups[$group],static fn($a,$b)=>strcmp((string)$a['due_at'],(string)$b['due_at'])?:($a['task_id']<=>$b['task_id']));
+        usort($groups['no_due'],static fn($a,$b)=>$a['task_id']<=>$b['task_id']);
+        return ['groups'=>$groups,'today_local'=>$today];
+    }
+    private static function localDisplay(string $value,bool $year=false): string {
+        $date=DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$value,new DateTimeZone('America/Mexico_City'));
+        if(!$date)return '';
+        $months=[1=>'ene',2=>'feb',3=>'mar',4=>'abr',5=>'may',6=>'jun',7=>'jul',8=>'ago',9=>'sep',10=>'oct',11=>'nov',12=>'dic'];
+        return $date->format('j').' '.$months[(int)$date->format('n')].($year?' '.$date->format('Y'):'').' · '.$date->format('g:i').' '.((int)$date->format('G')<12?'a. m.':'p. m.');
+    }
     public function mutate(string $doctor,string $patient,string $actor,string $operation,array $body,string $key,?int $id=null): array {
         if(getenv('MXMED_LON06A_WRITE_ENABLED')!=='1')self::fail('LON06A_WRITE_DISABLED',503);
         if(clinical_m6_write_window_blocks_writes())self::fail('M6_WRITE_WINDOW_BLOCKED',503);

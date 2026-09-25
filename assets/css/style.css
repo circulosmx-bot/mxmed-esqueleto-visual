@@ -22998,3 +22998,25 @@ body{margin:0;background:var(--mm-fondo-base);}
     grid-column:auto;
   }
 }
+
+/* AGF01: separate longitudinal follow-up workload, outside appointment slots. */
+#p-ag-admin .agf01-followups{margin:18px 0 4px;padding:18px;border:1px solid #c9e3e7;border-radius:14px;background:#f8fcfd;min-width:0}
+#p-ag-admin .agf01-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;margin-bottom:12px}
+#p-ag-admin .agf01-head h6{margin:0;color:#07536a;font-size:1.08rem;font-weight:700}
+#p-ag-admin .agf01-head span{color:#607989;font-size:.82rem}
+#p-ag-admin .agf01-status{margin:0;color:#526b78;font-size:.88rem}
+#p-ag-admin .agf01-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:start}
+#p-ag-admin .agf01-group{min-width:0;padding:12px;border:1px solid #d7e8eb;border-radius:10px;background:#fff}
+#p-ag-admin .agf01-group h6{margin:0 0 8px;color:#14516a;font-size:.88rem;font-weight:700}
+#p-ag-admin .agf01-group--overdue{border-left:3px solid #c36a5b;background:#fffafa}
+#p-ag-admin .agf01-group--overdue h6{color:#9a493e}
+#p-ag-admin .agf01-group--today{border-left:3px solid #009eab}
+#p-ag-admin .agf01-group--no-due{background:#fcfdfd}
+#p-ag-admin .agf01-item{padding:9px 0;border-top:1px solid #e2ebed;min-width:0;overflow-wrap:anywhere}
+#p-ag-admin .agf01-item:first-child{padding-top:0;border-top:0}
+#p-ag-admin .agf01-patient{display:block;color:#12415b;font-size:.82rem}
+#p-ag-admin .agf01-action{margin:2px 0 3px;color:#17394d;font-size:.87rem;line-height:1.35}
+#p-ag-admin .agf01-detail{margin:0;color:#607989;font-size:.76rem;line-height:1.4}
+#p-ag-admin .agf01-linked{color:#087b90}
+@media(max-width:1100px){#p-ag-admin .agf01-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){#p-ag-admin .agf01-followups{padding:14px}#p-ag-admin .agf01-groups{grid-template-columns:1fr}}

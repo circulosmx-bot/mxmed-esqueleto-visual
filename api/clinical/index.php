@@ -4354,6 +4354,13 @@ try {
             return;
         }
     }
+    if ($method==='GET' && $segments===['longitudinal','follow-ups','agenda']) {
+        $routeName='longitudinal/follow-ups/agenda';
+        $context=clinical_require_doctor_context($routeName);if($context===null)return;
+        $service=new ClinicalLongitudinalTasks(clinical_documents_pdo());
+        clinical_send_response(['ok'=>true,'data'=>$service->readAgendaFollowUps($context['doctor_id']),'meta'=>['route'=>$routeName,'method'=>$method]],200);
+        return;
+    }
     if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'longitudinal'
         && ($segments[3] ?? '') === 'tasks') {
         $routeName='patients/{patient_id}/longitudinal/tasks';
