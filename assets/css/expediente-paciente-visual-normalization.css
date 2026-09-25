@@ -2586,7 +2586,7 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
   gap:7px;
   min-width:0;
   color:#285a70;
-  transform:translateY(-10px);
+  transform:translateY(-7px);
 }
 #p-expediente #m7-workspace .vis23-appointment-icon {
   display:none;
