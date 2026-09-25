@@ -591,6 +591,7 @@
   currentButton.addEventListener('click', ()=>{ if(active && protectNavigation()) renderEncounter(active, false); });
   async function transitionToSection(type){
     if(!type || type === selectedSection || transitionBusy || sectionBusy || ws03?.isBusy() || ws04?.isBusy() || ws05?.isBusy()) return false;
+    if(selectedSection === 'measurements' && !(await ws03.resolvePendingNavigation())) return false;
     if(eligibleCaptureIsDirty()){
       if(!(await saveEligibleCapture())) return false;
     } else if(!protectNavigation()) return false;

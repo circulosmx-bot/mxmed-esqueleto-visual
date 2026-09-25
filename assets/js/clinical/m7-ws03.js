@@ -19,6 +19,9 @@
     const priorList = q('[data-vis29-prior]');
     const formTitle = q('[data-vis29-form-title]');
     const invalidationDialog = q('[data-meas01-confirm]');
+    const pendingDialog = q('[data-vis29-pending-dialog]');
+    const pendingRegister = q('[data-vis29-pending-register]');
+    const pendingHint = q('[data-vis29-pending-hint]');
     let priorEpoch=0, priorRows=[], reuseCandidate=null, lastCode='blood_pressure', noticeTimer=0, createPending=false;
     const measurementConflict = q('[data-m7-measurement-conflict]');
     const measurementDraft = q('[data-m7-measurement-draft]');
@@ -43,7 +46,7 @@
     let key = '', patient = '', mode = 'none', selected = '', observations = [], selectedObservation = null;
     let baselineMeasurement = '', baselineExam = '', examVersion = null, busy = false;
     let measurementLocked = false, examLocked = false;
-    let createKey = '', loadedExam = {}, measurementNotice = '', examNotice = '';
+    let createKey = '', loadedExam = {}, measurementNotice = '', examNotice = '', pendingDecision = false;
     let retainedMeasurementDraft = '', retainedExamDraft = '';
     const drafts = new Map();
     const hide = (node, visible)=>node.classList.toggle('d-none', !visible);
@@ -128,8 +131,9 @@
       } else data.value_numeric=Number(value.value);
       return data;
     }
-    function fillMeasurement(row, discardDraft=true){
+    function fillMeasurement(row, discardDraft=true, preserveRetainedDraft=false){
       reuseCandidate=null;
+      if(!preserveRetainedDraft){retainedMeasurementDraft='';q('[data-m7-measurement-use-draft]').disabled=true;}
       selectedObservation=row || null;
       code.value=row?.code || 'blood_pressure'; value.value=row?.value_numeric ?? '';
       systolic.value=row?.systolic_mm_hg ?? ''; diastolic.value=row?.diastolic_mm_hg ?? '';
@@ -238,6 +242,7 @@
       hide(examSave,mode==='open');
     }
     function load(detail, encounterKey, state, restoreDrafts=true){
+      if(key!==encounterKey && pendingDialog.open) pendingDialog.close('stay');
       if(key!==encounterKey) createKey='';
       key=encounterKey; patient=String(detail.patient_id || ''); mode=state;
       clearTimeout(noticeTimer);reuseCandidate=null;createPending=false;
@@ -269,9 +274,10 @@
     }
     function reset(){
       if(invalidationDialog.open)invalidationDialog.close('cancel');
+      if(pendingDialog.open)pendingDialog.close('stay');
       ++priorEpoch;priorRows=[];reuseCandidate=null;priorList.replaceChildren();clearTimeout(noticeTimer);createPending=false;
       key=''; patient=''; mode='none'; selected=''; observations=[]; selectedObservation=null;
-      createKey=''; measurementNotice=''; examNotice='';
+      createKey=''; retainedMeasurementDraft=''; measurementNotice=''; examNotice='';
       hide(measurementPanel,false); hide(examPanel,false);
     }
     async function responseJson(response){
@@ -344,12 +350,15 @@
       }finally{busy=false;paintMeasurement();}
     }
 
-    async function saveMeasurement(event){
+    async function saveMeasurement(event, explicitPrior=false){
       event?.preventDefault();
       if(mode!=='open'||busy||measurementLocked) return false;
       if(!isDirty()) return true;
-      if(reuseCandidate&&!event){measurementNotice='Confirma el valor previo con “Agregar a esta consulta” o cancela la captura.';paintMeasurement();return false;}
-      if(!form.reportValidity()){measurementNotice='Completa el valor, la fecha y el origen, o cancela la captura.';paintMeasurement();return false;}
+      if(reuseCandidate&&!event&&!explicitPrior){measurementNotice='Confirma el valor previo con “Agregar a esta consulta” o cancela la captura.';paintMeasurement();return false;}
+      if(!form.checkValidity()){
+        measurementNotice=!source.value?'Completa el origen o cancela esta captura antes de cambiar de paso.':'Completa el valor y la fecha, o cancela esta captura antes de cambiar de paso.';
+        paintMeasurement();form.reportValidity();return false;
+      }
       clearTimeout(noticeTimer);measurementNotice='';
       const oldKey=key, oldPatient=patient, draft=measurementSnapshot();
       const row=selectedObservation, data=measurementPayload();
@@ -390,6 +399,25 @@
         if(createPending)measurementNotice='No se confirmó el registro. Reintenta el registro para comprobar la misma solicitud.';
         return false;
       }finally{ busy=false; if(key===oldKey){paintMeasurement();paintExam();} }
+    }
+    async function resolvePendingNavigation(){
+      if(selected!=='measurements'||!reuseCandidate) return true;
+      if(mode!=='open'||busy||measurementLocked||createPending||pendingDecision){
+        measurementNotice=measurementLocked?'Resuelve el conflicto de esta medición antes de cambiar de paso.':'No se confirmó el registro. Reintenta o revisa esta captura antes de cambiar de paso.';
+        paintMeasurement();return false;
+      }
+      const expectedKey=key, expectedPatient=patient;
+      pendingDecision=true;
+      pendingRegister.disabled=!form.checkValidity();
+      pendingHint.hidden=!pendingRegister.disabled;
+      pendingDialog.returnValue='';
+      pendingDialog.showModal();
+      const choice=await new Promise(resolve=>pendingDialog.addEventListener('close',()=>resolve(pendingDialog.returnValue),{once:true}));
+      pendingDecision=false;
+      if(key!==expectedKey||patient!==expectedPatient||currentPatient()!==expectedPatient) return false;
+      if(choice==='discard'){fillMeasurement(null);return true;}
+      if(choice==='register'&&!pendingRegister.disabled) return (await saveMeasurement(null,true))===true;
+      return false;
     }
     async function saveExam(){
       if(mode!=='open'||busy||examLocked) return false;
@@ -459,7 +487,7 @@
       if(reuseCandidate||canReplaceCapture())fillMeasurement(null);
     });
     q('[data-m7-measurement-reload]').addEventListener('click',async()=>{
-      try{const detail=await reloadCurrent();const row=detail.observations?.find(item=>Number(item.observation_id)===Number(selectedObservation?.observation_id));if(row){observations=detail.observations;fillMeasurement(row);hide(measurementConflict,true);q('[data-m7-measurement-use-draft]').disabled=false;}else{measurementNotice='No se encontró la medición guardada.';paintMeasurement();}}catch(_){measurementNotice='No se pudo cargar la versión guardada.';paintMeasurement();}
+      try{const detail=await reloadCurrent();const row=detail.observations?.find(item=>Number(item.observation_id)===Number(selectedObservation?.observation_id));if(row){observations=detail.observations;fillMeasurement(row,true,true);hide(measurementConflict,true);q('[data-m7-measurement-use-draft]').disabled=false;}else{measurementNotice='No se encontró la medición guardada.';paintMeasurement();}}catch(_){measurementNotice='No se pudo cargar la versión guardada.';paintMeasurement();}
     });
     q('[data-m7-measurement-use-draft]').addEventListener('click',()=>{
       if(mode!=='open'||measurementLocked||!retainedMeasurementDraft)return;
@@ -476,7 +504,7 @@
       hide(examConflict,false);paintExam();
     });
     syncCode();
-    return {load,select,reset,isDirty,remember,isBusy:()=>busy,
+    return {load,select,reset,isDirty,remember,resolvePendingNavigation,isBusy:()=>busy||pendingDecision,
       saveSelected:()=>selected==='measurements'?saveMeasurement():selected==='physical_exam'?saveExam():Promise.resolve(true),
       hasSavedDrafts:()=>!!key && (getDraft('measurements') !== null || getDraft('physical_exam') !== null)};
   };

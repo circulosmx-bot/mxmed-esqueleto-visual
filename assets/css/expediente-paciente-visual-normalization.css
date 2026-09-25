@@ -3167,6 +3167,12 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
 #p-expediente #m7-workspace .meas01-confirm::backdrop {background:rgb(10 35 45 / 35%)}
 #p-expediente #m7-workspace .meas01-confirm form {display:flex;justify-content:flex-end;gap:12px}
 #p-expediente #m7-workspace .meas01-confirm .btn {min-height:44px}
+#p-expediente #m7-workspace .vis29-pending-dialog {width:min(560px,calc(100vw - 32px));max-width:none}
+#p-expediente #m7-workspace .vis29-pending-dialog h5 {margin:0 0 10px}
+#p-expediente #m7-workspace .vis29-pending-dialog p {margin:0 0 12px;line-height:1.45}
+#p-expediente #m7-workspace .vis29-pending-dialog form {flex-wrap:wrap;margin-top:20px}
+#p-expediente #m7-workspace .vis29-pending-dialog [data-vis29-pending-hint] {font-size:.87rem;color:#5a6e7b}
+@media(max-width:600px){#p-expediente #m7-workspace .vis29-pending-dialog form .btn {flex:1 1 100%}}
 @media(max-width:575.98px){
   #p-expediente #m7-workspace .vis29-current .vis29-reading {grid-template-columns:minmax(0,1fr) auto}
   #p-expediente #m7-workspace .meas01-row-actions {grid-column:2;grid-row:1 / 4;flex-direction:column;gap:0}
