@@ -57,6 +57,7 @@
     next.disabled = index < 0 || index === steps.length - 1;
     progress.textContent = index < 0 ? '' : `Paso ${index + 1} de 7`;
     const selected = steps[index]?.dataset.m7Section;
+    next.textContent = selected === 'measurements' ? 'Continuar a Exploración' : 'Siguiente';
     const copy = stepCopy[selected] || stepCopy.reason;
     stepHelper.textContent = copy[1];
     stepHelper.title = copy[1];

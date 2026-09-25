@@ -22,7 +22,9 @@ final class ClinicalMeasurementTrends
     public static function options(array $query): array
     {
         $view=(string)($query['view'] ?? 'series');
-        if (!in_array($view,['series','latest','history','points'],true)) throw new InvalidArgumentException('INVALID_VIEW');
+        if (!in_array($view,['series','latest','history','points','prior'],true)) throw new InvalidArgumentException('INVALID_VIEW');
+        $excludeEncounter=(string)($query['exclude_encounter_id'] ?? '');
+        if ($view==='prior' && (!preg_match('/^[1-9][0-9]*$/D',$excludeEncounter) || strlen($excludeEncounter)>18)) throw new InvalidArgumentException('CURRENT_ENCOUNTER_REQUIRED');
         $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
         $from=self::time((string)($query['from'] ?? $now->modify('-12 months')->format('Y-m-d H:i:s')));
         $to=self::time((string)($query['to'] ?? $now->format('Y-m-d H:i:s')));
@@ -44,7 +46,7 @@ final class ClinicalMeasurementTrends
             if (!is_array($parts) || count($parts)!==2 || !is_string($parts[0]) || !self::validTime($parts[0]) || !is_int($parts[1]) || $parts[1]<1) throw new InvalidArgumentException('INVALID_CURSOR');
             $cursor=$parts;
         }
-        return compact('view','from','to','code','unit','source','component','cursor')+['limit'=>(int)$rawSize];
+        return compact('view','from','to','code','unit','source','component','cursor')+['limit'=>(int)$rawSize,'exclude_encounter_id'=>(int)$excludeEncounter];
     }
 
     private static function validTime(string $value): bool
@@ -104,6 +106,7 @@ final class ClinicalMeasurementTrends
     {
         $from=$options['from']->format('Y-m-d H:i:s');$to=$options['to']->format('Y-m-d H:i:s');
         $view=$options['view'];
+        if ($view==='prior') return $this->prior($doctor,$patient,$options['exclude_encounter_id']);
         if ($view==='series' || $view==='latest') return $this->series($doctor,$patient,$from,$to);
         $where="e.doctor_id=:doctor AND e.patient_id=:patient AND o.effective_at>=:from_time AND o.effective_at<=:to_time";
         $params=[':doctor'=>$doctor,':patient'=>$patient,':from_time'=>$from,':to_time'=>$to];
@@ -123,6 +126,34 @@ final class ClinicalMeasurementTrends
         foreach($rows as $row){$item=self::item($row);if($view==='points') {if(!$item['trend_eligible'])continue;foreach(self::components($item) as $component){if($options['component']!=='' && $component['component']!==$options['component'])continue;$items[]=array_merge($item,$component);}}else{$items[]=$item;}}
         $last=end($rows);$cursor=$hasMore&&$last?base64_encode(json_encode([(string)$last['effective_at'],(int)$last['observation_id']])):null;
         return ['items'=>$items,'next_cursor'=>$cursor,'has_more'=>$hasMore,'limit'=>$options['limit'],'from'=>$from,'to'=>$to,'ordering'=>'effective_at DESC, observation_id DESC'];
+    }
+
+    /** VIS29: latest reusable prior per concept, using the canonical write units and time authority.
+     * No lower date bound: an older height must not disappear behind recent vital signs.
+     * Exclusion precedes ranking; current observations cannot hide a prior candidate.
+     */
+    private function prior(string $doctor,string $patient,int $excludeEncounter): array
+    {
+        require_once __DIR__.'/clinical_observations.php';
+        $eligible=[];
+        $params=[':doctor'=>$doctor,':patient'=>$patient,':exclude'=>$excludeEncounter];
+        foreach (clinical_observation_catalog() as $code=>$definition) {
+            $eligible[]="(o.code=:code_$code AND o.unit=:unit_$code)";
+            $params[":code_$code"]=$code;$params[":unit_$code"]=$definition['unit'];
+        }
+        $units=implode(' OR ',$eligible);
+        $sql="SELECT * FROM (SELECT o.*,EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=e.encounter_id) AS has_amendment,
+            ROW_NUMBER() OVER (PARTITION BY o.code ORDER BY o.effective_at DESC,o.observation_id DESC) AS prior_rank
+            FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id
+            WHERE e.doctor_id=:doctor AND e.patient_id=:patient AND o.encounter_id<>:exclude
+            AND o.effective_at_authority='EXPLICIT_EFFECTIVE_TIME' AND o.effective_at<=UTC_TIMESTAMP()
+            AND o.source IN ('direct_measurement','patient_report','import') AND ($units)
+            AND ((o.code='blood_pressure' AND o.systolic_mm_hg>0 AND o.diastolic_mm_hg>0)
+                OR (o.code<>'blood_pressure' AND o.value_numeric IS NOT NULL))) ranked
+            WHERE prior_rank=1 ORDER BY effective_at DESC,observation_id DESC";
+        $stmt=$this->pdo->prepare($sql);$stmt->execute($params);
+        return ['items'=>array_map(static fn(array $row):array=>self::item($row),$stmt->fetchAll(PDO::FETCH_ASSOC)),
+            'latest_semantics'=>'LATEST_EXPLICIT_PRIOR_PER_CONCEPT','excluded_encounter_id'=>$excludeEncounter];
     }
 
     private function series(string $doctor,string $patient,string $from,string $to): array
