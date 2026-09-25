@@ -636,8 +636,8 @@
 #p-expediente .lon06b-dialog h4{font-size:1.07rem;color:#06536e;margin:0 0 5px}
 #p-expediente .lon06b-dialog p{font-size:.83rem;color:#526976;overflow-wrap:anywhere;margin:0 0 10px}
 #p-expediente .lon06b-dialog label{display:block;font-size:.82rem;font-weight:700;margin:10px 0 4px;color:#173b4d}
-#p-expediente .lon06b-dialog input{display:block;width:100%;min-width:0;border:1px solid #a8cbd4;border-radius:9px;background:#fff;color:#173b4d;padding:8px 10px;font:inherit;font-size:.9rem}
-#p-expediente .lon06b-dialog :is(input,button):focus-visible,#p-expediente .lon06b button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
+#p-expediente .lon06b-dialog :is(input,select){display:block;width:100%;min-width:0;border:1px solid #a8cbd4;border-radius:9px;background:#fff;color:#173b4d;padding:8px 10px;font:inherit;font-size:.9rem}
+#p-expediente .lon06b-dialog :is(input,select,button):focus-visible,#p-expediente .lon06b button:focus-visible{outline:2px solid #008e9b;outline-offset:2px}
 #p-expediente .lon06b-dialog-actions{justify-content:flex-end;margin-top:16px}
 #p-expediente .lon06b-conflict{border:1px solid #e9b7bf;border-radius:10px;padding:10px;background:#fff6f7;margin-top:12px}
 #p-expediente .lon06b-error,#p-expediente .lon06b-form-error{font-size:.83rem;color:#923044;margin:0 0 7px}

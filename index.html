@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis30-header-r7">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis31-followup">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -4650,7 +4650,7 @@
                   <p data-lon06b-status role="status" aria-live="polite">Selecciona un paciente para ver sus tareas.</p><p class="lon06b-error d-none" data-lon06b-error role="alert"></p>
                   <div class="lon06b-groups d-none" data-lon06b-groups><section class="lon06b-group"><h4>Abiertas</h4><div data-lon06b-open></div></section><section class="lon06b-group"><h4>Historial · resueltas y canceladas</h4><div data-lon06b-terminal></div></section></div>
                   <dialog class="lon06b-dialog" data-lon06b-dialog aria-labelledby="lon06b-dialog-title"><form data-lon06b-form novalidate><h4 id="lon06b-dialog-title" data-lon06b-dialog-title></h4><p data-lon06b-context></p>
-                    <div data-lon06b-editable><label for="lon06b-title-field">Acción clínica</label><input id="lon06b-title-field" maxlength="500" required data-lon06b-title><label for="lon06b-due">Fecha límite, si aplica</label><input id="lon06b-due" type="datetime-local" data-lon06b-due><p class="lon06b-hint">Sin fecha límite no se considera vencida.</p><label for="lon06b-appointment">ID de cita existente, si deseas vincularla</label><input id="lon06b-appointment" maxlength="64" data-lon06b-appointment><p class="lon06b-hint">La cita debe pertenecer a este paciente. Vincularla no cambia su estado ni la fecha límite.</p></div>
+                    <div data-lon06b-editable><label for="lon06b-title-field">Acción clínica</label><input id="lon06b-title-field" maxlength="500" required data-lon06b-title><label for="lon06b-due" data-lon06b-due-label>Fecha límite, si aplica</label><input id="lon06b-due" type="datetime-local" data-lon06b-due><p class="lon06b-hint" data-lon06b-due-hint>Sin fecha límite no se considera vencida.</p><div data-lon06b-appointment-raw><label for="lon06b-appointment">ID de cita existente, si deseas vincularla</label><input id="lon06b-appointment" maxlength="64" data-lon06b-appointment><p class="lon06b-hint">La cita debe pertenecer a este paciente. Vincularla no cambia su estado ni la fecha límite.</p></div><div data-lon06b-follow-up-appointment class="d-none"><label for="lon06b-follow-up-appointment-select">Vincular a una cita (opcional)</label><select id="lon06b-follow-up-appointment-select" data-lon06b-follow-up-appointment-select><option value="">Selecciona una cita futura del paciente</option></select><p class="lon06b-hint" data-lon06b-appointment-state aria-live="polite"></p><p class="lon06b-hint">Puedes relacionar este seguimiento con una cita futura del paciente. La cita no se modificará.</p></div></div>
                     <div data-lon06b-reason-wrap class="d-none"><label for="lon06b-reason">Motivo clínico</label><input id="lon06b-reason" maxlength="255" data-lon06b-reason></div>
                     <div class="lon06b-conflict d-none" data-lon06b-conflict role="alert"><p>Esta tarea cambió en otra sesión. Tu borrador permanece en el formulario.</p><p data-lon06b-server-state></p><button type="button" class="btn btn-outline-primary btn-sm" data-lon06b-reload>Recargar y descartar mi borrador</button></div>
                     <p class="lon06b-form-error d-none" data-lon06b-form-error role="alert" tabindex="-1"></p><div class="lon06b-dialog-actions"><button type="button" class="btn btn-outline-secondary" data-lon06b-cancel>Seguir revisando</button><button type="submit" class="btn btn-primary" data-lon06b-save>Confirmar</button></div>
@@ -10721,7 +10721,7 @@
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
 <script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>
 <script src="assets/js/clinical/lon05b-medications.js?v=lon05b"></script>
-<script src="assets/js/clinical/lon06b-tasks.js?v=lon06b"></script>
+<script src="assets/js/clinical/lon06b-tasks.js?v=lon06b-vis31"></script>
 <script src="assets/js/clinical/vis06-modules.js?v=vis06"></script>
 <script src="assets/js/clinical/vis07-administrative.js?v=vis19"></script>
 <script src="assets/js/clinical/vis01-navigation.js?v=vis01"></script>
