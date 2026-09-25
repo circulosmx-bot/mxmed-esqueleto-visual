@@ -66,7 +66,7 @@ $(function(){
   };
   sidebar.querySelectorAll(':scope > .menu-main:not(.d-none)').forEach((button, index)=>{
     const label = button.querySelector('.ttl')?.textContent.trim();
-    button.setAttribute('aria-label', label || '');
+    if(!button.hasAttribute('aria-label'))button.setAttribute('aria-label', label || '');
     const pane = button.nextElementSibling;
     if(pane?.matches('.menu-sub:not(.d-none)')){
       pane.id ||= 'sb01-submenu-'+index;

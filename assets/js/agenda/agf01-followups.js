@@ -1,8 +1,11 @@
-// AGF02 keeps follow-ups outside calendar slots and uses the existing longitudinal writer.
+// ALR01 derives in-app attention from the existing physician-scoped follow-up reader.
 (function () {
   const panel=document.getElementById('p-ag-admin');
   const root=document.getElementById('agf01-followups');
   if(!panel||!root)return;
+  const agendaNav=document.querySelector('#mmSidebar .menu-main[data-group="agenda"]');
+  const badge=agendaNav?.querySelector('[data-alr01-badge]');
+  const summary=root.querySelector('[data-alr01-summary]');
   const status=root.querySelector('[data-agf01-status]');
   const groups=root.querySelector('[data-agf01-groups]');
   const feedback=root.querySelector('[data-agf02-feedback]');
@@ -12,7 +15,71 @@
   const error=dialog?.querySelector('[data-agf02-error]');
   const confirm=dialog?.querySelector('[data-agf02-confirm]');
   const keys=['overdue','today','upcoming','no_due'];
-  let generation=0,action=null,returnFocus=null;
+  const localDateParts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Mexico_City',year:'numeric',month:'2-digit',day:'2-digit'});
+  let generation=0,action=null,returnFocus=null,loadedRows=null,renderedSignature='';
+
+  function localDay(date){
+    const parts=Object.fromEntries(localDateParts.formatToParts(date).map(part=>[part.type,part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  }
+  function classify(row,now,day){
+    if(row.due_at==null)return 'no_due';
+    const due=new Date(`${String(row.due_at).replace(' ','T')}Z`);
+    if(Number.isNaN(due.getTime()))return 'no_due';
+    if(due.getTime()<=now.getTime())return 'overdue';
+    return localDay(due)===day?'today':'upcoming';
+  }
+  function regroup(rows,now){
+    const result=Object.fromEntries(keys.map(key=>[key,[]]));
+    const day=localDay(now);
+    rows.forEach(row=>result[classify(row,now,day)].push(row));
+    return result;
+  }
+  function signature(data){return keys.map(key=>data[key].map(row=>row.task_id).join(',')).join('|');}
+  function renderAttention(data){
+    const overdue=data.overdue.length,today=data.today.length,count=overdue+today;
+    if(badge){badge.hidden=count===0;badge.textContent=count?String(count):'';}
+    if(agendaNav){
+      if(count)agendaNav.setAttribute('aria-label',`Agenda · ${count} ${count===1?'seguimiento requiere':'seguimientos requieren'} atención`);
+      else agendaNav.setAttribute('aria-label','Agenda');
+    }
+    if(summary){
+      const parts=[];
+      if(overdue)parts.push(`${overdue} ${overdue===1?'vencido':'vencidos'}`);
+      if(today)parts.push(`${today} para hoy`);
+      summary.textContent=parts.join(' · ');summary.hidden=count===0;
+      summary.classList.toggle('alr01-attention-summary--overdue',overdue>0);
+    }
+  }
+  function clearAttention(){
+    loadedRows=null;renderedSignature='';
+    if(badge){badge.hidden=true;badge.textContent='';}
+    agendaNav?.setAttribute('aria-label','Agenda');
+    if(summary){summary.hidden=true;summary.textContent='';}
+  }
+  function renderGroups(data){
+    renderAttention(data);
+    if(panel.classList.contains('d-none'))return;
+    let count=0;
+    for(const key of keys){
+      const group=root.querySelector(`[data-agf01-group="${key}"]`);
+      const target=root.querySelector(`[data-agf01-items="${key}"]`);
+      const rows=data[key];
+      target.replaceChildren();
+      rows.forEach(row=>renderItem({...row,derived_due_state:key==='overdue'?'OVERDUE':'PENDING'},target));
+      group.classList.toggle('d-none',rows.length===0);
+      count+=rows.length;
+    }
+    renderedSignature=signature(data);
+    groups.classList.toggle('d-none',count===0);
+    if(count)status.classList.add('d-none');
+    else{status.classList.remove('d-none');status.textContent='No hay seguimientos pendientes.';}
+  }
+  function reevaluateTime(){
+    if(!loadedRows)return;
+    const data=regroup(loadedRows,new Date());
+    if(signature(data)!==renderedSignature||panel.classList.contains('d-none'))renderGroups(data);
+  }
 
   function message(value){feedback.textContent=value;feedback.classList.toggle('d-none',!value);}
   function actionButton(label,kind,row,style){
@@ -100,31 +167,27 @@
   }
 
   async function load(){
-    if(panel.classList.contains('d-none'))return;
     const current=++generation;
-    root.setAttribute('aria-busy','true');
-    status.classList.remove('d-none');status.textContent='Cargando seguimientos…';
+    if(!panel.classList.contains('d-none')){
+      root.setAttribute('aria-busy','true');
+      status.classList.remove('d-none');status.textContent='Cargando seguimientos…';
+    }
     try{
       const response=await fetch('/api/clinical/index.php/longitudinal/follow-ups/agenda',{credentials:'same-origin',headers:{Accept:'application/json'}});
       const payload=await response.json();
       if(!response.ok||payload?.ok!==true||!payload.data?.groups)throw new Error('FOLLOW_UP_READ_FAILED');
       if(current!==generation)return;
-      let count=0;
       for(const key of keys){
-        const group=root.querySelector(`[data-agf01-group="${key}"]`);
-        const target=root.querySelector(`[data-agf01-items="${key}"]`);
-        const rows=payload.data.groups[key];
-        if(!Array.isArray(rows))throw new Error('INVALID_FOLLOW_UP_GROUP');
-        target.replaceChildren();
-        rows.forEach(row=>renderItem(row,target));
-        group.classList.toggle('d-none',rows.length===0);
-        count+=rows.length;
+        if(!Array.isArray(payload.data.groups[key]))throw new Error('INVALID_FOLLOW_UP_GROUP');
       }
-      if(count){status.classList.add('d-none');groups.classList.remove('d-none');}
-      else{status.textContent='No hay seguimientos pendientes.';}
+      loadedRows=keys.flatMap(key=>payload.data.groups[key]);
+      renderGroups(payload.data.groups);
     }catch(_){
       if(current!==generation)return;
-      groups.classList.add('d-none');status.classList.remove('d-none');status.textContent='No se pudieron cargar los seguimientos.';
+      clearAttention();
+      if(!panel.classList.contains('d-none')){
+        groups.classList.add('d-none');status.classList.remove('d-none');status.textContent='No se pudieron cargar los seguimientos.';
+      }
     }finally{if(current===generation)root.removeAttribute('aria-busy');}
   }
 
@@ -134,6 +197,9 @@
   reason?.addEventListener('input',()=>{if(action)action.key=crypto.randomUUID();});
   form?.addEventListener('submit',submitAction);
   dialog?.addEventListener('close',()=>{action=null;(returnFocus?.isConnected?returnFocus:panel.querySelector('#ag_refresh_btn'))?.focus({preventScroll:true});returnFocus=null;});
+  window.setInterval(reevaluateTime,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reevaluateTime();});
+  window.addEventListener('focus',reevaluateTime);
   new MutationObserver(()=>{if(!panel.classList.contains('d-none'))load();}).observe(panel,{attributes:true,attributeFilter:['class']});
-  if(!panel.classList.contains('d-none'))load();
+  load();
 })();
