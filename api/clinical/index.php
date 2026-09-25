@@ -3963,6 +3963,7 @@ function clinical_v1_error_status(Throwable $error): int
     if(str_starts_with($code,'SCHEMA_NOT_READY'))return 503;
     if($code==='V1_MULTIPART_STORAGE_NOT_READY')return 503;
     if($code==='DOCUMENT_NOT_FOUND')return 404;
+    if($code==='OBSERVATION_CONTEXT_MISMATCH')return 403;
     if(in_array($code,['VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH','DOCUMENT_TYPE_MISMATCH','DOCUMENT_ALREADY_SUPERSEDED','DOCUMENT_LINEAGE_INVALID'],true))return 409;
     if($error instanceof InvalidArgumentException||$error instanceof ClinicalSectionValidationException||$error instanceof ClinicalObservationValidationException)return 400;
     return 500;
@@ -7377,6 +7378,26 @@ try {
             }catch(Throwable $e){clinical_send_response(['ok'=>false,'error'=>['code'=>clinical_v1_error_code($e),'message'=>$e->getMessage()],'data'=>null,'meta'=>['route'=>$routeName]],clinical_v1_error_status($e));}return;
         }
 
+        // MEAS01: current-open observation invalidation, never physical deletion.
+        if(count($segments)===5&&($segments[2]??'')==='observations'&&($segments[4]??'')==='void'&&$method==='POST'){
+            $routeName='encounters/{encounter_key}/observations/{observation_id}/void';
+            $context=clinical_require_doctor_context($routeName);if($context===null)return;
+            $routePdo=clinical_documents_pdo();
+            if(!clinical_m6_encounter_route_uses_v1($routePdo,urldecode((string)$segments[1]),$context)){clinical_m6_send_v1_route_unavailable($routeName);return;}
+            $body=clinical_read_json_body();
+            if(($body['ok']??false)!==true){clinical_send_response(['ok'=>false,'error'=>['code'=>'bad_request'],'data'=>null,'meta'=>['route'=>$routeName]],400);return;}
+            try{
+                $pdo=clinical_documents_pdo();$row=clinical_v1_authorized_encounter($pdo,urldecode((string)$segments[1]),$context,$routeName);if($row===null)return;
+                $data=is_array($body['data']??null)?$body['data']:[];
+                if(!isset($data['row_version']) || !is_int($data['row_version']) || $data['row_version']<1)throw new InvalidArgumentException('ROW_VERSION_REQUIRED');
+                if(!preg_match('/^[1-9][0-9]*$/D',(string)$segments[3]))throw new InvalidArgumentException('OBSERVATION_ID_INVALID');
+                if(!is_string($data['patient_id']??null) || $data['patient_id']!==(string)$row['patient_id'])throw new RuntimeException('OBSERVATION_CONTEXT_MISMATCH');
+                // The confirmed error-capture action supplies a canonical reason; no extra free-text step.
+                $result=(new ClinicalEncounterIntegrityService($pdo))->invalidateObservation((int)$row['encounter_id'],(int)$segments[3],$data['row_version'],$context['user_id'],$context['doctor_id'],$data['patient_id'],'Captura errónea');
+                clinical_send_response(['ok'=>true,'error'=>null,'message'=>'observation invalidated','data'=>$result,'meta'=>['route'=>$routeName]],200);
+            }catch(Throwable $e){clinical_send_response(['ok'=>false,'error'=>['code'=>clinical_v1_error_code($e),'message'=>$e->getMessage()],'data'=>null,'meta'=>['route'=>$routeName]],clinical_v1_error_status($e));}return;
+        }
+
         if(count($segments)===4&&($segments[2]??'')==='observations'&&$method==='PATCH'){
             $routeName='encounters/{encounter_key}/observations/{observation_id}';$context=clinical_require_doctor_context($routeName);if($context===null)return;
             $routePdo=clinical_documents_pdo();$useV1=clinical_m6_encounter_route_uses_v1($routePdo,urldecode((string)$segments[1]),$context);
@@ -7748,6 +7769,7 @@ try {
             $rows = [];
             $structuredSections = [];
             $structuredObservations = [];
+            $invalidatedObservations = [];
             $useV1 = false;
 
             try {
@@ -7800,7 +7822,7 @@ try {
                             'updated_at' => (string)$sectionRow['updated_at'],
                         ];
                     }
-                    $observationQuery = $pdo->prepare('SELECT observation_id, encounter_id, code, value_numeric, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, effective_at_authority, recorded_at, source, provenance_json, row_version, created_at, updated_at FROM clinical_observations WHERE encounter_id = :encounter_id ORDER BY effective_at DESC, observation_id DESC');
+                    $observationQuery = $pdo->prepare('SELECT observation_id, encounter_id, code, value_numeric, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, effective_at_authority, recorded_at, recorded_by_user_id, source, provenance_json, row_version, invalidated_at, invalidated_by_user_id, invalidation_reason, created_at, updated_at FROM clinical_observations WHERE encounter_id = :encounter_id ORDER BY effective_at DESC, observation_id DESC');
                     $observationQuery->execute([':encounter_id' => $encounterId]);
                     foreach ($observationQuery->fetchAll(PDO::FETCH_ASSOC) as $observationRow) {
                         $observationRow['observation_id'] = (int)$observationRow['observation_id'];
@@ -7808,7 +7830,8 @@ try {
                         $observationRow['row_version'] = (int)$observationRow['row_version'];
                         $observationRow['provenance'] = json_decode((string)$observationRow['provenance_json'], true) ?: [];
                         unset($observationRow['provenance_json']);
-                        $structuredObservations[] = $observationRow;
+                        if ($observationRow['invalidated_at']!==null) $invalidatedObservations[] = $observationRow;
+                        else $structuredObservations[] = $observationRow;
                     }
                     $amendmentQuery = $pdo->prepare('SELECT amendment_id, target_type, target_id, target_field, reason, author_user_id, amended_at, correction_payload_json, previous_effective_reference FROM clinical_encounter_amendments WHERE encounter_id = :encounter_id ORDER BY amended_at, amendment_id');
                     $amendmentQuery->execute([':encounter_id' => $encounterId]);
@@ -7892,6 +7915,7 @@ try {
                     'status' => (string)($encounterRow['status'] ?? 'open'),
                     'sections' => $structuredSections,
                     'observations' => $structuredObservations,
+                    'invalidated_observations' => $invalidatedObservations,
                     'amendments' => $structuredAmendments ?? [],
                     'closed_at' => ($encounterRow['closed_at'] ?? null),
                     'closed_by_user_id' => ($encounterRow['closed_by_user_id'] ?? null),

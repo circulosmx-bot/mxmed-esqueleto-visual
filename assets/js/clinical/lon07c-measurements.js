@@ -80,7 +80,7 @@
   function renderHistory(){
     const body=$('[data-lon07c-history-body]');body.replaceChildren();
     if(!historyRows.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='Sin mediciones registradas en este período.';tr.append(td);body.append(tr);}
-    for(const row of historyRows){const tr=document.createElement('tr');const values=[names[row.code]||row.code,`${value(row)} ${row.unit}`,`${row.effective_at} UTC`,sources[row.source]||row.source,row.trend_eligible?'Comparable':`${authority[row.effective_at_authority]||'Registro histórico'} · Sólo historial`];
+    for(const row of historyRows){const tr=document.createElement('tr');const values=[names[row.code]||row.code,`${value(row)} ${row.unit}`,`${row.effective_at} UTC`,sources[row.source]||row.source,row.invalidated_at?`Invalidada · ${row.invalidation_reason} · ${row.invalidated_at} UTC · ${row.invalidated_by_user_id}`:row.trend_eligible?'Comparable':`${authority[row.effective_at_authority]||'Registro histórico'} · Sólo historial`];
       values.forEach((text,index)=>{const td=document.createElement('td');td.textContent=text;td.dataset.label=['Medición','Valor','Fecha','Origen','Estado'][index];if(index===4&&!row.trend_eligible)td.className='lon07c-history-only';tr.append(td);});body.append(tr);
     }
     $('[data-lon07c-more-history]').classList.toggle('d-none',!historyCursor);

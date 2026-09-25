@@ -20,6 +20,9 @@ function clinical_observation_catalog(): array
 
 function clinical_observation_validate(array $input): array
 {
+    foreach (['invalidated_at','invalidated_by_user_id','invalidation_reason'] as $field) {
+        if (array_key_exists($field,$input)) throw new ClinicalObservationValidationException('OBSERVATION_INVALIDATION_COMMAND_REQUIRED');
+    }
     if (array_key_exists('effective_at_authority', $input)) {
         throw new ClinicalObservationValidationException('OBSERVATION_TIME_AUTHORITY_SERVER_ONLY');
     }
@@ -104,7 +107,7 @@ final class ClinicalObservationsRepository
             $stmt=$this->pdo->prepare('UPDATE clinical_observations SET code=:code,value_numeric=:value_numeric,value_text=NULL,unit=:unit,
               systolic_mm_hg=:systolic,diastolic_mm_hg=:diastolic,'.$timeSet.'recorded_by_user_id=:actor,
               source=:source,provenance_json=:provenance,row_version=row_version+1,updated_at=UTC_TIMESTAMP()
-              WHERE observation_id=:observation_id AND encounter_id=:encounter_id AND row_version=:expected_version');
+              WHERE observation_id=:observation_id AND encounter_id=:encounter_id AND row_version=:expected_version AND invalidated_at IS NULL');
             $params=[':code'=>$input['code'],':value_numeric'=>$input['value_numeric']??null,':unit'=>$input['unit'],
               ':systolic'=>$input['systolic_mm_hg']??null,':diastolic'=>$input['diastolic_mm_hg']??null,
               ':actor'=>$actor,':source'=>$input['source'],
@@ -115,6 +118,28 @@ final class ClinicalObservationsRepository
             if ($stmt->rowCount() !== 1) throw new RuntimeException('VERSION_CONFLICT');
             $row=$this->fetch($observationId); $this->pdo->commit(); return $row;
         } catch (Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
+    }
+
+    /** One-way invalidation. Lock order matches PATCH and encounter finalization. */
+    public function invalidateOpen(int $encounterId, int $observationId, int $expectedVersion, string $actor, string $doctor, string $patient, string $reason): array
+    {
+        if ($expectedVersion<1) throw new InvalidArgumentException('ROW_VERSION_REQUIRED');
+        $reason=trim($reason);
+        if ($reason==='' || mb_strlen($reason)>1000) throw new InvalidArgumentException('INVALIDATION_REASON_REQUIRED');
+        if (trim($actor)==='' || strlen($actor)>64) throw new InvalidArgumentException('INVALIDATION_ACTOR_REQUIRED');
+        $this->pdo->beginTransaction();
+        try {
+            $lock=$this->pdo->prepare('SELECT status,doctor_id,patient_id FROM clinical_encounters WHERE encounter_id=:id FOR UPDATE');
+            $lock->execute([':id'=>$encounterId]);$encounter=$lock->fetch(PDO::FETCH_ASSOC);
+            if (!$encounter || (string)$encounter['doctor_id']!==$doctor || (string)$encounter['patient_id']!==$patient) throw new RuntimeException('OBSERVATION_CONTEXT_MISMATCH');
+            if ($encounter['status']!=='open') throw new RuntimeException('ENCOUNTER_TERMINAL');
+            $stmt=$this->pdo->prepare('UPDATE clinical_observations SET invalidated_at=UTC_TIMESTAMP(),invalidated_by_user_id=:actor,
+                invalidation_reason=:reason,row_version=row_version+1,updated_at=UTC_TIMESTAMP()
+                WHERE observation_id=:id AND encounter_id=:encounter AND row_version=:version AND invalidated_at IS NULL');
+            $stmt->execute([':actor'=>$actor,':reason'=>$reason,':id'=>$observationId,':encounter'=>$encounterId,':version'=>$expectedVersion]);
+            if ($stmt->rowCount()!==1) throw new RuntimeException('VERSION_CONFLICT');
+            $row=$this->fetch($observationId);$this->pdo->commit();return $row;
+        } catch (Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e; }
     }
 
     private function assertOpen(int $encounterId): void

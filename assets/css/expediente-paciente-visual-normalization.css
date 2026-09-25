@@ -3158,3 +3158,16 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   font-family:inherit;font-size:.875rem;line-height:1.25;
 }
 #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {align-items:end}
+
+/* MEAS01: secondary current-observation invalidation; history has no destructive action. */
+#p-expediente #m7-workspace .vis29-current .vis29-reading {grid-template-columns:minmax(0,1fr) minmax(100px,.7fr) auto}
+#p-expediente #m7-workspace .meas01-row-actions {grid-column:3;grid-row:1 / 3;display:flex;gap:12px;align-items:center}
+#p-expediente #m7-workspace .meas01-row-actions .meas01-remove {color:#a73535}
+#p-expediente #m7-workspace .meas01-confirm {max-width:min(440px,calc(100vw - 32px));padding:20px;border:1px solid #abcbd4;border-radius:12px;color:#173f54}
+#p-expediente #m7-workspace .meas01-confirm::backdrop {background:rgb(10 35 45 / 35%)}
+#p-expediente #m7-workspace .meas01-confirm form {display:flex;justify-content:flex-end;gap:12px}
+#p-expediente #m7-workspace .meas01-confirm .btn {min-height:44px}
+@media(max-width:575.98px){
+  #p-expediente #m7-workspace .vis29-current .vis29-reading {grid-template-columns:minmax(0,1fr) auto}
+  #p-expediente #m7-workspace .meas01-row-actions {grid-column:2;grid-row:1 / 4;flex-direction:column;gap:0}
+}

@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis29-r4">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=meas01">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5506,6 +5506,11 @@
                         <div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-measurement-new>Cancelar captura</button><button type="submit" class="btn btn-primary" data-m7-measurement-save>Agregar a esta consulta</button></div>
                       </form>
                       <section class="vis29-current" aria-labelledby="vis29-current-title"><h5 id="vis29-current-title"><span class="material-symbols-rounded" aria-hidden="true">vital_signs</span>Valores de esta consulta</h5><p class="vis29-description">Mediciones registradas en esta consulta.</p><div class="m7-measurement-list" data-m7-measurements-list></div></section>
+                      <dialog class="meas01-confirm" data-meas01-confirm aria-labelledby="meas01-confirm-title" aria-describedby="meas01-confirm-copy">
+                        <h5 id="meas01-confirm-title">¿Eliminar este valor de la consulta?</h5>
+                        <p id="meas01-confirm-copy">El valor dejará de utilizarse como medición vigente y se conservará su registro para trazabilidad clínica.</p>
+                        <form method="dialog"><button class="btn btn-outline-secondary" value="cancel" autofocus>Cancelar</button><button class="btn btn-outline-danger" value="confirm">Eliminar</button></form>
+                      </dialog>
                       <div class="m7-section-conflict d-none" data-m7-measurement-conflict role="alert"><strong>La medición cambió en otra sesión.</strong><p>Tu edición se conserva. Compara la versión guardada antes de volver a editar.</p><div class="m7-section-conflict-columns"><div><strong>Tu borrador</strong><pre data-m7-measurement-draft></pre></div><div><strong>Versión guardada</strong><pre data-m7-measurement-server></pre></div></div><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-primary" data-m7-measurement-reload>Cargar versión guardada</button><button type="button" class="btn btn-outline-secondary" data-m7-measurement-use-draft disabled>Usar mi borrador después de revisar</button></div></div>
                     </div>
                     <div class="m7-section-editor d-none" data-m7-exam>
@@ -10695,7 +10700,7 @@
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis16"></script>
 <script src="assets/js/app.js?v=vis19"></script>
-<script src="assets/js/clinical/m7-ws03.js?v=vis29-r3"></script>
+<script src="assets/js/clinical/m7-ws03.js?v=meas01"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=vis21"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=vis29-r2"></script>
 <script src="assets/js/clinical/m7-workspace.js?v=vis29-r2"></script>
@@ -10703,7 +10708,7 @@
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=vis05"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=vis10d"></script>
-<script src="assets/js/clinical/lon07c-measurements.js?v=lon07c"></script>
+<script src="assets/js/clinical/lon07c-measurements.js?v=meas01"></script>
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
 <script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>
 <script src="assets/js/clinical/lon05b-medications.js?v=lon05b"></script>

@@ -277,7 +277,8 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
         ['clinical_encounters','open_guard','tinyint'],['clinical_encounters','voided_at',null],
         ['clinical_encounters','voided_by_user_id',null],['clinical_encounters','void_reason',null],
         ['clinical_encounter_sections','payload_schema_version',null],['clinical_encounter_sections','row_version',null],
-        ['clinical_observations','row_version',null],['clinical_documents','encounter_ref_id','bigint'],
+        ['clinical_observations','invalidated_at','datetime'],['clinical_observations','invalidated_by_user_id','varchar'],
+        ['clinical_observations','invalidation_reason','varchar'],['clinical_observations','row_version',null],['clinical_documents','encounter_ref_id','bigint'],
     ];
     foreach($columns as [$table,$column,$type]){
         $q=$pdo->prepare('SELECT DATA_TYPE,GENERATION_EXPRESSION,IS_NULLABLE,EXTRA FROM information_schema.COLUMNS
@@ -331,6 +332,7 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
         ['clinical_encounter_sections','chk_encounter_section_type_v1',['reason_evolution','physical_exam','follow_up']],
         ['clinical_encounter_sections','chk_encounter_section_version_v1',['payload_schema_version','row_version']],
         ['clinical_observations','chk_observation_version_v1',['row_version']],
+        ['clinical_observations','chk_observation_invalidation_v1',['invalidated_at','invalidated_by_user_id','invalidation_reason']],
         ['clinical_observations','chk_observation_source_v1',['direct_measurement','patient_report','import']],
         ['clinical_observations','chk_observation_bp_v1',['blood_pressure','systolic_mm_hg','diastolic_mm_hg','mmhg']],
         ['clinical_encounter_amendments','chk_encounter_amendment_reason_v1',['reason','char_length']],
@@ -699,6 +701,12 @@ final class ClinicalEncounterIntegrityService
     {
         $this->assertAvailable();
         return $this->observations->updateOpen($encounterId, $observationId, $payload, $expectedVersion, $actorId);
+    }
+
+    public function invalidateObservation(int $encounterId, int $observationId, int $version, string $actor, string $doctor, string $patient, string $reason): array
+    {
+        $this->assertAvailable();
+        return $this->observations->invalidateOpen($encounterId,$observationId,$version,$actor,$doctor,$patient,$reason);
     }
 
     public function appendAmendment(int $encounterId, array $target, string $reason, string $actorId, array $correction, string $doctorId, string $idempotencyKey): array

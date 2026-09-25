@@ -7,10 +7,10 @@ if(method_exists($db,'createFunction'))$db->createFunction('UTC_TIMESTAMP',stati
 else $db->sqliteCreateFunction('UTC_TIMESTAMP',static fn()=>'2026-09-24 23:00:00');
 $db->exec('CREATE TABLE clinical_encounters (encounter_id INTEGER,doctor_id TEXT,patient_id TEXT)');
 $db->exec('CREATE TABLE clinical_encounter_amendments (encounter_id INTEGER)');
-$db->exec('CREATE TABLE clinical_observations (observation_id INTEGER,encounter_id INTEGER,code TEXT,value_numeric TEXT,unit TEXT,systolic_mm_hg TEXT,diastolic_mm_hg TEXT,effective_at TEXT,effective_at_authority TEXT,recorded_at TEXT,source TEXT)');
+$db->exec('CREATE TABLE clinical_observations (observation_id INTEGER,encounter_id INTEGER,code TEXT,value_numeric TEXT,unit TEXT,systolic_mm_hg TEXT,diastolic_mm_hg TEXT,effective_at TEXT,effective_at_authority TEXT,recorded_at TEXT,source TEXT,invalidated_at TEXT,invalidated_by_user_id TEXT,invalidation_reason TEXT)');
 $db->exec("INSERT INTO clinical_encounters VALUES (1,'d','p'),(2,'d','p'),(3,'d','p'),(4,'other','p'),(5,'d','other')");
 $add=static function(int $id,int $enc,string $code,string $value,string $unit,string $date,string $authority='EXPLICIT_EFFECTIVE_TIME',?string $s=null,?string $d=null)use($db):void{
- $db->prepare('INSERT INTO clinical_observations VALUES (?,?,?,?,?,?,?,?,?,?,?)')->execute([$id,$enc,$code,$value,$unit,$s,$d,$date,$authority,$date,'direct_measurement']);
+ $db->prepare('INSERT INTO clinical_observations (observation_id,encounter_id,code,value_numeric,unit,systolic_mm_hg,diastolic_mm_hg,effective_at,effective_at_authority,recorded_at,source) VALUES (?,?,?,?,?,?,?,?,?,?,?)')->execute([$id,$enc,$code,$value,$unit,$s,$d,$date,$authority,$date,'direct_measurement']);
 };
 $add(1,1,'weight','67.800000','kg','2026-09-01 10:00:00');
 $add(2,2,'weight','68.400000','kg','2026-09-20 10:00:00');
@@ -38,3 +38,10 @@ $check($rows['weight']['value_numeric']==='68.400000' && $rows['blood_pressure']
 $failed=false;try{ClinicalMeasurementTrends::options(['view'=>'prior']);}catch(InvalidArgumentException $e){$failed=true;}$check($failed,'current encounter exclusion required');
 $check(ClinicalMeasurementTrends::options([])['view']==='series','existing default read contract preserved');
 if(isset($argv[1]))file_put_contents($argv[1],json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+
+$db->exec("UPDATE clinical_observations SET invalidated_at='2026-09-24 22:00:00',invalidated_by_user_id='d',invalidation_reason='Captura errónea' WHERE observation_id=2");
+$rows=array_column($reader->read('d','p',$options)['items'],null,'code');
+$check($rows['weight']['observation_id']===1,'invalidated latest prior falls back to eligible older weight');
+$history=$reader->read('d','p',ClinicalMeasurementTrends::options(['view'=>'history','from'=>'2026-09-01 00:00:00','to'=>'2026-09-24 23:00:00']));
+$audit=array_column($history['items'],null,'observation_id')[2];
+$check(!$audit['trend_eligible'] && $audit['ineligibility_reason']==='INVALIDATED' && $audit['invalidated_by_user_id']==='d','invalidated row remains explicitly auditable');

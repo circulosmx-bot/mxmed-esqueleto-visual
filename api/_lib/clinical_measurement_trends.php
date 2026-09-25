@@ -15,8 +15,8 @@ final class ClinicalMeasurementTrends
 
     public function assertReady(): void
     {
-        $stmt=$this->pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_observations' AND COLUMN_NAME='effective_at_authority'");
-        if ((int)$stmt->fetchColumn()!==1) throw new RuntimeException('SCHEMA_NOT_READY');
+        $stmt=$this->pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_observations' AND COLUMN_NAME IN ('effective_at_authority','invalidated_at','invalidated_by_user_id','invalidation_reason')");
+        if ((int)$stmt->fetchColumn()!==4) throw new RuntimeException('SCHEMA_NOT_READY');
     }
 
     public static function options(array $query): array
@@ -68,6 +68,7 @@ final class ClinicalMeasurementTrends
 
     private static function classify(array $row): string
     {
+        if (!empty($row['invalidated_at'])) return 'INVALIDATED';
         $code=(string)$row['code'];
         if ($code==='pain' || !in_array($code,self::CODES,true)) return 'NUMERIC_NON_COMPARABLE';
         if (!in_array((string)$row['unit'],self::UNITS[$code],true)) return 'INCOMPATIBLE_UNIT';
@@ -87,6 +88,8 @@ final class ClinicalMeasurementTrends
             'systolic_mm_hg'=>$code==='blood_pressure'?$row['systolic_mm_hg']:null,
             'diastolic_mm_hg'=>$code==='blood_pressure'?$row['diastolic_mm_hg']:null,
             'effective_at'=>(string)$row['effective_at'],'effective_at_authority'=>(string)$row['effective_at_authority'],
+            'invalidated_at'=>$row['invalidated_at']??null,'invalidated_by_user_id'=>$row['invalidated_by_user_id']??null,
+            'invalidation_reason'=>$row['invalidation_reason']??null,
             'recorded_at'=>(string)$row['recorded_at'],'trend_eligible'=>$reason==='TREND_ELIGIBLE',
             'classification'=>$reason==='TREND_ELIGIBLE'?'TREND_ELIGIBLE':'HISTORY_ONLY',
             'ineligibility_reason'=>$reason==='TREND_ELIGIBLE'?null:$reason,
@@ -112,12 +115,12 @@ final class ClinicalMeasurementTrends
         $params=[':doctor'=>$doctor,':patient'=>$patient,':from_time'=>$from,':to_time'=>$to];
         foreach (['code','unit','source'] as $name) if ($options[$name]!=='') {$where.=" AND o.$name=:$name";$params[":$name"]=$options[$name];}
         if ($view==='points') {
-            $where.=" AND o.effective_at_authority='EXPLICIT_EFFECTIVE_TIME'";
+            $where.=" AND o.invalidated_at IS NULL AND o.effective_at_authority='EXPLICIT_EFFECTIVE_TIME'";
             $where.=" AND o.code IN ('blood_pressure','heart_rate','respiratory_rate','temperature','oxygen_saturation','weight','height','waist')";
             $where.=" AND ((o.code='blood_pressure' AND o.systolic_mm_hg>0 AND o.diastolic_mm_hg>0) OR (o.code<>'blood_pressure' AND o.value_numeric IS NOT NULL))";
         }
         if ($options['cursor']!==null) {$where.=' AND (o.effective_at<:cursor_time OR (o.effective_at=:cursor_time_equal AND o.observation_id<:cursor_id))';$params[':cursor_time']=$options['cursor'][0];$params[':cursor_time_equal']=$options['cursor'][0];$params[':cursor_id']=$options['cursor'][1];}
-        $sql="SELECT o.observation_id,o.encounter_id,o.code,o.value_numeric,o.unit,o.systolic_mm_hg,o.diastolic_mm_hg,o.effective_at,o.effective_at_authority,o.recorded_at,o.source,EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=e.encounter_id) AS has_amendment FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id WHERE $where ORDER BY o.effective_at DESC,o.observation_id DESC LIMIT :limit";
+        $sql="SELECT o.observation_id,o.encounter_id,o.code,o.value_numeric,o.unit,o.systolic_mm_hg,o.diastolic_mm_hg,o.effective_at,o.effective_at_authority,o.recorded_at,o.source,o.invalidated_at,o.invalidated_by_user_id,o.invalidation_reason,EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=e.encounter_id) AS has_amendment FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id WHERE $where ORDER BY o.effective_at DESC,o.observation_id DESC LIMIT :limit";
         $stmt=$this->pdo->prepare($sql);
         foreach($params as $name=>$value)$stmt->bindValue($name,$value,$name===':cursor_id'?PDO::PARAM_INT:PDO::PARAM_STR);
         $stmt->bindValue(':limit',$options['limit']+1,PDO::PARAM_INT);$stmt->execute();
@@ -145,7 +148,7 @@ final class ClinicalMeasurementTrends
         $sql="SELECT * FROM (SELECT o.*,EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=e.encounter_id) AS has_amendment,
             ROW_NUMBER() OVER (PARTITION BY o.code ORDER BY o.effective_at DESC,o.observation_id DESC) AS prior_rank
             FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id
-            WHERE e.doctor_id=:doctor AND e.patient_id=:patient AND o.encounter_id<>:exclude
+            WHERE e.doctor_id=:doctor AND e.patient_id=:patient AND o.encounter_id<>:exclude AND o.invalidated_at IS NULL
             AND o.effective_at_authority='EXPLICIT_EFFECTIVE_TIME' AND o.effective_at<=UTC_TIMESTAMP()
             AND o.source IN ('direct_measurement','patient_report','import') AND ($units)
             AND ((o.code='blood_pressure' AND o.systolic_mm_hg>0 AND o.diastolic_mm_hg>0)
@@ -159,7 +162,7 @@ final class ClinicalMeasurementTrends
     private function series(string $doctor,string $patient,string $from,string $to): array
     {
         // Partition by the physical series key; never select from a global first-N page.
-        $sql="SELECT * FROM (SELECT o.observation_id,o.encounter_id,o.code,o.value_numeric,o.unit,o.systolic_mm_hg,o.diastolic_mm_hg,o.effective_at,o.effective_at_authority,o.recorded_at,o.source,EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=e.encounter_id) AS has_amendment,ROW_NUMBER() OVER (PARTITION BY o.code,o.unit,o.source ORDER BY o.effective_at DESC,o.observation_id DESC) AS series_rank FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id WHERE e.doctor_id=:doctor AND e.patient_id=:patient AND o.effective_at>=:from_time AND o.effective_at<=:to_time AND o.effective_at_authority='EXPLICIT_EFFECTIVE_TIME' AND ((o.code='blood_pressure' AND o.unit='mmHg' AND o.systolic_mm_hg>0 AND o.diastolic_mm_hg>0) OR (o.code='heart_rate' AND o.unit='bpm' AND o.value_numeric IS NOT NULL) OR (o.code='respiratory_rate' AND o.unit='rpm' AND o.value_numeric IS NOT NULL) OR (o.code='temperature' AND o.unit='°C' AND o.value_numeric IS NOT NULL) OR (o.code='oxygen_saturation' AND o.unit='%' AND o.value_numeric IS NOT NULL) OR (o.code='weight' AND o.unit IN ('kg','lb') AND o.value_numeric IS NOT NULL) OR (o.code='height' AND o.unit='cm' AND o.value_numeric IS NOT NULL) OR (o.code='waist' AND o.unit='cm' AND o.value_numeric IS NOT NULL))) ranked WHERE series_rank=1 ORDER BY code,unit,source";
+        $sql="SELECT * FROM (SELECT o.observation_id,o.encounter_id,o.code,o.value_numeric,o.unit,o.systolic_mm_hg,o.diastolic_mm_hg,o.effective_at,o.effective_at_authority,o.recorded_at,o.source,o.invalidated_at,o.invalidated_by_user_id,o.invalidation_reason,EXISTS(SELECT 1 FROM clinical_encounter_amendments a WHERE a.encounter_id=e.encounter_id) AS has_amendment,ROW_NUMBER() OVER (PARTITION BY o.code,o.unit,o.source ORDER BY o.effective_at DESC,o.observation_id DESC) AS series_rank FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id WHERE e.doctor_id=:doctor AND e.patient_id=:patient AND o.effective_at>=:from_time AND o.effective_at<=:to_time AND o.invalidated_at IS NULL AND o.effective_at_authority='EXPLICIT_EFFECTIVE_TIME' AND ((o.code='blood_pressure' AND o.unit='mmHg' AND o.systolic_mm_hg>0 AND o.diastolic_mm_hg>0) OR (o.code='heart_rate' AND o.unit='bpm' AND o.value_numeric IS NOT NULL) OR (o.code='respiratory_rate' AND o.unit='rpm' AND o.value_numeric IS NOT NULL) OR (o.code='temperature' AND o.unit='°C' AND o.value_numeric IS NOT NULL) OR (o.code='oxygen_saturation' AND o.unit='%' AND o.value_numeric IS NOT NULL) OR (o.code='weight' AND o.unit IN ('kg','lb') AND o.value_numeric IS NOT NULL) OR (o.code='height' AND o.unit='cm' AND o.value_numeric IS NOT NULL) OR (o.code='waist' AND o.unit='cm' AND o.value_numeric IS NOT NULL))) ranked WHERE series_rank=1 ORDER BY code,unit,source";
         $stmt=$this->pdo->prepare($sql);$stmt->execute([':doctor'=>$doctor,':patient'=>$patient,':from_time'=>$from,':to_time'=>$to]);
         $series=[];
         foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $row){$item=self::item($row);foreach(self::components($item) as $component)$series[]=['series_key'=>$component['series_key'],'code'=>$item['code'],'unit'=>$item['unit'],'source'=>$item['source'],'component'=>$component['component'],'latest_comparable_observation'=>array_merge($item,$component)];}

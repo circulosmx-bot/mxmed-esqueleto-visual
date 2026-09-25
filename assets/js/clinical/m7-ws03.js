@@ -18,6 +18,7 @@
     const measurementList = q('[data-m7-measurements-list]');
     const priorList = q('[data-vis29-prior]');
     const formTitle = q('[data-vis29-form-title]');
+    const invalidationDialog = q('[data-meas01-confirm]');
     let priorEpoch=0, priorRows=[], reuseCandidate=null, lastCode='blood_pressure', noticeTimer=0, createPending=false;
     const measurementConflict = q('[data-m7-measurement-conflict]');
     const measurementDraft = q('[data-m7-measurement-draft]');
@@ -180,7 +181,15 @@
             }else fillMeasurement(row);
             formTitle.scrollIntoView({block:'nearest',behavior:'auto'});
             (code.value==='blood_pressure'?systolic:value).focus();
-          });line.append(button);
+          });
+          if(prior)line.append(button);
+          else {
+            const actions=document.createElement('div');actions.className='meas01-row-actions';actions.append(button);
+            const remove=document.createElement('button');remove.type='button';remove.className='btn btn-link meas01-remove';remove.textContent='Eliminar';
+            remove.setAttribute('aria-label',`Eliminar: ${name.textContent} · ${val.textContent}`);
+            remove.disabled=busy||measurementLocked||createPending;
+            remove.addEventListener('click',()=>invalidateMeasurement(row));actions.append(remove);line.append(actions);
+          }
         }
         target.append(line);
       });
@@ -259,6 +268,7 @@
       if(type==='physical_exam') paintExam();
     }
     function reset(){
+      if(invalidationDialog.open)invalidationDialog.close('cancel');
       ++priorEpoch;priorRows=[];reuseCandidate=null;priorList.replaceChildren();clearTimeout(noticeTimer);createPending=false;
       key=''; patient=''; mode='none'; selected=''; observations=[]; selectedObservation=null;
       createKey=''; measurementNotice=''; examNotice='';
@@ -301,6 +311,39 @@
       root.querySelector('[data-m7-status]').textContent='Consulta histórica de sólo lectura.';
       paintMeasurement(); paintExam();
     }
+    async function invalidateMeasurement(row){
+      if(mode!=='open'||busy||measurementLocked||createPending||invalidationDialog.open)return;
+      if(selectedObservation?.observation_id===row.observation_id&&isDirty()){
+        measurementNotice='Guarda o cancela la edición de este valor antes de eliminarlo.';paintMeasurement();return;
+      }
+      const oldKey=key,oldPatient=patient;
+      invalidationDialog.returnValue='cancel';
+      const confirmed=new Promise(resolve=>invalidationDialog.addEventListener('close',()=>resolve(invalidationDialog.returnValue==='confirm'),{once:true}));
+      invalidationDialog.showModal();
+      if(!await confirmed || key!==oldKey || patient!==oldPatient || currentPatient()!==oldPatient || mode!=='open' || busy)return;
+      busy=true;clearTimeout(noticeTimer);measurementNotice='Eliminando…';paintMeasurement();
+      try{
+        const response=await fetch(`${encounterUrl(oldKey)}/observations/${row.observation_id}/void`,{
+          method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json'},
+          body:JSON.stringify({patient_id:oldPatient,row_version:Number(row.row_version)})
+        });
+        const result=await responseJson(response);
+        if(!result.data?.invalidated_at || Number(result.data.observation_id)!==Number(row.observation_id))throw new Error('INVALID_RESPONSE');
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==oldPatient)return;
+        const detail=await reloadCurrent();
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==oldPatient)return;
+        observations=detail.observations||[];
+        if(selectedObservation?.observation_id===row.observation_id)fillMeasurement(null);
+        measurementNotice='Medición eliminada';
+        noticeTimer=window.setTimeout(()=>{if(key===oldKey&&measurementNotice==='Medición eliminada'){measurementNotice='';paintMeasurement();}},2500);
+      }catch(error){
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==oldPatient)return;
+        measurementNotice=error.code==='VERSION_CONFLICT'?'El valor cambió. Actualiza la consulta y revisa la medición antes de eliminarla.'
+          :error.code==='ENCOUNTER_TERMINAL'?'La consulta terminó. No se eliminó la medición.'
+          :'No se confirmó la eliminación. El valor permanece visible; actualiza la consulta para comprobar su estado.';
+      }finally{busy=false;paintMeasurement();}
+    }
+
     async function saveMeasurement(event){
       event?.preventDefault();
       if(mode!=='open'||busy||measurementLocked) return false;
@@ -323,10 +366,11 @@
         const result=await responseJson(response);
         if(key!==oldKey||patient!==oldPatient||currentPatient()!==patient) return;
         const saved=result.data;
-        observations=[saved,...observations.filter(item=>Number(item.observation_id)!==Number(saved.observation_id))];
+        observations=[saved,...observations.filter(item=>Number(item.observation_id)!==Number(saved.observation_id))].filter(item=>!item.invalidated_at);
         fillMeasurement(row?saved:null);
-        measurementNotice=row?'Cambios guardados':'Medición agregada';
-        noticeTimer=window.setTimeout(()=>{if(key===oldKey&&measurementNotice=== (row?'Cambios guardados':'Medición agregada')){measurementNotice='';paintMeasurement();}},2500);
+        const successNotice=saved.invalidated_at?'Este registro ya fue eliminado; no se agregó a los valores vigentes.':row?'Cambios guardados':'Medición agregada';
+        measurementNotice=successNotice;
+        noticeTimer=window.setTimeout(()=>{if(key===oldKey&&measurementNotice===successNotice){measurementNotice='';paintMeasurement();}},2500);
         return true;
       }catch(error){
         // An ambiguous create retains its idempotency key and payload for an explicit safe retry.
