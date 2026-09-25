@@ -652,7 +652,7 @@
     window.requestAnimationFrame(()=>{
       const panel = root.querySelector('[data-m7-terminal]');
       panel?.scrollIntoView({behavior:'smooth', block:'start'});
-      panel?.querySelector('[data-m7-finalize]')?.focus({preventScroll:true});
+      root.querySelector('[data-m7-finalize]')?.focus({preventScroll:true});
     });
     return true;
   }

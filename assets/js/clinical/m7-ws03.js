@@ -158,15 +158,12 @@
     function renderRows(target,rows,prior=false){
       target.replaceChildren();
       if(!rows.length){const empty=document.createElement('p');empty.className='vis29-empty';empty.textContent=prior?'No hay valores previos elegibles.':'Aún no hay mediciones registradas en esta consulta.';target.append(empty);return;}
-      const groups=new Map();
       rows.forEach(row=>{
         const dates=dateParts(row);
-        let group=groups.get(dates.day);
-        if(!group){group=document.createElement('div');group.className='vis29-date-group';const heading=document.createElement('h6');heading.textContent=dates.day;group.append(heading);groups.set(dates.day,group);target.append(group);}
         const line=document.createElement('div');line.className='vis29-reading';
         const name=document.createElement('span');name.textContent=catalog[row.code]?.[0]||row.code;
         const val=document.createElement('strong');val.textContent=reading(row);
-        const timeLabel=document.createElement('small');timeLabel.textContent=dates.time;
+        const timeLabel=document.createElement('small');timeLabel.textContent=[dates.day,dates.time].filter(Boolean).join(' · ');
         line.append(name,val,timeLabel);
         if(mode==='open'){
           const button=document.createElement('button');button.type='button';button.className='btn btn-link';button.textContent=prior?'Usar valor':'Editar';button.disabled=busy||measurementLocked||createPending;
@@ -183,7 +180,7 @@
             (code.value==='blood_pressure'?systolic:value).focus();
           });line.append(button);
         }
-        group.append(line);
+        target.append(line);
       });
     }
     async function loadPrior(encounterId){
@@ -207,7 +204,7 @@
       [...form.elements].forEach(control=>{ control.disabled=mode!=='open'||busy||measurementLocked||createPending; });
       source.querySelector('option[value="import"]').disabled=!selectedObservation;
       const save=q('[data-m7-measurement-save]'),cancel=q('[data-m7-measurement-new]');
-      save.textContent=selectedObservation?'Guardar cambios':reuseCandidate?'Registrar en esta consulta':'Agregar medición';
+      save.textContent=selectedObservation?'Guardar cambios':'Agregar a esta consulta';
       save.disabled=mode!=='open'||busy||measurementLocked||!isDirty();
       cancel.textContent=selectedObservation?'Cancelar edición':'Cancelar captura';
       cancel.disabled=mode!=='open'||busy||measurementLocked||createPending;
@@ -308,7 +305,7 @@
       event?.preventDefault();
       if(mode!=='open'||busy||measurementLocked) return false;
       if(!isDirty()) return true;
-      if(reuseCandidate&&!event){measurementNotice='Confirma el valor previo con “Registrar en esta consulta” o cancela la captura.';paintMeasurement();return false;}
+      if(reuseCandidate&&!event){measurementNotice='Confirma el valor previo con “Agregar a esta consulta” o cancela la captura.';paintMeasurement();return false;}
       if(!form.reportValidity()){measurementNotice='Completa el valor, la fecha y el origen, o cancela la captura.';paintMeasurement();return false;}
       clearTimeout(noticeTimer);measurementNotice='';
       const oldKey=key, oldPatient=patient, draft=measurementSnapshot();

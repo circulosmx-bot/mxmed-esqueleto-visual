@@ -5,7 +5,7 @@
     if (!panel) return null;
     const $ = selector => panel.querySelector(selector);
     const state = root.querySelector('[data-m7-terminal-state]');
-    const finalize = $('[data-m7-finalize]');
+    const finalize = root.querySelector('[data-m7-finalize]');
     const voidForm = $('[data-m7-void-form]');
     const amendmentForm = $('[data-m7-amendment-form]');
     const amendmentList = $('[data-m7-amendment-list]');
