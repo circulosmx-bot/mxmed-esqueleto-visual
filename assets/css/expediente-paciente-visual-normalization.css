@@ -2565,8 +2565,8 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
 #p-expediente #m7-workspace .vis23-workspace-context-line {
   display:flex;
   flex-wrap:nowrap;
-  align-items:baseline;
-  gap:0 12px;
+  align-items:center;
+  gap:0 16px;
   min-width:0;
 }
 #p-expediente #m7-workspace .m7-workspace-head h3 {
@@ -2583,14 +2583,15 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
   display:flex;
   flex:0 0 auto;
   align-items:center;
-  gap:5px;
+  gap:7px;
   min-width:0;
   color:#285a70;
+  transform:translateY(2px);
 }
 #p-expediente #m7-workspace .vis23-appointment-icon {
   display:none;
   flex:0 0 auto;
-  font-size:1.28rem;
+  font-size:2.4rem;
   line-height:1;
 }
 #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) .vis23-appointment-icon {
@@ -2607,7 +2608,7 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
 #p-expediente #m7-workspace .vis21-step-context {
   display:flex;
   flex:1 1 auto;
-  align-items:baseline;
+  align-items:center;
   justify-content:flex-start;
   gap:8px;
   min-width:0;
@@ -2691,7 +2692,7 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
 }
 #p-expediente #m7-workspace .m7-workspace-sections button::before {
   top:19px;
-  border-top-width:3px;
+  border-top-width:4px;
 }
 #p-expediente #m7-workspace .m7-workspace-sections .vis04-step-number {
   flex-basis:35px;
@@ -2797,7 +2798,7 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
     grid-template-columns:1fr;
   }
   #p-expediente #m7-workspace .vis23-workspace-context-line {
-    gap:5px 9px;
+    gap:5px 11px;
   }
   #p-expediente #m7-workspace .m7-workspace-head h3 {
     font-size:1.18rem;
@@ -2806,7 +2807,7 @@ body.exp-consultation-focus-active #p-expediente [data-exp-tabs].vis01-primary-n
     font-size:1rem;
   }
   #p-expediente #m7-workspace .vis23-appointment-icon {
-    font-size:1.05rem;
+    font-size:2rem;
   }
   #p-expediente #m7-workspace .vis21-step-copy {
     flex-wrap:wrap;
