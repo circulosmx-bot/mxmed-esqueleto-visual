@@ -209,7 +209,7 @@
       renderRows(measurementList,observations);
       if(priorRows.length)renderRows(priorList,priorRows,true);
       formTitle.textContent=selectedObservation?'Editar medición':'Registrar valores';
-      measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':'');
+      measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':reuseCandidate?'Valor previo preparado. Selecciona el origen y agrégalo, o cancela la captura antes de cambiar de paso.':'');
       [...form.elements].forEach(control=>{ control.disabled=mode!=='open'||busy||measurementLocked||createPending; });
       source.querySelector('option[value="import"]').disabled=!selectedObservation;
       const save=q('[data-m7-measurement-save]'),cancel=q('[data-m7-measurement-new]');
@@ -453,7 +453,11 @@
     form.addEventListener('input',captureInput);
     form.addEventListener('change',captureInput);
     form.addEventListener('submit',saveMeasurement);
-    q('[data-m7-measurement-new]').addEventListener('click',()=>{if(!canReplaceCapture())return;fillMeasurement(null);});
+    q('[data-m7-measurement-new]').addEventListener('click',()=>{
+      if(busy||measurementLocked||createPending||mode!=='open')return;
+      // This explicit cancel already authorizes discarding a prepared prior value.
+      if(reuseCandidate||canReplaceCapture())fillMeasurement(null);
+    });
     q('[data-m7-measurement-reload]').addEventListener('click',async()=>{
       try{const detail=await reloadCurrent();const row=detail.observations?.find(item=>Number(item.observation_id)===Number(selectedObservation?.observation_id));if(row){observations=detail.observations;fillMeasurement(row);hide(measurementConflict,true);q('[data-m7-measurement-use-draft]').disabled=false;}else{measurementNotice='No se encontró la medición guardada.';paintMeasurement();}}catch(_){measurementNotice='No se pudo cargar la versión guardada.';paintMeasurement();}
     });
