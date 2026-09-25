@@ -17,6 +17,9 @@
   const editor = root.querySelector('[data-m7-editor]');
   const editorState = root.querySelector('[data-m7-editor-state]');
   const editorText = root.querySelector('[data-m7-editor-text]');
+  const sectionDraftCue = root.querySelector('[data-vis30-section-draft]');
+  const sectionDraftRecover = root.querySelector('[data-vis30-section-recover]');
+  const sectionDraftDiscard = root.querySelector('[data-vis30-section-discard]');
   const editorSave = root.querySelector('[data-m7-editor-save]');
   const promoteProblem = root.querySelector('[data-lon04b-m7-promote]');
   editorText?.addEventListener('input',()=>{if(promoteProblem && selectedSection==='assessment') promoteProblem.classList.toggle('d-none',editorText.value!==sectionBaseline);});
@@ -46,6 +49,7 @@
   let authorizedPatientChange = '';
   let appointmentHeaderEpoch = 0;
   let editorStateTimer = 0;
+  let activeSectionDraftKey = '';
   const localDrafts = new Map();
   const ws03 = window.mxmedM7WS03?.(root, encounterUrlForWs03, ()=>patientId, ()=>{
     active = null;
@@ -294,11 +298,17 @@
     if(promoteProblem){promoteProblem.dataset.sectionId = row?.section_id || '';promoteProblem.dataset.encounterId = body.dataset.encounterId || '';}
     sectionVersion = row ? Number(row.row_version) : null;
     sectionBaseline = row ? String(row.narrative_text || '') : '';
-    const draft = readDraft(key, selectedSection);
-    editorText.value = draft === null ? sectionBaseline : draft;
+    const draftId = draftKey(key, selectedSection);
+    let draft = readDraft(key, selectedSection);
+    if(draft !== null && draft === sectionBaseline){clearDraft(key,selectedSection);draft=null;if(activeSectionDraftKey===draftId)activeSectionDraftKey='';}
+    const passiveDraft = draft !== null && activeSectionDraftKey !== draftId;
+    editorText.value = passiveDraft || draft === null ? sectionBaseline : draft;
+    show(sectionDraftCue,passiveDraft);
+    sectionDraftRecover.disabled=sectionMode!=='open';
+    sectionDraftDiscard.disabled=sectionMode!=='open';
     show(promoteProblem, selectedSection === 'assessment' && !!row?.section_id && !!sectionBaseline.trim() && editorText.value === sectionBaseline);
-    editorText.readOnly = sectionMode !== 'open' || sectionConflict || sectionBusy;
-    editorSave.disabled = sectionMode !== 'open' || sectionBusy || sectionConflict || !isDirty();
+    editorText.readOnly = sectionMode !== 'open' || sectionConflict || sectionBusy || passiveDraft;
+    editorSave.disabled = sectionMode !== 'open' || sectionBusy || sectionConflict || passiveDraft || !isDirty();
     show(editorSave, sectionMode === 'open');
     setEditorState(sectionMode !== 'open' ? 'Sólo lectura' : sectionConflict ? 'Conflicto: revisa ambas versiones' : isDirty() ? 'Cambios sin guardar' : '');
     sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
@@ -365,6 +375,7 @@
       sectionMode = 'open';
       sectionConflict = false;
       clearDraft(key, type);
+      if(activeSectionDraftKey===draftKey(key,type))activeSectionDraftKey='';
       paintSection();
       conflictDraft.value = draft;
       conflictServer.value = editorText.value;
@@ -438,6 +449,7 @@
         updated_at:String(row.updated_at || ''), payload_schema_version:Number(row.payload_schema_version || 1)
       };
       clearDraft(key, type);
+      if(activeSectionDraftKey===draftKey(key,type))activeSectionDraftKey='';
       paintSection();
       setEditorState('Guardado', { transient:true });
       return true;
@@ -448,13 +460,14 @@
     } finally {
       sectionBusy = false;
       if(key === body.dataset.encounterKey && type === selectedSection){
-        editorText.readOnly = sectionMode !== 'open' || sectionConflict;
+        editorText.readOnly = sectionMode !== 'open' || sectionConflict || !sectionDraftCue.classList.contains('d-none');
         if(!sectionConflict) editorSave.disabled = sectionMode !== 'open' || !isDirty();
       }
     }
   }
   function reset(){
     appointmentHeaderEpoch++;
+    activeSectionDraftKey = '';
     setEditorState('');
     sectionEpoch++;
     ws03?.reset();
@@ -608,15 +621,28 @@
   }));
   editorText.addEventListener('input', ()=>{
     if(sectionMode !== 'open') return;
+    activeSectionDraftKey=draftKey(body.dataset.encounterKey,selectedSection);
     rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     setEditorState(isDirty() ? 'Cambios sin guardar' : '');
     editorSave.disabled = sectionBusy || sectionConflict || !isDirty();
   });
   editorSave.addEventListener('click', saveSection);
+  sectionDraftRecover.addEventListener('click',()=>{
+    const key=body.dataset.encounterKey||'', draft=readDraft(key,selectedSection);
+    if(sectionMode!=='open'||draft===null||sectionDraftCue.classList.contains('d-none'))return;
+    activeSectionDraftKey=draftKey(key,selectedSection);
+    paintSection();editorText.focus();
+  });
+  sectionDraftDiscard.addEventListener('click',()=>{
+    const key=body.dataset.encounterKey||'';
+    if(sectionMode!=='open'||sectionDraftCue.classList.contains('d-none'))return;
+    clearDraft(key,selectedSection);activeSectionDraftKey='';paintSection();
+  });
   conflictReload.addEventListener('click', reloadAfterConflict);
   conflictUseDraft.addEventListener('click', ()=>{
     if(sectionConflict || sectionMode !== 'open' || conflictUseDraft.disabled) return;
     editorText.value = conflictDraft.value;
+    activeSectionDraftKey=draftKey(body.dataset.encounterKey,selectedSection);
     rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
     paintSection();
     editorText.focus();

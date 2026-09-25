@@ -15,7 +15,7 @@
     reason: ['Motivo / Evolución','Motivo de atención, síntomas o evolución.'],
     measurements: ['Mediciones','Signos vitales y mediciones clínicas.'],
     exam: ['Exploración','Hallazgos de la exploración física.'],
-    assessment: ['Valoración','Impresión y valoración clínica.'],
+    assessment: ['Valoración','Impresión clínica, diagnósticos y análisis del caso.'],
     plan: ['Plan','Indicaciones, tratamiento y plan de atención.'],
     documents: ['Documentos / Acciones','Documentos y acciones de esta consulta.'],
     finalize: ['Finalizar','Revisión y cierre de la consulta.']
@@ -65,6 +65,7 @@
     const editor = root.querySelector('[data-m7-editor-text]');
     editor.removeAttribute('aria-labelledby');
     editor.setAttribute('aria-describedby', 'vis21-step-helper');
+    editor.placeholder = selected === 'assessment' ? 'Describe tu impresión diagnóstica, evolución y diagnósticos diferenciales relevantes.' : '';
   }
   function advance(delta) {
     const before = currentIndex(), target = steps[before + delta];

@@ -22,6 +22,10 @@
     const pendingDialog = q('[data-vis29-pending-dialog]');
     const pendingRegister = q('[data-vis29-pending-register]');
     const pendingHint = q('[data-vis29-pending-hint]');
+    const recoveredDraft = q('[data-vis30-measurement-draft]');
+    const recoveredDraftCopy = q('[data-vis30-measurement-draft-copy]');
+    const recoverDraft = q('[data-vis30-measurement-recover]');
+    const discardRecoveredDraft = q('[data-vis30-measurement-discard]');
     let priorEpoch=0, priorRows=[], reuseCandidate=null, lastCode='blood_pressure', noticeTimer=0, createPending=false;
     const measurementConflict = q('[data-m7-measurement-conflict]');
     const measurementDraft = q('[data-m7-measurement-draft]');
@@ -30,6 +34,9 @@
     const examMeta = q('[data-m7-exam-meta]');
     const examSystems = q('[data-m7-exam-systems]');
     const examSave = q('[data-m7-exam-save]');
+    const examDraftCue = q('[data-vis30-exam-draft]');
+    const examDraftRecover = q('[data-vis30-exam-recover]');
+    const examDraftDiscard = q('[data-vis30-exam-discard]');
     const examConflict = q('[data-m7-exam-conflict]');
     const examDraft = q('[data-m7-exam-draft]');
     const examServer = q('[data-m7-exam-server]');
@@ -47,7 +54,7 @@
     let baselineMeasurement = '', baselineExam = '', examVersion = null, busy = false;
     let measurementLocked = false, examLocked = false;
     let createKey = '', loadedExam = {}, measurementNotice = '', examNotice = '', pendingDecision = false;
-    let retainedMeasurementDraft = '', retainedExamDraft = '';
+    let retainedMeasurementDraft = '', retainedExamDraft = '', availableMeasurementDraft = '', unavailableMeasurementDraft = false, availableExamDraft = '';
     const drafts = new Map();
     const hide = (node, visible)=>node.classList.toggle('d-none', !visible);
     const draftId = type=>`mxmed.m7.ws03.draft:${key}:${type}`;
@@ -82,12 +89,39 @@
         reuse_candidate:reuseCandidate, code:code.value, value:value.value, systolic:systolic.value, diastolic:diastolic.value,
         time:time.value, source:source.value });
     }
+    function classifyMeasurementDraft(raw){
+      try{
+        const draft=JSON.parse(raw);
+        if(!draft || typeof draft!=='object' || Array.isArray(draft)) return {meaningful:false,unavailable:false};
+        if(draft.reuse_candidate?.observation_id && catalog[draft.reuse_candidate.code]) return {meaningful:true,unavailable:false};
+        const text=name=>String(draft[name]??'').trim();
+        if(draft.observation_id){
+          const row=observations.find(item=>Number(item.observation_id)===Number(draft.observation_id));
+          if(!row) return {meaningful:true,unavailable:true};
+          return {meaningful:text('code')!==String(row.code||'') || text('value')!==String(row.value_numeric??'') ||
+            text('systolic')!==String(row.systolic_mm_hg??'') || text('diastolic')!==String(row.diastolic_mm_hg??'') ||
+            text('time')!==toLocalDateTime(row.effective_at) || text('source')!==String(row.source||''),unavailable:false};
+        }
+        return {meaningful:['value','systolic','diastolic','time','source'].some(name=>text(name)!==''),unavailable:false};
+      }catch(_){return {meaningful:false,unavailable:false};}
+    }
     function examSnapshot(){
       const result={};
       examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
         result[row.dataset.m7ExamSystem]={state:row.querySelector('select').value,finding:row.querySelector('input').value};
       });
       return JSON.stringify(result);
+    }
+    function examDraftIsMeaningful(raw){
+      try{
+        const draft=JSON.parse(raw), baseline=JSON.parse(baselineExam);
+        if(!draft || typeof draft!=='object' || Array.isArray(draft)) return false;
+        return Object.keys(systems).some(name=>{
+          const saved=baseline[name]||{}, pending=draft[name]||{};
+          const savedState=saved.state||'NOT_REVIEWED', pendingState=pending.state||'NOT_REVIEWED';
+          return savedState!==pendingState || (pendingState==='ABNORMAL' && String(saved.finding||'')!==String(pending.finding||''));
+        });
+      }catch(_){return false;}
     }
     function isDirty(){
       return mode==='open' && (selected==='measurements' ? measurementSnapshot()!==baselineMeasurement || [value,systolic,diastolic,time].some(control=>control.validity.badInput&&!control.closest('.d-none'))
@@ -133,6 +167,7 @@
     }
     function fillMeasurement(row, discardDraft=true, preserveRetainedDraft=false){
       reuseCandidate=null;
+      availableMeasurementDraft='';unavailableMeasurementDraft=false;
       if(!preserveRetainedDraft){retainedMeasurementDraft='';q('[data-m7-measurement-use-draft]').disabled=true;}
       selectedObservation=row || null;
       code.value=row?.code || 'blood_pressure'; value.value=row?.value_numeric ?? '';
@@ -172,7 +207,7 @@
         const timeLabel=document.createElement('small');timeLabel.textContent=[dates.day,dates.time].filter(Boolean).join(' · ');
         line.append(name,val,timeLabel);
         if(mode==='open'){
-          const button=document.createElement('button');button.type='button';button.className='btn btn-link';button.textContent=prior?'Usar valor':'Editar';button.disabled=busy||measurementLocked||createPending;
+          const button=document.createElement('button');button.type='button';button.className='btn btn-link';button.textContent=prior?'Usar valor':'Editar';button.disabled=busy||measurementLocked||createPending||!!availableMeasurementDraft;
           if(prior)button.setAttribute('aria-pressed',String(priorSelected));
           button.setAttribute('aria-label',`${button.textContent}: ${name.textContent} · ${val.textContent}`);
           button.addEventListener('click',()=>{
@@ -191,7 +226,7 @@
             const actions=document.createElement('div');actions.className='meas01-row-actions';actions.append(button);
             const remove=document.createElement('button');remove.type='button';remove.className='btn btn-link meas01-remove';remove.textContent='Eliminar';
             remove.setAttribute('aria-label',`Eliminar: ${name.textContent} · ${val.textContent}`);
-            remove.disabled=busy||measurementLocked||createPending;
+            remove.disabled=busy||measurementLocked||createPending||!!availableMeasurementDraft;
             remove.addEventListener('click',()=>invalidateMeasurement(row));actions.append(remove);line.append(actions);
           }
         }
@@ -213,33 +248,49 @@
       renderRows(measurementList,observations);
       if(priorRows.length)renderRows(priorList,priorRows,true);
       formTitle.textContent=selectedObservation?'Editar medición':'Registrar valores';
+      hide(recoveredDraft,!!availableMeasurementDraft);
+      recoveredDraftCopy.textContent=unavailableMeasurementDraft?'Hay una captura pendiente recuperada, pero la medición original ya no está disponible. Descarta este borrador para continuar.':'Hay una captura pendiente recuperada de esta consulta. Elige si deseas retomarla o descartarla.';
+      recoverDraft.disabled=mode!=='open'||busy||unavailableMeasurementDraft;
+      discardRecoveredDraft.disabled=mode!=='open'||busy;
       measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':reuseCandidate?'Valor previo preparado. Selecciona el origen y agrégalo, o cancela la captura antes de cambiar de paso.':'');
-      [...form.elements].forEach(control=>{ control.disabled=mode!=='open'||busy||measurementLocked||createPending; });
+      [...form.elements].forEach(control=>{ if(!control.closest('[data-vis30-measurement-draft]')) control.disabled=mode!=='open'||busy||measurementLocked||createPending||!!availableMeasurementDraft; });
       source.querySelector('option[value="import"]').disabled=!selectedObservation;
       const save=q('[data-m7-measurement-save]'),cancel=q('[data-m7-measurement-new]');
       save.textContent=selectedObservation?'Guardar cambios':'Agregar a esta consulta';
-      save.disabled=mode!=='open'||busy||measurementLocked||!isDirty();
+      save.disabled=mode!=='open'||busy||measurementLocked||!!availableMeasurementDraft||!isDirty();
       cancel.textContent=selectedObservation?'Cancelar edición':'Cancelar captura';
-      cancel.disabled=mode!=='open'||busy||measurementLocked||createPending;
+      cancel.disabled=mode!=='open'||busy||measurementLocked||createPending||!!availableMeasurementDraft;
       hide(cancel,!!selectedObservation||isDirty());
       hide(form,!!key);
     }
     function syncExamRow(row){
       const state=row.querySelector('select').value;
       const finding=row.querySelector('input');
-      finding.disabled=mode!=='open'||state!=='ABNORMAL'||busy||examLocked;
+      finding.disabled=mode!=='open'||state!=='ABNORMAL'||busy||examLocked||!!availableExamDraft;
       finding.required=state==='ABNORMAL';
       if(state!=='ABNORMAL') finding.value='';
     }
     function paintExam(){
+      hide(examDraftCue,!!availableExamDraft);
+      examDraftRecover.disabled=mode!=='open'||busy;
+      examDraftDiscard.disabled=mode!=='open'||busy;
       examState.textContent=examNotice || (mode!=='open'?'Sólo lectura':examLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'');
       examMeta.textContent=examVersion===null?'Aún no hay exploración guardada. Sin revisión no equivale a normal.':`Versión ${examVersion} · Sin revisión no equivale a normal.`;
       examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
-        row.querySelector('select').disabled=mode!=='open'||busy||examLocked;
+        row.querySelector('select').disabled=mode!=='open'||busy||examLocked||!!availableExamDraft;
         syncExamRow(row);
       });
-      examSave.disabled=mode!=='open'||busy||examLocked||!isDirty();
+      examSave.disabled=mode!=='open'||busy||examLocked||!!availableExamDraft||!isDirty();
       hide(examSave,mode==='open');
+    }
+    function fillExamFromSaved(){
+      const saved=loadedExam.payload?.systems || {};
+      examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
+        const entry=saved[row.dataset.m7ExamSystem];
+        row.querySelector('select').value=entry?.state || 'NOT_REVIEWED';
+        row.querySelector('input').value=entry?.state==='ABNORMAL'?String(entry.finding || ''):'';
+      });
+      baselineExam=examSnapshot();
     }
     function load(detail, encounterKey, state, restoreDrafts=true){
       if(key!==encounterKey && pendingDialog.open) pendingDialog.close('stay');
@@ -250,20 +301,36 @@
       observations=Array.isArray(detail.observations)?detail.observations:[];
       loadedExam=detail.sections?.physical_exam || {};
       examVersion=loadedExam.row_version==null?null:Number(loadedExam.row_version);
-      const saved=loadedExam.payload?.systems || {};
-      examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
-        const entry=saved[row.dataset.m7ExamSystem];
-        row.querySelector('select').value=entry?.state || 'NOT_REVIEWED';
-        row.querySelector('input').value=entry?.state==='ABNORMAL'?String(entry.finding || ''):'';
-      });
-      baselineExam=examSnapshot();
+      availableExamDraft='';
+      fillExamFromSaved();
       fillMeasurement(null,false);
-      if(mode==='open'){
-        restore('measurements');
-        try{createPending=!selectedObservation&&!!sessionStorage.getItem(createKeyId());}catch(_){}
-        if(restoreDrafts) restore('physical_exam');
-      }
       measurementLocked=false; examLocked=false; measurementNotice=''; examNotice=''; hide(examConflict,false); hide(measurementConflict,false);
+      if(mode==='open'){
+        const savedDraft=getDraft('measurements');
+        const classification=classifyMeasurementDraft(savedDraft);
+        let unresolvedCreate=false;
+        try{unresolvedCreate=!!sessionStorage.getItem(createKeyId());}catch(_){}
+        if(savedDraft && classification.meaningful){
+          if(unresolvedCreate){
+            restore('measurements',savedDraft);
+            createPending=!selectedObservation;
+            measurementNotice='Hay una captura pendiente recuperada cuyo registro no se confirmó. Reintenta la misma solicitud.';
+          }else{
+            availableMeasurementDraft=savedDraft;
+            unavailableMeasurementDraft=classification.unavailable;
+          }
+        }else{
+          if(savedDraft) clearDraft('measurements');
+          if(unresolvedCreate) forgetCreateKey();
+        }
+        if(restoreDrafts){
+          const examDraft=getDraft('physical_exam');
+          if(examDraft){
+            if(examDraftIsMeaningful(examDraft)) availableExamDraft=examDraft;
+            else clearDraft('physical_exam');
+          }
+        }
+      }
       paintMeasurement(); paintExam();
     }
     function select(type){
@@ -277,7 +344,7 @@
       if(pendingDialog.open)pendingDialog.close('stay');
       ++priorEpoch;priorRows=[];reuseCandidate=null;priorList.replaceChildren();clearTimeout(noticeTimer);createPending=false;
       key=''; patient=''; mode='none'; selected=''; observations=[]; selectedObservation=null;
-      createKey=''; retainedMeasurementDraft=''; measurementNotice=''; examNotice='';
+      createKey=''; retainedMeasurementDraft=''; availableMeasurementDraft=''; unavailableMeasurementDraft=false; availableExamDraft=''; measurementNotice=''; examNotice='';
       hide(measurementPanel,false); hide(examPanel,false);
     }
     async function responseJson(response){
@@ -481,6 +548,19 @@
     form.addEventListener('input',captureInput);
     form.addEventListener('change',captureInput);
     form.addEventListener('submit',saveMeasurement);
+    recoverDraft.addEventListener('click',()=>{
+      if(!availableMeasurementDraft||unavailableMeasurementDraft||mode!=='open'||busy)return;
+      const draft=availableMeasurementDraft;
+      availableMeasurementDraft='';
+      restore('measurements',draft);
+      measurementNotice='Captura recuperada. Regístrala o cancélala antes de cambiar de paso.';
+      paintMeasurement();
+      (reuseCandidate&&!source.value?source:code.value==='blood_pressure'?systolic:value).focus();
+    });
+    discardRecoveredDraft.addEventListener('click',()=>{
+      if(!availableMeasurementDraft||mode!=='open'||busy)return;
+      fillMeasurement(null);
+    });
     q('[data-m7-measurement-new]').addEventListener('click',()=>{
       if(busy||measurementLocked||createPending||mode!=='open')return;
       // This explicit cancel already authorizes discarding a prepared prior value.
@@ -493,6 +573,19 @@
       if(mode!=='open'||measurementLocked||!retainedMeasurementDraft)return;
       restore('measurements',retainedMeasurementDraft);setDraft('measurements',measurementSnapshot());
       hide(measurementConflict,false);paintMeasurement();
+    });
+    examDraftRecover.addEventListener('click',()=>{
+      if(!availableExamDraft||mode!=='open'||busy)return;
+      const draft=availableExamDraft;
+      availableExamDraft='';
+      restore('physical_exam',draft);
+      examNotice='Captura recuperada. Guarda los cambios o revisa antes de cambiar de paso.';
+      paintExam();
+      examSystems.querySelector('select')?.focus();
+    });
+    examDraftDiscard.addEventListener('click',()=>{
+      if(!availableExamDraft||mode!=='open'||busy)return;
+      availableExamDraft='';clearDraft('physical_exam');fillExamFromSaved();examNotice='';paintExam();
     });
     examSave.addEventListener('click',saveExam);
     q('[data-m7-exam-reload]').addEventListener('click',async()=>{

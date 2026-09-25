@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis29-r6">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis30">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5465,6 +5465,7 @@
                       <div class="m7-doc-capture" data-m7-capture><h5>Captura desde otro dispositivo</h5><button type="button" class="btn btn-outline-primary" data-m7-capture-start>Crear enlace de captura</button><div class="d-none" data-m7-capture-session><a data-m7-capture-link target="_blank" rel="noopener noreferrer">Abrir captura</a><span data-m7-capture-state role="status"></span><button type="button" class="btn btn-outline-secondary" data-m7-capture-check>Comprobar estado</button><button type="button" class="btn btn-outline-danger" data-m7-capture-cancel>Cancelar enlace</button></div></div>
                     </section>
                     <div class="m7-section-editor d-none" data-m7-editor>
+                      <div class="vis30-recovered-draft d-none" data-vis30-section-draft role="status"><p>Hay una captura pendiente recuperada de esta consulta. Elige si deseas retomarla o descartarla.</p><div><button type="button" class="btn btn-outline-primary" data-vis30-section-recover>Recuperar borrador</button><button type="button" class="btn btn-link" data-vis30-section-discard>Descartar borrador</button></div></div>
                       <label class="m7-section-editor-label visually-hidden" for="m7-section-text" data-vis04-editor-label>Contenido de la consulta</label>
                       <textarea id="m7-section-text" data-m7-editor-text rows="6" aria-describedby="vis21-step-helper"></textarea>
                       <div class="vis28-save-utility">
@@ -5492,6 +5493,7 @@
                       <section class="vis29-prior" aria-labelledby="vis29-prior-title"><h5 id="vis29-prior-title"><span class="material-symbols-rounded" aria-hidden="true">history</span>Últimos valores registrados</h5><p class="vis29-description">Selecciona un valor para usarlo en esta consulta.</p><div data-vis29-prior></div></section>
                       <form class="vis29-register" data-m7-measurements-form>
                         <div class="vis29-form-heading"><span class="material-symbols-rounded" aria-hidden="true">add_circle</span><h5 data-vis29-form-title>Registrar valores</h5></div><p class="vis29-description">Completa o edita la información de la medición.</p>
+                        <div class="vis30-recovered-draft d-none" data-vis30-measurement-draft role="status"><p data-vis30-measurement-draft-copy>Hay una captura pendiente recuperada de esta consulta. Elige si deseas retomarla o descartarla.</p><div><button type="button" class="btn btn-outline-primary" data-vis30-measurement-recover>Recuperar captura</button><button type="button" class="btn btn-link" data-vis30-measurement-discard>Descartar borrador</button></div></div>
                         <div class="m7-measurement-fields">
                           <label>Medición<select data-m7-measurement-code required></select></label>
                           <label data-m7-measurement-value-label>Valor<input data-m7-measurement-value type="number" step="any" min="0" required></label>
@@ -5521,6 +5523,7 @@
                     </div>
                     <div class="m7-section-editor d-none" data-m7-exam>
                       <span data-m7-exam-meta hidden></span>
+                      <div class="vis30-recovered-draft d-none" data-vis30-exam-draft role="status"><p>Hay una captura pendiente recuperada de la exploración. Elige si deseas retomarla o descartarla.</p><div><button type="button" class="btn btn-outline-primary" data-vis30-exam-recover>Recuperar captura</button><button type="button" class="btn btn-link" data-vis30-exam-discard>Descartar borrador</button></div></div>
                       <div data-m7-exam-systems></div>
                       <div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-exam-save>Guardar exploración</button></div>
                       <div class="m7-section-conflict d-none" data-m7-exam-conflict role="alert"><strong>La exploración cambió en otra sesión.</strong><p>Tu borrador se conserva. Revisa la versión guardada antes de reconciliar.</p><div class="m7-section-conflict-columns"><div><strong>Tu borrador</strong><pre data-m7-exam-draft></pre></div><div><strong>Versión guardada</strong><pre data-m7-exam-server></pre></div></div><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-primary" data-m7-exam-reload>Cargar versión guardada</button><button type="button" class="btn btn-outline-secondary" data-m7-exam-use-draft disabled>Usar mi borrador después de revisar</button></div></div>
@@ -10706,11 +10709,11 @@
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis16"></script>
 <script src="assets/js/app.js?v=vis19"></script>
-<script src="assets/js/clinical/m7-ws03.js?v=vis29-r6"></script>
+<script src="assets/js/clinical/m7-ws03.js?v=vis30"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=vis21"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=vis29-r2"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=vis29-r6"></script>
-<script src="assets/js/clinical/vis04-consultation.js?v=vis29-r2"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=vis30"></script>
+<script src="assets/js/clinical/vis04-consultation.js?v=vis30"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=vis05"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=vis10d"></script>
