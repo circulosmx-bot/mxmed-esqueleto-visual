@@ -3149,3 +3149,12 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   #p-expediente #m7-workspace .vis29-register {align-self:stretch}
   #p-expediente #m7-workspace .vis29-capture-details {flex-direction:row;align-items:end}
 }
+
+/* VIS29-R4 — uniform native controls; canonical units remain read-only. */
+#p-expediente #m7-workspace .vis29-register .m7-measurement-fields input,
+#p-expediente #m7-workspace .vis29-register .m7-measurement-fields select {
+  box-sizing:border-box;height:44px;min-height:44px;margin-top:5px;
+  border:1px solid #abcbd4;border-radius:9px;padding:8px;
+  font-family:inherit;font-size:.875rem;line-height:1.25;
+}
+#p-expediente #m7-workspace .vis29-register .m7-measurement-fields {align-items:end}
