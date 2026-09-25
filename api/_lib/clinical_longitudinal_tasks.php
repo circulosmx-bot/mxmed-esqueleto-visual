@@ -127,6 +127,7 @@ final class ClinicalLongitudinalTasks {
                 }
                 $groups[$group][]=[
                     'task_id'=>(int)$row['task_id'],
+                    'row_version'=>(int)$row['row_version'],
                     'patient_id'=>(string)$row['patient_id'],
                     'patient_name'=>(string)$patient['display_name'],
                     'title'=>(string)$row['title'],
