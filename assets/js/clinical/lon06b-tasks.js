@@ -12,7 +12,7 @@
   let patientId='',epoch=0,items=[],editing=null,returnFocus=null,conflictBlocked=false;
   const endpoint=(suffix='')=>`/api/clinical/index.php/patients/${encodeURIComponent(patientId)}/longitudinal/tasks${suffix}`;
   const date=value=>value?`${value} UTC`:'Sin fecha límite';
-  const overdue=row=>row.state==='OPEN'&&row.due_at&&Date.parse(row.due_at.replace(' ','T')+'Z')<Date.now();
+  const overdue=row=>row.derived_due_state==='OVERDUE';
   async function request(suffix='',method='GET',body=null,key='') {
     let response;
     try {response=await fetch(endpoint(suffix),{method,credentials:'same-origin',headers:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{}),...(key?{'Idempotency-Key':key}:{})},body:body?JSON.stringify(body):undefined});}
@@ -20,7 +20,7 @@
     const result=await response.json().catch(()=>null);
     if (!response.ok||result?.ok!==true) {
       const code=typeof result?.error==='string'?result.error:result?.error?.code||'REQUEST_FAILED';
-      const message={STALE_VERSION:'La tarea cambió en otra sesión. Tu borrador se conserva.',TERMINAL_TASK:'La tarea ya está cerrada. Tu borrador se conserva.',IDEMPOTENCY_PAYLOAD_CONFLICT:'Esta solicitud ya se usó con otro contenido. Cierra y abre una acción nueva.',M6_WRITE_WINDOW_BLOCKED:'Las escrituras clínicas están pausadas. Tu borrador se conserva.',LON06A_WRITE_DISABLED:'La edición de tareas no está habilitada en este entorno.',FOREIGN_SOURCE:'La consulta de origen no pertenece a este paciente.',FOREIGN_APPOINTMENT:'La cita no pertenece a este paciente.',NOT_FOUND:'Paciente o tarea fuera de tu ámbito autorizado.'}[code]||`No se pudo completar la acción (${code}).`;
+      const message={STALE_VERSION:'La tarea cambió en otra sesión. Tu borrador se conserva.',TERMINAL_TASK:'La tarea ya está cerrada. Tu borrador se conserva.',IDEMPOTENCY_PAYLOAD_CONFLICT:'Esta solicitud ya se usó con otro contenido. Cierra y abre una acción nueva.',M6_WRITE_WINDOW_BLOCKED:'Las escrituras clínicas están pausadas. Tu borrador se conserva.',LON06A_WRITE_DISABLED:'La edición de tareas no está habilitada en este entorno.',FOREIGN_SOURCE:'La consulta de origen no pertenece a este paciente.',FOREIGN_APPOINTMENT:'La cita no pertenece a este paciente.',INELIGIBLE_APPOINTMENT:'La cita ya no está disponible para vincular. Elige otra o crea el seguimiento sin cita.',NOT_FOUND:'Paciente o tarea fuera de tu ámbito autorizado.'}[code]||`No se pudo completar la acción (${code}).`;
       throw {code,message};
     }
     return result.data;
@@ -46,8 +46,8 @@
     const card=document.createElement('article');card.className='lon06b-item';
     const heading=document.createElement('h5');heading.textContent=`${typeName[row.task_type]||row.task_type} · ${row.title}`;
     const meta=document.createElement('p');meta.className='lon06b-meta';
-    meta.textContent=`${stateName[row.state]||row.state} · ${date(row.due_at)} · ${row.source_encounter_id?`Consulta ${row.source_encounter_id}`:'Registro longitudinal'} · ${row.appointment_id?'Cita vinculada':'Sin cita vinculada'} · versión ${row.row_version}`;
-    if (overdue(row)) {const badge=document.createElement('p');badge.className='lon06b-overdue';badge.textContent='Vencida';card.append(badge);}
+    meta.textContent=`${row.task_type==='FOLLOW_UP'?({PENDING:'Pendiente',OVERDUE:'Vencido',RESOLVED:'Resuelto',CANCELED:'Cancelado'}[row.derived_due_state]||stateName[row.state]):stateName[row.state]||row.state} · ${date(row.due_at)} · ${row.source_encounter_id?`Consulta ${row.source_encounter_id}`:'Registro longitudinal'} · ${row.appointment_id?'Cita vinculada':'Sin cita vinculada'} · versión ${row.row_version}`;
+    if (overdue(row)&&row.task_type!=='FOLLOW_UP') {const badge=document.createElement('p');badge.className='lon06b-overdue';badge.textContent='Vencida';card.append(badge);}
     const actions=document.createElement('div');actions.className='lon06b-item-actions';
     if(row.state==='OPEN') {actions.append(button('Editar',event=>open('UPDATE',row,event.currentTarget)),button('Resolver',event=>open('RESOLVE',row,event.currentTarget)),button('Cancelar tarea',event=>open('CANCEL',row,event.currentTarget),'btn btn-outline-danger btn-sm'));}
     const detail=document.createElement('div');detail.className='lon06b-history';detail.hidden=true;
@@ -85,7 +85,8 @@
     const start=parseAppointmentTime(row.start_at);if(!start)return '';
     const day=new Intl.DateTimeFormat('es-MX',{day:'2-digit',month:'short',year:'numeric'}).format(start).replace(/\./g,'');
     const hour=start.getHours(),time=`${hour%12||12}:${String(start.getMinutes()).padStart(2,'0')} ${hour<12?'a. m.':'p. m.'}`;
-    return `${day} · ${time}`;
+    const location=String(row.consultorio_name||'').trim();
+    return `${day} · ${time}${location?` · ${location}`:''}`;
   }
   async function loadFollowUpAppointments(targetEditing,selectedId='') {
     const select=$('[data-lon06b-follow-up-appointment-select]'),state=$('[data-lon06b-appointment-state]');
@@ -94,7 +95,7 @@
     const from=new Date(),to=new Date(from);to.setDate(to.getDate()+365);
     const localParam=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')} ${String(value.getHours()).padStart(2,'0')}:${String(value.getMinutes()).padStart(2,'0')}:${String(value.getSeconds()).padStart(2,'0')}`;
     try {
-      const query=new URLSearchParams({from:localParam(from),to:localParam(to),limit:'500'});
+      const query=new URLSearchParams({from:localParam(from),to:localParam(to),patient_id:targetEditing.patientId,limit:'500'});
       const response=await fetch(`/api/agenda/index.php/appointments?${query}`,{credentials:'same-origin',headers:{Accept:'application/json'}});
       const result=await response.json().catch(()=>null);
       if(!response.ok||result?.ok!==true||!Array.isArray(result.data))throw new Error('lookup_failed');
@@ -121,8 +122,9 @@
     $('[data-lon06b-title]').placeholder=followUpCreate?'Ej. Revisar resultados de laboratorio en una semana':'';
     $('[data-lon06b-due-label]').textContent=followUpCreate?'Fecha límite (opcional)':'Fecha límite, si aplica';
     $('[data-lon06b-due-hint]').textContent=followUpCreate?'Si no eliges una fecha, el seguimiento seguirá pendiente sin vencimiento.':'Sin fecha límite no se considera vencida.';
-    $('[data-lon06b-dialog-title]').textContent=({CREATE:context.type==='FOLLOW_UP'?'Crear seguimiento':'Crear tarea clínica',UPDATE:'Editar tarea',RESOLVE:'Resolver tarea',CANCEL:'Cancelar tarea'})[operation];
-    $('[data-lon06b-context]').textContent=followUpCreate?'Deja una acción clínica pendiente para revisar después.':row?`${typeName[row.task_type]} · ${row.title} · ${stateName[row.state]}`:context.encounterId?`Creación explícita desde consulta ${context.encounterId}. La consulta no cambiará.`:'Nueva acción clínica longitudinal.';
+    $('[data-lon06b-dialog-title]').textContent=({CREATE:context.type==='FOLLOW_UP'?'Registra una acción para seguimiento':'Crear tarea clínica',UPDATE:'Editar tarea',RESOLVE:'Resolver tarea',CANCEL:'Cancelar tarea'})[operation];
+    $('[data-lon06b-context]').textContent=followUpCreate?'':row?`${typeName[row.task_type]} · ${row.title} · ${stateName[row.state]}`:context.encounterId?`Creación explícita desde consulta ${context.encounterId}. La consulta no cambiará.`:'Nueva acción clínica longitudinal.';
+    show($('[data-lon06b-context]'),!followUpCreate);
     $('[data-lon06b-cancel]').textContent=followUpCreate?'Cancelar':'Seguir revisando';$('[data-lon06b-save]').textContent=followUpCreate?'Crear seguimiento':'Confirmar';
     dialog.showModal();(entry?$('[data-lon06b-title]'):$('[data-lon06b-reason]')).focus();
     if(followUpCreate)loadFollowUpAppointments(editing);

@@ -19,14 +19,14 @@ CREATE TABLE clinical_encounters (encounter_id BIGINT UNSIGNED PRIMARY KEY, doct
 CREATE TABLE clinical_encounter_sections (section_id BIGINT UNSIGNED PRIMARY KEY, encounter_id BIGINT UNSIGNED NOT NULL, section_type VARCHAR(40) NOT NULL, narrative_text TEXT DEFAULT NULL) ENGINE=InnoDB;
 CREATE TABLE clinical_documents (id BIGINT UNSIGNED PRIMARY KEY, encounter_ref_id BIGINT UNSIGNED, patient_id VARCHAR(64) NOT NULL, document_type VARCHAR(64) NOT NULL, status VARCHAR(20) NOT NULL) ENGINE=InnoDB;
 CREATE TABLE clinical_record_entries (entry_id BIGINT UNSIGNED PRIMARY KEY, patient_id VARCHAR(64) NOT NULL, payload_json JSON) ENGINE=InnoDB;
-CREATE TABLE agenda_appointments (appointment_id VARCHAR(64) NOT NULL PRIMARY KEY, doctor_id VARCHAR(64) NOT NULL, patient_id VARCHAR(64) NULL, status VARCHAR(32) NULL, start_at DATETIME NOT NULL) ENGINE=InnoDB;
+CREATE TABLE agenda_appointments (appointment_id VARCHAR(64) NOT NULL PRIMARY KEY, doctor_id VARCHAR(64) NOT NULL, consultorio_id VARCHAR(64) NOT NULL, patient_id VARCHAR(64) NULL, status VARCHAR(32) NULL, start_at DATETIME NOT NULL, end_at DATETIME NOT NULL, modality VARCHAR(32) NULL) ENGINE=InnoDB;
 INSERT INTO patients_patients VALUES ('p_a'),('p_b');
 INSERT INTO patients_doctor_links (doctor_id,patient_id,status) VALUES ('d_a','p_a','active'),('d_b','p_b','active');
 INSERT INTO clinical_encounters VALUES (101,'d_a','p_a','open',NULL),(102,'d_b','p_b','open',NULL);
 INSERT INTO clinical_encounter_sections VALUES (201,101,'plan','Control en dos semanas');
 INSERT INTO clinical_documents VALUES (301,101,'p_a','order','generated');
 INSERT INTO clinical_record_entries VALUES (401,'p_a','{"legacy_follow_up":"Control anterior"}');
-INSERT INTO agenda_appointments VALUES ('a_a','d_a','p_a','confirmed',UTC_TIMESTAMP()),('a_b','d_b','p_b','confirmed',UTC_TIMESTAMP());
+INSERT INTO agenda_appointments VALUES ('a_a','d_a','north','p_a','confirmed',DATE_ADD(NOW(),INTERVAL 7 DAY),DATE_ADD(NOW(),INTERVAL 7 DAY)+INTERVAL 30 MINUTE,'in_person'),('a_b','d_b','north','p_b','confirmed',DATE_ADD(NOW(),INTERVAL 7 DAY),DATE_ADD(NOW(),INTERVAL 7 DAY)+INTERVAL 30 MINUTE,'in_person');
 SQL
 mysql "$qa_db" < "$root_dir/modules/clinical/db/migrations/2026_09_21_06_longitudinal_antecedents.sql"
 for _ in 1 2; do mysql "$qa_db" < "$root_dir/modules/clinical/db/migrations/2026_09_21_09_longitudinal_tasks.sql"; done

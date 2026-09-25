@@ -193,8 +193,8 @@
     else {
       const open = (tasks.value.items || []).filter(row => row.state === 'OPEN');
       compact('[data-lon02-tasks]', open, 'Sin tareas abiertas registradas.', (target, row) => {
-        const overdue = row.due_at && Date.parse(row.due_at.replace(' ', 'T') + 'Z') < Date.now();
-        line(target, row.title, `${row.task_type === 'FOLLOW_UP' ? 'Seguimiento' : 'Tarea clínica'} · ${row.due_at ? `Límite ${row.due_at} UTC${overdue ? ' · Vencida' : ''}` : 'Sin fecha límite'}`);
+        const overdue = row.derived_due_state === 'OVERDUE';
+        line(target, row.title, `${row.task_type === 'FOLLOW_UP' ? 'Seguimiento' : 'Tarea clínica'} · ${row.due_at ? `Límite ${row.due_at} UTC${overdue ? ` · ${row.task_type === 'FOLLOW_UP' ? 'Vencido' : 'Vencida'}` : ''}` : 'Sin fecha límite'}`);
       });
     }
   }

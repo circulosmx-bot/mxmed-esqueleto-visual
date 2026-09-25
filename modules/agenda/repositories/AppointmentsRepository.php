@@ -32,7 +32,7 @@ class AppointmentsRepository
         return (int)$stmt->fetchColumn() > 0;
     }
 
-    public function listByRange(string $from, string $to, ?string $doctorId = null, ?string $consultorioId = null, int $limit = 200): array
+    public function listByRange(string $from, string $to, ?string $doctorId = null, ?string $consultorioId = null, int $limit = 200, ?string $patientId = null): array
     {
         $this->ensureTable();
         $columns = $this->getColumns($this->table);
@@ -77,6 +77,10 @@ class AppointmentsRepository
         if ($consultorioId) {
             $sql .= ' AND consultorio_id = :consultorio_id';
             $params['consultorio_id'] = $consultorioId;
+        }
+        if ($patientId) {
+            $sql .= ' AND patient_id = :patient_id';
+            $params['patient_id'] = $patientId;
         }
 
         $sql .= ' ORDER BY start_at ASC LIMIT :limit';

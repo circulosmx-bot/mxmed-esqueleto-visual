@@ -46,12 +46,25 @@ final class ClinicalLongitudinalTasks {
         $s->execute([$encounter,$doctor,$patient]);if(!$s->fetchColumn())self::fail('FOREIGN_SOURCE',409);
         return $encounter;
     }
-    private function appointment(string $doctor,string $patient,mixed $appointment): ?string {
+    private static function dueState(array $row,?string $now=null): string {
+        if($row['state']!=='OPEN')return (string)$row['state'];
+        return $row['due_at']!==null && (string)$row['due_at']<=($now??gmdate('Y-m-d H:i:s'))?'OVERDUE':'PENDING';
+    }
+    private static function project(array $row): array {
+        $row['derived_due_state']=self::dueState($row);
+        return $row;
+    }
+    private function appointment(string $doctor,string $patient,mixed $appointment,bool $requireEligible=false): ?string {
         if($appointment===null)return null;
         if(!is_string($appointment)||trim($appointment)===''||mb_strlen(trim($appointment))>64)self::fail('INVALID_APPOINTMENT_ID');
         $id=trim($appointment);
-        $s=$this->pdo->prepare('SELECT 1 FROM agenda_appointments WHERE appointment_id=? AND doctor_id=? AND patient_id=?');
-        $s->execute([$id,$doctor,$patient]);if(!$s->fetchColumn())self::fail('FOREIGN_APPOINTMENT',409);
+        $s=$this->pdo->prepare('SELECT status,start_at FROM agenda_appointments WHERE appointment_id=? AND doctor_id=? AND patient_id=?');
+        $s->execute([$id,$doctor,$patient]);$row=$s->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row))self::fail('FOREIGN_APPOINTMENT',409);
+        if($requireEligible){
+            $now=(new DateTimeImmutable('now',new DateTimeZone('America/Mexico_City')))->format('Y-m-d H:i:s');
+            if(!in_array(strtolower((string)$row['status']),['pending_otp','pending','scheduled','confirmed'],true)||(string)$row['start_at']<=$now)self::fail('INELIGIBLE_APPOINTMENT',409);
+        }
         return $id;
     }
     private static function responsible(array $body,string $actor): ?string {
@@ -78,9 +91,9 @@ final class ClinicalLongitudinalTasks {
             if($id!==null){$this->row($doctor,$patient,$id);$sql.=' AND task_id=?';$args[]=$id;}
             $s=$this->pdo->prepare($sql.' ORDER BY event_id');$s->execute($args);return ['events'=>$s->fetchAll(PDO::FETCH_ASSOC)];
         }
-        if($id!==null)return ['item'=>$this->row($doctor,$patient,$id)];
+        if($id!==null)return ['item'=>self::project($this->row($doctor,$patient,$id))];
         $s=$this->pdo->prepare('SELECT * FROM clinical_patient_tasks WHERE doctor_id=? AND patient_id=? ORDER BY (state="OPEN") DESC,due_at IS NULL,due_at,task_id');
-        $s->execute([$doctor,$patient]);return ['items'=>$s->fetchAll(PDO::FETCH_ASSOC)];
+        $s->execute([$doctor,$patient]);return ['items'=>array_map(self::project(...),$s->fetchAll(PDO::FETCH_ASSOC))];
     }
     public function mutate(string $doctor,string $patient,string $actor,string $operation,array $body,string $key,?int $id=null): array {
         if(getenv('MXMED_LON06A_WRITE_ENABLED')!=='1')self::fail('LON06A_WRITE_DISABLED',503);
@@ -100,7 +113,7 @@ final class ClinicalLongitudinalTasks {
         $this->pdo->beginTransaction();
         try{
             $this->scope($doctor,$patient,true);
-            $prior=$this->receipt($doctor,$patient,$command,$key,$hash);if($prior!==null){$this->pdo->commit();return $prior;}
+            $prior=$this->receipt($doctor,$patient,$command,$key,$hash);if($prior!==null){$this->pdo->commit();$prior['item']=self::project($prior['item']);return $prior;}
             $now=gmdate('Y-m-d H:i:s');$before=null;$reason=null;
             if($create){
                 $type=self::value($body,'task_type',32,true);
@@ -109,7 +122,7 @@ final class ClinicalLongitudinalTasks {
                 $responsible=self::responsible($body,$actor);
                 $due=self::date(self::value($body,'due_at',19));
                 $source=$this->source($doctor,$patient,$body['source_encounter_id']??null);
-                $appointment=$this->appointment($doctor,$patient,$body['appointment_id']??null);
+                $appointment=$this->appointment($doctor,$patient,$body['appointment_id']??null,$type==='FOLLOW_UP');
                 $provenance=$source===null?'EXPLICIT_LONGITUDINAL_ENTRY':'ENCOUNTER_DERIVED_EXPLICIT_ENTRY';
                 $s=$this->pdo->prepare('INSERT INTO clinical_patient_tasks (doctor_id,patient_id,task_type,title,responsible_user_id,due_at,state,provenance,source_encounter_id,appointment_id,created_by,updated_by,created_at,updated_at) VALUES (?,?,?,?,?,?,"OPEN",?,?,?,?,?,?,?)');
                 $s->execute([$doctor,$patient,$type,$title,$responsible,$due,$provenance,$source,$appointment,$actor,$actor,$now,$now]);
@@ -123,7 +136,9 @@ final class ClinicalLongitudinalTasks {
                     $title=array_key_exists('title',$body)?self::value($body,'title',500,true):$before['title'];
                     $responsible=array_key_exists('responsible_user_id',$body)?self::responsible($body,$actor):$before['responsible_user_id'];
                     $due=array_key_exists('due_at',$body)?self::date(self::value($body,'due_at',19)):$before['due_at'];
-                    $appointment=array_key_exists('appointment_id',$body)?$this->appointment($doctor,$patient,$body['appointment_id']):$before['appointment_id'];
+                    $requestedAppointment=$body['appointment_id']??null;
+                    $sameAppointment=is_string($requestedAppointment)&&trim($requestedAppointment)===(string)$before['appointment_id'];
+                    $appointment=array_key_exists('appointment_id',$body)&&!$sameAppointment?$this->appointment($doctor,$patient,$requestedAppointment,$before['task_type']==='FOLLOW_UP'):$before['appointment_id'];
                     $s=$this->pdo->prepare('UPDATE clinical_patient_tasks SET title=?,responsible_user_id=?,due_at=?,appointment_id=?,updated_by=?,updated_at=?,row_version=row_version+1 WHERE task_id=? AND doctor_id=? AND patient_id=? AND state="OPEN" AND row_version=?');
                     $s->execute([$title,$responsible,$due,$appointment,$actor,$now,$id,$doctor,$patient,$expected]);
                 }else{
@@ -137,7 +152,7 @@ final class ClinicalLongitudinalTasks {
             $s=$this->pdo->prepare('INSERT INTO clinical_patient_task_audit_events (doctor_id,patient_id,task_id,entity_version,operation,actor_user_id,reason,before_json,after_json,occurred_at) VALUES (?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())');
             $s->execute([$doctor,$patient,$id,(int)$after['row_version'],$operation,$actor,$reason,$before===null?null:self::json($before),self::json($after)]);
             $result=['item'=>$after];$this->receipt($doctor,$patient,$command,$key,$hash,$result);
-            $this->pdo->commit();return $result;
+            $this->pdo->commit();$result['item']=self::project($result['item']);return $result;
         }catch(Throwable $error){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $error;}
     }
 }

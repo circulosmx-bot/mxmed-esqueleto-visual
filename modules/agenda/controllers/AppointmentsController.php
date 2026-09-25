@@ -76,7 +76,8 @@ class AppointmentsController
                 $toDatetime,
                 $doctorId,
                 $consultorioId,
-                $limit
+                $limit,
+                trim((string)($params['patient_id'] ?? '')) ?: null
             );
         } catch (\RuntimeException $e) {
             if ($e->getMessage() === 'appointments table not ready') {
