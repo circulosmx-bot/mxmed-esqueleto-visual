@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis29">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis29-r1">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5490,11 +5490,11 @@
                     </div>
                     <div class="m7-section-editor d-none" data-m7-measurements>
                       <div class="vis29-review-grid">
-                        <section class="vis29-current" aria-labelledby="vis29-current-title"><h5 id="vis29-current-title">Esta consulta</h5><p class="vis29-description">Mediciones registradas en esta consulta.</p><div class="m7-measurement-list" data-m7-measurements-list></div></section>
-                        <section class="vis29-prior" aria-labelledby="vis29-prior-title"><h5 id="vis29-prior-title">Últimos valores previos</h5><p class="vis29-description">Valores del historial. Usar un valor no lo registra.</p><div data-vis29-prior></div></section>
+                        <section class="vis29-current" aria-labelledby="vis29-current-title"><h5 id="vis29-current-title"><span class="material-symbols-rounded" aria-hidden="true">vital_signs</span>Esta consulta</h5><p class="vis29-description">Mediciones registradas en esta consulta.</p><div class="m7-measurement-list" data-m7-measurements-list></div></section>
+                        <section class="vis29-prior" aria-labelledby="vis29-prior-title"><h5 id="vis29-prior-title"><span class="material-symbols-rounded" aria-hidden="true">history</span>Últimos valores previos</h5><p class="vis29-description">Valores del historial. Usar un valor no lo registra.</p><div data-vis29-prior></div></section>
                       </div>
                       <form class="vis29-register" data-m7-measurements-form>
-                        <h5 data-vis29-form-title>Registrar medición</h5>
+                        <div class="vis29-form-heading"><span class="material-symbols-rounded" aria-hidden="true">add_circle</span><h5 data-vis29-form-title>Registrar medición</h5></div><p class="vis29-description">Completa o edita la información de la medición.</p>
                         <p class="vis29-reuse-context" data-vis29-reuse-context role="status" hidden></p>
                         <div class="m7-measurement-fields">
                           <label>Medición<select data-m7-measurement-code required></select></label>
