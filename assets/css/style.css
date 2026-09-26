@@ -23043,3 +23043,33 @@ body.mx-sidebar-collapsed #mmSidebar .menu-main[data-group="agenda"] .alr01-nav-
 #agf02-dialog .agf02-dialog-error{margin:8px 0 0;color:#a0463d;font-size:.82rem}
 #agf02-dialog .agf02-dialog-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:16px}
 #agf02-dialog .btn-danger{background:#ad493f;border-color:#ad493f;color:#fff}
+
+/* PLAN02B: compact optional actions within the consultation Plan. */
+.plan02b-next-steps { margin-top: 1rem; padding: 1rem; border: 1px solid #bfdbe2; border-radius: 14px; background: #f8fcfd; min-width: 0; }
+.plan02b-next-steps[hidden] { display: none !important; }
+.plan02b-next-steps h4 { font-size: 1.15rem; color: #00536c; }
+.plan02b-next-steps h5 { font-size: 1rem; margin: 0; }
+.plan02b-next-steps p { margin: .4rem 0; font-size: .88rem; overflow-wrap: anywhere; }
+.plan02b-next-steps fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
+.plan02b-card { padding: .9rem; margin: .65rem 0; border: 1px solid #d6e6ec; border-radius: 10px; background: white; }
+.plan02b-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; }
+.plan02b-card label { display: flex; flex-direction: column; gap: .3rem; margin: .75rem 0; font-size: .9rem; }
+.plan02b-card input:not([type=radio]):not([type=checkbox]), .plan02b-card select, .plan02b-card textarea { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid #9cbfcb; border-radius: 7px; padding: .55rem; background: white; color: #173e50; }
+.plan02b-modes { display: flex; flex-wrap: wrap; gap: 1rem; }
+.plan02b-modes label, .plan02b-card label:has(input[type=checkbox]) { flex-direction: row; align-items: center; }
+.plan02b-date-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .7rem; }
+.plan02b-order + .plan02b-order { border-top: 1px solid #d6e6ec; padding-top: .8rem; margin-top: .8rem; }
+.plan02b-order h6 { margin-top: .8rem; }
+.plan02b-state { display: inline-block; margin: .4rem 0; font-size: .8rem; color: #476675; }
+.plan02b-state[data-state=SUCCESS] { color: #14664c; }
+.plan02b-error { color: #9d352f; }
+.plan02b-slots { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+.plan02b-review { border-top: 1px solid #bfdbe2; padding-top: .9rem; margin: 1rem 0; }
+.plan02b-review h6 { margin: .7rem 0 .3rem; }
+.plan02b-next-steps :focus-visible, .plan02b-leave :focus-visible { outline: 3px solid #0099b1; outline-offset: 3px; }
+.plan02b-leave { border: 1px solid #9cbfcb; border-radius: 12px; padding: 1.2rem; width: min(480px,calc(100vw - 24px)); max-height: 90vh; overflow: auto; }
+.plan02b-leave::backdrop { background: #173e5066; }
+.plan02b-leave div { display: flex; flex-wrap: wrap; gap: .7rem; }
+.plan02b-linked { display: block; white-space: normal; overflow-wrap: anywhere; text-align: left; font-size: .75rem; line-height: 1.35; margin-top: .45rem; padding-top: .35rem; border-top: 1px solid currentColor; }
+.mx-ag-custom-slot-card.is-occupied:has(.plan02b-linked) { height: auto; min-height: 80px; }
+@media(max-width: 600px) { .plan02b-next-steps { padding: .7rem; } .plan02b-date-grid { grid-template-columns: minmax(0,1fr); } .plan02b-heading .btn { white-space: normal; } }

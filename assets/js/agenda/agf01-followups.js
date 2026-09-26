@@ -18,6 +18,43 @@
   const localDateParts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Mexico_City',year:'numeric',month:'2-digit',day:'2-digit'});
   let generation=0,action=null,returnFocus=null,loadedRows=null,renderedSignature='';
 
+  // Keep the minimized Agenda projection unchanged. Resolve links through the
+  // existing authorized appointment detail and patient-task readers, only for
+  // booked cards. Cache per refresh; no second task state or polling loop.
+  let cardReferences=new Map(),patientTasks=new Map(),referencesReady=false;
+  async function readReference(path){
+    const response=await fetch(path,{credentials:'same-origin',headers:{Accept:'application/json'}});
+    const value=await response.json();
+    if(!response.ok||value?.ok!==true)throw new Error('reference unavailable');
+    return value.data;
+  }
+  async function loadCardReference(id,seen){
+    try{
+      const appointment=await readReference('/api/agenda/index.php/appointments/'+encodeURIComponent(id));
+      if(seen!==generation)return;
+      const patient=String(appointment.patient_id||'');
+      if(!loadedRows?.some(row=>String(row.patient_id)===patient)){cardReferences.set(id,[]);return;}
+      if(!patientTasks.has(patient))patientTasks.set(patient,readReference('/api/clinical/index.php/patients/'+encodeURIComponent(patient)+'/longitudinal/tasks'));
+      const data=await patientTasks.get(patient);
+      if(seen!==generation)return;
+      cardReferences.set(id,data.items.filter(row=>row.state==='OPEN'&&row.task_type==='FOLLOW_UP'&&String(row.appointment_id)===id&&String(row.doctor_id)===String(appointment.doctor_id)));
+      renderAppointmentReferences();
+    }catch(_){if(seen===generation)cardReferences.set(id,[]);}
+  }
+  function renderAppointmentReferences(){
+    panel.querySelectorAll('.mx-ag-custom-slot-card.is-occupied[data-event-id]:not([data-slot-demo])').forEach(card=>{
+      const id=card.dataset.eventId;
+      if(referencesReady&&loadedRows?.length&&!cardReferences.has(id)){cardReferences.set(id,[]);void loadCardReference(id,generation);}
+      const rows=referencesReady&&loadedRows?(cardReferences.get(id)||[]):[];
+      let reference=card.querySelector('[data-plan02b-linked]');
+      if(!rows.length){reference?.remove();return;}
+      const text=`${rows.length} ${rows.length===1?'seguimiento pendiente':'seguimientos pendientes'} · ${rows[0].title}`;
+      if(!reference){reference=document.createElement('span');reference.dataset.plan02bLinked='';reference.className='plan02b-linked';card.append(reference);}
+      if(reference.textContent!==text)reference.textContent=text;
+    });
+  }
+  new MutationObserver(renderAppointmentReferences).observe(panel,{childList:true,subtree:true});
+
   function localDay(date){
     const parts=Object.fromEntries(localDateParts.formatToParts(date).map(part=>[part.type,part.value]));
     return `${parts.year}-${parts.month}-${parts.day}`;
@@ -52,7 +89,8 @@
     }
   }
   function clearAttention(){
-    loadedRows=null;renderedSignature='';
+    loadedRows=null;renderedSignature='';referencesReady=false;
+    renderAppointmentReferences();
     if(badge){badge.hidden=true;badge.textContent='';}
     agendaNav?.setAttribute('aria-label','Agenda');
     if(summary){summary.hidden=true;summary.textContent='';}
@@ -171,6 +209,7 @@
 
   async function load(){
     const current=++generation;
+    cardReferences=new Map();patientTasks=new Map();referencesReady=false;
     if(!panel.classList.contains('d-none')){
       root.setAttribute('aria-busy','true');
       status.classList.remove('d-none');status.textContent='Cargando seguimientos…';
@@ -183,8 +222,9 @@
       for(const key of keys){
         if(!Array.isArray(payload.data.groups[key]))throw new Error('INVALID_FOLLOW_UP_GROUP');
       }
-      loadedRows=keys.flatMap(key=>payload.data.groups[key]);
+      loadedRows=keys.flatMap(key=>payload.data.groups[key]);referencesReady=true;
       renderGroups(payload.data.groups);
+      renderAppointmentReferences();
     }catch(_){
       if(current!==generation)return;
       clearAttention();

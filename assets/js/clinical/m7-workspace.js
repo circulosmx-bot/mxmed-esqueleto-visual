@@ -182,6 +182,7 @@
       (selectedSection === 'measurements' || selectedSection === 'physical_exam' ? !!ws03?.isDirty() : editorText.value !== sectionBaseline);
   }
   function hasAnyUnsaved(options){
+    if(window.mxmedPlanNextSteps?.hasPending() || window.mxmedPlanNextSteps?.isBusy()) return true;
     const key = body.dataset.encounterKey || '';
     if(!key || isDirty(options) || ws03?.isDirty() || ws04?.isDirty() || ws03?.isBusy() || ws04?.isBusy() || sectionBusy) return true;
     for(const type of ['reason_evolution','assessment','plan']){
@@ -261,6 +262,7 @@
     });
   }
   async function mayLeaveCurrentPatientContext(options = {}){
+    if(window.mxmedPlanNextSteps && !(await window.mxmedPlanNextSteps.mayLeave())) return false;
     const currentPatientId = selectedPatient();
     if(options.reason === 'change_patient' && authorizedPatientChange === currentPatientId){ authorizedPatientChange = ''; return true; }
     if(!active || String(active.status || '').toLowerCase() !== 'open') return true;
@@ -282,6 +284,7 @@
   }
   function sectionRow(type){ return loadedSections[type] || null; }
   function paintSection(){
+    body.dataset.plan02bSection = selectedSection;
     const ws03Selected = selectedSection === 'measurements' || selectedSection === 'physical_exam';
     const ws04Selected = selectedSection === 'documents';
     const ws05Selected = selectedSection === 'finalize';
@@ -603,6 +606,7 @@
   resumeButton.addEventListener('click', ()=>{ if(active) renderEncounter(active, false); });
   currentButton.addEventListener('click', ()=>{ if(active && protectNavigation()) renderEncounter(active, false); });
   async function transitionToSection(type){
+    if(type !== selectedSection && window.mxmedPlanNextSteps && !(await window.mxmedPlanNextSteps.mayLeave())) return false;
     if(!type || type === selectedSection || transitionBusy || sectionBusy || ws03?.isBusy() || ws04?.isBusy() || ws05?.isBusy()) return false;
     if(selectedSection === 'measurements' && !(await ws03.resolvePendingNavigation())) return false;
     if(eligibleCaptureIsDirty()){
@@ -721,7 +725,19 @@
     pendingEntryIntent = '';
     workspaceEntryPromise = enterCurrentConsultation(intent);
   });
+  let nextStepsLeaveBypass = false;
   workspaceTab?.addEventListener('hide.bs.tab', event=>{
+    if(!nextStepsLeaveBypass && (window.mxmedPlanNextSteps?.hasPending() || window.mxmedPlanNextSteps?.isBusy())){
+      event.preventDefault();
+      const destination = event.relatedTarget;
+      void window.mxmedPlanNextSteps.mayLeave().then(allowed=>{
+        if(!allowed || !destination) return;
+        nextStepsLeaveBypass = true;
+        window.bootstrap?.Tab.getOrCreateInstance(destination).show();
+      });
+      return;
+    }
+    nextStepsLeaveBypass = false;
     if(primaryTabBypass){ primaryTabBypass = false; return; }
     if(eligibleCaptureIsDirty()){
       event.preventDefault();

@@ -97,7 +97,7 @@ with sync_playwright() as playwright:
     page.goto(base + '/modules/clinical/README.md')
     page.set_content(fixture, wait_until='load')
     expect(page.locator('[data-agf01-status]')).to_be_hidden()
-    for key, title in [('overdue', 'Vencidos'), ('today', 'Para hoy'), ('upcoming', 'Próximos'), ('no_due', 'Sin fecha')]:
+    for key, title in [('overdue', 'Vencidos'), ('today', 'Para hoy'), ('upcoming', 'Próximos'), ('no_due', 'Sin fecha límite')]:
         expect(page.locator(f'[data-agf01-group="{key}"]')).to_be_visible()
         expect(page.locator(f'[data-agf01-group="{key}"] h6')).to_have_text(title)
     check('agf-linked' not in page.locator('#agf01-followups').inner_text(), 'Agenda UI hides internal appointment ID')
