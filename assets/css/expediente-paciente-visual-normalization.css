@@ -748,7 +748,7 @@
 /* VIS01: seven primary destinations; existing modules remain contextual. */
 #p-expediente .vis01-primary-navigation .mm-tabs-row {
   display:grid;
-  grid-template-columns:repeat(7, minmax(0, 1fr));
+  grid-template-columns:repeat(6, minmax(0, 1fr));
   gap:6px;
 }
 #p-expediente .vis01-primary-navigation [data-vis01-secondary],
@@ -805,7 +805,7 @@
     overflow-x:auto;
   }
   #p-expediente .vis01-primary-navigation .mm-tabs-row {
-    grid-template-columns:repeat(7, minmax(150px, 1fr))!important;
+    grid-template-columns:repeat(6, minmax(150px, 1fr))!important;
     width:max-content;
     min-width:100%;
   }
@@ -1047,7 +1047,7 @@
 }
 #p-expediente .lon07c-controls :is(input,select) {height:var(--exp-control-height)}
 #p-expediente.mm-card #t-datos .mx-phone-country {min-height:var(--exp-control-height)}
-#p-expediente .mm-tabs-rows.vis01-primary-navigation .mm-tabs-row {grid-template-columns:repeat(7,minmax(max-content,1fr))}
+#p-expediente .mm-tabs-rows.vis01-primary-navigation .mm-tabs-row {grid-template-columns:repeat(6,minmax(max-content,1fr))}
 #p-expediente .vis01-primary-navigation .nav-link {
   flex-direction:row;
   height:var(--exp-nav-height);
@@ -1101,7 +1101,7 @@
 #p-expediente :is(.lon03b-item,.lon04b-item,.lon05b-item,.lon06b-item):first-child {padding-top:0}
 #p-expediente :is(.lon03b-dialog,.lon04b-dialog,.lon05b-dialog,.lon06b-dialog) {padding:var(--exp-card-padding)}
 @media(max-width:1199.98px) {
-  #p-expediente .vis01-primary-navigation .mm-tabs-row {grid-template-columns:repeat(7,minmax(190px,1fr))!important}
+  #p-expediente .vis01-primary-navigation .mm-tabs-row {grid-template-columns:repeat(6,minmax(190px,1fr))!important}
 }
 @media(max-width:700px) {
   #p-expediente {
@@ -3209,3 +3209,40 @@ body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card:
   #p-expediente .head .vis16-consultation-card:has([data-vis31-pending]:not([hidden])) .vis16-consultation-actions .btn { min-height:28px; }
   #p-expediente .vis31-pending-link { margin:0; padding:2px 6px; font-size:12px; line-height:18px; }
 }
+
+/* VIS32: one dedicated same-app mode; visibility never changes domain state. */
+#p-expediente [data-vis32-consultation-target] { display:none !important; }
+#p-expediente [data-vis32-pending-context] { display:none; }
+body.mx-consultation-mode .mx-global-header,
+body.mx-consultation-mode .mm-sidebar,
+body.mx-consultation-mode .mm-footer,
+body.mx-consultation-mode #p-expediente > .head > .mx-panel-subheader,
+body.mx-consultation-mode #p-expediente [data-exp-tabs],
+body.mx-consultation-mode #p-expediente [data-vis01-context],
+body.mx-consultation-mode #p-expediente .exp-hdr .exp-patient-photo-slot,
+body.mx-consultation-mode #p-expediente .exp-hdr .ne-rx-ch-actions,
+body.mx-consultation-mode #p-expediente .exp-hdr [data-vis02-action],
+body.mx-consultation-mode #p-expediente .exp-hdr [data-vis16-consultation-actions],
+body.mx-consultation-mode #p-expediente .vis31-pending-link,
+body.mx-consultation-mode #m7-workspace [data-lon06b-m7-follow-up] { display:none !important; }
+body.mx-consultation-mode .mm-wrap .mm-grid.page { padding:12px; gap:0; min-height:100vh; }
+body.mx-consultation-mode .mm-main { width:100%; margin:0; }
+body.mx-consultation-mode #p-expediente > .head > .exp-hdr { background:#eaf4f7; box-shadow:none; opacity:1; filter:none; }
+body.mx-consultation-mode #p-expediente .head .vis02-active .exp-hdr-left { grid-template-columns:minmax(200px,.8fr) minmax(0,2fr); gap:14px; }
+body.mx-consultation-mode #p-expediente .head .vis02-active #exp_clinical_context .ne-rx-ch-top { grid-column:1; grid-row:1; opacity:1; filter:none; color:#163d50; }
+body.mx-consultation-mode #p-expediente .head .vis02-active .vis02-context { grid-column:2; grid-row:1; height:auto; align-items:stretch; gap:8px; }
+body.mx-consultation-mode #p-expediente .head .vis02-card { height:auto; padding:8px; opacity:1; filter:none; }
+body.mx-consultation-mode #p-expediente [data-vis32-pending-context] { display:block; color:#245568; font-size:12px; margin-top:4px; }
+body.mx-consultation-mode #p-expediente #m7-workspace { margin-top:0; scroll-margin-top:12px; }
+@media(max-width:999.98px) {
+  body.mx-consultation-mode #p-expediente .head .vis02-active .exp-hdr-left { grid-template-columns:minmax(0,1fr); }
+  body.mx-consultation-mode #p-expediente .head .vis02-active .vis02-context { grid-column:1; grid-row:2; }
+}
+@media(max-width:575.98px) {
+  body.mx-consultation-mode .mm-wrap .mm-grid.page { padding:8px; }
+  body.mx-consultation-mode #p-expediente .head .vis02-active .vis02-context { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+body.mx-consultation-mode .mm-wrap { background:#eef6f8; }
+body.mx-consultation-mode #p-expediente .head .vis02-active #exp_clinical_context .ne-rx-ch-top,
+body.mx-consultation-mode #p-expediente .head .vis02-active #exp_clinical_context .ne-rx-ch-top * { color:#163d50 !important; }
+body.mx-consultation-mode #p-expediente > .head > .exp-hdr .vis16-consultation-card.vis16-consultation-open { opacity:1; filter:none; }

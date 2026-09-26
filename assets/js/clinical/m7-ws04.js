@@ -354,6 +354,12 @@
       select(selected) { show(panel, selected); if (!selected && session) endCapture(true, true); if (selected && context) refresh(); },
       isDirty() { return !!($('[data-m7-doc-title]').value.trim() || $('[data-m7-doc-file]').files?.length || $('[data-m7-order-title]').value.trim() || $('[data-m7-order-summary]').value.trim() || $('[data-m7-result-order]').value || $('[data-m7-result-title]').value.trim() || $('[data-m7-result-provenance]').value.trim() || $('[data-m7-result-file]').files?.length || $('[data-m7-replace-reason]').value.trim() || $('[data-m7-replace-file]').files?.length); },
       isBusy() { return busy || captureBusy; },
+      async leaveView() {
+        if (busy) return false;
+        if (session) await endCapture();
+        if (session || captureBusy) return false;
+        closeUpload(true); return true;
+      },
       load(encounter) { const key = String(encounter.encounter_key || ''); const patientId = String(encounter.patient_id || ''); if (!key || !patientId) return; const changed = context?.key !== key || context?.patientId !== patientId; context = { key, patientId, doctorId:String(encounter.doctor_id || ''), encounterId:String(encounter.encounter_id || ''), status:String(encounter.status || '').toLowerCase(), closedAt:String(encounter.closed_at || '') }; if (changed) { epoch++; if (session) endCapture(true, true); closeUpload(true); rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, orderForm, resultForm, replaceForm].forEach(form => form.reset()); show(replaceForm, false);  } paint(); },
       reset() { epoch++; if (session) endCapture(true, true); closeUpload(true); context = null; rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, orderForm, resultForm, replaceForm].forEach(form => form.reset()); show(panel, false); show(replaceForm, false);  }
     };

@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis31">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis32">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -4539,7 +4539,7 @@
             <div class="mm-tabs mm-tabs-rows mb-3 vis01-primary-navigation" data-exp-tabs>
               <ul class="nav nav-pills mm-tabs-row mm-tabs-row-top" role="tablist" aria-label="Secciones del expediente">
                 <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-resumen-longitudinal" data-tab-key="t-resumen-longitudinal"><span class="tab-ico material-symbols-outlined" aria-hidden="true">summarize</span><span class="tab-lbl">Resumen</span></button></li>
-                <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consulta-actual" data-tab-key="t-consulta-actual"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Consulta</span></button></li>
+                <li hidden inert data-vis32-consultation-target class="nav-item"><button tabindex="-1" type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consulta-actual" data-tab-key="t-consulta-actual"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Consulta</span></button></li>
                 <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl">Historial</span></button></li>
                 <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-estudios" data-tab-key="t-estudios"><span class="tab-ico material-symbols-outlined" aria-hidden="true">science</span><span class="tab-lbl">Órdenes y resultados</span></button></li>
                 <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consent" data-tab-key="t-consent"><span class="tab-ico material-symbols-outlined" aria-hidden="true">folder_open</span><span class="tab-lbl">Documentos</span></button></li>
@@ -5458,7 +5458,7 @@
                         </div>
                       </header>
                     </div>
-                    <div class="m7-workspace-actions"><button type="button" class="btn btn-outline-secondary" data-vis01-open="#t-resumen-longitudinal">Volver al expediente</button>
+                    <div class="m7-workspace-actions"><button type="button" class="btn btn-outline-secondary" data-m7-exit>Volver al expediente</button>
                       <button type="button" class="btn btn-primary d-none" data-m7-start>Iniciar consulta</button>
                       <button type="button" class="btn btn-outline-primary d-none" data-m7-resume>Continuar consulta</button>
                       <button type="button" class="btn btn-outline-secondary d-none" data-m7-current>Volver a consulta activa</button>
@@ -10761,14 +10761,14 @@
 <script src="assets/js/physician-signature.js?v=sig03a"></script>
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
-<script src="assets/js/clinical/vis02-patient-header.js?v=vis31"></script>
+<script src="assets/js/clinical/vis02-patient-header.js?v=vis32"></script>
 <script src="assets/js/app.js?v=plan02a-agr02"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=vis30"></script>
-<script src="assets/js/clinical/m7-ws04.js?v=docux01r1"></script>
+<script src="assets/js/clinical/m7-ws04.js?v=vis32"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=plan02br1"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=plan02br1-vis30"></script>
-<script src="assets/js/clinical/vis04-consultation.js?v=vis31"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=vis32"></script>
+<script src="assets/js/clinical/vis04-consultation.js?v=vis32"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=vis05"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=fup01"></script>
@@ -10779,7 +10779,7 @@
 <script src="assets/js/clinical/lon06b-tasks.js?v=plan02b"></script>
 <script src="assets/js/clinical/vis06-modules.js?v=vis06"></script>
 <script src="assets/js/clinical/vis07-administrative.js?v=vis19"></script>
-<script src="assets/js/clinical/vis01-navigation.js?v=vis01"></script>
+<script src="assets/js/clinical/vis01-navigation.js?v=vis32"></script>
 <script src="assets/js/billing/patient-profiles.js?v=fiscux03b"></script>
 <script src="assets/js/billing/invoices.js?v=fisc02a"></script>
 <script src="assets/js/billing/issuance.js?v=fiscux02"></script>
@@ -11956,6 +11956,6 @@
     updateP10Polling();
   })();
 </script>
-<script src="assets/js/clinical/plan02b-next-steps.js?v=plan02br2"></script>
+<script src="assets/js/clinical/plan02b-next-steps.js?v=vis32"></script>
 </body>
 </html>

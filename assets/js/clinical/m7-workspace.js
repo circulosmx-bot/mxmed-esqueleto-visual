@@ -725,8 +725,35 @@
     pendingEntryIntent = '';
     workspaceEntryPromise = enterCurrentConsultation(intent);
   });
+  // VIS32 exits only the view. Existing writers and terminal guards remain authoritative.
+  const exitButton = root.querySelector('[data-m7-exit]');
+  let viewExitBusy = false, viewExitBypass = false;
+  const lastRecordTab = new Map();
+  const recordTab = target => patientPane.querySelector(`.vis01-primary-navigation .nav-item:not([hidden]):not(.d-none) [data-bs-target="${target}"]:not([disabled])`);
+  document.addEventListener('shown.bs.tab', event => {
+    if (event.target.closest('#p-expediente .vis01-primary-navigation .nav-item:not([hidden])')) lastRecordTab.set(selectedPatient(), event.target.dataset.bsTarget);
+  });
+  exitButton.addEventListener('click', async () => {
+    if(viewExitBusy || busy || transitionBusy || sectionBusy || ws03?.isBusy() || ws04?.isBusy() || ws05?.isBusy()) return;
+    const id = selectedPatient(), key = body.dataset.encounterKey;
+    viewExitBusy = true; exitButton.disabled = true;
+    try {
+      if(window.mxmedPlanNextSteps && !window.mxmedPlanNextSteps.mayLeaveView()) return;
+      if(eligibleCaptureIsDirty()) { if(!(await saveEligibleCapture())) return; }
+      else if(!protectNavigation()) return;
+      if(ws04 && !(await ws04.leaveView())) return;
+      if(selectedPatient() !== id || body.dataset.encounterKey !== key) return;
+      const target = recordTab(lastRecordTab.get(id)) || recordTab('#t-resumen-longitudinal');
+      if(!target) return;
+      viewExitBypass = true;
+      window.bootstrap?.Tab.getOrCreateInstance(target).show();
+      viewExitBypass = false;
+      if(target.classList.contains('active')) requestAnimationFrame(() => { if(selectedPatient() === id && target.classList.contains('active')) { target.focus({preventScroll:true}); patientPane.querySelector('.exp-hdr')?.scrollIntoView({block:'start'}); } });
+    } finally { viewExitBypass = false; viewExitBusy = false; exitButton.disabled = false; }
+  });
   let nextStepsLeaveBypass = false;
   workspaceTab?.addEventListener('hide.bs.tab', event=>{
+    if(viewExitBypass) return;
     if(!nextStepsLeaveBypass && (window.mxmedPlanNextSteps?.hasPending() || window.mxmedPlanNextSteps?.isBusy())){
       event.preventDefault();
       const destination = event.relatedTarget;

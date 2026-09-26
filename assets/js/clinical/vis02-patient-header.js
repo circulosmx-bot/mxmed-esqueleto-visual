@@ -16,6 +16,7 @@
     const button = indicator.querySelector('button');
     const copy = count === 1 ? '1 pendiente clínico' : `${count} pendientes clínicos`;
     button.textContent = count ? copy : '';
+    indicator.querySelector('[data-vis32-pending-context]').textContent = count ? copy : '';
     button.setAttribute('aria-label', `${copy} de este paciente. Abrir seguimientos.`);
   }
   function message(key, text) { host.querySelector(`[data-vis02-value="${key}"]`).textContent = text; }
@@ -148,7 +149,7 @@
       }).join('');
       const pending = document.createElement('div');
       pending.dataset.vis31Pending = ''; pending.hidden = true;
-      pending.innerHTML = '<button type="button" class="vis31-pending-link" data-vis01-open="#t-tareas-longitudinal"></button>';
+      pending.innerHTML = '<button type="button" class="vis31-pending-link" data-vis01-open="#t-tareas-longitudinal"></button><span data-vis32-pending-context></span>';
       cards.querySelector('[data-vis02-value="consulta"]').after(pending);
       host.append(cards);
       cards.addEventListener('click', async event => {

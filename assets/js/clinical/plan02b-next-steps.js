@@ -40,8 +40,9 @@
           actions().forEach(a=>{if(a.state==='IN_PROGRESS'){a.state='FAILED';a.uncertain=true;a.code='AMBIGUOUS';a.error='Respuesta pendiente. Reintenta para recuperar el registro.';}});
         }
       }catch(_){}
-      render();
     }
+    // A same-encounter resume may have temporarily hidden the badge during reload.
+    render();
     root.hidden=body.dataset.plan02bSection!=='plan'||body.dataset.encounterState!=='open';
     collector.hidden=body.dataset.plan02bSection!=='documents';
   }
@@ -225,6 +226,13 @@
     if(kind==='orders')state.orders=state.orders.filter(x=>x!==a);else state[kind]=null;
     state.message='';render();
   });
+  // Dedicated-view exit preserves encounter-scoped preparations, including retries.
+  // Patient changes and terminal actions continue to use the original mayLeave guard.
+  function mayLeaveView(){
+    if(busy || actions().some(a=>a.state==='IN_PROGRESS')) return false;
+    if(modal){requestClose();if(modal)return false;}
+    persist();return true;
+  }
   async function mayLeave(){
     if(busy){state.message='Espera a que termine el registro de las acciones.';render();return false;}
     if(modal){requestClose();if(modal)return false;}
@@ -238,7 +246,7 @@
       dialog.showModal();dialog.querySelector('[data-stay]').focus();
     });return guardPromise;
   }
-  window.mxmedPlanNextSteps={mayLeave,hasPending:()=>pending()||!!dirtyModal(),isBusy:()=>busy};
+  window.mxmedPlanNextSteps={mayLeave,mayLeaveView,hasPending:()=>pending()||!!dirtyModal(),isBusy:()=>busy};
   window.addEventListener('beforeunload',event=>{if(pending()||busy||dirtyModal()){event.preventDefault();event.returnValue='';}});
   new MutationObserver(sync).observe(body,{attributes:true,attributeFilter:['data-encounter-id','data-encounter-key','data-encounter-state','data-plan02b-section']});
   sync();

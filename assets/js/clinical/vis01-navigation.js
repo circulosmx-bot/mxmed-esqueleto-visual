@@ -27,10 +27,10 @@
     window.bootstrap?.Tab.getOrCreateInstance(tab).show();
   }
   // Bootstrap's arrow-key list includes hidden compatibility targets. Restrict
-  // keyboard traversal to the seven visible destinations, retaining hide guards.
+  // keyboard traversal to the six visible destinations, retaining hide guards.
   navigation.addEventListener('keydown', event => {
     if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-    const tabs = [...navigation.querySelectorAll('.nav-item:not([data-vis01-secondary]):not(.d-none) > .nav-link')]
+    const tabs = [...navigation.querySelectorAll('.nav-item:not([data-vis01-secondary]):not([hidden]):not(.d-none) > .nav-link')]
       .filter(tab => !tab.disabled && tab.getAttribute('aria-disabled') !== 'true');
     const index = tabs.indexOf(event.target);
     if (index < 0) return;

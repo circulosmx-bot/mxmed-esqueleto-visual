@@ -20,35 +20,20 @@
     documents: ['Documentos / Acciones','Documentos y acciones de esta consulta.'],
     finalize: ['Finalizar','Revisión y cierre de la consulta.']
   };
-  let focusWasActive = false, focusScrollToken = 0;
+  let focusWasActive = false;
   const currentIndex = () => steps.findIndex(button => button.getAttribute('aria-current') === 'true');
-  function consultationStartIsComfortablyVisible() {
-    const rect = root.getBoundingClientRect();
-    const compact = matchMedia('(max-width:819.98px)').matches;
-    const minimumTop = compact ? 8 : 64;
-    const maximumTop = compact ? Math.min(innerHeight * .24, 170) : Math.min(innerHeight * .28, 250);
-    const usefulBottom = Math.min(innerHeight * .62, compact ? 440 : 540);
-    return rect.top >= minimumTop && rect.top <= maximumTop && rect.bottom >= usefulBottom;
-  }
-  function positionActiveConsultation() {
-    const token = ++focusScrollToken;
-    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
-        if (token !== focusScrollToken
-          || !document.body.classList.contains('exp-consultation-focus-active')
-          || !root.getClientRects().length
-          || consultationStartIsComfortablyVisible()) return;
-        const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
-        root.scrollIntoView({behavior, block:'start', inline:'nearest'});
-      }, 180)));
-  }
   function syncFocusMode() {
     const active = body.dataset.encounterState === 'open'
       && !body.classList.contains('d-none')
       && consultationTab?.classList.contains('active')
       && !pane.classList.contains('d-none');
     document.body.classList.toggle('exp-consultation-focus-active', !!active);
-    if (active && !focusWasActive) positionActiveConsultation();
-    if (!active) focusScrollToken++;
+    document.body.classList.toggle('mx-consultation-mode', !!active);
+    if (active && !focusWasActive) requestAnimationFrame(() => {
+      if (!document.body.classList.contains('mx-consultation-mode')) return;
+      pane.scrollIntoView({block:'start'});
+      root.querySelector('[data-m7-exit]')?.focus({preventScroll:true});
+    });
     focusWasActive = !!active;
   }
   function syncStep() {
