@@ -8,6 +8,16 @@
     ['medications', 'Medicación actual', 'medication', 'Ver medicación', '#t-medicamentos-longitudinal'],
     ['problems', 'Problemas activos', 'clinical_notes', 'Ver todos', '#t-problemas-longitudinal']
   ];
+  function pendingTasks(items = []) {
+    const indicator = host?.querySelector('[data-vis31-pending]');
+    if (!indicator) return;
+    const count = items.filter(row => row.state === 'OPEN').length;
+    indicator.hidden = count === 0;
+    const button = indicator.querySelector('button');
+    const copy = count === 1 ? '1 pendiente clínico' : `${count} pendientes clínicos`;
+    button.textContent = count ? copy : '';
+    button.setAttribute('aria-label', `${copy} de este paciente. Abrir seguimientos.`);
+  }
   function message(key, text) { host.querySelector(`[data-vis02-value="${key}"]`).textContent = text; }
   function insideConsultation() {
     return document.querySelector('#p-expediente .vis01-primary-navigation .nav-link.active')?.dataset.bsTarget === '#t-consulta-actual';
@@ -66,8 +76,9 @@
     if (rows.length > 2) { const more = document.createElement('span'); more.textContent = `+ ${rows.length - 2} más`; box.append(more); }
   }
   async function refresh() {
-    if (!host || !patient || selected() !== patient) return;
+    if (!host?.querySelector('[data-vis02-action="consulta"]') || !patient || selected() !== patient) return;
     const id = patient, run = ++epoch;
+    pendingTasks();
     const cta = host.querySelector('[data-vis02-action="consulta"]');
     if (!['open', 'none', 'legacy'].includes(encounterState)) {
       encounterState = 'unavailable';
@@ -83,6 +94,12 @@
       if (!response.ok || result?.ok !== true) throw new Error('unavailable');
       return result;
     };
+    // Reuse the former rail's patient task authority without delaying other summaries.
+    read('longitudinal/tasks').then(result => {
+      if (run === epoch && selected() === id && patient === id) pendingTasks(Array.isArray(result.data?.items) ? result.data.items : []);
+    }).catch(() => {
+      if (run === epoch && selected() === id && patient === id) pendingTasks();
+    });
     const results = await Promise.allSettled(['encounters/active','longitudinal/allergies','longitudinal/medications','longitudinal/problems','longitudinal-summary'].map(read));
     if (run !== epoch || selected() !== id || patient !== id) return;
     const [enc, allergies, medications, problems, longitudinal] = results;
@@ -112,7 +129,7 @@
     if (container.id !== 'exp_clinical_context') return;
     host = container;
     container.closest('.mx-clinical-subheader').classList.toggle('vis02-active', active);
-    if (!active) { patient = ''; epoch++; return; }
+    if (!active) { patient = ''; epoch++; pendingTasks(); return; }
     if (!host.querySelector('.vis02-context')) {
       const metadata = document.createElement('span'); metadata.className = 'vis02-patient-id';
       host.querySelector('.ne-rx-ch-patient-line').append(metadata);
@@ -129,6 +146,10 @@
           : action;
         return `<section class="vis02-card${key === 'consulta' ? ' vis16-consultation-card' : ''}"><h3><span class="material-symbols-outlined" aria-hidden="true">${icon}</span>${title}</h3><div data-vis02-value="${key}" aria-live="polite">Consultando…</div>${actions}</section>`;
       }).join('');
+      const pending = document.createElement('div');
+      pending.dataset.vis31Pending = ''; pending.hidden = true;
+      pending.innerHTML = '<button type="button" class="vis31-pending-link" data-vis01-open="#t-tareas-longitudinal"></button>';
+      cards.querySelector('[data-vis02-value="consulta"]').after(pending);
       host.append(cards);
       cards.addEventListener('click', async event => {
         const finalize = event.target.closest('[data-vis16-finalize]');
@@ -159,7 +180,15 @@
     syncConsultationCtaVisibility();
     if (patient !== selected()) { patient = selected(); encounterState = 'unavailable'; refresh(); }
   };
-  ['m7:encounter-started','m7:encounter-state-changed','mxmed:encounter-lifecycle','mxmed:encounter-changed'].forEach(name => window.addEventListener(name, refresh));
+  ['m7:encounter-started','m7:encounter-state-changed','mxmed:encounter-lifecycle','mxmed:encounter-changed','lon06b:changed'].forEach(name => window.addEventListener(name, refresh));
+  // Clear the previous patient's projection synchronously with the patient gate.
+  const pane = document.getElementById('p-expediente');
+  if (pane) new MutationObserver(() => {
+    if (!host || patient === selected()) return;
+    epoch++; pendingTasks(); patient = ''; encounterState = 'unavailable';
+    // The patient gate can temporarily replace the header while rebuilding it.
+    if (host.querySelector('[data-vis02-action="consulta"]')) { patient = selected(); if (patient) refresh(); }
+  }).observe(pane, {attributes:true, attributeFilter:['data-patient-id','data-active-patient-id']});
   document.addEventListener('shown.bs.tab', event => {
     if (!event.target.closest('#p-expediente [data-exp-tabs]')) return;
     syncConsultationCtaVisibility();

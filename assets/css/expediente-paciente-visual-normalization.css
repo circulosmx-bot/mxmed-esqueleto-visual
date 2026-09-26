@@ -901,7 +901,7 @@
 #m7-workspace .m7-workspace-sections button[aria-current=true] {border-bottom-color:#008b9a;background:#e9f9fa}
 #m7-workspace .vis04-step-number {display:inline-flex;align-items:center;justify-content:center;flex:0 0 24px;height:24px;border-radius:50%;background:#e1eef2;color:#06536e;font-weight:700}
 #m7-workspace [aria-current=true] .vis04-step-number {background:#008b9a;color:white}
-#m7-workspace .vis04-layout {display:grid;grid-template-columns:minmax(0,2.7fr) minmax(240px,1fr);gap:14px;align-items:start}
+#m7-workspace .vis04-layout {display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
 #m7-workspace .vis04-capture {min-width:0}
 #m7-workspace .m7-section-editor {margin-top:0;padding:12px}
 #m7-workspace .vis04-context {min-width:0;padding:12px;border:1px solid #d5e8ed;border-radius:12px;background:#f6fbfc}
@@ -3189,4 +3189,23 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
 @media(max-width:575.98px){
   #p-expediente #m7-workspace .vis29-current .vis29-reading {grid-template-columns:minmax(0,1fr) auto}
   #p-expediente #m7-workspace .meas01-row-actions {grid-column:2;grid-row:1 / 4;flex-direction:column;gap:0}
+}
+
+/* VIS31: critical summaries stay legible; the surrounding VIS22 shell stays secondary. */
+body.exp-consultation-focus-active #p-expediente > .head > .exp-hdr .vis02-card:not(.vis16-consultation-card) {
+  opacity:1;
+  filter:none;
+}
+#p-expediente [data-vis31-pending][hidden] { display:none !important; }
+#p-expediente .vis31-pending-link {
+  display:inline-block; max-width:100%; margin:.3rem 0; padding:.25rem .55rem;
+  border:1px solid #a5c9d1; border-radius:999px; background:#edf6f8;
+  color:#245568; font:inherit; font-size:.8rem; line-height:1.4; text-align:left;
+}
+#p-expediente .vis31-pending-link:hover { background:#dceef2; }
+#p-expediente .vis31-pending-link:focus-visible { outline:2px solid #00798d; outline-offset:2px; }
+@media(min-width:576px) {
+  #p-expediente .head .vis16-consultation-card:has([data-vis31-pending]:not([hidden])) { gap:1px; }
+  #p-expediente .head .vis16-consultation-card:has([data-vis31-pending]:not([hidden])) .vis16-consultation-actions .btn { min-height:28px; }
+  #p-expediente .vis31-pending-link { margin:0; padding:2px 6px; font-size:12px; line-height:18px; }
 }
