@@ -797,13 +797,33 @@ function clinical_note_capture_normalize_url(string $value): string
     return '/' . ltrim($raw, '/');
 }
 
+// Desktop management reuses clinical authority; the phone only receives a scoped bearer.
+function clinical_note_capture_require_scope(PDO $pdo, array $doctorContext, string $patientId, string $encounterKey, string $route): bool
+{
+    if ($encounterKey !== '') {
+        $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
+        $encounter = ($resolved['ok'] ?? false) === true ? ($resolved['row'] ?? null) : null;
+        if (!is_array($encounter)) {
+            clinical_send_response(['ok' => false, 'error' => 'not_found', 'message' => 'encounter no encontrado',
+                'data' => null, 'meta' => ['route' => $route]], 404);
+            return false;
+        }
+        if (!clinical_require_encounter_owner($encounter, $doctorContext['doctor_id'], $route)) {
+            return false;
+        }
+        if ($patientId !== trim((string)($encounter['patient_id'] ?? ''))) {
+            clinical_send_response(['ok' => false, 'error' => 'forbidden', 'message' => 'patient / encounter mismatch',
+                'data' => null, 'meta' => ['route' => $route]], 403);
+            return false;
+        }
+    }
+    // Patient-level note/consent capture legitimately has no encounter.
+    return clinical_require_doctor_patient_scope($pdo, $doctorContext['doctor_id'], $patientId, $route);
+}
+
 function clinical_note_capture_token_generate(): string
 {
-    try {
-        return bin2hex(random_bytes(16));
-    } catch (Throwable $e) {
-        return sha1(uniqid('note_capture_', true));
-    }
+    return bin2hex(random_bytes(16));
 }
 
 function clinical_note_capture_token_fetch(PDO $pdo, string $token): ?array
@@ -2490,7 +2510,7 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
     }
 
     if ($encounterKey !== '') {
-        clinical_encounters_ensure_schema($pdo);
+        if (!$pdo->inTransaction()) clinical_encounters_ensure_schema($pdo);
         $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
         if (($resolved['ok'] ?? false) !== true) {
             throw new InvalidArgumentException((string)($resolved['error_message'] ?? 'encounter inválido'));
@@ -2508,7 +2528,7 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
         throw new InvalidArgumentException('patient_id requerido');
     }
     if ($requireCanonicalPatient && $encounterKey === '' && $encounterId > 0) {
-        clinical_encounters_ensure_schema($pdo);
+        if (!$pdo->inTransaction()) clinical_encounters_ensure_schema($pdo);
         $encounterRow = clinical_encounter_get_by_id($pdo, $encounterId);
         if (!is_array($encounterRow)) {
             throw new ClinicalDocumentsPatientWriteException('not_found', 'encounter no encontrado', 404);
@@ -7960,6 +7980,16 @@ try {
     }
 
     if (($segments[0] ?? '') === 'note-capture-tokens') {
+        $captureDoctorContext = null;
+        $desktopOperation = ($method === 'POST' && count($segments) === 1)
+            || ($method === 'GET' && count($segments) === 2)
+            || ($method === 'POST' && count($segments) === 3 && in_array($segments[2], ['cancel', 'consume'], true));
+        if ($desktopOperation) {
+            $captureDoctorContext = clinical_require_doctor_context('note-capture-tokens');
+            if ($captureDoctorContext === null) {
+                return;
+            }
+        }
         try {
             $pdo = clinical_documents_pdo();
             clinical_note_capture_tokens_ensure_schema($pdo);
@@ -7967,7 +7997,7 @@ try {
             clinical_send_response([
                 'ok' => false,
                 'error' => 'server_error',
-                'message' => trim((string)$e->getMessage()) ?: 'server error',
+                'message' => 'capture token operation failed',
                 'data' => null,
                 'meta' => [
                     'method' => $method,
@@ -7975,6 +8005,15 @@ try {
                 ],
             ], 500);
             return;
+        }
+
+        require_once __DIR__ . '/../_lib/clinical_note_capture_atomic.php';
+        $captureLock = null;
+        try {
+        // Serialize fresh reads, expiry, upload, signature, cancel and consume.
+        // The claim boundary is the pending/expiry check AFTER acquiring this lock.
+        if (count($segments) >= 2) {
+            $captureLock = clinical_note_capture_lock($pdo, trim(rawurldecode((string)$segments[1])));
         }
 
         if ($method === 'POST' && count($segments) === 1) {
@@ -8018,7 +8057,16 @@ try {
             }
             $expiresInSec = max(60, min(3600, $expiresInSec));
 
-            $token = clinical_note_capture_token_generate();
+            if (!clinical_note_capture_require_scope($pdo, $captureDoctorContext, $patientId, $encounterKey, 'note-capture-tokens')) {
+                return;
+            }
+            try {
+                $token = clinical_note_capture_token_generate();
+            } catch (Throwable $e) {
+                clinical_send_response(['ok' => false, 'error' => 'server_error', 'message' => 'capture token generation failed',
+                    'data' => null, 'meta' => ['route' => 'note-capture-tokens']], 500);
+                return;
+            }
             $now = gmdate('Y-m-d H:i:s');
             $expiresAt = gmdate('Y-m-d H:i:s', time() + $expiresInSec);
             $noteContextNorm = strtolower($noteContext);
@@ -8075,7 +8123,7 @@ try {
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'server_error',
-                    'message' => trim((string)$e->getMessage()) ?: 'server error',
+                    'message' => 'capture token operation failed',
                     'data' => null,
                     'meta' => [
                         'method' => 'POST',
@@ -8133,6 +8181,10 @@ try {
                 ], 404);
                 return;
             }
+            if (!clinical_note_capture_require_scope($pdo, $captureDoctorContext,
+                trim((string)$row['patient_id']), trim((string)($row['encounter_key'] ?? '')), 'note-capture-tokens')) {
+                return;
+            }
             $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
             clinical_send_response([
                 'ok' => true,
@@ -8176,8 +8228,17 @@ try {
                 ], 404);
                 return;
             }
+            if (!clinical_note_capture_require_scope($pdo, $captureDoctorContext,
+                trim((string)$row['patient_id']), trim((string)($row['encounter_key'] ?? '')), 'note-capture-tokens')) {
+                return;
+            }
             $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
             $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+            if (!in_array($status, ['pending', 'cancelled'], true)) {
+                clinical_send_response(['ok' => false, 'error' => 'conflict', 'message' => 'token no disponible para cancelar (' . $status . ')',
+                    'data' => null, 'meta' => ['route' => 'note-capture-tokens/{token}/cancel']], 409);
+                return;
+            }
             if ($status === 'pending') {
                 $cancelledAt = gmdate('Y-m-d H:i:s');
                 $stmt = $pdo->prepare("
@@ -8265,6 +8326,10 @@ try {
                         'route' => 'note-capture-tokens/{token}/consume',
                     ],
                 ], 404);
+                return;
+            }
+            if (!clinical_note_capture_require_scope($pdo, $captureDoctorContext,
+                trim((string)$row['patient_id']), trim((string)($row['encounter_key'] ?? '')), 'note-capture-tokens')) {
                 return;
             }
             $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
@@ -8699,12 +8764,15 @@ try {
                         );
                     } else {
                         clinical_m6_observability_route('C21_TOKEN_UPLOAD', 'PATIENT_UPLOAD', 'GUARDED_LEGACY');
-                        $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+                        clinical_encounters_ensure_schema($pdo);
+                        $document = clinical_note_capture_legacy_transaction($pdo, $row,
+                            fn() => clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile));
                     }
                 } else {
                     // A genuinely encounter-less token keeps the existing patient-level authority.
                     clinical_m6_observability_route('C21_TOKEN_UPLOAD', 'PATIENT_UPLOAD', 'PATIENT_LEVEL_C04');
-                    $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+                    $document = clinical_note_capture_legacy_transaction($pdo, $row,
+                            fn() => clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile));
                 }
             } catch (ClinicalM6LegacyWriteBlockedException $e) {
                 // M6_GUARD_C21_NOTE_CAPTURE_UPLOAD: token reads/status remain available.
@@ -8783,58 +8851,9 @@ try {
                 return;
             }
 
-            $uploadedAt = gmdate('Y-m-d H:i:s');
-            if ($canonicalC21) {
-                $documentId = (int)($document['document_id'] ?? 0);
-                $documentUuid = trim((string)($document['document_uuid'] ?? ''));
-                $previewUrl = '';
-            } else {
-                $documentId = (int)($document['document_db_id'] ?? 0);
-                $documentUuid = trim((string)($document['document_id'] ?? ($document['document_uuid'] ?? '')));
-                $previewUrl = clinical_note_capture_extract_preview_url($document);
-            }
-            $update = $pdo->prepare("
-                UPDATE clinical_note_capture_tokens
-                SET
-                    status = 'uploaded',
-                    uploaded_at = :uploaded_at,
-                    document_id = :document_id,
-                    document_uuid = :document_uuid,
-                    preview_url = :preview_url,
-                    updated_at = :updated_at
-                WHERE token = :token
-            ");
-            $update->bindValue(':uploaded_at', $uploadedAt, PDO::PARAM_STR);
-            if ($documentId > 0) {
-                $update->bindValue(':document_id', $documentId, PDO::PARAM_INT);
-            } else {
-                $update->bindValue(':document_id', null, PDO::PARAM_NULL);
-            }
-            if ($documentUuid !== '') {
-                $update->bindValue(':document_uuid', $documentUuid, PDO::PARAM_STR);
-            } else {
-                $update->bindValue(':document_uuid', null, PDO::PARAM_NULL);
-            }
-            if ($previewUrl !== '') {
-                $update->bindValue(':preview_url', $previewUrl, PDO::PARAM_STR);
-            } else {
-                $update->bindValue(':preview_url', null, PDO::PARAM_NULL);
-            }
-            $update->bindValue(':updated_at', $uploadedAt, PDO::PARAM_STR);
-            $update->bindValue(':token', $token, PDO::PARAM_STR);
-            $update->execute();
-
             $latest = clinical_note_capture_token_fetch($pdo, $token);
-            if (!is_array($latest)) {
-                $latest = [
-                    'token' => $token,
-                    'status' => 'uploaded',
-                    'expires_at' => ($row['expires_at'] ?? ''),
-                    'uploaded_at' => $uploadedAt,
-                    'document_id' => $documentId,
-                    'document_uuid' => $documentUuid,
-                    'preview_url' => $previewUrl,
-                ];
+            if (!is_array($latest) || ($latest['status'] ?? '') !== 'uploaded') {
+                throw new RuntimeException('CAPTURE_DOCUMENT_RESULT_UNAVAILABLE');
             }
             clinical_send_response([
                 'ok' => true,
@@ -8860,6 +8879,9 @@ try {
             ],
         ], 404);
         return;
+        } finally {
+            if ($captureLock !== null) clinical_note_capture_unlock($pdo, $captureLock);
+        }
     }
 
     if (($segments[0] ?? '') === 'doctors') {

@@ -33,7 +33,7 @@ function clinical_encounter_multipart_file(array $files): array
 /** Called only after the canonical route's authorization and operation policy pass. */
 function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array $doctor,
     array $payload, string $createOperation, string $policyOperation, string $documentClass,
-    array $policyContext, array $files, string $idempotencyKey): array
+    array $policyContext, array $files, string $idempotencyKey, ?callable $afterInsert = null): array
 {
     $family = $createOperation === 'CREATE_POST_ENCOUNTER_RESULT' ? 'C05_RESULT_CREATE' : 'C04_C05_ENCOUNTER_DOCUMENT';
     clinical_m6_observability_route($family, $createOperation, 'CANONICAL_V1');
@@ -56,7 +56,7 @@ function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array 
     return (new ClinicalMultipartDocumentService($pdo, $storage))->execute(
         $context, $idempotencyKey, $doctor['user_id'], $file['tmp_name'], $file['name'],
         (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $ttl . ' seconds'),
-        function (PDO $transaction, string $documentUuid) use ($encounter, $doctor, $payload, $createOperation, $policyOperation, $documentClass, $policyContext): array {
+        function (PDO $transaction, string $documentUuid) use ($encounter, $doctor, $payload, $createOperation, $policyOperation, $documentClass, $policyContext, $afterInsert): array {
             $lock = $transaction->prepare('SELECT * FROM clinical_encounters WHERE encounter_id=:id FOR UPDATE');
             $lock->execute([':id' => $encounter['encounter_id']]);
             $locked = $lock->fetch(PDO::FETCH_ASSOC);
@@ -72,6 +72,8 @@ function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array 
             $decision = clinical_document_operation_policy($policyOperation, $documentClass, (string)$locked['status'], $policyContext);
             if (($decision['allowed'] ?? false) !== true) throw new RuntimeException((string)($decision['code'] ?? 'DOCUMENT_OPERATION_UNSUPPORTED'));
             $id = clinical_v1_document_insert($transaction, $locked, $payload, $doctor['user_id'], $documentUuid);
+            // Capture joins this transaction without nesting or replacing canonical idempotency.
+            if ($afterInsert !== null) $afterInsert($transaction, $id, $documentUuid);
             return ['document_id' => $id, 'document_uuid' => $documentUuid, 'result_column' => 'document_id', 'result_id' => $id];
         },
         static fn(PDO $transaction, string $column, int $id): array => clinical_v1_document_fetch($transaction, $id)

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_encounter_multipart_adapter.php';
+require_once __DIR__ . '/clinical_note_capture_atomic.php';
 
 /** Stable opaque command authority; the raw capture token never enters V1 metadata. */
 function clinical_note_capture_command_key(array $tokenRow): string
@@ -62,6 +63,7 @@ function clinical_note_capture_multipart_execute(
         $documentClass,
         $policyContext,
         $files,
-        clinical_note_capture_command_key($tokenRow)
+        clinical_note_capture_command_key($tokenRow),
+        static fn(PDO $transaction, int $id, string $uuid) => clinical_note_capture_complete_document($transaction, $tokenRow, $id, $uuid)
     );
 }
