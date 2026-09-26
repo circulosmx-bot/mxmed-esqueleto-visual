@@ -30699,6 +30699,21 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
 
   window.getActiveEncounterKey = getActiveEncounterKey;
   window.setEncounterContextOnPane = setEncounterContextOnPane;
+  // Prescription scope follows the visible M7 workspace, never a background OPEN encounter.
+  window.mxmedPrescriptionRuntimeScope = (patientId) => {
+    const pane = findExpedientePane();
+    const selectedPatientId = cleanValue(pane?.dataset?.patientId || pane?.dataset?.activePatientId);
+    const requestedPatientId = cleanValue(patientId);
+    const inConsultation = document.body.classList.contains('mx-consultation-mode')
+      && !!pane?.querySelector('[data-bs-target="#t-consulta-actual"].active');
+    const body = document.querySelector('#m7-workspace [data-m7-body]');
+    const samePatient = !!requestedPatientId && selectedPatientId === requestedPatientId
+      && cleanValue(body?.dataset?.patientId) === requestedPatientId;
+    const encounterKey = inConsultation && samePatient && body?.dataset?.encounterState === 'open'
+      && !body.classList.contains('d-none')
+      ? cleanValue(body.dataset.encounterKey) : null;
+    return { patient_id: selectedPatientId, mode: inConsultation ? 'consultation' : 'standalone', encounter_key: encounterKey };
+  };
 
   let lastEncounterPayload = null;
   let lastEncounterPayloadKey = '';
@@ -34897,16 +34912,25 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       const requestedDocumentType = String(requestArgs.document_type || requestArgs.type || '').trim();
       const isEvolutionNote = requestedDocumentType === 'nota_evolucion';
       const isPrescription = requestedDocumentType === 'prescription';
+      const prescriptionScope = isPrescription && typeof window.mxmedPrescriptionRuntimeScope === 'function'
+        ? window.mxmedPrescriptionRuntimeScope(context.patient_id) : null;
       const fromBridge = (typeof window.getActiveEncounterKey === 'function')
         ? String(window.getActiveEncounterKey() || '').trim()
         : '';
-      const encounterKey = String(context.encounter_key || fromBridge || '').trim();
-      if (!encounterKey) {
+      const encounterKey = isPrescription
+        ? String(prescriptionScope?.encounter_key || '').trim()
+        : String(context.encounter_key || fromBridge || '').trim();
+      if (!encounterKey && (!isPrescription || prescriptionScope?.mode === 'consultation')) {
         const error = new Error('Selecciona o inicia una consulta antes de guardar este documento clínico.');
         error.code = 'ACTIVE_ENCOUNTER_REQUIRED';
         throw error;
       }
-      context.encounter_key = encounterKey;
+      if (encounterKey) context.encounter_key = encounterKey;
+      else {
+        delete context.encounter_key;
+        delete context.appointment_id;
+        context.encounter_id = null;
+      }
       requestArgs.context = context;
       const contextPatientId = String(context.patient_id ?? '').trim();
       const explicitLegacyPatientId = String(context.legacy_patient_id ?? '').trim();
@@ -34928,6 +34952,15 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           throw new Error('No se pudo resolver el paciente para guardar la receta.');
         }
         throw new Error('No se pudo resolver el paciente para guardar el documento clínico.');
+      }
+      if (isPrescription) {
+        const selectedPatientId = String(window.mxmedPrescriptionRuntimeScope?.(canonicalPatientId)?.patient_id || '').trim();
+        const selectedCanonicalPatientId = /^p_/i.test(selectedPatientId)
+          ? selectedPatientId
+          : await resolveCanonicalPatientIdSafe(selectedPatientId).catch(() => null);
+        if (!selectedCanonicalPatientId || selectedCanonicalPatientId !== canonicalPatientId) {
+          throw new Error('El paciente de la receta ya no coincide con el expediente activo.');
+        }
       }
 
       const gatewayArgs = {
@@ -34994,8 +35027,23 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       });
 
       const commandFingerprint = JSON.stringify(gatewayArgs);
-      const commandScope = `encounter-document:${encounterKey}:${requestedDocumentType}`;
+      const commandScope = encounterKey
+        ? `encounter-document:${encounterKey}:${requestedDocumentType}`
+        : `patient-document:${canonicalPatientId}:${requestedDocumentType}`;
       try {
+        if (isPrescription) {
+          const latestScope = window.mxmedPrescriptionRuntimeScope?.(canonicalPatientId);
+          if (latestScope?.patient_id !== canonicalPatientId
+            || latestScope?.mode !== prescriptionScope?.mode
+            || String(latestScope?.encounter_key || '') !== encounterKey) {
+            throw new Error('El contexto de la receta cambió. Revisa el paciente y vuelve a intentar.');
+          }
+        }
+        const doctorId = !encounterKey ? resolveGatewayDocumentsDoctorId() : '';
+        if (!encounterKey && !doctorId) throw new Error('No se pudo confirmar el contexto del profesional.');
+        const writeUrl = encounterKey
+          ? `${mxmedApiBase()}/api/clinical/index.php/encounters/${encodeURIComponent(encounterKey)}/documents`
+          : `${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(canonicalPatientId)}/documents`;
         const gatewayPayload = await window.mxmedClinicalCommandKeys.run(
           commandScope,
           commandFingerprint,
@@ -35004,7 +35052,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
             event_datetime: gatewayArgs.event_datetime || new Date().toISOString().slice(0, 19).replace('T', ' ')
           }),
           async ({ key, command })=> {
-            const payload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/encounters/${encodeURIComponent(encounterKey)}/documents`, {
+            const payload = await fetchJson(writeUrl, {
               method: 'POST',
               headers: { Accept: 'application/json', 'Idempotency-Key': key },
               body: JSON.stringify(command)
@@ -35035,7 +35083,7 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
           'IDEMPOTENCY_KEY_REUSED',
           'SCHEMA_NOT_READY'
         ]);
-        console.warn('[CLINICAL-DOCUMENTS-CANONICAL-CREATE] encounter_create_failed', {
+        console.warn('[CLINICAL-DOCUMENTS-CANONICAL-CREATE] document_create_failed', {
           encounter_key: encounterKey,
           patient_id: canonicalPatientId,
           code: error?.code || null,
@@ -38180,10 +38228,9 @@ window.mxmedExplicitStartEncounter = async function(patientId, options = {}){
       mergeQuickRxPatientSnapshot(rawPatient, patientId),
       patientId
     );
-    const encounterKey = (typeof window.getActiveEncounterKey === 'function')
-      ? normalizeRecetaText(window.getActiveEncounterKey())
-      : '';
-    const appointmentId = resolveRecetaAppointmentId(patientId, encounterKey);
+    const prescriptionScope = window.mxmedPrescriptionRuntimeScope?.(patientId);
+    const encounterKey = normalizeRecetaText(prescriptionScope?.encounter_key);
+    const appointmentId = encounterKey ? resolveRecetaAppointmentId(patientId, encounterKey) : '';
     const doctorName = normalizeRecetaText(actor.nombre_completo);
     const doctorCedula = normalizeRecetaText(actor.cedula_profesional);
     const doctorEspecialidad = normalizeRecetaText(actor.especialidad);

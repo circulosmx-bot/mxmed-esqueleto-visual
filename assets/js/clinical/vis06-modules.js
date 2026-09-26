@@ -125,6 +125,9 @@
     pane.querySelector(`[data-bs-target="#${settings.target}"]`)?.addEventListener('shown.bs.tab',load);
   }
   ['patient:selected','expediente:patient_changed','expediente:patient-changed'].forEach(name=>window.addEventListener(name,load));
+  window.addEventListener('mxmed:clinical-document-created',event=>{
+    if(String(event.detail?.patient_id||'')===selectedPatient())load();
+  });
   if(selectedPatient())load();
   new MutationObserver(()=>{if(selectedPatient()!==patient)load();}).observe(pane,{attributes:true,attributeFilter:['data-patient-id','data-active-patient-id']});
 })();

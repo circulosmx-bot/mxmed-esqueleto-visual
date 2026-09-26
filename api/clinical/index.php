@@ -4059,13 +4059,14 @@ function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload
     $payloadData=is_array($payload['payload']??null)?$payload['payload']:[];
     $type=strtolower(trim((string)($payload['document_type']??'')));if($type==='')throw new InvalidArgumentException('DOCUMENT_TYPE_REQUIRED');
     $event=trim((string)($payload['event_datetime']??''));if($event==='')$event=gmdate('Y-m-d H:i:s');
+    $encounterId=(int)($encounterRow['encounter_id']??0);
     $doc=mxmed_build_clinical_document(['type'=>$type,'title'=>$payload['title']??'','summary'=>$payload['summary']??'',
       'event_datetime'=>$event,'context'=>['patient_id'=>$encounterRow['patient_id'],'appointment_id'=>$encounterRow['appointment_id']??null,
-      'encounter_id'=>(string)$encounterRow['encounter_id'],'care_setting'=>'consulta'],'payload'=>$payloadData,'actor'=>['user_id'=>$actorId]]);
+      'encounter_id'=>$encounterId>0?(string)$encounterId:null,'care_setting'=>'consulta'],'payload'=>$payloadData,'actor'=>['user_id'=>$actorId]]);
     // MULTI05A UUID BEGIN.
     if ($documentUuid !== null) $doc['document_id'] = $documentUuid;
     // MULTI05A UUID END.
-    return mxmed_persist_clinical_document_in_transaction($pdo,$doc,['encounter_ref_id'=>(int)$encounterRow['encounter_id']]);
+    return mxmed_persist_clinical_document_in_transaction($pdo,$doc,$encounterId>0?['encounter_ref_id'=>$encounterId]:[]);
 }
 
 function clinical_v1_document_fetch(PDO $pdo,int $id): array
@@ -8885,6 +8886,14 @@ try {
     }
 
     if (($segments[0] ?? '') === 'doctors') {
+        $scopedDoctorId=trim(rawurldecode((string)($segments[1]??'')));
+        $scopedDoctorContext=clinical_require_doctor_context('doctors/{doctor_id}/documents');
+        if($scopedDoctorContext===null)return;
+        if($scopedDoctorId===''||!hash_equals($scopedDoctorContext['doctor_id'],$scopedDoctorId)){
+            clinical_send_response(['ok'=>false,'error'=>'forbidden','message'=>'doctor scope mismatch','data'=>null,
+                'meta'=>['route'=>'doctors/{doctor_id}/documents']],403);
+            return;
+        }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
             clinical_m6_observability_route('C04_PATIENT_DOCUMENT', 'CREATE_DOCUMENT', 'PATIENT_LEVEL_C04');
             $doctorId = trim(rawurldecode((string)$segments[1]));
@@ -8945,6 +8954,41 @@ try {
                 $payload = clinical_documents_force_request_patient_id($payload, $patientId);
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
+                if (in_array(strtolower(trim((string)($payload['document_type'] ?? ''))), ['prescription','receta','rx'], true)) {
+                    $payload['document_type']='prescription';
+                    if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('PRESCRIPTION_MULTIPART_UNSUPPORTED');
+                    $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+                    foreach (['encounter_key','encounter_id','appointment_id'] as $field) {
+                        if (trim((string)($payload[$field] ?? ($context[$field] ?? ''))) !== '') {
+                            throw new InvalidArgumentException('PATIENT_PRESCRIPTION_ENCOUNTER_FORBIDDEN');
+                        }
+                    }
+                    foreach ([$payload['doctor_id'] ?? null,$context['doctor_id'] ?? null] as $claimedDoctorId) {
+                        if ($claimedDoctorId !== null && trim((string)$claimedDoctorId) !== $doctorId) {
+                            throw new InvalidArgumentException('DOCTOR_CONTEXT_MISMATCH');
+                        }
+                    }
+                    $context['patient_id']=$patientId;
+                    $context['encounter_id']=null;
+                    $context['appointment_id']=null;
+                    $payload['context']=$context;
+                    $payload['actor']=['user_id'=>$scopedDoctorContext['user_id']];
+                    $key=clinical_idempotency_key_validate((string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                    clinical_encounter_integrity_assert_schema_ready($pdo);
+                    $semantic=clinical_document_semantic_request($payload,null)+['patient_id'=>$patientId,'operation'=>'CREATE_ENCOUNTER_DOCUMENT'];
+                    $service=new ClinicalEncounterIntegrityService($pdo);
+                    $result=$service->idempotentCreate('CREATE_ENCOUNTER_DOCUMENT',$doctorId,'PATIENT',$patientId,$key,$semantic,
+                        'document_id',$scopedDoctorContext['user_id'],
+                        fn():int=>clinical_v1_document_insert($pdo,['patient_id'=>$patientId],$payload,$scopedDoctorContext['user_id']),
+                        fn(int $id):array=>clinical_v1_document_fetch($pdo,$id));
+                    $replay=($result['_idempotency_replay']??false)===true;
+                    $document=clinical_documents_get_by_token_fetch($pdo,(string)$result['document_uuid']);
+                    if($document===null)throw new RuntimeException('DOCUMENT_NOT_FOUND');
+                    clinical_send_response(['ok'=>true,'error'=>null,'message'=>'document saved','data'=>[
+                        'document_id'=>$result['document_uuid'],'document'=>$document],
+                        'meta'=>$meta+['idempotency_replay'=>$replay]],$replay?200:201);
+                    return;
+                }
                 $document = clinical_documents_save_create_request($pdo, $payload, $uploadFile, $isMultipart);
             } catch (ClinicalM6LegacyWriteBlockedException $e) {
                 // M6_GUARD_C04_C05_C20_SCOPED_CREATE: route patient is authoritative.
@@ -8962,6 +9006,10 @@ try {
                     'data' => null,
                     'meta' => $meta,
                 ], 400);
+                return;
+            } catch (ClinicalIdempotencyException $e) {
+                clinical_send_response(['ok'=>false,'error'=>['code'=>$e->errorCode,'message'=>$e->getMessage()],
+                    'data'=>null,'meta'=>$meta],$e->httpStatus);
                 return;
             } catch (RuntimeException $e) {
                 $msg = trim((string)$e->getMessage());

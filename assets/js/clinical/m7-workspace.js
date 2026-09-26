@@ -483,6 +483,7 @@
     show(body, false);
     delete body.dataset.encounterKey;
     delete body.dataset.encounterId;
+    delete body.dataset.patientId;
     delete body.dataset.encounterState;
     show(history, false);
     show(startButton, false);
@@ -514,6 +515,7 @@
     else setCurrentEncounterHeader(fallbackDetail);
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
     body.dataset.encounterId = String(encounter.encounter_id || '').trim();
+    body.dataset.patientId = String(encounter.patient_id || '').trim();
     body.dataset.encounterState = state;
     loadSections(encounter);
     if(!historical && encounter.appointment_id) void hydrateLinkedAppointmentHeader(encounter, headerToken);
