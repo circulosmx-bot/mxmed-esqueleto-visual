@@ -138,7 +138,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=plan02br2" />
+<link rel="stylesheet" href="assets/css/style.css?v=docux01r1" />
 <link rel="stylesheet" href="assets/css/next-available-modal.css" />
 <link rel="stylesheet" href="assets/css/profile-theme-admin.css?v=crd038" />
 
@@ -5480,17 +5480,42 @@
                     <section class="m7-section-editor m7-documents d-none" data-m7-documents aria-label="Documentos y acciones clínicas">
                       <section class="plan02b-collector" data-plan02b-collector hidden aria-label="Acciones por confirmar"></section>
                       <div class="vis21-panel-toolbar"><button type="button" class="btn btn-outline-primary" data-m7-doc-refresh>Actualizar</button></div>
-                      <div class="m7-doc-columns">
-                        <div><h5>De esta consulta</h5><div data-m7-encounter-documents></div></div>
-                        <div><h5>Del paciente, sin consulta</h5><div data-m7-patient-documents></div></div>
-                      </div>
+                      <section class="docux-current" aria-labelledby="docux-current-title">
+                        <h5 id="docux-current-title">Documentos de esta consulta</h5>
+                        <div class="docux-actions" data-docux-actions><button type="button" class="btn btn-outline-primary" data-docux-attach>Adjuntar documento</button><button type="button" class="btn btn-outline-primary" data-m7-capture-start>Capturar con celular</button></div>
+                        <div data-m7-encounter-documents></div>
+                      </section>
                       <div class="m7-doc-actions" data-m7-doc-actions>
-                        <form data-m7-doc-upload-form><h5>Adjuntar a esta consulta</h5><p>Los documentos del paciente sin consulta se muestran arriba como historial.</p><label>Título<input data-m7-doc-title required maxlength="160"></label><label>Archivo PDF o imagen<input data-m7-doc-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><label class="d-none" data-m7-doc-image-tag-wrap>Etiqueta de imagen<input data-m7-doc-image-tag value="clinical_attachment" maxlength="80"></label><button type="submit" class="btn btn-primary" data-m7-doc-upload>Guardar adjunto</button></form>
                         <form data-m7-order-form><h5>Orden de estudio</h5><label>Estudio solicitado<input data-m7-order-title required maxlength="160"></label><label>Indicación<textarea data-m7-order-summary rows="2"></textarea></label><button type="submit" class="btn btn-primary">Crear orden</button></form>
                         <form data-m7-result-form><h5>Resultado de una orden</h5><p>El resultado se guarda en la consulta donde nació la orden, incluso si ya finalizó.</p><label>Orden de esta consulta<select data-m7-result-order required></select></label><label>Tipo<select data-m7-result-type><option value="lab_result">Laboratorio</option><option value="imaging_result">Imagen</option><option value="external_report">Informe externo</option></select></label><label>Título<input data-m7-result-title required maxlength="160"></label><label>Procedencia<input data-m7-result-provenance required maxlength="160"></label><label>Archivo PDF o imagen<input data-m7-result-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><button type="submit" class="btn btn-primary">Guardar resultado</button></form>
                       </div>
                       <form class="m7-doc-replace d-none" data-m7-replace-form><h5>Reemplazar documento</h5><p>Se añadirá una versión nueva; la anterior permanecerá en el historial.</p><strong data-m7-replace-target></strong><label>Motivo del reemplazo<textarea data-m7-replace-reason required maxlength="1000" rows="2"></textarea></label><label>Archivo nuevo<input data-m7-replace-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><div class="m7-section-editor-actions"><button type="button" class="btn btn-outline-secondary" data-m7-replace-cancel>Cancelar</button><button type="submit" class="btn btn-primary">Guardar nueva versión</button></div></form>
-                      <div class="m7-doc-capture" data-m7-capture><h5>Captura desde otro dispositivo</h5><button type="button" class="btn btn-outline-primary" data-m7-capture-start>Crear enlace de captura</button><div class="d-none" data-m7-capture-session><a data-m7-capture-link target="_blank" rel="noopener noreferrer">Abrir captura</a><span data-m7-capture-state role="status"></span><button type="button" class="btn btn-outline-secondary" data-m7-capture-check>Comprobar estado</button><button type="button" class="btn btn-outline-danger" data-m7-capture-cancel>Cancelar enlace</button></div></div>
+                      <section class="docux-general" data-docux-general hidden aria-labelledby="docux-general-title"><h5 id="docux-general-title">Documentos generales del paciente</h5><div data-m7-patient-documents></div></section>
+                      <dialog class="docux-modal" data-docux-upload aria-labelledby="docux-upload-title">
+                        <form data-m7-doc-upload-form novalidate>
+                          <header><h4 id="docux-upload-title">Adjuntar documento</h4><button type="button" class="btn btn-link" data-modal-close aria-label="Cerrar">×</button></header>
+                          <div class="plan02b-modal-content">
+                            <label>Título<input data-m7-doc-title required maxlength="160"></label>
+                            <span id="docux-file-label">Archivo</span>
+                            <div class="docux-dropzone" data-docux-dropzone role="group" aria-labelledby="docux-file-label">
+                              <p data-docux-file-state aria-live="polite">Arrastra un PDF o imagen aquí</p>
+                              <button type="button" class="btn btn-outline-primary" data-docux-pick>Seleccionar archivo</button>
+                              <input class="visually-hidden" data-m7-doc-file type="file" accept="application/pdf,image/jpeg,image/png,image/webp" aria-label="Archivo PDF o imagen" tabindex="-1">
+                            </div>
+                            <input data-m7-doc-image-tag type="hidden" value="clinical_attachment">
+                          </div>
+                          <p data-docux-upload-state role="status" aria-live="polite"></p>
+                          <footer><div><button type="button" class="btn btn-outline-secondary" data-modal-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-m7-doc-upload>Guardar documento</button></div></footer>
+                        </form>
+                      </dialog>
+                      <dialog class="docux-modal docux-capture-modal" data-docux-capture aria-labelledby="docux-capture-title">
+                        <header><h4 id="docux-capture-title">Capturar documento con celular</h4><button type="button" class="btn btn-link" data-modal-close aria-label="Cerrar">×</button></header>
+                        <div class="plan02b-modal-content">
+                          <div data-docux-qr-content hidden><p>Escanea este código con tu celular</p><div class="docux-qr" data-docux-qr role="img" aria-label="Código QR para abrir el enlace de captura"></div><div class="docux-links"><a data-m7-capture-link target="_blank" rel="noopener noreferrer">Abrir enlace de captura</a><button type="button" class="btn btn-link" data-docux-copy>Copiar enlace</button></div></div>
+                          <p data-m7-capture-state role="status" aria-live="polite"></p>
+                        </div>
+                        <footer><div><button type="button" class="btn btn-outline-secondary" data-m7-capture-cancel>Cancelar captura</button><button type="button" class="btn btn-outline-secondary" data-docux-capture-close hidden>Cerrar</button></div></footer>
+                      </dialog>
                     </section>
                     <div class="m7-section-editor d-none" data-m7-editor>
                       <div class="vis30-recovered-draft d-none" data-vis30-section-draft role="status"><p>Hay una captura pendiente recuperada de esta consulta. Elige si deseas retomarla o descartarla.</p><div><button type="button" class="btn btn-outline-primary" data-vis30-section-recover>Recuperar borrador</button><button type="button" class="btn btn-link" data-vis30-section-discard>Descartar borrador</button></div></div>
@@ -10740,7 +10765,7 @@
 <script src="assets/js/app.js?v=plan02a-agr02"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=vis30"></script>
-<script src="assets/js/clinical/m7-ws04.js?v=vis21"></script>
+<script src="assets/js/clinical/m7-ws04.js?v=docux01r1"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=plan02br1"></script>
 <script src="assets/js/clinical/m7-workspace.js?v=plan02br1-vis30"></script>
 <script src="assets/js/clinical/vis04-consultation.js?v=vis30"></script>

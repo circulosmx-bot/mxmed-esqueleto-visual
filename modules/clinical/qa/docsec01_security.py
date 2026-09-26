@@ -106,7 +106,7 @@ def run():
         page.locator('[data-m7-section="plan"]').click();expect(page.locator('[data-plan02b]')).to_be_visible()
         expect(page.locator('[data-plan02b-count]')).not_to_be_visible()
         page.locator('[data-m7-section="documents"]').click()
-        for selector in ['[data-plan02b-collector]','[data-m7-doc-upload-form]','[data-m7-order-form]','[data-m7-result-form]']:
+        for selector in ['[data-plan02b-collector]','[data-docux-attach]','[data-m7-order-form]','[data-m7-result-form]']:
             expect(page.locator(selector)).to_be_visible()
         check('PLAN02BR2 collector badge orders results upload preserved',True)
         check('consultation remains OPEN',page.locator('#m7-workspace [data-m7-body]').get_attribute('data-encounter-state')=='open')

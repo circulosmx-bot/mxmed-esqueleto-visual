@@ -23114,3 +23114,23 @@ body.mx-sidebar-collapsed #mmSidebar .menu-main[data-group="agenda"] .alr01-nav-
 .plan02b-modal [data-ns-exact] { font-weight:650; color:var(--plan02-clinical-ink); }
 .plan02b-modal footer > p { color:#5f7685; }
 .plan02b-collector > [data-ns-message]:only-child { margin:0; }
+
+/* DOCUX01-R1: compact intake, using the established Plan dialog shell. */
+.docux-actions { display:flex; flex-wrap:wrap; gap:.6rem; margin:.7rem 0 1rem; }
+.docux-actions .btn { min-height:42px; white-space:normal; }
+.docux-general { margin-top:1.2rem; padding-top:1rem; border-top:1px solid #d6e6ec; }
+.docux-general h5 { color:#526e7c; font-size:1rem; }
+.docux-general[hidden], .docux-modal [hidden] { display:none !important; }
+.docux-modal { width:min(560px,calc(100vw - 24px)); }
+.docux-modal:not([open]) { display:none; }
+.docux-modal .plan02b-modal-content { min-width:0; }
+.docux-dropzone { border:2px dashed #8eafba; border-radius:12px; background:#f6fafb; text-align:center; padding:1.4rem .8rem; margin-top:.4rem; }
+.docux-dropzone[data-drag=true] { border-style:solid; border-color:#00798d; background:#e8f6f8; }
+.docux-dropzone p { overflow-wrap:anywhere; margin:0 0 .8rem; }
+.docux-modal [data-docux-upload-state][data-error=true] { color:#9d352f; }
+.docux-capture-modal .plan02b-modal-content { text-align:center; }
+.docux-qr { width:256px; height:256px; padding:20px; margin:.8rem auto; background:#fff; box-sizing:border-box; }
+.docux-qr img, .docux-qr canvas { max-width:100%; }
+.docux-links { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.5rem 1rem; }
+.docux-modal footer .btn { min-height:42px; }
+@media(max-width:600px) { .docux-actions .btn { flex:1 1 145px; } .docux-modal { padding:.85rem; } }
