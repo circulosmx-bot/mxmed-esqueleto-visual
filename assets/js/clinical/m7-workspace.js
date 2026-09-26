@@ -606,7 +606,7 @@
   resumeButton.addEventListener('click', ()=>{ if(active) renderEncounter(active, false); });
   currentButton.addEventListener('click', ()=>{ if(active && protectNavigation()) renderEncounter(active, false); });
   async function transitionToSection(type){
-    if(type !== selectedSection && window.mxmedPlanNextSteps && !(await window.mxmedPlanNextSteps.mayLeave())) return false;
+    if(window.mxmedPlanNextSteps?.isBusy()) return false;
     if(!type || type === selectedSection || transitionBusy || sectionBusy || ws03?.isBusy() || ws04?.isBusy() || ws05?.isBusy()) return false;
     if(selectedSection === 'measurements' && !(await ws03.resolvePendingNavigation())) return false;
     if(eligibleCaptureIsDirty()){

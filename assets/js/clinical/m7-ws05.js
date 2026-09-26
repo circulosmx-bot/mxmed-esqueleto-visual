@@ -120,8 +120,9 @@
         [...voidForm.elements,...amendmentForm.elements].forEach(control => control.disabled = false);
       }
     }
-    finalize.addEventListener('click', () => {
+    finalize.addEventListener('click', async () => {
       if (context?.status !== 'open' || busy) return;
+      if (window.mxmedPlanNextSteps && !(await window.mxmedPlanNextSteps.mayLeave())) return;
       if (hasUnsaved()) { notice('Hay cambios locales sin guardar. Guárdalos o descártalos antes de finalizar.', 'failed'); return; }
       if (!window.confirm('Finalizar cerrará esta consulta y dejará la edición clínica normal en sólo lectura. No elimina la consulta ni depende del pago o la factura. ¿Finalizar ahora?')) return;
       execute('finalize', {});
