@@ -23114,6 +23114,12 @@ body.mx-sidebar-collapsed #mmSidebar .menu-main[data-group="agenda"] .alr01-nav-
 .plan02b-modal [data-ns-exact] { font-weight:650; color:var(--plan02-clinical-ink); }
 .plan02b-modal footer > p { color:#5f7685; }
 .plan02b-collector > [data-ns-message]:only-child { margin:0; }
+.plan02b-rx-rows { display:grid; gap:.7rem; margin:.65rem 0; }
+.plan02b-rx-row { min-width:0; padding:.65rem; border:1px solid #d6e4ea; border-radius:9px; background:#f8fcfd; }
+.plan02b-modal .plan02b-rx-row header { padding:0; border:0; }
+.plan02b-rx-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:.7rem; }
+.plan02b-rx-fields label { min-width:0; margin:.45rem 0; }
+@media(max-width:600px) { .plan02b-rx-fields { grid-template-columns:minmax(0,1fr); } .plan02b-action-bar .btn { flex-basis:calc(50% - .25rem); } }
 
 /* DOCUX01-R1: compact intake, using the established Plan dialog shell. */
 .docux-actions { display:flex; flex-wrap:wrap; gap:.6rem; margin:.7rem 0 1rem; }
