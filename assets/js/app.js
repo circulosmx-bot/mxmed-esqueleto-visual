@@ -24483,6 +24483,10 @@ console.info('app.js loaded :: 20251123a');
         customWeekExpectedRangeKey = sanitizeText(range?.rangeKey || '');
         customWeekExpectedScopeKey = resolveCustomWeekScopeKey();
       }
+      if(isCustomDayActive()){
+        // Manual refresh must reload the canonical snapshot used by Day.
+        customDayForceFreshSnapshotAfterCreate = true;
+      }
       try{ calendar.removeAllEvents(); }catch(_){}
       calendar.refetchEvents();
       window.setTimeout(()=>{
