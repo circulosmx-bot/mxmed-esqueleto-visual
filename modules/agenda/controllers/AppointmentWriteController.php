@@ -19,6 +19,7 @@ require_once __DIR__ . '/../repositories/OverrideRepository.php';
 require_once __DIR__ . '/../repositories/AppointmentCollisionsRepository.php';
 require_once __DIR__ . '/../services/HolidayMxProvider.php';
 require_once __DIR__ . '/../config/agenda.php';
+require_once __DIR__ . '/../contracts/IdempotencyContract.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AppointmentWriteController
@@ -79,6 +80,58 @@ class AppointmentWriteController
             return $externalIngressError;
         }
 
+        $key = trim((string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+        if ($key !== '' && !preg_match('/\A[A-Za-z0-9._:-]{8,128}\z/D', $key)) {
+            return $this->error('invalid_params', 'invalid Idempotency-Key');
+        }
+        if (!$this->repository || !$this->pdo) return $this->error('db_not_ready', 'appointment writer unavailable');
+        // Scope retries to the authenticated actor and physician, never just the client key.
+        $identity = $key === '' ? null : hash('sha256', json_encode([
+            (string)($payload['doctor_id'] ?? ''),
+            (string)($this->actorContext['user_id'] ?? $payload['created_by_id'] ?? ''), $key,
+        ]));
+        $canonical = $payload;
+        // Transport/audit timestamps do not change the requested booking.
+        unset($canonical['occurred_at']);
+        foreach (['start_at','end_at'] as $field) {
+            $dt = $this->parseDateTime($canonical[$field] ?? null);
+            if ($dt) $canonical[$field] = $dt->format('Y-m-d H:i:s');
+        }
+        $canonical['status'] = $canonical['status'] ?? 'tentative';
+        $sort = function ($value) use (&$sort) {
+            if (!is_array($value)) return $value;
+            if (!array_is_list($value)) ksort($value);
+            return array_map($sort, $value);
+        };
+        $fingerprint = hash('sha256', json_encode($sort($canonical), JSON_THROW_ON_ERROR));
+        $lock = null;
+        try {
+            $lock = $this->repository->lockCreation((string)($payload['doctor_id'] ?? ''));
+            if ($identity !== null) {
+                $record = $this->repository->findCreationAttempt($identity);
+                if ($record !== null) {
+                    $evaluation = \Agenda\Contracts\IdempotencyContract::evaluate(
+                        new \Agenda\Contracts\IdempotencyRecord('appointment_create', $identity,
+                            $record['appointment_id'], $record['create_request_hash'],
+                            json_decode($record['create_result_json'], true, 512, JSON_THROW_ON_ERROR)),
+                        $identity, $fingerprint
+                    );
+                    if ($evaluation->status() === \Agenda\Contracts\IdempotencyContract::CONFLICT) {
+                        return $this->error('idempotency_conflict', 'Idempotency-Key already used for a different booking');
+                    }
+                    return $this->success($evaluation->result(), ['write'=>'create','events_appended'=>0,'idempotency_replay'=>true]);
+                }
+            }
+            return $this->createOnce($payload, $identity, $fingerprint);
+        } catch (\Throwable $e) {
+            return $this->error('db_not_ready', 'appointment creation integrity unavailable', $this->qaDebugMeta($e));
+        } finally {
+            if ($lock !== null) $this->repository->unlockCreation($lock);
+        }
+    }
+
+    private function createOnce(array $payload, ?string $identity, string $fingerprint): array
+    {
         // Auto-create patient if missing patient_id and patient info is provided
         if (!array_key_exists('patient_id', $payload) || $this->isEmptyPatientIdInput($payload['patient_id'])) {
             $patientInput = $payload['patient'] ?? null;
@@ -156,9 +209,7 @@ class AppointmentWriteController
         }
 
         try {
-            $result = $this->repository->createAppointment($payload);
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', $e->getMessage(), $this->qaDebugMeta($e));
+            $result = $this->repository->createAppointment($payload, $identity, $fingerprint);
         } catch (PDOException $e) {
             // IMPORTANT: many "collision" cases are actually enforced by DB constraints.
             // Map common SQLSTATE/driver errors to a semantic error in QA.
@@ -167,6 +218,8 @@ class AppointmentWriteController
                 return $this->error($mapped['error'], $mapped['message'], $mapped['meta']);
             }
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        } catch (RuntimeException $e) {
+            return $this->error('db_not_ready', $e->getMessage(), $this->qaDebugMeta($e));
         } catch (\Throwable $e) {
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
@@ -174,7 +227,7 @@ class AppointmentWriteController
         return $this->success(
             [
                 'appointment_id' => $result['appointment_id'],
-                'status' => 'created',
+                'status' => $result['status'],
                 'start_at' => $payload['start_at'],
                 'end_at' => $payload['end_at'],
                 'doctor_id' => $payload['doctor_id'],
@@ -182,7 +235,7 @@ class AppointmentWriteController
                 'patient_id' => $payload['patient_id'] ?? null,
                 'created_at' => $result['created_at'],
             ],
-            ['write' => 'create', 'events_appended' => 1]
+            ['write' => 'create', 'events_appended' => 1, 'idempotency_replay' => false]
         );
     }
 

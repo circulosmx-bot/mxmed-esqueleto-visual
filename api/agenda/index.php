@@ -1426,6 +1426,7 @@ try {
         'invalid_verification_code' => 400,
         'db_not_ready' => 503,
         'collision' => 409,
+        'idempotency_conflict' => 409,
         'conflict' => 409,
         'invalid_transition' => 409,
         'outside_schedule' => 409,

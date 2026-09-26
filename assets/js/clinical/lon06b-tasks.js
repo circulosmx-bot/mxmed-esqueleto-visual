@@ -100,7 +100,7 @@
       const result=await response.json().catch(()=>null);
       if(!response.ok||result?.ok!==true||!Array.isArray(result.data))throw new Error('lookup_failed');
       if(editing!==targetEditing||targetEditing.patientId!==patient())return;
-      const eligible=result.data.filter(row=>String(row.patient_id||'')===targetEditing.patientId&&String(row.appointment_id||'')&&parseAppointmentTime(row.start_at)>new Date()&&['pending_otp','pending','scheduled','confirmed'].includes(String(row.status||'').toLowerCase())).sort((a,b)=>parseAppointmentTime(a.start_at)-parseAppointmentTime(b.start_at));
+      const eligible=result.data.filter(row=>String(row.patient_id||'')===targetEditing.patientId&&String(row.appointment_id||'')&&parseAppointmentTime(row.start_at)>new Date()&&['tentative','pending_otp','pending','scheduled','confirmed'].includes(String(row.status||'').toLowerCase())).sort((a,b)=>parseAppointmentTime(a.start_at)-parseAppointmentTime(b.start_at));
       targetEditing.appointments=new Map(eligible.map(row=>[String(row.appointment_id),row]));
       select.replaceChildren();addOption('','Selecciona una cita futura del paciente');
       for(const row of eligible)addOption(String(row.appointment_id),appointmentLabel(row));
@@ -142,7 +142,7 @@
           const check=await fetch(`/api/agenda/index.php/appointments/${encodeURIComponent(body.appointment_id)}`,{credentials:'same-origin',headers:{Accept:'application/json'}}),verified=await check.json().catch(()=>null);
           if(editing.patientId!==patient())return;
           const appointment=verified?.data;
-          if(!check.ok||verified?.ok!==true||String(appointment?.patient_id||'')!==editing.patientId||!parseAppointmentTime(appointment?.start_at)||parseAppointmentTime(appointment.start_at)<=new Date()||!['pending_otp','pending','scheduled','confirmed'].includes(String(appointment?.status||'').toLowerCase()))throw new Error('invalid');
+          if(!check.ok||verified?.ok!==true||String(appointment?.patient_id||'')!==editing.patientId||!parseAppointmentTime(appointment?.start_at)||parseAppointmentTime(appointment.start_at)<=new Date()||!['tentative','pending_otp','pending','scheduled','confirmed'].includes(String(appointment?.status||'').toLowerCase()))throw new Error('invalid');
         } catch (_) {error.textContent='La cita seleccionada ya no es válida para este paciente. Actualiza la selección o crea el seguimiento sin vincular una cita.';show(error,true);return;}
       }
     }

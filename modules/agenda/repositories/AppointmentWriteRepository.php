@@ -62,7 +62,7 @@ class AppointmentWriteRepository
         $this->clinicalEncounterBridge = new ClinicalEncounterBridge($config);
     }
 
-    public function createAppointment(array $payload): array
+    public function createAppointment(array $payload, ?string $requestKey = null, ?string $requestHash = null): array
     {
         $this->ensureAppointmentsTable();
         $this->ensureEventsTable();
@@ -89,6 +89,15 @@ class AppointmentWriteRepository
             'created_at' => $createdAt,
         ];
 
+        if ($requestKey !== null) {
+            $this->ensureCreationReceiptColumns();
+            $appointmentData['create_request_key'] = $requestKey;
+            $appointmentData['create_request_hash'] = $requestHash;
+            $appointmentData['create_result_json'] = json_encode(array_intersect_key($appointmentData, array_flip([
+                'appointment_id','status','start_at','end_at','doctor_id','consultorio_id','patient_id','created_at'
+            ])), JSON_THROW_ON_ERROR);
+        }
+
         $this->pdo->beginTransaction();
         try {
             $this->insert($this->appointmentsTable, $appointmentData);
@@ -107,7 +116,45 @@ class AppointmentWriteRepository
         return [
             'appointment_id' => $appointmentId,
             'created_at' => $createdAt,
+            'status' => $appointmentData['status'],
         ];
+    }
+
+    // Serialize authenticated creates per physician, including availability read.
+    // Connection-scoped lock is released on every return/error and on disconnect.
+    public function lockCreation(string $doctorId): string
+    {
+        $database = (string)$this->pdo->query('SELECT DATABASE()')->fetchColumn();
+        $name = 'agenda-create:' . substr(hash('sha256', $database . '|' . $this->appointmentsTable . '|' . strtolower($doctorId)), 0, 48);
+        $stmt = $this->pdo->prepare('SELECT GET_LOCK(?, 10)');
+        $stmt->execute([$name]);
+        if ((int)$stmt->fetchColumn() !== 1) throw new RuntimeException('appointment creation busy');
+        return $name;
+    }
+
+    public function unlockCreation(string $name): void
+    {
+        $stmt = $this->pdo->prepare('SELECT RELEASE_LOCK(?)');
+        $stmt->execute([$name]);
+    }
+
+    private function ensureCreationReceiptColumns(): void
+    {
+        $this->ensureAppointmentsTable();
+        foreach (['create_request_key','create_request_hash','create_result_json'] as $column) {
+            if (!in_array($column, $this->getColumns($this->appointmentsTable), true)) {
+                throw new RuntimeException('appointment creation idempotency migration required');
+            }
+        }
+    }
+
+    public function findCreationAttempt(string $key): ?array
+    {
+        $this->ensureCreationReceiptColumns();
+        $stmt = $this->pdo->prepare("SELECT appointment_id, create_request_hash, create_result_json FROM {$this->appointmentsTable} WHERE create_request_key = ?");
+        $stmt->execute([$key]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 
     private function appendEvent(string $appointmentId, array $payload, string $createdAt): void

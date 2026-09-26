@@ -63,7 +63,7 @@ final class ClinicalLongitudinalTasks {
         if(!is_array($row))self::fail('FOREIGN_APPOINTMENT',409);
         if($requireEligible){
             $now=(new DateTimeImmutable('now',new DateTimeZone('America/Mexico_City')))->format('Y-m-d H:i:s');
-            if(!in_array(strtolower((string)$row['status']),['pending_otp','pending','scheduled','confirmed'],true)||(string)$row['start_at']<=$now)self::fail('INELIGIBLE_APPOINTMENT',409);
+            if(!in_array(strtolower((string)$row['status']),['tentative','pending_otp','pending','scheduled','confirmed'],true)||(string)$row['start_at']<=$now)self::fail('INELIGIBLE_APPOINTMENT',409);
         }
         return $id;
     }
@@ -120,7 +120,7 @@ final class ClinicalLongitudinalTasks {
                         $appointment??=$this->pdo->prepare('SELECT start_at,status FROM agenda_appointments WHERE appointment_id=? AND doctor_id=? AND patient_id=?');
                         $appointment->execute([$row['appointment_id'],$doctor,$patient['patient_id']]);
                         $linked=$appointment->fetch(PDO::FETCH_ASSOC);
-                        if(is_array($linked)&&in_array(strtolower((string)$linked['status']),['pending_otp','pending','scheduled','confirmed'],true)&&(string)$linked['start_at']>$nowLocal){
+                        if(is_array($linked)&&in_array(strtolower((string)$linked['status']),['tentative','pending_otp','pending','scheduled','confirmed'],true)&&(string)$linked['start_at']>$nowLocal){
                             $linkedDisplay='Cita vinculada · '.self::localDisplay((string)$linked['start_at']);
                         }
                     }catch(PDOException $ignored){$linkedDisplay=null;}

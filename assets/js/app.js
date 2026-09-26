@@ -4236,6 +4236,7 @@ console.info('app.js loaded :: 20251123a');
   let initialized = false;
   let visibilityObserver = null;
   let createRequestInFlight = false;
+  let createBookingAttempt = null;
   let createFlowMode = 'appointment';
   let createWaitlistContext = null;
   let createActivePatientMode = 'manual';
@@ -17378,10 +17379,10 @@ console.info('app.js loaded :: 20251123a');
       });
       return resp.json().catch(()=> null);
     },
-    async createAppointment(payload){
+    async createAppointment(payload, idempotencyKey = null){
       const resp = await fetch('/api/agenda/index.php/appointments', {
         method: 'POST',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(idempotencyKey ? {'Idempotency-Key': idempotencyKey} : {}) },
         credentials: 'same-origin',
         body: JSON.stringify(payload || {})
       });
@@ -20523,13 +20524,22 @@ console.info('app.js loaded :: 20251123a');
     setCreateError('');
 
     try{
-      const result = await AgendaApiClient.createAppointment(payload);
+      // Keep the same identity after an ambiguous network response. Semantic
+      // edits start a new attempt; incidental audit timestamps do not.
+      const attemptPayload = {...payload};
+      delete attemptPayload.occurred_at;
+      const attemptFingerprint = JSON.stringify(attemptPayload);
+      if (!createBookingAttempt || createBookingAttempt.fingerprint !== attemptFingerprint) {
+        createBookingAttempt = {fingerprint: attemptFingerprint, key: crypto.randomUUID()};
+      }
+      const result = await AgendaApiClient.createAppointment(payload, createBookingAttempt.key);
       const json = result?.json || null;
       if(!result?.ok || !json || json.ok !== true){
         const msg = sanitizeText(json?.message || json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo crear la cita.';
         setCreateError(msg);
         return;
       }
+      createBookingAttempt = null;
       if(String(calendar?.view?.type || '') === 'timeGridDay'){
         customDayForceFreshSnapshotAfterCreate = true;
       }

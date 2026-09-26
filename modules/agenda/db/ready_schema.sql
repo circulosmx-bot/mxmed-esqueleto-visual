@@ -14,17 +14,21 @@ CREATE TABLE IF NOT EXISTS `agenda_appointments` (
   `status` VARCHAR(32) DEFAULT NULL,
   `active_slot_key` VARCHAR(255) GENERATED ALWAYS AS (
     CASE
-      WHEN `status` IN ('pending_otp','confirmed','pending','scheduled')
+      WHEN `status` IN ('tentative','pending_otp','confirmed','pending','scheduled')
       THEN CONCAT(`doctor_id`,'|',`consultorio_id`,'|',DATE_FORMAT(`start_at`,'%Y-%m-%d %H:%i:%s'))
       ELSE NULL
     END
   ) STORED,
+  `create_request_key` CHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `create_request_hash` CHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `create_result_json` JSON DEFAULT NULL,
   `channel_origin` VARCHAR(64),
   `created_by_role` VARCHAR(32),
   `created_by_id` VARCHAR(64),
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`appointment_id`),
   UNIQUE KEY `uniq_active_slot` (`active_slot_key`),
+  UNIQUE KEY `uniq_appointment_create_request` (`create_request_key`),
   KEY `idx_appointments_patient` (`patient_id`),
   KEY `idx_appointments_doctor_start` (`doctor_id`, `start_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
