@@ -109,6 +109,8 @@
     const resolving=kind==='resolve';
     dialog.querySelector('[data-agf02-title]').textContent=resolving?'Resolver seguimiento':'Cancelar seguimiento';
     dialog.querySelector('[data-agf02-description]').textContent=resolving?'¿Confirmas que esta acción ya fue atendida?':'Este seguimiento dejará de aparecer como pendiente. Su registro se conservará en el expediente.';
+    dialog.querySelector('label[for="agf02-reason"]').textContent=resolving?'Nota de resolución':'Motivo de cancelación';
+    reason.placeholder=resolving?'Ej. Resultados revisados; sin hallazgos relevantes.':'';
     dialog.querySelector('[data-agf02-back]').textContent=resolving?'Cancelar':'Volver';
     confirm.textContent=resolving?'Resolver':'Cancelar seguimiento';
     confirm.classList.toggle('btn-danger',!resolving);confirm.classList.toggle('btn-primary',resolving);
@@ -119,7 +121,7 @@
   async function submitAction(event){
     event.preventDefault();if(!action||confirm.disabled)return;
     const clinicalReason=reason.value.trim();
-    if(!clinicalReason){error.textContent='Indica brevemente el motivo clínico.';error.classList.remove('d-none');reason.focus();return;}
+    if(!clinicalReason){error.textContent=action.kind==='resolve'?'Escribe una nota de resolución.':'Indica el motivo de cancelación.';error.classList.remove('d-none');reason.focus();return;}
     const {kind,row,key}=action;
     confirm.disabled=true;dialog.setAttribute('aria-busy','true');error.classList.add('d-none');
     try{
@@ -148,7 +150,8 @@
     item.append(patient,action);
     if(row.due_display){
       const due=document.createElement('p');due.className='agf01-detail';
-      due.textContent=`Fecha límite · ${row.due_display} · ${row.derived_due_state==='OVERDUE'?'Vencido':'Pendiente'}`;
+      due.textContent=`Fecha límite · ${row.due_display}`;
+      due.setAttribute('aria-label',`${due.textContent} · ${row.derived_due_state==='OVERDUE'?'Vencido':'Pendiente'}`);
       item.append(due);
     }
     if(row.linked_appointment_display){

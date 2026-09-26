@@ -6045,6 +6045,9 @@ console.info('app.js loaded :: 20251123a');
       fetchAvailabilityEvents(requestRange)
     ]);
     const availabilityMeta = availabilityResult?.meta || {};
+    if(availabilityMeta.warning){
+      setError('No se pudo cargar la disponibilidad.');
+    }
     const hasRealRange = availabilityMeta?.has_visible_schedule_range === true;
     const rangeMin = normalizeAgendaTimeValue(sanitizeText(availabilityMeta?.visible_min_time || ''));
     const rangeMax = normalizeAgendaTimeValue(sanitizeText(availabilityMeta?.visible_max_time || ''));
@@ -12535,8 +12538,7 @@ console.info('app.js loaded :: 20251123a');
         const responses = await Promise.all(requests);
         const successfulResponses = responses.filter((entry)=> entry?.json?.ok === true);
         if(!successfulResponses.length){
-          const firstError = responses.find((entry)=> entry?.json?.ok !== true)?.json || null;
-          const message = sanitizeText(firstError?.message || firstError?.error || 'No fue posible cargar disponibilidad para esta fecha.');
+          const message = 'No se pudo cargar la disponibilidad.';
           const failedState = { status: 'error', slots: [], message };
           eventRescheduleAvailabilityCache.set(cacheKey, failedState);
           return failedState;
@@ -23832,7 +23834,7 @@ console.info('app.js loaded :: 20251123a');
           }
           const warning = sanitizeText(availabilityResult?.meta?.warning || '');
           if(warning){
-            setError(`Disponibilidad: ${warning}`);
+            setError('No se pudo cargar la disponibilidad.');
           }
           if(isWeekView){
             window.setTimeout(()=> applyWeeklyHoursState(), 0);
@@ -23854,7 +23856,7 @@ console.info('app.js loaded :: 20251123a');
             successCallback(eventsForCallback);
             return;
           }
-          const message = sanitizeText(err?.message || '') || 'No se pudo cargar la agenda.';
+          const message = 'No se pudo cargar la agenda.';
           setError(message);
           failureCallback(err);
         }finally{
