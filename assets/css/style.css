@@ -23094,3 +23094,23 @@ body.mx-sidebar-collapsed #mmSidebar .menu-main[data-group="agenda"] .alr01-nav-
 [data-m7-section="documents"] .plan02b-count { position: absolute; top: -3px; left: calc(50% + 14px); min-width: 18px; height: 18px; padding: 1px 4px; border-radius: 9px; background: #e5f2f6; color: #17536a; border: 1px solid #91bdcd; font-size: 11px; line-height: 14px; font-weight: 600; }
 .plan02b-count[hidden], .plan02b-collector[hidden] { display: none !important; }
 @media(max-width: 600px) { .plan02b-prepared { flex-direction: column; } .plan02b-row-actions { justify-content: flex-start; } .plan02b-modal { padding: .8rem; } }
+
+/* PLAN02B-R2: Consultation's existing teal, scoped to its three capture dialogs. */
+.plan02b-modal { --plan02-clinical-primary:var(--mm-acc-activo); --plan02-clinical-ink:#07536e; font-size:.9rem; border-radius:14px; }
+.plan02b-modal header { padding-bottom:.75rem; border-bottom:1px solid #d6e4ea; }
+.plan02b-modal h4 { color:var(--plan02-clinical-ink); font-weight:650; }
+.plan02b-modal .btn { min-height:40px; border-radius:9px; font-size:.875rem; font-weight:600; }
+.plan02b-modal .btn-primary { color:#fff; background:var(--plan02-clinical-primary); border-color:var(--plan02-clinical-primary); }
+.plan02b-modal .btn-primary:hover, .plan02b-modal .btn-primary:active { color:#fff; background:var(--plan02-clinical-ink); border-color:var(--plan02-clinical-ink); }
+.plan02b-modal .btn-outline-primary { color:var(--plan02-clinical-ink); border-color:var(--plan02-clinical-primary); background:#fff; }
+.plan02b-modal .btn-outline-primary:hover { background:#effafb; }
+.plan02b-modal .btn-outline-secondary { color:#315b70; border-color:#a9c2ce; background:#fff; }
+.plan02b-modal .btn-outline-secondary:hover { background:#f2f6f8; }
+.plan02b-modal [data-modal-close] { display:grid; place-items:center; padding:0; width:36px; min-height:36px; flex:none; color:var(--plan02-clinical-ink); text-decoration:none; font-size:1.4rem; }
+.plan02b-modal input:not([type=radio]):not([type=checkbox]), .plan02b-modal select { min-height:40px; border-radius:9px; }
+.plan02b-modal input[type=radio], .plan02b-modal input[type=checkbox] { accent-color:var(--plan02-clinical-primary); }
+.plan02b-modal :focus-visible { outline-color:var(--plan02-clinical-primary); box-shadow:none; }
+.plan02b-modal .plan02b-patient, .plan02b-modal .plan02b-appointment-context { padding:.6rem; border-radius:9px; background:#effafb; color:var(--plan02-clinical-ink); }
+.plan02b-modal [data-ns-exact] { font-weight:650; color:var(--plan02-clinical-ink); }
+.plan02b-modal footer > p { color:#5f7685; }
+.plan02b-collector > [data-ns-message]:only-child { margin:0; }
