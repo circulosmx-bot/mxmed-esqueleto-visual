@@ -26,7 +26,7 @@
     reason: ['Motivo de Atención', 'síntomas o evolución'],
     measurements: ['Mediciones', 'signos vitales y mediciones clínicas'],
     exam: ['Exploración', 'hallazgos de la exploración física'],
-    assessment: ['Valoración', 'impresión clínica y diagnósticos'],
+    assessment: ['Valoración', 'Impresión clínica, diagnósticos y análisis del caso.'],
     plan: ['Plan', 'indicaciones y próximos pasos'],
     documents: ['Documentos', 'documentos y acciones de esta consulta'],
     finalize: ['Finalizar', 'revisión y cierre de la consulta']

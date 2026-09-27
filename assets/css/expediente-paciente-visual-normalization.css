@@ -3638,3 +3638,119 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis04-helper {
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-label { flex-wrap:wrap; row-gap:2px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-origin-cluster { flex-basis:100%; }
 }
+
+/* R3: Steps 1–5 share the accepted Step 1 shell. Clinical content alone varies. */
+@media(min-width:1200px) {
+  body.mx-consultation-mode:has(#m7-workspace .m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .mm-grid { padding-bottom:0; }
+  body.mx-consultation-mode:has(#m7-workspace .m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .mm-main > hr { display:none; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .vis23-workspace-context-line { row-gap:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .vis04-capture {
+    height:clamp(170px, calc(100dvh - 680px), 220px);
+    min-height:0;
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:is(:nth-child(2),:nth-child(3),:nth-child(5))[aria-current="true"]) .vis04-capture {
+    overflow-y:auto;
+    scrollbar-gutter:stable;
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(4)[aria-current="true"]) [data-m7-editor-text] {
+    box-sizing:border-box;
+    height:clamp(170px, calc(100dvh - 680px), 220px);
+    min-height:0;
+  }
+}
+@media(min-width:1200px) and (max-height:899px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .vis04-capture {
+    height:clamp(170px, calc(100dvh - 664px), 216px);
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(4)[aria-current="true"]) [data-m7-editor-text] {
+    height:clamp(170px, calc(100dvh - 664px), 216px);
+  }
+}
+@media(min-width:1200px) and (max-height:800px) {
+  body.mx-consultation-mode #p-expediente:has(#m7-workspace .m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) > .body { padding-top:6px; padding-bottom:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) { padding-top:16px; padding-bottom:12px; margin-bottom:0; }
+}
+
+/* The measurement writer leads; prior values remain a secondary reading column. */
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] {
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:4px;
+}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register { grid-column:1; grid-row:1; padding:4px 8px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-prior { grid-column:2; grid-row:1; align-self:start; padding:4px 8px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current { grid-column:1 / -1; grid-row:2; padding:2px 8px; }
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] h5,
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-form-heading { margin-bottom:2px; font-size:15px; line-height:20px; }
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] .material-symbols-rounded { font-size:20px; }
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] .vis29-description { display:none; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields { gap:2px 8px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields label { font-size:13.5px; line-height:15px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields input,
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields select { height:32px; min-height:32px; margin-top:1px; padding:3px 7px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-capture-details { gap:8px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-section-editor-actions { margin-top:2px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .btn { min-height:30px; padding:3px 10px; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current .vis29-empty { margin:0; }
+
+/* Seven existing exploration controls occupy four compact desktop rows. */
+@media(min-width:1200px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam] { padding:0; border:0; background:transparent; }
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam-systems] {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:16px;
+    row-gap:2px;
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-row {
+    grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1.6fr);
+    gap:5px;
+    padding:1px 0;
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-row input,
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-row select { min-height:38px; height:38px; padding:5px 7px; font-size:13px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam] > .m7-section-editor-actions { margin-top:4px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam-save] { min-height:36px; padding:5px 12px; }
+}
+
+/* The Plan narrative yields space to the existing four Próximos pasos actions. */
+@media(min-width:1200px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(5)[aria-current="true"]) [data-m7-editor-text] {
+    height:72px;
+    min-height:0;
+    padding:10px 14px;
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(5)[aria-current="true"]) .plan02b-next-steps { margin-top:8px; padding:8px 10px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(5)[aria-current="true"]) .plan02b-next-steps h4 { margin-bottom:4px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(5)[aria-current="true"]) .plan02b-next-steps p { margin:2px 0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(5)[aria-current="true"]) .plan02b-feedback:empty { display:none; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(5)[aria-current="true"]) .plan02b-action-bar .btn { min-height:38px; }
+}
+@media(min-width:1200px) and (max-height:800px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] { gap:2px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:1px;
+    padding:2px 6px;
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-form-heading { grid-column:1; grid-row:1; line-height:20px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields { grid-column:1 / -1; grid-row:2; gap:1px 6px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields label { line-height:14px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields input,
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields select { height:28px; min-height:28px; padding-block:2px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-section-editor-actions { grid-column:2; grid-row:1; margin:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .btn { min-height:28px; padding-block:2px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current { padding:0 6px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(5)[aria-current="true"]) [data-m7-editor-text] { height:50px; padding:6px 10px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-row input,
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-row select { min-height:32px; height:32px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam-systems] { row-gap:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-row { padding:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam-save] { min-height:30px; }
+}
+@media(max-width:1199.98px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] { grid-template-columns:minmax(0,1fr); }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register { grid-column:1; grid-row:1; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-prior { grid-column:1; grid-row:2; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current { grid-column:1; grid-row:3; }
+}
