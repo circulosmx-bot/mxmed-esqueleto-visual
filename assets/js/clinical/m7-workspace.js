@@ -111,17 +111,32 @@
     if(['call_center','call-center'].includes(channel)) return 'Call Center';
     return '';
   }
-  function setAppointmentOriginDot(appointment){
+  function setAppointmentOriginDot(appointment, linked = false){
     Array.from(originDot.classList)
       .filter(name=>name.startsWith('mx-ag-origin-dot--'))
       .forEach(name=>originDot.classList.remove(name));
     originCluster.hidden = true;
     originLabel.textContent = '';
-    if(!appointment) return;
-    const origin = window.mxmedAgendaAppointmentOriginMeta?.(appointment);
-    if(!origin?.visualKey || !origin?.label) return;
-    originDot.classList.add(`mx-ag-origin-dot--${origin.visualKey}`);
-    originLabel.textContent = origin.label;
+    delete originCluster.dataset.labelSource;
+    delete originCluster.dataset.colorSource;
+    if(!linked) return;
+    const originData = appointment || {};
+    const realLabel = [
+      'origin_label', 'origin_display_label', 'origin_display_name',
+      'appointment_origin_label', 'channel_origin_label', 'source_label'
+    ].map(field=>String(originData[field] || '').trim()).find(Boolean) || '';
+    const hasOriginCode = [
+      'origin_visual_key', 'origin', 'source', 'appointment_origin', 'channel_origin',
+      'created_by_role', 'actor_role', 'operator_slot', 'operatorSlot',
+      'operator_number', 'operatorNumber', 'operator_index', 'operatorIndex',
+      'operator_no', 'operatorNo', 'operator'
+    ].some(field=>String(originData[field] ?? '').trim());
+    const agendaOrigin = window.mxmedAgendaAppointmentOriginMeta?.(originData);
+    const visualKey = agendaOrigin?.visualKey || 'user';
+    originDot.classList.add(`mx-ag-origin-dot--${visualKey}`);
+    originLabel.textContent = realLabel || (hasOriginCode ? agendaOrigin?.label : '') || 'Médico tratante';
+    originCluster.dataset.labelSource = realLabel ? 'REAL_LABEL' : hasOriginCode && agendaOrigin?.label ? 'MAPPED_CODE' : 'SYNTHETIC_FALLBACK';
+    originCluster.dataset.colorSource = hasOriginCode && agendaOrigin?.visualKey ? 'AGENDA_MAPPING' : 'SYNTHETIC_FALLBACK';
     originCluster.hidden = false;
   }
   function setCurrentEncounterHeader(detail){
@@ -143,7 +158,7 @@
       if(token !== appointmentHeaderEpoch || body.dataset.encounterKey !== String(encounter.encounter_key || '').trim()) return;
       const appointmentPatient = String(appointment?.patient_id || '').trim();
       if(appointmentPatient && appointmentPatient !== String(encounter.patient_id || patientId).trim()) return;
-      setAppointmentOriginDot(appointment);
+      setAppointmentOriginDot(appointment, true);
       const scheduledTime = formatClinicalTime(appointment?.start_at);
       if(!scheduledTime) return;
       const origin = appointmentOriginLabel(appointment);
@@ -522,7 +537,7 @@
   }
   function renderEncounter(encounter, historical){
     const headerToken = ++appointmentHeaderEpoch;
-    setAppointmentOriginDot(null);
+    setAppointmentOriginDot(null, !historical && !!String(encounter?.appointment_id || '').trim());
     const state = String(encounter.status || '').toLowerCase();
     setWorkspaceTitle(state);
     const label = state === 'voided' ? 'Anulada' : state === 'closed' ? 'Finalizada' : 'En curso';
