@@ -26,6 +26,13 @@ function clinical_observation_validate(array $input): array
     if (array_key_exists('effective_at_authority', $input)) {
         throw new ClinicalObservationValidationException('OBSERVATION_TIME_AUTHORITY_SERVER_ONLY');
     }
+    if (array_key_exists('capture_time_mode', $input)
+        && ($input['capture_time_mode'] !== 'SERVER_AT_SAVE' || array_key_exists('effective_at', $input))) {
+        throw new ClinicalObservationValidationException('OBSERVATION_CAPTURE_TIME_MODE_INVALID');
+    }
+    if (is_array($input['provenance'] ?? null) && array_key_exists('capture_time_mode', $input['provenance'])) {
+        throw new ClinicalObservationValidationException('OBSERVATION_CAPTURE_TIME_PROVENANCE_SERVER_ONLY');
+    }
     $code=trim((string)($input['code'] ?? ''));
     $catalog=clinical_observation_catalog();
     if (!isset($catalog[$code])) throw new ClinicalObservationValidationException('OBSERVATION_CODE_UNSUPPORTED');
@@ -82,6 +89,14 @@ final class ClinicalObservationsRepository
         $this->assertOpen($encounterId);
         $capturedAt=gmdate('Y-m-d H:i:s');
         $explicitTime=array_key_exists('effective_at',$input);
+        $serverAtSave=($input['capture_time_mode']??null)==='SERVER_AT_SAVE';
+        // The schema's authoritative time class is shared; server provenance distinguishes this mode
+        // from caller-supplied historical effective time without reclassifying legacy fallback rows.
+        $provenance=$input['provenance']??[];
+        if ($serverAtSave) {
+            if (!is_array($provenance)) throw new ClinicalObservationValidationException('OBSERVATION_PROVENANCE_INVALID');
+            $provenance['capture_time_mode']='SERVER_AT_SAVE';
+        }
         $stmt=$this->pdo->prepare('INSERT INTO clinical_observations
           (encounter_id, code, value_numeric, value_text, unit, systolic_mm_hg, diastolic_mm_hg, effective_at, effective_at_authority, recorded_at,
            recorded_by_user_id, source, provenance_json, row_version, created_at, updated_at)
@@ -90,18 +105,26 @@ final class ClinicalObservationsRepository
             ':encounter_id'=>$encounterId, ':code'=>$input['code'], ':value_numeric'=>$input['value_numeric'] ?? null,
             ':unit'=>$input['unit'], ':systolic'=>$input['systolic_mm_hg'] ?? null, ':diastolic'=>$input['diastolic_mm_hg'] ?? null,
             ':effective_at'=>$explicitTime?$input['effective_at']:$capturedAt,
-            ':time_authority'=>$explicitTime?'EXPLICIT_EFFECTIVE_TIME':'CAPTURE_TIME_FALLBACK',
+            ':time_authority'=>($explicitTime||$serverAtSave)?'EXPLICIT_EFFECTIVE_TIME':'CAPTURE_TIME_FALLBACK',
             ':recorded_at'=>$capturedAt, ':actor'=>$actor, ':source'=>$input['source'],
-            ':provenance'=>json_encode($input['provenance'] ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
+            ':provenance'=>json_encode($provenance, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
         ]);
         return (int)$this->pdo->lastInsertId();
     }
 
     public function updateOpen(int $encounterId, int $observationId, array $input, int $expectedVersion, string $actor): array
     {
+        if (array_key_exists('capture_time_mode',$input)) throw new ClinicalObservationValidationException('OBSERVATION_CAPTURE_TIME_MODE_CREATE_ONLY');
         $input=clinical_observation_validate($input); $this->pdo->beginTransaction();
         try {
             $this->assertOpen($encounterId);
+            $existing=$this->fetch($observationId);
+            $originalProvenance=json_decode((string)($existing['provenance_json']??'{}'),true);
+            $provenance=$input['provenance']??[];
+            if (is_array($originalProvenance) && ($originalProvenance['capture_time_mode']??null)==='SERVER_AT_SAVE') {
+                if (!is_array($provenance)) throw new ClinicalObservationValidationException('OBSERVATION_PROVENANCE_INVALID');
+                $provenance['capture_time_mode']='SERVER_AT_SAVE';
+            }
             $explicitTime=array_key_exists('effective_at',$input);
             $timeSet=$explicitTime?'effective_at=:effective_at,effective_at_authority=\'EXPLICIT_EFFECTIVE_TIME\',':'';
             $stmt=$this->pdo->prepare('UPDATE clinical_observations SET code=:code,value_numeric=:value_numeric,value_text=NULL,unit=:unit,
@@ -111,7 +134,7 @@ final class ClinicalObservationsRepository
             $params=[':code'=>$input['code'],':value_numeric'=>$input['value_numeric']??null,':unit'=>$input['unit'],
               ':systolic'=>$input['systolic_mm_hg']??null,':diastolic'=>$input['diastolic_mm_hg']??null,
               ':actor'=>$actor,':source'=>$input['source'],
-              ':provenance'=>json_encode($input['provenance']??[],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
+              ':provenance'=>json_encode($provenance,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
               ':observation_id'=>$observationId,':encounter_id'=>$encounterId,':expected_version'=>$expectedVersion];
             if($explicitTime)$params[':effective_at']=$input['effective_at'];
             $stmt->execute($params);

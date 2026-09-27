@@ -24,7 +24,7 @@
   };
   const visualCopy = {
     reason: ['Motivo de Atención', 'síntomas o evolución'],
-    measurements: ['Mediciones', 'signos vitales y mediciones clínicas'],
+    measurements: ['Signos vitales y otros valores clínicos', 'signos vitales y mediciones clínicas'],
     exam: ['Exploración', 'hallazgos de la exploración física'],
     assessment: ['Valoración', 'Impresión clínica, diagnósticos y análisis del caso.'],
     plan: ['Plan', 'indicaciones y próximos pasos'],

@@ -3754,3 +3754,60 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current .vis29-empt
   body.mx-consultation-mode #p-expediente #m7-workspace .vis29-prior { grid-column:1; grid-row:2; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current { grid-column:1; grid-row:3; }
 }
+
+/* Step 2 capture and current values. Historical rows keep their existing layout. */
+#p-expediente #m7-workspace .vis29-register .m7-measurement-fields,
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {
+  grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(55px,.48fr) minmax(0,1.15fr);
+  gap:6px;align-items:end;
+}
+#p-expediente #m7-workspace .vis29-register .vis29-capture-details {display:contents}
+#p-expediente #m7-workspace .vis29-register label:has([data-m7-measurement-source]),
+#p-expediente #m7-workspace .vis29-register [data-m7-measurement-pressure-label] {grid-column:auto}
+#p-expediente #m7-workspace [data-m7-measurements-list] {
+  display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:7px;align-items:stretch;
+}
+#p-expediente #m7-workspace [data-m7-measurements-list] > .vis29-empty {grid-column:1 / -1}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip {
+  display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(28px,auto);
+  align-items:center;gap:2px 3px;min-width:0;
+  padding:4px;border:1px solid #b9d9df;border-radius:8px;background:#fff;
+}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip > span {
+  grid-column:1 / -1;grid-row:1;font-size:11px;font-weight:700;line-height:1.15;min-height:20px;overflow-wrap:anywhere;
+}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip > strong {
+  grid-column:1 / -1;grid-row:2;font-size:clamp(15px,1.3vw,20px);line-height:1.1;font-weight:800;white-space:normal;overflow-wrap:anywhere;
+}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip > small {
+  grid-column:1;grid-row:3;font-size:9px;line-height:1.1;color:#59707b;overflow-wrap:anywhere;
+}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip .meas01-row-actions {
+  display:flex;grid-column:2;grid-row:3;gap:2px;justify-content:flex-end;align-self:end;
+}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip .btn {
+  min-width:28px;min-height:28px;padding:2px;font-size:15px;line-height:1;
+}
+#p-expediente #m7-workspace .vis29-current h5,
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current h5 {line-height:16px;margin-bottom:0}
+@media(max-width:1199.98px){
+  #p-expediente #m7-workspace [data-m7-measurements-list] {grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(min-width:1200px){
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {
+    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 6px;padding:2px 6px;
+  }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-form-heading {grid-column:1;grid-row:1;line-height:18px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {grid-column:1 / -1;grid-row:2}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields label {font-size:12px;line-height:12px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields input,
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields select {height:26px;min-height:26px;padding-block:2px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-section-editor-actions {grid-column:2;grid-row:1;margin:0}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .btn {min-height:26px;padding-block:2px}
+}
+@media(max-width:575.98px){
+  #p-expediente #m7-workspace .vis29-register .m7-measurement-fields,
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #p-expediente #m7-workspace .vis29-register [data-m7-measurement-pressure-label] {grid-column:1 / -1}
+  #p-expediente #m7-workspace [data-m7-measurements-list] {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
