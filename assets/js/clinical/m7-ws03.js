@@ -1,5 +1,6 @@
 // M7 WS03: encounter-owned observations and explicit three-state physical examination.
 (function(){
+  let metadataSequence=0;
   window.mxmedM7WS03 = function(root, encounterUrl, currentPatient, onTerminal){
     const q = selector => root.querySelector(selector);
     const measurementPanel = q('[data-m7-measurements]');
@@ -194,7 +195,29 @@
       const stamp=prior?row.effective_at:(row.recorded_at || row.effective_at);
       const date=new Date(String(stamp).replace(' ','T').slice(0,19)+'Z');
       if(Number.isNaN(date.getTime())) return {day:'Fecha de medición no disponible',time:''};
-      return {day:date.toLocaleDateString('es-MX',prior?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short'}),time:date.toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit'})};
+      return {day:date.toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}),time:date.toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit'})};
+    }
+    // Persisted readback metadata; the popover stays outside scroll clipping.
+    function attachMetadata(line,row,prior){
+      const dates=dateParts(row,prior),tip=document.createElement('span');
+      tip.id=`vis-step2-metadata-${++metadataSequence}`;tip.dataset.visStep2Tooltip='';
+      tip.setAttribute('role','tooltip');tip.setAttribute('popover','manual');tip.hidden=true;
+      const origin={direct_measurement:'Medición directa',patient_report:'Informado por el paciente',import:'Importado'}[row.source];
+      tip.textContent=[`${prior?'Medido':'Registrado'}: ${[dates.day,dates.time].filter(Boolean).join(' · ')}`,origin?`Origen: ${origin}`:''].filter(Boolean).join('\n');
+      line.tabIndex=0;line.setAttribute('role','group');line.setAttribute('aria-describedby',tip.id);line.append(tip);
+      const close=()=>{if(tip.matches(':popover-open'))tip.hidePopover();tip.hidden=true;};
+      const show=()=>{
+        tip.hidden=false;if(tip.showPopover&&!tip.matches(':popover-open'))tip.showPopover();
+        const anchor=line.getBoundingClientRect(),box=tip.getBoundingClientRect();
+        tip.style.left=`${Math.max(8,Math.min(anchor.left,innerWidth-box.width-8))}px`;
+        tip.style.top=`${anchor.bottom+6+box.height<innerHeight?anchor.bottom+6:Math.max(8,anchor.top-box.height-6)}px`;
+      };
+      line.addEventListener('pointerenter',show);
+      line.addEventListener('pointerleave',()=>{if(!line.contains(document.activeElement))close();});
+      line.addEventListener('focusin',show);
+      line.addEventListener('focusout',()=>{queueMicrotask(()=>{if(!line.contains(document.activeElement))close();});});
+      line.addEventListener('click',event=>{if(!event.target.closest('button')){line.focus();show();}});
+      line.addEventListener('keydown',event=>{if(event.key==='Escape')close();});
     }
     function canReplaceCapture(){
       if(busy||measurementLocked||createPending||mode!=='open') return false;
@@ -202,17 +225,22 @@
     }
     function renderRows(target,rows,prior=false){
       target.replaceChildren();
+      if(!prior){
+        target.dataset.valueCount=String(rows.length);
+        target.style.setProperty('--step2-columns',Math.max(1,Math.min(8,rows.length)));
+        target.style.setProperty('--step2-tablet-columns',Math.max(1,Math.min(4,rows.length)));
+        target.style.setProperty('--step2-mobile-columns',Math.max(1,Math.min(2,rows.length)));
+      }
       if(!rows.length){const empty=document.createElement('p');empty.className='vis29-empty';empty.textContent=prior?'No hay valores previos elegibles.':'Aún no hay mediciones registradas en esta consulta.';target.append(empty);return;}
       if(!prior) rows=[...rows].sort((a,b)=>Object.keys(catalog).indexOf(a.code)-Object.keys(catalog).indexOf(b.code) || Number(a.observation_id)-Number(b.observation_id));
       rows.forEach(row=>{
-        const dates=dateParts(row,prior);
-        const line=document.createElement('div');line.className=prior?'vis29-reading':'vis29-reading vis-step2-chip';
+        const line=document.createElement('div');line.className=prior?'vis29-reading vis-step2-prior-chip':'vis29-reading vis-step2-chip';
         const priorSelected=prior&&!!reuseCandidate&&String(row.observation_id)===String(reuseCandidate.observation_id)&&String(row.encounter_key)===String(reuseCandidate.encounter_key);
         line.classList.toggle('vis29-prior-selected',priorSelected);
         const name=document.createElement('span');name.textContent=catalog[row.code]?.[0]||row.code;
         const val=document.createElement('strong');val.textContent=reading(row);
-        const timeLabel=document.createElement('small');timeLabel.textContent=[dates.day,dates.time].filter(Boolean).join(' · ');
-        line.append(name,val,timeLabel);
+        line.append(name,val);
+        attachMetadata(line,row,prior);
         if(mode==='open'){
           const button=document.createElement('button');button.type='button';button.className='btn btn-link';button.textContent=prior?'Usar valor':'✎';button.disabled=busy||measurementLocked||createPending||!!availableMeasurementDraft||(prior&&observations.some(item=>item.code===row.code&&!item.invalidated_at));
           if(prior)button.setAttribute('aria-pressed',String(priorSelected));

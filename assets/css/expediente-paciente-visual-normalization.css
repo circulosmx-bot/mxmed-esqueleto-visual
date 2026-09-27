@@ -3755,59 +3755,75 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current .vis29-empt
   body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current { grid-column:1; grid-row:3; }
 }
 
-/* Step 2 capture and current values. Historical rows keep their existing layout. */
+/* Step 2 density: adaptive saved values, quiet prior context and capture toolbar. */
 #p-expediente #m7-workspace .vis29-register .m7-measurement-fields,
 body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {
-  grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(55px,.48fr) minmax(0,1.15fr);
+  grid-template-columns:minmax(0,1.4fr) minmax(0,.9fr) minmax(45px,.4fr) minmax(0,1.2fr);
   gap:6px;align-items:end;
 }
 #p-expediente #m7-workspace .vis29-register .vis29-capture-details {display:contents}
 #p-expediente #m7-workspace .vis29-register label:has([data-m7-measurement-source]),
 #p-expediente #m7-workspace .vis29-register [data-m7-measurement-pressure-label] {grid-column:auto}
 #p-expediente #m7-workspace [data-m7-measurements-list] {
-  display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:7px;align-items:stretch;
+  display:grid;grid-template-columns:repeat(var(--step2-columns,1),minmax(0,1fr));gap:7px;align-items:stretch;margin:4px 0 0;
 }
+#p-expediente #m7-workspace [data-m7-measurements-list]:is([data-value-count="1"],[data-value-count="2"],[data-value-count="3"]) {max-width:calc(var(--step2-columns)*240px + (var(--step2-columns) - 1)*7px)}
 #p-expediente #m7-workspace [data-m7-measurements-list] > .vis29-empty {grid-column:1 / -1}
 #p-expediente #m7-workspace .vis29-current .vis-step2-chip {
-  display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(28px,auto);
-  align-items:center;gap:2px 3px;min-width:0;
-  padding:4px;border:1px solid #b9d9df;border-radius:8px;background:#fff;
+  display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;
+  align-items:center;gap:1px;min-width:0;
+  padding:4px 7px;border:1px solid #b9d9df;border-radius:8px;background:#fff;
 }
-#p-expediente #m7-workspace .vis29-current .vis-step2-chip > span {
-  grid-column:1 / -1;grid-row:1;font-size:11px;font-weight:700;line-height:1.15;min-height:20px;overflow-wrap:anywhere;
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip > span:not([data-vis-step2-tooltip]) {
+  grid-column:1 / -1;grid-row:1;font-size:11px;font-weight:700;line-height:1.15;overflow-wrap:anywhere;
 }
 #p-expediente #m7-workspace .vis29-current .vis-step2-chip > strong {
-  grid-column:1 / -1;grid-row:2;font-size:clamp(15px,1.3vw,20px);line-height:1.1;font-weight:800;white-space:normal;overflow-wrap:anywhere;
-}
-#p-expediente #m7-workspace .vis29-current .vis-step2-chip > small {
-  grid-column:1;grid-row:3;font-size:9px;line-height:1.1;color:#59707b;overflow-wrap:anywhere;
+  grid-column:1 / -1;grid-row:2;font-size:clamp(17px,1.5vw,22px);line-height:1.1;font-weight:800;white-space:normal;overflow-wrap:anywhere;
 }
 #p-expediente #m7-workspace .vis29-current .vis-step2-chip .meas01-row-actions {
-  display:flex;grid-column:2;grid-row:3;gap:2px;justify-content:flex-end;align-self:end;
+  display:flex;flex-direction:row;grid-column:1 / -1;grid-row:3;gap:2px;justify-content:flex-end;align-self:end;
 }
-#p-expediente #m7-workspace .vis29-current .vis-step2-chip .btn {
-  min-width:28px;min-height:28px;padding:2px;font-size:15px;line-height:1;
-}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip .btn {grid-column:auto;grid-row:auto;min-width:24px;min-height:24px;padding:2px;font-size:15px;line-height:1}
 #p-expediente #m7-workspace .vis29-current h5,
-body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current h5 {line-height:16px;margin-bottom:0}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current h5 {line-height:16px;margin-bottom:2px}
+#p-expediente #m7-workspace .vis29-prior,
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-prior {padding:2px 6px;background:#f8fafc;border-color:#dce5eb}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-prior h5 {font-size:13px;line-height:18px;margin-bottom:2px;color:#486576}
+#p-expediente #m7-workspace [data-vis29-prior] {display:flex;flex-wrap:wrap;gap:2px 4px}
+#p-expediente #m7-workspace .vis29-prior .vis-step2-prior-chip {
+  display:flex;flex-wrap:wrap;align-items:center;gap:3px;min-width:0;padding:0 5px;border:0;border-radius:6px;background:#edf2f6;color:#466477;font-size:11px;line-height:16px;
+}
+#p-expediente #m7-workspace .vis-step2-prior-chip > span:not([data-vis-step2-tooltip])::after {content:" ·"}
+#p-expediente #m7-workspace .vis-step2-prior-chip > strong {font-size:11px;font-weight:600}
+#p-expediente #m7-workspace .vis29-prior .vis-step2-prior-chip .btn {padding:0 3px;min-height:20px;font-size:10px;color:#366575}
+#p-expediente #m7-workspace :is(.vis-step2-chip,.vis-step2-prior-chip):focus-visible {outline:2px solid #008d9f;outline-offset:2px}
+[data-vis-step2-tooltip] {
+  position:fixed;inset:auto;margin:0;box-sizing:border-box;max-width:min(270px,calc(100vw - 16px));padding:8px 10px;
+  border:0;border-radius:6px;background:#223744;color:#fff;font:12px/1.4 system-ui,sans-serif;white-space:pre-line;pointer-events:none;z-index:1080;
+}
+[data-vis-step2-tooltip][hidden] {display:none!important}
 @media(max-width:1199.98px){
-  #p-expediente #m7-workspace [data-m7-measurements-list] {grid-template-columns:repeat(4,minmax(0,1fr))}
+  #p-expediente #m7-workspace .vis29-prior .vis-step2-prior-chip .btn {min-height:24px}
+  #p-expediente #m7-workspace [data-m7-measurements-list] {grid-template-columns:repeat(var(--step2-tablet-columns,1),minmax(0,1fr))}
 }
 @media(min-width:1200px){
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {
-    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 6px;padding:2px 6px;
-  }
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-form-heading {grid-column:1;grid-row:1;line-height:18px}
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {grid-column:1 / -1;grid-row:2}
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields label {font-size:12px;line-height:12px}
+  #p-expediente #m7-workspace .vis29-current .vis-step2-chip {padding-block:3px;gap:0}
+  #p-expediente #m7-workspace .vis29-current .vis-step2-chip .btn {min-height:22px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register:has([data-m7-measurement-pressure-label]:not(.d-none)) label:first-child {grid-column:auto}
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] {grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:min-content min-content;align-self:start;align-content:start;gap:0 6px;padding:2px 6px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-form-heading {grid-column:1 / -1;grid-row:1;line-height:18px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {grid-column:1;grid-row:2}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields label {font-size:11px;line-height:14px}
   body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields input,
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields select {height:26px;min-height:26px;padding-block:2px}
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-section-editor-actions {grid-column:2;grid-row:1;margin:0}
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .btn {min-height:26px;padding-block:2px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields select {height:28px;min-height:28px;padding:2px 4px;font-size:11px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-section-editor-actions {grid-column:2;grid-row:2;margin:0;align-self:end;flex-direction:column;gap:2px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .btn {min-height:28px;padding:2px 7px;font-size:11px;white-space:nowrap}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register :is(.vis29-save-state,.vis30-recovered-draft) {grid-column:1 / -1;grid-row:auto}
 }
 @media(max-width:575.98px){
   #p-expediente #m7-workspace .vis29-register .m7-measurement-fields,
   body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {grid-template-columns:repeat(2,minmax(0,1fr))}
   #p-expediente #m7-workspace .vis29-register [data-m7-measurement-pressure-label] {grid-column:1 / -1}
-  #p-expediente #m7-workspace [data-m7-measurements-list] {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #p-expediente #m7-workspace [data-m7-measurements-list] {grid-template-columns:repeat(var(--step2-mobile-columns,1),minmax(0,1fr))}
 }
