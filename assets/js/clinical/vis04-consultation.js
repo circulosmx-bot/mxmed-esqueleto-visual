@@ -31,6 +31,7 @@
     documents: ['Documentos', 'documentos y acciones de esta consulta'],
     finalize: ['Finalizar', 'revisión y cierre de la consulta']
   };
+  const reasonExample = 'Ejemplo:\nDolor abdominal de 3 días de evolución, inicialmente leve y actualmente de mayor intensidad. Se localiza en epigastrio, aumenta después de comer y se acompaña de náusea y distensión. Niega fiebre o vómito. Refiere haber tomado omeprazol con mejoría parcial.';
   let focusWasActive = false;
   const currentIndex = () => steps.findIndex(button => button.getAttribute('aria-current') === 'true');
   function syncFocusMode() {
@@ -63,7 +64,7 @@
     const editor = root.querySelector('[data-m7-editor-text]');
     editor.removeAttribute('aria-labelledby');
     editor.setAttribute('aria-describedby', 'vis21-step-helper');
-    editor.placeholder = selected === 'reason' ? 'Describe aquí todos los detalles del paciente' : selected === 'assessment' ? 'Describe tu impresión diagnóstica, evolución y diagnósticos diferenciales relevantes.' : '';
+    editor.placeholder = selected === 'reason' ? reasonExample : selected === 'assessment' ? 'Describe tu impresión diagnóstica, evolución y diagnósticos diferenciales relevantes.' : '';
   }
   function advance(delta) {
     const before = currentIndex(), target = steps[before + delta];

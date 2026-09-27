@@ -20911,6 +20911,8 @@ console.info('app.js loaded :: 20251123a');
     }
     return 'user';
   };
+  // Agenda owns the appointment-origin mapping; Consultation consumes this same resolver.
+  window.mxmedAgendaAppointmentOriginVisualKey = resolveAppointmentOriginVisualKey;
   const enrichRowsWithPatientDisplayName = async (rows = [], { signal } = {})=>{
     const safeRows = Array.isArray(rows) ? rows : [];
     if(!safeRows.length) return safeRows;

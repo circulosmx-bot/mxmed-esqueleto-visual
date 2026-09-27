@@ -6,6 +6,7 @@
   const workspaceTitle = root.querySelector('#m7-workspace-title');
   const status = root.querySelector('[data-m7-status]');
   const statusLabel = root.querySelector('[data-m7-status-label]');
+  const originDot = root.querySelector('[data-m7-origin-dot]');
   const operator = root.querySelector('[data-m7-operator]');
   const errorBox = root.querySelector('[data-m7-error]');
   const body = root.querySelector('[data-m7-body]');
@@ -109,16 +110,32 @@
     if(['call_center','call-center'].includes(channel)) return 'Call Center';
     return '';
   }
-  function setCurrentEncounterHeader(detail){
+  function setAppointmentOriginDot(appointment){
+    Array.from(originDot.classList)
+      .filter(name=>name.startsWith('mx-ag-origin-dot--'))
+      .forEach(name=>originDot.classList.remove(name));
+    originDot.hidden = true;
+    if(!appointment) return;
+    const visualKey = window.mxmedAgendaAppointmentOriginVisualKey?.(appointment);
+    if(!visualKey) return;
+    originDot.classList.add(`mx-ag-origin-dot--${visualKey}`);
+    originDot.hidden = false;
+  }
+  function setCurrentEncounterHeader(detail, encounter){
     const safe = String(detail || '').trim();
     const scheduled = safe.match(/^Cita\s+(.+?)(?:\s+·\s+(.+))?$/);
     const started = safe.match(/^Iniciada\s+(.+)$/);
-    statusLabel.textContent = scheduled ? 'Cita Programada' : started ? 'Consulta iniciada' : 'Consulta actual';
+    statusLabel.textContent = scheduled || started ? 'Consulta iniciada' : 'Consulta actual';
     status.textContent = scheduled ? scheduled[1] : started ? started[1] : safe;
     status.title = safe;
     const professional = window.mxmedResolveActiveProfessionalContext?.();
     const slot = String(professional?.operator_slot || professional?.operatorSlot || '').trim();
-    operator.textContent = slot ? `Operador ${slot}` : 'Médico tratante';
+    const currentDoctor = String(professional?.doctor_id || '').trim();
+    const encounterDoctor = String(encounter?.doctor_id || '').trim();
+    const isTreatingDoctor = String(professional?.role || professional?.actor_role || '').toLowerCase() === 'doctor'
+      && !!currentDoctor && currentDoctor === encounterDoctor;
+    operator.textContent = slot ? `Operador ${slot}` : isTreatingDoctor ? 'Médico tratante' : '';
+    operator.hidden = !operator.textContent;
   }
   function setWorkspaceTitle(state){
     workspaceTitle.textContent = String(state || '').toLowerCase() === 'open' ? 'CONSULTA EN CURSO' : 'CONSULTA ACTUAL';
@@ -131,11 +148,12 @@
       if(token !== appointmentHeaderEpoch || body.dataset.encounterKey !== String(encounter.encounter_key || '').trim()) return;
       const appointmentPatient = String(appointment?.patient_id || '').trim();
       if(appointmentPatient && appointmentPatient !== String(encounter.patient_id || patientId).trim()) return;
+      setAppointmentOriginDot(appointment);
       const scheduledTime = formatClinicalTime(appointment?.start_at);
       if(!scheduledTime) return;
       const origin = appointmentOriginLabel(appointment);
       const detail = `Cita ${scheduledTime}${origin ? ` · ${origin}` : ''}`;
-      setCurrentEncounterHeader(detail);
+      setCurrentEncounterHeader(detail, encounter);
       context.textContent = detail;
     } catch (_) { /* No encounter timestamp may substitute for a missing appointment time. */ }
   }
@@ -504,10 +522,12 @@
     sectionButtons.forEach(button=>{ button.disabled = true; button.removeAttribute('aria-current'); });
     historyList.replaceChildren();
     setWorkspaceTitle('');
+    setAppointmentOriginDot(null);
     status.textContent = 'Selecciona un paciente para consultar su atención.';
   }
   function renderEncounter(encounter, historical){
     const headerToken = ++appointmentHeaderEpoch;
+    setAppointmentOriginDot(null);
     const state = String(encounter.status || '').toLowerCase();
     setWorkspaceTitle(state);
     const label = state === 'voided' ? 'Anulada' : state === 'closed' ? 'Finalizada' : 'En curso';
@@ -521,7 +541,7 @@
     const contextLine = fallbackDetail;
     context.textContent = contextLine;
     if(historical) status.textContent = `· Sólo lectura${contextLine ? ` · ${contextLine}` : ''}`;
-    else setCurrentEncounterHeader(fallbackDetail);
+    else setCurrentEncounterHeader(fallbackDetail, encounter);
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
     body.dataset.encounterId = String(encounter.encounter_id || '').trim();
     body.dataset.patientId = String(encounter.patient_id || '').trim();

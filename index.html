@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=consultation-fidelity-a">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=consultation-origin-fine-tuning">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5445,11 +5445,11 @@
                       <h3 id="m7-workspace-title">CONSULTA ACTUAL</h3>
                       <div class="vis23-appointment-meta">
                         <span class="vis32-calendar-icon" aria-hidden="true"><span class="material-symbols-outlined">calendar_month</span><span class="material-symbols-outlined">schedule</span></span>
-                        <span class="vis32-appointment-copy"><span class="vis32-appointment-label" data-m7-status-label>Consulta iniciada</span>
+                        <span class="vis32-appointment-copy"><span class="vis32-appointment-label"><span class="mx-ag-origin-dot vis32-appointment-origin-dot" data-m7-origin-dot hidden aria-hidden="true"></span><span data-m7-status-label>Consulta iniciada</span></span>
                         <p class="m7-workspace-status" data-m7-status role="status" aria-live="polite">Selecciona un paciente para consultar su atención.</p>
                         </span>
                       </div>
-                      <span class="vis32-operator"><span class="vis32-operator-dot" aria-hidden="true"></span><span data-m7-operator>Médico tratante</span></span>
+                      <span class="vis32-operator" data-m7-operator>Médico tratante</span>
                       <header class="vis21-step-context" data-vis21-step-context aria-live="polite">
                         <div class="vis21-step-copy">
                           <p id="vis21-step-helper" data-vis21-step-helper>Motivo de atención, síntomas o evolución.</p>
@@ -5598,7 +5598,7 @@
                     </section>
                     </div>
                     <nav class="vis04-progression" aria-label="Avanzar por la consulta"><button type="button" class="btn btn-outline-secondary" data-vis04-prev><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H4m0 0 6-6m-6 6 6 6"/></svg><span>volver</span></button><span data-vis04-progress aria-live="polite"></span><div class="vis29-footer-action"><button type="button" class="btn btn-primary" data-vis04-next><span data-vis04-next-label>siguiente</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16m0 0-6-6m6 6-6 6"/></svg></button><div class="vis29-terminal-slot"><button type="button" class="btn btn-primary" data-m7-finalize>Finalizar consulta</button></div></div></nav>
-                    <p class="vis04-helper">Los cambios se guardan automáticamente al cambiar de paso. Solo “Finalizar consulta” cierra la atención.</p>
+                    <p class="vis04-helper">Los cambios se guardan automáticamente al cambiar de paso. Sólo “Finalizar consulta” cierra la atención.</p>
                     </div>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history hidden>
@@ -10766,13 +10766,13 @@
 <script src="assets/js/signature-handoff-admin.js?v=sig03b"></script>
 <script src="assets/js/perfil/professional-information.js?v=ip01a"></script>
 <script src="assets/js/clinical/vis02-patient-header.js?v=vis32"></script>
-<script src="assets/js/app.js?v=plan02a-agr02"></script>
+<script src="assets/js/app.js?v=consultation-origin-fine-tuning"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=vis30"></script>
 <script src="assets/js/clinical/m7-ws04.js?v=vis32"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=plan02br1"></script>
-<script src="assets/js/clinical/m7-workspace.js?v=vis32"></script>
-<script src="assets/js/clinical/vis04-consultation.js?v=vis32"></script>
+<script src="assets/js/clinical/m7-workspace.js?v=consultation-origin-fine-tuning"></script>
+<script src="assets/js/clinical/vis04-consultation.js?v=consultation-origin-fine-tuning"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=vis05"></script>
 <script src="assets/js/clinical/lon02-summary.js?v=fup01"></script>
