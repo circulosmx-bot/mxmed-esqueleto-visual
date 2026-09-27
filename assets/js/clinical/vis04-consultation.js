@@ -9,6 +9,8 @@
   const previous = root.querySelector('[data-vis04-prev]');
   const next = root.querySelector('[data-vis04-next]');
   const progress = root.querySelector('[data-vis04-progress]');
+  const stepTitle = root.querySelector('[data-m7-step-title]');
+  const stepSubtitle = root.querySelector('[data-m7-step-subtitle]');
   const label = root.querySelector('[data-vis04-editor-label]');
   const stepHelper = root.querySelector('[data-vis21-step-helper]');
   const stepCopy = {
@@ -19,6 +21,15 @@
     plan: ['Plan','Indicaciones, tratamiento y plan de atención.'],
     documents: ['Documentos / Acciones','Documentos y acciones de esta consulta.'],
     finalize: ['Finalizar','Revisión y cierre de la consulta.']
+  };
+  const visualCopy = {
+    reason: ['Motivo de Atención', 'síntomas o evolución'],
+    measurements: ['Mediciones', 'signos vitales y mediciones clínicas'],
+    exam: ['Exploración', 'hallazgos de la exploración física'],
+    assessment: ['Valoración', 'impresión clínica y diagnósticos'],
+    plan: ['Plan', 'indicaciones y próximos pasos'],
+    documents: ['Documentos', 'documentos y acciones de esta consulta'],
+    finalize: ['Finalizar', 'revisión y cierre de la consulta']
   };
   let focusWasActive = false;
   const currentIndex = () => steps.findIndex(button => button.getAttribute('aria-current') === 'true');
@@ -42,7 +53,9 @@
     next.disabled = index < 0 || index === steps.length - 1;
     progress.textContent = index < 0 ? '' : `Paso ${index + 1} de 7`;
     const selected = steps[index]?.dataset.m7Section;
-    next.textContent = 'Siguiente';
+    const visual = visualCopy[selected] || visualCopy.reason;
+    stepTitle.textContent = visual[0];
+    stepSubtitle.textContent = visual[1];
     const copy = stepCopy[selected] || stepCopy.reason;
     stepHelper.textContent = copy[1];
     stepHelper.title = copy[1];
@@ -50,7 +63,7 @@
     const editor = root.querySelector('[data-m7-editor-text]');
     editor.removeAttribute('aria-labelledby');
     editor.setAttribute('aria-describedby', 'vis21-step-helper');
-    editor.placeholder = selected === 'assessment' ? 'Describe tu impresión diagnóstica, evolución y diagnósticos diferenciales relevantes.' : '';
+    editor.placeholder = selected === 'reason' ? 'Describe aquí todos los detalles del paciente' : selected === 'assessment' ? 'Describe tu impresión diagnóstica, evolución y diagnósticos diferenciales relevantes.' : '';
   }
   function advance(delta) {
     const before = currentIndex(), target = steps[before + delta];

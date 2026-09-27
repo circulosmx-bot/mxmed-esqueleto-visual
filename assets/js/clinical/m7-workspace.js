@@ -5,6 +5,8 @@
   if(!patientPane || !root) return;
   const workspaceTitle = root.querySelector('#m7-workspace-title');
   const status = root.querySelector('[data-m7-status]');
+  const statusLabel = root.querySelector('[data-m7-status-label]');
+  const operator = root.querySelector('[data-m7-operator]');
   const errorBox = root.querySelector('[data-m7-error]');
   const body = root.querySelector('[data-m7-body]');
   const context = root.querySelector('[data-m7-context]');
@@ -109,7 +111,14 @@
   }
   function setCurrentEncounterHeader(detail){
     const safe = String(detail || '').trim();
-    status.textContent = safe;
+    const scheduled = safe.match(/^Cita\s+(.+?)(?:\s+·\s+(.+))?$/);
+    const started = safe.match(/^Iniciada\s+(.+)$/);
+    statusLabel.textContent = scheduled ? 'Cita Programada' : started ? 'Consulta iniciada' : 'Consulta actual';
+    status.textContent = scheduled ? scheduled[1] : started ? started[1] : safe;
+    status.title = safe;
+    const professional = window.mxmedResolveActiveProfessionalContext?.();
+    const slot = String(professional?.operator_slot || professional?.operatorSlot || '').trim();
+    operator.textContent = slot ? `Operador ${slot}` : 'Médico tratante';
   }
   function setWorkspaceTitle(state){
     workspaceTitle.textContent = String(state || '').toLowerCase() === 'open' ? 'CONSULTA EN CURSO' : 'CONSULTA ACTUAL';

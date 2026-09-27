@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=vis32">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=consultation-fidelity-a">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5444,9 +5444,12 @@
                     <div class="vis23-workspace-context-line">
                       <h3 id="m7-workspace-title">CONSULTA ACTUAL</h3>
                       <div class="vis23-appointment-meta">
-                        <span class="material-symbols-outlined vis23-appointment-icon" aria-hidden="true">today</span>
+                        <span class="vis32-calendar-icon" aria-hidden="true"><span class="material-symbols-outlined">calendar_month</span><span class="material-symbols-outlined">schedule</span></span>
+                        <span class="vis32-appointment-copy"><span class="vis32-appointment-label" data-m7-status-label>Consulta iniciada</span>
                         <p class="m7-workspace-status" data-m7-status role="status" aria-live="polite">Selecciona un paciente para consultar su atención.</p>
+                        </span>
                       </div>
+                      <span class="vis32-operator"><span class="vis32-operator-dot" aria-hidden="true"></span><span data-m7-operator>Médico tratante</span></span>
                       <header class="vis21-step-context" data-vis21-step-context aria-live="polite">
                         <div class="vis21-step-copy">
                           <p id="vis21-step-helper" data-vis21-step-helper>Motivo de atención, síntomas o evolución.</p>
@@ -5468,14 +5471,15 @@
                   <div class="m7-workspace-body d-none" data-m7-body>
                     <p class="m7-workspace-context" data-m7-context></p>
                     <nav class="m7-workspace-sections" aria-label="Pasos de la consulta">
-                      <button type="button" data-m7-section="reason" disabled><span class="vis04-step-number" aria-hidden="true">1</span><span>Motivo / Evolución</span></button>
+                      <button type="button" data-m7-section="reason" disabled aria-label="Motivo / Evolución"><span class="vis04-step-number" aria-hidden="true">1</span><span>Motivo</span></button>
                       <button type="button" data-m7-section="measurements" disabled><span class="vis04-step-number" aria-hidden="true">2</span><span>Mediciones</span></button>
                       <button type="button" data-m7-section="exam" disabled><span class="vis04-step-number" aria-hidden="true">3</span><span>Exploración</span></button>
                       <button type="button" data-m7-section="assessment" disabled><span class="vis04-step-number" aria-hidden="true">4</span><span>Valoración</span></button>
                       <button type="button" data-m7-section="plan" disabled><span class="vis04-step-number" aria-hidden="true">5</span><span>Plan</span></button>
-                      <button type="button" data-m7-section="documents" disabled><span class="vis04-step-number" aria-hidden="true">6</span><span>Documentos / Acciones</span><span class="plan02b-count" data-plan02b-count hidden></span></button>
+                      <button type="button" data-m7-section="documents" disabled aria-label="Documentos / Acciones"><span class="vis04-step-number" aria-hidden="true">6</span><span>Documentos</span><span class="plan02b-count" data-plan02b-count hidden></span></button>
                       <button type="button" data-m7-section="finalize" disabled><span class="vis04-step-number" aria-hidden="true">7</span><span>Finalizar</span></button>
                     </nav>
+                    <header class="m7-step-intro" aria-live="polite"><h2 data-m7-step-title>Motivo de Atención</h2><p data-m7-step-subtitle>síntomas o evolución</p></header>
                     <div class="vis04-layout"><div class="vis04-capture">
                     <section class="m7-section-editor m7-documents d-none" data-m7-documents aria-label="Documentos y acciones clínicas">
                       <section class="plan02b-collector" data-plan02b-collector hidden aria-label="Acciones por confirmar"></section>
@@ -5593,8 +5597,8 @@
                       <div class="m7-amendment-history"><h5>Historial de enmiendas del encuentro</h5><div data-m7-amendment-list></div></div>
                     </section>
                     </div>
-                    <nav class="vis04-progression" aria-label="Avanzar por la consulta"><button type="button" class="btn btn-outline-secondary" data-vis04-prev>Anterior</button><span data-vis04-progress aria-live="polite"></span><div class="vis29-footer-action"><button type="button" class="btn btn-primary" data-vis04-next>Siguiente</button><div class="vis29-terminal-slot"><button type="button" class="btn btn-primary" data-m7-finalize>Finalizar consulta</button></div></div></nav>
-                    <p class="vis04-helper">Los cambios se guardan automáticamente al cambiar de paso. Sólo “Finalizar consulta” cierra la atención.</p>
+                    <nav class="vis04-progression" aria-label="Avanzar por la consulta"><button type="button" class="btn btn-outline-secondary" data-vis04-prev><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H4m0 0 6-6m-6 6 6 6"/></svg><span>volver</span></button><span data-vis04-progress aria-live="polite"></span><div class="vis29-footer-action"><button type="button" class="btn btn-primary" data-vis04-next><span data-vis04-next-label>siguiente</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16m0 0-6-6m6 6-6 6"/></svg></button><div class="vis29-terminal-slot"><button type="button" class="btn btn-primary" data-m7-finalize>Finalizar consulta</button></div></div></nav>
+                    <p class="vis04-helper">Los cambios se guardan automáticamente al cambiar de paso. Solo “Finalizar consulta” cierra la atención.</p>
                     </div>
                   </div>
                   <div class="m7-workspace-history d-none" data-m7-history hidden>
