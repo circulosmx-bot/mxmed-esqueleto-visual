@@ -3292,26 +3292,26 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis23-workspace-context-l
   gap:20px 14px;
 }
 body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title {
-  min-height:58px;
-  padding:8.5px 15px;
+  min-height:46.4px;
+  padding:6.8px 12px;
   justify-content:flex-start;
-  border-radius:9px;
+  border-radius:7.2px;
   background:#26c8d2;
   background-image:none;
   box-shadow:none;
   text-shadow:none;
   animation:none;
   color:#fff;
-  font-size:30.6px;
+  font-size:24.48px;
   font-weight:750;
   letter-spacing:0;
   line-height:1;
 }
 body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title::before {
-  flex:0 0 18.7px;
-  width:18.7px;
-  height:18.7px;
-  margin-inline-end:11px;
+  flex:0 0 14.96px;
+  width:14.96px;
+  height:14.96px;
+  margin-inline-end:8.8px;
   background:#155a70;
   opacity:1;
   animation:none;
@@ -3358,14 +3358,24 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-copy {
 body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-label {
   display:inline-flex;
   align-items:center;
-  gap:12px;
+  gap:18px;
   color:#1e5369;
   font-size:29px;
   font-weight:400;
   line-height:1.25;
 }
-body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-origin-dot { flex:0 0 16px; }
-body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-origin-dot[hidden] { display:none !important; }
+body.mx-consultation-mode #p-expediente #m7-workspace .vis32-origin-cluster {
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
+  gap:12px;
+  color:#3e616b;
+  font-size:23px;
+  font-weight:650;
+  line-height:1.2;
+  white-space:nowrap;
+}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis32-origin-cluster[hidden] { display:none !important; }
 body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-status {
   display:block;
   color:#1e5369;
@@ -3373,20 +3383,6 @@ body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-status {
   font-weight:750;
   line-height:1.05;
 }
-body.mx-consultation-mode #p-expediente #m7-workspace .vis32-operator {
-  display:inline-flex;
-  align-items:center;
-  flex:0 0 auto;
-  gap:12px;
-  min-height:36px;
-  margin-top:5px;
-  color:#3e616b;
-  font-size:23px;
-  font-weight:650;
-  line-height:1.2;
-  white-space:nowrap;
-}
-body.mx-consultation-mode #p-expediente #m7-workspace .vis32-operator[hidden] { display:none; }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis21-step-context { display:none; }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis21-step-context:has(.vis21-step-state .m7-section-editor-state:not(:empty)) {
   display:flex;
@@ -3570,13 +3566,13 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis04-helper {
 @media(max-width:1200px) {
   body.mx-consultation-mode #p-expediente #m7-workspace { padding:28px 30px 24px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis23-workspace-context-line { gap:14px; }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title { font-size:21.25px; min-height:48.5px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-body][data-encounter-state="open"]:not(.d-none)) #m7-workspace-title { font-size:17px; min-height:38.8px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-calendar-icon { flex-basis:56px; width:56px; height:56px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-calendar-icon .material-symbols-outlined:first-child { font-size:56px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-calendar-icon .material-symbols-outlined:last-child { font-size:30px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-label { font-size:22px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-status { font-size:31px; }
-  body.mx-consultation-mode #p-expediente #m7-workspace .vis32-operator { font-size:18px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis32-origin-cluster { font-size:18px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-sections::before { top:17.3px; right:35px; left:35px; height:5.1px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-sections button,
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-sections button:not(:disabled),
@@ -3619,4 +3615,26 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis04-helper {
   body.mx-consultation-mode #p-expediente #m7-workspace { padding-top:24px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-body { margin-top:10px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-sections { margin-bottom:10px; }
+}
+@media(min-width:1200px) {
+  body.mx-consultation-mode:has(#m7-workspace [data-m7-section="reason"][aria-current="true"]) .mm-grid { padding-bottom:0; }
+  body.mx-consultation-mode:has(#m7-workspace [data-m7-section="reason"][aria-current="true"]) .mm-main > hr { display:none; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) .vis23-workspace-context-line { row-gap:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) [data-m7-editor-text] {
+    height:clamp(170px, calc(100dvh - 680px), 220px);
+  }
+}
+@media(min-width:1200px) and (max-height:899px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) [data-m7-editor-text] {
+    height:clamp(170px, calc(100dvh - 664px), 216px);
+  }
+}
+@media(min-width:1200px) and (max-height:800px) {
+  body.mx-consultation-mode #p-expediente:has(#m7-workspace [data-m7-section="reason"][aria-current="true"]) > .body { padding-top:6px; padding-bottom:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) { padding-top:16px; padding-bottom:12px; margin-bottom:0; }
+}
+@media(max-width:700px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-copy { white-space:normal; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-label { flex-wrap:wrap; row-gap:2px; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis32-origin-cluster { flex-basis:100%; }
 }

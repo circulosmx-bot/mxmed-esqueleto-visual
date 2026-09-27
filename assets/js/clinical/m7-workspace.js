@@ -6,8 +6,9 @@
   const workspaceTitle = root.querySelector('#m7-workspace-title');
   const status = root.querySelector('[data-m7-status]');
   const statusLabel = root.querySelector('[data-m7-status-label]');
+  const originCluster = root.querySelector('[data-m7-origin-cluster]');
   const originDot = root.querySelector('[data-m7-origin-dot]');
-  const operator = root.querySelector('[data-m7-operator]');
+  const originLabel = root.querySelector('[data-m7-origin-label]');
   const errorBox = root.querySelector('[data-m7-error]');
   const body = root.querySelector('[data-m7-body]');
   const context = root.querySelector('[data-m7-context]');
@@ -114,28 +115,22 @@
     Array.from(originDot.classList)
       .filter(name=>name.startsWith('mx-ag-origin-dot--'))
       .forEach(name=>originDot.classList.remove(name));
-    originDot.hidden = true;
+    originCluster.hidden = true;
+    originLabel.textContent = '';
     if(!appointment) return;
-    const visualKey = window.mxmedAgendaAppointmentOriginVisualKey?.(appointment);
-    if(!visualKey) return;
-    originDot.classList.add(`mx-ag-origin-dot--${visualKey}`);
-    originDot.hidden = false;
+    const origin = window.mxmedAgendaAppointmentOriginMeta?.(appointment);
+    if(!origin?.visualKey || !origin?.label) return;
+    originDot.classList.add(`mx-ag-origin-dot--${origin.visualKey}`);
+    originLabel.textContent = origin.label;
+    originCluster.hidden = false;
   }
-  function setCurrentEncounterHeader(detail, encounter){
+  function setCurrentEncounterHeader(detail){
     const safe = String(detail || '').trim();
     const scheduled = safe.match(/^Cita\s+(.+?)(?:\s+·\s+(.+))?$/);
     const started = safe.match(/^Iniciada\s+(.+)$/);
     statusLabel.textContent = scheduled || started ? 'Consulta iniciada' : 'Consulta actual';
     status.textContent = scheduled ? scheduled[1] : started ? started[1] : safe;
     status.title = safe;
-    const professional = window.mxmedResolveActiveProfessionalContext?.();
-    const slot = String(professional?.operator_slot || professional?.operatorSlot || '').trim();
-    const currentDoctor = String(professional?.doctor_id || '').trim();
-    const encounterDoctor = String(encounter?.doctor_id || '').trim();
-    const isTreatingDoctor = String(professional?.role || professional?.actor_role || '').toLowerCase() === 'doctor'
-      && !!currentDoctor && currentDoctor === encounterDoctor;
-    operator.textContent = slot ? `Operador ${slot}` : isTreatingDoctor ? 'Médico tratante' : '';
-    operator.hidden = !operator.textContent;
   }
   function setWorkspaceTitle(state){
     workspaceTitle.textContent = String(state || '').toLowerCase() === 'open' ? 'CONSULTA EN CURSO' : 'CONSULTA ACTUAL';
@@ -153,7 +148,7 @@
       if(!scheduledTime) return;
       const origin = appointmentOriginLabel(appointment);
       const detail = `Cita ${scheduledTime}${origin ? ` · ${origin}` : ''}`;
-      setCurrentEncounterHeader(detail, encounter);
+      setCurrentEncounterHeader(detail);
       context.textContent = detail;
     } catch (_) { /* No encounter timestamp may substitute for a missing appointment time. */ }
   }
@@ -541,7 +536,7 @@
     const contextLine = fallbackDetail;
     context.textContent = contextLine;
     if(historical) status.textContent = `· Sólo lectura${contextLine ? ` · ${contextLine}` : ''}`;
-    else setCurrentEncounterHeader(fallbackDetail, encounter);
+    else setCurrentEncounterHeader(fallbackDetail);
     body.dataset.encounterKey = String(encounter.encounter_key || '').trim();
     body.dataset.encounterId = String(encounter.encounter_id || '').trim();
     body.dataset.patientId = String(encounter.patient_id || '').trim();

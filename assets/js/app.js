@@ -9921,6 +9921,15 @@ console.info('app.js loaded :: 20251123a');
       label: `${resolveDoctorAgendaPrefix()} ${doctorLastName}`
     };
   };
+  // Share Agenda's origin key and visible legend label with Consultation.
+  window.mxmedAgendaAppointmentOriginMeta = (props = {})=>{
+    const meta = resolveEventActionOriginMeta(props);
+    const legendDot = document.querySelector(`#ag_origin_catalog .mx-ag-origin-dot--${meta.visualKey}`);
+    return {
+      visualKey:meta.visualKey,
+      label:String(legendDot?.parentElement?.textContent || meta.label || '').trim()
+    };
+  };
   const syncEventActionPatientIdentityDisplay = ({
     name = '',
     phone = '',
