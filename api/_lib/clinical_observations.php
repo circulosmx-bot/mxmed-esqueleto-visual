@@ -33,6 +33,11 @@ function clinical_observation_validate(array $input): array
     if (is_array($input['provenance'] ?? null) && array_key_exists('capture_time_mode', $input['provenance'])) {
         throw new ClinicalObservationValidationException('OBSERVATION_CAPTURE_TIME_PROVENANCE_SERVER_ONLY');
     }
+    if (is_array($input['provenance'] ?? null) && array_intersect(
+        ['reuse_mode','source_observation_id','source_encounter_id','source_encounter_key','source_effective_at','source_recorded_at','reused_at','source_provenance'],
+        array_keys($input['provenance']))) {
+        throw new ClinicalObservationValidationException('OBSERVATION_REUSE_PROVENANCE_SERVER_ONLY');
+    }
     $code=trim((string)($input['code'] ?? ''));
     $catalog=clinical_observation_catalog();
     if (!isset($catalog[$code])) throw new ClinicalObservationValidationException('OBSERVATION_CODE_UNSUPPORTED');
@@ -112,6 +117,41 @@ final class ClinicalObservationsRepository
         return (int)$this->pdo->lastInsertId();
     }
 
+    /** Called by the existing idempotent executor, inside its creation transaction. */
+    public function reusePriorInTransaction(int $encounterId, int $sourceId, string $doctor, string $actor): int
+    {
+        $this->assertOpen($encounterId); // Serializes reuse with manual writes, void and finalization.
+        $current=$this->pdo->prepare('SELECT doctor_id,patient_id FROM clinical_encounters WHERE encounter_id=:id');
+        $current->execute([':id'=>$encounterId]);$encounter=$current->fetch(PDO::FETCH_ASSOC);
+        if (!$encounter || (string)$encounter['doctor_id']!==$doctor) throw new RuntimeException('OBSERVATION_CONTEXT_MISMATCH');
+        $patient=(string)$encounter['patient_id'];
+        // Lock the scoped source before checking the exact accepted prior-reader projection.
+        $lock=$this->pdo->prepare('SELECT o.* FROM clinical_observations o JOIN clinical_encounters e ON e.encounter_id=o.encounter_id
+            WHERE o.observation_id=:id AND e.doctor_id=:doctor AND e.patient_id=:patient AND e.encounter_id<>:current FOR UPDATE');
+        $lock->execute([':id'=>$sourceId,':doctor'=>$doctor,':patient'=>$patient,':current'=>$encounterId]);
+        $source=$lock->fetch(PDO::FETCH_ASSOC);
+        if (!$source) throw new RuntimeException('PRIOR_OBSERVATION_NOT_REUSABLE');
+        require_once __DIR__.'/clinical_measurement_trends.php';
+        $eligible=(new ClinicalMeasurementTrends($this->pdo))->priorCandidates($doctor,$patient,$encounterId);
+        if (!in_array($sourceId,array_map(static fn(array $row):int=>(int)$row['observation_id'],$eligible),true)) {
+            throw new RuntimeException('PRIOR_OBSERVATION_NOT_REUSABLE');
+        }
+        $duplicate=$this->pdo->prepare('SELECT observation_id FROM clinical_observations WHERE encounter_id=:encounter AND code=:code AND invalidated_at IS NULL LIMIT 1');
+        $duplicate->execute([':encounter'=>$encounterId,':code'=>$source['code']]);
+        if ($duplicate->fetchColumn()!==false) throw new RuntimeException('MEASUREMENT_TYPE_ALREADY_PRESENT');
+        $copy=array_intersect_key($source,array_flip(['code','unit','value_numeric','systolic_mm_hg','diastolic_mm_hg','source','effective_at']));
+        $id=$this->createOpenInTransaction($encounterId,$copy,$actor);
+        $created=$this->fetch($id);
+        $lineage=['reuse_mode'=>'PRIOR_OBSERVATION','source_observation_id'=>$sourceId,
+            'source_encounter_id'=>(int)$source['encounter_id'],'source_encounter_key'=>'enc:'.$source['encounter_id'],
+            'source_effective_at'=>$source['effective_at'],'source_recorded_at'=>$source['recorded_at'],
+            'reused_at'=>$created['recorded_at'],'source_provenance'=>json_decode((string)$source['provenance_json'],true,512,JSON_THROW_ON_ERROR)];
+        // Lineage is committed atomically with creation; the source is never modified.
+        $set=$this->pdo->prepare('UPDATE clinical_observations SET provenance_json=:provenance WHERE observation_id=:id');
+        $set->execute([':id'=>$id,':provenance'=>json_encode($lineage,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)]);
+        return $id;
+    }
+
     public function updateOpen(int $encounterId, int $observationId, array $input, int $expectedVersion, string $actor): array
     {
         if (array_key_exists('capture_time_mode',$input)) throw new ClinicalObservationValidationException('OBSERVATION_CAPTURE_TIME_MODE_CREATE_ONLY');
@@ -121,6 +161,7 @@ final class ClinicalObservationsRepository
             $existing=$this->fetch($observationId);
             $originalProvenance=json_decode((string)($existing['provenance_json']??'{}'),true);
             $provenance=$input['provenance']??[];
+            if (is_array($originalProvenance) && ($originalProvenance['reuse_mode']??null)==='PRIOR_OBSERVATION') $provenance=$originalProvenance;
             if (is_array($originalProvenance) && ($originalProvenance['capture_time_mode']??null)==='SERVER_AT_SAVE') {
                 if (!is_array($provenance)) throw new ClinicalObservationValidationException('OBSERVATION_PROVENANCE_INVALID');
                 $provenance['capture_time_mode']='SERVER_AT_SAVE';

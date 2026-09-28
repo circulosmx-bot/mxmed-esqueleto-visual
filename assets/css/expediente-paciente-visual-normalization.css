@@ -3296,11 +3296,9 @@ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-body][data-en
   padding:6.8px 12px;
   justify-content:flex-start;
   border-radius:7.2px;
-  background:#26c8d2;
-  background-image:none;
+  background-color:#26c8d2;
   box-shadow:none;
   text-shadow:none;
-  animation:none;
   color:#fff;
   font-size:24.48px;
   font-weight:750;
@@ -3313,9 +3311,6 @@ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-body][data-en
   height:14.96px;
   margin-inline-end:8.8px;
   background:#155a70;
-  opacity:1;
-  animation:none;
-  transform:none;
 }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis23-appointment-meta {
   display:flex;
@@ -3827,3 +3822,75 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis29-prior h5 {font-size
   #p-expediente #m7-workspace .vis29-register [data-m7-measurement-pressure-label] {grid-column:1 / -1}
   #p-expediente #m7-workspace [data-m7-measurements-list] {grid-template-columns:repeat(var(--step2-mobile-columns,1),minmax(0,1fr))}
 }
+
+/* Step 2 R3: prior values live in a modal; the existing writer fills the band. */
+body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-actions {position:relative}
+#p-expediente #m7-workspace .vis-r3-prior-trigger {display:none;align-items:center;justify-content:center;gap:7px;white-space:normal;font-weight:700}
+#p-expediente #m7-workspace .vis-r3-prior-trigger .material-symbols-rounded {font-size:21px}
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] {grid-template-columns:minmax(0,1fr);gap:7px}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {grid-column:1;grid-row:1;padding:5px 10px}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current {grid-column:1;grid-row:2;padding:3px 10px}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-form-heading {line-height:20px;margin-bottom:3px}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {
+  grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(60px,.45fr) minmax(0,1.3fr);gap:10px;
+}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields label {font-size:13px;line-height:16px}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields :is(input,select) {height:36px;min-height:36px;padding:4px 8px;font-size:13px}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .btn {min-height:36px;padding:4px 12px;font-size:13px}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip {position:relative;grid-template-rows:auto 1fr;min-height:72px;padding:5px 32px 5px 7px;gap:5px}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip .meas01-row-actions {display:contents}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip .btn {position:absolute;right:2px;bottom:2px;min-width:28px;min-height:28px;font-size:17.25px;padding:2px;line-height:1;text-decoration:none}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip .meas01-remove {top:2px;bottom:auto}
+#p-expediente #m7-workspace .vis29-current .vis-step2-chip > strong {font-size:clamp(17px,1.45vw,21px);line-height:1.15;align-self:center}
+#p-expediente #m7-workspace .vis-step2-chip .btn:focus-visible {outline:2px solid #008d9f;outline-offset:1px}
+#p-expediente #m7-workspace .vis-r3-prior-dialog {
+  width:min(820px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:18px;border:1px solid #b9d9df;border-radius:12px;background:#fff;color:#1e5369;overflow-y:auto;
+}
+#p-expediente #m7-workspace .vis-r3-prior-dialog::backdrop {background:rgb(13 44 61 / .42)}
+#p-expediente #m7-workspace .vis-r3-prior-dialog > header {display:flex;align-items:center;justify-content:space-between;gap:12px}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis-r3-prior-dialog h5 {display:flex;align-items:center;gap:7px;font-size:18px;line-height:1.3;margin:0}
+#p-expediente #m7-workspace .vis-r3-prior-dialog [data-vis29-prior-close] {min-width:40px;min-height:40px;font-size:24px;padding:3px;color:#1e5369;text-decoration:none}
+#p-expediente #m7-workspace .vis-r3-prior-state {font-size:13px;margin:8px 0;min-height:18px}
+#p-expediente #m7-workspace .vis-r3-prior-dialog [data-vis29-prior] {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#p-expediente #m7-workspace .vis-r3-prior-dialog .vis-step2-prior-chip {display:grid;grid-template-columns:1fr;gap:4px;padding:12px;border:1px solid #d3e4e9;border-radius:8px;background:#f8fbfc;min-width:0}
+#p-expediente #m7-workspace .vis-r3-prior-dialog .vis-step2-prior-chip > span::after {content:none}
+#p-expediente #m7-workspace .vis-r3-prior-dialog .vis-step2-prior-chip > span {font-size:13px;font-weight:700}
+#p-expediente #m7-workspace .vis-r3-prior-dialog .vis-step2-prior-chip > strong {font-size:21px;line-height:1.2}
+#p-expediente #m7-workspace .vis-r3-prior-dialog .vis-step2-prior-chip > small {font-size:12px;line-height:1.5;white-space:pre-line}
+#p-expediente #m7-workspace .vis-r3-prior-dialog .vis-step2-prior-chip .btn {justify-self:start;margin-top:4px;min-height:40px;padding:6px 12px;font-size:13px;white-space:normal}
+@media(min-width:1200px){
+  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="measurements"][aria-current="true"]) .m7-workspace-actions > .vis-r3-prior-trigger {display:flex;position:absolute;right:0;top:52px;width:max-content;min-height:30px;padding:3px 9px;font-size:12px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {grid-template-columns:minmax(0,1fr) auto;gap:0 10px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-section-editor-actions {grid-column:2;grid-row:2;align-self:end}
+}
+@media(max-width:1199.98px){
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] > .vis-r3-prior-trigger {display:flex;grid-column:1;grid-row:1;justify-self:end;min-height:40px;padding:5px 10px;font-size:13px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {grid-row:2}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current {grid-row:3}
+  #p-expediente #m7-workspace .vis29-current .vis-step2-chip {min-height:94px;padding-right:44px}
+  #p-expediente #m7-workspace .vis29-current .vis-step2-chip .btn {min-width:40px;min-height:40px}
+}
+@media(max-width:575.98px){
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #p-expediente #m7-workspace .vis-r3-prior-dialog [data-vis29-prior] {grid-template-columns:minmax(0,1fr)}
+  #p-expediente #m7-workspace .vis-r3-prior-dialog {padding:12px}
+}
+/* Scale the three authorized groups without changing their layout allocation. */
+body.mx-consultation-mode #p-expediente #m7-workspace [data-vis04-prev] {transform:scale(.8);transform-origin:top left}
+body.mx-consultation-mode #p-expediente #m7-workspace [data-vis04-next] {transform:scale(.8);transform-origin:top right}
+body.mx-consultation-mode #p-expediente #m7-workspace .vis23-appointment-meta {transform:scale(.8);transform-origin:top left}
+
+@media(min-width:1200px){
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-measurements] {gap:1px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {padding:1px 8px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-form-heading {line-height:18px;margin-bottom:1px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-measurement-fields label {line-height:14px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current {padding:0 8px}
+  #p-expediente #m7-workspace .vis29-current .vis-step2-chip {min-height:62px;padding:3px 30px 3px 7px;gap:2px}
+  #p-expediente #m7-workspace .vis29-current .vis-step2-chip > strong {font-size:19px}
+  body.mx-consultation-mode #p-expediente #m7-workspace :is(.vis29-form-heading,.vis29-current h5) .material-symbols-rounded {font-size:18px;line-height:18px}
+}
+#p-expediente #m7-workspace .vis29-current [data-vis-step2-unit] {font-size:12px;font-weight:650;white-space:nowrap}
+
+
+#p-expediente #m7-workspace .vis-r3-prior-dialog [data-vis29-prior] .vis-step2-prior-chip > * {grid-column:1;grid-row:auto}

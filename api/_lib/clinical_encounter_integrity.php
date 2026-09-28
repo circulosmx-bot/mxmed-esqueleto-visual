@@ -697,6 +697,21 @@ final class ClinicalEncounterIntegrityService
         );
     }
 
+    public function reusePriorObservation(int $encounterId, array $command, string $actorId, string $doctorId, string $idempotencyKey): array
+    {
+        $this->assertAvailable();
+        if (array_keys($command)!==['source_observation_id'] || !is_int($command['source_observation_id']) || $command['source_observation_id']<1) {
+            throw new InvalidArgumentException('PRIOR_OBSERVATION_COMMAND_INVALID');
+        }
+        return (new ClinicalIdempotentCreateExecutor($this->pdo))->execute(
+            'CREATE_OBSERVATION',$doctorId,'ENCOUNTER',(string)$encounterId,$idempotencyKey,
+            ['encounter_id'=>$encounterId,'reuse_mode'=>'PRIOR_OBSERVATION','source_observation_id'=>$command['source_observation_id']],
+            'observation_id',$actorId,
+            fn():int=>$this->observations->reusePriorInTransaction($encounterId,$command['source_observation_id'],$doctorId,$actorId),
+            fn(int $id):array=>$this->observations->fetch($id)
+        );
+    }
+
     public function updateObservation(int $encounterId, int $observationId, array $payload, int $expectedVersion, string $actorId): array
     {
         $this->assertAvailable();

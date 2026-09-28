@@ -3984,7 +3984,7 @@ function clinical_v1_error_status(Throwable $error): int
     if($code==='V1_MULTIPART_STORAGE_NOT_READY')return 503;
     if($code==='DOCUMENT_NOT_FOUND')return 404;
     if($code==='OBSERVATION_CONTEXT_MISMATCH')return 403;
-    if(in_array($code,['VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH','DOCUMENT_TYPE_MISMATCH','DOCUMENT_ALREADY_SUPERSEDED','DOCUMENT_LINEAGE_INVALID'],true))return 409;
+    if(in_array($code,['PRIOR_OBSERVATION_NOT_REUSABLE','MEASUREMENT_TYPE_ALREADY_PRESENT','VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH','DOCUMENT_TYPE_MISMATCH','DOCUMENT_ALREADY_SUPERSEDED','DOCUMENT_LINEAGE_INVALID'],true))return 409;
     if($error instanceof InvalidArgumentException||$error instanceof ClinicalSectionValidationException||$error instanceof ClinicalObservationValidationException)return 400;
     return 500;
 }
@@ -7403,6 +7403,21 @@ try {
             try{$pdo=clinical_documents_pdo();$row=clinical_v1_authorized_encounter($pdo,urldecode((string)$segments[1]),$context,$routeName);if($row===null)return;
                 $data=is_array($body['data']??null)?$body['data']:[];$result=(new ClinicalEncounterIntegrityService($pdo))->createObservation((int)$row['encounter_id'],$data,$context['user_id'],$context['doctor_id'],(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
                 $replay=($result['_idempotency_replay']??false)===true;unset($result['_idempotency_replay']);clinical_send_response(['ok'=>true,'error'=>null,'message'=>'observation created','data'=>$result,'meta'=>['route'=>$routeName,'idempotency_replay'=>$replay]],$replay?200:201);
+            }catch(Throwable $e){clinical_send_response(['ok'=>false,'error'=>['code'=>clinical_v1_error_code($e),'message'=>$e->getMessage()],'data'=>null,'meta'=>['route'=>$routeName]],clinical_v1_error_status($e));}return;
+        }
+
+        if(count($segments)===4&&($segments[2]??'')==='observations'&&($segments[3]??'')==='reuse'&&$method==='POST'){
+            $routeName='encounters/{encounter_key}/observations/reuse';$context=clinical_require_doctor_context($routeName);if($context===null)return;
+            $pdo=clinical_documents_pdo();
+            if(!clinical_m6_encounter_route_uses_v1($pdo,urldecode((string)$segments[1]),$context)){clinical_m6_send_v1_route_unavailable($routeName);return;}
+            $body=clinical_read_json_body();
+            if(($body['ok']??false)!==true){clinical_send_response(['ok'=>false,'error'=>['code'=>'bad_request'],'data'=>null,'meta'=>['route'=>$routeName]],400);return;}
+            try{
+                $row=clinical_v1_authorized_encounter($pdo,urldecode((string)$segments[1]),$context,$routeName);if($row===null)return;
+                $data=is_array($body['data']??null)?$body['data']:[];
+                $result=(new ClinicalEncounterIntegrityService($pdo))->reusePriorObservation((int)$row['encounter_id'],$data,$context['user_id'],$context['doctor_id'],(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                $replay=($result['_idempotency_replay']??false)===true;unset($result['_idempotency_replay']);
+                clinical_send_response(['ok'=>true,'error'=>null,'message'=>'prior observation reused','data'=>$result,'meta'=>['route'=>$routeName,'idempotency_replay'=>$replay]],$replay?200:201);
             }catch(Throwable $e){clinical_send_response(['ok'=>false,'error'=>['code'=>clinical_v1_error_code($e),'message'=>$e->getMessage()],'data'=>null,'meta'=>['route'=>$routeName]],clinical_v1_error_status($e));}return;
         }
 

@@ -135,7 +135,7 @@ final class ClinicalMeasurementTrends
      * No lower date bound: an older height must not disappear behind recent vital signs.
      * Exclusion precedes ranking; current observations cannot hide a prior candidate.
      */
-    private function prior(string $doctor,string $patient,int $excludeEncounter): array
+    public function priorCandidates(string $doctor,string $patient,int $excludeEncounter): array
     {
         require_once __DIR__.'/clinical_observations.php';
         $eligible=[];
@@ -155,7 +155,12 @@ final class ClinicalMeasurementTrends
                 OR (o.code<>'blood_pressure' AND o.value_numeric IS NOT NULL))) ranked
             WHERE prior_rank=1 ORDER BY effective_at DESC,observation_id DESC";
         $stmt=$this->pdo->prepare($sql);$stmt->execute($params);
-        return ['items'=>array_map(static fn(array $row):array=>self::item($row),$stmt->fetchAll(PDO::FETCH_ASSOC)),
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function prior(string $doctor,string $patient,int $excludeEncounter): array
+    {
+        return ['items'=>array_map(static fn(array $row):array=>self::item($row),$this->priorCandidates($doctor,$patient,$excludeEncounter)),
             'latest_semantics'=>'LATEST_EXPLICIT_PRIOR_PER_CONCEPT','excluded_encounter_id'=>$excludeEncounter];
     }
 

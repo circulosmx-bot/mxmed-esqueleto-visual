@@ -17,6 +17,9 @@
     const measurementState = q('[data-m7-measurements-state]');
     const measurementList = q('[data-m7-measurements-list]');
     const priorList = q('[data-vis29-prior]');
+    const priorDialog = q('[data-vis29-prior-dialog]');
+    const priorState = q('[data-vis29-prior-state]');
+    const reuseKeys = new Map();
     const formTitle = q('[data-vis29-form-title]');
     const invalidationDialog = q('[data-meas01-confirm]');
     const pendingDialog = q('[data-vis29-pending-dialog]');
@@ -165,7 +168,10 @@
       syncCode();
     }
     function measurementPayload(){
-      const data={code:code.value,unit:unit.value,source:source.value,provenance:selectedObservation?.provenance || {}};
+      // Server capture/reuse provenance is retained by the writer; never resubmit its reserved fields.
+      const provenance={...(selectedObservation?.provenance || {})};
+      for(const field of ['capture_time_mode','reuse_mode','source_observation_id','source_encounter_id','source_encounter_key','source_effective_at','source_recorded_at','reused_at','source_provenance'])delete provenance[field];
+      const data={code:code.value,unit:unit.value,source:source.value,provenance};
       if(!selectedObservation) data.capture_time_mode='SERVER_AT_SAVE';
       if(code.value==='blood_pressure'){
         data.systolic_mm_hg=Number(systolic.value); data.diastolic_mm_hg=Number(diastolic.value);
@@ -189,7 +195,6 @@
     }
     // Presentation only: keep exact canonical numbers in capture and requests.
     const numberText = input => input!==null && input!=='' && Number.isFinite(Number(input)) ? new Intl.NumberFormat('es-MX',{maximumFractionDigits:2,useGrouping:false}).format(Number(input)) : '—';
-    const reading = row => `${row.code==='blood_pressure' ? `${numberText(row.systolic_mm_hg)}/${numberText(row.diastolic_mm_hg)}` : numberText(row.value_numeric)} ${row.unit}`;
     function dateParts(row,prior=false){
       if(prior && row.effective_at_authority!=='EXPLICIT_EFFECTIVE_TIME') return {day:'Fecha de medición no confirmada',time:''};
       const stamp=prior?row.effective_at:(row.recorded_at || row.effective_at);
@@ -203,7 +208,12 @@
       tip.id=`vis-step2-metadata-${++metadataSequence}`;tip.dataset.visStep2Tooltip='';
       tip.setAttribute('role','tooltip');tip.setAttribute('popover','manual');tip.hidden=true;
       const origin={direct_measurement:'Medición directa',patient_report:'Informado por el paciente',import:'Importado'}[row.source];
-      tip.textContent=[`${prior?'Medido':'Registrado'}: ${[dates.day,dates.time].filter(Boolean).join(' · ')}`,origin?`Origen: ${origin}`:''].filter(Boolean).join('\n');
+      const provenance=row.provenance || {};
+      const measured=dateParts(row,true);
+      const time=parts=>[parts.day,parts.time].filter(Boolean).join(' · ');
+      tip.textContent=[...(provenance.reuse_mode==='PRIOR_OBSERVATION'
+        ?[`Medido: ${time(measured)}`,`Incorporado a esta consulta: ${time(dates)}`]
+        :[`${prior?'Medido':'Registrado'}: ${time(dates)}`]),origin?`Origen: ${origin}`:''].filter(Boolean).join('\n');
       line.tabIndex=0;line.setAttribute('role','group');line.setAttribute('aria-describedby',tip.id);line.append(tip);
       const close=()=>{if(tip.matches(':popover-open'))tip.hidePopover();tip.hidden=true;};
       const show=()=>{
@@ -235,25 +245,26 @@
       if(!prior) rows=[...rows].sort((a,b)=>Object.keys(catalog).indexOf(a.code)-Object.keys(catalog).indexOf(b.code) || Number(a.observation_id)-Number(b.observation_id));
       rows.forEach(row=>{
         const line=document.createElement('div');line.className=prior?'vis29-reading vis-step2-prior-chip':'vis29-reading vis-step2-chip';
-        const priorSelected=prior&&!!reuseCandidate&&String(row.observation_id)===String(reuseCandidate.observation_id)&&String(row.encounter_key)===String(reuseCandidate.encounter_key);
-        line.classList.toggle('vis29-prior-selected',priorSelected);
         const name=document.createElement('span');name.textContent=catalog[row.code]?.[0]||row.code;
-        const val=document.createElement('strong');val.textContent=reading(row);
+        const val=document.createElement('strong');
+        val.append(row.code==='blood_pressure'?`${numberText(row.systolic_mm_hg)}/${numberText(row.diastolic_mm_hg)}`:numberText(row.value_numeric), ' ');
+        const unitText=document.createElement('span');unitText.dataset.visStep2Unit='';unitText.textContent=row.unit;val.append(unitText);
         line.append(name,val);
-        attachMetadata(line,row,prior);
+        if(prior){
+          const metadata=document.createElement('small'),dates=dateParts(row,true);
+          const origin={direct_measurement:'Medición directa',patient_report:'Informado por el paciente',import:'Importado'}[row.source];
+          metadata.textContent=`Medido: ${[dates.day,dates.time].filter(Boolean).join(' · ')}${origin?'\nOrigen: '+origin:''}`;
+          line.append(metadata);
+        }else attachMetadata(line,row,false);
         if(mode==='open'){
-          const button=document.createElement('button');button.type='button';button.className='btn btn-link';button.textContent=prior?'Usar valor':'✎';button.disabled=busy||measurementLocked||createPending||!!availableMeasurementDraft||(prior&&observations.some(item=>item.code===row.code&&!item.invalidated_at));
-          if(prior)button.setAttribute('aria-pressed',String(priorSelected));
-          button.setAttribute('aria-label',`${prior?'Usar valor':'Editar'}: ${name.textContent} · ${val.textContent}`);
+          const used=prior&&observations.some(item=>item.code===row.code&&!item.invalidated_at);
+          const button=document.createElement('button');button.type='button';button.className=prior?'btn btn-outline-primary':'btn btn-link';button.textContent=prior?(used?'Ya registrado':'Usar en esta consulta'):'✎';
+          button.disabled=busy||measurementLocked||createPending||!!availableMeasurementDraft||used;
+          button.setAttribute('aria-label',`${prior?(used?'Ya registrado':'Usar en esta consulta'):'Editar'}: ${name.textContent} · ${val.textContent}`);
           button.addEventListener('click',()=>{
-            if(!canReplaceCapture() || (prior&&observations.some(item=>item.code===row.code&&!item.invalidated_at))) return;
-            if(prior){
-              fillMeasurement(null);reuseCandidate=row;code.value=row.code;syncCode();
-              value.value=row.value_numeric??'';systolic.value=row.systolic_mm_hg??'';diastolic.value=row.diastolic_mm_hg??'';
-              source.value='';
-              setDraft('measurements',measurementSnapshot());paintMeasurement();
-            }else fillMeasurement(row);
-            formTitle.scrollIntoView({block:'nearest',behavior:'auto'});
+            if(prior){reusePrior(row);return;}
+            if(!canReplaceCapture())return;
+            fillMeasurement(row);formTitle.scrollIntoView({block:'nearest',behavior:'auto'});
             (code.value==='blood_pressure'?systolic:value).focus();
           });
           if(prior)line.append(button);
@@ -278,6 +289,43 @@
         if(run!==priorEpoch||key!==expectedKey||patient!==expectedPatient||currentPatient()!==patient)return;
         priorRows=result.data.items||[];renderRows(priorList,priorRows,true);
       }catch(_){if(run===priorEpoch)priorList.textContent='No se pudieron cargar los valores previos.';}
+    }
+    // Only a committed response followed by canonical encounter readback changes current chips.
+    async function reusePrior(row){
+      if(mode!=='open'||busy||measurementLocked||createPending||availableMeasurementDraft||observations.some(item=>item.code===row.code&&!item.invalidated_at))return;
+      // Keep an unrelated manual draft intact. Reusing its selected type needs an explicit resolution first.
+      if(isDirty()&&code.value===row.code){priorState.textContent='Guarda o cancela la captura de este tipo antes de usar el valor anterior.';return;}
+      const oldKey=key,oldPatient=patient,storageId=`mxmed.m7.ws03.reuse-key:${patient}:${key}:${row.observation_id}`;
+      let idempotencyKey=reuseKeys.get(storageId);
+      try{idempotencyKey=idempotencyKey||sessionStorage.getItem(storageId);}catch(_){}
+      if(!idempotencyKey)idempotencyKey=crypto.randomUUID?crypto.randomUUID():[...crypto.getRandomValues(new Uint8Array(16))].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+      reuseKeys.set(storageId,idempotencyKey);try{sessionStorage.setItem(storageId,idempotencyKey);}catch(_){}
+      busy=true;priorState.textContent='Incorporando valor…';paintMeasurement();
+      try{
+        const response=await fetch(`${encounterUrl(oldKey)}/observations/reuse`,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','Idempotency-Key':idempotencyKey},body:JSON.stringify({source_observation_id:Number(row.observation_id)})});
+        const result=await responseJson(response);
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==oldPatient)return;
+        const detail=await reloadCurrent();
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==oldPatient)return;
+        const confirmed=(detail.observations||[]).find(item=>Number(item.observation_id)===Number(result.data?.observation_id));
+        if(!confirmed||confirmed.code!==row.code)throw new Error('MEASUREMENT_READBACK_MISSING');
+        observations=(detail.observations||[]).filter(item=>!item.invalidated_at);
+        if(detail.status&&detail.status!=='open')terminal(detail);
+        // Retain the command key until an explicit void completes this logical command.
+        priorState.textContent=confirmed.invalidated_at?'Este registro ya fue eliminado. Actualiza los valores anteriores para continuar.':`${catalog[row.code]?.[0]||row.code}: valor incorporado a esta consulta.`;
+        if(!isDirty())fillMeasurement(null);
+      }catch(error){
+        if(key!==oldKey||patient!==oldPatient||currentPatient()!==oldPatient)return;
+        // A definitive rejection made no write; an ambiguous response keeps its key for safe retry.
+        if(error.code&&error.status<500&&!String(error.code).includes('IDEMPOTENCY')){
+          reuseKeys.delete(storageId);try{sessionStorage.removeItem(storageId);}catch(_){}
+        }
+        priorState.textContent=error.code==='MEASUREMENT_TYPE_ALREADY_PRESENT'?'Este tipo ya está registrado. Actualiza la consulta para revisarlo.'
+          :error.code==='PRIOR_OBSERVATION_NOT_REUSABLE'?'El valor anterior ya no está disponible. Actualiza los valores anteriores antes de continuar.'
+          :['ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED'].includes(error.code)?'La consulta terminó. No se incorporó el valor.'
+          :error.code==='M6_WRITE_WINDOW_BLOCKED'?'El guardado está pausado. Puedes volver a intentarlo.'
+          :'No se confirmó la incorporación. Vuelve a intentarlo para comprobar la misma solicitud.';
+      }finally{busy=false;if(key===oldKey&&patient===oldPatient){paintMeasurement();if(priorDialog?.open&&!priorDialog.contains(document.activeElement))(priorList.querySelector('button:not(:disabled)')||q('[data-vis29-prior-close]')).focus({preventScroll:true});}}
     }
     function paintMeasurement(){
       syncAvailableCodes();
@@ -329,6 +377,8 @@
       baselineExam=examSnapshot();
     }
     function load(detail, encounterKey, state, restoreDrafts=true){
+      if((key!==encounterKey||patient!==String(detail.patient_id||''))&&priorDialog?.open)priorDialog.close();
+      if(priorState)priorState.textContent='';
       if(key!==encounterKey && pendingDialog.open) pendingDialog.close('stay');
       if(key!==encounterKey) createKey='';
       key=encounterKey; patient=String(detail.patient_id || ''); mode=state;
@@ -370,12 +420,15 @@
       paintMeasurement(); paintExam();
     }
     function select(type){
+      if(type!=='measurements'&&priorDialog?.open)priorDialog.close();
       selected=type;
       hide(measurementPanel,type==='measurements'); hide(examPanel,type==='physical_exam');
       if(type==='measurements') paintMeasurement();
       if(type==='physical_exam') paintExam();
     }
     function reset(){
+      if(priorDialog?.open)priorDialog.close();
+      if(priorState)priorState.textContent='';
       if(invalidationDialog.open)invalidationDialog.close('cancel');
       if(pendingDialog.open)pendingDialog.close('stay');
       ++priorEpoch;priorRows=[];reuseCandidate=null;priorList.replaceChildren();clearTimeout(noticeTimer);createPending=false;
@@ -442,6 +495,7 @@
         const detail=await reloadCurrent();
         if(key!==oldKey||patient!==oldPatient||currentPatient()!==oldPatient)return;
         observations=detail.observations||[];
+        for(const previous of priorRows.filter(item=>item.code===row.code)){const id=`mxmed.m7.ws03.reuse-key:${patient}:${key}:${previous.observation_id}`;reuseKeys.delete(id);try{sessionStorage.removeItem(id);}catch(_){}}
         if(selectedObservation?.observation_id===row.observation_id)fillMeasurement(null);
         measurementNotice='Medición eliminada';
         noticeTimer=window.setTimeout(()=>{if(key===oldKey&&measurementNotice==='Medición eliminada'){measurementNotice='';paintMeasurement();}},2500);
@@ -636,6 +690,8 @@
       restore('physical_exam',retainedExamDraft);setDraft('physical_exam',examSnapshot());
       hide(examConflict,false);paintExam();
     });
+    root.querySelectorAll('[data-vis29-prior-open]').forEach(button=>button.addEventListener('click',()=>{if(key&&selected==='measurements'&&!priorDialog.open)priorDialog.showModal();}));
+    q('[data-vis29-prior-close]')?.addEventListener('click',()=>priorDialog.close());
     syncCode();
     return {load,select,reset,isDirty,remember,resolvePendingNavigation,isBusy:()=>busy||pendingDecision,
       saveSelected:()=>selected==='measurements'?saveMeasurement():selected==='physical_exam'?saveExam():Promise.resolve(true),
