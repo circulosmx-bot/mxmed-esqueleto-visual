@@ -3923,4 +3923,16 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register {padding-b
 #p-expediente #m7-workspace .vitalref-source-tooltip[hidden] {display:none}
 #p-expediente #m7-workspace .vitalref-info:focus-visible {outline:2px solid #617d94;outline-offset:2px}
 #p-expediente #m7-workspace .vis29-register :is([data-m7-measurement-value],[data-m7-measurement-systolic],[data-m7-measurement-diastolic])::placeholder {color:#657781;font-size:12px;font-weight:400;opacity:1}
+/* VITALREF03: explicit arrows occupy the number input's existing footprint. */
+#p-expediente #m7-workspace .vis29-register .vitalref-number {display:grid;grid-template-columns:minmax(0,1fr);position:relative;min-width:0}
+#p-expediente #m7-workspace .vis29-register .vitalref-number-stepped input,
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .vitalref-number-stepped input {appearance:textfield;padding-right:22px}
+#p-expediente #m7-workspace .vis29-register .vitalref-number-stepped input::-webkit-inner-spin-button,
+#p-expediente #m7-workspace .vis29-register .vitalref-number-stepped input::-webkit-outer-spin-button {appearance:none;margin:0}
+#p-expediente #m7-workspace .vis29-register [data-vitalref-step] {position:absolute;right:1px;width:20px;height:calc((100% - 7px) / 2);min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:3px;background:transparent;color:#244b60;font:12px/1 sans-serif;display:flex;align-items:center;justify-content:center}
+#p-expediente #m7-workspace .vis29-register [data-vitalref-step="1"] {top:6px}
+#p-expediente #m7-workspace .vis29-register [data-vitalref-step="-1"] {bottom:1px}
+#p-expediente #m7-workspace .vis29-register [data-vitalref-step][hidden] {display:none}
+#p-expediente #m7-workspace .vis29-register [data-vitalref-step]:hover {background:#e9f9fa}
+#p-expediente #m7-workspace .vis29-register [data-vitalref-step]:focus-visible {outline:2px solid #008e9b;outline-offset:-2px}
 #p-expediente #m7-workspace .vitalref-source-tooltip {position:fixed;inset:auto;margin:0;max-width:min(380px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;padding:10px 12px;border:1px solid #d7e0e5;border-radius:7px;background:#f5f7f8;color:#405461;font-size:12px;line-height:18px;white-space:pre-line;overflow-wrap:anywhere;box-shadow:0 3px 12px #16384826;pointer-events:none}

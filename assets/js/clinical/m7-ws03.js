@@ -19,6 +19,39 @@
     const referenceLabel = q('[data-vitalref-measurement-label]');
     const neutralPlaceholders = [value,systolic,diastolic].map(input=>input.placeholder);
     let referenceEpoch=0, referenceRequest=null, referenceItems=new Map();
+    // Transient input navigation only; excluded from drafts and writer payloads.
+    const entryAnchors=new Map();
+    const numericSteps={blood_pressure:'1',heart_rate:'1',respiratory_rate:'1',temperature:'0.1',oxygen_saturation:'1',pain:'1'};
+    // Keep the scalar field's name independent of the adjacent arrow buttons.
+    if(!value.hasAttribute('aria-label'))value.setAttribute('aria-label',valueLabel.textContent.trim());
+    const numberControls=[value,systolic,diastolic].map(input=>{
+      const wrapper=document.createElement('span');wrapper.className='vitalref-number';
+      input.before(wrapper);wrapper.append(input);
+      input.id=input.id||`vitalref-number-${++metadataSequence}`;
+      const buttons=[1,-1].map(direction=>{
+        const button=document.createElement('button');button.type='button';
+        button.dataset.vitalrefStep=String(direction);button.setAttribute('aria-controls',input.id);
+        button.textContent=direction===1?'▴':'▾';wrapper.append(button);
+        button.addEventListener('click',()=>stepNumber(input,direction));
+        return button;
+      });
+      input.addEventListener('keydown',event=>{
+        if(input.step==='any'||event.altKey||event.ctrlKey||event.metaKey||!['ArrowUp','ArrowDown'].includes(event.key))return;
+        event.preventDefault();stepNumber(input,event.key==='ArrowUp'?1:-1);
+      },true);
+      return {input,wrapper,buttons};
+    });
+    function stepNumber(input,direction){
+      if(input.disabled||input.readOnly||input.step==='any'||input.validity.badInput)return;
+      input.focus({preventScroll:true});
+      const before=input.value,anchor=entryAnchors.get(input);
+      if(before===''&&anchor)input.value=String(anchor.entry_anchor);
+      // Native step alignment/minimum behavior applies to actual values and to
+      // fields without a reference (including pain's scale, never a midpoint).
+      direction===1?input.stepUp():input.stepDown();
+      if(input.step==='0.1'&&input.value!=='')input.value=Number(input.value).toFixed(1);
+      if(input.value!==before)input.dispatchEvent(new Event('input',{bubbles:true}));
+    }
     const measurementState = q('[data-m7-measurements-state]');
     const measurementList = q('[data-m7-measurements-list]');
     const priorList = q('[data-vis29-prior]');
@@ -71,21 +104,36 @@
       referenceTooltip.hidden=true;
     }
     function renderReference(){
+      entryAnchors.clear();
       if(!referenceHint||!referenceTooltip||!referenceLabel)return;
       closeReferenceTooltip();
       const item=referenceItems.get(code.value);
-      // Presentation only: use the resolver's display text, never clinical defaults
-      // or input values. Reset all controls before applying the current context.
+      // Derive placeholders and navigation anchors from the same frozen authority.
+      // Rendering/focusing never changes input.value or dispatches an input event.
       [value,systolic,diastolic].forEach((input,index)=>{input.placeholder=neutralPlaceholders[index];});
       if(item?.reference_available){
         const display=String(item.display_reference||'');
         if(code.value==='blood_pressure'&&item.reference_kind==='category'){
           const limits=display.match(/(<\d+(?:\.\d+)?)\/(<\d+(?:\.\d+)?)(?=\s|$)/);
-          if(limits){systolic.placeholder=`Ref. ${limits[1]}`;diastolic.placeholder=`Ref. ${limits[2]}`;}
+          if(limits){
+            [systolic,diastolic].forEach((input,index)=>{
+              input.placeholder=`Ref. ${limits[index+1]}`;
+              entryAnchors.set(input,{entry_anchor:Number(limits[index+1].slice(1)),reference_id:item.reference_id});
+            });
+          }
         }else if(['heart_rate','respiratory_rate','temperature','oxygen_saturation','pain'].includes(code.value)
           &&['range','scale'].includes(item.reference_kind)){
           const range=display.match(/:\s*(\d+(?:\.\d+)?[–-]\d+(?:\.\d+)?)(?=\s|$)/);
-          if(range)value.placeholder=`${item.reference_kind==='scale'?'Escala':'Ref.'} ${range[1]}`;
+          if(range){
+            value.placeholder=`${item.reference_kind==='scale'?'Escala':'Ref.'} ${range[1]}`;
+            if(item.reference_kind==='range'){
+              const bounds=range[1].split(/[–-]/).map(Number),step=Number(value.step);
+              const midpoint=(bounds[0]+bounds[1])/2;
+              if(Number.isFinite(midpoint)&&step>0)entryAnchors.set(value,{
+                entry_anchor:Number((Math.round(midpoint/step)*step).toFixed(6)),reference_id:item.reference_id
+              });
+            }
+          }
         }
       }
       referenceHint.hidden=!item?.display_reference;
@@ -227,6 +275,14 @@
       const isPressure=code.value==='blood_pressure';
       hide(valueLabel,!isPressure); hide(pressureLabel,isPressure);
       value.required=!isPressure; systolic.required=isPressure; diastolic.required=isPressure;
+      value.step=numericSteps[code.value]||'any';systolic.step=diastolic.step='1';
+      for(const {input,wrapper,buttons} of numberControls){
+        const stepped=input.step!=='any';wrapper.classList.toggle('vitalref-number-stepped',stepped);
+        buttons.forEach((button,index)=>{
+          button.hidden=!stepped;
+          button.setAttribute('aria-label',`${index===0?'Aumentar':'Disminuir'} ${input===value?catalog[code.value]?.[0]||'valor':input.getAttribute('aria-label')}`);
+        });
+      }
       unit.value=catalog[code.value]?.[1] || '';
       renderReference();
     }
@@ -417,7 +473,8 @@
       source.querySelector('option[value="import"]').disabled=!selectedObservation;
       const save=q('[data-m7-measurement-save]'),cancel=q('[data-m7-measurement-new]');
       save.textContent=selectedObservation?'Guardar cambios':'Agregar a esta consulta';
-      save.disabled=mode!=='open'||busy||measurementLocked||!!availableMeasurementDraft||!code.value||!isDirty();
+      const numericReady=(code.value==='blood_pressure'?[systolic,diastolic]:[value]).every(input=>input.value!==''&&input.validity.valid);
+      save.disabled=mode!=='open'||busy||measurementLocked||!!availableMeasurementDraft||!code.value||!isDirty()||!numericReady||!source.value;
       cancel.textContent=selectedObservation?'Cancelar edición':'Cancelar captura';
       cancel.disabled=mode!=='open'||busy||measurementLocked||createPending||!!availableMeasurementDraft;
       hide(cancel,!!selectedObservation||isDirty());
