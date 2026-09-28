@@ -3686,7 +3686,13 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .m7-sectio
 body.mx-consultation-mode #p-expediente #m7-workspace .vis29-register .btn { min-height:30px; padding:3px 10px; }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current .vis29-empty { margin:0; }
 
-/* Seven existing exploration controls occupy four compact desktop rows. */
+/* Exploration controls occupy four compact desktop rows. */
+@media(max-width:1199.98px) {
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam-systems] {
+    max-height:var(--m7-exam-existing-height,none);
+    overflow-y:auto;
+  }
+}
 @media(min-width:1200px) {
   body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam] { padding:0; border:0; background:transparent; }
   body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exam-systems] {

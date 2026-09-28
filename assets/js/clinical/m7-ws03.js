@@ -89,7 +89,8 @@
     };
     const systems = {
       general:'Estado general', cardiovascular:'Cardiovascular', respiratory:'Respiratorio',
-      abdomen:'Abdomen', neurological:'Neurológico', musculoskeletal:'Musculoesquelético', skin:'Piel'
+      abdomen:'Abdomen', neurological:'Neurológico', musculoskeletal:'Musculoesquelético', skin:'Piel',
+      head_neck:'Cabeza y cuello'
     };
     let key = '', patient = '', mode = 'none', selected = '', observations = [], selectedObservation = null;
     let baselineMeasurement = '', baselineExam = '', examVersion = null, busy = false;
@@ -783,6 +784,25 @@
       finding.addEventListener('input',()=>{examNotice='';setDraft('physical_exam',examSnapshot());paintExam();});
       row.append(title,state,finding);examSystems.append(row);
     });
+    // Keep the pre-existing seven-row allocation when the systems stack on narrow
+    // screens. The added system scrolls into view without moving the shell footer.
+    const existingExamRows=[...examSystems.children].slice(0,7);
+    let examLayoutFrame=0;
+    const examLayoutObserver=new ResizeObserver(()=>{
+      if(examLayoutFrame)return;
+      examLayoutFrame=requestAnimationFrame(()=>{
+        examLayoutFrame=0;
+        if(!matchMedia('(max-width:1199.98px)').matches)return;
+        const first=existingExamRows[0].getBoundingClientRect();
+        const last=existingExamRows.at(-1).getBoundingClientRect();
+        if(!first.height)return;
+        const height=`${last.bottom-first.top}px`;
+        if(examSystems.style.getPropertyValue('--m7-exam-existing-height')!==height){
+          examSystems.style.setProperty('--m7-exam-existing-height',height);
+        }
+      });
+    });
+    [examSystems,...existingExamRows].forEach(row=>examLayoutObserver.observe(row));
     code.addEventListener('change',()=>{
       const nextCode=code.value;code.value=lastCode;
       if(isDirty()||selectedObservation||createPending){measurementNotice='Registra o cancela la captura pendiente antes de cambiar de medición.';paintMeasurement();return;}
