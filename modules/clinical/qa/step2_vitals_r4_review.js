@@ -1,5 +1,5 @@
 // Synthetic composition and reuse simulation, injected solely by the guarded Director router.
-// All clinical writes are blocked; simulated reuse stays in this browser session only.
+// Real clinical writes are blocked; simulated reuse/void stay in this browser session only.
 (() => {
   const params=new URLSearchParams(location.search);
   if(!['127.0.0.1','localhost','[::1]'].includes(location.hostname)
@@ -35,7 +35,10 @@
   const storageId=`mxmed.director.step2.r4:${patientId}:${encounterId}:${count}`;
   let simulated=[];
   try{simulated=JSON.parse(sessionStorage.getItem(storageId)||'[]');}catch(_){}
-  const currentRows=[...catalog.slice(0,count).map((item,index)=>row(item,index)),...simulated.map(item=>item.row)];
+  let voided=[];
+  try{voided=JSON.parse(sessionStorage.getItem(storageId+':voids')||'[]');}catch(_){}
+  const currentRows=[...catalog.slice(0,count).map((item,index)=>row(item,index)),...simulated.map(item=>item.row)]
+    .map(item=>voided.find(saved=>saved.observation_id===item.observation_id)||item);
   currentRows.forEach(item=>{item.provenance=JSON.parse(item.provenance_json||'{}');});
   const originalFetch=window.fetch.bind(window);
   const json=(payload,status=200)=>new Response(JSON.stringify(payload),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -43,12 +46,25 @@
     const url=new URL(typeof input==='string'?input:input.url,location.href);
     const method=String(init?.method||input?.method||'GET').toUpperCase();
     if(url.origin!==location.origin)return originalFetch(input,init);
+    const voidMatch=decodeURIComponent(url.pathname).match(new RegExp(`^/api/clinical/index.php/encounters/enc:${encounterId}/observations/(\\d+)/void$`));
+    if(method==='POST'&&voidMatch){
+      const command=JSON.parse(init.body||'{}'),target=currentRows.find(item=>item.observation_id===Number(voidMatch[1]));
+      if(command.patient_id!==patientId)return json({ok:false,error:{code:'PATIENT_CONTEXT_MISMATCH'}},409);
+      if(!target)return json({ok:false,error:{code:'OBSERVATION_NOT_FOUND'}},404);
+      if(!Number.isInteger(command.row_version)||command.row_version!==target.row_version||target.invalidated_at)
+        return json({ok:false,error:{code:'VERSION_CONFLICT'}},409);
+      Object.assign(target,{invalidated_at:new Date().toISOString().slice(0,19).replace('T',' '),
+        invalidated_by_user_id:'director-review-browser',invalidation_reason:'Captura errónea',row_version:target.row_version+1});
+      voided.push({...target});
+      try{sessionStorage.setItem(storageId+':voids',JSON.stringify(voided));}catch(_){}
+      return json({ok:true,data:target});
+    }
     if(method==='POST'&&decodeURIComponent(url.pathname)===`/api/clinical/index.php/encounters/enc:${encounterId}/observations/reuse`){
       const command=JSON.parse(init.body||'{}'),source=priorRows.find(item=>item.observation_id===command.source_observation_id);
       const key=new Headers(init.headers).get('Idempotency-Key'),replay=simulated.find(item=>item.key===key);
       if(replay)return json({ok:true,data:replay.row},200);
       if(!source)return json({ok:false,error:{code:'PRIOR_OBSERVATION_NOT_REUSABLE'}},409);
-      if(currentRows.some(item=>item.code===source.code))return json({ok:false,error:{code:'MEASUREMENT_TYPE_ALREADY_PRESENT'}},409);
+      if(currentRows.some(item=>!item.invalidated_at&&item.code===source.code))return json({ok:false,error:{code:'MEASUREMENT_TYPE_ALREADY_PRESENT'}},409);
       const recorded=new Date().toISOString().slice(0,19).replace('T',' ');
       const provenance={reuse_mode:'PRIOR_OBSERVATION',source_observation_id:source.observation_id,source_encounter_id:source.encounter_id,source_encounter_key:source.encounter_key,source_effective_at:source.effective_at,source_recorded_at:source.recorded_at,reused_at:recorded,source_provenance:{}};
       const reused={...source,observation_id:99500+simulated.length,encounter_id:encounterId,encounter_key:`enc:${encounterId}`,recorded_at:recorded,provenance,provenance_json:JSON.stringify(provenance)};
@@ -66,10 +82,11 @@
     if(method!=='GET'||!response.ok||url.pathname!=='/api/clinical/index.php/encounters/enc%3A1016')return response;
     const payload=await response.clone().json().catch(()=>null);
     if(payload?.ok!==true||payload?.data?.patient_id!==patientId)return response;
-    payload.data.observations=currentRows;
+    payload.data.observations=currentRows.filter(item=>!item.invalidated_at);
+    payload.data.invalidated_observations=currentRows.filter(item=>item.invalidated_at);
     return json(payload,response.status);
   };
-  window.mxmedDirectorStep2VisualFixture=Object.freeze({patientId,encounterId,readOnly:true,syntheticPreviousValues:true,simulatedReuseOnly:true,currentCount:count,syntheticTypeCount:priorRows.length});
+  window.mxmedDirectorStep2VisualFixture=Object.freeze({patientId,encounterId,readOnly:true,syntheticPreviousValues:true,simulatedReuseOnly:true,simulatedVoidOnly:true,currentCount:count,syntheticTypeCount:priorRows.length});
   window.addEventListener('load',()=>{
     const openStep=()=>{
       const step=document.querySelector('[data-m7-section="measurements"]');

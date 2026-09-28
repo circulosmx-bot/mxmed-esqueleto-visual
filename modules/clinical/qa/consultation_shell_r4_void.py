@@ -1,0 +1,47 @@
+"""Actual WebKit capture/void commands against an isolated canonical database."""
+import json,os,subprocess
+from pathlib import Path
+from playwright.sync_api import sync_playwright,expect
+ROOT=Path(__file__).resolve().parents[3];BASE=os.environ['STEP2_QA_BASE'];DB=os.environ['STEP2_QA_DB']
+OUT=Path(os.environ.get('SHELL_R4_ARTIFACTS','/tmp/mxmed-consultation-shell-r4'));OUT.mkdir(parents=True,exist_ok=True)
+def sql(query):return subprocess.check_output(['mysql','-N',DB,'-e',query],text=True).strip()
+assert DB.startswith('shell_r4_qa_')
+checks={};errors=[]
+def check(name,value=True):assert value,name;checks[name]='PASS';print('PASS '+name,flush=True)
+with sync_playwright() as pw:
+ browser=pw.webkit.launch();ctx=browser.new_context();ctx.add_cookies([{'name':'PHPSESSID','value':'step2-qa','url':BASE}]);page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
+ page.goto(BASE+'/modules/clinical/README.md')
+ page.evaluate('''html=>{const doc=new DOMParser().parseFromString(html,'text/html');document.body.innerHTML=doc.querySelector('#m7-workspace').outerHTML;document.head.innerHTML='<style>.d-none{display:none!important}[hidden]{display:none!important}dialog:not([open]){display:none}label{display:block}</style>';document.querySelector('[data-m7-body]').classList.remove('d-none');}''',(ROOT/'index.html').read_text())
+ page.add_script_tag(url=BASE+'/assets/js/clinical/m7-ws03.js')
+ page.evaluate('''async()=>{const root=document.querySelector('#m7-workspace');window.voidQA=mxmedM7WS03(root,k=>'/api/clinical/index.php/encounters/'+encodeURIComponent(k),()=> 'p_a',()=>{});const detail=await (await fetch('/api/clinical/index.php/encounters/enc%3A1')).json();if(!detail.ok)throw Error(JSON.stringify(detail));voidQA.load(detail.data,'enc:1','open');voidQA.select('measurements');}''')
+ expect(page.locator('.vis-step2-chip')).to_have_count(1)
+ response=ctx.request.post(BASE+'/api/clinical/index.php/encounters/enc%3A1/observations',data={'code':'heart_rate','unit':'bpm','value_numeric':81,'source':'direct_measurement','capture_time_mode':'SERVER_AT_SAVE'},headers={'Content-Type':'application/json','Idempotency-Key':'shell-r4-canonical-void'})
+ row=response.json()['data'];oid=int(row['observation_id']);version=int(row['row_version']);check('real canonical observation uses SERVER_AT_SAVE',response.status==201 and json.loads(sql(f'SELECT provenance_json FROM clinical_observations WHERE observation_id={oid}'))['capture_time_mode']=='SERVER_AT_SAVE')
+ page.evaluate("async()=>{const detail=await (await fetch('/api/clinical/index.php/encounters/enc%3A1')).json();voidQA.load(detail.data,'enc:1','open');voidQA.select('measurements');}")
+ expect(page.locator('.vis-step2-chip')).to_have_count(2)
+ endpoint=BASE+f'/api/clinical/index.php/encounters/enc%3A1/observations/{oid}/void';request=ctx.request
+ def post(payload,url=endpoint):return request.post(url,data=payload,headers={'Content-Type':'application/json'})
+ before=sql(f'SELECT value_numeric,effective_at,recorded_at,provenance_json,row_version,invalidated_at FROM clinical_observations WHERE observation_id={oid}')
+ conflict=post({'patient_id':'p_a','row_version':version+1});check('stale row version rejected',conflict.status==409 and conflict.json()['error']['code']=='VERSION_CONFLICT')
+ mismatched=post({'patient_id':'p_other','row_version':version});check('patient context mismatch rejected',mismatched.status in [400,403,404,409])
+ wrong=post({'patient_id':'p_a','row_version':version},endpoint.replace('enc%3A1','enc%3A999999'));check('foreign encounter rejected',wrong.status==404)
+ anonymous=browser.new_context();denied=anonymous.request.post(endpoint,data={'patient_id':'p_a','row_version':version});check('authenticated physician required',denied.status in [401,403]);anonymous.close()
+ check('rejected commands leave original row unchanged',sql(f'SELECT value_numeric,effective_at,recorded_at,provenance_json,row_version,invalidated_at FROM clinical_observations WHERE observation_id={oid}')==before)
+ chip=page.locator('.vis-step2-chip').filter(has_text='Frecuencia cardíaca');dialog=page.locator('[data-meas01-confirm]')
+ page.route('**/observations/'+str(oid)+'/void',lambda route:route.fulfill(status=503,content_type='application/json',body=json.dumps({'ok':False,'error':{'code':'M6_WRITE_WINDOW_BLOCKED'}})))
+ chip.get_by_role('button',name='Eliminar:',exact=False).click();expect(dialog).to_be_visible();dialog.get_by_role('button',name='Eliminar',exact=True).click();expect(page.locator('[data-m7-measurements-state]')).to_contain_text('No se confirmó la eliminación.')
+ expect(chip).to_be_visible();expect(page.locator('.vis-step2-chip')).to_have_count(2);check('genuine write failure keeps chip and selector filtering',page.locator('[data-m7-measurement-code] option[value=heart_rate]').count()==0)
+ page.unroute('**/observations/'+str(oid)+'/void')
+ chip.get_by_role('button',name='Eliminar:',exact=False).click();expect(dialog).to_be_visible()
+ with page.expect_response(lambda r:r.url==endpoint and r.request.method=='POST') as removed:dialog.get_by_role('button',name='Eliminar',exact=True).click()
+ void=removed.value;check('canonical POST void succeeds',void.status==200 and bool(void.json()['data']['invalidated_at']))
+ check('canonical request carries patient and version',void.request.post_data_json=={'patient_id':'p_a','row_version':version})
+ expect(dialog).not_to_be_visible();expect(page.locator('.vis-step2-chip')).to_have_count(1);expect(page.locator('[data-m7-measurement-code] option[value=heart_rate]')).to_have_count(1);expect(page.locator('[data-m7-measurements-state]')).to_have_text('Medición eliminada')
+ check('chip disappears, selector restores, stale error clears')
+ check('other current value preserved',page.locator('.vis-step2-chip').inner_text().startswith('Peso'))
+ stored=sql(f'SELECT value_numeric,effective_at,recorded_at,provenance_json,row_version,invalidated_at,invalidated_by_user_id,invalidation_reason FROM clinical_observations WHERE observation_id={oid}').split('\t');original=before.split('\t')
+ check('void retains clinical value time and provenance',stored[:4]==original[:4]);check('row version and invalidation audit persisted',int(stored[4])==version+1 and stored[5]!='NULL' and stored[6]=='u_a' and stored[7]=='Captura errónea')
+ detail=request.get(BASE+'/api/clinical/index.php/encounters/enc%3A1').json()['data'];check('canonical readback excludes row as active',all(int(r['observation_id'])!=oid or bool(r['invalidated_at']) for r in detail['observations']))
+ check('original row retained, no hard delete',sql(f'SELECT COUNT(*) FROM clinical_observations WHERE observation_id={oid}')=='1')
+ check('no JavaScript errors',not errors);page.screenshot(path=str(OUT/'canonical-void-success-webkit.png'));ctx.close();browser.close()
+(OUT/'canonical-void-report.json').write_text(json.dumps({'CANONICAL_VOID_QA':'PASS','checks':checks,'javascript_errors':errors},indent=2));print('CANONICAL_VOID_QA=PASS',flush=True)

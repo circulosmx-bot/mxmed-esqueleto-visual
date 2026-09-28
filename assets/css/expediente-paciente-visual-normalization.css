@@ -3379,13 +3379,6 @@ body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-status {
   line-height:1.05;
 }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis21-step-context { display:none; }
-body.mx-consultation-mode #p-expediente #m7-workspace .vis21-step-context:has(.vis21-step-state .m7-section-editor-state:not(:empty)) {
-  display:flex;
-  flex:1 1 100%;
-  order:4;
-  margin:0;
-  transform:none;
-}
 body.mx-consultation-mode #p-expediente #m7-workspace .vis21-step-context .vis21-step-copy { display:none; }
 body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-actions { align-self:start; }
 body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-exit] {
@@ -3611,59 +3604,55 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis04-helper {
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-body { margin-top:10px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-sections { margin-bottom:10px; }
 }
-@media(min-width:1200px) {
-  body.mx-consultation-mode:has(#m7-workspace [data-m7-section="reason"][aria-current="true"]) .mm-grid { padding-bottom:0; }
-  body.mx-consultation-mode:has(#m7-workspace [data-m7-section="reason"][aria-current="true"]) .mm-main > hr { display:none; }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) .vis23-workspace-context-line { row-gap:0; }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) [data-m7-editor-text] {
-    height:clamp(170px, calc(100dvh - 680px), 220px);
-  }
-}
-@media(min-width:1200px) and (max-height:899px) {
-  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) [data-m7-editor-text] {
-    height:clamp(170px, calc(100dvh - 664px), 216px);
-  }
-}
-@media(min-width:1200px) and (max-height:800px) {
-  body.mx-consultation-mode #p-expediente:has(#m7-workspace [data-m7-section="reason"][aria-current="true"]) > .body { padding-top:6px; padding-bottom:0; }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) { padding-top:16px; padding-bottom:12px; margin-bottom:0; }
-}
 @media(max-width:700px) {
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-copy { white-space:normal; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-appointment-label { flex-wrap:wrap; row-gap:2px; }
   body.mx-consultation-mode #p-expediente #m7-workspace .vis32-origin-cluster { flex-basis:100%; }
 }
 
-/* R3: Steps 1–5 share the accepted Step 1 shell. Clinical content alone varies. */
+/* Shell R4: one desktop allocation for all seven steps. Recovered gap height
+   belongs to the capture panel; the accepted footer anchor stays in place. */
 @media(min-width:1200px) {
-  body.mx-consultation-mode:has(#m7-workspace .m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .mm-grid { padding-bottom:0; }
-  body.mx-consultation-mode:has(#m7-workspace .m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .mm-main > hr { display:none; }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .vis23-workspace-context-line { row-gap:0; }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .vis04-capture {
-    height:clamp(170px, calc(100dvh - 680px), 220px);
+  body.mx-consultation-mode #p-expediente #m7-workspace {
+    --consultation-header-to-stepper-gap:6px;
+    --consultation-stepper-to-content-gap:6px;
+    --consultation-recovered-height:24px;
+    --consultation-capture-height:clamp(170px, calc(100dvh - 680px), 220px);
+  }
+  body.mx-consultation-mode .mm-wrap .mm-grid.page { padding-bottom:0; }
+  body.mx-consultation-mode .mm-main > hr { display:none; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis23-workspace-context-line { row-gap:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-body { margin-top:var(--consultation-header-to-stepper-gap); }
+  body.mx-consultation-mode #p-expediente #m7-workspace .m7-workspace-sections { margin-bottom:var(--consultation-stepper-to-content-gap); }
+  body.mx-consultation-mode #p-expediente #m7-workspace .vis04-capture {
+    height:calc(var(--consultation-capture-height) + var(--consultation-recovered-height));
     min-height:0;
-  }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:is(:nth-child(2),:nth-child(3),:nth-child(5))[aria-current="true"]) .vis04-capture {
+    margin:0;
     overflow-y:auto;
-    scrollbar-gutter:stable;
   }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(4)[aria-current="true"]) [data-m7-editor-text] {
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:is(:nth-child(2),:nth-child(3),:nth-child(5))[aria-current="true"]) .vis04-capture { scrollbar-gutter:stable; }
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:is(:nth-child(1),:nth-child(4))[aria-current="true"]) [data-m7-editor-text] {
     box-sizing:border-box;
-    height:clamp(170px, calc(100dvh - 680px), 220px);
+    height:calc(var(--consultation-capture-height) + var(--consultation-recovered-height));
     min-height:0;
   }
 }
 @media(min-width:1200px) and (max-height:899px) {
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) .vis04-capture {
-    height:clamp(170px, calc(100dvh - 664px), 216px);
-  }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(4)[aria-current="true"]) [data-m7-editor-text] {
-    height:clamp(170px, calc(100dvh - 664px), 216px);
+  body.mx-consultation-mode #p-expediente #m7-workspace {
+    --consultation-header-to-stepper-gap:2px;
+    --consultation-capture-height:clamp(170px, calc(100dvh - 664px), 216px);
   }
 }
 @media(min-width:1200px) and (max-height:800px) {
-  body.mx-consultation-mode #p-expediente:has(#m7-workspace .m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) > .body { padding-top:6px; padding-bottom:0; }
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button:nth-child(-n+5)[aria-current="true"]) { padding-top:16px; padding-bottom:12px; margin-bottom:0; }
+  body.mx-consultation-mode #p-expediente > .body { padding-top:6px; padding-bottom:0; }
+  body.mx-consultation-mode #p-expediente #m7-workspace {
+    padding-top:16px;
+    padding-bottom:12px;
+    margin-bottom:0;
+    --consultation-header-to-stepper-gap:0px;
+    --consultation-stepper-to-content-gap:0px;
+    --consultation-recovered-height:20px;
+  }
 }
 
 /* The measurement writer leads; prior values remain a secondary reading column. */
@@ -3894,8 +3883,9 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis23-appointment-meta {t
 #p-expediente #m7-workspace .vis-r4-subtitle-row {display:contents}
 body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis-r4-subtitle-row {display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px}
 body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis-r4-subtitle-row .vis-r3-prior-trigger {display:flex;flex:0 1 auto;min-height:30px;max-width:100%;padding:3px 9px;font-size:12px;line-height:18px}
-/* Offset the band and its viewport together; retain the footer's allocated height. */
-body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis04-capture {margin-top:-3px;margin-bottom:3px}
+@media(max-width:1199.98px){
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis04-capture {margin-top:-3px;margin-bottom:3px}
+}
 body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current {position:relative;top:5px}
 body.mx-consultation-mode #p-expediente #m7-workspace .vis-r3-prior-dialog h5 {font-size:24px}
 body.mx-consultation-mode #p-expediente #m7-workspace .vis-r3-prior-dialog h5 .material-symbols-rounded {font-size:32px;color:#00b8c9}
@@ -3912,11 +3902,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis-r3-prior-dialog .vis-
 #p-expediente #m7-workspace .vis-r3-prior-dialog > footer {display:flex;justify-content:flex-end;border-top:1px solid #d3e4e9;margin-top:16px;padding-top:12px}
 #p-expediente #m7-workspace .vis-r3-prior-dialog > footer [data-vis29-prior-close] {min-height:40px;padding:6px 18px;font-size:14px;font-weight:700}
 @media(min-width:1200px){
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis04-capture {height:clamp(173px,calc(100dvh - 677px),223px);margin-bottom:0}
   #p-expediente #m7-workspace .vis-r3-prior-dialog [data-vis29-prior] {grid-template-columns:repeat(3,minmax(0,1fr))}
-}
-@media(min-width:1200px) and (max-height:899px){
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis04-capture {height:clamp(173px,calc(100dvh - 661px),219px)}
 }
 @media(max-width:1199.98px){
   body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis-r4-subtitle-row {row-gap:7px}

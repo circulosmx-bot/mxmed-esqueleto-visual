@@ -52,10 +52,10 @@ with sync_playwright() as pw:
   expect(page.locator('.vis-step2-chip')).to_have_count(count);expect(page.locator('[data-vis29-prior] .vis29-reading')).to_have_count(len(canonical))
   page.evaluate('async()=>{await document.fonts.ready;scrollTo(0,0);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}');page.mouse.move(0,0);return page
  baselines={}
- for w,h in ([] if os.environ.get('STEP2_QA_SHARED_ONLY') else DESKTOP+[(820,1180),(390,844)]):
+ for w,h in ([] if (os.environ.get('STEP2_QA_SHARED_ONLY') or os.environ.get('STEP2_QA_FUNCTIONAL_ONLY')) else DESKTOP+[(820,1180),(390,844)]):
   page=ready(w,h,baseline=True);baselines[(w,h)]=page.evaluate(METRICS);page.close()
  report['baselineCoordinates']={f'{w}x{h}':m for (w,h),m in baselines.items()}
- for w,h in ([] if os.environ.get('STEP2_QA_SHARED_ONLY') else DESKTOP+[(820,1180),(390,844)]):
+ for w,h in ([] if (os.environ.get('STEP2_QA_SHARED_ONLY') or os.environ.get('STEP2_QA_FUNCTIONAL_ONLY')) else DESKTOP+[(820,1180),(390,844)]):
   for count in ([0,1,4,8,9] if (w,h)==(1440,900) else [8]):
    page=ready(w,h,count);m=page.evaluate(METRICS)
    assert not m['horizontalOverflow'] and not any(c['overflow'] for c in m['chips']),m
@@ -100,16 +100,18 @@ with sync_playwright() as pw:
     assert dialog.evaluate('(n)=>n.scrollWidth<=n.clientWidth') and dialog.bounding_box()['height']<=h-30
     page.screenshot(path=str(OUT/f'prior-modal-{w}x{h}-webkit.png'));page.locator('[data-vis29-prior-close]').last.click()
    page.close()
- # Compare both scaling and shell anchors for every accepted step at normal desktop size.
- old=ready(baseline=True);page=ready()
- for step in STEPS:
-  for target in [old,page]:target.locator(f'[data-m7-section="{step}"]').click();expect(target.locator(f'[data-m7-section="{step}"]')).to_have_attribute('aria-current','true')
-  for target in [old,page]:target.evaluate('async()=>{scrollTo(0,0);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}')
-  a=old.evaluate(METRICS);b=page.evaluate(METRICS)
-  for field in ['header','consultation','stepper','title','footer']:assert a[field]==b[field],(step,field,a[field],b[field])
-  for field in ['appointment','origin','prev','next']:assert a[field]==b[field],(step,field,a[field],b[field])
-  check('shared anchors preserved '+step)
- old.close();page.close()
+ # Shell R4 supplies its own seven-step geometry gate; reuse this gate's interactions.
+ if not os.environ.get('STEP2_QA_FUNCTIONAL_ONLY'):
+  # Compare both scaling and shell anchors for every accepted step at normal desktop size.
+  old=ready(baseline=True);page=ready()
+  for step in STEPS:
+   for target in [old,page]:target.locator(f'[data-m7-section="{step}"]').click();expect(target.locator(f'[data-m7-section="{step}"]')).to_have_attribute('aria-current','true')
+   for target in [old,page]:target.evaluate('async()=>{scrollTo(0,0);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}')
+   a=old.evaluate(METRICS);b=page.evaluate(METRICS)
+   for field in ['header','consultation','stepper','title','footer']:assert a[field]==b[field],(step,field,a[field],b[field])
+   for field in ['appointment','origin','prev','next']:assert a[field]==b[field],(step,field,a[field],b[field])
+   check('shared anchors preserved '+step)
+  old.close();page.close()
  # Origin fixture semantics remain untouched; scaling retains the accepted alignment.
  page=ready(origin=True);a=page.locator('.vis32-appointment-label').bounding_box();dot=page.locator('[data-m7-origin-dot]').bounding_box();label=page.locator('[data-m7-origin-label]').bounding_box()
  assert abs(dot['y']+dot['height']/2-(label['y']+label['height']/2))<2
