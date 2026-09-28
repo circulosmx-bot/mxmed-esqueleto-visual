@@ -1,10 +1,10 @@
 """Read/preparation-only UX review; canonical writes stay in the stress fixture."""
 from plan02br2_browser import *
 import pymysql
-UX=BASE+'/index.html?review_patient=plan02ux&review_encounter=open&qa_tools=hide'
+UX=BASE+'/index.html?review_patient=plan02ux&review_encounter=open&qa_tools=hide&review_placeholders=clean'
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True);ctx=browser.new_context(viewport={'width':1440,'height':900},timezone_id='America/Mexico_City');page=ctx.new_page();page.set_default_timeout(20000);writes=[];capture(page,writes)
-    page.goto(UX,wait_until='commit');page.wait_for_function('document.querySelector("#m7-workspace [data-m7-body]")?.dataset.encounterId==="1016"',timeout=55000);page.wait_for_timeout(1200);page.locator('[data-m7-section="plan"]').click();expect(page.locator('[data-m7-editor-text]')).to_have_value('Solicitar estudios de control y revisar los resultados en la próxima consulta.');report={}
+    page.goto(UX,wait_until='commit');page.wait_for_function('document.querySelector("#m7-workspace [data-m7-body]")?.dataset.encounterId==="1016"',timeout=55000);page.wait_for_timeout(1200);page.locator('[data-m7-section="plan"]').click();expect(page.locator('[data-m7-editor-text]')).to_have_value('');expect(page.locator('[data-m7-editor-text]')).to_have_attribute('placeholder','Solicitar estudios de control y revisar los resultados en la próxima consulta.');report={}
     assert not any(x in page.locator('#m7-workspace').inner_text() for x in ['PLAN02BR1','PLAN02B OPTIONAL','recovery'])
     for w,h in [(1440,900),(1366,768),(820,1180),(390,844)]:
         page.set_viewport_size({'width':w,'height':h});page.locator('[data-plan02b]').scroll_into_view_if_needed();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=str(OUT/f'ux-plan-{w}.png'))

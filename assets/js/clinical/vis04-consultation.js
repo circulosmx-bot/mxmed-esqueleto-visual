@@ -64,7 +64,7 @@
     const editor = root.querySelector('[data-m7-editor-text]');
     editor.removeAttribute('aria-labelledby');
     editor.setAttribute('aria-describedby', 'vis21-step-helper');
-    editor.placeholder = selected === 'reason' ? reasonExample : selected === 'assessment' ? 'Describe tu impresión diagnóstica, evolución y diagnósticos diferenciales relevantes.' : '';
+    editor.placeholder = selected === 'reason' ? reasonExample : selected === 'assessment' ? 'Describe tu impresión diagnóstica, evolución y diagnósticos diferenciales relevantes.' : selected === 'plan' ? 'Solicitar estudios de control y revisar los resultados en la próxima consulta.' : '';
   }
   function advance(delta) {
     const before = currentIndex(), target = steps[before + delta];

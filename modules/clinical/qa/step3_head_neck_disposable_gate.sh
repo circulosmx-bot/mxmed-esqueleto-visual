@@ -47,4 +47,4 @@ MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS=
 http_pid=$!
 base="http://127.0.0.1:$port"
 for _ in {1..40}; do if curl -fsS -o /dev/null "$base/modules/clinical/README.md" 2>/dev/null; then break; fi;sleep 0.1;done
-STEP3_QA_BASE="$base" STEP3_QA_DB="$qa_db" python3 "$root_dir/modules/clinical/qa/step3_head_neck_browser.py"
+STEP3_QA_BASE="$base" STEP3_QA_DB="$qa_db" python3 "${STEP3_QA_BROWSER:-$root_dir/modules/clinical/qa/step3_head_neck_browser.py}"
