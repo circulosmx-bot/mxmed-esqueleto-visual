@@ -31,14 +31,14 @@ with sync_playwright() as p:
   key='A2';load();await resolve(references[0]);const encounterScoped=code.value==='blood_pressure'&&clean();
   key='A1';load();const old=pending.shift();patient='child';key='B1';load();const newest=pending.shift();old(success(references[0]));await tick();const staleReferenceRejected=value.placeholder==='';newest(success(references[1]));await tick();const newestReferenceApplied=code.value==='oxygen_saturation'&&value.placeholder==='Ref. 95–100'&&clean();up(value);const newestAnchor=value.value==='99';cancel();
   patient='adult';key='A1';load();await resolve(references[0]);choose('heart_rate');value.value='112';value.dispatchEvent(new Event('input',{bubbles:true}));const raw=sessionStorage.getItem('mxmed.m7.ws03.draft:A1:measurements');
-  load();await resolve(references[0]);const realDraftLock=value.disabled&&value.value===''&&sessionStorage.getItem('mxmed.m7.ws03.draft:A1:measurements')===raw;
-  root.querySelector('[data-vis30-measurement-recover]').click();up(value);const recoveredActualValueWins=value.value==='113';cancel();
+  load();await resolve(references[0]);const realDraftAutoRestored=!value.disabled&&value.value==='112'&&ws.isDirty()&&sessionStorage.getItem('mxmed.m7.ws03.draft:A1:measurements')===raw;
+  up(value);const recoveredActualValueWins=value.value==='113';cancel();
   rows=[{observation_id:7,encounter_id:1,code:'heart_rate',unit:'bpm',value_numeric:68,source:'direct_measurement',row_version:1,invalidated_at:null,provenance:{reuse_mode:'PRIOR_OBSERVATION',source_observation_id:6}}];load();await resolve(references[0]);
   const usedTypeFiltersPreference=!Array.from(code.options).some(n=>n.value==='heart_rate')&&code.value!=='heart_rate';root.querySelector('[aria-label^="Editar: Frecuencia cardíaca"]').click();up(value);const reusedActualValueWins=value.value==='69';cancel();rows=[];
   load();await resolve(references[0]);choose('heart_rate');up(value);const source=root.querySelector('[data-m7-measurement-source]');source.value='direct_measurement';source.dispatchEvent(new Event('change',{bubbles:true}));const saved=await ws.saveSelected(),command=calls.find(c=>c.method==='POST');
   const serverAtSave=saved&&command.body.value_numeric===81&&command.body.capture_time_mode==='SERVER_AT_SAVE'&&!JSON.stringify(command.body).match(/entry-type|entry_anchor|reference|effective_at/);
   sessionStorage.setItem('mxmed.m7.ws03.entry-type:adult:A2','not-a-measurement');key='A2';rows=[];load();await resolve(references[0]);const invalidChoiceSafe=code.value==='blood_pressure'&&clean();
-  return {onlyUITypeStored,reenterWithoutToggle,reenteredArrow,clearedAtPatientSwitch,childDoesNotInheritAdultType,childDoesNotInheritAdultAnchor,returnPatientType,returnPatientAnchor,encounterScoped,staleReferenceRejected,newestReferenceApplied,newestAnchor,realDraftLock,recoveredActualValueWins,usedTypeFiltersPreference,reusedActualValueWins,serverAtSave,invalidChoiceSafe};
+  return {onlyUITypeStored,reenterWithoutToggle,reenteredArrow,clearedAtPatientSwitch,childDoesNotInheritAdultType,childDoesNotInheritAdultAnchor,returnPatientType,returnPatientAnchor,encounterScoped,staleReferenceRejected,newestReferenceApplied,newestAnchor,realDraftAutoRestored,recoveredActualValueWins,usedTypeFiltersPreference,reusedActualValueWins,serverAtSave,invalidChoiceSafe};
  }''',references)
  assert all(result.values()),result
  (OUT/'logic-report.json').write_text(json.dumps(result,indent=2));print('VITALREF03_R1_LOGIC_GATE=PASS',json.dumps(result),flush=True);browser.close()

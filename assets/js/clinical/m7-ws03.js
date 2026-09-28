@@ -95,7 +95,7 @@
     let baselineMeasurement = '', baselineExam = '', examVersion = null, busy = false;
     let measurementLocked = false, examLocked = false;
     let createKey = '', loadedExam = {}, measurementNotice = '', examNotice = '', pendingDecision = false;
-    let retainedMeasurementDraft = '', retainedExamDraft = '', availableMeasurementDraft = '', unavailableMeasurementDraft = false, availableExamDraft = '';
+    let retainedMeasurementDraft = '', retainedExamDraft = '', availableMeasurementDraft = '', unavailableMeasurementDraft = false, availableExamDraft = '', measurementRecovered = false;
     const drafts = new Map();
     const hide = (node, visible)=>node.classList.toggle('d-none', !visible);
     function closeReferenceTooltip(){
@@ -270,7 +270,10 @@
         if(type==='measurements'){
           const row=observations.find(item=>Number(item.observation_id)===Number(draft.observation_id));
           selectedObservation=row || null;reuseCandidate=draft.reuse_candidate||null;
-          code.value=draft.code || 'blood_pressure'; value.value=draft.value || '';
+          // An edited canonical type may have been filtered from the empty form.
+          if(row)syncAvailableCodes(draft.code || row.code);
+          else code.value=draft.code || 'blood_pressure';
+          value.value=draft.value || '';
           systolic.value=draft.systolic || ''; diastolic.value=draft.diastolic || '';
           source.value=draft.source || '';
           syncCode();
@@ -320,15 +323,15 @@
       } else data.value_numeric=Number(value.value);
       return data;
     }
-    function fillMeasurement(row, discardDraft=true, preserveRetainedDraft=false){
+    function fillMeasurement(row, discardDraft=true, preserveRetainedDraft=false, requested=entryType()){
       reuseCandidate=null;
-      availableMeasurementDraft='';unavailableMeasurementDraft=false;
+      availableMeasurementDraft='';unavailableMeasurementDraft=false;measurementRecovered=false;
       if(!preserveRetainedDraft){retainedMeasurementDraft='';q('[data-m7-measurement-use-draft]').disabled=true;}
       selectedObservation=row || null;
-      code.value=row?.code || entryType(); value.value=row?.value_numeric ?? '';
+      code.value=row?.code || requested; value.value=row?.value_numeric ?? '';
       systolic.value=row?.systolic_mm_hg ?? ''; diastolic.value=row?.diastolic_mm_hg ?? '';
       source.querySelector('option[value="import"]').disabled=!row;
-      source.value=row?.source || ''; syncAvailableCodes(row?.code || entryType());
+      source.value=row?.source || ''; syncAvailableCodes(row?.code || requested);
       baselineMeasurement=measurementSnapshot();
       if(discardDraft) clearDraft('measurements');
       if(discardDraft){forgetCreateKey();createPending=false;}
@@ -475,19 +478,21 @@
       renderRows(measurementList,observations);
       if(priorRows.length)renderRows(priorList,priorRows,true);
       formTitle.textContent=selectedObservation?'Editar medición':'Registrar valores';
+      hide(q('[data-m7-measurement-recovered-status]'),measurementRecovered);
       hide(recoveredDraft,!!availableMeasurementDraft);
       recoveredDraftCopy.textContent=unavailableMeasurementDraft?'Hay una captura pendiente recuperada, pero la medición original ya no está disponible. Descarta este borrador para continuar.':'Hay una captura pendiente recuperada de esta consulta. Elige si deseas retomarla o descartarla.';
       recoverDraft.disabled=mode!=='open'||busy||unavailableMeasurementDraft;
       discardRecoveredDraft.disabled=mode!=='open'||busy;
+      const unsafeDraftPending=!!availableMeasurementDraft&&unavailableMeasurementDraft;
       measurementState.textContent=measurementNotice || (mode!=='open'?'Sólo lectura':measurementLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':reuseCandidate?'Valor previo preparado. Selecciona el origen y agrégalo, o cancela la captura antes de cambiar de paso.':'');
-      [...form.elements].forEach(control=>{ if(!control.closest('[data-vis30-measurement-draft]')) control.disabled=mode!=='open'||busy||measurementLocked||createPending||!!availableMeasurementDraft; });
+      [...form.elements].forEach(control=>{ if(!control.closest('[data-vis30-measurement-draft]')) control.disabled=mode!=='open'||busy||measurementLocked||createPending||unsafeDraftPending; });
       source.querySelector('option[value="import"]').disabled=!selectedObservation;
       const save=q('[data-m7-measurement-save]'),cancel=q('[data-m7-measurement-new]');
       save.textContent=selectedObservation?'Guardar cambios':'Agregar a esta consulta';
       const numericReady=(code.value==='blood_pressure'?[systolic,diastolic]:[value]).every(input=>input.value!==''&&input.validity.valid);
-      save.disabled=mode!=='open'||busy||measurementLocked||!!availableMeasurementDraft||!code.value||!isDirty()||!numericReady||!source.value;
-      cancel.textContent=selectedObservation?'Cancelar edición':'Cancelar captura';
-      cancel.disabled=mode!=='open'||busy||measurementLocked||createPending||!!availableMeasurementDraft;
+      save.disabled=mode!=='open'||busy||measurementLocked||unsafeDraftPending||!code.value||!isDirty()||!numericReady||!source.value;
+      cancel.textContent=measurementRecovered?'Descartar captura':selectedObservation?'Cancelar edición':'Cancelar captura';
+      cancel.disabled=mode!=='open'||busy||measurementLocked||createPending||unsafeDraftPending;
       hide(cancel,!!selectedObservation||isDirty());
       hide(form,!!key);
     }
@@ -546,6 +551,9 @@
             restore('measurements',savedDraft);
             createPending=!selectedObservation;
             measurementNotice='Hay una captura pendiente recuperada cuyo registro no se confirmó. Reintenta la misma solicitud.';
+          }else if(!classification.unavailable){
+            restore('measurements',savedDraft);
+            measurementRecovered=true;
           }else{
             availableMeasurementDraft=savedDraft;
             unavailableMeasurementDraft=classification.unavailable;
@@ -580,7 +588,7 @@
       if(pendingDialog.open)pendingDialog.close('stay');
       ++priorEpoch;priorRows=[];reuseCandidate=null;priorList.replaceChildren();clearTimeout(noticeTimer);createPending=false;
       key=''; patient=''; mode='none'; selected=''; observations=[]; selectedObservation=null;
-      createKey=''; retainedMeasurementDraft=''; availableMeasurementDraft=''; unavailableMeasurementDraft=false; availableExamDraft=''; measurementNotice=''; examNotice='';
+      createKey=''; retainedMeasurementDraft=''; availableMeasurementDraft=''; unavailableMeasurementDraft=false; availableExamDraft=''; measurementRecovered=false; measurementNotice=''; examNotice='';
       hide(measurementPanel,false); hide(examPanel,false);
     }
     async function responseJson(response){
@@ -805,8 +813,9 @@
     });
     q('[data-m7-measurement-new]').addEventListener('click',()=>{
       if(busy||measurementLocked||createPending||mode!=='open')return;
-      // This explicit cancel already authorizes discarding a prepared prior value.
-      if(reuseCandidate||canReplaceCapture())fillMeasurement(null);
+      // Explicit discard clears only this unsaved capture and keeps its reference type.
+      if(measurementRecovered)fillMeasurement(null,true,false,code.value);
+      else if(reuseCandidate||canReplaceCapture())fillMeasurement(null);
     });
     q('[data-m7-measurement-reload]').addEventListener('click',async()=>{
       try{const detail=await reloadCurrent();const row=detail.observations?.find(item=>Number(item.observation_id)===Number(selectedObservation?.observation_id));if(row){observations=detail.observations;fillMeasurement(row,true,true);hide(measurementConflict,true);q('[data-m7-measurement-use-draft]').disabled=false;}else{measurementNotice='No se encontró la medición guardada.';paintMeasurement();}}catch(_){measurementNotice='No se pudo cargar la versión guardada.';paintMeasurement();}

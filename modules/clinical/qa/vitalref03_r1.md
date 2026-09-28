@@ -2,6 +2,11 @@
 
 Starting source: `f869632df773691996577abd35bd358f4bf1a9d6`.
 
+Historical R1 behavior below: [Draft recovery R2](step2_draft_recovery_r2.md)
+supersedes the mandatory recovery decision for safe measurement drafts. The R1
+reload gates now expect automatic restoration; unsafe and ambiguous states retain
+their protections.
+
 ## Reproduction and cause
 
 Before modifying source, fresh WebKit contexts tested HR, temperature and BP.
