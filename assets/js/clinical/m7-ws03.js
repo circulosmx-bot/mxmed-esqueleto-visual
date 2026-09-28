@@ -258,9 +258,10 @@
         }else attachMetadata(line,row,false);
         if(mode==='open'){
           const used=prior&&observations.some(item=>item.code===row.code&&!item.invalidated_at);
-          const button=document.createElement('button');button.type='button';button.className=prior?'btn btn-outline-primary':'btn btn-link';button.textContent=prior?(used?'Ya registrado':'Usar en esta consulta'):'✎';
+          const button=document.createElement('button');button.type='button';button.className=prior?'btn btn-primary':'btn btn-link';button.textContent=prior?(used?'Ya agregado':'Usar'):'✎';
+          if(prior){button.dataset.vis29PriorUsed=String(used);const icon=document.createElement('span');icon.className='material-symbols-rounded';icon.setAttribute('aria-hidden','true');icon.textContent=used?'check_circle':'history';button.prepend(icon);}
           button.disabled=busy||measurementLocked||createPending||!!availableMeasurementDraft||used;
-          button.setAttribute('aria-label',`${prior?(used?'Ya registrado':'Usar en esta consulta'):'Editar'}: ${name.textContent} · ${val.textContent}`);
+          button.setAttribute('aria-label',`${prior?(used?'Ya agregado':'Usar en esta consulta'):'Editar'}: ${name.textContent} · ${val.textContent}`);
           button.addEventListener('click',()=>{
             if(prior){reusePrior(row);return;}
             if(!canReplaceCapture())return;
@@ -691,7 +692,7 @@
       hide(examConflict,false);paintExam();
     });
     root.querySelectorAll('[data-vis29-prior-open]').forEach(button=>button.addEventListener('click',()=>{if(key&&selected==='measurements'&&!priorDialog.open)priorDialog.showModal();}));
-    q('[data-vis29-prior-close]')?.addEventListener('click',()=>priorDialog.close());
+    root.querySelectorAll('[data-vis29-prior-close]').forEach(button=>button.addEventListener('click',()=>priorDialog.close()));
     syncCode();
     return {load,select,reset,isDirty,remember,resolvePendingNavigation,isBusy:()=>busy||pendingDecision,
       saveSelected:()=>selected==='measurements'?saveMeasurement():selected==='physical_exam'?saveExam():Promise.resolve(true),
