@@ -4527,6 +4527,39 @@ try {
         }
         return;
     }
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'vital-references' && count($segments) === 3) {
+        $routeName='patients/{patient_id}/vital-references';
+        header('Cache-Control: private, no-store');
+        if ($method!=='GET') {
+            clinical_send_response(['ok'=>false,'error'=>'not_found','data'=>null,'meta'=>['route'=>$routeName]],404);
+            return;
+        }
+        $context=clinical_require_doctor_context($routeName);
+        if ($context===null) return;
+        if ($_GET!==[]) {
+            clinical_send_response(['ok'=>false,'error'=>['code'=>'bad_request','message'=>'La referencia utiliza únicamente el contexto canónico del paciente'],'data'=>null,'meta'=>['route'=>$routeName]],400);
+            return;
+        }
+        $patientId=trim(rawurldecode((string)$segments[1]));
+        try {
+            $pdo=clinical_documents_pdo();
+            if (!clinical_require_doctor_patient_scope($pdo,$context['doctor_id'],$patientId,$routeName)) return;
+            $query=$pdo->prepare('SELECT birthdate FROM patients_patients WHERE patient_id=:patient LIMIT 1');
+            $query->execute([':patient'=>$patientId]);
+            $row=$query->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                clinical_send_response(['ok'=>false,'error'=>['code'=>'not_found','message'=>'Paciente no encontrado'],'data'=>null,'meta'=>['route'=>$routeName]],404);
+                return;
+            }
+            require_once __DIR__.'/../_lib/clinical_vital_references.php';
+            $result=clinical_vital_references_resolve($row['birthdate']===null?null:(string)$row['birthdate']);
+            clinical_send_response(['ok'=>true,'data'=>$result,'meta'=>['route'=>$routeName,'method'=>'GET']],200);
+        } catch (Throwable $e) {
+            clinical_send_response(['ok'=>false,'error'=>['code'=>'server_error','message'=>'No se pudieron cargar las referencias'],'data'=>null,'meta'=>['route'=>$routeName]],500);
+        }
+        return;
+    }
+
     $isTimelineRoute = ($method === 'GET'
         && ($segments[0] ?? '') === 'patients'
         && ($segments[2] ?? '') === 'timeline'

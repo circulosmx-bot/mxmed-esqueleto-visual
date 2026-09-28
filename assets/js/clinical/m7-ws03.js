@@ -14,6 +14,11 @@
     const diastolic = q('[data-m7-measurement-diastolic]');
     const unit = q('[data-m7-measurement-unit]');
     const source = q('[data-m7-measurement-source]');
+    const referenceHint = q('[data-vitalref-hint]');
+    const referenceTooltip = q('[data-vitalref-tooltip]');
+    const referenceDesktop = matchMedia('(min-width:1200px)');
+    const referenceTablet = matchMedia('(min-width:576px)');
+    let referenceEpoch=0, referenceRequest=null, referenceItems=new Map();
     const measurementState = q('[data-m7-measurements-state]');
     const measurementList = q('[data-m7-measurements-list]');
     const priorList = q('[data-vis29-prior]');
@@ -60,6 +65,63 @@
     let retainedMeasurementDraft = '', retainedExamDraft = '', availableMeasurementDraft = '', unavailableMeasurementDraft = false, availableExamDraft = '';
     const drafts = new Map();
     const hide = (node, visible)=>node.classList.toggle('d-none', !visible);
+    function closeReferenceTooltip(){
+      if(!referenceTooltip)return;
+      if(referenceTooltip.matches(':popover-open'))referenceTooltip.hidePopover();
+      referenceTooltip.hidden=true;
+    }
+    function renderReference(){
+      if(!referenceHint||!referenceTooltip)return;
+      closeReferenceTooltip();
+      const item=referenceItems.get(code.value);
+      referenceHint.hidden=!item?.display_reference;
+      referenceHint.textContent=item?.display_reference || '';
+      referenceTooltip.textContent='';
+      for(const input of [value,systolic,diastolic])input.removeAttribute('aria-describedby');
+      if(referenceHint.hidden)return;
+      // An informational span only: never part of snapshot, form elements or payload.
+      const pressure=code.value==='blood_pressure';
+      const placement=referenceDesktop.matches?'value':(referenceTablet.matches?(pressure?'fields':'value'):(pressure?'fields':'heading'));
+      referenceHint.dataset.vitalrefPlacement=placement;
+      (placement==='value'?(pressure?pressureLabel:valueLabel):q(placement==='fields'?'.m7-measurement-fields':'.vis29-form-heading')).append(referenceHint);
+      for(const input of code.value==='blood_pressure'?[systolic,diastolic]:[value])input.setAttribute('aria-describedby',referenceHint.id);
+      const sourceInfo=item.source;
+      referenceTooltip.textContent=[item.display_reference,sourceInfo?`Fuente: ${sourceInfo.source_title}`:'',sourceInfo?`${sourceInfo.source_year} · ${sourceInfo.source_version}`:'',sourceInfo?.url || '',`Contexto: ${item.context}`,...(item.caveats||[])].filter(Boolean).join('\n');
+    }
+    function clearReferences(){
+      ++referenceEpoch;referenceRequest?.abort();referenceRequest=null;referenceItems=new Map();renderReference();
+    }
+    async function loadReferences(){
+      clearReferences();
+      if(!patient)return;
+      const run=referenceEpoch, expectedPatient=patient, expectedKey=key;
+      referenceRequest=new AbortController();
+      try{
+        const response=await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(patient)}/vital-references`,{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'},signal:referenceRequest.signal});
+        const result=await responseJson(response);
+        if(run!==referenceEpoch||key!==expectedKey||patient!==expectedPatient||currentPatient()!==patient)return;
+        referenceItems=new Map((Array.isArray(result.data?.items)?result.data.items:[]).filter(item=>catalog[item.measurement_code]).map(item=>[item.measurement_code,item]));
+        renderReference();
+      }catch(_){if(run===referenceEpoch){referenceItems=new Map();renderReference();}}
+    }
+    if(referenceHint&&referenceTooltip){
+      referenceDesktop.addEventListener('change',renderReference);
+      referenceTablet.addEventListener('change',renderReference);
+      const show=()=>{
+        if(referenceHint.hidden||selected!=='measurements')return;
+        referenceTooltip.hidden=false;
+        if(referenceTooltip.showPopover&&!referenceTooltip.matches(':popover-open'))referenceTooltip.showPopover();
+        const anchor=referenceHint.getBoundingClientRect(),box=referenceTooltip.getBoundingClientRect();
+        referenceTooltip.style.left=`${Math.max(8,Math.min(anchor.left,innerWidth-box.width-8))}px`;
+        referenceTooltip.style.top=`${anchor.bottom+6+box.height<innerHeight?anchor.bottom+6:Math.max(8,anchor.top-box.height-6)}px`;
+      };
+      referenceHint.addEventListener('pointerenter',show);
+      referenceHint.addEventListener('pointerleave',()=>{if(document.activeElement!==referenceHint)closeReferenceTooltip();});
+      referenceHint.addEventListener('focus',show);
+      referenceHint.addEventListener('blur',closeReferenceTooltip);
+      referenceHint.addEventListener('click',event=>{event.preventDefault();referenceHint.focus();show();});
+      referenceHint.addEventListener('keydown',event=>{if(event.key==='Escape')closeReferenceTooltip();});
+    }
     const draftId = type=>`mxmed.m7.ws03.draft:${key}:${type}`;
     const createKeyId = ()=>`mxmed.m7.ws03.create-key:${key}`;
     function forgetCreateKey(){
@@ -154,6 +216,7 @@
       hide(valueLabel,!isPressure); hide(pressureLabel,isPressure);
       value.required=!isPressure; systolic.required=isPressure; diastolic.required=isPressure;
       unit.value=catalog[code.value]?.[1] || '';
+      renderReference();
     }
     function syncAvailableCodes(){
       const requested=code.value;
@@ -383,6 +446,7 @@
       if(key!==encounterKey && pendingDialog.open) pendingDialog.close('stay');
       if(key!==encounterKey) createKey='';
       key=encounterKey; patient=String(detail.patient_id || ''); mode=state;
+      loadReferences();
       clearTimeout(noticeTimer);reuseCandidate=null;createPending=false;
       loadPrior(detail.encounter_id);
       observations=Array.isArray(detail.observations)?detail.observations:[];
@@ -421,6 +485,7 @@
       paintMeasurement(); paintExam();
     }
     function select(type){
+      closeReferenceTooltip();
       if(type!=='measurements'&&priorDialog?.open)priorDialog.close();
       selected=type;
       hide(measurementPanel,type==='measurements'); hide(examPanel,type==='physical_exam');
@@ -428,6 +493,7 @@
       if(type==='physical_exam') paintExam();
     }
     function reset(){
+      clearReferences();
       if(priorDialog?.open)priorDialog.close();
       if(priorState)priorState.textContent='';
       if(invalidationDialog.open)invalidationDialog.close('cancel');
