@@ -3999,3 +3999,124 @@ body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-transition-space 
 @media(min-width:1200px) and (max-height:800px) {
   body.mx-consultation-mode #p-expediente #m7-workspace .m7-exam-transition-space { height:30px; }
 }
+
+/* Clinical flow R1: only Steps 6/7 content changes; shared shell allocations stay fixed. */
+#p-expediente #m7-workspace .flow-tool-selectors {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 8px}
+#p-expediente #m7-workspace .flow-tool-selectors .btn {display:flex;align-items:center;justify-content:center;gap:8px;white-space:normal;min-width:0}
+#p-expediente #m7-workspace .flow-tool-selectors [aria-pressed="true"] {color:#fff;background:#00aebf;border-color:#00aebf}
+#p-expediente #m7-workspace .flow-tool-guide {font-size:13px;margin:8px 0;color:#526976}
+#p-expediente #m7-workspace .flow-document-heading {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+#p-expediente #m7-workspace .flow-document-heading h5 {margin:0}
+#p-expediente #m7-workspace .flow-document-heading > div {display:flex;flex-wrap:wrap;gap:6px}
+#p-expediente #m7-workspace .docux-current {border:1px solid #b8dce3;border-radius:10px;padding:8px;background:rgb(255 255 255 / .65);margin-top:8px}
+#p-expediente #m7-workspace [data-m7-encounter-documents] {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#p-expediente #m7-workspace [data-m7-encounter-documents] .m7-doc-card {position:relative;margin:0;padding:7px 8px 7px 34px;background:#fff}
+#p-expediente #m7-workspace .m7-doc-card > .material-symbols-rounded {position:absolute;left:6px;top:8px;color:#087cff;font-size:24px}
+#p-expediente #m7-workspace [data-m7-encounter-documents] .m7-doc-card strong {font-size:13px;line-height:16px}
+#p-expediente #m7-workspace [data-m7-encounter-documents] .m7-doc-card p {font-size:11px;line-height:14px}
+#p-expediente #m7-workspace .m7-doc-actions {display:block;margin:0}
+#p-expediente #m7-workspace [data-m7-result-form] {display:grid;grid-template-columns:1.15fr .9fr 1.1fr .85fr 1.1fr auto;align-items:end;gap:8px;padding:8px;background:#fff}
+#p-expediente #m7-workspace [data-m7-result-form] label {margin:0;font-size:12px;line-height:16px}
+#p-expediente #m7-workspace [data-m7-result-form] :is(input,select) {min-height:34px;height:34px;margin-top:3px;padding:4px 7px;font-size:12px}
+#p-expediente #m7-workspace [data-m7-result-form] input[type=file] {font-size:11px}
+#p-expediente #m7-workspace [data-m7-documents] > .vis21-step-state {margin:0}
+#p-expediente #m7-workspace [data-m7-doc-state][data-state=saved] {position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap;padding:0}
+#p-expediente #m7-workspace [data-m7-terminal] > .vis21-step-state {margin:0}
+#p-expediente #m7-workspace [data-m7-terminal-state]:not([data-state=failed]):not([data-state=saved]) {position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap;padding:0}
+#p-expediente #m7-workspace .plan02b-collector {padding:0;margin:0;border:0;background:none}
+#p-expediente #m7-workspace .plan02b-collector h4 {font-size:15px;line-height:20px;margin:0 0 6px;color:#06536e}
+#p-expediente #m7-workspace .flow-consequences {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#p-expediente #m7-workspace .flow-consequence {position:relative;display:flex;gap:8px;align-items:start;flex-wrap:wrap;min-width:0;border:1px solid #b8dce3;border-radius:10px;padding:8px;background:#fff;margin:0}
+#p-expediente #m7-workspace .flow-consequence > .material-symbols-rounded {font-size:26px;color:#087cff;flex:0 0 auto}
+#p-expediente #m7-workspace .flow-consequence > div:first-of-type {flex:1;min-width:0}
+#p-expediente #m7-workspace .flow-consequence strong {font-size:13px;color:#06536e}
+#p-expediente #m7-workspace .flow-consequence p {font-size:12px;line-height:16px;margin:2px 0;overflow-wrap:anywhere}
+#p-expediente #m7-workspace .flow-consequence small {display:block;font-size:11px;line-height:14px;color:#617d94}
+#p-expediente #m7-workspace .flow-consequence .plan02b-state {display:inline-block;font-size:11px;padding:2px 6px;background:#fff0da;color:#916018;border-radius:14px;line-height:14px}
+#p-expediente #m7-workspace .flow-consequence .plan02b-state[data-state=SUCCESS] {background:#d9f5e4;color:#087b48}
+#p-expediente #m7-workspace .flow-consequence .plan02b-row-actions {display:flex;gap:4px;flex-basis:100%;justify-content:flex-end}
+#p-expediente #m7-workspace .flow-confirm-row {display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
+#p-expediente #m7-workspace .flow-confirm-row p {font-size:12px;margin:0;flex:1}
+#p-expediente #m7-workspace .flow-generated {margin:8px 0}
+#p-expediente #m7-workspace [data-review-document-list] {display:flex;gap:8px;flex-wrap:wrap}
+#p-expediente #m7-workspace .flow-review-edit {display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px;border:1px solid #b8dce3;border-radius:10px;background:rgb(255 255 255 / .5)}
+#p-expediente #m7-workspace .flow-review-edit p {display:flex;align-items:center;gap:7px;flex:1;margin:0;font-size:12px}
+#p-expediente #m7-workspace .flow-review-edit .material-symbols-rounded {color:#087cff;font-size:20px}
+#p-expediente #m7-workspace .m7-terminal-actions {display:block;margin:8px 0 0}
+#p-expediente #m7-workspace .flow-exception,#p-expediente #m7-workspace .m7-amendment-history {font-size:12px;color:#617d94;margin:6px 0 0}
+#p-expediente #m7-workspace .flow-exception summary,#p-expediente #m7-workspace .m7-amendment-history summary {cursor:pointer}
+#p-expediente #m7-workspace .flow-exception form {padding:8px;background:#fff;border:1px solid #d5e6ea;border-radius:8px;margin-top:8px}
+.docux-modal .m7-doc-card {position:relative;padding:12px 12px 12px 44px;border:1px solid #c7e0e5;border-radius:8px;margin:8px 0;overflow-wrap:anywhere}
+.docux-modal .m7-doc-card > .material-symbols-rounded {position:absolute;left:12px;top:12px;color:#087cff}
+.docux-modal .m7-doc-card p {font-size:13px;margin:4px 0}
+.docux-modal .m7-doc-card-actions {display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.plan02b-order-review {border-top:1px solid #d5e6ea;margin-top:12px;padding-top:12px}
+.plan02b-order-review h5 {font-size:16px}
+@media(min-width:1200px){
+  body.mx-consultation-mode #p-expediente #m7-workspace :is([data-m7-documents],[data-m7-terminal]) .btn {min-height:28px;padding:3px 8px;font-size:12px;line-height:18px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .flow-tool-selectors .btn {min-height:38px;font-size:14px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence {padding:6px;gap:6px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence .plan02b-row-actions .btn {min-height:24px;padding:1px 7px;font-size:11px}
+}
+@media(min-width:1200px) and (max-height:800px){
+  #p-expediente #m7-workspace .flow-tool-selectors {margin-bottom:4px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .flow-tool-selectors .btn {min-height:30px}
+  #p-expediente #m7-workspace .docux-current {margin-top:4px;padding:5px}
+  #p-expediente #m7-workspace [data-m7-result-form] {padding:5px;gap:6px}
+  #p-expediente #m7-workspace [data-m7-result-form] :is(input,select) {height:30px;min-height:30px}
+  #p-expediente #m7-workspace .flow-consequence > .material-symbols-rounded {font-size:22px}
+  #p-expediente #m7-workspace .flow-consequence .plan02b-row-actions {position:absolute;right:4px;bottom:4px;flex-basis:auto}
+  #p-expediente #m7-workspace .flow-consequence:has(.plan02b-row-actions) {padding-bottom:28px}
+  #p-expediente #m7-workspace .flow-review-edit {margin-top:5px;padding:4px}
+  #p-expediente #m7-workspace .flow-review-edit p {font-size:11px}
+  #p-expediente #m7-workspace .flow-exception,#p-expediente #m7-workspace .m7-amendment-history {margin-top:3px}
+}
+@media(max-width:1199.98px){
+  #p-expediente #m7-workspace [data-m7-result-form] {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #p-expediente #m7-workspace [data-m7-encounter-documents],#p-expediente #m7-workspace .flow-consequences {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #p-expediente #m7-workspace .flow-review-edit {flex-wrap:wrap}
+  #p-expediente #m7-workspace .flow-review-edit p {flex-basis:100%}
+}
+@media(max-width:575.98px){
+  #p-expediente #m7-workspace .flow-tool-selectors,#p-expediente #m7-workspace [data-m7-result-form],#p-expediente #m7-workspace [data-m7-encounter-documents],#p-expediente #m7-workspace .flow-consequences {grid-template-columns:minmax(0,1fr)}
+  #p-expediente #m7-workspace .flow-confirm-row {flex-wrap:wrap}
+  #p-expediente #m7-workspace .flow-confirm-row p {flex-basis:100%}
+  #p-expediente #m7-workspace .flow-confirm-row .btn {white-space:normal;width:100%}
+}
+/* Keep the normal four-file preview fully inside the fixed desktop content zone. */
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-documents] {padding:6px}
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-terminal] {padding:8px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-doc-preview {text-align:left;min-height:54px;cursor:pointer;width:100%;color:#173f54;line-height:16px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-doc-preview:hover {border-color:#00b8c9}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-doc-preview:focus-visible {outline:2px solid #008d9f;outline-offset:1px}
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-documents] .btn-primary,body.mx-consultation-mode #p-expediente #m7-workspace .flow-confirm-row .btn-primary {background:#00b8c9;border-color:#00b8c9;color:#fff}
+body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-collector h4 {font-size:15px;font-weight:600;line-height:20px;margin:0 0 6px}
+/* The pending badge moves to Finalizar without joining the stepper's layout flow. */
+#p-expediente #m7-workspace [data-m7-section="finalize"] {position:relative}
+#p-expediente #m7-workspace [data-m7-section="finalize"] .plan02b-count {position:absolute;top:-3px;left:calc(50% + 14px);min-width:18px;height:18px;padding:1px 4px;border-radius:9px;background:#e5f2f6;color:#17536a;border:1px solid #91bdcd;font-size:11px;line-height:14px;font-weight:600}
+/* Reserve card actions locally; normal four-action review fits the existing allocation. */
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence {position:relative;padding-bottom:30px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence:not(:has(.plan02b-row-actions)) {padding-bottom:6px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence .plan02b-row-actions {position:absolute;right:4px;bottom:4px;flex-basis:auto}
+@media(min-width:1200px){
+  #p-expediente #m7-workspace .flow-confirm-slot {position:absolute;right:calc(100% + 12px);top:0;display:flex;white-space:nowrap}
+  body.mx-consultation-mode #p-expediente #m7-workspace .flow-confirm-slot .btn {min-height:40px;padding:7px 12px;font-size:12px;line-height:24px;white-space:nowrap}
+  #p-expediente #m7-workspace .flow-confirm-row:has(p:empty) {display:none}
+}
+/* Avoid anonymous text line boxes inflating the compact clinical cards. */
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence > div:first-of-type {display:grid;gap:2px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence strong {display:block;font-size:13px;line-height:16px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence p {font-size:12px;line-height:16px;margin:0}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence .plan02b-state {justify-self:start;font-size:11px;line-height:14px;margin:0}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-review-edit p {line-height:16px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-review-edit .material-symbols-rounded {line-height:20px}
+@media(min-width:1200px) and (max-height:800px){
+  body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-terminal] {padding:6px}
+  body.mx-consultation-mode #p-expediente #m7-workspace .flow-consequence {padding-bottom:28px}
+}
+@media(min-width:1200px){
+  body.mx-consultation-mode #p-expediente #m7-workspace .flow-confirm-slot .btn {background:#fff;color:#008fa4;border:1px solid #00b8c9}
+}
+@media(min-width:1200px){
+  #p-expediente #m7-workspace .vis29-terminal-slot {position:relative}
+}

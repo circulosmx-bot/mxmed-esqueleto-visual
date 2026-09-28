@@ -19,8 +19,8 @@
     exam: ['Exploración','Hallazgos de la exploración física.'],
     assessment: ['Valoración','Impresión clínica, diagnósticos y análisis del caso.'],
     plan: ['Plan','Indicaciones, tratamiento y plan de atención.'],
-    documents: ['Documentos / Acciones','Documentos y acciones de esta consulta.'],
-    finalize: ['Finalizar','Revisión y cierre de la consulta.']
+    documents: ['Documentos y resultados','Archivos clínicos y resultados de esta consulta.'],
+    finalize: ['Revisar y finalizar','Resumen de indicaciones y próximos pasos.']
   };
   const visualCopy = {
     reason: ['Motivo de Atención', 'síntomas o evolución'],
@@ -28,8 +28,8 @@
     exam: ['Exploración', 'hallazgos de la exploración física'],
     assessment: ['Valoración', 'Impresión clínica, diagnósticos y análisis del caso.'],
     plan: ['Plan', 'indicaciones y próximos pasos'],
-    documents: ['Documentos', 'documentos y acciones de esta consulta'],
-    finalize: ['Finalizar', 'revisión y cierre de la consulta']
+    documents: ['Documentos y resultados', 'Archivos clínicos y resultados de esta consulta.'],
+    finalize: ['Revisar y finalizar', 'Resumen de indicaciones y próximos pasos.']
   };
   const reasonExample = 'Ejemplo:\nDolor abdominal de 3 días de evolución, inicialmente leve y actualmente de mayor intensidad. Se localiza en epigastrio, aumenta después de comer y se acompaña de náusea y distensión. Niega fiebre o vómito. Refiere haber tomado omeprazol con mejoría parcial.';
   let focusWasActive = false;

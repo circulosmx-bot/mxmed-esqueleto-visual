@@ -26,6 +26,8 @@
       IDEMPOTENCY_KEY_REUSED:'Este intento ya se usó para otra corrección. Revisa el contenido.'
     })[code] || 'No se completó la acción. Comprueba el estado de la consulta.';
     function notice(text, kind = '') { state.textContent = text; state.dataset.state = kind; }
+    function guardFinalize(){finalize.disabled=busy||!!window.mxmedPlanNextSteps?.hasPending()||!!window.mxmedPlanNextSteps?.isBusy();}
+    window.addEventListener('mxmed:plan-preparations-changed',guardFinalize);
     function sameContext() { return !!context && selectedPatient() === context.patientId; }
     async function request(path, body, idempotencyKey = '') {
       const response = await fetch(`${encounterUrl(context.key)}/${path}`, {
@@ -46,7 +48,7 @@
       context.status = status;
       context.detail = detail;
       show($('[data-m7-terminal-actions]'), status === 'open');
-      show(finalize, status === 'open');
+      show(finalize, status === 'open');guardFinalize();
       show(voidForm, status === 'open');
       show(amendmentForm, status === 'closed');
       show($('[data-m7-terminal-void]'), status === 'voided');
@@ -105,6 +107,7 @@
         // Recheck the authoritative state immediately before every terminal command.
         const fresh = await reload();
         if (!fresh || (kind === 'amendments' ? fresh.status !== 'closed' : fresh.status !== 'open')) throw new Error('La consulta cambió de estado. Se actualizó la vista sin enviar la acción.');
+        if(kind==='finalize'&&(window.mxmedPlanNextSteps?.hasPending()||window.mxmedPlanNextSteps?.isBusy()))throw new Error('Confirma las indicaciones pendientes o retíralas en Plan antes de finalizar.');
         await request(kind,body,idempotencyKey);
         if (kind === 'amendments') { amendmentForm.reset(); attempt = ''; }
         const detail = await reload();
@@ -116,13 +119,14 @@
           try { const detail = await reload(); if (detail) onTransition(detail); } catch (_) { /* Keep the explicit failure visible. */ }
         }
       } finally {
-        busy = false; finalize.disabled = false;
+        busy = false;guardFinalize();
         [...voidForm.elements,...amendmentForm.elements].forEach(control => control.disabled = false);
       }
     }
     finalize.addEventListener('click', async () => {
       if (context?.status !== 'open' || busy) return;
-      if (window.mxmedPlanNextSteps && !(await window.mxmedPlanNextSteps.mayLeave())) return;
+      if(window.mxmedPlanNextSteps?.hasPending()||window.mxmedPlanNextSteps?.isBusy()){notice('Confirma las indicaciones pendientes o retíralas en Plan antes de finalizar.','failed');return;}
+      if(window.mxmedPlanNextSteps&&!window.mxmedPlanNextSteps.mayLeaveView())return;
       if (hasUnsaved()) { notice('Hay cambios locales sin guardar. Guárdalos o descártalos antes de finalizar.', 'failed'); return; }
       if (!window.confirm('Finalizar cerrará esta consulta y dejará la edición clínica normal en sólo lectura. No elimina la consulta ni depende del pago o la factura. ¿Finalizar ahora?')) return;
       execute('finalize', {});

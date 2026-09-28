@@ -114,9 +114,11 @@ with sync_playwright() as pw:
     page.locator('[data-modal-add]').click()
     text='Plan R6 con una orden preparada.'; editor.fill(text); count=len(writes)
     page.locator('[data-vis04-next]').click(); selected(page,'documents')
-    expect(page.locator('[data-plan02b-collector] [data-ns="confirm"]')).to_be_visible()
+    expect(page.locator('[data-plan02b-collector]')).to_be_hidden()
+    page.locator('[data-m7-section="finalize"]').click(); selected(page,'finalize')
+    expect(page.locator('[data-ns="confirm"]')).to_be_visible()
     expect(page.locator('[data-plan02b-collector]')).to_contain_text('Orden sintética R6 preparada, sin confirmar')
-    check('narrative transition preserves prepared action and Step 6 Confirmar acciones',len(writes)==count+1 and not unexpected and sql('SELECT COUNT(*) FROM clinical_documents')=='0')
+    check('narrative transition preserves prepared action through Step 6 into Step 7 confirmation',len(writes)==count+1 and not unexpected and sql('SELECT COUNT(*) FROM clinical_documents')=='0')
     # Clear only the unconfirmed browser preparation before entering other steps.
     page.locator('[data-plan02b-collector] [data-remove]').click()
     page.locator('[data-m7-section="finalize"]').click(); selected(page,'finalize')

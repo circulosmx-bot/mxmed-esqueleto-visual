@@ -9,17 +9,18 @@
     const patientList = $('[data-m7-patient-documents]');
     const state = root.querySelector('[data-m7-doc-state]');
     const uploadForm = $('[data-m7-doc-upload-form]');
-    const orderForm = $('[data-m7-order-form]');
     const resultForm = $('[data-m7-result-form]');
     const replaceForm = $('[data-m7-replace-form]');
     const uploadDialog = $('[data-docux-upload]');
     const captureDialog = $('[data-docux-capture]');
+    const readerDialog = $('[data-doc-reader]');
+    let tool = 'result',readerMode='patient',readerTrigger=null;
     let uploadTrigger = null;
     let session = null;
     const pollInterval = 2500;
     // Like Plan's dialogs, live at body level so workspace form styles do not
     // override the shared clinical modal shell. No clinical context moves with them.
-    dialogs.push(uploadDialog, captureDialog); document.body.append(...dialogs);
+    dialogs.push(uploadDialog, captureDialog, readerDialog); document.body.append(...dialogs);
     let context = null;
     let rows = [];
     let selectedReplacement = null;
@@ -72,7 +73,7 @@
     function eventFor(kind) { attemptFor(kind); return attempts.get(kind).eventTime; }
     function resetAttempt(kind) { attempts.delete(kind); }
     function bindAttempt(form, kind) { form.addEventListener('input', () => resetAttempt(kind)); form.addEventListener('change', () => resetAttempt(kind)); }
-    bindAttempt(uploadForm, 'upload'); bindAttempt(orderForm, 'order'); bindAttempt(resultForm, 'result'); bindAttempt(replaceForm, 'replace');
+    bindAttempt(uploadForm, 'upload'); bindAttempt(resultForm, 'result'); bindAttempt(replaceForm, 'replace');
     for (const input of [$('[data-m7-doc-file]'), $('[data-m7-result-file]'), $('[data-m7-replace-file]')]) {
       input.addEventListener('change', () => { if (input.files?.length) status('Archivo seleccionado; aún no está guardado.', 'selected'); });
     }
@@ -86,9 +87,10 @@
     function multipart(payload, file) { const form = new FormData(); Object.entries(payload).forEach(([key, value]) => form.append(key, key === 'payload' || key === 'replacement' ? JSON.stringify(value) : value)); form.append('file', file); return form; }
     function payloadOf(row) { try { return typeof row.payload_json === 'string' ? JSON.parse(row.payload_json || '{}') : row.payload_json || {}; } catch (_) { return {}; } }
     function relatedOrder(row) { const payload = payloadOf(row); return String(payload.related_order_document_uuid || payload.related_order_document_id || payload.related_document_uuid || payload.related_document_id || payload.related_order_id || payload.context?.related_order_document_uuid || ''); }
-    function documentLabel(row) { return ({ pdf:'PDF clínico', image:'Imagen clínica', order:'Orden de estudio', lab_result:'Resultado de laboratorio', imaging_result:'Resultado de imagen', external_report:'Informe externo', prescription:'Receta', receta:'Receta' })[row.document_type] || String(row.document_type || 'Documento clínico').replaceAll('_', ' '); }
-    function card(row, group) {
-      const node = document.createElement('article'); node.className = 'm7-doc-card';
+    function documentLabel(row) { if(row.document_type==='pdf'&&row.has_private_binary!=1)return 'Documento clínico';return ({ pdf:'PDF clínico', image:'Imagen clínica', order:'Orden de estudio', lab_result:'Resultado de laboratorio', imaging_result:'Resultado de imagen', external_report:'Informe externo', prescription:'Receta', receta:'Receta' })[row.document_type] || String(row.document_type || 'Documento clínico').replaceAll('_', ' '); }
+    function card(row) {
+      const node = document.createElement('article'); node.className = 'm7-doc-card';node.dataset.document=row.document_uuid;
+      const icon=document.createElement('span');icon.className='material-symbols-rounded';icon.setAttribute('aria-hidden','true');icon.textContent='description';node.append(icon);
       const title = document.createElement('strong'); title.textContent = row.title || documentLabel(row);
       const statusLabel = ({ signed:'Firmado', generated:'Generado', draft:'Borrador', voided:'Anulado' })[String(row.status || '').toLowerCase()] || 'Registrado';
       const meta = document.createElement('p'); meta.textContent = `${documentLabel(row)} · ${String(row.event_datetime || '').replace('T',' ') || 'Sin fecha'} · ${statusLabel}`;
@@ -108,7 +110,7 @@
       if (resultTypes.has(String(row.document_type))) { const order = rows.find(item => String(item.document_uuid) === relatedOrder(row) || String(item.id) === relatedOrder(row)); if (order) { const relation = document.createElement('p'); relation.textContent = `Resultado de: ${order.title || 'orden de estudio'}`; node.append(relation); } }
       const actions = document.createElement('div'); actions.className = 'm7-doc-card-actions';
       if (row.has_private_binary == 1) { const read = document.createElement('button'); read.type = 'button'; read.className = 'btn btn-outline-primary btn-sm'; read.textContent = 'Abrir archivo'; read.addEventListener('click', () => privateRead(row)); actions.append(read); }
-      if (available() && row.has_successor != 1 && payloadOf(row).auto_generated !== true) { const replace = document.createElement('button'); replace.type = 'button'; replace.className = 'btn btn-outline-secondary btn-sm'; replace.textContent = 'Reemplazar'; replace.addEventListener('click', () => { selectedReplacement = row; $('[data-m7-replace-target]').textContent = row.title || documentLabel(row); show(replaceForm, true); replaceForm.scrollIntoView({ block:'nearest' }); }); actions.append(replace); }
+      if (available() && row.has_successor != 1 && payloadOf(row).auto_generated !== true) { const replace = document.createElement('button'); replace.type = 'button'; replace.className = 'btn btn-outline-secondary btn-sm'; replace.textContent = 'Reemplazar'; replace.addEventListener('click', () => { closeReader();selectedReplacement = row; $('[data-m7-replace-target]').textContent = row.title || documentLabel(row); show(replaceForm, true); replaceForm.scrollIntoView({ block:'nearest' }); }); actions.append(replace); }
       if (sameContext() && ['prescription','receta'].includes(String(row.document_type || '').toLowerCase()) && ['generated','signed'].includes(String(row.status || '').toLowerCase()) && row.has_successor != 1) {
         const addMedication = document.createElement('button'); addMedication.type = 'button'; addMedication.className = 'btn btn-outline-primary btn-sm'; addMedication.textContent = 'Agregar a medicación';
         addMedication.addEventListener('click', () => root.dispatchEvent(new CustomEvent('lon05b:prescription-selected', {bubbles:true,detail:{documentId:Number(row.id),patientId:context.patientId,title:row.title || 'Receta',trigger:addMedication}})));
@@ -116,24 +118,38 @@
       }
       node.append(actions); return node;
     }
+    function previewCard(row){
+      const node=document.createElement('button');node.type='button';node.className='m7-doc-card flow-doc-preview';
+      const icon=document.createElement('span');icon.className='material-symbols-rounded';icon.setAttribute('aria-hidden','true');icon.textContent='description';
+      const title=document.createElement('strong');title.textContent=row.title||documentLabel(row);
+      const meta=document.createElement('p');const stateLabel=({signed:'Firmado',generated:'Generado',draft:'Borrador',voided:'Anulado'})[String(row.status||'').toLowerCase()]||'Registrado';
+      meta.textContent=documentLabel(row)+' · '+stateLabel+(row.has_successor==1?' · Reemplazado':'');
+      node.title=String(row.event_datetime||'').replace('T',' ');node.setAttribute('aria-label',`${title.textContent}. ${meta.textContent}. Ver detalles`);
+      node.append(icon,title,meta);node.onclick=()=>{readDocuments('encounter',node);[...patientList.children].find(card=>card.dataset.document===row.document_uuid)?.scrollIntoView({block:'nearest'});};return node;
+    }
     function paint() {
       encounterList.replaceChildren(); patientList.replaceChildren();
       const encounterRows = rows.filter(row => String(row.encounter_ref_id || row.encounter_id || '') === String(context?.encounterId || ''));
-      const patientRows = rows.filter(row => !row.encounter_ref_id && !row.encounter_id);
-      for (const [target, items, empty] of [[encounterList, encounterRows, 'Aún no hay documentos registrados en esta consulta.'], [patientList, patientRows, 'Aún no hay documentos del paciente sin consulta.']]) {
-        if (!items.length) { const p = document.createElement('p'); p.textContent = empty; target.append(p); }
-        else items.forEach(row => target.append(card(row)));
-      }
-      $('[data-docux-general]').hidden = patientRows.length === 0;
-      const orders = encounterRows.filter(row => orderTypes.has(String(row.document_type)));
+      const preview=encounterRows.filter(row=>row.has_successor!=1).slice(0,4);
+      if (!preview.length) {const p=document.createElement('p');p.textContent='Aún no hay documentos registrados en esta consulta.';encounterList.append(p);}
+      else preview.forEach(row=>encounterList.append(previewCard(row)));
+      $('[data-doc-count]').textContent=encounterRows.length?`(${encounterRows.length})`:'';
+      $('[data-doc-all]').hidden=encounterRows.length<=4;
+      const items=readerMode==='encounter'?encounterRows:rows;
+      if(!items.length)patientList.textContent='Aún no hay documentos registrados.';
+      else items.forEach(row=>patientList.append(card(row)));
+      $('[data-doc-reader] h4').textContent=readerMode==='encounter'?'Documentos de esta consulta':'Documentos del paciente';
+      const orders = encounterRows.filter(row => orderTypes.has(String(row.document_type))&&row.has_successor!=1&&row.status!=='voided');
       const orderSelect = $('[data-m7-result-order]'); const chosenOrder = orderSelect.value; orderSelect.replaceChildren(new Option('Selecciona una orden', ''));
       orders.forEach(row => orderSelect.add(new Option(row.title || 'Orden de estudio', row.document_uuid)));
       if (orders.some(row => row.document_uuid === chosenOrder)) orderSelect.value = chosenOrder;
       const open = context?.status === 'open';
       if (context?.status === 'voided') { selectedReplacement = null; show(replaceForm, false); }
-      orderForm.classList.toggle('d-none', !open);
-      resultForm.classList.toggle('d-none', context?.status === 'voided' || !orders.length);
-      show($('[data-docux-actions]'), open);
+      resultForm.classList.toggle('d-none', tool!=='result'||context?.status==='voided'||!orders.length);
+      const guide=$('[data-doc-tool-guide]');
+      guide.hidden=tool==='result'&&orders.length>0&&context?.status!=='voided';
+      guide.textContent=tool==='upload'?'Adjunta un PDF o imagen. Se guardará sólo al confirmar en la ventana de carga.':tool==='capture'?'Captura con el enlace seguro de esta consulta. El documento aparecerá después de guardarlo en el celular.':orders.length?'Los resultados conservan la consulta de origen de su orden.':'Registra primero una orden en Revisar y finalizar para poder añadir su resultado.';
+      panel.querySelectorAll('[data-doc-tool]').forEach(button=>{button.setAttribute('aria-pressed',String(button.dataset.docTool===tool));button.disabled=busy||context?.status==='voided'||(button.dataset.docTool!=='result'&&!open);});
     }
     async function refresh() {
       if (!sameContext()) return;
@@ -171,6 +187,17 @@
         else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
       });
     }
+    function closeReader(){readerDialog.close();readerDialog.classList.remove('plan02b-modal');}
+    modalShell(readerDialog,()=>{closeReader();returnFocus(readerTrigger);});
+    $('[data-doc-reader-close]').onclick=()=>{closeReader();returnFocus(readerTrigger);};
+    function readDocuments(mode,trigger){if(busy||session)return;readerMode=mode;readerTrigger=trigger;paint();readerDialog.classList.add('plan02b-modal');readerDialog.showModal();readerDialog.querySelector('[data-modal-close]').focus();}
+    $('[data-doc-all]').onclick=e=>readDocuments('encounter',e.currentTarget);
+    $('[data-doc-patient]').onclick=e=>readDocuments('patient',e.currentTarget);
+    panel.querySelectorAll('[data-doc-tool]').forEach(button=>button.addEventListener('click',event=>{
+      if(busy||captureBusy||session||!available()){event.stopImmediatePropagation();return;}
+      tool=button.dataset.docTool;paint();
+    }));
+    window.addEventListener('mxmed:review-document',event=>{if(event.detail?.encounterKey===context?.key)privateRead(event.detail.document);});
     function uploadMessage(text, error = false) { const node = $('[data-docux-upload-state]'); node.textContent = text; node.dataset.error = String(error); }
     function fileState() {
       $('[data-docux-file-state]').textContent = $('[data-m7-doc-file]').files?.[0]?.name || 'Arrastra un PDF o imagen aquí';
@@ -221,15 +248,11 @@
           closeUpload(true); await refresh(); status('Documento guardado', 'saved'); returnFocus(uploadTrigger);
         }
       } catch (_) { if (uploadDialog.open && context?.key === owner.key && sameContext()) uploadMessage('No se pudo guardar el documento.', true); }
-      finally { busy = false; controls.forEach(x => x.disabled = false); }
+      finally { busy = false; controls.forEach(x => x.disabled = false);paint(); }
     });
-    orderForm.addEventListener('submit', event => { event.preventDefault(); execute('order', orderForm, async () => {
-      if (context.status !== 'open') throw new Error('No se pueden crear órdenes en esta consulta.');
-      await send(`encounters/${encodeURIComponent(context.key)}/documents`, { document_type:'order', title:$('[data-m7-order-title]').value.trim(), summary:$('[data-m7-order-summary]').value.trim(), event_datetime:eventFor('order'), payload:{ source:'m7_ws04' } }, attemptFor('order'));
-    }); });
     resultForm.addEventListener('submit', event => { event.preventDefault(); execute('result', resultForm, async () => {
       const file = acceptedFile($('[data-m7-result-file]')); const order = $('[data-m7-result-order]').value;
-      if (!rows.some(row => row.document_uuid === order && String(row.encounter_ref_id || row.encounter_id || '') === String(context.encounterId) && orderTypes.has(String(row.document_type)))) throw new Error('Selecciona una orden de esta consulta.');
+      if (!rows.some(row => row.document_uuid === order && String(row.encounter_ref_id || row.encounter_id || '') === String(context.encounterId) && orderTypes.has(String(row.document_type))&&row.has_successor!=1&&row.status!=='voided')) throw new Error('Selecciona una orden de esta consulta.');
       const provenance = $('[data-m7-result-provenance]').value.trim();
       const payload = { document_type:$('[data-m7-result-type]').value, title:$('[data-m7-result-title]').value.trim(), event_datetime:eventFor('result'), provenance, payload:{ related_order_document_uuid:order, provenance, source:'m7_ws04' } };
       await send(`encounters/${encodeURIComponent(context.key)}/documents`, multipart(payload, file), attemptFor('result'), true);
@@ -319,7 +342,7 @@
       catch (_) { if (currentSession(s)) captureMessage('No se pudo copiar. Usa Abrir enlace de captura.'); }
     });
     $('[data-m7-capture-start]').addEventListener('click', () => {
-      if (!sameContext() || context.status !== 'open' || captureBusy || session) return;
+      if (busy || !sameContext() || context.status !== 'open' || captureBusy || session) return;
       const s = { context:{ ...context }, token:'', url:'', pending:true, closing:false, timer:null, controller:null };
       session = s; captureBusy = true; removeQR(); captureMessage('Preparando captura…');
       $('[data-m7-capture-cancel]').hidden = false; $('[data-m7-capture-cancel]').disabled = false; $('[data-docux-capture-close]').hidden = true;
@@ -352,16 +375,16 @@
     }).observe(root.closest('#p-expediente') || root, { attributes:true, subtree:true, attributeFilter:['data-patient-id','data-active-patient-id','data-encounter-key','data-encounter-state','class'] });
     return {
       select(selected) { show(panel, selected); if (!selected && session) endCapture(true, true); if (selected && context) refresh(); },
-      isDirty() { return !!($('[data-m7-doc-title]').value.trim() || $('[data-m7-doc-file]').files?.length || $('[data-m7-order-title]').value.trim() || $('[data-m7-order-summary]').value.trim() || $('[data-m7-result-order]').value || $('[data-m7-result-title]').value.trim() || $('[data-m7-result-provenance]').value.trim() || $('[data-m7-result-file]').files?.length || $('[data-m7-replace-reason]').value.trim() || $('[data-m7-replace-file]').files?.length); },
+      isDirty() { return !!($('[data-m7-doc-title]').value.trim() || $('[data-m7-doc-file]').files?.length || $('[data-m7-result-order]').value || $('[data-m7-result-title]').value.trim() || $('[data-m7-result-provenance]').value.trim() || $('[data-m7-result-file]').files?.length || $('[data-m7-replace-reason]').value.trim() || $('[data-m7-replace-file]').files?.length); },
       isBusy() { return busy || captureBusy; },
       async leaveView() {
         if (busy) return false;
         if (session) await endCapture();
         if (session || captureBusy) return false;
-        closeUpload(true); return true;
+        closeUpload(true);closeReader();return true;
       },
-      load(encounter) { const key = String(encounter.encounter_key || ''); const patientId = String(encounter.patient_id || ''); if (!key || !patientId) return; const changed = context?.key !== key || context?.patientId !== patientId; context = { key, patientId, doctorId:String(encounter.doctor_id || ''), encounterId:String(encounter.encounter_id || ''), status:String(encounter.status || '').toLowerCase(), closedAt:String(encounter.closed_at || '') }; if (changed) { epoch++; if (session) endCapture(true, true); closeUpload(true); rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, orderForm, resultForm, replaceForm].forEach(form => form.reset()); show(replaceForm, false);  } paint(); },
-      reset() { epoch++; if (session) endCapture(true, true); closeUpload(true); context = null; rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, orderForm, resultForm, replaceForm].forEach(form => form.reset()); show(panel, false); show(replaceForm, false);  }
+      load(encounter) { const key = String(encounter.encounter_key || ''); const patientId = String(encounter.patient_id || ''); if (!key || !patientId) return; const changed = context?.key !== key || context?.patientId !== patientId; context = { key, patientId, doctorId:String(encounter.doctor_id || ''), encounterId:String(encounter.encounter_id || ''), status:String(encounter.status || '').toLowerCase(), closedAt:String(encounter.closed_at || '') }; if (changed) { epoch++;closeReader();tool='result'; if (session) endCapture(true, true); closeUpload(true); rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, resultForm, replaceForm].forEach(form => form.reset()); show(replaceForm, false);  } paint(); },
+      reset() { epoch++;closeReader(); if (session) endCapture(true, true); closeUpload(true); context = null; rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, resultForm, replaceForm].forEach(form => form.reset()); show(panel, false); show(replaceForm, false);  }
     };
   };
 })();
