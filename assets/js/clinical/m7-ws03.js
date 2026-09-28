@@ -74,7 +74,6 @@
     const examState = q('[data-m7-exam-state]');
     const examMeta = q('[data-m7-exam-meta]');
     const examSystems = q('[data-m7-exam-systems]');
-    const examSave = q('[data-m7-exam-save]');
     const examDraftCue = q('[data-vis30-exam-draft]');
     const examDraftRecover = q('[data-vis30-exam-recover]');
     const examDraftDiscard = q('[data-vis30-exam-discard]');
@@ -497,12 +496,25 @@
       hide(cancel,!!selectedObservation||isDirty());
       hide(form,!!key);
     }
+    function setExamFindingInvalid(row, invalid){
+      const finding=row.querySelector('input'), error=row.querySelector('.m7-exam-finding-error');
+      finding.classList.toggle('is-invalid',invalid);
+      error.hidden=!invalid;
+      if(invalid){
+        finding.setAttribute('aria-invalid','true');
+        finding.setAttribute('aria-describedby',error.id);
+      }else{
+        finding.removeAttribute('aria-invalid');
+        finding.removeAttribute('aria-describedby');
+      }
+    }
     function syncExamRow(row){
       const state=row.querySelector('select').value;
       const finding=row.querySelector('input');
       finding.disabled=mode!=='open'||state!=='ABNORMAL'||busy||examLocked||!!availableExamDraft;
       finding.required=state==='ABNORMAL';
       if(state!=='ABNORMAL') finding.value='';
+      if(state!=='ABNORMAL'||finding.value.trim())setExamFindingInvalid(row,false);
     }
     function paintExam(){
       hide(examDraftCue,!!availableExamDraft);
@@ -514,8 +526,6 @@
         row.querySelector('select').disabled=mode!=='open'||busy||examLocked||!!availableExamDraft;
         syncExamRow(row);
       });
-      examSave.disabled=mode!=='open'||busy||examLocked||!!availableExamDraft||!isDirty();
-      hide(examSave,mode==='open');
     }
     function fillExamFromSaved(){
       const saved=loadedExam.payload?.systems || {};
@@ -523,6 +533,7 @@
         const entry=saved[row.dataset.m7ExamSystem];
         row.querySelector('select').value=entry?.state || 'NOT_REVIEWED';
         row.querySelector('input').value=entry?.state==='ABNORMAL'?String(entry.finding || ''):'';
+        setExamFindingInvalid(row,false);
       });
       baselineExam=examSnapshot();
     }
@@ -741,12 +752,23 @@
       if(!isDirty()) return true;
       const draft=examSnapshot(); const oldKey=key, oldPatient=patient;
       const parsed=JSON.parse(draft), payload={systems:{}};
+      const invalidRows=[];
+      examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
+        const item=parsed[row.dataset.m7ExamSystem];
+        const invalid=item.state==='ABNORMAL'&&!item.finding.trim();
+        setExamFindingInvalid(row,invalid);
+        if(invalid)invalidRows.push(row);
+      });
+      if(invalidRows.length){
+        examNotice='Describe cada hallazgo anormal antes de guardar.';
+        paintExam();
+        const finding=invalidRows[0].querySelector('input');
+        finding.focus({preventScroll:true});
+        finding.closest('.m7-exam-finding').scrollIntoView({block:'nearest',inline:'nearest'});
+        return false;
+      }
       for(const [name,item] of Object.entries(parsed)){
         if(item.state==='NOT_REVIEWED') continue;
-        if(item.state==='ABNORMAL'&&!item.finding.trim()){
-          examSystems.querySelector(`[data-m7-exam-system="${name}"] input`).focus();
-          examState.textContent='Describe cada hallazgo anormal antes de guardar.'; return false;
-        }
         payload.systems[name]=item.state==='ABNORMAL'?{state:'ABNORMAL',finding:item.finding.trim()}:{state:'NORMAL'};
       }
       const data={payload_schema_version:1,payload,narrative_text:''};
@@ -780,9 +802,12 @@
       const state=document.createElement('select');state.setAttribute('aria-label',`${label}: estado`);
       [['NOT_REVIEWED','Sin revisión'],['NORMAL','Normal'],['ABNORMAL','Anormal']].forEach(([id,text])=>{const option=document.createElement('option');option.value=id;option.textContent=text;state.append(option);});
       const finding=document.createElement('input');finding.type='text';finding.placeholder='Describe el hallazgo';finding.setAttribute('aria-label',`${label}: hallazgo anormal`);
+      const findingArea=document.createElement('div');findingArea.className='m7-exam-finding';
+      const error=document.createElement('span');error.className='m7-exam-finding-error';error.id=`m7-exam-finding-error-${++metadataSequence}`;error.hidden=true;error.textContent='Describe el hallazgo para continuar.';
+      findingArea.append(finding,error);
       state.addEventListener('change',()=>{examNotice='';syncExamRow(row);setDraft('physical_exam',examSnapshot());paintExam();});
       finding.addEventListener('input',()=>{examNotice='';setDraft('physical_exam',examSnapshot());paintExam();});
-      row.append(title,state,finding);examSystems.append(row);
+      row.append(title,state,findingArea);examSystems.append(row);
     });
     // Keep the pre-existing seven-row allocation when the systems stack on narrow
     // screens. The added system scrolls into view without moving the shell footer.
@@ -793,10 +818,16 @@
       examLayoutFrame=requestAnimationFrame(()=>{
         examLayoutFrame=0;
         if(!matchMedia('(max-width:1199.98px)').matches)return;
-        const first=existingExamRows[0].getBoundingClientRect();
-        const last=existingExamRows.at(-1).getBoundingClientRect();
-        if(!first.height)return;
-        const height=`${last.bottom-first.top}px`;
+        if(!existingExamRows[0].getBoundingClientRect().height)return;
+        // Validation helpers can grow rows within the list, never its shell allocation.
+        const height=`${existingExamRows.reduce((total,row)=>{
+          const style=getComputedStyle(row);
+          const heights=[row.querySelector('strong'),row.querySelector('select'),row.querySelector('input')].map(control=>control.getBoundingClientRect().height);
+          const controls=style.gridTemplateColumns.split(' ').length===1
+            ?heights.reduce((sum,item)=>sum+item,0)+2*parseFloat(style.rowGap)
+            :Math.max(...heights);
+          return total+controls+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth);
+        },0)}px`;
         if(examSystems.style.getPropertyValue('--m7-exam-existing-height')!==height){
           examSystems.style.setProperty('--m7-exam-existing-height',height);
         }
@@ -858,7 +889,6 @@
       if(!availableExamDraft||mode!=='open'||busy)return;
       availableExamDraft='';clearDraft('physical_exam');fillExamFromSaved();examNotice='';paintExam();
     });
-    examSave.addEventListener('click',saveExam);
     q('[data-m7-exam-reload]').addEventListener('click',async()=>{
       try{const detail=await reloadCurrent();clearDraft('physical_exam');load(detail,key,detail.status==='open'?'open':'terminal',false);hide(examConflict,true);q('[data-m7-exam-use-draft]').disabled=mode!=='open';}catch(_){examNotice='No se pudo cargar la versión guardada.';paintExam();}
     });
