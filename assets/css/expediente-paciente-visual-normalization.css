@@ -3478,6 +3478,9 @@ body.mx-consultation-mode #p-expediente #m7-workspace .m7-step-intro p {
   font-weight:400;
   line-height:1.35;
 }
+/* One shared surface below the stepper, through navigation and its helper.
+   No layout allocation; controls, cards and dialogs retain their own surfaces. */
+body.mx-consultation-mode #p-expediente #m7-workspace .consultation-workspace-surface { background:#dbfcff; }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis04-layout { gap:0; }
 body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-editor] {
   margin:0;
