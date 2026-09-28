@@ -4,8 +4,10 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[3]
 OUT=Path(os.environ.get('STEP2_VITALS_ARTIFACTS','/tmp/mxmed-step2-vitals-r4'));OUT.mkdir(parents=True,exist_ok=True)
-START='96b3f791f156229e763b4c45782c2fbbb4541790'
-BASE=os.environ.get('STEP2_VITALS_REVIEW_BASE','http://127.0.0.1:18143/index.html?review_patient=plan02ux&review_encounter=open&qa_tools=hide')
+START=os.environ.get('STEP2_VITALS_START_SOURCE_HEAD')
+if not os.environ.get('STEP2_QA_FUNCTIONAL_ONLY'):
+ assert START and re.fullmatch(r'[0-9a-f]{40}',START),'Supply the current accepted preflight HEAD in STEP2_VITALS_START_SOURCE_HEAD'
+BASE=os.environ.get('STEP2_VITALS_REVIEW_BASE','http://127.0.0.1:18148/index.html?review_patient=plan02ux&review_encounter=open&qa_tools=hide')
 URL=BASE+'&review_step2_visual=r4&review_current_values='
 STEPS=['reason','measurements','exam','assessment','plan','documents','finalize']
 DESKTOP=[(1440,900),(1440,880),(1366,768)]
@@ -13,7 +15,7 @@ canonical=json.loads(subprocess.check_output(['php','-r','require $argv[1]; echo
 fixture=(ROOT/'modules/clinical/qa/step2_vitals_r4_review.js').read_text().split('const priorRows=')[1].split('.map(')[0]
 examples=dict(re.findall(r"\['([a-z_]+)','([^']+)'",fixture))
 assert examples=={code:item['unit'] for code,item in canonical.items()},(examples,canonical)
-report={'canonicalCatalog':canonical,'syntheticTypeCount':len(examples)};errors=[]
+report={'START_SOURCE_HEAD':START,'canonicalCatalog':canonical,'syntheticTypeCount':len(examples)};errors=[]
 METRICS='''()=>{
  const rect=n=>{if(typeof n==='string')n=document.querySelector(n);const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height]};
  const capture=document.querySelector('.vis04-capture'),chips=[...document.querySelectorAll('.vis-step2-chip')];
@@ -50,7 +52,7 @@ with sync_playwright() as pw:
   page.goto(URL+str(count)+('&review_origin_visual=linked-fallback' if origin else ''),wait_until='commit')
   expect(page.locator('[data-m7-step-title]')).to_have_text('Signos vitales y otros valores clínicos',timeout=55000)
   expect(page.locator('.vis-step2-chip')).to_have_count(count);expect(page.locator('[data-vis29-prior] .vis29-reading')).to_have_count(len(canonical))
-  page.evaluate('async()=>{await document.fonts.ready;scrollTo(0,0);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}');page.mouse.move(0,0);return page
+  page.evaluate('async()=>{await document.fonts.ready;scrollTo({top:0,left:0,behavior:"instant"});await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}');page.mouse.move(0,0);return page
  baselines={}
  for w,h in ([] if (os.environ.get('STEP2_QA_SHARED_ONLY') or os.environ.get('STEP2_QA_FUNCTIONAL_ONLY')) else DESKTOP+[(820,1180),(390,844)]):
   page=ready(w,h,baseline=True);baselines[(w,h)]=page.evaluate(METRICS);page.close()
@@ -106,7 +108,7 @@ with sync_playwright() as pw:
   old=ready(baseline=True);page=ready()
   for step in STEPS:
    for target in [old,page]:target.locator(f'[data-m7-section="{step}"]').click();expect(target.locator(f'[data-m7-section="{step}"]')).to_have_attribute('aria-current','true')
-   for target in [old,page]:target.evaluate('async()=>{scrollTo(0,0);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}')
+   for target in [old,page]:target.evaluate('async()=>{scrollTo({top:0,left:0,behavior:"instant"});await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}')
    a=old.evaluate(METRICS);b=page.evaluate(METRICS)
    for field in ['header','consultation','stepper','title','footer']:assert a[field]==b[field],(step,field,a[field],b[field])
    for field in ['appointment','origin','prev','next']:assert a[field]==b[field],(step,field,a[field],b[field])

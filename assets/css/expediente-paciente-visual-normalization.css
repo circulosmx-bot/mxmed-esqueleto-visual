@@ -3884,9 +3884,17 @@ body.mx-consultation-mode #p-expediente #m7-workspace .vis23-appointment-meta {t
 body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis-r4-subtitle-row {display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px}
 body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis-r4-subtitle-row .vis-r3-prior-trigger {display:flex;flex:0 1 auto;min-height:30px;max-width:100%;padding:3px 9px;font-size:12px;line-height:18px}
 @media(max-width:1199.98px){
-  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis04-capture {margin-top:-3px;margin-bottom:3px}
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis04-capture {margin-top:-6px;margin-bottom:6px}
 }
-body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current {position:relative;top:5px}
+@media(min-width:1200px){
+  /* Lift Step 2 by 3px without clipping its writer or changing the footer allocation. */
+  body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections button[data-m7-section="measurements"][aria-current="true"]) .vis04-capture {
+    margin-top:-3px;
+    height:calc(var(--consultation-capture-height) + var(--consultation-recovered-height) + 3px);
+  }
+}
+/* Compensate the 3px lift, then lower current values 2px from the accepted layout. */
+body.mx-consultation-mode #p-expediente #m7-workspace .vis29-current {position:relative;top:10px}
 body.mx-consultation-mode #p-expediente #m7-workspace .vis-r3-prior-dialog h5 {font-size:24px}
 body.mx-consultation-mode #p-expediente #m7-workspace .vis-r3-prior-dialog h5 .material-symbols-rounded {font-size:32px;color:#00b8c9}
 #p-expediente #m7-workspace .vis-r3-prior-dialog .vis-r4-prior-description {margin:0 0 10px;color:#617d94;font-size:16px;line-height:24px}
