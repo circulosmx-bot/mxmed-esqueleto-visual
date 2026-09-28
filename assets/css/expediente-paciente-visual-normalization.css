@@ -3478,14 +3478,13 @@ body.mx-consultation-mode #p-expediente #m7-workspace .m7-step-intro p {
   font-weight:400;
   line-height:1.35;
 }
-/* One shared surface below the stepper, through navigation and its helper.
-   No layout allocation; controls, cards and dialogs retain their own surfaces. */
-body.mx-consultation-mode #p-expediente #m7-workspace .consultation-workspace-surface { background:#dbfcff; }
-/* Step 2: extend only the background paint; retain every content anchor.
-   50% aqua over white softens the sections without fading controls. */
-body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections [data-m7-section="measurements"][aria-current="true"]) .consultation-workspace-surface {
-  box-shadow:12px 0 0 #dbfcff,-12px 0 0 #dbfcff;
+/* All seven steps share a surface through navigation and its helper.
+   Extend its paint 12px on every side without changing layout allocation. */
+body.mx-consultation-mode #p-expediente #m7-workspace .consultation-workspace-surface {
+  background:#dbfcff;
+  box-shadow:0 0 0 12px #dbfcff;
 }
+/* Retain Step 2's 50% aqua over white without fading controls or chips. */
 body.mx-consultation-mode #p-expediente #m7-workspace:has(.m7-workspace-sections [data-m7-section="measurements"][aria-current="true"]) :is(.vis29-register,.vis29-current) {
   background:linear-gradient(rgba(219,252,255,.5),rgba(219,252,255,.5)) #fff;
 }
