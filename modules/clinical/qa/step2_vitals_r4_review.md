@@ -31,3 +31,5 @@ bash modules/clinical/qa/step2_prior_reuse_r3a_disposable_gate.sh
 ```
 
 The WebKit gate compares shell geometry at all five sizes to the starting commit, derives the canonical catalog from PHP, checks all five requested sizes, all nine modal types, three successive reuses, failures, retry, filtering, metadata and navigation. The existing isolated writer gate checks void restoration and SERVER_AT_SAVE; the disposable database gate verifies canonical reuse and time authority separately from visual fixtures. Delivery artifacts contain captures, measured coordinates, test logs and the refreshed runtime's served-source hashes.
+
+If another Director review occupies port 18143, start the guarded Step 2 router on a free loopback port and set `STEP2_VITALS_REVIEW_BASE` to its `index.html?review_patient=plan02ux&review_encounter=open&qa_tools=hide` URL when running the visual gate. The delivery runtime artifact records the actual port and committed source. This keeps independent reviews separate without changing fixtures or clinical storage.

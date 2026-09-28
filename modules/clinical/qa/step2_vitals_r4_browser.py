@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[3]
 OUT=Path(os.environ.get('STEP2_VITALS_ARTIFACTS','/tmp/mxmed-step2-vitals-r4'));OUT.mkdir(parents=True,exist_ok=True)
 START='96b3f791f156229e763b4c45782c2fbbb4541790'
-BASE='http://127.0.0.1:18143/index.html?review_patient=plan02ux&review_encounter=open&qa_tools=hide'
+BASE=os.environ.get('STEP2_VITALS_REVIEW_BASE','http://127.0.0.1:18143/index.html?review_patient=plan02ux&review_encounter=open&qa_tools=hide')
 URL=BASE+'&review_step2_visual=r4&review_current_values='
 STEPS=['reason','measurements','exam','assessment','plan','documents','finalize']
 DESKTOP=[(1440,900),(1440,880),(1366,768)]
