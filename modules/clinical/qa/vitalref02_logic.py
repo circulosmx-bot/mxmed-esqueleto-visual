@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[3]
 OUT=Path(os.environ.get('VITALREF02_ARTIFACTS','/tmp/mxmed-vitalref02'));OUT.mkdir(parents=True,exist_ok=True)
 references=json.loads(subprocess.check_output(['php','-r','require $argv[1];$today=new DateTimeImmutable("today",new DateTimeZone("America/Mexico_City"));echo json_encode([clinical_vital_references_resolve("1990-01-01"),clinical_vital_references_resolve($today->modify("-8 years")->format("Y-m-d")),clinical_vital_references_resolve($today->modify("-14 years")->format("Y-m-d")),clinical_vital_references_resolve($today->modify("-6 months")->format("Y-m-d")),clinical_vital_references_resolve(null)]);',str(ROOT/'api/_lib/clinical_vital_references.php')],text=True))
 with sync_playwright() as pw:
-    browser=pw.webkit.launch();page=browser.new_page();page.goto((ROOT/'index.html').as_uri(),wait_until='domcontentloaded')
+    browser=pw.webkit.launch();page=browser.new_page();page.on('dialog',lambda d:d.accept());page.goto((ROOT/'index.html').as_uri(),wait_until='domcontentloaded')
     result=page.evaluate(r'''async references=>{
       const root=document.querySelector('#m7-workspace');let patient='adult',calls=[],pending=[],rows=[];
       const tick=async()=>{await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));};
@@ -55,7 +55,7 @@ with sync_playwright() as pw:
       const editShowsSavedValue=controls[0].value==='81'&&controls[0].placeholder==='Ref. 60–100'&&!controls[0].matches(':placeholder-shown');
       controls[0].value='';controls[0].dispatchEvent(new Event('input',{bubbles:true}));
       const editClearNeverPrefills=controls[0].value===''&&controls[0].matches(':placeholder-shown')&&ws.isDirty();
-      root.querySelector('[data-m7-measurement-new]').click();rows=[];
+      root.querySelector('[data-m7-measurement-new]').click();rows=[];choose('blood_pressure');
       patient='child';load();const clearedAtSwitch=placeholders().every(n=>!n)&&hint.hidden;const childRead=pending.shift();
       patient='adult';load();const newest=pending.shift();childRead.resolve(success(references[1]));await tick();const lateChildIgnored=placeholders().every(n=>!n)&&hint.hidden;
       newest.resolve(success(references[0]));await tick();const newestApplied=controls[1].placeholder==='Ref. <120';

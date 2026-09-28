@@ -97,7 +97,7 @@ with sync_playwright() as pw:
       arrow(controls[0],1);const savedValueWins=controls[0].value==='82';arrow(controls[0],-1);
       controls[0].value='';controls[0].dispatchEvent(new Event('input',{bubbles:true}));
       const editClearNeverPrefills=controls[0].value===''&&controls[0].matches(':placeholder-shown')&&ws.isDirty();
-      root.querySelector('[data-m7-measurement-new]').click();rows=[];
+      root.querySelector('[data-m7-measurement-new]').click();rows=[];choose('blood_pressure');
       patient='child';load();const clearedAtSwitch=placeholders().every(n=>!n)&&hint.hidden;const childRead=pending.shift();
       patient='adult';load();const newest=pending.shift();childRead.resolve(success(references[1]));await tick();const lateChildIgnored=placeholders().every(n=>!n)&&hint.hidden;
       newest.resolve(success(references[0]));await tick();const newestApplied=controls[1].placeholder==='Ref. <120';

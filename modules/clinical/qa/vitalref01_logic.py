@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright
 ROOT=Path(__file__).resolve().parents[3]
 references=json.loads(subprocess.check_output(['php','-r','require $argv[1]; echo json_encode([clinical_vital_references_resolve("1990-01-01"),clinical_vital_references_resolve((new DateTimeImmutable("today"))->modify("-8 years")->format("Y-m-d"))]);',str(ROOT/'api/_lib/clinical_vital_references.php')],text=True))
 with sync_playwright() as pw:
- browser=pw.webkit.launch();page=browser.new_page();page.goto((ROOT/'index.html').as_uri(),wait_until='domcontentloaded')
+ browser=pw.webkit.launch();page=browser.new_page();page.on('dialog',lambda d:d.accept());page.goto((ROOT/'index.html').as_uri(),wait_until='domcontentloaded')
  result=page.evaluate('''async references=>{
   const root=document.querySelector('#m7-workspace');let patient='adult',calls=[],pending=[];
   const tick=()=>new Promise(r=>setTimeout(r,0));
@@ -32,7 +32,8 @@ with sync_playwright() as pw:
   const manualDraft=sessionStorage.getItem('mxmed.m7.ws03.draft:adult:measurements');
   hint.focus();hint.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));
   const tooltipDoesNotTouchDraft=inputs[0].value==='81'&&sessionStorage.getItem('mxmed.m7.ws03.draft:adult:measurements')===manualDraft;
-  sessionStorage.removeItem('mxmed.m7.ws03.draft:adult:measurements');
+  root.querySelector('[data-m7-measurement-new]').click();
+  code.value='blood_pressure';code.dispatchEvent(new Event('change',{bubbles:true}));
   patient='child';load();const clearedAtSwitch=hint.hidden;const childRead=pending.shift();
   patient='adult';load();const newestRead=pending.shift();
   childRead.resolve(success(references[1]));await tick();await tick();const lateChildIgnored=hint.hidden;

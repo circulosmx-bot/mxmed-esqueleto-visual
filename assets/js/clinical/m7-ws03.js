@@ -184,6 +184,18 @@
     }
     const draftId = type=>`mxmed.m7.ws03.draft:${key}:${type}`;
     const createKeyId = ()=>`mxmed.m7.ws03.create-key:${key}`;
+    // Restore only the selected control context, never a value or an anchor.
+    // Real VIS30 drafts and canonical used-type filtering still take precedence.
+    const entryTypeId = ()=>`mxmed.m7.ws03.entry-type:${patient}:${key}`;
+    function entryType(){
+      if(patient&&key){
+        try{
+          const name=sessionStorage.getItem(entryTypeId());
+          if(Object.keys(catalog).includes(name))return name;
+        }catch(_){}
+      }
+      return 'blood_pressure';
+    }
     function forgetCreateKey(){
       createKey=''; try{sessionStorage.removeItem(createKeyId());}catch(_){}
     }
@@ -286,8 +298,7 @@
       unit.value=catalog[code.value]?.[1] || '';
       renderReference();
     }
-    function syncAvailableCodes(){
-      const requested=code.value;
+    function syncAvailableCodes(requested=code.value){
       const used=new Set(observations.filter(item=>!item.invalidated_at && item.observation_id!==selectedObservation?.observation_id).map(item=>item.code));
       const available=Object.keys(catalog).filter(name=>!used.has(name) || selectedObservation?.code===name);
       if([...code.options].map(option=>option.value).join('|')!==available.join('|')) {
@@ -314,10 +325,10 @@
       availableMeasurementDraft='';unavailableMeasurementDraft=false;
       if(!preserveRetainedDraft){retainedMeasurementDraft='';q('[data-m7-measurement-use-draft]').disabled=true;}
       selectedObservation=row || null;
-      code.value=row?.code || 'blood_pressure'; value.value=row?.value_numeric ?? '';
+      code.value=row?.code || entryType(); value.value=row?.value_numeric ?? '';
       systolic.value=row?.systolic_mm_hg ?? ''; diastolic.value=row?.diastolic_mm_hg ?? '';
       source.querySelector('option[value="import"]').disabled=!row;
-      source.value=row?.source || ''; syncAvailableCodes();
+      source.value=row?.source || ''; syncAvailableCodes(row?.code || entryType());
       baselineMeasurement=measurementSnapshot();
       if(discardDraft) clearDraft('measurements');
       if(discardDraft){forgetCreateKey();createPending=false;}
@@ -768,6 +779,7 @@
       const nextCode=code.value;code.value=lastCode;
       if(isDirty()||selectedObservation||createPending){measurementNotice='Registra o cancela la captura pendiente antes de cambiar de medición.';paintMeasurement();return;}
       code.value=nextCode;syncCode();measurementNotice='';baselineMeasurement=measurementSnapshot();paintMeasurement();
+      if(patient&&key){try{sessionStorage.setItem(entryTypeId(),code.value);}catch(_){}}
     });
     function captureInput(event){
       if(event.target===code)return;
