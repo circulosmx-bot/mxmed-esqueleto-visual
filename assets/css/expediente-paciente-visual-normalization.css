@@ -2964,7 +2964,7 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   }
 }
 
-/* VIS28 — progression is primary; manual save stays beside its canonical state. */
+/* Narrative feedback is reserved for transitions, failures and recovery. */
 #p-expediente #m7-workspace .vis28-save-utility {
   display:flex;
   align-items:center;
@@ -2972,21 +2972,11 @@ body.exp-consultation-focus-active #p-expediente .head .vis16-consultation-card.
   gap:4px 10px;
   margin-top:6px;
 }
+#p-expediente #m7-workspace .vis28-save-utility:has([data-m7-editor-state][hidden]) { display:none; }
 #p-expediente #m7-workspace .vis28-save-utility .m7-section-editor-state {
   max-width:100%;
   text-align:left;
 }
-#p-expediente #m7-workspace [data-m7-editor-save] {
-  min-height:44px;
-  padding:6px 4px;
-  font-size:.82rem;
-  font-weight:500;
-  color:#426477;
-  background:transparent;
-  border-color:transparent;
-}
-#p-expediente #m7-workspace [data-m7-editor-save]:disabled,
-#p-expediente #m7-workspace .vis28-save-utility:has([data-m7-editor-state][hidden]):has([data-m7-editor-save]:disabled),
 #p-expediente #m7-workspace:not(:has([data-m7-section="plan"][aria-current="true"])) [data-lon06b-m7-follow-up],
 #p-expediente #m7-workspace:not(:has([data-m7-section="plan"][aria-current="true"])) .vis28-clinical-actions:has([data-lon04b-m7-promote].d-none) {
   display:none;
@@ -3510,7 +3500,6 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-editor-text] {
 }
 body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="reason"][aria-current="true"]) [data-m7-editor-text] { min-height:150px; }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis28-save-utility { margin-top:5px; }
-body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-editor-save]:disabled { display:none; }
 body.mx-consultation-mode #p-expediente #m7-workspace .vis04-progression {
   display:grid;
   grid-template-columns:1fr auto 1fr;

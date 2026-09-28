@@ -24,7 +24,6 @@
   const sectionDraftCue = root.querySelector('[data-vis30-section-draft]');
   const sectionDraftRecover = root.querySelector('[data-vis30-section-recover]');
   const sectionDraftDiscard = root.querySelector('[data-vis30-section-discard]');
-  const editorSave = root.querySelector('[data-m7-editor-save]');
   const promoteProblem = root.querySelector('[data-lon04b-m7-promote]');
   editorText?.addEventListener('input',()=>{if(promoteProblem && selectedSection==='assessment') promoteProblem.classList.toggle('d-none',editorText.value!==sectionBaseline);});
   const conflictBox = root.querySelector('[data-m7-conflict]');
@@ -348,9 +347,7 @@
     sectionDraftDiscard.disabled=sectionMode!=='open';
     show(promoteProblem, selectedSection === 'assessment' && !!row?.section_id && !!sectionBaseline.trim() && editorText.value === sectionBaseline);
     editorText.readOnly = sectionMode !== 'open' || sectionConflict || sectionBusy || passiveDraft;
-    editorSave.disabled = sectionMode !== 'open' || sectionBusy || sectionConflict || passiveDraft || !isDirty();
-    show(editorSave, sectionMode === 'open');
-    setEditorState(sectionMode !== 'open' ? 'Sólo lectura' : sectionConflict ? 'Conflicto: revisa ambas versiones' : isDirty() ? 'Cambios sin guardar' : '');
+    setEditorState(sectionMode !== 'open' ? 'Sólo lectura' : sectionConflict ? 'Conflicto: revisa ambas versiones' : '');
     sectionButtons.forEach(button=>button.setAttribute('aria-current', sectionTypes[button.dataset.m7Section] === selectedSection ? 'true' : 'false'));
   }
   function setConflict(title, message, draft, server){
@@ -374,7 +371,6 @@
     show(editor, true);
     editorState.textContent = 'Cargando contenido de esta consulta…';
     editorText.readOnly = true;
-    editorSave.disabled = true;
     sectionButtons.forEach(button=>{ if(sectionTypes[button.dataset.m7Section]) button.disabled = false; });
     try {
       const detail = Object.prototype.hasOwnProperty.call(encounter, 'sections') && Object.prototype.hasOwnProperty.call(encounter, 'observations')
@@ -394,7 +390,6 @@
         ? 'El esquema clínico no está listo. No se cargó esta sección.'
         : 'No se pudo cargar esta sección. Vuelve a abrir la consulta.');
       editorText.readOnly = true;
-      editorSave.disabled = true;
     }
   }
   async function reloadAfterConflict(){
@@ -419,7 +414,7 @@
       paintSection();
       conflictDraft.value = draft;
       conflictServer.value = editorText.value;
-      conflictMessage.textContent = 'Revisa la versión guardada y tu borrador. Puedes copiar cambios o elegir tu borrador; después deberás guardar deliberadamente.';
+      conflictMessage.textContent = 'Revisa la versión guardada y tu borrador. Puedes copiar cambios o elegir tu borrador; los cambios se guardarán al cambiar de paso.';
       conflictUseDraft.disabled = false;
       show(conflictBox, true);
     } catch (_) {
@@ -435,7 +430,6 @@
     const expectedVersion = sectionVersion;
     sectionBusy = true;
     editorText.readOnly = true;
-    editorSave.disabled = true;
     setEditorState('Guardando…');
     const data = { payload_schema_version:1, payload:{}, narrative_text:draft };
     if(expectedVersion !== null) data.row_version = expectedVersion;
@@ -501,7 +495,6 @@
       sectionBusy = false;
       if(key === body.dataset.encounterKey && type === selectedSection){
         editorText.readOnly = sectionMode !== 'open' || sectionConflict || !sectionDraftCue.classList.contains('d-none');
-        if(!sectionConflict) editorSave.disabled = sectionMode !== 'open' || !isDirty();
       }
     }
   }
@@ -668,10 +661,8 @@
     if(sectionMode !== 'open') return;
     activeSectionDraftKey=draftKey(body.dataset.encounterKey,selectedSection);
     rememberDraft(body.dataset.encounterKey, selectedSection, editorText.value);
-    setEditorState(isDirty() ? 'Cambios sin guardar' : '');
-    editorSave.disabled = sectionBusy || sectionConflict || !isDirty();
+    setEditorState('');
   });
-  editorSave.addEventListener('click', saveSection);
   sectionDraftRecover.addEventListener('click',()=>{
     const key=body.dataset.encounterKey||'', draft=readDraft(key,selectedSection);
     if(sectionMode!=='open'||draft===null||sectionDraftCue.classList.contains('d-none'))return;

@@ -67,7 +67,7 @@ with sync_playwright() as pw:
         check(f'{w}x{h} assessment matches Step 1', editor.evaluate(STYLE) == plan_style)
         page.locator('[data-m7-section="plan"]').click(); editor.focus()
         check(f'{w}x{h} empty focus leaves placeholder and no dirty state', editor.evaluate('n=>n.matches(":placeholder-shown")') and page.locator('[data-m7-editor-state]').inner_text() == '')
-        editor.fill(REAL); expect(page.locator('[data-m7-editor-state]')).to_have_text('Cambios sin guardar')
+        editor.fill(REAL); expect(page.locator('[data-m7-editor-state]')).to_be_hidden()
         check(f'{w}x{h} typed text hides native placeholder', not editor.evaluate('n=>n.matches(":placeholder-shown")'))
         check(f'{w}x{h} actual text retains darker style', editor.evaluate('n=>getComputedStyle(n).color') != plan_style['color'])
         editor.fill(''); expect(page.locator('[data-m7-editor-state]')).to_have_text('')

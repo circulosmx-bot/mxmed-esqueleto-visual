@@ -520,7 +520,7 @@
       hide(examDraftCue,!!availableExamDraft);
       examDraftRecover.disabled=mode!=='open'||busy;
       examDraftDiscard.disabled=mode!=='open'||busy;
-      examState.textContent=examNotice || (mode!=='open'?'Sólo lectura':examLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':isDirty()?'Cambios sin guardar':'');
+      examState.textContent=examNotice || (mode!=='open'?'Sólo lectura':examLocked?'Conflicto: revisa la versión guardada':busy?'Guardando…':'');
       examMeta.textContent=examVersion===null?'Aún no hay exploración guardada. Sin revisión no equivale a normal.':`Versión ${examVersion} · Sin revisión no equivale a normal.`;
       examSystems.querySelectorAll('[data-m7-exam-system]').forEach(row=>{
         row.querySelector('select').disabled=mode!=='open'||busy||examLocked||!!availableExamDraft;
@@ -760,7 +760,7 @@
         if(invalid)invalidRows.push(row);
       });
       if(invalidRows.length){
-        examNotice='Describe cada hallazgo anormal antes de guardar.';
+        examNotice='Describe cada hallazgo anormal antes de continuar.';
         paintExam();
         const finding=invalidRows[0].querySelector('input');
         finding.focus({preventScroll:true});
@@ -881,7 +881,7 @@
       const draft=availableExamDraft;
       availableExamDraft='';
       restore('physical_exam',draft);
-      examNotice='Captura recuperada. Guarda los cambios o revisa antes de cambiar de paso.';
+      examNotice='Captura recuperada. Los cambios se guardarán al cambiar de paso.';
       paintExam();
       examSystems.querySelector('select')?.focus();
     });

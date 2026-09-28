@@ -72,7 +72,7 @@ with sync_playwright() as pw:
  hn.locator('input').fill('   ');expect(hn.locator('input')).to_have_attribute('aria-invalid','true');check('whitespace does not clear the required finding error')
  text='Hallazgo sintético de cabeza y cuello.';hn.locator('input').fill(text);
  expect(hn.locator('input')).not_to_have_attribute('aria-invalid','true');expect(hn.locator('.m7-exam-finding-error')).to_be_hidden();check('inline error clears immediately after a valid finding')
- expect(page.locator('[data-m7-exam-state]')).to_have_text('Cambios sin guardar')
+ expect(page.locator('[data-m7-exam-state]')).to_have_text('')
  page.locator('[data-vis04-next]').click();expect(page.locator('[data-m7-section="assessment"]')).to_have_attribute('aria-current','true',timeout=15000)
  check('canonical autosave uses the existing physical_exam endpoint and schema',len(writes)==1 and writes[0]['payload_schema_version']==1 and writes[0]['payload']['systems']=={'cardiovascular':{'state':'NORMAL'},'head_neck':{'state':'ABNORMAL','finding':text}})
  check('new field and established system persist in canonical storage',payload()['systems']==writes[0]['payload']['systems'])
@@ -87,7 +87,7 @@ with sync_playwright() as pw:
  hn.locator('input').fill('Hallazgo sintético guardado al volver.');page.locator('[data-vis04-prev]').click();expect(page.locator('[data-m7-section="measurements"]')).to_have_attribute('aria-current','true')
  check('dirty Previous saves through the canonical writer',len(writes)==before_clean+1 and payload()['systems']['head_neck']['finding']=='Hallazgo sintético guardado al volver.')
  reload_exam(page)
- changed='Hallazgo sintético editado.';hn.locator('input').fill(changed);expect(page.locator('[data-m7-exam-state]')).to_have_text('Cambios sin guardar')
+ changed='Hallazgo sintético editado.';hn.locator('input').fill(changed);expect(page.locator('[data-m7-exam-state]')).to_have_text('')
  previous=sql("SELECT * FROM clinical_encounter_sections WHERE encounter_id=1016 AND section_type='physical_exam'")
  def fail(route):route.fulfill(status=503,content_type='application/json',body=json.dumps({'ok':False,'error':{'code':'QA_WRITE_FAILURE'}}))
  page.route('**/sections/physical_exam',fail);page.locator('[data-m7-section="assessment"]').click()
