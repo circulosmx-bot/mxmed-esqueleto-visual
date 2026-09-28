@@ -105,9 +105,9 @@
       }
       if(!valid())return;
       const area=document.querySelector('[data-review-documents]'),list=document.querySelector('[data-review-document-list]');
-      const docs=canonicalDocs.filter(d=>['order','prescription','receta'].includes(d.document_type)&&d.has_private_binary==1);
+      const docs=canonicalDocs.filter(d=>['order','prescription','receta'].includes(d.document_type)&&['generated','signed'].includes(d.status)&&d.has_successor!=1);
       area.hidden=!docs.length;list.replaceChildren();
-      docs.slice(0,3).forEach(d=>{const b=document.createElement('button');b.type='button';b.className='btn btn-outline-primary btn-sm';b.textContent=d.title||'Documento clínico';b.onclick=()=>window.dispatchEvent(new CustomEvent('mxmed:review-document',{detail:{document:d,encounterKey:c.key}}));list.append(b);});
+      docs.slice(0,3).forEach(d=>{const b=document.createElement('button');b.type='button';b.className='btn btn-outline-primary btn-sm';b.textContent=d.title||'Documento clínico';b.title=b.textContent;b.onclick=()=>window.dispatchEvent(new CustomEvent('mxmed:review-document',{detail:{document:d,encounterKey:c.key}}));list.append(b);});
       if(docs.length>3){const b=document.createElement('button');b.type='button';b.className='btn btn-link btn-sm';b.textContent=`Ver ${docs.length} documentos`;b.onclick=()=>document.querySelector('[data-review-docs]').click();list.append(b);}
     }catch(_){if(valid()){summaryFailed=true;verified.clear();}}
     finally{if(valid()){summaryLoading=false;render();}}

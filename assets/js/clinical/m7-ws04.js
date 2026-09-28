@@ -197,7 +197,16 @@
       if(busy||captureBusy||session||!available()){event.stopImmediatePropagation();return;}
       tool=button.dataset.docTool;paint();
     }));
-    window.addEventListener('mxmed:review-document',event=>{if(event.detail?.encounterKey===context?.key)privateRead(event.detail.document);});
+    window.addEventListener('mxmed:review-document',async event=>{
+      if(event.detail?.encounterKey!==context?.key)return;
+      const row=event.detail.document;
+      if(row.has_private_binary==1){privateRead(row);return;}
+      document.querySelector('.m7-workspace-sections [data-m7-section="documents"]').click();
+      await refresh();
+      if(event.detail.encounterKey!==context?.key)return;
+      readDocuments('encounter',$('[data-doc-patient]'));
+      [...patientList.children].find(card=>card.dataset.document===row.document_uuid)?.scrollIntoView({block:'nearest'});
+    });
     function uploadMessage(text, error = false) { const node = $('[data-docux-upload-state]'); node.textContent = text; node.dataset.error = String(error); }
     function fileState() {
       $('[data-docux-file-state]').textContent = $('[data-m7-doc-file]').files?.[0]?.name || 'Arrastra un PDF o imagen aquí';
