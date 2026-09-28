@@ -17,7 +17,7 @@ with sync_playwright() as pw:
   };
   const ws=window.mxmedM7WS03(root,k=>'/encounters/'+k,()=>patient,()=>{});
   const load=()=>{ws.load({patient_id:patient,encounter_id:1,observations:[],sections:{}},patient,'open');ws.select('measurements');};
-  const code=root.querySelector('[data-m7-measurement-code]'),hint=root.querySelector('[data-vitalref-hint]');
+  const code=root.querySelector('[data-m7-measurement-code]'),hint=root.querySelector('[data-vitalref-hint]'),tooltip=root.querySelector('[data-vitalref-tooltip]');
   const inputs=['value','systolic','diastolic'].map(k=>root.querySelector('[data-m7-measurement-'+k+']'));
   const clean=()=>!ws.isDirty()&&!ws.hasSavedDrafts()&&inputs.every(n=>n.value==='')&&root.querySelector('[data-m7-measurement-source]').value===''&&root.querySelectorAll('.vis-step2-chip').length===0;
   load();const adultRead=pending.shift();adultRead.resolve(success(references[0]));await tick();await tick();
@@ -25,7 +25,7 @@ with sync_playwright() as pw:
   for(const item of references[0].items){
     code.value=item.measurement_code;code.dispatchEvent(new Event('change',{bubbles:true}));
     const before=JSON.stringify(Object.entries(sessionStorage));ws.remember();await ws.saveSelected();
-    safety[item.measurement_code]=clean()&&hint.hidden===!item.display_reference&&hint.textContent===item.display_reference&&before===JSON.stringify(Object.entries(sessionStorage))&&!root.querySelector('[data-m7-measurements-form]').checkValidity();
+    safety[item.measurement_code]=clean()&&hint.hidden===!item.display_reference&&tooltip.textContent.split('\\n')[0]===item.display_reference&&before===JSON.stringify(Object.entries(sessionStorage))&&!root.querySelector('[data-m7-measurements-form]').checkValidity();
   }
   code.value='heart_rate';code.dispatchEvent(new Event('change',{bubbles:true}));
   inputs[0].value='81';inputs[0].dispatchEvent(new Event('input',{bubbles:true}));ws.remember();
@@ -36,9 +36,9 @@ with sync_playwright() as pw:
   patient='child';load();const clearedAtSwitch=hint.hidden;const childRead=pending.shift();
   patient='adult';load();const newestRead=pending.shift();
   childRead.resolve(success(references[1]));await tick();await tick();const lateChildIgnored=hint.hidden;
-  newestRead.resolve(success(references[0]));await tick();await tick();const newestApplied=hint.textContent.includes('Referencia adulta:');
+  newestRead.resolve(success(references[0]));await tick();await tick();const newestApplied=tooltip.textContent.includes('Referencia adulta:');
   patient='child';load();pending.shift().resolve(success(references[1]));await tick();await tick();
-  const childNoAdult=hint.textContent==='Referencia pediátrica: requiere edad, sexo y talla.';
+  const childNoAdult=tooltip.textContent.split('\\n')[0]==='Referencia pediátrica: requiere edad, sexo y talla.';
   patient='adult';load();const late=pending.shift();ws.reset();late.resolve(success(references[0]));await tick();await tick();
   const resetRejectsLate=hint.hidden;
   patient='unavailable';load();pending.shift().resolve({ok:false,status:503,json:async()=>({ok:false,error:'unavailable'})});await tick();await tick();

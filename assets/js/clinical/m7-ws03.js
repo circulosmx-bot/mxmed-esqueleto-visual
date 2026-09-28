@@ -16,8 +16,8 @@
     const source = q('[data-m7-measurement-source]');
     const referenceHint = q('[data-vitalref-hint]');
     const referenceTooltip = q('[data-vitalref-tooltip]');
-    const referenceDesktop = matchMedia('(min-width:1200px)');
-    const referenceTablet = matchMedia('(min-width:576px)');
+    const referenceLabel = q('[data-vitalref-measurement-label]');
+    const neutralPlaceholders = [value,systolic,diastolic].map(input=>input.placeholder);
     let referenceEpoch=0, referenceRequest=null, referenceItems=new Map();
     const measurementState = q('[data-m7-measurements-state]');
     const measurementList = q('[data-m7-measurements-list]');
@@ -71,20 +71,31 @@
       referenceTooltip.hidden=true;
     }
     function renderReference(){
-      if(!referenceHint||!referenceTooltip)return;
+      if(!referenceHint||!referenceTooltip||!referenceLabel)return;
       closeReferenceTooltip();
       const item=referenceItems.get(code.value);
+      // Presentation only: use the resolver's display text, never clinical defaults
+      // or input values. Reset all controls before applying the current context.
+      [value,systolic,diastolic].forEach((input,index)=>{input.placeholder=neutralPlaceholders[index];});
+      if(item?.reference_available){
+        const display=String(item.display_reference||'');
+        if(code.value==='blood_pressure'&&item.reference_kind==='category'){
+          const limits=display.match(/(<\d+(?:\.\d+)?)\/(<\d+(?:\.\d+)?)(?=\s|$)/);
+          if(limits){systolic.placeholder=`Ref. ${limits[1]}`;diastolic.placeholder=`Ref. ${limits[2]}`;}
+        }else if(['heart_rate','respiratory_rate','temperature','oxygen_saturation','pain'].includes(code.value)
+          &&['range','scale'].includes(item.reference_kind)){
+          const range=display.match(/:\s*(\d+(?:\.\d+)?[–-]\d+(?:\.\d+)?)(?=\s|$)/);
+          if(range)value.placeholder=`${item.reference_kind==='scale'?'Escala':'Ref.'} ${range[1]}`;
+        }
+      }
       referenceHint.hidden=!item?.display_reference;
-      referenceHint.textContent=item?.display_reference || '';
+      referenceHint.setAttribute('aria-label',`${catalog[code.value]?.[0]||'Medición'}: ${item?.display_reference||''} Ver referencia clínica y fuente.`);
       referenceTooltip.textContent='';
       for(const input of [value,systolic,diastolic])input.removeAttribute('aria-describedby');
       if(referenceHint.hidden)return;
-      // An informational span only: never part of snapshot, form elements or payload.
-      const pressure=code.value==='blood_pressure';
-      const placement=referenceDesktop.matches?'value':(referenceTablet.matches?(pressure?'fields':'value'):(pressure?'fields':'heading'));
-      referenceHint.dataset.vitalrefPlacement=placement;
-      (placement==='value'?(pressure?pressureLabel:valueLabel):q(placement==='fields'?'.m7-measurement-fields':'.vis29-form-heading')).append(referenceHint);
-      for(const input of code.value==='blood_pressure'?[systolic,diastolic]:[value])input.setAttribute('aria-describedby',referenceHint.id);
+      // A compact info affordance beside Medición; no separate reference row.
+      referenceLabel.append(referenceHint);
+      for(const input of code.value==='blood_pressure'?[systolic,diastolic]:[value])input.setAttribute('aria-describedby',referenceTooltip.id);
       const sourceInfo=item.source;
       referenceTooltip.textContent=[item.display_reference,sourceInfo?`Fuente: ${sourceInfo.source_title}`:'',sourceInfo?`${sourceInfo.source_year} · ${sourceInfo.source_version}`:'',sourceInfo?.url || '',`Contexto: ${item.context}`,...(item.caveats||[])].filter(Boolean).join('\n');
     }
@@ -105,8 +116,6 @@
       }catch(_){if(run===referenceEpoch){referenceItems=new Map();renderReference();}}
     }
     if(referenceHint&&referenceTooltip){
-      referenceDesktop.addEventListener('change',renderReference);
-      referenceTablet.addEventListener('change',renderReference);
       const show=()=>{
         if(referenceHint.hidden||selected!=='measurements')return;
         referenceTooltip.hidden=false;
@@ -120,7 +129,10 @@
       referenceHint.addEventListener('focus',show);
       referenceHint.addEventListener('blur',closeReferenceTooltip);
       referenceHint.addEventListener('click',event=>{event.preventDefault();referenceHint.focus();show();});
-      referenceHint.addEventListener('keydown',event=>{if(event.key==='Escape')closeReferenceTooltip();});
+      referenceHint.addEventListener('keydown',event=>{
+        if(event.key==='Escape')closeReferenceTooltip();
+        else if(event.key==='Enter'||event.key===' '){event.preventDefault();show();}
+      });
     }
     const draftId = type=>`mxmed.m7.ws03.draft:${key}:${type}`;
     const createKeyId = ()=>`mxmed.m7.ws03.create-key:${key}`;
