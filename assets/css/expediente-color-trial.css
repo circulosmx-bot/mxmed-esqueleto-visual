@@ -1,0 +1,29 @@
+/* Reversible #013151 color trial. Paint only; no layout or behavior changes. */
+body #p-expediente > .head > .exp-hdr {
+  background: #013151 !important;
+}
+
+#p-expediente .vis01-primary-navigation .nav-item:not([data-vis01-secondary]) > .nav-link {
+  background: #013151 !important;
+  border-color: #013151 !important;
+  color: #fff !important;
+}
+
+#p-expediente .vis01-primary-navigation .nav-item:not([data-vis01-secondary]) > .nav-link :is(.tab-ico, .tab-lbl, .tab-line, .tab-line-sub) {
+  color: #fff !important;
+}
+
+/* Keep the teal selection language, with readable white labels and icons. */
+#p-expediente .vis01-primary-navigation .nav-item:not([data-vis01-secondary]) > .nav-link:is(.active, .vis01-context-active) {
+  background: #007f8b !important;
+  border-color: #007f8b !important;
+}
+
+#p-expediente .vis01-primary-navigation .nav-item:not([data-vis01-secondary]) > .nav-link:hover {
+  border-color: #04ccdc !important;
+}
+
+#p-expediente .vis01-primary-navigation .nav-item:not([data-vis01-secondary]) > .nav-link:is(:focus, :focus-visible) {
+  outline: 2px solid #013151;
+  outline-offset: 1px;
+}
