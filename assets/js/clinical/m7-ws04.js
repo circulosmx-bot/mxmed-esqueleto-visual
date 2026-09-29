@@ -88,7 +88,7 @@
     function multipart(payload, file) { const form = new FormData(); Object.entries(payload).forEach(([key, value]) => form.append(key, key === 'payload' || key === 'replacement' ? JSON.stringify(value) : value)); form.append('file', file); return form; }
     function payloadOf(row) { try { return typeof row.payload_json === 'string' ? JSON.parse(row.payload_json || '{}') : row.payload_json || {}; } catch (_) { return {}; } }
     function relatedOrder(row) { const payload = payloadOf(row); return String(payload.related_order_document_uuid || payload.related_order_document_id || payload.related_document_uuid || payload.related_document_id || payload.related_order_id || payload.context?.related_order_document_uuid || ''); }
-    function documentLabel(row) { if(row.document_type==='pdf'&&row.has_private_binary!=1)return 'Documento clínico';return ({ pdf:'PDF clínico', image:'Imagen clínica', order:'Orden de estudio', lab_result:'Resultado de laboratorio', imaging_result:'Resultado de imagen', external_report:'Informe externo', prescription:'Receta', receta:'Receta' })[row.document_type] || String(row.document_type || 'Documento clínico').replaceAll('_', ' '); }
+    function documentLabel(row) { const captured=payloadOf(row);if(captured.source==='step6_mobile_capture_r4'&&captured.capture_classification_label)return String(captured.capture_classification_label);if(row.document_type==='pdf'&&row.has_private_binary!=1)return 'Documento clínico';return ({ pdf:'PDF clínico', image:'Imagen clínica', order:'Orden de estudio', lab_result:'Resultado de laboratorio', imaging_result:'Resultado de imagen', external_report:'Informe externo', prescription:'Receta', receta:'Receta' })[row.document_type] || String(row.document_type || 'Documento clínico').replaceAll('_', ' '); }
     function card(row) {
       const node = document.createElement('article'); node.className = 'm7-doc-card';node.dataset.document=row.document_uuid;
       const icon=document.createElement('span');icon.className='material-symbols-rounded';icon.setAttribute('aria-hidden','true');icon.textContent='description';node.append(icon);
@@ -314,106 +314,137 @@
     $('[data-m7-replace-cancel]').addEventListener('click', () => { selectedReplacement = null; show(replaceForm, false); replaceForm.reset(); resetAttempt('replace'); });
     function currentSession(s) { return session === s && captureDialog.open && sameContext() && context.key === s.context.key && context.patientId === s.context.patientId; }
     function stopPolling(s) { if (!s) return; clearTimeout(s.timer); s.timer = null; s.controller?.abort(); s.controller = null; }
+    function stopExpiry(s) { if (s) { clearInterval(s.expiryTimer); s.expiryTimer = null; } }
     function removeQR() { $('[data-docux-qr-content]').hidden = true; $('[data-docux-qr]').replaceChildren(); $('[data-m7-capture-link]').removeAttribute('href'); }
-    function captureMessage(text) { $('[data-m7-capture-state]').textContent = text; }
+    function captureMessage(text, kind='') { const n=$('[data-m7-capture-state]');n.textContent=text;n.dataset.state=kind; }
     function clearCapturePreview(){const image=$('[data-docux-received-preview]');image.onload=null;image.onerror=null;image.removeAttribute('src');image.hidden=true;$('[data-docux-received-file]').hidden=false;}
-    function terminal(s, value, data={}) {
-      s.pending = false; stopPolling(s);
+    function updateExpiry(s) {
+      if (!currentSession(s) || !s.pending) return;
+      const seconds=Math.max(0,Math.ceil((s.expiresAt-Date.now())/1000));
+      $('[data-docux-capture-expiry]').textContent=seconds>0?`Expira en ${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`:'Verificando vigencia del código…';
+    }
+    function showSelection(s) {
       if (!currentSession(s)) return;
-      removeQR(); $('[data-m7-capture-cancel]').hidden = true; $('[data-docux-capture-close]').hidden = false;
-      captureMessage(({ uploaded:'✓ Documento recibido', cancelled:'Captura cancelada', expired:'El enlace de captura venció.' })[value] || 'La sesión de captura ya no está disponible.');
-      $('[data-docux-capture-use]').hidden=value!=='uploaded';$('[data-docux-capture-use]').disabled=true;
-      if (value === 'uploaded') {
+      stopPolling(s);stopExpiry(s);removeQR();clearCapturePreview();
+      s.token='';s.url='';s.pending=false;s.status='selection';
+      $('[data-docux-capture-selection]').hidden=false;$('[data-docux-capture-selected]').hidden=true;
+      $('[data-docux-capture-guide]').hidden=true;$('[data-docux-received]').hidden=true;
+      $('[data-m7-capture-cancel]').hidden=true;$('[data-docux-capture-renew]').hidden=true;
+      $('[data-docux-capture-generate]').hidden=false;$('[data-docux-capture-generate]').disabled=!s.classification;
+      $('[data-docux-capture-change]').disabled=false;captureMessage('Selecciona el tipo y genera el código cuando estés listo.');
+    }
+    function terminal(s, value, data={}) {
+      s.pending=false;s.status=value;stopPolling(s);stopExpiry(s);
+      if (!currentSession(s)) return;
+      removeQR();$('[data-docux-capture-guide]').hidden=true;$('[data-m7-capture-cancel]').hidden=true;
+      $('[data-docux-capture-generate]').hidden=true;$('[data-docux-capture-renew]').hidden=!['expired','cancelled'].includes(value);
+      $('[data-docux-capture-change]').disabled=false;
+      captureMessage(({uploaded:'Documento recibido',consumed:'Documento recibido',cancelled:'Captura cancelada',expired:'El código expiró.'})[value]||'La sesión de captura ya no está disponible.',value);
+      if (['uploaded','consumed'].includes(value)) {
+        $('[data-docux-capture-change]').hidden=true;
         $('[data-docux-received]').hidden=false;$('[data-docux-received-title]').textContent='Verificando documento recibido…';$('[data-docux-received-detail]').textContent='';
         refresh().then(()=>{if(!currentSession(s))return;const doc=rows.find(row=>row.document_uuid===data.document_uuid&&String(row.encounter_ref_id||row.encounter_id)===String(s.context.encounterId));
-          $('[data-docux-received-title]').textContent=doc?.title||'Documento recibido';$('[data-docux-received-detail]').textContent=doc?'Registrado en esta consulta.':'Actualiza los documentos para verificar el registro.';$('[data-docux-capture-use]').disabled=!doc;
-          // Preview uses the existing physician-authorized private reader only.
+          $('[data-docux-received-title]').textContent=doc?.title||s.classification?.label||'Documento recibido';
+          const time=data.uploaded_at?new Date(data.uploaded_at):null;
+          const received=time&&!Number.isNaN(time.getTime())?new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'}).format(time):'';
+          $('[data-docux-received-detail]').textContent=doc?`${s.classification?.label||documentLabel(doc)}${received?' · '+received:''} · Registrado en esta consulta.`:'Actualiza los documentos para verificar el registro.';
           if(doc?.document_type==='image'&&doc.has_private_binary==1){const image=$('[data-docux-received-preview]');image.onload=()=>{if(currentSession(s)){image.hidden=false;$('[data-docux-received-file]').hidden=true;}};image.onerror=()=>{image.hidden=true;};image.src=route(`documents/${encodeURIComponent(doc.document_uuid)}/binary/ORIGINAL`);}
         });
       }
     }
     function schedule(s) {
-      if (currentSession(s) && s.pending && s.token && !s.closing && !document.hidden) s.timer = setTimeout(() => poll(s), pollInterval);
+      if (currentSession(s) && s.pending && s.token && !s.closing && !document.hidden) s.timer=setTimeout(()=>poll(s),pollInterval);
     }
     async function poll(s) {
-      if (!currentSession(s) || !s.pending || s.closing || document.hidden) return;
-      const controller = new AbortController(); s.controller = controller;
+      if (!currentSession(s)||!s.pending||s.closing||document.hidden) return;
+      const controller=new AbortController();s.controller=controller;
       try {
-        const response = await jsonResponse(await fetch(route(`note-capture-tokens/${encodeURIComponent(s.token)}`), { credentials:'same-origin', headers:{ Accept:'application/json' }, signal:controller.signal }));
-        if (!currentSession(s) || s.closing || controller.signal.aborted) return;
-        if (response.data.status !== 'pending') terminal(s, response.data.status,response.data);
-        else captureMessage('Esperando captura…');
-      } catch (error) { if (error.name !== 'AbortError' && currentSession(s) && !s.closing) captureMessage('No se pudo comprobar la captura. Volveremos a intentarlo.'); }
-      finally { if (s.controller === controller) s.controller = null; if (!controller.signal.aborted) schedule(s); }
+        const response=await jsonResponse(await fetch(route(`note-capture-tokens/${encodeURIComponent(s.token)}`),{credentials:'same-origin',headers:{Accept:'application/json'},signal:controller.signal}));
+        if(!currentSession(s)||s.closing||controller.signal.aborted)return;
+        if(response.data.status!=='pending')terminal(s,response.data.status,response.data);
+        else {s.expiresAt=Date.parse(response.data.expires_at);updateExpiry(s);captureMessage('Esperando captura…','pending');}
+      }catch(error){if(error.name!=='AbortError'&&currentSession(s)&&!s.closing)captureMessage('No se pudo comprobar la captura. Volveremos a intentarlo.');}
+      finally {if(s.controller===controller)s.controller=null;if(!controller.signal.aborted)schedule(s);}
     }
-    function dismissCapture(s, restore = true) {
-      stopPolling(s);
-      if (session !== s) return;
-      removeQR(); clearCapturePreview(); captureDialog.close(); captureDialog.classList.remove('plan02b-modal'); session = null;
-      paint();
-      if (restore) returnFocus($('[data-m7-capture-start]'));
+    function dismissCapture(s, restore=true) {
+      stopPolling(s);stopExpiry(s);if(session!==s)return;
+      removeQR();clearCapturePreview();captureDialog.close();captureDialog.classList.remove('plan02b-modal');session=null;paint();
+      if(restore)returnFocus($('[data-m7-capture-start]'));
     }
     async function cancelSession(s) {
-      if (!s.token || !s.pending) return;
-      // Read first so an already observed upload is never sent to cancel. Races
-      // between this read and cancellation use the accepted terminal 409 contract.
-      const data = await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
-      if (data.status !== 'pending') { terminal(s, data.status,data); return; }
-      try { await send(`note-capture-tokens/${encodeURIComponent(s.token)}/cancel`, {}, makeKey()); terminal(s, 'cancelled'); }
-      catch (error) {
-        if (error.code !== 'conflict' && error.code !== '409') throw error;
-        const latest = await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
-        if (latest.status === 'pending') throw error;
-        terminal(s, latest.status,latest);
+      if(!s.token||!s.pending)return;
+      const data=await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
+      if(data.status!=='pending'){terminal(s,data.status,data);return;}
+      try {await send(`note-capture-tokens/${encodeURIComponent(s.token)}/cancel`,{},makeKey());terminal(s,'cancelled');}
+      catch(error){
+        if(error.code!=='conflict'&&error.code!=='409')throw error;
+        const latest=await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
+        if(latest.status==='pending')throw error;terminal(s,latest.status,latest);
       }
     }
-    async function endCapture(close = true, contextLost = false) {
-      const s = session; if (!s) return;
-      if (s.closing) { if (contextLost) dismissCapture(s, false); return; }
-      s.closing = true; stopPolling(s); removeQR();
-      $('[data-m7-capture-cancel]').disabled = true; captureMessage('Cancelando captura…');
-      if (contextLost) dismissCapture(s, false);
-      try {
-        await s.issuance;
-        await cancelSession(s);
-        if (close) dismissCapture(s, !contextLost);
-      } catch (_) {
-        if (session === s) captureMessage('No se pudo cancelar la captura. Intenta cancelar de nuevo antes de cerrar.');
-        else status('No se pudo cancelar una captura anterior. Su enlace vencerá automáticamente.', 'failed');
-      } finally { s.closing = false; if (session === s) $('[data-m7-capture-cancel]').disabled = false; }
+    async function endCapture(close=true,contextLost=false) {
+      const s=session;if(!s)return;
+      if(s.closing){if(contextLost)dismissCapture(s,false);return;}
+      s.closing=true;stopPolling(s);stopExpiry(s);removeQR();
+      $('[data-m7-capture-cancel]').disabled=true;$('[data-docux-capture-change]').disabled=true;
+      if(s.pending)captureMessage('Cancelando captura…');
+      if(contextLost)dismissCapture(s,false);
+      try {await s.issuance;await cancelSession(s);if(close)dismissCapture(s,!contextLost);}
+      catch(_){if(session===s)captureMessage('No se pudo cancelar la captura. Intenta cancelar de nuevo antes de cerrar.');else status('No se pudo cancelar una captura anterior. Su enlace vencerá automáticamente.','failed');}
+      finally{s.closing=false;if(session===s){$('[data-m7-capture-cancel]').disabled=false;$('[data-docux-capture-change]').disabled=false;}}
     }
-    modalShell(captureDialog, () => endCapture());
-    $('[data-m7-capture-cancel]').addEventListener('click', () => endCapture(false));
-    $('[data-docux-capture-close]').addEventListener('click', () => endCapture());
-    $('[data-docux-capture-use]').addEventListener('click',()=>{if(session&&!session.pending&&!$('[data-docux-capture-use]').disabled)endCapture();});
-    $('[data-docux-copy]').addEventListener('click', async () => {
-      const s = session; if (!s || !s.pending || !currentSession(s)) return;
-      try { await navigator.clipboard.writeText(s.url); if (currentSession(s)) captureMessage('Enlace copiado. Esperando captura…'); }
-      catch (_) { if (currentSession(s)) captureMessage('No se pudo copiar. Usa Abrir enlace de captura.'); }
-    });
-    $('[data-m7-capture-start]').addEventListener('click', () => {
-      if (busy || actionOpen() || !sameContext() || context.status !== 'open' || captureBusy || session) return;
-      const s = { context:{ ...context }, token:'', url:'', pending:true, closing:false, timer:null, controller:null };
-      session = s; captureBusy = true; removeQR(); clearCapturePreview(); captureMessage('Preparando captura…');
-      $('[data-m7-capture-cancel]').hidden = false; $('[data-m7-capture-cancel]').disabled = false; $('[data-docux-capture-close]').hidden = true;
-      $('[data-docux-capture-use]').hidden=true;$('[data-docux-received]').hidden=true;
-      captureDialog.classList.add('plan02b-modal'); captureDialog.showModal();paint(); $('[data-m7-capture-cancel]').focus();
-      s.issuance = (async () => {
+    async function generateCapture(s) {
+      if(!currentSession(s)||captureBusy||s.closing||s.pending||!s.classification)return;
+      s.pending=true;s.status='issuing';captureBusy=true;removeQR();clearCapturePreview();
+      $('[data-docux-capture-selection]').hidden=true;$('[data-docux-capture-selected]').hidden=false;
+      $('[data-docux-capture-label]').textContent=s.classification.label;$('[data-docux-capture-change]').hidden=false;
+      $('[data-docux-capture-change]').disabled=true;$('[data-docux-capture-generate]').hidden=true;
+      $('[data-docux-capture-renew]').hidden=true;$('[data-docux-received]').hidden=true;
+      $('[data-m7-capture-cancel]').hidden=false;$('[data-m7-capture-cancel]').disabled=false;
+      captureMessage('Generando código QR…');
+      s.issuance=(async()=>{
         try {
-          const response = await send('note-capture-tokens', { patient_id:s.context.patientId, encounter_key:s.context.key, note_context:'nota_clinica_modal' }, makeKey());
-          s.token = String(response.data?.token || ''); if (!s.token) throw new Error();
-          s.url = new URL(response.data.mobile_url, location.origin).href;
-          if (new URL(s.url).origin !== location.origin) throw new Error();
-          if (!currentSession(s) || s.closing) return;
-          const qr = $('[data-docux-qr]'); new QRCode(qr, { text:s.url, width:216, height:216, colorDark:'#000000', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M }); qr.removeAttribute('title');
-          $('[data-m7-capture-link]').href = s.url; $('[data-docux-qr-content]').hidden = false; captureMessage('Esperando captura…'); schedule(s);
-        } catch (_) {
-          if (currentSession(s) && !s.closing) {
-            captureMessage(s.token ? 'No se pudo mostrar la captura. Cierra esta ventana para cancelarla.' : 'No se pudo confirmar el inicio de la captura. Si se creó un enlace, vencerá automáticamente.'); removeQR();
-            if (!s.token) { $('[data-m7-capture-cancel]').hidden = true; $('[data-docux-capture-close]').hidden = false; }
+          const response=await send('note-capture-tokens',{patient_id:s.context.patientId,encounter_key:s.context.key,capture_classification:s.classification.id},makeKey());
+          s.token=String(response.data?.token||'');if(!s.token)throw new Error();
+          s.url=String(response.data.mobile_url||'');const url=new URL(s.url);
+          if(!['https:','http:'].includes(url.protocol)||url.username||url.password)throw new Error();
+          s.expiresAt=Date.parse(response.data.expires_at);if(!Number.isFinite(s.expiresAt))throw new Error();
+          if(!currentSession(s)||s.closing)return;
+          s.status='pending';const qr=$('[data-docux-qr]');new QRCode(qr,{text:s.url,width:216,height:216,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});qr.removeAttribute('title');
+          $('[data-m7-capture-link]').setAttribute('href',s.url);$('[data-docux-capture-guide]').hidden=false;$('[data-docux-qr-content]').hidden=false;$('[data-docux-capture-change]').disabled=false;
+          captureMessage('Esperando captura…','pending');updateExpiry(s);s.expiryTimer=setInterval(()=>updateExpiry(s),1000);schedule(s);$('[data-m7-capture-link]').focus();
+        }catch(_){
+          if(currentSession(s)&&!s.closing){
+            captureMessage(s.token?'No se pudo mostrar el código. Cierra esta ventana para cancelarlo.':'No se pudo confirmar la creación del código. Cierra y vuelve a intentar; cualquier código creado vencerá automáticamente.');removeQR();
+            if(!s.token){s.pending=false;s.status='failed';$('[data-m7-capture-cancel]').hidden=true;}
           }
-        } finally { captureBusy = false; }
+        }finally{captureBusy=false;}
       })();
+      await s.issuance;
+    }
+    modalShell(captureDialog,()=>endCapture());
+    $('[data-m7-capture-cancel]').addEventListener('click',()=>endCapture(false));
+    $('[data-docux-capture-close]').addEventListener('click',()=>endCapture());
+    $('[data-docux-capture-change]').addEventListener('click',async()=>{const s=session;if(!s||s.closing)return;await endCapture(false);if(currentSession(s)&&!s.pending&&['cancelled','expired'].includes(s.status)){showSelection(s);$('[data-docux-capture-options] input:checked')?.focus();}});
+    $('[data-docux-capture-generate]').addEventListener('click',()=>{if(session)generateCapture(session);});
+    $('[data-docux-capture-renew]').addEventListener('click',()=>{const s=session;if(s&&!s.pending&&['expired','cancelled'].includes(s.status)){s.token='';generateCapture(s);}});
+    $('[data-docux-copy]').addEventListener('click',async()=>{const s=session;if(!s||!s.pending||!currentSession(s))return;try{await navigator.clipboard.writeText(s.url);if(currentSession(s))captureMessage('Enlace copiado. Esperando captura…');}catch(_){if(currentSession(s))captureMessage('No se pudo copiar. Usa Abrir enlace.');}});
+    $('[data-m7-capture-start]').addEventListener('click',async()=>{
+      if(busy||actionOpen()||!sameContext()||context.status!=='open'||captureBusy||session)return;
+      const s={context:{...context},token:'',url:'',pending:false,closing:false,timer:null,controller:null,classification:null,expiryTimer:null};session=s;
+      captureDialog.classList.add('plan02b-modal');captureDialog.showModal();showSelection(s);paint();
+      $('[data-docux-capture-options]').replaceChildren();captureMessage('Cargando tipos de documento…');$('[data-docux-capture-close]').focus();
+      try {
+        const catalog=await get('note-capture-tokens/classifications');if(!currentSession(s))return;
+        for(const item of catalog.items||[]){
+          const label=document.createElement('label'),input=document.createElement('input'),icon=document.createElement('span'),text=document.createElement('span');
+          input.type='radio';input.name='capture-classification';input.value=item.id;input.required=true;
+          icon.className='material-symbols-rounded';icon.setAttribute('aria-hidden','true');icon.textContent=item.icon;
+          text.textContent=item.label;label.append(input,icon,text);$('[data-docux-capture-options]').append(label);
+          input.addEventListener('change',()=>{if(currentSession(s)&&!s.pending&&input.checked){s.classification=item;$('[data-docux-capture-generate]').disabled=false;}});
+        }
+        captureMessage('Selecciona el tipo y genera el código cuando estés listo.');$('[data-docux-capture-options] input')?.focus();
+      }catch(_){if(currentSession(s))captureMessage('No se pudieron cargar los tipos. Cierra y vuelve a intentar.');}
     });
     document.addEventListener('visibilitychange', () => { const s = session; if (!s) return; stopPolling(s); if (!document.hidden) schedule(s); });
     window.addEventListener('pagehide', () => {

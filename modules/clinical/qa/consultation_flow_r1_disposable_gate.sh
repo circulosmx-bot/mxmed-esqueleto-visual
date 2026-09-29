@@ -59,4 +59,4 @@ MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS=
 http_pid=$!
 base="http://127.0.0.1:$port"
 for _ in {1..40}; do if curl -fsS -o /dev/null "$base/modules/clinical/README.md" 2>/dev/null; then break; fi;sleep 0.1;done
-FLOW_R1_QA_BASE="$base" FLOW_R1_QA_DB="$qa_db" FLOW_R1_QA_ROOT="$qa_root" python3 "$root_dir/modules/clinical/qa/consultation_flow_r1_browser.py"
+FLOW_R1_QA_BASE="$base" FLOW_R1_QA_DB="$qa_db" FLOW_R1_QA_ROOT="$qa_root" python3 "${FLOW_R1_QA_SCRIPT:-$root_dir/modules/clinical/qa/consultation_flow_r1_browser.py}"

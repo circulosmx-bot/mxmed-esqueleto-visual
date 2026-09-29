@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=consultation-save-ux-r6">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=mobile-capture-r4">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -5508,12 +5508,16 @@
                       <dialog class="docux-modal docux-capture-modal docux-action-modal" id="docux-capture" data-docux-capture aria-labelledby="docux-capture-title" aria-describedby="docux-capture-description">
                         <header><span class="material-symbols-rounded docux-action-icon" aria-hidden="true">smartphone</span><div><h4 id="docux-capture-title">Capturar con celular</h4><p id="docux-capture-description">Usa tu teléfono para fotografiar o cargar un documento directamente en esta consulta.</p></div><button type="button" class="btn btn-link" data-modal-close aria-label="Cerrar">×</button></header>
                         <div class="plan02b-modal-content">
-                          <div class="docux-capture-guide"><ol class="docux-capture-steps"><li><span>1</span>Escanea el código<br>o abre el enlace</li><li><span>2</span>Toma la foto o<br>selecciona una imagen</li><li><span>3</span>El documento recibido<br>aparece en esta consulta</li></ol>
-                          <div class="docux-capture-columns"><div class="docux-qr-panel" data-docux-qr-content hidden><div class="docux-qr" data-docux-qr role="img" aria-label="Código QR para abrir el enlace de captura"></div><p>Escanea con la cámara de tu teléfono</p><div class="docux-links"><a data-m7-capture-link target="_blank" rel="noopener noreferrer"><span class="material-symbols-rounded" aria-hidden="true">link</span>Abrir enlace de captura</a><button type="button" class="btn btn-link" data-docux-copy aria-label="Copiar enlace"><span class="material-symbols-rounded" aria-hidden="true">content_copy</span></button></div></div>
-                          <div class="docux-phone-panel"><span class="material-symbols-rounded docux-phone" aria-hidden="true">smartphone</span><p data-m7-capture-state role="status" aria-live="polite"></p><p class="docux-phone-help">Mantén esta ventana abierta mientras envías el documento.</p></div></div></div>
-                          <article class="docux-received" data-docux-received hidden><img class="docux-received-preview" data-docux-received-preview alt="Vista previa del documento recibido" hidden><span class="material-symbols-rounded docux-received-file" data-docux-received-file aria-hidden="true">description</span><div><h5>Última captura recibida</h5><strong data-docux-received-title>Documento recibido</strong><p data-docux-received-detail></p></div><span class="material-symbols-rounded docux-received-success" aria-hidden="true">check_circle</span></article>
+                          <fieldset class="docux-capture-classifications" data-docux-capture-selection><legend>¿Qué tipo de documento vas a capturar?</legend><div data-docux-capture-options></div><p class="docux-capture-classification-help">Para un resultado de estudio vinculado a una orden, usa Registrar resultado.</p></fieldset>
+                          <div class="docux-capture-selected" data-docux-capture-selected hidden><p>Capturando: <strong data-docux-capture-label></strong></p><button type="button" class="btn btn-link" data-docux-capture-change>Cambiar tipo</button></div>
+                          <div class="docux-capture-guide" data-docux-capture-guide hidden><ol class="docux-capture-steps"><li><span>1</span>Escanea el código<br>o abre el enlace</li><li><span>2</span>Toma la foto o<br>selecciona una imagen</li><li><span>3</span>El documento aparecerá aquí<br>cuando sea recibido</li></ol>
+                            <div class="docux-capture-columns"><div class="docux-qr-panel" data-docux-qr-content hidden><div class="docux-qr" data-docux-qr role="img" aria-label="Código QR para abrir el enlace de captura"></div><p>Escanea con la cámara de tu teléfono</p><div class="docux-links"><a data-m7-capture-link target="_blank" rel="noopener noreferrer"><span class="material-symbols-rounded" aria-hidden="true">link</span>Abrir enlace</a><button type="button" class="btn btn-link" data-docux-copy aria-label="Copiar enlace"><span class="material-symbols-rounded" aria-hidden="true">content_copy</span></button></div><p class="docux-capture-expiry" data-docux-capture-expiry></p></div>
+                            <div class="docux-phone-panel"><span class="material-symbols-rounded docux-phone" aria-hidden="true">smartphone</span><p class="docux-phone-help">Mantén esta ventana abierta mientras envías el documento.</p></div></div>
+                          </div>
+                          <p class="docux-capture-status" data-m7-capture-state role="status" aria-live="polite"></p>
+                          <article class="docux-received" data-docux-received hidden><img class="docux-received-preview" data-docux-received-preview alt="Vista previa del documento recibido" hidden><span class="material-symbols-rounded docux-received-file" data-docux-received-file aria-hidden="true">description</span><div><h5>Documento recibido</h5><strong data-docux-received-title></strong><p data-docux-received-detail></p></div><span class="material-symbols-rounded docux-received-success" aria-hidden="true">check_circle</span></article>
                         </div>
-                        <footer><div><button type="button" class="btn btn-outline-secondary" data-m7-capture-cancel>Cancelar captura</button><button type="button" class="btn btn-outline-secondary" data-docux-capture-close hidden>Cerrar</button><button type="button" class="btn btn-primary" data-docux-capture-use hidden>Usar captura</button></div></footer>
+                        <footer><div><button type="button" class="btn btn-outline-secondary" data-docux-capture-close>Cerrar</button><button type="button" class="btn btn-outline-secondary" data-m7-capture-cancel hidden>Cancelar captura</button><button type="button" class="btn btn-primary" data-docux-capture-generate disabled>Generar código QR</button><button type="button" class="btn btn-primary" data-docux-capture-renew hidden>Generar nuevo código</button></div></footer>
                       </dialog>
                       <dialog class="docux-modal docux-action-modal" id="docux-result" data-docux-result aria-labelledby="docux-result-title" aria-describedby="docux-result-description">
                         <form data-m7-result-form>
@@ -10779,7 +10783,7 @@
 <script src="assets/js/app.js?v=consultation-fine-tuning-r2"></script>
 <script src="assets/js/agenda/agf01-followups.js?v=plan02b"></script>
 <script src="assets/js/clinical/m7-ws03.js?v=consultation-save-ux-r6"></script>
-<script src="assets/js/clinical/m7-ws04.js?v=vis32"></script>
+<script src="assets/js/clinical/m7-ws04.js?v=mobile-capture-r4"></script>
 <script src="assets/js/clinical/m7-ws05.js?v=plan02br1"></script>
 <script src="assets/js/clinical/m7-workspace.js?v=consultation-save-ux-r6"></script>
 <script src="assets/js/clinical/vis04-consultation.js?v=consultation-placeholder-r2"></script>

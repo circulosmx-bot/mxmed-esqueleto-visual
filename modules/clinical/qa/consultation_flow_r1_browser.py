@@ -4,7 +4,7 @@ from email.parser import BytesParser
 from email.policy import default
 from datetime import datetime,timedelta
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit,urljoin
 from playwright.sync_api import sync_playwright,expect
 BASE,DB=os.environ['FLOW_R1_QA_BASE'],os.environ['FLOW_R1_QA_DB']
 assert DB.startswith('flow_r1_qa_') and len(DB)==23
@@ -65,13 +65,18 @@ with sync_playwright() as pw:
   page.locator(f'.m7-workspace-sections [data-m7-section="{name}"]').click();expect(page.locator(f'[data-m7-section="{name}"]')).to_have_attribute('aria-current','true')
   if name=='documents':expect(page.locator('[data-m7-doc-state]')).to_have_attribute('data-state','saved')
  def state(page):return page.evaluate('k=>JSON.parse(sessionStorage.getItem(k))',KEY)
- def open_kind(page,kind):page.locator(f'[data-plan02b] [data-ns="{kind}"]').click();expect(page.locator('.plan02b-modal')).to_be_visible()
+ def open_kind(page,kind):
+  try:page.locator(f'[data-plan02b] [data-ns="{kind}"]').click();expect(page.locator('.plan02b-modal')).to_be_visible()
+  except Exception:
+   page.screenshot(path=str(OUT/'failed-plan-launch-webkit.png'));(OUT/'failed-plan-launch.json').write_text(json.dumps({'errors':errors,'buttons':page.locator('[data-plan02b] button').evaluate_all('ns=>ns.map(n=>({text:n.textContent,rect:n.getBoundingClientRect().toJSON(),disabled:n.disabled}))')},indent=2));raise
  def order(page,title,mode='none'):
   open_kind(page,'orders');page.locator('[data-order-field="title"]').fill(title);page.locator('[data-order-review="mode"]').select_option(mode)
   if mode=='days':page.locator('[data-order-review="days"]').fill('10')
   if mode=='date':page.locator('[data-order-review="date"]').fill((datetime.now()+timedelta(days=11)).strftime('%Y-%m-%d'))
   page.locator('[data-modal-add]').click();expect(page.locator('.plan02b-modal')).to_have_count(0)
  def confirm(page):page.locator('[data-ns="confirm"]').click();page.wait_for_function('!window.mxmedPlanNextSteps.isBusy()');expect(page.locator('[data-ns-message]')).not_to_contain_text('Verificando registros')
+ def capture(page):
+  page.locator('[data-m7-capture-start]').click();page.locator('input[name="capture-classification"][value="clinical_image"]').check();page.locator('[data-docux-capture-generate]').click()
  ctx,page=setup()
  order(page,'Orden sin revisión');check('default order prepares no follow-up',len(state(page)['orderReviews'])==0 and len(state(page)['orders'])==1)
  # Appointment unavailable until an eligible appointment is selected/prepared.
@@ -126,13 +131,13 @@ with sync_playwright() as pw:
  page.locator('[data-doc-patient]').click();expect(page.locator('[data-doc-reader]')).to_be_visible();page.locator('[data-doc-reader-close]').click()
  # Secure capture issuance only after explicit action, cancellation reaches canonical terminal state.
  tokens_before=count('clinical_note_capture_tokens') if sql("SHOW TABLES LIKE 'clinical_note_capture_tokens'") else 0
- page.locator('[data-m7-capture-start]').click();expect(page.locator('[data-docux-qr-content]')).to_be_visible();check('mobile secure capture preserved',count('clinical_note_capture_tokens')==tokens_before+1)
+ capture(page);expect(page.locator('[data-docux-qr-content]')).to_be_visible();check('mobile secure capture preserved',count('clinical_note_capture_tokens')==tokens_before+1)
  for _ in range(10):page.keyboard.press('Tab');assert page.locator('[data-docux-capture]').evaluate('n=>n.contains(document.activeElement)')
  for _ in range(8):page.keyboard.press('Shift+Tab');assert page.locator('[data-docux-capture]').evaluate('n=>n.contains(document.activeElement)')
  check('mobile capture modal keyboard focus stays trapped')
  page.locator('[data-m7-capture-cancel]').click();expect(page.locator('[data-m7-capture-state]')).to_have_text('Captura cancelada');check('capture cancel preserves secure token state',sql('SELECT status FROM clinical_note_capture_tokens ORDER BY created_at DESC LIMIT 1')=='cancelled');page.locator('[data-docux-capture-close]').click()
  # The actual mobile bearer upload still uses DOCSEC01's canonical single-use authority.
- with page.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/note-capture-tokens')) as issued:page.locator('[data-m7-capture-start]').click()
+ with page.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/note-capture-tokens')) as issued:capture(page)
  capture_data=issued.value.json()['data'];token=capture_data['token'];anon=pw.request.new_context();n=count('clinical_documents')
  check('capture status and issuance remain physician-authenticated',anon.get(BASE+'/api/clinical/index.php/note-capture-tokens/'+token).status==401 and anon.post(BASE+'/api/clinical/index.php/note-capture-tokens',data={'patient_id':'p_plan02ux_review','encounter_key':'enc:1016','note_context':'nota_clinica_modal'}).status==401)
  page.evaluate('document.activeElement?.blur()');pending_capture=page.screenshot();capture_views={}
@@ -142,18 +147,18 @@ with sync_playwright() as pw:
   check(f'mobile capture modal {w}x{h} no horizontal overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth+1') and page.locator('[data-docux-capture]').evaluate('n=>n.scrollWidth<=n.clientWidth+1'))
   page.evaluate('document.activeElement?.blur()');capture_views[f'{w}x{h}']=page.screenshot()
  page.set_viewport_size({'width':1440,'height':900})
- mobile=browser.new_context(viewport={'width':390,'height':844});phone=mobile.new_page();phone.goto(BASE+capture_data['mobile_url'],wait_until='networkidle');check('actual phone page requires no physician login',not mobile.cookies());phone.locator('#captureFile').set_input_files(file)
+ mobile=browser.new_context(viewport={'width':390,'height':844});phone=mobile.new_page();phone.goto(urljoin(BASE,capture_data['mobile_url']),wait_until='networkidle');check('actual phone page requires no physician login',not mobile.cookies());phone.locator('#captureFile').set_input_files(file)
  with phone.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/upload')) as uploaded:phone.locator('#captureSubmit').click()
  check('anonymous phone upload saves only token-authorized encounter',uploaded.value.status in [200,201] and count('clinical_documents')==n+1 and sql('SELECT encounter_ref_id FROM clinical_documents ORDER BY id DESC LIMIT 1')=='1016');mobile.close()
  reused=anon.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+token+'/upload',multipart={'file':file});check('capture token is single-use with no duplicate document',reused.status in [409,410] and count('clinical_documents')==n+1)
- expect(page.locator('[data-m7-capture-state]')).to_have_text('✓ Documento recibido',timeout=15000);expect(page.locator('[data-docux-qr-content]')).to_be_hidden();expect(page.locator('[data-docux-capture-use]')).to_be_enabled();check('received capture uses canonical readback',page.locator('[data-docux-received]').is_visible() and page.locator('[data-docux-received-detail]').inner_text()=='Registrado en esta consulta.');(OUT/'mobile-capture-modal-terminal-token-webkit.png').write_bytes(pending_capture)
+ expect(page.locator('[data-m7-capture-state]')).to_have_text('Documento recibido',timeout=15000);expect(page.locator('[data-docux-qr-content]')).to_be_hidden();expect(page.locator('[data-docux-capture-close]')).to_be_enabled();check('received capture uses canonical readback',page.locator('[data-docux-received]').is_visible() and 'Registrado en esta consulta.' in page.locator('[data-docux-received-detail]').inner_text());(OUT/'mobile-capture-modal-terminal-token-webkit.png').write_bytes(pending_capture)
  for size,data in capture_views.items():(OUT/f'capture-modal-{size}-terminal-token-webkit.png').write_bytes(data)
  expect(page.locator('[data-docux-received-preview]')).to_be_visible();check('capture preview uses authorized canonical binary without write',page.locator('[data-docux-received-preview]').evaluate('n=>n.naturalWidth===128&&n.naturalHeight===96&&n.getAttribute("src").includes("/binary/ORIGINAL")') and count('clinical_documents')==n+1)
  check('received-image preview retains physician authentication',anon.get(BASE+page.locator('[data-docux-received-preview]').get_attribute('src')).status==401)
- page.screenshot(path=str(OUT/'mobile-capture-received-webkit.png'));n=count('clinical_documents');page.locator('[data-docux-capture-use]').click();expect(page.locator('[data-docux-capture]')).not_to_be_visible();check('Use capture creates no second document and restores focus',count('clinical_documents')==n and page.locator('[data-m7-capture-start]').evaluate('n=>document.activeElement===n'));check('closed capture clears private preview',page.locator('[data-docux-received-preview]').get_attribute('src') is None);anon.dispose()
+ page.screenshot(path=str(OUT/'mobile-capture-received-webkit.png'));n=count('clinical_documents');page.locator('[data-docux-capture-close]').click();expect(page.locator('[data-docux-capture]')).not_to_be_visible();check('Close received capture creates no second document and restores focus',count('clinical_documents')==n and page.locator('[data-m7-capture-start]').evaluate('n=>document.activeElement===n'));check('closed capture clears private preview',page.locator('[data-docux-received-preview]').get_attribute('src') is None);anon.dispose()
  # Expiry retains the existing terminal authority and anonymous rejection.
- with page.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/note-capture-tokens')) as issued:page.locator('[data-m7-capture-start]').click()
- expiring=issued.value.json()['data']['token'];sql("UPDATE clinical_note_capture_tokens SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 SECOND) WHERE token='"+expiring+"'");expect(page.locator('[data-m7-capture-state]')).to_have_text('El enlace de captura venció.',timeout=15000)
+ with page.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/note-capture-tokens')) as issued:capture(page)
+ expiring=issued.value.json()['data']['token'];sql("UPDATE clinical_note_capture_tokens SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 SECOND) WHERE token='"+expiring+"'");expect(page.locator('[data-m7-capture-state]')).to_have_text('El código expiró.',timeout=15000)
  anon=pw.request.new_context();check('expired token rejects anonymous upload without document',anon.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+expiring+'/upload',multipart={'file':file}).status==410 and count('clinical_documents')==n);anon.dispose();page.locator('[data-docux-capture-close]').click()
  expect(page.locator('[data-doc-all]')).to_be_visible();page.locator('[data-doc-all]').click();expect(page.locator('[data-doc-reader] .m7-doc-card')).to_have_count(count('clinical_documents'));page.locator('[data-doc-reader-close]').click();check('many files stay bounded with full canonical reader modal')
  # Snapshot both operational surfaces at approved desktop and narrow sizes.

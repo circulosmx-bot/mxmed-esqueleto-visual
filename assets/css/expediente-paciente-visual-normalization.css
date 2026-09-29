@@ -4291,3 +4291,28 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documen
  .docux-action-modal .docux-phone {font-size:88px}
  .docux-action-modal .docux-phone-panel {padding:12px}
 }
+
+/* Mobile capture R4: selection precedes issuance inside the existing modal. */
+.docux-capture-classifications {border:0;padding:0;margin:0;min-width:0}
+.docux-capture-classifications legend {font-size:16px;font-weight:650;line-height:22px;margin-bottom:12px}
+.docux-capture-classifications [data-docux-capture-options] {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.docux-action-modal .docux-capture-classifications label {position:relative;display:flex;align-items:center;gap:10px;margin:0;padding:14px 10px;border:1px solid #bdd8e4;border-radius:8px;background:#fff;cursor:pointer;min-width:0}
+.docux-capture-classifications label:has(input:checked) {border-color:#00b8c9;background:#e5faff;box-shadow:inset 0 0 0 1px #00b8c9}
+.docux-capture-classifications label:has(input:focus-visible) {outline:3px solid #008fa4;outline-offset:2px}
+.docux-capture-classifications input {position:absolute;opacity:0;width:1px;height:1px}
+.docux-capture-classifications .material-symbols-rounded {font-size:32px;color:#009db7;flex-shrink:0}
+.docux-capture-classification-help {font-size:12px;line-height:18px;color:#617d94;margin:12px 0 0}
+.docux-capture-selected {display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.docux-capture-selected p {margin:0;font-size:14px;line-height:20px}
+.docux-capture-selected .btn {font-size:13px;white-space:nowrap;padding:4px;color:#008fa4}
+.docux-capture-status {font-size:14px;line-height:20px;margin:12px 0 0;color:#356b82}
+.docux-capture-status[data-state=uploaded],.docux-capture-status[data-state=consumed] {color:#008754}
+.docux-action-modal .docux-capture-expiry {font-size:12px;margin:8px 0 0;color:#617d94}
+.docux-action-modal[data-docux-capture] .docux-qr {width:216px;height:216px}
+.docux-action-modal[data-docux-capture] .docux-capture-columns {grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
+@media(max-width:575.98px){
+ .docux-action-modal[data-docux-capture] .docux-capture-columns {grid-template-columns:minmax(0,1fr)}
+ .docux-action-modal[data-docux-capture] .docux-phone-panel {display:none}
+ .docux-capture-classifications [data-docux-capture-options] {grid-template-columns:repeat(2,minmax(0,1fr))}
+ .docux-action-modal .docux-capture-classifications label {flex-direction:column;text-align:center;padding:10px 8px}
+}

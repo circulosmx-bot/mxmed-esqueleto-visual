@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
   <title>Captura clínica móvil</title>
   <style>
     :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2937;background:#f6f8fb}
@@ -22,6 +23,13 @@
     .preview{margin-top:10px;display:none}
     .preview img{width:100%;max-height:260px;object-fit:contain;border:1px solid #dbe3ef;border-radius:10px;background:#f8fafc}
     .d-none{display:none !important}
+    .pickers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .capture-type{padding:12px;border-radius:8px;background:#dbfcff;color:#07536e;font-weight:600}
+    .file-name{font-size:13px;overflow-wrap:anywhere}
+    #captureSubmit{background:#00aebe;border-color:#00aebe;min-height:44px}
+    .pickers button{min-height:48px;color:#07536e;border-color:#00b8c9;background:#fff}
+    .wrap{color:#07536e;border-color:#bdd8e4}
+    [hidden]{display:none!important}
     .sig-pad{border:1px solid #c7d2e5;border-radius:10px;background:#fff;touch-action:none;width:100%;height:190px}
     .sig-actions{display:flex;gap:10px;margin-top:10px}
     .sig-actions button{width:auto;flex:1}
@@ -29,12 +37,16 @@
 </head>
 <body>
   <main class="wrap">
-    <h1 id="captureTitle">Capturar imagen clínica</h1>
-    <p id="captureIntro">Selecciona una imagen desde tu cámara o galería y súbela para anexarla al documento clínico activo en escritorio.</p>
+    <h1 id="captureTitle">Capturar documento</h1>
+    <p id="captureIntro">Fotografía o selecciona el documento y envíalo a la consulta abierta en tu computadora.</p>
 
+    <p class="capture-type" id="captureClassification" hidden></p>
     <form id="captureForm">
-      <label for="captureFile">Imagen clínica</label>
-      <input id="captureFile" name="file" type="file" accept="image/*,application/pdf" capture="environment" required>
+      <div class="pickers"><button type="button" id="captureTakePhoto" disabled>Tomar foto</button><button type="button" id="captureChooseFile" disabled>Seleccionar imagen/archivo</button></div>
+      <input id="captureFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Seleccionar imagen o archivo" hidden>
+      <input id="captureCamera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-label="Tomar foto" hidden>
+      <p class="file-name" id="captureFileName" aria-live="polite"></p>
+      <div id="captureLegacyMetadata">
 
       <label for="captureSummary">Resumen (opcional)</label>
       <input id="captureSummary" name="summary" type="text" maxlength="180" placeholder="Ej. Foto de lesión en control">
@@ -42,7 +54,8 @@
       <label for="captureDatetime">Fecha y hora (opcional)</label>
       <input id="captureDatetime" name="event_datetime" type="datetime-local">
 
-      <button id="captureSubmit" type="submit">Subir imagen</button>
+      </div>
+      <button id="captureSubmit" type="submit" disabled>Enviar documento</button>
     </form>
 
     <form id="signatureForm" class="d-none">
@@ -62,7 +75,7 @@
       <img id="capturePreview" alt="Vista previa de imagen">
     </div>
 
-    <div class="msg muted" id="captureMsg">Esperando acción…</div>
+    <div class="msg muted" id="captureMsg" role="status" aria-live="polite">Esperando acción…</div>
   </main>
 
   <script>
@@ -78,6 +91,9 @@
       const summaryInput = document.getElementById('captureSummary');
       const datetimeInput = document.getElementById('captureDatetime');
       const submitBtn = document.getElementById('captureSubmit');
+      const cameraInput=document.getElementById('captureCamera'),takePhoto=document.getElementById('captureTakePhoto'),chooseFile=document.getElementById('captureChooseFile');
+      let selectedFile=null,previewUrl='',pending=false,scopedClassification=false,acceptedTypes=['image/jpeg','image/png','image/webp','application/pdf'];
+      takePhoto.onclick=()=>cameraInput.click();chooseFile.onclick=()=>fileInput.click();
       const previewWrap = document.getElementById('capturePreviewWrap');
       const previewImg = document.getElementById('capturePreview');
 
@@ -226,30 +242,38 @@
         previewWrap.style.display = 'none';
         setupSignatureCanvas();
         setMsg('Firma pendiente de envío…', 'muted');
-      }else{
-        setNowDatetime();
-        setMsg('Esperando imagen para enviar…', 'muted');
+      }else if(token){
+        setNowDatetime();setMsg('Verificando código…');
+        fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/mobile-context`,{headers:{Accept:'application/json'},credentials:'omit',cache:'no-store'})
+          .then(async response=>{const json=await response.json();if(!response.ok||!json.ok)throw new Error('El código no está disponible. Solicita uno nuevo en tu computadora.');return json.data;})
+          .then(data=>{
+            pending=data.status==='pending';scopedClassification=!!data.classification?.id;
+            acceptedTypes=data.classification?.mime_types||acceptedTypes;fileInput.accept=acceptedTypes.join(',');
+            const label=document.getElementById('captureClassification');label.textContent='Documento: '+data.classification.label;label.hidden=false;
+            document.getElementById('captureLegacyMetadata').hidden=scopedClassification;
+            takePhoto.hidden=!acceptedTypes.some(type=>type.startsWith('image/'));takePhoto.disabled=!pending;chooseFile.disabled=!pending;
+            chooseFile.textContent=acceptedTypes.includes('application/pdf')&&!acceptedTypes.some(type=>type.startsWith('image/'))?'Seleccionar archivo PDF':'Seleccionar imagen/archivo';
+            setMsg(pending?'Selecciona el documento. Se enviará sólo cuando presiones Enviar documento.':({expired:'El código expiró. Genera uno nuevo en tu computadora.',cancelled:'Este código fue cancelado.',uploaded:'Documento recibido. Este código ya fue utilizado.',consumed:'Documento recibido. Este código ya fue utilizado.'})[data.status]||'Este código ya no está disponible.',pending?'muted':'err');
+          }).catch(error=>setMsg(error.message,'err'));
       }
 
-      fileInput?.addEventListener('change', ()=>{
-        const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-        if(!file){
-          previewWrap.style.display = 'none';
-          previewImg.removeAttribute('src');
-          return;
-        }
-        if((file.type || '').toLowerCase().startsWith('image/')){
-          previewImg.src = URL.createObjectURL(file);
-          previewWrap.style.display = 'block';
-        }else{
-          previewWrap.style.display = 'none';
-          previewImg.removeAttribute('src');
-        }
-      });
+      const selectFile=input=>{
+        const file=input.files?.[0]||null;
+        if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}previewImg.removeAttribute('src');previewWrap.style.display='none';
+        selectedFile=null;submitBtn.disabled=true;document.getElementById('captureFileName').textContent='';
+        if(!pending||!file)return;
+        if(!acceptedTypes.includes(file.type)){setMsg('El archivo no corresponde al tipo elegido en la computadora.','err');input.value='';return;}
+        selectedFile=file;document.getElementById('captureFileName').textContent=file.name;submitBtn.disabled=false;
+        if(file.type.startsWith('image/')){previewUrl=URL.createObjectURL(file);previewImg.src=previewUrl;previewWrap.style.display='block';}
+        setMsg('Documento seleccionado. Revisa y presiona Enviar documento.');
+      };
+      fileInput.addEventListener('change',()=>selectFile(fileInput));cameraInput.addEventListener('change',()=>selectFile(cameraInput));
+      window.addEventListener('pagehide',()=>{if(previewUrl)URL.revokeObjectURL(previewUrl);});
 
       form?.addEventListener('submit', async (event)=>{
         event.preventDefault();
-        const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+        const file = selectedFile;
+        if(!pending)return;
         if(!file){
           setMsg('Selecciona un archivo antes de subir.', 'err');
           return;
@@ -262,10 +286,10 @@
           formData.append('file', uploadFile);
           const summary = String(summaryInput.value || '').trim();
           const eventDatetime = String(datetimeInput.value || '').trim();
-          if(summary) formData.append('summary', summary);
-          if(eventDatetime) formData.append('event_datetime', eventDatetime);
+          if(!scopedClassification&&summary) formData.append('summary', summary);
+          if(!scopedClassification&&eventDatetime) formData.append('event_datetime', eventDatetime);
 
-          setMsg('Subiendo imagen…');
+          setMsg('Enviando documento…');
           const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/upload`, {
             method: 'POST',
             body: formData,
@@ -277,7 +301,8 @@
             const message = String((json && (json.message || (json.error && json.error.message) || json.error)) || `HTTP ${resp.status}`).trim();
             throw new Error(message || 'No se pudo subir la imagen.');
           }
-          setMsg('Imagen enviada correctamente. Ya puedes volver a tu computadora.', 'ok');
+          setMsg('Documento enviado correctamente. Ya puedes volver a tu computadora.', 'ok');
+          pending=false;cameraInput.disabled=true;takePhoto.disabled=true;chooseFile.disabled=true;
           submitBtn.disabled = true;
           fileInput.disabled = true;
           summaryInput.disabled = true;

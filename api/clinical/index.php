@@ -11,6 +11,7 @@ require_once __DIR__ . '/../_lib/clinical_longitudinal_antecedents.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_problems.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_medications.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_tasks.php';
+require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
 
 clinical_m6_observability_request_started_at();
 
@@ -8039,6 +8040,11 @@ try {
                 return;
             }
         }
+        if ($method === 'GET' && count($segments) === 2 && $segments[1] === 'classifications') {
+            clinical_send_response(['ok' => true, 'data' => ['items' => array_values(clinical_capture_classifications()),
+                'title_supported' => false, 'title_required' => false]], 200);
+            return;
+        }
         try {
             $pdo = clinical_documents_pdo();
             clinical_note_capture_tokens_ensure_schema($pdo);
@@ -8084,6 +8090,21 @@ try {
             $patientId = trim((string)($body['patient_id'] ?? ''));
             $encounterKey = trim((string)($body['encounter_key'] ?? ''));
             $noteContext = trim((string)($body['note_context'] ?? 'nota_clinica_modal'));
+            $captureClassification = null;
+            try {
+                if (array_key_exists('capture_classification', $body)) {
+                    if (!is_string($body['capture_classification']) || $encounterKey === '') {
+                        throw new InvalidArgumentException('CAPTURE_CLASSIFICATION_INVALID');
+                    }
+                    $noteContext = clinical_capture_classification_context($body['capture_classification']);
+                    $captureClassification = clinical_capture_classification_from_context($noteContext);
+                } elseif (str_starts_with(strtolower($noteContext), 'step6_capture_r4:')) {
+                    throw new InvalidArgumentException('CAPTURE_CLASSIFICATION_REQUIRED');
+                }
+            } catch (InvalidArgumentException $e) {
+                clinical_send_response(['ok' => false, 'error' => $e->getMessage(), 'data' => null], 400);
+                return;
+            }
             if ($patientId === '') {
                 clinical_send_response([
                     'ok' => false,
@@ -8109,6 +8130,13 @@ try {
             if (!clinical_note_capture_require_scope($pdo, $captureDoctorContext, $patientId, $encounterKey, 'note-capture-tokens')) {
                 return;
             }
+            if ($captureClassification !== null) {
+                $scope = clinical_resolve_encounter_key($pdo, $encounterKey);
+                if (($scope['row']['status'] ?? '') !== 'open') {
+                    clinical_send_response(['ok' => false, 'error' => 'ENCOUNTER_TERMINAL', 'data' => null], 409);
+                    return;
+                }
+            }
             try {
                 $token = clinical_note_capture_token_generate();
             } catch (Throwable $e) {
@@ -8123,6 +8151,13 @@ try {
             $mobilePath = '/public/note-capture.html?token=' . rawurlencode($token);
             if ($isConsentRemoteSignatureContext) {
                 $mobilePath .= '&mode=signature';
+            }
+            if ($captureClassification !== null) {
+                try { $mobilePath = clinical_capture_mobile_url($mobilePath); }
+                catch (RuntimeException $e) {
+                    clinical_send_response(['ok' => false, 'error' => $e->getMessage(), 'data' => null], 503);
+                    return;
+                }
             }
             try {
                 $stmt = $pdo->prepare("
@@ -8192,12 +8227,35 @@ try {
                     'expires_at' => clinical_note_capture_datetime_to_iso($expiresAt),
                     'mobile_url' => $mobilePath,
                     'qr_value' => $mobilePath,
+                    ...($captureClassification !== null ? ['classification' => $captureClassification] : []),
                 ],
                 'meta' => [
                     'method' => 'POST',
                     'route' => 'note-capture-tokens',
                 ],
             ], 201);
+            return;
+        }
+
+        // Bearer-only phone description: no patient/encounter/doctor/private document metadata.
+        if ($method === 'GET' && count($segments) === 3 && $segments[2] === 'mobile-context') {
+            $row = clinical_note_capture_token_fetch($pdo, trim(rawurldecode((string)$segments[1])));
+            if (!is_array($row)) {
+                clinical_send_response(['ok' => false, 'error' => 'not_found', 'data' => null], 404);
+                return;
+            }
+            $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            try { $classification = clinical_capture_classification_from_context((string)$row['note_context']); }
+            catch (InvalidArgumentException) {
+                clinical_send_response(['ok' => false, 'error' => 'CAPTURE_CLASSIFICATION_INVALID', 'data' => null], 410);
+                return;
+            }
+            header('Cache-Control: no-store');
+            clinical_send_response(['ok' => true, 'data' => [
+                'status' => $row['status'], 'expires_at' => clinical_note_capture_datetime_to_iso($row['expires_at']),
+                'classification' => $classification ?? ['id' => null, 'label' => 'Documento clínico',
+                    'mime_types' => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']],
+            ]], 200);
             return;
         }
 
@@ -8715,6 +8773,22 @@ try {
             $patientId = trim((string)($row['patient_id'] ?? ''));
             $encounterKey = trim((string)($row['encounter_key'] ?? ''));
             $noteContext = trim((string)($row['note_context'] ?? 'nota_clinica_modal'));
+            try { $captureClassification = clinical_capture_classification_from_context($noteContext); }
+            catch (InvalidArgumentException) {
+                clinical_send_response(['ok' => false, 'error' => 'CAPTURE_CLASSIFICATION_INVALID', 'data' => null], 410);
+                return;
+            }
+            if ($captureClassification !== null) {
+                $actualMime = (new finfo(FILEINFO_MIME_TYPE))->file((string)$uploadFile['tmp_name']);
+                if (!in_array($actualMime, $captureClassification['mime_types'], true)) {
+                    clinical_send_response(['ok' => false, 'error' => 'CAPTURE_FILE_TYPE_MISMATCH',
+                        'message' => 'El archivo no corresponde al tipo elegido en la computadora.', 'data' => null], 400);
+                    return;
+                }
+                // Anonymous metadata never changes the issued clinical classification or title/context.
+                $summary = '';
+                $eventDatetime = gmdate('Y-m-d H:i:s');
+            }
             $noteContextNorm = strtolower($noteContext);
             $isConsentIdentityContext = strpos($noteContextNorm, 'consentimiento_identidad_firmante') === 0;
             $identityKind = 'otro';
@@ -8728,6 +8802,7 @@ try {
             $uploadMime = strtolower(trim((string)($uploadFile['type'] ?? '')));
             $uploadName = strtolower(trim((string)($uploadFile['name'] ?? '')));
             $resolvedDocumentType = (strpos($uploadMime, 'pdf') !== false || preg_match('/\.pdf$/i', $uploadName) === 1) ? 'pdf' : 'image';
+            if ($captureClassification !== null) $resolvedDocumentType = $captureClassification['document_type'];
             $identityKindLabelMap = [
                 'ine' => 'Credencial de elector / INE',
                 'pasaporte' => 'Pasaporte',
@@ -8741,6 +8816,11 @@ try {
                 ? 'Anexo de identidad del firmante'
                 : 'Imagen clínica adjunta desde celular';
             $payloadSource = $isConsentIdentityContext ? 'consentimiento_identidad_qr_v1' : 'nota_modal_qr_v1';
+            if ($captureClassification !== null) {
+                $defaultTitle = $captureClassification['label'] . ' (captura móvil)';
+                $defaultSummary = $captureClassification['label'] . ' recibido desde celular';
+                $payloadSource = 'step6_mobile_capture_r4';
+            }
             $payload = [
                 'patient_id' => $patientId,
                 'document_type' => $resolvedDocumentType,
@@ -8753,6 +8833,11 @@ try {
                     'note_context' => ($noteContext !== '' ? $noteContext : 'nota_clinica_modal'),
                 ],
             ];
+            if ($captureClassification !== null) {
+                $payload['payload']['capture_method'] = 'mobile';
+                $payload['payload']['capture_classification'] = $captureClassification['id'];
+                $payload['payload']['capture_classification_label'] = $captureClassification['label'];
+            }
             if ($isConsentIdentityContext) {
                 $payload['payload']['identity_doc_kind'] = $identityKind;
                 $payload['payload']['identity_doc_label'] = $identityKindLabel;
