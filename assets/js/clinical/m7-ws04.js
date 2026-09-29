@@ -14,13 +14,14 @@
     const uploadDialog = $('[data-docux-upload]');
     const captureDialog = $('[data-docux-capture]');
     const readerDialog = $('[data-doc-reader]');
-    let tool = 'result',readerMode='patient',readerTrigger=null;
+    const resultDialog = $('[data-docux-result]');
+    let readerMode='patient',readerTrigger=null,resultTrigger=null;
     let uploadTrigger = null;
     let session = null;
     const pollInterval = 2500;
     // Like Plan's dialogs, live at body level so workspace form styles do not
     // override the shared clinical modal shell. No clinical context moves with them.
-    dialogs.push(uploadDialog, captureDialog, readerDialog); document.body.append(...dialogs);
+    dialogs.push(uploadDialog, captureDialog, readerDialog, resultDialog); document.body.append(...dialogs);
     let context = null;
     let rows = [];
     let selectedReplacement = null;
@@ -53,7 +54,7 @@
       DOCUMENT_ALREADY_SUPERSEDED:'Otra versión ya reemplazó este documento. Actualiza el historial.',
       DOCUMENT_NOT_FOUND:'El documento no está disponible en este contexto.'
     })[code] || 'No se completó la acción clínica. Revisa el estado y vuelve a intentar.';
-    function status(text, kind = '') { state.textContent = text; state.dataset.state = kind; }
+    function status(text, kind = '') { state.textContent = text; state.dataset.state = kind;if(resultDialog.open){$('[data-docux-result-state]').textContent=text;$('[data-docux-result-state]').dataset.state=kind;} }
     async function jsonResponse(response) {
       const value = await response.json().catch(() => null);
       if (!response.ok || value?.ok !== true) {
@@ -124,7 +125,7 @@
       const title=document.createElement('strong');title.textContent=row.title||documentLabel(row);
       const meta=document.createElement('p');const stateLabel=({signed:'Firmado',generated:'Generado',draft:'Borrador',voided:'Anulado'})[String(row.status||'').toLowerCase()]||'Registrado';
       meta.textContent=documentLabel(row)+' · '+stateLabel+(row.has_successor==1?' · Reemplazado':'');
-      node.title=String(row.event_datetime||'').replace('T',' ');node.setAttribute('aria-label',`${title.textContent}. ${meta.textContent}. Ver detalles`);
+      node.title=title.textContent+' · '+String(row.event_datetime||'').replace('T',' ');node.setAttribute('aria-label',`${title.textContent}. ${meta.textContent}. Ver detalles`);
       node.append(icon,title,meta);node.onclick=()=>{readDocuments('encounter',node);[...patientList.children].find(card=>card.dataset.document===row.document_uuid)?.scrollIntoView({block:'nearest'});};return node;
     }
     function paint() {
@@ -134,7 +135,7 @@
       if (!preview.length) {const p=document.createElement('p');p.textContent='Aún no hay documentos registrados en esta consulta.';encounterList.append(p);}
       else preview.forEach(row=>encounterList.append(previewCard(row)));
       $('[data-doc-count]').textContent=encounterRows.length?`(${encounterRows.length})`:'';
-      $('[data-doc-all]').hidden=encounterRows.length<=4;
+      $('[data-doc-all]').hidden=!encounterRows.length;
       const items=readerMode==='encounter'?encounterRows:rows;
       if(!items.length)patientList.textContent='Aún no hay documentos registrados.';
       else items.forEach(row=>patientList.append(card(row)));
@@ -145,11 +146,12 @@
       if (orders.some(row => row.document_uuid === chosenOrder)) orderSelect.value = chosenOrder;
       const open = context?.status === 'open';
       if (context?.status === 'voided') { selectedReplacement = null; show(replaceForm, false); }
-      resultForm.classList.toggle('d-none', tool!=='result'||context?.status==='voided'||!orders.length);
-      const guide=$('[data-doc-tool-guide]');
-      guide.hidden=tool==='result'&&orders.length>0&&context?.status!=='voided';
-      guide.textContent=tool==='upload'?'Adjunta un PDF o imagen. Se guardará sólo al confirmar en la ventana de carga.':tool==='capture'?'Captura con el enlace seguro de esta consulta. El documento aparecerá después de guardarlo en el celular.':orders.length?'Los resultados conservan la consulta de origen de su orden.':'Registra primero una orden en Revisar y finalizar para poder añadir su resultado.';
-      panel.querySelectorAll('[data-doc-tool]').forEach(button=>{button.setAttribute('aria-pressed',String(button.dataset.docTool===tool));button.disabled=busy||context?.status==='voided'||(button.dataset.docTool!=='result'&&!open);});
+      $('[data-docux-result-guide]').hidden=!!orders.length;
+      $('[data-docux-result-fields]').hidden=!orders.length;
+      $('[data-docux-result-fields]').disabled=!orders.length||context?.status==='voided';
+      $('[data-docux-result-save]').disabled=busy||!orders.length||context?.status==='voided';
+      const targets={upload:uploadDialog,capture:captureDialog,result:resultDialog};
+      panel.querySelectorAll('[data-doc-tool]').forEach(button=>{button.setAttribute('aria-expanded',String(targets[button.dataset.docTool].open));button.disabled=busy||context?.status==='voided'||(button.dataset.docTool!=='result'&&!open);});
     }
     async function refresh() {
       if (!sameContext()) return;
@@ -167,7 +169,7 @@
       if (busy || !available()) return;
       busy = true; const controls = [...form.querySelectorAll('button, input, select, textarea')]; controls.forEach(control => control.disabled = true);
       status(kind === 'upload' || kind === 'result' || kind === 'replace' ? 'Subiendo archivo… aún no está guardado.' : 'Creando orden…', 'uploading');
-      try { await fn(); resetAttempt(kind); form.reset(); if (kind === 'replace') { selectedReplacement = null; show(replaceForm, false); } await refresh(); status('Guardado en el expediente clínico.', 'saved'); }
+      try { await fn(); resetAttempt(kind); form.reset(); if(kind==='result')fileState('result');if (kind === 'replace') { selectedReplacement = null; show(replaceForm, false); } await refresh(); status('Guardado en el expediente clínico.', 'saved');if(kind==='result'){closeResult(true);returnFocus(resultTrigger);} }
       catch (error) { status(error.message || errorMessage(error.code), error.code === 'IDEMPOTENCY_KEY_REUSED' ? 'conflict' : error.code === 'M6_WRITE_WINDOW_BLOCKED' ? 'blocked' : 'failed'); }
       finally { busy = false; controls.forEach(control => control.disabled = false); paint(); }
     }
@@ -181,10 +183,13 @@
       dialog.addEventListener('click', e => { if (e.target === dialog) { const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close(); } });
       dialog.addEventListener('keydown', e => {
         if (e.key !== 'Tab') return;
-        const controls = [...dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(x => !x.disabled && x.tabIndex >= 0 && x.getClientRects().length);
-        const first = controls[0], last = controls[controls.length - 1];
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+        const controls = [...dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(x => !x.matches(':disabled') && x.tabIndex >= 0 && x.getClientRects().length);
+        if(!controls.length)return;
+        // Safari may omit buttons from its native Tab order. Keep every move in
+        // the modal's visible control order, including its actions.
+        const index=controls.indexOf(document.activeElement);
+        const next=e.shiftKey?(index<=0?controls.length-1:index-1):(index<0||index===controls.length-1?0:index+1);
+        e.preventDefault();controls[next].focus();
       });
     }
     function closeReader(){readerDialog.close();readerDialog.classList.remove('plan02b-modal');}
@@ -193,10 +198,21 @@
     function readDocuments(mode,trigger){if(busy||session)return;readerMode=mode;readerTrigger=trigger;paint();readerDialog.classList.add('plan02b-modal');readerDialog.showModal();readerDialog.querySelector('[data-modal-close]').focus();}
     $('[data-doc-all]').onclick=e=>readDocuments('encounter',e.currentTarget);
     $('[data-doc-patient]').onclick=e=>readDocuments('patient',e.currentTarget);
-    panel.querySelectorAll('[data-doc-tool]').forEach(button=>button.addEventListener('click',event=>{
-      if(busy||captureBusy||session||!available()){event.stopImmediatePropagation();return;}
-      tool=button.dataset.docTool;paint();
-    }));
+    const actionOpen=()=>uploadDialog.open||resultDialog.open||captureDialog.open;
+    function meaningful(form){return [...form.querySelectorAll('input:not([type=hidden]),select')].some(n=>n.type==='file'?n.files?.length:n.matches('[data-m7-result-type]')?false:!!n.value.trim());}
+    function allowDiscard(form){return !meaningful(form)||window.confirm('¿Descartar los cambios de este modal? El documento no se ha guardado.');}
+    function closeResult(force=false,discard=false){
+      if(!force&&(busy||(!discard&&!allowDiscard(resultForm))))return;
+      resultDialog.close();resultDialog.classList.remove('plan02b-modal');resultForm.reset();resetAttempt('result');fileState('result');$('[data-docux-result-state]').textContent='';paint();
+      if(!force)returnFocus(resultTrigger);
+    }
+    modalShell(resultDialog,()=>closeResult());
+    $('[data-docux-result-cancel]').onclick=()=>closeResult(false,true);
+    panel.querySelector('[data-doc-tool="result"]').onclick=e=>{
+      if(busy||captureBusy||actionOpen()||!available())return;
+      resultTrigger=e.currentTarget;$('[data-docux-result-state]').textContent='';paint();resultDialog.classList.add('plan02b-modal');resultDialog.showModal();paint();
+      (resultForm.querySelector('select:not(:disabled)')||$('[data-docux-result-cancel]')).focus();
+    };
     window.addEventListener('mxmed:review-document',async event=>{
       if(event.detail?.encounterKey!==context?.key)return;
       const row=event.detail.document;
@@ -208,21 +224,23 @@
       [...patientList.children].find(card=>card.dataset.document===row.document_uuid)?.scrollIntoView({block:'nearest'});
     });
     function uploadMessage(text, error = false) { const node = $('[data-docux-upload-state]'); node.textContent = text; node.dataset.error = String(error); }
-    function fileState() {
-      $('[data-docux-file-state]').textContent = $('[data-m7-doc-file]').files?.[0]?.name || 'Arrastra un PDF o imagen aquí';
-      $('[data-docux-pick]').textContent = $('[data-m7-doc-file]').files?.length ? 'Cambiar archivo' : 'Seleccionar archivo';
-      delete $('[data-docux-dropzone]').dataset.drag;
+    function fileState(kind='upload') {
+      const result=kind==='result',input=$(result?'[data-m7-result-file]':'[data-m7-doc-file]');
+      $(result?'[data-docux-result-file-state]':'[data-docux-file-state]').textContent=input.files?.[0]?.name||'Arrastra un PDF o imagen aquí';
+      $(result?'[data-docux-result-pick]':'[data-docux-pick]').textContent=input.files?.length?'Cambiar archivo':'Seleccionar archivo';
+      delete $(result?'[data-docux-result-dropzone]':'[data-docux-dropzone]').dataset.drag;
     }
-    function closeUpload(force = false) {
-      if (busy && !force) return;
+    function closeUpload(force = false,discard=false) {
+      if (!force&&(busy||(!discard&&!allowDiscard(uploadForm)))) return;
       uploadDialog.close(); uploadDialog.classList.remove('plan02b-modal'); uploadForm.reset(); resetAttempt('upload'); fileState(); uploadMessage('');
+      paint();
       if (!force) returnFocus(uploadTrigger);
     }
     modalShell(uploadDialog, () => closeUpload());
-    uploadDialog.querySelector('[data-modal-cancel]').addEventListener('click', () => closeUpload());
+    uploadDialog.querySelector('[data-modal-cancel]').addEventListener('click', () => closeUpload(false,true));
     $('[data-docux-attach]').addEventListener('click', e => {
-      if (busy || !available() || context.status !== 'open') return;
-      uploadTrigger = e.currentTarget; uploadMessage(''); fileState(); uploadDialog.classList.add('plan02b-modal'); uploadDialog.showModal(); $('[data-m7-doc-title]').focus();
+      if (busy || captureBusy || actionOpen() || !available() || context.status !== 'open') return;
+      uploadTrigger = e.currentTarget; uploadMessage(''); fileState(); uploadDialog.classList.add('plan02b-modal'); uploadDialog.showModal();paint(); $('[data-m7-doc-title]').focus();
     });
     $('[data-docux-pick]').addEventListener('click', () => $('[data-m7-doc-file]').click());
     $('[data-m7-doc-file]').addEventListener('change', () => {
@@ -241,6 +259,16 @@
       $('[data-m7-doc-file]').files = e.dataTransfer.files;
       $('[data-m7-doc-file]').dispatchEvent(new Event('change', { bubbles:true }));
     });
+    $('[data-docux-result-pick]').onclick=()=>$('[data-m7-result-file]').click();
+    $('[data-m7-result-file]').addEventListener('change',()=>{
+      try{acceptedFile($('[data-m7-result-file]'));$('[data-docux-result-state]').textContent='';}
+      catch(error){$('[data-m7-result-file]').value='';status(error.message,'failed');}
+      fileState('result');
+    });
+    const resultDrop=$('[data-docux-result-dropzone]');
+    for(const type of ['dragenter','dragover'])resultDrop.addEventListener(type,e=>{e.preventDefault();if(!busy)resultDrop.dataset.drag='true';});
+    resultDrop.addEventListener('dragleave',()=>fileState('result'));
+    resultDrop.addEventListener('drop',e=>{e.preventDefault();if(busy)return;if(e.dataTransfer?.files.length!==1){status('Selecciona un solo archivo.','failed');return;}$('[data-m7-result-file]').files=e.dataTransfer.files;$('[data-m7-result-file]').dispatchEvent(new Event('change',{bubbles:true}));});
     uploadForm.addEventListener('submit', async event => {
       event.preventDefault(); if (busy || !available() || context.status !== 'open') return;
       let file;
@@ -259,7 +287,8 @@
       } catch (_) { if (uploadDialog.open && context?.key === owner.key && sameContext()) uploadMessage('No se pudo guardar el documento.', true); }
       finally { busy = false; controls.forEach(x => x.disabled = false);paint(); }
     });
-    resultForm.addEventListener('submit', event => { event.preventDefault(); execute('result', resultForm, async () => {
+    resultForm.noValidate=true;
+    resultForm.addEventListener('submit', event => { event.preventDefault();try{acceptedFile($('[data-m7-result-file]'));}catch(error){status(error.message,'failed');$('[data-docux-result-pick]').focus();return;}if(!resultForm.reportValidity())return;execute('result', resultForm, async () => {
       const file = acceptedFile($('[data-m7-result-file]')); const order = $('[data-m7-result-order]').value;
       if (!rows.some(row => row.document_uuid === order && String(row.encounter_ref_id || row.encounter_id || '') === String(context.encounterId) && orderTypes.has(String(row.document_type))&&row.has_successor!=1&&row.status!=='voided')) throw new Error('Selecciona una orden de esta consulta.');
       const provenance = $('[data-m7-result-provenance]').value.trim();
@@ -286,12 +315,18 @@
     function stopPolling(s) { if (!s) return; clearTimeout(s.timer); s.timer = null; s.controller?.abort(); s.controller = null; }
     function removeQR() { $('[data-docux-qr-content]').hidden = true; $('[data-docux-qr]').replaceChildren(); $('[data-m7-capture-link]').removeAttribute('href'); }
     function captureMessage(text) { $('[data-m7-capture-state]').textContent = text; }
-    function terminal(s, value) {
+    function terminal(s, value, data={}) {
       s.pending = false; stopPolling(s);
       if (!currentSession(s)) return;
       removeQR(); $('[data-m7-capture-cancel]').hidden = true; $('[data-docux-capture-close]').hidden = false;
       captureMessage(({ uploaded:'✓ Documento recibido', cancelled:'Captura cancelada', expired:'El enlace de captura venció.' })[value] || 'La sesión de captura ya no está disponible.');
-      if (value === 'uploaded') refresh();
+      $('[data-docux-capture-use]').hidden=value!=='uploaded';$('[data-docux-capture-use]').disabled=true;
+      if (value === 'uploaded') {
+        $('[data-docux-received]').hidden=false;$('[data-docux-received-title]').textContent='Verificando documento recibido…';$('[data-docux-received-detail]').textContent='';
+        refresh().then(()=>{if(!currentSession(s))return;const doc=rows.find(row=>row.document_uuid===data.document_uuid&&String(row.encounter_ref_id||row.encounter_id)===String(s.context.encounterId));
+          $('[data-docux-received-title]').textContent=doc?.title||'Documento recibido';$('[data-docux-received-detail]').textContent=doc?'Registrado en esta consulta.':'Actualiza los documentos para verificar el registro.';$('[data-docux-capture-use]').disabled=!doc;
+        });
+      }
     }
     function schedule(s) {
       if (currentSession(s) && s.pending && s.token && !s.closing && !document.hidden) s.timer = setTimeout(() => poll(s), pollInterval);
@@ -302,7 +337,7 @@
       try {
         const response = await jsonResponse(await fetch(route(`note-capture-tokens/${encodeURIComponent(s.token)}`), { credentials:'same-origin', headers:{ Accept:'application/json' }, signal:controller.signal }));
         if (!currentSession(s) || s.closing || controller.signal.aborted) return;
-        if (response.data.status !== 'pending') terminal(s, response.data.status);
+        if (response.data.status !== 'pending') terminal(s, response.data.status,response.data);
         else captureMessage('Esperando captura…');
       } catch (error) { if (error.name !== 'AbortError' && currentSession(s) && !s.closing) captureMessage('No se pudo comprobar la captura. Volveremos a intentarlo.'); }
       finally { if (s.controller === controller) s.controller = null; if (!controller.signal.aborted) schedule(s); }
@@ -311,6 +346,7 @@
       stopPolling(s);
       if (session !== s) return;
       removeQR(); captureDialog.close(); captureDialog.classList.remove('plan02b-modal'); session = null;
+      paint();
       if (restore) returnFocus($('[data-m7-capture-start]'));
     }
     async function cancelSession(s) {
@@ -318,13 +354,13 @@
       // Read first so an already observed upload is never sent to cancel. Races
       // between this read and cancellation use the accepted terminal 409 contract.
       const data = await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
-      if (data.status !== 'pending') { terminal(s, data.status); return; }
+      if (data.status !== 'pending') { terminal(s, data.status,data); return; }
       try { await send(`note-capture-tokens/${encodeURIComponent(s.token)}/cancel`, {}, makeKey()); terminal(s, 'cancelled'); }
       catch (error) {
         if (error.code !== 'conflict' && error.code !== '409') throw error;
         const latest = await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
         if (latest.status === 'pending') throw error;
-        terminal(s, latest.status);
+        terminal(s, latest.status,latest);
       }
     }
     async function endCapture(close = true, contextLost = false) {
@@ -345,17 +381,19 @@
     modalShell(captureDialog, () => endCapture());
     $('[data-m7-capture-cancel]').addEventListener('click', () => endCapture(false));
     $('[data-docux-capture-close]').addEventListener('click', () => endCapture());
+    $('[data-docux-capture-use]').addEventListener('click',()=>{if(session&&!session.pending&&!$('[data-docux-capture-use]').disabled)endCapture();});
     $('[data-docux-copy]').addEventListener('click', async () => {
       const s = session; if (!s || !s.pending || !currentSession(s)) return;
       try { await navigator.clipboard.writeText(s.url); if (currentSession(s)) captureMessage('Enlace copiado. Esperando captura…'); }
       catch (_) { if (currentSession(s)) captureMessage('No se pudo copiar. Usa Abrir enlace de captura.'); }
     });
     $('[data-m7-capture-start]').addEventListener('click', () => {
-      if (busy || !sameContext() || context.status !== 'open' || captureBusy || session) return;
+      if (busy || actionOpen() || !sameContext() || context.status !== 'open' || captureBusy || session) return;
       const s = { context:{ ...context }, token:'', url:'', pending:true, closing:false, timer:null, controller:null };
       session = s; captureBusy = true; removeQR(); captureMessage('Preparando captura…');
       $('[data-m7-capture-cancel]').hidden = false; $('[data-m7-capture-cancel]').disabled = false; $('[data-docux-capture-close]').hidden = true;
-      captureDialog.classList.add('plan02b-modal'); captureDialog.showModal(); $('[data-m7-capture-cancel]').focus();
+      $('[data-docux-capture-use]').hidden=true;$('[data-docux-received]').hidden=true;
+      captureDialog.classList.add('plan02b-modal'); captureDialog.showModal();paint(); $('[data-m7-capture-cancel]').focus();
       s.issuance = (async () => {
         try {
           const response = await send('note-capture-tokens', { patient_id:s.context.patientId, encounter_key:s.context.key, note_context:'nota_clinica_modal' }, makeKey());
@@ -390,10 +428,10 @@
         if (busy) return false;
         if (session) await endCapture();
         if (session || captureBusy) return false;
-        closeUpload(true);closeReader();return true;
+        if(uploadDialog.open){closeUpload();if(uploadDialog.open)return false;}if(resultDialog.open){closeResult();if(resultDialog.open)return false;}closeReader();return true;
       },
-      load(encounter) { const key = String(encounter.encounter_key || ''); const patientId = String(encounter.patient_id || ''); if (!key || !patientId) return; const changed = context?.key !== key || context?.patientId !== patientId; context = { key, patientId, doctorId:String(encounter.doctor_id || ''), encounterId:String(encounter.encounter_id || ''), status:String(encounter.status || '').toLowerCase(), closedAt:String(encounter.closed_at || '') }; if (changed) { epoch++;closeReader();tool='result'; if (session) endCapture(true, true); closeUpload(true); rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, resultForm, replaceForm].forEach(form => form.reset()); show(replaceForm, false);  } paint(); },
-      reset() { epoch++;closeReader(); if (session) endCapture(true, true); closeUpload(true); context = null; rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, resultForm, replaceForm].forEach(form => form.reset()); show(panel, false); show(replaceForm, false);  }
+      load(encounter) { const key = String(encounter.encounter_key || ''); const patientId = String(encounter.patient_id || ''); if (!key || !patientId) return; const changed = context?.key !== key || context?.patientId !== patientId; context = { key, patientId, doctorId:String(encounter.doctor_id || ''), encounterId:String(encounter.encounter_id || ''), status:String(encounter.status || '').toLowerCase(), closedAt:String(encounter.closed_at || '') }; if (changed) { epoch++;closeReader();closeResult(true); if (session) endCapture(true, true); closeUpload(true); rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, resultForm, replaceForm].forEach(form => form.reset()); show(replaceForm, false);  } paint(); },
+      reset() { epoch++;closeReader();closeResult(true); if (session) endCapture(true, true); closeUpload(true); context = null; rows = []; selectedReplacement = null; attempts.clear(); [uploadForm, resultForm, replaceForm].forEach(form => form.reset()); show(panel, false); show(replaceForm, false);  }
     };
   };
 })();

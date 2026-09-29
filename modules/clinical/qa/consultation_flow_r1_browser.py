@@ -14,13 +14,18 @@ KEY='mxmed-plan02b:1:p_plan02ux_review:1016'
 def sql(q):return subprocess.check_output(['mysql','-N',DB,'-e',q],text=True).strip()
 def count(table):return int(sql('SELECT COUNT(*) FROM '+table))
 def director():return hashlib.sha256(subprocess.check_output(['mysql','-N','mxmed_director_review_lon07c','-e','SELECT * FROM clinical_encounters ORDER BY encounter_id;SELECT * FROM clinical_documents ORDER BY id;SELECT * FROM clinical_encounter_sections ORDER BY encounter_id,section_type;SELECT * FROM clinical_observations ORDER BY observation_id'])).hexdigest()
-checks={};writes=[];errors=[];unexpected=[];dialog_text=[];lost_order=False;failed_rx=False;shutting_down=False
+checks={};writes=[];errors=[];unexpected=[];dialog_text=[];lost_order=False;failed_rx=False;shutting_down=False;discard_allowed=True;lost_result=False;active_routes=0
 before=director()
 def check(name,value=True):assert value,name;checks[name]='PASS';print('PASS '+name,flush=True)
 with sync_playwright() as pw:
  browser=pw.webkit.launch();api=pw.request.new_context(extra_http_headers={'Cookie':'PHPSESSID=step3-head-neck-qa'})
  def proxy(route):
-  global lost_order,failed_rx
+  global active_routes
+  active_routes+=1
+  try:forward(route)
+  finally:active_routes-=1
+ def forward(route):
+  global lost_order,failed_rx,lost_result
   if shutting_down:route.abort();return
   r=route.request;parsed=urlsplit(r.url);path=parsed.path+('?' + parsed.query if parsed.query else '')
   content=r.headers.get('content-type','');body=r.post_data_json if r.post_data and content.startswith('application/json') else None
@@ -42,6 +47,8 @@ with sync_playwright() as pw:
    print('MULTIPART_FAILURE='+str(result.status)+' '+str(result.json().get('error')),flush=True)
   if lost_order and body and body.get('document_type')=='order' and result.ok:
    lost_order=False;route.abort('failed');return
+  if lost_result and content.startswith('multipart/') and result.ok:
+   lost_result=False;route.abort('failed');return
   route.fulfill(response=result)
  def guard(route):
   r=route.request
@@ -49,7 +56,7 @@ with sync_playwright() as pw:
   else:route.continue_()
  def setup(w=1440,h=900):
   ctx=browser.new_context(viewport={'width':w,'height':h},timezone_id='America/Mexico_City');page=ctx.new_page();page.set_default_timeout(22000)
-  page.on('pageerror',lambda e:errors.append(str(e)));page.on('dialog',lambda d:(dialog_text.append(d.message),d.accept()))
+  page.on('pageerror',lambda e:errors.append(str(e)));page.on('dialog',lambda d:(dialog_text.append(d.message),d.dismiss() if 'Descartar los cambios de este modal' in d.message and not discard_allowed else d.accept()))
   page.route('**/api/clinical/**',guard)
   for pattern in ['**/api/clinical/index.php/encounters/**','**/api/clinical/index.php/patients/*/encounters*','**/api/clinical/index.php/patients/*/encounters/**','**/api/clinical/index.php/doctors/*/patients/*/documents*','**/api/clinical/index.php/patients/*/longitudinal/tasks*','**/api/clinical/index.php/patients/*/longitudinal/tasks/**','**/api/clinical/index.php/documents/**','**/api/clinical/index.php/note-capture-tokens*','**/api/clinical/index.php/note-capture-tokens/**','**/api/agenda/index.php/**']:page.route(pattern,proxy)
   page.goto(REVIEW,wait_until='commit');expect(page.locator('[data-m7-section="plan"]')).to_have_attribute('aria-current','true',timeout=55000)
@@ -86,7 +93,7 @@ with sync_playwright() as pw:
  page.evaluate("()=>window.mxmedM7OpenFromHeader('p_plan02ux_review','resume')");page.wait_for_function('document.querySelector("[data-m7-body]").dataset.encounterId==="1016"');step(page,'plan');check('exit and same-encounter resume preserve preparation',state(page)==prepared and not writes)
  step(page,'documents');check('Step 6 contains no Plan collector or confirmation',page.locator('[data-m7-documents] [data-plan02b-collector]').count()==0 and page.locator('[data-ns="confirm"]:visible').count()==0)
  check('three document tools and no unconfirmed result target',page.locator('[data-doc-tool]').count()==3 and page.locator('[data-m7-result-order] option').count()==1)
- page.locator('[data-doc-tool="result"]').click();check('result requires canonical order',page.locator('[data-m7-result-form]').is_hidden())
+ page.locator('[data-doc-tool="result"]').click();check('result requires canonical order',page.locator('[data-docux-result-guide]').is_visible() and page.locator('[data-docux-result-save]').is_disabled());page.locator('[data-docux-result-cancel]').click()
  step(page,'finalize');expect(page.locator('[data-prepared]')).to_have_count(4);expect(page.locator('[data-m7-finalize]')).to_be_disabled();check('5 to 6 to 7 retains all four and zero writes',not writes and sql('SELECT status FROM clinical_encounters WHERE encounter_id=1016')=='open')
  page.locator('[data-review-plan]').click();expect(page.locator('[data-m7-section="plan"]')).to_have_attribute('aria-current','true');step(page,'finalize');page.locator('[data-review-docs]').click();expect(page.locator('[data-m7-section="documents"]')).to_have_attribute('aria-current','true');step(page,'finalize');check('Edit Plan and Edit Documents preserve encounter and preparation',state(page)==prepared and not writes)
  page.mouse.move(0,0);page.evaluate('document.activeElement?.blur()');page.screenshot(path=str(OUT/'canonical-step7-pending-1440x900-webkit.png'))
@@ -106,38 +113,62 @@ with sync_playwright() as pw:
  page.mouse.move(0,0);page.evaluate('document.activeElement?.blur()');page.screenshot(path=str(OUT/'canonical-step7-confirmed-1440x900-webkit.png'))
  # Upload picker/drop cancellation are memory-only; explicit save uses accepted multipart.
  step(page,'documents');page.locator('[data-docux-attach]').click();image=base64.b64decode(page.evaluate('()=>{const c=document.createElement("canvas");c.width=128;c.height=96;const g=c.getContext("2d");g.fillStyle="#dbfcff";g.fillRect(0,0,128,96);g.fillStyle="#173f54";g.fillText("QA documental",8,50);return c.toDataURL("image/png").split(",")[1]}'));file={'name':'resultado-prueba.png','mimeType':'image/png','buffer':image}
- page.locator('[data-m7-doc-file]').set_input_files(file);check('upload file selection alone never writes',count('clinical_documents')==2);page.locator('[data-m7-doc-title]').fill('Documento clínico de prueba');page.locator('[data-docux-upload] [data-modal-cancel]').click();check('upload cancel preserves canonical counts',count('clinical_documents')==2)
+ page.screenshot(path=str(OUT/'attach-document-modal-1440x900-webkit.png'));page.locator('[data-m7-doc-file]').set_input_files(file);check('upload file selection alone never writes',count('clinical_documents')==2);page.locator('[data-m7-doc-title]').fill('Documento clínico de prueba')
+ discard_allowed=False;page.keyboard.press('Escape');expect(page.locator('[data-docux-upload]')).to_be_visible();check('attach dirty Escape rejection preserves local fields',page.locator('[data-m7-doc-title]').input_value()=='Documento clínico de prueba' and count('clinical_documents')==2);discard_allowed=True
+ page.locator('[data-docux-upload] [data-modal-cancel]').click();check('upload cancel preserves canonical counts and no dirty state',count('clinical_documents')==2 and page.locator('[data-m7-doc-title]').input_value()=='' and page.locator('[data-m7-doc-file]').input_value()=='');check('attach returns focus',page.locator('[data-docux-attach]').evaluate('n=>document.activeElement===n'))
  page.locator('[data-docux-attach]').click();page.locator('[data-m7-doc-file]').set_input_files(file);page.locator('[data-m7-doc-title]').fill('Documento clínico de prueba');page.locator('[data-m7-doc-upload]').click();expect(page.locator('[data-docux-upload]')).not_to_be_visible();check('explicit document upload persisted once',count('clinical_documents')==3)
  page.locator('[data-doc-tool="result"]').click();expect(page.locator('[data-m7-result-form]')).to_be_visible();check('only canonical order offered',page.locator('[data-m7-result-order] option').count()==2)
- page.locator('[data-m7-result-order]').select_option(s['orders'][0]['result']['document_uuid']);page.locator('[data-m7-result-title]').fill('Resultado de biometría de prueba');page.locator('[data-m7-result-provenance]').fill('Laboratorio de prueba');page.locator('[data-m7-result-file]').set_input_files(file);n=count('clinical_documents');page.locator('[data-m7-result-form] button[type="submit"]').click();expect(page.locator('[data-m7-doc-state]')).to_have_attribute('data-state','saved');check('result registration uses originating order encounter',count('clinical_documents')==n+1 and sql("SELECT encounter_ref_id FROM clinical_documents WHERE title='Resultado de biometría de prueba'")=='1016')
+ page.screenshot(path=str(OUT/'register-result-modal-1440x900-webkit.png'))
+ page.locator('[data-m7-result-title]').fill('Resultado sin guardar');page.locator('[data-m7-result-file]').set_input_files(file);n=count('clinical_documents');discard_allowed=False;page.keyboard.press('Escape');check('result dirty guard preserves fields',page.locator('[data-m7-result-title]').input_value()=='Resultado sin guardar' and page.locator('[data-docux-result]').is_visible());discard_allowed=True;page.locator('[data-docux-result-cancel]').click();check('result cancel clears local dirty state without writes',count('clinical_documents')==n and page.locator('[data-m7-result-title]').input_value()=='');check('result returns focus',page.locator('[data-doc-tool="result"]').evaluate('n=>document.activeElement===n'));page.locator('[data-doc-tool="result"]').click()
+ page.locator('[data-m7-result-order]').select_option(s['orders'][0]['result']['document_uuid']);page.locator('[data-m7-result-title]').fill('Resultado de biometría de prueba');page.locator('[data-m7-result-provenance]').fill('Laboratorio de prueba');page.locator('[data-m7-result-file]').set_input_files(file);n=count('clinical_documents');lost_result=True;page.locator('[data-m7-result-form] button[type="submit"]').click();expect(page.locator('[data-docux-result-state]')).to_have_attribute('data-state','failed');check('lost result response retains modal for safe retry',page.locator('[data-docux-result]').is_visible() and count('clinical_documents')==n+1)
+ first_key=writes[-1]['key'];page.locator('[data-m7-result-form] button[type="submit"]').click();expect(page.locator('[data-docux-result]')).not_to_be_visible();check('result registration and retry preserve originating encounter and idempotency',count('clinical_documents')==n+1 and sql("SELECT encounter_ref_id FROM clinical_documents WHERE title='Resultado de biometría de prueba'")=='1016' and writes[-1]['key']==first_key)
  check('current document view compact with patient reader modal',page.locator('[data-m7-encounter-documents] .m7-doc-card').count()<=4 and page.locator('[data-m7-documents] [data-m7-patient-documents]').count()==0)
  page.locator('[data-doc-patient]').click();expect(page.locator('[data-doc-reader]')).to_be_visible();page.locator('[data-doc-reader-close]').click()
  # Secure capture issuance only after explicit action, cancellation reaches canonical terminal state.
  tokens_before=count('clinical_note_capture_tokens') if sql("SHOW TABLES LIKE 'clinical_note_capture_tokens'") else 0
  page.locator('[data-m7-capture-start]').click();expect(page.locator('[data-docux-qr-content]')).to_be_visible();check('mobile secure capture preserved',count('clinical_note_capture_tokens')==tokens_before+1)
+ for _ in range(10):page.keyboard.press('Tab');assert page.locator('[data-docux-capture]').evaluate('n=>n.contains(document.activeElement)')
+ for _ in range(8):page.keyboard.press('Shift+Tab');assert page.locator('[data-docux-capture]').evaluate('n=>n.contains(document.activeElement)')
+ check('mobile capture modal keyboard focus stays trapped')
  page.locator('[data-m7-capture-cancel]').click();expect(page.locator('[data-m7-capture-state]')).to_have_text('Captura cancelada');check('capture cancel preserves secure token state',sql('SELECT status FROM clinical_note_capture_tokens ORDER BY created_at DESC LIMIT 1')=='cancelled');page.locator('[data-docux-capture-close]').click()
  # The actual mobile bearer upload still uses DOCSEC01's canonical single-use authority.
  with page.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/note-capture-tokens')) as issued:page.locator('[data-m7-capture-start]').click()
- token=issued.value.json()['data']['token'];anon=pw.request.new_context();n=count('clinical_documents')
- check('capture status remains physician-authenticated',anon.get(BASE+'/api/clinical/index.php/note-capture-tokens/'+token).status==401)
- uploaded=anon.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+token+'/upload',multipart={'file':file,'patient_id':'p_other','encounter_key':'enc:999999'})
- check('mobile upload saves only token-authorized encounter',uploaded.status in [200,201] and count('clinical_documents')==n+1 and sql('SELECT encounter_ref_id FROM clinical_documents ORDER BY id DESC LIMIT 1')=='1016')
+ capture_data=issued.value.json()['data'];token=capture_data['token'];anon=pw.request.new_context();n=count('clinical_documents')
+ check('capture status and issuance remain physician-authenticated',anon.get(BASE+'/api/clinical/index.php/note-capture-tokens/'+token).status==401 and anon.post(BASE+'/api/clinical/index.php/note-capture-tokens',data={'patient_id':'p_plan02ux_review','encounter_key':'enc:1016','note_context':'nota_clinica_modal'}).status==401)
+ pending_capture=page.screenshot();capture_views={}
+ for w,h in [(1440,900),(1366,768),(820,1180),(390,844)]:
+  page.set_viewport_size({'width':w,'height':h});page.mouse.move(0,0)
+  for _ in range(5):page.keyboard.press('Tab');assert page.locator('[data-docux-capture]').evaluate('n=>n.contains(document.activeElement)')
+  check(f'mobile capture modal {w}x{h} no horizontal overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth+1') and page.locator('[data-docux-capture]').evaluate('n=>n.scrollWidth<=n.clientWidth+1'))
+  capture_views[f'{w}x{h}']=page.screenshot()
+ page.set_viewport_size({'width':1440,'height':900})
+ mobile=browser.new_context(viewport={'width':390,'height':844});phone=mobile.new_page();phone.goto(BASE+capture_data['mobile_url'],wait_until='networkidle');check('actual phone page requires no physician login',not mobile.cookies());phone.locator('#captureFile').set_input_files(file)
+ with phone.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/upload')) as uploaded:phone.locator('#captureSubmit').click()
+ check('anonymous phone upload saves only token-authorized encounter',uploaded.value.status in [200,201] and count('clinical_documents')==n+1 and sql('SELECT encounter_ref_id FROM clinical_documents ORDER BY id DESC LIMIT 1')=='1016');mobile.close()
  reused=anon.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+token+'/upload',multipart={'file':file});check('capture token is single-use with no duplicate document',reused.status in [409,410] and count('clinical_documents')==n+1)
- expect(page.locator('[data-m7-capture-state]')).to_have_text('✓ Documento recibido',timeout=15000);expect(page.locator('[data-docux-qr-content]')).to_be_hidden();page.locator('[data-docux-capture-close]').click();anon.dispose()
+ expect(page.locator('[data-m7-capture-state]')).to_have_text('✓ Documento recibido',timeout=15000);expect(page.locator('[data-docux-qr-content]')).to_be_hidden();expect(page.locator('[data-docux-capture-use]')).to_be_enabled();check('received capture uses canonical readback',page.locator('[data-docux-received]').is_visible() and page.locator('[data-docux-received-detail]').inner_text()=='Registrado en esta consulta.');(OUT/'mobile-capture-modal-terminal-token-webkit.png').write_bytes(pending_capture)
+ for size,data in capture_views.items():(OUT/f'capture-modal-{size}-terminal-token-webkit.png').write_bytes(data)
+ page.screenshot(path=str(OUT/'mobile-capture-received-webkit.png'));n=count('clinical_documents');page.locator('[data-docux-capture-use]').click();expect(page.locator('[data-docux-capture]')).not_to_be_visible();check('Use capture creates no second document and restores focus',count('clinical_documents')==n and page.locator('[data-m7-capture-start]').evaluate('n=>document.activeElement===n'));anon.dispose()
+ # Expiry retains the existing terminal authority and anonymous rejection.
+ with page.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/note-capture-tokens')) as issued:page.locator('[data-m7-capture-start]').click()
+ expiring=issued.value.json()['data']['token'];sql("UPDATE clinical_note_capture_tokens SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 SECOND) WHERE token='"+expiring+"'");expect(page.locator('[data-m7-capture-state]')).to_have_text('El enlace de captura venció.',timeout=15000)
+ anon=pw.request.new_context();check('expired token rejects anonymous upload without document',anon.post(BASE+'/api/clinical/index.php/note-capture-tokens/'+expiring+'/upload',multipart={'file':file}).status==410 and count('clinical_documents')==n);anon.dispose();page.locator('[data-docux-capture-close]').click()
  expect(page.locator('[data-doc-all]')).to_be_visible();page.locator('[data-doc-all]').click();expect(page.locator('[data-doc-reader] .m7-doc-card')).to_have_count(count('clinical_documents'));page.locator('[data-doc-reader-close]').click();check('many files stay bounded with full canonical reader modal')
  # Snapshot both operational surfaces at approved desktop and narrow sizes.
  for w,h in [(1440,900),(1366,768),(820,1180),(390,844)]:
   page.set_viewport_size({'width':w,'height':h})
   for name in ['documents','finalize']:
    step(page,name)
-   if name=='documents':page.locator('[data-doc-tool="result"]').click()
    page.evaluate('async()=>{await document.fonts.ready;document.activeElement?.blur();document.querySelector(".vis04-capture").scrollTop=0;scrollTo(0,0)}')
    check(f'{name} {w}x{h} no horizontal overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'))
    if w>=1200:check(f'{name} {w}x{h} no page scroll',page.evaluate('document.documentElement.scrollHeight<=innerHeight+1'))
    if name=='documents':
-    check(f'document tools {w}x{h} available with one selection',page.locator('[data-doc-tool]:disabled').count()==0 and page.locator('[data-doc-tool][aria-pressed="true"]').count()==1)
-    # Let Bootstrap's selector color transitions finish before the evidence capture.
-    page.wait_for_function('()=>[...document.querySelectorAll("[data-doc-tool]")].every(n=>getComputedStyle(n).backgroundColor===(n.getAttribute("aria-pressed")==="true"?"rgb(0, 174, 191)":"rgb(255, 255, 255)"))')
+    check(f'document actions {w}x{h} available without inline forms',page.locator('[data-doc-tool]:disabled').count()==0 and page.locator('[data-m7-documents] form:visible').count()==0)
+    for launch,modal,close in [('[data-docux-attach]','[data-docux-upload]','[data-docux-upload] [data-modal-cancel]'),('[data-doc-tool="result"]','[data-docux-result]','[data-docux-result-cancel]')]:
+     page.locator(launch).click();expect(page.locator(modal)).to_be_visible()
+     for _ in range(9):page.keyboard.press('Tab');assert page.locator(modal).evaluate('n=>n.contains(document.activeElement)')
+     check(f'modal focus trap and overflow {launch} {w}x{h}',page.evaluate('document.documentElement.scrollWidth<=innerWidth+1') and page.locator(modal).evaluate('n=>n.scrollWidth<=n.clientWidth+1'))
+     page.screenshot(path=str(OUT/f'{"attach" if "attach" in launch else "result"}-modal-{w}x{h}-webkit.png'));page.locator(close).click();check(f'modal return focus {launch} {w}x{h}',page.locator(launch).evaluate('n=>document.activeElement===n'))
    page.mouse.move(0,0);page.screenshot(path=str(OUT/f'canonical-{name}-{w}x{h}-webkit.png'),full_page=w<1200,animations='disabled')
  # A second order's review uses the resulting canonical appointment ID, not a guessed dependency.
  page.set_viewport_size({'width':1440,'height':900});step(page,'plan');order(page,'Estudio con revisión en próxima cita','appointment');step(page,'finalize');appointments_before=count('agenda_appointments');confirm(page)
@@ -155,7 +186,12 @@ with sync_playwright() as pw:
  page.reload(wait_until='commit');expect(page.locator('[data-m7-section="plan"]')).to_have_attribute('aria-current','true',timeout=55000);page.wait_for_function('document.querySelector("[data-m7-body]").dataset.encounterId==="1017"');step(page,'finalize')
  page.locator('details.flow-exception summary').click();page.locator('[data-m7-void-reason]').fill('Anulación explícita de prueba');page.locator('[data-m7-void-form] button[type="submit"]').click();page.wait_for_function('document.querySelector("[data-m7-body]").dataset.encounterState==="voided"')
  check('secondary void form preserves explicit canonical reason and confirmation',sql("SELECT CONCAT(status,'|',void_reason) FROM clinical_encounters WHERE encounter_id=1017")=='voided|Anulación explícita de prueba' and any(t.startswith('Anular conservará') for t in dialog_text))
- page.wait_for_load_state('networkidle',timeout=15000);shutting_down=True;ctx.close();browser.close();api.dispose()
+ shutting_down=True
+ for _ in range(200):
+  page.wait_for_timeout(50)
+  if active_routes==0:break
+ check('all routed canonical requests completed before teardown',active_routes==0)
+ ctx.close();browser.close();api.dispose()
 check('no JavaScript errors or unexpected Director writes',not errors and not unexpected and director()==before)
 (OUT/'canonical-browser-report.json').write_text(json.dumps({'qa':'PASS','checks':checks,'writes':writes,'javascript_errors':errors,'director_records_unchanged':True,'source_sha256':{f:hashlib.sha256(Path(f).read_bytes()).hexdigest() for f in ['index.html','assets/js/clinical/plan02b-next-steps.js','assets/js/clinical/m7-ws04.js','assets/js/clinical/m7-ws05.js','assets/js/clinical/vis04-consultation.js','assets/css/expediente-paciente-visual-normalization.css']}},indent=2,ensure_ascii=False))
 print('CONSULTATION_FLOW_R1_CANONICAL_QA=PASS',flush=True)
