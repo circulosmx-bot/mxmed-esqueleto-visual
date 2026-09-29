@@ -1,0 +1,16 @@
+/* Reversible R2 color trial: patient header and existing selected-tab states only.
+ * Inactive tabs, including hover/focus, retain the original stylesheet rules.
+ */
+body #p-expediente > .head > .exp-hdr {
+  background: #013151 !important;
+}
+
+#p-expediente .vis01-primary-navigation .nav-item:not([data-vis01-secondary]) > .nav-link:is(.active, .vis01-context-active) {
+  background: #013151 !important;
+  border-color: #013151 !important;
+  color: #fff !important;
+}
+
+#p-expediente .vis01-primary-navigation .nav-item:not([data-vis01-secondary]) > .nav-link:is(.active, .vis01-context-active) :is(.tab-ico, .tab-lbl, .tab-line, .tab-line-sub) {
+  color: #fff !important;
+}
