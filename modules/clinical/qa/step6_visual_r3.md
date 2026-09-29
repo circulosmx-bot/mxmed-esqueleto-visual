@@ -14,9 +14,9 @@ Attachment/capture/result widths are 570/540/530 px. Shared white surfaces, 14 p
 
 Attachment type and provenance are truthful read-only presentation: PDF or clinical image, attached in this consultation. MIME-derived types, existing source payload, supported MIME values, private storage and size validation are unchanged. No illustrative prescription/order/note categories or new source controls are added. Result type remains the canonical select in its original field order, with identical writer payloads.
 
-Capture presents three numbered connected instructions and balanced QR/phone columns. A real pending session displays its actual QR and canonical pending status. No connected-device claim is invented. After upload the existing authority removes the now-terminal bearer link; the receipt displays the actual canonical title and document glyph. No unavailable preview, size or filename is fabricated. “Usar captura” still acknowledges the already persisted document without a second write.
+Capture presents three numbered connected instructions and balanced QR/phone columns. A real pending session displays its actual QR and canonical pending status. No connected-device claim is invented. After upload the existing authority removes the now-terminal bearer link; the receipt displays the actual canonical title and, for an image with private binary, a thumbnail from the existing physician-authorized binary reader. The document glyph remains for unsupported/unavailable previews. Closing or replacing the capture session clears that private thumbnail. Unavailable size or original filename is omitted. “Usar captura” still acknowledges the already persisted document without a second write.
 
-The only R3 JavaScript differences are rendering three preview cards and displaying the patient document count. Writers, token issuance/poll/cancellation, canonical order filters, result idempotency, Plan and Step 7 controllers, schema and API contracts are unchanged.
+R3 JavaScript changes render three preview cards, display the patient document count and load/clear the received-image thumbnail through the existing private reader. Writers, token issuance/poll/cancellation, canonical order filters, result idempotency, Plan and Step 7 controllers, schema and API contracts are unchanged.
 
 ## Verification
 

@@ -4221,6 +4221,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documen
 .docux-received h5 {font-size:14px;line-height:20px;font-weight:600;margin:0 0 4px}
 .docux-received strong {display:block;font-size:13px;line-height:18px;overflow-wrap:anywhere;color:#356b82}
 .docux-action-modal .docux-received p {font-size:12px;margin:4px 0 0;color:#617d94}
+.docux-received-preview {width:56px;height:68px;object-fit:contain;border:1px solid #d5edf3;border-radius:6px;background:#fff;flex-shrink:0}
 .docux-received-file {font-size:46px;color:#008aa7}
 .docux-received-success {font-size:26px;color:#009f57;font-variation-settings:'FILL' 1}
 @media(min-width:1200px) and (max-height:800px){

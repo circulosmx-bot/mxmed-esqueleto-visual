@@ -316,6 +316,7 @@
     function stopPolling(s) { if (!s) return; clearTimeout(s.timer); s.timer = null; s.controller?.abort(); s.controller = null; }
     function removeQR() { $('[data-docux-qr-content]').hidden = true; $('[data-docux-qr]').replaceChildren(); $('[data-m7-capture-link]').removeAttribute('href'); }
     function captureMessage(text) { $('[data-m7-capture-state]').textContent = text; }
+    function clearCapturePreview(){const image=$('[data-docux-received-preview]');image.onload=null;image.onerror=null;image.removeAttribute('src');image.hidden=true;$('[data-docux-received-file]').hidden=false;}
     function terminal(s, value, data={}) {
       s.pending = false; stopPolling(s);
       if (!currentSession(s)) return;
@@ -326,6 +327,8 @@
         $('[data-docux-received]').hidden=false;$('[data-docux-received-title]').textContent='Verificando documento recibido…';$('[data-docux-received-detail]').textContent='';
         refresh().then(()=>{if(!currentSession(s))return;const doc=rows.find(row=>row.document_uuid===data.document_uuid&&String(row.encounter_ref_id||row.encounter_id)===String(s.context.encounterId));
           $('[data-docux-received-title]').textContent=doc?.title||'Documento recibido';$('[data-docux-received-detail]').textContent=doc?'Registrado en esta consulta.':'Actualiza los documentos para verificar el registro.';$('[data-docux-capture-use]').disabled=!doc;
+          // Preview uses the existing physician-authorized private reader only.
+          if(doc?.document_type==='image'&&doc.has_private_binary==1){const image=$('[data-docux-received-preview]');image.onload=()=>{if(currentSession(s)){image.hidden=false;$('[data-docux-received-file]').hidden=true;}};image.onerror=()=>{image.hidden=true;};image.src=route(`documents/${encodeURIComponent(doc.document_uuid)}/binary/ORIGINAL`);}
         });
       }
     }
@@ -346,7 +349,7 @@
     function dismissCapture(s, restore = true) {
       stopPolling(s);
       if (session !== s) return;
-      removeQR(); captureDialog.close(); captureDialog.classList.remove('plan02b-modal'); session = null;
+      removeQR(); clearCapturePreview(); captureDialog.close(); captureDialog.classList.remove('plan02b-modal'); session = null;
       paint();
       if (restore) returnFocus($('[data-m7-capture-start]'));
     }
@@ -391,7 +394,7 @@
     $('[data-m7-capture-start]').addEventListener('click', () => {
       if (busy || actionOpen() || !sameContext() || context.status !== 'open' || captureBusy || session) return;
       const s = { context:{ ...context }, token:'', url:'', pending:true, closing:false, timer:null, controller:null };
-      session = s; captureBusy = true; removeQR(); captureMessage('Preparando captura…');
+      session = s; captureBusy = true; removeQR(); clearCapturePreview(); captureMessage('Preparando captura…');
       $('[data-m7-capture-cancel]').hidden = false; $('[data-m7-capture-cancel]').disabled = false; $('[data-docux-capture-close]').hidden = true;
       $('[data-docux-capture-use]').hidden=true;$('[data-docux-received]').hidden=true;
       captureDialog.classList.add('plan02b-modal'); captureDialog.showModal();paint(); $('[data-m7-capture-cancel]').focus();
