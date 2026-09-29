@@ -53,9 +53,13 @@ php -d "session.save_path=$qa_root/sessions" -r 'session_id("step3-head-neck-qa"
 window_path="$qa_root/write-window.json"
 MXMED_CLINICAL_WRITE_WINDOW_CONTROL=FILE MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH="$window_path" php -r 'require $argv[1];clinical_m6_write_window_initialize_file(getenv("MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH"));' "$root_dir/api/_lib/clinical_m6_write_window.php"
 port_hex="$(openssl rand -hex 2)";port=$((18000 + 16#$port_hex % 20000))
+qa_php_flags=(-d "session.save_path=$qa_root/sessions")
+if [[ "${FLOW_R1_CAPTURE_R42:-0}" == "1" ]]; then
+  qa_php_flags+=(-d upload_max_filesize=32M -d post_max_size=40M -d memory_limit=128M -d display_errors=Off -d "auto_prepend_file=$root_dir/modules/clinical/qa/step6_mobile_capture_r42_probe.php")
+fi
 MXMED_DB_HOST=localhost MXMED_DB_NAME="$qa_db" MXMED_DB_USER=root MXMED_DB_PASS='' MXMED_LON06A_WRITE_ENABLED=1 MXMED_CLINICAL_STAGING_TTL_SECONDS=600 MXMED_CLINICAL_PRIVATE_STORAGE_ROOT="$qa_root/private" MXMED_CLINICAL_ENCOUNTER_INTEGRITY_V1=1 MXMED_CLINICAL_M6_COHORT_MODE=allowlist MXMED_CLINICAL_M6_COHORT_PAIRS='1|p_plan02ux_review' \
   MXMED_CLINICAL_WRITE_WINDOW_CONTROL=FILE MXMED_CLINICAL_WRITE_WINDOW_STATE_PATH="$window_path" \
-  php -d "session.save_path=$qa_root/sessions" -S "127.0.0.1:$port" -t "$root_dir" >"$qa_root/server.log" 2>&1 &
+  FLOW_R42_PROBE_LOG="$qa_root/runtime-probe.jsonl" php "${qa_php_flags[@]}" -S "127.0.0.1:$port" -t "$root_dir" >"$qa_root/server.log" 2>&1 &
 http_pid=$!
 base="http://127.0.0.1:$port"
 for _ in {1..40}; do if curl -fsS -o /dev/null "$base/modules/clinical/README.md" 2>/dev/null; then break; fi;sleep 0.1;done

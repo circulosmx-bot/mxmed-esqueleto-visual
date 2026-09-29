@@ -8732,27 +8732,16 @@ try {
             }
 
             $uploadFile = $_FILES['file'] ?? null;
-            $uploadError = is_array($uploadFile) ? (int)($uploadFile['error'] ?? UPLOAD_ERR_NO_FILE) : UPLOAD_ERR_NO_FILE;
-            if (!is_array($uploadFile) || $uploadError !== UPLOAD_ERR_OK) {
-                $uploadMessage = 'archivo requerido';
-                if ($uploadError === UPLOAD_ERR_INI_SIZE || $uploadError === UPLOAD_ERR_FORM_SIZE) {
-                    $uploadMessage = 'archivo demasiado grande para el límite de carga';
-                } elseif ($uploadError === UPLOAD_ERR_PARTIAL) {
-                    $uploadMessage = 'la carga del archivo fue parcial, intenta nuevamente';
-                } elseif ($uploadError === UPLOAD_ERR_NO_TMP_DIR || $uploadError === UPLOAD_ERR_CANT_WRITE) {
-                    $uploadMessage = 'no se pudo procesar la carga en el servidor';
-                } elseif ($uploadError === UPLOAD_ERR_EXTENSION) {
-                    $uploadMessage = 'la carga fue bloqueada por extensión del servidor';
-                }
+            require_once __DIR__ . '/../_lib/clinical_capture_upload_errors.php';
+            $uploadFailure = clinical_capture_upload_failure(is_array($uploadFile) ? $uploadFile : null,
+                (int)($_SERVER['CONTENT_LENGTH'] ?? 0), (string)ini_get('post_max_size'));
+            if ($uploadFailure !== null) {
                 clinical_send_response([
-                    'ok' => false,
-                    'error' => 'bad_request',
-                    'message' => $uploadMessage,
-                    'data' => null,
-                    'meta' => [
-                        'method' => 'POST',
-                        'route' => 'note-capture-tokens/{token}/upload',
-                        'upload_error' => $uploadError,
+                    'ok' => false, 'error' => $uploadFailure['code'], 'message' => $uploadFailure['message'],
+                    'data' => null, 'meta' => [
+                        'method' => 'POST', 'route' => 'note-capture-tokens/{token}/upload',
+                        'upload_error' => $uploadFailure['upload_error'],
+                        'post_max_size_exceeded' => $uploadFailure['post_max_size_exceeded'],
                     ],
                 ], 400);
                 return;
