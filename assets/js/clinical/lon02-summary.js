@@ -8,7 +8,16 @@
   const error = $('[data-lon02-error]');
   const content = $('[data-lon02-content]');
   const patient = () => String(pane.dataset.patientId || pane.dataset.activePatientId || '').trim();
-  const date = value => String(value || '').trim().replace('T', ' ') || 'Fecha no disponible';
+  // Preserve each authority's clock (Agenda uses Mexico City; clinical times use UTC).
+  // This only formats presentation, without reinterpreting or persisting timestamps.
+  const date = value => {
+    const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+    if (!match) return 'Fecha no disponible';
+    const [, year, month, day, hour, minute] = match;
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    if (!months[Number(month) - 1]) return 'Fecha no disponible';
+    return `${Number(day)} ${months[Number(month) - 1]} ${year}${hour === undefined ? '' : ` · ${Number(hour)}:${minute}`}`;
+  };
   const state = value => ({open:'En curso', closed:'Finalizada', voided:'Anulada'})[String(value || '').toLowerCase()] || 'Estado no disponible';
   const source = value => ({direct_measurement:'Medición directa', patient_report:'Referido por paciente', import:'Importación'})[String(value || '')] || 'Fuente no disponible';
   const measure = value => ({blood_pressure:'Presión arterial',heart_rate:'Frecuencia cardiaca',respiratory_rate:'Frecuencia respiratoria',temperature:'Temperatura',oxygen_saturation:'Saturación de oxígeno',pain:'Dolor',weight:'Peso',height:'Estatura',waist:'Cintura'})[String(value || '')] || String(value || 'Medición');
@@ -56,13 +65,17 @@
     rows.forEach((row, index) => {
       if (consumed.has(index)) return;
       const observationKey = row.observation_key || row.observation_id || row.measurement_event_key || '';
-      if (row.code === 'blood_pressure' && ['systolic', 'diastolic'].includes(row.component) && observationKey) {
+      if (row.code === 'blood_pressure' && ['systolic', 'diastolic'].includes(row.component)) {
         const opposite = row.component === 'systolic' ? 'diastolic' : 'systolic';
         const pairIndex = rows.findIndex((candidate, candidateIndex) => candidateIndex !== index
           && !consumed.has(candidateIndex)
           && candidate.code === 'blood_pressure'
           && candidate.component === opposite
+          // LON02 omits observation IDs, but its LON07B projection splits the same
+          // latest complete BP observation into two series. Match the full context;
+          // never combine distinct encounters, times, sources or explicit IDs.
           && (candidate.observation_key || candidate.observation_id || candidate.measurement_event_key || '') === observationKey
+          && Boolean(row.encounter_key) && candidate.encounter_key === row.encounter_key
           && candidate.date === row.date
           && candidate.source === row.source
           && candidate.unit === row.unit
@@ -78,7 +91,9 @@
           return;
         }
       }
-      output.push(row);
+      if (row.code === 'blood_pressure' && ['systolic', 'diastolic'].includes(row.component)) {
+        output.push({...row, component:null, incomplete:true, value:row.component === 'systolic' ? `${number(row.value)} / —` : `— / ${number(row.value)}`});
+      } else output.push(row);
     });
     return output;
   }
@@ -88,32 +103,23 @@
     label.textContent = `${measure(row.code)}${row.component ? ` ${row.component === 'systolic' ? 'sistólica' : 'diastólica'}` : ''}`;
     const value = document.createElement('strong'); value.className = 'lon02-measurement-value';
     value.textContent = `${number(row.value)} ${row.unit || ''}`.trim();
-    item.append(label, value); target.append(item);
+    const meta = document.createElement('small'); meta.className = 'lon02-measurement-meta';
+    meta.textContent = `${date(row.date)}${row.incomplete ? ' · Lectura incompleta' : ''}`;
+    meta.title = `${row.date} UTC · ${source(row.source)}${row.has_amendment ? ' · Con enmienda' : ''}`;
+    item.append(label, value, meta); target.append(item);
   }
   function renderMeasurements(rows) {
     const target = $('[data-lon02-measurements]');
     target.replaceChildren();
     const normalized = measurementRows(rows);
     if (!normalized.length) { target.textContent = 'Sin mediciones comparables en los últimos 12 meses.'; return; }
-    const groups = new Map();
-    normalized.forEach(row => {
-      const key = [row.date, row.source, Boolean(row.has_amendment), row.encounter_key, row.provenance, row.effective_at_authority].join('|');
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(row);
-    });
-    groups.forEach(groupRows => {
-      const group = document.createElement('div'); group.className = 'lon02-measurement-group';
-      groupRows.forEach(row => measurementLine(group, row));
-      const row = groupRows[0];
-      const meta = document.createElement('small'); meta.className = 'lon02-measurement-meta';
-      meta.textContent = `${date(row.date)} UTC · ${source(row.source)}${row.has_amendment ? ' · Con enmienda' : ''}`;
-      group.append(meta); target.append(group);
-    });
+    normalized.forEach(row => measurementLine(target, row));
   }
+
   function render(data) {
     const recent = data.recent_encounters || [];
     // LON02 supplies a bounded, descending canonical history; never infer a visit from Agenda.
-    list('[data-lon02-recent]', recent.slice(0, 2), 'Sin consultas anteriores en el resumen disponible.', (target, row) => line(target, date(row.date), `Consulta ${state(row.status)} · Encuentro canónico`));
+    list('[data-lon02-recent]', recent.slice(0, 2), 'Sin consultas anteriores en el resumen disponible.', (target, row) => line(target, date(row.date), `Consulta ${state(row.status)}`));
     // Already selected by LON07B latest-comparable authority. Do not re-sort observations.
     renderMeasurements(data.latest_measurements || []);
     const late = data.late_results || [];
@@ -124,7 +130,7 @@
       ...late.map(row => ({...row, context:'Recibido después del cierre'})),
       ...(data.recent_documents || []).filter(row => resultTypes.includes(String(row.type || '').trim().toLowerCase()) && !late.some(item => isSame(item, row))).map(row => ({...row, context:documentType(row.type)}))
     ];
-    compact('[data-lon02-results]', results, 'Sin órdenes pendientes ni resultados en el resumen disponible.', (target, row) => line(target, row.title, `${row.context} · ${date(row.date)}`), 3);
+    compact('[data-lon02-results]', results, 'Sin órdenes pendientes ni resultados en el resumen disponible.', (target, row) => line(target, row.title, `${row.context} · ${date(row.date)}`), 2);
     content.classList.remove('d-none');
   }
   async function renderAppointment(id, request) {
@@ -191,10 +197,18 @@
     tasksTarget.replaceChildren();
     if (tasks.status !== 'fulfilled') tasksTarget.textContent = 'Estado no disponible.';
     else {
-      const open = (tasks.value.items || []).filter(row => row.state === 'OPEN');
-      compact('[data-lon02-tasks]', open, 'Sin tareas abiertas registradas.', (target, row) => {
+      const open = (tasks.value.items || []).filter(row => row.state === 'OPEN').sort((a, b) =>
+        Number(b.derived_due_state === 'OVERDUE') - Number(a.derived_due_state === 'OVERDUE')
+        || String(a.due_at || '9999').localeCompare(String(b.due_at || '9999')));
+      if (open.length) {
+        const count = document.createElement('span'); count.className = 'lon02-pending-count';
+        count.textContent = `${open.length} ${open.length === 1 ? 'pendiente clínico' : 'pendientes clínicos'}`;
+        tasksTarget.append(count);
+      } else tasksTarget.textContent = 'Sin pendientes clínicos registrados.';
+      open.slice(0, 1).forEach(row => {
+        const target = tasksTarget;
         const overdue = row.derived_due_state === 'OVERDUE';
-        line(target, row.title, `${row.task_type === 'FOLLOW_UP' ? 'Seguimiento' : 'Tarea clínica'} · ${row.due_at ? `Límite ${row.due_at} UTC${overdue ? ` · ${row.task_type === 'FOLLOW_UP' ? 'Vencido' : 'Vencida'}` : ''}` : 'Sin fecha límite'}`);
+        line(target, row.title, `${row.task_type === 'FOLLOW_UP' ? 'Seguimiento' : 'Tarea clínica'} · ${row.due_at ? `Límite ${date(row.due_at)}${overdue ? ` · ${row.task_type === 'FOLLOW_UP' ? 'Vencido' : 'Vencida'}` : ''}` : 'Sin fecha límite'}`);
       });
     }
   }
@@ -221,7 +235,6 @@
       status.textContent = 'Resumen no disponible.';
     }
   }
-  $('[data-lon02-refresh]').addEventListener('click', load);
   $('[data-lon02-history]').addEventListener('click', () => goToHistory());
   for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, load);
   pane.querySelector('[data-bs-target="#t-resumen-longitudinal"]')?.addEventListener('shown.bs.tab', load);
