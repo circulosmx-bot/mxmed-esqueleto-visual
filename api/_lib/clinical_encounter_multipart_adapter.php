@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/clinical_multipart_document_service.php';
+require_once __DIR__ . '/clinical_image_optimizer.php';
 
 /** Deployment configuration only; no implicit product TTL or storage fallback. */
 function clinical_encounter_multipart_config(): array
@@ -44,6 +45,15 @@ function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array 
     } catch (Throwable) {
         throw new RuntimeException('V1_MULTIPART_STORAGE_NOT_READY');
     }
+    $optimized = null;
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+    if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        $optimized = clinical_optimize_private_image($file);
+        $payload['payload']['original_audit'] = $optimized['manifest']['original'];
+        $payload['payload']['image_optimization'] = array_diff_key($optimized['manifest']['optimized'], ['path' => true]);
+        $file['tmp_name'] = $optimized['main'];
+    }
+    try {
     $context = [
         'operation' => $createOperation,
         'doctor_id' => $doctor['doctor_id'],
@@ -78,6 +88,7 @@ function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array 
         },
         static fn(PDO $transaction, string $column, int $id): array => clinical_v1_document_fetch($transaction, $id)
     );
+    } finally { clinical_clean_private_image($optimized); }
 }
 
 /** Canonical append-only amendment with an immutable successor binary. */
@@ -93,6 +104,15 @@ function clinical_document_amendment_multipart_execute(PDO $pdo, array $original
         throw new RuntimeException('V1_MULTIPART_STORAGE_NOT_READY');
     }
     $replacement = $command['replacement'];
+    $optimized = null;
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+    if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        $optimized = clinical_optimize_private_image($file);
+        $replacement['payload']['original_audit'] = $optimized['manifest']['original'];
+        $replacement['payload']['image_optimization'] = array_diff_key($optimized['manifest']['optimized'], ['path' => true]);
+        $file['tmp_name'] = $optimized['main'];
+    }
+    try {
     $encounterId = isset($original['encounter_ref_id']) ? (int)$original['encounter_ref_id'] : 0;
     $context = [
         'operation' => 'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT',
@@ -122,6 +142,7 @@ function clinical_document_amendment_multipart_execute(PDO $pdo, array $original
         },
         static fn(PDO $transaction, string $column, int $id): array => clinical_v1_document_revision_fetch($transaction, $id)
     );
+    } finally { clinical_clean_private_image($optimized); }
 }
 
 /** Public error codes only; never forward storage paths or exception text. */

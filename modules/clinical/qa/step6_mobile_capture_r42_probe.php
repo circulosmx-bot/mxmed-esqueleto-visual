@@ -6,7 +6,8 @@ if (!str_ends_with($path, '/upload')) return;
 $probeFile=$_FILES['file'] ?? null;
 $probe=['files_present'=>is_array($probeFile),'upload_error'=>$probeFile['error'] ?? null,'bytes'=>$probeFile['size'] ?? null,
     'upload_max_filesize'=>ini_get('upload_max_filesize'),'post_max_size'=>ini_get('post_max_size'),'memory_limit'=>ini_get('memory_limit')];
-register_shutdown_function(static function() use ($probe):void {
+register_shutdown_function(static function() use ($probe, $probeFile):void {
+    $probe['raw_temp_exists_at_shutdown']=is_array($probeFile) && is_file((string)($probeFile['tmp_name']??''));
     $probe['peak_php_bytes']=memory_get_peak_usage(true);$probe['http_status']=http_response_code();
     file_put_contents((string)getenv('FLOW_R42_PROBE_LOG'),json_encode($probe)."\n",FILE_APPEND|LOCK_EX);
 });

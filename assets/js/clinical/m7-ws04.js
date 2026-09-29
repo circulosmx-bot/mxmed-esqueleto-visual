@@ -88,7 +88,11 @@
     function multipart(payload, file) { const form = new FormData(); Object.entries(payload).forEach(([key, value]) => form.append(key, key === 'payload' || key === 'replacement' ? JSON.stringify(value) : value)); form.append('file', file); return form; }
     function payloadOf(row) { try { return typeof row.payload_json === 'string' ? JSON.parse(row.payload_json || '{}') : row.payload_json || {}; } catch (_) { return {}; } }
     function relatedOrder(row) { const payload = payloadOf(row); return String(payload.related_order_document_uuid || payload.related_order_document_id || payload.related_document_uuid || payload.related_document_id || payload.related_order_id || payload.context?.related_order_document_uuid || ''); }
-    function documentLabel(row) { const captured=payloadOf(row);if(captured.source==='step6_mobile_capture_r4'&&captured.capture_classification_label)return String(captured.capture_classification_label);if(row.document_type==='pdf'&&row.has_private_binary!=1)return 'Documento clínico';return ({ pdf:'PDF clínico', image:'Imagen clínica', order:'Orden de estudio', lab_result:'Resultado de laboratorio', imaging_result:'Resultado de imagen', external_report:'Informe externo', prescription:'Receta', receta:'Receta' })[row.document_type] || String(row.document_type || 'Documento clínico').replaceAll('_', ' '); }
+    function logicalDocuments(items) {
+      const seen=new Set();return items.filter(row=>{const payload=payloadOf(row);if(!payload.capture_session_uuid||!payload.media_bundle_id)return true;if(seen.has(payload.media_bundle_id))return false;seen.add(payload.media_bundle_id);return true;});
+    }
+    function openBundle(row){const payload=payloadOf(row);window.open('/modules/clinical/ui/viewer.php?bundle_id='+encodeURIComponent(payload.media_bundle_id)+'&patient_id='+encodeURIComponent(context.patientId),'_blank','noopener');}
+    function documentLabel(row) { const captured=payloadOf(row);if(captured.capture_session_uuid)return captured.media_page_count+' páginas';if(captured.source==='step6_mobile_capture_r4'&&captured.capture_classification_label)return String(captured.capture_classification_label);if(row.document_type==='pdf'&&row.has_private_binary!=1)return 'Documento clínico';return ({ pdf:'PDF clínico', image:'Imagen clínica', order:'Orden de estudio', lab_result:'Resultado de laboratorio', imaging_result:'Resultado de imagen', external_report:'Informe externo', prescription:'Receta', receta:'Receta' })[row.document_type] || String(row.document_type || 'Documento clínico').replaceAll('_', ' '); }
     function card(row) {
       const node = document.createElement('article'); node.className = 'm7-doc-card';node.dataset.document=row.document_uuid;
       const icon=document.createElement('span');icon.className='material-symbols-rounded';icon.setAttribute('aria-hidden','true');icon.textContent='description';node.append(icon);
@@ -110,8 +114,8 @@
       if (family.length > 1) { const lineage = document.createElement('p'); lineage.textContent = `Historial: ${family.length} versiones. La original permanece disponible.`; node.append(lineage); }
       if (resultTypes.has(String(row.document_type))) { const order = rows.find(item => String(item.document_uuid) === relatedOrder(row) || String(item.id) === relatedOrder(row)); if (order) { const relation = document.createElement('p'); relation.textContent = `Resultado de: ${order.title || 'orden de estudio'}`; node.append(relation); } }
       const actions = document.createElement('div'); actions.className = 'm7-doc-card-actions';
-      if (row.has_private_binary == 1) { const read = document.createElement('button'); read.type = 'button'; read.className = 'btn btn-outline-primary btn-sm'; read.textContent = 'Abrir archivo'; read.addEventListener('click', () => privateRead(row)); actions.append(read); }
-      if (available() && row.has_successor != 1 && payloadOf(row).auto_generated !== true) { const replace = document.createElement('button'); replace.type = 'button'; replace.className = 'btn btn-outline-secondary btn-sm'; replace.textContent = 'Reemplazar'; replace.addEventListener('click', () => { closeReader();selectedReplacement = row; $('[data-m7-replace-target]').textContent = row.title || documentLabel(row); show(replaceForm, true); replaceForm.scrollIntoView({ block:'nearest' }); }); actions.append(replace); }
+      if (row.has_private_binary == 1) { const read = document.createElement('button'); read.type = 'button'; read.className = 'btn btn-outline-primary btn-sm'; read.textContent = 'Abrir archivo'; read.addEventListener('click', () => payloadOf(row).capture_session_uuid?openBundle(row):privateRead(row)); actions.append(read); }
+      if (!payloadOf(row).capture_session_uuid && available() && row.has_successor != 1 && payloadOf(row).auto_generated !== true) { const replace = document.createElement('button'); replace.type = 'button'; replace.className = 'btn btn-outline-secondary btn-sm'; replace.textContent = 'Reemplazar'; replace.addEventListener('click', () => { closeReader();selectedReplacement = row; $('[data-m7-replace-target]').textContent = row.title || documentLabel(row); show(replaceForm, true); replaceForm.scrollIntoView({ block:'nearest' }); }); actions.append(replace); }
       if (sameContext() && ['prescription','receta'].includes(String(row.document_type || '').toLowerCase()) && ['generated','signed'].includes(String(row.status || '').toLowerCase()) && row.has_successor != 1) {
         const addMedication = document.createElement('button'); addMedication.type = 'button'; addMedication.className = 'btn btn-outline-primary btn-sm'; addMedication.textContent = 'Agregar a medicación';
         addMedication.addEventListener('click', () => root.dispatchEvent(new CustomEvent('lon05b:prescription-selected', {bubbles:true,detail:{documentId:Number(row.id),patientId:context.patientId,title:row.title || 'Receta',trigger:addMedication}})));
@@ -126,18 +130,18 @@
       const meta=document.createElement('p');const stateLabel=({signed:'Firmado',generated:'Generado',draft:'Borrador',voided:'Anulado'})[String(row.status||'').toLowerCase()]||'Registrado';
       meta.textContent=documentLabel(row)+' · '+stateLabel+(row.has_successor==1?' · Reemplazado':'');
       node.title=title.textContent+' · '+String(row.event_datetime||'').replace('T',' ');node.setAttribute('aria-label',`${title.textContent}. ${meta.textContent}. Ver detalles`);
-      node.append(icon,title,meta);node.onclick=()=>{readDocuments('encounter',node);[...patientList.children].find(card=>card.dataset.document===row.document_uuid)?.scrollIntoView({block:'nearest'});};return node;
+      node.append(icon,title,meta);node.onclick=()=>{if(payloadOf(row).capture_session_uuid){openBundle(row);return;}readDocuments('encounter',node);[...patientList.children].find(card=>card.dataset.document===row.document_uuid)?.scrollIntoView({block:'nearest'});};return node;
     }
     function paint() {
       encounterList.replaceChildren(); patientList.replaceChildren();
-      const encounterRows = rows.filter(row => String(row.encounter_ref_id || row.encounter_id || '') === String(context?.encounterId || ''));
+      const encounterRows = logicalDocuments(rows.filter(row => String(row.encounter_ref_id || row.encounter_id || '') === String(context?.encounterId || '')));
       const preview=encounterRows.filter(row=>row.has_successor!=1).slice(0,3);
       if (!preview.length) {const p=document.createElement('p');p.textContent='Aún no hay documentos registrados en esta consulta.';encounterList.append(p);}
       else preview.forEach(row=>encounterList.append(previewCard(row)));
       $('[data-doc-count]').textContent=encounterRows.length?`(${encounterRows.length})`:'';
-      $('[data-doc-patient-total]').textContent=rows.length?`El paciente tiene ${rows.length} documentos en su expediente.`:'Sin documentos registrados en el expediente.';
+      $('[data-doc-patient-total]').textContent=rows.length?`El paciente tiene ${logicalDocuments(rows).length} documentos en su expediente.`:'Sin documentos registrados en el expediente.';
       $('[data-doc-all]').hidden=!encounterRows.length;
-      const items=readerMode==='encounter'?encounterRows:rows;
+      const items=readerMode==='encounter'?encounterRows:logicalDocuments(rows);
       if(!items.length)patientList.textContent='Aún no hay documentos registrados.';
       else items.forEach(row=>patientList.append(card(row)));
       $('[data-doc-reader] h4').textContent=readerMode==='encounter'?'Documentos de esta consulta':'Documentos del paciente';
@@ -312,145 +316,118 @@
     }
     $('[data-m7-doc-refresh]').addEventListener('click', refresh);
     $('[data-m7-replace-cancel]').addEventListener('click', () => { selectedReplacement = null; show(replaceForm, false); replaceForm.reset(); resetAttempt('replace'); });
-    function currentSession(s) { return session === s && captureDialog.open && sameContext() && context.key === s.context.key && context.patientId === s.context.patientId; }
-    function stopPolling(s) { if (!s) return; clearTimeout(s.timer); s.timer = null; s.controller?.abort(); s.controller = null; }
-    function stopExpiry(s) { if (s) { clearInterval(s.expiryTimer); s.expiryTimer = null; } }
-    function removeQR() { $('[data-docux-qr-content]').hidden = true; $('[data-docux-qr]').replaceChildren(); $('[data-m7-capture-link]').removeAttribute('href'); }
-    function captureMessage(text, kind='') { const n=$('[data-m7-capture-state]');n.textContent=text;n.dataset.state=kind; }
-    function clearCapturePreview(){const image=$('[data-docux-received-preview]');image.onload=null;image.onerror=null;image.removeAttribute('src');image.hidden=true;$('[data-docux-received-file]').hidden=false;}
-    function updateExpiry(s) {
-      if (!currentSession(s) || !s.pending) return;
-      const seconds=Math.max(0,Math.ceil((s.expiresAt-Date.now())/1000));
-      $('[data-docux-capture-expiry]').textContent=seconds>0?`Expira en ${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`:'Verificando vigencia del código…';
+    function currentSession(s) { return session===s && captureDialog.open && sameContext() && context.key===s.context.key; }
+    function stopPolling(s) { if(s){clearTimeout(s.timer);s.timer=null;} }
+    function captureMessage(text) { $('[data-m7-capture-state]').textContent=text; }
+    function removeQR() { $('[data-docux-qr-content]').hidden=true;$('[data-docux-qr]').replaceChildren();$('[data-m7-capture-link]').removeAttribute('href'); }
+    function drawQR(s,data) {
+      s.token=data.token;s.url=data.mobile_url;s.qrPageUuid=data.page_uuid;removeQR();
+      new QRCode($('[data-docux-qr]'),{text:s.url,width:216,height:216,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+      $('[data-docux-qr]').removeAttribute('title');$('[data-docux-qr-content]').hidden=false;$('[data-docux-capture-guide]').hidden=false;
+      $('[data-m7-capture-link]').href=s.url;$('[data-docux-capture-expiry]').textContent='Código de un solo uso · página '+data.page_number;
     }
-    function showSelection(s) {
-      if (!currentSession(s)) return;
-      stopPolling(s);stopExpiry(s);removeQR();clearCapturePreview();
-      s.token='';s.url='';s.pending=false;s.status='selection';
-      $('[data-docux-capture-selection]').hidden=false;$('[data-docux-capture-selected]').hidden=true;
-      $('[data-docux-capture-guide]').hidden=true;$('[data-docux-received]').hidden=true;
-      $('[data-m7-capture-cancel]').hidden=true;$('[data-docux-capture-renew]').hidden=true;
-      $('[data-docux-capture-generate]').hidden=false;$('[data-docux-capture-generate]').disabled=!s.classification;
-      $('[data-docux-capture-change]').disabled=false;captureMessage('Selecciona el tipo y genera el código cuando estés listo.');
-    }
-    function terminal(s, value, data={}) {
-      s.pending=false;s.status=value;stopPolling(s);stopExpiry(s);
-      if (!currentSession(s)) return;
-      removeQR();$('[data-docux-capture-guide]').hidden=true;$('[data-m7-capture-cancel]').hidden=true;
-      $('[data-docux-capture-generate]').hidden=true;$('[data-docux-capture-renew]').hidden=!['expired','cancelled'].includes(value);
-      $('[data-docux-capture-change]').disabled=false;
-      captureMessage(({uploaded:'Documento recibido',consumed:'Documento recibido',cancelled:'Captura cancelada',expired:'El código expiró.'})[value]||'La sesión de captura ya no está disponible.',value);
-      if (['uploaded','consumed'].includes(value)) {
-        $('[data-docux-capture-change]').hidden=true;
-        $('[data-docux-received]').hidden=false;$('[data-docux-received-title]').textContent='Verificando documento recibido…';$('[data-docux-received-detail]').textContent='';
-        refresh().then(()=>{if(!currentSession(s))return;const doc=rows.find(row=>row.document_uuid===data.document_uuid&&String(row.encounter_ref_id||row.encounter_id)===String(s.context.encounterId));
-          $('[data-docux-received-title]').textContent=doc?.title||s.classification?.label||'Documento recibido';
-          const time=data.uploaded_at?new Date(data.uploaded_at):null;
-          const received=time&&!Number.isNaN(time.getTime())?new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'}).format(time):'';
-          $('[data-docux-received-detail]').textContent=doc?`${s.classification?.label||documentLabel(doc)}${received?' · '+received:''} · Registrado en esta consulta.`:'Actualiza los documentos para verificar el registro.';
-          if(doc?.document_type==='image'&&doc.has_private_binary==1){const image=$('[data-docux-received-preview]');image.onload=()=>{if(currentSession(s)){image.hidden=false;$('[data-docux-received-file]').hidden=true;}};image.onerror=()=>{image.hidden=true;};image.src=route(`documents/${encodeURIComponent(doc.document_uuid)}/binary/ORIGINAL`);}
-        });
-      }
-    }
-    function schedule(s) {
-      if (currentSession(s) && s.pending && s.token && !s.closing && !document.hidden) s.timer=setTimeout(()=>poll(s),pollInterval);
-    }
-    async function poll(s) {
-      if (!currentSession(s)||!s.pending||s.closing||document.hidden) return;
-      const controller=new AbortController();s.controller=controller;
-      try {
-        const response=await jsonResponse(await fetch(route(`note-capture-tokens/${encodeURIComponent(s.token)}`),{credentials:'same-origin',headers:{Accept:'application/json'},signal:controller.signal}));
-        if(!currentSession(s)||s.closing||controller.signal.aborted)return;
-        if(response.data.status!=='pending')terminal(s,response.data.status,response.data);
-        else {s.expiresAt=Date.parse(response.data.expires_at);updateExpiry(s);captureMessage('Esperando captura…','pending');}
-      }catch(error){if(error.name!=='AbortError'&&currentSession(s)&&!s.closing)captureMessage('No se pudo comprobar la captura. Volveremos a intentarlo.');}
-      finally {if(s.controller===controller)s.controller=null;if(!controller.signal.aborted)schedule(s);}
-    }
-    function dismissCapture(s, restore=true) {
-      stopPolling(s);stopExpiry(s);if(session!==s)return;
-      removeQR();clearCapturePreview();captureDialog.close();captureDialog.classList.remove('plan02b-modal');session=null;paint();
-      if(restore)returnFocus($('[data-m7-capture-start]'));
-    }
-    async function cancelSession(s) {
-      if(!s.token||!s.pending)return;
-      const data=await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
-      if(data.status!=='pending'){terminal(s,data.status,data);return;}
-      try {await send(`note-capture-tokens/${encodeURIComponent(s.token)}/cancel`,{},makeKey());terminal(s,'cancelled');}
-      catch(error){
-        if(error.code!=='conflict'&&error.code!=='409')throw error;
-        const latest=await get(`note-capture-tokens/${encodeURIComponent(s.token)}`);
-        if(latest.status==='pending')throw error;terminal(s,latest.status,latest);
-      }
-    }
-    async function endCapture(close=true,contextLost=false) {
-      const s=session;if(!s)return;
-      if(s.closing){if(contextLost)dismissCapture(s,false);return;}
-      s.closing=true;stopPolling(s);stopExpiry(s);removeQR();
-      $('[data-m7-capture-cancel]').disabled=true;$('[data-docux-capture-change]').disabled=true;
-      if(s.pending)captureMessage('Cancelando captura…');
-      if(contextLost)dismissCapture(s,false);
-      try {await s.issuance;await cancelSession(s);if(close)dismissCapture(s,!contextLost);}
-      catch(_){if(session===s)captureMessage('No se pudo cancelar la captura. Intenta cancelar de nuevo antes de cerrar.');else status('No se pudo cancelar una captura anterior. Su enlace vencerá automáticamente.','failed');}
-      finally{s.closing=false;if(session===s){$('[data-m7-capture-cancel]').disabled=false;$('[data-docux-capture-change]').disabled=false;}}
-    }
-    async function generateCapture(s) {
-      if(!currentSession(s)||captureBusy||s.closing||s.pending||!s.classification)return;
-      s.pending=true;s.status='issuing';captureBusy=true;removeQR();clearCapturePreview();
-      $('[data-docux-capture-selection]').hidden=true;$('[data-docux-capture-selected]').hidden=false;
-      $('[data-docux-capture-label]').textContent=s.classification.label;$('[data-docux-capture-change]').hidden=false;
-      $('[data-docux-capture-change]').disabled=true;$('[data-docux-capture-generate]').hidden=true;
-      $('[data-docux-capture-renew]').hidden=true;$('[data-docux-received]').hidden=true;
-      $('[data-m7-capture-cancel]').hidden=false;$('[data-m7-capture-cancel]').disabled=false;
-      captureMessage('Generando código QR…');
-      s.issuance=(async()=>{
-        try {
-          const response=await send('note-capture-tokens',{patient_id:s.context.patientId,encounter_key:s.context.key,capture_classification:s.classification.id},makeKey());
-          s.token=String(response.data?.token||'');if(!s.token)throw new Error();
-          s.url=String(response.data.mobile_url||'');const url=new URL(s.url);
-          if(!['https:','http:'].includes(url.protocol)||url.username||url.password)throw new Error();
-          s.expiresAt=Date.parse(response.data.expires_at);if(!Number.isFinite(s.expiresAt))throw new Error();
-          if(!currentSession(s)||s.closing)return;
-          s.status='pending';const qr=$('[data-docux-qr]');new QRCode(qr,{text:s.url,width:216,height:216,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});qr.removeAttribute('title');
-          $('[data-m7-capture-link]').setAttribute('href',s.url);$('[data-docux-capture-guide]').hidden=false;$('[data-docux-qr-content]').hidden=false;$('[data-docux-capture-change]').disabled=false;
-          captureMessage('Esperando captura…','pending');updateExpiry(s);s.expiryTimer=setInterval(()=>updateExpiry(s),1000);schedule(s);$('[data-m7-capture-link]').focus();
-        }catch(_){
-          if(currentSession(s)&&!s.closing){
-            captureMessage(s.token?'No se pudo mostrar el código. Cierra esta ventana para cancelarlo.':'No se pudo confirmar la creación del código. Cierra y vuelve a intentar; cualquier código creado vencerá automáticamente.');removeQR();
-            if(!s.token){s.pending=false;s.status='failed';$('[data-m7-capture-cancel]').hidden=true;}
+    async function renderCapture(s,data) {
+      if(!currentSession(s))return;
+      s.status=data.status;s.pending=data.status==='OPEN';s.data=data;
+      const pageList=$('[data-docux-capture-pages]');
+      const signature=JSON.stringify([data.status,data.pages]);
+      if(s.pageSignature!==signature){
+        s.pageSignature=signature;pageList.replaceChildren();
+        for(const page of data.pages||[]){
+          const row=document.createElement('article'),img=document.createElement('img'),label=document.createElement('strong');
+          img.src=page.thumbnail_url;img.alt='Página '+page.page_number;label.textContent='Página '+page.page_number;row.append(img,label);
+          const index=data.pages.indexOf(page);
+          for(const [text,offset] of [['Subir',-1],['Bajar',1]]){
+            const button=document.createElement('button');button.type='button';button.className='btn btn-link';button.textContent=text;
+            button.hidden=!s.pending||index+offset<0||index+offset>=data.pages.length;
+            button.onclick=()=>captureCommand(s,'reorder',{pages:data.pages.map(p=>p.page_uuid).map((id,i)=>i===index?data.pages[index+offset].page_uuid:i===index+offset?page.page_uuid:id)});row.append(button);
           }
-        }finally{captureBusy=false;}
-      })();
-      await s.issuance;
+          const remove=document.createElement('button');remove.type='button';remove.className='btn btn-link';remove.textContent='Quitar';remove.hidden=!s.pending;remove.onclick=()=>captureCommand(s,'remove',{page_uuid:page.page_uuid});row.append(remove);pageList.append(row);
+        }
+      }
+      pageList.hidden=!data.page_count;
+      $('[data-docux-capture-finalize]').hidden=!s.pending||!data.page_count;
+      $('[data-docux-capture-renew]').hidden=!s.pending;
+      $('[data-m7-capture-cancel]').hidden=!s.pending;
+      if(data.pages?.some(page=>page.page_uuid===s.qrPageUuid)){removeQR();$('[data-docux-capture-guide]').hidden=true;}
+      if(data.status==='COMPLETED'){
+        stopPolling(s);removeQR();$('[data-docux-capture-guide]').hidden=true;$('[data-docux-capture-change]').hidden=true;
+        captureMessage('Documento recibido · '+data.page_count+' páginas');
+        if(!s.refreshed){s.refreshed=true;await refresh();}
+      }else if(!s.pending){stopPolling(s);removeQR();captureMessage(data.status==='EXPIRED'?'La sesión de captura venció.':'Captura cancelada.');}
+      else captureMessage(data.page_count?data.page_count+' páginas recibidas. Puedes ordenar, quitar o finalizar el documento.':'Esperando la primera página…');
+    }
+    async function captureCommand(s,action,body={}){
+      if(!currentSession(s)||captureBusy||!s.id)return;
+      captureBusy=true;stopPolling(s);
+      try {const result=await send('mobile-capture-sessions/'+s.id+'/'+action,body,makeKey());await renderCapture(s,result.data);}
+      catch(_){if(currentSession(s))captureMessage('No se completó la acción. Actualiza el estado e intenta de nuevo.');}
+      finally{captureBusy=false;schedule(s);}
+    }
+    function schedule(s){stopPolling(s);if(currentSession(s)&&s.pending&&!s.closing&&!document.hidden)s.timer=setTimeout(()=>poll(s),pollInterval);}
+    async function poll(s){
+      if(!currentSession(s)||!s.id||s.closing)return;
+      try{await renderCapture(s,await get('mobile-capture-sessions/'+s.id));}
+      catch(_){if(currentSession(s))captureMessage('No se pudo comprobar la captura. Volveremos a intentarlo.');}
+      finally{schedule(s);}
+    }
+    async function endCapture(close=true,contextLost=false){
+      const s=session;if(!s||s.closing)return;
+      s.closing=true;stopPolling(s);
+      try{
+        await s.issuance;
+        if(s.id&&s.pending){
+          let data;
+          try{data=(await send('mobile-capture-sessions/'+s.id+'/cancel',{},makeKey())).data;}
+          catch(error){data=await get('mobile-capture-sessions/'+s.id);if(data.status==='OPEN')throw error;}
+          s.pending=false;await renderCapture(s,data);
+        }
+        if(close){captureDialog.close();captureDialog.classList.remove('plan02b-modal');session=null;removeQR();paint();if(!contextLost)returnFocus($('[data-m7-capture-start]'));}
+      }catch(_){if(currentSession(s))captureMessage('No se pudo cancelar. Intenta de nuevo antes de cerrar.');}
+      finally{s.closing=false;schedule(s);}
+    }
+    async function generateCapture(s){
+      if(!currentSession(s)||captureBusy||!s.classification)return;
+      captureBusy=true;stopPolling(s);captureMessage('Preparando el código…');
+      s.issuance=(async()=>{
+        try{
+          if(!s.id){const created=await send('mobile-capture-sessions',{patient_id:s.context.patientId,encounter_key:s.context.key,classification_key:s.classification.id,title:$('[data-docux-capture-title-input]').value.trim()},makeKey());s.id=created.data.session_uuid;s.pending=true;}
+          const response=await send('mobile-capture-sessions/'+s.id+'/pages',{},makeKey());
+          if(!currentSession(s)||s.closing)return;
+          await renderCapture(s,response.data);drawQR(s,response.data);
+          $('[data-docux-capture-selection]').hidden=true;$('[data-docux-capture-selected]').hidden=false;
+          $('[data-docux-capture-label]').textContent=s.classification.label;$('[data-docux-capture-change]').hidden=false;
+          $('[data-docux-capture-generate]').hidden=true;captureMessage('Escanea el código para enviar una página.');
+        }catch(_){if(currentSession(s))captureMessage('No se pudo preparar el código. Intenta de nuevo.');}
+        finally{captureBusy=false;schedule(s);}
+      })();await s.issuance;
     }
     modalShell(captureDialog,()=>endCapture());
-    $('[data-m7-capture-cancel]').addEventListener('click',()=>endCapture(false));
-    $('[data-docux-capture-close]').addEventListener('click',()=>endCapture());
-    $('[data-docux-capture-change]').addEventListener('click',async()=>{const s=session;if(!s||s.closing)return;await endCapture(false);if(currentSession(s)&&!s.pending&&['cancelled','expired'].includes(s.status)){showSelection(s);$('[data-docux-capture-options] input:checked')?.focus();}});
-    $('[data-docux-capture-generate]').addEventListener('click',()=>{if(session)generateCapture(session);});
-    $('[data-docux-capture-renew]').addEventListener('click',()=>{const s=session;if(s&&!s.pending&&['expired','cancelled'].includes(s.status)){s.token='';generateCapture(s);}});
-    $('[data-docux-copy]').addEventListener('click',async()=>{const s=session;if(!s||!s.pending||!currentSession(s))return;try{await navigator.clipboard.writeText(s.url);if(currentSession(s))captureMessage('Enlace copiado. Esperando captura…');}catch(_){if(currentSession(s))captureMessage('No se pudo copiar. Usa Abrir enlace.');}});
+    $('[data-docux-capture-close]').onclick=()=>endCapture();$('[data-m7-capture-cancel]').onclick=()=>endCapture(false);
+    $('[data-docux-capture-finalize]').onclick=()=>captureCommand(session,'finalize');
+    $('[data-docux-capture-generate]').onclick=()=>generateCapture(session);$('[data-docux-capture-renew]').onclick=()=>generateCapture(session);
+    $('[data-docux-capture-change]').onclick=async()=>{const s=session;await endCapture(false);if(currentSession(s)&&!s.pending){s.id='';s.pageSignature='';$('[data-docux-capture-pages]').replaceChildren();$('[data-docux-capture-selection]').hidden=false;$('[data-docux-capture-selected]').hidden=true;$('[data-docux-capture-generate]').hidden=false;$('[data-docux-capture-guide]').hidden=true;}};
+    $('[data-docux-copy]').onclick=async()=>{try{if(session?.url)await navigator.clipboard.writeText(session.url);}catch(_){captureMessage('Usa Abrir enlace para acceder al código.');}};
     $('[data-m7-capture-start]').addEventListener('click',async()=>{
       if(busy||actionOpen()||!sameContext()||context.status!=='open'||captureBusy||session)return;
-      const s={context:{...context},token:'',url:'',pending:false,closing:false,timer:null,controller:null,classification:null,expiryTimer:null};session=s;
-      captureDialog.classList.add('plan02b-modal');captureDialog.showModal();showSelection(s);paint();
-      $('[data-docux-capture-options]').replaceChildren();captureMessage('Cargando tipos de documento…');$('[data-docux-capture-close]').focus();
-      try {
-        const catalog=await get('note-capture-tokens/classifications');if(!currentSession(s))return;
-        for(const item of catalog.items||[]){
-          const label=document.createElement('label'),input=document.createElement('input'),icon=document.createElement('span'),text=document.createElement('span');
-          input.type='radio';input.name='capture-classification';input.value=item.id;input.required=true;
-          icon.className='material-symbols-rounded';icon.setAttribute('aria-hidden','true');icon.textContent=item.icon;
-          text.textContent=item.label;label.append(input,icon,text);$('[data-docux-capture-options]').append(label);
-          input.addEventListener('change',()=>{if(currentSession(s)&&!s.pending&&input.checked){s.classification=item;$('[data-docux-capture-generate]').disabled=false;}});
+      const s={context:{...context},id:'',classification:null,pending:false,closing:false,timer:null};session=s;
+      captureDialog.classList.add('plan02b-modal');captureDialog.showModal();removeQR();
+      $('[data-docux-capture-selection]').hidden=false;$('[data-docux-capture-selected]').hidden=true;
+      $('[data-docux-capture-guide]').hidden=true;$('[data-docux-received]').hidden=true;$('[data-docux-capture-pages]').replaceChildren();
+      for(const selector of ['[data-m7-capture-cancel]','[data-docux-capture-renew]','[data-docux-capture-finalize]'])$(selector).hidden=true;
+      $('[data-docux-capture-title-input]').value='';$('[data-docux-capture-generate]').hidden=false;$('[data-docux-capture-generate]').disabled=true;
+      $('[data-docux-capture-options]').replaceChildren();captureMessage('Selecciona el tipo de documento antes de generar el código.');paint();
+      try{
+        const catalog=await get('mobile-capture-sessions/classifications');if(!currentSession(s))return;
+        for(const item of catalog.items||[]){const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span');
+          input.type='radio';input.name='capture-classification';input.value=item.id;input.required=true;text.textContent=item.label;label.append(input,text);$('[data-docux-capture-options]').append(label);
+          input.onchange=()=>{if(currentSession(s)&&input.checked){s.classification=item;$('[data-docux-capture-generate]').disabled=false;}};
         }
-        captureMessage('Selecciona el tipo y genera el código cuando estés listo.');$('[data-docux-capture-options] input')?.focus();
-      }catch(_){if(currentSession(s))captureMessage('No se pudieron cargar los tipos. Cierra y vuelve a intentar.');}
+        $('[data-docux-capture-options] input')?.focus();
+      }catch(_){captureMessage('No se pudieron cargar los tipos de documento.');}
     });
-    document.addEventListener('visibilitychange', () => { const s = session; if (!s) return; stopPolling(s); if (!document.hidden) schedule(s); });
-    window.addEventListener('pagehide', () => {
-      const s = session; stopPolling(s);
-      if (s?.token && s.pending) fetch(route(`note-capture-tokens/${encodeURIComponent(s.token)}/cancel`), { method:'POST', credentials:'same-origin', keepalive:true, headers:{ 'Content-Type':'application/json' }, body:'{}' }).catch(() => {});
-    });
+    document.addEventListener('visibilitychange',()=>{if(session)schedule(session);});
+    window.addEventListener('pagehide',()=>{const s=session;stopPolling(s);if(s?.id&&s.pending)fetch(route('mobile-capture-sessions/'+s.id+'/cancel'),{method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});});
     const body = root.querySelector('[data-m7-body]');
     new MutationObserver(() => {
       if (session && (body.dataset.encounterKey !== session.context.key || body.dataset.encounterState !== 'open' || !sameContext() || !root.getClientRects().length)) endCapture(true, true);

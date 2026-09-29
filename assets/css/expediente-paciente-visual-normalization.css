@@ -4296,10 +4296,10 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documen
 .docux-capture-classifications {border:0;padding:0;margin:0;min-width:0}
 .docux-capture-classifications legend {font-size:16px;font-weight:650;line-height:22px;margin-bottom:12px}
 .docux-capture-classifications [data-docux-capture-options] {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.docux-action-modal .docux-capture-classifications label {position:relative;display:flex;align-items:center;gap:10px;margin:0;padding:14px 10px;border:1px solid #bdd8e4;border-radius:8px;background:#fff;cursor:pointer;min-width:0}
-.docux-capture-classifications label:has(input:checked) {border-color:#00b8c9;background:#e5faff;box-shadow:inset 0 0 0 1px #00b8c9}
-.docux-capture-classifications label:has(input:focus-visible) {outline:3px solid #008fa4;outline-offset:2px}
-.docux-capture-classifications input {position:absolute;opacity:0;width:1px;height:1px}
+.docux-action-modal .docux-capture-classifications [data-docux-capture-options] label {position:relative;display:flex;align-items:center;gap:10px;margin:0;padding:14px 10px;border:1px solid #bdd8e4;border-radius:8px;background:#fff;cursor:pointer;min-width:0}
+.docux-capture-classifications [data-docux-capture-options] label:has(input:checked) {border-color:#00b8c9;background:#e5faff;box-shadow:inset 0 0 0 1px #00b8c9}
+.docux-capture-classifications [data-docux-capture-options] label:has(input:focus-visible) {outline:3px solid #008fa4;outline-offset:2px}
+.docux-capture-classifications input[type="radio"] {position:absolute;opacity:0;width:1px;height:1px}
 .docux-capture-classifications .material-symbols-rounded {font-size:32px;color:#009db7;flex-shrink:0}
 .docux-capture-classification-help {font-size:12px;line-height:18px;color:#617d94;margin:12px 0 0}
 .docux-capture-selected {display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
@@ -4314,5 +4314,17 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documen
  .docux-action-modal[data-docux-capture] .docux-capture-columns {grid-template-columns:minmax(0,1fr)}
  .docux-action-modal[data-docux-capture] .docux-phone-panel {display:none}
  .docux-capture-classifications [data-docux-capture-options] {grid-template-columns:repeat(2,minmax(0,1fr))}
- .docux-action-modal .docux-capture-classifications label {flex-direction:column;text-align:center;padding:10px 8px}
+ .docux-action-modal .docux-capture-classifications [data-docux-capture-options] label {flex-direction:column;text-align:center;padding:10px 8px}
 }
+
+/* R43A session management stays inside the existing capture modal. */
+.docux-capture-pages{display:grid;gap:8px}
+.docux-capture-pages article{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px;border:1px solid #bdd8e4;border-radius:8px}
+.docux-capture-pages img{width:48px;height:64px;object-fit:contain;background:#fff}
+.docux-capture-pages strong{margin-right:auto}
+.docux-capture-classifications>label{display:block;margin-top:12px}
+.docux-capture-classifications>label input{display:block;width:100%;margin-top:4px}
+
+.docux-action-modal .docux-capture-classifications>label{display:block;text-align:left;margin:12px 0 0;padding:0;border:0;background:transparent}
+.docux-action-modal .docux-capture-classifications>label input{position:static;opacity:1;height:40px;width:100%;padding:8px 10px;border:1px solid #bdd8e4;border-radius:8px;background:#fff}
+.docux-capture-modal footer>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}

@@ -79,11 +79,13 @@
     <div class="msg muted" id="captureMsg" role="status" aria-live="polite">Esperando acción…</div>
   </main>
 
+  <script src="/public/mobile-capture-session.js?v=r43a"></script>
   <script>
     (function(){
       const params = new URLSearchParams(window.location.search || '');
       const token = String(params.get('token') || '').trim();
       const mode = String(params.get('mode') || '').trim().toLowerCase();
+      if (mode === 'multipage') { window.startClinicalMultipageCapture(token); return; }
 
       const titleEl = document.getElementById('captureTitle');
       const introEl = document.getElementById('captureIntro');

@@ -227,12 +227,19 @@ function render_embed_css(bool $embed): void
 function http_get_json(string $url, int $timeoutSeconds = 8): array
 {
     $fetchOnce = static function (string $requestUrl, int $timeout) : array {
+        $headers = "Accept: application/json\r\n";
+        // Forward only the session cookie to the configured same-host clinical API.
+        $requestHost = parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
+        if (parse_url($requestUrl, PHP_URL_HOST) === $requestHost && isset($_COOKIE['PHPSESSID'])
+            && preg_match('/^[A-Za-z0-9,-]+$/D', (string)$_COOKIE['PHPSESSID'])) {
+            $headers .= 'Cookie: PHPSESSID=' . $_COOKIE['PHPSESSID'] . "\r\n";
+        }
         $context = stream_context_create([
             'http' => [
                 'method' => 'GET',
                 'timeout' => $timeout,
                 'ignore_errors' => true,
-                'header' => "Accept: application/json\r\n",
+                'header' => $headers,
             ],
         ]);
         $raw = @file_get_contents($requestUrl, false, $context);
@@ -540,6 +547,7 @@ function sort_bundle_documents_for_viewer(array $items): array
         $leftItem = is_array($left) ? $left : [];
         $rightItem = is_array($right) ? $right : [];
 
+        if (!empty($leftItem['media_page_number']) && !empty($rightItem['media_page_number'])) return (int)$leftItem['media_page_number'] <=> (int)$rightItem['media_page_number'];
         $leftDt = trim((string)($leftItem['event_datetime'] ?? ''));
         $rightDt = trim((string)($rightItem['event_datetime'] ?? ''));
         if ($leftDt !== $rightDt) {
@@ -871,6 +879,11 @@ $renderMode = strtolower(trim((string)($fileMeta['render_mode'] ?? '')));
 $mimeType = strtolower(first_non_empty_string([$optimizedMeta, $fileMeta, $document, $content, $payload], ['mime', 'mime_type', 'content_type', 'type', 'media_type']));
 $mediaSrc = first_non_empty_string([$optimizedMeta, $originalMeta, $fileMeta, $payload, $content], ['path', 'url', 'src', 'file_url', 'pdf_url', 'image_url']);
 $thumbSrc = first_non_empty_string([$thumbMeta], ['path', 'url', 'src']);
+if (!empty($payload['capture_session_uuid']) && $uuid !== '') {
+    $mediaSrc = '/api/clinical/index.php/documents/' . rawurlencode($uuid) . '/binary/ORIGINAL';
+    $thumbSrc = '/api/clinical/index.php/documents/' . rawurlencode($uuid) . '/binary/THUMBNAIL';
+    $renderMode = 'image';
+}
 $htmlInline = trim((string)($payload['html'] ?? ''));
 
 $currentHost = strtolower((string)parse_url(get_api_base(), PHP_URL_HOST));
@@ -1577,6 +1590,7 @@ if (!$embed) {
           <button type="button" class="btn btn-success btn-sm d-none" data-role="cert-edit-save">Guardar cambios</button>
           <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-role="cert-edit-cancel">Cancelar</button>
         <?php endif; ?>
+        <?php if (!empty($payload['capture_session_uuid']) && $bundleItems !== []): ?><span>Página <?php echo $selectedBundleIndex + 1; ?> de <?php echo count($bundleItems); ?></span><?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($bundlePrevHref); ?>">Anterior</a>
         <?php endif; ?>
@@ -1618,7 +1632,7 @@ if (!$embed) {
               $bundleItemUuid = trim((string)($bundleItem['document_uuid'] ?? ''));
               $bundleItemCaption = trim((string)($bundleItem['media_caption'] ?? ''));
               $bundleItemTag = trim((string)($bundleItem['media_tag_label'] ?? ''));
-              $bundleItemLabel = $bundleItemCaption !== '' ? $bundleItemCaption : ($bundleItemTag !== '' ? $bundleItemTag : 'Imagen');
+              $bundleItemLabel = !empty($bundleItem['media_page_number']) ? ('Página ' . (int)$bundleItem['media_page_number']) : ($bundleItemCaption !== '' ? $bundleItemCaption : ($bundleItemTag !== '' ? $bundleItemTag : 'Imagen'));
               $bundleItemHref = build_viewer_self_href([
                   'bundle_id' => $bundleId,
                   'patient_id' => $patientId,
