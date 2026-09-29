@@ -131,10 +131,11 @@
     function paint() {
       encounterList.replaceChildren(); patientList.replaceChildren();
       const encounterRows = rows.filter(row => String(row.encounter_ref_id || row.encounter_id || '') === String(context?.encounterId || ''));
-      const preview=encounterRows.filter(row=>row.has_successor!=1).slice(0,4);
+      const preview=encounterRows.filter(row=>row.has_successor!=1).slice(0,3);
       if (!preview.length) {const p=document.createElement('p');p.textContent='Aún no hay documentos registrados en esta consulta.';encounterList.append(p);}
       else preview.forEach(row=>encounterList.append(previewCard(row)));
       $('[data-doc-count]').textContent=encounterRows.length?`(${encounterRows.length})`:'';
+      $('[data-doc-patient-total]').textContent=rows.length?`El paciente tiene ${rows.length} documentos en su expediente.`:'Sin documentos registrados en el expediente.';
       $('[data-doc-all]').hidden=!encounterRows.length;
       const items=readerMode==='encounter'?encounterRows:rows;
       if(!items.length)patientList.textContent='Aún no hay documentos registrados.';

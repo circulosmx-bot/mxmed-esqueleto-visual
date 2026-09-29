@@ -135,12 +135,12 @@ with sync_playwright() as pw:
  with page.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/note-capture-tokens')) as issued:page.locator('[data-m7-capture-start]').click()
  capture_data=issued.value.json()['data'];token=capture_data['token'];anon=pw.request.new_context();n=count('clinical_documents')
  check('capture status and issuance remain physician-authenticated',anon.get(BASE+'/api/clinical/index.php/note-capture-tokens/'+token).status==401 and anon.post(BASE+'/api/clinical/index.php/note-capture-tokens',data={'patient_id':'p_plan02ux_review','encounter_key':'enc:1016','note_context':'nota_clinica_modal'}).status==401)
- pending_capture=page.screenshot();capture_views={}
+ page.evaluate('document.activeElement?.blur()');pending_capture=page.screenshot();capture_views={}
  for w,h in [(1440,900),(1366,768),(820,1180),(390,844)]:
   page.set_viewport_size({'width':w,'height':h});page.mouse.move(0,0)
   for _ in range(5):page.keyboard.press('Tab');assert page.locator('[data-docux-capture]').evaluate('n=>n.contains(document.activeElement)')
   check(f'mobile capture modal {w}x{h} no horizontal overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth+1') and page.locator('[data-docux-capture]').evaluate('n=>n.scrollWidth<=n.clientWidth+1'))
-  capture_views[f'{w}x{h}']=page.screenshot()
+  page.evaluate('document.activeElement?.blur()');capture_views[f'{w}x{h}']=page.screenshot()
  page.set_viewport_size({'width':1440,'height':900})
  mobile=browser.new_context(viewport={'width':390,'height':844});phone=mobile.new_page();phone.goto(BASE+capture_data['mobile_url'],wait_until='networkidle');check('actual phone page requires no physician login',not mobile.cookies());phone.locator('#captureFile').set_input_files(file)
  with phone.expect_response(lambda r:r.request.method=='POST' and r.url.endswith('/upload')) as uploaded:phone.locator('#captureSubmit').click()

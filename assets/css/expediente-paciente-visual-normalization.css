@@ -4131,63 +4131,147 @@ body.mx-consultation-mode #p-expediente #m7-workspace .flow-review-edit .materia
   #p-expediente #m7-workspace [data-review-document-list] {flex-wrap:wrap}
 }
 
-/* Step 6 R2: action launches and readers occupy the existing content allocation. */
-#p-expediente #m7-workspace .flow-action-cards {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 10px}
-#p-expediente #m7-workspace .flow-action-card {display:flex;align-items:center;gap:12px;min-width:0;min-height:90px;padding:14px;border:1px solid #b8dce3;border-radius:10px;background:#fff;color:#07536e;text-align:left;cursor:pointer}
-#p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {font-size:24px;line-height:1;display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:10px;background:#eafaff;color:#009db7}
-#p-expediente #m7-workspace .flow-action-card > span:nth-child(2) {min-width:0;flex:1}
-#p-expediente #m7-workspace .flow-action-card strong {display:block;font-size:16px;line-height:20px;font-weight:650}
-#p-expediente #m7-workspace .flow-action-card small {display:block;font-size:13px;line-height:18px;margin-top:4px;color:#356b82}
-#p-expediente #m7-workspace .flow-action-arrow {font-size:24px;flex:0 0 auto}
-#p-expediente #m7-workspace .flow-action-card:hover {background:#f4fcfd;border-color:#00b8c9}
-#p-expediente #m7-workspace .flow-action-card:focus-visible {outline:3px solid #008fa4;outline-offset:2px}
-#p-expediente #m7-workspace .flow-action-card:disabled {opacity:.55;cursor:default}
-#p-expediente #m7-workspace .flow-document-overview {display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);gap:12px}
-#p-expediente #m7-workspace .flow-document-overview .docux-current {margin:0}
-#p-expediente #m7-workspace .flow-patient-documents {padding:8px;border:1px solid #b8dce3;border-radius:10px;background:rgb(255 255 255 / .65);min-width:0}
-#p-expediente #m7-workspace .flow-patient-documents h5 {font-size:15px;line-height:20px;margin:0 0 6px;color:#07536e}
-body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-documents .btn {display:flex;align-items:center;justify-content:center;gap:8px;white-space:normal;width:100%;min-height:54px;background:#fff}
-#p-expediente #m7-workspace .flow-document-overview .flow-doc-preview {overflow:hidden}
-#p-expediente #m7-workspace .flow-document-overview .flow-doc-preview strong {display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#p-expediente #m7-workspace .flow-document-overview .flow-doc-preview p {margin:3px 0 0}
-.docux-action-modal.plan02b-modal {width:min(600px,calc(100vw - 24px));background:#fff;padding:22px;color:#07536e}
-.docux-action-modal.plan02b-modal header {align-items:flex-start;gap:14px}
+/* Step 6 R3: graphic action hierarchy within the frozen Consultation allocation. */
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-documents] {padding:0;border:0;background:transparent;box-shadow:none}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-cards {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 12px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {display:flex;align-items:center;gap:16px;min-width:0;min-height:108px;padding:14px;border:1px solid #b8dce3;border-radius:10px;background:#fff;color:#07536e;text-align:left;cursor:pointer}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {position:relative;display:grid;place-items:center;flex:0 0 76px;height:76px;font-size:72px;line-height:1;font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 48;border-radius:12px;background:#effbfe;color:#009db7}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > span:nth-child(2) {min-width:0;flex:1}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card strong {display:block;font-size:18px;line-height:22px;font-weight:650}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card small {display:block;font-size:15px;line-height:20px;font-weight:400;margin-top:5px;color:#356b82}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-arrow {font-size:22px;flex:0 0 auto}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card:hover {background:#f6fcfd;border-color:#00b8c9}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card:focus-visible {outline:3px solid #008fa4;outline-offset:2px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card:disabled {opacity:.55;cursor:default}
+body.mx-consultation-mode #p-expediente #m7-workspace [data-doc-tool=capture] > .material-symbols-rounded:first-child::after,.docux-action-modal[data-docux-capture] .docux-action-icon::after {content:'photo_camera';font-family:'Material Symbols Rounded';font-size:22px;line-height:1;position:absolute;left:50%;top:50%;transform:translate(-50%,-35%);font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview {display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview :is(.docux-current,.flow-patient-documents) {margin:0;padding:10px 12px;border:1px solid #b8dce3;border-radius:10px;background:rgb(255 255 255 / .75);min-width:0}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview h5 {font-size:15px;line-height:20px;margin:0;font-weight:650;color:#07536e}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-heading {min-height:22px;gap:8px;margin:0 0 8px;flex-wrap:nowrap}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-heading > div {flex-wrap:nowrap;gap:4px;align-items:center}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-heading [data-doc-all] {border:0;background:transparent;font-size:13px;line-height:20px;min-height:22px;padding:0;text-decoration:underline;color:#008fa4;white-space:nowrap}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-heading [data-m7-doc-refresh] {min-height:22px;padding:0;width:20px;color:#7196a3}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-heading [data-m7-doc-refresh] .material-symbols-rounded {font-size:16px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview {min-height:60px;padding:8px 6px 8px 35px;border:1px solid #b8dce3;border-radius:8px;background:#fff;overflow:hidden}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview strong {display:block;font-size:13px;line-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview p {font-size:12px;line-height:14px;margin:3px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview > .material-symbols-rounded {font-size:26px;left:6px;top:12px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-overview {display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;margin-top:8px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-documents .btn {display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:normal;text-align:left;width:100%;min-height:60px;padding:10px;font-size:13px;line-height:18px;border-color:#b8dce3;background:#fff}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-documents .material-symbols-rounded {font-size:26px;flex-shrink:0}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-note {display:flex;align-items:center;gap:8px;margin:0;padding:8px;border-radius:8px;background:#e5f5ff;color:#356b82;font-size:12px;line-height:16px}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-note .material-symbols-rounded {font-size:22px;color:#008aa7;font-variation-settings:'FILL' 1}
+body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documents] {grid-template-columns:repeat(3,minmax(0,1fr))}
+/* Shared white modal family, individually proportioned to the approved guide. */
+.docux-action-modal.plan02b-modal {width:min(570px,calc(100vw - 24px));background:#fff;padding:28px;border:1px solid #d7e8ee;border-radius:14px;box-shadow:0 18px 56px #173e5033;color:#07536e}
+.docux-action-modal.plan02b-modal[data-docux-capture] {width:min(540px,calc(100vw - 24px))}
+.docux-action-modal.plan02b-modal[data-docux-result] {width:min(530px,calc(100vw - 24px))}
+.docux-action-modal.plan02b-modal header {position:relative;align-items:center;gap:18px;padding:0 16px 0 0;border:0;margin-bottom:22px}
 .docux-action-modal.plan02b-modal header > div {flex:1;min-width:0}
-.docux-action-modal.plan02b-modal h4 {font-size:24px;line-height:30px}
-.docux-action-modal.plan02b-modal header p {color:#617d94;line-height:20px;margin:5px 0 0}
-.docux-action-modal.plan02b-modal .docux-action-icon {font-size:40px;line-height:48px;color:#009db7}
-.docux-action-modal.plan02b-modal .docux-dropzone {border-color:#74dbe7;background:#f4fcfe;padding:14px;display:flex;flex-direction:column;align-items:center;gap:6px}
-.docux-action-modal.plan02b-modal .docux-dropzone > .material-symbols-rounded {font-size:32px;color:#009db7}
-.docux-action-modal.plan02b-modal .docux-dropzone p {margin:0}
-.docux-action-modal.plan02b-modal .docux-dropzone small {color:#617d94}
+.docux-action-modal.plan02b-modal h4 {font-size:28px;line-height:34px;font-weight:650}
+.docux-action-modal.plan02b-modal header p {font-size:14px;line-height:20px;color:#617d94;margin:5px 0 0}
+.docux-action-modal.plan02b-modal .docux-action-icon {position:relative;display:grid;place-items:center;font-size:72px;line-height:80px;flex:0 0 80px;height:80px;color:#009db7;font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 48}
+.docux-action-modal.plan02b-modal[data-docux-capture] .docux-action-icon {border-radius:12px;background:#e5f5ff}
+.docux-action-modal.plan02b-modal [data-modal-close] {position:absolute;right:-18px;top:-18px;width:28px;min-height:28px;font-size:26px;color:#356b82}
+.docux-action-modal.plan02b-modal label {font-size:13px;line-height:18px;font-weight:600;gap:5px;margin:14px 0}
+.docux-action-modal.plan02b-modal :is(input:not([type=radio]):not([type=checkbox]),select) {min-height:40px;height:40px;padding:8px 12px;border:1px solid #bdd8e4;border-radius:7px;background:#fff;color:#173e50;font-size:14px;font-weight:400}
+.docux-action-modal.plan02b-modal input::placeholder {color:#8295a5;opacity:1}
+.docux-action-modal.plan02b-modal .docux-file-context {font-size:13px;margin:14px 0}
+.docux-action-modal.plan02b-modal .docux-file-context strong {display:block;font-weight:600;margin-bottom:5px}
+.docux-action-modal.plan02b-modal .docux-file-context p {display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #bdd8e4;border-radius:7px;margin:0;color:#356b82;background:#f7fcfd}
+.docux-action-modal.plan02b-modal .docux-file-context .material-symbols-rounded {font-size:24px;color:#009db7}
+.docux-action-modal.plan02b-modal :is(#docux-file-label,#docux-result-file-label) {font-size:13px;font-weight:600;line-height:18px}
+.docux-action-modal.plan02b-modal .docux-dropzone {position:relative;min-height:110px;display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto auto;align-content:center;column-gap:14px;row-gap:6px;text-align:left;padding:20px 38px;border:1px dashed #29c9e5;border-radius:8px;background:#f3fcff}
+.docux-action-modal.plan02b-modal .docux-dropzone > .material-symbols-rounded {grid-row:1/3;align-self:center;font-size:48px;color:#009db7}
+.docux-action-modal.plan02b-modal .docux-dropzone p {grid-column:2;grid-row:1;align-self:end;z-index:1;pointer-events:none;font-size:14px;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.docux-action-modal.plan02b-modal .docux-dropzone small {grid-column:2;grid-row:2;color:#617d94;font-size:12px}
+.docux-action-modal.plan02b-modal .docux-dropzone .btn {position:absolute;inset:0;width:100%;height:100%;padding:20px 10px 42px 100px;text-align:left;display:flex;align-items:center;border:0;background:transparent;color:#008fa4;font-size:15px}
+.docux-action-modal.plan02b-modal .docux-dropzone p:has(+small) {transform:translateY(-18px);font-size:12px;font-weight:400;color:#617d94}
+.docux-action-modal.plan02b-modal .docux-dropzone small {transform:translateY(12px)}
 .docux-action-modal.plan02b-modal [data-docux-result-state][data-state=failed] {color:#9d352f}
-.docux-action-modal.plan02b-modal footer > div {justify-content:space-between}
+.docux-action-modal.plan02b-modal footer {border:0;margin:22px 0 0;padding:0}
+.docux-action-modal.plan02b-modal footer > div {justify-content:space-between;margin:0}
+.docux-action-modal.plan02b-modal footer .btn {min-height:44px;padding:10px 22px;border-radius:8px;font-size:15px;line-height:22px;font-weight:600}
+.docux-action-modal.plan02b-modal[data-docux-upload] footer .btn {flex-basis:calc((100% - 56px)/2)}
+.docux-action-modal.plan02b-modal footer .btn-outline-secondary {color:#008fa4;border-color:#00b8c9}
 .docux-action-modal.plan02b-modal .btn-primary {background:#00b8c9;border-color:#00b8c9}
 .docux-action-modal.plan02b-modal .btn-primary:hover {background:#008fa4}
-.docux-action-modal.plan02b-modal input::placeholder {color:#8295a5;opacity:1}
-.docux-action-modal.plan02b-modal select {min-height:40px;height:40px;padding:8px;border:1px solid #9cbfcb;border-radius:9px;background:#fff;color:#173e50}
-.docux-capture-steps {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;padding:12px;margin:16px 0 0;border:1px solid #d5edf3;border-radius:10px;background:#f5fcfe}
-.docux-capture-steps li {font-size:12px;line-height:17px;min-width:0}
-.docux-capture-steps li > span {display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#00b8c9;color:#fff;margin:0 auto 6px;font-weight:650;font-size:14px}
-.docux-received {display:flex;gap:12px;align-items:center;text-align:left;padding:12px;border:1px solid #d5edf3;border-radius:10px;background:#f5fcfe;margin-top:12px}
-.docux-received > .material-symbols-rounded {color:#009f57;font-size:32px}
-.docux-received strong {font-size:14px;overflow-wrap:anywhere}
+.docux-capture-guide {border:1px solid #d5edf3;border-radius:10px;background:#f6fcfe;padding:10px}
+.docux-capture-steps {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:0 0 16px;text-align:center}
+.docux-capture-steps li {position:relative;font-size:12px;line-height:17px;min-width:0}
+.docux-capture-steps li > span {position:relative;z-index:1;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#00b8c9;color:#fff;margin:0 auto 8px;font-weight:650;font-size:16px}
+.docux-capture-steps li:not(:last-child)::after {content:'';position:absolute;left:calc(50% + 27px);top:19px;width:calc(100% - 46px);height:1px;background:#79bbce}
+.docux-capture-columns {display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:stretch}
+.docux-capture-columns:has([data-docux-qr-content][hidden]) {grid-template-columns:minmax(0,1fr)}
+.docux-action-modal .docux-qr-panel,.docux-action-modal .docux-phone-panel {min-width:0;border:1px solid #d5edf3;border-radius:8px;padding:10px;background:#fff}
+.docux-action-modal .docux-qr {width:180px;height:180px;padding:12px;margin:0 auto 6px}
+.docux-action-modal .docux-qr :is(img,canvas) {width:100%;height:100%;display:block;image-rendering:pixelated}
+.docux-action-modal .docux-qr-panel > p {font-size:12px;line-height:17px;color:#617d94;margin:0 0 10px}
+.docux-action-modal .docux-links {display:flex;align-items:center;justify-content:space-between;gap:4px;padding:5px;border:1px solid #9ddde7;border-radius:6px;background:#effaff;white-space:nowrap}
+.docux-action-modal .docux-links a {display:flex;align-items:center;gap:5px;color:#008aa7;text-decoration:none;font-size:11px}
+.docux-action-modal .docux-links .material-symbols-rounded {font-size:18px}
+.docux-action-modal .docux-links .btn {min-height:24px;padding:0 2px}
+.docux-action-modal .docux-phone-panel {display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f4fbfe;gap:8px}
+.docux-action-modal .docux-phone {position:relative;font-size:126px;line-height:1;color:#173e50;font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 48}
+.docux-action-modal .docux-phone::after {content:'photo_camera';position:absolute;left:50%;top:50%;transform:translate(-50%,-35%);font-family:'Material Symbols Rounded';font-size:36px;line-height:1;color:#6c9cb9;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 48}
+.docux-action-modal .docux-phone-panel [data-m7-capture-state] {font-size:13px;line-height:18px;font-weight:600;margin:0}
+.docux-action-modal .docux-phone-panel .docux-phone-help {font-size:12px;line-height:17px;color:#617d94;margin:0}
+.docux-received {display:flex;gap:12px;align-items:center;text-align:left;padding:12px;border:1px solid #d5edf3;border-radius:10px;background:#f7fcfe;margin-top:12px}
+.docux-received > div {flex:1;min-width:0}
+.docux-received h5 {font-size:14px;line-height:20px;font-weight:600;margin:0 0 4px}
+.docux-received strong {display:block;font-size:13px;line-height:18px;overflow-wrap:anywhere;color:#356b82}
+.docux-action-modal .docux-received p {font-size:12px;margin:4px 0 0;color:#617d94}
+.docux-received-file {font-size:46px;color:#008aa7}
+.docux-received-success {font-size:26px;color:#009f57;font-variation-settings:'FILL' 1}
 @media(min-width:1200px) and (max-height:800px){
-  #p-expediente #m7-workspace .flow-action-card {min-height:68px;padding:8px;gap:8px}
-  #p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {flex-basis:40px;height:40px}
-  #p-expediente #m7-workspace .flow-action-card strong {font-size:14px;line-height:18px}
-  #p-expediente #m7-workspace .flow-action-card small {font-size:12px;line-height:16px;margin-top:2px}
-  #p-expediente #m7-workspace .flow-action-cards {margin-bottom:8px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {min-height:88px;padding:10px 12px;gap:12px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {font-size:60px;flex-basis:64px;height:64px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card strong {font-size:17px;line-height:20px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card small {font-size:13px;line-height:18px;margin-top:4px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-cards {margin-bottom:10px;gap:12px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview :is(.docux-current,.flow-patient-documents) {padding:7px 10px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-heading {margin-bottom:6px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview,body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-documents .btn {min-height:48px;padding-top:5px;padding-bottom:5px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-overview {margin-top:6px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview strong {font-size:12px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview p {font-size:11px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-note {padding:5px;font-size:11px;line-height:15px}
 }
 @media(max-width:1199.98px){
-  #p-expediente #m7-workspace .flow-action-cards {grid-template-columns:repeat(2,minmax(0,1fr))}
-  #p-expediente #m7-workspace .flow-document-overview {grid-template-columns:minmax(0,1fr)}
+ /* Retain R2's responsive content allocation so the shared footer stays put. */
+ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-documents] {min-height:504px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {min-height:90px;padding:12px;gap:12px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {font-size:60px;flex-basis:64px;height:64px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview :is(.docux-current,.flow-patient-documents) {padding:8px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview,body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-documents .btn {min-height:54px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-cards {grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview {grid-template-columns:minmax(0,1fr)}
+ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documents] {grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:575.98px){
-  #p-expediente #m7-workspace .flow-action-cards {grid-template-columns:minmax(0,1fr)}
-  .docux-action-modal.plan02b-modal {padding:16px}
-  .docux-action-modal.plan02b-modal header {gap:8px}
-  .docux-action-modal.plan02b-modal h4 {font-size:20px;line-height:26px}
-  .docux-action-modal.plan02b-modal .docux-action-icon {font-size:32px;line-height:40px}
-  .docux-capture-steps {gap:6px;padding:8px}
+ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-documents] {min-height:759.27px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-documents .btn {min-height:48px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-note {font-size:11px;line-height:14px;padding:6px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-cards {grid-template-columns:minmax(0,1fr)}
+ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documents] {grid-template-columns:minmax(0,1fr)}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {min-height:98px;padding:12px;gap:12px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {font-size:56px;flex-basis:60px;height:60px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card strong {font-size:17px;line-height:21px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card small {font-size:13px;line-height:18px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-overview {grid-template-columns:minmax(0,1fr)}
+ .docux-action-modal.plan02b-modal {padding:18px}
+ .docux-action-modal.plan02b-modal header {gap:12px;margin-bottom:18px;padding-right:10px}
+ .docux-action-modal.plan02b-modal h4 {font-size:23px;line-height:29px}
+ .docux-action-modal.plan02b-modal .docux-action-icon {font-size:52px;flex-basis:58px;height:64px;line-height:64px}
+ .docux-action-modal.plan02b-modal [data-modal-close] {right:-10px;top:-10px}
+ .docux-action-modal.plan02b-modal .docux-dropzone {padding:18px;column-gap:10px;grid-template-columns:40px minmax(0,1fr)}
+ .docux-action-modal.plan02b-modal .docux-dropzone .btn {padding-left:68px}
+ .docux-action-modal.plan02b-modal .docux-dropzone > .material-symbols-rounded {font-size:40px}
+ .docux-action-modal.plan02b-modal footer .btn {padding:10px 14px;font-size:14px}
+ .docux-action-modal.plan02b-modal[data-docux-upload] footer .btn {flex-basis:calc((100% - 12px)/2)}
+ .docux-capture-columns {grid-template-columns:minmax(0,1fr)}
+ .docux-capture-steps {gap:6px}
+ .docux-capture-steps li {font-size:11px;line-height:16px}
+ .docux-action-modal .docux-phone {font-size:88px}
+ .docux-action-modal .docux-phone-panel {padding:12px}
 }
