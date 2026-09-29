@@ -4520,3 +4520,74 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
   #p-expediente #lon02-summary .vis03-evolution-head {flex-wrap:wrap}
   #p-expediente #lon02-summary .vis03-evolution-head > .btn-link {margin-left:54px}
 }
+
+/* Summary R3: measured Step 6 palette, typography and icon treatment.
+   Sizes adapt to the existing read-only overview; no Consultation selectors change. */
+#p-expediente #lon02-summary {
+  --summary-ink:#07536e;
+  --summary-copy:#356b82;
+  --summary-border:#b8dce3;
+  --summary-accent:#009db7;
+  background:#dbfcff;border-color:var(--summary-border);border-radius:12px;
+  color:var(--summary-copy);
+}
+#p-expediente #lon02-summary .lon02-head {margin-bottom:4px}
+#p-expediente #lon02-summary .lon02-head h3 {font-size:28px;font-weight:400;line-height:30px;margin-bottom:2px;color:#1e5369}
+#p-expediente #lon02-summary .lon02-head p {font-size:15px;line-height:20px;color:var(--summary-copy)}
+#p-expediente #lon02-summary .lon02-grid .lon02-card,
+#p-expediente #lon02-summary .vis03-evolution {
+  padding:8px 12px;border:1px solid var(--summary-border);border-radius:10px;
+  background:rgb(255 255 255 / .75);color:var(--summary-copy);box-shadow:none;
+}
+#p-expediente #lon02-summary .lon02-card h4,
+#p-expediente #lon02-summary .vis03-evolution-head .vis03-level-title {
+  font-size:18px;line-height:22px;font-weight:650;color:var(--summary-ink);
+}
+#p-expediente #lon02-summary .lon02-card h4 {margin-left:64px}
+#p-expediente #lon02-summary .lon02-card h4 .material-symbols-outlined,
+#p-expediente #lon02-summary .vis03-level-title .material-symbols-outlined {
+  left:12px;width:52px;height:52px;border-radius:12px;background:#effbfe;
+  color:var(--summary-accent);font-family:'Material Symbols Rounded';
+  font-size:44px;font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 48;
+}
+#p-expediente #lon02-summary .lon02-card > [data-lon02-problems],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-allergies],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-tasks],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-appointment],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-results] {margin-left:64px;font-size:14px;line-height:20px}
+#p-expediente #lon02-summary .lon02-card p {font-size:14px;line-height:20px}
+#p-expediente #lon02-summary .lon02-card p strong,
+#p-expediente #lon02-summary .lon02-pending-count,
+#p-expediente #lon02-summary .vis03-timeline strong {color:var(--summary-ink);font-weight:650}
+#p-expediente #lon02-summary .lon02-card p span {color:var(--summary-copy);font-size:12px;line-height:16px}
+#p-expediente #lon02-summary .lon02-helper {color:var(--summary-copy);font-size:13px;line-height:18px}
+#p-expediente #lon02-summary .lon02-vitals-head > div,
+#p-expediente #lon02-summary .lon02-evolution-heading,
+#p-expediente #lon02-summary .vis03-timeline {margin-left:64px}
+#p-expediente #lon02-summary .lon02-vitals-head h4 {margin-left:0}
+#p-expediente #lon02-summary .lon02-card .btn-link,
+#p-expediente #lon02-summary .vis03-evolution-head > .btn-link {
+  font-size:13px;font-weight:600;line-height:18px;color:#008fa4;
+  border-radius:7px;text-decoration-thickness:1px;text-underline-offset:3px;
+}
+#p-expediente #lon02-summary .btn-link:hover {color:var(--summary-ink)}
+#p-expediente #lon02-summary .btn-link:focus-visible {outline:3px solid #008fa4;outline-offset:2px}
+#p-expediente #lon02-summary .lon02-measurement-row {border-left-color:var(--summary-border);gap:6px 5px}
+#p-expediente #lon02-summary .lon02-vital-icon {
+  font-family:'Material Symbols Rounded';font-size:24px;color:var(--summary-accent);
+  font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24;
+}
+#p-expediente #lon02-summary .lon02-measurement-label {font-size:13px;color:var(--summary-copy)}
+#p-expediente #lon02-summary .lon02-measurement-value {font-size:19px;line-height:24px;font-weight:650;color:var(--summary-ink)}
+#p-expediente #lon02-summary .lon02-measurement-meta {color:var(--summary-copy)}
+#p-expediente #lon02-summary .vis03-evolution-head .vis03-level-title {margin-bottom:0}
+#p-expediente #lon02-summary .vis03-timeline span {border-color:var(--summary-border);color:var(--summary-copy)}
+/* Tab-strip polish applies only while Summary is active. */
+#p-expediente:has(#t-resumen-longitudinal.active) .vis01-primary-navigation .nav-link {border-radius:10px;border-color:#b8dce3}
+#p-expediente:has(#t-resumen-longitudinal.active) .vis01-primary-navigation .nav-link.active {background:#008fa4;border-color:#008fa4;box-shadow:none}
+@media(max-width:1199px) {
+  #p-expediente #lon02-summary .lon02-vitals-head > .btn-link {margin-left:64px}
+}
+@media(max-width:700px) {
+  #p-expediente #lon02-summary .vis03-evolution-head > .btn-link {margin-left:64px}
+}
