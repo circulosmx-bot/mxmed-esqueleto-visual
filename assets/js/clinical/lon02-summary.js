@@ -106,7 +106,11 @@
     const meta = document.createElement('small'); meta.className = 'lon02-measurement-meta';
     meta.textContent = `${date(row.date)}${row.incomplete ? ' · Lectura incompleta' : ''}`;
     meta.title = `${row.date} UTC · ${source(row.source)}${row.has_amendment ? ' · Con enmienda' : ''}`;
-    item.append(label, value, meta); target.append(item);
+    const icon = document.createElement('span');
+    icon.className = 'material-symbols-outlined lon02-vital-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = ({blood_pressure:'favorite',heart_rate:'ecg_heart',respiratory_rate:'air',temperature:'thermometer',oxygen_saturation:'spo2',pain:'sentiment_dissatisfied',weight:'monitor_weight',height:'height',waist:'straighten'})[row.code] || 'monitor_heart';
+    item.append(icon, label, value, meta); target.append(item);
   }
   function renderMeasurements(rows) {
     const target = $('[data-lon02-measurements]');

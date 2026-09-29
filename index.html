@@ -209,7 +209,7 @@
 <link rel="stylesheet" href="assets/css/professional-information-layout.css?v=dense-v1">
 <link rel="stylesheet" href="assets/css/activity-gallery-layout.css?v=activity-gallery-v1">
 <link rel="stylesheet" href="assets/css/consultorio-visual-normalization.css?v=con01">
-<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=summary-r1">
+<link rel="stylesheet" href="assets/css/expediente-paciente-visual-normalization.css?v=summary-r2">
 <link rel="stylesheet" href="assets/css/billing-patient-profiles.css?v=patux01">
 <link rel="stylesheet" href="assets/css/billing-invoices.css?v=fisc02a">
 <link rel="stylesheet" href="assets/css/billing-issuance.css?v=fiscux02">
@@ -4578,11 +4578,11 @@
                       <section class="lon02-card lon02-card--tasks"><h4><span class="material-symbols-outlined" aria-hidden="true">task_alt</span>Pendientes clínicos</h4><div data-lon02-tasks></div><button type="button" class="btn btn-link" data-vis01-open="#t-tareas-longitudinal">Ver tareas y seguimiento</button></section>
                     </div></section>
                     <section class="vis03-priority vis03-priority-context" aria-label="Contexto clínico reciente"><div class="lon02-grid">
-                      <section class="lon02-card lon02-card--measurements"><h4><span class="material-symbols-outlined" aria-hidden="true">monitor_heart</span>Signos vitales recientes</h4><div data-lon02-measurements></div><button type="button" class="btn btn-link" data-vis01-open="#t-mediciones-longitudinal">Ver signos vitales y tendencias</button></section>
+                      <section class="lon02-card lon02-card--measurements"><div class="lon02-vitals-head"><div><h4><span class="material-symbols-outlined" aria-hidden="true">monitor_heart</span>Signos vitales recientes</h4><p class="lon02-helper">Últimos valores registrados en el expediente.</p></div><button type="button" class="btn btn-link" data-vis01-open="#t-mediciones-longitudinal">Ver signos vitales y tendencias</button></div><div data-lon02-measurements></div></section>
                       <section class="lon02-card lon02-card--appointment"><h4><span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>Próxima cita</h4><div data-lon02-appointment></div></section>
                       <section class="lon02-card lon02-card--results"><h4><span class="material-symbols-outlined" aria-hidden="true">science</span>Resultados recientes</h4><div data-lon02-results></div><button type="button" class="btn btn-link" data-vis01-open="#t-estudios">Ver órdenes y resultados</button></section>
                     </div></section>
-                    <section class="vis03-evolution" aria-labelledby="vis03-evolution-title"><div class="vis03-evolution-head"><h4 id="vis03-evolution-title" class="vis03-level-title"><span class="material-symbols-outlined" aria-hidden="true">timeline</span>Evolución clínica reciente <span>Sólo lectura</span></h4><button type="button" class="btn btn-link" data-lon02-history>Ver historial completo</button></div><div class="vis03-timeline" data-lon02-recent></div></section>
+                    <section class="vis03-evolution" aria-labelledby="vis03-evolution-title"><div class="vis03-evolution-head"><div class="lon02-evolution-heading"><h4 id="vis03-evolution-title" class="vis03-level-title"><span class="material-symbols-outlined" aria-hidden="true">clinical_notes</span>Evolución clínica reciente</h4><p class="lon02-helper">Último evento registrado en el expediente.</p></div><button type="button" class="btn btn-link" data-lon02-history>Ver historial completo</button></div><div class="vis03-timeline" data-lon02-recent></div></section>
                   </div>
                 </section>
               </div>
@@ -10790,7 +10790,7 @@
 <script src="assets/js/clinical/vis04-consultation.js?v=consultation-placeholder-r2"></script>
 <script src="assets/js/clinical/m7-ws06.js?v=vis01"></script>
 <script src="assets/js/clinical/lon01-history.js?v=vis05"></script>
-<script src="assets/js/clinical/lon02-summary.js?v=summary-r1"></script>
+<script src="assets/js/clinical/lon02-summary.js?v=summary-r2"></script>
 <script src="assets/js/clinical/lon07c-measurements.js?v=meas01"></script>
 <script src="assets/js/clinical/lon03b-antecedents.js?v=lon03b"></script>
 <script src="assets/js/clinical/lon04b-problems.js?v=lon04b"></script>

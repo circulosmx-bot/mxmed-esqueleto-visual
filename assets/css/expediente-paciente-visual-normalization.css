@@ -4466,3 +4466,57 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
   #p-expediente #lon02-summary .vis03-priority-context .lon02-grid {grid-template-columns:minmax(0,1fr);grid-template-areas:'vitals' 'appointment' 'results'}
   #p-expediente #lon02-summary .lon02-card .btn-link {min-height:44px!important}
 }
+
+/* Summary R2: internal visual polish; canonical reads and navigation stay unchanged. */
+#p-expediente #lon02-summary .lon02-card,
+#p-expediente #lon02-summary .vis03-evolution {position:relative}
+#p-expediente #lon02-summary .lon02-card h4 {margin-left:54px;min-height:22px;align-items:center;font-size:17px;line-height:22px}
+#p-expediente #lon02-summary .lon02-card h4 .material-symbols-outlined,
+#p-expediente #lon02-summary .vis03-level-title .material-symbols-outlined {
+  position:absolute;left:10px;top:8px;display:grid;place-items:center;
+  width:44px;height:44px;border-radius:50%;background:#e2f7fa;color:#00859b;
+  font-size:30px;line-height:1;
+}
+#p-expediente #lon02-summary .lon02-card > [data-lon02-problems],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-allergies],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-tasks],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-appointment],
+#p-expediente #lon02-summary .lon02-card > [data-lon02-results] {margin-left:54px;line-height:1.4}
+#p-expediente #lon02-summary .lon02-card .btn-link {font-size:13px;font-weight:600}
+#p-expediente #lon02-summary .lon02-vitals-head {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:44px;margin-bottom:16px}
+#p-expediente #lon02-summary .lon02-vitals-head > div {margin-left:54px;min-width:0}
+#p-expediente #lon02-summary .lon02-vitals-head h4 {margin-left:0}
+#p-expediente #lon02-summary .lon02-vitals-head > .btn-link {flex:0 0 auto;margin:0;padding-top:2px;align-self:flex-start}
+#p-expediente #lon02-summary .lon02-helper {font-size:12px;font-weight:400;line-height:16px;color:#526976;margin:0}
+#p-expediente #lon02-summary [data-lon02-measurements] {display:flex;flex-wrap:wrap;gap:12px 0;margin:0}
+#p-expediente #lon02-summary .lon02-measurement-row {
+  position:relative;display:grid;grid-template-columns:22px minmax(0,1fr);align-content:start;
+  flex:1 1 130px;min-width:0;gap:6px 5px;padding:4px 9px;
+  border:0;border-left:1px solid #d5e8ed;border-radius:0;background:transparent;
+}
+#p-expediente #lon02-summary .lon02-measurement-row:first-child {border-left:0;padding-left:0}
+#p-expediente #lon02-summary .lon02-vital-icon {grid-column:1;grid-row:1;align-self:center;font-size:22px;line-height:1;color:#00a3b5}
+#p-expediente #lon02-summary .lon02-measurement-label {grid-column:2;align-self:center;font-size:12px;line-height:16px;white-space:normal}
+#p-expediente #lon02-summary .lon02-measurement-value {grid-column:1/-1;font-size:18px;line-height:22px;white-space:nowrap}
+#p-expediente #lon02-summary .lon02-measurement-meta {grid-column:1/-1;font-size:11px;line-height:14px}
+#p-expediente #lon02-summary [data-lon02-appointment] strong {font-size:16px;line-height:22px;color:#07536e}
+#p-expediente #lon02-summary .vis03-evolution-head {min-height:40px;flex-wrap:nowrap;align-items:center;margin-bottom:0}
+#p-expediente #lon02-summary .lon02-evolution-heading {margin-left:54px;min-width:0}
+#p-expediente #lon02-summary .vis03-evolution-head .vis03-level-title {font-size:17px;line-height:22px;margin:0 0 2px}
+#p-expediente #lon02-summary .vis03-evolution-head > .btn-link {flex:0 0 auto;font-size:13px}
+#p-expediente #lon02-summary .vis03-timeline {margin-left:54px}
+#p-expediente #lon02-summary .vis03-timeline p {border-left:0;padding:0}
+#p-expediente #lon02-summary .vis03-timeline span {border-left:1px solid #b8dce3;padding-left:10px}
+@media(min-width:1200px) {
+  #p-expediente #lon02-summary .vis03-priority-essential .lon02-card {min-height:138px}
+  #p-expediente #lon02-summary .lon02-card--appointment {min-height:97px}
+  #p-expediente #lon02-summary .lon02-card--results {min-height:120px}
+}
+@media(max-width:1199px) {
+  #p-expediente #lon02-summary .lon02-vitals-head {flex-wrap:wrap}
+  #p-expediente #lon02-summary .lon02-vitals-head > .btn-link {margin-left:54px}
+}
+@media(max-width:700px) {
+  #p-expediente #lon02-summary .vis03-evolution-head {flex-wrap:wrap}
+  #p-expediente #lon02-summary .vis03-evolution-head > .btn-link {margin-left:54px}
+}
