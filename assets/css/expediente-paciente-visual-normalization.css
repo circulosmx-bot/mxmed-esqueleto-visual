@@ -4134,7 +4134,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace .flow-review-edit .materia
 /* Step 6 R3: graphic action hierarchy within the frozen Consultation allocation. */
 body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-documents] {padding:0;border:0;background:transparent;box-shadow:none}
 body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-cards {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 12px}
-body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {display:flex;align-items:center;gap:16px;min-width:0;min-height:108px;padding:14px;border:1px solid #b8dce3;border-radius:10px;background:#fff;color:#07536e;text-align:left;cursor:pointer}
+body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {display:flex;align-items:center;gap:16px;min-width:0;min-height:84px;padding:3px 14px;border:1px solid #b8dce3;border-radius:10px;background:#fff;color:#07536e;text-align:left;cursor:pointer}
 body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {position:relative;display:grid;place-items:center;flex:0 0 76px;height:76px;font-size:72px;line-height:1;font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 48;border-radius:12px;background:#effbfe;color:#009db7}
 body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > span:nth-child(2) {min-width:0;flex:1}
 body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card strong {display:block;font-size:18px;line-height:22px;font-weight:650}
@@ -4225,7 +4225,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documen
 .docux-received-file {font-size:46px;color:#008aa7}
 .docux-received-success {font-size:26px;color:#009f57;font-variation-settings:'FILL' 1}
 @media(min-width:1200px) and (max-height:800px){
- body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {min-height:88px;padding:10px 12px;gap:12px}
+ body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card {min-height:68px;padding:1px 12px;gap:12px}
  body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card > .material-symbols-rounded:first-child {font-size:60px;flex-basis:64px;height:64px}
  body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card strong {font-size:17px;line-height:20px}
  body.mx-consultation-mode #p-expediente #m7-workspace .flow-action-card small {font-size:13px;line-height:18px;margin-top:4px}
@@ -4237,6 +4237,21 @@ body.mx-consultation-mode #p-expediente #m7-workspace [data-m7-encounter-documen
  body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview strong {font-size:12px}
  body.mx-consultation-mode #p-expediente #m7-workspace .flow-document-overview .flow-doc-preview p {font-size:11px}
  body.mx-consultation-mode #p-expediente #m7-workspace .flow-patient-note {padding:5px;font-size:11px;line-height:15px}
+}
+/* Step 6 R3.2: fit the low-height desktop band without scaling card contents.
+   Give the 4px recovered below the subtitle to the capture allocation so the
+   shared footer stays at its accepted anchor. Keep 12px below the helper for
+   the aqua extension; remove only the remaining empty bottom allocation. */
+@media(min-width:1200px) and (min-height:800.01px) and (max-height:899px){
+ body.mx-consultation-mode #p-expediente:has(#m7-workspace [data-m7-section="documents"][aria-current="true"]) > .body {padding-bottom:0}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) {padding-bottom:12px;margin-bottom:0}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .m7-step-intro {margin-bottom:8px}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .vis04-capture {height:calc(var(--consultation-capture-height) + var(--consultation-recovered-height) + 4px)}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .flow-action-card {min-height:82px;padding-top:2px;padding-bottom:2px}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .flow-action-cards {margin-bottom:8px}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .flow-document-overview :is(.docux-current,.flow-patient-documents) {padding-top:8px;padding-bottom:8px}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .flow-document-heading {margin-bottom:6px}
+ body.mx-consultation-mode #p-expediente #m7-workspace:has([data-m7-section="documents"][aria-current="true"]) .flow-patient-overview {margin-top:6px}
 }
 @media(max-width:1199.98px){
  /* Retain R2's responsive content allocation so the shared footer stays put. */
