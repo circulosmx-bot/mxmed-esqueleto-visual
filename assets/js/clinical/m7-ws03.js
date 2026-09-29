@@ -88,7 +88,7 @@
     };
     const systems = {
       general:'Estado general', cardiovascular:'Cardiovascular', respiratory:'Respiratorio',
-      abdomen:'Abdomen', neurological:'Neurológico', musculoskeletal:'Musculoesquelético', skin:'Piel',
+      abdomen:'Abdominal', neurological:'Neurológico', musculoskeletal:'Musculoesquelético', skin:'Piel',
       head_neck:'Cabeza y cuello'
     };
     let key = '', patient = '', mode = 'none', selected = '', observations = [], selectedObservation = null;
