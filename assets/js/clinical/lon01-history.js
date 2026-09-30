@@ -31,15 +31,19 @@
   let paging = false;
   let detailOrigin = null;
   let selection = 0;
+  let autoSelectPending = false;
+  let fallbackOpen = null;
   const empty = $('[data-vis05-empty]');
   function selectCard(button) {
     root.querySelectorAll('.lon01-card').forEach(card => card.setAttribute('aria-pressed', String(card === button)));
     detailOrigin = button;
   }
-  function reveal() {
+  function reveal(focus = true) {
     show(empty, false); show(detail, true); root.classList.add('vis05-detail-open');
-    detailTitle.focus({preventScroll:true});
-    if (matchMedia('(max-width:700px)').matches) detail.scrollIntoView({block:'start'});
+    if (focus) {
+      detailTitle.focus({preventScroll:true});
+      if (matchMedia('(max-width:700px)').matches) detail.scrollIntoView({block:'start'});
+    }
   }
   const seenCanonical = new Set();
   const seenLegacy = new Set();
@@ -81,7 +85,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (_) { message('No se pudo abrir el archivo privado autorizado.', true); }
   }
-  async function openCanonical(row) {
+  async function openCanonical(row, focus = true) {
     const seen = epoch, request = ++selection, origin = detailOrigin;
     show(detail, false); show(empty, true); empty.textContent = 'Cargando detalle…';
     const key = String(row.encounter_key || '');
@@ -143,7 +147,7 @@
         else appendObject(target, amendment.correction || {});
       });
       if (!detailBody.children.length) detailBody.append(line('Contenido', 'No hay contenido clínico registrado en esta consulta.'));
-      reveal();
+      reveal(focus);
       message('Detalle de sólo lectura.');
     } catch (failure) { if (seen === epoch && request === selection) { message(failure.message, true); empty.textContent = 'No se pudo cargar el detalle. Selecciona de nuevo el registro para reintentar.'; } }
   }
@@ -168,30 +172,40 @@
     const title = document.createElement('strong'); title.textContent = label;
     const meta = document.createElement('span'); meta.textContent = subline;
     button.setAttribute('aria-pressed', 'false');
-    button.append(title, meta); button.addEventListener('click', () => { selectCard(button); action(); });
+    button.append(title, meta);
+    if (className === 'is-current') {
+      const badge = document.createElement('span'); badge.className = 'lon01-state'; badge.textContent = 'EN CURSO';
+      button.append(badge);
+    }
+    button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); action(); });
     return button;
   }
   async function load(reset = false) {
     if (paging && !reset) return;
     const id = selectedPatient();
     if (reset) {
-      epoch++; selection++; detailOrigin = null; root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
+      epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active'); fallbackOpen = null; root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
       current.replaceChildren(); previous.replaceChildren(); legacy.replaceChildren(); detailBody.replaceChildren();
       show(detail, false); show(content, false); show(more, false); show(error, false);
     }
     if (!id) { status.textContent = 'Selecciona un paciente para ver su historial.'; return; }
     paging = true; more.disabled = true;
     const seen = epoch;
+    let loadNextForSelection = false;
     status.textContent = 'Cargando historial…';
     try {
       const data = await get(`patients/${encodeURIComponent(id)}/longitudinal-history?limit=25&offset=${offset}`);
       if (seen !== epoch || selectedPatient() !== id) return;
       if (offset > 0) for (const target of [current, previous, legacy]) if (!target.children.length) target.replaceChildren();
+      let newestClosed = null;
       for (const row of data.canonical || []) {
         if (seenCanonical.has(row.encounter_key)) continue;
         seenCanonical.add(row.encounter_key);
         const isOpen = String(row.status).toLowerCase() === 'open';
-        (isOpen ? current : previous).append(card(`Consulta ${state(row.status)}`, `Encuentro canónico · ${date(row.encounter_dt)}`, () => openCanonical(row), isOpen ? 'is-current' : row.status === 'voided' ? 'is-voided' : 'is-closed'));
+        const button = card(`Consulta ${state(row.status)}`, `Encuentro canónico · ${date(row.encounter_dt)}`, () => openCanonical(row), isOpen ? 'is-current' : row.status === 'voided' ? 'is-voided' : 'is-closed');
+        (isOpen ? current : previous).append(button);
+        if (isOpen && !fallbackOpen) fallbackOpen = {button, row};
+        if (row.status === 'closed' && !newestClosed) newestClosed = {button, row};
       }
       for (const row of data.legacy || []) {
         if (seenLegacy.has(row.entry_id)) continue;
@@ -203,9 +217,27 @@
       if (!current.children.length) current.textContent = 'No hay consulta en curso.';
       if (!previous.children.length) previous.textContent = 'No hay consultas finalizadas o anuladas.';
       if (!legacy.children.length) legacy.textContent = 'No hay registros anteriores.';
-      message('Historial de sólo lectura. Los registros anteriores no se convierten en consultas.');
-    } catch (failure) { if (seen === epoch) message(failure.message, true); }
-    finally { if (seen === epoch) { paging = false; more.disabled = false; } }
+      message('');
+      if (autoSelectPending && newestClosed) {
+        autoSelectPending = false;
+        selectCard(newestClosed.button);
+        void openCanonical(newestClosed.row, false);
+      } else if (autoSelectPending && (data.canonical || []).length === 25 && data.has_more && offset <= 10000) {
+        loadNextForSelection = true;
+      } else if (autoSelectPending) {
+        autoSelectPending = false;
+        if (fallbackOpen) {
+          selectCard(fallbackOpen.button);
+          void openCanonical(fallbackOpen.row, false);
+        }
+      }
+    } catch (failure) { if (seen === epoch) { autoSelectPending = false; message(failure.message, true); } }
+    finally {
+      if (seen === epoch) {
+        paging = false; more.disabled = false;
+        if (loadNextForSelection && autoSelectPending) void load();
+      }
+    }
   }
   $('[data-lon01-refresh]').addEventListener('click', () => load(true));
   more.addEventListener('click', () => load());
