@@ -4614,3 +4614,13 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #lon02-summary .lon02-head p {
   display:inline;
 }
+
+/* Summary module labels only; keep Material Symbols ligatures intact. */
+#p-expediente #lon02-summary .lon02-card h4,
+#p-expediente #lon02-summary .vis03-evolution-head .vis03-level-title {
+  text-transform:uppercase;
+}
+#p-expediente #lon02-summary .lon02-card h4 .material-symbols-outlined,
+#p-expediente #lon02-summary .vis03-level-title .material-symbols-outlined {
+  text-transform:none;
+}
