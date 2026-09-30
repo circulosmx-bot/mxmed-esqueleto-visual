@@ -89,7 +89,8 @@ with sync_playwright() as p:
         if width<=700: page.locator('[data-lon01-close]').click()
         cards=page.locator('.lon01-card.is-closed')
         assert cards.count()==2
-        assert [round(cards.nth(i).bounding_box()['height']) for i in range(2)]==[88,88]
+        assert [round(cards.nth(i).bounding_box()['height']) for i in range(2)]==[61,61]
+        if has_open and width>700: assert round(page.locator('.lon01-card.is-open-consultation').bounding_box()['height'])==58
         assert page.locator('.lon01-card.is-open-consultation').count()==int(has_open)
         assert page.locator('.lon01-event-row').count()==(3 if has_open else 0)
         assert page.evaluate('document.documentElement.scrollWidth')<=width
