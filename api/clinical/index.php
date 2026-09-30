@@ -12,6 +12,7 @@ require_once __DIR__ . '/../_lib/clinical_longitudinal_problems.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_medications.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_tasks.php';
 require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
+require_once __DIR__ . '/../_lib/clinical_document_timeline_read.php';
 
 clinical_m6_observability_request_started_at();
 
@@ -8954,6 +8955,24 @@ try {
                 return;
             }
 
+            $timelineMode = ($_GET['timeline_mode'] ?? '0') === '1';
+            if (isset($_GET['timeline_mode']) && !in_array($_GET['timeline_mode'], ['0', '1'], true)) {
+                clinical_send_response(['ok' => false, 'error' => 'bad_request', 'message' => 'timeline_mode inválido', 'data' => null, 'meta' => $meta], 400);
+                return;
+            }
+            $timelineCursor = null;
+            if ($timelineMode) {
+                $timelineLimit = $_GET['limit'] ?? '50';
+                $cursorRaw = $_GET['cursor'] ?? '';
+                if (!is_string($timelineLimit) || preg_match('/^[0-9]+$/', $timelineLimit) !== 1
+                    || (int)$timelineLimit < 1 || (int)$timelineLimit > 100
+                    || !is_string($cursorRaw) || ($cursorRaw !== '' && ($timelineCursor = clinical_document_timeline_decode_cursor($cursorRaw)) === null)
+                    || trim((string)($_GET['document_type'] ?? '')) !== '' || trim((string)($_GET['hospital_stay_id'] ?? '')) !== '') {
+                    clinical_send_response(['ok' => false, 'error' => 'bad_request', 'message' => 'Parámetros de proyección cronológica inválidos', 'data' => null, 'meta' => $meta], 400);
+                    return;
+                }
+            }
+
             $limit = (int)($_GET['limit'] ?? 30);
             if ($limit <= 0) {
                 $limit = 30;
@@ -8985,16 +9004,23 @@ try {
                     ], 403);
                     return;
                 }
+                if ($timelineMode) {
+                    $timeline = clinical_document_timeline_list_fetch($pdo, $patientId, (int)$timelineLimit, $timelineCursor);
+                    clinical_send_response(['ok' => true, 'error' => null, 'message' => 'timeline documents listed',
+                        'data' => $timeline, 'meta' => $meta + ['timeline_mode' => true, 'timeline_timezone' => 'UTC']], 200);
+                    return;
+                }
                 $items = clinical_documents_list_fetch($pdo, $patientId, $documentType, $hospitalStayId, $limit);
             } catch (Throwable $e) {
                 $msg = trim($e->getMessage());
+                $timelineSchemaMissing = $timelineMode && $msg === 'TIMELINE_READER_SCHEMA_NOT_READY';
                 clinical_send_response([
                     'ok' => false,
-                    'error' => 'server_error',
+                    'error' => $timelineSchemaMissing ? 'SCHEMA_NOT_READY' : 'server_error',
                     'message' => ($msg !== '') ? $msg : 'server error',
                     'data' => null,
                     'meta' => $meta,
-                ], 500);
+                ], $timelineSchemaMissing ? 503 : 500);
                 return;
             }
 
