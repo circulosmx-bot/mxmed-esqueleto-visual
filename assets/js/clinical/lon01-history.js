@@ -79,6 +79,7 @@
   function fitTimelineViewport() {
     if (!matchMedia('(min-width:701px)').matches || !root.closest('#t-historial-atencion.active')) {
       root.style.removeProperty('--lon01-viewport-height');
+      timeline.classList.remove('is-scrollable');
       return;
     }
     const footer = document.querySelector('.mm-footer');
@@ -86,6 +87,7 @@
     const timelineTop = timeline.getBoundingClientRect().top + window.scrollY;
     const available = Math.max(180, Math.floor(window.innerHeight - timelineTop - footerHeight - 32));
     root.style.setProperty('--lon01-viewport-height', `${available}px`);
+    requestAnimationFrame(() => timeline.classList.toggle('is-scrollable', timeline.scrollHeight > timeline.clientHeight + 1));
   }
   function revealAutoSelected(button) {
     if (!matchMedia('(min-width:701px)').matches) return;
@@ -444,7 +446,6 @@
       show(content, true);
       show(openSection, current.children.length > 0);
       if (!previous.children.length) previous.textContent = 'No hay consultas finalizadas o anuladas.';
-      if (!legacy.children.length) legacy.textContent = 'No hay registros anteriores.';
       message('');
       fitTimelineViewport();
       if (autoSelectPending && newestClosed && newestClosedButton) {

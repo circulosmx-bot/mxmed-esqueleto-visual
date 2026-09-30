@@ -4668,6 +4668,21 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #lon01-history .lon01-card.is-open-consultation {background:#c9f7fa;border-color:#28b8c7}
 #p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-history-icon-box {background:#b6f0f4}
 #p-expediente #lon01-history .vis05-timeline {max-height:var(--lon01-viewport-height);overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior:contain}
+/* H08C: reuse the Consultation OPEN chip's aqua, dot and sheen within Historial's card. */
+#p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-closed-copy strong {display:inline-flex;align-items:center;max-width:100%;padding:5px 8px;border-radius:8px;background-color:#09c9da;color:#fff;text-shadow:0 1px 1px rgba(0,68,86,.72);box-shadow:inset 0 0 0 1px rgba(0,94,112,.28);background-image:linear-gradient(105deg,transparent,rgba(255,255,255,.4) 50%,transparent);background-size:36% 100%;background-repeat:no-repeat;background-position:-65% 0;animation:vis27-open-chip-sheen 2.8s ease-in-out infinite}
+#p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-closed-copy strong::before {content:"";flex:none;width:7.5px;height:7.5px;margin-inline-end:5.5px;border-radius:50%;background-color:#fff;animation:vis26-open-dot-pulse 2s ease-in-out infinite}
+/* The gutter stays reserved. Hover and keyboard focus reveal the scroll affordance only when needed. */
+#p-expediente #lon01-history .vis05-timeline.is-scrollable:hover,
+#p-expediente #lon01-history .vis05-timeline.is-scrollable:focus-within {box-shadow:inset -3px 0 0 #8ccfd8}
+#p-expediente #lon01-history .vis05-timeline::-webkit-scrollbar {width:8px}
+#p-expediente #lon01-history .vis05-timeline::-webkit-scrollbar-track {background:transparent}
+#p-expediente #lon01-history .vis05-timeline::-webkit-scrollbar-thumb {border:2px solid transparent;border-radius:8px;background:transparent;background-clip:padding-box}
+#p-expediente #lon01-history .vis05-timeline.is-scrollable:hover::-webkit-scrollbar-thumb,
+#p-expediente #lon01-history .vis05-timeline.is-scrollable:focus-within::-webkit-scrollbar-thumb {background-color:#52aebd}
+@media (prefers-reduced-motion:reduce) {
+  #p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-closed-copy strong {animation:none;background-image:none}
+  #p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-closed-copy strong::before {animation:none;opacity:1;transform:none}
+}
 #p-expediente #lon01-history .lon01-detail {height:var(--lon01-viewport-height);max-height:var(--lon01-viewport-height);overflow-y:auto;scrollbar-gutter:stable}
 #p-expediente #lon01-history .lon01-event-row {display:grid;grid-template-columns:32px minmax(0,1fr) 18px;align-items:center;gap:10px;width:100%;min-height:58px;margin:0;padding:7px 6px 7px 10px;border:0;border-left:3px solid transparent;border-bottom:1px solid #c6e6ea;border-radius:0;background:transparent;color:#123f60;font-family:inherit;text-align:left;cursor:pointer}
 #p-expediente #lon01-history .lon01-event-row:hover {background:rgb(255 255 255 / .45)}
@@ -4681,6 +4696,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #lon01-history .lon01-document-text {max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:700px) {
   #p-expediente #lon01-history .vis05-timeline {max-height:none;overflow:visible;scrollbar-gutter:auto}
+  #p-expediente #lon01-history .vis05-timeline::-webkit-scrollbar {width:auto}
   #p-expediente #lon01-history .lon01-detail {height:auto;max-height:none;overflow:visible;scrollbar-gutter:auto}
   #p-expediente #lon01-history .lon01-event-meta {white-space:normal}
 }
