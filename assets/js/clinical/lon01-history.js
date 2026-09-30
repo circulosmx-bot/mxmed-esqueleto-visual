@@ -60,10 +60,9 @@
   let detailOrigin = null;
   let selection = 0;
   let autoSelectPending = false;
-  let fallbackOpen = null;
   const empty = $('[data-vis05-empty]');
   function selectCard(button) {
-    root.querySelectorAll('.lon01-card').forEach(card => card.setAttribute('aria-pressed', String(card === button)));
+    root.querySelectorAll('.lon01-card[aria-controls="lon01-detail"]').forEach(card => card.setAttribute('aria-pressed', String(card === button)));
     detailOrigin = button;
   }
   function preserveDetailHeight() {
@@ -253,11 +252,24 @@
     button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); openCanonical(row); });
     return {button, venue};
   }
+  function openConsultationCard(id) {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'lon01-card is-open-consultation';
+    const iconBox = document.createElement('span'); iconBox.className = 'lon01-history-icon-box'; iconBox.setAttribute('aria-hidden', 'true');
+    const icon = document.createElement('span'); icon.className = 'material-symbols-rounded lon01-history-icon'; icon.textContent = 'history'; iconBox.append(icon);
+    const copy = document.createElement('span'); copy.className = 'lon01-closed-copy';
+    const title = document.createElement('strong'); title.textContent = 'CONSULTA EN CURSO';
+    const action = document.createElement('span'); action.className = 'lon01-open-action'; action.textContent = 'Volver a consulta';
+    copy.append(title, action);
+    const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
+    button.append(iconBox, copy, chevron);
+    button.addEventListener('click', () => { if (selectedPatient() === id) void window.mxmedM7OpenFromHeader?.(id, 'resume'); });
+    return button;
+  }
   async function load(reset = false) {
     if (paging && !reset) return;
     const id = selectedPatient();
     if (reset) {
-      epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active'); fallbackOpen = null; root.classList.remove('vis05-detail-open'); detail.style.minHeight = ''; detail.removeAttribute('aria-busy'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
+      epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active'); root.classList.remove('vis05-detail-open'); detail.style.minHeight = ''; detail.removeAttribute('aria-busy'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
       current.replaceChildren(); previous.replaceChildren(); legacy.replaceChildren(); detailBody.replaceChildren();
       appointments.clear(); officeNames.clear(); show(openSection, false);
       show(detail, false); show(content, false); show(more, false); show(error, false);
@@ -268,20 +280,24 @@
     let loadNextForSelection = false;
     status.textContent = 'Cargando historial…';
     try {
-      const data = await get(`patients/${encodeURIComponent(id)}/longitudinal-history?limit=25&offset=${offset}`);
+      const [data, active] = await Promise.all([
+        get(`patients/${encodeURIComponent(id)}/longitudinal-history?limit=25&offset=${offset}`),
+        reset ? get(`patients/${encodeURIComponent(id)}/encounters/active`) : Promise.resolve(null)
+      ]);
       if (seen !== epoch || selectedPatient() !== id) return;
+      if (active && active.status === 'open' && String(active.patient_id) === id) current.append(openConsultationCard(id));
       if (offset > 0) for (const target of [current, previous, legacy]) if (!target.children.length) target.replaceChildren();
       let newestClosed = null;
       for (const row of data.canonical || []) {
         if (seenCanonical.has(row.encounter_key)) continue;
         seenCanonical.add(row.encounter_key);
         const isOpen = String(row.status).toLowerCase() === 'open';
+        if (isOpen) continue; // The active reader owns the actionable OPEN card.
         const closed = String(row.status).toLowerCase() === 'closed';
         const previousCard = closed ? previousConsultationCard(row) : null;
-        const button = previousCard?.button || card(`Consulta ${state(row.status)}`, date(row.encounter_dt), () => openCanonical(row), isOpen ? 'is-current' : 'is-voided');
-        (isOpen ? current : previous).append(button);
+        const button = previousCard?.button || card(`Consulta ${state(row.status)}`, date(row.encounter_dt), () => openCanonical(row), 'is-voided');
+        previous.append(button);
         if (previousCard) void appointmentVenue(row, button, previousCard.venue, seen, id);
-        if (isOpen && !fallbackOpen) fallbackOpen = {button, row};
         if (row.status === 'closed' && !newestClosed) newestClosed = {button, row};
       }
       for (const row of data.legacy || []) {
@@ -303,10 +319,6 @@
         loadNextForSelection = true;
       } else if (autoSelectPending) {
         autoSelectPending = false;
-        if (fallbackOpen) {
-          selectCard(fallbackOpen.button);
-          void openCanonical(fallbackOpen.row, false);
-        }
       }
     } catch (failure) { if (seen === epoch) { autoSelectPending = false; message(failure.message, true); } }
     finally {

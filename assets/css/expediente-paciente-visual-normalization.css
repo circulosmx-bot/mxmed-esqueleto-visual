@@ -4649,7 +4649,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #lon01-history .lon01-card .lon01-state {position:absolute;top:8px;right:34px;padding:2px 5px;border:1px solid #80c5cd;border-radius:5px;background:#e6f7f8;color:#087783;font-size:10px;font-weight:700;line-height:1.2;white-space:nowrap}
 #p-expediente #lon01-history .lon01-card.is-current[aria-pressed="true"] {background:#e9f8fa;border-color:#008c9b;box-shadow:inset 0 0 0 1px #008c9b}
 #p-expediente #lon01-history .lon01-card.is-legacy {background:#f8fafb;border-style:dashed}
-#p-expediente #lon01-history .lon01-card.is-closed {flex-direction:row;align-items:center;gap:12px;min-height:104px;padding:12px 38px 12px 12px;border-left-width:1px;background:rgb(255 255 255 / .78)}
+#p-expediente #lon01-history .lon01-card.is-closed {flex-direction:row;align-items:center;gap:12px;min-height:88px;padding:9px 38px 9px 12px;border-left-width:1px;background:rgb(255 255 255 / .78)}
 #p-expediente #lon01-history .lon01-card.is-closed[aria-pressed="true"] {border-color:#008c9b;background:#e9f8fa;box-shadow:inset 0 0 0 1px #008c9b}
 #p-expediente #lon01-history .lon01-card.is-closed .lon01-history-icon-box {display:grid;place-items:center;flex:none;width:68px;height:68px;border-radius:13px;background:#e4f8fa;color:#079cb3}
 #p-expediente #lon01-history .lon01-card.is-closed .lon01-history-icon {color:inherit;font-size:43px;line-height:1;text-transform:none;overflow:visible}
@@ -4657,6 +4657,14 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #lon01-history .lon01-card.is-closed .lon01-closed-copy strong {font-size:1.1rem;font-weight:700;line-height:1.2;color:#123f60}
 #p-expediente #lon01-history .lon01-card.is-closed .lon01-closed-date {font-size:.94rem;line-height:1.25;color:#476783}
 #p-expediente #lon01-history .lon01-card.is-closed .lon01-closed-venue {max-width:100%;min-height:1.25em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:.84rem;line-height:1.25;color:#476783;text-transform:uppercase}
+#p-expediente #lon01-history .lon01-card.is-closed .lon01-closed-venue:empty {display:none}
+#p-expediente #lon01-history .lon01-card.is-open-consultation {flex-direction:row;align-items:center;gap:12px;min-height:88px;padding:9px 38px 9px 12px;border-left-width:1px;border-color:#75c4cd;background:#e8f9fa;color:#123f60}
+#p-expediente #lon01-history .lon01-card.is-open-consultation:hover {background:#d9f4f7;border-color:#008c9b}
+#p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-history-icon-box {display:grid;place-items:center;flex:none;width:68px;height:68px;border-radius:13px;background:#d1f2f5;color:#008fa4}
+#p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-history-icon {color:inherit;font-size:43px;line-height:1;text-transform:none;overflow:visible}
+#p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-closed-copy {display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-width:0;color:#123f60}
+#p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-closed-copy strong {font-size:1.1rem;font-weight:700;line-height:1.2;color:#123f60}
+#p-expediente #lon01-history .lon01-card.is-open-consultation .lon01-open-action {font-size:.94rem;line-height:1.25;color:#007786;text-decoration:underline}
 #p-expediente #lon01-history [data-lon01-status] {margin:0 0 8px;font-size:.81rem;line-height:1.35}
 #p-expediente #lon01-history [data-lon01-status]:empty {display:none}
 #p-expediente #lon01-history .lon01-refresh {display:inline-grid;place-items:center;flex:none;width:36px;height:36px;min-height:36px;padding:0;overflow:hidden;border-color:#a5cdd4;background:transparent;color:#287488}
