@@ -11,11 +11,11 @@
   const openSection = $('[data-lon01-open-section]');
   const previous = $('[data-lon01-previous]');
   const legacy = $('[data-lon01-legacy]');
-  const more = $('[data-lon01-more]');
   const detail = $('[data-lon01-detail]');
   const detailTitle = $('[data-lon01-detail-title]');
   const detailMeta = $('[data-lon01-detail-meta]');
   const detailBody = $('[data-lon01-detail-body]');
+  const timeline = $('.vis05-timeline');
   const selectedPatient = () => String(pane.dataset.patientId || pane.dataset.activePatientId || '').trim();
   const show = (node, visible) => node.classList.toggle('d-none', !visible);
   const date = value => {
@@ -44,6 +44,18 @@
     const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     return `${Number(parts.day)} ${months[Number(parts.month) - 1]} ${parts.year} · ${parts.hour}:${parts.minute}`;
   };
+  const timelineClock = value => {
+    const raw = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)) return null;
+    const instant = new Date(`${raw.replace(' ', 'T')}Z`);
+    if (Number.isNaN(instant.getTime())) return null;
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+      timeZone:'America/Mexico_City', year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'
+    }).formatToParts(instant).map(part => [part.type, part.value]));
+    const local = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+    return {local, label:closedDate(local)};
+  };
   const number = value => {
     const raw = String(value ?? 'Sin valor');
     const match = raw.match(/^(-?\d+)(?:\.(\d+))?$/);
@@ -55,15 +67,31 @@
   const legacyType = value => ({historia_clinica:'Historia clínica anterior', exploracion_fisica:'Exploración física anterior'})[String(value || '')] || 'Registro clínico anterior';
   let patientId = '';
   let epoch = 0;
-  let offset = 0;
-  let paging = false;
+  let doctorId = '';
   let detailOrigin = null;
   let selection = 0;
   let autoSelectPending = false;
   const empty = $('[data-vis05-empty]');
   function selectCard(button) {
-    root.querySelectorAll('.lon01-card[aria-controls="lon01-detail"]').forEach(card => card.setAttribute('aria-pressed', String(card === button)));
+    root.querySelectorAll('[aria-controls="lon01-detail"][aria-pressed]').forEach(card => card.setAttribute('aria-pressed', String(card === button)));
     detailOrigin = button;
+  }
+  function fitTimelineViewport() {
+    if (!matchMedia('(min-width:701px)').matches || !root.closest('#t-historial-atencion.active')) {
+      root.style.removeProperty('--lon01-viewport-height');
+      return;
+    }
+    const footer = document.querySelector('.mm-footer');
+    const footerHeight = footer && getComputedStyle(footer).display !== 'none' ? footer.getBoundingClientRect().height : 0;
+    const timelineTop = timeline.getBoundingClientRect().top + window.scrollY;
+    const available = Math.max(180, Math.floor(window.innerHeight - timelineTop - footerHeight - 32));
+    root.style.setProperty('--lon01-viewport-height', `${available}px`);
+  }
+  function revealAutoSelected(button) {
+    if (!matchMedia('(min-width:701px)').matches) return;
+    const outer = timeline.getBoundingClientRect(), inner = button.getBoundingClientRect();
+    if (inner.top < outer.top) timeline.scrollTop += inner.top - outer.top;
+    else if (inner.bottom > outer.bottom) timeline.scrollTop += inner.bottom - outer.bottom;
   }
   function preserveDetailHeight() {
     if (detail.classList.contains('d-none') || !matchMedia('(min-width:701px)').matches) return;
@@ -76,8 +104,6 @@
       if (matchMedia('(max-width:700px)').matches) detail.scrollIntoView({block:'start'});
     }
   }
-  const seenCanonical = new Set();
-  const seenLegacy = new Set();
   const officeNames = new Map();
   const appointments = new Map();
   async function appointmentVenue(row, button, venue, seen, id) {
@@ -203,6 +229,61 @@
     } catch (failure) { if (seen === epoch && request === selection) { message(failure.message, true); empty.textContent = 'No se pudo cargar el detalle. Selecciona de nuevo el registro para reintentar.'; } }
     finally { if (seen === epoch && request === selection) detail.removeAttribute('aria-busy'); }
   }
+  const prescriptionTypes = new Set(['prescription','receta']);
+  const orderTypes = new Set(['order','orders','lab_order','imaging_order','orden_estudio']);
+  const documentTypeLabel = row => prescriptionTypes.has(row.document_type) ? 'RECETA' : 'ORDEN DE ESTUDIOS';
+  function documentDescriptor(row) {
+    const count = Number(row.prescription_item_count);
+    if (prescriptionTypes.has(row.document_type) && count > 1) return `${count} medicamentos`;
+    return String(row.summary || row.title || '').trim();
+  }
+  function appendDocumentDetail(documentRow, row) {
+    const content = documentRow.content || {};
+    const payload = content.payload || {};
+    const summary = String(content.summary || row.summary || '').trim();
+    if (summary) detailBody.append(line('Resumen', summary));
+    const rendered = String(content.rendered_text || payload.text || '').trim();
+    if (rendered) {
+      const body = document.createElement('pre'); body.className = 'lon01-document-text'; body.textContent = rendered; detailBody.append(body);
+    } else if (prescriptionTypes.has(row.document_type)) {
+      const items = Array.isArray(payload.prescription?.items) ? payload.prescription.items : [];
+      group('Medicamentos prescritos', items, (target, item) => {
+        const value = [item?.medicamento, item?.dosis, item?.via, item?.frecuencia, item?.duracion, item?.indicaciones]
+          .filter(part => typeof part === 'string' && part.trim()).join(' · ');
+        if (value) target.append(line('Medicamento', value));
+      });
+      if (typeof payload.prescription?.observaciones === 'string' && payload.prescription.observaciones.trim())
+        detailBody.append(line('Observaciones', payload.prescription.observaciones));
+    } else {
+      const studies = Array.isArray(payload.requested_studies) ? payload.requested_studies : [];
+      group('Estudios solicitados', studies, (target, study) => {
+        const name = typeof study === 'string' ? study : typeof study?.name === 'string' ? study.name : '';
+        if (name.trim()) target.append(line('Estudio', name));
+      });
+      if (typeof payload.indication === 'string' && payload.indication.trim()) detailBody.append(line('Indicación', payload.indication));
+      if (typeof payload.priority === 'string' && payload.priority.trim()) detailBody.append(line('Prioridad', payload.priority));
+    }
+    if (!detailBody.children.length) detailBody.append(line('Contenido', 'No hay contenido adicional registrado.'));
+  }
+  async function openDocument(row, focus = true) {
+    const seen = epoch, request = ++selection;
+    if (!detail.classList.contains('d-none')) { preserveDetailHeight(); detail.setAttribute('aria-busy', 'true'); }
+    else { show(empty, true); empty.textContent = 'Cargando detalle…'; }
+    try {
+      const data = await get(`doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(row.document_uuid)}`);
+      const item = data?.document;
+      if (request !== selection || seen !== epoch || selectedPatient() !== patientId) return;
+      if (!item || String(item.context?.patient_id) !== patientId || String(item.document_id) !== String(row.document_uuid)
+          || String(item.document_type) !== String(row.document_type)) throw new Error('El documento no corresponde al registro seleccionado.');
+      detailBody.replaceChildren();
+      detailTitle.textContent = String(item.title || row.title || documentTypeLabel(row));
+      detailMeta.textContent = `${documentTypeLabel(row)} · ${utcDate(row.timeline_at)} · ${({draft:'Borrador',generated:'Generada',signed:'Firmada',voided:'Anulada'})[item.status] || 'Registrada'}`;
+      detail.dataset.state = prescriptionTypes.has(row.document_type) ? 'prescription' : 'order';
+      appendDocumentDetail(item, row);
+      reveal(focus); message('');
+    } catch (failure) { if (seen === epoch && request === selection) { message(failure.message, true); empty.textContent = 'No se pudo cargar el detalle. Selecciona de nuevo el registro para reintentar.'; } }
+    finally { if (seen === epoch && request === selection) detail.removeAttribute('aria-busy'); }
+  }
   function openLegacy(row) {
     message('');
     preserveDetailHeight();
@@ -265,75 +346,122 @@
     button.addEventListener('click', () => { if (selectedPatient() === id) void window.mxmedM7OpenFromHeader?.(id, 'resume'); });
     return button;
   }
-  async function load(reset = false) {
-    if (paging && !reset) return;
-    const id = selectedPatient();
-    if (reset) {
-      epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active'); root.classList.remove('vis05-detail-open'); detail.style.minHeight = ''; detail.removeAttribute('aria-busy'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
-      current.replaceChildren(); previous.replaceChildren(); legacy.replaceChildren(); detailBody.replaceChildren();
-      appointments.clear(); officeNames.clear(); show(openSection, false);
-      show(detail, false); show(content, false); show(more, false); show(error, false);
+  function documentEventRow(row, clock) {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'lon01-event-row';
+    button.setAttribute('aria-pressed', 'false'); button.setAttribute('aria-controls', 'lon01-detail');
+    const icon = document.createElement('span'); icon.className = 'material-symbols-rounded lon01-event-icon'; icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = prescriptionTypes.has(row.document_type) ? 'prescriptions' : row.document_type === 'imaging_order' ? 'radiology' : 'science';
+    const copy = document.createElement('span'); copy.className = 'lon01-event-copy';
+    const title = document.createElement('strong'); title.textContent = documentTypeLabel(row);
+    const meta = document.createElement('span'); meta.className = 'lon01-event-meta';
+    const descriptor = documentDescriptor(row);
+    meta.textContent = `${clock.label}${descriptor ? ` · ${descriptor}` : ''}`;
+    copy.append(title, meta);
+    const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-event-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
+    button.append(icon, copy, chevron);
+    button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); void openDocument(row); });
+    return button;
+  }
+  function sortedHistory(canonical, documents) {
+    const events = [];
+    for (const row of canonical) {
+      if (String(row.status).toLowerCase() === 'open') continue;
+      const key = String(row.encounter_dt || '').trim().replace('T', ' ').slice(0, 19);
+      events.push({kind:'encounter', row, key, id:Number(String(row.encounter_key || '').split(':').pop()) || 0});
     }
+    for (const row of documents) {
+      if (row.timeline_eligible !== true || row.timeline_scope !== 'PATIENT'
+          || (!prescriptionTypes.has(row.document_type) && !orderTypes.has(row.document_type))) continue;
+      if (String(row.patient_id) !== patientId || !row.document_uuid) continue;
+      const clock = timelineClock(row.timeline_at);
+      if (clock) events.push({kind:'document', row, clock, key:clock.local, id:Number(row.id) || 0});
+    }
+    return events.sort((a, b) => b.key.localeCompare(a.key)
+      || (a.kind === b.kind ? b.id - a.id || String(b.row.document_uuid || b.row.encounter_key).localeCompare(String(a.row.document_uuid || a.row.encounter_key)) : a.kind === 'encounter' ? -1 : 1));
+  }
+  async function allHistoryRows(id, seen) {
+    const canonical = [], historical = [], canonicalSeen = new Set(), legacySeen = new Set();
+    for (let pageOffset = 0; pageOffset <= 10000; pageOffset += 25) {
+      const data = await get(`patients/${encodeURIComponent(id)}/longitudinal-history?limit=25&offset=${pageOffset}`);
+      if (seen !== epoch || selectedPatient() !== id) return null;
+      for (const row of data.canonical || []) if (!canonicalSeen.has(row.encounter_key)) { canonicalSeen.add(row.encounter_key); canonical.push(row); }
+      for (const row of data.legacy || []) if (!legacySeen.has(row.entry_id)) { legacySeen.add(row.entry_id); historical.push(row); }
+      if (!data.has_more) return {canonical, historical};
+    }
+    throw new Error('El historial excede el límite de lectura disponible.');
+  }
+  async function allTimelineDocuments(id, seen) {
+    const items = [], cursors = new Set();
+    let cursor = '';
+    while (true) {
+      const data = await get(`doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(id)}/documents?timeline_mode=1&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+      if (seen !== epoch || selectedPatient() !== id) return null;
+      items.push(...(data.items || []));
+      if (!data.has_more) return items;
+      cursor = String(data.cursor_next || '');
+      if (!cursor || cursors.has(cursor)) throw new Error('La paginación del historial documental no avanzó.');
+      cursors.add(cursor);
+    }
+  }
+  async function load() {
+    const id = selectedPatient();
+    epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active');
+    root.classList.remove('vis05-detail-open'); detail.style.minHeight = ''; detail.removeAttribute('aria-busy');
+    show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.';
+    patientId = id; doctorId = '';
+    current.replaceChildren(); previous.replaceChildren(); legacy.replaceChildren(); detailBody.replaceChildren();
+    appointments.clear(); officeNames.clear(); show(openSection, false);
+    show(detail, false); show(content, false); show(error, false);
+    timeline.scrollTop = 0;
     if (!id) { status.textContent = 'Selecciona un paciente para ver su historial.'; return; }
-    paging = true; more.disabled = true;
     const seen = epoch;
-    let loadNextForSelection = false;
     status.textContent = 'Cargando historial…';
     try {
-      const [data, active] = await Promise.all([
-        get(`patients/${encodeURIComponent(id)}/longitudinal-history?limit=25&offset=${offset}`),
-        reset ? get(`patients/${encodeURIComponent(id)}/encounters/active`) : Promise.resolve(null)
+      const [active, history] = await Promise.all([
+        get(`patients/${encodeURIComponent(id)}/encounters/active`), allHistoryRows(id, seen)
       ]);
       if (seen !== epoch || selectedPatient() !== id) return;
+      doctorId = String(active?.doctor_id || window.mxmedResolveActiveProfessionalContext?.()?.doctor_id
+        || window.mxmedStore?.activeProfessionalContext?.doctor_id || window.mxmedStore?.doctor_id || '').trim();
+      if (!doctorId) throw new Error('No se pudo confirmar el contexto del profesional para la cronología documental.');
+      const documents = await allTimelineDocuments(id, seen);
+      if (seen !== epoch || selectedPatient() !== id || !history || !documents) return;
       if (active && active.status === 'open' && String(active.patient_id) === id) current.append(openConsultationCard(id));
-      if (offset > 0) for (const target of [current, previous, legacy]) if (!target.children.length) target.replaceChildren();
-      let newestClosed = null;
-      for (const row of data.canonical || []) {
-        if (seenCanonical.has(row.encounter_key)) continue;
-        seenCanonical.add(row.encounter_key);
-        const isOpen = String(row.status).toLowerCase() === 'open';
-        if (isOpen) continue; // The active reader owns the actionable OPEN card.
-        const closed = String(row.status).toLowerCase() === 'closed';
-        const previousCard = closed ? previousConsultationCard(row) : null;
+      const newestClosed = history.canonical.find(row => String(row.status).toLowerCase() === 'closed');
+      let newestClosedButton = null;
+      for (const event of sortedHistory(history.canonical, documents)) {
+        if (event.kind === 'document') { previous.append(documentEventRow(event.row, event.clock)); continue; }
+        const row = event.row;
+        const previousCard = String(row.status).toLowerCase() === 'closed' ? previousConsultationCard(row) : null;
         const button = previousCard?.button || card(`Consulta ${state(row.status)}`, date(row.encounter_dt), () => openCanonical(row), 'is-voided');
         previous.append(button);
         if (previousCard) void appointmentVenue(row, button, previousCard.venue, seen, id);
-        if (row.status === 'closed' && !newestClosed) newestClosed = {button, row};
+        if (row.encounter_key === newestClosed?.encounter_key) newestClosedButton = button;
       }
-      for (const row of data.legacy || []) {
-        if (seenLegacy.has(row.entry_id)) continue;
-        seenLegacy.add(row.entry_id);
+      for (const row of history.historical) {
         legacy.append(card(`Registro histórico${row.status === 'draft' ? ' · Borrador' : ''}`, `${legacyType(row.note_type)} · fecha de consulta no confirmada`, () => openLegacy(row), 'is-legacy'));
       }
-      offset += 25;
-      show(content, true); show(more, !!data.has_more);
+      show(content, true);
       show(openSection, current.children.length > 0);
       if (!previous.children.length) previous.textContent = 'No hay consultas finalizadas o anuladas.';
       if (!legacy.children.length) legacy.textContent = 'No hay registros anteriores.';
       message('');
-      if (autoSelectPending && newestClosed) {
+      fitTimelineViewport();
+      if (autoSelectPending && newestClosed && newestClosedButton) {
         autoSelectPending = false;
-        selectCard(newestClosed.button);
-        void openCanonical(newestClosed.row, false);
-      } else if (autoSelectPending && (data.canonical || []).length === 25 && data.has_more && offset <= 10000) {
-        loadNextForSelection = true;
-      } else if (autoSelectPending) {
-        autoSelectPending = false;
+        selectCard(newestClosedButton);
+        void openCanonical(newestClosed, false);
+        requestAnimationFrame(() => { if (seen === epoch && newestClosedButton.isConnected) revealAutoSelected(newestClosedButton); });
       }
+      autoSelectPending = false;
     } catch (failure) { if (seen === epoch) { autoSelectPending = false; message(failure.message, true); } }
-    finally {
-      if (seen === epoch) {
-        paging = false; more.disabled = false;
-        if (loadNextForSelection && autoSelectPending) void load();
-      }
-    }
   }
-  $('[data-lon01-refresh]').addEventListener('click', () => load(true));
-  more.addEventListener('click', () => load());
+  $('[data-lon01-refresh]').addEventListener('click', load);
   $('[data-lon01-close]').addEventListener('click', () => { selection++; detail.removeAttribute('aria-busy'); root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; show(detail, false); detailBody.replaceChildren(); (detailOrigin?.isConnected ? detailOrigin : $('[data-lon01-refresh]')).focus(); });
-  for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, () => load(true));
-  pane.querySelector('[data-bs-target="#t-historial-atencion"]')?.addEventListener('shown.bs.tab', () => load(true));
-  new MutationObserver(() => { if (selectedPatient() !== patientId) load(true); }).observe(pane, {attributes:true, attributeFilter:['data-patient-id','data-active-patient-id']});
+  for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, load);
+  pane.querySelector('[data-bs-target="#t-historial-atencion"]')?.addEventListener('shown.bs.tab', load);
+  window.addEventListener('resize', fitTimelineViewport);
+  new MutationObserver(() => { if (selectedPatient() !== patientId) load(); }).observe(pane, {attributes:true, attributeFilter:['data-patient-id','data-active-patient-id']});
   detailTitle.setAttribute('tabindex', '-1');
-  if (selectedPatient()) load(true);
+  if (selectedPatient()) load();
 })();
