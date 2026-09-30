@@ -8,6 +8,7 @@
   const error = $('[data-lon01-error]');
   const content = $('[data-lon01-content]');
   const current = $('[data-lon01-current]');
+  const openSection = $('[data-lon01-open-section]');
   const previous = $('[data-lon01-previous]');
   const legacy = $('[data-lon01-legacy]');
   const more = $('[data-lon01-more]');
@@ -22,6 +23,11 @@
     const parts = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/);
     const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     return parts && months[Number(parts[2]) - 1] ? `${Number(parts[3])} ${months[Number(parts[2]) - 1]} ${parts[1]} · ${parts[4]}` : raw || 'Fecha no disponible';
+  };
+  const closedDate = value => {
+    const parts = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T]|$)/);
+    const months = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    return parts && months[Number(parts[2]) - 1] ? `${Number(parts[3])} ${months[Number(parts[2]) - 1]} ${parts[1]}` : 'FECHA NO DISPONIBLE';
   };
   // Terminal encounter timestamps are stored in UTC without an API offset.
   // Agenda's existing product timezone is America/Mexico_City. Encounter start
@@ -73,6 +79,28 @@
   }
   const seenCanonical = new Set();
   const seenLegacy = new Set();
+  const officeNames = new Map();
+  const appointments = new Map();
+  async function appointmentVenue(row, button, venue, seen, id) {
+    const appointmentId = String(row.appointment_id || '').trim();
+    if (!appointmentId) return;
+    try {
+      if (!appointments.has(appointmentId)) appointments.set(appointmentId, fetch(`/api/agenda/index.php/appointments/${encodeURIComponent(appointmentId)}`, {credentials:'same-origin', headers:{Accept:'application/json'}}).then(response => response.json()).then(result => result?.ok === true ? result.data : null));
+      const appointment = await appointments.get(appointmentId);
+      if (seen !== epoch || selectedPatient() !== id || !button.isConnected || String(appointment?.patient_id || '') !== id) return;
+      const appointmentName = String(appointment.consultorio_name || '').trim();
+      if (appointmentName) { venue.textContent = appointmentName; return; }
+      const officeId = String(appointment.consultorio_id || '').trim();
+      const doctorId = String(appointment.doctor_id || '').trim();
+      if (!officeId || !doctorId) return;
+      if (!officeNames.has(doctorId)) officeNames.set(doctorId, fetch(`/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`, {credentials:'same-origin', headers:{Accept:'application/json'}}).then(response => response.json()).then(result => result?.ok === true && Array.isArray(result.data) ? result.data : []));
+      const offices = await officeNames.get(doctorId);
+      if (seen !== epoch || selectedPatient() !== id || !button.isConnected) return;
+      const office = offices.find(item => String(item.consultorio_id || '') === officeId && String(item.doctor_id || '') === doctorId);
+      const name = String(office?.name || '').trim();
+      if (name) venue.textContent = name;
+    } catch (_) { /* No verified venue: leave the third line empty. */ }
+  }
 
   async function get(path) {
     const response = await fetch(`/api/clinical/index.php/${path}`, { credentials:'same-origin', headers:{Accept:'application/json'} });
@@ -210,12 +238,28 @@
     button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); action(); });
     return button;
   }
+  function previousConsultationCard(row) {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'lon01-card is-closed';
+    button.setAttribute('aria-pressed', 'false'); button.setAttribute('aria-controls', 'lon01-detail');
+    const iconBox = document.createElement('span'); iconBox.className = 'lon01-history-icon-box'; iconBox.setAttribute('aria-hidden', 'true');
+    const icon = document.createElement('span'); icon.className = 'material-symbols-rounded lon01-history-icon'; icon.textContent = 'history'; iconBox.append(icon);
+    const copy = document.createElement('span'); copy.className = 'lon01-closed-copy';
+    const title = document.createElement('strong'); title.textContent = 'CONSULTA ANTERIOR';
+    const when = document.createElement('span'); when.className = 'lon01-closed-date'; when.textContent = closedDate(row.encounter_dt);
+    const venue = document.createElement('span'); venue.className = 'lon01-closed-venue';
+    copy.append(title, when, venue);
+    const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
+    button.append(iconBox, copy, chevron);
+    button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); openCanonical(row); });
+    return {button, venue};
+  }
   async function load(reset = false) {
     if (paging && !reset) return;
     const id = selectedPatient();
     if (reset) {
       epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active'); fallbackOpen = null; root.classList.remove('vis05-detail-open'); detail.style.minHeight = ''; detail.removeAttribute('aria-busy'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
       current.replaceChildren(); previous.replaceChildren(); legacy.replaceChildren(); detailBody.replaceChildren();
+      appointments.clear(); officeNames.clear(); show(openSection, false);
       show(detail, false); show(content, false); show(more, false); show(error, false);
     }
     if (!id) { status.textContent = 'Selecciona un paciente para ver su historial.'; return; }
@@ -232,8 +276,11 @@
         if (seenCanonical.has(row.encounter_key)) continue;
         seenCanonical.add(row.encounter_key);
         const isOpen = String(row.status).toLowerCase() === 'open';
-        const button = card(`Consulta ${state(row.status)}`, date(row.encounter_dt), () => openCanonical(row), isOpen ? 'is-current' : row.status === 'voided' ? 'is-voided' : 'is-closed');
+        const closed = String(row.status).toLowerCase() === 'closed';
+        const previousCard = closed ? previousConsultationCard(row) : null;
+        const button = previousCard?.button || card(`Consulta ${state(row.status)}`, date(row.encounter_dt), () => openCanonical(row), isOpen ? 'is-current' : 'is-voided');
         (isOpen ? current : previous).append(button);
+        if (previousCard) void appointmentVenue(row, button, previousCard.venue, seen, id);
         if (isOpen && !fallbackOpen) fallbackOpen = {button, row};
         if (row.status === 'closed' && !newestClosed) newestClosed = {button, row};
       }
@@ -244,7 +291,7 @@
       }
       offset += 25;
       show(content, true); show(more, !!data.has_more);
-      if (!current.children.length) current.textContent = 'Sin consulta activa.';
+      show(openSection, current.children.length > 0);
       if (!previous.children.length) previous.textContent = 'No hay consultas finalizadas o anuladas.';
       if (!legacy.children.length) legacy.textContent = 'No hay registros anteriores.';
       message('');
