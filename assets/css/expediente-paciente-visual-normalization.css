@@ -4608,3 +4608,9 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
     grid-template-columns:minmax(0,1fr);
   }
 }
+
+/* Keep the existing title and subtitle styles on one line when space allows. */
+#p-expediente #lon02-summary .lon02-head h3,
+#p-expediente #lon02-summary .lon02-head p {
+  display:inline;
+}
