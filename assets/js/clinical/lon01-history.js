@@ -23,6 +23,28 @@
     const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     return parts && months[Number(parts[2]) - 1] ? `${Number(parts[3])} ${months[Number(parts[2]) - 1]} ${parts[1]} · ${parts[4]}` : raw || 'Fecha no disponible';
   };
+  // Terminal encounter timestamps are stored in UTC without an API offset.
+  // Agenda's existing product timezone is America/Mexico_City. Encounter start
+  // and observation effective times may be local wall times, so they keep date().
+  const utcDate = value => {
+    const raw = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)) return date(raw);
+    const instant = new Date(`${raw.replace(' ', 'T')}Z`);
+    if (Number.isNaN(instant.getTime())) return date(raw);
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+      timeZone:'America/Mexico_City', year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hourCycle:'h23'
+    }).formatToParts(instant).map(part => [part.type, part.value]));
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return `${Number(parts.day)} ${months[Number(parts.month) - 1]} ${parts.year} · ${parts.hour}:${parts.minute}`;
+  };
+  const number = value => {
+    const raw = String(value ?? 'Sin valor');
+    const match = raw.match(/^(-?\d+)(?:\.(\d+))?$/);
+    if (!match || !match[2]) return raw;
+    const fraction = match[2].replace(/0+$/, '');
+    return fraction ? `${match[1]}.${fraction}` : match[1];
+  };
   const state = value => ({open:'En curso', closed:'Finalizada', voided:'Anulada'})[String(value || '').toLowerCase()] || 'Estado no disponible';
   const legacyType = value => ({historia_clinica:'Historia clínica anterior', exploracion_fisica:'Exploración física anterior'})[String(value || '')] || 'Registro clínico anterior';
   let patientId = '';
@@ -104,7 +126,7 @@
       if (request !== selection || seen !== epoch || selectedPatient() !== patientId) return;
       detailBody.replaceChildren();
       detailTitle.textContent = `Consulta ${state(item.status)}`;
-      detailMeta.textContent = `Encuentro canónico · ${date(item.event_datetime)}${item.closed_at ? ` · Finalizada ${date(item.closed_at)}` : ''}`;
+      detailMeta.textContent = `${date(item.event_datetime)}${item.closed_at ? ` · Finalizada ${utcDate(item.closed_at)}` : ''}`;
       detail.dataset.state = item.status;
       const indications = [];
       if ((item.amendments || []).length) indications.push('Con enmienda');
@@ -113,7 +135,7 @@
       let hint = origin.querySelector('.vis05-indicators');
       if (!hint) { hint = document.createElement('span'); hint.className = 'vis05-indicators'; origin.append(hint); }
       hint.textContent = indications.join(' · ');
-      if (item.status === 'voided') detailBody.append(line('Anulación', `${date(item.voided_at)} · ${item.void_reason || 'Motivo no disponible'}`));
+      if (item.status === 'voided') detailBody.append(line('Anulación', `${utcDate(item.voided_at)} · ${item.void_reason || 'Motivo no disponible'}`));
       const sections = item.sections || {};
       group('Contenido de la consulta', Object.entries({reason_evolution:'Motivo / Evolución', assessment:'Valoración', plan:'Plan', physical_exam:'Exploración'}).filter(([key]) => sections[key]), (target, [key, label]) => {
         const block = document.createElement('div'); block.className = key === 'reason_evolution' ? 'vis05-narrative' : 'vis05-section';
@@ -124,8 +146,8 @@
         }
         target.append(block);
       });
-      group('Mediciones de esta consulta', item.observations || [], (target, observation) => {
-        target.append(line(({blood_pressure:'Presión arterial',weight:'Peso',height:'Talla',temperature:'Temperatura',heart_rate:'Frecuencia cardíaca',respiratory_rate:'Frecuencia respiratoria',oxygen_saturation:'Saturación de oxígeno',pain:'Dolor'})[observation.code] || String(observation.code || 'Medición'), `${observation.systolic_mm_hg != null ? `${observation.systolic_mm_hg}/${observation.diastolic_mm_hg}` : observation.value_numeric ?? 'Sin valor'} ${observation.unit || ''} · ${date(observation.effective_at)} · ${({direct_measurement:'Medición directa',patient_report:'Informado por el paciente',import:'Importado'})[observation.source] || observation.source || 'Origen no disponible'}`));
+      group('SIGNOS VITALES DE ESTA CONSULTA', item.observations || [], (target, observation) => {
+        target.append(line(({blood_pressure:'Presión arterial',weight:'Peso',height:'Talla',temperature:'Temperatura',heart_rate:'Frecuencia cardíaca',respiratory_rate:'Frecuencia respiratoria',oxygen_saturation:'Saturación de oxígeno',pain:'Dolor'})[observation.code] || String(observation.code || 'Medición'), `${observation.systolic_mm_hg != null ? `${number(observation.systolic_mm_hg)} / ${number(observation.diastolic_mm_hg)}` : number(observation.value_numeric)} ${observation.unit || ''} · ${date(observation.effective_at)} · ${({direct_measurement:'Medición directa',patient_report:'Informado por el paciente',import:'Importado'})[observation.source] || observation.source || 'Origen no disponible'}`));
       });
       group('Documentos y resultados', documentRows, (target, documentRow) => {
         const label = documentRow.title || documentRow.document_type || 'Documento';
@@ -142,17 +164,17 @@
         }
       });
       group('Enmiendas del encuentro', item.amendments || [], (target, amendment) => {
-        target.append(line('Enmienda posterior; el original permanece conservado', `${date(amendment.amended_at)} · ${amendment.reason || 'Sin motivo disponible'}`));
+        target.append(line('Enmienda posterior; el original permanece conservado', `${utcDate(amendment.amended_at)} · ${amendment.reason || 'Sin motivo disponible'}`));
         if (amendment.correction?.text || amendment.correction?.narrative_text) target.append(line('Adenda', amendment.correction.text || amendment.correction.narrative_text));
         else appendObject(target, amendment.correction || {});
       });
       if (!detailBody.children.length) detailBody.append(line('Contenido', 'No hay contenido clínico registrado en esta consulta.'));
       reveal(focus);
-      message('Detalle de sólo lectura.');
+      message('');
     } catch (failure) { if (seen === epoch && request === selection) { message(failure.message, true); empty.textContent = 'No se pudo cargar el detalle. Selecciona de nuevo el registro para reintentar.'; } }
   }
   function openLegacy(row) {
-    message('Registro histórico de sólo lectura.');
+    message('');
     selection++; detail.dataset.state = 'legacy';
     detailBody.replaceChildren();
     detailTitle.textContent = `Registro histórico${row.status === 'draft' ? ' · Borrador' : ''}`;
@@ -202,7 +224,7 @@
         if (seenCanonical.has(row.encounter_key)) continue;
         seenCanonical.add(row.encounter_key);
         const isOpen = String(row.status).toLowerCase() === 'open';
-        const button = card(`Consulta ${state(row.status)}`, `Encuentro canónico · ${date(row.encounter_dt)}`, () => openCanonical(row), isOpen ? 'is-current' : row.status === 'voided' ? 'is-voided' : 'is-closed');
+        const button = card(`Consulta ${state(row.status)}`, date(row.encounter_dt), () => openCanonical(row), isOpen ? 'is-current' : row.status === 'voided' ? 'is-voided' : 'is-closed');
         (isOpen ? current : previous).append(button);
         if (isOpen && !fallbackOpen) fallbackOpen = {button, row};
         if (row.status === 'closed' && !newestClosed) newestClosed = {button, row};
@@ -214,7 +236,7 @@
       }
       offset += 25;
       show(content, true); show(more, !!data.has_more);
-      if (!current.children.length) current.textContent = 'No hay consulta en curso.';
+      if (!current.children.length) current.textContent = 'Sin consulta activa.';
       if (!previous.children.length) previous.textContent = 'No hay consultas finalizadas o anuladas.';
       if (!legacy.children.length) legacy.textContent = 'No hay registros anteriores.';
       message('');

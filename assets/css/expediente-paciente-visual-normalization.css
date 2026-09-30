@@ -4655,6 +4655,9 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #lon01-history .lon01-refresh:hover {background:#effbfe}
 /* The legacy embedded clinical editor remains mounted for compatibility, outside the visible read-only Historial. */
 #p-expediente #t-historial-atencion > .clinical-panel {display:none!important}
+#p-expediente #lon01-history .lon01-detail-head {align-items:center}
+#p-expediente #lon01-history .lon01-detail-head h4 {margin:0}
+@media(min-width:701px) {#p-expediente #lon01-history [data-lon01-close] {display:none}}
 #p-expediente :is(#lon01-history .lon01-columns h4,#t-datos .vis07-card h4,#t-estudios .vis06-detail h5,#t-consent .vis06-detail h5,#t-tratamiento .vis06-detail h5) {
   text-transform:uppercase;
   color:#07536e;
