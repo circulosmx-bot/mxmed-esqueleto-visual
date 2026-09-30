@@ -116,14 +116,14 @@
     const target = $('[data-lon02-measurements]');
     target.replaceChildren();
     const normalized = measurementRows(rows);
-    if (!normalized.length) { target.textContent = 'Sin mediciones comparables en los últimos 12 meses.'; return; }
+    if (!normalized.length) { target.textContent = 'Sin signos vitales recientes registrados.'; return; }
     normalized.forEach(row => measurementLine(target, row));
   }
 
   function render(data) {
     const recent = data.recent_encounters || [];
     // LON02 supplies a bounded, descending canonical history; never infer a visit from Agenda.
-    list('[data-lon02-recent]', recent.slice(0, 2), 'Sin consultas anteriores en el resumen disponible.', (target, row) => line(target, date(row.date), `Consulta ${state(row.status)}`));
+    list('[data-lon02-recent]', recent.slice(0, 2), 'Sin eventos clínicos recientes registrados.', (target, row) => line(target, date(row.date), `Consulta ${state(row.status)}`));
     // Already selected by LON07B latest-comparable authority. Do not re-sort observations.
     renderMeasurements(data.latest_measurements || []);
     const late = data.late_results || [];
@@ -134,7 +134,7 @@
       ...late.map(row => ({...row, context:'Recibido después del cierre'})),
       ...(data.recent_documents || []).filter(row => resultTypes.includes(String(row.type || '').trim().toLowerCase()) && !late.some(item => isSame(item, row))).map(row => ({...row, context:documentType(row.type)}))
     ];
-    compact('[data-lon02-results]', results, 'Sin órdenes pendientes ni resultados en el resumen disponible.', (target, row) => line(target, row.title, `${row.context} · ${date(row.date)}`), 2);
+    compact('[data-lon02-results]', results, 'Sin resultados recientes.', (target, row) => line(target, row.title, `${row.context} · ${date(row.date)}`), 2);
     content.classList.remove('d-none');
   }
   async function renderAppointment(id, request) {
@@ -160,7 +160,7 @@
       if (!item || !Object.hasOwn(item, 'next_appointment_at')) throw new Error('unavailable');
       target.replaceChildren();
       if (item.next_appointment_at) line(target, date(item.next_appointment_at), 'Hora de Agenda · Ciudad de México');
-      else target.textContent = 'Sin próxima cita registrada en Agenda.';
+      else target.textContent = 'Sin próxima cita programada.';
     } catch (_) {
       if (request === epoch && patient() === id) target.textContent = 'Próxima cita no disponible.';
     }
@@ -208,7 +208,7 @@
         const count = document.createElement('span'); count.className = 'lon02-pending-count';
         count.textContent = `${open.length} ${open.length === 1 ? 'pendiente clínico' : 'pendientes clínicos'}`;
         tasksTarget.append(count);
-      } else tasksTarget.textContent = 'Sin pendientes clínicos registrados.';
+      } else tasksTarget.textContent = 'Sin pendientes clínicos abiertos.';
       open.slice(0, 1).forEach(row => {
         const target = tasksTarget;
         const overdue = row.derived_due_state === 'OVERDUE';
