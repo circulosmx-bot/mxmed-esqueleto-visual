@@ -45,6 +45,7 @@ $draft=$service->createDraft($base,'s1');$id=(int)$draft['record']['session_id']
 check($draft['record']['status']==='DRAFT' && $draft['record']['lineage_root_id']===$id,'standalone draft');
 check($draft['record']['performed_by_role_snapshot']==='Fisioterapeuta','performer role snapshot');
 check($service->createDraft($base,'s1')['record']['session_id']===$id,'draft replay');
+rejects(fn()=> $service->createDraft($base+['note'=>'different'],'s1'),'IDEMPOTENCY_KEY_REUSED','session key conflict');
 $items=[['sequence'=>1,'type_key'=>'physical_therapy','title'=>'Ejercicios','note'=>null],['sequence'=>2,'type_key'=>'manual_therapy','title'=>'Movilización','note'=>'Suave']];
 $completion=['expected_version'=>1,'procedure_items'=>$items,'performed_local'=>'2026-09-29 14:30:00','performed_timezone'=>'America/Mexico_City','performed_utc_offset_minutes'=>-360];
 rejects(fn()=> $service->complete($id,1,array_replace($completion,['performed_utc_offset_minutes'=>-300]),'bad-offset'),'INVALID_PERFORMED_TIME','timezone offset mismatch');
@@ -57,11 +58,13 @@ rejects(fn()=> $service->editDraft($id,2,['title'=>'mutated']),'SESSION_NOT_EDIT
 rejects(fn()=> $service->complete($id,1,$completion,'complete-again'),'ROW_VERSION_CONFLICT','completion CAS');
 $history=$service->standaloneHistory();check(count($history)===1 && (int)$history[0]['session_id']===$id,'standalone projection');
 $correction=$service->correct($id,2,['correction_reason'=>'Dato corregido','outcome'=>'Mejoría'], 'correct-1');$new=(int)$correction['record']['session_id'];
+check((int)$service->correct($id,2,['correction_reason'=>'Dato corregido','outcome'=>'Mejoría'],'correct-1')['record']['session_id']===$new,'correction replay');
 check($new!==$id && $correction['record']['version_number']==2 && $correction['record']['replaces_session_id']==$id,'correction lineage');
 check($service->getSession($id)['outcome']===null && count($service->standaloneHistory())===1 && (int)$service->standaloneHistory()[0]['session_id']===$new,'original preserved and no duplicate');
 rejects(fn()=> $service->correct($id,2,['correction_reason'=>'Other'], 'correct-2'),'SESSION_NOT_CORRECTABLE','one successor');
 rejects(fn()=> $service->void($id,2,'Old version','void-old'),'SESSION_NOT_VOIDABLE','correction versus void');
 $void=$service->void($new,1,'Registro anulado','void-1');
+check($service->void($new,1,'Registro anulado','void-1')['record']['status']==='VOIDED','void replay');
 check($void['record']['status']==='VOIDED' && $void['record']['void_reason']==='Registro anulado' && $void['record']['procedure_items'][0]['title']==='Ejercicios','void retains clinical data');
 check(count($service->standaloneHistory())===0,'void excluded from projection');
 $enc=$service->createDraft(array_replace($base,['encounter_scope'=>'ENCOUNTER','encounter_ref_id'=>1]),'enc-1');$encId=(int)$enc['record']['session_id'];
