@@ -60,6 +60,10 @@
     root.querySelectorAll('.lon01-card').forEach(card => card.setAttribute('aria-pressed', String(card === button)));
     detailOrigin = button;
   }
+  function preserveDetailHeight() {
+    if (detail.classList.contains('d-none') || !matchMedia('(min-width:701px)').matches) return;
+    detail.style.minHeight = `${Math.max(detail.getBoundingClientRect().height, parseFloat(detail.style.minHeight) || 0)}px`;
+  }
   function reveal(focus = true) {
     show(empty, false); show(detail, true); root.classList.add('vis05-detail-open');
     if (focus) {
@@ -108,10 +112,15 @@
     } catch (_) { message('No se pudo abrir el archivo privado autorizado.', true); }
   }
   async function openCanonical(row, focus = true) {
-    const seen = epoch, request = ++selection, origin = detailOrigin;
-    show(detail, false); show(empty, true); empty.textContent = 'Cargando detalle…';
+    const seen = epoch, request = ++selection;
+    const hasDetail = !detail.classList.contains('d-none');
+    if (hasDetail) {
+      preserveDetailHeight();
+      detail.setAttribute('aria-busy', 'true');
+    } else {
+      show(empty, true); empty.textContent = 'Cargando detalle…';
+    }
     const key = String(row.encounter_key || '');
-    message('Cargando consulta histórica…');
     try {
       const item = await get(`encounters/${encodeURIComponent(key)}`);
       if (request !== selection || seen !== epoch || selectedPatient() !== patientId || String(item.patient_id) !== patientId) return;
@@ -128,13 +137,6 @@
       detailTitle.textContent = `Consulta ${state(item.status)}`;
       detailMeta.textContent = `${date(item.event_datetime)}${item.closed_at ? ` · Finalizada ${utcDate(item.closed_at)}` : ''}`;
       detail.dataset.state = item.status;
-      const indications = [];
-      if ((item.amendments || []).length) indications.push('Con enmienda');
-      if (documentRows.some(doc => Number(doc.created_after_final_note) === 1 && ['lab_result','lab_pdf','imaging_result','external_result','external_report'].includes(doc.document_type))) indications.push('Resultado posterior al cierre');
-      else if (documentRows.length) indications.push(`${documentRows.length} documento(s)`);
-      let hint = origin.querySelector('.vis05-indicators');
-      if (!hint) { hint = document.createElement('span'); hint.className = 'vis05-indicators'; origin.append(hint); }
-      hint.textContent = indications.join(' · ');
       if (item.status === 'voided') detailBody.append(line('Anulación', `${utcDate(item.voided_at)} · ${item.void_reason || 'Motivo no disponible'}`));
       const sections = item.sections || {};
       group('Contenido de la consulta', Object.entries({reason_evolution:'Motivo / Evolución', assessment:'Valoración', plan:'Plan', physical_exam:'Exploración'}).filter(([key]) => sections[key]), (target, [key, label]) => {
@@ -172,9 +174,12 @@
       reveal(focus);
       message('');
     } catch (failure) { if (seen === epoch && request === selection) { message(failure.message, true); empty.textContent = 'No se pudo cargar el detalle. Selecciona de nuevo el registro para reintentar.'; } }
+    finally { if (seen === epoch && request === selection) detail.removeAttribute('aria-busy'); }
   }
   function openLegacy(row) {
     message('');
+    preserveDetailHeight();
+    detail.removeAttribute('aria-busy');
     selection++; detail.dataset.state = 'legacy';
     detailBody.replaceChildren();
     detailTitle.textContent = `Registro histórico${row.status === 'draft' ? ' · Borrador' : ''}`;
@@ -194,11 +199,14 @@
     const title = document.createElement('strong'); title.textContent = label;
     const meta = document.createElement('span'); meta.textContent = subline;
     button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('aria-controls', 'lon01-detail');
     button.append(title, meta);
     if (className === 'is-current') {
       const badge = document.createElement('span'); badge.className = 'lon01-state'; badge.textContent = 'EN CURSO';
       button.append(badge);
     }
+    const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
+    button.append(chevron);
     button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); action(); });
     return button;
   }
@@ -206,7 +214,7 @@
     if (paging && !reset) return;
     const id = selectedPatient();
     if (reset) {
-      epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active'); fallbackOpen = null; root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
+      epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active'); fallbackOpen = null; root.classList.remove('vis05-detail-open'); detail.style.minHeight = ''; detail.removeAttribute('aria-busy'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; paging = false; patientId = id; offset = 0; seenCanonical.clear(); seenLegacy.clear();
       current.replaceChildren(); previous.replaceChildren(); legacy.replaceChildren(); detailBody.replaceChildren();
       show(detail, false); show(content, false); show(more, false); show(error, false);
     }
@@ -263,7 +271,7 @@
   }
   $('[data-lon01-refresh]').addEventListener('click', () => load(true));
   more.addEventListener('click', () => load());
-  $('[data-lon01-close]').addEventListener('click', () => { selection++; root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; show(detail, false); detailBody.replaceChildren(); (detailOrigin?.isConnected ? detailOrigin : $('[data-lon01-refresh]')).focus(); });
+  $('[data-lon01-close]').addEventListener('click', () => { selection++; detail.removeAttribute('aria-busy'); root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; show(detail, false); detailBody.replaceChildren(); (detailOrigin?.isConnected ? detailOrigin : $('[data-lon01-refresh]')).focus(); });
   for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, () => load(true));
   pane.querySelector('[data-bs-target="#t-historial-atencion"]')?.addEventListener('shown.bs.tab', () => load(true));
   new MutationObserver(() => { if (selectedPatient() !== patientId) load(true); }).observe(pane, {attributes:true, attributeFilter:['data-patient-id','data-active-patient-id']});
