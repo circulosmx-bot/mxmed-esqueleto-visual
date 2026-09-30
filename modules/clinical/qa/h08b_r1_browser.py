@@ -136,7 +136,7 @@ with sync_playwright() as p:
         else:
             assert 'Sin consulta activa.' not in page.locator('#lon01-history').inner_text()
             if width>700:
-                left=cards.first.bounding_box()['y'];right=page.locator('[data-lon01-detail]').bounding_box()['y']
+                left=page.locator('.lon01-list-column').bounding_box()['y'];right=page.locator('[data-lon01-detail]').bounding_box()['y']
                 assert abs(left-right)<1,(left,right)
         assert all(call['method']=='GET' for call in page.evaluate('qaCalls'))
         print(f'{width}x{height} open={has_open}: PASS')

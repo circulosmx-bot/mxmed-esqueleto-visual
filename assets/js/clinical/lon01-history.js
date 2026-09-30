@@ -16,6 +16,10 @@
   const detailMeta = $('[data-lon01-detail-meta]');
   const detailBody = $('[data-lon01-detail-body]');
   const timeline = $('.vis05-timeline');
+  const listColumn = $('.lon01-list-column');
+  const filters = $('[data-lon01-filters]');
+  const filterEmpty = $('[data-lon01-filter-empty]');
+  const filterButtons = [...filters.querySelectorAll('[data-lon01-filter]')];
   const selectedPatient = () => String(pane.dataset.patientId || pane.dataset.activePatientId || '').trim();
   const show = (node, visible) => node.classList.toggle('d-none', !visible);
   const date = value => {
@@ -71,6 +75,8 @@
   let detailOrigin = null;
   let selection = 0;
   let autoSelectPending = false;
+  let activeFilter = 'all';
+  const selectActions = new WeakMap();
   const empty = $('[data-vis05-empty]');
   function selectCard(button) {
     root.querySelectorAll('[aria-controls="lon01-detail"][aria-pressed]').forEach(card => card.setAttribute('aria-pressed', String(card === button)));
@@ -84,9 +90,10 @@
     }
     const footer = document.querySelector('.mm-footer');
     const footerHeight = footer && getComputedStyle(footer).display !== 'none' ? footer.getBoundingClientRect().height : 0;
-    const timelineTop = timeline.getBoundingClientRect().top + window.scrollY;
+    const timelineTop = listColumn.getBoundingClientRect().top + window.scrollY;
     const available = Math.max(180, Math.floor(window.innerHeight - timelineTop - footerHeight - 32));
     root.style.setProperty('--lon01-viewport-height', `${available}px`);
+    root.style.setProperty('--lon01-filter-height', `${filters.classList.contains('d-none') ? 0 : filters.getBoundingClientRect().height + 8}px`);
     requestAnimationFrame(() => timeline.classList.toggle('is-scrollable', timeline.scrollHeight > timeline.clientHeight + 1));
   }
   function revealAutoSelected(button) {
@@ -286,7 +293,7 @@
     } catch (failure) { if (seen === epoch && request === selection) { message(failure.message, true); empty.textContent = 'No se pudo cargar el detalle. Selecciona de nuevo el registro para reintentar.'; } }
     finally { if (seen === epoch && request === selection) detail.removeAttribute('aria-busy'); }
   }
-  function openLegacy(row) {
+  function openLegacy(row, focus = true) {
     message('');
     preserveDetailHeight();
     detail.removeAttribute('aria-busy');
@@ -302,7 +309,7 @@
       detailBody.append(heading); appendObject(detailBody, row.payload);
     }
     if (!detailBody.children.length) detailBody.append(line('Contenido', 'Este registro no contiene información visible.'));
-    reveal();
+    reveal(focus);
   }
   function card(label, subline, action, className = '') {
     const button = document.createElement('button'); button.type = 'button'; button.className = `lon01-card ${className}`;
@@ -317,7 +324,9 @@
     }
     const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
     button.append(chevron);
-    button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); action(); });
+    const choose = focus => { autoSelectPending = false; selectCard(button); action(focus); };
+    selectActions.set(button, choose);
+    button.addEventListener('click', () => choose(true));
     return button;
   }
   function previousConsultationCard(row) {
@@ -332,7 +341,10 @@
     copy.append(title, when, venue);
     const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
     button.append(iconBox, copy, chevron);
-    button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); openCanonical(row); });
+    button.dataset.lon01Kind = 'consultations';
+    const choose = focus => { autoSelectPending = false; selectCard(button); void openCanonical(row, focus); };
+    selectActions.set(button, choose);
+    button.addEventListener('click', () => choose(true));
     return {button, venue};
   }
   function openConsultationCard(id) {
@@ -345,6 +357,7 @@
     copy.append(title, action);
     const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
     button.append(iconBox, copy, chevron);
+    button.dataset.lon01Kind = 'consultations';
     button.addEventListener('click', () => { if (selectedPatient() === id) void window.mxmedM7OpenFromHeader?.(id, 'resume'); });
     return button;
   }
@@ -361,7 +374,10 @@
     copy.append(title, meta);
     const chevron = document.createElement('span'); chevron.className = 'material-symbols-rounded lon01-event-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = 'chevron_right';
     button.append(icon, copy, chevron);
-    button.addEventListener('click', () => { autoSelectPending = false; selectCard(button); void openDocument(row); });
+    button.dataset.lon01Kind = prescriptionTypes.has(row.document_type) ? 'prescriptions' : 'studies';
+    const choose = focus => { autoSelectPending = false; selectCard(button); void openDocument(row, focus); };
+    selectActions.set(button, choose);
+    button.addEventListener('click', () => choose(true));
     return button;
   }
   function sortedHistory(canonical, documents) {
@@ -405,6 +421,38 @@
       cursors.add(cursor);
     }
   }
+  function applyFilter(next, changed = true) {
+    activeFilter = next;
+    for (const button of filterButtons) button.setAttribute('aria-pressed', String(button.dataset.lon01Filter === next));
+    const items = [...current.querySelectorAll('[data-lon01-kind]'), ...previous.querySelectorAll('[data-lon01-kind]')];
+    for (const item of items) item.hidden = next !== 'all' && item.dataset.lon01Kind !== next;
+    const visible = items.filter(item => !item.hidden);
+    show(openSection, [...current.children].some(item => !item.hidden));
+    if (!previous.children.length) show(previous, next === 'all');
+    const emptyLabels = {
+      consultations:'Sin consultas registradas.',
+      prescriptions:'Sin recetas independientes registradas.',
+      studies:'Sin estudios independientes registrados.'
+    };
+    filterEmpty.textContent = visible.length ? '' : emptyLabels[next] || '';
+    show(filterEmpty, next !== 'all' && visible.length === 0);
+    if (!changed) return;
+    timeline.scrollTop = 0;
+    const selectedVisible = detailOrigin?.isConnected && !detailOrigin.hidden;
+    if (!selectedVisible) {
+      selection++;
+      detail.removeAttribute('aria-busy');
+      detailOrigin = null;
+      detailBody.replaceChildren();
+      show(detail, false);
+      root.classList.remove('vis05-detail-open');
+      empty.textContent = visible.length ? 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.' : filterEmpty.textContent || 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.';
+      show(empty, true);
+      const firstDetail = visible.find(item => selectActions.has(item));
+      if (firstDetail) selectActions.get(firstDetail)(false);
+    }
+    requestAnimationFrame(fitTimelineViewport);
+  }
   async function load() {
     const id = selectedPatient();
     epoch++; selection++; detailOrigin = null; autoSelectPending = !!root.closest('#t-historial-atencion.active');
@@ -413,7 +461,9 @@
     patientId = id; doctorId = '';
     current.replaceChildren(); previous.replaceChildren(); legacy.replaceChildren(); detailBody.replaceChildren();
     appointments.clear(); officeNames.clear(); show(openSection, false);
-    show(detail, false); show(content, false); show(error, false);
+    show(detail, false); show(content, false); show(filters, false); show(filterEmpty, false); show(error, false);
+    activeFilter = 'all';
+    for (const button of filterButtons) button.setAttribute('aria-pressed', String(button.dataset.lon01Filter === 'all'));
     timeline.scrollTop = 0;
     if (!id) { status.textContent = 'Selecciona un paciente para ver su historial.'; return; }
     const seen = epoch;
@@ -435,17 +485,19 @@
         if (event.kind === 'document') { previous.append(documentEventRow(event.row, event.clock)); continue; }
         const row = event.row;
         const previousCard = String(row.status).toLowerCase() === 'closed' ? previousConsultationCard(row) : null;
-        const button = previousCard?.button || card(`Consulta ${state(row.status)}`, date(row.encounter_dt), () => openCanonical(row), 'is-voided');
+        const button = previousCard?.button || card(`Consulta ${state(row.status)}`, date(row.encounter_dt), focus => openCanonical(row, focus), 'is-voided');
+        button.dataset.lon01Kind = 'consultations';
         previous.append(button);
         if (previousCard) void appointmentVenue(row, button, previousCard.venue, seen, id);
         if (row.encounter_key === newestClosed?.encounter_key) newestClosedButton = button;
       }
       for (const row of history.historical) {
-        legacy.append(card(`Registro histórico${row.status === 'draft' ? ' · Borrador' : ''}`, `${legacyType(row.note_type)} · fecha de consulta no confirmada`, () => openLegacy(row), 'is-legacy'));
+        legacy.append(card(`Registro histórico${row.status === 'draft' ? ' · Borrador' : ''}`, `${legacyType(row.note_type)} · fecha de consulta no confirmada`, focus => openLegacy(row, focus), 'is-legacy'));
       }
       show(content, true);
-      show(openSection, current.children.length > 0);
       if (!previous.children.length) previous.textContent = 'No hay consultas finalizadas o anuladas.';
+      show(filters, true);
+      applyFilter('all', false);
       message('');
       fitTimelineViewport();
       if (autoSelectPending && newestClosed && newestClosedButton) {
@@ -457,8 +509,22 @@
       autoSelectPending = false;
     } catch (failure) { if (seen === epoch) { autoSelectPending = false; message(failure.message, true); } }
   }
+  filters.addEventListener('click', event => {
+    const button = event.target.closest('[data-lon01-filter]');
+    if (button && button.dataset.lon01Filter !== activeFilter) applyFilter(button.dataset.lon01Filter);
+  });
+  filters.addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    const index = filterButtons.indexOf(document.activeElement);
+    if (index < 0) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? filterButtons.length - 1
+      : (index + (event.key === 'ArrowRight' ? 1 : -1) + filterButtons.length) % filterButtons.length;
+    filterButtons[next].focus({preventScroll:true});
+    if (filterButtons[next].dataset.lon01Filter !== activeFilter) applyFilter(filterButtons[next].dataset.lon01Filter);
+  });
   $('[data-lon01-refresh]').addEventListener('click', load);
-  $('[data-lon01-close]').addEventListener('click', () => { selection++; detail.removeAttribute('aria-busy'); root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; show(detail, false); detailBody.replaceChildren(); (detailOrigin?.isConnected ? detailOrigin : $('[data-lon01-refresh]')).focus(); });
+  $('[data-lon01-close]').addEventListener('click', () => { const returnFocus = detailOrigin?.isConnected ? detailOrigin : $('[data-lon01-refresh]'); selection++; detail.removeAttribute('aria-busy'); root.classList.remove('vis05-detail-open'); show(empty, true); empty.textContent = 'Selecciona una consulta o un registro para revisar su detalle de sólo lectura.'; show(detail, false); detailBody.replaceChildren(); root.querySelectorAll('[aria-controls="lon01-detail"][aria-pressed]').forEach(card => card.setAttribute('aria-pressed', 'false')); detailOrigin = null; returnFocus.focus(); });
   for (const name of ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']) window.addEventListener(name, load);
   pane.querySelector('[data-bs-target="#t-historial-atencion"]')?.addEventListener('shown.bs.tab', load);
   window.addEventListener('resize', fitTimelineViewport);
