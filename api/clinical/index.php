@@ -13,6 +13,7 @@ require_once __DIR__ . '/../_lib/clinical_longitudinal_medications.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_tasks.php';
 require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
 require_once __DIR__ . '/../_lib/clinical_document_timeline_read.php';
+require_once __DIR__ . '/../_lib/clinical_treatment_routes.php';
 
 clinical_m6_observability_request_started_at();
 
@@ -4113,6 +4114,7 @@ try {
             return;
         }
     }
+    if (clinical_treatment_route($method, $segments)) return;
     if ($method==='GET' && $segments===['longitudinal','follow-ups','agenda']) {
         $routeName='longitudinal/follow-ups/agenda';
         $context=clinical_require_doctor_context($routeName);if($context===null)return;

@@ -73,6 +73,12 @@ function clinical_idempotency_operation_validate(string $operationType): string
         'CREATE_POST_ENCOUNTER_RESULT',
         'CREATE_ENCOUNTER_AMENDMENT',
         'CREATE_DOCUMENT_AMENDMENT_OR_REPLACEMENT',
+        'CREATE_TREATMENT_PLAN',
+        'TRANSITION_TREATMENT_PLAN',
+        'CREATE_TREATMENT_SESSION',
+        'COMPLETE_TREATMENT_SESSION',
+        'VOID_TREATMENT_SESSION',
+        'CORRECT_TREATMENT_SESSION',
     ];
     if (!in_array($operationType, $allowed, true)) {
         throw new InvalidArgumentException('IDEMPOTENCY_OPERATION_UNSUPPORTED');
