@@ -44,6 +44,14 @@ try {
     <symbol id="provider-icon-catalog" viewBox="0 0 24 24"><path d="M8 3h8m-6 0v6L4 19a1.5 1.5 0 0 0 1.3 2h13.4a1.5 1.5 0 0 0 1.3-2L14 9V3M7 16h10"/></symbol>
     <symbol id="provider-icon-area" viewBox="0 0 24 24"><path d="M12 21s7-5.8 7-12a7 7 0 1 0-14 0c0 6.2 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></symbol>
     <symbol id="provider-icon-plan" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></symbol>
+    <symbol id="provider-icon-reviews" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-9l-5 3v-3H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="m8 11 2.4 2.4L16 8"/></symbol>
+    <symbol id="provider-icon-agenda" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-13 4h3m3 0h2m-8 4h3"/></symbol>
+    <symbol id="provider-icon-patients" viewBox="0 0 24 24"><circle cx="10" cy="8" r="3"/><path d="M3 20v-2a7 7 0 0 1 11-5.7M16 4a3 3 0 0 1 0 6m1 5 2 2 3-4"/></symbol>
+    <symbol id="provider-icon-orders" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H5V3h2Zm8 0v5h4M8 12h8m-8 4h6"/></symbol>
+    <symbol id="provider-icon-billing" viewBox="0 0 24 24"><path d="M5 3h14v18l-2-1.5-3 1.5-2-1.5-3 1.5-2-1.5L5 21V3Zm4 5h6M9 12h7m-7 4h4"/></symbol>
+    <symbol id="provider-icon-promotion" viewBox="0 0 24 24"><path d="M3 10h4l11-5v14L7 14H3v-4Zm4 4 2 6h4m5-11 3-2m-3 9 3 2"/></symbol>
+    <symbol id="provider-icon-reports" viewBox="0 0 24 24"><path d="M4 20V4m0 16h16M8 16v-4m4 4V8m4 8V6m4 10v-7"/></symbol>
+    <symbol id="provider-icon-notifications" viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5l-2 3Zm5 3h4M12 2v2"/></symbol>
   </svg>
   <div class="portal-shell">
     <header class="portal-header mx-global-header">

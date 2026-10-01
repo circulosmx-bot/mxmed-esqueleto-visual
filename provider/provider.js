@@ -12,41 +12,38 @@
   const accountToggle = document.getElementById('account-menu-toggle');
   const accountMenu = document.getElementById('account-menu');
   const desktopNav = window.matchMedia('(min-width: 841px)');
-  // Physician shell order, with provider ownership. Future rows remain absent until their own authority exists.
-  // Agenda: physician calendar grammar; organization, location, service, and resource/equipment ownership.
-  // Pacientes: physician list/header grammar; authorized provider orders, appointments, results, documents, and billing only.
-  // Órdenes/Resultados, Facturación, Promoción, Reportes, and Notificaciones inherit visual slots, not physician data scope.
-  // Provider full patient chart access is never granted by this navigation model.
+  // Physician shell order with provider scope. STRUCTURAL_ONLY never grants an API capability.
+  // Agenda will belong to organization/location/service/resource; Pacientes will show only authorized provider records.
+  const FUNCTIONAL = 'FUNCTIONAL', STRUCTURAL_ONLY = 'STRUCTURAL_ONLY';
   const modules = [
-    {key:'summary',title:'Resumen',placement:'header',live:true},
-    {key:'profile',title:'Perfil Empresarial',placement:'sidebar-group',live:true},
-    {key:'agenda',title:'Agenda',live:false},
-    {key:'patients',title:'Pacientes',live:false},
-    {key:'catalog',title:'Catálogo de Estudios',placement:'sidebar',live:true},
-    {key:'orders_results',title:'Órdenes y Resultados',live:false},
-    {key:'billing',title:'Facturación',live:false},
-    {key:'promotion',title:'Promoción',live:false},
-    {key:'reports',title:'Reportes',live:false},
-    {key:'notifications',title:'Notificaciones',live:false},
-    {key:'subscription',title:'Suscripción',placement:'header-plan',live:true}
+    {key:'summary',title:'Resumen',placement:'header',status:FUNCTIONAL,icon:'summary',description:'Estado actual de tu organización y su configuración.'},
+    {key:'profile',title:'Perfil Empresarial',subtitle:'información / administración',placement:'sidebar-group',status:FUNCTIONAL,icon:'building',children:[
+      {key:'company',title:'Información Empresarial',subtitle:'Datos de la organización',status:FUNCTIONAL,icon:'building',description:'Información registrada de tu organización.'},
+      {key:'locations',title:'Sucursales',subtitle:'Ubicación y contacto',status:FUNCTIONAL,icon:'building',description:'Administra ubicación y disponibilidad de cada sucursal.'},
+      {key:'team',title:'Equipo y accesos',subtitle:'Miembros e invitaciones',status:FUNCTIONAL,icon:'team',description:'Gestiona cuentas autorizadas para esta organización.'},
+      {key:'reviews',title:'Opiniones',subtitle:'Supervisión y comentarios',status:STRUCTURAL_ONLY,icon:'reviews',description:'Espacio de opiniones sobre servicios del proveedor.'}
+    ]},
+    {key:'agenda',title:'Agenda',subtitle:'programación',placement:'sidebar',status:STRUCTURAL_ONLY,icon:'agenda',description:'Programación de servicios del proveedor.'},
+    {key:'patients',title:'Pacientes',placement:'sidebar',status:STRUCTURAL_ONLY,icon:'patients',description:'Registros de pacientes vinculados a servicios del proveedor.'},
+    {key:'catalog',title:'Catálogo de Estudios',subtitle:'servicios y cobertura',placement:'sidebar',status:FUNCTIONAL,icon:'catalog',children:[
+      {key:'services',title:'Servicios por sucursal',heading:'Catálogo de Estudios',status:FUNCTIONAL,icon:'catalog',description:'Configura los estudios ofrecidos por cada sucursal.'},
+      {key:'areas',title:'Áreas de servicio',heading:'Catálogo de Estudios',status:FUNCTIONAL,icon:'area',description:'Define dónde puedes prestar servicios fuera de la sucursal.'}
+    ]},
+    {key:'orders_results',title:'Órdenes y Resultados',placement:'sidebar',status:STRUCTURAL_ONLY,icon:'orders',description:'Órdenes de servicio y resultados del proveedor.'},
+    {key:'billing',title:'Facturar',subtitle:'recibos y facturación',placement:'sidebar',status:STRUCTURAL_ONLY,icon:'billing',description:'Facturación de servicios del proveedor.'},
+    {key:'promotion',title:'Promoción',subtitle:'paquetes y promociones',placement:'sidebar',status:STRUCTURAL_ONLY,icon:'promotion',description:'Promociones y paquetes de servicios del proveedor.'},
+    {key:'reports',title:'Reportes',placement:'sidebar',status:STRUCTURAL_ONLY,icon:'reports',description:'Reportes de la organización cuando exista su autoridad.'},
+    {key:'notifications',title:'Notificaciones',subtitle:'centro de avisos',placement:'sidebar',status:STRUCTURAL_ONLY,icon:'notifications',description:'Avisos relacionados con la operación del proveedor.'},
+    {key:'subscription',title:'Suscripción',placement:'header-plan',status:FUNCTIONAL,icon:'plan',description:'Estado comercial de esta organización.'}
   ];
-  const sections = {profile:[['company','Información Empresarial'],['locations','Sucursales'],['team','Equipo y accesos']],catalog:[['services','Servicios por sucursal'],['areas','Áreas de servicio']]};
+  const sections = Object.fromEntries(modules.filter(module=>module.children).map(module=>[module.key,module.children]));
+  const moduleByKey = new Map(modules.flatMap(module=>[module,...(module.children||[])]).map(module=>[module.key,module]));
   const profileInformationTabs = [
     {key:'company',title:'Información Empresarial',live:true,mode:'read-only'},
     {key:'sanitary',title:'Información Sanitaria',live:false},
     {key:'facility_media',title:'Fotos de Instalaciones y Servicios',live:false}
   ];
-  // Only the current read-only company authority is exposed; the remaining provider tabs have no writer yet.
-  // Opiniones, Agenda, Pacientes, Órdenes y Resultados, Facturación, Promoción, Reportes and Notificaciones remain unexposed.
-  const moduleHeadings = {
-    summary:['Resumen','Estado actual de tu organización y su configuración.','summary'],
-    company:['Información Empresarial','Información registrada de tu organización.','company'],
-    locations:['Sucursales','Administra ubicación y disponibilidad de cada sucursal.','locations'],
-    team:['Equipo y accesos','Gestiona cuentas autorizadas para esta organización.','team'],
-    services:['Catálogo de Estudios','Configura los estudios ofrecidos por cada sucursal.','catalog'],
-    areas:['Catálogo de Estudios','Define dónde puedes prestar servicios fuera de la sucursal.','catalog'],
-    subscription:['Suscripción','Estado comercial de esta organización.','subscription']
-  };
+  // Sanitaria and facility media tabs stay hidden until an authoritative provider reader/writer exists.
   const fields = [['branch_name','Nombre de la sucursal'],['street','Calle'],['exterior_number','Número exterior'],['interior_number','Número interior'],['postal_code','Código postal'],['colonia','Colonia'],['municipality','Municipio o alcaldía'],['state_name','Estado'],['phone','Teléfono']];
   const material = fields.map(f => f[0]).filter(f => f !== 'phone');
   const state = { csrf:'', organizations:[], group:'', context:null, locations:[], primary:'summary', module:'summary', profileExpanded:true, branch:'', selectedLocation:'', editingLocation:false, selectedOffering:'', offerings:[], areas:[], subscription:null, team:null, invitations:[], catalog:[], categories:[], catalogSearch:'', catalogCategory:'', generation:0, controller:null, dirty:false, snapshot:'', pendingKey:'', pendingFingerprint:'' };
@@ -96,15 +93,15 @@
   function empty(title, copy='', button='') { return `<div class="empty"><strong>${esc(title)}</strong><span>${esc(copy)}</span>${button}</div>`; }
   function gate(name) { return `<div class="gate">${gated(name) ? gateText : 'Tu cuenta no tiene permiso para administrar esta sección.'}</div>`; }
   function setLoading(text='Cargando sección…') { content.innerHTML=`<p class="loading" role="status">${esc(text)}</p>`; }
-  const primaryFor = leaf => ['company','locations','team'].includes(leaf) ? 'profile' : leaf==='services'||leaf==='areas' ? 'catalog' : leaf;
-  const sectionVisible = leaf => leaf==='team' ? allowed('provider_team_manage') : state.context?.member_role!=='collaborator';
-  const availableSections = primary => (sections[primary]||[]).filter(([leaf])=>sectionVisible(leaf));
-  const primaryVisible = primary => primary==='summary'||primary==='subscription'||availableSections(primary).length>0;
+  const primaryFor = leaf => modules.find(module=>module.children?.some(section=>section.key===leaf))?.key || leaf;
+  const availableSections = primary => sections[primary] || [];
+  const primaryVisible = primary => moduleByKey.has(primary);
   const routeFor = leaf => primaryFor(leaf)==='profile' || primaryFor(leaf)==='catalog' ? `${primaryFor(leaf)}/${leaf}` : leaf;
   const routeFromHash = () => {
     const route=location.hash.slice(1);
     const leaf=route.includes('/') ? route.split('/')[1] : route;
-    return ['summary','subscription','company','locations','team','services','areas'].includes(leaf) && route===routeFor(leaf) && primaryVisible(primaryFor(leaf)) ? leaf : 'summary';
+    const entry=moduleByKey.get(leaf);
+    return entry && !entry.children && route===routeFor(leaf) ? leaf : 'summary';
   };
   function syncNavToggle() {
     const expanded=desktopNav.matches ? !layout.classList.contains('sidebar-collapsed') : layout.classList.contains('nav-open');
@@ -122,18 +119,22 @@
   document.addEventListener('click',event=>{if(!event.target.closest('.mx-hb-account')){accountMenu.hidden=true;accountToggle.setAttribute('aria-expanded','false');}});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!accountMenu.hidden){accountMenu.hidden=true;accountToggle.setAttribute('aria-expanded','false');accountToggle.focus();}});
   function renderNav() {
-    nav.innerHTML = modules.filter(m=>m.live && m.placement?.startsWith('sidebar') && primaryVisible(m.key)).map(m => {
-      if(m.key==='profile')return `<button type="button" class="menu-main ${state.primary==='profile'?'sb01-current-group':''}" data-group="profile" aria-controls="profile-submenu" aria-expanded="${state.profileExpanded}"><span class="txt"><span class="ttl">Perfil Empresarial</span><span class="sub">información / administración</span></span><span class="ico" aria-hidden="true">${shellIcon('building')}</span></button><div id="profile-submenu" class="menu-sub ${state.profileExpanded?'open':''}" data-group="profile" ${state.profileExpanded?'':'hidden'}>${availableSections('profile').map(([leaf,title])=>`<button type="button" class="menu-sub-btn ${state.module===leaf?'active':''}" data-section="${leaf}" ${state.module===leaf?'aria-current="page"':''}><span class="block"><span class="l1">${title}</span><span class="l2">${leaf==='company'?'Datos de la organización':leaf==='locations'?'Ubicación y contacto':'Miembros e invitaciones'}</span></span><span class="ico-right" aria-hidden="true">${shellIcon(leaf==='team'?'team':'building')}</span></button>`).join('<div class="menu-sep"></div>')}</div>`;
-      return `<button type="button" class="menu-main ${state.primary===m.key?'active':''}" data-primary="${m.key}" ${state.primary===m.key?'aria-current="page"':''}><span class="txt"><span class="ttl">${m.title}</span><span class="sub">servicios y cobertura</span></span><span class="ico" aria-hidden="true">${shellIcon('catalog')}</span></button>`;
+    const previousScroll=nav.scrollTop;
+    nav.innerHTML = modules.filter(module=>module.placement?.startsWith('sidebar')).map(module => {
+      if(module.placement==='sidebar-group')return `<button type="button" class="menu-main ${state.primary===module.key?'sb01-current-group':''}" data-group="${module.key}" aria-controls="profile-submenu" aria-expanded="${state.profileExpanded}"><span class="txt"><span class="ttl">${esc(module.title)}</span><span class="sub">${esc(module.subtitle)}</span></span><span class="ico" aria-hidden="true">${shellIcon(module.icon)}</span></button><div id="profile-submenu" class="menu-sub ${state.profileExpanded?'open':''}" data-group="${module.key}" ${state.profileExpanded?'':'hidden'}>${availableSections(module.key).map(section=>`<button type="button" class="menu-sub-btn ${state.module===section.key?'active':''}" data-section="${section.key}" ${state.module===section.key?'aria-current="page"':''} title="${esc(section.title)}"><span class="block"><span class="l1">${esc(section.title)}</span><span class="l2">${esc(section.subtitle)}</span></span><span class="ico-right" aria-hidden="true">${shellIcon(section.icon)}</span></button>`).join('<div class="menu-sep"></div>')}</div>`;
+      return `<button type="button" class="menu-main ${state.primary===module.key?'active':''}" data-primary="${module.key}" ${state.primary===module.key?'aria-current="page"':''} title="${esc(module.title)}"><span class="txt"><span class="ttl">${esc(module.title)}</span>${module.subtitle?`<span class="sub">${esc(module.subtitle)}</span>`:''}</span><span class="ico" aria-hidden="true">${shellIcon(module.icon)}</span></button>`;
     }).join('');
     nav.hidden = false;
     mobileToggle.hidden=false;
+    nav.scrollTop=previousScroll;
+    const selected=nav.querySelector('[aria-current="page"]');
+    if(selected && desktopNav.matches){const selectedBox=selected.getBoundingClientRect(),navBox=nav.getBoundingClientRect();if(selectedBox.bottom>navBox.bottom)nav.scrollTop+=selectedBox.bottom-navBox.bottom+6;else if(selectedBox.top<navBox.top)nav.scrollTop-=navBox.top-selectedBox.top+6;}
     nav.querySelector('[data-group="profile"]')?.addEventListener('click',()=>{state.profileExpanded=!state.profileExpanded;renderNav();});
-    nav.querySelectorAll('[data-primary]').forEach(button=>button.addEventListener('click',()=>switchModule(availableSections(button.dataset.primary)[0]?.[0]||button.dataset.primary)));
+    nav.querySelectorAll('[data-primary]').forEach(button=>button.addEventListener('click',()=>switchModule(availableSections(button.dataset.primary)[0]?.key||button.dataset.primary)));
     nav.querySelectorAll('[data-section]').forEach(button=>button.addEventListener('click',()=>switchModule(button.dataset.section)));
     const available=availableSections(state.primary);
     sectionNav.hidden=available.length===0;
-    sectionNav.innerHTML=available.map(([leaf,title])=>`<button type="button" class="mx-panel-tabs-link ${state.module===leaf?'active':''}" data-section="${leaf}" ${state.module===leaf?'aria-current="page"':''}><span class="tab-ico" aria-hidden="true">${shellIcon(leaf==='team'?'team':leaf==='services'?'catalog':leaf==='areas'?'area':'building')}</span><span class="mx-panel-tabs-label">${title}</span></button>`).join('');
+    sectionNav.innerHTML=available.map(section=>`<button type="button" class="mx-panel-tabs-link ${state.module===section.key?'active':''}" data-section="${section.key}" ${state.module===section.key?'aria-current="page"':''}><span class="tab-ico" aria-hidden="true">${shellIcon(section.icon)}</span><span class="mx-panel-tabs-label">${esc(section.title)}</span></button>`).join('');
     sectionNav.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>switchModule(button.dataset.section)));
   }
   function setIntro() {
@@ -144,7 +145,7 @@
     updatePlanHeader();
   }
   function updatePlanHeader() { const sub=state.subscription?.subscription;document.getElementById('provider-plan-name').textContent=sub?label(sub.status):(state.context?.commercial_entitled?'Activo':'Sin acceso'); }
-  function setModuleHeading() {const [title,description,icon]=moduleHeadings[state.module]||moduleHeadings.summary;document.getElementById('page-title').textContent=title;document.getElementById('page-subtitle').textContent=description;document.getElementById('page-icon').innerHTML=shellIcon(icon==='company'||icon==='locations'?'building':icon==='subscription'?'plan':icon==='team'?'team':icon==='catalog'?'catalog':'summary');}
+  function setModuleHeading() {const entry=moduleByKey.get(state.module)||moduleByKey.get('summary');document.getElementById('page-title').textContent=entry.heading||entry.title;document.getElementById('page-subtitle').textContent=entry.description||'';document.getElementById('page-icon').innerHTML=shellIcon(entry.icon);}
   async function bootstrap() {
     try {
       const session=await request('/api/identity/index.php/current-session');
@@ -172,11 +173,13 @@
   }
   async function switchModule(module, force=false, historyMode='push') {
     if (!state.context) return;
-    if (!primaryVisible(primaryFor(module)) || (sections[primaryFor(module)] && !availableSections(primaryFor(module)).some(([leaf])=>leaf===module))) return;
+    const entry=moduleByKey.get(module),primary=primaryFor(module);
+    if (!entry || entry.children || !primaryVisible(primary) || (sections[primary] && !availableSections(primary).some(section=>section.key===module))) return;
     if (!force && !guard()) return;
-    const generation=newGeneration(); state.primary=primaryFor(module); state.module=module; if(state.primary==='profile')state.profileExpanded=true; state.dirty=false; state.selectedLocation=''; state.selectedOffering=''; state.editingLocation=false; clearAlert(); renderNav(); setModuleHeading(); closeMobileNav(); setLoading();
+    const generation=newGeneration(); state.primary=primary; state.module=module; if(state.primary==='profile')state.profileExpanded=true; state.dirty=false; state.selectedLocation=''; state.selectedOffering=''; state.editingLocation=false; clearAlert(); renderNav(); setModuleHeading(); closeMobileNav(); setLoading();
     if(historyMode!=='none')history[historyMode==='replace'?'replaceState':'pushState'](null,'','#'+routeFor(module));
     try {
+      if (entry.status===STRUCTURAL_ONLY) { renderStructural(entry); return; }
       if (module==='summary') await loadSummary(generation);
       if (module==='company') loadCompany();
       if (module==='locations') await loadLocations(generation);
@@ -196,6 +199,14 @@
     const data=await request(orgPath('locations'),'GET',undefined,state.controller.signal);
     if(generation!==state.generation)return;
     state.locations=data.locations||[];
+  }
+  function renderStructural(entry) {
+    const message='Este módulo se incorporará durante la construcción del Perfil Proveedor.';
+    if(entry.key==='patients'){
+      content.innerHTML=`<div class="structural-patient-shell"><section class="structural-patient-list"><h2>Lista de pacientes</h2><div class="structural-placeholder"><span class="structural-placeholder-icon" aria-hidden="true">${shellIcon(entry.icon)}</span><p>${message}</p></div></section><section class="structural-patient-detail"><h2>Detalle del paciente</h2><p>Esta vista se limitará a la identidad básica y a los registros autorizados de servicios del proveedor.</p></section></div>`;
+      return;
+    }
+    content.innerHTML=`<div class="structural-placeholder"><span class="structural-placeholder-icon" aria-hidden="true">${shellIcon(entry.icon)}</span><p>${message}</p></div>`;
   }
   function loadCompany() {
     const context=state.context;
