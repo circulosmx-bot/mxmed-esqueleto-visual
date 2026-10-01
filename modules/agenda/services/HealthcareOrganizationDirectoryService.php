@@ -137,6 +137,10 @@ final class HealthcareOrganizationDirectoryService
             FROM medical_groups WHERE group_id=:group_id');
         $stmt->execute(['group_id' => $groupId]);
         $organization = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->prepare('SELECT operational_state,verification_state
+            FROM healthcare_organization_provider_status WHERE group_id=:group_id');
+        $stmt->execute(['group_id' => $groupId]);
+        $organization['provider_status'] = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         $stmt = $this->pdo->prepare('SELECT location_id,location_uuid,branch_name,operational_state,verification_state,
             street,exterior_number,interior_number,postal_code,colonia,municipality,state_name,
@@ -145,7 +149,7 @@ final class HealthcareOrganizationDirectoryService
         $stmt->execute(['group_id' => $groupId]);
         $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($locations as &$location) {
-            $stmt = $this->pdo->prepare('SELECT o.study_type_id,s.study_type_key,s.display_name_es,s.category_key,
+            $stmt = $this->pdo->prepare('SELECT o.offering_id,o.study_type_id,s.study_type_key,s.display_name_es,s.category_key,
                 s.is_active AS study_type_active,o.operational_state,o.verification_state,o.service_mode,
                 o.requires_appointment,o.preparation_instructions
                 FROM healthcare_organization_location_study_offerings o
@@ -153,6 +157,15 @@ final class HealthcareOrganizationDirectoryService
                 WHERE o.location_id=:location_id ORDER BY o.study_type_id');
             $stmt->execute(['location_id' => $location['location_id']]);
             $location['offerings'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($location['offerings'] as &$offering) {
+                $areas = $this->pdo->prepare('SELECT service_area_id,scope_type,region_key,operational_state,verification_state
+                    FROM healthcare_organization_location_study_service_areas
+                    WHERE offering_id=:offering_id ORDER BY service_area_id');
+                $areas->execute(['offering_id' => $offering['offering_id']]);
+                $offering['service_areas'] = $areas->fetchAll(PDO::FETCH_ASSOC);
+                unset($offering['offering_id']);
+            }
+            unset($offering);
             unset($location['location_id']);
         }
         unset($location);
@@ -270,10 +283,10 @@ final class HealthcareOrganizationDirectoryService
             $fields['operational_state'] = $this->state($data['operational_state']);
         }
         if (array_key_exists('service_mode', $data)) {
-            if ($data['service_mode'] !== 'ON_SITE') {
+            if (!in_array($data['service_mode'], ['ON_SITE','HOME_SERVICE','MOBILE'], true)) {
                 throw new InvalidArgumentException('invalid_service_mode');
             }
-            $fields['service_mode'] = 'ON_SITE';
+            $fields['service_mode'] = $data['service_mode'];
         }
         if (array_key_exists('requires_appointment', $data)) {
             if (!is_bool($data['requires_appointment'])) {
