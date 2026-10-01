@@ -111,7 +111,9 @@ $adminArea=callApi($api,actor('admin'),'POST',[...$org,'locations',$adminLoc['lo
     ['scope_type'=>'POSTAL_CODE','postal_code'=>'01000','submission_key'=>'prov04e-admin-area']);
 check($adminArea['verification_state']==='UNVERIFIED','QA_ADMIN_AREA');
 denied(fn()=>callApi($api,actor('admin'),'POST',[...$org,'invitations'],['invitee_account_id'=>'invitee','role'=>'collaborator','submission_key'=>'prov04e-admin-deny']),403,'FORBIDDEN','QA_ADMIN_INVITE_DENY');
-check(callApi($api,$a,'POST',[...$org,'members',callApi($api,$a,'GET',[...$org,'team'])['members'][1]['membership_id'],'suspend'])['status']==='suspended','QA_MEMBER_SUSPEND');
+$adminMember=array_values(array_filter(callApi($api,$a,'GET',[...$org,'team'])['members'],
+    static fn(array $member): bool=>$member['role_code']==='administrator'))[0];
+check(callApi($api,$a,'POST',[...$org,'members',$adminMember['membership_id'],'suspend'])['status']==='suspended','QA_MEMBER_SUSPEND');
 check(count(callApi($api,$a,'GET',[...$org,'study-types'])['items'])>=1,'QA_CATALOG');
 check($p->query('SELECT COUNT(*) FROM healthcare_organization_location_edit_events')->fetchColumn()>=2,'QA_LOCATION_AUDIT');
 check($p->query('SELECT COUNT(*) FROM healthcare_organization_locations')->fetchColumn()===3,'QA_RETRY_NO_DUPLICATE');

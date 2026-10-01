@@ -50,7 +50,8 @@ try {
 } catch (HealthcareOrganizationTeamException $e) {
     $status=match($e->reason) {
         'authentication_required'=>401,'invitation_not_found','organization_not_found','member_not_manageable'=>404,
-        'team_management_denied'=>403,'invalid_invitation_role','invalid_submission_key','self_invitation_denied','verified_account_required'=>422,
+        'team_management_denied'=>403,'invitee_resolution_rate_limited'=>429,
+        'invalid_invitation_role','invalid_submission_key','self_invitation_denied','verified_account_required'=>422,
         default=>409,
     };
     providerJson($status,['ok'=>false,'error'=>strtoupper($e->reason)]);

@@ -161,6 +161,20 @@ final class HealthcareOrganizationTeamService
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function listOwnPendingInvitations(?AuthenticatedAccessContext $actor): array
+    {
+        $accountId=$this->actorId($actor);
+        $this->locklessVerifiedAccount($accountId);
+        $stmt=$this->pdo->prepare("SELECT i.invitation_uuid,i.group_id,g.display_name AS organization_name,
+            i.intended_role,i.status,i.issued_at,i.expires_at
+            FROM healthcare_organization_membership_invitations i
+            JOIN medical_groups g ON g.group_id=i.group_id
+            WHERE i.invitee_account_id=? AND i.status='PENDING' AND i.expires_at>NOW(6)
+            ORDER BY i.issued_at,i.invitation_uuid");
+        $stmt->execute([$accountId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function suspendMember(?AuthenticatedAccessContext $actor,string $groupId,string $membershipId): array
     { return $this->changeMember($actor,$groupId,$membershipId,'SUSPENDED'); }
 
