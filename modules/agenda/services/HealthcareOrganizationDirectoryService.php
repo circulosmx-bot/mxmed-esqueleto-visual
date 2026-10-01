@@ -51,6 +51,46 @@ final class HealthcareOrganizationDirectoryService
         return $this->requireLocation($groupId, $locationUuid);
     }
 
+    /** Provider edit: lock the assertion, record changed fields and reverify material changes. */
+    public function updateLocationForProvider(string $groupId, string $locationUuid, array $data, string $actorAccountId): array
+    {
+        if ($this->pdo->inTransaction()) throw new RuntimeException('nested_transaction_denied');
+        $this->pdo->beginTransaction();
+        try {
+            $lock = $this->pdo->prepare('SELECT * FROM healthcare_organization_locations WHERE group_id=? AND location_uuid=? FOR UPDATE');
+            $lock->execute([$groupId, $locationUuid]);
+            $before = $lock->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($before)) throw new RuntimeException('location_not_found');
+            $after = $this->updateLocation($groupId, $locationUuid, $data);
+            $changed = [];
+            foreach (array_keys($data) as $field) {
+                if ((string)($before[$field] ?? '') !== (string)($after[$field] ?? '')) $changed[] = $field;
+            }
+            $material = (bool)array_intersect($changed, [
+                'branch_name','street','exterior_number','interior_number','postal_code','colonia',
+                'municipality','state_name','latitude','longitude','coordinate_source',
+            ]);
+            if ($material && $before['verification_state'] === 'VERIFIED') {
+                $this->pdo->prepare("UPDATE healthcare_organization_locations SET verification_state='UNVERIFIED',
+                    verification_actor_user_id=NULL,verification_at=NULL WHERE group_id=? AND location_uuid=?")
+                    ->execute([$groupId,$locationUuid]);
+                $after = $this->requireLocation($groupId, $locationUuid);
+            }
+            if ($changed !== []) {
+                $this->pdo->prepare('INSERT INTO healthcare_organization_location_edit_events
+                    (group_id,location_uuid,actor_account_id,changed_fields_json,material_change,
+                     previous_verification_state,new_verification_state) VALUES (?,?,?,?,?,?,?)')
+                    ->execute([$groupId,$locationUuid,$actorAccountId,json_encode($changed,JSON_THROW_ON_ERROR),
+                        $material ? 1 : 0,$before['verification_state'],$after['verification_state']]);
+            }
+            $this->pdo->commit();
+            return $after;
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function setLocationVerification(string $groupId, string $locationUuid, string $state, string $actorUserId): array
     {
         $this->requireLocation($groupId, $locationUuid);

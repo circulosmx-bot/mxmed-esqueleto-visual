@@ -138,6 +138,29 @@ final class HealthcareOrganizationTeamService
             'role_code'=>$member['role_code'],'status'=>$member['status']];
     }
 
+    /** Owner-only projections; private email and credential fields never leave this service. */
+    public function listMembers(?AuthenticatedAccessContext $actor,string $groupId): array
+    {
+        $this->requireTeam($actor,$groupId);
+        $stmt=$this->pdo->prepare("SELECT membership_id,account_id,role_code,status
+            FROM auth_account_memberships WHERE entity_group_id=? AND profile_doctor_id IS NULL
+            AND scope_code='organization' AND assignment_source IN
+            ('provider_claim_approval','provider_invitation_acceptance')
+            ORDER BY created_at,membership_id");
+        $stmt->execute([$groupId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function listPendingInvitations(?AuthenticatedAccessContext $actor,string $groupId): array
+    {
+        $this->requireTeam($actor,$groupId);
+        $stmt=$this->pdo->prepare("SELECT invitation_uuid,group_id,invitee_account_id,intended_role,status,
+            issued_at,expires_at FROM healthcare_organization_membership_invitations
+            WHERE group_id=? AND status='PENDING' AND expires_at>NOW(6) ORDER BY issued_at,invitation_uuid");
+        $stmt->execute([$groupId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function suspendMember(?AuthenticatedAccessContext $actor,string $groupId,string $membershipId): array
     { return $this->changeMember($actor,$groupId,$membershipId,'SUSPENDED'); }
 
