@@ -1,0 +1,150 @@
+/* Opt-in MXMED administrative primitives, adapted from the physician profile.
+   The physician page does not load this file. */
+@font-face{font-family:Carlito;src:url('/assets/fonts/mxmed-admin/carlito-regular-latin.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:Carlito;src:url('/assets/fonts/mxmed-admin/carlito-bold-latin.woff2') format('woff2');font-style:normal;font-weight:700;font-display:swap}
+@font-face{font-family:Asap;src:url('/assets/fonts/mxmed-admin/asap-latin.woff2') format('woff2');font-style:normal;font-weight:400 700;font-display:swap}
+@font-face{font-family:bootstrap-icons;src:url('/assets/fonts/mxmed-admin/bootstrap-icons.woff2') format('woff2');font-display:block}
+
+.mx-admin{
+  --mx-shell-sidebar-width:232px;
+  --mx-shell-header-height:82px;
+  --mx-shell-radius:14px;
+  --mx-shell-control-radius:9px;
+  font-family:Carlito,'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  color:var(--mx-shell-text);
+  background:var(--mx-shell-page);
+  margin:0;
+  min-width:320px;
+  font-synthesis:none;
+}
+.mx-admin.mx-theme-provider{
+  --mx-shell-primary:#08457c; /* Existing MXMED navy shell token. */
+  --mx-shell-primary-strong:#003152;
+  --mx-shell-accent:#00adc1;
+  --mx-shell-action:#00738f;
+  --mx-shell-surface:#fff;
+  --mx-shell-page:#eaf6fb;
+  --mx-shell-panel:#f2fbfc;
+  --mx-shell-border:#cbdbe2;
+  --mx-shell-text:#073b5a;
+  --mx-shell-muted:#5f7685;
+}
+.mx-admin *{box-sizing:border-box}
+.mx-admin [hidden]{display:none!important}
+.mx-admin :is(button,input,select,textarea){font:inherit}
+.mx-admin button{cursor:pointer}
+.mx-admin button:disabled{cursor:not-allowed;opacity:.58}
+.mx-admin a{color:var(--mx-shell-action)}
+.mx-admin :is(button,a,input,select,textarea):focus-visible{outline:3px solid var(--mx-shell-accent);outline-offset:2px}
+.mx-admin .bi::before{display:inline-block;font-family:bootstrap-icons!important;font-style:normal;font-weight:normal!important;line-height:1;-webkit-font-smoothing:antialiased}
+.mx-admin .bi-building::before{content:'\f1dd'}
+
+/* Same rail, header height, sidebar width, and content guide as the MXMED shell. */
+.mx-admin .portal-shell{min-height:100vh;display:flex;flex-direction:column}
+.mx-admin .portal-header{min-height:var(--mx-shell-header-height);background:var(--mx-shell-surface);display:grid;grid-template-columns:var(--mx-shell-sidebar-width) minmax(0,1fr);border-bottom:1px solid rgba(0,49,82,.12)}
+.mx-admin .portal-header-rail{background:var(--mx-shell-primary);display:flex;align-items:center;justify-content:center;color:#fff}
+.mx-admin .portal-header-rail-badge{width:40px;height:40px;display:grid;place-items:center;border:2px solid currentColor;border-radius:10px;font:700 1.35rem Asap,Carlito,sans-serif}
+.mx-admin .portal-header-main{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:10px 26px}
+.mx-admin .brand{display:flex;align-items:center;gap:17px;min-width:0}
+.mx-admin .brand img{width:198px;height:48px;object-fit:contain;object-position:left;flex:0 0 auto}
+.mx-admin .brand-context{font:600 1.08rem Asap,Carlito,sans-serif;color:var(--mx-shell-primary-strong);padding-left:18px;border-left:1px solid var(--mx-shell-border);white-space:nowrap}
+.mx-admin .header-right{display:flex;align-items:center;gap:10px;color:var(--mx-shell-muted);font-size:.88rem;min-width:0}
+.mx-admin .header-right label{font-weight:700}
+.mx-admin .header-right select{max-width:min(310px,28vw)}
+.mx-admin .organization-name{font-weight:700;color:var(--mx-shell-text);overflow-wrap:anywhere}
+.mx-admin .portal-main{flex:1;min-width:0}
+.mx-admin .portal-layout{display:grid;grid-template-columns:var(--mx-shell-sidebar-width) minmax(0,1fr);column-gap:18px;min-height:calc(100vh - var(--mx-shell-header-height) - 64px);padding-right:18px;background:var(--mx-shell-page)}
+.mx-admin .portal-workspace{min-width:0;align-self:start;margin:18px 0 28px;background:var(--mx-shell-panel);border:1px solid #b8e1eb;border-radius:var(--mx-shell-radius);padding:0 14px 16px;box-shadow:0 12px 28px rgba(0,49,82,.08)}
+
+/* The provider owns its navigation data and click handlers. These are visual states only. */
+.mx-admin .module-nav{background:var(--mx-shell-primary);color:#fff;display:flex;flex-direction:column;gap:10px;padding:16px 10px;min-width:0}
+.mx-admin .module-nav button{position:relative;width:100%;min-height:72px;display:flex;align-items:center;justify-content:center;padding:10px 48px 10px 12px;border:0;border-radius:12px;background:transparent;color:#fff;font:600 1.08rem Asap,Carlito,sans-serif;text-align:center;line-height:1.25}
+.mx-admin .module-nav button::after{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-family:bootstrap-icons!important;font-size:2.05rem;font-weight:normal;line-height:1}
+.mx-admin .module-nav button[data-primary=summary]::after{content:'\f3fc'}
+.mx-admin .module-nav button[data-primary=subscription]::after{content:'\f154'}
+.mx-admin .module-nav button[data-primary=profile]::after{content:'\f4d3'}
+.mx-admin .module-nav button[data-primary=catalog]::after{content:'\f28c'}
+.mx-admin .module-nav button:hover,.mx-admin .module-nav button:focus-visible{background:rgba(255,255,255,.14)}
+.mx-admin .module-nav button[aria-current=page]{background:var(--mx-shell-panel);color:var(--mx-shell-primary-strong);box-shadow:inset 4px 0 var(--mx-shell-accent);font-weight:700}
+.mx-admin .module-nav button[aria-current=page]::after{color:var(--mx-shell-action)}
+.mx-admin .module-nav button:focus-visible{outline:3px solid var(--mx-shell-accent);outline-offset:-3px}
+.mx-admin .mobile-nav-toggle{display:none}
+
+/* Physician panel heading, pale body, and pill-like subsection navigation. */
+.mx-admin .page-intro{display:flex;align-items:center;gap:13px;min-height:96px;margin:0 -14px 14px;padding:14px 18px;background:var(--mx-shell-primary);border-radius:var(--mx-shell-radius) var(--mx-shell-radius) 0 0;color:#fff}
+.mx-admin .page-intro-icon{font-size:2.65rem;line-height:1;flex:0 0 auto}
+.mx-admin .page-intro-copy{min-width:0;flex:1 1 auto}
+.mx-admin .page-intro .eyebrow{margin:0 0 3px;font:600 .72rem Asap,Carlito,sans-serif;letter-spacing:.07em;color:#c8eff4}
+.mx-admin .page-intro h1{margin:0;font-size:2rem;font-weight:700;line-height:1.12;overflow-wrap:anywhere}
+.mx-admin .page-intro p:last-child{margin:3px 0 0;font-size:.93rem;color:#e7f7f9}
+.mx-admin .status-chips{display:flex;justify-content:flex-end;gap:7px;flex-wrap:wrap;max-width:35%;align-self:center}
+.mx-admin .section-nav{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px;padding:7px;border:1px solid transparent;border-radius:12px;background:#eef5f7}
+.mx-admin .section-nav button{min-height:44px;padding:8px 15px;border:1px solid transparent;border-radius:9px;background:var(--mx-shell-surface);color:var(--mx-shell-text);font:700 .78rem Asap,Carlito,sans-serif;text-transform:uppercase}
+.mx-admin .section-nav button:hover{background:#e7f8fa;color:var(--mx-shell-primary-strong)}
+.mx-admin .section-nav button[aria-current=page]{background:var(--mx-shell-action);color:#fff}
+.mx-admin .content-panel{min-width:0;min-height:320px;padding:18px 20px 22px;border:1px solid rgba(7,59,90,.1);border-radius:16px;background:#f7fbfc;box-shadow:0 7px 22px rgba(7,59,90,.07)}
+.mx-admin .content-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.mx-admin .content-head h2{margin:0;color:var(--mx-shell-text);font-size:1.5rem;font-weight:700;line-height:1.15}
+.mx-admin .content-head p{margin:4px 0 0;color:var(--mx-shell-muted);font-size:.91rem}
+.mx-admin .portal-footer{min-height:64px;padding:20px 24px;background:var(--mx-shell-primary);color:#fff;font-size:.85rem;text-align:center}
+
+/* Opt-in administrative card, form, action, and state grammar. */
+.mx-admin :is(.metric,.card,.panel,.list-row,.empty){min-width:0;border:1px solid var(--mx-shell-border);border-radius:var(--mx-shell-radius);background:var(--mx-shell-surface);box-shadow:none}
+.mx-admin :is(.metric,.card,.panel){padding:16px}
+.mx-admin .metric .label{display:block;color:var(--mx-shell-text);font:700 .76rem Asap,Carlito,sans-serif;letter-spacing:.03em;text-transform:uppercase}
+.mx-admin .metric strong{display:block;margin:7px 0 3px;color:var(--mx-shell-text);font-size:1.55rem;overflow-wrap:anywhere}
+.mx-admin :is(.metric small,.muted,.inline-note,.subtle){color:var(--mx-shell-muted)}
+.mx-admin .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mx-admin .field label{color:var(--mx-shell-text);font-weight:650;font-size:.88rem}
+.mx-admin :is(.field input,.field select,.field textarea,.header-right select){min-height:42px;padding:9px 11px;border:1px solid var(--mx-shell-border);border-radius:var(--mx-shell-control-radius);background:#fff;color:var(--mx-shell-text);box-shadow:none}
+.mx-admin .field textarea{min-height:84px;resize:vertical}
+.mx-admin :is(.field input,.field select,.field textarea,.header-right select):focus{border-color:var(--mx-shell-accent);outline:none;box-shadow:0 0 0 3px rgba(0,173,193,.18)}
+.mx-admin :is(.field input,.field select,.field textarea):disabled{background:#f2f6f8;color:#405d6c}
+.mx-admin .check-field{display:flex;align-items:center;gap:9px;font-size:.9rem}
+.mx-admin .check-field input{accent-color:var(--mx-shell-action)}
+.mx-admin .button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 15px;border:1px solid var(--mx-shell-action);border-radius:var(--mx-shell-control-radius);background:var(--mx-shell-action);color:#fff;font-weight:700;font-size:.88rem;text-align:center;line-height:1.2}
+.mx-admin .button:hover{background:var(--mx-shell-primary-strong);border-color:var(--mx-shell-primary-strong);color:#fff}
+.mx-admin .button.secondary{background:#fff;border-color:#63c8d2;color:var(--mx-shell-primary-strong)}
+.mx-admin .button.quiet{background:#f1fafb;border-color:#b9ced7;color:#284f62}
+.mx-admin .button.danger{background:#fff;border-color:#b77d7d;color:#923232}
+.mx-admin .button.danger:hover{background:#fff2ef;border-color:#923232;color:#762626}
+.mx-admin .button:disabled{background:#f0f4f6;border-color:#d5e0e5;color:#6d8089}
+.mx-admin .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid #b9ced7;border-radius:999px;background:#eef5f7;color:var(--mx-shell-text);font-size:.8rem;font-weight:700;white-space:normal}
+.mx-admin .chip.good{border-color:#b5dfcf;background:#e0f5ed;color:#11735f}
+.mx-admin .chip.warn{border-color:#f1dfb5;background:#fff2de;color:#865800}
+.mx-admin .list-row.selected{border-color:var(--mx-shell-accent);background:#eaf9fb;box-shadow:inset 4px 0 var(--mx-shell-accent)}
+.mx-admin .notice{padding:11px 14px;margin:0 0 14px;border:1px solid #b5dfcf;border-radius:9px;background:#e5f5ef;color:#146754;font-size:.9rem}
+.mx-admin .notice.error{border-color:#f1c8c0;background:#fff2ef;color:#9b4040}
+.mx-admin .notice.warn{border-color:#f1dfb5;background:#fff8e7;color:#865800}
+
+@media(max-width:840px){
+  .mx-admin{--mx-shell-sidebar-width:64px}
+  .mx-admin .portal-header-rail-badge{width:36px;height:36px;font-size:1.15rem}
+  .mx-admin .portal-layout{display:block;min-height:0;padding:14px}
+  .mx-admin .mobile-nav-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;padding:10px 15px;margin:0 0 14px;border:1px solid var(--mx-shell-primary);border-radius:10px;background:var(--mx-shell-primary);color:#fff;font:600 .95rem Asap,Carlito,sans-serif}
+  .mx-admin .mobile-nav-toggle:hover{background:var(--mx-shell-primary-strong)}
+  .mx-admin .module-nav{display:none;margin:0 0 14px;padding:8px;border-radius:12px;box-shadow:0 7px 22px rgba(7,59,90,.14)}
+  .mx-admin .portal-layout.nav-open .module-nav:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .mx-admin .module-nav button{min-height:54px;justify-content:flex-start;padding:9px 36px 9px 12px;text-align:left;font-size:.88rem}
+  .mx-admin .module-nav button::after{right:10px;font-size:1.45rem}
+  .mx-admin .portal-workspace{margin:0 0 14px}
+}
+@media(max-width:620px){
+  .mx-admin .portal-header-main{padding:10px 13px;flex-wrap:wrap;gap:8px}
+  .mx-admin .brand{width:100%;gap:8px}
+  .mx-admin .brand img{width:150px;height:40px}
+  .mx-admin .brand-context{padding-left:9px;font-size:.93rem}
+  .mx-admin .header-right{width:100%;justify-content:space-between;gap:6px}
+  .mx-admin .header-right select{max-width:65%;min-height:38px}
+  .mx-admin .portal-workspace{padding:0 10px 10px}
+  .mx-admin .page-intro{margin:0 -10px 12px;padding:12px;gap:9px;align-items:flex-start;flex-wrap:wrap}
+  .mx-admin .page-intro-icon{font-size:2rem;margin-top:9px}
+  .mx-admin .page-intro h1{font-size:1.45rem}
+  .mx-admin .page-intro p:last-child{font-size:.84rem}
+  .mx-admin .status-chips{max-width:none;width:100%;justify-content:flex-start;padding-left:41px}
+  .mx-admin .section-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mx-admin .section-nav button{padding:8px 5px;font-size:.71rem}
+  .mx-admin .content-panel{padding:15px;min-height:260px}
+  .mx-admin .content-head{align-items:flex-start;flex-direction:column}
+  .mx-admin .content-head h2{font-size:1.3rem}
+}

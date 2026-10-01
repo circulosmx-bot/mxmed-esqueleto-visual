@@ -32,21 +32,25 @@ try {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>Proveedor · México Médico</title>
+  <link rel="stylesheet" href="/assets/css/mxmed-admin-visual-primitives.css">
   <link rel="stylesheet" href="/provider/provider.css">
   <script src="/provider/provider.js" defer></script>
 </head>
-<body>
+<body class="mx-admin mx-theme-provider">
   <div class="portal-shell">
     <header class="portal-header">
-      <div class="brand"><img src="/assets/mexico-medico.svg" alt="México Médico"><span class="brand-divider" aria-hidden="true"></span><span class="brand-context">Proveedor</span></div>
-      <div class="header-right"><label for="organization-picker">Organización</label><select id="organization-picker" aria-label="Organización actual" hidden></select><span id="single-organization" class="organization-name"></span></div>
+      <div class="portal-header-rail" aria-hidden="true"><span class="portal-header-rail-badge">P</span></div>
+      <div class="portal-header-main">
+        <div class="brand"><img src="/assets/mexico-medico.svg" alt="México Médico"><span class="brand-context">Proveedor</span></div>
+        <div class="header-right"><label for="organization-picker">Organización</label><select id="organization-picker" aria-label="Organización actual" hidden></select><span id="single-organization" class="organization-name"></span></div>
+      </div>
     </header>
     <main class="portal-main">
       <div class="portal-layout">
         <button id="mobile-nav-toggle" class="mobile-nav-toggle" type="button" aria-controls="module-nav" aria-expanded="false" hidden>Secciones del proveedor <span aria-hidden="true">☰</span></button>
         <nav id="module-nav" class="module-nav" aria-label="Secciones del proveedor" hidden></nav>
         <div class="portal-workspace">
-          <div class="page-intro"><div><p class="eyebrow">PORTAL DE PROVEEDORES</p><h1 id="page-title">Tu organización</h1><p id="page-subtitle">Consulta y administra la configuración disponible para tu cuenta.</p></div><div id="status-chips" class="status-chips"></div></div>
+          <div class="page-intro"><span class="page-intro-icon bi bi-building" aria-hidden="true"></span><div class="page-intro-copy"><p class="eyebrow">PORTAL DE PROVEEDORES</p><h1 id="page-title">Tu organización</h1><p id="page-subtitle">Consulta y administra la configuración disponible para tu cuenta.</p></div><div id="status-chips" class="status-chips"></div></div>
           <div id="notice" role="status" aria-live="polite" class="notice" hidden></div>
           <nav id="section-nav" class="section-nav" aria-label="Secciones del módulo" hidden></nav>
           <section id="portal-content" class="content-panel" aria-live="polite"><p class="loading">Cargando organizaciones…</p></section>
