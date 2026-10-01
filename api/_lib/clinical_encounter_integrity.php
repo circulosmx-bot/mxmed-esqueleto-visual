@@ -263,6 +263,59 @@ function clinical_encounter_integrity_required_schema(): array
       'clinical_documents','clinical_document_participants'];
 }
 
+/** Accept exactly one complete, enforced idempotency constraint generation. */
+function clinical_encounter_integrity_idempotency_constraint_drift(PDO $pdo): array
+{
+    $specs = [
+        'v1' => [
+            'chk_idempotency_operation_v1' => ['operation_type','create_observation','create_encounter_document','create_post_encounter_result','create_encounter_amendment','create_document_amendment_or_replacement'],
+            'chk_idempotency_committed_result_v1' => ['committed_at','observation_id','document_id','encounter_amendment_id','document_revision_id','is null','is not null'],
+        ],
+        'trt04' => [
+            'chk_idempotency_operation_trt04' => ['operation_type','create_observation','create_encounter_document','create_post_encounter_result','create_encounter_amendment','create_document_amendment_or_replacement','create_treatment_plan','transition_treatment_plan','create_treatment_session','complete_treatment_session','void_treatment_session','correct_treatment_session'],
+            'chk_idempotency_committed_result_trt04' => ['operation_type','committed_at','observation_id','document_id','encounter_amendment_id','document_revision_id','treatment_plan_id','treatment_plan_event_id','treatment_session_id','treatment_result_json','create_treatment_plan','transition_treatment_plan','create_treatment_session','complete_treatment_session','void_treatment_session','correct_treatment_session','is null','is not null'],
+        ],
+    ];
+    $names = array_keys(array_merge(...array_values($specs)));
+    $marks = implode(',', array_fill(0, count($names), '?'));
+    $query = $pdo->prepare("SELECT tc.CONSTRAINT_NAME,tc.ENFORCED,cc.CHECK_CLAUSE
+        FROM information_schema.TABLE_CONSTRAINTS tc
+        JOIN information_schema.CHECK_CONSTRAINTS cc
+          ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME
+        WHERE tc.CONSTRAINT_SCHEMA=DATABASE() AND tc.TABLE_NAME='clinical_idempotency_requests'
+          AND tc.CONSTRAINT_TYPE='CHECK' AND tc.CONSTRAINT_NAME IN ($marks)");
+    $query->execute($names);
+    $found = [];
+    foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $found[(string)$row['CONSTRAINT_NAME']] = $row;
+    }
+    $complete = [];
+    foreach ($specs as $generation => $checks) {
+        $valid = true;
+        foreach ($checks as $name => $markers) {
+            $row = $found[$name] ?? null;
+            $clause = strtolower((string)($row['CHECK_CLAUSE'] ?? ''));
+            if ($row === null || (string)$row['ENFORCED'] !== 'YES' || $clause === '') { $valid = false; break; }
+            foreach ($markers as $marker) {
+                if (!str_contains($clause, $marker)) { $valid = false; break; }
+            }
+            if (!$valid) break;
+        }
+        if ($valid) $complete[] = $generation;
+    }
+    if (count($found) !== 2 || count($complete) !== 1) {
+        return ['clinical_idempotency_requests.idempotency_constraint_generation'];
+    }
+    $columns = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='clinical_idempotency_requests'")->fetchAll(PDO::FETCH_COLUMN);
+    $treatmentColumns = ['treatment_plan_id','treatment_plan_event_id','treatment_session_id','treatment_result_json'];
+    $installed = count(array_intersect($treatmentColumns, is_array($columns) ? $columns : []));
+    if (($complete[0] === 'v1' && $installed !== 0) || ($complete[0] === 'trt04' && $installed !== count($treatmentColumns))) {
+        return ['clinical_idempotency_requests.idempotency_constraint_generation'];
+    }
+    return [];
+}
+
 function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
 {
     $drift=[];
@@ -338,8 +391,6 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
         ['clinical_encounter_amendments','chk_encounter_amendment_reason_v1',['reason','char_length']],
         ['clinical_encounter_start_requests','chk_encounter_start_commit_v1',['committed_at','encounter_id']],
         ['clinical_idempotency_requests','chk_idempotency_context_v1',['context_type','encounter','patient']],
-        ['clinical_idempotency_requests','chk_idempotency_operation_v1',['create_observation','create_encounter_document','create_post_encounter_result','create_encounter_amendment','create_document_amendment_or_replacement']],
-        ['clinical_idempotency_requests','chk_idempotency_committed_result_v1',['committed_at','observation_id','document_id','encounter_amendment_id','document_revision_id']],
         ['clinical_document_revisions','chk_document_revision_reason_v1',['reason','char_length']],
     ];
     foreach($checks as [$table,$name,$markers]){
@@ -350,6 +401,7 @@ function clinical_encounter_integrity_assert_schema_ready(PDO $pdo): void
         if($clause===''){$drift[]=$table.'.'.$name;continue;}
         foreach($markers as $marker){if(!str_contains($clause,$marker))$drift[]=$table.'.'.$name;}
     }
+    array_push($drift, ...clinical_encounter_integrity_idempotency_constraint_drift($pdo));
 
     $foreignKeys=[
         ['clinical_encounter_sections','fk_encounter_sections_encounter','encounter_id','clinical_encounters','encounter_id'],
