@@ -25,6 +25,11 @@
   const node = (tag, text, cls='') => {const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
   const symbol = (name,cls='') => {const icon=node('span',name,`material-symbols-rounded ${cls}`);icon.setAttribute('aria-hidden','true');return icon;};
   const button = (text, action) => {const b=node('button',text,'btn btn-outline-primary btn-sm');b.type='button';b.addEventListener('click',action);return b;};
+  const openPortableOrder = uuid => {
+    if(!uuid || !professional)return;
+    const query=new URLSearchParams({uuid,doctor_id:professional});
+    window.open(`/modules/clinical/ui/portable-order.php?${query}`,'_blank','noopener');
+  };
   let orderComposerDialog=null;
   function openGeneralOrder(trigger){
     if(orderComposerDialog)return;
@@ -178,6 +183,14 @@
       node('p',`${projectionLabel(row)}${isOrder&&orderOrigin(row)?' · '+orderOrigin(row):''}`));
     header.append(iconBox,intro);
     if(isOrder)header.append(node('span',item.result_count?resultCount(item.result_count):'Sin resultados',`vis06-count ${item.result_count?'has-results':''}`));
+    if(isOrder&&['generated','signed'].includes(row.status)&&row.generated_at&&Number(row.has_successor)!==1&&row.document_uuid){
+      const ownerPatient=selectedPatient(),ownerDoctor=professional;
+      get(`doctors/${encodeURIComponent(ownerDoctor)}/portable-orders/${encodeURIComponent(row.document_uuid)}`).then(()=>{
+        if(request!==view.detailRequest||selectedPatient()!==ownerPatient||professional!==ownerDoctor)return;
+        const print=button('Imprimir',()=>openPortableOrder(row.document_uuid));
+        print.classList.add('vis06-order-print');header.append(print);
+      }).catch(()=>{});
+    }
     const mobileBack=button('Volver a la lista',()=>{view.workspace.classList.remove('is-detail-open');view.lastTrigger?.focus({preventScroll:true});});
     mobileBack.classList.add('vis06-mobile-back');view.detail.append(mobileBack,header);
     if(isOrder){

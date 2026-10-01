@@ -15,6 +15,7 @@ require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
 require_once __DIR__ . '/../_lib/clinical_document_timeline_read.php';
 require_once __DIR__ . '/../_lib/clinical_order_result_read.php';
 require_once __DIR__ . '/../_lib/clinical_study_contract.php';
+require_once __DIR__ . '/../_lib/clinical_portable_order.php';
 require_once __DIR__ . '/../_lib/clinical_study_catalog_read.php';
 require_once __DIR__ . '/../_lib/clinical_treatment_routes.php';
 
@@ -456,12 +457,7 @@ function clinical_has_active_doctor_patient_link(PDO $pdo, string $doctorId, str
 /** @return array{doctor_id:string,user_id:string}|null */
 function clinical_authenticated_doctor_context(): ?array
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start(['read_and_close' => true]);
-    }
-    $doctorId = trim((string)($_SESSION['doctor_id'] ?? $_SESSION['active_doctor_id'] ?? $_SESSION['mxmed_doctor_id'] ?? ''));
-    $userId = trim((string)($_SESSION['user_id'] ?? $_SESSION['mxmed_user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['actor_user_id'] ?? ''));
-    return ($doctorId !== '' && $userId !== '') ? ['doctor_id' => $doctorId, 'user_id' => $userId] : null;
+    return clinical_portable_doctor_context();
 }
 
 function clinical_appointment_matches_encounter_owner(PDO $pdo, string $appointmentId, string $doctorId, string $patientId): bool
@@ -1967,6 +1963,14 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args, bool $requir
 
     $doc['content']['payload'] = clinical_study_normalize_order_payload($pdo, (string)$doc['document_type'],
         (array)($doc['content']['payload'] ?? []));
+    if (clinical_study_order_type((string)$doc['document_type'])) {
+        $doctor = clinical_authenticated_doctor_context();
+        if ($doctor === null) throw new ClinicalPortableOrderException('No se pudo identificar al médico solicitante.', 422);
+        $doc['content']['payload'] = clinical_portable_issue_payload($pdo, $doc['content']['payload'],
+            (string)$doc['document_type'], $doctor['doctor_id'], (string)$doc['context']['patient_id'],
+            clinical_portable_text($doc['context']['appointment_id'] ?? '') ?: null,
+            (string)$doc['timestamps']['generated_at']);
+    }
     $doc['content']['payload'] = clinical_study_validate_result_payload($pdo, (string)$doc['document_type'],
         $doc['content']['payload'], (string)$doc['context']['patient_id'],
         ($doc['context']['encounter_id'] ?? null) === null ? null : (string)$doc['context']['encounter_id']);
@@ -2288,6 +2292,12 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
     clinical_m6_assert_legacy_write_allowed($patientId);
 
     $payloadData = clinical_study_normalize_order_payload($pdo, $documentType, $payloadData);
+    if (clinical_study_order_type($documentType)) {
+        $doctor = clinical_authenticated_doctor_context();
+        if ($doctor === null) throw new ClinicalPortableOrderException('No se pudo identificar al médico solicitante.', 422);
+        $payloadData = clinical_portable_issue_payload($pdo, $payloadData, $documentType,
+            $doctor['doctor_id'], $patientId, $appointmentId ?: null, gmdate('Y-m-d H:i:s'));
+    }
     $payloadData = clinical_study_validate_result_payload($pdo, $documentType, $payloadData,
         $patientId, $encounterId > 0 ? (string)$encounterId : null);
 
@@ -3836,6 +3846,14 @@ function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload
     $payloadData=is_array($payload['payload']??null)?$payload['payload']:[];
     $type=strtolower(trim((string)($payload['document_type']??'')));if($type==='')throw new InvalidArgumentException('DOCUMENT_TYPE_REQUIRED');
     $payloadData=clinical_study_normalize_order_payload($pdo,$type,$payloadData);
+    if (clinical_study_order_type($type)) {
+        $doctor = clinical_authenticated_doctor_context();
+        $doctorId = clinical_portable_text($encounterRow['doctor_id'] ?? ($doctor['doctor_id'] ?? ''));
+        if ($doctorId === '') throw new ClinicalPortableOrderException('No se pudo identificar al médico solicitante.', 422);
+        $payloadData = clinical_portable_issue_payload($pdo, $payloadData, $type, $doctorId,
+            (string)$encounterRow['patient_id'], clinical_portable_text($encounterRow['appointment_id'] ?? '') ?: null,
+            gmdate('Y-m-d H:i:s'));
+    }
     $payloadData=clinical_study_validate_result_payload($pdo,$type,$payloadData,
       (string)$encounterRow['patient_id'],isset($encounterRow['encounter_id'])?(string)$encounterRow['encounter_id']:null);
     $event=trim((string)($payload['event_datetime']??''));if($event==='')$event=gmdate('Y-m-d H:i:s');
@@ -3948,6 +3966,12 @@ function clinical_v1_document_amendment_insert(PDO $pdo,array $authorizedOrigina
     $sourcePayload=is_array($sourcePayload)?$sourcePayload:[];
     $replacement['payload']=clinical_study_normalize_order_payload($pdo,(string)$target['document_type'],
       (array)$replacement['payload'],$sourcePayload);
+    if (clinical_study_order_type((string)$target['document_type'])) {
+        $replacement['payload'] = clinical_portable_issue_payload($pdo, $replacement['payload'],
+            (string)$target['document_type'], (string)$doctorContext['doctor_id'],
+            (string)$target['patient_id'], clinical_portable_text($target['appointment_id'] ?? '') ?: null,
+            gmdate('Y-m-d H:i:s'));
+    }
     $replacement['payload']=clinical_study_validate_result_payload($pdo,(string)$target['document_type'],
       (array)$replacement['payload'],(string)$target['patient_id'],$encounterId>0?(string)$encounterId:null,$sourcePayload);
     require_once __DIR__ . '/../_lib/clinical_documents.php';
@@ -7472,6 +7496,12 @@ try {
                     return;
                 }
 
+                if (clinical_study_order_type($documentType)) {
+                    $payloadData = clinical_study_normalize_order_payload($pdo, $documentType, $payloadData);
+                    $payloadData = clinical_portable_issue_payload($pdo, $payloadData, $documentType,
+                        (string)$doctorContext['doctor_id'], $patientId, $appointmentId ?: null,
+                        gmdate('Y-m-d H:i:s'));
+                }
                 $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 if (!is_string($payloadJson)) {
                     $payloadJson = '{}';
@@ -8825,6 +8855,25 @@ try {
                 'meta'=>['route'=>'doctors/{doctor_id}/documents']],403);
             return;
         }
+        if ($method === 'GET' && count($segments) === 4 && ($segments[2] ?? '') === 'portable-orders') {
+            header('Cache-Control: private, no-store, max-age=0');
+            header('Pragma: no-cache');
+            $routeName = 'doctors/{doctor_id}/portable-orders/{document_uuid}';
+            try {
+                $model = clinical_portable_order_read(clinical_documents_pdo(),
+                    trim(rawurldecode((string)$segments[3])), $scopedDoctorId,
+                    (string)$scopedDoctorContext['user_id']);
+                clinical_send_response(['ok'=>true,'data'=>$model,'meta'=>['route'=>$routeName]], 200);
+            } catch (ClinicalPortableOrderException $error) {
+                clinical_send_response(['ok'=>false,'error'=>'portable_order_unavailable',
+                    'message'=>$error->reason,'data'=>null,'meta'=>['route'=>$routeName]], $error->httpStatus);
+            } catch (Throwable $error) {
+                clinical_send_response(['ok'=>false,'error'=>'server_error',
+                    'message'=>'No se pudo preparar la orden para impresión.','data'=>null,
+                    'meta'=>['route'=>$routeName]], 500);
+            }
+            return;
+        }
         if ($method === 'GET' && count($segments) === 3 && ($segments[2] ?? '') === 'study-types') {
             $routeName = 'doctors/{doctor_id}/study-types';
             try {
@@ -9895,6 +9944,14 @@ try {
                 } catch (Throwable $e) {
                     $statusValue = 'generated';
                 }
+                if (clinical_study_order_type($sourceType)) {
+                    unset($payloadData['portable_order_snapshot_version'], $payloadData['portable_order_snapshot']);
+                    if ($statusValue === 'generated') {
+                        $payloadData = clinical_portable_issue_payload($pdo, $payloadData, $sourceType,
+                            (string)$replicationContext['doctor_id'], $patientId, $appointmentId ?: null, $now);
+                    }
+                    $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                }
                 $values = [
                     'document_uuid' => $newUuid,
                     'document_type' => $sourceType,
@@ -10228,6 +10285,9 @@ try {
                 // This legacy endpoint accepts a string selection, not item identities.
                 unset($replacementPayload['order_items'], $replacementPayload['order_payload_version']);
                 $replacementPayload = clinical_study_normalize_order_payload($pdo, $newType, $replacementPayload, $sourcePayload);
+                $replacementPayload = clinical_portable_issue_payload($pdo, $replacementPayload, $newType,
+                    $scopedDoctorContext['doctor_id'], $patientId,
+                    clinical_portable_text($sourceRow['appointment_id'] ?? '') ?: null, gmdate('Y-m-d H:i:s'));
                 if (isset($replacementPayload['replaced_by_document_id'])) unset($replacementPayload['replaced_by_document_id']);
                 if (isset($replacementPayload['replaced_by_document_uuid'])) unset($replacementPayload['replaced_by_document_uuid']);
                 if (isset($replacementPayload['replacement_at'])) unset($replacementPayload['replacement_at']);

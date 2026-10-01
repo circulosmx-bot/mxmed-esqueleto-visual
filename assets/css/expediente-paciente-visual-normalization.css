@@ -4864,6 +4864,7 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
 #p-expediente #t-estudios .vis06-orders .vis06-detail-placeholder h4 {margin:0;color:#123f60;font-size:17px}
 #p-expediente #t-estudios .vis06-orders .vis06-detail-placeholder p {margin:0;color:#6c8ba1;font-size:13px}
 #p-expediente #t-estudios .vis06-orders .vis06-projected-head {display:flex;align-items:center;gap:10px;min-width:0;margin-bottom:12px}
+#p-expediente #t-estudios .vis06-orders .vis06-order-print {flex:none;white-space:nowrap}
 #p-expediente #t-estudios .vis06-orders .vis06-detail-icon {display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:9px;background:#e5f7f9;color:#079cb3}
 #p-expediente #t-estudios .vis06-orders .vis06-detail-icon .material-symbols-rounded {font-size:29px}
 #p-expediente #t-estudios .vis06-orders .vis06-projected-intro {flex:1;min-width:0}

@@ -72103,7 +72103,7 @@ function mxResetLogoPreview(){
             </div>
             <div class="modal-body" data-est-order-detail-body></div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-print-disabled disabled>Imprimir (próximamente)</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-print-disabled disabled>Imprimir</button>
               <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Cerrar</button>
             </div>
           </div>
@@ -72117,7 +72117,11 @@ function mxResetLogoPreview(){
     if(printBtn && !printBtn.dataset.bound){
       printBtn.dataset.bound = '1';
       printBtn.addEventListener('click', ()=>{
-        setOrderFeedback('La impresión de órdenes diagnósticas se habilitará en una fase posterior.', 'muted');
+        const uuid = clean(modalEl.dataset.portableOrderUuid || '');
+        const doctorId = resolveClinicalDocumentsDoctorId();
+        if(!uuid || !doctorId) return;
+        const query = new URLSearchParams({uuid,doctor_id:doctorId});
+        window.open(`/modules/clinical/ui/portable-order.php?${query}`, '_blank', 'noopener');
       });
     }
     const modal = (typeof BsModal.getOrCreateInstance === 'function')
@@ -72127,6 +72131,9 @@ function mxResetLogoPreview(){
   }
   function renderOrderDetailState(refs, mode, model = {}){
     if(!refs || !refs.bodyEl || !refs.titleEl) return;
+    const printBtn = refs.modalEl.querySelector('[data-est-order-print-disabled]');
+    refs.modalEl.dataset.portableOrderUuid = mode === 'ready' && model.printEligible ? clean(model.uuid || '') : '';
+    if(printBtn) printBtn.disabled = !refs.modalEl.dataset.portableOrderUuid;
     if(mode === 'loading'){
       refs.titleEl.textContent = 'Detalle de orden diagnóstica';
       refs.bodyEl.innerHTML = '<div class="text-muted">Cargando orden…</div>';
@@ -72282,6 +72289,8 @@ function mxResetLogoPreview(){
           title: clean(doc?.title || ''),
           summary: clean(doc?.summary || doc?.content?.summary || ''),
           context: (doc?.context && typeof doc.context === 'object') ? doc.context : {},
+          status: clean(doc?.status || ''),
+          generatedAt: clean(doc?.timestamps?.generated_at || ''),
           eventDatetime: clean(
             doc?.ui?.event_datetime
             || doc?.event_datetime
@@ -72318,6 +72327,18 @@ function mxResetLogoPreview(){
     try{
       const detail = await fetchOrderDocumentDetail(docRef);
       const payload = (detail && typeof detail.payload === 'object') ? detail.payload : {};
+      const doctorId = resolveClinicalDocumentsDoctorId();
+      const candidateOrder = ['order','orders','lab_order','imaging_order','orden_estudio'].includes(clean(detail.documentType || '').toLowerCase())
+        && ['generated','signed'].includes(clean(detail.status || '').toLowerCase())
+        && !!clean(detail.generatedAt || '') && !!clean(detail.uuid || '');
+      let printEligible = false;
+      if(candidateOrder && doctorId){
+        try{
+          const printResponse = await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/portable-orders/${encodeURIComponent(detail.uuid)}`,
+            {credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});
+          printEligible = printResponse.ok;
+        }catch(_){printEligible = false;}
+      }
       const model = {
         typeLabel: resolveDiagnosticFamilyTitle(detail.documentType),
         area: resolveOrderAreaLabel(detail.documentType, payload),
@@ -72329,6 +72350,8 @@ function mxResetLogoPreview(){
         packages: extractPresetNamesFromPayload(payload),
         file: resolveClinicalFileFromPayload(payload),
         documentType: clean(detail.documentType || ''),
+        uuid: clean(detail.uuid || ''),
+        printEligible,
         relatedOrderRef: resolveRelatedOrderRefFromPayload(payload)
       };
       traceOrder('detail_file_resolved', {
