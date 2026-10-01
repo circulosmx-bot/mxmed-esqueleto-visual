@@ -37,6 +37,17 @@ def request(method, path, body=None, cookie=OWNER):
         return error.code, json.load(error)
 
 
+def pdf_request(order_uuid, doctor='d_ordprint', cookie=OWNER):
+    target = '/modules/clinical/ui/portable-order-pdf.php?' + urllib.parse.urlencode(
+        {'uuid': order_uuid, 'doctor_id': doctor})
+    req = urllib.request.Request(BASE + target, headers={'Cookie': cookie} if cookie else {})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as response:
+            return response.status, response.headers, response.read()
+    except urllib.error.HTTPError as error:
+        return error.code, error.headers, error.read()
+
+
 def create(items, patient='p_ordprint', encounter=None, indication='Control de rutina', priority='Urgente'):
     path = f'/doctors/d_ordprint/patients/{patient}/documents' if encounter is None else f'/encounters/enc%3A{encounter}/documents'
     body = {'patient_id': patient, 'document_type': 'orders', 'title': 'Orden QA', 'summary': 'Orden QA',
@@ -96,6 +107,8 @@ enc_snapshot = json.loads(sql(f'SELECT payload_json FROM clinical_documents WHER
 assert enc_snapshot['consultorio']['name'] == 'Consultorio Original QA', enc_snapshot
 print('QA_CONSULTATION_CONSULTORIO_SNAPSHOT=PASS')
 
+before_pdf_code, _, before_pdf = pdf_request(document_uuid)
+assert before_pdf_code == 200 and before_pdf.startswith(b'%PDF-')
 sql("UPDATE profiles_doctors SET display_name='Médica Nueva QA' WHERE doctor_id='d_ordprint'; "
     "UPDATE patients_patients SET display_name='Paciente Nuevo QA' WHERE patient_id='p_ordprint'; "
     "UPDATE consultorios SET titulo='Consultorio Nuevo QA' WHERE doctor_id='d_ordprint'")
@@ -104,6 +117,13 @@ assert status == 200 and repeated['data']['patient']['name'] == 'Paciente Origin
 assert repeated['data']['physician']['name'] == 'Médica Original QA'
 status, repeated_consult = model(enc_uuid)
 assert status == 200 and repeated_consult['data']['consultorio']['name'] == 'Consultorio Original QA'
+after_pdf_code, _, after_pdf = pdf_request(document_uuid)
+assert after_pdf_code == 200 and after_pdf.startswith(b'%PDF-')
+if os.environ.get('ORDPRINT_QA_ARTIFACTS'):
+    snapshot_dir = Path(os.environ['ORDPRINT_QA_ARTIFACTS'])
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    (snapshot_dir / 'snapshot-before.pdf').write_bytes(before_pdf)
+    (snapshot_dir / 'snapshot-after.pdf').write_bytes(after_pdf)
 print('QA_SNAPSHOT_REPRODUCIBILITY=PASS')
 
 signed_id, signed_uuid = copy(document_id)
@@ -192,6 +212,22 @@ assert page_request(page_path, None)[0] == 403
 assert page_request('/modules/clinical/ui/portable-order.php?' + urllib.parse.urlencode({'uuid': void_uuid, 'doctor_id': 'd_ordprint'}))[0] == 403
 print('QA_DEDICATED_RENDERER_SECURITY_AND_LEGACY_NOTICE=PASS')
 
+for order_uuid in (document_uuid, signed_uuid, legacy_uuid):
+    code, headers, body = pdf_request(order_uuid)
+    assert code == 200 and headers.get_content_type() == 'application/pdf', (code, headers, body[:120])
+    assert body.startswith(b'%PDF-') and body.rstrip().endswith(b'%%EOF')
+    assert int(headers['Content-Length']) == len(body)
+    assert headers['Content-Disposition'].startswith('attachment; filename="Orden-estudios-')
+    assert order_uuid not in headers['Content-Disposition']
+assert pdf_request(document_uuid, doctor='d_other', cookie=OTHER)[0] == 403
+assert pdf_request(other_uuid)[0] == 403
+assert pdf_request(document_uuid, cookie=None)[0] == 403
+assert pdf_request(str(uuid.uuid4()))[0] == 403
+for denied_uuid in (replaced_uuid, void_uuid, malformed_uuid, malformed_v2_uuid,
+                    missing_doctor_uuid, missing_patient_uuid):
+    assert pdf_request(denied_uuid)[0] == 403, denied_uuid
+print('QA_PDF_AUTH_GENERATED_SIGNED_LEGACY_AND_FAIL_CLOSED_STATES=PASS')
+
 ten_id, ten_uuid = create([{'study_category': 'LABORATORIO', 'study_display_name': f'Estudio de control {i}'} for i in range(10)])
 many_id, many_uuid = create([{'study_category': 'LABORATORIO', 'study_display_name': f'Estudio extenso {i} ' + ('Descripción clínica ' * 8),
                              'note': ('Nota particular para este estudio. ' * 12)} for i in range(55)],
@@ -223,24 +259,35 @@ with sync_playwright() as playwright:
                 page.screenshot(path=str(artifact_dir / 'one-screen.png'), full_page=True)
         pages = len(re.findall(rb'/Type\s*/Page\b', pdf))
         assert pages >= expected_min and len(pdf) > 1000, (identity, pages, len(pdf))
+        pdf_code, pdf_headers, pdf_body = pdf_request(order_uuid)
+        assert pdf_code == 200 and pdf_headers.get_content_type() == 'application/pdf'
+        pdf_pages = len(re.findall(rb'/Type\s*/Page\b', pdf_body))
+        assert pdf_pages >= expected_min and abs(pdf_pages - pages) <= 1, (identity, pages, pdf_pages)
+        if os.environ.get('ORDPRINT_QA_ARTIFACTS'):
+            (artifact_dir / f'{identity}-download.pdf').write_bytes(pdf_body)
         if identity == 'many':
             assert page.locator('.study').last.is_visible()
             assert page.locator('.signature').is_visible()
             assert page.locator('.reference').is_visible()
-        print(f'QA_{identity.upper()}_STUDY_PAPER=PASS pages={pages}')
+        print(f'QA_{identity.upper()}_STUDY_PAPER_AND_DOWNLOAD=PASS print_pages={pages} pdf_pages={pdf_pages}')
     entry = context.new_page()
     entry.route(BASE + '/', lambda route: route.fulfill(status=200, content_type='text/html', body='<html><body></body></html>'))
     entry.goto(BASE + '/')
     entry.set_content('<div id="t-estudios"><div data-est-open-modal></div><div data-est-order-block></div><div class="est-orders-list"></div></div>')
-    entry.evaluate("window.mxmedStore={doctor_id:'d_ordprint'};window.resolveDoctorId=()=> 'd_ordprint';window.bootstrap={Modal:class {constructor(el){this.el=el}show(){this.el.style.display='block'}static getOrCreateInstance(el){return new this(el)}}};window.__portableOpened='';window.open=(url)=>{window.__portableOpened=url;}")
+    entry.evaluate("window.mxmedStore={doctor_id:'d_ordprint'};window.resolveDoctorId=()=> 'd_ordprint';window.bootstrap={Modal:class {constructor(el){this.el=el}show(){this.el.style.display='block'}static getOrCreateInstance(el){return new this(el)}}};window.__portableOpened='';window.__portableDownloaded='';window.open=(url)=>{window.__portableOpened=url;};HTMLAnchorElement.prototype.click=function(){window.__portableDownloaded=this.href;}")
     entry.add_script_tag(path=str(Path(__file__).resolve().parents[3] / 'assets/js/app.js'))
     assert entry.evaluate('typeof window.mxmedOpenDiagnosticDocumentDetail') == 'function'
     entry.evaluate('(uuid)=>window.mxmedOpenDiagnosticDocumentDetail(uuid)', enc_uuid)
     assert not entry.locator('[data-est-order-print-disabled]').is_disabled()
+    assert not entry.locator('[data-est-order-pdf-disabled]').is_disabled()
     entry.locator('[data-est-order-print-disabled]').click()
     assert '/modules/clinical/ui/portable-order.php?' in entry.evaluate('window.__portableOpened')
     assert enc_uuid in entry.evaluate('window.__portableOpened')
+    entry.locator('[data-est-order-pdf-disabled]').click()
+    assert '/modules/clinical/ui/portable-order-pdf.php?' in entry.evaluate('window.__portableDownloaded')
+    assert enc_uuid in entry.evaluate('window.__portableDownloaded')
     entry.evaluate('(uuid)=>window.mxmedOpenDiagnosticDocumentDetail(uuid)', void_uuid)
     assert entry.locator('[data-est-order-print-disabled]').is_disabled()
-    print('QA_CONSULTATION_SHARED_PRINT_ENTRY_AND_VOIDED_DENIAL=PASS')
+    assert entry.locator('[data-est-order-pdf-disabled]').is_disabled()
+    print('QA_CONSULTATION_SHARED_PRINT_AND_PDF_ENTRIES_AND_VOIDED_DENIAL=PASS')
     browser.close()

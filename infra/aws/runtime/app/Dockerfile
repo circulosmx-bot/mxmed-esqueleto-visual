@@ -41,7 +41,10 @@ COPY --from=extension-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/
 COPY --from=extension-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        chromium \
+        chromium-sandbox \
         curl \
+        fonts-liberation \
         libfreetype6 \
         libicu72 \
         libjpeg62-turbo \

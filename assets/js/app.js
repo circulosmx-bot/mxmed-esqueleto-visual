@@ -72104,6 +72104,7 @@ function mxResetLogoPreview(){
             <div class="modal-body" data-est-order-detail-body></div>
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-print-disabled disabled>Imprimir</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-pdf-disabled disabled>Descargar PDF</button>
               <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Cerrar</button>
             </div>
           </div>
@@ -72124,6 +72125,22 @@ function mxResetLogoPreview(){
         window.open(`/modules/clinical/ui/portable-order.php?${query}`, '_blank', 'noopener');
       });
     }
+    const pdfBtn = modalEl.querySelector('[data-est-order-pdf-disabled]');
+    if(pdfBtn && !pdfBtn.dataset.bound){
+      pdfBtn.dataset.bound = '1';
+      pdfBtn.addEventListener('click', ()=>{
+        const uuid = clean(modalEl.dataset.portableOrderUuid || '');
+        const doctorId = resolveClinicalDocumentsDoctorId();
+        if(!uuid || !doctorId) return;
+        const query = new URLSearchParams({uuid,doctor_id:doctorId});
+        const link = document.createElement('a');
+        link.href = `/modules/clinical/ui/portable-order-pdf.php?${query}`;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      });
+    }
     const modal = (typeof BsModal.getOrCreateInstance === 'function')
       ? BsModal.getOrCreateInstance(modalEl)
       : new BsModal(modalEl);
@@ -72132,8 +72149,10 @@ function mxResetLogoPreview(){
   function renderOrderDetailState(refs, mode, model = {}){
     if(!refs || !refs.bodyEl || !refs.titleEl) return;
     const printBtn = refs.modalEl.querySelector('[data-est-order-print-disabled]');
+    const pdfBtn = refs.modalEl.querySelector('[data-est-order-pdf-disabled]');
     refs.modalEl.dataset.portableOrderUuid = mode === 'ready' && model.printEligible ? clean(model.uuid || '') : '';
     if(printBtn) printBtn.disabled = !refs.modalEl.dataset.portableOrderUuid;
+    if(pdfBtn) pdfBtn.disabled = !refs.modalEl.dataset.portableOrderUuid;
     if(mode === 'loading'){
       refs.titleEl.textContent = 'Detalle de orden diagnóstica';
       refs.bodyEl.innerHTML = '<div class="text-muted">Cargando orden…</div>';

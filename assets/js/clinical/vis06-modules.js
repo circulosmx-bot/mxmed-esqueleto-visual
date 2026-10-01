@@ -30,6 +30,14 @@
     const query=new URLSearchParams({uuid,doctor_id:professional});
     window.open(`/modules/clinical/ui/portable-order.php?${query}`,'_blank','noopener');
   };
+  const downloadPortableOrder = uuid => {
+    if(!uuid || !professional)return;
+    const query=new URLSearchParams({uuid,doctor_id:professional});
+    const link=document.createElement('a');
+    link.href=`/modules/clinical/ui/portable-order-pdf.php?${query}`;
+    link.download='';
+    document.body.append(link);link.click();link.remove();
+  };
   let orderComposerDialog=null;
   function openGeneralOrder(trigger){
     if(orderComposerDialog)return;
@@ -187,8 +195,11 @@
       const ownerPatient=selectedPatient(),ownerDoctor=professional;
       get(`doctors/${encodeURIComponent(ownerDoctor)}/portable-orders/${encodeURIComponent(row.document_uuid)}`).then(()=>{
         if(request!==view.detailRequest||selectedPatient()!==ownerPatient||professional!==ownerDoctor)return;
+        const actions=node('div','','vis06-portable-actions');
         const print=button('Imprimir',()=>openPortableOrder(row.document_uuid));
-        print.classList.add('vis06-order-print');header.append(print);
+        const pdf=button('Descargar PDF',()=>downloadPortableOrder(row.document_uuid));
+        print.classList.add('vis06-order-print');pdf.classList.add('vis06-order-print');
+        actions.append(print,pdf);header.append(actions);
       }).catch(()=>{});
     }
     const mobileBack=button('Volver a la lista',()=>{view.workspace.classList.remove('is-detail-open');view.lastTrigger?.focus({preventScroll:true});});
