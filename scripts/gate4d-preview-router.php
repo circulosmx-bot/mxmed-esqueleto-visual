@@ -8,8 +8,16 @@ if ($role === 'backend' && str_starts_with($path, '/api/identity/index.php')) {
     require __DIR__ . '/../api/identity/index.php';
     return true;
 }
+if ($role === 'backend' && str_starts_with($path, '/api/provider/index.php/')) {
+    require __DIR__ . '/../api/provider/index.php';
+    return true;
+}
 
 if ($role === 'frontend') {
+    if ($path === '/provider') {
+        header('Location: /provider/', true, 302);
+        return true;
+    }
     $surfaceRoutes = [
         '/acceso' => __DIR__ . '/../public/identity/acceso.php',
         '/crear-cuenta' => __DIR__ . '/../public/identity/crear-cuenta.php',
@@ -21,7 +29,8 @@ if ($role === 'frontend') {
         require $surfaceRoutes[$path];
         return true;
     }
-    if (str_starts_with($path, '/api/identity/index.php')) {
+    if (str_starts_with($path, '/api/identity/index.php') || str_starts_with($path, '/api/provider/index.php/')
+        || $path === '/provider/') {
         $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
         $configuredOrigin = rtrim((string)(getenv('MXMED_PREVIEW_ORIGIN') ?: 'https://127.0.0.1:8140'), '/');
         $forwardedOrigin = trim((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
@@ -30,7 +39,8 @@ if ($role === 'frontend') {
             $value = trim((string)($_SERVER[$serverKey] ?? ''));
             if ($value !== '') $headers[] = $headerName . ': ' . $value;
         }
-        $options = ['http' => ['method' => $method, 'header' => implode("\r\n", $headers), 'ignore_errors' => true, 'timeout' => 5]];
+        $options = ['http' => ['method' => $method, 'header' => implode("\r\n", $headers), 'ignore_errors' => true,
+            'follow_location' => 0, 'max_redirects' => 0, 'timeout' => 5]];
         if ($method !== 'GET' && $method !== 'HEAD') $options['http']['content'] = (string)file_get_contents('php://input');
         $body = @file_get_contents('http://127.0.0.1:8141' . $path . (($_SERVER['QUERY_STRING'] ?? '') !== '' ? '?' . $_SERVER['QUERY_STRING'] : ''), false, stream_context_create($options));
         if ($body === false) {
@@ -42,7 +52,7 @@ if ($role === 'frontend') {
         }
         foreach (($http_response_header ?? []) as $responseHeader) {
             if (preg_match('/^HTTP\/\S+\s+(\d+)/', $responseHeader, $match)) { http_response_code((int)$match[1]); continue; }
-            if (stripos($responseHeader, 'Content-Type:') === 0 || stripos($responseHeader, 'Cache-Control:') === 0 || stripos($responseHeader, 'Pragma:') === 0 || stripos($responseHeader, 'X-Content-Type-Options:') === 0 || stripos($responseHeader, 'Content-Security-Policy:') === 0 || stripos($responseHeader, 'Set-Cookie:') === 0) header($responseHeader, false);
+            if (stripos($responseHeader, 'Content-Type:') === 0 || stripos($responseHeader, 'Cache-Control:') === 0 || stripos($responseHeader, 'Pragma:') === 0 || stripos($responseHeader, 'X-Content-Type-Options:') === 0 || stripos($responseHeader, 'Content-Security-Policy:') === 0 || stripos($responseHeader, 'Set-Cookie:') === 0 || stripos($responseHeader, 'Location:') === 0) header($responseHeader, false);
         }
         echo $body;
         return true;

@@ -94,6 +94,10 @@
         flowState(flow, state);
         const note = form.querySelector('[data-form-note]');
         if (note) note.textContent = state === 'success' ? 'La acción se procesó correctamente.' : 'La acción no pudo completarse.';
+        if (state === 'success' && flow === 'login' && new URLSearchParams(window.location.search).get('next') === '/provider/') {
+          window.location.assign('/provider/');
+          return;
+        }
         if (state === 'success' && (flow === 'verify' || flow === 'reset')) window.history.replaceState({}, document.title, window.location.pathname);
       } catch (_) {
         flowState(flow, 'error');
