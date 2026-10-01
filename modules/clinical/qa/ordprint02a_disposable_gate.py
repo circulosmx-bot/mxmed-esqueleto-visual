@@ -182,6 +182,9 @@ assert status == 200 and 'no-store' in headers.get('Cache-Control', '')
 assert 'Biometría hemática QA' in html and 'Firma del médico' in html
 assert '03/02/1985' in html and '02/02/1985' not in html
 assert 'FORGED' not in html and 'Paciente Nuevo QA' not in html
+assert 'México Médico · MXMED' not in html and '<div class="brand">México Médico</div>' in html
+assert 'Referencia MXMED:' in html and 'Versión documental' not in html
+assert document_uuid not in html and 'Copia histórica reconstruida' not in html
 assert not any(value in html for value in ('related_order_item_ids', 'clinical_patient_tasks', 'Descargar PDF', 'QR'))
 legacy_path = '/modules/clinical/ui/portable-order.php?' + urllib.parse.urlencode({'uuid': legacy_uuid, 'doctor_id': 'd_ordprint'})
 assert 'Copia histórica reconstruida' in page_request(legacy_path)[2]
@@ -223,7 +226,7 @@ with sync_playwright() as playwright:
         if identity == 'many':
             assert page.locator('.study').last.is_visible()
             assert page.locator('.signature').is_visible()
-            assert page.locator('.footer').is_visible()
+            assert page.locator('.reference').is_visible()
         print(f'QA_{identity.upper()}_STUDY_PAPER=PASS pages={pages}')
     entry = context.new_page()
     entry.route(BASE + '/', lambda route: route.fulfill(status=200, content_type='text/html', body='<html><body></body></html>'))
