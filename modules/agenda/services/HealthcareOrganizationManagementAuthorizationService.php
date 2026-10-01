@@ -19,12 +19,13 @@ interface ProviderCommercialEntitlementPort
 final class HealthcareOrganizationManagementAuthorizationService
 {
     public const TEAM = 'provider_team_manage';
+    public const SUBSCRIPTION = 'provider_subscription_manage';
     public const PROFILE = 'provider_profile_manage';
     public const LOCATIONS = 'provider_locations_manage';
     public const OFFERINGS = 'provider_offerings_manage';
     public const SERVICE_AREAS = 'provider_service_areas_manage';
 
-    private const ACTIONS = [self::TEAM,self::PROFILE,self::LOCATIONS,self::OFFERINGS,self::SERVICE_AREAS];
+    private const ACTIONS = [self::TEAM,self::SUBSCRIPTION,self::PROFILE,self::LOCATIONS,self::OFFERINGS,self::SERVICE_AREAS];
     private const PROVIDER_TYPES = [
         HealthcareOrganizationType::LABORATORY,HealthcareOrganizationType::DIAGNOSTIC_CENTER,
         HealthcareOrganizationType::CLINIC,HealthcareOrganizationType::HOSPITAL,
@@ -42,7 +43,7 @@ final class HealthcareOrganizationManagementAuthorizationService
     public function evaluate(?AuthenticatedAccessContext $actor, string $groupId, string $action,
         string $resourceType = 'organization', string|int|null $resourceId = null): array
     {
-        $denied = ['eligible'=>false,'allowed'=>false,'entitlement_required'=>$action!==self::TEAM,
+        $denied = ['eligible'=>false,'allowed'=>false,'entitlement_required'=>!in_array($action,[self::TEAM,self::SUBSCRIPTION],true),
             'entitlement_satisfied'=>false,'role'=>null,'reason'=>'DENIED'];
         if (!in_array($action,self::ACTIONS,true) || $groupId==='') return $denied;
         if ($actor===null || $actor->principal()->accountStatus()!=='active'
@@ -70,9 +71,9 @@ final class HealthcareOrganizationManagementAuthorizationService
             if ($role==='owner' && $rows[0]['assignment_source']!=='provider_claim_approval') return $denied;
             if ($role==='administrator' && $rows[0]['assignment_source']!=='provider_invitation_acceptance') return $denied;
             if ($role==='collaborator' && $rows[0]['assignment_source']!=='provider_invitation_acceptance') return $denied;
-            $eligible=$role==='owner' || ($role==='administrator' && $action!==self::TEAM);
+            $eligible=$role==='owner' || ($role==='administrator' && !in_array($action,[self::TEAM,self::SUBSCRIPTION],true));
             if (!$eligible) return array_replace($denied,['role'=>$role]);
-            $gated=$action!==self::TEAM;
+            $gated=!in_array($action,[self::TEAM,self::SUBSCRIPTION],true);
             $entitled=$gated && $this->entitlements!==null
                 && $this->entitlements->isEntitled($actor->accountId(),$groupId,$action);
             return ['eligible'=>true,'allowed'=>!$gated || $entitled,'entitlement_required'=>$gated,

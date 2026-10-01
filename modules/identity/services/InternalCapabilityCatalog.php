@@ -18,6 +18,7 @@ final class InternalCapabilityCatalog
         foreach($media as $key=>[$label,$description])$result[$key]=['key'=>$key,'domain'=>'media_review','label'=>$label,'description'=>$description,'delegable'=>true,'kind'=>'operational'];
         $key=self::MANAGE_ADVISORS;$result[$key]=['key'=>$key,'domain'=>'internal_governance','label'=>'Administrar asesores','description'=>'Gestionar relaciones de asesores; conceder permisos operativos requiere delegación adicional.','delegable'=>false,'kind'=>'governance'];
         $key='provider_claim_review';$result[$key]=['key'=>$key,'domain'=>'provider_claim','label'=>'Revisar claims de organizaciones','description'=>'Aprobar o rechazar el primer claim de una organización proveedora.','delegable'=>true,'kind'=>'operational'];
+        $key='provider_subscription_activate';$result[$key]=['key'=>$key,'domain'=>'provider_commercial','label'=>'Activar suscripción proveedora','description'=>'Crear o cancelar una suscripción organizacional mediante gobernanza interna; no representa un pago.','delegable'=>true,'kind'=>'operational'];
         return $result;
     }
     public static function require(string $key):array{return self::all()[$key]??throw new \RuntimeException('governance_unknown_capability');}

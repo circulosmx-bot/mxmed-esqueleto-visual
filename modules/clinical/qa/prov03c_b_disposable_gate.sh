@@ -14,6 +14,9 @@ mysql -e "CREATE DATABASE \`$qa_db\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unico
 mysqldump --no-data --set-gtid-purged=OFF --single-transaction mxmed_director_review_lon07c | mysql "$qa_db"
 mysql "$qa_db" < "$root_dir/modules/clinical/db/migrations/2026_09_30_15_initial_curated_study_catalog.sql"
 mysql "$qa_db" < "$root_dir/modules/profiles/db/2026_06_19_create_subscription_plan_lifecycle.sql"
+if [[ -z "$(mysql -N "$qa_db" -e "SHOW COLUMNS FROM subscription_plans LIKE 'product_family'")" ]]; then
+  mysql "$qa_db" < "$root_dir/modules/subscriptions/db/2026_10_01_01_provider_organization_commercial_entitlement.sql"
+fi
 PROV03CB_QA_DB="$qa_db" php "$root_dir/modules/clinical/qa/prov03c_b_fixture.php" > "$qa_root/fixture.json"
 mkdir "$qa_root/sessions"
 php -d "session.save_path=$qa_root/sessions" -r 'session_id("prov03cb-owner");session_start();$_SESSION["doctor_id"]="d_match";$_SESSION["user_id"]="u_match";session_write_close();'

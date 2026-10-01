@@ -55,6 +55,21 @@ $org('org_rejected','LABORATORY');
 $coverage->setProviderVerification('org_rejected','REJECTED','operator_qa');
 $pdo->exec("INSERT INTO medical_groups(group_id,organization_type_key,canonical_name,display_name,status,source)
     VALUES('org_missing','LABORATORY','org_missing','org_missing','verified','operator_created')");
+// Disposable commercial fixture: all organization eligibility states get the
+// same matching product, so the PROV03 operational/verification tests stay distinct.
+$pdo->exec("INSERT INTO subscription_plans(plan_code,plan_label,billing_period,duration_days,product_family,source)
+    VALUES('provider_qa_internal','Provider QA','annual',365,'PROVIDER_ORGANIZATION','disposable_qa')");
+$pdo->exec("INSERT INTO provider_subscription_plan_capabilities(plan_code,billing_period,capability)
+    VALUES('provider_qa_internal','annual','provider_matching_participation')");
+foreach (['org_lab','org_hospital','org_clinic','org_unverified','org_inactive','org_rejected','org_missing'] as $groupId) {
+    $pdo->prepare("INSERT INTO profile_subscriptions
+        (subscription_id,entity_type,entity_id,plan_code,contracted_plan_code,effective_plan_code,
+         billing_period,starts_at,expires_at,status,source)
+        VALUES(UUID(),'provider_organization',?,'provider_qa_internal','provider_qa_internal',
+          'provider_qa_internal','annual',DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY),
+          DATE_ADD(UTC_TIMESTAMP(),INTERVAL 30 DAY),'active','disposable_qa')")
+        ->execute([$groupId]);
+}
 $full = $place('org_lab','Lab Full','20000',[$a=>'ON_SITE',$b=>'ON_SITE',$c=>'ON_SITE']);
 $ab = $place('org_lab','Lab AB','20000',[$a=>'ON_SITE',$b=>'ON_SITE']);
 $ac = $place('org_lab','Lab AC','20000',[$a=>'ON_SITE',$c=>'ON_SITE']);

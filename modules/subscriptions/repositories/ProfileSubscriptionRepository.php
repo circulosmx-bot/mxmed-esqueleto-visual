@@ -54,6 +54,20 @@ final class ProfileSubscriptionRepository
         if ($status !== self::STATUS_ACTIVE) {
             throw new InvalidArgumentException('invalid_profile_subscription_payload: status must be active');
         }
+        if ($entityType !== 'doctor' || $doctorId !== $entityId) {
+            throw new InvalidArgumentException('invalid_profile_subscription_payload: doctor entity required');
+        }
+        $plan = $this->pdo->prepare('SELECT * FROM subscription_plans WHERE plan_code=? AND billing_period=? LIMIT 1');
+        $plan->execute([$planCode,$billingPeriod]);
+        $planRow=$plan->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($planRow) || ($planRow['product_family'] ?? 'DOCTOR') !== 'DOCTOR') {
+            throw new InvalidArgumentException('invalid_profile_subscription_payload: doctor plan required');
+        }
+        $doctor=$this->pdo->prepare('SELECT 1 FROM profiles_doctors WHERE doctor_id=? LIMIT 1');
+        $doctor->execute([$doctorId]);
+        if ($doctor->fetchColumn()===false) {
+            throw new InvalidArgumentException('invalid_profile_subscription_payload: doctor entity not found');
+        }
 
         try {
             $stmt = $this->pdo->prepare(

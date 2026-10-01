@@ -26,14 +26,7 @@ final class CurrentSubscriptionRepository
 
         try {
             $stmt = $this->pdo->prepare(
-                'SELECT
-                    plan_code,
-                    plan_label,
-                    billing_period,
-                    duration_days,
-                    is_active,
-                    sort_order,
-                    source
+                'SELECT *
                  FROM subscription_plans
                  WHERE plan_code = :plan_code
                    AND billing_period = :billing_period

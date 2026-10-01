@@ -11,6 +11,8 @@ use Subscriptions\Repositories\CurrentSubscriptionRepository;
 use Subscriptions\Repositories\SubscriptionContractAcceptanceRepository;
 use Throwable;
 
+require_once __DIR__.'/SubscriptionEntityResolverService.php';
+
 final class SubscriptionWriteException extends RuntimeException
 {
     private int $status;
@@ -122,6 +124,13 @@ final class CreateSubscriptionWithAcceptanceService
         $plan = $this->currentRepository->findPlanByCodeAndPeriod($planCode, $billingPeriod);
         if ($plan === null) {
             throw new SubscriptionWriteException(404, 'plan_not_found', 'subscription plan not found');
+        }
+        if (($plan['product_family'] ?? 'DOCTOR') !== 'DOCTOR') {
+            throw new SubscriptionWriteException(422, 'plan_entity_incompatible', 'plan is not compatible with doctor');
+        }
+        $entity=(new SubscriptionEntityResolverService($this->pdo))->resolveForCheckout($entityType,$entityId);
+        if (($entity['entity_exists']??false)!==true || ($entity['entity_is_contractable']??false)!==true) {
+            throw new SubscriptionWriteException(404,'entity_not_found','doctor entity not found');
         }
 
         $catalogPlanCode = strtolower($this->requiredText($plan['plan_code'] ?? null, 'plan_not_found', 'subscription plan not found', 404));
@@ -293,13 +302,14 @@ final class CreateSubscriptionWithAcceptanceService
                AND entity_id = :entity_id
                AND deleted_at IS NULL
                AND status IN (\'active\', \'expiring_soon\', \'grace_period\')
-               AND (starts_at IS NULL OR starts_at <= :now)
-               AND (expires_at IS NULL OR expires_at >= :now)'
+               AND (starts_at IS NULL OR starts_at <= :now_start)
+               AND (expires_at IS NULL OR expires_at >= :now_end)'
         );
         $stmt->execute([
             'entity_type' => $entityType,
             'entity_id' => $entityId,
-            'now' => $now,
+            'now_start' => $now,
+            'now_end' => $now,
         ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int)($row['total'] ?? 0) > 0;

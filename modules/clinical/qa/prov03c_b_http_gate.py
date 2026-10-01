@@ -179,12 +179,28 @@ status, response = match(mode='REMOTE')
 check(status == 400, 'QA_UNSUPPORTED_MODE_REJECTED')
 
 baseline = [row['location']['location_uuid'] for row in data['candidates']]
+commercial_provider_hash = provider_hash()
 sql("INSERT INTO profile_subscriptions(subscription_id,entity_type,entity_id,plan_code,contracted_plan_code,"
-    "effective_plan_code,status) VALUES('00000000-0000-4000-8000-000000000008','laboratory','org_lab',"
+    "effective_plan_code,status) VALUES('00000000-0000-4000-8000-000000000008','doctor','d_unrelated',"
     "'professional','professional','professional','active')")
 status, response = match()
 check(status == 200 and [row['location']['location_uuid'] for row in response['data']['candidates']] == baseline,
-      'QA_COMMERCIAL_INDEPENDENCE')
+      'QA_DOCTOR_SUBSCRIPTION_INDEPENDENCE')
+check(loc['full'] in candidates(response['data']), 'QA_MATCH_WITH_ENTITLEMENT')
+sql("UPDATE profile_subscriptions SET status='cancelled' WHERE entity_type='provider_organization' AND entity_id='org_lab'")
+status, response = match()
+check(status == 200 and loc['full'] not in candidates(response['data']) and loc['clinic'] in candidates(response['data']),
+      'QA_MATCH_WITHOUT_ENTITLEMENT')
+sql("UPDATE profile_subscriptions SET status='active',starts_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 DAY),"
+    "expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE entity_type='provider_organization' AND entity_id='org_lab'")
+status, response = match()
+check(status == 200 and loc['full'] not in candidates(response['data']) and provider_hash() == commercial_provider_hash,
+      'QA_MATCH_AFTER_EXPIRY')
+sql("UPDATE profile_subscriptions SET expires_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 30 DAY) "
+    "WHERE entity_type='provider_organization' AND entity_id='org_lab'")
+status, response = match()
+check(status == 200 and [row['location']['location_uuid'] for row in response['data']['candidates']] == baseline,
+      'QA_MATCH_REACTIVATED_WITHOUT_REVERIFICATION')
 
 status, response = match(cookie=OTHER, doctor='d_other')
 check(status == 404, 'QA_UNRELATED_PHYSICIAN')

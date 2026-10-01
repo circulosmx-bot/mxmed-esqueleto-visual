@@ -262,6 +262,8 @@ final class HealthcareStudyProviderMatchingService
             JOIN medical_groups mg ON mg.group_id=l.group_id
             JOIN healthcare_organization_provider_status ps ON ps.group_id=mg.group_id
             WHERE ps.operational_state='ACTIVE' AND ps.verification_state='VERIFIED'
+              AND EXISTS (SELECT 1 FROM healthcare_provider_commercial_active_capabilities commercial
+                WHERE commercial.group_id=mg.group_id AND commercial.capability='provider_matching_participation')
               AND l.operational_state='ACTIVE' AND l.verification_state='VERIFIED'
               AND EXISTS (SELECT 1 FROM healthcare_organization_location_study_offerings o
                 JOIN clinical_study_types s ON s.study_type_id=o.study_type_id
