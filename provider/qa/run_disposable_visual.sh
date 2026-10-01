@@ -4,7 +4,7 @@ root_dir="$(cd "$(dirname "$0")/../.." && pwd)"
 qa_db="mxmed_gate4d_preview_prov04f_$(openssl rand -hex 6)"
 qa_tmp="$(mktemp -d /tmp/prov04f-portal-XXXXXXXX)"
 qa_pepper="$(openssl rand -hex 32)"
-captures="$root_dir/.tmp/prov04f/captures"
+captures="$root_dir/.tmp/b3-ia01/captures"
 cleanup() {
   [[ -z "${proxy_pid:-}" ]] || { kill "$proxy_pid" 2>/dev/null || true; wait "$proxy_pid" 2>/dev/null || true; }
   [[ -z "${front_pid:-}" ]] || { kill "$front_pid" 2>/dev/null || true; wait "$front_pid" 2>/dev/null || true; }

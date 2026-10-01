@@ -27,39 +27,64 @@ with sync_playwright() as playwright:
         overflow = page.evaluate('document.documentElement.scrollWidth > window.innerWidth')
         print(f'{name}: horizontal_overflow={overflow}')
         if overflow: issues.append(f'{name}: horizontal overflow')
-    def open_module(name):
-        page.get_by_role('button', name=name, exact=True).click()
+    def open_primary(name):
+        if page.viewport_size['width'] <= 840 and page.locator('#module-nav').is_hidden():
+            page.locator('#mobile-nav-toggle').click()
+        page.locator('#module-nav').get_by_role('button', name=name, exact=True).click()
+        page.locator('.content-panel .loading').wait_for(state='detached', timeout=15000)
+    def open_section(name):
+        page.locator('#section-nav').get_by_role('button', name=name, exact=True).click()
         page.locator('.content-panel .loading').wait_for(state='detached', timeout=15000)
     page.goto(root, wait_until='domcontentloaded')
     page.get_by_role('heading', name='Resumen', exact=True).wait_for(timeout=20000)
     assert page.locator('#page-title').inner_text() == 'Provider A'
+    assert page.locator('#module-nav button').all_inner_texts() == ['Resumen','Suscripción','Perfil','Catálogo de Estudios']
+    assert page.locator('#module-nav [aria-current="page"]').inner_text() == 'Resumen'
     capture('A-resumen-owner-1440x810.png',1440,810)
     capture('A-resumen-owner-1440x900.png',1440,900)
     capture('A-resumen-owner-1366x768.png',1366,768)
-    open_module('Sucursales')
+    open_primary('Perfil')
+    assert page.locator('#section-nav button').all_inner_texts() == ['Sucursales','Equipo y accesos']
     page.get_by_text('Sucursal Centro').wait_for()
-    capture('B-sucursales-1440x810.png',1440,810)
-    open_module('Servicios')
-    page.get_by_text('Biometría hemática',exact=True).first.wait_for()
-    capture('C-servicios-1440x810.png',1440,810)
-    open_module('Áreas de servicio')
-    page.get_by_text('Código postal 01000').wait_for()
-    capture('D-areas-1440x810.png',1440,810)
-    open_module('Equipo')
+    capture('B-perfil-sucursales-1440x810.png',1440,810)
+    open_section('Equipo y accesos')
     page.get_by_text('owner@example.invalid').wait_for()
-    capture('E-equipo-1440x810.png',1440,810)
-    open_module('Suscripción')
+    capture('C-perfil-equipo-1440x810.png',1440,810)
+    assert page.url.endswith('#profile/team')
+    page.reload(wait_until='domcontentloaded')
+    page.get_by_text('owner@example.invalid').wait_for()
+    assert page.locator('#section-nav [aria-current="page"]').inner_text() == 'Equipo y accesos'
+    print('QA_NESTED_ROUTE_REFRESH=PASS')
+    open_primary('Catálogo de Estudios')
+    assert page.locator('#section-nav button').all_inner_texts() == ['Servicios por sucursal','Áreas de servicio']
+    page.get_by_text('Biometría hemática',exact=True).first.wait_for()
+    capture('D-catalogo-servicios-1440x810.png',1440,810)
+    open_section('Áreas de servicio')
+    page.get_by_text('Código postal 01000').wait_for()
+    capture('E-catalogo-areas-1440x810.png',1440,810)
+    open_primary('Suscripción')
     page.locator('.metric strong').get_by_text('Plan de proveedor').wait_for()
     capture('F-suscripcion-1440x810.png',1440,810)
     page.locator('#organization-picker').select_option('prov_b')
     page.get_by_role('heading', name='Resumen', exact=True).wait_for()
-    open_module('Sucursales')
+    assert page.url.endswith('#summary')
+    assert page.locator('#page-title').inner_text() == 'Provider B'
+    assert 'Sucursal Centro' not in page.locator('#portal-content').inner_text()
+    open_primary('Perfil')
     page.get_by_text('Se requiere un plan de proveedor activo',exact=False).wait_for()
     capture('G-sin-plan-1440x810.png',1440,810)
     page.locator('#organization-picker').select_option('prov_a')
     page.get_by_role('heading', name='Resumen', exact=True).wait_for()
     capture('H-resumen-mobile-390x844.png',390,844)
-    open_module('Servicios')
+    assert page.locator('#mobile-nav-toggle').is_visible()
+    page.locator('#mobile-nav-toggle').focus()
+    page.keyboard.press('Enter')
+    assert page.locator('#mobile-nav-toggle').get_attribute('aria-expanded') == 'true'
+    assert page.locator('#module-nav').is_visible()
+    page.locator('#mobile-nav-toggle').click()
+    assert page.locator('#mobile-nav-toggle').get_attribute('aria-expanded') == 'false'
+    open_primary('Catálogo de Estudios')
+    assert page.locator('#section-nav').is_visible()
     capture('I-servicios-mobile-390x844.png',390,844)
     page.locator('#study-search').fill('BH')
     page.get_by_text('Configurado',exact=True).wait_for()
@@ -67,13 +92,29 @@ with sync_playwright() as playwright:
     page.locator('#study-category').select_option('IMAGEN')
     page.get_by_text('Sin estudios coincidentes.').wait_for()
     print('QA_STUDY_CATALOG_ALIAS_CATEGORY=PASS')
+    open_primary('Perfil')
+    open_section('Equipo y accesos')
+    assert page.locator('#invite-form').is_visible()
+    assert not page.evaluate('document.documentElement.scrollWidth > window.innerWidth')
+    print('QA_MOBILE_TEAM=PASS')
     page.set_viewport_size({'width':1440,'height':810})
-    open_module('Sucursales')
+    open_primary('Perfil')
+    open_section('Sucursales')
     page.locator('[data-edit-location]').first.click()
     page.locator('#loc-phone').fill('55 5555 9191')
     dialogs=[]
     page.once('dialog',lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
-    page.get_by_role('button',name='Servicios',exact=True).click()
+    page.locator('#organization-picker').select_option('prov_b')
+    assert 'cambios sin guardar' in dialogs[0]
+    assert page.locator('#organization-picker').input_value() == 'prov_a'
+    dialogs=[]
+    page.once('dialog',lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
+    page.locator('#section-nav').get_by_role('button',name='Equipo y accesos',exact=True).click()
+    assert 'cambios sin guardar' in dialogs[0]
+    assert page.get_by_role('heading',name='Sucursales',exact=True).count() == 1
+    dialogs=[]
+    page.once('dialog',lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
+    page.locator('#module-nav').get_by_role('button',name='Catálogo de Estudios',exact=True).click()
     assert 'cambios sin guardar' in dialogs[0]
     assert page.get_by_role('heading',name='Sucursales',exact=True).count() == 1
     page.locator('#location-form [type=submit]').click()
@@ -95,20 +136,27 @@ with sync_playwright() as playwright:
     page.locator('#location-form [type=submit]').click()
     page.get_by_text('Sucursal QA Nueva').wait_for()
     print('QA_LOCATION_CREATE=PASS')
-    open_module('Servicios')
+    open_primary('Catálogo de Estudios')
     page.locator('[data-edit-offering]').first.click()
     assert page.locator('#offering-form [name=study_type_id]').count() == 0
     page.locator('#service-mode').select_option('MOBILE')
+    prior_branch=page.locator('#branch-picker').input_value()
+    dialogs=[]
+    page.once('dialog',lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
+    page.locator('#branch-picker').select_option(index=1)
+    assert 'cambios sin guardar' in dialogs[0]
+    assert page.locator('#branch-picker').input_value() == prior_branch
     page.locator('#offering-form [type=submit]').click()
     page.get_by_text('Configuración guardada.').wait_for()
     print('QA_OFFERING_IDENTITY_IMMUTABLE=PASS')
-    open_module('Áreas de servicio')
+    open_section('Áreas de servicio')
     page.locator('#area-postal').fill('01001')
     page.locator('#area-form [type=submit]').click()
     page.get_by_text('Código postal 01001').wait_for()
     assert 'Pendiente de verificación' in page.get_by_text('Código postal 01001').locator('..').inner_text()
     print('QA_SERVICE_AREA_CREATE=PASS')
-    open_module('Equipo')
+    open_primary('Perfil')
+    open_section('Equipo y accesos')
     page.locator('#invite-email').fill('eligible2@example.invalid')
     page.once('dialog',lambda dialog: dialog.accept())
     page.locator('#invite-form [type=submit]').click()
@@ -117,11 +165,15 @@ with sync_playwright() as playwright:
     print('QA_TEAM_EMAIL_INVITE=PASS')
     page.locator('#organization-picker').select_option('prov_b')
     page.get_by_role('heading',name='Resumen',exact=True).wait_for()
-    open_module('Equipo')
+    open_primary('Perfil')
+    open_section('Equipo y accesos')
     assert page.locator('#invite-email').count() == 1
     print('QA_TEAM_WITHOUT_ENTITLEMENT=PASS')
     page.locator('#organization-picker').select_option('prov_a')
     page.get_by_role('heading',name='Resumen',exact=True).wait_for()
+    assert page.locator('#module-nav button').all_inner_texts() == ['Resumen','Suscripción','Perfil','Catálogo de Estudios']
+    assert all(title not in page.locator('#module-nav').inner_text() for title in ['Agenda','Pacientes','Órdenes y Resultados','Facturación','Difusión','Reportes'])
+    print('QA_NO_DEAD_MODULES=PASS')
     assert 'MX|CP|' not in page.locator('body').inner_text()
     assert 'prov04f_bh' not in page.locator('body').inner_text()
     assert not issues, issues
@@ -137,17 +189,15 @@ with sync_playwright() as playwright:
             print('QA_NO_ORGANIZATIONS=PASS')
         elif actor=='admin':
             role_page.get_by_role('heading',name='Resumen',exact=True).wait_for()
-            assert role_page.get_by_role('button',name='Equipo',exact=True).count()==0
-            role_page.get_by_role('button',name='Sucursales',exact=True).click()
+            role_page.locator('#module-nav').get_by_role('button',name='Perfil',exact=True).click()
             role_page.get_by_text('Sucursal Centro').wait_for()
+            assert role_page.locator('#section-nav button').all_inner_texts()==['Sucursales']
             status=role_page.evaluate("async () => (await fetch('/api/provider/index.php/organizations/prov_b')).status")
             assert status==404
             print('QA_ADMIN_ENTITLED_CROSS_ORGANIZATION=PASS')
         else:
             role_page.get_by_role('heading',name='Resumen',exact=True).wait_for()
-            assert role_page.get_by_role('button',name='Equipo',exact=True).count()==0
-            assert role_page.get_by_role('button',name='Sucursales',exact=True).count()==0
-            assert role_page.get_by_role('button',name='Suscripción',exact=True).count()==1
+            assert role_page.locator('#module-nav button').all_inner_texts()==['Resumen','Suscripción']
             print('QA_COLLABORATOR_SAFE_CONTEXT=PASS')
         role_context.close()
     print('VISUAL_QA=PASS')

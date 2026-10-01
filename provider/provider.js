@@ -3,13 +3,29 @@
   const API = '/api/provider/index.php';
   const content = document.getElementById('portal-content');
   const nav = document.getElementById('module-nav');
+  const sectionNav = document.getElementById('section-nav');
+  const mobileToggle = document.getElementById('mobile-nav-toggle');
+  const layout = document.querySelector('.portal-layout');
   const picker = document.getElementById('organization-picker');
   const single = document.getElementById('single-organization');
   const notice = document.getElementById('notice');
-  const titles = { summary:'Resumen', locations:'Sucursales', services:'Servicios', areas:'Áreas de servicio', team:'Equipo', subscription:'Suscripción' };
+  // Canonical B3 order. Future modules stay in configuration, never in the live navigation without an authority.
+  const modules = [
+    {key:'summary',title:'Resumen',live:true},
+    {key:'subscription',title:'Suscripción',live:true},
+    {key:'profile',title:'Perfil',live:true},
+    {key:'agenda',title:'Agenda',live:false},
+    {key:'patients',title:'Pacientes',live:false},
+    {key:'catalog',title:'Catálogo de Estudios',live:true},
+    {key:'orders_results',title:'Órdenes y Resultados',live:false},
+    {key:'billing',title:'Facturación',live:false},
+    {key:'diffusion',title:'Difusión',live:false},
+    {key:'reports',title:'Reportes',live:false}
+  ];
+  const sections = {profile:[['locations','Sucursales'],['team','Equipo y accesos']],catalog:[['services','Servicios por sucursal'],['areas','Áreas de servicio']]};
   const fields = [['branch_name','Nombre de la sucursal'],['street','Calle'],['exterior_number','Número exterior'],['interior_number','Número interior'],['postal_code','Código postal'],['colonia','Colonia'],['municipality','Municipio o alcaldía'],['state_name','Estado'],['phone','Teléfono']];
   const material = fields.map(f => f[0]).filter(f => f !== 'phone');
-  const state = { csrf:'', organizations:[], group:'', context:null, locations:[], module:'summary', branch:'', selectedLocation:'', editingLocation:false, selectedOffering:'', offerings:[], areas:[], subscription:null, team:null, invitations:[], catalog:[], categories:[], catalogSearch:'', catalogCategory:'', generation:0, controller:null, dirty:false, snapshot:'', pendingKey:'', pendingFingerprint:'' };
+  const state = { csrf:'', organizations:[], group:'', context:null, locations:[], primary:'summary', module:'summary', branch:'', selectedLocation:'', editingLocation:false, selectedOffering:'', offerings:[], areas:[], subscription:null, team:null, invitations:[], catalog:[], categories:[], catalogSearch:'', catalogCategory:'', generation:0, controller:null, dirty:false, snapshot:'', pendingKey:'', pendingFingerprint:'' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const val = v => v === null || v === undefined || v === '' ? '—' : esc(v);
   const path = (...parts) => `${API}/${parts.map(x => encodeURIComponent(String(x))).join('/')}`;
@@ -55,11 +71,31 @@
   function empty(title, copy='', button='') { return `<div class="empty"><strong>${esc(title)}</strong><span>${esc(copy)}</span>${button}</div>`; }
   function gate(name) { return `<div class="gate">${gated(name) ? gateText : 'Tu cuenta no tiene permiso para administrar esta sección.'}</div>`; }
   function setLoading(text='Cargando sección…') { content.innerHTML=`<p class="loading" role="status">${esc(text)}</p>`; }
+  const primaryFor = leaf => leaf==='locations'||leaf==='team' ? 'profile' : leaf==='services'||leaf==='areas' ? 'catalog' : leaf;
+  const sectionVisible = leaf => leaf==='team' ? allowed('provider_team_manage') : state.context?.member_role!=='collaborator';
+  const availableSections = primary => (sections[primary]||[]).filter(([leaf])=>sectionVisible(leaf));
+  const primaryVisible = primary => primary==='summary'||primary==='subscription'||availableSections(primary).length>0;
+  const routeFor = leaf => primaryFor(leaf)==='profile' || primaryFor(leaf)==='catalog' ? `${primaryFor(leaf)}/${leaf}` : leaf;
+  const routeFromHash = () => {
+    const route=location.hash.slice(1);
+    const leaf=route.includes('/') ? route.split('/')[1] : route;
+    return ['summary','subscription','locations','team','services','areas'].includes(leaf) && route===routeFor(leaf) && primaryVisible(primaryFor(leaf)) ? leaf : 'summary';
+  };
+  function closeMobileNav() { layout.classList.remove('nav-open'); mobileToggle.setAttribute('aria-expanded','false'); }
+  mobileToggle.onclick=()=>{const open=layout.classList.toggle('nav-open');mobileToggle.setAttribute('aria-expanded',String(open));};
   function renderNav() {
-    const visible = ['summary','locations','services','areas','team','subscription'].filter(k => k === 'summary' || k === 'subscription' || (k === 'team' ? allowed('provider_team_manage') : state.context?.member_role !== 'collaborator'));
-    nav.innerHTML = visible.map(k => `<button type="button" data-module="${k}" ${state.module===k?'aria-current="page"':''}>${titles[k]}</button>`).join('');
+    nav.innerHTML = modules.filter(m=>m.live && primaryVisible(m.key)).map(m => `<button type="button" data-primary="${m.key}" ${state.primary===m.key?'aria-current="page"':''}>${m.title}</button>`).join('');
     nav.hidden = false;
-    nav.querySelectorAll('button').forEach(button => button.addEventListener('click', () => switchModule(button.dataset.module)));
+    mobileToggle.hidden=false;
+    nav.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+      const primary=button.dataset.primary;
+      const leaf=primary===state.primary ? state.module : availableSections(primary)[0]?.[0] || primary;
+      switchModule(leaf);
+    }));
+    const available=availableSections(state.primary);
+    sectionNav.hidden=available.length===0;
+    sectionNav.innerHTML=available.map(([leaf,title])=>`<button type="button" data-section="${leaf}" ${state.module===leaf?'aria-current="page"':''}>${title}</button>`).join('');
+    sectionNav.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>switchModule(button.dataset.section)));
   }
   function setIntro() {
     document.getElementById('page-title').textContent=state.context?.display_name || 'Tu organización';
@@ -73,25 +109,28 @@
       state.csrf=session.csrf_token;
       const result=await request(path('me','organizations'));
       state.organizations=result.organizations || [];
-      if (!state.organizations.length) { nav.hidden=true; single.textContent=''; content.innerHTML=empty('No tienes organizaciones de proveedor disponibles en esta cuenta.','Cuando se te asigne una organización, podrás verla aquí.'); return; }
+      if (!state.organizations.length) { nav.hidden=true; mobileToggle.hidden=true; single.textContent=''; content.innerHTML=empty('No tienes organizaciones de proveedor disponibles en esta cuenta.','Cuando se te asigne una organización, podrás verla aquí.'); return; }
       if (state.organizations.length > 1) {
         picker.innerHTML=state.organizations.map(o=>`<option value="${esc(o.group_id)}">${esc(o.display_name)}</option>`).join(''); picker.hidden=false; single.hidden=true;
         picker.addEventListener('change',()=>{ if(!guard()){picker.value=state.group;return;} selectOrganization(picker.value); });
       } else { single.textContent=state.organizations[0].display_name; }
-      await selectOrganization(state.organizations[0].group_id);
+      await selectOrganization(state.organizations[0].group_id,true);
     } catch(e) { alert(errorMessage(e),'error'); content.innerHTML=empty('No pudimos cargar el portal.','Actualiza la página para volver a intentarlo.'); }
   }
-  async function selectOrganization(group) {
-    const generation=newGeneration(); state.group=group; state.context=null; state.locations=[]; state.offerings=[]; state.areas=[]; state.branch=''; state.selectedLocation=''; state.selectedOffering=''; state.dirty=false; clearSubmission(); state.module='summary'; nav.hidden=true; clearAlert(); setLoading('Cargando organización…');
+  async function selectOrganization(group,restoreRoute=false) {
+    const requestedRoute=restoreRoute?location.hash:'';
+    const generation=newGeneration(); state.group=group; state.context=null; state.locations=[]; state.offerings=[]; state.areas=[]; state.team=null; state.invitations=[]; state.subscription=null; state.catalog=[]; state.categories=[]; state.branch=''; state.selectedLocation=''; state.selectedOffering=''; state.dirty=false; clearSubmission(); state.primary='summary'; state.module='summary'; nav.hidden=true; sectionNav.hidden=true; mobileToggle.hidden=true; closeMobileNav(); clearAlert(); setLoading('Cargando organización…');
     try {
       const context=await request(orgPath(), 'GET', undefined, state.controller.signal);
       if (generation!==state.generation) return;
-      state.context=context; picker.value=group; setIntro(); renderNav(); await switchModule('summary',true);
+      state.context=context; picker.value=group; setIntro(); history.replaceState(null,'',requestedRoute||'#summary'); await switchModule(routeFromHash(),true,'replace');
     } catch(e) { if (generation!==state.generation || e.name==='AbortError') return; alert(errorMessage(e),'error'); content.innerHTML=empty('No pudimos abrir esta organización.'); }
   }
-  async function switchModule(module, force=false) {
+  async function switchModule(module, force=false, historyMode='push') {
+    if (!primaryVisible(primaryFor(module)) || (sections[primaryFor(module)] && !availableSections(primaryFor(module)).some(([leaf])=>leaf===module))) return;
     if (!force && !guard()) return;
-    const generation=newGeneration(); state.module=module; state.dirty=false; state.selectedLocation=''; state.selectedOffering=''; state.editingLocation=false; clearAlert(); renderNav(); setLoading();
+    const generation=newGeneration(); state.primary=primaryFor(module); state.module=module; state.dirty=false; state.selectedLocation=''; state.selectedOffering=''; state.editingLocation=false; clearAlert(); renderNav(); closeMobileNav(); setLoading();
+    if(historyMode!=='none')history[historyMode==='replace'?'replaceState':'pushState'](null,'','#'+routeFor(module));
     try {
       if (module==='summary') await loadSummary(generation);
       if (module==='locations') await loadLocations(generation);
@@ -101,6 +140,11 @@
       if (module==='subscription') await loadSubscription(generation);
     } catch(e) { if(e.name==='AbortError'||generation!==state.generation)return; alert(errorMessage(e),'error'); content.innerHTML=empty('No pudimos cargar esta sección.','Inténtalo de nuevo.'); }
   }
+  window.addEventListener('popstate',()=>{
+    const previous=routeFor(state.module);
+    if(state.dirty && !guard()){history.pushState(null,'','#'+previous);return;}
+    switchModule(routeFromHash(),true,'none');
+  });
   async function fetchLocations(generation) {
     if (!allowed('provider_locations_manage')) { state.locations=[]; return; }
     const data=await request(orgPath('locations'),'GET',undefined,state.controller.signal);

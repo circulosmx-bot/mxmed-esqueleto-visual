@@ -42,10 +42,16 @@ try {
       <div class="header-right"><label for="organization-picker">Organización</label><select id="organization-picker" aria-label="Organización actual" hidden></select><span id="single-organization" class="organization-name"></span></div>
     </header>
     <main class="portal-main">
-      <div class="page-intro"><div><p class="eyebrow">PORTAL DE PROVEEDORES</p><h1 id="page-title">Tu organización</h1><p id="page-subtitle">Consulta y administra la configuración disponible para tu cuenta.</p></div><div id="status-chips" class="status-chips"></div></div>
-      <div id="notice" role="status" aria-live="polite" class="notice" hidden></div>
-      <nav id="module-nav" class="module-nav" aria-label="Secciones del proveedor" hidden></nav>
-      <section id="portal-content" class="content-panel" aria-live="polite"><p class="loading">Cargando organizaciones…</p></section>
+      <div class="portal-layout">
+        <button id="mobile-nav-toggle" class="mobile-nav-toggle" type="button" aria-controls="module-nav" aria-expanded="false" hidden>Secciones del proveedor <span aria-hidden="true">☰</span></button>
+        <nav id="module-nav" class="module-nav" aria-label="Secciones del proveedor" hidden></nav>
+        <div class="portal-workspace">
+          <div class="page-intro"><div><p class="eyebrow">PORTAL DE PROVEEDORES</p><h1 id="page-title">Tu organización</h1><p id="page-subtitle">Consulta y administra la configuración disponible para tu cuenta.</p></div><div id="status-chips" class="status-chips"></div></div>
+          <div id="notice" role="status" aria-live="polite" class="notice" hidden></div>
+          <nav id="section-nav" class="section-nav" aria-label="Secciones del módulo" hidden></nav>
+          <section id="portal-content" class="content-panel" aria-live="polite"><p class="loading">Cargando organizaciones…</p></section>
+        </div>
+      </div>
     </main>
     <footer class="portal-footer">México Médico · Portal de proveedores</footer>
   </div>
