@@ -4793,3 +4793,104 @@ body.mx-consultation-mode #p-expediente #m7-workspace .plan02b-action-bar .btn:a
   #p-expediente #lon01-history .lon01-head {flex-direction:row;align-items:flex-start}
   #p-expediente #lon01-history .lon01-head .lon01-refresh {width:36px;flex:none}
 }
+
+/* OR02C: order-centered, read-only workspace. Other document tabs keep VIS06 layout. */
+#p-expediente #t-estudios .vis06-orders .vis06-head {margin-bottom:10px}
+#p-expediente #t-estudios .vis06-orders .vis06-controls {display:grid;grid-template-columns:max-content minmax(180px,1fr) max-content 42px;align-items:center;gap:10px;margin-bottom:10px}
+#p-expediente #t-estudios .vis06-orders .vis06-create {display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:7px 14px;white-space:nowrap;text-transform:uppercase}
+#p-expediente #t-estudios .vis06-orders .vis06-create .material-symbols-rounded {font-size:20px;line-height:1}
+#p-expediente #t-estudios .vis06-orders .vis06-search-wrap {box-sizing:border-box;display:flex;align-items:center;min-width:0;height:42px;padding:0 12px;border:1px solid #a9d4dd;border-radius:8px;background:#fff;color:#517f91}
+#p-expediente #t-estudios .vis06-orders .vis06-search-wrap .material-symbols-rounded {flex:none;width:24px;overflow:hidden;white-space:nowrap;font-size:23px}
+#p-expediente #t-estudios .vis06-orders .vis06-search-wrap input {min-width:0;width:100%;height:100%;padding:0 0 0 8px;border:0;outline:0;box-shadow:none;background:transparent;color:#123f60}
+#p-expediente #t-estudios .vis06-orders .vis06-search-wrap:focus-within {outline:2px solid #008c9b;outline-offset:2px}
+#p-expediente #t-estudios .vis06-orders .vis06-segments {display:flex;align-items:stretch;height:42px;padding:3px;border:1px solid #a6d4dc;border-radius:9px;background:rgb(255 255 255 / .76)}
+#p-expediente #t-estudios .vis06-orders .vis06-segments button {min-width:82px;padding:4px 9px;border:0;border-radius:6px;background:transparent;color:#18546d;font-family:inherit;font-size:12px;font-weight:600;line-height:1.2;cursor:pointer}
+#p-expediente #t-estudios .vis06-orders .vis06-segments button+button {border-left:1px solid #c8e4e9}
+#p-expediente #t-estudios .vis06-orders .vis06-segments button[aria-pressed="true"] {background:#007f92;color:#fff;border-left-color:transparent}
+#p-expediente #t-estudios .vis06-orders .vis06-segments button:hover:not([aria-pressed="true"]) {background:#effbfe}
+#p-expediente #t-estudios .vis06-orders .vis06-refresh {display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:0;overflow:hidden;border-color:#a5cdd4;background:rgb(255 255 255 / .78);color:#287488}
+#p-expediente #t-estudios .vis06-orders .vis06-refresh .material-symbols-rounded {max-width:24px;overflow:hidden;font-size:23px;line-height:1}
+#p-expediente #t-estudios .vis06-orders-workspace {display:grid;grid-template-columns:minmax(0,45fr) minmax(0,55fr);gap:12px;height:var(--vis06-orders-height,420px);min-height:140px;min-width:0}
+#p-expediente #t-estudios .vis06-orders-index {display:flex;flex-direction:column;min-width:0;min-height:0}
+#p-expediente #t-estudios .vis06-orders .vis06-notice {flex:none;margin:0 0 5px;font-size:12px;line-height:1.3}
+#p-expediente #t-estudios .vis06-orders .vis06-list {display:flex;flex-direction:column;gap:7px;flex:1;min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;padding-right:3px}
+#p-expediente #t-estudios .vis06-orders .vis06-list.is-scrollable:hover,
+#p-expediente #t-estudios .vis06-orders .vis06-list.is-scrollable:focus-within {box-shadow:inset -3px 0 0 #8ccfd8}
+#p-expediente #t-estudios .vis06-orders .vis06-list::-webkit-scrollbar {width:8px}
+#p-expediente #t-estudios .vis06-orders .vis06-list::-webkit-scrollbar-track {background:transparent}
+#p-expediente #t-estudios .vis06-orders .vis06-list::-webkit-scrollbar-thumb {border:2px solid transparent;border-radius:8px;background:transparent;background-clip:padding-box}
+#p-expediente #t-estudios .vis06-orders .vis06-list.is-scrollable:hover::-webkit-scrollbar-thumb,
+#p-expediente #t-estudios .vis06-orders .vis06-list.is-scrollable:focus-within::-webkit-scrollbar-thumb {background-color:#52aebd}
+#p-expediente #t-estudios .vis06-orders .vis06-index-card {display:grid;grid-template-columns:46px minmax(0,1fr) auto 18px;align-items:center;gap:10px;flex:none;width:100%;min-height:70px;padding:8px 10px;border:1px solid #b8dce3;border-radius:10px;background:rgb(255 255 255 / .8);color:#123f60;font-family:inherit;text-align:left;cursor:pointer}
+#p-expediente #t-estudios .vis06-orders .vis06-index-card:hover {background:#f1fafb;border-color:#8fcbd4}
+#p-expediente #t-estudios .vis06-orders .vis06-index-card[aria-pressed="true"] {background:#e7f8fa;border-color:#008c9b;box-shadow:inset 0 0 0 1px #008c9b}
+#p-expediente #t-estudios .vis06-orders .vis06-index-icon {display:grid;place-items:center;width:46px;height:46px;overflow:hidden;border-radius:10px;background:#e5f7f9;color:#079cb3}
+#p-expediente #t-estudios .vis06-orders .vis06-index-icon .material-symbols-rounded {font-size:28px;line-height:1}
+#p-expediente #t-estudios .vis06-orders .vis06-index-copy {display:flex;flex-direction:column;gap:1px;min-width:0}
+#p-expediente #t-estudios .vis06-orders .vis06-index-copy strong {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;line-height:1.2;color:#123f60}
+#p-expediente #t-estudios .vis06-orders .vis06-index-copy small {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.25;color:#476783}
+#p-expediente #t-estudios .vis06-orders .vis06-index-copy .vis06-index-eyebrow {font-size:10px;font-weight:700;color:#356b82}
+#p-expediente #t-estudios .vis06-orders .vis06-count {display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#eaf1f3;color:#526b78;font-size:11px;font-weight:600;white-space:nowrap}
+#p-expediente #t-estudios .vis06-orders .vis06-count::before {content:'';width:7px;height:7px;border-radius:50%;background:#819ba5}
+#p-expediente #t-estudios .vis06-orders .vis06-count.has-results {background:#def8ed;color:#08796d}
+#p-expediente #t-estudios .vis06-orders .vis06-count.has-results::before {background:#11b893}
+#p-expediente #t-estudios .vis06-orders .vis06-index-chevron {width:18px;overflow:hidden;white-space:nowrap;font-size:19px;color:#287488}
+#p-expediente #t-estudios .vis06-orders .vis06-more {flex:none;align-self:center;margin:4px 0 8px}
+#p-expediente #t-estudios .vis06-orders .vis06-orders-empty {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;flex:1;min-height:0;padding:20px;border:1px solid #b8dce3;border-radius:10px;background:rgb(255 255 255 / .78);text-align:center;color:#123f60}
+#p-expediente #t-estudios .vis06-orders .vis06-orders-empty strong {max-width:340px;font-size:17px;line-height:1.3}
+#p-expediente #t-estudios .vis06-orders .vis06-orders-empty p {max-width:390px;margin:0;color:#6c8ba1;font-size:13px}
+#p-expediente #t-estudios .vis06-orders .vis06-detail {box-sizing:border-box;min-width:0;min-height:0;height:100%;margin:0;padding:12px 14px;overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior:contain;background:rgb(255 255 255 / .83)}
+#p-expediente #t-estudios .vis06-orders .vis06-detail.is-placeholder {display:flex;align-items:center;justify-content:center}
+#p-expediente #t-estudios .vis06-orders .vis06-detail-placeholder {display:flex;flex-direction:column;align-items:center;gap:10px;max-width:450px;text-align:center}
+#p-expediente #t-estudios .vis06-orders .vis06-placeholder-icon {display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:#e4f1f5;color:#268da4;font-size:42px;line-height:1}
+#p-expediente #t-estudios .vis06-orders .vis06-detail-placeholder h4 {margin:0;color:#123f60;font-size:17px}
+#p-expediente #t-estudios .vis06-orders .vis06-detail-placeholder p {margin:0;color:#6c8ba1;font-size:13px}
+#p-expediente #t-estudios .vis06-orders .vis06-projected-head {display:flex;align-items:center;gap:10px;min-width:0;margin-bottom:12px}
+#p-expediente #t-estudios .vis06-orders .vis06-detail-icon {display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:9px;background:#e5f7f9;color:#079cb3}
+#p-expediente #t-estudios .vis06-orders .vis06-detail-icon .material-symbols-rounded {font-size:29px}
+#p-expediente #t-estudios .vis06-orders .vis06-projected-intro {flex:1;min-width:0}
+#p-expediente #t-estudios .vis06-orders .vis06-projected-intro h4 {margin:0 0 2px;color:#123f60;font-size:18px;line-height:1.25}
+#p-expediente #t-estudios .vis06-orders .vis06-projected-intro p {margin:0;color:#476783;font-size:12px}
+#p-expediente #t-estudios .vis06-orders .vis06-projected-section {margin:0 0 9px;padding:9px 11px;border:1px solid #d2e7ec;border-radius:9px;background:#fff}
+#p-expediente #t-estudios .vis06-orders .vis06-projected-section:last-child {margin-bottom:0}
+#p-expediente #t-estudios .vis06-orders .vis06-section-title {display:flex;align-items:center;gap:6px;margin:0 0 7px;padding-bottom:5px;border-bottom:1px solid #deebef;font-size:12px;font-weight:700;line-height:1.2;color:#07536e;text-transform:uppercase}
+#p-expediente #t-estudios .vis06-orders .vis06-section-title .material-symbols-rounded {font-size:16px;text-transform:none}
+#p-expediente #t-estudios .vis06-orders .vis06-facts {display:grid;gap:3px;margin:0}
+#p-expediente #t-estudios .vis06-orders .vis06-fact {display:grid;grid-template-columns:minmax(120px,30%) minmax(0,1fr);gap:8px;font-size:12px;line-height:1.35}
+#p-expediente #t-estudios .vis06-orders .vis06-fact dt {color:#476783;font-weight:500}
+#p-expediente #t-estudios .vis06-orders .vis06-fact dd {margin:0;color:#123f60;white-space:pre-wrap;overflow-wrap:anywhere}
+#p-expediente #t-estudios .vis06-orders .vis06-study-list {margin:0;padding-left:18px;color:#123f60;font-size:12px}
+#p-expediente #t-estudios .vis06-orders .vis06-result-entry {display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:6px 8px;border:1px solid #d5e8ed;border-radius:7px;background:#f7fbfc;color:#123f60;font-family:inherit;text-align:left;cursor:pointer}
+#p-expediente #t-estudios .vis06-orders .vis06-result-entry+.vis06-result-entry {margin-top:5px}
+#p-expediente #t-estudios .vis06-orders .vis06-result-entry>.material-symbols-rounded:first-child {font-size:23px;color:#07536e}
+#p-expediente #t-estudios .vis06-orders .vis06-result-entry>.material-symbols-rounded:last-child {margin-left:auto;color:#287488}
+#p-expediente #t-estudios .vis06-orders .vis06-result-entry-copy {display:flex;flex-direction:column;min-width:0}
+#p-expediente #t-estudios .vis06-orders .vis06-result-entry-copy strong {font-size:12px}
+#p-expediente #t-estudios .vis06-orders .vis06-result-entry-copy small {font-size:11px;color:#476783}
+#p-expediente #t-estudios .vis06-orders .vis06-no-results {display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px;text-align:center;color:#123f60}
+#p-expediente #t-estudios .vis06-orders .vis06-no-results>.material-symbols-rounded {font-size:27px;color:#819ba5}
+#p-expediente #t-estudios .vis06-orders .vis06-no-results strong {font-size:13px}
+#p-expediente #t-estudios .vis06-orders .vis06-no-results p {margin:0;color:#6c8ba1;font-size:12px}
+#p-expediente #t-estudios .vis06-orders .vis06-mobile-back {display:none}
+#p-expediente #t-estudios.vis06-capture-open .vis06-orders-workspace {display:none}
+@media(max-width:1000px) and (min-width:701px) {
+  #p-expediente #t-estudios .vis06-orders .vis06-controls {grid-template-columns:max-content minmax(120px,1fr) max-content 42px;gap:7px}
+  #p-expediente #t-estudios .vis06-orders .vis06-segments button {min-width:67px;padding-inline:5px}
+  #p-expediente #t-estudios .vis06-orders-workspace {grid-template-columns:minmax(0,43fr) minmax(0,57fr)}
+  #p-expediente #t-estudios .vis06-orders .vis06-index-card {grid-template-columns:42px minmax(0,1fr) 16px}
+  #p-expediente #t-estudios .vis06-orders .vis06-index-card>.vis06-count {grid-column:2;justify-self:start}
+}
+@media(max-width:700px) {
+  #p-expediente #t-estudios .vis06-orders .vis06-controls {grid-template-columns:minmax(0,1fr) 42px;gap:8px}
+  #p-expediente #t-estudios .vis06-orders .vis06-create,#p-expediente #t-estudios .vis06-orders .vis06-search-wrap {grid-column:1/-1;width:100%}
+  #p-expediente #t-estudios .vis06-orders .vis06-segments {min-width:0}
+  #p-expediente #t-estudios .vis06-orders .vis06-segments button {min-width:0;flex:1;padding-inline:3px;font-size:11px}
+  #p-expediente #t-estudios .vis06-orders-workspace {display:block;height:auto;min-height:0}
+  #p-expediente #t-estudios .vis06-orders .vis06-list {max-height:none;overflow:visible;scrollbar-gutter:auto}
+  #p-expediente #t-estudios .vis06-orders .vis06-detail {display:none;height:auto;max-height:none;overflow:visible;scrollbar-gutter:auto}
+  #p-expediente #t-estudios .vis06-orders-workspace.is-detail-open .vis06-orders-index {display:none}
+  #p-expediente #t-estudios .vis06-orders-workspace.is-detail-open .vis06-detail {display:block}
+  #p-expediente #t-estudios .vis06-orders .vis06-mobile-back {display:inline-flex;margin-bottom:10px}
+  #p-expediente #t-estudios .vis06-orders .vis06-index-card {grid-template-columns:42px minmax(0,1fr) 16px}
+  #p-expediente #t-estudios .vis06-orders .vis06-index-card>.vis06-count {grid-column:2;justify-self:start}
+}
