@@ -9,24 +9,49 @@
   const picker = document.getElementById('organization-picker');
   const single = document.getElementById('single-organization');
   const notice = document.getElementById('notice');
-  // Canonical B3 order. Future modules stay in configuration, never in the live navigation without an authority.
+  const accountToggle = document.getElementById('account-menu-toggle');
+  const accountMenu = document.getElementById('account-menu');
+  const desktopNav = window.matchMedia('(min-width: 841px)');
+  // Physician shell order, with provider ownership. Future rows remain absent until their own authority exists.
+  // Agenda: physician calendar grammar; organization, location, service, and resource/equipment ownership.
+  // Pacientes: physician list/header grammar; authorized provider orders, appointments, results, documents, and billing only.
+  // Órdenes/Resultados, Facturación, Promoción, Reportes, and Notificaciones inherit visual slots, not physician data scope.
+  // Provider full patient chart access is never granted by this navigation model.
   const modules = [
-    {key:'summary',title:'Resumen',live:true},
-    {key:'subscription',title:'Suscripción',live:true},
-    {key:'profile',title:'Perfil',live:true},
+    {key:'summary',title:'Resumen',placement:'header',live:true},
+    {key:'profile',title:'Perfil Empresarial',placement:'sidebar-group',live:true},
     {key:'agenda',title:'Agenda',live:false},
     {key:'patients',title:'Pacientes',live:false},
-    {key:'catalog',title:'Catálogo de Estudios',live:true},
+    {key:'catalog',title:'Catálogo de Estudios',placement:'sidebar',live:true},
     {key:'orders_results',title:'Órdenes y Resultados',live:false},
     {key:'billing',title:'Facturación',live:false},
-    {key:'diffusion',title:'Difusión',live:false},
-    {key:'reports',title:'Reportes',live:false}
+    {key:'promotion',title:'Promoción',live:false},
+    {key:'reports',title:'Reportes',live:false},
+    {key:'notifications',title:'Notificaciones',live:false},
+    {key:'subscription',title:'Suscripción',placement:'header-plan',live:true}
   ];
-  const sections = {profile:[['locations','Sucursales'],['team','Equipo y accesos']],catalog:[['services','Servicios por sucursal'],['areas','Áreas de servicio']]};
+  const sections = {profile:[['company','Información Empresarial'],['locations','Sucursales'],['team','Equipo y accesos']],catalog:[['services','Servicios por sucursal'],['areas','Áreas de servicio']]};
+  const profileInformationTabs = [
+    {key:'company',title:'Información Empresarial',live:true,mode:'read-only'},
+    {key:'sanitary',title:'Información Sanitaria',live:false},
+    {key:'facility_media',title:'Fotos de Instalaciones y Servicios',live:false}
+  ];
+  // Only the current read-only company authority is exposed; the remaining provider tabs have no writer yet.
+  // Opiniones, Agenda, Pacientes, Órdenes y Resultados, Facturación, Promoción, Reportes and Notificaciones remain unexposed.
+  const moduleHeadings = {
+    summary:['Resumen','Estado actual de tu organización y su configuración.','summary'],
+    company:['Información Empresarial','Información registrada de tu organización.','company'],
+    locations:['Sucursales','Administra ubicación y disponibilidad de cada sucursal.','locations'],
+    team:['Equipo y accesos','Gestiona cuentas autorizadas para esta organización.','team'],
+    services:['Catálogo de Estudios','Configura los estudios ofrecidos por cada sucursal.','catalog'],
+    areas:['Catálogo de Estudios','Define dónde puedes prestar servicios fuera de la sucursal.','catalog'],
+    subscription:['Suscripción','Estado comercial de esta organización.','subscription']
+  };
   const fields = [['branch_name','Nombre de la sucursal'],['street','Calle'],['exterior_number','Número exterior'],['interior_number','Número interior'],['postal_code','Código postal'],['colonia','Colonia'],['municipality','Municipio o alcaldía'],['state_name','Estado'],['phone','Teléfono']];
   const material = fields.map(f => f[0]).filter(f => f !== 'phone');
-  const state = { csrf:'', organizations:[], group:'', context:null, locations:[], primary:'summary', module:'summary', branch:'', selectedLocation:'', editingLocation:false, selectedOffering:'', offerings:[], areas:[], subscription:null, team:null, invitations:[], catalog:[], categories:[], catalogSearch:'', catalogCategory:'', generation:0, controller:null, dirty:false, snapshot:'', pendingKey:'', pendingFingerprint:'' };
+  const state = { csrf:'', organizations:[], group:'', context:null, locations:[], primary:'summary', module:'summary', profileExpanded:true, branch:'', selectedLocation:'', editingLocation:false, selectedOffering:'', offerings:[], areas:[], subscription:null, team:null, invitations:[], catalog:[], categories:[], catalogSearch:'', catalogCategory:'', generation:0, controller:null, dirty:false, snapshot:'', pendingKey:'', pendingFingerprint:'' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const shellIcon = name => `<svg aria-hidden="true" focusable="false"><use href="#provider-icon-${name}"></use></svg>`;
   const val = v => v === null || v === undefined || v === '' ? '—' : esc(v);
   const path = (...parts) => `${API}/${parts.map(x => encodeURIComponent(String(x))).join('/')}`;
   const orgPath = (...parts) => path('organizations', state.group, ...parts);
@@ -67,11 +92,11 @@
   window.addEventListener('beforeunload', e => { if (state.dirty) { e.preventDefault(); e.returnValue=''; } });
   function markClean(form) { state.snapshot = form ? JSON.stringify(Object.fromEntries(new FormData(form))) : ''; state.dirty=false; }
   function watchForm(form) { if (!form) return; markClean(form); form.addEventListener('input', () => { state.dirty=JSON.stringify(Object.fromEntries(new FormData(form)))!==state.snapshot; }); form.addEventListener('change', () => { state.dirty=JSON.stringify(Object.fromEntries(new FormData(form)))!==state.snapshot; }); }
-  function heading(title, description='', actions='') { return `<div class="content-head"><div><h2>${esc(title)}</h2>${description?`<p>${esc(description)}</p>`:''}</div>${actions}</div>`; }
+  function heading(title, description='', actions='') { return actions ? `<div class="content-head">${actions}</div>` : ''; }
   function empty(title, copy='', button='') { return `<div class="empty"><strong>${esc(title)}</strong><span>${esc(copy)}</span>${button}</div>`; }
   function gate(name) { return `<div class="gate">${gated(name) ? gateText : 'Tu cuenta no tiene permiso para administrar esta sección.'}</div>`; }
   function setLoading(text='Cargando sección…') { content.innerHTML=`<p class="loading" role="status">${esc(text)}</p>`; }
-  const primaryFor = leaf => leaf==='locations'||leaf==='team' ? 'profile' : leaf==='services'||leaf==='areas' ? 'catalog' : leaf;
+  const primaryFor = leaf => ['company','locations','team'].includes(leaf) ? 'profile' : leaf==='services'||leaf==='areas' ? 'catalog' : leaf;
   const sectionVisible = leaf => leaf==='team' ? allowed('provider_team_manage') : state.context?.member_role!=='collaborator';
   const availableSections = primary => (sections[primary]||[]).filter(([leaf])=>sectionVisible(leaf));
   const primaryVisible = primary => primary==='summary'||primary==='subscription'||availableSections(primary).length>0;
@@ -79,29 +104,47 @@
   const routeFromHash = () => {
     const route=location.hash.slice(1);
     const leaf=route.includes('/') ? route.split('/')[1] : route;
-    return ['summary','subscription','locations','team','services','areas'].includes(leaf) && route===routeFor(leaf) && primaryVisible(primaryFor(leaf)) ? leaf : 'summary';
+    return ['summary','subscription','company','locations','team','services','areas'].includes(leaf) && route===routeFor(leaf) && primaryVisible(primaryFor(leaf)) ? leaf : 'summary';
   };
-  function closeMobileNav() { layout.classList.remove('nav-open'); mobileToggle.setAttribute('aria-expanded','false'); }
-  mobileToggle.onclick=()=>{const open=layout.classList.toggle('nav-open');mobileToggle.setAttribute('aria-expanded',String(open));};
+  function syncNavToggle() {
+    const expanded=desktopNav.matches ? !layout.classList.contains('sidebar-collapsed') : layout.classList.contains('nav-open');
+    mobileToggle.setAttribute('aria-expanded',String(expanded));
+    mobileToggle.setAttribute('aria-label',desktopNav.matches ? (expanded?'Contraer menú lateral':'Expandir menú lateral') : (expanded?'Cerrar secciones del proveedor':'Abrir secciones del proveedor'));
+  }
+  function closeMobileNav() { layout.classList.remove('nav-open'); syncNavToggle(); }
+  mobileToggle.onclick=()=>{if(desktopNav.matches){const collapsed=layout.classList.toggle('sidebar-collapsed');document.body.classList.toggle('sidebar-collapsed',collapsed);}else layout.classList.toggle('nav-open');syncNavToggle();};
+  desktopNav.addEventListener('change',()=>{layout.classList.remove('nav-open');if(!desktopNav.matches){layout.classList.remove('sidebar-collapsed');document.body.classList.remove('sidebar-collapsed');}syncNavToggle();});
+  document.getElementById('provider-home').onclick=()=>switchModule('summary');
+  document.getElementById('provider-plan-entry').onclick=()=>switchModule('subscription');
+  accountToggle.onclick=()=>{const open=accountMenu.hidden;accountMenu.hidden=!open;accountToggle.setAttribute('aria-expanded',String(open));};
+  document.getElementById('account-subscription').onclick=()=>{accountMenu.hidden=true;accountToggle.setAttribute('aria-expanded','false');switchModule('subscription');};
+  document.getElementById('account-switch-organization').onclick=()=>{accountMenu.hidden=true;accountToggle.setAttribute('aria-expanded','false');picker.focus();};
+  document.addEventListener('click',event=>{if(!event.target.closest('.mx-hb-account')){accountMenu.hidden=true;accountToggle.setAttribute('aria-expanded','false');}});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!accountMenu.hidden){accountMenu.hidden=true;accountToggle.setAttribute('aria-expanded','false');accountToggle.focus();}});
   function renderNav() {
-    nav.innerHTML = modules.filter(m=>m.live && primaryVisible(m.key)).map(m => `<button type="button" data-primary="${m.key}" ${state.primary===m.key?'aria-current="page"':''}>${m.title}</button>`).join('');
+    nav.innerHTML = modules.filter(m=>m.live && m.placement?.startsWith('sidebar') && primaryVisible(m.key)).map(m => {
+      if(m.key==='profile')return `<button type="button" class="menu-main ${state.primary==='profile'?'sb01-current-group':''}" data-group="profile" aria-controls="profile-submenu" aria-expanded="${state.profileExpanded}"><span class="txt"><span class="ttl">Perfil Empresarial</span><span class="sub">información / administración</span></span><span class="ico" aria-hidden="true">${shellIcon('building')}</span></button><div id="profile-submenu" class="menu-sub ${state.profileExpanded?'open':''}" data-group="profile" ${state.profileExpanded?'':'hidden'}>${availableSections('profile').map(([leaf,title])=>`<button type="button" class="menu-sub-btn ${state.module===leaf?'active':''}" data-section="${leaf}" ${state.module===leaf?'aria-current="page"':''}><span class="block"><span class="l1">${title}</span><span class="l2">${leaf==='company'?'Datos de la organización':leaf==='locations'?'Ubicación y contacto':'Miembros e invitaciones'}</span></span><span class="ico-right" aria-hidden="true">${shellIcon(leaf==='team'?'team':'building')}</span></button>`).join('<div class="menu-sep"></div>')}</div>`;
+      return `<button type="button" class="menu-main ${state.primary===m.key?'active':''}" data-primary="${m.key}" ${state.primary===m.key?'aria-current="page"':''}><span class="txt"><span class="ttl">${m.title}</span><span class="sub">servicios y cobertura</span></span><span class="ico" aria-hidden="true">${shellIcon('catalog')}</span></button>`;
+    }).join('');
     nav.hidden = false;
     mobileToggle.hidden=false;
-    nav.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
-      const primary=button.dataset.primary;
-      const leaf=primary===state.primary ? state.module : availableSections(primary)[0]?.[0] || primary;
-      switchModule(leaf);
-    }));
+    nav.querySelector('[data-group="profile"]')?.addEventListener('click',()=>{state.profileExpanded=!state.profileExpanded;renderNav();});
+    nav.querySelectorAll('[data-primary]').forEach(button=>button.addEventListener('click',()=>switchModule(availableSections(button.dataset.primary)[0]?.[0]||button.dataset.primary)));
+    nav.querySelectorAll('[data-section]').forEach(button=>button.addEventListener('click',()=>switchModule(button.dataset.section)));
     const available=availableSections(state.primary);
     sectionNav.hidden=available.length===0;
-    sectionNav.innerHTML=available.map(([leaf,title])=>`<button type="button" data-section="${leaf}" ${state.module===leaf?'aria-current="page"':''}>${title}</button>`).join('');
+    sectionNav.innerHTML=available.map(([leaf,title])=>`<button type="button" class="mx-panel-tabs-link ${state.module===leaf?'active':''}" data-section="${leaf}" ${state.module===leaf?'aria-current="page"':''}><span class="tab-ico" aria-hidden="true">${shellIcon(leaf==='team'?'team':leaf==='services'?'catalog':leaf==='areas'?'area':'building')}</span><span class="mx-panel-tabs-label">${title}</span></button>`).join('');
     sectionNav.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>switchModule(button.dataset.section)));
   }
   function setIntro() {
-    document.getElementById('page-title').textContent=state.context?.display_name || 'Tu organización';
+    document.getElementById('organization-name-text').textContent=state.context?.display_name || 'Tu organización';
+    document.getElementById('organization-role').textContent=`${label(state.context?.organization_type)} · ${label(state.context?.member_role)}`;
     const status=state.context?.provider_status;
     document.getElementById('status-chips').innerHTML=status ? `<span class="chip ${status.operational_state==='ACTIVE'?'good':'warn'}">${label(status.operational_state)}</span><span class="chip ${status.verification_state==='VERIFIED'?'good':'warn'}">${label(status.verification_state)}</span>` : '';
+    updatePlanHeader();
   }
+  function updatePlanHeader() { const sub=state.subscription?.subscription;document.getElementById('provider-plan-name').textContent=sub?label(sub.status):(state.context?.commercial_entitled?'Activo':'Sin acceso'); }
+  function setModuleHeading() {const [title,description,icon]=moduleHeadings[state.module]||moduleHeadings.summary;document.getElementById('page-title').textContent=title;document.getElementById('page-subtitle').textContent=description;document.getElementById('page-icon').innerHTML=shellIcon(icon==='company'||icon==='locations'?'building':icon==='subscription'?'plan':icon==='team'?'team':icon==='catalog'?'catalog':'summary');}
   async function bootstrap() {
     try {
       const session=await request('/api/identity/index.php/current-session');
@@ -109,11 +152,12 @@
       state.csrf=session.csrf_token;
       const result=await request(path('me','organizations'));
       state.organizations=result.organizations || [];
+      document.getElementById('account-switch-organization').hidden=state.organizations.length<2;
       if (!state.organizations.length) { nav.hidden=true; mobileToggle.hidden=true; single.textContent=''; content.innerHTML=empty('No tienes organizaciones de proveedor disponibles en esta cuenta.','Cuando se te asigne una organización, podrás verla aquí.'); return; }
       if (state.organizations.length > 1) {
         picker.innerHTML=state.organizations.map(o=>`<option value="${esc(o.group_id)}">${esc(o.display_name)}</option>`).join(''); picker.hidden=false; single.hidden=true;
         picker.addEventListener('change',()=>{ if(!guard()){picker.value=state.group;return;} selectOrganization(picker.value); });
-      } else { single.textContent=state.organizations[0].display_name; }
+      } else { single.hidden=true; }
       await selectOrganization(state.organizations[0].group_id,true);
     } catch(e) { alert(errorMessage(e),'error'); content.innerHTML=empty('No pudimos cargar el portal.','Actualiza la página para volver a intentarlo.'); }
   }
@@ -127,12 +171,14 @@
     } catch(e) { if (generation!==state.generation || e.name==='AbortError') return; alert(errorMessage(e),'error'); content.innerHTML=empty('No pudimos abrir esta organización.'); }
   }
   async function switchModule(module, force=false, historyMode='push') {
+    if (!state.context) return;
     if (!primaryVisible(primaryFor(module)) || (sections[primaryFor(module)] && !availableSections(primaryFor(module)).some(([leaf])=>leaf===module))) return;
     if (!force && !guard()) return;
-    const generation=newGeneration(); state.primary=primaryFor(module); state.module=module; state.dirty=false; state.selectedLocation=''; state.selectedOffering=''; state.editingLocation=false; clearAlert(); renderNav(); closeMobileNav(); setLoading();
+    const generation=newGeneration(); state.primary=primaryFor(module); state.module=module; if(state.primary==='profile')state.profileExpanded=true; state.dirty=false; state.selectedLocation=''; state.selectedOffering=''; state.editingLocation=false; clearAlert(); renderNav(); setModuleHeading(); closeMobileNav(); setLoading();
     if(historyMode!=='none')history[historyMode==='replace'?'replaceState':'pushState'](null,'','#'+routeFor(module));
     try {
       if (module==='summary') await loadSummary(generation);
+      if (module==='company') loadCompany();
       if (module==='locations') await loadLocations(generation);
       if (module==='services') await loadServices(generation);
       if (module==='areas') await loadAreas(generation);
@@ -151,12 +197,18 @@
     if(generation!==state.generation)return;
     state.locations=data.locations||[];
   }
+  function loadCompany() {
+    const context=state.context;
+    const status=context?.provider_status||{};
+    content.innerHTML=`<div class="company-readonly" data-provider-info-tab="${profileInformationTabs[0].key}"><div class="metric"><span class="label">Organización</span><strong>${esc(context.display_name)}</strong><small>${label(context.organization_type)}</small></div><div class="metric"><span class="label">Tu acceso</span><strong>${label(context.member_role)}</strong><small>Miembro activo de esta organización</small></div><div class="metric"><span class="label">Estado</span><strong>${label(status.operational_state)}</strong><small>${label(status.verification_state)}</small></div></div><p class="inline-note">Estos datos se muestran para consulta. La edición del perfil empresarial estará disponible cuando exista su autoridad correspondiente.</p>`;
+  }
   async function loadSummary(generation) {
     const reads=[request(orgPath('subscription'),'GET',undefined,state.controller.signal)];
     if(allowed('provider_locations_manage')) reads.push(request(orgPath('locations'),'GET',undefined,state.controller.signal));
     const results=await Promise.allSettled(reads);
     if(generation!==state.generation)return;
     state.subscription=results[0].status==='fulfilled'?results[0].value:null;
+    updatePlanHeader();
     state.locations=results[1]?.status==='fulfilled'?(results[1].value.locations||[]):[];
     const loc=state.locations, offerings=loc.flatMap(x=>x.offerings||[]);
     const status=state.context.provider_status||{};
@@ -232,7 +284,7 @@
   function inviteResolutionText(code){return ({SELF_INVITE:'No puedes invitar a tu propia cuenta.',ALREADY_MEMBER:'Esta cuenta ya pertenece al equipo.',PENDING_INVITATION:'Ya existe una invitación pendiente para esta cuenta.',NOT_FOUND_OR_NOT_INVITABLE:'No se puede invitar a esta cuenta.'})[code]||'No se puede invitar a esta cuenta.';}
   async function memberAction(id,verb){if(!id||!['suspend','revoke'].includes(verb))return;if(!confirm(verb==='suspend'?'¿Suspender este miembro?':'¿Revocar el acceso de este miembro?'))return;try{await request(orgPath('members',id,verb),'POST',{});const gen=newGeneration();await loadTeam(gen);alert('Equipo actualizado.');}catch(e){alert(errorMessage(e),'error');}}
   async function revokeInvite(id){if(!confirm('¿Revocar esta invitación pendiente?'))return;try{await request(orgPath('invitations',id,'revoke'),'POST',{});const gen=newGeneration();await loadTeam(gen);alert('Invitación revocada.');}catch(e){alert(errorMessage(e),'error');}}
-  async function loadSubscription(generation){const data=await request(orgPath('subscription'),'GET',undefined,state.controller.signal);if(generation!==state.generation)return;state.subscription=data;renderSubscription();}
+  async function loadSubscription(generation){const data=await request(orgPath('subscription'),'GET',undefined,state.controller.signal);if(generation!==state.generation)return;state.subscription=data;updatePlanHeader();renderSubscription();}
   function renderSubscription(){const sub=state.subscription?.subscription;const capability=state.context.commercial_entitled;content.innerHTML=heading('Suscripción','Estado comercial de esta organización. Esta sección es de consulta.')+`<div class="grid"><div class="metric"><span class="label">Acceso comercial</span><strong>${capability?'Activo':'Sin acceso activo'}</strong><small>Configuración de sucursales y servicios</small></div>${sub?`<div class="metric"><span class="label">Plan</span><strong>Plan de proveedor</strong><small>${label(sub.billing_period)}</small></div><div class="metric"><span class="label">Estado del plan</span><strong>${label(sub.status)}</strong><small>Desde ${fmtDate(sub.starts_at)}${sub.expires_at?` · Hasta ${fmtDate(sub.expires_at)}`:''}</small></div>`:''}</div>${!capability?`<div class="attention"><p>${gateText}</p><p>La activación comercial no está disponible desde este portal.</p></div>`:''}`;}
   bootstrap();
 })();
