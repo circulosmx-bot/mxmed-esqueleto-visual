@@ -92,6 +92,9 @@ def choose(page, key):
     page.locator(f'[data-lon01-filter="{key}"]').click()
     assert page.locator(f'[data-lon01-filter="{key}"]').get_attribute('aria-pressed') == 'true'
     assert page.locator('[data-lon01-filter][aria-pressed="true"]').count() == 1
+    assert page.locator('[data-lon01-kind][hidden][aria-pressed="true"]').count() == 0
+    assert page.locator('[data-lon01-kind][hidden].is-selected').count() == 0
+    assert page.locator('[data-lon01-kind][aria-pressed="true"]').count() <= 1
 
 
 with sync_playwright() as p:
@@ -161,6 +164,28 @@ with sync_playwright() as p:
         assert page.locator('[data-lon01-filter-empty]').inner_text() == label
         assert page.locator('[data-vis05-empty]').inner_text() == label
         assert page.locator('[data-lon01-detail]').is_hidden()
+    page.close()
+
+    page = browser.new_page(viewport={'width':1440,'height':810})
+    enter(page, rows=encounters, docs=[documents[0]], has_open=False)
+    choose(page,'prescriptions')
+    prescription = page.locator('.lon01-event-row')
+    assert prescription.get_attribute('aria-pressed') == 'true'
+    choose(page,'all')
+    assert prescription.get_attribute('aria-pressed') == 'true'  # Still eligible.
+    prescription.focus()
+    page.locator('[data-lon01-filter="studies"]').evaluate('(button)=>button.click()')
+    assert page.locator('[data-lon01-filter="studies"]').get_attribute('aria-pressed') == 'true'
+    assert page.evaluate('document.activeElement?.dataset.lon01Filter') == 'studies'
+    assert page.locator('[data-lon01-kind][aria-pressed="true"]').count() == 0
+    assert page.locator('[data-lon01-kind][hidden].is-selected').count() == 0
+    assert prescription.get_attribute('aria-pressed') == 'false'
+    assert page.locator('[data-lon01-detail]').is_hidden()
+    assert page.locator('[data-vis05-empty]').inner_text() == 'Sin estudios independientes registrados.'
+    choose(page,'all')
+    assert page.locator('[data-lon01-kind][aria-pressed="true"]').count() == 1
+    assert prescription.get_attribute('aria-pressed') == 'true'  # First chronological eligible row.
+    print('H09 hidden selection, empty filter, and focus: PASS')
     page.close()
 
     long_rows = encounters + [{'encounter_key':f'enc:{number}',

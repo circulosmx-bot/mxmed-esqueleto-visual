@@ -424,6 +424,12 @@
   function applyFilter(next, changed = true) {
     activeFilter = next;
     for (const button of filterButtons) button.setAttribute('aria-pressed', String(button.dataset.lon01Filter === next));
+    if (changed && detailOrigin?.isConnected && next !== 'all' && detailOrigin.dataset.lon01Kind !== next) {
+      if (detailOrigin.contains(document.activeElement)) {
+        filterButtons.find(button => button.dataset.lon01Filter === next)?.focus({preventScroll:true});
+      }
+      selectCard(null);
+    }
     const items = [...current.querySelectorAll('[data-lon01-kind]'), ...previous.querySelectorAll('[data-lon01-kind]')];
     for (const item of items) item.hidden = next !== 'all' && item.dataset.lon01Kind !== next;
     const visible = items.filter(item => !item.hidden);
@@ -442,7 +448,7 @@
     if (!selectedVisible) {
       selection++;
       detail.removeAttribute('aria-busy');
-      detailOrigin = null;
+      selectCard(null);
       detailBody.replaceChildren();
       show(detail, false);
       root.classList.remove('vis05-detail-open');
