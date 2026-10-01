@@ -69,6 +69,7 @@ function clinical_canonical_document_class(string $documentType): string
         'imaging_result' => 'IMAGING_RESULT',
         'external_result' => 'EXTERNAL_RESULT',
         'external_report' => 'EXTERNAL_REPORT',
+        'result' => 'GENERIC_RESULT',
         'prescription', 'receta' => 'PRESCRIPTION',
         default => 'ENCOUNTER_DOCUMENT',
     };
@@ -113,7 +114,7 @@ function clinical_encounter_start_semantic_request(string $doctorId, string $pat
 
 function clinical_document_create_operation(string $documentClass): string
 {
-    return in_array(strtoupper(trim($documentClass)), ['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT'], true)
+    return in_array(strtoupper(trim($documentClass)), ['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT','GENERIC_RESULT'], true)
         ? 'CREATE_POST_ENCOUNTER_RESULT'
         : 'CREATE_ENCOUNTER_DOCUMENT';
 }
@@ -124,6 +125,7 @@ function clinical_document_policy_operation(string $documentClass): string
         'LAB_RESULT' => 'CREATE_LAB_RESULT',
         'IMAGING_RESULT' => 'CREATE_IMAGING_RESULT',
         'EXTERNAL_RESULT', 'EXTERNAL_REPORT' => 'CREATE_EXTERNAL_RESULT',
+        'GENERIC_RESULT' => 'CREATE_GENERIC_RESULT',
         'PRESCRIPTION' => 'CREATE_PRESCRIPTION',
         'ORDER' => 'CREATE_ORDER',
         default => 'CREATE_ENCOUNTER_DOCUMENT',
@@ -242,8 +244,8 @@ function clinical_document_operation_policy(string $operation, string $documentC
         return ['allowed'=>in_array($status,['open','closed'],true),'code'=>in_array($status,['open','closed'],true)?'ALLOWED':'ENCOUNTER_STATE_INVALID'];
     }
     if ($operation === 'CREATE_FINAL_AUTO_NOTE') return ['allowed'=>$status==='open','code'=>$status==='open'?'ALLOWED':'FINAL_NOTE_REQUIRES_OPEN'];
-    $postClasses=['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT'];
-    if (in_array($operation,['CREATE_LAB_RESULT','CREATE_IMAGING_RESULT','CREATE_EXTERNAL_RESULT'],true)
+    $postClasses=['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT','GENERIC_RESULT'];
+    if (in_array($operation,['CREATE_LAB_RESULT','CREATE_IMAGING_RESULT','CREATE_EXTERNAL_RESULT','CREATE_GENERIC_RESULT'],true)
         && in_array($class,$postClasses,true)) {
         $validContext=($context['same_patient']??false)===true && ($context['valid_originating_order']??false)===true
           && trim((string)($context['effective_at']??''))!=='' && trim((string)($context['provenance']??''))!=='';

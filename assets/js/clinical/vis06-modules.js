@@ -17,6 +17,8 @@
   const home = row => orderTypes.has(row.document_type) || (legacyDocumentResultTypes.has(row.document_type) && (row.document_type !== 'external_report' || relation(row))) ? 'orders' : prescriptionTypes.has(row.document_type) ? 'prescriptions' : 'documents';
   const relation = row => { const p = payload(row); return String(p.related_order_document_uuid || p.related_order_document_id || p.related_document_uuid || p.related_document_id || p.related_order_id || p.context?.related_order_document_uuid || ''); };
   const day = value => { const m=String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : 'Sin fecha registrada'; };
+  const coverageLabel = state => ({NO_RESULTS:'Sin resultados',PARTIAL_RESULTS:'Algunos estudios tienen resultado',ALL_ITEMS_HAVE_RESULTS:'Todos los estudios tienen resultado',UNKNOWN_COVERAGE:'Cobertura por estudio no especificada',UNKNOWN_LEGACY:'Cobertura por estudio no especificada'})[state] || 'Cobertura por estudio no especificada';
+  const itemCoverageLabel = state => ({NO_RESULT:'Sin resultado',RESULT_AVAILABLE:'Resultado disponible',UNKNOWN:'Cobertura no especificada'})[state] || 'Cobertura no especificada';
   const longDay = value => { const m=String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m)return 'Sin fecha registrada';return `${Number(m[3])} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][Number(m[2])-1]} ${m[1]}`; };
   const label = row => ({pdf:'PDF clínico',image:'Imagen clínica',note:'Nota clínica',order:'Orden de estudio',lab_result:'Resultado de laboratorio',imaging_result:'Resultado de imagen',external_report:'Informe externo',prescription:'Receta',receta:'Receta'})[row.document_type] || 'Documento clínico';
   const projectionLabel = row => ({order:'Orden de estudio',orders:'Orden de estudio',lab_order:'Orden de laboratorio',imaging_order:'Orden de imagen',orden_estudio:'Orden de estudio',lab_result:'Resultado de laboratorio',lab_pdf:'Resultado de laboratorio',imaging_result:'Resultado de imagen',result:'Resultado de estudio',external_result:'Resultado externo',external_report:'Informe externo'})[row.document_type] || label(row);
@@ -179,15 +181,23 @@
     const mobileBack=button('Volver a la lista',()=>{view.workspace.classList.remove('is-detail-open');view.lastTrigger?.focus({preventScroll:true});});
     mobileBack.classList.add('vis06-mobile-back');view.detail.append(mobileBack,header);
     if(isOrder){
+      const register=button('REGISTRAR RESULTADO',()=>{
+        if(!window.mxmedLinkedResultComposer)return;
+        const owner={patientId:selectedPatient(),doctorId:professional,orderRef:row.document_uuid,orderRow:row};
+        window.mxmedLinkedResultComposer.open({...owner,trigger:register,
+          isCurrent:()=>selectedPatient()===owner.patientId&&professional===owner.doctorId,
+          onSaved:loadOrders});
+      });
+      register.classList.add('vis06-register-result');if(row.status!=='voided'&&Number(row.has_successor)!==1)view.detail.append(register);
       const data=projectedSection('Datos de la orden','assignment');
       const facts=node('dl','','vis06-facts');facts.append(fact('Fecha de emisión',longDay(row.chronology_at)));
       if(orderOrigin(row))facts.append(fact('Origen',orderOrigin(row)));
       data.append(facts);view.detail.append(data);
       const structured=row.order_payload_version===2&&Array.isArray(row.order_items)?row.order_items.filter(item=>typeof item?.study_display_name==='string'&&item.study_display_name.trim()):[];
       const studies=structured.length?structured:(row.requested_studies||[]).filter(value=>typeof value==='string'&&value.trim());
-      if(studies.length){const section=projectedSection('Estudios solicitados','science');const list=node('ul','','vis06-study-list');studies.forEach(study=>{
+      if(studies.length){const section=projectedSection('Estudios solicitados','science');section.append(node('p',coverageLabel(row.coverage_state),'vis06-coverage-summary'));const list=node('ul','','vis06-study-list');studies.forEach(study=>{
         const item=node('li',typeof study==='string'?study:study.study_display_name);
-        if(typeof study==='object'&&study.study_category){const category=node('small',window.mxmedStudyComposer?.categories?.[study.study_category]||'Otra categoría','vis06-study-category');item.append(category);}
+        if(typeof study==='object'){if(study.study_category){const category=node('small',window.mxmedStudyComposer?.categories?.[study.study_category]||'Otra categoría','vis06-study-category');item.append(category);}item.append(node('small',itemCoverageLabel(study.coverage_state),'vis06-item-coverage'));}
         list.append(item);
       });section.append(list);view.detail.append(section);}
       const linked=projectedSection(`Resultados vinculados (${item.result_count})`,'description');
@@ -211,6 +221,18 @@
         });
       }
       if(row.has_private_binary==1){const file=projectedSection('Archivo / contenido','description');file.append(button('Abrir archivo',()=>privateRead(row,view)));view.detail.append(file);}
+      const covered=projectedSection('CORRESPONDE A','science');const ids=Array.isArray(row.related_order_item_ids)?row.related_order_item_ids:[];
+      if(!ids.length)covered.append(node('p','Resultado general de la orden · Cobertura por estudio no especificada'));
+      else {
+        const linkedOrder=item.kind==='ORDER'?item.order:ordersItems.find(candidate=>candidate.kind==='ORDER'&&candidate.order.id===row.related_order_document_id)?.order;
+        const studies=linkedOrder?.order_items||[];const names=ids.map(id=>studies.find(study=>study.order_item_id===id)?.study_display_name).filter(Boolean);
+        if(names.length===ids.length){const list=node('ul','','vis06-study-list');names.forEach(name=>list.append(node('li',name)));covered.append(list);}
+        else if(row.related_order_document_id){covered.append(node('p','Cargando estudios vinculados…'));get(`doctors/${encodeURIComponent(professional)}/documents/${encodeURIComponent(row.related_order_document_id)}`).then(full=>{
+          if(request!==view.detailRequest||seen!==generation)return;const payload=full?.content?.payload||{};const names=ids.map(id=>(payload.order_items||[]).find(study=>study.order_item_id===id)?.study_display_name).filter(Boolean);
+          covered.replaceChildren(node('h5','CORRESPONDE A'));if(names.length){const list=node('ul','','vis06-study-list');names.forEach(name=>list.append(node('li',name)));covered.append(list);}else covered.append(node('p','Cobertura por estudio no disponible.'));
+        }).catch(()=>{if(request===view.detailRequest&&seen===generation)covered.append(node('p','No se pudo cargar el detalle de estudios.'));});}
+      }
+      view.detail.append(covered);
     }
     if(row.summary){const section=projectedSection(isOrder?'Resumen de la orden':'Resumen del resultado','notes');section.append(node('p',row.summary));view.detail.append(section);}
     if(row.versions?.length>1){const section=projectedSection('Historial de versiones','history');row.versions.forEach(version=>{

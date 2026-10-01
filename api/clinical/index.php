@@ -3794,14 +3794,40 @@ function clinical_v1_originating_order_valid(PDO $pdo,array $payload,array $enco
     if(is_array($payload['payload']??null))$semanticPayload=array_replace($payload,$payload['payload']);
     $refs=clinical_document_extract_related_order_refs($semanticPayload);
     if($refs===[])return false;
+    $orderId=null;
     foreach($refs as $ref){
-        $stmt=$pdo->prepare("SELECT id FROM clinical_documents WHERE (CAST(id AS CHAR)=:ref OR document_uuid=:ref)
+        $stmt=$pdo->prepare("SELECT id FROM clinical_documents d WHERE (CAST(d.id AS CHAR)=:ref OR d.document_uuid=:ref)
           AND patient_id=:patient AND encounter_ref_id=:encounter
-          AND document_type IN ('order','orders','lab_order','imaging_order','orden_estudio') LIMIT 1");
+          AND document_type IN ('order','orders','lab_order','imaging_order','orden_estudio')
+          AND d.status<>'voided' AND NOT EXISTS(SELECT 1 FROM clinical_document_revisions v
+            WHERE v.supersedes_document_id=d.id OR (v.original_document_id=d.id AND v.supersedes_document_id IS NULL)) LIMIT 1 FOR UPDATE");
         $stmt->execute([':ref'=>(string)$ref,':patient'=>(string)$encounterRow['patient_id'],':encounter'=>(int)$encounterRow['encounter_id']]);
-        if($stmt->fetchColumn()!==false)return true;
+        $found=$stmt->fetchColumn();
+        if($found===false||($orderId!==null&&(int)$found!==$orderId))return false;
+        $orderId=(int)$found;
     }
-    return false;
+    return $orderId!==null;
+}
+
+function clinical_v1_originating_patient_order(PDO $pdo,array $payload,string $patientId): ?array
+{
+    $semantic=is_array($payload['payload']??null)?array_replace($payload,$payload['payload']):$payload;
+    $refs=clinical_document_extract_related_order_refs($semantic);
+    if($refs===[])return null;
+    $stmt=$pdo->prepare("SELECT d.id,d.appointment_id,d.hospital_stay_id,d.care_setting FROM clinical_documents d WHERE (CAST(d.id AS CHAR)=:ref OR d.document_uuid=:ref)
+      AND d.patient_id=:patient AND d.encounter_ref_id IS NULL AND (d.encounter_id IS NULL OR d.encounter_id='')
+      AND d.document_type IN ('order','orders','lab_order','imaging_order','orden_estudio')
+      AND d.status<>'voided' AND NOT EXISTS(SELECT 1 FROM clinical_document_revisions v
+        WHERE v.supersedes_document_id=d.id OR (v.original_document_id=d.id AND v.supersedes_document_id IS NULL)) LIMIT 1 FOR UPDATE");
+    $orderId=null;
+    $order=null;
+    foreach($refs as $ref){
+        $stmt->execute([':ref'=>(string)$ref,':patient'=>$patientId]);
+        $found=$stmt->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($found)||($orderId!==null&&(int)$found['id']!==$orderId))return null;
+        $orderId=(int)$found['id'];$order=$found;
+    }
+    return $order;
 }
 
 function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload,string $actorId,?string $documentUuid=null): int
@@ -3816,7 +3842,9 @@ function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload
     $encounterId=(int)($encounterRow['encounter_id']??0);
     $doc=mxmed_build_clinical_document(['type'=>$type,'title'=>$payload['title']??'','summary'=>$payload['summary']??'',
       'event_datetime'=>$event,'context'=>['patient_id'=>$encounterRow['patient_id'],'appointment_id'=>$encounterRow['appointment_id']??null,
-      'encounter_id'=>$encounterId>0?(string)$encounterId:null,'care_setting'=>'consulta'],'payload'=>$payloadData,'actor'=>['user_id'=>$actorId]]);
+      'encounter_id'=>$encounterId>0?(string)$encounterId:null,
+      'hospital_stay_id'=>$encounterRow['hospital_stay_id']??null,
+      'care_setting'=>$encounterRow['care_setting']??'consulta'],'payload'=>$payloadData,'actor'=>['user_id'=>$actorId]]);
     // MULTI05A UUID BEGIN.
     if ($documentUuid !== null) $doc['document_id'] = $documentUuid;
     // MULTI05A UUID END.
@@ -3864,7 +3892,7 @@ function clinical_v1_document_amendment_request(array $request,array $original):
     $replacement['event_datetime']=array_key_exists('event_datetime',$replacement)?(string)$replacement['event_datetime']:(string)($original['event_datetime']??'');
     if(preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/',trim($replacement['event_datetime']))!==1)throw new InvalidArgumentException('DOCUMENT_EVENT_DATETIME_INVALID');
     $documentClass=clinical_assert_document_class($replacement);
-    if(in_array($documentClass,['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT'],true)){
+    if(in_array($documentClass,['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT','GENERIC_RESULT'],true)){
         $originalPayload=json_decode((string)($original['payload_json']??''),true);
         if(!is_array($originalPayload)||!clinical_document_result_lineage_refs_match($originalPayload,$replacement['payload']))throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
     }
@@ -3902,7 +3930,7 @@ function clinical_v1_document_amendment_insert(PDO $pdo,array $authorizedOrigina
         $decision=clinical_document_operation_policy('AMEND_DOCUMENT',clinical_canonical_document_class((string)$target['document_type']),(string)$encounter['status']);
         if(($decision['allowed']??false)!==true)throw new RuntimeException((string)($decision['code']??'DOCUMENT_OPERATION_UNSUPPORTED'));
         $targetClass=clinical_canonical_document_class((string)$target['document_type']);
-        if(in_array($targetClass,['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT'],true)
+        if(in_array($targetClass,['LAB_RESULT','IMAGING_RESULT','EXTERNAL_RESULT','EXTERNAL_REPORT','GENERIC_RESULT'],true)
           && !clinical_v1_originating_order_valid($pdo,$replacement,$encounter))throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
     }
     $prior=$pdo->prepare('SELECT original_document_id FROM clinical_document_revisions WHERE new_document_id=:target LIMIT 1 FOR UPDATE');
@@ -8868,6 +8896,27 @@ try {
                 $payload = clinical_documents_force_request_patient_id($payload, $patientId);
                 $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
                 $isMultipart = ($request['is_multipart'] ?? false) === true;
+                if($isMultipart && clinical_study_result_type((string)($payload['document_type']??''))
+                    && is_array($payload['payload']??null)
+                    && (string)($payload['payload']['source']??'')==='res02a_linked_result'){
+                    foreach([$payload,is_array($payload['context']??null)?$payload['context']:[],
+                        is_array($payload['payload']??null)?$payload['payload']:[]] as $scope){
+                        foreach(['encounter_key','encounter_id','appointment_id','hospital_stay_id'] as $field){
+                            if(trim((string)($scope[$field]??''))!=='')throw new InvalidArgumentException('PATIENT_RESULT_CONTEXT_FORBIDDEN');
+                        }
+                    }
+                    if(!is_array($uploadFile)||trim((string)($payload['provenance']??''))===''
+                        ||trim((string)($payload['event_datetime']??''))==='')throw new InvalidArgumentException('RESULT_FILE_PROVENANCE_REQUIRED');
+                    if(clinical_v1_originating_patient_order($pdo,$payload,$patientId)===null)
+                        throw new InvalidArgumentException('RESULT_ORDER_SCOPE_MISMATCH');
+                    $payload['actor']=['user_id'=>$scopedDoctorContext['user_id']];
+                    require_once __DIR__.'/../_lib/clinical_encounter_multipart_adapter.php';
+                    $result=clinical_patient_result_multipart_execute($pdo,$scopedDoctorContext,$patientId,
+                        $payload,$_FILES,(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                    [$status,$body]=clinical_encounter_multipart_response($result);
+                    $body['meta']['route']='doctors/{doctor_id}/patients/{patient_id}/documents';
+                    clinical_send_response($body,$status);return;
+                }
                 if (in_array(strtolower(trim((string)($payload['document_type'] ?? ''))), ['prescription','receta','rx'], true)) {
                     $payload['document_type']='prescription';
                     if ($isMultipart || $uploadFile !== null) throw new InvalidArgumentException('PRESCRIPTION_MULTIPART_UNSUPPORTED');

@@ -962,6 +962,24 @@
  #lon01-history .lon01-detail button {min-height:44px}
 }
 
+/* RES02A: shared linked-result composer. */
+.res02a-dialog {width:min(620px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;border:1px solid #b9d8e1;border-radius:14px;color:#173b4d;background:#fff;box-shadow:0 18px 50px #082c4450}
+.res02a-dialog::backdrop {background:#082c4488}
+.res02a-dialog form {display:flex;flex-direction:column;max-height:calc(100dvh - 26px)}
+.res02a-dialog header,.res02a-dialog footer {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#f1fbfd}
+.res02a-dialog header {border-bottom:1px solid #c9e1e8}.res02a-dialog footer {justify-content:flex-end;border-top:1px solid #c9e1e8}
+.res02a-dialog h4 {margin:0;color:#064c68;font-size:19px}.res02a-dialog [data-close]:not(.btn) {border:0;background:transparent;color:#064c68;font-size:26px;line-height:1}
+.res02a-body {display:grid;gap:14px;overflow-y:auto;padding:16px 18px}.res02a-body>label,.res02a-body [data-order-picker] label {display:grid;gap:5px;font-weight:600}
+.res02a-body input:not([type=checkbox]):not([type=radio]),.res02a-body select {width:100%;min-height:40px;border:1px solid #b5d7df;border-radius:7px;padding:8px 10px;color:#173b4d;background:#fff}
+.res02a-body [data-context] {padding:10px;border:1px solid #d5e8ed;border-radius:8px;background:#f6fbfc}.res02a-body [data-context] p {margin:4px 0 0;color:#526976;font-size:13px}
+.res02a-body fieldset {min-width:0;margin:0;padding:10px;border:1px solid #bedce4;border-radius:8px}.res02a-body legend {float:none;width:auto;margin:0 0 5px;padding:0 3px;font-size:13px;font-weight:700;color:#07536e}
+.res02a-items {max-height:210px;overflow-y:auto}.res02a-choice {display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:9px 6px;border-bottom:1px solid #e5eff2;cursor:pointer;font-weight:600}.res02a-choice:last-child {border-bottom:0}.res02a-choice input {flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:#008fa6}.res02a-choice span {display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}.res02a-choice small,.res02a-body>small {font-size:12px;color:#526976;font-weight:400}.res02a-legacy {margin:3px 0 8px;padding-left:22px}.res02a-body [data-feedback] {min-height:1.3em;margin:0;color:#9d352f;font-size:13px}
+.res02a-dialog :focus-visible {outline:3px solid #0099b1;outline-offset:2px}
+#p-expediente #t-estudios .vis06-register-result {margin:8px 0 10px}
+#p-expediente #t-estudios .vis06-item-coverage {display:block;color:#526976;font-size:12px}
+#p-expediente #t-estudios .vis06-coverage-summary {font-size:13px;color:#07536e;font-weight:600}
+@media(max-width:600px){.res02a-dialog {width:calc(100vw - 12px);max-height:calc(100dvh - 12px)}.res02a-dialog form {max-height:calc(100dvh - 14px)}.res02a-dialog header,.res02a-dialog footer {padding:10px 12px}.res02a-body {padding:12px}.res02a-dialog footer .btn {flex:1}}
+
 /* VIS06: only the three document destinations; existing capture callers retained. */
 #p-expediente .vis06-ready:not(.vis06-capture-open)>:not(.vis06-module):not(.modal) {display:none!important}
 #p-expediente .vis06-module {padding:16px;border:1px solid #c9e1e8;border-radius:14px;background:#fff;color:#173b4d}

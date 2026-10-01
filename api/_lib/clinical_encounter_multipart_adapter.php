@@ -31,6 +31,44 @@ function clinical_encounter_multipart_file(array $files): array
     return $file;
 }
 
+/** Patient-owned result: preserve the selected order's scope without an ambient encounter. */
+function clinical_patient_result_multipart_execute(PDO $pdo, array $doctor, string $patientId,
+    array $payload, array $files, string $idempotencyKey): array
+{
+    $file=clinical_encounter_multipart_file($files);
+    [$root,$ttl]=clinical_encounter_multipart_config();
+    $storage=new ClinicalPrivateBinaryStorage($root);
+    $optimized=null;
+    $mime=(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+    if(in_array($mime,['image/jpeg','image/png','image/webp'],true)){
+        $optimized=clinical_optimize_private_image($file);
+        $payload['payload']['original_audit']=$optimized['manifest']['original'];
+        $payload['payload']['image_optimization']=array_diff_key($optimized['manifest']['optimized'],['path'=>true]);
+        $file['tmp_name']=$optimized['main'];
+    }
+    try{
+        $context=['operation'=>'CREATE_POST_ENCOUNTER_RESULT','doctor_id'=>$doctor['doctor_id'],
+            'patient_id'=>$patientId,'context_type'=>'PATIENT','context_id'=>$patientId,
+            'document_type'=>strtolower(trim((string)$payload['document_type'])),
+            'metadata'=>clinical_document_semantic_request($payload,null)];
+        return (new ClinicalMultipartDocumentService($pdo,$storage))->execute($context,$idempotencyKey,
+            (string)$doctor['user_id'],$file['tmp_name'],$file['name'],
+            (new DateTimeImmutable('now',new DateTimeZone('UTC')))->modify('+'.$ttl.' seconds'),
+            function(PDO $transaction,string $documentUuid) use($patientId,$payload,$doctor):array {
+                $order=clinical_v1_originating_patient_order($transaction,$payload,$patientId);
+                if($order===null)throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
+                $id=clinical_v1_document_insert($transaction,['patient_id'=>$patientId,
+                    'appointment_id'=>$order['appointment_id']??null,
+                    'hospital_stay_id'=>$order['hospital_stay_id']??null,
+                    'care_setting'=>$order['care_setting']??'consulta'],$payload,
+                    (string)$doctor['user_id'],$documentUuid);
+                return ['document_id'=>$id,'document_uuid'=>$documentUuid,
+                    'result_column'=>'document_id','result_id'=>$id];
+            },
+            static fn(PDO $transaction,string $column,int $id):array=>clinical_v1_document_fetch($transaction,$id));
+    }finally{clinical_clean_private_image($optimized);}
+}
+
 /** Called only after the canonical route's authorization and operation policy pass. */
 function clinical_encounter_multipart_execute(PDO $pdo, array $encounter, array $doctor,
     array $payload, string $createOperation, string $policyOperation, string $documentClass,
