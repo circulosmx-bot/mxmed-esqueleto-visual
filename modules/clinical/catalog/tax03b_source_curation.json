@@ -1,0 +1,3032 @@
+{
+  "source": "index.html study selector data-est-item/data-est-lab-pick/data-est-lab-pack/data-est-group-label; aliases from visible terms and existing assets/js/app.js search maps",
+  "seed_migration": "2026_09_30_15_initial_curated_study_catalog.sql",
+  "entries": [
+    {
+      "source_kind": "checkbox",
+      "source_line": 6871,
+      "source_id": "glucose",
+      "source_name": "Glucosa",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "glucose",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6872,
+      "source_id": "hba1c",
+      "source_name": "HbA1c",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "hba1c",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6873,
+      "source_id": "fructosamine",
+      "source_name": "Fructosamina",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fructosamine",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6874,
+      "source_id": "ogtt",
+      "source_name": "Curva de glucosa (OGTT)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ogtt",
+      "category_key": "LABORATORIO",
+      "aliases": [
+        "OGTT"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6878,
+      "source_id": "urea",
+      "source_name": "Urea",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "urea",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6879,
+      "source_id": "creatinine",
+      "source_name": "Creatinina",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "creatinine",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6880,
+      "source_id": "egfr",
+      "source_name": "TFG estimada (eGFR)",
+      "classification": "AMBIGUOUS",
+      "reason": "Estimated calculation, not an independently ordered assay"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6881,
+      "source_id": "bun",
+      "source_name": "Nitrógeno ureico (BUN)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "bun",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6882,
+      "source_id": "uric_acid",
+      "source_name": "Ácido úrico",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "uric_acid",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6886,
+      "source_id": "sodium",
+      "source_name": "Sodio",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "sodium",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6887,
+      "source_id": "potassium",
+      "source_name": "Potasio",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "potassium",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6888,
+      "source_id": "chloride",
+      "source_name": "Cloro",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "chloride",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6889,
+      "source_id": "calcium",
+      "source_name": "Calcio",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "calcium",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6890,
+      "source_id": "magnesium",
+      "source_name": "Magnesio",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "magnesium",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6891,
+      "source_id": "phosphorus",
+      "source_name": "Fósforo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "phosphorus",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6895,
+      "source_id": "chol_total",
+      "source_name": "Colesterol total",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "chol_total",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6896,
+      "source_id": "hdl",
+      "source_name": "HDL",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "hdl",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6897,
+      "source_id": "ldl",
+      "source_name": "LDL",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ldl",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6898,
+      "source_id": "triglycerides",
+      "source_name": "Triglicéridos",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "triglycerides",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6899,
+      "source_id": "non_hdl",
+      "source_name": "Colesterol no-HDL",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "non_hdl",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6903,
+      "source_id": "ast",
+      "source_name": "AST (TGO)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ast",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6904,
+      "source_id": "alt",
+      "source_name": "ALT (TGP)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "alt",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6905,
+      "source_id": "alp",
+      "source_name": "Fosfatasa alcalina (ALP)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "alp",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6906,
+      "source_id": "ggt",
+      "source_name": "GGT",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ggt",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6907,
+      "source_id": "bilirubin_total",
+      "source_name": "Bilirrubina total",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "bilirubin_total",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6908,
+      "source_id": "bilirubin_direct",
+      "source_name": "Bilirrubina directa",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "bilirubin_direct",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6909,
+      "source_id": "bilirubin_indirect",
+      "source_name": "Bilirrubina indirecta",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "bilirubin_indirect",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6910,
+      "source_id": "albumin",
+      "source_name": "Albúmina",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "albumin",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6911,
+      "source_id": "total_protein",
+      "source_name": "Proteínas totales",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "total_protein",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6915,
+      "source_id": "amylase",
+      "source_name": "Amilasa",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "amylase",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6916,
+      "source_id": "lipase",
+      "source_name": "Lipasa",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "lipase",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6927,
+      "source_id": "cbc",
+      "source_name": "Biometría hemática (BH / CBC)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "cbc",
+      "category_key": "LABORATORIO",
+      "aliases": [
+        "BH / CBC",
+        "Biometría hemática",
+        "CBC"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6928,
+      "source_id": "hgb_hct",
+      "source_name": "Hemoglobina / Hematocrito",
+      "classification": "AMBIGUOUS",
+      "reason": "Two analytes collapsed into one option"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6929,
+      "source_id": "platelets",
+      "source_name": "Plaquetas",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "platelets",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6933,
+      "source_id": "iron",
+      "source_name": "Hierro sérico",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "iron",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6934,
+      "source_id": "tibc",
+      "source_name": "CTFH (TIBC)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "tibc",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6935,
+      "source_id": "transferrin_sat",
+      "source_name": "% Saturación transferrina",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "transferrin_sat",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6936,
+      "source_id": "ferritin",
+      "source_name": "Ferritina",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ferritin",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6947,
+      "source_id": "pt_inr",
+      "source_name": "TP / INR",
+      "classification": "AMBIGUOUS",
+      "reason": "Test and derived ratio collapsed into one option"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6948,
+      "source_id": "aptt",
+      "source_name": "TTPa (aPTT)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "aptt",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6949,
+      "source_id": "fibrinogen",
+      "source_name": "Fibrinógeno",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fibrinogen",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6950,
+      "source_id": "d_dimer",
+      "source_name": "Dímero D",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "d_dimer",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6961,
+      "source_id": "tsh",
+      "source_name": "TSH",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "tsh",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6962,
+      "source_id": "ft4",
+      "source_name": "T4 libre",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ft4",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6963,
+      "source_id": "ft3",
+      "source_name": "T3 libre",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ft3",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6964,
+      "source_id": "anti_tpo",
+      "source_name": "Anti-TPO",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "anti_tpo",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6965,
+      "source_id": "anti_tg",
+      "source_name": "Anti-tiroglobulina",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "anti_tg",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6969,
+      "source_id": "bhcg",
+      "source_name": "β-hCG",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "bhcg",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6970,
+      "source_id": "lh",
+      "source_name": "LH",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "lh",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6971,
+      "source_id": "fsh",
+      "source_name": "FSH",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fsh",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6972,
+      "source_id": "prolactin",
+      "source_name": "Prolactina",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "prolactin",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6973,
+      "source_id": "estradiol",
+      "source_name": "Estradiol",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "estradiol",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6974,
+      "source_id": "progesterone",
+      "source_name": "Progesterona",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "progesterone",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6975,
+      "source_id": "testosterone_total",
+      "source_name": "Testosterona total",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "testosterone_total",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6976,
+      "source_id": "testosterone_free",
+      "source_name": "Testosterona libre",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "testosterone_free",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6987,
+      "source_id": "crp_hs",
+      "source_name": "PCR ultrasensible",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "crp_hs",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6988,
+      "source_id": "esr",
+      "source_name": "VSG",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "esr",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6992,
+      "source_id": "ana",
+      "source_name": "ANA",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ana",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6993,
+      "source_id": "ena",
+      "source_name": "ENA",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ena",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6994,
+      "source_id": "anca",
+      "source_name": "ANCA",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "anca",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6995,
+      "source_id": "rf",
+      "source_name": "Factor reumatoide",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rf",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6996,
+      "source_id": "anti_ccp",
+      "source_name": "Anti-CCP",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "anti_ccp",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6997,
+      "source_id": "c3",
+      "source_name": "C3",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "c3",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 6998,
+      "source_id": "c4",
+      "source_name": "C4",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "c4",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7002,
+      "source_id": "vitamin_d",
+      "source_name": "Vitamina D",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "vitamin_d",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7003,
+      "source_id": "vitamin_b12",
+      "source_name": "Vitamina B12",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "vitamin_b12",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7004,
+      "source_id": "folate",
+      "source_name": "Ácido fólico",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "folate",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7008,
+      "source_id": "igg",
+      "source_name": "IgG",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "igg",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7009,
+      "source_id": "iga",
+      "source_name": "IgA",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "iga",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7010,
+      "source_id": "igm",
+      "source_name": "IgM",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "igm",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7021,
+      "source_id": "hiv_ag_ac",
+      "source_name": "VIH Ag/Ac",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "hiv_ag_ac",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7022,
+      "source_id": "vdrl_rpr",
+      "source_name": "VDRL / RPR",
+      "classification": "AMBIGUOUS",
+      "reason": "Two different screening methods collapsed into one option"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7023,
+      "source_id": "hbsag",
+      "source_name": "HBsAg",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "hbsag",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7024,
+      "source_id": "anti_hbs",
+      "source_name": "Anti-HBs",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "anti_hbs",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7025,
+      "source_id": "anti_hbc",
+      "source_name": "Anti-HBc",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "anti_hbc",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7026,
+      "source_id": "hcv_ab",
+      "source_name": "VHC (anticuerpos)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "hcv_ab",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7030,
+      "source_id": "toxoplasma",
+      "source_name": "Toxoplasma",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7031,
+      "source_id": "rubella",
+      "source_name": "Rubéola",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7032,
+      "source_id": "cmv",
+      "source_name": "CMV",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7033,
+      "source_id": "herpes",
+      "source_name": "Herpes",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7034,
+      "source_id": "influenza_a",
+      "source_name": "Influenza A",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7035,
+      "source_id": "influenza_b",
+      "source_name": "Influenza B",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7036,
+      "source_id": "rsv",
+      "source_name": "RSV",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7037,
+      "source_id": "covid19",
+      "source_name": "SARS-CoV-2 (COVID-19)",
+      "classification": "AMBIGUOUS",
+      "reason": "Pathogen name does not identify assay or specimen"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7048,
+      "source_id": "urine_culture",
+      "source_name": "Urocultivo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "urine_culture",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7049,
+      "source_id": "blood_culture",
+      "source_name": "Hemocultivo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "blood_culture",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7050,
+      "source_id": "stool_culture",
+      "source_name": "Coprocultivo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "stool_culture",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7051,
+      "source_id": "throat_swab",
+      "source_name": "Exudado faríngeo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "throat_swab",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7052,
+      "source_id": "vaginal_swab",
+      "source_name": "Exudado vaginal",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "vaginal_swab",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7063,
+      "source_id": "urinalysis",
+      "source_name": "EGO (examen general de orina)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "urinalysis",
+      "category_key": "LABORATORIO",
+      "aliases": [
+        "EGO",
+        "examen general de orina"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7064,
+      "source_id": "microalbumin",
+      "source_name": "Microalbuminuria",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "microalbumin",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7068,
+      "source_id": "fecal_occult_blood",
+      "source_name": "Sangre oculta en heces",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fecal_occult_blood",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7069,
+      "source_id": "stool_ova_parasites",
+      "source_name": "Coproparasitoscópico",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "stool_ova_parasites",
+      "category_key": "LABORATORIO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7172,
+      "source_id": "rx_chest",
+      "source_name": "RX Tórax",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_chest",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7178,
+      "source_id": "rx_abdomen",
+      "source_name": "RX Abdomen",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_abdomen",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7179,
+      "source_id": "rx_pelvis",
+      "source_name": "RX Pelvis",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_pelvis",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7185,
+      "source_id": "rx_cspine",
+      "source_name": "RX Columna cervical",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_cspine",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7186,
+      "source_id": "rx_lspine",
+      "source_name": "RX Columna lumbar",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_lspine",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7192,
+      "source_id": "rx_shoulder",
+      "source_name": "RX Hombro",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_shoulder",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7193,
+      "source_id": "rx_knee",
+      "source_name": "RX Rodilla",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_knee",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7194,
+      "source_id": "rx_ankle",
+      "source_name": "RX Tobillo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_ankle",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7195,
+      "source_id": "rx_hand",
+      "source_name": "RX Mano",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "rx_hand",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7204,
+      "source_id": "us_abdomen",
+      "source_name": "US Abdomen",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "us_abdomen",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7205,
+      "source_id": "us_renal",
+      "source_name": "US Renal",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "us_renal",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7211,
+      "source_id": "us_pelvic",
+      "source_name": "US Pélvico",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "us_pelvic",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7212,
+      "source_id": "us_obstetric_study",
+      "source_name": "US Obstétrico",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "us_obstetric_study",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7218,
+      "source_id": "us_thyroid",
+      "source_name": "US Tiroides",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "us_thyroid",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7224,
+      "source_id": "us_soft_tissue",
+      "source_name": "US Partes blandas",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "us_soft_tissue",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7230,
+      "source_id": "us_testicular",
+      "source_name": "US Testicular",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "us_testicular",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7239,
+      "source_id": "ct_head",
+      "source_name": "TAC Cráneo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ct_head",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7245,
+      "source_id": "ct_chest",
+      "source_name": "TAC Tórax",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ct_chest",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7251,
+      "source_id": "ct_abdomen_pelvis",
+      "source_name": "TAC Abdomen y pelvis",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ct_abdomen_pelvis",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7252,
+      "source_id": "ct_uro",
+      "source_name": "UroTAC (vías urinarias)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ct_uro",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7258,
+      "source_id": "ct_spine",
+      "source_name": "TAC Columna (segmento)",
+      "classification": "AMBIGUOUS",
+      "reason": "Spinal segment not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7259,
+      "source_id": "ct_extremity",
+      "source_name": "TAC Extremidad (segmento)",
+      "classification": "AMBIGUOUS",
+      "reason": "Extremity and segment not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7268,
+      "source_id": "mr_brain",
+      "source_name": "RM Cerebro",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "mr_brain",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7274,
+      "source_id": "mr_spine",
+      "source_name": "RM Columna (segmento)",
+      "classification": "AMBIGUOUS",
+      "reason": "Spinal segment not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7280,
+      "source_id": "mr_knee",
+      "source_name": "RM Rodilla",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "mr_knee",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7281,
+      "source_id": "mr_shoulder",
+      "source_name": "RM Hombro",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "mr_shoulder",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7287,
+      "source_id": "mr_abdomen",
+      "source_name": "RM Abdomen",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "mr_abdomen",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7293,
+      "source_id": "mr_angio_study",
+      "source_name": "Angio-RM (territorio)",
+      "classification": "AMBIGUOUS",
+      "reason": "Vascular territory not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7302,
+      "source_id": "mammo",
+      "source_name": "Mamografía",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "mammo",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7303,
+      "source_id": "breast_us",
+      "source_name": "US Mama",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "breast_us",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7312,
+      "source_id": "vasc_carotid",
+      "source_name": "Doppler carotídeo",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "carotid_doppler"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7313,
+      "source_id": "vasc_venous_leg",
+      "source_name": "Doppler venoso MI (TVP)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "lower_ext_venous_doppler"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7314,
+      "source_id": "vasc_arterial_leg",
+      "source_name": "Doppler arterial MI",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "lower_ext_art_doppler"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7315,
+      "source_id": "vasc_upper_ext",
+      "source_name": "Doppler MS (arterial/venoso)",
+      "classification": "AMBIGUOUS",
+      "reason": "Arterial versus venous not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7316,
+      "source_id": "vasc_abdomen",
+      "source_name": "Doppler abdominal (aorta/renal/mesentérico)",
+      "classification": "AMBIGUOUS",
+      "reason": "Aorta, renal or mesenteric territory not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7325,
+      "source_id": "nm_bone_scan",
+      "source_name": "Gammagrama óseo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "nm_bone_scan",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7326,
+      "source_id": "nm_thyroid_uptake",
+      "source_name": "Captación tiroidea",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "nm_thyroid_uptake",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7335,
+      "source_id": "pet_ct",
+      "source_name": "PET-CT",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "pet_ct",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7344,
+      "source_id": "dexa",
+      "source_name": "Densitometría ósea (DEXA)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "dexa",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7353,
+      "source_id": "fluoro_hsg",
+      "source_name": "Histerosalpingografía (HSG)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fluoro_hsg",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7354,
+      "source_id": "fluoro_vcug",
+      "source_name": "Cistouretrografía miccional (VCUG)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fluoro_vcug",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7355,
+      "source_id": "fluoro_ugi",
+      "source_name": "Tránsito esófago-gastro-duodenal (UGI)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fluoro_ugi",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7356,
+      "source_id": "fluoro_barium_enema",
+      "source_name": "Enema baritado",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "fluoro_barium_enema",
+      "category_key": "IMAGEN",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7446,
+      "source_id": "ecg_12lead",
+      "source_name": "ECG 12 derivaciones",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ecg_12lead",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7447,
+      "source_id": "ecg_rhythm_strip",
+      "source_name": "Tira de ritmo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ecg_rhythm_strip",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7456,
+      "source_id": "holter",
+      "source_name": "Holter / monitorización ECG ambulatoria",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "holter",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7457,
+      "source_id": "abpm_mapa",
+      "source_name": "MAPA (presión arterial ambulatoria / ABPM)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "abpm_mapa",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": [
+        "MAPA 24 h (presión arterial ambulatoria)",
+        "ABPM"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7466,
+      "source_id": "echo_tte",
+      "source_name": "Ecocardiograma transtorácico (ETT)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "echo_tte",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": [
+        "ETT"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7467,
+      "source_id": "echo_tes",
+      "source_name": "Ecocardiograma transesofágico (ETE)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "echo_tes",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": [
+        "ETE"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7476,
+      "source_id": "stress_test",
+      "source_name": "Prueba de esfuerzo (ECG de esfuerzo)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "stress_test",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7477,
+      "source_id": "stress_echo",
+      "source_name": "Ecocardiograma de estrés",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "stress_echo",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7486,
+      "source_id": "tilt_table",
+      "source_name": "Prueba de mesa basculante (Tilt table)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "tilt_table",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": [
+        "Mesa inclinada (Tilt test)"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7495,
+      "source_id": "carotid_doppler",
+      "source_name": "Doppler carotídeo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "carotid_doppler",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7496,
+      "source_id": "lower_ext_art_doppler",
+      "source_name": "Doppler arterial de miembros inferiores",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "lower_ext_art_doppler",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7497,
+      "source_id": "lower_ext_venous_doppler",
+      "source_name": "Doppler venoso de miembros inferiores",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "lower_ext_venous_doppler",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7578,
+      "source_id": "egd_eda_base",
+      "source_name": "EGD/EDA (endoscopia alta)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "egd_eda_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": [
+        "EGD",
+        "EDA"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7584,
+      "source_id": "colonoscopy_base",
+      "source_name": "Colonoscopia",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "colonoscopy_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7585,
+      "source_id": "flex_sig_base",
+      "source_name": "Sigmoidoscopia flexible",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "flex_sig_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7586,
+      "source_id": "anoscopy_base",
+      "source_name": "Anoscopia",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "anoscopy_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7587,
+      "source_id": "proctoscopy_base",
+      "source_name": "Proctoscopia",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "proctoscopy_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7593,
+      "source_id": "ercp_cpre_base",
+      "source_name": "CPRE / ERCP",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ercp_cpre_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": [
+        "CPRE",
+        "ERCP"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7599,
+      "source_id": "eus_use_base",
+      "source_name": "EUS/USE (ultrasonido endoscópico)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "eus_use_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": [
+        "EUS",
+        "USE"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7605,
+      "source_id": "capsule_base",
+      "source_name": "Cápsula endoscópica",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "capsule_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7606,
+      "source_id": "enteroscopy_base",
+      "source_name": "Enteroscopia",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "enteroscopy_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7614,
+      "source_id": "bronchoscopy_base",
+      "source_name": "Broncoscopía",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "bronchoscopy_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7615,
+      "source_id": "ebus_base",
+      "source_name": "EBUS (ultrasonido endobronquial)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ebus_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7621,
+      "source_id": "laryngoscopy_base",
+      "source_name": "Laringoscopía flexible",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "laryngoscopy_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7627,
+      "source_id": "pleuroscopy_base",
+      "source_name": "Pleuroscopía / Toracoscopía médica",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "pleuroscopy_base",
+      "category_key": "ENDOSCOPIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7735,
+      "source_id": "bx_gi",
+      "source_name": "Biopsia gastrointestinal",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7736,
+      "source_id": "bx_skin",
+      "source_name": "Biopsia de piel",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7737,
+      "source_id": "bx_breast",
+      "source_name": "Biopsia de mama",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7738,
+      "source_id": "bx_gyn",
+      "source_name": "Biopsia ginecológica",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7739,
+      "source_id": "bx_urology",
+      "source_name": "Biopsia urológica",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7740,
+      "source_id": "bx_soft_tissue",
+      "source_name": "Biopsia de partes blandas",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7741,
+      "source_id": "bx_bone",
+      "source_name": "Biopsia ósea",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7742,
+      "source_id": "bx_renal",
+      "source_name": "Biopsia renal",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure rather than defined pathology study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7748,
+      "source_id": "slides_review",
+      "source_name": "Revisión de laminillas (segunda opinión)",
+      "classification": "AMBIGUOUS",
+      "reason": "Review service without defined study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7749,
+      "source_id": "paraffin_block_review",
+      "source_name": "Revisión de bloque/parafina",
+      "classification": "AMBIGUOUS",
+      "reason": "Review service without defined study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7757,
+      "source_id": "surg_specimen_general",
+      "source_name": "Pieza quirúrgica (general)",
+      "classification": "AMBIGUOUS",
+      "reason": "Specimen label rather than a study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7758,
+      "source_id": "surg_specimen_onco",
+      "source_name": "Pieza oncológica (resección)",
+      "classification": "AMBIGUOUS",
+      "reason": "Specimen label rather than a study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7759,
+      "source_id": "amputation",
+      "source_name": "Amputación / pieza mayor",
+      "classification": "AMBIGUOUS",
+      "reason": "Specimen label rather than a study"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7767,
+      "source_id": "cyto_fna",
+      "source_name": "PAAF / BACAF (aspiración con aguja fina)",
+      "classification": "AMBIGUOUS",
+      "reason": "Sampling procedure; cytology interpretation not specified"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7768,
+      "source_id": "cyto_fluids",
+      "source_name": "Citología de líquidos (pleural/ascítico/LCR)",
+      "classification": "AMBIGUOUS",
+      "reason": "Several specimen types collapsed into one option"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7769,
+      "source_id": "cyto_pap",
+      "source_name": "Papanicolaou (convencional)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "cyto_pap",
+      "category_key": "PATOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7770,
+      "source_id": "cyto_liquid_based",
+      "source_name": "Citología en base líquida",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "cyto_liquid_based",
+      "category_key": "PATOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7778,
+      "source_id": "autopsy_clinical",
+      "source_name": "Autopsia clínica",
+      "classification": "AMBIGUOUS",
+      "reason": "Postmortem service, outside initial requested-study selector"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7779,
+      "source_id": "autopsy_fetal",
+      "source_name": "Autopsia fetal/perinatal",
+      "classification": "AMBIGUOUS",
+      "reason": "Postmortem service, outside initial requested-study selector"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7931,
+      "source_id": "karyotype",
+      "source_name": "Cariotipo",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "karyotype",
+      "category_key": "GENETICA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7932,
+      "source_id": "cma_microarray",
+      "source_name": "Microarreglo cromosómico (CMA / Microarray)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "cma_microarray",
+      "category_key": "GENETICA",
+      "aliases": [
+        "CMA",
+        "Microarray"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7940,
+      "source_id": "ngs_panel",
+      "source_name": "Panel genético (NGS)",
+      "classification": "AMBIGUOUS",
+      "reason": "Panel content not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7941,
+      "source_id": "wes",
+      "source_name": "Exoma clínico (WES)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "wes",
+      "category_key": "GENETICA",
+      "aliases": [
+        "WES"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7942,
+      "source_id": "wgs",
+      "source_name": "Genoma clínico (WGS)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "wgs",
+      "category_key": "GENETICA",
+      "aliases": [
+        "WGS"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7943,
+      "source_id": "targeted_variant",
+      "source_name": "Prueba dirigida (gen/variante específica)",
+      "classification": "AMBIGUOUS",
+      "reason": "Gene or variant not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7951,
+      "source_id": "nipt",
+      "source_name": "NIPT (tamiz prenatal no invasivo)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "nipt",
+      "category_key": "GENETICA",
+      "aliases": [
+        "NIPT"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7952,
+      "source_id": "carrier_screening",
+      "source_name": "Tamiz de portadores (Carrier screening)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "carrier_screening",
+      "category_key": "GENETICA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7960,
+      "source_id": "hereditary_cancer_germline",
+      "source_name": "Panel de cáncer hereditario (multigénico)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "hereditary_cancer_germline",
+      "category_key": "GENETICA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7961,
+      "source_id": "brca1_2",
+      "source_name": "BRCA1/BRCA2 (germinal)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "brca1_2",
+      "category_key": "GENETICA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7962,
+      "source_id": "lynch",
+      "source_name": "Síndrome de Lynch (germinal)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "lynch",
+      "category_key": "GENETICA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7970,
+      "source_id": "thrombophilia",
+      "source_name": "Panel de trombofilia (genético)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "thrombophilia",
+      "category_key": "GENETICA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7978,
+      "source_id": "pgx",
+      "source_name": "Panel farmacogenómico (PGx)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "pgx",
+      "category_key": "GENETICA",
+      "aliases": [
+        "PGx"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 7986,
+      "source_id": "somatic_tumor_ngs",
+      "source_name": "Panel tumoral (NGS) — somático",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "somatic_tumor_ngs",
+      "category_key": "GENETICA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8120,
+      "source_id": "spirometry",
+      "source_name": "Espirometría",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "spirometry",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8121,
+      "source_id": "dlco",
+      "source_name": "DLCO (difusión de CO)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "dlco",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8122,
+      "source_id": "plethysmography",
+      "source_name": "Volúmenes pulmonares (pletismografía corporal)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "plethysmography",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8123,
+      "source_id": "full_pft",
+      "source_name": "Pruebas funcionales respiratorias completas (PFR completo)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "full_pft",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": [
+        "PFR completo"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8124,
+      "source_id": "bronchial_challenge",
+      "source_name": "Reto bronquial (provocación)",
+      "classification": "AMBIGUOUS",
+      "reason": "Provocation protocol not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8125,
+      "source_id": "feno",
+      "source_name": "FeNO (óxido nítrico exhalado)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "feno",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8126,
+      "source_id": "six_min_walk",
+      "source_name": "Caminata 6 minutos (6MWT)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "six_min_walk",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": [
+        "6MWT"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8127,
+      "source_id": "cpet",
+      "source_name": "Prueba de esfuerzo cardiopulmonar (CPET)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "cpet",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8128,
+      "source_id": "overnight_oximetry",
+      "source_name": "Oximetría nocturna",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "overnight_oximetry",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8129,
+      "source_id": "capnography",
+      "source_name": "Capnografía",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "capnography",
+      "category_key": "FUNCION_PULMONAR",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8137,
+      "source_id": "psg_diagnostic",
+      "source_name": "Polisomnografía (PSG) diagnóstica",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "psg_diagnostic",
+      "category_key": "SUENO",
+      "aliases": [
+        "PSG diagnóstica"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8138,
+      "source_id": "psg_titration",
+      "source_name": "PSG con titulación (CPAP/BiPAP)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "psg_titration",
+      "category_key": "SUENO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8139,
+      "source_id": "hsat",
+      "source_name": "Estudio domiciliario de apnea (HSAT)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "hsat",
+      "category_key": "SUENO",
+      "aliases": [
+        "HSAT (apnea del sueño en casa)"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8140,
+      "source_id": "mslt",
+      "source_name": "MSLT (latencias múltiples del sueño)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "mslt",
+      "category_key": "SUENO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8141,
+      "source_id": "mwt",
+      "source_name": "MWT (mantenimiento de la vigilia)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "mwt",
+      "category_key": "SUENO",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8149,
+      "source_id": "eeg_routine",
+      "source_name": "EEG rutinario",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "eeg_routine",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8150,
+      "source_id": "eeg_sleep_deprived",
+      "source_name": "EEG con privación de sueño",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "eeg_sleep_deprived",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8151,
+      "source_id": "video_eeg",
+      "source_name": "Video-EEG (prolongado)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "video_eeg",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8157,
+      "source_id": "emg_ncs",
+      "source_name": "EMG + Velocidades de conducción nerviosa (VCN)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "emg_ncs",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": [
+        "EMG + VCN (estudio completo)"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8158,
+      "source_id": "repetitive_nerve_stimulation",
+      "source_name": "Estimulación repetitiva",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "repetitive_nerve_stimulation",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8159,
+      "source_id": "sfemg",
+      "source_name": "EMG de fibra única (SFEMG)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "sfemg",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8165,
+      "source_id": "evoked_visual",
+      "source_name": "Potenciales evocados visuales (PEV)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "evoked_visual",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8166,
+      "source_id": "evoked_auditory_baep",
+      "source_name": "Potenciales auditivos de tronco (PEAT/BAEP)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "evoked_auditory_baep",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8167,
+      "source_id": "evoked_ssep",
+      "source_name": "Potenciales somatosensoriales (PESS/SSEP)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "evoked_ssep",
+      "category_key": "NEUROFISIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8175,
+      "source_id": "audiometry_tonal",
+      "source_name": "Audiometría tonal",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "audiometry_tonal",
+      "category_key": "AUDIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8176,
+      "source_id": "audiometry_speech",
+      "source_name": "Audiometría verbal",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "audiometry_speech",
+      "category_key": "AUDIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8177,
+      "source_id": "tympanometry",
+      "source_name": "Timpanometría (impedanciometría)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "tympanometry",
+      "category_key": "AUDIOLOGIA",
+      "aliases": [
+        "impedanciometría"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8178,
+      "source_id": "otoacoustic_emissions",
+      "source_name": "Emisiones otoacústicas (OEA)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "otoacoustic_emissions",
+      "category_key": "AUDIOLOGIA",
+      "aliases": [
+        "OEA"
+      ]
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8179,
+      "source_id": "abr",
+      "source_name": "Potenciales auditivos (ABR/PEAT)",
+      "classification": "AMBIGUOUS",
+      "reason": "Potentially same as auditory evoked potential entry in neurophysiology; no safe distinct identity"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8185,
+      "source_id": "vng",
+      "source_name": "Videonistagmografía (VNG)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "vng",
+      "category_key": "AUDIOLOGIA",
+      "aliases": []
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8186,
+      "source_id": "vemp",
+      "source_name": "VEMP",
+      "classification": "AMBIGUOUS",
+      "reason": "Laterality and specific VEMP protocol not fixed"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8194,
+      "source_id": "tilt_table",
+      "source_name": "Mesa inclinada (Tilt test)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "tilt_table"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8195,
+      "source_id": "holter_bp_24h",
+      "source_name": "MAPA 24 h (presión arterial ambulatoria)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "abpm_mapa"
+    },
+    {
+      "source_kind": "checkbox",
+      "source_line": 8196,
+      "source_id": "ankle_brachial_index",
+      "source_name": "Índice tobillo-brazo (ITB/ABI)",
+      "classification": "CANONICAL_CLEAR",
+      "study_type_key": "ankle_brachial_index",
+      "category_key": "CARDIOVASCULAR",
+      "aliases": [
+        "ITB",
+        "ABI"
+      ]
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 6735,
+      "source_name": "Biometría hemática (BH / CBC)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "cbc"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6736,
+      "source_name": "QS (Glucosa, Urea, Creatinina)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 6737,
+      "source_name": "EGO (examen general de orina)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "urinalysis"
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 6738,
+      "source_name": "HbA1c",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "hba1c"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6739,
+      "source_name": "Perfil lipídico",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6740,
+      "source_name": "Perfil hepático",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6741,
+      "source_name": "Perfil tiroideo",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 6742,
+      "source_name": "PCR ultrasensible",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "crp_hs"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6752,
+      "source_name": "QS (Glucosa, Urea, Creatinina)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6759,
+      "source_name": "Perfil lipídico",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6766,
+      "source_name": "Perfil hepático",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6773,
+      "source_name": "Perfil tiroideo",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6780,
+      "source_name": "Control de diabetes",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6787,
+      "source_name": "ETS básico",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6794,
+      "source_name": "Preop básico",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6801,
+      "source_name": "Preop gineco",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6808,
+      "source_name": "Preop ortopedia",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6815,
+      "source_name": "Reuma básico",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6822,
+      "source_name": "Embarazo básico",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6829,
+      "source_name": "Panel viral respiratorio",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6836,
+      "source_name": "TORCH",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 6843,
+      "source_name": "Panel infeccioso PCR",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 7686,
+      "source_name": "Biopsia gastrointestinal",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 7687,
+      "source_name": "Pieza quirúrgica (general)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 7688,
+      "source_name": "PAAF / BACAF (aspiración con aguja fina)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "quick_pick",
+      "source_line": 7689,
+      "source_name": "Revisión de laminillas (segunda opinión)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7699,
+      "source_name": "Pieza oncológica completa (márgenes + IHQ si se requiere)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7706,
+      "source_name": "Biopsia renal completa (incluye IF si aplica)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7713,
+      "source_name": "Transoperatorio (congelación)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7848,
+      "source_name": "NIPT estándar",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7849,
+      "source_name": "CMA / Microarray (postnatal)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7850,
+      "source_name": "Exoma clínico TRIO (WES)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7851,
+      "source_name": "Panel multigénico de cáncer hereditario",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7852,
+      "source_name": "Cardiogenética (miocardiopatías / canalopatías)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7853,
+      "source_name": "Neurogenética (epilepsia / neurodesarrollo)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7854,
+      "source_name": "Panel tumoral somático (NGS) — FFPE",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7864,
+      "source_name": "NIPT estándar",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7871,
+      "source_name": "CMA / Microarray (postnatal)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7878,
+      "source_name": "Exoma clínico TRIO (WES)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7885,
+      "source_name": "Panel multigénico de cáncer hereditario",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7892,
+      "source_name": "Cardiogenética (miocardiopatías / canalopatías)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7899,
+      "source_name": "Neurogenética (epilepsia / neurodesarrollo)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 7906,
+      "source_name": "Panel tumoral somático (NGS) — FFPE",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8047,
+      "source_name": "Espirometría pre/post broncodilatador",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8048,
+      "source_name": "PFR completo (Espirometría + Volúmenes + DLCO)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8049,
+      "source_name": "PSG diagnóstica",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "psg_diagnostic"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8050,
+      "source_name": "HSAT (apnea del sueño en casa)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "hsat"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8051,
+      "source_name": "EMG + VCN (estudio completo)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "emg_ncs"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8052,
+      "source_name": "EEG rutinario",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "eeg_routine"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8062,
+      "source_name": "Espirometría pre/post broncodilatador",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8069,
+      "source_name": "PFR completo (Espirometría + Volúmenes + DLCO)",
+      "classification": "UI_GROUP_OR_HEADING",
+      "reason": "UI selection package/template, not an individual canonical study"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8076,
+      "source_name": "PSG diagnóstica",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "psg_diagnostic"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8083,
+      "source_name": "HSAT (apnea del sueño en casa)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "hsat"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8090,
+      "source_name": "EMG + VCN (estudio completo)",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "emg_ncs"
+    },
+    {
+      "source_kind": "package",
+      "source_line": 8097,
+      "source_name": "EEG rutinario",
+      "classification": "ALIAS_ONLY",
+      "alias_of": "eeg_routine"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 6865,
+      "source_name": "Química / Metabólico",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 6921,
+      "source_name": "Hematología",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 6941,
+      "source_name": "Coagulación",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 6955,
+      "source_name": "Endocrino",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 6981,
+      "source_name": "Inflamación / Inmuno",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7015,
+      "source_name": "Serologías / Infecciosas",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7042,
+      "source_name": "Microbiología",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7057,
+      "source_name": "Orina / Heces",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7169,
+      "source_name": "Tórax",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7175,
+      "source_name": "Abdomen y pelvis",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7182,
+      "source_name": "Columna",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7189,
+      "source_name": "Extremidades",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7201,
+      "source_name": "Abdomen",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7208,
+      "source_name": "Pelvis / Gineco-Obstétrico",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7215,
+      "source_name": "Cabeza y cuello",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7221,
+      "source_name": "Partes blandas",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7227,
+      "source_name": "Urológico",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7236,
+      "source_name": "Cabeza",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7242,
+      "source_name": "Tórax",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7248,
+      "source_name": "Abdomen y pelvis",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7255,
+      "source_name": "Columna y extremidades",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7265,
+      "source_name": "Neuro",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7271,
+      "source_name": "Columna",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7277,
+      "source_name": "Músculo-esquelético",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7284,
+      "source_name": "Abdomen",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7290,
+      "source_name": "Angio-RM",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7299,
+      "source_name": "Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7309,
+      "source_name": "Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7322,
+      "source_name": "Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7332,
+      "source_name": "Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7341,
+      "source_name": "Estudio base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7350,
+      "source_name": "Fluoroscopía / Contraste",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7443,
+      "source_name": "ECG · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7453,
+      "source_name": "Monitoreo · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7463,
+      "source_name": "Ecocardiografía · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7473,
+      "source_name": "Estrés · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7483,
+      "source_name": "Otros funcionales · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7492,
+      "source_name": "Vascular · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7575,
+      "source_name": "Digestiva · Endoscopia alta (EGD/EDA)",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7581,
+      "source_name": "Digestiva · Colon y recto",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7590,
+      "source_name": "Digestiva · Vía biliar / páncreas",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7596,
+      "source_name": "Digestiva · Ultrasonido endoscópico",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7602,
+      "source_name": "Digestiva · Intestino delgado",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7611,
+      "source_name": "Respiratoria · Vía aérea inferior",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7618,
+      "source_name": "Respiratoria · Vía aérea superior",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7624,
+      "source_name": "Respiratoria · Pleura",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7732,
+      "source_name": "Biopsias (por sistema)",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7745,
+      "source_name": "Servicios relacionados",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7754,
+      "source_name": "Piezas (generales)",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7764,
+      "source_name": "Muestras citológicas",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7775,
+      "source_name": "Tipos",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7928,
+      "source_name": "Citogenética · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7937,
+      "source_name": "NGS · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7948,
+      "source_name": "Reproductiva · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7957,
+      "source_name": "Cáncer hereditario · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7967,
+      "source_name": "Trombofilia · Estudio base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7975,
+      "source_name": "PGx · Estudio base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 7983,
+      "source_name": "Oncología somática · Estudio base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8117,
+      "source_name": "Respiratorio · Pruebas base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8134,
+      "source_name": "Sueño · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8146,
+      "source_name": "Neurofisiología · EEG",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8154,
+      "source_name": "Neurofisiología · EMG / VCN",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8162,
+      "source_name": "Neurofisiología · Potenciales evocados",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8172,
+      "source_name": "Audiología · Audición",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8182,
+      "source_name": "Audiología · Vestibular",
+      "classification": "UI_GROUP_OR_HEADING"
+    },
+    {
+      "source_kind": "group_heading",
+      "source_line": 8191,
+      "source_name": "Autonómico · Estudios base",
+      "classification": "UI_GROUP_OR_HEADING"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
 require_once __DIR__ . '/../_lib/clinical_document_timeline_read.php';
 require_once __DIR__ . '/../_lib/clinical_order_result_read.php';
 require_once __DIR__ . '/../_lib/clinical_study_contract.php';
+require_once __DIR__ . '/../_lib/clinical_study_catalog_read.php';
 require_once __DIR__ . '/../_lib/clinical_treatment_routes.php';
 
 clinical_m6_observability_request_started_at();
@@ -8794,6 +8795,17 @@ try {
         if($scopedDoctorId===''||!hash_equals($scopedDoctorContext['doctor_id'],$scopedDoctorId)){
             clinical_send_response(['ok'=>false,'error'=>'forbidden','message'=>'doctor scope mismatch','data'=>null,
                 'meta'=>['route'=>'doctors/{doctor_id}/documents']],403);
+            return;
+        }
+        if ($method === 'GET' && count($segments) === 3 && ($segments[2] ?? '') === 'study-types') {
+            $routeName = 'doctors/{doctor_id}/study-types';
+            try {
+                $data = clinical_study_catalog_read(clinical_documents_pdo(), $_GET);
+                clinical_send_response(['ok'=>true,'data'=>$data,'meta'=>['route'=>$routeName]], 200);
+            } catch (InvalidArgumentException $error) {
+                clinical_send_response(['ok'=>false,'error'=>'bad_request','message'=>$error->getMessage(),
+                    'data'=>null,'meta'=>['route'=>$routeName]], 400);
+            }
             return;
         }
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {

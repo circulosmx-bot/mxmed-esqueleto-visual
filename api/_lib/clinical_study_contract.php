@@ -5,7 +5,18 @@ declare(strict_types=1);
 function clinical_study_categories(): array
 {
     return ['LABORATORIO','IMAGEN','CARDIOVASCULAR','OFTALMOLOGIA','NEUROFISIOLOGIA',
-        'FUNCION_PULMONAR','AUDIOLOGIA','DENTAL','PATOLOGIA','ENDOSCOPIA','SUENO','OTROS'];
+        'FUNCION_PULMONAR','AUDIOLOGIA','DENTAL','PATOLOGIA','ENDOSCOPIA','SUENO','GENETICA','OTROS'];
+}
+
+function clinical_study_category_labels_es(): array
+{
+    return [
+        'LABORATORIO'=>'Laboratorio', 'IMAGEN'=>'Imagen', 'CARDIOVASCULAR'=>'Cardiovascular',
+        'OFTALMOLOGIA'=>'Oftalmología', 'NEUROFISIOLOGIA'=>'Neurofisiología',
+        'FUNCION_PULMONAR'=>'Función pulmonar', 'AUDIOLOGIA'=>'Audiología', 'DENTAL'=>'Dental',
+        'PATOLOGIA'=>'Patología', 'ENDOSCOPIA'=>'Endoscopia', 'SUENO'=>'Sueño',
+        'GENETICA'=>'Genética', 'OTROS'=>'Otros',
+    ];
 }
 
 function clinical_study_order_type(string $type): bool
