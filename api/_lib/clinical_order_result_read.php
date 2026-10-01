@@ -68,7 +68,7 @@ function clinical_or_cte(PDO $pdo, string $patientId): string
         WHERE d.patient_id={$patient} AND d.document_type IN ({$orders}) AND {$successor}
     ), current_results AS (
         SELECT d.id,d.payload_json,d.created_at AS sort_at
-        FROM clinical_documents d WHERE d.patient_id={$patient} AND d.document_type IN ({$results}) AND {$successor}
+        FROM clinical_documents d WHERE d.patient_id={$patient} AND d.document_type IN ({$results}) AND d.status<>'voided' AND {$successor}
     ), result_refs AS (
         SELECT r.id AS result_id,j.ref
         FROM current_results r JOIN JSON_TABLE(JSON_ARRAY({$refValues}), '$[*]' COLUMNS (ref VARCHAR(128) PATH '$')) j
@@ -95,7 +95,8 @@ function clinical_or_search_sql(PDO $pdo, string $search, string $alias, bool $s
     $labels = $study
         ? " OR CASE {$alias}.document_type WHEN 'lab_order' THEN 'Orden de laboratorio' WHEN 'imaging_order' THEN 'Orden de imagen' ELSE 'Orden de estudios' END LIKE {$pattern} ESCAPE '\\\\'"
         : " OR CASE {$alias}.document_type WHEN 'lab_result' THEN 'Resultado de laboratorio' WHEN 'imaging_result' THEN 'Resultado de imagen' ELSE 'Resultado de estudio' END LIKE {$pattern} ESCAPE '\\\\'";
-    $studies = $study ? " OR JSON_SEARCH({$alias}.payload_json,'one',{$pattern},'\\\\','$.requested_studies[*]') IS NOT NULL" : '';
+    $studies = $study ? " OR JSON_SEARCH({$alias}.payload_json,'one',{$pattern},'\\\\','$.requested_studies[*]') IS NOT NULL"
+        . " OR JSON_SEARCH({$alias}.payload_json,'one',{$pattern},'\\\\','$.order_items[*].study_display_name','$.order_items[*].study_category','$.order_items[*].study_type_key','$.order_items[*].external_code') IS NOT NULL" : '';
     return $base . $labels . $studies . ')';
 }
 
@@ -107,6 +108,14 @@ function clinical_or_document(array $row): array
         ? 'ENCOUNTER' : (trim((string)($row['appointment_id'] ?? '')) !== '' ? 'APPOINTMENT'
             : (trim((string)($row['hospital_stay_id'] ?? '')) !== '' ? 'HOSPITAL_STAY' : 'PATIENT'));
     $isOrder = in_array($row['document_type'], clinical_or_order_types(), true);
+    $legacyCategory = match ((string)$row['document_type']) {
+        'lab_order','lab_result','lab_pdf' => 'LABORATORIO',
+        'imaging_order','imaging_result' => 'IMAGEN',
+        default => null,
+    };
+    $standaloneCategory = match ((string)($payload['diagnostic_result_kind'] ?? '')) {
+        'lab' => 'LABORATORIO', 'imaging' => 'IMAGEN', 'other' => 'OTROS', default => $legacyCategory,
+    };
     return [
         'id' => (int)$row['id'], 'document_uuid' => $row['document_uuid'],
         'document_type' => $row['document_type'], 'title' => $row['title'], 'summary' => $row['summary'],
@@ -122,6 +131,15 @@ function clinical_or_document(array $row): array
             ? 'generated_at' : 'created_at',
         'requested_studies' => $isOrder && is_array($payload['requested_studies'] ?? null)
             ? array_values(array_filter($payload['requested_studies'], 'is_string')) : [],
+        'order_payload_version' => $isOrder ? (int)($payload['order_payload_version'] ?? 1) : null,
+        'order_items' => $isOrder && (int)($payload['order_payload_version'] ?? 0) === 2 && is_array($payload['order_items'] ?? null)
+            ? array_values(array_filter($payload['order_items'], 'is_array')) : [],
+        'study_category' => $isOrder ? $legacyCategory : (is_string($payload['study_category'] ?? null)
+            ? $payload['study_category'] : $standaloneCategory),
+        'study_type_key' => !$isOrder && is_string($payload['study_type_key'] ?? null) ? $payload['study_type_key'] : null,
+        'study_display_name' => !$isOrder && is_string($payload['study_display_name'] ?? null) ? $payload['study_display_name'] : null,
+        'related_order_item_ids' => !$isOrder && is_array($payload['related_order_item_ids'] ?? null)
+            ? array_values(array_filter($payload['related_order_item_ids'], 'is_string')) : null,
         'result_origin' => !$isOrder && is_string($payload['result_origin'] ?? null) ? $payload['result_origin'] : null,
         'related_order_document_id' => null,
     ];
@@ -206,7 +224,39 @@ function clinical_or_list_fetch(PDO $pdo, string $patientId, int $limit, string 
                 $child['related_order_document_id'] = $id;
                 $results[] = $child;
             }
-            $items[] = ['kind'=>'ORDER','order'=>$docs[$id],'result_count'=>count($results),'results'=>$results];
+            $order = $docs[$id];
+            $total = count($order['order_items']);
+            $currentIds = [];
+            foreach ($order['order_items'] as $studyItem) {
+                if (is_string($studyItem['order_item_id'] ?? null)) $currentIds[$studyItem['order_item_id']] = true;
+            }
+            $covered = [];
+            $unknown = false;
+            foreach ($results as $result) {
+                if ($result['related_order_item_ids'] === null) { $unknown = true; continue; }
+                $matched = false;
+                foreach ($result['related_order_item_ids'] as $itemId) {
+                    if (isset($currentIds[$itemId])) { $covered[$itemId] = true; $matched = true; }
+                }
+                if (!$matched) $unknown = true;
+            }
+            if ($order['order_payload_version'] === 2 && $total > 0) {
+                foreach ($order['order_items'] as &$studyItem) {
+                    $itemId = (string)($studyItem['order_item_id'] ?? '');
+                    $studyItem['coverage_state'] = isset($covered[$itemId]) ? 'RESULT_AVAILABLE' : ($unknown ? 'UNKNOWN' : 'NO_RESULT');
+                }
+                unset($studyItem);
+                $count = count($covered);
+                $order['coverage_state'] = $count === $total ? 'ALL_ITEMS_HAVE_RESULTS'
+                    : ($unknown ? 'UNKNOWN_COVERAGE' : ($count > 0 ? 'PARTIAL_RESULTS' : 'NO_RESULTS'));
+                $order['covered_item_count'] = $count;
+                $order['total_item_count'] = $total;
+            } else {
+                $order['coverage_state'] = 'UNKNOWN_LEGACY';
+                $order['covered_item_count'] = null;
+                $order['total_item_count'] = count($order['requested_studies']);
+            }
+            $items[] = ['kind'=>'ORDER','order'=>$order,'result_count'=>count($results),'results'=>$results];
         } else {
             $result = $docs[$id];
             if ($candidate['kind'] === 'RESULT') {

@@ -14,6 +14,7 @@ require_once __DIR__ . '/../_lib/clinical_longitudinal_tasks.php';
 require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
 require_once __DIR__ . '/../_lib/clinical_document_timeline_read.php';
 require_once __DIR__ . '/../_lib/clinical_order_result_read.php';
+require_once __DIR__ . '/../_lib/clinical_study_contract.php';
 require_once __DIR__ . '/../_lib/clinical_treatment_routes.php';
 
 clinical_m6_observability_request_started_at();
@@ -1149,9 +1150,8 @@ function clinical_document_has_linked_result(PDO $pdo, string $patientId, string
         SELECT id, payload_json
         FROM clinical_documents
         WHERE patient_id = :patient_id
-          AND document_type IN ('lab_result', 'imaging_result', 'result', 'lab_pdf')
+          AND document_type IN ('lab_result', 'imaging_result', 'result', 'lab_pdf', 'external_result', 'external_report')
         ORDER BY id DESC
-        LIMIT 300
     ");
     $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
     $stmt->execute();
@@ -1964,6 +1964,12 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args, bool $requir
     // M6_GUARD_C04_C05_C20_CREATE: deny before document/participant mutation.
     clinical_m6_assert_legacy_write_allowed(trim((string)($doc['context']['patient_id'] ?? '')));
 
+    $doc['content']['payload'] = clinical_study_normalize_order_payload($pdo, (string)$doc['document_type'],
+        (array)($doc['content']['payload'] ?? []));
+    $doc['content']['payload'] = clinical_study_validate_result_payload($pdo, (string)$doc['document_type'],
+        $doc['content']['payload'], (string)$doc['context']['patient_id'],
+        ($doc['context']['encounter_id'] ?? null) === null ? null : (string)$doc['context']['encounter_id']);
+
     if (($doc['document_type'] ?? '') === 'nota_evolucion') {
         $errs = mxmed_evolution_note_validate_to_generate((array)($doc['content']['payload'] ?? []));
         if (count($errs) > 0) {
@@ -2279,6 +2285,10 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
 
     // M6_GUARD_C04_C05_C20_MULTIPART: deny before clinical_store_uploaded_file().
     clinical_m6_assert_legacy_write_allowed($patientId);
+
+    $payloadData = clinical_study_normalize_order_payload($pdo, $documentType, $payloadData);
+    $payloadData = clinical_study_validate_result_payload($pdo, $documentType, $payloadData,
+        $patientId, $encounterId > 0 ? (string)$encounterId : null);
 
     $renderedText = null;
     if (is_string($payloadData['text'] ?? null)) {
@@ -3724,7 +3734,7 @@ function clinical_v1_error_status(Throwable $error): int
     if($code==='V1_MULTIPART_STORAGE_NOT_READY')return 503;
     if($code==='DOCUMENT_NOT_FOUND')return 404;
     if($code==='OBSERVATION_CONTEXT_MISMATCH')return 403;
-    if(in_array($code,['PRIOR_OBSERVATION_NOT_REUSABLE','MEASUREMENT_TYPE_ALREADY_PRESENT','VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH','DOCUMENT_TYPE_MISMATCH','DOCUMENT_ALREADY_SUPERSEDED','DOCUMENT_LINEAGE_INVALID'],true))return 409;
+    if(in_array($code,['PRIOR_OBSERVATION_NOT_REUSABLE','MEASUREMENT_TYPE_ALREADY_PRESENT','VERSION_CONFLICT','ENCOUNTER_TERMINAL','ENCOUNTER_CLOSED','ENCOUNTER_VOIDED','AMENDMENT_REQUIRES_CLOSED','DOCUMENT_CONTEXT_MISMATCH','DOCUMENT_TYPE_MISMATCH','DOCUMENT_ALREADY_SUPERSEDED','DOCUMENT_LINEAGE_INVALID','ORDER_WITH_RESULTS_REPLACEMENT_FORBIDDEN'],true))return 409;
     if($error instanceof InvalidArgumentException||$error instanceof ClinicalSectionValidationException||$error instanceof ClinicalObservationValidationException)return 400;
     return 500;
 }
@@ -3798,6 +3808,9 @@ function clinical_v1_document_insert(PDO $pdo,array $encounterRow,array $payload
     require_once __DIR__ . '/../_lib/clinical_documents.php';
     $payloadData=is_array($payload['payload']??null)?$payload['payload']:[];
     $type=strtolower(trim((string)($payload['document_type']??'')));if($type==='')throw new InvalidArgumentException('DOCUMENT_TYPE_REQUIRED');
+    $payloadData=clinical_study_normalize_order_payload($pdo,$type,$payloadData);
+    $payloadData=clinical_study_validate_result_payload($pdo,$type,$payloadData,
+      (string)$encounterRow['patient_id'],isset($encounterRow['encounter_id'])?(string)$encounterRow['encounter_id']:null);
     $event=trim((string)($payload['event_datetime']??''));if($event==='')$event=gmdate('Y-m-d H:i:s');
     $encounterId=(int)($encounterRow['encounter_id']??0);
     $doc=mxmed_build_clinical_document(['type'=>$type,'title'=>$payload['title']??'','summary'=>$payload['summary']??'',
@@ -3876,6 +3889,10 @@ function clinical_v1_document_amendment_insert(PDO $pdo,array $authorizedOrigina
     if((string)$target['document_uuid']!==(string)$authorizedOriginal['document_uuid']
       || strtolower((string)$target['document_type'])!==strtolower((string)$authorizedOriginal['document_type']))throw new RuntimeException('DOCUMENT_CONTEXT_MISMATCH');
     if(!clinical_has_active_doctor_patient_link($pdo,(string)$doctorContext['doctor_id'],(string)$target['patient_id']))throw new RuntimeException('DOCUMENT_NOT_FOUND');
+    if(clinical_study_order_type((string)$target['document_type'])
+      && clinical_document_has_linked_result($pdo,(string)$target['patient_id'],(string)$target['id'],(string)$target['document_uuid'])){
+        throw new RuntimeException('ORDER_WITH_RESULTS_REPLACEMENT_FORBIDDEN');
+    }
     $encounterId=isset($target['encounter_ref_id'])?(int)$target['encounter_ref_id']:0;
     if($encounterId>0){
         $lock=$pdo->prepare('SELECT * FROM clinical_encounters WHERE encounter_id=:id FOR UPDATE');$lock->execute([':id'=>$encounterId]);$encounter=$lock->fetch(PDO::FETCH_ASSOC);
@@ -3898,6 +3915,12 @@ function clinical_v1_document_amendment_insert(PDO $pdo,array $authorizedOrigina
       WHERE supersedes_document_id=:target OR (original_document_id=:target AND supersedes_document_id IS NULL) LIMIT 1 FOR UPDATE');
     $successor->execute([':target'=>(int)$target['id']]);
     if($successor->fetchColumn()!==false)throw new RuntimeException('DOCUMENT_ALREADY_SUPERSEDED');
+    $sourcePayload=json_decode((string)($target['payload_json']??''),true);
+    $sourcePayload=is_array($sourcePayload)?$sourcePayload:[];
+    $replacement['payload']=clinical_study_normalize_order_payload($pdo,(string)$target['document_type'],
+      (array)$replacement['payload'],$sourcePayload);
+    $replacement['payload']=clinical_study_validate_result_payload($pdo,(string)$target['document_type'],
+      (array)$replacement['payload'],(string)$target['patient_id'],$encounterId>0?(string)$encounterId:null,$sourcePayload);
     require_once __DIR__ . '/../_lib/clinical_documents.php';
     $contextEncounter=$encounterId>0?(string)$encounterId:(string)($target['encounter_id']??'');
     $doc=mxmed_build_clinical_document(['type'=>$replacement['document_type'],'title'=>$replacement['title'],'summary'=>$replacement['summary'],
@@ -10111,6 +10134,9 @@ try {
                 $replacementPayload['requested_studies'] = $requestedStudies;
                 $replacementPayload['selection_count'] = count($requestedStudies);
                 $replacementPayload['flags'] = $flags;
+                // This legacy endpoint accepts a string selection, not item identities.
+                unset($replacementPayload['order_items'], $replacementPayload['order_payload_version']);
+                $replacementPayload = clinical_study_normalize_order_payload($pdo, $newType, $replacementPayload, $sourcePayload);
                 if (isset($replacementPayload['replaced_by_document_id'])) unset($replacementPayload['replaced_by_document_id']);
                 if (isset($replacementPayload['replaced_by_document_uuid'])) unset($replacementPayload['replaced_by_document_uuid']);
                 if (isset($replacementPayload['replacement_at'])) unset($replacementPayload['replacement_at']);

@@ -150,11 +150,16 @@ function clinical_encounter_multipart_error(Throwable $error): array
 {
     $code = $error->getMessage();
     if ($error instanceof ClinicalIdempotencyException) return [$error->httpStatus, $error->errorCode];
+    if ($error instanceof InvalidArgumentException &&
+        (str_starts_with($code, 'ORDER_ITEM_') || str_starts_with($code, 'ORDER_ITEMS_')
+            || str_starts_with($code, 'RESULT_ITEM_') || str_starts_with($code, 'RESULT_ORDER_')
+            || str_starts_with($code, 'STUDY_'))) return [400, $code];
     if ($code === 'V1_MULTIPART_STORAGE_NOT_READY' || str_starts_with($code, 'MULTIPART_STORAGE_SCHEMA_NOT_READY')) return [503, 'V1_MULTIPART_STORAGE_NOT_READY'];
     if ($code === 'MULTIPART_FILE_REQUIRED') return [400, $code];
     if (in_array($code, ['STAGING_MAX_BYTES_EXCEEDED', 'STAGING_MIME_NOT_ALLOWED', 'STAGING_SOURCE_NOT_REGULAR_FILE'], true)) return [400, 'MULTIPART_FILE_INVALID'];
     if (in_array($code, ['ENCOUNTER_VOIDED', 'ENCOUNTER_TERMINAL', 'ENCOUNTER_CLOSED', 'DOCUMENT_CONTEXT_MISMATCH',
         'DOCUMENT_TYPE_MISMATCH', 'DOCUMENT_ALREADY_SUPERSEDED', 'DOCUMENT_LINEAGE_INVALID',
+        'ORDER_WITH_RESULTS_REPLACEMENT_FORBIDDEN',
         'DOCUMENT_OPERATION_UNSUPPORTED', 'DOCUMENT_NOT_FOUND', 'ENCOUNTER_NOT_FOUND'], true)) {
         return [clinical_v1_error_status($error), clinical_v1_error_code($error)];
     }
