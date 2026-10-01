@@ -13,6 +13,7 @@ require_once __DIR__ . '/../_lib/clinical_longitudinal_medications.php';
 require_once __DIR__ . '/../_lib/clinical_longitudinal_tasks.php';
 require_once __DIR__ . '/../_lib/clinical_capture_classification.php';
 require_once __DIR__ . '/../_lib/clinical_document_timeline_read.php';
+require_once __DIR__ . '/../_lib/clinical_order_result_read.php';
 require_once __DIR__ . '/../_lib/clinical_treatment_routes.php';
 
 clinical_m6_observability_request_started_at();
@@ -8957,6 +8958,27 @@ try {
                 return;
             }
 
+            $ordersResultsMode = ($_GET['orders_results_mode'] ?? '0') === '1';
+            if (isset($_GET['orders_results_mode']) && !in_array($_GET['orders_results_mode'], ['0', '1'], true)) {
+                clinical_send_response(['ok' => false, 'error' => 'bad_request', 'message' => 'orders_results_mode inválido', 'data' => null, 'meta' => $meta], 400);
+                return;
+            }
+            $orCursor = null;
+            $orLimit = $_GET['limit'] ?? '25';
+            $orFilter = $_GET['filter'] ?? 'all';
+            $orSearch = $_GET['search'] ?? '';
+            if ($ordersResultsMode && (
+                !is_string($orLimit) || preg_match('/^[0-9]+$/', $orLimit) !== 1 || (int)$orLimit < 1 || (int)$orLimit > 100
+                || !is_string($orFilter) || !in_array($orFilter, ['all','orders','results'], true)
+                || !is_string($orSearch) || mb_strlen($orSearch) > 120
+                || !is_string($_GET['cursor'] ?? '')
+                || (($_GET['cursor'] ?? '') !== '' && ($orCursor = clinical_or_cursor_decode($_GET['cursor'])) === null)
+                || trim((string)($_GET['document_type'] ?? '')) !== '' || trim((string)($_GET['hospital_stay_id'] ?? '')) !== ''
+                || ($_GET['timeline_mode'] ?? '0') !== '0'
+            )) {
+                clinical_send_response(['ok' => false, 'error' => 'bad_request', 'message' => 'Parámetros de órdenes y resultados inválidos', 'data' => null, 'meta' => $meta], 400);
+                return;
+            }
             $timelineMode = ($_GET['timeline_mode'] ?? '0') === '1';
             if (isset($_GET['timeline_mode']) && !in_array($_GET['timeline_mode'], ['0', '1'], true)) {
                 clinical_send_response(['ok' => false, 'error' => 'bad_request', 'message' => 'timeline_mode inválido', 'data' => null, 'meta' => $meta], 400);
@@ -9012,17 +9034,24 @@ try {
                         'data' => $timeline, 'meta' => $meta + ['timeline_mode' => true, 'timeline_timezone' => 'UTC']], 200);
                     return;
                 }
+                if ($ordersResultsMode) {
+                    $projection = clinical_or_list_fetch($pdo, $patientId, (int)$orLimit, $orFilter, trim($orSearch), $orCursor);
+                    clinical_send_response(['ok' => true, 'error' => null, 'message' => 'orders and results listed',
+                        'data' => $projection, 'meta' => $meta + ['orders_results_mode' => true, 'chronology_timezone' => 'UTC']], 200);
+                    return;
+                }
                 $items = clinical_documents_list_fetch($pdo, $patientId, $documentType, $hospitalStayId, $limit);
             } catch (Throwable $e) {
                 $msg = trim($e->getMessage());
                 $timelineSchemaMissing = $timelineMode && $msg === 'TIMELINE_READER_SCHEMA_NOT_READY';
+                $orSchemaMissing = $ordersResultsMode && $msg === 'ORDER_RESULT_READER_SCHEMA_NOT_READY';
                 clinical_send_response([
                     'ok' => false,
-                    'error' => $timelineSchemaMissing ? 'SCHEMA_NOT_READY' : 'server_error',
+                    'error' => $timelineSchemaMissing || $orSchemaMissing ? 'SCHEMA_NOT_READY' : 'server_error',
                     'message' => ($msg !== '') ? $msg : 'server error',
                     'data' => null,
                     'meta' => $meta,
-                ], $timelineSchemaMissing ? 503 : 500);
+                ], $timelineSchemaMissing || $orSchemaMissing ? 503 : 500);
                 return;
             }
 
