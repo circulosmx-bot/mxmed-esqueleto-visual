@@ -3,7 +3,7 @@
   const pane = document.getElementById('p-expediente');
   if (!pane) return;
   const config = {
-    orders:{target:'t-estudios',title:'Órdenes y resultados',copy:'Solicitudes y resultados vinculados a su atención de origen.',empty:'No hay órdenes ni resultados registrados.',action:'Nueva orden'},
+    orders:{target:'t-estudios',title:'Órdenes y resultados',copy:'Solicitudes y resultados vinculados a su atención de origen.',empty:'No hay órdenes ni resultados registrados.',action:'Solicitar estudios'},
     documents:{target:'t-consent',title:'Documentos',copy:'Archivos clínicos, informes y versiones. Las órdenes y los resultados tienen su propia sección.',empty:'No hay documentos clínicos registrados.',action:'Crear o adjuntar documento'},
     prescriptions:{target:'t-tratamiento',title:'Recetas',copy:'Historial de prescripciones. Una receta no confirma el uso actual del medicamento.',empty:'No hay recetas registradas.',action:'Emitir receta'}
   };
@@ -88,7 +88,7 @@
   }
   async function load() {
     const id=selectedPatient(),seen=++generation;
-    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.search.value='';v.filter.value='';});
+    if(id!==patient)views.forEach(v=>{v.host.classList.remove('vis06-capture-open');v.back.hidden=true;v.create.hidden=false;v.search.value='';v.filter.value='';});
     patient=id;rows=[];
     views.forEach(v=>{v.list.replaceChildren();v.detail.hidden=true;v.notice.textContent=id?'Consultando registros…':'Selecciona un paciente.';});
     if(!id)return;
@@ -108,9 +108,9 @@
     const create=button(settings.action,()=>{
       if(kind==='prescriptions'){host.querySelector('[data-action="tratamiento-alias-open-receta"]')?.click();return;}
       host.classList.add('vis06-capture-open');back.hidden=false;
-      if(kind==='orders')host.querySelector('[data-est-section="solicitar"]')?.click();
+      if(kind==='orders'){create.hidden=true;host.querySelector('[data-est-section="solicitar"]')?.click();}
     });create.className='btn btn-primary';head.append(copy,create);
-    const back=button('Volver al listado',()=>{host.classList.remove('vis06-capture-open');back.hidden=true;create.focus();load();});back.hidden=true;
+    const back=button('Volver al listado',()=>{host.classList.remove('vis06-capture-open');back.hidden=true;create.hidden=false;create.focus();load();});back.hidden=true;
     const controls=node('div','','vis06-controls');const search=node('input');search.type='search';search.placeholder='Buscar por nombre o descripción';search.setAttribute('aria-label',`Buscar en ${settings.title}`);search.className='form-control';
     const filter=node('select','','form-select');filter.setAttribute('aria-label',`Filtrar ${settings.title}`);
     (kind==='orders'?[['','Órdenes y resultados'],['orders','Sólo órdenes'],['results','Sólo resultados']]:[['','Todos los estados'],['generated','Generados'],['signed','Firmados'],['draft','Borradores'],['voided','Anulados']]).forEach(([value,title])=>filter.add(new Option(title,value)));
@@ -118,7 +118,7 @@
     const notice=node('p','','vis06-notice');notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');
     const list=node('div','','vis06-list'),detail=node('section','','vis06-detail');detail.hidden=true;
     module.append(head,back,controls,notice,list,detail);host.prepend(module);host.classList.add('vis06-ready');
-    const view={kind,settings,host,back,search,filter,notice,list,detail,lastTrigger:null};views.set(kind,view);
+    const view={kind,settings,host,create,back,search,filter,notice,list,detail,lastTrigger:null};views.set(kind,view);
     search.addEventListener('input',()=>render(view));filter.addEventListener('change',()=>render(view));
     if(kind==='documents'){const link=button('Ver órdenes y resultados',()=>pane.querySelector('[data-bs-target="#t-estudios"]')?.click());module.append(link);}
     if(kind==='prescriptions'){const link=button('Consultar medicación actual',()=>pane.querySelector('[data-bs-target="#t-medicamentos-longitudinal"]')?.click());module.append(link);}

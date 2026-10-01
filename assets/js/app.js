@@ -71718,7 +71718,8 @@ function mxResetLogoPreview(){
     return `${String(dt.getDate()).padStart(2, '0')}-${months[dt.getMonth()]}-${dt.getFullYear()} - ${hh}:${mm}:${ss}`;
   }
   function resolveOrderPatientId(){
-    const isCanonicalPatientId = (value)=> /^p_[a-z0-9]+$/i.test(clean(value));
+    const isCanonicalPatientId = (value)=> /^p_[a-z0-9_-]{6,62}$/i.test(clean(value))
+      || /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clean(value));
     const fromResolver = (typeof window.resolveActivePatientId === 'function') ? clean(window.resolveActivePatientId()) : '';
     if(isCanonicalPatientId(fromResolver)) return fromResolver;
     const fromStore = clean(window.mxmedStore?.currentPatientId || window.mxmedStore?.activePatientId);
@@ -73231,6 +73232,8 @@ function mxResetLogoPreview(){
     const flags = Array.isArray(params?.flags) ? params.flags.map(clean).filter(Boolean).sort() : [];
     return JSON.stringify({
       patientId: clean(params?.patientId),
+      authoringContext: clean(params?.authoringContext),
+      encounterKey: clean(params?.encounterKey),
       documentType: clean(params?.documentType),
       area: clean(params?.area),
       priority: clean(params?.priority),
@@ -73257,8 +73260,9 @@ function mxResetLogoPreview(){
       setOrderFeedback('Selecciona un paciente activo antes de generar la orden.', 'error');
       return { ok: false, reason: 'missing_patient' };
     }
-    const encounterKey = resolveOrderEncounterKey();
-    const appointmentId = resolveOrderAppointmentId(patientId, encounterKey);
+    const authoringContext = clean(params?.authoringContext).toUpperCase();
+    const encounterKey = authoringContext === 'PATIENT' ? '' : resolveOrderEncounterKey();
+    const appointmentId = authoringContext === 'PATIENT' ? '' : resolveOrderAppointmentId(patientId, encounterKey);
     const eventDatetime = nowSqlDateTime();
     const priority = clean(prioritySelect?.value || '');
     const indication = clean(indicationTextarea?.value || '');
@@ -73299,6 +73303,8 @@ function mxResetLogoPreview(){
     };
     const signature = buildOrderSubmitSignature({
       patientId,
+      authoringContext,
+      encounterKey,
       documentType,
       area,
       priority,
@@ -74479,6 +74485,7 @@ function mxResetLogoPreview(){
         try{
           const saveResult = await saveCanonicalStudyOrder({
             items,
+            authoringContext: 'PATIENT',
             controllerKey: controller.key,
             area: controllerAreaMap[controller.key] || areaSelect?.value || '',
             replacement: orderReplacementState.active ? {
