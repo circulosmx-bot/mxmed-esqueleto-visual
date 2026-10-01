@@ -18,6 +18,7 @@ require_once __DIR__ . '/../_lib/clinical_study_contract.php';
 require_once __DIR__ . '/../_lib/clinical_portable_order.php';
 require_once __DIR__ . '/../_lib/clinical_study_catalog_read.php';
 require_once __DIR__ . '/../_lib/clinical_treatment_routes.php';
+require_once __DIR__ . '/../../modules/agenda/services/HealthcareStudyProviderMatchingService.php';
 
 clinical_m6_observability_request_started_at();
 
@@ -8853,6 +8854,38 @@ try {
         if($scopedDoctorId===''||!hash_equals($scopedDoctorContext['doctor_id'],$scopedDoctorId)){
             clinical_send_response(['ok'=>false,'error'=>'forbidden','message'=>'doctor scope mismatch','data'=>null,
                 'meta'=>['route'=>'doctors/{doctor_id}/documents']],403);
+            return;
+        }
+        if ($method === 'GET' && count($segments) === 7 && ($segments[2] ?? '') === 'patients'
+            && ($segments[4] ?? '') === 'study-orders' && ($segments[6] ?? '') === 'provider-matches') {
+            header('Cache-Control: private, no-store, max-age=0');
+            header('Pragma: no-cache');
+            $routeName = 'doctors/{doctor_id}/patients/{patient_id}/study-orders/{document_uuid}/provider-matches';
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $versionRaw = $_GET['document_version'] ?? null;
+            $pageRaw = $_GET['page'] ?? '1';
+            $sizeRaw = $_GET['page_size'] ?? (string)\Agenda\Services\HealthcareStudyProviderMatchingService::DEFAULT_PAGE_SIZE;
+            if (!is_string($versionRaw) || !ctype_digit($versionRaw) || strlen($versionRaw) > 10
+                || !is_string($pageRaw) || !ctype_digit($pageRaw) || strlen($pageRaw) > 6
+                || !is_string($sizeRaw) || !ctype_digit($sizeRaw) || strlen($sizeRaw) > 3
+                || !is_string($_GET['service_mode'] ?? null) || !is_array($_GET['region_keys'] ?? null)) {
+                clinical_send_response(['ok'=>false,'error'=>'bad_request','message'=>'invalid provider match input',
+                    'data'=>null,'meta'=>['route'=>$routeName]], 400);
+                return;
+            }
+            try {
+                $matcher = new \Agenda\Services\HealthcareStudyProviderMatchingService(clinical_documents_pdo());
+                $data = $matcher->matchOrder($scopedDoctorId, $patientId,
+                    trim(rawurldecode((string)$segments[5])), (int)$versionRaw,
+                    $_GET['region_keys'], $_GET['service_mode'], (int)$pageRaw, (int)$sizeRaw);
+                clinical_send_response(['ok'=>true,'data'=>$data,'meta'=>['route'=>$routeName]], 200);
+            } catch (\Agenda\Services\ProviderMatchRequestException $error) {
+                clinical_send_response(['ok'=>false,'error'=>$error->reason,'message'=>$error->reason,
+                    'data'=>null,'meta'=>['route'=>$routeName]], $error->httpStatus);
+            } catch (Throwable $error) {
+                clinical_send_response(['ok'=>false,'error'=>'server_error','message'=>'provider match unavailable',
+                    'data'=>null,'meta'=>['route'=>$routeName]], 500);
+            }
             return;
         }
         if ($method === 'GET' && count($segments) === 4 && ($segments[2] ?? '') === 'portable-orders') {
