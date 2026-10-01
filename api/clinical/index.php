@@ -8903,6 +8903,36 @@ try {
                         'meta'=>$meta+['idempotency_replay'=>$replay]],$replay?200:201);
                     return;
                 }
+                // TAX03C: structured patient-level diagnostic orders use the canonical
+                // idempotent writer. The legacy lab/imaging request path remains available.
+                if (!$isMultipart && $uploadFile === null
+                    && clinical_study_order_type((string)($payload['document_type'] ?? ''))
+                    && is_array(($payload['payload'] ?? [])['order_items'] ?? null)) {
+                    $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+                    $innerContext = is_array($payload['payload']['context'] ?? null) ? $payload['payload']['context'] : [];
+                    foreach ([$payload, $context, $payload['payload'], $innerContext] as $scope) {
+                        if (isset($scope['doctor_id']) && trim((string)$scope['doctor_id']) !== $doctorId) {
+                            throw new InvalidArgumentException('DOCTOR_CONTEXT_MISMATCH');
+                        }
+                        foreach (['encounter_key','encounter_id','appointment_id','hospital_stay_id'] as $field) {
+                            if (trim((string)($scope[$field] ?? '')) !== '') throw new InvalidArgumentException('PATIENT_ORDER_ENCOUNTER_FORBIDDEN');
+                        }
+                    }
+                    $payload['context']=['patient_id'=>$patientId,'encounter_id'=>null,'appointment_id'=>null];
+                    $payload['actor']=['user_id'=>$scopedDoctorContext['user_id']];
+                    $key=clinical_idempotency_key_validate((string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??''));
+                    clinical_encounter_integrity_assert_schema_ready($pdo);
+                    $semantic=clinical_document_semantic_request($payload,null)+['patient_id'=>$patientId,'operation'=>'CREATE_ENCOUNTER_DOCUMENT'];
+                    $service=new ClinicalEncounterIntegrityService($pdo);
+                    $result=$service->idempotentCreate('CREATE_ENCOUNTER_DOCUMENT',$doctorId,'PATIENT',$patientId,$key,$semantic,
+                        'document_id',$scopedDoctorContext['user_id'],
+                        fn():int=>clinical_v1_document_insert($pdo,['patient_id'=>$patientId],$payload,$scopedDoctorContext['user_id']),
+                        fn(int $id):array=>clinical_v1_document_fetch($pdo,$id));
+                    $replay=($result['_idempotency_replay']??false)===true;unset($result['_idempotency_replay']);
+                    clinical_send_response(['ok'=>true,'error'=>null,'message'=>'document created','data'=>$result,
+                        'meta'=>$meta+['idempotency_replay'=>$replay]],$replay?200:201);
+                    return;
+                }
                 $document = clinical_documents_save_create_request($pdo, $payload, $uploadFile, $isMultipart);
             } catch (ClinicalM6LegacyWriteBlockedException $e) {
                 // M6_GUARD_C04_C05_C20_SCOPED_CREATE: route patient is authoritative.

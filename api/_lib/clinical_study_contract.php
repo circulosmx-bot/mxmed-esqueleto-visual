@@ -11,10 +11,10 @@ function clinical_study_categories(): array
 function clinical_study_category_labels_es(): array
 {
     return [
-        'LABORATORIO'=>'Laboratorio', 'IMAGEN'=>'Imagen', 'CARDIOVASCULAR'=>'Cardiovascular',
+        'LABORATORIO'=>'Laboratorio', 'IMAGEN'=>'Imagenología', 'CARDIOVASCULAR'=>'Cardiovascular',
         'OFTALMOLOGIA'=>'Oftalmología', 'NEUROFISIOLOGIA'=>'Neurofisiología',
         'FUNCION_PULMONAR'=>'Función pulmonar', 'AUDIOLOGIA'=>'Audiología', 'DENTAL'=>'Dental',
-        'PATOLOGIA'=>'Patología', 'ENDOSCOPIA'=>'Endoscopia', 'SUENO'=>'Sueño',
+        'PATOLOGIA'=>'Patología', 'ENDOSCOPIA'=>'Endoscopía', 'SUENO'=>'Medicina del sueño',
         'GENETICA'=>'Genética', 'OTROS'=>'Otros',
     ];
 }

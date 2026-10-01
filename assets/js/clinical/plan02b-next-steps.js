@@ -28,7 +28,7 @@
   const uncertain=a=>!!a && a.state!=='SUCCESS' && (a.uncertain || a.state==='IN_PROGRESS' || (a.state==='FAILED' && a.payload && (a.code==='AMBIGUOUS'||!a.code)));
   const frozen=a=>a?.state==='SUCCESS'||uncertain(a);
   const sameContext=()=>context&&JSON.stringify(contextNow())===JSON.stringify(context);
-  const semantic=(kind,a)=>JSON.stringify(kind==='orders'?{title:a.title,summary:a.summary,review:a.review||{mode:'none'}}:kind==='prescription'?{items:a.items,observaciones:a.observaciones}:kind==='appointment'?{mode:a.mode,selection:a.selection}:{title:a.title,due:a.due,link:a.link,ownDue:a.ownDue});
+  const semantic=(kind,a)=>JSON.stringify(kind==='orders'?{items:a.items||[],priority:a.priority,indication:a.indication,review:a.review||{mode:'none'}}:kind==='prescription'?{items:a.items,observaciones:a.observaciones}:kind==='appointment'?{mode:a.mode,selection:a.selection}:{title:a.title,due:a.due,link:a.link,ownDue:a.ownDue});
   function sync(){
     const next=contextNow();
     if(!next.patient||!next.doctor||!next.encounter||!next.key){root.hidden=true;collector.hidden=true;badge.hidden=true;summaryEpoch++;summaryKey='';clearSummary();return;}
@@ -105,7 +105,7 @@
       }
       if(!valid())return;
       const area=document.querySelector('[data-review-documents]'),list=document.querySelector('[data-review-document-list]');
-      const docs=canonicalDocs.filter(d=>['order','prescription','receta'].includes(d.document_type)&&['generated','signed'].includes(d.status)&&d.has_successor!=1);
+      const docs=canonicalDocs.filter(d=>['order','orders','lab_order','imaging_order','orden_estudio','prescription','receta'].includes(d.document_type)&&['generated','signed'].includes(d.status)&&d.has_successor!=1);
       area.hidden=!docs.length;list.replaceChildren();
       docs.slice(0,3).forEach(d=>{const b=document.createElement('button');b.type='button';b.className='btn btn-outline-primary btn-sm';b.textContent=d.title||'Documento clínico';b.title=b.textContent;b.onclick=()=>window.dispatchEvent(new CustomEvent('mxmed:review-document',{detail:{document:d,encounterKey:c.key}}));list.append(b);});
       if(docs.length>3){const b=document.createElement('button');b.type='button';b.className='btn btn-link btn-sm';b.textContent=`Ver ${docs.length} documentos`;b.onclick=()=>document.querySelector('[data-review-docs]').click();list.append(b);}
@@ -113,7 +113,7 @@
     finally{if(valid()){summaryLoading=false;render();}}
   }
   function closeModal(){
-    if(!modal)return;const {dialog,trigger}=modal;epoch++;modal=null;dialog.close();dialog.remove();const target=trigger?.isConnected?trigger:trigger?.dataset.review?collector.querySelector(`[data-review="${CSS.escape(trigger.dataset.review)}"]`):null;target?.focus({preventScroll:true});
+    if(!modal)return;const {dialog,trigger}=modal;modal.composer?.destroy();epoch++;modal=null;dialog.close();dialog.remove();const target=trigger?.isConnected?trigger:trigger?.dataset.review?collector.querySelector(`[data-review="${CSS.escape(trigger.dataset.review)}"]`):null;target?.focus({preventScroll:true});
   }
   function dirtyModal(){return modal&&!modal.readonly&&(semantic(modal.kind,modal.draft)!==modal.baseline||JSON.stringify(modal.search)!==modal.searchBaseline);}
   function requestClose(){
@@ -122,7 +122,7 @@
   }
   function openModal(kind,original,trigger){
     if(busy||modal||!sameContext())return;
-    const draft=original?clone(original):action(kind==='orders'?{title:'',summary:'',review:{mode:'none',days:10,date:''}}:kind==='prescription'?{items:[medication()],observaciones:''}:kind==='appointment'?{mode:'existing',selection:null}:{title:'',due:'',link:false,ownDue:false});
+    const draft=original?clone(original):action(kind==='orders'?{title:'',summary:'',items:[],priority:'Rutinaria',indication:'',review:{mode:'none',days:10,date:''}}:kind==='prescription'?{items:[medication()],observaciones:''}:kind==='appointment'?{mode:'existing',selection:null}:{title:'',due:'',link:false,ownDue:false});
     const dialog=document.createElement('dialog');dialog.className='plan02b-modal';dialog.setAttribute('aria-labelledby','plan02b-modal-title');
     dialog.innerHTML='<form><header><h4 id="plan02b-modal-title"></h4><button type="button" class="btn btn-link" data-modal-close aria-label="Cerrar">×</button></header><div class="plan02b-modal-content"></div><p data-modal-error role="alert"></p><footer><p data-modal-helper>Se registrará al confirmar las acciones.</p><div><button type="button" class="btn btn-outline-secondary" data-modal-cancel>Cancelar</button><button type="submit" class="btn btn-primary" data-modal-add></button></div></footer></form>';
     const search={days:state.days,date:state.date,consultorio:state.consultorio};
@@ -168,12 +168,19 @@
     let html='';
     if(kind==='orders'){
       const review=a.review||{mode:'none',days:10,date:''};
-      html=field('Estudio / orden',`<input data-order-field="title" maxlength="160" value="${esc(a.title)}" required>`)+field('Indicaciones',`<textarea data-order-field="summary" rows="3">${esc(a.summary)}</textarea>`)+`<section class="plan02b-order-review"><h5>Revisión del resultado</h5>${field('Seguimiento',`<select data-order-review="mode"><option value="none" ${review.mode==='none'?'selected':''}>Sin seguimiento programado</option><option value="days" ${review.mode==='days'?'selected':''}>En días</option><option value="date" ${review.mode==='date'?'selected':''}>Fecha específica</option><option value="appointment" ${review.mode==='appointment'?'selected':''} ${chosen()?'':'disabled'}>En la próxima cita</option></select>`)}${review.mode==='days'?field('En (días)',`<input data-order-review="days" type="number" min="1" max="365" value="${review.days||10}" required>`):review.mode==='date'?field('Fecha específica',`<input data-order-review="date" type="date" min="${dateOnly(new Date())}" value="${esc(review.date)}" required>`):review.mode==='appointment'?`<p>${esc(appointmentLabel(chosen()))}</p>`:''}<p>${chosen()?'Se preparará un seguimiento separado de la orden.':'Para revisar en la próxima cita, selecciona o prepara primero una próxima cita en Plan.'}</p></section>`;
+      html=`<div data-tax03c-host></div><section class="plan02b-order-review"><h5>Revisión del resultado</h5>${field('Seguimiento',`<select data-order-review="mode"><option value="none" ${review.mode==='none'?'selected':''}>Sin seguimiento programado</option><option value="days" ${review.mode==='days'?'selected':''}>En días</option><option value="date" ${review.mode==='date'?'selected':''}>Fecha específica</option><option value="appointment" ${review.mode==='appointment'?'selected':''} ${chosen()?'':'disabled'}>En la próxima cita</option></select>`)}${review.mode==='days'?field('En (días)',`<input data-order-review="days" type="number" min="1" max="365" value="${review.days||10}" required>`):review.mode==='date'?field('Fecha específica',`<input data-order-review="date" type="date" min="${dateOnly(new Date())}" value="${esc(review.date)}" required>`):review.mode==='appointment'?`<p>${esc(appointmentLabel(chosen()))}</p>`:''}<p>${chosen()?'Se preparará un seguimiento separado de la orden.':'Para revisar en la próxima cita, selecciona o prepara primero una próxima cita en Plan.'}</p></section>`;
     }
     if(kind==='prescription')html=`${patient?`<p class="plan02b-patient">Paciente: <strong>${esc(patient)}</strong></p>`:''}<div class="plan02b-rx-rows">${(a.items||[]).map((item,index)=>`<section class="plan02b-rx-row" data-rx-row="${index}" aria-label="Medicamento ${index+1}"><header><h5>Medicamento ${index+1}</h5>${a.items.length>1&&!readonly?`<button type="button" class="btn btn-link btn-sm" data-rx-remove="${index}" aria-label="Retirar medicamento ${index+1}">Retirar</button>`:''}</header><div class="plan02b-rx-fields">${[['medicamento','Medicamento'],['dosis','Dosis'],['via','Vía'],['frecuencia','Periodicidad'],['duracion','Duración'],['indicaciones','Indicaciones']].map(([key,label])=>field(label,`<input data-rx-field="${key}" data-rx-index="${index}" maxlength="500" value="${esc(item[key]||'')}" ${key==='medicamento'?'required':''}>`)).join('')}</div></section>`).join('')}</div>${readonly?'':'<button type="button" class="btn btn-outline-primary btn-sm" data-rx-add>Agregar medicamento</button>'}${field('Indicaciones generales (opcional)',`<textarea data-rx-observaciones rows="2" maxlength="2000">${esc(a.observaciones||'')}</textarea>`)}`;
     if(kind==='appointment')html=`${patient?`<p class="plan02b-patient">Paciente: <strong>${esc(patient)}</strong></p>`:''}<div class="plan02b-modes">${field('<input type="radio" name="ns-mode" value="existing" '+(a.mode==='existing'?'checked':'')+'> Usar una cita existente','')}${field('<input type="radio" name="ns-mode" value="new" '+(a.mode==='new'?'checked':'')+'> Agendar nueva cita','')}</div>${a.mode==='existing'?field('Cita del paciente',`<select data-ns-existing><option value="">Selecciona una cita futura</option>${appointments.map(x=>`<option value="${esc(x.appointment_id)}" ${a.selection?.appointment_id===x.appointment_id?'selected':''}>${esc(appointmentLabel(x))}</option>`).join('')}</select>`):`<div class="plan02b-date-grid">${field('Dentro de (días)',`<input data-ns-days type="number" min="1" max="365" value="${s.days}">`)}${field('Fecha exacta',`<input data-ns-date type="date" value="${s.date}" min="${dateOnly(new Date())}" required>`)}${field('Consultorio',`<select data-ns-location><option value="">Selecciona consultorio</option>${locations.map(x=>`<option value="${esc(x.consultorio_id)}" ${s.consultorio===String(x.consultorio_id)?'selected':''}>${esc(x.name||x.nombre||'Consultorio')}</option>`).join('')}</select>`)}</div><p data-ns-exact>${esc(exact(s.date))}</p><button type="button" class="btn btn-outline-primary" data-ns="availability">Buscar horarios</button><div class="plan02b-slots" aria-label="Horarios disponibles">${slots.map((x,i)=>`<button type="button" class="btn ${a.selection?.start_at===x.start_at?'btn-primary':'btn-outline-primary'}" data-ns-slot="${i}" aria-pressed="${a.selection?.start_at===x.start_at}">${esc(x.start_at.slice(11,16))}</button>`).join('')}</div>`}<p data-slot-selection>${esc(appointmentLabel(a.selection))}</p><p role="status">${a.selection&&a.mode==='new'&&a.state!=='SUCCESS'?'Horario seleccionado. Aún no reservado. Se reservará al confirmar las acciones.':esc(loading)}</p>`;
     if(kind==='followup')html=`${field('Acción clínica',`<input data-ns-title maxlength="500" value="${esc(a.title)}" required>`)}${chosen()?`<p class="plan02b-appointment-context"><strong>Próxima cita:</strong> ${esc(appointmentLabel(chosen()))}</p>`+field('Vincular con esta cita',`<select data-ns-link><option value="no" ${!a.link?'selected':''}>No vincular</option><option value="yes" ${a.link?'selected':''}>Vincular</option></select>`):'<p>No hay una próxima cita preparada. Puedes añadirla después y volver para vincular.</p>'}${a.link?field(`<input type="checkbox" data-ns-own-due ${a.ownDue||a.due?'checked':''}> Añadir una fecha límite propia`,''):''}<div ${!a.link||a.ownDue||a.due?'':'hidden'}>${field('Fecha límite (opcional)',`<input data-ns-due type="datetime-local" value="${esc(a.due)}">`)}${a.link?'<p>Úsala sólo si esta acción debe completarse antes de la cita.</p>':''}</div>`;
+    modal.composer?.destroy();
     dialog.querySelector('.plan02b-modal-content').innerHTML=`<fieldset ${readonly?'disabled':''}>${html}</fieldset>`;
+    if(kind==='orders'&&window.mxmedStudyComposer){
+      modal.composer=window.mxmedStudyComposer.mount(dialog.querySelector('[data-tax03c-host]'),{
+        doctorId:context.doctor,selected:a.items||[],priority:a.priority,indication:a.indication||a.summary||'',readonly,
+        onChange:(items,priority,indication)=>{a.items=items;a.priority=priority;a.indication=indication;a.summary=indication;a.title=window.mxmedStudyComposer.title(items);}
+      });
+    }
     if(marker)dialog.querySelector(`[${marker.name}="${CSS.escape(marker.value)}"]${active.type==='radio'?'[value="'+CSS.escape(active.value)+'"]':''}`)?.focus({preventScroll:true});
   }
   function invalidateSlot(){epoch++;modal.draft.selection=null;slots=[];loading='Busca y selecciona un horario para esta fecha y consultorio.';}
@@ -189,7 +196,7 @@
   }
   function modalChange(event){
     if(!modal||modal.readonly)return;const e=event.target,a=modal.draft;
-    if(e.matches('[data-order-field],[data-ns-title],[data-ns-due],[data-ns-days],[data-rx-field],[data-rx-observaciones]'))return;
+    if(e.closest('[data-tax03c-composer]')||e.matches('[data-order-field],[data-ns-title],[data-ns-due],[data-ns-days],[data-rx-field],[data-rx-observaciones]'))return;
     if(e.matches('select[data-order-review]')){a.review||={mode:'none',days:10,date:''};a.review.mode=e.value;renderModal();return;}
     if(e.name==='ns-mode'){a.mode=e.value;invalidateSlot();readers(a.mode);return;}
     if(e.matches('[data-ns-existing]'))a.selection=appointments.find(x=>x.appointment_id===e.value)||null;
@@ -208,8 +215,9 @@
       }
       draft.items=draft.items.map(item=>Object.fromEntries(Object.entries(item).map(([key,value])=>[key,String(value||'').trim()])));
       draft.observaciones=String(draft.observaciones||'').trim();
-    }else if((kind==='appointment'&&!draft.selection)||(kind!=='appointment'&&!draft.title.trim())||(kind==='followup'&&draft.link&&!chosen())){dialog.querySelector('[data-modal-error]').textContent='Completa la acción y selecciona una cita u horario cuando corresponda.';return;}
+    }else if((kind==='appointment'&&!draft.selection)||(kind==='orders'&&!modal.composer?.valid())||(kind!=='appointment'&&kind!=='orders'&&!draft.title.trim())||(kind==='followup'&&draft.link&&!chosen())){dialog.querySelector('[data-modal-error]').textContent=kind==='orders'?'Agrega al menos un estudio antes de preparar la orden.':'Completa la acción y selecciona una cita u horario cuando corresponda.';return;}
     if(kind==='orders'){
+      draft.items=modal.composer.selected();draft.priority=modal.composer.priority();draft.indication=modal.composer.indication().trim();draft.summary=draft.indication;draft.title=window.mxmedStudyComposer.title(draft.items);
       const review=draft.review||{mode:'none'};
       if((review.mode==='days'&&(!Number.isInteger(Number(review.days))||Number(review.days)<1||Number(review.days)>365))||(review.mode==='date'&&(!review.date||review.date<dateOnly(new Date())))||(review.mode==='appointment'&&!chosen())){dialog.querySelector('[data-modal-error]').textContent='Completa cuándo revisar el resultado o selecciona primero una próxima cita.';return;}
     }
@@ -266,10 +274,18 @@
     if(busy||modal||!pending()||body.dataset.plan02bSection!=='finalize')return;
     const c=contextNow();if(JSON.stringify(c)!==JSON.stringify(context)||body.dataset.encounterState!=='open')return;
     const a=state.appointment,f=state.followup,r=state.prescription;
-    if(state.orders.some(o=>!o.title.trim())||(r&&(!r.items?.length||r.items.some(item=>!String(item.medicamento||'').trim())))||(a&&!a.selection)||(f&&(!f.title.trim()||(f.link&&!a?.selection)))){state.message='Completa las acciones seleccionadas antes de confirmar.';render();return;}
+    if(state.orders.some(o=>o.state!=='SUCCESS'&&(!Array.isArray(o.items)||!o.items.length||o.items.length>100))||(r&&(!r.items?.length||r.items.some(item=>!String(item.medicamento||'').trim())))||(a&&!a.selection)||(f&&(!f.title.trim()||(f.link&&!a?.selection)))){state.message='Completa las acciones seleccionadas antes de confirmar.';render();return;}
     busy=true;state.message='';render();
     try{
-      for(const o of state.orders)await run(o,`/api/clinical/index.php/encounters/${encodeURIComponent(c.key)}/documents`,{document_type:'order',title:o.title.trim(),summary:o.summary.trim(),event_datetime:o.event,payload:{source:'m7_ws04'}});
+      for(const o of state.orders){
+        if(o.state==='SUCCESS')continue;
+        const type=window.mxmedStudyComposer.documentType(o.items);
+        const orderItems=o.items.map(item=>item.type==='canonical'?{study_type_id:item.id,study_type_key:item.key}:{study_category:item.category,study_display_name:item.name,...(item.note?{note:item.note}:{})});
+        await run(o,`/api/clinical/index.php/encounters/${encodeURIComponent(c.key)}/documents`,{
+          document_type:type,title:o.title.trim(),summary:Array.from(o.summary||'').slice(0,512).join(''),event_datetime:o.event,
+          payload:{source:'m7_ws04',order_area:window.mxmedStudyComposer.orderArea(o.items),priority:o.priority||'Rutinaria',indication:o.indication||'',order_items:orderItems}
+        });
+      }
       if(r&&r.state!=='SUCCESS'){
         const scope=window.mxmedPrescriptionRuntimeScope?.(c.patient);
         if(scope?.mode!=='consultation'||scope.patient_id!==c.patient||scope.encounter_key!==c.key){

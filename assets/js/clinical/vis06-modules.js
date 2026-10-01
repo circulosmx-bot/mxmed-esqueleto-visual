@@ -23,6 +23,44 @@
   const node = (tag, text, cls='') => {const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
   const symbol = (name,cls='') => {const icon=node('span',name,`material-symbols-rounded ${cls}`);icon.setAttribute('aria-hidden','true');return icon;};
   const button = (text, action) => {const b=node('button',text,'btn btn-outline-primary btn-sm');b.type='button';b.addEventListener('click',action);return b;};
+  let orderComposerDialog=null;
+  function openGeneralOrder(trigger){
+    if(orderComposerDialog)return;
+    const patientId=selectedPatient(),doctorId=professional;
+    if(!patientId||!doctorId||!window.mxmedStudyComposer){views.get('orders').notice.textContent='Selecciona un paciente y un profesional antes de solicitar estudios.';return;}
+    const dialog=document.createElement('dialog');dialog.className='tax03c-dialog';dialog.setAttribute('aria-label','Solicitar estudios');
+    dialog.innerHTML='<form><header><h4>Solicitar estudios</h4><button type="button" class="btn btn-link" data-tax03c-close aria-label="Cerrar">×</button></header><div data-tax03c-host></div><p data-tax03c-error role="alert"></p><footer><button type="button" class="btn btn-outline-secondary" data-tax03c-close>Cancelar</button><button type="submit" class="btn btn-primary" data-tax03c-submit>Solicitar estudios</button></footer></form>';
+    document.body.append(dialog);orderComposerDialog=dialog;
+    let attemptKey=crypto.randomUUID(),attemptEvent='';
+    const composer=window.mxmedStudyComposer.mount(dialog.querySelector('[data-tax03c-host]'),{
+      doctorId,onChange:()=>{attemptKey=crypto.randomUUID();attemptEvent='';}
+    });
+    let busy=false;
+    const close=()=>{if(busy)return;composer.destroy();dialog.close();dialog.remove();orderComposerDialog=null;trigger?.focus({preventScroll:true});};
+    dialog.querySelectorAll('[data-tax03c-close]').forEach(control=>control.addEventListener('click',close));
+    dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
+    dialog.querySelector('form').addEventListener('submit',async event=>{
+      event.preventDefault();if(busy)return;
+      const error=dialog.querySelector('[data-tax03c-error]');error.textContent='';
+      if(!composer.valid()){error.textContent='Agrega al menos un estudio antes de solicitar la orden.';return;}
+      if(selectedPatient()!==patientId||professional!==doctorId){error.textContent='El contexto del paciente cambió. Vuelve a abrir la solicitud.';return;}
+      busy=true;const submit=dialog.querySelector('[data-tax03c-submit]');submit.disabled=true;submit.textContent='Guardando…';
+      const items=composer.selected(),type=window.mxmedStudyComposer.documentType(items),priority=composer.priority(),indication=composer.indication().trim();
+      const payload={source:'tax03c_catalog_composer',order_area:window.mxmedStudyComposer.orderArea(items),priority,indication,order_items:composer.orderItems()};
+      attemptEvent ||=new Date().toISOString().slice(0,19).replace('T',' ');
+      const command={patient_id:patientId,document_type:type,title:window.mxmedStudyComposer.title(items),
+        summary:`${items.length} estudio${items.length===1?'':'s'} · ${priority}`,event_datetime:attemptEvent,payload};
+      try{
+        const response=await fetch(`/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/documents`,{
+          method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','Idempotency-Key':attemptKey},body:JSON.stringify(command)});
+        const result=await response.json();if(!response.ok||result?.ok!==true)throw new Error(result?.message||'No se pudo guardar la orden.');
+        busy=false;close();
+        window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created',{detail:{patient_id:patientId,document_type:type,source:'tax03c_catalog_composer'}}));
+        loadOrders();
+      }catch(failure){error.textContent=failure?.message||'No se pudo guardar la orden. Intenta de nuevo.';busy=false;submit.disabled=false;submit.textContent='Solicitar estudios';}
+    });
+    dialog.showModal();dialog.querySelector('[data-tax03c-search]')?.focus();
+  }
   const views = new Map();
   let rows=[], patient='', professional='', generation=0, ordersRequest=0, ordersItems=[], ordersCursor=null, ordersHasMore=false, ordersPageLoading=false;
   const orderTitleCache=new Map();
@@ -145,8 +183,13 @@
       const facts=node('dl','','vis06-facts');facts.append(fact('Fecha de emisión',longDay(row.chronology_at)));
       if(orderOrigin(row))facts.append(fact('Origen',orderOrigin(row)));
       data.append(facts);view.detail.append(data);
-      const studies=(row.requested_studies||[]).filter(value=>typeof value==='string'&&value.trim());
-      if(studies.length){const section=projectedSection('Estudios solicitados','science');const list=node('ul','','vis06-study-list');studies.forEach(study=>list.append(node('li',study)));section.append(list);view.detail.append(section);}
+      const structured=row.order_payload_version===2&&Array.isArray(row.order_items)?row.order_items.filter(item=>typeof item?.study_display_name==='string'&&item.study_display_name.trim()):[];
+      const studies=structured.length?structured:(row.requested_studies||[]).filter(value=>typeof value==='string'&&value.trim());
+      if(studies.length){const section=projectedSection('Estudios solicitados','science');const list=node('ul','','vis06-study-list');studies.forEach(study=>{
+        const item=node('li',typeof study==='string'?study:study.study_display_name);
+        if(typeof study==='object'&&study.study_category){const category=node('small',window.mxmedStudyComposer?.categories?.[study.study_category]||'Otra categoría','vis06-study-category');item.append(category);}
+        list.append(item);
+      });section.append(list);view.detail.append(section);}
       const linked=projectedSection(`Resultados vinculados (${item.result_count})`,'description');
       if(!item.result_count){const empty=node('div','','vis06-no-results');empty.append(symbol('description'),node('strong','Aún no se han recibido resultados para esta orden.'),node('p','Los resultados se mostrarán aquí cuando estén disponibles.'));linked.append(empty);}
       else item.results.forEach(result=>{
@@ -293,8 +336,8 @@
     const head=node('header','','vis06-head'),copy=node('div');copy.append(node('h3',settings.title),node('p',settings.copy));
     const create=button(settings.action,()=>{
       if(kind==='prescriptions'){host.querySelector('[data-action="tratamiento-alias-open-receta"]')?.click();return;}
+      if(kind==='orders'){openGeneralOrder(create);return;}
       host.classList.add('vis06-capture-open');back.hidden=false;
-      if(kind==='orders'){create.hidden=true;host.querySelector('[data-est-section="solicitar"]')?.click();}
     });create.className='btn btn-primary';head.append(copy);if(kind!=='orders')head.append(create);
     const back=button('Volver al listado',()=>{host.classList.remove('vis06-capture-open');back.hidden=true;create.hidden=false;create.focus();load();});back.hidden=true;
     const controls=node('div','','vis06-controls');const search=node('input');search.type='search';search.placeholder=kind==='orders'?'Buscar orden o resultado':'Buscar por nombre o descripción';search.setAttribute('aria-label',`Buscar en ${settings.title}`);search.className='form-control';
